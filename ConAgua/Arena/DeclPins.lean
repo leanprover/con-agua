@@ -4,7 +4,7 @@ import ConAgua.Arena.IndIface
 /-!
 # The pin variant list across the declaration loop (lane `decls3`)
 
-Lane `romload`'s `PinSetsR m pins` (the 24-word `EREC` records listed at `CTL[150]`, `CTL[151]`
+Lane `romload`'s `PinSetsR m pins` (the 40-word `EREC` records listed at `CTL[150]`, `CTL[151]`
 hold the twin's variants) is a fact about `EREC` below its top and two `CTL` words. So it survives
 every run that only grows the record pool (`IWGrow`, or `ArrExt` of `erecP` at an in-bounds top)
 and leaves `CTL[150]`, `CTL[151]` alone: `PinSetsR.grow`, `PinSetsR.ext`. The declaration loop
@@ -84,28 +84,8 @@ theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
   rw [rdW_keep hek hlt]; exact hw i hi
 
 theorem PinSetR.grow {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip)
-    (hg : RecGrow m m') : PinSetR m' r ip := by
-  obtain ⟨hb, hs, hh⟩ := h
-  have het : erecTop m ≤ erecTop m' := hg.1
-  have hek := hg.2
-  have e0 : erTop m = erecTop m := rfl
-  have htop : erecTop m < 2 ^ 64 := UInt64.toNat_lt_size _
-  refine ⟨by omega, SliceR.grow hs hg, fun j hj => ?_⟩
-  have e8 : (r + 8 + 2 * UInt64.ofNat j).toNat = r.toNat + 8 + 2 * j := by
-    have : (2 * UInt64.ofNat j).toNat = 2 * j := by
-      rw [UInt64.toNat_mul, UInt64.toNat_ofNat']; simp; omega
-    rw [UInt64.toNat_add, UInt64.toNat_add, this]; simp; omega
-  have e9 : (r + 9 + 2 * UInt64.ofNat j).toNat = r.toNat + 9 + 2 * j := by
-    have : (2 * UInt64.ofNat j).toNat = 2 * j := by
-      rw [UInt64.toNat_mul, UInt64.toNat_ofNat']; simp; omega
-    rw [UInt64.toNat_add, UInt64.toNat_add, this]; simp; omega
-  have h8 : rdW (m'.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) =
-      rdW (m.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) := rdW_keep hek (by rw [e8]; omega)
-  have h9 : rdW (m'.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) =
-      rdW (m.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) := rdW_keep hek (by rw [e9]; omega)
-  have := SliceR.grow (hh j hj) hg
-  unfold HdrR at this ⊢
-  rw [h8, h9]; exact this
+    (hg : RecGrow m m') : PinSetR m' r ip :=
+  L.Rom.PinSetR.keep h ⟨hg.1, hg.2⟩
 
 /-- **The variant list survives a run that grows the pools and leaves `CTL[150]`, `CTL[151]`.** -/
 theorem PinSetsR.grow {m m' : Mem} {ips : List INatOpPinSet} (h : PinSetsR m ips)

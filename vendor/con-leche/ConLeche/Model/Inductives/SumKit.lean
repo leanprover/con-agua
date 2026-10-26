@@ -189,14 +189,14 @@ theorem IsTy_body_of_sat {R : Term} {ds : List Term} {σ : Nat → V}
 /-- A read spine crosses a cons its terms do not mention. -/
 theorem DenoteSpine.cons_mono {acval : Name → (Name → Nat) → Term}
     {c₀ : ConstantInfo} {A : (Name → Nat) → Term} (hfresh : env.find? c₀.name = none)
-    (hat : ∀ e : Expr, ConsCrossAt c₀ e) {ψ : Name → Nat} {d : Nat} :
+    {ψ : Name → Nat} {d : Nat} :
     ∀ {as : List Expr} {vs : List Term}, (∀ a ∈ as, ConstsBound env a) →
       DenoteSpine acval env ψ d as vs →
-      DenoteSpine (acvalWith acval c₀.name A) ⟨c₀ :: env.consts⟩ ψ d as vs
+      DenoteSpine (acvalWith acval c₀.name A) ⟨c₀ :: env.consts, env.tables⟩ ψ d as vs
   | _, _, _, .nil => .nil
   | a :: _, _, hcb, .cons ha htl =>
-    .cons (denote_cons_mono hfresh (hat a) ψ d (hcb a List.mem_cons_self) ha)
-      (DenoteSpine.cons_mono hfresh hat (fun a' ha' => hcb a' (List.mem_cons_of_mem _ ha')) htl)
+    .cons (denote_cons_mono hfresh ψ d (hcb a List.mem_cons_self) ha)
+      (DenoteSpine.cons_mono hfresh (fun a' ha' => hcb a' (List.mem_cons_of_mem _ ha')) htl)
 
 omit [SetTheory V] in
 /-- A valuation agreeing with the parameters below `nP`. -/
@@ -374,9 +374,9 @@ theorem CtorDataI.cross {m : EnvModel V env} {T : Name} {lps : List Name} {cvC :
     (h : CtorDataI m T lps cvC nP nF nIdx resSort isProp large idxArgs ds Es srcs)
     {c₀ : ConstantInfo} {A : (Name → Nat) → Term}
     (hfresh : env.find? c₀.name = none) (hT : T ≠ c₀.name)
-    (hat : ∀ e : Expr, ConsCrossAt c₀ e) (hcb : ConstsBound env cvC.type)
+    (hcb : ConstsBound env cvC.type)
     (hcbI : ∀ e ∈ idxArgs, ConstsBound env e)
-    (m₂ : EnvModel V ⟨c₀ :: env.consts⟩)
+    (m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩)
     (hac : m₂.acval = acvalWith m.acval c₀.name A) :
     CtorDataI m₂ T lps cvC nP nF nIdx resSort isProp large idxArgs ds Es srcs := by
   have hbody : ∀ ψ, ctorBodyAVI m₂ T nP nF ψ (Es ψ) = ctorBodyAVI m T nP nF ψ (Es ψ) := by
@@ -386,9 +386,9 @@ theorem CtorDataI.cross {m : EnvModel V env} {T : Name} {lps : List Name} {cvC :
   refine ⟨h.resid, fun ψ => ?_, h.len, h.lenE, h.idxLen, fun ψ => ?_,
     fun ψ ρ => ?_, h.below, h.belowE, h.params, h.srcLen, h.srcBnd, h.srcIdx, h.srcProp⟩
   · rw [hac, hbody]
-    exact denote_cons_mono hfresh (hat _) ψ 0 hcb (h.read ψ)
+    exact denote_cons_mono hfresh ψ 0 hcb (h.read ψ)
   · rw [hac]
-    exact DenoteSpine.cons_mono hfresh hat hcbI (h.idxRead ψ)
+    exact DenoteSpine.cons_mono hfresh hcbI (h.idxRead ψ)
   · rw [hbody]; exact h.okTy ψ ρ
 
 
@@ -414,7 +414,7 @@ theorem sumCtorData_of (hμ : μ.isVerified = true) (mp : EnvModelM V μ env)
       CtorDataI mp.base2 T lps cvCa nP nF nIdx resSort isProp large idxArgs ds Es srcs := by
   obtain ⟨⟨heq, hccv⟩, hresid, fvsP, crest, tfvs, trest, xFvs, idxArgs, hopC, -, -, hopX, hlenI,
     -, hres, hsorts⟩ := ConLeche.checkSumCtor_shape hCtor
-  obtain ⟨-, -, -, -, hlbt, hitf, stype, u, htp', -, hst, hens⟩ :=
+  obtain ⟨-, -, -, hlbt, hitf, stype, u, htp', -, hst, hens⟩ :=
     ConLeche.checkConstantVal_inv hccv
   rw [← heq] at hlbt hitf htp' hst
   have htf' := hitf
@@ -661,13 +661,13 @@ theorem ctorFramesGen (hμ : μ.isVerified = true) (mp : EnvModelM V μ env)
             ∈ˢ (univ ((sorts.getD j .zero).eval ψ) : V)) := by
   obtain ⟨⟨heq, hccv⟩, -, fvsP, crest, tfvs, trest, xFvs, idxArgs', hopC, hopT, hdoms, hopX,
     -, -, -, hsorts⟩ := ConLeche.checkSumCtor_shape hCtor
-  obtain ⟨-, -, -, -, hlbt, hitf, -, -, -, -⟩ := ConLeche.checkConstantVal_inv hccv
+  obtain ⟨-, -, -, hlbt, hitf, -, -, -, -⟩ := ConLeche.checkConstantVal_inv hccv
   rw [← heq] at hlbt hitf
   have htf' := hitf
   have hbt' := hlbt
   have hlenP : fvsP.length = nP := openPisAtFvars_length _ hopC
   have hopAll := openPisAtFvars_add nP hopC (by rw [Nat.zero_add]; exact hopX)
-  obtain ⟨hTf, -, -, hTb, -⟩ := mp.base2.wf _ (ConLeche.Env.find?_mem hfT)
+  obtain ⟨hTf, -, -, hTb, -⟩ := mp.base2.wf.consts _ (ConLeche.Env.find?_mem hfT)
   simp only [ConstantInfo.toConstantVal] at hTf hTb
   obtain ⟨hlenS, hfields⟩ := ConLeche.checkStructFieldSortsI_inv hsorts
   have hpins := ConLeche.checkStructDomsAt_inv hdoms
@@ -1045,7 +1045,7 @@ theorem stageCtorGen {T : Name}
     (hE : ∀ (T' : Name) (cvT' : ConstantVal) (caps' : IndCaps),
       env.find? T' = some (.indInfo cvT' caps') → T' ≠ T →
       ConLeche.reservedBasisNames.contains T' = false → caps'.eta = true →
-      ConLeche.EtaFamilyStored ⟨.ctorInfo cvCa nP nF :: env.consts⟩ T' caps' →
+      ConLeche.EtaFamilyStored ⟨.ctorInfo cvCa nP nF :: env.consts, env.tables⟩ T' caps' →
       caps'.etaCtor ≠ cvCa.name)
     (mp : EnvModelM V μ env)
     {sorts : List Level}
@@ -1065,7 +1065,7 @@ theorem stageCtorGen {T : Name}
     -- the block's own capability laws at the cons (task #210 Parts A
     -- and B), at any carrier agreeing with this one off the
     -- constructor's name and storing the constructor's leaf there
-    (hTlaws : ∀ m₂ : EnvModel V ⟨.ctorInfo cvCa nP nF :: env.consts⟩,
+    (hTlaws : ∀ m₂ : EnvModel V ⟨.ctorInfo cvCa nP nF :: env.consts, env.tables⟩,
       (∀ n, n ≠ cvCa.name → m₂.acval n = mp.base2.acval n) →
       (∀ ψ, m₂.acval cvCa.name ψ
         = sumMkAV (resSort.eval ψ) j (ds ψ) (((ds ψ).drop nP)) (uChains (Fss ψ))) →
@@ -1093,12 +1093,12 @@ theorem stageCtorGen {T : Name}
       Sat V (((ds ψ).take nP)).reverse ρ →
       ∀ bs : List V, SpineFit ρ (((ds ψ).drop nP)) bs →
         SpineFit ρ (((ppsAll ψ).drop nP)) (idxValsAt ρ (Es ψ) bs)) :
-    ∃ mp' : EnvModelM V μ ⟨.ctorInfo cvCa nP nF :: env.consts⟩,
+    ∃ mp' : EnvModelM V μ ⟨.ctorInfo cvCa nP nF :: env.consts, env.tables⟩,
       mp'.base2.acval = acvalWith mp.base2.acval cvCa.name
         (fun ψ => sumMkAV (resSort.eval ψ) j (ds ψ) (((ds ψ).drop nP))
           (uChains (Fss ψ))) := by
   obtain ⟨⟨hty, hccv⟩, -, -⟩ := ConLeche.checkSumCtor_shape hCtor
-  obtain ⟨-, hnres, -, -, hlbt, hitf, -, -, htp, -, -, -⟩ :=
+  obtain ⟨-, hnres, -, hlbt, hitf, -, -, htp, -, -, -⟩ :=
     ConLeche.checkConstantVal_inv hccv
   have htf' := hitf
   have hbt' := hlbt
@@ -1106,7 +1106,7 @@ theorem stageCtorGen {T : Name}
   have hcb : ConstsBound env cvCa.type := constsBound_of_constsResolve _ htr
   have hTC : T ≠ cvCa.name := by
     intro h; rw [h, hfresh] at hfT; exact nomatch hfT
-  have hwfC : ConLeche.EnvWF ⟨.ctorInfo cvCa nP nF :: env.consts⟩ := by
+  have hwfC : ConLeche.EnvWF ⟨.ctorInfo cvCa nP nF :: env.consts, env.tables⟩ := by
     refine ConLeche.EnvWF.cons mp.base2.wf (ConLeche.structConstWF ?_ ?_ (Expr.constsResolve_mono htr) ?_
       (fun _ _ _ heq => nomatch heq) (fun _ _ _ _ heq => nomatch heq))
     · show cvCa.type.hasFvar = false; rw [hty]; exact htf'
@@ -1124,10 +1124,9 @@ theorem stageCtorGen {T : Name}
   have hwalks := ctorWalksGen hFD hCD hfold hFsj hEsj hiff hFssOkP hIdx
   have hreadC : ∀ ψ : Name → Nat,
       denote (acvalWith mp.base2.acval cvCa.name A)
-        ⟨.ctorInfo cvCa nP nF :: env.consts⟩ ψ 0 cvCa.type
+        ⟨.ctorInfo cvCa nP nF :: env.consts, env.tables⟩ ψ 0 cvCa.type
         = some (mkPisAV (ds ψ) (ctorBodyAVI mp.base2 T nP nF ψ (Es ψ))) := fun ψ =>
-    denote_cons_mono (c₀ := .ctorInfo cvCa nP nF) hfresh
-      (ConsCrossAt.ofNtc fun _ h => nomatch h) ψ 0 hcb (hCD.read ψ)
+    denote_cons_mono (c₀ := .ctorInfo cvCa nP nF) hfresh ψ 0 hcb (hCD.read ψ)
   have hnresC : ConLeche.reservedBasisNames.contains
       (ConstantInfo.ctorInfo cvCa nP nF).name = false := by
     show ConLeche.reservedBasisNames.contains cvCa.name = false
@@ -1135,7 +1134,6 @@ theorem stageCtorGen {T : Name}
   refine declStep_preserves_of_ind_member_cons mp (c₀ := .ctorInfo cvCa nP nF)
     (A := A) hfresh hnresC (Or.inr ⟨_, _, _, rfl⟩)
     (ConsHead.ofFresh hwfC (fun ψ => hAbelow ψ) hnresC
-      (fun _ h => nomatch h)
       (fun _ _ _ _ h => nomatch h))
     ?_ ?_ ?_ ?_ ?_ ?_
   · intro ψ₁ ψ₂ hφ
@@ -1160,12 +1158,12 @@ theorem stageCtorGen {T : Name}
   · -- `caps_ok`: nothing is claimed by the block's family
     intro m₂ hac
     refine capsOk_cons_native mp (c₀ := .ctorInfo cvCa nP nF) (A := A)
-      (T := T) hfresh (ConsCrossEnv.ofNtc fun _ h => nomatch h)
+      (T := T) hfresh
       (Or.inr fun _ _ h => nomatch h) ?_ m₂ hac ?_
     · intro T' cvT' caps' hf hne hres hcape hfam
       exact hE T' cvT' caps' hf hne hres hcape hfam
     · intro cvT caps' hf _
-      have hfT' : (⟨.ctorInfo cvCa nP nF :: env.consts⟩ : Env).find? T
+      have hfT' : (⟨.ctorInfo cvCa nP nF :: env.consts, env.tables⟩ : Env).find? T
           = some (.indInfo cvTa caps) := by
         rw [ConLeche.Env.find?_cons, ite_eq_right (fun h => hTC h.symm)]
         exact hfT

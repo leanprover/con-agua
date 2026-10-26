@@ -32,7 +32,12 @@ parameter here: the consumers relate it to the store).
 | 3 | `indInfo cv caps` | cv at `p+1`; caps at `p+5` (15 words, `decCaps`) |
 | 4 | `ctorInfo cv np nf` | cv at `p+1`; `p+5`, `p+6` |
 | 5 | `recInfo cv major pre rules` | cv at `p+1`; `p+5`, `p+6`; rules slice `p+7`, `p+8` (11-word records) |
-| 6 | `projInfo tbl` | `tableName` `p+1`, `structName` `p+2`, lps `p+3`,`p+4`, `numParams` `p+5`, `ctor` `p+6`, `numFields` `p+7`, `structSort` `p+8`, bodies `p+9`,`p+10`, guards `p+11`,`p+12`, `off` `p+13` |
+
+`IProjTable` (13 words, at `p`; not a constant: the environment's table component, `Tiers.lean`'s
+`EnvR.tkeys`/`tvals`/`tables`): word `p` is `6` and word `p+1` is `0` (the kind and name words of
+the constant records' layout, kept so that the fields keep their offsets), `structName` `p+2`, lps
+`p+3`,`p+4`, `numParams` `p+5`, `ctor` `p+6`, `numFields` `p+7`, `structSort` `p+8`, bodies
+`p+9`,`p+10`, guards `p+11`,`p+12`.
 
 The declarations themselves are the front's records (`DECL`/`DLP`, `Front/StateDR.lean`'s
 `DeclsF`); an inductive block will need a slice of constant records (not yet).
@@ -110,13 +115,12 @@ def decCaps (q : Nat) : Option IIndCaps := do
          unitParams := ← nat? a (q + 5), ruleK := ← bool? a (q + 6), sortZ := ← decPW a dn (q + 7),
          all := ← hlist? a (q + 10), nparams := ← nat? a (q + 12), ctors := ← hlist? a (q + 13) }
 
-/-- `IProjTable` at `p` (a `projInfo` record; word `p` is its kind). -/
+/-- `IProjTable` at `p` (a table record). -/
 def decTbl (p : Nat) : Option IProjTable := do
-  pure { tableName := ← hd? a (p + 1), structName := ← hd? a (p + 2),
+  pure { structName := ← hd? a (p + 2),
          levelParams := ← hlist? a (p + 3), numParams := ← nat? a (p + 5), ctor := ← hd? a (p + 6),
          numFields := ← nat? a (p + 7), structSort := ← hd? a (p + 8),
-         bodies := (← hlist? a (p + 9)).toArray, guards := ← hlist? a (p + 11),
-         off := ← nat? a (p + 13) }
+         bodies := (← hlist? a (p + 9)).toArray, guards := ← hlist? a (p + 11) }
 
 /-- **The constant record at `p`.** -/
 def decCI (p : Nat) : Option IConstantInfo := do
@@ -128,7 +132,6 @@ def decCI (p : Nat) : Option IConstantInfo := do
   | 4 => pure (.ctorInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6)))
   | 5 => pure (.recInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6))
       (← decRules a (← nat? a (p + 7)) (← nat? a (p + 8))))
-  | 6 => pure (.projInfo (← decTbl a p))
   | _ => none
 
 /-- A value kind (0 defn, 1 thm, 2 opaque). -/
@@ -277,9 +280,9 @@ theorem ArrExt.decCaps {dn : NIdx → Option ConLeche.Name} {q : Nat} {x : IIndC
 
 theorem ArrExt.decTbl {p : Nat} {x : IProjTable} (hx : decTbl a p = some x) : decTbl b p = some x := by
   simp only [L.Arena.decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
-  obtain ⟨e1, h1, e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e8, h8, e9, h9, e10, h10, e⟩ := hx
-  exact ⟨e1, h.hd? h1, e2, h.hd? h2, e3, h.hlist? h3, e4, h.nat? h4, e5, h.hd? h5, e6, h.nat? h6,
-    e7, h.hd? h7, e8, h.hlist? h8, e9, h.hlist? h9, e10, h.nat? h10, e⟩
+  obtain ⟨e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e8, h8, e9, h9, e⟩ := hx
+  exact ⟨e2, h.hd? h2, e3, h.hlist? h3, e4, h.nat? h4, e5, h.hd? h5, e6, h.nat? h6,
+    e7, h.hd? h7, e8, h.hlist? h8, e9, h.hlist? h9, e⟩
 
 theorem ArrExt.decCI {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
     (hx : decCI a dn p = some x) : decCI b dn p = some x := by
@@ -311,10 +314,7 @@ theorem ArrExt.decCI {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConsta
       simp only [Option.bind_eq_some_iff] at hx ⊢
       obtain ⟨y, hy, z, hz, w, hw, o, ho, c, hc, r, hr, e⟩ := hx
       exact ⟨y, h.decCV hy, z, h.nat? hz, w, h.nat? hw, o, h.nat? ho, c, h.nat? hc, r, h.decRules hr, e⟩
-    | 6, hx =>
-      simp only [Option.bind_eq_some_iff] at hx ⊢
-      obtain ⟨y, hy, e⟩ := hx; exact ⟨y, h.decTbl hy, e⟩
-    | k + 7, hx => simp at hx
+    | k + 6, hx => simp at hx
 
 theorem ArrExt.decVG {q : Nat} {x : ValueGroup} (hx : decVG a q = some x) : decVG b q = some x := by
   simp only [L.Arena.decVG, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢

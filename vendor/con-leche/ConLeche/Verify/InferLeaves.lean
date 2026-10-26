@@ -294,7 +294,6 @@ theorem unfoldDefinition_fvarLeaves {env : Env} (henv : EnvWF env)
   match hf : env.find? n with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) => intro h; exact nomatch h
-  | some (.projInfo _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.indInfo _ _) => intro h; exact nomatch h
   | some (.ctorInfo _ _ _) => intro h; exact nomatch h
@@ -308,7 +307,7 @@ theorem unfoldDefinition_fvarLeaves {env : Env} (henv : EnvWF env)
     simp only [Option.some.injEq] at h
     subst h
     intro l hl
-    obtain ⟨-, -, -, -, hval, -⟩ := henv _ (Env.find?_mem hf)
+    obtain ⟨-, -, -, -, hval, -⟩ := henv.consts _ (Env.find?_mem hf)
     obtain ⟨hvc, -, -, -⟩ := hval cv value hint rfl
     rcases fvarLeaves_mkAppN hl with hl' | ⟨x, hx, hlx⟩
     · rw [fvarLeaves_eq_nil_of_not_hasFvar
@@ -335,7 +334,6 @@ theorem unfoldDefinition_looseBVars {env : Env} (henv : EnvWF env)
   match hf : env.find? n with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) => intro h; exact nomatch h
-  | some (.projInfo _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.indInfo _ _) => intro h; exact nomatch h
   | some (.ctorInfo _ _ _) => intro h; exact nomatch h
@@ -348,7 +346,7 @@ theorem unfoldDefinition_looseBVars {env : Env} (henv : EnvWF env)
   · intro h
     simp only [Option.some.injEq] at h
     subst h
-    obtain ⟨-, -, -, -, hval, -⟩ := henv _ (Env.find?_mem hf)
+    obtain ⟨-, -, -, -, hval, -⟩ := henv.consts _ (Env.find?_mem hf)
     obtain ⟨-, -, -, hvb⟩ := hval cv value hint rfl
     refine looseBVarsBounded_mkAppN ?_ ?_
     · rw [looseBVarsBounded_instantiateLevelParams]
@@ -448,7 +446,7 @@ theorem whnfPres_fvarLeaves {env : Env} (henv : EnvWF env) :
               (fun l' hl' => hl')
           have hl2 := ihCore hwe'' l hl
           rcases fvarLeaves_mkAppN hl2 with hrl | ⟨x, hx, hlx⟩
-          · obtain ⟨-, -, -, -, -, hrules, -⟩ := henv _ (Env.find?_mem hfc)
+          · obtain ⟨-, -, -, -, -, hrules, -⟩ := henv.consts _ (Env.find?_mem hfc)
             obtain ⟨hrf, -, -, -, -⟩ := hrules cv mI rP rules rfl r
               (List.mem_of_find?_eq_some hrule)
             rw [fvarLeaves_eq_nil_of_not_hasFvar
@@ -595,7 +593,7 @@ theorem whnfPres_looseBVars {env : Env} (henv : EnvWF env) :
               (looseBVarsBounded_getAppArgs hbapp _ (getD_mem (by omega)))
           refine ihCore hwe'' ?_
           refine looseBVarsBounded_mkAppN ?_ ?_
-          · obtain ⟨-, -, -, -, -, hrules, -⟩ := henv _ (Env.find?_mem hfc)
+          · obtain ⟨-, -, -, -, -, hrules, -⟩ := henv.consts _ (Env.find?_mem hfc)
             obtain ⟨-, -, -, hrb, -⟩ := hrules cv mI rP rules rfl r
               (List.mem_of_find?_eq_some hrule)
             rw [looseBVarsBounded_instantiateLevelParams]
@@ -690,15 +688,11 @@ theorem inferTypeCore_WScoped {env : Env} (henv : EnvWF env) :
         revert h
         split
         · intro h
-          revert h
-          split
-          · intro h
-            simp only [Except.ok.injEq] at h
-            subst h
-            obtain ⟨htc, -, -, -, -⟩ := henv _ (Env.find?_mem hf)
-            exact WScoped.of_not_hasFvar
-              (by rw [hasFvar_instantiateLevelParams]; exact htc)
-          · intro h; exact nomatch h
+          simp only [Except.ok.injEq] at h
+          subst h
+          obtain ⟨htc, -, -, -, -⟩ := henv.consts _ (Env.find?_mem hf)
+          exact WScoped.of_not_hasFvar
+            (by rw [hasFvar_instantiateLevelParams]; exact htc)
         · intro h; exact nomatch h
     | lit l0 =>
       rw [inferTypeCore_succ] at h
@@ -802,17 +796,13 @@ theorem inferTypeCore_fvarLeaves {env : Env} (henv : EnvWF env) :
         revert h
         split
         · intro h
-          revert h
-          split
-          · intro h
-            simp only [Except.ok.injEq] at h
-            subst h
-            obtain ⟨htc, -, -, -, -⟩ := henv _ (Env.find?_mem hf)
-            intro l hl
-            rw [fvarLeaves_eq_nil_of_not_hasFvar
-              (by rw [hasFvar_instantiateLevelParams]; exact htc)] at hl
-            cases hl
-          · intro h; exact nomatch h
+          simp only [Except.ok.injEq] at h
+          subst h
+          obtain ⟨htc, -, -, -, -⟩ := henv.consts _ (Env.find?_mem hf)
+          intro l hl
+          rw [fvarLeaves_eq_nil_of_not_hasFvar
+            (by rw [hasFvar_instantiateLevelParams]; exact htc)] at hl
+          cases hl
         · intro h; exact nomatch h
     | lit l0 =>
       rw [inferTypeCore_succ] at h
@@ -947,15 +937,11 @@ theorem inferTypeCore_looseBVars {env : Env} (henv : EnvWF env) :
         revert h
         split
         · intro h
-          revert h
-          split
-          · intro h
-            simp only [Except.ok.injEq] at h
-            subst h
-            obtain ⟨-, -, -, htb, -⟩ := henv _ (Env.find?_mem hf)
-            rw [looseBVarsBounded_instantiateLevelParams]
-            exact htb
-          · intro h; exact nomatch h
+          simp only [Except.ok.injEq] at h
+          subst h
+          obtain ⟨-, -, -, htb, -⟩ := henv.consts _ (Env.find?_mem hf)
+          rw [looseBVarsBounded_instantiateLevelParams]
+          exact htb
         · intro h; exact nomatch h
     | lit l0 =>
       rw [inferTypeCore_succ] at h

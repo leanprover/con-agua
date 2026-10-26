@@ -67,3 +67,51 @@ every path outside that directory and reports success.)
   `ConRon/Bridge` files.
 * con-leche `pins/` changed (type pins: 728 lines added), so `pins.bin` and the ROM's
   `INatOpPinSet` record (24 words today) change.
+
+## Phase 2: the sync to con-ron ed864140 (con-leche 0d2f467b)
+
+The re-vendoring itself was mechanical: `0002-bridge-toolchain.patch` conflicted in its
+`ConRon/Bridge` hunks only where upstream had rewritten the same proofs; the resolution keeps
+upstream's text and adds the two bridge tactics the old hunks carried (`try replace … AM.pure_bind_ok`,
+`dsimp +instances only [IFEnv.restrictTo]`). The work was in the three upstream changes behind
+the report's numbers.
+
+**Projection tables out of the constants (con-leche #362).** The twin now keeps a structure's
+projection table in the environment's own table component, keyed on the structure name, instead
+of as a reserved-name constant of kind 6. L follows layout (b): tiered row arrays `TIXA`/`TIXS`/
+`TIXN` (129‥131, tier 1 at 385‥387) map a name index to its table record (one word: record pointer
++ 1, 0 = none), `ETAB` (143) lists the records oldest-first with the count in `CTL[133]`, and a
+record is 13 words (name, level parameters, parameter count, constructor, field count, structure
+sort, the bodies and guards slices). `EnvR` gained `tkeys`/`tvals`/`tables`; its frame claims
+129‥144 and 385‥387. `find_proj` reads through `find_table`; `proj_table_name`, the kind-6 checks
+in `infer_const` and the prop readers, the ROM reader's kind-6 refusal and the
+`R_PROJECTION_TABLE_ENTRY`/`R_RESERVED_PROJECTION_NAME` reasons are gone. Promotion promotes the
+new tables with the new constants (`promote_new_tables`, `promote_proj_tables`,
+`index_promoted_tables`; `erase_installed_tables` on rollback). Deviations D21, D22, D29 are fixed.
+
+**`toConstantVal` is pure, `isProjFnShape` is gone.** `ci_to_cv` is
+`return p + 1`; the `WalkableDecl` chain of the hoist and the declaration twins lost the
+projection-shape test.
+
+**Type pins and the end of `orElseAttempt` (con-ron #129).** Pin records grew
+to 40 words (the type pins), with their gate functions; `pins.bin` is regenerated. The twin no
+longer recovers from an error inside a pin-variant attempt, so `ATT` and the class masking of
+`fail R` are retired (`fail R` is `abort R`). D4 is fixed.
+
+What cost time beyond the twin's diff:
+
+* Every closure set over the word arrays (`List.range 320`, `a < 320`) had to grow to 388 to cover
+  the table rows' tier 1; they are spread over about twenty files with no common definition.
+* The generated function lists (`coreFns`, `loopFns`, `leafFns`, `phaseBFns`, the pre-loop write
+  sets) must be regenerated after the last L change, not before: a stale `leafFns` shows up only as
+  a kernel `forall_of_all` failure in `LeafAll.lean`. `imFns` (`IndMemoFns.lean`), `declExtFns` (`LoopDecl.lean`),
+  `loopStepOut` (`LoopProgInd.lean`) and the nine lists of `IndArmFns.lean` have no generator;
+  their closures were recomputed by a throwaway `#eval` over `checkerProg`'s call graph (removing `proj_table_name` took `intern_nstr` out of `coreFns`, so
+  `declExtFns` gained it).
+
+Result: `scripts/diff-e2e.py --refs` on con-leche 0d2f467b's 634 fixtures: all agree with the
+expectation, with con-ron ed864140 and with `e2e-ref` (406 accepted, 228 not; no verdict kind
+differs). `scripts/e2e.py` (675 fixtures with the arena tests): 425 agree on accept, con-ron and
+`e2e-ref` disagree nowhere; its 223 `l-crash` rows are the shipped binary's `rejected: …` /
+`declined: …` lines, which `l_outcome` does not parse yet (the class word matches the reference
+on every one checked).

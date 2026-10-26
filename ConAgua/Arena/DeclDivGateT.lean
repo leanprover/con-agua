@@ -129,7 +129,7 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
   rw [hcvd, hvv] at hcid
   simp only [Option.some.injEq] at hcid
   subst hcid
-  have hwc := hok2.envWF _ (List.mem_of_find?_eq_some hfindP)
+  have hwc := hok2.envWF.consts _ (List.mem_of_find?_eq_some hfindP)
   obtain ⟨hfv, -, -, -⟩ := hwc.2.2.2.2.1 cv' v' hint rfl
   have hwsv : ConLeche.Expr.WScoped 0 v' := ConLeche.Expr.WScoped.of_not_hasFvar hfv
   -- the variant loop, at the pre-insertion view

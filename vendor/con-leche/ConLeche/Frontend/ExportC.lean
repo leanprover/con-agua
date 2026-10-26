@@ -440,7 +440,7 @@ changed, from key lookups in a DOM to fields of a syntax record. -/
         | .«opaque» => .«opaque»
         | .regular n => .regular n
       return .inl (.defnDecl cvp vl h)
-    | s => return .inr (.declined s!"definition with safety '{s}'")
+    | s => return .inr (.declined s!"definition with safety {Display.str s}")
   | .thm cvr value =>
     let cvp ← cvOfF nm lv ex cvr
     let vl ← ex value
@@ -465,7 +465,7 @@ changed, from key lookups in a DOM to fields of a syntax record. -/
       | "ctor" => pure QuotKind.ctor
       | "lift" => pure QuotKind.lift
       | "ind" => pure QuotKind.ind
-      | k => throw s!"unknown quotient kind '{k}'"
+      | k => throw s!"unknown quotient kind {Display.str k}"
     return .inl (.quotDecl qk cv)
   | .ind tys cts rcs =>
     match ← validateIndF nm lv ex tys cts rcs with

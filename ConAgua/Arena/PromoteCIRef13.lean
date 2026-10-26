@@ -26,7 +26,7 @@ include hp
 theorem projB_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (ct : NIdx)
     (ss : LIdx) (bodies : List EIdx) (guards : List LIdx) (r : List Word) (m' : Mem)
     (hD : ArenaD m a) (hP : PMemoR m pm)
-    (hsz : (m.arr64 EREC).size < 2 ^ 64) (hqb : q.toNat + 14 ≤ (m.arr64 EREC).size)
+    (hsz : (m.arr64 EREC).size < 2 ^ 64) (hqb : q.toNat + 13 ≤ (m.arr64 EREC).size)
     (hct : hd? (erecP m) (q.toNat + 6) = some ct) (hss : hd? (erecP m) (q.toNat + 8) = some ss)
     (hbs : hlist? (erecP m) (q.toNat + 9) = some bodies)
     (hgs : hlist? (erecP m) (q.toNat + 11) = some guards)

@@ -69,7 +69,7 @@ theorem ShapeCV.grow {m m' : Mem} {q : Word} (h : ShapeCV m q) (hg : IWGrow m m'
 /-! ## What the recursor stage needs of the pass -/
 
 /-- Every word array below 320 (both tiers) but `target_abs`' memo's. -/
-def taFreeA : List ArrId := (List.range 320).filter (· ≠ TAM)
+def taFreeA : List ArrId := (List.range 388).filter (· ≠ TAM)
 /-- Every `CTL` word below 256 but that memo's two control words. -/
 def taFreeC : List Word := ((List.range 256).filter (fun c => c ≠ 212 ∧ c ≠ 213)).map Nat.toUInt64
 
@@ -83,7 +83,7 @@ theorem taMR.ofClosed {p : Prog} {fs : List FnName} (hcl : closedA p taFreeA taF
     ⟨taFreeA, taFreeC, (run_memFrame hcl hf (run_of_callW h)).1, fun b hb => ?_, fun x hx => ?_⟩
     (by decide) (by decide) hm⟩
   · simp only [taFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
-    have key : ∀ x < 320, x ≠ 206 → x < 201 ∨ 208 < x ∨ x ∈ [201, 202, 203, 204, 205, 207, 208] := by
+    have key : ∀ x < 388, x ≠ 206 → x < 201 ∨ 208 < x ∨ x ∈ [201, 202, 203, 204, 205, 207, 208] := by
       decide +kernel
     exact key b hb.1 (by simpa [TAM] using hb.2)
   · simp only [taFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx

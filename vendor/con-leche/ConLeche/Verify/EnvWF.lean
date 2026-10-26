@@ -16,18 +16,12 @@ delta-unfolding and monotonicity lemmas need it.
 
 namespace ConLeche
 
-/-- The projection-table name shape is injective (task #175 S1). -/
-theorem projTableName_inj {T T' : Name} (h : projTableName T = projTableName T') :
-    T = T' := by
-  simp only [projTableName, Name.num.injEq, Name.str.injEq] at h
-  exact h.1.1
-
 /-- Unfold a successful projection-table lookup to the stored table:
 the structure's table is stored, the index is in range, and the entry
 is the table's view at it (task #175 S1). -/
 theorem Env.findProj?_some {env : Env} {T : Name} {i : Nat}
     {entry : ProjEntry} (h : env.findProj? T i = some entry) :
-    ∃ tbl : ProjTable, env.find? (projTableName T) = some (.projInfo tbl) ∧
+    ∃ tbl : ProjTable, env.findTable? T = some tbl ∧
       i < tbl.numFields ∧ entry = tbl.entry i := by
   unfold Env.findProj? at h
   split at h
@@ -39,41 +33,48 @@ theorem Env.findProj?_some {env : Env} {T : Name} {i : Nat}
 
 /-- The lookup at a stored table, in range. -/
 theorem Env.findProj?_of_table {env : Env} {T : Name} {tbl : ProjTable}
-    (h : env.find? (projTableName T) = some (.projInfo tbl)) {i : Nat}
+    (h : env.findTable? T = some tbl) {i : Nat}
     (hi : i < tbl.numFields) : env.findProj? T i = some (tbl.entry i) := by
   unfold Env.findProj?
   rw [h]
   exact ite_eq_left hi
 
-/-- No table stored, no entry. -/
-theorem Env.findProj?_none_of_fresh {env : Env} {T : Name}
-    (h : env.find? (projTableName T) = none) (i : Nat) : env.findProj? T i = none := by
-  unfold Env.findProj?
-  rw [h]
+/-- A stored table is a member of the table component, under its
+structure's name, and the structure is stored. -/
+theorem Env.findTable?_mem {env : Env} {T : Name} {tbl : ProjTable}
+    (h : env.findTable? T = some tbl) :
+    tbl ∈ env.tables ∧ tbl.structName = T ∧ (env.find? T).isSome = true := by
+  unfold Env.findTable? at h
+  split at h
+  · next hT =>
+    exact ⟨List.mem_of_find?_eq_some h, by simpa using List.find?_some h, hT⟩
+  · exact nomatch h
 
-/-- **The stored table's projection offset** of structure `T` (task
-#210 Part A; `0` when no table is stored): what every entry of the
-table carries (`Env.findProj?_off`). -/
-def Env.projOff (env : Env) (T : Name) : Nat :=
-  match env.find? (projTableName T) with
-  | some (.projInfo tbl) => tbl.off
-  | _ => 0
+/-- The table lookup at a stored structure is the table component's. -/
+theorem Env.findTable?_of_isSome {env : Env} {T : Name} (hT : (env.find? T).isSome = true) :
+    env.findTable? T = env.tables.find? (·.structName == T) := by
+  unfold Env.findTable?
+  rw [ite_eq_left hT]
 
-theorem Env.findProj?_off {env : Env} {T : Name} {i : Nat} {e : ProjEntry}
-    (hi : env.findProj? T i = some e) : e.off = env.projOff T := by
-  obtain ⟨tbl, hf, -, rfl⟩ := Env.findProj?_some hi
-  unfold Env.projOff
-  rw [hf]
-  rfl
+/-- A table install leaves the constant lookups alone. -/
+@[simp] theorem Env.find?_pushTable (env : Env) (t : ProjTable) :
+    Env.find? ⟨env.consts, t :: env.tables⟩ = env.find? := rfl
 
-/-- Two entries of one structure's table carry the same projection
-offset (task #210 Part A): both are views of the one stored table. -/
-theorem Env.findProj?_off_eq {env : Env} {T : Name} {i j : Nat} {e e' : ProjEntry}
-    (hi : env.findProj? T i = some e) (hj : env.findProj? T j = some e') : e.off = e'.off := by
-  obtain ⟨tbl, hf, -, rfl⟩ := Env.findProj?_some hi
-  obtain ⟨tbl', hf', -, rfl⟩ := Env.findProj?_some hj
-  obtain rfl : tbl = tbl' := ConstantInfo.projInfo.inj (Option.some.inj (hf.symm.trans hf'))
-  rfl
+/-- A table install answers its structure's name (where it is stored),
+and leaves every other table lookup alone. -/
+theorem Env.findTable?_pushTable (env : Env) (t : ProjTable) (T : Name) :
+    Env.findTable? ⟨env.consts, t :: env.tables⟩ T =
+      if t.structName = T ∧ (env.find? T).isSome = true then some t
+      else env.findTable? T := by
+  unfold Env.findTable?
+  show (if (env.find? T).isSome = true then (t :: env.tables).find? _ else none) = _
+  rw [List.find?_cons]
+  by_cases hs : (env.find? T).isSome = true
+  · by_cases hT : t.structName = T
+    · simp [hT, hs]
+    · have hb : (t.structName == T) = false := by simpa using hT
+      simp only [hs, hb, hT, false_and, ↓reduceIte]
+  · simp [hs]
 
 @[simp] theorem ProjTable.entry_levelParams (tbl : ProjTable) (i : Nat) :
     (tbl.entry i).levelParams = tbl.levelParams := rfl
@@ -148,22 +149,36 @@ theorem stripPis_isSome_of_le :
   -- (a theorem's stored value carries NO clause: a theorem is opaque
   -- to reduction and stored by its statement — the value is the
   -- record's own, unread by the kernel and by the invariant)
-  -- a projection table's bodies (task #175 S1): closed with respect to
-  -- free variables, level parameters within the structure's list,
-  -- resolving, and scoped at the parameters and the subject; there
-  -- are exactly `numFields` of them
-  (∀ tbl, c = .projInfo tbl →
-    tbl.bodies.size = tbl.numFields ∧
-    ∀ (i : Nat) (b : Expr), tbl.bodies[i]? = some b →
-      b.hasFvar = false ∧
-      b.allLevelParamsDefined tbl.levelParams = true ∧
-      b.constsResolve env = true ∧
-      b.looseBVarsBounded (tbl.numParams + 1) = true) ∧
   -- the capability arities (environment-independent)
   IndCapsWF c
 
-/-- Every stored constant is syntactically well-formed. -/
-@[expose] def EnvWF (env : Env) : Prop := ∀ c ∈ env.consts, ConstWF env c
+/-- **Syntactic well-formedness of one stored projection table** w.r.t.
+`env` (task #175 S1; task #362 for the first clause): its structure is
+a stored constant, and its bodies are closed with respect to free
+variables, level parameters within the structure's list, resolving,
+and scoped at the parameters and the subject; there are exactly
+`numFields` of them. -/
+@[expose] def TableWF (env : Env) (tbl : ProjTable) : Prop :=
+  (env.find? tbl.structName).isSome = true ∧
+  tbl.bodies.size = tbl.numFields ∧
+  ∀ (i : Nat) (b : Expr), tbl.bodies[i]? = some b →
+    b.hasFvar = false ∧
+    b.allLevelParamsDefined tbl.levelParams = true ∧
+    b.constsResolve env = true ∧
+    b.looseBVarsBounded (tbl.numParams + 1) = true
+
+/-- Every stored constant and every stored table is syntactically
+well-formed. -/
+structure EnvWF (env : Env) : Prop where
+  consts : ∀ c ∈ env.consts, ConstWF env c
+  tables : ∀ t ∈ env.tables, TableWF env t
+
+/-- The table of a stored structure, off `EnvWF`. -/
+theorem EnvWF.table {env : Env} (henv : EnvWF env) {T : Name} {tbl : ProjTable}
+    (h : env.findTable? T = some tbl) : TableWF env tbl :=
+  henv.tables tbl (Env.findTable?_mem h).1
+
+
 
 /-- The capability arities of a stored inductive, off `EnvWF`. -/
 theorem EnvWF.indCaps {env : Env} (henv : EnvWF env) {T : Name}
@@ -171,11 +186,12 @@ theorem EnvWF.indCaps {env : Env} (henv : EnvWF env) {T : Name}
     (h : env.find? T = some (.indInfo cv caps)) :
     (caps.unitlike = true → (cv.type.stripPis caps.unitParams).isSome = true) ∧
     (caps.eta = true → (cv.type.stripPis caps.etaParams).isSome = true) :=
-  (henv _ (List.mem_of_find?_eq_some h)).2.2.2.2.2.2.2 cv caps rfl
+  (henv.consts _ (List.mem_of_find?_eq_some h)).2.2.2.2.2.2 cv caps rfl
 
 /-- `find?` on a cons. -/
-theorem Env.find?_cons {c : ConstantInfo} {env : Env} {n : Name} :
-    Env.find? ⟨c :: env.consts⟩ n = if c.name = n then some c else env.find? n := by
+theorem Env.find?_cons {c : ConstantInfo} {cs : List ConstantInfo} {ts : List ProjTable}
+    {n : Name} :
+    Env.find? ⟨c :: cs, ts⟩ n = if c.name = n then some c else Env.find? ⟨cs, ts⟩ n := by
   simp only [Env.find?, List.find?]
   split
   · next h => simp_all
@@ -183,14 +199,14 @@ theorem Env.find?_cons {c : ConstantInfo} {env : Env} {n : Name} :
 
 /-- A cons finds its own head. -/
 theorem Env.find?_cons_self (c : ConstantInfo) (env : Env) :
-    Env.find? ⟨c :: env.consts⟩ c.name = some c := by
+    Env.find? ⟨c :: env.consts, env.tables⟩ c.name = some c := by
   rw [Env.find?_cons, ite_eq_left rfl]
 
 /-- A cons of a *fresh* head does not find anything new. -/
 theorem Env.find?_cons_of_fresh {c : ConstantInfo} {env : Env}
     {n : Name} {ci : ConstantInfo} (hfresh : env.find? c.name = none)
     (h : env.find? n = some ci) :
-    Env.find? ⟨c :: env.consts⟩ n = some ci := by
+    Env.find? ⟨c :: env.consts, env.tables⟩ n = some ci := by
   rw [Env.find?_cons]
   split
   · next heq => rw [heq, h] at hfresh; exact nomatch hfresh
@@ -200,18 +216,64 @@ theorem Env.find?_cons_of_fresh {c : ConstantInfo} {env : Env}
 successful lookups. -/
 theorem Env.find?_cons_of_isSome {c : ConstantInfo} {env : Env} {n : Name}
     (hfresh : env.find? c.name = none) (h : (env.find? n).isSome = true) :
-    Env.find? ⟨c :: env.consts⟩ n = env.find? n := by
+    Env.find? ⟨c :: env.consts, env.tables⟩ n = env.find? n := by
   rw [Env.find?_cons]
   split
   · next heq => rw [← heq] at h; rw [hfresh] at h; simp at h
   · rfl
 
-/-- A cons at another name does not change a table lookup. -/
-theorem Env.findProj?_cons_ne {env : Env} {c₀ : ConstantInfo} {T : Name}
-    (hn : c₀.name ≠ projTableName T) (i : Nat) :
-    Env.findProj? ⟨c₀ :: env.consts⟩ T i = env.findProj? T i := by
+/-- **A push of a fresh constant leaves the table lookups alone**
+(task #362): a stored table's structure is stored (`TableWF`), so no
+table waits for the fresh name. -/
+theorem EnvWF.findTable?_cons {env : Env} (henv : EnvWF env) {c : ConstantInfo}
+    (hfresh : env.find? c.name = none) (T : Name) :
+    Env.findTable? ⟨c :: env.consts, env.tables⟩ T = env.findTable? T := by
+  unfold Env.findTable?
+  rw [Env.find?_cons]
+  by_cases hT : c.name = T
+  · subst hT
+    rw [ite_eq_left rfl, hfresh]
+    simp only [Option.isSome_some, ↓reduceIte, Option.isSome_none, Bool.false_eq_true]
+    rw [List.find?_eq_none]
+    intro t ht hq
+    have hn : t.structName = c.name := by simpa using hq
+    have := (henv.tables t ht).1
+    rw [hn, hfresh] at this
+    exact absurd this (by simp)
+  · rw [ite_eq_right hT]
+
+theorem EnvWF.findProj?_cons {env : Env} (henv : EnvWF env) {c : ConstantInfo}
+    (hfresh : env.find? c.name = none) (T : Name) (i : Nat) :
+    Env.findProj? ⟨c :: env.consts, env.tables⟩ T i = env.findProj? T i := by
   unfold Env.findProj?
-  rw [Env.find?_cons, ite_eq_right hn]
+  rw [henv.findTable?_cons hfresh]
+
+/-- **An extension that keeps the tables keeps the table lookups**
+(task #362): a stored name stays stored, and a table waits for no name
+the prefix lacks, since every stored table's structure is stored. -/
+theorem EnvWF.findTable?_extend {env₀ env : Env} (henv : EnvWF env₀)
+    (hF : ∀ n, (env₀.find? n).isSome = true → (env.find? n).isSome = true)
+    (hT : env.tables = env₀.tables) (T : Name) :
+    env.findTable? T = env₀.findTable? T := by
+  unfold Env.findTable?
+  by_cases h0 : (env₀.find? T).isSome = true
+  · rw [ite_eq_left (hF T h0), ite_eq_left h0, hT]
+  · rw [ite_eq_right h0]
+    split
+    · rw [hT, List.find?_eq_none]
+      intro t ht hq
+      have hn : t.structName = T := by simpa using hq
+      have := (henv.tables t ht).1
+      rw [hn] at this
+      exact h0 this
+    · rfl
+
+theorem EnvWF.findProj?_extend {env₀ env : Env} (henv : EnvWF env₀)
+    (hF : ∀ n, (env₀.find? n).isSome = true → (env.find? n).isSome = true)
+    (hT : env.tables = env₀.tables) (T : Name) (i : Nat) :
+    env.findProj? T i = env₀.findProj? T i := by
+  unfold Env.findProj?
+  rw [henv.findTable?_extend hF hT]
 
 /-- Resolution depends on the environment only through which names it
 finds: every name found in `env` being found in `env'` carries
@@ -268,7 +330,7 @@ theorem Expr.constsResolve_of_find {env env' : Env}
 /-- Resolution is monotone under environment extension. -/
 theorem Expr.constsResolve_mono {c : ConstantInfo} {env : Env} :
     ∀ {e : Expr}, e.constsResolve env = true →
-      e.constsResolve ⟨c :: env.consts⟩ = true :=
+      e.constsResolve ⟨c :: env.consts, env.tables⟩ = true :=
   Expr.constsResolve_of_find fun n h => by
     rw [Env.find?_cons]
     split <;> simp_all
@@ -330,22 +392,27 @@ theorem Expr.find?_isSome_of_piResult_getAppFn_const {env : Env} {e : Expr}
   rw [heq] at h2
   simpa [Expr.constsResolve] using h2
 
+/-- A constant push keeps a table well formed (its structure stays
+found, its bodies keep resolving). -/
+theorem TableWF.cons {c : ConstantInfo} {env : Env} {t : ProjTable} (h : TableWF env t) :
+    TableWF ⟨c :: env.consts, env.tables⟩ t := by
+  obtain ⟨h0, h1, h2⟩ := h
+  refine ⟨?_, h1, fun i b hb => ?_⟩
+  · rw [Env.find?_cons]; split <;> simp_all
+  · obtain ⟨g1, g2, g3, g4⟩ := h2 i b hb
+    exact ⟨g1, g2, Expr.constsResolve_mono g3, g4⟩
+
 /-- Extending with a fresh, well-formed constant preserves `EnvWF`. -/
 theorem EnvWF.cons {c : ConstantInfo} {env : Env}
     (henv : EnvWF env)
-    (hc : ConstWF ⟨c :: env.consts⟩ c) : EnvWF ⟨c :: env.consts⟩ := by
-  intro c' hc'
+    (hc : ConstWF ⟨c :: env.consts, env.tables⟩ c) : EnvWF ⟨c :: env.consts, env.tables⟩ := by
+  refine ⟨fun c' hc' => ?_, fun t ht => (henv.tables t ht).cons⟩
   rcases List.mem_cons.mp hc' with rfl | hmem
   · exact hc
-  · obtain ⟨h1, h2, h3, h4, h5, h6, h8, h9⟩ := henv c' hmem
+  · obtain ⟨h1, h2, h3, h4, h5, h6, h9⟩ := henv.consts c' hmem
     refine ⟨h1, h2, Expr.constsResolve_mono h3, h4, fun cv value hint heq =>
       let ⟨g1, g2, g3, g4⟩ := h5 cv value hint heq
-      ⟨g1, g2, Expr.constsResolve_mono g3, g4⟩, ?_,
-      fun tbl heq =>
-        let ⟨g0, g⟩ := h8 tbl heq
-        ⟨g0, fun i b hb =>
-          let ⟨g1, g2, g3, g4⟩ := g i b hb
-          ⟨g1, g2, Expr.constsResolve_mono g3, g4⟩⟩, h9⟩
+      ⟨g1, g2, Expr.constsResolve_mono g3, g4⟩, ?_, h9⟩
     intro cv mI rP rules heq r hr
     obtain ⟨g1, g2, g3, g4, g5⟩ := h6 cv mI rP rules heq r hr
     refine ⟨g1, g2, Expr.constsResolve_mono g3, g4, ?_⟩
@@ -354,6 +421,42 @@ theorem EnvWF.cons {c : ConstantInfo} {env : Env}
     exact ⟨n1, n2, fun pin hpin =>
       let ⟨p1, p2, p3, p4⟩ := n3 pin hpin
       ⟨p1, p2, Expr.constsResolve_mono p3, p4⟩, n4⟩
+
+/-- Resolution reads the environment only through `find?`. -/
+theorem Expr.constsResolve_eq_of_find {env env' : Env} (h : env'.find? = env.find?)
+    (e : Expr) : e.constsResolve env' = e.constsResolve env := by
+  cases h₁ : e.constsResolve env
+  · cases h₂ : e.constsResolve env'
+    · rfl
+    · have := Expr.constsResolve_of_find (fun n hn => by rw [← h]; exact hn) h₂
+      rw [h₁] at this; exact absurd this Bool.false_ne_true
+  · exact Expr.constsResolve_of_find (fun n hn => by rw [h]; exact hn) h₁
+
+/-- A constant's well-formedness reads the environment only through
+`find?`. -/
+theorem ConstWF.of_find {env env' : Env} (h : env'.find? = env.find?) {c : ConstantInfo}
+    (hc : ConstWF env c) : ConstWF env' c := by
+  unfold ConstWF at hc ⊢
+  simp only [Expr.constsResolve_eq_of_find h]
+  exact hc
+
+/-- A table's well-formedness reads the environment only through
+`find?`. -/
+theorem TableWF.of_find {env env' : Env} (h : env'.find? = env.find?) {t : ProjTable}
+    (ht : TableWF env t) : TableWF env' t := by
+  unfold TableWF at ht ⊢
+  simp only [Expr.constsResolve_eq_of_find h, h]
+  exact ht
+
+/-- **Installing a well-formed table preserves `EnvWF`** (task #362): the
+constants read the environment only through `find?`, which a table
+install leaves alone. -/
+theorem EnvWF.pushTable {env : Env} {t : ProjTable} (henv : EnvWF env)
+    (ht : TableWF env t) : EnvWF ⟨env.consts, t :: env.tables⟩ :=
+  ⟨fun c hc => (henv.consts c hc).of_find (Env.find?_pushTable env t), fun t' ht' => by
+    rcases List.mem_cons.mp ht' with rfl | hmem
+    · exact ht.of_find (Env.find?_pushTable env _)
+    · exact (henv.tables t' hmem).of_find (Env.find?_pushTable env t)⟩
 
 /-- The kernel's name-list distinctness check is `List.Nodup`'s. -/
 theorem nodup_of_nameNodup : ∀ {ns : List Name}, ConLeche.Name.nodup ns = true → ns.Nodup

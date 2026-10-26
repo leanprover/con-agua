@@ -243,7 +243,7 @@ theorem canonPars_of_forests {μ : CheckMode} {F : Nat} {envC envI : Env} {pp : 
   obtain ⟨-, -, -, -, -, -, hcore, -⟩ := hctx
   have h0' : cvTasR[0]? = some cvTa0 := by rw [List.head?_eq_getElem?] at hcv0; exact hcv0
   obtain ⟨hf0, -⟩ := hcore.1 0 cvTa0 h0'
-  have hw0 := mpC.base2.wf _ (List.mem_of_find?_eq_some hf0)
+  have hw0 := mpC.base2.wf.consts _ (List.mem_of_find?_eq_some hf0)
   exact canonPars_of_open hop0 ⟨Expr.WScoped.of_not_hasFvar hw0.1, hw0.2.2.2.1⟩
 
 set_option maxHeartbeats 16000000 in
@@ -487,7 +487,7 @@ theorem genNodeCalls {μ : CheckMode} (hμ : μ.isVerified = true) {F : Nat}
               ConLeche.BlockShape.memberNames] using h1⟩
       obtain ⟨hnamesD, hnPD, hnIdxsD, hkD, hmk⟩ := hfacts
       obtain ⟨hfC, -⟩ := hcore.2.2 m hmk j cA hcj
-      have hw := mpC.base2.wf _ (List.mem_of_find?_eq_some hfC)
+      have hw := mpC.base2.wf.consts _ (List.mem_of_find?_eq_some hfC)
       -- the member forest
       obtain ⟨crest, ks, ts, hcrest, hd, ⟨ty, u, hty, hsort⟩, hforest, he⟩ :=
         hMF m _ (by rw [hcsR, ← hctM]) j cA hcj

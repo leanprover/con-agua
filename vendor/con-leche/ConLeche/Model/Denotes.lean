@@ -281,26 +281,13 @@ theorem Denotes_of_denote {acval : Name → (Name → Nat) → Term}
     rwa [Expr.closeN_instantiate1 body 0 hlb'.2 hfb'.2.2] at hb
   | case10 d sn i e ihe =>
     intro ta h hfb hlb ρ
-    obtain ⟨ia, hia, hcase⟩ := denote_proj_inv h
+    obtain ⟨ia, entry, hia, hfp, rfl⟩ := denote_proj_inv h
     have hfb' : Expr.fvarsBelow d e := hfb
     have hlb' : e.looseBVarsBounded 0 = true := hlb
     show Denotes _ _ _ _ (Expr.proj sn i (closeN d e 0)) _
-    rcases hcase with ⟨entry, hfp, rfl⟩ | ⟨hfp, hdec⟩
-    · have hie := ihe hia hfb' hlb' ρ
-      rw [projNV_interp, ← field_eq_projS]
-      exact Denotes.proj_table hfp hie
-    · match i, hdec with
-      | 0, hdec =>
-        obtain rfl := Option.some.inj hdec
-        have hie := ihe hia hfb' hlb' ρ
-        rw [interp_fst]
-        exact Denotes.proj_fst hfp hie
-      | 1, hdec =>
-        obtain rfl := Option.some.inj hdec
-        have hie := ihe hia hfb' hlb' ρ
-        rw [interp_snd]
-        exact Denotes.proj_snd hfp hie
-      | _ + 2, hdec => exact nomatch hdec
+    have hie := ihe hia hfb' hlb' ρ
+    rw [projNV_interp, ← field_eq_projS]
+    exact Denotes.proj_table hfp hie
   | case11 d k hsup =>
     intro ta h _ _ ρ
     rw [denote, ite_eq_left hsup] at h
@@ -346,7 +333,7 @@ noncomputable def Model.ofEnvModelM {μ : ConLeche.CheckMode} {env : Env}
   mem := by
     intro c hc φ ρ
     obtain ⟨ta, hta⟩ := m.type_reads c hc φ
-    have hwf := m.base2.wf c hc
+    have hwf := m.base2.wf.consts c hc
     have hnf : c.toConstantVal.type.hasFvar = false := hwf.1
     have hlb : c.toConstantVal.type.looseBVarsBounded 0 = true := hwf.2.2.2.1
     have hbr := Denotes_of_denote (V := V) m.base2.cval_closed 0

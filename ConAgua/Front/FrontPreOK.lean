@@ -7,9 +7,8 @@ import ConAgua.Checker.FrontProg
 # The frontend after the prelude, with the records' words (lane `pipeline`)
 
 `frontAll_refines_pre_ok`: `frontAll_refines_pre` (`FrontPre.lean`) where, in addition, every record
-of `DECL` before the run is `RecOK` (`Checker/HoistRefBase.lean`); then every record after it is,
-and the twin's records are walkable (`WalkableDecl`, `Checker/HoistWalkRef.lean`: an inductive
-block holds no projection table). The run is `runI_refines` with the stronger invariant
+of `DECL` before the run is `RecOK` (`Checker/HoistRefBase.lean`); then every record after it is.
+The run is `runI_refines` with the stronger invariant
 `FrontInvOK`. The memory side of a line is `DGrow` (`FrontPreOK1.lean`‥`FrontPreOK3.lean`); the
 twin side is that a line pushes at most one record, and an inductive block of `indInfo`, `ctorInfo`
 and `recInfo` constants (`applyLine_decls`). A pointer word of an inductive record decodes to one
@@ -35,14 +34,6 @@ def GoodCI : IConstantInfo → Prop
 def GoodDecl : IDeclaration → Prop
   | .indDecl b _ => ∀ ci ∈ b, GoodCI ci
   | _ => True
-
-theorem GoodDecl.walkable {d : IDeclaration} (h : GoodDecl d) : L.Checker.WalkableDecl d := by
-  cases d with
-  | indDecl b nP =>
-    intro ci hci
-    have := h ci hci
-    cases ci <;> simp_all [GoodCI, IConstantInfo.isTowerEntry]
-  | _ => trivial
 
 /-- Every result of `x` satisfies `P`. -/
 def Post {α : Type} (x : AM α) (P : α → Prop) : Prop :=
@@ -408,8 +399,7 @@ theorem frontAll_refines_pre_ok (b : ByteArray) (h64 : System.Platform.numBits =
     invoke frontAllProg (exec frontAllProg n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
       ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st' ∧ ModeOK s'.mem ∧
-      (∀ x < D.size + st'.decls.size, L.Checker.RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x) ∧
-      ∀ d ∈ st'.decls, L.Checker.WalkableDecl d; ⊤⦄ := by
+      (∀ x < D.size + st'.decls.size, L.Checker.RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x); ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun h0
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
@@ -427,26 +417,23 @@ theorem frontAll_refines_pre_ok (b : ByteArray) (h64 : System.Platform.numBits =
         (FrontInvOK D b) _ (initKW_inv_ok D b h64 hsize) s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins, hR, hmode⟩
         n s₁ hs₁) rfl n s₀ hm rfl)
   rw [h0] at hW
-  obtain ⟨st', a', h1, ⟨-, h2, h3, h4, hM⟩, h5, h6⟩ :=
+  obtain ⟨st', a', h1, ⟨-, h2, h3, h4, hM⟩, h5, -⟩ :=
     frontRunW_refines_pre_ok D b h64 hsize frontAllProg frontAllProg_indFields frontAllProg_indApply
       frontAllProg_indInstall frontAllProg_indLine s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hR hmode hW
-  exact ⟨st', a', h1, h2, h3, h4, hM, h5, fun d hd => (h6 d hd).walkable⟩
+  exact ⟨st', a', h1, h2, h3, h4, hM, h5⟩
 
-/-- **The same at the checker's program** (`checkerProg_front_run`). The walkability of `D` is not
-used (the twin's records are walkable on their own). -/
+/-- **The same at the checker's program** (`checkerProg_front_run`). -/
 theorem frontRunOK_checker (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
     (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
-    (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x) (hmode : ModeOK s₀.mem)
-    (_hW : ∀ d ∈ D, L.Checker.WalkableDecl d) :
+    (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke L.Checker.checkerProg (exec L.Checker.checkerProg n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
       ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st' ∧ ModeOK s'.mem ∧
-      (∀ x < D.size + st'.decls.size, L.Checker.RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x) ∧
-      ∀ d ∈ st'.decls, L.Checker.WalkableDecl d; ⊤⦄ := by
+      (∀ x < D.size + st'.decls.size, L.Checker.RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x); ⊤⦄ := by
   rw [L.Checker.checkerProg_front_run n]
   exact frontAll_refines_pre_ok D b h64 hsize n s₀ hm hpool a₀ hA hD hok hoff hpins hR hmode
 

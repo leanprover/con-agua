@@ -16,7 +16,7 @@ The environment-extension transports that are `V`-free (task #148).
 Contents: the literal-guard monotonicity family
 (`natLitSupported_cons`, `strLitSupported_cons`, `natOpGuard_cons`) and
 the projection-table transport (`findProj?_cons_of_base_none`,
-`ProjOkT.cons`).
+`ProjOkT.cons`, `ProjOkT.pushTable`).
 -/
 
 set_option linter.unusedVariables false
@@ -25,21 +25,17 @@ namespace ConLeche.Verify
 
 open ConLeche.Term
 
-/-- A fresh cons that is not a projection table cannot create a table
-lookup where none existed. -/
-theorem findProj?_cons_of_base_none {env : Env} {c₀ : ConstantInfo}
-    (hntc : ∀ tbl, c₀ ≠ .projInfo tbl) :
+/-- A fresh cons cannot create a table lookup where none existed: a
+stored table's structure is stored (`EnvWF`), so no table waits for the
+fresh name (task #362). -/
+theorem findProj?_cons_of_base_none {env : Env} {c₀ : ConstantInfo} (hwf : EnvWF env)
+    (hfresh : env.find? c₀.name = none) :
     ∀ (sn : Name) (i : Nat),
       env.findProj? sn i = none →
-      Env.findProj? ⟨c₀ :: env.consts⟩ sn i = none := by
+      Env.findProj? ⟨c₀ :: env.consts, env.tables⟩ sn i = none := by
   intro sn i h0
-  by_cases hn : c₀.name = projTableName sn
-  · have hf : (⟨c₀ :: env.consts⟩ : Env).find? (projTableName sn) = some c₀ := by
-      rw [Env.find?_cons, ite_eq_left hn]
-    unfold Env.findProj?
-    rw [hf]
-    cases c₀ <;> first | rfl | exact absurd rfl (hntc _)
-  · rw [Env.findProj?_cons_ne hn]; exact h0
+  rw [hwf.findProj?_cons hfresh]
+  exact h0
 
 
 /-! ## The guards are monotone, not merely congruent
@@ -58,7 +54,7 @@ The resulting monotonicity lemmas take a single hypothesis
 /-- The `Nat`-literal guard is monotone under a fresh install. -/
 theorem natLitSupported_cons {env : Env} {c₀ : ConstantInfo}
     (hfresh : env.find? c₀.name = none) (h : natLitSupported env = true) :
-    natLitSupported ⟨c₀ :: env.consts⟩ = true := by
+    natLitSupported ⟨c₀ :: env.consts, env.tables⟩ = true := by
   simp only [natLitSupported, Bool.and_eq_true] at h ⊢
   obtain ⟨⟨h1, h2⟩, h3⟩ := h
   have i1 : (env.find? natName).isSome = true := by
@@ -74,7 +70,7 @@ theorem natLitSupported_cons {env : Env} {c₀ : ConstantInfo}
 /-- The `String`-literal guard is monotone under a fresh install. -/
 theorem strLitSupported_cons {env : Env} {c₀ : ConstantInfo}
     (hfresh : env.find? c₀.name = none) (h : strLitSupported env = true) :
-    strLitSupported ⟨c₀ :: env.consts⟩ = true := by
+    strLitSupported ⟨c₀ :: env.consts, env.tables⟩ = true := by
   simp only [strLitSupported, Bool.and_eq_true] at h ⊢
   obtain ⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩ := h
   have i1 : (env.find? stringName).isSome = true := by
@@ -100,7 +96,7 @@ theorem strLitSupported_cons {env : Env} {c₀ : ConstantInfo}
 /-- The `Nat`-operation guard is monotone under a fresh install. -/
 theorem natOpGuard_cons {env : Env} {c₀ : ConstantInfo} {c : Name}
     (hfresh : env.find? c₀.name = none) (h : natOpGuard env c = true) :
-    natOpGuard ⟨c₀ :: env.consts⟩ c = true := by
+    natOpGuard ⟨c₀ :: env.consts, env.tables⟩ c = true := by
   simp only [natOpGuard, Bool.and_eq_true] at h ⊢
   obtain ⟨⟨h0, hdeps⟩, hbool⟩ := h
   refine ⟨⟨natLitSupported_cons hfresh h0, ?_⟩, ?_⟩
@@ -172,7 +168,7 @@ theorem natOpTyPinned_of_find {env env' : Env} {c : Name} {ty : Expr}
 /-- The pinned operation type is monotone under a fresh install. -/
 theorem natOpTyPinned_cons {env : Env} {c₀ : ConstantInfo} {c : Name} {ty : Expr}
     (hfresh : env.find? c₀.name = none) (h : natOpTyPinned env c ty = true) :
-    natOpTyPinned ⟨c₀ :: env.consts⟩ c ty = true :=
+    natOpTyPinned ⟨c₀ :: env.consts, env.tables⟩ c ty = true :=
   natOpTyPinned_of_find (fun ci hf =>
     ⟨ci, by rw [Env.find?_cons_of_isSome hfresh (by rw [hf]; rfl)]; exact hf, rfl⟩) h
 
@@ -181,26 +177,33 @@ theorem natOpTyPinned_cons {env : Env} {c₀ : ConstantInfo} {c : Name} {ty : Ex
 The head case is a hypothesis (the install must establish its own
 constant's law), and everything else transports. -/
 
-/-- The projection-table discipline survives an install.  A head that
-is a table supplies its own head data (task #175 wiring W5); the
-stored tables' head data survives by freshness. -/
-theorem ProjOkT.cons {env : Env} {c₀ : ConstantInfo} (h : ProjOkT env)
-    (hfresh : env.find? c₀.name = none)
-    (hheadTower : ∀ tbl, c₀ = .projInfo tbl →
-      ∀ i, i < tbl.numFields → TowerHead ⟨c₀ :: env.consts⟩ (tbl.entry i)) :
-    ProjOkT ⟨c₀ :: env.consts⟩ := by
+/-- The projection-table discipline survives a fresh constant's
+install: the stored tables stay (`EnvWF.findTable?_cons`) and so does
+their head data. -/
+theorem ProjOkT.cons {env : Env} {c₀ : ConstantInfo} (h : ProjOkT env) (hwf : EnvWF env)
+    (hfresh : env.find? c₀.name = none) :
+    ProjOkT ⟨c₀ :: env.consts, env.tables⟩ := by
   have hkeep : ∀ (n : Name) (ci : ConstantInfo),
       (∀ cv mI rP rules, ci ≠ .recInfo cv mI rP rules) →
-      env.find? n = some ci → (⟨c₀ :: env.consts⟩ : Env).find? n = some ci := by
+      env.find? n = some ci → (⟨c₀ :: env.consts, env.tables⟩ : Env).find? n = some ci := by
     intro n ci _ hf
     rw [Env.find?_cons_of_isSome hfresh (by rw [hf]; rfl)]; exact hf
-  intro n tbl hf i hi
-  by_cases hn : c₀.name = n
-  · subst hn
-    rw [Env.find?_cons, ite_eq_left rfl] at hf
-    exact hheadTower tbl (Option.some.inj hf) i hi
-  · rw [Env.find?_cons, ite_eq_right hn] at hf
-    exact TowerHead.mono hkeep (h n tbl hf i hi)
+  intro T tbl hf i hi
+  rw [hwf.findTable?_cons hfresh] at hf
+  exact TowerHead.mono hkeep (h T tbl hf i hi)
+
+/-- **The projection-table discipline survives a table's install**
+(task #362): the new table supplies its own head data, the others keep
+theirs (a table install leaves the constants alone). -/
+theorem ProjOkT.pushTable {env : Env} {t : ProjTable} (h : ProjOkT env)
+    (hhead : ∀ i, i < t.numFields → TowerHead env (t.entry i)) :
+    ProjOkT ⟨env.consts, t :: env.tables⟩ := by
+  intro T tbl hf i hi
+  rw [Env.findTable?_pushTable] at hf
+  split at hf
+  · cases hf
+    exact hhead i hi
+  · exact h T tbl hf i hi
 
 /-! ## The one-name update -/
 
@@ -243,7 +246,7 @@ theorem acvalWith_params {acval : Name → (Name → Nat) → Term}
       (∀ p ∈ c₀.toConstantVal.levelParams, ψ₁ p = ψ₂ p) →
       A ψ₁ = A ψ₂) :
     ∀ (m : Name) (ci : ConLeche.ConstantInfo),
-      (⟨c₀ :: env.consts⟩ : Env).find? m = some ci →
+      (⟨c₀ :: env.consts, env.tables⟩ : Env).find? m = some ci →
       ∀ ψ₁ ψ₂ : Name → Nat,
         (∀ p ∈ ci.toConstantVal.levelParams, ψ₁ p = ψ₂ p) →
         acvalWith acval c₀.name A m ψ₁

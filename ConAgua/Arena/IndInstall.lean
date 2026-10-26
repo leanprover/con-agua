@@ -673,7 +673,7 @@ def checkBlockRec : FunDecl := lfn
 /-- `check_block_tables_one(p, m, cs.off, ss.off, vis)`: one structure-like member's (one
 constructor, no index) projection table install (`nP + nF + 1` past `2^64` a capacity abort:
 the twin's `structProjGuards` computes it in `Nat`). -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:86-105 ConRon.Arena.checkBlockTables
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:86-104 ConRon.Arena.checkBlockTables
 @[l_impl ConRon.Arena.checkBlockTables]
 def checkBlockTablesOne : FunDecl := lfn (p, m, csOff, ssOff, vis) locals
     (ctorPtr, cA, nF, sortsPtr, sortsO, sortsL, lpsO, lpsL, guardsO, guardsL, vis2) {
@@ -683,14 +683,14 @@ def checkBlockTablesOne : FunDecl := lfn (p, m, csOff, ssOff, vis) locals
   (guardsO, guardsL) := call struct_proj_guards(EREC.u64[cA + 3], IW.u64[p + 4], nF, sortsO, sortsL);
   (lpsO, lpsL) := call block_shape_lps(p);
   vis2 := call check_struct_proj_table(EREC.u64[IW.u64[m]], EREC.u64[cA], lpsO, lpsL,
-    IW.u64[p + 4], nF, IW.u64[p + 6], guardsO, guardsL, 1, cA, vis);
+    IW.u64[p + 4], nF, IW.u64[p + 6], guardsO, guardsL, cA, vis);
   return vis2
 }
 
 /-- `check_block_tables(p, ms.off, ms.len, cs.off, cs.len, ss.off, ss.len, vis)`: the projection
 table at every structure-like member, the three lists walked side by side, stopping at the
 shortest; recursion as the twin's. -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:86-105 ConRon.Arena.checkBlockTables
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:86-104 ConRon.Arena.checkBlockTables
 @[l_impl ConRon.Arena.checkBlockTables]
 def checkBlockTables : FunDecl := lfn (p, msO, msL, csO, csL, ssO, ssL, vis) locals
     (m, csp, ssp, vis2) {
@@ -715,7 +715,7 @@ def checkBlockTables : FunDecl := lfn (p, msO, msL, csO, csL, ssO, ssL, vis) loc
 /-- `check_block_tail(block.off, block.len, q)`: the install after the pass — the index binders'
 sorts, the constructors consed (with the flush entering that environment), the container bit, then
 `check_block_tail_rec` (`q` a `BlockPass` pointer). -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:107-122 ConRon.Arena.checkBlockTail
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:106-121 ConRon.Arena.checkBlockTail
 @[l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTail : FunDecl := lfn (blockO, blockL, q) locals
     (env1, p, isoO, isoL, fe2, u, nested, fe4) {
@@ -732,7 +732,7 @@ def checkBlockTail : FunDecl := lfn (blockO, blockL, q) locals
 /-- `check_block_tail_rec(block.off, block.len, q, p, fe2, nested)`: the rest of the tail — the
 recursor stage at the constructors' environment `fe2`, the recursors consed at their majors (the
 rules' lookups bounded at `fe2`), and the projection tables. -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:107-122 ConRon.Arena.checkBlockTail
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:106-121 ConRon.Arena.checkBlockTail
 @[l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTailRec : FunDecl := lfn (blockO, blockL, q, p, fe2, nested) locals
     (fe2b, outO, outL, fe3, fe4) {
@@ -747,7 +747,7 @@ def checkBlockTailRec : FunDecl := lfn (blockO, blockL, q, p, fe2, nested) local
 
 /-- `check_block(vis, boff, blen, p)`: check and install a block on the uniform route — the
 distinct names, the flush, the pass at official's `is_rec`, and the install after it. -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:124-137 ConRon.Arena.checkBlock
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:123-136 ConRon.Arena.checkBlock
 @[l_impl ConRon.Arena.checkBlock]
 def checkBlock : FunDecl := lfn (vis, blockO, blockL, p0) locals
     (ctO, ctL, cnO, cnL, nmO, nmL, nd1, nd2, u, raw, q, fe) {

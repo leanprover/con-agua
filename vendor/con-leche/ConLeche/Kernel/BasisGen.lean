@@ -155,8 +155,6 @@ private def qConstantInfo : ConLeche.ConstantInfo → CoreM Lean.Expr
     pure (mkAppN (mkConst ``ConLeche.ConstantInfo.recInfo)
       #[qConstantVal cv, mkRawNatLit mI, mkRawNatLit rP,
         qList recRuleTy (rules.map qRecRule)])
-  | .projInfo _ =>
-    throwError "#stored_basis: a projection table is not a pinnable declaration"
 
 /-! ## The recipe -/
 
@@ -237,7 +235,7 @@ def elabStoredBasis : CommandElab := fun stx => do
     let id := e[1]
     let rawStx := e[3]
     let raw ← liftTermElabM (evalInfo rawStx)
-    let ci := pinRecRuleFields ⟨consts⟩ raw
+    let ci := pinRecRuleFields ⟨consts, []⟩ raw
     liftTermElabM do
       splice ((← getCurrNamespace) ++ id.getId) constantInfoTy (← qConstantInfo ci)
     consts := ci :: consts

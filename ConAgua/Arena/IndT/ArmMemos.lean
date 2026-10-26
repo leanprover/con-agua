@@ -22,7 +22,7 @@ open L.Arena
 /-! ## `RcMR` across a writer of the `hb` memo alone -/
 
 /-- Every word array below 320 (both tiers) but the recursor check's memos other than `hb`'s. -/
-def rcHbFreeA : List ArrId := (List.range 320).filter (fun b => b ∉ [NOM, DPM, RAM, RFM, TAM])
+def rcHbFreeA : List ArrId := (List.range 388).filter (fun b => b ∉ [NOM, DPM, RAM, RFM, TAM])
 /-- Every `CTL` word below 256 but those memos' control words. -/
 def rcHbFreeC : List Word :=
   ((List.range 256).filter (fun c => c ∉ [204, 206, 208, 210, 212, 213, 218, 219])).map Nat.toUInt64
@@ -63,12 +63,12 @@ theorem RcMR.ofClosedHb {p : Prog} {fs : List FnName} (hcl : closedA p rcHbFreeA
 /-! ## `maMR`, `mcMR` across writers outside them -/
 
 /-- Every word array below 320 (both tiers) but `mentions_any`'s memo. -/
-def maFreeA : List ArrId := (List.range 320).filter (· ≠ MAM)
+def maFreeA : List ArrId := (List.range 388).filter (· ≠ MAM)
 /-- Every `CTL` word below 256 but its control words. -/
 def maFreeC : List Word := ((List.range 256).filter (fun c => c ≠ 202 ∧ c ≠ 203)).map Nat.toUInt64
 
 /-- Every word array below 320 (both tiers) but `mentions_const`'s memo. -/
-def mcFreeA : List ArrId := (List.range 320).filter (· ≠ MCM)
+def mcFreeA : List ArrId := (List.range 388).filter (· ≠ MCM)
 /-- Every `CTL` word below 256 but its control words. -/
 def mcFreeC : List Word := ((List.range 256).filter (fun c => c ≠ 216 ∧ c ≠ 217)).map Nat.toUInt64
 

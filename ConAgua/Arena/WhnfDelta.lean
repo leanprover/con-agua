@@ -504,7 +504,7 @@ def reduceNatL : FunDecl :=
 
 /-- `whnf_step(mode, vis, d, e)`: one iteration of the reduction loop (`decStep`): head-normalize
 without delta, try literal acceleration, unfold one definition. -/
--- con-ron: ConRon/Arena/Core.lean:2404-2419 ConRon.Arena.whnfStep
+-- con-ron: ConRon/Arena/Core.lean:2405-2420 ConRon.Arena.whnfStep
 @[l_impl ConRon.Arena.whnfStep]
 def whnfStepL : FunDecl := lfn (mode, vis, d, e) locals (e1, fl, e2, fl2, e3) {
   e1 := call whnf_core(mode, 0, vis, d, e);
@@ -527,7 +527,7 @@ def whnfLoopB : Stmt := lblk (mode, vis, d, e, fl, x) {
 /-- `whnf_loop(mode, vis, d, e)`: the reduction loop, iterating `whnf_step` on its own (effectively
 unbounded, `2^62`) step budget — an uncounted L `while` (the convention: the twin's loop fuels are
 not counted in L, since an L `while` already costs L fuel per iteration). -/
--- con-ron: ConRon/Arena/Core.lean:2432-2435 ConRon.Arena.whnfBody
+-- con-ron: ConRon/Arena/Core.lean:2433-2436 ConRon.Arena.whnfBody
 @[l_impl ConRon.Arena.whnfBody]
 def whnfLoopL : FunDecl := lfn (mode, vis, d, e) locals (fl, x) {
   ⟪whnfLoopB⟫;
@@ -538,7 +538,7 @@ def whnfLoopL : FunDecl := lfn (mode, vis, d, e) locals (fl, x) {
 `forallE`, `lit`; `whnfStuckTag`) return `e` untouched; else the `whnfC` memo at the current
 eager bit (the mode's, `((mode >> 1) & 1) << 32`, array 98): a hit returns the stored handle, a miss runs `whnf_loop`,
 probes again (the loop may have changed the table) and inserts. -/
--- con-ron: ConRon/Arena/Core.lean:2154-2166 ConRon.Arena.whnfStuckTag
+-- con-ron: ConRon/Arena/Core.lean:2155-2167 ConRon.Arena.whnfStuckTag
 @[l_impl ConRon.Arena.whnfStuckTag]
 def whnfL : FunDecl := lfn (mode, vis, d, e) locals (t, fd, j, dd, x, z) {
   t := e >> 28;

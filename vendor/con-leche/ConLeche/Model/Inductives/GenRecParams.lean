@@ -215,7 +215,7 @@ theorem genMemberRec_paramDefeq (hμ : μ.isVerified = true) (hwf : ConLeche.Env
           ∀ l, l < p.nP → ∃ D b, instPisWith (xs.take l) cvT.type = some (.forallE D b) ∧
             ConLeche.isDefEqCore μ envC F' p.nP ((xs.map Expr.fvarTypeD).getD l default) D
               = .ok true := by
-  obtain ⟨-, -, -, -, -, hfv0, -, -, stype, u0, hinf, -⟩ :=
+  obtain ⟨-, -, -, -, hfv0, -, -, stype, u0, hinf, -⟩ :=
     ConLeche.classConstOk_inv T.hcv
   rw [T.hcvG] at hfv0 hinf
   generalize htyG : T.gty = type at hfv0 hinf

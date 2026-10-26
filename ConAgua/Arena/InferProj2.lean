@@ -12,9 +12,8 @@ the twin fails (`projMissError`'s verdict, an error).
 **`inferProj_refines : InferProjProg p → InferProjCallees p → InferProjOK p`**, closing
 `InferCallees.proj` (`InferBodyDisp.lean`).
 
-Twin-side facts proved here: `findProj?` keeps every level-list readback (it interns the table's
-name, `projTableName`; `EStore.internName_ext`) and answers only entries below the table's field
-count.
+Twin-side facts used here: `findProj?` is a pure lookup that answers only entries below the table's
+field count (`findProj?_lt`).
 -/
 
 open ConRon.Arena
@@ -25,45 +24,6 @@ set_option experimental.vcgen true
 set_option linter.unusedSimpArgs false
 
 namespace L.Arena
-
-/-! ## The twin's lookup -/
-
-/-- **`internNNode` extends the store.** -/
-theorem internNNode_ext' (v : NNodeView) (a a' : AState) (h : NIdx)
-    (hr : (internNNode v).run a = .ok (h, a')) : Ext a.store a'.store := by
-  unfold internNNode at hr
-  simp only [StateT.run_bind, StateT.run_get, pure_bind] at hr
-  split at hr
-  · cases hr; exact Ext.refl _
-  · rename_i hn
-    by_cases hc : (if a.store.ns.scratchOn then a.store.ns.scr.sizeOf v
-        else a.store.ns.pers.sizeOf v) < Idx.idxCap
-    · simp only [hc, ↓reduceIte, StateT.run_bind, StateT.run_set, pure_bind] at hr
-      cases hr; exact EStore.internName_ext _ _
-    · simp only [hc, ↓reduceIte] at hr
-      cases hr
-
-/-- **`findProj?` keeps every level-list readback** (it only interns the table's name). -/
-theorem findProj?_lss (fe : IFEnv) (T : NIdx) (i : Nat) (a a' : AState) (o : Option IProjEntry)
-    (hr : (fe.findProj? T i).run a = .ok (o, a')) (h : LsIdx) (ls : List ConLeche.Level)
-    (hd : denoteLs a.store.lss h = some ls) : denoteLs a'.store.lss h = some ls := by
-  simp only [IFEnv.findProj?, projTableName, StateT.run_bind] at hr
-  cases h1 : (internNNode (.str T "projTable")).run a with
-  | error e => rw [h1] at hr; cases hr
-  | ok x =>
-  rw [h1] at hr
-  simp only [except_ok_bind] at hr
-  cases h2 : (internNNode (.num x.1 0)).run x.2 with
-  | error e => rw [h2] at hr; cases hr
-  | ok y =>
-  rw [h2] at hr
-  simp only [except_ok_bind] at hr
-  have e1 := internNNode_ext' _ _ _ _ h1
-  have e2 := internNNode_ext' _ _ _ _ h2
-  have hy : a' = y.2 := by
-    split at hr <;> (cases hr; rfl)
-  rw [hy]
-  exact e2.lss.lst h ls (e1.lss.lst h ls hd)
 
 /-! ## The model of `infer_proj` -/
 
@@ -202,7 +162,8 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
   obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases (K := ipK4 p n vis sn i pe (r₂.headD 0) wT wu) rfl hW
   simp only [ipK4] at hW
   have h₄ := CoreSpec.of_callW (hc.findProj n ⟨m₃, Locals.init []⟩ _ dn vis fe M₂ eb wT i hS₂ hcTw) hc4
-  have hrun4 := ipRun_of_ref h₄
+  have hrun4 : fe.findProj? (decI wT) i.toNat =
+      decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat := h₄.2.2.1
   obtain ⟨-, ⟨M₄, hS₄, hK₄, hSt₄⟩, -, -⟩ := h₄
   have hE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hc.erec n "find_proj" _ m₃ r₄ m₄ (Or.inl rfl) hc4
   obtain ⟨g4, hW⟩ := of_ite_none hW
@@ -213,7 +174,7 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
   rw [hde] at hrun4
   have hq₄ : decTbl (m₄.arr64 EREC) (r₄.tail.headD 0).toNat = some tbl := by rw [hE₄]; exact hdt
   have hi : i.toNat < tbl.numFields := findProj?_lt hrun4
-  have hdu₄ := findProj?_lss fe _ _ _ _ _ hrun4 _ _ hdu
+  have hdu₄ := hdu
   -- `infer_proj_at`
   cases n with
   | zero => simp [call1W, callW_zero] at hW
@@ -222,7 +183,7 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
     ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb sn i pe (r₂.headD 0) wT wu (r₄.tail.headD 0) tbl hS₄ hq₄ hfe
     hi hcuw hrw2 hpe ⟨lsu, hdu₄⟩) (fun r r' h => by simp only [decH, h]) hW
   refine ipRef_trans ?_ h₅ (hK₁.trans (hK₂.trans hK₄)) (hSt₁.trans (hSt₂.trans hSt₄))
-  exact inferProj_hit R fe d.toNat (decI sn) i.toNat (decE pe) a₀ _ _ _ _ _ _ _ _ _ hrun1 hrun2 hgaf
+  exact inferProj_hit R fe d.toNat (decI sn) i.toNat (decE pe) a₀ _ _ _ _ _ _ _ _ hrun1 hrun2 hgaf
     (by rw [decE_const_tag _ hhw]; simpa using g1') hv hrun4
 
 /-- **`infer_proj` refines `inferProj` at both grades** (`InferProjOK`, `InferBodyDisp.lean`):

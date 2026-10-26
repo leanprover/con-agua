@@ -71,7 +71,7 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 Each stub is a not-yet-translated callee; the spec is what the real code will have to prove. -/
 
 /-- The promotion's two entries are `Promote.lean`'s `promote_vg(g, vis)` and
-`promote_new(k, vis, fresh)` (program: `PromoteProg`). `promote_vg` refines `promoteVG
+`promote_new(k, kt, vis, fresh)` (program: `PromoteProg`). `promote_vg` refines `promoteVG
 PMemo.empty coreWalkFuel` under the loop's relation (`PromoteRecRef.lean`'s `vg_rel`). -/
 @[refines ConRon.Arena.promoteVG]
 theorem promoteVG_spec (hpr : PromoteProg p) :
@@ -110,7 +110,10 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
   · exact hR.check.env.grow (fun b h1 h2 h3 => hf.1 b (fun h => by
         have := hA b h; simp only [ArrId] at *; omega)
       (by simp only [CTL, ArrId]; omega)) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
-      hg
+      hg (TblSame.of_frame (fun b hb => by have := hA b hb; simp only [ArrId] at *; omega)
+        (fun b hb => by have := hA b hb; simp only [ArrId] at *; omega)
+        (fun h => by have := hA _ h; simp only [ETAB, ArrId] at *; omega)
+        (fun h => by have := hC _ h; simp at this) hf)
   · exact ModeOK.of_keep hR.check.mode (hf.2.1 1 (by decide)) htk
   · exact hR.pend.ext (hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide))
       (hf.2.1 130 (fun h => by have := hC _ h; simp at this)) hg.ext
@@ -125,21 +128,32 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
       (hf.2.1 150 (fun h => by have := hC _ h; simp at this))
       (hf.2.1 151 (fun h => by have := hC _ h; simp at this))
 
+/-- `tbl_grown(nt)` under the loop's relation: the tables list's length minus `nt`. -/
+theorem tblGrown_loop (hpr : PromoteProg p) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
+      (nt : Word), LoopR pins dn s₀.mem a₀ vis fe pend ds →
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "tbl_grown" [nt]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      (r.headD 0).toNat = fe.env.tables.length - nt.toNat; ⊤⦄ := by
+  intro n s₀ a₀ vis fe pend nt hR
+  refine triple_post (tblGrown_spec p hpr n s₀ nt) fun r s' ⟨h1, h2, h3⟩ => ⟨h1, h2, ?_⟩
+  rw [h3, hR.check.env.tables_length]
+
 theorem promoteNew_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (k fresh : Word) (pm : PMemo), (if fresh = 0 then PMemoR s₀.mem pm else pm = PMemo.empty) →
+      (k kt fresh : Word) (pm : PMemo), (if fresh = 0 then PMemoR s₀.mem pm else pm = PMemo.empty) →
       LoopR pins dn s₀.mem a₀ vis fe pend ds → k.toNat ≤ vis.toNat →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "promote_new" [k, vis, fresh]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (promoteNew pm coreWalkFuel k.toNat fe) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (promoteNew pm coreWalkFuel k.toNat fe) a₀) vis
-        (AM.res (promoteNew pm coreWalkFuel k.toNat fe) a₀).2 pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend k fresh pm hpm hR hk
-  refine triple_post (callW_spec p n "promote_new" [k, vis, fresh] s₀) fun r s' ⟨hl, hc⟩ => ?_
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "promote_new" [k, kt, vis, fresh]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀ ∧
+      LoopR pins dn s'.mem (AM.st (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀) vis
+        (AM.res (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀).2 pend ds; ⊤⦄ := by
+  intro n s₀ a₀ vis fe pend k kt fresh pm hpm hR hk
+  refine triple_post (callW_spec p n "promote_new" [k, kt, vis, fresh] s₀) fun r s' ⟨hl, hc⟩ => ?_
   obtain ⟨a', pm', fe', hrun, hLoop⟩ :=
-    promoteNew_rel p hpr dn n s₀.mem a₀ pm k vis fresh fe pend ds r s'.mem hpm hR hk hc
-  have hok : AM.ok (promoteNew pm coreWalkFuel k.toNat fe) a₀ := by simp [AM.ok, hrun]
-  have hst : AM.st (promoteNew pm coreWalkFuel k.toNat fe) a₀ = a' := by simp [AM.st, hrun]
-  have hres : AM.res (promoteNew pm coreWalkFuel k.toNat fe) a₀ = (pm', fe') := by
+    promoteNew_rel p hpr dn n s₀.mem a₀ pm k kt vis fresh fe pend ds r s'.mem hpm hR hk hc
+  have hok : AM.ok (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀ := by simp [AM.ok, hrun]
+  have hst : AM.st (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀ = a' := by simp [AM.st, hrun]
+  have hres : AM.res (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀ = (pm', fe') := by
     simp [AM.res, hrun]
   rw [hst, hres]
   exact ⟨hl, hok, hLoop⟩
@@ -367,49 +381,50 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
 section twin
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet)
 
-/-- `installStep`'s `none` arm, named. -/
-def isNoneT (vis : Nat) (fe' : IFEnv) (pend : Array PendingCheck) :
+/-- `installStep`'s `none` arm, named (`nt` the table count before the step). -/
+def isNoneT (vis nt : Nat) (fe' : IFEnv) (pend : Array PendingCheck) :
     AM (IFEnv × Array PendingCheck) := do
-  let r ← promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis) fe'
+  let r ← promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis)
+    (fe'.env.tables.length - nt) fe'
   dropScratch
   pure (r.2, pend)
 
 /-- `installStep`'s `some` arm, named. -/
-def isSomeT (i vis : Nat) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup) :
+def isSomeT (i vis nt : Nat) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup) :
     AM (IFEnv × Array PendingCheck) := do
   let r ← promoteVG PMemo.empty coreWalkFuel vg
-  let r2 ← promoteNew r.1 coreWalkFuel (fe'.visibleBelow - vis) fe'
+  let r2 ← promoteNew r.1 coreWalkFuel (fe'.visibleBelow - vis) (fe'.env.tables.length - nt) fe'
   dropScratch
   pure (r2.2, pend.push ⟨r.2, i, vis⟩)
 
 /-- `installStep` after `installStepGo`, named. -/
-def installStepK (i vis : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup) :
+def installStepK (i vis nt : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup) :
     AM (IFEnv × Array PendingCheck) :=
   match r.2 with
-  | none => isNoneT vis r.1 pend
-  | some vg => isSomeT i vis r.1 pend vg
+  | none => isNoneT vis nt r.1 pend
+  | some vg => isSomeT i vis nt r.1 pend vg
 
 theorem installStep_eq (i : Nat) (fe : IFEnv) (pend : Array PendingCheck) (pd : IDeclaration) :
     installStep mode pins i fe pend pd = (do
       flushCaches
       enterScratch
       let r ← installStepGo mode pins fe pd
-      installStepK i fe.visibleBelow pend r) := by
+      installStepK i fe.visibleBelow fe.env.tables.length pend r) := by
   simp only [installStep, installStepK, isNoneT, isSomeT]; rfl
 
-theorem installStepK_none (i v : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
-    (h : r.2 = none) : installStepK i v pend r = isNoneT v r.1 pend := by
+theorem installStepK_none (i v nt : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
+    (h : r.2 = none) : installStepK i v nt pend r = isNoneT v nt r.1 pend := by
   simp [installStepK, h]
 
-theorem installStepK_some (i v : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
-    (vg : ValueGroup) (h : r.2 = some vg) : installStepK i v pend r = isSomeT i v r.1 pend vg := by
+theorem installStepK_some (i v nt : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
+    (vg : ValueGroup) (h : r.2 = some vg) : installStepK i v nt pend r = isSomeT i v nt r.1 pend vg := by
   simp [installStepK, h]
 
 /-- `installStep` from its pieces, in `AM.ok`/`AM.st`/`AM.res` terms. -/
 theorem installStep_ok (i : Nat) (fe : IFEnv) (pend : Array PendingCheck) (pd : IDeclaration)
     (a0 : AState) (h1 : AM.ok flushCaches a0) (h2 : AM.ok enterScratch (AM.st flushCaches a0))
-    (h3 : AM.ok (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) (h4 : AM.ok (installStepK i fe.visibleBelow pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) :
-    AM.ok (installStep mode pins i fe pend pd) a0 ∧ AM.st (installStep mode pins i fe pend pd) a0 = AM.st (installStepK i fe.visibleBelow pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) ∧ AM.res (installStep mode pins i fe pend pd) a0 = AM.res (installStepK i fe.visibleBelow pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) := by
+    (h3 : AM.ok (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) (h4 : AM.ok (installStepK i fe.visibleBelow fe.env.tables.length pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) :
+    AM.ok (installStep mode pins i fe pend pd) a0 ∧ AM.st (installStep mode pins i fe pend pd) a0 = AM.st (installStepK i fe.visibleBelow fe.env.tables.length pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) ∧ AM.res (installStep mode pins i fe pend pd) a0 = AM.res (installStepK i fe.visibleBelow fe.env.tables.length pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) := by
   have r1 := AM.run_of_ok _ _ h1
   have r2 := AM.run_of_ok _ _ h2
   have r3 := AM.run_of_ok _ _ h3
@@ -501,13 +516,15 @@ end twin
 
 /-! ## Phase A's step: `install_step` -/
 
-/-- `is_none(vis, v2)`: `installStep`'s `none` arm (`isNoneT`). -/
--- con-ron: ConRon/Arena/Checker.lean:153-207 ConRon.Arena.installStep
+/-- `is_none(vis, v2, nt)`: `installStep`'s `none` arm (`isNoneT`; `nt` the tables list's length
+before the step). -/
+-- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
 @[l_impl ConRon.Arena.installStep]
-def isNoneL : FunDecl := lfn (vis, v2) locals (k, z) {
+def isNoneL : FunDecl := lfn (vis, v2, nt) locals (k, kt, z) {
   k := 0;
   if vis <= v2 { k := v2 - vis };
-  z := call promote_new(k, v2, 1);
+  kt := call tbl_grown(nt);
+  z := call promote_new(k, kt, v2, 1);
   z := call scratch_drop();
   return 0
 }
@@ -524,35 +541,38 @@ def pendPushL : FunDecl := lfn (g, i, v) locals (c) {
   return 0
 }
 
-/-- `is_some(i, vis, v2, g)`: `installStep`'s `some` arm (`isSomeT`); the pending check is
+/-- `is_some(i, vis, v2, nt, g)`: `installStep`'s `some` arm (`isSomeT`); the pending check is
 written right after `promote_vg` (where its record is known to decode), the twin pushes it at
 the end (a value, so the order is invisible). -/
--- con-ron: ConRon/Arena/Checker.lean:153-207 ConRon.Arena.installStep
+-- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
 @[l_impl ConRon.Arena.installStep]
-def isSomeL : FunDecl := lfn (i, vis, v2, g) locals (k, z, g2) {
+def isSomeL : FunDecl := lfn (i, vis, v2, nt, g) locals (k, kt, z, g2) {
   k := 0;
   if vis <= v2 { k := v2 - vis };
+  kt := call tbl_grown(nt);
   g2 := call promote_vg(g, v2);
   z := call pend_push(g2, i, vis);
-  z := call promote_new(k, v2, 0);
+  z := call promote_new(k, kt, v2, 0);
   z := call scratch_drop();
   return 0
 }
 
-/-- `install_step(i, vis)`: `installStep` (the bracket, `installStepGo`, then one of the arms). -/
--- con-ron: ConRon/Arena/Checker.lean:153-207 ConRon.Arena.installStep
+/-- `install_step(i, vis)`: `installStep` (the tables list's length read first, the bracket,
+`installStepGo`, then one of the arms). -/
+-- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
 @[l_impl ConRon.Arena.installStep]
-def installStepL : FunDecl := lfn (i, vis) locals (v2, f, g, z) {
+def installStepL : FunDecl := lfn (i, vis) locals (nt, v2, f, g, z) {
+  nt := call tbl_cnt();
   z := call flush_caches();
   z := call scratch_enter();
   (v2, f, g) := call install_step_go(i, vis);
-  if f == 0 { z := call is_none(vis, v2) } else { z := call is_some(i, vis, v2, g) };
+  if f == 0 { z := call is_none(vis, v2, nt) } else { z := call is_some(i, vis, v2, nt, g) };
   return v2
 }
 
 /-- `install_decl_step(i, vis)`: `installDeclStep` (the `And` pin, then the step; a rejected pin
 or a failing step is an `abort`). -/
--- con-ron: ConRon/Arena/Checker.lean:209-236 ConRon.Arena.installDeclStep
+-- con-ron: ConRon/Arena/Checker.lean:212-239 ConRon.Arena.installDeclStep
 @[l_impl ConRon.Arena.installDeclStep]
 def installDeclStepL : FunDecl := lfn (i, vis) locals (ok, v) {
   ok := call and_pin_ok(i);
@@ -562,7 +582,7 @@ def installDeclStepL : FunDecl := lfn (i, vis) locals (ok, v) {
 }
 
 /-- `install_fold_go(i, cnt, vis)`: `installFold` over records `i`‥`cnt - 1`. -/
--- con-ron: ConRon/Arena/Checker.lean:238-249 ConRon.Arena.installFold
+-- con-ron: ConRon/Arena/Checker.lean:241-252 ConRon.Arena.installFold
 @[l_impl ConRon.Arena.installFold]
 def installFoldGoL : FunDecl := lfn (i, cnt, vis) locals (r) {
   if i == cnt { return vis };
@@ -571,7 +591,7 @@ def installFoldGoL : FunDecl := lfn (i, cnt, vis) locals (r) {
 }
 
 /-- `install_fold_next(i, cnt, vis)`: one step of `installFold` (`i < cnt`), then the rest. -/
--- con-ron: ConRon/Arena/Checker.lean:238-249 ConRon.Arena.installFold
+-- con-ron: ConRon/Arena/Checker.lean:241-252 ConRon.Arena.installFold
 @[l_impl ConRon.Arena.installFold]
 def installFoldNextL : FunDecl := lfn (i, cnt, vis) locals (v, r) {
   v := call install_decl_step(i, vis);
@@ -581,7 +601,7 @@ def installFoldNextL : FunDecl := lfn (i, cnt, vis) locals (v, r) {
 
 /-- `check_pending(j, vis)`: `checkPending` on pending check `j`, the environment seen at its
 recorded view. -/
--- con-ron: ConRon/Arena/Checker.lean:251-267 ConRon.Arena.checkPending
+-- con-ron: ConRon/Arena/Checker.lean:254-270 ConRon.Arena.checkPending
 @[l_impl ConRon.Arena.checkPending]
 def checkPendingL : FunDecl := lfn (j, vis) locals (g, v, z) {
   if 4611686018427387904 <= j { abort };
@@ -594,7 +614,7 @@ def checkPendingL : FunDecl := lfn (j, vis) locals (g, v, z) {
 }
 
 /-- `check_pending_go(j, cnt, vis)`: `checkPendingList` over pending checks `j`‥`cnt - 1`. -/
--- con-ron: ConRon/Arena/Checker.lean:269-278 ConRon.Arena.checkPendingList
+-- con-ron: ConRon/Arena/Checker.lean:272-281 ConRon.Arena.checkPendingList
 @[l_impl ConRon.Arena.checkPendingList]
 def checkPendingGoL : FunDecl := lfn (j, cnt, vis) locals (z) {
   if j == cnt { return 0 };
@@ -603,7 +623,7 @@ def checkPendingGoL : FunDecl := lfn (j, cnt, vis) locals (z) {
 }
 
 /-- `check_pending_next(j, cnt, vis)`: one pending check (`j < cnt`), then the rest. -/
--- con-ron: ConRon/Arena/Checker.lean:269-278 ConRon.Arena.checkPendingList
+-- con-ron: ConRon/Arena/Checker.lean:272-281 ConRon.Arena.checkPendingList
 @[l_impl ConRon.Arena.checkPendingList]
 def checkPendingNextL : FunDecl := lfn (j, cnt, vis) locals (z) {
   if 4611686018427387904 <= j { abort };
@@ -617,12 +637,13 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
   (ds : Array IDeclaration) (p : Prog)
 
 theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNoneL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (vis v2 : Word) (fe' : IFEnv) (pend : Array PendingCheck)
+    (vis v2 nt : Word) (fe' : IFEnv) (pend : Array PendingCheck)
     (hR : LoopR pins dn s₀.mem a₀ v2 fe' pend ds) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_none" [vis, v2]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isNoneT vis.toNat fe' pend) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (isNoneT vis.toNat fe' pend) a₀) v2
-        (AM.res (isNoneT vis.toNat fe' pend) a₀).1 (AM.res (isNoneT vis.toNat fe' pend) a₀).2 ds; ⊤⦄ := by
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_none" [vis, v2, nt]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isNoneT vis.toNat nt.toNat fe' pend) a₀ ∧
+      LoopR pins dn s'.mem (AM.st (isNoneT vis.toNat nt.toNat fe' pend) a₀) v2
+        (AM.res (isNoneT vis.toNat nt.toNat fe' pend) a₀).1
+        (AM.res (isNoneT vis.toNat nt.toNat fe' pend) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
   rw [invoke_eq _ hp]
   simp only [callFn, isNoneL]
@@ -631,10 +652,12 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        (promoteNew_spec pins dn ds p hb.pr n · a₀ · fe' pend · · PMemo.empty),
+        (tblGrown_loop pins dn ds p hb.pr n · a₀ v2 fe' pend ·),
+        (promoteNew_spec pins dn ds p hb.pr n · a₀ · fe' pend · · · PMemo.empty),
         (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew PMemo.empty coreWalkFuel
-          (fe'.visibleBelow - vis.toNat) fe') a₀) v2
-          (AM.res (promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') a₀).2
+          (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') a₀) v2
+          (AM.res (promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis.toNat)
+            (fe'.env.tables.length - nt.toNat) fe') a₀).2
           pend)] <;>
       finish [isNoneT]
 
@@ -658,16 +681,17 @@ theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s�
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish [pendPushMem]
 
+set_option maxHeartbeats 1000000 in
 theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hp : p.lookup "is_some" = some isSomeL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (i vis v2 g : Word) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup)
+    (i vis v2 nt g : Word) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup)
     (hg : decVG (erecP s₀.mem) g.toNat = some vg)
     (hR : LoopR pins dn s₀.mem a₀ v2 fe' pend ds) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_some" [i, vis, v2, g]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isSomeT i.toNat vis.toNat fe' pend vg) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (isSomeT i.toNat vis.toNat fe' pend vg) a₀) v2
-        (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).1
-        (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).2 ds; ⊤⦄ := by
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_some" [i, vis, v2, nt, g]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀ ∧
+      LoopR pins dn s'.mem (AM.st (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀) v2
+        (AM.res (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀).1
+        (AM.res (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
   rw [invoke_eq _ hp]
   simp only [callFn, isSomeL]
@@ -676,11 +700,12 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        (tblGrown_loop pins dn ds p hb.pr n · a₀ v2 fe' pend ·),
         (promoteVG_spec pins dn ds p hb.pr n · a₀ · fe' pend · vg),
         (pendPush_spec pins dn ds p hpp n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) v2 fe' pend ·
           · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2 · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
-        (promoteNew_spec pins dn ds p hb.pr n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
-        (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) v2 (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
+        (promoteNew_spec pins dn ds p hb.pr n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
+        (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) v2 (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
       finish [isSomeT]
 
 theorem pend_words (m : Mem) (pend : Array PendingCheck) (hP : PendR m pend) (j : Word)

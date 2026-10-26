@@ -29,7 +29,7 @@ open L.Ind (CWF IW)
 
 namespace L.Arena
 
-/-- con-ron: ConRon/Arena/Core.lean:3652-3656 ConRon.Arena.whnf -/
+/-- con-ron: ConRon/Arena/Core.lean:3644-3648 ConRon.Arena.whnf -/
 @[l_impl ConRon.Arena.whnf]
 def whnfTopL : FunDecl := lfn (vis, dep, e) locals (r) {
   r := call whnf(0, vis, dep, e);

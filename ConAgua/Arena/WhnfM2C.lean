@@ -29,7 +29,7 @@ The record words the arms need are read where the record was found (`m2c_arms`, 
 namespace L.Arena
 
 /-- The constructor test, the single rule, its constructor's record; then `m2c_ctor`.
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cHeadL : FunDecl := lfn (mode, vis, d, ro, rc, major) locals (ok, f, q, r) {
   ok := call is_ctor_app(vis, major);
   if ok != 0 { return major };
@@ -43,7 +43,7 @@ def m2cHeadL : FunDecl := lfn (mode, vis, d, ro, rc, major) locals (ok, f, q, r)
 
 /-- The family of the constructor (`cvjP` its record): the head of its type's Π-result, an
 inductive; then `m2c_arms`.
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cCtorL : FunDecl := lfn (mode, vis, d, ro, cvjP, major)
     locals (piRes, hh, T, us, f, indP, r) {
   piRes := call pi_result(EREC.u64[cvjP + 4]);
@@ -59,7 +59,7 @@ def m2cCtorL : FunDecl := lfn (mode, vis, d, ro, cvjP, major)
 
 /-- The name and the universe arguments of a `const` handle (the view checks, then the stored
 record).
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cConstViewL : FunDecl := lfn (hh) locals (t, i) {
   t := ⟦hh⟧.tier;
   i := ⟦hh⟧.idx;
@@ -70,7 +70,7 @@ def m2cConstViewL : FunDecl := lfn (hh) locals (t, i) {
 
 /-- The rule's `k` and `eta` bits pick the arm; the K and `And` arms get the rule's constructor,
 the constructor's level-parameter count and parameter count.
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cArmsL : FunDecl := lfn (mode, vis, d, ro, cvjP, T, indP, major) locals (r) {
   if EREC.u64[ro + 9] != 0 {
     r := call m2c_k(mode, vis, d, T, major, EREC.u64[ro], EREC.u64[cvjP + 3], EREC.u64[cvjP + 5]);
@@ -86,7 +86,7 @@ def m2cArmsL : FunDecl := lfn (mode, vis, d, ro, cvjP, T, indP, major) locals (r
 
 /-- The major's type in whnf and its head: `(0, …)` if the head is not a constant, else
 `(1, tmaj, T', ust, ustl)` (`ustl` the length of `ust`).
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cPreL : FunDecl := lfn (mode, vis, d, major) locals (ioa, tmaj, hh, T2, ust, uo, ul) {
   ioa := call infer_io(mode, vis, d, major);
   tmaj := call whnf(mode, vis, d, ioa);
@@ -98,7 +98,7 @@ def m2cPreL : FunDecl := lfn (mode, vis, d, major) locals (ioa, tmaj, hh, T2, us
 }
 
 /-- The type check and the proof-irrelevance run of a fabricated `fab` (K and `And` arms).
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cCheckL : FunDecl := lfn (mode, vis, d, tmaj, fab, major) locals (ok, ioa, ir) {
   ok := call fab_scope_ok(d, fab, major);
   if ok == 0 { return major };
@@ -111,7 +111,7 @@ def m2cCheckL : FunDecl := lfn (mode, vis, d, tmaj, fab, major) locals (ok, ioa,
 }
 
 /-- The K arm: the major's type's head is the family at the constructor's level count.
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cKL : FunDecl := lfn (mode, vis, d, T, major, ctor, lpl, cnP)
     locals (f, tmaj, T2, ust, ustl, r) {
   (f, tmaj, T2, ust, ustl) := call m2c_pre(mode, vis, d, major);
@@ -123,7 +123,7 @@ def m2cKL : FunDecl := lfn (mode, vis, d, T, major, ctor, lpl, cnP)
 }
 
 /-- The K arm's fabrication: the constructor applied to the type's first `cnP` arguments.
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cK2L : FunDecl := lfn (mode, vis, d, ctor, cnP, tmaj, ust, major)
     locals (to, tn, hd, fab, r) {
   (to, tn) := call get_app_args(tmaj);
@@ -136,7 +136,7 @@ def m2cK2L : FunDecl := lfn (mode, vis, d, ctor, cnP, tmaj, ust, major)
 
 /-- The η arm (`indP` the family's record): the type's head, argument count, level count and
 instantiated non-`Prop` test.
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cEtaL : FunDecl := lfn (mode, vis, d, T, indP, major)
     locals (po, pc, ec, ep, ef, swd, so, sc, f, tmaj, T2, ust, ustl, to, tn, nz, r) {
   po := EREC.u64[indP + 2];
@@ -160,7 +160,7 @@ def m2cEtaL : FunDecl := lfn (mode, vis, d, T, indP, major)
 }
 
 /-- The η arm's fabrication: the reserved names, the projection slots, the η spine.
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cEta2L : FunDecl := lfn (vis, d, T, ec, ef, to, tn, ust, major)
     locals (res, ok, fo, fn, hd, fab) {
   res := call reserved_contains_w(T);
@@ -178,7 +178,7 @@ def m2cEta2L : FunDecl := lfn (vis, d, T, ec, ef, to, tn, ust, major)
 }
 
 /-- The `And` arm: the family is the pinned `And`, its two projection slots ready to fire.
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cAndL : FunDecl := lfn (mode, vis, d, T, major, ctor, lpl, cnP)
     locals (an, f, tmaj, T2, ust, ustl, to, tn, ars, r) {
   an := call pin_at(11);
@@ -197,7 +197,7 @@ def m2cAndL : FunDecl := lfn (mode, vis, d, T, major, ctor, lpl, cnP)
 
 /-- The `And` arm's fabrication: the two projections pushed after the type's arguments (the
 slice `(to, tn)` ends at the stack top), the constructor applied to all of them.
-con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
+con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cAnd2L : FunDecl := lfn (mode, vis, d, ctor, T, tmaj, to, tn, ust, major)
     locals (p0, p1, hd, fab, r) {
   p0 := call mk_proj(T, 0, major);

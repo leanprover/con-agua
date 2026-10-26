@@ -4,7 +4,7 @@ import ConAgua.Arena.PromoteRecRef
 # The constant side of the promotion: models and specs
 
 `erec_rd1‥5`, `erec_wr1‥5`, `erec_cp`, then `promote_fire`, `promote_rule`, `promote_rules`,
-`promote_caps`, `promote_proj_table`. As `PromoteRec.lean`: models whose callees are `callW` runs,
+`promote_caps`, `promote_proj_table`, and the entries' table side. As `PromoteRec.lean`: models whose callees are `callW` runs,
 one `vcgen` per spec.
 -/
 
@@ -188,10 +188,10 @@ theorem capsWr_spec (d c a k : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
       finish [stP]
 
-theorem projWr_spec (d tn sn lp c ss bs gs : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "proj_wr" [d, tn, sn, lp, c, ss, bs, gs]
+theorem projWr_spec (d sn lp c ss bs gs : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "proj_wr" [d, sn, lp, c, ss, bs, gs]
     ⦃fun _ s' => LocEq s' s₀ ∧
-      stP d s₀.mem [(1, tn), (2, sn), (3, lp), (6, c), (8, ss), (9, bs), (11, gs)] = some s'.mem; ⊤⦄ := by
+      stP d s₀.mem [(2, sn), (3, lp), (6, c), (8, ss), (9, bs), (11, gs)] = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "proj_wr")]
   simp only [callFn, projWr]
   cases n with
@@ -391,13 +391,12 @@ theorem promoteCaps_spec (f s d : Word) :
 /-- **The model of `proj_a(f, q)`.** -/
 def projAW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (List Word × Mem) :=
   (callW p n "pn_at" [f, q + 2] m).bind fun r6 =>
-  (callW p n "pn_at" [f, q + 1] r6.2).bind fun r7 =>
-  (callW p n "ps_at" [0, f, q + 3] r7.2).bind fun r8 =>
-  some ([g0 r7.1, g0 r6.1, g0 r8.1], r8.2)
+  (callW p n "ps_at" [0, f, q + 3] r6.2).bind fun r8 =>
+  some ([g0 r6.1, g0 r8.1], r8.2)
 
 theorem projA_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proj_a" [f, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ projAW p n s₀.mem f q = some ([g0 r, g1 r, g2 r], s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ projAW p n s₀.mem f q = some ([g0 r, g1 r], s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "proj_a")]
   simp only [callFn, projA]
   sym only [lang_grind, arena_grind] =>
@@ -426,11 +425,11 @@ theorem projB_spec (f q : Word) :
 
 /-- **The model of `promote_proj_table(f, p)`.** -/
 def projW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
-  (callW p n "erec_alloc" [14] m).bind fun r5 =>
+  (callW p n "erec_alloc" [13] m).bind fun r5 =>
   (callW p n "proj_a" [f, q] r5.2).bind fun a =>
   (callW p n "proj_b" [f, q] a.2).bind fun b =>
-  (callW p n "erec_cp" [g0 r5.1, q, 14] b.2).bind fun m₁ =>
-  (callW p n "proj_wr" [g0 r5.1, g0 a.1, g1 a.1, g2 a.1, g0 b.1, g1 b.1, g2 b.1, g3 b.1] m₁.2).bind fun w =>
+  (callW p n "erec_cp" [g0 r5.1, q, 13] b.2).bind fun m₁ =>
+  (callW p n "proj_wr" [g0 r5.1, g0 a.1, g1 a.1, g0 b.1, g1 b.1, g2 b.1, g3 b.1] m₁.2).bind fun w =>
   some (g0 r5.1, w.2)
 
 theorem promoteProj_spec (f q : Word) :
@@ -584,7 +583,6 @@ def ciW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
   else if g0 r.1 = 3 then promoteArmK p n f q "pci_ind" r.2
   else if g0 r.1 = 4 then promoteArmK p n f q "pci_ctor" r.2
   else if g0 r.1 = 5 then promoteArmK p n f q "pci_rec" r.2
-  else if g0 r.1 = 6 then promoteArmK p n f q "promote_proj_table" r.2
   else none
 
 theorem promoteCI_spec (f q : Word) :
@@ -595,8 +593,7 @@ theorem promoteCI_spec (f q : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "erec_rd1", callW_spec p n "pci_plain", callW_spec p n "pci_defn",
-      callW_spec p n "pci_ind", callW_spec p n "pci_ctor", callW_spec p n "pci_rec",
-      callW_spec p n "promote_proj_table"] <;>
+      callW_spec p n "pci_ind", callW_spec p n "pci_ctor", callW_spec p n "pci_rec"] <;>
     finish (gen := 20) [ciW, promoteArmK, Option.bind_some, Option.bind_none]
 
 /-- **The model of `promote_ci_list(f, j, k)`.** -/
@@ -656,29 +653,142 @@ theorem indexPromoted_spec (c j k : Word) :
       callW_spec p n "index_promoted"] <;>
     finish (gen := 20) [indexW, memK_some, Option.bind_some, Option.bind_none]
 
-/-- **The model of `promote_new(k, vis, fresh)`.** -/
-def newW (p : Prog) (n : Nat) (m : Mem) (k vis fresh : Word) : Option Mem :=
-  if k = 0 then some m
-  else (if fresh ≠ 0 then (callW p n "promote_clear" [] m).bind fun r => some r.2 else some m).bind
-    fun m₁ =>
-    if (m₁.arr64 CTL).size ≤ 128 then none
-    else
-    (callW p n "erase_installed" [rdW (m₁.arr64 CTL) 128 - 1,
-        if rdW (m₁.arr64 CTL) 128 < k then rdW (m₁.arr64 CTL) 128 else k] m₁).bind fun r₁ =>
-    (callW p n "promote_ci_list" [L.Ind.CWF, rdW (m₁.arr64 CTL) 128 - 1,
-        if rdW (m₁.arr64 CTL) 128 < k then rdW (m₁.arr64 CTL) 128 else k] r₁.2).bind fun r₂ =>
-    memK (callW p n "index_promoted" [vis, rdW (m₁.arr64 CTL) 128 - 1,
-        if rdW (m₁.arr64 CTL) 128 < k then rdW (m₁.arr64 CTL) 128 else k] r₂.2)
+/-- **The model of `promote_new_consts(k, vis)`.** -/
+def newCW (p : Prog) (n : Nat) (m₁ : Mem) (k vis : Word) : Option Mem :=
+  if k = 0 then some m₁
+  else if (m₁.arr64 CTL).size ≤ 128 then none
+  else
+  (callW p n "erase_installed" [rdW (m₁.arr64 CTL) 128 - 1,
+      if rdW (m₁.arr64 CTL) 128 < k then rdW (m₁.arr64 CTL) 128 else k] m₁).bind fun r₁ =>
+  (callW p n "promote_ci_list" [L.Ind.CWF, rdW (m₁.arr64 CTL) 128 - 1,
+      if rdW (m₁.arr64 CTL) 128 < k then rdW (m₁.arr64 CTL) 128 else k] r₁.2).bind fun r₂ =>
+  memK (callW p n "index_promoted" [vis, rdW (m₁.arr64 CTL) 128 - 1,
+      if rdW (m₁.arr64 CTL) 128 < k then rdW (m₁.arr64 CTL) 128 else k] r₂.2)
 
-theorem promoteNew_specW (k vis fresh : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_new" [k, vis, fresh]
-    ⦃fun _ s' => LocEq s' s₀ ∧ newW p n s₀.mem k vis fresh = some s'.mem; ⊤⦄ := by
+theorem promoteNewConsts_spec (k vis : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_new_consts" [k, vis]
+    ⦃fun _ s' => LocEq s' s₀ ∧ newCW p n s₀.mem k vis = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ (hp.get "promote_new_consts")]
+  simp only [callFn, promoteNewConstsL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "erase_installed", callW_spec p n "promote_ci_list",
+      callW_spec p n "index_promoted"] <;>
+    finish (gen := 20) [newCW, memK_some, Option.bind_some, Option.bind_none]
+
+/-- **The model of `promote_proj_tables(f, j, k)`.** -/
+def ptsW (p : Prog) (n : Nat) (m : Mem) (f j k : Word) : Option Mem :=
+  if k = 0 then some m
+  else (callW p n "tbl_at" [j] m).bind fun q =>
+    (callW p n "promote_proj_table" [f, g0 q.1] q.2).bind fun d =>
+    (callW p n "tbl_put" [j, g0 d.1] d.2).bind fun u =>
+    memK (callW p n "promote_proj_tables" [f, j - 1, k - 1] u.2)
+
+theorem promoteProjTables_spec (f j k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_proj_tables" [f, j, k]
+    ⦃fun _ s' => LocEq s' s₀ ∧ ptsW p n s₀.mem f j k = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ (hp.get "promote_proj_tables")]
+  simp only [callFn, promoteProjTablesL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "tbl_at", callW_spec p n "promote_proj_table", callW_spec p n "tbl_put",
+      callW_spec p n "promote_proj_tables"] <;>
+    finish (gen := 20) [ptsW, memK_some, Option.bind_some, Option.bind_none]
+
+/-- **The model of `erase_installed_tables(j, k)`.** -/
+def eraseTW (p : Prog) (n : Nat) (m : Mem) (j k : Word) : Option Mem :=
+  if k = 0 then some m
+  else (callW p n "tbl_at" [j] m).bind fun q =>
+    (callW p n "erec_rd1" [g0 q.1 + 2] q.2).bind fun w =>
+    (callW p n "tbl_row_set" [g0 w.1, 0] w.2).bind fun z =>
+    memK (callW p n "erase_installed_tables" [j - 1, k - 1] z.2)
+
+theorem eraseInstalledTables_spec (j k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "erase_installed_tables" [j, k]
+    ⦃fun _ s' => LocEq s' s₀ ∧ eraseTW p n s₀.mem j k = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ (hp.get "erase_installed_tables")]
+  simp only [callFn, eraseInstalledTablesL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "tbl_at", callW_spec p n "erec_rd1", callW_spec p n "tbl_row_set",
+      callW_spec p n "erase_installed_tables"] <;>
+    finish (gen := 20) [eraseTW, memK_some, Option.bind_some, Option.bind_none]
+
+/-- **The model of `index_promoted_tables(j, k)`.** -/
+def indexTW (p : Prog) (n : Nat) (m : Mem) (j k : Word) : Option Mem :=
+  if k = 0 then some m
+  else (callW p n "index_promoted_tables" [j - 1, k - 1] m).bind fun z₀ =>
+    (callW p n "tbl_at" [j] z₀.2).bind fun q =>
+    (callW p n "erec_rd1" [g0 q.1 + 2] q.2).bind fun w =>
+    memK (callW p n "tbl_row_set" [g0 w.1, g0 q.1 + 1] w.2)
+
+theorem indexPromotedTables_spec (j k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "index_promoted_tables" [j, k]
+    ⦃fun _ s' => LocEq s' s₀ ∧ indexTW p n s₀.mem j k = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ (hp.get "index_promoted_tables")]
+  simp only [callFn, indexPromotedTablesL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "tbl_at", callW_spec p n "erec_rd1", callW_spec p n "tbl_row_set",
+      callW_spec p n "index_promoted_tables"] <;>
+    finish (gen := 20) [indexTW, memK_some, Option.bind_some, Option.bind_none]
+
+/-- **The model of `promote_new_tables(kt)`.** -/
+def newTW (p : Prog) (n : Nat) (m : Mem) (kt : Word) : Option Mem :=
+  if kt = 0 then some m
+  else (callW p n "tbl_cnt" [] m).bind fun c =>
+    (callW p n "erase_installed_tables" [g0 c.1 - 1, if g0 c.1 < kt then g0 c.1 else kt] c.2).bind
+      fun r₁ =>
+    (callW p n "promote_proj_tables" [L.Ind.CWF, g0 c.1 - 1, if g0 c.1 < kt then g0 c.1 else kt]
+      r₁.2).bind fun r₂ =>
+    memK (callW p n "index_promoted_tables" [g0 c.1 - 1, if g0 c.1 < kt then g0 c.1 else kt] r₂.2)
+
+theorem promoteNewTables_spec (kt : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_new_tables" [kt]
+    ⦃fun _ s' => LocEq s' s₀ ∧ newTW p n s₀.mem kt = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ (hp.get "promote_new_tables")]
+  simp only [callFn, promoteNewTablesL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "tbl_cnt", callW_spec p n "erase_installed_tables",
+      callW_spec p n "promote_proj_tables", callW_spec p n "index_promoted_tables"] <;>
+    finish (gen := 20) [newTW, memK_some, Option.bind_some, Option.bind_none]
+
+/-- **`tbl_grown(nt)`**: the table count minus `nt`, truncated. -/
+theorem tblGrown_spec (nt : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "tbl_grown" [nt]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      (r.headD 0).toNat = (rdW (s₀.mem.arr64 CTL) 133).toNat - nt.toNat; ⊤⦄ := by
+  have hs1 : ∀ c : Word, nt ≤ c → (c - nt).toNat = c.toNat - nt.toNat :=
+    fun c h => UInt64.toNat_sub_of_le _ _ h
+  have hs2 : ∀ c : Word, ¬ nt ≤ c → c.toNat - nt.toNat = 0 := fun c h => by
+    have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h); omega
+  rw [invoke_eq _ (hp.get "tbl_grown")]
+  simp only [callFn, tblGrownL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        tblCnt_spec p (hp.get "tbl_cnt") n] <;>
+      finish
+
+/-- **The model of `promote_new(k, kt, vis, fresh)`.** -/
+def newW (p : Prog) (n : Nat) (m : Mem) (k kt vis fresh : Word) : Option Mem :=
+  (if fresh ≠ 0 then (callW p n "promote_clear" [] m).bind fun r => some r.2 else some m).bind
+    fun m₁ =>
+  (callW p n "promote_new_consts" [k, vis] m₁).bind fun r₁ =>
+  memK (callW p n "promote_new_tables" [kt] r₁.2)
+
+theorem promoteNew_specW (k kt vis fresh : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_new" [k, kt, vis, fresh]
+    ⦃fun _ s' => LocEq s' s₀ ∧ newW p n s₀.mem k kt vis fresh = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "promote_new")]
   simp only [callFn, promoteNewL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "promote_clear", callW_spec p n "erase_installed",
-      callW_spec p n "promote_ci_list", callW_spec p n "index_promoted"] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "promote_clear", callW_spec p n "promote_new_consts",
+      callW_spec p n "promote_new_tables"] <;>
     finish (gen := 20) [newW, memK_some, Option.bind_some, Option.bind_none]
 
 end specs

@@ -78,7 +78,6 @@ theorem classConstOkHeader_spec (p : Prog) (h : IhProg p)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p h.ix h.rowGet h.find n, resCont_spec p h.resF h.resC n,
       L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
-      ipfF_spec p h.ipf n,
       lbbF_spec p h.bvb n, hffF_spec p h.hf n,
       hcR n "all_level_params_defined", hcR n "consts_resolve_ffast"] <;>
     finish (gen := 20)

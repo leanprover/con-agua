@@ -123,6 +123,14 @@ theorem IdxBelow.push {fe : FEnv} (h : IdxBelow fe) (ci : ConstantInfo) :
   · cases hl; omega
   · exact Nat.lt_succ_of_lt (h.2 n c ci' hl)
 
+theorem IdxBelow.pushTable {fe : FEnv} (h : IdxBelow fe) (t : ProjTable) :
+    IdxBelow (fe.pushTable t) := h
+
+theorem IdxBelow.pushTables :
+    ∀ (Q : List ProjTable) {fe : FEnv}, IdxBelow fe → IdxBelow (FEnv.pushTables Q fe)
+  | [], _, h => h
+  | t :: Q, _, h => IdxBelow.pushTables Q (h.pushTable t)
+
 /-- **A push answers the pushed name and leaves every other lookup
 alone** (below the counter nothing else changes). -/
 theorem IdxBelow.find?_push {fe : FEnv} (h : IdxBelow fe) (ci : ConstantInfo) (n : Name) :
@@ -149,19 +157,24 @@ record's installed constants — sharded by name hash (`baseGet?`,
 `ConLeche/Kernel/FEnv.lean`), one map per shard. -/
 abbrev BaseIdx := Array (Std.HashMap Name (Nat × Nat × Nat))
 
-/-- The records' slots: record `k`'s installed constants, deferred. -/
-abbrev Slots := Array (Thunk (Array ConstantInfo))
+/-- The records' slots: record `k`'s installed constants and projection
+tables, each in install order, deferred. -/
+abbrev Slots := Array (Thunk (Array ConstantInfo × List ProjTable))
 
-/-- **The worker view at counter `v`**: no constants of its own, the
-base visible below `v`.  A worker installs record `r` at
+/-- **The worker view at counter `v`**: no constants or tables of its
+own, the base visible below `v`.  A worker installs record `r` at
 `workerView B S vis_r`, where `vis_r` is the counter the prediction
 gives it. -/
 def workerView (B : BaseIdx) (S : Slots) (v : Nat) : FEnv :=
-  ⟨⟨[]⟩, {}, v, ⟨B, S, v⟩, []⟩
+  ⟨⟨[], []⟩, {}, v, ⟨B, S, v⟩, [], {}⟩
 
 theorem workerView_find? (B : BaseIdx) (S : Slots) (v : Nat) (n : Name) :
     (workerView B S v).find? n = FBase.find? ⟨B, S, v⟩ n := by
   simp [workerView, FEnv.find?]
+
+theorem workerView_rawTable? (B : BaseIdx) (S : Slots) (v : Nat) (T : Name) :
+    (workerView B S v).rawTable? T = FBase.findTable? ⟨B, S, v⟩ T := by
+  simp [workerView, FEnv.rawTable?]
 
 /-- No two names share a counter in the base: what the builder
 guarantees (`buildBase_inj`), and what lets a commit fill exactly one
@@ -171,22 +184,35 @@ def BaseInj (B : BaseIdx) : Prop :=
     baseGet? B n₁ = some (c, x₁) → baseGet? B n₂ = some (c, x₂) → n₁ = n₂
 
 /-- **The invariant of the commit thread**: the worker view at the
-serial index's counter answers every lookup as the serial index does. -/
-def ViewAgrees (B : BaseIdx) (S : Slots) (fe : FEnv) : Prop :=
-  ∀ n, (workerView B S fe.visibleBelow).find? n = fe.find? n
+serial index's counter answers every constant lookup as the serial
+index does, and every raw table lookup (`FEnv.rawTable?`) — so every
+table lookup too (`FEnv.findTable?` is the raw lookup gated by the
+constant lookup). -/
+structure ViewAgrees (B : BaseIdx) (S : Slots) (fe : FEnv) : Prop where
+  find : ∀ n, (workerView B S fe.visibleBelow).find? n = fe.find? n
+  raw : ∀ T, (workerView B S fe.visibleBelow).rawTable? T = fe.rawTable? T
 
 /-- At the empty index nothing is visible on either side. -/
 theorem ViewAgrees.empty (B : BaseIdx) (S : Slots) : ViewAgrees B S (mkFEnv Env.empty) := by
-  unfold ViewAgrees
-  intro n
-  rw [workerView_find?]
-  simp only [FBase.find?, mkFEnv, mkFEnvGo, Env.empty, FEnv.find?,
-    Std.HashMap.getElem?_empty]
-  split <;> simp [baseGet?]
+  constructor
+  · intro n
+    rw [workerView_find?]
+    simp only [FBase.find?, mkFEnv, mkFEnvGo, Env.empty, FEnv.find?,
+      Std.HashMap.getElem?_empty]
+    split <;> simp [baseGet?]
+  · intro T
+    rw [workerView_rawTable?]
+    simp only [FBase.findTable?, mkFEnv, mkFEnvGo, mkTblsGo, Env.empty, FEnv.rawTable?,
+      Std.HashMap.getElem?_empty]
+    split <;> simp [baseGet?]
 
 /-- The slot's constant: position `j` of record `k`'s task. -/
 def slotGet (S : Slots) (k j : Nat) : Option ConstantInfo :=
-  if h : k < S.size then (S[k]).get[j]? else none
+  if h : k < S.size then (S[k]).get.1[j]? else none
+
+/-- The slot's tables: record `k`'s task's. -/
+def slotTables (S : Slots) (k : Nat) : Option (List ProjTable) :=
+  if h : k < S.size then some (S[k]).get.2 else none
 
 /-- **The slot check**: position `j` of record `k`'s slot is `ci`.  At
 run time a pointer comparison — the slot delivers the very object the
@@ -207,22 +233,41 @@ theorem slotIs_spec {S : Slots} {k j : Nat} {ci : ConstantInfo}
     rw [hget, of_decide_eq_true h']
   · exact absurd h Bool.false_ne_true
 
-/-- **A commit's slot check**: the base predicted `ci`'s name at the
-counter `v`, and that slot's task delivers `ci`. -/
-def slotOk (B : BaseIdx) (S : Slots) (v : Nat) (ci : ConstantInfo) : Bool :=
-  match baseGet? B ci.name with
-  | some (c, k, j) => c == v && slotIs S k j ci
+/-- **The table slot check**: record `k`'s slot delivers the tables `Q`
+— a pointer comparison at run time, as `slotIs`. -/
+def slotTablesIs (S : Slots) (k : Nat) (Q : List ProjTable) : Bool :=
+  match slotTables S k with
+  | some Q' => withPtrEq Q' Q (fun _ => decide (Q' = Q)) (fun h => by simp [h])
   | none => false
 
-theorem slotOk_spec {B : BaseIdx} {S : Slots} {v : Nat} {ci : ConstantInfo}
-    (h : slotOk B S v ci = true) :
-    ∃ k j, baseGet? B ci.name = some (v, k, j) ∧ slotGet S k j = some ci := by
+theorem slotTablesIs_spec {S : Slots} {k : Nat} {Q : List ProjTable}
+    (h : slotTablesIs S k Q = true) : slotTables S k = some Q := by
+  unfold slotTablesIs at h
+  split at h
+  · rename_i Q' hget
+    have h' : decide (Q' = Q) = true := h
+    rw [hget, of_decide_eq_true h']
+  · exact absurd h Bool.false_ne_true
+
+/-- **A commit's slot check**: the base predicted `ci`'s name at the
+counter `v`, and that slot's task delivers `ci` and the record's tables
+`Q`. -/
+def slotOk (B : BaseIdx) (S : Slots) (Q : List ProjTable) (v : Nat) (ci : ConstantInfo) :
+    Bool :=
+  match baseGet? B ci.name with
+  | some (c, k, j) => c == v && slotIs S k j ci && slotTablesIs S k Q
+  | none => false
+
+theorem slotOk_spec {B : BaseIdx} {S : Slots} {Q : List ProjTable} {v : Nat}
+    {ci : ConstantInfo} (h : slotOk B S Q v ci = true) :
+    ∃ k j, baseGet? B ci.name = some (v, k, j) ∧ slotGet S k j = some ci ∧
+      slotTables S k = some Q := by
   unfold slotOk at h
   split at h
   · rename_i c k j hB
     simp only [Bool.and_eq_true, beq_iff_eq] at h
-    obtain ⟨rfl, hs⟩ := h
-    exact ⟨k, j, hB, slotIs_spec hs⟩
+    obtain ⟨⟨rfl, hs⟩, ht⟩ := h
+    exact ⟨k, j, hB, slotIs_spec hs, slotTablesIs_spec ht⟩
   · exact absurd h Bool.false_ne_true
 
 theorem FBase.find?_eq (B : BaseIdx) (S : Slots) (v : Nat) (n : Name) :
@@ -235,13 +280,29 @@ theorem FBase.find?_eq (B : BaseIdx) (S : Slots) (v : Nat) (n : Name) :
   | none => rfl
   | some p => obtain ⟨c, k, j⟩ := p; rfl
 
-/-- **A checked commit keeps the invariant.** -/
-theorem ViewAgrees.push {B : BaseIdx} {S : Slots} {fe : FEnv} (hB : BaseInj B)
-    (hidx : IdxBelow fe) (h : ViewAgrees B S fe) {ci : ConstantInfo}
-    (hok : slotOk B S fe.visibleBelow ci = true) :
-    ViewAgrees B S (fe.push ci) := by
-  obtain ⟨k, j, hslot, hget⟩ := slotOk_spec hok
-  unfold ViewAgrees at h ⊢
+theorem FBase.findTable?_eq (B : BaseIdx) (S : Slots) (v : Nat) (T : Name) :
+    FBase.findTable? ⟨B, S, v⟩ T =
+      match baseGet? B T with
+      | some (c, k, _) =>
+        if c < v then (slotTables S k).bind (ProjTable.lastOf? T) else none
+      | none => none := by
+  simp only [FBase.findTable?, slotTables]
+  cases baseGet? B T with
+  | none => rfl
+  | some p =>
+    obtain ⟨c, k, j⟩ := p
+    simp only
+    split
+    · split <;> simp
+    · rfl
+
+/-- **A checked push keeps the constant half of the invariant.** -/
+theorem ViewAgrees.find_push {B : BaseIdx} {S : Slots} {fe : FEnv} (hB : BaseInj B)
+    (hidx : IdxBelow fe) (h : ∀ n, (workerView B S fe.visibleBelow).find? n = fe.find? n)
+    {Q : List ProjTable} {ci : ConstantInfo}
+    (hok : slotOk B S Q fe.visibleBelow ci = true) :
+    ∀ n, (workerView B S (fe.push ci).visibleBelow).find? n = (fe.push ci).find? n := by
+  obtain ⟨k, j, hslot, hget, -⟩ := slotOk_spec hok
   unfold BaseInj at hB
   intro n
   rw [hidx.find?_push, workerView_find?, FBase.find?_eq]
@@ -264,29 +325,29 @@ theorem ViewAgrees.push {B : BaseIdx} {S : Slots} {fe : FEnv} (hB : BaseInj B)
       · have : ¬ c < fe.visibleBelow + 1 := by omega
         simp [hlt, this]
 
-/-! ## A commit of several constants
+/-! ## A commit of several constants and tables
 
 A block, an axiom, a basis block or a pinned declaration pushes a list
-of constants; each fills its predicted slot. -/
+of constants, each filling its predicted slot, and a block its tables:
+every table names one of the record's own constants (the structure it
+belongs to), and travels in that record's slot. -/
 
-/-- The slot checks of a list of constants pushed from counter `v` on. -/
-def slotsOk (B : BaseIdx) (S : Slots) : Nat → List ConstantInfo → Bool
+/-- The slot checks of a list of constants pushed from counter `v` on,
+each slot also delivering the record's tables `Q`. -/
+def slotsOk (B : BaseIdx) (S : Slots) (Q : List ProjTable) : Nat → List ConstantInfo → Bool
   | _, [] => true
-  | v, ci :: L => slotOk B S v ci && slotsOk B S (v + 1) L
+  | v, ci :: L => slotOk B S Q v ci && slotsOk B S Q (v + 1) L
+
+/-- **A commit's checks**: every constant fills its slot (`slotsOk`), and
+every table belongs to one of the record's constants. -/
+def commitOk (B : BaseIdx) (S : Slots) (v : Nat) (L : List ConstantInfo)
+    (Q : List ProjTable) : Bool :=
+  slotsOk B S Q v L && Q.all (fun t => L.any (·.name == t.structName))
 
 theorem IdxBelow.pushAll {fe : FEnv} (h : IdxBelow fe) :
     ∀ L : List ConstantInfo, IdxBelow (FEnv.pushAll L fe)
   | [] => h
   | ci :: L => IdxBelow.pushAll (h.push ci) L
-
-/-- **Checked commits of several constants keep the invariant.** -/
-theorem ViewAgrees.pushAll {B : BaseIdx} {S : Slots} (hB : BaseInj B) :
-    ∀ (L : List ConstantInfo) {fe : FEnv}, IdxBelow fe → ViewAgrees B S fe →
-      slotsOk B S fe.visibleBelow L = true → ViewAgrees B S (FEnv.pushAll L fe)
-  | [], _, _, h, _ => h
-  | ci :: L, fe, hidx, h, hok => by
-    simp only [slotsOk, Bool.and_eq_true] at hok
-    exact ViewAgrees.pushAll hB L (hidx.push ci) (ViewAgrees.push hB hidx h hok.1) hok.2
 
 theorem pushAll_visibleBelow : ∀ (L : List ConstantInfo) (fe : FEnv),
     (FEnv.pushAll L fe).visibleBelow = fe.visibleBelow + L.length
@@ -296,6 +357,130 @@ theorem pushAll_visibleBelow : ∀ (L : List ConstantInfo) (fe : FEnv),
     rw [pushAll_visibleBelow L (fe.push ci)]
     simp only [FEnv.push, List.length_cons]
     omega
+
+/-- Checked pushes keep the constant half of the invariant. -/
+theorem ViewAgrees.find_pushAll {B : BaseIdx} {S : Slots} (hB : BaseInj B)
+    {Q : List ProjTable} :
+    ∀ (L : List ConstantInfo) {fe : FEnv}, IdxBelow fe →
+      (∀ n, (workerView B S fe.visibleBelow).find? n = fe.find? n) →
+      slotsOk B S Q fe.visibleBelow L = true →
+      ∀ n, (workerView B S (FEnv.pushAll L fe).visibleBelow).find? n =
+        (FEnv.pushAll L fe).find? n
+  | [], _, _, h, _ => h
+  | ci :: L, fe, hidx, h, hok => by
+    simp only [slotsOk, Bool.and_eq_true] at hok
+    exact ViewAgrees.find_pushAll hB L (hidx.push ci)
+      (ViewAgrees.find_push hB hidx h hok.1) hok.2
+
+/-- The slot checks place every pushed constant at its counter, its slot
+delivering the tables. -/
+theorem slotsOk_mem {B : BaseIdx} {S : Slots} {Q : List ProjTable} :
+    ∀ {v : Nat} {L : List ConstantInfo}, slotsOk B S Q v L = true →
+      ∀ ci ∈ L, ∃ c k j, baseGet? B ci.name = some (c, k, j) ∧ v ≤ c ∧
+        c < v + L.length ∧ slotTables S k = some Q
+  | _, [], _, _, hm => nomatch hm
+  | v, ci :: L, hok, cj, hm => by
+    simp only [slotsOk, Bool.and_eq_true] at hok
+    rcases List.mem_cons.mp hm with rfl | hm
+    · obtain ⟨k, j, hB, -, hQ⟩ := slotOk_spec hok.1
+      exact ⟨v, k, j, hB, Nat.le_refl _, by simp, hQ⟩
+    · obtain ⟨c, k, j, hB, h1, h2, hQ⟩ := slotsOk_mem hok.2 cj hm
+      exact ⟨c, k, j, hB, by omega, by simp only [List.length_cons]; omega, hQ⟩
+
+/-- The slot checks fill every counter of the range: the name at a
+counter in it is a pushed constant's. -/
+theorem slotsOk_cover {B : BaseIdx} {S : Slots} {Q : List ProjTable} :
+    ∀ {v : Nat} {L : List ConstantInfo}, slotsOk B S Q v L = true →
+      ∀ c, v ≤ c → c < v + L.length → ∃ ci ∈ L, ∃ k j, baseGet? B ci.name = some (c, k, j)
+  | _, [], _, c, h1, h2 => by simp at h2; omega
+  | v, ci :: L, hok, c, h1, h2 => by
+    simp only [slotsOk, Bool.and_eq_true] at hok
+    by_cases hc : c = v
+    · subst hc
+      obtain ⟨k, j, hB, -⟩ := slotOk_spec hok.1
+      exact ⟨ci, List.mem_cons_self, k, j, hB⟩
+    · obtain ⟨cj, hm, k, j, hB⟩ :=
+        slotsOk_cover hok.2 c (by omega) (by simp only [List.length_cons] at h2; omega)
+      exact ⟨cj, List.mem_cons_of_mem _ hm, k, j, hB⟩
+
+/-- `lastOf?` finds nothing exactly when no table carries the name. -/
+theorem lastOf?_eq_none {T : Name} :
+    ∀ {Q : List ProjTable}, ProjTable.lastOf? T Q = none ↔ ∀ t ∈ Q, t.structName ≠ T
+  | [] => by simp [ProjTable.lastOf?]
+  | t :: Q => by
+    have ih := lastOf?_eq_none (T := T) (Q := Q)
+    simp only [ProjTable.lastOf?, List.mem_cons, forall_eq_or_imp]
+    cases hl : ProjTable.lastOf? T Q with
+    | some r => simp only [reduceCtorEq, false_iff]; intro ⟨_, h⟩; exact absurd (ih.2 h) (by simp [hl])
+    | none =>
+      have := ih.1 hl
+      by_cases hT : t.structName = T
+      · simp [hT]
+      · simpa [hT] using this
+
+/-- **A checked commit keeps the invariant**: the record's constants
+pushed, then its tables. -/
+theorem ViewAgrees.commit {B : BaseIdx} {S : Slots} (hB : BaseInj B) {fe : FEnv}
+    (hidx : IdxBelow fe) (h : ViewAgrees B S fe) {L : List ConstantInfo}
+    {Q : List ProjTable} (hok : commitOk B S fe.visibleBelow L Q = true) :
+    ViewAgrees B S (FEnv.pushTables Q (FEnv.pushAll L fe)) := by
+  simp only [commitOk, Bool.and_eq_true, List.all_eq_true, List.any_eq_true,
+    beq_iff_eq] at hok
+  obtain ⟨hsl, hQL⟩ := hok
+  have hvb : (FEnv.pushTables Q (FEnv.pushAll L fe)).visibleBelow =
+      fe.visibleBelow + L.length := by
+    rw [FEnv.visibleBelow_pushTables, pushAll_visibleBelow]
+  constructor
+  · intro n
+    rw [FEnv.find?_pushTables, ← ViewAgrees.find_pushAll hB L hidx h.find hsl n,
+      hvb, pushAll_visibleBelow]
+  · intro T
+    -- a table of the record names one of its constants, at a counter of
+    -- the commit's range
+    have hQr : ∀ t ∈ Q, t.structName = T → ∃ c k j, baseGet? B T = some (c, k, j) ∧
+        fe.visibleBelow ≤ c ∧ c < fe.visibleBelow + L.length := by
+      intro t ht hT
+      obtain ⟨ci, hci, hn⟩ := hQL t ht
+      obtain ⟨c, k, j, hBc, h1, h2, -⟩ := slotsOk_mem hsl ci hci
+      exact ⟨c, k, j, by rw [← hT, ← hn]; exact hBc, h1, h2⟩
+    rw [hvb, FEnv.rawTable?_pushTables, FEnv.rawTable?_pushAll, ← h.raw T,
+      workerView_rawTable?, workerView_rawTable?, FBase.findTable?_eq, FBase.findTable?_eq]
+    cases hl : baseGet? B T with
+    | none =>
+      have hQn : ProjTable.lastOf? T Q = none := by
+        rw [lastOf?_eq_none]
+        intro t ht hT
+        obtain ⟨c, k, j, hBT, -⟩ := hQr t ht hT
+        rw [hBT] at hl; exact nomatch hl
+      simp [hQn]
+    | some p =>
+      obtain ⟨c, k, j⟩ := p
+      simp only
+      by_cases hc : c < fe.visibleBelow
+      · have hQn : ProjTable.lastOf? T Q = none := by
+          rw [lastOf?_eq_none]
+          intro t ht hT
+          obtain ⟨c', k', j', hBT, h1, -⟩ := hQr t ht hT
+          rw [hBT] at hl
+          cases hl
+          omega
+        simp [hQn, hc, Nat.lt_of_lt_of_le hc (Nat.le_add_right _ _)]
+      · by_cases hc' : c < fe.visibleBelow + L.length
+        · obtain ⟨ci, hci, k', j', hBci⟩ := slotsOk_cover hsl c (by omega) hc'
+          have hn : ci.name = T := hB _ _ _ _ _ hBci hl
+          obtain ⟨c₁, k₁, j₁, hB₁, -, -, hQ⟩ := slotsOk_mem hsl ci hci
+          rw [hn, hl] at hB₁
+          cases hB₁
+          simp only [hc', hc, ↓reduceIte, hQ, Option.bind_some]
+          cases ProjTable.lastOf? T Q <;> rfl
+        · have hQn : ProjTable.lastOf? T Q = none := by
+            rw [lastOf?_eq_none]
+            intro t ht hT
+            obtain ⟨c', k', j', hBT, -, h2⟩ := hQr t ht hT
+            rw [hBT] at hl
+            cases hl
+            omega
+          simp [hQn, hc, hc']
 
 /-! ## The base builder
 
@@ -485,7 +670,7 @@ theorem valueStep_commit {pins : List NatOpPinSet} {B : BaseIdx} {S : Slots} {i 
     (h : valueStep (workerView B S fe.visibleBelow) pd = some (.ok (ci, vg))) :
     installDeclStep mode pins (i, fe, pend) pd =
       .ok (i + 1, fe.push ci, pend.push ⟨vg, i, fe.visibleBelow⟩) := by
-  have hs := installStepC_value (mode := mode) (pins := pins) (i := i) (pend := pend) (funext hag) h
+  have hs := installStepC_value (mode := mode) (pins := pins) (i := i) (pend := pend) (funext hag.find) h
   unfold installDeclStep
   simp only [hand, ↓reduceIte]
   revert hs
@@ -505,7 +690,7 @@ theorem valueStep_commit_error {pins : List NatOpPinSet} {B : BaseIdx} {S : Slot
     (hag : ViewAgrees B S fe) (hand : andPinOk pd = true)
     (h : valueStep (workerView B S fe.visibleBelow) pd = some (.error e)) :
     installDeclStep mode pins (i, fe, pend) pd = .error (e, i) := by
-  have hs := installStepC_value (mode := mode) (pins := pins) (i := i) (pend := pend) (funext hag) h
+  have hs := installStepC_value (mode := mode) (pins := pins) (i := i) (pend := pend) (funext hag.find) h
   unfold installDeclStep
   simp only [hand, ↓reduceIte]
   revert hs

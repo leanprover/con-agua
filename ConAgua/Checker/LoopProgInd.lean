@@ -29,7 +29,8 @@ def loopStepOut : List FnName :=
    "pls_clear", "pls_put", "pn_arm", "pn_at", "pn_clear", "pn_put", "proj_a", "proj_b",
    "promote_caps", "promote_ci", "promote_ci_list", "promote_clear", "promote_cv", "promote_e",
    "promote_e_list", "promote_fire", "promote_l", "promote_l_list", "promote_l_pool",
-   "promote_ls", "promote_n", "promote_n_list", "promote_new", "promote_proj_table",
+   "promote_ls", "promote_n", "promote_n_list", "promote_new", "promote_new_consts",
+   "promote_new_tables", "promote_proj_table", "promote_proj_tables",
    "promote_rule", "promote_rules", "promote_slice", "promote_vg", "ps_at"]
 
 /-- The loop's functions with a step's write set: `loopFns` but `loopStepOut` (compared by name

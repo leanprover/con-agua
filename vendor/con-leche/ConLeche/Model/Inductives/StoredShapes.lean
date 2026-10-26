@@ -264,7 +264,7 @@ theorem blockMembers_notLit {env envI : Env} (hwf : ConLeche.EnvWF env)
     -- … so it is older than the block, and so is the `Char` it mentions
     have hciE : env.find? ConLeche.charOfNatName = some ci := by
       rw [← hI _ (hnm _ hCO')]; exact hci
-    have hres := (hwf ci (List.mem_of_find?_eq_some hciE)).2.2.1
+    have hres := (hwf.consts ci (List.mem_of_find?_eq_some hciE)).2.2.1
     rw [hty] at hres
     simp only [ConLeche.Expr.constsResolve, Bool.and_eq_true] at hres
     have hChar' : ConLeche.charName ∉ names := by
@@ -593,7 +593,7 @@ theorem storedFieldShapes_of_walk {V : Type w} [SetTheory V] {env : Env} (m : En
   have hcl : ∀ n ci, ctx.find? n = some ci → ci.toConstantVal.type.hasFvar = false := by
     intro n ci hf
     rw [hfind] at hf
-    exact (henv ci (List.mem_of_find?_eq_some hf)).1
+    exact (henv.consts ci (List.mem_of_find?_eq_some hf)).1
   have hhi : ctx.hiAt 0 = ctx.nP + ctx.names.length := by simp [ConLeche.NestCtx.hiAt]
   have hlenH : holes.length = ctx.names.length := ConLeche.nestHoles_length hholes
   have hparW' : ∀ x ∈ ctx.params, Expr.WScoped (ctx.hiAt 0) x :=

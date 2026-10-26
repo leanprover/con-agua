@@ -33,7 +33,13 @@ namespace L.Ind
 
 open L.Arena
 
-/-! ## A handle an `intern_*` model returns is below `2^32` -/
+/-! ## A pool write at a tagged address plus an offset -/
+
+theorem vpool_st_k (X : Mem) (T k v : Word) (h41 : T.toNat < 2 ^ 41)
+    (hsz : (X.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40)
+    (hk : (T &&& 1099511627775).toNat + k.toNat < (X.arr64 (tierA 0 (T >>> 40))).size) :
+    vpool (X.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) v) = (vpool X).set! (T + k).toNat v :=
+  vpool_stidx X T k v h41 (by rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; omega) hsz (by omega)
 
 /-! ## `intern_nanon` (master's `internNAnon_spec`, `internNAnon_stage`) -/
 
@@ -588,124 +594,5 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have := mt UInt64.le_iff_toNat_le.mpr c
   have e : (4294967296 : Word).toNat = 4294967296 := rfl
   rw [e] at this; show (r.headD 0).toNat < 2 ^ 32; omega
-
-/-! ## `proj_table_name(T)` (the bytes `projTable`, master's `intern_nstr`, `intern_nnum`) -/
-
-/-- `nninternW`'s handle is below `2^32`. -/
-theorem nninternW_lt {m m' : Mem} {a : AState} {pre u w : Word} (hR : NNumR m a)
-    (hI : nninternW m pre u = some (w, m')) : w.toNat < 2 ^ 32 := by
-  exact consInternM_lt nnumCS_wf hR hI
-
-/-- `proj_table_name` and its callees. -/
-def ptProg : Prog :=
-  [("proj_table_name", projTableNameL), ("intern_nstr", internNStr), ("lit_hash", litHash),
-   ("limbs_eq", limbsEq), ("nstr_match", nsMatch), ("nstr_find", nsFind), ("nstr_push", nsPush),
-   ("intern_nnum", internNNum), ("nnum_find", nnumFind), ("nnum_push", nnumPush)]
-
-def ptFns : List FnName := ptProg.map (·.1)
-
-/-- `proj_table_name` writes the pool (and its top) and the `str` and `num` tables. -/
-theorem ptProg_closed :
-    closedA ptProg [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [0, 36, 37, 38, 39] ptFns = true := by
-  decide +kernel
-
-abbrev PtF (p : Prog) : Prop := ProgHas p ptProg
-
-/-- **The model of `proj_table_name`.** -/
-noncomputable def ptF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
-  callF ptProg "proj_table_name" m args
-
-theorem ptF_spec (p : Prog) (hp : PtF p) (n : Nat) (s₀ : St) (args : List Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "proj_table_name" args
-    ⦃fun r s' => LocEq s' s₀ ∧ ptF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
-  callF_spec ptProg_closed (hp.agree ptFns) (by decide) n s₀ args
-
-theorem ptF_frame {m m' : Mem} {args r : List Word} (h : ptF m args = some (r, m')) :
-    MemFrame [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [0, 36, 37, 38, 39] m m' := by
-  obtain ⟨n, hc⟩ := callF_run h
-  exact (run_memFrame ptProg_closed (by decide) (run_of_callW hc)).1
-
-set_option maxHeartbeats 2000000 in
-/-- `ptnW_spec` from the one lookup. -/
-theorem ptnW_spec' (p : Prog) (hp : p.lookup "proj_table_name" = some projTableNameL) (n : Nat)
-    (s₀ : St) (t : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proj_table_name" [t]
-    ⦃fun r s' => LocEq s' s₀ ∧ ptnW p n s₀.mem t = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, projTableNameL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, evalE_tierE, evalE_idxE,
-      callW_spec p n "intern_nstr", callW_spec p n "intern_nnum"] <;>
-    finish [ptnW, ptMem, ptBytes, tierW, idxW, nameCnt]
-
-/-- **`proj_table_name`'s model refines `projTableName`** under the stage relation (replaces
-`IndStubs.projTableName_spec`; lane `whnf`'s `projTableName_refines` is under `CoreS`). -/
-theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t : Word) (ht : H t) :
-    RelW ptF [t] (StageR dn vis fe) (projTableName (decI t)) (KeepPost dn vis fe decW0N) := by
-  intro m m' a r hc hS
-  obtain ⟨n', hc'⟩ := callF_run hc
-  cases n' with
-  | zero => exact (callW_zero_false hc').elim
-  | succ n =>
-  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (ptnW_spec' ptProg rfl n _ t) hc'
-  simp only at hs' hW
-  rw [hs'] at hW
-  unfold ptnW at hW
-  obtain ⟨c1, hW⟩ := of_ite_none hW
-  obtain ⟨c2, hW⟩ := of_ite_none hW
-  obtain ⟨c3, hW⟩ := of_ite_none hW
-  by_cases c4 : nameCnt m (t >>> 28) ((t >>> 27) &&& 1) ≤ (t &&& 134217727)
-  · rw [if_pos c4] at hW; cases hW
-  rw [if_neg c4] at hW
-  obtain ⟨c5, hW⟩ := of_ite_none hW
-  obtain ⟨c6, hW⟩ := of_ite_none hW
-  have hpool : PoolOK m := hS.1.arena.1.lit.1
-  generalize ho : rdW (m.arr64 CTL) 0 = o at hW c5 c6
-  have hot : o = m.top := ho.symm
-  subst hot
-  obtain ⟨hg, hsl, hk⟩ := ptMem_facts m hpool c6
-  have hR1 : ArenaR (ptMem m m.top) a := ArenaR.grow m _ hg a hS.1.arena.1
-  have hmo1 : ModeOK (ptMem m m.top) := hS.1.mode.grows hg
-  have hpc1 : pcap (ptMem m m.top) < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.2.2.1; omega
-  have hcap1 : m.top.toNat + (9 : Word).toNat ≤ pcap (ptMem m m.top) := by
-    have := hsl.le; have := hg.cap; omega
-  rcases hc1 : callW ptProg n "intern_nstr" [t, m.top, 9] (ptMem m m.top) with _ | ⟨r₁, m₂⟩
-  · rw [hc1] at hW; cases hW
-  rw [hc1] at hW
-  simp only at hW
-  obtain ⟨c7, hW⟩ := of_ite_none hW
-  obtain ⟨s₂, hs₂, -, hok1, hR2, hres1⟩ := triple_of_callW
-    (internNStr_refinesA ptProg rfl rfl rfl rfl rfl rfl a n ⟨ptMem m m.top, Locals.init []⟩ t m.top 9 hR1 ht
-      hsl "projTable" hk (ModeOK.slice0 hmo1 hsl)) hc1
-  obtain ⟨s₂', hs₂', -, hW1⟩ := triple_of_callW (s₀ := ⟨ptMem m m.top, Locals.init []⟩)
-    (internNStr_spec ptProg rfl rfl rfl rfl rfl rfl n _ t m.top 9 hpc1 hcap1) hc1
-  simp only at hs₂ hR2 hs₂' hW1
-  rw [hs₂] at hR2
-  rw [hs₂'] at hW1
-  have hfr : MemFrame [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] m m₂ :=
-    ((grows_frame m _ hg).mono (by simp) (by simp)).trans
-      ((consInternM_frame nstrCS_wf hW1).mono (by simp [ConsSch.wset, nstrCS]) (by simp [ConsSch.wset, nstrCS]))
-  obtain ⟨a1, hrun1, hS1, hg1, -, -⟩ := stage_of_name hS (internNNode_str_run (decI t) "projTable" a)
-    hok1 hR2 hres1 hfr (by simp [POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
-    (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
-    (hmo1.frame (consInternM_frame nstrCS_wf hW1) (by simp [nstrCS]) (by simp [nstrCS]))
-  have hr1 : (r₁.headD 0).toNat < 2 ^ 32 := by
-    have := mt UInt64.le_iff_toNat_le.mpr c7
-    have e : (4294967296 : Word).toNat = 4294967296 := rfl
-    rw [e] at this; omega
-  rcases hc2 : callW ptProg n "intern_nnum" [r₁.headD 0, 0] m₂ with _ | ⟨r₂, m₃⟩
-  · rw [hc2] at hW; cases hW
-  rw [hc2] at hW
-  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  obtain ⟨s₃, hs₃, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (internNNum_spec ptProg rfl rfl rfl n _ (r₁.headD 0) 0) hc2
-  simp only at hs₃ hW2
-  rw [hs₃] at hW2
-  obtain ⟨a2, hrun2, hS2, hg2, -, -⟩ := internNNum_stage hS1 (r₁.headD 0) 0 hr1 hW2
-  rw [hr] at hrun2 hW2
-  refine ⟨decI (r.headD 0), a2, ?_, hS2, hg1.trans hg2, nninternW_lt hS1.1.arena.1.nnum hW2, rfl⟩
-  simp only [projTableName, StateT.run_bind, hrun1]
-  exact hrun2
 
 end L.Ind

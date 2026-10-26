@@ -4,7 +4,6 @@ import ConLeche.Verify.Inductives.RecStage
 public import ConLeche.Model.Inductives.BlockRecMem
 public import ConLeche.Model.Inductives.DeclBlock
 import ConLeche.Model.Inductives.BlockRecLaw
-import ConLeche.Verify.ProjSlots
 import ConLeche.Verify.Inductives.BlockRecRun
 
 public section
@@ -13,7 +12,7 @@ public section
 # The recursor stage, assembled at the run
 
 `blockRecStaged_of` (`Model/Inductives/BlockStageRec.lean`) is the
-recursor stage's cons, stated at eighteen premises.  This module
+recursor stage's cons, stated at fifteen premises.  This module
 discharges from the CHECK'S OWN RUN every premise that is a syntactic
 fact about the stored recursors, so that what is left of the Model half
 is the two SEMANTIC seams — the family premise (`BlockRecPre`, the
@@ -26,8 +25,7 @@ What the run supplies, and where it comes from:
 |---|---|
 | `hty`, `hrhs` | `recStage_facts` |
 | `hresRec` | `recStage_reserved` |
-| `hfr`, `hnres`, `hpsh` | the per-recursor type record's check (`RecStage.tyGenAt`, `ConstChecked`) |
-| `hnoTy` | the same check's `ConstChecked.noProj` |
+| `hfr`, `hnres` | the per-recursor type record's check (`RecStage.tyGenAt`, `ConstChecked`) |
 | `hrd` | `hrd_of_pre`, at the family premise |
 | `hrecP` | `hrecP_ofR`, at the rule data |
 -/
@@ -44,43 +42,9 @@ universe w
 
 variable {V : Type w} [SetTheory V] {μ : CheckMode}
 
-/-! ## 4. The stored RULES mention no empty slot
-
-`hnoRhs` is `hnoTy`'s twin one stage down: a stored right-hand side has
-no `.proj` node at an empty slot of the BARE-`k` environment
-(`RuleOutOk.hnoProj`), whose `findProj?` is the constructors'
-(`findProj?_consBlockRecsBare`).  Both facts
-below are fields of the stage's rule record (`RecStage.ruleOutOf`,
-`Verify/Inductives/RecStage.lean`). -/
+/-! ## 4. The stored rules' typing run -/
 
 section RuleOut
-
-/-- **`blockRecStaged_of`'s `hnoRhs`**: a stored rule's right-hand side
-mentions no EMPTY projection slot of the constructors' environment.
-It is the rule record's `hnoProj` at the environment the stage stores
-it in — the BARE-`k` one, whose `findProj?` is `envC`'s, because no
-recursor's name is projection-shaped. -/
-theorem recStage_rhsNoProj {envC : Env} {p : BlockParts} {cvTas : List ConstantVal}
-    {rs : List (ConstantVal × List Expr × Nat × List (ConstantVal × Nat))} {F : Nat}
-    (h : ConLeche.RecStageG μ F envC p cvTas rs) :
-    ∀ r ∈ rs, ∀ rhsA ∈ r.2.1, ∀ (T : Name) (i : Nat),
-      envC.findProj? T i = none → Expr.NoProjAt T i rhsA := by
-  obtain ⟨R⟩ := id h
-  -- no rule-less recursor's name is projection-shaped, so the bare
-  -- environment's slots are the constructors' environment's
-  have hpsh : ∀ x ∈ rs.map (fun r => (r.1, r.2.2.1)), x.1.name.isProjFnShape = false := by
-    intro x hx
-    obtain ⟨y, hy, rfl⟩ := List.mem_map.mp hx
-    obtain ⟨i, hi⟩ := List.getElem?_of_mem hy
-    obtain ⟨rc, u, -, -, ⟨E⟩⟩ := R.tyGenAt hi
-    rw [E.name_eq, ← E.hcv0.1]
-    exact E.hcv.notProjShape
-  intro r hr rhsA hrhsA T i hslot
-  obtain ⟨c, hc⟩ := List.getElem?_of_mem hr
-  obtain ⟨j, rc, -, -, Q⟩ := R.ruleOutOf hc hrhsA
-  refine Q.hnoProj T i ?_
-  rw [findProj?_consBlockRecsBare hpsh]
-  exact hslot
 
 /-- **The rule's own typing run, at the stage's own bare-`k`
 environment**, stated at the list the model's bare cons is built over
@@ -261,8 +225,7 @@ abbrev NestedFiresOk (envC : Env) (p : BlockParts)
       (∀ pin ∈ pins, pin.hasFvar = false ∧
         pin.allLevelParamsDefined r.1.levelParams = true ∧
         pin.constsResolve envC = true ∧
-        pin.looseBVarsBounded (p.toBlockShape.rulePrefixAt j) = true ∧
-        ∀ (T : Name) (i : Nat), envC.findProj? T i = none → Expr.NoProjAt T i pin) ∧
+        pin.looseBVarsBounded (p.toBlockShape.rulePrefixAt j) = true) ∧
       ∃ pre dom body D,
         r.1.type.stripPis (p.toBlockShape.majorIdxAt j) = some (pre, .forallE dom body) ∧
         dom.getAppFn = .const D lvls ∧
@@ -330,7 +293,7 @@ theorem blockRecStaged_runR {envC : Env} (hμ : μ.isVerified = true)
     fun _ => blockRecAcv_of_notin
   have hL := fun r (hr : r ∈ rs) => hleaf.stored hnd hr
   exact blockRecStaged_of mpC hnd
-    (fun r hr => (hcv r hr).1) (fun r hr => (hcv r hr).2.1) (fun r hr => (hcv r hr).2.2.1)
+    (fun r hr => (hcv r hr).1) (fun r hr => (hcv r hr).2)
     (fun r hr => ⟨(hfacts r hr).1, (hfacts r hr).2.1, (hfacts r hr).2.2.1,
       (hfacts r hr).2.2.2.1⟩)
     hag (fun r hr => (hL r hr).1) (fun r hr => (hL r hr).2.1)
@@ -340,10 +303,8 @@ theorem blockRecStaged_runR {envC : Env} (hμ : μ.isVerified = true)
       (fun i r hr ψ => blockRecAcv_at hnd hr ψ) hleaf.pre)
     (fun r hr rhs hrhs => (hfacts r hr).2.2.2.2 rhs hrhs)
     hctorsIn hshape hnest
-    (hrecP_ofR mpC hshape (fun r hr => (hcv r hr).1) (fun r hr => (hcv r hr).2.2.1) hag hnew)
+    (hrecP_ofR mpC hshape (fun r hr => (hcv r hr).1) hag hnew)
     (ConLeche.recStage_reserved h)
-    (fun r hr T i hslot => (hcv r hr).2.2.2 T i hslot)
-    (fun r hr rhs hrhs T i hslot => recStage_rhsNoProj h r hr rhs hrhs T i hslot)
 
 
 end ConLeche.Model

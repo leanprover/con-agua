@@ -58,7 +58,7 @@ theorem HFr.trans {tg ws : Word} {c : Nat} {m₁ m₂ m₃ : Mem} (h₁ : HFr tg
   ⟨h₁.1.trans h₂.1, fun x hx => (h₂.2 x hx).trans (h₁.2 x hx)⟩
 
 /-- **The hoist's setting**: the store, a visited set, the stream in the order `ord` (below
-`2 ^ 60` records, every one walkable), the name index (positions of the stream), and three
+`2 ^ 60` records), the name index (positions of the stream), and three
 disjoint slices of `IW`: `ord`, the targets `tg`, the stack `ws`, `c` words each. -/
 structure HEnv (m : Mem) (a : AState) (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat)
     (ord tg ws : Word) (c : Nat) : Prop where
@@ -67,7 +67,6 @@ structure HEnv (m : Mem) (a : AState) (ds : Array IDeclaration) (idx : Std.HashM
   ordR : OrdR m ord ds
   size : ds.size = c
   c60 : c < 2 ^ 60
-  walk : ∀ k (h : k < ds.size), WalkableDecl ds[k]
   nix : NixR m idx
   nixlt : ∀ (n : NIdx) (j : Nat), idx[n]? = some j → j < c
   rg1 : ord.toNat + c ≤ tg.toNat
@@ -96,7 +95,7 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
   have hA : ∀ b ∈ [IW, HSEEN], 64 ≤ b ∧ b < 256 := by decide
   have hC : ∀ x ∈ ([73, 74] : List Word), 64 ≤ x.toNat := by simp
   refine ⟨ArenaR.frame_ext [IW, HSEEN] [73, 74] hA hC m m' hf.1 a hE.arena, hs,
-    ?_, hE.size, hE.c60, hE.walk, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
+    ?_, hE.size, hE.c60, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
     by rw [hsz]; exact hE.isz, by rw [htop]; exact hE.top, ?_⟩
   · intro k hk
     have hk' : k < c := hE.size ▸ hk
@@ -136,7 +135,7 @@ theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : S
   obtain ⟨s, hs⟩ := hE.seen
   refine ⟨ArenaR.frame_ext [IW] [200] hA hC m m' hf.1 a hE.arena,
     ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf.1 _ hs⟩,
-    ?_, hE.size, hE.c60, hE.walk, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
+    ?_, hE.size, hE.c60, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
     by rw [hsz]; exact hE.isz, Nat.le_trans hE.top hf.2.1.1, hf.2.2⟩
   · intro k hk
     have hk' : k < c := hE.size ▸ hk
@@ -487,7 +486,7 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
   rw [hCloseGoW.k_hoist_deps_of.arm1] at h
   obtain ⟨ns, hrun, hns, hseen₁, mn, hnotes, hfr₁⟩ :=
     hoistDepsOf_ok n m m₁ a kw (UInt64.ofNat i) _ tg ws (sp - 1) sp₁ ds[kw.toNat] hE.arena hE.seen
-      hr59 hD hok (hE.walk _ hks) hd
+      hr59 hD hok hd
   obtain ⟨hgood, hdeps⟩ := good_of_run hks hrun
   -- the stack below the top
   have hS₀ : StkOK m ws (sp - 1) c T := by

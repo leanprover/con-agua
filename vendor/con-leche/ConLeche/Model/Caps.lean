@@ -15,7 +15,7 @@ value-kind harvest discharges.
 
 The law **carries the instantiated former type's reading**, so the
 crossing must move that reading forward too
-(`denote_cons_fresh_mono`, on `ConstsBound` of the instantiated type
+(`denote_cons_mono`, on `ConstsBound` of the instantiated type
 — `constsBound_instType`).  Everything else is `acvalWith_ne` at the
 two leaves the law mentions (the former and the capability
 constructor), each `≠` the fresh name because `EtaFamilyStored`
@@ -56,7 +56,7 @@ theorem constsBound_instType {env : Env} (hwf : ConLeche.EnvWF env)
     ConstsBound env
       (c.toConstantVal.type.instantiateLevelParams
         c.toConstantVal.levelParams us) := by
-  obtain ⟨-, -, hty, -⟩ := hwf c hc
+  obtain ⟨-, -, hty, -⟩ := hwf.consts c hc
   refine constsBound_of_constsResolve _ ?_
   rw [ConLeche.Expr.constsResolve_instantiateLevelParams]
   exact hty
@@ -73,8 +73,8 @@ theorem etaFamilyStored_descend {c₀ : ConstantInfo} {T : Name}
     {cvT : ConstantVal} {caps : IndCaps}
     (hnotind : ∀ cv caps, c₀ ≠ .indInfo cv caps)
     (hnotctor : ∀ cv np nf, c₀ ≠ .ctorInfo cv np nf)
-    (hf : (⟨c₀ :: env.consts⟩ : Env).find? T = some (.indInfo cvT caps))
-    (hfam : ConLeche.EtaFamilyStored ⟨c₀ :: env.consts⟩ T caps) :
+    (hf : (⟨c₀ :: env.consts, env.tables⟩ : Env).find? T = some (.indInfo cvT caps))
+    (hfam : ConLeche.EtaFamilyStored ⟨c₀ :: env.consts, env.tables⟩ T caps) :
     env.find? T = some (.indInfo cvT caps) ∧
       ConLeche.EtaFamilyStored env T caps ∧
       T ≠ c₀.name ∧ caps.etaCtor ≠ c₀.name := by
@@ -90,7 +90,7 @@ theorem etaFamilyStored_descend {c₀ : ConstantInfo} {T : Name}
     rw [heq, ConLeche.Env.find?_cons, ite_eq_left rfl] at hfC
     exact hnotctor cvC cnP cnF (Option.some.inj hfC)
   have hdown : ∀ n : Name, n ≠ c₀.name →
-      (⟨c₀ :: env.consts⟩ : Env).find? n = env.find? n := by
+      (⟨c₀ :: env.consts, env.tables⟩ : Env).find? n = env.find? n := by
     intro n hn
     rw [ConLeche.Env.find?_cons, ite_eq_right (fun hh => hn hh.symm)]
   exact ⟨by rwa [hdown _ hnT] at hf,
@@ -122,10 +122,9 @@ theorem capsOk_cons_fresh (mp : EnvModelM V μ env)
     (hprev : CapsOk mp.base2)
     {c₀ : ConstantInfo} {A : (Name → Nat) → Term}
     (hfresh : env.find? c₀.name = none)
-    (hntc : ConsCrossEnv env c₀)
     (hnotind : ∀ cv caps, c₀ ≠ .indInfo cv caps)
     (hnotctor : ∀ cv np nf, c₀ ≠ .ctorInfo cv np nf)
-    (m₂ : EnvModel V ⟨c₀ :: env.consts⟩)
+    (m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩)
     (hac : m₂.acval = acvalWith mp.base2.acval c₀.name A) :
     CapsOk m₂ := by
   constructor
@@ -137,8 +136,7 @@ theorem capsOk_cons_fresh (mp : EnvModelM V μ env)
       hprev.1 T cvT caps hfE hcape hres hfam₀ φ' us hlen
     refine ⟨TVa, ?_, hokTVa, ?_, ?_⟩
     · rw [hac]
-      exact denote_cons_mono hfresh
-        ((hntc.typeOf hfE).instantiateLevelParams _ _) _ 0
+      exact denote_cons_mono hfresh _ 0
         (constsBound_instType mp.base2.wf
           (ConLeche.Env.find?_mem hfE) us) hTVa
     · intro ρ ts rest x hlents hfit hmem
@@ -150,8 +148,7 @@ theorem capsOk_cons_fresh (mp : EnvModelM V μ env)
         (fun _ _ _ => rfl)
       · rwa [ConLeche.Env.find?_cons, ite_eq_right (fun hh => hnC hh.symm)] at hf₂
       · rw [hac]
-        exact denote_cons_mono hfresh
-          ((hntc.typeOf hf).instantiateLevelParams _ _) _ 0
+        exact denote_cons_mono hfresh _ 0
           (constsBound_instType mp.base2.wf
             (ConLeche.Env.find?_mem hf) us) hTCa
   · -- the unit-like half: no fabricated spine, one leaf to move
@@ -170,8 +167,7 @@ theorem capsOk_cons_fresh (mp : EnvModelM V μ env)
       hprev.2 T cvT caps hfE hcapu hres φ' us hlen
     refine ⟨TVa, ?_, hokTVa, ?_⟩
     · rw [hac]
-      exact denote_cons_mono hfresh
-        ((hntc.typeOf hfE).instantiateLevelParams _ _) _ 0
+      exact denote_cons_mono hfresh _ 0
         (constsBound_instType mp.base2.wf
           (ConLeche.Env.find?_mem hfE) us) hTVa
     · intro ρ ts rest x y hlents hfit hmx hmy

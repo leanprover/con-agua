@@ -216,12 +216,12 @@ end Sims
 
 /-! ## 3. The assembly -/
 
-/-- The shared operations read the index only through `find?`
-(`coreKnotI_congr`). -/
-theorem sharedOpsC_congr {fe₁ fe₂ : FEnv} (hfe : fe₁.find? = fe₂.find?) :
-    sharedOpsC mode fe₁ = sharedOpsC mode fe₂ := by
-  unfold sharedOpsC opE opB opS
-  simp only [coreKnotI_congr hfe]
+/-- The recursors' conses at their majors leave the tables alone. -/
+theorem consBlockRecsT_tables (find? : Name → Option ConstantInfo) (q : BlockShape) :
+    ∀ (m : Nat) (out : List (ConstantVal × TargetMajor × List Expr)) (env : Env),
+      (consBlockRecsT find? q m out env).tables = env.tables
+  | _, [], _ => rfl
+  | m, _ :: rest, _ => consBlockRecsT_tables find? q (m + 1) rest _
 
 /-! ### The cons at the majors
 
@@ -268,7 +268,7 @@ theorem find?_consBlockRecsT_of_bare {find? : Name → Option ConstantInfo}
     simp only [List.map_cons, consBlockRecsBare] at h
     simp only [consBlockRecsT]
     refine find?_consBlockRecsT_of_bare
-      (envA := ⟨.recInfo cv (q.majorIdxAt m) (q.rulePrefixAt m) [] :: envA.consts⟩) ?_ n h
+      (envA := ⟨.recInfo cv (q.majorIdxAt m) (q.rulePrefixAt m) [] :: envA.consts, envA.tables⟩) ?_ n h
     exact find?_cons_mono rfl hf
 
 theorem mem_consBlockRecsT {find? : Name → Option ConstantInfo}
@@ -319,9 +319,10 @@ theorem envWF_consBlockRecsT {find? : Name → Option ConstantInfo} {q : BlockSh
         = true →
       ((consBlockRecsT find? q 0 out env).find? n).isSome = true :=
     find?_consBlockRecsT_of_bare (fun _ hn => hn)
-  intro c hc
+  refine ⟨fun c hc => ?_, fun t ht => TableWF.mono hdomEnv
+    (henv.tables t (by rw [consBlockRecsT_tables] at ht; exact ht))⟩
   rcases mem_consBlockRecsT hc with hc' | ⟨i, t, hti, rfl⟩
-  · exact ConstWF.mono hdomEnv (henv c hc')
+  · exact ConstWF.mono hdomEnv (henv.consts c hc')
   · rw [Nat.zero_add]
     obtain ⟨h1, h2, h3, h4, h5⟩ := hall t (List.mem_of_getElem? hti)
     refine structConstWF h1 h2 (Expr.constsResolve_of_find hdomEnv h3) h4

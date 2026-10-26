@@ -184,32 +184,6 @@ def rulesEq : FunDecl := lfn (o1, l1, o2, l2) locals (e) {
   return e
 }
 
-/-- `tbl_eq_a(p, q)`: names, level parameters, `numParams`, `ctor`, `numFields`, `structSort`
-(words `1‥8`). -/
--- con-ron: none — the derived `IProjTable` equality, at `decTbl`'s decoding
-def tblEqA : FunDecl := lfn (p, q) locals (e) {
-  if EREC.u64[p + 1] != EREC.u64[q + 1] { return 0 };
-  if EREC.u64[p + 2] != EREC.u64[q + 2] { return 0 };
-  e := call er_sl_at(p, q, 3);
-  if e == 0 { return 0 };
-  if EREC.u64[p + 5] != EREC.u64[q + 5] { return 0 };
-  if EREC.u64[p + 6] != EREC.u64[q + 6] { return 0 };
-  if EREC.u64[p + 7] != EREC.u64[q + 7] { return 0 };
-  return u64(EREC.u64[p + 8] == EREC.u64[q + 8])
-}
-
-/-- `tbl_eq(p, p')`: two projection tables (`decTbl`, `projInfo` records) are equal. -/
--- con-ron: none — the derived `IProjTable` equality, at `decTbl`'s decoding
-def tblEq : FunDecl := lfn (p, q) locals (e) {
-  e := call tbl_eq_a(p, q);
-  if e == 0 { return 0 };
-  e := call er_sl_at(p, q, 9);
-  if e == 0 { return 0 };
-  e := call er_sl_at(p, q, 11);
-  if e == 0 { return 0 };
-  return u64(EREC.u64[p + 13] == EREC.u64[q + 13])
-}
-
 /-- `ci_eq_rest(p, p', k)`: the equality of two records of the same kind `k ≤ 5` whose constant
 values agree. -/
 -- con-ron: none — the derived `IConstantInfo` equality (`fe.find? n == some pin`)
@@ -242,8 +216,7 @@ def ciEqRest : FunDecl := lfn (p, q, k) locals (e, o1, l1, o2, l2) {
 def ciEq : FunDecl := lfn (p, q) locals (k, e) {
   k := EREC.u64[p];
   if k != EREC.u64[q] { return 0 };
-  if 6 < k { abort };
-  if k == 6 { e := call tbl_eq(p, q); return e };
+  if 5 < k { abort };
   e := call cv_eq(p + 1, q + 1);
   if e == 0 { return 0 };
   e := call ci_eq_rest(p, q, k);
@@ -261,26 +234,12 @@ def findIs : FunDecl := lfn (vis, n, pin) locals (f, r, e) {
 
 /-! ## `toConstantVal` -/
 
-/-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → a constant value pointer: the inline one at
-`p + 1`, or for a projection table a fresh one (the table name, its level parameters, `Sort 1`
-interned as the twin interns it). -/
--- con-ron: ConRon/Arena/Env.lean:203-214 ConRon.Arena.IConstantInfo.toConstantVal
+/-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → the constant value pointer: the inline one at
+`p + 1` (every constant record has it there). -/
+-- con-ron: ConRon/Arena/Env.lean:176-180 ConRon.Arena.IConstantInfo.toConstantVal
 @[l_impl ConRon.Arena.IConstantInfo.toConstantVal]
-def ciToCv : FunDecl := lfn (p) locals (k, z, o, t, q, nm, lo, ll) {
-  k := EREC.u64[p];
-  if k <= 5 { return p + 1 };
-  if k != 6 { abort };
-  z := call intern_zero();
-  if 4294967296 <= z { abort };
-  o := call intern_succ(z);
-  if 4294967296 <= o { abort };
-  t := call intern_sort(o);
-  if 4294967296 <= t { abort };
-  nm := EREC.u64[p + 1];
-  lo := EREC.u64[p + 3];
-  ll := EREC.u64[p + 4];
-  q := call cv_new(nm, lo, ll, t);
-  return q
+def ciToCv : FunDecl := lfn (p) locals () {
+  return p + 1
 }
 
 /-! ## The renaming -/
@@ -467,7 +426,7 @@ def canonRulesEq : FunDecl :=
 }
 
 /-- `ci_canon_defn(p, p')`: two definitions, hints first, then the common data, then the values. -/
--- con-ron: ConRon/Arena/Canon.lean:192-220 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: ConRon/Arena/Canon.lean:192-217 ConRon.Arena.IConstantInfo.canonEq
 def ciCanonDefn : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, a, b) {
   e := call hint_eq(p + 6, q + 6);
   if e == 0 { return 0 };
@@ -482,7 +441,7 @@ def ciCanonDefn : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, a, b)
 
 /-- `ci_canon_rec(p, p')`: two recursors, the two counts first, then the common data, then the
 rules. -/
--- con-ron: ConRon/Arena/Canon.lean:192-220 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: ConRon/Arena/Canon.lean:192-217 ConRon.Arena.IConstantInfo.canonEq
 def ciCanonRec : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, o1, l1, o2, l2) {
   if EREC.u64[p + 5] != EREC.u64[q + 5] || EREC.u64[p + 6] != EREC.u64[q + 6] { return 0 };
   e := call cv_canon_eq(p + 1, q + 1);
@@ -497,15 +456,13 @@ def ciCanonRec : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, o1, l1
 }
 
 /-- `ci_canon_eq(p, p')`: `IConstantInfo.canonEq`, kind by kind (a definition's hints first, a
-recursor's two counts first; an inductive's capabilities are not compared; tables as they
-stand). -/
--- con-ron: ConRon/Arena/Canon.lean:192-220 ConRon.Arena.IConstantInfo.canonEq
+recursor's two counts first; an inductive's capabilities are not compared). -/
+-- con-ron: ConRon/Arena/Canon.lean:192-217 ConRon.Arena.IConstantInfo.canonEq
 @[l_impl ConRon.Arena.IConstantInfo.canonEq]
 def ciCanonEq : FunDecl := lfn (p, q) locals (k, e) {
   k := EREC.u64[p];
   if k != EREC.u64[q] { return 0 };
-  if 6 < k { abort };
-  if k == 6 { e := call tbl_eq(p, q); return e };
+  if 5 < k { abort };
   if k == 1 { e := call ci_canon_defn(p, q); return e };
   if k == 4 {
     if EREC.u64[p + 5] != EREC.u64[q + 5] || EREC.u64[p + 6] != EREC.u64[q + 6] { return 0 }
@@ -516,7 +473,7 @@ def ciCanonEq : FunDecl := lfn (p, q) locals (k, e) {
 }
 
 /-- `canon_eq_list(o, l, o', l')`: two `IW` slices of constant records, member for member. -/
--- con-ron: ConRon/Arena/Canon.lean:222-229 ConRon.Arena.canonEqList
+-- con-ron: ConRon/Arena/Canon.lean:219-226 ConRon.Arena.canonEqList
 @[l_impl ConRon.Arena.canonEqList]
 def canonEqListL : FunDecl := lfn (o1, l1, o2, l2) locals (e, a, b) {
   if l1 == 0 && l2 == 0 { return 1 };
@@ -535,9 +492,9 @@ def canonEqListL : FunDecl := lfn (o1, l1, o2, l2) locals (e, a, b) {
 def declArmsCanonFns : Prog :=
   [("er_sl_eq", erSlEq), ("b_eq", bEq), ("cv_eq", cvEq), ("hint_eq", hintEq), ("pw_eq", pwEq),
    ("caps_eq", capsEq), ("rule_eq_but_rhs", ruleEqButRhs), ("rules_eq", rulesEq),
-   ("tbl_eq", tblEq), ("ci_eq", ciEq), ("er_sl_at", erSlAt), ("caps_eq_a", capsEqA),
+   ("ci_eq", ciEq), ("er_sl_at", erSlAt), ("caps_eq_a", capsEqA),
    ("caps_eq_b", capsEqB), ("caps_eq_c", capsEqC), ("rule_eq_a", ruleEqA), ("rule_eq_b", ruleEqB),
-   ("tbl_eq_a", tblEqA), ("ci_eq_rest", ciEqRest), ("canon_ctx", canonCtx),
+   ("ci_eq_rest", ciEqRest), ("canon_ctx", canonCtx),
    ("ci_canon_defn", ciCanonDefn), ("ci_canon_rec", ciCanonRec), ("find_is", findIs), ("ci_to_cv", ciToCv),
    ("canon_names_go", canonNamesGo), ("canon_names", canonNames),
    ("canon_name_map", canonNameMap), ("canon_level_eq", canonLevelEq),

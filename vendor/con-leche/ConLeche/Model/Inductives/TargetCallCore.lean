@@ -81,7 +81,7 @@ theorem memberHoles_formers (hmr : BlockMembersRun mpC.base2 d pp.toBlockShape c
   obtain ⟨-, -, ⟨caps, hfind⟩, hfv, hbv, hFD'⟩ := hmr.2.2.2.1 t' cv hcv
   have hg : (cvTas.map (fun cv : ConstantVal => cv.type)).getD t' default = cv.type := by
     rw [List.getD_eq_getElem?_getD, List.getElem?_map, hcv]; rfl
-  have hwf := mpC.base2.wf _ (List.mem_of_find?_eq_some hfind)
+  have hwf := mpC.base2.wf.consts _ (List.mem_of_find?_eq_some hfind)
   obtain ⟨T', hT', hmemT'⟩ := hvTy t' ht''
   have hgc : (cvTas.getD t' default).type = cv.type := by
     rw [List.getD_eq_getElem?_getD, hcv]; rfl

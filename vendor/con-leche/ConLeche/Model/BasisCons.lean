@@ -77,14 +77,14 @@ theorem natHeads_cons_offNat (mp : EnvModelM V μ env)
     {c₀ : ConstantInfo} {A : (Name → Nat) → Term}
     (hnN : c₀.name ≠ natName) (hnZ : c₀.name ≠ natZeroName)
     (hnS : c₀.name ≠ natSuccName)
-    (m2 : EnvModel V ⟨c₀ :: env.consts⟩)
+    (m2 : EnvModel V ⟨c₀ :: env.consts, env.tables⟩)
     (hacval : m2.acval = acvalWith mp.base2.acval c₀.name A)
     (φ : Name → Nat) : NatHeads m2 φ := by
   intro hg ρ
   rw [hacval]
   -- the three lookups are the prefix's, so the guard reflects
   have hfind : ∀ p : Name, c₀.name ≠ p →
-      (⟨c₀ :: env.consts⟩ : Env).find? p = env.find? p := by
+      (⟨c₀ :: env.consts, env.tables⟩ : Env).find? p = env.find? p := by
     intro p hp
     show List.find? _ (c₀ :: env.consts) = _
     rw [List.find?_cons_of_neg (by simpa using hp)]
@@ -118,8 +118,8 @@ theorem etaFamilyStored_descend_reserved {c₀ : ConstantInfo} {T : Name}
     {cvT : ConstantVal} {caps : IndCaps}
     (hres₀ : ConLeche.reservedBasisNames.contains c₀.name = true)
     (hresT : ConLeche.reservedBasisNames.contains T = false)
-    (hf : (⟨c₀ :: env.consts⟩ : Env).find? T = some (.indInfo cvT caps))
-    (hfam : ConLeche.EtaFamilyStored ⟨c₀ :: env.consts⟩ T caps) :
+    (hf : (⟨c₀ :: env.consts, env.tables⟩ : Env).find? T = some (.indInfo cvT caps))
+    (hfam : ConLeche.EtaFamilyStored ⟨c₀ :: env.consts, env.tables⟩ T caps) :
     env.find? T = some (.indInfo cvT caps) ∧
       ConLeche.EtaFamilyStored env T caps ∧
       T ≠ c₀.name ∧ caps.etaCtor ≠ c₀.name := by
@@ -129,7 +129,7 @@ theorem etaFamilyStored_descend_reserved {c₀ : ConstantInfo} {T : Name}
   have hnC : caps.etaCtor ≠ c₀.name := fun hh => by
     rw [hh, hres₀] at hCres; exact nomatch hCres
   have hdown : ∀ n : Name, n ≠ c₀.name →
-      (⟨c₀ :: env.consts⟩ : Env).find? n = env.find? n := by
+      (⟨c₀ :: env.consts, env.tables⟩ : Env).find? n = env.find? n := by
     intro n hn
     rw [ConLeche.Env.find?_cons, ite_eq_right (fun hh => hn hh.symm)]
   exact ⟨by rwa [hdown _ hnT] at hf, ⟨hCres, ⟨cvC, by rwa [hdown _ hnC] at hfC⟩, hfP⟩,
@@ -145,9 +145,8 @@ theorem capsOk_cons_basis (mp : EnvModelM V μ env)
     (hprev : CapsOk mp.base2)
     {c₀ : ConstantInfo} {A : (Name → Nat) → Term}
     (hfresh : env.find? c₀.name = none)
-    (hntc : ConsCrossEnv env c₀)
     (hres₀ : ConLeche.reservedBasisNames.contains c₀.name = true)
-    (m₂ : EnvModel V ⟨c₀ :: env.consts⟩)
+    (m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩)
     (hac : m₂.acval = acvalWith mp.base2.acval c₀.name A) :
     CapsOk m₂ := by
   constructor
@@ -159,8 +158,7 @@ theorem capsOk_cons_basis (mp : EnvModelM V μ env)
       hprev.1 T cvT caps hfE hcape hres hfam₀ φ' us hlen
     refine ⟨TVa, ?_, hokTVa, ?_, ?_⟩
     · rw [hac]
-      exact denote_cons_mono hfresh
-        ((hntc.typeOf hfE).instantiateLevelParams _ _) _ 0
+      exact denote_cons_mono hfresh _ 0
         (constsBound_instType mp.base2.wf
           (ConLeche.Env.find?_mem hfE) us) hTVa
     · intro ρ ts rest x hlents hfit hmem
@@ -172,8 +170,7 @@ theorem capsOk_cons_basis (mp : EnvModelM V μ env)
         (fun _ _ _ => rfl)
       · rwa [ConLeche.Env.find?_cons, ite_eq_right (fun hh => hnC hh.symm)] at hf₂
       · rw [hac]
-        exact denote_cons_mono hfresh
-          ((hntc.typeOf hf).instantiateLevelParams _ _) _ 0
+        exact denote_cons_mono hfresh _ 0
           (constsBound_instType mp.base2.wf
             (ConLeche.Env.find?_mem hf) us) hTCa
   · -- the unit-like half: one leaf to move, the disequality off the
@@ -188,8 +185,7 @@ theorem capsOk_cons_basis (mp : EnvModelM V μ env)
       hprev.2 T cvT caps hfE hcapu hres φ' us hlen
     refine ⟨TVa, ?_, hokTVa, ?_⟩
     · rw [hac]
-      exact denote_cons_mono hfresh
-        ((hntc.typeOf hfE).instantiateLevelParams _ _) _ 0
+      exact denote_cons_mono hfresh _ 0
         (constsBound_instType mp.base2.wf
           (ConLeche.Env.find?_mem hfE) us) hTVa
     · intro ρ ts rest x y hlents hfit hx hy

@@ -582,7 +582,7 @@ theorem blockNestCtx_ok {env₁ : Env} (henv₁ : EnvWF env₁) {p : BlockShape}
     (hpq : openPisAtFvars p.nP cv0.type 0 = some (fvs, body)) :
     NestCtxOk (p.nestCtx fvs env₁.find?) ∧ AllWS p.nP fvs ∧ fvs.length = p.nP := by
   have hw0 : WScoped 0 cv0.type := hT _ (List.mem_of_mem_head? h0)
-  refine ⟨fun n ci hf => (henv₁ ci (List.mem_of_find?_eq_some hf)).1, fun x hx => ?_,
+  refine ⟨fun n ci hf => (henv₁.consts ci (List.mem_of_find?_eq_some hf)).1, fun x hx => ?_,
     ConLeche.Verify.openPisAtFvars_length _ hpq⟩
   have := (openPisAtFvars_WScoped p.nP cv0.type 0 hpq hw0).1 x hx
   rwa [Nat.zero_add] at this

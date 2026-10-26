@@ -26,19 +26,11 @@ set_option linter.unusedVariables false
 
 namespace L.Arena
 
-/-- `str_cv(p)`: the constant value of the record at `p` as `(lo, ll, ty)`: the level parameters
-`EREC[lo‥lo+ll)` and the type. A record of kind `≤ 5` holds it at `p + 1`; a projection table
-(kind `6`) has its own level parameters (`p + 3`, `p + 4`) and the type `Sort 1`, interned as the
-twin interns it. -/
--- con-ron: ConRon/Arena/Env.lean:203-214 ConRon.Arena.IConstantInfo.toConstantVal
-def strCvL : FunDecl := lfn (p) locals (k, z, o, t) {
-  k := EREC.u64[p];
-  if k <= 5 { return (EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4]) };
-  if k != 6 { abort };
-  z := call intern_zero();
-  o := call intern_succ(z);
-  t := call intern_sort(o);
-  return (EREC.u64[p + 3], EREC.u64[p + 4], t)
+/-- `str_cv(p)`: the constant value of the record at `p` (`IConstantInfo.toConstantVal`, inline at
+`p + 1`) as `(lo, ll, ty)`: the level parameters `EREC[lo‥lo+ll)` and the type. -/
+-- con-ron: ConRon/Arena/Env.lean:176-180 ConRon.Arena.IConstantInfo.toConstantVal
+def strCvL : FunDecl := lfn (p) locals () {
+  return (EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4])
 }
 
 /-- `string_ty_ok(found, p)`: no level parameters, type `Sort 1`. -/

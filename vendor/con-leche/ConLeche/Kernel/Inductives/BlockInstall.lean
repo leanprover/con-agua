@@ -174,7 +174,7 @@ def consBlockInds (p₁ : BlockShape) (isRec : Bool) :
     List ConstantVal → Nat → Env → Env
   | [], _, env => env
   | cvTa :: rest, i, env =>
-    consBlockInds p₁ isRec rest (i + 1) ⟨.indInfo cvTa (blockCapsAt p₁ i isRec) :: env.consts⟩
+    consBlockInds p₁ isRec rest (i + 1) ⟨.indInfo cvTa (blockCapsAt p₁ i isRec) :: env.consts, env.tables⟩
 
 /-- **Stage 1**: the k type formers, checked, agreed and consed —
 official's `declare_inductive_types`, which puts every former in the
@@ -331,7 +331,7 @@ def consBlockRecs (find? : Name → Option ConstantInfo) (p : BlockShape) (nP : 
     consBlockRecs find? p nP (m + 1) rest
       ⟨.recInfo cvRa (p.majorIdxAt m) (p.rulePrefixAt m)
         (sumRules find? cvRa.name nP ctorsA rhss)
-        :: env.consts⟩
+        :: env.consts, env.tables⟩
 
 /-! ### The recursor stage as CHECKING
 
@@ -348,6 +348,6 @@ def consBlockRecsBare (p : BlockShape) : Nat → List (ConstantVal × Nat) → E
   | _, [], env => env
   | m, (cvRa, _nIdx) :: rest, env =>
     consBlockRecsBare p (m + 1) rest
-      ⟨.recInfo cvRa (p.majorIdxAt m) (p.rulePrefixAt m) [] :: env.consts⟩
+      ⟨.recInfo cvRa (p.majorIdxAt m) (p.rulePrefixAt m) [] :: env.consts, env.tables⟩
 
 end ConLeche

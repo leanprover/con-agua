@@ -9,7 +9,7 @@ public import ConLeche.Semantics.Decl
 
 Each record carries **guards and runs** only — `Bool` side conditions
 on stored data, `inferTypeCore`/`isDefEqCore`/`ensureSortCore`
-verdicts, and the `env₂ = ⟨… :: env.consts⟩` shapes.  It is
+verdicts, and the `env₂ = ⟨… :: env.consts, env.tables⟩` shapes.  It is
 **valuation-free**: no `cval` parameter, no `denote`, no `Infer`, no
 `DefEq`, no `V`.
 
@@ -59,7 +59,6 @@ def ConstantValRun (μ : CheckMode) (F : Nat) (env : Env)
     (cv : ConstantVal) (type' : Expr) : Prop :=
   (env.find? cv.name).isNone = true ∧
   reservedBasisNames.contains cv.name = false ∧
-  cv.name.isProjFnShape = false ∧
   Name.nodup cv.levelParams = true ∧
   cv.type.looseBVarsBounded 0 = true ∧
   cv.type.hasFvar = false ∧
@@ -125,7 +124,7 @@ def DeclDefnRun (μ : CheckMode) (F : Nat) (env : Env)
     ConstantValRun μ F env cv type' ∧
     ValueFrontRun μ F env cv value type' value' ∧
     env₂ = ⟨.defnInfo ⟨cv.name, cv.levelParams, type'⟩ value' hint ::
-      env.consts⟩ ∧
+      env.consts, env.tables⟩ ∧
     (natOpNames.contains cv.name = true →
       natOpGuard env₂ cv.name = true ∧
       (natOpDeps cv.name).all (natOpStoredOk env₂) = true ∧
@@ -148,7 +147,7 @@ def DeclThmRun (μ : CheckMode) (F : Nat) (env : Env)
     -- stored by statement only: the constant carries no value (the
     -- checked `value'` is the realizability witness, not stored)
     env₂ = ⟨.thmInfo ⟨cv.name, cv.levelParams, type'⟩ ::
-      env.consts⟩
+      env.consts, env.tables⟩
 
 /-- An `opaqueDecl`'s guards and runs. -/
 def DeclOpaqueRun (μ : CheckMode) (F : Nat) (env : Env)
@@ -156,7 +155,7 @@ def DeclOpaqueRun (μ : CheckMode) (F : Nat) (env : Env)
   ∃ type' value',
     ConstantValRun μ F env cv type' ∧
     ValueFrontRun μ F env cv value type' value' ∧
-    env₂ = ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩ :: env.consts⟩ ∧
+    env₂ = ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩ :: env.consts, env.tables⟩ ∧
     (reduceOpNames.contains cv.name = true →
       ReducePinRun μ F env env₂ cv.name value)
 
@@ -174,12 +173,12 @@ def DeclAxiomRun (μ : CheckMode) (F : Nat) (env : Env)
     ConstantValRun μ F env cv type' ∧
     (let cv : ConstantVal := ⟨cv.name, cv.levelParams, type'⟩
      (stdAxiomOk env cv = true ∧
-        env₂ = ⟨.axiomInfo cv :: env.consts⟩) ∨
+        env₂ = ⟨.axiomInfo cv :: env.consts, env.tables⟩) ∨
      (cv.name = trustCompilerName ∧ trustCompilerOk env cv = true ∧
-        env₂ = ⟨.axiomInfo cv :: env.consts⟩) ∨
+        env₂ = ⟨.axiomInfo cv :: env.consts, env.tables⟩) ∨
      ((cv.name = ofReduceNatName ∨ cv.name = ofReduceBoolName) ∧
         ofReduceAxOk env cv = true ∧
-        env₂ = ⟨.axiomInfo cv :: env.consts⟩) ∨
+        env₂ = ⟨.axiomInfo cv :: env.consts, env.tables⟩) ∨
      (stdAxiomOk env cv = false ∧
         cv.name ≠ trustCompilerName ∧
         cv.name ≠ ofReduceNatName ∧ cv.name ≠ ofReduceBoolName ∧

@@ -49,8 +49,8 @@ def checkStructDomsAt (ops : CheckerOps m) (env : Env) (off : Nat)
       throw (.notImplemented "direct structure: binder domain mismatch")
     checkStructDomsAt ops env off fvs doms j
 
-/-- Stage 5: **the projection table** (task #175 S1).  One constant
-per structure: the fields' result-type bodies read off the
+/-- Stage 5: **the projection table** (task #175 S1).  One table per
+structure, in the environment's table component (task #362): the fields' result-type bodies read off the
 stored constructor type by substitution alone
 (`structProjBodies`), the per-field guard levels
 (`structProjGuards`), the constructor and the counts.  Nothing is
@@ -62,7 +62,7 @@ fails that guard at every use (`invalid`, as official).  The body
 walk cannot fail on a constructor type `checkSumCtor` accepted
 (it peels exactly `nP + nF` binders), so its failure is internal. -/
 def checkStructProjTable (T C : Name) (lps : List Name) (nP nF : Nat)
-    (resSort : Level) (guards : List Level) (off : Nat) (cvCa : ConstantVal) (env : Env) :
+    (resSort : Level) (guards : List Level) (cvCa : ConstantVal) (env : Env) :
     m Env := do
   let bodies ← unwrapOr (structProjBodies T nP nF cvCa.type)
     (.internal "direct structure: projection bodies")
@@ -74,8 +74,13 @@ def checkStructProjTable (T C : Name) (lps : List Name) (nP nF : Nat)
       b.allLevelParamsDefined lps && b.constsResolve env &&
       b.looseBVarsBounded (nP + 1)) do
     throw (.internal "direct structure: projection body scoping")
-  unless (env.find? (projTableName T)).isNone do
+  -- the table follows its structure (installed by the same block):
+  -- `EnvWF`'s table clause records it, and the prefix views hide the
+  -- table with the structure
+  unless (env.find? T).isSome do
+    throw (.internal "direct structure: projection table before its structure")
+  unless (env.findTable? T).isNone do
     throw (.invalid "projection table taken")
-  pure ⟨.projInfo ⟨T, lps, nP, C, nF, resSort, bodies, guards, off⟩ :: env.consts⟩
+  pure ⟨env.consts, ⟨T, lps, nP, C, nF, resSort, bodies, guards⟩ :: env.tables⟩
 
 end ConLeche

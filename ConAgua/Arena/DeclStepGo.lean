@@ -438,7 +438,7 @@ def ivProg : Prog := declStepFns ++ L.Ind.libFns ++ L.Ind.stubFns ++ envProg
 /-- The functions `install_value` reaches. -/
 def ivFns : List FnName :=
   ["install_value", "erec_ci", "erec_alloc", "dlp_copy", "install_header", "env_find",
-   "env_row_get", "env_ix", "reserved_contains", "reserved_from", "is_proj_fn_shape", "cv_lps",
+   "env_row_get", "env_ix", "reserved_contains", "reserved_from", "cv_lps",
    "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "loose_bvars_bounded_fast",
    "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast", "install_value_guards",
    "env_push", "env_row_set", "erec_vg"]
@@ -447,7 +447,6 @@ def ivFns : List FnName :=
 structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns where
   bvb : BvbProg p
   hf : HfF p
-  ipf : IpfF p
 
 section ivLookups
 variable {p : Prog} (h : IvProg p)
@@ -457,7 +456,7 @@ theorem IvProg.iv : p.lookup "install_value" = some installValueL :=
 theorem IvProg.recP : RecProg p := by
   constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
 theorem IvProg.ih : IhProg p := by
-  constructor <;> first | exact h.bvb | exact h.hf | exact h.ipf | exact (h.agree _ (by decide) (by decide)).trans rfl
+  constructor <;> first | exact h.bvb | exact h.hf | exact (h.agree _ (by decide) (by decide)).trans rfl
 end ivLookups
 
 end L.Arena

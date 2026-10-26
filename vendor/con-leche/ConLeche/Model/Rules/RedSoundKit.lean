@@ -426,14 +426,6 @@ theorem _root_.ConLeche.Semantics.WellDenoted.lam_body {ρ : Nat → V} {A b : T
     ∀ x, x ∈ˢ interp V ρ A → WellDenoted V (cons x ρ) b := fun x hx =>
   (cast (WellDenoted_lam V ρ A b) h).2.2.1 x hx
 
-theorem _root_.ConLeche.Semantics.WellDenoted.fst_arg {ρ : Nat → V} {e : Term}
-    (h : WellDenoted V ρ (.fst e)) : WellDenoted V ρ e :=
-  (cast (WellDenoted_fst V ρ e) h).1
-
-theorem _root_.ConLeche.Semantics.WellDenoted.snd_arg {ρ : Nat → V} {e : Term}
-    (h : WellDenoted V ρ (.snd e)) : WellDenoted V ρ e :=
-  (cast (WellDenoted_snd V ρ e) h).1
-
 /-- "Not pt" source (1): a graded type is not the point. -/
 theorem _root_.ConLeche.Model.WellDenotedTy.ne_pt {ρ : Nat → V} {e : Term}
     (h : WellDenotedTy V ρ e) : interp V ρ e ≠ pt := h.2.ne_pt
@@ -762,7 +754,7 @@ theorem denote_unfoldDefinition {m : EnvModel V env} (hdi : AcvalDefnInst m)
             e.getAppArgs := (Option.some.inj hud).symm
         exact deltaCore m hfn hfind rfl hlen
           (by obtain ⟨-, -, -, -, hd, -⟩ :=
-                m.wf _ (ConLeche.Env.find?_mem hfind)
+                m.wf.consts _ (ConLeche.Env.find?_mem hfind)
               exact (hd cv value hint rfl).1)
           (denoteDefnInst hdi φ ⟨hint, ConLeche.Env.find?_mem hfind⟩) hea
       · exact nomatch hud

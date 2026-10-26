@@ -131,7 +131,7 @@ theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) 
         (AM.st (checkThmVal V fe cv v) a₀) ∧ CoreMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (tv_specW p hp (realCall p) (realCall_spec p) n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
-  have hcv := decCI_cv hc (.inl rfl)
+  have hcv := decCI_cvTA hc (.inl rfl)
   obtain ⟨a', hrun, hS', hM', hg⟩ :=
     tvW_okT hq hp.rcp hq.knot.lvc hq.lvlEqC hap hkp hn hm hS hc hcv hv hpre hCr
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
@@ -178,7 +178,7 @@ theorem checkOpaqueVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg 
         (AM.st (checkOpaqueVal V fe cv v) a₀) ∧ CoreMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (ov_specW p hp (realCall p) (realCall_spec p) n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
-  have hcv := decCI_cv hc (.inr rfl)
+  have hcv := decCI_cvTA hc (.inr rfl)
   obtain ⟨a', hrun, hS', hM', hg⟩ :=
     dvW_okT hq hp.rcp hap hkp hn "type mismatch in opaque" hm hS hc hcv hv hlps hCr
   rw [← checkOpaqueVal_dvT] at hrun

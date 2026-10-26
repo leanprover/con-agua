@@ -17,7 +17,6 @@ import ConLeche.Verify.Knot
 import ConLeche.Verify.CheckerF
 import ConLeche.Verify.Extend.Inversions
 import ConLeche.Verify.Level
-import ConLeche.Verify.InferProjSlots
 
 public section
 
@@ -45,9 +44,7 @@ What the record asks of it:
   `0` itself);
 * the family's rule prefix is SHARED SYNTACTICALLY (`RecPrefixSame`): every
   generated type is a telescope over the same prefix `g.pre` (`SameDoms`);
-* every stored rule is the generated rule (`ClassRuleRun`);
-* no stored term has a `.proj` node at an empty table slot
-  (the stored terms' own checking inference's: `inferTypeCore_noProjAt`).
+* every stored rule is the generated rule (`ClassRuleRun`).
 -/
 
 namespace ConLeche
@@ -300,7 +297,7 @@ theorem genRecTy_run (hμ : μ.isVerified = true)
     Nonempty (RecTyGen μ F envC p.toBlockShape false i rc cvG (R.Ms.getD c default).nIdx
       (structElimLevel p.elim p.large)) := by
   have hcv := ConLeche.classConstOk_checked T.hcv
-  obtain ⟨-, -, -, -, -, hfv0, -, -, stype, u0, hinf, -⟩ := ConLeche.classConstOk_inv T.hcv
+  obtain ⟨-, -, -, -, hfv0, -, -, stype, u0, hinf, -⟩ := ConLeche.classConstOk_inv T.hcv
   have htype : cvG.type = T.gty := T.type_eq
   rw [T.hcvG] at hfv0 hinf
   dsimp only at hfv0 hinf
@@ -348,11 +345,7 @@ syntactically, every rule the generated one, stored as generated.
   constructor telescopes over the parameters, minors after their
   motives, the stored prefix the generator's own) — what the ported
   generator lemmas take throughout (`classGenRecTy_spec`, the prefix's
-  motive entry), a fact of the run's earlier binds (`genScoped_of_run`);
-the stage record's `.proj`-freedom of every stored term
-(`ConstChecked.noProj`, `RuleOutOk.hnoProj`) is the stored term's own full inference
-(`inferTypeCore_noProjAt`: a successful inference names only occupied
-slots). -/
+  motive entry), a fact of the run's earlier binds (`genScoped_of_run`). -/
 theorem recStage_of_gen (hμ : μ.isVerified = true)
     (R : GenRecRun μ F (mkFEnv env₁) env₁ (mkFEnv envC) p.toBlockShape nestedBit pos cvTas
       block ctorsAs out)
@@ -523,8 +516,7 @@ theorem recStage_of_gen (hμ : μ.isVerified = true)
     rw [hfeR] at hres
     simp only [StructWalkers.plain, ConLeche.constsResolveF_eq] at hres
     rw [hfeR, ConLeche.mkFEnv_env, ConLeche.fueledOps_inferType] at htyR
-    exact ⟨rc, hrc, ⟨Q.hbv, Q.hfv, by rw [← E.lps_eq]; exact Q.hlp, hres, ⟨_, htyR⟩,
-      fun _ _ hslot => inferTypeCore_noProjAt htyR Q.hfv hslot⟩⟩
+    exact ⟨rc, hrc, ⟨Q.hbv, Q.hfv, by rw [← E.lps_eq]; exact Q.hlp, hres, ⟨_, htyR⟩⟩⟩
 
 end Stage
 

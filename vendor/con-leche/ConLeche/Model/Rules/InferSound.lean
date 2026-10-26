@@ -209,7 +209,7 @@ theorem Infer.fvar_sound {g : Grade} {d idx : Nat} {ty : Expr} (h : idx < d) :
 /-- A constant: `ConstType`. -/
 theorem Infer.const_sound (hin : RulesInputs V m φ) {g : Grade} {d : Nat}
     {n : Name} {us : List Level} {ci : ConLeche.ConstantInfo}
-    (hf : env.find? n = some ci) (htower : ci.isTowerEntry = false)
+    (hf : env.find? n = some ci)
     (hus : us.length = ci.toConstantVal.levelParams.length) :
     InferSem m φ g d (.const n us)
       (ci.toConstantVal.type.instantiateLevelParams ci.toConstantVal.levelParams us) := by
@@ -221,8 +221,8 @@ theorem Infer.const_sound (hin : RulesInputs V m φ) {g : Grade} {d : Nat}
   obtain rfl : ea = m.acval n
       (Level.substFn φ ci.toConstantVal.levelParams us) :=
     (Option.some.inj hea).symm
-  obtain ⟨ta, hta, hok, hmem⟩ := hin.const_ty d n ci us hf htower hus
-  obtain ⟨htc, -, -, htb, -⟩ := m.wf _ (Env.find?_mem hf)
+  obtain ⟨ta, hta, hok, hmem⟩ := hin.const_ty d n ci us hf hus
+  obtain ⟨htc, -, -, htb, -⟩ := m.wf.consts _ (Env.find?_mem hf)
   have hnf : (ci.toConstantVal.type.instantiateLevelParams
       ci.toConstantVal.levelParams us).hasFvar = false := by
     rw [Expr.hasFvar_instantiateLevelParams]; exact htc
@@ -853,7 +853,7 @@ theorem Infer.proj_soundFull (hin : RulesInputs V m φ) {d : Nat}
   have hLpe : Expr.LeavesBounded pe := fun l hl =>
     hLb l (by simpa [Expr.fvarLeaves] using hl)
   have hCpe : CtxOkS m φ d Δa pe := hC.proj_arg
-  obtain ⟨vp, hvp, rfl⟩ := denote_proj_inv_tower hent hea
+  obtain ⟨vp, -, hvp, -, rfl⟩ := denote_proj_inv hea
   -- the scrutinee's inferred type, and its reduct (readings)
   obtain ⟨htpef, htpesub, tpea, htpea, hrowP⟩ :=
     htpe.apply ⟨hws, hb, hLpe⟩ hCpe hvp
@@ -955,7 +955,7 @@ theorem Infer.proj_soundIO (hin : RulesInputs V m φ) {d : Nat}
   have hLpe : Expr.LeavesBounded pe := fun l hl =>
     hLb l (by simpa [Expr.fvarLeaves] using hl)
   have hCpe : CtxOkS m φ d Δa pe := hC.proj_arg
-  obtain ⟨vp, hvp, rfl⟩ := denote_proj_inv_tower hent hea
+  obtain ⟨vp, -, hvp, -, rfl⟩ := denote_proj_inv hea
   -- the scrutinee's inferred type, and its reduct (readings)
   obtain ⟨htpef, htpesub, tpea, htpea, hrowP⟩ :=
     htpe ⟨hws, hb, hLpe⟩ hCpe hvp

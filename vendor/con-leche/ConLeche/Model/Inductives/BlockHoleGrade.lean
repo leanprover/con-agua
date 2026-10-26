@@ -234,7 +234,7 @@ theorem blockHoleGrade_of_run {μ : ConLeche.CheckMode} (hμ : μ.isVerified = t
   obtain ⟨kinds, nfs, nodes⟩ := posKs
   obtain ⟨cvTa0, fvsP, rest, holes, hcv0, hop0, hholes, hder, -⟩ :=
     checkBlockPositivity_derivM mp.base2.wf hrun
-      (fun cv h => (mp.base2.wf _ (List.mem_of_find?_eq_some
+      (fun cv h => (mp.base2.wf.consts _ (List.mem_of_find?_eq_some
         (hcore.1 0 cv (by rwa [List.head?_eq_getElem?] at h)).1)).1)
       (fun c cs hc j cA hj => by
         have hck : c < d.k := by rw [← hlenCA]; exact (List.getElem?_eq_some_iff.mp hc).1
@@ -385,7 +385,7 @@ theorem blockRunLink (ψ : Name → Nat)
   have hkL : p.memberNames.length = d.k := by rw [hnames, hk]
   obtain ⟨cvTa0, fvsP, rest, holes, hcv0, hop0, hholes, hder, -⟩ :=
     checkBlockPositivity_derivM mp.base2.wf hrun
-      (fun cv h => (mp.base2.wf _ (List.mem_of_find?_eq_some
+      (fun cv h => (mp.base2.wf.consts _ (List.mem_of_find?_eq_some
         (hF 0 cv (by rwa [List.head?_eq_getElem?] at h)).1)).1)
       (fun c cs hc j cA hj => by
         have hck : c < d.k := by rw [← hlenCA]; exact (List.getElem?_eq_some_iff.mp hc).1
@@ -401,7 +401,7 @@ theorem blockRunLink (ψ : Name → Nat)
   -- the walk context's facts
   have hcv0' : cvTas[0]? = some cvTa0 := by rwa [List.head?_eq_getElem?] at hcv0
   have hT0f : cvTa0.type.hasFvar = false :=
-    (mp.base2.wf _ (List.mem_of_find?_eq_some (hF 0 cvTa0 hcv0').1)).1
+    (mp.base2.wf.consts _ (List.mem_of_find?_eq_some (hF 0 cvTa0 hcv0').1)).1
   have hplen : fvsP.length = p.nP := ConLeche.Verify.openPisAtFvars_length _ hop0
   have hpar : ∀ (q : Nat) (x : Expr), fvsP[q]? = some x → ∃ ty, x = .fvar q ty := by
     intro q x hx
@@ -536,7 +536,7 @@ theorem blockRunNf_nestOcc (hW : WhnfNamesFree env d.memberNames)
   obtain ⟨kinds, nfs, nodes⟩ := posKs
   obtain ⟨cvTa0, fvsP, rest, holes, hcv0, hop0, hholes, hder, -⟩ :=
     checkBlockPositivity_derivM mp.base2.wf hrun
-      (fun cv h => (mp.base2.wf _ (List.mem_of_find?_eq_some
+      (fun cv h => (mp.base2.wf.consts _ (List.mem_of_find?_eq_some
         (hF 0 cv (by rwa [List.head?_eq_getElem?] at h)).1)).1)
       (fun c cs hc j cA hj => by
         have hck : c < d.k := by rw [← hlenCA]; exact (List.getElem?_eq_some_iff.mp hc).1

@@ -90,13 +90,13 @@ theorem decCI_kind0 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
   constructor
   · intro h0
     subst h0
-    rcases hk with ⟨-, cv, hcv, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩
+    rcases hk with ⟨-, cv, hcv, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩
     · exact ⟨cv, hcv, rfl⟩
     all_goals simp at h1
   · intro h0 cv hc
     subst hc
     rcases hk with ⟨h1, -⟩ | ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, -, h2⟩ | ⟨-, _, _, -, -, h2⟩ |
-      ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h2⟩ | ⟨-, _, -, h2⟩
+      ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h2⟩
     · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
     all_goals cases h2
 
@@ -110,8 +110,7 @@ theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
   constructor
   · intro h0
     subst h0
-    rcases hk with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, cv, caps, hcv, -, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ |
-      ⟨h1, -⟩
+    rcases hk with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, cv, caps, hcv, -, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩
     · simp at h1
     · simp at h1
     · simp at h1
@@ -120,7 +119,7 @@ theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
   · intro h0 cv caps hc
     subst hc
     rcases hk with ⟨-, _, -, h2⟩ | ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, -, h2⟩ | ⟨h1, -⟩ |
-      ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h2⟩ | ⟨-, _, -, h2⟩
+      ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h2⟩
     · cases h2
     · cases h2
     · cases h2

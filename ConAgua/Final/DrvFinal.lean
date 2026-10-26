@@ -21,24 +21,24 @@ universe w
 /-- The file's code as the driver sees it: the parallel mode's entries, the stub, the compiler's
 output. -/
 theorem code_of_checkerFile_par [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
-    Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF 126 frozenIdsL parOwnedL ++
+    Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF 132 frozenIdsL parOwnedL ++
       (abiStub checkerTab ++ compileProg checkerTab checkerProg "check")) k0 := by
   rw [checkerFile_eq, checkerStub_eq, List.append_assoc] at hcode
   exact hcode
 
-theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 126 = true := by decide
+theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 132 = true := by decide
 
 /-- `getD 0 0` is the head. -/
 theorem getD_zero_headD (rs : List Word) : rs.getD 0 0 = rs.headD 0 := by cases rs <;> rfl
 
 /-- `seqMem`'s word arrays (the globals' writes keep them). -/
 theorem seqMem_arr64 (m : Mem) (lo hi : Word) (hsz : 242 < m.words.size) (a : Nat) :
-    (seqMem m MODE PLO PHI OUT HDRF CTLF 126 lo hi).arr64 a =
-      if a = OUT ∨ a = CTLF then #[] else if a = HDRF then (m.arr64 OUT).extract 0 126 else m.arr64 a := by
-  show (seqMem0 m OUT HDRF CTLF 126).arr64 a = _
+    (seqMem m MODE PLO PHI OUT HDRF CTLF 132 lo hi).arr64 a =
+      if a = OUT ∨ a = CTLF then #[] else if a = HDRF then (m.arr64 OUT).extract 0 132 else m.arr64 a := by
+  show (seqMem0 m OUT HDRF CTLF 132).arr64 a = _
   by_cases ha : a < m.words.size
-  · exact seqMem0_arr64 m OUT HDRF CTLF 126 ha
-  · have h1 : (seqMem0 m OUT HDRF CTLF 126).arr64 a = #[] := by
+  · exact seqMem0_arr64 m OUT HDRF CTLF 132 ha
+  · have h1 : (seqMem0 m OUT HDRF CTLF 132).arr64 a = #[] := by
       simp only [seqMem0, seqWords, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_mapIdx,
         Array.getElem?_eq_none (Nat.le_of_not_lt ha), Option.map_none, Option.getD_none]
     have h2 : m.arr64 a = #[] := by
@@ -51,7 +51,7 @@ theorem seqMem_arr64 (m : Mem) (lo hi : Word) (hsz : 242 < m.words.size) (a : Na
 /-- **The driver's accept is the twin's**: `DrvAccepts` at the checker's program gives
 `TwinAccepts [b]`. -/
 theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (h : DrvAccepts checkerProg checkerTab MODE PLO PHI OUT HDRF CTLF 126 b pb) :
+    (h : DrvAccepts checkerProg checkerTab MODE PLO PHI OUT HDRF CTLF 132 b pb) :
     TwinAccepts [b] := by
   obtain ⟨hb, hpb, h⟩ := h
   have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
@@ -76,7 +76,7 @@ theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     omega
   · rw [getD_zero_headD] at hge h₂ hacc₂
     refine drv_twinAccepts b pb [] _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
-      (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 126 0 (rs₁.headD 0 - 9223372036854775808)) rs₂ m₂
+      (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 132 0 (rs₁.headD 0 - 9223372036854775808)) rs₂ m₂
       ?_ ?_ ?_ ?_ ?_ ?_ h₂ hacc₂
     · intro a ha
       rw [seqMem_arr64 _ _ _ hsz]
@@ -92,9 +92,9 @@ theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
       simp only [show ¬ (HDRF = OUT ∨ HDRF = CTLF) by decide, if_false, if_true]
       simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
       by_cases h3 : 3 < (m₁.arr64 OUT).size
-      · have h4 : 3 < min 126 (m₁.arr64 OUT).size := by omega
+      · have h4 : 3 < min 132 (m₁.arr64 OUT).size := by omega
         simp [h4]
-      · have h4 : ¬ 3 < min 126 (m₁.arr64 OUT).size := by omega
+      · have h4 : ¬ 3 < min 132 (m₁.arr64 OUT).size := by omega
         simp [h4, Array.getElem?_eq_none (Nat.le_of_not_lt h3)]
 
 /-- **The final theorem for the driver of `checker.s`.** -/
@@ -107,7 +107,7 @@ theorem checkerFile_drv_accepts_regs [Host]
       dm (label abiStartL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, hr, h⟩ => ⟨hpc, hr, fun h0 h1 => drvAccepts_twin b pb h64 (h h0 h1)⟩)
     (drv_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf (by decide) MODE PLO PHI OUT
-      HDRF CTLF 126 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
+      HDRF CTLF 132 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
 
 /-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/

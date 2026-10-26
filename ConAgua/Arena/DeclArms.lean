@@ -36,9 +36,9 @@ open L.Front (DECL)
 /-! ## The constant check -/
 
 /-- `check_constant_val(vis, q)`: `checkConstantVal fe cv` (`q` the constant value): the header's
-checks (`install_header`: the fresh name, the reserved names, the projection shape, the universe
-parameters, the type's guards), then the type's sort. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:335-363 ConRon.Arena.checkConstantVal
+checks (`install_header`: the fresh name, the reserved names, the universe parameters, the type's
+guards), then the type's sort. -/
+-- con-ron: ConRon/Arena/CheckerBase.lean:239-265 ConRon.Arena.checkConstantVal
 @[l_impl ConRon.Arena.checkConstantVal]
 def checkConstantValL : FunDecl := lfn (vis, q) locals (t, z, st, u) {
   t := EREC.u64[q + 3];
@@ -56,7 +56,7 @@ pushes that record itself. -/
 
 /-- `check_defn_val(vis, p)`: `checkDefnVal fe cv v hint`: the value's guards, its type against the
 declared one, the push. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:711-721 ConRon.Arena.checkDefnVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:783-793 ConRon.Arena.checkDefnVal
 @[l_impl ConRon.Arena.checkDefnVal]
 def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
   v := EREC.u64[p + 5];
@@ -71,7 +71,7 @@ def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
 
 /-- `check_thm_val(vis, p)`: `checkThmVal`: the type a proposition, the value's guards and type;
 stored by its statement. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:723-739 ConRon.Arena.checkThmVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:795-811 ConRon.Arena.checkThmVal
 @[l_impl ConRon.Arena.checkThmVal]
 def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d, w) {
   v := EREC.u64[p + 5];
@@ -91,7 +91,7 @@ def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d,
 
 /-- `check_opaque_val(vis, p)`: `checkOpaqueVal`: `check_defn_val`'s text (the record `p` is an
 `axiomInfo`). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:741-752 ConRon.Arena.checkOpaqueVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:813-824 ConRon.Arena.checkOpaqueVal
 @[l_impl ConRon.Arena.checkOpaqueVal]
 def checkOpaqueValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
   v := EREC.u64[p + 5];
@@ -338,7 +338,7 @@ def reducePinGuardL : FunDecl := lfn (vis, c) locals (p, b) {
 /-- `check_reduce_pin(vis, vis2, c, v)`: `checkReducePin`: the stored constant's type, the element
 inductive, the pin's guards (short-circuiting), the value against the pin, the identity
 certificate `v x ≡ x`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:650-684 ConRon.Arena.checkReducePin
+-- con-ron: ConRon/Arena/DeclCheck.lean:722-756 ConRon.Arena.checkReducePin
 @[l_impl ConRon.Arena.checkReducePin]
 def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
   e := call reduce_stored_ok(vis2, c);
@@ -361,7 +361,7 @@ def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
 /-! ## The pinned basis install, the quotient pin -/
 
 /-- `install_basis_decl(vis, p)`: the constant record `p` installed, duplicate-checked. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:754-761 ConRon.Arena.installBasisDecl
+-- con-ron: ConRon/Arena/DeclCheck.lean:826-833 ConRon.Arena.installBasisDecl
 @[l_impl ConRon.Arena.installBasisDecl]
 def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
   n := EREC.u64[p + 1];
@@ -372,7 +372,7 @@ def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
 }
 
 /-- `install_basis_decls(vis, o, l)`: an `IW` slice of constant records, in order. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:763-767 ConRon.Arena.installBasisDecls
+-- con-ron: ConRon/Arena/DeclCheck.lean:835-839 ConRon.Arena.installBasisDecls
 @[l_impl ConRon.Arena.installBasisDecls]
 def installBasisDeclsL : FunDecl := lfn (vis, o, l) locals (c, w) {
   if l == 0 { return vis };

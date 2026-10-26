@@ -60,7 +60,7 @@ theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
   have hw : wk = UInt64.ofNat wk.toNat := by simp
   rcases hk' with ⟨h1, cv, -, rfl⟩ | ⟨h1, cv, v, hi, -, -, -, rfl⟩ | ⟨h1, cv, -, rfl⟩ |
       ⟨h1, cv, caps, -, -, rfl⟩ | ⟨h1, cv, np, nf, -, hnp, hnf, rfl⟩ |
-      ⟨h1, cv, mi, rp, o, c, rules, -, hmi, hrp, -, -, -, rfl⟩ | ⟨h1, tbl, -, rfl⟩
+      ⟨h1, cv, mi, rp, o, c, rules, -, hmi, hrp, -, -, -, rfl⟩
   · simp [fpShape]
   · simp [fpShape]
   · simp [fpShape]
@@ -88,7 +88,6 @@ theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
       · simp at hf
       · rw [counts_words hsz hmi hrp] at hf
         simp only [true_and]; simp [hf]
-  · simp [fpShape]
 
 /-- **The shape tests, passing**: the twin's shape matches. -/
 theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b : Word}
@@ -102,7 +101,7 @@ theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
   subst hkw
   rcases hk' with ⟨h1, cv, -, rfl⟩ | ⟨h1, cv, v, hi, -, -, -, rfl⟩ | ⟨h1, cv, -, rfl⟩ |
       ⟨h1, cv, caps, hcv, -, rfl⟩ | ⟨h1, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
-      ⟨h1, cv, mi, rp, o, c, rules, hcv, hmi, hrp, -, -, -, rfl⟩ | ⟨h1, tbl, -, rfl⟩ <;>
+      ⟨h1, cv, mi, rp, o, c, rules, hcv, hmi, hrp, -, -, -, rfl⟩ <;>
     rcases hk with hk | hk | hk <;> rw [hk] at h1 <;> simp at h1
   · exact ⟨cv, by simp [fpShape, hk]⟩
   · have hcc := counts_words (a := a) (b := b) hsz hnp hnf
@@ -125,7 +124,7 @@ theorem fpShape_cv {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
   obtain ⟨wk, -, hk'⟩ := ciD h
   rcases hk' with ⟨-, cv', -, rfl⟩ | ⟨-, cv', v, hi, -, -, -, rfl⟩ | ⟨-, cv', -, rfl⟩ |
       ⟨-, cv', caps, hcv, -, rfl⟩ | ⟨-, cv', np, nf, hcv, -, -, rfl⟩ |
-      ⟨-, cv', mi, rp, o, c, rules, hcv, -, -, -, -, -, rfl⟩ | ⟨-, tbl, -, rfl⟩ <;>
+      ⟨-, cv', mi, rp, o, c, rules, hcv, -, -, -, -, -, rfl⟩ <;>
     simp only [fpShape] at hs <;> (try cases hs)
   · split at hs <;> cases hs; exact hcv
   · split at hs <;> cases hs; exact hcv
@@ -138,7 +137,7 @@ def FpT (fe : IFEnv) (nm : NIdx) (k a b : Word) (T : AM IConstantVal) (a0 : ASta
     (fun cvT => (do let pin ← T; pure (decide (cvT = pin)) : AM Bool).run a0 = .ok (res, a'))
 
 /-- The pin of a clause: the ROM constant's constant value. -/
-def romPinT (id : Nat) : AM IConstantVal := do (← romCiT id).toConstantVal
+def romPinT (id : Nat) : AM IConstantVal := do return (← romCiT id).toConstantVal
 
 section model
 variable (p : Prog)
@@ -272,8 +271,8 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
       ⟨hS2, hpciP⟩) h3
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3
-  generalize AM.res (pci.toConstantVal) a2 = pin at hrun3 hcv3
-  generalize AM.st (pci.toConstantVal) a2 = a3 at hrun3 hS3
+  generalize AM.res (pure pci.toConstantVal : AM IConstantVal) a2 = pin at hrun3 hcv3
+  generalize AM.st (pure pci.toConstantVal : AM IConstantVal) a2 = a3 at hrun3 hS3
   have hq1b : q.toNat + 1 < 2 ^ 64 := by
     obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvP
     have := erecP_bound hw hS.2; omega
@@ -341,7 +340,7 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
       cases c1
       all_goals try (simp [h1, fpShape]; done)
       simp only [h1, Option.bind_some, fpShape, ↓reduceIte, bind_assoc, pure_bind]
-      congr 1; funext c; congr 1; funext cv'; congr 1; funext b
+      congr 1; funext c; congr 1; funext b
       split
       · rfl
       congr 1; funext x2
@@ -356,7 +355,7 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
           simp only [Option.some.injEq, IConstantInfo.ctorInfo.injEq] at heq
           obtain ⟨rfl, rfl, rfl⟩ := heq
           simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc, pure_bind]
-          congr 1; funext c; congr 1; funext cv'; congr 1; funext b
+          congr 1; funext c; congr 1; funext b
           split
           · rfl
           congr 1; funext x3

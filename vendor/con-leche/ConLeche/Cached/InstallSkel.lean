@@ -45,13 +45,12 @@ inductive InstallSkel where
   | ind  (n : Name)
   | ctor (n : Name) (numParams numFields : Nat)
   | recr (n : Name) (majorIdx rulePrefix : Nat)
-  | proj (n : Name)
   deriving DecidableEq, Repr, Inhabited
 
 /-- The declared name of a skeleton. -/
 def skelName : InstallSkel → Name
   | .ax n | .defn n | .thm n | .ind n => n
-  | .ctor n _ _ | .recr n _ _ | .proj n => n
+  | .ctor n _ _ | .recr n _ _ => n
 
 /-- The skeleton of an installed constant. -/
 def ciSkel : ConstantInfo → InstallSkel
@@ -61,7 +60,6 @@ def ciSkel : ConstantInfo → InstallSkel
   | .indInfo cv _ => .ind cv.name
   | .ctorInfo cv nP nF => .ctor cv.name nP nF
   | .recInfo cv mI rP _ => .recr cv.name mI rP
-  | .projInfo tbl => .proj (projTableName tbl.structName)
 
 /-- The skeleton list of an environment (newest first, as `consts`). -/
 def envSkels (env : Env) : List InstallSkel := env.consts.map ciSkel
@@ -95,8 +93,9 @@ def sumCtorSkels (nP : Nat) (cs : List (Name × Nat)) (sk : List InstallSkel) :
 
 The INSTALL ORDER at k members (the floor's agreement is positional):
 the k type formers, then every constructor of every member in block
-order, then the k recursors, then one projection table per
-structure-like member. -/
+order, then the k recursors.  (The projection tables the block installs
+after them are not constants: no skeleton, no slot of their own — a
+table travels in its structure's record's slot.) -/
 
 /-- The k type formers (member 0 deepest, as `consBlockInds`). -/
 def blockIndSkels : List MemberShape → List InstallSkel → List InstallSkel
@@ -119,19 +118,10 @@ def blockRecSkels (q : BlockShape) : Nat → List RecShape → List InstallSkel 
     blockRecSkels q (r + 1) rest
       (.recr rc.cvR.name (q.majorIdxAt r) (q.rulePrefixAt r) :: sk)
 
-/-- The projection table of every structure-like member. -/
-def blockTableSkels : List MemberShape → List InstallSkel → List InstallSkel
-  | [], sk => sk
-  | ms :: rest, sk =>
-    blockTableSkels rest
-      (if ms.ctors.length == 1 && ms.nIdx == 0 then
-        .proj (projTableName ms.cvT.name) :: sk else sk)
-
 /-- The uniform install's skeleton. -/
 def blockSkels (p : BlockParts) (sk : List InstallSkel) : List InstallSkel :=
-  blockTableSkels p.members
-    (blockRecSkels p.toBlockShape 0 p.recs
-      (blockCtorSkels p.nP p.members (blockIndSkels p.members sk)))
+  blockRecSkels p.toBlockShape 0 p.recs
+    (blockCtorSkels p.nP p.members (blockIndSkels p.members sk))
 
 /-- The inductive dispatch: the k-ary skeleton; a
 block the recogniser does not read installs nothing (it declines).  The

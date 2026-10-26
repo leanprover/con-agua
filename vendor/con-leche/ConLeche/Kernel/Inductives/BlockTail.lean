@@ -101,11 +101,11 @@ def consBlockRecsT (find? : Name → Option ConstantInfo)
     consBlockRecsT find? p (m + 1) rest
       ⟨.recInfo cv (p.majorIdxAt m) (p.rulePrefixAt m)
         (tgtStoredRules find? cv (p.rulePrefixAt m) M rhss)
-        :: env.consts⟩
+        :: env.consts, env.tables⟩
 
 /-- **The projection table at every STRUCTURE-LIKE member** (one
-constructor, no index): the member's table at the tagged tower's
-projection offset `1`; nothing at any other member. -/
+constructor, no index): the member's table; nothing at any other
+member. -/
 def checkBlockTables (p : BlockShape) :
     List (MemberShape × List (ConstantVal × Nat) × List (List Level)) → Env → m Env
   | [], env => pure env
@@ -115,7 +115,7 @@ def checkBlockTables (p : BlockShape) :
        | [cA], [sorts] =>
          if ms.nIdx == 0 then
            checkStructProjTable ms.cvT.name cA.1.name p.lps p.nP cA.2 p.resSort
-             (structProjGuards cA.1.type p.nP cA.2 sorts) 1 cA.1 env
+             (structProjGuards cA.1.type p.nP cA.2 sorts) cA.1 env
          else pure env
        | _, _ => pure env)
     checkBlockTables p rest env'

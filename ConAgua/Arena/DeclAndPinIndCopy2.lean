@@ -367,7 +367,7 @@ theorem decCI_front_kind {T : Array Word} {dn0 : NIdx → Option ConLeche.Name} 
   refine ⟨kk, rfl, ?_⟩
   rw [hk] at hc
   simp only [bind, Option.bind_some] at hc
-  rcases kk with _ | _ | _ | _ | _ | _ | _ | kk
+  rcases kk with _ | _ | _ | _ | _ | _ | kk
   · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
     obtain ⟨_, -, rfl⟩ := hc; exact hF.elim
   · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
@@ -377,8 +377,6 @@ theorem decCI_front_kind {T : Array Word} {dn0 : NIdx → Option ConLeche.Name} 
   · simp
   · simp
   · simp
-  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
-    obtain ⟨_, -, rfl⟩ := hc; exact hF.elim
   · simp at hc
 
 /-- The common end of `ind_rec_copy`'s three kinds: the record's copy at the top of `mx`, where

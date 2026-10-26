@@ -114,7 +114,6 @@ def headTypePW (find? : Name → Option ConstantInfo) (root : Expr) (d : Nat) :
   | .const I us, n =>
     match find? I with
     | some ci =>
-      if ci.isTowerEntry then none else
       let cv := ci.toConstantVal
       if us.length = cv.levelParams.length then
         (residualPW (peelPisW find? n cv.type)).map
@@ -153,12 +152,11 @@ def typeSortPW (find? : Name → Option ConstantInfo) (T : Expr) :
 from its stored type (prop-ness is invariant under application), an
 fvar head from its declared type; sorts, ∀s and literals are never
 proofs. -/
-def headProofPW (find? : Name → Option ConstantInfo) : Expr →
-    Option PropWhen
+def headProofPW (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) : Expr → Option PropWhen
   | .const c us =>
     match find? c with
     | some ci =>
-      if ci.isTowerEntry then none else
       let cv := ci.toConstantVal
       if us.length = cv.levelParams.length then
         (typeSortPW find? cv.type).map (Level.substPW cv.levelParams us)
@@ -172,14 +170,14 @@ def headProofPW (find? : Name → Option ConstantInfo) : Expr →
     -- nested pair, whatever the scrutinee's type, so the field's type
     -- does not make it the point (task #342 L18): "a proof" is the slow
     -- path's, which infers the scrutinee's type
-    match find? (projTableName S) with
-    | some (.projInfo tbl) =>
+    match findTable? S with
+    | some tbl =>
       if i < tbl.numFields then
         match typeSortPW find? (tbl.entry i).body with
         | some pw => if pw.isNever then some pw else none
         | none => none
       else none
-    | _ => none
+    | none => none
   | _ => none
 
 /-- The zero-ness datum of the sort of the *type* of `a` ("is `a` a
@@ -189,11 +187,12 @@ head answers from its stored/declared type; a λ answers from its body
 a `let` from its body, and an application from its function (prop-ness
 is invariant under application, so a β-redex's is its λ's); sorts, ∀s
 and literals are never proofs.  `none` = unknown. -/
-def proofPW (find? : Name → Option ConstantInfo) : Expr → Option PropWhen
-  | .lam _ b => proofPW find? b
-  | .letE _ _ b => proofPW find? b
-  | .app f _ => proofPW find? f
-  | h => headProofPW find? h
+def proofPW (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) : Expr → Option PropWhen
+  | .lam _ b => proofPW find? findTable? b
+  | .letE _ _ b => proofPW find? findTable? b
+  | .app f _ => proofPW find? findTable? f
+  | h => headProofPW find? findTable? h
 
 /-- Is the datum "always zero" — the sort is `Prop` at every
 valuation? -/
@@ -203,15 +202,17 @@ valuation? -/
 
 /-- **Definitely not a proof** (the no arm): the datum is known and is
 not always-zero. -/
-def notProofFast (find? : Name → Option ConstantInfo) (a : Expr) : Bool :=
-  match proofPW find? a with
+def notProofFast (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) (a : Expr) : Bool :=
+  match proofPW find? findTable? a with
   | some pw => !pw.isProp
   | none => false
 
 /-- **Definitely a proof** (the yes arm): the datum is known and
 always-zero. -/
-def isProofFast (find? : Name → Option ConstantInfo) (a : Expr) : Bool :=
-  match proofPW find? a with
+def isProofFast (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) (a : Expr) : Bool :=
+  match proofPW find? findTable? a with
   | some pw => pw.isProp
   | none => false
 

@@ -322,12 +322,12 @@ bundle-supplying layer.**  The three type fields at the composed
 assignment `Level.substFn φ ks us`, carried to the instantiated form
 by `denotePInstLevels` (an equality: no arity premise, no fuel). -/
 theorem constType (m : EnvModelM V μ env) : ConstType m.base2 φ := by
-  intro d n ci us hf _hnt hlen
+  intro d n ci us hf hlen
   have hmem := ConLeche.Env.find?_mem hf
   have hname := ConLeche.Env.find?_name hf
   obtain ⟨ta, hta⟩ :=
     m.type_reads ci hmem (Level.substFn φ ci.toConstantVal.levelParams us)
-  have hwf := m.base2.wf ci hmem
+  have hwf := m.base2.wf.consts ci hmem
   -- the reading is closed, hence depth-free
   have hcl : ∀ k : Nat, ta.liftN 1 k = ta := fun k =>
     denote_liftN_eq_self m.base2.cval_closed
@@ -364,7 +364,7 @@ theorem indFibLaw (m : EnvModelM V μ env) (φ : Name → Nat) : IndFibLaw m.bas
   have hmem := ConLeche.Env.find?_mem hf
   have hname := ConLeche.Env.find?_name hf
   have hcv : (ConstantInfo.indInfo cv caps).toConstantVal = cv := rfl
-  have hwf := m.base2.wf _ hmem
+  have hwf := m.base2.wf.consts _ hmem
   obtain ⟨ta, hta⟩ := m.type_reads _ hmem (Level.substFn φ cv.levelParams us)
   rw [hcv] at hta
   have hcl : ∀ k : Nat, ta.liftN 1 k = ta := fun k =>

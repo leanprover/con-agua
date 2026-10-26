@@ -173,7 +173,7 @@ theorem andPinOk_scratch {pd : IDeclaration} {s s' : AState} {b : Bool}
         simp only [andPinDecls, internCIList] at g2
         obtain ⟨q, s₃, hgo, hrest⟩ := ConRon.Bridge.AM.bind_ok g2
         obtain ⟨-, rfl⟩ := ConRon.Bridge.AM.pure_ok hrest
-        obtain ⟨hstep, -, -, -⟩ := ConRon.Bridge.Frontend.internCIList_sstep ConLeche.andPin hok
+        obtain ⟨hstep, -, -⟩ := ConRon.Bridge.Frontend.internCIList_sstep ConLeche.andPin hok
           (ConRon.Bridge.Frontend.EMemoOK.empty _) hgo
         exact (canonEqList_ks _ _ _ _ _ k4).trans hstep.scratch
       · exact congrArg (·.store.scratchOn) (ConRon.Bridge.AM.pure_ok k3).2

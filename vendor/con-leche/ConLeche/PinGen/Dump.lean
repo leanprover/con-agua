@@ -130,6 +130,10 @@ structure PinOpDump where
   proofsName : String
   pin : PinBlob
   proofs : Array PinBlob
+  /-- The type pins (task #364): per type-pinned constant the pin or a
+  certificate mentions (`ConLeche.PinGen.typePinNames`), its name and
+  its type in the generating toolchain. -/
+  typePins : Array (String × PinBlob)
   deriving Inhabited
 
 /-- A whole dump file. -/
@@ -150,8 +154,9 @@ structure PinDumpFile where
   deriving Inhabited
 
 /-- The format tag written into, and required of, a dump file.
-`/2` since task #191: the prelude fields. -/
-def dumpFormatTag : String := "con-leche-natop-pins/3"
+`/2` since task #191: the prelude fields; `/4` since task #364: the
+per-operation type pins. -/
+def dumpFormatTag : String := "con-leche-natop-pins/4"
 
 /-- The dump file's basename for a toolchain: the `lean-toolchain`
 string with everything outside `[A-Za-z0-9._-]` turned into `-`
@@ -450,7 +455,9 @@ def opDumpOfJson (j : Json) : Except String PinOpDump := do
     pinName := ← (← j.getObjVal? "pinName").getStr?
     proofsName := ← (← j.getObjVal? "proofsName").getStr?
     pin := ← blobOfJson (← j.getObjVal? "pin")
-    proofs := ← (← (← j.getObjVal? "proofs").getArr?).mapM blobOfJson }
+    proofs := ← (← (← j.getObjVal? "proofs").getArr?).mapM blobOfJson
+    typePins := ← (← (← j.getObjVal? "typePins").getArr?).mapM fun t => do
+      pure ((← (← t.getObjVal? "name").getStr?), ← blobOfJson (← t.getObjVal? "type")) }
 
 /-- Parse a dump file, checking the format tag. -/
 def dumpFileOfJson (j : Json) : Except String PinDumpFile := do
@@ -508,9 +515,11 @@ toolchain — the point of variants is that a binary built on one
 toolchain carries the pins of several; `tests/pindump.sh` is what
 insists that the CURRENT toolchain's dump exists and is fresh. -/
 
-/-- Splice one operation's pin and certificate proofs into the ambient
-environment (kernel-checked, then compiled), under the variant's
-suffix; returns the pin constant and the proof-list constant.
+/-- Splice one operation's pin, certificate proofs and type pins into
+the ambient environment (kernel-checked, then compiled), under the
+variant's suffix; returns the pin constant, the proof-list constant and
+the type-pin list (an `Expr` of type `List (Name × Expr)` over spliced
+type constants `<pinName>Type_v<i>_<j>`).
 
 Each certificate proof becomes its **own** definition
 (`…CertProofs_v<i>_<j>`), and `…CertProofs_v<i>` is the shallow list of
@@ -531,7 +540,7 @@ private def addExposed (decl : Declaration) : Elab.TermElabM Unit := do
   compileDecl decl
 
 def spliceOpDump (suffix : String) (o : PinOpDump) :
-    Elab.TermElabM (Lean.Name × Lean.Name) := do
+    Elab.TermElabM (Lean.Name × Lean.Name × Lean.Expr) := do
   let pinName := o.pinName.toName.appendAfter suffix
   let pinDecl := Declaration.defnDecl {
     name := pinName, levelParams := [], type := exprT,
@@ -554,7 +563,20 @@ def spliceOpDump (suffix : String) (o : PinOpDump) :
       (.app (.const ``List.nil [.zero]) exprT),
     hints := .abbrev, safety := .safe }
   addExposed proofsDecl
-  return (pinName, proofsName)
+  let pairT := mkApp2 (.const ``Prod [.zero, .zero]) nameT exprT
+  let mut typePins : Array Lean.Expr := #[]
+  for i in [0:o.typePins.size] do
+    let (n, b) := o.typePins[i]!
+    let tyName := o.pinName.toName.appendAfter s!"Type{suffix}_{i}"
+    addExposed (Declaration.defnDecl {
+      name := tyName, levelParams := [], type := exprT,
+      value := b.value, hints := .abbrev, safety := .safe })
+    typePins := typePins.push (mkApp4 (.const ``Prod.mk [.zero, .zero]) nameT exprT
+      (quoteName (ConLeche.Name.ofLeanName n.toName)) (.const tyName []))
+  let typePinsE := typePins.foldr
+    (fun p acc => mkApp3 (.const ``List.cons [.zero]) pairT p acc)
+    (.app (.const ``List.nil [.zero]) pairT)
+  return (pinName, proofsName, typePinsE)
 
 /-- The operations in the field order of `ConLeche.NatOpPinSet`. -/
 def pinSetOpOrder : List String :=
@@ -567,12 +589,14 @@ def spliceDump (i : Nat) (d : PinDumpFile) : Elab.TermElabM Lean.Name := do
   let suffix := s!"_v{i}"
   let mut pins : Array Lean.Expr := #[]
   let mut proofs : Array Lean.Expr := #[]
+  let mut typePins : Array Lean.Expr := #[]
   for op in pinSetOpOrder do
     let some o := d.ops.find? (·.op == op) |
       throwError "pin dump {d.toolchain} carries no pin for {op}"
-    let (pn, prn) ← spliceOpDump suffix o
+    let (pn, prn, tps) ← spliceOpDump suffix o
     pins := pins.push (.const pn [])
     proofs := proofs.push (.const prn [])
+    typePins := typePins.push tps
   let setName := (`ConLeche.natOpPinSet).appendAfter suffix
   let setDecl := Declaration.defnDecl {
     name := setName, levelParams := [],
@@ -581,7 +605,7 @@ def spliceDump (i : Nat) (d : PinDumpFile) : Elab.TermElabM Lean.Name := do
     -- imports (`ConLeche/Kernel/NatOpPins.lean`), not this format module
     type := .const `ConLeche.NatOpPinSet [],
     value := mkAppN (.const `ConLeche.NatOpPinSet.mk [])
-      (#[mkStrLit d.toolchain] ++ pins ++ proofs),
+      (#[mkStrLit d.toolchain] ++ pins ++ proofs ++ typePins),
     hints := .abbrev, safety := .safe }
   addExposed setDecl
   return setName
@@ -676,6 +700,12 @@ def dumpLines (d : PinDumpFile) : Array String := Id.run do
     for pi in [0:o.proofs.size] do
       out := out ++ blobLines o.proofs[pi]! ""
       if pi + 1 != o.proofs.size then out := out.push ","
+    out := out.push "],\"typePins\":["
+    for ti in [0:o.typePins.size] do
+      let (n, b) := o.typePins[ti]!
+      out := out.push ("{\"name\":" ++ (Json.str n).compress ++ ",\"type\":")
+      out := out ++ blobLines b ""
+      out := out.push (if ti + 1 == o.typePins.size then "}" else "},")
     out := out.push "]"
     out := out.push (if oi + 1 == d.ops.size then "}" else "},")
   out := out.push "]"

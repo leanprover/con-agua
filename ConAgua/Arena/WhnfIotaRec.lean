@@ -46,7 +46,7 @@ def erecPushLoop : Stmt := lblk (o, c, k, so, j) {
 /-- A nested rule's stored pins (the `EREC` slice `(o, c)`, `k = 1` the rule's fire kind) pushed
 on the stack: the slice's offset is the old top, the top is raised past it. Nothing for `k ≠ 1` (a
 plain rule has no pins). -/
--- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def erecPushL : FunDecl := lfn (o, c, k) locals (so, j) {
   if k != 1 { return 0 };
   so := CTL.u64[136];
@@ -67,7 +67,7 @@ def stackCoverL : FunDecl := lfn (x) locals () {
 /-- The parameter comparands of a firing rule (`recFireArgs` over the recursor's spine `(so, mI + 1)`)
 against the major's leading `ctorParams` arguments (`defEqList`). A nested rule's pins are copied to the stack first; the
 top is raised over the comparand slice (it lies below it already) and put back at the end. -/
--- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def iotaRecCmpL : FunDecl := lfn (mode, vis, d, us, recP, so, rl, mo)
     locals (top, pvo, ao, an, x, ok) {
   top := CTL.u64[136];
@@ -84,7 +84,7 @@ def iotaRecCmpL : FunDecl := lfn (mode, vis, d, us, recP, so, rl, mo)
 comparands (`lvls_eq_c`; `0`, the twin's fuel exhaustion, is a decline: `abort`), its parameters
 (`iota_rec_cmp`), its telescope at the full grade (`iota_certs_full`), the indices
 (`iota_index_ok`; the twin's `(args.take mI).drop rP`: the slice from `so + min rP mI`). -/
--- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def iotaRecVckL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL)
     locals (lok, ok, tyC) {
   lok := call lvls_eq_c(usj, cmpL);
@@ -105,7 +105,7 @@ def iotaRecVckL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo
 }
 
 /-- The certificate family: nothing in a trusted mode or outside case 3, else `iota_rec_vck`. -/
--- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def iotaRecFamL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn)
     locals (cmpL, c3, r) {
   if mode & 1 != 0 { return 1 };
@@ -121,7 +121,7 @@ def iotaRecFamL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo
 certificate family, the rule's right-hand side at the recursor's levels applied to the leading
 `rP` arguments (the twin's `args.take rP`: all `mI + 1` of them when `mI < rP`, so `rP` is capped
 at `mI + 1`) and the fields. -/
--- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def iotaRecFire2L : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl, mo, mn)
     locals (cp, rP, fam, rhs, x) {
   cp := EREC.u64[rl + 2];
@@ -139,7 +139,7 @@ def iotaRecFire2L : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, r
 }
 
 /-- The major's arguments on the stack, the fire, the top put back. -/
--- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def iotaRecFireL : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl, major)
     locals (top, mo, mn, r1, r2) {
   top := CTL.u64[136];
@@ -151,7 +151,7 @@ def iotaRecFireL : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl
 
 /-- A `const` handle's name and level list: `(0, _, _)` for another tag; a dangling handle aborts
 (the twin's `view` fails). -/
--- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def iotaRecHeadL : FunDecl := lfn (hh) locals (t, i) {
   if hh >> 28 != 3 { return (0, 0, 0) };
   t := ⟦hh⟧.tier;
@@ -162,7 +162,7 @@ def iotaRecHeadL : FunDecl := lfn (hh) locals (t, i) {
 }
 
 /-- The major premise prepared, its head a stored constructor with a rule. -/
--- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def iotaRecMajorL : FunDecl := lfn (mode, vis, d, c, us, recP, so, sn)
     locals (b0, major, hh, hf, cj, usj, cf, ctorP, rf, rl, r1, r2) {
   b0 := call intern_bvar(0);
@@ -182,7 +182,7 @@ def iotaRecMajorL : FunDecl := lfn (mode, vis, d, c, us, recP, so, sn)
 
 /-- The recursor `c` at levels `us` on the stack slice `(so, sn)`: its record, the arity, the
 level-list length, its telescope's `sn` binders (`sn - 1` is the major's index). -/
--- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def iotaRecCL : FunDecl := lfn (mode, vis, d, c, us, so, sn)
     locals (flag, recP, uso, usl, pf, pr, r1, r2) {
   (flag, recP) := call env_find(c, vis);

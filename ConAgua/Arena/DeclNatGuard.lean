@@ -78,11 +78,12 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
   replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨cv, a1, hrun1, hS1, hg1, hcv⟩ := ciToCv_ref (dn := dn) (vis := vis) (fe := fe) hN.toNatCvProg
     c ci k m a r1 m1 ⟨hS, hci⟩ h1
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun1)
   have hsz1 := hS1.2.2.2.2.1
   obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := cvWordsAt hsz1 hcv
   by_cases hl : rdW (m1.arr64 EREC) (r1.headD 0 + 2) = 0
   · rw [if_neg (by simpa using hl)] at hw
-    have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
+    have hisE : ci.toConstantVal.levelParams.isEmpty = true := hiff.mp hl
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     obtain ⟨hm2, h0, hr2⟩ := pinAt_call hN.lPinAt (j := 30) rfl h2
     rw [hm2] at hw
@@ -92,14 +93,14 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨x3, a3, hrun3, hS3, hg3, hx3l, hx3⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
-      hN.toMasterProg (r2.headD 0) k m1 a1 r3 m3 ⟨hS1, hp2⟩ h3
+      hN.toMasterProg (r2.headD 0) k m1 a r3 m3 ⟨hS1, hp2⟩ h3
     obtain ⟨-, hst3⟩ := hstay m3 hg3
     rw [hst3] at *
-    have e2 : (pinAt 29).run a1 = .ok (decI (r2.headD 0), a1) := by
+    have e2 : (pinAt 29).run a = .ok (decI (r2.headD 0), a) := by
       have := pinAt_run hF 29 (by decide)
       rw [hr2]; exact this
     have hrun : (boolCtorOk ci).run a = .ok (decide (wt = r3.headD 0), a3) := by
-      simp only [boolCtorOk, StateT.run_bind, hrun1, exc_ok_bind', hisE, if_true, boolName_eq, e2, hrun3,
+      simp only [boolCtorOk, hisE, if_true, StateT.run_bind, exc_ok_bind', boolName_eq, e2, hrun3,
         hty, decI_beq_word hlt hx3l, ← hx3, StateT.run_pure]
       rfl
     refine ⟨_, a3, hrun, hS3, hg1.trans hg3, ?_⟩
@@ -110,12 +111,12 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
   · rw [if_pos (by simpa using hl)] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
-    have hisE : cv.levelParams.isEmpty = false := by
-      cases h : cv.levelParams.isEmpty
+    have hisE : ci.toConstantVal.levelParams.isEmpty = false := by
+      cases h : ci.toConstantVal.levelParams.isEmpty
       · rfl
       · exact absurd (hiff.mpr h) hl
-    refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-    simp only [boolCtorOk, StateT.run_bind, hrun1, exc_ok_bind', hisE]
+    refine ⟨false, a, ?_, hS1, hg1, by simp [decW0B]⟩
+    simp only [boolCtorOk, hisE]
     rfl
 
 @[refines ConRon.Arena.boolCtorOk]

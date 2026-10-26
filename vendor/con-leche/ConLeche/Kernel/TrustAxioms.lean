@@ -205,11 +205,12 @@ def reduceCertVar (c : Name) : Expr :=
 `native_decide`, `decide +native` and `bv_decide`) asserts the result of
 a compiled computation as an axiom named
 `<declaration>._native.<tactic>.ax_<i>_<j>`; `decide +native` passes the
-tactic name `decide`. -/
+tactic name `decide`.  The tactic component is returned as displayed
+(`Name.render`), since it is input. -/
 def nativeAxiomTactic? : Name → Option String
   | .str (.str (.str _ "_native") tac) ax =>
     if ax.startsWith "ax" then
-      some (if tac = "decide" then "decide +native" else tac)
+      some (if tac = "decide" then "decide +native" else (Name.str .anonymous tac).render)
     else none
   | _ => none
 

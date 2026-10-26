@@ -663,8 +663,8 @@ closed and bvar-closed. -/
 theorem nestCtx_ok_of_envWF {env : Env} (henv : EnvWF env) (p : BlockShape) (fvsP : List Expr) :
     NestCtxOk (p.nestCtx fvsP env.find?) ∧
       NestCtxB (p.nestCtx fvsP env.find?) :=
-  ⟨fun _ ci hf => (henv ci (List.mem_of_find?_eq_some hf)).1,
-    fun _ ci hf => (henv ci (List.mem_of_find?_eq_some hf)).2.2.2.1⟩
+  ⟨fun _ ci hf => (henv.consts ci (List.mem_of_find?_eq_some hf)).1,
+    fun _ ci hf => (henv.consts ci (List.mem_of_find?_eq_some hf)).2.2.2.1⟩
 
 /-- The canonical parameters (a closed former's opened telescope) are
 scoped over the parameters. -/

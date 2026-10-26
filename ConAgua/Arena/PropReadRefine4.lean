@@ -34,7 +34,7 @@ theorem decTbl_body {E : Array Word} {q : Word} {tbl : IProjTable} (h : decTbl E
         tbl.bodies.getD i.toNat default := by
   simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
-  obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, bs, hbs, -, -, -, -, rfl⟩ := h
+  obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, bs, hbs, -, -, rfl⟩ := h
   simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
     Option.map_eq_some_iff] at hbs
   obtain ⟨off, ⟨wo, hwo, rfl⟩, cnt, ⟨wc, hwc, rfl⟩, hs⟩ := hbs
@@ -68,7 +68,7 @@ theorem decTbl_body {E : Array Word} {q : Word} {tbl : IProjTable} (h : decTbl E
 
 /-- `headProofPW`'s `.proj` arm. -/
 def hpProjT (fe : IFEnv) (f : Nat) (S : NIdx) (i : Nat) : AM (Option PropWhen) := do
-  match ← fe.findProj? S i with
+  match fe.findProj? S i with
   | some entry => do
     match ← typeSortPW fe f entry.body with
     | some pw => pure (if pw.isNever then some pw else none)
@@ -101,16 +101,17 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   · cases hW
   obtain ⟨hok, hafter, hres, -⟩ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
     (hfp n ⟨m, Locals.init []⟩ a dn vis fe M eb sn i hS hsn) hc1
-  have hrun₁ := pr_run_of_ok hok
-  rw [hres] at hrun₁
-  dsimp only at hrun₁
-  generalize AM.st (fe.findProj? (decI sn) i.toNat) a = a₁ at hrun₁ hafter
+  have hfx : fe.findProj? (decI sn) i.toNat =
+      decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) i.toNat := hres
+  replace hafter : CoreAfter dn m m₁ a vis fe M eb := hafter
+  generalize ha₁ : a = a₁ at hafter
+  subst ha₁
   simp only [hppK1] at hW
   by_cases h0 : r₁.headD 0 = 0
   · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
-    refine ⟨none, a₁, ?_, hafter, rfl⟩
-    simp only [hpProjT, StateT.run_bind, hrun₁, decEntry, h0, ↓reduceIte, except_ok_bind]
+    refine ⟨none, a, ?_, hafter, rfl⟩
+    simp only [hpProjT, hfx, decEntry, h0, ↓reduceIte]
     rfl
   simp only [h0, ↓reduceIte] at hW
   obtain ⟨tbl, htbl, -⟩ := hpf n m a dn vis fe M eb sn i r₁ m₁ hS hc1 h0
@@ -127,13 +128,13 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       some (tbl.entry i.toNat) := by
     simp only [decEntry, h0, ↓reduceIte, htbl, Option.map_some]
   have hbody : (tbl.entry i.toNat).body = decE b := hbe.symm
-  have hcalc : ∀ res, (typeSortPW fe f.toNat (decE b)).run a₁ = .ok (res, a₂) →
+  have hcalc : ∀ res, (typeSortPW fe f.toNat (decE b)).run a = .ok (res, a₂) →
       (hpProjT fe f.toNat (decI sn) i.toNat).run a =
       (match res with
         | some pw => pure (if pw.isNever then some pw else none)
         | none => pure none : AM (Option PropWhen)).run a₂ := by
     intro res h
-    simp only [hpProjT, StateT.run_bind, hrun₁, hentry, except_ok_bind, hbody, h]
+    simp only [hpProjT, hfx, hentry, StateT.run_bind, hbody, h, except_ok_bind]
   have hpre := hcalc res₂ hrun₂
   clear hcalc
   have hA : CoreAfter dn m m₂ a₂ vis fe M eb := CoreAfter.comp hK₁ hSt₁ hRd₂.core

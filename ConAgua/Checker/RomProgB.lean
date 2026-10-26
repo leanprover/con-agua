@@ -76,6 +76,8 @@ theorem checkerProg_pinProg (bs : List UInt8) : PinProg bs (Prog.subPB bs checke
   rom_exprs_to := lkN bs (f := "rom_exprs_to") rfl rfl
   rom_pins_to := lkN bs (f := "rom_pins_to") rfl rfl
   rom_lists_to := lkN bs (f := "rom_lists_to") rfl rfl
+  rom_tpairs_to := lkN bs (f := "rom_tpairs_to") rfl rfl
+  rom_tpins_to := lkN bs (f := "rom_tpins_to") rfl rfl
   rom_sets_to := lkN bs (f := "rom_sets_to") rfl rfl
   intern_pin_sets := lkN bs (f := "intern_pin_sets") rfl rfl
   rom_pin_sets := lkN bs (f := "rom_pin_sets") rfl rfl

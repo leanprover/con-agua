@@ -22,7 +22,7 @@ theorem erase_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     installed.length ≤ j.toNat + 1 →
     ConstsAt dn (erecP m) (m.arr64 ECON) j.toNat installed →
     callW p n "erase_installed" [j, k] m = some (r, m') →
-    EnvR dn m' vis ⟨fe.env, eraseInstalled fe.idx installed, fe.visibleBelow⟩ ∧
+    EnvR dn m' vis ⟨fe.env, eraseInstalled fe.idx installed, fe.visibleBelow, fe.tbls⟩ ∧
       MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m m' := by
   intro n
   induction n with

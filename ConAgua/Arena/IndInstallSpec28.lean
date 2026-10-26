@@ -180,7 +180,7 @@ theorem icp_spec (p : Prog) (hp : p.lookup "check_block_pass" = some checkBlockP
     callW_spec p n "block_nest_ctx", callW_spec p n "check_block_classes",
     callW_spec p n "check_block_positivity", callW_spec p n "class_seeds", callW_spec p n "nest_seeds",
     callW_spec p n "check_block_pass_rec"]
-  all_goals simp_all [LocEq, Expr.pval, ipf_rd64, BinOp.eval, St.setLocs_cons, St.setLoc_loc,
+  all_goals simp_all [LocEq, Expr.pval, L.Arena.rd64_rdWC, BinOp.eval, St.setLocs_cons, St.setLoc_loc,
     St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr,
     icpW, icprK_some, icpK8_some, icpK7_some, icpK6_some, icpK5_some, icpK4_some, icpK3_some,
     icpK2_some, icpK1_some]

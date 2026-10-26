@@ -479,7 +479,7 @@ def slEq : FunDecl := lfn (o1, l1, o2, l2) locals (r) {
 }
 
 /-- `sl_nodup(o, l)`: `nameNodup` (no word twice). -/
--- con-ron: ConRon/Arena/CheckerBase.lean:115-120 ConRon.Arena.nameNodup
+-- con-ron: ConRon/Arena/CheckerBase.lean:35-40 ConRon.Arena.nameNodup
 @[l_impl ConRon.Arena.nameNodup]
 def slNodup : FunDecl := lfn (o, l) locals (b, r) {
   if l == 0 { return 1 };
@@ -599,7 +599,7 @@ def cvLps : FunDecl := lfn (q) locals (o, l) {
 
 /-- `reserved_contains(n)`: `(← reservedBasisNames).contains n` (the 16 reserved names,
 `PINS[55‥70]`). -/
--- con-ron: ConRon/Arena/Core.lean:1451-1455 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1452-1456 ConRon.Arena.reservedBasisNames
 def reservedContains : FunDecl := lfn (n) locals (r) {
   if PINS.u64[0] == 0 { abort };
   r := call reserved_from(n, 0);
@@ -607,7 +607,7 @@ def reservedContains : FunDecl := lfn (n) locals (r) {
 }
 
 /-- `reserved_from(n, j)`: `n` among `PINS[55 + j‥70]`. -/
--- con-ron: ConRon/Arena/Core.lean:1451-1455 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1452-1456 ConRon.Arena.reservedBasisNames
 def reservedFrom : FunDecl := lfn (n, j) locals (r) {
   if 16 <= j { return 0 };
   if PINS.u64[55 + j] == n { return 1 };
@@ -739,7 +739,7 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort (.const 0)⟩
 * `intern_ls_iw(off, len)` → `us` (`internLsNode` of the `IW` slice of level handles).
 * `name_rec(n)` → `internNNode (.str n "rec")`; `name_rec_i(n, i)` → `internNNode (.str n
   s!"rec_{i}")`; `proj_table_name(T)` → `projTableName T`.
-* `is_proj_fn_shape(n)` → `0`/`1`; `reserved_rec_name(n)` → `0`/`1`.
+* `reserved_rec_name(n)` → `0`/`1`.
 * `rec_rule_bits(vis, ctor)` → `(k, eta)` (the two bits `recRuleBits` writes).
 * `basis_pin_hit(off, len)` → `(ok, kind)` (the block's record pointers, an `IW` slice);
   `check_basis_decl(vis, kind)` → `vis'`; `ind_params_ok(nP, off, len)` → `0`/`1`.
@@ -758,7 +758,7 @@ def stubFns : Prog :=
    ("fvar_b", stub 2), ("has_fvar_fast", stub 2), ("loose_bvars_bounded_fast", stub 3),
    ("all_level_params_defined", stub 3),
    ("intern_ls_iw", stub 2), ("name_rec", stub 1), ("name_rec_i", stub 2),
-   ("proj_table_name", stub 1), ("is_proj_fn_shape", stub 1), ("reserved_rec_name", stub 1),
+   ("proj_table_name", stub 1), ("reserved_rec_name", stub 1),
    ("rec_rule_bits", stub 2), ("basis_pin_hit", stub 2), ("check_basis_decl", stub 2),
    ("ind_params_ok", stub 3), ("lv_zero_caps", stub 1)]
 

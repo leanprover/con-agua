@@ -68,13 +68,12 @@ structure StoreDen (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (
   readN : ∀ (h : NIdx) (x : ConLeche.Name), a.caches.readNC[h]? = some x →
     denoteN a.store.ns h = some x
   /-- A stored constant's level-parameter names read back (`PropRead`'s `substPWAt`). -/
-  constLps : ∀ (c : NIdx) (ci : IConstantInfo) (cv : IConstantVal), fe.find? c = some ci →
-    ci.isTowerEntry = false → (∀ s, ci.toConstantVal.run s = .ok (cv, s)) →
-    ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks
+  constLps : ∀ (c : NIdx) (ci : IConstantInfo), fe.find? c = some ci →
+    ∃ ks, ci.toConstantVal.levelParams.mapM (denoteN a.store.ns) = some ks
   /-- An environment projection table's levels read back (over the environment's tables, not
   over every offset of `EREC` at which `decTbl` decodes: lane `loopt`'s blocker; `ProjFound`
   gives the membership for the table `find_proj` answers). -/
-  proj : ∀ (c : NIdx) (tbl : IProjTable), fe.find? c = some (.projInfo tbl) →
+  proj : ∀ (c : NIdx) (tbl : IProjTable), fe.findTable? c = some tbl →
     (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
     (∀ i, i < tbl.numFields → ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l) ∧
     (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks)
@@ -260,7 +259,7 @@ theorem StoreDen.mono {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
       obtain ⟨y, hy, ys, hys, rfl⟩ := h
       exact ⟨y, hN _ _ hy, ys, ih _ hys, rfl⟩
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
-    fun c ci cv hf ht hcv => ?_, fun q tbl ht => ?_, hlv, hlsa, fun k x e => hN _ _ (h.dnN k x e),
+    fun c ci hf => ?_, fun q tbl ht => ?_, hlv, hlsa, fun k x e => hN _ _ (h.dnN k x e),
     fun c cv mI rP rules hf r hr lvls pins hfi u hu =>
       (h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu).elim fun L hL => ⟨L, hx.ls.lvl _ _ hL⟩⟩
   · obtain ⟨l, hl⟩ := h.sort x u (hs x u hv); exact ⟨l, hx.ls.lvl _ _ hl⟩
@@ -272,7 +271,7 @@ theorem StoreDen.mono {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
   · rcases hr k x hk with h' | h'
     · exact hN _ _ (h.readN k x h')
     · exact h'
-  · obtain ⟨ks, hks⟩ := h.constLps c ci cv hf ht hcv; exact ⟨ks, hNs _ _ hks⟩
+  · obtain ⟨ks, hks⟩ := h.constLps c ci hf; exact ⟨ks, hNs _ _ hks⟩
   · obtain ⟨⟨l, hl⟩, hg, ⟨ks, hks⟩⟩ := h.proj q tbl ht
     exact ⟨⟨l, hx.ls.lvl _ _ hl⟩, fun i hi => (hg i hi).elim fun l hl => ⟨l, hx.ls.lvl _ _ hl⟩,
       ⟨ks, hNs _ _ hks⟩⟩

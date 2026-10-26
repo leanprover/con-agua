@@ -11,7 +11,7 @@ import ConAgua.Checker.Entry
 word array's length *as a word* is below `2^62` (`CapsW`). `len64` is the size modulo `2^64`, so
 the actual sizes are below `2^62` only for sizes below `2^64` (`WordsFit`, which every memory the
 x64 layout can hold meets): then `CapsOK`. The proof is by induction over the list, on runs
-(`capFold_run`), not by unrolling the 318 branches.
+(`capFold_run`), not by unrolling the 388 branches.
 -/
 
 namespace L.Checker

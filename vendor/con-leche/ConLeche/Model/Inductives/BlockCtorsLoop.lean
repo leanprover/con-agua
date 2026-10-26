@@ -85,7 +85,7 @@ theorem blockCtorsLoop (hμ : μ.isVerified = true)
     (Inv : ∀ {env' : Env}, EnvModel V env' → Prop)
     (hInv : ∀ {env' : Env} (m' : EnvModel V env') (cA : ConstantVal × Nat)
       (A : (Name → Nat) → Term)
-      (mC : EnvModel V ⟨.ctorInfo cA.1 nP cA.2 :: env'.consts⟩),
+      (mC : EnvModel V ⟨.ctorInfo cA.1 nP cA.2 :: env'.consts, env'.tables⟩),
       cA ∈ ctorsA → env'.find? cA.1.name = none →
       mC.acval = acvalWith m'.acval cA.1.name A → Inv m' → Inv mC)
     -- the block's capability record and its laws at every carrier the

@@ -51,7 +51,7 @@ structure BlockPass where
   tbl : List NestCtorNf
 
 /-- con-leche: ConLeche/Kernel/Inductives/BlockTail.lean:54-74 checkBlockPass
-con-leche: ConLeche/Cached/CheckerC.lean:134-152 checkBlockPassS
+con-leche: ConLeche/Cached/CheckerC.lean:126-144 checkBlockPassS
 **One pass over the formers, the constructors and the classes** at the
 block's `is_rec` verdict: the formers (and the flush entering the environment
 that holds them all), the constructors, the walk's context, the classes, and
@@ -84,10 +84,9 @@ def checkBlockRec (mode : CheckMode) (fe : IFEnv) (p : BlockParts) (nested : Boo
   genRecCheck mode fe p.shape nested params tbl rd ms cvTas block
 
 /-- con-leche: ConLeche/Kernel/Inductives/BlockTail.lean:106-121 checkBlockTables
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:150-163 checkBlockTablesF
+con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:157-170 checkBlockTablesF
 **The projection table at every STRUCTURE-LIKE member** (one constructor, no
-index): the member's table at the tagged tower's projection offset `1`;
-nothing at any other member.  The three lists are walked side by side, as the
+index): the member's table; nothing at any other member.  The three lists are walked side by side, as the
 Rust's index `i` walks them. -/
 def checkBlockTables (p : BlockShape) :
     List MemberShape → List (List (IConstantVal × Nat)) → List (List (List LIdx)) →
@@ -98,14 +97,14 @@ def checkBlockTables (p : BlockShape) :
       if m.nIdx == 0 then do
         let guards ← structProjGuards cA.type p.nP nF sorts
         let fe₂ ← checkStructProjTable m.cvT.name cA.name p.lps p.nP nF p.resSort
-          guards 1 cA fe
+          guards cA fe
         checkBlockTables p ms css sss fe₂
       else checkBlockTables p ms css sss fe
     | _, _ => checkBlockTables p ms css sss fe
   | _, _, _, fe => pure fe
 
 /-- con-leche: ConLeche/Kernel/Inductives/BlockTail.lean:123-136 checkBlockTail
-con-leche: ConLeche/Cached/CheckerC.lean:154-176 checkBlockTailS
+con-leche: ConLeche/Cached/CheckerC.lean:146-168 checkBlockTailS
 **The install after the pass**: the index binders' sorts, the constructors
 consed (and the flush entering that environment), the recursor stage, the
 recursors consed at their majors, and the projection tables. -/
@@ -122,7 +121,7 @@ def checkBlockTail (mode : CheckMode) (block : List IConstantInfo) (q : BlockPas
   checkBlockTables q.p.shape q.p.shape.members q.ctorsAs q.sortsss fe₃
 
 /-- con-leche: ConLeche/Kernel/Inductives/BlockTail.lean:138-146 checkBlock
-con-leche: ConLeche/Cached/CheckerC.lean:178-186 checkBlockKS
+con-leche: ConLeche/Cached/CheckerC.lean:170-178 checkBlockKS
 **Check and install a block on the uniform route**: the distinct names, the
 flush, the pass at official's `is_rec`, and the install after it. -/
 def checkBlock (mode : CheckMode) (fe : IFEnv) (block : List IConstantInfo)

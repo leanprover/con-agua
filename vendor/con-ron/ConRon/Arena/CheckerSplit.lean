@@ -56,7 +56,7 @@ structure ValueGroup where
   jv : EIdx
   deriving Inhabited
 
-/-- con-leche: ConLeche/Kernel/CheckerSplit.lean:63-81 installHeader —
+/-- con-leche: ConLeche/Kernel/CheckerSplit.lean:63-79 installHeader —
 `checkConstantVal` minus its inference: the syntactic guards.  con-leche writes
 the shared clauses out twice and so does this, clause for clause. -/
 def installHeader (fe : IFEnv) (cv : IConstantVal) : AM Unit := do
@@ -64,8 +64,6 @@ def installHeader (fe : IFEnv) (cv : IConstantVal) : AM Unit := do
     fail (.invalid "duplicate declaration")
   if (← reservedBasisNames).contains cv.name then
     fail (.invalid "reserved basis name")
-  if ← NIdx.isProjFnShape cv.name then
-    fail (.invalid "reserved projection name")
   unless nameNodup cv.levelParams do
     fail (.invalid "duplicate universe parameters")
   unless ← looseBVarsBoundedFast coreWalkFuel 0 cv.type do
@@ -78,7 +76,7 @@ def installHeader (fe : IFEnv) (cv : IConstantVal) : AM Unit := do
   unless ← constsResolveFFast fe cv.type do
     fail (← unresolvedConstsErrorL (← strLitSupported fe) "type" cv.type)
 
-/-- con-leche: ConLeche/Kernel/CheckerSplit.lean:83-94 installValueGuards — the
+/-- con-leche: ConLeche/Kernel/CheckerSplit.lean:81-92 installValueGuards — the
 value half of `check{Defn,Thm,Opaque}Val` minus its inference: the guards. -/
 def installValueGuards (fe : IFEnv) (cv : IConstantVal) (value : EIdx) :
     AM Unit := do
@@ -92,7 +90,7 @@ def installValueGuards (fe : IFEnv) (cv : IConstantVal) (value : EIdx) :
   unless ← constsResolveFFast fe value do
     fail (← unresolvedConstsErrorL (← strLitSupported fe) "value" value)
 
-/-- con-leche: ConLeche/Kernel/CheckerSplit.lean:96-112 checkValueGroup —
+/-- con-leche: ConLeche/Kernel/CheckerSplit.lean:94-110 checkValueGroup —
 **the check half of a value declaration**, at the environment the constant was
 installed at: the type's sort, the theorem's is-a-proposition test, for a
 theorem the value's guards, and the value's type against the

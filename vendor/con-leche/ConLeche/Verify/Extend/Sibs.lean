@@ -32,10 +32,10 @@ theorem RecCtorsStored.cons {env : Env} {c₀ : ConstantInfo}
           env.find? (RecRule.ctor r) = some (.ctorInfo cvj cnP cnF)) ∧
         (r.k = true → recRuleKOf env.find? r.ctor = true) ∧
         (r.eta = true → recRuleEtaOf env.find? r.ctor = true)) :
-    RecCtorsStored (⟨c₀ :: env.consts⟩ : Env) := by
+    RecCtorsStored (⟨c₀ :: env.consts, env.tables⟩ : Env) := by
   have hkeep : ∀ (m : Name) (ci : ConstantInfo),
       (∀ cv mI rP rules, ci ≠ .recInfo cv mI rP rules) →
-      env.find? m = some ci → (⟨c₀ :: env.consts⟩ : Env).find? m = some ci := by
+      env.find? m = some ci → (⟨c₀ :: env.consts, env.tables⟩ : Env).find? m = some ci := by
     intro m ci _ hf
     rw [Env.find?_cons_of_isSome hfresh (by rw [hf]; rfl)]
     exact hf

@@ -26,22 +26,6 @@ theorem arenaD_rows {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP
     DerR.frameM _ _ m _ hf (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) a hD.2⟩,
     hP.frame (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) (by simp) hf⟩
 
-/-- The tail of `newW` after the memo is cleared. -/
-def newRest (p : Prog) (n : Nat) (k vis : Word) (m₁ : Mem) : Option Mem :=
-  if (m₁.arr64 CTL).size ≤ 128 then none
-  else
-  (callW p n "erase_installed" [rdW (m₁.arr64 CTL) 128 - 1,
-      if rdW (m₁.arr64 CTL) 128 < k then rdW (m₁.arr64 CTL) 128 else k] m₁).bind fun r₁ =>
-  (callW p n "promote_ci_list" [L.Ind.CWF, rdW (m₁.arr64 CTL) 128 - 1,
-      if rdW (m₁.arr64 CTL) 128 < k then rdW (m₁.arr64 CTL) 128 else k] r₁.2).bind fun r₂ =>
-  memK (callW p n "index_promoted" [vis, rdW (m₁.arr64 CTL) 128 - 1,
-      if rdW (m₁.arr64 CTL) 128 < k then rdW (m₁.arr64 CTL) 128 else k] r₂.2)
-
-theorem newW_eq (p : Prog) (n : Nat) (m : Mem) (k vis fresh : Word) :
-    newW p n m k vis fresh = if k = 0 then some m else
-      (if fresh ≠ 0 then (callW p n "promote_clear" [] m).bind fun r => some r.2 else some m).bind
-        (newRest p n k vis) := rfl
-
 theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs,
     (b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
       (146 ≤ b ∧ b ≤ 149) ∨ (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
@@ -96,15 +80,17 @@ variable (p : Prog) (hp : PromoteProg p)
 include hp
 
 theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a : AState)
-    (pm : PMemo) (k vis : Word) (consts : List IConstantInfo)
-    (idx : Std.HashMap NIdx (Nat × IConstantInfo)) (vb : Nat) (pend : Array PendingCheck)
+    (pm : PMemo) (k vis : Word) (consts : List IConstantInfo) (tables : List IProjTable)
+    (idx : Std.HashMap NIdx (Nat × IConstantInfo)) (vb : Nat) (tbls : Std.HashMap NIdx IProjTable)
+    (pend : Array PendingCheck)
     (ds : Array IDeclaration) (m' : Mem) (hP₁ : PMemoR m₁ pm)
-    (hR₁ : LoopR pins dn m₁ a vis ⟨⟨consts⟩, idx, vb⟩ pend ds) (hk : k.toNat ≤ vis.toNat)
-    (hW : newRest p n k vis m₁ = some m') :
+    (hR₁ : LoopR pins dn m₁ a vis ⟨⟨consts, tables⟩, idx, vb, tbls⟩ pend ds) (hk : k.toNat ≤ vis.toNat)
+    (hk0 : k ≠ 0) (hW : newCW p n m₁ k vis = some m') :
     ∃ a' pm' Lc', (promoteCIList pm coreWalkFuel (consts.take k.toNat)).run a =
         .ok ((pm', Lc'), a') ∧
-      LoopR pins dn m' a' vis ⟨⟨Lc' ++ consts.drop k.toNat⟩,
-        indexPromoted (eraseInstalled idx (consts.take k.toNat)) vb Lc', vb⟩ pend ds := by
+      LoopR pins dn m' a' vis ⟨⟨Lc' ++ consts.drop k.toNat, tables⟩,
+        indexPromoted (eraseInstalled idx (consts.take k.toNat)) vb Lc', vb, tbls⟩ pend ds ∧
+      PMemoR m' pm' := by
   have hE₁ := hR₁.check.env
   have hvis : vb = vis.toNat := hR₁.check.env.vis
   subst hvis
@@ -112,7 +98,7 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hsz₁ : (m₁.arr64 EREC).size < 2 ^ 64 := hiw4
   have hts₁ : erecTop m₁ ≤ (m₁.arr64 EREC).size := hiw2
   have hD₁ : ArenaD m₁ a := hR₁.check.arena
-  simp only [newRest] at hW
+  simp only [newCW, if_neg hk0] at hW
   by_cases hs128 : (m₁.arr64 CTL).size ≤ 128
   · rw [if_pos hs128] at hW; cases hW
   rw [if_neg hs128] at hW
@@ -208,9 +194,22 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
     rw [this]
     have e : n0.toNat - c.toNat + Lc'.length = n0.toNat := by rw [hlen₃, hLlen]; omega
     rw [← e]; exact hcdec₃
-  have hE₃ : EnvR dn m₃ vis ⟨⟨Lc' ++ B⟩, eraseInstalled idx Lc, vis.toNat⟩ :=
-    (show EnvR dn m₂ vis ⟨⟨consts⟩, eraseInstalled idx Lc, vis.toNat⟩ from hE₂).promoted hEC₃rows hg₂₃ (Lc' ++ B)
-      hEnv₃c
+  have hTab₃ : envTables m₃ = some tables := by
+    have h0 := hE₂.tables
+    rw [envTables_eq] at h0 ⊢
+    have hc133 : tblCnt m₃ = tblCnt m₂ := by
+      simp only [tblCnt]; rw [hfr₃.2.1 133 (fun h => by have := pnew_ctl _ h; simp at this)]
+    rw [hc133]
+    exact tdec_mono hg₂₃.ext _ _ (fun i _ => by
+      rw [hfr₃.1 ETAB (fun h => by rcases pnew_arrs' _ h with h | h | h | h <;> (simp only [ArrId, ETAB] at h; omega))
+        (by decide)]) h0
+  have hE₃ : EnvR dn m₃ vis ⟨⟨Lc' ++ B, tables⟩, eraseInstalled idx Lc, vis.toNat, tbls⟩ :=
+    (show EnvR dn m₂ vis ⟨⟨consts, tables⟩, eraseInstalled idx Lc, vis.toNat, tbls⟩ from hE₂).promoted
+      hEC₃rows (fun w hw => hfr₃.1 _ (fun h => by
+        have := tblArr_cases w hw
+        rcases pnew_arrs' _ h with h' | h' | h' | h' <;> (simp only [ArrId] at h' this; omega))
+        (by rcases tblArr_cases w hw with h | h | h | h | h | h <;> rw [h] <;> decide))
+      hg₂₃ (Lc' ++ B) tables hEnv₃c hTab₃
   have hsz₃ : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg₂₃.2.2]; exact hsz₂
   -- index
   cases hcd : callW p n "index_promoted" [vis, n0 - 1, c] m₃ with
@@ -248,8 +247,8 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hfl : m₄.flag = m₁.flag := hfA.2.1 1 (by decide)
   have htk : TierKeep m₁ m₄ :=
     (TierKeep.of_frame hfr₂ (by simp)).trans (htk₃.trans (TierKeep.of_frame hfr₄ (by simp)))
-  exact LoopR.of_frame hR₁ hD₄ hfA pnew_arrs pnew_ctl hcp₃ hg₁₄ hts₄ hP₄ hE₄
-    (ModeOK.of_keep hR₁.check.mode hfl htk)
+  exact ⟨LoopR.of_frame hR₁ hD₄ hfA (fun b hb => .inl (pnew_arrs b hb)) (fun x hx => .inl (pnew_ctl x hx)) hcp₃ hg₁₄ hts₄ hP₄ hE₄
+    (ModeOK.of_keep hR₁.check.mode hfl htk), hP₄⟩
 
 end rel
 

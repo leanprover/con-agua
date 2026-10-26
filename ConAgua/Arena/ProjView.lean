@@ -3,10 +3,9 @@ import ConAgua.Arena.WhnfCoreApp
 /-!
 # What the twin's `findProj?` and `IProjEntry.fireOk` leave alone (helper `whnf4-leaves`)
 
-Two facts of the twin the projection callers need: `findProj?` answers an entry only below the
-table's `numFields` (`findProj?_lt`), and neither it nor `fireOk` changes a stored expression
-node's view (`findProj?_eview`, `fireOk_store`): `findProj?` interns names only (`internNNode`),
-`fireOk` writes the readback and verdict caches only. With them `and_rescue_slots`' loop carries
+Two facts of the twin the projection callers need: `findProj?` (a pure lookup) answers an entry
+only below the table's `numFields` (`findProj?_lt`), and `fireOk` does not change a stored
+expression node's view (`fireOk_store`): it writes the readback and verdict caches only. With them `and_rescue_slots`' loop carries
 "`ust` is a stored `const` node's list" from one slot to the next (`FireOkOK`'s hypothesis).
 -/
 
@@ -19,36 +18,14 @@ theorem pv_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) : (Excep
 theorem pv_get_bind {β : Type} (f : AState → AM β) (lst : AState) :
     ((do let s ← get; f s : AM β)).run lst = (f lst).run lst := rfl
 
-/-- `findProj?`'s answer at the table name's handle. -/
-def pvRes (o : Option IConstantInfo) (i : Nat) : Option IProjEntry :=
-  match o with
-  | some (.projInfo tbl) => if i < tbl.numFields then some (tbl.entry i) else none
-  | _ => none
-
-theorem pv_findProj_run (fe : IFEnv) (T : NIdx) (i : Nat) (a a' : AState) (nm : NIdx)
-    (h : (projTableName T).run a = .ok (nm, a')) :
-    (fe.findProj? T i).run a = .ok (pvRes (fe.find? nm) i, a') := by
-  simp only [IFEnv.findProj?, StateT.run_bind, h]
-  cases e : fe.find? nm with
-  | none => simp [e, pvRes, bind, Except.bind, pure, StateT.pure, Except.pure] <;> rfl
-  | some ci => cases ci <;> simp [e, pvRes, bind, Except.bind, pure, StateT.pure, Except.pure] <;> rfl
-
-theorem findProj?_lt {fe : IFEnv} {T : NIdx} {i : Nat} {a a' : AState} {e : IProjEntry}
-    (h : (fe.findProj? T i).run a = .ok (some e, a')) : i < e.numFields := by
-  cases hp : (projTableName T).run a with
-  | error x =>
-    simp only [IFEnv.findProj?, StateT.run_bind, hp] at h
-    cases h
-  | ok r =>
-    rw [pv_findProj_run fe T i a r.2 r.1 hp] at h
-    simp only [Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨h1, -⟩ := h
-    unfold pvRes at h1
-    split at h1
-    · split at h1
-      · cases h1; simpa [IProjTable.entry] using ‹i < _›
-      · cases h1
-    · cases h1
+theorem findProj?_lt {fe : IFEnv} {T : NIdx} {i : Nat} {e : IProjEntry}
+    (h : fe.findProj? T i = some e) : i < e.numFields := by
+  unfold IFEnv.findProj? at h
+  split at h
+  · split at h
+    · cases h; simpa [IProjTable.entry] using ‹i < _›
+    · cases h
+  · cases h
 
 /-- A stored expression node's view, unchanged from `a` to `a'`. -/
 def EViewKept (a a' : AState) : Prop := ∀ x : EIdx, a'.store.view x = a.store.view x
@@ -81,27 +58,6 @@ theorem internNNode_eview {v : NNodeView} {a a' : AState} {h : NIdx}
     · rw [ite_eq_right hcap] at hrun
       simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift, bind,
         Except.bind] at hrun
-
-theorem projTableName_eview {T : NIdx} {a a' : AState} {nm : NIdx}
-    (h : (projTableName T).run a = .ok (nm, a')) : EViewKept a a' := by
-  simp only [projTableName, StateT.run_bind] at h
-  cases h1 : (internNNode (.str T "projTable")).run a with
-  | error e => rw [h1] at h; cases h
-  | ok r =>
-    rw [h1] at h
-    exact (internNNode_eview h1).trans (internNNode_eview h)
-
-theorem findProj?_eview {fe : IFEnv} {T : NIdx} {i : Nat} {a a' : AState} {r : Option IProjEntry}
-    (h : (fe.findProj? T i).run a = .ok (r, a')) : EViewKept a a' := by
-  cases hp : (projTableName T).run a with
-  | error x =>
-    simp only [IFEnv.findProj?, StateT.run_bind, hp] at h
-    cases h
-  | ok q =>
-    rw [pv_findProj_run fe T i a q.2 q.1 hp] at h
-    simp only [Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h
-    exact projTableName_eview hp
 
 /-! ## The readers write caches only -/
 

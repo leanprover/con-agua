@@ -26,7 +26,7 @@ The rows, and where each comes from:
 | `nat_ops` | `natOps_cons_fresh`, `Or.inl`: not a `defnInfo` |
 | `div_mod` | `divMod_cons_fresh`, same disjunct |
 | `eq_law` | `eqLaw_cons_fresh` (the `Eq` block supplies its own — `eqLaw_of_tower`) |
-| `caps_ok` | `capsOk_cons_basis` at a reserved name, `capsOk_cons_fresh` at the pair's two `projInfo`s |
+| `caps_ok` | `capsOk_cons_basis` at a reserved name, `capsOk_cons_fresh` elsewhere |
 | `rec_rules` | `recRules_cons_fresh`, on `EnvModel.rec_ctors` |
 | `reduce_ops` | `reduceOps_cons_fresh`, `Or.inl` except at `Quot.sound`, where the name decides |
 
@@ -86,21 +86,19 @@ theorem declStep_preserves_of_basis_cons (mp : EnvModelM V μ env)
     (htyReads : ∀ ψ : Name → Nat,
       ∃ ta : Term,
         denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta)
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta)
     (htyOk : ∀ (ψ : Name → Nat) (ta : Term),
       denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta →
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta →
       ∀ ρ : Nat → V, WellDenotedTy V ρ ta)
     (hmemNew : ∀ (ψ : Name → Nat) (ta : Term),
       denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta →
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta →
       ∀ ρ : Nat → V, interp V ρ (A ψ) ∈ˢ interp V ρ ta)
-    (hntc : ∀ entry, c₀ ≠ .projInfo entry := by
-      intro _ h; exact nomatch h)
     (hind : IndStrictHead (V := V) (acvalWith mp.base2.acval c₀.name A)
-      ⟨c₀ :: env.consts⟩ c₀ := by
+      ⟨c₀ :: env.consts, env.tables⟩ c₀ := by
       intro _ _ h; first | exact nomatch h | exact ConstantInfo.noConfusion h) :
-    ∃ mp' : EnvModelM V μ ⟨c₀ :: env.consts⟩,
+    ∃ mp' : EnvModelM V μ ⟨c₀ :: env.consts, env.tables⟩,
       mp'.base2.acval = acvalWith mp.base2.acval c₀.name A := by
   refine declStep_preserves_of_cons mp (c₀ := c₀) (A := A) hfresh hh hAparams hAok htyReads htyOk hmemNew
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ (hind := hind)
@@ -111,8 +109,7 @@ theorem declStep_preserves_of_basis_cons (mp : EnvModelM V μ env)
   · -- `nat_heads`: the guard reads three names, and this is none
     exact fun φ => natHeads_cons_offNat mp hnN hnZ hnS _ rfl φ
   · -- `nat_ops`
-    exact fun φ => natOps_cons_fresh mp (mp.nat_ops φ) hfresh
-      (hntc := hh.projTower) (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
+    exact fun φ => natOps_cons_fresh mp (mp.nat_ops φ) hfresh (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
   · -- `div_mod`
     exact fun φ => divMod_cons_fresh (mp.div_mod φ) hfresh
       (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
@@ -120,15 +117,15 @@ theorem declStep_preserves_of_basis_cons (mp : EnvModelM V μ env)
     exact eqLaw_cons_fresh mp.eq_law hnEq _ rfl
   · -- `caps_ok`: reserved name, or a kind no family mentions
     rcases hcaps with hres | ⟨h1, h2⟩
-    · exact capsOk_cons_basis mp mp.caps_ok hfresh hh.projTower hres _ rfl
-    · exact capsOk_cons_fresh mp mp.caps_ok hfresh hh.projTower h1 h2 _ rfl
+    · exact capsOk_cons_basis mp mp.caps_ok hfresh hres _ rfl
+    · exact capsOk_cons_fresh mp mp.caps_ok hfresh h1 h2 _ rfl
   · -- `rec_rules`: `EnvModel.rec_ctors` supplies the constructor
     -- disequality, so freshness is enough
-    exact fun φ => recRules_cons_fresh mp hfresh hh.projTower hnotrec _ rfl φ
+    exact fun φ => recRules_cons_fresh mp hfresh hnotrec _ rfl φ
   · -- `reduce_ops`
     exact reduceOps_cons_fresh mp.reduce_ops hfresh hred _ rfl
   · -- `tower_ok` (task #175 wiring W5): no tower entry is a basis cons
-    exact fun φ => towerOk_cons_fresh mp hfresh hh.projTower hntc _ rfl φ
+    exact fun φ => towerOk_cons_fresh mp hfresh _ rfl φ
 
 /-- **The P step at a basis *recursor* cons** — `declStep_preserves_of_basis_cons`
 with its `hnotrec` premise traded for the row itself.  Six of the seven
@@ -157,24 +154,22 @@ theorem declStep_preserves_of_basis_rec_cons (mp : EnvModelM V μ env)
     (htyReads : ∀ ψ : Name → Nat,
       ∃ ta : Term,
         denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta)
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta)
     (htyOk : ∀ (ψ : Name → Nat) (ta : Term),
       denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta →
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta →
       ∀ ρ : Nat → V, WellDenotedTy V ρ ta)
     (hmemNew : ∀ (ψ : Name → Nat) (ta : Term),
       denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta →
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta →
       ∀ ρ : Nat → V, interp V ρ (A ψ) ∈ˢ interp V ρ ta)
-    (hrec : ∀ m₂ : EnvModel V ⟨c₀ :: env.consts⟩,
+    (hrec : ∀ m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩,
       m₂.acval = acvalWith mp.base2.acval c₀.name A →
       ∀ φ : Name → Nat, RecRules m₂ φ)
-    (hntc : ∀ entry, c₀ ≠ .projInfo entry := by
-      intro _ h; exact nomatch h)
     (hind : IndStrictHead (V := V) (acvalWith mp.base2.acval c₀.name A)
-      ⟨c₀ :: env.consts⟩ c₀ := by
+      ⟨c₀ :: env.consts, env.tables⟩ c₀ := by
       intro _ _ h; first | exact nomatch h | exact ConstantInfo.noConfusion h) :
-    ∃ mp' : EnvModelM V μ ⟨c₀ :: env.consts⟩,
+    ∃ mp' : EnvModelM V μ ⟨c₀ :: env.consts, env.tables⟩,
       mp'.base2.acval = acvalWith mp.base2.acval c₀.name A := by
   refine declStep_preserves_of_cons mp (c₀ := c₀) (A := A) hfresh hh hAparams hAok htyReads htyOk hmemNew
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ (hind := hind)
@@ -182,16 +177,15 @@ theorem declStep_preserves_of_basis_rec_cons (mp : EnvModelM V μ env)
     obtain ⟨hint2, hdt⟩ := hmem
     exact absurd hdt.symm (hnotdefn cv2 value2 hint2)
   · exact fun φ => natHeads_cons_offNat mp hnN hnZ hnS _ rfl φ
-  · exact fun φ => natOps_cons_fresh mp (mp.nat_ops φ) hfresh
-      (hntc := hh.projTower) (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
+  · exact fun φ => natOps_cons_fresh mp (mp.nat_ops φ) hfresh (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
   · exact fun φ => divMod_cons_fresh (mp.div_mod φ) hfresh
       (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
   · exact eqLaw_cons_fresh mp.eq_law hnEq _ rfl
-  · exact capsOk_cons_basis mp mp.caps_ok hfresh hh.projTower hres _ rfl
+  · exact capsOk_cons_basis mp mp.caps_ok hfresh hres _ rfl
   · exact fun φ => hrec _ rfl φ
   · exact reduceOps_cons_fresh mp.reduce_ops hfresh hred _ rfl
   · -- `tower_ok` (task #175 wiring W5): no tower entry is a basis cons
-    exact fun φ => towerOk_cons_fresh mp hfresh hh.projTower hntc _ rfl φ
+    exact fun φ => towerOk_cons_fresh mp hfresh _ rfl φ
 
 /-- **The P step at the `Eq` cons** — `declStep_preserves_of_basis_cons` with
 its `eq_law` row traded for the row itself.  `eqLaw_cons_fresh`'s
@@ -218,23 +212,21 @@ theorem declStep_preserves_of_basis_cons_eqrow (mp : EnvModelM V μ env)
     (htyReads : ∀ ψ : Name → Nat,
       ∃ ta : Term,
         denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta)
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta)
     (htyOk : ∀ (ψ : Name → Nat) (ta : Term),
       denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta →
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta →
       ∀ ρ : Nat → V, WellDenotedTy V ρ ta)
     (hmemNew : ∀ (ψ : Name → Nat) (ta : Term),
       denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta →
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta →
       ∀ ρ : Nat → V, interp V ρ (A ψ) ∈ˢ interp V ρ ta)
-    (heq : ∀ m₂ : EnvModel V ⟨c₀ :: env.consts⟩,
+    (heq : ∀ m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩,
       m₂.acval = acvalWith mp.base2.acval c₀.name A → EqLaw m₂)
-    (hntc : ∀ entry, c₀ ≠ .projInfo entry := by
-      intro _ h; exact nomatch h)
     (hind : IndStrictHead (V := V) (acvalWith mp.base2.acval c₀.name A)
-      ⟨c₀ :: env.consts⟩ c₀ := by
+      ⟨c₀ :: env.consts, env.tables⟩ c₀ := by
       intro _ _ h; first | exact nomatch h | exact ConstantInfo.noConfusion h) :
-    ∃ mp' : EnvModelM V μ ⟨c₀ :: env.consts⟩,
+    ∃ mp' : EnvModelM V μ ⟨c₀ :: env.consts, env.tables⟩,
       mp'.base2.acval = acvalWith mp.base2.acval c₀.name A := by
   refine declStep_preserves_of_cons mp (c₀ := c₀) (A := A) hfresh hh hAparams hAok htyReads htyOk hmemNew
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ (hind := hind)
@@ -242,16 +234,15 @@ theorem declStep_preserves_of_basis_cons_eqrow (mp : EnvModelM V μ env)
     obtain ⟨hint2, hdt⟩ := hmem
     exact absurd hdt.symm (hnotdefn cv2 value2 hint2)
   · exact fun φ => natHeads_cons_offNat mp hnN hnZ hnS _ rfl φ
-  · exact fun φ => natOps_cons_fresh mp (mp.nat_ops φ) hfresh
-      (hntc := hh.projTower) (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
+  · exact fun φ => natOps_cons_fresh mp (mp.nat_ops φ) hfresh (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
   · exact fun φ => divMod_cons_fresh (mp.div_mod φ) hfresh
       (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
   · exact heq _ rfl
-  · exact capsOk_cons_basis mp mp.caps_ok hfresh hh.projTower hres _ rfl
-  · exact fun φ => recRules_cons_fresh mp hfresh hh.projTower hnotrec _ rfl φ
+  · exact capsOk_cons_basis mp mp.caps_ok hfresh hres _ rfl
+  · exact fun φ => recRules_cons_fresh mp hfresh hnotrec _ rfl φ
   · exact reduceOps_cons_fresh mp.reduce_ops hfresh hred _ rfl
   · -- `tower_ok` (task #175 wiring W5): no tower entry is a basis cons
-    exact fun φ => towerOk_cons_fresh mp hfresh hh.projTower hntc _ rfl φ
+    exact fun φ => towerOk_cons_fresh mp hfresh _ rfl φ
 
 /-- **The P step at a basis cons, both varying rows open.**  The `Nat`
 block needs this: its first three conses *are* the three names
@@ -274,27 +265,25 @@ theorem declStep_preserves_of_basis_cons_gen (mp : EnvModelM V μ env)
     (htyReads : ∀ ψ : Name → Nat,
       ∃ ta : Term,
         denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta)
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta)
     (htyOk : ∀ (ψ : Name → Nat) (ta : Term),
       denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta →
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta →
       ∀ ρ : Nat → V, WellDenotedTy V ρ ta)
     (hmemNew : ∀ (ψ : Name → Nat) (ta : Term),
       denote (acvalWith mp.base2.acval c₀.name A)
-          ⟨c₀ :: env.consts⟩ ψ 0 c₀.toConstantVal.type = some ta →
+          ⟨c₀ :: env.consts, env.tables⟩ ψ 0 c₀.toConstantVal.type = some ta →
       ∀ ρ : Nat → V, interp V ρ (A ψ) ∈ˢ interp V ρ ta)
-    (hnh : ∀ m₂ : EnvModel V ⟨c₀ :: env.consts⟩,
+    (hnh : ∀ m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩,
       m₂.acval = acvalWith mp.base2.acval c₀.name A →
       ∀ φ : Name → Nat, NatHeads m₂ φ)
-    (hrec : ∀ m₂ : EnvModel V ⟨c₀ :: env.consts⟩,
+    (hrec : ∀ m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩,
       m₂.acval = acvalWith mp.base2.acval c₀.name A →
       ∀ φ : Name → Nat, RecRules m₂ φ)
-    (hntc : ∀ entry, c₀ ≠ .projInfo entry := by
-      intro _ h; exact nomatch h)
     (hind : IndStrictHead (V := V) (acvalWith mp.base2.acval c₀.name A)
-      ⟨c₀ :: env.consts⟩ c₀ := by
+      ⟨c₀ :: env.consts, env.tables⟩ c₀ := by
       intro _ _ h; first | exact nomatch h | exact ConstantInfo.noConfusion h) :
-    ∃ mp' : EnvModelM V μ ⟨c₀ :: env.consts⟩,
+    ∃ mp' : EnvModelM V μ ⟨c₀ :: env.consts, env.tables⟩,
       mp'.base2.acval = acvalWith mp.base2.acval c₀.name A := by
   refine declStep_preserves_of_cons mp (c₀ := c₀) (A := A) hfresh hh hAparams hAok htyReads htyOk hmemNew
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ (hind := hind)
@@ -302,15 +291,14 @@ theorem declStep_preserves_of_basis_cons_gen (mp : EnvModelM V μ env)
     obtain ⟨hint2, hdt⟩ := hmem
     exact absurd hdt.symm (hnotdefn cv2 value2 hint2)
   · exact fun φ => hnh _ rfl φ
-  · exact fun φ => natOps_cons_fresh mp (mp.nat_ops φ) hfresh
-      (hntc := hh.projTower) (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
+  · exact fun φ => natOps_cons_fresh mp (mp.nat_ops φ) hfresh (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
   · exact fun φ => divMod_cons_fresh (mp.div_mod φ) hfresh
       (Or.inl fun cv v hint => hnotdefn cv v hint) _ rfl
   · exact eqLaw_cons_fresh mp.eq_law hnEq _ rfl
-  · exact capsOk_cons_basis mp mp.caps_ok hfresh hh.projTower hres _ rfl
+  · exact capsOk_cons_basis mp mp.caps_ok hfresh hres _ rfl
   · exact fun φ => hrec _ rfl φ
   · exact reduceOps_cons_fresh mp.reduce_ops hfresh hred _ rfl
   · -- `tower_ok` (task #175 wiring W5): no tower entry is a basis cons
-    exact fun φ => towerOk_cons_fresh mp hfresh hh.projTower hntc _ rfl φ
+    exact fun φ => towerOk_cons_fresh mp hfresh _ rfl φ
 
 end ConLeche.Model

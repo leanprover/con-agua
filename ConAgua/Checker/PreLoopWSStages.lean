@@ -406,7 +406,7 @@ theorem stageC_prepare_prelude_off :
 
 /-! ## `intern_all_pins` -/
 
-/-- The call closure of `intern_all_pins` in `checkerProg` (95 functions). -/
+/-- The call closure of `intern_all_pins` in `checkerProg` (97 functions). -/
 def stageFns_intern_all_pins : List FnName := [
   "app_find", "app_push", "bvar_find", "bvar_push", "const_find", "const_push", "der_b",
   "erec_alloc", "forall_find", "forall_push", "fvar_find", "fvar_push", "imax_find", "imax_push",
@@ -420,8 +420,8 @@ def stageFns_intern_all_pins : List FnName := [
   "nstr_push", "param_find", "param_push", "proj_find", "proj_push", "rom_ex_leaf", "rom_ex_one",
   "rom_ex_ref", "rom_ex_two", "rom_expr", "rom_exprs_to", "rom_items", "rom_level", "rom_levels",
   "rom_lists_to", "rom_lit", "rom_lvls_go", "rom_name", "rom_pins_to", "rom_put", "rom_sets_to",
-  "rom_u64", "rset_clear", "rset_find", "rset_put", "sort_find", "sort_push", "stk_pool",
-  "stk_push", "succ_find", "succ_push", "zero_find", "zero_push"]
+  "rom_tpairs_to", "rom_tpins_to", "rom_u64", "rset_clear", "rset_find", "rset_put", "sort_find",
+  "sort_push", "stk_pool", "stk_push", "succ_find", "succ_push", "zero_find", "zero_push"]
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_intern_all_pins` store
 into. -/

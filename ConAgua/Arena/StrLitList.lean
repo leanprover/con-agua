@@ -652,71 +652,30 @@ end oks2
 
 /-! ## The found constant's level-parameter names read back -/
 
-theorem projInfo_lps {tbl : IProjTable} {a a' : AState} {cv : IConstantVal}
-    (h : (IConstantInfo.projInfo tbl).toConstantVal.run a = .ok (cv, a')) :
-    cv.levelParams = tbl.levelParams := by
-  simp only [IConstantInfo.toConstantVal, StateT.run_bind] at h
-  revert h
-  cases (internLNode .zero).run a with
-  | error e => intro h; cases h
-  | ok p1 =>
-  simp only [except_ok_bind]
-  cases (internLNode (.succ p1.1)).run p1.2 with
-  | error e => intro h; cases h
-  | ok p2 =>
-  simp only [except_ok_bind]
-  cases (internE (.sort p2.1)).run p2.2 with
-  | error e => intro h; cases h
-  | ok p3 =>
-  simp only [except_ok_bind, StateT.run_pure]
-  intro h; cases h; rfl
-
-/-- **A found constant's level-parameter names read back** after its `toConstantVal`: a projection
-table's from `StoreDen.proj`, any other constant's from `StoreDen.constLps`. -/
+/-- **A found constant's level-parameter names read back** (`StoreDen.constLps`). -/
 theorem cv_lps {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Word}
-    {m m₁ : Mem} {a a₁ : AState} {M₁ : ModeMaps} (hS₁ : CoreS dn m₁ a₁ vis fe M₁ eb)
-    (_he : m₁.arr64 EREC = m.arr64 EREC) {q : Word} {ci : IConstantInfo}
-    (_hci : decCI (erecP m) dn q.toNat = some ci) (hfe : ∃ c, fe.find? c = some ci)
-    {cv : IConstantVal} (hrun : ci.toConstantVal.run a = .ok (cv, a₁)) :
-    ∃ ks, cv.levelParams.mapM (denoteN a₁.store.ns) = some ks := by
+    {m : Mem} {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis fe M eb) {ci : IConstantInfo}
+    (hfe : ∃ c, fe.find? c = some ci) :
+    ∃ ks, ci.toConstantVal.levelParams.mapM (denoteN a.store.ns) = some ks := by
   obtain ⟨c, hc⟩ := hfe
-  by_cases ht : ci.isTowerEntry = true
-  · cases ci with
-    | projInfo tbl =>
-      rw [projInfo_lps hrun]
-      exact (hS₁.den.proj c tbl hc).2.2
-    | _ => simp [IConstantInfo.isTowerEntry] at ht
-  · have hf : ci.isTowerEntry = false := by simpa using ht
-    have hp : ∀ s, ci.toConstantVal.run s = .ok (cv, s) := by
-      cases ci with
-      | projInfo => simp [IConstantInfo.isTowerEntry] at hf
-      | _ =>
-        simp only [IConstantInfo.toConstantVal, StateT.run_pure] at hrun ⊢
-        cases hrun; intro s; rfl
-    have := hp a; rw [hrun] at this; cases this
-    exact hS₁.den.constLps c ci cv hc hf hp
+  exact hS.den.constLps c ci hc
 
-/-- The one level parameter of a found constant reads back, at the state after its
-`toConstantVal` (`cv_lps`). -/
+/-- The one level parameter of a found constant reads back (`cv_lps`). -/
 theorem lp_den {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Word}
-    {m m₁ : Mem} {a a₁ : AState} {M₁ : ModeMaps} (hS₁ : CoreS dn m₁ a₁ vis fe M₁ eb)
-    (he : m₁.arr64 EREC = m.arr64 EREC) {q : Word} {ci : IConstantInfo}
-    (hci : decCI (erecP m) dn q.toNat = some ci) (hfe : ∃ c, fe.find? c = some ci)
-    {cv : IConstantVal} (hrun : ci.toConstantVal.run a = .ok (cv, a₁)) {pn : Word}
-    (hlp : cv.levelParams = [decI pn]) :
-    ∃ x, denoteN (AM.st ci.toConstantVal a).store.ls.ns (decI pn) = some x := by
-  obtain ⟨ks, hks⟩ := cv_lps hS₁ he hci hfe hrun
+    {m : Mem} {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis fe M eb) {ci : IConstantInfo}
+    (hfe : ∃ c, fe.find? c = some ci) {pn : Word}
+    (hlp : ci.toConstantVal.levelParams = [decI pn]) :
+    ∃ x, denoteN a.store.ls.ns (decI pn) = some x := by
+  obtain ⟨ks, hks⟩ := cv_lps hS hfe
   rw [hlp] at hks
-  have hst : AM.st ci.toConstantVal a = a₁ := by unfold AM.st; rw [hrun]
-  rw [hst]
-  cases hx : denoteN a₁.store.ns (decI pn) with
+  cases hx : denoteN a.store.ns (decI pn) with
   | none => simp [List.mapM_cons, hx] at hks
   | some x => exact ⟨x, hx⟩
 
 /-- The twins' common prefix: the constant's value, one level parameter, its sort; then `k`. -/
 def listPreT (k : IConstantVal → LIdx → EIdx → AM Bool) : Option IConstantInfo → AM Bool
   | some ci => do
-    let cv ← ci.toConstantVal
+    let cv := ci.toConstantVal
     match cv.levelParams with
     | [p] => do
       let pl ← internLNode (.param p)
@@ -814,27 +773,28 @@ theorem listPre_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   obtain ⟨ci, hci⟩ := hdec hf0
   rw [show decFound dn m found q = some ci by simp only [decFound, hf0, ↓reduceIte, hci]]
   rcases h1 : callW p n "str_cv" [q] m with _ | ⟨c, m₁⟩ <;> simp only [h1, reduceCtorEq] at hW
-  obtain ⟨cv, a₁, hrun, hA, he, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
+  obtain ⟨hm₁, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
+  subst m₁
   have hfe' := hfe ci (by simp only [decFound, hf0, ↓reduceIte, hci])
-  refine coreRef_bind (cref_run (dec := fun _ => cv) (ok := fun _ => True) (r := c) hrun hA rfl
-    trivial) (fun M₁ hS₁ => ?_)
+  have hden := fun pn (hlp : ci.toConstantVal.levelParams = [decI pn]) => lp_den hS hfe' hlp
+  dsimp only [listPreT]
+  generalize ci.toConstantVal = cv at hsl hlen hty hden
   by_cases hl : c.tail.headD 0 ≠ 1
   · simp only [hl, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     split
     · rename_i x hx; exact absurd hx (lp_ne hlen hl x)
-    · exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
+    · exact coreRef_ret hS (by rw [decBool, ← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
   have hl' : c.tail.headD 0 = 1 := by simpa using hl
   simp only [hl', ne_eq, not_true_eq_false, ↓reduceIte] at hW
   obtain ⟨hlp, hw⟩ := lp_one hsl hl'
   rw [hlp]
   dsimp only
-  rw [he] at hW
-  rcases h2 : callW p n "str_param_sort" [rdW (m.arr64 EREC) (c.headD 0)] m₁ with _ | ⟨s, m₂⟩
+  rcases h2 : callW p n "str_param_sort" [rdW (m.arr64 EREC) (c.headD 0)] m with _ | ⟨s, m₂⟩
   · rw [h2, hn] at hW; cases hW
   rw [h2] at hW
-  refine paramSort_run p hp hS₁ hw (lp_den hA.choose_spec.1 he hci hfe' hrun hlp) h2
+  refine paramSort_run p hp hS hw (hden _ hlp) h2
     (fun M₂ a₂ hpl hso hpd₂ hS₂ => hk cv _ s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW)
 
 /-- **`list_ty_ok` refines `listTyOk`.** -/
@@ -849,7 +809,14 @@ theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (listTy_spec p hp.listTyOk n _ found q) h
-  refine listPre_call (K2 := listK2 p n) p hp hS hdec hfe (fun _ => rfl) hW
+  refine listPre_call (K2 := listK2 p n)
+    (k := fun cv pl sort => do
+      if cv.type.tag == ETag.forallE then
+        match ← view cv.type with
+        | .forallE d b => pure (d == sort && b == sort)
+        | _ => pure false
+      else pure false)
+    p hp hS hdec hfe (fun _ => rfl) hW
     fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [listK2_s, faEqA_eq] at hW
   rw [hty]
@@ -869,7 +836,32 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (listNil_spec p hp.listNilTyOk n _ found q) h
-  refine listPre_call (K2 := nilK2 p n) p hp hS hdec hfe (fun _ => rfl) hW
+  refine listPre_call (K2 := nilK2 p n)
+    (k := fun cv pl sort => do
+      let ps ← internLsNode [pl]
+      let li ← pinList
+      if cv.type.tag == ETag.forallE then
+        match ← view cv.type with
+        | .forallE d b => do
+          if d != sort then pure false else
+          if b.tag == ETag.app then
+            match ← view b with
+            | .app f a =>
+              if f.tag == ETag.const then
+                match ← view f with
+                | .const l1 us1 =>
+                  if a.tag == ETag.bvar then
+                    match ← view a with
+                    | .bvar 0 => pure (l1 == li && us1 == ps)
+                    | _ => pure false
+                  else pure false
+                | _ => pure false
+              else pure false
+            | _ => pure false
+          else pure false
+        | _ => pure false
+      else pure false)
+    p hp hS hdec hfe (fun _ => rfl) hW
     fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [nilK2_s] at hW
   cases h3 : callW p n "str_ls1" [s.headD 0] m₂ with
@@ -907,7 +899,34 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (listCons_spec p hp.listConsTyOk n _ found q) h
-  refine listPre_call (K2 := consK2 p n) p hp hS hdec hfe (fun _ => rfl) hW
+  refine listPre_call (K2 := consK2 p n)
+    (k := fun cv pl sort => do
+      let ps ← internLsNode [pl]
+      let li ← pinList
+      let b0 ← internE (.bvar 0)
+      let b1 ← internE (.bvar 1)
+      let b2 ← internE (.bvar 2)
+      let l1 ← internE (.const li ps)
+      let dom3 ← internE (.app l1 b1)
+      let cod3 ← internE (.app l1 b2)
+      if cv.type.tag == ETag.forallE then
+        match ← view cv.type with
+        | .forallE d1 r1 => do
+          if d1 != sort then pure false else
+          if r1.tag == ETag.forallE then
+            match ← view r1 with
+            | .forallE d2 r2 => do
+              if d2 != b0 then pure false else
+              if r2.tag == ETag.forallE then
+                match ← view r2 with
+                | .forallE d3 c3 => pure (d3 == dom3 && c3 == cod3)
+                | _ => pure false
+              else pure false
+            | _ => pure false
+          else pure false
+        | _ => pure false
+      else pure false)
+    p hp hS hdec hfe (fun _ => rfl) hW
     fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [consK2_s] at hW
   cases h3 : callW p n "str_ls1" [s.headD 0] m₂ with

@@ -185,7 +185,7 @@ end spec
 /-! ## `lv_sub_int(u, ko, kc, vo, vc)`: substitute, then intern -/
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:2071-2086 ConRon.Arena.substLMemoAt
-con-ron: ConRon/Arena/Core.lean:1939-1949 ConRon.Arena.substLevelsAt -/
+con-ron: ConRon/Arena/Core.lean:1940-1950 ConRon.Arena.substLevelsAt -/
 def lvSubInt : FunDecl := lfn (u, ko, kc, vo, vc) locals (x, h) {
   CTL.u64[192] := 0;
   x := call lp_substl(u, ko, kc, vo, vc);

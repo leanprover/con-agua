@@ -2,7 +2,6 @@ module
 
 public import ConLeche.Verify.Fueled
 public import ConLeche.Kernel.CheckDecl
-import ConLeche.Verify.Extend.Inversions
 
 public section
 
@@ -37,39 +36,6 @@ variable {pins : List NatOpPinSet}
     ⟨fun F => ensureSortCore mode env F d e, fun hle h => ensureSortCore_mono hle h⟩
   whnf env d e :=
     ⟨fun F => whnf mode env F d e, fun hle h => whnf_mono hle h⟩
-  -- the variant-fallback combinator (task #273): monotone because the
-  -- result is `Unit` — an attempt that errs at one fuel and matches at
-  -- a larger one changes the branch, not the success; the continuation
-  -- is handed `none` (see `CheckerOps.orElse`)
-  orElse x k :=
-    ⟨fun F => match x.val F with
-      | .ok true => pure ()
-      | _ => (k none).val F, by
-      intro F F' v hle h
-      dsimp only at h ⊢
-      cases hx : x.val F with
-      | ok b =>
-        rw [hx] at h
-        rw [x.property hle hx]
-        cases b with
-        | true => exact h
-        | false => exact (k none).property hle h
-      | error e =>
-        rw [hx] at h
-        cases hx' : x.val F' with
-        | ok b =>
-          cases b with
-          | true => cases v; rfl
-          | false => exact (k none).property hle h
-        | error e' => exact (k none).property hle h⟩
-
-/-- `fueledOpsM`'s combinator at a fuel, by definition. -/
-@[simp] theorem fueledOpsM_orElse_atF (x : FueledM Bool)
-    (k : Option CheckError → FueledM Unit) (F : Nat) :
-    ((fueledOpsM mode).orElse x k).val F =
-      match x.val F with
-      | .ok true => pure ()
-      | _ => (k none).val F := rfl
 
 /-! ## The `atF` battery: fueled-family runs are fueled-ops runs -/
 
@@ -146,10 +112,10 @@ theorem checkStructDomsAt_datF (env : Env) (off : Nat)
       checkStructDomsAt_datF env off fvs doms F j]
 
 theorem checkStructProjTable_datF (T C : Name) (lps : List Name)
-    (nP nF : Nat) (rs : Level) (guards : List Level) (off : Nat) (cvCa : ConstantVal)
+    (nP nF : Nat) (rs : Level) (guards : List Level) (cvCa : ConstantVal)
     (env : Env) (F : Nat) :
-    (checkStructProjTable T C lps nP nF rs guards off cvCa env : FueledM _).val F =
-      (checkStructProjTable T C lps nP nF rs guards off cvCa env : CheckM _) := by
+    (checkStructProjTable T C lps nP nF rs guards cvCa env : FueledM _).val F =
+      (checkStructProjTable T C lps nP nF rs guards cvCa env : CheckM _) := by
   unfold checkStructProjTable
   simp only [FueledM.atF_bind, FueledM.atF_pure, FueledM.atF_throw,
     FueledM.atF_ite, unwrapOr_atF]
@@ -978,12 +944,27 @@ theorem checkDivModCerts_datF (env : Env) (c : Name) (annVal : Expr)
       | false => rfl
     · rfl
 
+theorem checkTypePins_datF (env : Env) (F : Nat) :
+    ∀ (tps : List (Name × Expr)),
+      (checkTypePins (fueledOpsM mode) env tps).val F =
+        checkTypePins (fueledOps mode F) env tps
+  | [] => rfl
+  | p :: rest => by
+    simp only [checkTypePins]
+    rw [FueledM.atF_bind]
+    congr 1
+    funext b
+    cases b with
+    | true => exact checkTypePins_datF env F rest
+    | false => rfl
+
 theorem checkDivModPinAt_datF (env : Env) (c : Name) (value' : Expr)
     (ps : NatOpPinSet) (F : Nat) :
     (checkDivModPinAt (fueledOpsM mode) env c value' ps).val F =
       checkDivModPinAt (fueledOps mode F) env c value' ps := by
   unfold checkDivModPinAt
   repeat (first
+    | (rw [checkTypePins_datF])
     | (rw [checkDivModCerts_datF])
     | split
     | ((rw [FueledM.atF_bind]; congr 1 <;> try rfl) <;> try funext _)
@@ -999,13 +980,12 @@ theorem checkDivModPinLoop_datF (env : Env) (c : Name) (value' : Expr)
   | ps :: rest, tried => by
     unfold checkDivModPinLoop
     split
-    · rw [fueledOpsM_orElse_atF, fueledOps_orElse, checkDivModPinAt_datF]
-      cases checkDivModPinAt (fueledOps mode F) env c value' ps with
-      | ok b =>
-        cases b with
-        | true => rfl
-        | false => exact checkDivModPinLoop_datF env c value' F rest _
-      | error e => exact checkDivModPinLoop_datF env c value' F rest _
+    · rw [FueledM.atF_bind, checkDivModPinAt_datF]
+      congr 1
+      funext b
+      cases b with
+      | true => rfl
+      | false => exact checkDivModPinLoop_datF env c value' F rest _
     · exact checkDivModPinLoop_datF env c value' F rest _
 
 theorem checkDivModPin_datF (env env2 : Env) (c : Name) (F : Nat) :

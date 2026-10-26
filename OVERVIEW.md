@@ -82,11 +82,9 @@ are the class (`1` reject, `2` decline, `0` other), the rest a reason, whose
 message the harness prints. The code comes back in `rax`
 ([`OutcomeRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L25-L28)). A reject or decline
 site is labelled with the twin's message where the twin fails in the same way at
-the same point (`fail R`); inside a `Nat.div`/`Nat.mod` pin-variant attempt,
-where the twin recovers, such a site aborts with class `0`. The labels are not
-proved; they are checked against con-ron on the test corpus, where an exit 1 or
+the same point (`fail R`). The labels are not proved; they are checked against con-ron on the test corpus, where an exit 1 or
 2 is always con-ron's own exit code
-([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L51-L51)).
+([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L49-L49)).
 Internally, accept is the return word `0x414343455054`, chosen so that no
 status word or unset register reads as accept
 ([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L89-L91)).
@@ -393,7 +391,7 @@ related state with a related result
 the shape most refinements have). The relations say how L's arrays represent
 the twin's state (§6, §7). The refinements compose along entry 1's stages
 ([the stage specs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L89-L122)) and phase A into
-[`checkA_run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/CheckARun.lean#L275-L283),
+[`checkA_run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/CheckARun.lean#L278-L286),
 and with entry 2's phase B into
 [`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L25-L34):
 an entry-1 run of `check` from the loaded memory followed by an entry-2 run on
@@ -487,8 +485,8 @@ and can bind several results. Arithmetic wraps; there is no division (Kraken
 has no `div`), only `mulhi`, the high word of the 128-bit product.
 
 The concrete syntax is a set of Lean macros that produce these terms
-([the rules](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L74-L158),
-[`lfn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L399-L400),
+([the rules](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L74-L156),
+[`lfn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L397-L398),
 [summary](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L10-L61)).
 Informally (`A` an array, `R` a store, `f` a function, `x` a local or a global,
 all names of Lean constants except the locals):
@@ -560,7 +558,7 @@ after tier 0's, so a tiered access costs one indexed load more than a plain one
 Three primitives do in one statement what a loop would do word by word, with
 the bounds checked once
 ([`le64!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L96-L97),
-[`scan!`, `copy!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L150-L156)):
+[`scan!`, `copy!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L148-L154)):
 
 * `copy!(D, di, S, si, n)`: copy `n` words (or bytes, zero-extended into
   words) from `S` to `D`, ascending;
@@ -922,11 +920,11 @@ con-leche's three.
 [`docs/deviations.md`](docs/deviations.md) lists every place where L does
 something else than the twin, beyond fuel and fixed capacities, in three
 sections:
-[Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L41)
+[Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L39)
 (to be fixed, or intent unclear),
-[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L43-L65)
+[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L41-L61)
 (by design, with the reason), and
-[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L67-L91).
+[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L63-L89).
 Each row says what the twin does, what L does, and the effect: completeness (L
 declines where the twin accepts), performance, or none. No deviation may lose
 soundness, and the theorem would not let one through: it is about the L code as

@@ -92,6 +92,97 @@ instance : LawfulBEq Name where
   eq_of_beq h := of_decide_eq_true h
   rfl := by simp [BEq.beq, Name.beq]
 
+/-! ## Display rendering
+
+Everything the checker prints that comes from the input — names,
+strings — goes through `Display.Acc`, so no input reaches the
+terminal (or a CI log, where a line starting with `::` is a workflow
+command) as a control sequence, an invisible character or a spoofed
+separator.  Inside the delimiters of a quoted component or string, `\`
+is written `\\` and every *unsafe* character (`Display.unsafeChar`),
+and the closing delimiter, as `\u{XXXX}` (upper-case hex, at least
+four digits).  A rendering is capped at `Display.maxLen` characters;
+what does not fit is replaced by `…[N more characters]`. -/
+
+/-- The characters a display never prints raw: Unicode's control (Cc)
+and format (Cf, Unicode 15.1) characters, the line and paragraph
+separators (Zl, Zp) and every space separator (Zs) other than the
+ASCII space — the C0/C1 controls and DEL, the bidi embeddings,
+overrides, isolates and marks, the zero-width characters, the BOM, the
+tag characters, and the spaces that look like U+0020 but are not. -/
+def Display.unsafeChar (c : Char) : Bool :=
+  let v := c.val
+  v < 0x20 || (0x7F ≤ v && v ≤ 0xA0) || v == 0xAD ||
+  (0x600 ≤ v && v ≤ 0x605) || v == 0x61C || v == 0x6DD || v == 0x70F ||
+  (0x890 ≤ v && v ≤ 0x891) || v == 0x8E2 || v == 0x1680 || v == 0x180E ||
+  (0x2000 ≤ v && v ≤ 0x200F) || (0x2028 ≤ v && v ≤ 0x202F) ||
+  (0x205F ≤ v && v ≤ 0x2064) || (0x2066 ≤ v && v ≤ 0x206F) || v == 0x3000 ||
+  v == 0xFEFF || (0xFFF9 ≤ v && v ≤ 0xFFFB) ||
+  v == 0x110BD || v == 0x110CD || (0x13430 ≤ v && v ≤ 0x1343F) ||
+  (0x1BCA0 ≤ v && v ≤ 0x1BCA3) || (0x1D173 ≤ v && v ≤ 0x1D17A) ||
+  v == 0xE0001 || (0xE0020 ≤ v && v ≤ 0xE007F)
+
+/-- The cap on one rendering, in characters (before the marker). -/
+def Display.maxLen : Nat := 512
+
+/-- `\u{XXXX}`: the code point in upper-case hex, at least four digits. -/
+def Display.codeEscape (c : Char) : String :=
+  let ds := (Nat.toDigits 16 c.val.toNat).map Char.toUpper
+  "\\u{" ++ String.ofList (List.replicate (4 - ds.length) '0' ++ ds) ++ "}"
+
+/-- A capped rendering under construction: the output, its length, the
+input characters dropped since the cap was reached, and whether it was. -/
+structure Display.Acc where
+  out : String
+  len : Nat
+  dropped : Nat
+  full : Bool
+
+/-- Appends `p`, which stands for `raw` characters of the input,
+unless the cap is reached; past the cap only the count grows. -/
+def Display.Acc.piece (a : Display.Acc) (p : String) (raw : Nat) : Display.Acc :=
+  if a.full || a.len + p.length > Display.maxLen then
+    { a with full := true, dropped := a.dropped + raw }
+  else { a with out := a.out ++ p, len := a.len + p.length }
+
+/-- Appends characters that need no escaping (an identifier, a numeral). -/
+def Display.Acc.chars (a : Display.Acc) (s : String) : Display.Acc :=
+  s.foldl (fun a c => a.piece c.toString 1) a
+
+/-- Appends the inside of a quoted component or string closed by
+`close`: `\` doubled, `close` and the unsafe characters as `\u{XXXX}`. -/
+def Display.Acc.escaped (a : Display.Acc) (close : Char) (s : String) : Display.Acc :=
+  s.foldl (init := a) fun a c =>
+    if c = '\\' then a.piece "\\\\" 1
+    else if c = close || Display.unsafeChar c then a.piece (Display.codeEscape c) 1
+    else a.piece c.toString 1
+
+/-- The rendering, with the elision marker when the cap was reached. -/
+def Display.Acc.finish (a : Display.Acc) : String :=
+  if a.full then a.out ++ s!"…[{a.dropped} more characters]" else a.out
+
+/-- Whether a string component prints bare: Lean's own rule
+(`Lean.Name.escapePart`, `Init/Data/ToString/Name.lean`) — a nonempty
+identifier, `isIdFirst` then `isIdRest`.  No such component contains a
+`.`, a control, format or separator character, a `«`, a `»` or a `\`. -/
+def Display.idShaped (s : String) : Bool :=
+  match s.toList with
+  | [] => false
+  | c :: cs => Lean.isIdFirst c && cs.all Lean.isIdRest
+
+/-- Pushes one component.  An identifier-shaped one bare; any other
+(including the empty one, a numeral-looking one and one with a `.`)
+between `«`…`»`, with `»` escaped like an unsafe character. -/
+def Display.Acc.component (a : Display.Acc) (s : String) : Display.Acc :=
+  if Display.idShaped s then a.chars s
+  else ((a.piece "«" 0).escaped '»' s).piece "»" 0
+
+/-- **The display rendering of a raw string from the input** (a
+`safety` field, a quotient kind): between `"`…`"`, escaped and capped
+like a quoted name component. -/
+def Display.str (s : String) : String :=
+  (((Display.Acc.mk "" 0 0 false).piece "\"" 0 |>.escaped '"' s).piece "\"" 0).finish
+
 namespace Name
 
 /-- Conversion from `Lean.Name` (dropping macro scopes is the caller's duty). -/
@@ -100,14 +191,32 @@ def ofLeanName : Lean.Name → Name
   | .str p s => .str (ofLeanName p) s
   | .num p n => .num (ofLeanName p) n
 
-protected def toString : Name → String
-  | .anonymous => "[anonymous]"
-  | .str .anonymous s => s
-  | .str p s => p.toString ++ "." ++ s
-  | .num .anonymous n => toString n
-  | .num p n => p.toString ++ "." ++ toString n
+/-- The name's components, root first (a tail-recursive walk, so a deep
+name renders in constant stack). -/
+def componentList : Name → List (String ⊕ Nat) → List (String ⊕ Nat)
+  | .anonymous, acc => acc
+  | .str p s, acc => componentList p (.inl s :: acc)
+  | .num p n, acc => componentList p (.inr n :: acc)
 
-instance : ToString Name := ⟨Name.toString⟩
+/-- **The one display rendering of a name** (`ToString Name`): the
+components joined by `.`, each bare when identifier-shaped and
+otherwise `«…»` with its unsafe characters escaped (`Display.Acc`),
+numeric components as decimals, the anonymous name `[anonymous]`, the
+whole capped at `Display.maxLen` characters.  Display only: nothing
+compares, hashes or parses the result. -/
+def render (n : Name) : String :=
+  match n with
+  | .anonymous => "[anonymous]"
+  | _ =>
+    let (a, _) := (componentList n []).foldl (init := ((Display.Acc.mk "" 0 0 false), true))
+      fun (a, first) c =>
+        let a := if first then a else a.piece "." 1
+        match c with
+        | .inl s => (a.component s, false)
+        | .inr k => (a.chars (toString k), false)
+    a.finish
+
+instance : ToString Name := ⟨Name.render⟩
 
 end Name
 

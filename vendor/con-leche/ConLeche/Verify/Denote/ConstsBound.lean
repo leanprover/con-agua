@@ -17,8 +17,7 @@ predicate, with `Expr` clause equations and one `instantiate1` closure
 fact.
 
 `strLitSupported_listNames` comes with them: it is the same kind of
-fact (a guard inversion producing two `isSome` obligations) and
-`Verify/Denote/TowerExtend` reads it at the same clause.
+fact (a guard inversion producing two `isSome` obligations).
 -/
 
 namespace ConLeche.Verify
@@ -236,7 +235,7 @@ theorem envWF_constsBound {env : Env} (hwf : EnvWF env) :
       (∀ cv value hint, c = .defnInfo cv value hint →
         ConstsBound env value) := by
   intro c hc
-  obtain ⟨-, -, hty, -, hdefn, -⟩ := hwf c hc
+  obtain ⟨-, -, hty, -, hdefn, -⟩ := hwf.consts c hc
   exact ⟨constsBound_of_constsResolve _ hty,
     fun cv value hint heq =>
       constsBound_of_constsResolve _ (hdefn cv value hint heq).2.2.1⟩

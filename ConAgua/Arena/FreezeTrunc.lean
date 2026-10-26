@@ -15,7 +15,7 @@ Three facts the truncation needs are invariants of the library relations: a froz
 sits at word 2 (tier 0's offset word is `0`, `TierLay`; the extent `2 + 2 n` assumes it), `PoolOK`
 bounds the saved tier-0 top `PT0[0]` by `POOL`'s size only while the top is in tier 1 (`POOL` is
 cut to the top), and `PendR` bounds the pending count by `2^62` (so `PEND`'s extent `3 · CTL[130]`
-does not wrap). `EnvKeysIn m fe` (every name the environment indexes is a tier-0 name below its
+does not wrap). `EnvKeysIn m fe` (every name the environment indexes, in its constant index and its table map, is a tier-0 name below its
 table's count, which `EnvR` does not say) follows from the twin's invariant (`envKeysIn_of`), and
 the scratch flag `CTL[1] = 0` (so the pool top is in tier 0) from `TwinPend.off`.
 `PhaseBStart.trunc'` is the theorem without hypotheses.
@@ -70,16 +70,6 @@ theorem IWOK.trunc {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (truncFrozen m) := 
   refine ⟨h1, ?_, h3, by omega, h5⟩
   simp only [erecTop] at he ⊢; omega
 
-theorem SliceR.trunc {m : Mem} {o l : Word} {hs : List EIdx} (h : L.Rom.SliceR m o l hs) :
-    L.Rom.SliceR (truncFrozen m) o l hs := by
-  obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨by rw [erecTop_trunc]; exact h1, h2, fun i hi => ?_⟩
-  rw [rdW_erec_trunc m]
-  · exact h3 i hi
-  · have := erecTop m; have := L.Rom.top_lt m
-    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
-    omega
-
 theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m ips) :
     L.Rom.PinSetsR (truncFrozen m) ips := by
   obtain ⟨h1, h2, h3⟩ := h
@@ -88,17 +78,10 @@ theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m
   refine ⟨by rw [hc]; exact h1, by rw [hc, erecTop_trunc]; exact h2, fun k hk => ?_⟩
   rw [hc, rdW_erec_trunc m (by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; omega)]
-  obtain ⟨p1, p2, p3⟩ := h3 k hk
-  generalize rdW (m.arr64 EREC) (rdW (m.arr64 CTL) 150 + UInt64.ofNat k) = r at p1 p2 p3 ⊢
-  refine ⟨by rw [erecTop_trunc]; exact p1, SliceR.trunc p2, fun j hj => ?_⟩
-  have q := p3 j hj
-  simp only [L.Rom.HdrR] at q ⊢
-  have e2 : (2 * UInt64.ofNat j).toNat = 2 * j := by
-    rw [UInt64.toNat_mul, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
-    simp; omega
-  rw [rdW_erec_trunc m (by rw [UInt64.toNat_add, UInt64.toNat_add, e2]; simp; omega),
-    rdW_erec_trunc m (by rw [UInt64.toNat_add, UInt64.toNat_add, e2]; simp; omega)]
-  exact SliceR.trunc q
+  refine L.Rom.PinSetR.keep (h3 k hk) ⟨Nat.le_of_eq (erecTop_trunc m).symm, fun i hi => ?_⟩
+  rw [truncFrozen_erec]
+  simp only [Array.getElem?_extract, Nat.zero_add]
+  by_cases h2 : i < (m.arr64 EREC).size <;> simp [hi, h2, Nat.lt_min]
 
 /-! ## The pending checks -/
 
@@ -129,10 +112,13 @@ def nmCS : Nat → ConsSch
 /-- The tier-0 name count of the name table with tag `g` (`anonymous`, `str`, `num`). -/
 def nmCnt (m : Mem) (g : Nat) : Nat := (rdW (m.arr64 CTL) (UInt64.ofNat (nmCS g).ca.toNat)).toNat
 
-/-- **Every name the environment indexes is a tier-0 name below its table's count.** -/
-def EnvKeysIn (m : Mem) (fe : IFEnv) : Prop :=
-  ∀ n : NIdx, (fe.idx[n]?).isSome → rowTag n.word.toUInt64 ≤ 2 →
+/-- **Every name the environment indexes is a tier-0 name below its table's count**, in the
+constant index and in the table map. -/
+structure EnvKeysIn (m : Mem) (fe : IFEnv) : Prop where
+  idx : ∀ n : NIdx, (fe.idx[n]?).isSome → rowTag n.word.toUInt64 ≤ 2 →
     rowTier n.word.toUInt64 = 0 ∧ rowIx n.word.toUInt64 + 1 < 2 * nmCnt m (rowTag n.word.toUInt64)
+  tbls : ∀ n : NIdx, (fe.tbls[n]?).isSome → rowTag n.word.toUInt64 ≤ 2 →
+    rowTier n.word.toUInt64 = 0 ∧ tblIx n.word.toUInt64 < nmCnt m (rowTag n.word.toUInt64)
 
 theorem getD_extract' (a : Array Word) (e i : Nat) :
     (a.extract 0 e)[i]?.getD 0 = if i < e then a[i]?.getD 0 else 0 := by
@@ -182,6 +168,37 @@ theorem row_trunc (w : Word) :
       exact ⟨.inl rfl, fun h => by omega, fun _ => ⟨rfl, rfl⟩⟩
   · simp [hg]
 
+/-- A tier-0 table-row array under the truncation. -/
+theorem tix_trunc (g : Nat) (hg : g ≤ 2) :
+    (truncFrozen m).arr64 (129 + g) = (m.arr64 (129 + g)).extract 0 (nmCnt m g) := by
+  rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl
+  · rw [show 129 + 0 = TIXA from rfl, truncFrozen_tixa]; rfl
+  · rw [show 129 + 1 = TIXS from rfl, truncFrozen_tixs]; rfl
+  · rw [show 129 + 2 = TIXN from rfl, truncFrozen_tixn]; rfl
+
+theorem tblRow_trunc (w : Word) :
+    (tblRow (truncFrozen m) w = tblRow m w ∨ tblRow (truncFrozen m) w = 0) ∧
+    (rowTier w = 0 → rowTag w ≤ 2 → tblIx w < nmCnt m (rowTag w) →
+      tblRow (truncFrozen m) w = tblRow m w) := by
+  have ht : rowTier w = 0 ∨ rowTier w = 1 := by simp only [rowTier]; omega
+  unfold tblRow
+  by_cases hg : rowTag w ≤ 2
+  · simp only [hg, ↓reduceIte]
+    rcases ht with ht | ht
+    · have ha : tblArr w = 129 + rowTag w := by
+        unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 0 : Nat) = 129 + rowTag w; omega
+      rw [ha, tix_trunc hcnt _ hg, getD_extract']
+      refine ⟨by split <;> simp, fun _ _ hr => ?_⟩
+      rw [if_pos hr]
+    · have ha : tblArr w ∉ fzSrcs := by
+        have : tblArr w = 385 + rowTag w := by
+          unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 1 : Nat) = 385 + rowTag w; omega
+        rw [this]; rcases (show rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 by omega) with e | e | e <;>
+          rw [e] <;> decide
+      rw [truncFrozen_other m _ ha]
+      exact ⟨.inl rfl, fun h => by omega⟩
+  · simp [hg]
+
 theorem EnvR.trunc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (hk : EnvKeysIn m fe) (h : EnvR dn m vis fe) : EnvR dn (truncFrozen m) vis fe := by
   have hN : (truncFrozen m).arr64 ECON = m.arr64 ECON := truncFrozen_other m _ (by decide)
@@ -190,7 +207,7 @@ theorem EnvR.trunc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hin : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → (fe.idx[n]?).isSome →
       rowC (truncFrozen m) n.word.toUInt64 = rowC m n.word.toUInt64 ∧
       rowP (truncFrozen m) n.word.toUInt64 = rowP m n.word.toUInt64 := fun n hn hs => by
-    obtain ⟨ht, hr⟩ := hk n hs hn
+    obtain ⟨ht, hr⟩ := hk.idx n hs hn
     exact (row_trunc hcnt _).2.1 ht hn hr
   -- a row the environment does not hold is empty
   have hout : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → fe.idx[n]? = none →
@@ -201,7 +218,21 @@ theorem EnvR.trunc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     split at this
     · assumption
     · simp at this
-  refine ⟨h.vis, fun n hn => ?_, fun n hn h0 => ?_, ?_⟩
+  -- a table row the environment holds reads the same, one it does not is empty
+  have tin : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → (fe.tbls[n]?).isSome →
+      tblRow (truncFrozen m) n.word.toUInt64 = tblRow m n.word.toUInt64 := fun n hn hs => by
+    obtain ⟨ht, hr⟩ := hk.tbls n hs hn
+    exact (tblRow_trunc hcnt _).2 ht hn hr
+  have tout : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → fe.tbls[n]? = none →
+      tblRow (truncFrozen m) n.word.toUInt64 = 0 := fun n hn hs => by
+    have := h.tkeys n hn
+    rw [hs] at this
+    have h0 : tblRow m n.word.toUInt64 = 0 := by simpa using this.symm
+    rcases (tblRow_trunc hcnt n.word.toUInt64).1 with e' | e'
+    · rw [e']; exact h0
+    · exact e'
+  have hET : (truncFrozen m).arr64 ETAB = m.arr64 ETAB := truncFrozen_other m _ (by decide)
+  refine ⟨h.vis, fun n hn => ?_, fun n hn h0 => ?_, ?_, fun n hn => ?_, fun n hn h0 => ?_, ?_⟩
   · cases e : fe.idx[n]? with
     | none =>
       have h0 := hout n hn e
@@ -224,6 +255,17 @@ theorem EnvR.trunc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     rw [this.2, erecP_trunc]
     exact h.vals n hn (by rw [← this.1]; exact h0)
   · rw [← h.consts]; simp only [envConsts, envLen, hc, erecP_trunc, hN]
+  · cases e : fe.tbls[n]? with
+    | none => rw [tout n hn e]; simp
+    | some t => rw [tin n hn (by simp [e]), ← e]; exact h.tkeys n hn
+  · have hs : (fe.tbls[n]?).isSome := by
+      cases e : fe.tbls[n]? with
+      | some _ => rfl
+      | none => exact absurd (tout n hn e) h0
+    rw [tin n hn hs] at h0 ⊢
+    rw [erecP_trunc]
+    exact h.tvals n hn h0
+  · rw [← h.tables]; simp only [envTables, tblCnt, hc, erecP_trunc, hET]
 
 end env
 
@@ -305,21 +347,11 @@ theorem denoteN_view {st : NStore} {n : NIdx} {x : ConLeche.Name} (h : denoteN s
   | none => rw [e] at h; simp at h
   | some _ => rfl
 
-/-- **Every name the environment indexes is a tier-0 name below its table's count**, at phase
-B's start: the index is the list's (`IFEnvCoh`), a listed name is found (`IFEnvOK.hit`), so it
-denotes, so its node exists, and it is persistent (`PersIFEnv`). -/
-theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingCheck}
-    (hR : ArenaR m a) (hT : TwinPend fe pend a) : EnvKeysIn m fe := by
-  intro n hs hn
-  obtain ⟨env, pendP, hok, -, -⟩ := hT.fold
-  obtain ⟨⟨c, ci⟩, hp⟩ := Option.isSome_iff_exists.mp hs
-  have hcoh := hok.coh
-  have hc : c < fe.visibleBelow := by
-    rw [hcoh.1, ← ConRon.Bridge.mkIFEnvGo_fst' fe.env.consts]
-    exact ConRon.Bridge.mkIFEnvGo_counter_lt _ n c ci (by rw [← hcoh.2 n]; exact hp)
-  have hf : fe.find? n = some ci := by simp [IFEnv.find?, hp, hc]
-  obtain ⟨nm, c', hdn, -, -⟩ := hok.check.ienv.hit n ci hf
-  have hper : n.isPersistent = true := (hok.persEnv.idx n _ hp).1
+/-- A persistent name handle that denotes is a tier-0 name below its table's count. -/
+theorem nameIn_of {m : Mem} {a : AState} (hR : ArenaR m a) {n : NIdx} {nm : ConLeche.Name}
+    (hper : n.isPersistent = true) (hdn : denoteN a.store.ns n = some nm)
+    (hn : rowTag n.word.toUInt64 ≤ 2) :
+    rowTier n.word.toUInt64 = 0 ∧ n.word.toUInt64.toNat % 2 ^ 27 < nmCnt m (rowTag n.word.toUInt64) := by
   have hv := denoteN_view hdn
   simp only [NStore.view, hper, ↓reduceIte, EStore.ns, NTables.get] at hv
   have hw : n.word.toUInt64.toNat = n.word.toNat := UInt32.toNat_toUInt64 _
@@ -332,7 +364,7 @@ theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingChe
     have := congrArg UInt32.toNat e; simpa [Idx.tag, UInt32.toNat_div] using this
   have hidx : n.idxNat = n.word.toNat % 134217728 := by
     simp [Idx.idxNat, Idx.index, UInt32.toNat_mod]
-  simp only [rowTag, rowTier, rowIx, hw] at hn ⊢
+  simp only [rowTag, rowTier, hw] at hn ⊢
   refine ⟨htier, ?_⟩
   by_cases h0 : n.tag == NTag.anonymous
   · simp only [h0, ↓reduceIte, Option.isSome_map] at hv
@@ -359,6 +391,57 @@ theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingChe
     rw [e]; simp only [nmCnt, nmCS, NTag.num] at hcnt ⊢
     rw [hidx] at hlt; simp at hcnt ⊢; omega
   · simp [h0, h1, h2] at hv
+
+/-- A table of a list that denotes has a structure name that denotes. -/
+theorem denoteProjTableList_name {st : EStore} :
+    ∀ (ts : List IProjTable) (xs : List ConLeche.ProjTable), Frontend.denoteProjTableList st ts = some xs →
+    ∀ t ∈ ts, ∃ nm, denoteN st.ns t.structName = some nm
+  | [], _, _, t, ht => by simp at ht
+  | u :: us, xs, h, t, ht => by
+    simp only [Frontend.denoteProjTableList] at h
+    cases hu : Frontend.denoteProjTable st u with
+    | none => rw [hu] at h; simp at h
+    | some x =>
+      cases hus : Frontend.denoteProjTableList st us with
+      | none => rw [hu, hus] at h; simp at h
+      | some xs' =>
+        rcases List.mem_cons.mp ht with rfl | ht
+        · unfold Frontend.denoteProjTable at hu
+          split at hu
+          · rename_i sn _ _ hsn _ _; exact ⟨sn, hsn⟩
+          · simp at hu
+        · exact denoteProjTableList_name us xs' hus t ht
+
+/-- **Every name the environment indexes is a tier-0 name below its table's count**, at phase
+B's start: the index is the list's (`IFEnvCoh`), a listed name is found (`IFEnvOK.hit`), so it
+denotes, so its node exists, and it is persistent (`PersIFEnv`); a table's key is its table's
+structure name (`IFEnvCoh`), which denotes (`denoteFEnv`) and is persistent. -/
+theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingCheck}
+    (hR : ArenaR m a) (hT : TwinPend fe pend a) : EnvKeysIn m fe := by
+  obtain ⟨env, pendP, hok, -, -⟩ := hT.fold
+  have hcoh := hok.coh
+  refine ⟨fun n hs hn => ?_, fun n hs hn => ?_⟩
+  · obtain ⟨⟨c, ci⟩, hp⟩ := Option.isSome_iff_exists.mp hs
+    have hc : c < fe.visibleBelow := by
+      rw [hcoh.1]
+      exact ConRon.Bridge.mkIFEnvGo_lt _ n c ci (by rw [← hcoh.idx n]; exact hp)
+    have hf : fe.find? n = some ci := by simp [IFEnv.find?, hp, hc]
+    obtain ⟨nm, c', hdn, -, -⟩ := hok.check.ienv.hit n ci hf
+    have hper : n.isPersistent = true := (hok.persEnv.idx n _ hp).1
+    obtain ⟨ht, hl⟩ := nameIn_of hR hper hdn hn
+    exact ⟨ht, by simp only [rowIx]; omega⟩
+  · obtain ⟨t, hp⟩ := Option.isSome_iff_exists.mp hs
+    have hper : n.isPersistent = true := (hok.persEnv.tbls n t hp).1
+    have hfind := hp
+    rw [hcoh.tbls n, ConRon.Bridge.mkIFEnvTblsGo_find?] at hfind
+    have hmem := List.mem_of_find?_eq_some hfind
+    have hname : t.structName = n := by simpa using List.find?_some hfind
+    have hden := hok.denote
+    simp only [ConRon.Bridge.denoteFEnv] at hden
+    obtain ⟨-, htabs⟩ := ConRon.Bridge.denoteIEnv_some.mp hden
+    obtain ⟨nm, hdn⟩ := denoteProjTableList_name _ _ htabs t hmem
+    rw [hname] at hdn
+    exact nameIn_of hR hper hdn hn
 
 /-- **The truncation theorem, without hypotheses** (the environment's discharged). -/
 theorem PhaseBStart.trunc' {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}

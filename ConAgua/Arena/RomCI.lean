@@ -216,14 +216,8 @@ def itemsCI : ConLeche.ConstantInfo → List Item
   | .indInfo v c => itemsCV v ++ itemsCaps c
   | .ctorInfo v _ _ => itemsCV v
   | .recInfo v _ _ rs => itemsCV v ++ itemsRules rs
-  | .projInfo _ => []
 
-/-- Not a projection table. -/
-def ciNoProj : ConLeche.ConstantInfo → Bool
-  | .projInfo _ => false
-  | _ => true
-
-theorem sim_ci (ci : ConLeche.ConstantInfo) (hci : ciNoProj ci = true) (m : EMemo) :
+theorem sim_ci (ci : ConLeche.ConstantInfo) (m : EMemo) :
     Sim (Frontend.internCI m ci) m (itemsCI ci) Prod.fst := by
   cases ci with
   | axiomInfo v =>
@@ -267,26 +261,24 @@ theorem sim_ci (ci : ConLeche.ConstantInfo) (hci : ciNoProj ci = true) (m : EMem
     obtain ⟨m₁, _⟩ := r
     refine (Sim.bind (is := itemsRules rs) (js := []) (sim_rules rs m₁) fun r' => ?_).congr (by simp)
     obtain ⟨m₂, _⟩ := r'; exact Sim.pure _ _ _ rfl
-  | projInfo t => simp [ciNoProj] at hci
 
 /-- A block's items. -/
 def itemsCIs : List ConLeche.ConstantInfo → List Item
   | [] => []
   | c :: cs => itemsCI c ++ itemsCIs cs
 
-theorem sim_ciList (cs : List ConLeche.ConstantInfo) (hcs : cs.all ciNoProj = true) :
+theorem sim_ciList (cs : List ConLeche.ConstantInfo) :
     ∀ (m : EMemo), Sim (Frontend.internCIList m cs) m (itemsCIs cs) Prod.fst := by
   induction cs with
   | nil => intro m; exact Sim.pure _ _ _ rfl
   | cons c cs ih =>
     intro m
-    simp only [List.all_cons, Bool.and_eq_true] at hcs
     have h : Frontend.internCIList m (c :: cs) = Frontend.internCI m c >>= fun x => match x with
         | (m, h) => Frontend.internCIList m cs >>= fun y => match y with | (m, hs) => pure (m, h :: hs) := rfl
     rw [h]
-    refine Sim.bind (is := itemsCI c) (js := itemsCIs cs) (sim_ci c hcs.1 m) fun x => ?_
+    refine Sim.bind (is := itemsCI c) (js := itemsCIs cs) (sim_ci c m) fun x => ?_
     obtain ⟨m₁, _⟩ := x
-    refine (Sim.bind (is := itemsCIs cs) (js := []) (ih hcs.2 m₁) fun y => ?_).congr (by simp)
+    refine (Sim.bind (is := itemsCIs cs) (js := []) (ih m₁) fun y => ?_).congr (by simp)
     obtain ⟨m₂, _⟩ := y
     exact Sim.pure _ _ _ rfl
 
@@ -429,15 +421,15 @@ theorem SimZ.bindN {α β : Type} {x : AM α} {f : α → AM β} {is : List Item
 
 /-! The `Arena` wrappers, at a fresh memo. -/
 
-theorem simZ_ci (ci : ConLeche.ConstantInfo) (hci : ciNoProj ci = true) (P : AState → Prop) :
+theorem simZ_ci (ci : ConLeche.ConstantInfo) (P : AState → Prop) :
     SimZ (ConRon.Arena.internCI ci) (itemsCI ci) P :=
-  (SimZ.of_sim (sim_ci ci hci ∅) P).map Prod.snd
+  (SimZ.of_sim (sim_ci ci ∅) P).map Prod.snd
 theorem simZ_cv (cv : ConLeche.ConstantVal) (P : AState → Prop) :
     SimZ (ConRon.Arena.internCV cv) (itemsCV cv) P :=
   (SimZ.of_sim (sim_cv cv ∅) P).map Prod.snd
-theorem simZ_ciList (cs : List ConLeche.ConstantInfo) (hcs : cs.all ciNoProj = true) (P : AState → Prop) :
+theorem simZ_ciList (cs : List ConLeche.ConstantInfo) (P : AState → Prop) :
     SimZ (ConRon.Arena.internCIList cs) (itemsCIs cs) P :=
-  (SimZ.of_sim (sim_ciList cs hcs ∅) P).map Prod.snd
+  (SimZ.of_sim (sim_ciList cs ∅) P).map Prod.snd
 theorem simZ_expr (e : ConLeche.Expr) (P : AState → Prop) :
     SimZ (ConRon.Arena.internExpr e) [.ex e] P :=
   (SimZ.of_sim (sim_expr e ∅) P).map Prod.snd
@@ -504,20 +496,37 @@ theorem simZ_pure {α : Type} (v : α) (P : AState → Prop) : SimZ (Pure.pure v
   cases hr
   exact ⟨v, rfl⟩
 
+/-- A type-pin list's items: per pin its name, then its type at a fresh memo. -/
+def itemsTypePins : List (ConLeche.Name × ConLeche.Expr) → List Item
+  | [] => []
+  | p :: rest => seqZ [[.nm p.1], [.ex p.2], itemsTypePins rest, []]
+
+theorem simZ_typePins (P : AState → Prop) (hP : CpPred P) :
+    ∀ tps : List (ConLeche.Name × ConLeche.Expr), SimZ (internTypePins tps) (itemsTypePins tps) P
+  | [] => simZ_pure _ _
+  | p :: rest => by
+    simp only [internTypePins, itemsTypePins, seqZ]
+    exact SimZ.bind hP ((SimZ.of_sim (sim_name p.1 ∅) P)) fun _ =>
+      SimZ.bind hP (simZ_expr _ _) fun _ => SimZ.bind hP (simZ_typePins P hP rest) fun _ => simZ_pure _ _
+
 /-- A pin set's items. -/
 def itemsPinSet (ps : ConLeche.NatOpPinSet) : List Item :=
   seqZ [[.ex ps.divPin], [.ex ps.modPin], [.ex ps.gcdPin], [.ex ps.landPin], [.ex ps.lorPin],
     [.ex ps.xorPin], [.ex ps.shiftLeftPin], [.ex ps.shiftRightPin],
     ps.divProofs.map .ex, ps.modProofs.map .ex, ps.gcdProofs.map .ex, ps.landProofs.map .ex,
-    ps.lorProofs.map .ex, ps.xorProofs.map .ex, ps.shiftLeftProofs.map .ex, ps.shiftRightProofs.map .ex, []]
+    ps.lorProofs.map .ex, ps.xorProofs.map .ex, ps.shiftLeftProofs.map .ex, ps.shiftRightProofs.map .ex,
+    itemsTypePins ps.divTypePins, itemsTypePins ps.modTypePins, itemsTypePins ps.gcdTypePins,
+    itemsTypePins ps.landTypePins, itemsTypePins ps.lorTypePins, itemsTypePins ps.xorTypePins,
+    itemsTypePins ps.shiftLeftTypePins, itemsTypePins ps.shiftRightTypePins, []]
 
 theorem simZ_pinSet (ps : ConLeche.NatOpPinSet) : SimZ (internPinSet ps) (itemsPinSet ps) PinsReadyP := by
-  unfold internPinSet itemsPinSet
+  unfold internPinSet internPinSetTypePins itemsPinSet
   simp only [seqZ]
   repeat (first
     | exact simZ_pure _ _
     | refine SimZ.bind pinsReady_cp (simZ_expr _ _) fun _ => ?_
-    | refine SimZ.bind pinsReady_cp (simZ_exprList _ _) fun _ => ?_)
+    | refine SimZ.bind pinsReady_cp (simZ_exprList _ _) fun _ => ?_
+    | refine SimZ.bind pinsReady_cp (simZ_typePins _ pinsReady_cp _) fun _ => ?_)
 
 /-- The pin sets' items. -/
 def itemsPinSets : List ConLeche.NatOpPinSet → List Item
@@ -569,38 +578,27 @@ def itemsAllPins (pins : List ConLeche.NatOpPinSet) : List Item :=
     [.ex ConLeche.reduceBoolDeclPin],
     itemsPinSets pins]
 
-/-- The constants the walk interns are not projection tables. -/
-def AllPinsNoProj : Prop :=
-  (ConLeche.BasisKind.decls .eqK).all ciNoProj ∧ (ConLeche.BasisKind.declsA .eqK).all ciNoProj ∧
-  (ConLeche.BasisKind.decls .natK).all ciNoProj ∧ (ConLeche.BasisKind.declsA .natK).all ciNoProj ∧
-  (ConLeche.BasisKind.decls .emptyK).all ciNoProj ∧ (ConLeche.BasisKind.declsA .emptyK).all ciNoProj ∧
-  (ConLeche.BasisKind.decls .falseK).all ciNoProj ∧ (ConLeche.BasisKind.declsA .falseK).all ciNoProj ∧
-  (ConLeche.BasisKind.decls .quotK).all ciNoProj ∧ (ConLeche.BasisKind.declsA .quotK).all ciNoProj ∧
-  ciNoProj ConLeche.iffA ∧ ciNoProj ConLeche.iffIntroA ∧ ciNoProj ConLeche.iffRecA ∧
-  ciNoProj ConLeche.nonemptyA ∧ ciNoProj ConLeche.nonemptyIntroA ∧ ciNoProj ConLeche.nonemptyRecA
-
 /-- **The startup walk has the store effect of its items** (at a filled pin table). -/
-theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) (h : AllPinsNoProj) :
+theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) :
     SimZ (internAllPins pins) (itemsAllPins pins) PinsReadyP := by
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, c1, c2, c3, c4, c5, c6⟩ := h
   unfold internAllPins itemsAllPins
   simp only [seqZ]
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h1 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h2 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h3 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h4 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h5 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h6 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h7 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h8 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h9 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ h10 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ci _ c1 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ci _ c2 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ci _ c3 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ci _ c4 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ci _ c5 _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ci _ c6 _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
   repeat refine SimZ.bind pinsReady_cp (simZ_cv _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_expr _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_expr _ _) fun _ => ?_
@@ -656,7 +654,7 @@ holds after; the result (the interned pin variants) is not built in L. -/
 @[refines_part ConRon.Arena.internAllPins "the store effect"]
 theorem internAllPins_refines (rom : List UInt8) (off : Word) (p : Prog) (hL : ItemsProg rom p)
     (hp : p.lookup "intern_all_pins_rom" = some (internAllPinsAt off)) (hr : RomOK rom)
-    (pins : List ConLeche.NatOpPinSet) (hnp : AllPinsNoProj)
+    (pins : List ConLeche.NatOpPinSet)
     (hfit : (itemsAllPins pins).all itemFits = true) (rest : List UInt8)
     (hd : rom.drop off.toNat = encItems [] (itemsAllPins pins) ++ rest)
     (n : Nat) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀) (hmo : ModeOK s₀.mem) (hP : PinsReadyP a₀)
@@ -674,7 +672,7 @@ theorem internAllPins_refines (rom : List UInt8) (off : Word) (p : Prog) (hL : I
   obtain ⟨m', a', -, hrunI, hR, -, -, hf, -⟩ := romItemsW_ok rom hr _ hfit n' (resetMem s.mem) a₀ off rest []
     ∅ q s'.mem hA' ((memFrame_top (resetMem_frame1 s.mem) (by decide)).mode hA.1.lit.1 hmo) (MemoR.fresh s.mem hc) hd (by rw [resetMem_stk]; exact hst)
     (by rw [(resetMem_frame1 _).2.2.1]; omega) hW
-  obtain ⟨v, hv⟩ := simZ_internAllPins pins hnp ∅ a₀ m' a' hP (by rw [runItems_reset]; exact hrunI)
+  obtain ⟨v, hv⟩ := simZ_internAllPins pins ∅ a₀ m' a' hP (by rw [runItems_reset]; exact hrunI)
   exact ⟨hloc, v, a', hv, hR, (resetMem_frame _).trans hf⟩
 
 end L.Rom

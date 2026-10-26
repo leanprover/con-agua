@@ -32,7 +32,7 @@ theorem propIrrelC_spec (ih : SSimC mode env f) {d : Nat} {a b : Expr} {s₀ : C
     (hs : CSOK mode env s₀) (hwa : Expr.WScoped d a) (hwb : Expr.WScoped d b) :
     ⦃fun s => s = s₀⦄ propIrrelI (coreKnotI mode (mkFEnv env) f) (mkFEnv env) d a b
     ⦃fun v s' => CSOK mode env s' ∧ Runs (propIrrel (fueledFns mode env) env d a b) v; ⊤⦄ := by
-  sym only [conleche_grind, propIrrel, mkFEnv_find_fun] =>
+  sym only [conleche_grind, propIrrel, mkFEnv_find_fun, mkFEnv_findTable_fun] =>
     vcgen [propIrrelI, ih.inferIO_spec, ih.whnf_spec, isEquivLM_spec (mode := mode) (env := env),
       liftFueled_spec (mode := mode) (env := env)] <;>
       -- the pure side is nine binds deep, one `Runs.bind_eq` generation each

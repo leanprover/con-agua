@@ -143,9 +143,7 @@ syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
 syntax "abort" : lstmt
 /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
 syntax "abort " ident : lstmt
-/-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R`, or with `R`'s
-class bits cleared while the global `L.Arena.ATT` is `3` (inside a pin-variant attempt, where the
-twin recovers): `abort R ^ (R & ATT)`. -/
+/-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
 syntax (name := lfail) &"fail" ident : lstmt
 /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
 constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
@@ -372,9 +370,7 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
     -- `fail R` (its keyword is not reserved: `fail` stays an identifier elsewhere)
     if s.raw.isOfKind ``lfail then
       let r : Ident := ⟨s.raw[1]⟩
-      let att := mkIdent `L.Arena.ATT
-      `(L.Stmt.abort (L.Expr.bin .xor (L.Expr.const $r)
-        (L.Expr.bin .and (L.Expr.const $r) (L.Expr.glob $att))))
+      `(L.Stmt.abort (L.Expr.const $r))
     else Macro.throwErrorAt s "unsupported L statement"
 where
   /-- `x op= e`, for a local or a global `x`. -/

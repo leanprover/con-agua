@@ -171,10 +171,10 @@ theorem reduceOps_install (hμ : μ.isVerified = true)
       interp V ρ (A ψ) ∈ˢ interp V ρ (Ta ψ))
     (hred : ConLeche.reduceOpNames.contains cv.name = true →
       ReducePinRun μ F env
-        ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩ :: env.consts⟩
+        ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩ :: env.consts, env.tables⟩
         cv.name value)
     (m₂ : EnvModel V
-      ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩ :: env.consts⟩)
+      ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩ :: env.consts, env.tables⟩)
     (hac : m₂.acval = acvalWith mp.base2.acval cv.name A) :
     ReduceOps m₂ := by
   intro c hcN cvR hf₂ hpin

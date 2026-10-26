@@ -280,8 +280,9 @@ structure IndCaps where
 
 /-- **One structure's projection table** (task #175 S1, 2026-09-06):
 everything the checker's `.proj` rules consume about a structure `T`,
-stored once at the structure's install as ONE constant (keyed on the
-structure: `projTableName structName`; see `Env.findProj?`).
+stored once at the structure's install in the environment's table
+component (`Env.tables`, keyed on the structure's name: `Env.findTable?`,
+`Env.findProj?`; task #362).
 
 A table is installed by the direct simple-structure install alone.
 The `.proj T i` node is first-class — typed by `bodies[i]`, the
@@ -322,14 +323,6 @@ structure ProjTable where
   infer branch checks it at every use of a `Prop`-declared
   structure. -/
   guards : List Level
-  /-- **The projection offset** (task #210 Part A): the position of
-  field `0` in the carrier's pair chain — `1` at the installer's
-  TAGGED tower (`inj 0 (mkTower (fs ++ [pt]))`, the tag in front),
-  which is the only value the installer stores (`checkBlockTables`);
-  `0` would read a bare tuple tower `mkTower fs` — so that the model
-  reads `.proj T i` as `projS (i + off)`.  Syntactic to the kernel: the typing, iota and
-  eta rules never look at it. -/
-  off : Nat
   deriving DecidableEq, Repr, Inhabited
 
 /-- **One projection-table entry** — the per-field VIEW of a
@@ -349,15 +342,13 @@ structure ProjEntry where
   /-- the projection's `Prop` guard level (see `ProjTable.guards`) -/
   fieldSort : Level
   structSort : Level
-  /-- the table's projection offset (see `ProjTable.off`) -/
-  off : Nat
   deriving DecidableEq, Repr, Inhabited
 
 /-- The per-field view of a table at field `i` (meaningful for `i <
 numFields`). -/
 def ProjTable.entry (tbl : ProjTable) (i : Nat) : ProjEntry :=
   ⟨tbl.structName, i, tbl.levelParams, tbl.numParams, tbl.ctor, tbl.numFields,
-    tbl.bodies.getD i default, tbl.guards.getD i .zero, tbl.structSort, tbl.off⟩
+    tbl.bodies.getD i default, tbl.guards.getD i .zero, tbl.structSort⟩
 
 /-- Information stored about an accepted constant. -/
 inductive ConstantInfo where
@@ -376,15 +367,6 @@ inductive ConstantInfo where
   are consumed at install time only and are not stored. -/
   | recInfo (val : ConstantVal) (majorIdx rulePrefix : Nat)
       (rules : List RecRule)
-  /-- A structure's projection table (see `ProjTable`), stored under
-  the reserved name `projTableName tbl.structName` so lookups,
-  freshness and environment extension are uniform with constants.  Its
-  `toConstantVal` carries the closed dummy type `Sort 1` (the table is
-  not a term: no `.const` names it, `inferTypeCore` rejects one), so
-  the environment well-formedness and model machinery cover the
-  constant uniformly; the bodies' own well-formedness is `EnvWF`'s
-  table clause. -/
-  | projInfo (tbl : ProjTable)
   deriving DecidableEq, Repr, Inhabited
 
 /-- **Which of the four quotient constants a `#QUOT` record declares**
@@ -515,27 +497,13 @@ def indParamsOk (nP : Nat) (block : List ConstantInfo) : Bool :=
     | .ctorInfo _ nPc _ => nPc == nP
     | _ => true
 
-/-- The reserved name of structure `T`'s projection table (task #175
-S1): one constant per structure, a `Nat` component keeping it out of
-the way of exported identifiers (the front door rejects the shape,
-`Name.isProjFnShape`). -/
-def projTableName (T : Name) : Name := (T.str "projTable").num 0
-
 namespace ConstantInfo
 
 def toConstantVal : ConstantInfo → ConstantVal
   | .axiomInfo v | .defnInfo v _ _ | .thmInfo v => v
   | .indInfo v _ | .ctorInfo v _ _ | .recInfo v _ _ _ => v
-  | .projInfo tbl => ⟨projTableName tbl.structName, tbl.levelParams, .sort (.succ .zero)⟩
 
 def name (c : ConstantInfo) : Name := c.toConstantVal.name
-
-/-- A projection table (task #175 W4c): a table, not a term — no
-`.const` node names it (`inferTypeCore` rejects one), so the model
-owes it no leaf. -/
-def isTowerEntry : ConstantInfo → Bool
-  | .projInfo _ => true
-  | _ => false
 
 end ConstantInfo
 
@@ -556,28 +524,42 @@ def names : Declaration → List Name
 
 end Declaration
 
-/-- The global environment: the list of constants accepted so far, newest
-first.  Names are unique (the checker rejects duplicates), so the order is
-irrelevant for lookup. -/
+/-- The global environment: the constants accepted so far and the
+structures' projection tables, each list newest first.  Names are
+unique (the checker rejects duplicates), so the order is irrelevant for
+lookup; so are the tables' structure names (a block installs a table
+only for its own, fresh, structure-like members).
+
+The tables are not constants (task #362): no `.const` names one, they
+are read by `.proj` nodes alone, keyed on the structure's name
+(`findTable?`). -/
 structure Env where
   consts : List ConstantInfo
+  tables : List ProjTable
   deriving Repr, Inhabited
 
 namespace Env
 
 /-- The empty environment; the starting point of every checker run. -/
-def empty : Env := ⟨[]⟩
+def empty : Env := ⟨[], []⟩
 
 def find? (env : Env) (n : Name) : Option ConstantInfo :=
   env.consts.find? (·.name == n)
 
+/-- The projection table of structure `T`, visible where `T` is (a block
+installs a table only for its own structures, so on every environment
+the checker builds the gate passes exactly where a table is stored; it
+makes a view that hides a structure hide its table, `FEnv.findTable?`). -/
+def findTable? (env : Env) (T : Name) : Option ProjTable :=
+  if (env.find? T).isSome then env.tables.find? (·.structName == T) else none
+
 /-- Look up the projection-table entry for field `i` of `T`: the
-structure's table (`projTableName T`), viewed at field `i` (task #175
-S1; `none` beyond the table's field count). -/
+structure's table, viewed at field `i` (task #175 S1; `none` beyond the
+table's field count). -/
 def findProj? (env : Env) (T : Name) (i : Nat) : Option ProjEntry :=
-  match env.find? (projTableName T) with
-  | some (.projInfo tbl) => if i < tbl.numFields then some (tbl.entry i) else none
-  | _ => none
+  match env.findTable? T with
+  | some tbl => if i < tbl.numFields then some (tbl.entry i) else none
+  | none => none
 
 end Env
 

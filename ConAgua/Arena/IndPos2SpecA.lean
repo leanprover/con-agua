@@ -191,7 +191,6 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
       | thmInfo _ => simp [hslice?]
       | ctorInfo _ _ _ => simp [hslice?]
       | recInfo _ _ _ _ => simp [hslice?]
-      | projInfo _ => simp [hslice?]
 
 /-- `nat?` reads inside the array. -/
 theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? a i = some k) : i < a.size := by

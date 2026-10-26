@@ -56,13 +56,10 @@ The two clauses that carry the type theory:
   `piV`/`lamV` look at nothing else.
 * **Projections read a pair chain.**  A structure value is a
   right-nested pair chain; `field i p` is its `i`-th component
-  (`sfst ∘ ssnd^i`).  When the environment holds a projection table
-  for the structure (`env.findProj?`, every structure installed
-  natively), field `i` sits at position `i + entry.off` of the chain
-  (`off` records where field `0` sits: the chain may start with a
-  constructor tag).  Without a table only the two fields `0`/`1` of a
-  bare pair denote, by `sfst`/`ssnd` — the pinned pair the checker's
-  own inductive models are built from.
+  (`sfst ∘ ssnd^i`).  The chain starts with the constructor's tag, so
+  field `i` of a structure (one with a projection table,
+  `env.findProj?`) sits at position `i + 1`.  A projection from
+  anything without a table denotes nothing.
 
 A universe level denotes a natural (`Level.eval φ u`, the ordinary
 evaluation with `imax u 0 = 0`), and `Sort u` denotes `univ u`, the
@@ -162,18 +159,10 @@ inductive Denotes (cval : Name → (LevelParam → Nat) → V) (env : Env) (φ :
       (hv : Denotes cval env φ ρ v Y) (hb : Denotes cval env φ (push Y ρ) body X) :
       Denotes cval env φ ρ (.letE ty v body) X
   /-- a projection at a stored table reads the field's position in the
-  pair chain -/
+  pair chain, behind the tag -/
   | proj_table {ρ : BVarIdx → V} {T : Name} {i : Nat} {e : Expr} {entry : ProjEntry} {P : V}
       (ht : env.findProj? T i = some entry) (he : Denotes cval env φ ρ e P) :
-      Denotes cval env φ ρ (.proj T i e) (field (i + entry.off) P)
-  /-- field `0` of a bare pair -/
-  | proj_fst {ρ : BVarIdx → V} {T : Name} {e : Expr} {P : V}
-      (ht : env.findProj? T 0 = none) (he : Denotes cval env φ ρ e P) :
-      Denotes cval env φ ρ (.proj T 0 e) (sfst P)
-  /-- field `1` of a bare pair -/
-  | proj_snd {ρ : BVarIdx → V} {T : Name} {e : Expr} {P : V}
-      (ht : env.findProj? T 1 = none) (he : Denotes cval env φ ρ e P) :
-      Denotes cval env φ ρ (.proj T 1 e) (ssnd P)
+      Denotes cval env φ ρ (.proj T i e) (field (i + 1) P)
   /-- a `Nat` literal denotes what its constructor form denotes -/
   | natLit {ρ : BVarIdx → V} {n : Nat} {X : V}
       (h : Denotes cval env φ ρ (natLitToConstructor n) X) :
@@ -217,19 +206,9 @@ theorem Denotes_functional {V : Type w} [SetTheory V]
     | letE hv' hb' =>
       obtain rfl := ihv hv'
       exact ihb hb'
-  | proj_table ht _ ih =>
+  | proj_table _ _ ih =>
     cases hw with
-    | proj_table ht' he' => rw [ht] at ht'; cases ht'; rw [ih he']
-    | proj_fst ht' _ => rw [ht] at ht'; exact nomatch ht'
-    | proj_snd ht' _ => rw [ht] at ht'; exact nomatch ht'
-  | proj_fst ht _ ih =>
-    cases hw with
-    | proj_table ht' _ => rw [ht] at ht'; exact nomatch ht'
-    | proj_fst _ he' => rw [ih he']
-  | proj_snd ht _ ih =>
-    cases hw with
-    | proj_table ht' _ => rw [ht] at ht'; exact nomatch ht'
-    | proj_snd _ he' => rw [ih he']
+    | proj_table _ he' => rw [ih he']
   | natLit _ ih =>
     cases hw with
     | natLit h' => exact ih h'

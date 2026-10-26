@@ -20,15 +20,14 @@ The twin's structural-`Nat` gate (`Core.lean`: `natOpNames`, `natDivModNames`, `
   records `[hyps.off, hyps.len, eq]`.
 * `CertCtxA` is a 21-word `IW` record, the fields in the twin's order: `natTy, x, y, one, bleN,
   boolTy, bT, bF, z, two, modN, divN, addN, mulN, subN, gcdN, slN, srN, landN, lorN, xorN`.
-* **A pin variant** (`INatOpPinSet`, the ROM's, lane lead) is an `EREC` record of 24 words: the
+* **A pin variant** (`INatOpPinSet`, the ROM's, lane lead) is an `EREC` record of 40 words: the
   eight pins `divPin, modPin, gcdPin, landPin, lorPin, xorPin, shiftLeftPin, shiftRightPin`, then
-  the eight proof lists as `EREC` slices `(off, len)` in the same order (`toolchain` is only in
-  the decline message, not kept). The variant list is the `IW` slice `rom_pin_sets()` returns.
-* **No recovery** (L recovers nowhere): the twin's `orElseAttempt` resumes after an error inside one
-  variant's attempt (`checkDivModPinAt`) and tries the next variant; L aborts there, with the class
-  bits of a reject or decline cleared (`ATT`, `Arena/Globals.lean`). That is an error where the twin may still accept through a later variant: a completeness loss, never a
-  soundness one. With the ROM's empty variant list (`romPins = []`) the loop declines at once in
-  both.
+  the eight proof lists as `EREC` slices `(off, len)` in the same order, then the eight type-pin
+  lists `divTypePins … shiftRightTypePins` as `EREC` slices `(off, len)` of `len` pairs (the
+  name at `off + 2i`, the type at `off + 2i + 1`) (`toolchain` is only in the decline message,
+  not kept). The variant list is the `IW` slice `rom_pin_sets()` returns.
+* Every step of the variant loop is a boolean decision, as the twin's: an error inside an attempt
+  is the run's error in both.
 -/
 
 namespace L.Ind
@@ -569,7 +568,7 @@ def substConstAllL : FunDecl := lfn (n, r, fuel, h) locals (t, x, y, z, el, a, b
 }
 
 /-- `subst_const0_pairs(n, r, o, l)`: both sides of every equation, then the rest. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:699-707 ConRon.Arena.substConst0Pairs
+-- con-ron: ConRon/Arena/DeclCheck.lean:771-779 ConRon.Arena.substConst0Pairs
 @[l_impl ConRon.Arena.substConst0Pairs]
 def substConst0PairsL : FunDecl := lfn (n, r, o, l) locals (p, a, b, q, ro, rl, so, sl) {
   if l == 0 { return (0, 0) };
@@ -583,7 +582,7 @@ def substConst0PairsL : FunDecl := lfn (n, r, o, l) locals (p, a, b, q, ro, rl, 
 }
 
 /-- `certify_nat_eqs(vis, o, l)`: every equation by definitional equality at depth 2. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:688-697 ConRon.Arena.certifyNatEqs
+-- con-ron: ConRon/Arena/DeclCheck.lean:760-769 ConRon.Arena.certifyNatEqs
 @[l_impl ConRon.Arena.certifyNatEqs]
 def certifyNatEqsL : FunDecl := lfn (vis, o, l) locals (p, e) {
   if l == 0 { return 1 };
@@ -619,6 +618,28 @@ def divModDeclPinL : FunDecl := lfn (ps, c) locals (j) {
   return EREC.u64[ps + j]
 }
 
+/-- `div_mod_type_pins(ps, c)`: the variant's type pins of op `c`, the `EREC` slice of pairs. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:193-205 ConRon.Arena.divModTypePins
+@[l_impl ConRon.Arena.divModTypePins]
+def divModTypePinsL : FunDecl := lfn (ps, c) locals (j) {
+  j := call div_mod_slot(c);
+  return (EREC.u64[ps + 24 + 2 * j], EREC.u64[ps + 25 + 2 * j])
+}
+
+/-- `type_pin_stored(vis, n)`: the stored type of `n`, or `Sort 0` when `n` is absent. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:207-216 ConRon.Arena.typePinStored
+@[l_impl ConRon.Arena.typePinStored]
+def typePinStoredL : FunDecl := lfn (vis, n) locals (f, r, q, z, s) {
+  (f, r) := call env_find(n, vis);
+  if f == 0 {
+    z := call pin_word(53);
+    s := call intern_sort(z);
+    return s
+  };
+  q := call ci_to_cv(r);
+  return EREC.u64[q + 3]
+}
+
 /-- `div_mod_cert_proofs(ps, c)`: the variant's certificate proofs of op `c`, copied into `IW`. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:180-191 ConRon.Arena.divModCertProofs
 @[l_impl ConRon.Arena.divModCertProofs]
@@ -631,7 +652,7 @@ def divModCertProofsL : FunDecl := lfn (ps, c) locals (j, o, l) {
 /-! ## The pinned characterization statements -/
 
 /-- `eq_at1(ty, a, b)`: `Eq.{1} ty a b`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:200-210 ConRon.Arena.eqAt1
+-- con-ron: ConRon/Arena/DeclCheck.lean:225-235 ConRon.Arena.eqAt1
 @[l_impl ConRon.Arena.eqAt1]
 def eqAt1L : FunDecl := lfn (ty, a, b) locals (z, one, o, l, us, en, e, e1, e2, r) {
   z := call pin_word(53);
@@ -647,7 +668,7 @@ def eqAt1L : FunDecl := lfn (ty, a, b) locals (z, one, o, l, us, en, e, e1, e2, 
 }
 
 /-- `nat_one()`: `Nat.succ Nat.zero`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:212-217 ConRon.Arena.natOne
+-- con-ron: ConRon/Arena/DeclCheck.lean:237-242 ConRon.Arena.natOne
 @[l_impl ConRon.Arena.natOne]
 def natOneL : FunDecl := lfn () locals (s, z, cz, r) {
   s := call pin_at(3);
@@ -658,7 +679,7 @@ def natOneL : FunDecl := lfn () locals (s, z, cz, r) {
 }
 
 /-- `nat_var(i)`: `fvar i Nat`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:219-223 ConRon.Arena.natVar
+-- con-ron: ConRon/Arena/DeclCheck.lean:244-248 ConRon.Arena.natVar
 @[l_impl ConRon.Arena.natVar]
 def natVarL : FunDecl := lfn (i) locals (nt, c, r) {
   nt := call pin_at(1);
@@ -671,7 +692,7 @@ def natVarL : FunDecl := lfn (i) locals (nt, c, r) {
 `1‥3`, `7‥14`) into `IW[q + 10 ‥ q + 20]`, the last eleven words of the context record. All eleven are
 read before any is written (lane `decls3-divmod`: the refinement proof then needs no aliasing facts
 between the two records, and `cert_ctx` stays short enough for one `vcgen` run). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:253-280 ConRon.Arena.certCtx
+-- con-ron: ConRon/Arena/DeclCheck.lean:278-305 ConRon.Arena.certCtx
 def certCtxPinsL : FunDecl :=
     lfn (q, pi) locals (w10, w11, w12, w13, w14, w15, w16, w17, w18, w19, w20) {
   w10 := IW.u64[pi + 8]; w11 := IW.u64[pi + 7]; w12 := IW.u64[pi + 1]; w13 := IW.u64[pi + 3];
@@ -685,7 +706,7 @@ def certCtxPinsL : FunDecl :=
 
 /-- `cert_ctx_main(q, natTy, x, y, one, bleN, boolTy, bT, bF, z, two)`: the first ten words of the
 context record at `q`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:253-280 ConRon.Arena.certCtx
+-- con-ron: ConRon/Arena/DeclCheck.lean:278-305 ConRon.Arena.certCtx
 def certCtxMainL : FunDecl :=
     lfn (q, natTy, x, y, one, bleN, boolTy, bT, bF, z, two) {
   IW.u64[q] := natTy; IW.u64[q + 1] := x; IW.u64[q + 2] := y; IW.u64[q + 3] := one;
@@ -697,7 +718,7 @@ def certCtxMainL : FunDecl :=
 /-- `cert_ctx()`: the 21 pinned handles, a fresh `IW` record (the module doc's layout), built in
 the twin's order (the first ten words are written by `cert_ctx_main`, the last eleven, the
 operation names, copied by `cert_ctx_pins`). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:253-280 ConRon.Arena.certCtx
+-- con-ron: ConRon/Arena/DeclCheck.lean:278-305 ConRon.Arena.certCtx
 @[l_impl ConRon.Arena.certCtx]
 def certCtxL : FunDecl :=
     lfn () locals (pi, nt, natTy, x, y, one, bleN, bn, boolTy, u, bT, bF, z, s, two, q) {
@@ -725,7 +746,7 @@ def certCtxL : FunDecl :=
 }
 
 /-- `cert_guard(cx, a, b, r)`: `Nat.ble a b = r`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:282-285 ConRon.Arena.certGuard
+-- con-ron: ConRon/Arena/DeclCheck.lean:307-310 ConRon.Arena.certGuard
 @[l_impl ConRon.Arena.certGuard]
 def certGuardL : FunDecl := lfn (cx, a, b, r) locals (t, e) {
   t := call nat_ap2(IW.u64[cx + 4], a, b);
@@ -734,7 +755,7 @@ def certGuardL : FunDecl := lfn (cx, a, b, r) locals (t, e) {
 }
 
 /-- `cert_eq(cx, c, rhs)`: `c x y = rhs` (the left side interned after the right one). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:287-291 ConRon.Arena.certEq
+-- con-ron: ConRon/Arena/DeclCheck.lean:312-316 ConRon.Arena.certEq
 @[l_impl ConRon.Arena.certEq]
 def certEqL : FunDecl := lfn (cx, c, rhs) locals (t, e) {
   t := call nat_ap2(c, IW.u64[cx + 1], IW.u64[cx + 2]);
@@ -743,7 +764,7 @@ def certEqL : FunDecl := lfn (cx, c, rhs) locals (t, e) {
 }
 
 /-- `cert_halves(cx, c)`: `c (x / 2) (y / 2)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:293-298 ConRon.Arena.certHalves
+-- con-ron: ConRon/Arena/DeclCheck.lean:318-323 ConRon.Arena.certHalves
 @[l_impl ConRon.Arena.certHalves]
 def certHalvesL : FunDecl := lfn (cx, c) locals (hx, hy, r) {
   hx := call nat_ap2(IW.u64[cx + 11], IW.u64[cx + 1], IW.u64[cx + 9]);
@@ -753,7 +774,7 @@ def certHalvesL : FunDecl := lfn (cx, c) locals (hx, hy, r) {
 }
 
 /-- `stmt1(h, e)`: the statement record `[[h], e]` (one hypothesis). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:300-306 ConRon.Arena.certTwoEqs
+-- con-ron: ConRon/Arena/DeclCheck.lean:325-331 ConRon.Arena.certTwoEqs
 def stmt1 : FunDecl := lfn (h, e) locals (o, l, s) {
   (o, l) := call sl_new1(h);
   s := call rec3(o, l, e);
@@ -761,7 +782,7 @@ def stmt1 : FunDecl := lfn (h, e) locals (o, l, s) {
 }
 
 /-- `cert_two_eqs(cx, c, h1, h2, r1, r2)`: `[([h1], c x y = r1), ([h2], c x y = r2)]`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:300-306 ConRon.Arena.certTwoEqs
+-- con-ron: ConRon/Arena/DeclCheck.lean:325-331 ConRon.Arena.certTwoEqs
 @[l_impl ConRon.Arena.certTwoEqs]
 def certTwoEqsL : FunDecl := lfn (cx, c, h1, h2, r1, r2) locals (e1, e2, s1, s2, q) {
   e1 := call cert_eq(cx, c, r1);
@@ -773,7 +794,7 @@ def certTwoEqsL : FunDecl := lfn (cx, c, h1, h2, r1, r2) locals (e1, e2, s1, s2,
 }
 
 /-- `cert_gcd(cx, c)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:308-314 ConRon.Arena.certGcd
+-- con-ron: ConRon/Arena/DeclCheck.lean:333-339 ConRon.Arena.certGcd
 @[l_impl ConRon.Arena.certGcd]
 def certGcdL : FunDecl := lfn (cx, c) locals (h1, h2, m, r1, o, l) {
   h1 := call cert_guard(cx, IW.u64[cx + 3], IW.u64[cx + 1], IW.u64[cx + 6]);
@@ -785,7 +806,7 @@ def certGcdL : FunDecl := lfn (cx, c) locals (h1, h2, m, r1, o, l) {
 }
 
 /-- `cert_shift_left(cx, c)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:316-322 ConRon.Arena.certShiftLeft
+-- con-ron: ConRon/Arena/DeclCheck.lean:341-347 ConRon.Arena.certShiftLeft
 @[l_impl ConRon.Arena.certShiftLeft]
 def certShiftLeftL : FunDecl := lfn (cx, c) locals (h1, h2, a, b, r1, o, l) {
   h1 := call cert_guard(cx, IW.u64[cx + 3], IW.u64[cx + 2], IW.u64[cx + 6]);
@@ -798,7 +819,7 @@ def certShiftLeftL : FunDecl := lfn (cx, c) locals (h1, h2, a, b, r1, o, l) {
 }
 
 /-- `cert_shift_right(cx, c)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:324-330 ConRon.Arena.certShiftRight
+-- con-ron: ConRon/Arena/DeclCheck.lean:349-355 ConRon.Arena.certShiftRight
 @[l_impl ConRon.Arena.certShiftRight]
 def certShiftRightL : FunDecl := lfn (cx, c) locals (h1, h2, a, b, r1, o, l) {
   h1 := call cert_guard(cx, IW.u64[cx + 3], IW.u64[cx + 2], IW.u64[cx + 6]);
@@ -811,7 +832,7 @@ def certShiftRightL : FunDecl := lfn (cx, c) locals (h1, h2, a, b, r1, o, l) {
 }
 
 /-- `cert_land(cx, c)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:332-341 ConRon.Arena.certLand
+-- con-ron: ConRon/Arena/DeclCheck.lean:357-366 ConRon.Arena.certLand
 @[l_impl ConRon.Arena.certLand]
 def certLandL : FunDecl := lfn (cx, c) locals (h1, h2, rc, a, mx, my, b, r1, o, l) {
   h1 := call cert_guard(cx, IW.u64[cx + 3], IW.u64[cx + 1], IW.u64[cx + 6]);
@@ -827,7 +848,7 @@ def certLandL : FunDecl := lfn (cx, c) locals (h1, h2, rc, a, mx, my, b, r1, o, 
 }
 
 /-- `cert_lor_rhs(cx, c)`: `2*((x/2) ||| (y/2)) + (x%2 + y%2 - (x%2)*(y%2))`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:343-351 ConRon.Arena.certLorRhs
+-- con-ron: ConRon/Arena/DeclCheck.lean:368-376 ConRon.Arena.certLorRhs
 @[l_impl ConRon.Arena.certLorRhs]
 def certLorRhsL : FunDecl := lfn (cx, c) locals (rc, t2, mx, my, a, b, d, r) {
   rc := call cert_halves(cx, c);
@@ -842,7 +863,7 @@ def certLorRhsL : FunDecl := lfn (cx, c) locals (rc, t2, mx, my, a, b, d, r) {
 }
 
 /-- `cert_lor(cx, c)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:353-359 ConRon.Arena.certLor
+-- con-ron: ConRon/Arena/DeclCheck.lean:378-384 ConRon.Arena.certLor
 @[l_impl ConRon.Arena.certLor]
 def certLorL : FunDecl := lfn (cx, c) locals (h1, h2, r1, o, l) {
   h1 := call cert_guard(cx, IW.u64[cx + 3], IW.u64[cx + 1], IW.u64[cx + 6]);
@@ -853,7 +874,7 @@ def certLorL : FunDecl := lfn (cx, c) locals (h1, h2, r1, o, l) {
 }
 
 /-- `cert_xor_rhs(cx, c)`: `2*((x/2) ^^^ (y/2)) + (x%2 + y%2) % 2`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:361-368 ConRon.Arena.certXorRhs
+-- con-ron: ConRon/Arena/DeclCheck.lean:386-393 ConRon.Arena.certXorRhs
 @[l_impl ConRon.Arena.certXorRhs]
 def certXorRhsL : FunDecl := lfn (cx, c) locals (rc, t2, mx, my, a, d, r) {
   rc := call cert_halves(cx, c);
@@ -867,7 +888,7 @@ def certXorRhsL : FunDecl := lfn (cx, c) locals (rc, t2, mx, my, a, d, r) {
 }
 
 /-- `cert_xor(cx, c)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:370-376 ConRon.Arena.certXor
+-- con-ron: ConRon/Arena/DeclCheck.lean:395-401 ConRon.Arena.certXor
 @[l_impl ConRon.Arena.certXor]
 def certXorL : FunDecl := lfn (cx, c) locals (h1, h2, r1, o, l) {
   h1 := call cert_guard(cx, IW.u64[cx + 3], IW.u64[cx + 1], IW.u64[cx + 6]);
@@ -878,7 +899,7 @@ def certXorL : FunDecl := lfn (cx, c) locals (h1, h2, r1, o, l) {
 }
 
 /-- `cert_rec_rhs(cx, c)`: `c (x - y) y`, under `Nat.succ` for `div`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:378-385 ConRon.Arena.certRecRhs
+-- con-ron: ConRon/Arena/DeclCheck.lean:403-410 ConRon.Arena.certRecRhs
 @[l_impl ConRon.Arena.certRecRhs]
 def certRecRhsL : FunDecl := lfn (cx, c) locals (d, st, s, r) {
   d := call nat_ap2(IW.u64[cx + 14], IW.u64[cx + 1], IW.u64[cx + 2]);
@@ -893,7 +914,7 @@ def certRecRhsL : FunDecl := lfn (cx, c) locals (d, st, s, r) {
 
 /-- `cert_div_mod_eqs(cx, c, h1, h2, h3, h4, recRhs, baseRhs)`:
 `[([h1, h2], c x y = recRhs), ([h3], c x y = baseRhs), ([h4], c x y = baseRhs)]`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:387-393 ConRon.Arena.certDivModEqs
+-- con-ron: ConRon/Arena/DeclCheck.lean:412-418 ConRon.Arena.certDivModEqs
 @[l_impl ConRon.Arena.certDivModEqs]
 def certDivModEqsL : FunDecl :=
     lfn (cx, c, h1, h2, h3, h4, recRhs, baseRhs) locals (e1, e2, o, s1, s2, s3, q) {
@@ -908,7 +929,7 @@ def certDivModEqsL : FunDecl :=
 }
 
 /-- `cert_div_mod_guards(cx, c, recRhs, baseRhs)`: the four guards, then the three statements. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:395-403 ConRon.Arena.certDivModGuards
+-- con-ron: ConRon/Arena/DeclCheck.lean:420-428 ConRon.Arena.certDivModGuards
 @[l_impl ConRon.Arena.certDivModGuards]
 def certDivModGuardsL : FunDecl := lfn (cx, c, recRhs, baseRhs) locals (h1, h2, h3, h4, o, l) {
   h1 := call cert_guard(cx, IW.u64[cx + 2], IW.u64[cx + 1], IW.u64[cx + 6]);
@@ -920,7 +941,7 @@ def certDivModGuardsL : FunDecl := lfn (cx, c, recRhs, baseRhs) locals (h1, h2, 
 }
 
 /-- `cert_div_mod(cx, c)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:405-410 ConRon.Arena.certDivMod
+-- con-ron: ConRon/Arena/DeclCheck.lean:430-435 ConRon.Arena.certDivMod
 @[l_impl ConRon.Arena.certDivMod]
 def certDivModL : FunDecl := lfn (cx, c) locals (rr, b, o, l) {
   rr := call cert_rec_rhs(cx, c);
@@ -931,7 +952,7 @@ def certDivModL : FunDecl := lfn (cx, c) locals (rr, b, o, l) {
 }
 
 /-- `div_mod_cert_stmts_at(cx, c)`: the seven-way dispatch. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:412-422 ConRon.Arena.divModCertStmtsAt
+-- con-ron: ConRon/Arena/DeclCheck.lean:437-447 ConRon.Arena.divModCertStmtsAt
 @[l_impl ConRon.Arena.divModCertStmtsAt]
 def divModCertStmtsAtL : FunDecl := lfn (cx, c) locals (o, l) {
   if c == IW.u64[cx + 15] { (o, l) := call cert_gcd(cx, c); return (o, l) };
@@ -945,7 +966,7 @@ def divModCertStmtsAtL : FunDecl := lfn (cx, c) locals (o, l) {
 }
 
 /-- `div_mod_cert_stmts(c)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:424-436 ConRon.Arena.divModCertStmts
+-- con-ron: ConRon/Arena/DeclCheck.lean:449-461 ConRon.Arena.divModCertStmts
 @[l_impl ConRon.Arena.divModCertStmts]
 def divModCertStmtsL : FunDecl := lfn (c) locals (cx, o, l) {
   cx := call cert_ctx();
@@ -955,7 +976,7 @@ def divModCertStmtsL : FunDecl := lfn (c) locals (cx, o, l) {
 
 /-- `div_mod_cert_applied(proofS, ho, hl)`: the proof applied to `x`, `y` and one `fvar` per
 hypothesis (at most two; a longer list stays `proof x y`, as the twin's `_` clause). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:438-456 ConRon.Arena.divModCertApplied
+-- con-ron: ConRon/Arena/DeclCheck.lean:463-481 ConRon.Arena.divModCertApplied
 @[l_impl ConRon.Arena.divModCertApplied]
 def divModCertAppliedL : FunDecl := lfn (proofS, ho, hl) locals (x, y, b1, base, f2, a1, f3, r) {
   x := call nat_var(0);
@@ -978,7 +999,7 @@ def divModCertAppliedL : FunDecl := lfn (proofS, ho, hl) locals (x, y, b1, base,
 }
 
 /-- `subst_const0_list(n, r, o, l)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:458-465 ConRon.Arena.substConst0List
+-- con-ron: ConRon/Arena/DeclCheck.lean:483-490 ConRon.Arena.substConst0List
 @[l_impl ConRon.Arena.substConst0List]
 def substConst0ListL : FunDecl := lfn (n, r, o, l) locals (h, ro, rl, so, sl) {
   if l == 0 { return (0, 0) };
@@ -989,7 +1010,7 @@ def substConst0ListL : FunDecl := lfn (n, r, o, l) locals (h, ro, rl, so, sl) {
 }
 
 /-- `consts_resolve_all(vis, o, l)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:467-472 ConRon.Arena.constsResolveAll
+-- con-ron: ConRon/Arena/DeclCheck.lean:492-497 ConRon.Arena.constsResolveAll
 @[l_impl ConRon.Arena.constsResolveAll]
 def constsResolveAllL : FunDecl := lfn (vis, o, l) locals (e) {
   if l == 0 { return 1 };
@@ -1003,7 +1024,7 @@ def constsResolveAllL : FunDecl := lfn (vis, o, l) locals (e) {
 
 /-- `div_mod_cert_guard(vis, c, annVal, ho, hl, eqE, proof)`: the syntactic guards of one
 certificate. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:474-488 ConRon.Arena.divModCertGuard
+-- con-ron: ConRon/Arena/DeclCheck.lean:499-513 ConRon.Arena.divModCertGuard
 @[l_impl ConRon.Arena.divModCertGuard]
 def divModCertGuardL : FunDecl := lfn (vis, c, annVal, ho, hl, eqE, proof) locals (p, b, so, sl, e) {
   p := call subst_const_all(c, annVal, 4000000000, proof);
@@ -1025,7 +1046,7 @@ def divModCertGuardL : FunDecl := lfn (vis, c, annVal, ho, hl, eqE, proof) local
 
 /-- `bool_ctor_typed(vis2, n)`: `n` is stored at the type `Bool` itself (the lookup, then the
 stored type, then `Bool` interned). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:490-503 ConRon.Arena.boolCtorTyped
+-- con-ron: ConRon/Arena/DeclCheck.lean:515-528 ConRon.Arena.boolCtorTyped
 @[l_impl ConRon.Arena.boolCtorTyped]
 def boolCtorTypedL : FunDecl := lfn (vis2, n) locals (f, r, q, bn, bt) {
   (f, r) := call env_find(n, vis2);
@@ -1038,7 +1059,7 @@ def boolCtorTypedL : FunDecl := lfn (vis2, n) locals (f, r, q, bn, bt) {
 
 /-- `div_mod_env_guard(vis2, c)`: the dependency guard, the pinned dependencies, the pinned `Eq`
 basis, the `Bool` constructors at `Bool`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:505-517 ConRon.Arena.divModEnvGuard
+-- con-ron: ConRon/Arena/DeclCheck.lean:530-542 ConRon.Arena.divModEnvGuard
 @[l_impl ConRon.Arena.divModEnvGuard]
 def divModEnvGuardL : FunDecl := lfn (vis2, c) locals (g, o, l, en, ea, e, n) {
   g := call nat_op_guard(vis2, c);
@@ -1058,11 +1079,10 @@ def divModEnvGuardL : FunDecl := lfn (vis2, c) locals (g, o, l, en, ea, e, n) {
   return e
 }
 
-/-- `div_mod_pin_guard(ps, vis, c)`: the syntactic guards on the variant's pin. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:519-528 ConRon.Arena.divModPinGuard
-@[l_impl ConRon.Arena.divModPinGuard]
-def divModPinGuardL : FunDecl := lfn (ps, vis, c) locals (p, b) {
-  p := call div_mod_decl_pin(ps, c);
+/-- `ground_guards(vis, p)`: the pin closed, free-variable-free, level-monomorphic, resolving. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:544-552 ConRon.Arena.groundGuards
+@[l_impl ConRon.Arena.groundGuards]
+def groundGuardsL : FunDecl := lfn (vis, p) locals (b) {
   b := call loose_bvars_bounded_fast(4000000000, 0, p);
   if b == 0 { return 0 };
   b := call has_fvar_fast(4000000000, p);
@@ -1073,9 +1093,51 @@ def divModPinGuardL : FunDecl := lfn (ps, vis, c) locals (p, b) {
   return b
 }
 
+/-- `type_pin_guard(vis, n, ty)`: `n` stored with a stored type free of free variables; `ty`
+closed, free of free variables and resolving. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:554-565 ConRon.Arena.typePinGuard
+@[l_impl ConRon.Arena.typePinGuard]
+def typePinGuardL : FunDecl := lfn (vis, n, ty) locals (f, r, st, b) {
+  (f, r) := call env_find(n, vis);
+  if f == 0 { return 0 };
+  st := call type_pin_stored(vis, n);
+  b := call has_fvar_fast(4000000000, st);
+  if b != 0 { return 0 };
+  b := call loose_bvars_bounded_fast(4000000000, 0, ty);
+  if b == 0 { return 0 };
+  b := call has_fvar_fast(4000000000, ty);
+  if b != 0 { return 0 };
+  b := call consts_resolve_ffast(vis, ty);
+  return b
+}
+
+/-- `type_pins_guard(vis, o, l)`: `type_pin_guard` on each pair of the `EREC` slice. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:567-575 ConRon.Arena.typePinsGuard
+@[l_impl ConRon.Arena.typePinsGuard]
+def typePinsGuardL : FunDecl := lfn (vis, o, l) locals (e) {
+  if l == 0 { return 1 };
+  e := call type_pin_guard(vis, EREC.u64[o], EREC.u64[o + 1]);
+  if e == 0 { return 0 };
+  e := call type_pins_guard(vis, o + 2, l - 1);
+  return e
+}
+
+/-- `div_mod_pin_guard(ps, vis, c)`: the ground guards on the variant's pin, then its type pins'
+guards. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:577-586 ConRon.Arena.divModPinGuard
+@[l_impl ConRon.Arena.divModPinGuard]
+def divModPinGuardL : FunDecl := lfn (ps, vis, c) locals (p, b, o, l) {
+  p := call div_mod_decl_pin(ps, c);
+  b := call ground_guards(vis, p);
+  if b == 0 { return 0 };
+  (o, l) := call div_mod_type_pins(ps, c);
+  b := call type_pins_guard(vis, o, l);
+  return b
+}
+
 /-- `div_mod_certs_guard_go(vis, c, annVal, so, sl, po, pl)`: the statements zipped with the
 proofs (the shorter list ends it, `true`). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:530-542 ConRon.Arena.divModCertsGuardGo
+-- con-ron: ConRon/Arena/DeclCheck.lean:588-600 ConRon.Arena.divModCertsGuardGo
 @[l_impl ConRon.Arena.divModCertsGuardGo]
 def divModCertsGuardGoL : FunDecl := lfn (vis, c, annVal, so, sl, po, pl) locals (s, e) {
   if sl == 0 || pl == 0 { return 1 };
@@ -1088,7 +1150,7 @@ def divModCertsGuardGoL : FunDecl := lfn (vis, c, annVal, so, sl, po, pl) locals
 }
 
 /-- `div_mod_certs_guard(ps, vis, c, annVal)`: the statements, then the proofs, then the zip. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:544-550 ConRon.Arena.divModCertsGuard
+-- con-ron: ConRon/Arena/DeclCheck.lean:602-608 ConRon.Arena.divModCertsGuard
 @[l_impl ConRon.Arena.divModCertsGuard]
 def divModCertsGuardL : FunDecl := lfn (ps, vis, c, annVal) locals (so, sl, po, pl, e) {
   (so, sl) := call div_mod_cert_stmts(c);
@@ -1102,7 +1164,7 @@ def divModCertsGuardL : FunDecl := lfn (ps, vis, c, annVal) locals (so, sl, po, 
 /-- `check_div_mod_certs(vis, c, annVal, so, sl, po, pl)`: per certificate, the guards, the
 substituted proof applied, its type inferred and compared with the substituted equation (depth
 `4`); the two lists must end together. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:552-573 ConRon.Arena.checkDivModCerts
+-- con-ron: ConRon/Arena/DeclCheck.lean:610-631 ConRon.Arena.checkDivModCerts
 @[l_impl ConRon.Arena.checkDivModCerts]
 def checkDivModCertsL : FunDecl :=
     lfn (vis, c, annVal, so, sl, po, pl) locals (s, g, p, ho, hl, ap, tp, rhs, d) {
@@ -1123,11 +1185,24 @@ def checkDivModCertsL : FunDecl :=
   return d
 }
 
-/-- `check_div_mod_pin_at(vis, c, value, ps)`: one variant's attempt: the stored value against
-the variant's pin, then (on a match) its certificates. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:575-589 ConRon.Arena.checkDivModPinAt
-@[l_impl ConRon.Arena.checkDivModPinAt]
-def checkDivModPinAtL : FunDecl := lfn (vis, c, value, ps) locals (pa, ok, so, sl, po, pl, r) {
+/-- `check_type_pins(vis, o, l)`: each pair's stored type against its pinned type, by
+definitional equality. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:633-642 ConRon.Arena.checkTypePins
+@[l_impl ConRon.Arena.checkTypePins]
+def checkTypePinsL : FunDecl := lfn (vis, o, l) locals (st, d) {
+  if l == 0 { return 1 };
+  st := call type_pin_stored(vis, EREC.u64[o]);
+  d := call is_def_eq_core(vis, 0, st, EREC.u64[o + 1]);
+  if d == 0 { return 0 };
+  d := call check_type_pins(vis, o + 2, l - 1);
+  return d
+}
+
+/-- `check_div_mod_pin_value(vis, c, value, ps)`: the stored value against the variant's pin,
+then (on a match) its certificates. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:644-655 ConRon.Arena.checkDivModPinValue
+@[l_impl ConRon.Arena.checkDivModPinValue]
+def checkDivModPinValueL : FunDecl := lfn (vis, c, value, ps) locals (pa, ok, so, sl, po, pl, r) {
   pa := call div_mod_decl_pin(ps, c);
   ok := call is_def_eq_core(vis, 0, value, pa);
   if ok == 0 { return 0 };
@@ -1137,23 +1212,34 @@ def checkDivModPinAtL : FunDecl := lfn (vis, c, value, ps) locals (pa, ok, so, s
   return r
 }
 
+/-- `check_div_mod_pin_at(vis, c, value, ps)`: one variant's attempt: its type pins, then the
+value pin and the certificates. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:657-668 ConRon.Arena.checkDivModPinAt
+@[l_impl ConRon.Arena.checkDivModPinAt]
+def checkDivModPinAtL : FunDecl := lfn (vis, c, value, ps) locals (o, l, b, r) {
+  (o, l) := call div_mod_type_pins(ps, c);
+  b := call check_type_pins(vis, o, l);
+  if b == 0 { return 0 };
+  r := call check_div_mod_pin_value(vis, c, value, ps);
+  return r
+}
+
 /-- `check_div_mod_pin_loop(vis, c, value, po, pl)`: the variant loop over the `IW` slice of
-variant records; no variant left declines. **No recovery**: an error inside an attempt aborts
-here, where the twin's `orElseAttempt` restores the state and tries the next variant (the
-module doc); `ATT` is `3` during the attempt, so such an abort claims no class (`fail R`,
-`Arena/Globals.lean`). The `tried` list only feeds the message and is not kept. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:600-632 ConRon.Arena.checkDivModPinLoop
+variant records; no variant left declines. The pin guard, then the certificates' guard, then the
+attempt, each a boolean decision (the guards short-circuit, as the twin's). The `tried` list only
+feeds the message and is not kept. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:676-704 ConRon.Arena.checkDivModPinLoop
 @[l_impl ConRon.Arena.checkDivModPinLoop]
-def checkDivModPinLoopL : FunDecl := lfn (vis, c, value, po, pl) locals (ps, g1, g2, r) {
+def checkDivModPinLoopL : FunDecl := lfn (vis, c, value, po, pl) locals (ps, g, r) {
   if pl == 0 { fail R_UNSUPPORTED_NAT_DIV_MOD };
   ps := IW.u64[po];
-  g1 := call div_mod_pin_guard(ps, vis, c);
-  g2 := call div_mod_certs_guard(ps, vis, c, value);
-  if g1 != 0 && g2 != 0 {
-    L.Arena.ATT := 3;
-    r := call check_div_mod_pin_at(vis, c, value, ps);
-    L.Arena.ATT := 0;
-    if r != 0 { return 0 }
+  g := call div_mod_pin_guard(ps, vis, c);
+  if g != 0 {
+    g := call div_mod_certs_guard(ps, vis, c, value);
+    if g != 0 {
+      r := call check_div_mod_pin_at(vis, c, value, ps);
+      if r != 0 { return 0 }
+    }
   };
   r := call check_div_mod_pin_loop(vis, c, value, po + 1, pl - 1);
   return r
@@ -1161,7 +1247,7 @@ def checkDivModPinLoopL : FunDecl := lfn (vis, c, value, po, pl) locals (ps, g1,
 
 /-- `check_div_mod_pin(po, pl, vis, vis2, c)`: the gate after the definition check (`vis2` the
 extended view, `vis` the pre-insertion one every check runs at). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:634-648 ConRon.Arena.checkDivModPin
+-- con-ron: ConRon/Arena/DeclCheck.lean:706-720 ConRon.Arena.checkDivModPin
 @[l_impl ConRon.Arena.checkDivModPin]
 def checkDivModPinL : FunDecl := lfn (po, pl, vis, vis2, c) locals (g, f, r, z) {
   g := call div_mod_env_guard(vis2, c);
@@ -1190,6 +1276,7 @@ def declArmsNatFns : Prog :=
    ("subst_const0", substConst0L), ("subst_const_all", substConstAllL),
    ("subst_const0_pairs", substConst0PairsL), ("certify_nat_eqs", certifyNatEqsL),
    ("div_mod_slot", divModSlot), ("div_mod_decl_pin", divModDeclPinL),
+   ("div_mod_type_pins", divModTypePinsL), ("type_pin_stored", typePinStoredL),
    ("div_mod_cert_proofs", divModCertProofsL), ("eq_at1", eqAt1L), ("nat_one", natOneL),
    ("nat_var", natVarL), ("cert_ctx_pins", certCtxPinsL), ("cert_ctx_main", certCtxMainL),
    ("cert_ctx", certCtxL), ("cert_guard", certGuardL),
@@ -1203,8 +1290,10 @@ def declArmsNatFns : Prog :=
    ("div_mod_cert_applied", divModCertAppliedL), ("subst_const0_list", substConst0ListL),
    ("consts_resolve_all", constsResolveAllL), ("div_mod_cert_guard", divModCertGuardL),
    ("bool_ctor_typed", boolCtorTypedL), ("div_mod_env_guard", divModEnvGuardL),
-   ("div_mod_pin_guard", divModPinGuardL), ("div_mod_certs_guard_go", divModCertsGuardGoL),
+   ("ground_guards", groundGuardsL), ("type_pin_guard", typePinGuardL),
+   ("type_pins_guard", typePinsGuardL), ("div_mod_pin_guard", divModPinGuardL), ("div_mod_certs_guard_go", divModCertsGuardGoL),
    ("div_mod_certs_guard", divModCertsGuardL), ("check_div_mod_certs", checkDivModCertsL),
+   ("check_type_pins", checkTypePinsL), ("check_div_mod_pin_value", checkDivModPinValueL),
    ("check_div_mod_pin_at", checkDivModPinAtL), ("check_div_mod_pin_loop", checkDivModPinLoopL),
    ("check_div_mod_pin", checkDivModPinL)]
 
@@ -1224,7 +1313,7 @@ value now lives:
   `reduceNatCvA`, `7` `reduceBoolCvA`, `8` `ofReduceNatA`, `9` `ofReduceBoolA`.
 * `rom_expr_pin(id)` → an expression handle: `0` `reduceNatDeclPin`, `1` `reduceBoolDeclPin`.
 * `rom_pin_sets()` → `(off, len)`: the `Nat`-operation pin variants (`checkDecl`'s `pins`), an
-  `IW` slice of `EREC` pointers to 24-word variant records (this module's doc). Empty for the
+  `IW` slice of `EREC` pointers to 40-word variant records (this module's doc). Empty for the
   program's ROM today (`romPins = []`). -/
 def romStubs : Prog :=
   [("rom_basis_decls", stub 1), ("rom_basis_decls_a", stub 1), ("rom_ci", stub 1),

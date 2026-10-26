@@ -76,7 +76,7 @@ def whnfAppW : Stmt := lblk (mode, vis, d, v, hd, vo, vn, same, ao, an, i, top, 
 }
 
 /-- `whnfAppL`, with its loop spliced from `whnfAppW`.
-con-ron: ConRon/Arena/Core.lean:2222-2253 ConRon.Arena.whnfApp -/
+con-ron: ConRon/Arena/Core.lean:2223-2254 ConRon.Arena.whnfApp -/
 def whnfAppL' : FunDecl :=
     lfn (mode, vis, d, v, hd, vo, vn, same, ao, an, i) locals (top, a, node, ap, st, e2, e3, t, x) {
   top := CTL.u64[136];

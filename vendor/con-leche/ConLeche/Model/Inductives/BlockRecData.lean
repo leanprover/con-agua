@@ -1369,7 +1369,7 @@ theorem find?_consBlockRecsR_at {q : BlockShape} :
       · next hh => exact absurd rfl hh
     | succ j =>
       have hrest : ∀ x ∈ rest, (Env.mk (ConstantInfo.recInfo r0.1 (q.majorIdxAt m)
-          (q.rulePrefixAt m) (R m r0) :: env.consts)).find? x.1.name = none := by
+          (q.rulePrefixAt m) (R m r0) :: env.consts) env.tables).find? x.1.name = none := by
         intro x hx
         rw [ConLeche.Env.find?_cons]
         split
@@ -1423,7 +1423,7 @@ theorem blockRecBareModel_run {envC : Env} (hμ : μ.isVerified = true)
   have hL := fun r (hr : r ∈ rs) => hleaf.stored hnd hr
   exact envModelM_consBlockRecsBare (q := p.toBlockShape) (m := 0) mpC
     (by rw [bareOf_map_name]; exact hnd)
-    (hB fun r hr => (hcv r hr).1) (hB fun r hr => (hcv r hr).2.1)
+    (hB fun r hr => (hcv r hr).1) (hB fun r hr => (hcv r hr).2)
     (hB fun r hr =>
       ⟨(hfacts r hr).1, (hfacts r hr).2.1, (hfacts r hr).2.2.1, (hfacts r hr).2.2.2.1⟩)
     (fun n hne => blockRecAcv_of_notin (fun r hr => hne (r.1, r.2.2.1)
@@ -1506,7 +1506,8 @@ theorem blockRuleRhs_read_run {envC : Env} (hμ : μ.isVerified = true)
   have hcross : ∀ (ψ : Name → Nat) (e : Expr),
       denote m₃.acval (consBlockRecsBare p.toBlockShape 0 (bareOf rs) envC) ψ 0 e
         = denote m₃.acval (ConLeche.consBlockRecsR R p.toBlockShape 0 rs envC) ψ 0 e :=
-    fun ψ e => denote_swap (ConLeche.SwapShList.congr hsw) ψ 0 e
+    fun ψ e => denote_swap (ConLeche.SwapShList.congrEnv hsw (by
+      rw [ConLeche.consBlockRecsR_tables, ConLeche.consBlockRecsBare_tables])) ψ 0 e
   have hone : ∀ ψ : Name → Nat, ∃ Ra : Term,
       denote m₃.acval (ConLeche.consBlockRecsR R p.toBlockShape 0 rs envC) ψ 0 rhsA
           = some Ra ∧ ∀ ρ : Nat → V, WellDenoted V ρ Ra := by
@@ -1580,7 +1581,7 @@ theorem blockRecDenote_cross {mpC : EnvModelM V μ envC}
   have hcv := recStage_cvFacts h
   rw [hac]
   refine denote_consBlockRecsR_mono (fun r hr => (hcv r hr).1)
-    (fun r hr => (hcv r hr).2.2.1) (fun n hne => ?_) ψ d e hcb hread
+    (fun n hne => ?_) ψ d e hcb hread
   refine blockRecAcvOf_of_ne (fun m hm => ?_)
   obtain ⟨r, hr, rfl⟩ := List.mem_map.mp hm
   exact hne r hr
@@ -1612,8 +1613,8 @@ CONSED reading — the rule's λ-tower is read there, because the
 right-hand side mentions the recursors by design — needs the other
 direction too, and it is free: `denote_envExtend` is an equation
 under `ConstsBound env₀`, and the run supplies both of its remaining
-premises (`recStage_cvFacts` for the freshness and the
-projection shape, `recStage_reserved` for the two literal
+premises (`recStage_cvFacts` for the freshness,
+`recStage_reserved` for the two literal
 guards, which is exactly the NAME check `blockRecStaged_of` names for
 the same reason).
 
@@ -1634,8 +1635,7 @@ theorem blockRecDenote_cross_eq {mpC : EnvModelM V μ envC}
       (fun {n} {ci} hf => hkeep n ci hf)
       ⟨(ConLeche.natLitSupported_consBlockRecsR hres).symm,
         (ConLeche.strLitSupported_consBlockRecsR hres).symm⟩
-      (fun sn i hs => by
-        rw [findProj?_consBlockRecsR (fun r hr => (hcv r hr).2.2.1)]; exact hs) d e hcb]
+      (findProj?_consBlockRecsR mpC.base2.wf (fun r hr => (hcv r hr).1)) d e hcb]
   refine denote_acval_congr (fun n hn => ?_) d e
   refine (blockRecAcvOf_of_ne (fun m hm => ?_)).symm
   obtain ⟨r, hr, rfl⟩ := List.mem_map.mp hm

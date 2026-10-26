@@ -354,7 +354,7 @@ grind_pattern [conleche_grind] wscoped_fvar_ty => Expr.WScoped d (.fvar idx ty)
 /-- A stored constant's type is closed. -/
 theorem EnvWF.constTy_closed (henv : EnvWF env) {n : Name} {ci : ConstantInfo}
     (h : env.find? n = some ci) : ci.toConstantVal.type.hasFvar = false :=
-  (henv _ (Env.find?_mem h)).1
+  (henv.consts _ (Env.find?_mem h)).1
 
 /-- A projection's type is well scoped at its subject's scope. -/
 theorem wscoped_typeAt (henv : EnvWF env) {T : Name} {i : Nat} {entry : ProjEntry}

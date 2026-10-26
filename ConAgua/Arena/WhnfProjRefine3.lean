@@ -28,7 +28,7 @@ namespace L.Arena
 def ProjSortDen : Prop :=
   ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb : Word) (c : NIdx) (tbl : IProjTable), CoreS dn m a vis fe M eb →
-    fe.find? c = some (.projInfo tbl) →
+    fe.findTable? c = some tbl →
     (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
       (∃ l, denoteL a.store.ls a.pins.zeroLevel = some l)
 
@@ -39,7 +39,7 @@ environment table's level parameters and the field guards below
 def FireDen : Prop :=
   ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb : Word) (c : NIdx) (tbl : IProjTable), CoreS dn m a vis fe M eb →
-    fe.find? c = some (.projInfo tbl) →
+    fe.findTable? c = some tbl →
     ReadNCOK a ∧ (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks) ∧
       ∀ i, i < tbl.numFields → ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l
 
@@ -49,7 +49,7 @@ def FireOkOKD (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
     HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
-    (∃ c, fe.find? c = some (.projInfo tbl)) → i.toNat < tbl.numFields →
+    (∃ c, fe.findTable? c = some tbl) → i.toNat < tbl.numFields →
     (∃ ls, denoteLs a₀.store.lss (decI us) = some ls) →
     CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
       fe M eb
@@ -97,7 +97,7 @@ theorem decTbl_parts {a : Array Word} {q : Nat} {tbl : IProjTable} (h : decTbl a
     hd? a (q + 8) = some tbl.structSort ∧ hlist? a (q + 3) = some tbl.levelParams ∧
       hlist? a (q + 11) = some tbl.guards := by
   simp only [decTbl, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨_, _, _, _, l3, h3, _, _, _, _, _, _, s8, h8, _, _, g, hg, _, _, rfl⟩ := h
+  obtain ⟨_, _, l3, h3, _, _, _, _, _, _, s8, h8, _, _, g, hg, rfl⟩ := h
   exact ⟨h8, h3, hg⟩
 
 theorem hlist?_slice' {k : IdxKind} {a : Array Word} {i : Nat} {l : List (Idx k)}

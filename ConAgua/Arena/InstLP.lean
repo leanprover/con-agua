@@ -97,7 +97,7 @@ def slsGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1939-1949 ConRon.Arena.substLevelsAt -/
+/-- con-ron: ConRon/Arena/Core.lean:1940-1950 ConRon.Arena.substLevelsAt -/
 @[l_impl ConRon.Arena.substLevelsAt]
 def sleGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   if l == 0 { return 0 };
@@ -108,7 +108,7 @@ def sleGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1951-1961 ConRon.Arena.substParamLevels -/
+/-- con-ron: ConRon/Arena/Core.lean:1952-1962 ConRon.Arena.substParamLevels -/
 @[l_impl ConRon.Arena.substParamLevels]
 def slpGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (f, v, h, r) {
   if l == 0 { return 0 };
@@ -394,7 +394,7 @@ def instLPFastL : FunDecl := lfn (f, lo, ll, us, e) locals (b, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1975-1993 ConRon.Arena.recFireLevels -/
+/-- con-ron: ConRon/Arena/Core.lean:1976-1994 ConRon.Arena.recFireLevels -/
 @[l_impl ConRon.Arena.recFireLevels]
 def recFireLevelsL : FunDecl := lfn (fireKind, fvo, fvc, po, pc, us, qo, qc) locals (vo, vc, b, c, x, r) {
   (vo, vc) := call ls_node(us);

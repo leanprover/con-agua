@@ -1649,7 +1649,7 @@ theorem genIhFree_run
   rw [hopI] at hop2
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hop2)
   -- the stored type: its constants resolve at the constructors' environment
-  obtain ⟨-, -, -, -, -, -, -, hres, -, -, -, -⟩ := ConLeche.classConstOk_inv TR.hcv
+  obtain ⟨-, -, -, -, -, -, hres, -, -, -, -⟩ := ConLeche.classConstOk_inv TR.hcv
   rw [TR.type_eq] at hres
   have hgtyC : CBNF envC TR.gty :=
     constsBound_eraseFVars _ (constsBound_of_constsResolve _ hres)

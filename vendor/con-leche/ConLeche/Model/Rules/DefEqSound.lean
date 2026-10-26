@@ -246,49 +246,29 @@ theorem DefEq.app_sound {d : Nat} {f₁ a₁ f₂ a₂ : Expr}
       hLa.app_arg hLb.app_arg hwa.app_arg hwb.app_arg h₁ h₂)
 
 /-- Congruence under a projection: a projection of the point is the
-point (`projS_pt`, `sfst_pt`, `ssnd_pt`), so the projected subjects of
+point (`projS_pt`), so the projected subjects of
 two projections that are not the point are not the point ("not pt"
 source (2)). -/
 theorem DefEq.proj_sound {d : Nat} {s : Name} {i : Nat} {e₁ e₂ : Expr}
     (h : DefEqSem m φ d e₁ e₂) :
     DefEqSem m φ d (.proj s i e₁) (.proj s i e₂) := by
   intro hfa hfb Δa aa ba hCa hCb haa hba ρ hρ hLa hLb hwa hwb hna hnb
-  obtain ⟨ia₁, he₁, hrd₁⟩ := denote_proj_inv haa
-  obtain ⟨ia₂, he₂, hrd₂⟩ := denote_proj_inv hba
-  rcases hrd₁ with ⟨entry, hfe, rfl⟩ | ⟨hnt, hdec₁⟩
-  · rcases hrd₂ with ⟨entry', hfe', rfl⟩ | ⟨hnt', -⟩
-    · obtain rfl : entry = entry' := Option.some.inj (hfe.symm.trans hfe')
-      have hn₁ : interp V ρ ia₁ ≠ pt := by
-        intro h; apply hna; rw [projNV_interp, h, ConLeche.SetTheory.Tower.projS_pt]
-      have hn₂ : interp V ρ ia₂ ≠ pt := by
-        intro h; apply hnb; rw [projNV_interp, h, ConLeche.SetTheory.Tower.projS_pt]
-      exact ProjAV.interp_congr (h hfa.proj_arg hfb.proj_arg hCa.proj_arg
-        hCb.proj_arg he₁ he₂ ρ hρ hLa.proj_arg hLb.proj_arg
-        (ProjAV.hoistV hwa) (ProjAV.hoistV hwb) hn₁ hn₂)
-    · rw [hnt'] at hfe; exact nomatch hfe
-  · rcases hrd₂ with ⟨entry', hfe', -⟩ | ⟨-, hdec₂⟩
-    · rw [hnt] at hfe'; exact nomatch hfe'
-    · rcases Term.projPair?_cases₂ hdec₁ hdec₂ with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
-      · have hn₁ : interp V ρ ia₁ ≠ pt := by
-          intro h; apply hna; rw [interp_fst, h, sfst_pt]
-        have hn₂ : interp V ρ ia₂ ≠ pt := by
-          intro h; apply hnb; rw [interp_fst, h, sfst_pt]
-        exact deqStep_fstCong (h hfa.proj_arg hfb.proj_arg hCa.proj_arg
-          hCb.proj_arg he₁ he₂ ρ hρ hLa.proj_arg hLb.proj_arg
-          hwa.fst_arg hwb.fst_arg hn₁ hn₂)
-      · have hn₁ : interp V ρ ia₁ ≠ pt := by
-          intro h; apply hna; rw [interp_snd, h, ssnd_pt]
-        have hn₂ : interp V ρ ia₂ ≠ pt := by
-          intro h; apply hnb; rw [interp_snd, h, ssnd_pt]
-        exact deqStep_sndCong (h hfa.proj_arg hfb.proj_arg hCa.proj_arg
-          hCb.proj_arg he₁ he₂ ρ hρ hLa.proj_arg hLb.proj_arg
-          hwa.snd_arg hwb.snd_arg hn₁ hn₂)
+  obtain ⟨ia₁, entry, he₁, hfe, rfl⟩ := denote_proj_inv haa
+  obtain ⟨ia₂, entry', he₂, hfe', rfl⟩ := denote_proj_inv hba
+  obtain rfl : entry = entry' := Option.some.inj (hfe.symm.trans hfe')
+  have hn₁ : interp V ρ ia₁ ≠ pt := by
+    intro h; apply hna; rw [projNV_interp, h, ConLeche.SetTheory.Tower.projS_pt]
+  have hn₂ : interp V ρ ia₂ ≠ pt := by
+    intro h; apply hnb; rw [projNV_interp, h, ConLeche.SetTheory.Tower.projS_pt]
+  exact ProjAV.interp_congr (h hfa.proj_arg hfb.proj_arg hCa.proj_arg
+    hCb.proj_arg he₁ he₂ ρ hρ hLa.proj_arg hLb.proj_arg
+    (ProjAV.hoistV hwa) (ProjAV.hoistV hwb) hn₁ hn₂)
 
 /-- Both sides are the point (`prf_of_isProofFast`): vacuous at the
 conditional motive. -/
 theorem DefEq.proofFast_sound (hin : RulesInputs V m φ) {d : Nat} {a b : Expr}
-    (ha : ConLeche.isProofFast env.find? a = true)
-    (_hb : ConLeche.isProofFast env.find? b = true) :
+    (ha : ConLeche.isProofFast env.find? env.findTable? a = true)
+    (_hb : ConLeche.isProofFast env.find? env.findTable? b = true) :
     DefEqSem m φ d a b := by
   intro hfa _ Δa aa ba hCa hCb haa _ ρ hρ hLa _ hwa _ hna _
   exact absurd (prf_of_isProofFast hin ha hfa hCa haa ρ hρ hLa hwa) hna
@@ -750,7 +730,7 @@ theorem DefEq.structEta_sound (hin : RulesInputs V m φ) {d : Nat}
   -- the constructor's type reading, and it is not the point
   have hlvc : us'.length = cvc.levelParams.length := by rw [hlps]; exact hlv
   obtain ⟨tc, htc, hoktc, hmemC, -, -⟩ :=
-    constTy_pkg hin.const_ty hctor rfl (show us'.length = _ from hlvc)
+    constTy_pkg hin.const_ty hctor (show us'.length = _ from hlvc)
   dsimp only [ConLeche.ConstantInfo.toConstantVal] at htc hmemC
   obtain rfl : TCa = tc := Option.some.inj (hTCa.symm.trans (htc 0))
   have hlenA : asa.length = (tsa ++ ps).length := by

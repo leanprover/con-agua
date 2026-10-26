@@ -48,7 +48,7 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
     allPinsOff rest [] ∅ q m₁ hA' ((memFrame_top (resetMem_frame1 mem) (by decide)).mode hA.1.lit.1 hmo)
     (MemoR.fresh mem hc) hd (by rw [resetMem_stk]; exact hst)
     (by rw [(resetMem_frame1 _).2.2.1]; omega) hI
-  obtain ⟨v, hv⟩ := simZ_internAllPins [] allPins_noProj ∅ a m' a' hP (by rw [runItems_reset]; exact hrunI)
+  obtain ⟨v, hv⟩ := simZ_internAllPins [] ∅ a m' a' hP (by rw [runItems_reset]; exact hrunI)
   have hqd : q = UInt64.ofNat romData.length := by
     have hl := romData_len
     apply UInt64.toNat_inj.mp
@@ -171,7 +171,7 @@ theorem RsetR_zero (m : Mem) (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : 150 �
 open ConRon.Bridge ConRon.Bridge.Frontend in
 /-- **`intern_all_pins`'s model, in the decoder direction**: on a buffer that starts with
 `romData`, a run that returns is the twin's `internAllPins P` for the pin list `P` the buffer's
-variant list decodes to, and the 24-word records hold the interned variants (`PinSetsR`). -/
+variant list decodes to, and the 40-word records hold the interned variants (`PinSetsR`). -/
 theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt8)
     (hrom : rom = romData ++ rest) (n : Nat) (mem mem' : Mem) (a : AState) (hA : ArenaD mem a)
     (hmo : ModeOK mem) (hP : PinsReadyP a) (hok : StateOK a) (hpins : PinsOK a) (hpp : PersPins a)
@@ -195,8 +195,7 @@ buffer decodes to (any buffer that starts with `romData`, `pb_check`); the varia
 
 A full refinement in the decoder direction: the pin list is the twin's input, the buffer is L's,
 and `TwinAccepts` takes the pin list existentially, so every L run that returns is a twin run at
-the decoded list. The startup half (`internAllPins []`) is the ROM's fixed data, which holds no
-projection table (D29). What the buffer cannot spell (string literals, `natVal ≥ 2^64`: D6) is a
+the decoded list. The startup half (`internAllPins []`) is the ROM's fixed data. What the buffer cannot spell (string literals, `natVal ≥ 2^64`: D6) is a
 completeness gap of the format, as `read_nat`'s 18 digits are for `parseChunks` (D2). Through it
 the ROM interns it alone reaches (`internPinSet(s)`, `internExpr`, `internExprList`, and below
 `BasisKind.decls`/`declsA` the `Frontend.internCI` family) count as covered. -/

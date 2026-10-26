@@ -63,7 +63,7 @@ theorem decTbl_fields {a : Array Word} {q : Word} {tbl : IProjTable}
     hslice? a (rdW a (q + 11)).toNat (rdW a (q + 12)).toNat = some tbl.guards := by
   simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
-  obtain ⟨tn, -, sn, -, lps, hlps, np, -, ct, -, nf, -, ss, hss, bd, hbd, gd, hgd, off, -, hc⟩ := h
+  obtain ⟨sn, -, lps, hlps, np, -, ct, -, nf, -, ss, hss, bd, hbd, gd, hgd, hc⟩ := h
   subst hc
   exact ⟨hlist_words (j := 3) hsz (by decide) hlps, (hd_word (j := 8) hsz (by decide) hss).1,
     (hd_word (j := 8) hsz (by decide) hss).2, by simpa using hlist_words (j := 9) hsz (by decide) hbd,
@@ -314,12 +314,12 @@ def projAtT (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) : AM 
 
 /-- **`inferProj` at a hit** is `projAtT` from the state after the lookup. -/
 theorem inferProj_hit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat) (pe : EIdx)
-    (a a₁ a₂ a₃ : AState) (it te hh : EIdx) (T : NIdx) (us : LsIdx) (entry : IProjEntry)
+    (a a₁ a₂ : AState) (it te hh : EIdx) (T : NIdx) (us : LsIdx) (entry : IProjEntry)
     (h1 : (r.infer d pe).run a = .ok (it, a₁)) (h2 : (r.whnf d it).run a₁ = .ok (te, a₂))
     (h3 : (getAppFn coreWalkFuel te).run a₂ = .ok (hh, a₂)) (ht : (hh.tag == ETag.const) = true)
     (hv : a₂.store.view hh = some (.const T us))
-    (h4 : (fe.findProj? T i).run a₂ = .ok (some entry, a₃)) :
-    (inferProj r fe d sn i pe).run a = (projAtT sn T us entry te pe).run a₃ := by
+    (h4 : fe.findProj? T i = some entry) :
+    (inferProj r fe d sn i pe).run a = (projAtT sn T us entry te pe).run a₂ := by
   simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2, h3, ht, if_true,
     view_run _ _ _ hv, h4]
   rfl
@@ -505,7 +505,7 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb sn i pe te T us q : Word) (tbl : IProjTable)
     (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
-    (hfe : ∃ c, fe.find? c = some (.projInfo tbl))
+    (hfe : ∃ c, fe.findTable? c = some tbl)
     (hi : i.toNat < tbl.numFields) (hus : HW us) (hte : HW te) (hpe : HW pe)
     (hden : ∃ ls, denoteLs a₀.store.lss (decI us) = some ls) :
     CoreSpec p (n + 1) "infer_proj_at" [vis, sn, i, pe, te, T, us, q]

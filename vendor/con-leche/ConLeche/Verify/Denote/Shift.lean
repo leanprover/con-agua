@@ -146,16 +146,11 @@ theorem denote_bvarsBelow (hcl : ∀ n ψ, Term.Closed (cval n ψ)) :
     cases h2 : env.findProj? sn i with
     | some entry =>
       rw [h2] at h
-      obtain rfl : v = projNV (i + entry.off) B := (Option.some.inj h).symm
+      obtain rfl : v = projNV (i + 1) B := (Option.some.inj h).symm
       exact projNV_bvarsBelow _ hB
     | none =>
       rw [h2] at h
-      rcases i with _ | _ | i
-      · simp only [Term.projPair?, Option.some.injEq] at h
-        exact h ▸ hB
-      · simp only [Term.projPair?, Option.some.injEq] at h
-        exact h ▸ hB
-      · exact nomatch h
+      exact nomatch h
   | case11 d n hg =>
     intro _ _ v h
     rw [denote_natLit hg] at h

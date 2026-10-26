@@ -608,14 +608,11 @@ def inferConstT (fe : IFEnv) (n : NIdx) (us : LsIdx) : AM EIdx :=
     let err ← unknownConstError n
     fail err
   | some ci => do
-    if ci.isTowerEntry then do
-      fail (.invalid "projection table entry used as a constant")
-    else do
-      let cv ← ci.toConstantVal
-      let usl ← viewLs us
-      if usl.length != cv.levelParams.length then do
-        fail (.invalid "incorrect number of universe levels")
-      else constTyAt cv us
+    let cv := ci.toConstantVal
+    let usl ← viewLs us
+    if usl.length != cv.levelParams.length then do
+      fail (.invalid "incorrect number of universe levels")
+    else constTyAt cv us
 
 /-- `inferBody`'s `.const` arm is `inferConstT`. -/
 @[refines_part ConRon.Arena.inferBody "const"]
@@ -625,25 +622,17 @@ theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
   simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   rfl
 
-/-- A decoded record whose kind word is not `6` (a projection table) is a constant with a
-`ConstantVal` at `q + 1`. -/
-theorem decCI_kind_ne6 {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
-    (h6 : rdW b q ≠ 6) :
-    ci.isTowerEntry = false ∧ ∃ cv, (∀ s, ci.toConstantVal.run s = .ok (cv, s)) ∧
-      decCV b (q.toNat + 1) = some cv := by
+/-- A decoded constant record has its `ConstantVal` at `q + 1`. -/
+theorem decCI_cvA {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b) :
+    decCV b (q.toNat + 1) = some ci.toConstantVal := by
   cases hq : a[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
-  have hqb := hab _ _ hq
-  have hrd : rdW b q = w := by simp [rdW, hqb]
-  rw [hrd] at h6
-  have hne : w.toNat ≠ 6 := fun e => h6 (UInt64.toNat_inj.mp (by rw [e]; rfl))
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-  all_goals (rw [hk] at h hne; simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h)
+  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | k
+  all_goals (rw [hk] at h; simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h)
   all_goals first
-    | exact absurd rfl hne
     | (simp at h; done)
     | ((first
         | obtain ⟨cv, hcv, rfl⟩ := h
@@ -653,7 +642,7 @@ theorem decCI_kind_ne6 {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {
         | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
         | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
         | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
-       exact ⟨rfl, cv, fun _ => rfl, hab.decCV hcv⟩)
+       exact hab.decCV hcv)
 
 theorem mapM_len {α β : Type} (f : α → Option β) :
     ∀ (l : List α) (xs : List β), l.mapM f = some xs → xs.length = l.length
@@ -710,11 +699,12 @@ theorem viewLs_run (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss.
 
 theorem inferConstT_run (fe : IFEnv) (n : NIdx) (us : LsIdx) (a : AState) (ci : IConstantInfo)
     (cv : IConstantVal) (ids : List LIdx) (hf : fe.find? n = some ci)
-    (ht : ci.isTowerEntry = false) (hcv : ∀ s, ci.toConstantVal.run s = .ok (cv, s))
+    (hcv : ci.toConstantVal = cv)
     (hv : (viewLs us).run a = .ok (ids, a)) (hlen : ids.length = cv.levelParams.length) :
     (inferConstT fe n us).run a = (constTyAt cv us).run a := by
-  simp only [inferConstT, hf, ht, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, hcv,
-    except_ok_bind, hv, hlen, bne_self_eq_false]
+  subst hcv
+  simp only [inferConstT, hf, StateT.run_bind, except_ok_bind, hv, hlen, bne_self_eq_false]
+  rfl
 
 theorem coreRef_congr {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} {dec : List Word → α}
     {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
@@ -729,7 +719,6 @@ def constArmK (p : Prog) (n : Nat) (us : Word) (res : Option (List Word × Mem))
   | none => none
   | some (r, m₁) =>
     if r.headD 0 = 0 then none
-    else if rdW (m₁.arr64 EREC) (r.tail.headD 0) = 6 then none
     else if lsNodeW m₁ us = [] then none
     else if (lsNodeW m₁ us).tail.headD 0 ≠ rdW (m₁.arr64 EREC) (r.tail.headD 0 + 3) then none
     else call1W p n "const_ty_at" [rdW (m₁.arr64 EREC) (r.tail.headD 0 + 1),
@@ -737,13 +726,13 @@ def constArmK (p : Prog) (n : Nat) (us : Word) (res : Option (List Word × Mem))
       rdW (m₁.arr64 EREC) (r.tail.headD 0 + 4), us] m₁
 
 theorem constArmK_ok (p : Prog) (n : Nat) (us : Word) (r : List Word) (m₁ : Mem)
-    (h0 : r.headD 0 ≠ 0) (h6 : rdW (m₁.arr64 EREC) (r.tail.headD 0) ≠ 6)
+    (h0 : r.headD 0 ≠ 0)
     (hne : lsNodeW m₁ us ≠ [])
     (hl : (lsNodeW m₁ us).tail.headD 0 = rdW (m₁.arr64 EREC) (r.tail.headD 0 + 3)) :
     constArmK p n us (some (r, m₁)) = call1W p n "const_ty_at" [rdW (m₁.arr64 EREC) (r.tail.headD 0 + 1),
       rdW (m₁.arr64 EREC) (r.tail.headD 0 + 2), rdW (m₁.arr64 EREC) (r.tail.headD 0 + 3),
       rdW (m₁.arr64 EREC) (r.tail.headD 0 + 4), us] m₁ := by
-  simp only [constArmK, h0, h6, hne, hl, ne_eq, not_true_eq_false, ↓reduceIte]
+  simp only [constArmK, h0, hne, hl, ne_eq, not_true_eq_false, ↓reduceIte]
 
 section ic
 variable (p : Prog) (hp : InferLeafProg p)
@@ -794,8 +783,8 @@ theorem inferConst_refines (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK 
   have hfind' : fe.find? (decI nm) = some ci := by
     rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
   rw [← hq] at hci
-  obtain ⟨h6, hW⟩ := of_ite_none hW
-  obtain ⟨htw, cv, hcvr, hcv⟩ := decCI_kind_ne6 hci (erecP_ext _) h6
+  have hcv := decCI_cvA hci (erecP_ext _)
+  generalize hcvr : ci.toConstantVal = cv at hcv
   obtain ⟨hne, hW⟩ := of_ite_none hW
   obtain ⟨hl, hW⟩ := of_ite_none hW
   have hl' : (lsNodeW s.mem us).tail.headD 0 = rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 3) := by
@@ -804,7 +793,7 @@ theorem inferConst_refines (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK 
   obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.1 hus hne
   have hlen : ids.length = cv.levelParams.length := by
     rw [hslice?_length hsl, ← hl', hlen1, hlen2]
-  have hT := inferConstT_run fe (decI nm) (decI us) a₀ ci cv ids hfind' htw hcvr
+  have hT := inferConstT_run fe (decI nm) (decI us) a₀ ci cv ids hfind' hcvr
     (viewLs_run _ _ _ hv) hlen
   have hcv' : cv = ⟨decI (rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 1)), cv.levelParams,
       decE (rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 4))⟩ := by

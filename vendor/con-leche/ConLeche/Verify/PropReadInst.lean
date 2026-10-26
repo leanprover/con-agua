@@ -371,9 +371,10 @@ walks through before it reads a head. -/
 
 /-- **The proof reader's answer survives instantiating a bound
 variable**, at the same depth (its heads are never that variable). -/
-theorem proofPW_instantiate1 (find? : Name → Option ConstantInfo) {v : Expr} :
-    ∀ (b : Expr) (k : Nat) {pw : PropWhen}, proofPW find? b = some pw →
-      proofPW find? (b.instantiate1 v k) = some pw ∧
+theorem proofPW_instantiate1 (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) {v : Expr} :
+    ∀ (b : Expr) (k : Nat) {pw : PropWhen}, proofPW find? findTable? b = some pw →
+      proofPW find? findTable? (b.instantiate1 v k) = some pw ∧
         (b.instantiate1 v k).proofDepth = b.proofDepth := by
   intro b
   induction b with
@@ -570,25 +571,21 @@ theorem headTypePW_instantiateLevelParams {env : Env} (henv : EnvWF env)
       intro hh
       dsimp only at hh ⊢
       split at hh
+      · next hlen =>
+        rw [ite_eq_left (by rw [List.length_map]; exact hlen)]
+        revert hh
+        cases hres : residualPW (peelPisW env.find? n ci.toConstantVal.type) with
+        | none => intro hh; exact nomatch hh
+        | some p =>
+          intro hh
+          obtain rfl := Option.some.inj hh
+          obtain ⟨u0, hpeel, rfl⟩ := residualPW_some_inv hres
+          have hwf := henv.consts _ (List.mem_of_find?_eq_some hfI)
+          have hdef := allLevelParamsDefined_peelPisW env.find? n hwf.2.1 hpeel
+          simp only [Expr.allLevelParamsDefined] at hdef
+          simp only [Option.map_some]
+          rw [Level.substPW_comp hlen (Level.zeronessOf_paramsDefined hdef)]
       · exact nomatch hh
-      · next hnt =>
-        rw [ite_eq_right hnt]
-        split at hh
-        · next hlen =>
-          rw [ite_eq_left (by rw [List.length_map]; exact hlen)]
-          revert hh
-          cases hres : residualPW (peelPisW env.find? n ci.toConstantVal.type) with
-          | none => intro hh; exact nomatch hh
-          | some p =>
-            intro hh
-            obtain rfl := Option.some.inj hh
-            obtain ⟨u0, hpeel, rfl⟩ := residualPW_some_inv hres
-            have hwf := henv _ (List.mem_of_find?_eq_some hfI)
-            have hdef := allLevelParamsDefined_peelPisW env.find? n hwf.2.1 hpeel
-            simp only [Expr.allLevelParamsDefined] at hdef
-            simp only [Option.map_some]
-            rw [Level.substPW_comp hlen (Level.zeronessOf_paramsDefined hdef)]
-        · exact nomatch hh
   | fvar idx ty =>
     simp only [headTypePW, Expr.instantiateLevelParams] at hh ⊢
     rw [peelPisW_instantiateLevelParams, residualPW_map_instantiateLevelParams, hh]

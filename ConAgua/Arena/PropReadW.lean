@@ -136,7 +136,6 @@ def cArmK1 (p : Prog) (n : Nat) (us : Word) (sub : Word → Mem → Option (List
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, 0, 0, m)
-    else if rdW (m.arr64 EREC) (r.tail.headD 0) = 6 then some (0, 0, 0, m)
     else if lsNodeW m us = [] then none
     else if (lsNodeW m us).tail.headD 0 ≠ rdW (m.arr64 EREC) (r.tail.headD 0 + 3) then
       some (0, 0, 0, m)

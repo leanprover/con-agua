@@ -15,7 +15,7 @@ open L.Arena L.Compiler
 
 /-- The arrays of `leafA`, as a test. -/
 def leafPa (a : ArrId) : Bool :=
-  decide (a < 320) && a != PINS && a != 49 && a != 50 && a != 52 && a != 53 && a != 54 &&
+  decide (a < 388) && a != PINS && a != 49 && a != 50 && a != 52 && a != 53 && a != 54 &&
     a != 151 && a != 152 && a != 153
 
 /-- The `CTL` words of `leafC`, as a test. -/

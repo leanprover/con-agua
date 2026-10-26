@@ -139,7 +139,7 @@ theorem blockCtorReads_of {env : Env} {m : EnvModel V env} {d : BlockData V} {lp
     obtain ⟨hfb, -, -, hFDt⟩ := hcore.1 mm cvTb hcvb
     have hmm' : mm < d.k := hmm
     have hcvbCl : cvTb.type.hasFvar = false :=
-      (m.wf _ (List.mem_of_find?_eq_some hfb)).1
+      (m.wf.consts _ (List.mem_of_find?_eq_some hfb)).1
     obtain ⟨bs, s, hsyn⟩ := hFDt.syn
     obtain ⟨ty, hty, -, hread⟩ := formerHoleTy_read m.acval_closed (ψ := ψ) hcvbCl
       (stripPis_isSome_of_le (Nat.le_add_right d.nP _) (by rw [hsyn]; rfl))

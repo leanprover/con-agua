@@ -2,7 +2,7 @@ iotaRecC_spec: pass Expr.WScoped.of_not_hasFvar to finish; grind no longer finds
 chaining on nightly-2026-10-20 (vendor/README.md, "Toolchain switch" 2).
 
 diff --git a/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean b/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean
-index ea5c3e34a0a00046e41e0481e6e4d66140b01112..2be4f69c760e4bd4440a6713445a65c6652afd06 100644
+index a8a22e6369fb963490d50e7728a7cce14141afef..c937f54a833eced2df8872c4204c9f1f0f111b5b 100644
 --- a/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean
 +++ b/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean
 @@ -892,7 +892,7 @@ theorem iotaRecC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode env f)

@@ -72,13 +72,13 @@ theorem inferTypeCore_bvar_inv {d i : Nat} {t : Expr}
   rw [inferTypeCore_succ] at h
   simp [inferBody, throw, throwThe, MonadExceptOf.throw] at h
 
-/-- The `.const` clause, whole: the stored constant, the table-entry
-guard, the level arity and the instantiated type
+/-- The `.const` clause, whole: the stored constant, the level arity
+and the instantiated type
 (`inferTypeCore_const_inv` drops the arity — it is consumed inside its
 own `split`). -/
 theorem inferTypeCore_const_inv_full {d : Nat} {n : Name} {us : List Level}
     {t : Expr} (h : inferTypeCore mode env (fuel + 1) d (.const n us) = .ok t) :
-    ∃ ci, env.find? n = some ci ∧ ci.isTowerEntry = false ∧
+    ∃ ci, env.find? n = some ci ∧
       us.length = ci.toConstantVal.levelParams.length ∧
       t = ci.toConstantVal.type.instantiateLevelParams
         ci.toConstantVal.levelParams us := by
@@ -90,16 +90,12 @@ theorem inferTypeCore_const_inv_full {d : Nat} {n : Name} {us : List Level}
   | some ci =>
     intro h
     dsimp only at h
-    by_cases hte : ci.isTowerEntry = false
-    · simp only [hte, Bool.not_false, ite_true] at h
-      by_cases hlen : us.length = ci.toConstantVal.levelParams.length
-      · rw [ite_eq_left hlen] at h
-        simp only [Except.ok.injEq] at h
-        exact ⟨ci, rfl, hte, hlen, h.symm⟩
-      · rw [ite_eq_right hlen] at h
-        simp [throw, throwThe, MonadExceptOf.throw] at h
-    · simp only [Bool.not_eq_false] at hte
-      simp [hte, throw, throwThe, MonadExceptOf.throw] at h
+    by_cases hlen : us.length = ci.toConstantVal.levelParams.length
+    · rw [ite_eq_left hlen] at h
+      simp only [Except.ok.injEq] at h
+      exact ⟨ci, rfl, hlen, h.symm⟩
+    · rw [ite_eq_right hlen] at h
+      simp [throw, throwThe, MonadExceptOf.throw] at h
 
 /-- The `Nat`-literal clause: the support guard and `Nat`. -/
 theorem inferTypeCore_natLit_inv' {d k : Nat} {t : Expr}
@@ -151,8 +147,8 @@ theorem infer_bridge_succ (hw : WhnfBridge μ env fuel) (hd : DefEqBridge μ env
     obtain ⟨hlt, rfl⟩ := inferTypeCore_fvar_inv h
     exact .fvar hlt
   | .const n us, h =>
-    obtain ⟨ci, hf, hte, hlen, rfl⟩ := inferTypeCore_const_inv_full h
-    exact .const hf hte hlen
+    obtain ⟨ci, hf, hlen, rfl⟩ := inferTypeCore_const_inv_full h
+    exact .const hf hlen
   | .lit (.natVal k), h =>
     obtain ⟨hg, rfl⟩ := inferTypeCore_natLit_inv' h
     exact .natLit hg
@@ -205,8 +201,8 @@ theorem inferIO_bridge_succ (hw : WhnfBridge μ env fuel)
     exact .fvar hlt
   | .const n us, h =>
     rw [inferTypeCoreIO_const_eq] at h
-    obtain ⟨ci, hf, hte, hlen, rfl⟩ := inferTypeCore_const_inv_full h
-    exact .const hf hte hlen
+    obtain ⟨ci, hf, hlen, rfl⟩ := inferTypeCore_const_inv_full h
+    exact .const hf hlen
   | .lit (.natVal k), h =>
     rw [inferTypeCoreIO_lit_eq] at h
     obtain ⟨hg, rfl⟩ := inferTypeCore_natLit_inv' h

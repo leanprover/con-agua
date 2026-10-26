@@ -241,14 +241,15 @@ theorem TwinPend.enterThm {fe : IFEnv}
   | cons hp _ =>
     have hwf := hok.check.state.wf
     have hx1 : PExt a.store a.store.enableScratch := ConRon.Bridge.PExt.enterScratch hwf
-    refine ⟨env.prefixTo pc.vis, _, by rw [hp.prefix]; exact hp.envWF, ?_, ?_, hp.wsty⟩
+    refine ⟨_, _, hp.envWF, ?_, ?_, hp.wsty⟩
     · rw [enterScratch_st]
       exact
         { state := ⟨(EStore.enableScratch_spec hwf).1⟩
           caches := ConRon.Bridge.CacheOK.of_empty (h.caches (by simp))
           pins := hok.check.pins.pmono hok.persPins hx1 rfl
-          ienv := (ConRon.Bridge.IFEnvOK_prefix hok hnd pc.vis).pmono
-            ⟨hok.persEnv.env, hok.persEnv.idx⟩ hx1 }
+          ienv := ((ConRon.Bridge.IFEnvOK_prefix hok hnd pc.vis).congr_env hp.prefix_find?
+              hp.prefix_findTable?).pmono
+            ⟨hok.persEnv.env, hok.persEnv.idx, hok.persEnv.tables, hok.persEnv.tbls⟩ hx1 }
     · rw [enterScratch_st]
       exact ConRon.Bridge.denoteCV_pext hx1 hp.pers.cv hp.cv
 
@@ -266,10 +267,9 @@ theorem TwinPend.step {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck
   obtain ⟨env, pendP, hok, hnd, hrel⟩ := h.fold
   cases hrel with
   | cons hp hrest =>
-    have hpre := hp.prefix
     obtain ⟨hok₁, hx₁, hc₁, -⟩ :=
       ConRon.Bridge.Arena.checkPending_prefix rfl hk hok hp.pers hnd (h.caches (by simp))
-        (by rw [hpre]; exact hp.envWF) hp.kind hp.cv hp.jv hp.wsty hp.wsjv hrun
+        hp.envWF hp.prefix_find? hp.prefix_findTable? hp.kind hp.cv hp.jv hp.wsty hp.wsjv hrun
     have hoff : a'.store.scratchOn = false ∧ a'.store.dropScratch = a'.store := by
       simp only [checkPending] at hrun
       obtain ⟨_, s1, -, r1⟩ := ConRon.Bridge.AM.bind_ok hrun
@@ -278,7 +278,7 @@ theorem TwinPend.step {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck
       simp only [Except.ok.injEq, Prod.mk.injEq] at r2
       obtain ⟨-, rfl⟩ := r2
       exact ⟨rfl, rfl⟩
-    exact ⟨⟨⟨env, _, hok₁, hnd, PendRel.listRel_mono hx₁ ⟨[], rfl⟩ hrest⟩, fun _ => hc₁, hoff.1,
+    exact ⟨⟨⟨env, _, hok₁, hnd, PendRel.listRel_mono hx₁ ⟨[], rfl⟩ (ConRon.Bridge.TblExt.of_eq rfl) hrest⟩, fun _ => hc₁, hoff.1,
       fun _ => hoff.2⟩, hx₁⟩
 
 end twin

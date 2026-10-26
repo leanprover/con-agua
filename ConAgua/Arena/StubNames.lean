@@ -50,7 +50,7 @@ def pinRangeHas : FunDecl := lfn (n, k, hi) locals (w, r) {
 /-- `lit_guard_has(n)`: `(← litGuardNames).contains n`: the pins `Nat`, `Nat.zero`, `Nat.succ`,
 `String`, `String.ofList`, `List`, `List.nil`, `List.cons`, `Char`, `Char.ofNat` (slots 1, 2, 3,
 5‥10, 12), all read first, as the twin builds its list. -/
--- con-ron: ConRon/Arena/Core.lean:1457-1473 ConRon.Arena.litGuardNames
+-- con-ron: ConRon/Arena/Core.lean:1458-1474 ConRon.Arena.litGuardNames
 @[l_impl ConRon.Arena.litGuardNames]
 def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
   a := call pin_at(1); b := call pin_at(2); c := call pin_at(3); d := call pin_at(5);
@@ -61,7 +61,7 @@ def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1475-1490 ConRon.Arena.reservedRecName -/
+/-- con-ron: ConRon/Arena/Core.lean:1476-1491 ConRon.Arena.reservedRecName -/
 @[l_impl ConRon.Arena.reservedRecName]
 def reservedRecNameL : FunDecl := lfn (n) locals (r) {
   r := call reserved_contains(n);

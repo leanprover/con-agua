@@ -494,10 +494,48 @@ def isHelper (env : Environment) (spec : OpSpec) (c : Lean.Name) :
   | some (.defnInfo _) => true
   | _ => false
 
-/-- Compute one operation's pin and certificate proofs from the
-compiling environment (no splicing). -/
+/-- **The type-pinned constants** (task #364): constants a certificate
+proof may use whose *types* differ between supported toolchains, so
+that one toolchain's proof blob is ill-typed against another's stream
+although every name resolves.  Measured over the pins' and
+certificates' constants on every toolchain of the matrix: exactly
+these two — `Decidable` became a structure on lean4 master, which
+changed its recursor's and `casesOn`'s minor premises (the other
+constants' types agree, up to level-parameter names).  Per operation,
+the dump carries the generating toolchain's type of each of these the
+operation's pin or certificates mention; the install gate compares the
+stream's stored type against it by definitional equality before
+anything else of the variant (`checkDivModPinAt`,
+`ConLeche/Kernel/Checker.lean`), so variant selection is a boolean
+decision and no certificate of a foreign toolchain is ever inferred.
+A new entry is needed when a new toolchain changes the type of a
+constant some certificate uses — `scripts/natop-matrix.sh` then exits
+3 (an ill-typed certificate is an error, not a fallthrough). -/
+def typePinNames : List Lean.Name := [``Decidable.rec, ``Decidable.casesOn]
+
+/-- The type pins of one operation: each type-pinned constant that the
+pin or the certificate proofs mention, with its type in the generating
+environment. -/
+def typePinsOf (pin : Lean.Expr) (proofs : List Lean.Expr) :
+    MetaM (List (Lean.Name × ConLeche.Expr)) := do
+  let env ← getEnv
+  let used := proofs.foldl (fun s pf => pf.foldConsts s fun c s => s.insert c)
+    (constsOf pin)
+  let mut out := []
+  for n in typePinNames do
+    if used.contains n then
+      let some ci := env.find? n | throwError "type-pinned {n} missing"
+      unless n.toString.toName == n do
+        throwError "type-pinned {n}: its name does not round-trip through a string"
+      match toConLeche ci.type with
+      | .ok t => out := out ++ [(n, t)]
+      | .error m => throwError "type pin conversion ({n}): {m}"
+  return out
+
+/-- Compute one operation's pin, certificate proofs and type pins from
+the compiling environment (no splicing). -/
 def computeOp (prefixes : Std.HashMap String (List String)) (spec : OpSpec) :
-    MetaM (ConLeche.Expr × List ConLeche.Expr) := do
+    MetaM (ConLeche.Expr × List ConLeche.Expr × List (Lean.Name × ConLeche.Expr)) := do
   let env ← getEnv
   let some allowedList := prefixes[spec.op.toString]? |
     throwError "no stream prefix for {spec.op} in scripts/natop_prefix.json"
@@ -526,16 +564,18 @@ def computeOp (prefixes : Std.HashMap String (List String)) (spec : OpSpec) :
     !eqCompilerInternal c &&
     (c == spec.op || groundSet.contains c || cone.contains c)
   let mut proofsS : List ConLeche.Expr := []
+  let mut proofsL : List Lean.Expr := []
   for thmName in spec.certs do
     let some ci := env.find? thmName | throwError "{thmName} missing"
     let some pf := ci.value? (allowOpaque := true) |
       throwError "{thmName} has no value"
     let pf ← inlineCertClosure certAllowed pf
     checkConsts s!"certificate proof {thmName}" certAllowed pf
+    proofsL := proofsL ++ [pf]
     match toConLeche pf with
     | .ok e => proofsS := proofsS ++ [e]
     | .error m => throwError "proof conversion ({thmName}): {m}"
-  return (pinS, proofsS)
+  return (pinS, proofsS, ← typePinsOf pin proofsL)
 
 /-! ## The dump generator (task #176)
 
@@ -559,13 +599,15 @@ strips imported proofs. -/
 (the executable's `main` does it); `ConLeche.PinGen.Certs` is an import
 of the generator executable, so Lake has built its olean by the time
 this runs. -/
-def computeOps : IO (Environment × Array (OpSpec × ConLeche.Expr × List ConLeche.Expr)) := do
+def computeOps : IO (Environment × Array (OpSpec × ConLeche.Expr × List ConLeche.Expr ×
+    List (Lean.Name × ConLeche.Expr))) := do
   let prefixes ← match loadPrefixes natopPrefixJson with
     | .ok m => pure m
     | .error e => throw (IO.userError s!"bad scripts/natop_prefix.json: {e}")
   let genEnv ← importModules (loadExts := false) (level := .private)
     #[{module := `Init}, {module := `ConLeche.PinGen.Certs}] {} 0
-  let mut results : Array (OpSpec × ConLeche.Expr × List ConLeche.Expr) := #[]
+  let mut results : Array (OpSpec × ConLeche.Expr × List ConLeche.Expr ×
+    List (Lean.Name × ConLeche.Expr)) := #[]
   for spec in opSpecs do
     let (r, _, _) ←
       try
@@ -582,14 +624,15 @@ def computeOps : IO (Environment × Array (OpSpec × ConLeche.Expr × List ConLe
 prelude half (task #191) is computed by `ConLeche/PinGen/Prelude.lean`,
 which sits above this module; `computeDumpAndPrelude` there assembles
 the whole file. -/
-def opDumpsOf (results : Array (OpSpec × ConLeche.Expr × List ConLeche.Expr)) :
-    Array PinOpDump :=
-  results.map fun (spec, pin, proofs) => {
+def opDumpsOf (results : Array (OpSpec × ConLeche.Expr × List ConLeche.Expr ×
+    List (Lean.Name × ConLeche.Expr))) : Array PinOpDump :=
+  results.map fun (spec, pin, proofs, typePins) => {
     op := spec.op.toString
     pinName := spec.pinName.toString
     proofsName := spec.proofsName.toString
     pin := blobOf pin
-    proofs := (proofs.map blobOf).toArray }
+    proofs := (proofs.map blobOf).toArray
+    typePins := (typePins.map fun (n, t) => (n.toString, blobOf t)).toArray }
 
 
 end ConLeche.PinGen

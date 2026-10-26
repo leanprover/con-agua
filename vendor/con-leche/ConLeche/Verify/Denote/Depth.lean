@@ -171,13 +171,11 @@ theorem denote_shiftFrom
     | some ea =>
       simp only [Option.map_some]
       cases env.findProj? sn i with
-      | none =>
-        dsimp only
-        rcases i with _ | _ | i <;> rfl
+      | none => rfl
       | some entry =>
-        show some (projNV (i + entry.off) (Term.liftN 1 ea (d - p)))
+        show some (projNV (i + 1) (Term.liftN 1 ea (d - p)))
           = Option.map (fun x => Term.liftN 1 x (d - p))
-            (some (projNV (i + entry.off) ea))
+            (some (projNV (i + 1) ea))
         simp only [Option.map_some, projNV_liftN]
   | .lit (.natVal k), d, _, _ => by
     simp only [ConLeche.Expr.shiftFrom, denote]

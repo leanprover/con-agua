@@ -170,7 +170,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
   intro u3 x3 m3 a3 hh3
   obtain ⟨⟨⟨hS3, hg3, hM3⟩, ⟨hR3, hk3⟩, hA3⟩, hrun3⟩ := hh3
   obtain ⟨hck3, -, hst3⟩ := ConRon.Bridge.Inductives.ReadOK.flush (μ := V)
-    (⟨c1.ok.state, c1.ok.pins, hconsOK c1.ok.state.wf c1.ok.ienv.toS a1 rfl⟩ :
+    (⟨c1.ok.state, c1.ok.pins, hconsOK c1.ok.state.wf (ConRon.Bridge.TablesStored.of_envWF henv₁) c1.ok.ienv.toS a1 rfl⟩ :
       ConRon.Bridge.Inductives.ReadOK _ _ a1) hrun3
   have hC3 := StageC.of_parts hS3 hck3 hA3
     (fun k x e => by rw [hst3]; exact c1.ext.lss.ls.ns k x (hC.mem.dnN k x e))
@@ -261,7 +261,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
         ⟨m3, Locals.init []⟩ a3 dn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ bs
         params tbl rd cls cvTas block hC3 hpre hrb3 hlp3 hR3 hA3
         (fun f hf => hkeep f (List.mem_append_right _ hf)) hcons.coh
-        d1 d2 d3 d4 d5 d6 d7 hMs hTw (fun f hf => hfRc f (List.mem_append_left _ hf))) (fun r s' h => by
+        (by obtain ⟨e, h, rfl⟩ := hcons.denote; rw [hst3]; exact h) d1 d2 d3 d4 d5 d6 d7 hMs hTw (fun f hf => hfRc f (List.mem_append_left _ hf))) (fun r s' h => by
           obtain ⟨-, hok, hC', hg, hd, hA', hR', -⟩ := h; rw [hnb] at hok hC' hd
           exact ⟨hok, hC'.stage, hg, hd, hA', hR'⟩)) k (Nat.le_refl _))
       (fun r m' e5 => HbMemo.ofClosed hcl (hfs _ (by decide)) e5 hM3)
@@ -302,6 +302,8 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
     rw [hcoh₂b.1, hcons.coh.1, hfe₂b]
   have hfind₂b : fe2b.find? = (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe).find? := by
     funext n; rw [hcoh₂b.find?, hcons.coh.find?, hfe₂b]
+  have hraw₂b : ∀ n, fe2b.rawTable? n = (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe).rawTable? n := by
+    intro n; rw [hcoh₂b.rawTable?, hcons.coh.rawTable?, hfe₂b]
   have hden₂b : ConRon.Bridge.denoteFEnv a5.store fe2b = some (ConLeche.consBlockCtors bs.nP qP.ctorsAs env₁) := by
     have h' := ConRon.Bridge.denoteFEnv_mono x35 hden₂
     simp only [ConRon.Bridge.denoteFEnv] at h' ⊢; rw [hfe₂b]; exact h'
@@ -311,7 +313,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
     rw [← hvis]; exact hfind₂b
   obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.consBlockRecsTF_spec (μ := V)
     (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe).visibleBelow bs shP outs outP 0
-    fe2b _ a5 a6 fe3 c3.ok (ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? c3.ok.ienv hview)
+    fe2b _ a5 a6 fe3 c3.ok (ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? c3.ok.ienv hview hraw₂b)
     (Nat.le_of_eq hvis.symm) hcoh₂b hden₂b (ConRon.Bridge.Inductives.dShape_ext x05 _ _ hshP) hout hfresh
     (by rw [hS2.1.env.vis]; exact hrun6)
   have x06 : Ext a.store a6.store := x05.trans c4.ext

@@ -105,10 +105,10 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
   have hc := CapsOK.keep h4.since.keep h4.since.caps
   have hm : s₀.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb s8 s64
   refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm (by have := hc.pool; omega)
-    a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok.1 h4.mode h4.rok.2)
+    a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok h4.mode)
     (stage_since n (preLoop_mem "front_run" (by decide +kernel)) s₀))
     (stageFrame_front_run n s₀)) fun r s' ⟨⟨hpost, hl, hk, hpf⟩, hsf⟩ => ⟨hl, fun h0 => ?_⟩
-  obtain ⟨st, a', hp, hA, hD, hto, hM, hR, hW⟩ := hpost h0
+  obtain ⟨st, a', hp, hA, hD, hto, hM, hR⟩ := hpost h0
   have hu : b.size < USize.size := by
     rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega
   have hcp : parseChunks [b] a = .ok (.ok (.ofState st), a') := by
@@ -128,10 +128,7 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
       (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
       (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
       (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
-  · refine ⟨fun x hx => hR x (by simpa [ParseResultD.ofState] using hx), fun d hd => ?_⟩
-    rcases Array.mem_append.mp hd with hd | hd
-    · exact h4.rok.2 d hd
-    · exact hW d hd
+  · exact fun x hx => hR x (by simpa [ParseResultD.ofState] using hx)
 
 /-! ## `prepare_prelude` -/
 
@@ -174,8 +171,8 @@ theorem prepareStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (pre : Prelu
   have hdsz : (s₀.mem.arr64 DECL).size < 2 ^ 64 := by have := hc.1 DECL (by decide); omega
   refine triple_post (triple_and (triple_and (preparePrelude_refines checkerProg checkerProg_prepProg
     checkerProg_prepExt checkerProg_hoistProg checkerProg_hoistExt n s₀ a pre rc.decls
-    (fun x hx => ⟨h5.decls.recs x hx, h5.rok.1 x hx⟩) (by simpa [rdW] using h5.decls.count) h5.np
-    h5.decls.room hdsz (fun x hx => h5.rok.2 _ (Array.getElem_mem hx)) h5.arena.1 hseen hnix hI
+    (fun x hx => ⟨h5.decls.recs x hx, h5.rok x hx⟩) (by simpa [rdW] using h5.decls.count) h5.np
+    h5.decls.room hdsz h5.arena.1 hseen hnix hI
     ⟨fun _ => h5.pf.full⟩)
     (stage_since n (preLoop_mem "prepare_prelude" (by decide +kernel)) s₀))
     (stageFrame_prepare_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
@@ -203,17 +200,17 @@ theorem prefix4_facts {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : ASta
   obtain ⟨hA, hB, hC, hD⟩ := h
   have hok0 : ConRon.Bridge.StateOK (AState.init EStore.empty) := ⟨EStore.empty_wf⟩
   obtain ⟨hokA, -, hpinsA, hppA, hoffA, -, -⟩ := ConRon.Bridge.internReservedPins_run hok0 rfl hA
-  obtain ⟨hstep1, hpersPre, hnPre, preC, hrelPre⟩ :=
+  obtain ⟨hstep1, hpersPre, preC, hrelPre⟩ :=
     ConRon.Bridge.Frontend.builtinPreludeE_run hokA hoffA hpinsA hB
   obtain ⟨hstep2, hpersR, rc', hclR, hrelR⟩ :=
     ConRon.Bridge.Frontend.parseChunks_run hstep1.ok
       (by rw [hstep1.scratch, hoffA]) (hpinsA.mono hstep1.ext hstep1.pins) hC
-  obtain ⟨hstep3, -, -, -⟩ :=
+  obtain ⟨hstep3, -, -⟩ :=
     ConRon.Bridge.Frontend.preparePrelude_run (preC := preC) hstep2.ok
       (by rw [hstep2.scratch, hstep1.scratch, hoffA])
       (hpinsA.mono (hstep1.trans hstep2).ext (hstep1.trans hstep2).pins)
       (ConRon.Bridge.Frontend.denoteDeclArray_ext hstep2.ext hrelPre) hpersPre
-      (hnPre.mono hstep2.ext) hrelR.decls hpersR hrelR.projNamed hD
+      hrelR.decls hpersR hD
   refine ⟨hstep3.ok, by rw [hstep3.scratch, hstep2.scratch, hstep1.scratch]; exact hoffA,
     hpinsA.mono ((hstep1.ext.trans hstep2.ext).trans hstep3.ext)
       (by rw [hstep3.pins, hstep2.pins, hstep1.pins]),

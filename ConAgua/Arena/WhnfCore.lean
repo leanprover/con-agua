@@ -47,7 +47,7 @@ abbrev WCM : ArrId := 96
 /-! ## The L code -/
 
 /-- The knot's `whnfCore` slot. -/
--- con-ron: ConRon/Arena/Core.lean:2140-2152 ConRon.Arena.whnfCoreStuckTag
+-- con-ron: ConRon/Arena/Core.lean:2141-2153 ConRon.Arena.whnfCoreStuckTag
 @[l_impl ConRon.Arena.whnfCoreStuckTag]
 def whnfCoreL : FunDecl := lfn (mode, cheap, vis, d, e) locals (g, fd, j, dd, x, u) {
   g := e >> 28;
@@ -77,8 +77,8 @@ def whnfCoreLoopB : Stmt := lblk (mode, cheap, vis, d, e, st, r) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2386-2394 ConRon.Arena.whnfCoreBody
-con-ron: ConRon/Arena/Core.lean:2373-2384 ConRon.Arena.whnfCoreLoop -/
+/-- con-ron: ConRon/Arena/Core.lean:2387-2395 ConRon.Arena.whnfCoreBody
+con-ron: ConRon/Arena/Core.lean:2374-2385 ConRon.Arena.whnfCoreLoop -/
 @[l_impl ConRon.Arena.whnfCoreBody ConRon.Arena.whnfCoreLoop]
 def whnfCoreLoopL : FunDecl := lfn (mode, cheap, vis, d, e) locals (st, r) {
   ⟪whnfCoreLoopB⟫;
@@ -87,7 +87,7 @@ def whnfCoreLoopL : FunDecl := lfn (mode, cheap, vis, d, e) locals (st, r) {
 
 /-- The `app` arm of `whnf_core_step` (its own function: the arms' chains of calls are proved
 apart). -/
--- con-ron: ConRon/Arena/Core.lean:2344-2371 ConRon.Arena.whnfCoreStep
+-- con-ron: ConRon/Arena/Core.lean:2345-2372 ConRon.Arena.whnfCoreStep
 @[l_impl ConRon.Arena.whnfCoreStep]
 def whnfCoreAppL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (top, h, so, sn, v, st, r) {
@@ -100,7 +100,7 @@ def whnfCoreAppL : FunDecl :=
 }
 
 /-- The second half of the `app` arm: the reduct's spine, then the β/ι walk. -/
--- con-ron: ConRon/Arena/Core.lean:2344-2371 ConRon.Arena.whnfCoreStep
+-- con-ron: ConRon/Arena/Core.lean:2345-2372 ConRon.Arena.whnfCoreStep
 @[l_impl ConRon.Arena.whnfCoreStep]
 def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd, ho, hn, st, r) {
   top := CTL.u64[136];
@@ -110,7 +110,7 @@ def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd,
   return (st, r)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2344-2371 ConRon.Arena.whnfCoreStep -/
+/-- con-ron: ConRon/Arena/Core.lean:2345-2372 ConRon.Arena.whnfCoreStep -/
 @[l_impl ConRon.Arena.whnfCoreStep]
 def whnfCoreStepL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (g, t, i, st, r) {
@@ -144,8 +144,8 @@ def whnfCoreStepL : FunDecl :=
   abort
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2222-2253 ConRon.Arena.whnfApp
-con-ron: ConRon/Arena/Core.lean:2103-2107 ConRon.Arena.internAppRebuilt -/
+/-- con-ron: ConRon/Arena/Core.lean:2223-2254 ConRon.Arena.whnfApp
+con-ron: ConRon/Arena/Core.lean:2104-2108 ConRon.Arena.internAppRebuilt -/
 @[l_impl ConRon.Arena.whnfApp ConRon.Arena.internAppRebuilt]
 def whnfAppL : FunDecl :=
     lfn (mode, vis, d, v, hd, vo, vn, same, ao, an, i) locals (top, a, node, ap, st, e2, e3, t, x) {
@@ -183,7 +183,7 @@ def whnfAppL : FunDecl :=
   return (0, v)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2201-2220 ConRon.Arena.betaPeel -/
+/-- con-ron: ConRon/Arena/Core.lean:2202-2221 ConRon.Arena.betaPeel -/
 @[l_impl ConRon.Arena.betaPeel]
 def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) {
   co := CTL.u64[136];
@@ -214,7 +214,7 @@ def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) 
   return (1, e2)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2331-2342 ConRon.Arena.whnfCoreStepProj -/
+/-- con-ron: ConRon/Arena/Core.lean:2332-2343 ConRon.Arena.whnfCoreStepProj -/
 @[l_impl ConRon.Arena.whnfCoreStepProj]
 def whnfCoreStepProjL : FunDecl := lfn (mode, cheap, vis, d, e, sn, i, pe) locals (c, f, r) {
   if cheap != 0 { c := call whnf_core(mode, 1, vis, d, pe) } else { c := call whnf(mode, vis, d, pe) };
@@ -223,7 +223,7 @@ def whnfCoreStepProjL : FunDecl := lfn (mode, cheap, vis, d, e, sn, i, pe) local
   return (0, e)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
+/-- con-ron: ConRon/Arena/Core.lean:2297-2330 ConRon.Arena.reduceProjCore -/
 @[l_impl ConRon.Arena.reduceProjCore]
 def reduceProjCoreL : FunDecl :=
     lfn (mode, vis, d, sn, i, c) locals (top, e1, f, q, st, r) {
@@ -238,7 +238,7 @@ def reduceProjCoreL : FunDecl :=
 
 /-- `reduceProjCore` from the scrutinee's head on (`q` the table record): the head must be a
 constant.
-con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
+con-ron: ConRon/Arena/Core.lean:2297-2330 ConRon.Arena.reduceProjCore -/
 def reduceProjHeadL : FunDecl :=
     lfn (mode, vis, e1, q, i) locals (hh, t, x, k, us, st, r) {
   hh := call get_app_fn(e1);
@@ -256,7 +256,7 @@ def reduceProjHeadL : FunDecl :=
 /-- `reduceProjCore` at a constant head `k.{us}`: the arguments (pushed on the stack), the
 level count, the entry's fire check, the shape conditions. The twin's `args.length = numParams +
 numFields` (`Nat`) is tested as `nf <= an && an - nf == np`, which does not wrap; then `np + i < an`.
-con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
+con-ron: ConRon/Arena/Core.lean:2297-2330 ConRon.Arena.reduceProjCore -/
 def reduceProjFireL : FunDecl :=
     lfn (mode, vis, e1, q, i, k, us) locals (ao, an, lo, usl, fok, np, nf, st, r) {
   (ao, an) := call get_app_args(e1);
@@ -273,7 +273,7 @@ def reduceProjFireL : FunDecl :=
 
 /-- `reduceProjCore`'s fire: argument `j` of the slice `(ao, an)` (else `bvar 0`), certified at
 the verified mode.
-con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
+con-ron: ConRon/Arena/Core.lean:2297-2330 ConRon.Arena.reduceProjCore -/
 def reduceProjArgL : FunDecl :=
     lfn (mode, vis, k, ao, an, j) locals (b0, arg, ok) {
   b0 := call intern_bvar(0);
@@ -284,9 +284,9 @@ def reduceProjArgL : FunDecl :=
   return (0, 0)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2279-2286 ConRon.Arena.projCert
-con-ron: ConRon/Arena/Core.lean:2288-2294 ConRon.Arena.projCertAt
-con-ron: ConRon/Arena/Core.lean:2272-2277 ConRon.Arena.teleArityOk -/
+/-- con-ron: ConRon/Arena/Core.lean:2280-2287 ConRon.Arena.projCert
+con-ron: ConRon/Arena/Core.lean:2289-2295 ConRon.Arena.projCertAt
+con-ron: ConRon/Arena/Core.lean:2273-2278 ConRon.Arena.teleArityOk -/
 @[l_impl ConRon.Arena.projCert ConRon.Arena.projCertAt ConRon.Arena.teleArityOk]
 def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   (f, q) := call env_find(k, vis);
@@ -296,7 +296,7 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   return u64(ok != 0)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1837-1849 ConRon.Arena.projLitToCtor -/
+/-- con-ron: ConRon/Arena/Core.lean:1838-1850 ConRon.Arena.projLitToCtor -/
 @[l_impl ConRon.Arena.projLitToCtor]
 def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
   if h >> 28 != 8 { return h };
@@ -358,7 +358,7 @@ def decEntry (a : Array Word) (f q : Word) (i : Nat) : Option IProjEntry :=
 def FindProjOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb T i : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW T →
-    CoreSpec p n "find_proj" [vis, T, i] (fe.findProj? (decI T) i.toNat)
+    CoreSpec p n "find_proj" [vis, T, i] (pure (fe.findProj? (decI T) i.toNat))
       (fun r => decEntry (s₀.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
       M eb
 
@@ -372,7 +372,7 @@ def FireOkOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
     HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
-    (∃ c, fe.find? c = some (.projInfo tbl)) → i.toNat < tbl.numFields →
+    (∃ c, fe.findTable? c = some tbl) → i.toNat < tbl.numFields →
     (∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) →
     CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
       fe M eb
@@ -387,8 +387,8 @@ def IotaRecAtOK (p : Prog) (n : Nat) : Prop :=
       (iotaRecAt (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size)
       decOptR s₀ a₀ dn vis fe M eb ResW
 
-/-- **`find_proj` and `fire_ok` leave the record pool alone** (they intern into the expression and
-level stores); `reduce_proj_core` reads the table's words after them. -/
+/-- **`find_proj` and `fire_ok` leave the record pool alone** (`fire_ok` interns into the level
+store); `reduce_proj_core` reads the table's words after them. -/
 def ErecKept (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
     (f = "find_proj" ∨ f = "fire_ok") → callW p n f vs m = some (r, m') →
@@ -405,7 +405,7 @@ def ProjFound (p : Prog) : Prop :=
     (M : ModeMaps) (eb T i : Word) (r : List Word) (m' : Mem), CoreS dn m a vis fe M eb →
     callW p n "find_proj" [vis, T, i] m = some (r, m') → r.headD 0 ≠ 0 →
     ∃ tbl : IProjTable, decTbl (m.arr64 EREC) (r.tail.headD 0).toNat = some tbl ∧
-      ∃ c, fe.find? c = some (.projInfo tbl)
+      ∃ c, fe.findTable? c = some tbl
 
 /-- **The projection-table callees** (`find_proj`, `fire_ok`) and their record-pool facts: what
 `reduce_proj_core` and the ι side's `and_rescue_slots`/`major_to_ctor` assume of them. A part of

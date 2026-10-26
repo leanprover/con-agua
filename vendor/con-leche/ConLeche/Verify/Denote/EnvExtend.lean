@@ -31,21 +31,30 @@ reading exists on one side and not the other. -/
   ∀ (d : Nat) (e : Expr), ConstsBound env₀ e →
     denote acval env₀ φ d e = denote acval env φ d e
 
+/-- **A table lookup survives an extension that keeps the stored names
+and the tables** (task #362: a constant push or a rule swap). -/
+theorem findProj?_mono_of_tables {env₀ env : Env} (hF : FindPreserved env₀ env)
+    (hT : env.tables = env₀.tables) :
+    ∀ (sn : Name) (i : Nat) (entry : ConLeche.ProjEntry),
+      env₀.findProj? sn i = some entry → env.findProj? sn i = some entry := by
+  intro sn i entry h
+  obtain ⟨tbl, hf0, hi, rfl⟩ := ConLeche.Env.findProj?_some h
+  obtain ⟨-, -, hs⟩ := ConLeche.Env.findTable?_mem hf0
+  refine ConLeche.Env.findProj?_of_table ?_ hi
+  have hs' : (env.find? sn).isSome = true := by
+    cases h0 : env₀.find? sn with
+    | none => rw [h0] at hs; exact nomatch hs
+    | some ci => rw [hF h0]; rfl
+  rw [ConLeche.Env.findTable?_of_isSome hs', hT, ← ConLeche.Env.findTable?_of_isSome hs]
+  exact hf0
+
 /-- **`DenotePEnvExtend`, discharged** — from `FindPreserved` and
 `LitGuardsAgree` alone. -/
 theorem denote_envExtend {env₀ env : Env}
     {acval : Name → (Name → Nat) → Term} {φ : Name → Nat}
     (hF : FindPreserved env₀ env) (hG : LitGuardsAgree env₀ env)
-    (hproj : ∀ (sn : Name) (i : Nat),
-      env₀.findProj? sn i = none → env.findProj? sn i = none) :
+    (hproj : ∀ (sn : Name) (i : Nat), env.findProj? sn i = env₀.findProj? sn i) :
     DenotePEnvExtend env₀ env acval φ := by
-  -- a preserved lookup carries its entry across unchanged
-  have hmono : ∀ (sn : Name) (i : Nat) (entry : ConLeche.ProjEntry),
-      env₀.findProj? sn i = some entry →
-      env.findProj? sn i = some entry := by
-    intro sn i entry h
-    obtain ⟨tbl, hf0, hi, rfl⟩ := ConLeche.Env.findProj?_some h
-    exact ConLeche.Env.findProj?_of_table (hF hf0) hi
   intro d e
   induction d, e using denote.induct (env := env₀) with
   | case1 d u => intro _; rw [denote, denote]
@@ -93,14 +102,12 @@ theorem denote_envExtend {env₀ env : Env}
     | none => rfl
     | some ea =>
       show (match env₀.findProj? sn i with
-          | some entry => some (projNV (i + entry.off) ea)
-          | none => Term.projPair? i ea)
+          | some _ => some (projNV (i + 1) ea)
+          | none => none)
         = (match env.findProj? sn i with
-          | some entry => some (projNV (i + entry.off) ea)
-          | none => Term.projPair? i ea)
-      cases hfp0 : env₀.findProj? sn i with
-      | some entry => rw [hmono sn i entry hfp0]
-      | none => rw [hproj sn i hfp0]
+          | some _ => some (projNV (i + 1) ea)
+          | none => none)
+      rw [hproj sn i]
   | case11 d n hsup =>
     intro _
     rw [denote, ite_eq_left hsup, denote, ite_eq_left (hG.1 ▸ hsup)]
@@ -153,7 +160,7 @@ subjects, whose acceptance guaranteed prefix-supported literals. -/
 /-- Free at every fresh cons, of any kind. -/
 theorem litGuardsMono_cons {env : Env} {c₀ : ConLeche.ConstantInfo}
     (hfresh : env.find? c₀.name = none) :
-    LitGuardsMono env ⟨c₀ :: env.consts⟩ :=
+    LitGuardsMono env ⟨c₀ :: env.consts, env.tables⟩ :=
   ⟨natLitSupported_cons hfresh, strLitSupported_cons hfresh⟩
 
 /-- **The monotone crossing**: a successful prefix reading is
@@ -161,17 +168,11 @@ reproduced verbatim at the extension. -/
 theorem denote_envExtend_mono {env₀ env : Env}
     {acval : Name → (Name → Nat) → Term} {φ : Name → Nat}
     (hF : FindPreserved env₀ env) (hG : LitGuardsMono env₀ env)
-    (hproj : ∀ (sn : Name) (i : Nat),
-      env₀.findProj? sn i = none → env.findProj? sn i = none) :
+    (hproj : ∀ (sn : Name) (i : Nat) (entry : ConLeche.ProjEntry),
+      env₀.findProj? sn i = some entry → env.findProj? sn i = some entry) :
     ∀ (d : Nat) (e : Expr), ConstsBound env₀ e →
       ∀ {ea : Term}, denote acval env₀ φ d e = some ea →
         denote acval env φ d e = some ea := by
-  have hmono : ∀ (sn : Name) (i : Nat) (entry : ConLeche.ProjEntry),
-      env₀.findProj? sn i = some entry →
-      env.findProj? sn i = some entry := by
-    intro sn i entry h
-    obtain ⟨tbl, hf0, hi, rfl⟩ := ConLeche.Env.findProj?_some h
-    exact ConLeche.Env.findProj?_of_table (hF hf0) hi
   intro d e
   induction d, e using denote.induct (env := env₀) with
   | case1 d u => intro _ ea h; rw [denote] at h ⊢; exact h
@@ -227,14 +228,10 @@ theorem denote_envExtend_mono {env₀ env : Env}
   | case10 d sn i e ihe =>
     intro hc ea h
     rw [constsBound_proj] at hc
-    obtain ⟨ea', hea', hcase⟩ := denote_proj_inv h
-    rcases hcase with ⟨entry, hfp0, rfl⟩ | ⟨hnt0, hdec⟩
-    · -- a table entry at the prefix persists unchanged
-      rw [denote, ihe hc hea', hmono sn i entry hfp0]
-      rfl
-    · -- the table-free path: the extension adds no entry either
-      rw [denote, ihe hc hea', hproj sn i hnt0]
-      exact hdec
+    obtain ⟨ea', entry, hea', hfp0, rfl⟩ := denote_proj_inv h
+    -- a table entry at the prefix persists unchanged
+    rw [denote, ihe hc hea', hproj sn i entry hfp0]
+    rfl
   | case11 d n hsup =>
     intro _ ea h
     rw [denote, ite_eq_left hsup] at h
@@ -280,17 +277,11 @@ annotations are the walk's). -/
 theorem denote_envExtend_mono_ok {env₀ env : Env}
     {acval : Name → (Name → Nat) → Term} {φ : Name → Nat}
     (hF : FindPreserved env₀ env) (hG : LitGuardsMono env₀ env)
-    (hproj : ∀ (sn : Name) (i : Nat),
-      env₀.findProj? sn i = none → env.findProj? sn i = none) :
+    (hproj : ∀ (sn : Name) (i : Nat) (entry : ConLeche.ProjEntry),
+      env₀.findProj? sn i = some entry → env.findProj? sn i = some entry) :
     ∀ (d : Nat) (e : Expr),
       ∀ {ea : Term}, denote acval env₀ φ d e = some ea →
         denote acval env φ d e = some ea := by
-  have hmono : ∀ (sn : Name) (i : Nat) (entry : ConLeche.ProjEntry),
-      env₀.findProj? sn i = some entry →
-      env.findProj? sn i = some entry := by
-    intro sn i entry h
-    obtain ⟨tbl, hf0, hi, rfl⟩ := ConLeche.Env.findProj?_some h
-    exact ConLeche.Env.findProj?_of_table (hF hf0) hi
   intro d e
   induction d, e using denote.induct (env := env₀) with
   | case1 d u => intro ea h; rw [denote] at h ⊢; exact h
@@ -332,14 +323,10 @@ theorem denote_envExtend_mono_ok {env₀ env : Env}
     rfl
   | case10 d sn i e ihe =>
     intro ea h
-    obtain ⟨ea', hea', hcase⟩ := denote_proj_inv h
-    rcases hcase with ⟨entry, hfp0, rfl⟩ | ⟨hnt0, hdec⟩
-    · -- a table entry at the prefix persists unchanged
-      rw [denote, ihe hea', hmono sn i entry hfp0]
-      rfl
-    · -- the table-free path: the extension adds no entry either
-      rw [denote, ihe hea', hproj sn i hnt0]
-      exact hdec
+    obtain ⟨ea', entry, hea', hfp0, rfl⟩ := denote_proj_inv h
+    -- a table entry at the prefix persists unchanged
+    rw [denote, ihe hea', hproj sn i entry hfp0]
+    rfl
   | case11 d n hsup =>
     intro ea h
     rw [denote, ite_eq_left hsup] at h

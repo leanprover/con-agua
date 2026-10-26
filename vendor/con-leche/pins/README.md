@@ -13,7 +13,7 @@ and the built-in prelude of the repository's own toolchain:
 
 Carries, for every pin-certified `Nat` operation — `Nat.div`,
 `Nat.mod`, `Nat.gcd`, `Nat.shiftLeft`, `Nat.shiftRight`, `Nat.land`,
-`Nat.lor`, `Nat.xor` — two things:
+`Nat.lor`, `Nat.xor` — three things:
 
 * the **pinned defining expression**: that toolchain's own definition
   value with every local helper (`Nat.modCore`, `Nat.div.go`, matchers,
@@ -27,6 +27,16 @@ Carries, for every pin-certified `Nat` operation — `Nat.div`,
   theorems, elaborated against the real toolchain prelude and made
   self-contained (closed over each operation's own dependency cone, so
   they check against dependency-sliced streams too).
+* the **type pins**: for each of `Decidable.rec` and `Decidable.casesOn`
+  that the pin or the certificates mention, its type in that toolchain
+  (`typePinNames` in `ConLeche/PinGen.lean`).  These are the constants
+  the certificates use whose types differ between the supported
+  toolchains (`Decidable` became a structure on lean4 master), so a
+  stream can resolve every name a foreign variant's certificates
+  mention and still make them ill-typed.  The checker compares each
+  stored type against its pin by definitional equality before anything
+  else of the variant; a mismatch means "this variant does not match",
+  decided without inferring a certificate.
 
 The encoding is described in `ConLeche/PinGen/Dump.lean`: JSON, and what
 is stored per blob is the *share table* (`["a",123,124]`-style entries
@@ -83,8 +93,8 @@ dump, in the order the install gate tries them: each dump becomes a
 **pin variant** (`ConLeche.NatOpPinSet`, listed in
 `ConLeche.natOpPinSets`), and at a pin-certified operation's install
 the checker takes the FIRST variant whose ground constants the stream
-declares, whose pin is definitionally equal to the stream's stored
-value and whose certificates check; only when no variant matches does
+declares, whose type pins and pin are definitionally equal to the
+stream's stored types and value, and whose certificates check; only when no variant matches does
 the stream decline, naming what each variant failed on.  The dump
 that matches the repository's own toolchain (`lean-toolchain`) is
 listed first, so on its streams the first attempt matches and the loop

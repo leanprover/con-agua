@@ -22,14 +22,15 @@ theorem rowSet_frame (m : Mem) (w c q : Word) (ht : rowTag w ≤ 2) :
     simp only [rowArr, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ArrId, List.mem_cons, List.not_mem_nil, or_false]; omega
   exact (h1.trans h2).mono (by simpa using hmem) (by simp)
 
-/-- **`EnvR` after a promotion**: the rows are untouched, the pool grew, the constants list is the
-promoted one. -/
-theorem EnvR.promoted {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
-    {env : IEnv} {idx : Std.HashMap NIdx (Nat × IConstantInfo)} {vb : Nat}
-    (h : EnvR dn m vis ⟨env, idx, vb⟩)
+/-- **`EnvR` after a promotion**: the rows (constant and table) are untouched, the pool grew, the
+constants and tables lists are the promoted ones. -/
+theorem EnvR.promoted {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe)
     (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 135 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
-    (hg : ErecGrow m m') (consts' : List IConstantInfo) (hcons : envConsts dn m' = some consts') :
-    EnvR dn m' vis ⟨⟨consts'⟩, idx, vb⟩ := by
+    (htr : ∀ w, rowTag w ≤ 2 → m'.arr64 (tblArr w) = m.arr64 (tblArr w))
+    (hg : ErecGrow m m') (consts' : List IConstantInfo) (tables' : List IProjTable)
+    (hcons : envConsts dn m' = some consts') (htabs : envTables m' = some tables') :
+    EnvR dn m' vis ⟨⟨consts', tables'⟩, fe.idx, fe.visibleBelow, fe.tbls⟩ := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
     · have : rowTier w < 2 := Nat.mod_lt _ (by decide)
@@ -43,18 +44,28 @@ theorem EnvR.promoted {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : W
         (by simp only [rowArr]; omega)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
+  have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by
+    unfold tblRow; split
+    · rename_i hw; rw [htr w hw]
+    · rfl
   have hx := hg.ext
-  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, hcons⟩
-  rw [hC] at h0
-  have hv := h.vals n hn h0
-  have hk := h.keys n hn
-  simp only [rowW, h0, ite_false, Option.map_some] at hk
-  cases e : idx[n]? with
-  | none => simp [e] at hk
-  | some r =>
-    simp only [e, Option.map_some] at hv ⊢
-    rw [hP]
-    exact (hx.decCI hv.symm).symm
+  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, hcons,
+    fun n hn => (hT _).symm ▸ h.tkeys n hn, fun n hn h0 => ?_, htabs⟩
+  · rw [hC] at h0
+    have hv := h.vals n hn h0
+    have hk := h.keys n hn
+    simp only [rowW, h0, ite_false, Option.map_some] at hk
+    cases e : fe.idx[n]? with
+    | none => simp [e] at hk
+    | some r =>
+      simp only [e, Option.map_some] at hv ⊢
+      rw [hP]
+      exact (hx.decCI hv.symm).symm
+  · rw [hT] at h0 ⊢
+    have hv := h.tvals n hn h0
+    cases e : fe.tbls[n]? with
+    | none => rw [e] at hv; have := h.tkeys n hn; simp [e, h0] at this
+    | some t => rw [e] at hv; exact (hx.decTbl hv.symm).symm
 
 section rel
 variable (p : Prog) (hp : PromoteProg p)

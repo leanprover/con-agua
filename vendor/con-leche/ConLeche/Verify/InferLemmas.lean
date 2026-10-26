@@ -382,7 +382,7 @@ theorem inferTypeCore_app_inv' {env : Env} {fuel d : Nat}
 theorem inferTypeCore_const_inv {env : Env} {fuel d : Nat}
     {n : Name} {us : List Level} {t : Expr}
     (h : inferTypeCore mode env fuel d (.const n us) = .ok t) :
-    ∃ ci, env.find? n = some ci ∧ ci.isTowerEntry = false ∧
+    ∃ ci, env.find? n = some ci ∧
       t = ci.toConstantVal.type.instantiateLevelParams
         ci.toConstantVal.levelParams us := by
   match fuel, h with
@@ -401,15 +401,9 @@ theorem inferTypeCore_const_inv {env : Env} {fuel d : Nat}
       dsimp only at h
       revert h
       split
-      · next htw =>
-        intro h
-        revert h
-        split
-        · intro h
-          simp only [pure, Except.pure, Except.ok.injEq] at h
-          exact ⟨ci, rfl, by simpa using htw, h.symm⟩
-        · intro h
-          simp [throw, throwThe, MonadExceptOf.throw] at h
+      · intro h
+        simp only [pure, Except.pure, Except.ok.injEq] at h
+        exact ⟨ci, rfl, h.symm⟩
       · intro h
         simp [throw, throwThe, MonadExceptOf.throw] at h
 
@@ -766,7 +760,6 @@ theorem iotaRec_inv {env : Env} {fuel d : Nat} {e eout : Expr}
   match hfc : env.find? c with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) => intro h; exact nomatch h
-  | some (.projInfo _) => intro h; exact nomatch h
   | some (.defnInfo _ _ _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.indInfo _ _) => intro h; exact nomatch h
@@ -803,7 +796,6 @@ theorem iotaRec_inv {env : Env} {fuel d : Nat} {e eout : Expr}
   match hfj : env.find? cj with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) => intro h; exact nomatch h
-  | some (.projInfo _) => intro h; exact nomatch h
   | some (.defnInfo _ _ _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.indInfo _ _) => intro h; exact nomatch h
@@ -988,8 +980,7 @@ theorem majorToCtor_inv {env : Env} {fuel d : Nat} {recName : Name}
     simp only [pure, Except.pure, Except.ok.injEq] at h
     exact Or.inl h.symm
   | some (.axiomInfo _) | some (.defnInfo _ _ _) | some (.thmInfo _)
-  | some (.indInfo _ _) | some (.recInfo _ _ _ _)
-  | some (.projInfo _) =>
+  | some (.indInfo _ _) | some (.recInfo _ _ _ _) =>
     intro h; dsimp only at h
     simp only [pure, Except.pure, Except.ok.injEq] at h
     exact Or.inl h.symm
@@ -1013,8 +1004,7 @@ theorem majorToCtor_inv {env : Env} {fuel d : Nat} {recName : Name}
     simp only [pure, Except.pure, Except.ok.injEq] at h
     exact Or.inl h.symm
   | some (.axiomInfo _) | some (.defnInfo _ _ _) | some (.thmInfo _)
-  | some (.ctorInfo _ _ _) | some (.recInfo _ _ _ _)
-  | some (.projInfo _) =>
+  | some (.ctorInfo _ _ _) | some (.recInfo _ _ _ _) =>
     intro h; dsimp only at h
     simp only [pure, Except.pure, Except.ok.injEq] at h
     exact Or.inl h.symm
@@ -1489,7 +1479,7 @@ the slow branch.  The fast "not a proof" arm only ever answers
 the arms run in both modes, so no mode conjunct survives. -/
 theorem propIrrel_inv {env : Env} {fuel d : Nat} {a b : Expr}
     (h : propIrrelFueled mode env fuel d a b = .ok true) :
-    (isProofFast env.find? a = true ∧ isProofFast env.find? b = true) ∨
+    (isProofFast env.find? env.findTable? a = true ∧ isProofFast env.find? env.findTable? b = true) ∨
     ∃ ta sta uT tb stb vT,
       inferTypeIO mode env fuel d a = .ok ta ∧
       inferTypeIO mode env fuel d ta = .ok sta ∧
@@ -1738,7 +1728,6 @@ theorem structEtaCertWith_inv {env : Env} {fuel d : Nat} {a b wtb : Expr}
   match hfc : env.find? c with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) => intro h; exact nomatch h
-  | some (.projInfo _) => intro h; exact nomatch h
   | some (.defnInfo _ _ _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.indInfo _ _) => intro h; exact nomatch h
@@ -1767,7 +1756,6 @@ theorem structEtaCertWith_inv {env : Env} {fuel d : Nat} {a b wtb : Expr}
   match hfT : env.find? T with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) => intro h; exact nomatch h
-  | some (.projInfo _) => intro h; exact nomatch h
   | some (.defnInfo _ _ _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.ctorInfo _ _ _) => intro h; exact nomatch h
@@ -1884,7 +1872,6 @@ theorem structUnitCert_inv {env : Env} {fuel d : Nat} {a b : Expr}
   match hfT : env.find? T with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) => intro h; exact nomatch h
-  | some (.projInfo _) => intro h; exact nomatch h
   | some (.defnInfo _ _ _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.ctorInfo _ _ _) => intro h; exact nomatch h
@@ -2094,8 +2081,7 @@ theorem projEntry_body_wf {env : Env} (henv : EnvWF env) {T : Name}
     entry.body.constsResolve env = true ∧
     entry.body.looseBVarsBounded (entry.numParams + 1) = true := by
   obtain ⟨tbl, hf', hi, rfl⟩ := Env.findProj?_some hf
-  obtain ⟨-, -, -, -, -, -, h8, -⟩ := henv _ (List.mem_of_find?_eq_some hf')
-  obtain ⟨hsize, hb⟩ := h8 tbl rfl
+  obtain ⟨-, hsize, hb⟩ := henv.table hf'
   have hlt : i < tbl.bodies.size := by rw [hsize]; exact hi
   have := hb i (tbl.bodies[i]'hlt) (Array.getElem?_eq_getElem hlt)
   simp only [ProjTable.entry_body, ProjTable.entry_levelParams, ProjTable.entry_numParams]
@@ -2511,7 +2497,6 @@ theorem unfoldDefinition_WScoped {env : Env} (henv : EnvWF env)
   match hf : env.find? n with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) => intro h; exact nomatch h
-  | some (.projInfo _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.indInfo _ _) => intro h; exact nomatch h
   | some (.ctorInfo _ _ _) => intro h; exact nomatch h
@@ -2524,7 +2509,7 @@ theorem unfoldDefinition_WScoped {env : Env} (henv : EnvWF env)
   · intro h
     simp only [Option.some.injEq] at h
     subst h
-    obtain ⟨-, -, -, -, hval, -⟩ := henv _ (Env.find?_mem hf)
+    obtain ⟨-, -, -, -, hval, -⟩ := henv.consts _ (Env.find?_mem hf)
     obtain ⟨hvc, -, -, -⟩ := hval cv value hint rfl
     refine Expr.WScoped.mkAppN
       (WScoped.of_not_hasFvar (by
@@ -2603,7 +2588,7 @@ theorem whnfPres_WScoped {env : Env} (henv : EnvWF env) :
             fun x hx => hwapp.getAppArgs x hx
           have hrhs : WScoped d
               (r.rhs.instantiateLevelParams cv.levelParams us) := by
-            obtain ⟨-, -, -, -, -, hrules, -⟩ := henv _ (Env.find?_mem hfc)
+            obtain ⟨-, -, -, -, -, hrules, -⟩ := henv.consts _ (Env.find?_mem hfc)
             obtain ⟨hrf, -, -, -, -⟩ := hrules cv mI rP rules rfl r
               (List.mem_of_find?_eq_some hrule)
             exact WScoped.of_not_hasFvar

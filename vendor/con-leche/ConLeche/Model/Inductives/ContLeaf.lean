@@ -84,7 +84,7 @@ theorem keyFit_of_wd {μ : ConLeche.CheckMode} (mp : EnvModelM V μ env) {D : Lf
   have hname := ConLeche.Env.find?_name hf
   have hin := mp.mem_type _ hmem ψ _ hta ρ
   rw [hname] at hin
-  have hwf := mp.base2.wf _ hmem
+  have hwf := mp.base2.wf.consts _ hmem
   have hcl : Term.bvarsBelow 0 (mkPisAV ab (.sort (D.w ψ))) :=
     ConLeche.Verify.denote_bvarsBelow mp.base2.cval_closed 0 _
       (ConLeche.Expr.WScoped.of_not_hasFvar hwf.1) hwf.2.2.2.1
@@ -315,14 +315,14 @@ theorem keyParamsFit {μ : ConLeche.CheckMode} (mp : EnvModelM V μ env)
       T' = cv.type.instantiateLevelParams cv.levelParams us := by
     intro T' h
     cases h with
-    | const hf' _ _ =>
+    | const hf' _ =>
       rw [hf] at hf'
       cases hf'
       rfl
   have hcerts := certsF_of_infer_spine ds hhead hpi ⟨ty, hI⟩
   have hsem := Rules.certsF_sound hin hcerts
   -- the former's stored type, read
-  obtain ⟨Ta, hTaD, hokTa, -, hnf, hbd⟩ := Rules.constTy_pkg hin.const_ty hf rfl hul
+  obtain ⟨Ta, hTaD, hokTa, -, hnf, hbd⟩ := Rules.constTy_pkg hin.const_ty hf hul
   dsimp only [ConLeche.ConstantInfo.toConstantVal] at hTaD hokTa hnf hbd
   obtain ⟨hfT, hCT⟩ := Rules.frame_of_not_hasFvar (m := mp.base2) (φ := φ) (Δa := Δa) hnf hbd hΔ
   obtain ⟨resta, hfit⟩ := hsem hfT hCT (hTaD d) hfr hdsa
@@ -362,7 +362,7 @@ theorem keyParamsFit {μ : ConLeche.CheckMode} (mp : EnvModelM V μ env)
     have := teleFitPA_to_chain (ab.take ds.length).length htele hle hTF n (by simpa using hn)
     simpa using this
   -- the former's telescope is closed, so the fit holds at the key frame's base
-  have hwf := mp.base2.wf _ (ConLeche.Env.find?_mem hf)
+  have hwf := mp.base2.wf.consts _ (ConLeche.Env.find?_mem hf)
   have hcl : Term.bvarsBelow 0 (mkPisAV ab (.sort (D.w ψ))) :=
     ConLeche.Verify.denote_bvarsBelow mp.base2.cval_closed 0 _
       (ConLeche.Expr.WScoped.of_not_hasFvar hwf.1) hwf.2.2.2.1

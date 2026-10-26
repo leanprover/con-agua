@@ -92,8 +92,7 @@ def encRules (seen : List ConLeche.Expr) : List ConLeche.RecRule → List UInt8 
     let r' := encRules r.2 rs
     (r.1 ++ r'.1, r'.2)
 
-/-- A constant at the memo `seen` (a projection table: the kind `6` alone, which the reader
-refuses). -/
+/-- A constant at the memo `seen`. -/
 def encCI (seen : List ConLeche.Expr) : ConLeche.ConstantInfo → List UInt8 × List ConLeche.Expr
   | .axiomInfo v => let r := encCV seen v; (u64B 0 ++ r.1, r.2)
   | .defnInfo v e h =>
@@ -111,7 +110,6 @@ def encCI (seen : List ConLeche.Expr) : ConLeche.ConstantInfo → List UInt8 × 
     let r := encCV seen v
     let x := encRules r.2 rs
     (u64B 5 ++ r.1 ++ u64B mI ++ u64B rP ++ u64B rs.length ++ x.1, x.2)
-  | .projInfo _ => (u64B 6, seen)
 
 /-- Constants at one memo. -/
 def encCIsM (seen : List ConLeche.Expr) : List ConLeche.ConstantInfo → List UInt8 × List ConLeche.Expr

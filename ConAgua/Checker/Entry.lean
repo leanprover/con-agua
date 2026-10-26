@@ -34,7 +34,7 @@ open L L.Arena L.Ind
 
 /-- The word arrays the checker names (`0‥wordArrays - 1`, the tier-1 arrays `256 + a` included;
 `checkerProg_arrs` checks it). -/
-def wordArrays : Nat := 318
+def wordArrays : Nat := 388
 
 /-- The least `CTL` length `check` runs with: every fixed `CTL` slot the lanes use is below it
 (the largest is `249`, the prelude parse's id tables), and `arenaR_init`'s `64 ≤ |CTL|`. -/
@@ -163,39 +163,6 @@ def inst1A : FunDecl := lfn (e, v, d) locals (r) {
   return r
 }
 
-/-! ## `is_proj_fn_shape(n)` -/
-
-/-- `is_proj_fn_shape(n)`: `NIdx.isProjFnShape` — `n` is `num (str _ s) _` with `s` `"proj"` or
-`"projTable"`. The views abort where the twin's `viewN` throws (a handle past its tier's count, or
-in the scratch tier while it is off). The string is compared byte by byte in the pool (one byte
-per word, `NStrStore.lean`). -/
--- con-ron: ConRon/Arena/CheckerBase.lean:122-136 ConRon.Arena.NIdx.isProjFnShape
-@[l_impl ConRon.Arena.NIdx.isProjFnShape]
-def isProjFnShapeL : FunDecl := lfn (n) locals (t, i, p, o, l) {
-  if 4294967295 < n { abort };
-  if n >> 28 != 2 { return 0 };
-  t := ⟦n⟧.tier;
-  i := ⟦n⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if NNUM⟨t⟩.count <= i { abort };
-  p := NNUM⟨t, i⟩.p;
-  if 4294967295 < p { abort };
-  if p >> 28 != 1 { return 0 };
-  t := ⟦p⟧.tier;
-  i := ⟦p⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if NSTR⟨t⟩.count <= i { abort };
-  o := NSTR⟨t, i⟩.o;
-  l := NSTR⟨t, i⟩.l;
-  if l != 4 && l != 9 { return 0 };
-  if POOL⦃o⦄ != 112 || POOL⦃o + 1⦄ != 114 || POOL⦃o + 2⦄ != 111 ||
-     POOL⦃o + 3⦄ != 106 { return 0 };
-  if l == 4 { return 1 };
-  if POOL⦃o + 4⦄ != 84 || POOL⦃o + 5⦄ != 97 || POOL⦃o + 6⦄ != 98 ||
-     POOL⦃o + 7⦄ != 108 || POOL⦃o + 8⦄ != 101 { return 0 };
-  return 1
-}
-
 /-! ## `basis_pin_hit(off, len)` -/
 
 /-- `basis_pin_hit(off, len)` → `(ok, kind)`: `basisPinHit block` for the block `check_decl` built
@@ -235,7 +202,7 @@ def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
 constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …`, a `ctorInfo`
 `4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
 binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:425-438 ConRon.Arena.indParamsOk
+-- con-ron: ConRon/Arena/CheckerBase.lean:327-340 ConRon.Arena.indParamsOk
 @[l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;
@@ -273,7 +240,8 @@ def entryProg : Prog :=
    ("fz_40", fzF 40), ("fz_41", fzF 41), ("fz_42", fzF 42), ("fz_43", fzF 43), ("fz_44", fzF 44),
    ("fz_45", fzF 45), ("fz_46", fzF 46), ("fz_47", fzF 47), ("fz_48", fzF 48), ("fz_49", fzF 49),
    ("fz_50", fzF 50), ("fz_51", fzF 51), ("fz_52", fzF 52), ("fz_53", fzF 53), ("fz_54", fzF 54),
-   ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57),
+   ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57), ("fz_58", fzF 58),
+   ("fz_59", fzF 59), ("fz_60", fzF 60),
    ("cap_check", capCheckL),
    -- the reserved pins at their ROM offset (lane `decls` binds it only parametrically, `IrpProg rom
    -- off p`; its readers read the pin-data buffer, `L.Rom.romProgPB`)
@@ -281,7 +249,7 @@ def entryProg : Prog :=
    ("intern_all_pins", L.Rom.internAllPinsPB),
    ("abstract1_fast", abstract1FastA), ("instantiate1_fast", instantiate1FastA),
    ("inst1", inst1A),
-   ("is_proj_fn_shape", isProjFnShapeL), ("basis_pin_hit", basisPinHitL),
+   ("basis_pin_hit", basisPinHitL),
    ("ind_params_ok", indParamsOkL)]
 
 end L.Checker

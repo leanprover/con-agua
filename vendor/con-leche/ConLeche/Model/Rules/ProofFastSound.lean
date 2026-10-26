@@ -411,9 +411,6 @@ theorem typeSort_head (hin : RulesInputs V m φ) {T : Expr} {d : Nat}
       intro hpw
       dsimp only at hpw
       split at hpw
-      · exact nomatch hpw
-      next hnt =>
-      split at hpw
       · next hlen =>
         revert hpw
         cases hres : ConLeche.residualPW (ConLeche.peelPisW env.find? T.getAppArgs.length
@@ -423,9 +420,8 @@ theorem typeSort_head (hin : RulesInputs V m φ) {T : Expr} {d : Nat}
           intro hpw
           obtain rfl := Option.some.inj hpw
           obtain ⟨u0, hpeel, rfl⟩ := ConLeche.residualPW_some_inv hres
-          have hnt' : ci.isTowerEntry = false := by simpa using hnt
-          obtain ⟨TyA, hTyA, -, hmemI, hnf, hbd⟩ := constTy_pkg hin.const_ty hfI hnt' hlen
-          obtain ⟨TyA', hTyA', hwTy, -⟩ := hin.const_ty d I ci vs' hfI hnt' hlen
+          obtain ⟨TyA, hTyA, -, hmemI, hnf, hbd⟩ := constTy_pkg hin.const_ty hfI hlen
+          obtain ⟨TyA', hTyA', hwTy, -⟩ := hin.const_ty d I ci vs' hfI hlen
           obtain rfl : TyA' = TyA := Option.some.inj (hTyA'.symm.trans (hTyA d))
           rw [denote_const hfI hlen] at hfa
           obtain rfl := Option.some.inj hfa
@@ -537,7 +533,7 @@ theorem prf_head (hin : RulesInputs V m φ) {d : Nat} {Δa : List Term} {a : Exp
     (hf : Frame d a) (hC : CtxOkS m φ d Δa a)
     (hda : denote m.acval env φ d a = some aa) (hρ : Sat V Δa ρ)
     (hL : LeavesGr m φ d a ρ)
-    (hpw : ConLeche.headProofPW env.find? a = some pw) (hprop : pw.isProp = true) :
+    (hpw : ConLeche.headProofPW env.find? env.findTable? a = some pw) (hprop : pw.isProp = true) :
     interp V ρ aa = pt := by
   have hholds := holds_of_isProp hprop φ
   cases a with
@@ -550,9 +546,6 @@ theorem prf_head (hin : RulesInputs V m φ) {d : Nat} {Δa : List Term} {a : Exp
       intro hpw
       dsimp only at hpw
       split at hpw
-      · exact nomatch hpw
-      next hnt =>
-      split at hpw
       · next hlen =>
         revert hpw
         cases hts : ConLeche.typeSortPW env.find? ci.toConstantVal.type with
@@ -560,11 +553,10 @@ theorem prf_head (hin : RulesInputs V m φ) {d : Nat} {Δa : List Term} {a : Exp
         | some pw0 =>
           intro hpw
           obtain rfl := Option.some.inj hpw
-          have hnt' : ci.isTowerEntry = false := by simpa using hnt
           have hts' := ConLeche.typeSortPW_instantiateLevelParams m.wf
             ci.toConstantVal.levelParams us hts
-          obtain ⟨TyA, hTyA, -, hmemI, hnf, hbd⟩ := constTy_pkg hin.const_ty hfc hnt' hlen
-          obtain ⟨TyA', hTyA', hwTy, -⟩ := hin.const_ty d c ci us hfc hnt' hlen
+          obtain ⟨TyA, hTyA, -, hmemI, hnf, hbd⟩ := constTy_pkg hin.const_ty hfc hlen
+          obtain ⟨TyA', hTyA', hwTy, -⟩ := hin.const_ty d c ci us hfc hlen
           obtain rfl : TyA' = TyA := Option.some.inj (hTyA'.symm.trans (hTyA d))
           rw [denote_const hfc hlen] at hda
           obtain rfl := Option.some.inj hda
@@ -616,7 +608,7 @@ theorem prf_core (hin : RulesInputs V m φ) :
         {pw : ConLeche.PropWhen},
         Frame d a → CtxOkS m φ d Δa a → denote m.acval env φ d a = some aa →
         Sat V Δa ρ → LeavesGr m φ d a ρ → WellDenoted V ρ aa →
-        ConLeche.proofPW env.find? a = some pw → pw.isProp = true →
+        ConLeche.proofPW env.find? env.findTable? a = some pw → pw.isProp = true →
         interp V ρ aa = pt := by
   intro n
   induction n with
@@ -628,7 +620,7 @@ theorem prf_core (hin : RulesInputs V m φ) :
       simp only [ConLeche.proofPW] at hpw
       simp only [ConLeche.Expr.proofDepth] at hn
       obtain ⟨tya, ba, htya, hba, rfl⟩ := denote_lam_inv hda
-      obtain ⟨hpw', hdep⟩ := ConLeche.proofPW_instantiate1 env.find? (v := .fvar d ty) b 0 hpw
+      obtain ⟨hpw', hdep⟩ := ConLeche.proofPW_instantiate1 env.find? env.findTable? (v := .fvar d ty) b 0 hpw
       rw [interp_lam]
       refine lamV_eq_pt fun x hx => ?_
       exact ih _ (by omega) (Frame.lam_open hf (Frame.lam_ty hf))
@@ -640,7 +632,7 @@ theorem prf_core (hin : RulesInputs V m φ) :
       simp only [ConLeche.Expr.proofDepth] at hn
       obtain ⟨-, va, ba, -, hva, hba, rfl⟩ := denote_letE_inv hda
       obtain ⟨hfr', hsub, hred⟩ := zeta_syntax hf hva hba
-      obtain ⟨hpw', hdep⟩ := ConLeche.proofPW_instantiate1 env.find? (v := v) b 0 hpw
+      obtain ⟨hpw', hdep⟩ := ConLeche.proofPW_instantiate1 env.find? env.findTable? (v := v) b 0 hpw
       have hgv : WellDenoted V ρ va := hwa.letE_val
       rw [interp_zeta]
       exact ih _ (by omega) hfr' (hC.of_subset hsub) hred hρ (hL.of_subset hsub)
@@ -670,13 +662,13 @@ theorem prf_core (hin : RulesInputs V m φ) :
 `isProofFast` yes-arm's justification (`DefEq.proofFast`). -/
 theorem prf_of_isProofFast (hin : RulesInputs V m φ)
     {d : Nat} {a : Expr} {Δa : List Term} {aa : Term}
-    (h : ConLeche.isProofFast env.find? a = true) (hfa : Frame d a)
+    (h : ConLeche.isProofFast env.find? env.findTable? a = true) (hfa : Frame d a)
     (hCa : CtxOkS m φ d Δa a)
     (hda : denote m.acval env φ d a = some aa)
     (ρ : Nat → V) (hρ : Sat V Δa ρ) (hL : LeavesGr m φ d a ρ)
     (hwa : WellDenoted V ρ aa) :
     interp V ρ aa = (pt : V) := by
-  obtain ⟨pw, hpw, hprop⟩ := ConLeche.isProofFast_inv env.find? h
+  obtain ⟨pw, hpw, hprop⟩ := ConLeche.isProofFast_inv env.find? env.findTable? h
   exact prf_core hin _ a (Nat.lt_succ_self _) hfa hCa hda hρ hL hwa hpw hprop
 
 end ConLeche.Model.Rules

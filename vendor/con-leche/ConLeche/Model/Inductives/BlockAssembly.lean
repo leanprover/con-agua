@@ -79,8 +79,6 @@ structure BlockFormerFacts {env : Env} (mp : EnvModelM V μ env) (q : BlockShape
     cvTa.type.constsResolve env = true
   nresOf : ∀ (m : Nat) (cvTa : ConstantVal), cvTas[m]? = some cvTa →
     ConLeche.reservedBasisNames.contains cvTa.name = false
-  pshapeOf : ∀ (m : Nat) (cvTa : ConstantVal), cvTas[m]? = some cvTa →
-    cvTa.name.isProjFnShape = false
   tyWFOf : ∀ (m : Nat) (cvTa : ConstantVal), cvTas[m]? = some cvTa →
     cvTa.type.hasFvar = false ∧
     cvTa.type.allLevelParamsDefined cvTa.levelParams = true ∧
@@ -215,7 +213,6 @@ theorem blockFormerFacts_of (hμ : μ.isVerified = true) {F : Nat} {env envI : E
         cvTa.name = ms.cvT.name ∧ cvTa.levelParams = ms.cvT.levelParams ∧
         env.find? cvTa.name = none ∧
         ConLeche.reservedBasisNames.contains cvTa.name = false ∧
-        cvTa.name.isProjFnShape = false ∧
         cvTa.type.constsResolve env = true ∧
         cvTa.type.hasFvar = false ∧
         cvTa.type.allLevelParamsDefined cvTa.levelParams = true ∧
@@ -226,13 +223,13 @@ theorem blockFormerFacts_of (hμ : μ.isVerified = true) {F : Nat} {env envI : E
     intro m cvTa hm
     obtain ⟨ms, hms, hrun⟩ := hpair m cvTa hm
     obtain ⟨cvT, hn, hl, heq, hccv, bs, hst⟩ := ConLeche.checkBlockTele_shape hrun
-    obtain ⟨hfind, hnres, hpsh, -, hlbt, hitf, -, -, hlpd, htr, -, -⟩ :=
+    obtain ⟨hfind, hnres, -, hlbt, hitf, -, -, hlpd, htr, -, -⟩ :=
       ConLeche.checkConstantVal_inv hccv
-    rw [← heq] at hfind hnres hpsh hlbt hitf hlpd htr hn hl
+    rw [← heq] at hfind hnres hlbt hitf hlpd htr hn hl
     have htf' := hitf
     have hbt' := hlbt
     obtain ⟨pps, hFD⟩ := formerData_of hμ mp ⟨heq, hccv⟩ hst
-    exact ⟨ms, bs, hms, hn, hl, hfind, hnres, hpsh,
+    exact ⟨ms, bs, hms, hn, hl, hfind, hnres,
       htr, htf', hlpd, hbt', hst, pps, hFD⟩
   -- the members' telescope readings, chosen positionally
   have hfdEx : ∀ m : Nat, ∃ pps : (Name → Nat) → List Term,
@@ -248,7 +245,7 @@ theorem blockFormerFacts_of (hμ : μ.isVerified = true) {F : Nat} {env envI : E
       refine ⟨fun _ => [], fun _ hh => ?_, fun _ _ => rfl⟩
       exact absurd hh (by simp)
     | some cvTa =>
-      obtain ⟨ms, -, hms, -, -, -, -, -, -, -, -, -, -, pps, hFD⟩ := hsyn m cvTa hm
+      obtain ⟨ms, -, hms, -, -, -, -, -, -, -, -, -, pps, hFD⟩ := hsyn m cvTa hm
       refine ⟨pps, fun cvTa' hh => ?_, fun hh => nomatch hh⟩
       obtain rfl := Option.some.inj hh
       rw [show (p₀.toBlockShape.withSort s0).nIdxs.getD m 0 = ms.nIdx from hnIdxAt m ms hms]
@@ -259,7 +256,7 @@ theorem blockFormerFacts_of (hμ : μ.isVerified = true) {F : Nat} {env envI : E
         ((p₀.toBlockShape.withSort s0).nP + (p₀.toBlockShape.withSort s0).nIdxs.getD m 0)
         (p₀.toBlockShape.withSort s0).resSort (Classical.choose (hfdEx m)) :=
     fun m cvTa hm => (Classical.choose_spec (hfdEx m)).1 cvTa hm
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hsEval, hfd,
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hsEval, hfd,
     fun m hm => (Classical.choose_spec (hfdEx m)).2 hm, ?_⟩
   · -- one former per member
     show cvTas.length = (p₀.toBlockShape.withSort s0).members.length
@@ -277,19 +274,16 @@ theorem blockFormerFacts_of (hμ : μ.isVerified = true) {F : Nat} {env envI : E
     obtain ⟨-, -, -, -, -, hfind, -⟩ := hsyn m cvTa hm
     exact hfind
   · intro m cvTa hm
-    obtain ⟨-, -, -, -, -, -, -, -, htr, -⟩ := hsyn m cvTa hm
+    obtain ⟨-, -, -, -, -, -, -, htr, -⟩ := hsyn m cvTa hm
     exact htr
   · intro m cvTa hm
     obtain ⟨-, -, -, -, -, -, hnres, -⟩ := hsyn m cvTa hm
     exact hnres
   · intro m cvTa hm
-    obtain ⟨-, -, -, -, -, -, -, hpsh, -⟩ := hsyn m cvTa hm
-    exact hpsh
-  · intro m cvTa hm
-    obtain ⟨-, -, -, -, -, -, -, -, -, htf, hlpd, hbt, -⟩ := hsyn m cvTa hm
+    obtain ⟨-, -, -, -, -, -, -, -, htf, hlpd, hbt, -⟩ := hsyn m cvTa hm
     exact ⟨htf, hlpd, hbt⟩
   · intro m cvTa hm
-    obtain ⟨ms, bs, hms, -, -, -, -, -, -, -, -, -, hst, -⟩ := hsyn m cvTa hm
+    obtain ⟨ms, bs, hms, -, -, -, -, -, -, -, -, hst, -⟩ := hsyn m cvTa hm
     exact ⟨bs, by rw [show (p₀.toBlockShape.withSort s0).nIdxs.getD m 0 = ms.nIdx from
       hnIdxAt m ms hms]; exact hst⟩
   · -- official's parameter agreement, semantically
@@ -368,7 +362,7 @@ theorem blockFormerPass (mp : EnvModelM V μ env) {F : Nat} {p₀ : BlockParts} 
       (∀ (j' : Nat) (cvTb : ConstantVal), cvTas[j']? = some cvTb →
         (ConLeche.blockCapsAt q j' isRec).eta = true →
         env'.find? (ConLeche.blockCapsAt q j' isRec).etaCtor = none) →
-      ∀ m₂ : EnvModel V ⟨.indInfo cvTa (ConLeche.blockCapsAt q j isRec) :: env'.consts⟩,
+      ∀ m₂ : EnvModel V ⟨.indInfo cvTa (ConLeche.blockCapsAt q j isRec) :: env'.consts, env'.tables⟩,
       m₂.acval = acvalWith m'.acval cvTa.name (A j) →
       CapsLawsAt m₂ cvTa.name cvTa (ConLeche.blockCapsAt q j isRec)) :
     ∃ mp' : EnvModelM V μ envI,
@@ -421,91 +415,11 @@ theorem blockFormerPass (mp : EnvModelM V μ env) {F : Nat} {p₀ : BlockParts} 
 
 /-- A name absent from a cons is absent from the base. -/
 theorem find?_none_of_consB {c : ConstantInfo} {env : Env} {n : Name}
-    (h : Env.find? ⟨c :: env.consts⟩ n = none) : env.find? n = none := by
+    (h : Env.find? ⟨c :: env.consts, env.tables⟩ n = none) : env.find? n = none := by
   rw [ConLeche.Env.find?_cons] at h
   split at h
   · exact nomatch h
   · exact h
-
-/-- **A structure-like member's projection TABLE name is free at the
-pre-table environment**: the member's own table check requires the
-name fresh where it runs, and every environment the tables' loop
-threads is a cons over the previous one.
-
-It is what carries inference's projection-slot guarantee
-(`inferTypeCore_noProjAt`) to the block's OWN members: a constructor
-type inferred at the formers' environment carries a `.proj T i` node only where a table for `T` was
-stored THERE, and none of the block's members has one. -/
-theorem blockTablesTblFree {q : BlockShape} :
-    ∀ (l : List (MemberShape × List (ConstantVal × Nat) × List (List Level)))
-      (env env₂ : Env),
-      ConLeche.checkBlockTables (m := ConLeche.CheckM) q l env = .ok env₂ →
-      ∀ (i : Nat) (e : MemberShape × List (ConstantVal × Nat) × List (List Level)),
-        l[i]? = some e → ∀ (cA : ConstantVal × Nat) (sorts : List Level),
-        e.2.1 = [cA] → e.2.2 = [sorts] → e.1.nIdx = 0 →
-        env.find? (projTableName e.1.cvT.name) = none
-  | [], _, _, _, _, _, hi, _, _, _, _, _ => by simp at hi
-  | (ms, ctorsA, sortss) :: rest, env, env₂, h, i, e, hi, cA, sorts, hc, hs, hidx => by
-    have hkey : ∃ env' : Env,
-        ConLeche.checkBlockTables (m := ConLeche.CheckM) q rest env' = .ok env₂ ∧
-        (∀ n : Name, env'.find? n = none → env.find? n = none) ∧
-        (∀ (cB : ConstantVal × Nat) (sortsB : List Level),
-          ctorsA = [cB] → sortss = [sortsB] → ms.nIdx = 0 →
-          env.find? (projTableName ms.cvT.name) = none) := by
-      cases ctorsA with
-      | nil =>
-        refine ⟨env, ?_, fun _ hh => hh, fun _ _ hcc _ _ => by simp at hcc⟩
-        rw [ConLeche.checkBlockTables] at h
-        · exact h
-        · simp
-      | cons cA0 ctl =>
-      cases ctl with
-      | cons c2 ctl2 =>
-        refine ⟨env, ?_, fun _ hh => hh, fun _ _ hcc _ _ => by simp at hcc⟩
-        rw [ConLeche.checkBlockTables] at h
-        · exact h
-        · simp
-      | nil =>
-      cases sortss with
-      | nil =>
-        refine ⟨env, ?_, fun _ hh => hh, fun _ _ _ hss _ => by simp at hss⟩
-        rw [ConLeche.checkBlockTables] at h
-        · exact h
-        · simp
-      | cons s0 stl =>
-      cases stl with
-      | cons s2 stl2 =>
-        refine ⟨env, ?_, fun _ hh => hh, fun _ _ _ hss _ => by simp at hss⟩
-        rw [ConLeche.checkBlockTables] at h
-        · exact h
-        · simp
-      | nil =>
-      rw [ConLeche.checkBlockTables] at h
-      by_cases hidx0 : (ms.nIdx == 0) = true
-      case neg =>
-        rw [ite_eq_right hidx0] at h
-        exact ⟨env, h, fun _ hh => hh, fun _ _ _ _ hii => absurd (by rw [hii]; rfl) hidx0⟩
-      rw [ite_eq_left hidx0] at h
-      cases hT : ConLeche.checkStructProjTable (m := ConLeche.CheckM) ms.cvT.name cA0.1.name
-          q.lps q.nP cA0.2 q.resSort (ConLeche.structProjGuards cA0.1.type q.nP cA0.2 s0)
-          1 cA0.1 env with
-      | error er => rw [hT] at h; exact nomatch h
-      | ok env' =>
-        rw [hT] at h
-        obtain ⟨_bodies, _hb1, _hb2, hfreshT, henvOut⟩ :=
-          ConLeche.checkStructProjTable_inv hT
-        refine ⟨env', h, fun n hn => ?_, fun _ _ _ _ _ => hfreshT⟩
-        rw [henvOut] at hn
-        exact find?_none_of_consB hn
-    obtain ⟨env', hrest, hmono, hhere⟩ := hkey
-    cases i with
-    | zero =>
-      simp only [List.getElem?_cons_zero, Option.some.injEq] at hi
-      subst hi
-      exact hhere cA sorts hc hs hidx
-    | succ j =>
-      simp only [List.getElem?_cons_succ] at hi
-      exact hmono _ (blockTablesTblFree rest env' env₂ hrest j e hi cA sorts hc hs hidx)
 
 /-! ## The dummy pass -/
 
@@ -591,7 +505,7 @@ theorem blockDummyPass (mp : EnvModelM V μ env) {F : Nat} {p₀ : BlockParts} {
   intro j cvTa hj env' m' hFD' hfreshT hcb hfreshC m₂ hac
   have hFD₂ : FormerData m₂ cvTa (q.nP + q.nIdxs.getD j 0) q.resSort (ppsOf j) :=
     hFD'.cross (c₀ := .indInfo cvTa (ConLeche.blockCapsAt q j isRec)) hfreshT
-      (ConsCrossAt.ofNtc fun _ hh => nomatch hh) hcb m₂ hac
+      hcb m₂ hac
   have hleaf : ∀ ψ, m₂.acval cvTa.name ψ = sumTyAV (q.resSort.eval ψ) (ppsOf j ψ) [] := by
     intro ψ
     rw [hac]
@@ -862,7 +776,7 @@ theorem blockRealPass (mp : EnvModelM V μ env) {F : Nat} {p₀ : BlockParts} {i
     intro j cvTa hj env' m' hFD' hfreshT hcb hfreshC m₂ hac
     have hFD₂ : FormerData m₂ cvTa (q.nP + q.nIdxs.getD j 0) q.resSort (ppsOf j) :=
       hFD'.cross (c₀ := .indInfo cvTa (ConLeche.blockCapsAt q j isRec)) hfreshT
-        (ConsCrossAt.ofNtc fun _ hh => nomatch hh) hcb m₂ hac
+        hcb m₂ hac
     have hleaf : ∀ ψ, m₂.acval cvTa.name ψ
         = blockTyG q.k (q.resSort.eval ψ) (fun c => uOf c ψ)
             (fun c => ((ppsOf c ψ).drop q.nP)) (Chs ψ) (ppsOf j ψ) j := by

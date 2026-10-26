@@ -515,39 +515,6 @@ theorem rulesEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {o1 l1 o2 l2 : Word
     have hb : (l1 == l2) = false := by simpa using hl
     simp [rulesEqB, hb, this]
 
-/-! ## Projection tables -/
-
-theorem tblEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {p q : Word} {x y : IProjTable}
-    (hx : decTbl a p.toNat = some x) (hy : decTbl a q.toNat = some y) :
-    tblEqB a p q = decide (x = y) := by
-  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx hy
-  obtain ⟨n1, h1, n2, h2, l3, h3, n5, h5, c6, h6, n7, h7, s8, h8, b9, h9, g11, h11, n13, h13, ex⟩ := hx
-  have ex := Option.some.inj ex; subst ex
-  obtain ⟨m1, k1, m2, k2, l3', k3, m5, k5, c6', k6, m7, k7, s8', k8, b9', k9, g11', k11, m13, k13, ey⟩ := hy
-  have ey := Option.some.inj ey; subst ey
-  obtain ⟨w1, f1, u1, rfl⟩ := hdW_ (q := p) (k := 1) (kn := 1) hsz rfl h1
-  obtain ⟨v1, g1, t1, rfl⟩ := hdW_ (q := q) (k := 1) (kn := 1) hsz rfl k1
-  obtain ⟨w2, f2, u2, rfl⟩ := hdW_ (q := p) (k := 2) (kn := 2) hsz rfl h2
-  obtain ⟨v2, g2, t2, rfl⟩ := hdW_ (q := q) (k := 2) (kn := 2) hsz rfl k2
-  obtain ⟨w5, f5, rfl⟩ := natW_ (q := p) (k := 5) (kn := 5) hsz rfl h5
-  obtain ⟨v5, g5, rfl⟩ := natW_ (q := q) (k := 5) (kn := 5) hsz rfl k5
-  obtain ⟨w6, f6, u6, rfl⟩ := hdW_ (q := p) (k := 6) (kn := 6) hsz rfl h6
-  obtain ⟨v6, g6, t6, rfl⟩ := hdW_ (q := q) (k := 6) (kn := 6) hsz rfl k6
-  obtain ⟨w7, f7, rfl⟩ := natW_ (q := p) (k := 7) (kn := 7) hsz rfl h7
-  obtain ⟨v7, g7, rfl⟩ := natW_ (q := q) (k := 7) (kn := 7) hsz rfl k7
-  obtain ⟨w8, f8, u8, rfl⟩ := hdW_ (q := p) (k := 8) (kn := 8) hsz rfl h8
-  obtain ⟨v8, g8, t8, rfl⟩ := hdW_ (q := q) (k := 8) (kn := 8) hsz rfl k8
-  obtain ⟨w13, f13, rfl⟩ := natW_ (q := p) (k := 13) (kn := 13) hsz rfl h13
-  obtain ⟨v13, g13, rfl⟩ := natW_ (q := q) (k := 13) (kn := 13) hsz rfl k13
-  have s3 := slAt_ok hsz (q := p) (r := q) (i := 3) (j := 4) (kn := 3) rfl rfl rfl h3 k3
-  have s9 := slAt_ok hsz (q := p) (r := q) (i := 9) (j := 10) (kn := 9) rfl rfl rfl h9 k9
-  have s11 := slAt_ok hsz (q := p) (r := q) (i := 11) (j := 12) (kn := 11) rfl rfl rfl h11 k11
-  apply bool_of_iff
-  simp only [tblEqB, tblEqAB, f1, g1, f2, g2, f5, g5, f6, g6, f7, g7, f8, g8, f13, g13, s3, s9, s11,
-    Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IProjTable.mk.injEq, fld_nat, fld_hd u1 t1,
-    fld_hd u2 t2, fld_hd u6 t6, fld_hd u8 t8, List.toArray_inj]
-  grind
-
 /-! ## Constant records -/
 
 theorem cvEqB_ok' {a : Array Word} (hsz : a.size < 2 ^ 64) {p q k : Word} {kn : Nat} (hk : k.toNat = kn)
@@ -595,8 +562,7 @@ theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x :
           nat? a (p + 6) = some nf ∧ x = .ctorInfo cv np nf) ∨
        (wk.toNat = 5 ∧ ∃ cv mi rp o c rules, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some mi ∧
           nat? a (p + 6) = some rp ∧ nat? a (p + 7) = some o ∧ nat? a (p + 8) = some c ∧
-          decRules a o c = some rules ∧ x = .recInfo cv mi rp rules) ∨
-       (wk.toNat = 6 ∧ ∃ tbl, decTbl a p = some tbl ∧ x = .projInfo tbl)) := by
+          decRules a o c = some rules ∧ x = .recInfo cv mi rp rules)) := by
   unfold decCI at h
   simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
   obtain ⟨k, hk, h⟩ := h
@@ -626,12 +592,17 @@ theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x :
   · rename_i hh
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, hcv, mi, hmi, rp, hrp, o, ho, c, hc, rules, hr, rfl⟩ := h
-    exact .inr (.inr (.inr (.inr (.inr (.inl ⟨hh, cv, mi, rp, o, c, rules, hcv, hmi, hrp, ho, hc, hr, rfl⟩)))))
-  · rename_i hh
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨tbl, ht, rfl⟩ := h
-    exact .inr (.inr (.inr (.inr (.inr (.inr ⟨hh, tbl, ht, rfl⟩)))))
+    exact .inr (.inr (.inr (.inr (.inr ⟨hh, cv, mi, rp, o, c, rules, hcv, hmi, hrp, ho, hc, hr, rfl⟩))))
   · simp at h
+
+/-- **A decoded record's constant value sits at `p + 1`** (every kind holds it inline, the twin's
+pure `toConstantVal`). -/
+theorem ciD_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
+    (h : decCI a dn p = some x) : decCV a (p + 1) = some x.toConstantVal := by
+  obtain ⟨_, _, hx⟩ := ciD h
+  rcases hx with ⟨-, cv, hcv, rfl⟩ | ⟨-, cv, -, -, hcv, -, -, rfl⟩ | ⟨-, cv, hcv, rfl⟩ |
+      ⟨-, cv, -, hcv, -, rfl⟩ | ⟨-, cv, -, -, hcv, -, -, rfl⟩ |
+      ⟨-, cv, -, -, -, -, -, hcv, -, -, -, -, -, rfl⟩ <;> exact hcv
 
 theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     (hsz : a.size < 2 ^ 64) {p q : Word} {x y : IConstantInfo}
@@ -645,10 +616,10 @@ theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : Dn
     UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])
   rcases hx with ⟨k0, cv, hcv, rfl⟩ | ⟨k0, cv, v, hi, hcv, hv, hhi, rfl⟩ | ⟨k0, cv, hcv, rfl⟩ |
       ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
-      ⟨k0, cv, mi, rp, o, c, rules, hcv, hmi, hrp, ho, hc, hr, rfl⟩ | ⟨k0, tbl, ht, rfl⟩ <;>
+      ⟨k0, cv, mi, rp, o, c, rules, hcv, hmi, hrp, ho, hc, hr, rfl⟩ <;>
   rcases hy with ⟨k1, cv', hcv', rfl⟩ | ⟨k1, cv', v', hi', hcv', hv', hhi', rfl⟩ | ⟨k1, cv', hcv', rfl⟩ |
       ⟨k1, cv', caps', hcv', hcaps', rfl⟩ | ⟨k1, cv', np', nf', hcv', hnp', hnf', rfl⟩ |
-      ⟨k1, cv', mi', rp', o', c', rules', hcv', hmi', hrp', ho', hc', hr', rfl⟩ | ⟨k1, tbl', ht', rfl⟩
+      ⟨k1, cv', mi', rp', o', c', rules', hcv', hmi', hrp', ho', hc', hr', rfl⟩
   all_goals first
     | (have hne : wk ≠ wk' := fun h => by have := congrArg UInt64.toNat h; omega
        simp [ciEqB, r1, r2, hne]; done)
@@ -718,14 +689,6 @@ theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : Dn
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, f6, g6, f7, g7, f8, g8, c1, c2]
     simp [fld_nat, and_assoc]
-  · -- proj
-    have a1 : wk = 6 := wl wk 6 (by decide) k0
-    have a2 : wk' = 6 := wl wk' 6 (by decide) k1
-    subst a1 a2
-    have c1 := tblEqB_ok hsz ht ht'
-    apply bool_of_iff
-    simp only [ciEqB, r1, r2, c1]
-    simp
 
 end L.Ind
 

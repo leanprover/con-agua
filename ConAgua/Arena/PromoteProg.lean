@@ -105,13 +105,19 @@ def promoteProg : Prog :=
    ("pci_rec", pciRec),
    ("promote_ci", promoteCIL),
    ("promote_ci_list", promoteCIListL),
+   ("promote_proj_tables", promoteProjTablesL),
    ("promote_clear", promoteClear),
    ("vg_rd", vgRd),
    ("vg_wr", vgWr),
    ("promote_vg", promoteVGL),
    ("erase_installed", eraseInstalledL),
    ("index_promoted", indexPromotedL),
+   ("promote_new_consts", promoteNewConstsL),
+   ("erase_installed_tables", eraseInstalledTablesL),
+   ("index_promoted_tables", indexPromotedTablesL),
+   ("promote_new_tables", promoteNewTablesL),
    ("promote_new", promoteNewL),
+   ("tbl_grown", tblGrownL),
    ("pn_find", memoFindG pnSch),
    ("pn_put", memoPutG pnSch),
    ("pn_clear", memoClearG pnSch),
@@ -202,7 +208,12 @@ def promoteProg : Prog :=
    ("erec_alloc", L.Ind.erecAlloc),
    ("env_ix", envIxL),
    ("env_row_set", envRowSetL),
-   ("env_erase", envEraseL)]
+   ("env_erase", envEraseL),
+   ("tbl_ix", tblIxL),
+   ("tbl_row_set", tblRowSetL),
+   ("tbl_cnt", tblCntL),
+   ("tbl_at", tblAtL),
+   ("tbl_put", tblPutL)]
 
 /-- **What the promotion's specs need of the program**: `promoteProg`'s functions
 (`hp.get "f"`). -/

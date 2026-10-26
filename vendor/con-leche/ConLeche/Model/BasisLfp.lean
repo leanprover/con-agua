@@ -713,12 +713,12 @@ the head of the cons. -/
 theorem lfp0_stored {env : ConLeche.Env} {cv : ConLeche.ConstantVal} {caps : ConLeche.IndCaps}
     {w : (Name → Nat) → Nat} {F : V → V}
     {inj : Nat → List V → V} {cn : Nat → Name} {flds : Nat → List Term} :
-    LfpStored (⟨.indInfo cv caps :: env.consts⟩ : ConLeche.Env)
+    LfpStored (⟨.indInfo cv caps :: env.consts, env.tables⟩ : ConLeche.Env)
       (lfp0 cv.name w F inj 0 cn flds) := by
   refine ⟨fun mm hmm => ?_, fun _ _ j hj => absurd hj (Nat.not_lt_zero j)⟩
   obtain rfl : mm = 0 := Nat.lt_one_iff.mp hmm
   exact ⟨cv, caps, by
-    show (⟨.indInfo cv caps :: env.consts⟩ : ConLeche.Env).find? cv.name = _
+    show (⟨.indInfo cv caps :: env.consts, env.tables⟩ : ConLeche.Env).find? cv.name = _
     rw [ConLeche.Env.find?_cons]; exact ite_eq_left rfl⟩
 
 /-- A one-member block is stored at an environment holding its former and

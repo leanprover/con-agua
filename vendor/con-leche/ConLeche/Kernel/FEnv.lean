@@ -28,8 +28,9 @@ index of a parallel install's predicted slots, built once before the
 workers start and never written again.  An entry `n ↦ (c, k, j)` says
 that the constant named `n` gets the installation counter `c` and is
 the `j`-th constant record `k` installs; `slots[k]` is a thunk that
-delivers record `k`'s installed constants (forcing it waits for the
-record's installer to publish them).  An entry is visible to lookups
+delivers record `k`'s installed constants and projection tables, each
+in install order (forcing it waits for the record's installer to
+publish them).  An entry is visible to lookups
 below the bound `below` only, so a lookup waits only on an earlier
 record, never on the looker itself.
 
@@ -42,7 +43,7 @@ everywhere (`FBase.find?_empty`), which is every `FEnv` but a worker's
 view. -/
 structure FBase where
   idx : Array (Std.HashMap Name (Nat × Nat × Nat)) := #[]
-  slots : Array (Thunk (Array ConstantInfo)) := #[]
+  slots : Array (Thunk (Array ConstantInfo × List ProjTable)) := #[]
   below : Nat := 0
 
 /-- The shard a name's base entry lives in, among `m` shards: the high
@@ -67,7 +68,28 @@ def FBase.find? (b : FBase) (n : Name) : Option ConstantInfo :=
   match baseGet? b.idx n with
   | some (c, k, j) =>
     if c < b.below then
-      if h : k < b.slots.size then (b.slots[k]).get[j]? else none
+      if h : k < b.slots.size then (b.slots[k]).get.1[j]? else none
+    else none
+  | none => none
+
+/-- The last table of `T` in a list of tables in install order: the one
+installed last, which a table map built by inserting them in order
+holds. -/
+def ProjTable.lastOf? (T : Name) : List ProjTable → Option ProjTable
+  | [] => none
+  | t :: ts =>
+    match ProjTable.lastOf? T ts with
+    | some r => some r
+    | none => if t.structName == T then some t else none
+
+/-- The base layer's table lookup (task #362): the table of `T` among
+the tables of the record that installs `T` — a table is installed by
+its structure's record — visible where `T` is. -/
+def FBase.findTable? (b : FBase) (T : Name) : Option ProjTable :=
+  match baseGet? b.idx T with
+  | some (c, k, _) =>
+    if c < b.below then
+      if h : k < b.slots.size then ProjTable.lastOf? T (b.slots[k]).get.2 else none
     else none
   | none => none
 
@@ -106,6 +128,12 @@ structure FEnv where
   reads it before the index, as if its constants had been pushed
   (`find?_overlay_pushAll`, `ConLeche/Verify/Cached/BlockOverlay.lean`). -/
   ovl : List ConstantInfo
+  /-- **The projection tables** (task #362), keyed on the structure's
+  name: `env.tables` as a map (the newest table of a name wins, as
+  `List.find?` takes the first).  No counter: a table is visible
+  exactly where its structure is (`findTable?`), so the prefix and
+  worker views need nothing of their own for it. -/
+  tbls : Std.HashMap Name ProjTable
 
 /-- The index build, from the back: the newest (front) constant is
 inserted last and wins, exactly as `List.find?` takes the first match —
@@ -118,11 +146,17 @@ def mkFEnvGo : List ConstantInfo → Nat × Std.HashMap Name (Nat × ConstantInf
     let p := mkFEnvGo cs
     (p.1 + 1, p.2.insert ci.name (p.1, ci))
 
+/-- The table map's build, from the back: the newest (front) table is
+inserted last and wins, exactly as `List.find?` takes the first. -/
+def mkTblsGo : List ProjTable → Std.HashMap Name ProjTable
+  | [] => ∅
+  | t :: ts => (mkTblsGo ts).insert t.structName t
+
 /-- Build the index of `env`, with nothing hidden (`visibleBelow` is the
 constant count). -/
 def mkFEnv (env : Env) : FEnv :=
   let p := mkFEnvGo env.consts
-  ⟨env, p.2, p.1, {}, []⟩
+  ⟨env, p.2, p.1, {}, [], mkTblsGo env.tables⟩
 
 namespace FEnv
 
@@ -153,13 +187,29 @@ def restrictTo (fe : FEnv) (k : Nat) : FEnv :=
   { fe with visibleBelow := k }
 
 /-- The index of the cons-extended environment (`push_mkFEnv`:
-`FEnv.push (mkFEnv env) ci = mkFEnv ⟨ci :: env.consts⟩`, definitionally).
+`FEnv.push (mkFEnv env) ci = mkFEnv ⟨ci :: env.consts, env.tables⟩`,
+definitionally).
 The new entry gets the next installation counter, and the visibility
 bound advances with it — so a push is visible to everything checked
 after it and to nothing checked before (task #108). -/
 def push (fe : FEnv) (ci : ConstantInfo) : FEnv :=
-  ⟨⟨ci :: fe.env.consts⟩, fe.idx.insert ci.name (fe.visibleBelow, ci),
-   fe.visibleBelow + 1, fe.base, fe.ovl⟩
+  ⟨⟨ci :: fe.env.consts, fe.env.tables⟩, fe.idx.insert ci.name (fe.visibleBelow, ci),
+   fe.visibleBelow + 1, fe.base, fe.ovl, fe.tbls⟩
+
+/-- **Install a projection table** (task #362): the table component
+extended, the constant index untouched (`pushTable_mkFEnv`:
+`FEnv.pushTable (mkFEnv env) t = mkFEnv ⟨env.consts, t :: env.tables⟩`,
+definitionally). -/
+def pushTable (fe : FEnv) (t : ProjTable) : FEnv :=
+  ⟨⟨fe.env.consts, t :: fe.env.tables⟩, fe.idx, fe.visibleBelow, fe.base, fe.ovl,
+   fe.tbls.insert t.structName t⟩
+
+/-- Install a list of tables, head first (as `FEnv.pushAll` pushes
+constants): `(pushTables Q fe).env.tables = Q.reverse ++ fe.env.tables`.
+Tail-recursive, so the index is threaded owned. -/
+def pushTables : List ProjTable → FEnv → FEnv
+  | [], fe => fe
+  | t :: Q, fe => pushTables Q (fe.pushTable t)
 
 /-- **Cons `new` (newest first) as an overlay** (task #329): the
 environment `new` pushed onto `fe` would be (`find?_overlay`, for an
@@ -167,7 +217,8 @@ environment `new` pushed onto `fe` would be (`find?_overlay`, for an
 environments, one bucket array.  Read-only: the install never pushes
 onto it. -/
 def overlay (fe : FEnv) (new : List ConstantInfo) : FEnv :=
-  ⟨⟨new ++ fe.env.consts⟩, fe.idx, fe.visibleBelow, fe.base, new ++ fe.ovl⟩
+  ⟨⟨new ++ fe.env.consts, fe.env.tables⟩, fe.idx, fe.visibleBelow, fe.base, new ++ fe.ovl,
+   fe.tbls⟩
 
 /-- **Mark the index linear** (task #331): the identity
 (`markLinear_eq`), which at run time also sets the runtime's linearity
@@ -179,18 +230,34 @@ at the install driver's start, never inside `mkFEnv`: `mkFEnv
 Env.empty` is a closed term, persistent, and a persistent array is
 copied on its first insert by design.  `@[never_extract]` keeps an
 application to a closed argument from being hoisted into a persistent
-closed term itself. -/
+closed term itself.  The table map is marked too: it is threaded the
+same way. -/
 @[never_extract, noinline]
 def markLinear (fe : FEnv) : FEnv :=
-  { fe with idx := fe.idx.markLinear }
+  { fe with idx := fe.idx.markLinear, tbls := fe.tbls.markLinear }
 
 theorem markLinear_eq (fe : FEnv) : fe.markLinear = fe := rfl
 
+/-- The table map's lookup, ungated: a miss in the map falls through to
+the base layer (empty but in a worker's view). -/
+def rawTable? (fe : FEnv) (T : Name) : Option ProjTable :=
+  match fe.tbls[T]? with
+  | some t => some t
+  | none => fe.base.findTable? T
+
+/-- **The table lookup** (task #362): `T`'s table, visible exactly
+where the constant `T` is — the table map holds every installed table,
+and the prefix views (`restrictTo`) and the worker views hide a table by
+hiding its structure (`= Env.findTable?` for `mkFEnv`,
+`mkFEnv_findTable?`). -/
+def findTable? (fe : FEnv) (T : Name) : Option ProjTable :=
+  if (fe.find? T).isSome then fe.rawTable? T else none
+
 /-- Indexed projection-table lookup (`= Env.findProj?` for `mkFEnv`). -/
 def findProj? (fe : FEnv) (T : Name) (i : Nat) : Option ProjEntry :=
-  match fe.find? (projTableName T) with
-  | some (.projInfo tbl) => if i < tbl.numFields then some (tbl.entry i) else none
-  | _ => none
+  match fe.findTable? T with
+  | some tbl => if i < tbl.numFields then some (tbl.entry i) else none
+  | none => none
 
 /-- `towerSlotsAll` through the index. -/
 def towerSlotsAllF (fe : FEnv) (T : Name) (nF : Nat) : Bool :=

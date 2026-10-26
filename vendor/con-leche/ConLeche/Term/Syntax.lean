@@ -53,10 +53,11 @@ Differences from `ConLeche.Expr`, each deliberate:
 
   So the layer has **two unary formers**, `fst e` and `snd e`, taking
   only the subject (task #225; they were one `proj i e` node with a
-  side condition `i < 2` until then).  The checker's node index is
-  decoded once, at the denotation (`Term.projPair?`, below), and every
-  reader downstream matches on a constructor instead of carrying the
-  bound.  The typing rules read `A` and `B` off the premise
+  side condition `i < 2` until then).  The checker's `.proj T i` node
+  is decoded once, at the denotation (through `T`'s projection table:
+  field `i` is the chain of formers `projNV (i + 1)`, behind the
+  constructor's tag), and every reader downstream matches on a
+  constructor instead of carrying the bound.  The typing rules read `A` and `B` off the premise
   `Γ ⊢ p : Σ A B` instead of off the term.  This is the same move
   the `app` rule makes, and it pays the same way: the premise hands
   soundness the `⟦p⟧ ∈ˢ sigmaSet …` package that the set model's
@@ -227,54 +228,6 @@ def mkAppN (f : Term) : List Term → Term
 @[simp] theorem mkAppN_nil (f : Term) : mkAppN f [] = f := rfl
 @[simp] theorem mkAppN_cons (f a : Term) (as : List Term) :
     mkAppN f (a :: as) = mkAppN (.app f a) as := rfl
-
-/-- Decode the checker's projection index for the **pinned pair**: the
-two fields are the two formers `fst`/`snd`, and no other index denotes.
-This is where the side condition `i < 2` of the old single `proj i e`
-former lives now (task #225).  The denotation stays total, and a
-`.proj T i` node with `2 ≤ i` and no projection-table entry still has
-no image, exactly as when the bound was a conjunct of `WellDenoted`. -/
-def projPair? : Nat → Term → Option Term
-  | 0, e => some (.fst e)
-  | 1, e => some (.snd e)
-  | _ + 2, _ => none
-
-/-- The decoder is defined exactly at the two field indices, so a
-decoded projection still witnesses the old side condition. -/
-theorem lt_of_projPair? {i : Nat} {e x : Term} (h : projPair? i e = some x) :
-    i < 2 := by
-  rcases i with _ | _ | i
-  · omega
-  · omega
-  · exact nomatch h
-
-/-- …and conversely: below the bound the decoder always fires, on any
-subject.  Definedness depends on the index alone. -/
-theorem projPair?_exists_of_lt {i : Nat} (h : i < 2) (e : Term) :
-    ∃ x, projPair? i e = some x := by
-  rcases i with _ | _ | i
-  · exact ⟨.fst e, rfl⟩
-  · exact ⟨.snd e, rfl⟩
-  · omega
-
-/-- A decoded projection is one of the two formers on the same
-subject — the case split consumers of the decoder want. -/
-theorem projPair?_cases {i : Nat} {e x : Term} (h : projPair? i e = some x) :
-    x = .fst e ∨ x = .snd e := by
-  rcases i with _ | _ | i
-  · exact Or.inl (Option.some.inj h).symm
-  · exact Or.inr (Option.some.inj h).symm
-  · exact nomatch h
-
-/-- The same split for two decodings **at one index**: a congruence
-site sees the same former on both sides. -/
-theorem projPair?_cases₂ {i : Nat} {e x e' x' : Term}
-    (h : projPair? i e = some x) (h' : projPair? i e' = some x') :
-    (x = .fst e ∧ x' = .fst e') ∨ (x = .snd e ∧ x' = .snd e') := by
-  rcases i with _ | _ | i
-  · exact Or.inl ⟨(Option.some.inj h).symm, (Option.some.inj h').symm⟩
-  · exact Or.inr ⟨(Option.some.inj h).symm, (Option.some.inj h').symm⟩
-  · exact nomatch h
 
 end Term
 

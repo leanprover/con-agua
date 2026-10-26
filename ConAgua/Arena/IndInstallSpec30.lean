@@ -34,7 +34,7 @@ open L.Arena
 /-! ## Write sets from the program text -/
 
 /-- Every word array below 320 (both tiers) but the `has_loose_bvar_b` memo's. -/
-def hbFreeA : List ArrId := (List.range 320).filter (· ≠ HBM)
+def hbFreeA : List ArrId := (List.range 388).filter (· ≠ HBM)
 /-- Every `CTL` word below 256 but the `hb` memo's stamp word. -/
 def hbFreeC : List Word := ((List.range 256).filter (· ≠ 214)).map Nat.toUInt64
 
@@ -44,7 +44,7 @@ theorem hbFree_mfr {m m' : Mem} (h : MemFrame hbFreeA hbFreeC m m') :
   refine ⟨hbFreeA, hbFreeC, h, fun b hb => ?_, fun x hx => ?_⟩
   · simp only [hbFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
     obtain ⟨c, hc⟩ : ∃ c : Nat, c = b := ⟨b, rfl⟩
-    have h1 : c < 320 := hc ▸ hb.1
+    have h1 : c < 388 := hc ▸ hb.1
     have h2 : c ≠ 207 := hc ▸ hb.2
     subst hc
     by_cases a1 : c < 201; · exact .inl a1
@@ -71,7 +71,7 @@ theorem HbMemo.ofClosed {p : Prog} {fs : List FnName} (hcl : closedA p hbFreeA h
   exact ⟨mp, hbMR_mfr (hbFree_mfr (run_memFrame hcl hf (run_of_callW h)).1) (by decide) (by decide) hmp⟩
 
 /-- Every word array below 320 (both tiers) but the five walk memos'. -/
-def posFreeA : List ArrId := (List.range 320).filter (fun b => b ∉ [NOM, DPM, RAM, HBM, RFM])
+def posFreeA : List ArrId := (List.range 388).filter (fun b => b ∉ [NOM, DPM, RAM, HBM, RFM])
 /-- Every `CTL` word below 256 but the five memos' stamp words (and the banked memo's two). -/
 def posFreeC : List Word :=
   ((List.range 256).filter (fun c => c ∉ [204, 206, 208, 210, 214, 218, 219])).map Nat.toUInt64
@@ -81,7 +81,7 @@ theorem posFree_mfr {m m' : Mem} (h : MemFrame posFreeA posFreeC m m') :
   refine ⟨posFreeA, posFreeC, h, fun b hb => ?_, fun x hx => ?_⟩
   · simp only [posFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
     obtain ⟨c, hc⟩ : ∃ c : Nat, c = b := ⟨b, rfl⟩
-    have h1 : c < 320 := hc ▸ hb.1
+    have h1 : c < 388 := hc ▸ hb.1
     have h2 : c ∉ [202, 203, 205, 207, 204] := hc ▸ hb.2
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h2
     subst hc

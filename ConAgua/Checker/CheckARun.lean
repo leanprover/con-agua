@@ -248,7 +248,10 @@ theorem checkerProg_fz : ∀ i < frozen.length, checkerProg.lookup (fzName i) = 
   | 55, _ => show checkerProg.lookup "fz_55" = some (fzF 55); chk_lk
   | 56, _ => show checkerProg.lookup "fz_56" = some (fzF 56); chk_lk
   | 57, _ => show checkerProg.lookup "fz_57" = some (fzF 57); chk_lk
-  | _ + 58, h => exact absurd h (by omega)
+  | 58, _ => show checkerProg.lookup "fz_58" = some (fzF 58); chk_lk
+  | 59, _ => show checkerProg.lookup "fz_59" = some (fzF 59); chk_lk
+  | 60, _ => show checkerProg.lookup "fz_60" = some (fzF 60); chk_lk
+  | _ + 61, h => exact absurd h (by omega)
 
 /-! ## Entry 1 -/
 

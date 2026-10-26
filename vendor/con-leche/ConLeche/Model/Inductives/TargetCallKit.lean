@@ -278,19 +278,8 @@ theorem targetAbs_read
     | some entry =>
       intro vals τ hvl hτ
       obtain ⟨hv, hw⟩ := he vals τ hvl hτ
-      exact projNV_agree (i + entry.off) hv hw
-    | none =>
-      rcases i with _ | _ | i
-      · intro vals τ hvl hτ
-        obtain ⟨hv, hw⟩ := he vals τ hvl hτ
-        exact projNV_agree 0 hv hw
-      · intro vals τ hvl hτ
-        obtain ⟨hv, hw⟩ := he vals τ hvl hτ
-        refine ⟨by simp [hv], fun h => ?_⟩
-        simp only [WellDenoted_snd] at h ⊢
-        obtain ⟨h1, u, v, A, Bf, h2, h3, h4⟩ := h
-        exact ⟨hw h1, u, v, A, Bf, hv ▸ h2, h3, h4⟩
-      · trivial
+      exact projNV_agree (i + 1) hv hw
+    | none => trivial
   | .lam ty b, d, as2, as1, h2, h1 | .forallE ty b, d, as2, as1, h2, h1 => by
     have iht := targetAbs_read hnames ty d as2 as1 h2 h1
     simp only [ConLeche.targetAbs, Expr.instantiateList, denote]

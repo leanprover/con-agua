@@ -213,7 +213,7 @@ def substPWAtL : FunDecl := lfn (lo, lc, us, k, o, c) locals (vo, vc, t0, x) {
 
 /-- `head_type_res(vis, f, n, ty)`: the residual's datum after `n` binders (`peelPisW`, then
 `residualPW`). -/
--- con-ron: ConRon/Arena/PropRead.lean:186-220 ConRon.Arena.headTypePW
+-- con-ron: ConRon/Arena/PropRead.lean:186-219 ConRon.Arena.headTypePW
 @[l_impl ConRon.Arena.headTypePW]
 def headTypeResL : FunDecl := lfn (vis, f, n, ty) locals (pf, pv, k, o, c) {
   (pf, pv) := call peel_pis_w(vis, f, n, ty);
@@ -222,12 +222,11 @@ def headTypeResL : FunDecl := lfn (vis, f, n, ty) locals (pf, pv, k, o, c) {
 }
 
 /-- `head_type_const(vis, f, n, cn, us)`: `headTypePW`'s `.const` arm. -/
--- con-ron: ConRon/Arena/PropRead.lean:186-220 ConRon.Arena.headTypePW
+-- con-ron: ConRon/Arena/PropRead.lean:186-219 ConRon.Arena.headTypePW
 @[l_impl ConRon.Arena.headTypePW]
 def headTypeConstL : FunDecl := lfn (vis, f, n, cn, us) locals (fd, p, lo, l, k, o, c) {
   (fd, p) := call env_find(cn, vis);
   if fd == 0 { return (0, 0, 0) };
-  if EREC.u64[p] == 6 { return (0, 0, 0) };
   (lo, l) := call ls_node(us);
   if l != EREC.u64[p + 3] { return (0, 0, 0) };
   (k, o, c) := call head_type_res(vis, f, n, EREC.u64[p + 4]);
@@ -237,7 +236,7 @@ def headTypeConstL : FunDecl := lfn (vis, f, n, cn, us) locals (fd, p, lo, l, k,
 }
 
 /-- `head_type_pw(vis, f, root, d, h, n)`: the dispatch on the head's view. -/
--- con-ron: ConRon/Arena/PropRead.lean:186-220 ConRon.Arena.headTypePW
+-- con-ron: ConRon/Arena/PropRead.lean:186-219 ConRon.Arena.headTypePW
 @[l_impl ConRon.Arena.headTypePW]
 def headTypePWL : FunDecl :=
     lfn (vis, f, root, d, h, n) locals (g, x1, x2, x3, bf, bd, k, o, c) {
@@ -274,8 +273,8 @@ def typeSortPWLoop : Stmt := lblk (vis, f, rt, r, d, t, x) {
 }
 
 /-- `type_sort_pw(vis, f, rt)`: `typeSortPW` (`typeSortPWGo` from the root `rt`, depth `0`). -/
--- con-ron: ConRon/Arena/PropRead.lean:222-238 ConRon.Arena.typeSortPWGo
--- con-ron: ConRon/Arena/PropRead.lean:240-243 ConRon.Arena.typeSortPW
+-- con-ron: ConRon/Arena/PropRead.lean:221-237 ConRon.Arena.typeSortPWGo
+-- con-ron: ConRon/Arena/PropRead.lean:239-242 ConRon.Arena.typeSortPW
 @[l_impl ConRon.Arena.typeSortPWGo ConRon.Arena.typeSortPW]
 def typeSortPWL : FunDecl := lfn (vis, f, rt) locals (r, d, t, x, cnt, fn, k, o, c) {
   r := rt;
@@ -290,12 +289,11 @@ def typeSortPWL : FunDecl := lfn (vis, f, rt) locals (r, d, t, x, cnt, fn, k, o,
 }
 
 /-- `head_proof_const(vis, f, cn, us)`: `headProofPW`'s `.const` arm. -/
--- con-ron: ConRon/Arena/PropRead.lean:245-277 ConRon.Arena.headProofPW
+-- con-ron: ConRon/Arena/PropRead.lean:244-275 ConRon.Arena.headProofPW
 @[l_impl ConRon.Arena.headProofPW]
 def headProofConstL : FunDecl := lfn (vis, f, cn, us) locals (fd, p, lo, l, k, o, c) {
   (fd, p) := call env_find(cn, vis);
   if fd == 0 { return (0, 0, 0) };
-  if EREC.u64[p] == 6 { return (0, 0, 0) };
   (lo, l) := call ls_node(us);
   if l != EREC.u64[p + 3] { return (0, 0, 0) };
   (k, o, c) := call type_sort_pw(vis, f, EREC.u64[p + 4]);
@@ -306,7 +304,7 @@ def headProofConstL : FunDecl := lfn (vis, f, cn, us) locals (fd, p, lo, l, k, o
 
 /-- `head_proof_proj(vis, f, sn, i)`: `headProofPW`'s `.proj` arm (the table's body at field `i`,
 the `Inhabited` handle `0` past the bodies, as `Array.getD`). -/
--- con-ron: ConRon/Arena/PropRead.lean:245-277 ConRon.Arena.headProofPW
+-- con-ron: ConRon/Arena/PropRead.lean:244-275 ConRon.Arena.headProofPW
 @[l_impl ConRon.Arena.headProofPW]
 def headProofProjL : FunDecl := lfn (vis, f, sn, i) locals (fd, q, b, k, o, c) {
   (fd, q) := call find_proj(vis, sn, i);
@@ -319,7 +317,7 @@ def headProofProjL : FunDecl := lfn (vis, f, sn, i) locals (fd, q, b, k, o, c) {
 }
 
 /-- `head_proof_pw(vis, f, h)`: the dispatch on the head's view. -/
--- con-ron: ConRon/Arena/PropRead.lean:245-277 ConRon.Arena.headProofPW
+-- con-ron: ConRon/Arena/PropRead.lean:244-275 ConRon.Arena.headProofPW
 @[l_impl ConRon.Arena.headProofPW]
 def headProofPWL : FunDecl := lfn (vis, f, h) locals (g, x1, x2, x3, k, o, c) {
   (g, x1, x2, x3) := call e_view(h);
@@ -364,7 +362,7 @@ def proofPWLoop : Stmt := lblk (vis, f, e, t, x) {
   }
 }
 
-/-- con-ron: ConRon/Arena/PropRead.lean:279-300 ConRon.Arena.proofPW -/
+/-- con-ron: ConRon/Arena/PropRead.lean:277-298 ConRon.Arena.proofPW -/
 @[l_impl ConRon.Arena.proofPW]
 def proofPWL : FunDecl := lfn (vis, f, e) locals (t, x, k, o, c) {
   ⟪proofPWLoop⟫;
@@ -377,7 +375,7 @@ def proofPWL : FunDecl := lfn (vis, f, e) locals (t, x, k, o, c) {
 /-! ## The two arms -/
 
 /-- `not_proof_fast(vis, a)`: the heap reset, then `proof_pw` at `coreWalkFuel`. -/
--- con-ron: ConRon/Arena/PropRead.lean:304-310 ConRon.Arena.notProofFast
+-- con-ron: ConRon/Arena/PropRead.lean:302-308 ConRon.Arena.notProofFast
 @[l_impl ConRon.Arena.notProofFast]
 def notProofFastL : FunDecl := lfn (vis, a) locals (k, o, c) {
   CTL.u64[192] := 0;
@@ -388,7 +386,7 @@ def notProofFastL : FunDecl := lfn (vis, a) locals (k, o, c) {
 }
 
 /-- `is_proof_fast(vis, a)`. -/
--- con-ron: ConRon/Arena/PropRead.lean:312-318 ConRon.Arena.isProofFast
+-- con-ron: ConRon/Arena/PropRead.lean:310-316 ConRon.Arena.isProofFast
 @[l_impl ConRon.Arena.isProofFast]
 def isProofFastL : FunDecl := lfn (vis, a) locals (k, o, c) {
   CTL.u64[192] := 0;

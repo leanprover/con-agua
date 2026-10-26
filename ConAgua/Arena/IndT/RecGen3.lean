@@ -42,13 +42,9 @@ theorem classConstOk_of_ih (mode : ConLeche.CheckMode) {fe : IFEnv} {cv : IConst
     simp only [h2, exc_error_bind, exc_ok_bind', reduceCtorEq] at h ⊢
   cases hc1 : b2.contains cv.name <;> simp only [hc1, Bool.false_eq_true, ↓reduceIte, failAM_run,
     StateT.run_bind, exc_error_bind, reduceCtorEq] at h ⊢
-  rcases h3 : (NIdx.isProjFnShape cv.name).run a2 with _ | ⟨b3, a3⟩ <;>
-    simp only [h3, exc_error_bind, exc_ok_bind', reduceCtorEq] at h ⊢
-  cases hc2 : b3 <;> simp only [hc2, Bool.false_eq_true, ↓reduceIte, failAM_run, StateT.run_bind,
-    exc_error_bind, reduceCtorEq] at h ⊢
   cases hc3 : nameNodup cv.levelParams <;> simp only [hc3, Bool.false_eq_true, ↓reduceIte, failAM_run,
     StateT.run_bind, exc_error_bind, reduceCtorEq, not_false_eq_true, not_true_eq_false] at h ⊢
-  rcases h5 : (looseBVarsBoundedFast coreWalkFuel 0 cv.type).run a3 with _ | ⟨b5, a5⟩ <;>
+  rcases h5 : (looseBVarsBoundedFast coreWalkFuel 0 cv.type).run a2 with _ | ⟨b5, a5⟩ <;>
     simp only [h5, exc_error_bind, exc_ok_bind', reduceCtorEq] at h ⊢
   cases hc4 : b5 <;> simp only [hc4, Bool.false_eq_true, ↓reduceIte, failAM_run, StateT.run_bind,
     exc_error_bind, reduceCtorEq, not_false_eq_true, not_true_eq_false] at h ⊢

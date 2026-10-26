@@ -120,7 +120,7 @@ def indPiTeleLen : FunDecl := lfn (f, h) locals (g, x, y, z, r) {
 }
 
 /-- `pi_sort_tele_len(f, e)`: `piSortTeleLen? f e` as `(ok, n)`. -/
--- con-ron: ConRon/Arena/Env.lean:322-332 ConRon.Arena.piSortTeleLen?
+-- con-ron: ConRon/Arena/Env.lean:312-322 ConRon.Arena.piSortTeleLen?
 @[l_impl ConRon.Arena.piSortTeleLen?]
 def piSortTeleLen : FunDecl := lfn (f, h) locals (g, x, y, z, ok, r) {
   if f == 0 { abort };

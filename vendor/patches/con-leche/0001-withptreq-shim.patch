@@ -65,7 +65,7 @@ index 8cd1cca9a8baae0f2e2952640dfea9e8ec89b691..a16f4b4a19a51f9567b1a1423811b08a
  
  /-- The executed equality is the specification: `withPtrEq a b k h`
 diff --git a/vendor/con-leche/ConLeche/Kernel/Name.lean b/vendor/con-leche/ConLeche/Kernel/Name.lean
-index d015be158c9d27d3651d858840b61460885bdaf4..afa9266f0f071be64ad31b025477dbba2482f238 100644
+index 271174e600734a4dbabef69592ac210719a89834..3c6eb103e287cb2207a46cdcb1d3a61e049f068e 100644
 --- a/vendor/con-leche/ConLeche/Kernel/Name.lean
 +++ b/vendor/con-leche/ConLeche/Kernel/Name.lean
 @@ -7,7 +7,7 @@ is that it is *definitionally* `k ()` — which is what
@@ -143,7 +143,7 @@ index 0000000000000000000000000000000000000000..d4e0fd15c75748076e3ae69569ad6112
 +@[expose, implemented_by withPtrEqUnsafe]
 +def ConLeche.withPtrEq {α : Type u} (a b : α) (k : Unit → Bool) (h : a = b → k () = true) : Bool := k ()
 diff --git a/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean b/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean
-index f16021693285e08a90baa7bdb15d751690df714d..5566a6a0b3a3655f4c1e1fb4ae631a794b55ec84 100644
+index 091bbdda638f78582031dc495eab999b0b50f4bc..25a99832cc6de300e4b573357f1ad37caf522991 100644
 --- a/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean
 +++ b/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean
 @@ -6,7 +6,7 @@ import ConLeche.Verify.Cached.KnotCongr
@@ -155,7 +155,7 @@ index f16021693285e08a90baa7bdb15d751690df714d..5566a6a0b3a3655f4c1e1fb4ae631a79
  
  /-!
  # The parallel install's commit step (task #329)
-@@ -195,7 +195,7 @@ structural comparison, which is what it means logically
+@@ -221,7 +221,7 @@ structural comparison, which is what it means logically
  (`slotIs_spec`). -/
  def slotIs (S : Slots) (k j : Nat) (ci : ConstantInfo) : Bool :=
    match slotGet S k j with

@@ -145,7 +145,7 @@ at each of them the front door has already checked the same condition.
 | a loose `.bvar` | outside the fragment (`.notImplemented`); also excluded by the subject's own `looseBVarsBounded 0` |
 | `.const` unfindable / mis-arity | `env.find?` + `us.length = cv.levelParams.length`, the two `throw`s of the `.const` clause |
 | a literal without its basis | `natLitSupported` / `strLitSupported`, the literal clauses' guards |
-| `.proj i` with `2 ≤ i` and no table entry (the decoder `Term.projPair?`'s `none`) | the `.proj` clause throws without an `env.findProj?` entry, and at an entry the reading is the tower (`denote_proj_tower`) |
+| `.proj T i` without a table entry | the `.proj` clause throws without an `env.findProj?` entry, and at an entry the reading is the tower (`denote_proj_tower`) |
 
 The `.fvar` clause reads **unconditionally** — `denote` never looks
 at the leaf's stored annotation; that asymmetry is what made
@@ -193,9 +193,8 @@ theorem inferTypeCore_const_inv_len {fuel d : Nat}
       dsimp only at h
       by_cases hlen : us.length = ci.toConstantVal.levelParams.length
       · exact ⟨ci, rfl, hlen⟩
-      · split at h
-        · simp [throw, throwThe, MonadExceptOf.throw] at h
-        · simp [throw, throwThe, MonadExceptOf.throw] at h
+      · rw [ite_eq_right hlen] at h
+        simp [throw, throwThe, MonadExceptOf.throw] at h
 
 /-- **The `Nat`-literal clause's guard, recorded** — `denote`'s own
 literal guard, verbatim. -/

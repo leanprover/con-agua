@@ -121,7 +121,7 @@ theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option
       ih hfit.2 _ memo1 (k + 1) _ a1 _ (o + 1) (kw - 1) rest r2 m3 (by
         rcases hz with h | ⟨hok, hmo, hn⟩
         · exact .inl (List.append_eq_nil_iff.mp h).2
-        · obtain ⟨st, -, hmo1, -⟩ := ConRon.Bridge.Frontend.internCI_sstep hok hmo hrun1
+        · obtain ⟨st, -, hmo1⟩ := ConRon.Bridge.Frontend.internCI_sstep hok hmo hrun1
           exact .inr ⟨st.ok, hmo1, (hn.ext st.ext).mono (fun x hx => List.mem_append_right _ hx)⟩)
         hI2 hM2 (by rw [hs2]; exact hs1)
         hd1 hk1' (by omega) (by omega) h2

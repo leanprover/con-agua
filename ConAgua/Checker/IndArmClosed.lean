@@ -17,12 +17,12 @@ namespace L.Checker
 open L.Arena L.Ind L.Compiler
 
 /-- An array test: below 320 (both tiers) and `f`. -/
-def tA (f : Nat → Bool) (a : ArrId) : Bool := decide (a < 320) && f a
+def tA (f : Nat → Bool) (a : ArrId) : Bool := decide (a < 388) && f a
 
 /-- A `CTL` word test: below 256 and `g`. -/
 def tC (g : Nat → Bool) (w : Word) : Bool := decide (w.toNat < 256) && g w.toNat
 
-theorem tA_mem {f : Nat → Bool} {a : ArrId} (h : tA f a = true) : a ∈ (List.range 320).filter f := by
+theorem tA_mem {f : Nat → Bool} {a : ArrId} (h : tA f a = true) : a ∈ (List.range 388).filter f := by
   simp only [tA, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [List.mem_filter, List.mem_range]
   exact ⟨h.1, h.2⟩
@@ -106,7 +106,7 @@ theorem checkerProg_armMc : closedA checkerProg mcFreeA mcFreeC armMcFns = true 
 /-! ## The walk memos: the `AbsKeep` callees that reach no walk -/
 
 /-- The arrays below 256 apart from the walk memos'. -/
-def armAbsA : List ArrId := (List.range 320).filter fun b => memoFreeA [b]
+def armAbsA : List ArrId := (List.range 388).filter fun b => memoFreeA [b]
 /-- The `CTL` words below 256 apart from the walk memos' epoch words. -/
 def armAbsC : List Word := ((List.range 256).filter fun c => memoFreeC [c.toUInt64]).map Nat.toUInt64
 
