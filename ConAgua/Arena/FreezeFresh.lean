@@ -304,12 +304,14 @@ theorem tblRow_fresh (w : Word) :
   · have hg3 : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 := by omega
     simp only [hg, ↓reduceIte]
     rcases ht with ht | ht
-    · have ha : tblArr w = 129 + rowTag w := by unfold tblArr; rw [ht]; omega
+    · have ha : tblArr w = 129 + rowTag w := by
+        unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 0 : Nat) = 129 + rowTag w; omega
       have hn : tblArr w ∉ freshZ := by
         rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
       rw [fresh_keep m hn]
       exact ⟨fun _ => rfl, fun h => absurd ht h⟩
-    · have ha : tblArr w = 385 + rowTag w := by unfold tblArr; rw [ht]; omega
+    · have ha : tblArr w = 385 + rowTag w := by
+        unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 1 : Nat) = 385 + rowTag w; omega
       have hn : tblArr w ∈ freshZ := by
         rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
       exact ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; show 385 + rowTag w ≠ (1 : Nat); omega) _⟩
@@ -421,7 +423,7 @@ theorem TwinPend.memos {fe : IFEnv} {pend : List PendingCheck} {a : AState} (h :
   exact ⟨⟨env, pendP,
     { check := { state := { wf := hok.check.state.wf }, caches := { hok.check.caches with },
                  pins := { hok.check.pins with }, ienv := { hok.check.ienv with } }
-      envWF := hok.envWF, persPins := { hok.persPins with }, persEnv := hok.persEnv,
+      envWF := hok.envWF, tblShape := hok.tblShape, persPins := { hok.persPins with }, persEnv := hok.persEnv,
       coh := hok.coh, denote := hok.denote }, hnd, hrel⟩, h.caches, h.off, h.dropped⟩
 
 /-- A worker with the caches empty and the store its own `dropScratch` is the state with fresh
