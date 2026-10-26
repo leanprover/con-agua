@@ -116,7 +116,9 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA ⊢; omega
   have gC : ∀ x ∈ [C], 64 ≤ x.toNat := fun x h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
-  have eA : AvoidA 132 144 [A] := fun b h => .inl (by
+  have eA : AvoidA 129 144 [A] := fun b h => .inl (by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA ⊢; omega)
+  have eA2 : AvoidA 385 388 [A] := fun b h => .inl (by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA ⊢; omega)
   have eC : AvoidC 128 136 [C] := fun x h => .inl (by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega)
@@ -127,7 +129,7 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
       DerR.of_store _ _ _ (DerR.frameM [A] [C] m m' hf
         (fun b hb => by have := gA b hb; simp only [ArrId] at this ⊢; omega) a hS.arena.2) rfl⟩,
       hcore, hS.pins.congr (hf.1 PINS (nA _ (by decide)) (by decide)),
-      hS.env.frame eA eC hf,
+      hS.env.frame eA eC hf eA2,
       fun h l e => hS.readL h l (h1 ▸ e), fun h l e => hS.readLs h l (h2 ▸ e), hS.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
       hS.memos.frame hf ⟨nA _ (by decide), nA _ (by decide)⟩ ⟨nC _ (by decide), nC _ (by decide)⟩

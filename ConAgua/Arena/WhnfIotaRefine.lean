@@ -605,7 +605,8 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     exact DerR.of_store _ _ _ this rfl
   · exact hS.pins.congr (hf.1 PINS (fun h => by simp at h; simp only [PINS] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide))
       (by decide))
-  · exact hS.env.frame (aA 132 144 (Or.inr (by omega))) (aC 128 136 (Or.inr (by omega))) hf
+  · exact hS.env.frame (aA 129 144 (Or.inr (by omega))) (aC 128 136 (Or.inr (by omega))) hf
+      (aA 385 388 (Or.inr (by omega)))
   · intro h l e; exact hS.readL h l (by simpa [hL] using e)
   · intro h l e; exact hS.readLs h l (by simpa [hLs] using e)
   · exact hf.2.2.1 EREC ▸ hS.erec
