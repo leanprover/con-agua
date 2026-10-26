@@ -98,7 +98,7 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
   have fin : ∀ x a', (groundGuards fe (decI pe)).run a = .ok (x, a') →
       CoreStep V env fe a a' ∧ x = (P.looseBVarsBounded 0 && (!P.hasFvar &&
         (P.allLevelParamsDefined [] && P.constsResolve env))) := fun x a' hr => by
-    obtain ⟨h1, h2, h3, h4⟩ := ConRon.Bridge.pinGuardWalk_run hC.check (ConRon.Bridge.Ext.refl _) rfl
+    obtain ⟨h1, h2, h3, h4⟩ := ConRon.Bridge.pinGuardWalk_run hC.check (ConRon.Arena.Ext.refl _) rfl
       hpd hr
     exact ⟨⟨h1, h2, h3⟩, h4⟩
   -- loose bvars
@@ -247,7 +247,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   -- the stored type
   obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, hx2⟩, hf2, hCr2, hw⟩ :=
     (tps_ref hD nw).bindLC hcl (leaf_mem _ (by decide)) hkp (im_mem _ rfl) ⟨hC.stage, hn1⟩ hCr hw
-  obtain ⟨hck2, hxt2, hp2, hd2⟩ := AM.of_run (P := fun t => t = a) rfl hrun2
+  obtain ⟨hck2, hxt2, hp2, hd2⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a) rfl hrun2
     (ConRon.Bridge.typePinStored_spec a (decI nw) nm hC.check hn)
   have c2 : CoreStep V env fe a a2 := ⟨hck2, hxt2, hp2⟩
   have hC2 := StageC.of_core hC hS2 hf2 c2
@@ -420,11 +420,12 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
+    have hlen' : l.toNat = tps.length + 1 := by simpa using hlen
     have hrest : L.Rom.TPinsR m1 (o + 2) (l - 1) tps := by
       have hl1 : (l - 1).toNat = l.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
       have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
-      refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1]; simp at hlen; omega, by rw [hl1]; simp at hlen; omega,
+      refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1]; omega, by rw [hl1]; omega,
         fun i hi => ?_⟩ ⟨hg1.2.1, hg1.2.2.2⟩
       have := hv (i + 1) (by simpa using hi)
       simp only [List.getElem_cons_succ] at this
@@ -432,7 +433,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
         rw [UInt64.ofNat_add, UInt64.ofNat_one, UInt64.mul_add, UInt64.mul_one]; ac_rfl
       rw [e] at this
       exact this
-    obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2'⟩ := ih qs (o + 2) (l - 1) k m1 a1 r2 m' hC1 hCr1 hrest
+    obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2'⟩ := ih qs (o + 2) (l - 1) k m1 a1 r2 m2 hC1 hCr1 hrest
       (ConRon.Bridge.TypePinsDenote.mono c1.ext _ _ hd3) h2
     refine ⟨x2, a2, ?_, hC2, c1.trans c2, hg1.trans hg2, hd2'⟩
     simp only [typePinsGuard, StateT.run_bind, hrun1', exc_ok_bind', hx1, if_true]
@@ -508,7 +509,7 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {ps c : Word}
   replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  obtain ⟨x4, a4, hrun4, hC4, c4, hg4, hd4⟩ := tpsgC hD hcl hkp x3 _ _ _ (k + 1) m3 a2 r4 m4 hC3 hCr3
+  obtain ⟨x4, a4, hrun4, hC4, c4, hg4, hd4⟩ := tpsgC hD hcl hkp x3 _ _ _ k m3 a2 r4 m4 hC3 hCr3
     hd3 htd h4
   have hrun : (divModPinGuard ip fe (decI c)).run a = .ok (x4, a4) := by
     simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2, if_true, hrun3]
