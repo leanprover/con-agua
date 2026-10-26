@@ -34,15 +34,25 @@ def VerdictClaimL {β : Type} (T : AM (RecordVerdict ⊕ β)) (a : AState) (e : 
   e.cls ≠ 0 → (∃ ce, T.run a = .error ce ∧ twinCls ce = e.cls) ∨
     ∃ v a', T.run a = .ok (.inl v, a') ∧ twinCls v.toError = e.cls
 
+/-- The functions `fs` claim nothing in `p`: their errors have class `0` (on `checkerProg` by
+`callE_nv checkerProg_nv`; on `frontAllProg` through its agreement with `checkerProg`). -/
+def NVCls (p : Prog) (fs : List FnName) : Prop :=
+  ∀ g ∈ fs, ∀ n args m e, callE p n g args m = .error e → e.cls = 0
+
+theorem NVCls.cls {p : Prog} {fs : List FnName} (h : NVCls p fs) {g : FnName} (hg : g ∈ fs)
+    {n : Nat} {args : List Word} {m : Mem} {e : Err} (he : callE p n g args m = .error e) :
+    e.cls = 0 := h g hg n args m e he
+
 /-- The common record of a declaration record (all but `inductive`). -/
 def declCv? : DeclRec → Option CVRec
   | .ax cv _ | .defn cv .. | .thm cv _ | .opaq cv .. | .quot cv _ => some cv
   | .ind .. => none
 
 /-- The scanner's `safety` word, the converse half `DeclR` does not state: a definition whose
-`safety` string is `safe` has `flag = 1` (flag `0` is another string, `2` an escaped one). -/
+`safety` string is `safe` does not have `flag = 0` (flag `0` is another string without an escape;
+an escaped spelling of `safe` has flag `2`, where `decl_kind` aborts with class `0`). -/
 def DeclSafeR (d : DeclRec) (f : DFld) : Prop :=
-  ∀ cv v h s, d = .defn cv v h s → s = "safe" → f.flag = 1
+  ∀ cv v h s, d = .defn cv v h s → s = "safe" → f.flag ≠ 0
 
 open L.Arena in
 l_model declKind_specE (p : Prog) (hf : p.lookup "decl_kind" = some declKind)
@@ -93,7 +103,7 @@ theorem declKindE_claim (p : Prog) (m : Mem) (b : ByteArray) (st : StateD) (a : 
     rename_i h20 h21 h1 h2 h0
     cases d with
     | defn cv v h s =>
-      have hs : s ≠ "safe" := fun hs => h1 (hS cv v h s rfl hs)
+      have hs : s ≠ "safe" := fun hs => hS cv v h s rfl hs h0
       obtain ⟨cvp, hpc⟩ := hP cv rfl
       obtain ⟨w, hw⟩ := defnSafety_run st a cv cvp hpc v h s hs
       exact .inr ⟨_, a, hw, by simp [ConRon.Arena.Frontend.RecordVerdict.toError, Err.cls, R_DEFINITION_WITH_SAFETY]⟩
