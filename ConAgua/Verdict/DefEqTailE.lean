@@ -921,3 +921,186 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
       exact hirr _ m₃ M₃ hS₃ hW
 
 end L.Arena
+
+/-! ## `stuck_app_cong`, `stuck_app` -/
+
+namespace L.Arena
+
+/-- **`defeq_lst`'s error spec** (the error half of `DefeqLstOK`). -/
+def DefeqLstE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d ao an bo bn : Word) (xs ys : Array EIdx),
+    SlotPre s₀ a₀ dn vis fe M eb mode → SpineR s₀.mem ao an xs → SpineR s₀.mem bo bn ys →
+    ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat → bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat →
+    CoreSpecE p (n + 1) "defeq_lst" [mode, vis, d, ao, an, bo, bn]
+      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) s₀ a₀
+
+l_model stuckAppCong_specE (p : Prog) (hf : p.lookup "stuck_app_cong" = some stuckAppCongL)
+  fns [hf ↦ stuckAppCongE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`stuck_app_cong`'s error claim** (the error half of `appCong_refines`). -/
+theorem appCong_refinesE (p : Prog) (hq : StuckProg p) (hlstE : DefeqLstE p)
+    (hnv : closedNV p L.Checker.nvFns = true) (n : Nat)
+    (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    CoreSpecE p (n + 1) "stuck_app_cong" [mode, vis, d, a, b]
+      (appCongT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (stuckAppCong_specE p hq.stuckAppCong (n + 1)
+    ⟨s₀.mem, Locals.init []⟩ mode vis d a b) hc0 (Err.code_ne_of_cls hkc)
+  have hS := hs.rel
+  have hK := hk n (Nat.le_refl _)
+  have hKE := hkE n (Nat.le_refl _)
+  have hspn := hS.spn
+  rw [stuckAppCongE.arm1] at hW
+  generalize rdW (s₀.mem.arr64 CTL) 136 = top at hW
+  cases h1 : callE p n "get_app_args" [a] s₀.mem with
+  | error e => rw [h1, stuckAppCongE.k_get_app_args.none] at hW; cases hW; exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1, stuckAppCongE.k_get_app_args.arm1] at hW
+  obtain ⟨hf1, hg1, hr10, htop1, aa, hargs1, hsp1⟩ :=
+    getAppArgs_callW hq.leaf.core.spine hS ha (callW_of_callE h1)
+  have hS₁ := hS.frame_stk hf1 (by simp) (by simp)
+  cases h2 : callE p n "get_app_args" [b] m₁ with
+  | error e => rw [h2, stuckAppCongE.k_get_app_args_2.none] at hW; cases hW; exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h2
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [h2] at hW
+  obtain ⟨hf2, hg2, hr20, htop2, bb, hargs2, hsp2⟩ :=
+    getAppArgs_callW hq.leaf.core.spine hS₁ hb (callW_of_callE h2)
+  have hS₂ := hS₁.frame_stk hf2 (by simp) (by simp)
+  have hla : aa.length = (r₁.tail.headD 0).toNat := by simpa using hsp1.size
+  have hlb : bb.length = (r₂.tail.headD 0).toNat := by simpa using hsp2.size
+  have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hg1.size ▸ hspn
+  have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := hg2.size ▸ hspn₁
+  simp only [stuckAppCongE.k_get_app_args_2] at hW
+  rcases (Classical.em (r₁.tail.headD 0 = r₂.tail.headD 0)).symm with heq | heq
+  · rw [if_neg heq] at hW; cases hW
+  rw [if_pos heq] at hW
+  have heq' : aa.length = bb.length := by rw [hla, hlb, heq]
+  cases h3 : callE p n "get_app_fn" [a] m₂ with
+  | error e => rw [h3, stuckAppCongE.k_get_app_fn.none] at hW; cases hW; exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h3
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [h3, stuckAppCongE.k_get_app_fn.arm1] at hW
+  obtain ⟨rfl, hh3, hgaf3⟩ := getAppFn_callW hq.leaf hS₂.arena.1 ha (callW_of_callE h3)
+  cases h4 : callE p n "get_app_fn" [b] m₃ with
+  | error e => rw [h4, stuckAppCongE.k_get_app_fn_2.none] at hW; cases hW; exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h4
+  | ok q =>
+  obtain ⟨r₄, m₄⟩ := q
+  rw [h4, stuckAppCongE.k_get_app_fn_2.arm1] at hW
+  obtain ⟨rfl, hh4, hgaf4⟩ := getAppFn_callW hq.leaf hS₂.arena.1 hb (callW_of_callE h4)
+  refine ErrClaim.congr_run (appCongT_eq _ fe _ _ _ a₀ aa bb hargs1 hargs2 heq' _ _ hgaf3 hgaf4) ?_
+  cases h5 : callE p n "defeq" [mode, vis, d, r₃.headD 0, r₄.headD 0] m₄ with
+  | error e =>
+    rw [h5, stuckAppCongE.k_defeq.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₄, Locals.init []⟩)
+      (hKE.defeq F ⟨m₄, Locals.init []⟩ a₀ dn vis fe M eb mode d (r₃.headD 0) (r₄.headD 0) hF hn
+        ⟨hS₂, hs.mode4, hs.eb_mode⟩ hh3 hh4) h5)
+  | ok q =>
+  obtain ⟨r₅, m₅⟩ := q
+  rw [h5] at hW
+  simp only [stuckAppCongE.k_defeq] at hW
+  have h₅ := CoreSpec.of_callW (hK.defeq F ⟨m₄, Locals.init []⟩ a₀ dn vis fe M eb mode d (r₃.headD 0)
+    (r₄.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hh3 hh4) (callW_of_callE h5)
+  obtain ⟨_, _, _, hst₅⟩ := h₅.2.1
+  refine ErrClaim.bind_core h₅ (fun M₅ hS₅ => ?_)
+  by_cases h0 : r₅.headD 0 = 0
+  · rw [if_neg (fun h => h h0)] at hW; cases hW
+  rw [if_pos h0] at hW
+  rw [decBool_true_of h0]
+  simp only [↓reduceIte]
+  cases h6 : callE p n "defeq_lst" [mode, vis, d, r₁.headD 0, r₁.tail.headD 0, r₂.headD 0,
+      r₂.tail.headD 0] m₅ with
+  | error e =>
+    rw [h6, stuckAppCongE.k_defeq_lst.none] at hW; cases hW
+    have hb1 := hsp1.bound
+    have hb2 := hsp2.bound
+    have e1 : (spTop m₁).toNat = (r₁.headD 0).toNat + (r₁.tail.headD 0).toNat := by
+      rw [htop1, ← hr10, addW_toNat (by omega)]
+    have e2 : (spTop m₄).toNat = (r₂.headD 0).toNat + (r₂.tail.headD 0).toNat := by
+      rw [htop2, ← hr20, addW_toNat (by have := hg1.size; omega)]
+    have hle12 : (spTop m₁).toNat ≤ (spTop m₄).toNat := UInt64.le_iff_toNat_le.mp hg2.1
+    have h5top : spTop m₅ = spTop m₄ := hst₅.1
+    have hA : SpineR m₅ (r₁.headD 0) (r₁.tail.headD 0) aa.toArray :=
+      (hsp1.grew hg2 (by omega) hspn₁).keep hst₅.size hst₅.below (by omega) hspn₂
+    have hB : SpineR m₅ (r₂.headD 0) (r₂.tail.headD 0) bb.toArray :=
+      hsp2.keep hst₅.size hst₅.below (by omega) hspn₂
+    refine ErrClaim.of_callE_succ h6 fun j hj h' => ?_
+    subst hj
+    have := CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩)
+      (hlstE j (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega)
+        ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode d (r₁.headD 0) (r₁.tail.headD 0) (r₂.headD 0)
+        (r₂.tail.headD 0) aa.toArray bb.toArray ⟨hS₅, hs.mode4, hs.eb_mode⟩ hA hB
+        (by rw [h5top]; omega) (by rw [h5top]; omega)) h'
+    simpa only [List.toList_toArray] using this
+  | ok q => rw [h6, stuckAppCongE.k_defeq_lst.arm1] at hW; simp only [stuckAppCongE.j1] at hW; cases hW
+
+/-- **`stuck_app_cong`'s error spec** (`appCong_refinesE`'s shape at one fuel below). -/
+def AppCongE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word),
+    n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    CoreSpecE p (n + 1) "stuck_app_cong" [mode, vis, d, a, b]
+      (appCongT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+theorem appCongE_of (p : Prog) (hq : StuckProg p) (hlstE : DefeqLstE p)
+    (hnv : closedNV p L.Checker.nvFns = true) : AppCongE p :=
+  fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
+    appCong_refinesE p hq hlstE hnv n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb
+
+l_model stuckApp_specE (p : Prog) (hf : p.lookup "stuck_app" = some stuckAppL)
+  fns [hf ↦ stuckAppE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`stuck_app`'s error claim** (the error half of `stuckApp_refines`). -/
+theorem stuckApp_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
+    (hacE : AppCongE p) (hirrE : StuckIrrelE p) (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n)
+    (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    CoreSpecE p (n + 1) "stuck_app" [mode, vis, d, a, b]
+      (stuckAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (stuckApp_specE p hq.stuckApp (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b) hc0 (Err.code_ne_of_cls hkc)
+  simp only [stuckAppE] at hW
+  rw [stuckAppT_eq]
+  cases h1 : callE p n "stuck_app_cong" [mode, vis, d, a, b] s₀.mem with
+  | error e =>
+    rw [h1, stuckAppE.k_stuck_app_cong.none] at hW; cases hW
+    refine ErrClaim.bind_left (ErrClaim.of_callE_succ h1 fun j hj h' => ?_)
+    subst hj
+    exact CoreSpecE.of_callE (hacE j (hk.mono (by omega)) (hkE.mono (by omega)) F s₀ a₀ dn vis fe M
+      eb mode d a b (by omega) (by omega) hs ha hb) h'
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1] at hW
+  simp only [stuckAppE.k_stuck_app_cong] at hW
+  have h₁ := CoreSpec.of_callW (appCong_at p hq hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha
+    hb) (callW_of_callE h1)
+  refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
+  by_cases h0 : r₁.headD 0 ≠ 0
+  · rw [if_pos h0] at hW; cases hW
+  rw [if_neg h0] at hW
+  rw [decBool_false_of (by simpa using h0)]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  cases h2 : callE p n "stuck_irrel" [mode, vis, d, a, b] m₁ with
+  | error e =>
+    rw [h2, stuckAppE.k_stuck_irrel.none] at hW; cases hW
+    refine ErrClaim.of_callE_succ h2 fun j hj h' => ?_
+    subst hj
+    exact CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩) (hirrE j (hk.mono (by omega))
+      (hkE.mono (by omega)) F _ _ dn vis fe M₁ eb mode d a b (by omega) (by omega)
+      ⟨hS₁, hs.mode4, hs.eb_mode⟩ ha hb) h'
+  | ok q => rw [h2] at hW; simp only [stuckAppE.k_stuck_irrel] at hW; cases hW
+
+end L.Arena
