@@ -54,9 +54,9 @@ theorem indexPromotedTables_cons (tbls : Std.HashMap NIdx IProjTable) (t : IProj
 /-- A write to the table rows keeps the arena, the promotion memos. -/
 theorem arenaD_tbl {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP : PMemoR m pm)
     (hf : MemFrame tblArrs [] m m') : ArenaD m' a ∧ PMemoR m' pm :=
-  ⟨⟨ArenaR.frame_ext _ _ (by simp [TIXA, TIXS, TIXN]) (by simp) m _ hf a hD.1,
-    DerR.frameM _ _ m _ hf (by simp [TIXA, TIXS, TIXN]) a hD.2⟩,
-    hP.frame (by simp [TIXA, TIXS, TIXN]) (by simp) hf⟩
+  ⟨⟨ArenaR.frame (by decide) (by simp) hf hD.1,
+    DerR.frameM _ _ m _ hf (by decide) a hD.2⟩,
+    hP.frame (by decide) (by simp) hf⟩
 
 section rel
 variable (p : Prog) (hp : PromoteProg p)
@@ -337,7 +337,11 @@ theorem ptables_rel : ∀ (n : Nat) (m : Mem) (a : AState)
     obtain ⟨a1, pm1, t', hrun1, hD1, hP1, hcp1, hfr1, htk1, hg1, hts1, hptr1, hptr13, hdec1⟩ :=
       proj_rel p hp n m a pm f ptr D t dl m1 hD hP hsz hts hdec (by omega) hDt hca
     have hE1 : m1.arr64 ETAB = m.arr64 ETAB :=
-      hfr1.1 ETAB (by simp [ETAB, EREC]; decide) (by decide)
+      hfr1.1 ETAB (fun h => by
+        rcases List.mem_cons.mp h with h | h
+        · exact absurd h (by decide)
+        · rcases vg_arrs ETAB (List.mem_cons.mpr (Or.inr h)) with h' | h' | h' <;>
+            (simp only [ETAB, ArrId] at h'; omega)) (by decide)
     have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
     obtain ⟨⟨z0, m1'⟩, hpu, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
