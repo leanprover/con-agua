@@ -184,6 +184,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
         rw [if_neg (by simpa using h3)] at hw
         have hcvd := ciCv_decodes hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
+        simp only [IConstantInfo.toConstantVal] at hiff hty
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw
           replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
@@ -279,6 +280,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
         rw [if_neg (by simpa using h4)] at hw
         have hcvd := ciCv_decodes hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
+        simp only [IConstantInfo.toConstantVal] at hiff hty
         replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
         obtain ⟨hm1, -, hr1⟩ := pinNat_call hN h1
         subst hm1
@@ -390,6 +392,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
         rw [if_neg (by simpa using h4)] at hw
         have hcvd := ciCv_decodes hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
+        simp only [IConstantInfo.toConstantVal] at hiff hty
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw
           have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
