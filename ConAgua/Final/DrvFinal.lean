@@ -34,7 +34,7 @@ theorem getD_zero_headD (rs : List Word) : rs.getD 0 0 = rs.headD 0 := by cases 
 /-- `seqMem`'s word arrays (the globals' writes keep them). -/
 theorem seqMem_arr64 (m : Mem) (lo hi : Word) (hsz : 242 < m.words.size) (a : Nat) :
     (seqMem m MODE PLO PHI OUT HDRF CTLF 132 lo hi).arr64 a =
-      if a = OUT ∨ a = CTLF then #[] else if a = HDRF then (m.arr64 OUT).extract 0 126 else m.arr64 a := by
+      if a = OUT ∨ a = CTLF then #[] else if a = HDRF then (m.arr64 OUT).extract 0 132 else m.arr64 a := by
   show (seqMem0 m OUT HDRF CTLF 132).arr64 a = _
   by_cases ha : a < m.words.size
   · exact seqMem0_arr64 m OUT HDRF CTLF 132 ha
@@ -92,9 +92,9 @@ theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
       simp only [show ¬ (HDRF = OUT ∨ HDRF = CTLF) by decide, if_false, if_true]
       simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
       by_cases h3 : 3 < (m₁.arr64 OUT).size
-      · have h4 : 3 < min 126 (m₁.arr64 OUT).size := by omega
+      · have h4 : 3 < min 132 (m₁.arr64 OUT).size := by omega
         simp [h4]
-      · have h4 : ¬ 3 < min 126 (m₁.arr64 OUT).size := by omega
+      · have h4 : ¬ 3 < min 132 (m₁.arr64 OUT).size := by omega
         simp [h4, Array.getElem?_eq_none (Nat.le_of_not_lt h3)]
 
 /-- **The final theorem for the driver of `checker.s`.** -/

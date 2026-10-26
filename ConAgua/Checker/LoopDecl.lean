@@ -39,7 +39,8 @@ def declExtFns : List FnName :=
    "div_mod_certs_guard_go", "div_mod_cert_guard", "subst_const_all", "subst_const0_list",
    "consts_resolve_all", "check_div_mod_pin_at", "check_div_mod_certs", "div_mod_cert_applied",
    "ground_guards", "div_mod_type_pins", "type_pins_guard", "type_pin_guard", "type_pin_stored",
-   "check_type_pins", "check_div_mod_pin_value",
+   "check_type_pins", "check_div_mod_pin_value", "intern_nstr", "nstr_find", "nstr_match",
+   "nstr_push",
    -- lane `stubs`: the callees of `intern_ls_iw` and `consts_resolve_ffast`
    "pool_room", "iw_pool", "crf_go", "cr_leaf", "cr_lit_pins", "pin_found", "crm_find", "crm_put",
    "crm_clear", "is_str_lit"]

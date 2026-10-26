@@ -82,12 +82,12 @@ theorem thread_chain (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = 
 
 /-- **A thread's calls accept their groups**, in order, from phase A's worker state: entry 1's
 `PhaseBStart m a v`, the buffer `bufOf m v`, a fresh region memory `r₀` (`INIT = 0`, every owned
-array zero at its size in `m`, at least `318` arrays (`checkerTab.nw`)). -/
+array zero at its size in `m`, at least `388` arrays (`checkerTab.nw`)). -/
 theorem thread_accepts (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
     {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
     (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
     (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r₀ : Mem) (hr : 318 ≤ r₀.words.size)
+    (r₀ : Mem) (hr : 388 ≤ r₀.words.size)
     (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m.arr64 b).size) (hI : r₀.glob INIT = 0)
     (cs : List (Word × Nat × Mem)) (hruns : ThreadRuns (bufOf m v) r₀ cs)
     (hj : ∀ c ∈ cs, c.1.toNat < pend.size) :
@@ -108,7 +108,7 @@ theorem thread_accepts (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode 
 /-- What a thread's harness supplies: a fresh region memory and the calls on it. -/
 def ThreadOK (m : Mem) (B : Array Word) (pend : Array PendingCheck)
     (t : Mem × List (Word × Nat × Mem)) : Prop :=
-  318 ≤ t.1.words.size ∧ (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m.arr64 b).size) ∧
+  388 ≤ t.1.words.size ∧ (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m.arr64 b).size) ∧
     t.1.glob INIT = 0 ∧ ThreadRuns B t.1 t.2 ∧ ∀ c ∈ t.2, c.1.toNat < pend.size
 
 /-- **The threads give con-ron's pool**: threads whose calls together claim every group index
@@ -168,7 +168,7 @@ theorem run_load_size {b pb : ByteArray} {s8 s64 : List Nat} (hs : ∀ n ∈ s64
 /-- **The threads' runs accept ⇒ the twin's pool accepts.** Entry 1 (`check` with the mode word
 `1`, from the loaded memory) returning `2^63 + k`; the buffer `B`, the first `len` words of `OUT`
 (`len` the header's word `1`); and threads `ths`, each a fresh region memory (`INIT = 0`, every owned
-array zero at its size in entry 1's memory, at least `318` arrays (`checkerTab.nw`)) with its calls (`ThreadRuns`:
+array zero at its size in entry 1's memory, at least `388` arrays (`checkerTab.nw`)) with its calls (`ThreadRuns`:
 each call's run of `check` on `bufMem B r j` returns, and the buffer is unchanged after it), every
 claimed index below `k`, and every index below `k` claimed by some thread. -/
 theorem threads_twinAcceptsPooled (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
@@ -177,7 +177,7 @@ theorem threads_twinAcceptsPooled (b pb : ByteArray) (s8 s64 : List Nat) (hin : 
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     (B : Array Word) (hB : B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat)
     (ths : List (Mem × List (Word × Nat × Mem)))
-    (hth : ∀ t ∈ ths, 318 ≤ t.1.words.size ∧ (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m₁.arr64 b).size) ∧
+    (hth : ∀ t ∈ ths, 388 ≤ t.1.words.size ∧ (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m₁.arr64 b).size) ∧
       t.1.glob INIT = 0 ∧ ThreadRuns B t.1 t.2 ∧ ∀ c ∈ t.2, c.1 < rs₁.headD 0 - 9223372036854775808)
     (hcov : ∀ j : Word, j < rs₁.headD 0 - 9223372036854775808 → ∃ t ∈ ths, ∃ c ∈ t.2, c.1 = j) :
     TwinAcceptsPooled [b] := by

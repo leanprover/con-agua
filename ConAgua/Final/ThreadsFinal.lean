@@ -65,9 +65,9 @@ theorem entry1_buf (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s
   have hBm : B = bufOf m v := by rw [hB, bufOf, hm₁, (parCompactMem_hdr hok).2.1]
   have hs := bufOf_size (v := v) hok hlt
   have hoffs := buf_offs hok hlt
-  have h126 : hdrW = 132 := by decide
-  have h58 : frozen.length = 61 := frozen_length
-  have h59 : frozenIdsL.length = 59 := rfl
+  have hH : hdrW = 132 := by decide
+  have hF61 : frozen.length = 61 := frozen_length
+  have hL : frozenIdsL.length = 62 := rfl
   refine ⟨by rw [hlen, hF.size, hs.2]; exact hoffs.2, by rw [hlen, hs.2]; omega,
     fun i hi => hBm ▸ buf_entries_inside hok hlt hi, fun i hi i' hi' hii => ?_⟩
   rw [hBm]
@@ -157,7 +157,7 @@ theorem bufKept_of_memRel {B : Array Word} {buf base : Nat} {r : Mem} {d : DataM
   intro k hk h1
   obtain ⟨hidx, -, -, hlt⟩ := frozen_facts hk h1
   have hnw : frozen[k].1 < checkerTab.nw := by
-    have : checkerTab.nw = 318 := by decide
+    have : checkerTab.nw = 388 := by decide
     rw [this]; exact hlt
   have h59 : k + 1 < frozenIdsL.length := by rw [frozenIdsL_eq]; simp; omega
   have he := hent (k + 1) h59
@@ -187,8 +187,8 @@ theorem threadRuns_range (B : Array Word) (t : ThreadM) (rm : Nat → Mem)
     exact ⟨by simp [abiFuel], h1, h2, threadRuns_range B t rm h c (s + 1) (by omega)⟩
 
 theorem parOwnedL_lt : ∀ a ∈ parOwnedL, a < checkerTab.nw := by
-  have h1 : parOwnedL.all (· < 318) = true := by decide
-  have h2 : checkerTab.nw = 318 := by decide
+  have h1 : parOwnedL.all (· < 388) = true := by decide
+  have h2 : checkerTab.nw = 388 := by decide
   intro a ha; rw [h2]; simpa using List.all_eq_true.mp h1 a ha
 
 /-! ## The theorem -/
@@ -252,7 +252,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   rw [← hBeq] at hent' hinc'
   -- the buffer's header facts (`BufGeom`'s)
   have hhdr : ∀ i < frozenIdsL.length, 9 + 2 * i < B.size := by
-    intro i hi; have : frozenIdsL.length = 59 := rfl; omega
+    intro i hi; have : frozenIdsL.length = 62 := rfl; omega
   have hdisj : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
       (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨
       (bufEntry B i').1 + (bufEntry B i').2 ≤ (bufEntry B i).1 ∨ (bufEntry B i).2 = 0 ∨ (bufEntry B i').2 = 0 := by
