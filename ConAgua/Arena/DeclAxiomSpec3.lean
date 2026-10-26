@@ -137,7 +137,7 @@ def FpT (fe : IFEnv) (nm : NIdx) (k a b : Word) (T : AM IConstantVal) (a0 : ASta
     (fun cvT => (do let pin ← T; pure (decide (cvT = pin)) : AM Bool).run a0 = .ok (res, a'))
 
 /-- The pin of a clause: the ROM constant's constant value. -/
-def romPinT (id : Nat) : AM IConstantVal := do (← romCiT id).toConstantVal
+def romPinT (id : Nat) : AM IConstantVal := do return (← romCiT id).toConstantVal
 
 section model
 variable (p : Prog)
@@ -271,8 +271,8 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
       ⟨hS2, hpciP⟩) h3
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3
-  generalize AM.res (pci.toConstantVal) a2 = pin at hrun3 hcv3
-  generalize AM.st (pci.toConstantVal) a2 = a3 at hrun3 hS3
+  generalize AM.res (pure pci.toConstantVal : AM IConstantVal) a2 = pin at hrun3 hcv3
+  generalize AM.st (pure pci.toConstantVal : AM IConstantVal) a2 = a3 at hrun3 hS3
   have hq1b : q.toNat + 1 < 2 ^ 64 := by
     obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvP
     have := erecP_bound hw hS.2; omega

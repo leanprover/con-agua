@@ -151,10 +151,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
   obtain ⟨s2, hs2, -, hok2, hS2, hg2, hcv2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (ciToCv_refines p hC dn vis fe w ci n ⟨m1, Locals.init []⟩ a1 ⟨hS1, hciP⟩) h2
   subst hs2
-  have hrun2 := AM.run_of_ok _ _ hok2
-  generalize AM.res ci.toConstantVal a1 = pcv at hrun2 hcv2
-  generalize AM.st ci.toConstantVal a1 = a2 at hrun2 hS2
-  have hok2' : ConRon.Bridge.StateOK a2 := ConRon.Bridge.toConstantVal_stateOK hok1 hrun2
+  simp only [AM.res_pure, AM.st_pure] at hS2 hcv2
   -- `cv_canon_eq`
   cases h3 : callW p n "cv_canon_eq" [q, r2.headD 0] s2.mem with
   | none => rw [h3] at hW; cases hW
@@ -165,13 +162,13 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
   obtain ⟨rfl, rfl⟩ := hW
   have hg12 := hg1.trans hg2
   obtain ⟨s3, hs3, -, hok3, ⟨⟨hS3, hg3, hd3⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (cvCanonEq_refines p hC dn vis fe q (r2.headD 0) cv pcv n ⟨s2.mem, Locals.init []⟩ a2
-      ⟨hS2, ArrExt.decCV (IWGrow.erecPExt hg12) hq, hcv2, poolSmall_of_stage hS2,
-        fun x y l hx hy => hok2'.view_inj hx hy⟩) h3
+    (cvCanonEq_refines p hC dn vis fe q (r2.headD 0) cv ci.toConstantVal n ⟨s2.mem, Locals.init []⟩
+      a1 ⟨hS2, ArrExt.decCV (IWGrow.erecPExt hg12) hq, hcv2, poolSmall_of_stage hS2,
+        fun x y l hx hy => hok1.view_inj hx hy⟩) h3
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3
   refine ⟨_, _, ?_, hS3, hg12.trans hg3, hd3⟩
-  simp only [quotPinHit, StateT.run_bind, hrun1', exc_ok_bind', hget, hrun2]
+  simp only [quotPinHit, StateT.run_bind, hrun1', exc_ok_bind', hget]
   exact hrun3
 
 /-! ## The quotient arm `check_decl_quot(i, vis)` -/
