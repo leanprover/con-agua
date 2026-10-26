@@ -431,4 +431,148 @@ theorem recIdxE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV)
       rw [ex1] at hT
       exact hrest m rfl h fun h' => absurd h' hT
 
+
+/-- **`vi_rec`'s error model**: a class-`≠ 0` error is an `.invalid` (class `1`) and the twin's
+checks of the recursor record fail (`RecFail`). Hypotheses of the ok refinement `recW_twin`. -/
+theorem recE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b : ByteArray}
+    {n : Nat} {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
+    (hD : StateDR m st) {rc : IndRecRec} {r np tn cn ke tyn tyt fuel : Word}
+    (hrec : RecF b m r.toNat rc) (hr : r.toNat + 11 < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
+    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
+    (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32)
+    (e : Err) (h : recE p n m r np tn cn ke tyn tyt fuel = .error e) (hk : e.cls ≠ 0) :
+    e.cls = 1 ∧ RecFail st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat
+      tn.toNat cn.toNat (keOf ke) fuel.toNat rc := by
+  cases n with
+  | zero => rw [recE.eq_1] at h; cases h; exact absurd (by simp [Err.cls]) hk
+  | succ n =>
+  rw [recE.arm1] at h
+  have ix : ∀ s : Word, s.toNat ≤ 10 → rdW (m.arr64 IFR) (r + s) = wd m IFR (r.toNat + s.toNat) := by
+    intro s hs; rw [wd_eq, widx2 _ _ (by omega)]
+  obtain ⟨⟨c1, -, -⟩, c2, c3, c4, c5, c6, -⟩ := hrec
+  cases h1 : callE p n "name_get" [rdW (m.arr64 IFR) r] m with
+  | error e1 =>
+    rw [h1, recE.k_name_get.none] at h; cases h
+    exact absurd (hnv.cls (by simp) h1) hk
+  | ok q =>
+  obtain ⟨rr, m₁⟩ := q
+  rw [h1] at h
+  obtain ⟨s', hs', rfl, hok, hrr⟩ :=
+    triple_of_callE (nameGet_spec p hL.decl.expr.front n ⟨m, Locals.init []⟩ _) h1
+  have hm₁ : m₁ = m := by rw [← hs']
+  subst hm₁
+  have hl : lkW m₁ NID (rdW (m₁.arr64 IFR) r) = some (rr.headD 0) := by
+    simp only [lkW, hok, if_true, hrr, List.headD_cons]
+  rw [wd_eq] at hl
+  have hname := (lkW_name hD a hl).1
+  rw [c1.1] at hname
+  -- the indices check, after the counts and `k` passed
+  have hJ : recE.j1 p n r np tn tyn tyt fuel (rr.headD 0) m₁ = .error e →
+      e = .abort R_RECURSOR_DECLARES_INDICES ∧
+      ∃ T, (viewN (decI (rr.headD 0))).run a = .ok (.str T "rec", a) ∧
+        ∃ j, ∃ hj : j < (islice (k := .name) m₁ tyn.toNat tn.toNat).length,
+          ∃ hj' : j < (islice (k := .expr) m₁ tyt.toNat tn.toNat).length,
+          (∀ j' (h1 : j' < j), (islice (k := .name) m₁ tyn.toNat tn.toNat)[j'] = T → ∃ o,
+            (piSortTeleLen? fuel.toNat ((islice (k := .expr) m₁ tyt.toNat tn.toNat)[j']'(by omega))).run a =
+              .ok (o, a) ∧ ∀ k, o = some k → np.toNat + rc.numIndices = k) ∧
+          (islice (k := .name) m₁ tyn.toNat tn.toNat)[j] = T ∧ ∃ k,
+            (piSortTeleLen? fuel.toNat (islice (k := .expr) m₁ tyt.toNat tn.toNat)[j]).run a =
+              .ok (some k, a) ∧ np.toNat + rc.numIndices ≠ k := by
+    intro hj
+    rw [recE.j1.arm1] at hj
+    cases h2 : callE p n "name_rec_pre" [rr.headD 0] m₁ with
+    | error e2 =>
+      rw [h2, recE.k_name_rec_pre.none] at hj; cases hj
+      exact absurd (hnv.cls (by simp) h2) hk
+    | ok q2 =>
+    obtain ⟨r2, m₂⟩ := q2
+    rw [h2] at hj
+    obtain ⟨s2, hs2, rfl, hW2⟩ := triple_of_callE (nrp_spec p hL n ⟨m₁, Locals.init []⟩ _) h2
+    have hm₂ : m₂ = m₁ := by rw [← hs2]
+    subst hm₂
+    obtain ⟨v, hv, hv1, -⟩ := nrpW_ok hR _ _ _ hW2
+    by_cases hf : r2.headD 0 = 0
+    · rw [recE.k_name_rec_pre.arm2 p n r np tn tyn tyt fuel r2 m₂ hf, recE.j2.arm1] at hj; cases hj
+    rw [recE.k_name_rec_pre.arm1 p n r np tn tyn tyt fuel r2 m₂ hf] at hj
+    cases h3 : callE p n "vi_rec_idx" [r2.tail.headD 0, rdW (m₂.arr64 IFR) (r + 5), np, tn, tyn, tyt,
+        fuel, 0] m₂ with
+    | ok q3 =>
+      obtain ⟨r3, m₃⟩ := q3
+      rw [h3, recE.k_vi_rec_idx.arm1, recE.j2.arm1] at hj; cases hj
+    | error e3 =>
+    rw [h3, recE.k_vi_rec_idx.none] at hj; cases hj
+    have hE := triple_of_callE_err (recIdx_specE p hL.vi_rec_idx n ⟨m₂, Locals.init []⟩ _ _ _ _ _ _ _ _) h3
+      (Err.code_ne_of_cls hk)
+    obtain ⟨hvs, htt⟩ := hv1 hf
+    have e5 : rdW (m₂.arr64 IFR) (r + 5) = wd m₂ IFR (r.toNat + 5) := by
+      have := ix 5 (by decide); simpa using this
+    rw [e5] at hE
+    obtain ⟨he, k, -, k2, k3, k4, x, k5, k6⟩ :=
+      recIdxE_claim hL hnv hR hnp (by rw [c3.1]; exact c3.2) hb hb' n 0 e hE hk
+    rw [c3.1] at k4 k6
+    rw [hvs] at hv
+    refine ⟨he, _, hv, k, by rw [islice_length]; exact k2, by rw [islice_length]; exact k2,
+      fun j' hj' hT' => ?_, by rw [islice_get, k3], x, by rw [islice_get]; exact k5, k6⟩
+    rw [islice_get] at hT' ⊢
+    have hw : wd m₂ IFL (tyn.toNat + j') = r2.tail.headD 0 :=
+      decI_inj' _ _ (hTN j' (by omega)) htt hT'
+    exact k4 j' (Nat.zero_le _) hj' hw
+  have hcls : ∀ R : Word, R &&& 3 = 1 → e = .abort R → e.cls = 1 := by
+    intro R hR' he; subst he; simpa [Err.cls] using hR'
+  by_cases e8 : rdW (m₁.arr64 IFR) (r + 8) = np
+  rotate_left
+  · rw [recE.k_name_get.abort1 p n r np tn cn ke tyn tyt fuel rr m₁ e8] at h; cases h
+    refine ⟨by decide, _, hname, .inl fun heq => e8 ?_⟩
+    rw [ix 8 (by decide)]; apply UInt64.toNat_inj.mp; simp only [show (8 : Word).toNat = 8 from rfl]
+    rw [c6.1, heq]
+  have e8' : rc.numParams = np.toNat := by
+    rw [ix 8 (by decide)] at e8; rw [← c6.1]; simp only [show (8 : Word).toNat = 8 from rfl] at e8; rw [e8]
+  by_cases e7 : rdW (m₁.arr64 IFR) (r + 7) = tn
+  rotate_left
+  · rw [recE.k_name_get.abort2 p n r np tn cn ke tyn tyt fuel rr m₁ e8 e7] at h; cases h
+    refine ⟨by decide, _, hname, .inr ⟨e8', .inl fun heq => e7 ?_⟩⟩
+    rw [ix 7 (by decide)]; apply UInt64.toNat_inj.mp; simp only [show (7 : Word).toNat = 7 from rfl]
+    rw [c5.1, heq]
+  have e7' : rc.numMotives = tn.toNat := by
+    rw [ix 7 (by decide)] at e7; rw [← c5.1]; simp only [show (7 : Word).toNat = 7 from rfl] at e7; rw [e7]
+  by_cases e6 : rdW (m₁.arr64 IFR) (r + 6) = cn
+  rotate_left
+  · rw [recE.k_name_get.abort3 p n r np tn cn ke tyn tyt fuel rr m₁ e8 e7 e6] at h; cases h
+    refine ⟨by decide, _, hname, .inr ⟨e8', .inr ⟨e7', .inl fun heq => e6 ?_⟩⟩⟩
+    rw [ix 6 (by decide)]; apply UInt64.toNat_inj.mp; simp only [show (6 : Word).toNat = 6 from rfl]
+    rw [c4.1, heq]
+  have e6' : rc.numMinors = cn.toNat := by
+    rw [ix 6 (by decide)] at e6; rw [← c4.1]; simp only [show (6 : Word).toNat = 6 from rfl] at e6; rw [e6]
+  have e4r : rdW (m₁.arr64 IFR) (r + 4) = wd m₁ IFR (r.toNat + 4) := by
+    have := ix 4 (by decide); simpa using this
+  -- the indices failure, once `k` passed
+  have fin : (∀ kE, keOf ke = some kE → rc.k = kE) →
+      recE.j1 p n r np tn tyn tyt fuel (rr.headD 0) m₁ = .error e →
+      e.cls = 1 ∧ RecFail st a (islice m₁ tyn.toNat tn.toNat) (islice m₁ tyt.toNat tn.toNat) np.toNat
+        tn.toNat cn.toNat (keOf ke) fuel.toNat rc := by
+    intro hkp hj
+    obtain ⟨he, T, hv, j, hj1, hj2, hpre, hT, x, hx1, hx2⟩ := hJ hj
+    exact ⟨hcls _ (by decide) he, _, hname, .inr ⟨e8', .inr ⟨e7', .inr ⟨e6', .inr ⟨hkp, T, hv, j, hj1,
+      hj2, hpre, hT, x, hx1, hx2⟩⟩⟩⟩⟩
+  by_cases hk0 : ke = 0
+  · rw [recE.k_name_get.arm2 p n r np tn cn ke tyn tyt fuel rr m₁ e8 e7 e6 hk0] at h
+    exact fin (fun kE hkE => by simp [keOf, hk0] at hkE) h
+  by_cases e4 : rdW (m₁.arr64 IFR) (r + 4) = ke - 1
+  · rw [recE.k_name_get.arm1 p n r np tn cn ke tyn tyt fuel rr m₁ e8 e7 e6 hk0 e4] at h
+    refine fin (fun kE hkE => ?_) h
+    simp only [keOf, hk0, if_false, Option.some.injEq] at hkE
+    rw [e4r, c2] at e4
+    rcases hke with rfl | rfl | rfl
+    · exact absurd rfl hk0
+    · subst hkE; cases hk' : rc.k <;> simp_all
+    · subst hkE; cases hk' : rc.k <;> simp_all
+  · rw [recE.k_name_get.abort4 p n r np tn cn ke tyn tyt fuel rr m₁ e8 e7 e6 hk0 e4] at h; cases h
+    refine ⟨by decide, _, hname, .inr ⟨e8', .inr ⟨e7', .inr ⟨e6', .inl ⟨ke = 2, by simp [keOf, hk0], ?_⟩⟩⟩⟩⟩
+    rw [e4r, c2] at e4
+    rcases hke with rfl | rfl | rfl
+    · exact absurd rfl hk0
+    · cases hk' : rc.k <;> simp_all
+    · cases hk' : rc.k <;> simp_all
+
 end L.Front.Ind
