@@ -100,7 +100,7 @@ def setGoT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (b : EIdx) (c : NIdx) (us :
   match ← viewLsLen us' with
   | none => failDanglingLs
   | some uslen =>
-  let slots ← towerSlotsAll fe T caps.etaFields
+  let slots ← (pure (towerSlotsAll fe T caps.etaFields) : AM Bool)
   if caps.eta = true ∧ caps.etaCtor = c ∧
       reserved.contains T = false ∧ reserved.contains c = false ∧
       targs.length = caps.etaParams ∧
@@ -141,7 +141,7 @@ theorem setGoT_run (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (b : EIdx) (c : NId
     (aargs targs : List EIdx) {m : Mem} {a : AState} (hP : PinsFull m a.pins) (uslen : Nat)
     (hv : a.store.lss.viewLen us' = some uslen) :
     (setGoT r fe depth b c us cvc T us' cvT caps aargs targs).run a =
-      (towerSlotsAll fe T caps.etaFields >>=
+      ((pure (towerSlotsAll fe T caps.etaFields) : AM Bool) >>=
         setGoK r fe depth b c us cvc T us' cvT caps aargs targs a.pins.reserved uslen).run a := by
   simp only [setGoT, StateT.run_bind, reservedBasisNames_run hP, except_ok_bind, viewLsLen_run, hv]
   rfl
@@ -304,12 +304,7 @@ theorem reservedContains_callW {p : Prog} (hc : StuckCallees p) {n : Nat}
 /-- A `const` node's level list at a state, read back after `towerSlotsAll`. -/
 theorem constLs_after_tower {fe : IFEnv} {T : NIdx} {nF : Nat} {a : AState} {x : EIdx} {c : NIdx}
     {us : LsIdx} (hv : a.store.view x = some (.const c us)) :
-    (AM.st (towerSlotsAll fe T nF) a).store.view x = some (.const c us) := by
-  unfold AM.st
-  split
-  · rename_i a' heq
-    rw [view_of_noLss (Keeps.run (keeps_noLss_towerSlotsAll fe T nF) heq)]; exact hv
-  · exact hv
+    (AM.st (pure (towerSlotsAll fe T nF) : AM Bool) a).store.view x = some (.const c us) := hv
 
 /-- **`struct_eta_cert_go` refines `setGoT`** at the knot (the projections' slice left on the
 stack). -/

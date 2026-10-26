@@ -69,7 +69,7 @@ theorem lpsDen_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IRec
     {cvj : IConstantVal} (hfe : FireEnv fe lps rule cvj) :
     ∃ ks, lps.mapM (denoteN a.store.ns) = some ks := by
   obtain ⟨⟨c, cv, mI, rP, rules, hf, rfl, -⟩, -⟩ := hfe
-  exact hS.den.constLps c _ cv hf rfl (fun _ => rfl)
+  exact hS.den.constLps c _ hf
 
 /-- **The fire datum at the rule's and the constructor's words reads back.** -/
 theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IRecRule}
@@ -83,7 +83,7 @@ theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IR
   obtain ⟨⟨c, cv, mI, rP, rules, hf, -, hmem⟩, ⟨cj, np', nf', hfj⟩⟩ := hfe
   rcases decRule_fireE hS.erec hrule with ⟨h0, hpl⟩ | ⟨h0, lvls, pins, hn, hsl⟩
   · obtain ⟨-, -, hlp, -⟩ := decCV_rd1 hS.erec (decCI_ctorInfo_cv hci)
-    exact .inl ⟨h0, hpl, hlp, hS.den.constLps cj _ cvj hfj rfl (fun _ => rfl)⟩
+    exact .inl ⟨h0, hpl, hlp, hS.den.constLps cj _ hfj⟩
   · exact .inr ⟨h0, lvls, pins, hn, hsl, hS.den.recRules c cv mI rP rules hf rule hmem lvls pins hn⟩
 
 end
