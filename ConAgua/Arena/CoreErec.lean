@@ -24,7 +24,7 @@ open Std.WP
 namespace L.Arena
 
 /-- Every word array but `EREC` (the arrays the checker uses are below 320, both tiers). -/
-def coreErecA : List ArrId := (List.range 320).filter (· ≠ EREC)
+def coreErecA : List ArrId := (List.range 388).filter (· ≠ EREC)
 
 /-- Every `CTL` word below 256. -/
 def coreErecC : List Word := (List.range 256).map Nat.toUInt64

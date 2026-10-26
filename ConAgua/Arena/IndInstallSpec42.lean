@@ -139,7 +139,7 @@ end model
 
 /-- The arrays they may write: all below 320 (both tiers) but the stage memos' (`201..208`) and `abstract1`'s
 memo (`49`), and since lane `indstaget` the pins and the core's walk memos. -/
-def cidFreeA : List ArrId := (List.range 320).filter (fun b => (b < 201 ∨ 208 < b) ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155 ∧
+def cidFreeA : List ArrId := (List.range 388).filter (fun b => (b < 201 ∨ 208 < b) ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155 ∧
   b ≠ PINS ∧ b ≠ 151 ∧ b ≠ 152 ∧ b ≠ 153 ∧ b ≠ 52 ∧ b ≠ 53 ∧ b ≠ 54)
 
 /-- The `CTL` words they may write: all below 256 but the stage memos' (`202..219`) and

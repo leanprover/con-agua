@@ -189,7 +189,7 @@ theorem classesLp_of_cnsRec {mb mF : Mem} {mo ml qr : Word} {hi : Nat} {ws : Lis
 /-! ## Memo frames from the program text -/
 
 /-- Every word array below 320 (both tiers) but the recursor check's walk memos. -/
-def rcFreeA : List ArrId := (List.range 320).filter (fun b => b ∉ [NOM, DPM, RAM, HBM, RFM, TAM])
+def rcFreeA : List ArrId := (List.range 388).filter (fun b => b ∉ [NOM, DPM, RAM, HBM, RFM, TAM])
 /-- Every `CTL` word below 256 but those memos' control words. -/
 def rcFreeC : List Word :=
   ((List.range 256).filter (fun c => c ∉ [204, 206, 208, 210, 212, 213, 214, 218, 219])).map Nat.toUInt64

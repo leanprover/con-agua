@@ -37,7 +37,7 @@ open L.Front (DECL DLP)
 
 /-- The arrays a step may write: all but the pending checks and the declaration records. -/
 def stepA : List ArrId :=
-  (List.range 320).filter fun b => b ≠ PEND ∧ b ≠ DECL ∧ b ≠ DLP ∧ (b < 146 ∨ 149 < b)
+  (List.range 388).filter fun b => b ≠ PEND ∧ b ≠ DECL ∧ b ≠ DLP ∧ (b < 146 ∨ 149 < b)
 
 /-- The `CTL` words a step may write: all but the pending checks' count, the promotion memos'
 words and the pin variant list's header (`CTL[150]`, `CTL[151]`, lane `romload`). -/

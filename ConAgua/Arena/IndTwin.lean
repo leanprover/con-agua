@@ -68,7 +68,7 @@ theorem StageT.core {m : Mem} {a : AState} (h : StageT dn vis fe m a) : ∃ M, C
 
 /-- The arrays a core function may write: every array but the pools, the pins, the walk memos `AbsOK`
 holds beyond `CoreMemos` (51, 155) and the stage memos (201‥208). -/
-def coreStageA : List ArrId := (List.range 320).filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧
+def coreStageA : List ArrId := (List.range 388).filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧
   b ≠ 51 ∧ b ≠ 155 ∧ (b < 201 ∨ 208 < b)
 
 /-- The `CTL` words a core function may write: all but the pools' tops, the epochs of the walk memos
