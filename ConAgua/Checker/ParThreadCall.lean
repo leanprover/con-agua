@@ -298,7 +298,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
       · obtain ⟨-, hz', hc, h320⟩ := frozen_facts hk h1
         rw [bufMem_frozen _ r j hk h1, if_pos (Nat.lt_of_lt_of_le h320 hr), bufImg_trunc hok hlt hk h1, freshMem_arr,
           if_neg hc, if_neg hz']
-      · obtain ⟨-, hsrc, -⟩ := owned_facts ho
+      · obtain ⟨-, hsrc⟩ := owned_facts ho
         rw [bufMem_owned _ r j ho, hz b ho, freshMem_arr, if_neg hbc,
           if_pos (show b ∈ freshZ from List.mem_cons_of_mem _ ho), truncFrozen_other m b hsrc]
   · simp [Mem.setG]
