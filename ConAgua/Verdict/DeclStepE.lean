@@ -430,4 +430,113 @@ theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : A
 
 end istg
 
+section ist
+variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
+  (p : Prog)
+
+/-- **What `install_step` claims on failure under `StageT`** (the error half of
+`installStep_pieces`'s hypotheses). -/
+def InstallStepSpecE : Prop :=
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (i vis : Word) (fe : IFEnv)
+    (pend : Array PendingCheck), i.toNat < ds.size → ConRon.Bridge.StateOK a →
+    a.store.scratchOn = false → LoopR pins dn m a vis fe pend ds → TwinOK dn m a fe →
+    pinW m 0 ≠ 0 → (∃ env, FoldOK V env fe a) →
+    (∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x) → PersDecl (dsAt ds i) →
+    (∃ pinsP, PinsDenote a.store pins pinsP) → PersPinSets pins → IndMemos m →
+    ∀ e, callE p n "install_step" [i, vis] m = .error e →
+    ErrClaim (installStep V pins i.toNat fe pend (dsAt ds i)) a e
+
+/-- **`install_step` fails only where `installStep` does**: the bracket's openings and the
+promotions claim nothing; `install_step_go` by its claim. -/
+theorem installStep_errT {p : Prog} (hb : BracketProg p) (hp : p.lookup "install_step" = some installStepL)
+    (hnv : closedNV p L.Checker.nvFns = true)
+    (hGo : InstallStepGoSpecE pins dn ds p) : InstallStepSpecE pins dn ds p := by
+  intro n hn m a i vis fe pend hi hok hoff hR hTw hfl hF hden hpd hPD hpps hIM e hc
+  by_cases hk0 : e.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (installStep_specE p hp n ⟨m, Locals.init []⟩ i vis) hc
+    (Err.code_ne_of_cls hk0)
+  have hwf' : StoreWF (AM.st flushCaches a).store := by rw [flushCaches_st]; exact hok.wf
+  have hoff' : (AM.st flushCaches a).store.scratchOn = false := by rw [flushCaches_st]; exact hoff
+  have hFe : ∃ env, FoldOK V env fe (AM.st enterScratch (AM.st flushCaches a)) := by
+    obtain ⟨env, h⟩ := hF
+    exact ⟨env, by rw [enterScratch_st, flushCaches_st]; exact h.enter⟩
+  have hde : ∃ x, Frontend.denoteDecl (AM.st enterScratch (AM.st flushCaches a)).store
+      (dsAt ds i) = some x := by
+    obtain ⟨x, h⟩ := hden
+    exact ⟨x, by
+      rw [enterScratch_st, flushCaches_st]
+      exact ConRon.Bridge.denoteDecl_pext (PExt.enterScratch hok.wf) hpd h⟩
+  have hPDe : ∃ pinsP, PinsDenote (AM.st enterScratch (AM.st flushCaches a)).store pins pinsP := by
+    obtain ⟨q, h⟩ := hPD
+    exact ⟨q, by
+      rw [enterScratch_st, flushCaches_st]
+      exact PinsDenote.pmono (PExt.enterScratch hok.wf) _ _ hpps h⟩
+  cases n with
+  | zero => rw [installStepE.eq_1] at hW; cases hW; exact absurd rfl hk0
+  | succ n =>
+  have hn' : n ≤ 2 ^ 62 := by omega
+  rw [installStepE.arm1] at hW
+  simp only [installStep, bind_assoc]
+  cases h0 : callE p n "tbl_cnt" [] m with
+  | error e0 =>
+    rw [h0, installStepE.k_tbl_cnt.none] at hW; cases hW
+    exact nvl hnv (by decide +kernel) h0
+  | ok q0 =>
+  obtain ⟨r0, m0⟩ := q0
+  rw [h0, installStepE.k_tbl_cnt.arm1] at hW
+  obtain ⟨s0, hs0, hm0, -⟩ := triple_of_callE (tblCnt_spec p (hb.pr.get "tbl_cnt") n ⟨m, Locals.init []⟩) h0
+  have hm0' : m0 = m := hs0.symm.trans hm0
+  subst hm0'
+  cases h1 : callE p n "flush_caches" [] m0 with
+  | error e1 =>
+    rw [h1, installStepE.k_flush_caches.none] at hW; cases hW
+    exact nvl hnv (by decide +kernel) h1
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, installStepE.k_flush_caches.arm1] at hW
+  obtain ⟨s1, hs1, -, hokF, hLF, hTF, hflF, hIMF⟩ := triple_of_callE
+    (flush_loopW (pins := pins) dn ds p hb n ⟨m0, Locals.init []⟩ a vis fe pend hR hTw hfl hIM) h1
+  subst hs1
+  refine ErrClaim.bind_right (AM.run_of_ok _ _ hokF) ?_
+  cases h2 : callE p n "scratch_enter" [] s1.mem with
+  | error e2 =>
+    rw [h2, installStepE.k_scratch_enter.none] at hW; cases hW
+    exact nvl hnv (by decide +kernel) h2
+  | ok q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, installStepE.k_scratch_enter.arm1] at hW
+  obtain ⟨s2, hs2, -, hokE, hLE, hTE, hflE, hIME⟩ := triple_of_callE
+    (enter_loopW (pins := pins) dn ds p hb n ⟨s1.mem, Locals.init []⟩ (AM.st flushCaches a) vis fe pend
+      hwf' hoff' hLF hTF hflF hIMF) h2
+  subst hs2
+  refine ErrClaim.bind_right (AM.run_of_ok _ _ hokE) ?_
+  cases h3 : callE p n "install_step_go" [i, vis] s2.mem with
+  | error e3 =>
+    rw [h3, installStepE.k_install_step_go.none] at hW; cases hW
+    exact ErrClaim.bind_left (hGo n hn' s2.mem _ vis fe pend i hi (TwinFold.enterAM hok) hFe hLE hTE
+      hflE hde hPDe hIME _ h3)
+  | ok q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [h3] at hW
+  by_cases hf : r3.tail.headD 0 = 0
+  · rw [installStepE.k_install_step_go.arm1 p _ _ _ _ _ _ hf] at hW
+    cases h4 : callE p n "is_none" [vis, r3.headD 0, r0.headD 0] m3 with
+    | error e4 =>
+      rw [h4, installStepE.k_is_none.none] at hW; cases hW
+      exact nvl hnv (by decide +kernel) h4
+    | ok q4 =>
+      obtain ⟨r4, m4⟩ := q4
+      rw [h4, installStepE.k_is_none.arm1, installStepE.j1.arm1] at hW; cases hW
+  · rw [installStepE.k_install_step_go.arm2 p _ _ _ _ _ _ hf] at hW
+    cases h4 : callE p n "is_some" [i, vis, r3.headD 0, r0.headD 0, r3.tail.tail.headD 0] m3 with
+    | error e4 =>
+      rw [h4, installStepE.k_is_none.none] at hW; cases hW
+      exact nvl hnv (by decide +kernel) h4
+    | ok q4 =>
+      obtain ⟨r4, m4⟩ := q4
+      rw [h4, installStepE.k_is_none.arm1, installStepE.j1.arm1] at hW; cases hW
+
+end ist
+
 end L.Arena
