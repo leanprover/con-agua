@@ -111,7 +111,7 @@ theorem threadFails_range (B : Array Word) (t : ThreadM) (rm : Nat → Mem) (i :
     exact ⟨by simp [abiFuel], h1, h2, threadFails_range B t rm i e h hf c (s + 1) (by omega)⟩
 
 /-- An L outcome of `rdx = 2` is a failing run with the code in `rax`. -/
-theorem outcome_err {G : Layout} {r : Except Err (List Word × Mem)} {d : MachineData}
+theorem outcome_err {G : L.Compiler.Layout} {r : Except Err (List Word × Mem)} {d : MachineData}
     (h : OutcomeRel G r d) (h2 : d.regs.rdx = 2) : ∃ e, r = .error e ∧ d.regs.rax = e.code := by
   rcases r with e | ⟨rs, m'⟩
   · refine ⟨e, rfl, ?_⟩
@@ -120,6 +120,8 @@ theorem outcome_err {G : Layout} {r : Except Err (List Word × Mem)} {d : Machin
 
 /-! ## The theorem -/
 
+-- the linter's traversal of this proof exceeds the recursion limit
+set_option linter.constructorNameAsVariable false in
 /-- Entry 1's failure is the twin's. -/
 theorem entry1Fail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
@@ -134,10 +136,20 @@ theorem entry1Fail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
   have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
     ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
-  obtain ⟨e, he, hrax⟩ := outcome_err (hout₀.resolve_left hne) hF.rdx₀
+  rcases hout₀ with h1 | hout₀'
+  · exact absurd h1 hne
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
-  rw [hrax] at hk ⊢
-  exact hV b pb [] _ hin 1 (Or.inl rfl) abiFuel hN e he hk
+  rcases hres₁ : L.run checkerProg abiFuel "check" []
+      ((loadMem b pb [] (List.replicate checkerTab.nw abiWords)).setG MODE 1) with e | ⟨rs₁, m₁⟩
+  · rw [hres₁] at hout₀'
+    have hrax : st₀.data.regs.rax = e.code := by
+      cases e <;> simp only [OutcomeRel] at hout₀' <;> first | exact hout₀'.elim | exact hout₀'.2
+    rw [hrax] at hk ⊢
+    exact hV b pb [] _ hin 1 (Or.inl rfl) abiFuel hN e hres₁ hk
+  · rw [hres₁] at hout₀'
+    simp only [OutcomeRel] at hout₀'
+    rw [hF.rdx₀] at hout₀'
+    exact absurd hout₀'.1 (by decide)
 
 -- the linter's traversal of this proof exceeds the recursion limit
 set_option linter.constructorNameAsVariable false in
