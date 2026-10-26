@@ -128,6 +128,17 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
       (hf.2.1 150 (fun h => by have := hC _ h; simp at this))
       (hf.2.1 151 (fun h => by have := hC _ h; simp at this))
 
+/-- `tbl_grown(nt)` under the loop's relation: the tables list's length minus `nt`. -/
+theorem tblGrown_loop (hpr : PromoteProg p) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
+      (nt : Word), LoopR pins dn s₀.mem a₀ vis fe pend ds →
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "tbl_grown" [nt]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      (r.headD 0).toNat = fe.env.tables.length - nt.toNat; ⊤⦄ := by
+  intro n s₀ a₀ vis fe pend nt hR
+  refine triple_post (tblGrown_spec p hpr n s₀ nt) fun r s' ⟨h1, h2, h3⟩ => ⟨h1, h2, ?_⟩
+  rw [h3, hR.check.env.tables_length]
+
 theorem promoteNew_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (k kt fresh : Word) (pm : PMemo), (if fresh = 0 then PMemoR s₀.mem pm else pm = PMemo.empty) →
@@ -634,7 +645,6 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
         (AM.res (isNoneT vis.toNat nt.toNat fe' pend) a₀).1
         (AM.res (isNoneT vis.toNat nt.toNat fe' pend) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
-  have htl := hR.check.env.tables_length
   rw [invoke_eq _ hp]
   simp only [callFn, isNoneL]
   cases n with
@@ -642,7 +652,7 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        tblGrown_spec p hb.pr n,
+        (tblGrown_loop pins dn ds p hb.pr n · a₀ v2 fe' pend ·),
         (promoteNew_spec pins dn ds p hb.pr n · a₀ · fe' pend · · · PMemo.empty),
         (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew PMemo.empty coreWalkFuel
           (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') a₀) v2
@@ -671,6 +681,7 @@ theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s�
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish [pendPushMem]
 
+set_option maxHeartbeats 1000000 in
 theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hp : p.lookup "is_some" = some isSomeL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis v2 nt g : Word) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup)
@@ -682,7 +693,6 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
         (AM.res (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀).1
         (AM.res (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
-  have htl := hR.check.env.tables_length
   rw [invoke_eq _ hp]
   simp only [callFn, isSomeL]
   cases n with
@@ -690,7 +700,7 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        tblGrown_spec p hb.pr n,
+        (tblGrown_loop pins dn ds p hb.pr n · a₀ v2 fe' pend ·),
         (promoteVG_spec pins dn ds p hb.pr n · a₀ · fe' pend · vg),
         (pendPush_spec pins dn ds p hpp n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) v2 fe' pend ·
           · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2 · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
