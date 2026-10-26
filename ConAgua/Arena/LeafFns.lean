@@ -125,9 +125,8 @@ def leafFns : List FnName :=
    "lv_node", "lv_nz", "lv_rest", "lv_simp", "lv_spw", "lv_sub_int", "lv_subsimp", "lv_subst",
    "lv_substl", "lv_zero", "lv_zero_caps", "lvl_eq", "lvl_eq_c", "lvl_eq_fueled", "lvl_eq_rec",
    "lvl_eq_true", "lvls_eq", "lvls_eq_c", "lvls_eq_rec", "m2c_const_view", "ma_clear", "ma_find",
-   "ma_put", "mac_hi", "matches_pin", "max_find", "max_push", "mc_clear", "mc_find", "mc_put",
-   "member_idx_at", "member_names_copy", "memo_get", "memo_push", "mentions_any_const",
-   "mentions_any_go", "mentions_any_node", "mentions_const", "mentions_const_go", "mk_app",
+   "ma_put", "mac_hi", "matches_pin", "max_find", "max_push", "member_idx_at", "member_names_copy",
+   "memo_get", "memo_push", "mentions_any_const", "mentions_any_go", "mentions_any_node", "mk_app",
    "mk_app_n", "mk_app_n_f", "mk_app_n_from", "mk_forall", "mk_lam", "mk_let", "mk_proj",
    "mk_target_major", "n_idxs_copy", "name_rec", "name_rec_i", "nanon_find", "nanon_push",
    "nat_add", "nat_add_lit", "nat_ap1", "nat_ap2", "nat_beq_lit", "nat_bin_op_name", "nat_ble_lit",
@@ -207,9 +206,9 @@ def leafFns : List FnName :=
    "target_pi_doms_with", "target_rec_pins", "target_rec_pins_names", "target_rec_pins_split",
    "tbl_at", "tbl_cnt", "tbl_grown", "tbl_ix", "tbl_put", "tbl_row_get", "tbl_row_set",
    "tgt_rule_nested", "tgt_stored_rules_remap", "tower_slots_all", "trust_compiler_ok",
-   "type_pin_guard", "type_pin_stored", "type_pins_guard", "type_sort_pw", "unfoldable_head",
-   "unresolved_consts_error", "unwrap_id_defs", "unwrap_step", "vg_rd", "vg_wr", "view_ls",
-   "view_ls_len", "wc_clear", "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put",
+   "type_pin_guard", "type_pin_stored", "type_pins_guard", "type_sort_pw", "ue_mentions_go",
+   "unfoldable_head", "unresolved_consts_error", "unwrap_id_defs", "unwrap_step", "vg_rd", "vg_wr",
+   "view_ls", "view_ls_len", "wc_clear", "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put",
    "whnf_walk_fuel", "wk_clear", "wk_find", "wk_put", "ws_find", "zero_find", "zero_push"]
 
 /-- `leafFns` as a tree of name codes (membership of a name by evaluating its code's lookup). -/

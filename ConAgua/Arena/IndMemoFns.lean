@@ -184,7 +184,8 @@ def imFns : List FnName :=
    "wh_clear", "wh_find", "wh_put", "whnf", "whnf_app", "whnf_core", "whnf_core_app",
    "whnf_core_app2", "whnf_core_loop", "whnf_core_step", "whnf_core_step_proj", "whnf_loop",
    "whnf_step", "wk_clear", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node",
-   "ws_put", "wscoped_bfast", "zero_find", "zero_push"]
+   "ws_put", "wscoped_bfast", "zero_find", "zero_push",
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
 
 /-- `imFns` as a tree of name codes. -/
 names_tree imTree : imFns

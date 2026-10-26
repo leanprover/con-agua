@@ -129,7 +129,8 @@ def armPosFns : List FnName :=
     "class_read_mot_pos", "class_read_rec_cls", "class_read_classes", "block_raw_rec",
     "block_raw_rec_go", "block_raw_rec_member", "pi_doms_mention_any", "mentions_any_const",
     "ma_clear", "mentions_any_go", "ma_find", "mentions_any_node", "ma_put", "find_table",
-    "tbl_row_get", "tbl_ix"]
+    "tbl_row_get", "tbl_ix",
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
 
 /-- `tailCallees`, closed under calls. -/
 def armHbFns : List FnName :=
@@ -280,7 +281,8 @@ def armHbFns : List FnName :=
     "view_ls", "pool_copy", "abstract_prefix_list", "abstract_prefix", "er_from_iw",
     "er_from_iw_go", "tgt_stored_rules_remap", "tgt_rule_nested", "cons_block_recs_push",
     "rules_to_erec", "rules_to_erec_go", "rule_copy", "rec_info_rec", "find_table", "tbl_row_get",
-    "tbl_ix"]
+    "tbl_ix",
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
 
 /-- `tailRcCallees`, `grcRcCallees` and `cons_block_recs_tf`, closed under calls. -/
 def armRcFns : List FnName :=
@@ -415,7 +417,8 @@ def armRcFns : List FnName :=
     "aux_rule_fire", "view_ls", "pool_copy", "abstract_prefix_list", "abstract_prefix",
     "er_from_iw", "er_from_iw_go", "tgt_stored_rules_remap", "tgt_rule_nested",
     "cons_block_recs_push", "rules_to_erec", "rules_to_erec_go", "rule_copy", "rec_info_rec",
-    "find_table", "tbl_row_get", "tbl_ix"]
+    "find_table", "tbl_row_get", "tbl_ix",
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
 
 /-- `blockTaCallees`, closed under calls. -/
 def armTaFns : List FnName :=
@@ -567,7 +570,8 @@ def armTaFns : List FnName :=
     "nest_res_head", "nest_ctor_nf", "check_abs_ctor_sorts_all", "check_abs_ctor_sorts",
     "check_abs_ctor_sorts_one", "check_block_positivity_nfs", "check_block_positivity_nfs_member",
     "class_seeds", "nest_seed_of", "nest_seed_of_go", "nest_seeds", "nest_seeds_fuel",
-    "check_block_pass_rec", "find_table", "tbl_row_get", "tbl_ix"]
+    "check_block_pass_rec", "find_table", "tbl_row_get", "tbl_ix",
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
 
 /-- `cidFrameCallees` and `check_basis_decl`, closed under calls. -/
 def armCidFns : List FnName :=
@@ -833,7 +837,8 @@ def armMaFns : List FnName :=
     "lift_app", "lf_find", "lf_put", "lift_lam", "lift_forall", "lift_let", "lift_proj", "i1l_app",
     "i1l_find", "i1l_put", "i1l_lam", "i1l_forall", "i1l_let", "i1l_proj", "struct_proj_bodies_go",
     "struct_proj_arg_p", "check_struct_proj_table_scoped", "find_table", "env_push_table",
-    "tbl_row_get", "tbl_row_set", "tbl_ix"]
+    "tbl_row_get", "tbl_row_set", "tbl_ix",
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
 
 /-- `check_block`, closed under calls. -/
 def armMcFns : List FnName :=
@@ -1036,7 +1041,8 @@ def armMcFns : List FnName :=
     "lift_app", "lf_find", "lf_put", "lift_lam", "lift_forall", "lift_let", "lift_proj", "i1l_app",
     "i1l_find", "i1l_put", "i1l_lam", "i1l_forall", "i1l_let", "i1l_proj", "struct_proj_bodies_go",
     "struct_proj_arg_p", "check_struct_proj_table_scoped", "find_table", "env_push_table",
-    "tbl_row_get", "tbl_row_set", "tbl_ix"]
+    "tbl_row_get", "tbl_row_set", "tbl_ix",
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
 
 /-- The `AbsKeep` callees of the arm whose closure leaves the walk memos alone (`armAbsEasy`), closed under calls. -/
 def armAbsFns : List FnName :=
