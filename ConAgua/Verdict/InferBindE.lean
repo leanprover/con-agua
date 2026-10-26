@@ -870,4 +870,129 @@ theorem inferLam_refinesE (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (h
   rw [hpf, ha2] at hc
   exact hc
 
+/-- **`infer_forall`'s verdicts**: the domain's type (the `infer` and `whnf` slots), a domain type
+that is no sort rejects, the telescope's (`inferPis_telE`). -/
+theorem inferForall_refinesE (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
+    (hil : InstListOK p) (hnv : closedNV p L.Checker.nvFns = true) (hcap : BStkCap)
+    (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty body : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
+    CoreSpecE p (n + 1) "infer_forall" [mode, vis, d, ty, body]
+      (inferForall (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE body)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferForall_specE p hq.fa (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d ty body) hc0 (Err.code_ne_of_cls hk0)
+  rw [inferForallE.eq_2] at hW
+  split at hW
+  · exact absurd hW (fun h => cls_abort0 hk0 (Except.error.inj h))
+  rename_i hd
+  have hd63 : d.toNat < 2 ^ 63 := by
+    have : d >>> 63 = 0 := by simpa using hd
+    have h2 := congrArg UInt64.toNat this
+    rw [UInt64.toNat_shiftRight] at h2
+    simp [Nat.shiftRight_eq_div_pow] at h2
+    have := d.toNat_lt
+    omega
+  have hS := hs.rel
+  have hK := hk n (Nat.le_refl _)
+  have hKE := hkE n (Nat.le_refl _)
+  simp only [inferForall]
+  cases h1 : callE p n "infer" [mode, vis, d, ty] s₀.mem with
+  | error e1 =>
+    rw [h1, inferForallE.k_infer.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (hKE.infer F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty) h1)
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1, inferForallE.k_infer.eq_2] at hW
+  have h₁ := CoreSpec.of_callW (hK.infer F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty) (callW_of_callE h1)
+  obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := h₁.2.1
+  refine ErrClaim.bind_ref h₁ ?_
+  cases h2 : callE p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with
+  | error e2 =>
+    rw [h2, inferForallE.k_whnf.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩) (hKE.whnf F _ _ dn vis fe
+      M₁ eb mode d (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) h2)
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [h2, inferForallE.k_whnf.eq_2] at hW
+  have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0)
+    hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) (callW_of_callE h2)
+  obtain ⟨M₂, hS₂, hK₂, hSt₂⟩ := h₂.2.1
+  refine ErrClaim.bind_ref h₂ ?_
+  by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
+  · rw [if_pos g1] at hW; cases hW
+    simp only [show decH r₂ = decE (r₂.headD 0) from rfl, tag_sort_ne _ h₂.2.2.2 g1,
+      Bool.false_eq_true, ↓reduceIte]
+    exact ErrClaim.fail _ _ rfl
+  rw [if_neg g1] at hW
+  have g1' : r₂.headD 0 >>> 28 = 2 := by simpa using g1
+  split at hW
+  · exact absurd hW (fun h => cls_abort0 hk0 (Except.error.inj h))
+  rename_i gs1
+  split at hW
+  · exact absurd hW (fun h => cls_abort0 hk0 (Except.error.inj h))
+  rename_i gs2
+  obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) h₂.2.2.2 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'
+  simp only [show decH r₂ = decE (r₂.headD 0) from rfl, tag_sort_beq _ h₂.2.2.2 g1', ↓reduceIte]
+  refine ErrClaim.bind_right (L.Ind.viewSort_run (L.Ind.viewSort_of_view _ _ _
+    ((decE_tag_eq _ h₂.2.2.2 2 (by decide)).mpr g1') hvs)) ?_
+  dsimp only
+  simp only [internFVarE]
+  cases h3 : callE p n "intern_fvar" [d, ty] m₂ with
+  | error e3 =>
+    rw [h3, inferForallE.k_intern_fvar.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "intern_fvar" (by simp)) h3
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [h3, inferForallE.k_intern_fvar.eq_2] at hW
+  obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+    (internFVar_spec p hb.fvf hb.fvp hb.fvi n _ d ty) (callW_of_callE h3)
+  rw [hs₃] at hfv
+  have h₃ := internFVar_core hS₂ d ty hty r₃ hfv
+  obtain ⟨M₃, hS₃, hK₃, hSt₃⟩ := h₃.2.1
+  have hrw3 := h₃.2.2.2
+  refine ErrClaim.bind_ref h₃ ?_
+  split at hW
+  · exact absurd hW (fun h => cls_abort0 hk0 (Except.error.inj h))
+  rename_i g2a
+  split at hW
+  · exact absurd hW (fun h => cls_abort0 hk0 (Except.error.inj h))
+  rename_i g2b
+  rw [tPush_zero] at hW
+  obtain ⟨so, hso⟩ : ∃ so, so = rdW (m₃.arr64 CTL) 136 := ⟨_, rfl⟩
+  obtain ⟨lo, hlo⟩ : ∃ lo, lo = rdW (m₃.arr64 CTL) 137 := ⟨_, rfl⟩
+  rw [← hso, ← hlo] at hW; rw [← hso] at g2a; rw [← hlo] at g2b
+  have g2 : tPushOK m₃ so lo 0 := tPushOK_of hS₃ (by simpa using g2a) (by simpa using g2b)
+  have hcp := hcap _ _ _ _ _ _ _ hS₃
+  have hsoS : so.toNat ≤ (m₃.arr64 SPN).size := by
+    have := g2.2.2.1; simp at this; omega
+  have hloS : lo.toNat ≤ (m₃.arr64 BSTK).size := by
+    have := g2.2.2.2.1; simp at this; omega
+  obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', hbszT, hbbT, hpgT⟩ := tPush_step (m₀ := m₃)
+    (fvs := #[]) (ws := #[]) hS₃ hcp (SpineR.empty _ _ hsoS) (BStkR.empty _ _ hloS) (fun _ _ => rfl) rfl
+    g2 hrw3
+  have e01 : (0 : Word) + 1 = 1 := rfl
+  rw [e01] at hf' htop' hB' hbt'
+  cases h4 : callE p n "infer_pis" [mode, vis, d, 16777216, body, 1, so, lo]
+      (tPush m₃ so lo 0 (r₃.headD 0) (tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0)) with
+  | ok q => rw [h4, inferForallE.k_infer_pis.eq_2] at hW; cases hW
+  | error e4 =>
+  rw [h4, inferForallE.k_infer_pis.none] at hW; cases hW
+  cases n with
+  | zero => exact absurd (callE_zero_cls h4) hk0
+  | succ n' =>
+  have hc := CoreSpecE.of_callE (s₀ := ⟨tPush m₃ so lo 0 (r₃.headD 0)
+      (tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0), Locals.init []⟩)
+    (inferPis_telE p hp hq hb hil hnv hcap n' (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega)
+      (by omega) _ _ dn vis fe M₃ eb mode d 16777216 body 1 so lo _ _ m₃ ⟨hS', hs.mode4, hs.eb_mode⟩
+      hbody hf' htop' hB' hbt' (by simp; omega) hb' hsz' hbbT hbszT hpgT) h4
+  have hpf : (16777216 : Word).toNat = peelFuel := rfl
+  have ha2 : ((#[] : Array Word).push (tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0)).map
+      (decI (k := .level)) = #[decI (tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0)] := by simp
+  rw [hpf, ha2] at hc
+  exact hc
+
 end L.Arena
