@@ -86,6 +86,15 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   `simp_all` over the models' equations, the locals' lemmas and `lemmas` instead of
   `sym … finish` (cheaper for many paths and small functions); `heartbeats`: per step theorem; `trace`: log the
   generated commands.
+* `errors`: the models keep the errors (the verdict proofs, `Arena/Verdict.lean`). A model is
+  `Except L.Err …` (`.ok` for `some`); an `abort R` is `.error (.abort R)` (`abort` is code `0`);
+  a continuation passes a callee's error on (`| .error ε => .error ε`, its equation `k.none`); a
+  model at fuel `0` is `.error .outOfFuel`; every abort leaf has a guarded equation `fW.abortᵢ`
+  with patterns. A callee without a spec is called through its whole run, `callE p n "f" [..] m`
+  (`callE_spec`), so a plain `l_model … errors` needs no `specs` (and the binder `p`). The spec's
+  exceptional post is `fun ε => ε.code ≠ 0 → fW n s₀.mem args = .error ε`: an error with a code
+  (an abort) is the model's; out of bounds, where the model reads a default, has code `0` and is
+  left out.
 
 Not supported (an error names the statement or the callee): nested loops, a loop that calls a
 member of its own group (unless through its spec, above), byte stores, `FunDecl`s with parameters (`memoFindG S`) and models with
