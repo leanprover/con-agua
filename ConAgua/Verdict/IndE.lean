@@ -19,7 +19,7 @@ open L.Arena
 
 l_model cfbE_spec (p : Prog) (hf : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
   fns [hf ↦ cfbE] grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
 
 /-- **`check_field_sort_bound`'s error refinement**: a failing run (the model `cfbE`, the real
 calls) of class `1` or `2` claims that the twin's universe bound `sfbT` fails with that class.
@@ -172,7 +172,7 @@ theorem cfbE_claim {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
 
 l_model nckE_spec (p : Prog) (hf : p.lookup "nest_cont_key" = some nestContKeyL)
   fns [hf ↦ nckE list] grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW, pos2_getElem_getD] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW, pos2_getElem_getD] errors
 
 open ConRon.Bridge.Inductives (dCtx dProg dState dCtx_ext dProg_ext dState_ext)
 

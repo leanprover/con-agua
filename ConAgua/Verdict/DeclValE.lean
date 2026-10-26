@@ -25,7 +25,7 @@ open L.Ind
 
 l_model lvlEqFueled_specE (p : Prog) (hf : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
   fns [hf ↦ lvlEqFueledE] grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
 
 /-- A bounded read is the defaulting one (for `grind`, in `check_value_group`'s error model:
 the run's loads are bounded, the model's are `rdW`). -/
@@ -40,14 +40,14 @@ attribute [local grind =] getElem_eq_getD_W rdW_def_W
 the calls' argument lists); `simp []` fails here (its `simp_all` unfolds the continuations). -/
 l_model checkValueGroup_specE (p : Prog) (hf : p.lookup "check_value_group" = some checkValueGroupL)
   fns [hf ↦ checkValueGroupE] grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] gen 20
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] gen 20
   heartbeats 4000000 instances 4000 errors
 
 end cvg
 
 l_model checkThmVal_specE (p : Prog) (hf : p.lookup "check_thm_val" = some checkThmValL)
   fns [hf ↦ checkThmValE] grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 400000 simp [] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 400000 simp [] errors
 
 local notation "V" => ConLeche.CheckMode.verified
 

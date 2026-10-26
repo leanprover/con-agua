@@ -32,10 +32,10 @@ theorem getElem_rdW_add5 (a : Array Word) (x : Word) (h : (x.toNat + 5) % 184467
   simp only [rdW, h', ↓reduceDIte, this, Array.getElem?_eq_getElem h, Option.getD_some]
 
 l_model loopE_spec (p : Prog) (hp : p.lookup "check_div_mod_pin_loop" = some checkDivModPinLoopL)
-  fns [hp ↦ loopE] simp [rdW_eq, getElem_rdW'] errors
+  fns [hp ↦ loopE] extra [ld64_rdW_specE] simp [rdW_eq, getElem_rdW'] errors
 
 l_model cpE_spec (p : Prog) (hp : p.lookup "check_div_mod_pin" = some checkDivModPinL)
-  fns [hp ↦ cpE list] simp [rdW_eq, getElem_rdW', getElem_rdW_add5] errors
+  fns [hp ↦ cpE list] extra [ld64_rdW_specE] simp [rdW_eq, getElem_rdW', getElem_rdW_add5] errors
 
 /-! ## The loop -/
 
