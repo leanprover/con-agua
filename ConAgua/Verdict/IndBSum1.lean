@@ -296,7 +296,6 @@ theorem sdomsE_claim (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : 
     decHL m fo.toNat fl.toNat = some fvs → decHL m dO.toNat dl.toNat = some doms →
     fo.toNat + fl.toNat < 2 ^ 64 → dO.toNat + dl.toNat < 2 ^ 64 → fo.toNat + fl.toNat ≤ iwTop m →
     dO.toNat + dl.toNat ≤ iwTop m → off.toNat + fl.toNat < 2 ^ 64 →
-    j.toNat ≤ fl.toNat → j.toNat ≤ dl.toNat →
     Frontend.denoteEList a.store fvs = some fvsP → Frontend.denoteEList a.store doms = some domsP →
     (∀ i, i < j.toNat → ∀ x y, fvsP[i]? = some x → domsP[i]? = some y →
       ConLeche.Expr.WScoped (off.toNat + i) x.fvarTypeD ∧ ConLeche.Expr.WScoped (off.toNat + i) y) →
@@ -304,13 +303,13 @@ theorem sdomsE_claim (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : 
       ErrClaim (ConRon.Arena.checkStructDomsAt V fe off.toNat fvs doms j.toNat) a e := by
   induction n with
   | zero =>
-    intro m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms hfob hdob hfot hdot hoob hjf hjd hfP hdP
+    intro m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms hfob hdob hfot hdot hoob hfP hdP
       hws e he
     rw [sdomsE.eq_def] at he
     cases he
     exact ErrClaim.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
-  intro m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms hfob hdob hfot hdot hoob hjf hjd hfP hdP
+  intro m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms hfob hdob hfot hdot hoob hfP hdP
     hws e he
   by_cases hk0 : e.cls = 0
   · exact ErrClaim.of_cls0 hk0
@@ -325,8 +324,40 @@ theorem sdomsE_claim (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : 
   have hj1 : (j - 1).toNat = j.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hjpos))]
     simp
-  have hjm1f : j.toNat - 1 < fl.toNat := by omega
-  have hjm1d : j.toNat - 1 < dl.toNat := by omega
+  cases h1 : callE p n "sl_get" [fo, fl, j - 1] m with
+  | error e1 =>
+    rw [h1, sdomsE.k_sl_get.none] at he
+    cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, sdomsE.k_sl_get.arm1] at he
+  obtain ⟨s1, hs1, -, hm1, hgw1⟩ := triple_of_callW (slGet_specW p hg n ⟨m, Locals.init []⟩ fo fl (j - 1))
+    (callW_of_callE h1)
+  have hl1 : ¬ fl ≤ j - 1 := by
+    intro hl'; simp [getW, hl'] at hgw1
+  have hm1' : m = m1 := by rw [← hs1, hm1]
+  subst hm1'
+  cases h2 : callE p n "sl_get" [dO, dl, j - 1] m with
+  | error e2 =>
+    rw [h2, sdomsE.k_sl_get_2.none] at he
+    cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+  | ok q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, sdomsE.k_sl_get_2.arm1] at he
+  obtain ⟨s2, hs2, -, hm2, hgw2⟩ := triple_of_callW (slGet_specW p hg n ⟨m, Locals.init []⟩ dO dl (j - 1))
+    (callW_of_callE h2)
+  have hl2 : ¬ dl ≤ j - 1 := by
+    intro hl'; simp [getW, hl'] at hgw2
+  have hm2' : m = m2 := by rw [← hs2, hm2]
+  subst hm2'
+  have hjm1f : j.toNat - 1 < fl.toNat := by
+    have : ¬ fl.toNat ≤ (j - 1).toNat := fun e => hl1 (UInt64.le_iff_toNat_le.mpr e)
+    omega
+  have hjm1d : j.toNat - 1 < dl.toNat := by
+    have : ¬ dl.toNat ≤ (j - 1).toNat := fun e => hl2 (UInt64.le_iff_toNat_le.mpr e)
+    omega
   have hfoeq : fo + (j - 1) = UInt64.ofNat (fo.toNat + (j.toNat - 1)) := by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, hj1]; simp
   have hdoeq : dO + (j - 1) = UInt64.ofNat (dO.toNat + (j.toNat - 1)) := by
@@ -345,38 +376,10 @@ theorem sdomsE_claim (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : 
   have hjeq : j.toNat = (j.toNat - 1) + 1 := by omega
   rw [hjeq]
   simp only [ConRon.Arena.checkStructDomsAt, unwrapOr, hfvsij, hdomsij, pure_bind, bind_assoc]
-  cases h1 : callE p n "sl_get" [fo, fl, j - 1] m with
-  | error e1 =>
-    rw [h1, sdomsE.k_sl_get.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, sdomsE.k_sl_get.arm1] at he
-  obtain ⟨s1, hs1, -, hm1, hgw1⟩ := triple_of_callW (slGet_specW p hg n ⟨m, Locals.init []⟩ fo fl (j - 1))
-    (callW_of_callE h1)
-  have hl1 : ¬ fl ≤ j - 1 := by
-    intro hl'; simp [getW, hl'] at hgw1
-  have hm1' : m = m1 := by rw [← hs1, hm1]
-  subst hm1'
   have hr1 : r1.headD 0 = wa := by
     simp only [getW, hl1, if_false, Option.some.injEq] at hgw1
     rw [← hgw1, hfoeq, hwa_eq]
   rw [hr1] at he
-  cases h2 : callE p n "sl_get" [dO, dl, j - 1] m with
-  | error e2 =>
-    rw [h2, sdomsE.k_sl_get_2.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2, sdomsE.k_sl_get_2.arm1] at he
-  obtain ⟨s2, hs2, -, hm2, hgw2⟩ := triple_of_callW (slGet_specW p hg n ⟨m, Locals.init []⟩ dO dl (j - 1))
-    (callW_of_callE h2)
-  have hl2 : ¬ dl ≤ j - 1 := by
-    intro hl'; simp [getW, hl'] at hgw2
-  have hm2' : m = m2 := by rw [← hs2, hm2]
-  subst hm2'
   have hr2 : r2.headD 0 = wb := by
     simp only [getW, hl2, if_false, Option.some.injEq] at hgw2
     rw [← hgw2, hdoeq, hwb_eq]
@@ -440,7 +443,7 @@ theorem sdomsE_claim (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : 
       have := ih (by omega) m4 a2 off fo fl dO dl (j - 1) fvs doms fvsP domsP hC2 hA2
         (by rw [decHL_grow (hg1.trans hg2) (by omega)]; exact hfvs)
         (by rw [decHL_grow (hg1.trans hg2) (by omega)]; exact hdoms) hfob hdob
-        (by have := (hg1.trans hg2).1; omega) (by have := (hg1.trans hg2).1; omega) hoob (by omega) (by omega)
+        (by have := (hg1.trans hg2).1; omega) (by have := (hg1.trans hg2).1; omega) hoob
         (ConRon.Bridge.denoteEList_ext hcs2.ext _ _ hfP) (ConRon.Bridge.denoteEList_ext hcs2.ext _ _ hdP)
         (fun i hi => hws i (by omega)) _ h5
       rwa [hj1] at this
@@ -460,7 +463,7 @@ theorem checkStructDomsAt_claim (hg : p.lookup "sl_get" = some slGet)
     (hdoms : decHL s₀.mem dO.toNat dl.toNat = some doms)
     (hfob : fo.toNat + fl.toNat < 2 ^ 64) (hdob : dO.toNat + dl.toNat < 2 ^ 64)
     (hfot : fo.toNat + fl.toNat ≤ iwTop s₀.mem) (hdot : dO.toNat + dl.toNat ≤ iwTop s₀.mem)
-    (hoob : off.toNat + fl.toNat < 2 ^ 64) (hjf : j.toNat ≤ fl.toNat) (hjd : j.toNat ≤ dl.toNat)
+    (hoob : off.toNat + fl.toNat < 2 ^ 64)
     {fvsP domsP : List ConLeche.Expr} (hfP : Frontend.denoteEList a₀.store fvs = some fvsP)
     (hdP : Frontend.denoteEList a₀.store doms = some domsP)
     (hws : ∀ i, i < j.toNat → ∀ x y, fvsP[i]? = some x → domsP[i]? = some y →
@@ -473,7 +476,7 @@ theorem checkStructDomsAt_claim (hg : p.lookup "sl_get" = some slGet)
   have hW := triple_of_callE_err (sdomsE_spec p hp n ⟨s₀.mem, Locals.init []⟩ vis off fo fl dO dl j) hc'
     (Err.code_ne_of_cls hk0)
   exact sdomsE_claim hq henv hnv hcE hg hftd n hn s₀.mem a₀ off fo fl dO dl j fvs doms _ _ hC hA hfvs hdoms
-    hfob hdob hfot hdot hoob hjf hjd hfP hdP hws er hW
+    hfob hdob hfot hdot hoob hfP hdP hws er hW
 
 end sims
 
