@@ -214,5 +214,178 @@ theorem loopCE (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
 
 end loop
 
+/-! ## The gate -/
+
+section pin
+variable {p : Prog}
+
+local notation "V" => ConLeche.CheckMode.verified
+
+/-- **The error claim of `check_div_mod_pin_loop`** (`loopC`'s hypotheses, the failing call). -/
+def LoopClaimE (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (env : ConLeche.Env) : Prop :=
+  ∀ (c value : Word), H c → H value → ∀ {nm : ConLeche.Name} {v : ConLeche.Expr},
+    ConLeche.Expr.WScoped 0 v →
+    ∀ (ips : List INatOpPinSet) (psPs : List ConLeche.NatOpPinSet) (po pl : Word)
+      (tried : List String) (k : Nat), k ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState),
+      StageC dn vis fe env m a → L.Stubs.CrOK m → PinsIW m po.toNat pl.toNat ips →
+      PinsDenote a.store ips psPs → denoteN a.store.ns (decI c) = some nm →
+      denoteE a.store (decE value) = some v → ∀ e,
+      callE p k "check_div_mod_pin_loop" [vis, c, value, po, pl] m = .error e →
+      ErrClaim (checkDivModPinLoop V fe (decI c) (decE value) ips tried) a e
+
+/-- **`check_div_mod_pin`'s error refinement** (`cpC`'s statement; the loop by its error claim, the
+environment guard and `env_find` claim nothing). -/
+theorem cpCE {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
+    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word}
+    {fe2 : IFEnv} {env env2 : ConLeche.Env}
+    (hnv : closedNV p L.Checker.nvFns = true)
+    (hLoop : LoopClaimE p dn vis (fe2.restrictTo vis.toNat) env)
+    {po pl c : Word} {ips : List INatOpPinSet} {psPs : List ConLeche.NatOpPinSet}
+    {nm : ConLeche.Name} {k : Nat} (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hS : StageR dn vis2 fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
+    (hok2 : StepOK env2 fe2 a) (hc : H c) (hI : PinsIW m po.toNat pl.toNat ips)
+    (hpd : PinsDenote a.store ips psPs) (hn : denoteN a.store.ns (decI c) = some nm)
+    (hCr : L.Stubs.CrOK m) (e : Err)
+    (he : cpE p k m po pl vis vis2 c = .error e) :
+    ErrClaim (checkDivModPin V ips (fe2.restrictTo vis.toNat) fe2 (decI c)) a e := by
+  cases k with
+  | zero => rw [cpE.eq_1] at he; cases he; exact ErrClaim.of_cls0 rfl
+  | succ k =>
+  have hk' : k ≤ 2 ^ 62 := by omega
+  rw [cpE.arm1] at he
+  have hD7 := hD.toDmProg8.toDmProg7
+  -- the environment guard, at the extended view
+  cases h1 : callE p k "div_mod_env_guard" [vis2, c] m with
+  | error e1 =>
+    rw [h1, cpE.k_div_mod_env_guard.none] at he
+    cases he
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide) h1)
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1] at he
+  obtain ⟨x1, a1, hrun1, ⟨hS1, hg1, hd1⟩⟩ :=
+    (eg_ref hD7 hdn c) k m a r1 m1 ⟨hS, hc⟩ (callW_of_callE h1)
+  obtain ⟨hst1, hx1, hc1, hp1, hgv⟩ :=
+    ConRon.Bridge.divModEnvGuard_run hC.check.state hC.check.pins hok2.ienv hn hrun1
+  have c1 : CoreStep V env (fe2.restrictTo vis.toNat) a a1 :=
+    ⟨hC.check.mono hst1 hx1 hc1 hp1, hx1, hp1⟩
+  have hf1 := callW_leafFrame hcl (leaf_mem _ (by decide)) (callW_of_callE h1)
+  have hC1 := StageC.of_core hC (hS1.restrict vis) hf1 c1
+  have hCr1 := hkp.call (im_mem _ rfl) (callW_of_callE h1) hCr
+  by_cases z1 : r1.headD 0 = 0
+  · rw [cpE.k_div_mod_env_guard.abort1 _ _ _ _ _ _ _ _ _ z1] at he
+    cases he
+    have hxf := decW0B_false hd1 z1
+    have hrun1' : (divModEnvGuard fe2 (decI c)).run a = .ok (false, a1) := by
+      rw [← hxf]; exact hrun1
+    unfold checkDivModPin
+    refine ErrClaim.bind_right hrun1' ?_
+    exact ErrClaim.ite_neg (by simp) (ErrClaim.fail _ _ rfl)
+  rw [cpE.k_div_mod_env_guard.arm1 _ _ _ _ _ _ _ _ _ z1] at he
+  have hxt := decW0B_true hd1 z1
+  have hrun1' : (divModEnvGuard fe2 (decI c)).run a = .ok (true, a1) := by
+    rw [← hxt]; exact hrun1
+  unfold checkDivModPin
+  refine ErrClaim.bind_right hrun1' ?_
+  refine ErrClaim.ite_pos rfl ?_
+  -- the stored value
+  cases h2 : callE p k "env_find" [c, vis2] m1 with
+  | error e2 =>
+    rw [h2, cpE.k_env_find.none] at he
+    cases he
+    exact ErrClaim.of_callE_nv hnv (by decide) h2
+  | ok q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2] at he
+  obtain ⟨hm2, hfd⟩ := envFind_call hD7.toDmProg6.toDmProg5.toMasterProg c hc hS1.1.env
+    (callW_of_callE h2)
+  subst hm2
+  cases hf : fe2.find? (decI c) with
+  | none =>
+    rw [hf] at hfd
+    rw [cpE.k_env_find.abort1 _ _ _ _ _ _ _ _ (show r2.headD 0 = 0 from hfd)] at he
+    cases he; exact ErrClaim.of_cls0 rfl
+  | some ci =>
+  rw [hf] at hfd
+  obtain ⟨hr2, hci⟩ := hfd
+  have hsz := hS1.2.2.2.2.1
+  by_cases hk1 : rdW (m2.arr64 EREC) (r2.tail.headD 0) ≠ 1
+  · rw [cpE.k_env_find.abort2 _ _ _ _ _ _ _ _ (by rw [hr2]; decide) hk1] at he
+    cases he; exact ErrClaim.of_cls0 rfl
+  replace hk1 := Classical.not_not.mp hk1
+  rw [cpE.k_env_find.arm1 _ _ _ _ _ _ _ _ (by rw [hr2]; decide) hk1] at he
+  obtain ⟨cv, v, hint, rfl, hk1', hcv⟩ : ∃ cv v hint, ci = .defnInfo cv v hint ∧
+      (erecP m2)[(r2.tail.headD 0).toNat]? = some 1 ∧
+      decCV (erecP m2) ((r2.tail.headD 0).toNat + 1) = some cv := by
+    rcases decCI_defn_cases hci with h | ⟨w, hw', hne, hnd⟩
+    · exact h
+    · exfalso
+      have := rdW_erec_of hsz hw'
+      exact hne (by rw [← this]; exact hk1) 
+  obtain ⟨-, wv, hwv, hwlt, hvw⟩ := decCI_defn_value hci
+  have hk1'' : rdW (m2.arr64 EREC) (r2.tail.headD 0) = 1 := hk1
+  have hq5 : (r2.tail.headD 0 + 5).toNat = (r2.tail.headD 0).toNat + 5 := by
+    have h1 : (r2.tail.headD 0).toNat + 5 < (erecP m2).size := by
+      have := (Array.getElem?_eq_some_iff.mp hwv).1; omega
+    have h2 : (erecP m2).size ≤ erTop m2 := erecP_size_le' m2
+    have h3 : erTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 129).toNat_lt
+    have h5 : (5 : Word).toNat = 5 := rfl
+    rw [UInt64.toNat_add, h5]; exact Nat.mod_eq_of_lt (by omega)
+  have hval : rdW (m2.arr64 EREC) (r2.tail.headD 0 + 5) = wv := by
+    have : (erecP m2)[(r2.tail.headD 0 + 5).toNat]? = some wv := by rw [hq5]; exact hwv
+    exact rdW_erec_of hsz this
+  rw [hval] at he
+  -- the twin's stored value: its denotation and its scope (con-ron's `checkDivModPin_bridge`)
+  obtain ⟨nm0, cc, hn0, hcid, hfindP⟩ := hok2.ienv.hit (decI c) _ hf
+  rw [hn] at hn0
+  obtain rfl := Option.some.inj hn0
+  simp only [Frontend.denoteCI] at hcid
+  cases hcvd : Frontend.denoteCV a.store cv with
+  | none => rw [hcvd] at hcid; simp at hcid
+  | some cv' =>
+  cases hvv : denoteE a.store v with
+  | none => rw [hcvd, hvv] at hcid; simp at hcid
+  | some v' =>
+  rw [hcvd, hvv] at hcid
+  simp only [Option.some.injEq] at hcid
+  subst hcid
+  have hwc := hok2.envWF.consts _ (List.mem_of_find?_eq_some hfindP)
+  obtain ⟨hfv, -, -, -⟩ := hwc.2.2.2.2.1 cv' v' hint rfl
+  have hwsv : ConLeche.Expr.WScoped 0 v' := ConLeche.Expr.WScoped.of_not_hasFvar hfv
+  -- the variant loop, at the pre-insertion view
+  have hv1 : denoteE a1.store (decE wv) = some v' := by
+    have h := ConRon.Bridge.denote_ext hvv hx1
+    rw [hvw] at h; exact h
+  subst hvw
+  show ErrClaim (checkDivModPinLoop V _ (decI c) (decE wv) ips []) a1 e
+  cases h3 : callE p k "check_div_mod_pin_loop"
+      [vis, c, wv, po, pl] m2 with
+  | error e3 =>
+    rw [h3, cpE.k_check_div_mod_pin_loop.none] at he
+    cases he
+    exact hLoop c wv hc hwlt hwsv ips psPs po pl [] k hk' m2 a1 hC1 hCr1 (hI.grow hg1)
+      (ConRon.Bridge.PinsDenote.mono hx1 _ _ hpd) (ConRon.Bridge.denoteN_ext hn hx1) hv1 _ h3
+  | ok q3 =>
+    rw [h3, cpE.k_check_div_mod_pin_loop.arm1] at he
+    cases he
+
+/-- **The loop's callee-shape error claim from its refinement**: `LoopClaimE`, given the claim of
+`check_div_mod_pin_at` and the program's text. -/
+theorem loopClaimE (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+    (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
+    (hnv : closedNV p L.Checker.nvFns = true) (hCpa : CpaClaimE p dn vis fe env) :
+    LoopClaimE p dn vis fe env := by
+  intro c value hc hval nm v hwsv ips psPs po pl tried k hk m a hC hCr hI hpd hn hv e hce
+  by_cases hk0 : e.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hE := triple_of_callE_err (loopE_spec p hD.lCheckDivModPinLoop k ⟨m, Locals.init []⟩ vis c
+    value po pl) hce (Err.code_ne_of_cls hk0)
+  exact loopCE hD hq hcl hkp hs0 hsA henv hnv hCpa c value hc hval hwsv ips psPs po pl tried k hk
+    m a hC hCr hI hpd hn hv e hE
+
+end pin
+
 end L.Ind
-#print axioms L.Ind.loopCE
+
