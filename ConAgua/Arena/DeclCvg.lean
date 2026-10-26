@@ -265,7 +265,8 @@ theorem ivg_specW (p : Prog) (h : CvgProg p) (cl : CallM) (hc : CallSpec p cl) (
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         cvLps_specW p h.alloc h.copy h.eti h.lps n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
-        hc n "all_level_params_defined", hc n "consts_resolve_ffast"] <;>
+        hc n "all_level_params_defined", hc n "consts_resolve_ffast",
+        hc n "unresolved_consts_error"] <;>
       finish (gen := 20)
 
 /-! ### `check_value_group(vis, g)` -/
