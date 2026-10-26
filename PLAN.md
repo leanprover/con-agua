@@ -59,6 +59,20 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - A long `&&`/`||` chain in an `if` costs `vcgen` one path per exit, and consecutive chains multiply.
   Pass `L.evalC_spec`/`L.evalE_spec` (`L/PureEval.lean`) instead of `evalC`/`evalE`, then
   `simp only [Cond.pval, Expr.pval, …] at *` before `grind`.
+- **A `grind` that takes minutes on one arithmetic goal (a loop step's digit equation, the value a
+  Nat op returns) is not short of lemmas.** It is lost in its own search: the generic multi-patterns
+  (`pv_succ`, `pv_set_succ`, `wt_succ`, `wt_add`) instantiate on every pair of terms, and the
+  model-based theory combination splits on every pair of `UInt64` terms in a context full of
+  abort conditions. Write a lemma in the goal's own shape (same `set64`/load terms, the
+  invariant's equation as a hypothesis) whose variables all occur in its conclusion, prove it
+  once with explicit rewrites and a `grind` over generalized atoms (seconds), and use it as
+  `all_goals first | (with_reducible apply L <;> grind) | grind …` (`with_reducible`: a failed
+  `apply` on another goal must not unfold `vpool`, an `Array.ofFn` of size `2^41`; never pick
+  hypotheses out by `assumption` with metavariables for the same reason). NatShl 760 s -> 120 s
+  (`shl_step_goal`, `shl_result_goal`), NatMul's column step 145 s -> 4 s (`mul_step_goal`).
+  Also: destructure an invariant's dead disjunct before `grind` (`PoolOK`'s `ptop0` case split
+  every goal of every Nat op: 2x), and after the tiered pool, loops with tier-decoded loads need
+  the plain `vcgen` recipe above, not `sym … => finish` (NatDiv's passes 338 s -> 40 s).
 - Known vcgen gaps: no `eq_def` fallback; `ite` equations are ignored; an over-applied `ite` doesn't split; specs
   aren't found through projections; precondition-only arguments stay metavariables; pattern lambdas from another
   module don't match; equation generation fails for structural recursion that matches under a bind. Kraken's
