@@ -431,4 +431,156 @@ theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees
         (hcE.proj k (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe MM eb mode d _ _ _
           (by omega) (by omega) hsl h1' h3').2 h1)
 
+/-! ## The slots `infer`, `infer_io` -/
+
+l_model infer_specE (p : Prog) (hf : p.lookup "infer" = some inferSlotL)
+  fns [hf ↦ inferE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] heartbeats 400000 errors
+
+l_model inferIO_specE (p : Prog) (hf : p.lookup "infer_io" = some inferIOSlotL)
+  fns [hf ↦ inferIOE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] heartbeats 400000 errors
+
+theorem knot_infer_missE (mode : ConLeche.CheckMode) (fe : IFEnv) (F d : Nat) (e : EIdx) (a : AState)
+    (hm : a.caches.inferC[e]? = none) (ce : CheckError)
+    (hb : (inferBody (coreKnot mode fe id F) fe d e).run a = .error ce) :
+    ((coreKnot mode fe id (F + 1)).infer d e).run a = .error ce := by
+  simp [coreKnot, hm, StateT.run_bind, hb]; rfl
+
+theorem knot_inferIO_missE (mode : ConLeche.CheckMode) (fe : IFEnv) (F d : Nat) (e : EIdx)
+    (a : AState) (hm : a.caches.inferIOC[e]? = none) (ce : CheckError)
+    (hb : (inferBodyIO (CoreFnsA.ioView (coreKnot mode fe id F)) fe d e).run a = .error ce) :
+    ((coreKnot mode fe id (F + 1)).inferIO d e).run a = .error ce := by
+  simp [coreKnot, hm, StateT.run_bind, hb]; rfl
+
+/-- **`infer`'s verdicts** (the error half of `infer_refines`): a hit succeeds, a miss fails as
+the body; the memo's `in_find`/`in_put` claim nothing. -/
+theorem infer_refinesE (p : Prog) (hp : KnotProg p) (hnv : closedNV p L.Checker.nvFns = true) (n : Nat)
+    (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (hb : InferBodySpecE p n) : InferSlotE p (n + 1) := by
+  intro F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hs he
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (infer_specE p hp.infer (n + 1) ⟨s₀.mem, Locals.init []⟩ mode vis d e)
+    hc0 (Err.code_ne_of_cls hk0)
+  rw [inferE.eq_2] at hW
+  have hS := hs.rel
+  have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
+  rw [hkey] at hW
+  cases h1 : callE p n "in_find" [e, genW 0 eb] s₀.mem with
+  | error e1 =>
+    rw [h1, inferE.k_in_find.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "in_find" (by simp)) h1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1] at hW
+  obtain ⟨t₁, ht₁, hst, hne, hr⟩ := triple_of_callE
+    (memoFindG_spec inSch p "in_find" hp.inFind n ⟨s₀.mem, Locals.init []⟩ e (genW 0 eb)) h1
+  have hm₁ : m₁ = s₀.mem := by rw [← ht₁, hst]
+  subst hm₁
+  subst hr
+  by_cases h1' : (mfindG inSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
+  · simp only [inferE.k_in_find] at hW; rw [if_pos h1'] at hW; cases hW
+  have hmiss := (hS.core.inf.findE hS.core.eb1 e he hne).2 (by simpa using h1')
+  simp only [inferE.k_in_find] at hW; rw [if_neg h1'] at hW
+  cases h2 : callE p n "infer_body" [mode, vis, d, e] s₀.mem with
+  | error e2 =>
+    rw [h2, inferE.k_infer_body.none] at hW; cases hW
+    have hcl := CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩) (hb F' _ a₀ dn vis fe MM eb mode d e
+      (by omega) (by omega) ⟨hS, hs.mode4, hs.eb_mode⟩ he hk hkE) h2
+    exact ErrClaim.of_run_eq' (fun ce h => knot_infer_missE _ fe F' d.toNat _ a₀ hmiss ce h) hcl
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [h2, inferE.k_infer_body.arm1] at hW
+  cases h3 : callE p n "in_find" [e, genW 0 eb] m₂ with
+  | error e3 =>
+    rw [h3, inferE.k_in_find_2.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "in_find" (by simp)) h3
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [h3] at hW; simp only [inferE.k_in_find_2] at hW
+  cases h4 : callE p n "in_put" [e, genW 0 eb, r₂.headD 0, r₃.headD 0, r₃.tail.headD 0] m₃ with
+  | error e4 =>
+    rw [h4, inferE.k_in_put.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "in_put" (by simp)) h4
+  | ok q => rw [h4] at hW; simp [inferE.k_in_put] at hW
+
+/-- **`infer_io`'s verdicts** (the error half of `inferIO_refines`). -/
+theorem inferIO_refinesE (p : Prog) (hp : KnotProg p) (hnv : closedNV p L.Checker.nvFns = true)
+    (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (hb : InferIOBodySpecE p n) :
+    InferIOSlotE p (n + 1) := by
+  intro F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hs he
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferIO_specE p hp.inferIO (n + 1) ⟨s₀.mem, Locals.init []⟩ mode vis
+    d e) hc0 (Err.code_ne_of_cls hk0)
+  rw [inferIOE.eq_2] at hW
+  have hS := hs.rel
+  have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
+  rw [hkey] at hW
+  cases h1 : callE p n "io_find" [e, genW 0 eb] s₀.mem with
+  | error e1 =>
+    rw [h1, inferIOE.k_io_find.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "io_find" (by simp)) h1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1] at hW
+  obtain ⟨t₁, ht₁, hst, hne, hr⟩ := triple_of_callE
+    (memoFindG_spec ioSch p "io_find" hp.ioFind n ⟨s₀.mem, Locals.init []⟩ e (genW 0 eb)) h1
+  have hm₁ : m₁ = s₀.mem := by rw [← ht₁, hst]
+  subst hm₁
+  subst hr
+  by_cases h1' : (mfindG ioSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
+  · simp only [inferIOE.k_io_find] at hW; rw [if_pos h1'] at hW; cases hW
+  have hmiss := (hS.core.io.findE hS.core.eb1 e he hne).2 (by simpa using h1')
+  simp only [inferIOE.k_io_find] at hW; rw [if_neg h1'] at hW
+  cases h2 : callE p n "infer_body_io" [mode, vis, d, e] s₀.mem with
+  | error e2 =>
+    rw [h2, inferIOE.k_infer_body_io.none] at hW; cases hW
+    have hcl := CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩) (hb F' _ a₀ dn vis fe MM eb mode d e
+      (by omega) (by omega) ⟨hS, hs.mode4, hs.eb_mode⟩ he hk hkE) h2
+    exact ErrClaim.of_run_eq' (fun ce h => knot_inferIO_missE _ fe F' d.toNat _ a₀ hmiss ce h) hcl
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [h2, inferIOE.k_infer_body_io.arm1] at hW
+  cases h3 : callE p n "io_find" [e, genW 0 eb] m₂ with
+  | error e3 =>
+    rw [h3, inferIOE.k_io_find_2.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "io_find" (by simp)) h3
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [h3] at hW; simp only [inferIOE.k_io_find_2] at hW
+  cases h4 : callE p n "io_put" [e, genW 0 eb, r₂.headD 0, r₃.headD 0, r₃.tail.headD 0] m₃ with
+  | error e4 =>
+    rw [h4, inferIOE.k_io_put.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "io_put" (by simp)) h4
+  | ok q => rw [h4] at hW; simp [inferIOE.k_io_put] at hW
+
+/-! ## The goal: the knot's `infer`, `infer_io` steps, error halves -/
+
+/-- **The knot's `infer` slot one level up, error half** (`inferSlot_step`'s): from the knot and
+its error half up to `n`. -/
+@[refines_part ConRon.Arena.coreKnot "infer (step, verdicts)"]
+theorem inferSlot_stepE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (hcE : InferCalleesE p)
+    (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) : InferSlotE p (n + 1) :=
+  infer_refinesE p hq.knot hcE.nv n hk hkE (inferBody_refinesE p hq hc hcE n)
+
+/-- **The knot's `inferIO` slot one level up, error half** (`inferIOSlot_step`'s). -/
+@[refines_part ConRon.Arena.coreKnot "inferIO (step, verdicts)"]
+theorem inferIOSlot_stepE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
+    (hcE : InferCalleesE p) (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
+    InferIOSlotE p (n + 1) :=
+  inferIO_refinesE p hq.knot hcE.nv n hk hkE (inferBodyIO_refinesE p hq hc hcE n)
+
+/-- **Both inference slots one level up, error halves.** -/
+theorem inferSlots_stepE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
+    (hcE : InferCalleesE p) :
+    ∀ n, KnotUpTo p n → KnotUpToE p n → InferSlotE p (n + 1) ∧ InferIOSlotE p (n + 1) :=
+  fun n hk hkE => ⟨inferSlot_stepE p hq hc hcE n hk hkE, inferIOSlot_stepE p hq hc hcE n hk hkE⟩
+
 end L.Arena
