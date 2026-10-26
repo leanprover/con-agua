@@ -70,7 +70,7 @@ theorem byteAt_pos_iff (hsize : b.size < 2 ^ 64) (pos : USize) (wpos : Word) (li
 include h64 in
 @[refines ConLeche.Frontend.keyAt]
 theorem keyAt_eq_keyAtN (hsize : b.size < 2 ^ 63) (i kl : USize)
-    (hi : i.toNat + 1 + kl.toNat < b.size) :
+    (_hi : i.toNat + 1 + kl.toNat < b.size) :
     UInt64.ofNat (keyAt b i kl).ctorIdx = keyAtN b.data i.toUInt64 kl.toUInt64 := by
   have hb : ∀ (pos : USize) (c : UInt8), byteAt b pos = c ↔ byteW b.data pos.toUInt64 = c.toUInt64 := by
     intro pos c

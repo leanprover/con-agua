@@ -228,7 +228,7 @@ def strPutEsc : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn, pt, pb
 
 /-- **The model of the loop** from `j`, `k` words written so far: the final `k` and memory. -/
 def escLoopW (b : Array UInt8) (m : Mem) (top e j k : Word) : Option (Word × Mem) :=
-  if h : j < e then
+  if _h : j < e then
     if byteW b j ≠ 92 then
       if m.len64 (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + k then none
       else escLoopW b (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + k) (byteW b j))
@@ -237,17 +237,17 @@ def escLoopW (b : Array UInt8) (m : Mem) (top e j k : Word) : Option (Word × Me
     else match u8PutW m top k (escOneN b e j).2.1 with
       | none => none
       | some (k', m') =>
-        if hj : (escOneN b e j).2.2 ≤ j then none
+        if _hj : (escOneN b e j).2.2 ≤ j then none
         else escLoopW b m' top e (escOneN b e j).2.2 k'
   else some (k, m)
 termination_by e.toNat - j.toNat
 decreasing_by
-  · have := UInt64.lt_iff_toNat_lt.mp h
+  · have := UInt64.lt_iff_toNat_lt.mp _h
     have : (j + 1).toNat = j.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; have := e.toNat_lt; omega
     omega
-  · have := UInt64.lt_iff_toNat_lt.mp h
-    have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hj)
+  · have := UInt64.lt_iff_toNat_lt.mp _h
+    have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp _hj)
     omega
 
 /-- The end of `str_put_esc`: the top moved past the `k` words written. -/
@@ -271,7 +271,7 @@ section arms
 variable (b : Array UInt8) (m : Mem) (top e j k : Word)
 
 theorem escLoopW_end (h : ¬ j < e) : escLoopW b m top e j k = some (k, m) := by
-  rw [escLoopW, dif_neg h]
+  rw [escLoopW, dite_eq_right h]
 
 theorem escLoopW_raw (h : j < e) (hj : j.toNat < b.size) (hc : b[j.toNat].toUInt64 ≠ 92)
     (hl : ¬ m.len64 (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + k) :
@@ -279,15 +279,15 @@ theorem escLoopW_raw (h : j < e) (hj : j.toNat < b.size) (hc : b[j.toNat].toUInt
       escLoopW b (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + k) b[j.toNat].toUInt64)
         top e (j + 1) (k + 1) := by
   have hb : byteW b j = b[j.toNat].toUInt64 := by simp [byteW, Array.getD, hj]
-  rw [escLoopW, dif_pos h, hb, if_pos hc, if_neg hl]
+  rw [escLoopW, dite_eq_left h, hb, ite_eq_left hc, ite_eq_right hl]
 
 theorem escLoopW_esc (k' : Word) (m' : Mem) (h : j < e) (hj : j.toNat < b.size)
     (hc : b[j.toNat].toUInt64 = 92) (ho : (escOneN b e j).1 ≠ 0)
     (hu : u8PutW m top k (escOneN b e j).2.1 = some (k', m')) (hn : j < (escOneN b e j).2.2) :
     escLoopW b m top e j k = escLoopW b m' top e (escOneN b e j).2.2 k' := by
   have hb : byteW b j = b[j.toNat].toUInt64 := by simp [byteW, Array.getD, hj]
-  rw [escLoopW, dif_pos h, hb, if_neg (by simp [hc]), if_neg ho, hu]
-  simp only [dif_neg (UInt64.not_le.mpr hn)]
+  rw [escLoopW, dite_eq_left h, hb, ite_eq_right (by simp [hc]), ite_eq_right ho, hu]
+  simp only [dite_eq_right (UInt64.not_le.mpr hn)]
 
 end arms
 

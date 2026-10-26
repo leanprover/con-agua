@@ -207,9 +207,9 @@ theorem seqLayout_ok (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf 
     unfold seqSlot at e'
     by_cases h1 : a = hdrf <;> by_cases h2 : b = hdrf
     · exact hab (h1.trans h2.symm)
-    · rw [if_pos h1, if_neg h2] at e'; exact hb' (Or.inl e'.symm)
-    · rw [if_neg h1, if_pos h2] at e'; exact ha' (Or.inl e')
-    · rw [if_neg h1, if_neg h2] at e'; exact hab e'
+    · rw [ite_eq_left h1, ite_eq_right h2] at e'; exact hb' (Or.inl e'.symm)
+    · rw [ite_eq_right h1, ite_eq_left h2] at e'; exact ha' (Or.inl e')
+    · rw [ite_eq_right h1, ite_eq_right h2] at e'; exact hab e'
   · intro a _ b _ x h; exact absurd h seq_notIn8
 
 end
@@ -387,15 +387,15 @@ theorem seq_memRel {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (hok : abiTabO
     by_cases h1 : a = out ∨ a = ctlf
     · simp only [e, h1, ite_true] at hi; simp at hi
     · simp only [h1, ite_false]
-      simp only [e, if_neg h1] at hi ⊢
+      simp only [e, ite_eq_right h1] at hi ⊢
       unfold seqSlot
       by_cases h2 : a = hdrf
-      · simp only [if_pos h2, Array.size_extract, hout64] at hi ⊢
+      · simp only [ite_eq_left h2, Array.size_extract, hout64] at hi ⊢
         rw [harr out hout i (by omega)]
         have := hm.get64 out hout i (by omega)
         simp only [abiLayout_b64] at this
         rw [this]; simp
-      · simp only [if_neg h2] at hi ⊢
+      · simp only [ite_eq_right h2] at hi ⊢
         have hs := hm.size64 a ha
         simp only [abiLayout_s64] at hs
         rw [harr a ha i (by omega)]

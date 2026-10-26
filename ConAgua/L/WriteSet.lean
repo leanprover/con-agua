@@ -322,7 +322,7 @@ theorem GFrame.copy8w {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (d : 
 theorem GFrame.setG {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) {g : GVar} (hg : g ∈ G)
     (v : Word) : GFrame G m₀ (m.setG g v) := fun g' hg' => by
   simp only [Mem.setG]
-  rw [if_neg (fun (e : g' = g) => hg' (e ▸ hg))]
+  rw [ite_eq_right (fun (e : g' = g) => hg' (e ▸ hg))]
   exact h g' hg'
 
 theorem closedG_lookup {p : Prog} {G : List GVar} {fs : List FnName} (hp : closedG p G fs = true)

@@ -161,14 +161,14 @@ theorem bvarOK : ConsOK p bvarCS where
       subst he; simp [Expr.pval, h],
     fun s => by simp [bvarCS, argsOf, Expr.pval, List.range_succ]⟩
   room := fun s => by
-    simp only [bvarCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+    simp only [bvarCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval]; rfl
   skips := by intro e he; simp [bvarCS] at he
   pre := rfl
   colA := by simp [bvarCS]
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [bvarCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+    simp only [bvarCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [bvarCS] at h
   mloc := fun h => by simp [bvarCS] at h
   exnk := fun _ => by decide

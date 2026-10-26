@@ -239,11 +239,11 @@ theorem abiVals_getElem? (tab : Tab) (h : tab.nb = 2) :
     congr 1; omega
 
 /-- The word an address store writes. -/
-theorem addr_val (R : Reg64s) (off : Nat) (h : R.r8.toNat + off < 2 ^ 64) :
+theorem addr_val (R : Reg64s) (off : Nat) (_h : R.r8.toNat + off < 2 ^ 64) :
     UInt64.ofBitVec ((SVal.addr off).val R) = UInt64.ofNat (R.r8.toNat + off) := by
   apply UInt64.toNat_inj.mp
   simp only [SVal.val, Reg64s.get64_r8, UInt64.toNat_ofBitVec, BitVec.toNat_add, UInt64.toNat_toBitVec,
-    UInt64.toNat_ofNat', Nat.toUInt64, UInt64.toNat_ofNat]
+    UInt64.toNat_ofNat', Nat.toUInt64]
   omega
 
 /-- A word of `stores`, by position. -/
@@ -387,7 +387,7 @@ theorem sim_stores (Q : MachineState → Prop) (R : Reg64s) (base : Nat) (hb : R
     have hmap' : ∀ (m : DataMem), (∀ y, (s.dmem.get? y).isSome → (m.get? y).isSome) →
         ∀ j < 8 * vs.length, (m.get? (A (base + (d + 8) + j))).isSome :=
       fun m hm j hj => hm _ (by rw [show base + (d + 8) + j = base + d + (8 + j) by omega]; exact hmap _ (by omega))
-    simp only [storesCode, List.append_assoc] at hc
+    simp only [storesCode] at hc
     have hrest := hc.right
     cases v with
     | reg r =>

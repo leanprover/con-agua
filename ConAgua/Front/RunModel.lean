@@ -34,22 +34,22 @@ theorem invoke_loc {p : Prog} {k : Stmt → M Sig} {f : FnName} {vs : List Word}
     | none => rw [hp] at h1; cases h1
     | some fd' =>
       rw [hp] at h1
-      simp only [StateT.run_pure, Except.ok.injEq, Prod.mk.injEq] at h1
+      simp only [StateT.run_pure] at h1
       obtain ⟨rfl, rfl⟩ := h1
       exact ⟨rfl, rfl⟩
   obtain ⟨-, rfl⟩ := hl s
   unfold callFn at h2
   obtain ⟨s2, s3, h3, h4⟩ := run_bind_ok h2
-  simp only [StateT.run_get, Except.ok.injEq, Prod.mk.injEq] at h3
+  simp only [StateT.run_get] at h3
   obtain ⟨rfl, rfl⟩ := h3
   obtain ⟨u, s4, h5, h6⟩ := run_bind_ok h4
-  simp only [StateT.run_set, Except.ok.injEq, Prod.mk.injEq] at h5
+  simp only [StateT.run_set] at h5
   obtain ⟨-, rfl⟩ := h5
   obtain ⟨rr, s5, h7, h8⟩ := run_bind_ok h6
   obtain ⟨u2, s6, h9, h10⟩ := run_bind_ok h8
-  simp only [StateT.run_modify, Except.ok.injEq, Prod.mk.injEq] at h9
+  simp only [StateT.run_modify] at h9
   obtain ⟨-, rfl⟩ := h9
-  simp only [StateT.run_pure, Except.ok.injEq, Prod.mk.injEq] at h10
+  simp only [StateT.run_pure] at h10
   obtain ⟨rfl, rfl⟩ := h10
   refine ⟨rfl, fun s' hs' => ?_⟩
   refine run_bind_of (hl s').1 ?_
@@ -86,7 +86,7 @@ theorem runF_of {p : Prog} {f : FnName} {vs : List Word} {m : Mem} {x : Nat × L
     (hx : RunOK p f vs m x) : runF p f vs m = some x.2.2.mem := by
   have h : ∃ x, RunOK p f vs m x := ⟨x, hx⟩
   unfold runF
-  rw [dif_pos h, runOK_mem (Classical.choose_spec h) hx]
+  rw [dite_eq_left h, runOK_mem (Classical.choose_spec h) hx]
 
 theorem runF_some {p : Prog} {f : FnName} {vs : List Word} {m m' : Mem} (h : runF p f vs m = some m') :
     ∃ x, RunOK p f vs m x ∧ x.2.2.mem = m' := by

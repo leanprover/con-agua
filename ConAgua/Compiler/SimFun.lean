@@ -219,7 +219,7 @@ theorem sim_zeroLocals (ctx : Ctx) (need : List Var) (hal : ∀ x r, ctx.alloc.l
       refine ev_movRI hc.head (hrest _ h1 (Only.refl _ _ _) (fun _ => rfl) (fun h => by simp [hl] at h)
         (fun r' h => ?_) (fun r' h => ?_))
       · rw [hl] at h; cases h; simp [rget_set]
-      · rw [rget_set, if_neg (fun e => h (by rw [hl, e]))]
+      · rw [rget_set, ite_eq_right (fun e => h (by rw [hl, e]))]
     | none =>
       simp only [hl] at hc
       obtain ⟨a1, a2, a3⟩ := hmap j (Nat.le_refl _) (by omega) hl
@@ -342,7 +342,7 @@ theorem fnCtx_allocOk (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) :
   have h := fnCtx_spec tab t sk f fd
   refine ⟨h.reg, h.inj, fun hl => ?_, fun hl => ?_, fun x hx => ?_, fun ht y => ?_⟩
   · simp only [fnCtx, fnAlloc] at hl ⊢
-    rw [if_neg (by simp [hl])]
+    rw [ite_eq_right (by simp [hl])]
   · simp only [fnCtx, fnAlloc, Bool.not_eq_false'] at hl ⊢
     simp [tregOf, hl]
   · simp only [fnCtx, fnAlloc] at hx ⊢
@@ -368,8 +368,8 @@ theorem bestTier_lt (u : Array Nat) : ∀ n b x, bestTier u n b = some x → x <
     rcases bestTier_lt u n _ x h with h1 | h1
     · exact .inl (Nat.lt_succ_of_lt h1)
     · by_cases hb : betterTier u n b = true
-      · rw [if_pos hb] at h1; cases h1; exact .inl (Nat.lt_succ_self _)
-      · rw [if_neg hb] at h1; exact .inr h1
+      · rw [ite_eq_left hb] at h1; cases h1; exact .inl (Nat.lt_succ_self _)
+      · rw [ite_eq_right hb] at h1; exact .inr h1
 
 /-- The tier local is a parameter of a leaf with at most 6 parameters. -/
 theorem tregOf_spec (fd : FunDecl) (x : Var) (h : tregOf fd = some x) :
@@ -596,13 +596,13 @@ theorem sim_fnBody0 (t : NTree)
            | none => (rdW s6.dmem (A (sp + 8 * x))).getD 0)
           else Locals.init vs x) } := ⟨_, rfl⟩
     have hσ0 : ∀ x, ¬(x < fd.nlocals ∧ fd.nparams ≤ x ∧ need.contains x = false) →
-        σ0.loc x = Locals.init vs x := fun x h => by rw [hσ0d]; exact if_neg h
+        σ0.loc x = Locals.init vs x := fun x h => by rw [hσ0d]; exact ite_eq_right h
     have hσr : ∀ x r, (x < fd.nlocals ∧ fd.nparams ≤ x ∧ need.contains x = false) →
         ctx.alloc.lookup x = some r → σ0.loc x = UInt64.ofBitVec (s6.regs.get64 r) := fun x r h hr => by
-      rw [hσ0d]; simp only [if_pos h, hr]
+      rw [hσ0d]; simp only [ite_eq_left h, hr]
     have hσs : ∀ x, (x < fd.nlocals ∧ fd.nparams ≤ x ∧ need.contains x = false) →
         ctx.alloc.lookup x = none → σ0.loc x = (rdW s6.dmem (A (sp + 8 * x))).getD 0 := fun x h hn => by
-      rw [hσ0d]; simp only [if_pos h, hn]
+      rw [hσ0d]; simp only [ite_eq_left h, hn]
     have hσm : σ0.mem = σ.mem := by rw [hσ0d]
     have hzero : ∀ x, x < fd.nlocals → ¬ x < fd.nparams →
         ¬(x < fd.nlocals ∧ fd.nparams ≤ x ∧ need.contains x = false) → need.contains x = true := by
@@ -682,7 +682,7 @@ theorem sim_fnBody0 (t : NTree)
       · right; exact ⟨by simpa using hO5, hle⟩
     · intro x hx hn
       have htk : (argRegs.take fd.nparams).getD (x - 0) .rax = argRegs.getD x .rax := by
-        simp [List.getD_eq_getElem?_getD, List.getElem?_take, hx]
+        simp [List.getD_eq_getElem?_getD, hx]
       rw [hv5 x (Nat.zero_le _) (by omega) hn, htk, hregs hnp6 x (by omega)]
       simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (show x < vs.length by omega)]
   · have c0 := hc.left
@@ -777,7 +777,7 @@ theorem sim_fnBody (t : NTree)
       rw [ht] at hy; cases hy
       simp [Reg64s.set64, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hxv]
     · intro h i hi
-      rw [rget_set, if_neg (hnb i (by omega))]
+      rw [rget_set, ite_eq_right (hnb i (by omega))]
       exact hregs h i hi
     · intro r σ2 d2 h1 h2 h3 h4
       refine ev_congr (hepi r σ2 d2 h1 h2 (hS.trans h3) h4) ?_
@@ -823,7 +823,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
       · have := hall 0 (by omega)
         exact hspec.np fun h => by
           rw [show (fnCtx G.tab t sk f fd).alloc = fnAlloc fd from rfl] at h; simp [h] at this
-    simp only [List.append_assoc, List.singleton_append] at hkf
+    simp only [List.singleton_append] at hkf
     refine ev_label hkf.head ?_
     have cB := hkf.tail
     refine sim_fnBody hG hTab p t hTree n hE f fd hlk hnp hbody vs σ hvl 0 (by simp [maxOff])
@@ -838,8 +838,8 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
       · rw [hS2.rsp, show d.regs.rsp.toBitVec = A d.regs.rsp.toNat by simp [A],
           rdW_of_pres hG hP2 (by omega) (Nat.le_refl _) (by omega)]; exact hra
       · refine hKret r { σ2 with loc := σ.loc } _ hr hm2 rfl ?_ ?_ ?_ ?_ ?_ hP2
-        · simp only [Reg64s.set64_rsp, Reg64s.get64_rsp, UInt64.toNat_ofBitVec, BitVec.toNat_add,
-            UInt64.toNat_toBitVec, hsp2, BitVec.toNat_ofNat]
+        · simp only [Reg64s.set64_rsp, UInt64.toNat_ofBitVec, BitVec.toNat_add,
+            UInt64.toNat_toBitVec, hsp2]
           rw [show BitVec.toNat (8 : BitVec 64) = 8 from rfl]; omega
         · simp [Reg64s.set64_rsp]; exact hS2.rbp
         · simp [Reg64s.set64_rsp]; exact hS2.r15
@@ -875,7 +875,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
       refine ev_subRI c1.head fun st2 => H _ ?_ (by simp [hssi]) (by simp [hs15]) (by simp [hsbp]) (by simp [hs14])
         (by simp [hsm])
         (by intro r hr; have hne := allocRegs_ne hr; simp only [rget_set]; simp [hne.2.2.2.1, hsr r hr])
-      simp [Int64.toBitVec_ofInt, BitVec.toNat_sub, hssp]
+      simp [Int64.toBitVec_ofInt, hssp]
       have hm : ((8 : UInt64) * OfNat.ofNat F).toNat = 8 * F := by
         simp [UInt64.toNat_mul]
         rw [UInt64.toNat_ofNat_of_lt (by simp [UInt64.size]; omega)]
@@ -949,13 +949,13 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     obtain ⟨hleaf, hfind⟩ := hsk1
     have hleaf' : Stmt.calls fd.body = false := by simpa [fnCtx] using hleaf
     have hskf : skOf sk f = F := by simp [skOf, hfind]
-    simp only [List.append_assoc, List.cons_append, List.nil_append] at hkf
+    simp only [List.cons_append, List.nil_append] at hkf
     refine ev_label hkf.head ?_
     exact H (kf + 1) d (by simpa only [List.append_assoc, List.cons_append, List.nil_append] using hkf.tail)
       (by rw [← hskf]; exact hlo) (fun hc => by simp [hc] at hleaf') rfl rfl rfl rfl rfl rfl (fun _ _ => rfl)
   -- the stack check: room for the frame, the return address of a call and the frame of a callee
   -- without a stack check
-  simp only [List.append_assoc, List.cons_append, List.nil_append] at hkf
+  simp only [List.cons_append, List.nil_append] at hkf
   refine ev_label hkf.head ?_
   have c1 := hkf.tail
   refine ev_movRR c1.head ?_

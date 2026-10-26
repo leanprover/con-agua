@@ -145,16 +145,16 @@ attribute [local lang_grind] Mbr.enc Mbr.err
 theorem nextMemberN_ws (h : i < UInt64.ofNat b.size)
     (hc : byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13) :
     nextMemberN b i w = nextMemberN b (i + 1) w := by
-  rw [nextMemberN, dif_pos h, if_pos hc]
+  rw [nextMemberN, dite_eq_left h, ite_eq_left hc]
 theorem nextMemberN_close (h : i < UInt64.ofNat b.size)
     (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i = 125) :
     nextMemberN b i w = ⟨1, i, w, 0, 0⟩ := by
-  rw [nextMemberN, dif_pos h, if_neg hc, if_pos h1]
+  rw [nextMemberN, dite_eq_left h, ite_eq_right hc, ite_eq_left h1]
 theorem nextMemberN_comma (h : i < UInt64.ofNat b.size)
     (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 125)
     (h2 : byteW b i = 44) :
     nextMemberN b i w = if w ≠ 0 then .err else nextMemberN b (i + 1) 1 := by
-  rw [nextMemberN, dif_pos h, if_neg hc, if_neg h1, if_pos h2]
+  rw [nextMemberN, dite_eq_left h, ite_eq_right hc, ite_eq_right h1, ite_eq_left h2]
 theorem nextMemberN_quote (h : i < UInt64.ofNat b.size)
     (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 125)
     (h2 : byteW b i ≠ 44) (h3 : byteW b i = 34) :
@@ -164,14 +164,14 @@ theorem nextMemberN_quote (h : i < UInt64.ofNat b.size)
       else if valueAtN b i (UInt64.ofNat (keyEndN b (i + 1).toNat)) = i then .err
       else ⟨2, i, w, keyAtN b i (UInt64.ofNat (keyEndN b (i + 1).toNat) - (i + 1)),
         valueAtN b i (UInt64.ofNat (keyEndN b (i + 1).toNat))⟩ := by
-  rw [nextMemberN, dif_pos h, if_neg hc, if_neg h1, if_neg h2, if_pos h3]
+  rw [nextMemberN, dite_eq_left h, ite_eq_right hc, ite_eq_right h1, ite_eq_right h2, ite_eq_left h3]
 theorem nextMemberN_other (h : i < UInt64.ofNat b.size)
     (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 125)
     (h2 : byteW b i ≠ 44) (h3 : byteW b i ≠ 34) :
     nextMemberN b i w = .err := by
-  rw [nextMemberN, dif_pos h, if_neg hc, if_neg h1, if_neg h2, if_neg h3]
+  rw [nextMemberN, dite_eq_left h, ite_eq_right hc, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3]
 theorem nextMemberN_end (h : ¬ i < UInt64.ofNat b.size) : nextMemberN b i w = .err := by
-  rw [nextMemberN, dif_neg h]
+  rw [nextMemberN, dite_eq_right h]
 
 grind_pattern [lang_grind] nextMemberN_ws => nextMemberN b i w, b[i.toNat]
 grind_pattern [lang_grind] nextMemberN_close => nextMemberN b i w, b[i.toNat]
@@ -298,34 +298,34 @@ variable (bit : Word → Word) (val : Word → Word → Word → Word) (mask : W
   (i w seen : Word)
 
 theorem objN_err (h : (nextMemberN b i w).tag = 0) : objN bit val mask b i w seen = 0 := by
-  rw [objN, if_pos h]
+  rw [objN, ite_eq_left h]
 theorem objN_close (h : (nextMemberN b i w).tag = 1) :
     objN bit val mask b i w seen =
       if (nextMemberN b i w).w ≠ 0 ∧ seen ≠ 0 then 0
       else if seen &&& mask ≠ mask then 0
       else (nextMemberN b i w).pos + 1 := by
-  rw [objN, if_neg (by simp [h]), if_pos h]
+  rw [objN, ite_eq_right (by simp [h]), ite_eq_left h]
 theorem objN_unknown (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) (hb : bit (nextMemberN b i w).key = 0) :
     objN bit val mask b i w seen = 0 := by
-  rw [objN, if_neg h0, if_neg h1, if_pos hb]
+  rw [objN, ite_eq_right h0, ite_eq_right h1, ite_eq_left hb]
 theorem objN_dup (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) (hb : bit (nextMemberN b i w).key ≠ 0)
     (hd : seen &&& bit (nextMemberN b i w).key ≠ 0) : objN bit val mask b i w seen = 0 := by
-  rw [objN, if_neg h0, if_neg h1, if_neg hb, if_pos hd]
+  rw [objN, ite_eq_right h0, ite_eq_right h1, ite_eq_right hb, ite_eq_left hd]
 theorem objN_noprog (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) (hb : bit (nextMemberN b i w).key ≠ 0)
     (hd : seen &&& bit (nextMemberN b i w).key = 0)
     (hp : ¬ (nextMemberN b i w).pos <
       val (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val) :
     objN bit val mask b i w seen = 0 := by
-  rw [objN, if_neg h0, if_neg h1, if_neg hb,
-    if_neg (by simp [hd]), dif_neg hp]
+  rw [objN, ite_eq_right h0, ite_eq_right h1, ite_eq_right hb,
+    ite_eq_right (by simp [hd]), dite_eq_right hp]
 theorem objN_step (e seen' : Word) (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1)
     (hb : bit (nextMemberN b i w).key ≠ 0) (hd : seen &&& bit (nextMemberN b i w).key = 0)
     (he : val (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val = e)
     (hp : (nextMemberN b i w).pos < e) (hs : seen' = seen ||| bit (nextMemberN b i w).key) :
     objN bit val mask b i w seen = objN bit val mask b e 0 seen' := by
   subst he hs
-  rw [objN, if_neg h0, if_neg h1, if_neg hb,
-    if_neg (by simp [hd]), dif_pos hp]
+  rw [objN, ite_eq_right h0, ite_eq_right h1, ite_eq_right hb,
+    ite_eq_right (by simp [hd]), dite_eq_left hp]
 
 grind_pattern [lang_grind] objN_err => objN bit val mask b i w seen, nextMemberN b i w
 grind_pattern [lang_grind] objN_close => objN bit val mask b i w seen, nextMemberN b i w
@@ -378,28 +378,28 @@ variable (item : Word → Word) (b : Array UInt8) (i cnt w : Word)
 theorem objListN_ws (h : i < UInt64.ofNat b.size)
     (hc : byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13) :
     objListN item b i cnt w = objListN item b (i + 1) cnt w := by
-  rw [objListN, dif_pos h, if_pos hc]
+  rw [objListN, dite_eq_left h, ite_eq_left hc]
 theorem objListN_close (h : i < UInt64.ofNat b.size)
     (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i = 93) :
     objListN item b i cnt w = if w ≠ 0 ∧ cnt ≠ 0 then 0 else i + 1 := by
-  rw [objListN, dif_pos h, if_neg hc, if_pos h1]
+  rw [objListN, dite_eq_left h, ite_eq_right hc, ite_eq_left h1]
 theorem objListN_comma (h : i < UInt64.ofNat b.size)
     (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 93)
     (h2 : byteW b i = 44) :
     objListN item b i cnt w = if w ≠ 0 then 0 else objListN item b (i + 1) cnt 1 := by
-  rw [objListN, dif_pos h, if_neg hc, if_neg h1, if_pos h2]
+  rw [objListN, dite_eq_left h, ite_eq_right hc, ite_eq_right h1, ite_eq_left h2]
 theorem objListN_open (h : i < UInt64.ofNat b.size)
     (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 93)
     (h2 : byteW b i ≠ 44) (h3 : byteW b i = 123) :
     objListN item b i cnt w =
       if w = 0 then 0 else if i < item i then objListN item b (item i) (cnt + 1) 0 else 0 := by
-  rw [objListN, dif_pos h, if_neg hc, if_neg h1, if_neg h2, if_pos h3]
+  rw [objListN, dite_eq_left h, ite_eq_right hc, ite_eq_right h1, ite_eq_right h2, ite_eq_left h3]
 theorem objListN_other (h : i < UInt64.ofNat b.size)
     (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 93)
     (h2 : byteW b i ≠ 44) (h3 : byteW b i ≠ 123) : objListN item b i cnt w = 0 := by
-  rw [objListN, dif_pos h, if_neg hc, if_neg h1, if_neg h2, if_neg h3]
+  rw [objListN, dite_eq_left h, ite_eq_right hc, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3]
 theorem objListN_end (h : ¬ i < UInt64.ofNat b.size) : objListN item b i cnt w = 0 := by
-  rw [objListN, dif_neg h]
+  rw [objListN, dite_eq_right h]
 
 grind_pattern [lang_grind] objListN_ws => objListN item b i cnt w, b[i.toNat]
 grind_pattern [lang_grind] objListN_close => objListN item b i cnt w, b[i.toNat]

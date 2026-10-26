@@ -24,6 +24,9 @@ So a writing build here:
 With LAKE_ARTIFACT_CACHE=false the build still takes the lock and gets the source check (a local trace
 can be just as wrong; a later writing build would publish it), but nothing is staged or published; it
 still READS the shared cache (Lake gets the variable unset: Lake's own `false` would disable reads too).
+LAKE_COLD=1 keeps the shared cache out in both directions (Lake gets LAKE_ARTIFACT_CACHE=false): a worktree with
+no `.lake/build` then compiles every module itself. Needed to see warnings: a module restored from the cache has
+a synthetic trace with an EMPTY log ("log": []), so its warnings are neither stored nor replayed.
 `env` and `serve` are passed through read-only (no lock, no writes). Plain `lake` bypasses all of this:
 do not use it in a worktree (use LAKE_ARTIFACT_CACHE=false scripts/lake to keep the cache out).
 """
@@ -178,12 +181,17 @@ def main():
     env = dict(os.environ)
     env["LAKE_CACHE_DIR"] = shared
     env.setdefault("LAKE_RESTORE_ARTIFACTS", "true")
-    writes = truthy(env.get("LAKE_ARTIFACT_CACHE", "true"))
+    cold = truthy(env.get("LAKE_COLD", "false"))
+    writes = truthy(env.get("LAKE_ARTIFACT_CACHE", "true")) and not cold
     sub = subcommand(args)
     if sub in (None, "env", "serve", "help"):
         env.pop("LAKE_ARTIFACT_CACHE", None)  # Lake's default: read the cache, never write it
         os.execvpe("lake", ["lake"] + args, env)
-    if not writes:
+    if cold:
+        # neither reads nor writes the shared cache (Lake's own `false`): every module is built here,
+        # so its log (the warnings) is real; see LAKE_COLD in the docstring
+        env["LAKE_ARTIFACT_CACHE"] = "false"
+    elif not writes:
         # read-only: still locked and checked below, no staging. UNSET, not "false": Lake's
         # LAKE_ARTIFACT_CACHE=false turns off cache READS too (Package.isArtifactCacheReadable,
         # Lake/Config/Monad.lean); unset, reading is on and writing off.

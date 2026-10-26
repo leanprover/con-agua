@@ -158,7 +158,7 @@ def exprLPW (m : Mem) (h : Word) : Word :=
 in bits 0‥14, fvar range in bits 15‥29 (`packBF`), `lp` in bit 30. -/
 def packBFL (b f l : Word) : Word := packBF b f + l * 1073741824
 
-theorem packBFL_bvar (b f l : Word) (hb : b.toNat < 32768) (hf : f.toNat < 32768) (hl : l ≤ 1) :
+theorem packBFL_bvar (b f l : Word) (hb : b.toNat < 32768) (_hf : f.toNat < 32768) (hl : l ≤ 1) :
     packBFL b f l &&& 32767 = b := by
   have hl' : l.toNat ≤ 1 := hl
   apply UInt64.toNat_inj.mp
