@@ -83,6 +83,29 @@ theorem setGo_err {m : Mem} {a : AState} (hP : PinsFull m a.pins) (uslen : Nat)
 
 end goErr
 
+section certErr
+variable (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx)
+
+theorem setCert_err_io (s s₁ : AState) (h1 : (etaCtorShape fe a).run s = .ok (true, s₁)) (ce : CheckError)
+    (h : (r.inferIO depth b).run s₁ = .error ce) :
+    (structEtaCert r fe depth a b).run s = .error ce := by
+  simp only [structEtaCert, StateT.run_bind, h1, except_ok_bind, ↓reduceIte, h]; rfl
+
+theorem setCert_err_whnf (s s₁ s₂ : AState) (tb : EIdx) (h1 : (etaCtorShape fe a).run s = .ok (true, s₁))
+    (h2 : (r.inferIO depth b).run s₁ = .ok (tb, s₂)) (ce : CheckError)
+    (h : (r.whnf depth tb).run s₂ = .error ce) :
+    (structEtaCert r fe depth a b).run s = .error ce := by
+  simp only [structEtaCert, StateT.run_bind, h1, except_ok_bind, ↓reduceIte, h2, h]; rfl
+
+theorem setCert_err_with (s s₁ s₂ s₃ : AState) (tb wtb : EIdx)
+    (h1 : (etaCtorShape fe a).run s = .ok (true, s₁))
+    (h2 : (r.inferIO depth b).run s₁ = .ok (tb, s₂)) (h3 : (r.whnf depth tb).run s₂ = .ok (wtb, s₃))
+    (ce : CheckError) (h : (structEtaCertWith r fe depth a b wtb).run s₃ = .error ce) :
+    (structEtaCert r fe depth a b).run s = .error ce := by
+  simp only [structEtaCert, StateT.run_bind, h1, except_ok_bind, ↓reduceIte, h2, h3, h]
+
+end certErr
+
 section set
 variable (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
   (hnv : closedNV p L.Checker.nvFns = true) (hDL : DefeqLstE p)
@@ -589,6 +612,75 @@ theorem setWith_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
       · exact Or.inl h1
       · exact Or.inr (fun e => hcnt ⟨h1, e⟩)
     rw [if_pos hc'] at hW; cases hW
+
+include hq hi hc hnv hDL in
+/-- **`struct_eta_cert`'s verdicts** are the `infer_io`, `whnf` slots' and `struct_eta_cert_with`'s. -/
+theorem setCert_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    CoreSpecE p (n + 1) "struct_eta_cert" [mode, vis, d, a, b]
+      (structEtaCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (secE_spec p hq.setCert (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b) hc0 (Err.code_ne_of_cls hk0)
+  simp only [secE] at hW
+  cases c1 : callE p n "eta_ctor_shape" [vis, a] s₀.mem with
+  | error e1 =>
+    rw [c1, secE.k_eta_ctor_shape.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfSetE_nv "eta_ctor_shape" (by simp)) c1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [c1] at hW
+  simp only [secE.k_eta_ctor_shape] at hW
+  obtain ⟨hok1, ⟨M₁, hS₁, -, -⟩, hres1, -⟩ := CoreSpec.of_callW
+    (etaCtorShape_at p hq n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb a hs.rel ha) (callW_of_callE c1)
+  have hrun1 := AM.run_of_ok _ _ hok1
+  rw [hres1] at hrun1
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [if_pos h0] at hW; cases hW
+  rw [if_neg h0] at hW
+  rw [decBool_true_of h0] at hrun1
+  cases c2 : callE p n "infer_io" [mode, vis, d, b] m₁ with
+  | error e2 =>
+    rw [c2, secE.k_infer_io.none] at hW; cases hW
+    exact ErrClaim.of_run_err (fun ce h' => setCert_err_io (h1 := hrun1) (ce := ce) (h := h'))
+      (CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).inferIO F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b
+        hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb) c2)
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [c2] at hW
+  simp only [secE.k_infer_io] at hW
+  obtain ⟨hok2, ⟨M₂, hS₂, -, -⟩, hres2, hr2⟩ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).inferIO F
+    ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb) (callW_of_callE c2)
+  have hrun2 := AM.run_of_ok _ _ hok2
+  rw [hres2] at hrun2
+  cases c3 : callE p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with
+  | error e3 =>
+    rw [c3, secE.k_whnf.none] at hW; cases hW
+    exact ErrClaim.of_run_err (fun ce h' => setCert_err_whnf (h1 := hrun1) (h2 := hrun2) (ce := ce) (h := h'))
+      (CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d
+        (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hr2) c3)
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [c3] at hW
+  simp only [secE.k_whnf] at hW
+  obtain ⟨hok3, ⟨M₃, hS₃, -, -⟩, hres3, hh3⟩ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).whnf F
+    ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hr2)
+    (callW_of_callE c3)
+  have hrun3 := AM.run_of_ok _ _ hok3
+  rw [hres3] at hrun3
+  have hW' := err_of_k (by intro q e; simp [secE.k_struct_eta_cert_with]) (fun _ => rfl) hW
+  cases n with
+  | zero => exact ErrClaim.of_callE_zero hW'
+  | succ N =>
+  exact ErrClaim.of_run_err (fun ce h' => setCert_err_with (h1 := hrun1) (h2 := hrun2) (h3 := hrun3) (ce := ce)
+      (h := h'))
+    (CoreSpecE.of_callE (setWith_refinesE p hq hi hc hnv hDL N (hk.mono (Nat.le_succ N))
+      (hkE.mono (Nat.le_succ N)) F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode d a b (r₃.headD 0) (by omega)
+      (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hh3) hW')
 
 end set
 
