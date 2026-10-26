@@ -195,8 +195,7 @@ buffer decodes to (any buffer that starts with `romData`, `pb_check`); the varia
 
 A full refinement in the decoder direction: the pin list is the twin's input, the buffer is L's,
 and `TwinAccepts` takes the pin list existentially, so every L run that returns is a twin run at
-the decoded list. The startup half (`internAllPins []`) is the ROM's fixed data, which holds no
-projection table (D29). What the buffer cannot spell (string literals, `natVal ≥ 2^64`: D6) is a
+the decoded list. The startup half (`internAllPins []`) is the ROM's fixed data. What the buffer cannot spell (string literals, `natVal ≥ 2^64`: D6) is a
 completeness gap of the format, as `read_nat`'s 18 digits are for `parseChunks` (D2). Through it
 the ROM interns it alone reaches (`internPinSet(s)`, `internExpr`, `internExprList`, and below
 `BasisKind.decls`/`declsA` the `Frontend.internCI` family) count as covered. -/

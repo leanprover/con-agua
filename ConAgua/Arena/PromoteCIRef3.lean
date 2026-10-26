@@ -65,11 +65,11 @@ theorem capsWr_call {n : Nat} {d c a k : Word} {m m' : Mem} {r : List Word}
     stP d m [((1 : Word), c), ((10 : Word), a), ((13 : Word), k)] = some m' := by
   obtain ⟨s', rfl, -, hW⟩ := callW_triple (capsWr_spec p hp n ⟨m, Locals.init []⟩ d c a k) hc; exact hW
 
-theorem projWr_call {n : Nat} {d tn sn lp c ss bs gs : Word} {m m' : Mem} {r : List Word}
-    (hc : callW p n "proj_wr" [d, tn, sn, lp, c, ss, bs, gs] m = some (r, m')) :
-    stP d m [((1 : Word), tn), ((2 : Word), sn), ((3 : Word), lp), ((6 : Word), c),
+theorem projWr_call {n : Nat} {d sn lp c ss bs gs : Word} {m m' : Mem} {r : List Word}
+    (hc : callW p n "proj_wr" [d, sn, lp, c, ss, bs, gs] m = some (r, m')) :
+    stP d m [((2 : Word), sn), ((3 : Word), lp), ((6 : Word), c),
       ((8 : Word), ss), ((9 : Word), bs), ((11 : Word), gs)] = some m' := by
-  obtain ⟨s', rfl, -, hW⟩ := callW_triple (projWr_spec p hp n ⟨m, Locals.init []⟩ d tn sn lp c ss bs gs) hc; exact hW
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (projWr_spec p hp n ⟨m, Locals.init []⟩ d sn lp c ss bs gs) hc; exact hW
 
 /-- **A promoted firing mode's five words** denote `fire` in the pool `A`. -/
 def FireWords (A : Array Word) (k q b r y : Word) (fire : IRecRuleFire) : Prop :=

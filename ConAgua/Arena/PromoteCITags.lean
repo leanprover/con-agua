@@ -24,6 +24,11 @@ namespace L.Arena
 @[refines ConRon.Arena.promoteCIList] theorem promoteCIList_refines : type_of% @ciList_rel := @ciList_rel
 @[refines ConRon.Arena.eraseInstalled] theorem eraseInstalled_refines : type_of% @erase_rel := @erase_rel
 @[refines ConRon.Arena.indexPromoted] theorem indexPromoted_refines : type_of% @index_rel := @index_rel
+@[refines ConRon.Arena.promoteProjTables] theorem promoteProjTables_refines : type_of% @ptables_rel := @ptables_rel
+@[refines ConRon.Arena.eraseInstalledTables] theorem eraseInstalledTables_refines : type_of% @eraseT_rel := @eraseT_rel
+@[refines ConRon.Arena.indexPromotedTables] theorem indexPromotedTables_refines : type_of% @indexT_rel := @indexT_rel
+@[refines ConRon.Arena.promoteNewConsts] theorem promoteNewConsts_refines : type_of% @pconsts_rel := @pconsts_rel
+@[refines ConRon.Arena.promoteNewTables] theorem promoteNewTables_refines : type_of% @ptablesNew_rel := @ptablesNew_rel
 @[refines ConRon.Arena.promoteNew] theorem promoteNew_refines : type_of% @promoteNew_rel := @promoteNew_rel
 
 

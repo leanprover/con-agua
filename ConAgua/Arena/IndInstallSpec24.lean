@@ -34,7 +34,7 @@ def ctoK2 (p : Prog) (n : Nat) (pp ms cA nF vis : Word) (rg : List Word) :
   | none => none
   | some (rl, m) => ctoK3 (callW p n "check_struct_proj_table"
       [rdW (m.arr64 EREC) (rdW (m.arr64 IW) ms), rdW (m.arr64 EREC) cA, rl.headD 0, rl.tail.headD 0,
-        rdW (m.arr64 IW) (pp + 4), nF, rdW (m.arr64 IW) (pp + 6), rg.headD 0, rg.tail.headD 0, 1, cA, vis] m)
+        rdW (m.arr64 IW) (pp + 4), nF, rdW (m.arr64 IW) (pp + 6), rg.headD 0, rg.tail.headD 0, cA, vis] m)
 def ctoK1 (p : Prog) (n : Nat) (pp ms cA nF vis : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -54,7 +54,7 @@ variable (p : Prog) (n : Nat) (m : Mem) (pp ms co so cA nF vis : Word) (r rg : L
 theorem ctoK3_some : ctoK3 (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem ctoK2_some : ctoK2 p n pp ms cA nF vis rg (some (r, m)) = ctoK3 (callW p n "check_struct_proj_table"
       [rdW (m.arr64 EREC) (rdW (m.arr64 IW) ms), rdW (m.arr64 EREC) cA, r.headD 0, r.tail.headD 0,
-        rdW (m.arr64 IW) (pp + 4), nF, rdW (m.arr64 IW) (pp + 6), rg.headD 0, rg.tail.headD 0, 1, cA, vis] m) :=
+        rdW (m.arr64 IW) (pp + 4), nF, rdW (m.arr64 IW) (pp + 6), rg.headD 0, rg.tail.headD 0, cA, vis] m) :=
   rfl
 theorem ctoK1_some : ctoK1 p n pp ms cA nF vis (some (r, m)) =
     ctoK2 p n pp ms cA nF vis r (callW p n "block_shape_lps" [pp] m) := rfl

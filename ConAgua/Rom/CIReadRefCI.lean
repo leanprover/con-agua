@@ -452,7 +452,6 @@ theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     exact ci_rec hL hr dn seen memo v hfit.1.1.1.1 mI rP rs hfit.1.1.1.2 hfit.1.1.2 hfit.1.2 hfit.2
       k m a q rest r m' hI hM hst hd hc
   | defnInfo v e h => simp [ciFits] at hfit
-  | projInfo t => simp [ciFits] at hfit
 
 end kinds
 

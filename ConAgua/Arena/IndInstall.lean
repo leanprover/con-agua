@@ -674,7 +674,6 @@ def checkBlockRec : FunDecl := lfn
 constructor, no index) projection table install (`nP + nF + 1` past `2^64` a capacity abort:
 the twin's `structProjGuards` computes it in `Nat`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:86-104 ConRon.Arena.checkBlockTables
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkBlockTables` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.checkBlockTables]
 def checkBlockTablesOne : FunDecl := lfn (p, m, csOff, ssOff, vis) locals
     (ctorPtr, cA, nF, sortsPtr, sortsO, sortsL, lpsO, lpsL, guardsO, guardsL, vis2) {
@@ -684,7 +683,7 @@ def checkBlockTablesOne : FunDecl := lfn (p, m, csOff, ssOff, vis) locals
   (guardsO, guardsL) := call struct_proj_guards(EREC.u64[cA + 3], IW.u64[p + 4], nF, sortsO, sortsL);
   (lpsO, lpsL) := call block_shape_lps(p);
   vis2 := call check_struct_proj_table(EREC.u64[IW.u64[m]], EREC.u64[cA], lpsO, lpsL,
-    IW.u64[p + 4], nF, IW.u64[p + 6], guardsO, guardsL, 1, cA, vis);
+    IW.u64[p + 4], nF, IW.u64[p + 6], guardsO, guardsL, cA, vis);
   return vis2
 }
 
@@ -692,7 +691,6 @@ def checkBlockTablesOne : FunDecl := lfn (p, m, csOff, ssOff, vis) locals
 table at every structure-like member, the three lists walked side by side, stopping at the
 shortest; recursion as the twin's. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:86-104 ConRon.Arena.checkBlockTables
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkBlockTables` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.checkBlockTables]
 def checkBlockTables : FunDecl := lfn (p, msO, msL, csO, csL, ssO, ssL, vis) locals
     (m, csp, ssp, vis2) {

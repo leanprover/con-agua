@@ -50,22 +50,22 @@ theorem capsWr_rel' {n : Nat} {d c a k : Word} {m m' : Mem} {r : List Word}
     omega
   · simpa using h5
 
-theorem projWr_rel' {n : Nat} {d tn sn lp c ss bs gs : Word} {m m' : Mem} {r : List Word}
+theorem projWr_rel' {n : Nat} {d sn lp c ss bs gs : Word} {m m' : Mem} {r : List Word}
     (hbd : d.toNat + 12 ≤ (m.arr64 EREC).size) (hsz : (m.arr64 EREC).size < 2 ^ 64)
-    (hc : callW p n "proj_wr" [d, tn, sn, lp, c, ss, bs, gs] m = some (r, m')) :
+    (hc : callW p n "proj_wr" [d, sn, lp, c, ss, bs, gs] m = some (r, m')) :
     (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ MemFrame [EREC] [] m m' ∧
-    (∀ i, i ≠ d.toNat + 1 → i ≠ d.toNat + 2 → i ≠ d.toNat + 3 → i ≠ d.toNat + 6 →
+    (∀ i, i ≠ d.toNat + 2 → i ≠ d.toNat + 3 → i ≠ d.toNat + 6 →
       i ≠ d.toNat + 8 → i ≠ d.toNat + 9 → i ≠ d.toNat + 11 →
       (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
-    (m'.arr64 EREC)[d.toNat + 1]? = some tn ∧ (m'.arr64 EREC)[d.toNat + 2]? = some sn ∧
+    (m'.arr64 EREC)[d.toNat + 2]? = some sn ∧
     (m'.arr64 EREC)[d.toNat + 3]? = some lp ∧ (m'.arr64 EREC)[d.toNat + 6]? = some c ∧
     (m'.arr64 EREC)[d.toNat + 8]? = some ss ∧ (m'.arr64 EREC)[d.toNat + 9]? = some bs ∧
     (m'.arr64 EREC)[d.toNat + 11]? = some gs := by
   have h := projWr_call p hp hc
   obtain ⟨h1, h2, h3, h4, h5⟩ := stP_nat d _ (by simp; omega) (by simp) h
-  refine ⟨h1, h2, fun i hi1 hi2 hi3 hi4 hi5 hi6 hi7 => h3 i ?_, ?_⟩
+  refine ⟨h1, h2, fun i hi2 hi3 hi4 hi5 hi6 hi7 => h3 i ?_, ?_⟩
   · simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, forall_eq,
-      show (((1 : Word)).toNat = 1) from rfl, show (((2 : Word)).toNat = 2) from rfl,
+      show (((2 : Word)).toNat = 2) from rfl,
       show (((3 : Word)).toNat = 3) from rfl, show (((6 : Word)).toNat = 6) from rfl,
       show (((8 : Word)).toNat = 8) from rfl, show (((9 : Word)).toNat = 9) from rfl,
       show (((11 : Word)).toNat = 11) from rfl]

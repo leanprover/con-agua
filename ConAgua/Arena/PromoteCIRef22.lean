@@ -28,12 +28,12 @@ theorem decCaps_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
 theorem pmDecTbl_bound {a : Array Word} {q : Nat} {tbl : IProjTable} (h : decTbl a q = some tbl) :
-    q + 13 < a.size := by
+    q + 12 < a.size := by
   unfold decTbl at h
   simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-  obtain ⟨e1, h1, e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e8, h8, e9, h9, e10, h10,
-    -⟩ := h
-  obtain ⟨w, hw, -⟩ := nat?_get h10
+  obtain ⟨e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e8, h8, e9, h9, -⟩ := h
+  obtain ⟨o, c, -, hc1, -⟩ := hlist?_unfold h9
+  obtain ⟨w, hw, -⟩ := nat?_get hc1
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
 theorem decHint_move' {a b : Array Word} {i j : Nat} {h : ConLeche.ReducibilityHint}
