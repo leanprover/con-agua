@@ -158,7 +158,7 @@ theorem ivE_core {p : Prog} (hP : IvProg p) (hap : ApdF p)
 /-- **`install_value`'s error claim under `StageT`** (`installValue_loopT`'s hypotheses). -/
 theorem installValue_errT {p : Prog} (hP : IvProg p) (hap : ApdF p) (hkp : CrKeep p)
     (hnv : closedNV p L.Checker.nvFns = true) (hivE : IvgE p)
-    (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+    {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {vis : Word} {fe : IFEnv}
     {pend : Array PendingCheck} {i ck vk : Word} (hi : i.toNat < ds.size)
     (hk : IvArgs ck vk (dsAt ds i))
     (hR : LoopR pins dn m a vis fe pend ds) (hS : StageT dn vis fe m a)
