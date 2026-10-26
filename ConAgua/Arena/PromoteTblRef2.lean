@@ -17,17 +17,13 @@ theorem ptnew_arrs : ∀ b ∈ tblArrs ++ ETAB :: EREC :: eArrs,
       (146 ≤ b ∧ b ≤ 149) ∨ (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320)) ∨
       ((129 ≤ b ∧ b ≤ 131) ∨ b = 143 ∨ (385 ≤ b ∧ b ≤ 387)) := by
   intro b hb
-  simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hb
-  rcases hb with (rfl | rfl | rfl | rfl | rfl | rfl) | rfl | rfl | hb
-  · right; left; simp [TIXA]
-  · right; left; simp [TIXS]
-  · right; left; simp [TIXN]
-  · right; right; right; simp
-  · right; right; right; simp
-  · right; right; right; simp
+  rcases List.mem_append.mp hb with hb | hb
+  · simp only [tblArrs, List.mem_cons, List.not_mem_nil, or_false] at hb
+    right
+    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> simp [TIXA, TIXS, TIXN]
+  rcases List.mem_cons.mp hb with rfl | hb
   · right; right; left; rfl
-  · left; right; left; left; simp [EREC]
-  · rcases vg_arrs b (List.mem_cons.mpr (Or.inr hb)) with h | h | h
+  · rcases vg_arrs b hb with h | h | h
     · exact .inl (.inl h)
     · exact .inl (.inr (.inl (.inl (by subst h; exact ⟨by decide, by decide⟩))))
     · exact .inl (.inr (.inr h))
@@ -175,7 +171,8 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
     have hl : envLen m₃ = envLen m₂ := by simp only [envLen, h128₃]
     rw [hl]
     exact cdec_mono hg₂₃.ext _ _ (fun i _ => by
-      rw [hrows₃ ECON (by decide) (by decide) (by decide)]) h0
+      rw [hX₃ ECON (fun h => by rcases pts_arrs _ h with h' | h' | h' | h' <;> (simp only [ECON, ArrId] at h'; omega))
+        (by decide)]) h0
   have hE₃ : EnvR dn m₃ vis ⟨⟨consts, Lt' ++ B⟩, idx, vb, eraseInstalledTables tbls Lc⟩ :=
     (show EnvR dn m₂ vis ⟨⟨consts, tables⟩, idx, vb, eraseInstalledTables tbls Lc⟩ from hE₂).promoted
       hrows₃ htr₃ hg₂₃ consts (Lt' ++ B) hEnv₃c hEnv₃t
