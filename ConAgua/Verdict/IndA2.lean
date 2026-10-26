@@ -1,4 +1,5 @@
 import ConAgua.Verdict.IndA1
+import ConAgua.Verdict.IndAGen
 import ConAgua.Arena.IndT.Block
 
 /-!
@@ -29,50 +30,11 @@ l_model icbE_spec (p : Prog) (hf : p.lookup "check_block" = some checkBlock)
   fns [hf ↦ icbE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
 
-/-- **`check_block_pass`'s error claim**, in the shape of `checkBlockPass_refinesC` (any fuel
-`n ≤ 2 ^ 62`). -/
-def CheckBlockPassE (p : Prog) : Prop :=
-  ∀ {env : ConLeche.Env} (_ : KnotStageProg p) (_ : ConLeche.EnvWF env) (_ : ValProg p)
-    (_ : OpfF p) (_ : LvlCacheProg p) (_ : p.lookup "lv_leq_top" = some lvLeqTop)
-    (_ : ApdF p) (_ : CrKeep p) (_ : IlpfF p) (_ : LzcF p) (_ : PassProg p) {fs : List FnName}
-    (_ : closedA p posFreeA posFreeC fs = true) (_ : ∀ f ∈ passCallees, f ∈ fs) (n : Nat)
-    (_ : n ≤ 2 ^ 62) (m : Mem) (a : AState) {dn : NIdx → Option ConLeche.Name}
-    {vis : Word} {fe : IFEnv} {p0 isRec : Word} {bs : BlockShape} {b : Bool}
-    (_ : StageC dn vis fe env m a) (_ : DecB (fun m => decBS m p0.toNat) m bs)
-    (_ : ShapeSrc m p0) (_ : ShapeCV m p0) (_ : (isRec != 0) = b)
-    (_ : PosMR m) (_ : AbsOK m) (_ : ∀ f ∈ passKeepCalleesC, AbsKeep p f)
-    (_ : ConRon.Bridge.IFEnvCoh fe) (_ : ConRon.Bridge.denoteFEnv a.store fe = some env)
-    {shP : ConLeche.BlockShape} (_ : ConRon.Bridge.Inductives.dShape a.store bs = some shP)
-    (_ : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome),
-    ∀ e, callE p n "check_block_pass" [vis, p0, isRec] m = .error e →
-      ErrClaim (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b) a e
+-- `check_block_pass`'s error claim, in the shape of `checkBlockPass_refinesC`.
+err_stmt CheckBlockPassE := checkBlockPass_refinesC fuel n
 
-/-- **`check_block_tail`'s error claim**, in the shape of `checkBlockTail_refinesC` (any fuel
-`n ≤ 2 ^ 62`). -/
-def CheckBlockTailE (p : Prog) : Prop :=
-  ∀ {env₁ : ConLeche.Env} (_ : KnotStageProg p) (_ : ConLeche.EnvWF env₁) (_ : ValProg p)
-    (_ : OpfF p) (_ : LvlCacheProg p) (_ : p.lookup "lv_leq_top" = some lvLeqTop)
-    (_ : ApdF p) (_ : CrKeep p) (_ : IlpfF p) (_ : TailProg p) (_ : CbrLook p) {fs : List FnName}
-    (_ : ∀ f ∈ tailCallees, f ∈ fs) (_ : closedA p hbFreeA hbFreeC fs = true) (n : Nat)
-    (_ : n ≤ 2 ^ 62) {fsR : List FnName} (_ : closedA p rcFreeA rcFreeC fsR = true)
-    (_ : ∀ f ∈ tailRcCallees, f ∈ fsR) (m : Mem) (a : AState) {dn : NIdx → Option ConLeche.Name}
-    {vis : Word} {fe : IFEnv} {bO bL q : Word} {bp : BlockPass} {block : List IConstantInfo}
-    (_ : StageC dn vis fe env₁ m a) (_ : BPassR vis fe m q bp)
-    (_ : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (_ : HbMemo m)
-    (_ : AbsOK m) (_ : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
-    (_ : RcMR m) (_ : RecsB m (rdW (m.arr64 IW) (q + 3)))
-    (_ : ClassesLp m (rdW (m.arr64 IW) (q + 15)) (rdW (m.arr64 IW) (q + 16)))
-    (_ : ConRon.Bridge.IFEnvCoh fe) (_ : ConRon.Bridge.denoteFEnv a.store fe = some env₁)
-    {qP : ConLeche.BlockPass ConLeche.Env}
-    (_ : ConRon.Bridge.Inductives.dPass a.store env₁ bp = some qP)
-    {blockP : List ConLeche.ConstantInfo} (_ : Frontend.denoteCIList a.store block = some blockP)
-    (_ : ∀ cv ∈ qP.cvTas, ConLeche.Expr.WScoped 0 cv.type)
-    (_ : ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.ctorsAs env₁))
-    (_ : ∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M)
-    (_ : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR) {fsH : List FnName}
-    (_ : closedA p rcHbFreeA rcHbFreeC fsH = true) (_ : "check_block_tables" ∈ fsH),
-    ∀ e, callE p n "check_block_tail" [bO, bL, q] m = .error e →
-      ErrClaim (ConRon.Arena.checkBlockTail V block bp) a e
+-- `check_block_tail`'s error claim, in the shape of `checkBlockTail_refinesC`.
+err_stmt CheckBlockTailE := checkBlockTail_refinesC fuel n
 
 section
 variable {p : Prog}
@@ -325,8 +287,8 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
     rw [c8, icbE.k_check_block_pass.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    exact hpass hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP.pass hcl hfs F (by omega) s7.mem _ hC7 hq7 hsrc7 hcx7
-      (b := raw) (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP hlpsDn _ c8
+    exact hpass hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP.pass hcl hfs ⟨s7.mem, Locals.init []⟩ _ hC7 hq7 hsrc7 hcx7
+      (b := raw) (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP hlpsDn F (by omega) _ c8
   | ok q8 =>
   obtain ⟨r8, m8⟩ := q8
   rw [c8, icbE.k_check_block_pass.eq_2] at he
@@ -348,9 +310,9 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e9 =>
     rw [c9, icbE.k_check_block_tail.none] at he
     cases he
-    exact htail hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf hP.tail hP.cbr hfs2 hcl2 F (by omega) hclR hfR s8.mem _ hC8
+    exact htail hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf hP.tail hP.cbr hfs2 hcl2 hclR hfR ⟨s8.mem, Locals.init []⟩ _ hC8
       hBP8 (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK hA8 hkt ⟨hP8, hta8⟩ hrb8 hlp8 hcoh8 hden8 hqP
-      (ConRon.Bridge.denoteCIList_mono i8.ext _ _ hbP) hTw henv₂ hMs hfRc hclH hfH _ c9
+      (ConRon.Bridge.denoteCIList_mono i8.ext _ _ hbP) hTw henv₂ hMs hfRc hclH hfH F (by omega) _ c9
   | ok q9 =>
     rw [c9, icbE.k_check_block_tail.eq_2] at he
     cases he
