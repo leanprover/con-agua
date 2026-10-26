@@ -95,9 +95,11 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
         rcases rciA_mem hm with h | h | h | h | h | h | h <;> omega)
         (fun hm => by subst hm; simp [CTL] at h1))
       (hf.2.1 128 (by decide)) hg
-      (TblSame.of_frame (fun b hb => by rcases rciA_mem hb with h | h | h | h | h | h | h <;> omega)
-        (fun b hb => by rcases rciA_mem hb with h | h | h | h | h | h | h <;> omega)
-        (fun hm => by rcases rciA_mem hm with h | h | h | h | h | h | h <;> simp [ETAB] at * <;> omega)
+      (TblSame.of_frame
+        (fun b hb => by rcases rciA_mem hb with h | h | h | h | h | h | h <;> simp only [ArrId] at * <;> omega)
+        (fun b hb => by rcases rciA_mem hb with h | h | h | h | h | h | h <;> simp only [ArrId] at * <;> omega)
+        (fun hm => by
+          rcases rciA_mem hm with h | h | h | h | h | h | h <;> simp only [ETAB, ArrId] at * <;> omega)
         (by decide) hf) hS.1.env
 
 /-! ## The steps -/
