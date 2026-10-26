@@ -34,6 +34,15 @@ def VerdictClaimL {β : Type} (T : AM (RecordVerdict ⊕ β)) (a : AState) (e : 
   e.cls ≠ 0 → (∃ ce, T.run a = .error ce ∧ twinCls ce = e.cls) ∨
     ∃ v a', T.run a = .ok (.inl v, a') ∧ twinCls v.toError = e.cls
 
+/-- The functions `fs` claim nothing in `p`: their errors have class `0` (on `checkerProg` by
+`callE_nv checkerProg_nv`; on `frontAllProg` through its agreement with `checkerProg`). -/
+def NVCls (p : Prog) (fs : List FnName) : Prop :=
+  ∀ g ∈ fs, ∀ n args m e, callE p n g args m = .error e → e.cls = 0
+
+theorem NVCls.cls {p : Prog} {fs : List FnName} (h : NVCls p fs) {g : FnName} (hg : g ∈ fs)
+    {n : Nat} {args : List Word} {m : Mem} {e : Err} (he : callE p n g args m = .error e) :
+    e.cls = 0 := h g hg n args m e he
+
 /-- The common record of a declaration record (all but `inductive`). -/
 def declCv? : DeclRec → Option CVRec
   | .ax cv _ | .defn cv .. | .thm cv _ | .opaq cv .. | .quot cv _ => some cv
