@@ -40,6 +40,10 @@ def CcvE (p : Prog) : Prop :=
     (∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks) → L.Stubs.CrOK s₀.mem →
     CoreSpecE p n "check_constant_val" [vis, q] (checkConstantVal V fe cv) s₀ a₀
 
+l_model ctE_spec (p : Prog) (hf : p.lookup "check_sum_tele" = some checkSumTeleL)
+  fns [hf ↦ ctE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
 l_model ctsE_spec (p : Prog) (hf : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
   fns [hf ↦ ctsE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
@@ -219,6 +223,105 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   | ok q5 =>
   rw [h5, ctsE.k_check_constant_val.arm1] at hW'
   cases hW'
+
+include hq henv hV hApd hCrk hnv hW hCcv in
+/-- **`check_sum_tele`'s error claim** (the hypotheses of `checkSumTele_refinesC`, and the
+callees' error claims): only the slow arm can fail with a verdict. -/
+theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p)
+    (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (cv n cvTa0 : Word) (cvv cvTa : IConstantVal) (hC : StageC dn vis fe env s₀.mem a₀)
+    (hcv : decCVp s₀.mem cv.toNat = some cvv) (hcvb : cv.toNat + 4 ≤ erTop s₀.mem)
+    (hsl' : ∀ lo ll, nat? (erA s₀.mem) (cv.toNat + 1) = some lo →
+      nat? (erA s₀.mem) (cv.toNat + 2) = some ll → lo + ll ≤ erTop s₀.mem ∨ ll = 0)
+    (hta : decCVp s₀.mem cvTa0.toNat = some cvTa) (hta4 : cvTa0.toNat + 4 ≤ erTop s₀.mem)
+    (hslTa : ∀ lo ll, nat? (erA s₀.mem) (cvTa0.toNat + 1) = some lo →
+      nat? (erA s₀.mem) (cvTa0.toNat + 2) = some ll → lo + ll ≤ erTop s₀.mem ∨ ll = 0)
+    (hA : AbsOK s₀.mem) {cvP cvTaP : ConLeche.ConstantVal}
+    (hcvP : Frontend.denoteCV a₀.store cvv = some cvP)
+    (hcvTaP : Frontend.denoteCV a₀.store cvTa = some cvTaP)
+    (hws : ConLeche.Expr.WScoped 0 cvTaP.type) (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) :
+    CoreSpecE p k "check_sum_tele" [vis, cv, n, cvTa0] (checkSumTele V fe cvv n.toNat cvTa) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc' => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW' := triple_of_callE_err (ctE_spec p hp k ⟨s₀.mem, Locals.init []⟩ vis cv n cvTa0) hc'
+    (Err.code_ne_of_cls hk0)
+  have hS := hC.stage
+  obtain ⟨hI1, hE1, hsz, hEs, hc0⟩ := hS.2
+  cases k with
+  | zero => rw [ctE.eq_def] at hW'; cases hW'; exact absurd rfl hk0
+  | succ k =>
+  rw [ctE.arm1] at hW'
+  obtain ⟨w, hw, hw32, hwd⟩ := hd?_rdW (decCV_type hta) (by omega)
+  have hw' : rdW (s₀.mem.arr64 EREC) (cvTa0 + 3) = w := by
+    rw [← hw]; congr 1
+  rw [hw'] at hW'
+  cases h1 : callE p k "strip_pis" [n, w] s₀.mem with
+  | error e1 =>
+    rw [h1, ctE.k_strip_pis.none] at hW'
+    cases hW'
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (stripPis_specF p hst k ⟨s₀.mem, Locals.init []⟩ n w)
+    (callW_of_callE h1)
+  subst hs1
+  obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe n w hw32 s₀.mem s1.mem a₀ r1 h1m hS
+  have hdw : denoteE a₀.store (decI w) = some cvTaP.type := by
+    rw [hwd]; exact ConRon.Bridge.denoteCV_type hcvTaP
+  obtain ⟨ha1, -⟩ := ConRon.Bridge.Inductives.stripPis_pstep hC.check.state hdw hrun1
+  rw [ha1] at hrun1 hS1
+  have hA1 := stripF_afr h1m hA
+  have hC1 : StageC dn vis fe env s1.mem a₀ := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
+  have hcv1 := decCVp_grow hg1 hcvb hsl' hcv
+  have hta1 := decCVp_grow hg1 hta4 hslTa hta
+  have hnat : ∀ q : Word, q.toNat + 4 ≤ erTop s₀.mem → ∀ j, j < 4 →
+      nat? (erA s1.mem) (q.toNat + j) = nat? (erA s₀.mem) (q.toNat + j) := fun q hq j hj => by
+    simp only [nat?, erA]; rw [hg1.2.2.2 _ (by omega)]
+  have hrun0 : ∀ {β : Type} (f : Option (List EIdx × EIdx) → AM β),
+      (stripPis n.toNat cvTa.type >>= f).run a₀ = (f x).run a₀ := by
+    intro β f; rw [StateT.run_bind, ← hwd, hrun1]; rfl
+  by_cases hf : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2
+  · rw [h1, ctE.k_strip_pis.arm1 p k vis cv n cvTa0 r1 s1.mem hf] at hW'
+    cases h2 : callE p k "e_view" [r1.tail.tail.tail.headD 0] s1.mem with
+    | error e2 =>
+      rw [h2, ctE.k_e_view.none] at hW'
+      cases hW'
+      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    | ok q2 =>
+      rw [h2, ctE.k_e_view.arm1] at hW'
+      cases hW'
+  · rw [h1, ctE.k_strip_pis.arm2 p k vis cv n cvTa0 r1 s1.mem hf] at hW'
+    cases h2 : callE p k "check_sum_tele_slow" [vis, cv, n, cvTa0] s1.mem with
+    | error e2 =>
+      rw [h2, ctE.k_check_sum_tele_slow.none] at hW'
+      cases hW'
+      have hcl := CoreSpecE.of_callE (checkSumTeleSlow_claim hq henv hV hApd hCrk hnv hW hCcv ha hc hsc hv hff
+        hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab k (by omega) s1 a₀ cv n cvTa0 cvv cvTa
+        hC1 hcv1 (by have := hg1.2.1; omega)
+        (fun lo ll e1 e2 => by
+          rw [hnat cv hcvb 1 (by decide)] at e1; rw [hnat cv hcvb 2 (by decide)] at e2
+          have := hsl' lo ll e1 e2; have := hg1.2.1; omega)
+        hta1 (by have := hg1.2.1; omega) hA1 hcvP hcvTaP hws hfe) h2
+      unfold checkSumTele
+      rw [← hwd]
+      refine ErrClaim.bind_right hrun1 ?_
+      cases x with
+      | none => exact hcl
+      | some le =>
+        obtain ⟨l, e⟩ := le
+        simp only [decOLE, decW0E] at hdec
+        obtain ⟨h1', -, hb32, hbe⟩ := hdec
+        rw [drop3_eq] at hb32 hbe
+        have hnt : ¬ (e.tag == ETag.sort) = true := by
+          rw [← hbe, ← decE_eq]
+          intro ht
+          exact hf ⟨h1', (tag_sort_iff _ (by simpa using hb32)).mp (by simpa using ht)⟩
+        simp only [hnt, if_false, Bool.false_eq_true]
+        exact hcl
+    | ok q2 =>
+      rw [h2, ctE.k_check_sum_tele_slow.arm1] at hW'
+      cases hW'
 
 end census
 
