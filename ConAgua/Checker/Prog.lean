@@ -149,7 +149,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1813 functions, 0 of them stubs.
+1835 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -659,6 +659,7 @@ def checkerProg : Prog := [
   ("check_div_mod_pin", L.Ind.checkDivModPinL),
   ("check_div_mod_pin_at", L.Ind.checkDivModPinAtL),
   ("check_div_mod_pin_loop", L.Ind.checkDivModPinLoopL),
+  ("check_div_mod_pin_value", L.Ind.checkDivModPinValueL),
   ("check_field_sort_bound", L.Ind.checkFieldSortBoundL),
   ("check_ind_decl", L.Ind.checkIndDecl),
   ("check_opaque_val", L.Ind.checkOpaqueValL),
@@ -679,6 +680,7 @@ def checkerProg : Prog := [
   ("check_sum_tele", L.Ind.checkSumTeleL),
   ("check_sum_tele_slow", L.Ind.checkSumTeleSlowL),
   ("check_thm_val", L.Ind.checkThmValL),
+  ("check_type_pins", L.Ind.checkTypePinsL),
   ("check_value_group", L.Arena.checkValueGroupL),
   ("ci_canon_defn", L.Ind.ciCanonDefn),
   ("ci_canon_eq", L.Ind.ciCanonEq),
@@ -872,6 +874,7 @@ def checkerProg : Prog := [
   ("div_mod_env_guard", L.Ind.divModEnvGuardL),
   ("div_mod_pin_guard", L.Ind.divModPinGuardL),
   ("div_mod_slot", L.Ind.divModSlot),
+  ("div_mod_type_pins", L.Ind.divModTypePinsL),
   ("div_shl1", L.Arena.divShl1),
   ("div_step", L.Arena.divStep),
   ("div_sub", L.Arena.divSub),
@@ -945,8 +948,8 @@ def checkerProg : Prog := [
   ("find_pinned", L.Ind.findPinned),
   ("find_pinned_cv", L.Ind.findPinnedCv),
   ("find_proj", L.Arena.findProjL),
-  ("find_table", L.Arena.findTableL),
   ("find_rule", L.Arena.findRuleL),
+  ("find_table", L.Arena.findTableL),
   ("fire_ok", L.Arena.fireOkL),
   ("fl_clear", L.Arena.memoClearG L.Arena.flSch),
   ("fl_find", L.Arena.memoFindG L.Arena.flSch),
@@ -1049,6 +1052,7 @@ def checkerProg : Prog := [
   ("get_app_fn", L.Arena.getAppFnL),
   ("get_app_fn_f", L.Arena.getAppFnFL),
   ("get_app_spine", L.Arena.getAppSpineL),
+  ("ground_guards", L.Ind.groundGuardsL),
   ("has_escape", L.Scan.Leaves.hasEscape),
   ("has_fvar", L.Arena.hasFvarL),
   ("has_fvar_fast", L.Arena.hasFvarFastL),
@@ -1894,6 +1898,8 @@ def checkerProg : Prog := [
   ("rom_pins_to", L.Rom.romPinsTo),
   ("rom_put", L.Rom.romPutPB),
   ("rom_sets_to", L.Rom.romSetsTo),
+  ("rom_tpairs_to", L.Rom.romTPairsTo),
+  ("rom_tpins_to", L.Rom.romTPinsTo),
   ("rom_u64", L.Rom.romU64PB),
   ("rr_clear", L.Arena.memoClearG L.Arena.rrSch),
   ("rr_find", L.Arena.memoFindG L.Arena.rrSch),
@@ -2088,6 +2094,9 @@ def checkerProg : Prog := [
   ("tower_slots_all", L.Arena.towerSlotsAllL),
   ("trust_compiler_ok", L.Ind.trustCompilerOkL),
   ("try_unfold_proj_app", L.Arena.tryUnfoldProjAppL),
+  ("type_pin_guard", L.Ind.typePinGuardL),
+  ("type_pin_stored", L.Ind.typePinStoredL),
+  ("type_pins_guard", L.Ind.typePinsGuardL),
   ("type_sort_pw", L.Arena.typeSortPWL),
   ("u_next", L.Scan.Str.uNext),
   ("unescape", L.Scan.Str.unescape),

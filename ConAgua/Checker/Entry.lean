@@ -34,7 +34,7 @@ open L L.Arena L.Ind
 
 /-- The word arrays the checker names (`0‥wordArrays - 1`, the tier-1 arrays `256 + a` included;
 `checkerProg_arrs` checks it). -/
-def wordArrays : Nat := 318
+def wordArrays : Nat := 388
 
 /-- The least `CTL` length `check` runs with: every fixed `CTL` slot the lanes use is below it
 (the largest is `249`, the prelude parse's id tables), and `arenaR_init`'s `64 ≤ |CTL|`. -/

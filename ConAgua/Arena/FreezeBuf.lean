@@ -258,12 +258,12 @@ not zeroed by `freshMem`, below `320`. -/
 theorem frozen_facts_all : (List.range 61).all (fun k => k == 0 ||
     (frozenIdsL.idxOf? (frozen.map (·.1))[k]! == some (k + 1) &&
       !(freshZ.contains (frozen.map (·.1))[k]!) &&
-      (frozen.map (·.1))[k]! != CTL && decide ((frozen.map (·.1))[k]! < 318))) = true := by
+      (frozen.map (·.1))[k]! != CTL && decide ((frozen.map (·.1))[k]! < 388))) = true := by
   decide +kernel
 
 theorem frozen_facts {k : Nat} (hk : k < frozen.length) (h1 : 1 ≤ k) :
     frozenIdsL.idxOf? frozen[k].1 = some (k + 1) ∧ frozen[k].1 ∉ freshZ ∧ frozen[k].1 ≠ CTL ∧
-      frozen[k].1 < 318 := by
+      frozen[k].1 < 388 := by
   have := List.all_eq_true.mp frozen_facts_all k (List.mem_range.mpr (by rwa [frozen_length] at hk))
   rw [getElem!_pos (frozen.map (·.1)) k (by simpa using hk), List.getElem_map] at this
   simp only [Bool.or_eq_true, beq_iff_eq, Bool.and_eq_true, Bool.not_eq_true', bne_iff_ne, ne_eq,
