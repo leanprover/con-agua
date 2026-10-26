@@ -84,4 +84,83 @@ theorem classKeyOf_claim (hnv : closedNV p _root_.L.Checker.nvFns = true) (k : N
     cases hW
 end kof
 
+
+l_model classMinorSlotE_spec (p : Prog) (hf : p.lookup "class_minor_slot" = some classMinorSlotL)
+  fns [hf ↦ classMinorSlotE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`class_minor_slot`'s error refinement** (the hypotheses of `classMinorSlot_refines`): the
+scan `class_minor_slot_go` is outside the verdict closure; the one reject site (not exactly one
+minor premise) means the twin's hit list is not a singleton. -/
+theorem classMinorSlot_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
+    (hgo : p.lookup "class_minor_slot_go" = some classMinorSlotGo)
+    (hp : p.lookup "class_minor_slot" = some classMinorSlotL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (rd c cc : Word) (R : ClassRead) (hR : decCR s₀.mem rd.toNat = some R) (hcc : cc.toNat < 2 ^ 32)
+    (hsz : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) :
+    CoreSpecE p (n + 1) "class_minor_slot" [rd, c, cc]
+      (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (classMinorSlotE_spec p hp (n + 1) ⟨s₀.mem, Locals.init []⟩ rd c cc)
+    hc (Err.code_ne_of_cls hk0)
+  simp only [classMinorSlotE] at hW
+  cases h1 : callE p n "class_minor_slot_go"
+      [rdW (s₀.mem.arr64 IW) rd, rdW (s₀.mem.arr64 IW) (rd + 1), 0, c, cc, 0, 0, 0, 0] s₀.mem with
+  | error e1 =>
+    rw [h1, classMinorSlotE.k_class_minor_slot_go.none] at hW
+    cases hW
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+  | ok q =>
+  obtain ⟨r, m1⟩ := q
+  by_cases hx : r.headD 0 ≠ 1
+  · rw [h1, classMinorSlotE.k_class_minor_slot_go.abort1 p r m1 hx] at hW
+    cases hW
+    obtain ⟨s', -, -, -, x, y, z, w, hg, rfl⟩ := triple_of_callW
+      (classMinorSlotGo_spec p hgo n ⟨s₀.mem, Locals.init []⟩ _ _ 0 c cc 0 0 0 0) (callW_of_callE h1)
+    simp only [List.headD_cons] at hx
+    have hR' := hR
+    simp only [decCR, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hR'
+    obtain ⟨slots, hsl, rcs, -, hRe⟩ := hR'
+    have hRs : R.slots = slots := by rw [← hRe]
+    obtain ⟨o, l, ho, hl, hdec⟩ := decAt_some hsl
+    have hrd64 : rd.toNat < 2 ^ 64 := rd.toNat_lt
+    have ho' := iwN_rdW ho hrd64
+    rw [UInt64.ofNat_toNat] at ho'
+    have hl' := iwN_off (k := 1) hl (by have := iwN_lt hl; omega)
+    rw [show UInt64.ofNat 1 = 1 from rfl, UInt64.ofNat_toNat] at hl'
+    have hl1 : rdW (s₀.mem.arr64 IW) (rd + 1) = UInt64.ofNat l := hl'.2
+    simp only at hg
+    rw [ho'.1, hl1] at hg
+    have hol : o + l < 2 ^ 64 := by
+      rcases decPL_le hdec with h0 | h0
+      · have : o < 2 ^ 64 := ho'.2
+        omega
+      · omega
+    have hlz : l < 2 ^ 64 := (iwN_rdW hl (by have := iwN_lt hl; omega)).2
+    have hos : o < 2 ^ 64 := ho'.2
+    have hg2 := classMinorSlotGoW_ok n s₀.mem (UInt64.ofNat o) (UInt64.ofNat l) 0 c cc 0 0 0 0 x y z w
+      slots hg
+      (by simpa [UInt64.toNat_ofNat_of_lt' hos, UInt64.toNat_ofNat_of_lt' hlz] using hdec) hcc hsz
+      (by simp [UInt64.toNat_ofNat_of_lt' hos, UInt64.toNat_ofNat_of_lt' hlz]; omega)
+      (by simp [UInt64.toNat_ofNat_of_lt' hlz]; omega) (by simp [UInt64.toNat_ofNat_of_lt' hlz]; omega)
+    obtain ⟨g1, -, -⟩ := hg2
+    simp only [UInt64.toNat_zero, Nat.zero_add] at g1
+    rw [← hRs] at g1
+    have hlen : (hitsFrom c.toNat (decI cc) 0 R.slots).length ≠ 1 := by
+      intro h1'
+      apply hx
+      have : x.toNat = (1 : Word).toNat := by rw [g1, h1']; rfl
+      exact UInt64.toNat_inj.mp this
+    have hits := hitsFrom_eq c.toNat (decI cc) 0 R.slots
+    simp only [Nat.zero_add] at hits
+    show ErrClaim (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀ _
+    simp only [ConRon.Arena.classMinorSlot]
+    erw [hits]
+    match hh : hitsFrom c.toNat (decI cc) 0 R.slots, hlen with
+    | [], _ => exact ErrClaim.fail _ _ (by decide)
+    | _ :: _ :: _, _ => exact ErrClaim.fail _ _ (by decide)
+  · rw [h1, classMinorSlotE.k_class_minor_slot_go.arm1 p r m1 (by simpa using hx)] at hW
+    cases hW
+
 end L.Ind
