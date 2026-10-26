@@ -28,6 +28,121 @@ l_model inferConst_specE (p : Prog) (hf : p.lookup "infer_const" = some inferCon
 #print inferConstE
 #prefixx L.Arena.inferConstE
 
+/-! ## `infer_const` -/
+
+/-- The callees of `infer_const`, `infer_proj` outside the verdict closure. -/
+theorem inferLeavesE_nv : ∀ f ∈ ["env_find", "pin_at", "ls_node", "const_ty_at", "find_table",
+    "find_proj", "get_app_fn", "get_app_args"], f ∈ L.Checker.nvFns := by
+  decide +kernel
+
+/-- **`infer_const(vis, n, us)`'s verdicts**: an unknown name rejects, `sorryAx` declines
+(`unknownConstError`), a level count mismatch rejects; every callee claims nothing (`nvFns`). -/
+theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p)
+    (hnv : closedNV p L.Checker.nvFns = true) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb nm us : Word) (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hnm : HW nm)
+    (hus : HW us) :
+    CoreSpecE p (n + 1) "infer_const" [vis, nm, us] (inferConstT fe (decI nm) (decI us)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferConst_specE p hp.inferConst (n + 1) ⟨s₀.mem, Locals.init []⟩
+    vis nm us) hc (Err.code_ne_of_cls hk0)
+  simp only [inferConstE] at hW
+  cases h1 : callE p n "env_find" [nm, vis] s₀.mem with
+  | error e1 =>
+    rw [h1, inferConstE.k_env_find.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferLeavesE_nv "env_find" (by simp)) h1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1] at hW
+  obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callE
+    (envFind_refines p hp.envix hp.envrow hp.envfind n ⟨s₀.mem, Locals.init []⟩ vis nm hS.env hnm) h1
+  obtain ⟨-, -, -, -, hfound⟩ := triple_of_callE
+    (envFind_found p hp.envix hp.envrow hp.envfind n ⟨s₀.mem, Locals.init []⟩ vis nm hnm) h1
+  rw [ht₁] at hm₁
+  subst hm₁
+  by_cases h0 : r₁.headD 0 = 0
+  · -- `unknownConstError`
+    have hnone : fe.find? (decI nm) = none := by rw [hfind]; simp only [decFound, h0, if_true]
+    rw [inferConstE.k_env_find.arm1 p n nm us r₁ s₀.mem h0] at hW
+    cases h2 : callE p n "pin_at" [13] s₀.mem with
+    | error e2 =>
+      rw [h2, inferConstE.k_pin_at.none] at hW; cases hW
+      exact ErrClaim.of_callE_nv hnv (inferLeavesE_nv "pin_at" (by simp)) h2
+    | ok q =>
+    obtain ⟨r₂, m₂⟩ := q
+    rw [h2] at hW
+    obtain ⟨t₂, ht₂, hm₂, -, hlt, hpin⟩ := triple_of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+      (pinAt_refines p hp.pinAt n ⟨s₀.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 13) h2
+    have hue : (unknownConstError (decI nm)).run a₀ = .ok (if nm = r₂.headD 0 then
+        CheckError.notImplemented "use of the sorryAx axiom" else .invalid "unknown constant", a₀) := by
+      have hb := decI_beq (k := .name) nm (r₂.headD 0) hnm hlt
+      simp only [unknownConstError, pinSorryAx, show PIN_SORRY_AX = (13 : Word).toNat from rfl,
+        StateT.run_bind, hpin, except_ok_bind, hb]
+      by_cases he : nm = r₂.headD 0
+      · simp only [he, ↓reduceIte]; rfl
+      · simp only [he, ↓reduceIte]; rfl
+    have hT : inferConstT fe (decI nm) (decI us) =
+        (unknownConstError (decI nm) >>= fun err => fail err) := by
+      simp only [inferConstT, hnone]
+    rw [hT]
+    refine ErrClaim.bind_right hue ?_
+    by_cases he : nm = r₂.headD 0
+    · rw [inferConstE.k_pin_at.abort1 p nm r₂ m₂ he] at hW
+      cases hW
+      rw [if_pos he]; exact ErrClaim.fail _ _ rfl
+    · rw [inferConstE.k_pin_at.abort2 p nm r₂ m₂ he] at hW
+      cases hW
+      rw [if_neg he]; exact ErrClaim.fail _ _ rfl
+  · -- found: the level count
+    obtain ⟨htag, hrow, hq⟩ := hfound h0
+    obtain ⟨ci, hci⟩ := hS.env.found_some nm hnm htag hrow
+    have hfind' : fe.find? (decI nm) = some ci := by
+      rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
+    rw [← hq] at hci
+    have hcv := decCI_cvA hci (erecP_ext _)
+    generalize hcvr : ci.toConstantVal = cv at hcv
+    rw [inferConstE.k_env_find.arm2 p n nm us r₁ s₀.mem h0] at hW
+    cases h2 : callE p n "ls_node" [us] s₀.mem with
+    | error e2 =>
+      rw [h2, inferConstE.k_ls_node.none] at hW; cases hW
+      exact ErrClaim.of_callE_nv hnv (inferLeavesE_nv "ls_node" (by simp)) h2
+    | ok q =>
+    obtain ⟨r₂, m₂⟩ := q
+    rw [h2] at hW
+    obtain ⟨t₂, ht₂, rfl, hne', hr₂⟩ := triple_of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+      (lsNode_spec p hp.lsNode n _ us) h2
+    simp only at ht₂ hne' hr₂
+    subst ht₂ hr₂
+    by_cases hl : (lsNodeW s₀.mem us).tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (r₁.tail.headD 0 + 3)
+    · rw [inferConstE.k_ls_node.abort1 p n us _ _ _ hl] at hW
+      cases hW
+      obtain ⟨-, -, -, -, hsl⟩ := infer_decCV_words hcv hS.erec
+      obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.1 hus hne'
+      have hlen : (ids.length != cv.levelParams.length) = true := by
+        rw [hslice?_length hsl, ← hlen2, ← hlen1]
+        simp only [bne_iff_ne, ne_eq]
+        intro h; exact hl (UInt64.toNat_inj.mp h)
+      have hT : inferConstT fe (decI nm) (decI us) =
+          (viewLs (decI us) >>= fun usl => if (usl.length != ci.toConstantVal.levelParams.length) = true
+            then fail (.invalid "incorrect number of universe levels")
+            else constTyAt ci.toConstantVal (decI us)) := by
+        simp only [inferConstT, hfind']
+      rw [hT, hcvr]
+      refine ErrClaim.bind_right (viewLs_run _ _ _ hv) ?_
+      rw [if_pos hlen]
+      exact ErrClaim.fail _ _ rfl
+    · have hl' : (lsNodeW s₀.mem us).tail.headD 0 = rdW (s₀.mem.arr64 EREC) (r₁.tail.headD 0 + 3) := by
+        simpa using hl
+      rw [inferConstE.k_ls_node.arm1 p n us _ _ _ hl'] at hW
+      cases h3 : callE p n "const_ty_at" _ s₀.mem with
+      | error e3 =>
+        rw [h3, inferConstE.k_const_ty_at.none] at hW; cases hW
+        exact ErrClaim.of_callE_nv hnv (inferLeavesE_nv "const_ty_at" (by simp)) h3
+      | ok q => rw [h3, inferConstE.k_const_ty_at.arm1] at hW; cases hW
+
+#exit
 /-! ## `infer_proj`'s error model (by hand: `l_model … errors` times out on it)
 
 The generated text (`trace`), its spec proved by the ok spec's recipe (`inferProj_spec`). -/
