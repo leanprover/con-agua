@@ -34,6 +34,13 @@ Bumps since (DESIGN.md has the details):
   `con-ron/0002` now adds `dsimp only` before `vcgen` in the new
   `enterEager_spec`/`leaveEager_spec` instead of in the removed
   `takeModeMemos_spec`/`putModeMemos_spec`.
+* 2026-10-26: con-ron `12752ca7` → `ed864140`, con-leche `ae1f3198` → `0d2f467b`
+  (con-leche tasks #362–#365, con-ron tasks #128–#131: projection tables leave the constants,
+  no reserved projection-name shape, type pins with a boolean pin-variant loop, escaped display
+  rendering). `con-ron/0002` conflicted in seven `ConRon/Bridge` files
+  (`Checker/{Base,Basis,Split}`, `Inductives/{BlockTail,GenRec,Rel,StructInstall}`); resolved by
+  taking upstream and re-applying the same three toolchain patterns (`try replace … :=
+  AM.pure_bind_ok …`, `dsimp +instances only [IFEnv.restrictTo]` after the `restrictTo` simp).
 
 Patches at the first vendoring:
 

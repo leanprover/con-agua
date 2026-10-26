@@ -224,7 +224,6 @@ def whnfCoreStepProjL : FunDecl := lfn (mode, cheap, vis, d, e, sn, i, pe) local
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2297-2330 ConRon.Arena.reduceProjCore -/
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.reduceProjCore` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.reduceProjCore]
 def reduceProjCoreL : FunDecl :=
     lfn (mode, vis, d, sn, i, c) locals (top, e1, f, q, st, r) {
@@ -240,7 +239,6 @@ def reduceProjCoreL : FunDecl :=
 /-- `reduceProjCore` from the scrutinee's head on (`q` the table record): the head must be a
 constant.
 con-ron: ConRon/Arena/Core.lean:2297-2330 ConRon.Arena.reduceProjCore -/
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.reduceProjCore` changed; re-check the L code and its proofs, then delete this line
 def reduceProjHeadL : FunDecl :=
     lfn (mode, vis, e1, q, i) locals (hh, t, x, k, us, st, r) {
   hh := call get_app_fn(e1);
@@ -259,7 +257,6 @@ def reduceProjHeadL : FunDecl :=
 level count, the entry's fire check, the shape conditions. The twin's `args.length = numParams +
 numFields` (`Nat`) is tested as `nf <= an && an - nf == np`, which does not wrap; then `np + i < an`.
 con-ron: ConRon/Arena/Core.lean:2297-2330 ConRon.Arena.reduceProjCore -/
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.reduceProjCore` changed; re-check the L code and its proofs, then delete this line
 def reduceProjFireL : FunDecl :=
     lfn (mode, vis, e1, q, i, k, us) locals (ao, an, lo, usl, fok, np, nf, st, r) {
   (ao, an) := call get_app_args(e1);
@@ -277,7 +274,6 @@ def reduceProjFireL : FunDecl :=
 /-- `reduceProjCore`'s fire: argument `j` of the slice `(ao, an)` (else `bvar 0`), certified at
 the verified mode.
 con-ron: ConRon/Arena/Core.lean:2297-2330 ConRon.Arena.reduceProjCore -/
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.reduceProjCore` changed; re-check the L code and its proofs, then delete this line
 def reduceProjArgL : FunDecl :=
     lfn (mode, vis, k, ao, an, j) locals (b0, arg, ok) {
   b0 := call intern_bvar(0);

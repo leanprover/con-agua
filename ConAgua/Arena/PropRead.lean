@@ -214,7 +214,6 @@ def substPWAtL : FunDecl := lfn (lo, lc, us, k, o, c) locals (vo, vc, t0, x) {
 /-- `head_type_res(vis, f, n, ty)`: the residual's datum after `n` binders (`peelPisW`, then
 `residualPW`). -/
 -- con-ron: ConRon/Arena/PropRead.lean:186-219 ConRon.Arena.headTypePW
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.headTypePW` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.headTypePW]
 def headTypeResL : FunDecl := lfn (vis, f, n, ty) locals (pf, pv, k, o, c) {
   (pf, pv) := call peel_pis_w(vis, f, n, ty);
@@ -224,7 +223,6 @@ def headTypeResL : FunDecl := lfn (vis, f, n, ty) locals (pf, pv, k, o, c) {
 
 /-- `head_type_const(vis, f, n, cn, us)`: `headTypePW`'s `.const` arm. -/
 -- con-ron: ConRon/Arena/PropRead.lean:186-219 ConRon.Arena.headTypePW
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.headTypePW` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.headTypePW]
 def headTypeConstL : FunDecl := lfn (vis, f, n, cn, us) locals (fd, p, lo, l, k, o, c) {
   (fd, p) := call env_find(cn, vis);
@@ -239,7 +237,6 @@ def headTypeConstL : FunDecl := lfn (vis, f, n, cn, us) locals (fd, p, lo, l, k,
 
 /-- `head_type_pw(vis, f, root, d, h, n)`: the dispatch on the head's view. -/
 -- con-ron: ConRon/Arena/PropRead.lean:186-219 ConRon.Arena.headTypePW
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.headTypePW` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.headTypePW]
 def headTypePWL : FunDecl :=
     lfn (vis, f, root, d, h, n) locals (g, x1, x2, x3, bf, bd, k, o, c) {
@@ -293,7 +290,6 @@ def typeSortPWL : FunDecl := lfn (vis, f, rt) locals (r, d, t, x, cnt, fn, k, o,
 
 /-- `head_proof_const(vis, f, cn, us)`: `headProofPW`'s `.const` arm. -/
 -- con-ron: ConRon/Arena/PropRead.lean:244-275 ConRon.Arena.headProofPW
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.headProofPW` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.headProofPW]
 def headProofConstL : FunDecl := lfn (vis, f, cn, us) locals (fd, p, lo, l, k, o, c) {
   (fd, p) := call env_find(cn, vis);
@@ -309,7 +305,6 @@ def headProofConstL : FunDecl := lfn (vis, f, cn, us) locals (fd, p, lo, l, k, o
 /-- `head_proof_proj(vis, f, sn, i)`: `headProofPW`'s `.proj` arm (the table's body at field `i`,
 the `Inhabited` handle `0` past the bodies, as `Array.getD`). -/
 -- con-ron: ConRon/Arena/PropRead.lean:244-275 ConRon.Arena.headProofPW
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.headProofPW` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.headProofPW]
 def headProofProjL : FunDecl := lfn (vis, f, sn, i) locals (fd, q, b, k, o, c) {
   (fd, q) := call find_proj(vis, sn, i);
@@ -323,7 +318,6 @@ def headProofProjL : FunDecl := lfn (vis, f, sn, i) locals (fd, q, b, k, o, c) {
 
 /-- `head_proof_pw(vis, f, h)`: the dispatch on the head's view. -/
 -- con-ron: ConRon/Arena/PropRead.lean:244-275 ConRon.Arena.headProofPW
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.headProofPW` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.headProofPW]
 def headProofPWL : FunDecl := lfn (vis, f, h) locals (g, x1, x2, x3, k, o, c) {
   (g, x1, x2, x3) := call e_view(h);

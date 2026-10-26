@@ -210,8 +210,6 @@ def towerSlotsAllLoop : Stmt := lblk (vis, T, nF, j, flag, q) {
 /-- con-leche: `CoreDefs.lean:723-728`/`FEnv.lean:195-197` `towerSlotsAll` — are all `nF`
 projection slots of `T` table entries? -/
 -- con-ron: ConRon/Arena/Core.lean:1430-1434 ConRon.Arena.towerSlotsAll
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.towerSlotsAll`, `ConRon.Arena.towerSlotsAllGo` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.towerSlotsAll` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.towerSlotsAll]
 def towerSlotsAllL : FunDecl := lfn (vis, T, nF) locals (j, flag, q) {
   j := 0;
@@ -276,7 +274,6 @@ def andRescueLoop : Stmt := lblk (vis, ctor, nP, us, an, j, flag, q, ok) {
 fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `numParams` at `q + 5`,
 `numFields` at `q + 7` (`EnvRec.lean`'s `decTbl`). -/
 -- con-ron: ConRon/Arena/Core.lean:1659-1671 ConRon.Arena.andRescueSlotsGo
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.andRescueSlotsGo` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:1673-1681 ConRon.Arena.andRescueSlots
 @[l_impl ConRon.Arena.andRescueSlotsGo ConRon.Arena.andRescueSlots]
 def andRescueSlotsL : FunDecl := lfn (vis, ctor, nP, us) locals (an, j, flag, q, ok) {
@@ -336,7 +333,6 @@ stuck-major rescue: K-flagged, η-capable, or the pinned `And`. No certificate o
 spine; the K and `And` fabrications keep the type check, and the proof-irrelevance run is a
 certificate family (off at `.trusted`). -/
 -- con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.majorToCtor]
 def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major) locals (top, r) {
   top := CTL.u64[136];
