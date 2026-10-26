@@ -24,7 +24,10 @@ The functions:
   declines (an unsafe axiom or opaque, a definition whose safety is not `safe`), fails (an unknown
   quotient kind) or where the record is not applied here (`inductive`, a string with an escape).
 * `decl_push(k, n, o, l, t, v, q, h)`: appends a record.
-* `apply_decl(pl, name, lps, type, value, hk, hn, flag)`: the fields of `DeclIface.lean`.
+* `decl_cv(name, lps, type)`: con-ron's `parseCVD`, the name and type handles and the universe
+  parameters' slice (`lp_put`).
+* `apply_decl(pl, name, lps, type, value, hk, hn, flag)`: the fields of `DeclIface.lean`; in
+  con-ron's order, `decl_cv` first, then `decl_kind` (its declines), the value, the push.
 
 Each spec is an equation about a named `Option` model; the refinement is in
 `ApplyDeclRefine.lean`.
@@ -205,22 +208,27 @@ def pushW (m : Mem) (k n o l t v q h : Word) : Option Mem :=
     (rdW (m.arr64 DECL) 0 + 1))
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD -/
-def declCv : FunDecl := lfn (k, q, name, lps, type, value, hn) locals (n, t, o, l, v, z) {
+def declCv : FunDecl := lfn (name, lps, type) locals (n, t, o, l) {
   n := call name_get(name);
   t := call expr_get(type);
   (o, l) := call lp_put(lps);
+  return (n, t, o, l)
+}
+
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD -/
+@[l_impl ConRon.Arena.Frontend.processLineCoreD]
+def applyDecl : FunDecl :=
+    lfn (pl, name, lps, type, value, hk, hn, flag) locals (n, t, o, l, k, q, v, z) {
+  (n, t, o, l) := call decl_cv(name, lps, type);
+  (k, q) := call decl_kind(pl, hk, hn, flag);
   if k == 2 || k == 3 || k == 4 { v := call expr_get(value) } else { v := 0 };
   z := call decl_push(k, n, o, l, t, v, q, hn);
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD -/
-@[l_impl ConRon.Arena.Frontend.processLineCoreD]
-def applyDecl : FunDecl := lfn (pl, name, lps, type, value, hk, hn, flag) locals (k, q, z) {
-  (k, q) := call decl_kind(pl, hk, hn, flag);
-  z := call decl_cv(k, q, name, lps, type, value, hn);
-  return 0
-}
+/-- The model of `decl_cv(name, lps, type)`: the memory after `lp_put`, `none` where it aborts. -/
+def cvW (b : Array UInt8) (m : Mem) (name lps type : Word) : Option Mem :=
+  if tblOK m NID name = true ∧ tblOK m EID type = true then lpPutW b m lps else none
 
 /-- After `lp_put`: the value (for kinds `2`‥`4`) and the push. -/
 def declK1 (k q n t o l hn value : Word) : Option Mem → Option Mem
@@ -238,7 +246,9 @@ def declK1 (k q n t o l hn value : Word) : Option Mem → Option Mem
         (if tblOK m₁ EID value = true then pushW m₁ k n o l t (tblW m₁ EID value) q hn else none)
       else pushW m₁ k n o l t 0 q hn := rfl
 
-/-- The model of `decl_cv(k, q, name, lps, type, value, hn)`. -/
+/-- The record after `decl_kind` returned `(k, q)`: `decl_cv`'s common data, the value, the push.
+(`apply_decl` runs `decl_cv` before `decl_kind`, as con-ron's `parseCVD` before the safety
+declines; `decl_kind` reads no memory, so the order does not show in this `Option` model.) -/
 def declCvW (b : Array UInt8) (m : Mem) (k q name lps type value hn : Word) : Option Mem :=
   if tblOK m NID name = true ∧ tblOK m EID type = true then
     declK1 k q (tblW m NID name) (tblW m EID type) (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0)
@@ -385,10 +395,11 @@ theorem declPush_spec (n : Nat) (s₀ : St) (k nm o l t v q h : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;> finish [pushW, recM]
 
 theorem declCv_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (k q name lps type value hn : Word) :
+    (hm : s₀.mem.arr8 IN = b) (name lps type : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "decl_cv" [k, q, name, lps, type, value, hn]
-    ⦃fun _ s' => LocEq s' s₀ ∧ declCvW b s₀.mem k q name lps type value hn = some s'.mem; ⊤⦄ := by
+    invoke p (exec p n) "decl_cv" [name, lps, type]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [tblW s₀.mem NID name, tblW s₀.mem EID type,
+      rdW (s₀.mem.arr64 DLP) 0, lsCntN b (lps + 1) 0] ∧ cvW b s₀.mem name lps type = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hE.decl_cv]
   simp only [callFn, declCv]
   cases n with
@@ -396,8 +407,25 @@ theorem declCv_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : S
   | succ n =>
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nameGet_spec p hE.expr.front n,
-        exprGet_spec p hE.expr n, lpPut_spec p hE b hb n, declPush_spec p hE n] <;>
-      finish [declCvW]
+        exprGet_spec p hE.expr n, lpPut_spec p hE b hb n] <;>
+      finish [cvW]
+
+/-- `apply_decl`'s order (`decl_cv`, then `decl_kind`) gives `applyDeclW`. -/
+theorem applyDeclW_cv (b : Array UInt8) (m m₁ : Mem) (pl name lps type value hk hn flag : Word)
+    (h : cvW b m name lps type = some m₁) :
+    applyDeclW b m pl name lps type value hk hn flag =
+      match declKindW pl hk hn flag with
+      | none => none
+      | some (k, q) => declK1 k q (tblW m NID name) (tblW m EID type) (rdW (m.arr64 DLP) 0)
+          (lsCntN b (lps + 1) 0) hn value (some m₁) := by
+  unfold cvW at h
+  split at h
+  · rename_i hok
+    unfold applyDeclW
+    cases declKindW pl hk hn flag with
+    | none => rfl
+    | some kq => obtain ⟨k, q⟩ := kq; simp only [declK0, declCvW, if_pos hok, h]
+  · cases h
 
 theorem applyDecl_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
     (hm : s₀.mem.arr8 IN = b) (pl name lps type value hk hn flag : Word) :
@@ -410,10 +438,10 @@ theorem applyDecl_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, declKind_spec p hE n,
-        declCv_spec p hE b hb n] <;>
-      finish [applyDeclW]
+    sym (gen := 16) only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, declCv_spec p hE b hb n,
+        declKind_spec p hE n, exprGet_spec p hE.expr n, declPush_spec p hE n] <;>
+      finish [applyDeclW_cv]
 
 end specs
 

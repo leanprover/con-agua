@@ -37869,9 +37869,9 @@ ret
 ca_f_apply_decl:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $152, %rax
+cmpq $288, %rax
 jb ca_exhausted
-subq $144, %rsp
+subq $192, %rsp
 movq (%rsi), %rax
 movq %rax, (%rsp)
 movq 8(%rsi), %rax
@@ -37888,6 +37888,16 @@ movq 48(%rsi), %rax
 movq %rax, 48(%rsp)
 movq 56(%rsi), %rax
 movq %rax, 56(%rsp)
+movq 8(%rsp), %rdi
+movq 16(%rsp), %r8
+movq 24(%rsp), %r9
+subq $1, %r14
+jb ca_exhausted
+call ca_f_decl_cv
+movq %rax, 64(%rsp)
+movq %rdi, 72(%rsp)
+movq %r8, 80(%rsp)
+movq %r9, 88(%rsp)
 movq (%rsp), %rdi
 movq 40(%rsp), %r8
 movq 48(%rsp), %r9
@@ -37895,33 +37905,52 @@ movq 56(%rsp), %r10
 subq $1, %r14
 jb ca_exhausted
 call ca_f_decl_kind
-movq %rax, 64(%rsp)
-movq %rdi, 72(%rsp)
-movq 64(%rsp), %rax
-movq %rax, 88(%rsp)
-movq 72(%rsp), %rax
 movq %rax, 96(%rsp)
-movq 8(%rsp), %rax
-movq %rax, 104(%rsp)
-movq 16(%rsp), %rax
-movq %rax, 112(%rsp)
-movq 24(%rsp), %rax
-movq %rax, 120(%rsp)
-movq 32(%rsp), %rax
-movq %rax, 128(%rsp)
-movq 48(%rsp), %rax
-movq %rax, 136(%rsp)
-lea 88(%rsp), %rsi
+movq %rdi, 104(%rsp)
+cmpq $2, 96(%rsp)
+je .Lca_apply_decl_2213S
+cmpq $3, 96(%rsp)
+je .Lca_apply_decl_22138S
+cmpq $4, 96(%rsp)
+jne .Lca_apply_decl_221E
+.Lca_apply_decl_22138S:
+.Lca_apply_decl_2213S:
+movq 32(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
-call ca_f_decl_cv
-movq %rax, 80(%rsp)
+call ca_f_expr_get
+movq %rax, 112(%rsp)
+jmp .Lca_apply_decl_221X
+.Lca_apply_decl_221E:
+movq $0, 112(%rsp)
+.Lca_apply_decl_221X:
+movq 96(%rsp), %rax
+movq %rax, 128(%rsp)
+movq 64(%rsp), %rax
+movq %rax, 136(%rsp)
+movq 80(%rsp), %rax
+movq %rax, 144(%rsp)
+movq 88(%rsp), %rax
+movq %rax, 152(%rsp)
+movq 72(%rsp), %rax
+movq %rax, 160(%rsp)
+movq 112(%rsp), %rax
+movq %rax, 168(%rsp)
+movq 104(%rsp), %rax
+movq %rax, 176(%rsp)
+movq 48(%rsp), %rax
+movq %rax, 184(%rsp)
+lea 128(%rsp), %rsi
+subq $1, %r14
+jb ca_exhausted
+call ca_f_decl_push
+movq %rax, 120(%rsp)
 movq $0, %rax
 jmp .Lca_apply_decl_0R
 .Lca_apply_decl_0Z:
 movq $0, %rax
 .Lca_apply_decl_0R:
-addq $144, %rsp
+addq $192, %rsp
 ret
 ca_f_apply_dline:
 movq %rsp, %rax
@@ -71164,83 +71193,40 @@ ret
 ca_f_decl_cv:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $264, %rax
+cmpq $64, %rax
 jb ca_exhausted
-subq $168, %rsp
-movq (%rsi), %rax
-movq %rax, (%rsp)
-movq 8(%rsi), %rax
-movq %rax, 8(%rsp)
-movq 16(%rsi), %rax
-movq %rax, 16(%rsp)
-movq 24(%rsi), %rax
-movq %rax, 24(%rsp)
-movq 32(%rsi), %rax
-movq %rax, 32(%rsp)
-movq 40(%rsi), %rax
-movq %rax, 40(%rsp)
-movq 48(%rsi), %rax
-movq %rax, 48(%rsp)
-movq 16(%rsp), %rdi
+subq $56, %rsp
+movq %rdi, (%rsp)
+movq %r8, 8(%rsp)
+movq %r9, 16(%rsp)
+movq (%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
 call ca_f_name_get
-movq %rax, 56(%rsp)
-movq 32(%rsp), %rdi
+movq %rax, 24(%rsp)
+movq 16(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
 call ca_f_expr_get
-movq %rax, 64(%rsp)
-movq 24(%rsp), %rdi
+movq %rax, 32(%rsp)
+movq 8(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
 call ca_f_lp_put
-movq %rax, 72(%rsp)
-movq %rdi, 80(%rsp)
-cmpq $2, (%rsp)
-je .Lca_decl_cv_22213S
-cmpq $3, (%rsp)
-je .Lca_decl_cv_222138S
-cmpq $4, (%rsp)
-jne .Lca_decl_cv_2221E
-.Lca_decl_cv_222138S:
-.Lca_decl_cv_22213S:
-movq 40(%rsp), %rdi
-subq $1, %r14
-jb ca_exhausted
-call ca_f_expr_get
-movq %rax, 88(%rsp)
-jmp .Lca_decl_cv_2221X
-.Lca_decl_cv_2221E:
-movq $0, 88(%rsp)
-.Lca_decl_cv_2221X:
-movq (%rsp), %rax
-movq %rax, 104(%rsp)
-movq 56(%rsp), %rax
-movq %rax, 112(%rsp)
-movq 72(%rsp), %rax
-movq %rax, 120(%rsp)
-movq 80(%rsp), %rax
-movq %rax, 128(%rsp)
-movq 64(%rsp), %rax
-movq %rax, 136(%rsp)
-movq 88(%rsp), %rax
-movq %rax, 144(%rsp)
-movq 8(%rsp), %rax
-movq %rax, 152(%rsp)
-movq 48(%rsp), %rax
-movq %rax, 160(%rsp)
-lea 104(%rsp), %rsi
-subq $1, %r14
-jb ca_exhausted
-call ca_f_decl_push
-movq %rax, 96(%rsp)
-movq $0, %rax
+movq %rax, 40(%rsp)
+movq %rdi, 48(%rsp)
+movq 32(%rsp), %rdi
+movq 40(%rsp), %r8
+movq 48(%rsp), %r9
+movq 24(%rsp), %rax
 jmp .Lca_decl_cv_0R
 .Lca_decl_cv_0Z:
 movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
 .Lca_decl_cv_0R:
-addq $168, %rsp
+addq $56, %rsp
 ret
 ca_f_decl_declares:
 movq %rsp, %rax
@@ -199949,9 +199935,9 @@ ret
 ca_f_pre_apply_decl:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $152, %rax
+cmpq $288, %rax
 jb ca_exhausted
-subq $144, %rsp
+subq $192, %rsp
 movq (%rsi), %rax
 movq %rax, (%rsp)
 movq 8(%rsi), %rax
@@ -199968,6 +199954,16 @@ movq 48(%rsi), %rax
 movq %rax, 48(%rsp)
 movq 56(%rsi), %rax
 movq %rax, 56(%rsp)
+movq 8(%rsp), %rdi
+movq 16(%rsp), %r8
+movq 24(%rsp), %r9
+subq $1, %r14
+jb ca_exhausted
+call ca_f_pre_decl_cv
+movq %rax, 64(%rsp)
+movq %rdi, 72(%rsp)
+movq %r8, 80(%rsp)
+movq %r9, 88(%rsp)
 movq (%rsp), %rdi
 movq 40(%rsp), %r8
 movq 48(%rsp), %r9
@@ -199975,33 +199971,52 @@ movq 56(%rsp), %r10
 subq $1, %r14
 jb ca_exhausted
 call ca_f_decl_kind
-movq %rax, 64(%rsp)
-movq %rdi, 72(%rsp)
-movq 64(%rsp), %rax
-movq %rax, 88(%rsp)
-movq 72(%rsp), %rax
 movq %rax, 96(%rsp)
-movq 8(%rsp), %rax
-movq %rax, 104(%rsp)
-movq 16(%rsp), %rax
-movq %rax, 112(%rsp)
-movq 24(%rsp), %rax
-movq %rax, 120(%rsp)
-movq 32(%rsp), %rax
-movq %rax, 128(%rsp)
-movq 48(%rsp), %rax
-movq %rax, 136(%rsp)
-lea 88(%rsp), %rsi
+movq %rdi, 104(%rsp)
+cmpq $2, 96(%rsp)
+je .Lca_pre_apply_decl_2213S
+cmpq $3, 96(%rsp)
+je .Lca_pre_apply_decl_22138S
+cmpq $4, 96(%rsp)
+jne .Lca_pre_apply_decl_221E
+.Lca_pre_apply_decl_22138S:
+.Lca_pre_apply_decl_2213S:
+movq 32(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
-call ca_f_pre_decl_cv
-movq %rax, 80(%rsp)
+call ca_f_expr_get
+movq %rax, 112(%rsp)
+jmp .Lca_pre_apply_decl_221X
+.Lca_pre_apply_decl_221E:
+movq $0, 112(%rsp)
+.Lca_pre_apply_decl_221X:
+movq 96(%rsp), %rax
+movq %rax, 128(%rsp)
+movq 64(%rsp), %rax
+movq %rax, 136(%rsp)
+movq 80(%rsp), %rax
+movq %rax, 144(%rsp)
+movq 88(%rsp), %rax
+movq %rax, 152(%rsp)
+movq 72(%rsp), %rax
+movq %rax, 160(%rsp)
+movq 112(%rsp), %rax
+movq %rax, 168(%rsp)
+movq 104(%rsp), %rax
+movq %rax, 176(%rsp)
+movq 48(%rsp), %rax
+movq %rax, 184(%rsp)
+lea 128(%rsp), %rsi
+subq $1, %r14
+jb ca_exhausted
+call ca_f_decl_push
+movq %rax, 120(%rsp)
 movq $0, %rax
 jmp .Lca_pre_apply_decl_0R
 .Lca_pre_apply_decl_0Z:
 movq $0, %rax
 .Lca_pre_apply_decl_0R:
-addq $144, %rsp
+addq $192, %rsp
 ret
 ca_f_pre_apply_dline:
 movq %rsp, %rax
@@ -200741,83 +200756,40 @@ ret
 ca_f_pre_decl_cv:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $264, %rax
+cmpq $64, %rax
 jb ca_exhausted
-subq $168, %rsp
-movq (%rsi), %rax
-movq %rax, (%rsp)
-movq 8(%rsi), %rax
-movq %rax, 8(%rsp)
-movq 16(%rsi), %rax
-movq %rax, 16(%rsp)
-movq 24(%rsi), %rax
-movq %rax, 24(%rsp)
-movq 32(%rsi), %rax
-movq %rax, 32(%rsp)
-movq 40(%rsi), %rax
-movq %rax, 40(%rsp)
-movq 48(%rsi), %rax
-movq %rax, 48(%rsp)
-movq 16(%rsp), %rdi
+subq $56, %rsp
+movq %rdi, (%rsp)
+movq %r8, 8(%rsp)
+movq %r9, 16(%rsp)
+movq (%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
 call ca_f_name_get
-movq %rax, 56(%rsp)
-movq 32(%rsp), %rdi
+movq %rax, 24(%rsp)
+movq 16(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
 call ca_f_expr_get
-movq %rax, 64(%rsp)
-movq 24(%rsp), %rdi
+movq %rax, 32(%rsp)
+movq 8(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
 call ca_f_pre_lp_put
-movq %rax, 72(%rsp)
-movq %rdi, 80(%rsp)
-cmpq $2, (%rsp)
-je .Lca_pre_decl_cv_22213S
-cmpq $3, (%rsp)
-je .Lca_pre_decl_cv_222138S
-cmpq $4, (%rsp)
-jne .Lca_pre_decl_cv_2221E
-.Lca_pre_decl_cv_222138S:
-.Lca_pre_decl_cv_22213S:
-movq 40(%rsp), %rdi
-subq $1, %r14
-jb ca_exhausted
-call ca_f_expr_get
-movq %rax, 88(%rsp)
-jmp .Lca_pre_decl_cv_2221X
-.Lca_pre_decl_cv_2221E:
-movq $0, 88(%rsp)
-.Lca_pre_decl_cv_2221X:
-movq (%rsp), %rax
-movq %rax, 104(%rsp)
-movq 56(%rsp), %rax
-movq %rax, 112(%rsp)
-movq 72(%rsp), %rax
-movq %rax, 120(%rsp)
-movq 80(%rsp), %rax
-movq %rax, 128(%rsp)
-movq 64(%rsp), %rax
-movq %rax, 136(%rsp)
-movq 88(%rsp), %rax
-movq %rax, 144(%rsp)
-movq 8(%rsp), %rax
-movq %rax, 152(%rsp)
-movq 48(%rsp), %rax
-movq %rax, 160(%rsp)
-lea 104(%rsp), %rsi
-subq $1, %r14
-jb ca_exhausted
-call ca_f_decl_push
-movq %rax, 96(%rsp)
-movq $0, %rax
+movq %rax, 40(%rsp)
+movq %rdi, 48(%rsp)
+movq 32(%rsp), %rdi
+movq 40(%rsp), %r8
+movq 48(%rsp), %r9
+movq 24(%rsp), %rax
 jmp .Lca_pre_decl_cv_0R
 .Lca_pre_decl_cv_0Z:
 movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
 .Lca_pre_decl_cv_0R:
-addq $168, %rsp
+addq $56, %rsp
 ret
 ca_f_pre_decl_val:
 movq %rsp, %rax

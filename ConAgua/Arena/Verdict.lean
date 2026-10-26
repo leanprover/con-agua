@@ -115,6 +115,30 @@ theorem ErrClaim.of_callE_nv {α : Type} {T : AM α} {a : AState} {p : Prog} {fs
     {e : Err} (h : callE p n f vs m = .error e) : ErrClaim T a e :=
   ErrClaim.of_cls0 (callE_nv hp hf n vs m h)
 
+/-- A word load, error-precise: its value as `rdW`, or an error with code `0` (the loads of the
+`errors` models, `l_model … extra [ld64_rdW_specE]`). -/
+theorem ld64_rdW_specE (a : ArrId) (i : Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ ld64 a i
+    ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size;
+     fun e => e.code = 0⦄ := by
+  apply M.triple_of_run'
+  · intro s r s' hs hrun
+    subst hs
+    simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
+    split at hrun
+    · rename_i h
+      simp only [StateT.run_pure, Except.ok.injEq, Prod.mk.injEq] at hrun
+      obtain ⟨rfl, rfl⟩ := hrun
+      exact ⟨rfl, by simp [rdW, h], h⟩
+    · simp [StateT.lift, StateT.run, throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at hrun
+  · intro s e hs hrun
+    subst hs
+    simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
+    split at hrun
+    · simp [StateT.run, pure, StateT.pure, Except.pure] at hrun
+    · simp [StateT.lift, StateT.run, throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at hrun
+      subst hrun; rfl
+
 /-! ## The error spec of a core function
 
 `CoreSpec` (`WhnfBase.lean`) is the ok refinement of a call; `CoreSpecE` is its error half: a
