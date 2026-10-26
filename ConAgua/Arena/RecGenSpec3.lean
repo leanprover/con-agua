@@ -79,7 +79,8 @@ theorem classConstOkHeader_spec (p : Prog) (h : IhProg p)
       envFind_specW p h.ix h.rowGet h.find n, resCont_spec p h.resF h.resC n,
       L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
       lbbF_spec p h.bvb n, hffF_spec p h.hf n,
-      hcR n "all_level_params_defined", hcR n "consts_resolve_ffast"] <;>
+      hcR n "all_level_params_defined", hcR n "consts_resolve_ffast",
+      hcR n "unresolved_consts_error"] <;>
     finish (gen := 20)
 
 theorem classConstOk_spec (p : Prog) (h : IhProg p)

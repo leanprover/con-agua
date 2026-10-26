@@ -312,5 +312,25 @@ abbrev R_PIN_DATA : L.Word := 588
 abbrev R_DEPTH : L.Word := 592
 /-- other: internal check failed -/
 abbrev R_INTERNAL : L.Word := 596
+/-- reject: unknown constant in type -/
+abbrev R_UNKNOWN_CONSTANT_IN_TYPE : L.Word := 601
+/-- reject: unknown constant in value -/
+abbrev R_UNKNOWN_CONSTANT_IN_VALUE : L.Word := 605
+/-- reject: unknown constant in type of -/
+abbrev R_UNKNOWN_CONSTANT_IN_TYPE_OF : L.Word := 609
+/-- reject: unknown constant in generated rule of -/
+abbrev R_UNKNOWN_CONSTANT_IN_GENERATED : L.Word := 613
+/-- reject: unknown constant in the domains of a generated rule of -/
+abbrev R_UNKNOWN_CONSTANT_IN_THE : L.Word := 617
+/-- decline: use of the sorryAx axiom in type -/
+abbrev R_USE_OF_THE_SORRYAX_IN_TYPE : L.Word := 622
+/-- decline: use of the sorryAx axiom in value -/
+abbrev R_USE_OF_THE_SORRYAX_IN_VALUE : L.Word := 626
+/-- decline: use of the sorryAx axiom in type of -/
+abbrev R_USE_OF_THE_SORRYAX_IN_TYPE_OF : L.Word := 630
+/-- decline: use of the sorryAx axiom in generated rule of -/
+abbrev R_USE_OF_THE_SORRYAX_IN_GENERATED : L.Word := 634
+/-- decline: use of the sorryAx axiom in the domains of a generated rule of -/
+abbrev R_USE_OF_THE_SORRYAX_IN_THE : L.Word := 638
 
 end L.Arena

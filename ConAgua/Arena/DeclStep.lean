@@ -107,7 +107,7 @@ def erecVg : FunDecl := lfn (p, vk) locals (g) {
 /-- `install_header(vis, q)`: `installHeader fe cv`, `q` the constant value in `EREC`. -/
 -- con-ron: ConRon/Arena/CheckerSplit.lean:59-77 ConRon.Arena.installHeader
 @[l_impl ConRon.Arena.installHeader]
-def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a) {
+def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a, u) {
   n := EREC.u64[q];
   t := EREC.u64[q + 3];
   (f, r) := call env_find(n, vis);
@@ -124,14 +124,14 @@ def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, 
   a := call all_level_params_defined(o, l, t);
   if a == 0 { fail R_UNDECLARED_UNIVERSE_PARAMETER };
   c := call consts_resolve_ffast(vis, t);
-  if c == 0 { abort };
+  if c == 0 { u := call unresolved_consts_error(vis, t, 0); abort };
   return 0
 }
 
 /-- `install_value_guards(vis, q, v)`: `installValueGuards fe cv v`. -/
 -- con-ron: ConRon/Arena/CheckerSplit.lean:79-91 ConRon.Arena.installValueGuards
 @[l_impl ConRon.Arena.installValueGuards]
-def installValueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c) {
+def installValueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c, u) {
   (o, l) := call cv_lps(q);
   b := call loose_bvars_bounded_fast(4000000000, 0, v);
   if b == 0 { fail R_LOOSE_BOUND_VARIABLE_IN };
@@ -140,7 +140,7 @@ def installValueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c) {
   a := call all_level_params_defined(o, l, v);
   if a == 0 { fail R_UNDECLARED_UNIVERSE_PARAMETER_IN_VALUE };
   c := call consts_resolve_ffast(vis, v);
-  if c == 0 { abort };
+  if c == 0 { u := call unresolved_consts_error(vis, v, 1); abort };
   return 0
 }
 

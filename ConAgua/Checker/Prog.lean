@@ -149,7 +149,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1835 functions, 0 of them stubs.
+1838 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -1059,6 +1059,7 @@ def checkerProg : Prog := [
   ("has_loose_b_var_b_fast", L.Ind.hasLooseBVarBFastL),
   ("has_loose_b_var_b_go", L.Ind.hasLooseBVarBGoL),
   ("has_loose_b_var_b_ins", L.Ind.hasLooseBVarBInsL),
+  ("has_str_lit_go", L.Stubs.hasStrLitGoL),
   ("hb_clear", L.Arena.memoClearG L.Ind.hbSch),
   ("hb_find", L.Arena.memoFindG L.Ind.hbSch),
   ("hb_put", L.Arena.memoPutG L.Ind.hbSch),
@@ -2099,10 +2100,12 @@ def checkerProg : Prog := [
   ("type_pins_guard", L.Ind.typePinsGuardL),
   ("type_sort_pw", L.Arena.typeSortPWL),
   ("u_next", L.Scan.Str.uNext),
+  ("ue_mentions_go", L.Stubs.ueMentionsGoL),
   ("unescape", L.Scan.Str.unescape),
   ("unfold_definition", L.Arena.unfoldDefinitionL),
   ("unfold_defn_at", L.Arena.unfoldDefnAtL),
   ("unfoldable_head", L.Arena.unfoldableHeadL),
+  ("unresolved_consts_error", L.Stubs.unresolvedConstsErrL),
   ("unwrap_id_defs", L.Arena.unwrapIdDefsL),
   ("unwrap_step", L.Arena.unwrapStepL),
   ("utf8_char", L.Scan.Utf8.utf8Char),

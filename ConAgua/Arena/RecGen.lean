@@ -353,7 +353,7 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
 (the body of lane `decls2`'s `install_header`, whose model `ihW` is this function's). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:502-523 ConRon.Arena.classConstOk
 @[l_impl ConRon.Arena.classConstOk]
-def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a) {
+def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a, u) {
   n := EREC.u64[q];
   t := EREC.u64[q + 3];
   (f, r) := call env_find(n, vis);
@@ -370,7 +370,7 @@ def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d,
   a := call all_level_params_defined(o, l, t);
   if a == 0 { fail R_UNDECLARED_UNIVERSE_PARAMETER_IN };
   c := call consts_resolve_ffast(vis, t);
-  if c == 0 { abort };
+  if c == 0 { u := call unresolved_consts_error(vis, t, 2); abort };
   return 0
 }
 
@@ -453,7 +453,7 @@ def classRuleOkDomains : FunDecl := lfn (visT, off, cnt) locals (b, r) {
 parameters the recursor's, resolving. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:559-587 ConRon.Arena.classRuleOk
 @[l_impl ConRon.Arena.classRuleOk]
-def classRuleOkGuards : FunDecl := lfn (visR, cvR, gen) locals (b, lo, ll) {
+def classRuleOkGuards : FunDecl := lfn (visR, cvR, gen) locals (b, lo, ll, u) {
   b := call loose_bvars_bounded_fast(⟪CWF⟫, 0, gen);
   if b == 0 { abort };
   b := call has_fvar_fast(⟪CWF⟫, gen);
@@ -462,7 +462,7 @@ def classRuleOkGuards : FunDecl := lfn (visR, cvR, gen) locals (b, lo, ll) {
   b := call all_level_params_defined(lo, ll, gen);
   if b == 0 { abort };
   b := call consts_resolve_ffast(visR, gen);
-  if b == 0 { abort };
+  if b == 0 { u := call unresolved_consts_error(visR, gen, 3); abort };
   return 0
 }
 
@@ -477,7 +477,7 @@ def classRuleOkL : FunDecl := lfn (visT, visR, cvR, n, gen)
   (ok, rbsOff, rbsLen, bodyD) := call strip_lams(n, gen);
   if ok == 0 { abort };
   closed := call class_rule_ok_domains(visT, rbsOff, rbsLen);
-  if closed == 0 { abort };
+  if closed == 0 { u := call unresolved_consts_error(visR, gen, 4); abort };
   return gen
 }
 

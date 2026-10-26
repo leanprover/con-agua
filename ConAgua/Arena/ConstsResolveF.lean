@@ -3,6 +3,7 @@ import ConAgua.Arena.MemoLib
 import ConAgua.Arena.Env
 import ConAgua.Arena.Pins
 import ConAgua.Arena.WhnfIota
+import ConAgua.Arena.Reasons
 import ConAgua.Census.Attr
 
 /-!
@@ -120,5 +121,113 @@ def crfProg : Prog :=
   [("consts_resolve_ffast", constsResolveFFastL), ("crf_go", crfGo), ("cr_leaf", crLeaf),
    ("cr_lit_pins", crLitPins), ("pin_found", pinFound),
    ("crm_find", memoFindG crSch), ("crm_put", memoPutG crSch), ("crm_clear", memoClearG crSch)]
+
+/-! ## `CheckerBase.lean`: the verdict at a term whose constants do not all resolve
+
+These walks run only on the error path, right after `consts_resolve_ffast` failed; the run aborts
+after them. They write nothing (no memo: the twin's `hasStrLitGo` visited set and
+`mentionsConst`'s memo are dropped, `docs/deviations.md` D16), so the error path stays inside every
+write set its callers' frames are checked against (the parallel mode's owned arrays, the loops'
+and the inductive arm's memo frames). -/
+
+/-- `has_str_lit_go(f, h)`: does `h` contain a string literal? The twin's fuel `f` (abort at `0`,
+the twin's `.internal`; the children at `f - 1`), the node viewed first and the leaves decided off
+the view (a literal of kind `≠ 0` is a string), short-circuiting. The twin's visited set is
+dropped: a node it has visited and finished answered `false` (a `true` ends the walk), which is
+what a second walk of it answers too. -/
+-- con-ron: ConRon/Arena/CheckerBase.lean:188-221 ConRon.Arena.hasStrLitGo
+@[l_impl ConRon.Arena.hasStrLitGo]
+def hasStrLitGoL : FunDecl := lfn (f, h) locals (g, x, y, z, t, i, r) {
+  if f == 0 { abort };
+  (g, x, y, z) := call e_view(h);
+  if g == 8 {
+    t := ⟦h⟧.tier;
+    i := ⟦h⟧.idx;
+    return u64(LIT⟨t, i⟩.kind != 0)
+  };
+  if g == 0 || g == 2 || g == 3 { return 0 };
+  if g == 1 { r := call has_str_lit_go(f - 1, y); return r };
+  if g == 4 || g == 5 || g == 6 {
+    r := call has_str_lit_go(f - 1, x);
+    if r != 0 { return 1 };
+    r := call has_str_lit_go(f - 1, y);
+    return r
+  };
+  if g == 7 {
+    r := call has_str_lit_go(f - 1, x);
+    if r != 0 { return 1 };
+    r := call has_str_lit_go(f - 1, y);
+    if r != 0 { return 1 };
+    r := call has_str_lit_go(f - 1, z);
+    return r
+  };
+  r := call has_str_lit_go(f - 1, z);
+  return r
+}
+
+/-- `ue_mentions_go(f, T, h)`: `mentions_const_go` (the twin's `mentionsConstGo`, the same walk)
+without its memo. -/
+-- con-ron: ConRon/Arena/Inductives/StructParts.lean:263-304 ConRon.Arena.mentionsConstGo
+@[l_impl ConRon.Arena.mentionsConstGo]
+def ueMentionsGoL : FunDecl := lfn (f, T, h) locals (g, x, y, z, r, b1, b2, b3) {
+  if f == 0 { abort };
+  (g, x, y, z) := call e_view(h);
+  if g == 0 || g == 2 || g == 8 { return 0 };
+  if g == 3 { return u64(x == T) };
+  if g == 1 { r := call ue_mentions_go(f - 1, T, y) }
+  else if g == 4 || g == 5 || g == 6 {
+    b1 := call ue_mentions_go(f - 1, T, x);
+    b2 := call ue_mentions_go(f - 1, T, y);
+    r := b1 | b2
+  } else if g == 7 {
+    b1 := call ue_mentions_go(f - 1, T, x);
+    b2 := call ue_mentions_go(f - 1, T, y);
+    b3 := call ue_mentions_go(f - 1, T, z);
+    r := b1 | b2 | b3
+  } else {
+    b1 := call ue_mentions_go(f - 1, T, z);
+    r := u64(x == T) | b1
+  };
+  return r
+}
+
+/-- `unresolved_consts_error(vis, e, w)`: the twin's `fail (← unresolvedConstsErrorL (←
+strLitSupported fe) where_ e)` (`w ≤ 1`) and `fail (← unresolvedConstsError where_ e)` (`w ≥ 2`):
+always aborts. `w` names the twin's `where_` (`0` "type", `1` "value", `2` "type of", `3`
+"generated rule of", `4` "the domains of a generated rule of"; the reason of each message). For
+`w ≤ 1`: without the String support declarations, a string literal in `e` (`has_str_lit_go`)
+declines. Then a term mentioning `sorryAx` (pin 13, `ue_mentions_go`: the twin's `mentionsConst`)
+declines, anything else rejects. -/
+-- con-ron: ConRon/Arena/CheckerBase.lean:176-186 ConRon.Arena.unresolvedConstsError
+-- con-ron: ConRon/Arena/CheckerBase.lean:223-235 ConRon.Arena.unresolvedConstsErrorL
+@[l_impl ConRon.Arena.unresolvedConstsError ConRon.Arena.unresolvedConstsErrorL]
+def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (s, r, sa, m) {
+  if w <= 1 {
+    s := call str_lit_supported(vis);
+    if s == 0 {
+      r := call has_str_lit_go(⟪CWF⟫, e);
+      if r != 0 { fail R_STRING_LITERALS_BEFORE }
+    }
+  };
+  sa := call pin_at(13);
+  m := call ue_mentions_go(⟪CWF⟫, sa, e);
+  if m != 0 {
+    if w == 0 { fail R_USE_OF_THE_SORRYAX_IN_TYPE };
+    if w == 1 { fail R_USE_OF_THE_SORRYAX_IN_VALUE };
+    if w == 2 { fail R_USE_OF_THE_SORRYAX_IN_TYPE_OF };
+    if w == 3 { fail R_USE_OF_THE_SORRYAX_IN_GENERATED };
+    fail R_USE_OF_THE_SORRYAX_IN_THE
+  };
+  if w == 0 { fail R_UNKNOWN_CONSTANT_IN_TYPE };
+  if w == 1 { fail R_UNKNOWN_CONSTANT_IN_VALUE };
+  if w == 2 { fail R_UNKNOWN_CONSTANT_IN_TYPE_OF };
+  if w == 3 { fail R_UNKNOWN_CONSTANT_IN_GENERATED };
+  fail R_UNKNOWN_CONSTANT_IN_THE
+}
+
+/-- The error path's functions (outside `crfProg`, whose callers' proofs never reach them). -/
+def unresolvedFns : Prog :=
+  [("has_str_lit_go", hasStrLitGoL), ("ue_mentions_go", ueMentionsGoL),
+   ("unresolved_consts_error", unresolvedConstsErrL)]
 
 end L.Stubs
