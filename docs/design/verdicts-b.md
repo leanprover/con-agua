@@ -93,3 +93,19 @@ frontend 27, entry 3. One helper per family (inductives two), up to six at once.
   `checker_frontStageE` (`Entry1StagesE.prelude`/`.front`).
 * defeq (Opus, 75 min): all 43, `KnotAllProg.defeqSlotE_all`, `isDefEqCore_stageE`; open: the whnf
   family's claims (`DefeqWhnfE`).
+* whnf (Opus, 80 min): all 66, `whnfSlotsE_of`. declarations (Sonnet, 3 h): all but the inductive
+  arm, the fold loop, `CPErrT`. inductives A (Sonnet then Opus, 1 h + 40 min with forks) and B
+  (Sonnet, 4 h): all; the last two hand models (`classes_nfs`, `target_k53_args`) and the bridge
+  (Opus, 47 min).
+* Assembly: `KnotAllE.lean` (the error knot at every fuel, the core stubs), `TopE.lean` (the
+  stages), `IndArmTopE.lean`: `seqVerdicts_proved`, `threadVerdicts_proved`.
+* Threads: `ThreadsFail` (`Final/ThreadsVerdict.lean`), the failing run's trusted facts, smaller
+  than `ThreadsRun`: one thread, its calls up to the failing one; no coverage, no assumption about
+  which failing group the harness reports.
+
+## Result
+
+`checkerFile_accepts` and `checkerFile_accepts_regs` have the second conclusion
+`rdx = 2 → rax &&& 3 ≠ 0 → TwinVerdict [b] (rax &&& 3)`; `checkerFile_threads_verdict` is the
+threaded one. No `sorry`; the axioms are pinned. The whole bulk (about 300 functions) took about
+9 hours of wall time with up to six helpers.
