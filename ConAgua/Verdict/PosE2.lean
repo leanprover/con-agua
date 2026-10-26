@@ -575,7 +575,7 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
   simp only [List.nil_append] at hP5 hN5
   have hx04 := c3.ext.trans c4.ext
   have hgrp4 := ConRon.Bridge.Inductives.dGrp_ext hx04 _ _ hgrpP
-  dsimp only
+  try dsimp only
   -- the group's constructors
   cases h6 : callE p n "nest_group_ctors" [vis, nPc, rp.tail.tail.headD 0, rp.tail.tail.tail.headD 0, 0, 0] m5 with
   | error e6 =>
@@ -694,6 +694,321 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
     (dState_ext hx07 _ _ hnsP) rfl _ h8
   rw [hhg, hgl] at hcl
   exact ErrClaim.bind_left (by simpa using hcl)
+
+include LK hq hnv in
+/-- **`nest_cont_new`'s error claim at L fuel `n + 1`** (`newOKC_step`'s proof on the model `nnewE`):
+`nest_grow_group` by `nggE_claim` (from `NitE`), `nest_frame` by the block's `FrameOKE` at `n`;
+the other callees are outside the verdict closure. -/
+theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn vis fe env) (n : Nat)
+    (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p dn vis fe env n) : NewOKE p dn vis fe env (n + 1) := by
+  have hcl : CoreStageClosed p := hq.closed
+  obtain ⟨-, -, -, -, -, -, hFrame, -, -, -, -⟩ := ihC
+  obtain ⟨-, -, -, -, -, -, eFrame, -, -, -, -⟩ := ihE
+  have R := LK.ct.cr.rx
+  intro m a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS ctxP progP nP usP dsP ctyP nsP hC hW hnn hus
+    hds hdsb hcty hns hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni er he
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  replace he := triple_of_callE_err (nnewE_spec p LK.pnew (n + 1) ⟨m, Locals.init []⟩ vis ctx fu po pl kb nn us dO
+    dL nPc cty ns) he (Err.code_ne_of_cls hk0)
+  simp only at he
+  have hS := hC.stage
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hdsD := hds.get (OMono.decHL _ _)
+  have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
+  obtain ⟨-, -, hfind, -, -, -⟩ := ConRon.Bridge.Inductives.dCtx_fields hctx
+  rw [nnewE.arm1] at he
+  -- the walk stack
+  cases h1 : callE p n "nest_walk_stack" [ctx, dO, dL, po, pl] m with
+  | error e1 =>
+    rw [h1, nnewE.k_nest_walk_stack.none] at he; cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+  | ok q1 =>
+  obtain ⟨rw, m1⟩ := q1
+  obtain ⟨s1, hs1, -, hws⟩ := triple_of_callW (nestWalkStack_spec' p LK n ⟨m, Locals.init []⟩ ctx dO dL po pl)
+    (callW_of_callE h1)
+  simp only at hws
+  rw [hs1] at hws
+  rw [h1, nnewE.k_nest_walk_stack.arm1] at he
+  cases n with
+  | zero => simp [nwsWf] at hws
+  | succ n' =>
+  simp only [nwsWf] at hws
+  obtain ⟨wp, a1, hrun1, hS1, hg1, hwp⟩ := nwsW_ok dn fe vis n' m m1 a ctx dO dL po pl c ds prog rw hws hS
+    hW.u.dec hW.u.inn hhi0 hdsD (fun j hj => by omega)
+  have hWp : WCtx dn vis fe m1 ctx (rw.headD 0) (rw.tail.headD 0) c wp := by
+    rcases hwp with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · exact ⟨hW.u.grow hg1, ⟨rfl, by simp, fun i hi => by simp at hi⟩, by simpa using hhi0⟩
+    · exact hW.grow hg1
+  obtain ⟨p1, hwpE⟩ := ConRon.Bridge.Inductives.nestWalkStack_spec c prog ds dsP a a1 wp hC.check.state hdsP hrun1
+  simp only [ConRon.Bridge.Inductives.RV, ConRon.Bridge.Inductives.hiAt_eq hctx] at hwpE
+  have hwpP : dProg a.store wp = some (ConLeche.nestWalkStack ctxP progP dsP) := by
+    rw [hwpE]; simp only [ConLeche.nestWalkStack]
+    split
+    · rfl
+    · exact hprog
+  have hwpl : wp.length = (ConLeche.nestWalkStack ctxP progP dsP).length :=
+    ConRon.Bridge.Inductives.dProg_length hwpP
+  have hdsw : ∀ d ∈ dsP,
+      ConLeche.Expr.WScoped (ctxP.hiAt (ConLeche.nestWalkStack ctxP progP dsP).length) d := by
+    unfold ConLeche.nestWalkStack; split
+    · rename_i hfree
+      intro x hx
+      exact ConLeche.WScoped.of_fvarsBelow (hwds x hx)
+        (ConLeche.Expr.fvarB_le (by simpa using List.all_eq_true.mp hfree x hx))
+    · exact hwds
+  have c1 := p1.toCore hC.check
+  rw [ConRon.Arena.nestContNew.eq_def]
+  refine ErrClaim.bind_right hrun1 ?_
+  -- the mates
+  cases h2 : callE p (n' + 1) "nest_frame_mates" [vis, nn] m1 with
+  | error e2 =>
+    rw [h2, nnewE.k_nest_frame_mates.none] at he; cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+  | ok q2 =>
+  obtain ⟨rm, m2⟩ := q2
+  obtain ⟨s2, hs2, -, hfm⟩ := triple_of_callW (nestFrameMates_specW p LK.fm (n' + 1) ⟨m1, Locals.init []⟩ vis nn)
+    (callW_of_callE h2)
+  simp only at hfm
+  rw [hs2] at hfm
+  rw [h2, nnewE.k_nest_frame_mates.arm1] at he
+  obtain ⟨hS2, hg2, hmd, hmb⟩ := nfmW_ok hfm hS1 hnn
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have hWp2 := hWp.grow hg2
+  have hhw : (nhiW m2 ctx (rw.tail.headD 0)).toNat = c.hiAt wp.length := hWp2.hi htop2
+  -- the frame's first free index
+  cases h2b : callE p (n' + 1) "nest_ctx_hi_at" [ctx, rw.tail.headD 0] m2 with
+  | error e2 =>
+    rw [h2b, nnewE.k_nest_ctx_hi_at.none] at he; cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2b
+  | ok q2b =>
+  obtain ⟨rh, m2b⟩ := q2b
+  obtain ⟨s2b, hs2b, -, hm2b, hrh⟩ := triple_of_callW (nestCtxHiAt_specE p R.hi (n' + 1) ⟨m2, Locals.init []⟩ ctx
+    (rw.tail.headD 0)) (callW_of_callE h2b)
+  simp only at hm2b hrh
+  rw [hs2b] at hm2b
+  subst hm2b
+  rw [h2b, nnewE.k_nest_ctx_hi_at.arm1, hrh] at he
+  -- the group, from the instantiation met
+  cases h3 : callE p (n' + 1) "rec2" [nn, cty] m2b with
+  | error e3 =>
+    rw [h3, nnewE.k_rec2.none] at he; cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+  | ok q3 =>
+  obtain ⟨rp3, m3⟩ := q3
+  obtain ⟨s3, hs3, -, hpr⟩ := triple_of_callW (posRec2_specW p R.ha R.h2 (n' + 1) ⟨m2b, Locals.init []⟩ nn cty)
+    (callW_of_callE h3)
+  simp only at hpr
+  rw [hs3] at hpr
+  rw [h3, nnewE.k_rec2.arm1] at he
+  generalize hpw : rp3.headD 0 = pw at hpr he
+  obtain ⟨hS3, hg3, hpq, ht3, hget3⟩ := posRecW_stage hpr hS2 (by simp)
+  simp only [List.length_cons, List.length_nil] at ht3
+  cases h4 : callE p (n' + 1) "sl_new1" [pw] m3 with
+  | error e4 =>
+    rw [h4, nnewE.k_sl_new1.none] at he; cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+  | ok q4 =>
+  obtain ⟨g0, m4⟩ := q4
+  obtain ⟨s4, hs4, -, hn1⟩ := triple_of_callW (slNew1_specW p R.ha LK.hn1 (n' + 1) ⟨m3, Locals.init []⟩ pw)
+    (callW_of_callE h4)
+  simp only at hn1
+  rw [hs4] at hn1
+  rw [h4, nnewE.k_sl_new1.arm1] at he
+  obtain ⟨hn1r, hg0⟩ := new1W_rec hn1
+  obtain ⟨hS4, hg4, hg0q, ht4, hget4⟩ := posRecW_stage hn1r hS3 (by simp)
+  simp only [List.length_cons, List.length_nil] at ht4
+  have hgrp0 : GrpAt m4 (g0.headD 0).toNat [(decI nn, decI cty)] := by
+    intro i hi
+    simp only [List.length_cons, List.length_nil] at hi
+    have hi0 : i = 0 := by omega
+    subst hi0
+    have e0 := hget3 0 (by simp); have e1 := hget3 1 (by simp)
+    simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at e0 e1
+    refine ⟨pw, nn, cty, by simpa using hget4 0 (by simp), by omega,
+      by rw [hg4.2.2.1 _ (by omega)]; exact e0, hnn, rfl, by rw [hg4.2.2.1 _ (by omega)]; exact e1, hcty, rfl⟩
+  have hg1t : g0.tail.headD 0 = 1 := by rw [hg0]; rfl
+  rw [hg1t] at he
+  have hg24 := hg3.trans hg4
+  have hmates := ConRon.Bridge.Inductives.nestFrameMates_rel c1.ok.state c1.ok.ienv ctxP hfind
+    (ConRon.Bridge.denoteN_ext hnP p1.ext)
+  have hA4 : AbsOK m4 := new1W_afr hn1 (posRecW_afr hpr (nfmW_afr hfm (nwsW_afr hws hA)))
+  have hC4 : StageC dn vis fe env m4 a1 := hC.of_pstep hS4 hA4 p1
+  have hg14 := hg1.trans (hg2.trans hg24)
+  have hP4 : PosMR m4 := ((((hP.fr (nwsW_mfr hws)).fr (nfmW_mfr hfm)).fr (posRecW_mfr hpr)).fr (new1W_mfr hn1))
+  try dsimp only
+  have hctx1 : dCtx a1.store env.find? c = some ctxP := dCtx_ext _ p1.ext _ _ hctx
+  have hmdD : decHL m4 (rm.headD 0).toNat (rm.tail.headD 0).toNat = some (nestFrameMates fe (decI nn)) := by
+    rw [decHL_agree (RdS.of_grow hg24) (fun j hj => by omega)]; exact hmd
+  have hdsD4 : decHL m4 dO.toNat dL.toNat = some ds := by
+    rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hdsD
+  cases h5 : callE p (n' + 1) "nest_grow_group" [vis, ctx, nhiW m2b ctx (rw.tail.headD 0), us, dO, dL, rm.headD 0,
+      rm.tail.headD 0, g0.headD 0, 1] m4 with
+  | error e5 =>
+    rw [h5, nnewE.k_nest_grow_group.none] at he; cases he
+    have hE := triple_of_callE_err (nggE_spec p LK.hgg (n' + 1) ⟨m4, Locals.init []⟩ vis ctx _ us dO dL _ _ _ 1) h5
+      (Err.code_ne_of_cls hk0)
+    simp only at hE
+    exact ErrClaim.bind_left (nggE_claim LK hIlpf hcl hLC hnv dn vis fe hNit ctx _ us dO dL (c.hiAt wp.length) hhw c ds
+      hus a1 (nestFrameMates fe (decI nn)) hc hctx1 (ConRon.Bridge.denoteLs_ext husP p1.ext)
+      (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hmates (n' + 1) m4 a1 _ _ _ 1
+      (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] hC4 hA4 (ConRon.Arena.Ext.refl _) (fun _ h => h)
+      (hW.u.grow hg14) hdsD4 (by have := hg14.1; omega) hmdD (fun j hj => by have := hg24.1; omega) (by simp)
+      (by simp only [List.length_cons, List.length_nil]; omega) hgrp0 hP4 _ hE)
+  | ok q5 =>
+  obtain ⟨rg5, m5⟩ := q5
+  obtain ⟨s5, hs5, -, hgg⟩ := triple_of_callW (nestGrowGroup_spec p LK.nit R.h2 R.h4 LK.nag.hsn LK.hgg (realCall p)
+    (realCall_spec p) (n' + 1) ⟨m4, Locals.init []⟩ vis ctx _ us dO dL _ _ _ 1) (callW_of_callE h5)
+  simp only at hgg
+  rw [hs5] at hgg
+  rw [h5, nnewE.k_nest_grow_group.arm1] at he
+  generalize hrg : [rg5.headD 0, rg5.tail.headD 0] = rg at hgg
+  have q0 : rg5.headD 0 = rg.headD 0 := by rw [← hrg]; rfl
+  have q1 : rg5.tail.headD 0 = rg.tail.headD 0 := by rw [← hrg]; rfl
+  rw [q0, q1] at he
+  obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5, hJ5⟩ := ggW_ok dn fe vis ctx (nhiW m2b ctx (rw.tail.headD 0)) us
+    dO dL (c.hiAt wp.length) hhw c ds hus (realCall p) (IlpFr.real hIlpf)
+    (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a1.store a'.store)
+    (nestFrameMates fe (decI nn)) (fun _ _ hJ => IlpRd.realC hIlpf hJ.1) (fun m' _ => AbsOK m')
+    (fun k' _ a' key n0 hJ hn0 => by
+      obtain ⟨hCm, hAm, hxm⟩ := hJ
+      obtain ⟨n0P, hn0P⟩ := denoteNList_memN hmates n0 hn0
+      have hxa := p1.ext.trans hxm
+      exact nitLe_realC hcl hLC k' _ _ key c _ hCm hAm (dCtx_ext _ hxa _ _ hctx)
+        (keyP := ⟨n0P, usP, dsP⟩) (by
+          simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hn0P hxm,
+            ConRon.Bridge.denoteLs_ext husP hxa, ConRon.Bridge.denoteEList_ext hxa _ _ hdsP]))
+    (fun _ _ _ hJ hf hS' => ⟨hJ.1.of_pstep hS' (hJ.2.1.iw hf) (PStep.refl hJ.1.check.state), hJ.2.1.iw hf, hJ.2.2⟩)
+    (fun _ _ _ a' a'' _ n0 x _ hJ hn0 _ hrun hS' _ hAm' => by
+      obtain ⟨hCm, hAm, hxm⟩ := hJ
+      obtain ⟨n0P, hn0P⟩ := denoteNList_memN hmates n0 hn0
+      have hxa := p1.ext.trans hxm
+      obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (c.hiAt wp.length) ⟨n0, decI us, ds⟩
+        ⟨n0P, usP, dsP⟩ a' a'' x hCm.check
+        ⟨dCtx_ext _ hxa _ _ hctx, by
+          simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hn0P hxm,
+            ConRon.Bridge.denoteLs_ext husP hxa, ConRon.Bridge.denoteEList_ext hxa _ _ hdsP]⟩ hrun
+      exact ⟨hCm.of_cstep hS' hAm' c4, hAm', hxm.trans c4.ext⟩)
+    (n' + 1) m4 m5 a1 (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
+    (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] rg hgg hS4 ⟨hC4, hA4, ConRon.Arena.Ext.refl _⟩
+    (fun _ h => h) (hW.u.grow hg14) hdsD4 (by have := hg14.1; omega) hmdD
+    (fun j hj => by have := hg24.1; omega) (by simp) (by simp only [List.length_cons, List.length_nil]; omega) hgrp0
+    hP4
+  have hA5 : AbsOK m5 := hJ5.2.1
+  obtain ⟨c2, grpV, ⟨hgrp, hgs⟩, -⟩ := ConRon.Bridge.Inductives.nestGrowGroup_spec hc c (c.hiAt wp.length) (decI us)
+    usP ds dsP _ _ [(decI nn, decI cty)] [(nP, ctyP)]
+    (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; exact hni)
+    a1 a5 grp c1.ok ⟨dCtx_ext _ p1.ext _ _ hctx, ConRon.Bridge.denoteLs_ext husP p1.ext,
+      ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP, hmates,
+      by simp [dGrp, ConRon.Bridge.Inductives.dGE, ConRon.Bridge.denoteN_ext hnP p1.ext,
+        ConRon.Bridge.denote_ext hctyP p1.ext]⟩ hrun5
+  have hx05 := p1.ext.trans c2.ext
+  have c12 := c1.trans c2
+  obtain ⟨hk1, hk2, hk3⟩ := ConRon.Bridge.Inductives.dState_inv (dState_ext hx05 _ _ hnsP)
+  have hg15 := hg14.trans hg5
+  have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.2.1 hS5.2.2.2.1
+  refine ErrClaim.bind_right hrun5 ?_
+  try dsimp only
+  -- its keys, then the active list
+  cases h6 : callE p (n' + 1) "nest_cont_new_active" [us, dO, dL, rg.headD 0, rg.tail.headD 0, 0, 0] m5 with
+  | error e6 =>
+    rw [h6, nnewE.k_nest_cont_new_active.none] at he; cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+  | ok q6 =>
+  obtain ⟨ra6, m6⟩ := q6
+  obtain ⟨s6, hs6, -, hca⟩ := triple_of_callW (nestContNewActive_spec p R.ha LK.nit.hc2 R.h4 LK.nag.hsn LK.hca (n' + 1)
+    ⟨m5, Locals.init []⟩ us dO dL _ _ 0 0) (callW_of_callE h6)
+  simp only at hca
+  rw [hs6] at hca
+  rw [h6, nnewE.k_nest_cont_new_active.arm1] at he
+  generalize hra : [ra6.headD 0, ra6.tail.headD 0] = ra at hca
+  have u0 : ra6.headD 0 = ra.headD 0 := by rw [← hra]; rfl
+  have u1 : ra6.tail.headD 0 = ra.tail.headD 0 := by rw [← hra]; rfl
+  rw [u0, u1] at he
+  obtain ⟨hS6, hg6, hka, hkab⟩ := caW_ok dn vis fe us dO dL ds hus (n' + 1) m5 m6 a5 _ _ 0 0 grp [] ra hca hS5
+    (hds.grow (OMono.decHL _ _) hg15) (by simpa using hgl5) hgb5 hgrp5 (KsB.nil _ _) (by simp)
+  simp only [List.nil_append] at hka
+  obtain ⟨hp6, hk0', ha0, hn0⟩ := nsb_words hns htop
+  have hg16 := hg15.trans hg6
+  rw [pos2_ns_rd hg16 hp6 htop 2 (by decide), pos2_ns_rd hg16 hp6 htop 3 (by decide)] at he
+  cases h7 : callE p (n' + 1) "sl_append" [ra.headD 0, ra.tail.headD 0, rdW (m.arr64 IW) (ns + 2),
+      rdW (m.arr64 IW) (ns + 3)] m6 with
+  | error e7 =>
+    rw [h7, nnewE.k_sl_append.none] at he; cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h7
+  | ok q7 =>
+  obtain ⟨rap7, m7⟩ := q7
+  obtain ⟨s7, hs7, -, hap⟩ := triple_of_callW (slAppend_specW p R.ha LK.nit.hc2 LK.hap (n' + 1) ⟨m6, Locals.init []⟩
+    _ _ _ _) (callW_of_callE h7)
+  simp only at hap
+  rw [hs7] at hap
+  rw [h7, nnewE.k_sl_append.arm1] at he
+  generalize hrap : rap7 = rap at hap he
+  obtain ⟨hS7, hg7, h70, h71, ht7, hw71, hw72⟩ := appendW_stage hap hS6 hkab
+    (by have := hns.b2; have := hg16.1; omega)
+  have hact7 : KsB m7 (rap.headD 0).toNat (rap.tail.headD 0).toNat
+      (grp.map (fun x => (⟨x.1, decI us, ds⟩ : NestKey)) ++ NS.active) := by
+    rw [h70, h71]
+    exact pos2_decB_append decNK_mono hka (ha0.grow hg16) hg7 (by omega) hw71 hw72
+  have hg17 := hg16.trans hg7
+  rw [pos2_rd_grow hg17 (by omega), pos2_ns_rd hg17 hp6 htop 1 (by decide),
+    pos2_ns_rd hg17 hp6 htop 4 (by decide), pos2_ns_rd hg17 hp6 htop 5 (by decide)] at he
+  cases h8 : callE p (n' + 1) "rec6" [rdW (m.arr64 IW) ns, rdW (m.arr64 IW) (ns + 1), rap.headD 0, rap.tail.headD 0,
+      rdW (m.arr64 IW) (ns + 4), rdW (m.arr64 IW) (ns + 5)] m7 with
+  | error e8 =>
+    rw [h8, nnewE.k_rec6.none] at he; cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h8
+  | ok q8 =>
+  obtain ⟨rq8, m8⟩ := q8
+  obtain ⟨s8, hs8, -, hq1⟩ := triple_of_callW (rec6_specW p R.ha LK.h6 (n' + 1) ⟨m7, Locals.init []⟩ _ _ _ _ _ _)
+    (callW_of_callE h8)
+  simp only at hq1
+  rw [hs8] at hq1
+  rw [h8, nnewE.k_rec6.arm1] at he
+  generalize hns1 : rq8.headD 0 = ns1 at hq1 he
+  obtain ⟨hS8, hg8, hq8, ht8, hget8⟩ := posRecW_stage hq1 hS7 (by simp)
+  simp only [List.length_cons, List.length_nil] at ht8
+  have hg18 := hg17.trans hg8
+  have hns1 := nsb_rec6 (m' := m8) (q := ns1) (keys := NS.keys.toList)
+    (act := grp.map (fun x => (⟨x.1, decI us, ds⟩ : NestKey)) ++ NS.active) (nfs := NS.ctorNfs.toList) (by omega)
+    (Nat.lt_of_le_of_lt hS8.2.1 hS8.2.2.2.1) hget8 (hk0'.grow hg18) (by have := hns.b0; have := hg18.1; omega)
+    (hact7.grow hg8) (by have := hg8.1; omega) (hn0.grow hg18) (by have := hns.b4; have := hg18.1; omega)
+  simp only [Array.toArray_toList] at hns1
+  have hA8 : AbsOK m8 := posRecW_afr hq1 (appendW_afr hap (caW_afr _ _ _ _ _ _ _ _ _ _ _ hca hA5))
+  have hC8 : StageC dn vis fe env m8 a5 := hC.of_cstep hS8 hA8 c12
+  have hg58 := (hg6.trans hg7).trans hg8
+  have hhwP : (nhiW m2b ctx (rw.tail.headD 0)).toNat = ctxP.hiAt (ConLeche.nestWalkStack ctxP progP dsP).length := by
+    rw [hhw, ConRon.Bridge.Inductives.hiAt_eq hctx, hwpl]
+  -- the frame
+  cases h9 : callE p (n' + 1) "nest_frame" [vis, ctx, fu, rw.headD 0, rw.tail.headD 0, nhiW m2b ctx (rw.tail.headD 0),
+      us, dO, dL, nPc, rg.headD 0, rg.tail.headD 0, ns1] m8 with
+  | error e9 =>
+    rw [h9, nnewE.k_nest_frame.none] at he; cases he
+    have hcl := eFrame m8 a5 ctx fu _ _ _ us dO dL nPc _ _ ns1 c wp ds grp
+      _ ctxP _ usP dsP grpV
+      ⟨nsP.keys, grpV.map (fun p => (⟨p.1, usP, dsP⟩ : ConLeche.NestKey)) ++ nsP.active, nsP.ctorNfs⟩
+      hC8 (hWp2.grow ((hg24.trans hg5).trans hg58)) hhw hus (hds.grow (OMono.decHL _ _) hg18)
+      (by have := hg18.1; omega) (by simpa using hgl5) (by have := hg58.1; omega) (hgrp5.grow hgb5 hg58) hns1
+      (((hP5.fr (caW_mfr _ _ _ _ _ _ _ _ _ _ _ hca)).fr (appendW_mfr hap)).fr (posRecW_mfr hq1)) hA8
+      hc (dCtx_ext _ hx05 _ _ hctx) (dProg_ext hx05 _ _ hwpP) (ConRon.Bridge.denoteLs_ext husP hx05)
+      (ConRon.Bridge.denoteEList_ext hx05 _ _ hdsP) hgrp
+      (ConRon.Bridge.Inductives.dState_mk hk1 (ConRon.Bridge.Inductives.mapM_option_append
+        (ConRon.Bridge.Inductives.dKeys_grp (ConRon.Bridge.denoteLs_ext husP hx05)
+          (ConRon.Bridge.denoteEList_ext hx05 _ _ hdsP) hgrp) hk2) hk3)
+      (by rw [hhwP]; exact hdsw) (fun x hx => by rw [hhwP]; exact hgs x hx _ hdsw) _ h9
+    rw [hhw] at hcl
+    exact ErrClaim.bind_left hcl
+  | ok q9 =>
+  obtain ⟨r9, m9⟩ := q9
+  rw [h9, nnewE.k_nest_frame.arm1] at he
+  cases h10 : callE p (n' + 1) "nest_cont_new_finish" [ctx, us, dO, dL, rg.headD 0, rg.tail.headD 0, r9.headD 0,
+      rdW (m9.arr64 IW) (ns + 2), rdW (m9.arr64 IW) (ns + 3), kb] m9 with
+  | error e10 =>
+    rw [h10, nnewE.k_nest_cont_new_finish.none] at he; cases he
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h10
+  | ok q10 =>
+    obtain ⟨r10, m10⟩ := q10
+    rw [h10, nnewE.k_nest_cont_new_finish.arm1] at he; cases he
 
 end steps
 
