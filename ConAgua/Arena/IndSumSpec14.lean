@@ -409,6 +409,11 @@ structure TblProg (p : Prog) : Prop where
   hix : p.lookup "env_ix" = some envIxL
   hrg : p.lookup "env_row_get" = some envRowGetL
   hfind : p.lookup "env_find" = some envFindL
+  htix : p.lookup "tbl_ix" = some tblIxL
+  htrg : p.lookup "tbl_row_get" = some tblRowGetL
+  htrs : p.lookup "tbl_row_set" = some tblRowSetL
+  hftab : p.lookup "find_table" = some findTableL
+  hept : p.lookup "env_push_table" = some envPushTableL
   hea : p.lookup "erec_alloc" = some erecAlloc
   hefg : p.lookup "er_from_iw_go" = some erFromIwGo
   hef : p.lookup "er_from_iw" = some erFromIw
