@@ -1,5 +1,6 @@
 import ConAgua.Verdict.PhaseBE
 import ConAgua.Checker.ParDriverL
+import ConAgua.Checker.VerdictTop
 
 /-!
 # Entry 2's `check_b` fails only where phase B on the worker does (lane verdicts-b, calibration)
@@ -52,7 +53,7 @@ theorem checkPendingGo_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs 
     | ok q => rw [hq] at hrun; simp [Except.map] at hrun
   have hAg : Agree phaseBS (fun _ => false) s.mem m₂ :=
     ⟨fun b hb => hw b hb, fun _ hb => absurd hb (by simp), rfl⟩
-  have hres := invoke_agree checkerProg_phaseBReads check_pending_go_mem_phaseBFns n [0, k, v]
+  have hres := L.invoke_agree checkerProg_phaseBReads check_pending_go_mem_phaseBFns n [0, k, v]
     (s₁ := ⟨s.mem, Locals.init []⟩) (s₂ := ⟨m₂, Locals.init []⟩) hAg rfl
   rw [hrun₀] at hres
   have hrun₂ : (invoke checkerProg (exec checkerProg n) "check_pending_go" [0, k, v]).run
@@ -170,4 +171,52 @@ theorem runMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checke
         hw hmode hlo hhi hctlf hv)
 
 end agree
+
+open ConAgua.Final L.Rom in
+/-- **Entry 2's verdict claim from `check_pending`'s error claim** (as `drv_twinAccepts`, with
+`runMode2_agreeE` for `runMode2_agree` and `TwinVerdict.phaseB` for the accepting pipeline).
+`hCP` is `check_pending`'s error claim under the program facts `drv_twinAccepts` has; it is
+discharged bottom-up (its callees: `scratch_enter`, `check_value_group`, `scratch_drop`). -/
+theorem entry2Verdict_of
+    (hCP : ∀ (bs : List UInt8) (dn : NIdx → Option ConLeche.Name), RomOK bs →
+      bs = romData ++ bs.drop romData.length → L.Ind.DnInj dn → QuotDn dn →
+      PhaseBProg (Prog.subPB bs checkerProg) → ∀ pins ds fe pend,
+      CPErrT .verified pins dn ds (Prog.subPB bs checkerProg) fe pend) :
+    Entry2Verdict checkerProg := by
+  intro b pb s8 s64 hin N₁ hN₁ rs₁ m₁ h₁ hge N₂ hN₂ w hw hmode hlo hhi hctlf hv e h₂ hk0
+  have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
+  obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ := checkA_run b pb s8 s64 hin 3 (Or.inr rfl) N₁ hN₁ rs₁ m₁ h₁ hr
+  have hflag : modeFlag 3 = 0 := rfl
+  rw [hflag] at hok hm₁
+  have hrom : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1
+  have hT := twinFold_of_prefix PA.pfx
+  have hdn : L.Ind.DnInj (dnOf PA.sE.store) := dnOf_inj hT.stateOK.wf
+  have hQd : QuotDn (dnOf PA.sE.store) := by
+    obtain ⟨k, hk, hd⟩ := prefix_quotU PA.pfx
+    exact ⟨k, by simp [dnOf, hk, hd]⟩
+  have hLC := checkerProg_loopCalleesPB pb.data.toList hrom hpre (dnOf PA.sE.store) hdn
+    (indArmSpec_checker _ hrom hpre _ hdn) hQd
+  have hTop := checkerProg_loopTopPB pb.data.toList
+  have hPB' : PhaseBProg (Prog.subPB pb.data.toList checkerProg) :=
+    ⟨hTop.bracket, hLC.cvg, hLC.knot, hLC.leaf, hLC.loop, hTop.pc, hTop.pcg, hTop.pcx,
+      hLC.cd.crp.apd, ⟨hLC.indMemo, hLC.crf⟩⟩
+  have hfr := parCompactMem_out m v 0
+  rw [← hm₁] at hfr
+  have hw' : ∀ a, phaseBS a = true → w.arr64 a = m.arr64 a := fun a ha => by
+    rw [hw a ha, hfr.arr a (fun e => by subst e; revert ha; decide)]
+  have h3 := (parCompactMem_hdr (vis := v) hok).2.2.2.1
+  have hv' : rd64 w HDRF 3 = v := by
+    rw [hv, hm₁]; exact h3
+  have hk : (rs₁.headD 0 - 9223372036854775808).toNat = PA.pend.size := by
+    have hc := hS.loop.pend.count
+    have hlt : PA.pend.size < 2 ^ 64 := by rw [← hc]; exact UInt64.toNat_lt_size _
+    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.pend.size - 9223372036854775808 =
+        UInt64.ofNat PA.pend.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
+    rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hlt)]
+  have hB := runMode2_agreeE .verified PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend
+    pb.data.toList hPB' rfl (hCP _ _ hrom hpre hdn hQd hPB' _ _ _ _) N₂ hN₂ m PA.sF v _ hk hPB hS w
+    hw' hmode hlo hhi hctlf hv' h₂ hk0
+  obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
+  exact TwinVerdict.phaseB hA hBp hC hD hE PA.fold hB
+
 end L.Checker
