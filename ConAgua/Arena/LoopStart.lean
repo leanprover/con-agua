@@ -28,7 +28,7 @@ environment's index rows (132‥134), the promotion memo (146‥149), `consts_re
 def loopZeroArr (b : Nat) : Prop :=
   b = 49 ∨ b = 50 ∨ b = 52 ∨ b = 53 ∨ b = 54 ∨ b = 151 ∨ b = 152 ∨ b = 153 ∨
     (132 ≤ b ∧ b ≤ 134) ∨ (146 ≤ b ∧ b ≤ 149) ∨ b = 155 ∨ (201 ≤ b ∧ b ≤ 208) ∨ b = 51 ∨
-    (140 ≤ b ∧ b ≤ 142)
+    (140 ≤ b ∧ b ≤ 142) ∨ (129 ≤ b ∧ b ≤ 131) ∨ (385 ≤ b ∧ b ≤ 387)
 
 /-- The `CTL` words the loop needs zero at its start: the core's memo stamps, the number of
 constants (128), of pending checks (130), the promotion memo's words (140‥147),
@@ -36,7 +36,7 @@ constants (128), of pending checks (130), the promotion memo's words (140‥147)
 `instantiate1Lift`'s stamp (52). -/
 def loopZeroCtl (x : Nat) : Prop :=
   x = 48 ∨ x = 50 ∨ x = 54 ∨ x = 56 ∨ x = 58 ∨ x = 152 ∨ x = 154 ∨ x = 156 ∨ x = 158 ∨
-    x = 128 ∨ x = 130 ∨ (140 ≤ x ∧ x ≤ 147) ∨ (202 ≤ x ∧ x ≤ 219) ∨ x = 52
+    x = 128 ∨ x = 130 ∨ (140 ≤ x ∧ x ≤ 147) ∨ (202 ≤ x ∧ x ≤ 219) ∨ x = 52 ∨ x = 133
 
 /-- **The zeros the loop starts from.** -/
 structure LoopZero (m : Mem) : Prop where
@@ -103,9 +103,24 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
     have hz := h.arr (rowArr w) hl (UInt64.ofNat (rowIx w))
     have hlt : rowIx w < 2 ^ 64 := by unfold rowIx; omega
     simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
-  refine ⟨by rfl, fun n hn => ?_, fun n hn hc => absurd (hrow _ hn) hc, ?_⟩
-  · simp [rowW, hrow _ hn, mkIFEnv, mkIFEnvGo, IEnv.empty]
-  · simp [envConsts, envLen, h.word 128 (by unfold loopZeroCtl; decide), mkIFEnv, IEnv.empty]
+  have htrow : ∀ w : Word, tblRow m w = 0 := by
+    intro w
+    unfold tblRow
+    split
+    · rename_i hw
+      have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
+      have hl : loopZeroArr (tblArr w) := by
+        simp only [loopZeroArr, tblArr]
+        rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h0 | h0 <;> simp only [h0] <;> omega
+      have hz := h.arr (tblArr w) hl (UInt64.ofNat (tblIx w))
+      have hlt : tblIx w < 2 ^ 64 := by unfold tblIx; omega
+      simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
+    · rfl
+  exact EnvR.init (fun w => by
+      by_cases hw : rowTag w ≤ 2
+      · exact hrow w hw
+      · simp [rowC, hw])
+    (h.word 128 (by unfold loopZeroCtl; decide)) htrow (h.word 133 (by unfold loopZeroCtl; decide))
 
 end LoopZero
 

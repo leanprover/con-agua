@@ -37,12 +37,12 @@ theorem twinFold_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB :
 /-- The arrays `LoopZero` asks zero, as a list. -/
 def loopZeroArrs : List Nat :=
   [49, 50, 52, 53, 54, 151, 152, 153, 132, 133, 134, 146, 147, 148, 149, 155, 201, 202, 203, 204,
-    205, 206, 207, 208, 51, 140, 141, 142]
+    205, 206, 207, 208, 51, 140, 141, 142, 129, 130, 131, 385, 386, 387]
 
 /-- The `CTL` words `LoopZero` asks zero, as a list. -/
 def loopZeroCtls : List Nat :=
   [48, 50, 54, 56, 58, 152, 154, 156, 158, 128, 130, 140, 141, 142, 143, 144, 145, 146, 147, 202,
-    203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 52]
+    203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 52, 133]
 
 theorem loopZeroArr_mem {b : Nat} (h : loopZeroArr b) : b ∈ loopZeroArrs := by
   simp only [loopZeroArr] at h
