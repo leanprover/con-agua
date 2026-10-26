@@ -260,6 +260,190 @@ theorem icfForallE_ok (N : Nat)
       _ _ _ _ _ _ _ hvw hr1' hr2 hr3 ce (by rw [hargget]; exact h'))
     (CoreSpecE.of_callE hE4 hW')
 
+include hp hil hnv in
+theorem icfFlushE_ok (N : Nat)
+    (hAE : ∀ N', N = N' + 1 → ICFSpecE p "iota_certs_full_aux" (fun _ _ _ => True) N') :
+    ICFSpecE p "iota_certs_full_flush" (fun h an i => h >>> 28 = 0 ∧ i < an) N := by
+  intro F hnF hn62 hk hkE s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
+    ⟨h0, hi⟩ hacc hargs htop hao
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (icfFlushE_spec p hp.iotaCertsFullFlush N ⟨s₀.mem, Locals.init []⟩
+    mode vis d h aco acn ao an i) hc0 (Err.code_ne_of_cls hk0)
+  simp only [icfFlushE] at hW
+  cases N with
+  | zero =>
+    obtain ⟨e', he', h0'⟩ := callE_zero p "expr_view_ok" [h] s₀.mem
+    rw [he'] at hW; cases hW; exact absurd h0' hk0
+  | succ N' =>
+  have hAE' := hAE N' rfl
+  have hk' : KnotUpTo p N' := hk.mono (by omega)
+  have hkE' : KnotUpToE p N' := hkE.mono (by omega)
+  cases c0 : callE p (N' + 1) "expr_view_ok" [h] s₀.mem with
+  | error e0 =>
+    rw [c0] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfCertsE_nv "expr_view_ok" (by simp)) c0
+  | ok q =>
+  obtain ⟨rv, m0⟩ := q
+  rw [c0] at hW
+  simp only at hW
+  obtain ⟨t0, ht0, -, hmem0, hev⟩ := triple_of_callE
+    (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c0
+  obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
+  obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
+  obtain ⟨x, hvx⟩ := hB h0
+  by_cases hacn : acn = 0
+  · rw [if_pos hacn] at hW; cases hW
+  rw [if_neg hacn] at hW
+  have hbd := hacc.bound
+  have hspn := hS.spn
+  have h263 : (2 : Nat) ^ 63 < 2 ^ 64 := by decide
+  have hsum : (aco + acn).toNat = aco.toNat + acn.toNat := by
+    rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
+  have htopc : aco.toNat + acn.toNat ≤ (spTop s₀.mem).toNat := by
+    rw [← htop, hsum]; exact Nat.le_refl _
+  cases c1 : callE p (N' + 1) "inst_list" [h, aco, acn, 0] s₀.mem with
+  | error e1 =>
+    rw [c1] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfCertsE_nv "inst_list" (by simp)) c1
+  | ok q =>
+  obtain ⟨r1, m1⟩ := q
+  rw [c1] at hW
+  simp only at hW
+  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hr1⟩ := CoreSpec.run
+    (hil (N' + 1) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h aco acn 0 acc hS hh hacc htopc)
+    (callW_of_callE c1)
+  have hW' := err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
+      | .error e => (.error e : Except Err (List Word × Mem))
+      | .ok (r, m') => .ok ([r.headD 0], m')) (by intro q e; simp) (fun _ => rfl) hW
+  have hsp1 : spTop m1 = aco + acn := by rw [hSt1.1, ← htop]
+  have hsz1 : (m1.arr64 SPN).size = (s₀.mem.arr64 SPN).size := hSt1.size
+  have hnil : SpineR m1 (aco + acn) 0 #[] := SpineR.nil_at m1 _ (by rw [hsum]; omega)
+  have hargs1 : SpineR m1 ao an args := hargs.keep hSt1.size hSt1.below
+    (by show ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat; omega) hS.spn
+  exact ErrClaim.of_run_err (fun ce h' => icf_err_flush _ fe d.toNat (decE h) acc args i.toNat
+      (by rw [hargs.size]; exact hi) a₀ _ x _ hvx
+      (by rw [hacc.size]; intro h0; exact hacn (UInt64.toNat_inj.mp (by simpa using h0))) hrun1 ce h')
+    (CoreSpecE.of_callE (hAE' F (by omega) (by omega) hk' hkE' ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb
+      mode d (r1.headD 0) (aco + acn) 0 ao an i #[] args hS1 hm4 hebm hr1 trivial hnil hargs1
+      (by rw [UInt64.add_zero]; exact hsp1.symm) (by omega)) hW')
+
+include hp hil hnv in
+theorem icfAuxE_ok (N : Nat)
+    (hFo : ∀ N', N = N' + 1 →
+      ICFSpecE p "iota_certs_full_forall" (fun h an i => h >>> 28 = 6 ∧ i < an) N')
+    (hFl : ∀ N', N = N' + 1 →
+      ICFSpecE p "iota_certs_full_flush" (fun h an i => h >>> 28 = 0 ∧ i < an) N') :
+    ICFSpecE p "iota_certs_full_aux" (fun _ _ _ => True) N := by
+  intro F hnF hn62 hk hkE s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
+    _ hacc hargs htop hao
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (icfAuxE_spec p hp.iotaCertsFullAux N ⟨s₀.mem, Locals.init []⟩
+    mode vis d h aco acn ao an i) hc0 (Err.code_ne_of_cls hk0)
+  simp only [icfAuxE] at hW
+  by_cases hni : ¬ i < an
+  · rw [if_neg hni] at hW; cases hW
+  have hi := Classical.not_not.mp hni
+  rw [if_pos hi] at hW
+  by_cases h6 : h >>> 28 = 6
+  · rw [if_pos h6] at hW
+    have hW' := err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
+        | .error e => (.error e : Except Err (List Word × Mem))
+        | .ok (r, m') => .ok ([r.headD 0], m')) (by intro q e; simp) (fun _ => rfl) hW
+    cases N with
+    | zero => exact ErrClaim.of_callE_zero hW'
+    | succ N' =>
+    exact CoreSpecE.of_callE (hFo N' rfl F (by omega) (by omega) (hk.mono (by omega))
+      (hkE.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d h aco acn ao an i acc
+      args hS hm4 hebm hh ⟨h6, hi⟩ hacc hargs htop hao) hW'
+  rw [if_neg h6] at hW
+  by_cases h0 : h >>> 28 = 0
+  · rw [if_pos h0] at hW
+    have hW' := err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
+        | .error e => (.error e : Except Err (List Word × Mem))
+        | .ok (r, m') => .ok ([r.headD 0], m')) (by intro q e; simp) (fun _ => rfl) hW
+    cases N with
+    | zero => exact ErrClaim.of_callE_zero hW'
+    | succ N' =>
+    exact CoreSpecE.of_callE (hFl N' rfl F (by omega) (by omega) (hk.mono (by omega))
+      (hkE.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d h aco acn ao an i acc
+      args hS hm4 hebm hh ⟨h0, hi⟩ hacc hargs htop hao) hW'
+  rw [if_neg h0] at hW
+  exact ErrClaim.of_callE_nv hnv (whnfCertsE_nv "expr_view_ok" (by simp))
+    (err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
+        | .error e => (.error e : Except Err (List Word × Mem))
+        | .ok (_, m') => .ok ([0], m')) (by intro q e; simp) (fun _ => rfl) hW)
+
+include hp hil hnv in
+theorem icf_allE (N : Nat) :
+    ICFSpecE p "iota_certs_full_aux" (fun _ _ _ => True) N ∧
+    ICFSpecE p "iota_certs_full_forall" (fun h an i => h >>> 28 = 6 ∧ i < an) N ∧
+    ICFSpecE p "iota_certs_full_flush" (fun h an i => h >>> 28 = 0 ∧ i < an) N := by
+  induction N with
+  | zero =>
+    exact ⟨icfAuxE_ok p hp hil hnv 0 (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
+      icfForallE_ok p hp hil hnv 0 (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
+      icfFlushE_ok p hp hil hnv 0 (fun _ h => absurd h (by simp))⟩
+  | succ N ih =>
+    exact ⟨icfAuxE_ok p hp hil hnv (N + 1) (fun N' h => by cases Nat.succ.inj h; exact ih.2.1)
+        (fun N' h => by cases Nat.succ.inj h; exact ih.2.2),
+      icfForallE_ok p hp hil hnv (N + 1)
+        (fun N' h => by cases Nat.succ.inj h; exact iotaCertsFullAux_refines' p hp hil N)
+        (fun N' h => by cases Nat.succ.inj h; exact ih.1),
+      icfFlushE_ok p hp hil hnv (N + 1) (fun N' h => by cases Nat.succ.inj h; exact ih.1)⟩
+
+include hp hil hnv in
+/-- **`IotaCertsFullE`**: `iota_certs_full`'s verdicts are the slots'. -/
+theorem iotaCertsFullE_of : IotaCertsFullE p := by
+  intro n hk hkE F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h ao an args hS hm4 hebm hh hargs htop
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (icfTopE_spec p hp.iotaCertsFull n ⟨s₀.mem, Locals.init []⟩
+    mode vis d h ao an) hc0 (Err.code_ne_of_cls hk0)
+  simp only [icfTopE] at hW
+  cases c0 : callE p n "ctl_get" [136] s₀.mem with
+  | error e0 =>
+    rw [c0] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfCertsE_nv "ctl_get" (by simp)) c0
+  | ok q =>
+  obtain ⟨t, m0⟩ := q
+  rw [c0] at hW
+  simp only at hW
+  cases n with
+  | zero =>
+    obtain ⟨e', he', -⟩ := callE_zero p "ctl_get" [136] s₀.mem
+    rw [c0] at he'; cases he'
+  | succ n' =>
+  obtain ⟨t0, ht0, -, hmem0, hget⟩ := triple_of_callE
+    (ctlGet_spec p hp.ctlGet n' ⟨s₀.mem, Locals.init []⟩ 136) c0
+  obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
+  have ht : t.headD 0 = rdW (s₀.mem.arr64 CTL) 136 := by
+    simp only [ctlGetW] at hget
+    split at hget
+    · simp only [Option.some.injEq] at hget; rw [← hget]
+    · cases hget
+  have htop' : t.headD 0 = ao + an := by rw [ht]; exact htop.symm
+  have hW' := err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
+      | .error e => (.error e : Except Err (List Word × Mem))
+      | .ok (r, m') => .ok ([r.headD 0], m'.set64 CTL 136 (t.headD 0))) (by intro q e; simp)
+    (fun _ => rfl) hW
+  have hspn := hS.spn
+  have hb := hargs.bound
+  have hsum : (ao + an).toNat = ao.toNat + an.toNat := by
+    rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
+  have hnil : SpineR s₀.mem (t.headD 0) 0 #[] := SpineR.nil_at s₀.mem _ (by rw [htop', hsum]; omega)
+  have hE := (icf_allE p hp hil hnv n').1 F (by omega) (by omega) (hk.mono (by omega))
+    (hkE.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe
+    MM eb mode d h (t.headD 0) 0 ao an 0 #[] args.toList.toArray hS hm4 hebm hh trivial hnil
+    (by simpa using hargs) (by rw [UInt64.add_zero, htop']; exact htop)
+    (by rw [htop', hsum]; exact Nat.le_refl _)
+  simp only [iotaCertsFull]
+  simpa using CoreSpecE.of_callE hE hW'
+
 end icf
 
 end L.Arena
