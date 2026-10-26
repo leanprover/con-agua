@@ -5,7 +5,7 @@ import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndInstallSpec27
 import ConAgua.Arena.TblFrame
-import ConRon.Bridge.Inductives.StructParts
+import ConAgua.Final.Twin
 
 /-!
 # `check_struct_proj_table_scoped` through the real `all_level_params_defined` (lane `indproofs4`, helper `sct`)
