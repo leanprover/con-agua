@@ -423,8 +423,15 @@ theorem TwinOK.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
     (h : TwinOK dn m a fe) {k : Nat} (hk : k ≤ fe.visibleBelow) : TwinOK dn m a (fe.restrictTo k) :=
   ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk,
     { h.den with
-      constLps := fun c ci cv hf => h.den.constLps c ci cv (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
-      proj := fun c tbl hf => h.den.proj c tbl (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
+      constLps := fun c ci hf => h.den.constLps c ci (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
+      proj := fun c tbl hf => h.den.proj c tbl (by
+        unfold IFEnv.findTable? at hf ⊢
+        split at hf
+        · rename_i hs
+          obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp hs
+          rw [ConRon.Bridge.IFEnv.restrictTo_find?_le hk hx]
+          exact hf
+        · cases hf)
       recRules := fun c cv mI rP rules hf => h.den.recRules c cv mI rP rules
         (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf) }⟩
 
