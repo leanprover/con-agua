@@ -124,3 +124,88 @@ theorem applyIndE_claim (p : Prog) (hFI : IndFieldLookups p) {X : StateD → ASt
     rw [h3, applyIndE.k_install_ind_d.arm1] at he; cases he
 
 end L.Front.Ind
+
+namespace L.Front
+
+open ConAgua.Front.FieldsLink ConAgua.Scan L.Front.Fields
+open L.Scan.Line (scanLineLoop)
+
+/-- The scanner's `safety` converse on the declaration lines of `b` (`DeclSafeR`, which
+`apply_decl`'s claim takes): what `rec_decl_line` reads at a line con-leche's loop reads as a
+declaration record. -/
+def SafeLink (b : ByteArray) : Prop :=
+  ∀ (j : USize) (r : LineRec) (e : USize) (d : DeclRec),
+    scanLineLoop b j true 0 0 .absent = .ok r e → r = .decl d → DeclSafeR d (declLineN b.data j.toUInt64)
+
+/-- **`apply_dline`'s error model claims the line's verdict**: the record is con-leche's
+(`declLine_link`); an inductive block is `apply_ind`'s claim, any other declaration
+`apply_decl`'s (`applyDecl_refinesE`). -/
+theorem applyDLineE_claim (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p) (hDL : DeclLookups p)
+    (hF : DeclFieldLookups p) (hXI : L.Front.Ind.IndLineLookups p)
+    {X : StateD → AState → Prop} (hV : L.Front.Ind.ValidateClaim p X)
+    (hnv : NVCls p ["ind_fields", "install_ind_d", "rec_decl_line"]) (hnvD : ApplyDeclNV p)
+    {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (hSL : SafeLink b)
+    {m : Mem} {a : AState} {st : StateD} (hm : m.arr8 IN = b.data)
+    (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) (hX : X st a)
+    (j : USize) (r : LineRec) (e' : USize) (hloop : scanLineLoop b j true 0 0 .absent = .ok r e') (n : Nat) :
+    ∀ e, applyDLineE p n m j.toUInt64 = .error e → VerdictClaimR (applyLine st r) a e := by
+  intro e he hk
+  cases n with
+  | zero => simp only [applyDLineE] at he; cases he; exact absurd rfl hk
+  | succ n =>
+  simp only [applyDLineE] at he
+  cases h1 : callE p n "rec_decl_line" [j.toUInt64] m with
+  | error e1 =>
+    rw [h1, applyDLineE.k_rec_decl_line.none] at he; cases he
+    exact absurd (hnv.cls (by simp) h1) hk
+  | ok q1 =>
+  obtain ⟨r1, m₁⟩ := q1
+  rw [h1] at he
+  obtain ⟨s1, hs1, hsm, hr1⟩ :=
+    triple_of_callE (recDeclLine_spec p hF b.data hsize n ⟨m, Locals.init []⟩ hm j.toUInt64) h1
+  subst hr1
+  have hm1 : m₁ = m := by rw [← hs1, hsm]
+  rw [hm1] at he h1
+  generalize hf : declLineN b.data j.toUInt64 = f at he
+  by_cases h0 : f.pl = 0
+  · rw [applyDLineE.k_rec_decl_line.abort1 _ _ _ _ (by simpa [DFld.enc] using h0)] at he
+    cases he; exact absurd rfl hk
+  have hX' : DRecR b r f := by
+    rw [← hf]; exact declLine_link b h64 hsize j true 0 0 .absent DFld.none r e' hloop trivial
+      (by show (declLineN b.data j.toUInt64).pl ≠ 0; rw [hf]; exact h0)
+  rcases r with _ | _ | _ | d | _ | _ <;> simp only [DRecR] at hX'
+  by_cases h25 : f.pl = 25
+  · rw [applyDLineE.k_rec_decl_line.arm1 _ _ _ _ (by simpa [DFld.enc] using h0)
+      (by simpa [DFld.enc] using h25)] at he
+    cases h2 : callE p n "apply_ind" [(f.enc).tail.headD 0] m with
+    | error e2 =>
+      rw [h2, applyDLineE.k_apply_ind.none] at he; cases he
+      cases d with
+      | ind tys cts rcs =>
+        obtain ⟨-, v, hv, e'', hscan⟩ := hX'
+        have h2' : callE p n "apply_ind" [v.toUInt64] m = .error e := by
+          rw [← hv]; simpa [DFld.enc] using h2
+        exact L.Front.Ind.applyIndE_claim p hFI hV (fun g hg => hnv g (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hg ⊢; rcases hg with rfl | rfl <;> simp)) h64 hsize hm hA hD hok hX
+          hscan n e (triple_of_callE_err (L.Front.Ind.applyInd_specE p hXI.apply_ind n ⟨m, Locals.init []⟩ _) h2'
+            (Err.code_ne_of_cls hk)) hk
+      | ax _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
+      | defn _ _ _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
+      | thm _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
+      | opaq _ _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
+      | quot _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
+    | ok q2 => obtain ⟨_, _⟩ := q2; rw [h2, applyDLineE.k_apply_ind.arm1] at he; cases he
+  · rw [applyDLineE.k_rec_decl_line.arm2 _ _ _ _ (by simpa [DFld.enc] using h0)
+      (by simpa [DFld.enc] using h25)] at he
+    cases h2 : callE p n "apply_decl" [f.pl, f.name, f.lps, f.type, f.value, f.hk, f.hn, f.flag] m with
+    | error e2 =>
+      simp only [DFld.enc, List.headD_cons, List.tail_cons] at he
+      rw [h2, applyDLineE.k_apply_ind.none] at he; cases he
+      have hS := hSL j (.decl d) e' d hloop rfl
+      rw [hf] at hS
+      exact applyDecl_refinesE p hDL hnvD b hsize m hm st a hD f d hX' hS n e h2 hk
+    | ok q2 =>
+      obtain ⟨_, _⟩ := q2
+      simp only [DFld.enc, List.headD_cons, List.tail_cons] at he
+      rw [h2, applyDLineE.k_apply_ind.arm1] at he; cases he
+
+end L.Front
