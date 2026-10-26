@@ -1,4 +1,5 @@
 import ConAgua.Verdict.IndArmE
+import ConAgua.Verdict.IndBWt
 import ConAgua.Verdict.TopE
 import ConAgua.Checker.IndArm
 
@@ -60,9 +61,9 @@ namespace L.Checker
 
 open L L.Arena L.Front L.Rom L.Compiler L.Ind ConAgua.Final
 
-/-- **The inductive arm's error claim at the programs phase A runs** from the three callee claims
+/-- **The inductive arm's error claim at the programs phase A runs** from the two callee claims
 at those programs (`indArmSpec_checker`'s program facts). -/
-theorem indArmVerdict_of (hW : ∀ bs, WtE (Prog.subPB bs checkerProg))
+theorem indArmVerdict_of
     (hNfs : ∀ bs dn vis fe env, ConLeche.EnvWF env → ClassesNfsE (Prog.subPB bs checkerProg) dn vis fe env)
     (hTka : ∀ bs dn vis fe env, ConLeche.EnvWF env → TkaE (Prog.subPB bs checkerProg) dn vis fe env) :
     IndArmVerdict := by
@@ -95,6 +96,9 @@ theorem indArmVerdict_of (hW : ∀ bs, WtE (Prog.subPB bs checkerProg))
   have hnv := checkerProg_nvPB bs
   have hU : UceProg (Prog.subPB bs checkerProg) :=
     ⟨checkerProg_uceLookupsPB bs, strLitSupported_core _ hkp.knot.str⟩
+  have hW : WtE (Prog.subPB bs checkerProg) :=
+    wtE_of hkp hnv (by prog_bundle []) (by prog_bundle []) (by prog_bundle []) (by prog_bundle [])
+      (by prog_bundle []) (by prog_bundle [])
   exact indArmSpecE_of hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P
     (closedW_subPB bs checkerProg_armPos) (by decide +kernel) (by decide +kernel)
     (closedW_subPB bs checkerProg_armHb) (by decide +kernel)
@@ -107,6 +111,6 @@ theorem indArmVerdict_of (hW : ∀ bs, WtE (Prog.subPB bs checkerProg))
     (by decide +kernel) (by decide +kernel)
     (closedW_subPB bs checkerProg_armRcHb) (by decide +kernel)
     (closedW_subPB bs checkerProg_armMa) (by decide +kernel)
-    hnv hU (hW bs) (hNfs bs) (hTka bs) dn hdn
+    hnv hU hW (hNfs bs) (hTka bs) dn hdn
 
 end L.Checker

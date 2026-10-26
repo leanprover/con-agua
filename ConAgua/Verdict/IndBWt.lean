@@ -11,8 +11,8 @@ error knot, `whnfTop_stageE`), its ok run by `whnfC_rsim`; the view; the `fail` 
 `wtArm` the guards leave is the twin's `.invalid`); `intern_fvar`, `instantiate1_fast`,
 `sl_cons` outside the verdict closure; the recursion by the induction hypothesis.
 
-`whnfC_rsim` (the ok run of `whnf`) needs the environment well formed, so the claim is `WtE'`:
-`WtE` with `ConLeche.EnvWF env`.
+`whnfC_rsim` (the ok run of `whnf`) needs the environment well formed, so `WtE` (IndBSum2.lean)
+takes `ConLeche.EnvWF env`.
 -/
 
 set_option experimental.vcgen true
@@ -34,15 +34,6 @@ l_model wtE_spec (p : Prog) (hf : p.lookup "whnf_telescope" = some whnfTelescope
   fns [hf ↦ wtE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
-
-/-- **`whnf_telescope`'s error claim** (`WtE` with the environment well formed, as
-`whnfTelescope_refinesC` takes it). -/
-def WtE' (p : Prog) : Prop :=
-  ∀ {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env},
-    ConLeche.EnvWF env → ∀ (k : Nat), k ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (i n e : Word),
-    StageC dn vis fe env s₀.mem a₀ → AbsOK s₀.mem → H e → i.toNat + n.toNat < 2 ^ 64 →
-    ∀ {eP : ConLeche.Expr}, denoteE a₀.store (decI e) = some eP → ConLeche.Expr.WScoped i.toNat eP →
-    CoreSpecE p k "whnf_telescope" [vis, i, n, e] (whnfTelescope V fe i.toNat n.toNat (decI e)) s₀ a₀
 
 /-- The arms of `wtArm` the L guards leave (not a sort at `0`, not a `∀` at `n + 1`) are the
 twin's `.invalid` failures. -/
@@ -225,12 +216,12 @@ theorem wtE_claim (k : Nat) (hk : k ≤ 2 ^ 62) :
 
 end sims
 
-/-- **`whnf_telescope`'s error claim** (`WtE'`) from the program's facts: the knot (`whnf_top`'s
+/-- **`whnf_telescope`'s error claim** (`WtE`) from the program's facts: the knot (`whnf_top`'s
 claim from the error knot), the lookups of the callees `wtW_spec` reads. -/
 theorem wtE_of {p : Prog} (hq : KnotStageProg p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
     (hp : p.lookup "whnf_telescope" = some whnfTelescopeL) (hv : p.lookup "e_view" = some eView)
     (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
-    (hif : p.lookup "intern_fvar" = some internFVar) (hi1 : I1Prog p) : WtE' p := by
+    (hif : p.lookup "intern_fvar" = some internFVar) (hi1 : I1Prog p) : WtE p := by
   intro dn vis fe env henv k hk s₀ a₀ i n e hC hA he hin eP hdP hwsP
   refine CoreSpecE.of_runs fun er hc => ?_
   by_cases hk0 : er.cls = 0

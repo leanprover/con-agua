@@ -25,8 +25,8 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- **`whnf_telescope`'s error claim** (the hypotheses of `whnfTelescope_refinesC`; the whnf family
 discharges it). -/
 def WtE (p : Prog) : Prop :=
-  ∀ {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
-    (k : Nat), k ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (i n e : Word),
+  ∀ {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env},
+    ConLeche.EnvWF env → ∀ (k : Nat), k ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (i n e : Word),
     StageC dn vis fe env s₀.mem a₀ → AbsOK s₀.mem → H e → i.toNat + n.toNat < 2 ^ 64 →
     ∀ {eP : ConLeche.Expr}, denoteE a₀.store (decI e) = some eP → ConLeche.Expr.WScoped i.toNat eP →
     CoreSpecE p k "whnf_telescope" [vis, i, n, e] (whnfTelescope V fe i.toNat n.toNat (decI e)) s₀ a₀
@@ -112,7 +112,7 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
     rw [h1, ctsE.k_whnf_telescope.none] at hW'
     cases hW'
     refine ErrClaim.bind_left ?_
-    have := CoreSpecE.of_callE (hW (k := k) (by omega) s₀ a₀ 0 n w hC hA hw32 (by simpa using n.toNat_lt) hdw hws) h1
+    have := CoreSpecE.of_callE (hW henv (k := k) (by omega) s₀ a₀ 0 n w hC hA hw32 (by simpa using n.toNat_lt) hdw hws) h1
     simpa using this
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
