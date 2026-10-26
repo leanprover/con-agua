@@ -35,7 +35,8 @@ def XOfTwin (X : StateD → AState → Prop) : Prop :=
 statement), from `validate_ind_d`'s claim (`ValidateClaim`), the twin facts it takes (`XOfTwin`),
 and the scanner's `safety` converse (`SafeLink`). -/
 theorem frontStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.ValidateClaim frontAllProg X)
-    (hXT : XOfTwin X) (hSL : ∀ b, SafeLink b) :
+    (hXT : XOfTwin X)
+    (hSL : System.Platform.numBits = 64 → ∀ b : ByteArray, b.size < 2 ^ 63 → SafeLink b) :
     ∀ b pb s8 s64, InputsOK b pb s64 →
       StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb s8 s64)) (TwinVerdict [b]) := by
   intro b pb s8 s64 hin n _hn s₀
@@ -48,7 +49,7 @@ theorem frontStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.ValidateC
   rw [← callE_frontAll (by decide) n [] s.mem] at hc
   have hE := triple_of_callE_err (frontRun_specE frontAllProg rfl n ⟨s.mem, Locals.init []⟩) hc
     (Err.code_ne_of_cls hk)
-  have hf := frontRunE_claim pre.decls b hin.1 hin.2.1 hV (hXT pre.decls) (hSL b) n s.mem sB hm
+  have hf := frontRunE_claim pre.decls b hin.1 hin.2.1 hV (hXT pre.decls) (hSL hin.1 b hin.2.1) n s.mem sB hm
     h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok h4.mode e hE hk
   have hu : b.size < USize.size := by
     rw [show USize.size = 2 ^ 64 by simp [USize.size, hin.1]]; have := hin.2.1; omega
@@ -80,7 +81,8 @@ theorem builtinPreludeE_fails {a : AState} {c : L.Word}
 statement): it fails (class `≠ 0`) only where `pre_front_run` does, which fails as `front_run` on
 the prelude's bytes (`preFrontRun_errSim`), so the twin's `parseBytes preludeText` fails. -/
 theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.ValidateClaim frontAllProg X)
-    (hXT : XOfTwin X) (hSL : ∀ b, SafeLink b) :
+    (hXT : XOfTwin X)
+    (hSL : System.Platform.numBits = 64 → ∀ b : ByteArray, b.size < 2 ^ 63 → SafeLink b) :
     ∀ b pb s8 s64, InputsOK b pb s64 →
       StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb s8 s64)) (TwinVerdict [b]) := by
   intro b pb s8 s64 hin n _hn s₀
@@ -124,7 +126,7 @@ theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.Validat
     (Err.code_ne_of_cls hk)
   have hD0 : StateDR (s.mem.setIn preIn) (StateD.blank.pre #[]) := by
     rw [blank_pre_empty]; exact h3.sdr.frame (setIn_frame _ _) (by simp) (by simp)
-  exact frontRunE_claim #[] preludeText hin.1 preludeText_size hV (hXT #[]) (hSL _) n
+  exact frontRunE_claim #[] preludeText hin.1 preludeText_size hV (hXT #[]) (hSL hin.1 _ preludeText_size) n
     (s.mem.setIn preIn) sA (by rw [setIn_arr8_zero _ _ h0, preIn_eq])
     (L.Rom.ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) h3.arena) hD0 h3.twin.ok h3.twin.off
     h3.twin.pins (fun x hx => absurd hx (by simp))
