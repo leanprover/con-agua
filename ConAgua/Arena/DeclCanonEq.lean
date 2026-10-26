@@ -562,7 +562,7 @@ theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x :
           nat? a (p + 6) = some nf ∧ x = .ctorInfo cv np nf) ∨
        (wk.toNat = 5 ∧ ∃ cv mi rp o c rules, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some mi ∧
           nat? a (p + 6) = some rp ∧ nat? a (p + 7) = some o ∧ nat? a (p + 8) = some c ∧
-          decRules a o c = some rules ∧ x = .recInfo cv mi rp rules))) := by
+          decRules a o c = some rules ∧ x = .recInfo cv mi rp rules)) := by
   unfold decCI at h
   simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
   obtain ⟨k, hk, h⟩ := h
@@ -594,6 +594,15 @@ theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x :
     obtain ⟨cv, hcv, mi, hmi, rp, hrp, o, ho, c, hc, rules, hr, rfl⟩ := h
     exact .inr (.inr (.inr (.inr (.inr ⟨hh, cv, mi, rp, o, c, rules, hcv, hmi, hrp, ho, hc, hr, rfl⟩))))
   · simp at h
+
+/-- **A decoded record's constant value sits at `p + 1`** (every kind holds it inline, the twin's
+pure `toConstantVal`). -/
+theorem decCI_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
+    (h : decCI a dn p = some x) : decCV a (p + 1) = some x.toConstantVal := by
+  obtain ⟨-, -, hx⟩ := ciD h
+  rcases hx with ⟨-, cv, hcv, rfl⟩ | ⟨-, cv, -, -, hcv, -, -, rfl⟩ | ⟨-, cv, hcv, rfl⟩ |
+      ⟨-, cv, -, hcv, -, rfl⟩ | ⟨-, cv, -, -, hcv, -, -, rfl⟩ |
+      ⟨-, cv, -, -, -, -, -, hcv, -, -, -, -, -, rfl⟩ <;> exact hcv
 
 theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     (hsz : a.size < 2 ^ 64) {p q : Word} {x y : IConstantInfo}

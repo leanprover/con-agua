@@ -19,27 +19,6 @@ namespace L.Arena
 
 theorem strRdW {a : Array Word} {q w : Word} (h : a[q.toNat]? = some w) : rdW a q = w := by simp [rdW, h]
 
-/-- A decoded record's constant value sits at `p + 1` (every kind holds it inline). -/
-theorem strCiCv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
-    (h : decCI a dn p = some x) : decCV a (p + 1) = some x.toConstantVal := by
-  unfold decCI at h
-  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
-  obtain ⟨k, -, h⟩ := h
-  split at h
-  · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, rfl⟩ := h; exact hcv
-  · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, _, _, _, rfl⟩ := h; exact hcv
-  · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, rfl⟩ := h; exact hcv
-  · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, _, rfl⟩ := h; exact hcv
-  · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, _, _, _, rfl⟩ := h; exact hcv
-  · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h; exact hcv
-  · simp at h
-
 /-- The model of `str_cv`. -/
 def strCvW (m : Mem) (q : Word) : Option (List Word × Mem) :=
   some ([rdW (m.arr64 EREC) (q + 2), rdW (m.arr64 EREC) (q + 3), rdW (m.arr64 EREC) (q + 4)], m)
@@ -75,7 +54,7 @@ theorem cv_call (hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (strCv_spec p hp.strCv n _ q) h
   simp only [strCvW, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, hm⟩ := hW
-  obtain ⟨hsl, hlen, hty, hhw⟩ := decCV_rd (erecP_ext m) hS.erec (strCiCv hci)
+  obtain ⟨hsl, hlen, hty, hhw⟩ := decCV_rd (erecP_ext m) hS.erec (L.Ind.decCI_cv hci)
   exact ⟨hm.symm, hsl, hlen, hty, hhw⟩
 
 end calls
