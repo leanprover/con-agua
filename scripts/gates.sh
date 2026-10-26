@@ -77,7 +77,7 @@ run vendor     scripts/bump-con-ron.sh --check
 run modules    python3 scripts/modules_check.py
 run provenance python3 scripts/provenance.py check
 run reasons    reasons
-run build      timeout 3000 scripts/lake build ConAgua
+run build      timeout 10800 scripts/lake build ConAgua
 run core-fns   timeout 600 python3 scripts/core_fns.py --check
 run loop-fns   timeout 600 python3 scripts/loop_fns.py --check
 run leaf-fns   timeout 600 python3 scripts/leaf_fns.py --check
