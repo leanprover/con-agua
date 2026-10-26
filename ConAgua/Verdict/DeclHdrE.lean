@@ -41,18 +41,26 @@ l_model installHeader_specE (p : Prog) (hf : p.lookup "install_header" = some in
   heartbeats 400000 simp [] errors
 
 /-- The callees of the declaration family outside the verdict closure. -/
-theorem declHdrE_nv : ∀ f ∈ ["cv_lps", "loose_bvars_bounded_fast", "has_fvar_fast",
-    "all_level_params_defined", "consts_resolve_ffast", "sl_nodup", "reserved_contains",
-    "env_find", "env_push", "erec_ci"], f ∈ L.Checker.nvFns := by
+def declNvList : List FnName :=
+  ["cv_lps", "loose_bvars_bounded_fast", "has_fvar_fast", "all_level_params_defined",
+   "consts_resolve_ffast", "sl_nodup", "reserved_contains", "env_find", "env_push", "erec_ci",
+   "reduce_stored_ok", "reduce_elem_ok", "reduce_pin_guard", "reduce_decl_pin", "reduce_cert_var",
+   "mk_app", "pin_at", "is_none", "is_some", "tbl_cnt", "flush_caches", "scratch_enter",
+   "scratch_drop", "and_pin_ok", "pin_in", "erec_vg", "rom_ci", "rom_basis_decls", "find_is",
+   "ci_to_cv", "ci_canon_eq", "cv_canon_eq", "std_axiom_ok", "trust_compiler_ok",
+   "of_reduce_ax_ok", "sl_contains", "nat_op_names", "nat_op_guard", "nat_op_deps",
+   "nat_op_stored_ok_all", "nat_div_mod_names", "rom_pin_sets", "ind_block_to_erec",
+   "rom_basis_decls_a", "quot_pin_hit", "pin_word", "iw_reset", "promote_new", "promote_vg",
+   "pend_push"]
+
+theorem declNv_mem : ∀ f ∈ declNvList, f ∈ L.Checker.nvFns := by
   decide +kernel
 
 /-- A failing callee of the list claims nothing. -/
 theorem nvl {p : Prog} (hnv : closedNV p L.Checker.nvFns = true) {α : Type} {T : AM α} {a : AState}
-    {f : FnName} (hf : f ∈ ["cv_lps", "loose_bvars_bounded_fast", "has_fvar_fast",
-    "all_level_params_defined", "consts_resolve_ffast", "sl_nodup", "reserved_contains",
-    "env_find", "env_push", "erec_ci"]) {n : Nat} {vs : List Word} {m : Mem} {e : Err}
+    {f : FnName} (hf : f ∈ declNvList) {n : Nat} {vs : List Word} {m : Mem} {e : Err}
     (h : callE p n f vs m = .error e) : ErrClaim T a e :=
-  ErrClaim.of_callE_nv hnv (declHdrE_nv f hf) h
+  ErrClaim.of_callE_nv hnv (declNv_mem f hf) h
 
 /-- **A hit of `env_find` is a hit of `find?`**. -/
 theorem envFindW_hitSome {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
@@ -158,7 +166,7 @@ theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h1 : callE p n "cv_lps" [q] m with
   | error e1 =>
     rw [h1, installValueGuardsE.k_cv_lps.none] at hW; cases hW
-    exact nvl hnv (by simp) h1
+    exact nvl hnv (by decide +kernel) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, installValueGuardsE.k_cv_lps.eq_2] at hW
@@ -176,7 +184,7 @@ theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h2 : callE p (n + 1) "loose_bvars_bounded_fast" [4000000000, 0, v] s1.mem with
   | error e2 =>
     rw [h2, installValueGuardsE.k_loose_bvars_bounded_fast.none] at hW; cases hW
-    exact nvl hnv (by simp) h2
+    exact nvl hnv (by decide +kernel) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2] at hW
@@ -203,7 +211,7 @@ theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h3 : callE p (n + 1) "has_fvar_fast" [4000000000, v] s2.mem with
   | error e3 =>
     rw [h3, installValueGuardsE.k_has_fvar_fast.eq_1] at hW; cases hW
-    exact nvl hnv (by simp) h3
+    exact nvl hnv (by decide +kernel) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3] at hW
@@ -234,7 +242,7 @@ theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h4 : callE p (n + 1) "all_level_params_defined" [r1.headD 0, w2, v] s3.mem with
   | error e4 =>
     rw [h4, installValueGuardsE.k_all_level_params_defined.eq_1] at hW; cases hW
-    exact nvl hnv (by simp) h4
+    exact nvl hnv (by decide +kernel) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4] at hW
@@ -258,7 +266,7 @@ theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h5 : callE p (n + 1) "consts_resolve_ffast" [vis, v] m4 with
   | error e5 =>
     rw [h5, installValueGuardsE.k_consts_resolve_ffast.none] at hW; cases hW
-    exact nvl hnv (by simp) h5
+    exact nvl hnv (by decide +kernel) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5] at hW
@@ -300,7 +308,7 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h1 : callE p n "env_find" [wx, vis] m with
   | error e1 =>
     rw [h1, installHeaderE.k_env_find.none] at hW; cases hW
-    exact nvl hnv (by simp) h1
+    exact nvl hnv (by decide +kernel) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1] at hW
@@ -320,7 +328,7 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h2 : callE p n "reserved_contains" [wx] s1.mem with
   | error e2 =>
     rw [h2, installHeaderE.k_reserved_contains.none] at hW; cases hW
-    exact nvl hnv (by simp) h2
+    exact nvl hnv (by decide +kernel) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2] at hW
@@ -353,7 +361,7 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h4 : callE p n "cv_lps" [q] s1.mem with
   | error e4 =>
     rw [h4, installHeaderE.k_cv_lps.none] at hW; cases hW
-    exact nvl hnv (by simp) h4
+    exact nvl hnv (by decide +kernel) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4, installHeaderE.k_cv_lps.eq_2] at hW
@@ -374,7 +382,7 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h5 : callE p (n + 1) "sl_nodup" [r4.headD 0, w2] s4.mem with
   | error e5 =>
     rw [h5, installHeaderE.k_sl_nodup.eq_1] at hW; cases hW
-    exact nvl hnv (by simp) h5
+    exact nvl hnv (by decide +kernel) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5] at hW
@@ -406,7 +414,7 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h6 : callE p (n + 1) "loose_bvars_bounded_fast" [4000000000, 0, wt] s4.mem with
   | error e6 =>
     rw [h6, installHeaderE.k_loose_bvars_bounded_fast.none] at hW; cases hW
-    exact nvl hnv (by simp) h6
+    exact nvl hnv (by decide +kernel) h6
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   rw [h6] at hW
@@ -433,7 +441,7 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h7 : callE p (n + 1) "has_fvar_fast" [4000000000, wt] s6.mem with
   | error e7 =>
     rw [h7, installHeaderE.k_has_fvar_fast.eq_1] at hW; cases hW
-    exact nvl hnv (by simp) h7
+    exact nvl hnv (by decide +kernel) h7
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [h7] at hW
@@ -465,7 +473,7 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h8 : callE p (n + 1) "all_level_params_defined" [r4.headD 0, w2, wt] s7.mem with
   | error e8 =>
     rw [h8, installHeaderE.k_all_level_params_defined.eq_1] at hW; cases hW
-    exact nvl hnv (by simp) h8
+    exact nvl hnv (by decide +kernel) h8
   | ok q8 =>
   obtain ⟨r8, m8⟩ := q8
   rw [h8] at hW
@@ -490,7 +498,7 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   cases h9 : callE p (n + 1) "consts_resolve_ffast" [vis, wt] m8 with
   | error e9 =>
     rw [h9, installHeaderE.k_consts_resolve_ffast.none] at hW; cases hW
-    exact nvl hnv (by simp) h9
+    exact nvl hnv (by decide +kernel) h9
   | ok q9 =>
   obtain ⟨r9, m9⟩ := q9
   rw [h9] at hW

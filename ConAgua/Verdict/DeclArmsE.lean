@@ -75,7 +75,7 @@ theorem checkDeclThm_errT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (ha
   cases h1 : callE p n "erec_ci" [i, 2] m with
   | error e1 =>
     rw [h1, checkDeclThmE.k_erec_ci.none] at hW; cases hW
-    exact nvl hnv (by simp) h1
+    exact nvl hnv (by decide +kernel) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, checkDeclThmE.k_erec_ci.arm1] at hW
