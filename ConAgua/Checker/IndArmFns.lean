@@ -578,7 +578,7 @@ def armCidFns : List FnName :=
     "intern_app", "app_find", "app_push", "mk_lam", "intern_lam", "lam_find", "lam_push",
     "mk_forall", "intern_forall", "forall_find", "forall_push", "mk_let", "intern_letE",
     "letE_find", "letE_push", "rci_caps", "rci_rules_to", "rci_rule", "rci_lvls_to", "rom_exprs_to",
-    "er_to_iw", "er_copy", "canon_eq_list", "ci_canon_eq", "tbl_eq", "tbl_eq_a", "er_sl_at",
+    "er_to_iw", "er_copy", "canon_eq_list", "ci_canon_eq", "er_sl_at",
     "er_sl_eq", "ci_canon_defn", "hint_eq", "cv_canon_eq", "canon_ctx", "canon_names",
     "canon_names_go", "sl_cons", "iw_copy", "cv_lps", "canon_expr_eq", "e_view", "canon_level_eq",
     "lv_node", "canon_name_map", "sl_find", "sl_getd", "canon_levels_eq", "view_ls", "ls_node",

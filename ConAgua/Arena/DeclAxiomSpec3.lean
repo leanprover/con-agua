@@ -60,7 +60,7 @@ theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
   have hw : wk = UInt64.ofNat wk.toNat := by simp
   rcases hk' with ⟨h1, cv, -, rfl⟩ | ⟨h1, cv, v, hi, -, -, -, rfl⟩ | ⟨h1, cv, -, rfl⟩ |
       ⟨h1, cv, caps, -, -, rfl⟩ | ⟨h1, cv, np, nf, -, hnp, hnf, rfl⟩ |
-      ⟨h1, cv, mi, rp, o, c, rules, -, hmi, hrp, -, -, -, rfl⟩ | ⟨h1, tbl, -, rfl⟩
+      ⟨h1, cv, mi, rp, o, c, rules, -, hmi, hrp, -, -, -, rfl⟩
   · simp [fpShape]
   · simp [fpShape]
   · simp [fpShape]
@@ -88,7 +88,6 @@ theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
       · simp at hf
       · rw [counts_words hsz hmi hrp] at hf
         simp only [true_and]; simp [hf]
-  · simp [fpShape]
 
 /-- **The shape tests, passing**: the twin's shape matches. -/
 theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b : Word}
@@ -102,7 +101,7 @@ theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
   subst hkw
   rcases hk' with ⟨h1, cv, -, rfl⟩ | ⟨h1, cv, v, hi, -, -, -, rfl⟩ | ⟨h1, cv, -, rfl⟩ |
       ⟨h1, cv, caps, hcv, -, rfl⟩ | ⟨h1, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
-      ⟨h1, cv, mi, rp, o, c, rules, hcv, hmi, hrp, -, -, -, rfl⟩ | ⟨h1, tbl, -, rfl⟩ <;>
+      ⟨h1, cv, mi, rp, o, c, rules, hcv, hmi, hrp, -, -, -, rfl⟩ <;>
     rcases hk with hk | hk | hk <;> rw [hk] at h1 <;> simp at h1
   · exact ⟨cv, by simp [fpShape, hk]⟩
   · have hcc := counts_words (a := a) (b := b) hsz hnp hnf
@@ -125,7 +124,7 @@ theorem fpShape_cv {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
   obtain ⟨wk, -, hk'⟩ := ciD h
   rcases hk' with ⟨-, cv', -, rfl⟩ | ⟨-, cv', v, hi, -, -, -, rfl⟩ | ⟨-, cv', -, rfl⟩ |
       ⟨-, cv', caps, hcv, -, rfl⟩ | ⟨-, cv', np, nf, hcv, -, -, rfl⟩ |
-      ⟨-, cv', mi, rp, o, c, rules, hcv, -, -, -, -, -, rfl⟩ | ⟨-, tbl, -, rfl⟩ <;>
+      ⟨-, cv', mi, rp, o, c, rules, hcv, -, -, -, -, -, rfl⟩ <;>
     simp only [fpShape] at hs <;> (try cases hs)
   · split at hs <;> cases hs; exact hcv
   · split at hs <;> cases hs; exact hcv

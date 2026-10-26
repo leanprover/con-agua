@@ -6,7 +6,7 @@ import ConAgua.L.ProgHas
 # Record equalities in L, word models and specs (lane `decls3`, helper `decls3-canon`)
 
 `DeclArmsCanon.lean`'s `er_sl_eq`, `b_eq`, `cv_eq`, `hint_eq`, `pw_eq`, `caps_eq`,
-`rule_eq_but_rhs`, `rules_eq`, `tbl_eq`, `ci_eq`, `find_is`. Their word models are **total
+`rule_eq_but_rhs`, `rules_eq`, `ci_eq`, `find_is`. Their word models are **total
 `Bool` functions of the record pool** `a : Array Word` (the functions read only `EREC`, never write,
 and a slice comparison recurses on its length, not on a fuel): `slEqN`, `erSlEqB`, `cvEqB`, …
 `ciEqB`. Each spec says a returning call answers `if model then 1 else 0` and leaves the memory
@@ -32,10 +32,10 @@ open L.Arena
 def canonProgFns : Prog :=
   [("er_sl_eq", L.Ind.erSlEq), ("b_eq", L.Ind.bEq), ("cv_eq", L.Ind.cvEq),
    ("hint_eq", L.Ind.hintEq), ("pw_eq", L.Ind.pwEq), ("caps_eq", L.Ind.capsEq),
-   ("rule_eq_but_rhs", L.Ind.ruleEqButRhs), ("rules_eq", L.Ind.rulesEq), ("tbl_eq", L.Ind.tblEq),
+   ("rule_eq_but_rhs", L.Ind.ruleEqButRhs), ("rules_eq", L.Ind.rulesEq),
    ("ci_eq", L.Ind.ciEq), ("er_sl_at", L.Ind.erSlAt), ("caps_eq_a", L.Ind.capsEqA),
    ("caps_eq_b", L.Ind.capsEqB), ("caps_eq_c", L.Ind.capsEqC), ("rule_eq_a", L.Ind.ruleEqA),
-   ("rule_eq_b", L.Ind.ruleEqB), ("tbl_eq_a", L.Ind.tblEqA), ("ci_eq_rest", L.Ind.ciEqRest),
+   ("rule_eq_b", L.Ind.ruleEqB), ("ci_eq_rest", L.Ind.ciEqRest),
    ("canon_ctx", L.Ind.canonCtx), ("ci_canon_defn", L.Ind.ciCanonDefn),
    ("ci_canon_rec", L.Ind.ciCanonRec), ("find_is", L.Ind.findIs), ("env_find", envFindL),
    ("env_row_get", envRowGetL), ("env_ix", envIxL), ("ci_to_cv", L.Ind.ciToCv),
@@ -133,16 +133,6 @@ def rulesEqN (a : Array Word) : Nat → Word → Word → Bool
 def rulesEqB (a : Array Word) (o1 l1 o2 l2 : Word) : Bool :=
   l1 == l2 && rulesEqN a l1.toNat o1 o2
 
-/-- **`tbl_eq_a`**. -/
-def tblEqAB (a : Array Word) (p q : Word) : Bool :=
-  rdW a (p + 1) == rdW a (q + 1) && rdW a (p + 2) == rdW a (q + 2) && erSlAtB a p q 3 &&
-    rdW a (p + 5) == rdW a (q + 5) && rdW a (p + 6) == rdW a (q + 6) &&
-    rdW a (p + 7) == rdW a (q + 7) && rdW a (p + 8) == rdW a (q + 8)
-
-/-- **`tbl_eq`**. -/
-def tblEqB (a : Array Word) (p q : Word) : Bool :=
-  tblEqAB a p q && erSlAtB a p q 9 && erSlAtB a p q 11 && rdW a (p + 13) == rdW a (q + 13)
-
 /-- **`ci_eq_rest`**. -/
 def ciEqRestB (a : Array Word) (p q k : Word) : Bool :=
   if k = 1 then rdW a (p + 5) == rdW a (q + 5) && hintEqB a (p + 6) (q + 6)
@@ -153,11 +143,10 @@ def ciEqRestB (a : Array Word) (p q k : Word) : Bool :=
       rulesEqB a (rdW a (p + 7)) (rdW a (p + 8)) (rdW a (q + 7)) (rdW a (q + 8))
   else true
 
-/-- **`ci_eq`** (`6 < kind` aborts in L; the model is arbitrary there). -/
+/-- **`ci_eq`** (`5 < kind` aborts in L; the model is arbitrary there). -/
 def ciEqB (a : Array Word) (p q : Word) : Bool :=
   if rdW a p ≠ rdW a q then false
-  else if 6 < rdW a p then false
-  else if rdW a p = 6 then tblEqB a p q
+  else if 5 < rdW a p then false
   else cvEqB a (p + 1) (q + 1) && ciEqRestB a p q (rdW a p)
 
 /-- **`find_is`**: `env_find`'s row, then `ci_eq` against `pin`. -/
@@ -410,32 +399,6 @@ theorem ruleEqButRhs_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ruleEqA_spec p hp n, ruleEqB_spec p hp n, bEq_spec p hp n] <;>
       finish (gen := 20) [rdW_eq, ruleEqButRhsB]
 
-theorem tblEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "tbl_eq_a" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if tblEqAB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "tbl_eq_a")]
-  simp only [callFn, tblEqA]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erSlAt_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, tblEqAB]
-
-theorem tblEq_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "tbl_eq" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if tblEqB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "tbl_eq")]
-  simp only [callFn, tblEq]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, tblEqA_spec p hp n, erSlAt_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, tblEqB]
-
 theorem rulesEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rules_eq" [o1, l1, o2, l2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
@@ -476,7 +439,7 @@ theorem ciEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, tblEq_spec p hp n, cvEq_spec' p hp n, ciEqRest_spec p hp n] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, cvEq_spec' p hp n, ciEqRest_spec p hp n] <;>
       finish (gen := 20) [rdW_eq, ciEqB]
 
 theorem findIs_spec' (n : Nat) (s₀ : St) (nm vis pin : Word) :

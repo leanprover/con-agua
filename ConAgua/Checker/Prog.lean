@@ -2066,8 +2066,6 @@ def checkerProg : Prog := [
   ("target_rec_pins", L.Ind.targetRecPins),
   ("target_rec_pins_names", L.Ind.targetRecPinsNames),
   ("target_rec_pins_split", L.Ind.targetRecPinsSplit),
-  ("tbl_eq", L.Ind.tblEq),
-  ("tbl_eq_a", L.Ind.tblEqA),
   ("tgt_rule_nested", L.Ind.tgtRuleNested),
   ("tgt_stored_rules", L.Ind.tgtStoredRules),
   ("tgt_stored_rules_remap", L.Ind.tgtStoredRulesRemap),
