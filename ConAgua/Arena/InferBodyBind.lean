@@ -480,7 +480,7 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
     by rw [eB, hm₂, size_set64, e2], ?_, ?_⟩
   · simp only [spTop]
     rw [htp, rdW_set64, ite_eq_right (fun h => absurd h.2.1 (by decide)), hm₃, rdW_set64, ite_eq_left ⟨rfl, rfl, by
-            rw [hm₂, hm₁, size_set64, size_set64]; exact h136⟩]
+                 rw [hm₂, hm₁, size_set64, size_set64]; exact h136⟩]
   · have hB₁ : BStkR m₁ lo k ws := hB.frame e2
     have hpush := hB₁.push (by rw [e2]; exact hcap) (by rw [e2]; exact h2) x
     rw [← hm₂] at hpush

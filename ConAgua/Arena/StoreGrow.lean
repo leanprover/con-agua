@@ -226,7 +226,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     · have := UInt64.not_lt.mp hjn; have := UInt64.le_iff_toNat_le.mp this
       simp only [hjn, ↓reduceIte]
       rw [rd3, ite_eq_right (fun h' => by have := h'.2.1; rw [a] at this; omega), rd2,
-              ite_eq_left ⟨by rw [a]; omega, by rw [a]; omega⟩]
+        ite_eq_left ⟨by rw [a]; omega, by rw [a]; omega⟩]
   have K3 : ∀ j : Word, j < n → KW sa ob m3 j = KW sa ob m j := by
     intro j hj
     have hjN : j < n * 2 := UInt64.lt_iff_toNat_lt.mpr (by
@@ -235,7 +235,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     have := UInt64.lt_iff_toNat_lt.mp hj
     simp only [KW]
     rw [rd3, ite_eq_right (fun h' => by have := h'.2.2.1; rw [a] at this; omega),
-            r2m _ (by rw [a]; omega) (by rw [a]; omega)]
+      r2m _ (by rw [a]; omega) (by rw [a]; omega)]
   -- the old table's facts, as value words
   have oldv : ∀ j : Word, j < n → bt < VW sa ob m j →
       (VW sa ob m j).toNat ≤ bt.toNat + (cntW S m t).toNat ∧
@@ -306,10 +306,10 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   have ctl' : m'.arr64 CTL = m.arr64 CTL := arr' CTL (Ne.symm hsaC)
   have w0 : rdW (m'.arr64 sa) 0 = n * 2 - SN0 := by
     rw [hw0, rd3, ite_eq_right (fun h' => by have := h'.1; simp at this; omega), rd2,
-            ite_eq_right (fun h' => by have := h'.1; simp at this; omega), rd1, ite_eq_left rfl]
+      ite_eq_right (fun h' => by have := h'.1; simp at this; omega), rd1, ite_eq_left rfl]
   have w1 : rdW (m'.arr64 sa) 1 = o := by
     rw [hw1, rd3, ite_eq_right (fun h' => by have := h'.1; simp at this; omega), rd2,
-            ite_eq_right (fun h' => by have := h'.1; simp at this; omega), rd1, ite_eq_right (by decide), ← ho]
+      ite_eq_right (fun h' => by have := h'.1; simp at this; omega), rd1, ite_eq_right (by decide), ← ho]
     simp only [koW, hsa]
   have kn' : knW S.sa m' t = n * 2 := by
     simp only [knW, hsa, w0]; exact UInt64.sub_add_cancel _ _

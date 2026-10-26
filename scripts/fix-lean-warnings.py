@@ -153,14 +153,28 @@ def reindent_blocks():
                 d = sum(dl for c, dl in sh if c < mm.start())
                 if d <= 0:
                     continue
-                bal = sum(s.count(c) for c in opens) - sum(s.count(c) for c in closes)
-                k = line
-                while bal > 0 and k < len(src):
+                stack, target = [], None
+                for i, ch in enumerate(s):
+                    if i == mm.start():
+                        target = stack[-1] if stack else None
+                    if ch in opens:
+                        stack.append(i)
+                    elif ch in closes and stack:
+                        stack.pop()
+                if target is None or target not in stack:
+                    continue  # the block is closed on its own line
+                depth = stack.index(target)  # brackets still open outside the target's
+                k, cur = line, len(stack)
+                while cur > depth and k < len(src):
                     t = src[k]
                     src[k] = " " * d + t if t.strip() else t
                     SHIFTS[(p, k + 1)].append((0, d))
                     moved += 1
-                    bal += sum(t.count(c) for c in opens) - sum(t.count(c) for c in closes)
+                    for ch in t:
+                        if ch in opens:
+                            cur += 1
+                        elif ch in closes:
+                            cur -= 1
                     k += 1
                 break
         Path(p).write_text("\n".join(src))

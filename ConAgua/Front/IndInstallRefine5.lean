@@ -57,11 +57,11 @@ theorem block_get {α : Type} [Inhabited α] (A B C : List α) (j : Nat) :
   rw [List.append_assoc]
   by_cases h1 : j < A.length
   · rw [ite_eq_left h1, getElem!_pos (A ++ (B ++ C)) j (by simp; omega), getElem!_pos A j h1,
-           List.getElem_append_left h1]
+      List.getElem_append_left h1]
   · rw [ite_eq_right h1]
     by_cases h2 : j < A.length + B.length
     · rw [ite_eq_left h2, getElem!_pos (A ++ (B ++ C)) j (by simp; omega), getElem!_pos B (j - A.length) (by omega),
-             List.getElem_append_right (by omega), List.getElem_append_left (by omega)]
+        List.getElem_append_right (by omega), List.getElem_append_left (by omega)]
     · rw [ite_eq_right h2]
       by_cases h3 : j < A.length + B.length + C.length
       · rw [getElem!_pos (A ++ (B ++ C)) j (by simp; omega), getElem!_pos C (j - A.length - B.length) (by omega),

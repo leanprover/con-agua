@@ -279,7 +279,7 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
           simp [tgW, UInt64.ofNat_add]
         · rw [ite_eq_right (by omega)]
           rw [Std.HashMap.getElem?_insert, ite_eq_right (by simpa using hxj), ← hT.1 x hx,
-                  rdW_addr _ _ _ (by omega)]
+            rdW_addr _ _ _ (by omega)]
       · intro x hx
         rw [Std.HashMap.getElem?_insert, ite_eq_right (by simp; omega)]
         exact hT.2 x hx
@@ -644,7 +644,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
         rw [ite_eq_left rfl, ite_eq_left (by omega)]
         simp [tgW, UInt64.ofNat_add]
       · rw [ite_eq_right (by omega), Std.HashMap.getElem?_insert, ite_eq_right (by simpa using hxj),
-                ← hT.1 x hx, rdW_addr _ _ _ (by omega)]
+          ← hT.1 x hx, rdW_addr _ _ _ (by omega)]
     · rw [Std.HashMap.getElem?_insert, ite_eq_right (by simp; omega)]; exact hT.2 x hx
   have hstk₀ : stk m₀ ws 1 = [j] := by
     simp only [stk, UInt64.toNat_one, List.range_one, List.map_cons, List.map_nil,

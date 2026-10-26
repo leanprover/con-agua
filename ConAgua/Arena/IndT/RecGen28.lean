@@ -342,7 +342,7 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
   have hlow : ∀ i, i < nm.toNat → (mC.arr64 IW)[i]? = (s2.mem.arr64 IW)[i]? := by
     intro i hi
     rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
-            ite_eq_right (by omega)]
+      ite_eq_right (by omega)]
     exact g1 i (by omega)
   have hrdC : ∀ t, t < 13 → rdW (mC.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) =
       rdW (s2.mem.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) := by
@@ -366,16 +366,16 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
       rw [← hC, set64IW_get, ite_eq_left ⟨by omega, by rw [szB]; omega⟩]
       rw [show (11 : Word) = UInt64.ofNat 11 from rfl, hrdB 11 (by omega), hsrcw 11 (by omega) v hv]
     rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
-            ite_eq_right (by omega), g2 k (by simp) (by omega), hsrcw k hk v hv]
+      ite_eq_right (by omega), g2 k (by simp) (by omega), hsrcw k hk v hv]
   have hw9 : iwN m4 (nm.toNat + 9) = some (r1.headD 0).toNat := by
     simp only [iwN, nat?, iwA]
     rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
-            ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get, ite_eq_left ⟨by omega, by rw [hn9] at b9; exact b9⟩]
+      ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get, ite_eq_left ⟨by omega, by rw [hn9] at b9; exact b9⟩]
     rfl
   have hw10 : iwN m4 (nm.toNat + 10) = some (r1.tail.headD 0).toNat := by
     simp only [iwN, nat?, iwA]
     rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
-            ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_left ⟨by omega, by rw [szA]; rw [hn10] at b10; exact b10⟩]
+      ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_left ⟨by omega, by rw [szA]; rw [hn10] at b10; exact b10⟩]
     rfl
   have hFr1 : FrX (qr.toNat + j.toNat) s1.mem m4 := by
     rw [← hE]; exact (FrX.trans_grow (FrX.of_grow (IWGrow.refl _)) hgD).set _ _ hqj

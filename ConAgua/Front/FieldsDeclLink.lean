@@ -172,15 +172,15 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       have hkeU : ke.toNat < b.size := by rw [hkeN]; exact hkb.2
       unfold hkvN
       rw [ite_eq_right (by intro h'; exact absurd hvW (UInt64.not_lt.mpr h')),
-              ite_eq_right (by rw [hb123]; decide), hpEq, hkeEq]
+        ite_eq_right (by rw [hb123]; decide), hpEq, hkeEq]
       rw [ite_eq_right (by
                 rw [UInt64.not_le, UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by omega)]
                 have : (p.toUInt64 + 1).toNat = p.toNat + 1 := by
                   rw [UInt64.toNat_add]; simp; omega
                 rw [this]; omega),
-              ite_eq_right (by
-                            rw [UInt64.not_le, UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by omega)]
-                            rw [USize.toNat_toUInt64]; omega)]
+        ite_eq_right (by
+                rw [UInt64.not_le, UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by omega)]
+                rw [USize.toNat_toUInt64]; omega)]
       split at h
       · rename_i hreg
         try simp only at h

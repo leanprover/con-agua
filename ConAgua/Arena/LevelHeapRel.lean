@@ -205,7 +205,7 @@ theorem HeapFrame.heap (h : HeapFrame m m') (p : Word) (hb : ¬ p >>> 32 = 0)
   rw [e1] at h1
   rw [e2] at h2
   rw [ite_eq_right h3, ite_eq_right hlt0, h.lh _ (by simp only [htop]; omega),
-                h.lh _ (by simp only [htop]; omega), h.lh _ (by simp only [htop]; omega)]
+    h.lh _ (by simp only [htop]; omega), h.lh _ (by simp only [htop]; omega)]
 
 theorem HeapFrame.ext (h : HeapFrame m m') : HeapExt m m' := by
   refine ⟨fun p hp => ?_, fun A a b => h.arr A b a, h.ctl, h.size, h.wsize, h.top, h.lh⟩

@@ -272,7 +272,7 @@ theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
   · obtain ⟨ci, hci⟩ := hci (by rw [h1]; decide)
     rw [h1]
     simp only [decFound, ite_eq_right (show (1 : Word) ≠ 0 by decide), hci, Option.isSome_some,
-            ↓reduceIte]
+      ↓reduceIte]
 
 theorem ite_beq0 (c : Bool) : ((if c = true then (1 : Word) else 0) == 0) = !c := by
   cases c <;> rfl

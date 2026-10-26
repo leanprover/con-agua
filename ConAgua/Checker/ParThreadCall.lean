@@ -289,7 +289,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
           Array.size_replicate]
         by_cases h1 : k < 256
         · rw [ite_eq_left ⟨h1, hk⟩, ite_eq_left h1, getD_extract_lt _ _ _ _ (by rw [size_extract0]; omega),
-                      Nat.zero_add]
+            Nat.zero_add]
         · rw [ite_eq_right (by omega), ite_eq_right h1]
           simp [Array.getD_eq_getD_getElem?, hk]
     · rw [arr64_copy64_ne _ _ _ _ _ _ hbc, ← hW]
