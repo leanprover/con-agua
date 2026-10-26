@@ -1,4 +1,5 @@
 import ConAgua.Arena.PromoteCIRef30
+import ConAgua.Arena.TblFrame
 
 /-!
 # The table side of the promotion: `erase_installed_tables`, `promote_proj_tables`,
@@ -17,19 +18,6 @@ open scoped Lean.Order
 set_option linter.unusedSimpArgs false
 
 namespace L.Arena
-
-/-- The table-row arrays (both tiers). -/
-abbrev tblArrs : List ArrId := [TIXA, TIXS, TIXN, 385, 386, 387]
-
-theorem tblArr_mem (w : Word) (hw : rowTag w ≤ 2) : tblArr w ∈ tblArrs := by
-  rcases tblArr_cases w hw with h | h | h | h | h | h <;> rw [h] <;> decide
-
-theorem tblSet_frame (m : Mem) (w v : Word) (hw : rowTag w ≤ 2) :
-    MemFrame tblArrs [] m (tblSet m w v) := by
-  have hne : tblArr w ≠ CTL := by
-    rcases tblArr_cases w hw with h | h | h | h | h | h <;> rw [h] <;> decide
-  exact (MemFrame.set64 m (tblArr w) hne (tixW w) v).mono
-    (by simpa using tblArr_mem w hw) (by simp)
 
 theorem promoteProjTables_nil (pm : PMemo) (fuel : Nat) :
     promoteProjTables pm fuel [] = pure (pm, []) := by
