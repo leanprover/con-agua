@@ -76,7 +76,7 @@
     28    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
 
 == docs/deviations.md#L49
-    49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) where the twin raises one of several kinds at a point L merges into one abort (unresolved constant vs `sorryAx`, a projection miss, a level-fuel test), and at every capacity or defensive check | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the labels are trusted and checked against con-ron on the corpus; splitting the merged sites needs a branch per kind |
+    49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) where the twin raises one of several kinds at a point L merges into one abort (an unresolved constant in a declaration's type or value, or in a generated recursor rule, vs `sorryAx` or a string literal before `String`: `install_header`, `install_value_guards`, `class_const_ok_header`, `class_rule_ok`), and at every capacity or defensive check | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the labels are trusted and checked against con-ron on the corpus; splitting the merged sites needs a branch per kind |
 
 == ConAgua/Final/Statement.lean#L89-L91
     89  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
@@ -488,17 +488,18 @@
     33      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
     34      TwinAccepts [b] := by
 
-== ConAgua/Final/DrvAbi.lean#L152-L161
-   152  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-   153      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
-   154      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
-   155      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   156      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
-   157      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   158      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   159      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   160          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
-   161        dm (label abiStartL) := by
+== ConAgua/Final/DrvAbi.lean#L177-L187
+   177  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+   178      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   179      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
+   180      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+   181      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   182      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+   183      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   184      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   185          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
+   186          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+   187        dm (label abiStartL) := by
 
 == ConAgua/Final/DrvFinal.lean#L101-L107
    101  theorem checkerFile_drv_accepts_regs [Host]
@@ -1201,59 +1202,59 @@
    148        pure (some r)
    149      | none => pure none
 
-== ConAgua/L/ModelGen.lean#L9-L60
-     9  /-!
-    10  # Generated word models and specs (`l_model`)
-    11  
-    12  `l_model` reads the `lfn` text of a group of L functions and generates, for each function `f`,
-    13  
-    14  * its **word model** `fW : Nat → Mem → Word → … → Option (Word × Mem)` (`Option Word` for a
-    15    read-only function, `ro`; no fuel argument for a single function that needs none): the L code
-    16    with every local inlined, `abort` as `none`, a load as `rdW`, a store as `Mem.set64`, a call to a
-    17    group member as that member's model at fuel `n`, a call to another function as the model its
-    18    spec states (`specs`), and the code after an effectful call as a first-order continuation
-    19    `fW.k_g` (`| none => none | some (x, m₁) => …`) over the locals it reads, named after the
-    20    callee `g` (`fW.k_g_2`, … for its later calls, in source order; after a loop `fW.k_loopᵢ`), so
-    21    that a change elsewhere in the code does not rename it. The code after an `if`
-    22    whose branches both fall through is a join point `fW.jᵢ` over the locals and the memory (no
-    23    copy of it). Equal continuations of the group are shared;
-    24  * a function with **several results** (`return (a, b, …)`) gets a list model
-    25    `Option (List Word × Mem)` (`return e` is `some ([e], m)`, the end of the body `some ([], m)`;
-    26    `↦ fW list` forces it), or with `↦ fW tuple` a tuple model `Option (Word × … × Mem)` (the
-    27    longest `return`'s arity, shorter ones padded with `0`);
-    28  * a **loop** (`while c { … }` in the `lfn`, or a spliced named block `⟪X⟫` that is one `while`)
-    29    is a model of its own, `fW.loopᵢ n m x₁ …` (`exec p n` on the loop: `| 0 => none | n + 1 =>
-    30    if c then … fW.loopᵢ n … else exit`; the enclosing code applies it at `n + 1`), over the locals
-    31    live at its head. Its result is `(signal, outs…, memory)`: the signal (`Sig.normal`,
-    32    `Sig.ret vs`) if the body has a `return`, the locals it assigns that the code after it reads,
-    33    the memory unless read-only; the code after it is a continuation of that result. A loop with a
-    34    `return` followed by the function's last statement (`return …`, `abort`) is **fused**: its model
-    35    returns the function's result. Its spec `fW.loopᵢ.spec` (`⦃s = s₀⦄ exec p n X ⦃…⦄`, by
-    36    induction, the model is the loop's meaning) is generated, and a `while` written in the `lfn`
-    37    becomes the named block `fW.loopᵢ.stmt` (with `fW.lfn_eq : F = lfn … ⟪fW.loopᵢ.stmt⟫ …`).
-    38    Named blocks without a loop are inlined;
-    39  * one **guarded equation** `fW.armᵢ` per non-`none` leaf of the `if` tree of each model, loop and
-    40    continuation (the path's conditions as hypotheses, in order; on the negative side in their
-    41    natural form: `a = b` for `¬ a ≠ b`, `a ≠ b` for `¬ a = b`, `p` for `¬ ¬ p`), each with a `grind_pattern` in the
-    42    `grind` attributes; `fW.abortᵢ` for each `none` leaf, `fW.k_g.none` for each continuation (no
-    43    patterns);
-    44  * the **spec** `⦃s = s₀⦄ invoke p (exec p n) "f" args ⦃LocEq s' s₀ ∧
-    45    fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member (`some (r, s'.mem)` for a list
-    46    model, `some (r.headD 0, r.tail.headD 0, …, s'.mem)` for a tuple model), as one conjunction
-    47    over the group (`name`), a step theorem per member (`name.stepᵢ`: `vcgen` with the specs of the
-    48    callees and loops that member calls, then `finish`) and the induction on the fuel.
-    49  
-    50  The definitions come in dependency order: each strongly connected component of the reference
-    51  graph is one definition or one `mutual` block, well-founded on `(fuel, depth)` if it has a
-    52  continuation or a loop (models `(n, D)`, continuations `(n + 1, d)`, loops `(n, d)`; `LevelLeq.lean`
-    53  does this by hand), structural on the fuel if it has only models.
-    54  
-    55  ```
-    56  l_model liftGo_spec (p : Prog) (hp : LiftProg p)
-    57    fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW]
-    58    specs [derB_spec p (hp.get "der_b") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
-    59    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
-    60  ```
+== ConAgua/L/ModelGen.lean#L10-L61
+    10  /-!
+    11  # Generated word models and specs (`l_model`)
+    12  
+    13  `l_model` reads the `lfn` text of a group of L functions and generates, for each function `f`,
+    14  
+    15  * its **word model** `fW : Nat → Mem → Word → … → Option (Word × Mem)` (`Option Word` for a
+    16    read-only function, `ro`; no fuel argument for a single function that needs none): the L code
+    17    with every local inlined, `abort` as `none`, a load as `rdW`, a store as `Mem.set64`, a call to a
+    18    group member as that member's model at fuel `n`, a call to another function as the model its
+    19    spec states (`specs`), and the code after an effectful call as a first-order continuation
+    20    `fW.k_g` (`| none => none | some (x, m₁) => …`) over the locals it reads, named after the
+    21    callee `g` (`fW.k_g_2`, … for its later calls, in source order; after a loop `fW.k_loopᵢ`), so
+    22    that a change elsewhere in the code does not rename it. The code after an `if`
+    23    whose branches both fall through is a join point `fW.jᵢ` over the locals and the memory (no
+    24    copy of it). Equal continuations of the group are shared;
+    25  * a function with **several results** (`return (a, b, …)`) gets a list model
+    26    `Option (List Word × Mem)` (`return e` is `some ([e], m)`, the end of the body `some ([], m)`;
+    27    `↦ fW list` forces it), or with `↦ fW tuple` a tuple model `Option (Word × … × Mem)` (the
+    28    longest `return`'s arity, shorter ones padded with `0`);
+    29  * a **loop** (`while c { … }` in the `lfn`, or a spliced named block `⟪X⟫` that is one `while`)
+    30    is a model of its own, `fW.loopᵢ n m x₁ …` (`exec p n` on the loop: `| 0 => none | n + 1 =>
+    31    if c then … fW.loopᵢ n … else exit`; the enclosing code applies it at `n + 1`), over the locals
+    32    live at its head. Its result is `(signal, outs…, memory)`: the signal (`Sig.normal`,
+    33    `Sig.ret vs`) if the body has a `return`, the locals it assigns that the code after it reads,
+    34    the memory unless read-only; the code after it is a continuation of that result. A loop with a
+    35    `return` followed by the function's last statement (`return …`, `abort`) is **fused**: its model
+    36    returns the function's result. Its spec `fW.loopᵢ.spec` (`⦃s = s₀⦄ exec p n X ⦃…⦄`, by
+    37    induction, the model is the loop's meaning) is generated, and a `while` written in the `lfn`
+    38    becomes the named block `fW.loopᵢ.stmt` (with `fW.lfn_eq : F = lfn … ⟪fW.loopᵢ.stmt⟫ …`).
+    39    Named blocks without a loop are inlined;
+    40  * one **guarded equation** `fW.armᵢ` per non-`none` leaf of the `if` tree of each model, loop and
+    41    continuation (the path's conditions as hypotheses, in order; on the negative side in their
+    42    natural form: `a = b` for `¬ a ≠ b`, `a ≠ b` for `¬ a = b`, `p` for `¬ ¬ p`), each with a `grind_pattern` in the
+    43    `grind` attributes; `fW.abortᵢ` for each `none` leaf, `fW.k_g.none` for each continuation (no
+    44    patterns);
+    45  * the **spec** `⦃s = s₀⦄ invoke p (exec p n) "f" args ⦃LocEq s' s₀ ∧
+    46    fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member (`some (r, s'.mem)` for a list
+    47    model, `some (r.headD 0, r.tail.headD 0, …, s'.mem)` for a tuple model), as one conjunction
+    48    over the group (`name`), a step theorem per member (`name.stepᵢ`: `vcgen` with the specs of the
+    49    callees and loops that member calls, then `finish`) and the induction on the fuel.
+    50  
+    51  The definitions come in dependency order: each strongly connected component of the reference
+    52  graph is one definition or one `mutual` block, well-founded on `(fuel, depth)` if it has a
+    53  continuation or a loop (models `(n, D)`, continuations `(n + 1, d)`, loops `(n, d)`; `LevelLeq.lean`
+    54  does this by hand), structural on the fuel if it has only models.
+    55  
+    56  ```
+    57  l_model liftGo_spec (p : Prog) (hp : LiftProg p)
+    58    fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW]
+    59    specs [derB_spec p (hp.get "der_b") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
+    60    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
+    61  ```
 
 == ConAgua/Arena/ArenaRel.lean#L273-L296
    273  /-- **The arena relation**: every represented table and the pool (the store tier, over
@@ -1703,17 +1704,18 @@
    170    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
    171    the driver touches no callee-saved register but `r15`. -/
 
-== ConAgua/Final/DrvAbi.lean#L152-L161
-   152  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-   153      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
-   154      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
-   155      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   156      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
-   157      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   158      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   159      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   160          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
-   161        dm (label abiStartL) := by
+== ConAgua/Final/DrvAbi.lean#L177-L187
+   177  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+   178      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   179      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
+   180      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+   181      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   182      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+   183      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   184      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   185          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
+   186          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+   187        dm (label abiStartL) := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L25-L34
     25  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
@@ -1806,7 +1808,7 @@
     46  | D13 | DESIGN.md (`readLC`/`readNC`/`readLsC`) | readback caches | not mirrored: L never reads back (the level algorithms work on handles) | none | – | by design: L works on handles and never reads back |
     47  | D14 | `lv_equiv`, DESIGN.md (levels) | con-leche's `leq` simplifies again | simplifies each side once (proved equal) | none | – | by design: proved equal; simplifying once suffices |
     48  | D15 | DESIGN.md (lane `induct`); ROADMAP §3(b) | every `CheckMode`, `checkFuel` | the `.verified` mode only, no `checkFuel` | none | – | by design: only the `.verified` mode is checked |
-    49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) where the twin raises one of several kinds at a point L merges into one abort (unresolved constant vs `sorryAx`, a projection miss, a level-fuel test), and at every capacity or defensive check | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the labels are trusted and checked against con-ron on the corpus; splitting the merged sites needs a branch per kind |
+    49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) where the twin raises one of several kinds at a point L merges into one abort (an unresolved constant in a declaration's type or value, or in a generated recursor rule, vs `sorryAx` or a string literal before `String`: `install_header`, `install_value_guards`, `class_const_ok_header`, `class_rule_ok`), and at every capacity or defensive check | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the labels are trusted and checked against con-ron on the corpus; splitting the merged sites needs a branch per kind |
     50  | D17 | Stage B `validate` / `scan_string` (DESIGN.md, lane `stageb`) | `feed_chunk` asks `newline_from`; con-leche decodes a whole string, then checks UTF-8 | does not ask (same error, same line); checks each raw run between escapes (proved equivalent) | none | – | by design: proved equivalent |
     51  | D19 | `Rom/CIRead.lean` (the ROM constant readers) | `internCI` keeps a `sortZ` name as a value | interns it (only `Quot`'s `u`, already interned as a level parameter) | none | integrate | by design: representation only |
     52  | D20 | `Checker/Entry.lean` adapters `abstract1_fast`, `instantiate1_fast`, `inst1` | the walks take `coreWalkFuel` | the fuel argument is dropped; lane exprops4's walks count their own | none (the twin's fuel is never exhausted below `2^62`; ROADMAP §3(b)) | integrate | by design: the twin's fuel is never exhausted; the walks count their own |

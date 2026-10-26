@@ -746,7 +746,7 @@ theorem inferConst_spec (n : Nat) (s₀ : St) (vis nm us : Word) :
   simp only [callFn, inferConstL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "env_find",
-      lsNode_spec p hp.lsNode n, callW_spec p n "const_ty_at"] <;>
+      lsNode_spec p hp.lsNode n, callW_spec p n "const_ty_at", callW_spec p n "pin_at"] <;>
     finish [constArmK_ok, call1W_some]
 
 end ic

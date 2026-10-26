@@ -133,7 +133,8 @@ def checkFieldSortBoundL : FunDecl :=
   lfn (isProp, large, s, idxOff, idxLen, fv, u) locals (r, z, eq, ct) {
   if isProp == 0 {
     r := call lv_leq_top(u, s);
-    if r != 2 { abort }
+    if r == 0 { fail R_RESOURCE_LIMIT_FUEL };
+    if r != 2 { fail R_DIRECT_SUM_FIELD_UNIVERSE }
   } else if large != 0 {
     z := call pin_word(53);
     eq := call lvl_eq_true(u, z);

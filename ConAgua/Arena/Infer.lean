@@ -54,7 +54,12 @@ def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
 @[l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO ConRon.Arena.unknownConstError]
 def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
   (f, p) := call env_find(n, vis);
-  if f == 0 { abort };
+  if f == 0 {
+    -- `unknownConstError`: `sorryAx` (pin 13) declines, any other name rejects
+    l := call pin_at(13);
+    if n == l { fail R_USE_OF_THE };
+    fail R_UNKNOWN_CONSTANT_2
+  };
   (lo, l) := call ls_node(us);
   if l != EREC.u64[p + 3] { fail R_INCORRECT_NUMBER_OF };
   r := call const_ty_at(EREC.u64[p + 1], EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4], us);
@@ -434,7 +439,7 @@ def inferProjAtL : FunDecl :=
 con-ron: ConRon/Arena/Core.lean:296-307 ConRon.Arena.projMissError -/
 @[l_impl ConRon.Arena.inferProj ConRon.Arena.projMissError]
 def inferProjL : FunDecl :=
-    lfn (mode, io, vis, d, sn, i, pe) locals (it, te, hh, t, x, f, q, r, cT, cu) {
+    lfn (mode, io, vis, d, sn, i, pe) locals (it, te, hh, t, x, f, q, r, cT, cu, to, tn) {
   if io != 0 { it := call infer_io(mode, vis, d, pe) } else { it := call infer(mode, vis, d, pe) };
   te := call whnf(mode, vis, d, it);
   hh := call get_app_fn(te);
@@ -446,7 +451,22 @@ def inferProjL : FunDecl :=
   cT := CONST⟨t, x⟩.n;
   cu := CONST⟨t, x⟩.us;
   (f, q) := call find_proj(vis, cT, i);
-  if f == 0 { abort };
+  if f == 0 {
+    -- `projMissError`: a table means the index is out of range; an indexed structure-like type
+    -- (`projIndexedStructLike`: `T` is `sn`, an inductive with one constructor, more arguments
+    -- than parameters, and `i` below the constructor's field count) declines; else reject
+    f := call find_table(vis, cT);
+    if f != 0 { fail R_PROJECTION_INDEX_OUT };
+    if cT == sn {
+      (to, tn) := call get_app_args(te);
+      (f, q) := call env_find(cT, vis);
+      if f != 0 && EREC.u64[q] == 3 && EREC.u64[q + 19] == 1 && EREC.u64[q + 17] < tn {
+        (f, q) := call env_find(EREC.u64[EREC.u64[q + 18]], vis);
+        if f != 0 && EREC.u64[q] == 4 && i < EREC.u64[q + 6] { fail R_PROJECTION_ON_AN }
+      }
+    };
+    fail R_INVALID_PROJECTION_NOT
+  };
   r := call infer_proj_at(vis, sn, i, pe, te, cT, cu, q);
   return r
 }

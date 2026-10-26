@@ -28,6 +28,31 @@ def DrvAccepts (p : Prog) (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : Arr
         L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0 (rs1.getD 0 0 - 9223372036854775808)) =
           .ok (rs2, m2) ∧ rs2.getD 0 0 = ACCEPT))
 
+/-- **What a failing driver run means**: both buffers are below `2^63` bytes, and entry 1's run of
+`check` fails with an error of code `k`, or it returns `2^63 + j` and entry 2's run from its memory
+fails with an error of code `k`. -/
+def DrvErr (p : Prog) (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+    (b pb : ByteArray) (k : Word) : Prop :=
+  b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
+  ((∃ e, L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3) =
+      .error e ∧ e.code = k) ∨
+   (∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3) =
+      .ok (rs1, m1) ∧ m1.words.size = tab.nw ∧ 2 ^ 63 ≤ (rs1.getD 0 0).toNat ∧ ∃ e,
+      L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0 (rs1.getD 0 0 - 9223372036854775808)) =
+        .error e ∧ e.code = k))
+
+/-- An entry's post with `rdx = 2`: the run failed, with the code in `rax`. -/
+theorem err_of_entryOut {G : L.Compiler.Layout} {res : Except Err (List Word × Mem)} {s : MachineData}
+    (h : s.regs.rdx = 1 ∨ OutcomeRel G res s) (h2 : s.regs.rdx = 2) :
+    ∃ e, res = .error e ∧ s.regs.rax = e.code := by
+  rcases h with h | h
+  · rw [h2] at h; exact absurd h (by decide)
+  rcases res with e | ⟨rs, m⟩
+  · cases e with
+    | outOfFuel => exact absurd h id
+    | _ => exact ⟨_, rfl, h.2⟩
+  · rw [h.1] at h2; exact absurd h2 (by decide)
+
 /-- Two runs in sequence. -/
 theorem ev_seq [Host] {P Q : MachineState → Prop} {s : MachineData} {pc : Int64} (h : Ev P s pc)
     (k : ∀ st, P st → Ev Q st.data st.pc) : Ev Q s pc :=
@@ -157,7 +182,8 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
+        (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
       dm (label abiStartL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hfits := hc.hfits
@@ -180,10 +206,12 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       rdW s.dmem (A (base + abiNeed tab)) = some dm.regs.r15 →
       rdW s.dmem (A (base + abiNeed tab + 8)) = some ra → (rdW s.dmem (A rsp0)).isSome →
       (s.regs.rdx = 0 → s.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) →
+      (s.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb s.regs.rax) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
+        (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
         s (label abiDrvDoneL) := by
-    intro s h15 hsp hbp h14 hbx h12 h13 hfitS hw15 hwra hmsp hacc
+    intro s h15 hsp hbp h14 hbx h12 h13 hfitS hw15 hwra hmsp hacc herr
     rw [Code.label (i := 29) hL3 rfl]
     refine ev_label (Code.get (i := 29) hL3 rfl) ?_
     refine ev_movRR (Code.get (i := 30) hL3 rfl) ?_
@@ -205,7 +233,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     · rsimp; rw [e1]; exact hmsp
     refine ev_ret (Code.get (i := 37) hL3 rfl) (ra := ra) ?_ ?_
     · rsimp; rw [rdW_wrW_same]
-    refine Eventually.done _ ⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
+    refine Eventually.done _ ⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
     · rsimp; rw [BitVec.sub_add_cancel]; show s.regs.rsp.toNat = _; rw [hsp, hrsp0]
     · rsimp; exact hbp
     · rsimp; exact h14
@@ -214,6 +242,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     · rsimp; exact h12
     · rsimp; exact h13
     · rsimp; exact hacc
+    · rsimp; exact herr
   rw [Code.label (i := 7) hL3 rfl]
   refine ev_label (Code.get (i := 7) hL3 rfl) ?_
   refine ev_movRI (Code.get (i := 8) hL3 rfl) ?_
@@ -228,7 +257,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     refine ev_ret (Code.get (i := 41) hL3 rfl) (ra := ra)
       (by show rdW dm.dmem dm.regs.rsp.toBitVec = some ra; rw [toBitVec_eq_A]; exact hc.hra) ?_
     refine Eventually.done _ ⟨rfl, ⟨?_, by simp, by simp, by simp, by simp, by simp, by simp⟩,
-      fun h => absurd h (by simp <;> decide)⟩
+      fun h => absurd h (by simp <;> decide), fun h => absurd h (by simp <;> decide)⟩
     simp only [Reg64s.set64_rsp, Reg64s.set64_rax, Reg64s.set64_rdx, UInt64.toNat_ofBitVec, BitVec.toNat_add,
       UInt64.toNat_toBitVec, show (8 : BitVec 64).toNat = 8 from rfl]
     omega
@@ -349,9 +378,12 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   refine ev_cmpRO (r := .rdx) (o := oI 0) (v := 0) (Code.get (i := 19) hL3 rfl) (Or.inl rfl) ?_
   refine ev_jcc (Code.get (i := 20) hL3 rfl) (fun hnz => ?_) (fun hz0 => ?_)
   · -- entry 1 reported an error or exhaustion
-    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp fun h0 => ?_
-    simp only [CondCode.interp, cmpFlags_zf, Reg64s.get64_rdx] at hnz
-    exact absurd hnz (by rw [h0]; decide)
+    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp (fun h0 => ?_) (fun h2 => ?_)
+    · simp only [CondCode.interp, cmpFlags_zf, Reg64s.get64_rdx] at hnz
+      exact absurd hnz (by rw [h0]; decide)
+    · obtain ⟨hb, hpb⟩ := hsz.resolve_left (by rw [h2]; decide)
+      obtain ⟨e, he, hk⟩ := err_of_entryOut hout h2
+      exact ⟨hb, hpb, .inl ⟨e, he, hk.symm⟩⟩
   simp only [CondCode.interp, cmpFlags_zf, Reg64s.get64_rdx] at hz0
   have hrdx0 : s1.regs.rdx = 0 := by
     simp only [Bool.not_eq_false', beq_iff_eq] at hz0
@@ -371,7 +403,8 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) ?_
   refine ev_jcc (Code.get (i := 23) hL3 rfl) (fun hlt => ?_) (fun hge3 => ?_)
   · -- entry 1 finished without pending work: its result is the result
-    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp fun _ hacc => ⟨hb, hpb, rs1, m1, hres, hnw1, Or.inl ?_⟩
+    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp (fun _ hacc => ⟨hb, hpb, rs1, m1, hres, hnw1, Or.inl ?_⟩)
+      (fun h2 => absurd (hrdx0 ▸ h2) (by decide))
     rw [← hrax]; exact hacc
   simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge3
   rsimp at hge3
@@ -438,7 +471,13 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (hbx2.trans hbx1) (h122.trans h121) (h132.trans h131) (by omega)
     (by rw [hsv2 _ (Nat.le_refl _) (by omega)]; exact hw15) (by rw [hsv2 _ (by omega) (by omega)]; exact hwra)
     (isSome_rdW fun j hj => by
-      rw [A_add]; exact hfr2.grows _ (isSome_get?_storeInt (hwin _ (by omega) (by omega)))) fun h0 hax => ?_
+      rw [A_add]; exact hfr2.grows _ (isSome_get?_storeInt (hwin _ (by omega) (by omega)))) (fun h0 hax => ?_)
+    (fun h2 => ?_)
+  rotate_left
+  · obtain ⟨e, he, hk⟩ := err_of_entryOut hout2 h2
+    refine ⟨hb, hpb, .inr ⟨rs1, m1, hres, hnw1, ?_, e, ?_, hk.symm⟩⟩
+    · rw [← hrax]; simpa using hge3
+    · rw [← hrax]; exact he
   have hout2' := hout2.resolve_left (by rw [h0]; decide)
   rcases hres2 : L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0
       (BinOp.sub.eval s1.regs.rax 9223372036854775808)) with e | ⟨rs2, m2⟩

@@ -82,6 +82,7 @@ theorem inferProj_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "infer_io", callW_spec p n "infer", callW_spec p n "whnf",
       callW_spec p n "get_app_fn", callW_spec p n "find_proj", callW_spec p n "infer_proj_at",
+      callW_spec p n "find_table", callW_spec p n "get_app_args", callW_spec p n "env_find",
         evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [ipW, ipFirst, ipK1, ipK2, ipHead, ipK4, call1W, tierW, idxW, Cmp.eval, LocEq, BinOp.eval,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,

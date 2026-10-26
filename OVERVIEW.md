@@ -405,7 +405,7 @@ input), and only the accept path has to agree with the twin.
 
 ### 4.5 The composition
 
-[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L152-L161)
+[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L177-L187)
 is the driver on the machine: `ca_start` calls entry 1, whose setup stub builds
 the layout and enters the trampoline, so `compile_correct` gives one L run of
 `check` in mode 3; if that returns `2^63 + k`, it calls entry 2 in place, a
@@ -673,7 +673,7 @@ The split keeps `vcgen` away from the twin's monad and the twin's proofs away
 from L's syntax. Most word models and specs are generated: the `l_model`
 command reads a group of `lfn`s and produces the models, one guarded equation
 per arm for `grind`, and the specs with their proofs
-([`ConAgua/L/ModelGen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/ModelGen.lean#L9-L60);
+([`ConAgua/L/ModelGen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/ModelGen.lean#L10-L61);
 204 uses). Two habits keep the proofs fast: facts are guarded equations about
 named functions (no `∃`, disjunction or `fun` in a postcondition), and a
 function with many paths is proved by plain `vcgen` followed by `simp_all` or
@@ -858,8 +858,9 @@ place, on phase A's own arrays, so it needs the setup stub's region plus 16
 bytes, where it keeps its return address and the caller's `r15`
 ([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L162-L171)).
 Its machine-level theorem
-([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L152-L161))
-says that an accept means the two L runs accepted, and
+([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L177-L187))
+says that an accept means the two L runs accepted, and an error report
+(`rdx = 2`) that one of them failed with the code in `rax`;
 [`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L25-L34)
 that two such runs mean `TwinAccepts`; the final theorems (§2.1) compose them
 for the committed file.
