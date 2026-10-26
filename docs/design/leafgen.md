@@ -121,3 +121,18 @@ whichever lands second rebases.
   `Stmt.need sk s ≤ ctx.need`; the entry is not in the table (`skOf_skt_entry`), so the
   trampoline and the final theorems are unchanged. 295 of 7504 stack checks gone. Init on
   R+G1+Z: 326.43 G → 318.87 G (−7.56 G).
+* **G2** (the register-stack expression code generator; helper leafgen-g): `gen` (Compile.lean)
+  evaluates an expression straight into a target register with scratch registers (`Ctx.pool`:
+  `rax rcx rdx` and the argument registers holding no local; never `rbx r12 r13`), operands in
+  place, `lea`, `imul` by an immediate, constant shifts, `mulhi`, constant indices folded into the
+  address, register indices, tiered loads, `ldc`, `cmpw` by `cmov` (the trusted parser has no
+  `setcc`); used by conditions (`genCmp`), `set` (`genSet`: in place on a register or slot, into the
+  local's register, or through `rax`), return values and call arguments (`valInto`, `retRegs`,
+  `compileRegArgs` with scratch lists), `st64`/`st64t` (`genSt`). Proof: `SimGen.lean` (`sim_gen`,
+  `GenSpec`, `CmpSpec`), `StepGen.lean` (instruction lemmas for any register); `CPost` keeps `rbx`
+  for verdicts-a's `if c abort k`. Dropped (prototype cost): CSE (+1.5 G), a load as the memory
+  operand of a `cmp` (+2.3 G), variable shifts, `gset`, byte stores (none in the checker); the
+  frame shrink (`tempsS` 0 where `gen` applies, 4.7 G before S) was reverted at the merge with S
+  (S's frame table is computed without the descriptor table that `gen` needs). Follow-ups: the
+  load operand, CSE, the frame shrink. Init (R+G1+Z+S) 319.07 G → 274.79 G (−44.3 G, −13.9%);
+  against master before the lane 359.13 G → 274.79 G (−23.5%). diff-e2e --refs: 628 agree.
