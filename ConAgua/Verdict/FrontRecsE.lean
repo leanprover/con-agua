@@ -575,4 +575,191 @@ theorem recE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b
     · cases hk' : rc.k <;> simp_all
     · cases hk' : rc.k <;> simp_all
 
+
+/-- **`vi_recs_go`'s error model**: a class-`≠ 0` error is an `.invalid` at the first recursor
+record from `j` on that fails the twin's checks, the ones before it passing. Hypotheses of the
+ok refinement `recsGoW_twin`. -/
+theorem recsGoE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b : ByteArray}
+    {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
+    (hD : StateDR m st) {rcs : List IndRecRec} {ro rn np tn cn ke tyn tyt fuel : Word}
+    (hL' : ListF (RecF b m) m 11 ro.toNat rcs) (hrn : rn.toNat = rcs.length)
+    (hro : ro.toNat + 11 * rcs.length < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
+    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
+    (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) :
+    ∀ n j e, recsGoE p n m ro rn np tn cn ke tyn tyt fuel j = .error e → e.cls ≠ 0 →
+      e.cls = 1 ∧ ∃ k, ∃ hk : k < rcs.length, j.toNat ≤ k ∧
+        (∀ i (hi : i < k), j.toNat ≤ i →
+          RecOK st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
+            cn.toNat (keOf ke) fuel.toNat (rcs[i]'(by omega))) ∧
+        RecFail st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
+          cn.toNat (keOf ke) fuel.toNat rcs[k] := by
+  intro n
+  induction n with
+  | zero => intro j e h hk; rw [recsGoE.eq_1] at h; cases h; exact absurd (by simp [Err.cls]) hk
+  | succ n ih =>
+    intro j e h hk
+    by_cases hle : rn ≤ j
+    · rw [recsGoE.arm1 p n m ro rn np tn cn ke tyn tyt fuel j hle] at h; cases h
+    rw [recsGoE.arm2 p n m ro rn np tn cn ke tyn tyt fuel j hle] at h
+    have hj1 := wsucc j rn (UInt64.not_le.mp hle)
+    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
+    have hix : (ro + 11 * j).toNat = ro.toNat + 11 * j.toNat := by
+      have := widx ro 11 j 0 (by simp; omega); simpa using this
+    have hrec := hL'.2.2 j.toNat (by omega)
+    rw [← hix] at hrec
+    cases h1 : callE p n "vi_rec" [ro + 11 * j, np, tn, cn, ke, tyn, tyt, fuel] m with
+    | error e1 =>
+      rw [h1, recsGoE.k_vi_rec.none] at h; cases h
+      have hE := triple_of_callE_err (rec_specE p hL.vi_rec n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _) h1
+        (Err.code_ne_of_cls hk)
+      obtain ⟨hc, hF⟩ := recE_claim hL hnv hR hD hrec (by rw [hix]; omega) hnp hke hb hb' hTN e hE hk
+      exact ⟨hc, j.toNat, by omega, Nat.le_refl _, fun i hi h2 => by omega, hF⟩
+    | ok q =>
+      obtain ⟨r1, m₁⟩ := q
+      rw [h1, recsGoE.k_vi_rec.arm1] at h
+      obtain ⟨s1, hs1, rfl, hW⟩ := triple_of_callE (rec_spec p hL n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _) h1
+      have hm₁ : m₁ = m := by rw [← hs1]
+      subst hm₁
+      have hok := recW_twin hR hD hrec (by rw [hix]; omega) hnp hke hb hb' hTN hW
+      cases h2 : recsGoE p n m₁ ro rn np tn cn ke tyn tyt fuel (j + 1) with
+      | ok q2 => rw [h2, recsGoE.k_vi_recs_go.arm1] at h; cases h
+      | error e2 =>
+        rw [h2, recsGoE.k_vi_recs_go.none] at h; cases h
+        obtain ⟨hc, k, hk', k1, k2, k3⟩ := ih (j + 1) e h2 hk
+        rw [hj1] at k1
+        refine ⟨hc, k, hk', by omega, fun i hi h3 => ?_, k3⟩
+        by_cases hij : i = j.toNat
+        · subst hij; exact hok
+        · exact k2 i hi (by rw [hj1]; omega)
+
+/-- **`vi_recs`' error model**: a class-`≠ 0` error is an `.invalid`; the block is not nested and
+the twin's recursor loop stops at a failing record (`RecsFail`). Hypotheses of the ok
+refinements `nestedW_twin`, `recsGoW_twin`. -/
+theorem recsE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b : ByteArray}
+    {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
+    (hD : StateDR m st) {tys : List IndTypeRec} {rcs : List IndRecRec}
+    {to tn ro rn np cn ke tyn tyt fuel : Word}
+    (hTy : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63)
+    (hL' : ListF (RecF b m) m 11 ro.toNat rcs) (hrn : rn.toNat = rcs.length)
+    (hro : ro.toNat + 11 * rcs.length < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
+    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
+    (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32)
+    (n : Nat) (e : Err) (h : recsE p n m to tn ro rn np cn ke tyn tyt fuel = .error e)
+    (hk : e.cls ≠ 0) :
+    e.cls = 1 ∧ (tys.any fun x => x.numNested != 0) = false ∧
+      RecsFail st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
+        cn.toNat (keOf ke) fuel.toNat rcs := by
+  cases n with
+  | zero => rw [recsE.eq_1] at h; cases h; exact absurd (by simp [Err.cls]) hk
+  | succ n =>
+  rw [recsE.arm1] at h
+  cases h1 : callE p n "vi_nested" [to, tn, 0] m with
+  | error e1 =>
+    rw [h1, recsE.k_vi_nested.none] at h; cases h
+    exact absurd (hnv.cls (by simp) h1) hk
+  | ok q =>
+  obtain ⟨r1, m₁⟩ := q
+  rw [h1] at h
+  obtain ⟨s1, hs1, rfl, hW⟩ := triple_of_callE (nested_spec p hL n ⟨m, Locals.init []⟩ _ _ _) h1
+  have hm₁ : m₁ = m := by rw [← hs1]
+  subst hm₁
+  by_cases hu : r1.headD 0 ≠ 0
+  · rw [recsE.k_vi_nested.arm1 p n tn ro rn np cn ke tyn tyt fuel r1 m₁ hu] at h; cases h
+  have hu' : r1.headD 0 = 0 := Classical.byContradiction hu
+  rw [recsE.k_vi_nested.arm2 p n tn ro rn np cn ke tyn tyt fuel r1 m₁ hu'] at h
+  obtain ⟨n1, -⟩ := nestedW_twin hTy htn hto n 0 _ hW
+  have hany : (tys.any fun x => x.numNested != 0) = false := by
+    rw [List.any_eq_false]
+    intro x hx
+    obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hx
+    simp [n1 hu' k hk (Nat.zero_le _)]
+  cases h2 : callE p n "vi_recs_go" [ro, rn, np, tn, cn, ke, tyn, tyt, fuel, 0] m₁ with
+  | ok q2 => obtain ⟨r2, m₂⟩ := q2; rw [h2, recsE.k_vi_recs_go.arm1] at h; cases h
+  | error e2 =>
+  rw [h2, recsE.k_vi_recs_go.none] at h; cases h
+  have hE := triple_of_callE_err (recsGo_specE p hL.vi_recs_go n ⟨m₁, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _) h2
+    (Err.code_ne_of_cls hk)
+  obtain ⟨hc, k, hk', -, k2, k3⟩ :=
+    recsGoE_claim hL hnv hR hD hL' hrn hro hnp hke hb hb' hTN n 0 e hE hk
+  exact ⟨hc, hany, k, hk', fun i hi => k2 i hi (Nat.zero_le _), k3⟩
+
+/-- **`vi_recs`' error refinement** at a failing call (`recsE_claim`). -/
+theorem viRecs_refinesE {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b : ByteArray}
+    {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
+    (hD : StateDR m st) {tys : List IndTypeRec} {rcs : List IndRecRec}
+    {to tn ro rn np cn ke tyn tyt fuel : Word}
+    (hTy : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63)
+    (hL' : ListF (RecF b m) m 11 ro.toNat rcs) (hrn : rn.toNat = rcs.length)
+    (hro : ro.toNat + 11 * rcs.length < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
+    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
+    (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32)
+    (n : Nat) (e : Err)
+    (hc : callE p n "vi_recs" [to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel] m = .error e)
+    (hk : e.cls ≠ 0) :
+    e.cls = 1 ∧ (tys.any fun x => x.numNested != 0) = false ∧
+      RecsFail st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
+        cn.toNat (keOf ke) fuel.toNat rcs :=
+  recsE_claim hL hnv hR hD hTy htn hto hL' hrn hro hnp hke hb hb' hTN n e
+    (triple_of_callE_err (recs_specE p hL.vi_recs n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _) hc
+      (Err.code_ne_of_cls hk)) hk
+
+
+/-- **`vi_rec_idx`'s error refinement** at a failing call (`recIdxE_claim`). -/
+theorem viRecIdx_refinesE {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {m : Mem}
+    {a : AState} (hR : ArenaR m a) {T ni np tn tyn tyt fuel j : Word}
+    (hnp : np.toNat < 10 ^ 18) (hni : ni.toNat < 10 ^ 18) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63) (n : Nat) (e : Err)
+    (hc : callE p n "vi_rec_idx" [T, ni, np, tn, tyn, tyt, fuel, j] m = .error e) (hk : e.cls ≠ 0) :
+    e = .abort R_RECURSOR_DECLARES_INDICES ∧
+      ∃ k, j.toNat ≤ k ∧ k < tn.toNat ∧ wd m IFL (tyn.toNat + k) = T ∧
+        (∀ k', j.toNat ≤ k' → k' < k → wd m IFL (tyn.toNat + k') = T → ∃ o,
+          (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + k')))).run a = .ok (o, a) ∧
+            ∀ x, o = some x → np.toNat + ni.toNat = x) ∧
+        ∃ x, (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + k)))).run a = .ok (some x, a) ∧
+          np.toNat + ni.toNat ≠ x :=
+  recIdxE_claim hL hnv hR hnp hni hb hb' n j e
+    (triple_of_callE_err (recIdx_specE p hL.vi_rec_idx n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _) hc
+      (Err.code_ne_of_cls hk)) hk
+
+/-- **`vi_rec`'s error refinement** at a failing call (`recE_claim`). -/
+theorem viRec_refinesE {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b : ByteArray}
+    {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
+    (hD : StateDR m st) {rc : IndRecRec} {r np tn cn ke tyn tyt fuel : Word}
+    (hrec : RecF b m r.toNat rc) (hr : r.toNat + 11 < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
+    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
+    (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) (n : Nat) (e : Err)
+    (hc : callE p n "vi_rec" [r, np, tn, cn, ke, tyn, tyt, fuel] m = .error e) (hk : e.cls ≠ 0) :
+    e.cls = 1 ∧ RecFail st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat
+      tn.toNat cn.toNat (keOf ke) fuel.toNat rc :=
+  recE_claim hL hnv hR hD hrec hr hnp hke hb hb' hTN e
+    (triple_of_callE_err (rec_specE p hL.vi_rec n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _) hc
+      (Err.code_ne_of_cls hk)) hk
+
+/-- **`vi_recs_go`'s error refinement** at a failing call (`recsGoE_claim`). -/
+theorem viRecsGo_refinesE {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b : ByteArray}
+    {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
+    (hD : StateDR m st) {rcs : List IndRecRec} {ro rn np tn cn ke tyn tyt fuel j : Word}
+    (hL' : ListF (RecF b m) m 11 ro.toNat rcs) (hrn : rn.toNat = rcs.length)
+    (hro : ro.toNat + 11 * rcs.length < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
+    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
+    (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) (n : Nat) (e : Err)
+    (hc : callE p n "vi_recs_go" [ro, rn, np, tn, cn, ke, tyn, tyt, fuel, j] m = .error e)
+    (hk : e.cls ≠ 0) :
+    e.cls = 1 ∧ ∃ k, ∃ hk : k < rcs.length, j.toNat ≤ k ∧
+      (∀ i (hi : i < k), j.toNat ≤ i →
+        RecOK st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
+          cn.toNat (keOf ke) fuel.toNat (rcs[i]'(by omega))) ∧
+      RecFail st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
+        cn.toNat (keOf ke) fuel.toNat rcs[k] :=
+  recsGoE_claim hL hnv hR hD hL' hrn hro hnp hke hb hb' hTN n j e
+    (triple_of_callE_err (recsGo_specE p hL.vi_recs_go n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _) hc
+      (Err.code_ne_of_cls hk)) hk
+
 end L.Front.Ind
