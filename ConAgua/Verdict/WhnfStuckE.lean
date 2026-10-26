@@ -1,6 +1,7 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfPirrE
 import ConAgua.Arena.DefEqStuck
+import ConAgua.Arena.DefEqStuckEta
 
 /-!
 # The `whnf` family's stuck-side helpers: `prop_irrel` (lane `verdicts-b`, helper `k2`)
@@ -150,5 +151,196 @@ theorem propIrrel_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (
   exact h'
 
 end pi
+
+/-! ## `eta_cert`, `eta_cert_body`, `eta_cert_ty` -/
+
+theorem whnfEtaE_nv : ∀ f ∈ ["inst1", "intern_fvar", "mk_app", "io_neutral"], f ∈ L.Checker.nvFns := by
+  decide +kernel
+
+section etaErr
+variable (r : CoreFnsA) (depth : Nat)
+
+theorem etaTy_err_infer (lhs cod₂ fv : EIdx) (a : AState) (ce : CheckError)
+    (h : (r.infer (depth + 1) lhs).run a = .error ce) : (etaTyT r depth lhs cod₂ fv).run a = .error ce := by
+  simp only [etaTyT, StateT.run_bind, h]; rfl
+
+theorem etaTy_err_defeq (lhs cod₂ fv t₁ t₂ : EIdx) (a a₁ a₂ : AState)
+    (h1 : (r.infer (depth + 1) lhs).run a = .ok (t₁, a₁))
+    (h2 : (instantiate1Fast coreWalkFuel cod₂ fv 0).run a₁ = .ok (t₂, a₂)) (ce : CheckError)
+    (h3 : (r.defeq (depth + 1) t₁ t₂).run a₂ = .error ce) :
+    (etaTyT r depth lhs cod₂ fv).run a = .error ce := by
+  simp only [etaTyT, StateT.run_bind, h1, except_ok_bind, h2, h3]
+
+theorem etaBody_err_defeq (mode : ConLeche.CheckMode) (ty₁ body₁ b cod₂ fv lhs rhs : EIdx)
+    (a a₁ a₂ a₃ : AState) (h1 : (internE (.fvar depth ty₁)).run a = .ok (fv, a₁))
+    (h2 : (instantiate1Fast coreWalkFuel body₁ fv 0).run a₁ = .ok (lhs, a₂))
+    (h3 : (internE (.app b fv)).run a₂ = .ok (rhs, a₃)) (ce : CheckError)
+    (h4 : (r.defeq (depth + 1) lhs rhs).run a₃ = .error ce) :
+    (etaBodyT mode r depth ty₁ body₁ b cod₂).run a = .error ce := by
+  simp only [etaBodyT, StateT.run_bind, h1, except_ok_bind, h2, h3, h4]; rfl
+
+theorem etaBody_err_ty (mode : ConLeche.CheckMode) (ty₁ body₁ b cod₂ fv lhs rhs : EIdx)
+    (a a₁ a₂ a₃ a₄ : AState) (hv : mode.verifiedChecks = true)
+    (h1 : (internE (.fvar depth ty₁)).run a = .ok (fv, a₁))
+    (h2 : (instantiate1Fast coreWalkFuel body₁ fv 0).run a₁ = .ok (lhs, a₂))
+    (h3 : (internE (.app b fv)).run a₂ = .ok (rhs, a₃))
+    (h4 : (r.defeq (depth + 1) lhs rhs).run a₃ = .ok (true, a₄)) (ce : CheckError)
+    (h5 : (etaTyT r depth lhs cod₂ fv).run a₄ = .error ce) :
+    (etaBodyT mode r depth ty₁ body₁ b cod₂).run a = .error ce := by
+  simp only [etaBodyT, StateT.run_bind, h1, except_ok_bind, h2, h3, h4, Bool.not_true,
+    Bool.false_eq_true, ↓reduceIte, hv, h5]
+
+end etaErr
+
+section eta
+variable (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hnv : closedNV p L.Checker.nvFns = true)
+include hq hc hnv
+
+/-- **`eta_cert_ty`'s verdicts** are the `infer` and `defeq` slots'. -/
+theorem etaCertTy_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d lhs cod2 fv : Word) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hd : ¬ d + 1 = 0) (hl : HW lhs)
+    (hcod : HW cod2) (hfv : HW fv) :
+    CoreSpecE p (n + 1) "eta_cert_ty" [mode, vis, d, lhs, cod2, fv]
+      (etaTyT (coreKnot (decMode mode) fe id F) d.toNat (decE lhs) (decE cod2) (decE fv)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (ectE_spec p hq.etaCertTy (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d lhs cod2 fv) hc0 (Err.code_ne_of_cls hk0)
+  simp only [ectE] at hW
+  have hd1 := toNat_succ_of_ne hd
+  cases c1 : callE p n "infer" [mode, vis, d + 1, lhs] s₀.mem with
+  | error e1 =>
+    rw [c1, ectE.k_infer.none] at hW; cases hW
+    have h := CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).infer F s₀ a₀ dn vis fe M eb mode (d + 1) lhs
+      hF hn hs hl) c1
+    rw [hd1] at h
+    exact ErrClaim.of_run_err (fun ce h' => etaTy_err_infer (cod₂ := _) (fv := _) (a := a₀) (ce := ce) (h := h')) h
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [c1] at hW
+  simp only [ectE.k_infer] at hW
+  have h₁ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F s₀ a₀ dn vis fe M eb mode (d + 1) lhs
+    hF hn hs hl) (callW_of_callE c1)
+  rw [hd1] at h₁
+  obtain ⟨hok1, ⟨M₁, hS₁, -, -⟩, hres1, hr1⟩ := h₁
+  have hrun1 := AM.run_of_ok _ _ hok1
+  rw [hres1] at hrun1
+  cases c2 : callE p n "inst1" [cod2, fv, 0] m₁ with
+  | error e2 =>
+    rw [c2, ectE.k_inst1.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfEtaE_nv "inst1" (by simp)) c2
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [c2] at hW
+  simp only [ectE.k_inst1] at hW
+  obtain ⟨hok2, ⟨M₂, hS₂, -, -⟩, hres2, hr2⟩ := CoreSpec.of_callW
+    (hc.inst1 n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb cod2 fv 0 hS₁ hcod hfv) (callW_of_callE c2)
+  have hrun2 := AM.run_of_ok _ _ hok2
+  rw [hres2] at hrun2
+  have hW' := err_of_k (by intro q e; simp [ectE.k_defeq]) (fun _ => rfl) hW
+  have h := CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).defeq F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb
+    mode (d + 1) (r₁.headD 0) (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hr1 hr2) hW'
+  rw [hd1] at h
+  exact ErrClaim.of_run_err (fun ce h' => etaTy_err_defeq (a := a₀) (h1 := hrun1) (h2 := hrun2) (ce := ce) (h3 := h')) h
+
+/-- **`eta_cert_body`'s verdicts** are the `defeq` slot's and `eta_cert_ty`'s. -/
+theorem etaCertBody_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d ty1 body1 b cod2 : Word) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty1) (hbody : HW body1)
+    (_hb : HW b) (hcod : HW cod2) :
+    CoreSpecE p (n + 1) "eta_cert_body" [mode, vis, d, ty1, body1, b, cod2]
+      (etaBodyT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE ty1) (decE body1)
+        (decE b) (decE cod2)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (ecbE_spec p hq.etaCertBody (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d ty1 body1 b cod2) hc0 (Err.code_ne_of_cls hk0)
+  simp only [ecbE] at hW
+  by_cases hd : d + 1 = 0
+  · rw [if_pos hd] at hW; cases hW; exact absurd rfl hk0
+  rw [if_neg hd] at hW
+  have hd1 := toNat_succ_of_ne hd
+  cases c1 : callE p n "intern_fvar" [d, ty1] s₀.mem with
+  | error e1 =>
+    rw [c1, ecbE.k_intern_fvar.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfEtaE_nv "intern_fvar" (by simp)) c1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [c1] at hW
+  simp only [ecbE.k_intern_fvar] at hW
+  obtain ⟨s₁, hs₁, -, hfv⟩ := triple_of_callE
+    (internFVar_spec p hq.body.fvf hq.body.fvp hq.body.fvi n ⟨s₀.mem, Locals.init []⟩ d ty1) c1
+  rw [hs₁] at hfv
+  obtain ⟨hok1, ⟨M₁, hS₁, -, -⟩, hres1, hr1⟩ := internFVar_core hs.rel d ty1 hty r₁ hfv
+  have hrun1 := AM.run_of_ok _ _ hok1
+  rw [hres1] at hrun1
+  cases c2 : callE p n "inst1" [body1, r₁.headD 0, 0] m₁ with
+  | error e2 =>
+    rw [c2, ecbE.k_inst1.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfEtaE_nv "inst1" (by simp)) c2
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [c2] at hW
+  simp only [ecbE.k_inst1] at hW
+  obtain ⟨hok2, ⟨M₂, hS₂, -, -⟩, hres2, hr2⟩ := CoreSpec.of_callW
+    (hc.inst1 n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb body1 (r₁.headD 0) 0 hS₁ hbody hr1)
+    (callW_of_callE c2)
+  have hrun2 := AM.run_of_ok _ _ hok2
+  rw [hres2] at hrun2
+  cases c3 : callE p n "mk_app" [b, r₁.headD 0] m₂ with
+  | error e3 =>
+    rw [c3, ecbE.k_mk_app.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfEtaE_nv "mk_app" (by simp)) c3
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [c3] at hW
+  simp only [ecbE.k_mk_app] at hW
+  obtain ⟨hok3, ⟨M₃, hS₃, -, -⟩, hres3, hr3⟩ := mkApp_core hq.leaf.core.spine hS₂ b (r₁.headD 0) r₃
+    (callW_of_callE c3)
+  have hrun3 := AM.run_of_ok _ _ hok3
+  rw [hres3] at hrun3
+  cases c4 : callE p n "defeq" [mode, vis, d + 1, r₂.headD 0, r₃.headD 0] m₃ with
+  | error e4 =>
+    rw [c4, ecbE.k_defeq.none] at hW; cases hW
+    have h := CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).defeq F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb
+      mode (d + 1) (r₂.headD 0) (r₃.headD 0) hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ hr2 hr3) c4
+    rw [hd1] at h
+    exact ErrClaim.of_run_err (fun ce h' => etaBody_err_defeq (mode := _) (cod₂ := _) (a := a₀) (h1 := hrun1) (h2 := hrun2)
+      (h3 := hrun3) (ce := ce) (h4 := h')) h
+  | ok q =>
+  obtain ⟨r₄, m₄⟩ := q
+  rw [c4] at hW
+  simp only [ecbE.k_defeq] at hW
+  have h₄ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).defeq F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb
+    mode (d + 1) (r₂.headD 0) (r₃.headD 0) hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ hr2 hr3)
+    (callW_of_callE c4)
+  rw [hd1] at h₄
+  obtain ⟨hok4, ⟨M₄, hS₄, -, -⟩, hres4, -⟩ := h₄
+  have hrun4 := AM.run_of_ok _ _ hok4
+  rw [hres4] at hrun4
+  by_cases h0 : r₄.headD 0 = 0
+  · rw [if_pos h0] at hW; cases hW
+  rw [if_neg h0] at hW
+  rw [decBool_true_of h0] at hrun4
+  by_cases hm : mode &&& 1 = 0
+  · rw [if_pos hm] at hW
+    have hv : (decMode mode).verifiedChecks = true := by rw [decMode_vc mode hs.mode4]; simpa using hm
+    have hW' := err_of_k (by intro q e; simp [ecbE.k_eta_cert_ty]) (fun _ => rfl) hW
+    cases n with
+    | zero => exact ErrClaim.of_callE_zero hW'
+    | succ N =>
+    exact ErrClaim.of_run_err (fun ce h' => etaBody_err_ty (a := a₀) (hv := hv) (h1 := hrun1) (h2 := hrun2)
+        (h3 := hrun3) (h4 := hrun4) (ce := ce) (h5 := h'))
+      (CoreSpecE.of_callE (etaCertTy_refinesE p hq hc hnv N (hk.mono (Nat.le_succ N))
+        (hkE.mono (Nat.le_succ N)) F ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode d (r₂.headD 0) cod2 (r₁.headD 0) (by omega)
+        (by omega) ⟨hS₄, hs.mode4, hs.eb_mode⟩ hd hr2 hcod hr1) hW')
+  · rw [if_neg hm] at hW; cases hW
+
+end eta
 
 end L.Arena
