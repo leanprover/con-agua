@@ -374,7 +374,8 @@ def targetMajorOfOutsideTail : FunDecl := lfn (vis, p, pfo, pfl, I, us, dso, dsl
     locals (nidx, sI, e, r) {
   (nidx, sI) := call target_outside_inst(vis, I, us, dso, dsl);
   e := call lvl_eq_c(sI, IW.u64[p + 6]);
-  if e != 2 { abort };
+  if e == 0 { fail R_RESOURCE_LIMIT_FUEL };
+  if e != 2 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_LIVES };
   r := call mk_target_major(I, us, dso, dsl, dsl, nidx, cso, csl, 0, 0, 0, pfo, pfl);
   return r
 }

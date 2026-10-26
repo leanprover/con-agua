@@ -622,11 +622,12 @@ def lvlEqTrue : FunDecl := lfn (u, v) locals (r) {
   return u64(r == 2)
 }
 
-/-- `lvl_eq_fueled(u, v)`: `liftFueled (← lvlEq? u v)`: `none` aborts. -/
+/-- `lvl_eq_fueled(u, v)`: `liftFueled (← lvlEq? u v)`: `none` declines. -/
 -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:309-314 ConRon.Arena.liftFueled
 def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
   r := call lvl_eq_c(u, v);
-  if r == 0 { abort };
+  if r == 0 { fail R_RESOURCE_LIMIT_FUEL };
   return u64(r == 2)
 }
 

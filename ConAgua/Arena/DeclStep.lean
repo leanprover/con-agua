@@ -282,6 +282,7 @@ def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt
   if EREC.u64[g] == 1 {
     zr := call pin_word(53);
     e := call lvl_eq_c(u, zr);
+    if e == 0 { fail R_RESOURCE_LIMIT_FUEL };
     if e == 1 { fail R_TYPE_OF_THEOREM };
     if e != 2 { abort };
     z := call install_value_guards(vis, g + 1, v)
