@@ -212,7 +212,7 @@ theorem thrS_cases {b : ArrId} (h : thrS b = true) :
   · left
     obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem h3
     have h59 : frozenIdsL.length = 59 := rfl
-    have h58 : frozen.length = 58 := frozen_length
+    have h58 : frozen.length = 61 := frozen_length
     rcases i with _ | _ | k
     · exact absurd rfl h1
     · exact absurd rfl h2

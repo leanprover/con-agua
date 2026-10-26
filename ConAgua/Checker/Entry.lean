@@ -240,7 +240,8 @@ def entryProg : Prog :=
    ("fz_40", fzF 40), ("fz_41", fzF 41), ("fz_42", fzF 42), ("fz_43", fzF 43), ("fz_44", fzF 44),
    ("fz_45", fzF 45), ("fz_46", fzF 46), ("fz_47", fzF 47), ("fz_48", fzF 48), ("fz_49", fzF 49),
    ("fz_50", fzF 50), ("fz_51", fzF 51), ("fz_52", fzF 52), ("fz_53", fzF 53), ("fz_54", fzF 54),
-   ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57),
+   ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57), ("fz_58", fzF 58),
+   ("fz_59", fzF 59), ("fz_60", fzF 60),
    ("cap_check", capCheckL),
    -- the reserved pins at their ROM offset (lane `decls` binds it only parametrically, `IrpProg rom
    -- off p`; its readers read the pin-data buffer, `L.Rom.romProgPB`)
