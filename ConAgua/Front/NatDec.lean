@@ -218,7 +218,7 @@ def decW (b : Array UInt8) (m : Mem) (top n i d : Word) : Option (Mem × Word) :
   else some (m, n)
 termination_by d.toNat - i.toNat
 decreasing_by
-  all_goals have := decK_pos i d h; omega
+  all_goals have := decK_pos i d _h; omega
 
 section
 variable (b : Array UInt8) (m : Mem) (top n i d : Word)

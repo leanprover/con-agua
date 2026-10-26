@@ -92,6 +92,22 @@ def fix_simp(lines):
     print(f"simp: {len(seen)} warnings, {tidied} lines tidied")
 
 
+def rename_in_decreasing_by(src, line, name):
+    """`name` was bound at `line` (1-based) and is now `_name`.  The linter does not see uses
+    inside `decreasing_by`, so rename those too (up to the next top-level command)."""
+    pat = re.compile(r"(?<![\w.'])" + re.escape(name) + r"(?![\w'!?₀₁₂₃₄₅₆₇₈₉])")
+    k, in_dec = line, False
+    while k < len(src):
+        l = src[k]
+        if k >= line and l and not l[0].isspace() and not l.startswith(("termination_by", "decreasing_by", ")", "|")):
+            break
+        if l.startswith("decreasing_by"):
+            in_dec = True
+        if in_dec:
+            src[k] = pat.sub("_" + name, l)
+        k += 1
+
+
 def fix_vars(lines):
     edits = defaultdict(set)
     for ln in lines:
@@ -108,6 +124,7 @@ def fix_vars(lines):
                 src[line - 1] = s[:col] + "_" + s[col:]
                 SHIFTS[(p, line)].append((col, 1))
                 done += 1
+                rename_in_decreasing_by(src, line, name)
             else:
                 print(f"  skip {p}:{line}:{col}: `{name}` not at that position")
                 skipped += 1

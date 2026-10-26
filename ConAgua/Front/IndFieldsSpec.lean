@@ -87,7 +87,7 @@ decreasing_by
   all_goals
     have := L.Scan.lt_of_lt_ofNat h
     first
-      | (rw [UInt64.lt_iff_toNat_lt] at hj; omega)
+      | (rw [UInt64.lt_iff_toNat_lt] at _hj; omega)
       | (have := L.Scan.toNat_add_one_of_lt_ofNat h; omega)
 
 /-- After `ifl_push`: the loop goes on at `e`. -/
@@ -197,11 +197,11 @@ def objLoopW (b : Array UInt8) (m : Mem) (kind p i w : Word) : Option (Word × M
 termination_by (b.size - i.toNat, 4)
 decreasing_by
   all_goals
-    have hk := nextMemberN_key b i w (nextMemberN_tag b i w h0 h1)
+    have hk := nextMemberN_key b i w (nextMemberN_tag b i w _h0 h1)
     have := L.Scan.lt_of_lt_ofNat hk.2
     rw [UInt64.le_iff_toNat_le] at hk
   · exact Prod.Lex.right' _ (by omega) (by decide)
-  · rw [UInt64.lt_iff_toNat_lt] at hlt
+  · rw [UInt64.lt_iff_toNat_lt] at _hlt
     exact Prod.Lex.left _ _ (by omega)
 
 /-- **The model of `ind_member(kind, p, ks, k, v)`.** -/
@@ -223,7 +223,7 @@ def memberW (b : Array UInt8) (m : Mem) (kind p ks k v : Word) : Option (Word ×
   else none
 termination_by (b.size - ks.toNat, 3)
 decreasing_by
-  rw [UInt64.lt_iff_toNat_lt] at hv
+  rw [UInt64.lt_iff_toNat_lt] at _hv
   exact Prod.Lex.right' _ (by omega) (by decide)
 
 /-- **The model of `ind_list(v, sub)`**: `(off, cnt, end)` and the memory after. -/
@@ -236,8 +236,8 @@ def listW (b : Array UInt8) (m : Mem) (v sub : Word) : Option ((Word × Word × 
   else none
 termination_by (b.size - v.toNat, 2)
 decreasing_by
-  have := L.Scan.lt_of_lt_ofNat hv
-  have := L.Scan.toNat_add_one_of_lt_ofNat hv
+  have := L.Scan.lt_of_lt_ofNat _hv
+  have := L.Scan.toNat_add_one_of_lt_ofNat _hv
   exact Prod.Lex.right' _ (by omega) (by decide)
 
 /-- `ind_list`'s loop from `i`, `cnt` records read at `o`. -/
