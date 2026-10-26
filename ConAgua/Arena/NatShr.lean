@@ -241,9 +241,12 @@ theorem shrLoop_spec (n : Nat) (s₀ : St) (h : ShrInv Pg C s₀) :
   | succ n ih =>
     simp only [ShrInv, ShrPost] at h ⊢
     rw [exec, step_while (w := shrLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n] <;>
-      finish (splits := 20) [ShrInv, ShrPost]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n]
+    all_goals clear ih
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (splits := 20) [arena_grind, lang_grind, ShrInv, ShrPost]
 
 include hpl in
 theorem shrLoop_step_spec (n : Nat) (s₀ : St) (h : ShrInv Pg C s₀) :
@@ -289,11 +292,12 @@ theorem natShr_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       shrLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
     all_goals (try simp only [ShrInv, ShrPost] at *)
     all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte,
-      Nat.reduceEqDiff, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
-      UInt64.toNat_zero] at *)
-    all_goals (try and_intros)
-    all_goals (try (set_option maxHeartbeats 200000 in grind (splits := 40) [arena_grind, lang_grind, natop_grind]))
+    -- `setLoc` lemmas, not unfolding; no `and_intros` (one `grind` per goal)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
+      Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    all_goals grind (splits := 40) [arena_grind, lang_grind, natop_grind]
 
 end shrFn
 
