@@ -263,37 +263,6 @@ theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List N
 
 /-! ## The environment's table side as callees of the stage -/
 
-/-- `env_find`'s model on a hit: the memory is unchanged and the constant is visible. -/
-theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
-    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR dn m vis fe)
-    (hw : w.toNat < 2 ^ 32) (h0 : r.headD 0 ≠ 0) : m1 = m ∧ (fe.find? (decI w)).isSome := by
-  unfold envFindW at h
-  by_cases ht : 2 < tagW w
-  · simp [ht] at h
-  rw [if_neg ht] at h
-  have ht2 : tagW w ≤ 2 := by
-    have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
-    exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
-  rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2]
-  by_cases hc : rowCW m w = 0
-  · rw [if_pos hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.1] at h0; simp at h0
-  rw [if_neg hc] at h
-  by_cases hv : rowCW m w - 1 < vis
-  · rw [if_pos hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
-    refine ⟨h.2.symm, ?_⟩
-    have hc' : (rowCW m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
-    have : (rowCW m w).toNat - 1 < vis.toNat := by
-      have := UInt64.lt_iff_toNat_lt.mp hv
-      rwa [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))] at this
-    have hd := EnvR.decCI_isSome hE w hw htag (by rwa [rowCW_eq m w hw ht2] at hc)
-    simp only [hc, ite_false, this, ite_true]
-    rw [rowCW_eq m w hw ht2] at hc ⊢
-    simpa using hd
-  · rw [if_neg hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.1] at h0; simp at h0
-
 /-- `find_table` as a callee: the memory is unchanged, the row word decodes the twin's lookup. -/
 theorem findTable_call {p : Prog} (hP : TblProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {n : Nat} {m m' : Mem} {w : Word} {r : List Word} (hE : EnvR dn m vis fe)
@@ -342,10 +311,12 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
     (hS : StageR dn vis fe m a) (ht : decTbl (erecP m) q.toNat = some t)
     (hc : callW p n "env_push_table" [q] m = some (r, m')) :
     StageR dn vis (fe.pushTable t) m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AFr m m' := by
-  obtain ⟨s', hs', ⟨-, hE'⟩, hM, hw, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (triple_and (envPushTable_refines p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ vis q t hS.1.env ht)
-      (envPushTable_mem p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ q)) hc
-  rw [hs'] at hE' hM
+  obtain ⟨s', hs', -, hE'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envPushTable_refines p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ vis q t hS.1.env ht) hc
+  obtain ⟨s'', hs'', hM, hw, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envPushTable_mem p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ q) hc
+  rw [hs'] at hE'
+  rw [hs''] at hM
   simp only at hM hw
   have hfr : MemFrame (ETAB :: tblArrs) [133] m m' := by
     rw [hM]
@@ -451,8 +422,9 @@ theorem tblW_okR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   by_cases hf0 : rf.headD 0 = 0
   · rw [tblK3_missing (h := hf0)]; exact Sim.of_none
   rw [tblK3_found (h := hf0)]
-  obtain ⟨hm32, hhit⟩ := envFindW_hit hf hS2.1.env hT hf0
+  obtain ⟨hm32, hfind0, ci0, hci0⟩ := envFindW_hit hf hS2.1.env hT hf0
   subst m3
+  have hhit : (fe.find? (decI T)).isSome := by rw [hfind0, hci0]; rfl
   simp only [hhit, ite_true]
   -- `find_table`: the table is not taken
   rcases hft : callW p (n + 1) "find_table" [vis, T] m2 with _ | ⟨rt, m3⟩
@@ -521,7 +493,7 @@ theorem tblW_okR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 `all_level_params_defined` (`realCall p`; `checkStructProjTable_refines`' with the stub contract):
 from `StageC` at `vis` of `fe`, `checkStructProjTable_refines`' decodings and the walk memos, and
 the twin's readings of the structure's name, the level parameters and the constructor
-(`checkStructProjTable_runF`'s), a returning run returns the view of `fe` with the `projInfo`
+(`checkStructProjTable_runF`'s), a returning run returns the view of `fe` with the structure's
 table pushed, and the twin's run is a `PStep`. -/
 @[refines ConRon.Arena.checkStructProjTable]
 theorem checkStructProjTable_refinesC (p : Prog) (hP : TblProg p) (hp : ApdF p) (n : Nat) (s₀ : St)
