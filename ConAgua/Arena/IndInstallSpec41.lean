@@ -38,7 +38,6 @@ capacity guards.
 
 noncomputable section
 set_option experimental.vcgen true
-set_option linter.deprecated false
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
@@ -325,7 +324,7 @@ theorem word_add_noWrap {x y : Word} (h : ¬ x + y < x) : x.toNat + y.toNat < 2 
 /-- **A fresh `ClassGen` record of parts decoded below the tops is decoded below the tops.** -/
 theorem cgRec_decB {m : Mem} {g : Word}
     {w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 : Word}
-    (hget : ∀ j (hj : j < 14), (m.arr64 IW)[g.toNat + j]? =
+    (hget : ∀ j (_hj : j < 14), (m.arr64 IW)[g.toNat + j]? =
       [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]?)
     (hq : g.toNat + 14 ≤ iwTop m) {nP : Nat} {params : List EIdx} {cls : List TargetMajor}
     {ftc : List EIdx} {slots : List ConRon.Arena.ClassSlot} {ctors : List (List ConRon.Arena.ClassCtor)}
@@ -340,15 +339,15 @@ theorem cgRec_decB {m : Mem} {g : Word}
     (hpre : DecB (fun m => (decHL m w12.toNat w13.toNat : Option (List EIdx))) m pre) :
     DecB (fun m => decCG m g.toNat) m (⟨nP, params, cls, ftc, slots, ctors, elim, pre⟩ : ConRon.Arena.ClassGen) := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hgw : ∀ j (hj : j < 14), (iwA (truncM m))[g.toNat + j]? =
-      some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using hj)) := by
-    intro j hj
+  have hgw : ∀ j (_hj : j < 14), (iwA (truncM m))[g.toNat + j]? =
+      some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using _hj)) := by
+    intro j _hj
     rw [truncM_iw_eq (by omega)]
-    simp only [iwA, hget j hj]
+    simp only [iwA, hget j _hj]
     rw [List.getElem?_eq_getElem (by simp; omega)]
-  have hw : ∀ j (hj : j < 14), iwN (truncM m) (g.toNat + j) =
-      some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using hj)).toNat := by
-    intro j hj; simp only [iwN, nat?, hgw j hj]; rfl
+  have hw : ∀ j (_hj : j < 14), iwN (truncM m) (g.toNat + j) =
+      some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using _hj)).toNat := by
+    intro j _hj; simp only [iwN, nat?, hgw j _hj]; rfl
   have h0' := hw 0 (by omega)
   have h1 := hw 1 (by omega)
   have h2 := hw 2 (by omega)
@@ -413,7 +412,7 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       apply Nat.le_of_not_lt
       intro h
       have := truncM_iw_get? m (iwTop m)
-      rw [if_neg (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
+      rw [ite_eq_right (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
       cases this
     rcases decHL_le hpd' with h0 | h0
     · omega
@@ -470,7 +469,7 @@ theorem decHL_set_out {k : IdxKind} {m : Mem} {x v : Word} {o l : Nat} (h : o + 
   intro j hj
   have : j < l := List.mem_range.mp hj
   simp only [hd?, iwA]
-  rw [set64IW_get, if_neg (by omega)]
+  rw [set64IW_get, ite_eq_right (by omega)]
 
 -- ==== S41F.lean
 /-! ## Part C: the generator record, its prefix, the recursor types -/
@@ -540,7 +539,7 @@ theorem csRes_decB {m : Mem} {r : List Word} {cvs : List IConstantVal} (h : CsRe
   rw [decPL_eq_bind, show decNL (truncM m) (r.headD 0).toNat (r.tail.headD 0).toNat = some ptrs from
     decNL_decB hp hb]
   rw [decPL_eq_bind, hp] at hd
-  simp only [Option.bind_eq_bind, Option.bind_some] at hd
+  simp only [Option.bind_some] at hd
   have : ∀ (qs : List Nat) (xs : List IConstantVal), qs.mapM (decCVp m) = some xs → (∀ q ∈ qs, CVExt m q) →
       qs.mapM (decCVp (truncM m)) = some xs := by
     intro qs

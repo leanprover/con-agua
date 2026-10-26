@@ -19,7 +19,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Rom
 
@@ -123,27 +122,27 @@ variable (rom : List UInt8) (n : Nat) (m m₁ : Mem) (pos q h : Word)
 theorem itK_some (F : Mem → Word → Option (Word × Mem)) : itK n F (some (h, q, m₁)) = F m₁ q := rfl
 theorem romItemsW_end (h5 : romB rom pos = 5) : romItemsW rom (n + 1) m pos = some (pos + 1, m) := by
   simp [romItemsW, h5]
-theorem romItemsW_reset (h5 : romB rom pos ≠ 5) (h4 : romB rom pos = 4) :
+theorem romItemsW_reset (_h5 : romB rom pos ≠ 5) (h4 : romB rom pos = 4) :
     romItemsW rom (n + 1) m pos = if rclearOK m then romItemsW rom n (resetMem m) (pos + 1) else none := by
-  simp [romItemsW, h5, h4]
-theorem romItemsW_reset_ok (h5 : romB rom pos ≠ 5) (h4 : romB rom pos = 4) (hok : rclearOK m) :
+  simp [romItemsW, h4]
+theorem romItemsW_reset_ok (_h5 : romB rom pos ≠ 5) (h4 : romB rom pos = 4) (hok : rclearOK m) :
     romItemsW rom (n + 1) m pos = romItemsW rom n (resetMem m) (pos + 1) := by
-  simp [romItemsW, h5, h4, hok]
-theorem romItemsW_nm (h5 : romB rom pos ≠ 5) (h4 : romB rom pos ≠ 4) (h0 : romB rom pos = 0) :
+  simp [romItemsW, h4, hok]
+theorem romItemsW_nm (_h5 : romB rom pos ≠ 5) (_h4 : romB rom pos ≠ 4) (h0 : romB rom pos = 0) :
     romItemsW rom (n + 1) m pos = itK n (romItemsW rom n) (romNameW rom n m (pos + 1)) := by
-  simp [romItemsW, h5, h4, h0]
-theorem romItemsW_lv (h5 : romB rom pos ≠ 5) (h4 : romB rom pos ≠ 4) (h0 : romB rom pos ≠ 0)
+  simp [romItemsW, h0]
+theorem romItemsW_lv (_h5 : romB rom pos ≠ 5) (_h4 : romB rom pos ≠ 4) (_h0 : romB rom pos ≠ 0)
     (h1 : romB rom pos = 1) :
     romItemsW rom (n + 1) m pos = itK n (romItemsW rom n) (romLevelW rom n m (pos + 1)) := by
-  simp [romItemsW, h5, h4, h0, h1]
-theorem romItemsW_lvs (h5 : romB rom pos ≠ 5) (h4 : romB rom pos ≠ 4) (h0 : romB rom pos ≠ 0)
-    (h1 : romB rom pos ≠ 1) (h2 : romB rom pos = 2) :
+  simp [romItemsW, h1]
+theorem romItemsW_lvs (_h5 : romB rom pos ≠ 5) (_h4 : romB rom pos ≠ 4) (_h0 : romB rom pos ≠ 0)
+    (_h1 : romB rom pos ≠ 1) (h2 : romB rom pos = 2) :
     romItemsW rom (n + 1) m pos = itK n (romItemsW rom n) (romLevelsW rom n m (pos + 1)) := by
-  simp [romItemsW, h5, h4, h0, h1, h2]
-theorem romItemsW_ex (h5 : romB rom pos ≠ 5) (h4 : romB rom pos ≠ 4) (h0 : romB rom pos ≠ 0)
-    (h1 : romB rom pos ≠ 1) (h2 : romB rom pos ≠ 2) (h3 : romB rom pos = 3) :
+  simp [romItemsW, h2]
+theorem romItemsW_ex (_h5 : romB rom pos ≠ 5) (_h4 : romB rom pos ≠ 4) (_h0 : romB rom pos ≠ 0)
+    (_h1 : romB rom pos ≠ 1) (_h2 : romB rom pos ≠ 2) (h3 : romB rom pos = 3) :
     romItemsW rom (n + 1) m pos = itK n (romItemsW rom n) (romExprW rom n m (pos + 1)) := by
-  simp [romItemsW, h5, h4, h0, h1, h2, h3]
+  simp [romItemsW, h3]
 end arms
 
 attribute [arena_grind =] itK_some

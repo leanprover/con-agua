@@ -98,7 +98,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
     ⟨M3, G3, hS4, (hg1.trans hg2).trans (hg3.trans hg4), hR3.frame (posRecW_fr h), hk2.trans hk3 hG2,
       UInt64.le_trans hG2 hG3⟩⟩
   · simp only [ConRon.Arena.nestCtorNf, hpl, StateT.run_bind]
-    simp only [hrun2, except_ok_bind, StateT.run_bind, hrun3]
+    simp only [hrun2, except_ok_bind, hrun3]
     rfl
   · have hn0 := hget4 0 (by simp)
     have hn1 := hget4 1 (by simp)
@@ -116,8 +116,8 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
     simp only [Nat.add_zero] at hn0'
     rw [hn0] at hn0'; rw [hn1] at hn1'; rw [hn2] at hn2'; rw [hn3] at hn3'; rw [hn4] at hn4'
     show decNCN (truncM m') nf.toNat = _
-    simp only [decNCN, decAt, iwH, iwN, hd?, nat?, hn0', hn1', hwnH, hus, hty, Option.bind_eq_bind,
-      Option.bind_some, Option.map_some, ite_true, if_true]
+    simp only [decNCN, decAt, iwH, iwN, hd?, nat?, hn0', hn1', hwnH, hus, Option.bind_eq_bind,
+      Option.bind_some, ite_true, ite_true]
     rw [show nf.toNat + 2 + 1 = nf.toNat + 3 by omega, hn2', hn3', hn4']
     simp [hqlT, hwnd, hty, decE_eq]
 

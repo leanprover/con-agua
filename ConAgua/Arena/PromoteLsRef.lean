@@ -14,7 +14,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -409,7 +408,7 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
   · simp [plsArmW, hh', hne, hc0, h1] at hW
   by_cases h2 : m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) < (lsNodeW m h).tail.headD 0
   · unfold plsArmW at hW
-    rw [if_neg (by simp [hh', hne]), if_neg hc0, if_neg h1, if_pos h2] at hW; cases hW
+    rw [ite_eq_right (by simp [hh', hne]), ite_eq_right hc0, ite_eq_right h1, ite_eq_left h2] at hW; cases hW
   rw [plsArmW_eq p n m f h hh' hne hc0 h1 h2] at hW
   obtain ⟨ids, hv⟩ := promote_lsNodeW_view hD.1 hh hne
   obtain ⟨hw, hso, hsl⟩ := lsNodeW_store' hD.1 hh hv
@@ -499,11 +498,11 @@ theorem pls_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : 
   · rw [plsW_pers p n m f h ht] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hpers : (decI h : LsIdx).isPersistent = true := PW.pers ⟨hh, ht⟩
-    rw [if_pos hpers, ← hr]
+    rw [ite_eq_left hpers, ← hr]
     exact ⟨a, pm, rfl, hD, hP, ⟨hh, ht⟩, rfl, MemFrame.refl _ _ _, rfl, TierKeep.refl _⟩
   have hnp : (decI h : LsIdx).isPersistent = false := by
     rw [isPersistent_decI h hh]; exact beq_eq_false_iff_ne.mpr ht
-  rw [if_neg (by simp [hnp])]
+  rw [ite_eq_right (by simp [hnp])]
   have hk : (hKey .levels).ok h 0 := ⟨hh, rfl⟩
   by_cases h0 : mfindG plsSch m h 0 = []
   · simp [plsW, ht, h0] at hW

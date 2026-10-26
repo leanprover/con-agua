@@ -8,7 +8,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -56,8 +55,8 @@ theorem recBlock_rel {n : Nat} {d5 w5 w6 l : Word} {m m' : Mem} {r : List Word}
   | zero => simp only [callW_zero'] at hW; split at hW <;> simp at hW
   | succ n =>
   by_cases hbig : 1152921504606846976 ≤ l
-  · rw [if_pos hbig] at hW; cases hW
-  rw [if_neg hbig] at hW
+  · rw [ite_eq_left hbig] at hW; cases hW
+  rw [ite_eq_right hbig] at hW
   have h60 : l.toNat < 1152921504606846976 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hbig)
     simpa using this

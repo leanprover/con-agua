@@ -13,7 +13,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -39,9 +38,8 @@ theorem icfCheckE_spec (p : Prog) (hp : p.lookup "iota_certs_full_check" = some 
   simp only [callFn, iotaCertsFullCheckL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callE_spec p n "inst_list", callE_spec p n "infer", callE_spec p n "defeq"] <;>
-  simp_all [icfCheckE, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr]
+  simp_all [icfCheckE, LocEq, St.setLocs_cons,
+    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ]
 
 def icfForallE (p : Prog) (n : Nat) (m : Mem) (mode vis d h aco acn ao an i : Word) :
     Except Err (List Word × Mem) :=
@@ -75,9 +73,8 @@ theorem icfForallE_spec (p : Prog) (hp : p.lookup "iota_certs_full_forall" = som
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callE_spec p n "iota_certs_full_parts", callE_spec p n "spn_get",
     callE_spec p n "iota_certs_full_check", callE_spec p n "iota_certs_full_aux"] <;>
-  simp_all [icfForallE, Cmp.eval, Cmp.evalW, BinOp.eval, Mem.len64, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr, rdW, CTL, size_set64]
+  simp_all [icfForallE, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLocs_cons,
+    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, CTL, size_set64]
 
 def icfFlushE (p : Prog) (n : Nat) (m : Mem) (mode vis d h aco acn ao an i : Word) :
     Except Err (List Word × Mem) :=
@@ -103,9 +100,8 @@ theorem icfFlushE_spec (p : Prog) (hp : p.lookup "iota_certs_full_flush" = some 
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callE_spec p n "inst_list", callE_spec p n "iota_certs_full_aux",
     callE_spec p n "expr_view_ok"] <;>
-  simp_all [icfFlushE, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr]
+  simp_all [icfFlushE, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons,
+    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ]
 
 def icfAuxE (p : Prog) (n : Nat) (m : Mem) (mode vis d h aco acn ao an i : Word) :
     Except Err (List Word × Mem) :=
@@ -134,9 +130,7 @@ theorem icfAuxE_spec (p : Prog) (hp : p.lookup "iota_certs_full_aux" = some iota
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callE_spec p n "iota_certs_full_forall", callE_spec p n "iota_certs_full_flush",
     callE_spec p n "expr_view_ok"] <;>
-  simp_all [icfAuxE, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons, decide_eq_true_eq,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr] <;>
+  simp_all [icfAuxE, Cmp.eval, BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] <;>
   exact of_decide_eq_true ‹_›
 
 def icfTopE (p : Prog) (n : Nat) (m : Mem) (mode vis d h ao an : Word) :
@@ -157,8 +151,7 @@ theorem icfTopE_spec (p : Prog) (hp : p.lookup "iota_certs_full" = some iotaCert
   simp only [callFn, iotaCertsFullL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callE_spec p n "ctl_get", callE_spec p n "iota_certs_full_aux"] <;>
-  simp_all [icfTopE, Cmp.eval, Cmp.evalW, BinOp.eval, Mem.len64, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr, rdW, CTL]
+  simp_all [icfTopE, LocEq, St.setLocs_cons,
+    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ]
 
 end L.Arena

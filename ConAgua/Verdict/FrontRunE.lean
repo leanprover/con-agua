@@ -394,23 +394,23 @@ theorem finishFrom_fail (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat)
     rcases h with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
     · refine .inl ⟨ce, ?_, hc⟩
       unfold finishFrom
-      rw [feedChunk, dif_pos hi]
+      rw [feedChunk, dite_eq_left hi]
       simp [hs, hi', applyFinalLine, StateT.run_bind, hce]
       rfl
     · refine .inr ⟨v.toError, lineNo + 1, a', ?_, hc⟩
       unfold finishFrom
-      rw [feedChunk, dif_pos hi]
+      rw [feedChunk, dite_eq_left hi]
       simp [hs, hi', applyFinalLine, StateT.run_bind, hv]
       rfl
   · rcases h with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
     · refine .inl ⟨ce, ?_, hc⟩
       unfold finishFrom
-      rw [feedChunk, dif_pos hi]
+      rw [feedChunk, dite_eq_left hi]
       simp [hs, hq, StateT.run_bind, hce]
       rfl
     · refine .inr ⟨v.toError, lineNo + 1, a', ?_, hc⟩
       unfold finishFrom
-      rw [feedChunk, dif_pos hi]
+      rw [feedChunk, dite_eq_left hi]
       simp [hs, hq, StateT.run_bind, hv]
       rfl
 

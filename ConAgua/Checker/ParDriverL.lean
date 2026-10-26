@@ -101,7 +101,7 @@ theorem checkB_agree0 (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerP
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = k := hhi
   have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 241).size), (s₀.mem.arr64 241)[(3 : Word).toNat] = v := by
-    intro hb; rw [← hv]; unfold rd64; rw [Array.getD, dif_pos hb]; rfl
+    intro hb; rw [← hv]; unfold rd64; rw [Array.getD, dite_eq_left hb]; rfl
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
   cases n with
@@ -109,9 +109,9 @@ theorem checkB_agree0 (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerP
   | succ n =>
     have hcg' := checkPendingGo_agree mode pins dn ds fe pend bs hP hm n (by omega) m a v k hk hPB h
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hcg' · · ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons,
-      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
+      Locals.init_nil, Cmp.eval,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [hl, Mem.copy64_zero] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
     all_goals first
@@ -155,7 +155,7 @@ theorem checkMode2_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs check
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons, Locals.init_nil,
+    all_goals (try simp only [St.setLoc_loc, St.setLocs_cons,
       Cmp.eval, reduceIte, beq_iff_eq, Sig.retVal, Sig.retOr, St.setLocs_nil, List.headD_cons] at *)
     all_goals first
       | (simp_all (config := { decide := true }); done)

@@ -96,11 +96,11 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   | succ n =>
   simp only [pPrepW, hnpw] at h
   by_cases hlt : rdW (m.arr64 DECL) 0 < np
-  · rw [if_pos hlt] at h; cases h
-  rw [if_neg hlt] at h
+  · rw [ite_eq_left hlt] at h; cases h
+  rw [ite_eq_right hlt] at h
   by_cases hbig : 576460752303423488 ≤ rdW (m.arr64 DECL) 0
-  · rw [if_pos hbig] at h; cases h
-  rw [if_neg hbig] at h
+  · rw [ite_eq_left hbig] at h; cases h
+  rw [ite_eq_right hbig] at h
   generalize hnw : rdW (m.arr64 DECL) 0 = nw at h hn hlt hbig
   have hn59 : nw.toNat < 2 ^ 59 := by
     have := UInt64.not_le.mp hbig; rw [UInt64.lt_iff_toNat_lt] at this; simpa using this
@@ -155,7 +155,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
     apply List.filter_eq_self.mpr
     intro x hx
     have hx' := List.mem_range'.mp hx
-    rw [addrN, ← rd, hrd₃ _ (by omega), if_pos (by simp; omega)]
+    rw [addrN, ← rd, hrd₃ _ (by omega), ite_eq_left (by simp; omega)]
     simp
   -- the front
   cases hfr : pFrontW n m₃ np nw ord mk 0 with
@@ -289,7 +289,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
     intro i hi k hk
     rw [hfin, ← hD₇, ← hIW₇ i hi, ← hdw i hi k hk]
     simp only [dw, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
   refine ⟨res.1, a₁, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hpe₁, hse₁, hpins₁, by rw [hres]; omega⟩
   · simp only [preparePrelude, prepareD]
     rw [HoistTwin.run_bind, HoistTwin.run_bind, hrunF]
@@ -299,7 +299,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   · have h0 : 0 < (m₉.arr64 DECL).size := by rw [hD₉s]; omega
     rw [hfin]
     simp only [rdW, UInt64.toNat_zero, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
-      h0, and_self, if_true, Option.getD_some, hres]
+      h0, ite_true, Option.getD_some, hres]
   · intro x hx
     have hx' : x < c.toNat := hres ▸ hx
     obtain ⟨-, hDx, hRx⟩ := hO₆ x hx

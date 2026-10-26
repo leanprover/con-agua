@@ -73,11 +73,11 @@ theorem bmjW_rpW_eq {m : Mem} {q r : Word} {bs : BlockShape} (hq : DecB (fun m =
   unfold bmjW brpW BlockShape.majorIdxAt BlockShape.rulePrefixAt
   rw [e3, e2]
   by_cases hle : UInt64.ofNat l ≤ r
-  · rw [if_pos hle, if_pos hle]
+  · rw [ite_eq_left hle, ite_eq_left hle]
     have : bs.recs[r.toNat]? = none := by
       rw [List.getElem?_eq_none_iff, hlen]; have := UInt64.le_iff_toNat_le.mp hle; rw [t3] at this; exact this
     rw [this]; exact ⟨rfl, rfl⟩
-  rw [if_neg hle, if_neg hle]
+  rw [ite_eq_right hle, ite_eq_right hle]
   have hrl : r.toNat < l := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle); rwa [t3] at this
   obtain ⟨v, rc, hv, hrc, hget⟩ := decPL_get l o bs.recs hd r.toNat hrl

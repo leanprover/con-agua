@@ -85,12 +85,12 @@ def naW (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) := naK1 n
 section arms
 variable (n : Nat) (m1 m2 : Mem) (r rs : List Word)
 theorem naK2_some : naK2 (some (rs, m2)) = some ([rs.getD 1 0], m2) := rfl
-theorem naK1_miss (h : r.headD 0 = 0) : naK1 n (some (r, m1)) = some ([0], m1) := by rw [naK1, if_pos h]
+theorem naK1_miss (h : r.headD 0 = 0) : naK1 n (some (r, m1)) = some ([0], m1) := by rw [naK1, ite_eq_left h]
 theorem naK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
-    naK1 n (some (r, m1)) = some ([0], m1) := by rw [naK1, if_neg h, if_pos h3]
+    naK1 n (some (r, m1)) = some ([0], m1) := by rw [naK1, ite_eq_right h, ite_eq_left h3]
 theorem naK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     naK1 n (some (r, m1)) = naK2 (piBW n m1 CWF (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4))) := by
-  rw [naK1, if_neg h, if_neg h3]
+  rw [naK1, ite_eq_right h, ite_eq_right h3]
 end arms
 attribute [ind_grind] naK2_some naK1_miss naK1_noind naK1_ind
 
@@ -265,9 +265,9 @@ theorem dcGoW_nil (h : l = 0) : dcGoW (n + 1) m hi off l = some ([1], m) := by s
 theorem dcGoW_cons (h : ¬ l = 0) : dcGoW (n + 1) m hi off l =
     dcK n hi off l (fvbF m [CWF, rdW (m.arr64 IW) off]) := by simp [dcGoW, h]
 theorem dcK_out (h : hi < r.headD 0) : dcK n hi off l (some (r, m1)) = some ([0], m1) := by
-  rw [dcK, if_pos h]
+  rw [dcK, ite_eq_left h]
 theorem dcK_in (h : ¬ hi < r.headD 0) : dcK n hi off l (some (r, m1)) = dcGoW n m1 hi (off + 1) (l - 1) := by
-  rw [dcK, if_neg h]
+  rw [dcK, ite_eq_right h]
 end arms
 attribute [ind_grind] dcGoW_nil dcGoW_cons dcK_out dcK_in
 
@@ -396,9 +396,9 @@ def nwsK (po pl : Word) : Option (List Word × Mem) → Option (List Word × Mem
 def nwsW (n : Nat) (m : Mem) (ctx off l po pl : Word) : Option (List Word × Mem) :=
   nwsK po pl (dcWf n m ctx off l)
 theorem nwsK_closed (po pl : Word) (r : List Word) (m1 : Mem) (h : r.headD 0 ≠ 0) :
-    nwsK po pl (some (r, m1)) = some ([0, 0], m1) := by rw [nwsK, if_pos h]
+    nwsK po pl (some (r, m1)) = some ([0, 0], m1) := by rw [nwsK, ite_eq_left h]
 theorem nwsK_open (po pl : Word) (r : List Word) (m1 : Mem) (h : ¬ r.headD 0 ≠ 0) :
-    nwsK po pl (some (r, m1)) = some ([po, pl], m1) := by rw [nwsK, if_neg h]
+    nwsK po pl (some (r, m1)) = some ([po, pl], m1) := by rw [nwsK, ite_eq_right h]
 attribute [ind_grind] nwsK_closed nwsK_open
 
 /-- The lookups of `nest_ds_closed`. -/
@@ -536,14 +536,14 @@ theorem pdoW_notpi (h : ¬ n = 0) (h6 : e >>> 28 ≠ 6) : pdoW (k + 1) m no nl l
   simp [pdoW, h, h6]
 theorem pdoW_empty (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e = []) :
     pdoW (k + 1) m no nl lo hi n e = none := by
-  simp only [pdoW]; rw [if_neg h, if_neg h6, if_pos hv]
+  simp only [pdoW]; rw [ite_eq_right h, ite_eq_right h6, ite_eq_left hv]
 theorem pdoW_pi (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e ≠ []) : pdoW (k + 1) m no nl lo hi n e =
     pdoK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0)) := by
-  simp only [pdoW]; rw [if_neg h, if_neg h6, if_neg hv]
+  simp only [pdoW]; rw [ite_eq_right h, ite_eq_right h6, ite_eq_right hv]
 theorem pdoK1_hit (h : r ≠ 0) : pdoK1 k no nl lo hi n v (some (r, m1)) = some ([1], m1) := by
-  rw [pdoK1, if_pos h]
+  rw [pdoK1, ite_eq_left h]
 theorem pdoK1_miss (h : ¬ r ≠ 0) : pdoK1 k no nl lo hi n v (some (r, m1)) =
-    pdoW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0) := by rw [pdoK1, if_neg h]
+    pdoW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0) := by rw [pdoK1, ite_eq_right h]
 end arms
 attribute [ind_grind] pdoW_zero pdoW_notpi pdoW_empty pdoW_pi pdoK1_hit pdoK1_miss
 
@@ -614,7 +614,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
             else ConRon.Arena.piDomsOcc names lo.toNat hi.toNat (n.toNat - 1) (decE b)).run a := by
       rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
       have htag : (decE e).tag = ETag.forallE := (decE_tag_forall e he).mpr hg6
-      simp only [htag, beq_self_eq_true, if_true, StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
+      simp only [htag, beq_self_eq_true, ite_true, StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
       rfl
     by_cases hr1 : r1 ≠ 0
     · rw [pdoK1_hit (h := hr1)] at h
@@ -701,17 +701,17 @@ theorem gcW_nil (h : l = 0) : gcW (k + 1) m vis nPc off l oo ol = some ([oo, ol]
 theorem gcW_cons (h : ¬ l = 0) : gcW (k + 1) m vis nPc off l oo ol =
     gcK1 k vis nPc off l oo ol (ntWf k m vis (rdW (m.arr64 IW) off)) := by simp [gcW, h]
 theorem gcK1_none (h : r.headD 0 = 0) : gcK1 k vis nPc off l oo ol (some (r, m1)) = none := by
-  rw [gcK1, if_pos h]
+  rw [gcK1, ite_eq_left h]
 theorem gcK1_bad (h : ¬ r.headD 0 = 0) (h1 : r.tail.headD 0 ≠ nPc) (h3 : r.tail.tail.tail.headD 0 ≠ 0) :
-    gcK1 k vis nPc off l oo ol (some (r, m1)) = none := by rw [gcK1, if_neg h, if_pos h1, if_pos h3]
+    gcK1 k vis nPc off l oo ol (some (r, m1)) = none := by rw [gcK1, ite_eq_right h, ite_eq_left h1, ite_eq_left h3]
 theorem gcK1_empty (h : ¬ r.headD 0 = 0) (h1 : r.tail.headD 0 ≠ nPc) (h3 : ¬ r.tail.tail.tail.headD 0 ≠ 0) :
     gcK1 k vis nPc off l oo ol (some (r, m1)) =
       gcK2 k vis nPc off l (appendW k m1 oo ol (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0)) := by
-  rw [gcK1, if_neg h, if_pos h1, if_neg h3]
+  rw [gcK1, ite_eq_right h, ite_eq_left h1, ite_eq_right h3]
 theorem gcK1_same (h : ¬ r.headD 0 = 0) (h1 : ¬ r.tail.headD 0 ≠ nPc) :
     gcK1 k vis nPc off l oo ol (some (r, m1)) =
       gcK2 k vis nPc off l (appendW k m1 oo ol (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0)) := by
-  rw [gcK1, if_neg h, if_neg h1]
+  rw [gcK1, ite_eq_right h, ite_eq_right h1]
 theorem gcK2_some : gcK2 k vis nPc off l (some (r2, m2)) =
     gcW k m2 vis nPc (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0) := by rw [gcK2]
 end arms

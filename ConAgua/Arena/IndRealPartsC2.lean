@@ -14,7 +14,6 @@ model's frames (`IndRealPartsC1`), the sort reads back by the stage's `StoreDen`
 `lvlEqC_simC` is the call's `Sim`.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -88,7 +87,7 @@ theorem lvlHyp_real (n : Nat) {m : Mem} {a : AState} {nP : Nat} {blk : List ICon
   have hzh := (pinZero_stage hS1 hz).2
   have hpne : rdW (m1.arr64 PINS) 0 ≠ 0 := by intro h0; simp [pinWordV, h0] at hz
   have hzp : z = pinW m1 53 := by
-    simp only [pinWordV, hpne, if_false, Option.some.injEq] at hz
+    simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz
     rw [← hz]; rfl
   have hF := hS1.1.pins.full hpne
   obtain ⟨lz, hdz⟩ := hC1.stageT.twin.den.zero

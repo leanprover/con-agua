@@ -31,7 +31,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -116,17 +115,17 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
     lbbF_okT dn vis fe 4000000000 0 e he1l s1.mem m2 a1 r2 h2 hT1
   rw [hF, h00] at hrun2
   by_cases hb2 : r2.headD 0 = 0
-  · rw [if_pos hb2] at h
+  · rw [ite_eq_left hb2] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ex2 : x2 = false := by rw [← hx2]; simpa using hb2
     have hrun : (reducePinGuard fe (decI c)).run a = .ok (false, a2) := by
       simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_false,
-        if_true, StateT.run_pure]
+        ite_true, StateT.run_pure]
       rfl
     obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS2
     exact ⟨false, a2, hrun, hC, hx, hr, hg1.trans hg2, by simp [decW0B]⟩
-  rw [if_neg hb2] at h
+  rw [ite_eq_right hb2] at h
   have ex2 : x2 = true := by rw [← hx2]; simpa using hb2
   -- `has_fvar_fast`
   cases h3 : hffF m2 [4000000000, e] with
@@ -139,17 +138,17 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
     hffF_okT dn vis fe 4000000000 e he1l m2 m3 a2 r3 h3 hS2
   rw [hF] at hrun3
   by_cases hb3 : r3.headD 0 ≠ 0
-  · rw [if_pos hb3] at h
+  · rw [ite_eq_left hb3] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ex3 : x3 = true := by rw [← hx3]; simpa using hb3
     have hrun : (reducePinGuard fe (decI c)).run a = .ok (false, a3) := by
       simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_true,
-        Bool.false_eq_true, if_false, hrun3, ex3, if_true, StateT.run_pure]
+        Bool.false_eq_true, ite_false, hrun3, ex3, ite_true, StateT.run_pure]
       rfl
     obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS3
     exact ⟨false, a3, hrun, hC, hx, hr, hg1.trans (hg2.trans hg3), by simp [decW0B]⟩
-  rw [if_neg hb3] at h
+  rw [ite_eq_right hb3] at h
   have ex3 : x3 = false := by rw [← hx3]; simpa using hb3
   -- `all_level_params_defined`
   cases h4 : realCall p n "all_level_params_defined" [0, 0, e] m3 with
@@ -162,18 +161,18 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
     apdF_okT dn vis fe 0 0 e he1l [] m3 m4 a3 r4 (apdF_of_callW hap h4)
       ⟨hS3, by simp [decHL, hslice?], [], rfl⟩
   by_cases hb4 : r4.headD 0 = 0
-  · rw [if_pos hb4] at h
+  · rw [ite_eq_left hb4] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ex4 : x4 = false := by rw [← hx4]; simpa using hb4
     have hrun : (reducePinGuard fe (decI c)).run a = .ok (false, a4) := by
       simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_true,
-        Bool.false_eq_true, if_false, hrun3, ex3, hrun4, ex4, Bool.not_false, if_true,
+        Bool.false_eq_true, ite_false, hrun3, ex3, hrun4, ex4, Bool.not_false, ite_true,
         StateT.run_pure]
       rfl
     obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS4
     exact ⟨false, a4, hrun, hC, hx, hr, hg1.trans (hg2.trans (hg3.trans hg4)), by simp [decW0B]⟩
-  rw [if_neg hb4] at h
+  rw [ite_eq_right hb4] at h
   have ex4 : x4 = true := by rw [← hx4]; simpa using hb4
   -- `consts_resolve_ffast`
   cases h5 : realCall p n "consts_resolve_ffast" [vis, e] m4 with
@@ -187,7 +186,7 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   obtain ⟨rfl, rfl⟩ := h
   have hrun : (reducePinGuard fe (decI c)).run a = .ok (x5, a5) := by
     simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_true,
-      Bool.false_eq_true, if_false, hrun3, ex3, hrun4, ex4]
+      Bool.false_eq_true, ite_false, hrun3, ex3, hrun4, ex4]
     exact hrun5
   obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS5
   exact ⟨x5, a5, hrun, hC, hx, hr, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hx5⟩
@@ -243,8 +242,8 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   subst hs1
   have hrun1 := AM.run_of_ok _ _ hok1
   by_cases e1 : r1.headD 0 = 0
-  · rw [if_pos e1] at hW; cases hW
-  rw [if_neg e1] at hW
+  · rw [ite_eq_left e1] at hW; cases hW
+  rw [ite_eq_right e1] at hW
   have t1 : AM.res (reduceStoredOk fe2 (decI c)) a = true := by rw [← hb1]; simpa using e1
   rw [t1] at hrun1
   obtain ⟨hi1, -⟩ := ConRon.Bridge.reduceStoredOk_run hck.state hck.pins hok2.ienv hnm _ _ hrun1
@@ -266,8 +265,8 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   subst hs2
   have hrun2 := AM.run_of_ok _ _ hok2'
   by_cases e2 : r2.headD 0 = 0
-  · rw [if_pos e2] at hW; cases hW
-  rw [if_neg e2] at hW
+  · rw [ite_eq_left e2] at hW; cases hW
+  rw [ite_eq_right e2] at hW
   have t2 : AM.res (reduceElemOk fe (decI c)) a1 = true := by rw [← hb2]; simpa using e2
   rw [t2] at hrun2
   obtain ⟨hi2, -⟩ := ConRon.Bridge.reduceElemOk_run hC1.check.state hC1.check.pins
@@ -289,8 +288,8 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   obtain ⟨x3, a3, hrun3, hC3, hx3, hr3, hg3, hb3⟩ :=
     rpgW_okC hC.red.pa hC.rdp hC.red.rom hcl hC.apd hkp hW3 hC2 hc hnm2 hCr2
   by_cases e3 : r3.headD 0 = 0
-  · rw [if_pos e3] at hW; cases hW
-  rw [if_neg e3] at hW
+  · rw [ite_eq_left e3] at hW; cases hW
+  rw [ite_eq_right e3] at hW
   have t3 : x3 = true := by rw [← hb3.1]; simpa using e3
   rw [t3] at hrun3
   have hc2 : ConLeche.reducePinGuard env nm = true := by rw [← hr3, t3]
@@ -331,8 +330,8 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   obtain ⟨hck5, hx5', -, -⟩ := defeq_check henv hC4.check hv4 hpd hws hwsP hrun5
   have hC5 := StageC.of_T hT5 hck5
   by_cases e5 : r5.headD 0 = 0
-  · rw [if_pos e5] at hW; cases hW
-  rw [if_neg e5] at hW
+  · rw [ite_eq_left e5] at hW; cases hW
+  rw [ite_eq_right e5] at hW
   have t5 : x5 = true := by rw [← hx5]; simpa [decBool] using e5
   have hnm5 := ConRon.Bridge.denoteN_ext hnm4 hx5'
   have hv5 := ConRon.Bridge.denote_ext hv4 hx5'
@@ -352,8 +351,8 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   have hC6 := StageC.of_leaf hC5 hS6 (callW_leafFrame hcl (leaf_mem _ (by decide)) h6) hi6
   have hv6 : denoteE a6.store (decE v) = some x := ConRon.Bridge.denote_ext hv5 hi6.ext
   by_cases e6 : 4294967296 ≤ r6.headD 0
-  · rw [if_pos e6] at hW; cases hW
-  rw [if_neg e6] at hW
+  · rw [ite_eq_left e6] at hW; cases hW
+  rw [ite_eq_right e6] at hW
   have hxl : (r6.headD 0).toNat < 2 ^ 32 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp e6); simpa using this
   -- the application
@@ -390,15 +389,15 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
     (ConRon.Bridge.denote_ext hxv hi7.ext) hwsA hwsC hrun8
   have hC8 := StageC.of_T hT8 hck8
   by_cases e8 : r8.headD 0 = 0
-  · rw [if_pos e8] at hW; cases hW
-  rw [if_neg e8] at hW
+  · rw [ite_eq_left e8] at hW; cases hW
+  rw [ite_eq_right e8] at hW
   have t8 : x8 = true := by rw [← hx8]; simpa [decBool] using e8
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl⟩ := hW
   refine ⟨a8, ?_, ?_, hC8, hg1.trans (hg2.trans (hg3.trans (hg4.trans (hg5.trans (hg6.trans
     (hg7.trans hg8))))))⟩
-  · simp only [checkReducePin, StateT.run_bind, hrun1, exc_ok_bind', if_true]
-    simp only [hrun2, exc_ok_bind', if_true, StateT.run_bind, hrun3, hrun4, hrun5, t5, hrun6]
+  · simp only [checkReducePin, StateT.run_bind, hrun1, exc_ok_bind', ite_true]
+    simp only [hrun2, exc_ok_bind', ite_true, StateT.run_bind, hrun3, hrun4, hrun5, t5, hrun6]
     have e7 : (internE (.app (decI v) (decE (r6.headD 0)))).run a6 = .ok (decE ax, a7) := hrun7
     simp only [e7, exc_ok_bind']
     have e8 : (isDefEqCore V fe checkFuel 1 (decE ax) (decE (r6.headD 0))).run a7 =
@@ -535,7 +534,7 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
       .ok ((List.range' 44 2).map (fun j => decI (pinW s3.mem j)), a3) := reduceOpNames_run hF
   have hiff := contains_pins hF hwnl 44 2 (by omega) (by omega)
   by_cases hin : wn = r4.headD 0 ∨ wn = r5.headD 0
-  · rw [if_pos hin] at h
+  · rw [ite_eq_left hin] at h
     rw [e4, e5] at hin
     have hc : ((List.range' 44 2).map fun j => (decI (pinW s3.mem j) : NIdx)).contains (decI wn) =
         true := by
@@ -563,10 +562,10 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
              if (← reduceOpNames).contains cv.name then
                checkReducePin V (fe2.restrictTo fe.visibleBelow) fe2 cv.name (decI wv)
              pure fe2).run a = _
-    simp only [StateT.run_bind, hrun2, exc_ok_bind', hrun3, hcont, hname, hc, if_true, hvis]
+    simp only [StateT.run_bind, hrun2, exc_ok_bind', hrun3, hcont, hname, hc, ite_true, hvis]
     simp only [hrun6, exc_ok_bind', StateT.run_pure]
     rfl
-  · rw [if_neg hin] at h
+  · rw [ite_eq_right hin] at h
     rw [e4, e5] at hin
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -589,7 +588,7 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
                checkReducePin V (fe2.restrictTo fe.visibleBelow) fe2 cv.name (decI wv)
              pure fe2).run a = _
     simp only [StateT.run_bind, hrun2, exc_ok_bind', hrun3, hcont, hname, hc, Bool.false_eq_true,
-      if_false, StateT.run_pure]
+      ite_false, StateT.run_pure]
     rfl
 
 end L.Arena

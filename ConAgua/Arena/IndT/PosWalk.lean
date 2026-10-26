@@ -9,8 +9,6 @@ walk): the root frame's fuel (`whnfWalkFuel`, the state unchanged), the fields (
 denotations), the telescope closed (`closeTelescope_spec`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)
@@ -99,7 +97,7 @@ theorem walkOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : WalkOKC p dn vis
     simp only [UInt64.toNat_zero] at hrun
     simp only [StateT.run_bind, hrun, except_ok_bind, hrun3]
   by_cases hr : root ≠ 0
-  · rw [if_pos hr] at h
+  · rw [ite_eq_left hr] at h
     have hdec : decide (root ≠ 0) = true := by simpa using hr
     cases n with
     | zero => simp [wfWf, nbWalkK1] at h
@@ -118,7 +116,7 @@ theorem walkOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : WalkOKC p dn vis
       (PStep.refl hC.check.state) h
     refine ⟨ks, nds, cur, ns2, closed, a', fun K => ?_, rest.1, hg1.trans rest.2.1, rest.2.2⟩
     simp only [← hK K, hwd, walkK, hdec, dite_true, StateT.run_bind, ← decE_eq, hrunw, except_ok_bind]
-  · rw [if_neg hr] at h
+  · rw [ite_eq_right hr] at h
     have hdec : decide (root ≠ 0) = false := by simpa using hr
     obtain ⟨ks, nds, cur, ns2, closed, a', hK, rest⟩ := hF fu m a hC (IWGrow.refl _) hP hA
       (PStep.refl hC.check.state) h

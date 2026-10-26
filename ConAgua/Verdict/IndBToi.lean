@@ -9,8 +9,6 @@ stored or not an inductive; `inst_pis_with` does not bind the parameters; the ty
 end in a sort); every callee is `closedNV`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -61,11 +59,11 @@ theorem toiE_claim (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : 
   by_cases hf0 : r2.headD 0 = 0
   · rw [toiE.k_env_find.abort1 p n us dso dsl r2 m hf0] at he
     cases he
-    have hfn : fe.find? (decI I) = none := by rw [hfind, decFound, if_pos hf0]
+    have hfn : fe.find? (decI I) = none := by rw [hfind, decFound, ite_eq_left hf0]
     simp only [hfn]
     exact ErrClaim.fail _ _ (by decide)
   obtain ⟨ci, hci⟩ := hdec hf0
-  have hfci : fe.find? (decI I) = some ci := by rw [hfind, decFound, if_neg hf0, hci]
+  have hfci : fe.find? (decI I) = some ci := by rw [hfind, decFound, ite_eq_right hf0, hci]
   obtain ⟨kk, hkk, hcase⟩ := decCI_ind_cases hci
   have hkr := erec_nat (w := r2.tail.headD 0) (c := 0) (by simpa using hkk) (by decide)
   rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr

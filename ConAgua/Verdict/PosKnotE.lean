@@ -9,7 +9,6 @@ import ConAgua.Verdict.DefEqSlotE
 fuel `0` (`nbOKE_zero`).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

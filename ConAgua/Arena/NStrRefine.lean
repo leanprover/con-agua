@@ -27,7 +27,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -68,10 +67,10 @@ theorem internNNode_str_run (pre : NIdx) (s : String) (a : AState) :
     cases hs : a.store.lss.ls.ns.scratchOn <;>
     cases hc : a.store.lss.ls.ns.scr.strs.cons[nstrKey pre s]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, nstrKey, ite_self, protoRun, nstrLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrNStrs, withPersNStrs, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      ↓reduceIte, nstrKey, protoRun, nstrLens] <;>
+    (try split) <;> simp_all [withScrNStrs, withPersNStrs, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's name `str` tables -/
 
@@ -228,7 +227,7 @@ theorem nstrNewOK :
   simp only [nstrKey, NsRecRel_raw, nshash, nsQ, nsO, nsL, e0, e1, e2, e3, hpv, hpq, ← top_rdW] at htop hrs ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
-    show (0 : Word).toNat = 0 from rfl, htop]
+    show (0 : Word).toNat = 0 from rfl]
   exact ⟨⟨(hdq.mpr rfl).symm, hrs, hk, trivial⟩, trivial⟩
 
 end query
@@ -248,7 +247,7 @@ theorem nstrCS_wf : nstrCS.WF where
   col A h := by simp [nstrCS] at h
   colRoom A h := by simp [nstrCS] at h
   colLt A h := by
-    simp only [nstrCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [nstrCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (nspushOK_room m t ((nspushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nstrCS, hk]
   ex h := by simp [nstrCS] at h

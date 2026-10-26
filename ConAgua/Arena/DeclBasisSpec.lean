@@ -16,8 +16,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -50,10 +48,10 @@ theorem pinAtW_ok {m m' : Mem} {a : AState} {i : Word} {r : List Word}
   unfold pinAtW at h
   by_cases h0 : pinW m 0 = 0
   · simp [h0] at h
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   by_cases hi : 51 ≤ i
   · simp [hi] at h
-  rw [if_neg hi] at h
+  rw [ite_eq_right hi] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hF := hP.full h0
@@ -109,23 +107,22 @@ theorem oroW_ok {m m' : Mem} {a : AState} {w : Word} {r : List Word}
       decide (w = pinW m (1 + (45 : Word).toNat)) := decI_beq w _ hw hl1
   have e1 : r1.headD 0 = pinW m (1 + (45 : Word).toNat) := by rw [hr1]; rfl
   by_cases he : w = r1.headD 0
-  · rw [if_pos he, hm1] at h
+  · rw [ite_eq_left he, hm1] at h
     obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok h hP
     subst hr
     rw [e1] at he
     refine ⟨hm, hl, ?_⟩
     simp only [ofReduceOp, ofReduceNatName, pinOfReduceNat, reduceNatName, pinReduceNat,
-      StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, exc_ok_bind',
-      hbeq, he, decide_true, if_true]
+      StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, exc_ok_bind', he, ite_true]
     simpa [PIN_REDUCE_NAT, PIN_REDUCE_BOOL] using hrun
-  · rw [if_neg he, hm1] at h
+  · rw [ite_eq_right he, hm1] at h
     obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok h hP
     subst hr
     rw [e1] at he
     refine ⟨hm, hl, ?_⟩
     simp only [ofReduceOp, ofReduceNatName, pinOfReduceNat, reduceBoolName, pinReduceBool,
       StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, exc_ok_bind',
-      hbeq, he, decide_false, Bool.false_eq_true, if_false]
+      hbeq, he, decide_false, Bool.false_eq_true, ite_false]
     simpa [PIN_REDUCE_NAT, PIN_REDUCE_BOOL] using hrun
 
 local notation "V" => ConLeche.CheckMode.verified
@@ -272,8 +269,8 @@ theorem ibdW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, ibdK1_some] at h
   by_cases hb : r1.headD 0 ≠ 0
-  · rw [if_pos hb] at h; cases h
-  rw [if_neg hb] at h
+  · rw [ite_eq_left hb] at h; cases h
+  rw [ite_eq_right hb] at h
   obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hwl (by simpa using hb)
   have hw : (rdW (m1.arr64 EREC) (c + 1)).toNat < 2 ^ 32 := by rw [ew]; exact hwl
   cases h2 : callW p n "env_push" [vis, c] m1 with
@@ -288,7 +285,7 @@ theorem ibdW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   refine ⟨?_, by simpa using hS2, hg2⟩
-  simp [installBasisDecl, hname, hfind, StateT.run_bind, StateT.run_pure]
+  simp [installBasisDecl, hname, hfind, StateT.run_pure]
   rfl
 
 /-- The basis list's decoding: an `IW` slice of constant-record pointers. -/
@@ -319,7 +316,7 @@ theorem ibds_rel {p : Prog} (hp : BasisProg p) (dn : NIdx → Option ConLeche.Na
   subst hs'
   rw [ibdsW_step] at hW
   by_cases hl : l = 0
-  · rw [if_pos hl] at hW
+  · rw [ite_eq_left hl] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, hm⟩ := hW
     subst hl
@@ -328,7 +325,7 @@ theorem ibds_rel {p : Prog} (hp : BasisProg p) (dn : NIdx → Option ConLeche.Na
     subst this
     rw [← hm]
     exact ⟨fe, a, rfl, by simpa using hS, IWGrow.refl _⟩
-  rw [if_neg hl] at hW
+  rw [ite_eq_right hl] at hW
   -- the head
   obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := ⟨l.toNat - 1, by
     have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩

@@ -1,6 +1,5 @@
 import ConAgua.Verdict.FrontRunE
 
-set_option linter.deprecated false
 
 /-!
 # The scanner's `safety` converse (lane `verdicts-b`, helper `f2`)
@@ -38,7 +37,7 @@ theorem strCode_safe (v : USize) (e : USize)
   split at h; cases h; rename_i hq
   have hv : v < b.usize := by
     refine Classical.byContradiction fun hn => ?_
-    have h0 : byteAt b v = 0 := by unfold byteAt; rw [dif_neg hn]
+    have h0 : byteAt b v = 0 := by unfold byteAt; rw [dite_eq_right hn]
     rw [h0] at hq; exact hq (by decide)
   have hv1 : (v.toUInt64 + 1).toNat = (v + 1).toNat := by
     rw [← succ_toUInt64 b h64 hsize, USize.toNat_toUInt64]
@@ -74,7 +73,7 @@ theorem strCode_safe (v : USize) (e : USize)
   · simp
   rename_i hesc
   have hesc' := hasEscapeN_eq_zero b _ _ hesc
-  rw [if_pos rfl]
+  rw [ite_eq_left rfl]
   have hx := eq_toUTF8_of_fromUTF8? (hS (noEsc_of_hasEscapeN_decl b _ _ hesc'))
   have hl := congrArg (fun x : ByteArray => x.data.toList) hx
   simp only [show "safe".toUTF8.data.toList = [115, 97, 102, 101] by rfl] at hl
@@ -82,7 +81,7 @@ theorem strCode_safe (v : USize) (e : USize)
   have hlen := congrArg List.length hl
   simp only [List.length_take, List.length_drop, Array.length_toList, List.length_cons,
     List.length_nil] at hlen
-  rw [if_pos]
+  rw [ite_eq_left]
   · decide
   refine ⟨?_, ?_⟩
   · apply UInt64.toNat_inj.mp
@@ -217,15 +216,15 @@ theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Lin
   by_cases hi : i < b.usize
   · have hin := usizeInBounds b i hi
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i hi
-    rw [dif_pos hi] at h
+    rw [dite_eq_left hi] at h
     simp only [uget_byteAt _ i hi] at h
     by_cases hws : isWs (byteAt b i) = true
-    · simp only [hws, if_true] at h
+    · simp only [hws, ite_true] at h
       rw [declN_congr _ _ _ _ _ _ (nm_ws b h64 hsize i _ hi hws)]
       exact declLine_link' (i + 1) w ik idx pl f r e h hP
-    simp only [hws, Bool.false_eq_true, if_false] at h
+    simp only [hws, Bool.false_eq_true, ite_false] at h
     by_cases h125 : byteAt b i = 125
-    · simp only [h125, show ((125 : UInt8) == 125) = true from rfl, if_true] at h
+    · simp only [h125, show ((125 : UInt8) == 125) = true from rfl, ite_true] at h
       rw [declN_close _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125])]
       split at h; cases h
       cases pl
@@ -239,19 +238,19 @@ theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Lin
         · simp [hk] at h
       · exact hP.1.elim
     simp only [show (byteAt b i == 125) = false by simpa using h125, Bool.false_eq_true,
-      if_false] at h
+      ite_false] at h
     by_cases h44 : byteAt b i = 44
-    · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
+    · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, ite_true] at h
       split at h; cases h; rename_i hw
       have hw' : w = false := by simpa using hw
       subst hw'
-      simp only [bw, Bool.false_eq_true, if_false]
+      simp only [bw, Bool.false_eq_true, ite_false]
       rw [declN_congr _ _ _ _ _ _ (nm_comma b h64 hsize i hi hws h44)]
       exact declLine_link' (i + 1) true ik idx pl f r e h hP
     simp only [show (byteAt b i == 44) = false by simpa using h44, Bool.false_eq_true,
-      if_false] at h
+      ite_false] at h
     by_cases h34 : byteAt b i = 34
-    · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
+    · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, ite_true] at h
       split at h; cases h; rename_i hw
       have hw' : w = true := by simpa using hw
       subst hw'
@@ -260,7 +259,7 @@ theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Lin
       have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
       have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
       have hm := nm_key b h64 hsize i hi h34 hk' hv'
-      simp only [bw, if_true]
+      simp only [bw, ite_true]
       rw [declN_key _ _ _ _ (by rw [hm]; exact (by decide : (2 : Word) ≠ 0))
         (by rw [hm]; exact (by decide : (2 : Word) ≠ 1))]
       simp only [hm]
@@ -278,7 +277,7 @@ theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Lin
         split at h
         · rename_i hie
           obtain ⟨hpl, hD⟩ := axEntry_link b h64 hsize v d' e' hd
-          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          rw [hpl, ite_eq_left ((lt_toUInt64_iff _ _).mp hie)]
           exact declLine_link' e' false ik idx (.decl d') _ r e h
             ⟨hD, fun d hd => by cases hd; exact declSafe_of_pl b hD (by simp)⟩
         · cases h
@@ -288,7 +287,7 @@ theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Lin
         split at h
         · rename_i hie
           obtain ⟨hpl, hD, hS⟩ := defEntry_link' b h64 hsize v d' e' hd
-          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          rw [hpl, ite_eq_left ((lt_toUInt64_iff _ _).mp hie)]
           exact declLine_link' e' false ik idx (.decl d') _ r e h ⟨hD, fun d hd => by cases hd; exact hS⟩
         · cases h
       case kThm =>
@@ -297,7 +296,7 @@ theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Lin
         split at h
         · rename_i hie
           obtain ⟨hpl, hD⟩ := thmEntry_link b h64 hsize v d' e' hd
-          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          rw [hpl, ite_eq_left ((lt_toUInt64_iff _ _).mp hie)]
           exact declLine_link' e' false ik idx (.decl d') _ r e h
             ⟨hD, fun d hd => by cases hd; exact declSafe_of_pl b hD (by simp)⟩
         · cases h
@@ -307,7 +306,7 @@ theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Lin
         split at h
         · rename_i hie
           obtain ⟨hpl, hD⟩ := opaqueEntry_link b h64 hsize v d' e' hd
-          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          rw [hpl, ite_eq_left ((lt_toUInt64_iff _ _).mp hie)]
           exact declLine_link' e' false ik idx (.decl d') _ r e h
             ⟨hD, fun d hd => by cases hd; exact declSafe_of_pl b hD (by simp)⟩
         · cases h
@@ -317,7 +316,7 @@ theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Lin
         split at h
         · rename_i hie
           obtain ⟨hpl, hD⟩ := quotEntry_link b h64 hsize v d' e' hd
-          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          rw [hpl, ite_eq_left ((lt_toUInt64_iff _ _).mp hie)]
           exact declLine_link' e' false ik idx (.decl d') _ r e h
             ⟨hD, fun d hd => by cases hd; exact declSafe_of_pl b hD (by simp)⟩
         · cases h
@@ -335,9 +334,9 @@ theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Lin
         · cases h
 
     · simp only [show (byteAt b i == 34) = false by simpa using h34, Bool.false_eq_true,
-        if_false] at h
+        ite_false] at h
       cases h
-  · rw [dif_neg hi] at h; cases h
+  · rw [dite_eq_right hi] at h; cases h
 termination_by b.size - i.toNat
 decreasing_by
   all_goals first

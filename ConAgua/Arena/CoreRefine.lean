@@ -90,7 +90,7 @@ theorem ModeR.findE (h : ModeR S eKeyG VH m M eb t te) (heb : eb ≤ 1) (e : Wor
   exact ⟨h1.trans (congrArg some h2), h3⟩
 
 /-- `genKey`'s decoding at a handle word and an eager bit. -/
-theorem eKeyG_dk (e eb : Word) (he : e.toNat < 2 ^ 32) (heb : eb ≤ 1) :
+theorem eKeyG_dk (e eb : Word) (_he : e.toNat < 2 ^ 32) (heb : eb ≤ 1) :
     eKeyG.dk e (genW 0 eb) = (decE e, eb) := by
   have hg : eb.toNat < 2 ^ 32 := by rw [UInt64.le_iff_toNat_le] at heb; simp at heb; omega
   show (bmKey.dk e (genW 0 eb &&& 0xFFFFFFFF), genW 0 eb >>> 32) = _

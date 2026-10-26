@@ -67,7 +67,7 @@ theorem srK1_some : srK1 k T nP o nIdx cbody (some (r1, m1)) =
 theorem srK2_big (h : 4294967296 ≤ hd) : srK2 k nP o nIdx cbody (some (hd, m2)) = none := by
   simp [srK2, h]
 theorem srK2_ok (h : ¬ 4294967296 ≤ hd) : srK2 k nP o nIdx cbody (some (hd, m2)) =
-    srK3 k nP o nIdx cbody hd (gafF m2 [CWF, cbody]) := by simp only [srK2, if_neg h]
+    srK3 k nP o nIdx cbody hd (gafF m2 [CWF, cbody]) := by simp only [srK2, ite_eq_right h]
 theorem srK3_some : srK3 k nP o nIdx cbody hd (some (rf, m3)) =
     srK4 k nP o nIdx hd (rf.headD 0) (gaaF m3 [CWF, cbody]) := rfl
 theorem srK4_some : srK4 k nP o nIdx hd fn (some (ra, m4)) =
@@ -75,9 +75,9 @@ theorem srK4_some : srK4 k nP o nIdx hd fn (some (ra, m4)) =
 theorem srK5_le (h : rp.tail.headD 0 ≤ al) : srK5 k nP nIdx hd fn ao al (some (rp, m5)) =
     (match eqW k m5 ao (rp.tail.headD 0) (rp.headD 0) (rp.tail.headD 0) with
       | none => none
-      | some e => some ([srRes fn hd al nP nIdx e], m5)) := by simp only [srK5, if_pos h]
+      | some e => some ([srRes fn hd al nP nIdx e], m5)) := by simp only [srK5, ite_eq_left h]
 theorem srK5_gt (h : ¬ rp.tail.headD 0 ≤ al) : srK5 k nP nIdx hd fn ao al (some (rp, m5)) =
-    some ([srRes fn hd al nP nIdx 0], m5) := by simp only [srK5, if_neg h]
+    some ([srRes fn hd al nP nIdx 0], m5) := by simp only [srK5, ite_eq_right h]
 end arms
 
 grind_pattern [ind_grind] srW_succ => srW (k + 1) m T lo ll nP o nIdx cbody
@@ -276,10 +276,10 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
       rw [heq, hpl]
       have := map_decI_inj (k := .expr) ws1 ws2 hb1 hb2
       by_cases hw : ws1 = ws2
-      · rw [if_pos hw]
+      · rw [ite_eq_left hw]
         have ht : args.take (rp.tail.headD 0).toNat = ps := by rw [hm1, hm2, hw]
         rw [ht]; simp
-      · rw [if_neg hw]
+      · rw [ite_eq_right hw]
         have hne : args.take (rp.tail.headD 0).toNat ≠ ps := by
           rw [hm1, hm2]; exact fun h' => hw (this.mp h')
         rw [show (args.take (rp.tail.headD 0).toNat == ps) = false from by simpa using hne]
@@ -347,8 +347,8 @@ end census
 /-! ## The walk memos across the sum-check pieces (lane `indproofs4`, helper `memo`) -/
 
 theorem pinternW_afr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : AFr m m' := by
-  exact AFr.of_frame (consInternM_frame paramCS_wf h) (by simp [ConsSch.wset, paramCS, paramSch, PREC, PSLOT, PINS, memoFreeA])
-    (by simp [paramCS, paramSch, memoFreeC])
+  exact AFr.of_frame (consInternM_frame paramCS_wf h) (by simp [ConsSch.wset, paramCS, PREC, PSLOT, PINS, memoFreeA])
+    (by simp [paramCS, memoFreeC])
 
 theorem plgW_afr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, h => by simp [plgW] at h

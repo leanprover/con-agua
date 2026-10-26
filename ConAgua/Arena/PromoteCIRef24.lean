@@ -8,7 +8,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -69,7 +68,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
   cases installed with
   | nil =>
     have hk0 : k = 0 := UInt64.toNat_inj.mp (by simpa using hk)
-    rw [if_pos hk0] at hW
+    rw [ite_eq_left hk0] at hW
     have hm : m = m' := Option.some.inj hW
     subst hm
     refine ⟨a, pm, [], ?_, hD, hP, rfl, MemFrame.refl _ _ _, TierKeep.refl _, ErecGrow.refl _, hts, rfl, trivial,
@@ -78,10 +77,10 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
   | cons ci cs =>
     have hk0 : k ≠ 0 := by
       intro h; rw [h] at hk; simp at hk
-    rw [if_neg hk0] at hW
+    rw [ite_eq_right hk0] at hW
     obtain ⟨⟨ptr, hptr, hdec⟩, hrest⟩ := hcon
     have hbd := (Array.getElem?_eq_some_iff.mp hptr).1
-    rw [if_neg (by omega)] at hW
+    rw [ite_eq_right (by omega)] at hW
     have hrd : rdW (m.arr64 ECON) j = ptr := by
       rw [pci_rdW_of_get? _ j (by simpa using hptr)]
     rw [hrd] at hW
@@ -91,7 +90,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
       ci_rel p hp n m a pm f ptr D dn ci dl m1 hD hP hsz hts hdec hDt hca
     have hE1 : m1.arr64 ECON = m.arr64 ECON := hfr1.1 ECON (by decide) (by decide)
     have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
-    rw [if_neg (by rw [hE1]; omega)] at hW
+    rw [ite_eq_right (by rw [hE1]; omega)] at hW
     cases hcb : callW p n "promote_ci_list" [f, j - 1, k - 1] (m1.set64 ECON j (dl.headD 0)) with
     | none => rw [hcb] at hW; cases hW
     | some x =>
@@ -132,7 +131,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     have hg02 : ErecGrow m m1 := hg1
     have hEcon : ∀ i, i ≠ j.toNat → ((m1.set64 ECON j (dl.headD 0)).arr64 ECON)[i]? = (m.arr64 ECON)[i]? := by
       intro i hi
-      rw [hE2, arr_set!_get?, if_neg (by omega), hE1]
+      rw [hE2, arr_set!_get?, ite_eq_right (by omega), hE1]
     have hcon' : ConstsAt dn (preE (m1.set64 ECON j (dl.headD 0)) D)
         ((m1.set64 ECON j (dl.headD 0)).arr64 ECON) (j - 1).toNat cs := by
       rcases hjn with h | h
@@ -160,7 +159,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
         · rw [toNat_sub1 j h]; have := toNat_pred j h; omega
       have hbd' : j.toNat < (m1.arr64 ECON).size := by rw [hE1]; exact hbd
       refine ⟨⟨dl.headD 0, ?_, hext.ext.decCI hdec1⟩, ?_⟩
-      · rw [hout3 _ hj_out, hE2, arr_set!_get?, if_pos ⟨rfl, hbd'⟩]
+      · rw [hout3 _ hj_out, hE2, arr_set!_get?, ite_eq_left ⟨rfl, hbd'⟩]
       · rcases hjn with h | h
         · subst h; have : cs' = [] := List.length_eq_zero_iff.mp (by simpa using hlen3)
           subst this; trivial

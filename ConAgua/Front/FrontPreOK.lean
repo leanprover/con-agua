@@ -391,7 +391,7 @@ when every record of `DECL` before is `RecOK`, so is every record after; the twi
 walkable. -/
 theorem frontAll_refines_pre_ok (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
-    (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
+    (_hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
     (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
     (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x) (hmode : ModeOK s₀.mem) :

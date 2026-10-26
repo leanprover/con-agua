@@ -9,8 +9,6 @@ block's `BindOKC` at `n`) or a head (`AppOKC` at `n`). Then the block's `StageC`
 exec fuel up to the core walk's (`nbOKC_all`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)
@@ -35,8 +33,8 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbPosW_succ] at h
   by_cases hf0 : fu = 0
-  · rw [if_pos hf0] at h; cases h
-  rw [if_neg hf0] at h
+  · rw [ite_eq_left hf0] at h; cases h
+  rw [ite_eq_right hf0] at h
   have hfu : fu.toNat = (fu - 1).toNat + 1 := by
     have : fu.toNat ≠ 0 := fun e' => hf0 (UInt64.toNat_inj.mp (by simpa using e'))
     rw [pos2_word_pred hf0]; omega
@@ -72,7 +70,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
   have hx01 := c1.ext
   by_cases ho : o = 0
   · -- no occurrence in the reduct: the original, or the reduct
-    rw [if_pos ho] at h
+    rw [ite_eq_left ho] at h
     have hbo' : bo = false := by rw [← hbo]; simp [ho]
     subst hbo'
     obtain ⟨hn2, -, -, -, hnP2, -⟩ := ctx_fields hW2.u.dec hW2.u.inn htop2
@@ -90,7 +88,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
     have hC3 : StageC dn vis fe env m3 a1 := hC2.of_pstep hS3 hA3 (PStep.refl hC1.check.state)
     simp only [nbPosK3] at h
     by_cases ho2 : o2 ≠ 0
-    · rw [if_pos ho2] at h
+    · rw [ite_eq_left ho2] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hbo2' : bo2 = true := by rw [← hbo2]; simpa using ho2
       subst hbo2'
@@ -98,7 +96,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
         by simpa using hwd, by simpa using hns3, hP3, hA3, c1⟩
       simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
       rfl
-    · rw [if_neg ho2] at h
+    · rw [ite_eq_right ho2] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hbo2' : bo2 = false := by rw [← hbo2]; simpa using ho2
       subst hbo2'
@@ -106,13 +104,13 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
         by simp, by simpa using hns3, hP3, hA3, c1⟩
       simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
       rfl
-  rw [if_neg ho] at h
+  rw [ite_eq_right ho] at h
   have hbo' : bo = true := by rw [← hbo]; simpa using ho
   subst hbo'
   have hwP' : denoteE a1.store (decI (rw.headD 0)) = some wP := by rw [hwd]; exact hwP
   by_cases h6 : rw.headD 0 >>> 28 = 6
   · -- a binder
-    rw [if_pos h6] at h
+    rw [ite_eq_left h6] at h
     rcases hb : nbBindW (realCall p) n m2 vis ctx (fu - 1) po pl dep kb (rw.headD 0) ns with _ | ⟨rb, m4⟩ <;> rw [hb] at h; · simp [nbPosK4] at h
     simp only [nbPosK4, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -126,7 +124,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
     simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
     simpa using hrun4
   · -- an application
-    rw [if_neg h6] at h
+    rw [ite_eq_right h6] at h
     rcases hp : nbAppW (realCall p) n m2 vis ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns with _ | ⟨rp, m4⟩ <;> rw [hp] at h; · simp [nbPosK5] at h
     simp only [nbPosK5, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h

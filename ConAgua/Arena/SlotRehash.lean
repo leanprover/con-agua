@@ -23,7 +23,6 @@ table relation's `SlotsOKG` for the doubled table (`StoreGrow.lean`).
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -152,14 +151,14 @@ theorem KW_setK (mi : Mem) (hsz : (mi.arr64 sa).size = (m0.arr64 sa).size) (j j'
 theorem rd01_setV (mi : Mem) (hsz : (mi.arr64 sa).size = (m0.arr64 sa).size) (j : Word) (hj : j < N)
     (v y : Word) (hy : y.toNat < 2) :
     rdW ((mi.set64 sa (ob + j * 2) v).arr64 sa) y = rdW (mi.arr64 sa) y := by
-  rw [rd_set_in sa mi _ v _ (adr_in sa ob N m0 hob hNL hL mi hsz j hj).1, if_neg]
+  rw [rd_set_in sa mi _ v _ (adr_in sa ob N m0 hob hNL hL mi hsz j hj).1, ite_eq_right]
   intro h'; have := congrArg UInt64.toNat h'
   have a := adr_toNat sa ob N m0 hob hNL hL j hj; omega
 
 theorem rd01_setK (mi : Mem) (hsz : (mi.arr64 sa).size = (m0.arr64 sa).size) (j : Word) (hj : j < N)
     (v y : Word) (hy : y.toNat < 2) :
     rdW ((mi.set64 sa (ob + j * 2 + 1) v).arr64 sa) y = rdW (mi.arr64 sa) y := by
-  rw [rd_set_in sa mi _ v _ (adr_in sa ob N m0 hob hNL hL mi hsz j hj).2, if_neg]
+  rw [rd_set_in sa mi _ v _ (adr_in sa ob N m0 hob hNL hL mi hsz j hj).2, ite_eq_right]
   intro h'; have := congrArg UInt64.toNat h'
   have a := adr_toNat sa ob N m0 hob hNL hL j hj; omega
 
@@ -300,11 +299,11 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt
           refine ⟨D, ?_, fun e he => ?_⟩
           · rw [← hD, hV _ hiN]; simp [hbx]
           · obtain ⟨hne, hl⟩ := hpath e he
-            rw [hV _ (hw e), if_neg (Ne.symm hne)]; exact hl
-        · left; exact ⟨j'', hj'', by rw [hV _ hj'', if_neg (Ne.symm e)]; exact hm⟩
+            rw [hV _ (hw e), ite_eq_right (Ne.symm hne)]; exact hl
+        · left; exact ⟨j'', hj'', by rw [hV _ hj'', ite_eq_right (Ne.symm e)]; exact hm⟩
       · right
         refine foundU_keep sa ob N n bt c hsm m0 hob hNL hL hbt hnN mi _ x hx (fun j' hj' hl => ?_) hN0 hf
-        rw [hV _ hj', if_neg]; rintro rfl; exact hiL hl
+        rw [hV _ hj', ite_eq_right]; rintro rfl; exact hiL hl
     · rw [hV _ hiN]; simp only [↓reduceIte, mark_le_iff]; have := UInt64.lt_iff_toNat_lt.mp hXl.2
       rw [MARK_toNat] at this; omega
   · simp only [hji, ↓reduceIte]
@@ -357,17 +356,17 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt
             have := hmi x hmx; subst this
             right
             refine ⟨D, ?_, fun e he => ?_⟩
-            · rw [← hD, hV _ hjN, if_neg (Ne.symm hji)]; simp [hbx]
+            · rw [← hD, hV _ hjN, ite_eq_right (Ne.symm hji)]; simp [hbx]
             · obtain ⟨hne, hl⟩ := hpath e he
               have hnej : walkW N (homeW (hsm x) N) e ≠ j := fun h' => hjnL (by rw [← h']; exact hl)
-              rw [hV _ (hw e), if_neg (Ne.symm hne), if_neg (Ne.symm hnej)]; exact hl
+              rw [hV _ (hw e), ite_eq_right (Ne.symm hne), ite_eq_right (Ne.symm hnej)]; exact hl
           · by_cases e' : j'' = j
             · subst e'; left; refine ⟨i, hiN, ?_⟩; rw [hV _ hiN]; simp only [↓reduceIte]
               rw [← hmx, hYv]
-            · left; exact ⟨j'', hj'', by rw [hV _ hj'', if_neg (Ne.symm e), if_neg (Ne.symm e')]; exact hmx⟩
+            · left; exact ⟨j'', hj'', by rw [hV _ hj'', ite_eq_right (Ne.symm e), ite_eq_right (Ne.symm e')]; exact hmx⟩
         · right
           refine foundU_keep sa ob N n bt c hsm m0 hob hNL hL hbt hnN mi _ x hx (fun j' hj' hl => ?_) hN0 hf
-          rw [hV _ hj', if_neg (fun h' => hiL (by rw [h']; exact hl)), if_neg (fun h' => hjnL (by rw [h']; exact hl))]
+          rw [hV _ hj', ite_eq_right (fun h' => hiL (by rw [h']; exact hl)), ite_eq_right (fun h' => hjnL (by rw [h']; exact hl))]
     · -- move to the free slot `j`
       simp only [show ¬ MARK ≤ rdW (mi.arr64 sa) (ob + j * 2) from hm, ↓reduceIte]
       have f1 : GFr sa m0 (mi.set64 sa (ob + j * 2) X) := hfr.trans (GFr.set64 _ _ _ _)
@@ -402,18 +401,18 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt
             have := hmi x hmx; subst this
             right
             refine ⟨D, ?_, fun e he => ?_⟩
-            · rw [← hD, hV _ hjN, if_neg (Ne.symm hji)]; simp [hbx]
+            · rw [← hD, hV _ hjN, ite_eq_right (Ne.symm hji)]; simp [hbx]
             · obtain ⟨hne, hl⟩ := hpath e he
               have hnej : walkW N (homeW (hsm x) N) e ≠ j := fun h' => hjnL (by rw [← h']; exact hl)
-              rw [hV _ (hw e), if_neg (Ne.symm hne), if_neg (Ne.symm hnej)]; exact hl
+              rw [hV _ (hw e), ite_eq_right (Ne.symm hne), ite_eq_right (Ne.symm hnej)]; exact hl
           · have e' : j'' ≠ j := fun h' => hm (by
               rw [← h', hmx, mark_le_iff, add_mark_toNat _ (by
                 rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega)]; omega)
-            left; exact ⟨j'', hj'', by rw [hV _ hj'', if_neg (Ne.symm e), if_neg (Ne.symm e')]; exact hmx⟩
+            left; exact ⟨j'', hj'', by rw [hV _ hj'', ite_eq_right (Ne.symm e), ite_eq_right (Ne.symm e')]; exact hmx⟩
         · right
           refine foundU_keep sa ob N n bt c hsm m0 hob hNL hL hbt hnN mi _ x hx (fun j' hj' hl => ?_) hN0 hf
-          rw [hV _ hj', if_neg (fun h' => hiL (by rw [h']; exact hl)), if_neg (fun h' => hjnL (by rw [h']; exact hl))]
-      · rw [hV _ hiN, if_pos rfl, mark_le_iff]; simp
+          rw [hV _ hj', ite_eq_right (fun h' => hiL (by rw [h']; exact hl)), ite_eq_right (fun h' => hjnL (by rw [h']; exact hl))]
+      · rw [hV _ hiN, ite_eq_left rfl, mark_le_iff]; simp
 
 variable (G : Mem → Word → Word) (hGh : ∀ mi : Mem, GFr sa m0 mi → ∀ x K, KPm x K → G mi K = hsm x)
   (hN0 : 0 < N)

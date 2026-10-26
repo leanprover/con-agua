@@ -15,8 +15,6 @@ The refinement is `IndRealBph2.lean`.
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -82,14 +80,14 @@ def bphNW : Nat → Mem → Word → Word → Word → Word → Option Word
 section arms
 variable (f : Nat) (m : Mem) (bo o l j : Word)
 theorem bphNW_exit (h : ¬ j < l) : bphNW (f + 1) m bo o l j = some j := by
-  simp only [bphNW]; rw [if_neg h]
+  simp only [bphNW]; rw [ite_eq_right h]
 theorem bphNW_brk (h : j < l) (h2 : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + j) + 1) ≠
     rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (bo + j) + 1)) : bphNW (f + 1) m bo o l j = some j := by
-  simp only [bphNW]; rw [if_pos h, if_pos h2]
+  simp only [bphNW]; rw [ite_eq_left h, ite_eq_left h2]
 theorem bphNW_next (h : j < l) (h2 : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + j) + 1) =
     rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (bo + j) + 1)) :
     bphNW (f + 1) m bo o l j = bphNW f m bo o l (j + 1) := by
-  simp only [bphNW]; rw [if_pos h, if_neg (by simpa using h2)]
+  simp only [bphNW]; rw [ite_eq_left h, ite_eq_right (by simpa using h2)]
 end arms
 
 theorem bphNLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
@@ -156,17 +154,17 @@ theorem bphK3_some : bphK3 p f k o l (some (r2, m2)) =
 theorem bphK2_some : bphK2 p f bo bl k o l m1 rest (some j) =
     if j = l then bphK3 p f k o l (callW p f "er_to_iw" [bo, bl] m1) else rest := rfl
 theorem bphGoW_exit (h : ¬ k < 4) : bphGoW p (f + 1) m bo bl k = some ([0, 0], m) := by
-  simp only [bphGoW]; rw [if_neg h]
+  simp only [bphGoW]; rw [ite_eq_right h]
 theorem bphGoW_none1 (h : k < 4) (h1 : callW p f "rom_basis_decls" [k] m = none) :
     bphGoW p (f + 1) m bo bl k = none := by
-  simp only [bphGoW]; rw [if_pos h, h1]
+  simp only [bphGoW]; rw [ite_eq_left h, h1]
 theorem bphGoW_step (h : k < 4) (h1 : callW p f "rom_basis_decls" [k] m = some (r1, m1)) :
     bphGoW p (f + 1) m bo bl k =
       if r1.tail.headD 0 = bl then
         bphK2 p f bo bl k (r1.headD 0) (r1.tail.headD 0) m1 (bphGoW p f m1 bo bl (k + 1))
           (bphNW (f + 1) m1 bo (r1.headD 0) (r1.tail.headD 0) 0)
       else bphGoW p f m1 bo bl (k + 1) := by
-  simp only [bphGoW]; rw [if_pos h, h1]
+  simp only [bphGoW]; rw [ite_eq_left h, h1]
 end arms
 
 grind_pattern [ind_grind] bphK4_some => bphK4 k (some (r3, m3))

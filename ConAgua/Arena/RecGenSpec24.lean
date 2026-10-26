@@ -141,44 +141,44 @@ variable (m : Mem) (vis q fto ftl mo ml fvo fvl eo el ko kl j i t tele teo tel l
 theorem cfaK6_some : cfaK6 rest (some (r, m)) = rest m := rfl
 theorem cfaK5_bad (h : r.headD 0 = 0) :
     cfaK5 p k vis q fto ftl fvo fvl i eo el teo tel leaf mt rest (some (r, m)) = none := by
-  simp only [cfaK5]; rw [if_pos h]
+  simp only [cfaK5]; rw [ite_eq_left h]
 theorem cfaK5_ok (h : ¬ r.headD 0 = 0) :
     cfaK5 p k vis q fto ftl fvo fvl i eo el teo tel leaf mt rest (some (r, m)) =
       cfaK6 rest (callW p k "class_nodes_agree" [vis, q, fto, ftl, mt, teo, tel, leaf, fvo, fvl, i, eo, el] m) := by
-  simp only [cfaK5]; rw [if_neg h]
+  simp only [cfaK5]; rw [ite_eq_right h]
 theorem cfaK4_some : cfaK4 p k vis q fto ftl fvo fvl i eo el teo tel leaf rest (some (r, m)) =
     cfaK5 p k vis q fto ftl fvo fvl i eo el teo tel leaf (r.headD 0) rest
       (callW p k "class_leaf_at" [r.headD 0, leaf] m) := rfl
 theorem cfaK3_bad (h : r.headD 0 = 0) :
     cfaK3 p k vis q fto ftl mo ml fvo fvl i eo el t rest (some (r, m)) = none := by
-  simp only [cfaK3]; rw [if_pos h]
+  simp only [cfaK3]; rw [ite_eq_left h]
 theorem cfaK3_ok (h : ¬ r.headD 0 = 0) :
     cfaK3 p k vis q fto ftl mo ml fvo fvl i eo el t rest (some (r, m)) =
       cfaK4 p k vis q fto ftl fvo fvl i eo el (r.tail.headD 0) (r.tail.tail.headD 0)
         (r.tail.tail.tail.headD 0) rest (callW p k "target_major_at" [mo, ml, t] m) := by
-  simp only [cfaK3]; rw [if_neg h]
+  simp only [cfaK3]; rw [ite_eq_right h]
 theorem cfaK2_some : cfaK2 p k vis q fto ftl mo ml fvo fvl i eo el t tele rest (some (r, m)) =
     cfaK3 p k vis q fto ftl mo ml fvo fvl i eo el t rest (callW p k "strip_pis" [tele, r.headD 0] m) := rfl
 theorem cfaK1_some : cfaK1 p k vis q fto ftl mo ml fvo fvl i eo el t tele rest (some (r, m)) =
     cfaK2 p k vis q fto ftl mo ml fvo fvl i eo el t tele rest (callW p k "fvar_type_d" [r.headD 0] m) := rfl
 theorem cfaFv_in (h : i < fvl) : cfaFv p k m fvo fvl i = some ([rdW (m.arr64 IW) (fvo + i)], m) := by
-  simp only [cfaFv]; rw [if_pos h]
+  simp only [cfaFv]; rw [ite_eq_left h]
 theorem cfaFv_out (h : ¬ i < fvl) : cfaFv p k m fvo fvl i = callW p k "intern_bvar" [0] m := by
-  simp only [cfaFv]; rw [if_neg h]
+  simp only [cfaFv]; rw [ite_eq_right h]
 theorem cfaW_exit (h : ¬ j < kl) :
     cfaW p (k + 1) m vis q fto ftl mo ml fvo fvl eo el ko kl j i = some m := by
-  simp only [cfaW]; rw [if_neg h]
+  simp only [cfaW]; rw [ite_eq_right h]
 theorem cfaW_ord (h : j < kl) (h1 : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j)) = 1) :
     cfaW p (k + 1) m vis q fto ftl mo ml fvo fvl eo el ko kl j i =
       cfaW p k m vis q fto ftl mo ml fvo fvl eo el ko kl (j + 1) (i + 1) := by
-  simp only [cfaW]; rw [if_pos h, if_neg h1]
+  simp only [cfaW]; rw [ite_eq_left h, ite_eq_right h1]
 theorem cfaW_rec (h : j < kl) (h1 : rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j)) = 1) :
     cfaW p (k + 1) m vis q fto ftl mo ml fvo fvl eo el ko kl j i =
       cfaK1 p k vis q fto ftl mo ml fvo fvl i eo el
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j) + 1)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j) + 2))
         (fun m' => cfaW p k m' vis q fto ftl mo ml fvo fvl eo el ko kl (j + 1) (i + 1))
         (cfaFv p k m fvo fvl i) := by
-  simp only [cfaW]; rw [if_pos h, if_pos h1]
+  simp only [cfaW]; rw [ite_eq_left h, ite_eq_left h1]
 end arms
 
 end model

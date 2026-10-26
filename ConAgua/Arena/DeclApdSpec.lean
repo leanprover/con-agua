@@ -19,7 +19,6 @@ at `n`.
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -115,10 +114,10 @@ theorem apdG1_go (hf : f ≠ 0) : apdG1 n m o l f h = apdG2 n m o l f h (mfindG 
 theorem apdG2_abort (hr : fr = []) : apdG2 n m o l f h fr = none := by simp [apdG2, hr]
 theorem apdG2_hit (hr : fr ≠ []) (hh : fr.headD 0 ≠ 0) :
     apdG2 n m o l f h fr = some (rdW (m.arr64 APDM) (fr.tail.headD 0 * 4 + 3), m) := by
-  simp only [apdG2]; rw [if_neg hr, if_pos hh]
+  simp only [apdG2]; rw [ite_eq_right hr, ite_eq_left hh]
 theorem apdG2_miss (hr : fr ≠ []) (hh : ¬ fr.headD 0 ≠ 0) :
     apdG2 n m o l f h fr = apdG3 n m o l f h (eViewW m h) := by
-  simp only [apdG2]; rw [if_neg hr, if_neg hh]
+  simp only [apdG2]; rw [ite_eq_right hr, ite_eq_right hh]
 theorem apdG3_abort (hv : v = []) : apdG3 n m o l f h v = none := by simp [apdG3, hv]
 theorem apdG3_go (hv : v ≠ []) : apdG3 n m o l f h v =
     apdG4 h (apdNodeW n m o l f (v.headD 0) (v.tail.headD 0) (v.tail.tail.headD 0)
@@ -137,14 +136,14 @@ theorem apdNodeW_bin (hg : g = 4 ∨ g = 5 ∨ g = 6) : apdNodeW n m o l f g x y
   have h2 : g ≠ 2 := by rcases hg with e | e | e <;> rw [e] <;> decide
   have h3 : g ≠ 3 := by rcases hg with e | e | e <;> rw [e] <;> decide
   have h1 : g ≠ 1 := by rcases hg with e | e | e <;> rw [e] <;> decide
-  simp only [apdNodeW]; rw [if_neg h2, if_neg h3, if_neg h1, if_pos hg]
+  simp only [apdNodeW]; rw [ite_eq_right h2, ite_eq_right h3, ite_eq_right h1, ite_eq_left hg]
 theorem apdNodeW_let (hg : g = 7) : apdNodeW n m o l f g x y w =
     apdL1 n o l f y w (apdGoW n m o l (f - 1) x) := by simp [apdNodeW, hg]
 theorem apdNodeW_proj (hg : g = 9) : apdNodeW n m o l f g x y w = apdGoW n m o l (f - 1) w := by
   simp [apdNodeW, hg]
 theorem apdNodeW_leaf (h1 : g ≠ 1) (h2 : g ≠ 2) (h3 : g ≠ 3) (h4 : ¬ (g = 4 ∨ g = 5 ∨ g = 6))
     (h7 : g ≠ 7) (h9 : g ≠ 9) : apdNodeW n m o l f g x y w = some (1, m) := by
-  simp only [apdNodeW]; rw [if_neg h2, if_neg h3, if_neg h1, if_neg h4, if_neg h7, if_neg h9]
+  simp only [apdNodeW]; rw [ite_eq_right h2, ite_eq_right h3, ite_eq_right h1, ite_eq_right h4, ite_eq_right h7, ite_eq_right h9]
 theorem apdC1_abort (hl : ls = []) : apdC1 n m o l ls = none := by simp [apdC1, hl]
 theorem apdC1_go (hl : ls ≠ []) : apdC1 n m o l ls =
     apdR1 m (alpdLsW n m o l (ls.headD 0) (ls.tail.headD 0)) := by simp [apdC1, hl]

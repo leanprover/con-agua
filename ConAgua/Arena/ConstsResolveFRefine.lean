@@ -204,7 +204,7 @@ theorem clp_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis s : Word
     St.setLocs_cons, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Locals.init_nil,
     Nat.reduceEqDiff, clpW, clpL_cons, clpL_nil, Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq,
     bne_iff_ne, ne_eq, Bool.false_or, or_assoc, Classical.not_and_iff_not_or_not, Decidable.not_not,
-    Sig.retVal, Sig.retOr, if_true, if_false, or_false, or_true]
+    Sig.retVal, Sig.retOr, ite_true, ite_false, or_false, or_true]
 
 theorem cl_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis g x h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "cr_leaf" [vis, g, x, h]
@@ -226,9 +226,8 @@ theorem crf_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis f h : Wo
     callW_spec p k "e_view", callW_spec p k "cr_leaf", callW_spec p k "crm_find",
     callW_spec p k "crm_put", callW_spec p k "crf_go", callW_spec p k "env_find"]
   all_goals (try simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
+    St.setLocs_nil, St.setLocs_cons, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, Bool.and_eq_true,
     Bool.or_eq_true] at *)
   all_goals grind (gen := 20) (instances := 20000) [lang_grind, arena_grind, crfW, crfV, crfLf,
     crfM, crfN, crfP1, crfP2, crfL1, crfL2, crfL3, crfB1, crfB2, crfFv, crfT, crfT1, crfT2]
@@ -272,7 +271,7 @@ theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
   · rw [h0]; simp [decFound]
   · obtain ⟨ci, hci⟩ := hci (by rw [h1]; decide)
     rw [h1]
-    simp only [decFound, if_neg (show (1 : Word) ≠ 0 by decide), hci, Option.isSome_some,
+    simp only [decFound, ite_eq_right (show (1 : Word) ≠ 0 by decide), hci, Option.isSome_some,
       ↓reduceIte]
 
 theorem ite_beq0 (c : Bool) : ((if c = true then (1 : Word) else 0) == 0) = !c := by

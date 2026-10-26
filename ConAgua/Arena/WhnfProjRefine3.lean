@@ -19,7 +19,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -207,7 +206,7 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
     simp only [IProjTable.entry, hss']; exact hrunL
   have hT := fireOk_run (tbl.entry i.toNat) (decI us) a₀ _ _ _ hrunZ hrunL'
   by_cases b : o.headD 0 < 2
-  · rw [if_pos b] at hW
+  · rw [ite_eq_left b] at hW
     obtain ⟨hr0, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hno : ¬ decO (o.headD 0) = some true := by
       unfold decO; split
@@ -219,12 +218,12 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
           have : (o.headD 0).toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
           have : (o.headD 0).toNat ≠ 1 := fun e => h1 (UInt64.toNat_inj.mp (by simpa using e))
           simp at *; omega
-    rw [if_neg hno] at hT
+    rw [ite_eq_right hno] at hT
     obtain ⟨okT, stT, resT⟩ := AM.of_run_ok _ _ _ _ hT
     refine ⟨okT, ⟨M2, by rw [stT, ← hm]; exact hS2, hK2, by rw [← hm]; exact hSt2⟩, ?_, ?_⟩
     · rw [resT]; simp only [decBool, ← hr0]; decide
     · unfold ResH HW; rw [← hr0]; decide
-  rw [if_neg b] at hW
+  rw [ite_eq_right b] at hW
   have hyes : decO (o.headD 0) = some true := by
     unfold decO
     have := mt UInt64.lt_iff_toNat_lt.mpr b
@@ -232,8 +231,8 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
     rw [e2] at this
     have h0 : o.headD 0 ≠ 0 := fun e => by rw [e] at this; simp at this
     have h1 : o.headD 0 ≠ 1 := fun e => by rw [e] at this; simp at this
-    rw [if_neg h0, if_neg h1]
-  rw [if_pos hyes] at hT
+    rw [ite_eq_right h0, ite_eq_right h1]
+  rw [ite_eq_left hyes] at hT
   -- the words `field_sort_zero` reads, in the record pool of `m₂` (= the caller's)
   obtain ⟨w3, w4, h3, h4, hsl3⟩ := hlist?_slice' hlp
   obtain ⟨w11, w12, h11, h12, hsl11⟩ := hlist?_slice' hgd
@@ -254,7 +253,7 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
     have hlen := hslice?_length hsl11
     simp only [foFs, hrd11, hrd12]
     by_cases hi : i < w12
-    · rw [if_pos hi]
+    · rw [ite_eq_left hi]
       have hi' := UInt64.lt_iff_toNat_lt.mp hi
       obtain ⟨w, hw, hw32, hgw⟩ := hslice?_at' hsl11 i.toNat (by rw [← hlen] at *; omega)
       have hb := (Array.getElem?_eq_some_iff.mp hw).1
@@ -264,7 +263,7 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
       rw [hE2, hrd]
       refine ⟨hw32, ?_⟩
       rw [List.getD_eq_getElem?_getD, hgw]; rfl
-    · rw [if_neg hi]
+    · rw [ite_eq_right hi]
       have hi' := mt UInt64.lt_iff_toNat_lt.mpr hi
       refine ⟨by unfold HW; decide, ?_⟩
       rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega)]; rfl
@@ -301,12 +300,12 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
 
 /-- `ProjSortDen` is `StoreDen.proj`'s sort and `StoreDen.zero`. -/
 theorem projSortDen_of (hden : CoreDen) : ProjSortDen :=
-  fun dn m a vis fe M eb c tbl hS hfe =>
+  fun dn m a vis fe M eb _c _tbl hS hfe =>
     ⟨((hden dn m a vis fe M eb hS).proj _ _ hfe).1, (hden dn m a vis fe M eb hS).zero⟩
 
 /-- `FireDen` is `StoreDen.readN` and `StoreDen.proj`'s guards and level parameters. -/
 theorem fireDen_of (hden : CoreDen) : FireDen :=
-  fun dn m a vis fe M eb c tbl hS hfe =>
+  fun dn m a vis fe M eb _c _tbl hS hfe =>
     have hd := hden dn m a vis fe M eb hS
     ⟨hd.readN, (hd.proj _ _ hfe).2.2, (hd.proj _ _ hfe).2.1⟩
 

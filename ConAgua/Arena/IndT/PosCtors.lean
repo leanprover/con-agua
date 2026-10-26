@@ -8,8 +8,6 @@ constructor (the block's `OneOKC` at `n`, its out record and state denoting), th
 (L only), the rest (the block's `CtorsOKC` at `n`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext dOut dCtors kindOf)
@@ -40,14 +38,14 @@ theorem ctorsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : CtorsOKC p dn v
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbCtorsW_succ] at h
   by_cases h0 : cL = 0
-  · rw [if_pos h0] at h
+  · rw [ite_eq_left h0] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     subst h0
     have : cs = [] := List.eq_nil_of_length_eq_zero (by simpa using hcl.symm)
     subst this
     exact ⟨(outs, NS), a, by rw [ConRon.Arena.nestCtors.eq_def]; rfl, hC, IWGrow.refl _, hout, houtb, hns, hP, hA,
       ConRon.Bridge.CoreStep.refl hC.check⟩
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   obtain ⟨⟨cvv, nFn⟩, cs', rfl⟩ : ∃ x cs', cs = x :: cs' := by
     cases cs with
     | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hcl)) h0

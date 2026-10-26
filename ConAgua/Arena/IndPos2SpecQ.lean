@@ -58,7 +58,7 @@ theorem KlB.length {m : Mem} {o l : Nat} {ks : List NestFieldKind} (h : KlB m o 
 
 /-- A field-kind slice grown by one word (`sl_snoc`). -/
 theorem KlB.snoc {m m' : Mem} {o l q : Nat} {ks : List NestFieldKind} {w : Word} {k : NestFieldKind}
-    (h : KlB m o l ks) (hg : IWGrow m m') (hq : q + l < iwTop m')
+    (h : KlB m o l ks) (_hg : IWGrow m m') (hq : q + l < iwTop m')
     (hw : ∀ i < l, (m'.arr64 IW)[q + i]? = (m.arr64 IW)[o + i]?) (hx : (m'.arr64 IW)[q + l]? = some w)
     (hk : decNFK w = some k) : KlB m' q (l + 1) (ks ++ [k]) := by
   have h' : decKL (truncM m) o l = some ks := h

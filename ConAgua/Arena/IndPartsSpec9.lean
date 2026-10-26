@@ -12,7 +12,6 @@ import ConAgua.Arena.IndPos2SpecC
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -105,7 +104,7 @@ theorem partsMemberIdx_lt {names : List NIdx} {lvls : LsIdx} {e : EIdx} {a a' : 
       rcases x with _ | ⟨nn, us⟩
       · revert h; simp [StateT.run, failDanglingE, bind, Except.bind]
         intro h; revert h; unfold fail
-        simp [throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.bind, bind]
+        simp [throwThe, MonadExceptOf.throw, StateT.lift, Except.bind, bind]
       · revert h; simp only [except_ok_bind]
         split
         · simp [StateT.run, pure, StateT.pure, Except.pure]
@@ -152,13 +151,13 @@ theorem ctmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   cases x1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hd1
-    simp only [h0, if_true]
+    simp only [h0, ite_true]
     exact Sim.ret ⟨rfl, by simp, hS1, hg1⟩
   | some q =>
     obtain ⟨l1, e1⟩ := q
     obtain ⟨h1', -, hbl, hbe⟩ := hd1
     rw [partsDrop3] at hbl hbe
-    simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
+    simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
     have h2 := partsSimW (gafF_ok dn vis fe CWF _ hbl) hS1
     rw [CWF_eq, hbe] at h2
     show Sim (ctmW.k_get_app_fn_f n no nl lvls _) (getAppFn coreWalkFuel e1 >>= fun hd =>
@@ -311,7 +310,7 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         · rintro ⟨-, rfl⟩; exact hi'.symm
         · intro e; exact ⟨by decide, by rw [e, ofNat_toNat_word]⟩
     by_cases hc : r1.headD 0 ≠ 0 ∧ r1.tail.headD 0 = mm
-    · rw [bgoW.k_block_groups_one.arm1 (hc1 := hc), if_pos (hcond.mp hc)]
+    · rw [bgoW.k_block_groups_one.arm1 (hc1 := hc), ite_eq_left (hcond.mp hc)]
       intro r m' e
       rcases h3 : consW n m2 (UInt64.ofNat pc) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
       · cases e
@@ -321,7 +320,7 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         (hc0B.grow (decCN_mono _) (hg1.trans hg2))
       exact ⟨c0 :: gs, a2, rfl, ⟨hd3, Nat.le_of_eq ht3⟩, hS3, (hg1.trans hg2).trans hg3⟩
     · have hb : optEq o mm.toNat = false := by simpa using (mt hcond.mpr hc)
-      rw [bgoW.k_block_groups_one.arm2 (hc1 := hc), bgoW.j1.arm1, if_neg (by rw [hb]; decide)]
+      rw [bgoW.k_block_groups_one.arm2 (hc1 := hc), bgoW.j1.arm1, ite_eq_right (by rw [hb]; decide)]
       exact Sim.ret ⟨hgs, hS2, hg1.trans hg2⟩
 
 /-! ## `block_groups_go`, `block_groups` -/
@@ -363,7 +362,7 @@ theorem partsGH {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at e0 e1
   have hd := (hg.grow decCN_mono hgr).1
   show decAt (truncM m') (decPL (truncM m') (decCN (truncM m'))) h0.toNat = some gs
-  simp only [decAt, e0, e1, Option.bind_eq_bind, Option.bind_some, bind]
+  simp only [decAt, e0, e1, Option.bind_some, bind]
   exact hd
 
 /-- **`block_groups_go`'s model refines the twin's `mapM` over members `mm, …, k - 1`.** -/
@@ -449,7 +448,7 @@ theorem bgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   unfold bgW ConRon.Arena.blockGroups
   by_cases hk : k = 1
   · have hk' : (k.toNat == 1) = true := by subst hk; rfl
-    rw [if_pos hk, if_pos hk']
+    rw [ite_eq_left hk, ite_eq_left hk']
     intro r m' e
     rcases h1 : posRecW m [co, cl] with _ | ⟨h0, m1⟩ <;> rw [h1] at e
     · cases e
@@ -463,7 +462,7 @@ theorem bgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     exact ⟨[cs], a, rfl, ⟨hd4, Nat.le_of_eq ht4⟩, hS4, hg1.trans hg4⟩
   · have hk' : ¬ (k.toNat == 1) = true := by
       intro e; apply hk; apply UInt64.toNat_inj.mp; simpa using e
-    rw [if_neg hk, if_neg hk', List.range_eq_range']
+    rw [ite_eq_right hk, ite_eq_right hk', List.range_eq_range']
     have := bggW_sim (k := k) (mm := 0) hlv n m a hS hcs hnm hnb (nP := nP)
     simp only [UInt64.toNat_zero, Nat.sub_zero] at this
     refine Sim.congr (op := _ >>= pure) ?_ (bind_pure _)

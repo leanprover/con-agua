@@ -12,7 +12,6 @@ below its top); `cidW_ok` takes it as the stage decodes it below the tops (`DecB
 cut memory's record pool is exactly the pool below its top (`erA_truncM`), so the two agree.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 
@@ -25,7 +24,7 @@ theorem erA_truncM (m : Mem) : erA (truncM m) = erecP m := by
   intro i
   by_cases hi : i < erTop m
   · rw [truncM_er_eq hi, erecP_getE hi]; rfl
-  · rw [truncM_er_get?, if_neg hi]
+  · rw [truncM_er_get?, ite_eq_right hi]
     symm
     simp only [erecP, Array.getElem?_extract]
     split

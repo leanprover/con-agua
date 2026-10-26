@@ -33,8 +33,8 @@ theorem iwN_of_get {m : Mem} {i : Nat} {w : Word} (h : (m.arr64 IW)[i]? = some w
   simp [iwN, nat?, iwA, h]
 
 theorem RxPost.of_fr {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m1 m2 : Mem}
-    {a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (hR : RfInv m M G g)
-    (hf : RfFr m m1) (hg : IWGrow m m1) (h : RxPost dn fe vis m1 m2 a2 M G g) : RxPost dn fe vis m m2 a2 M G g := by
+    {a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (_hR : RfInv m M G g)
+    (_hf : RfFr m m1) (hg : IWGrow m m1) (h : RxPost dn fe vis m1 m2 a2 M G g) : RxPost dn fe vis m m2 a2 M G g := by
   obtain ⟨M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := h
   exact ⟨M2, G2, hS2, hg.trans hg2, hR2, hk2, hG2⟩
 
@@ -62,7 +62,7 @@ theorem rfEnter {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (hR
     refine ⟨?_, ?_, UInt64.le_refl _, hG, by rw [hf.2.2.1]; exact hsz⟩
     · have h218 : (218 : Word).toNat = 218 := rfl
       simp only [benterG, rdW_set64, size_set64, hB1]
-      simp [Ne.symm hne]; omega
+      simp; omega
     · have h218 : (218 : Word).toNat = 218 := rfl
       simp only [benterG, rdW_set64, size_set64, hB1]
       simp; intro; omega
@@ -144,7 +144,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
     (by simp; omega)
   obtain ⟨hlvH, hlvd⟩ := rd_iwH (m := m3) (p := rdW (mh.arr64 IW) h) (i := 1)
     (by rw [hrk]; rw [iwH_agree (RdS.of_grow hg3) (by simp; omega)]; simpa using hlv) (by simp; omega)
-  simp only [UInt64.add_zero, show UInt64.ofNat 1 = (1 : Word) from rfl] at hcnH hcnd hlvH hlvd
+  simp only [UInt64.add_zero] at hcnH hcnd hlvH hlvd
   rcases hci : ceinternW m3 (rdW (m3.arr64 IW) (rdW (mh.arr64 IW) h)) (rdW (m3.arr64 IW) (rdW (mh.arr64 IW) h + 1)) with _ | ⟨hd, m4⟩ <;> rw [hci] at hk; · simp [frK4] at hk
   by_cases hdb : 4294967296 ≤ hd
   · rw [frK4_big (hb := hdb)] at hk; simp at hk
@@ -158,7 +158,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
     ⟨hS4, by simp only [decHL, iwA, hiw4]; exact hdec3⟩
   refine ⟨some x, a5, ?_, ⟨by simp, by rw [← hx2]; rfl⟩, ?_⟩
   · simp only [StateT.run_bind]
-    simp only [hrun3, except_ok_bind, ConRon.Arena.internConstE, StateT.run_bind, ← hcnd, ← hlvd, hr4, show (decE hd : EIdx) = decI hd from rfl, hr5]
+    simp only [hrun3, except_ok_bind, ConRon.Arena.internConstE, ← hcnd, ← hlvd, hr4, show (decE hd : EIdx) = decI hd from rfl, hr5]
     rfl
   · exact ⟨M3, G3, hS5, ((hg2.trans hg3).trans hg4).trans hg5,
       (hR3.frame (RfFr.of_low (ceinternW_low hci))).frame (RfFr.ofMknF hst), hk3, hG3⟩
@@ -439,7 +439,7 @@ theorem rxNode_arm (k : Nat) (hGo : GoOK dn fe vis k) (vl : List Word) (v : ENod
       GoPost dn fe vis m m' a' M G gn mp' := by
   cases v with
   | app f' x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rxNodeW_bin (hg := Or.inl rfl)] at hn
     have := rxBin_ok dn fe vis k hGo 4 (fun m a b => mkAppW m a b) internAppE (fun m a2 x2 => by simp [rpMkW])
@@ -447,7 +447,7 @@ theorem rxNode_arm (k : Nat) (hGo : GoOK dn fe vis k) (vl : List Word) (v : ENod
       m m' a f f1 _ _ r fm mp M G gn hn hS hfm hx hy hR hb
     rw [hdx, hdy] at this; exact this
   | lam f' x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rxNodeW_bin (hg := Or.inr (Or.inl rfl))] at hn
     have := rxBin_ok dn fe vis k hGo 5 (fun m a b => mkLamW m a b) internLamE (fun m a2 x2 => by simp [rpMkW])
@@ -455,7 +455,7 @@ theorem rxNode_arm (k : Nat) (hGo : GoOK dn fe vis k) (vl : List Word) (v : ENod
       m m' a f f1 _ _ r fm mp M G gn hn hS hfm hx hy hR hb
     rw [hdx, hdy] at this; exact this
   | forallE f' x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rxNodeW_bin (hg := Or.inr (Or.inr rfl))] at hn
     have := rxBin_ok dn fe vis k hGo 6 (fun m a b => mkForallW m a b) internForallEE (fun m a2 x2 => by simp [rpMkW])
@@ -612,10 +612,10 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
     cases xo with
     | none =>
       simp only [OptE] at hout
-      simp only [hout, ne_eq, not_true_eq_false, if_false]; rfl
+      simp only [hout, ne_eq, not_true_eq_false, ite_false]; rfl
     | some e' =>
       obtain ⟨h0, hd⟩ := hout
-      rw [if_pos h0, hd]; rfl
+      rw [ite_eq_left h0, hd]; rfl
   | app f' x' => exact node (Or.inl hvr.1) trivial
   | lam f' x' => exact node (Or.inr (Or.inl hvr.1)) trivial
   | forallE f' x' => exact node (Or.inr (Or.inr (Or.inl hvr.1))) trivial

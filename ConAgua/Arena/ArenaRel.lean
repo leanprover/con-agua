@@ -52,7 +52,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -627,10 +626,10 @@ theorem lvlHPW_ok (u : Word) (hu : u.toNat < 2 ^ 32) :
   have hp : (decI u : LIdx).isPersistent = (tierW u == 0) := isPersistent_decI u hu
   unfold lvlHPW
   by_cases hs : tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos hs]
+  · rw [ite_eq_left hs]
     have hon : a.store.lss.ls.scratchOn = false := by rw [← hfl]; simp [hs.2]
     simp [LStore.derived, hp, hs.1, hon]; rfl
-  rw [if_neg hs]
+  rw [ite_eq_right hs]
   have hder : a.store.lss.ls.derived (decI u) =
       (if tierW u = 0 then a.store.lss.ls.pers else a.store.lss.ls.scr).derAt (decI u) := by
     unfold LStore.derived; rw [hp]
@@ -653,9 +652,7 @@ theorem lvlHPW_ok (u : Word) (hu : u.toNat < 2 ^ 32) :
     (tierW u) (idxW u) ht
   have him := col_read IHP hpW m _ _ _ hR.imax hR.imaxHp.1 hR.imaxHp.2 rfl
     (tierW u) (idxW u) ht
-  simp only [zeroCS, paramCS, succCS, maxCS, imaxCS, ite_self, apply_ite (fun t : LTables => t.zeros),
-    apply_ite (fun t : LTables => t.params), apply_ite (fun t : LTables => t.succs),
-    apply_ite (fun t : LTables => t.maxs), apply_ite (fun t : LTables => t.imaxs)] at hz hpa hsu hma him
+  simp only [paramCS, succCS, maxCS, imaxCS] at hz hpa hsu hma him
   have hidx := decI_idx (k := .level) u
   simp only [LTables.derAt, hidx, beq_iff_eq]
   have tg := fun g (hg : g < 16) => decI_tag_eq (k := .level) u hu g hg
@@ -707,10 +704,10 @@ theorem lsHPW_ok (us : Word) (hus : us.toNat < 2 ^ 32) :
   have hp : (decI us : LsIdx).isPersistent = (tierW us == 0) := isPersistent_decI us hus
   unfold lsHPW
   by_cases hs : tierW us ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos hs]
+  · rw [ite_eq_left hs]
     have hon : a.store.lss.scratchOn = false := by rw [← hfl]; simp [hs.2]
     simp [LsStore.derived, hp, hs.1, hon]; rfl
-  rw [if_neg hs]
+  rw [ite_eq_right hs]
   have hder : a.store.lss.derived (decI us) =
       (if tierW us = 0 then a.store.lss.pers else a.store.lss.scr).derAt (decI us) := by
     unfold LsStore.derived; rw [hp]

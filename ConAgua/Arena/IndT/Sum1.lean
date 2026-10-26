@@ -11,8 +11,6 @@ from that spec's proof: `whnf` (`whnfC_rsim`: the answer denotes, scoped), the v
 denotes), the recursion one level deeper (`WScoped.instantiate1`), the cons (L only).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -169,7 +167,7 @@ theorem wtW_simC (k : Nat) (hk : k ≤ 2 ^ 62) :
         rw [hrun2']
         simp only [bind, Except.bind]
         rw [hrun3]
-        simp only [bind, Except.bind]
+        simp only
         rw [hi1, hnm, hbeq] at hrun4
         rw [hrun4]
         rfl

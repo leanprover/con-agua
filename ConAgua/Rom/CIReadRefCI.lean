@@ -8,8 +8,6 @@ pinned constants have (axioms, theorems, inductives without `sortZ` names, const
 recursors with plain rules: `ciFits`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP
@@ -160,7 +158,7 @@ theorem ci_cvOnly {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option C
   have hk3 : UInt64.ofNat kn ≠ 3 := by rcases hkn with rfl | rfl <;> decide
   have hk4 : UInt64.ofNat kn ≠ 4 := by rcases hkn with rfl | rfl <;> decide
   have hk5 : UInt64.ofNat kn ≠ 5 := by rcases hkn with rfl | rfl <;> decide
-  simp only [ciTailW, hk1, hk3, hk4, hk5, if_false, bW_some, Option.some.injEq, Prod.mk.injEq] at hw
+  simp only [ciTailW, hk1, hk3, hk4, hk5, ite_false, bW_some, Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   refine ⟨memo1, _, a1, hrun memo1 icv a1 hrun2, hI2, hM2, hs2, by simp [hq2, u64B]; omega, hek2,
     by simp [hpp], hIW2, ?_⟩

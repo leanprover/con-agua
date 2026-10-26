@@ -8,7 +8,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -34,7 +33,7 @@ theorem wr1_rel {n : Nat} {d a : Word} {m m' : Mem} {r : List Word}
     (∀ i, (i < d.toNat ∨ d.toNat + 1 ≤ i) → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
     (m'.arr64 EREC)[d.toNat + 0]? = some a := by
   obtain ⟨h1, h2, h3, h5⟩ := wr_core hbd hsz
-    (by simp only [List.forall_mem_cons, List.forall_mem_nil]; decide) (by simp) (wr1_call p hp hc)
+    (by simp only [List.forall_mem_cons]; decide) (by simp) (wr1_call p hp hc)
   exact ⟨h1, h2, h3, by simpa using h5⟩
 
 theorem wr2_rel {n : Nat} {d a b : Word} {m m' : Mem} {r : List Word}
@@ -45,7 +44,7 @@ theorem wr2_rel {n : Nat} {d a b : Word} {m m' : Mem} {r : List Word}
     (m'.arr64 EREC)[d.toNat + 0]? = some a ∧
     (m'.arr64 EREC)[d.toNat + 1]? = some b := by
   obtain ⟨h1, h2, h3, h5⟩ := wr_core hbd hsz
-    (by simp only [List.forall_mem_cons, List.forall_mem_nil]; decide) (by simp) (wr2_call p hp hc)
+    (by simp only [List.forall_mem_cons]; decide) (by simp) (wr2_call p hp hc)
   exact ⟨h1, h2, h3, by simpa using h5⟩
 
 theorem wr3_rel {n : Nat} {d a b c : Word} {m m' : Mem} {r : List Word}
@@ -57,7 +56,7 @@ theorem wr3_rel {n : Nat} {d a b c : Word} {m m' : Mem} {r : List Word}
     (m'.arr64 EREC)[d.toNat + 1]? = some b ∧
     (m'.arr64 EREC)[d.toNat + 2]? = some c := by
   obtain ⟨h1, h2, h3, h5⟩ := wr_core hbd hsz
-    (by simp only [List.forall_mem_cons, List.forall_mem_nil]; decide) (by simp) (wr3_call p hp hc)
+    (by simp only [List.forall_mem_cons]; decide) (by simp) (wr3_call p hp hc)
   exact ⟨h1, h2, h3, by simpa using h5⟩
 
 theorem wr4_rel {n : Nat} {d a b c e : Word} {m m' : Mem} {r : List Word}
@@ -70,7 +69,7 @@ theorem wr4_rel {n : Nat} {d a b c e : Word} {m m' : Mem} {r : List Word}
     (m'.arr64 EREC)[d.toNat + 2]? = some c ∧
     (m'.arr64 EREC)[d.toNat + 3]? = some e := by
   obtain ⟨h1, h2, h3, h5⟩ := wr_core hbd hsz
-    (by simp only [List.forall_mem_cons, List.forall_mem_nil]; decide) (by simp) (wr4_call p hp hc)
+    (by simp only [List.forall_mem_cons]; decide) (by simp) (wr4_call p hp hc)
   exact ⟨h1, h2, h3, by simpa using h5⟩
 
 theorem wr5_rel {n : Nat} {d a b c e g : Word} {m m' : Mem} {r : List Word}
@@ -84,7 +83,7 @@ theorem wr5_rel {n : Nat} {d a b c e g : Word} {m m' : Mem} {r : List Word}
     (m'.arr64 EREC)[d.toNat + 3]? = some e ∧
     (m'.arr64 EREC)[d.toNat + 4]? = some g := by
   obtain ⟨h1, h2, h3, h5⟩ := wr_core hbd hsz
-    (by simp only [List.forall_mem_cons, List.forall_mem_nil]; decide) (by simp) (wr5_call p hp hc)
+    (by simp only [List.forall_mem_cons]; decide) (by simp) (wr5_call p hp hc)
   exact ⟨h1, h2, h3, by simpa using h5⟩
 
 end rel

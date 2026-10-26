@@ -14,7 +14,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -89,8 +88,8 @@ theorem ldsLeft_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hdqE
     (callW_of_callE h1)
   refine ErrClaim.bind_core e₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decOptR_some h0]
   cases h2 : callE p n "whnf_core" [mode, 1, vis, d, r₁.tail.headD 0] m₁ with
   | error e =>
@@ -137,8 +136,8 @@ theorem ldsRight_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hdq
     (callW_of_callE h1)
   refine ErrClaim.bind_core e₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decOptR_some h0]
   cases h2 : callE p n "whnf_core" [mode, 1, vis, d, r₁.tail.headD 0] m₁ with
   | error e =>
@@ -431,7 +430,7 @@ theorem ldsBoth_refinesE (p : Prog) (hp : LazyProg p) (hlE : LdsOneE p "lds_left
   subst hm₅'
   simp only [ldsBothE.k_hint_lt_2] at hW
   by_cases h2 : rl₂.headD 0 ≠ 0
-  · rw [if_pos h2] at hW
+  · rw [ite_eq_left h2] at hW
     have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
         (decHintW (rb.headD 0) (rb.tail.headD 0)) = true := by rw [← hlt₂]; exact decBool_t h2
     simp only [hl2, ↓reduceIte]
@@ -439,7 +438,7 @@ theorem ldsBoth_refinesE (p : Prog) (hp : LazyProg p) (hlE : LdsOneE p "lds_left
       (hrE k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₂ eb
         mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd) he)
   have h2' : rl₂.headD 0 = 0 := by simpa using h2
-  rw [if_neg h2] at hW
+  rw [ite_eq_right h2] at hW
   have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
       (decHintW (rb.headD 0) (rb.tail.headD 0)) = false := by rw [← hlt₂]; exact decBool_f h2'
   simp only [hl2, Bool.false_eq_true, ↓reduceIte]
@@ -497,11 +496,11 @@ theorem lazyDeltaStep_refinesE (p : Prog) (hp : LazyProg p)
   have hk' : KnotUpTo p k := hk.mono (by omega)
   have hkE' : KnotUpToE p k := hkE.mono (by omega)
   by_cases h00 : ra.headD 0 = 0 ∧ rb.headD 0 = 0
-  · rw [if_pos h00] at hW; cases hW
-  rw [if_neg h00] at hW
+  · rw [ite_eq_left h00] at hW; cases hW
+  rw [ite_eq_right h00] at hW
   by_cases hb0 : rb.headD 0 = 0
   · have ha0 : ra.headD 0 ≠ 0 := fun h => h00 ⟨h, hb0⟩
-    rw [if_pos hb0] at hW
+    rw [ite_eq_left hb0] at hW
     rw [decBool_t ha0, decBool_f hb0]
     cases h3 : callE p (k + 1) "try_unfold_proj_app" [mode, vis, d, b] m₂ with
     | error e =>
@@ -517,21 +516,21 @@ theorem lazyDeltaStep_refinesE (p : Prog) (hp : LazyProg p)
       vis fe M₂ eb mode d b (by omega) (by omega) ⟨hS₂, hs.mode4, hs.eb_mode⟩ hb) (callW_of_callE h3)
     refine ErrClaim.bind_core e₃ (fun M₃ hS₃ => ?_)
     by_cases ht : rt.headD 0 ≠ 0
-    · rw [if_pos ht] at hW
+    · rw [ite_eq_left ht] at hW
       rw [decOptR_some ht]
       exact arm _ _ _ _ _ hW (fun e he => ErrClaim.of_callE_succ he fun j hj h' => by
         cases Nat.add_right_cancel hj
         exact CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
           (hdqE k hk' hkE' F _ _ dn vis fe M₃ eb mode d a _ (by omega) (by omega)
             ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha e₃.2.2.2.2 hd) h')
-    rw [if_neg ht] at hW
+    rw [ite_eq_right ht] at hW
     rw [decOptR_none (by simpa using ht)]
     exact arm _ _ _ _ _ hW (fun e he => CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
       (hlE k hk' hkE' F (by omega) (by omega) _ _ dn vis fe M₃ eb mode d a b
         ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd) he)
-  rw [if_neg hb0] at hW
+  rw [ite_eq_right hb0] at hW
   by_cases ha0 : ra.headD 0 = 0
-  · rw [if_pos ha0] at hW
+  · rw [ite_eq_left ha0] at hW
     rw [decBool_f ha0, decBool_t hb0]
     cases h3 : callE p (k + 1) "try_unfold_proj_app" [mode, vis, d, a] m₂ with
     | error e =>
@@ -547,19 +546,19 @@ theorem lazyDeltaStep_refinesE (p : Prog) (hp : LazyProg p)
       vis fe M₂ eb mode d a (by omega) (by omega) ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha) (callW_of_callE h3)
     refine ErrClaim.bind_core e₃ (fun M₃ hS₃ => ?_)
     by_cases ht : rt.headD 0 ≠ 0
-    · rw [if_pos ht] at hW
+    · rw [ite_eq_left ht] at hW
       rw [decOptR_some ht]
       exact arm _ _ _ _ _ hW (fun e he => ErrClaim.of_callE_succ he fun j hj h' => by
         cases Nat.add_right_cancel hj
         exact CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
           (hdqE k hk' hkE' F _ _ dn vis fe M₃ eb mode d _ b (by omega) (by omega)
             ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₃.2.2.2.2 hb hd) h')
-    rw [if_neg ht] at hW
+    rw [ite_eq_right ht] at hW
     rw [decOptR_none (by simpa using ht)]
     exact arm _ _ _ _ _ hW (fun e he => CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
       (hrE k hk' hkE' F (by omega) (by omega) _ _ dn vis fe M₃ eb mode d a b
         ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd) he)
-  rw [if_neg ha0] at hW
+  rw [ite_eq_right ha0] at hW
   rw [decBool_t ha0, decBool_t hb0]
   exact arm _ _ _ _ _ hW (fun e he => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
     (hbE k hk' hkE' F (by omega) (by omega) _ _ dn vis fe M₂ eb mode d a b

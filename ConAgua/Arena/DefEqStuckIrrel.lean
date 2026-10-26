@@ -11,7 +11,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -94,7 +93,7 @@ theorem stuckIrrel_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mod
   simp only [callFn, stuckIrrelL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "struct_eta_cert",
       callW_spec p n "struct_unit_cert", callW_spec p n "proof_irrel"] <;>
-  simp_all [siK1, siK2, siK3, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+  simp_all [siK1, siK2, siK3, call1W, LocEq, St.setLocs_cons, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 

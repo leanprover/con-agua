@@ -31,7 +31,6 @@ and record length), `RFrame C.sch R C.hsM` (a node's relation and hash depend on
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -772,7 +771,7 @@ theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem
             C.sch.w.toNat * ((cntW C.sch m t).toNat + 1) := by
           rw [Nat.mul_add, Nat.mul_one, Nat.mul_comm C.sch.w.toNat]; omega
         omega
-      simp only [true_and, had, and_self, ↓reduceIte, hfn]
+      simp only [had, and_self, ↓reduceIte, hfn]
       rw [← hvs]; exact hE.vs ks _ hks g hg
     -- the new node's key words are the key
     have hfk' : ∀ f : Nat, f < C.nk →
@@ -1084,7 +1083,7 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
   have miss1 := tierR_miss C.sch R C.hsM C.KP m 1 _ hT1 _ key hK.match_ _ _ hQ _ hK.home _ hP1
   have e0 := hW.base 0 (by decide)
   have e1 := hW.base 1 (by decide)
-  simp only [show (0 : Word) = 0 from rfl, ↓reduceIte, show (1 : Word) ≠ 0 by decide] at e0 e1
+  simp only [↓reduceIte, show (1 : Word) ≠ 0 by decide] at e0 e1
   have hL := L.on_setP
   have htag : C.sch.tag = C.tag := rfl
   -- the append to tier `t` at slot `j`, then the column, then the growth

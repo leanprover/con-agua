@@ -56,13 +56,13 @@ variable (S : MemoSch) (m m₁ m₂ : Mem) (e k : Word) (r : List Word)
 theorem memoSlotD_hit (res : Option (List Word × Mem)) (h0 : mfindG S m e k ≠ [])
     (h1 : (mfindG S m e k).headD 0 ≠ 0) :
     memoSlotD S m e k res = some (Cmp.evalW .ne (mvG S m ((mfindG S m e k).tail.headD 0)) 0, m) := by
-  unfold memoSlotD; simp only [h0, h1, if_false, if_true, ne_eq, not_false_eq_true]
+  unfold memoSlotD; simp only [h0, h1, ite_false, ite_true, ne_eq, not_false_eq_true]
 
 theorem memoSlotD_miss (h0 : mfindG S m e k ≠ []) (h1 : (mfindG S m e k).headD 0 = 0)
     (h2 : msetG S m₁ e k (r.headD 0) = some m₂) :
     memoSlotD S m e k (some (r, m₁)) = some (r.headD 0, m₂) := by
   unfold memoSlotD
-  rw [if_neg h0, if_neg (by simp only [ne_eq, Decidable.not_not]; exact h1)]
+  rw [ite_eq_right h0, ite_eq_right (by simp only [ne_eq, Decidable.not_not]; exact h1)]
   simp only [h2]
 
 end arms
@@ -326,13 +326,13 @@ theorem infer_refines (n : Nat) (hk : KnotUpTo p n) (hb : InferBodySpec p n) :
   obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := hS.core.inf.findE hS.core.eb1 e he h0
   by_cases h1 : (mfindG inSch s.mem e (genW 0 eb)).headD 0 ≠ 0
-  · rw [if_pos h1] at hW
+  · rw [ite_eq_left h1] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
       (knot_infer_hit _ fe F' d.toNat _ a₀ _ (hf.1 h1).1)
     refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
     rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
-  rw [if_neg h1] at hW
+  rw [ite_eq_right h1] at hW
   have hmiss := hf.2 (by simpa using h1)
   rcases hcall : callW p n "infer_body" [mode, vis, d, e] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, reduceCtorEq] at hW
   have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk
@@ -367,13 +367,13 @@ theorem inferIO_refines (n : Nat) (hk : KnotUpTo p n) (hb : InferIOBodySpec p n)
   obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := hS.core.io.findE hS.core.eb1 e he h0
   by_cases h1 : (mfindG ioSch s.mem e (genW 0 eb)).headD 0 ≠ 0
-  · rw [if_pos h1] at hW
+  · rw [ite_eq_left h1] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
       (knot_inferIO_hit _ fe F' d.toNat _ a₀ _ (hf.1 h1).1)
     refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
     rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
-  rw [if_neg h1] at hW
+  rw [ite_eq_right h1] at hW
   have hmiss := hf.2 (by simpa using h1)
   rcases hcall : callW p n "infer_body_io" [mode, vis, d, e] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, reduceCtorEq] at hW
   have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk
@@ -415,14 +415,14 @@ theorem defeq_refines (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) :
   obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := hS.core.de.findD hS.core.eb1 x y hx hy h0
   by_cases h1 : (mfindG deSch s.mem x (genW y eb)).headD 0 ≠ 0
-  · rw [if_pos h1] at hW
+  · rw [ite_eq_left h1] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
       (knot_defeq_hit _ fe F' d.toNat _ _ a₀ _ (hf.1 h1))
     refine ⟨hok, ?_, by rw [hres, decBool, ← hr, evalW_ne_decB],
       by unfold ResH; rw [← hr]; exact evalW_ne_hw _⟩
     rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
-  rw [if_neg h1] at hW
+  rw [ite_eq_right h1] at hW
   have hmiss := hf.2 (by simpa using h1)
   rcases hcall : callW p n "defeq_body" [mode, vis, d, x, y] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, reduceCtorEq] at hW
   have hbody := hb F' s a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy hk

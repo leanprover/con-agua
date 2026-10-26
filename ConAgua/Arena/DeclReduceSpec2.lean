@@ -16,8 +16,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -203,11 +201,11 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   rcases h1 : envFindW m c vis with _ | ⟨r1, m1⟩ <;> simp only [h1, rsoK1, reduceCtorEq] at hW
   by_cases hf : r1.headD 0 = 0
   · -- a miss
-    rw [if_pos hf] at hW
+    rw [ite_eq_left hf] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hc hf
     refine ⟨false, a, by simp [reduceStoredOk, hfind]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-  rw [if_neg hf] at hW
+  rw [ite_eq_right hf] at hW
   obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.1.env hc hf
   obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env c hc htag hrc
   rw [hptr] at hW
@@ -220,7 +218,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨hk0, hkn⟩ := decCI_kind0 hci hwk
   by_cases hk : wk ≠ 0
   · -- another kind
-    rw [if_pos hk] at hW
+    rw [ite_eq_left hk] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
     have hne := hkn hk
@@ -228,7 +226,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
     cases ci with
     | axiomInfo cv => exact absurd rfl (hne cv)
     | _ => rfl
-  rw [if_neg hk] at hW
+  rw [ite_eq_right hk] at hW
   obtain ⟨cvR, hcvR, rfl⟩ := hk0 (by simpa using hk)
   -- the pinned type
   rcases h2 : callW p n "reduce_op_cv_a" [c] m1 with _ | ⟨r2, m2⟩ <;> simp only [h2, rsoK2, reduceCtorEq] at hW
@@ -374,7 +372,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
   have hsz := hS.2.2.2.2.1
   by_cases he : c = r1.headD 0
   · -- `reduceNat`: the pinned `Nat` basis
-    rw [if_pos he, hm1] at hW
+    rw [ite_eq_left he, hm1] at hW
     rw [e1] at he
     rcases h2 : pinAtW m 1 with _ | ⟨r2, m2⟩ <;> simp only [h2, reoN1, reduceCtorEq] at hW
     obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.1.pins
@@ -391,16 +389,15 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     have htwin : (reduceElemOk fe (decI c)).run a =
         .ok (fe.find? (decI (pinW m3 (1 + (1 : Word).toNat))) == some na, a4) := by
       simp only [reduceElemOk, reduceNatName, pinReduceNat, StateT.run_bind,
-        show PIN_REDUCE_NAT = (43 : Word).toNat from rfl, hrun1, exc_ok_bind', hbeq, he,
-        decide_true, if_true, pinNat, show PIN_NAT = (1 : Word).toNat from rfl, hrun2, hrun4',
+        show PIN_REDUCE_NAT = (43 : Word).toNat from rfl, hrun1, exc_ok_bind', he, ite_true, pinNat, show PIN_NAT = (1 : Word).toNat from rfl, hrun2, hrun4',
         beq_self_eq_true]
       rfl
     by_cases hf : r3.headD 0 = 0
-    · rw [if_pos hf] at hW
+    · rw [ite_eq_left hf] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨-, hfind⟩ := envFindW_miss h3 hS.1.env hl2 hf
       refine ⟨false, a4, by rw [htwin, hfind]; rfl, hS4, hg4, by simp [decW0B]⟩
-    rw [if_neg hf] at hW
+    rw [ite_eq_right hf] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.1.env hl2 hf
     obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env _ hl2 htag hrc
@@ -413,7 +410,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
       by_cases e : ci = na <;> simp [e]
     · by_cases e : ci = na <;> simp [e, decW0B]
   · -- `reduceBool`: a standard `Bool`
-    rw [if_neg he, hm1] at hW
+    rw [ite_eq_right he, hm1] at hW
     rw [e1] at he
     rcases h2 : pinAtW m 29 with _ | ⟨r2, m2⟩ <;> simp only [h2, reoB1, reduceCtorEq] at hW
     obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.1.pins
@@ -425,16 +422,16 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
           | _ => pure false : AM Bool).run a := by
       simp only [reduceElemOk, reduceNatName, pinReduceNat, StateT.run_bind,
         show PIN_REDUCE_NAT = (43 : Word).toNat from rfl, hrun1, exc_ok_bind', hbeq, he,
-        decide_false, Bool.false_eq_true, if_false, boolName, pinBool,
+        decide_false, Bool.false_eq_true, ite_false, boolName, pinBool,
         show PIN_BOOL = (29 : Word).toNat from rfl, hrun2]
       rfl
     rcases h3 : envFindW m (pinW m (1 + (29 : Word).toNat)) vis with _ | ⟨r3, m3⟩ <;> simp only [h3, reoB2, reduceCtorEq] at hW
     by_cases hf : r3.headD 0 = 0
-    · rw [if_pos hf] at hW
+    · rw [ite_eq_left hf] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨rfl, hfind⟩ := envFindW_miss h3 hS.1.env hl2 hf
       refine ⟨false, a, by rw [hpre, hfind]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-    rw [if_neg hf] at hW
+    rw [ite_eq_right hf] at hW
     obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.1.env hl2 hf
     obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env _ hl2 htag hrc
     rw [hptr] at hW
@@ -445,7 +442,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     rw [ek] at hW
     obtain ⟨hk3, hkn⟩ := decCI_kind3 hci hwk
     by_cases hk : wk ≠ 3
-    · rw [if_pos hk] at hW
+    · rw [ite_eq_left hk] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
       rw [hpre, hfind, hci]
@@ -453,7 +450,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
       cases ci with
       | indInfo cv caps => exact absurd rfl (hne cv caps)
       | _ => rfl
-    rw [if_neg hk] at hW
+    rw [ite_eq_right hk] at hW
     obtain ⟨cvB, caps, hcvB, rfl⟩ := hk3 (by simpa using hk)
     rcases h4 : callW p n "rom_cv" [5] m3 with _ | ⟨r4, m4⟩ <;> simp only [h4, reoB3, reduceCtorEq] at hW
     obtain ⟨pin, a4, hrun4, hS4, hg4, hpin⟩ := hR.cv dn vis fe 5 (by decide) n _ a r4 m4 hS h4

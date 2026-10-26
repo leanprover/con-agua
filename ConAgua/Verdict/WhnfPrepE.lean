@@ -13,9 +13,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
-set_option linter.unusedSectionVars false
 
 namespace L.Arena
 
@@ -59,25 +56,25 @@ theorem litMajorToCtorE_of (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p)
   simp only [lmtcE] at hW
   have hR := hS.arena.1
   by_cases h8 : h >>> 28 ≠ 8
-  · rw [if_pos h8] at hW
+  · rw [ite_eq_left h8] at hW
     exact ErrClaim.of_callE_nv hnv (whnfPrepE_nv "lit_to_ctor_if_nat" (by simp))
       (err_of_k (by intro q e; simp [lmtcE.k_lit_to_ctor_if_nat]) (fun _ => rfl) hW)
-  rw [if_neg h8] at hW
+  rw [ite_eq_right h8] at hW
   have h8' : h >>> 28 = 8 := by simpa using h8
   by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hsc] at hW
   by_cases hbd : tcnt s₀.mem LIT (tierW h) ≤ idxW h
-  · rw [if_pos hbd] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hbd] at hW
   have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hviewS, -⟩ := view_lit_kind s₀.mem a₀ hR h hh hvOK h8'
   have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8'
   by_cases hkind : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 1
-  · rw [if_pos hkind] at hW
+  · rw [ite_eq_left hkind] at hW
     exact ErrClaim.of_callE_nv hnv (whnfPrepE_nv "lit_to_ctor_if_nat" (by simp))
       (err_of_k (by intro q e; simp [lmtcE.k_lit_to_ctor_if_nat]) (fun _ => rfl) hW)
-  rw [if_neg hkind] at hW
+  rw [ite_eq_right hkind] at hW
   obtain ⟨str, hview⟩ := hviewS (by simpa using hkind)
   cases hc1 : callE p n "str_lit_supported" [vis] s₀.mem with
   | error e1 =>
@@ -90,8 +87,8 @@ theorem litMajorToCtorE_of (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p)
   obtain ⟨hrun1, ⟨M₁, hS₁, -, -⟩, -⟩ := CoreSpec.run
     (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) (callW_of_callE hc1)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decBool_t_m2c h0] at hrun1
   cases hc2 : callE p n "str_lit_ctor" [h] m₁ with
   | error e2 =>
@@ -153,8 +150,7 @@ theorem pm_err_nk_str (hK : recRuleK rules = false) (a a1 : AState)
     (hs : (isStrLit major).run a = .ok (true, a1)) (ce : CheckError)
     (ht : (pmTailT mode r fe d rec rules major).run a1 = .error ce) :
     (prepareMajor mode r fe d rec rules major).run a = .error ce := by
-  simp only [prepareMajor, hK, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, hs, except_ok_bind,
-    StateT.run_pure, pure_bind]
+  simp only [prepareMajor, hK, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, hs, except_ok_bind, pure_bind]
   simpa [pmTailT, StateT.run_bind] using ht
 
 theorem pm_err_nk_m2c (hK : recRuleK rules = false) (a a1 : AState)
@@ -223,8 +219,8 @@ theorem pmTailE (N : Nat) (hk : KnotUpTo p (N + 1)) (hkE : KnotUpToE p (N + 1)) 
     (isCtorApp_refines p hp.toIotaProg' N ⟨m3, Locals.init []⟩ a dn vis fe M eb me hS hme)
     (callW_of_callE c4)
   by_cases hc4 : r4.headD 0 ≠ 0
-  · rw [if_pos hc4] at h; cases h
-  rw [if_neg hc4] at h
+  · rw [ite_eq_left hc4] at h; cases h
+  rw [ite_eq_right hc4] at h
   have hb : decBool r4 = false := by
     unfold decBool; have : r4.headD 0 = 0 := Classical.not_not.mp hc4
     rw [this]; rfl
@@ -299,7 +295,7 @@ theorem prepareMajorE_of : PrepareMajorE p := by
   have hk' : KnotUpTo p N := hk.mono (Nat.le_succ N)
   by_cases hkr : rk.headD 0 ≠ 0
   · -- the K arm
-    rw [if_pos hkr] at hW
+    rw [ite_eq_left hkr] at hW
     have hK : recRuleK rules = true := by rw [← hkk]; simpa using hkr
     cases c2 : callE p (N + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major] s₀.mem with
     | error e2 =>
@@ -326,15 +322,15 @@ theorem prepareMajorE_of : PrepareMajorE p := by
       (isCtorApp_refines p hp.toIotaProg' N ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb (r2.headD 0) hS2 hr2)
       (callW_of_callE c3)
     by_cases hc3 : r3.headD 0 ≠ 0
-    · rw [if_pos hc3] at hW
+    · rw [ite_eq_left hc3] at hW
       rw [decBool_t_m2c hc3] at hrun3
       have hW' := err_of_k (by intro q e; simp [pmE.k_lit_major_to_ctor]) (fun _ => rfl) hW
       exact ErrClaim.of_run_err (fun ce h' => pm_err_K_lmtc _ _ _ _ _ _ _ hK a₀ _ _ _ hrun2 hrun3 ce h')
         (CoreSpecE.of_callE (litMajorToCtorE_of p hp.toIotaProg' hw hsup hnv N hk' (hkE.mono (by omega))
           F (by omega) (by omega) ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d (r2.headD 0) hS3 hm4
           hebm hr2) hW')
-    · rw [if_neg hc3] at hW; cases hW
-  · rw [if_neg hkr] at hW
+    · rw [ite_eq_right hc3] at hW; cases hW
+  · rw [ite_eq_right hkr] at hW
     have hK0 : recRuleK rules = false := by rw [← hkk, Classical.not_not.mp hkr]; rfl
     cases c2 : callE p (N + 1) "is_str_lit" [major] s₀.mem with
     | error e2 =>
@@ -350,12 +346,12 @@ theorem prepareMajorE_of : PrepareMajorE p := by
     have hrules2 : decRules (m2.arr64 EREC) ro.toNat rc.toNat = some rules := by
       rw [hE _ _ _ _ _ _ (by simp) (callW_of_callE c2)]; exact hr
     by_cases hs2 : r2.headD 0 ≠ 0
-    · rw [if_pos hs2] at hW
+    · rw [ite_eq_left hs2] at hW
       rw [decBool_t_m2c hs2] at hrun2
       exact ErrClaim.of_run_err (fun ce h' => pm_err_nk_str _ _ _ _ _ _ _ hK0 a₀ _ hrun2 ce h')
         (pmTailE p hp hc hw hsup hmtc hE hnv hM N hk hkE F hnF hn62 dn vis fe eb mode d rec ro rc major
           rules hm4 hebm hmaj m2 _ M2 hS2 hrules2 er hW)
-    rw [if_neg hs2] at hW
+    rw [ite_eq_right hs2] at hW
     rw [decBool_f_m2c (Classical.not_not.mp hs2)] at hrun2
     cases c3 : callE p (N + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major] m2 with
     | error e3 =>

@@ -14,7 +14,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -128,8 +127,8 @@ theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
         fe.findTable? (decI T) = some tbl) := by
   unfold findProjK at hW
   by_cases hT : 4294967295 < T
-  · rw [if_pos hT] at hW; cases hW
-  rw [if_neg hT] at hW
+  · rw [ite_eq_left hT] at hW; cases hW
+  rw [ite_eq_right hT] at hW
   have hw : T.toNat < 2 ^ 32 := by
     have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp hT); simp at this; omega
   cases hc : callW p n "find_table" [vis, T] s₀.mem with
@@ -143,12 +142,12 @@ theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   obtain ⟨k0, k1⟩ := findProj_of_tbl (fe := fe) (m := s₀.mem) (decI T) i.toNat (r₁.headD 0) hft hfs
   simp only at hW
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨e0, -, em⟩ := hW
     refine ⟨em.symm, by rw [← e0]; decide, ?_, fun h => absurd e0.symm h⟩
     rw [k0 h0, ← e0]; simp [decEntry]
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   obtain ⟨tbl, w, htbl, hfT, hw7, hnf, hfp⟩ := k1 h0
   have hq7 : (r₁.headD 0 - 1 + 7).toNat = (r₁.headD 0 - 1).toNat + 7 := by
     have hlt := (Array.getElem?_eq_some_iff.mp hw7).1
@@ -157,17 +156,17 @@ theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     simp only [rdW, hq7, hw7, Option.getD_some]
   rw [hrd] at hW
   by_cases bi : i < w
-  · rw [if_pos bi] at hW
+  · rw [ite_eq_left bi] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨e0, e1, em⟩ := hW
     refine ⟨em.symm, by rw [← e0]; decide, ?_, fun _ => ⟨tbl, by rw [← e1]; exact htbl, hfT⟩⟩
-    rw [hfp, if_pos (UInt64.lt_iff_toNat_lt.mp bi), ← e0, ← e1]
+    rw [hfp, ite_eq_left (UInt64.lt_iff_toNat_lt.mp bi), ← e0, ← e1]
     simp only [decEntry, show ((1 : Word) = 0) = False by decide, ite_false, htbl, Option.map_some]
-  · rw [if_neg bi] at hW
+  · rw [ite_eq_right bi] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨e0, -, em⟩ := hW
     refine ⟨em.symm, by rw [← e0]; decide, ?_, fun h => absurd e0.symm h⟩
-    rw [hfp, if_neg (mt UInt64.lt_iff_toNat_lt.mpr bi), ← e0]; simp [decEntry]
+    rw [hfp, ite_eq_right (mt UInt64.lt_iff_toNat_lt.mpr bi), ← e0]; simp [decEntry]
 
 /-- **`find_proj` refines `IFEnv.findProj?`** under `CoreS`. -/
 @[refines ConRon.Arena.IFEnv.findProj?]

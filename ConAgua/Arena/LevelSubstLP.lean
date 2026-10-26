@@ -24,7 +24,6 @@ generic ones; only the call-level specs are restated here.
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order

@@ -15,7 +15,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -103,7 +102,7 @@ theorem quickSort_refinesE (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes)
   by_cases hz : rz.headD 0 = 0
   · -- the decline: `lvl_eq_c` ran out of fuel, the twin's `liftFueled` fails
     rw [quickSortE.k_lvl_eq_c.abort1 (hc1 := hz)] at hW; cases hW
-    have : decO (rz.headD 0) = none := by unfold decO; rw [if_pos hz]
+    have : decO (rz.headD 0) = none := by unfold decO; rw [ite_eq_left hz]
     rw [this]
     exact ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
   · rw [quickSortE.k_lvl_eq_c.arm1 (hc1 := hz)] at hW; cases hW
@@ -230,15 +229,15 @@ theorem quickDefeq_refinesE (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes)
   simp only [quickDefeqE] at hW
   rw [quickDefEq_eq]
   by_cases he : x = y
-  · rw [if_pos he] at hW; cases hW
-  rw [if_neg he] at hW
+  · rw [ite_eq_left he] at hW; cases hW
+  rw [ite_eq_right he] at hW
   have hb : (decE x == decE y) = false := by rw [decE_beq_eq _ _ hx hy]; simp [he]
   simp only [hb, Bool.false_eq_true, ↓reduceIte, tag_bne x y hx hy, decide_eq_true_eq]
   by_cases hg : x >>> 28 ≠ y >>> 28
-  · rw [if_pos hg] at hW; cases hW
+  · rw [ite_eq_left hg] at hW; cases hW
   have hg' : x >>> 28 = y >>> 28 := Classical.byContradiction hg
-  rw [if_neg hg] at hW
-  rw [if_neg hg]
+  rw [ite_eq_right hg] at hW
+  rw [ite_eq_right hg]
   simp only [tag_beq_w x hx 2 (by decide) ETag.sort rfl 2 rfl,
     tag_beq_w x hx 8 (by decide) ETag.lit rfl 8 rfl, tag_beq_w x hx 6 (by decide) ETag.forallE rfl 6 rfl,
     tag_beq_w x hx 5 (by decide) ETag.lam rfl 5 rfl, Bool.or_eq_true, decide_eq_true_eq]
@@ -251,29 +250,29 @@ theorem quickDefeq_refinesE (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes)
     have h3 := tailE (quickDefeqE.k_quick_sort.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) h
     exact ErrClaim.of_callE_succ h3 fun k hk' h' => hT k hk' er h'
   by_cases h2 : x >>> 28 = 2
-  · rw [if_pos h2] at hW
+  · rw [ite_eq_left h2] at hW
     simp only [h2, true_or, ↓reduceIte]
     exact arm _ _ hW _ fun k _ e he => CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (quickSort_refinesE p hp hsd hnv k _ a₀ dn vis fe M eb _ _ _ x y hS h2 (hg' ▸ h2)) he
-  rw [if_neg h2] at hW
+  rw [ite_eq_right h2] at hW
   by_cases h8 : x >>> 28 = 8
-  · rw [if_pos h8] at hW
+  · rw [ite_eq_left h8] at hW
     have h3 := tailE (quickDefeqE.k_quick_sort.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) hW
     exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h3
-  rw [if_neg h8] at hW
+  rw [ite_eq_right h8] at hW
   by_cases h6 : x >>> 28 = 6
-  · rw [if_pos h6] at hW
+  · rw [ite_eq_left h6] at hW
     simp only [h6, true_or, or_true, ↓reduceIte]
     exact arm _ _ hW _ fun k hnk e he => CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (quickForall_refinesE p hp hbE hnv k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega)
         (by omega) _ a₀ dn vis fe M eb mode d x y ⟨hS, hs.mode4, hs.eb_mode⟩ h6 (hg' ▸ h6) hd) he
-  rw [if_neg h6] at hW
+  rw [ite_eq_right h6] at hW
   by_cases h5 : x >>> 28 = 5
-  · rw [if_pos h5] at hW
+  · rw [ite_eq_left h5] at hW
     simp only [h5, or_true, ↓reduceIte]
     exact arm _ _ hW _ fun k hnk e he => CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (quickLam_refinesE p hp hlE hnv k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega)
         (by omega) _ a₀ dn vis fe M eb mode d x y ⟨hS, hs.mode4, hs.eb_mode⟩ h5 (hg' ▸ h5) hd) he
-  rw [if_neg h5] at hW; cases hW
+  rw [ite_eq_right h5] at hW; cases hW
 
 end L.Arena

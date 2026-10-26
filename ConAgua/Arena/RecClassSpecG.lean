@@ -34,7 +34,7 @@ theorem snocW_room {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
   rw [hf.2.2.1 IW]
   simp only [snocW] at h
   have h0 : l + 1 ≠ 0 := by intro e0; simp [e0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   rcases hal : allocW m (l + 1) with _ | qm
   · simp [hal] at h
   obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
@@ -143,45 +143,45 @@ section arms
 variable (N : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (p vis np n mo ml d e dom body slot mo2 ml2 fv : Word)
   (r1 r2 r4 r5 r6 : List Word) (cR : CallM)
 theorem slotsW_zero (h : n = 0) : slotsW cR (N + 1) m p vis np n mo ml d e = some ([1, 0, 0], m) := by
-  rw [slotsW, if_pos h]
+  rw [slotsW, ite_eq_left h]
 theorem slotsW_tag (h : n ≠ 0) (h2 : e >>> 28 ≠ 6) :
     slotsW cR (N + 1) m p vis np n mo ml d e = some ([0, 0, 0], m) := by
-  rw [slotsW, if_neg h, if_pos h2]
+  rw [slotsW, ite_eq_right h, ite_eq_left h2]
 theorem slotsW_nil (h : n ≠ 0) (h2 : ¬ e >>> 28 ≠ 6) (h3 : eViewW m e = []) :
     slotsW cR (N + 1) m p vis np n mo ml d e = none := by
-  rw [slotsW, if_neg h, if_neg h2, if_pos h3]
+  rw [slotsW, ite_eq_right h, ite_eq_right h2, ite_eq_left h3]
 theorem slotsW_ok (h : n ≠ 0) (h2 : ¬ e >>> 28 ≠ 6) (h3 : eViewW m e ≠ []) :
     slotsW cR (N + 1) m p vis np n mo ml d e =
       ssK1 cR N p vis np n mo ml d ((eViewW m e).tail.headD 0) ((eViewW m e).tail.tail.headD 0)
         (slotW cR N m p vis np mo ml d ((eViewW m e).tail.headD 0)) := by
-  rw [slotsW, if_neg h, if_neg h2, if_neg h3]
+  rw [slotsW, ite_eq_right h, ite_eq_right h2, ite_eq_right h3]
 theorem ssK1_fail (h : r1.headD 0 = 0) : ssK1 cR N p vis np n mo ml d dom body (some (r1, m1)) =
-    some ([0, 0, 0], m1) := by rw [ssK1, if_pos h]
+    some ([0, 0, 0], m1) := by rw [ssK1, ite_eq_left h]
 theorem ssK1_ok (h : r1.headD 0 ≠ 0) : ssK1 cR N p vis np n mo ml d dom body (some (r1, m1)) =
-    ssK1b (nextW cR N m1 p vis np n mo ml d dom body (r1.tail.headD 0)) := by rw [ssK1, if_neg h]
+    ssK1b (nextW cR N m1 p vis np n mo ml d dom body (r1.tail.headD 0)) := by rw [ssK1, ite_eq_right h]
 theorem ssK1b_some : ssK1b (some (r1, m1)) =
     some ([r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0], m1) := by rw [ssK1b]
 theorem nextW_mot (h : rdW (m.arr64 IW) slot = 0) : nextW cR (N + 1) m p vis np n mo ml d dom body slot =
     ssK2 cR N p vis np n d dom body slot (motSnocW N m mo ml np d) := by
-  rw [nextW, if_pos h]
+  rw [nextW, ite_eq_left h]
 theorem nextW_min (h : rdW (m.arr64 IW) slot ≠ 0) : nextW cR (N + 1) m p vis np n mo ml d dom body slot =
     ssK3 cR N p vis np n d dom body slot mo ml m := by
-  rw [nextW, if_neg h]
+  rw [nextW, ite_eq_right h]
 theorem ssK2_some : ssK2 cR N p vis np n d dom body slot (some (r2, m2)) =
     ssK3 cR N p vis np n d dom body slot (r2.headD 0) (r2.tail.headD 0) m2 := by rw [ssK2]
 theorem ssK3_eq : ssK3 cR N p vis np n d dom body slot mo2 ml2 m2 =
     ssK4 cR N p vis np n d body slot mo2 ml2 (fvinternW m2 d dom) := by rw [ssK3]
 theorem ssK4_big (h : 4294967296 ≤ fv) : ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3)) = none := by
-  rw [ssK4, if_pos h]
+  rw [ssK4, ite_eq_left h]
 theorem ssK4_ok (h : ¬ 4294967296 ≤ fv) : ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3)) =
     ssK5 cR N p vis np n d slot mo2 ml2 (i1F m3 [CWF, body, fv, 0]) := by
-  rw [ssK4, if_neg h]
+  rw [ssK4, ite_eq_right h]
 theorem ssK5_some : ssK5 cR N p vis np n d slot mo2 ml2 (some (r4, m4)) =
     ssK6 N slot (slotsW cR N m4 p vis np (n - 1) mo2 ml2 (d + 1) (r4.headD 0)) := by rw [ssK5]
 theorem ssK6_fail (h : r5.headD 0 = 0) : ssK6 N slot (some (r5, m5)) = some ([0, 0, 0], m5) := by
-  rw [ssK6, if_pos h]
+  rw [ssK6, ite_eq_left h]
 theorem ssK6_ok (h : r5.headD 0 ≠ 0) : ssK6 N slot (some (r5, m5)) =
-    ssK7 (consW N m5 slot (r5.tail.headD 0) (r5.tail.tail.headD 0)) := by rw [ssK6, if_neg h]
+    ssK7 (consW N m5 slot (r5.tail.headD 0) (r5.tail.tail.headD 0)) := by rw [ssK6, ite_eq_right h]
 theorem ssK7_some : ssK7 (some (r6, m6)) = some ([1, r6.headD 0, r6.tail.headD 0], m6) := by rw [ssK7]
 end arms
 
@@ -403,14 +403,14 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     · rw [slotsW_tag (h := hn) (h2 := hg)]
       have ht : ¬ (((decI e : EIdx)).tag == ETag.forallE) = true :=
         fun h => hg ((tag_beq _ hH _ 6 (by decide) rfl).mp h)
-      rw [if_neg ht]
+      rw [ite_eq_right ht]
       exact RSim.pure_some ⟨⟨hS, IWGrow.refl m, rfl⟩, hJ⟩
     by_cases hne : eViewW m e = []
     · rw [slotsW_nil (h := hn) (h2 := hg) (h3 := hne)]; exact RSim.none
     rw [slotsW_ok (h := hn) (h2 := hg) (h3 := hne)]
     have hg6 : e >>> 28 = 6 := by simpa using hg
     have ht : (((decI e : EIdx)).tag == ETag.forallE) = true := (tag_beq _ hH _ 6 (by decide) rfl).mpr hg6
-    rw [if_pos ht]
+    rw [ite_eq_left ht]
     obtain ⟨hvb, hdomH, hbodyH⟩ := viewBindW hS.1.arena.1 hH hne hg6
     refine RSim.tstep hvb ?_
     refine RSim.bind (K := ssK1 cR N p vis np n mo ml d ((eViewW m e).tail.headD 0)

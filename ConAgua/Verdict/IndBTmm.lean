@@ -8,8 +8,6 @@ rejects the twin's final `fail`; `block_shape_lps`, `param_levels`, `sl_eq`, `mk
 are `closedNV`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -46,10 +44,10 @@ include hP hnv in
 theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao al I us t : Word}
     {bs : BlockShape} {css : List (List (IConstantVal × Nat))} {pfvs fvs args : List EIdx}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
-    (hcss : PSlR decCNS css cao cal m) (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs)
+    (hcss : PSlR decCNS css cao cal m) (_hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs)
     (hfv : DecB (fun m => decHL m fvo.toNat fvl.toNat) m fvs) (hfvb : fvo.toNat + fvl.toNat ≤ iwTop m)
     (hag : DecB (fun m => decHL m ao.toNat al.toNat) m args) (hagb : ao.toNat + al.toNat ≤ iwTop m)
-    (hI : H I) (hus : H us) (hPm : PosMR m) :
+    (_hI : H I) (hus : H us) (_hPm : PosMR m) :
     ∀ e, tmmE p (n + 1) m pp cao cal pfo pfl fvo fvl ao al I us t = .error e →
       ErrClaim (tmoMemT bs css pfvs fvs args (decI I) (decI us) t.toNat) a e := by
   intro e he
@@ -169,7 +167,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
   rw [UInt64.ofNat_toNat, eF] at hsl2
   have heq := eqW_ok n s2'.mem _ _ _ _ _ ws1 ws2 hsl1 hsl2 hW3
   by_cases hu0 : ¬ us = r2.headD 0
-  · rw [if_neg hu0, tmmE.k_sl_eq.abort1 p n _ _ _ _ _ _ _ _ _ _ _ _ r3 m3 rfl] at he
+  · rw [ite_eq_right hu0, tmmE.k_sl_eq.abort1 p n _ _ _ _ _ _ _ _ _ _ _ _ r3 m3 rfl] at he
     cases he
     have hne : ¬ ((decI us == AM.res (paramLevels bs.lps) a) && (List.take bs.nP args == List.take bs.nP fvs)) = true := by
       rw [← hd2]
@@ -177,7 +175,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
       simp only [Bool.and_eq_true, beq_iff_eq]; exact fun h => this h.1
     exact ErrClaim.ite_neg hne (ErrClaim.fail _ _ (by decide))
   replace hu0 : us = r2.headD 0 := Classical.byContradiction hu0
-  rw [if_pos hu0] at he
+  rw [ite_eq_left hu0] at he
   by_cases h3 : r3.headD 0 = 0
   · rw [tmmE.k_sl_eq.abort2 p n _ _ _ _ _ _ _ _ _ _ _ _ r3 m3 (by decide) h3] at he
     cases he
@@ -185,7 +183,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
       intro hc
       simp only [Bool.and_eq_true, beq_iff_eq] at hc
       have hws : ws1 = ws2 := map_decI_inj' ws1 ws2 hlt1 hlt2 (by rw [← hws1, ← hws2]; exact hc.2)
-      rw [if_pos hws] at heq
+      rw [ite_eq_left hws] at heq
       rw [h3] at heq
       exact absurd heq (by decide)
     exact ErrClaim.ite_neg hne (ErrClaim.fail _ _ (by decide))

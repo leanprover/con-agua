@@ -12,7 +12,6 @@ stub) and their sorts (`check_struct_field_sorts_i`, `installSimFsorts`).
 
 noncomputable section
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

@@ -10,7 +10,6 @@ proof: per class `targetMajorNfs` (`tmnW_okPC`, con-ron's `targetMajorNfs_spec` 
 extension), the record's copy (L only).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -121,7 +120,7 @@ theorem tmnW_okPC (mb : Mem) (n : Nat) (hn : n ≤ 2 ^ 62) :
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     refine ⟨ys, a1, ?_, hys, hC1, hg1, hP1, hA1, by simpa using hfr1, pr, by simpa using hpr, hprb⟩
     have hf : ctors.any (fun c => c.1.name == nf.ctor) = false := by rw [← hany, hh]; rfl
-    rw [ConRon.Arena.targetMajorNfs, hrun_tail]; simp only [hf, Bool.false_eq_true, if_false]; rfl
+    rw [ConRon.Arena.targetMajorNfs, hrun_tail]; simp only [hf, Bool.false_eq_true, ite_false]; rfl
   rw [tmnK2_yes (h := hh)] at h
   have ht : ctors.any (fun c => c.1.name == nf.ctor) = true := by rw [← hany]; simpa using hh
   obtain ⟨-, hlvP, hedP, -⟩ := ConRon.Bridge.Inductives.RC.dCtorNf_inv
@@ -143,7 +142,7 @@ theorem tmnW_okPC (mb : Mem) (n : Nat) (hn : n ≤ 2 ^ 62) :
     refine ⟨ys, a2, ?_, hys.grow (fun q => decNCN_mono q) hg2, hC2, hg12, hP2, hA2, by simpa using hfr1,
       pr, by simpa using hprg hg2, hprb⟩
     rw [ConRon.Arena.targetMajorNfs, hrun_tail]
-    simp only [ht, if_true, StateT.run_bind, run2, except_ok_bind, Bool.false_eq_true, if_false]; rfl
+    simp only [ht, ite_true, StateT.run_bind, run2, except_ok_bind, Bool.false_eq_true, ite_false]; rfl
   rw [tmnK3_keep (h := hk)] at h
   have hc1 : c = true := by rw [← hc]; simpa using hk
   subst hc1
@@ -159,7 +158,7 @@ theorem tmnW_okPC (mb : Mem) (n : Nat) (hn : n ≤ 2 ^ 62) :
   refine ⟨nf :: ys, a2, ?_, by simpa using hps3, hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state),
     hg12.trans hg3, hP2.fr hf3, hA3, ?_, e.toNat :: pr, by simpa using hd, ?_⟩
   · rw [ConRon.Arena.targetMajorNfs, hrun_tail]
-    simp only [ht, if_true, StateT.run_bind, run2, except_ok_bind]; rfl
+    simp only [ht, ite_true, StateT.run_bind, run2, except_ok_bind]; rfl
   · right; simp only [List.headD_cons]; exact hg12.1
   · rw [heT]; exact FA2.cons hpv hprb
 
@@ -342,8 +341,8 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
     simp only [rdW, hmt t ht, e]; simp only [iwA] at hv'; rw [hv']; rfl
   have hlow : ∀ i, i < nm.toNat → (mC.arr64 IW)[i]? = (s2.mem.arr64 IW)[i]? := by
     intro i hi
-    rw [← hC, set64IW_get, if_neg (by omega), ← hB, set64IW_get, if_neg (by omega), ← hA, set64IW_get,
-      if_neg (by omega)]
+    rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
+      ite_eq_right (by omega)]
     exact g1 i (by omega)
   have hrdC : ∀ t, t < 13 → rdW (mC.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) =
       rdW (s2.mem.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) := by
@@ -356,27 +355,27 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
       (m4.arr64 IW)[nm.toNat + k]? = (iwA (truncM mb))[p0 + k]? := by
     intro k hk h9 h10
     obtain ⟨v, hv⟩ := decTM_get hsrc k hk
-    rw [hv, ← hE, set64IW_get, if_neg (by omega)]
+    rw [hv, ← hE, set64IW_get, ite_eq_right (by omega)]
     by_cases k12 : k = 12
     · subst k12
-      rw [← hD, set64IW_get, if_pos ⟨by omega, by rw [szC]; omega⟩]
+      rw [← hD, set64IW_get, ite_eq_left ⟨by omega, by rw [szC]; omega⟩]
       rw [show (12 : Word) = UInt64.ofNat 12 from rfl, hrdC 12 (by omega), hsrcw 12 (by omega) v hv]
-    rw [← hD, set64IW_get, if_neg (by omega)]
+    rw [← hD, set64IW_get, ite_eq_right (by omega)]
     by_cases k11 : k = 11
     · subst k11
-      rw [← hC, set64IW_get, if_pos ⟨by omega, by rw [szB]; omega⟩]
+      rw [← hC, set64IW_get, ite_eq_left ⟨by omega, by rw [szB]; omega⟩]
       rw [show (11 : Word) = UInt64.ofNat 11 from rfl, hrdB 11 (by omega), hsrcw 11 (by omega) v hv]
-    rw [← hC, set64IW_get, if_neg (by omega), ← hB, set64IW_get, if_neg (by omega), ← hA, set64IW_get,
-      if_neg (by omega), g2 k (by simp) (by omega), hsrcw k hk v hv]
+    rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
+      ite_eq_right (by omega), g2 k (by simp) (by omega), hsrcw k hk v hv]
   have hw9 : iwN m4 (nm.toNat + 9) = some (r1.headD 0).toNat := by
     simp only [iwN, nat?, iwA]
-    rw [← hE, set64IW_get, if_neg (by omega), ← hD, set64IW_get, if_neg (by omega), ← hC, set64IW_get,
-      if_neg (by omega), ← hB, set64IW_get, if_neg (by omega), ← hA, set64IW_get, if_pos ⟨by omega, by rw [hn9] at b9; exact b9⟩]
+    rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
+      ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get, ite_eq_left ⟨by omega, by rw [hn9] at b9; exact b9⟩]
     rfl
   have hw10 : iwN m4 (nm.toNat + 10) = some (r1.tail.headD 0).toNat := by
     simp only [iwN, nat?, iwA]
-    rw [← hE, set64IW_get, if_neg (by omega), ← hD, set64IW_get, if_neg (by omega), ← hC, set64IW_get,
-      if_neg (by omega), ← hB, set64IW_get, if_pos ⟨by omega, by rw [szA]; rw [hn10] at b10; exact b10⟩]
+    rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
+      ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_left ⟨by omega, by rw [szA]; rw [hn10] at b10; exact b10⟩]
     rfl
   have hFr1 : FrX (qr.toNat + j.toNat) s1.mem m4 := by
     rw [← hE]; exact (FrX.trans_grow (FrX.of_grow (IWGrow.refl _)) hgD).set _ _ hqj
@@ -395,7 +394,7 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
     rw [hj1, decNL_snoc, decNL_frX hFr (by omega) (by right; right; omega), hws]
     have : iwN m4 (qr.toNat + j.toNat) = some nm.toNat := by
       simp only [iwN, nat?, iwA]
-      rw [← hE, set64IW_get, if_pos ⟨hqj.symm, by rw [szD]; rw [hqj] at bq; exact bq⟩]
+      rw [← hE, set64IW_get, ite_eq_left ⟨hqj.symm, by rw [szD]; rw [hqj] at bq; exact bq⟩]
       rfl
     simp [this]
   have hacc4 : FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m4) (ws ++ [nm.toNat])

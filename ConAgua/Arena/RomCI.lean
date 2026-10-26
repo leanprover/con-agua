@@ -76,7 +76,7 @@ theorem sim_one {α : Type} (x : AM α) (p : α → EMemo) (m : EMemo) (i : Item
   | ok q =>
     obtain ⟨v, a₁⟩ := q
     rw [hn] at hr
-    simp only [bind, Except.bind, pure, Except.pure, StateT.run_pure] at hr
+    simp only [bind, Except.bind, pure] at hr
     cases hr
     exact ⟨v, rfl, rfl⟩
 
@@ -454,7 +454,7 @@ theorem SimN.bind {α β : Type} {x : AM α} {f : α → AM β} {P : AState → 
   exact ⟨w, by rw [run_bind_of _ _ _ _ _ hv]; exact hw⟩
 
 theorem SimN.pure {α : Type} (v : α) (P : AState → Prop) : SimN (Pure.pure v : AM α) P :=
-  fun a _ => ⟨v, rfl⟩
+  fun _a _ => ⟨v, rfl⟩
 
 theorem simN_pinAt (i : Nat) (hi : i < 51) : SimN (pinAt i) PinsReadyP := by
   intro a hP

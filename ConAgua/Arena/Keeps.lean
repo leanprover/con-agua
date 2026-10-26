@@ -66,7 +66,6 @@ macro "prim_keeps " d:ident : tactic => `(tactic| (
     ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h
   all_goals first | (cases h; rfl) | (simp [throwThe, throw, Functor.map, Except.map] at h)))
 
-set_option linter.unusedSimpArgs false
 
 /-! ## The primitives keep `cp` -/
 

@@ -102,7 +102,7 @@ theorem fsgW_ok (n : Nat) : ∀ (m m' : Mem) (so sl j c cn : Word) (r : List Wor
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; have := sl.toNat_lt; omega
     obtain ⟨hm, h1, h2⟩ := ih m m'' so sl (j + 1) c cn r' slots hr hsl hsz hcn (by omega) P hP
     simp only [Bool.not_eq_true] at hh
-    simp only [hh, if_false]
+    simp only [hh, ite_false]
     rw [hj1] at h1 h2
     rw [hj1]
     simp only [List.headD_cons, List.tail_cons]
@@ -131,7 +131,7 @@ theorem pvW_afr : ∀ (n : Nat) (m m' : Mem) (g rP i : Word) (r : List Word), pv
     afr_auto h [pvW_afr n _ _ _ _ _ _, consW_afr]
 
 theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (g rP : Word)
-    (hns : G.nP + G.slots.length < 2 ^ 64) (f : Nat → AM EIdx)
+    (_hns : G.nP + G.slots.length < 2 ^ 64) (f : Nat → AM EIdx)
     (hf : ∀ i, f i = if i < G.nP then ConRon.Arena.exprGetD G.params i else G.slotVar (i - G.nP)) (n : Nat) :
     ∀ (m : Mem) (a : AState) (i : Word), StageR dn vis fe m a → DecB (fun m => decCG m g.toNat) m G →
     i.toNat ≤ rP.toNat →
@@ -166,7 +166,7 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       (KP dn vis fe m decW0E) := by
     by_cases hp : i.toNat < G.nP
     · have hw : i < UInt64.ofNat G.nP := UInt64.lt_iff_toNat_lt.mpr (by rw [t0]; exact hp)
-      rw [if_pos hw, if_pos hp]
+      rw [ite_eq_left hw, ite_eq_left hp]
       have hG' : decCG (truncM m) g.toNat = some G := hG
       simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
       obtain ⟨nP, hnP', ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, hGe⟩ := hG'
@@ -182,7 +182,7 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       exact rec2SimExprGetD n hS (by rw [t1, t2]; exact hpdB.get (OMono.decHL _ _))
         (by rw [t1, t2]; exact rec2DecB_HL_bound hpdB hsz hS.2.1 o1lt)
     · have hw : ¬ i < UInt64.ofNat G.nP := fun x => hp (by have := UInt64.lt_iff_toNat_lt.mp x; rwa [t0] at this)
-      rw [if_neg hw, if_neg hp]
+      rw [ite_eq_right hw, ite_eq_right hp]
       have hsub : (i - UInt64.ofNat G.nP).toNat = i.toNat - G.nP := by
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [t0]; omega)), t0]
       rintro ⟨r, m'⟩ h
@@ -220,7 +220,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
     (g t tele wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e : Word)
     (G : ClassGen) (ws fvs pvars : List EIdx) (recCls : List Nat) (cvGs : List IConstantVal)
-    (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64)
+    (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G) (_hns : G.nP + G.slots.length < 2 ^ 64)
     (hws : decHL m wso.toNat wsl.toNat = some ws) (hwb : wso.toNat + wsl.toNat ≤ iwTop m)
     (hfvs : decHL m fvso.toNat fvsl.toNat = some fvs) (hfb : fvso.toNat + fvsl.toNat ≤ iwTop m)
     (hpv : decHL m pvo.toNat pvl.toNat = some pvars) (hpb : pvo.toNat + pvl.toNat ≤ iwTop m)

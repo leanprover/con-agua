@@ -16,7 +16,6 @@ open L.Ind (eViewW eViewW_ok ViewR)
 open ConRon.Arena
 open ConRon.Arena.Frontend
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 
@@ -179,15 +178,15 @@ theorem sortTeleW_ok : ∀ (n : Nat) (f h ok r : Word), sortTeleW n m f h = some
       simp only
       rw [run_bind _ _ a _ h1]
       by_cases hok : ok' = 0
-      · rw [if_pos hok] at hw
+      · rw [ite_eq_left hok] at hw
         cases hw
-        simp only [hok, if_true, Option.map_none]
+        simp only [hok, ite_true, Option.map_none]
         exact ⟨rfl, by simp⟩
-      · rw [if_neg hok] at hw
+      · rw [ite_eq_right hok] at hw
         cases hw
         have : (r' + 1).toNat = r'.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; have := UInt64.toNat_lt (f - 1); omega
-        simp only [hok, if_false, Option.map_some, this, show (1 : Word) ≠ 0 by decide]
+        simp only [hok, ite_false, Option.map_some, this, show (1 : Word) ≠ 0 by decide]
         exact ⟨rfl, by omega⟩
     · rename_i h6
       split at hw
@@ -259,8 +258,8 @@ theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Wo
   obtain ⟨h1', h2', h3', h4'⟩ := ConsR.sizes hR.lam
   obtain ⟨i1, i2, i3, i4⟩ := ConsR.sizes hR.forallE
   obtain ⟨j1, j2, j3, j4⟩ := ConsR.sizes hR.proj
-  simp only [litCS, litCSk, litSch, appCS, appSch, sortCS, sortSch, constCS, constSch, letCS, letSch, bvarCS, bvarSch, fvarCS, fvarSch, lamCS, lamSch, forallCS, forallSch,
-    projCS, projSch] at a1 a3 b1 b3 c1 c3 d1 d3 e1 e3 f1 f3 g1 g3 h1' h3' i1 i3 j1 j3
+  simp only [litCS, litCSk, appCS, sortCS, constCS, letCS, bvarCS, fvarCS, lamCS, forallCS,
+    projCS] at a1 a3 b1 b3 c1 c3 d1 d3 e1 e3 f1 f3 g1 g3 h1' h3' i1 i3 j1 j3
   simp only [EStore.nodeCount, EStore.persCount, EStore.scrCount, ETables.count, Tbl.size] at *
   simp only [csum, show (4 : Word).toNat = 4 from rfl, show (8 : Word).toNat = 8 from rfl]
   simp only [UInt64.reduceAdd] at a1 a3 b1 b3 c1 c3 d1 d3 e1 e3 f1 f3 g1 g3 h1' h3' i1 i3 j1 j3 ⊢
@@ -344,8 +343,8 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
     simp only [NTag.anonymous, decN_idx, Tbl.node?]
     by_cases ht : tierW w = 0
-    · rw [if_pos ht] at hx; simp [ht, hx]
-    · rw [if_neg ht] at hx; simp [ht, hx]
+    · rw [ite_eq_left ht] at hx; simp [ht, hx]
+    · rw [ite_eq_right ht] at hx; simp [ht, hx]
   split at h
   · -- num
     rename_i hg0 hg
@@ -357,8 +356,8 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
     simp only [NTag.anonymous, NTag.str, NTag.num, decN_idx, Tbl.node?]
     by_cases ht : tierW w = 0
-    · rw [if_pos ht] at hx; simp [ht, hx]
-    · rw [if_neg ht] at hx; simp [ht, hx]
+    · rw [ite_eq_left ht] at hx; simp [ht, hx]
+    · rw [ite_eq_right ht] at hx; simp [ht, hx]
   split at h; cases h; rename_i hg0 hg2 hg1
   have hg : w >>> 28 = 1 := by simpa using hg1
   split at h; cases h; rename_i hc
@@ -369,8 +368,8 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
     simp only [NTag.anonymous, NTag.str, decN_idx, Tbl.node?]
     by_cases ht : tierW w = 0
-    · rw [if_pos ht] at hx; simp [ht, hx]
-    · rw [if_neg ht] at hx; simp [ht, hx]
+    · rw [ite_eq_left ht] at hx; simp [ht, hx]
+    · rw [ite_eq_right ht] at hx; simp [ht, hx]
   obtain ⟨hq, hol, hsl, -⟩ := hrel
   have hlen := sliceL_length (vpool m) (tfld m NSTR (tierW w) (idxW w) 1).toNat
     (tfld m NSTR (tierW w) (idxW w) 2).toNat

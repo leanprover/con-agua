@@ -29,7 +29,6 @@ exactly at the top while `iota_rec_fire2` runs (`iota_certs_full` asks for it).
 
 open ConRon.Arena
 
-set_option linter.unusedVariables false
 
 namespace L.Arena
 

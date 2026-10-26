@@ -77,7 +77,7 @@ theorem snocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   simp only [snocW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   rcases hal : allocW m (l + 1) with _ | ⟨q, m1⟩; · simp [hal] at h
   simp only [hal] at h
   rcases hcp : copyW (n - 1) m1 q o l with _ | m2; · simp [hcp] at h
@@ -118,22 +118,22 @@ theorem nhGoW_nil (h : l = 0) : nhGoW (k + 1) m vis ctx mm off l oo ol = some ([
 theorem nhGoW_cons (h : ¬ l = 0) : nhGoW (k + 1) m vis ctx mm off l oo ol =
     nhK1 k vis ctx mm off l oo ol (envFindW m (rdW (m.arr64 IW) off) vis) := by simp [nhGoW, h]
 theorem nhK1_miss (h : r.headD 0 = 0) : nhK1 k vis ctx mm off l oo ol (some (r, m1)) = some ([0, 0, 0], m1) := by
-  rw [nhK1, if_pos h]
+  rw [nhK1, ite_eq_left h]
 theorem nhK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
-    nhK1 k vis ctx mm off l oo ol (some (r, m1)) = some ([0, 0, 0], m1) := by rw [nhK1, if_neg h, if_pos h3]
+    nhK1 k vis ctx mm off l oo ol (some (r, m1)) = some ([0, 0, 0], m1) := by rw [nhK1, ite_eq_right h, ite_eq_left h3]
 theorem nhK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     nhK1 k vis ctx mm off l oo ol (some (r, m1)) =
       nhK2 k vis ctx mm off l oo ol (instW k m1 (rdW (m1.arr64 IW) (ctx + 7)) (rdW (m1.arr64 IW) (ctx + 8))
-        (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4))) := by rw [nhK1, if_neg h, if_neg h3]
+        (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4))) := by rw [nhK1, ite_eq_right h, ite_eq_right h3]
 theorem nhK2_none (h : r2.headD 0 = 0) : nhK2 k vis ctx mm off l oo ol (some (r2, m2)) = some ([0, 0, 0], m2) := by
-  rw [nhK2, if_pos h]
+  rw [nhK2, ite_eq_left h]
 theorem nhK2_some (h : ¬ r2.headD 0 = 0) : nhK2 k vis ctx mm off l oo ol (some (r2, m2)) =
     nhK3 k vis ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0)) := by
-  rw [nhK2, if_neg h]
+  rw [nhK2, ite_eq_right h]
 theorem nhK3_big (h : 4294967296 ≤ v) : nhK3 k vis ctx mm off l oo ol (some (v, m3)) = none := by
-  rw [nhK3, if_pos h]
+  rw [nhK3, ite_eq_left h]
 theorem nhK3_ok (h : ¬ 4294967296 ≤ v) : nhK3 k vis ctx mm off l oo ol (some (v, m3)) =
-    nhK4 k vis ctx mm off l (snocW k m3 oo ol v) := by rw [nhK3, if_neg h]
+    nhK4 k vis ctx mm off l (snocW k m3 oo ol v) := by rw [nhK3, ite_eq_right h]
 theorem nhK4_some : nhK4 k vis ctx mm off l (some (r4, m4)) =
     nhGoW k m4 vis ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0) := by rw [nhK4]
 end arms
@@ -353,7 +353,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
       hdec4 (by omega) (by rw [hmm1, hl1]; omega)
     refine ⟨xr, a', ?_, hS', hg24.trans hg', hout'⟩
     simp only [StateT.run_bind, hrun2, except_ok_bind]
-    simp only [internFVarE, StateT.run_bind]
+    simp only [internFVarE]
     rw [← hu, ← htd, ← decE_eq, hrun3]
     simp only [except_ok_bind]
     rw [hmm1] at hrun
@@ -579,13 +579,13 @@ def nuW (cR : CallM) (k : Nat) (m : Mem) (ctx cv : Word) : Option (List Word × 
 section arms
 variable (cR : CallM) (k : Nat) (m1 m2 m3 : Mem) (ctx cv o : Word) (r1 r2 : List Word)
 theorem nuK3_some : nuK3 (some (o, m3)) = some ([if o = 0 then 1 else 0], m3) := rfl
-theorem nuK2_none (h : r2.headD 0 = 0) : nuK2 k ctx (some (r2, m2)) = some ([0], m2) := by rw [nuK2, if_pos h]
+theorem nuK2_none (h : r2.headD 0 = 0) : nuK2 k ctx (some (r2, m2)) = some ([0], m2) := by rw [nuK2, ite_eq_left h]
 theorem nuK2_some (h : ¬ r2.headD 0 = 0) : nuK2 k ctx (some (r2, m2)) =
     nuK3 (noConstWf (k + 3) m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) 0 0 (r2.tail.headD 0)) := by
-  rw [nuK2, if_neg h]
-theorem nuK1_occ (h : r1.headD 0 ≠ 0) : nuK1 cR k ctx cv (some (r1, m1)) = some ([0], m1) := by rw [nuK1, if_pos h]
+  rw [nuK2, ite_eq_right h]
+theorem nuK1_occ (h : r1.headD 0 ≠ 0) : nuK1 cR k ctx cv (some (r1, m1)) = some ([0], m1) := by rw [nuK1, ite_eq_left h]
 theorem nuK1_ok (h : ¬ r1.headD 0 ≠ 0) : nuK1 cR k ctx cv (some (r1, m1)) = nuK2 k ctx (nrcW cR k m1 ctx cv) := by
-  rw [nuK1, if_neg h]
+  rw [nuK1, ite_eq_right h]
 end arms
 attribute [ind_grind] nuK3_some nuK2_none nuK2_some nuK1_occ nuK1_ok
 
@@ -681,7 +681,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     refine ⟨false, a2, ?_, hS2, hg1.trans hg2, rfl, hP2,
       fun hN => (hN.pdo _ _ _ _ _ _ _ _ _ _ hpd).trans (hA2 hN.pcc)⟩
     simp only [StateT.run_bind, hrun1, except_ok_bind]
-    simp only [Bool.false_eq_true, if_false, StateT.run_bind, hrun2, except_ok_bind]; rfl
+    simp only [Bool.false_eq_true, ite_false, StateT.run_bind, hrun2, except_ok_bind]; rfl
   | some crest =>
   obtain ⟨hx0, hcH, hcd⟩ := hx2
   rw [nuK2_some (h := by rw [hx0]; decide)] at h
@@ -700,9 +700,9 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   refine ⟨!b, a2, ?_, hS3, hg12.trans hg3, ?_, hP2.setNo hf3 ⟨∅, hM3⟩,
     fun hN => ((hN.pdo _ _ _ _ _ _ _ _ _ _ hpd).trans (hA2 hN.pcc)).trans (hN.noc _ _ _ _ _ _ _ _ _ hno)⟩
   · simp only [StateT.run_bind, hrun1, except_ok_bind]
-    simp only [Bool.false_eq_true, if_false, StateT.run_bind, hrun2, except_ok_bind]
+    simp only [Bool.false_eq_true, ite_false, StateT.run_bind, hrun2, except_ok_bind]
     rw [decE_eq, hcd, show (0 : Word).toNat = 0 from rfl] at hrun3
-    simp only [StateT.run_bind, hrun3, except_ok_bind]; rfl
+    simp only [hrun3, except_ok_bind]; rfl
   · subst hb; by_cases ho : o = 0 <;> simp [ho]
 
 section census

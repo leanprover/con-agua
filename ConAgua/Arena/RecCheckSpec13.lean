@@ -80,7 +80,7 @@ theorem decNCN_fields {m : Mem} {e : Word} {nf : NestCtorNf} (h : DecB (fun m =>
 
 /-- The head of a pointer slice decoded below the tops. -/
 theorem PSlR.uncons {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l : Word} {m : Mem}
-    (h : PSlR f xs o l m) (hl : l ≠ 0) (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    (h : PSlR f xs o l m) (hl : l ≠ 0) (_hsz : (m.arr64 IW).size < 2 ^ 64) :
     ∃ x ys, xs = x :: ys ∧ DecB (fun m' => f m' (rdW (m.arr64 IW) o).toNat) m x ∧
       PSlR f ys (o + 1) (l - 1) m := by
   obtain ⟨hd, hb⟩ := h
@@ -125,7 +125,7 @@ def tmnK4 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rc, m) => some ([rc.headD 0, rc.tail.headD 0], m)
 
-def tmnK3 (cR : CallM) (n : Nat) (rr : List Word) (e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def tmnK3 (_cR : CallM) (n : Nat) (rr : List Word) (e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rk, m) =>
     if rk.headD 0 = 0 then some ([rr.headD 0, rr.tail.headD 0], m)
@@ -158,14 +158,14 @@ section arms
 variable (cR : CallM) (n : Nat) (m : Mem) (vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl e hv : Word) (rr rk rc : List Word)
 theorem tmnK4_some : tmnK4 (some (rc, m)) = some ([rc.headD 0, rc.tail.headD 0], m) := rfl
 theorem tmnK3_drop (h : rk.headD 0 = 0) : tmnK3 cR n rr e (some (rk, m)) = some ([rr.headD 0, rr.tail.headD 0], m) := by
-  simp only [tmnK3]; rw [if_pos h]
+  simp only [tmnK3]; rw [ite_eq_left h]
 theorem tmnK3_keep (h : ¬ rk.headD 0 = 0) : tmnK3 cR n rr e (some (rk, m)) =
-    tmnK4 (consW n m e (rr.headD 0) (rr.tail.headD 0)) := by simp only [tmnK3]; rw [if_neg h]
+    tmnK4 (consW n m e (rr.headD 0) (rr.tail.headD 0)) := by simp only [tmnK3]; rw [ite_eq_right h]
 theorem tmnK2_no (h : hv = 0) : tmnK2 cR n vis q fto ftl pfo pfl us dso dsl rr m e (some hv) =
-    some ([rr.headD 0, rr.tail.headD 0], m) := by simp only [tmnK2]; rw [if_pos h]
+    some ([rr.headD 0, rr.tail.headD 0], m) := by simp only [tmnK2]; rw [ite_eq_left h]
 theorem tmnK2_yes (h : ¬ hv = 0) : tmnK2 cR n vis q fto ftl pfo pfl us dso dsl rr m e (some hv) =
     tmnK3 cR n rr e (tcmF cR n m vis q fto ftl pfo pfl us dso dsl (rdW (m.arr64 IW) (e + 1))
-      (rdW (m.arr64 IW) (e + 2)) (rdW (m.arr64 IW) (e + 3))) := by simp only [tmnK2]; rw [if_neg h]
+      (rdW (m.arr64 IW) (e + 2)) (rdW (m.arr64 IW) (e + 3))) := by simp only [tmnK2]; rw [ite_eq_right h]
 theorem tmnK1_some : tmnK1 cR n vis q fto ftl pfo pfl us dso dsl cto ctl nfo (some (rr, m)) =
     tmnK2 cR n vis q fto ftl pfo pfl us dso dsl rr m (rdW (m.arr64 IW) nfo)
       (chnW n m cto ctl (rdW (m.arr64 IW) (rdW (m.arr64 IW) nfo))) := rfl

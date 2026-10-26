@@ -33,8 +33,6 @@ to con-leche's loops on their `ok` path only.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order
@@ -262,10 +260,10 @@ def dobjEntryN (b : Array UInt8) (i : Word) : DFld := dobjN b (i + 1) 1 .init
 section
 variable (b : Array UInt8) (i w : Word) (f : DFld)
 theorem dobjN_err (h : (nextMemberN b i w).tag = 0) : dobjN b i w f = .none := by
-  rw [dobjN, if_pos h]
+  rw [dobjN, ite_eq_left h]
 theorem dobjN_close (h : (nextMemberN b i w).tag = 1) :
     dobjN b i w f = { f with pl := (nextMemberN b i w).pos + 1 } := by
-  rw [dobjN, if_neg (by simp [h]), if_pos h]
+  rw [dobjN, ite_eq_right (by simp [h]), ite_eq_left h]
 theorem dobjN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
     dobjN b i w f =
       if (nextMemberN b i w).pos <
@@ -273,7 +271,7 @@ theorem dobjN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w)
         dobjN b (dstepN b (nextMemberN b i w).pos (nextMemberN b i w).key (nextMemberN b i w).val f).1 0
           (dstepN b (nextMemberN b i w).pos (nextMemberN b i w).key (nextMemberN b i w).val f).2
       else .none := by
-  rw [dobjN, if_neg h0, if_neg h1]
+  rw [dobjN, ite_eq_right h0, ite_eq_right h1]
   simp only [dite_eq_ite]
 end
 grind_pattern [lang_grind] dobjN_err => dobjN b i w f, nextMemberN b i w
@@ -376,16 +374,16 @@ def declLineN (b : Array UInt8) (i : Word) : DFld := declN b i 1 .none
 section
 variable (b : Array UInt8) (i w : Word) (f : DFld)
 theorem declN_err (h : (nextMemberN b i w).tag = 0) : declN b i w f = .none := by
-  rw [declN, if_pos h]
+  rw [declN, ite_eq_left h]
 theorem declN_close (h : (nextMemberN b i w).tag = 1) : declN b i w f = f := by
-  rw [declN, if_neg (by simp [h]), if_pos h]
+  rw [declN, ite_eq_right (by simp [h]), ite_eq_left h]
 theorem declN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
     declN b i w f =
       if (nextMemberN b i w).pos < (dlvN b (nextMemberN b i w).key (nextMemberN b i w).val f).1 then
         declN b (dlvN b (nextMemberN b i w).key (nextMemberN b i w).val f).1 0
           (dlvN b (nextMemberN b i w).key (nextMemberN b i w).val f).2
       else .none := by
-  rw [declN, if_neg h0, if_neg h1]
+  rw [declN, ite_eq_right h0, ite_eq_right h1]
   simp only [dite_eq_ite]
 end
 grind_pattern [lang_grind] declN_err => declN b i w f, nextMemberN b i w

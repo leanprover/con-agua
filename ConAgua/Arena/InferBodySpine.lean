@@ -145,7 +145,7 @@ theorem inferSpineIOW_spec (p : Prog) (n : Nat) (s₀ : St) :
       callW_spec p n "inst_list", callW_spec p n "whnf", evalE_tld, tld, evalE_cnt, tcntM,
         evalE_tierE, evalE_idxE] <;>
     simp_all [spioLoop, spPush, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, w_lt_false, Mem.arr64_set64_ne,
       tfld, tcnt, TRec.ad, forall_arr_set64 _ SPN _ _ _ (by decide) (by decide),
       forall_arr_set64 _ CTL _ _ _ (by decide) (by decide)]
 
@@ -182,7 +182,7 @@ theorem inferSpineIO_spec (p : Prog) (hq : SpineInferProg p) (n : Nat) (s₀ : S
   simp only [callFn, inferSpineIOL']
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
       fun s => Triple.step_exec (inferSpineIOW_spec p (n + 1) s), callW_spec p n "inst_list"] <;>
-  simp_all [spioFn, spioFull, spTail, LocEq, BinOp.eval, St.setLocs_cons, CTL, Cmp.eval,
+  simp_all [spioFn, spioFull, spTail, LocEq, St.setLocs_cons, CTL, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 
@@ -213,7 +213,7 @@ theorem spPush_step {m m₀ : Mem} {co cn v : Word} {acc : Array EIdx}
     hbk.trans (BKept.of_frame (spnCtl_frame m (co + cn) v (co + (cn + 1))) (by decide) (by decide)),
     hpg.trans (PoolGrew.of_frame (spnCtl_frame m (co + cn) v (co + (cn + 1))) (by decide) (by decide))⟩
   · unfold spTop spPush
-    rw [rdW_set64, if_pos ⟨rfl, rfl, by rw [size_set64]; exact h136⟩]
+    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact h136⟩]
   · intro j hj
     simp only [spPush]
     rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
@@ -263,7 +263,7 @@ theorem spTail_ref (p : Prog) (hil : InstListOK p) (n : Nat) (dn : NIdx → Opti
         some (r.headD 0, m₁.set64 CTL 136 co) else none) rfl hF
   dsimp only at hF
   by_cases h136 : (136 : Word).toNat < (m₁.arr64 CTL).size
-  · rw [if_pos h136] at hF
+  · rw [ite_eq_left h136] at hF
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hF)
     have hinst := hil n ⟨m, Locals.init []⟩ a dn vis fe M eb ty co cn 0 acc hS ht hacc
       (by rw [htop, hadd]; exact Nat.le_refl _)
@@ -273,7 +273,7 @@ theorem spTail_ref (p : Prog) (hil : InstListOK p) (n : Nat) (dn : NIdx → Opti
     refine ⟨_, _, AM.run_of_ok _ _ hok, hres, hrw, M', ?_, hK', ?_⟩
     · exact hS'.frame_stk (MemFrame.setCtl m₁ 136 co) (by simp) (by simp)
     · exact peel_restore hco hb hsz hbk hpg hSt' htop hcn64 h136
-  · rw [if_neg h136] at hF; cases hF
+  · rw [ite_eq_right h136] at hF; cases hF
 
 theorem spioFull_zero (p : Prog) (n : Nat) (m : Mem) (mode vis d ty ao an i co cn : Word) :
     spioFull p n 0 m mode vis d ty ao an i co cn = none := rfl
@@ -319,20 +319,20 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
       · -- the ∀ step: the argument is pushed
         simp only [spioFull, spioLoop, hlt, ht6, ↓reduceIte] at hF
         by_cases c1 : tierW ty ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-        · rw [if_pos c1] at hF; cases hF
-        rw [if_neg c1] at hF
+        · rw [ite_eq_left c1] at hF; cases hF
+        rw [ite_eq_right c1] at hF
         by_cases c2 : tcnt m FORALL (tierW ty) ≤ idxW ty
-        · rw [if_pos c2] at hF; cases hF
-        rw [if_neg c2] at hF
+        · rw [ite_eq_left c2] at hF; cases hF
+        rw [ite_eq_right c2] at hF
         by_cases c3 : m.len64 SPN ≤ co + cn
-        · rw [if_pos c3] at hF; cases hF
-        rw [if_neg c3] at hF
+        · rw [ite_eq_left c3] at hF; cases hF
+        rw [ite_eq_right c3] at hF
         by_cases c4 : ¬ (co + cn).toNat < (m.arr64 SPN).size
-        · rw [if_pos c4] at hF; cases hF
-        rw [if_neg c4] at hF
+        · rw [ite_eq_left c4] at hF; cases hF
+        rw [ite_eq_right c4] at hF
         by_cases c5 : ¬ (136 : Word).toNat < (m.arr64 CTL).size
-        · rw [if_pos c5] at hF; cases hF
-        rw [if_neg c5] at hF
+        · rw [ite_eq_left c5] at hF; cases hF
+        rw [ite_eq_right c5] at hF
         have hv : viewOK m ty FORALL := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, -, hbody⟩ := view_forall m a hS.arena.1 ty ht hv ht6
         have hvb := viewBind_forall m a hS.arena.1 ty ht hv ht6
@@ -348,25 +348,25 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
           viewBind_run', hvb, except_ok_bind, hxi, hi1]
       · -- the `whnf` re-entry: the accumulator restarts at `#[a]`
         cases h1 : callW p k "inst_list" [ty, co, cn, 0] m with
-        | none => simp only [spioFull, spioLoop, hlt, ht6, h1, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
+        | none => simp only [spioFull, spioLoop, hlt, ht6, h1, ↓reduceIte, reduceCtorEq] at hF
         | some q =>
         obtain ⟨r₁, m₁⟩ := q
         cases h2 : callW p k "whnf" [mode, vis, d, r₁.headD 0] m₁ with
-        | none => simp only [spioFull, spioLoop, hlt, ht6, h1, h2, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
+        | none => simp only [spioFull, spioLoop, hlt, ht6, h1, h2, ↓reduceIte, reduceCtorEq] at hF
         | some q =>
         obtain ⟨r₂, m₂⟩ := q
         have g1 : r₂.headD 0 >>> 28 = 6 := Classical.byContradiction fun g => by
-          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
+          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g, ↓reduceIte, ne_eq, not_false_eq_true, reduceCtorEq] at hF
         have g2 : ¬ (tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0) := fun g => by
-          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
+          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, and_self] at hF
         have g3 : ¬ tcnt m₂ FORALL (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) := fun g => by
-          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
+          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g, ↓reduceIte, ne_eq, not_true_eq_false, reduceCtorEq] at hF
         have g4 : ¬ m₂.len64 SPN ≤ co := fun g => by
-          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g3, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
+          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g3, g, ↓reduceIte, ne_eq, not_true_eq_false, reduceCtorEq] at hF
         have g5 : co.toNat < (m₂.arr64 SPN).size := Classical.byContradiction fun g => by
-          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g3, g4, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
+          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g3, g4, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq] at hF
         have g6 : (136 : Word).toNat < (m₂.arr64 CTL).size := Classical.byContradiction fun g => by
-          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g3, g4, g5, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
+          simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g3, g4, g5, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq] at hF
         have hF' : spioFull p n k (spPush m₂ co 0 (rdW (m.arr64 SPN) (ao + i))) mode vis d
             (tfld m₂ FORALL (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 1) ao an
             (i + 1) co 1 = some (w, mF) := by
@@ -483,7 +483,7 @@ theorem headAndArgs_app (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a�
   rw [ht] at hW
   refine ⟨hloc, ?_⟩
   simp only [haaW] at hW
-  rw [if_pos h4] at hW
+  rw [ite_eq_left h4] at hW
   rcases h1 : callW p n "get_app_fn" [v] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [h1, reduceCtorEq] at hW
   rcases h2 : callW p n "get_app_args" [v] m₁ with _ | ⟨r₂, m₂⟩ <;> simp only [h2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr0, hr1, hr2, hm⟩ := hW
@@ -500,7 +500,7 @@ theorem headAndArgs_app (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a�
   rw [← hr0]
   simp [headAndArgs, htag, StateT.run_bind, hfnrun, except_ok_bind]
   simp only [StateT.run] at hxs ⊢
-  simp only [StateT.map, hxs]
+  simp only [hxs]
   rfl
 
 /-- `infer_spine_io` at every L fuel up to `n + 1`. -/
@@ -549,7 +549,7 @@ theorem inferAppIO_spec (p : Prog) (hq : SpineInferProg p) (n : Nat) (s₀ : St)
   simp only [callFn, inferAppIOL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
       callW_spec p n "head_and_args", callW_spec p n "infer_io", callW_spec p n "infer_spine_io"] <;>
-  simp_all [appIOK2, appIOK3, appIOK4, LocEq, BinOp.eval, St.setLocs_cons, CTL, Cmp.eval,
+  simp_all [appIOK2, appIOK3, appIOK4, LocEq, St.setLocs_cons, CTL,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 
@@ -585,8 +585,8 @@ theorem inferAppIO_refines (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
   dsimp only [appIOK4] at hW
   have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
-    refine Classical.byContradiction fun h => ?_; rw [if_neg h] at hW; cases hW
-  rw [if_pos h136] at hW
+    refine Classical.byContradiction fun h => ?_; rw [ite_eq_right h] at hW; cases hW
+  rw [ite_eq_left h136] at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   -- the head and the arguments
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, hha, hxs⟩ := triple_of_callW

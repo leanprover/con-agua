@@ -11,9 +11,6 @@ then `defn_div_gate(vis, w, n)` as `DivGateSpec` of `DeclArmDefn.lean`.
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -27,7 +24,7 @@ open L.Arena
 /-- The words `er_to_iw` leaves: the copy at the old top. -/
 theorem erToIwW_words {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
+    (_hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
     (hsrc : o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
     ∀ i < l.toNat, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + i]? = (m.arr64 EREC)[o.toNat + i]? := by
   simp only [erToIwW] at h
@@ -50,7 +47,7 @@ theorem erToIwW_words {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (by rw [hEE]; exact hE) (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
   rw [hEE] at hG
   intro i hi
-  rw [hG, if_pos (by omega)]
+  rw [hG, ite_eq_left (by omega)]
   congr 1; omega
 
 section divgate

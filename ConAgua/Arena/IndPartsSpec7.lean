@@ -20,7 +20,6 @@ Element decoders: `decSR` (`[cv, mI, rP, rules.off, rules.len]`, the rules an `E
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -121,11 +120,11 @@ theorem bsrW_rec (h : l ≠ 0) (h5 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off)
     bsrW (n + 1) m off l = bsrK1 n (rdW (m.arr64 EREC) off) (bsrW n m (off + 1) (l - 1)) := by
   simp [bsrW, h, h5]
 theorem bsrK1_fail (h : r.headD 0 = 0) : bsrK1 n ci (some (r, m1)) = some ([0, 0, 0], m1) := by
-  simp only [bsrK1]; rw [if_pos h]
+  simp only [bsrK1]; rw [ite_eq_left h]
 theorem bsrK1_ok (h : r.headD 0 ≠ 0) : bsrK1 n ci (some (r, m1)) =
     bsrK2 n r (posRecW m1 [ci + 1, rdW (m1.arr64 EREC) (ci + 5), rdW (m1.arr64 EREC) (ci + 6),
       rdW (m1.arr64 EREC) (ci + 7), rdW (m1.arr64 EREC) (ci + 8)]) := by
-  simp only [bsrK1]; exact if_neg (c := r.headD 0 = 0) h
+  simp only [bsrK1]; exact ite_eq_right (c := r.headD 0 = 0) h
 theorem bsrK2_some : bsrK2 n r (some (rc, m2)) =
     bsK3 (consW n m2 rc (r.tail.headD 0) (r.tail.tail.headD 0)) := rfl
 theorem bsK3_some : bsK3 (some (r2, m2)) = some ([1, r2.headD 0, r2.tail.headD 0], m2) := rfl
@@ -172,15 +171,15 @@ theorem bscW_ctor (h : l ≠ 0) (h4 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off
     bscW (n + 1) m off l = bscK1 n (rdW (m.arr64 EREC) off) (bscW n m (off + 1) (l - 1)) := by
   simp [bscW, h, h4]
 theorem bscKR_fail (h : r.headD 0 = 0) : bscKR (some (r, m1)) = some ([0, 0, 0, 0, 0], m1) := by
-  simp only [bscKR]; rw [if_pos h]
+  simp only [bscKR]; rw [ite_eq_left h]
 theorem bscKR_ok (h : r.headD 0 ≠ 0) :
     bscKR (some (r, m1)) = some ([1, 0, 0, r.tail.headD 0, r.tail.tail.headD 0], m1) := by
-  simp only [bscKR]; exact if_neg (c := r.headD 0 = 0) h
+  simp only [bscKR]; exact ite_eq_right (c := r.headD 0 = 0) h
 theorem bscK1_fail (h : r.headD 0 = 0) : bscK1 n ci (some (r, m1)) = some ([0, 0, 0, 0, 0], m1) := by
-  simp only [bscK1]; rw [if_pos h]
+  simp only [bscK1]; rw [ite_eq_left h]
 theorem bscK1_ok (h : r.headD 0 ≠ 0) : bscK1 n ci (some (r, m1)) =
     bscK2 n r (posRecW m1 [ci + 1, rdW (m1.arr64 EREC) (ci + 5), rdW (m1.arr64 EREC) (ci + 6)]) := by
-  simp only [bscK1]; exact if_neg (c := r.headD 0 = 0) h
+  simp only [bscK1]; exact ite_eq_right (c := r.headD 0 = 0) h
 theorem bscK2_some : bscK2 n r (some (c, m2)) =
     (match consW n m2 c (r.tail.headD 0) (r.tail.tail.headD 0) with
     | none => none
@@ -237,19 +236,19 @@ theorem bsW_no (h : l ≠ 0) (h3 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off) �
 theorem bsW_ind (h : l ≠ 0) (h3 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off) = 3) :
     bsW (n + 1) m off l = bsK1 n (rdW (m.arr64 EREC) off) (bsW n m (off + 1) (l - 1)) := by
   simp [bsW, h, h3]
-theorem bsKC_fail (h : r.headD 0 = 0) : bsKC (some (r, m1)) = some ([0, 0], m1) := by simp only [bsKC]; rw [if_pos h]
+theorem bsKC_fail (h : r.headD 0 = 0) : bsKC (some (r, m1)) = some ([0, 0], m1) := by simp only [bsKC]; rw [ite_eq_left h]
 theorem bsKC_ok (h : r.headD 0 ≠ 0) : bsKC (some (r, m1)) =
     (match posRecW m1 [0, 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
         r.tail.tail.tail.tail.headD 0] with
       | none => none
       | some (q, m2) => some ([1, q], m2)) := by
-  simp only [bsKC]; exact if_neg (c := r.headD 0 = 0) h
+  simp only [bsKC]; exact ite_eq_right (c := r.headD 0 = 0) h
 theorem bsK1_fail (h : r.headD 0 = 0) : bsK1 n ci (some (r, m1)) = some ([0, 0], m1) := by
-  simp only [bsK1]; rw [if_pos h]
+  simp only [bsK1]; rw [ite_eq_left h]
 theorem bsK1_ok (h : r.headD 0 ≠ 0) : bsK1 n ci (some (r, m1)) =
     bsK2 (r.tail.headD 0) (consW n m1 (ci + 1) (rdW (m1.arr64 IW) (r.tail.headD 0))
       (rdW (m1.arr64 IW) (r.tail.headD 0 + 1))) := by
-  simp only [bsK1]; exact if_neg (c := r.headD 0 = 0) h
+  simp only [bsK1]; exact ite_eq_right (c := r.headD 0 = 0) h
 theorem bsK2_some : bsK2 q (some (r, m2)) =
     (match posRecW m2 [r.headD 0, r.tail.headD 0, rdW (m2.arr64 IW) (q + 2), rdW (m2.arr64 IW) (q + 3),
         rdW (m2.arr64 IW) (q + 4), rdW (m2.arr64 IW) (q + 5)] with

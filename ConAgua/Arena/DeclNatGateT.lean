@@ -24,7 +24,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -79,7 +78,7 @@ theorem certW_okT (hN : NatEqProg p) (hq : KnotStageProg p) (o l : Word)
     | succ k =>
     have hw := callW_model (M := fun mm => certW p (realCall p) k mm vis o l)
       (certify_specW p hN.lNatCertify (realCall p) (realCall_spec p) k · vis o l) hc
-    simp only [certW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [certW, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
   | cons e es ih =>
@@ -92,7 +91,7 @@ theorem certW_okT (hN : NatEqProg p) (hq : KnotStageProg p) (o l : Word)
     have hw := callW_model (M := fun mm => certW p (realCall p) k mm vis o l)
       (certify_specW p hN.lNatCertify (realCall p) (realCall_spec p) k · vis o l) hc
     unfold certW at hw
-    rw [if_neg (fun h => hl0 (by simp [h]))] at hw
+    rw [ite_eq_right (fun h => hl0 (by simp [h]))] at hw
     have hpp' : rdW (m.arr64 IW) o = pp := by
       simp only [iwA] at hpp; simp [rdW, hpp]
     have hea' : rdW (m.arr64 IW) pp = ea := by
@@ -114,16 +113,16 @@ theorem certW_okT (hN : NatEqProg p) (hq : KnotStageProg p) (o l : Word)
     obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := hq.isDefEqCore_sim k hk' hS 2 ea eb hea heb r1 m1 h1
     have hrun1' : (isDefEqCore V fe checkFuel 2 (decE ea) (decE eb)).run a = .ok (x1, a1) := hrun1
     by_cases hz : r1.headD 0 = 0
-    · rw [if_pos hz] at hw
+    · rw [ite_eq_left hz] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hx : x1 = false := by rw [← hx1]; simp only [decBool, hz]; rfl
       refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
       subst he
       simp only [certifyNatEqs, StateT.run_bind, hrun1', exc_ok_bind', hx, Bool.false_eq_true,
-        if_false]
+        ite_false]
       rfl
-    · rw [if_neg hz] at hw
+    · rw [ite_eq_right hz] at hw
       have hx : x1 = true := by rw [← hx1]; simpa [decBool] using hz
       replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -138,7 +137,7 @@ theorem certW_okT (hN : NatEqProg p) (hq : KnotStageProg p) (o l : Word)
       obtain ⟨x, a2, hrun2, hS2, hg2, hd2⟩ := ih (o + 1) (l - 1) k hk' m1 a1 r2 m2 hS1 hrest1 hb1 h2
       refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa [decW0B] using hd2⟩
       subst he
-      simp only [certifyNatEqs, StateT.run_bind, hrun1', exc_ok_bind', hx, if_true]
+      simp only [certifyNatEqs, StateT.run_bind, hrun1', exc_ok_bind', hx, ite_true]
       exact hrun2
 
 /-- **`certify_nat_eqs` under `StageC`**: `certW_okT`, and con-ron's `CheckOK` after from
@@ -195,22 +194,22 @@ theorem defnNatCert_okC (hN : NatSubProg' p) (hc : p.lookup "defn_nat_cert" = so
   | none =>
     rw [hf] at hfd
     have hz : r1.headD 0 = 0 := hfd
-    rw [if_pos hz] at hw; cases hw
+    rw [ite_eq_left hz] at hw; cases hw
   | some ci =>
   rw [hf] at hfd
   obtain ⟨hf1, hci⟩ := hfd
   have hnz : ¬ r1.headD 0 = 0 := by rw [hf1]; decide
-  rw [if_neg hnz] at hw
+  rw [ite_eq_right hnz] at hw
   have hsz := hSw.2.2.2.2.1
   generalize hq0 : r1.tail.headD 0 = q at hw hci
   rcases decCI_defn_cases hci with ⟨cv, v, hint, rfl, hk1, hcv⟩ | ⟨w1, hw1, hne, hnd⟩
   rotate_left
   · have hk' := erecP_get hw1
     have : rdW (m1.arr64 EREC) q ≠ 1 := by rw [rdW, hk']; exact hne
-    rw [if_pos this] at hw; cases hw
+    rw [ite_eq_left this] at hw; cases hw
   obtain ⟨wv, hk1, hk5, hwl, hwd⟩ := decCI_defn_val hci
   have e1 : rdW (m1.arr64 EREC) q = 1 := by rw [rdW, erecP_get hk1]; rfl
-  rw [if_neg (by rw [e1]; simp)] at hw
+  rw [ite_eq_right (by rw [e1]; simp)] at hw
   have hq5 : (q + 5).toNat = q.toNat + 5 := by
     have : q.toNat + 5 < (m1.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp (erecP_get hk5)).1
     rw [UInt64.toNat_add]; simp; omega
@@ -259,8 +258,8 @@ theorem defnNatCert_okC (hN : NatSubProg' p) (hc : p.lookup "defn_nat_cert" = so
   obtain ⟨x4, a4, hrun4, hC4, hg4, hd4, hx4⟩ := certW_okC hE hq henv hk' hC3 hE3
     (EqL.lt64 hE3 hS3.2) hdps (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) h4
   by_cases e4 : r4.headD 0 = 0
-  · rw [if_pos e4] at hw; cases hw
-  rw [if_neg e4] at hw
+  · rw [ite_eq_left e4] at hw; cases hw
+  rw [ite_eq_right e4] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨-, rfl⟩ := hw
   have t4 : x4 = true := by rw [← hd4.1]; simpa using e4
@@ -268,7 +267,7 @@ theorem defnNatCert_okC (hN : NatSubProg' p) (hc : p.lookup "defn_nat_cert" = so
   have hrun3' : (substConst0Pairs (decI n) (decE wv) x2).run a2 = .ok (x3, a3) := hrun3
   simp only [natCertT, hf, StateT.run_bind, hrun2', exc_ok_bind']
   rw [← hv, hrun3']
-  simp only [exc_ok_bind', hrun4, t4, if_true]
+  simp only [exc_ok_bind', hrun4, t4, ite_true]
   rfl
 
 /-- **`defn_nat_gate` under `StageC`** (`defnNatGate_ref`'s; con-ron's `checkDecl_bridge_defn`, the
@@ -324,7 +323,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
   have hC2 := StageC.of_run hC1 (hS2.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)
     hC.check.state (Ext.refl _) rfl rfl
   by_cases e2 : r2.headD 0 = 0
-  · rw [if_neg (show ¬ (r2.headD 0 ≠ 0) from fun h => h e2), defnNatGateW.j1] at hw
+  · rw [ite_eq_right (show ¬ (r2.headD 0 ≠ 0) from fun h => h e2), defnNatGateW.j1] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hf : xs.contains (decI n) = false := by
@@ -332,7 +331,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
     refine ⟨a2, ?_, hS2, hC2, hg1.trans hg2, Ext.refl _⟩
     simp only [StateT.run_bind, hrun1, exc_ok_bind', hf]
     rfl
-  rw [if_pos (show r2.headD 0 ≠ 0 from e2)] at hw
+  rw [ite_eq_left (show r2.headD 0 ≠ 0 from e2)] at hw
   have hx2t : xs.contains (decI n) = true := by
     rw [← hx2, ← hd2.1]; simpa using e2
   -- the guard
@@ -360,8 +359,8 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
   have hC5 := StageC.of_run hC4 (hS5.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h5)
     hst5 hx5 hc5 hp5
   by_cases e35 : r3.headD 0 = 0 ∨ r5.headD 0 = 0
-  · rw [if_pos e35] at hw; cases hw
-  rw [if_neg e35] at hw
+  · rw [ite_eq_left e35] at hw; cases hw
+  rw [ite_eq_right e35] at hw
   have t3 : x3 = true := by rw [← hd3.1]; simp at e35; simp [e35.1]
   have t5 : x5 = true := by rw [← hd5.1]; simp at e35; simp [e35.2]
   -- the certificate
@@ -373,7 +372,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
     (hie.mono hx35) (ConRon.Bridge.denoteN_ext hnm hx35)
   refine ⟨a6, ?_, stageR_of_restrict hC6.stage hvb, hC6,
     (((((hg1.trans hg2).trans hg3).trans hg4).trans hg5).trans hg6), hx35.trans hx6⟩
-  simp only [StateT.run_bind, hrun1, exc_ok_bind', hx2t, if_true, hrun3, hrun4, hrun5, t3, t5,
+  simp only [StateT.run_bind, hrun1, exc_ok_bind', hx2t, ite_true, hrun3, hrun4, hrun5, t3, t5,
     Bool.and_self, hrun6]
 
 end gate

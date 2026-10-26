@@ -16,7 +16,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Rom
 
@@ -124,9 +123,9 @@ theorem lvTwoK_imax (ht : t = 3) : lvTwoK t u (some (v, q, m)) = lvNodeK q (imin
   simp [lvTwoK, ht]
 theorem romLevelW_zero (h0 : romB rom pos = 0) :
     romLevelW rom (n + 1) m pos = lvNodeK (pos + 1) (zinternW m) := by simp [romLevelW, h0]
-theorem romLevelW_param (h0 : romB rom pos ≠ 0) (h4 : romB rom pos = 4) :
+theorem romLevelW_param (_h0 : romB rom pos ≠ 0) (h4 : romB rom pos = 4) :
     romLevelW rom (n + 1) m pos = lvParamK (romNameW rom n m (pos + 1)) := by
-  simp [romLevelW, h0, h4]
+  simp [romLevelW, h4]
 theorem romLevelW_rec (h0 : romB rom pos ≠ 0) (h4 : romB rom pos ≠ 4) :
     romLevelW rom (n + 1) m pos = lvOneK rom n (romB rom pos) (romLevelW rom n m (pos + 1)) := by
   simp [romLevelW, h0, h4]

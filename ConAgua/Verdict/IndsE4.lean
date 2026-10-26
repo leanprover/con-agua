@@ -13,8 +13,6 @@ open Std.WP
 open scoped Lean.Order
 open ConRon.Bridge.Inductives (PStep)
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Ind
 
@@ -84,7 +82,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
       intro hc; apply hL; apply UInt64.toNat_inj.mp; omega
     intro _
     refine ⟨.invalid "parameters of all inductive datatypes must match", ?_, rfl⟩
-    simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, hne, exc_ok_bind] <;> rfl
+    simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, hne] <;> rfl
   rw [cbaoE.k_open_pis_at_fvars_f.arm1 p n vis nP fvs0O fvs0L s0 s ra m1 h0 hL] at he
   rw [hL] at hlen1
   have heq : fvs.length = fvs0.length := by omega
@@ -140,7 +138,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
       hxs1' hdoms (fun i _ x y hx hy => ⟨hc i x hx, ht i y hy⟩) e hW3
     rw [hz] at hcl
     refine ErrClaim.of_twin hcl fun ce hce => ?_
-    simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, heq, hrun2, hce, exc_ok_bind] <;> rfl
+    simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, heq, hrun2, hce] <;> rfl
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, cbaoE.k_check_block_doms_at.arm1] at he
@@ -172,7 +170,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
       hC3.stageT hs hs0 lu lv hlu hlv h4
     refine ErrClaim.of_twin hcl fun ce hce => ?_
     simp only [StateT.run_bind] at hce
-    simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, heq, hrun2, hrun3, exc_ok_bind]
+    simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, heq, hrun2, hrun3]
     exact hce
   | ok q4 =>
   obtain ⟨re, m4⟩ := q4
@@ -192,8 +190,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
     subst hb
     intro _
     refine ⟨.invalid "mutually inductive types must live in the same universe", ?_, rfl⟩
-    simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, heq, hrun2, hrun3, hrun4, liftFueled,
-      exc_ok_bind] <;> rfl
+    simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, heq, hrun2, hrun3, hrun4, liftFueled] <;> rfl
   · rw [h4, cbaoE.k_lvl_eq_fueled.arm1 p re m4 hre] at he; cases he
 
 end sims

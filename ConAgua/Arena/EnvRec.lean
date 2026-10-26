@@ -242,7 +242,7 @@ theorem ArrExt.decRule {q : Nat} {x : IRecRule} (hx : decRule a q = some x) : de
       obtain ⟨c, hc, nf, hnf, cp, hcp, r, hr, k, hk, e, he, e'⟩ := hf
       exact ⟨c, h.hd? hc, nf, h.nat? hnf, cp, h.nat? hcp, r, h.hd? hr, k, h.bool? hk, e, h.bool? he, e'⟩
     match t, hx with
-    | 0, hx => simp only [Option.bind_some] at hx ⊢; exact tail _ hx
+    | 0, hx => simp only at hx ⊢; exact tail _ hx
     | 1, hx =>
       cases hy : L.Arena.hlist? (k := .level) a (q + 4) with
       | none => simp [hy] at hx

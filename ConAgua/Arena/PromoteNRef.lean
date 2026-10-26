@@ -16,7 +16,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -276,11 +275,11 @@ theorem pn_rel : ∀ n : Nat,
     · rw [pnW_pers p n m f h hf ht] at hW
       obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       have hpers : (decI h : NIdx).isPersistent = true := PW.pers ⟨hh, ht⟩
-      rw [if_pos hpers, ← hr]
+      rw [ite_eq_left hpers, ← hr]
       exact ⟨a, pm, rfl, hD, hP, ⟨hh, ht⟩, rfl, MemFrame.refl _ _ _, rfl, rfl, rfl, SlKeep.refl _⟩
     have hnp : (decI h : NIdx).isPersistent = false := by
       rw [isPersistent_decI h hh]; exact beq_eq_false_iff_ne.mpr ht
-    rw [if_neg (by simp [hnp])]
+    rw [ite_eq_right (by simp [hnp])]
     have hk : (hKey .name).ok h 0 := ⟨hh, rfl⟩
     by_cases h0 : mfindG pnSch m h 0 = []
     · simp [pnW, hf, ht, h0] at hW
@@ -339,7 +338,7 @@ theorem pn_rel : ∀ n : Nat,
         hfr.mono (by simp) (by simp), rfl, rfl, rfl, SlKeep.of_frame hfr (by decide) (by decide)⟩
     by_cases g1 : h >>> 28 = 1
     · by_cases hcnt : tcnt m NSTR (tierW h) ≤ idxW h
-      · simp [pnArmW, hh', hv, g0, g1, hcnt] at hW
+      · simp [pnArmW, hh', hv, g1, hcnt] at hW
       rw [pnArmW_str _ _ _ _ _ hh' hv g1 hcnt] at hW
       obtain ⟨st, hview, hsl, hk, hq⟩ := viewN_str hD.1 hh hv g1 hcnt
       refine PNOk.of_sim (Sim.bind_twin hview ?_) hW
@@ -355,7 +354,7 @@ theorem pn_rel : ∀ n : Nat,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hl₁, hls₁, hsk₁.trans hsk₂⟩
     by_cases g2 : h >>> 28 = 2
     · by_cases hcnt : tcnt m NNUM (tierW h) ≤ idxW h
-      · simp [pnArmW, hh', hv, g0, g1, g2, hcnt] at hW
+      · simp [pnArmW, hh', hv, g2, hcnt] at hW
       rw [pnArmW_num _ _ _ _ _ hh' hv g2 hcnt] at hW
       obtain ⟨hview, hq⟩ := viewN_num hD.1 hh hv g2 hcnt
       refine PNOk.of_sim (Sim.bind_twin hview ?_) hW

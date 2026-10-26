@@ -23,7 +23,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -172,10 +171,10 @@ theorem pr_viewSort_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh :
     | none => rw [e] at hg'; cases hg'
     | some r => rw [e] at hg'; simp at hg'; simp [hg']
   split at hvs
-  · rw [if_pos (by assumption)]; exact get_sort _ _ hvs
-  · rw [if_neg (by assumption)]
+  · rw [ite_eq_left (by assumption)]; exact get_sort _ _ hvs
+  · rw [ite_eq_right (by assumption)]
     split at hvs
-    · rw [if_pos (by assumption)]; exact get_sort _ _ hvs
+    · rw [ite_eq_left (by assumption)]; exact get_sort _ _ hvs
     · cases hvs
 
 section rpw

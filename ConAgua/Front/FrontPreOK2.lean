@@ -16,7 +16,6 @@ open ConRon.Arena
 open ConRon.Arena.Frontend
 open ConLeche.Frontend (IndCtorRec IndTypeRec IndRecRec CVRec RuleRec DeclRec scanIndDecl)
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 
@@ -56,8 +55,8 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   rw [hN] at P3 P4
   have hL1 : LkR m₁ st := hL.frame P1.frame (by rw [P3, P1.size DLP]; omega)
   rcases h2 : instTypesW n b.data m₁ bo to tn 0 with _ | m₂ <;> simp only [h2, mK, reduceCtorEq] at h
-  rcases h3 : instCtorsW n b.data m₂ (bo + tn) oo cn 0 with _ | m₃ <;> simp only [h3, mK, reduceCtorEq] at h
-  rcases h4 : instRecsW n b.data m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;> simp only [h4, mK, reduceCtorEq] at h
+  rcases h3 : instCtorsW n b.data m₂ (bo + tn) oo cn 0 with _ | m₃ <;> simp only [h3, reduceCtorEq] at h
+  rcases h4 : instRecsW n b.data m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;> simp only [h4, reduceCtorEq] at h
   have hifr1 : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hifl1 : m₁.arr64 IFL = m.arr64 IFL := P1.other IFL (by decide) (by decide)
   -- the types

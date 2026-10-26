@@ -15,7 +15,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -59,7 +58,7 @@ theorem spineCmp_refinesE (p : Prog) (hp : SpineDProg p) (hnv : closedNV p L.Che
   · rw [spineCmpE.arm1 (hc1 := hc)] at hW
     have hc' : decI nm = (decI nm₂ : NIdx) ∧ xs.length = ys.length := by
       have := hcond.mpr hc; simpa using this
-    rw [if_pos hc']
+    rw [ite_eq_left hc']
     cases hc2 : callE p n "lvls_eq_c" [us, us₂] s₀.mem with
     | error e =>
       rw [hc2, spineCmpE.k_lvls_eq_c.none] at hW; cases hW
@@ -187,8 +186,8 @@ theorem defeqSpine_refinesE (p : Prog) (hp : SpineDProg p) (hnv : closedNV p L.C
   rw [hm₁] at hW
   simp only [defeqSpineE.k_spine_head] at hW
   by_cases h0 : ra.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   cases hc2 : callE p (k + 1) "spine_head" [b] s₀.mem with
   | error e =>
     rw [hc2, defeqSpineE.k_spine_head_2.none] at hW; cases hW
@@ -213,8 +212,8 @@ theorem defeqSpine_refinesE (p : Prog) (hp : SpineDProg p) (hnv : closedNV p L.C
     simp only [StateT.run_bind, hrb, except_ok_bind]
   refine ErrClaim.congr_run hT₁ ?_
   by_cases h0' : rb.headD 0 = 0
-  · rw [if_pos h0'] at hW; cases hW
-  rw [if_neg h0'] at hW
+  · rw [ite_eq_left h0'] at hW; cases hW
+  rw [ite_eq_right h0'] at hW
   rw [decSH_some h0']
   have h3 := tailE (defeqSpineE.k_defeq_spine2.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) hW
   exact CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)

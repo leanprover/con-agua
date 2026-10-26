@@ -22,7 +22,6 @@ map (`memoRG_zero`). An instance supplies the codec and its one law `ek_dk`; not
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -170,12 +169,12 @@ theorem mprobeG_okAt (S : MemoSch) (m : Mem) (e b n k1 k2 : Word)
       exact ⟨trivial, h0, hnm⟩
     by_cases hm : rdW (m.arr64 S.arr) ((b + walkW n (homeW (kh k1 k2) n) d.toNat) * 4 + 1) = k1 ∧
         rdW (m.arr64 S.arr) ((b + walkW n (homeW (kh k1 k2) n) d.toNat) * 4 + 2) = k2
-    · simp only [hd, h0, hm, ↓reduceIte, ne_eq, not_true_eq_false, and_self]
+    · simp only [hd, h0, hm, ↓reduceIte, and_self]
       refine fun _ => ⟨hn, fun _ => ?_, fun h => by simp at h⟩
       simp only [List.tail_cons, List.headD_cons]
       simp only [ne_eq, Decidable.not_not] at h0
       exact ⟨h0, hm.1, hm.2, d.toNat, hrun⟩
-    · simp only [hd, h0, hm, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true]
+    · simp only [hd, h0, hm, ↓reduceIte]
       simp only [ne_eq, Decidable.not_not] at h0
       exact this (fun e' he' => by
         rcases Nat.lt_succ_iff_lt_or_eq.mp he' with h | h
@@ -1148,7 +1147,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     rw [← hm's, ← hM]; simp only [slotsG_set64]
   have hc₁ : cntG S m₁ = c' := by
     simp only [cntG]; rw [← hM, rdW_set64]
-    simp only [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hac), size_set64]; simp
+    simp only [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hac)]; simp
     intro h; have := hS.cs; omega
   -- slots `j ≥ 1` of `m₁` are those of `m'`
   have hsj : ∀ j : Word, j.toNat < slotsG S m → 1 ≤ j.toNat →

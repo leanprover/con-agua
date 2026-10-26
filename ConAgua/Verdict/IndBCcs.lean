@@ -7,8 +7,6 @@ The loop calls `class_ctors_of` (`classCtorsOf_claim`); `rec2` is `closedNV`. Th
 hypotheses are those of `ccsW_okC` less the result-slice invariants.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

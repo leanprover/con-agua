@@ -281,7 +281,7 @@ theorem mkForallW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m'
   unfold mkForallW at hI
   split at hI
   · cases hI
-  rcases hI₁ : fainternW m t b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
+  rcases hI₁ : fainternW m t b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, reduceCtorEq] at hI
   split at hI
   · cases hI
   simp only [Option.some.injEq, Prod.mk.injEq] at hI
@@ -293,7 +293,7 @@ theorem mkForallW_frame {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some
   unfold mkForallW at hI; split at hI; · cases hI
   exact (L.Ind.mkK_frame (by decide) (fun r₁ m₁ hx => by
     exact consInternM_frame forallCS_wf hx) hI).mono
-    (by simp [ConsSch.wset, forallCS, forallSch, FADER, FAREC, FASLOT]) (by simp [forallCS, forallSch])
+    (by simp [ConsSch.wset, forallCS, FADER, FAREC, FASLOT]) (by simp [forallCS])
 
 /-- **`mk_forall` refines `internE (.forallE …)` under `CoreS`.** -/
 theorem mkForall_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
@@ -307,7 +307,7 @@ theorem mkForall_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [FADER, FAREC, FASLOT, PINS])
+    (by simp [FADER, FAREC, FASLOT])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -520,7 +520,7 @@ theorem litArm_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
     {r r₁ : List Word} {m₁ m' : Mem}
     (h₁ : CoreRef T₁ a₀ decBool dn s.mem vis fe M eb r₁ m₁)
-    (h0 : r₁.headD 0 ≠ 0)
+    (_h0 : r₁.headD 0 ≠ 0)
     (hW : pinArmK p n (callW p n "pin_at" [k.toUInt64] m₁) = some (r.headD 0, m'))
     (hT : ∀ nn, (pinAt k).run (AM.st T₁ a₀) = .ok (nn, AM.st T₁ a₀) →
       T.run a₀ = (constE nn).run (AM.st T₁ a₀)) :
@@ -563,7 +563,7 @@ theorem inferLit_refines (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees
   subst hl
   obtain ⟨l⟩ := k
   by_cases h3 : tfld s.mem LIT (tierW e) (idxW e) 0 = 0
-  · rw [if_pos h3] at hW
+  · rw [ite_eq_left h3] at hW
     cases l with
     | strVal str => simp [RecRel, StrRec, h3] at hrel
     | natVal N =>
@@ -580,7 +580,7 @@ theorem inferLit_refines (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees
     rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
     exact litArm_ref p hp hc n 1 (by decide) h₁ h0 hW
       (fun nn hpin => inferLitT_nat_run fe N a₀ _ nn hrun₁ hpin)
-  · rw [if_neg h3] at hW
+  · rw [ite_eq_right h3] at hW
     cases l with
     | natVal N => simp [RecRel, NatRec, h3] at hrel
     | strVal str =>

@@ -17,7 +17,6 @@ open ConRon.Arena ConLeche
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -76,7 +75,7 @@ theorem ilw_set {m m' : Mem} {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis 
   have hf := msetG_frame lpSch lpSch_wf m m' h 0 r hs
   have hf' : MemFrame [lpSch.arr] [lpSch.cs, lpSch.cs + 1] m m' := hf.mono (by simp) (by simp)
   obtain ⟨hS', hk⟩ := CoreS.frameLP lpSch (.inl rfl) hS hf'
-    (hS.memos.frameLP hf' (hM.setLP h r hh hr hs).lpMemos (by decide) (by simp [lpSch, lplSch, lplsSch]))
+    (hS.memos.frameLP hf' (hM.setLP h r hh hr hs).lpMemos (by decide) (by simp))
   exact ⟨hS'.lpMemos _ a.memos.instLPLC a.memos.instLPLsC, hk, hM.setLP h r hh hr hs⟩
 
 /-- `internRebuilt*`: the node itself when every child came back equal (`c`), else the interning. -/
@@ -103,14 +102,14 @@ theorem ilw_arm {m m' : Mem} {a : AState} {M : ModeMaps} {h r : Word} {body : AM
   unfold ilwProbe at hW
   by_cases hr0 : mfindG lpSch m h 0 = []
   · simp [hr0] at hW
-  rw [if_neg hr0] at hW
+  rw [ite_eq_right hr0] at hW
   by_cases hh0 : (mfindG lpSch m h 0).headD 0 ≠ 0
-  · rw [if_pos hh0] at hW
+  · rw [ite_eq_left hh0] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hget, hw⟩ := ilw_hit hM h hh hr0 hh0
     exact ILWStep.refl (by simp only [ilwArmT, StateT.run_bind, instLPGet_run, except_ok_bind, hget]; rfl)
       hS hM hw
-  rw [if_neg hh0] at hW
+  rw [ite_eq_right hh0] at hW
   have hmiss := ilw_miss hM h hh hr0 hh0
   rcases hY : Y with _ | ⟨r₃, m₃⟩ <;> rw [hY] at hW
   · simp [ilwSetK] at hW
@@ -159,8 +158,8 @@ theorem ilw_rebuild {c : Bool} {I : AM EIdx} {a : AState} {m m' : Mem} {M : Mode
     rw [hYr] at hY; simp only [Bool.false_eq_true, ↓reduceIte] at hY
     rcases h5 : Yn with _ | ⟨zs, m₅⟩ <;> simp only [h5, ilwChk, reduceCtorEq] at hY
     by_cases hb : 4294967296 ≤ zs.headD 0
-    · rw [if_pos hb] at hY; cases hY
-    rw [if_neg hb] at hY
+    · rw [ite_eq_left hb] at hY; cases hY
+    rw [ite_eq_right hb] at hY
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hY)
     have hz : HW (zs.headD 0) := by
       unfold HW; have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this

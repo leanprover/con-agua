@@ -11,7 +11,6 @@ stable (`partsConsPL`).
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -160,7 +159,7 @@ theorem installRec2Tele {p : Prog} (hP : InstProg p) (n : Nat) {dn : NIdx → Op
       rw [iwH_truncM hq1]; have h1 := hget 1 (by simp)
       simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at h1
       simp only [iwH, hd?, iwA, h1, Option.bind_eq_bind, Option.bind_some]
-      rw [if_pos hs32, hsd]
+      rw [ite_eq_left hs32, hsd]
     have e2 : decCVp (truncM s'.mem) (r1.headD 0).toNat = some x.1 :=
       (installCvDecB hcv hcx).grow (OMono.decCVp _) hg2
     simp only [decTele, List.headD_cons, e0, e1, bind, Option.bind_some, e2, pure]

@@ -28,7 +28,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Rom
 
@@ -533,16 +532,16 @@ theorem exConst2KN_some : exConst2KN rom n (some (a, q, m)) = exConst2K a (romLe
 theorem romLeafW_bvar (ht : t = 0) (hu : u64OK rom (pos + 1)) :
     romLeafW rom (n + 1) m pos t = exLeafK (pos + 9) (binternW m (u64W rom (pos + 1))) := by
   simp [romLeafW, ht, hu]
-theorem romLeafW_sort (ht0 : t ≠ 0) (ht : t = 1) :
-    romLeafW rom (n + 1) m pos t = exSortK (romLevelW rom n m (pos + 1)) := by simp [romLeafW, ht0, ht]
+theorem romLeafW_sort (_ht0 : t ≠ 0) (ht : t = 1) :
+    romLeafW rom (n + 1) m pos t = exSortK (romLevelW rom n m (pos + 1)) := by simp [romLeafW, ht]
 theorem romLeafW_u64 (ht : t = 0 ∨ t = 3) (hu : ¬ u64OK rom (pos + 1)) :
     romLeafW rom (n + 1) m pos t = none := by simp [romLeafW, ht, hu]
-theorem romLeafW_const (ht0 : t ≠ 0) (ht1 : t ≠ 1) (ht : t = 2) :
+theorem romLeafW_const (_ht0 : t ≠ 0) (_ht1 : t ≠ 1) (ht : t = 2) :
     romLeafW rom (n + 1) m pos t = exConst2KN rom n (romNameW rom n m (pos + 1)) := by
-  simp [romLeafW, ht0, ht1, ht]
-theorem romLeafW_lit (ht0 : t ≠ 0) (ht1 : t ≠ 1) (ht2 : t ≠ 2) (ht : t = 3) (hu : u64OK rom (pos + 1)) :
+  simp [romLeafW, ht]
+theorem romLeafW_lit (_ht0 : t ≠ 0) (_ht1 : t ≠ 1) (_ht2 : t ≠ 2) (ht : t = 3) (hu : u64OK rom (pos + 1)) :
     romLeafW rom (n + 1) m pos t = exLeafK (pos + 9) (romLitW m (u64W rom (pos + 1))) := by
-  simp [romLeafW, ht0, ht1, ht2, ht, hu]
+  simp [romLeafW, ht, hu]
 theorem exFvarK_some : exFvarK rom k (some (a, q, m)) = exNodeK q (fvinternW m k a) := by simp [exFvarK]
 theorem exProjK_some (hu : u64OK rom q) :
     exProjK rom n (some (a, q, m)) = exProj2K rom a (u64W rom q) (romExprW rom n m (q + 8)) := by
@@ -574,9 +573,9 @@ theorem romExprW_two (h9 : romB rom pos ≠ 9) (h2 : ¬ (romB rom pos = 0 ∨ ro
 theorem romOneW_fvar (ht : t = 4) (hu : u64OK rom (pos + 1)) :
     romOneW rom (n + 1) m pos t = exFvarK rom (u64W rom (pos + 1)) (romExprW rom n m (pos + 9)) := by
   simp [romOneW, ht, hu]
-theorem romOneW_proj (ht4 : t ≠ 4) (ht : t = 10) :
+theorem romOneW_proj (_ht4 : t ≠ 4) (ht : t = 10) :
     romOneW rom (n + 1) m pos t = exProjK rom n (romNameW rom n m (pos + 1)) := by
-  simp [romOneW, ht4, ht]
+  simp [romOneW, ht]
 theorem romTwoW_eq : romTwoW rom (n + 1) m pos t = exOneK rom n t (romExprW rom n m (pos + 1)) := by
   simp [romTwoW]
 end arms

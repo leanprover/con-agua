@@ -15,8 +15,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -195,11 +193,11 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
   rw [fpcW_step] at hW
   rcases h1 : envFindW m nm vis with _ | ⟨r1, m1⟩ <;> simp only [h1, fpcK1, reduceCtorEq] at hW
   by_cases hf : r1.headD 0 = 0
-  · rw [if_pos hf] at hW
+  · rw [ite_eq_left hf] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hnm hf
     exact ⟨false, a, hS, IWGrow.refl _, by simp [decW0B], by simp [FpcT, hfind]⟩
-  rw [if_neg hf] at hW
+  rw [ite_eq_right hf] at hW
   obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.1.env hnm hf
   obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env nm hnm htag hrc
   rw [hptr] at hW
@@ -213,11 +211,11 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
     have hW' : some ([(0 : Word)], m1) = some (r, m') := by
       rw [← hW]
       by_cases h2 : rdW (m1.arr64 EREC) q ≠ k
-      · rw [if_pos h2]
-      · rw [if_neg h2]
+      · rw [ite_eq_left h2]
+      · rw [ite_eq_right h2]
         rcases hfail with h1 | h1
         · exact absurd h1 h2
-        · rw [if_pos h1]
+        · rw [ite_eq_left h1]
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'
     obtain ⟨rfl, rfl⟩ := hW'
     exact ⟨false, a, hS, IWGrow.refl _, by simp [decW0B], by simp [FpcT, hbind, hnone]⟩
@@ -227,7 +225,7 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
     · exact absurd (.inl hne) hfail
   have hc : ¬ (k = 4 ∧ (rdW (m1.arr64 EREC) (q + 5) ≠ 0 ∨ rdW (m1.arr64 EREC) (q + 6) ≠ 0)) :=
     fun hx => hfail (.inr hx)
-  rw [if_neg (by simpa using hkw), if_neg hc] at hW
+  rw [ite_eq_right (by simpa using hkw), ite_eq_right hc] at hW
   obtain ⟨cvT, hshape, -⟩ := fpc_pass hsz hk hciA hkw hc
   have hcvP := fpcShape_cv hci hshape
   -- the pin
@@ -354,28 +352,28 @@ theorem trustCompilerOk_eq (fe : IFEnv) (cv : IConstantVal) :
   congr 1; funext t
   unfold clauseT
   cases hf : fe.find? t with
-  | none => simp [hf]
+  | none => simp
   | some ci =>
     cases ci with
     | indInfo cvT caps =>
-      simp only [hf, Option.bind_some, fpcShape, if_true, bind_assoc]
+      simp only [Option.bind_some, fpcShape, ite_true, bind_assoc]
       congr 1; funext pin
       simp only [matchesPin_eq, pure_bind]
       split <;> try rfl
       congr 1; funext ti
       cases hf2 : fe.find? ti with
-      | none => simp [hf2]
+      | none => simp
       | some ci2 =>
         cases ci2 with
         | ctorInfo cvTi nP nF =>
-          simp only [hf2, Option.bind_some, fpcShape]
+          simp only [Option.bind_some, fpcShape]
           by_cases e : nP = 0 ∧ nF = 0
           · obtain ⟨rfl, rfl⟩ := e
-            simp only [and_self, if_true, bind_assoc, matchesPin_eq, pure_bind]
+            simp only [and_self, ite_true, bind_assoc, pure_bind]
           · rcases Nat.eq_zero_or_pos nP with h0 | h0 <;> rcases Nat.eq_zero_or_pos nF with h1 | h1 <;>
               simp_all [Nat.pos_iff_ne_zero]
-        | _ => simp [hf2, fpcShape]
-    | _ => simp [hf, fpcShape]
+        | _ => simp [fpcShape]
+    | _ => simp [fpcShape]
 
 /-- A `find_pinned_cv` call's run, against its clause. -/
 theorem fpc_call {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -416,13 +414,13 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
       .ok (b2, a2) := hrun2
   simp only [hrun2', exc_ok_bind']
   by_cases e2 : r2.headD 0 = 0
-  · rw [if_pos e2] at hW
+  · rw [ite_eq_left e2] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : b2 = false := by rw [← hd2.1]; simpa using e2
     exact ⟨false, a2, by simp [hb]; rfl, hS2, hg2, by simp [decW0B]⟩
-  rw [if_neg e2] at hW
+  rw [ite_eq_right e2] at hW
   have hb2 : b2 = true := by rw [← hd2.1]; simpa using e2
-  simp only [hb2, Bool.not_true, Bool.false_eq_true, if_false]
+  simp only [hb2, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the `True.intro` clause
   rcases h3 : pinAtW m2 41 with _ | ⟨r3, m3⟩ <;> simp only [h3, tcoK3, reduceCtorEq] at hW
   obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok h3 hS2.1.pins
@@ -436,13 +434,13 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
       .ok (b4, a4) := hrun4
   simp only [hrun4', exc_ok_bind']
   by_cases e4 : r4.headD 0 = 0
-  · rw [if_pos e4] at hW
+  · rw [ite_eq_left e4] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : b4 = false := by rw [← hd4.1]; simpa using e4
     exact ⟨false, a4, by simp [hb]; rfl, hS4, hg2.trans hg4, by simp [decW0B]⟩
-  rw [if_neg e4] at hW
+  rw [ite_eq_right e4] at hW
   have hb4 : b4 = true := by rw [← hd4.1]; simpa using e4
-  simp only [hb4, Bool.not_true, Bool.false_eq_true, if_false]
+  simp only [hb4, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the axiom's pin
   rcases h5 : callW p n "rom_cv" [4] m4 with _ | ⟨r5, m5⟩ <;> simp only [h5, tcoK5, reduceCtorEq] at hW
   obtain ⟨pin, a5, hrun5, hS5, hg5, hpin⟩ := h.red.rom.cv dn vis fe 4 (by decide) n m4 a4 r5 m5 hS4 h5

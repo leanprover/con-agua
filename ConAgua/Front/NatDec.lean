@@ -27,7 +27,6 @@ con-leche's `readNatAt` on a literal the scanner accepted (`NatValR`).
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order
@@ -69,10 +68,10 @@ decreasing_by
 section
 variable (b : Array UInt8) (i k j ch pw : Word)
 theorem chunkN_stop (h : ¬ j < k) : chunkN b i k j ch pw = (ch, pw) := by
-  rw [chunkN, if_neg h]
+  rw [chunkN, ite_eq_right h]
 theorem chunkN_step (h : j < k) : chunkN b i k j ch pw =
     chunkN b i k (j + 1) (ch * 10 + ((byteW b (i + j) - 48) &&& 255)) (pw * 10) := by
-  rw [chunkN, if_pos h]
+  rw [chunkN, ite_eq_left h]
 end
 grind_pattern [lang_grind] chunkN_stop => chunkN b i k j ch pw
 grind_pattern [lang_grind] chunkN_step => chunkN b i k j ch pw, b[(i + j).toNat]
@@ -118,7 +117,7 @@ decreasing_by
 section
 variable (m m' : Mem) (o n w y y' i i' : Word)
 theorem madW_stop (h : ¬ i < n) : madW m o n w y i = (m, y) := by
-  rw [madW, if_neg h]
+  rw [madW, ite_eq_right h]
 theorem madW_step (k : Nat) (h : i < n) (hk : k = ((o + i) &&& 1099511627775).toNat)
     (hks : k < (m.arr64 (tierA 0 ((o + i) >>> 40))).size)
     (hi' : i' = i + 1)
@@ -132,7 +131,7 @@ theorem madW_step (k : Nat) (h : i < n) (hk : k = ((o + i) &&& 1099511627775).to
     prd_ld m (o + i) hks
   rw [e] at hy' ⊢
   subst hy'
-  rw [madW, if_pos h]
+  rw [madW, ite_eq_left h]
   simp only [madHi]
 end
 grind_pattern [arena_grind] madW_stop => madW m o n w y i
@@ -207,7 +206,7 @@ theorem decK_pos (i d : Word) (h : i < d) : 0 < (decK i d).toNat ∧ (i + decK i
 /-- The model of the chunk loop of `nat_dec`, from position `i` with `n` limbs at `top`: the
 memory and the length, `none` where the L code aborts (the pool is full). -/
 def decW (b : Array UInt8) (m : Mem) (top n i d : Word) : Option (Mem × Word) :=
-  if h : i < d then
+  if _h : i < d then
     if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2 ≠ 0 then
       if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.len64
           (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + n then none
@@ -219,12 +218,12 @@ def decW (b : Array UInt8) (m : Mem) (top n i d : Word) : Option (Mem × Word) :
   else some (m, n)
 termination_by d.toNat - i.toNat
 decreasing_by
-  all_goals have := decK_pos i d h; omega
+  all_goals have := decK_pos i d _h; omega
 
 section
 variable (b : Array UInt8) (m : Mem) (top n i d : Word)
 theorem decW_stop (h : ¬ i < d) : decW b m top n i d = some (m, n) := by
-  rw [decW, dif_neg h]
+  rw [decW, dite_eq_right h]
 theorem decW_step (h : i < d) : decW b m top n i d =
     if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2 ≠ 0 then
       if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.len64
@@ -234,7 +233,7 @@ theorem decW_step (h : i < d) : decW b m top n i d =
         top (n + 1) (i + decK i d) d
     else decW b (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1
       top n (i + decK i d) d := by
-  rw [decW, dif_pos h]
+  rw [decW, dite_eq_left h]
 end
 grind_pattern [lang_grind] decW_stop => decW b m top n i d
 grind_pattern [lang_grind] decW_step => decW b m top n i d

@@ -11,7 +11,6 @@ members' names checked distinct (`block_shape_all_ctors`, `block_caps_ctor_names
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

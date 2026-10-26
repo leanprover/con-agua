@@ -12,7 +12,6 @@ stays below its top across `block_counts` (`PTop`, so the stage relation is kept
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -162,7 +161,7 @@ theorem partsExBind {ε α β : Type} {x : Except ε α} {f : α → Except ε �
 theorem partsFailNe {α : Type} {e : CheckError} {a a' : AState} {v : α}
     (h : (fail e : AM α).run a = .ok (v, a')) : False := by
   revert h; unfold fail
-  simp [throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.bind, bind, StateT.run]
+  simp [throwThe, MonadExceptOf.throw, StateT.lift, Except.bind, bind, StateT.run]
 
 theorem partsPureRun {α : Type} {c v : α} {a a' : AState} (h : (pure c : AM α).run a = .ok (v, a')) :
     v = c := by
@@ -256,12 +255,12 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     simp only [List.headD_cons]
     by_cases hc : UInt64.ofNat t = mm
     · have hb : (t == mm.toNat) = true := hcond.mp hc
-      simp only [hc, hb, if_true]
+      simp only [hc, hb, ite_true]
       rw [partsRdIW_grow hg1 (by rw [hp2]; exact hrlt), hrw]
       exact Sim.ret ⟨rfl, fun q e => by simp only [Option.some.injEq] at e; subst e; exact ⟨hmb, hrb⟩,
         hS1, hg1⟩
     · have hb : (t == mm.toNat) = false := by simpa using (fun e => hc (hcond.mpr e))
-      simp only [hc, hb, if_false, Bool.false_eq_true]
+      simp only [hc, hb, ite_false, Bool.false_eq_true]
       refine Sim.congr (op := List.findM? (bmfPred names mm.toNat) rs' >>= pure) ?_ (bind_pure _)
       refine Sim.bindK rfl (fun _ _ => by rw [bmfW.k_block_member_counts_find])
         (ih m1 a1 (ro + 1) (rl - 1) rs' hS1 (hrs'.grow decSR_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
@@ -313,19 +312,19 @@ theorem bmgW_cons (h : ctl ≠ 0) : bmgW (n + 1) m nPd k nC no nl ro rl cto ctl 
 theorem bmgK1_ok (h : ¬ (4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0)) :
     bmgK1 n nPd k nC no nl ro rl cto ctl idx cv (some (r1, m1)) = bmgK2 n nPd k nC no nl ro rl cto ctl idx
       (bcW n m1 nPd k nC rl cv (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)) := by
-  simp only [bmgK1]; exact if_neg h
+  simp only [bmgK1]; exact ite_eq_right h
 theorem bmgK2_fail (h : r1.headD 0 = 0) :
     bmgK2 n nPd k nC no nl ro rl cto ctl idx (some (r1, m1)) = some ([0, 0, 0], m1) := by
-  simp only [bmgK2]; exact if_pos h
+  simp only [bmgK2]; exact ite_eq_left h
 theorem bmgK2_ok (h : r1.headD 0 ≠ 0) :
     bmgK2 n nPd k nC no nl ro rl cto ctl idx (some (r1, m1)) =
       bmgK3 n (r1.tail.tail.headD 0) (bmgW n m1 nPd k nC no nl ro rl (cto + 1) (ctl - 1) (idx + 1)) := by
-  simp only [bmgK2]; exact if_neg h
+  simp only [bmgK2]; exact ite_eq_right h
 theorem bmgK3_fail (h : r1.headD 0 = 0) : bmgK3 n cb (some (r1, m1)) = some ([0, 0, 0], m1) := by
-  simp only [bmgK3]; exact if_pos h
+  simp only [bmgK3]; exact ite_eq_left h
 theorem bmgK3_ok (h : r1.headD 0 ≠ 0) : bmgK3 n cb (some (r1, m1)) =
     bsK3 (consW n m1 cb (r1.tail.headD 0) (r1.tail.tail.headD 0)) := by
-  simp only [bmgK3]; exact if_neg h
+  simp only [bmgK3]; exact ite_eq_right h
 end arms
 attribute [ind_grind] bmgW_nil bmgW_cons bmgK1_ok bmgK2_fail bmgK2_ok bmgK3_fail bmgK3_ok
 
@@ -391,8 +390,8 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rintro r1 x m1 a1 ⟨rfl, hxb, hS1, hg1⟩
     by_cases hbig : 4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.headD 0 ∨
         4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.tail.headD 0
-    · rw [if_pos hbig]; exact Sim.of_none
-    rw [if_neg hbig]
+    · rw [ite_eq_left hbig]; exact Sim.of_none
+    rw [ite_eq_right hbig]
     have h5 : ((encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.headD 0).toNat < 2 ^ 32 := by
       have := mt Or.inl hbig; rw [UInt64.le_iff_toNat_le] at this; simpa using this
     have h6 : ((encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.tail.headD 0).toNat < 2 ^ 32 := by
@@ -431,12 +430,12 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hg02 := hg1.trans hg2
     cases x2 with
     | none =>
-      simp only [encONN, List.headD_cons, if_true]
+      simp only [encONN, List.headD_cons, ite_true]
       exact Sim.ret ⟨rfl, hS2, hg02⟩
     | some c =>
     obtain ⟨c1, c2⟩ := c
     have hc2 := hq2 c1 c2 rfl
-    rw [if_neg (show (encONN (some (c1, c2))).headD 0 ≠ 0 by simp [encONN])]
+    rw [ite_eq_right (show (encONN (some (c1, c2))).headD 0 ≠ 0 by simp [encONN])]
     have hcl1 : ctl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
     have hcto1 : (cto + 1).toNat = cto.toNat + 1 := by
       have := hts.2; rw [UInt64.toNat_add]; simp; omega
@@ -453,11 +452,11 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     cases x3 with
     | none =>
       have h0 : r3.headD 0 = 0 := hR3
-      rw [if_pos h0]
+      rw [ite_eq_left h0]
       exact Sim.ret ⟨rfl, hS3, hg02.trans hg3⟩
     | some ns =>
     obtain ⟨h1', hd3, hb3'⟩ := hR3
-    rw [if_neg (by rw [h1']; decide)]
+    rw [ite_eq_right (by rw [h1']; decide)]
     intro r m' e
     rcases h4 : consW n m3 ((encONN (some (c1, c2))).tail.tail.headD 0) (r3.tail.headD 0) (r3.tail.tail.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e
     · cases e

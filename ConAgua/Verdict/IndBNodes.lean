@@ -9,8 +9,6 @@ The loop's own aborts are the twin's two `fail`s (entry too short, `target_k53` 
 `target_k53_args` hypothesis `TkaE`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

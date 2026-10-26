@@ -32,8 +32,6 @@ Each spec is an equation about a named `Option` model, as in `Apply.lean`; the r
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order
@@ -140,27 +138,27 @@ section lsArms
 variable (b : Array UInt8) (m : Mem) (top i cnt : Word)
 
 theorem lsCntN_end (h : ¬ i < UInt64.ofNat b.size) : lsCntN b i cnt = cnt := by
-  rw [lsCntN, dif_neg h]
+  rw [lsCntN, dite_eq_right h]
 theorem lsCntN_close (h : i < UInt64.ofNat b.size) (hc : byteW b i = 93) : lsCntN b i cnt = cnt := by
-  rw [lsCntN, dif_pos h, if_pos hc]
+  rw [lsCntN, dite_eq_left h, ite_eq_left hc]
 theorem lsCntN_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : i < UInt64.ofNat (numEndN b i.toNat)) :
     lsCntN b i cnt = lsCntN b (UInt64.ofNat (numEndN b i.toNat)) (cnt + 1) := by
-  rw [lsCntN, dif_pos h, if_neg hc, if_pos hd, dif_pos he]
+  rw [lsCntN, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_left he]
 theorem lsCntN_noprog (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : ¬ i < UInt64.ofNat (numEndN b i.toNat)) :
     lsCntN b i cnt = cnt := by
-  rw [lsCntN, dif_pos h, if_neg hc, if_pos hd, dif_neg he]
+  rw [lsCntN, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_right he]
 theorem lsCntN_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57)) : lsCntN b i cnt = lsCntN b (i + 1) cnt := by
-  rw [lsCntN, dif_pos h, if_neg hc, if_neg hd]
+  rw [lsCntN, dite_eq_left h, ite_eq_right hc, ite_eq_right hd]
 
 theorem lsLoopM_end (h : ¬ i < UInt64.ofNat b.size) :
     lsLoopM b m top i cnt = some (m.set64 CTL 0 (top + cnt)) := by
-  rw [lsLoopM, dif_neg h]
+  rw [lsLoopM, dite_eq_right h]
 theorem lsLoopM_close (h : i < UInt64.ofNat b.size) (hc : byteW b i = 93) :
     lsLoopM b m top i cnt = some (m.set64 CTL 0 (top + cnt)) := by
-  rw [lsLoopM, dif_pos h, if_pos hc]
+  rw [lsLoopM, dite_eq_left h, ite_eq_left hc]
 theorem lsLoopM_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : i < UInt64.ofNat (numEndN b i.toNat)) :
     lsLoopM b m top i cnt =
@@ -171,14 +169,14 @@ theorem lsLoopM_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
           (tblW m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))) top
           (UInt64.ofNat (numEndN b i.toNat)) (cnt + 1)
       else none := by
-  rw [lsLoopM, dif_pos h, if_neg hc, if_pos hd, dif_pos he]
+  rw [lsLoopM, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_left he]
 theorem lsLoopM_noprog (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : ¬ i < UInt64.ofNat (numEndN b i.toNat)) :
     lsLoopM b m top i cnt = some (m.set64 CTL 0 (top + cnt)) := by
-  rw [lsLoopM, dif_pos h, if_neg hc, if_pos hd, dif_neg he]
+  rw [lsLoopM, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_right he]
 theorem lsLoopM_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57)) : lsLoopM b m top i cnt = lsLoopM b m top (i + 1) cnt := by
-  rw [lsLoopM, dif_pos h, if_neg hc, if_neg hd]
+  rw [lsLoopM, dite_eq_left h, ite_eq_right hc, ite_eq_right hd]
 end lsArms
 
 grind_pattern [lang_grind] lsCntN_end => lsCntN b i cnt

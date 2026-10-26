@@ -19,7 +19,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Ind
 
@@ -28,7 +27,7 @@ open L.Arena
 /-- The words `er_to_iw` leaves: the copy at the old top. -/
 theorem erToIwW_wordsA {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
+    (_hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
     (hsrc : o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
     ∀ i < l.toNat, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + i]? = (m.arr64 EREC)[o.toNat + i]? := by
   simp only [erToIwW] at h
@@ -48,7 +47,7 @@ theorem erToIwW_wordsA {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (by rw [hEE]; exact hE) (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
   rw [hEE] at hG
   intro i hi
-  rw [hG, if_pos (by omega)]
+  rw [hG, ite_eq_left (by omega)]
   congr 1; omega
 
 end L.Ind
@@ -296,7 +295,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   have e3 : rdW (m.arr64 DECL) (3 + 8 * i) = dw (m.arr64 DECL) i.toNat 2 := rdW_dwI hD h0 rfl (by decide)
   have e4 : rdW (m.arr64 DECL) (4 + 8 * i) = dw (m.arr64 DECL) i.toNat 3 := rdW_dwI hD h0 rfl (by decide)
   have e5 : rdW (m.arr64 DECL) (5 + 8 * i) = dw (m.arr64 DECL) i.toNat 4 := rdW_dwI hD h0 rfl (by decide)
-  rw [e1, h6, if_pos rfl, e3, e4, e5] at h
+  rw [e1, h6, ite_eq_left rfl, e3, e4, e5] at h
   have l12 := hF.names_lt 11 (by decide)
   have l49 := hF.names_lt 48 (by decide)
   have l50 := hF.names_lt 49 (by decide)
@@ -305,24 +304,24 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   rw [andPinOk_ind_run hF]
   by_cases hbf : blockAndNamed (andHs m) block = false
   · have hb : ¬ blockAndNamed (andHs m) block = true := by simp [hbf]
-    rw [if_neg hb] at h ⊢
-    simp only [if_pos rfl, Option.some.injEq, Prod.mk.injEq] at h
+    rw [ite_eq_right hb] at h ⊢
+    simp only [ite_eq_left rfl] at h
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
   have hb : blockAndNamed (andHs m) block = true := by simpa using hbf
-  rw [if_pos hb] at h ⊢
-  simp only [show (1 : Word) ≠ 0 from by decide, if_false] at h
+  rw [ite_eq_left hb] at h ⊢
+  simp only [show (1 : Word) ≠ 0 from by decide, ite_false] at h
   by_cases hn : nP = 2
   rotate_left
   · have : dw (m.arr64 DECL) i.toNat 4 ≠ 2 := fun h2 => hn (by rw [← hnP, h2]; rfl)
-    rw [if_pos this] at h
+    rw [ite_eq_left this] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨false, a, ?_, hS, IWGrow.refl m, by simp [decW0B]⟩
     simp [hn]; rfl
   subst hn
   have h2 : dw (m.arr64 DECL) i.toNat 4 = 2 := UInt64.toNat_inj.mp (by rw [hnP]; rfl)
-  rw [if_neg (by rw [h2]; decide)] at h
+  rw [ite_eq_right (by rw [h2]; decide)] at h
   -- `ind_block_to_erec`
   cases h1 : callW p n "ind_block_to_erec" [i] m with
   | none => rw [h1] at h; cases h
@@ -367,7 +366,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   have hrun4 := AM.run_of_ok _ _ hok4
   refine ⟨AM.res (canonEqList block pinned) a1, AM.st (canonEqList block pinned) a1, ?_, hS4,
     hg1.trans (hg2.trans (hg3.trans hg4)), ?_⟩
-  · rw [if_pos (by rfl)]
+  · rw [ite_eq_left (by rfl)]
     simp only [StateT.run_bind, hrun1, exc_ok_bind']
     exact hrun4
   · exact ⟨hd4.1, hd4.2⟩
@@ -402,8 +401,8 @@ theorem andpW_one {p : Prog} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
   | zero => simp [andpW] at h
   | succ n =>
   rw [andpW_step] at h
-  have hfl : ¬ rdW (m.arr64 PINS) 0 = 0 := fun hfl => by rw [if_pos hfl] at h; cases h
-  rw [if_neg hfl, if_neg hk] at h
+  have hfl : ¬ rdW (m.arr64 PINS) 0 = 0 := fun hfl => by rw [ite_eq_left hfl] at h; cases h
+  rw [ite_eq_right hfl, ite_eq_right hk] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   exact ⟨hfl, h.2.symm, h.1.symm⟩
 

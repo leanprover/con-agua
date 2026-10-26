@@ -12,7 +12,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 namespace L.Ind
 
@@ -174,8 +173,8 @@ theorem memGuard_iff (tgt k8 : Nat) (k : Word) (ht : tgt < 2 ^ 64) (hk8 : k8 < 2
       (tgt == (decON k8).getD k.toNat) = true := by
   by_cases hz : k8 = 0
   · subst hz
-    simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, if_false, decON,
-      if_true, Option.getD_none, beq_iff_eq]
+    simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, ite_false, decON,
+      ite_true, Option.getD_none, beq_iff_eq]
     constructor
     · intro h; have := congrArg UInt64.toNat h; rwa [UInt64.toNat_ofNat_of_lt' ht] at this
     · intro h; rw [h]; exact UInt64.ofNat_toNat
@@ -183,7 +182,7 @@ theorem memGuard_iff (tgt k8 : Nat) (k : Word) (ht : tgt < 2 ^ 64) (hk8 : k8 < 2
     have e1 : (UInt64.ofNat k8 - 1 : Word) = UInt64.ofNat (k8 - 1) := by
       obtain ⟨j, rfl⟩ : ∃ j, k8 = j + 1 := ⟨k8 - 1, by omega⟩
       simp [UInt64.ofNat_add]
-    simp only [hz', ne_eq, not_false_eq_true, if_true, e1, decON, hz, if_false, Option.getD_some, beq_iff_eq]
+    simp only [hz', ne_eq, not_false_eq_true, ite_true, e1, decON, hz, ite_false, Option.getD_some, beq_iff_eq]
     constructor
     · intro h; exact rec2W_inj ht (by omega) h
     · intro h; rw [h]
@@ -260,13 +259,13 @@ theorem rgW_pass (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGe
     rw [hmem]; simp only [decON]
     by_cases hz : k8 = 0
     · subst hz
-      simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, if_false,
+      simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, ite_false,
         Decidable.not_not] at c1
       have := congrArg UInt64.toNat c1
       rw [UInt64.toNat_ofNat_of_lt' tglt] at this
       simp [this]
     · have hz' : (UInt64.ofNat k8 : Word) ≠ 0 := fun e => hz (rec2W_inj k8lt (by decide) e)
-      simp only [hz', ne_eq, not_false_eq_true, if_true, Decidable.not_not] at c1
+      simp only [hz', ne_eq, not_false_eq_true, ite_true, Decidable.not_not] at c1
       have e1 : (UInt64.ofNat k8 - 1 : Word) = UInt64.ofNat (k8 - 1) := by
         obtain ⟨j, rfl⟩ : ∃ j, k8 = j + 1 := ⟨k8 - 1, by omega⟩
         simp [UInt64.ofNat_add]
@@ -301,7 +300,7 @@ theorem rgE_claim {γ : Type} {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFn
     (h : RtoProg p)
     (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen)
     (RS : RecShape) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
-    (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS) (hA : AbsOK m)
+    (_hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS) (_hA : AbsOK m)
     (rest : AM γ) (e : Err)
     (he : classRecTyOkGuardsE p (n + 1) m g k rc c = .error e) :
     ErrClaim (do

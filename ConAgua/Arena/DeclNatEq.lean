@@ -9,9 +9,6 @@ slice of pointers to two-word records `[lhs, rhs]` (`EqL`).
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -142,7 +139,7 @@ theorem CallRef.simP {α β γ : Type} {f : FnName} {args : List Word} {pre : Me
     exact h2 r1 m1 hq r m' e
 
 theorem recAt_of_post {m m1 : Mem} {r : List Word} {a b : Word} (h : RecPost m m1 r [a, b])
-    (hI : IWOK m) : RecAt m1 (r.headD 0) a b := by
+    (_hI : IWOK m) : RecAt m1 (r.headD 0) a b := by
   obtain ⟨hq, hK, hroom, htop, hget⟩ := h
   have hq' : (r.headD 0).toNat = iwTop m := by rw [hq]; rfl
   refine ⟨by rw [hq']; simp at htop; omega, ?_, ?_⟩
@@ -215,7 +212,7 @@ theorem natEqList2_ref (hN : NatEqProg p) (a1 b1 a2 b2 : Word) :
   rw [natEqList2W.arm1]
   refine recs_step hN hS (.refl m) (.nil m) ha1 hb1 fun r1 m1 hS1 hG1 hR1 => ?_
   refine recs_step hN hS1 hG1 hR1 ha2 hb2 fun r2 m2 hS2 hG2 hR2 => ?_
-  exact emit_sim hN.lIwAlloc hS2 hG2 hR2 rfl fun _ _ => by simp [wrIW, UInt64.add_assoc]
+  exact emit_sim hN.lIwAlloc hS2 hG2 hR2 rfl fun _ _ => by simp [wrIW]
 
 /-- **`nat_eq_list3` is its model `natEqList3W`** (generated). -/
 l_model natEqList3_specW (p : Prog) (hp : p.lookup "nat_eq_list3" = some natEqList3)

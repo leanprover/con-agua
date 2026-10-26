@@ -11,7 +11,6 @@ pool growth (`perturb`), and changing it changes the decoding — the word is de
 (`ptr_lt_of_stab`). Then the decoding reads the same in the cut pools.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open scoped Lean.Order
@@ -125,7 +124,7 @@ theorem decCS_minor_eq {m : Mem} {sp c : Nat} {cc : NIdx} {ihs : List (Nat × Na
   obtain ⟨t, ht, h⟩ := h
   rcases t with _ | _ | t
   · exfalso
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    simp only [Option.bind_eq_some_iff] at h
     obtain ⟨_, _, _, _, e⟩ := h
     cases e
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h

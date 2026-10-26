@@ -9,8 +9,6 @@ import ConAgua.Arena.IndT.PosCtors
 holes (`frameHoles_run`), the constructors walked (the block's `CtorsOKC` at `n`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext dOut dCtors dGrp kindOf)
@@ -44,14 +42,14 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
         | [] => internNNode .anonymous
         | (c, _) :: _ => pure c : AM NIdx).run a = .ok (decI (rn.headD 0), a1) := by
     by_cases h0 : gL = 0
-    · rw [if_pos h0]
+    · rw [ite_eq_left h0]
       have : grp = [] := List.eq_nil_of_length_eq_zero (by rw [← hgl, h0]; rfl)
       subst this
       rcases hst : naF m [] with _ | ⟨rn, m1⟩; · exact Or.inl rfl
       obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := naF_ok dn vis fe m m1 a rn hst hS
       exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.of_frame (naF_frame hst) (by simp [NAREC, NASLOT]) (by simp),
         naF_afr hst, hxH, by rw [hxd]; exact hrun⟩
-    · rw [if_neg h0]
+    · rw [ite_eq_right h0]
       obtain ⟨⟨cg, tg⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
         cases grp with
         | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hgl)) h0
@@ -92,13 +90,13 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
   have hrnb : ¬ 4294967296 ≤ rn.headD 0 := by
     have : ¬ (4294967296 : Word).toNat ≤ (rn.headD 0).toNat := by simpa using hrnH
     exact fun e => this (UInt64.le_iff_toNat_le.mp e)
-  rw [if_neg hrnb] at h
+  rw [ite_eq_right hrnb] at h
   -- the instantiation `hn.{us} ds`, typed
   rcases hic : ceinternW m1 (rn.headD 0) us with _ | ⟨hc', m2⟩ <;> rw [hic] at h; · simp [nbFrameK2] at h
   rw [nbFrameK2_some] at h
   by_cases hcb : 4294967296 ≤ hc'
-  · rw [if_pos hcb] at h; cases h
-  rw [if_neg hcb] at h
+  · rw [ite_eq_left hcb] at h; cases h
+  rw [ite_eq_right hcb] at h
   have hcH : H hc' := by
     have : ¬ (4294967296 : Word).toNat ≤ hc'.toNat := fun e => hcb (UInt64.le_iff_toNat_le.mpr e)
     simp only [H]; simpa using this
@@ -163,11 +161,11 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
     rw [ConLeche.Cached.frameHoles, List.mapIdx_eq_zipIdx_map]
   rw [hholesEq] at hholesP
   by_cases hov : hi + gL < hi
-  · rw [if_pos hov] at h; cases h
-  rw [if_neg hov] at h
+  · rw [ite_eq_left hov] at h; cases h
+  rw [ite_eq_right hov] at h
   by_cases hov2 : dL + gL < dL
-  · rw [if_pos hov2] at h; cases h
-  rw [if_neg hov2] at h
+  · rw [ite_eq_left hov2] at h; cases h
+  rw [ite_eq_right hov2] at h
   have hhg : (hi + gL).toNat = hi.toNat + gL.toNat := pos2_word_add hov
   have hdg : (dL + gL).toNat = dL.toNat + gL.toNat := pos2_word_add hov2
   have hg47 := (hg5.trans hg6).trans hg7

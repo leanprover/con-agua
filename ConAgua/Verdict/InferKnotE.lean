@@ -19,9 +19,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
-set_option linter.unusedVariables false
 
 namespace L.Arena
 
@@ -102,7 +99,7 @@ theorem inferConstIOT_err (fe : IFEnv) (n : NIdx) (us : LsIdx) (a : AState) (ce 
   have hl := LsStore.viewLen_of_view _ _ _ hv
   have e1 : (viewLs us).run a = .ok (ids, a) := viewLs_run us a ids hv
   have e2 : (viewLsLen us).run a = .ok (some ids.length, a) := by
-    simp [viewLsLen, hl, StateT.run_bind, StateT.run_get]; rfl
+    simp [viewLsLen, hl, StateT.run_get]; rfl
   rw [e1] at h; rw [e2]
   simp only [except_ok_bind] at h ⊢
   exact h
@@ -483,9 +480,9 @@ theorem infer_refinesE (p : Prog) (hp : KnotProg p) (hnv : closedNV p L.Checker.
   subst hm₁
   subst hr
   by_cases h1' : (mfindG inSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
-  · simp only [inferE.k_in_find] at hW; rw [if_pos h1'] at hW; cases hW
+  · simp only [inferE.k_in_find] at hW; rw [ite_eq_left h1'] at hW; cases hW
   have hmiss := (hS.core.inf.findE hS.core.eb1 e he hne).2 (by simpa using h1')
-  simp only [inferE.k_in_find] at hW; rw [if_neg h1'] at hW
+  simp only [inferE.k_in_find] at hW; rw [ite_eq_right h1'] at hW
   cases h2 : callE p n "infer_body" [mode, vis, d, e] s₀.mem with
   | error e2 =>
     rw [h2, inferE.k_infer_body.none] at hW; cases hW
@@ -536,9 +533,9 @@ theorem inferIO_refinesE (p : Prog) (hp : KnotProg p) (hnv : closedNV p L.Checke
   subst hm₁
   subst hr
   by_cases h1' : (mfindG ioSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
-  · simp only [inferIOE.k_io_find] at hW; rw [if_pos h1'] at hW; cases hW
+  · simp only [inferIOE.k_io_find] at hW; rw [ite_eq_left h1'] at hW; cases hW
   have hmiss := (hS.core.io.findE hS.core.eb1 e he hne).2 (by simpa using h1')
-  simp only [inferIOE.k_io_find] at hW; rw [if_neg h1'] at hW
+  simp only [inferIOE.k_io_find] at hW; rw [ite_eq_right h1'] at hW
   cases h2 : callE p n "infer_body_io" [mode, vis, d, e] s₀.mem with
   | error e2 =>
     rw [h2, inferIOE.k_infer_body_io.none] at hW; cases hW

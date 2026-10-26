@@ -307,7 +307,7 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
       obtain ⟨-, -, hd1⟩ := u64_dec rom hr (pos + 1) hu
       refine ⟨.bvar (u64W rom (pos + 1)).toNat, rom.drop ((pos + 1).toNat + 8), ?_,
         by simp only [exprFits, decide_eq_true_eq]; exact UInt64.toNat_lt _⟩
-      simp only [encExprM, UInt64.toNat_ofNat_of_lt (UInt64.toNat_lt _)]
+      simp only [encExprM]
       rw [hdrop, ← hpos1 hpos, hd1]; simp
     · -- sort
       obtain ⟨hpos, hdrop⟩ := romB_tag rom pos 1 (by decide) (by rw [h0]; rfl)

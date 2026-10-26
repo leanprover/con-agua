@@ -12,7 +12,6 @@ read-only), the arguments' check (`internConstE_run`, `mkAppN_run`; `nestOcc` re
 `tcmF_okC`.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -161,12 +160,12 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     have hne : le ≠ me := by intro hq; rw [hq] at he; simp at he; exact absurd he (by rw [he0]; decide)
     refine ⟨false, a2, ?_, rfl, hC2, hg12, hP2, hA2⟩
     have : (le != me) = true := by simpa using hne
-    simp only [tkArgs, StateT.run_bind, run1, except_ok_bind, run2, this, if_true]; rfl
+    simp only [tkArgs, StateT.run_bind, run1, except_ok_bind, run2, this, ite_true]; rfl
   rw [tkaK3_yes (h := he0)] at h
   have heq : le = me := by
     by_cases hq : le = me
     · exact hq
-    · rw [if_neg hq] at he; exact absurd he he0
+    · rw [ite_eq_right hq] at he; exact absurd he he0
   subst heq
   -- the leaf's class
   rcases h4 : ceinternW m2 ip usp with _ | ⟨hd, m3⟩ <;> rw [h4] at h <;>
@@ -221,7 +220,7 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     subst this
     refine ⟨false, a4, ?_, rfl, hC6, hg06, hP6, hA6⟩
     simp only [tkArgs, StateT.run_bind, run1, except_ok_bind, run2, bne_self_eq_false, Bool.false_eq_true,
-      if_false, ConRon.Arena.internConstE, run3, hrun4, run6]
+      ite_false, ConRon.Arena.internConstE, run3, hrun4, run6]
     rfl
   rw [tkaK7_yes (h := ho)] at h
   have hb1 : b = true := by rw [← hb6]; simpa using ho
@@ -249,7 +248,7 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   rw [hlvD] at run8
   refine ⟨c, a8, ?_, by simpa using hc, hC8, hg06.trans hg8, hP8, hA8⟩
   simp only [tkArgs, StateT.run_bind, run1, except_ok_bind, run2, bne_self_eq_false, Bool.false_eq_true,
-    if_false, ConRon.Arena.internConstE, run3, hrun4, run6, if_true]
+    ite_false, ConRon.Arena.internConstE, run3, hrun4, run6, ite_true]
   exact run8
 
 include hq henv in
@@ -303,7 +302,7 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
     have : ¬ (decE (rl.headD 0)).tag = ETag.const := fun e => t1 ((decE_tag_const _ hlhH).mp e)
     have hb : ((decE (rl.headD 0)).tag == ETag.const) = false := by rw [beq_eq_false_iff_ne]; exact this
     simp only [tkHeads, StateT.run_bind, run1, except_ok_bind, run2, hb, Bool.false_and,
-      Bool.false_eq_true, if_false]
+      Bool.false_eq_true, ite_false]
     rfl
   by_cases t2 : rm.headD 0 >>> 28 ≠ 3
   · rw [tkhK2_m (h := t1) (h2 := t2)] at h
@@ -312,7 +311,7 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
     have : ¬ (decE (rm.headD 0)).tag = ETag.const := fun e => t2 ((decE_tag_const _ hmhH).mp e)
     have hb : ((decE (rm.headD 0)).tag == ETag.const) = false := by rw [beq_eq_false_iff_ne]; exact this
     simp only [tkHeads, StateT.run_bind, run1, except_ok_bind, run2, hb, Bool.and_false,
-      Bool.false_eq_true, if_false]
+      Bool.false_eq_true, ite_false]
     rfl
   have t1' : rl.headD 0 >>> 28 = 3 := by simpa using t1
   have t2' : rm.headD 0 >>> 28 = 3 := by simpa using t2
@@ -357,7 +356,7 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
         (pure false : AM Bool) else tkArgs fe bs formerTys TM (decI ip) (decI usp) la ma).run a := by
     have hc2 : ((decE (rm.headD 0)).tag == ETag.const) = true := by rw [beq_iff_eq]; exact c2
     simp only [tkHeads, StateT.run_bind, run1, except_ok_bind, run2, ct1, hc2, Bool.and_self,
-      if_true, vr1, vr2, run3, run4]
+      ite_true, vr1, vr2, run3, run4]
   by_cases hi : ip ≠ ii
   · rw [tkhK4_i (h := hi)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
@@ -387,7 +386,7 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
     (hbs.grow hg14) (by rw [decHL_grow hg14 hftb]; exact hft) (by have := hg14.1; omega)
     (hMc.grow (decTM_mono _) hg14) hipH husH hla4 hma4 hP4 hsh hftP hMcP hI' hus' hlaP hmaP hformer hMs
   refine ⟨c, a5, ?_, by simpa using hc, hC5, hg14.trans hg5, hP5, hA5⟩
-  rw [hpre]; simp only [beq_self_eq_true, hll, Bool.and_self, Bool.not_true, Bool.false_eq_true, if_false]
+  rw [hpre]; simp only [beq_self_eq_true, hll, Bool.and_self, Bool.not_true, Bool.false_eq_true, ite_false]
   exact run5
 
 include hq henv in
@@ -452,7 +451,7 @@ theorem tkW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     have : c1 = false := by rw [← hc1, hz]; rfl
     subst this
     refine ⟨false, a2, ?_, rfl, hC2, hg12, hP2, hA2⟩
-    simp only [StateT.run_bind, run1, except_ok_bind, run2, Bool.false_eq_true, if_false]; rfl
+    simp only [StateT.run_bind, run1, except_ok_bind, run2, Bool.false_eq_true, ite_false]; rfl
   rw [tkK2_ok (h := hz)] at h
   have : c1 = true := by rw [← hc1]; simpa using hz
   subst this
@@ -467,7 +466,7 @@ theorem tkW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     (denote_ext hmdP q2.ext) hformer hMs
   refine ⟨c, a3, ?_, by simpa using hc, hC3, hg12.trans hg3, hP3, hA3⟩
   rw [hlwD] at run3
-  simp only [StateT.run_bind, run1, except_ok_bind, run2, if_true]
+  simp only [StateT.run_bind, run1, except_ok_bind, run2, ite_true]
   exact run3
 
 include hq henv in

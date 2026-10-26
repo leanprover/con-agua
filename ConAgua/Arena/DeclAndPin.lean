@@ -25,7 +25,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -113,7 +112,7 @@ theorem decI_iff {k : IdxKind} (x y : Word) (hx : x.toNat < 2 ^ 32) (hy : y.toNa
   · intro h
     simp only [decI] at h
     have h' := congrArg (fun z : Idx k => z.word) h
-    simp only [Idx.ofWord] at h'
+    simp only at h'
     have := congrArg UInt32.toNat h'
     simp [UInt64.toNat_toUInt32] at this
     apply UInt64.toNat_inj.mp
@@ -142,7 +141,7 @@ theorem andPinNameFree_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (w : 
     simp only [andPinNameFree, andPinNameHs, pinAnd, pinAndIntro, pinAndRec, PIN_AND, PIN_AND_INTRO,
       PIN_AND_REC, StateT.run_bind, e1]
     simp only [bind, Except.bind]
-    rw [e2]; simp only [Except.bind]
+    rw [e2]; simp only
     rw [e3]; rfl
   rw [e]
   congr
@@ -150,7 +149,7 @@ theorem andPinNameFree_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (w : 
   have k2 := decI_iff (k := .name) _ _ hl l2
   have k3 := decI_iff (k := .name) _ _ hl l3
   by_cases h1 : lo32 w = pinW m 12 <;> by_cases h2 : lo32 w = pinW m 49 <;>
-    by_cases h3 : lo32 w = pinW m 50 <;> simp_all [List.contains_cons, eq_comm]
+    by_cases h3 : lo32 w = pinW m 50 <;> simp_all [eq_comm]
 
 /-- `andPinOk` on a record the front produces is the name test. -/
 theorem andPinOk_run {D P : Array Word} {i : Nat} {d : IDeclaration} (hd : DeclAt D P i d)
@@ -170,20 +169,20 @@ theorem andPinOk_run {D P : Array Word} {i : Nat} {d : IDeclaration} (hd : DeclA
 theorem andPinOk_refines {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
     (hp : p.lookup "and_pin_ok" = some andPinOkL) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (i : Word) (hi : i.toNat < ds.size), (∀ b k, dsAt ds i ≠ .indDecl b k) →
+      (i : Word) (_hi : i.toNat < ds.size), (∀ b k, dsAt ds i ≠ .indDecl b k) →
       LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "and_pin_ok" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe pend ds ∧
       AM.res (andPinOk (dsAt ds i)) a₀ = (r.headD 0 != 0); ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i hi hone hR
+  intro n s₀ a₀ vis fe pend i _hi hone hR
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hk⟩ := M.of_run (P := fun s => s = s₀) hs hrun (andPinOk_specW p hp n s₀ i)
   subst hs
   have hdecl : DeclAt (s.mem.arr64 DECL) (s.mem.arr64 DLP) i.toNat (dsAt ds i) := by
-    have := hR.decls.recs i.toNat hi
-    exact declAt_of_F (by simpa [dsAt, Array.getD, hi] using this) hone
+    have := hR.decls.recs i.toNat _hi
+    exact declAt_of_F (by simpa [dsAt, Array.getD, _hi] using this) hone
   have hk6 : rdW (s.mem.arr64 DECL) (1 + 8 * i) ≠ 6 := by
     have h1 := hR.decls.room
     have h2 := hR.decls.dsize

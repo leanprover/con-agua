@@ -11,7 +11,6 @@ spec's proof: `exprGetD` (`exprGetD_spec`), `fvarTypeD` and `stripPis` (read-onl
 `classNodesAgree_spec` on its run for the extension).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -257,7 +256,7 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   refine ⟨a6, ?_, hC6, hg05.trans hg6, hP6, hA6⟩
   rw [hi1, hj1] at run6
   rw [hrec, ConRon.Arena.classFieldsAgree]
-  simp only [StateT.run_bind, run0, except_ok_bind, run1, run2, run3, run4, if_true, run5]
+  simp only [StateT.run_bind, run0, except_ok_bind, run1, run2, run3, run4, ite_true, run5]
   rw [decE_eq, hlwD] at run6
   exact run6
 

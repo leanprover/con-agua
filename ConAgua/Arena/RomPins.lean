@@ -25,7 +25,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Rom
 
@@ -143,7 +142,7 @@ theorem pinW_set (m : Mem) (d h : Word) (i : Nat) (hd : d.toNat < (m.arr64 PINS)
 def PinA : List ArrId := PINS :: StoreA
 
 theorem frame_pinA {m m' : Mem} (h : MemFrame StoreA StoreC m m') : MemFrame PinA StoreC m m' :=
-  h.mono (fun b hb => List.mem_cons_of_mem _ hb) (fun _ hx => hx)
+  h.mono (fun _b hb => List.mem_cons_of_mem _ hb) (fun _ hx => hx)
 
 section namesToRef
 variable (rom : List UInt8) (hr : RomOK rom)
@@ -228,7 +227,7 @@ theorem romNamesToW_ok (ns : List ConLeche.Name) (hns : ns.all nameFits = true) 
         have hp := hkeep2 d.toNat (.inl (by omega))
         rw [pinW_set _ _ _ _ hdlt] at hp
         simp only [↓reduceIte] at hp
-        simp only [List.getElem?_cons_zero, Nat.add_zero, hp, res1, Option.some.injEq, true_and]
+        simp only [List.getElem?_cons_zero, Nat.add_zero, hp, res1, true_and]
         exact hlt1
       | succ j =>
         obtain ⟨e1, e2⟩ := hres2 j (by simp at hj; omega)
@@ -577,7 +576,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
       rw [hlo _ (by omega) (by omega)]
       have := (hj1 i hi).1
       simp only [Nat.add_comm 1 i] at this ⊢
-      simp only [Array.getElem_toList, List.getElem_toArray]
+      simp only [List.getElem_toArray]
       rw [List.getElem?_eq_getElem (by omega)] at this
       exact Option.some.inj this
     · rw [h52, h53, h54]

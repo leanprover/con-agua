@@ -8,8 +8,6 @@ name tables; the expression store (and `LitInj`) is untouched.
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -106,12 +104,12 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     intro m m' a i n r h hS hin hP
     rw [gnW_succ] at h
     by_cases hn : n = 0
-    · rw [if_pos hn] at h
+    · rw [ite_eq_left hn] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hn
       refine ⟨[], a, ?_, hS, IWGrow.refl _, ⟨by simp [decHL, hslice?], by simp⟩, rfl, hP⟩
       simp [ConRon.Arena.canonNamesGo]; rfl
-    rw [if_neg hn] at h
+    rw [ite_eq_right hn] at h
     have hn1 : n.toNat = (n - 1).toNat + 1 := toNat_pred hn
     have hi1 : (i + 1).toNat = i.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; omega
@@ -119,8 +117,8 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     split at h
     · simp at h
     rename_i a1 m1 hna
-    have ha32 : ¬ 4294967296 ≤ a1 := fun ha32 => by rw [if_pos ha32] at h; simp at h
-    rw [if_neg ha32] at h
+    have ha32 : ¬ 4294967296 ≤ a1 := fun ha32 => by rw [ite_eq_left ha32] at h; simp at h
+    rw [ite_eq_right ha32] at h
     have ha1 : a1.toNat < 2 ^ 32 := by
       have : ¬ (4294967296 : Word).toNat ≤ a1.toNat := fun e => ha32 (UInt64.le_iff_toNat_le.mpr e)
       simpa using this
@@ -129,8 +127,8 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     split at h
     · simp at h
     rename_i h1 m2 hnn
-    have hh32 : ¬ 4294967296 ≤ h1 := fun hh32 => by rw [if_pos hh32] at h; simp at h
-    rw [if_neg hh32] at h
+    have hh32 : ¬ 4294967296 ≤ h1 := fun hh32 => by rw [ite_eq_left hh32] at h; simp at h
+    rw [ite_eq_right hh32] at h
     have hh1 : h1.toNat < 2 ^ 32 := by
       have : ¬ (4294967296 : Word).toNat ≤ h1.toNat := fun e => hh32 (UInt64.le_iff_toNat_le.mpr e)
       simpa using this

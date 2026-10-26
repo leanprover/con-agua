@@ -15,7 +15,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -26,19 +25,19 @@ theorem LsStore.viewLen_of_view (st : LsStore) (i : LsIdx) (ids : List LIdx)
   unfold LsStore.view at h
   unfold LsStore.viewLen LsStore.persGetLen
   split at h
-  · rw [if_pos (by assumption)]
+  · rw [ite_eq_left (by assumption)]
     unfold LsTables.get at h; unfold LsTables.getLen
     split at h
-    · rw [if_pos (by assumption)]
+    · rw [ite_eq_left (by assumption)]
       cases e : i |> fun _ => (st.pers.lists.node? i.idxNat) with
       | none | some r => simp_all
     · cases h
-  · rw [if_neg (by assumption)]
+  · rw [ite_eq_right (by assumption)]
     split at h
-    · rw [if_pos (by assumption)]
+    · rw [ite_eq_left (by assumption)]
       unfold LsTables.get at h; unfold LsTables.getLen
       split at h
-      · rw [if_pos (by assumption)]
+      · rw [ite_eq_left (by assumption)]
         cases e : (st.scr.lists.node? i.idxNat) with
         | none | some r => simp_all
       · cases h
@@ -89,7 +88,7 @@ theorem inferConstIOT_of_T (fe : IFEnv) (n : NIdx) (us : LsIdx) (a : AState) (x 
   have hl := LsStore.viewLen_of_view _ _ _ hv
   have e1 : (viewLs us).run a₁ = .ok (ids, a₁) := viewLs_run us a₁ ids hv
   have e2 : (viewLsLen us).run a₁ = .ok (some ids.length, a₁) := by
-    simp [viewLsLen, hl, StateT.run_bind, StateT.run_get]; rfl
+    simp [viewLsLen, hl, StateT.run_get]; rfl
   rw [e1] at h; rw [e2]
   simp only [except_ok_bind] at h ⊢
   exact h
@@ -202,7 +201,7 @@ theorem inferBody_spec (p : Prog) (hq : InferAllProg p) (n : Nat) (s₀ : St) (m
       callW_spec p n "intern_succ", callW_spec p n "intern_sort", callW_spec p n "infer_const",
       callW_spec p n "infer_lit", callW_spec p n "infer_forall", callW_spec p n "infer_lam",
       callW_spec p n "infer_app", callW_spec p n "infer_proj", callW_spec p n "infer_let"] <;>
-  simp_all [bodyK, bodyArmK, sortArmK, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+  simp_all [bodyK, bodyArmK, sortArmK, call1W, LocEq, St.setLocs_cons, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 
@@ -216,7 +215,7 @@ theorem inferBodyIO_spec (p : Prog) (hq : InferAllProg p) (n : Nat) (s₀ : St) 
       callW_spec p n "infer_lit", callW_spec p n "infer_forall_io", callW_spec p n "infer_lam_io",
       callW_spec p n "infer_app_io", callW_spec p n "infer_proj", callW_spec p n "inst1",
       callW_spec p n "infer_io"] <;>
-  simp_all [bodyIOK, bodyIOArmK, sortArmK, letIOArmK, call1W, LocEq, BinOp.eval, St.setLocs_cons,
+  simp_all [bodyIOK, bodyIOArmK, sortArmK, letIOArmK, call1W, LocEq, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
@@ -226,70 +225,70 @@ theorem eViewW_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
     (L.Ind.eViewW m h).headD 0 = h >>> 28 := by
   unfold L.Ind.eViewW at hne ⊢
   dsimp only at hne ⊢
-  have c0 : ¬ (4294967295 : Word) < h := fun c0 => by rw [if_pos c0] at hne; exact absurd rfl hne
-  rw [if_neg c0] at hne ⊢
-  have c1 : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c1 => by rw [if_pos c1] at hne; exact absurd rfl hne
-  rw [if_neg c1] at hne ⊢
+  have c0 : ¬ (4294967295 : Word) < h := fun c0 => by rw [ite_eq_left c0] at hne; exact absurd rfl hne
+  rw [ite_eq_right c0] at hne ⊢
+  have c1 : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c1 => by rw [ite_eq_left c1] at hne; exact absurd rfl hne
+  rw [ite_eq_right c1] at hne ⊢
   by_cases g0 : h >>> 28 = 0
-  · rw [if_pos g0] at hne ⊢
+  · rw [ite_eq_left g0] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g0]; rfl
-  rw [if_neg g0] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g0]; rfl
+  rw [ite_eq_right g0] at hne ⊢
   by_cases g1 : h >>> 28 = 1
-  · rw [if_pos g1] at hne ⊢
+  · rw [ite_eq_left g1] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g1]; rfl
-  rw [if_neg g1] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g1]; rfl
+  rw [ite_eq_right g1] at hne ⊢
   by_cases g2 : h >>> 28 = 2
-  · rw [if_pos g2] at hne ⊢
+  · rw [ite_eq_left g2] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g2]; rfl
-  rw [if_neg g2] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g2]; rfl
+  rw [ite_eq_right g2] at hne ⊢
   by_cases g3 : h >>> 28 = 3
-  · rw [if_pos g3] at hne ⊢
+  · rw [ite_eq_left g3] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g3]; rfl
-  rw [if_neg g3] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g3]; rfl
+  rw [ite_eq_right g3] at hne ⊢
   by_cases g4 : h >>> 28 = 4
-  · rw [if_pos g4] at hne ⊢
+  · rw [ite_eq_left g4] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g4]; rfl
-  rw [if_neg g4] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g4]; rfl
+  rw [ite_eq_right g4] at hne ⊢
   by_cases g5 : h >>> 28 = 5
-  · rw [if_pos g5] at hne ⊢
+  · rw [ite_eq_left g5] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g5]; rfl
-  rw [if_neg g5] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g5]; rfl
+  rw [ite_eq_right g5] at hne ⊢
   by_cases g6 : h >>> 28 = 6
-  · rw [if_pos g6] at hne ⊢
+  · rw [ite_eq_left g6] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g6]; rfl
-  rw [if_neg g6] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g6]; rfl
+  rw [ite_eq_right g6] at hne ⊢
   by_cases g7 : h >>> 28 = 7
-  · rw [if_pos g7] at hne ⊢
+  · rw [ite_eq_left g7] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g7]; rfl
-  rw [if_neg g7] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g7]; rfl
+  rw [ite_eq_right g7] at hne ⊢
   by_cases g8 : h >>> 28 = 8
-  · rw [if_pos g8] at hne ⊢
+  · rw [ite_eq_left g8] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g8]; rfl
-  rw [if_neg g8] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g8]; rfl
+  rw [ite_eq_right g8] at hne ⊢
   by_cases g9 : h >>> 28 = 9
-  · rw [if_pos g9] at hne ⊢
+  · rw [ite_eq_left g9] at hne ⊢
     split at hne
     · exact absurd rfl hne
-    · rename_i hc; rw [if_neg hc, g9]; rfl
-  rw [if_neg g9] at hne ⊢
+    · rename_i hc; rw [ite_eq_right hc, g9]; rfl
+  rw [ite_eq_right g9] at hne ⊢
   exact absurd rfl hne
 
 section arms

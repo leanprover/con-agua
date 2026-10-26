@@ -15,9 +15,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
-set_option linter.unusedVariables false
 
 namespace L.Arena
 
@@ -86,7 +83,7 @@ theorem pisOutE_cls0 (p : Prog) (hnv : closedNV p L.Checker.nvFns = true) :
 opening and the outward rebuild claim nothing. -/
 theorem inferLamsLeaf_refinesE (p : Prog) (hq : BindProg p) (hil : InstListOK p)
     (hnv : closedNV p L.Checker.nvFns = true) (n : Nat)
-    (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St)
+    (_hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d t k fo lo : Word) (fvs : Array EIdx) (ws : Array Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ht : HW t) (hf : SpineR s₀.mem fo k fvs)
@@ -231,7 +228,7 @@ theorem CoreS.ctl137 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   obtain ⟨mp, h⟩ := hS.memos.2.2.2.2.1
   unfold MemoRG MemoRV at h
   have := h.1
-  simp only [coreLsbSch] at this
+  simp only at this
   have e : (156 : Word).toNat = 156 := rfl
   omega
 
@@ -262,7 +259,7 @@ theorem inferLamsLeaf_anyE (p : Prog) (hq : BindProg p) (hil : InstListOK p)
 /-- **The λ peel loop with its leaf claims `inferLams`' failure** (by induction on the loop fuel,
 as `lamsFull_ref`): a domain's type (the `infer` slot), its `whnf` (the slot), a domain type that
 is no sort (a reject), the leaf's. -/
-theorem lamsFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
+theorem lamsFullE_ref (p : Prog) (_hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
     (hil : InstListOK p) (hnv : closedNV p L.Checker.nvFns = true) (hcap : BStkCap)
     (N : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (F : Nat) (hFN : N ≤ F) (hN : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode d fo lo eb : Word)
@@ -299,7 +296,7 @@ theorem lamsFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : 
     have hbtop : lo.toNat + k.toNat ≤ (bTop m).toNat := by rw [hbt, haddl]; exact Nat.le_refl _
     have h0 : (0 : Word).toNat = 0 := rfl
     by_cases hc : peel ≠ 0 ∧ t >>> 28 = 5
-    · rw [if_pos hc] at hF
+    · rw [ite_eq_left hc] at hF
       obtain ⟨hp0, ht5⟩ := hc
       split at hF
       · rw [inferLamsE.k_loop1.none] at hF
@@ -369,11 +366,11 @@ theorem lamsFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : 
       have hrw3 := h₃.2.2.2
       refine ErrClaim.bind_ref h₃ ?_
       by_cases g1 : r₃.headD 0 >>> 28 ≠ 2
-      · rw [if_pos g1, inferLamsE.k_loop1.none] at hF; cases hF
+      · rw [ite_eq_left g1, inferLamsE.k_loop1.none] at hF; cases hF
         simp only [show decH r₃ = decE (r₃.headD 0) from rfl, tag_sort_ne _ hrw3 g1,
           Bool.false_eq_true, ↓reduceIte]
         exact ErrClaim.fail _ _ rfl
-      rw [if_neg g1] at hF
+      rw [ite_eq_right g1] at hF
       have g1' : r₃.headD 0 >>> 28 = 2 := by simpa using g1
       simp only [show decH r₃ = decE (r₃.headD 0) from rfl, tag_sort_beq _ hrw3 g1', ↓reduceIte,
         internFVarE]
@@ -393,7 +390,7 @@ theorem lamsFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : 
       have hrw4 := h₄.2.2.2
       have hB₄ : BKept m₃ m₄ := by
         exact BKept.of_frame ((fvinternW_frame (hI := hfv)))
-          (by simp [fvarSch, FVREC, FVSLOT, FVLP, BSTK]) (by simp [fvarSch])
+          (by simp [FVREC, FVSLOT, FVLP, BSTK]) (by simp)
       refine ErrClaim.bind_ref h₄ ?_
       split at hF
       · rw [inferLamsE.k_loop1.none] at hF
@@ -434,7 +431,7 @@ theorem lamsFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : 
         (hbszT.trans (hBK.2.1.trans hbsz0)) ((hpg0.trans hSt14.pool).trans hpgT) er hk0 hF
       rw [hk1, hpeel1, hp', Nat.add_sub_cancel, Array.map_push] at hih
       exact hih
-    · rw [if_neg hc, inferLamsE.k_loop1.eq_2] at hF
+    · rw [ite_eq_right hc, inferLamsE.k_loop1.eq_2] at hF
       cases hL : callE p N "infer_lams_leaf" [mode, vis, d, t, k, fo, lo] m with
       | error e1 =>
         rw [hL, inferLamsE.k_infer_lams_leaf.none] at hF; cases hF
@@ -546,7 +543,7 @@ theorem pisFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
     have hbtop : lo.toNat + k.toNat ≤ (bTop m).toNat := by rw [hbt, haddl]; exact Nat.le_refl _
     have h0 : (0 : Word).toNat = 0 := rfl
     by_cases hc : peel ≠ 0 ∧ t >>> 28 = 6
-    · rw [if_pos hc] at hF
+    · rw [ite_eq_left hc] at hF
       obtain ⟨hp0, ht6⟩ := hc
       split at hF
       · rw [inferPisE.k_loop1.none] at hF
@@ -616,11 +613,11 @@ theorem pisFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       have hrw3 := h₃.2.2.2
       refine ErrClaim.bind_ref h₃ ?_
       by_cases g1 : r₃.headD 0 >>> 28 ≠ 2
-      · rw [if_pos g1, inferPisE.k_loop1.none] at hF; cases hF
+      · rw [ite_eq_left g1, inferPisE.k_loop1.none] at hF; cases hF
         simp only [show decH r₃ = decE (r₃.headD 0) from rfl, tag_sort_ne _ hrw3 g1,
           Bool.false_eq_true, ↓reduceIte]
         exact ErrClaim.fail _ _ rfl
-      rw [if_neg g1] at hF
+      rw [ite_eq_right g1] at hF
       have g1' : r₃.headD 0 >>> 28 = 2 := by simpa using g1
       split at hF
       · rw [inferPisE.k_loop1.none] at hF
@@ -652,7 +649,7 @@ theorem pisFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       have hrw4 := h₄.2.2.2
       have hB₄ : BKept m₃ m₄ := by
         exact BKept.of_frame ((fvinternW_frame (hI := hfv)))
-          (by simp [fvarSch, FVREC, FVSLOT, FVLP, BSTK]) (by simp [fvarSch])
+          (by simp [FVREC, FVSLOT, FVLP, BSTK]) (by simp)
       refine ErrClaim.bind_ref h₄ ?_
       split at hF
       · rw [inferPisE.k_loop1.none] at hF
@@ -687,7 +684,7 @@ theorem pisFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
         (hbszT.trans (hBK.2.1.trans hbsz0)) ((hpg0.trans hSt14.pool).trans hpgT) er hk0 hF
       rw [hk1, hpeel1, hp', Nat.add_sub_cancel, Array.map_push] at hih
       exact hih
-    · rw [if_neg hc, inferPisE.k_loop1.eq_2] at hF
+    · rw [ite_eq_right hc, inferPisE.k_loop1.eq_2] at hF
       cases hL : callE p N "infer_pis_leaf" [mode, vis, d, t, k, fo, lo] m with
       | error e1 =>
         rw [hL, inferPisE.k_infer_pis_leaf.none] at hF; cases hF
@@ -809,11 +806,11 @@ theorem inferLam_refinesE (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (h
   obtain ⟨M₂, hS₂, hK₂, hSt₂⟩ := h₂.2.1
   refine ErrClaim.bind_ref h₂ ?_
   by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
-  · rw [if_pos g1] at hW; cases hW
+  · rw [ite_eq_left g1] at hW; cases hW
     simp only [show decH r₂ = decE (r₂.headD 0) from rfl, tag_sort_ne _ h₂.2.2.2 g1,
       Bool.false_eq_true, ↓reduceIte]
     exact ErrClaim.fail _ _ rfl
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   have g1' : r₂.headD 0 >>> 28 = 2 := by simpa using g1
   simp only [show decH r₂ = decE (r₂.headD 0) from rfl, tag_sort_beq _ h₂.2.2.2 g1', ↓reduceIte,
     internFVarE]
@@ -923,11 +920,11 @@ theorem inferForall_refinesE (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
   obtain ⟨M₂, hS₂, hK₂, hSt₂⟩ := h₂.2.1
   refine ErrClaim.bind_ref h₂ ?_
   by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
-  · rw [if_pos g1] at hW; cases hW
+  · rw [ite_eq_left g1] at hW; cases hW
     simp only [show decH r₂ = decE (r₂.headD 0) from rfl, tag_sort_ne _ h₂.2.2.2 g1,
       Bool.false_eq_true, ↓reduceIte]
     exact ErrClaim.fail _ _ rfl
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   have g1' : r₂.headD 0 >>> 28 = 2 := by simpa using g1
   split at hW
   · exact absurd hW (fun h => cls_abort0 hk0 (Except.error.inj h))

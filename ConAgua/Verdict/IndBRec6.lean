@@ -5,8 +5,6 @@ import ConAgua.Verdict.IndBRec5
 # Error refinements of `class_recs_rules_ok_go`, `class_recs_rules_ok` (lane `verdicts-b`, helper `ib`)
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

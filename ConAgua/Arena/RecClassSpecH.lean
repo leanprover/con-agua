@@ -87,9 +87,9 @@ theorem readFinW_eq : readFinW cR (N + 1) m nP so sl ro rl = frK1 cR N nP so sl 
 theorem frK1_some : frK1 cR N nP so sl ro rl (some (r1, m1)) =
     frK2 so sl (crW cR N m1 nP (r1.headD 0) (r1.tail.headD 0) ro rl) := rfl
 theorem frK2_fail (h : r2.headD 0 = 0) : frK2 so sl (some (r2, m2)) = some ([0, 0], m2) := by
-  rw [frK2, if_pos h]
+  rw [frK2, ite_eq_left h]
 theorem frK2_ok (h : r2.headD 0 ≠ 0) : frK2 so sl (some (r2, m2)) =
-    frK3 (recW m2 4 [so, sl, r2.tail.headD 0, r2.tail.tail.headD 0]) := by rw [frK2, if_neg h]
+    frK3 (recW m2 4 [so, sl, r2.tail.headD 0, r2.tail.tail.headD 0]) := by rw [frK2, ite_eq_right h]
 theorem frK3_some : frK3 (some (r3, m3)) = some ([1, r3.headD 0], m3) := rfl
 theorem tsubW_le (h : b ≤ a) : tsubW a b = a - b := by simp [tsubW, h]
 theorem tsubW_gt (h : ¬ b ≤ a) : tsubW a b = 0 := by simp [tsubW, h]
@@ -100,14 +100,14 @@ theorem readW_ok (h : rl ≠ 0) : readW cR (N + 1) m p vis nP ro rl =
       (cR N "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m) := by
   simp [readW, h]
 theorem rdK1_fail (h : r1.headD 0 = 0) : rdK1 cR N p vis nP ro rl rc0 (some (r1, m1)) = some ([0, 0], m1) := by
-  rw [rdK1, if_pos h]
+  rw [rdK1, ite_eq_left h]
 theorem rdK1_ok (h : r1.headD 0 ≠ 0) : rdK1 cR N p vis nP ro rl rc0 (some (r1, m1)) =
     rdK2 cR N nP ro rl (slotsW cR N m1 p vis nP (tsubW (rdW (m1.arr64 IW) (rc0 + 1)) nP) 0 0 nP
-      (r1.tail.tail.tail.headD 0)) := by rw [rdK1, if_neg h]
+      (r1.tail.tail.tail.headD 0)) := by rw [rdK1, ite_eq_right h]
 theorem rdK2_fail (h : r2.headD 0 = 0) : rdK2 cR N nP ro rl (some (r2, m2)) = some ([0, 0], m2) := by
-  rw [rdK2, if_pos h]
+  rw [rdK2, ite_eq_left h]
 theorem rdK2_ok (h : r2.headD 0 ≠ 0) : rdK2 cR N nP ro rl (some (r2, m2)) =
-    rdK3 (readFinW cR N m2 nP (r2.tail.headD 0) (r2.tail.tail.headD 0) ro rl) := by rw [rdK2, if_neg h]
+    rdK3 (readFinW cR N m2 nP (r2.tail.headD 0) (r2.tail.tail.headD 0) ro rl) := by rw [rdK2, ite_eq_right h]
 theorem rdK3_some : rdK3 (some (r3, m3)) = some ([r3.headD 0, r3.tail.headD 0], m3) := rfl
 end arms
 

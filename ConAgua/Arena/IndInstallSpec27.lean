@@ -12,7 +12,6 @@ census theorem.
   `struct_proj_guards`); returned for the memory after.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

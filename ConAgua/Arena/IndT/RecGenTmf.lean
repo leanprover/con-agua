@@ -20,8 +20,6 @@ con-ron's steps of `targetMajorOf_spec`'s proof (`getAppArgs_run`, `getAppFn_run
 real `inst_lp_fast` meets its contract there (`IlpRd.realC`); after it `StageR` and `AbsOK`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -197,8 +195,8 @@ theorem tmtW_simC {p : Prog} (hP : TmtProg p) (hIlpf : IlpfF p) (hcore : CoreSta
   rintro r2 o m2 a2 ⟨hd2, hS2, hg2, hP2, hA2⟩
   rw [tmtK2_some]
   by_cases h2 : r2.headD 0 ≠ 2
-  · rw [if_pos h2]; exact Sim.of_none
-  rw [if_neg h2]
+  · rw [ite_eq_left h2]; exact Sim.of_none
+  rw [ite_eq_right h2]
   have ho : o = some true := by
     rcases o with _ | b
     · simp only [decLvlEq] at hd2; exact absurd (by rw [hd2]; decide) h2
@@ -264,11 +262,11 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   rw [tmoK1_some]
   simp only [List.headD_cons]
   by_cases hIq : I = pinW m (1 + (47 : Word).toNat)
-  · simp only [hIq, if_true]; exact Sim.of_none
-  simp only [hIq, if_false]
+  · simp only [hIq, ite_true]; exact Sim.of_none
+  simp only [hIq, ite_false]
   have hne : ((decI I : NIdx) == decI (pinW m (1 + (47 : Word).toNat))) = false := by
     simp only [beq_eq_false_iff_ne, ne_eq]; rw [clsDecI_inj hI hqH]; exact hIq
-  simp only [hne, Bool.false_eq_true, if_false]
+  simp only [hne, Bool.false_eq_true, ite_false]
   -- `target_ctors_of`
   refine Sim.bindK (K := tmoK2 p n vis pp I us ao al pfo pfl mno mnl) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => NcOut m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' ∧
@@ -298,12 +296,12 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   rintro r2 x m2 a2 ⟨hnc, hS2, hg2, hP2, hC2, hA2, p2⟩
   rw [tmoK2_some]
   rcases x with _ | ⟨nPc, cs⟩
-  · simp only [show r2.headD 0 = 0 from hnc, if_true]; exact Sim.of_none
+  · simp only [show r2.headD 0 = 0 from hnc, ite_true]; exact Sim.of_none
   obtain ⟨h1, hnP, hcl, hcb, hcsat⟩ := hnc
-  simp only [h1, show (1 : Word) ≠ 0 by decide, if_false]
+  simp only [h1, show (1 : Word) ≠ 0 by decide, ite_false]
   by_cases hal : al < r2.tail.headD 0
-  · simp only [hal, if_true]; exact Sim.of_none
-  simp only [hal, if_false]
+  · simp only [hal, ite_true]; exact Sim.of_none
+  simp only [hal, ite_false]
   have hT2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
   have hnal : nPc ≤ al.toNat := by
     have : ¬ al.toNat < (r2.tail.headD 0).toNat := fun h => hal (UInt64.lt_iff_toNat_lt.mpr h)
@@ -311,7 +309,7 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   have hagT : decHL (truncM m) ao.toNat al.toNat = some args := hag
   have hal' := decHL_length _ hagT
   have hlen : (args.take nPc).length = nPc := by simp; omega
-  simp only [hlen, bne_self_eq_false, Bool.false_eq_true, if_false]
+  simp only [hlen, bne_self_eq_false, Bool.false_eq_true, ite_false]
   have htake : DecB (fun m => decHL m ao.toNat (r2.tail.headD 0).toNat) m (args.take nPc) := by
     show decHL (truncM m) _ _ = _
     rw [hnP, decHL_take hagT _ hnal]
@@ -337,9 +335,9 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   rintro r3 b m3 a3 ⟨hb3, hS3, hg3, hP3, hC3, hA3, p3⟩
   rw [tmoK2b_some]
   cases b
-  · simp only [show r3.headD 0 = 0 by simpa using hb3, if_true]; exact Sim.of_none
+  · simp only [show r3.headD 0 = 0 by simpa using hb3, ite_true]; exact Sim.of_none
   have h0 : r3.headD 0 ≠ 0 := by simpa using hb3
-  simp only [h0, if_false, Bool.not_true, Bool.false_eq_true]
+  simp only [h0, ite_false, Bool.not_true, Bool.false_eq_true]
   have hg03 := hg2.trans hg3
   -- the occurrence test
   rw [← hnames]
@@ -369,9 +367,9 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   rintro r4 b m4 a4 ⟨hb4, hS4, hg4, hP4, hC4, hA4, p4⟩
   rw [tmoK3_some]
   cases b
-  · simp only [show r4.headD 0 = 0 by simpa using hb4, if_true]; exact Sim.of_none
+  · simp only [show r4.headD 0 = 0 by simpa using hb4, ite_true]; exact Sim.of_none
   have h0 : r4.headD 0 ≠ 0 := by simpa using hb4
-  simp only [h0, if_false, if_true]
+  simp only [h0, ite_false, ite_true]
   have hg04 := hg03.trans hg4
   -- the tail
   refine Sim.post (K := tmoK4) (f := fun r => [r.headD 0]) rfl (fun _ _ => rfl)
@@ -459,7 +457,7 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
   | some i =>
     rw [hfi] at hr5
     subst hr5
-    simp only [List.headD_cons, List.tail_cons, ne_eq, show (1 : Word) ≠ 0 by decide, not_false_eq_true, if_true]
+    simp only [List.headD_cons, List.tail_cons, ne_eq, show (1 : Word) ≠ 0 by decide, not_false_eq_true, ite_true]
     obtain ⟨hi, -⟩ := List.findIdx?_eq_some_iff_getElem.mp hfi
     have hie : (UInt64.ofNat i : Word).toNat = i := UInt64.toNat_ofNat_of_lt' (show i < 2 ^ 64 by omega)
     refine Sim.post (K := tmfK6) (f := fun r => [r.headD 0]) rfl (fun _ _ => rfl)
@@ -482,7 +480,7 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
   | none =>
     rw [hfi] at hr5
     subst hr5
-    simp only [List.headD_cons, List.tail_cons, ne_eq, not_true_eq_false, if_false]
+    simp only [List.headD_cons, List.tail_cons, ne_eq, not_true_eq_false, ite_false]
     refine Sim.post (K := tmfK6) (f := fun r => [r.headD 0]) rfl (fun _ _ => rfl)
       (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
         IWGrow s4.mem m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
@@ -545,14 +543,14 @@ theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
   rw [tmfK2_some]
   generalize hw : r2.headD 0 = w at hw32 hwd ⊢
   by_cases hng : w >>> 28 ≠ 3
-  · rw [if_pos hng]; exact Sim.of_none
+  · rw [ite_eq_left hng]; exact Sim.of_none
   have hg : w >>> 28 = 3 := by simpa using hng
-  rw [if_neg hng]
+  rw [ite_eq_right hng]
   have hct := ctag_iff w hw32 3 (by decide)
   have htag0 : (decE w).tag = ETag.const := hct.mpr hg
   have htag : ((decE w).tag == ETag.const) = true := by simpa using htag0
   rw [← hwd, show (decI w : EIdx) = decE w from rfl]
-  simp only [htag, if_true]
+  simp only [htag, ite_true]
   -- the view
   refine Sim.mstep (K := tmfK3 p n vis pp cao cal pfo pfl fvo fvl r1) rfl (fun _ _ => rfl) fun r3 m3 e3 => ?_
   obtain ⟨s3, rfl, hs3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩) (eView_spec p hP.ev n _ w) e3

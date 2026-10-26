@@ -8,8 +8,6 @@ buffer that starts with `romData` (`slotCall`); `rci_fresh()` empties the expres
 puts the level stack at its base (`freshCall`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP

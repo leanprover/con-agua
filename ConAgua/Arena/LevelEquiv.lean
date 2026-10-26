@@ -25,7 +25,6 @@ compared equal), Rust `kernel/level.rs:453-500`. `defaultFuel = 10^4` is the lit
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order

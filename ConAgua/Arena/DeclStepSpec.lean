@@ -14,7 +14,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -36,7 +35,7 @@ theorem IWGrow.erecPExt {m m' : Mem} (h : L.Ind.IWGrow m m') : ArrExt (erecP m) 
     rw [h2]
     have hs : i < (m'.arr64 EREC).size := by
       have := (Array.getElem?_eq_some_iff.mp (h2.trans hv)).1; exact this
-    rw [if_pos (by simp [L.Ind.erTop, erecTop] at h1 hi' ⊢; omega)]
+    rw [ite_eq_left (by simp [L.Ind.erTop, erecTop] at h1 hi' ⊢; omega)]
     exact hv
   · simp at hv
 

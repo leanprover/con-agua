@@ -127,7 +127,7 @@ theorem ld64_rdW_specE (a : ArrId) (i : Word) (s₀ : St) :
     simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
     split at hrun
     · rename_i h
-      simp only [StateT.run_pure, Except.ok.injEq, Prod.mk.injEq] at hrun
+      simp only [StateT.run_pure] at hrun
       obtain ⟨rfl, rfl⟩ := hrun
       exact ⟨rfl, by simp [rdW, h], h⟩
     · simp [StateT.lift, StateT.run, throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at hrun

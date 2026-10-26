@@ -12,7 +12,6 @@ open L.Arena
 open ConRon.Arena
 open ConRon.Arena.Frontend
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 
@@ -226,7 +225,7 @@ theorem decI_inj' {k : IdxKind} (x y : Word) (hx : x.toNat < 2 ^ 32) (hy : y.toN
     (h : (decI x : Idx k) = decI y) : x = y := by
   simp only [decI] at h
   have h' := congrArg (fun z : Idx k => z.word) h
-  simp only [Idx.ofWord] at h'
+  simp only at h'
   have := congrArg UInt32.toNat h'
   simp [UInt64.toNat_toUInt32] at this
   apply UInt64.toNat_inj.mp
@@ -299,7 +298,7 @@ theorem ctorIx_last (l : List NIdx) : ∀ (M : Std.HashMap NIdx Nat) (c : Nat) (
       simp only [List.getElem_cons_zero] at h1
       subst h1
       rw [ctorIx_absent xs _ _ _ (fun k' hk' => h2 (k' + 1) (by omega) (by simp; omega))]
-      simp [Std.HashMap.getElem?_insert]
+      simp
     | succ k =>
       rw [ih _ _ _ k (by simp at hk; omega) (by simpa using h1)
         (fun k' hk' hk'' => h2 (k' + 1) (by omega) (by simp; omega))]

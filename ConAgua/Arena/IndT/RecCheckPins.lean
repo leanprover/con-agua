@@ -12,8 +12,6 @@ proofs: `inferTypeCore` (`inferC_rsim`), the head's intern (`internConstE_run`),
 (`mkAppN_run`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -197,8 +195,8 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
   have hC2 : StageC dn vis fe env m2 a2 := hC1.of_pstep hS2 hA2 p2
   have c2 := c1.trans (p2.toCore c1.ok)
   by_cases hbig : 4294967296 ≤ hd
-  · rw [if_pos hbig] at h; cases h
-  rw [if_neg hbig] at h
+  · rw [ite_eq_left hbig] at h; cases h
+  rw [ite_eq_right hbig] at h
   have hdH : H hd := by
     have : ¬ (4294967296 : Word).toNat ≤ hd.toNat := fun x => hbig (UInt64.le_iff_toNat_le.mpr x)
     simp at this; exact this

@@ -21,7 +21,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -60,10 +59,10 @@ theorem internLNode_succ_run (u : LIdx) (a : AState) :
   cases hp : a.store.lss.ls.pers.succs.cons[succKey u]? <;> cases hs : a.store.lss.ls.scratchOn <;>
     cases hc : a.store.lss.ls.scr.succs.cons[succKey u]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, succKey, ite_self, protoRun, succLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrSuccs, withPersSuccs, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      ↓reduceIte, succKey, protoRun, succLens] <;>
+    (try split) <;> simp_all [withScrSuccs, withPersSuccs, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `succ` tables -/
 
@@ -170,8 +169,8 @@ theorem succCS_wf : succCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, rfl⟩ := list_one ks (by simpa [succCS] using hl)
-      simp [succCS, smatchW, shash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [succCS, smatchW, shash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [succCS, smatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl]
+    hs := by intro m t i; simp [succCS, smatchW, shash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl]
     qh := fun _ _ _ => rfl
     vs := by intro ks h hl f hf; simp [pushArgs, succCS, nkW, recK] at hf ⊢ <;> omega }
 

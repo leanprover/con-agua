@@ -85,10 +85,10 @@ theorem domsK1_some :
         (cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, b] m1) := by
   rw [domsK1]
 theorem domsK2_abort (heq : rb.headD 0 = 0) : domsK2 cR n vis off fo fl dO dl j (some (rb, m2)) = none := by
-  rw [domsK2, if_pos heq]
+  rw [domsK2, ite_eq_left heq]
 theorem domsK2_ok (heq : rb.headD 0 ≠ 0) :
     domsK2 cR n vis off fo fl dO dl j (some (rb, m2)) = domsK3 (domsW cR n m2 vis off fo fl dO dl (j - 1)) := by
-  rw [domsK2, if_neg heq]
+  rw [domsK2, ite_eq_right heq]
 theorem domsK3_some (r : List Word) (m : Mem) : domsK3 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 

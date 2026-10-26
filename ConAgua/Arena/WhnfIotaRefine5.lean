@@ -110,9 +110,9 @@ theorem icfForall_spec (p : Prog) (hp : p.lookup "iota_certs_full_forall" = some
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callW_spec p n "iota_certs_full_parts", callW_spec p n "spn_get",
     callW_spec p n "iota_certs_full_check", callW_spec p n "iota_certs_full_aux"] <;>
-  simp_all [icfForallW, Cmp.eval, Cmp.evalW, BinOp.eval, Mem.len64, LocEq, St.setLocs_cons,
+  simp_all [icfForallW, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr, rdW, CTL, size_set64]
+    Sig.retVal, Sig.retOr, CTL, size_set64]
 
 /-- The count index of a tag's table (`CTL[c + tier]`), `none` past the last tag. -/
 def evoCnt (g : Word) : Option TRec :=
@@ -164,7 +164,7 @@ theorem icfFlush_spec (p : Prog) (hp : p.lookup "iota_certs_full_flush" = some i
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "inst_list", callW_spec p n "iota_certs_full_aux",
     callW_spec p n "expr_view_ok"] <;>
-  simp_all [icfFlushW, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons,
+  simp_all [icfFlushW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
     Sig.retVal, Sig.retOr]
 
@@ -229,7 +229,7 @@ theorem icf_run_cont (hi : i < args.size) (a a1 a2 a3 a4 : AState) (ty body ty2 
   have hv' : (view h).run a = .ok (.forallE ty body, a) := by
     simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
   rw [iotaCertsFullAux]
-  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h1, h2, h3, h4]
+  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h1, h2, h3]
   simp [h4]
 
 theorem icf_run_other (hi : i < args.size) (a : AState)
@@ -404,7 +404,7 @@ theorem icfForall_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat
   have hbody : args.size = an.toNat := hargs.size
   have hr1' : (instantiateListFast coreWalkFuel (decE (pr.headD 0)) acc 0).run a₀ = .ok (ty2, a1) := hr1
   by_cases hok0 : ok.headD 0 = 0
-  · rw [if_pos (by simpa using hok0)] at hW
+  · rw [ite_eq_left (by simpa using hok0)] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : b = false := by rw [← hbk, hok0]; rfl
     subst hb
@@ -416,7 +416,7 @@ theorem icfForall_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat
     · rw [hstF]; exact hCA3.toG
     · rw [hresF]; show false = (r.headD 0 != 0); rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
-  · rw [if_neg (by simpa using hok0)] at hW
+  · rw [ite_eq_right (by simpa using hok0)] at hW
     obtain ⟨hg, hW⟩ := of_ite_none' hW
     rcases c4 : callW p (N' + 1) "iota_certs_full_aux"
         [mode, vis, d, pr.tail.headD 0, aco, acn + 1, ao, an, i + 1]
@@ -483,7 +483,7 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   rw [hc] at hev
   simp only at hev
   by_cases g2 : tcnt m c (tierW h) ≤ idxW h
-  · rw [if_pos g2] at hev; cases hev
+  · rw [ite_eq_left g2] at hev; cases hev
   have hv : viewOK m h c := ⟨g1, UInt64.not_le.mp g2⟩
   simp only [evoCnt] at hc
   by_cases t0 : h >>> 28 = 0
@@ -493,60 +493,60 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
     refine ⟨⟨_, this⟩, fun _ => ⟨_, this⟩, fun h6 => by rw [t0] at h6; exact absurd h6 (by decide),
       fun h0 => absurd t0 h0⟩
   by_cases t1 : h >>> 28 = 1
-  · simp [t0, t1] at hc
+  · simp [t1] at hc
     subst hc
     obtain ⟨i, ty, hvw⟩ := view_fvar m a hR h hh hv t1
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t1] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
   by_cases t2 : h >>> 28 = 2
-  · simp [t0, t1, t2] at hc
+  · simp [t2] at hc
     subst hc
     obtain ⟨u, hvw⟩ := view_sort m a hR h hh hv t2
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t2] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
   by_cases t3 : h >>> 28 = 3
-  · simp [t0, t1, t2, t3] at hc
+  · simp [t3] at hc
     subst hc
     obtain ⟨n, us, hvw⟩ := view_const m a hR h hh hv t3
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t3] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
   by_cases t4 : h >>> 28 = 4
-  · simp [t0, t1, t2, t3, t4] at hc
+  · simp [t4] at hc
     subst hc
     obtain ⟨hvw, -⟩ := view_app m a hR h hh hv t4
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t4] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
   by_cases t5 : h >>> 28 = 5
-  · simp [t0, t1, t2, t3, t4, t5] at hc
+  · simp [t5] at hc
     subst hc
     obtain ⟨hvw, -⟩ := view_lam m a hR h hh hv t5
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t5] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
   by_cases t6 : h >>> 28 = 6
-  · simp [t0, t1, t2, t3, t4, t5, t6] at hc
+  · simp [t6] at hc
     subst hc
     obtain ⟨hvw, -⟩ := view_forall m a hR h hh hv t6
     exact ⟨⟨_, hvw⟩, fun h0 => absurd t6 (by rw [h0]; decide), fun _ => ⟨_, _, hvw⟩,
       fun _ h6 => absurd t6 h6⟩
   by_cases t7 : h >>> 28 = 7
-  · simp [t0, t1, t2, t3, t4, t5, t6, t7] at hc
+  · simp [t7] at hc
     subst hc
     obtain ⟨hvw, -⟩ := view_let m a hR h hh hv t7
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => absurd h6 t6, fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
   by_cases t8 : h >>> 28 = 8
-  · simp [t0, t1, t2, t3, t4, t5, t6, t7, t8] at hc
+  · simp [t8] at hc
     subst hc
     obtain ⟨l, hvw⟩ := view_lit m a hR h hh hv t8
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => absurd h6 t6, fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
   by_cases t9 : h >>> 28 = 9
-  · simp [t0, t1, t2, t3, t4, t5, t6, t7, t8, t9] at hc
+  · simp [t9] at hc
     subst hc
     obtain ⟨hvw, -⟩ := view_proj m a hR h hh hv t9
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => absurd h6 t6, fun _ _ v hv' => ?_⟩
@@ -575,7 +575,7 @@ theorem icfFlush_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat)
   obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
   obtain ⟨x, hvx⟩ := hB h0
   by_cases hacn : acn = 0
-  · rw [if_pos hacn] at hW
+  · rw [ite_eq_left hacn] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hsz : acc.size = 0 := by rw [hacc.size, hacn]; rfl
     have hrun := icf_run_nil (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
@@ -586,7 +586,7 @@ theorem icfFlush_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat)
     · rw [hstF, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
     · rw [hresF]; show false = (r.headD 0 != 0); rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
-  rw [if_neg hacn] at hW
+  rw [ite_eq_right hacn] at hW
   rcases c1 : callW p (N' + 1) "inst_list" [h, aco, acn, 0] s₀.mem with _ | ⟨r1, m1⟩ <;>
     simp only [c1, reduceCtorEq] at hW
   have hbd := hacc.bound
@@ -637,7 +637,7 @@ theorem icfAux_ok (p : Prog) (hp : IotaProg4 p) (N : Nat)
     ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [icfAuxW] at hW
   by_cases hni : ¬ i < an
-  · rw [if_neg hni] at hW
+  · rw [ite_eq_right hni] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hi' : ¬ i.toNat < args.size := by rw [hargs.size]; exact hni
     have hrun := icf_run_done (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
@@ -649,9 +649,9 @@ theorem icfAux_ok (p : Prog) (hp : IotaProg4 p) (N : Nat)
     · rw [hresF]; show true = (r.headD 0 != 0); rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   have hi := Classical.not_not.mp hni
-  rw [if_pos hi] at hW
+  rw [ite_eq_left hi] at hW
   by_cases h6 : h >>> 28 = 6
-  · rw [if_pos h6] at hW
+  · rw [ite_eq_left h6] at hW
     cases N with
     | zero => rw [callW_zero] at hW; cases hW
     | succ N' =>
@@ -666,9 +666,9 @@ theorem icfAux_ok (p : Prog) (hp : IotaProg4 p) (N : Nat)
     refine ⟨hok1, hCAG1, ?_, ?_⟩
     · rw [hres1]; simp only [decBool, hr']
     · unfold ResH HW at hr1 ⊢; rw [← hr']; exact hr1
-  rw [if_neg h6] at hW
+  rw [ite_eq_right h6] at hW
   by_cases h0 : h >>> 28 = 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     cases N with
     | zero => rw [callW_zero] at hW; cases hW
     | succ N' =>
@@ -683,7 +683,7 @@ theorem icfAux_ok (p : Prog) (hp : IotaProg4 p) (N : Nat)
     refine ⟨hok1, hCAG1, ?_, ?_⟩
     · rw [hres1]; simp only [decBool, hr']
     · unfold ResH HW at hr1 ⊢; rw [← hr']; exact hr1
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   cases N with
   | zero => rw [callW_zero] at hW; cases hW
   | succ N' =>
@@ -766,9 +766,9 @@ theorem iotaCertsFull_spec (p : Prog) (hp : p.lookup "iota_certs_full" = some io
   simp only [callFn, iotaCertsFullL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callW_spec p n "ctl_get", callW_spec p n "iota_certs_full_aux"] <;>
-  simp_all [icfTopW, Cmp.eval, Cmp.evalW, BinOp.eval, Mem.len64, LocEq, St.setLocs_cons,
+  simp_all [icfTopW, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr, rdW, CTL]
+    Sig.retVal, Sig.retOr, CTL]
 
 /-- **`iota_certs_full` refines `iotaCertsFull`.** Statement changes: `n ≤ 2 ^ 62`, the eager bit. -/
 theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) :

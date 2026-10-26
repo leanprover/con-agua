@@ -11,7 +11,6 @@ Recursion on the other members, member 0's telescope opened per member as the tw
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -76,7 +75,7 @@ theorem iagK1_none (h : r.headD 0 = 0) : iagK1 p n vis nP c0 s0 o l (some (r, m)
 theorem iagK1_some (h : ¬ r.headD 0 = 0) : iagK1 p n vis nP c0 s0 o l (some (r, m)) =
     iagK2 p n vis nP c0 s0 o l (callW p n "check_block_agree_one" [vis, nP, r.tail.headD 0,
       r.tail.tail.headD 0, s0, rdW (m.arr64 IW) (rdW (m.arr64 IW) o),
-      rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 1)] m) := by simp only [iagK1, h, ↓reduceIte, if_false]
+      rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 1)] m) := by simp only [iagK1, h, ↓reduceIte, ite_false]
 theorem iagK2_some : iagK2 p n vis nP c0 s0 o l (some (r, m)) =
     iagK3 (iagW p n m vis nP c0 s0 (o + 1) (l - 1)) := by simp [iagK2]
 theorem iagK3_some : iagK3 (some (r, m)) = some ([0], m) := rfl

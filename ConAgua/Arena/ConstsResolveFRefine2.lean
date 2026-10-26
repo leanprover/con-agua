@@ -28,66 +28,66 @@ theorem eViewW_lit (m : Mem) (h : Word) (hne : eViewW m h ≠ []) (h8 : (eViewW 
   have hh : h.toNat < 2 ^ 32 := by
     have : ¬ (4294967295 : Nat) < h.toNat := c
     omega
-  simp only [c, if_false] at hne h8
+  simp only [c, ite_false] at hne h8
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hs] at hne
-  simp only [hs, if_false] at hne h8
+  simp only [hs, ite_false] at hne h8
   by_cases g0 : h >>> 28 = 0
-  · simp only [g0, if_true] at hne h8
+  · simp only [g0, ite_true] at hne h8
     by_cases cc : tcnt m BVAR (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
-  simp only [g0, if_false] at hne h8
+  simp only [g0, ite_false] at hne h8
   by_cases g1 : h >>> 28 = 1
-  · simp only [g1, if_true] at hne h8
+  · simp only [g1, ite_true] at hne h8
     by_cases cc : tcnt m FVAR (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
-  simp only [g1, if_false] at hne h8
+  simp only [g1, ite_false] at hne h8
   by_cases g2 : h >>> 28 = 2
-  · simp only [g2, if_true] at hne h8
+  · simp only [g2, ite_true] at hne h8
     by_cases cc : tcnt m SORT (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
-  simp only [g2, if_false] at hne h8
+  simp only [g2, ite_false] at hne h8
   by_cases g3 : h >>> 28 = 3
-  · simp only [g3, if_true] at hne h8
+  · simp only [g3, ite_true] at hne h8
     by_cases cc : tcnt m CONST (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
-  simp only [g3, if_false] at hne h8
+  simp only [g3, ite_false] at hne h8
   by_cases g4 : h >>> 28 = 4
-  · simp only [g4, if_true] at hne h8
+  · simp only [g4, ite_true] at hne h8
     by_cases cc : tcnt m APP (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
-  simp only [g4, if_false] at hne h8
+  simp only [g4, ite_false] at hne h8
   by_cases g5 : h >>> 28 = 5
-  · simp only [g5, if_true] at hne h8
+  · simp only [g5, ite_true] at hne h8
     by_cases cc : tcnt m LAM (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
-  simp only [g5, if_false] at hne h8
+  simp only [g5, ite_false] at hne h8
   by_cases g6 : h >>> 28 = 6
-  · simp only [g6, if_true] at hne h8
+  · simp only [g6, ite_true] at hne h8
     by_cases cc : tcnt m FORALL (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
-  simp only [g6, if_false] at hne h8
+  simp only [g6, ite_false] at hne h8
   by_cases g7 : h >>> 28 = 7
-  · simp only [g7, if_true] at hne h8
+  · simp only [g7, ite_true] at hne h8
     by_cases cc : tcnt m LET (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
-  simp only [g7, if_false] at hne h8
+  simp only [g7, ite_false] at hne h8
   by_cases g8 : h >>> 28 = 8
-  · simp only [g8, if_true] at hne
+  · simp only [g8, ite_true] at hne
     by_cases cc : tcnt m LIT (tierW h) ≤ idxW h
     · simp [cc] at hne
     · exact ⟨g8, hh, hs, cc⟩
-  simp only [g8, if_false] at hne h8
+  simp only [g8, ite_false] at hne h8
   by_cases g9 : h >>> 28 = 9
-  · simp only [g9, if_true] at hne h8
+  · simp only [g9, ite_true] at hne h8
     by_cases cc : tcnt m PROJ (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
@@ -177,15 +177,15 @@ theorem clp_callW {n : Nat} {m m' : Mem} {a : AState} {s : Word} {r : List Word}
   have hW := callW_model (M := fun mm => clpW p n mm vis s) (clp_spec p hp n · vis s) hc
   unfold clpW at hW
   by_cases h0 : s = 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW
     refine ⟨rfl, hf, ?_⟩
-    simp only [if_pos h0, Bool.false_or, List.headD_cons]
+    simp only [ite_eq_left h0, Bool.false_or, List.headD_cons]
     exact ite_not _
-  · rw [if_neg h0] at hW
+  · rw [ite_eq_right h0] at hW
     obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW
     refine ⟨rfl, hf, ?_⟩
-    simp only [if_neg h0, Bool.false_or, List.headD_cons]
+    simp only [ite_eq_right h0, Bool.false_or, List.headD_cons]
     exact ite_not _
 
 /-- **`cr_leaf` at a leaf's view is `constsResolve`**: memory unchanged, the twin's walk at the
@@ -210,21 +210,21 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
   | bvar i =>
     have hg : (eViewW m h).headD 0 = 0 := hR.1
     rw [hg] at hW
-    simp only [clW, show (0 : Word) ≠ 8 by decide, show (0 : Word) ≠ 3 by decide, if_false,
+    simp only [clW, show (0 : Word) ≠ 8 by decide, show (0 : Word) ≠ 3 by decide, ite_false,
       Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨rfl, true, rfl, rfl⟩
   | sort u =>
     have hg : (eViewW m h).headD 0 = 2 := hR.1
     rw [hg] at hW
-    simp only [clW, show (2 : Word) ≠ 8 by decide, show (2 : Word) ≠ 3 by decide, if_false,
+    simp only [clW, show (2 : Word) ≠ 8 by decide, show (2 : Word) ≠ 3 by decide, ite_false,
       Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨rfl, true, rfl, rfl⟩
   | const nn us =>
     obtain ⟨hg, hx, hxn, -, -⟩ := hR
     rw [hg] at hW
-    simp only [clW, show (3 : Word) ≠ 8 by decide, if_false, if_true] at hW
+    simp only [clW, show (3 : Word) ≠ 8 by decide, ite_false, ite_true] at hW
     rw [getD1] at hx hxn
     cases he : callW p n "env_find" [(eViewW m h).tail.headD 0, vis] m with
     | none => rw [he] at hW; cases hW
@@ -242,7 +242,7 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
     rw [hv] at hk
     cases Option.some.inj hk
     rw [hg] at hW
-    simp only [clW, if_true] at hW
+    simp only [clW, ite_true] at hW
     cases hi : callW p n "is_str_lit" [h] m with
     | none => rw [hi] at hW; cases hW
     | some q =>
@@ -253,7 +253,7 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
     simp only at hms hisl
     rw [hms] at hW
     unfold islW at hisl
-    simp only [h8, ne_eq, not_true_eq_false, if_false, hs, hcc, Option.some.injEq] at hisl
+    simp only [h8, ne_eq, not_true_eq_false, ite_false, hs, hcc, Option.some.injEq] at hisl
     cases hl : callW p n "cr_lit_pins" [vis, rs.headD 0] m with
     | none => rw [hl] at hW; cases hW
     | some q =>
@@ -267,7 +267,7 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
     · have hrec : tfld ml LIT (tierW h) (idxW h) 0 = 0 := hrel.1
       rw [hrec] at hisl
       rw [← hisl] at hval
-      simp only [show (0 : Word) ≠ 1 by decide, if_false, if_true] at hval
+      simp only [show (0 : Word) ≠ 1 by decide, ite_false, ite_true] at hval
       refine ⟨_, ?_, by rw [List.headD_cons]; exact hval.trans (by rw [pinsFound_nat])⟩
       simp [pinNat, pinNatZero, pinNatSucc, PIN_NAT, PIN_NAT_ZERO, PIN_NAT_SUCC,
         StateT.run_bind, pinAt_run hF, except_ok_bind]
@@ -275,7 +275,7 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
     · have hrec : tfld ml LIT (tierW h) (idxW h) 0 = 1 := hrel.1
       rw [hrec] at hisl
       rw [← hisl] at hval
-      simp only [if_true, show (1 : Word) ≠ 0 by decide, if_false] at hval
+      simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at hval
       refine ⟨_, ?_, by rw [List.headD_cons]; exact hval.trans (by rw [pinsFound_str])⟩
       simp [pinNat, pinNatZero, pinNatSucc, pinString, pinStringOfList, pinList, pinListNil,
         pinListCons, pinChar, pinCharOfNat, PIN_NAT, PIN_NAT_ZERO, PIN_NAT_SUCC, PIN_STRING,
@@ -318,15 +318,15 @@ theorem crfT_callW {n : Nat} {m m' : Mem} {memo : Std.HashMap EIdx Bool} {h w : 
     rw [msetG, ite_eq_right hr]; exact hput
   refine ⟨rfl, ?_, ?_⟩
   · exact memoRV_set crSch crSch_wf bmKey CrV crV_stable m memo hM h 0 w ⟨hh, rfl⟩ b hw _ hs
-  · exact (msetG_frame crSch crSch_wf m _ h 0 w hs).mono (by simp [crSch, CRM]) (by simp [crSch])
+  · exact (msetG_frame crSch crSch_wf m _ h 0 w hs).mono (by simp [CRM]) (by simp)
 
 theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1) := by
   intro m m' a memo f h r hS hM hh hc
   have hW := callW_model (M := fun mm => crfW p n mm vis f h) (crf_spec p hp n · vis f h) hc
   unfold crfW at hW
   by_cases hf : f = 0
-  · rw [if_pos hf] at hW; cases hW
-  rw [if_neg hf] at hW
+  · rw [ite_eq_left hf] at hW; cases hW
+  rw [ite_eq_right hf] at hW
   rcases hv : callW p n "e_view" [h] m with _ | ⟨rv, mv⟩
     <;> simp only [hv, reduceCtorEq, crfV] at hW
   obtain ⟨s', hmv, hs', hne, hrv⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -340,7 +340,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
   cases v with
   | bvar _ | sort _ | const _ _ | lit _ =>
     have hg := (by first | exact hR.1 | exact hR : (eViewW m h).headD 0 = _)
-    rw [if_pos (by rw [hg]; decide)] at hW
+    rw [ite_eq_left (by rw [hg]; decide)] at hW
     rcases hl : callW p n "cr_leaf" [vis, (eViewW m h).headD 0, (eViewW m h).tail.headD 0, h] m with _ | ⟨rl, ml⟩
       <;> simp only [hl, reduceCtorEq, crfLf, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
@@ -350,7 +350,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
   | fvar i ty =>
     obtain ⟨hg, -, hb1, hd1⟩ := hR
     rw [getD2] at hb1 hd1
-    rw [if_neg (by rw [hg]; decide)] at hW
+    rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
     obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -359,16 +359,16 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     simp only at hmf hrf
     subst hmf hrf
     by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
-    · rw [if_pos hhit, Option.some.injEq, Prod.mk.injEq] at hW
+    · rw [ite_eq_left hhit, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
       obtain ⟨bv, hbv, hw⟩ := memoRV_hit crSch bmKey CrV m memo hM h 0 hne' hhit ⟨hh, rfl⟩
       refine ⟨bv, memo, ?_, hM, MemFrame.refl _ _ _, hw⟩
       change memo[decE h]? = some bv at hbv
       simp only [hbv]; rfl
-    rw [if_neg hhit] at hW
+    rw [ite_eq_right hhit] at hW
     have hmiss : memo[decE h]? = none :=
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
-    rw [crfN, if_pos hg] at hW
+    rw [crfN, ite_eq_left hg] at hW
     rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.headD 0] m with _ | ⟨ra, ma⟩
       <;> simp only [h1, reduceCtorEq, crfFv] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb1 h1
@@ -380,7 +380,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     obtain ⟨hg, hb1, hd1, hb2, hd2⟩ := hR
     rw [getD1] at hb1 hd1
     rw [getD2] at hb2 hd2
-    rw [if_neg (by rw [hg]; decide)] at hW
+    rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
     obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -389,16 +389,16 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     simp only at hmf hrf
     subst hmf hrf
     by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
-    · rw [if_pos hhit, Option.some.injEq, Prod.mk.injEq] at hW
+    · rw [ite_eq_left hhit, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
       obtain ⟨bv, hbv, hw⟩ := memoRV_hit crSch bmKey CrV m memo hM h 0 hne' hhit ⟨hh, rfl⟩
       refine ⟨bv, memo, ?_, hM, MemFrame.refl _ _ _, hw⟩
       change memo[decE h]? = some bv at hbv
       simp only [hbv]; rfl
-    rw [if_neg hhit] at hW
+    rw [ite_eq_right hhit] at hW
     have hmiss : memo[decE h]? = none :=
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
-    rw [crfN, if_neg (by rw [hg]; decide), if_pos (by rw [hg]; decide)] at hW
+    rw [crfN, ite_eq_right (by rw [hg]; decide), ite_eq_left (by rw [hg]; decide)] at hW
     rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.headD 0] m with _ | ⟨ra, ma⟩
       <;> simp only [h1, reduceCtorEq, crfB1] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb1 h1
@@ -416,7 +416,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     rw [getD1] at hb1 hd1
     rw [getD2] at hb2 hd2
     rw [getD3] at hb3 hd3
-    rw [if_neg (by rw [hg]; decide)] at hW
+    rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
     obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -425,17 +425,17 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     simp only at hmf hrf
     subst hmf hrf
     by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
-    · rw [if_pos hhit, Option.some.injEq, Prod.mk.injEq] at hW
+    · rw [ite_eq_left hhit, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
       obtain ⟨bv, hbv, hw⟩ := memoRV_hit crSch bmKey CrV m memo hM h 0 hne' hhit ⟨hh, rfl⟩
       refine ⟨bv, memo, ?_, hM, MemFrame.refl _ _ _, hw⟩
       change memo[decE h]? = some bv at hbv
       simp only [hbv]; rfl
-    rw [if_neg hhit] at hW
+    rw [ite_eq_right hhit] at hW
     have hmiss : memo[decE h]? = none :=
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
-    rw [crfN, if_neg (by rw [hg]; decide), if_neg (by rw [hg]; decide),
-      if_pos (by rw [hg])] at hW
+    rw [crfN, ite_eq_right (by rw [hg]; decide), ite_eq_right (by rw [hg]; decide),
+      ite_eq_left (by rw [hg])] at hW
     rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.headD 0] m with _ | ⟨ra, ma⟩
       <;> simp only [h1, reduceCtorEq, crfL1] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb1 h1
@@ -458,7 +458,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     obtain ⟨hg, hb1, hd1, -, hb3, hd3⟩ := hR
     rw [getD1] at hb1 hd1
     rw [getD3] at hb3 hd3
-    rw [if_neg (by rw [hg]; decide)] at hW
+    rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
     obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -467,17 +467,17 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     simp only at hmf hrf
     subst hmf hrf
     by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
-    · rw [if_pos hhit, Option.some.injEq, Prod.mk.injEq] at hW
+    · rw [ite_eq_left hhit, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
       obtain ⟨bv, hbv, hw⟩ := memoRV_hit crSch bmKey CrV m memo hM h 0 hne' hhit ⟨hh, rfl⟩
       refine ⟨bv, memo, ?_, hM, MemFrame.refl _ _ _, hw⟩
       change memo[decE h]? = some bv at hbv
       simp only [hbv]; rfl
-    rw [if_neg hhit] at hW
+    rw [ite_eq_right hhit] at hW
     have hmiss : memo[decE h]? = none :=
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
-    rw [crfN, if_neg (by rw [hg]; decide), if_neg (by rw [hg]; decide),
-      if_neg (by rw [hg]; decide)] at hW
+    rw [crfN, ite_eq_right (by rw [hg]; decide), ite_eq_right (by rw [hg]; decide),
+      ite_eq_right (by rw [hg]; decide)] at hW
     rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.tail.headD 0] m with _ | ⟨ra, ma⟩
       <;> simp only [h1, reduceCtorEq, crfP1] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb3 h1
@@ -534,7 +534,7 @@ theorem constsResolveFFast_ref (e : Word) (he : H e) :
   rw [h2, bW_some, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl⟩ := hW
   have hfc : CrFrame m (mclearG crSch m) :=
-    (mclearG_frame crSch m).mono (by simp) (by simp [crSch])
+    (mclearG_frame crSch m).mono (by simp) (by simp)
   have hSc := (StageR.crf hS hfc).1
   have hMc : CrR (mclearG crSch m) ∅ := memoRV_clear crSch crSch_wf bmKey CrV m memo0 hM0 hw
   obtain ⟨b, memo', hr, hM', hF, hres⟩ := crf_refines hp k _ _ a ∅ _ e rg hSc hMc he h2

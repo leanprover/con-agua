@@ -22,7 +22,6 @@ including `j`, fails with that class (`checkPendingList` reports it as a value).
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -64,7 +63,7 @@ theorem checkPendingGo_emptyE (hP : PhaseBProg p) (n : Nat) (m : Mem) (k v : Wor
     have hW := triple_of_callE_err (checkPendingGo_specE p hP.cpg (n + 1) ⟨m, Locals.init []⟩ k k v)
       h (Err.code_ne_of_cls hk0)
     simp only [checkPendingGoE] at hW
-    rw [if_pos trivial] at hW
+    rw [ite_eq_left trivial] at hW
     cases hW
 
 /-- **One group through phase B's loop, error half of `PhaseBStart.one`**: a failing
@@ -202,9 +201,9 @@ theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
         words := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).words,
         glob := fun h => if h = ⟨10⟩ then 1
           else (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).glob h } a := by
-    intro h0; have := hR; simp only [seedMem, if_pos h0] at this; exact this
+    intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
   have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v s₀.mem a := by
-    intro h0; have := hR; simp only [seedMem, if_neg h0] at this; exact this
+    intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
   have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241).size),
       ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241)[(3 : Word).toNat] = v := by
     intro hb
@@ -217,9 +216,9 @@ theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
   | succ n =>
     have hcg' := threadGo_thrE mode pins dn ds fe pend bs hP hE n (by omega) a v j hj hj62
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hcg' · · ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons,
-      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
+      Locals.init_nil, Cmp.eval,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
     all_goals first
       | exact ErrClaim.of_cls0 (by decide)
@@ -256,8 +255,8 @@ theorem checkThrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons, Locals.init_nil,
-      Cmp.eval, reduceIte, beq_iff_eq, Sig.retVal, Sig.retOr, St.setLocs_nil, List.headD_cons] at *)
+    all_goals (try simp only [
+      Cmp.eval, beq_iff_eq] at *)
     all_goals first
       | exact ErrClaim.of_cls0 (by decide)
       | (simp_all (config := { decide := true }); done)

@@ -12,7 +12,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -59,9 +58,9 @@ theorem irVckE_spec (p : Prog) (hp : p.lookup "iota_rec_vck" = some iotaRecVckL)
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callE_spec p n "lvls_eq_c", callE_spec p n "iota_rec_cmp", callE_spec p n "const_ty_at",
     callE_spec p n "iota_certs_full", callE_spec p n "iota_index_ok"] <;>
-  simp_all [-UInt64.toNat_add, irVckE, irVckTailE, ixLen, EREC, CTL, BinOp.eval, getElem_rdW',
+  simp_all [-UInt64.toNat_add, irVckE, irVckTailE, ixLen, EREC, BinOp.eval, getElem_rdW',
     Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
-    Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+    Locals.init_cons_zero, Locals.init_cons_succ]
 
 /-- Error model of `iota_rec_fire2`. -/
 def irFire2E (p : Prog) (n : Nat) (m : Mem) (mode vis d c us recP so usj ctorP rl mo mn : Word) :
@@ -95,8 +94,8 @@ theorem irFire2E_spec (p : Prog) (hp : p.lookup "iota_rec_fire2" = some iotaRecF
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callE_spec p n "iota_rec_fam", callE_spec p n "rule_rhs_at", callE_spec p n "mk_app_n",
     callE_spec p n "mk_app_n_from"] <;>
-  simp_all [-UInt64.toNat_add, irFire2E, rpLen, EREC, CTL, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
+  simp_all [-UInt64.toNat_add, irFire2E, rpLen, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+    Locals.init_cons_succ]
 
 end L.Arena

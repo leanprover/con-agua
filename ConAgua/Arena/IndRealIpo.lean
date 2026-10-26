@@ -14,7 +14,6 @@ everything reads only, so the memory and the twin's state are unchanged.
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -78,23 +77,23 @@ def ipoW : Nat → Mem → Word → Word → Word → Word → Option Sig
 section arms
 variable (k : Nat) (m : Mem) (np o l j pw ok n : Word) (rest : Option Sig)
 theorem ipoK_bad (h : rdW (m.arr64 EREC) pw = 4 ∧ rdW (m.arr64 EREC) (pw + 5) ≠ np) :
-    ipoK m np pw rest = some (.ret [0]) := by simp only [ipoK]; rw [if_pos h]
+    ipoK m np pw rest = some (.ret [0]) := by simp only [ipoK]; rw [ite_eq_left h]
 theorem ipoK_ok (h : ¬ (rdW (m.arr64 EREC) pw = 4 ∧ rdW (m.arr64 EREC) (pw + 5) ≠ np)) :
-    ipoK m np pw rest = rest := by simp only [ipoK]; rw [if_neg h]
+    ipoK m np pw rest = rest := by simp only [ipoK]; rw [ite_eq_right h]
 theorem ipoT_none : ipoT m np pw rest none = none := rfl
 theorem ipoT_bad (h : ok ≠ 0 ∧ n < np) : ipoT m np pw rest (some (ok, n)) = some (.ret [0]) := by
-  simp only [ipoT]; rw [if_pos h]
+  simp only [ipoT]; rw [ite_eq_left h]
 theorem ipoT_ok (h : ¬ (ok ≠ 0 ∧ n < np)) : ipoT m np pw rest (some (ok, n)) = ipoK m np pw rest := by
-  simp only [ipoT]; rw [if_neg h]
+  simp only [ipoT]; rw [ite_eq_right h]
 theorem ipoW_exit (h : ¬ j < l) : ipoW (k + 1) m np o l j = some .normal := by
-  simp only [ipoW]; rw [if_neg h]
+  simp only [ipoW]; rw [ite_eq_right h]
 theorem ipoW_ind (h : j < l) (h3 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j)) = 3) :
     ipoW (k + 1) m np o l j = ipoT m np (rdW (m.arr64 EREC) (o + j)) (ipoW k m np o l (j + 1))
       (L.Front.Ind.sortTeleW k m CWF (rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j) + 4))) := by
-  simp only [ipoW]; rw [if_pos h, if_pos h3]
+  simp only [ipoW]; rw [ite_eq_left h, ite_eq_left h3]
 theorem ipoW_other (h : j < l) (h3 : ¬ rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j)) = 3) :
     ipoW (k + 1) m np o l j = ipoK m np (rdW (m.arr64 EREC) (o + j)) (ipoW k m np o l (j + 1)) := by
-  simp only [ipoW]; rw [if_pos h, if_neg h3]
+  simp only [ipoW]; rw [ite_eq_left h, ite_eq_right h3]
 end arms
 
 attribute [ind_grind] ipoK_bad ipoK_ok ipoT_none ipoT_bad ipoT_ok ipoW_exit ipoW_ind ipoW_other
@@ -303,7 +302,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
     have hp5 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j) + 5) = UInt64.ofNat npc := by
       rw [hpw', ← hr5]; congr 1; apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega
     have hnpcT : (UInt64.ofNat npc : Word).toNat = npc := UInt64.toNat_ofNat_of_lt' hnb
-    simp only [indParamsOk, StateT.run_bind, except_ok_bind]
+    simp only [indParamsOk, StateT.run_bind]
     by_cases hne : UInt64.ofNat npc ≠ np
     · rw [ipoK_bad (h := by rw [hkw, hw4, hp5]; exact ⟨rfl, hne⟩)] at h
       cases h

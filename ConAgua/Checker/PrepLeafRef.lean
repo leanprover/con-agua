@@ -187,7 +187,7 @@ declares `decI w`, plus one; `0` when there is none. -/
 theorem pFind_ok (n : Nat) (m : Mem) (dsAll : Array IDeclaration) (mk nw w j r : Word)
     (hD : ∀ x (h : x < dsAll.size), DeclAtF (m.arr64 DECL) (m.arr64 DLP) x dsAll[x] ∧
       RecOK (m.arr64 DECL) (m.arr64 DLP) x)
-    (hn : nw.toNat = dsAll.size) (hn59 : nw.toNat < 2 ^ 59) (hmk : mk.toNat + nw.toNat < 2 ^ 64)
+    (hn : nw.toNat = dsAll.size) (hn59 : nw.toNat < 2 ^ 59) (_hmk : mk.toNat + nw.toNat < 2 ^ 64)
     (hw : w.toNat < 2 ^ 32) (h : pFindW n m mk nw w j = some r) :
     (r = 0 → ∀ x (hx : x < dsAll.size), j.toNat ≤ x → rdW (m.arr64 IW) (mk + UInt64.ofNat x) = 0 →
       declares (decI w) dsAll[x] = false) ∧

@@ -12,8 +12,6 @@ bound `sfbT` (`sfbT_cstep`: `readLevelM_pstep` twice, or the zero pin and `lvlEq
 write (twin side none), the recursion at the extended store.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -52,12 +50,12 @@ theorem sfbT_cstep {env : ConLeche.Env} {fe : IFEnv} {isProp large : Bool} {s : 
     obtain ⟨rfl, rfl⟩ := AM.pure_ok k7
     cases b with
     | false =>
-      simp only [Bool.false_eq_true, ite_false, Bool.not_false, ite_true] at z7
+      simp only [Bool.false_eq_true, ite_false] at z7
       first
         | exact absurd z7 (fun h => AM.fail_ok h)
         | (obtain ⟨_, _, k, _⟩ := AM.bind_ok z7; exact absurd k (fun h => AM.fail_ok h))
     | true =>
-      simp only [ite_true, Bool.not_true, Bool.false_eq_true, ite_false] at z7
+      simp only [ite_true] at z7
       obtain ⟨-, rfl⟩ := AM.pure_ok z7
       exact c5.trans c6
   | true =>
@@ -135,7 +133,7 @@ theorem cfbW_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hz'
   have hzp : z = pinW m 53 := by
-    simp only [pinWordV, hpne, if_false, Option.some.injEq] at hz'
+    simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz'
     rw [← hz']; rfl
   have hF := hS.1.pins.full hpne
   obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
@@ -172,7 +170,7 @@ theorem cfbW_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
         · exact absurd hx (by decide)
         · rfl
       rw [this]; rfl
-    · have hct1 : ct ≠ 0 := fun e => hf ⟨by rw [if_neg h2], e⟩
+    · have hct1 : ct ≠ 0 := fun e => hf ⟨by rw [ite_eq_right h2], e⟩
       have hin : ws.contains fv = true := by
         rw [hct] at hct1
         cases hcw : ws.contains fv

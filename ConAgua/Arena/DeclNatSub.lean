@@ -9,9 +9,6 @@ import ConAgua.Arena.RecClassSpec
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -31,11 +28,11 @@ theorem viewR_shape {rv : List Word} {v : ENodeView} (h : ViewR rv v) :
   case const c us =>
     left
     obtain ⟨h0, h1, h2, h3, h4⟩ := h
-    refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [ntGetD1, getD2, H]
+    refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [H]
   case app f a =>
     right; left
     obtain ⟨h0, h1, h2, h3, h4⟩ := h
-    refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [ntGetD1, getD2, H]
+    refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [H]
   all_goals
     right; right
     refine ⟨?_, ?_, fun _ _ => by simp, fun _ _ => by simp⟩ <;> simp_all
@@ -147,7 +144,7 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
     have hw := callW_model (M := fun mm => sc0W p (k + 1) mm nm r fuel h) (sc0_specW p hN.lSubstConst0 (k + 1) · nm r fuel h) hc
     have hnz : fuel ≠ 0 := fun e => by simp [e] at hf
     rw [sc0W.eq_2] at hw
-    rw [if_neg hnz] at hw
+    rw [ite_eq_right hnz] at hw
     cases h1 : callW p k "e_view" [h] m with
     | none => rw [h1] at hw; simp [ntBW] at hw
     | some q1 =>
@@ -160,7 +157,7 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     rcases viewR_shape hvr with ⟨h3, c, us, hvv, hc0, hcd, hu0, hud⟩ | ⟨h4, fa, aa, hvv, hf0, hfd, ha0, had⟩ | ⟨hn3, hn4, hnc, hna⟩
     · -- a constant
-      rw [if_pos h3] at hw
+      rw [ite_eq_left h3] at hw
       cases h2 : callW p k "pin_word" [52] m1 with
       | none => rw [h2] at hw; simp [ntBW] at hw
       | some q2 =>
@@ -173,22 +170,22 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
           decide (rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0) := by
         rw [← hx2, decI_beq_word hc0 hn, decI_beq_word hu0 hx2l]; simp
       by_cases hcond : rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0
-      · rw [if_pos hcond] at hw
+      · rw [ite_eq_left hcond] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨decE r, a2, ?_, hS2, hg1.trans hg2, by simpa using hr, rfl⟩
         simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
-          decide_eq_true hcond, if_true]
+          decide_eq_true hcond, ite_true]
         rfl
-      · rw [if_neg hcond] at hw
+      · rw [ite_eq_right hcond] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨decE h, a2, ?_, hS2, hg1.trans hg2, by simpa using hh, rfl⟩
         simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
-          decide_eq_false hcond, Bool.false_eq_true, if_false]
+          decide_eq_false hcond, Bool.false_eq_true, ite_false]
         rfl
     · -- an application
-      rw [if_neg (by rw [h4]; decide), if_pos h4] at hw
+      rw [ite_eq_right (by rw [h4]; decide), ite_eq_left h4] at hw
       subst hvv hfd had
       cases h2 : callW p k "subst_const0" [nm, r, fuel - 1, rv.tail.headD 0] m1 with
       | none => rw [h2] at hw; simp [ntBW] at hw
@@ -214,10 +211,9 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
       obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := mkApp_ref (dn := dn) (vis := vis) (fe := fe) hN.toMasterProg
         (r1.headD 0) (r2.headD 0) k m3 a3 r3 m4 hS3 h4'
       refine ⟨x4, a4, ?_, hS4, hg1.trans (hg2.trans (hg3.trans hg4)), hl4, hx4⟩
-      simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hrun3, ← hx2, ← hx3,
-        ENodeView.app.injEq]
+      simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hrun3, ← hx2, ← hx3]
       exact hrun4
-    · rw [if_neg (fun e => hn3 e), if_neg (fun e => hn4 e)] at hw
+    · rw [ite_eq_right (fun e => hn3 e), ite_eq_right (fun e => hn4 e)] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨decE h, a1, ?_, hS1, hg1, by simpa using hh, rfl⟩
@@ -256,7 +252,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
     have hw := callW_model (M := fun mm => pairsW p (k + 1) mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs (k + 1) · nm r o l) hc
-    simp only [pairsW.eq_2, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [pairsW.eq_2, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨[], a, rfl, hS, IWGrow.refl _, by
       refine ⟨by simp, by simp, fun j hj => by simp at hj⟩⟩
@@ -268,7 +264,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     obtain ⟨pp, ea, eb, hl0, hpp, hrec, hea, heb, he, hrest⟩ := hE.cons
     have hw := callW_model (M := fun mm => pairsW p (k + 1) mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs (k + 1) · nm r o l) hc
     rw [pairsW.eq_2] at hw
-    rw [if_neg (fun h => hl0 (by simp [h]))] at hw
+    rw [ite_eq_right (fun h => hl0 (by simp [h]))] at hw
     have hpp' : rdW (m.arr64 IW) o = pp := by
       simp only [iwA] at hpp; simp [rdW, hpp]
     have hea' : rdW (m.arr64 IW) pp = ea := by

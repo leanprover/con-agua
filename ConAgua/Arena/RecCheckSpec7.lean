@@ -91,45 +91,45 @@ variable (n : Nat) (m m1 m2 m3 : Mem) (no nl lvls ho hl f f1 h g x y z a2 x2 c2 
 theorem taCW_ne (hv : vus ≠ lvls) : taCW (n + 1) m no nl lvls ho hl h nn vus = some (h, m) := by simp [taCW, hv]
 theorem taCW_eq (hv : ¬ vus ≠ lvls) :
     taCW (n + 1) m no nl lvls ho hl h nn vus = taCK m ho hl h (findW n m no nl nn) := by
-  simp only [taCW]; rw [if_neg hv]
+  simp only [taCW]; rw [ite_eq_right hv]
 theorem taCK_miss (h0 : fr.headD 0 = 0) : taCK m ho hl h (some fr) = some (h, m) := by
-  simp only [taCK]; rw [if_pos h0]
+  simp only [taCK]; rw [ite_eq_left h0]
 theorem taCK_out (h0 : ¬ fr.headD 0 = 0) (h1 : hl ≤ fr.tail.headD 0) : taCK m ho hl h (some fr) = some (h, m) := by
-  simp only [taCK]; rw [if_neg h0, if_pos h1]
+  simp only [taCK]; rw [ite_eq_right h0, ite_eq_left h1]
 theorem taCK_hit (h0 : ¬ fr.headD 0 = 0) (h1 : ¬ hl ≤ fr.tail.headD 0) :
     taCK m ho hl h (some fr) = some (rdW (m.arr64 IW) (ho + fr.tail.headD 0), m) := by
-  simp only [taCK]; rw [if_neg h0, if_neg h1]
+  simp only [taCK]; rw [ite_eq_right h0, ite_eq_right h1]
 theorem taGoW_abort (hf : f = 0) : taGoW (n + 1) m no nl lvls ho hl f h = none := by simp [taGoW, hf]
 theorem taGoW_view (hf : f ≠ 0) :
     taGoW (n + 1) m no nl lvls ho hl f h = taG1 n m no nl lvls ho hl f h (eViewW m h) := by simp [taGoW, hf]
 theorem taG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8) :
-    taG1 n m no nl lvls ho hl f h v = some (h, m) := by simp only [taG1]; rw [if_neg hv, if_pos hg]
+    taG1 n m no nl lvls ho hl f h v = some (h, m) := by simp only [taG1]; rw [ite_eq_right hv, ite_eq_left hg]
 theorem taG1_const (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
     (h3 : v.headD 0 = 3) :
     taG1 n m no nl lvls ho hl f h v = taCW n m no nl lvls ho hl h (v.tail.headD 0) (v.tail.tail.headD 0) := by
-  simp only [taG1]; rw [if_neg hv, if_neg hg, if_pos h3]
+  simp only [taG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_left h3]
 theorem taG1_node (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
     (h3 : ¬ v.headD 0 = 3) :
     taG1 n m no nl lvls ho hl f h v = taG3 n m no nl lvls ho hl f h v (mfindG taSch m h 0) := by
-  simp only [taG1]; rw [if_neg hv, if_neg hg, if_neg h3]
+  simp only [taG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_right h3]
 theorem taG3_abort (hr : fr = []) : taG3 n m no nl lvls ho hl f h v fr = none := by simp [taG3, hr]
 theorem taG3_hit (hr : fr ≠ []) (hh : fr.headD 0 ≠ 0) :
     taG3 n m no nl lvls ho hl f h v fr = some (rdW (m.arr64 TAM) (fr.tail.headD 0 * 4 + 3), m) := by
-  simp only [taG3]; rw [if_neg hr, if_pos hh]
+  simp only [taG3]; rw [ite_eq_right hr, ite_eq_left hh]
 theorem taG3_miss (hr : fr ≠ []) (hh : ¬ fr.headD 0 ≠ 0) :
     taG3 n m no nl lvls ho hl f h v fr = taG4 h (taNodeW n m no nl lvls ho hl (f - 1) (v.headD 0)
       (v.tail.headD 0) (v.tail.tail.headD 0) (v.tail.tail.tail.headD 0)) := by
-  simp only [taG3]; rw [if_neg hr, if_neg hh]
+  simp only [taG3]; rw [ite_eq_right hr, ite_eq_right hh]
 theorem taG4_some : taG4 h (some (r, m1)) = taG5 r (msetG taSch m1 h 0 r) := by rw [taG4]
 theorem taG5_some : taG5 r (some m2) = some (r, m2) := by rw [taG5]
 theorem taNodeW_bin (hg : g = 4 ∨ g = 5 ∨ g = 6) : taNodeW (n + 1) m no nl lvls ho hl f1 g x y z =
     taB1 n no nl lvls ho hl f1 g y (taGoW n m no nl lvls ho hl f1 x) := by
-  simp only [taNodeW]; rw [if_pos hg]
+  simp only [taNodeW]; rw [ite_eq_left hg]
 theorem taNodeW_let : taNodeW (n + 1) m no nl lvls ho hl f1 7 x y z =
     taL1 n no nl lvls ho hl f1 y z (taGoW n m no nl lvls ho hl f1 x) := by simp [taNodeW]
 theorem taNodeW_proj (hg : ¬ (g = 4 ∨ g = 5 ∨ g = 6)) (hg7 : ¬ g = 7) :
     taNodeW (n + 1) m no nl lvls ho hl f1 g x y z = taP1 x y (taGoW n m no nl lvls ho hl f1 z) := by
-  simp only [taNodeW]; rw [if_neg hg, if_neg hg7]
+  simp only [taNodeW]; rw [ite_eq_right hg, ite_eq_right hg7]
 theorem taB1_some : taB1 n no nl lvls ho hl f1 g y (some (a2, m1)) =
     taB2 g a2 (taGoW n m1 no nl lvls ho hl f1 y) := by rw [taB1]
 theorem taB2_some : taB2 g a2 (some (x2, m2)) = rpMkW m2 g a2 x2 0 0 0 := by rw [taB2]
@@ -314,7 +314,7 @@ theorem targetAbsGo_succ' (names : List NIdx) (lvls : LsIdx) (holes : List EIdx)
   | const n us =>
     simp only [taConstT]
     by_cases hb : (us == lvls) = true
-    · simp only [hb, if_true]
+    · simp only [hb, ite_true]
       cases names.findIdx? (· == n) with
       | none => rfl
       | some t => dsimp only; cases holes[t]? <;> rfl
@@ -496,21 +496,21 @@ theorem taNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
       (TaQ dn fe vis m) := by
   cases v with
   | app f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hg, taNodeW_bin k m no nl lvls ho hl f1 4 _ _ _ (Or.inl rfl)]
     exact taBin_ok dn fe vis k ih 4 (fun m a b => mkAppW m a b) internAppE (fun m a2 x2 => by simp [rpMkW])
       (fun m m' a u v r hS hI => mkApp_stage hS u v hI) (fun m m' u v r hI => mkAppW_low hI)
       m a no nl lvls ho hl f1 _ _ names holes mp hS hx hy hlv hI hM
   | lam f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hg, taNodeW_bin k m no nl lvls ho hl f1 5 _ _ _ (Or.inr (Or.inl rfl))]
     exact taBin_ok dn fe vis k ih 5 (fun m a b => mkLamW m a b) internLamE (fun m a2 x2 => by simp [rpMkW])
       (fun m m' a u v r hS hI => mkLam_stage hS u v hI) (fun m m' u v r hI => mkLamW_low hI)
       m a no nl lvls ho hl f1 _ _ names holes mp hS hx hy hlv hI hM
   | forallE f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hg, taNodeW_bin k m no nl lvls ho hl f1 6 _ _ _ (Or.inr (Or.inr rfl))]
     exact taBin_ok dn fe vis k ih 6 (fun m a b => mkForallW m a b) internForallEE

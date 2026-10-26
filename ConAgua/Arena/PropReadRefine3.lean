@@ -15,7 +15,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -182,7 +181,7 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     have : ¬ ids.length = cv.levelParams.length := fun h => hl (hlen.mp h)
     exact ⟨none, a, by rw [hpre]; simp only [this, ↓reduceIte]; rfl, RdAfter.refl hS, rfl⟩
-  simp only [hl, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  simp only [hl, ↓reduceIte] at hW
   have hlen' : ids.length = cv.levelParams.length := hlen.mpr (by simpa using hl)
   -- the datum of the type
   rcases hc2 : sub (rdW (m₁.arr64 EREC) (r₁.tail.headD 0 + 4)) m₁ with _ | ⟨r₂, m₂⟩ <;>
@@ -248,7 +247,7 @@ include hp hden hlps
 @[refines ConRon.Arena.headTypePW]
 theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {f root d h k : Word}
-    (hf : f.toNat ≤ coreWalkFuel) (hroot : HW root) (hh : HW h) {r : List Word}
+    (hf : f.toNat ≤ coreWalkFuel) (hroot : HW root) (_hh : HW h) {r : List Word}
     (hc : callW p n "head_type_pw" [vis, f, root, d, h, k] m = some (r, m')) :
     ∃ res a', (headTypePW fe f.toNat (decE root) d.toNat (decE h) k.toNat).run a = .ok (res, a') ∧
       RdAfter dn m m' a a' vis fe M eb ∧
@@ -354,7 +353,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   · obtain ⟨hg, hn, hn', husw, hus'⟩ := hVR
     rw [pr_getD1] at hn hn'
     rw [pr_getD2] at husw hus'
-    simp only [vG, vX, vY, hg, ↓reduceIte, eq_self_iff_true, if_true] at hW
+    simp only [vG, vX, vY, hg, ↓reduceIte, ite_true] at hW
     rcases hc2 : callW p n "head_type_const" [vis, f, k, w.tail.headD 0, w.tail.tail.headD 0] m
       with _ | ⟨r₂, m₂⟩
     · rw [hc2] at hW; cases hW
@@ -383,7 +382,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       | (rw [hVR.1]; decide)
       | (rw [hVR]; decide)
     simp only [vG, hg.1, hg.2.1, hg.2.2, false_and, ↓reduceIte, Option.some.injEq,
-      Prod.mk.injEq, if_false] at hW
+      Prod.mk.injEq, ite_false] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     exact ⟨none, a, by rw [hpre]; rfl, RdAfter.refl hS, rfl⟩
 

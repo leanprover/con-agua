@@ -8,8 +8,6 @@ level comparison (`lvl_eq_c`, `closedNV`), whose two rejects are the twin's `lif
 (code `0`'s result) and the universe fail.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -41,8 +39,8 @@ theorem tmtE_claim (n : Nat) {m : Mem} {a : AState} {pp pfo pfl I us dso dsl cso
     (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
     (hI : H I) (hus : H us) (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) m ds)
     (hdsb : dso.toNat + dsl.toNat < 2 ^ 64)
-    (hct : DecB (fun m => decPL m (decCN m) cso.toNat csl.toNat) m ctors)
-    (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs) (hPm : PosMR m)
+    (_hct : DecB (fun m => decPL m (decCN m) cso.toNat csl.toNat) m ctors)
+    (_hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs) (_hPm : PosMR m)
     {IP : ConLeche.Name} (hIP : denoteN a.store.ns (decI I) = some IP)
     {usP : List ConLeche.Level} (husP : denoteLs a.store.lss (decI us) = some usP)
     {dsP : List ConLeche.Expr} (hdsP : Frontend.denoteEList a.store ds = some dsP)

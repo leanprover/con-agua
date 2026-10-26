@@ -10,8 +10,6 @@ import ConRon.Bridge.Inductives.PosWalks
 `rec3TMA_sim`), the record write (twin side none), the rest by induction.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

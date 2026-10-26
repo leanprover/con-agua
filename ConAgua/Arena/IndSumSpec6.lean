@@ -83,7 +83,7 @@ theorem eViewW_head6S (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h
   simp only [hg, show ((6 : Word) = 0) = False from by decide, show ((6 : Word) = 1) = False from by decide,
     show ((6 : Word) = 2) = False from by decide, show ((6 : Word) = 3) = False from by decide,
     show ((6 : Word) = 4) = False from by decide, show ((6 : Word) = 5) = False from by decide,
-    if_false, if_true]
+    ite_false, ite_true]
   repeat' split
   all_goals simp
 
@@ -119,11 +119,11 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       exact tag_iff h hh 6 (by decide)
     by_cases ht : h >>> 28 = 6
     case neg =>
-      rw [pbW.arm2 n m T k i h hk ht, hks, structProjBodiesGo, ← decE_eq, if_neg (fun e => ht (htf.mp e))]
+      rw [pbW.arm2 n m T k i h hk ht, hks, structProjBodiesGo, ← decE_eq, ite_eq_right (fun e => ht (htf.mp e))]
       exact Sim.ret ⟨hS, IWGrow.refl m, rfl, hA⟩
     by_cases he : eViewW m h = []
     · rw [pbW.abort1 n m T k i h hk ht he]; exact Sim.of_none
-    rw [pbW.arm3 n m T k i h hk ht he, hks, structProjBodiesGo, ← decE_eq, if_pos (htf.mpr ht)]
+    rw [pbW.arm3 n m T k i h hk ht he, hks, structProjBodiesGo, ← decE_eq, ite_eq_left (htf.mpr ht)]
     obtain ⟨vv, hview, hVR⟩ := eViewW_ok m a hS.1.arena.1 h he
     have h6 := eViewW_head6S m h ht he
     refine Sim.bind_twin (view_run _ _ _ hview) ?_
@@ -222,15 +222,15 @@ theorem spbW_succ : spbW (k + 1) m T nP nF cty = spbK1 k T nF cty (projPsW k m n
 theorem spbK1_some : spbK1 k T nF cty (some (rp, m1)) =
     spbK2 k T nF (ipalF m1 [CWF, rp.headD 0, rp.tail.headD 0, cty]) := rfl
 theorem spbK2_none (h : ri.headD 0 = 0) : spbK2 k T nF (some (ri, m2)) = some ([0, 0, 0], m2) := by
-  simp only [spbK2, if_pos h]
+  simp only [spbK2, ite_eq_left h]
 theorem spbK2_some (h : ri.headD 0 ≠ 0) :
     spbK2 k T nF (some (ri, m2)) = spbK3 (pbW k m2 T nF 0 (ri.tail.headD 0)) := by
-  simp only [spbK2, if_neg h]
+  simp only [spbK2, ite_eq_right h]
 theorem spbK3_none (h : rg.headD 0 = 0) : spbK3 (some (rg, m3)) = some ([0, 0, 0], m3) := by
-  simp only [spbK3, if_pos h]
+  simp only [spbK3, ite_eq_left h]
 theorem spbK3_some (h : rg.headD 0 ≠ 0) :
     spbK3 (some (rg, m3)) = some ([1, rg.tail.headD 0, rg.tail.tail.headD 0], m3) := by
-  simp only [spbK3, if_neg h]
+  simp only [spbK3, ite_eq_right h]
 end arms
 
 grind_pattern [ind_grind] spbW_succ => spbW (k + 1) m T nP nF cty
@@ -310,7 +310,7 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     intro β f
     simp only [structProjPs, StateT.run_bind]
     rw [show (1 : Nat) = (1 : Word).toNat from rfl, hrun1]
-    simp only [bind, Except.bind, StateT.run_bind]
+    simp only [bind, Except.bind]
     rw [CWF_eq] at hrun2
     simp only [StateT.run] at hrun2 ⊢
     rw [hrun2]

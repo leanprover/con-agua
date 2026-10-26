@@ -13,8 +13,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -101,13 +99,13 @@ theorem whnfCoreStep_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n
   have hR := hs.rel.arena.1
   have hh : e.toNat < 2 ^ 32 := he
   by_cases ht : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos ht] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg ht] at hW
+  · rw [ite_eq_left ht] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right ht] at hW
   by_cases g4 : e >>> 28 = 4
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     by_cases hc4 : tcnt s₀.mem APP (tierW e) ≤ idxW e
-    · rw [if_pos hc4] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-    rw [if_neg hc4] at hW
+    · rw [ite_eq_left hc4] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+    rw [ite_eq_right hc4] at hW
     cases h1 : callE p n "whnf_core_app" [mode, cheap, vis, d, e] s₀.mem with
     | ok q => rw [h1] at hW; simp [whnfCoreStepE.k_whnf_core_app] at hW
     | error e1 =>
@@ -119,12 +117,12 @@ theorem whnfCoreStep_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n
     | succ N =>
     exact CoreSpecE.of_callE (hA N (hk.mono (by omega)) (hkE.mono (by omega)) F s₀ a₀ dn vis fe MM
       eb mode cheap d e (by omega) (by omega) hs he) h1
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   by_cases g9 : e >>> 28 = 9
-  · rw [if_pos g9] at hW
+  · rw [ite_eq_left g9] at hW
     by_cases hc9 : tcnt s₀.mem PROJ (tierW e) ≤ idxW e
-    · rw [if_pos hc9] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-    rw [if_neg hc9] at hW
+    · rw [ite_eq_left hc9] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+    rw [ite_eq_right hc9] at hW
     cases h1 : callE p n "whnf_core_step_proj" [mode, cheap, vis, d, e,
         tfld s₀.mem PROJ (tierW e) (idxW e) 0, tfld s₀.mem PROJ (tierW e) (idxW e) 1,
         tfld s₀.mem PROJ (tierW e) (idxW e) 2] s₀.mem with
@@ -138,29 +136,29 @@ theorem whnfCoreStep_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n
     | succ N =>
     exact CoreSpecE.of_callE (hP N (hk.mono (by omega)) (hkE.mono (by omega)) F s₀ a₀ dn vis fe MM
       eb mode cheap d e _ _ _ (by omega) (by omega) hs he hsn hpe) h1
-  rw [if_neg g9] at hW
+  rw [ite_eq_right g9] at hW
   by_cases g7 : e >>> 28 = 7
-  · rw [if_pos g7] at hW
+  · rw [ite_eq_left g7] at hW
     by_cases hc7 : tcnt s₀.mem LET (tierW e) ≤ idxW e
-    · rw [if_pos hc7] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-    rw [if_neg hc7] at hW
+    · rw [ite_eq_left hc7] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+    rw [ite_eq_right hc7] at hW
     cases h1 : callE p n "inst1" [tfld s₀.mem LET (tierW e) (idxW e) 2,
         tfld s₀.mem LET (tierW e) (idxW e) 1, 0] s₀.mem with
     | ok q => rw [h1] at hW; simp [whnfCoreStepE.k_inst1] at hW
     | error e1 =>
     rw [h1, whnfCoreStepE.k_inst1.none] at hW; cases hW
     exact ErrClaim.of_callE_nv hnv (whnfSlotE_nv "inst1" (by simp)) h1
-  rw [if_neg g7] at hW
+  rw [ite_eq_right g7] at hW
   by_cases g0 : e >>> 28 = 0
-  · rw [if_pos g0] at hW
+  · rw [ite_eq_left g0] at hW
     by_cases hc0 : tcnt s₀.mem BVAR (tierW e) ≤ idxW e
-    · rw [if_pos hc0] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-    rw [if_neg hc0] at hW
+    · rw [ite_eq_left hc0] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+    rw [ite_eq_right hc0] at hW
     cases hW
     have hv := view_bvar s₀.mem a₀ hR e hh ⟨ht, by simpa using hc0⟩ g0
     refine ErrClaim.of_run_eqW (step_run_bvar _ hv) ?_
     exact ErrClaim.fail _ _ rfl
-  rw [if_neg g0] at hW
+  rw [ite_eq_right g0] at hW
   repeat' split at hW
   all_goals (cases hW <;> exact ErrClaim.of_cls0 rfl)
 
@@ -196,7 +194,7 @@ theorem coreLoopE_ok (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     simp only [whnfCoreLoopE.loop1] at h; cases h; exact ErrClaim.of_cls0 rfl
   | succ k ih =>
     intro hkn K hK m a MM eb e hS heb he er h
-    simp only [whnfCoreLoopE.loop1, if_pos rfl] at h
+    simp only [whnfCoreLoopE.loop1, ite_eq_left rfl] at h
     cases hc : callE p k "whnf_core_step" [mode, cheap, vis, d, e] m with
     | error e1 =>
       rw [hc, whnfCoreLoopE.k_whnf_core_step.none] at h; cases h
@@ -297,8 +295,8 @@ theorem whnfCoreSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
   have heb := hS.core.eb1
   have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
   by_cases hst : e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0
-  · rw [if_pos hst] at hW; cases hW
-  rw [if_neg hst] at hW
+  · rw [ite_eq_left hst] at hW; cases hW
+  rw [ite_eq_right hst] at hW
   have ht : whnfCoreStuckTag (decE e) = false := by rw [stuck_iff e he]; simpa using hst
   -- the body's claim at fuel `n`
   have body : ∀ (c : Word) (er' : Err),
@@ -313,7 +311,7 @@ theorem whnfCoreSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
       (hk.mono (by omega)) (hkE.mono (by omega)) F' whnfCoreLoopFuel (by omega)
       (by simp only [whnfCoreLoopFuel]; omega) (by omega) s₀ a₀ dn vis fe MM eb mode c d e hs he) h2
   by_cases hc : cheap ≠ 0
-  · rw [if_pos hc] at hW
+  · rw [ite_eq_left hc] at hW
     have hcb : (cheap != 0) = true := by simpa using hc
     rw [hcb]
     cases h1 : callE p n "wk_find" [e, ((mode >>> 1) &&& 1) <<< 32] s₀.mem with
@@ -348,7 +346,7 @@ theorem whnfCoreSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     rw [h3] at hW
     simp only [whnfCoreE.k_wk_find_2] at hW
     exact ErrClaim.of_callE_nv hnv (whnfSlotE_nv "wk_put" (by simp)) (k_wk_put_err hW)
-  · rw [if_neg hc] at hW
+  · rw [ite_eq_right hc] at hW
     have hcb : (cheap != 0) = false := by simpa using hc
     rw [hcb]
     cases h1 : callE p n "wc_find" [e, ((mode >>> 1) &&& 1) <<< 32] s₀.mem with
@@ -498,7 +496,7 @@ theorem whnfLoopE_ok (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
   | succ k ih =>
     intro hkn K hK m a MM eb e hS heb he er h
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    simp only [whnfLoopE.loop1, if_pos rfl] at h
+    simp only [whnfLoopE.loop1, ite_eq_left rfl] at h
     cases hc : callE p k "whnf_step" [mode, vis, d, e] m with
     | error e1 =>
       rw [hc, whnfLoopE.k_whnf_step.none] at h; cases h
@@ -579,8 +577,8 @@ theorem whnfSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
   have heb := hS.core.eb1
   have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
   by_cases hst : e >>> 28 = 2 ∨ e >>> 28 = 1 ∨ e >>> 28 = 5 ∨ e >>> 28 = 6 ∨ e >>> 28 = 8
-  · rw [if_pos hst] at hW; cases hW
-  rw [if_neg hst] at hW
+  · rw [ite_eq_left hst] at hW; cases hW
+  rw [ite_eq_right hst] at hW
   have ht : whnfStuckTag (decE e) = false := by rw [whnfStuck_iff e he]; simpa using hst
   cases h1 : callE p n "wh_find" [e, ((mode >>> 1) &&& 1) <<< 32] s₀.mem with
   | error e1 =>

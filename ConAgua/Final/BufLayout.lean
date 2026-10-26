@@ -379,7 +379,7 @@ theorem bufMem0_arr64 (fz own : List ArrId) (B : Array Word) (r : Mem) {a : Nat}
       | some i => bufImg B i
       | none => if own.contains a then r.arr64 a else #[] := by
   simp only [bufMem0, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map, Array.getElem?_range, ha,
-    if_true, Option.map_some, Option.getD_some]
+    ite_true, Option.map_some, Option.getD_some]
 
 theorem idxOf?_of_contains {l : List ArrId} {a : Nat} (h : l.contains a = true) : ∃ k, l.idxOf? a = some k := by
   have hm : a ∈ l := by simpa using h
@@ -426,7 +426,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
     · simp only [bufL, hfz]
       by_cases hc : own.contains a = true
       · obtain ⟨k, hk⟩ := idxOf?_of_contains hc
-        simp only [hc, if_true, hk]; exact hr.size a ha k hk
+        simp only [hc, ite_true, hk]; exact hr.size a ha k hk
       · simp only [hc, idxOf?_of_not_contains hc]; rfl
     · have := hg.ent i (idxOf?_lt hfz)
       simp only [bufL, hfz, bufImg, Array.size_extract]
@@ -443,7 +443,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
       · obtain ⟨k, hk⟩ := idxOf?_of_contains hc
         have hk' := idxOf?_lt hk
         have hs := hr.size a ha k hk
-        simp only [hc, if_true] at hi ⊢
+        simp only [hc, ite_true] at hi ⊢
         simp only [hk]
         have hle : abiSlot * (2 + k) + abiSlot ≤ abiSlot * (2 + own.length) := by
           rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
@@ -468,18 +468,18 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   · intro a ha
     simp only [bufLayout_tab, hnb] at ha
     have := hW (2 + 2 * a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_tab, bufLayout_b8, Tab.base8]
+    simp only [bufLayout_T, bufLayout_b8, Tab.base8]
     rw [show (16 + 16 * (a : Int)).toNat = 8 * (2 + 2 * a) by omega, this]
     simp only [bufVal, show 2 + 2 * a ≠ 0 by omega, show 2 + 2 * a ≠ 1 by omega,
-      show 2 + 2 * a < 6 by omega, if_false, if_true]
+      show 2 + 2 * a < 6 by omega, ite_false, ite_true]
     rfl
   · intro a ha
     simp only [bufLayout_tab, hnb] at ha
     have := hW (3 + 2 * a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_tab, bufLayout_s8, Tab.len8]
+    simp only [bufLayout_T, bufLayout_s8, Tab.len8]
     rw [show (24 + 16 * (a : Int)).toNat = 8 * (3 + 2 * a) by omega, this]
     simp only [bufVal, show 3 + 2 * a ≠ 0 by omega, show 3 + 2 * a ≠ 1 by omega,
-      show 3 + 2 * a < 6 by omega, if_false, if_true]
+      show 3 + 2 * a < 6 by omega, ite_false, ite_true]
     rfl
   · intro a ha
     simp only [bufLayout_tab] at ha
@@ -488,7 +488,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
     simp only [bufLayout_T, bufLayout_tab, bufLayout_b64, Tab.base64, hnb]
     rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.wpos a : Int)).toNat = 8 * (6 + tab.wpos a) by omega, this]
     simp only [bufVal, show 6 + tab.wpos a ≠ 0 by omega, show 6 + tab.wpos a ≠ 1 by omega,
-      show ¬ 6 + tab.wpos a < 6 by omega, show 6 + tab.wpos a < 6 + tab.nw by omega, if_false, if_true,
+      show ¬ 6 + tab.wpos a < 6 by omega, show 6 + tab.wpos a < 6 + tab.nw by omega, ite_false, ite_true,
       show 6 + tab.wpos a - 6 = tab.wpos a by omega, tab.wposInv_wpos ha, UInt64.ofBitVec_toBitVec]
   · intro a ha
     simp only [bufLayout_tab] at ha
@@ -499,7 +499,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
       8 * (6 + tab.nw + tab.wpos a) by omega, this]
     simp only [bufVal, show 6 + tab.nw + tab.wpos a ≠ 0 by omega, show 6 + tab.nw + tab.wpos a ≠ 1 by omega,
       show ¬ 6 + tab.nw + tab.wpos a < 6 by omega, show ¬ 6 + tab.nw + tab.wpos a < 6 + tab.nw by omega,
-      show 6 + tab.nw + tab.wpos a < 6 + 2 * tab.nw by omega, if_false, if_true,
+      show 6 + tab.nw + tab.wpos a < 6 + 2 * tab.nw by omega, ite_false, ite_true,
       show 6 + tab.nw + tab.wpos a - 6 - tab.nw = tab.wpos a by omega, tab.wposInv_wpos ha, UInt64.ofBitVec_toBitVec]
   · intro i hi
     simp only [bufLayout_tab] at hi
@@ -512,7 +512,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
       qwrs_byte qs d _ _ (hq _ hq0) (Nat.mod_lt _ (by omega)) hfit]
     simp only [bufVal, show 6 + 2 * tab.nw + i / 8 ≠ 0 by omega, show 6 + 2 * tab.nw + i / 8 ≠ 1 by omega,
       show ¬ 6 + 2 * tab.nw + i / 8 < 6 by omega, show ¬ 6 + 2 * tab.nw + i / 8 < 6 + tab.nw by omega,
-      show ¬ 6 + 2 * tab.nw + i / 8 < 6 + 2 * tab.nw by omega, if_false,
+      show ¬ 6 + 2 * tab.nw + i / 8 < 6 + 2 * tab.nw by omega, ite_false,
       show 6 + 2 * tab.nw + i / 8 - 6 - 2 * tab.nw = i / 8 by omega, romBits, hw1, UInt64.ofBitVec_toBitVec]
     exact hw2
   · intro x hx

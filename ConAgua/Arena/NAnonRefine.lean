@@ -22,7 +22,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -64,10 +63,10 @@ theorem internNNode_anon_run (a : AState) :
   cases hp : a.store.lss.ls.ns.pers.anons.cons[naKey]? <;> cases hs : a.store.lss.ls.ns.scratchOn <;>
     cases hc : a.store.lss.ls.ns.scr.anons.cons[naKey]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, naKey, ite_self, protoRun, nanonLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrNAnons, withPersNAnons, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      ↓reduceIte, naKey, protoRun, nanonLens] <;>
+    (try split) <;> simp_all [withScrNAnons, withPersNAnons, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `anonymous` tables -/
 
@@ -101,7 +100,7 @@ def naMt (m : Mem) (t i : Word) : Bool := namatchW (m.arr64 (tierA NAREC t)) t i
 /-- **Matching is equality of `anonymous` nodes**: both sides are always true. -/
 theorem naMatchOK (m : Mem) : MatchOK NaRecRel (naMt m) m naKey := by
   intro t i k _
-  simp only [naMt, namatchW, eq_iff_iff, iff_true, naNode_eq k]
+  simp only [naMt, namatchW, naNode_eq k]
 
 theorem naHomeOK (m : Mem) : HomeOK nahash (naMt m) m nahashW := by
   intro t i _; rfl
@@ -127,9 +126,9 @@ theorem nanonCS_wf : nanonCS.WF where
   col A h := by simp [nanonCS] at h
   colRoom A h := by simp [nanonCS] at h
   colLt A h := by
-    simp only [nanonCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [nanonCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (napushOK_room m t ((napushOK_eqC m t).trans h)).2
-  vs ks h hk := by simp [pushArgs, nanonCS, hk]
+  vs ks h hk := by simp [pushArgs, nanonCS]
   ex _ := {
     nk := by decide
     nkw := by decide
@@ -137,8 +136,8 @@ theorem nanonCS_wf : nanonCS.WF where
     mt := by
       intro m ks h t i hl
       obtain rfl := list_zero ks (by simpa [nanonCS] using hl)
-      simp [nanonCS, namatchW, nahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [nanonCS, namatchW, nahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [nanonCS, namatchW, fieldsL]
+    hs := by intro m t i; simp [nanonCS, namatchW, nahash, fieldsL]
     qh := fun _ _ _ => rfl
     vs := by intro ks h hl f hf; simp [nanonCS, nkW] at hf }
 

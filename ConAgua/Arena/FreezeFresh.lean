@@ -93,7 +93,7 @@ theorem fresh_size (b : ArrId) : ((freshMem m).arr64 b).size = ((cutT m).arr64 b
 
 theorem fresh_getD {b : ArrId} (hb : b ∈ freshZ) (hc : b ≠ CTL) (i : Nat) :
     ((freshMem m).arr64 b)[i]?.getD 0 = 0 := by
-  rw [freshMem_arr, if_neg hc, if_pos hb]
+  rw [freshMem_arr, ite_eq_right hc, ite_eq_left hb]
   simp only [zeros, Array.getElem?_replicate]
   split <;> rfl
 

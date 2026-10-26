@@ -118,10 +118,9 @@ theorem ee_spec (p : Prog) (L : K53Look p) (n : Nat) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
       eftF_spec p L.tmn.tcm.tp.rc n, slCons_specW p L.tmn.tcm.ha L.tmn.tcm.ic L.tmn.tcm.sc n]
     all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
         Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-        reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+        reduceIte, beq_iff_eq] at *)
     all_goals grind (gen := 10) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 /-! ## `target_k53_tele` -/
@@ -162,10 +161,9 @@ theorem tte_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (bso bsl teo t
     simp only [callFn, targetK53Tele]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ee_spec p L n, slEq_spec p L.eq n]
     all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-        Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-        reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
+        Locals.init_cons_zero, Locals.init_cons_succ, Nat.reduceEqDiff,
+        reduceIte] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 /-! ## `target_k53_args` -/
@@ -237,25 +235,25 @@ theorem tkaK2_some : tkaK2 cR n vis q fto ftl Mc ip usp lao lal K r1 (some (r2, 
     tkaK3 cR n vis q fto ftl Mc ip usp lao lal K m
       (eqW n m (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)) := rfl
 theorem tkaK3_no (h : e = 0) : tkaK3 cR n vis q fto ftl Mc ip usp lao lal K m (some e) = some ([0], m) := by
-  simp only [tkaK3]; rw [if_pos h]
+  simp only [tkaK3]; rw [ite_eq_left h]
 theorem tkaK3_yes (h : ¬ e = 0) : tkaK3 cR n vis q fto ftl Mc ip usp lao lal K m (some e) =
     tkaK4 cR vis q fto ftl Mc usp lao (if lal < K then lal else K) n (ceinternW m ip usp) := by
-  simp only [tkaK3]; rw [if_neg h]
+  simp only [tkaK3]; rw [ite_eq_right h]
 theorem tkaK4_big (h : 4294967296 ≤ hd) : tkaK4 cR vis q fto ftl Mc usp lao lpl n (some (hd, m)) = none := by
-  simp only [tkaK4]; rw [if_pos h]
+  simp only [tkaK4]; rw [ite_eq_left h]
 theorem tkaK4_ok (h : ¬ 4294967296 ≤ hd) : tkaK4 cR vis q fto ftl Mc usp lao lpl n (some (hd, m)) =
     tkaK5 cR n vis q fto ftl Mc usp lao lpl (mknF m [hd, lao, lpl]) := by
-  simp only [tkaK4]; rw [if_neg h]
+  simp only [tkaK4]; rw [ite_eq_right h]
 theorem tkaK5_some : tkaK5 cR n vis q fto ftl Mc usp lao lpl (some (ra, m)) =
     tkaK6 cR n vis q fto ftl Mc usp lao lpl (ra.headD 0) (memberNamesW n m q) := rfl
 theorem tkaK6_some : tkaK6 cR n vis q fto ftl Mc usp lao lpl app (some (rn, m)) =
     tkaK7 cR n vis q fto ftl Mc usp lao lpl (noF n m (rn.headD 0) (rn.tail.headD 0) 0 0 app) := rfl
 theorem tkaK7_no (h : occ = 0) : tkaK7 cR n vis q fto ftl Mc usp lao lpl (some (occ, m)) = some ([0], m) := by
-  simp only [tkaK7]; rw [if_pos h]
+  simp only [tkaK7]; rw [ite_eq_left h]
 theorem tkaK7_yes (h : ¬ occ = 0) : tkaK7 cR n vis q fto ftl Mc usp lao lpl (some (occ, m)) =
     tkaK8 (tcmF cR n m vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
       (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl) := by
-  simp only [tkaK7]; rw [if_neg h]
+  simp only [tkaK7]; rw [ite_eq_right h]
 theorem tkaK8_some : tkaK8 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 attribute [ind_grind] tkaW_succ tkaK1_some tkaK2_some tkaK3_no tkaK3_yes tkaK4_big tkaK4_ok tkaK5_some
@@ -279,11 +277,9 @@ theorem tka_spec (p : Prog) (L : K53Look p) (cR : CallM) (hcR : CallSpec p cR) (
     -- `LocEq` unfolded, the callee posts' `s'.loc = …` serve `simp` as rewrites (`*`): the
     -- locals are resolved before `grind`, not by its E-matching through the chain (78 s -> ~5 s).
     all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-        Locals.init_cons_zero, Locals.init_cons_succ, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
-        loc_init9, loc_init10, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-        reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
+        Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals grind (gen := 40) (instances := 20000) [lang_grind, arena_grind, ind_grind]
 
 end L.Ind

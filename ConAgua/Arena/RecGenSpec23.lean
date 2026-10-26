@@ -92,28 +92,28 @@ section arms
 variable (k : Nat) (m : Mem) (vis q fto ftl mc teo tel leaf fvo fvl i eo el j : Word) (r : List Word)
   (rest : Mem → Option Mem)
 theorem cnaK2_bad (h : r.headD 0 = 0) : cnaK2 rest (some (r, m)) = none := by
-  simp only [cnaK2]; rw [if_pos h]
+  simp only [cnaK2]; rw [ite_eq_left h]
 theorem cnaK2_ok (h : ¬ r.headD 0 = 0) : cnaK2 rest (some (r, m)) = rest m := by
-  simp only [cnaK2]; rw [if_neg h]
+  simp only [cnaK2]; rw [ite_eq_right h]
 theorem cnaK1_bad (h : r.headD 0 = 0) : cnaK1 p k vis q fto ftl mc teo tel leaf i rest (some (r, m)) = none := by
-  simp only [cnaK1]; rw [if_pos h]
+  simp only [cnaK1]; rw [ite_eq_left h]
 theorem cnaK1_short (h0 : ¬ r.headD 0 = 0) (h : r.tail.tail.headD 0 ≤ i) :
     cnaK1 p k vis q fto ftl mc teo tel leaf i rest (some (r, m)) = none := by
-  simp only [cnaK1]; rw [if_neg h0, if_pos h]
+  simp only [cnaK1]; rw [ite_eq_right h0, ite_eq_left h]
 theorem cnaK1_ok (h0 : ¬ r.headD 0 = 0) (h : ¬ r.tail.tail.headD 0 ≤ i) :
     cnaK1 p k vis q fto ftl mc teo tel leaf i rest (some (r, m)) =
       cnaK2 rest (callW p k "target_k53" [vis, q, fto, ftl, mc, teo, tel, leaf,
         rdW (m.arr64 IW) (r.tail.headD 0 + i)] m) := by
-  simp only [cnaK1]; rw [if_neg h0, if_neg h]
+  simp only [cnaK1]; rw [ite_eq_right h0, ite_eq_right h]
 theorem cnaW_exit (h : ¬ j < el) :
     cnaW p (k + 1) m vis q fto ftl mc teo tel leaf fvo fvl i eo el j = some m := by
-  simp only [cnaW]; rw [if_neg h]
+  simp only [cnaW]; rw [ite_eq_right h]
 theorem cnaW_step (h : j < el) :
     cnaW p (k + 1) m vis q fto ftl mc teo tel leaf fvo fvl i eo el j =
       cnaK1 p k vis q fto ftl mc teo tel leaf i
         (fun m' => cnaW p k m' vis q fto ftl mc teo tel leaf fvo fvl i eo el (j + 1))
         (callW p k "target_pi_doms_with" [fvo, fvl, rdW (m.arr64 IW) (rdW (m.arr64 IW) (eo + j) + 4)] m) := by
-  simp only [cnaW]; rw [if_pos h]
+  simp only [cnaW]; rw [ite_eq_left h]
 end arms
 
 end model

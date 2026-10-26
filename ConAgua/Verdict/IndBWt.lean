@@ -16,8 +16,6 @@ takes `ConLeche.EnvWF env`.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

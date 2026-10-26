@@ -15,14 +15,12 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 namespace L.Ind
 
 open L.Arena
 
-def nfE.k_nest_fields (p : Prog) : Except L.Err (List L.Word × L.Mem) → Except L.Err (List L.Word × L.Mem)
+def nfE.k_nest_fields (_p : Prog) : Except L.Err (List L.Word × L.Mem) → Except L.Err (List L.Word × L.Mem)
   | Except.error ε => Except.error ε
   | Except.ok (r, m₁) =>
     Except.ok
@@ -310,9 +308,9 @@ theorem nfE_spec (p : Prog) (hf : p.lookup "nest_fields" = some nestFieldsL) (n 
             _root_.L.callE_spec p n "instantiate1_fast", _root_.L.callE_spec p n "sl_snoc"] <;>
           (try
               simp_all [_root_.L.LocEq, _root_.L.St.setLoc_loc, _root_.L.St.setLoc_mem, _root_.L.St.setLocs_nil,
-                _root_.L.St.setLocs_cons, _root_.L.Locals.init_nil, _root_.L.Locals.init_cons_zero,
+                _root_.L.St.setLocs_cons, _root_.L.Locals.init_cons_zero,
                 _root_.L.Locals.init_cons_succ, _root_.L.Sig.retVal, _root_.L.Sig.retOr, _root_.L.BinOp.eval,
-                _root_.L.Cmp.eval, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, nfE,
+                _root_.L.Cmp.eval, nfE,
                 nfE.k_nest_fields, nfE.k_sl_snoc_2, nfE.k_sl_snoc, nfE.k_instantiate1_fast, nfE.k_intern_fvar,
                 nfE.k_nest_pos, nfE.k_e_view]) <;>
         grind [lang_grind, arena_grind]

@@ -22,7 +22,6 @@ them; it waits for `DeclHdrE`).
 
 open ConRon.Arena
 
-set_option linter.deprecated false
 
 namespace L.Ind
 

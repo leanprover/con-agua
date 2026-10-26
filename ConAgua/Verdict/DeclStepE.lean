@@ -6,8 +6,6 @@ import ConAgua.Verdict.DeclCdE
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -105,7 +103,7 @@ theorem ivE_core {p : Prog} (hP : IvProg p) (hap : ApdF p)
   refine ErrClaim.bind_right hrun2 ?_
   by_cases hv1 : vk ≠ 1
   · rw [installValueE.k_install_header.arm1 p _ _ _ _ _ _ hv1] at hW
-    rw [if_pos hv1]
+    rw [ite_eq_left hv1]
     have hval2 : hd? (erecP s2.mem) (q.toNat + 5) = some (stepVal ds[i.toNat]) :=
       ArrExt.hd? (IWGrow.erecPExt hg2) hval1
     obtain ⟨wv, hwv, hwvl, hwvd⟩ := hd?_some hval2
@@ -138,7 +136,7 @@ theorem ivE_core {p : Prog} (hP : IvProg p) (hap : ApdF p)
     rw [h5, installValueE.k_erec_vg.arm1] at hW
     cases hW
   · rw [installValueE.k_install_header.arm2 p _ _ _ _ _ _ (by simpa using hv1), installValueE.j1.arm1] at hW
-    rw [if_neg hv1]
+    rw [ite_eq_right hv1]
     cases h4 : callE p n "env_push" [vis, q] s2.mem with
     | error e4 =>
       rw [h4, installValueE.k_env_push.none] at hW; cases hW
@@ -312,25 +310,25 @@ theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : A
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at hW
     simp only [show (1 : Word) ≠ 2 by decide, show (1 : Word) ≠ 3 by decide,
-      show (1 : Word) ≠ 4 by decide, if_false] at hW
+      show (1 : Word) ≠ 4 by decide, ite_false] at hW
     exact cdbranch hW _ (fun ce h => by rw [hd] at h; exact h)
   | quotDecl k cv =>
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at hW
     simp only [show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide,
-      show (5 : Word) ≠ 4 by decide, if_false] at hW
+      show (5 : Word) ≠ 4 by decide, ite_false] at hW
     exact cdbranch hW _ (fun ce h => by rw [hd] at h; exact h)
   | indDecl b nP =>
     have hk : dw (m1.arr64 DECL) i.toNat 0 = 6 := hdecl.1
     rw [hk] at hW
     simp only [show (6 : Word) ≠ 2 by decide, show (6 : Word) ≠ 3 by decide,
-      show (6 : Word) ≠ 4 by decide, if_false] at hW
+      show (6 : Word) ≠ 4 by decide, ite_false] at hW
     exact cdbranch hW _ (fun ce h => by rw [hd] at h; exact h)
   | basisDecl _ => exact absurd hdecl id
   | thmDecl cv v =>
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at hW
-    simp only [show (3 : Word) ≠ 2 by decide, if_false, if_true] at hW
+    simp only [show (3 : Word) ≠ 2 by decide, ite_false, ite_true] at hW
     cases hc' : callE p n "install_value" [i, vis, 2, 1] m1 with
     | error e1 =>
       rw [hc', installStepGoE.k_install_value.none] at hW; cases hW
@@ -344,7 +342,7 @@ theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : A
   | defnDecl cv v hint =>
     obtain ⟨hk, hcv, -⟩ := hdecl
     rw [hk] at hW
-    simp only [if_true] at hW
+    simp only [ite_true] at hW
     cases hp : callE p n "pin_in" [rdW (m1.arr64 DECL) (2 + 8 * i) &&& 4294967295, 15, 30] m1 with
     | error e1 =>
       rw [hp, installStepGoE.k_pin_in.none] at hW; cases hW
@@ -366,13 +364,13 @@ theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : A
       · rw [installStepGoE.k_pin_in.arm1 p _ _ _ _ _ hc0] at hW
         have hpin : ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
             true := hiff.mp hc0
-        rw [if_pos hpin] at hT
+        rw [ite_eq_left hpin] at hT
         exact cdbranch hW _ (fun ce h => by rw [hd] at h; rw [hT]; exact h)
       · have hc0' : r.headD 0 = 0 := by simpa using hc0
         rw [installStepGoE.k_pin_in.arm2 p _ _ _ _ _ hc0'] at hW
         have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
             true := fun h' => hc0 (hiff.mpr h')
-        rw [if_neg hpin] at hT
+        rw [ite_eq_right hpin] at hT
         cases hc' : callE p n "install_value" [i, vis, 1, 0] m1 with
         | error e1 =>
           rw [hc', installStepGoE.k_install_value.none] at hW; cases hW
@@ -387,8 +385,8 @@ theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : A
   | opaqueDecl cv v =>
     obtain ⟨hk, hcv, -⟩ := hdecl
     rw [hk] at hW
-    simp only [show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, if_false,
-      if_true] at hW
+    simp only [show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, ite_false,
+      ite_true] at hW
     cases hp : callE p n "pin_in" [rdW (m1.arr64 DECL) (2 + 8 * i) &&& 4294967295, 44, 46] m1 with
     | error e1 =>
       rw [hp, installStepGoE.k_pin_in_2.none] at hW; cases hW
@@ -409,13 +407,13 @@ theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : A
       · rw [installStepGoE.k_pin_in_2.arm1 p _ _ _ _ _ hc0] at hW
         have hpin : ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
             true := hiff.mp hc0
-        rw [if_pos (show (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
+        rw [ite_eq_left (show (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
         exact cdbranch hW _ (fun ce h => by rw [hd] at h; rw [hT]; exact h)
       · have hc0' : r.headD 0 = 0 := by simpa using hc0
         rw [installStepGoE.k_pin_in_2.arm2 p _ _ _ _ _ hc0'] at hW
         have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
             true := fun h' => hc0 (hiff.mpr h')
-        rw [if_neg (show ¬ (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
+        rw [ite_eq_right (show ¬ (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
         cases hc' : callE p n "install_value" [i, vis, 0, 2] m1 with
         | error e1 =>
           rw [hc', installStepGoE.k_install_value.none] at hW; cases hW
@@ -477,7 +475,7 @@ theorem installStep_errT {p : Prog} (hb : BracketProg p) (hp : p.lookup "install
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [installStepE.arm1] at hW
-  simp only [installStep, bind_assoc]
+  simp only [installStep]
   cases h0 : callE p n "tbl_cnt" [] m with
   | error e0 =>
     rw [h0, installStepE.k_tbl_cnt.none] at hW; cases hW

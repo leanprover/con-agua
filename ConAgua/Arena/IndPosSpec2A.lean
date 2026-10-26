@@ -380,7 +380,7 @@ theorem decNK_of_words {m : Mem} {k : Nat} {c u o l : Word} {ds : List EIdx}
     (h2 : (m.arr64 IW)[k + 2]? = some o) (h3 : (m.arr64 IW)[k + 3]? = some l)
     (hs : decHL m o.toNat l.toNat = some ds) : decNK m k = some ⟨decI c, decI u, ds⟩ := by
   simp only [decNK, decAt, iwH, iwN, nat?, hd?, iwA, h0, h1, h2, h3, hc, hu, Option.map_some,
-    Option.bind_eq_bind, Option.bind_some, if_true]
+    Option.bind_eq_bind, Option.bind_some, ite_true]
   simp [hs]
 
 theorem decNH_of_words {m : Mem} {w : Nat} {k b : Word} {key : NestKey}
@@ -474,13 +474,13 @@ theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
       by_cases hij : i = j.toNat
       · subst hij
         refine ⟨hh, ?_, ?_, ?_⟩
-        · rw [set64IW_get, if_pos ⟨hqj.symm, by have := hS2.2.1; omega⟩]
+        · rw [set64IW_get, ite_eq_left ⟨hqj.symm, by have := hS2.2.1; omega⟩]
         · rw [(hin.agree hset).1, hdh]
           simp [rhList, List.getElem?_map, List.getElem?_eq_getElem (show j.toNat < names.length by omega)]
         · exact (hin.agree hset).2
       · obtain ⟨wi, hwi, hdi, hini⟩ := hH i (by omega)
         refine ⟨wi, ?_, ?_, ?_⟩
-        · rw [set64IW_get, if_neg (by omega), hg12.2.2.1 _ (by omega)]; exact hwi
+        · rw [set64IW_get, ite_eq_right (by omega), hg12.2.2.1 _ (by omega)]; exact hwi
         · rw [(hini.agree hRm).1]; exact hdi
         · exact (hini.agree hRm).2.mono fun x hx => ⟨Nat.lt_of_lt_of_le hx.1 (by omega), hx.2⟩
     have hOut : ∀ {o l : Nat}, (∀ j < l, o + j < q.toNat) → ∀ j < l, OutR q.toNat nl.toNat (iwTop m) (o + j) :=
@@ -665,7 +665,7 @@ theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   simp only [appendW] at h
   by_cases h0 : l1 + l2 < l1
   · simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   rcases hal : allocW m (l1 + l2) with _ | ⟨q, m1⟩; · simp [hal] at h
   obtain ⟨hS1, -, -, -, -⟩ := hS.alloc hal
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
@@ -706,10 +706,10 @@ theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     intro i
     rw [hG2 i, hql]
     by_cases h1 : q.toNat ≤ i ∧ i < q.toNat + l1.toNat
-    · rw [if_neg (by omega), hG1, if_pos h1, if_pos h1]
+    · rw [ite_eq_right (by omega), hG1, ite_eq_left h1, ite_eq_left h1]
     · by_cases h2 : q.toNat + l1.toNat ≤ i ∧ i < q.toNat + l1.toNat + l2.toNat
-      · rw [if_pos h2, hG1, if_neg (by omega), if_neg h1, if_pos h2]
-      · rw [if_neg h2, hG1, if_neg h1, if_neg h1, if_neg h2]
+      · rw [ite_eq_left h2, hG1, ite_eq_right (by omega), ite_eq_right h1, ite_eq_left h2]
+      · rw [ite_eq_right h2, hG1, ite_eq_right h1, ite_eq_right h1, ite_eq_right h2]
   have htop : rdW (m3.arr64 CTL) 200 = q + (l1 + l2) := by
     rw [hA2 CTL (by decide), hA1 CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + (l1 + l2)).toNat = q.toNat + (l1.toNat + l2.toNat) := by
@@ -720,10 +720,10 @@ theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     · simp only [iwTop, hqq]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hget, if_neg (by omega), if_neg (by omega)]
+      rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
   · simp only [iwTop, htop, hsum]; simp only [iwTop] at hqt; omega
-  · rw [hget, ← hqt, if_pos (by omega)]; congr 2; omega
-  · rw [hget, ← hqt, if_neg (by omega), if_pos (by omega)]; congr 2; omega
+  · rw [hget, ← hqt, ite_eq_left (by omega)]; congr 2; omega
+  · rw [hget, ← hqt, ite_eq_right (by omega), ite_eq_left (by omega)]; congr 2; omega
 
 /-! ## `nest_hole_at` refines `nestHoleAt` -/
 
@@ -767,9 +767,9 @@ section arms
 variable (k : Nat) (m1 m2 : Mem) (po pl idx : Word) (r r2 : List Word)
 theorem haK2_hit (h : idx < r2.tail.headD 0) :
     haK2 idx (some (r2, m2)) = some ([1, rdW (m2.arr64 IW) (r2.headD 0 + idx)], m2) := by
-  simp only [haK2]; rw [if_pos h]
+  simp only [haK2]; rw [ite_eq_left h]
 theorem haK2_miss (h : ¬ idx < r2.tail.headD 0) : haK2 idx (some (r2, m2)) = some ([0, 0], m2) := by
-  simp only [haK2]; rw [if_neg h]
+  simp only [haK2]; rw [ite_eq_right h]
 theorem haK1_some : haK1 k po pl idx (some (r, m1)) =
     haK2 idx (appendW k m1 (r.headD 0) (r.tail.headD 0) po pl) := rfl
 end arms
@@ -816,12 +816,12 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   obtain ⟨-, -, -, -, hnP, -, -, -, -, -⟩ := ctx_fields hc hin hsz
   unfold haW at h
   by_cases hlt : i < rdW (m.arr64 IW) (ctx + 4)
-  · rw [if_pos hlt] at h
+  · rw [ite_eq_left hlt] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨hS, IWGrow.refl _, ?_⟩
     have : ¬ c.nP ≤ i.toNat := by rw [← hnP]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega
     simp [ConRon.Arena.nestHoleAt, this, decONH]
-  rw [if_neg hlt] at h
+  rw [ite_eq_right hlt] at h
   have hge : c.nP ≤ i.toNat := by
     rw [← hnP]
     have : ¬ (i.toNat < (rdW (m.arr64 IW) (ctx + 4)).toNat) := fun h' => hlt (UInt64.lt_iff_toNat_lt.mpr h')
@@ -851,7 +851,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     have hx : (r2.headD 0 + idx).toNat = iwTop m1 + idx.toNat := by
       rw [word_add_toNat (by omega), hr20]
     refine ⟨hS2, hg1.trans hg2, ?_⟩
-    simp only [ConRon.Arena.nestHoleAt, if_pos hge, decONH, List.headD_cons, List.tail_cons, true_and]
+    simp only [ConRon.Arena.nestHoleAt, ite_eq_left hge, decONH, List.headD_cons, List.tail_cons, true_and]
     by_cases hr : idx.toNat < c.rootHoles.length
     · obtain ⟨w, hw, hd, hni⟩ := hH1 idx.toNat hr
       have hw' : (m2.arr64 IW)[iwTop m1 + idx.toNat]? = some w := by
@@ -876,7 +876,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     refine ⟨hS2, hg1.trans hg2, ?_⟩
     have hh' : ¬ idx.toNat < c.rootHoles.length + pl.toNat := by
       intro hc'; exact hh (UInt64.lt_iff_toNat_lt.mpr (by omega))
-    simp only [ConRon.Arena.nestHoleAt, if_pos hge, decONH]
+    simp only [ConRon.Arena.nestHoleAt, ite_eq_left hge, decONH]
     rw [List.getElem?_eq_none (by simp; omega)]
     rfl
 

@@ -18,7 +18,6 @@ The stubs meet it everywhere (`lvlHyp_stub`); the real call under `StageC` meets
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -197,7 +196,7 @@ theorem partsPack {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   have he' : elim.toNat < 2 ^ 32 := he
   have hs' : s.toNat < 2 ^ 32 := hs
   simp only [show decPL (truncM m') (decMS (truncM m')) mo.toNat ml.toNat = some ms from hm2,
-    show decPL (truncM m') (decRS (truncM m')) ro.toNat rl.toNat = some recs from hr2, he', hs', if_true,
+    show decPL (truncM m') (decRS (truncM m')) ro.toNat rl.toNat = some recs from hr2, he', hs', ite_true,
     Option.bind_some]
 
 /-- **`block_shape_seal`'s model refines the twin's last `match large?`.** -/
@@ -220,7 +219,7 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     obtain ⟨h1, he, hee⟩ := hlg
     simp only [List.headD_cons] at h1
     simp only [List.tail_cons, List.headD_cons] at he hee
-    rw [if_pos (by rw [h1]; decide)] at e
+    rw [ite_eq_left (by rw [h1]; decide)] at e
     rcases h2 : posRecW m [mo, ml, ro2, rl2, nPd, elimw, s, 1, ip] with _ | ⟨q, m2⟩ <;> rw [h2] at e
     · cases e
     rw [bsealW.k_block_shape_pack.arm1] at e
@@ -230,7 +229,7 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     rw [← hee, ← hsv, ← hip]; exact hd2
   | none =>
     have h1 : lgw = 0 := hlg
-    rw [if_neg (by rw [h1]; decide)] at e
+    rw [ite_eq_right (by rw [h1]; decide)] at e
     rcases h3 : naF m [] with _ | ⟨r3, m3⟩ <;> rw [h3] at e
     · cases e
     rw [bsealW.k_intern_nanon.arm1] at e
@@ -544,7 +543,7 @@ theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word
   | zero => simp [resContW] at h2
   | succ n =>
   rw [resContW_step] at h2
-  intro h0; rw [if_pos h0] at h2; cases h2
+  intro h0; rw [ite_eq_left h0] at h2; cases h2
 
 /-- The twin's prefix of `buildTwin` up to `lvlEq?`: the counts, the reserved names, the result sort
 `sv` (`LvlHyp`'s `T`). -/
@@ -597,11 +596,11 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   cases x2 with
   | none =>
     have h0 : r2.headD 0 = 0 := hR2
-    simp only [h0, if_true]
+    simp only [h0, ite_true]
     exact Sim.ret ⟨rfl, hS2, hg02⟩
   | some nIdxs =>
   obtain ⟨h21, hd2, hb2⟩ := hR2
-  simp only [h21, show (1 : Word) ≠ 0 by decide, if_false]
+  simp only [h21, show (1 : Word) ≠ 0 by decide, ite_false]
   -- level parameters (model only)
   intro r m' e
   rcases h3 : erToIwW (n + 3) m2 (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 1)) (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 2)) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
@@ -630,7 +629,7 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   | true =>
   rw [hpb] at hr4'
   rw [bbH4_ok (h := by rw [hr4']; decide)]
-  simp only [if_true]
+  simp only [ite_true]
   have hil : r2.tail.tail.headD 0 = ctl := by
     apply UInt64.toNat_inj.mp
     have e1 := mapM_opt_length _ _ _ (show decNL (truncM m2) _ _ = some nIdxs from hd2)
@@ -699,7 +698,7 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [hsp] at hR1
     have h0 : r1.headD 0 = 0 := hR1
     intro r m' e
-    rw [if_pos h0] at e
+    rw [ite_eq_left h0] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     exact ⟨none, a, rfl, rfl, hS1, hg1⟩
   | some t =>
@@ -707,11 +706,11 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   rw [hsp] at hR1
   obtain ⟨h01, hq6, hts, hcs, hrs⟩ := hR1
   intro r m' e
-  rw [if_neg (by rw [h01]; decide)] at e
+  rw [ite_eq_right (by rw [h01]; decide)] at e
   dsimp only
   generalize hq : r1.tail.headD 0 = q at e hq6 hts hcs hrs
   by_cases hz : rdW (m1.arr64 IW) (q + 1) = 0 ∨ rdW (m1.arr64 IW) (q + 5) = 0
-  · rw [if_pos hz] at e
+  · rw [ite_eq_left hz] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     have : cvTs = [] ∨ rs = [] := by
       rcases hz with hz | hz
@@ -721,7 +720,7 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rcases this with rfl | rfl
     · rfl
     · cases cvTs <;> rfl
-  rw [if_neg hz] at e
+  rw [ite_eq_right hz] at e
   obtain ⟨cvT0, cvTs', rfl⟩ : ∃ c cs', cvTs = c :: cs' := by
     cases cvTs with
     | nil => exact absurd (Or.inl ((partsW0 hts).mpr rfl)) hz

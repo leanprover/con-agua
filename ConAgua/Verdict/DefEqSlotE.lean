@@ -16,7 +16,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -190,12 +189,12 @@ theorem defeqBody_refinesE (p : Prog) (hq : DefeqBodyProg p) (hc : DefeqBodyCall
   rw [defeqBody_eq, decE_beq hx hy]
   simp only [defeqBodyE] at hW
   by_cases hxy : x = y
-  · rw [if_pos hxy] at hW; cases hW
-  rw [if_neg hxy] at hW
+  · rw [ite_eq_left hxy] at hW; cases hW
+  rw [ite_eq_right hxy] at hW
   simp only [hxy, decide_false, Bool.false_eq_true, ↓reduceIte]
   by_cases hd0 : d >>> 63 ≠ 0
-  · rw [if_pos hd0] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg hd0] at hW
+  · rw [ite_eq_left hd0] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right hd0] at hW
   have hd := depth_lt_of_shr d (by simpa using hd0)
   cases h1 : callE p n "is_bool_true" [y] s₀.mem with
   | error e1 =>
@@ -233,8 +232,8 @@ theorem defeqBody_refinesE (p : Prog) (hq : DefeqBodyProg p) (hc : DefeqBodyCall
     intro sc st m₃ M₃ hS₃ hW3
     unfold defeqBodyE.j1 at hW3
     by_cases hsc : sc ≠ 0
-    · rw [if_pos hsc] at hW3; cases hW3
-    rw [if_neg hsc] at hW3
+    · rw [ite_eq_left hsc] at hW3; cases hW3
+    rw [ite_eq_right hsc] at hW3
     have hsc' : sc = 0 := by simpa using hsc
     simp only [hsc', bne_self_eq_false, Bool.false_eq_true, ↓reduceIte]
     unfold defeqBodyRestT
@@ -254,9 +253,9 @@ theorem defeqBody_refinesE (p : Prog) (hq : DefeqBodyProg p) (hc : DefeqBodyCall
       (by omega) (by omega) (hSP hS₃) hx hy hd) (callW_of_callE h4)
     refine ErrClaim.bind_core h₄ (fun M₄ hS₄ => ?_)
     by_cases hq4 : r₄.headD 0 ≠ 0
-    · rw [if_pos hq4] at hW3; cases hW3
-    rw [if_neg hq4] at hW3
-    simp only [decOB, if_pos (show r₄.headD 0 = 0 by simpa using hq4)]
+    · rw [ite_eq_left hq4] at hW3; cases hW3
+    rw [ite_eq_right hq4] at hW3
+    simp only [decOB, ite_eq_left (show r₄.headD 0 = 0 by simpa using hq4)]
     cases h5 : callE p (k + 1) "prop_irrel" [mode, vis, d, x, y] m₄ with
     | error e5 =>
       rw [h5, defeqBodyE.k_prop_irrel.none] at hW3; cases hW3
@@ -271,8 +270,8 @@ theorem defeqBody_refinesE (p : Prog) (hq : DefeqBodyProg p) (hc : DefeqBodyCall
       _ dn vis fe M₄ eb mode d x y (by omega) (by omega) (hSP hS₄) hx hy) (callW_of_callE h5)
     refine ErrClaim.bind_core h₅ (fun M₅ hS₅ => ?_)
     by_cases hp5 : r₅.headD 0 ≠ 0
-    · rw [if_pos hp5] at hW3; cases hW3
-    rw [if_neg hp5] at hW3
+    · rw [ite_eq_left hp5] at hW3; cases hW3
+    rw [ite_eq_right hp5] at hW3
     rw [decBool_false_of (by simpa using hp5)]
     simp only [Bool.false_eq_true, ↓reduceIte]
     have hK := hk (k + 1) (by omega)
@@ -323,9 +322,9 @@ theorem defeqBody_refinesE (p : Prog) (hq : DefeqBodyProg p) (hc : DefeqBodyCall
       (by omega) (by omega) (hSP hS₇) h₆.2.2.2 h₇.2.2.2 hd) (callW_of_callE h8)
     refine ErrClaim.bind_core h₈ (fun M₈ hS₈ => ?_)
     by_cases hq8 : r₈.headD 0 ≠ 0
-    · rw [if_pos hq8] at hW3; cases hW3
-    rw [if_neg hq8] at hW3
-    simp only [decOB, if_pos (show r₈.headD 0 = 0 by simpa using hq8)]
+    · rw [ite_eq_left hq8] at hW3; cases hW3
+    rw [ite_eq_right hq8] at hW3
+    simp only [decOB, ite_eq_left (show r₈.headD 0 = 0 by simpa using hq8)]
     cases h9 : callE p (k + 1) "lazy_delta_reduction" [mode, vis, d, r₆.headD 0, r₇.headD 0] m₈ with
     | error e9 =>
       rw [h9, defeqBodyE.k_lazy_delta_reduction.none] at hW3; cases hW3
@@ -342,12 +341,12 @@ theorem defeqBody_refinesE (p : Prog) (hq : DefeqBodyProg p) (hc : DefeqBodyCall
     refine ErrClaim.bind_core h₉ (fun M₉ hS₉ => ?_)
     obtain ⟨g0, g1, g2⟩ := h₉.2.2.2
     by_cases l0 : r₉.headD 0 = 0
-    · rw [if_pos l0] at hW3; cases hW3
-    rw [if_neg l0] at hW3
+    · rw [ite_eq_left l0] at hW3; cases hW3
+    rw [ite_eq_right l0] at hW3
     by_cases l1 : r₉.headD 0 = 1
-    · rw [if_pos l1] at hW3; cases hW3
-    rw [if_neg l1] at hW3
-    simp only [decLR, if_neg l0, if_neg l1]
+    · rw [ite_eq_left l1] at hW3; cases hW3
+    rw [ite_eq_right l1] at hW3
+    simp only [decLR, ite_eq_right l0, ite_eq_right l1]
     cases h10 : callE p (k + 1) "defeq_tail" [mode, vis, d, r₉.tail.headD 0, r₉.tail.tail.headD 0]
         m₉ with
     | error e10 =>
@@ -357,7 +356,7 @@ theorem defeqBody_refinesE (p : Prog) (hq : DefeqBodyProg p) (hc : DefeqBodyCall
           g1 g2 hd) h10
     | ok q => rw [h10] at hW3; simp only [defeqBodyE.k_defeq_tail] at hW3; cases hW3
   by_cases hb : r₁.headD 0 ≠ 0 ∧ ((mode >>> 1) &&& 1 ≠ 0 ∨ r₂.headD 0 = 0)
-  · rw [if_pos hb.1, if_pos hb.2] at hW
+  · rw [ite_eq_left hb.1, ite_eq_left hb.2] at hW
     have hcond : (decBool r₁ && ((decMode mode).eager || !decBool r₂)) = true := by
       rw [decMode_eager mode hs.mode4, decBool_true_of hb.1]
       rcases hb.2 with h | h
@@ -382,8 +381,8 @@ theorem defeqBody_refinesE (p : Prog) (hq : DefeqBodyProg p) (hc : DefeqBodyCall
   have hW' : defeqBodyE.j1 p (k + 1) mode vis d x y 0 m₂ = .error er := by
     by_cases hb1 : r₁.headD 0 ≠ 0
     · have hb2 : ¬ ((mode >>> 1) &&& 1 ≠ 0 ∨ r₂.headD 0 = 0) := fun h => hb ⟨hb1, h⟩
-      rw [if_pos hb1, if_neg hb2] at hW; exact hW
-    · rw [if_neg hb1] at hW; exact hW
+      rw [ite_eq_left hb1, ite_eq_right hb2] at hW; exact hW
+    · rw [ite_eq_right hb1] at hW; exact hW
   have hcond : (decBool r₁ && ((decMode mode).eager || !decBool r₂)) = false := by
     rw [decMode_eager mode hs.mode4]
     by_cases h1 : r₁.headD 0 = 0

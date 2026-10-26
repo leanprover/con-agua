@@ -21,7 +21,6 @@ program text; the `BlockPass` record's slices
   members); `bpPSl`/`bpHSl` read a slice of a decoded record as L does.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

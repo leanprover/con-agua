@@ -14,8 +14,6 @@ Mirrors `grpAW_okC`/`grpBW_okC`/`grpCW_okC` (the three parts of `grpW_okC`). The
 function has nested loops), `block_large_elim_allowed` and the rest are `closedNV`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -216,11 +214,11 @@ theorem grpCE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
     simp only [grpPMem]
     rw [set64IW_get, set64IW_get]
     by_cases j13 : j = 13
-    · subst j13; rw [if_pos ⟨e13.symm, by rw [size_set64]; omega⟩]; rfl
-    rw [if_neg (by omega)]
+    · subst j13; rw [ite_eq_left ⟨e13.symm, by rw [size_set64]; omega⟩]; rfl
+    rw [ite_eq_right (by omega)]
     by_cases j12 : j = 12
-    · subst j12; rw [if_pos ⟨e12.symm, by omega⟩]; rfl
-    rw [if_neg (by omega), hg2.2.2.1 _ (by omega), hget j (by rw [hwl]; omega), ← hws]
+    · subst j12; rw [ite_eq_left ⟨e12.symm, by omega⟩]; rfl
+    rw [ite_eq_right (by omega), hg2.2.2.1 _ (by omega), hget j (by rw [hwl]; omega), ← hws]
     rcases j with _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | j <;> first | rfl | omega
   have hpreP' : DecB (fun x => (decHL x o.toNat l.toNat : Option (List EIdx))) (grpPMem s2.mem g o l) pre := by
     refine decHL_decB ?_ (by rw [htP]; exact hpreb)

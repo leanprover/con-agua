@@ -15,7 +15,6 @@ two continuation-shaped fragments (`oneK`, `walkK`, no con-ron spec of their own
 of `nestPos` (`posBindT`, `posAppT`) they also give the denotations the caller's next step needs.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (dCtx dProg dState dCtors dOut dGrp kindOf)

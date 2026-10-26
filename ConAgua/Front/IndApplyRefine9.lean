@@ -15,7 +15,6 @@ open ConRon.Arena
 open ConRon.Arena.Frontend
 open ConLeche.Frontend (IndCtorRec IndTypeRec IndRecRec)
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 
@@ -135,7 +134,7 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   have hD₁ : StateDR m₁ st := hD.frame t2.frame (by decide) (by decide) (by decide) (by decide) (by decide)
   have hR₁ : ArenaR m₁ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₁ t2.frame a hR
   -- the type types
-  rcases h4 : mapW n m₁ to tn 11 2 1 with _ | ⟨⟨tyt, x2⟩, m₂⟩ <;> simp only [h4, pmK, reduceCtorEq] at h
+  rcases h4 : mapW n m₁ to tn 11 2 1 with _ | ⟨⟨tyt, x2⟩, m₂⟩ <;> simp only [h4, reduceCtorEq] at h
   obtain ⟨u1, u2, u3, -, u5, u6, u7⟩ := mapW_twin t3 h4 a tys (fun t => t.cv.type) (getDeclD st)
     (by rw [hTn])
     (fun k hk => by
@@ -147,13 +146,13 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   have e12 := t2.trans u2
   have hD₂ : StateDR m₂ st := hD.frame e12.frame (by decide) (by decide) (by decide) (by decide) (by decide)
   -- the listed constructor names
-  rcases h5 : listedW n m₂ to tn with _ | ⟨⟨fo, x⟩, m₃⟩ <;> simp only [h5, pmK, reduceCtorEq] at h
+  rcases h5 : listedW n m₂ to tn with _ | ⟨⟨fo, x⟩, m₃⟩ <;> simp only [h5, reduceCtorEq] at h
   obtain ⟨LS, l1, l2, l3, l4, l5, l6, l7, l8, l9⟩ := listedW_twin hD a tys to tn
     (fun k hk => hTy.2.2 k hk) hTn (by omega) h5 e12 u3
   have e13 := e12.trans l2
   have hD₃ : StateDR m₃ st := hD.frame e13.frame (by decide) (by decide) (by decide) (by decide) (by decide)
   -- the constructor records' names
-  rcases h6 : mapW n m₃ co cn 10 0 0 with _ | ⟨⟨cno, x3⟩, m₄⟩ <;> simp only [h6, pmK, reduceCtorEq] at h
+  rcases h6 : mapW n m₃ co cn 10 0 0 with _ | ⟨⟨cno, x3⟩, m₄⟩ <;> simp only [h6, reduceCtorEq] at h
   obtain ⟨v1, v2, v3, -, v5, v6, v7⟩ := mapW_twin l3 h6 a cts (fun c => c.cv.name) st.name
     (by rw [hCn])
     (fun k hk => by
@@ -163,7 +162,7 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
     (fun x w hw => lkW_name hD₃ a (by simpa [mapLk] using hw))
   have e14 := e13.trans v2
   -- `ifl_nodup`, the count
-  rcases h7 : nodupW n m₄ fo x 0 with _ | u <;> simp only [h7, wK, reduceCtorEq] at h
+  rcases h7 : nodupW n m₄ fo x 0 with _ | u <;> simp only [h7, reduceCtorEq] at h
   split at h; cases h; rename_i hu0
   split at h; cases h; rename_i hxcn
   have hxcn' : x = cn := Classical.byContradiction hxcn
@@ -193,7 +192,7 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   have hD₄ : StateDR m₄ st := hD.frame e14.frame (by decide) (by decide) (by decide) (by decide) (by decide)
   have hfuel := storeFuelW_ok hR₄ h9
   rcases h10 : orderW n m₄ to tn tyn fo cno co cn fuel np with _ | ⟨oo₅, m₅⟩ <;> simp only [h10, allocK, reduceCtorEq] at h8
-  rcases h11 : kExpW n m₅ to tn tyt oo₅ fuel with _ | ⟨ke, m₆⟩ <;> simp only [h11, allocK, reduceCtorEq] at h8
+  rcases h11 : kExpW n m₅ to tn tyt oo₅ fuel with _ | ⟨ke, m₆⟩ <;> simp only [h11, reduceCtorEq] at h8
   rcases h12 : recsW n m₆ to tn ro rn np cn ke tyn tyt fuel with _ | u12 <;> simp only [h12, uK, reduceCtorEq] at h8
   obtain ⟨hoo5, hm6⟩ := Prod.mk.inj (Option.some.inj h8)
   subst oo₅ m₆
@@ -263,8 +262,8 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
         obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hx
         simp [n1 hun k hk (Nat.zero_le _)]
       rw [hany] at hr
-      simp only [Bool.false_eq_true, if_false] at hr
-      rw [if_neg (by simpa using hun)] at h12
+      simp only [Bool.false_eq_true, ite_false] at hr
+      rw [ite_eq_right (by simpa using hun)] at h12
       obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hr
       have := recsGoW_twin hR₆ hD₆ hRc₆ hRn hro np3 hke
         (by have := t3.1; have := t3.2; have := u2.top; have := l2.top; have := v2.top; omega)

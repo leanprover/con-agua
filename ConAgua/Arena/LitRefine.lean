@@ -37,7 +37,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -76,9 +75,9 @@ theorem internE_lit_run (l : ConLeche.Literal) (a : AState) :
     cases hc : a.store.scr.lits.cons[litKey l]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
       ↓reduceIte, litKey, ite_self, protoRun, litLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrLits, withPersLits, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+    (try split) <;> simp_all [withScrLits, withPersLits, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## Normalised slices are unique -/
 
@@ -465,7 +464,7 @@ theorem litNewOK :
   simp only [litKey, RecRel_natVal, NatRec_raw, litH, e0, e1, e2, e3, hp, hqt, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
-    show (0 : Word).toNat = 0 from rfl, htop]
+    show (0 : Word).toNat = 0 from rfl]
   grind [PoolOK, SliceOK]
 
 end query
@@ -565,7 +564,7 @@ theorem litNewOKStr :
   simp only [litKey, RecRel_strVal, StrRec_raw, litH, e0, e1, e2, e3, hp, hqt, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
-    show (0 : Word).toNat = 0 from rfl, htop]
+    show (0 : Word).toNat = 0 from rfl]
   grind [SliceOK]
 
 end queryStr

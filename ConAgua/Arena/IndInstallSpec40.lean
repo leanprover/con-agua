@@ -11,7 +11,6 @@ its prefix, and the generated recursor types checked. The model `grpW` over the 
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -296,8 +295,8 @@ end model
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (r : List Word) (rest : Mem → Option (List Word × Mem))
   (vis pp nested pO pL tO tL rd mO mL cO cL cRo cRl fo fl m2o m2l co cl el g : Word)
-theorem grpK4_bad (h : r.headD 0 = 0) : grpK4 rest (some (r, m)) = none := by simp only [grpK4]; rw [if_pos h]
-theorem grpK4_ok (h : r.headD 0 ≠ 0) : grpK4 rest (some (r, m)) = rest m := by simp only [grpK4]; rw [if_neg h]
+theorem grpK4_bad (h : r.headD 0 = 0) : grpK4 rest (some (r, m)) = none := by simp only [grpK4]; rw [ite_eq_left h]
+theorem grpK4_ok (h : r.headD 0 ≠ 0) : grpK4 rest (some (r, m)) = rest m := by simp only [grpK4]; rw [ite_eq_right h]
 theorem grpK3_some : grpK3 p n pp rest (some (r, m)) =
     grpK4 rest (callW p n "block_large_elim_allowed" [pp, r.headD 0] m) := rfl
 theorem grpK2_fam (h : rdW (m.arr64 IW) (pp + 1) = 0) :
@@ -322,7 +321,7 @@ theorem grpK1_some : grpK1 p n vis pp nested mO mL (some (r, m)) =
       (callW p n "class_stream_recs" [vis, rdW (m.arr64 IW) (pp + 2), rdW (m.arr64 IW) (pp + 3)] m) := rfl
 theorem grpC4_some : grpC4 g (some (r, m)) = some ([g, r.headD 0, r.tail.headD 0], m) := rfl
 theorem grpC3_bad (h : r.headD 0 = 0) : grpC3 p n vis pp rd g cRo cRl (some (r, m)) = none := by
-  simp only [grpC3]; rw [if_pos h]
+  simp only [grpC3]; rw [ite_eq_left h]
 theorem grpC3_ok (h : r.headD 0 ≠ 0) : grpC3 p n vis pp rd g cRo cRl (some (r, m)) =
     grpC4 g (callW p n "class_rec_tys_ok" [vis, g,
       rdW ((grpPMem m g (r.tail.headD 0) (r.tail.tail.headD 0)).arr64 IW) (pp + 1),
@@ -331,7 +330,7 @@ theorem grpC3_ok (h : r.headD 0 ≠ 0) : grpC3 p n vis pp rd g cRo cRl (some (r,
       rdW ((grpPMem m g (r.tail.headD 0) (r.tail.tail.headD 0)).arr64 IW) (rd + 2),
       rdW ((grpPMem m g (r.tail.headD 0) (r.tail.tail.headD 0)).arr64 IW) (rd + 3)]
       (grpPMem m g (r.tail.headD 0) (r.tail.tail.headD 0))) := by
-  simp only [grpC3]; rw [if_neg h]
+  simp only [grpC3]; rw [ite_eq_right h]
 theorem grpC1_some : grpC1 p n vis pp pO pL rd cRo cRl m2o m2l fo fl co cl el (some (r, m)) =
     grpC2W p n (grpG1 m (r.headD 0) pp pO pL m2o m2l) vis pp rd (r.headD 0) cRo cRl fo fl co cl el := rfl
 theorem grpB6_some : grpB6 p n vis pp pO pL rd cRo cRl m2o m2l fo fl co cl (some (r, m)) =
@@ -341,11 +340,11 @@ theorem grpB5_some : grpB5 p n vis pp pO pL rd cRo cRl m2o m2l co cl (some (r, m
       (callW p n "struct_elim_level" [rdW (m.arr64 IW) (pp + 5), rdW (m.arr64 IW) (pp + 7)] m) := rfl
 theorem grpB4_bad (h : r.headD 0 = 0) :
     grpB4 p n vis pp pO pL rd cO cL cRo cRl m2o m2l co cl (some (r, m)) = none := by
-  simp only [grpB4]; rw [if_pos h]
+  simp only [grpB4]; rw [ite_eq_left h]
 theorem grpB4_ok (h : r.headD 0 ≠ 0) : grpB4 p n vis pp pO pL rd cO cL cRo cRl m2o m2l co cl (some (r, m)) =
     grpB5 p n vis pp pO pL rd cRo cRl m2o m2l co cl
       (callW p n "gen_rec_check_former_tys_c" [vis, cO, cL, m2o, m2l] m) := by
-  simp only [grpB4]; rw [if_neg h]
+  simp only [grpB4]; rw [ite_eq_right h]
 theorem grpB3_some : grpB3 p n vis pp pO pL rd cO cL cRo cRl m2o m2l (some (r, m)) =
     grpB4 p n vis pp pO pL rd cO cL cRo cRl m2o m2l (r.headD 0) (r.tail.headD 0)
       (callW p n "gen_rec_check_minor_ok" [rdW (m.arr64 IW) rd, rdW (m.arr64 IW) (rd + 1), r.headD 0,

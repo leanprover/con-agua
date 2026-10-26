@@ -84,13 +84,13 @@ variable (S : MemoSch) (m m₁ m₂ : Mem) (e k : Word) (r : List Word)
 theorem memoSlotW_hit (res : Option (List Word × Mem)) (h0 : mfindG S m e k ≠ [])
     (h1 : (mfindG S m e k).headD 0 ≠ 0) :
     memoSlotW S m e k res = some (mvG S m ((mfindG S m e k).tail.headD 0), m) := by
-  unfold memoSlotW; rw [if_neg h0, if_pos h1]
+  unfold memoSlotW; rw [ite_eq_right h0, ite_eq_left h1]
 
 theorem memoSlotW_miss (h0 : mfindG S m e k ≠ []) (h1 : (mfindG S m e k).headD 0 = 0)
     (h2 : msetG S m₁ e k (r.headD 0) = some m₂) :
     memoSlotW S m e k (some (r, m₁)) = some (r.headD 0, m₂) := by
   unfold memoSlotW
-  rw [if_neg h0, if_neg (by simp only [ne_eq, Decidable.not_not]; exact h1)]
+  rw [ite_eq_right h0, ite_eq_right (by simp only [ne_eq, Decidable.not_not]; exact h1)]
   simp only [h2]
 
 end arms
@@ -98,19 +98,19 @@ end arms
 theorem whnfCoreW_stuck (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word)
     (h : e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0) :
     whnfCoreW p n m mode cheap vis d e = some (e, m) := by
-  unfold whnfCoreW; rw [if_pos h]
+  unfold whnfCoreW; rw [ite_eq_left h]
 
 theorem whnfCoreW_cheap (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word)
     (h : ¬ (e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0)) (hc : cheap ≠ 0) :
     whnfCoreW p n m mode cheap vis d e =
       memoSlotW wkSch m e (ebKey mode) (callW p n "whnf_core_loop" [mode, 1, vis, d, e] m) := by
-  unfold whnfCoreW; rw [if_neg h, if_pos hc]
+  unfold whnfCoreW; rw [ite_eq_right h, ite_eq_left hc]
 
 theorem whnfCoreW_full (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word)
     (h : ¬ (e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0)) (hc : cheap = 0) :
     whnfCoreW p n m mode cheap vis d e =
       memoSlotW wcSch m e (ebKey mode) (callW p n "whnf_core_loop" [mode, 0, vis, d, e] m) := by
-  unfold whnfCoreW; rw [if_neg h, if_neg (by simpa using hc)]
+  unfold whnfCoreW; rw [ite_eq_right h, ite_eq_right (by simpa using hc)]
 
 /-! ## The L spec -/
 
@@ -269,7 +269,7 @@ theorem knot_whnfCore_missK (h : whnfCoreStuckTag e = false)
     ((coreKnot mode fe id (F + 1)).whnfCore true d e).run a =
       .ok (x, { a₁ with caches := { a₁.caches with
         whnfCoreCheapC := a₁.caches.whnfCoreCheapC.insert e x } }) := by
-  simp [coreKnot, h, hm, StateT.run_bind, hb, except_ok_bind, whnfCoreCheapSet]; rfl
+  simp [coreKnot, h, hm, StateT.run_bind, hb, whnfCoreCheapSet]; rfl
 
 theorem knot_whnfCore_missF (h : whnfCoreStuckTag e = false)
     (hm : a.caches.whnfCoreC[e]? = none) (x : EIdx) (a₁ : AState)
@@ -277,7 +277,7 @@ theorem knot_whnfCore_missF (h : whnfCoreStuckTag e = false)
     ((coreKnot mode fe id (F + 1)).whnfCore false d e).run a =
       .ok (x, { a₁ with caches := { a₁.caches with
         whnfCoreC := a₁.caches.whnfCoreC.insert e x } }) := by
-  simp [coreKnot, h, hm, StateT.run_bind, hb, except_ok_bind, whnfCoreSet]; rfl
+  simp [coreKnot, h, hm, StateT.run_bind, hb, whnfCoreSet]; rfl
 
 end twin
 

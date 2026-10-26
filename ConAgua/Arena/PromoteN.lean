@@ -14,7 +14,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -94,12 +93,12 @@ theorem pnW_pers (hf : f ≠ 0) (ht : tierW h = 0) : pnW p n m f h = some (h, m)
 theorem pnW_hit (hf : f ≠ 0) (ht : tierW h ≠ 0) (h0 : mfindG pnSch m h 0 ≠ [])
     (h1 : (mfindG pnSch m h 0).headD 0 ≠ 0) :
     pnW p n m f h = some (mvG pnSch m ((mfindG pnSch m h 0).tail.headD 0), m) := by
-  unfold pnW; rw [if_neg hf, if_neg ht, if_neg h0, if_pos h1]
+  unfold pnW; rw [ite_eq_right hf, ite_eq_right ht, ite_eq_right h0, ite_eq_left h1]
 
 theorem pnW_miss (hf : f ≠ 0) (ht : tierW h ≠ 0) (h0 : mfindG pnSch m h 0 ≠ [])
     (h1 : (mfindG pnSch m h 0).headD 0 = 0) :
     pnW p n m f h = memoK pnSch h (callW p n "pn_arm" [f - 1, h] m) := by
-  unfold pnW; rw [if_neg hf, if_neg ht, if_neg h0, if_neg (fun h2 => h2 h1)]
+  unfold pnW; rw [ite_eq_right hf, ite_eq_right ht, ite_eq_right h0, ite_eq_right (fun h2 => h2 h1)]
 
 theorem pnArmW_anon (hh : ¬ 4294967295 < h) (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hg : h >>> 28 = 0) (hc : ¬ tcnt m NANON (tierW h) ≤ idxW h) :

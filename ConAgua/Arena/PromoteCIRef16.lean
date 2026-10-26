@@ -8,7 +8,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -45,7 +44,7 @@ record, which then decodes. -/
 theorem mk_decode {n : Nat} {M0 M1 M2 : Mem} {c r : List Word} {q k kw : Word}
     {cv' : IConstantVal} (hCV : CVWords M0 c cv') (hext : ArrExt (erecP M0) (erecP M1))
     (hT01 : erecTop M0 ≤ erecTop M1)
-    (hts1 : erecTop M1 ≤ (M1.arr64 EREC).size) (hsz : (M1.arr64 EREC).size < 2 ^ 64)
+    (_hts1 : erecTop M1 ≤ (M1.arr64 EREC).size) (hsz : (M1.arr64 EREC).size < 2 ^ 64)
     (hkw : (M1.arr64 EREC)[q.toNat]? = some kw) (hk5 : 5 ≤ k.toNat)
     (hmk : callW p (n + 1) "pci_mk" [q, k, g0 c, g1 c, g2 c, g3 c] M1 = some (r, M2)) :
     (r.headD 0).toNat = erecTop M1 ∧ erecTop M2 = erecTop M1 + k.toNat ∧ ErecGrow M1 M2 ∧

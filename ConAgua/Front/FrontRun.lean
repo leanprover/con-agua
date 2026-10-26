@@ -271,7 +271,7 @@ input `b` and related to the arena state `a₀` (by `ArenaD`) and to the blank p
 @[refines ConRon.Arena.Frontend.parseBytes]
 theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
-    (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
+    (_hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
     (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄

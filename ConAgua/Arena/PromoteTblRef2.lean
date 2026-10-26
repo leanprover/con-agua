@@ -8,7 +8,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -62,7 +61,7 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
   have hsz₁ : (m₁.arr64 EREC).size < 2 ^ 64 := hiw4
   have hts₁ : erecTop m₁ ≤ (m₁.arr64 EREC).size := hiw2
   have hD₁ : ArenaD m₁ a := hR₁.check.arena
-  simp only [newTW, if_neg hk0] at hW
+  simp only [newTW, ite_eq_right hk0] at hW
   -- the count
   obtain ⟨⟨rc, m₁'⟩, hcc, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
@@ -74,8 +73,8 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
   have hcn : c.toNat = min n0.toNat kt.toNat := by
     rw [hc]
     by_cases h : n0 < kt
-    · rw [if_pos h]; have := UInt64.lt_iff_toNat_lt.mp h; omega
-    · rw [if_neg h]; have := UInt64.not_lt.mp h; have := UInt64.le_iff_toNat_le.mp this; omega
+    · rw [ite_eq_left h]; have := UInt64.lt_iff_toNat_lt.mp h; omega
+    · rw [ite_eq_right h]; have := UInt64.not_lt.mp h; have := UInt64.le_iff_toNat_le.mp this; omega
   -- the tables
   have htabs := hE₁.tables
   rw [envTables_eq] at htabs

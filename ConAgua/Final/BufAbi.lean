@@ -15,7 +15,6 @@ namespace ConAgua.Final
 
 open L L.Compiler L.Arena
 
-set_option linter.unusedSimpArgs false
 
 /-- The register-file simp set: writes as literals, reads as projections. -/
 local macro "rsimp" loc:(Lean.Parser.Tactic.location)? : tactic => `(tactic| simp only [Reg64s.set64_rax,
@@ -138,11 +137,11 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
       fun s h => by rw [h .rcx (by decide)]; simpa using hrcx
     have hvB : bufVal tab buf B base fz own (6 + p) = (UInt64.ofNat (bufB B buf base fz own (tab.wposInv p))).toBitVec := by
       simp only [bufVal, show 6 + p ≠ 0 by omega, show 6 + p ≠ 1 by omega, show ¬ 6 + p < 6 by omega,
-        show 6 + p < 6 + tab.nw by omega, if_false, if_true, show 6 + p - 6 = p by omega]
+        show 6 + p < 6 + tab.nw by omega, ite_false, ite_true, show 6 + p - 6 = p by omega]
     have hvL : bufVal tab buf B base fz own (6 + tab.nw + p) = (UInt64.ofNat (bufL B fz own (tab.wposInv p))).toBitVec := by
       simp only [bufVal, show 6 + tab.nw + p ≠ 0 by omega, show 6 + tab.nw + p ≠ 1 by omega,
         show ¬ 6 + tab.nw + p < 6 by omega, show ¬ 6 + tab.nw + p < 6 + tab.nw by omega,
-        show 6 + tab.nw + p < 6 + 2 * tab.nw by omega, if_false, if_true, show 6 + tab.nw + p - 6 - tab.nw = p by omega]
+        show 6 + tab.nw + p < 6 + 2 * tab.nw by omega, ite_false, ite_true, show 6 + tab.nw + p - 6 - tab.nw = p by omega]
     -- after the two stores: the rest
     have hrest : ∀ k' s', k' = k + (parDescB tab fz own (tab.wposInv p)).length →
         s'.dmem = qwrs base (bufVal tab buf B base fz own) d0 (qs ++ [6 + p] ++ [6 + tab.nw + p]) →

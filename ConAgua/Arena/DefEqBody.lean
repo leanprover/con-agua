@@ -18,7 +18,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -211,10 +210,10 @@ theorem defeqBody_refines (n : Nat) : DefeqBodySpec p n := by
   rw [defeqBody_eq, decE_beq hx hy]
   unfold dbW at hW
   by_cases hxy : x = y
-  · rw [if_pos hxy] at hW
+  · rw [ite_eq_left hxy] at hW
     simp only [hxy, decide_true, ↓reduceIte]
     exact coreRef_true hS hW
-  rw [if_neg hxy] at hW
+  rw [ite_eq_right hxy] at hW
   simp only [hxy, decide_false, Bool.false_eq_true, ↓reduceIte]
   obtain ⟨hd0, hW⟩ := of_ite_none hW
   have hd := depth_lt_of_shr d (by simpa using hd0)
@@ -238,10 +237,10 @@ theorem defeqBody_refines (n : Nat) : DefeqBodySpec p n := by
     intro sc st m₃ M₃ hS₃ hW3
     unfold dbKsc at hW3
     by_cases hsc : sc ≠ 0
-    · rw [if_pos hsc] at hW3
+    · rw [ite_eq_left hsc] at hW3
       simp only [hsc, bne_iff_ne, ne_eq, not_false_eq_true, ↓reduceIte]
       exact coreRef_true hS₃ hW3
-    rw [if_neg hsc] at hW3
+    rw [ite_eq_right hsc] at hW3
     have hsc' : sc = 0 := by simpa using hsc
     simp only [hsc', bne_self_eq_false, Bool.false_eq_true, ↓reduceIte]
     unfold defeqBodyRestT
@@ -254,20 +253,20 @@ theorem defeqBody_refines (n : Nat) : DefeqBodySpec p n := by
     refine coreRef_bind h₄ (fun M₄ hS₄ => ?_)
     rw [dbK2_some] at hW4
     by_cases hq4 : r₄.headD 0 ≠ 0
-    · rw [if_pos hq4] at hW4
-      simp only [decOB, if_neg hq4]
+    · rw [ite_eq_left hq4] at hW4
+      simp only [decOB, ite_eq_right hq4]
       exact coreRef_word hS₄ h₄.2.2.2.2 hW4
-    rw [if_neg hq4] at hW4
-    simp only [decOB, if_pos (show r₄.headD 0 = 0 by simpa using hq4)]
+    rw [ite_eq_right hq4] at hW4
+    simp only [decOB, ite_eq_left (show r₄.headD 0 = 0 by simpa using hq4)]
     obtain ⟨r₅, m₅, hc5, hW5⟩ := callW_cases rfl hW4
     have h₅ := CoreSpec.of_callW (propIrrel_refines p hq.stuck hc.stuck k hk' F ⟨m₄, Locals.init []⟩
       _ dn vis fe M₄ eb mode d x y (by omega) (by omega) (hSP hS₄) hx hy) hc5
     refine coreRef_bind h₅ (fun M₅ hS₅ => ?_)
     simp only [dbK3] at hW5
     by_cases hp5 : r₅.headD 0 ≠ 0
-    · rw [if_pos hp5] at hW5
+    · rw [ite_eq_left hp5] at hW5
       rw [decBool_true_of hp5]; exact coreRef_true hS₅ hW5
-    rw [if_neg hp5] at hW5
+    rw [ite_eq_right hp5] at hW5
     rw [decBool_false_of (by simpa using hp5)]
     simp only [Bool.false_eq_true, ↓reduceIte]
     have hK := hk (k + 1) (by omega)
@@ -289,11 +288,11 @@ theorem defeqBody_refines (n : Nat) : DefeqBodySpec p n := by
     refine coreRef_bind h₈ (fun M₈ hS₈ => ?_)
     simp only [dbK6] at hW8
     by_cases hq8 : r₈.headD 0 ≠ 0
-    · rw [if_pos hq8] at hW8
-      simp only [decOB, if_neg hq8]
+    · rw [ite_eq_left hq8] at hW8
+      simp only [decOB, ite_eq_right hq8]
       exact coreRef_word hS₈ h₈.2.2.2.2 hW8
-    rw [if_neg hq8] at hW8
-    simp only [decOB, if_pos (show r₈.headD 0 = 0 by simpa using hq8)]
+    rw [ite_eq_right hq8] at hW8
+    simp only [decOB, ite_eq_left (show r₈.headD 0 = 0 by simpa using hq8)]
     obtain ⟨r₉, m₉, hc9, hW9⟩ := callW_cases rfl hW8
     have h₉ := CoreSpec.of_callW (lazyDeltaReduction_refines p hq.lazy hc.lazy k hk' F (by omega)
       (by omega) ⟨m₈, Locals.init []⟩ _ dn vis fe M₈ eb mode d _ _ (hSP hS₈) h₆.2.2.2 h₇.2.2.2 hd) hc9
@@ -301,21 +300,21 @@ theorem defeqBody_refines (n : Nat) : DefeqBodySpec p n := by
     simp only [dbK7] at hW9
     obtain ⟨g0, g1, g2⟩ := h₉.2.2.2
     by_cases l0 : r₉.headD 0 = 0
-    · rw [if_pos l0] at hW9
-      simp only [decLR, if_pos l0]
+    · rw [ite_eq_left l0] at hW9
+      simp only [decLR, ite_eq_left l0]
       exact coreRef_word (w := 0) hS₉ hw0 hW9
-    rw [if_neg l0] at hW9
+    rw [ite_eq_right l0] at hW9
     by_cases l1 : r₉.headD 0 = 1
-    · rw [if_pos l1] at hW9
-      simp only [decLR, if_neg l0, if_pos l1]
+    · rw [ite_eq_left l1] at hW9
+      simp only [decLR, ite_eq_right l0, ite_eq_left l1]
       exact coreRef_word (w := 1) hS₉ hw1 hW9
-    rw [if_neg l1] at hW9
-    simp only [decLR, if_neg l0, if_neg l1]
+    rw [ite_eq_right l1] at hW9
+    simp only [decLR, ite_eq_right l0, ite_eq_right l1]
     exact CoreSpec.of_call1W (s₀ := ⟨m₉, Locals.init []⟩)
       (defeqTail_refines p hq.stuck hq.iota hc.stuck k hk' F _ _ dn vis fe M₉ eb mode d _ _
         (by omega) (by omega) (hSP hS₉) g1 g2 hd) (fun r r' h => by simp only [decBool, h]) hW9
   by_cases hb : r₁.headD 0 ≠ 0 ∧ ((mode >>> 1) &&& 1 ≠ 0 ∨ r₂.headD 0 = 0)
-  · rw [if_pos hb] at hW2
+  · rw [ite_eq_left hb] at hW2
     have hcond : (decBool r₁ && ((decMode mode).eager || !decBool r₂)) = true := by
       rw [decMode_eager mode hs.mode4, decBool_true_of hb.1]
       rcases hb.2 with h | h
@@ -329,7 +328,7 @@ theorem defeqBody_refines (n : Nat) : DefeqBodySpec p n := by
       _ dn vis fe M₂ eb mode d x (by omega) (by omega) ⟨hS₂, hs.mode4, hs.eb_mode⟩ hx) hc3
     refine coreRef_bind h₃ (fun M₃ hS₃ => ?_)
     exact rest _ _ _ _ hS₃ hW3
-  rw [if_neg hb] at hW2
+  rw [ite_eq_right hb] at hW2
   have hcond : (decBool r₁ && ((decMode mode).eager || !decBool r₂)) = false := by
     rw [decMode_eager mode hs.mode4]
     by_cases h1 : r₁.headD 0 = 0

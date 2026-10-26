@@ -14,7 +14,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -151,7 +150,7 @@ theorem stuckRest_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
   simp only [callFn, stuckRestL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "stuck_irrel",
       callW_spec p n "lvls_eq_c", callW_spec p n "eta_cert"] <;>
-  simp_all [drK, dsLv, dsEta, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+  simp_all [drK, dsLv, dsEta, call1W, LocEq, St.setLocs_cons, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 
@@ -162,9 +161,9 @@ theorem defeqStuck_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mod
   simp only [callFn, defeqStuckL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "e_view",
       callW_spec p n "stuck_str", callW_spec p n "stuck_app", callW_spec p n "stuck_rest"] <;>
-  simp_all [dsK, dsArm, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+  simp_all [dsK, dsArm, call1W, LocEq, St.setLocs_cons, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ, getD1, getD2, getD3]
+    Locals.init_cons_succ]
 
 /-! ## Leaves at any fuel -/
 
@@ -272,7 +271,7 @@ theorem stuckRest_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
   simp only [drK] at hW
   -- the free variables
   by_cases hf : ga = 1 ∧ gb = 1
-  · rw [if_pos hf] at hW
+  · rw [ite_eq_left hf] at hW
     obtain ⟨i, t, rfl⟩ := tagV_fvar (hta ▸ hf.1)
     obtain ⟨j, u, rfl⟩ := tagV_fvar (htb ▸ hf.2)
     refine coreRef_congr (ds_fvar _ _ fe _ _ _ a₀ i j t u hva hvb) ?_
@@ -288,10 +287,10 @@ theorem stuckRest_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
       exact coreRef_true hS hW
     · simp only [e, ↓reduceIte, decide_false, Bool.false_eq_true] at hW ⊢
       exact hirr a₀ s.mem M hS hW
-  rw [if_neg hf] at hW
+  rw [ite_eq_right hf] at hW
   -- the constants
   by_cases hcn : ga = 3 ∧ gb = 3
-  · rw [if_pos hcn] at hW
+  · rw [ite_eq_left hcn] at hW
     obtain ⟨nm, us, rfl⟩ := tagV_const (hta ▸ hcn.1)
     obtain ⟨nm', us', rfl⟩ := tagV_const (htb ▸ hcn.2)
     obtain ⟨-, hw1, hd1, hw2, hd2⟩ := hwa
@@ -299,8 +298,8 @@ theorem stuckRest_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
     refine coreRef_congr (ds_const _ _ fe _ _ _ a₀ nm nm' us us' hva hvb) ?_
     rw [← hd1, ← hd1', ← hd2, ← hd2']
     by_cases e : a1 = b1
-    · rw [if_pos e] at hW
-      rw [if_pos (by rw [e])]
+    · rw [ite_eq_left e] at hW
+      rw [ite_eq_left (by rw [e])]
       obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
       have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s a₀ dn vis fe M eb a2 b2 hS hw2 hw2'
         (by rw [hd2]; exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hva)
@@ -311,17 +310,17 @@ theorem stuckRest_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
       simp only [z0, ↓reduceIte] at hW1
       by_cases z1 : r₁.headD 0 = 1
       · simp only [z1, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
-        have : decO (r₁.headD 0) = some false := by unfold decO; rw [if_neg z0, if_pos z1]
+        have : decO (r₁.headD 0) = some false := by unfold decO; rw [ite_eq_right z0, ite_eq_left z1]
         rw [this]
         exact hirr _ m₁ M₁ hS₁ hW1
       · simp only [z1, ne_eq, not_false_eq_true, ↓reduceIte] at hW1
-        have : decO (r₁.headD 0) = some true := by unfold decO; rw [if_neg z0, if_neg z1]
+        have : decO (r₁.headD 0) = some true := by unfold decO; rw [ite_eq_right z0, ite_eq_right z1]
         rw [this]
         exact coreRef_true hS₁ hW1
-    · rw [if_neg e] at hW
-      rw [if_neg (fun h => e (decI_inj hw1 hw1' h))]
+    · rw [ite_eq_right e] at hW
+      rw [ite_eq_right (fun h => e (decI_inj hw1 hw1' h))]
       exact hirr a₀ s.mem M hS hW
-  rw [if_neg hcn] at hW
+  rw [ite_eq_right hcn] at hW
   have hlam : ∀ (t bd : EIdx) (w1 w2 x : Word) (T : AM Bool),
       HW w1 → decE w1 = t → HW w2 → decE w2 = bd → HW x →
       T.run a₀ = (lamArmT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
@@ -346,19 +345,19 @@ theorem stuckRest_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
       simp only [Bool.false_eq_true, ↓reduceIte]
       exact hirr _ m₁ M₁ hS₁ hW1
   by_cases hl : ga = 5
-  · rw [if_pos hl] at hW
+  · rw [ite_eq_left hl] at hW
     obtain ⟨t, bd, rfl⟩ := tagV_lam (hta ▸ hl)
     obtain ⟨-, hw1, hd1, hw2, hd2⟩ := hwa
     exact hlam t bd a1 a2 b _ hw1 hd1 hw2 hd2 hb
       (ds_lamL _ _ fe _ _ _ a₀ t bd vb hva hvb) hW
-  rw [if_neg hl] at hW
+  rw [ite_eq_right hl] at hW
   by_cases hl' : gb = 5
-  · rw [if_pos hl'] at hW
+  · rw [ite_eq_left hl'] at hW
     obtain ⟨t, bd, rfl⟩ := tagV_lam (htb ▸ hl')
     obtain ⟨-, hw1, hd1, hw2, hd2⟩ := hwb
     exact hlam t bd b1 b2 a _ hw1 hd1 hw2 hd2 ha
       (ds_lamR _ _ fe _ _ _ a₀ t bd va hva hvb (by rw [← hta]; exact hl)) hW
-  rw [if_neg hl'] at hW
+  rw [ite_eq_right hl'] at hW
   refine coreRef_congr (ds_irrel _ _ fe _ _ _ a₀ va vb hva hvb (by rw [← hta, ← htb]; exact h1)
     (by rw [← hta, ← htb]; exact h2) (by rw [← hta, ← htb]; exact hf)
     (by rw [← hta, ← htb]; exact hcn) (by rw [← hta, ← htb]; exact h3) (by rw [← hta]; exact hl)
@@ -443,7 +442,7 @@ theorem defeqStuck_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc 
     fun hsp h => CoreSpec.of_call1W hsp (fun r r' h => by simp only [decBool, h]) h
   simp only [dsArm] at hW
   by_cases c1 : ra.headD 0 = 8 ∧ rb.headD 0 = 4
-  · rw [if_pos c1] at hW
+  · rw [ite_eq_left c1] at hW
     obtain ⟨l, rfl⟩ := tagV_lit (hta ▸ c1.1)
     obtain ⟨fo, x, rfl⟩ := tagV_app (htb ▸ c1.2)
     obtain ⟨-, hfw, hfo, -, -⟩ := hvrb
@@ -453,9 +452,9 @@ theorem defeqStuck_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc 
       (rb.tail.headD 0) l hF hn hsl ha hb ha hfw (by rw [← hhda]; exact c1.1) hva) hW
     rw [hfo] at h
     simpa using h
-  rw [if_neg c1] at hW
+  rw [ite_eq_right c1] at hW
   by_cases c2 : ra.headD 0 = 4 ∧ rb.headD 0 = 8
-  · rw [if_pos c2] at hW
+  · rw [ite_eq_left c2] at hW
     obtain ⟨fo, x, rfl⟩ := tagV_app (hta ▸ c2.1)
     obtain ⟨l, rfl⟩ := tagV_lit (htb ▸ c2.2)
     obtain ⟨-, hfw, hfo, -, -⟩ := hvra
@@ -465,14 +464,14 @@ theorem defeqStuck_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc 
       (ra.tail.headD 0) l hF hn hsl ha hb hb hfw (by rw [← hhdb]; exact c2.2) hvb) hW
     rw [hfo] at h
     simpa using h
-  rw [if_neg c2] at hW
+  rw [ite_eq_right c2] at hW
   by_cases c3 : ra.headD 0 = 4 ∧ rb.headD 0 = 4
-  · rw [if_pos c3] at hW
+  · rw [ite_eq_left c3] at hW
     obtain ⟨f, x, rfl⟩ := tagV_app (hta ▸ c3.1)
     obtain ⟨g, y, rfl⟩ := tagV_app (htb ▸ c3.2)
     refine coreRef_congr (ds_app _ _ fe _ _ _ a₀ f x g y hva hvb) ?_
     exact fin (stuckApp_at p hq hi hc n hk F _ a₀ dn vis fe M eb mode d a b hF hn hsl ha hb) hW
-  rw [if_neg c3] at hW
+  rw [ite_eq_right c3] at hW
   exact fin (stuckRest_at p hq hi hc n hk F _ a₀ dn vis fe M eb mode d a b _ _ _ _ _ _ va vb hF hn
     hsl ha hb hva hvb (viewW_of hvra) (viewW_of hvrb) c1 c2 c3) hW
 

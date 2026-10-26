@@ -51,7 +51,7 @@ theorem decNat_ite (w : Word) (r : List Word) (h : (if w ≠ 0 then (1 : Word) e
   unfold decNat; rw [← h]
   by_cases hw : w = 0
   · subst hw; rfl
-  · simp only [ne_eq, hw, not_false_eq_true, ↓reduceIte, Option.some.injEq]
+  · simp only [ne_eq, hw, not_false_eq_true, ↓reduceIte]
     simp [hw]
 
 /-- **`lazy_nat` refines `natT`** at the knot. -/
@@ -274,19 +274,19 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
     by_cases k1 : rs.headD 0 = 1
     · rw [itW.k_lazy_delta_step.arm2 (hc1 := k0) (hc2 := k1), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
       obtain ⟨g1, g2, g3, hm⟩ := h
-      have : decDS rs = .eq := by rw [decDS, if_neg k0, if_pos k1]
+      have : decDS rs = .eq := by rw [decDS, ite_eq_right k0, ite_eq_left k1]
       rw [this, ← hm]
       exact coreRef_ret hS₄ (by simp only [decIter, ← g1]; rfl) (res3_of hw1 hw0 hw0 g1 g2 g3)
     by_cases k2 : rs.headD 0 = 2
     · rw [itW.k_lazy_delta_step.arm3 (hc1 := k0) (hc2 := k1) (hc3 := k2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
       obtain ⟨g1, g2, g3, hm⟩ := h
-      have : decDS rs = .diff := by rw [decDS, if_neg k0, if_neg k1, if_pos k2]
+      have : decDS rs = .diff := by rw [decDS, ite_eq_right k0, ite_eq_right k1, ite_eq_left k2]
       rw [this, ← hm]
       exact coreRef_ret hS₄ (by simp only [decIter, ← g1]; rfl) (res3_of hw0 hw0 hw0 g1 g2 g3)
     rw [itW.k_lazy_delta_step.arm4 (hc1 := k0) (hc2 := k1) (hc3 := k2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
       Prod.mk.injEq] at h
     obtain ⟨g1, g2, g3, hm⟩ := h
-    have : decDS rs = .unknown := by rw [decDS, if_neg k0, if_neg k1, if_neg k2]
+    have : decDS rs = .unknown := by rw [decDS, ite_eq_right k0, ite_eq_right k1, ite_eq_right k2]
     rw [this, ← hm]
     exact coreRef_ret hS₄ (by simp only [decIter, ← g1, ← g2, ← g3]; rfl) (res3_of hw2 ha hb g1 g2 g3)
   unfold iterT
@@ -306,12 +306,12 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
     have : decOB ro = some (ro.tail.headD 0 != 0) := by simp only [decOB, h0, ↓reduceIte]
     rw [this, ← hm]
     by_cases hv : ro.tail.headD 0 ≠ 0
-    · rw [if_pos hv] at g1
+    · rw [ite_eq_left hv] at g1
       have hb' : (ro.tail.headD 0 != 0) = true := bne_iff_ne.mpr hv
       exact coreRef_ret hS₁ (by rw [hb']; simp only [decIter, ← g1]; rfl)
         (res3_of hw1 hw0 hw0 g1 g2 g3)
     · have hv' : ro.tail.headD 0 = 0 := by simpa using hv
-      rw [if_neg hv] at g1
+      rw [ite_eq_right hv] at g1
       exact coreRef_ret hS₁ (by simp only [decIter, ← g1, hv']; rfl) (res3_of hw0 hw0 hw0 g1 g2 g3)
   have h0' : ro.headD 0 = 0 := by simpa using h0
   rw [itW.k_defeq_offset.arm2 (hc1 := h0')] at hW
@@ -420,7 +420,7 @@ theorem decIter_done {r : List Word} (h : r.headD 0 ≠ 3) : decIter r = .inl (d
   · simp only [h0, ↓reduceIte]
   by_cases h1 : r.headD 0 = 1
   · simp only [h1, ↓reduceIte]; rfl
-  rw [if_neg h0, if_neg h1, if_neg h, if_neg h0, if_neg h1]
+  rw [ite_eq_right h0, ite_eq_right h1, ite_eq_right h, ite_eq_right h0, ite_eq_right h1]
 
 theorem decIter_cont {r : List Word} (h : r.headD 0 = 3) :
     decIter r = .inr (decE (r.tail.headD 0), decE (r.tail.tail.headD 0)) := by

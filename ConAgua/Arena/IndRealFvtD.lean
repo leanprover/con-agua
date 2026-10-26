@@ -19,7 +19,6 @@ state is unchanged (`ftdW_ok`). Kept apart from `IndRealFvt.lean` (`fvar_type_ds
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -122,7 +121,7 @@ theorem ftdW_ok (m m' : Mem) (a : AState) (hR : ArenaR m a) (e : Word) (he : H e
     m' = m ∧ (fvarTypeD (decI e)).run a = .ok (decI (r.headD 0), a) ∧ (r.headD 0).toNat < 2 ^ 32 := by
   simp only [ftdW] at h
   by_cases hf : e >>> 28 ≠ 1
-  · rw [if_pos hf] at h
+  · rw [ite_eq_left hf] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have htag : ¬ (decE e).tag = ETag.fvar := by
       intro hc; exact hf ((decE_tag_eq e he 1 (by decide)).mp hc)
@@ -133,7 +132,7 @@ theorem ftdW_ok (m m' : Mem) (a : AState) (hR : ArenaR m a) (e : Word) (he : H e
     have htag' : ((decE e).tag == ETag.fvar) = false := by simpa using htag
     simp only [htag', Bool.false_eq_true, ite_false, List.headD_cons]
     rfl
-  rw [if_neg hf] at h
+  rw [ite_eq_right hf] at h
   have hf' : e >>> 28 = 1 := Decidable.not_not.mp hf
   obtain ⟨hne, h⟩ := of_ite_none h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

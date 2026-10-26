@@ -201,14 +201,14 @@ theorem of_K {β γ : Type} {K : Option β → Option γ} {o : Option β} {y : �
 theorem of_ite_none {γ : Type} {c : Prop} [Decidable c] {e : Option γ} {y : γ}
     (h : (if c then none else e) = some y) : ¬ c ∧ e = some y := by
   by_cases hc : c
-  · rw [if_pos hc] at h; cases h
-  · rw [if_neg hc] at h; exact ⟨hc, h⟩
+  · rw [ite_eq_left hc] at h; cases h
+  · rw [ite_eq_right hc] at h; exact ⟨hc, h⟩
 
 /-- **A passing guard** of a returned model: `(if c then e else none) = some y`. -/
 theorem of_ite_none' {γ : Type} {c : Prop} [Decidable c] {e : Option γ} {y : γ}
     (h : (if c then e else none) = some y) : c ∧ e = some y := by
   by_cases hc : c
-  · rw [if_pos hc] at h; exact ⟨hc, h⟩
-  · rw [if_neg hc] at h; cases h
+  · rw [ite_eq_left hc] at h; exact ⟨hc, h⟩
+  · rw [ite_eq_right hc] at h; cases h
 
 end L.Arena

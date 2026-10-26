@@ -166,7 +166,7 @@ theorem mkAppW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : 
   unfold mkAppW at hI
   split at hI
   · cases hI
-  rcases hI₁ : ainternW m f x with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
+  rcases hI₁ : ainternW m f x with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, reduceCtorEq] at hI
   cases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁
       (packBFL (maxW (derBW m f) (derBW m x)) (maxW (derFW m f) (derFW m x))
         (exprLPW m f ||| exprLPW m x)) with
@@ -252,7 +252,7 @@ theorem CoreS.of_app {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [AREC, ASLOT, ADER, PINS])
+    (by simp [AREC, ASLOT, ADER])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -292,11 +292,11 @@ theorem decE_tag_lam (e : Word) (hh : e.toNat < 2 ^ 32) :
 
 theorem spW_set64_eq (m : Mem) (p v : Word) (hb : p.toNat < (m.arr64 SPN).size) :
     spW (m.set64 SPN p v) p = v := by
-  unfold spW; rw [rdW_set64L, if_pos ⟨rfl, rfl, hb⟩]
+  unfold spW; rw [rdW_set64L, ite_eq_left ⟨rfl, rfl, hb⟩]
 
 theorem spW_set64_ne (m : Mem) (p j v : Word) (hj : p ≠ j) :
     spW (m.set64 SPN p v) j = spW m j := by
-  unfold spW; rw [rdW_set64L, if_neg (fun h => hj h.2.1)]
+  unfold spW; rw [rdW_set64L, ite_eq_right (fun h => hj h.2.1)]
 
 /-- **A push onto the spine stack extends `SpineR`**: the write is at the old top of the slice
 (`off + cnt`), so every old entry's position is untouched. -/
@@ -333,11 +333,11 @@ theorem SpineR.push {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m o
       exact h.lt i (by omega)
   · rw [Array.size_push, h.size] at hi
     rcases Nat.lt_succ_iff_lt_or_eq.mp hi with hi' | hi'
-    · rw [Array.getElem_push, dif_pos (by rw [h.size]; exact hi')]
+    · rw [Array.getElem_push, dite_eq_left (by rw [h.size]; exact hi')]
       rw [h.get i (by rw [h.size]; exact hi')]
       congr 1
       rw [spW_set64_ne _ _ _ _ (hnev i hi').symm]
-    · rw [Array.getElem_push, dif_neg (by omega)]
+    · rw [Array.getElem_push, dite_eq_right (by omega)]
       have hieq : i = cnt.toNat := by omega
       subst hieq
       rw [heqv, spW_set64_eq _ _ _ (by rw [hoc]; omega), decE_eq]
@@ -516,8 +516,7 @@ theorem peelFull_step (p : Prog) (n k : Nat) (m : Mem) (t ao an i co cn : Word) 
       peelFull p n k ((m.set64 SPN (co + cn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
           (co + cn + 1)) (tfld m LAM (tierW t) (idxW t) 1) ao an (i + 1) co
           (cn + 1) := by
-  simp only [peelFull, peelLoop, h, ht, h1, h2, h3, ↓reduceIte, ne_eq, not_false_eq_true,
-    not_true_eq_false]
+  simp only [peelFull, peelLoop, h, ht, h1, h2, h3, ↓reduceIte, ne_eq]
 
 /-- A write to `CTL` leaves every `SpineR` alone. -/
 theorem SpineR.setCtl {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
@@ -610,7 +609,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
         have htop' : spTop ((m.set64 SPN (co + cn) (spW m (ao + i))).set64 CTL 136 (co + cn + 1)) =
             co + (cn + 1) := by
           unfold spTop
-          rw [rdW_set64, if_pos ⟨rfl, rfl, by rw [size_set64]; exact h136m⟩, UInt64.add_assoc]
+          rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact h136m⟩, UInt64.add_assoc]
         have hb' : ∀ j : Word, j < co →
             spW ((m.set64 SPN (co + cn) (spW m (ao + i))).set64 CTL 136 (co + cn + 1)) j =
               spW m₀ j := by
@@ -748,7 +747,7 @@ theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (hil : InstListOK p) 
   have hS1 := hS.frame_stk (spnCtl_frame s.mem co a (co + 1)) (by simp) (by simp)
   have htop1 : spTop ((s.mem.set64 SPN co a).set64 CTL 136 (co + 1)) = co + 1 := by
     unfold spTop
-    rw [rdW_set64, if_pos ⟨rfl, rfl, by rw [size_set64]; exact h136i⟩]
+    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact h136i⟩]
   have hb1 : ∀ j : Word, j < co →
       spW ((s.mem.set64 SPN co a).set64 CTL 136 (co + 1)) j = spW s.mem j := by
     intro j hj

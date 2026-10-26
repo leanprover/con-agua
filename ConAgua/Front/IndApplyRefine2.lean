@@ -14,7 +14,6 @@ open L.Arena
 open ConRon.Arena
 open ConRon.Arena.Frontend
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 
@@ -104,9 +103,9 @@ theorem allocW_factsA {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
     simp [topN, hw0]
   refine ⟨e1, ?_, by omega, fun i hi => ?_, MemFrame.set64 _ _ hA _ _⟩
   · simp only [topN, wd_setA, show (0 : Word).toNat = 0 from rfl, true_and]
-    rw [if_pos (by omega)]
+    rw [ite_eq_left (by omega)]
     exact e2
-  · rw [wd_setA, if_neg (by simp; omega)]
+  · rw [wd_setA, ite_eq_right (by simp; omega)]
 
 /-- The push's facts. -/
 theorem pushLW_factsA {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63)
@@ -122,10 +121,10 @@ theorem pushLW_factsA {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 6
   simp only [show (1 : Word).toNat = 1 from rfl] at a2 a3
   refine ⟨a1, ?_, by omega, ?_, fun i h1 h2 => ?_, a5.trans (MemFrame.set64 _ _ (by decide) _ _)⟩
   · simp only [topN, wd_setA]
-    rw [if_neg (by simp; omega)]
+    rw [ite_eq_right (by simp; omega)]
     exact a2
-  · rw [wd_setA, if_pos ⟨rfl, rfl, by omega⟩]
-  · rw [wd_setA, if_neg (by simp; omega), a4 i h1]
+  · rw [wd_setA, ite_eq_left ⟨rfl, rfl, by omega⟩]
+  · rw [wd_setA, ite_eq_right (by simp; omega), a4 i h1]
 
 /-- A push as an `IExt`, with the pushed word on top. -/
 theorem pushLW_ext {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63)

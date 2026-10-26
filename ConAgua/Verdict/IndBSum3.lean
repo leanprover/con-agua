@@ -5,8 +5,6 @@ import ConAgua.Verdict.IndBSum2
 (lane `verdicts-b`, helper `ib`)
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -55,7 +53,7 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
     (hrsP : denoteL a.store.ls (decI rs) = some rsP)
     (hcqBP : denoteE a.store (decI cqB) = some crestP) (hwsc : ConLeche.Expr.WScoped nP.toNat crestP)
     (hok₀ : ConRon.Bridge.Inductives.IFEnvOKS env₀ (fe.restrictTo vis0.toNat) a.store)
-    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
+    (_hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
     CoreSpecE p (m + 1) "check_sum_ctor_tail"
       [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, nF, cqO, cqL, cqB]
       (cscTailT (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs) (isP != 0)
@@ -235,10 +233,10 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
       rw [heq]
       have := map_decI_inj (k := .expr) ws1 ws2 hb1 hb2
       by_cases hw : ws1 = ws2
-      · rw [if_pos hw]
+      · rw [ite_eq_left hw]
         have ht : args.take nP.toNat = cq1 := by rw [hmm1, hmm2, hw]
         rw [ht]; simp
-      · rw [if_neg hw]
+      · rw [ite_eq_right hw]
         have hne : args.take nP.toNat ≠ cq1 := by
           rw [hmm1, hmm2]; exact fun h' => hw (this.mp h')
         rw [show (args.take nP.toNat == cq1) = false from by simpa using hne]; rfl
@@ -256,9 +254,9 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
           obtain ⟨⟨h1', h2'⟩, h3'⟩ := hh
           rcases hcond with h | h | h
           · apply absurd h
-            rw [if_pos (decI_inj (k := .expr) hf32 (by omega) h1')]; decide
+            rw [ite_eq_left (decI_inj (k := .expr) hf32 (by omega) h1')]; decide
           · apply absurd h
-            rw [if_pos (by apply UInt64.toNat_inj.mp; rw [sum_toNat_add hni, ← hlen]; exact h3')]; decide
+            rw [ite_eq_left (by apply UInt64.toNat_inj.mp; rw [sum_toNat_add hni, ← hlen]; exact h3')]; decide
           · rw [hb3, h2'] at h; simp at h
       simp only [hfalse, Bool.false_eq_true, ite_false]
       exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
@@ -268,9 +266,9 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
         simp only [not_or] at hcond
         obtain ⟨h1', h2', h3'⟩ := hcond
         have e1 : rf.headD 0 = rh.headD 0 := by
-          refine Classical.byContradiction fun hne => ?_; apply h1'; rw [if_neg hne]
+          refine Classical.byContradiction fun hne => ?_; apply h1'; rw [ite_eq_right hne]
         have e2 : al = nP + nIdx := by
-          refine Classical.byContradiction fun hne => ?_; apply h2'; rw [if_neg hne]
+          refine Classical.byContradiction fun hne => ?_; apply h2'; rw [ite_eq_right hne]
         have e3 : args.take nP.toNat = cq1 := by
           rw [hb3] at h3'
           refine Classical.byContradiction fun hne => ?_
@@ -572,7 +570,7 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
     cases hW
     cases o4 with
     | none =>
-      simp only [unwrapOr]
+      simp only
       exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
     | some le => exact absurd (by simpa [decOLE] using hdec4.1 : r4.headD 0 = 1) (by rw [h40]; decide)
   rw [ctorE.k_open_pis_at_fvars_f.arm1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw r4 m4
@@ -585,7 +583,7 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
   obtain ⟨-, ⟨hcl, hclb⟩, hcqB, hcqBd⟩ := hdec4
   rw [sumGetD1, sumGetD2] at hcl hclb
   rw [drop3_eq] at hcqB hcqBd
-  simp only [unwrapOr, pure_bind]
+  simp only [pure_bind]
   subst hcqBd
   have hg04 := hg03.trans hg4
   -- the type former's opened telescope
@@ -613,7 +611,7 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
     cases hW
     cases o5 with
     | none =>
-      simp only [unwrapOr]
+      simp only
       exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
     | some le => exact absurd (by simpa [decOLE] using hdec5.1 : r5.headD 0 = 1) (by rw [h50]; decide)
   rw [ctorE.k_open_pis_at_fvars_f_2.arm1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF _ _ _ r5 m5
@@ -625,7 +623,7 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
   obtain ⟨tfvsP, trestP, htq, htfvs, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho5
   obtain ⟨-, ⟨htl, htlb⟩, -, -⟩ := hdec5
   rw [sumGetD1, sumGetD2] at htl htlb
-  simp only [unwrapOr, pure_bind]
+  simp only [pure_bind]
   -- `fvar_type_ds`
   cases h6 : callE p m "fvar_type_ds" [r5.tail.headD 0, r5.tail.tail.headD 0] m5 with
   | error e6 =>

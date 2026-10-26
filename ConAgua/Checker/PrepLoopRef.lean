@@ -195,14 +195,14 @@ twin's stream the unmarked records). -/
 theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
     ∀ (fuel : Nat) (m m' : Mem) (a : AState) (aw r : Word) (acc : Array IDeclaration),
     PEnv m a dsAll np nw ord mk → aw.toNat ≤ np.toNat → acc.size = aw.toNat →
-    (∀ k (hk : k < aw.toNat), (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
+    (∀ k (_hk : k < aw.toNat), (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
       acc[k]! = dsAll[(rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat]!) →
     pFrontW fuel m np nw ord mk aw = some (r, m') →
     ∃ (front rest : Array IDeclaration) (a' : AState),
       (frontOf acc ((dsAll.toList.take np.toNat).drop aw.toNat)
         (recsAt dsAll (unm m mk np.toNat nw.toNat))).run a = .ok ((front, rest), a') ∧
       front.size = np.toNat ∧
-      (∀ k (hk : k < np.toNat), (rdW (m'.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
+      (∀ k (_hk : k < np.toNat), (rdW (m'.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
         front[k]! = dsAll[(rdW (m'.arr64 IW) (ord + UInt64.ofNat k)).toNat]!) ∧
       rest = recsAt dsAll (unm m' mk np.toNat nw.toNat) ∧
             PEnv m' a' dsAll np nw ord mk ∧ a'.pins = a.pins ∧ a'.store.pers = a.store.pers ∧
@@ -226,7 +226,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
       have hnil : (dsAll.toList.take np.toNat).drop aw.toNat = [] :=
         List.drop_eq_nil_of_le (by simp; omega)
       refine ⟨acc, recsAt dsAll (unm m mk np.toNat nw.toNat), a, ?_, by omega,
-        fun k hk => hIW k (by omega), rfl, hE, rfl, rfl, rfl, PFr.refl _ _ _ _⟩
+        fun k _hk => hIW k (by omega), rfl, hE, rfl, rfl, rfl, PFr.refl _ _ _ _⟩
       rw [hnil, frontOf.eq_1]; rfl
     · have hlt : aw.toNat < np.toNat := by have := mt UInt64.le_iff_toNat_le.mpr hstop; omega
       have ha1 : (aw + 1).toNat = aw.toNat + 1 := toNat_succ aw (by omega)
@@ -292,7 +292,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
           · intro x hx'
             rw [getIW_set64, getIW_set64, ite_f (by rw [hoa]; omega), ite_f (by rw [hmx']; omega)]
           · rw [rdIW_set64, ite_t ⟨rfl, by rw [size_set64, hoa, hIW1]; omega⟩]
-          · intro k hk
+          · intro k _hk
             have hk' := addW_toNat ord k (by omega)
             rw [rdIW_set64, rdIW_set64, hIW1, ite_f (by rw [hoa, hk']; omega),
               ite_f (by rw [hmx', hk']; omega)]
@@ -312,20 +312,20 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
           · intro x hx'
             rw [getIW_set64, ite_f (by rw [hoa]; omega)]
           · rw [rdIW_set64, ite_t ⟨rfl, by rw [hoa, hIW1]; omega⟩]
-          · intro k hk
+          · intro k _hk
             have hk' := addW_toNat ord k (by omega)
             rw [rdIW_set64, hIW1, ite_f (by rw [hoa, hk']; omega)]
       obtain ⟨m2, v, o, hv, hX, hpick, hMF, hreg, hrd, hkeep, h2⟩ := hcase
       have hfr2 : PFr ord mk nw m1 m2 := PFr.of_frame hMF hreg
       have hE2 : PEnv m2 a1 dsAll np nw ord mk :=
         hE1.frame hfr2 (ArenaR.frame_ext [IW] [] (by decide) (by simp) m1 m2 hMF a1 hA1)
-      have hIW2 : ∀ k (hk : k < (aw + 1).toNat), (rdW (m2.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
+      have hIW2 : ∀ k (_hk : k < (aw + 1).toNat), (rdW (m2.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
           (acc.push dsAll[v.toNat]!)[k]! = dsAll[(rdW (m2.arr64 IW) (ord + UInt64.ofNat k)).toNat]! := by
-        intro k hk
-        rw [ha1] at hk
-        rcases Nat.lt_succ_iff_lt_or_eq.mp hk with hk | rfl
-        · rw [hkeep k hk]
-          obtain ⟨h1, h2⟩ := hIW k hk
+        intro k _hk
+        rw [ha1] at _hk
+        rcases Nat.lt_succ_iff_lt_or_eq.mp _hk with _hk | rfl
+        · rw [hkeep k _hk]
+          obtain ⟨h1, h2⟩ := hIW k _hk
           refine ⟨h1, ?_⟩
           rw [getElem!_pos (acc.push _) k (by simp; omega), Array.getElem_push_lt (by omega),
             ← getElem!_pos acc k (by omega)]

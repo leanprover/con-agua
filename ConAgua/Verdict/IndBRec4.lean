@@ -10,8 +10,6 @@ Its own aborts are of class `0` (the twin's `.internal`) but for the two consts-
 the inference's claim is `infer_type_core`'s.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -157,7 +155,7 @@ theorem crgE_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) {visT vis
   have ex5 : x5 = false := by rw [← hx5]; simpa using hb5
   subst ex5
   unfold ConRon.Arena.classRuleOk
-  simp only [bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
+  simp only [fail_bindAM]
   refine ErrClaim.bind_right hrun1 (ErrClaim.ite_pos rfl ?_)
   refine ErrClaim.bind_right hrun2 (ErrClaim.ite_neg (by decide) ?_)
   refine ErrClaim.bind_right hrun4 (ErrClaim.ite_pos rfl ?_)
@@ -212,7 +210,7 @@ theorem classRuleOk_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) (N
     crgW_okC hApd h1m hC hgen hqd hqb hA hcvP hgP
   have hws : ConLeche.Expr.WScoped 0 genP := ConLeche.Expr.WScoped.of_not_hasFvar hfvP
   unfold ConRon.Arena.classRuleOk
-  simp only [bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
+  simp only [fail_bindAM]
   refine ErrClaim.bind_right hl (ErrClaim.ite_pos rfl ?_)
   refine ErrClaim.bind_right hf (ErrClaim.ite_neg (by decide) ?_)
   refine ErrClaim.bind_right ha (ErrClaim.ite_pos rfl ?_)

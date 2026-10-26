@@ -32,7 +32,6 @@ the same line), so the driver does not ask.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order
@@ -208,14 +207,14 @@ section
 variable (b : Array UInt8) (i w idx pl : Word)
 
 theorem lineN_err (h : (nextMemberN b i w).tag = 0) : lineN b i w idx pl = 0 := by
-  rw [lineN, if_pos h]
+  rw [lineN, ite_eq_left h]
 theorem lineN_close (h : (nextMemberN b i w).tag = 1) :
     lineN b i w idx pl =
       if (nextMemberN b i w).w ≠ 0 ∧ (idx ≠ 0 ∨ pl ≠ 0) then 0
       else if (pl = 1 ∧ idx = 1) ∨ (pl = 2 ∧ idx = 2) ∨ (pl = 3 ∧ idx = 3) ∨ (pl = 4 ∧ idx = 0) ∨
           (pl = 5 ∧ idx = 0) then (nextMemberN b i w).pos + 1
       else 0 := by
-  rw [lineN, if_neg (by simp [h]), if_pos h]
+  rw [lineN, ite_eq_right (by simp [h]), ite_eq_left h]
 theorem lineN_idx (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1)
     (hk : ((nextMemberN b i w).key = 21 ∨ (nextMemberN b i w).key = 19 ∨ (nextMemberN b i w).key = 18)) :
     lineN b i w idx pl =
@@ -224,7 +223,7 @@ theorem lineN_idx (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w)
         lineN b (slotNatN b (nextMemberN b i w).pos (nextMemberN b i w).val) 0
           (idxCode (nextMemberN b i w).key) pl
       else 0 := by
-  rw [lineN, if_neg h0, if_neg h1, if_pos hk]
+  rw [lineN, ite_eq_right h0, ite_eq_right h1, ite_eq_left hk]
   simp only [dite_eq_ite]
 theorem lineN_pay (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1)
     (hk : ¬ ((nextMemberN b i w).key = 21 ∨ (nextMemberN b i w).key = 19 ∨ (nextMemberN b i w).key = 18)) :
@@ -236,7 +235,7 @@ theorem lineN_pay (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w)
         lineN b (lineVal b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val) 0
           idx (lineKind (nextMemberN b i w).key)
       else 0 := by
-  rw [lineN, if_neg h0, if_neg h1, if_neg hk]
+  rw [lineN, ite_eq_right h0, ite_eq_right h1, ite_eq_right hk]
   simp only [dite_eq_ite]
 
 grind_pattern [lang_grind] lineN_err => lineN b i w idx pl, nextMemberN b i w
@@ -332,14 +331,14 @@ decreasing_by
 section
 variable (b : Array UInt8) (i ln : Word)
 theorem validN_end (h : ¬ i < UInt64.ofNat b.size) : validN b i ln = 0 := by
-  rw [validN, dif_neg h]
+  rw [validN, dite_eq_right h]
 theorem validN_step (h : i < UInt64.ofNat b.size) :
     validN b i ln =
       if (lineFwdN b i).1 = 0 then ln + 1
       else if (lineFwdN b i).2 = 0 then 0
       else if i < (lineFwdN b i).2 then validN b (lineFwdN b i).2 (ln + 1)
       else ln + 1 := by
-  rw [validN, dif_pos h]; simp only [dite_eq_ite]
+  rw [validN, dite_eq_left h]; simp only [dite_eq_ite]
 end
 grind_pattern [lang_grind] validN_end => validN b i ln
 grind_pattern [lang_grind] validN_step => validN b i ln, lineFwdN b i

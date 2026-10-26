@@ -526,7 +526,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   rw [CWF_eq] at hrun1
   generalize r1.headD 0 = w at hd1 hd2 h
   by_cases hf : w >>> 28 = 1
-  · rw [if_pos hf] at h
+  · rw [ite_eq_left hf] at h
     obtain ⟨hne, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hne
@@ -553,7 +553,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       · simp only [Option.some.injEq] at hi
         rw [← hi, ← hR.2.1]; exact UInt64.toNat_lt _
     all_goals (have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide))
-  · rw [if_neg hf] at h
+  · rw [ite_eq_right hf] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have htag : ¬ (decE w).tag = ETag.fvar := by
       rw [decE_tag w hd1]
@@ -735,7 +735,7 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
         rw [hrun1]
         simp only [bind, Except.bind]
         rw [← hd12, hrun2]
-        simp only [bind, Except.bind]
+        simp only
         rw [← hw3, ← hd22]
         exact hrun3
       · rw [clK2_oob m2 bo ra hoob] at h; simp at h
@@ -796,13 +796,13 @@ theorem classRecOfW_hit (h : cgl ≠ 0) (h1 : rcl ≠ 0 → rco.toNat < (m.arr64
       (if cgo.toNat < (m.arr64 IW).size ∧ (rdW (m.arr64 IW) cgo).toNat < (m.arr64 EREC).size
         then some [1, rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo)] else none) := by
   have : ¬ (rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size) := fun ⟨a, b⟩ => b (h1 a)
-  simp only [classRecOfW, h, this, h2, if_false, if_true]
+  simp only [classRecOfW, h, this, h2, ite_false, ite_true]
 theorem classRecOfW_miss (h : cgl ≠ 0) (h1 : rcl ≠ 0 → rco.toNat < (m.arr64 IW).size)
     (h2 : ¬ (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = t) :
     classRecOfW (n + 1) m rco rcl cgo cgl t =
       croK (classRecOfW n m (rco + 1) (if rcl ≠ 0 then rcl - 1 else 0) (cgo + 1) (cgl - 1) t) := by
   have : ¬ (rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size) := fun ⟨a, b⟩ => b (h1 a)
-  simp only [classRecOfW, h, this, h2, if_false, if_true]
+  simp only [classRecOfW, h, this, h2, ite_false, ite_true]
 end arms
 
 end L.Ind

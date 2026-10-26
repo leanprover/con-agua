@@ -11,7 +11,6 @@ For the `StageC` proofs that call the two walks' models (`apdF`, `crfF`) under `
 writes its own memo (array 155), which `crfF_okT` gives back (`CrMemo` after); the rest is framed.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

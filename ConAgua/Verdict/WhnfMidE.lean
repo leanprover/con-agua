@@ -15,9 +15,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
-set_option linter.unusedSectionVars false
 
 namespace L.Arena
 
@@ -191,11 +188,11 @@ theorem lazyNat_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
       ((hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode d x y hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩
         hx hy) h'
   by_cases h1 : r₁.headD 0 ≠ 0
-  · rw [if_pos h1] at hW
+  · rw [ite_eq_left h1] at hW
     rw [decOptR_some h1] at hrun1
     refine ErrClaim.of_run_err (fun ce h' => ?_) (hdq _ _ _ _ _ hS₁ hrw1.2 hb hW)
     simp only [natT, StateT.run_bind, hrun1, except_ok_bind, h']; rfl
-  rw [if_neg h1] at hW
+  rw [ite_eq_right h1] at hW
   have h1' : r₁.headD 0 = 0 := by simpa using h1
   rw [decOptR_none h1'] at hrun1
   cases c2 : callE p n "reduce_nat" [mode, vis, d, b] m₁ with
@@ -215,11 +212,11 @@ theorem lazyNat_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   have hrun2 := AM.run_of_ok _ _ hok2
   rw [hres2] at hrun2
   by_cases h2 : r₂.headD 0 ≠ 0
-  · rw [if_pos h2] at hW
+  · rw [ite_eq_left h2] at hW
     rw [decOptR_some h2] at hrun2
     refine ErrClaim.of_run_err (fun ce h' => ?_) (hdq _ _ _ _ _ hS₂ ha hrw2.2 hW)
     simp only [natT, StateT.run_bind, hrun1, except_ok_bind, hrun2, h']; rfl
-  rw [if_neg h2] at hW; cases hW
+  rw [ite_eq_right h2] at hW; cases hW
 
 end lazy
 

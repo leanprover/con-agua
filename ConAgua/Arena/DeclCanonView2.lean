@@ -11,8 +11,6 @@ and the relational lemma against the twin's `viewLs` under the stage relation.
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -36,10 +34,10 @@ theorem poolCopyW_nil (hl : l = 0) : poolCopyW (n + 1) m d s l = some m := by si
 theorem poolCopyW_step (hl : l ≠ 0) (hs : (s &&& 1099511627775).toNat < (m.arr64 (tierA 0 (s >>> 40))).size) :
     poolCopyW (n + 1) m d s l =
       poolCopyW n (m.set64 IW d (prd m s)) (d + 1) (s + 1) (l - 1) := by
-  rw [poolCopyW]; simp only [hl, ↓reduceIte]; rw [if_neg (Nat.not_le.mpr hs)]
+  rw [poolCopyW]; simp only [hl, ↓reduceIte]; rw [ite_eq_right (Nat.not_le.mpr hs)]
 theorem poolCopyW_oob (hl : l ≠ 0) (hs : (m.arr64 (tierA 0 (s >>> 40))).size ≤ (s &&& 1099511627775).toNat) :
     poolCopyW (n + 1) m d s l = none := by
-  rw [poolCopyW]; simp only [hl, ↓reduceIte]; rw [if_pos hs]
+  rw [poolCopyW]; simp only [hl, ↓reduceIte]; rw [ite_eq_left hs]
 end arms
 
 grind_pattern [ind_grind] poolCopyW_nil => poolCopyW (n + 1) m d s l
@@ -82,7 +80,7 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
       refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
-      simp only [this, if_false]
+      simp only [this, ite_false]
     · by_cases hso : (m.arr64 (tierA 0 (s >>> 40))).size ≤ (s &&& 1099511627775).toNat
       · rw [poolCopyW_oob n m d s l hl hso] at h; simp at h
       rw [poolCopyW_step n m d s l hl (by omega)] at h
@@ -105,7 +103,7 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
         rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         by_cases hi : d.toNat = i
         · subst hi
-          simp only [hdlt, true_and, if_true]
+          simp only [hdlt, ite_true]
           rw [vpool_get? m s (by omega)]
         · simp [hi, Ne.symm hi]
       obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
@@ -116,15 +114,15 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
       · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
-        · rw [if_pos hi]
+        · rw [ite_eq_left hi]
           by_cases hid : i = d.toNat
           · subst hid
             have : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
-            rw [if_neg this, hget1, if_pos rfl]; simp
+            rw [ite_eq_right this, hget1, ite_eq_left rfl]; simp
           · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
-            rw [if_pos h2]
+            rw [ite_eq_left h2]
             congr 1; omega
-        · rw [if_neg hi, if_neg (by omega), hget1, if_neg (by omega)]
+        · rw [ite_eq_right hi, ite_eq_right (by omega), hget1, ite_eq_right (by omega)]
 
 
 /-! ## `view_ls` -/
@@ -163,7 +161,7 @@ theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
   have hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := fun c => hne (by
-    rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
+    rw [lsNodeW, ite_eq_right (by simpa using hg), ite_eq_right hsc, ite_eq_left c])
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) (UInt64.not_le.mp hc)
   refine ⟨x.us, ?_⟩
@@ -237,8 +235,8 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
   have hR := hS.1.arena.1
   unfold viewLsW at h
-  have hne : ¬ lsNodeW m us = [] := fun hne => by rw [if_pos hne] at h; simp at h
-  rw [if_neg hne] at h
+  have hne : ¬ lsNodeW m us = [] := fun hne => by rw [ite_eq_left hne] at h; simp at h
+  rw [ite_eq_right hne] at h
   obtain ⟨ids, hv⟩ := lsView_of_lsNodeW hR hu hne
   obtain ⟨hlsn, hbnd, hsl⟩ := lsNodeW_store hR hu hv
   rw [hlsn] at h
@@ -271,7 +269,7 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     · simp only [iwTop, hqq]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hG, if_neg (by omega)]
+      rw [hG, ite_eq_right (by omega)]
   have htop' : iwTop m2 = q.toNat + l.toNat := by simp only [iwTop, htop, hsum]
   have hdec : decHL m2 q.toNat l.toNat = some ids := by
     have e1 : (decHL m2 q.toNat l.toNat : Option (List LIdx)) = hslice? (vpool m) o.toNat l.toNat := by
@@ -279,7 +277,7 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
       apply hslice?_congr
       intro j hj
       simp only [iwA, hG]
-      rw [if_pos (by omega)]
+      rw [ite_eq_left (by omega)]
       congr 1; omega
     rw [e1]
     exact hslice_sliceL (.inr (by rw [vpool_size]; omega)) hsl

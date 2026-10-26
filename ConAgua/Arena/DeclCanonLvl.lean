@@ -9,8 +9,6 @@ import ConAgua.Arena.DeclCanonView2
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -65,7 +63,7 @@ theorem getDW_handle' {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
     simp [hj, hz, List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega : xs.length ≤ j.toNat)]
   · have hjl : j.toNat < l.toNat := by
       have : ¬ l.toNat ≤ j.toNat := fun h' => hj (UInt64.le_iff_toNat_le.mpr h'); omega
-    rw [if_neg hj]
+    rw [ite_eq_right hj]
     obtain ⟨w, hw, hw32, hwd⟩ := decHL_get' h j.toNat hjl hb
     have hoj : o + j = UInt64.ofNat (o.toNat + j.toNat) := by
       apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
@@ -128,12 +126,12 @@ theorem nmW_ok {n : Nat} {m : Mem} {po pl co cl x y : Word} {ps cs : List NIdx}
   have hr := findW_handle hps hpb hx hf
   unfold ConRon.Arena.canonNameMap
   by_cases h0 : r.headD 0 = 0
-  · rw [if_pos h0] at h
+  · rw [ite_eq_left h0] at h
     simp only [Option.some.injEq] at h; subst h
     cases hi : ps.findIdx? (fun p => p == decI x) with
     | none => simpa [hi] using hx
     | some i => rw [hi] at hr; simp [hr] at h0
-  · rw [if_neg h0] at h
+  · rw [ite_eq_right h0] at h
     simp only [Option.some.injEq] at h; subst h
     cases hi : ps.findIdx? (fun p => p == decI x) with
     | none => rw [hi] at hr; simp [hr] at h0
@@ -298,10 +296,10 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
   | succ n ih =>
     intro m a po pl qo ql co cl fuel u v r ps qs cs h hR hC hu hv
     rw [clW_succ] at h
-    have hf : ¬ fuel = 0 := fun hf => by rw [if_pos hf] at h; simp at h
-    rw [if_neg hf, cnClK0_def] at h
-    have hne : ¬ (lvNodeW m u = [] ∨ lvNodeW m v = []) := fun hne => by rw [if_pos hne] at h; simp at h
-    rw [if_neg hne] at h
+    have hf : ¬ fuel = 0 := fun hf => by rw [ite_eq_left hf] at h; simp at h
+    rw [ite_eq_right hf, cnClK0_def] at h
+    have hne : ¬ (lvNodeW m u = [] ∨ lvNodeW m v = []) := fun hne => by rw [ite_eq_left hne] at h; simp at h
+    rw [ite_eq_right hne] at h
     rw [not_or] at hne
     obtain ⟨vu, hru, hlu⟩ := lvView hR hu hne.1
     obtain ⟨vv, hrv, hlv⟩ := lvView hR hv hne.2
@@ -330,12 +328,12 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
            (word_lt32 _) (word_lt32 _)
          rw [decI_word, decI_word] at hb1
          refine andThen_ok hb1 hr1 (fun hne => ?_) (fun h0 => ?_)
-         · rw [if_neg hne] at h
+         · rw [ite_eq_right hne] at h
            obtain ⟨b2, hb2, hr2⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h hR hC
              (word_lt32 _) (word_lt32 _)
            rw [decI_word, decI_word] at hb2
            exact ⟨b2, hb2, hr2⟩
-         · rw [if_pos h0] at h; simp at h; simp [← h])
+         · rw [ite_eq_left h0] at h; simp at h; simp [← h])
       | (-- param.param
          unfold cnClK2 at h
          split at h
@@ -510,10 +508,10 @@ theorem llW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel ao
         simp only [List.map_cons]
         rw [ConRon.Arena.canonLevelListEq.eq_2]
         refine andThen_ok hb1 hr1 (fun hne => ?_) (fun h0 => ?_)
-        · rw [if_neg hne] at h
+        · rw [ite_eq_right hne] at h
           exact ih m a po pl qo ql co cl fuel _ _ _ _ r ws1' ws2' ps qs cs h hR hC h1' h2'
             (fun w hw => hw1 w (by simp [hw])) (fun w hw => hw2 w (by simp [hw]))
-        · rw [if_pos h0] at h; simp at h; simp [← h]
+        · rw [ite_eq_left h0] at h; simp at h; simp [← h]
 
 
 /-- **`canon_level_list_eq` refines `canonLevelListEq`.** -/

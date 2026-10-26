@@ -32,7 +32,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -86,13 +85,13 @@ theorem internE_lam_run (ty b : EIdx) (a : AState) :
     StateT.run_get, pure_bind, persFindBindMaybe_lam]
   cases hp : pfLa a ty b <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.lams.cons[laKey ty b]? <;>
-    simp only [hp, hs, hc, laKey, ite_self, protoRun, lamLens] <;>
+    simp only [hs, hc, laKey, protoRun, lamLens] <;>
     (repeat' split) <;>
       first
       | rfl
-      | simp_all [StateT.run_set, StateT.run_pure, withScrLams, withPersLams, fail,
-          throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-          StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      | simp_all [withScrLams, withPersLams, fail,
+          throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+          StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `lam` tables -/
 
@@ -185,7 +184,7 @@ theorem lamCS_wf : lamCS.WF where
   col A h := by simp [lamCS] at h
   colRoom A h := by simp [lamCS] at h
   colLt A h := by
-    simp only [lamCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [lamCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (lapushOK_room m t ((lapushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, lamCS, hk]
   ex _ := {
@@ -195,8 +194,8 @@ theorem lamCS_wf : lamCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [lamCS] using hl)
-      simp [lamCS, lamatchW, lahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [lamCS, lamatchW, lahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [lamCS, lamatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
+    hs := by intro m t i; simp [lamCS, lamatchW, lahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
     qh := fun _ _ _ => rfl
     vs := by
       intro ks h hl f hf

@@ -31,8 +31,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 
 namespace L.Arena
@@ -78,7 +76,7 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p)
   subst hm₁
   by_cases h0 : r₁.headD 0 = 0
   · -- `unknownConstError`
-    have hnone : fe.find? (decI nm) = none := by rw [hfind]; simp only [decFound, h0, if_true]
+    have hnone : fe.find? (decI nm) = none := by rw [hfind]; simp only [decFound, h0, ite_true]
     rw [inferConstE.k_env_find.arm1 p n nm us r₁ s₀.mem h0] at hW
     cases h2 : callE p n "pin_at" [13] s₀.mem with
     | error e2 =>
@@ -105,10 +103,10 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p)
     by_cases he : nm = r₂.headD 0
     · rw [inferConstE.k_pin_at.abort1 p nm r₂ m₂ he] at hW
       cases hW
-      rw [if_pos he]; exact ErrClaim.fail _ _ rfl
+      rw [ite_eq_left he]; exact ErrClaim.fail _ _ rfl
     · rw [inferConstE.k_pin_at.abort2 p nm r₂ m₂ he] at hW
       cases hW
-      rw [if_neg he]; exact ErrClaim.fail _ _ rfl
+      rw [ite_eq_right he]; exact ErrClaim.fail _ _ rfl
   · -- found: the level count
     obtain ⟨htag, hrow, hq⟩ := hfound h0
     obtain ⟨ci, hci⟩ := hS.env.found_some nm hnm htag hrow
@@ -145,7 +143,7 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p)
         simp only [inferConstT, hfind']
       rw [hT, hcvr]
       refine ErrClaim.bind_right (viewLs_run _ _ _ hv) ?_
-      rw [if_pos hlen]
+      rw [ite_eq_left hlen]
       exact ErrClaim.fail _ _ rfl
     · have hl' : (lsNodeW s₀.mem us).tail.headD 0 = rdW (s₀.mem.arr64 EREC) (r₁.tail.headD 0 + 3) := by
         simpa using hl
@@ -179,7 +177,7 @@ theorem ld64_rdW_specOob (a : ArrId) (i : Word) (s₀ : St) :
     subst hs
     simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
     split at hrun
-    · simp [pure, StateT.pure] at hrun
+    · simp [pure] at hrun
       cases hrun
     · simp [throw, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hrun
       cases hrun; rfl
@@ -280,8 +278,8 @@ theorem inferProj_specE (p : Prog) (hf : p.lookup "infer_proj" = some inferProjL
     inferProjE.k_find_table, inferProjE.k_get_app_args, inferProjE.k_env_find,
     inferProjE.k_env_find_2, inferProjE.j2,
     tierW, idxW, Cmp.eval, LocEq, BinOp.eval,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, CTL, CREC, w_lt_false, w_le_false, tfld, tcnt]
+    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, CTL, w_lt_false, w_le_false, tfld, tcnt]
 
 /-! ## `infer_proj`: the twin's failures, the records' words -/
 
@@ -326,7 +324,7 @@ theorem inferProj_miss (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Na
     (h5 : (getAppArgs coreWalkFuel te).run a₂ = .ok (xs, a₂)) :
     (inferProj r fe d sn i pe).run a =
       .error (projMissError fe (fe.findTable? T).isSome T sn i xs.length) := by
-  simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2, h3, ht, if_true,
+  simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2, h3, ht, ite_true,
     view_run _ _ _ hv, h4, h5]
   rfl
 
@@ -354,7 +352,7 @@ theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
   rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
   all_goals (rw [hk] at h)
-  all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, false_and,
+  all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq,
     and_false, exists_false, Option.pure_def] at h
   obtain ⟨cv', -, caps', hcaps, hc⟩ := h
   cases hc
@@ -589,20 +587,20 @@ theorem inferProj_gradeE (p : Prog) (hp : InferProjProg p) (hc : InferProjCallee
   rw [hc3] at hW; simp only [inferProjE.k_get_app_fn] at hW
   obtain ⟨rfl, hhw, hgaf⟩ := getAppFn_callW hp.leaf hS₂.arena.1 hrw2 (callW_of_callE hc3)
   by_cases g1 : r₃.headD 0 >>> 28 ≠ 3
-  · rw [if_pos g1] at hW; cases hW
+  · rw [ite_eq_left g1] at hW; cases hW
     have ht : ((decE (r₃.headD 0)).tag == ETag.const) = false := by
       rw [decE_const_tag _ hhw]; simpa using g1
     exact ErrClaim.of_error (inferProj_notConst _ _ _ _ _ _ _ _ _ _ _ _ hrun1 hrun2 hgaf ht) rfl
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   have g1' : r₃.headD 0 >>> 28 = 3 := Classical.not_not.mp g1
   have ht : ((decE (r₃.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hhw]; simpa using g1'
   by_cases g2 : tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0
-  · rw [if_pos g2] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right g2] at hW
   by_cases g3 : tcnt m₃ CONST (tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
-  · rw [if_pos g3] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg g3] at hW
+  · rw [ite_eq_left g3] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right g3] at hW
   have hvOK : viewOK m₃ (r₃.headD 0) CONST := ⟨g2, by simpa using g3⟩
   obtain ⟨cT, cu, hv, hcT, hcu, hcTw, hcuw⟩ :=
     view_const_words m₃ _ hS₂.arena.1 (r₃.headD 0) hhw hvOK g1'
@@ -627,7 +625,7 @@ theorem inferProj_gradeE (p : Prog) (hp : InferProjProg p) (hc : InferProjCallee
     hc.erec n "find_proj" _ m₃ r₄ m₄ (Or.inl rfl) (callW_of_callE hc4)
   by_cases g4 : r₄.headD 0 = 0
   · -- a miss: `projMissError`
-    rw [if_pos g4] at hW
+    rw [ite_eq_left g4] at hW
     have hnone : fe.findProj? (decI wT) i.toNat = none := by
       rw [hrun4]; simp only [decEntry, g4, ↓reduceIte]
     obtain ⟨xs, hxs⟩ := getAppArgs_of_getAppFn _ _ _ _ _ hgaf
@@ -645,15 +643,15 @@ theorem inferProj_gradeE (p : Prog) (hp : InferProjProg p) (hc : InferProjCallee
     have hm5 : m₅ = m₄ := ht₅ ▸ hm₅
     subst hm5
     by_cases g5 : r₅.headD 0 ≠ 0
-    · rw [if_pos g5] at hW; cases hW
+    · rw [ite_eq_left g5] at hW; cases hW
       have hts : (fe.findTable? (decI wT)).isSome = true := by rw [htbl]; exact hsome g5
       exact ErrClaim.of_error hT (by rw [hts]; rfl)
-    rw [if_neg g5] at hW
+    rw [ite_eq_right g5] at hW
     have hts : (fe.findTable? (decI wT)).isSome = false := by
       rw [htbl]; simp only [tblOut, Classical.not_not.mp g5, ↓reduceIte, Option.isSome_none]
     by_cases g6 : wT = sn
     · subst g6
-      rw [if_pos rfl] at hW
+      rw [ite_eq_left rfl] at hW
       cases hc6 : callE p n "get_app_args" [r₂.headD 0] m₅ with
       | error e6 =>
         rw [hc6] at hW; simp only [inferProjE.k_get_app_args] at hW; cases hW
@@ -684,7 +682,7 @@ theorem inferProj_gradeE (p : Prog) (hp : InferProjProg p) (hc : InferProjCallee
       by_cases C1 : r₇.headD 0 ≠ 0 ∧ rdW (m₇.arr64 EREC) (r₇.tail.headD 0) = 3 ∧
           rdW (m₇.arr64 EREC) (r₇.tail.headD 0 + 19) = 1 ∧
           rdW (m₇.arr64 EREC) (r₇.tail.headD 0 + 17) < r₆.tail.headD 0
-      · rw [if_pos C1] at hW
+      · rw [ite_eq_left C1] at hW
         obtain ⟨hwc, hpe1⟩ := hP.2 C1
         cases hc8 : callE p n "env_find"
             [rdW (m₇.arr64 EREC) (rdW (m₇.arr64 EREC) (r₇.tail.headD 0 + 18)), vis] m₇ with
@@ -699,22 +697,22 @@ theorem inferProj_gradeE (p : Prog) (hp : InferProjProg p) (hc : InferProjCallee
         have hcf := ctorFieldsGt_eq (iw := i) hS₆.erec hfind8 hfound8
         by_cases C2 : r₈.headD 0 ≠ 0 ∧ rdW (m₈.arr64 EREC) (r₈.tail.headD 0) = 4 ∧
             i < rdW (m₈.arr64 EREC) (r₈.tail.headD 0 + 6)
-        · rw [if_pos C2] at hW; cases hW
+        · rw [ite_eq_left C2] at hW; cases hW
           have hpt : projIndexedStructLike fe (decI wT) (decI wT) i.toNat xs'.length = true := by
             rw [hlen, hpe1, hcf]; simpa using C2
           exact ErrClaim.of_error hT (by
             rw [hts]; simp only [projMissError, Bool.false_eq_true, ↓reduceIte, hpt]; rfl)
-        · rw [if_neg C2] at hW; simp only [inferProjE.j2] at hW; cases hW
+        · rw [ite_eq_right C2] at hW; simp only [inferProjE.j2] at hW; cases hW
           have hpt : projIndexedStructLike fe (decI wT) (decI wT) i.toNat xs'.length = false := by
             rw [hlen, hpe1, hcf]; simpa using C2
           exact ErrClaim.of_error hT (by
             rw [hts]; simp only [projMissError, Bool.false_eq_true, ↓reduceIte, hpt]; rfl)
-      · rw [if_neg C1] at hW; simp only [inferProjE.j2] at hW; cases hW
+      · rw [ite_eq_right C1] at hW; simp only [inferProjE.j2] at hW; cases hW
         have hpt : projIndexedStructLike fe (decI wT) (decI wT) i.toNat xs'.length = false := by
           rw [hlen]; exact hP.1 C1
         exact ErrClaim.of_error hT (by
             rw [hts]; simp only [projMissError, Bool.false_eq_true, ↓reduceIte, hpt]; rfl)
-    · rw [if_neg g6] at hW; simp only [inferProjE.j2] at hW; cases hW
+    · rw [ite_eq_right g6] at hW; simp only [inferProjE.j2] at hW; cases hW
       have hne : ((decI wT : NIdx) != decI sn) = true := by
         simp only [bne_iff_ne, ne_eq]; exact fun h => g6 (decI_inj hcTw hsn h)
       have hpt : projIndexedStructLike fe (decI wT) (decI sn) i.toNat xs.length = false := by
@@ -722,11 +720,11 @@ theorem inferProj_gradeE (p : Prog) (hp : InferProjProg p) (hc : InferProjCallee
       exact ErrClaim.of_error hT (by
             rw [hts]; simp only [projMissError, Bool.false_eq_true, ↓reduceIte, hpt]; rfl)
   · -- a hit: `infer_proj_at`
-    rw [if_neg g4] at hW
+    rw [ite_eq_right g4] at hW
     obtain ⟨tbl, hdt, hfe⟩ := hc.projFound n m₃ _ dn vis fe M₂ eb wT i r₄ m₄ hS₂ (callW_of_callE hc4) g4
     have hde : decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat =
         some (tbl.entry i.toNat) := by
-      unfold decEntry; rw [if_neg g4, hdt]; rfl
+      unfold decEntry; rw [ite_eq_right g4, hdt]; rfl
     rw [hde] at hrun4
     have hq₄ : decTbl (m₄.arr64 EREC) (r₄.tail.headD 0).toNat = some tbl := by rw [hE₄]; exact hdt
     have hi : i.toNat < tbl.numFields := findProj?_lt hrun4
@@ -768,21 +766,21 @@ theorem inferProj_refinesE (p : Prog) (hp : InferProjProg p) (hc : InferProjCall
       hsn hpe rfl ?_ ?_
     · intro r m h
       simp only [inferProjE.first] at h
-      rw [if_neg (by decide)] at h
+      rw [ite_eq_right (by decide)] at h
       exact CoreSpec.of_callW (hK.infer F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) (callW_of_callE h)
     · intro e h
       simp only [inferProjE.first] at h
-      rw [if_neg (by decide)] at h
+      rw [ite_eq_right (by decide)] at h
       exact CoreSpecE.of_callE (hKE.infer F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) h
   · refine inferProj_gradeE p hp hc he hat n hk hkE F s₀ a₀ dn vis fe M eb mode 1 d sn i pe _ hF hn hs
       hsn hpe rfl ?_ ?_
     · intro r m h
       simp only [inferProjE.first] at h
-      rw [if_pos (by decide)] at h
+      rw [ite_eq_left (by decide)] at h
       exact CoreSpec.of_callW (hK.inferIO F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) (callW_of_callE h)
     · intro e h
       simp only [inferProjE.first] at h
-      rw [if_pos (by decide)] at h
+      rw [ite_eq_left (by decide)] at h
       exact CoreSpecE.of_callE (hKE.inferIO F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) h
 
 /-! ## `infer_proj_at`'s error model (by hand, in the shape of the ok model `ipaW`) -/
@@ -875,8 +873,8 @@ theorem inferProjAt_specE (p : Prog) (hf : p.lookup "infer_proj_at" = some infer
       callE_spec p n "get_app_args", callE_spec p n "ls_node", callE_spec p n "pin_word",
       callE_spec p n "lvl_eq_c", callE_spec p n "field_sort_zero", callE_spec p n "proj_type_at"] <;>
   simp_all [inferProjAtE, ipaE1, ipaE2, ipaEP, ipaE3, ipaE4, ipaE5, guardW, sliceAt, Cmp.eval, LocEq,
-    BinOp.eval, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, size_set64, CTL, EREC, SPN, PINS, w_lt_false,
+    BinOp.eval, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, EREC, w_lt_false,
     w_le_false]
 
 
@@ -953,19 +951,19 @@ theorem inferProjAt_refinesE (p : Prog) (hp : InferProjProg p) (hc : InferProjCa
   have hlen0 : xs.length = (r₁.tail.headD 0).toNat := by
     have := hsp₁.size; simp only [List.size_toArray] at this; exact this
   by_cases g1 : T ≠ sn
-  · rw [if_pos g1] at hW; cases hW
+  · rw [ite_eq_left g1] at hW; cases hW
     have hne : ((decI T : NIdx) != decI sn) = true := by
       simp only [bne_iff_ne, ne_eq]; exact fun h => g1 (decI_inj hT hsn h)
     exact ErrClaim.of_error (projAtT_errT _ _ _ _ _ _ _ xs hxs hne) rfl
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   have hTs : T = sn := Classical.not_not.mp g1
   by_cases g2 : r₁.tail.headD 0 ≠ rdW (m₁.arr64 EREC) (q + 5)
-  · rw [if_pos g2] at hW; cases hW
+  · rw [ite_eq_left g2] at hW; cases hW
     have hl : (xs.length != (tbl.entry i.toNat).numParams) = true := by
       simp only [bne_iff_ne, ne_eq, hlen0]
       intro h; apply g2; apply UInt64.toNat_inj.mp; rw [h]; exact hnp
     exact ErrClaim.of_error (projAtT_errNP _ _ _ _ _ _ _ xs hxs (by rw [hTs]) hl) rfl
-  rw [if_neg g2] at hW
+  rw [ite_eq_right g2] at hW
   have g2' : r₁.tail.headD 0 = rdW (m₁.arr64 EREC) (q + 5) := Classical.not_not.mp g2
   have hlen : xs.length = (tbl.entry i.toNat).numParams := by rw [hlen0, g2']; exact hnp.symm
   -- `ls_node`
@@ -988,12 +986,12 @@ theorem inferProjAt_refinesE (p : Prog) (hp : InferProjProg p) (hc : InferProjCa
   subst hr₂'
   have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat := lsNodeW_viewLen hS₁.arena.1 hus hl₂
   by_cases g3 : [o₂, l₂].tail.headD 0 ≠ rdW (m₂.arr64 EREC) (q + 4)
-  · rw [if_pos g3] at hW; cases hW
+  · rw [ite_eq_left g3] at hW; cases hW
     have hl : l₂.toNat ≠ (tbl.entry i.toNat).levelParams.length := by
       intro h; apply g3; apply UInt64.toNat_inj.mp; simp only [List.tail_cons, List.headD_cons]
       rw [h]; exact hlp
     exact ErrClaim.of_error (projAtT_errLP _ _ _ _ _ _ _ xs _ hxs (by rw [hTs]) hlen hvl hl) rfl
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   have g3' : l₂ = rdW (m₂.arr64 EREC) (q + 4) := by simpa using g3
   have hlpl : l₂.toNat = (tbl.entry i.toNat).levelParams.length := by rw [g3']; exact hlp.symm
   -- `pin_word(53)`
@@ -1044,8 +1042,8 @@ theorem inferProjAt_refinesE (p : Prog) (hp : InferProjProg p) (hc : InferProjCa
     xs l₂.toNat _ _ hxs (by rw [hTs]) hlen hvl hlpl hzl (by rw [hss']; exact hrun3)
   rw [decO_true] at hT1
   by_cases g4 : 2 ≤ r₃.headD 0
-  · rw [if_pos g4] at hW
-    rw [if_pos (by simpa using g4)] at hT1
+  · rw [ite_eq_left g4] at hW
+    rw [ite_eq_left (by simpa using g4)] at hT1
     -- `field_sort_zero`
     obtain ⟨hlps₃, -, -, -, hgd₃⟩ := decTbl_fields hq₃ hS₃.erec
     obtain ⟨hfw, hfdec⟩ := sliceAt_dec (k := .level) hS₃.erec hgd₃ i
@@ -1072,17 +1070,17 @@ theorem inferProjAt_refinesE (p : Prog) (hp : InferProjProg p) (hc : InferProjCa
     have hT2 := fszTail_run (tbl.entry i.toNat) (decI us) xs (decE pe) _ _ _
       (by rw [hfs]; exact hrun4)
     by_cases g5 : r₄.headD 0 = 0
-    · rw [if_pos g5] at hW; cases hW
+    · rw [ite_eq_left g5] at hW; cases hW
       have hb : decBool r₄ = false := by simp only [decBool, g5, bne_self_eq_false]
       rw [hb] at hT2
       exact ErrClaim.of_error (hT1.trans hT2) rfl
-    · rw [if_neg g5] at hW
+    · rw [ite_eq_right g5] at hW
       cases hc5 : callE p (N + 2) "proj_type_at" [q, i, us, r₁.headD 0, r₁.tail.headD 0, pe] m₄ with
       | error e5 =>
         rw [hc5] at hW; simp only [ipaE5] at hW; cases hW
         exact nvE "proj_type_at" (by simp) hc5 rfl
       | ok q₅ => rw [hc5] at hW; simp only [ipaE5] at hW; cases hW
-  · rw [if_neg g4] at hW
+  · rw [ite_eq_right g4] at hW
     cases hc5 : callE p (N + 2) "proj_type_at" [q, i, us, r₁.headD 0, r₁.tail.headD 0, pe] m₃ with
     | error e5 =>
       rw [hc5] at hW; simp only [ipaE5] at hW; cases hW

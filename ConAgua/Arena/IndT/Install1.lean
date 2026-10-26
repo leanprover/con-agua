@@ -14,8 +14,6 @@ the comparison's depth), its twin side transcribed from that spec's proof: `fvar
 `check_struct_doms_at` is the same walk with its result words dropped (`sdomsW_eq`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -185,7 +183,7 @@ theorem domsW_simC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (o
     rw [hrun1]
     simp only [bind, Except.bind]
     rw [← hw1eq, hrun2]
-    simp only [bind, Except.bind, hv2, StateT.run_pure]
+    simp only [hv2]
     exact hrun3
 
 include hq henv in

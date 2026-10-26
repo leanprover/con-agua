@@ -48,7 +48,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedVariables false
 
 namespace L.Arena
 
@@ -680,7 +679,7 @@ own premise): a core function runs only once the driver has filled the pins, so 
 wherever `CoreS`/`PinsFull` is (`natBinOpName_refines` gets it from `hC.pins.size` and the array's
 own zeroth word, which the L code's own `abort` branch would otherwise have to witness). -/
 theorem natBinOpNameL_spec (p : Prog) (hp : p.lookup "nat_bin_op_name" = some natBinOpNameL)
-    (n : Nat) (s₀ : St) (hflag : pinW s₀.mem 0 ≠ 0) (c : Word) :
+    (n : Nat) (s₀ : St) (_hflag : pinW s₀.mem 0 ≠ 0) (c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_bin_op_name" [c]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧

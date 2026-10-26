@@ -26,7 +26,6 @@ related to the memory after by `ArenaR` and its parse state by `StateDR`.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order

@@ -385,9 +385,9 @@ variable (k : Nat) (m1 m2 m3 : Mem) (dO dL hO hL c f r : Word) (r1 : List Word)
 theorem pcrK3_some : pcrK3 (some (r, m3)) = some ([1, r], m3) := rfl
 theorem pcrK2_some : pcrK2 k c (some (f, m2)) = pcrK3 (rxW (k + 2) m2 f c) := rfl
 theorem pcrK1_zero (h : r1.headD 0 = 0) : pcrK1 k dO dL hO hL (some (r1, m1)) = some ([0, 0], m1) := by
-  simp only [pcrK1]; rw [if_pos h]
+  simp only [pcrK1]; rw [ite_eq_left h]
 theorem pcrK1_ok (h : ¬ r1.headD 0 = 0) : pcrK1 k dO dL hO hL (some (r1, m1)) =
-    pcrK2 k (r1.tail.headD 0) (posRecW m1 [1, dO, dL, hO, hL]) := by simp only [pcrK1]; rw [if_neg h]
+    pcrK2 k (r1.tail.headD 0) (posRecW m1 [1, dO, dL, hO, hL]) := by simp only [pcrK1]; rw [ite_eq_right h]
 end arms
 attribute [ind_grind] pcrK3_some pcrK2_some pcrK1_zero pcrK1_ok
 

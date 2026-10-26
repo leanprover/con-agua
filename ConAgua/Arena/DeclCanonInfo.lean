@@ -5,8 +5,6 @@ import ConAgua.Arena.DeclCanonRules
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -137,7 +135,7 @@ theorem cdW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
     subst hd
     have hne : (if hintEqB (m.arr64 EREC) (p + 6) (q + 6) = true then (1 : Word) else 0) ≠ 0 := by
       simp [hbB]
-    rw [if_neg hne] at h
+    rw [ite_eq_right hne] at h
     cases hc : cvceW k m (p + 1) (q + 1) with
     | none => rw [hc] at h; simp [cdK1] at h
     | some xx =>
@@ -145,13 +143,13 @@ theorem cdW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
     rw [hc, cdK1_some] at h
     obtain ⟨b1, a1, hb1, hr1, hS1, hg1, hP1, hL1⟩ := cvceW_ok k hc hS (by rw [p1]; exact hcp)
       (by rw [q1]; exact hcq) hP hL
-    simp only [beq_self_eq_true, if_true]
+    simp only [beq_self_eq_true, ite_true]
     obtain ⟨b, a', hb, hr, hq⟩ := andThen_st (Q := CQ dn vis fe m m') (A := cv.canonEq cv')
       (B := (do let cs ← ConRon.Arena.canonNames cv.levelParams.length
                 ConRon.Arena.canonExprEq cv.levelParams cv'.levelParams cs coreWalkFuel v v' : AM Bool))
       hb1 hr1
       (fun hne1 => by
-        rw [if_neg hne1] at h
+        rw [ite_eq_right hne1] at h
         cases hx : ctxW k m1 (p + 1) (q + 1) with
         | none => rw [hx] at h; simp [cdK2] at h
         | some x2 =>
@@ -181,13 +179,13 @@ theorem cdW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
         rw [hvd, hvd']
         exact hb3)
       (fun h0 => by
-        rw [if_pos h0] at h
+        rw [ite_eq_left h0] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨rfl, hS1, hg1, hP1, hL1⟩)
     exact ⟨b, a', hb, hr, hq⟩
   · have hB0 : (if hintEqB (m.arr64 EREC) (p + 6) (q + 6) = true then (1 : Word) else 0) = 0 := by
       simp [hbB]
-    rw [if_pos hB0] at h
+    rw [ite_eq_left hB0] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hne : hi ≠ hi' := fun e => hbB (by rw [hB]; exact decide_eq_true e)
     have hcond : (hi == hi') = false := by simpa using hne
@@ -298,7 +296,7 @@ theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
   simp only [IConstantInfo.canonEq]
   rw [em, em', er, er'] at h
   by_cases hc : wm ≠ wm' ∨ wr ≠ wr'
-  · rw [if_pos hc] at h
+  · rw [ite_eq_left hc] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hb : (wm.toNat == wm'.toNat && wr.toNat == wr'.toNat) = false := by
       rcases hc with hc | hc
@@ -310,11 +308,11 @@ theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
         simp [this]
     rw [hb]
     exact ⟨false, a, rfl, rfl, hS, IWGrow.refl _, hP, hL⟩
-  · rw [if_neg hc] at h
+  · rw [ite_eq_right hc] at h
     have hw : wm = wm' ∧ wr = wr' := by
       rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩
     obtain ⟨rfl, rfl⟩ := hw
-    simp only [beq_self_eq_true, Bool.and_self, if_true]
+    simp only [beq_self_eq_true, Bool.and_self, ite_true]
     cases hc1 : cvceW k m (p + 1) (q + 1) with
     | none => rw [hc1] at h; simp [cwK1] at h
     | some xx =>
@@ -327,7 +325,7 @@ theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
                 ConRon.Arena.canonRulesEq cv.levelParams cv'.levelParams cs coreWalkFuel rules rules' : AM Bool))
       hb1 hr1
       (fun hne1 => by
-        rw [if_neg hne1] at h
+        rw [ite_eq_right hne1] at h
         cases hx : ctxW k m1 (p + 1) (q + 1) with
         | none => rw [hx] at h; simp [cwK2] at h
         | some x2 =>
@@ -361,7 +359,7 @@ theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
         rw [fuelW] at hb3
         exact hb3)
       (fun h0 => by
-        rw [if_pos h0] at h
+        rw [ite_eq_left h0] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨rfl, hS1, hg1, hP1, hL1⟩)
     exact ⟨b, a', hb, hr, hq⟩
@@ -435,7 +433,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
       ⟨k1, cv', mi', rp', o', cc', rules', hcv', hmi', hrp', ho', hcc', hr', rfl⟩
   all_goals first
     | (have hne : wk ≠ wk' := fun h => by have := congrArg UInt64.toNat h; omega
-       rw [if_pos hne] at h
+       rw [ite_eq_left hne] at h
        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
        exact ⟨false, a, by simp [IConstantInfo.canonEq]; rfl, rfl, hS, IWGrow.refl _, hP, hL⟩)
     | skip
@@ -443,7 +441,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have e0 := wl wk 0 (by decide) k0
     have e1 := wl wk' 0 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and, ite_false] at h
     have p1 : (p + 1).toNat = p.toNat + 1 := by
       obtain ⟨w1, hw1, -⟩ := decCV_name hcv
       exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
@@ -456,14 +454,14 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have e0 := wl wk 1 (by decide) k0
     have e1 := wl wk' 1 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    simp (config := { decide := true }) only [↓reduceIte, ite_false] at h
     obtain ⟨b, a', hb, hr, hq⟩ := cdW_ok k h hS hp hq hP hL
     exact ⟨b, a', hb, hr, hq⟩
   · -- thm
     have e0 := wl wk 2 (by decide) k0
     have e1 := wl wk' 2 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and, ite_false] at h
     have p1 : (p + 1).toNat = p.toNat + 1 := by
       obtain ⟨w1, hw1, -⟩ := decCV_name hcv
       exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
@@ -476,7 +474,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have e0 := wl wk 3 (by decide) k0
     have e1 := wl wk' 3 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and, ite_false] at h
     have p1 : (p + 1).toNat = p.toNat + 1 := by
       obtain ⟨w1, hw1, -⟩ := decCV_name hcv
       exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
@@ -489,7 +487,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have e0 := wl wk 4 (by decide) k0
     have e1 := wl wk' 4 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, ite_false, true_and] at h
     have p1 : (p + 1).toNat = p.toNat + 1 := by
       obtain ⟨w1, hw1, -⟩ := decCV_name hcv
       exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
@@ -507,7 +505,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     simp only [erA] at ea eb ec ed
     rw [ea, eb, ec, ed] at h
     by_cases hc : wa ≠ wc ∨ wb ≠ wd
-    · rw [if_pos hc] at h
+    · rw [ite_eq_left hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hbb : (wa.toNat == wc.toNat && wb.toNat == wd.toNat) = false := by
         rcases hc with hc | hc
@@ -520,19 +518,19 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
       refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
       simp only [IConstantInfo.canonEq]
       rw [hbb]; rfl
-    · rw [if_neg hc] at h
+    · rw [ite_eq_right hc] at h
       have hw : wa = wc ∧ wb = wd := by
         rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩
       obtain ⟨rfl, rfl⟩ := hw
       obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
       refine ⟨b, a', ?_, hr, hq⟩
-      simp only [IConstantInfo.canonEq, beq_self_eq_true, Bool.and_self, if_true]
+      simp only [IConstantInfo.canonEq, beq_self_eq_true, Bool.and_self, ite_true]
       exact hb
   · -- rec
     have e0 := wl wk 5 (by decide) k0
     have e1 := wl wk' 5 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and, ite_false] at h
     obtain ⟨b, a', hb, hr, hq⟩ := cwW_ok k h hS hp hq hP hL
     exact ⟨b, a', hb, hr, hq⟩
 
@@ -642,15 +640,15 @@ theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     have lx := decPL_length (m := m) hxs
     have ly := decPL_length (m := m) hys
     by_cases h0 : l1 = 0 ∧ l2 = 0
-    · rw [if_pos h0] at h
+    · rw [ite_eq_left h0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have e1 : xs = [] := List.length_eq_zero_iff.mp (by rw [lx, h0.1]; rfl)
       have e2 : ys = [] := List.length_eq_zero_iff.mp (by rw [ly, h0.2]; rfl)
       subst e1 e2
       exact ⟨true, a, by simp [ConRon.Arena.canonEqList]; rfl, rfl, hS, IWGrow.refl _, hP, hL⟩
-    rw [if_neg h0] at h
+    rw [ite_eq_right h0] at h
     by_cases h1 : l1 = 0 ∨ l2 = 0
-    · rw [if_pos h1] at h
+    · rw [ite_eq_left h1] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
       rcases xs with _ | ⟨x1, xs'⟩ <;> rcases ys with _ | ⟨y1, ys'⟩
@@ -660,7 +658,7 @@ theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       · simp [ConRon.Arena.canonEqList]; rfl
       · exfalso
         rcases h1 with h1 | h1 <;> (subst h1; simp at lx ly)
-    rw [if_neg h1] at h
+    rw [ite_eq_right h1] at h
     rw [not_or] at h1
     rcases xs with _ | ⟨x1, xs'⟩
     · exfalso; apply h1.1; exact UInt64.toNat_inj.mp (by simpa using lx.symm)
@@ -704,7 +702,7 @@ theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     obtain ⟨b, a', hb, hr, hq⟩ := andThen_st (Q := CQ dn vis fe m m') (A := ConRon.Arena.IConstantInfo.canonEq x1' y1')
       (B := ConRon.Arena.canonEqList xs'' ys'') hb1' hr1'
       (fun hne => by
-        rw [if_neg hne] at h
+        rw [ite_eq_right hne] at h
         have hx2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (IWGrow.erecPExtR hg1) hq) xs''.length
           (o1.toNat + 1) xs'' (by omega) hxs'
         have hy2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (IWGrow.erecPExtR hg1) hq) ys''.length
@@ -714,7 +712,7 @@ theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
           (by rw [o1e, l1p]; have := hg1.1; omega) (by rw [o2e, l2p]; have := hg1.1; omega) hP1 hL1
         exact ⟨b2, a2, hb2, hr2', hq2.1, hg1.trans hq2.2.1, hq2.2.2.1, hq2.2.2.2⟩)
       (fun h0 => by
-        rw [if_pos h0] at h
+        rw [ite_eq_left h0] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨rfl, hS1, hg1, hP1, hL1⟩)
     exact ⟨b, a', hb, hr, hq⟩

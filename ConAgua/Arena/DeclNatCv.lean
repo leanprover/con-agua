@@ -8,9 +8,6 @@ record prefix `erecP` of the memory after (`decCV (erecP m') q`).
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -45,7 +42,7 @@ theorem IWGrow.erec_get {m m' : Mem} (h : IWGrow m m') {i : Nat} {v : Word}
 theorem erecP_size_le' (m : Mem) : (erecP m).size ≤ erTop m := by
   simp only [erecP, Array.size_extract, erecTop, erTop]; omega
 
-theorem rdW_erec_of {m : Mem} {q : Word} {w : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64)
+theorem rdW_erec_of {m : Mem} {q : Word} {w : Word} (_hsz : (m.arr64 EREC).size < 2 ^ 64)
     (h : (erecP m)[q.toNat]? = some w) : rdW (m.arr64 EREC) q = w := by
   simp [rdW, erecP_get h]
 

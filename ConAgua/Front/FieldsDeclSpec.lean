@@ -9,8 +9,6 @@ meta import ConAgua.L.Semantics
 /-! # The specs of the declaration fields pass (`ConAgua.Front.FieldsDecl`) -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order
@@ -252,8 +250,7 @@ theorem declVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
         (hL.get "scan_ind_recs") (hL.get "scan_ind_type") (hL.get "scan_ind_types") (hL.get "scan_ind_ctor") (hL.get "scan_ind_ctors")
         (hL.get "scan_axiom") (hL.get "scan_def") (hL.get "scan_thm") (hL.get "scan_opaque") (hL.get "scan_quot") (hL.get "scan_ind_decl") n]
     -- The key test's `||` chain through `L.evalC_spec`: one path per `if`, not one per exit.
-    all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, beq_iff_eq,
-      or_assoc] at *)
+    all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, beq_iff_eq] at *)
     all_goals grind (gen := 16) (instances := 5000) [lang_grind]
 
 attribute [local lang_grind] DFld.enc DFld.none dlvN in

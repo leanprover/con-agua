@@ -18,8 +18,6 @@ open L.Scan.Utf8 (byteW)
 open L.Scan.Member (nextMemberN)
 open L.Scan.Leaves (numEndN skipDigitsN keyEndN)
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedSectionVars false
 
 namespace L.Front.Ind
 
@@ -29,7 +27,7 @@ set_option hygiene false in
 /-- A key's arm of an `IObjLoop`, entering it: the key's `seen` check passed. -/
 macro "iloop_key " f:ident : tactic => `(tactic| (
   intro i seen st m d e e' m' h hc hk hv hvle hok hR hmem hlt
-  rw [$f:ident, dif_pos h] at hok
+  rw [$f:ident, dite_eq_left h] at hok
   simp [uget_byteAt _ i h, hc, isWs, hk, hv] at hok
   have hiv := valueAt_gt b h64 hsize i h hk hv
   generalize valueAt b i (keyEnd b (i + 1)) = v at hok hvle hmem hiv ⊢
@@ -117,8 +115,8 @@ theorem rule_loop (m₁ : Mem) (q : Word) :
   · dloop_other scanRuleLoop
 
 /-- **One record of a list**: `ind_obj` on the record at `q`, from its loop instance. -/
-theorem item_gen {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanRes α) (kind : Word) (A : ArrId)
-    (sz : Nat) (Fn : Mem → Word → α → Mem → Prop) (R : Mem → Word → UInt32 → σ → Mem → Prop)
+theorem item_gen {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanRes α) (kind : Word) (_A : ArrId)
+    (_sz : Nat) (Fn : Mem → Word → α → Mem → Prop) (R : Mem → Word → UInt32 → σ → Mem → Prop)
     (st0 : σ)
     (S : USize → ScanRes α) (hS : ∀ i x e, S i = .ok x e → F (i + 1) true 0 st0 = .ok x e)
     (H : ∀ m₁ q, IObjLoop b F kind q (R m₁ q) (Fn m₁ q))
@@ -140,22 +138,22 @@ theorem recInv_alloc (A : ArrId) (hA : A = IFR ∨ A = IFL) (sz : Nat) (n q : Wo
 set_option hygiene false in
 macro "ilist_shape " G:ident : tactic => `(tactic| (
   constructor
-  · intro i acc w l e h; rw [$G:ident, dif_neg h]; simp
-  · intro i acc w h hws; rw [$G:ident, dif_pos h]; simp only [uget_byteAt _ i h, hws, if_true]
+  · intro i acc w l e h; rw [$G:ident, dite_eq_right h]; simp
+  · intro i acc w h hws; rw [$G:ident, dite_eq_left h]; simp only [uget_byteAt _ i h, hws, ite_true]
   · intro i acc w l e h hc hok
-    rw [$G:ident, dif_pos h] at hok
+    rw [$G:ident, dite_eq_left h] at hok
     simp [uget_byteAt _ i h, hc, isWs] at hok
     split at hok
     · cases hok
     · simp only [ScanRes.ok.injEq] at hok; obtain ⟨rfl, rfl⟩ := hok; exact ⟨rfl, rfl⟩
   · intro i acc w l e h hc hok
-    rw [$G:ident, dif_pos h] at hok
+    rw [$G:ident, dite_eq_left h] at hok
     simp [uget_byteAt _ i h, hc, isWs] at hok
     split at hok
     · cases hok
     · exact hok
   · intro i acc w l e h hc hok
-    rw [$G:ident, dif_pos h] at hok
+    rw [$G:ident, dite_eq_left h] at hok
     simp [uget_byteAt _ i h, hc, isWs] at hok
     split at hok
     · cases hok
@@ -166,7 +164,7 @@ macro "ilist_shape " G:ident : tactic => `(tactic| (
     · rename_i hie; exact ⟨x, e₁, hx, hie, hok⟩
     · cases hok
   · intro i acc w l e h hws h1 h2 h3 hok
-    rw [$G:ident, dif_pos h] at hok
+    rw [$G:ident, dite_eq_left h] at hok
     simp [uget_byteAt _ i h, hws, h1, h2, h3] at hok))
 
 theorem ruleList_shape : IListLoop b (scanRuleListLoop b) (scanRule b) := by
@@ -650,9 +648,9 @@ theorem cts_link (v : USize) (m : Mem) (l : List IndCtorRec) (e : USize) (r : Wo
       i mF q x e e₂ m₂ hS ⟨hIF, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _,
         seenR_zero _ _, seenR_zero _ _,
         (by show wd mF IFR (q.toNat + 6) = 0
-            rw [g1', if_neg (by decide), g1, if_pos (by decide)]),
+            rw [g1', ite_eq_right (by decide), g1, ite_eq_left (by decide)]),
         (by show wd mF IFR (q.toNat + 8) = 0
-            rw [g1', if_pos (by decide)])⟩ hob
+            rw [g1', ite_eq_left (by decide)])⟩ hob
     exact ⟨t1, t4, f1'.1.trans t2.1, t2.2.1, ⟨by rw [t3, f5', f5], trivial⟩⟩
 
 omit h64 hsize in

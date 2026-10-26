@@ -12,7 +12,6 @@ the fuel from the steps (`PosE1S`, `PosE2`, `PosE3*`, `IndE.keyOKE_step`) and th
 (`nbOKC_all`).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

@@ -52,7 +52,7 @@ theorem ExtP.rd {k : IdxKind} {i : Nat} {x : Idx k} (hi : P i) (hx : hd? a i = s
 theorem ExtP.rs {k : IdxKind} {o c : Nat} {xs : List (Idx k)} (hr : ∀ j < c, P (o + j))
     (hx : hslice? a o c = some xs) : hslice? b o c = some xs :=
   mapM_mono (fun j => L.Arena.hd? a (o + j)) (fun j => L.Arena.hd? b (o + j)) _ _
-    (fun j hj y hy => h.rd (hr j (List.mem_range.mp hj)) hy) hx
+    (fun j hj _y hy => h.rd (hr j (List.mem_range.mp hj)) hy) hx
 
 theorem ExtP.rl {k : IdxKind} {i : Nat} {xs : List (Idx k)} (hi : P i) (hi1 : P (i + 1))
     (hr : ∀ x _y : Nat, nat? a i = some x → nat? a (i + 1) = some _y → ∀ j < _y, P (x + j))

@@ -14,7 +14,6 @@ record pool `EREC` and their tops `CTL[192]`, `CTL[129]` (`lzcP_closed`); its wo
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

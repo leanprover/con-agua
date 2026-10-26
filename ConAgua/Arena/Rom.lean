@@ -30,7 +30,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Rom
 
@@ -149,7 +148,7 @@ theorem u64W_of_drop (pos : Word) (n : Nat) (rest : List UInt8)
   simp only [u64W, b0, b1, b2, b3, b4, b5, b6, b7]
   apply UInt64.toNat_inj.mp
   simp only [u64B, List.getElem_cons_zero, List.getElem_cons_succ, UInt8.toUInt64, UInt64.toNat_add,
-    UInt64.toNat_mul, UInt8.toNat_ofNat, UInt64.toNat_ofNat', UInt64.toNat_ofNatLT]
+    UInt64.toNat_mul, UInt64.toNat_ofNat']
   simp
   omega
 
@@ -341,7 +340,7 @@ theorem rputW_copy (pt pb i l : Word) (hv : i.toNat + l.toNat < 2 ^ 64)
     have hj1 : (j + 1).toNat = j.toNat + 1 := by
       rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by have := l.toNat_lt; simp; omega)
     have hij : (i + j).toNat = i.toNat + j.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-    rw [rputW, if_pos (UInt64.lt_iff_toNat_lt.mpr hjl),
+    rw [rputW, ite_eq_left (UInt64.lt_iff_toNat_lt.mpr hjl),
       ih _ (j + 1) (by omega) (UInt64.le_iff_toNat_le.mpr (by omega)), Mem.copy8w_succ,
       romB_eq rom _ _ hij.symm (by omega), getElem!_pos rom.toArray _ (by simp; omega),
       UInt64.add_assoc, UInt64.add_assoc]
@@ -416,10 +415,9 @@ theorem romPut_specW (hp : p.lookup "rom_put" = some (romPut rom)) (n : Nat) (s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, warr]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Mem.src8, not_true_eq_false,
+      reduceIte, bne_iff_ne, ne_eq, decide_eq_true_eq, Mem.src8, not_true_eq_false,
       Decidable.not_not] at *)
     all_goals (
       have hv' : i ≤ i + l := UInt64.not_lt.mp (by simpa using ‹¬decide (i + l < i) = true›)
@@ -496,7 +494,7 @@ theorem rputW_facts (pt pb i n : Word) (hv : i.toNat + n.toNat < 2 ^ 64) (ht : p
     by_cases h1 : pt.toNat * 2 ^ 40 + pb.toNat + (j.toNat + 1) ≤ x ∧
         x < pt.toNat * 2 ^ 40 + pb.toNat + n.toNat
     · have h2 : pt.toNat * 2 ^ 40 + (pb.toNat + j.toNat) ≠ x := by omega
-      simp [h1, h2, show pt.toNat * 2 ^ 40 + pb.toNat + j.toNat ≤ x by omega]
+      simp [h1, show pt.toNat * 2 ^ 40 + pb.toNat + j.toNat ≤ x by omega]
     · by_cases h2 : pt.toNat * 2 ^ 40 + (pb.toNat + j.toNat) = x
       · subst h2
         have e : pt.toNat * 2 ^ 40 + (pb.toNat + j.toNat) - (pt.toNat * 2 ^ 40 + pb.toNat) = j.toNat := by
@@ -548,7 +546,7 @@ theorem romPutW_facts (m : Mem) (i l : Word) (hpool : PoolOK m) (hok : romPutOK 
   have hctl : 0 < ((rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) i l 0).arr64 CTL).size := by
     rw [hf.ctl]; exact hctl0
   have htop' := Mem.top_set64 _ (m.top + l) hctl
-  have hg := Grows.write m _ l hpool hf (fun x hxt => by rw [hx, if_neg (by omega)]) (by omega)
+  have hg := Grows.write m _ l hpool hf (fun x hxt => by rw [hx, ite_eq_right (by omega)]) (by omega)
   refine ⟨hg, SliceOK.fresh hg htop', ?_, hin⟩
   rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, sliceL, List.ext_getElem_iff]
   refine ⟨by simp; omega, fun k hk₁ hk₂ => ?_⟩
@@ -651,7 +649,7 @@ theorem nmRecK_num (ht : t = 2) (hu : u64OK rom q) :
     nmRecK rom t (some (h, q, m₁)) = nmNumK q (nninternW m₁ h (u64W rom q)) := by simp [nmRecK, ht, hu]
 theorem romPutW_ok (hok : romPutOK rom m (q + 8) l) :
     romPutW rom m (q + 8) l = some (m.top, (rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) (q + 8) l 0).set64 CTL 0 (m.top + l)) := by
-  simp only [romPutW]; rw [if_pos hok]
+  simp only [romPutW]; rw [ite_eq_left hok]
 end nameArms
 
 attribute [arena_grind =] nmAnonK_some nmNumK_some nmRecK_str nmRecK_num romPutW_ok nmStrK_some
@@ -1003,8 +1001,8 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     rw [hl] at hW
     simp only [romPutW] at hW
     by_cases hok : romPutOK rom m₁ (q₁ + 8) (UInt64.ofNat str.toByteArray.size)
-    case neg => rw [if_neg hok] at hW; simp [nmStrK] at hW
-    rw [if_pos hok] at hW
+    case neg => rw [ite_eq_right hok] at hW; simp [nmStrK] at hW
+    rw [ite_eq_left hok] at hW
     simp only [nmStrK] at hW
     cases hI : nsinternW ((rputW rom m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (q₁ + 8) (UInt64.ofNat str.toByteArray.size) 0).set64 CTL 0
         (m₁.top + UInt64.ofNat str.toByteArray.size)) h₁ m₁.top (UInt64.ofNat str.toByteArray.size) with
@@ -1024,7 +1022,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
         (m₁.top + UInt64.ofNat str.toByteArray.size))) m₁.top.toNat
         (UInt64.ofNat str.toByteArray.size).toNat = strWords str := by
       rw [hk, hq8, hlN, ← List.drop_drop, hdq]
-      simp [u64B, strWords, List.take_left' hsz]
+      simp [u64B, strWords]
     have hmo1 := (romNameW_topK hP).mode hA.1.lit.1 hmo
     have hmo2 := (romPut_topK rom hok).mode hR1.1.lit.1 hmo1
     obtain ⟨ok2, hR3, res2, hf2⟩ := L.Front.nstr_A _ _ hR2 w m₃ h₁ _ _ hlt1 hsl str hk' (ModeOK.slice0 hmo2 hsl) hI

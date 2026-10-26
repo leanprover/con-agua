@@ -9,7 +9,6 @@ import ConAgua.Arena.RecCheckSpec20
 the `hb` memo after from the write set, `HbMemo.ofClosed`). With it the tail's triple.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

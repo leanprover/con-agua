@@ -11,8 +11,6 @@ import ConAgua.Arena.DeclNatGateT
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -420,7 +418,7 @@ theorem natGateSpecE_of {p : Prog} (hN : NatSubProg' p) (hq : KnotStageProg p) (
     (hcE : CoreStubsE p) (hnv : closedNV p L.Checker.nvFns = true)
     (hg : p.lookup "defn_nat_gate" = some defnNatGate)
     (hc : p.lookup "defn_nat_cert" = some defnNatCert) : NatGateSpecE p :=
-  fun dn vis w fe2 env env2 n nm k hk m a hn hSw hC henv hie hnm e hcall =>
+  fun _dn _vis _w _fe2 _env _env2 _n _nm _k hk _m _a hn hSw hC henv hie hnm _e hcall =>
     defnNatGateE_okC hN hq hcl hcE hnv hg hc hk hn hcall hSw hC henv hie hnm
 
 end L.Arena

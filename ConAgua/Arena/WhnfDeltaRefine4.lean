@@ -12,9 +12,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedVariables false
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -123,8 +120,8 @@ theorem callW_reduceNatK (hp : WhnfDeltaProg' p) (N F : Nat) (hF : N ≤ F) (hn2
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatK_spec p hp.toWhnfDeltaProg n s₀ mode vis d f b) h
   unfold reduceNatKW at hW
   by_cases hbd : tcnt s₀.mem CONST (tierW f) ≤ idxW f
-  · rw [if_pos hbd] at hW; cases hW
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW
+  rw [ite_eq_right hbd] at hW
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
     view_const_words s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg3
   rw [hview] at hvf
@@ -145,7 +142,7 @@ theorem callW_reduceNatK (hp : WhnfDeltaProg' p) (N F : Nat) (hF : N ≤ F) (hn2
   have hbne : ∀ v w : Word, HW v → HW w → ((decI v : LsIdx) != decI w) = !decide (v = w) := by
     intro v w hv hw; simp only [bne, decI_beq v w hv hw]
   by_cases hne : tfld s₀.mem CONST (tierW f) (idxW f) 1 ≠ r₁.headD 0
-  · rw [if_pos hne] at hW
+  · rw [ite_eq_left hne] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -158,7 +155,7 @@ theorem callW_reduceNatK (hp : WhnfDeltaProg' p) (N F : Nat) (hF : N ≤ F) (hn2
     refine (CRef.pure hC _ hz ?_ ?_).core
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [if_neg hne] at hW
+  rw [ite_eq_right hne] at hW
   have hne' : tfld s₀.mem CONST (tierW f) (idxW f) 1 = pinW s₀.mem 52 := by
     rw [← hr₁]; simpa using hne
   cases h2 : callW p n "reduce_nat_succ" [mode, vis, d, tfld s₀.mem CONST (tierW f) (idxW f) 0,
@@ -214,8 +211,8 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatAp_spec p hp.toWhnfDeltaProg n s₀ mode vis d f b) h
   unfold reduceNatApW at hW
   by_cases hbd : tcnt s₀.mem APP (tierW f) ≤ idxW f
-  · rw [if_pos hbd] at hW; cases hW
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW
+  rw [ite_eq_right hbd] at hW
   obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg4
   rw [hviewf] at hvf
   have hvf' := Option.some.inj hvf
@@ -224,7 +221,7 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
   generalize tfld s₀.mem APP (tierW f) (idxW f) 0 = gw at hW hgw hviewf
   generalize tfld s₀.mem APP (tierW f) (idxW f) 1 = xw at hW hxw hviewf
   by_cases g3 : gw >>> 28 ≠ 3
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -233,17 +230,17 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
     refine (CRef.pure hC _ (redApp_notconst _ fe d.toNat (decE gw) (decE xw) (decE b) a₀ ht) ?_ ?_).core
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   have g3' : gw >>> 28 = 3 := by simpa using g3
   have ht : ((decE (gw)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hgw]; exact beq_iff_eq.mpr g3'
   by_cases hs2 : tierW (gw) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hs2] at hW; cases hW
-  rw [if_neg hs2] at hW
+  · rw [ite_eq_left hs2] at hW; cases hW
+  rw [ite_eq_right hs2] at hW
   by_cases hb2 : tcnt s₀.mem CONST (tierW (gw)) ≤
       idxW (gw)
-  · rw [if_pos hb2] at hW; cases hW
-  rw [if_neg hb2] at hW
+  · rw [ite_eq_left hb2] at hW; cases hW
+  rw [ite_eq_right hb2] at hW
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.1 _ hgw
     ⟨hs2, by simpa using hb2⟩ g3'
   subst hn hu
@@ -264,7 +261,7 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
   have hcond := fun (hh : uw = pinW s₀.mem 52) =>
     (by rw [hbne _ _ hul hC.pins.lv_lt.1]; simp [hh] : ((decI uw : LsIdx) != decI (pinW s₀.mem 52)) = false)
   by_cases hne : uw ≠ r₁.headD 0
-  · rw [if_pos hne] at hW
+  · rw [ite_eq_left hne] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -276,7 +273,7 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
     refine (CRef.pure hC _ hz ?_ ?_).core
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [if_neg hne] at hW
+  rw [ite_eq_right hne] at hW
   have hne' : uw = pinW s₀.mem 52 := by rw [← hr₁]; simpa using hne
   have hcongrApp := redApp_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b) a₀
     (decI cw) (decI uw) (decI (pinW s₀.mem 52)) ht hview hel (hcond hne')
@@ -313,7 +310,7 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
   have hredbin := redBin_run (coreKnot (decMode mode) fe id F) fe d.toNat (decI cw) (decE xw) (decE b) a₀
     (natBinOpSel (pinW s₀.mem) cw) (decBool r₃) hbin (by rw [hb3, hbb3])
   by_cases hgo : r₂.headD 0 ≠ 0 ∧ r₃.headD 0 ≠ 0
-  · rw [if_pos hgo] at hW
+  · rw [ite_eq_left hgo] at hW
     cases h4 : callW p n "reduce_nat_op" [mode, vis, d, cw, xw, b] m₃ with
     | none => rw [h4] at hW; cases hW
     | some q₄ =>
@@ -333,7 +330,7 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
     refine ⟨hok, CoreAfter.comp (KeptAll.refl _ _) (StackKept.of_const_frame hfr3) hA, ?_, ?_⟩
     · rw [hres]; simp only [decOptR, ← hr0, ← hr1]
     · unfold ResW at hrw ⊢; rw [← hr0, ← hr1]; exact hrw
-  · rw [if_neg hgo] at hW
+  · rw [ite_eq_right hgo] at hW
     cases h4 : callW p n "reduce_nat_wf" [mode, vis, d, cw, xw, b] m₃ with
     | none => rw [h4] at hW; cases hW
     | some q₄ =>
@@ -394,8 +391,8 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatHead_spec p hp.toWhnfDeltaProg n s₀ mode vis d f b) h
   unfold reduceNatHeadW at hW
   by_cases hsc : tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW
+  rw [ite_eq_right hsc] at hW
   -- the tags that only check a bound
   have simple : ∀ (c : TRec), (f >>> 28 = 0 ∧ c = BVAR) ∨ (f >>> 28 = 1 ∧ c = FVAR) ∨ (f >>> 28 = 2 ∧ c = SORT) ∨
       (f >>> 28 = 5 ∧ c = LAM) ∨ (f >>> 28 = 6 ∧ c = FORALL) ∨ (f >>> 28 = 7 ∧ c = LET) ∨
@@ -406,8 +403,8 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
         s₀.mem vis fe MM eb r s'.mem ResW := by
     intro c hcg hW'
     by_cases hbd : tcnt s₀.mem c (tierW f) ≤ idxW f
-    · rw [if_pos hbd] at hW'; cases hW'
-    rw [if_neg hbd] at hW'
+    · rw [ite_eq_left hbd] at hW'; cases hW'
+    rw [ite_eq_right hbd] at hW'
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'
     obtain ⟨hr0, hr1, hm⟩ := hW'
     rw [← hm]
@@ -416,7 +413,7 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   by_cases g3 : f >>> 28 = 3
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     cases h1 : callW p n "reduce_nat_k" [mode, vis, d, f, b] s₀.mem with
     | none => rw [h1] at hW; cases hW
     | some q₁ =>
@@ -432,7 +429,7 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
       | succ n' =>
       obtain ⟨s'', hs'', -, hW2⟩ := triple_of_callW (reduceNatK_spec p hp.toWhnfDeltaProg n' s₀ mode vis d f b) h1
       unfold reduceNatKW at hW2
-      rw [if_pos hbd] at hW2; cases hW2
+      rw [ite_eq_left hbd] at hW2; cases hW2
     obtain ⟨n_, us_, hview, -, -, -, -⟩ := view_const_words s₀.mem a₀ hC.arena.1 f hf
       ⟨hsc, by simpa using hbd⟩ g3
     have hK := callW_reduceNatK p hp n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb
@@ -443,9 +440,9 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
     refine ⟨hok, hA, ?_, ?_⟩
     · rw [hres]; simp only [decOptR, ← hr0, ← hr1]
     · unfold ResW at hrw ⊢; rw [← hr0, ← hr1]; exact hrw
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   by_cases g4 : f >>> 28 = 4
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     cases h1 : callW p n "reduce_nat_ap" [mode, vis, d, f, b] s₀.mem with
     | none => rw [h1] at hW; cases hW
     | some q₁ =>
@@ -461,7 +458,7 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
       | succ n' =>
       obtain ⟨s'', hs'', -, hW2⟩ := triple_of_callW (reduceNatAp_spec p hp.toWhnfDeltaProg n' s₀ mode vis d f b) h1
       unfold reduceNatApW at hW2
-      rw [if_pos hbd] at hW2; cases hW2
+      rw [ite_eq_left hbd] at hW2; cases hW2
     obtain ⟨hview, -, -⟩ := view_app s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ g4
     have hA := callW_reduceNatAp p hp hno n F (by omega) (by omega) (hk.mono (by omega))
       s₀ a₀ dn vis fe MM eb mode d f b hS hf hb g4 hsc _ _ hview r₁ m₁ h1
@@ -471,33 +468,33 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
     refine ⟨hok, hA2, ?_, ?_⟩
     · rw [hres]; simp only [decOptR, ← hr0, ← hr1]
     · unfold ResW at hrw ⊢; rw [← hr0, ← hr1]; exact hrw
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   by_cases g0 : f >>> 28 = 0
-  · rw [if_pos g0] at hW; exact simple BVAR (Or.inl ⟨g0, rfl⟩) hW
-  rw [if_neg g0] at hW
+  · rw [ite_eq_left g0] at hW; exact simple BVAR (Or.inl ⟨g0, rfl⟩) hW
+  rw [ite_eq_right g0] at hW
   by_cases g1 : f >>> 28 = 1
-  · rw [if_pos g1] at hW; exact simple FVAR (Or.inr (Or.inl ⟨g1, rfl⟩)) hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; exact simple FVAR (Or.inr (Or.inl ⟨g1, rfl⟩)) hW
+  rw [ite_eq_right g1] at hW
   by_cases g2 : f >>> 28 = 2
-  · rw [if_pos g2] at hW; exact simple SORT (Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; exact simple SORT (Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
+  rw [ite_eq_right g2] at hW
   by_cases g5 : f >>> 28 = 5
-  · rw [if_pos g5] at hW; exact simple LAM (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩)))) hW
-  rw [if_neg g5] at hW
+  · rw [ite_eq_left g5] at hW; exact simple LAM (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩)))) hW
+  rw [ite_eq_right g5] at hW
   by_cases g6 : f >>> 28 = 6
-  · rw [if_pos g6] at hW; exact simple FORALL (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩))))) hW
-  rw [if_neg g6] at hW
+  · rw [ite_eq_left g6] at hW; exact simple FORALL (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩))))) hW
+  rw [ite_eq_right g6] at hW
   by_cases g7 : f >>> 28 = 7
-  · rw [if_pos g7] at hW
+  · rw [ite_eq_left g7] at hW
     exact simple LET (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩)))))) hW
-  rw [if_neg g7] at hW
+  rw [ite_eq_right g7] at hW
   by_cases g8 : f >>> 28 = 8
-  · rw [if_pos g8] at hW
+  · rw [ite_eq_left g8] at hW
     exact simple LIT (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g8, rfl⟩))))))) hW
-  rw [if_neg g8] at hW
+  rw [ite_eq_right g8] at hW
   by_cases g9 : f >>> 28 ≠ 9
-  · rw [if_pos g9] at hW; cases hW
-  rw [if_neg g9] at hW
+  · rw [ite_eq_left g9] at hW; cases hW
+  rw [ite_eq_right g9] at hW
   have g9' : f >>> 28 = 9 := by simpa using g9
   exact simple PROJ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩)))))))
     (by simpa using hW)
@@ -538,21 +535,21 @@ theorem callW_reduceNat (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F : N
     · have : ¬ (decE e).tag = ETag.app := fun h' => g ((decE_tag_app e he).mp h')
       rw [beq_eq_false_iff_ne.mpr this, beq_eq_false_iff_ne.mpr g]
   by_cases g4 : e >>> 28 ≠ 4
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
     refine (CRef.pure hC _ (reduceNat_notapp _ fe d.toNat (decE e) a₀ (by rw [hap]; exact beq_eq_false_iff_ne.mpr g4)) ?_ ?_).core
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   have g4' : e >>> 28 = 4 := by simpa using g4
   by_cases hsc : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW
+  rw [ite_eq_right hsc] at hW
   by_cases hbd : tcnt s₀.mem APP (tierW e) ≤ idxW e
-  · rw [if_pos hbd] at hW; cases hW
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW
+  rw [ite_eq_right hbd] at hW
   obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.1 e he ⟨hsc, by simpa using hbd⟩ g4'
   generalize tfld s₀.mem APP (tierW e) (idxW e) 0 = fw at hW hview hfw
   generalize tfld s₀.mem APP (tierW e) (idxW e) 1 = bw at hW hview hbw
@@ -610,7 +607,7 @@ theorem whnfStep_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (m
   simp only [callFn, whnfStepL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "whnf_core", callW_spec p n "reduce_nat", callW_spec p n "unfold_definition"] <;>
-  simp_all [whnfStepW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
+  simp_all [whnfStepW, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
     St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 theorem whnfStep_run_nat (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e e₁ e₂ : EIdx) (a a₁ a₂ : AState)
@@ -684,11 +681,11 @@ theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat)
   rw [hres2] at hrun2
   generalize AM.st (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE (r₁.headD 0))) a₁ = a₂ at hrun2 hS₂
   by_cases hf2 : r₂.headD 0 ≠ 0
-  · rw [if_pos hf2] at hW
+  · rw [ite_eq_left hf2] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
-    have hsome : decOptR r₂ = some (decE (r₂.tail.headD 0)) := by simp only [decOptR, decOpt, if_neg hf2]
+    have hsome : decOptR r₂ = some (decE (r₂.tail.headD 0)) := by simp only [decOptR, decOpt, ite_eq_right hf2]
     rw [hsome] at hrun2
     have hz := whnfStep_run_nat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e) (decE (r₁.headD 0)) _ a₀ a₁ a₂
       (by rw [hrun1]; rfl) hrun2
@@ -697,8 +694,8 @@ theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat)
     · rw [hst']; exact ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩
     · rw [hres']; simp only [decStep, ← hr0, ← hr1]; simp
     · unfold ResW at hrw2 ⊢; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, hrw2.2⟩
-  rw [if_neg hf2] at hW
-  have hnone : decOptR r₂ = none := by simp only [decOptR, decOpt]; rw [if_pos (by simpa using hf2)]
+  rw [ite_eq_right hf2] at hW
+  have hnone : decOptR r₂ = none := by simp only [decOptR, decOpt]; rw [ite_eq_left (by simpa using hf2)]
   rw [hnone] at hrun2
   have hSP2 : SlotPre ⟨m₂, Locals.init []⟩ a₂ dn vis fe M₂ eb mode := ⟨hS₂, hS.mode4, hS.eb_mode⟩
   cases h3 : callW p n "unfold_definition" [vis, r₁.headD 0] m₂ with
@@ -713,11 +710,11 @@ theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat)
   rw [hres3] at hrun3
   generalize AM.st (unfoldDefinition fe (decE (r₁.headD 0))) a₂ = a₃ at hrun3 hS₃
   by_cases hf3 : r₃.headD 0 ≠ 0
-  · rw [if_pos hf3] at hW
+  · rw [ite_eq_left hf3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
-    have hsome : decOptR r₃ = some (decE (r₃.tail.headD 0)) := by simp only [decOptR, decOpt, if_neg hf3]
+    have hsome : decOptR r₃ = some (decE (r₃.tail.headD 0)) := by simp only [decOptR, decOpt, ite_eq_right hf3]
     rw [hsome] at hrun3
     have hz := whnfStep_run_unf (coreKnot (decMode mode) fe id F) fe d.toNat (decE e) (decE (r₁.headD 0)) _ a₀ a₁ a₂ a₃
       (by rw [hrun1]; rfl) hrun2 hrun3
@@ -726,18 +723,18 @@ theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat)
     · rw [hst']; exact ⟨M₃, hS₃, (hK₁.trans hK₂).trans hK₃, (hSt₁.trans hSt₂).trans hSt₃⟩
     · rw [hres']; simp only [decStep, ← hr0, ← hr1]; simp
     · unfold ResW at hrw3 ⊢; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, hrw3.2⟩
-  rw [if_neg hf3] at hW
+  rw [ite_eq_right hf3] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   rw [← hm]
-  have hnone3 : decOptR r₃ = none := by simp only [decOptR, decOpt]; rw [if_pos (by simpa using hf3)]
+  have hnone3 : decOptR r₃ = none := by simp only [decOptR, decOpt]; rw [ite_eq_left (by simpa using hf3)]
   rw [hnone3] at hrun3
   have hz := whnfStep_run_done (coreKnot (decMode mode) fe id F) fe d.toNat (decE e) (decE (r₁.headD 0)) a₀ a₁ a₂ a₃
     (by rw [hrun1]; rfl) hrun2 hrun3
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hst']; exact ⟨M₃, hS₃, (hK₁.trans hK₂).trans hK₃, (hSt₁.trans hSt₂).trans hSt₃⟩
-  · rw [hres']; simp only [decStep, ← hr0, ← hr1]; simp [decH]
+  · rw [hres']; simp only [decStep, ← hr0, ← hr1]; simp
   · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, hrw1⟩
 
 end refs25

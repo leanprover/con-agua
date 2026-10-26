@@ -13,7 +13,6 @@ Callees enter as their runs (`callW`), turned into the twin's by their refinemen
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -265,14 +264,14 @@ theorem cntW_ok (n : Nat) : ∀ (m : Mem) (o l w r : Word) (ms : List TargetMajo
           word_add_toNat (by rw [show (1 : Word).toNat = 1 from rfl]; have := l.toNat_lt; omega)
         refine ⟨?_, by omega⟩
         rw [hr1, h1]
-        simp [memCount, List.filter_cons, hiff.mp he]
+        simp [memCount, hiff.mp he]
       · rw [cntK_miss (h := by rw [hrd8]; exact he)] at h
         simp only [Option.some.injEq] at h
         subst h
         refine ⟨?_, by omega⟩
         rw [h1]
         have : ¬ (t.member == some (w.toNat - 1)) = true := fun e => he (hiff.mpr e)
-        simp [memCount, List.filter_cons, this]
+        simp [memCount, this]
 
 mutual
 /-- **The model of `check_block_classes_one_per_member(j, k, o, l)`.** -/
@@ -292,7 +291,7 @@ theorem opmW_step (h : ¬ k ≤ j) : opmW (n + 1) m j k o l = opmK n m j k o l (
   simp [opmW, h]
 theorem opmK_bad (h : c ≠ 1) : opmK n m j k o l (some c) = some 0 := by simp [opmK, h]
 theorem opmK_good (h : ¬ c ≠ 1) : opmK n m j k o l (some c) = opmW n m (j + 1) k o l := by
-  simp only [opmK]; rw [if_neg h]
+  simp only [opmK]; rw [ite_eq_right h]
 end arms
 attribute [ind_grind] opmW_done opmW_step opmK_bad opmK_good
 

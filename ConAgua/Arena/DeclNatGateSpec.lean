@@ -10,9 +10,6 @@ guard, the stored dependencies, the stored value's equations certified at the pr
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -69,10 +66,10 @@ theorem decCI_defn_val {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q 
       | none => simp [hh5] at hv
       | some w => exact ⟨w, rfl, by simpa [hh5] using hv⟩
     by_cases hl : w.toNat < 2 ^ 32
-    · rw [if_pos hl] at hv
+    · rw [ite_eq_left hl] at hv
       cases hv
       exact ⟨w, by rw [hw0, this], hw, hl, rfl⟩
-    · rw [if_neg hl] at hv; cases hv
+    · rw [ite_eq_right hl] at hv; cases hv
   · exfalso
     rcases k with _ | _ | _ | _ | _ | _ | _ | k
     · simp [Option.bind_eq_some_iff] at h

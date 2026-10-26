@@ -12,8 +12,6 @@ opened telescope (`openPisAtFvarsF_run`), the index binders' sorts (`fsortsW_okC
 `checkStructFieldSortsI_spec` on its run for the `CoreStep`), the records and conses (L only).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -104,8 +102,8 @@ theorem iisW_simC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
         UInt64.ofNat msh.nIdx] m1)) (by simp [iisK1])
     (fun r m₁ => by
       by_cases h : r.headD 0 = 0
-      · rw [iisK1_none p n m₁ _ _ _ _ r h, if_pos h]
-      · rw [iisK1_some p n m₁ _ _ _ _ r h, if_neg h])
+      · rw [iisK1_none p n m₁ _ _ _ _ r h, ite_eq_left h]
+      · rw [iisK1_some p n m₁ _ _ _ _ r h, ite_eq_right h])
     (by
       have h := opfSimRA (n := n) (k := UInt64.ofNat bs.nP + UInt64.ofNat msh.nIdx) (i := 0) hOpf htyl hS hA
       rw [hk, htye] at h
@@ -117,7 +115,7 @@ theorem iisW_simC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   cases x1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hd1
-    simp only [h0, if_true]; exact Sim.of_none
+    simp only [h0, ite_true]; exact Sim.of_none
   | some fb =>
   obtain ⟨fvs, body⟩ := fb
   obtain ⟨xsP, xP, htq, hxs, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho1
@@ -127,7 +125,7 @@ theorem iisW_simC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   have g2 : r1.getD (1 + 1) 0 = r1.tail.tail.headD 0 := by
     rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
   rw [g1, g2] at hfd hfb
-  simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
+  simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
   show Sim _ (checkStructFieldSortsI V fe true false bs.resSort bs.nP (fvs.drop bs.nP) [] msh.nIdx) a1 _
   obtain ⟨hdT, hbT⟩ := installIdxTail (k := UInt64.ofNat bs.nP) hfd hfb
   rw [UInt64.toNat_ofNat_of_lt' hnpb] at hdT

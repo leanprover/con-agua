@@ -10,8 +10,6 @@ The non-`closedNV` callees are `class_minor_slot`, `class_fields_of`, `class_fie
 claims); the aborts are code `0`. The twin side transcribes `cxoW_okC`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -46,7 +44,7 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
     (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hR : DecB (fun m => decCR m rd.toNat) m R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hcA : DecB (fun m => decCN m cA.toNat) m cA') (hlp : CtorLp m cA) (hnpk : bs.nP + bs.k < 2 ^ 64)
+    (hcA : DecB (fun m => decCN m cA.toNat) m cA') (_hlp : CtorLp m cA) (hnpk : bs.nP + bs.k < 2 ^ 64)
     (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR m)
     {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
     {cAP : ConLeche.ConstantVal × Nat}

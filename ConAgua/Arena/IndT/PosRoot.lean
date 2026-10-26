@@ -10,8 +10,6 @@ instantiation met by `nestContKey_spec`), and the census links `nestRoot_refines
 `nestSeeds_refinesC`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -60,14 +58,14 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     rw [p2rtW_succ] at h
     by_cases h0 : cL = 0
-    · rw [if_pos h0] at h
+    · rw [ite_eq_left h0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst h0
       have : css = [] := List.eq_nil_of_length_eq_zero (by simpa using hcl.symm)
       subst this
       exact ⟨(outss, NS), a, by rw [ConRon.Arena.nestRoot.eq_def]; rfl, hC, IWGrow.refl _, by simpa using hout,
         by simpa using houtb, by simpa using hns, hP, hA, ConRon.Bridge.CoreStep.refl hC.check⟩
-    rw [if_neg h0] at h
+    rw [ite_eq_right h0] at h
     obtain ⟨cs, css', rfl⟩ : ∃ x css', css = x :: css' := by
       cases css with
       | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hcl)) h0
@@ -193,14 +191,14 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     rw [p2sdW_succ] at h
     by_cases h0 : sL = 0
-    · rw [if_pos h0] at h
+    · rw [ite_eq_left h0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst h0
       have : seeds = [] := List.eq_nil_of_length_eq_zero (by simpa using hsl.symm)
       subst this
       exact ⟨NS, a, by rw [ConRon.Arena.nestSeeds.eq_def]; rfl, hC, IWGrow.refl _, by simpa using hns, hP, hA,
         ConRon.Bridge.CoreStep.refl hC.check⟩
-    rw [if_neg h0] at h
+    rw [ite_eq_right h0] at h
     obtain ⟨⟨kk, nPcN⟩, seeds', rfl⟩ : ∃ x seeds', seeds = x :: seeds' := by
       cases seeds with
       | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hsl)) h0

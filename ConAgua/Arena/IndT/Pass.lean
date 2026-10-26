@@ -20,8 +20,6 @@ positivity context (core-free, `StageR`; con-ron's `blockNestCtx_spec` for `Chec
 `checkBlockPass_of` on the whole run).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

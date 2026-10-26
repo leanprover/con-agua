@@ -4,8 +4,6 @@ import ConAgua.Arena.DeclCanonExpr
 # The canonical expression comparison, relational lemma (lane `decls3`, helper `decls3-canon`)
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -53,11 +51,11 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
   | succ n ih =>
     intro m m' a po pl qo ql co cl fuel x y r ps qs cs h hS hC hL hP hx hy
     rw [ceW_succ] at h
-    have hf : ¬ fuel = 0 := fun hf => by rw [if_pos hf] at h; simp at h
-    rw [if_neg hf, ceK0_def] at h
+    have hf : ¬ fuel = 0 := fun hf => by rw [ite_eq_left hf] at h; simp at h
+    rw [ite_eq_right hf, ceK0_def] at h
     by_cases hne : eViewW m x = [] ∨ eViewW m y = []
-    · rw [if_pos hne] at h; simp at h
-    rw [if_neg hne] at h
+    · rw [ite_eq_left hne] at h; simp at h
+    rw [ite_eq_right hne] at h
     rw [not_or] at hne
     obtain ⟨vx, hvx, hrx⟩ := eViewW_ok m a hS.1.arena.1 x hne.1
     obtain ⟨vy, hvy, hry⟩ := eViewW_ok m a hS.1.arena.1 y hne.2
@@ -81,32 +79,32 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       rename_i i j
       dsimp only
       have hh := h
-      simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte,
+      simp (config := { decide := true }) only [↓reduceIte,
         Option.some.injEq, Prod.mk.injEq] at hh
       obtain ⟨hr, rfl⟩ := hh
       refine ⟨i == j, rfl, ?_, hS, IWGrow.refl _, hP⟩
       rw [← hr]
       by_cases e : ru.tail.headD 0 = rv.tail.headD 0
       · have : i = j := by rw [← hrx.2, ← hry.2, e]
-        rw [if_pos e]; simp [this]
+        rw [ite_eq_left e]; simp [this]
       · have : i ≠ j := fun e' => e (UInt64.toNat_inj.mp (by rw [hrx.2, hry.2, e']))
-        rw [if_neg e]; simp [this]
+        rw [ite_eq_right e]; simp [this]
     case neg.fvar.fvar =>
       rename_i i1 t1 i2 t2
       dsimp only
       obtain ⟨e0, hi1, hl1, ht1⟩ := hrx
       obtain ⟨f0, hi2, hl2, ht2⟩ := hry
-      simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, ite_true] at h
+      simp (config := { decide := true }) only [ne_eq, ↓reduceIte] at h
       by_cases e : ru.tail.headD 0 = rv.tail.headD 0
-      · rw [if_neg (fun h => h e)] at h
+      · rw [ite_eq_right (fun h => h e)] at h
         obtain ⟨b, hb, hr, hS', hg, hP'⟩ := ih m m' a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h
           hS hC hL hP hl1 hl2
         rw [ht1, ht2] at hb
         have hii : i1 = i2 := by rw [← hi1, ← hi2, e]
         refine ⟨b, ?_, hr, hS', hg, hP'⟩
-        simp only [hii, beq_self_eq_true, if_true]
+        simp only [hii, beq_self_eq_true, ite_true]
         exact hb
-      · rw [if_pos e] at h
+      · rw [ite_eq_left e] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hii : (i1 == i2) = false := by
           have : i1 ≠ i2 := fun e' => e (UInt64.toNat_inj.mp (by rw [hi1, hi2, e']))
@@ -132,9 +130,9 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       dsimp only
       obtain ⟨e0, hw1, hn1, hl1, hus1⟩ := hrx
       obtain ⟨f0, hw2, hn2, hl2, hus2⟩ := hry
-      simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, ite_true] at h
+      simp (config := { decide := true }) only [ne_eq, ↓reduceIte] at h
       by_cases e : ru.tail.headD 0 = rv.tail.headD 0
-      · rw [if_neg (fun h => h e)] at h
+      · rw [ite_eq_right (fun h => h e)] at h
         cases hc : lsEqW n m po pl qo ql co cl (fuel - 1) (ru.tail.tail.headD 0)
             (rv.tail.tail.headD 0) with
         | none => rw [hc] at h; simp [ceKS] at h
@@ -146,9 +144,9 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
         rw [hus1, hus2] at hb
         have hnn : (n1 == n2) = true := by rw [← hn1, ← hn2, e]; exact beq_self_eq_true _
         refine ⟨b, ?_, hrb, hS', hg, hP'⟩
-        simp only [hnn, if_true]
+        simp only [hnn, ite_true]
         exact hb
-      · rw [if_pos e] at h
+      · rw [ite_eq_left e] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hnn : (n1 == n2) = false := by
           rw [← hn1, ← hn2, decI_beq _ _ hw1 hw2]
@@ -160,7 +158,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       dsimp only
       obtain ⟨e0, hw1, hf1, hw1', hx1⟩ := hrx
       obtain ⟨f0, hw2, hf2, hw2', hx2⟩ := hry
-      simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, ite_true] at h
+      simp (config := { decide := true }) only [↓reduceIte] at h
       cases hc : ceW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0) with
       | none => rw [hc] at h; simp [ceK1] at h
       | some xx =>
@@ -172,13 +170,13 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       obtain ⟨b, hb, hr, hq1, hq2, hq3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
         hb1 hr1
         (fun hne => by
-          rw [if_neg hne] at h
+          rw [ite_eq_right hne] at h
           obtain ⟨b2, hb2, hr2, hS2, hg2, hP2⟩ := ih m1 m' a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h
             hS1 (hC.grow hg1) hL hP1 hw1' hw2'
           rw [hx1, hx2] at hb2
           exact ⟨b2, hb2, hr2, hS2, hg1.trans hg2, hP2⟩)
         (fun h0 => by
-          rw [if_pos h0] at h
+          rw [ite_eq_left h0] at h
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           exact ⟨rfl, hS1, hg1, hP1⟩)
       exact ⟨b, hb, hr, hq1, hq2, hq3⟩
@@ -187,7 +185,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       dsimp only
       obtain ⟨e0, hw1, ht1, hw1', hv1, hw1'', hb1⟩ := hrx
       obtain ⟨f0, hw2, ht2, hw2', hv2, hw2'', hb2⟩ := hry
-      simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, ite_true] at h
+      simp (config := { decide := true }) only [↓reduceIte] at h
       cases hc : ceW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0) with
       | none => rw [hc] at h; simp [ceK2] at h
       | some xx =>
@@ -199,7 +197,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       obtain ⟨b, hb, hr, hq1, hq2, hq3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
         hc1 hr1
         (fun hne => by
-          rw [if_neg hne] at h
+          rw [ite_eq_right hne] at h
           cases hd : ceW n m1 po pl qo ql co cl (fuel - 1) (ru.tail.tail.headD 0)
               (rv.tail.tail.headD 0) with
           | none => rw [hd] at h; simp [ceK3] at h
@@ -212,25 +210,25 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
           obtain ⟨b3, hb3, hr3, q1, q2, q3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
             hc2 hr2
             (fun hne2 => by
-              rw [if_neg hne2] at h
+              rw [ite_eq_right hne2] at h
               obtain ⟨c3, hc3, hr3, hS3, hg3, hP3⟩ := ih m2 m' a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h
                 hS2 ((hC.grow hg1).grow hg2) hL hP2 hw1'' hw2''
               rw [hb1, hb2] at hc3
               exact ⟨c3, hc3, hr3, hS3, (hg1.trans hg2).trans hg3, hP3⟩)
             (fun h0 => by
-              rw [if_pos h0] at h
+              rw [ite_eq_left h0] at h
               obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
               exact ⟨rfl, hS2, hg1.trans hg2, hP2⟩)
           exact ⟨b3, hb3, hr3, q1, q2, q3⟩)
         (fun h0 => by
-          rw [if_pos h0] at h
+          rw [ite_eq_left h0] at h
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           exact ⟨rfl, hS1, hg1, hP1⟩)
       exact ⟨b, hb, hr, hq1, hq2, hq3⟩
     case neg.lit.lit =>
       rename_i l1 l2
       dsimp only
-      simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, ite_true] at h
+      simp (config := { decide := true }) only [↓reduceIte] at h
       obtain ⟨hh, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨l1 == l2, rfl, ?_, hS, IWGrow.refl _, hP⟩
       rw [← hh]
@@ -248,9 +246,9 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       dsimp only
       obtain ⟨e0, hw1, hs1, hi1, hw1', he1⟩ := hrx
       obtain ⟨f0, hw2, hs2, hi2, hw2', he2⟩ := hry
-      simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, ite_true] at h
+      simp (config := { decide := true }) only [ne_eq, ↓reduceIte] at h
       by_cases e : ru.tail.headD 0 ≠ rv.tail.headD 0 ∨ ru.tail.tail.headD 0 ≠ rv.tail.tail.headD 0
-      · rw [if_pos e] at h
+      · rw [ite_eq_left e] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hnn : (s1 == s2 && i1 == i2) = false := by
           rcases e with e | e
@@ -263,7 +261,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
             simp [this]
         simp only [hnn]
         exact ⟨false, rfl, rfl, hS, IWGrow.refl _, hP⟩
-      · rw [if_neg e] at h
+      · rw [ite_eq_right e] at h
         rw [not_or] at e
         have e : ru.tail.headD 0 = rv.tail.headD 0 ∧ ru.tail.tail.headD 0 = rv.tail.tail.headD 0 :=
           ⟨Classical.byContradiction e.1, Classical.byContradiction e.2⟩
@@ -275,7 +273,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
           have h2 : i1 = i2 := by rw [← hi1, ← hi2, e.2]
           simp [h1, h2]
         refine ⟨b, ?_, hr, hS', hg, hP'⟩
-        simp only [hnn, if_true]
+        simp only [hnn, ite_true]
         exact hb
 
 /-- The post of a comparison that leaves the twin state alone but may grow the pool, with the

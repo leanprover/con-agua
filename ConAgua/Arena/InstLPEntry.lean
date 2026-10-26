@@ -19,7 +19,6 @@ open ConRon.Arena ConLeche
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -55,11 +54,11 @@ theorem ilw_clears_core {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
       (mclearG lplsSch (mclearG lplSch (mclearG lpSch m))) :=
     ((f1.mono (by simp) (by simp)).trans (f2.mono (by simp) (by simp))).trans (f3.mono (by simp) (by simp))
   have hD : ArenaD (mclearG lplsSch (mclearG lplSch (mclearG lpSch m))) a :=
-    ⟨hS.arena.1.frame (by simp) (by simp [arenaCtl, storeCtl, memoCtl, lpSch, lplSch, lplsSch]) hf,
+    ⟨hS.arena.1.frame (by simp) (by simp [arenaCtl, storeCtl, memoCtl]) hf,
       DerR.frameM _ _ _ _ hf (by simp) a hS.arena.2⟩
-  exact hS.of_walk hD rfl hf (by simp) (by simp [lpSch, lplSch, lplsSch])
-    (hS.memos.frameLP hf hLP (by simp) (by simp [lpSch, lplSch, lplsSch])) (by simp)
-    (by simp [lpSch, lplSch, lplsSch]) (by simp) (by simp [lpSch, lplSch, lplsSch])
+  exact hS.of_walk hD rfl hf (by simp) (by simp)
+    (hS.memos.frameLP hf hLP (by simp) (by simp)) (by simp)
+    (by simp) (by simp) (by simp)
 
 section core
 variable {p : Prog} (hp : ILWEntryProg p)
@@ -91,7 +90,7 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
   rw [hlp] at hW
   have hd := derLW_ok m₁ a hS.arena.1 hS.arena.2 e hh
   by_cases h0 : exprLPW m₁ e = 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, rfl⟩ := hW
     rw [hd, lpW_zero_iff] at h0
@@ -100,13 +99,13 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
     unfold instLPFast
     rw [StateT.run_bind, derivedE_run]
     simp only [except_ok_bind, h0, Bool.not_false, ↓reduceIte]; rfl
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   have hlp' : lpOfData (a.store.derived (decE e)) = true := by
     rw [hd, lpW_zero_iff] at h0; simpa using h0
   -- `ls_node(us)`: the values
   by_cases hne : lsNodeW m₁ us = []
-  · rw [if_pos hne] at hW; cases hW
-  rw [if_neg hne] at hW
+  · rw [ite_eq_left hne] at hW; cases hW
+  rw [ite_eq_right hne] at hW
   obtain ⟨ids, hvw, -, -⟩ := lsNodeW_view hS.arena.1 hus hne
   obtain ⟨hln, hvt, hsl⟩ := lsNodeW_store hS.arena.1 hus hvw
   obtain ⟨vs, hvs⟩ := hS.den.lsAll (decI us) (by rw [hvw]; rfl)
@@ -350,7 +349,7 @@ theorem instLP_refines (p : Prog) (hp : ILWEntryProg p) : InstLPOK p := by
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop₁ : (spTop (mc.set64 CTL 136 (spTop m + pl))).toNat = (spTop m).toNat + pl.toNat := by
     have hc' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hfc.2.2.1 CTL]; simpa using hctl
-    simp only [spTop]; rw [rdW_set64]; simp only [hc', and_self, ↓reduceIte, true_and]
+    simp only [spTop]; rw [rdW_set64]; simp only [hc', and_self, ↓reduceIte]
     rw [UInt64.toNat_add]; simp only [spTop] at t1' t2' ⊢; omega
   -- the core
   rw [← hb] at hW
@@ -374,7 +373,7 @@ theorem instLP_refines (p : Prog) (hp : ILWEntryProg p) : InstLPOK p := by
       (hSt₂.bstk.trans (BKept.of_frame hfb (by decide) (by decide))),
     (PoolGrew.of_frame hfm (by decide) (by decide)).trans
       (hSt₂.pool.trans (PoolGrew.of_frame hfb (by decide) (by decide)))⟩
-  · simp only [spTop]; rw [rdW_set64]; simp only [hc₂, and_self, ↓reduceIte, true_and]
+  · simp only [spTop]; rw [rdW_set64]; simp only [hc₂, and_self, ↓reduceIte]
   · rw [hspn₃, hSt₂.size, hspn₁, hfc.2.2.1 SPN]
   · have hi' : i.toNat < (spTop m).toNat := UInt64.lt_iff_toNat_lt.mp hi
     simp only [spW]

@@ -21,7 +21,6 @@ import ConAgua.Arena.IndDecStab
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -86,7 +85,7 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
   have hR := hS.1.arena.1
   unfold selmW at hm
   by_cases hlg : large ≠ 0
-  · rw [if_pos hlg] at hm
+  · rw [ite_eq_left hlg] at hm
     rcases c : callW p n "intern_param" [elim] s₀.mem with _ | ⟨r1, m1⟩
     · rw [c] at hm; cases hm
     rw [c] at hm
@@ -101,7 +100,7 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
     refine ⟨a', ?_, hS', hg, by simpa using hw⟩
     simp only [List.headD_cons, ConRon.Arena.structElimLevel, hb, ite_true]
     exact hrun
-  · rw [if_neg hlg] at hm
+  · rw [ite_eq_right hlg] at hm
     rcases c : callW p n "intern_zero" [] s₀.mem with _ | ⟨r1, m1⟩
     · rw [c] at hm; cases hm
     rw [c] at hm

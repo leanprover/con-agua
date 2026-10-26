@@ -14,7 +14,6 @@ memos and the derived ranges do not read `CTL[1]`.
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

@@ -42,10 +42,10 @@ theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k :
       have h1 : ¬ (a = OUT ∨ a = CTLF) := by
         rintro (rfl | rfl) <;> revert ha <;> decide
       have h2 : a ≠ HDRF := by rintro rfl; revert ha; decide
-      simp only [h1, h2, if_false]
+      simp only [h1, h2, ite_false]
     · rw [seqMem_arr64 _ _ _ hsz]; simp
     · simp only [rd64, seqMem_arr64 _ _ _ hsz]
-      simp only [show ¬ (HDRF = OUT ∨ HDRF = CTLF) by decide, if_false, if_true]
+      simp only [show ¬ (HDRF = OUT ∨ HDRF = CTLF) by decide, ite_false, ite_true]
       simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
       by_cases h3 : 3 < (m₁.arr64 OUT).size
       · have h4 : 3 < min 132 (m₁.arr64 OUT).size := by omega

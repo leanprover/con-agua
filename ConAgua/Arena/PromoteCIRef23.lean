@@ -8,7 +8,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -106,12 +105,12 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hrun2' : (promoteE pmA f.toNat (decI wv)).run aA = .ok ((pm1, x.2), a') := hrun2
     have hhint : decHint (erecP m1) (d + 6) = some hh := by
       refine decHint_move' (a := preE m D) (b := erecP m1) (i := q.toNat + 6) (j := d + 6) ?_ ?_ hhh
-      · rw [e6, preE_get, if_pos (by omega)]; exact s6.symm
+      · rw [e6, preE_get, ite_eq_left (by omega)]; exact s6.symm
       · by_cases h : q.toNat + 6 + 1 < D
         · right
           have e7' : (erecP m1)[d + 6 + 1]? = some w7 := e7
-          rw [e7', preE_get, if_pos h]; exact s7.symm
-        · left; rw [preE_get, if_neg h]
+          rw [e7', preE_get, ite_eq_left h]; exact s7.symm
+        · left; rw [preE_get, ite_eq_right h]
     refine ⟨a', pm1, .defnInfo x.1 x.2 hh, ?_, hDf, hPf, hcp, hfr, htk, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun1]; simp only; rw [run_bind_ok hrun2']; rfl
     · rw [← hr', hdr]; exact hdlo

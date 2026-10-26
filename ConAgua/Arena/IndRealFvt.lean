@@ -32,7 +32,6 @@ relational facts of the `IndStubs` contracts, under `StageR`:
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -108,15 +107,15 @@ noncomputable def ftdsGoW (o l q : Word) : Nat → Mem → Word → Option (List
     else some ([q, l], m)
 
 theorem ftdsGoW_ge (o l q : Word) (f : Nat) (m : Mem) (k : Word) (hk : ¬ k < l) : ftdsGoW o l q (f + 1) m k = some ([q, l], m) := by
-  simp only [ftdsGoW, hk, if_false]
+  simp only [ftdsGoW, hk, ite_false]
 
 theorem ftdsGoW_none (o l q : Word) (f : Nat) (m : Mem) (k : Word) (hk : k < l) (h : ftdF m [rdW (m.arr64 IW) (o + k)] = none) :
     ftdsGoW o l q (f + 1) m k = none := by
-  simp only [ftdsGoW, if_pos hk, h]
+  simp only [ftdsGoW, ite_eq_left hk, h]
 
 theorem ftdsGoW_step (o l q : Word) (f : Nat) (m m1 : Mem) (k : Word) (r : List Word) (hk : k < l) (h : ftdF m [rdW (m.arr64 IW) (o + k)] = some (r, m1)) :
     ftdsGoW o l q (f + 1) m k = ftdsGoW o l q f (m1.set64 IW (q + k) (r.headD 0)) (k + 1) := by
-  simp only [ftdsGoW, if_pos hk, h]
+  simp only [ftdsGoW, ite_eq_left hk, h]
 
 /-- `fvar_type_ds` and its callees. -/
 def ftdsProg : Prog := [("fvar_type_ds", fvarTypeDsL), ("iw_alloc", iwAlloc)] ++ ftdProg

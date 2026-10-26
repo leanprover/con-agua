@@ -14,7 +14,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -75,16 +74,16 @@ theorem plW_pers (hf : f ≠ 0) (ht : tierW h = 0) : plW p n m f h = some (h, m)
 theorem plW_hit (hf : f ≠ 0) (ht : tierW h ≠ 0) (h0 : mfindG plSch m h 0 ≠ [])
     (h1 : (mfindG plSch m h 0).headD 0 ≠ 0) :
     plW p n m f h = some (mvG plSch m ((mfindG plSch m h 0).tail.headD 0), m) := by
-  unfold plW; rw [if_neg hf, if_neg ht, if_neg h0, if_pos h1]
+  unfold plW; rw [ite_eq_right hf, ite_eq_right ht, ite_eq_right h0, ite_eq_left h1]
 
 theorem plW_miss (hf : f ≠ 0) (ht : tierW h ≠ 0) (h0 : mfindG plSch m h 0 ≠ [])
     (h1 : (mfindG plSch m h 0).headD 0 = 0) :
     plW p n m f h = memoK plSch h (callW p n "pl_arm" [f - 1, h] m) := by
-  unfold plW; rw [if_neg hf, if_neg ht, if_neg h0, if_neg (fun h2 => h2 h1)]
+  unfold plW; rw [ite_eq_right hf, ite_eq_right ht, ite_eq_right h0, ite_eq_right (fun h2 => h2 h1)]
 
 theorem plArmW_eq (hh : ¬ 4294967295 < h) (hne : lvNodeW m h ≠ []) :
     plArmW p n m f h = plK p n m f (lvNodeW m h) := by
-  unfold plArmW; rw [if_neg (by simp [hh, hne])]
+  unfold plArmW; rw [ite_eq_right (by simp [hh, hne])]
 
 end eqs
 
@@ -198,12 +197,12 @@ theorem plsW_pers (ht : tierW h = 0) : plsW p n m f h = some (h, m) := by simp [
 theorem plsW_hit (ht : tierW h ≠ 0) (h0 : mfindG plsSch m h 0 ≠ [])
     (h1 : (mfindG plsSch m h 0).headD 0 ≠ 0) :
     plsW p n m f h = some (mvG plsSch m ((mfindG plsSch m h 0).tail.headD 0), m) := by
-  unfold plsW; rw [if_neg ht, if_neg h0, if_pos h1]
+  unfold plsW; rw [ite_eq_right ht, ite_eq_right h0, ite_eq_left h1]
 
 theorem plsW_miss (ht : tierW h ≠ 0) (h0 : mfindG plsSch m h 0 ≠ [])
     (h1 : (mfindG plsSch m h 0).headD 0 = 0) :
     plsW p n m f h = memoK plsSch h (callW p n "pls_arm" [f, h] m) := by
-  unfold plsW; rw [if_neg ht, if_neg h0, if_neg (fun h2 => h2 h1)]
+  unfold plsW; rw [ite_eq_right ht, ite_eq_right h0, ite_eq_right (fun h2 => h2 h1)]
 
 end eqs2
 

@@ -86,7 +86,7 @@ theorem truncList_other (m₀ : Mem) (b : ArrId) :
     rw [truncList, truncList_other m₀ b zs _ (fun e he => h e (List.mem_cons_of_mem _ he))]
     have := Mem.setA_arr m z.src b ((m₀.arr64 z.src).extract 0 (fzExt m₀ z))
     simp only [Mem.setA] at this
-    rw [this, if_neg (fun hc => h (x, z) (List.mem_cons_self ..) hc.1.symm)]
+    rw [this, ite_eq_right (fun hc => h (x, z) (List.mem_cons_self ..) hc.1.symm)]
 
 theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
     ∀ (zs : List (ArrId × Fz)) (m : Mem), (x, z) ∈ zs →
@@ -105,13 +105,13 @@ theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
       rw [this]
       by_cases hz : z.src < m.words.size
       · simp [hz]
-      · simp only [hz, and_false, ↓reduceIte, true_and]
+      · simp only [hz, and_false, ↓reduceIte]
         rw [ho _ hz, Mem.arr64_oob m₀ _ (hw ▸ hz)]; simp
     · refine truncList_mem m₀ x z zs _ e hp.2 (by simp [hw]) (fun b hb => ?_)
       have := Mem.setA_arr m z'.src b ((m₀.arr64 z'.src).extract 0 (fzExt m₀ z'))
       simp only [Mem.setA] at this hb
       have hb' : ¬ b < m.words.size := by simpa using hb
-      rw [this, if_neg (fun (hc : b = z'.src ∧ z'.src < m.words.size) => hb' (hc.1 ▸ hc.2))]
+      rw [this, ite_eq_right (fun (hc : b = z'.src ∧ z'.src < m.words.size) => hb' (hc.1 ▸ hc.2))]
       exact ho b hb'
 
 /-! ## `truncFrozen` -/
@@ -163,7 +163,7 @@ theorem frozen_drop1 : frozen.drop 1 =
      (EREC, ⟨EREC, fzCtl 129⟩),
      (PEND, ⟨PEND, .bin .mul (fzC 3) (fzCtl 130)⟩)] := by
   simp only [frozen, List.cons_append, List.drop_succ_cons, List.drop_zero, List.nil_append,
-    List.append_assoc, List.singleton_append]
+    List.append_assoc]
 
 /-! ### The extents -/
 

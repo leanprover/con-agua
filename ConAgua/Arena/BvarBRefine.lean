@@ -83,7 +83,7 @@ theorem bbW_frame (n : Nat) :
           BbFrame m m' := fun _ _ _ h => h
       clear leaf
       by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-      · rw [bbNodeW, if_pos hs] at hb; cases hb
+      · rw [bbNodeW, ite_eq_left hs] at hb; cases hb
       have tagCase : ∀ (S : TRec), (viewOK m h S → BbFrame m m') →
           (tcnt m S (tierW h) ≤ idxW h → BbFrame m m') → BbFrame m m' := by
         intro S h1 h2
@@ -178,7 +178,7 @@ theorem bvbW_okF (n F : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
   by_cases hs : derBW m h = 32767
   · rw [bvbW_sat n m h f hs] at hb
     have hs' : ((derBW m h).toNat == satRange) = true := by rw [hs]; rfl
-    rw [if_pos hs']
+    rw [ite_eq_left hs']
     obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [bbN]⟩
     rw [bbN_succ] at hb
     obtain ⟨a', ha', hR'⟩ := bbMemoW_correctF n F m m' a hA.1 h f x hh (by omega) hb
@@ -192,7 +192,7 @@ theorem bvbW_okF (n F : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     have hs' : ((derBW m h).toNat == satRange) = false := by
       simp only [beq_eq_false_iff_ne, ne_eq]
       intro e; apply hs; apply UInt64.toNat_inj.mp; rw [e]; rfl
-    rw [if_neg (by simp [hs'])]
+    rw [ite_eq_right (by simp [hs'])]
     exact ⟨a, rfl, hA⟩
 
 /-- **`bvar_b`'s model refines `bvarB`** at the counter's fuel `f.toNat`, under `ArenaD`. -/

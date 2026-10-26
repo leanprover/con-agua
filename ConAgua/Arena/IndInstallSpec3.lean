@@ -9,7 +9,6 @@ import ConAgua.Arena.IndInstallSpec2
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -70,7 +69,7 @@ def agK1 (cR : CallM) (n : Nat) (vis nP fvs0O fvs0L s0 s : Word) :
     else agK2 cR n vis nP fvs0L s0 s r (ftdsF m1 [fvs0O, fvs0L])
 
 /-- After `fvar_type_ds`: the doms comparison. -/
-def agK2 (cR : CallM) (n : Nat) (vis nP fvs0L s0 s : Word) (r : List Word) :
+def agK2 (cR : CallM) (n : Nat) (vis nP _fvs0L s0 s : Word) (r : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rd, m2) =>
@@ -90,21 +89,21 @@ end
 section arms
 variable (cR : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis nP fvs0O fvs0L s0 s : Word) (r rd re : List Word)
 theorem agK1_abort0 (h : r.headD 0 = 0) : agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1)) = none := by
-  rw [agK1, if_pos h]
+  rw [agK1, ite_eq_left h]
 theorem agK1_abortL (h0 : r.headD 0 ≠ 0) (h : r.tail.tail.headD 0 ≠ fvs0L) :
     agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1)) = none := by
-  rw [agK1, if_neg h0, if_pos h]
+  rw [agK1, ite_eq_right h0, ite_eq_left h]
 theorem agK1_ok (h0 : r.headD 0 ≠ 0) (h : r.tail.tail.headD 0 = fvs0L) :
     agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1)) =
       agK2 cR n vis nP fvs0L s0 s r (ftdsF m1 [fvs0O, fvs0L]) := by
-  rw [agK1, if_neg h0, if_neg (by simpa using h)]
+  rw [agK1, ite_eq_right h0, ite_eq_right (by simpa using h)]
 theorem agK2_some : agK2 cR n vis nP fvs0L s0 s r (some (rd, m2)) =
     agK3 cR n s0 s (domsW cR n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP) := rfl
 theorem agK3_some (r' : List Word) : agK3 cR n s0 s (some (r', m3)) = agK4 (lveC cR n m3 s s0) := rfl
 theorem agK4_ok (h : re.headD 0 ≠ 0) : agK4 (some (re, m1)) = some ([], m1) := by
-  rw [agK4, if_neg h]
+  rw [agK4, ite_eq_right h]
 theorem agK4_abort (h : re.headD 0 = 0) : agK4 (some (re, m1)) = none := by
-  rw [agK4, if_pos h]
+  rw [agK4, ite_eq_left h]
 end arms
 
 grind_pattern [ind_grind] agK1_abort0 => agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1))

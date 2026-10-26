@@ -15,8 +15,6 @@ import ConAgua.Arena.RomCI
   end, all words below the tops, it is `DecB` (`Holds.decB`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -155,7 +153,7 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
   · simp [h1] at hw
   by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < k
   · simp [h1, h2] at hw
-  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at hw
+  simp only [h1, h2, ite_false, Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
   have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
@@ -170,7 +168,7 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
   have hI : (erAllocMem m k).arr64 IW = m.arr64 IW := hf.1 IW (by simp) (by decide)
   have htop : erTop (erAllocMem m k) = erTop m + k.toNat := by
     simp only [erTop, erAllocMem, rdW_set64]
-    rw [if_pos ⟨trivial, trivial, by simp; omega⟩, UInt64.toNat_add]
+    rw [ite_eq_left ⟨trivial, trivial, by simp; omega⟩, UInt64.toNat_add]
     omega
   have h200 : iwTop (erAllocMem m k) = iwTop m := by simp only [iwTop]; rw [hf.2.1 200 (by decide)]
   refine ⟨⟨ArenaD.frameHi hf (by simp) (by simp) h.arena, h.hcp,
@@ -280,12 +278,12 @@ theorem Holds.const (x : α) : Holds (fun _ => False) (fun _ => False) (fun _ =>
 /-- One `EREC` word. -/
 theorem Holds.er {i : Nat} {w : Word} (h : (erA m)[i]? = some w) :
     Holds (fun j => j = i) (fun _ => False) (fun m => (erA m)[i]?) m w :=
-  fun m'' h1 _ => (h1 i rfl).trans h
+  fun _m'' h1 _ => (h1 i rfl).trans h
 
 /-- One `IW` word. -/
 theorem Holds.iw {i : Nat} {w : Word} (h : (iwA m)[i]? = some w) :
     Holds (fun _ => False) (fun j => j = i) (fun m => (iwA m)[i]?) m w :=
-  fun m'' _ h2 => (h2 i rfl).trans h
+  fun _m'' _ h2 => (h2 i rfl).trans h
 
 /-- **At the end**: every word read below the tops, the decoding is `DecB`. -/
 theorem Holds.decB {f : Mem → Option α} {x : α} (h : Holds SE SI f m x)

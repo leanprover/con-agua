@@ -114,7 +114,7 @@ theorem cms_decB (n : Nat) {m : Mem} {rd c cc : Word} {R : ClassRead} {r : List 
   rw [hg] at h
   by_cases hx : x ≠ 1
   · simp [hx] at h
-  simp only [hx, if_false, Option.some.injEq] at h
+  simp only [hx, ite_false, Option.some.injEq] at h
   subst h
   simp only [List.headD_cons, List.tail_cons] at e1 e2 ⊢
   rcases cmsGo_words n _ _ _ _ _ _ _ _ _ _ _ _ _ _ hg with ⟨-, rfl, rfl⟩ | ⟨hz, hw⟩
@@ -238,10 +238,10 @@ section arms
 variable (m : Mem) (r : List Word) (vis q fto ftl rd mo ml c cA mw cv eo el e0 io il fvo fvl ko kl : Word)
 theorem cxoK9_some : cxoK9 (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem cxoK8_bad (h : r.headD 0 = 0) : cxoK8 p n cv cA ko kl e0 (some (r, m)) = none := by
-  simp only [cxoK8]; rw [if_pos h]
+  simp only [cxoK8]; rw [ite_eq_left h]
 theorem cxoK8_ok (h : ¬ r.headD 0 = 0) : cxoK8 p n cv cA ko kl e0 (some (r, m)) =
     cxoK9 (callW p n "rec6" [cv, rdW (m.arr64 IW) (cA + 1), ko, kl, r.tail.headD 0, rdW (m.arr64 IW) (e0 + 4)] m) := by
-  simp only [cxoK8]; rw [if_neg h]
+  simp only [cxoK8]; rw [ite_eq_right h]
 theorem cxoK7_some : cxoK7 p n mw cv cA ko kl e0 (some (r, m)) = cxoK8 p n cv cA ko kl e0
     (callW p n "inst_pis_with" [rdW (m.arr64 IW) (mw + 2), rdW (m.arr64 IW) (mw + 3), r.headD 0] m) := rfl
 theorem cxoK6_some : cxoK6 p n mw cv cA ko kl e0 (some (r, m)) =
@@ -251,21 +251,21 @@ theorem cxoK5_some : cxoK5 p n vis q fto ftl mo ml mw cv cA fvo fvl eo el e0 (so
       (callW p n "class_fields_agree" [vis, q, fto, ftl, mo, ml, fvo, fvl, eo, el, 0, r.headD 0, r.tail.headD 0] m) := rfl
 theorem cxoK4_bad (h : r.headD 0 = 0) :
     cxoK4 p n vis q fto ftl mo ml mw cv cA io il eo el e0 (some (r, m)) = none := by
-  simp only [cxoK4]; rw [if_pos h]
+  simp only [cxoK4]; rw [ite_eq_left h]
 theorem cxoK4_ok (h : ¬ r.headD 0 = 0) : cxoK4 p n vis q fto ftl mo ml mw cv cA io il eo el e0 (some (r, m)) =
     cxoK5 p n vis q fto ftl mo ml mw cv cA (r.tail.headD 0) (r.tail.tail.headD 0) eo el e0
       (callW p n "class_fields_of" [q, io, il, 0, r.tail.headD 0, r.tail.tail.headD 0] m) := by
-  simp only [cxoK4]; rw [if_neg h]
+  simp only [cxoK4]; rw [ite_eq_right h]
 theorem cxoK3_some : cxoK3 p n vis q fto ftl mo ml mw cv cA eo el e0 (some (r, m)) =
     cxoK4 p n vis q fto ftl mo ml mw cv cA (r.tail.headD 0) (r.tail.tail.headD 0) eo el e0
       (callW p n "open_pis_at_fvars_f" [rdW (m.arr64 IW) (cA + 1), rdW (m.arr64 IW) (e0 + 4),
         rdW (m.arr64 IW) (q + 4) + rdW (m.arr64 IW) (q + 1)] m) := rfl
 theorem cxoK2_bad (h : r.tail.headD 0 = 0) : cxoK2 p n vis q fto ftl rd mo ml c mw cv cA (some (r, m)) = none := by
-  simp only [cxoK2]; rw [if_pos h]
+  simp only [cxoK2]; rw [ite_eq_left h]
 theorem cxoK2_ok (h : ¬ r.tail.headD 0 = 0) : cxoK2 p n vis q fto ftl rd mo ml c mw cv cA (some (r, m)) =
     cxoK3 p n vis q fto ftl mo ml mw cv cA (r.headD 0) (r.tail.headD 0) (rdW (m.arr64 IW) (r.headD 0))
       (callW p n "class_minor_slot" [rd, c, rdW (m.arr64 EREC) cv] m) := by
-  simp only [cxoK2]; rw [if_neg h]
+  simp only [cxoK2]; rw [ite_eq_right h]
 theorem cxoK1_some : cxoK1 p n vis q fto ftl rd mo ml c cA (some (r, m)) =
     cxoK2 p n vis q fto ftl rd mo ml c (r.headD 0) (rdW (m.arr64 IW) cA) cA
       (callW p n "class_ctor_of_nfs" [rdW (m.arr64 IW) (r.headD 0 + 9), rdW (m.arr64 IW) (r.headD 0 + 10),

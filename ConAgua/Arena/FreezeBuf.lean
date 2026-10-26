@@ -320,7 +320,7 @@ theorem getD_freshCtl (c : Array Word) (k : Nat) :
   simp only [freshCtl, zeros, Array.getD_eq_getD_getElem?, Array.getElem?_append, size_extract0]
   split
   · rename_i h
-    rw [if_pos (by omega), get?_extract c (by omega : k < 256)]
+    rw [ite_eq_left (by omega), get?_extract c (by omega : k < 256)]
   · rename_i h
     rw [Array.getElem?_replicate]
     split

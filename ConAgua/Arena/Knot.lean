@@ -38,7 +38,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedVariables false
 
 namespace L.Arena
 

@@ -190,8 +190,7 @@ theorem decCI_ctorW {q : Nat} {cv : IConstantVal} {np nf : Nat}
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   rcases k with _ | _ | _ | _ | _ | _ | _ | k <;>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, exists_false, and_false,
-      false_and, exists_const] at h
+    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, exists_false, and_false] at h
   obtain ⟨cv', hcv, np', -, nf', hnf, hc⟩ := h
   simp only [IConstantInfo.ctorInfo.injEq] at hc
   obtain ⟨rfl, rfl, rfl⟩ := hc
@@ -204,8 +203,7 @@ theorem decCI_indW {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   rcases k with _ | _ | _ | _ | _ | _ | _ | k <;>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, exists_false, and_false,
-      false_and, exists_const] at h
+    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, exists_false, and_false] at h
   obtain ⟨cv', hcv, caps', hcaps, hc⟩ := h
   simp only [IConstantInfo.indInfo.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
@@ -367,12 +365,12 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
   subst e_m1
   simp only at hfind1 hfound1
   by_cases h0 : r1.headD 0 = 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hnone : fe.find? (decI c) = none := by rw [hfind1, decFound, if_pos h0]
+    have hnone : fe.find? (decI c) = none := by rw [hfind1, decFound, ite_eq_left h0]
     refine ⟨rfl, fun G => ⟨fun _ => famT_none (fun cv np nf h => by rw [hnone] at h; cases h),
       fun h => absurd rfl h⟩⟩
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   obtain ⟨htag1, hrow1, hq1⟩ := hfound1 h0
   obtain ⟨ci, hci⟩ := hE.found_some c hc htag1 hrow1
   have hfi : fe.find? (decI c) = some ci := by
@@ -381,12 +379,12 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
   have hciB := ArrExt.decCI (erecP_ext m) hci
   have hk := kind_of_rdW hciB
   by_cases h4 : rdW (m.arr64 EREC) (r1.tail.headD 0) ≠ 4
-  · rw [if_pos h4] at hW
+  · rw [ite_eq_left h4] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     refine ⟨rfl, fun G => ⟨fun _ => famT_none (fun cv np nf h => ?_), fun h => absurd rfl h⟩⟩
     rw [hfi] at h
     exact h4 (hk.2.mp ⟨cv, np, nf, Option.some.inj h⟩)
-  rw [if_neg h4] at hW
+  rw [ite_eq_right h4] at hW
   have h4' : rdW (m.arr64 EREC) (r1.tail.headD 0) = 4 := by simpa using h4
   obtain ⟨cvj, np, nF, rfl⟩ := hk.2.mpr h4'
   obtain ⟨-, hcv, hnf⟩ := decCI_ctorW hciB
@@ -479,14 +477,14 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
   subst e_m5
   simp only at hfind5 hfound5
   by_cases h5 : r5.headD 0 = 0
-  · rw [if_pos h5] at hW
+  · rw [ite_eq_left h5] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hnone : fe.find? (decI (r4.headD 0)) = none := by rw [hfind5, decFound, if_pos h5]
+    have hnone : fe.find? (decI (r4.headD 0)) = none := by rw [hfind5, decFound, ite_eq_left h5]
     refine ⟨rfl, fun G => ⟨fun _ => ?_, fun h => absurd rfl h⟩⟩
     rw [hblk]
     exact famBlk_other fe _ cvj a _ _ hpr hga _ _ hvw htag
       (fun cvT caps hc => by rw [hnone] at hc; cases hc)
-  rw [if_neg h5] at hW
+  rw [ite_eq_right h5] at hW
   obtain ⟨htag5, hrow5, hq5⟩ := hfound5 h5
   obtain ⟨ci5, hci5⟩ := hE.found_some (r4.headD 0) hn32 htag5 hrow5
   have hfi5 : fe.find? (decI (r4.headD 0)) = some ci5 := by
@@ -495,13 +493,13 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
   have hci5B := ArrExt.decCI (erecP_ext m) hci5
   have hk5 := kind_of_rdW hci5B
   by_cases h33 : rdW (m.arr64 EREC) (r5.tail.headD 0) ≠ 3
-  · rw [if_pos h33] at hW
+  · rw [ite_eq_left h33] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     refine ⟨rfl, fun G => ⟨fun _ => ?_, fun h => absurd rfl h⟩⟩
     rw [hblk]
     exact famBlk_other fe _ cvj a _ _ hpr hga _ _ hvw htag (fun cvT caps hc => by
       rw [hfi5] at hc; exact h33 (hk5.1.mp ⟨cvT, caps, Option.some.inj hc⟩))
-  rw [if_neg h33] at hW
+  rw [ite_eq_right h33] at hW
   obtain ⟨cvT, caps, rfl⟩ := hk5.1.mpr (by simpa using h33)
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   refine ⟨rfl, fun G => ⟨fun h => absurd h (by simp), fun _ => ⟨cvj, np, nF, cvT, caps, hciB, hci5B, ?_⟩⟩⟩
@@ -560,10 +558,10 @@ theorem recRuleKOf_ref (c : Word) (hc : H c) :
     rw [recRuleKOf_blk]; rfl
   obtain ⟨h0, h1⟩ := hout (fun _ nF _ caps => caps.ruleK && nF == 0)
   by_cases hz : rf.tail.tail.headD 0 = 0
-  · rw [if_pos hz] at hw
+  · rw [ite_eq_left hz] at hw
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
     exact ⟨false, a, by rw [hK]; exact h0 hz, hS, IWGrow.refl _, by simp [decW0B]⟩
-  rw [if_neg hz] at hw
+  rw [ite_eq_right hz] at hw
   obtain ⟨cvj, np, nF, cvT, caps, hcj, hcT, hrun⟩ := h1 hz
   obtain ⟨-, -, hnf⟩ := decCI_ctorW hcj
   obtain ⟨-, -, hcaps⟩ := decCI_indW hcT
@@ -583,12 +581,12 @@ theorem recRuleKOf_ref (c : Word) (hc : H c) :
     · have : wn = 0 := by simpa using h
       simp [this]
   by_cases hc2 : wk ≠ 0 ∧ wn = 0
-  · rw [if_pos hc2] at hw
+  · rw [ite_eq_left hc2] at hw
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
     refine ⟨_, a, by rw [hK]; exact hrun, hS, IWGrow.refl _, ?_⟩
     simp only [decW0B, ← hwk', hn0, hc2.2]
     simp [hc2.1]
-  · rw [if_neg hc2] at hw
+  · rw [ite_eq_right hc2] at hw
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
     refine ⟨_, a, by rw [hK]; exact hrun, hS, IWGrow.refl _, ?_⟩
     simp only [decW0B, ← hwk', hn0]
@@ -630,9 +628,9 @@ theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
     · obtain ⟨cvj, np, nF, cvT, caps, hcj, hcT, hrun⟩ := h1 hz
       exact ⟨false, a, by rw [hE, hrun, hb hz _ _ _ _ _ hcj hcT], hS, IWGrow.refl _, by simp [decW0B]⟩
   by_cases hz : rf.tail.tail.headD 0 = 0
-  · rw [if_pos hz] at hw
+  · rw [ite_eq_left hz] at hw
     exact hret0 hw (fun h => absurd hz h)
-  rw [if_neg hz] at hw
+  rw [ite_eq_right hz] at hw
   obtain ⟨cvj, np, nF, cvT, caps, hcj, hcT, hrun⟩ := h1 hz
   obtain ⟨-, hcv, -⟩ := decCI_ctorW hcj
   obtain ⟨-, hcvT, hcaps⟩ := decCI_indW hcT
@@ -645,14 +643,14 @@ theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
       (by rw [show (rf.tail.headD 0).toNat + 6 = (rf.tail.headD 0).toNat + 5 + 1 by omega]; exact hwc)
   rw [e5, e6] at hw
   by_cases hwe0 : we = 0
-  · rw [if_pos hwe0] at hw
+  · rw [ite_eq_left hwe0] at hw
     exact hret0 hw (fun _ cvj' np' nF' cvT' caps' h1' h2' => by
       rw [hcj] at h1'; rw [hcT] at h2'
       cases Option.some.inj h1'; cases Option.some.inj h2'
       rw [← hwe', hwe0]; rfl)
-  rw [if_neg hwe0] at hw
+  rw [ite_eq_right hwe0] at hw
   by_cases hwcc : wc ≠ c
-  · rw [if_pos hwcc] at hw
+  · rw [ite_eq_left hwcc] at hw
     exact hret0 hw (fun _ cvj' np' nF' cvT' caps' h1' h2' => by
       rw [hcj] at h1'; rw [hcT] at h2'
       cases Option.some.inj h1'; cases Option.some.inj h2'
@@ -660,7 +658,7 @@ theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
         rw [hwc']; simp only [beq_eq_false_iff_ne, ne_eq]
         exact fun e => hwcc ((decI_inj_iff hwc32 hc).mp e)
       simp [this])
-  rw [if_neg hwcc] at hw
+  rw [ite_eq_right hwcc] at hw
   have hwc_eq : wc = c := by simpa using hwcc
   -- the level-parameter slices
   obtain ⟨o1, l1, ho1, hl1, hs1⟩ := L.Ind.hlistW_ (kk := .name) (q := rf.headD 0) (k := 2) (k1 := 3)

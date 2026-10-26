@@ -14,7 +14,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -59,13 +58,13 @@ theorem defeqLamsInner_refinesE (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk :
   rw [hd1] at e₁
   refine ErrClaim.bind_core e₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decBool_t h0]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, mode_verified mode hs.mode4,
     decide_eq_true_eq]
   by_cases hv : mode &&& 1 = 0
-  · rw [if_pos hv] at hW
+  · rw [ite_eq_left hv] at hW
     simp only [hv, ↓reduceIte]
     cases hc2 : callE p n "infer" [mode, vis, d + 1, b₁] m₁ with
     | error e =>
@@ -105,7 +104,7 @@ theorem defeqLamsInner_refinesE (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk :
         e₂.2.2.2 e₃.2.2.2) h4
     rw [hd1] at this
     exact this
-  · rw [if_neg hv] at hW; cases hW
+  · rw [ite_eq_right hv] at hW; cases hW
 
 /-! ## `lams_open` -/
 

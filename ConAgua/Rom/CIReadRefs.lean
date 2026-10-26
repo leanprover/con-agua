@@ -11,8 +11,6 @@ block holds `Quot`, whose `sortZ` is `.ifAllZero [u]`; `decCaps` reads the name 
 twin state in which `dn` reads `u` back (`NamesDn dn a quotNames`, `CIReadRefCaps.lean`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP
@@ -113,7 +111,7 @@ theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   | succ n =>
   have hw := callW_model (M := fun mq => ciEntryW p n mq id) (ciEntry_specW rom p hL n · id) hc
   unfold ciEntryW at hw
-  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  rw [ite_eq_right (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
   obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   have h10 : (10 + id).toNat = 10 + id.toNat := word_add_toNat 10 id (by omega)
@@ -159,7 +157,7 @@ theorem romCvRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   | succ n =>
   have hw := callW_model (M := fun mq => cvEntryW p n mq id) (cvEntry_specW rom p hL n · id) hc
   unfold cvEntryW at hw
-  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  rw [ite_eq_right (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
   obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   have h18 : (18 + id).toNat = 18 + id.toNat := word_add_toNat 18 id (by omega)
@@ -200,7 +198,7 @@ theorem romExprPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   | succ n =>
   have hw := callW_model (M := fun mq => exprPinW p n mq id) (exprPin_specW rom p hL n · id) hc
   unfold exprPinW at hw
-  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  rw [ite_eq_right (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
   obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   have h28 : (28 + id).toNat = 28 + id.toNat := word_add_toNat 28 id (by omega)
@@ -323,7 +321,7 @@ theorem romBasisRef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   | succ n =>
   have hw := callW_model (M := fun mq => basisW p n mq k 0) (basis_specW rom p hL n · k) hc
   unfold basisW at hw
-  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  rw [ite_eq_right (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
   obtain ⟨r1, h1, rfl⟩ := ntBW_pair hw
   have hk0 : (k + 0).toNat = k.toNat := by simp
   obtain ⟨hf1, hf2, hf3⟩ := basisDecls_fit k.toNat hk
@@ -346,7 +344,7 @@ theorem romBasisARef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   | succ n =>
   have hw := callW_model (M := fun mq => basisW p n mq k 5) (basisA_specW rom p hL n · k) hc
   unfold basisW at hw
-  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  rw [ite_eq_right (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
   obtain ⟨r1, h1, rfl⟩ := ntBW_pair hw
   have hk5 : (k + 5).toNat = 5 + k.toNat := by rw [UInt64.toNat_add]; simp; omega
   obtain ⟨hf1, hf2, hf3⟩ := basisDeclsA_fit k.toNat hk
@@ -368,7 +366,7 @@ theorem romBasisRef_quot (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   | succ n =>
   have hw := callW_model (M := fun mq => basisW p n mq 4 0) (basis_specW rom p hL n · 4) hc
   unfold basisW at hw
-  rw [if_neg (by decide)] at hw
+  rw [ite_eq_right (by decide)] at hw
   obtain ⟨r1, h1, rfl⟩ := ntBW_pair hw
   obtain ⟨hf1, hf2, hf3⟩ := basisDeclsQ_fit
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
@@ -387,7 +385,7 @@ theorem romBasisARef_quot (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe 
   | succ n =>
   have hw := callW_model (M := fun mq => basisW p n mq 4 5) (basisA_specW rom p hL n · 4) hc
   unfold basisW at hw
-  rw [if_neg (by decide)] at hw
+  rw [ite_eq_right (by decide)] at hw
   obtain ⟨r1, h1, rfl⟩ := ntBW_pair hw
   obtain ⟨hf1, hf2, hf3⟩ := basisDeclsAQ_fit
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=

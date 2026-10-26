@@ -13,8 +13,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -167,19 +165,19 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
     simp only [ofReduceAxOk, StateT.run_bind, hname, hrun1, exc_ok_bind', pinEq,
       show PIN_EQ = (0 : Word).toNat from rfl, hrun2, hrun3']
   by_cases e4 : r4.headD 0 = 0
-  · rw [if_pos e4] at hW
+  · rw [ite_eq_left e4] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hf : (fe.find? (decI (pinW m1 (1 + (0 : Word).toNat))) == some ea) = false := by
       rw [← hb4]; simpa using e4
     refine ⟨false, a3, ?_, hS4, hg3.trans hg4, by simp [decW0B]⟩
     rw [hpre]
-    simp only [bne, hf, Bool.not_false, if_true]
+    simp only [bne, hf, Bool.not_false, ite_true]
     rfl
-  rw [if_neg e4] at hW
+  rw [ite_eq_right e4] at hW
   have ht : (fe.find? (decI (pinW m1 (1 + (0 : Word).toNat))) == some ea) = true := by
     rw [← hb4]; simpa using e4
   rw [hpre]
-  simp only [bne, ht, Bool.not_true, Bool.false_eq_true, if_false]
+  simp only [bne, ht, Bool.not_true, Bool.false_eq_true, ite_false]
   -- `reduce_elem_ok`
   rcases h5 : callW p n "reduce_elem_ok" [vis, c] s4.mem with _ | ⟨r5, m5⟩ <;> simp only [h5, oraK5, reduceCtorEq] at hW
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, hb5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
@@ -190,13 +188,13 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   generalize AM.st (reduceElemOk fe (decI c)) a3 = a5 at hrun5 hS5
   simp only [StateT.run_bind, hrun5, exc_ok_bind']
   by_cases e5 : r5.headD 0 = 0
-  · rw [if_pos e5] at hW
+  · rw [ite_eq_left e5] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hf : b5 = false := by rw [← hb5]; simpa using e5
     refine ⟨false, a5, by simp [hf]; rfl, hS5, hg3.trans (hg4.trans hg5), by simp [decW0B]⟩
-  rw [if_neg e5] at hW
+  rw [ite_eq_right e5] at hW
   have ht5 : b5 = true := by rw [← hb5]; simpa using e5
-  simp only [ht5, Bool.not_true, Bool.false_eq_true, if_false]
+  simp only [ht5, Bool.not_true, Bool.false_eq_true, ite_false]
   -- `reduce_stored_ok`
   rcases h6 : callW p n "reduce_stored_ok" [vis, c] s5.mem with _ | ⟨r6, m6⟩ <;> simp only [h6, oraK6, reduceCtorEq] at hW
   obtain ⟨s6, hs6, -, hok6, hS6, hg6, hb6, -⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
@@ -207,14 +205,14 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   generalize AM.st (reduceStoredOk fe (decI c)) a5 = a6 at hrun6 hS6
   simp only [StateT.run_bind, hrun6, exc_ok_bind']
   by_cases e6 : r6.headD 0 = 0
-  · rw [if_pos e6] at hW
+  · rw [ite_eq_left e6] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hf : b6 = false := by rw [← hb6]; simpa using e6
     refine ⟨false, a6, by simp [hf]; rfl, hS6, hg3.trans (hg4.trans (hg5.trans hg6)),
       by simp [decW0B]⟩
-  rw [if_neg e6] at hW
+  rw [ite_eq_right e6] at hW
   have ht6 : b6 = true := by rw [← hb6]; simpa using e6
-  simp only [ht6, Bool.not_true, Bool.false_eq_true, if_false]
+  simp only [ht6, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the pin
   rcases h7 : callW p n "of_reduce_pin_a" [wn] s6.mem with _ | ⟨r7, m7⟩ <;> simp only [h7, oraK7, reduceCtorEq] at hW
   obtain ⟨s7, hs7, -, hok7, hS7, hg7, hpin⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)

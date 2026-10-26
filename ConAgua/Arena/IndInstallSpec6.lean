@@ -13,7 +13,6 @@ members' slice below the pool's top (`hsrc`).
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -103,7 +102,7 @@ theorem nck_spec (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : St) (q fo fl : Wo
 lies below the top. -/
 theorem partsShapeFacts {m : Mem} {q : Word} {bs : BlockShape}
     (hq : DecB (fun m => decBS m q.toNat) m bs)
-    (hsrc : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m) :
+    (_hsrc : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m) :
     decBS m q.toNat = some bs ∧ q.toNat + 9 ≤ iwTop m ∧
     (∀ o l j v, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → j < l →
       iwN m (o + j) = some v → v + 1 < iwTop m) := by
@@ -343,7 +342,7 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
   have hsl' : (rdW (m4.arr64 IW) (q + 6)).toNat < 2 ^ 32 := hsl
   show decCtx (truncM s'.mem) qq.toNat = _
   simp only [decCtx, decAt, iwN, iwH, nat?, hd?, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, Nat.add_assoc,
-    Option.map_some, Option.bind_some, bind, pure, hnpw, UInt64.toNat_ofNat_of_lt' hnpb, hl4', hsl', if_true]
+    Option.map_some, Option.bind_some, bind, pure, hnpw, UInt64.toNat_ofNat_of_lt' hnpb, hl4', hsl', ite_true]
   simp only [show decHL _ _ _ = _ from hn1, show decHL _ _ _ = _ from hn2, show decNL _ _ _ = _ from hn3,
     show decHL _ _ _ = _ from hn4, Option.bind_some, hle4, hse]
 

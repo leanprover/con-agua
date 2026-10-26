@@ -11,7 +11,6 @@ What `HoistWalkRef.lean` reads of the pool's records: an inductive block's membe
 open ConRon.Arena ConRon.Arena.Frontend
 open L.Arena L.Ind L.Front L.Front.Ind
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Checker
 
@@ -22,7 +21,7 @@ theorem trunc_get {P : Array Word} {t j : Nat} {w : Word} (h : (trunc P t)[j]? =
   simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.getElem?_extract,
     Array.size_extract, Nat.sub_zero, Nat.zero_add] at h
   have hj' : ¬ (0 = j) := by omega
-  simp only [hj', false_and, ite_false] at h
+  simp only [hj', ite_false] at h
   split at h
   · exact ⟨h, by omega⟩
   · cases h
@@ -99,7 +98,7 @@ theorem decCI_walk {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Na
   generalize hn : kw.toNat = n at h
   rcases n with _ | _ | _ | _ | _ | _ | n
   all_goals
-    simp only [Option.pure_def, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+    simp only [Option.pure_def, Option.bind_eq_some_iff] at h
   · obtain ⟨cv, hcv, he⟩ := h; cases Option.some.inj he
     obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
     exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ e => by cases e⟩⟩

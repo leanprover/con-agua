@@ -13,7 +13,6 @@ Under the decoder `LvR` (and `LvsR` for the lists in `POOL`), from `leqOK` (`Lev
 at the entry's fuel `10^4` and `diff = 0`.
 -/
 
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -32,9 +31,9 @@ theorem leqTopW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l r x : Word) (L R :
   | zero => simp [leqTopW] at h
   | succ n =>
     rw [leqTopW_succ] at h
-    rcases e₁ : simpW n m l with _ | ⟨x₁, m₁⟩ <;> simp only [e₁, ltK₁, ltK₁_some, reduceCtorEq] at h
+    rcases e₁ : simpW n m l with _ | ⟨x₁, m₁⟩ <;> simp only [e₁, ltK₁, reduceCtorEq] at h
     obtain ⟨he₁, hx₁⟩ := simpW_ok n _ _ _ _ _ hl e₁
-    rcases e₂ : simpW n m₁ r with _ | ⟨y, m₂⟩ <;> simp only [e₂, ltK₁.ltK₂, ltK₂_some, reduceCtorEq] at h
+    rcases e₂ : simpW n m₁ r with _ | ⟨y, m₂⟩ <;> simp only [e₂, ltK₁.ltK₂, reduceCtorEq] at h
     obtain ⟨he₂, hy⟩ := simpW_ok n _ _ _ _ _ (hr.mono he₁) e₂
     obtain ⟨he₃, hx⟩ := (leqOK hN n).1 _ _ _ _ _ _ _ _ _ 10000 0 (hx₁.mono he₂) hy rfl DR_zero
       (by decide) h
@@ -69,9 +68,9 @@ theorem equivW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l r x : Word) (L R : 
         exact ⟨HeapExt.refl _, by simp [eLR, encO]⟩
       simp only [eLR, ↓reduceIte] at hz₀; subst hz₀
       rw [evK₁_zero] at h
-      rcases e₁ : simpW n m l with _ | ⟨x₁, m₁⟩ <;> simp only [e₁, evK₁.evK₂, evK₂_some, reduceCtorEq] at h
+      rcases e₁ : simpW n m l with _ | ⟨x₁, m₁⟩ <;> simp only [e₁, evK₁.evK₂, reduceCtorEq] at h
       obtain ⟨he₁, hx₁⟩ := simpW_ok n _ _ _ _ _ hl e₁
-      rcases e₂ : simpW n m₁ r with _ | ⟨y, m₂⟩ <;> simp only [e₂, evK₁.evK₃, evK₃_some, reduceCtorEq] at h
+      rcases e₂ : simpW n m₁ r with _ | ⟨y, m₂⟩ <;> simp only [e₂, evK₁.evK₃, reduceCtorEq] at h
       obtain ⟨he₂, hy⟩ := simpW_ok n _ _ _ _ _ (hr.mono he₁) e₂
       have hx₁' := hx₁.mono he₂
       cases e₃ : lvEqW n m₂ x₁ y with

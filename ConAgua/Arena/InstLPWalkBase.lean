@@ -25,7 +25,6 @@ open ConRon.Arena ConLeche
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -143,15 +142,15 @@ theorem CoreS.frameLP (S : MemoSch) (h3 : S = lpSch ∨ S = lplSch ∨ S = lplsS
     (hmem : CoreMemos m') : CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
   rcases h3 with rfl | rfl | rfl <;>
   exact hS.of_walk ⟨hS.arena.1.frame
-      (by simp [arenaArrs, storeArrs, memoArrs, lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO])
-      (by simp [arenaCtl, storeCtl, memoCtl, lpSch, lplSch, lplsSch]) hf,
-    DerR.frameM _ _ m m' hf (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) a hS.arena.2⟩
-    rfl hf (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO])
-    (by simp [lpSch, lplSch, lplsSch]) hmem
-    (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO, POOL])
-    (by simp [lpSch, lplSch, lplsSch])
-    (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO, SOREC, CREC])
-    (by simp [lpSch, lplSch, lplsSch])
+      (by simp [arenaArrs, storeArrs, memoArrs, LPMEMO, LPLMEMO, LPLSMEMO])
+      (by simp [arenaCtl, storeCtl, memoCtl]) hf,
+    DerR.frameM _ _ m m' hf (by simp [LPMEMO, LPLMEMO, LPLSMEMO]) a hS.arena.2⟩
+    rfl hf (by simp [LPMEMO, LPLMEMO, LPLSMEMO])
+    (by simp) hmem
+    (by simp [LPMEMO, LPLMEMO, LPLSMEMO, POOL])
+    (by simp)
+    (by simp [LPMEMO, LPLMEMO, LPLSMEMO, SOREC, CREC])
+    (by simp)
 
 end steps
 
@@ -181,8 +180,8 @@ theorem ILWMemo.setLP {m m' : Mem} {a : AState} (h : ILWMemo m a) (hw r : Word) 
       instLPC := a.memos.instLPC.insert (decE hw, 0) (decE r) } } := by
   have hf := msetG_frame lpSch lpSch_wf m m' hw 0 r hs
   exact ⟨memoRV_set lpSch lpSch_wf lfKey VH vstable_VH m _ h.lp hw 0 r hh (decE r) ⟨rfl, hr⟩ m' hs,
-    memoRV_frame lplSch lplSch_wf ilKey _ _ _ (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) m m' hf (fun _ _ h => h) _ h.lpl,
-    memoRV_frame lplsSch lplsSch_wf ilKey _ _ _ (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) m m' hf (fun _ _ h => h) _ h.lpls,
+    memoRV_frame lplSch lplSch_wf ilKey _ _ _ (by simp [LPMEMO, LPLMEMO]) (by simp) m m' hf (fun _ _ h => h) _ h.lpl,
+    memoRV_frame lplsSch lplsSch_wf ilKey _ _ _ (by simp [LPMEMO, LPLSMEMO]) (by simp) m m' hf (fun _ _ h => h) _ h.lpls,
     h.lplDen, h.lplsDen⟩
 
 /-- **A level substitution recorded** in `instLPLC`, its value reading back. -/
@@ -191,9 +190,9 @@ theorem ILWMemo.setLPL {m m' : Mem} {a : AState} (h : ILWMemo m a) (u r : Word) 
     ILWMemo m' { a with memos := { a.memos with
       instLPLC := a.memos.instLPLC.insert (decI u) (decI r) } } := by
   have hf := msetG_frame lplSch lplSch_wf m m' u 0 r hs
-  refine ⟨memoRV_frame lpSch lpSch_wf lfKey VH _ _ (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) m m' hf (fun _ _ h => h) _ h.lp,
+  refine ⟨memoRV_frame lpSch lpSch_wf lfKey VH _ _ (by simp [LPMEMO, LPLMEMO]) (by simp) m m' hf (fun _ _ h => h) _ h.lp,
     memoRV_set lplSch lplSch_wf ilKey _ (vstable_VI _) m _ h.lpl u 0 r ⟨hu, rfl⟩ (decI r) ⟨rfl, hr⟩ m' hs,
-    memoRV_frame lplsSch lplsSch_wf ilKey _ _ _ (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) m m' hf (fun _ _ h => h) _ h.lpls,
+    memoRV_frame lplsSch lplsSch_wf ilKey _ _ _ (by simp [LPLMEMO, LPLSMEMO]) (by simp) m m' hf (fun _ _ h => h) _ h.lpls,
     fun k v hk => ?_, h.lplsDen⟩
   simp only [Std.HashMap.getElem?_insert] at hk
   split at hk
@@ -206,8 +205,8 @@ theorem ILWMemo.setLPLs {m m' : Mem} {a : AState} (h : ILWMemo m a) (u r : Word)
     ILWMemo m' { a with memos := { a.memos with
       instLPLsC := a.memos.instLPLsC.insert (decI u) (decI r) } } := by
   have hf := msetG_frame lplsSch lplsSch_wf m m' u 0 r hs
-  refine ⟨memoRV_frame lpSch lpSch_wf lfKey VH _ _ (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) m m' hf (fun _ _ h => h) _ h.lp,
-    memoRV_frame lplSch lplSch_wf ilKey _ _ _ (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) (by simp [lpSch, lplSch, lplsSch, LPMEMO, LPLMEMO, LPLSMEMO]) m m' hf (fun _ _ h => h) _ h.lpl,
+  refine ⟨memoRV_frame lpSch lpSch_wf lfKey VH _ _ (by simp [LPMEMO, LPLSMEMO]) (by simp) m m' hf (fun _ _ h => h) _ h.lp,
+    memoRV_frame lplSch lplSch_wf ilKey _ _ _ (by simp [LPLMEMO, LPLSMEMO]) (by simp) m m' hf (fun _ _ h => h) _ h.lpl,
     memoRV_set lplsSch lplsSch_wf ilKey _ (vstable_VI _) m _ h.lpls u 0 r ⟨hu, rfl⟩ (decI r) ⟨rfl, hr⟩ m' hs,
     h.lplDen, fun k v hk => ?_⟩
   simp only [Std.HashMap.getElem?_insert] at hk

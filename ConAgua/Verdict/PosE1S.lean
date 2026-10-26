@@ -14,8 +14,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Ind
 open L.Arena
@@ -113,13 +111,13 @@ theorem bindOKE_step {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checke
   have hbo' : bo = false := by rw [← hbo]; simpa using ho
   subst hbo'
   refine ErrClaim.ite_neg (by simp) ?_
-  rw [npbE.k_nest_occ.eq_2, if_neg ho] at he
+  rw [npbE.k_nest_occ.eq_2, ite_eq_right ho] at he
   by_cases hd1 : dep + 1 = 0
-  · rw [if_pos hd1] at he; cases he; exact absurd rfl hk0
-  rw [if_neg hd1] at he
+  · rw [ite_eq_left hd1] at he; cases he; exact absurd rfl hk0
+  rw [ite_eq_right hd1] at he
   by_cases hk1 : kb + 1 = 0
-  · rw [if_pos hk1] at he; cases he; exact absurd rfl hk0
-  rw [if_neg hk1] at he
+  · rw [ite_eq_left hk1] at he; cases he; exact absurd rfl hk0
+  rw [ite_eq_right hk1] at he
   -- the variable, the body opened
   cases h4 : callE p n "intern_fvar" [dep, d] m3 with
   | error e4 =>
@@ -282,7 +280,7 @@ theorem posOKE_step {p : Prog} (L : NbLook p) (hq : KnotStageProg p)
   refine ErrClaim.bind_right hrun2 ?_
   by_cases ho : ro.headD 0 = 0
   · -- no occurrence: the rest claims nothing
-    rw [npE.k_nest_occ.eq_2, if_pos ho] at hce
+    rw [npE.k_nest_occ.eq_2, ite_eq_left ho] at hce
     cases h4 : callE p n "nest_occ" [rdW (m2.arr64 IW) ctx, rdW (m2.arr64 IW) (ctx + 1), rdW (m2.arr64 IW) (ctx + 4),
         nhiW m ctx pl, e] m2 with
     | error e4 =>
@@ -292,7 +290,7 @@ theorem posOKE_step {p : Prog} (L : NbLook p) (hq : KnotStageProg p)
       obtain ⟨r4, m4⟩ := q4
       rw [h4, npE.k_nest_occ_2.eq_2] at hce
       split at hce <;> cases hce
-  rw [npE.k_nest_occ.eq_2, if_neg ho] at hce
+  rw [npE.k_nest_occ.eq_2, ite_eq_right ho] at hce
   have hbo' : bo = true := by rw [← hbo]; simpa using ho
   subst hbo'
   have hg12 := hg1.trans hg2
@@ -306,9 +304,9 @@ theorem posOKE_step {p : Prog} (L : NbLook p) (hq : KnotStageProg p)
   have hwP' : denoteE a1.store (decI (rw.headD 0)) = some wP := by rw [hwd]; exact hwP
   simp only [Bool.not_true, Bool.false_eq_true, ite_false]
   by_cases h6 : rw.headD 0 >>> 28 = 6
-  · rw [if_pos h6] at hce
+  · rw [ite_eq_left h6] at hce
     have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forall _ hwH).mpr h6
-    rw [if_pos (by simpa using htag)]
+    rw [ite_eq_left (by simpa using htag)]
     cases h5 : callE p n "nest_pos_bind" [vis, ctx, fu - 1, po, pl, dep, kb, rw.headD 0, ns] m2 with
     | error e5 =>
       rw [h5, npE.k_nest_pos_bind.eq_1] at hce; cases hce
@@ -319,9 +317,9 @@ theorem posOKE_step {p : Prog} (L : NbLook p) (hq : KnotStageProg p)
     | ok q5 =>
       obtain ⟨r5, m5⟩ := q5
       rw [h5, npE.k_nest_pos_bind.eq_2] at hce; cases hce
-  · rw [if_neg h6] at hce
+  · rw [ite_eq_right h6] at hce
     have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forall _ hwH).mp e')
-    rw [if_neg (by simpa using htag)]
+    rw [ite_eq_right (by simpa using htag)]
     cases h5 : callE p n "nest_pos_app" [vis, ctx, fu - 1, po, pl, kb, nhiW m ctx pl, rw.headD 0, ns] m2 with
     | error e5 =>
       rw [h5, npE.k_nest_pos_app.eq_1] at hce; cases hce
@@ -406,7 +404,7 @@ theorem appOKE_step {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker
   have hargs2 : decHL m2 (ra.headD 0).toNat (ra.tail.headD 0).toNat = some args := by
     rw [decHL_agree (RdS.of_grow hg2) (fun j hj => by omega)]; exact hargs
   by_cases h1v : (eViewW m2 (rh.headD 0)).headD 0 = 1
-  · rw [if_pos h1v] at hce
+  · rw [ite_eq_left h1v] at hce
     obtain ⟨i, ty, rfl⟩ : ∃ i ty, v = .fvar i ty := by
       cases v <;> simp only [ViewR] at hvr <;> (try (rw [h1v] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
     obtain ⟨-, hi1, -, -⟩ := hvr
@@ -425,9 +423,9 @@ theorem appOKE_step {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker
     | ok q4 =>
       obtain ⟨r4, m4⟩ := q4
       rw [h4, npaE.k_nest_pos_fvar.eq_2] at hce; cases hce
-  rw [if_neg h1v] at hce
+  rw [ite_eq_right h1v] at hce
   by_cases h3v : (eViewW m2 (rh.headD 0)).headD 0 = 3
-  · rw [if_pos h3v] at hce
+  · rw [ite_eq_left h3v] at hce
     obtain ⟨nn, us, rfl⟩ : ∃ nn us, v = .const nn us := by
       cases v <;> simp only [ViewR] at hvr <;> (try (rw [h3v] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
     obtain ⟨-, hnH, hnd, husH, husd⟩ := hvr
@@ -484,7 +482,7 @@ theorem appOKE_step {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker
     | ok q5 =>
       obtain ⟨r5, m5⟩ := q5
       rw [h5, npaE.k_nest_cont.eq_2] at hce; cases hce
-  · rw [if_neg h3v] at hce; cases hce
+  · rw [ite_eq_right h3v] at hce; cases hce
     cases v with
     | fvar i ty => exact absurd hvr.1 h1v
     | const nn us => exact absurd hvr.1 h3v

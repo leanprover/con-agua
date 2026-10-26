@@ -72,7 +72,7 @@ theorem copyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), copyW n m d s l =
       refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
-      simp only [this, if_false]
+      simp only [this, ite_false]
     · rw [copyW_step n m d s l hl] at h
       have hl0 : 0 < l.toNat := by
         have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
@@ -93,7 +93,7 @@ theorem copyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), copyW n m d s l =
         rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         by_cases hi : d.toNat = i
         · subst hi
-          simp only [hdlt, true_and, if_true]
+          simp only [hdlt, ite_true]
           simp [rdW, Array.getElem?_eq_getElem hslt]
         · simp [hi, Ne.symm hi]
       obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
@@ -103,15 +103,15 @@ theorem copyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), copyW n m d s l =
       · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
-        · rw [if_pos hi]
+        · rw [ite_eq_left hi]
           by_cases hid : i = d.toNat
           · subst hid
             have : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
-            rw [if_neg this, hget1, if_pos rfl]; simp
+            rw [ite_eq_right this, hget1, ite_eq_left rfl]; simp
           · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
-            rw [if_pos h2, hget1, if_neg (by omega)]
+            rw [ite_eq_left h2, hget1, ite_eq_right (by omega)]
             congr 1; omega
-        · rw [if_neg hi, if_neg (by omega), hget1, if_neg (by omega)]
+        · rw [ite_eq_right hi, ite_eq_right (by omega), hget1, ite_eq_right (by omega)]
 
 end L.Ind
 
@@ -186,11 +186,11 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
     intro i
     rw [hG i, hq1]
     by_cases hi : q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + l.toNat
-    · rw [if_pos hi, if_neg (by omega), if_pos hi, hm1get, if_neg (by omega)]
-    · rw [if_neg hi, hm1get]
+    · rw [ite_eq_left hi, ite_eq_right (by omega), ite_eq_left hi, hm1get, ite_eq_right (by omega)]
+    · rw [ite_eq_right hi, hm1get]
       by_cases hiq : i = q.toNat
       · simp [hiq]
-      · rw [if_neg hiq, if_neg hiq, if_neg hi]
+      · rw [ite_eq_right hiq, ite_eq_right hiq, ite_eq_right hi]
   -- the other arrays and CTL
   have hCTL : ∀ i, i ≠ (200 : Word) → rdW (m'.arr64 CTL) i = rdW (m.arr64 CTL) i := by
     intro i hi
@@ -211,7 +211,7 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
       apply hslice?_congr
       intro j hj
       simp only [iwA, hget]
-      rw [if_neg (by omega), if_pos (by omega)]
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       congr 1; omega
     simp [this]
   · have : (q + (l + 1)).toNat = q.toNat + (l.toNat + 1) := by
@@ -220,7 +220,7 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
   · simp only [erTop, hCTL 129 (by decide)]; exact Nat.le_refl _
   · intro i hi
     simp only [iwTop, hq] at hi
-    rw [hget, if_neg (by omega), if_neg (by omega)]
+    rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
   · intro i _; rw [hEREC]
   · intro b hb hbc
     rw [hA b (by simpa using hb)]; simp only [consPre, allocMem]
@@ -301,11 +301,11 @@ theorem consW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {x o l : Word} {r : List 
     (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
   simp only [consW] at h
   have h0 : ¬ l + 1 = 0 := fun h0 => by simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   simp only [allocW] at h
   have h1 : ¬ m.len64 IW < rdW (m.arr64 CTL) 200 := fun h1 => by simp [h1] at h
   have h2 : ¬ m.len64 IW - rdW (m.arr64 CTL) 200 < l + 1 := fun h2 => by simp [h1, h2] at h
-  simp only [h1, h2, if_false] at h
+  simp only [h1, h2, ite_false] at h
   cases hcp : copyW (n - 1) ((allocMem m (l + 1)).set64 IW (rdW (m.arr64 CTL) 200) x)
       (rdW (m.arr64 CTL) 200 + 1) o l with
   | none => simp [hcp] at h

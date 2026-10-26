@@ -35,8 +35,8 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem pinternW_mfr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
   have h₂ := h
-  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h₂, by simp [ConsSch.wset, paramCS, paramSch, PREC, PSLOT],
-    by simp [paramCS, paramSch]⟩
+  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h₂, by simp [ConsSch.wset, paramCS, PREC, PSLOT],
+    by simp [paramCS]⟩
 
 theorem plgW_mfr : ∀ (k : Nat) {m m' : Mem} {o l : Word} {r : List Word}, plgW k m o l = some (r, m') →
     MFr [] [] m m'
@@ -145,19 +145,19 @@ theorem tcmK5_some : tcmK5 cR n vis pfo pfl dso dsl edso edsl d rn rb (some (rh,
     tcmK6 (pdeW cR n m vis d (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0) (rh.tail.headD 0) pfo pfl
       dso dsl edso edsl) := rfl
 theorem tcmK4_wrap (h : pfl + ftl < pfl) : tcmK4 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rb, m)) =
-    none := by simp only [tcmK4]; rw [if_pos h]
+    none := by simp only [tcmK4]; rw [ite_eq_left h]
 theorem tcmK4_ok (h : ¬ pfl + ftl < pfl) : tcmK4 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rb, m)) =
     tcmK5 cR n vis pfo pfl dso dsl edso edsl (pfl + ftl) rn rb (thW n m fto ftl pfl) := by
-  simp only [tcmK4]; rw [if_neg h]
+  simp only [tcmK4]; rw [ite_eq_right h]
 theorem tcmK3_some : tcmK3 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rl, m)) =
     tcmK4 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (plW n m (rl.headD 0) (rl.tail.headD 0)) := rfl
 theorem tcmK2_some : tcmK2 cR n vis p fto ftl pfo pfl dso dsl edso edsl (some (rn, m)) =
     tcmK3 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (lpsW n m p) := rfl
 theorem tcmK1_no (h : r.headD 0 ≠ 2) : tcmK1 cR n vis p fto ftl pfo pfl dso dsl edso edsl (some (r, m)) =
-    some ([0], m) := by simp only [tcmK1]; rw [if_pos h]
+    some ([0], m) := by simp only [tcmK1]; rw [ite_eq_left h]
 theorem tcmK1_yes (h : ¬ r.headD 0 ≠ 2) : tcmK1 cR n vis p fto ftl pfo pfl dso dsl edso edsl (some (r, m)) =
     tcmK2 cR n vis p fto ftl pfo pfl dso dsl edso edsl (memberNamesW n m p) := by
-  simp only [tcmK1]; rw [if_neg h]
+  simp only [tcmK1]; rw [ite_eq_right h]
 end arms
 attribute [ind_grind] tcmK6_some tcmK5_some tcmK4_wrap tcmK4_ok tcmK3_some tcmK2_some tcmK1_no tcmK1_yes
 

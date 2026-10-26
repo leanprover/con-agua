@@ -8,8 +8,6 @@ import ConAgua.Verdict.IndBNodes
 own aborts are the `strip_pis` failure (code `0`) and the `class_leaf_at` fail (the twin's `fail`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

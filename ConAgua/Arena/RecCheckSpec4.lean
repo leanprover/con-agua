@@ -101,10 +101,10 @@ def nbW : Nat → Mem → Word → Word → Word → Option Word
 
 theorem nbW_eq (n : Nat) (m : Mem) (q ko kl : Word) : nbW (n + 1) m q ko kl = nbK n m q (kindsFlatOutW n m ko kl) := rfl
 theorem nbK_zero (n : Nat) (m : Mem) (q f : Word) (h : f = 0) : nbK n m q (some f) = some 1 := by
-  rw [nbK, if_pos h]
+  rw [nbK, ite_eq_left h]
 theorem nbK_ne (n : Nat) (m : Mem) (q f : Word) (h : f ≠ 0) : nbK n m q (some f) =
     nbGoW n m (rdW (m.arr64 IW) (q + 2)) (rdW (m.arr64 IW) (q + 3)) (rdW (m.arr64 IW) (q + 1)) := by
-  rw [nbK, if_neg h]
+  rw [nbK, ite_eq_right h]
 grind_pattern [ind_grind] nbW_eq => nbW (n + 1) m q ko kl
 grind_pattern [ind_grind] nbK_zero => nbK n m q (some f)
 grind_pattern [ind_grind] nbK_ne => nbK n m q (some f)
@@ -151,7 +151,7 @@ theorem blockNestedBit_refines (p : Prog)
     try (simp only [nbK, reduceCtorEq] at h; done)
   have hf' := kindsFlatOutW_ok n _ _ _ kss f hsz hdec h1
   by_cases hfl : ConRon.Arena.nestKindsFlat kss = true
-  · rw [if_pos hfl] at hf'; subst hf'
+  · rw [ite_eq_left hfl] at hf'; subst hf'
     rw [nbK_ne n _ q 1 (by decide)] at h
     obtain ⟨hmem, hrecs, -⟩ := decBS_some hbs
     obtain ⟨o1, l1, ho1, hl1, hg1⟩ := decAt_some hmem

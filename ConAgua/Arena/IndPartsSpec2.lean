@@ -11,7 +11,6 @@ functions built on the record projections.
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -191,7 +190,7 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
       obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l o bs.members hg j hj'
       obtain ⟨⟨a, hva, hcv⟩, -, -⟩ := decMS_some hy
       have hGj := hG (q.toNat + j)
-      rw [if_pos (by rw [hll]; omega)] at hGj
+      rw [ite_eq_left (by rw [hll]; omega)] at hGj
       have e2 : q.toNat + j - q.toNat = j := by omega
       rw [e2, hoo] at hGj
       have hvb := hptr o l j v ho hl hj' hv
@@ -219,7 +218,7 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
       have hnmj : bs.memberNames[j] = nm := by
         simp [BlockShape.memberNames, List.getElem_map, hy', hnmE]
       rw [hnmj]
-      simp only [iwH, hd?, iwA, hGj, hwl', if_true, Option.bind_some, hnm']
+      simp only [iwH, hd?, iwA, hGj, ite_true]
       simp [hwl', hnm'])
     rw [hxs] at this
     exact this
@@ -228,7 +227,7 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
     · simp only [iwTop, hqq, hll]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hG, if_neg (by omega)]
+      rw [hG, ite_eq_right (by omega)]
   · simp only [iwTop, htop, hsum, hk]
 
 /-- **`block_shape_member_names` is `BlockShape.memberNames`**: the new `IW` slice holds the
@@ -375,7 +374,7 @@ theorem erToIw_specW2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "er_to_iw" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ erToIwW n s₀.mem o l = some (r, s'.mem) ∧
       r = [r.headD 0, r.tail.headD 0]; ⊤⦄ :=
-  triple_post (erToIw_specW p ha hc hp n s₀ o l) (fun r s' ⟨h1, h2⟩ => ⟨h1, h2, erToIwW_two h2⟩)
+  triple_post (erToIw_specW p ha hc hp n s₀ o l) (fun _r _s' ⟨h1, h2⟩ => ⟨h1, h2, erToIwW_two h2⟩)
 
 /-- The model of `block_shape_lps` (its callee runs at `n - 1`). -/
 def lpsW : Nat → Mem → Word → Option (List Word × Mem)

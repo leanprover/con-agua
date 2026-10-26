@@ -42,7 +42,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -367,7 +366,7 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
       have e7 : ¬ 3 * c.toNat + 2 = 3 * j + 2 := by omega
       have e8 : ¬ 3 * c.toNat + 1 = 3 * j + 2 := by omega
       have e9 : ¬ 3 * c.toNat = 3 * j + 2 := by omega
-      simp [e1, e2, e3, e4, e5, e6, e7, e8, e9]
+      simp [e1, e2, e3, e4, e6, e9]
     · have hj' : j = pend.size := by omega
       subst hj'
       simp only [Array.getElem_push, Nat.lt_irrefl, dite_false, ← hc']

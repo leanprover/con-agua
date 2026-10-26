@@ -12,7 +12,6 @@ and the stack below `t` is kept. The fvar indices `i, i + 1, …` do not wrap: e
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -53,16 +52,16 @@ theorem SpineR.push' {m m' : Mem} {o c x : Word} {acc : Array EIdx} (h : SpineR 
   refine ⟨by simp [h.size, hc1], by rw [hsz, hc1]; omega, ?_, ?_⟩
   · intro i hi; rw [hc1] at hi; rw [hsp]
     rcases Nat.lt_or_ge i c.toNat with hi' | hi'
-    · rw [if_neg (hne i hi')]; exact h.lt i hi'
+    · rw [ite_eq_right (hne i hi')]; exact h.lt i hi'
     · have : i = c.toNat := by omega
-      subst this; rw [hcc, if_pos rfl]; exact hx
+      subst this; rw [hcc, ite_eq_left rfl]; exact hx
   · intro i hi
     rw [Array.getElem_push]
     split
     · rename_i hi'
-      rw [hsp, if_neg (hne i (by rw [← h.size]; exact hi'))]; exact h.get i hi'
+      rw [hsp, ite_eq_right (hne i (by rw [← h.size]; exact hi'))]; exact h.get i hi'
     · have : i = c.toNat := by simp at hi; rw [← h.size]; omega
-      subst this; rw [hsp, hcc, if_pos rfl]
+      subst this; rw [hsp, hcc, ite_eq_left rfl]
 
 /-- A word in front of the slice. -/
 theorem SpineR.cons' {m : Mem} {t c x : Word} {l : List EIdx} (h : SpineR m (t + 1) c l.toArray)
@@ -194,7 +193,7 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
   have hcc : (co + cn).toNat = co.toNat + cn.toNat := wadd_toNat' (by have := hsl.bound; omega)
   simp only [opfGoK] at c'
   by_cases hn : n = 0
-  · rw [if_pos hn] at c'
+  · rw [ite_eq_left hn] at c'
     obtain ⟨r1, m1, h1, c'⟩ := ntBW_some c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     obtain ⟨a1, hrun1, hS1, hg1, hAb1, hspn1, htop1, hlt1⟩ := opfIl_ok hS hAb hsl he h1
@@ -203,14 +202,14 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
     refine ⟨rfl, hlt1, rfl, by rw [htop1, htop]; simp, SpineR.empty' ?_, fun w _ => by
       simp only [spW, hspn1]⟩
     rw [hspn1, hcc]; exact hsl.bound
-  rw [if_neg hn] at c'
+  rw [ite_eq_right hn] at c'
   have hn1 := wsub1 hn
   by_cases hg : e >>> 28 ≠ 6
-  · rw [if_pos hg] at c'
+  · rw [ite_eq_left hg] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     refine ⟨none, a, by rw [← hn1]; exact opfGo_run_nf acc _ _ _ a (by rw [decE_tag_fa e he]; simpa using hg),
       hS, IWGrow.refl _, hAb, rfl, rfl⟩
-  rw [if_neg hg] at c'
+  rw [ite_eq_right hg] at c'
   have hg6 : e >>> 28 = 6 := Decidable.not_not.mp hg
   obtain ⟨rv, m1, h1, c'⟩ := ntBW_some c'
   obtain ⟨hm1, hx, hy, hview⟩ := opfV_ok hS hg6 h1
@@ -241,7 +240,7 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
   rw [show co + (cn + 1) = co + cn + 1 by grind] at hO
   exact OGo.step hn hO (by rw [hsp4]; simp) hlt3 (by rw [hsz]; omega) (by rw [hsz, hcc]; omega)
     (fun w hw => by
-      rw [hsp4, if_neg (fun h => by subst h; omega)]
+      rw [hsp4, ite_eq_right (fun h => by subst h; omega)]
       simp only [spW, hs3])
 
 /-- **`opa_go` refines `openPisAtFvars`** under the stage relation and `AbsOK`, from the stack
@@ -265,19 +264,19 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
   have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1
   simp only [opaGoK] at c'
   by_cases hn : n = 0
-  · rw [if_pos hn] at c'
+  · rw [ite_eq_left hn] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     subst hn
     refine ⟨_, _, opa_run_zero (decE e) i.toNat a, hS, IWGrow.refl _, hAb, rfl, ?_⟩
     exact ⟨rfl, he, rfl, by simp, SpineR.empty' htb, fun w _ => rfl⟩
-  rw [if_neg hn] at c'
+  rw [ite_eq_right hn] at c'
   have hn1 := wsub1 hn
   by_cases hg : e >>> 28 ≠ 6
-  · rw [if_pos hg] at c'
+  · rw [ite_eq_left hg] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     refine ⟨none, a, by rw [← hn1]; exact opa_run_nf _ _ _ a (by rw [decE_tag_fa e he]; simpa using hg),
       hS, IWGrow.refl _, hAb, rfl, rfl⟩
-  rw [if_neg hg] at c'
+  rw [ite_eq_right hg] at c'
   have hg6 : e >>> 28 = 6 := Decidable.not_not.mp hg
   obtain ⟨rv, m1, h1, c'⟩ := ntBW_some c'
   obtain ⟨hm1, hx, hy, hview⟩ := opfV_ok hS hg6 h1
@@ -307,7 +306,7 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
   rw [htop4] at hO
   exact OGo.step hn hO (by rw [hsp4]; simp) hlt2 (by rw [hsz]; omega) (by rw [hsz]; omega)
     (fun w hw => by
-      rw [hsp4, if_neg (fun h => by subst h; omega)]
+      rw [hsp4, ite_eq_right (fun h => by subst h; omega)]
       simp only [spW, hs3])
 
 /-! ## `open_pis_at_fvars_f` -/
@@ -424,12 +423,12 @@ theorem opfF_ok (k e i : Word) (he : H e) :
   | some p =>
     obtain ⟨fvs, b⟩ := p
     obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO1
-    rw [if_neg (by rw [h0]; decide)] at c'
+    rw [ite_eq_right (by rw [h0]; decide)] at c'
     obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok dn vis fe hS1 hAb1 hsl hb c'
     rw [hdb] at hdec
     exact ⟨_, _, hrun, ⟨hS', hg1.trans hg', hdec⟩, hAb'⟩
   | none =>
-    rw [if_pos (show r1.headD 0 = 0 from hO1)] at c'
+    rw [ite_eq_left (show r1.headD 0 = 0 from hO1)] at c'
     obtain ⟨hS1', hg1'⟩ := stageR_hi hS1 (MemFrame.setCtl m1 136 co) (by simp) (by simp) (by decide)
       (by decide)
     have hAb1' := hAb1.frameD (MemFrame.setCtl m1 136 co) (by decide) (by decide)
@@ -447,7 +446,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
     rw [hrun2] at hrun
     cases x2 with
     | none =>
-      rw [if_pos (show r2.headD 0 = 0 from hO2)] at c'
+      rw [ite_eq_left (show r2.headD 0 = 0 from hO2)] at c'
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
       obtain ⟨hS3, hg3⟩ := stageR_hi hS2 (MemFrame.setCtl m2 136 co) (by simp) (by simp) (by decide)
         (by decide)
@@ -456,7 +455,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
     | some p =>
       obtain ⟨fvs, b⟩ := p
       obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO2
-      rw [if_neg (by rw [h0]; decide)] at c'
+      rw [ite_eq_right (by rw [h0]; decide)] at c'
       obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok dn vis fe hS2 hAb2 hsl hb c'
       rw [hdb] at hdec
       exact ⟨_, _, hrun, ⟨hS', hg1.trans (hg1'.trans (hg2.trans hg')), hdec⟩, hAb'⟩

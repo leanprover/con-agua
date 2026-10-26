@@ -16,7 +16,6 @@ open ConLeche.Frontend (IndCtorRec IndTypeRec IndRecRec CVRec RuleRec)
 open ConAgua.Front.FieldsLink
 open L.Front.Fields (listN itemsN)
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 
@@ -45,9 +44,9 @@ theorem PExt.size {m m' : Mem} (h : PExt m m') (A : ArrId) : (m'.arr64 A).size =
 theorem PExt.set {m m' : Mem} (h : PExt m m') (i v : Word) (hi : topN m DLP < i.toNat)
     (ht : 0 < i.toNat) : PExt m (m'.set64 DLP i v) :=
   ⟨h.frame.trans (MemFrame.set64 _ _ (by decide) _ _), by
-    have := h.top; simp only [topN, wd_setA, show (0 : Word).toNat = 0 from rfl]
-    rw [if_neg (by omega)]; exact this, fun j h1 h2 => by
-      rw [wd_setA, if_neg (by omega)]; exact h.keep j h1 h2⟩
+    have := h.top; simp only [topN, wd_setA]
+    rw [ite_eq_right (by omega)]; exact this, fun j h1 h2 => by
+      rw [wd_setA, ite_eq_right (by omega)]; exact h.keep j h1 h2⟩
 
 /-- The `DLP` allocator. -/
 theorem allocP_facts {m m' : Mem} {k o : Word} (hs : (m.arr64 DLP).size < 2 ^ 63)
@@ -63,7 +62,7 @@ theorem trunc_get (P : Array Word) (t j : Nat) (h1 : 1 ≤ j) (h2 : j ≤ t) (hs
     (trunc P t)[j]? = P[j]? := by
   simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.getElem?_extract,
     Array.size_extract, Nat.sub_zero, Nat.zero_add]
-  rw [if_neg (by omega), if_pos (by omega)]
+  rw [ite_eq_right (by omega), ite_eq_left (by omega)]
 
 
 /-- What the install reads of the front's state: the name and expression tables, `DLP`'s size and
@@ -186,7 +185,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
   have hptop : topN m DLP + 1 ≤ (m.arr64 DLP).size := hD.ptop
   unfold cvW at h
   rcases hn : lkW m NID nm with _ | nh <;> simp only [hn, wK, reduceCtorEq] at h
-  rcases ht : lkW m EID ty with _ | th <;> simp only [ht, wK, reduceCtorEq] at h
+  rcases ht : lkW m EID ty with _ | th <;> simp only [ht, reduceCtorEq] at h
   rcases hl : lpPutW b.data m lps with _ | m₁ <;> simp only [hl, mK, reduceCtorEq] at h
   simp only [Option.some.injEq] at h
   subst h
@@ -217,7 +216,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
       topN m DLP + (listN b.data lps).length := by
     rw [← htop1]
     unfold topN; rw [cvM_wd _ _ _ _ _ _ 0 hq3 (by omega)]
-    rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega)]
   refine ⟨cvp, hpc, F2.trans (by
       unfold cvM; exact ((((MemFrame.set64 _ _ (by decide) _ _).trans (MemFrame.set64 _ _ (by decide) _ _)).trans
         (MemFrame.set64 _ _ (by decide) _ _)).trans (MemFrame.set64 _ _ (by decide) _ _))), ?_, ?_, ?_, ?_, ?_⟩
@@ -226,12 +225,12 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
   · intro i h1 h2
     rw [cvM_wd _ _ _ _ _ _ i hq3 (by omega)]
     simp only [show i ≠ q.toNat by omega, show i ≠ q.toNat + 1 by omega, show i ≠ q.toNat + 2 by omega,
-      show i ≠ q.toNat + 3 by omega, if_false]
+      show i ≠ q.toNat + 3 by omega, ite_false]
     simp only [wd]; rw [F4 i (by omega) (by rw [hrdN]; omega)]
   · intro i h1 h2
     rw [cvM_wd _ _ _ _ _ _ i hq3 (by omega)]
     simp only [show i ≠ q.toNat by omega, show i ≠ q.toNat + 1 by omega, show i ≠ q.toNat + 2 by omega,
-      show i ≠ q.toNat + 3 by omega, if_false]
+      show i ≠ q.toNat + 3 by omega, ite_false]
     simp only [wd]; rw [F4 i (by omega) (by rw [hrdN]; omega)]
   · intro P hP
     have hw := fun j => cvM_wd m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th j hq3 (by omega)
@@ -240,10 +239,10 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
     have e2 := hP (q.toNat + 2) (.inl ⟨by omega, by omega⟩)
     have e3 := hP (q.toNat + 3) (.inl ⟨by omega, by omega⟩)
     rw [hw] at e0 e1 e2 e3
-    simp only [if_pos rfl, show q.toNat + 1 ≠ q.toNat by omega, show q.toNat + 2 ≠ q.toNat by omega,
-      show q.toNat + 2 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat by omega,
-      show q.toNat + 3 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat + 2 by omega, if_false,
-      if_true, ↓reduceIte] at e0 e1 e2 e3
+    simp only [ite_eq_left rfl, show q.toNat + 1 ≠ q.toNat by omega, show q.toNat + 2 ≠ q.toNat by omega,
+           show q.toNat + 2 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat by omega,
+           show q.toNat + 3 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat + 2 by omega, ite_false,
+           ite_true, ↓reduceIte] at e0 e1 e2 e3
     have ho : (rdW (m.arr64 DLP) 0 + 1).toNat = topN m DLP + 1 := by
       rw [UInt64.toNat_add, hrdN]; simp; omega
     have hc : (lsCntN b.data (lps + 1) 0).toNat = (listN b.data lps).length := by
@@ -256,7 +255,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
       rw [ho, hP _ (.inr ⟨by omega, by rw [htopF]; omega⟩), hw]
       simp only [show topN m DLP + 1 + j ≠ q.toNat by omega, show topN m DLP + 1 + j ≠ q.toNat + 1 by omega,
         show topN m DLP + 1 + j ≠ q.toNat + 2 by omega, show topN m DLP + 1 + j ≠ q.toNat + 3 by omega,
-        if_false]
+        ite_false]
       have := F5 j hj
       rw [hrdN, show 1 + topN m DLP + j = topN m DLP + 1 + j by omega] at this
       simp only [wd]; rw [this, getElem!_pos (listN b.data lps) j hj]; rfl)

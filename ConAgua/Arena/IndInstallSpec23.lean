@@ -7,7 +7,6 @@ the relation
 
 noncomputable section
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -67,7 +66,7 @@ theorem decPLB_omono {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OM
   simp only [decPLB] at h ⊢
   split at h
   · rename_i hb
-    rw [if_pos (Nat.le_trans hb (iwA_size_mono he))]
+    rw [ite_eq_left (Nat.le_trans hb (iwA_size_mono he))]
     exact (OMono.decPL hf o l).mono m m' x he h
   · cases h
 
@@ -79,7 +78,7 @@ theorem iwA_truncM_size_le (m : Mem) : (iwA (truncM m)).size ≤ iwTop m := by
   apply Nat.le_of_not_lt
   intro h
   have := truncM_iw_get? m (iwTop m)
-  rw [if_neg (Nat.lt_irrefl _)] at this
+  rw [ite_eq_right (Nat.lt_irrefl _)] at this
   rw [Array.getElem?_eq_getElem h] at this
   cases this
 
@@ -89,7 +88,7 @@ theorem le_iwA_truncM_size {m : Mem} {k : Nat} (hk : k ≤ iwTop m) (hT : iwTop 
   rcases Nat.eq_zero_or_pos k with h0 | h0
   · omega
   · have e := truncM_iw_get? m (k - 1)
-    rw [if_pos (by omega), Array.getElem?_eq_getElem (show k - 1 < (iwA m).size by omega)] at e
+    rw [ite_eq_left (by omega), Array.getElem?_eq_getElem (show k - 1 < (iwA m).size by omega)] at e
     have := (Array.getElem?_eq_some_iff.mp e).1
     omega
 
@@ -174,7 +173,7 @@ theorem installRec2PSlB {p : Prog} (hP : CtorsProg p) {n : Nat} {α : Type} {f :
   have hd := hx.1.grow (OMono.decPL hf _ _) hg
   show decAt (truncM s'.mem) _ _ = some xs
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some, decPLB]
-  rw [if_pos (le_iwA_truncM_size (Nat.le_trans hx.2 hg.1) hS'.2.1)]
+  rw [ite_eq_left (le_iwA_truncM_size (Nat.le_trans hx.2 hg.1) hS'.2.1)]
   exact hd
 
 theorem lpsW_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :

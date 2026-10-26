@@ -25,7 +25,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -67,10 +66,10 @@ theorem internNNode_num_run (pre : NIdx) (n : Nat) (a : AState) :
     cases hs : a.store.lss.ls.ns.scratchOn <;>
     cases hc : a.store.lss.ls.ns.scr.nums.cons[nnKey pre n]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, nnKey, ite_self, protoRun, nnumLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrNNums, withPersNNums, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      ↓reduceIte, nnKey, protoRun, nnumLens] <;>
+    (try split) <;> simp_all [withScrNNums, withPersNNums, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `num` tables -/
 
@@ -177,7 +176,7 @@ theorem nnumCS_wf : nnumCS.WF where
   col A h := by simp [nnumCS] at h
   colRoom A h := by simp [nnumCS] at h
   colLt A h := by
-    simp only [nnumCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [nnumCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (nnpushOK_room m t ((nnpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nnumCS, hk]
   ex h := by simp [nnumCS] at h

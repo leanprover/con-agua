@@ -9,8 +9,6 @@ import ConAgua.Verdict.DeclValE
 `infer_type_core`, `ensure_sort_core`, `check_field_sort_bound`) and `check_struct_field_sorts_i`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -106,7 +104,7 @@ theorem csfE_claimB (hg : p.lookup "sl_get" = some slGet)
   have efo : fo + (j - 1) = UInt64.ofNat (fo.toNat + J) := by
     apply UInt64.toNat_inj.mp; rw [sum_toNat_add (by omega), hJ]; simp; omega
   have hr1 : r1.headD 0 = w := by
-    simp only [getW, hl, if_false, Option.some.injEq] at hgw
+    simp only [getW, hl, ite_false, Option.some.injEq] at hgw
     rw [← hgw, efo, hw]
   have hm1' : m = m1 := by rw [← hs1, hm1]
   subst hm1'
@@ -375,13 +373,13 @@ theorem sdomsE_claim (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : 
   obtain ⟨hwx, hwy⟩ := hws (j.toNat - 1) (by omega) aP bP haP hbP
   have hjeq : j.toNat = (j.toNat - 1) + 1 := by omega
   rw [hjeq]
-  simp only [ConRon.Arena.checkStructDomsAt, unwrapOr, hfvsij, hdomsij, pure_bind, bind_assoc]
+  simp only [ConRon.Arena.checkStructDomsAt, unwrapOr, hfvsij, hdomsij, pure_bind]
   have hr1 : r1.headD 0 = wa := by
-    simp only [getW, hl1, if_false, Option.some.injEq] at hgw1
+    simp only [getW, hl1, ite_false, Option.some.injEq] at hgw1
     rw [← hgw1, hfoeq, hwa_eq]
   rw [hr1] at he
   have hr2 : r2.headD 0 = wb := by
-    simp only [getW, hl2, if_false, Option.some.injEq] at hgw2
+    simp only [getW, hl2, ite_false, Option.some.injEq] at hgw2
     rw [← hgw2, hdoeq, hwb_eq]
   rw [hr2] at he
   cases h3 : callE p n "fvar_type_d" [wa] m with

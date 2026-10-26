@@ -21,7 +21,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -69,10 +68,10 @@ theorem internE_sort_run (u : LIdx) (a : AState) :
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_sort]
   cases hp : pfSo a u <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.sorts.cons[sortKey u]? <;>
-    simp only [hp, hs, hc, Bool.false_eq_true, ↓reduceIte, sortKey, ite_self, protoRun, sortLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrSorts, withPersSorts, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+    simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, sortKey, protoRun, sortLens] <;>
+    (try split) <;> simp_all [withScrSorts, withPersSorts, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `sort` tables -/
 
@@ -180,8 +179,8 @@ theorem sortCS_wf : sortCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, rfl⟩ := list_one ks (by simpa [sortCS] using hl)
-      simp [sortCS, somatchW, sohash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [sortCS, somatchW, sohash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [sortCS, somatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl]
+    hs := by intro m t i; simp [sortCS, somatchW, sohash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl]
     qh := fun _ _ _ => rfl
     vs := by intro ks h hl f hf; simp [pushArgs, sortCS, nkW, recK] at hf ⊢ <;> omega }
 

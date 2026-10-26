@@ -11,7 +11,6 @@ open ConRon.Arena ConLeche
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -114,7 +113,7 @@ theorem derT_push {tb : Tbl α EIdx UInt64} {P : Nat → α → UInt64 → Prop}
     have := hn i x (by
       rw [Array.getElem?_eq_getElem hi]; rw [Array.getElem?_push_lt hi] at hx; exact hx)
     have e1 : (tb.der.push d).getD i 0 = tb.der[i] := by
-      simp [Array.getD, hi', Array.getElem_push_lt hi'] <;> intro h <;> omega
+      simp [Array.getD, Array.getElem_push_lt hi'] <;> intro h <;> omega
     have e2 : tb.derAt i = tb.der[i] := by simp [Tbl.derAt, Array.getD, hi']
     rw [e1]; rw [e2] at this; exact this
   · have hi' : i = tb.nodes.size := by
@@ -462,7 +461,7 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
   · cases hI
   rename_i hg
   obtain ⟨hf, hx⟩ := or_shr32 f x (by simpa using hg)
-  rcases hI₁ : ainternW m f x with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
+  rcases hI₁ : ainternW m f x with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, reduceCtorEq] at hI
   rcases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁
       (packBFL (maxW (derBW m f) (derBW m x)) (maxW (derFW m f) (derFW m x))
         (exprLPW m f ||| exprLPW m x)) with _ | m₂ <;>
@@ -482,7 +481,7 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
       derLW_ok m a hR hD f hf, derLW_ok m a hR hD x hx]; simp only [lpW, lp_derApp, b2w_or]) hP
   have o := fun B (hB : B ≠ ADER) (hB' : B ≠ ADER + 256) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
-  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
+  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit, hnew,
     cP_other hD₁.lam (o LADER (by decide) (by decide) (by decide))
@@ -504,7 +503,7 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
   · cases hI
   rename_i hg
   obtain ⟨ht, hb⟩ := or_shr32 t b (by simpa using hg)
-  rcases hI₁ : lainternW m t b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
+  rcases hI₁ : lainternW m t b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, reduceCtorEq] at hI
   rcases hP : derPutW LADER 28 m₁ (cnt2 m 28) r₁
       (packBFL (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b))
         (exprLPW m t ||| exprLPW m b)) with _ | m₂ <;>
@@ -524,7 +523,7 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
       simp only [lpW, lp_derBind, b2w_or]) hP
   have o := fun B (hB : B ≠ LADER) (hB' : B ≠ LADER + 256) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
-  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
+  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [LADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit,
     cP_other hD₁.app (o ADER (by decide) (by decide) (by decide))
@@ -548,7 +547,7 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
   · cases hI
   rename_i hg
   obtain ⟨ht, hb⟩ := or_shr32 t b (by simpa using hg)
-  rcases hI₁ : fainternW m t b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
+  rcases hI₁ : fainternW m t b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, reduceCtorEq] at hI
   rcases hP : derPutW FADER 30 m₁ (cnt2 m 30) r₁
       (packBFL (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b))
         (exprLPW m t ||| exprLPW m b)) with _ | m₂ <;>
@@ -568,7 +567,7 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
       simp only [lpW, lp_derBind, b2w_or]) hP
   have o := fun B (hB : B ≠ FADER) (hB' : B ≠ FADER + 256) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
-  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
+  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [FADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit,
     cP_other hD₁.app (o ADER (by decide) (by decide) (by decide))
@@ -593,7 +592,7 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
   rename_i hg
   obtain ⟨htv, hb⟩ := or_shr32 _ b (by simpa using hg)
   obtain ⟨ht, hv⟩ := or_lt32 t v htv
-  rcases hI₁ : leinternW m t v b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
+  rcases hI₁ : leinternW m t v b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, reduceCtorEq] at hI
   rcases hP : derPutW LEDER 20 m₁ (cnt2 m 20) r₁
       (packBFL (maxW (maxW (derBW m t) (derBW m v)) (satPredW (derBW m b)))
         (maxW (maxW (derFW m t) (derFW m v)) (derFW m b))
@@ -617,7 +616,7 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
       simp only [lpW, lp_derLet, b2w_or]) hP
   have o := fun B (hB : B ≠ LEDER) (hB' : B ≠ LEDER + 256) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
-  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
+  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [LEDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit,
     cP_other hD₁.app (o ADER (by decide) (by decide) (by decide))
@@ -641,7 +640,7 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
   · cases hI
   rename_i hg
   obtain ⟨hn, he⟩ := or_shr32 n e (by simpa using hg)
-  rcases hI₁ : pjinternW m n i e with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
+  rcases hI₁ : pjinternW m n i e with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, reduceCtorEq] at hI
   rcases hP : derPutW PJDER 32 m₁ (cnt2 m 32) r₁ (packBFL (derBW m e) (derFW m e) (exprLPW m e)) with _ | m₂ <;> simp only [hP, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
   obtain ⟨rfl, rfl⟩ := hI
   obtain ⟨hok, hX, hres⟩ := pjintern_correct m a hR.proj n i e hn he _ _ hI₁
@@ -659,7 +658,7 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
       fvar_derProj, derLW_ok m a hR hD e he]; simp only [lpW, lp_derProj]) hP
   have o := fun B (hB : B ≠ PJDER) (hB' : B ≠ PJDER + 256) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
-  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
+  refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit,
     cP_other hD₁.app (o ADER (by decide) (by decide) (by decide))
@@ -705,7 +704,7 @@ theorem internFVar_D (m : Mem) (a : AState) (hA : ArenaD m a) (u ty r : Word)
   have hR₁ := hR.lift_fvar _ _ _ _
     ⟨hX, fvintern_lp m a hR.fvar u ty hty hR.fvarLp (derLW_ok m a hR hD ty hty) _ _ hI⟩ hfr
     (AM.st_proto fvarLens _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, FVREC, FVSLOT, FVLP]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [FVREC, FVSLOT, FVLP]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -726,7 +725,7 @@ theorem internSort_D (m : Mem) (a : AState) (hA : ArenaD m a) (u r : Word)
   have hR₁ := hR.lift_sort _ _ _ _
     ⟨hX, sointern_lp m a hR.sort u hu hR.sortLp (lvlHPW_ok m a hR u hu) _ _ hI⟩ hfr
     (AM.st_proto sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, SOREC, SOSLOT, SOLP]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [SOREC, SOSLOT, SOLP]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -749,7 +748,7 @@ theorem internConst_D (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word)
   have hR₁ := hR.lift_const _ _ _ _
     ⟨hX, ceintern_lp m a hR.const f x hf hx hR.constLp (lsHPW_ok m a hR x hx) _ _ hI⟩ hfr
     (AM.st_proto constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, CREC, CSLOT, CLP]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [CREC, CSLOT, CLP]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁

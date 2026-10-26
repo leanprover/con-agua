@@ -9,8 +9,6 @@ walked domain's and the state's denotations), its variable interned (`internFVar
 opened (`instantiate1Fast_run`), the rest by the block's `FieldsOKC` at `n`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf RPos)
@@ -38,25 +36,25 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbFieldsW_succ] at h
   by_cases h0 : nF = 0
-  · rw [if_pos h0] at h
+  · rw [ite_eq_left h0] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     subst h0
     refine ⟨(ks, nds, decI cur, NS), a, by rw [ConRon.Arena.nestFields.eq_def]; rfl, hC, IWGrow.refl _, hks, hkb,
       hnd, hndb, hcur, rfl, hns, by simp, by simp, by simp, hP, hA, ConRon.Bridge.CoreStep.refl hC.check⟩
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   by_cases h6 : cur >>> 28 ≠ 6
-  · rw [if_pos h6] at h; cases h
-  rw [if_neg h6] at h
+  · rw [ite_eq_left h6] at h; cases h
+  rw [ite_eq_right h6] at h
   have h6' : cur >>> 28 = 6 := by simpa using h6
   by_cases hov : base + j < base
-  · rw [if_pos hov] at h; cases h
-  rw [if_neg hov] at h
+  · rw [ite_eq_left hov] at h; cases h
+  rw [ite_eq_right hov] at h
   by_cases hov1 : base + j + 1 = 0
-  · rw [if_pos hov1] at h; cases h
-  rw [if_neg hov1] at h
+  · rw [ite_eq_left hov1] at h; cases h
+  rw [ite_eq_right hov1] at h
   by_cases hev : eViewW m cur = []
-  · rw [if_pos hev] at h; cases h
-  rw [if_neg hev] at h
+  · rw [ite_eq_left hev] at h; cases h
+  rw [ite_eq_right hev] at h
   obtain ⟨d, b, hv, hd, hb, hvb, htag⟩ := pos2_forall_view hS hcur h6' hev
   simp only [hv, List.tail_cons, List.headD_cons] at h
   have hbj : (base + j).toNat = base.toNat + j.toNat := pos2_word_add hov
@@ -82,8 +80,8 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   rcases hfv : fvinternW m1 (base + j) d with _ | ⟨fv, m2⟩ <;> rw [hfv] at h; · simp [nbFieldsK2] at h
   rw [nbFieldsK2_some] at h
   by_cases hfvb : 4294967296 ≤ fv
-  · rw [if_pos hfvb] at h; cases h
-  simp only [if_neg hfvb, List.tail_cons, List.headD_cons] at h
+  · rw [ite_eq_left hfvb] at h; cases h
+  simp only [ite_eq_right hfvb, List.tail_cons, List.headD_cons] at h
   have hfvH : H fv := by
     have : ¬ (4294967296 : Word).toNat ≤ fv.toNat := fun e => hfvb (UInt64.le_iff_toNat_le.mpr e)
     simp only [H]; simpa using this
@@ -148,7 +146,7 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
           exact ConLeche.Expr.WScoped.instantiate1 hw.1 0 hw.2)
   refine ⟨x, a', ?_, hC', hg15.trans hg', hK', hKb', hD', hDb', hcH', hcd', hns', ?_, ?_, ?_, hP', hA', c3.trans c5⟩
   · rw [hnF', ConRon.Arena.nestFields.eq_def]
-    simp only [htag, beq_self_eq_true, if_true, StateT.run_bind, hvb, except_ok_bind]
+    simp only [htag, beq_self_eq_true, ite_true, StateT.run_bind, hvb, except_ok_bind]
     have e1 := hrun1; simp only [hbj, UInt64.toNat_zero] at e1
     rw [e1]; simp only [except_ok_bind]; rw [e2]; simp only [except_ok_bind]; rw [e3]; simp only [except_ok_bind]
     rw [hnF1, hj1, hb2d, hnd1] at hrun

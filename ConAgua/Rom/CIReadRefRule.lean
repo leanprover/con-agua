@@ -8,8 +8,6 @@ nested), into the 11-word record at `r` (`decRule`); `rci_rules_to(q, o, k)` ref
 `Frontend.internRules` into consecutive records (`decRules`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP
@@ -165,7 +163,7 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
   obtain ⟨hI2, hM2, hs2, ht2, hIW2, -, hsz2⟩ := setERs_facts ws m1 hI1 hM1 (fun jw hjw => by
     obtain ⟨i, -, -, h⟩ := hmemws jw hjw; omega)
   unfold ruleW.ruleTailW at hw
-  rw [if_neg (by decide), bW_some] at hw
+  rw [ite_eq_right (by decide), bW_some] at hw
   simp only [List.headD_cons] at hw
   have hq40 : (r1.tail.headD 0 + 40).toNat = (r1.tail.headD 0).toNat + 40 := by
     have := drop_len rom (r1.tail.headD 0).toNat (u64B rl.nfields) _ hd1 (by simp [u64B])
@@ -249,7 +247,7 @@ theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
     | succ k =>
     have hw := callW_model (M := fun mq => rulesToW p k mq q o kw) (rulesTo_specW rom p hL k · q o kw) hc
     have hk0 : kw = 0 := by apply UInt64.toNat_inj.mp; simpa using hk
-    simp only [rulesToW, hk0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [rulesToW, hk0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨memo, [], a, rfl, rfl, hI, hM, hst, by simp [encRules], EKeep.refl _ _, rfl, rfl,
       fun j hj => by simp at hj⟩
@@ -261,7 +259,7 @@ theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
     | succ k =>
     have hw := callW_model (M := fun mq => rulesToW p k mq q o kw) (rulesTo_specW rom p hL k · q o kw) hc
     have hk0 : kw ≠ 0 := fun h => by subst h; simp at hk
-    simp only [rulesToW, hk0, if_false] at hw
+    simp only [rulesToW, hk0, ite_false] at hw
     cases k with
     | zero => rw [callW_zero] at hw; simp at hw
     | succ k =>

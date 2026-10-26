@@ -54,13 +54,13 @@ variable (cR : CallM) (N : Nat) (m m1 m2 m3 m4 : Mem) (vis o l mp q e : Word) (r
 theorem cftW_mem (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : rdW (m.arr64 IW) (mp + 8) - 1 < l) :
     cftW cR (N + 1) m vis o l mp =
       some ([rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m) := by
-  simp only [cftW]; rw [if_pos h, if_pos h2]
+  simp only [cftW]; rw [ite_eq_left h, ite_eq_left h2]
 theorem cftW_out (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : ¬ rdW (m.arr64 IW) (mp + 8) - 1 < l) :
     cftW cR (N + 1) m vis o l mp = cftK1 (binternW m 0) := by
-  simp only [cftW]; rw [if_pos h, if_neg h2]
+  simp only [cftW]; rw [ite_eq_left h, ite_eq_right h2]
 theorem cftW_ext (h : ¬ rdW (m.arr64 IW) (mp + 8) ≠ 0) :
     cftW cR (N + 1) m vis o l mp = cftK2 cR N mp (envFindW m (rdW (m.arr64 IW) mp) vis) := by
-  simp only [cftW]; rw [if_neg h]
+  simp only [cftW]; rw [ite_eq_right h]
 theorem cftK1_some : cftK1 (some (e, m1)) = if 4294967296 ≤ e then none else some ([e], m1) := rfl
 theorem cftK2_some : cftK2 cR N mp (some (r2, m2)) =
     if r2.headD 0 = 0 then none
@@ -124,7 +124,7 @@ theorem decCI_ind_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
     cases he; exact hcv
   | 4, h => simp only [Option.bind_eq_some_iff, Option.some.injEq] at h; obtain ⟨_, _, _, _, _, _, h⟩ := h; cases h
   | 5, h => simp only [Option.bind_eq_some_iff, Option.some.injEq] at h; obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, h⟩ := h; cases h
-  | 6, h => simp [Option.bind_eq_some_iff] at h
+  | 6, h => simp at h
   | (_ + 7), h => simp at h
 
 theorem decTM_lvls' {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
@@ -211,7 +211,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     obtain ⟨hf0, h⟩ := of_ite_none h
     obtain ⟨hk3, h⟩ := of_ite_none h
     obtain ⟨ci, hci⟩ := hdec hf0
-    have hfci : fe.find? M.ind = some ci := by rw [← hwiE, hfind, decFound, if_neg hf0, hci]
+    have hfci : fe.find? M.ind = some ci := by rw [← hwiE, hfind, decFound, ite_eq_right hf0, hci]
     obtain ⟨kk, hkk, hcase⟩ := decCI_ind_cases hci
     have hkr := erec_nat (w := r2.tail.headD 0) (c := 0) (by simpa using hkk) (by decide)
     rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr

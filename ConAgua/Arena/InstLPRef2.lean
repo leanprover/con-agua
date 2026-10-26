@@ -14,7 +14,6 @@ open ConRon.Arena ConLeche
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -37,7 +36,7 @@ theorem internLsNode_ext (v : LsNodeView) (a a' : AState) (i : LsIdx)
     obtain ⟨-, rfl⟩ := Prod.mk.inj (Except.ok.inj h)
     exact ⟨rfl, LsExt.refl _⟩
   · split at h <;> split at h <;> first
-      | (simp only [StateT.run_pure, pure_bind, StateT.bind, StateT.set, StateT.pure, StateT.run,
+      | (simp only [StateT.bind, StateT.pure, StateT.run,
           bind, Except.bind, pure, Except.pure] at h
          injection h with h
          obtain ⟨-, rfl⟩ := Prod.mk.inj h
@@ -45,7 +44,7 @@ theorem internLsNode_ext (v : LsNodeView) (a a' : AState) (i : LsIdx)
          rw [show ∀ st : EStore, (st.internLevels v).1.lss.ls = st.lss.ls from
            fun st => LsStore.intern_ls' _ v]
          exact LExt.refl _)
-      | simp [fail, throwThe, MonadExceptOf.throw, StateT.run, bind, StateT.bind, StateT.lift,
+      | simp [fail, throwThe, MonadExceptOf.throw, StateT.run, bind, StateT.lift,
           Except.bind] at h
 
 /-! ## The cache invariants across a store extension -/
@@ -151,7 +150,7 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
   · exact hlc₂.of_ls hls₃ (by rw [hca₃])
   · exact hlsc₂.ext hlsx₃ (by rw [hca₃])
   · rw [hca₃]; rw [hca₂]
-  · simp only [spTop]; rw [rdW_set64]; simp only [hctl', and_self, ↓reduceIte, true_and]
+  · simp only [spTop]; rw [rdW_set64]; simp only [hctl', and_self, ↓reduceIte]
     rw [hb]; rfl
   · intro i hi
     have hi' : i.toNat < b.toNat := by rw [hb]; exact UInt64.lt_iff_toNat_lt.mp hi

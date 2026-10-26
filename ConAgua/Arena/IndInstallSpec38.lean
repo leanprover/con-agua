@@ -17,7 +17,6 @@ Three `while`-loop helpers of `gen_rec_check_prep` (`RecGen.lean`), each loop a 
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -58,10 +57,10 @@ def gftW : Nat → Mem → Word → Word → Word → Word → Option Mem
 
 section arms
 variable (f : Nat) (m : Mem) (o l q j : Word)
-theorem gftW_exit (h : ¬ j < l) : gftW (f + 1) m o l q j = some m := by simp only [gftW]; rw [if_neg h]
+theorem gftW_exit (h : ¬ j < l) : gftW (f + 1) m o l q j = some m := by simp only [gftW]; rw [ite_eq_right h]
 theorem gftW_step (h : j < l) : gftW (f + 1) m o l q j =
     gftW f (m.set64 IW (q + j) (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + j) + 3))) o l q (j + 1) := by
-  simp only [gftW]; rw [if_pos h]
+  simp only [gftW]; rw [ite_eq_left h]
 end arms
 
 def gftK2 (q l : Word) : Option Mem → Option (List Word × Mem)
@@ -157,7 +156,7 @@ theorem gftW_ok (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantVal)
   refine ih _ m' (j + 1) h (hS.set_iw _ _) (hg.set_iw _ _ (by rw [hqj']; omega))
     (by rw [cnsTop_set]; exact ht) (hfr.trans (MFr.set_iw _ _ _)) ?_ ?_
   · exact UInt64.le_iff_toNat_le.mpr (by rw [hj1]; omega)
-  · rw [hj1, hdec, List.take_succ, List.getElem?_map, List.getElem?_eq_getElem (by omega)]
+  · rw [hj1, hdec, List.take_add_one, List.getElem?_map, List.getElem?_eq_getElem (by omega)]
     simp [hty]
 
 end rel
@@ -239,11 +238,11 @@ variable (p : Prog) (k : Nat) (m : Mem) (vis co cl mo ml q j : Word) (r : List W
   (rest : Mem → Option Mem)
 theorem gfcK_some : gfcK q j rest (some (r, m)) = rest (m.set64 IW (q + j) (r.headD 0)) := rfl
 theorem gfcW_exit (h : ¬ j < ml) : gfcW p (k + 1) m vis co cl mo ml q j = some m := by
-  simp only [gfcW]; rw [if_neg h]
+  simp only [gfcW]; rw [ite_eq_right h]
 theorem gfcW_step (h : j < ml) : gfcW p (k + 1) m vis co cl mo ml q j =
     gfcK q j (fun m' => gfcW p k m' vis co cl mo ml q (j + 1))
       (callW p k "class_former_ty" [vis, co, cl, rdW (m.arr64 IW) (mo + j)] m) := by
-  simp only [gfcW]; rw [if_pos h]
+  simp only [gfcW]; rw [ite_eq_left h]
 end arms
 
 def gfcF2 (q l : Word) : Option Mem → Option (List Word × Mem)
@@ -503,19 +502,19 @@ variable (p : Prog) (k : Nat) (m : Mem) (so sl co cl j c t : Word) (r : List Wor
   (rest : Word → Mem → Option (Word × Mem))
 theorem mk1K_some : mk1K rest (some (r, m)) = rest (r.headD 0) m := rfl
 theorem mk1W_exit (h : ¬ j < sl) : mk1W p (k + 1) m so sl j c = some (c, m) := by
-  simp only [mk1W]; rw [if_neg h]
+  simp only [mk1W]; rw [ite_eq_right h]
 theorem mk1W_step (h : j < sl) : mk1W p (k + 1) m so sl j c =
     mk1K (fun s m' => mk1W p k m' so sl (j + 1) (c + s))
       (callW p k "class_slot_is_minor" [rdW (m.arr64 IW) (so + j)] m) := by
-  simp only [mk1W]; rw [if_pos h]
+  simp only [mk1W]; rw [ite_eq_left h]
 theorem mk2W_exit (h : ¬ j < cl) : mk2W (k + 1) m co cl j t = some (.normal, t) := by
-  simp only [mk2W]; rw [if_neg h]
+  simp only [mk2W]; rw [ite_eq_right h]
 theorem mk2W_ovf (h : j < cl) (ho : t + rdW (m.arr64 IW) (rdW (m.arr64 IW) (co + j) + 1) < t) :
     mk2W (k + 1) m co cl j t = some (.ret [0], t) := by
-  simp only [mk2W]; rw [if_pos h, if_pos ho]
+  simp only [mk2W]; rw [ite_eq_left h, ite_eq_left ho]
 theorem mk2W_step (h : j < cl) (ho : ¬ t + rdW (m.arr64 IW) (rdW (m.arr64 IW) (co + j) + 1) < t) :
     mk2W (k + 1) m co cl j t = mk2W k m co cl (j + 1) (t + rdW (m.arr64 IW) (rdW (m.arr64 IW) (co + j) + 1)) := by
-  simp only [mk2W]; rw [if_pos h, if_neg ho]
+  simp only [mk2W]; rw [ite_eq_left h, ite_eq_right ho]
 end arms
 
 /-- After the constructor loop: its signal, else the comparison. -/
@@ -614,10 +613,10 @@ theorem mk1W_ok {p : Prog} (hm : p.lookup "class_slot_is_minor" = some classSlot
   have hcl : c.toNat ≤ j.toNat := by
     rw [hc]; exact Nat.le_trans (List.length_filter_le _ _) (by rw [List.length_take]; exact Nat.min_le_left _ _)
   refine ih m m' (j + 1) _ c' h hsl hb (UInt64.le_iff_toNat_le.mpr (by omega)) ?_
-  rw [hj1, List.take_succ, List.getElem?_eq_getElem (by omega), List.filter_append]
+  rw [hj1, List.take_add_one, List.getElem?_eq_getElem (by omega), List.filter_append]
   simp only [Option.toList_some, List.length_append]
   rw [← hc, hr1]
-  cases hmn : (slots[j.toNat]'(by omega)).isMinor <;> simp [List.filter_cons, hmn, UInt64.toNat_add] <;> omega
+  cases hmn : (slots[j.toNat]'(by omega)).isMinor <;> simp [hmn, UInt64.toNat_add] <;> omega
 
 /-- **The constructor loop sums the classes' constructors** (past `2^64`: the early `0`), and
 the comparison is the count's. -/
@@ -662,7 +661,7 @@ theorem mk2W_ok (m : Mem) (co cl : Word) (ctors : List (List ClassCtor)) (c : Wo
     rw [← e, this.1]; simp; omega
   generalize hw : rdW (m.arr64 IW) (rdW (m.arr64 IW) (co + j) + 1) = w at h hrl
   have hsum : ((ctors.take (j.toNat + 1)).map List.length).sum = t.toNat + l := by
-    rw [List.take_succ, List.getElem?_eq_getElem (by omega), List.map_append, List.sum_append, ← ht]
+    rw [List.take_add_one, List.getElem?_eq_getElem (by omega), List.map_append, List.sum_append, ← ht]
     simp [hll]
   have hle : ((ctors.take (j.toNat + 1)).map List.length).sum ≤ (ctors.map List.length).sum := by
     have e := congrArg (fun xs => (xs.map List.length).sum) (List.take_append_drop (j.toNat + 1) ctors)

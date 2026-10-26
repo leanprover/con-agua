@@ -62,7 +62,7 @@ theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [CREC, CSLOT, CLP, PINS])
+    (by simp [CREC, CSLOT, CLP])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -82,8 +82,8 @@ theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CREC + 256, CSLOT
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact StackKept.of_frame hf
 
-theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
-    (hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
+theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (_hf : f.toNat < 2 ^ 32)
+    (_hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
     w.toNat < 2 ^ 32 := by
   exact consInternM_lt constCS_wf hR hI
 
@@ -243,12 +243,12 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have hKA : KeptAll M M2 eb := hK1.trans hK2
   have hStA : StackKept m m3 := hSt1.trans hSt2
   by_cases g3 : r3.headD 0 >>> 28 ≠ 3
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     refine ⟨_, ⟨_, _, _, _, hrun1, hrun2, hga, fun _ => ?_, fun h => absurd rfl h⟩,
       ⟨M2, hS2, hKA, hStA⟩, e2.trans e1, fun h => absurd rfl h⟩
     exact fun ht => g3 ((decE_tag_eq _ hh3 3 (by decide)).mp ht)
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   have g3' : r3.headD 0 >>> 28 = 3 := by simpa using g3
   rcases c4 : callW p N "m2c_const_view" [r3.headD 0] m3 with _ | ⟨r4, m4⟩ <;>
     simp only [c4, reduceCtorEq] at hW
@@ -332,13 +332,13 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (fabScopeOk_refines' p hp.toIotaProg' hc (N' + 1) ⟨m, Locals.init []⟩ a dn vis fe M eb d fab major
       hS hfab hmaj) c1
   by_cases g1 : r1.headD 0 = 0
-  · rw [if_pos g1] at hW
+  · rw [ite_eq_left g1] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     rw [decBool_f_m2c g1] at hrun1
     refine CoreRef.of_run ?_ ⟨M1, hS1, hK1, hSt1⟩ (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     simp only [m2cCheckT, StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, ↓reduceIte]
     rfl
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   rw [decBool_t_m2c g1] at hrun1
   rcases c2 : callW p (N' + 1) "infer_io" [mode, vis, d, fab] m1 with _ | ⟨r2, m2⟩ <;>
     simp only [c2, reduceCtorEq] at hW
@@ -354,18 +354,18 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   have hKA : KeptAll M M3 eb := hK1.trans (hK2.trans hK3)
   have hStA : StackKept m m3 := hSt1.trans (hSt2.trans hSt3)
   by_cases g3 : r3.headD 0 = 0
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     rw [decBool_f_m2c g3] at hrun3
     refine CoreRef.of_run ?_ ⟨M3, hS3, hKA, hStA⟩ (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     simp only [m2cCheckT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte, hrun2, hrun3,
       Bool.false_eq_true]
     rfl
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   rw [decBool_t_m2c g3] at hrun3
   have hv := decMode_verified mode hm4
   by_cases g4 : mode &&& 1 = 0
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     have hv' : (decMode mode).verifiedChecks = true := by rw [hv]; simpa using g4
     rcases c4 : callW p (N' + 1) "proof_irrel" [mode, vis, d, fab, major] m3 with _ | ⟨r4, m4⟩ <;>
       simp only [c4, reduceCtorEq] at hW
@@ -373,7 +373,7 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       (hpi N' (hk.mono (Nat.le_succ _)) F (by omega) (by omega)
         ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d fab major hS3 hm4 hebm hfab hmaj) c4
     by_cases g5 : r4.headD 0 = 0
-    · rw [if_neg (by simpa using g5)] at hW
+    · rw [ite_eq_right (by simpa using g5)] at hW
       obtain ⟨hr, rfl⟩ := ret_eq hW
       rw [decBool_f_m2c g5] at hrun4
       refine CoreRef.of_run ?_ ⟨M4, hS4, hKA.trans hK4, hStA.trans hSt4⟩ (decH_of _ _ hr)
@@ -381,7 +381,7 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       simp only [m2cCheckT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte, hrun2, hrun3, hv',
         hrun4, Bool.false_eq_true]
       rfl
-    · rw [if_pos (by simpa using g5)] at hW
+    · rw [ite_eq_left (by simpa using g5)] at hW
       obtain ⟨hr, rfl⟩ := ret_eq hW
       rw [decBool_t_m2c g5] at hrun4
       refine CoreRef.of_run ?_ ⟨M4, hS4, hKA.trans hK4, hStA.trans hSt4⟩ (decH_of _ _ hr)
@@ -389,7 +389,7 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       simp only [m2cCheckT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte, hrun2, hrun3, hv',
         hrun4]
       rfl
-  · rw [if_neg g4] at hW
+  · rw [ite_eq_right g4] at hW
     have hv' : (decMode mode).verifiedChecks = false := by rw [hv]; simpa using g4
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine CoreRef.of_run ?_ ⟨M3, hS3, hKA, hStA⟩ (decH_of _ _ hr) (resH_of_m2c _ _ hr hfab)
@@ -476,13 +476,13 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
   have hS1 := hS.frame_stk hfr1 (by simp) (by simp)
   have hlen : xs.length = (r1.tail.headD 0).toNat := by simpa using hsp1.size
   by_cases g1 : r1.tail.headD 0 < cnP
-  · rw [if_pos g1] at hW
+  · rw [ite_eq_left g1] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     have : ¬ cnP.toNat ≤ xs.length := by rw [hlen]; exact Nat.not_le.mpr g1
     simp only [m2cK2T, StateT.run_bind, hargs, except_ok_bind, this, ↓reduceIte]
     rfl
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   have hle : cnP.toNat ≤ xs.length := by rw [hlen]; exact UInt64.not_lt.mp g1
   rcases c2 : callW p (N' + 1) "intern_const" [ctor, ust] m1 with _ | ⟨r2, m2⟩ <;>
     simp only [c2, reduceCtorEq] at hW
@@ -540,17 +540,17 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
     (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d major hm4 hebm hmaj m a M hS
     L m1 c1
   by_cases g0 : L.headD 0 = 0
-  · rw [if_pos g0] at hW
+  · rw [ite_eq_left g0] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩) (decH_of _ _ hr)
       (resH_of_m2c _ _ hr hmaj)
     unfold m2cKT; exact m2cPreT_none hpre g0 _
-  rw [if_neg g0] at hW
+  rw [ite_eq_right g0] at hW
   obtain ⟨htm, hT2, hus⟩ := hhw g0
   obtain ⟨l, hvls, hll, -⟩ := hpre.view g0
   have hpre' := m2cPreT_some hpre g0
   by_cases g2 : L.tail.tail.headD 0 ≠ T
-  · rw [if_pos g2] at hW
+  · rw [ite_eq_left g2] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩) (decH_of _ _ hr)
       (resH_of_m2c _ _ hr hmaj)
@@ -558,11 +558,11 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
       fun e => g2 ((decI_inj_m2c hT2 hT).mp e.1)
     unfold m2cKT; rw [hpre']
     simp only [StateT.run_bind, hvls, except_ok_bind]
-    rw [if_neg hc]; rfl
-  rw [if_neg g2] at hW
+    rw [ite_eq_right hc]; rfl
+  rw [ite_eq_right g2] at hW
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
   by_cases g3 : lpl ≠ L.tail.tail.tail.tail.headD 0
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩) (decH_of _ _ hr)
       (resH_of_m2c _ _ hr hmaj)
@@ -570,8 +570,8 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
       fun e => g3 (UInt64.toNat_inj.mp (e.2.trans hll))
     unfold m2cKT; rw [hpre']
     simp only [StateT.run_bind, hvls, except_ok_bind]
-    rw [if_neg hc]; rfl
-  rw [if_neg g3] at hW
+    rw [ite_eq_right hc]; rfl
+  rw [ite_eq_right g3] at hW
   have g3' : lpl = L.tail.tail.tail.tail.headD 0 := by simpa using g3
   rcases c2 : callW p (N' + 1) "m2c_k2" [mode, vis, d, ctor, cnP, L.tail.headD 0,
       L.tail.tail.tail.headD 0, major] m1 with _ | ⟨r2, m2⟩ <;> simp only [c2, reduceCtorEq] at hW
@@ -588,7 +588,7 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
     (by unfold decH; rw [hr]) (by unfold ResH at hr2 ⊢; rw [← hr]; exact hr2)
   unfold m2cKT; rw [hpre']
   simp only [StateT.run_bind, hvls, except_ok_bind]
-  rw [if_pos hc]; exact hrun2
+  rw [ite_eq_left hc]; exact hrun2
 
 end karm
 

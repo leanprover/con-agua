@@ -8,7 +8,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -17,7 +16,7 @@ theorem cvStore_eq (m : Mem) (d a b c e : Word) :
   simp only [cvStore, stP, size_set64, UInt64.add_zero]
   by_cases h0 : (m.arr64 EREC).size ≤ d.toNat <;> by_cases h1 : (m.arr64 EREC).size ≤ (d + 1).toNat <;>
     by_cases h2 : (m.arr64 EREC).size ≤ (d + 2).toNat <;>
-    by_cases h3 : (m.arr64 EREC).size ≤ (d + 3).toNat <;> simp only [h0, h1, h2, h3, true_or, or_true, false_or, or_false, ↓reduceIte]
+    by_cases h3 : (m.arr64 EREC).size ≤ (d + 3).toNat <;> simp only [h0, h1, h2, h3, or_true, or_false, ↓reduceIte]
 
 theorem decCV_mk {A : Array Word} {d : Nat} {nm qq l t : Word} {lps : List NIdx}
     (h1 : A[d + 1]? = some nm) (h2 : A[d + 2]? = some qq) (h3 : A[d + 3]? = some l)

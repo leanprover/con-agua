@@ -85,19 +85,19 @@ variable (m m1 m2 : Mem) (ctx i s v hd : Word) (z : Word) (r : List Word)
 theorem erK3_some : erK3 (some (v, m2)) = some (1, v, m2) := rfl
 theorem erK2_big (h : 4294967296 ≤ s) : erK2 i (some (s, m1)) = none := by simp [erK2, h]
 theorem erK2_ok (h : ¬ 4294967296 ≤ s) : erK2 i (some (s, m1)) = erK3 (fvinternW m1 i s) := by
-  simp only [erK2]; rw [if_neg h]
+  simp only [erK2]; rw [ite_eq_right h]
 theorem erK1_some : erK1 m i (some z) = erK2 i (sointernW m z) := rfl
 theorem rtK2_some : rtK2 (some (r, m2)) = some (1, r.headD 0, m2) := rfl
 theorem rtK1_big (h : 4294967296 ≤ hd) : rtK1 ctx (some (hd, m1)) = none := by simp [rtK1, h]
 theorem rtK1_ok (h : ¬ 4294967296 ≤ hd) : rtK1 ctx (some (hd, m1)) =
     rtK2 (mknF m1 [hd, rdW (m1.arr64 IW) (ctx + 7), rdW (m1.arr64 IW) (ctx + 8)]) := by
-  simp only [rtK1]; rw [if_neg h]
+  simp only [rtK1]; rw [ite_eq_right h]
 theorem rxRootW_in (h : rdW (m.arr64 IW) (ctx + 4) ≤ i ∧ i < hiW m ctx 0) : rxRootW m ctx i =
     rtK1 ctx (ceinternW m (getDW m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1))
       (i - rdW (m.arr64 IW) (ctx + 4)) 0) (rdW (m.arr64 IW) (ctx + 10))) := by
-  simp only [rxRootW]; rw [if_pos h]
+  simp only [rxRootW]; rw [ite_eq_left h]
 theorem rxRootW_out (h : ¬ (rdW (m.arr64 IW) (ctx + 4) ≤ i ∧ i < hiW m ctx 0)) :
-    rxRootW m ctx i = some (0, 0, m) := by simp only [rxRootW]; rw [if_neg h]
+    rxRootW m ctx i = some (0, 0, m) := by simp only [rxRootW]; rw [ite_eq_right h]
 end arms
 attribute [ind_grind] erK3_some erK2_big erK2_ok erK1_some rtK2_some rtK1_big rtK1_ok rxRootW_in
   rxRootW_out
@@ -219,10 +219,10 @@ def rxNodeW : Nat → Mem → Word → Word → Word → Word → Word → Word 
     if g = 4 ∨ g = 5 ∨ g = 6 then rxB1 n f f1 g x y (rxGoW n m f f1 x)
     else if g = 7 then rxL1 n f f1 x y z (rxGoW n m f f1 x)
     else rxP1 x y (rxGoW n m f f1 z)
-def rxB1 (n : Nat) (f f1 g x y : Word) : Option (Word × Mem) → Option (Word × Mem)
+def rxB1 (n : Nat) (f f1 g _x y : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (a2, m1) => rxB2 g a2 (rxGoW n m1 f f1 y)
-def rxL1 (n : Nat) (f f1 x y z : Word) : Option (Word × Mem) → Option (Word × Mem)
+def rxL1 (n : Nat) (f f1 _x y z : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (a2, m1) => rxL2 n f f1 z a2 (rxGoW n m1 f f1 y)
 def rxL2 (n : Nat) (f f1 z a2 : Word) : Option (Word × Mem) → Option (Word × Mem)
@@ -260,10 +260,10 @@ theorem rxImgW_root (h0 : nn = 0) : rxImgW (n + 1) m ctx po pl nn i = rxRootW m 
   simp [rxImgW, h0]
 theorem rxImgW_frame (h0 : ¬ nn = 0) (hh : i = hiW m ctx (nn - 1)) :
     rxImgW (n + 1) m ctx po pl nn i = rxFrameW n m ctx po pl (nn - 1) i := by
-  simp only [rxImgW]; rw [if_neg h0, if_pos hh]
+  simp only [rxImgW]; rw [ite_eq_right h0, ite_eq_left hh]
 theorem rxImgW_next (h0 : ¬ nn = 0) (hh : ¬ i = hiW m ctx (nn - 1)) :
     rxImgW (n + 1) m ctx po pl nn i = rxImgW n m ctx po pl (nn - 1) i := by
-  simp only [rxImgW]; rw [if_neg h0, if_neg hh]
+  simp only [rxImgW]; rw [ite_eq_right h0, ite_eq_right hh]
 theorem rxFrameW_in (hn : n1 < pl) : rxFrameW (n + 1) m ctx po pl n1 i =
     pfrK1 n ctx po pl n1 (some (rdW (m.arr64 IW) (po + n1), m)) := by simp [rxFrameW, hn]
 theorem rxFrameW_def (hn : ¬ n1 < pl) : rxFrameW (n + 1) m ctx po pl n1 i =
@@ -278,7 +278,7 @@ theorem pfrK3_some : pfrK3 kp (some (q, l, m3)) =
     frK4 q l (ceinternW m3 (rdW (m3.arr64 IW) kp) (rdW (m3.arr64 IW) (kp + 1))) := rfl
 theorem frK4_big (hb : 4294967296 ≤ hd) : frK4 q l (some (hd, m4)) = none := by simp [frK4, hb]
 theorem frK4_ok (hb : ¬ 4294967296 ≤ hd) : frK4 q l (some (hd, m4)) = frK5 (mknF m4 [hd, q, l]) := by
-  simp only [frK4]; rw [if_neg hb]
+  simp only [frK4]; rw [ite_eq_right hb]
 theorem frK5_some : frK5 (some (rr, m5)) = some (1, rr.headD 0, m5) := rfl
 theorem rxDsW_succ : rxDsW (n + 1) m f o l = dsA n f o l (allocW m l) := by simp [rxDsW]
 theorem dsA_some : dsA n f o l (some (q, m1)) = dsB q l (rxDsGoW n m1 f o l q 0) := by rw [dsA]
@@ -292,40 +292,40 @@ theorem rxW_big (hb : 4294967296 ≤ rdW (m.arr64 CTL) 218 + 1) : rxW (n + 1) m 
   simp [rxW, hb]
 theorem rxW_ok (hb : ¬ 4294967296 ≤ rdW (m.arr64 CTL) 218 + 1) :
     rxW (n + 1) m f e = rxK1 (rdW (m.arr64 CTL) 219) (rxGoW n (benterG 218 m) f CWF e) := by
-  simp only [rxW]; rw [if_neg hb]
+  simp only [rxW]; rw [ite_eq_right hb]
 theorem rxK1_big (hb : 4294967296 ≤ r) : rxK1 s (some (r, m1)) = none := by simp [rxK1, hb]
 theorem rxK1_ok (hb : ¬ 4294967296 ≤ r) : rxK1 s (some (r, m1)) = some (r, m1.set64 CTL 219 s) := by
-  simp only [rxK1]; rw [if_neg hb]
+  simp only [rxK1]; rw [ite_eq_right hb]
 theorem rxGoW_abort (hf : fu = 0) : rxGoW (n + 1) m f fu h = none := by simp [rxGoW, hf]
 theorem rxGoW_view (hf : fu ≠ 0) : rxGoW (n + 1) m f fu h = rxG1 n m f fu h (eViewW m h) := by
   simp [rxGoW, hf]
 theorem rxG1_abort (hv : v = []) : rxG1 n m f fu h v = none := by simp [rxG1, hv]
 theorem rxG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8 ∨ v.headD 0 = 3) :
-    rxG1 n m f fu h v = some (h, m) := by simp only [rxG1]; rw [if_neg hv, if_pos hg]
+    rxG1 n m f fu h v = some (h, m) := by simp only [rxG1]; rw [ite_eq_right hv, ite_eq_left hg]
 theorem rxG1_fvar (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8 ∨ v.headD 0 = 3))
     (h1 : v.headD 0 = 1) : rxG1 n m f fu h v = rxH h (rxMapW n m f (v.tail.headD 0)) := by
-  simp only [rxG1]; rw [if_neg hv, if_neg hg, if_pos h1]
+  simp only [rxG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_left h1]
 theorem rxG1_node (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8 ∨ v.headD 0 = 3))
     (h1 : ¬ v.headD 0 = 1) :
     rxG1 n m f fu h v = rxG3 n m f fu h v (mfindG rfSch m h (rdW (m.arr64 CTL) 219 <<< 32)) := by
-  simp only [rxG1]; rw [if_neg hv, if_neg hg, if_neg h1]
+  simp only [rxG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_right h1]
 theorem rxH_some : rxH h (some (ok, r, m1)) = some ((if ok ≠ 0 then r else h), m1) := rfl
 theorem rxG3_abort (hr : fr = []) : rxG3 n m f fu h v fr = none := by simp [rxG3, hr]
 theorem rxG3_hit (hr : fr ≠ []) (hh : fr.headD 0 ≠ 0) :
     rxG3 n m f fu h v fr = some (rdW (m.arr64 RFM) (fr.tail.headD 0 * 4 + 3), m) := by
-  simp only [rxG3]; rw [if_neg hr, if_pos hh]
+  simp only [rxG3]; rw [ite_eq_right hr, ite_eq_left hh]
 theorem rxG3_miss (hr : fr ≠ []) (hh : ¬ fr.headD 0 ≠ 0) :
     rxG3 n m f fu h v fr = rxG4 h (rxNodeW n m f (fu - 1) (v.headD 0) (v.tail.headD 0)
       (v.tail.tail.headD 0) (v.tail.tail.tail.headD 0)) := by
-  simp only [rxG3]; rw [if_neg hr, if_neg hh]
+  simp only [rxG3]; rw [ite_eq_right hr, ite_eq_right hh]
 theorem rxG4_some : rxG4 h (some (r, m1)) = rxG5 r (msetG rfSch m1 h (rdW (m1.arr64 CTL) 219 <<< 32) r) := rfl
 theorem rxG5_some : rxG5 r (some m2) = some (r, m2) := rfl
 theorem rxNodeW_bin (hg : g = 4 ∨ g = 5 ∨ g = 6) : rxNodeW (n + 1) m f f1 g x y z =
-    rxB1 n f f1 g x y (rxGoW n m f f1 x) := by simp only [rxNodeW]; rw [if_pos hg]
+    rxB1 n f f1 g x y (rxGoW n m f f1 x) := by simp only [rxNodeW]; rw [ite_eq_left hg]
 theorem rxNodeW_let (hg : ¬ (g = 4 ∨ g = 5 ∨ g = 6)) (h7 : g = 7) : rxNodeW (n + 1) m f f1 g x y z =
-    rxL1 n f f1 x y z (rxGoW n m f f1 x) := by simp only [rxNodeW]; rw [if_neg hg, if_pos h7]
+    rxL1 n f f1 x y z (rxGoW n m f f1 x) := by simp only [rxNodeW]; rw [ite_eq_right hg, ite_eq_left h7]
 theorem rxNodeW_proj (hg : ¬ (g = 4 ∨ g = 5 ∨ g = 6)) (h7 : ¬ g = 7) : rxNodeW (n + 1) m f f1 g x y z =
-    rxP1 x y (rxGoW n m f f1 z) := by simp only [rxNodeW]; rw [if_neg hg, if_neg h7]
+    rxP1 x y (rxGoW n m f f1 z) := by simp only [rxNodeW]; rw [ite_eq_right hg, ite_eq_right h7]
 theorem rxB1_some : rxB1 n f f1 g x y (some (a2, m1)) = rxB2 g a2 (rxGoW n m1 f f1 y) := by rw [rxB1]
 theorem rxB2_some : rxB2 g a2 (some (x2, m2)) = rpMkW m2 g a2 x2 0 0 0 := rfl
 theorem rxL1_some : rxL1 n f f1 x y z (some (a2, m1)) = rxL2 n f f1 z a2 (rxGoW n m1 f f1 y) := by rw [rxL1]
@@ -582,7 +582,7 @@ theorem RfInv.frame {m m' : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Wo
       hgG, hGl, by rw [hfr.2.2.1]; exact hsz⟩, hF⟩
 
 theorem ceinternW_low {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r, m')) : LowFr m m' := by
-  exact ⟨_, _, (ceinternW_frame (hI := h)), by simp [constSch, CREC, CSLOT, CLP], by simp [constSch]⟩
+  exact ⟨_, _, (ceinternW_frame (hI := h)), by simp [CREC, CSLOT, CLP], by simp⟩
 
 theorem posRecW_fr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m')) : RfFr m m' := by
   simp only [posRecW] at h
@@ -980,13 +980,13 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
   by_cases hin2 : rdW (m.arr64 IW) (ctx + 4) ≤ i ∧ i < hiW m ctx 0
   · have h1 : c.nP ≤ i.toNat := by rw [← hnP]; exact UInt64.le_iff_toNat_le.mp hin2.1
     have h2 : i.toNat < c.nP + c.names.length := by rw [← hhi]; exact UInt64.lt_iff_toNat_lt.mp hin2.2
-    rw [if_pos (by simp only [Bool.and_eq_true, decide_eq_true_eq, ConRon.Arena.NestCtx.hiAt, Nat.add_zero]; exact ⟨h1, decide_eq_true h2⟩)]
+    rw [ite_eq_left (by simp only [Bool.and_eq_true, decide_eq_true_eq, ConRon.Arena.NestCtx.hiAt, Nat.add_zero]; exact ⟨h1, decide_eq_true h2⟩)]
     rw [rxRootW_in m ctx i hin2] at h
     have hsub : (i - rdW (m.arr64 IW) (ctx + 4)).toNat = i.toNat - c.nP := by
       rw [UInt64.toNat_sub_of_le _ _ hin2.1, hnP]
     have hgd : getDW m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (i - rdW (m.arr64 IW) (ctx + 4)) 0 =
         rdW (m.arr64 IW) (rdW (m.arr64 IW) ctx + (i - rdW (m.arr64 IW) (ctx + 4))) := by
-      simp only [getDW]; rw [if_neg (fun e => by have := UInt64.le_iff_toNat_le.mp e; omega)]
+      simp only [getDW]; rw [ite_eq_right (fun e => by have := UInt64.le_iff_toNat_le.mp e; omega)]
     rw [hgd] at h
     obtain ⟨hnmH, hnmd⟩ := rd_iwH (p := rdW (m.arr64 IW) ctx) (i := i - rdW (m.arr64 IW) (ctx + 4))
       (by rw [hsub]; exact decHL_getI hn _ (by omega)) (by rw [hsub]; have := hn' (i.toNat - c.nP) (by omega); omega)
@@ -1014,7 +1014,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
     obtain ⟨rfl, rfl, rfl⟩ := h
     have : ¬ (c.nP ≤ i.toNat ∧ i.toNat < c.nP + c.names.length) := fun ⟨e1, e2⟩ => hin2
       ⟨UInt64.le_iff_toNat_le.mpr (by rw [hnP]; exact e1), UInt64.lt_iff_toNat_lt.mpr (by rw [hhi]; exact e2)⟩
-    rw [if_neg (by simp only [Bool.and_eq_true, decide_eq_true_eq, ConRon.Arena.NestCtx.hiAt, Nat.add_zero]; exact fun ⟨e1, e2⟩ => this ⟨e1, of_decide_eq_true e2⟩)]
+    rw [ite_eq_right (by simp only [Bool.and_eq_true, decide_eq_true_eq, ConRon.Arena.NestCtx.hiAt, Nat.add_zero]; exact fun ⟨e1, e2⟩ => this ⟨e1, of_decide_eq_true e2⟩)]
     exact ⟨none, a, rfl, rfl, hR.post hS (IWGrow.refl _) (RfFr.refl _)⟩
 
 theorem imgOK_step (n : Nat) (hImg : ImgOK dn fe vis n) (hFr : FrOK dn fe vis n) : ImgOK dn fe vis (n + 1) := by
@@ -1037,13 +1037,13 @@ theorem imgOK_step (n : Nat) (hImg : ImgOK dn fe vis n) (hFr : FrOK dn fe vis n)
   · rw [rxImgW_frame (h0 := h0) (hh := hh)] at h
     have : (i.toNat == c.hiAt n1) = true := by
       rw [hh, hhi, hn1']; simp
-    rw [if_pos this]
+    rw [ite_eq_left this]
     have := hFr m m' a ctx po pl (nn - 1) i c prog r0 r1 M G g h hS hc hin hs (by rw [hn1]; omega) hR
     rwa [hn1, hn1'] at this
   · rw [rxImgW_next (h0 := h0) (hh := hh)] at h
     have : ¬ (i.toNat == c.hiAt n1) = true := by
       intro e; apply hh; apply UInt64.toNat_inj.mp; rw [hhi, hn1', Nat.add_sub_cancel]; simp at e; exact e
-    rw [if_neg this]
+    rw [ite_eq_right this]
     have := hImg m m' a ctx po pl (nn - 1) i c prog r0 r1 M G g h hS hc hin hs (by rw [hn1]; omega) hR
     rwa [hn1, hn1'] at this
 

@@ -14,7 +14,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -380,7 +379,7 @@ end slices
 theorem erecP_getElem (m : Mem) (i : Nat) (hi : i < erecTop m) (hs : erecTop m ≤ (m.arr64 EREC).size) :
     (erecP m)[i]? = (m.arr64 EREC)[i]? := by
   simp only [erecP, Array.getElem?_extract]
-  rw [if_pos (by simp; omega)]; simp
+  rw [ite_eq_left (by simp; omega)]; simp
 
 theorem erecP_size_le (m : Mem) : (erecP m).size ≤ erecTop m := by
   simp only [erecP, Array.size_extract]; omega
@@ -453,7 +452,7 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
     have e2 : rdW (m.arr64 EREC) (s + 2) = wl := by rw [rdW, hs2, raw hwl]; rfl
     have e3 : rdW (m.arr64 EREC) (s + 3) = w3 := by rw [rdW, hs3, raw hw3]; rfl
     simp only [cvRdW, hs1, hs2, hs3, e0, e1, e2, e3]
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
   rw [cvW_eq (h := by rw [hrd]; simp), hrd] at hW
   simp only [List.headD_cons, List.tail_cons] at hW
   cases hca : callW p n "promote_n" [f, w0] m with
@@ -591,7 +590,7 @@ theorem vgStore_facts {m m' : Mem} {d k nm q l t x : Word}
   refine ⟨hlt, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals (try intros)
   all_goals (try simp only [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
-    Array.getElem?_setIfInBounds, size_set64, Array.size_setIfInBounds, e1, e2, e3, e4, e5])
+    Array.getElem?_setIfInBounds, Array.size_setIfInBounds, e1, e2, e3, e4, e5])
   all_goals (try simp [b0, b1, b2, b3, b4, hlt])
   all_goals (try omega)
   · rename_i i hi
@@ -667,7 +666,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   have hg1 : (g + 1).toNat = g.toNat + 1 := toNat_add1 g (by omega)
   have hrd : vgRdW m₁ g = [kw, jw] := by
     simp only [vgRdW, hE₁, hg5']
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
     simp only [rdW, hg5', erecP_get hkw, erecP_get hjw]; rfl
   rw [vgK₀_some (h := by rw [hrd]; simp), hrd] at hW
   simp only [List.headD_cons, List.tail_cons] at hW
@@ -721,7 +720,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have ht₄ : erecTop (m₃.set64 CTL 129 (dr.headD 0 + 6)) = erecTop m₃ + 6 := by
     simp only [erecTop]
-    rw [rdW_set64, if_pos ⟨rfl, rfl, by simpa using hctl⟩, hd6, hdv]; rfl
+    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by simpa using hctl⟩, hd6, hdv]; rfl
   have ht₅ : erecTop m₅ = erecTop m₃ + 6 := by
     simp only [erecTop] at ht₄ ⊢; rw [hf₅.2.1 129 (by simp)]; exact ht₄
   have hts₅ : erecTop m₅ ≤ (m₅.arr64 EREC).size := by rw [ht₅, hsz₅, hE₄]; omega
@@ -757,8 +756,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
     have r5 := rd 5 (by decide); rw [w5] at r5
     have hsl₅ := (hg₂₅.ext).hslice? hsl
     simp only [decVG, decCV, hlist?, nat?, hd?, r0, r1, r2, r3, r4, r5, Option.map_some,
-      Option.bind_eq_bind, Option.bind_some, hkd, hpw0.1, hpw3.1, hpw₃.1, ↓reduceIte,
-      UInt64.toNat_ofNat', show (dr.headD 0).toNat + 1 + 1 = (dr.headD 0).toNat + 2 from rfl,
+      Option.bind_eq_bind, Option.bind_some, hkd, hpw0.1, hpw3.1, hpw₃.1, ↓reduceIte, show (dr.headD 0).toNat + 1 + 1 = (dr.headD 0).toNat + 2 from rfl,
       show (dr.headD 0).toNat + 1 + 3 = (dr.headD 0).toNat + 4 from rfl,
       show (dr.headD 0).toNat + 2 + 1 = (dr.headD 0).toNat + 3 from rfl, Option.pure_def]
     rw [hsl₅]

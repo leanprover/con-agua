@@ -63,7 +63,7 @@ variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 
 include h64 hsize
 
 /-- A name or level line: the fields `f` against the record `r`, applied. -/
-theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) (st : StateD)
+theorem lineRecW_refines (m m' : Mem) (_hm : m.arr8 IN = b.data) (a₀ : AState) (st : StateD)
     (hR : ArenaD m a₀) (hD : StateDR m st) (hmode : ModeOK m) (f : Fld) (r : LineRec)
     (hRec : f.pl ≠ 0 → RecR b r f) (h : lineRecW b.data m f.pl f.idx f.a f.c f.d = some m') :
     ∃ st', AM.ok (applyLine st r) a₀ ∧ AM.res (applyLine st r) a₀ = .inl st' ∧

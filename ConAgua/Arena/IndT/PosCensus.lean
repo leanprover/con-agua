@@ -8,7 +8,6 @@ import ConAgua.Arena.IndT.PosAll
 op (`nbSpec_all`: L ⊑ the word models; `nbOKC_all`: the models ⊑ the twin).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

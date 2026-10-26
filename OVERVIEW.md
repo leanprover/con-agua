@@ -437,7 +437,7 @@ twin's failure condition. Functions whose call closure aborts only with class
 
 ### 4.5 The composition
 
-[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L177-L187)
+[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L176-L186)
 is the driver on the machine: `ca_start` calls entry 1, whose setup stub builds
 the layout and enters the trampoline, so `compile_correct` gives one L run of
 `check` in mode 3; if that returns `2^63 + k`, it calls entry 2 in place, a
@@ -486,7 +486,7 @@ pending groups. `check` itself only dispatches on the global `MODE`, which the
 entry stubs write (§9); a zero region leaves it `0`, and then `check` aborts.
 
 A function closer to the data, which decodes a level-list handle
-([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L287-L295),
+([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L286-L294),
 [the twin's `viewLs`](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Monad.lean#L491-L497)):
 
 ```
@@ -688,17 +688,17 @@ Where L's representation differs from con-ron's beyond layout, it is listed in
 Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
 
 1. **The L code**, with its citation and census tag
-   ([`lvlEqL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L249-L259)).
+   ([`lvlEqL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L248-L258)).
 2. **A word model and a spec.** The model `lvlEqW` is the L code as a Lean
    function on `Mem` and words, `none` where L aborts
-   ([`lvlEqW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L244-L247));
+   ([`lvlEqW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L243-L246));
    the spec says a run of the function is the model, proved by
    `sym … => vcgen […] <;> finish`
-   ([`lvlEq_spec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L261-L273)).
+   ([`lvlEq_spec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L260-L272)).
 3. **The refinement**: under the arena relation, a model that returns `z`
    gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
    and the relation holds again
-   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L293-L299),
+   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L291-L297),
    against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L132-L149)).
 
 The split keeps `vcgen` away from the twin's monad and the twin's proofs away
@@ -715,7 +715,7 @@ function with many paths is proved by plain `vcgen` followed by `simp_all` or
 
 The relations nest by scope: one per store (`LitR`, `AppR`, …), the arena
 relation over all stores, the pool and the memos
-([`ArenaR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ArenaRel.lean#L273-L296)),
+([`ArenaR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ArenaRel.lean#L272-L295)),
 the core relation with the caches, the stage relation of the declaration
 checks, the loop relation of the fold. A refinement is stated at the smallest
 relation that suffices and lifted.
@@ -890,7 +890,7 @@ place, on phase A's own arrays, so it needs the setup stub's region plus 16
 bytes, where it keeps its return address and the caller's `r15`
 ([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L162-L171)).
 Its machine-level theorem
-([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L177-L187))
+([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L176-L186))
 says that an accept means the two L runs accepted, and an error report
 (`rdx = 2`) that one of them failed with the code in `rax`;
 [`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L25-L34)

@@ -248,15 +248,15 @@ theorem romNameW_dec : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
     simp only [hu, not_true_eq_false, ↓reduceIte] at hW
     obtain ⟨hl8, hq8, hdq⟩ := u64_dec rom hr q₁ hu
     by_cases h1 : romB rom pos = 1
-    · rw [if_pos h1] at hW
+    · rw [ite_eq_left h1] at hW
       obtain ⟨hp, hd⟩ := romB_tag rom pos 1 (by omega) h1
       have hp1 := pos_succ rom hr pos hp
       have hrest1 : rest₁ = rom.drop q₁.toNat := by
         rw [hq1, hp1, ← List.drop_drop, ← hp1, hd1, List.drop_left]
       simp only [romPutW] at hW
       by_cases hok : romPutOK rom m₁ (q₁ + 8) (u64W rom q₁)
-      case neg => rw [if_neg hok] at hW; simp [nmStrK] at hW
-      rw [if_pos hok] at hW
+      case neg => rw [ite_eq_right hok] at hW; simp [nmStrK] at hW
+      rw [ite_eq_left hok] at hW
       have hq := nmStrK_inv hW
       obtain ⟨hin, hasc⟩ := romPutOK_bytes rom hr m₁ _ _ hok
       rw [hq8] at hin hasc
@@ -276,10 +276,10 @@ theorem romNameW_dec : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
         simp only [encName, strB, List.length_cons, List.length_append, hsz, hbl, u64B,
           List.length_nil]
         rw [hdat, hbl, hq1, hp1]; simp; omega
-    · rw [if_neg h1] at hW
+    · rw [ite_eq_right h1] at hW
       by_cases h2 : romB rom pos = 2
-      case neg => rw [if_neg h2] at hW; simp at hW
-      rw [if_pos h2] at hW
+      case neg => rw [ite_eq_right h2] at hW; simp at hW
+      rw [ite_eq_left h2] at hW
       obtain ⟨hp, hd⟩ := romB_tag rom pos 2 (by omega) h2
       have hp1 := pos_succ rom hr pos hp
       have hrest1 : rest₁ = rom.drop q₁.toNat := by

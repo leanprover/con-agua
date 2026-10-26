@@ -15,7 +15,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -118,15 +117,15 @@ theorem peW_pers (hf : f ≠ 0) (ht : tierW h = 0) : peW p n m f h = some (h, m)
 theorem peW_hit (hf : f ≠ 0) (ht : tierW h ≠ 0) (h0 : mfindG peSch m h 0 ≠ [])
     (h1 : (mfindG peSch m h 0).headD 0 ≠ 0) :
     peW p n m f h = some (mvG peSch m ((mfindG peSch m h 0).tail.headD 0), m) := by
-  unfold peW; rw [if_neg hf, if_neg ht, if_neg h0, if_pos h1]
+  unfold peW; rw [ite_eq_right hf, ite_eq_right ht, ite_eq_right h0, ite_eq_left h1]
 
 theorem peW_miss (hf : f ≠ 0) (ht : tierW h ≠ 0) (h0 : mfindG peSch m h 0 ≠ [])
     (h1 : (mfindG peSch m h 0).headD 0 = 0) :
     peW p n m f h = memoK peSch h (callW p n "pe_arm" [f - 1, h] m) := by
-  unfold peW; rw [if_neg hf, if_neg ht, if_neg h0, if_neg (fun h2 => h2 h1)]
+  unfold peW; rw [ite_eq_right hf, ite_eq_right ht, ite_eq_right h0, ite_eq_right (fun h2 => h2 h1)]
 
 theorem peArmW_eq (hne : eViewW m h ≠ []) : peArmW p n m f h = peK p n m f h (eViewW m h) := by
-  unfold peArmW; rw [if_neg hne]
+  unfold peArmW; rw [ite_eq_right hne]
 
 theorem pe2K_some :
     pe2K p n g₂ g f b (some (q, m₁)) = pl2K.pl2K₂ p n g (q.headD 0) (callW p n g₂ [f, b] m₁) := rfl

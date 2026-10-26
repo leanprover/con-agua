@@ -13,7 +13,6 @@ callee keeping its memo well formed (`tabSimSpg`), then one member (`ctoW_sim`) 
 well formed in the memory at hand; `struct_proj_guards` needs it) — returned for the memory after.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

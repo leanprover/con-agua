@@ -27,7 +27,6 @@ store); the quotient record's `denoteCV` from the record's denotation (`TwinFold
 
 open ConRon.Arena
 
-set_option linter.deprecated false
 
 namespace L.Arena
 

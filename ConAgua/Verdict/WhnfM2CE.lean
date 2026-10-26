@@ -14,9 +14,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
-set_option linter.unusedSectionVars false
 
 namespace L.Arena
 
@@ -175,8 +172,8 @@ theorem m2cCheckE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF 
     (fabScopeOk_refines' p hp.toIotaProg' hc (N' + 1) ⟨m, Locals.init []⟩ a dn vis fe M eb d fab major
       hS hfab hmaj) (callW_of_callE c1)
   by_cases g1 : r1.headD 0 = 0
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
   rw [decBool_t_m2c g1] at hrun1
   cases c2 : callE p (N' + 1) "infer_io" [mode, vis, d, fab] m1 with
   | error e2 =>
@@ -206,19 +203,19 @@ theorem m2cCheckE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF 
     ((hk _ (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d tmaj _ hnF hn62
       ⟨hS2, hm4, hebm⟩ htm hr2) (callW_of_callE c3)
   by_cases g3 : r3.headD 0 = 0
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  · rw [ite_eq_left g3] at hW; cases hW
+  rw [ite_eq_right g3] at hW
   rw [decBool_t_m2c g3] at hrun3
   have hv := decMode_verified mode hm4
   by_cases g4 : mode &&& 1 = 0
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     have hv' : (decMode mode).verifiedChecks = true := by rw [hv]; simpa using g4
     have hW' := err_of_k (by intro q e; simp only [m2cCheckE.k_proof_irrel, m2cCheckE.j1]; split <;> simp)
       (fun _ => rfl) hW
     exact ErrClaim.of_run_err (fun ce h' => check_err_pi _ _ _ _ _ _ _ _ _ _ _ _ hv' hrun1 hrun2 hrun3 ce h')
       (CoreSpecE.of_callE (hPI N' (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) F (by omega)
         (by omega) ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d fab major hS3 hm4 hebm hfab hmaj) hW')
-  · rw [if_neg g4] at hW
+  · rw [ite_eq_right g4] at hW
     simp only [m2cCheckE.j1] at hW
     split at hW <;> cases hW
 
@@ -280,8 +277,8 @@ theorem m2cK2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N
   have hS1 := hS.frame_stk hfr1 (by simp) (by simp)
   have hlen : xs.length = (r1.tail.headD 0).toNat := by simpa using hsp1.size
   by_cases g1 : r1.tail.headD 0 < cnP
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
   have hle : cnP.toNat ≤ xs.length := by rw [hlen]; exact UInt64.not_lt.mp g1
   cases c2 : callE p (N' + 1) "intern_const" [ctor, ust] m1 with
   | error e2 =>
@@ -324,7 +321,7 @@ include hE in
 theorem m2cKE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode d T major ctor lpl cnP : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
-    (hT : HW T) (hmaj : HW major) (hctor : HW ctor) (m : Mem) (a : AState)
+    (_hT : HW T) (hmaj : HW major) (hctor : HW ctor) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (er : Err)
     (h : callE p (N + 1) "m2c_k" [mode, vis, d, T, major, ctor, lpl, cnP] m = .error er) :
     ErrClaim (m2cKT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
@@ -353,18 +350,18 @@ theorem m2cKE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N 
     (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d major hm4 hebm hmaj m a M hS
     L m1 (callW_of_callE c1)
   by_cases g0 : L.headD 0 = 0
-  · rw [if_pos g0] at hW; cases hW
-  rw [if_neg g0] at hW
+  · rw [ite_eq_left g0] at hW; cases hW
+  rw [ite_eq_right g0] at hW
   obtain ⟨htm, hT2, hus⟩ := hhw g0
   obtain ⟨l, hvls, hll, -⟩ := hpre.view g0
   have hpre' := m2cPreT_some hpre g0
   by_cases g2 : L.tail.tail.headD 0 ≠ T
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
   by_cases g3 : lpl ≠ L.tail.tail.tail.tail.headD 0
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  · rw [ite_eq_left g3] at hW; cases hW
+  rw [ite_eq_right g3] at hW
   have g3' : lpl = L.tail.tail.tail.tail.headD 0 := by simpa using g3
   have hW' := err_of_k (by intro q e; simp [m2cKE.k_m2c_k2]) (fun _ => rfl) hW
   have hc' : ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=
@@ -376,7 +373,7 @@ theorem m2cKE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N 
         exact hS1.den.constLs _ _ _ (hp5 g0).2.2.1) er hW')
   unfold m2cKT; rw [hpre']
   simp only [StateT.run_bind, hvls, except_ok_bind]
-  rw [if_pos hc']; exact h'
+  rw [ite_eq_left hc']; exact h'
 
 end karm
 
@@ -478,7 +475,7 @@ theorem m2cAnd2HE_spec (p : Prog) (hp : p.lookup "m2c_and2" = some m2cAnd2L) (n 
     callE_spec p n "m2c_check"] <;>
   simp_all [-UInt64.toNat_add, m2cAnd2HE, and2Push, Mem.len64, SPN, CTL, BinOp.eval, Cmp.eval, LocEq,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+    Locals.init_cons_succ]
 
 section andErr
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
@@ -506,7 +503,7 @@ include hp hc hpi hnv hPI
 theorem m2cAnd2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode d ctor T tmaj to tn ust major : Word) (hm4 : mode < 4)
-    (hebm : eb = (mode >>> 1) &&& 1) (hctor : HW ctor) (hT : HW T) (htm : HW tmaj) (hus : HW ust)
+    (hebm : eb = (mode >>> 1) &&& 1) (hctor : HW ctor) (_hT : HW T) (htm : HW tmaj) (hus : HW ust)
     (hmaj : HW major) (targs : List EIdx) (m : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m a vis fe M eb) (hsp : SpineR m to tn targs.toArray) (htop : to + tn = spTop m)
     (hvus : ∃ x c, a.store.view x = some (.const c (decI ust))) (er : Err)
@@ -639,8 +636,8 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
   rw [hm1'] at hW
   have hpin' : pinAnd.run a = .ok (decI (r1.headD 0), a) := by simpa [pinAnd, PIN_AND] using hpin
   by_cases g1 : T ≠ r1.headD 0
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
   have g1' : T = r1.headD 0 := by simpa using g1
   have hTan : (decI T : NIdx) = decI (r1.headD 0) := by rw [g1']
   cases c2 : callE p (N' + 1) "m2c_pre" [mode, vis, d, major] m with
@@ -659,7 +656,7 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
             targs ust (decE major)
         else pure (decE major)))
     simp only [m2cAndT, StateT.run_bind, hpin', except_ok_bind]
-    rw [if_pos hTan]
+    rw [ite_eq_left hTan]
     rfl
   | ok q =>
   obtain ⟨L, m2⟩ := q
@@ -669,8 +666,8 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
     (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d major hm4 hebm hmaj m a M hS
     L m2 (callW_of_callE c2)
   by_cases g0 : L.headD 0 = 0
-  · rw [if_pos g0] at hW; cases hW
-  rw [if_neg g0] at hW
+  · rw [ite_eq_left g0] at hW; cases hW
+  rw [ite_eq_right g0] at hW
   obtain ⟨htm, hT2, hus⟩ := hhw g0
   obtain ⟨l, -, hll, hvl⟩ := hpre.view g0
   have hpre' := m2cPreT_some hpre g0
@@ -707,23 +704,23 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
       else pure (decE major)).run
         (AM.st (andRescueSlots fe (decI ctor) cnP.toNat (decI (L.tail.tail.tail.headD 0))) a2) := by
     simp only [m2cAndT, StateT.run_bind, hpin', except_ok_bind]
-    rw [if_pos hTan, hpre']
+    rw [ite_eq_left hTan, hpre']
     simp only [StateT.run_bind, viewLsLen_some hvl, except_ok_bind, hargs, hrun4]
   by_cases g2 : L.tail.tail.headD 0 ≠ T
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
   by_cases g3 : r3.tail.headD 0 ≠ cnP
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  · rw [ite_eq_left g3] at hW; cases hW
+  rw [ite_eq_right g3] at hW
   have g3' : r3.tail.headD 0 = cnP := by simpa using g3
   by_cases g4 : lpl ≠ L.tail.tail.tail.tail.headD 0
-  · rw [if_pos g4] at hW; cases hW
-  rw [if_neg g4] at hW
+  · rw [ite_eq_left g4] at hW; cases hW
+  rw [ite_eq_right g4] at hW
   have g4' : lpl = L.tail.tail.tail.tail.headD 0 := by simpa using g4
   by_cases g5 : r4.headD 0 = 0
-  · rw [if_pos g5] at hW; cases hW
-  rw [if_neg g5] at hW
+  · rw [ite_eq_left g5] at hW; cases hW
+  rw [ite_eq_right g5] at hW
   have hcond : (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = cnP.toNat ∧
       lpl.toNat = (L.tail.tail.tail.tail.headD 0).toNat ∧ decBool r4 = true :=
     ⟨by rw [g2'], by rw [hlen, g3'], by rw [g4'], decBool_t_m2c g5⟩
@@ -736,7 +733,7 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
       have hb := hsp3.bound
       rw [htop3', ← htop3, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
       exact Nat.le_refl _) hspn3
-  refine ErrClaim.of_run_eqW (hstep.trans (by rw [if_pos hcond])) ?_
+  refine ErrClaim.of_run_eqW (hstep.trans (by rw [ite_eq_left hcond])) ?_
   exact m2cAnd2E_ok p hp hc hpi hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d ctor T _ _ _ _ major hm4 hebm hctor hT htm hus hmaj xs m4 _ M4
     hS4 hsp4 htop4
@@ -793,7 +790,7 @@ theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
       rw [hk1 _ _ hW] at he'; cases he'; exact hk0 h0
   | succ N' =>
   by_cases g9 : w9 ≠ 0
-  · rw [if_pos g9] at hW
+  · rw [ite_eq_left g9] at hW
     have hk' : rl.k = true := by rw [hkk]; simpa using g9
     have : m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
         cvT caps (decE major) = m2cKT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
@@ -802,10 +799,10 @@ theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
     rw [this]
     exact m2cKE_ok p hp hc hpi hE hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
       (by omega) (by omega) dn vis fe eb mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS er (hk1 _ _ hW)
-  rw [if_neg g9] at hW
+  rw [ite_eq_right g9] at hW
   have hk' : rl.k = false := by rw [hkk]; simpa using g9
   by_cases g10 : w10 ≠ 0
-  · rw [if_pos g10] at hW
+  · rw [ite_eq_left g10] at hW
     have he' : rl.eta = true := by rw [heta]; simpa using g10
     have : m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
         cvT caps (decE major) = m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps
@@ -814,7 +811,7 @@ theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
     rw [this]
     exact m2cEtaE_ok p hp hnv N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega)
       (by omega) dn vis fe eb mode d T indP major hm4 hebm hmaj cvT caps m a M hS er (hk1 _ _ hW)
-  rw [if_neg g10] at hW
+  rw [ite_eq_right g10] at hW
   have he' : rl.eta = false := by rw [heta]; simpa using g10
   have : m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
       cvT caps (decE major) = m2cAndT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
@@ -871,8 +868,8 @@ theorem m2cCtorE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
   have hm2' : m2 = m := ht2.symm.trans hm2
   rw [hm2'] at hW
   by_cases g2 : r2.headD 0 >>> 28 ≠ 3
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
   have g2' : r2.headD 0 >>> 28 = 3 := by simpa using g2
   have ht : ((decE (r2.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hh2]; simpa using g2'
@@ -909,8 +906,8 @@ theorem m2cCtorE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
   rw [hm4'] at hW
   have hview := view_run _ _ _ hvw
   by_cases g4 : r4.headD 0 = 0
-  · rw [if_pos g4] at hW; cases hW
-  rw [if_neg g4] at hW
+  · rw [ite_eq_left g4] at hW; cases hW
+  rw [ite_eq_right g4] at hW
   obtain ⟨ci, hci⟩ := hfound g4
   have hciE := (erecP_ext m).decCI hci
   have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
@@ -919,8 +916,8 @@ theorem m2cCtorE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
   have rk : rdW (m.arr64 EREC) (r4.tail.headD 0) = wk := by simp only [rdW, ewk]; rfl
   rw [rk] at hW
   by_cases g5 : wk ≠ 3
-  · rw [if_pos g5] at hW; cases hW
-  rw [if_neg g5] at hW
+  · rw [ite_eq_left g5] at hW; cases hW
+  rw [ite_eq_right g5] at hW
   obtain ⟨cvT, caps, rfl⟩ := hind.mpr (by simpa using g5)
   have hW' := err_of_k (by intro q e; simp [m2cCtorE.k_m2c_arms]) (fun _ => rfl) hW
   cases N with
@@ -964,8 +961,8 @@ theorem m2cHeadE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
     (callW_of_callE c1)
   have e1 : m1.arr64 EREC = m.arr64 EREC := hE _ _ _ _ _ _ (by simp) (callW_of_callE c1)
   by_cases g1 : r1.headD 0 ≠ 0
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
   rw [decBool_f_m2c (by simpa using g1)] at hrun1
   have hstep : (m2cHeadT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rules
       (decE major)).run a = (match rules with
@@ -980,8 +977,8 @@ theorem m2cHeadE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
     rfl
   obtain ⟨hlen, hget⟩ := decRules_get _ _ _ _ hr
   by_cases g2 : rc ≠ 1
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
   have g2' : rc = 1 := by simpa using g2
   subst g2'
   obtain ⟨rl, rfl⟩ : ∃ rl, rules = [rl] := by
@@ -1004,8 +1001,8 @@ theorem m2cHeadE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
     (callW_of_callE c2)
   rw [hm2] at hW
   by_cases g3 : r2.headD 0 = 0
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  · rw [ite_eq_left g3] at hW; cases hW
+  rw [ite_eq_right g3] at hW
   obtain ⟨ci, hci⟩ := hfound g3
   have hciE := (erecP_ext m1).decCI hci
   have hfind' : fe.find? rl.ctor = some ci := by
@@ -1014,8 +1011,8 @@ theorem m2cHeadE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
   have rk : rdW (m1.arr64 EREC) (r2.tail.headD 0) = wk := by simp only [rdW, ewk]; rfl
   rw [rk] at hW
   by_cases g4 : wk ≠ 4
-  · rw [if_pos g4] at hW; cases hW
-  rw [if_neg g4] at hW
+  · rw [ite_eq_left g4] at hW; cases hW
+  rw [ite_eq_right g4] at hW
   obtain ⟨cvj, cnP, cnF, rfl⟩ := hctr.mpr (by simpa using g4)
   have hW' := err_of_k (by intro q e; simp [m2cHeadE.k_m2c_ctor]) (fun _ => rfl) hW
   refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cCtorE_ok p hp hc hpi hE hcc hnv hPI N' F

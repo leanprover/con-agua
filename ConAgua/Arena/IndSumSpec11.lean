@@ -90,13 +90,13 @@ section arms
 variable (cR : CallM) (n : Nat) (m : Mem) (isProp large s io il fv u eq ct z : Word) (r : List Word)
 theorem cfbK4_fail (h : eq = 0 ∧ ct = 0) : cfbK4 eq m (some ct) = none := by simp [cfbK4, h]
 theorem cfbK4_ok (h : ¬ (eq = 0 ∧ ct = 0)) : cfbK4 eq m (some ct) = some ([0], m) := by
-  simp only [cfbK4, if_neg h]
+  simp only [cfbK4, ite_eq_right h]
 theorem cfbK3_some : cfbK3 n io il fv (some (eq, m)) = cfbK4 eq m (containsW n m io il fv) := rfl
 theorem cfbK2_some : cfbK2 cR n io il fv u m (some z) = cfbK3 n io il fv (eqTrueC cR n m u z) := rfl
 theorem cfbK1_ok (h : r.headD 0 = 2) : cfbK1 (some (r, m)) = some ([0], m) := by
-  simp only [cfbK1]; rw [if_pos h]
+  simp only [cfbK1]; rw [ite_eq_left h]
 theorem cfbK1_fail (h : r.headD 0 ≠ 2) : cfbK1 (some (r, m)) = none := by
-  simp only [cfbK1]; rw [if_neg h]
+  simp only [cfbK1]; rw [ite_eq_right h]
 theorem cfbW_leq (h : isProp = 0) :
     cfbW cR (n + 1) m isProp large s io il fv u = cfbK1 (cR n "lv_leq_top" [u, s] m) := by
   simp [cfbW, h]
@@ -283,7 +283,7 @@ theorem sumContains_decI {k : IdxKind} (x : Word) (hx : H x) : ∀ (ws : List Wo
     rw [decI_beq' x w hx (h w (by simp)), sumContains_decI x hx ws (fun v hv => h v (by simp [hv]))]
     by_cases e : w = x
     · subst e; simp
-    · simp [e, Ne.symm e]
+    · simp [Ne.symm e]
 
 /-- **A handle written right before a decoded slice** extends it at the front. -/
 theorem sumDecHL_write_front {k : IdxKind} (m : Mem) (o kk : Nat) (w v : Word) (acc : List (Idx k))
@@ -293,7 +293,7 @@ theorem sumDecHL_write_front {k : IdxKind} (m : Mem) (o kk : Nat) (w v : Word) (
   simp only [decHL, hslice?_succ] at h ⊢
   have e1 : (hslice? (iwA (m.set64 IW w v)) (o + 1) kk : Option (List (Idx k))) =
       hslice? (iwA m) (o + 1) kk :=
-    hslice?_congr _ _ _ _ _ fun i _ => by simp only [iwA, set64IW_get]; rw [if_neg (by omega)]
+    hslice?_congr _ _ _ _ _ fun i _ => by simp only [iwA, set64IW_get]; rw [ite_eq_right (by omega)]
   have e0 : (hd? (iwA (m.set64 IW w v)) o : Option (Idx k)) = some (decI v) := by
     simp [hd?, iwA, set64IW_get, hw, hsz, hv]
   rw [e1, e0, h]; rfl

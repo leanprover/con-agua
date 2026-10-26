@@ -18,7 +18,6 @@ with the flags restored afterwards** (`onA a.store.scratchOn`), provided
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -229,16 +228,14 @@ theorem internPersistentE_eq (v : ENodeView) (a : AState) (hF : FlagsEq a.store)
   case lam t b => pe_case (.lam t b)
   case forallE t b =>
     cases hf : ep.find? (.forallE t b) with
-    | some h => simp [hf, StateT.run_pure, Except.map]; rfl
+    | some h => simp [StateT.run_pure, Except.map]; rfl
     | none =>
       by_cases hc : ep.sizeOf (.forallE t b) < Idx.idxCap
-      · simp only [ETables.bindSizeOf, ETables.sizeOf, tag_fa_lam, tag_fa_lam'] at hc ⊢
-        simp only [hf, hc, EStore.internPersistent, EStore.intern, EStore.persFindMaybe,
-          EStore.internLam, EStore.internForallE, EStore.internBind, EStore.persFindBindMaybe,
-          findBind_lam, findBind_forall, pushBind_lam, pushBind_forall, Bool.false_eq_true,
+      · simp only [ETables.bindSizeOf, ETables.sizeOf, tag_fa_lam'] at hc ⊢
+        simp only [hf, hc, EStore.internPersistent, EStore.internForallE, EStore.internBind, EStore.persFindBindMaybe, findBind_forall, pushBind_forall, Bool.false_eq_true,
           ↓reduceIte, tag_fa_lam', derOfBindAt_23, hd]
         rfl
-      · simp only [ETables.bindSizeOf, ETables.sizeOf, tag_fa_lam, tag_fa_lam'] at hc ⊢
+      · simp only [ETables.bindSizeOf, ETables.sizeOf, tag_fa_lam'] at hc ⊢
         simp only [hc, Bool.false_eq_true, ↓reduceIte]
         rfl
   case letE t x b => pe_case (.letE t x b)

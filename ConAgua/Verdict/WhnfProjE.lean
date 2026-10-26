@@ -12,8 +12,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -29,7 +27,7 @@ theorem projLitToCtor_err_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Wo
     (hres : (r.whnf depth c).run a₁ = .error ce) :
     (projLitToCtor r fe depth (decE h)).run a = .error ce := by
   have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
-  simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hsup, hc, hres]
+  simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, hsup, hc, hres]
 
 /-- **`proj_lit_to_ctor`'s verdicts** are the `whnf` slot's (on a supported string literal). -/
 theorem projLitToCtor_refinesE (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
@@ -48,20 +46,20 @@ theorem projLitToCtor_refinesE (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
   simp only [projLitToCtorE] at hW
   have hS := hs.rel
   by_cases htag : h >>> 28 ≠ 8
-  · rw [if_pos htag] at hW; cases hW
-  rw [if_neg htag] at hW
+  · rw [ite_eq_left htag] at hW; cases hW
+  rw [ite_eq_right htag] at hW
   have htag8 : h >>> 28 = 8 := by simpa using htag
   by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hsc] at hW
   by_cases hbd : tcnt s₀.mem LIT (tierW h) ≤ idxW h
-  · rw [if_pos hbd] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hbd] at hW
   have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hviewS, -⟩ := view_lit_kind s₀.mem a₀ hS.arena.1 h hh hvOK htag8
   by_cases hkind : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 1
-  · rw [if_pos hkind] at hW; cases hW
-  rw [if_neg hkind] at hW
+  · rw [ite_eq_left hkind] at hW; cases hW
+  rw [ite_eq_right hkind] at hW
   obtain ⟨s', hv⟩ := hviewS (by simpa using hkind)
   cases hcall1 : callE p n "str_lit_supported" [vis] s₀.mem with
   | error e1 =>
@@ -74,8 +72,8 @@ theorem projLitToCtor_refinesE (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
   obtain ⟨hok1, ⟨M₁, hS₁, -, -⟩, hres1, -⟩ :=
     CoreSpec.of_callW (hStrSup n s₀ a₀ dn vis fe MM eb hS) (callW_of_callE hcall1)
   by_cases hsup0 : r₁.headD 0 = 0
-  · rw [if_pos hsup0] at hW; cases hW
-  rw [if_neg hsup0] at hW
+  · rw [ite_eq_left hsup0] at hW; cases hW
+  rw [ite_eq_right hsup0] at hW
   have hsupT : (strLitSupported fe).run a₀ = .ok (true, AM.st (strLitSupported fe) a₀) := by
     have hrr := AM.run_of_ok _ _ hok1
     rw [hres1] at hrr
@@ -166,7 +164,7 @@ theorem stepProj_err2 (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (c
     (h₁ : (if cheap then r.whnfCore true depth pe else r.whnf depth pe).run a = .ok (c, a₁))
     (ce : CheckError) (h₂ : (reduceProjCore mode r fe depth sn i c).run a₁ = .error ce) :
     (whnfCoreStepProj mode r fe cheap depth e sn i pe).run a = .error ce := by
-  cases cheap <;> simp_all [whnfCoreStepProj, StateT.run_bind, except_ok_bind] <;> rfl
+  cases cheap <;> simp_all [whnfCoreStepProj, StateT.run_bind] <;> rfl
 
 /-- **`whnf_core_step_proj`'s verdicts** are the scrutinee's head normalization's (a slot's) and
 `reduce_proj_core`'s. -/
@@ -198,7 +196,7 @@ theorem stepProj_refinesE (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupp
           .ok (decE (r₁.headD 0), a₁)) := by
     intro c hcdef
     by_cases hch : cheap = 0
-    · rw [if_neg (by simpa using hch)] at hcdef
+    · rw [ite_eq_right (by simpa using hch)] at hcdef
       have hb : (cheap != 0) = false := by simp [hch]
       rw [hb]
       simp only [Bool.false_eq_true, ↓reduceIte]
@@ -212,7 +210,7 @@ theorem stepProj_refinesE (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupp
         refine ⟨M₁, _, hS₁, hrw, ?_⟩
         have := AM.run_of_ok _ _ hok
         rw [hres] at this; exact this
-    · rw [if_pos hch] at hcdef
+    · rw [ite_eq_left hch] at hcdef
       have hb : (cheap != 0) = true := by simpa using hch
       rw [hb]
       simp only [↓reduceIte]
@@ -231,8 +229,8 @@ theorem stepProj_refinesE (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupp
       callE p n "whnf_core" [mode, 1, vis, d, pe] s₀.mem else callE p n "whnf" [mode, vis, d, pe] s₀.mem) =
       .error er := by
     by_cases hch : cheap ≠ 0
-    · rw [if_pos hch] at hW ⊢; exact hW
-    · rw [if_neg hch] at hW ⊢; exact hW
+    · rw [ite_eq_left hch] at hW ⊢; exact hW
+    · rw [ite_eq_right hch] at hW ⊢; exact hW
   obtain ⟨kE, kO⟩ := key _ rfl
   cases hc1 : (if cheap ≠ 0 then callE p n "whnf_core" [mode, 1, vis, d, pe] s₀.mem
     else callE p n "whnf" [mode, vis, d, pe] s₀.mem) with

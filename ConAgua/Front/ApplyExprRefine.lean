@@ -28,7 +28,6 @@ open L.Front.Fields (rdNatN NONE itemsN listN Fld)
 open ConAgua.Front.FieldsLink
 open L.Front.Unescape (strPutEscW)
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front
 
@@ -89,7 +88,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litCS, litCSk, litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -114,7 +113,7 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litStrCS, litCSk, litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -210,7 +209,7 @@ theorem mkForallW_above {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some 
   unfold mkForallW at h; split at h; · cases h
   exact mkK_above FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact MemFrame.above (consInternM_frame forallCS_wf hx)
-      (by simp [ConsSch.wset, forallCS, forallSch, FAREC, FASLOT])) h
+      (by simp [ConsSch.wset, forallCS, FAREC, FASLOT])) h
 theorem mkLetW_above {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     Above64 m m' := by
   unfold mkLetW at h; split at h; · cases h
@@ -367,7 +366,7 @@ theorem node_let (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q) 
     (hI : nodeW b.data m 13 x y z = some (w, m₁)) : NodeOK st (.letE p q t) a m₁ w := by
   simp only [nodeW, show (13 : Word) ≠ 8 by decide, show (13 : Word) ≠ 9 by decide,
     show (13 : Word) ≠ 10 by decide, show (13 : Word) ≠ 11 by decide,
-    show (13 : Word) ≠ 12 by decide, false_or, or_false, ↓reduceIte, letW] at hI
+    show (13 : Word) ≠ 12 by decide, or_false, ↓reduceIte, letW] at hI
   split at hI
   · rename_i hok
     obtain ⟨hgx, -, hnx⟩ := tbl_read hD.exprs x hok.1
@@ -385,7 +384,7 @@ theorem node_proj (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q)
     (hI : nodeW b.data m 14 x y z = some (w, m₁)) : NodeOK st (.proj p q t) a m₁ w := by
   simp only [nodeW, show (14 : Word) ≠ 8 by decide, show (14 : Word) ≠ 9 by decide,
     show (14 : Word) ≠ 10 by decide, show (14 : Word) ≠ 11 by decide,
-    show (14 : Word) ≠ 12 by decide, show (14 : Word) ≠ 13 by decide, false_or, or_false,
+    show (14 : Word) ≠ 12 by decide, show (14 : Word) ≠ 13 by decide, or_false,
     ↓reduceIte, projW] at hI
   split at hI
   · rename_i hok
@@ -405,7 +404,7 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
   simp only [nodeW, show (16 : Word) ≠ 8 by decide, show (16 : Word) ≠ 9 by decide,
     show (16 : Word) ≠ 10 by decide, show (16 : Word) ≠ 11 by decide,
     show (16 : Word) ≠ 12 by decide, show (16 : Word) ≠ 13 by decide,
-    show (16 : Word) ≠ 14 by decide, show (16 : Word) ≠ 15 by decide, false_or, or_false,
+    show (16 : Word) ≠ 14 by decide, show (16 : Word) ≠ 15 by decide, or_false,
     ↓reduceIte, litW] at hI
   obtain ⟨hcd, -, hdig, hn⟩ := natValR_decN b h64 hsize y z n hv
   cases hN : natDecW b.data m y z with
@@ -431,7 +430,7 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
     show (17 : Word) ≠ 10 by decide, show (17 : Word) ≠ 11 by decide,
     show (17 : Word) ≠ 12 by decide, show (17 : Word) ≠ 13 by decide,
     show (17 : Word) ≠ 14 by decide, show (17 : Word) ≠ 15 by decide,
-    show (17 : Word) ≠ 16 by decide, false_or, or_false,
+    show (17 : Word) ≠ 16 by decide, or_false,
     ↓reduceIte, litStrW] at hI
   split at hI
   · cases hI
@@ -478,7 +477,7 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
   simp only [nodeW, show (15 : Word) ≠ 8 by decide, show (15 : Word) ≠ 9 by decide,
     show (15 : Word) ≠ 10 by decide, show (15 : Word) ≠ 11 by decide,
     show (15 : Word) ≠ 12 by decide, show (15 : Word) ≠ 13 by decide,
-    show (15 : Word) ≠ 14 by decide, false_or, or_false, ↓reduceIte, constW] at hI
+    show (15 : Word) ≠ 14 by decide, or_false, ↓reduceIte, constW] at hI
   have hok : tblOK m NID x = true :=
     Classical.byContradiction fun hok => by simp [hok] at hI
   simp only [hok, ↓reduceIte] at hI

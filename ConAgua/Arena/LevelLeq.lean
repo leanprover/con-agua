@@ -35,7 +35,6 @@ set_option experimental.vcgen true
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -202,43 +201,43 @@ theorem leqW_rest (hf : f ≠ 0) (hl : ¬ (lvG m l = 0 ∧ 4294967296 ≤ d))
 
 theorem restW_pp (h : lvG m l = 4 ∧ lvG m r = 4) :
     restW (n + 1) m f l r d = some (if lvA m l = lvA m r ∧ 4294967296 ≤ d then 2 else 1, m) := by
-  rw [restW, if_pos h]
+  rw [restW, ite_eq_left h]
 theorem restW_pz (h1 : ¬ (lvG m l = 4 ∧ lvG m r = 4)) (h : lvG m l = 4 ∧ lvG m r = 0) :
     restW (n + 1) m f l r d = some (1, m) := by
-  rw [restW, if_neg h1, if_pos h]
+  rw [restW, ite_eq_right h1, ite_eq_left h]
 theorem restW_zp (h1 : ¬ (lvG m l = 4 ∧ lvG m r = 4)) (h2 : ¬ (lvG m l = 4 ∧ lvG m r = 0))
     (h : lvG m l = 0 ∧ lvG m r = 4) :
     restW (n + 1) m f l r d = some (if 4294967296 ≤ d then 2 else 1, m) := by
-  rw [restW, if_neg h1, if_neg h2, if_pos h]
+  rw [restW, ite_eq_right h1, ite_eq_right h2, ite_eq_left h]
 theorem restW_sl (h1 : ¬ (lvG m l = 4 ∧ lvG m r = 4)) (h2 : ¬ (lvG m l = 4 ∧ lvG m r = 0))
     (h3 : ¬ (lvG m l = 0 ∧ lvG m r = 4)) (h : lvG m l = 1) :
     restW (n + 1) m f l r d = leqW n m f (lvA m l) r (d - 1) := by
-  rw [restW, if_neg h1, if_neg h2, if_neg h3, if_pos h]
+  rw [restW, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_left h]
 theorem restW_sr (h1 : ¬ (lvG m l = 4 ∧ lvG m r = 4)) (h2 : ¬ (lvG m l = 4 ∧ lvG m r = 0))
     (h3 : ¬ (lvG m l = 0 ∧ lvG m r = 4)) (h4 : lvG m l ≠ 1) (h : lvG m r = 1) :
     restW (n + 1) m f l r d = leqW n m f l (lvA m r) (d + 1) := by
-  rw [restW, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_pos h]
+  rw [restW, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_left h]
 theorem restW_ml (h1 : ¬ (lvG m l = 4 ∧ lvG m r = 4)) (h2 : ¬ (lvG m l = 4 ∧ lvG m r = 0))
     (h3 : ¬ (lvG m l = 0 ∧ lvG m r = 4)) (h4 : lvG m l ≠ 1) (h5 : lvG m r ≠ 1) (h : lvG m l = 2) :
     restW (n + 1) m f l r d = andK n f (lvB m l) r d (leqW n m f (lvA m l) r d) := by
-  rw [restW, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_pos h]
+  rw [restW, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_left h]
 theorem restW_mr (h1 : ¬ (lvG m l = 4 ∧ lvG m r = 4)) (h2 : ¬ (lvG m l = 4 ∧ lvG m r = 0))
     (h3 : ¬ (lvG m l = 0 ∧ lvG m r = 4)) (h4 : lvG m l ≠ 1) (h5 : lvG m r ≠ 1) (h6 : lvG m l ≠ 2)
     (h : lvG m r = 2 ∧ (lvG m l = 4 ∨ lvG m l = 0)) :
     restW (n + 1) m f l r d = orK n f l (lvB m r) d (leqW n m f l (lvA m r) d) := by
-  rw [restW, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_pos h]
+  rw [restW, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_left h]
 theorem restW_ii (h1 : ¬ (lvG m l = 4 ∧ lvG m r = 4)) (h2 : ¬ (lvG m l = 4 ∧ lvG m r = 0))
     (h3 : ¬ (lvG m l = 0 ∧ lvG m r = 4)) (h4 : lvG m l ≠ 1) (h5 : lvG m r ≠ 1) (h6 : lvG m l ≠ 2)
     (h7 : ¬ (lvG m r = 2 ∧ (lvG m l = 4 ∨ lvG m l = 0)))
     (h : lvG m l = 3 ∧ lvG m r = 3 ∧ 4294967296 ≤ d) :
     restW (n + 1) m f l r d = eqK₁ n m f l r d (lvEqW n m (lvA m l) (lvA m r)) := by
-  rw [restW, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_pos h]
+  rw [restW, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_left h]
 theorem restW_im (h1 : ¬ (lvG m l = 4 ∧ lvG m r = 4)) (h2 : ¬ (lvG m l = 4 ∧ lvG m r = 0))
     (h3 : ¬ (lvG m l = 0 ∧ lvG m r = 4)) (h4 : lvG m l ≠ 1) (h5 : lvG m r ≠ 1) (h6 : lvG m l ≠ 2)
     (h7 : ¬ (lvG m r = 2 ∧ (lvG m l = 4 ∨ lvG m l = 0)))
     (h8 : ¬ (lvG m l = 3 ∧ lvG m r = 3 ∧ 4294967296 ≤ d)) :
     restW (n + 1) m f l r d = imaxRW n m f l r d := by
-  rw [restW, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8]
+  rw [restW, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_right h8]
 
 theorem andK_stop (hx : x ≠ 2) : andK n f b r d (some (x, m₁)) = some (x, m₁) := by
   rw [andK]; simp [hx]
@@ -255,38 +254,38 @@ theorem eqK₂_ne (hx : x ≠ 0) : eqK₂ n m f l r d (some x) = some (2, m) := 
 
 theorem imaxRW_cl (h : lvG m l = 3 ∧ lvG m (lvB m l) = 4) :
     imaxRW (n + 1) m f l r d = casesW n m f (lvA m (lvB m l)) l r d := by
-  rw [imaxRW, if_pos h]
+  rw [imaxRW, ite_eq_left h]
 theorem imaxRW_cr (h1 : ¬ (lvG m l = 3 ∧ lvG m (lvB m l) = 4))
     (h : lvG m r = 3 ∧ lvG m (lvB m r) = 4) :
     imaxRW (n + 1) m f l r d = casesW n m f (lvA m (lvB m r)) l r d := by
-  rw [imaxRW, if_neg h1, if_pos h]
+  rw [imaxRW, ite_eq_right h1, ite_eq_left h]
 theorem imaxRW_l (h1 : ¬ (lvG m l = 3 ∧ lvG m (lvB m l) = 4))
     (h2 : ¬ (lvG m r = 3 ∧ lvG m (lvB m r) = 4)) :
     imaxRW (n + 1) m f l r d = imaxLW n m f l r d := by
-  rw [imaxRW, if_neg h1, if_neg h2]
+  rw [imaxRW, ite_eq_right h1, ite_eq_right h2]
 theorem imaxLW_i (h : lvG m l = 3 ∧ lvG m (lvB m l) = 3) :
     imaxLW (n + 1) m f l r d = leqLK n f r d (dist1W m (lvA m l) (lvB m (lvB m l)) (lvB m l)) := by
-  rw [imaxLW, if_pos h]
+  rw [imaxLW, ite_eq_left h]
 theorem imaxLW_m (h3 : ¬ (lvG m l = 3 ∧ lvG m (lvB m l) = 3))
     (h : lvG m l = 3 ∧ lvG m (lvB m l) = 2) :
     imaxLW (n + 1) m f l r d =
       leqLK n f r d (dist2W n m (lvA m l) (lvA m (lvB m l)) (lvB m (lvB m l))) := by
-  rw [imaxLW, if_neg h3, if_pos h]
+  rw [imaxLW, ite_eq_right h3, ite_eq_left h]
 theorem imaxLW_r (h3 : ¬ (lvG m l = 3 ∧ lvG m (lvB m l) = 3))
     (h4 : ¬ (lvG m l = 3 ∧ lvG m (lvB m l) = 2)) :
     imaxLW (n + 1) m f l r d = imaxRrW n m f l r d := by
-  rw [imaxLW, if_neg h3, if_neg h4]
+  rw [imaxLW, ite_eq_right h3, ite_eq_right h4]
 theorem imaxRrW_i (h : lvG m r = 3 ∧ lvG m (lvB m r) = 3) :
     imaxRrW (n + 1) m f l r d = leqRK n f l d (dist1W m (lvA m r) (lvB m (lvB m r)) (lvB m r)) := by
-  rw [imaxRrW, if_pos h]
+  rw [imaxRrW, ite_eq_left h]
 theorem imaxRrW_m (h5 : ¬ (lvG m r = 3 ∧ lvG m (lvB m r) = 3))
     (h : lvG m r = 3 ∧ lvG m (lvB m r) = 2) :
     imaxRrW (n + 1) m f l r d =
       leqRK n f l d (dist2W n m (lvA m r) (lvA m (lvB m r)) (lvB m (lvB m r))) := by
-  rw [imaxRrW, if_neg h5, if_pos h]
+  rw [imaxRrW, ite_eq_right h5, ite_eq_left h]
 theorem imaxRrW_none (h5 : ¬ (lvG m r = 3 ∧ lvG m (lvB m r) = 3))
     (h6 : ¬ (lvG m r = 3 ∧ lvG m (lvB m r) = 2)) : imaxRrW (n + 1) m f l r d = some (0, m) := by
-  rw [imaxRrW, if_neg h5, if_neg h6]
+  rw [imaxRrW, ite_eq_right h5, ite_eq_right h6]
 
 theorem leqLK_some : leqLK n f r d (some (z, m₁)) = leqW n m₁ f z r d := by rw [leqLK]
 theorem leqRK_some : leqRK n f l d (some (z, m₁)) = leqW n m₁ f l z d := by rw [leqRK]

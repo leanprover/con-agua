@@ -22,7 +22,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Rom
 
@@ -297,11 +296,11 @@ theorem lsK_some (q h : Word) (m : Mem) (hh : ¬ 4294967296 ≤ h) : lsK q (some
 theorem lvsK_some (b k q : Word) (m₁ : Mem) (hok : stkPoolOK m₁ k) :
     lvsK b k (some (q, m₁)) =
       lsK q (lsinternW (((sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) b k 0).set64 CTL 0 (m₁.top + k)).set64 CTL 131 b) m₁.top k) := by
-  simp only [lvsK]; rw [if_pos hok]
+  simp only [lvsK]; rw [ite_eq_left hok]
 theorem romLevelsW_eq (rom : List UInt8) (n : Nat) (m : Mem) (pos : Word)
     (hu : u64OK rom pos) (hk : ¬ 1152921504606846976 ≤ u64W rom pos) :
     romLevelsW rom (n + 1) m pos = lvsK (stkTop m) (u64W rom pos) (romLvlsW rom n m (pos + 8) (u64W rom pos)) := by
-  simp only [romLevelsW, hu, hk, if_false, not_true_eq_false]
+  simp only [romLevelsW, hu, hk, ite_false, not_true_eq_false]
 
 attribute [arena_grind =] lsK_some
 grind_pattern [arena_grind] romLevelsW_eq => romLevelsW rom (n + 1) m pos
@@ -523,7 +522,7 @@ def RomA : List ArrId := RSTK :: StoreA
 def RomC : List Word := 131 :: StoreC
 
 theorem frame_romA {m m' : Mem} (h : MemFrame StoreA StoreC m m') : MemFrame RomA RomC m m' :=
-  h.mono (fun b hb => List.mem_cons_of_mem _ hb) (fun x hx => List.mem_cons_of_mem _ hx)
+  h.mono (fun _b hb => List.mem_cons_of_mem _ hb) (fun _x hx => List.mem_cons_of_mem _ hx)
 
 theorem pushMem_frame1 (m : Mem) (h : Word) : MemFrame [RSTK] [131] m (pushMem m h) := by
   simp only [pushMem]
@@ -587,7 +586,7 @@ theorem sputW_facts (pt pb b n : Word) (hv : b.toNat + n.toNat < 2 ^ 64) (ht : p
     by_cases h1 : pt.toNat * 2 ^ 40 + pb.toNat + (j.toNat + 1) ≤ x ∧
         x < pt.toNat * 2 ^ 40 + pb.toNat + n.toNat
     · have h2 : pt.toNat * 2 ^ 40 + (pb.toNat + j.toNat) ≠ x := by omega
-      simp [h1, h2, show pt.toNat * 2 ^ 40 + pb.toNat + j.toNat ≤ x by omega]
+      simp [h1, show pt.toNat * 2 ^ 40 + pb.toNat + j.toNat ≤ x by omega]
     · by_cases h2 : pt.toNat * 2 ^ 40 + (pb.toNat + j.toNat) = x
       · subst h2
         have e : pt.toNat * 2 ^ 40 + (pb.toNat + j.toNat) - (pt.toNat * 2 ^ 40 + pb.toNat) = j.toNat := by
@@ -619,7 +618,7 @@ theorem stkPoolW_facts (m : Mem) (b k : Word) (hpool : PoolOK m) (hok : stkPoolO
   have hctl : 0 < ((sputW m (m.top >>> 40) (m.top &&& 1099511627775) b k 0).arr64 CTL).size := by
     rw [hf.ctl]; exact hctl0
   have htop' := Mem.top_set64 _ (m.top + k) hctl
-  have hg := Grows.write m _ k hpool hf (fun x hxt => by rw [hx, if_neg (by omega)]) (by omega)
+  have hg := Grows.write m _ k hpool hf (fun x hxt => by rw [hx, ite_eq_right (by omega)]) (by omega)
   refine ⟨hg, SliceOK.fresh hg htop', ?_⟩
   rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, sliceL, List.ext_getElem_iff]
   refine ⟨by simp, fun j hk₁ hk₂ => ?_⟩

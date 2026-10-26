@@ -14,7 +14,6 @@ core's write set, `absOK_core`; `lv_zero_caps`' own, `lzcF_frame`). For the `Sta
 read these calls through the stub contracts (`IndT/RecCheckTcm.lean`'s `lvlsEqStub_spec`).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

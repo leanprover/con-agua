@@ -10,7 +10,6 @@ usual `RSim` post with `StageT`), a `Sim` as a `RSim`, and the four entry points
 `realCall p`.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

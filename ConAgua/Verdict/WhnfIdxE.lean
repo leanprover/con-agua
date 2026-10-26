@@ -12,9 +12,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
-set_option linter.unusedSectionVars false
 
 namespace L.Arena
 
@@ -64,7 +61,7 @@ theorem ioE_spec (p : Prog) (hp : p.lookup "iota_index_ok" = some iotaIndexOkL) 
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callE_spec p n "pi_residual", callE_spec p n "get_app_args", callE_spec p n "defeq_list"] <;>
   simp_all [ioE, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, rdW, CTL] <;>
+    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, CTL] <;>
   (intro hc; exfalso; have h1 := ‹UInt64.toNat 136 < _›; (try simp at h1); (try simp at hc); omega)
 
 theorem iotaIndexOk_err (r : CoreFnsA) (fe : IFEnv) (d mI rP cnP : Nat) (tyCtor : EIdx)
@@ -92,8 +89,8 @@ theorem iotaIndexOkE_of : IotaIndexOkE p := by
     mode vis d mI rP cnP tyCtor mo mn xo xn) hc0 (Err.code_ne_of_cls hk0)
   simp only [ioE] at hW
   by_cases hI : mI = rP
-  · rw [if_pos hI] at hW; cases hW
-  rw [if_neg hI] at hW
+  · rw [ite_eq_left hI] at hW; cases hW
+  rw [ite_eq_right hI] at hW
   have hI' : mI.toNat ≠ rP.toNat := fun h => hI (UInt64.toNat_inj.mp h)
   cases hc1 : callE p n "pi_residual" [tyCtor, mo, mn] s₀.mem with
   | error e1 =>
@@ -107,11 +104,11 @@ theorem iotaIndexOkE_of : IotaIndexOkE p := by
     (piResidual_refines p hp hi1 n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb tyCtor mo mn margs hS hty
       hsm htm) (callW_of_callE hc1)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   by_cases h136 : ¬ (136 : Word).toNat < (m₁.arr64 CTL).size
-  · rw [if_pos h136] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg h136] at hW
+  · rw [ite_eq_left h136] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right h136] at hW
   obtain ⟨hf1, hh1⟩ := hr₁
   have hsome : decOptR r₁ = some (decE (r₁.tail.headD 0)) := by
     simp only [decOptR, decOpt, h0, ↓reduceIte]
@@ -166,7 +163,7 @@ theorem iotaIndexOkE_of : IotaIndexOkE p := by
   have hD := hDL n' (hk.mono (Nat.le_succ n')) (hkE.mono (Nat.le_succ n')) F (by omega) (by omega)
       ⟨m₂, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₂.headD 0 + cnP) _ xo xn
       (xs.drop cnP.toNat).toArray idx hS₂ hm4 hebm hsd hsx₂.toN htd (fun _ => htx₂)
-  simp only [List.toList_toArray] at hD
+  simp only at hD
   exact ErrClaim.of_run_err (fun ce h' => iotaIndexOk_err _ fe d.toNat mI.toNat rP.toNat cnP.toNat
       (decE tyCtor) margs.toList idx.toList a₀ _ (decE (r₁.tail.headD 0)) xs hI' hrunP hga ce h')
     (CoreSpecE.of_callE hD hW')
@@ -207,9 +204,9 @@ theorem irCmpE_spec (p : Prog) (hp : p.lookup "iota_rec_cmp" = some iotaRecCmpL)
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callE_spec p n "erec_push", callE_spec p n "rec_fire_args", callE_spec p n "stack_cover",
     callE_spec p n "defeq_list"] <;>
-  simp_all [-UInt64.toNat_add, irCmpE, EREC, CTL, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
+  simp_all [-UInt64.toNat_add, irCmpE, EREC, BinOp.eval, getElem_rdW', LocEq,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+    Locals.init_cons_succ]
 
 section cmp
 variable (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
@@ -332,7 +329,7 @@ theorem iotaRecCmpE_of : IotaRecCmpE p := by
       (hsm3.take _ hcpm').toN hxs3.toN
       (fun _ => by show mo.toNat + (rdW E (rl + 2)).toNat ≤ (spTop m3).toNat; omega)
       (fun _ => hxt)
-  simp only [List.toList_toArray] at hD
+  simp only at hD
   have hrunA := AM.run_of_ok _ _ ok2
   rw [res2] at hrunA
   refine ErrClaim.of_run_err (fun ce h' => ?_) (CoreSpecE.of_callE hD hW')

@@ -77,19 +77,19 @@ theorem prhW_iff (n : Nat) : ∀ (m : Mem) (x k hi r : Word), hi.toNat ≤ 51 �
     intro m x k hi r h51 h
     rw [prhW_step] at h
     by_cases hk : hi ≤ k
-    · rw [if_pos hk] at h; cases Option.some.inj h
+    · rw [ite_eq_left hk] at h; cases Option.some.inj h
       have := UInt64.le_iff_toNat_le.mp hk
       refine ⟨by decide, by simp only [ne_eq, not_true_eq_false, false_iff]; omega⟩
-    rw [if_neg hk] at h
+    rw [ite_eq_right hk] at h
     have hk' : k.toNat < hi.toNat := by
       have := UInt64.not_le.mp hk; exact UInt64.lt_iff_toNat_lt.mp this
     obtain ⟨h0, h⟩ := of_ite_none h
     obtain ⟨h5, h⟩ := of_ite_none h
     by_cases he : pinW m (1 + k.toNat) = x
-    · rw [if_pos he] at h; cases Option.some.inj h
+    · rw [ite_eq_left he] at h; cases Option.some.inj h
       refine ⟨by decide, ?_⟩
       exact ⟨fun _ => ⟨k.toNat, Nat.le_refl _, hk', he⟩, fun _ => by decide⟩
-    rw [if_neg he] at h
+    rw [ite_eq_right he] at h
     have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     obtain ⟨hr, hiff⟩ := ih m x (k + 1) hi r h51 h
     refine ⟨hr, hiff.trans ?_⟩
@@ -201,21 +201,21 @@ theorem resFromW_iff (n : Nat) : ∀ (m : Mem) (x j r : Word), j.toNat ≤ 16 �
     intro m x j r hj h
     rw [resFromW_step] at h
     by_cases h16 : 16 ≤ j
-    · rw [if_pos h16] at h; cases Option.some.inj h
+    · rw [ite_eq_left h16] at h; cases Option.some.inj h
       have := UInt64.le_iff_toNat_le.mp h16
       simp only [UInt64.reduceToNat] at this
       refine ⟨by decide, by simp only [ne_eq, not_true_eq_false, false_iff]; omega⟩
-    rw [if_neg h16] at h
+    rw [ite_eq_right h16] at h
     have hj' : j.toNat < 16 := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h16)
       simpa using this
     have e55 : (55 + j).toNat = 55 + j.toNat := by rw [UInt64.toNat_add]; simp; omega
     have hw : rdW (m.arr64 PINS) (55 + j) = pinW m (55 + j.toNat) := by simp [rdW, pinW, e55]
     by_cases he : rdW (m.arr64 PINS) (55 + j) = x
-    · rw [if_pos he] at h; cases Option.some.inj h
+    · rw [ite_eq_left he] at h; cases Option.some.inj h
       refine ⟨by decide, ?_⟩
       exact ⟨fun _ => ⟨j.toNat, Nat.le_refl _, hj', hw ▸ he⟩, fun _ => by decide⟩
-    rw [if_neg he] at h
+    rw [ite_eq_right he] at h
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     obtain ⟨hr, hiff⟩ := ih m x (j + 1) r (by omega) h
     refine ⟨hr, hiff.trans ?_⟩
@@ -265,9 +265,9 @@ theorem rrnW_iff {n : Nat} {m : Mem} {x r : Word} (h : rrnW n m x = some r) :
   obtain ⟨-, i1⟩ := resContW_iff h1
   simp only [rrnK1] at h
   by_cases c1 : r1 ≠ 0
-  · rw [if_pos c1] at h; cases Option.some.inj h
+  · rw [ite_eq_left c1] at h; cases Option.some.inj h
     exact ⟨by decide, ⟨fun _ => .inl (i1.mp c1), fun _ => by decide⟩⟩
-  rw [if_neg c1] at h
+  rw [ite_eq_right c1] at h
   cases h2 : lghW m x with
   | none => rw [h2] at h; cases h
   | some r2 =>
@@ -275,9 +275,9 @@ theorem rrnW_iff {n : Nat} {m : Mem} {x r : Word} (h : rrnW n m x = some r) :
   obtain ⟨-, i2⟩ := lghW_iff h2
   simp only [rrnK2] at h
   by_cases c2 : r2 ≠ 0
-  · rw [if_pos c2] at h; cases Option.some.inj h
+  · rw [ite_eq_left c2] at h; cases Option.some.inj h
     exact ⟨by decide, ⟨fun _ => .inr (.inl (i2.mp c2)), fun _ => by decide⟩⟩
-  rw [if_neg c2] at h
+  rw [ite_eq_right c2] at h
   cases h3 : prhW n m x 14 21 with
   | none => rw [h3] at h; cases h
   | some r3 =>
@@ -285,9 +285,9 @@ theorem rrnW_iff {n : Nat} {m : Mem} {x r : Word} (h : rrnW n m x = some r) :
   obtain ⟨-, i3⟩ := prhW_iff n m x 14 21 r3 (by decide) h3
   simp only [rrnK3] at h
   by_cases c3 : r3 ≠ 0
-  · rw [if_pos c3] at h; cases Option.some.inj h
+  · rw [ite_eq_left c3] at h; cases Option.some.inj h
     exact ⟨by decide, ⟨fun _ => .inr (.inr (.inl (by simpa using i3.mp c3))), fun _ => by decide⟩⟩
-  rw [if_neg c3] at h
+  rw [ite_eq_right c3] at h
   obtain ⟨hr, i4⟩ := prhW_iff n m x 21 29 r (by decide) h
   refine ⟨hr, i4.trans ?_⟩
   simp only [rrnIn]
@@ -461,7 +461,7 @@ theorem rrnW_flag {n : Nat} {m : Mem} {x r : Word} (h : rrnW n m x = some r) : p
   unfold rrnW at h
   cases n with
   | zero => simp [resContW, rrnK1] at h
-  | succ n => rw [resContW_step, if_pos h0] at h; simp [rrnK1] at h
+  | succ n => rw [resContW_step, ite_eq_left h0] at h; simp [rrnK1] at h
 
 /-- **`reserved_rec_name(x)` refines `reservedRecName`** under the stage relation: the memory and
 the twin's state are unchanged, and the word is `1` exactly when the twin answers `true`. -/

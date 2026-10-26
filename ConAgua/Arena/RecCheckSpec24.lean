@@ -11,7 +11,6 @@ below the tops.
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -46,8 +45,8 @@ theorem trp_twin (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : ASta
   rw [hw] at h3
   simp only [except_ok_bind] at h3
   have hc : rpSetOk ((rpAux bs).map (·.cvR.name)) want = true := by
-    refine Classical.byContradiction fun hc => ?_; rw [if_neg hc] at h3; cases h3
-  rw [if_pos hc] at h3
+    refine Classical.byContradiction fun hc => ?_; rw [ite_eq_right hc] at h3; cases h3
+  rw [ite_eq_left hc] at h3
   have hnd : nameNodup (bs.recs.map (·.cvR.name)) = true ∧ a2'' = a3 := by
     change Except.ok (nameNodup (bs.recs.map (·.cvR.name)), a2'') = Except.ok (true, a3) at h3
     simp only [Except.ok.injEq, Prod.mk.injEq] at h3
@@ -64,8 +63,8 @@ theorem trp_twin (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : ASta
     rw [hm] at h2
     have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
         fun i => internNNode (.str n0 (toString "rec_" ++ (i + 1).repr))).run a2' = .ok (want, a2'') := hw
-    simp [StateT.run_bind, hw', h0, h1, h2, hn, hw, hc, hnd, hb, h4, except_ok_bind]
-    rw [if_pos hc]; simp [hnd, hb, h4]; rfl
+    simp [StateT.run_bind, hw', h0, h1, h2, hn, hnd, h4, except_ok_bind]
+    rw [ite_eq_left hc]; simp; rfl
   · simp only [rpN0, hm] at hn
     change Except.ok (ms0.cvT.name, a2) = Except.ok (n0, a2') at hn
     simp only [Except.ok.injEq, Prod.mk.injEq] at hn
@@ -75,8 +74,8 @@ theorem trp_twin (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : ASta
     rw [hm] at h2
     have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
         fun i => internNNode (.str ms0.cvT.name (toString "rec_" ++ (i + 1).repr))).run a2 = .ok (want, a2'') := hw
-    simp [StateT.run_bind, hw', h0, h1, h2, hw, hc, hnd, hb, h4, except_ok_bind]
-    rw [if_pos hc]; simp [hnd, hb, h4]; rfl
+    simp [StateT.run_bind, hw', h0, h1, h2, hnd, h4, except_ok_bind]
+    rw [ite_eq_left hc]; simp; rfl
 
 /-! ## The model -/
 
@@ -114,33 +113,33 @@ def trpW (p : Prog) (n : Nat) (m : Mem) (pp bo bl : Word) : Option (List Word ×
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (pp bo bl reco recl k mo : Word) (r rs : List Word)
-theorem trpK6_zero (h : r.headD 0 = 0) : trpK6 (some (r, m)) = none := by simp only [trpK6]; rw [if_pos h]
+theorem trpK6_zero (h : r.headD 0 = 0) : trpK6 (some (r, m)) = none := by simp only [trpK6]; rw [ite_eq_left h]
 theorem trpK6_ok (h : ¬ r.headD 0 = 0) : trpK6 (some (r, m)) = some ([], m) := by
-  simp only [trpK6]; rw [if_neg h]
+  simp only [trpK6]; rw [ite_eq_right h]
 theorem trpK5_zero (h : r.headD 0 = 0) : trpK5 p n pp bo bl k recl (some (r, m)) = none := by
-  simp only [trpK5]; rw [if_pos h]
+  simp only [trpK5]; rw [ite_eq_left h]
 theorem trpK5_ok (h : ¬ r.headD 0 = 0) : trpK5 p n pp bo bl k recl (some (r, m)) =
-    trpK6 (callW p n "target_rec_pins_split" [pp, k, recl, bo, bl] m) := by simp only [trpK5]; rw [if_neg h]
+    trpK6 (callW p n "target_rec_pins_split" [pp, k, recl, bo, bl] m) := by simp only [trpK5]; rw [ite_eq_right h]
 theorem trpK4_zero (h : r.headD 0 = 0) : trpK4 p n pp bo bl reco recl k mo rs (some (r, m)) = none := by
-  simp only [trpK4]; rw [if_pos h]
+  simp only [trpK4]; rw [ite_eq_left h]
 theorem trpK4_ok (h : ¬ r.headD 0 = 0) : trpK4 p n pp bo bl reco recl k mo rs (some (r, m)) =
     trpK5 p n pp bo bl k recl (callW p n "target_rec_pins_names"
       [mo, k, reco, recl, rs.tail.tail.headD 0, rs.tail.tail.tail.headD 0] m) := by
-  simp only [trpK4]; rw [if_neg h]
+  simp only [trpK4]; rw [ite_eq_right h]
 theorem trpK3_some : trpK3 p n pp bo bl reco recl k (some (rs, m)) =
     trpK4 p n pp bo bl reco recl k (rdW (m.arr64 IW) pp) rs
       (callW p n "block_rec_name_set_ok" [rdW (m.arr64 IW) pp, k, rs.headD 0, rs.tail.headD 0] m) := rfl
 theorem trpK2_zero (h : r.headD 0 = 0) : trpK2 p n pp bo bl reco recl (some (r, m)) = none := by
-  simp only [trpK2]; rw [if_pos h]
+  simp only [trpK2]; rw [ite_eq_left h]
 theorem trpK2_ok (h : ¬ r.headD 0 = 0) : trpK2 p n pp bo bl reco recl (some (r, m)) =
     trpK3 p n pp bo bl reco recl (rdW (m.arr64 IW) (pp + 1))
       (callW p n "block_rec_split_own_aux" [reco, recl, rdW (m.arr64 IW) (pp + 1)] m) := by
-  simp only [trpK2]; rw [if_neg h]
+  simp only [trpK2]; rw [ite_eq_right h]
 theorem trpK1_zero (h : r.headD 0 = 0) : trpK1 p n pp bo bl reco recl (some (r, m)) = none := by
-  simp only [trpK1]; rw [if_pos h]
+  simp only [trpK1]; rw [ite_eq_left h]
 theorem trpK1_ok (h : ¬ r.headD 0 = 0) : trpK1 p n pp bo bl reco recl (some (r, m)) =
     trpK2 p n pp bo bl reco recl (callW p n "block_rec_names_unreserved" [reco, recl] m) := by
-  simp only [trpK1]; rw [if_neg h]
+  simp only [trpK1]; rw [ite_eq_right h]
 end arms
 attribute [ind_grind] trpK6_zero trpK6_ok trpK5_zero trpK5_ok trpK4_zero trpK4_ok trpK3_some trpK2_zero
   trpK2_ok trpK1_zero trpK1_ok
@@ -312,12 +311,12 @@ theorem targetRecPins_refines (p : Prog) (L : RpLook p) (n : Nat) (s₀ : St) (a
     (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs)
     (hblk : DecB (fun m => decEBlk dn m bo.toNat bl.toNat) s₀.mem blk) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 3)) "target_rec_pins" [pp, bo, bl]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetRecPins bs blk) a₀ ∧
+    ⦃fun _r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetRecPins bs blk) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetRecPins bs blk) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (trp_spec p L.pins (n + 2) s₀ pp bo bl) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hS', hg⟩ := trpW_ok p L n s₀.mem s'.mem a₀ pp bo bl r bs blk hm hS hq hblk
+  rintro _r s' ⟨hl, hm⟩
+  obtain ⟨a', hrun, hS', hg⟩ := trpW_ok p L n s₀.mem s'.mem a₀ pp bo bl _r bs blk hm hS hq hblk
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
 

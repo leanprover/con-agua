@@ -19,9 +19,6 @@ the handles), to be discharged by `substConst0_refines` and its `substConstAll` 
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -97,10 +94,10 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
   rcases hyps with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩
   · have hn1 : hl ≠ 1 := fun e => by rw [e] at hlen; simp at hlen
     have hn2 : hl ≠ 2 := fun e => by rw [e] at hlen; simp at hlen
-    rw [if_neg hn1, if_neg hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
+    rw [ite_eq_right hn1, ite_eq_right hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
   · obtain rfl : hl = 1 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
     obtain ⟨-, hwlt, rfl, -⟩ := decHL_cons_iw hS.2.2.2.1 hd
-    rw [if_pos rfl, iw_rd_grow hG4 (by simp only [h1w] at hb; omega)]
+    rw [ite_eq_left rfl, iw_rd_grow hG4 (by simp only [h1w] at hb; omega)]
     refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
     exact Sim.ntRet ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun _ _ _ _ _ h => h
   · obtain rfl : hl = 2 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
@@ -108,7 +105,7 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
     obtain ⟨-, hwlt2, rfl, -⟩ := decHL_cons_iw hS.2.2.2.1 hrest
     have hlt2 : (ho + 1).toNat < iwTop m := by
       have h1 := hS.2.1; have h2 := hS.2.2.2.1; simp only [h2w] at hb; have e := word_add_one (w := ho) (by omega); omega
-    rw [if_neg (by decide), if_pos rfl, iw_rd_grow hG4 (by simp only [h2w] at hb; omega)]
+    rw [ite_eq_right (by decide), ite_eq_left rfl, iw_rd_grow hG4 (by simp only [h2w] at hb; omega)]
     refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
     refine Sim.ntB ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun r6 _ m6 a6 ⟨hS6, hg6, hl6, rfl⟩ => ?_
     rw [iw_rd_grow hg6 hlt2]
@@ -116,7 +113,7 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
     exact Sim.ntRet ((mkApp_ref hM (r6.headD 0) (r7.headD 0)).simG hS7 hg7) fun _ _ _ _ _ h => h
   · have hn1 : hl ≠ 1 := fun e => by rw [e] at hlen; simp at hlen
     have hn2 : hl ≠ 2 := fun e => by rw [e] at hlen; simp at hlen
-    rw [if_neg hn1, if_neg hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
+    rw [ite_eq_right hn1, ite_eq_right hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
 
 @[refines ConRon.Arena.divModCertApplied]
 theorem divModCertApplied_refines (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
@@ -152,10 +149,10 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
     | succ k =>
     have hw := callW_model (M := fun mm => sc0ListW p (k + 1) mm nm r o l)
       (sc0List_specW p hD.lSubstConst0List (k + 1) · nm r o l) hc
-    simp only [sc0ListW.eq_2, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [sc0ListW.eq_2, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨[], a, rfl, hS, IWGrow.refl _, ?_⟩
-    simp only [decRL, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil]
+    simp only [decRL, List.getD_cons_zero, List.getD_cons_succ]
     exact ⟨by simp [decHL, hslice?], by simp⟩
   | cons h hs ih =>
     intro o l k m a res m' hS hd hb hc
@@ -167,7 +164,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
     have hw := callW_model (M := fun mm => sc0ListW p (k + 1) mm nm r o l)
       (sc0List_specW p hD.lSubstConst0List (k + 1) · nm r o l) hc
     rw [sc0ListW.eq_2] at hw
-    rw [if_neg hl0] at hw
+    rw [ite_eq_right hl0] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ := hs0 nm r _ hn hr hwlt k m a r1 m1 hS h1
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
@@ -194,10 +191,10 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
     simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd2
     obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hcons' hS2 hd2.2 hl1 hd2.1
     refine ⟨x1 :: x2, a2, ?_, hS3, hg1.trans (hg2.trans hg3), ?_⟩
-    · simp only [substConst0List, StateT.run_bind, hrun1, exc_ok_bind', hrun2, StateT.run_pure]
+    · simp only [substConst0List, StateT.run_bind, StateT.run_pure]
       have hrun1' : (substConst0 (decI nm) (decE r) coreWalkFuel (decI (rdW (m.arr64 IW) o))).run a =
           .ok (x1, a1) := hrun1
-      simp only [hrun1', exc_ok_bind', hrun2, StateT.run_pure]
+      simp only [hrun1', exc_ok_bind', hrun2]
       rfl
     · simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1, List.headD_cons, List.tail_cons]
       rw [← hx1]

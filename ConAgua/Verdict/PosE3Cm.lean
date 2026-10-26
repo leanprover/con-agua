@@ -12,14 +12,12 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 namespace L.Ind
 
 open L.Arena
 
-def nctE.k_nest_ctors (p : Prog) : Except L.Err (List L.Word × L.Mem) → Except L.Err (List L.Word × L.Mem)
+def nctE.k_nest_ctors (_p : Prog) : Except L.Err (List L.Word × L.Mem) → Except L.Err (List L.Word × L.Mem)
   | Except.error ε => Except.error ε
   | Except.ok (r, m₁) =>
     Except.ok ([(List.headD r 0), (List.headD (List.tail r) 0), (List.headD (List.tail (List.tail r)) 0)], (m₁))
@@ -213,9 +211,9 @@ theorem nctE_spec (p : Prog) (hf : p.lookup "nest_ctors" = some nestCtorsL) (n :
             _root_.L.callE_spec p n "nest_ctors_one", _root_.L.callE_spec p n "rec3", _root_.L.callE_spec p n "sl_snoc"] <;>
           (try
               simp_all [_root_.L.LocEq, _root_.L.St.setLoc_loc, _root_.L.St.setLoc_mem, _root_.L.St.setLocs_nil,
-                _root_.L.St.setLocs_cons, _root_.L.Locals.init_nil, _root_.L.Locals.init_cons_zero,
+                _root_.L.St.setLocs_cons, _root_.L.Locals.init_cons_zero,
                 _root_.L.Locals.init_cons_succ, _root_.L.Sig.retVal, _root_.L.Sig.retOr, _root_.L.BinOp.eval,
-                _root_.L.Cmp.eval, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, nctE,
+                _root_.L.Cmp.eval, nctE,
                 nctE.k_nest_ctors, nctE.k_sl_snoc, nctE.k_rec3, nctE.k_nest_ctors_one]) <;>
         grind [lang_grind, arena_grind]
 

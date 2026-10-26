@@ -8,8 +8,6 @@ the twin's run, with the invariant `RInv` after. Then `rci_names_to` (`internNam
 handles to `EREC[o ‥]`) and `rci_name_sl` (a counted name list as a fresh `EREC` slice).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP
@@ -131,7 +129,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
     | succ k =>
     have hw := callW_model (M := fun mq => namesToW p k mq q o kw) (namesTo_specW rom p hL k · q o kw) hc
     have hk0 : kw = 0 := by apply UInt64.toNat_inj.mp; simpa using hk
-    simp only [namesToW, hk0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [namesToW, hk0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨[], a, rfl, rfl, by simp, by simp, hI, hM, rfl, by simp [encNames], EKeep.refl _ _, rfl, rfl⟩
   | cons x xs ih =>
@@ -142,7 +140,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
     | succ k =>
     have hw := callW_model (M := fun mq => namesToW p k mq q o kw) (namesTo_specW rom p hL k · q o kw) hc
     have hk0 : kw ≠ 0 := fun h => by subst h; simp at hk
-    simp only [namesToW, hk0, if_false] at hw
+    simp only [namesToW, hk0, ite_false] at hw
     obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
     have hd0 : rom.drop q.toNat = encName x ++ (encNames xs ++ rest) := by
       rw [hd, encNames, List.append_assoc]
@@ -217,7 +215,7 @@ theorem hslice_of {k : IdxKind} (a : Array Word) (o : Nat) (ws : List Word)
   rw [rmapM_some_of _ (fun j => (decI (ws.getD j 0) : Idx k)) _ (fun j hj => by
     have hj' := List.mem_range.mp hj
     simp only [hd?, hw j hj', Option.bind_eq_bind, Option.bind_some]
-    rw [if_pos (hlt _ (List.getElem_mem hj'))]
+    rw [ite_eq_left (hlt _ (List.getElem_mem hj'))]
     simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hj'])]
   congr 1
   apply List.ext_getElem (by simp)
@@ -340,10 +338,10 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
     by rw [hiw3, hIW2, hIW1], ?_⟩
   · simp only [List.headD_cons]; rw [hq3, hq8]; simp [encNameL, u64B]; omega
   · refine ⟨by omega, fun i hi hR => ?_⟩
-    rw [hkeep i hi, hget2, if_neg (by omega), if_neg (by omega), hE1']
+    rw [hkeep i hi, hget2, ite_eq_right (by omega), ite_eq_right (by omega), hE1']
   · have hH := holds_hlist (k := .name) m3 d.toNat (r1.headD 0) (UInt64.ofNat ns.length) ws
-      (by rw [hkeep _ (by omega), hget2, if_neg (by omega), if_pos rfl])
-      (by rw [hkeep _ (by omega), hget2, if_pos rfl]) (by rw [hcN, hwl]) hwd hwlt
+      (by rw [hkeep _ (by omega), hget2, ite_eq_right (by omega), ite_eq_left rfl])
+      (by rw [hkeep _ (by omega), hget2, ite_eq_left rfl]) (by rw [hcN, hwl]) hwd hwlt
     refine hH.mono (fun i hi => ?_) (fun _ h => h)
     rcases hi with rfl | rfl | ⟨h1, h2⟩
     · left; omega

@@ -12,7 +12,6 @@ spec's proof: `targetPiDomsWith` (`targetPiDomsWith_spec`, a `PSpec`), the field
 `target_k53` (`tkW_okC`, con-ron's `targetK53_spec` on its run for the extension).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -158,7 +157,7 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
     (ConRon.Bridge.Inductives.dCtorNf_ext.list c12.ext _ _ hesP') hformer hMs
   refine ⟨a3, ?_, hC3, hg12.trans hg3, hP3, hA3⟩
   simp only [ConRon.Arena.classNodesAgree, StateT.run_bind, run1, except_ok_bind, Option.getD_some, hget]
-  simp only [run2, except_ok_bind, if_true]
+  simp only [run2, except_ok_bind, ite_true]
   exact run3
 
 include hq henv P in

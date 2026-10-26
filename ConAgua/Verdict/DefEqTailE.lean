@@ -15,7 +15,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -91,8 +90,8 @@ theorem defeqTail_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     hs ha hb hd) (callW_of_callE h1)
   refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 ≠ 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decBool_false_of (by simpa using h0)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   cases h2 : callE p n "head_is_proj" [a1] m₁ with
@@ -124,10 +123,10 @@ theorem defeqTail_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     by_cases x : u = 0 <;> by_cases y : v = 0 <;> simp [x, y]
   rw [hpp]
   by_cases hp0 : r₂.headD 0 = 0 ∧ r₃.headD 0 = 0
-  · rw [if_pos hp0] at hW
+  · rw [ite_eq_left hp0] at hW
     simp only [hp0, and_self, decide_true, ↓reduceIte]
     exact hstk _ m₃ M₃ hS₃ hW
-  rw [if_neg hp0] at hW
+  rw [ite_eq_right hp0] at hW
   simp only [hp0, decide_false, Bool.false_eq_true, ↓reduceIte]
   cases h4 : callE p n "whnf_core" [mode, 0, vis, d, a1] m₃ with
   | error e4 =>
@@ -160,10 +159,10 @@ theorem defeqTail_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     simp only [decH, decE_beq h₄.2.2.2 ha, decE_beq h₅.2.2.2 hb, Bool.decide_and]
   rw [heq]
   by_cases hm : r₄.headD 0 = a1 ∧ r₅.headD 0 = b1
-  · rw [if_pos hm] at hW
+  · rw [ite_eq_left hm] at hW
     simp only [hm, and_self, decide_true, ↓reduceIte]
     exact hstk _ m₅ M₅ hS₅ hW
-  rw [if_neg hm] at hW
+  rw [ite_eq_right hm] at hW
   simp only [hm, decide_false, Bool.false_eq_true, ↓reduceIte]
   cases h6 : callE p n "defeq" [mode, vis, d, r₄.headD 0, r₅.headD 0] m₅ with
   | error e6 =>
@@ -230,8 +229,8 @@ theorem ldprExit_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     | ok q => rw [h] at hW'; simp only [ldprExitE.k_defeq] at hW'; cases hW'
   simp only [ldprExitE] at hW
   by_cases h1 : k = 1
-  · rw [if_pos h1] at hW; cases hW
-  rw [if_neg h1] at hW
+  · rw [ite_eq_left h1] at hW; cases hW
+  rw [ite_eq_right h1] at hW
   have hst : decDSs [k] = (if k = 2 then .diff else .unknown) := by
     unfold decDSs; simp [hk0, h1]
   have hbody : ∀ st, (st = DeltaStepA.diff ∨ st = DeltaStepA.unknown) →
@@ -263,7 +262,7 @@ theorem ldprExit_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     a₀ dn vis fe M eb mode d sn i a hs hsn ha) (callW_of_callE h1)
   refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
   by_cases f1 : r₁.headD 0 ≠ 0
-  · rw [if_pos f1] at hW
+  · rw [ite_eq_left f1] at hW
     rw [decOptR_someS f1]
     cases h2 : callE p (n' + 1) "reduce_proj_core" [mode, vis, d, sn, i, b] m₁ with
     | error e2 =>
@@ -280,13 +279,13 @@ theorem ldprExit_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
       (callW_of_callE h2)
     refine ErrClaim.bind_core h₂ (fun M₂ hS₂ => ?_)
     by_cases f2 : r₂.headD 0 ≠ 0
-    · rw [if_pos f2] at hW
+    · rw [ite_eq_left f2] at hW
       rw [decOptR_someS f2]
       exact hdef _ m₂ M₂ _ _ hS₂ h₁.2.2.2.2 h₂.2.2.2.2 hW
-    · rw [if_neg f2] at hW
+    · rw [ite_eq_right f2] at hW
       rw [decOptR_noneS (by simpa using f2)]
       exact hdef _ m₂ M₂ _ _ hS₂ ha hb hW
-  · rw [if_neg f1] at hW
+  · rw [ite_eq_right f1] at hW
     rw [decOptR_noneS (by simpa using f1)]
     exact hdef _ m₁ M₁ _ _ hS₁ ha hb hW
 
@@ -402,25 +401,25 @@ theorem projPair_refinesE (p : Prog) (hq : StuckProg p) (hldprE : LdprE p) : Pro
   have hS := hs.rel
   have hR := hS.arena.1
   by_cases g1 : a >>> 28 ≠ 9
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
   by_cases g2 : b >>> 28 ≠ 9
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
   have g1' : a >>> 28 = 9 := by simpa using g1
   have g2' : b >>> 28 = 9 := by simpa using g2
   by_cases c1 : tierW a ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos c1] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg c1] at hW
+  · rw [ite_eq_left c1] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right c1] at hW
   by_cases c2 : tcnt s₀.mem PROJ (tierW a) ≤ idxW a
-  · rw [if_pos c2] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg c2] at hW
+  · rw [ite_eq_left c2] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right c2] at hW
   by_cases c3 : tierW b ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos c3] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg c3] at hW
+  · rw [ite_eq_left c3] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right c3] at hW
   by_cases c4 : tcnt s₀.mem PROJ (tierW b) ≤ idxW b
-  · rw [if_pos c4] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg c4] at hW
+  · rw [ite_eq_left c4] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right c4] at hW
   obtain ⟨hva, hx1, hx3⟩ := view_proj s₀.mem a₀ hR a ha ⟨c1, by simpa using c2⟩ g1'
   obtain ⟨hvb, hy1, hy3⟩ := view_proj s₀.mem a₀ hR b hb ⟨c3, by simpa using c4⟩ g2'
   have htag : ∀ h : Word, HW h → ((decE h).tag == ETag.proj) = decide (h >>> 28 = 9) :=
@@ -435,11 +434,11 @@ theorem projPair_refinesE (p : Prog) (hq : StuckProg p) (hldprE : LdprE p) : Pro
   generalize tfld s₀.mem PROJ (tierW a) (idxW a) 2 = x3 at hW hx3
   generalize tfld s₀.mem PROJ (tierW b) (idxW b) 2 = y3 at hW hy3
   by_cases e1 : x1 ≠ y1
-  · rw [if_pos e1] at hW; cases hW
-  rw [if_neg e1] at hW
+  · rw [ite_eq_left e1] at hW; cases hW
+  rw [ite_eq_right e1] at hW
   by_cases e2 : x2 ≠ y2
-  · rw [if_pos e2] at hW; cases hW
-  rw [if_neg e2] at hW
+  · rw [ite_eq_left e2] at hW; cases hW
+  rw [ite_eq_right e2] at hW
   have e1' : x1 = y1 := by simpa using e1
   have e2' : x2 = y2 := by simpa using e2
   subst e1' e2'
@@ -533,8 +532,8 @@ theorem stuckIrrel_refinesE (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc
     ha hb) (callW_of_callE h1)
   refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
   by_cases g1 : r₁.headD 0 ≠ 0
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
   rw [decBool_false_of (by simpa using g1)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   cases h2 : callE p n "struct_eta_cert" [mode, vis, d, b, a] m₁ with
@@ -553,8 +552,8 @@ theorem stuckIrrel_refinesE (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc
     mode d b a hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb ha) (callW_of_callE h2)
   refine ErrClaim.bind_core h₂ (fun M₂ hS₂ => ?_)
   by_cases g2 : r₂.headD 0 ≠ 0
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
   rw [decBool_false_of (by simpa using g2)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   cases h3 : callE p n "struct_unit_cert" [mode, vis, d, a, b] m₂ with
@@ -573,8 +572,8 @@ theorem stuckIrrel_refinesE (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc
     mode d a b hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb) (callW_of_callE h3)
   refine ErrClaim.bind_core h₃ (fun M₃ hS₃ => ?_)
   by_cases g3 : r₃.headD 0 ≠ 0
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  · rw [ite_eq_left g3] at hW; cases hW
+  rw [ite_eq_right g3] at hW
   rw [decBool_false_of (by simpa using g3)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   cases h4 : callE p n "proof_irrel" [mode, vis, d, a, b] m₃ with
@@ -638,7 +637,7 @@ theorem stuckRest_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
   simp only [stuckRestE] at hW
   -- the free variables
   by_cases hf : ga = 1 ∧ gb = 1
-  · rw [if_pos hf.1, if_pos hf.2] at hW
+  · rw [ite_eq_left hf.1, ite_eq_left hf.2] at hW
     obtain ⟨i, t, rfl⟩ := tagV_fvar (hta ▸ hf.1)
     obtain ⟨j, u, rfl⟩ := tagV_fvar (htb ▸ hf.2)
     refine ErrClaim.congr_run (ds_fvar _ _ fe _ _ _ a₀ i j t u hva hvb) ?_
@@ -650,19 +649,19 @@ theorem stuckRest_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
         simp [e, this]
     rw [hij]
     by_cases e : a1 = b1
-    · rw [if_pos e] at hW; cases hW
-    · rw [if_neg e] at hW
+    · rw [ite_eq_left e] at hW; cases hW
+    · rw [ite_eq_right e] at hW
       simp only [e, decide_false, Bool.false_eq_true, ↓reduceIte]
       exact hirr a₀ s₀.mem M hS hW
   have hW1 : stuckRestE.j1 p n mode vis d a b ga a1 a2 gb b1 b2 s₀.mem = .error er := by
     by_cases g : ga = 1
-    · rw [if_pos g, if_neg (fun h => hf ⟨g, h⟩)] at hW; exact hW
-    · rw [if_neg g] at hW; exact hW
+    · rw [ite_eq_left g, ite_eq_right (fun h => hf ⟨g, h⟩)] at hW; exact hW
+    · rw [ite_eq_right g] at hW; exact hW
   clear hW
   simp only [stuckRestE.j1] at hW1
   -- the constants
   by_cases hcn : ga = 3 ∧ gb = 3
-  · rw [if_pos hcn.1, if_pos hcn.2] at hW1
+  · rw [ite_eq_left hcn.1, ite_eq_left hcn.2] at hW1
     obtain ⟨nm, us, rfl⟩ := tagV_const (hta ▸ hcn.1)
     obtain ⟨nm', us', rfl⟩ := tagV_const (htb ▸ hcn.2)
     obtain ⟨-, hw1, hd1, hw2, hd2⟩ := hwa
@@ -670,8 +669,8 @@ theorem stuckRest_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     refine ErrClaim.congr_run (ds_const _ _ fe _ _ _ a₀ nm nm' us us' hva hvb) ?_
     rw [← hd1, ← hd1', ← hd2, ← hd2']
     by_cases e : a1 = b1
-    · rw [if_pos e] at hW1
-      rw [if_pos (by rw [e])]
+    · rw [ite_eq_left e] at hW1
+      rw [ite_eq_left (by rw [e])]
       cases hl : callE p n "lvls_eq_c" [a2, b2] s₀.mem with
       | error e1 =>
         rw [hl, stuckRestE.k_lvls_eq_c.none] at hW1; cases hW1
@@ -686,24 +685,24 @@ theorem stuckRest_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
       refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
       by_cases z0 : r₁.headD 0 = 0
       · -- the decline: `lvls_eq_c` ran out of fuel, the twin's `liftFueled` fails
-        rw [if_pos z0] at hW1; cases hW1
-        have : decO (r₁.headD 0) = none := by unfold decO; rw [if_pos z0]
+        rw [ite_eq_left z0] at hW1; cases hW1
+        have : decO (r₁.headD 0) = none := by unfold decO; rw [ite_eq_left z0]
         rw [this]
         exact ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
-      rw [if_neg z0] at hW1
+      rw [ite_eq_right z0] at hW1
       by_cases z1 : r₁.headD 0 = 1
-      · rw [if_neg (fun h => h z1)] at hW1
-        have : decO (r₁.headD 0) = some false := by unfold decO; rw [if_neg z0, if_pos z1]
+      · rw [ite_eq_right (fun h => h z1)] at hW1
+        have : decO (r₁.headD 0) = some false := by unfold decO; rw [ite_eq_right z0, ite_eq_left z1]
         rw [this]
         exact hirr _ m₁ M₁ hS₁ hW1
-      · rw [if_pos z1] at hW1; cases hW1
-    · rw [if_neg e] at hW1
-      rw [if_neg (fun h => e (decI_inj hw1 hw1' h))]
+      · rw [ite_eq_left z1] at hW1; cases hW1
+    · rw [ite_eq_right e] at hW1
+      rw [ite_eq_right (fun h => e (decI_inj hw1 hw1' h))]
       exact hirr a₀ s₀.mem M hS hW1
   have hW2 : stuckRestE.j2 p n mode vis d a b ga a1 a2 gb b1 b2 s₀.mem = .error er := by
     by_cases g : ga = 3
-    · rw [if_pos g, if_neg (fun h => hcn ⟨g, h⟩)] at hW1; exact hW1
-    · rw [if_neg g] at hW1; exact hW1
+    · rw [ite_eq_left g, ite_eq_right (fun h => hcn ⟨g, h⟩)] at hW1; exact hW1
+    · rw [ite_eq_right g] at hW1; exact hW1
   clear hW1
   simp only [stuckRestE.j2] at hW2
   have hlam : ∀ (t bd : EIdx) (w1 w2 x : Word) (T : AM Bool),
@@ -734,24 +733,24 @@ theorem stuckRest_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     rw [hd1, hd2] at h₁
     refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
     by_cases e0 : r₁.headD 0 ≠ 0
-    · rw [if_pos e0] at hW; cases hW
-    · rw [if_neg e0] at hW
+    · rw [ite_eq_left e0] at hW; cases hW
+    · rw [ite_eq_right e0] at hW
       rw [decBool_false_of (by simpa using e0)]
       simp only [Bool.false_eq_true, ↓reduceIte]
       exact hirr _ m₁ M₁ hS₁ hW
   by_cases hl : ga = 5
-  · rw [if_pos hl] at hW2
+  · rw [ite_eq_left hl] at hW2
     obtain ⟨t, bd, rfl⟩ := tagV_lam (hta ▸ hl)
     obtain ⟨-, hw1, hd1, hw2, hd2⟩ := hwa
     exact hlam t bd a1 a2 b _ hw1 hd1 hw2 hd2 hb (ds_lamL _ _ fe _ _ _ a₀ t bd vb hva hvb) hW2
-  rw [if_neg hl] at hW2
+  rw [ite_eq_right hl] at hW2
   by_cases hl' : gb = 5
-  · rw [if_pos hl'] at hW2
+  · rw [ite_eq_left hl'] at hW2
     obtain ⟨t, bd, rfl⟩ := tagV_lam (htb ▸ hl')
     obtain ⟨-, hw1, hd1, hw2, hd2⟩ := hwb
     exact hlam t bd b1 b2 a _ hw1 hd1 hw2 hd2 ha
       (ds_lamR _ _ fe _ _ _ a₀ t bd va hva hvb (by rw [← hta]; exact hl)) hW2
-  rw [if_neg hl'] at hW2
+  rw [ite_eq_right hl'] at hW2
   refine ErrClaim.congr_run (ds_irrel _ _ fe _ _ _ a₀ va vb hva hvb (by rw [← hta, ← htb]; exact h1)
     (by rw [← hta, ← htb]; exact h2) (by rw [← hta, ← htb]; exact hf)
     (by rw [← hta, ← htb]; exact hcn) (by rw [← hta, ← htb]; exact h3) (by rw [← hta]; exact hl)
@@ -814,11 +813,11 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     | ok q => rw [h] at hW'; simp only [stuckStrE.k_defeq, stuckStrE.j2] at hW'; cases hW'
   simp only [stuckStrE] at hW
   by_cases h1 : tierW lt ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos h1] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg h1] at hW
+  · rw [ite_eq_left h1] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right h1] at hW
   by_cases h2 : tcnt s₀.mem LIT (tierW lt) ≤ idxW lt
-  · rw [if_pos h2] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-  rw [if_neg h2] at hW
+  · rw [ite_eq_left h2] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [ite_eq_right h2] at hW
   obtain ⟨kn, hkv, hrec⟩ := view_lit_f s₀.mem a₀ hR lt hlt ⟨h1, by simpa using h2⟩ hg
   rw [hl] at hkv
   have hkl : kn.l = l := by cases hkv; rfl
@@ -828,23 +827,23 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
   cases kl with
   | natVal N =>
     have h0 : tfld s₀.mem LIT (tierW lt) (idxW lt) 0 = 0 := hrec.1
-    rw [if_neg (fun h => absurd (h0 ▸ h.1) (by decide))] at hW
+    rw [ite_eq_right (fun h => absurd (h0 ▸ h.1) (by decide))] at hW
     exact hirr a₀ s₀.mem M hS hW
   | strVal st =>
     have h0 : tfld s₀.mem LIT (tierW lt) (idxW lt) 0 = 1 := hrec.1
     rcases (Classical.em (fo >>> 28 = 3)).symm with h3 | h3
-    · rw [if_neg (fun h => h3 h.2)] at hW
+    · rw [ite_eq_right (fun h => h3 h.2)] at hW
       unfold stuckStrT
       rw [tag_beq_const _ hfo]
       simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte]
       exact hirr a₀ s₀.mem M hS hW
-    rw [if_pos ⟨h0, h3⟩] at hW
+    rw [ite_eq_left ⟨h0, h3⟩] at hW
     by_cases h4 : tierW fo ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-    · rw [if_pos h4] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-    rw [if_neg h4] at hW
+    · rw [ite_eq_left h4] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+    rw [ite_eq_right h4] at hW
     by_cases h5 : tcnt s₀.mem CONST (tierW fo) ≤ idxW fo
-    · rw [if_pos h5] at hW; cases hW; exact ErrClaim.of_cls0 rfl
-    rw [if_neg h5] at hW
+    · rw [ite_eq_left h5] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+    rw [ite_eq_right h5] at hW
     obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR fo hfo ⟨h4, by simpa using h5⟩ h3
     have hct : ((decE fo).tag == ETag.const) = true := by rw [tag_beq_const _ hfo]; simp [h3]
     generalize tfld s₀.mem CONST (tierW fo) (idxW fo) 0 = co at hnw hW hv
@@ -892,9 +891,9 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     rw [hr₁, hr₂] at hW
     by_cases hcond : co = rdW (s₀.mem.arr64 PINS) (1 + 6) ∧ uo = rdW (s₀.mem.arr64 PINS) 52 ∧
         r₃.headD 0 ≠ 0
-    · rw [if_pos hcond] at hW
+    · rw [ite_eq_left hcond] at hW
       obtain ⟨hc₁, hc₂, hc₃⟩ := hcond
-      rw [if_pos ⟨hc₁, hc₂, decBool_true_of hc₃⟩]
+      rw [ite_eq_left ⟨hc₁, hc₂, decBool_true_of hc₃⟩]
       cases hp4 : callE p n "str_lit_ctor" [lt] m₃ with
       | error e =>
         rw [hp4, stuckStrE.k_str_lit_ctor.none] at hW; cases hW
@@ -908,16 +907,16 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
         hlt hv₃) (callW_of_callE hp4)
       refine ErrClaim.bind_core h₄ (fun M₄ hS₄ => ?_)
       by_cases hsd : side = 0
-      · rw [if_pos hsd] at hW
+      · rw [ite_eq_left hsd] at hW
         simp only [hsd, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte]
         exact hdef _ m₄ M₄ _ _ hS₄ h₄.2.2.2 hb hW
-      · rw [if_neg hsd] at hW
+      · rw [ite_eq_right hsd] at hW
         have : (side != 0) = true := by simpa using hsd
         simp only [this, ↓reduceIte]
         exact hdef _ m₄ M₄ _ _ hS₄ ha h₄.2.2.2 hW
-    · rw [if_neg hcond] at hW
-      rw [if_neg (fun h => hcond ⟨h.1, h.2.1, fun e => by
-        have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
+    · rw [ite_eq_right hcond] at hW
+      rw [ite_eq_right (fun h => hcond ⟨h.1, h.2.1, fun e => by
+              have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
       exact hirr _ m₃ M₃ hS₃ hW
 
 end L.Arena
@@ -981,8 +980,8 @@ theorem appCong_refinesE (p : Prog) (hq : StuckProg p) (hlstE : DefeqLstE p)
   have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := hg2.size ▸ hspn₁
   simp only [stuckAppCongE.k_get_app_args_2] at hW
   rcases (Classical.em (r₁.tail.headD 0 = r₂.tail.headD 0)).symm with heq | heq
-  · rw [if_neg heq] at hW; cases hW
-  rw [if_pos heq] at hW
+  · rw [ite_eq_right heq] at hW; cases hW
+  rw [ite_eq_left heq] at hW
   have heq' : aa.length = bb.length := by rw [hla, hlb, heq]
   cases h3 : callE p n "get_app_fn" [a] m₂ with
   | error e => rw [h3, stuckAppCongE.k_get_app_fn.none] at hW; cases hW; exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h3
@@ -1012,8 +1011,8 @@ theorem appCong_refinesE (p : Prog) (hq : StuckProg p) (hlstE : DefeqLstE p)
   obtain ⟨_, _, _, hst₅⟩ := h₅.2.1
   refine ErrClaim.bind_core h₅ (fun M₅ hS₅ => ?_)
   by_cases h0 : r₅.headD 0 = 0
-  · rw [if_neg (fun h => h h0)] at hW; cases hW
-  rw [if_pos h0] at hW
+  · rw [ite_eq_right (fun h => h h0)] at hW; cases hW
+  rw [ite_eq_left h0] at hW
   rw [decBool_true_of h0]
   simp only [↓reduceIte]
   cases h6 : callE p n "defeq_lst" [mode, vis, d, r₁.headD 0, r₁.tail.headD 0, r₂.headD 0,
@@ -1089,8 +1088,8 @@ theorem stuckApp_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     hb) (callW_of_callE h1)
   refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 ≠ 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decBool_false_of (by simpa using h0)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   cases h2 : callE p n "stuck_irrel" [mode, vis, d, a, b] m₁ with
@@ -1216,7 +1215,7 @@ theorem defeqStuck_refinesE (p : Prog) (hq : StuckProg p) (hstrE : StuckStrE p) 
       exact ErrClaim.of_callE_succ h fun j hj h' => CoreSpecE.of_callE (hsp j hj) (hj ▸ h')
     | ok q => rw [h] at hW'; simp only [defeqStuckE.k_stuck_rest] at hW'; cases hW'
   by_cases c1 : ra.headD 0 = 8 ∧ rb.headD 0 = 4
-  · rw [if_pos c1.1, if_pos c1.2] at hW
+  · rw [ite_eq_left c1.1, ite_eq_left c1.2] at hW
     obtain ⟨l, rfl⟩ := tagV_lit (hta ▸ c1.1)
     obtain ⟨fo, x, rfl⟩ := tagV_app (htb ▸ c1.2)
     obtain ⟨-, hfw, hfo, -, -⟩ := hvrb
@@ -1231,12 +1230,12 @@ theorem defeqStuck_refinesE (p : Prog) (hq : StuckProg p) (hstrE : StuckStrE p) 
   have hW1 : defeqStuckE.j1 p n mode vis d a b (ra.headD 0) (ra.tail.headD 0) (ra.tail.tail.headD 0)
       (rb.headD 0) (rb.tail.headD 0) (rb.tail.tail.headD 0) s₀.mem = .error er := by
     by_cases g : ra.headD 0 = 8
-    · rw [if_pos g, if_neg (fun h => c1 ⟨g, h⟩)] at hW; exact hW
-    · rw [if_neg g] at hW; exact hW
+    · rw [ite_eq_left g, ite_eq_right (fun h => c1 ⟨g, h⟩)] at hW; exact hW
+    · rw [ite_eq_right g] at hW; exact hW
   clear hW
   simp only [defeqStuckE.j1] at hW1
   by_cases c2 : ra.headD 0 = 4 ∧ rb.headD 0 = 8
-  · rw [if_pos c2.1, if_pos c2.2] at hW1
+  · rw [ite_eq_left c2.1, ite_eq_left c2.2] at hW1
     obtain ⟨fo, x, rfl⟩ := tagV_app (hta ▸ c2.1)
     obtain ⟨l, rfl⟩ := tagV_lit (htb ▸ c2.2)
     obtain ⟨-, hfw, hfo, -, -⟩ := hvra
@@ -1249,7 +1248,7 @@ theorem defeqStuck_refinesE (p : Prog) (hq : StuckProg p) (hstrE : StuckStrE p) 
     rw [hfo] at h
     simpa using h
   by_cases c3 : ra.headD 0 = 4 ∧ rb.headD 0 = 4
-  · rw [if_pos c3.1, if_neg (fun h => c2 ⟨c3.1, h⟩), if_pos c3.2] at hW1
+  · rw [ite_eq_left c3.1, ite_eq_right (fun h => c2 ⟨c3.1, h⟩), ite_eq_left c3.2] at hW1
     obtain ⟨f, x, rfl⟩ := tagV_app (hta ▸ c3.1)
     obtain ⟨g, y, rfl⟩ := tagV_app (htb ▸ c3.2)
     refine ErrClaim.congr_run (ds_app _ _ fe _ _ _ a₀ f x g y hva hvb) ?_
@@ -1260,8 +1259,8 @@ theorem defeqStuck_refinesE (p : Prog) (hq : StuckProg p) (hstrE : StuckStrE p) 
   have hW2 : defeqStuckE.j2 p n mode vis d a b (ra.headD 0) (ra.tail.headD 0) (ra.tail.tail.headD 0)
       (rb.headD 0) (rb.tail.headD 0) (rb.tail.tail.headD 0) s₀.mem = .error er := by
     by_cases g : ra.headD 0 = 4
-    · rw [if_pos g, if_neg (fun h => c2 ⟨g, h⟩), if_neg (fun h => c3 ⟨g, h⟩)] at hW1; exact hW1
-    · rw [if_neg g] at hW1; exact hW1
+    · rw [ite_eq_left g, ite_eq_right (fun h => c2 ⟨g, h⟩), ite_eq_right (fun h => c3 ⟨g, h⟩)] at hW1; exact hW1
+    · rw [ite_eq_right g] at hW1; exact hW1
   unfold defeqStuckE.j2 at hW2
   refine fin (fun j hj => ?_) hW2
   subst hj

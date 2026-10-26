@@ -40,7 +40,6 @@ named block). Every walk over a fixed chain of nodes (`binder_dom`, `lam_proj`, 
 
 open ConRon.Arena
 
-set_option linter.unusedVariables false
 
 namespace L.Arena
 

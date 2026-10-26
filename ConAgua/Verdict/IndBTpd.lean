@@ -8,8 +8,6 @@ The closedness reads, the canon forms and member abstractions are core-free (cla
 the verdicts are the knot's: `infer_type_core` twice and `is_def_eq_core`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -152,7 +150,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
     rw [word_lt_iff] at hc4; simp only [decW0Nat] at hd4; simp; omega
   have hclosed : (tpClosed pfvs (decE x) (decE y)).run a = .ok (true, a4) := by
     simp only [tpClosed, StateT.run_bind, rr1, except_ok_bind, e1, rr2, e2, run3, e3, run4, e4,
-      Bool.false_eq_true, if_false]; rfl
+      Bool.false_eq_true, ite_false]; rfl
   have hA4 : AbsOK s4.mem := ((((bvbW_afr h1m).trans (bvbW_afr h2m)).trans (fvbF_afr h3m)).trans
     (fvbF_afr h4m)) hA
   obtain ⟨q, -⟩ := tpClosed_pstep hC.check.state hxP hyP hclosed
@@ -410,7 +408,7 @@ theorem pdeE_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) :
   rw [h1, pdeE.k_target_params_def_eq_step.arm2 p (k + 1) vis d no nl lvls ho hl pfo pfl ao al bo bl r1 s1.mem hr1] at he
   have : c = true := by rw [← hc]; simpa using hr1
   subst this
-  simp only [if_true]
+  simp only [ite_true]
   have hgo := hg1.1
   exact ih (by omega) (m := s1.mem) hC1 hA1 hlv
     (by rw [decHL_grow hg1 hnob]; exact hno) (by omega)

@@ -28,8 +28,6 @@ con-leche's progress guard, and reads every number with `read_nat` (`NONE` past 
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order
@@ -164,10 +162,10 @@ def recObjN (b : Array UInt8) (i : Word) : Obj := objRecN b (i + 1) 1 ⟨0, 0, 0
 section
 variable (b : Array UInt8) (i w : Word) (o : Obj)
 theorem objRecN_err (h : (nextMemberN b i w).tag = 0) : objRecN b i w o = .none := by
-  rw [objRecN, if_pos h]
+  rw [objRecN, ite_eq_left h]
 theorem objRecN_close (h : (nextMemberN b i w).tag = 1) :
     objRecN b i w o = ⟨(nextMemberN b i w).pos + 1, o.x0, o.x1, o.x2, o.x3⟩ := by
-  rw [objRecN, if_neg (by simp [h]), if_pos h]
+  rw [objRecN, ite_eq_right (by simp [h]), ite_eq_left h]
 theorem objRecN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
     objRecN b i w o =
       if (nextMemberN b i w).pos <
@@ -177,7 +175,7 @@ theorem objRecN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i 
             (rdNatN b (nextMemberN b i w).val
               (exValN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val)) o)
       else .none := by
-  rw [objRecN, if_neg h0, if_neg h1]
+  rw [objRecN, ite_eq_right h0, ite_eq_right h1]
   simp only [dite_eq_ite]
 end
 grind_pattern [lang_grind] objRecN_err => objRecN b i w o, nextMemberN b i w
@@ -298,9 +296,9 @@ def exprLineN (b : Array UInt8) (i : Word) : Fld := exprN b i 1 .none
 section
 variable (b : Array UInt8) (i w : Word) (f : Fld)
 theorem exprN_err (h : (nextMemberN b i w).tag = 0) : exprN b i w f = .none := by
-  rw [exprN, if_pos h]
+  rw [exprN, ite_eq_left h]
 theorem exprN_close (h : (nextMemberN b i w).tag = 1) : exprN b i w f = f := by
-  rw [exprN, if_neg (by simp [h]), if_pos h]
+  rw [exprN, ite_eq_right (by simp [h]), ite_eq_left h]
 theorem exprN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
     exprN b i w f =
       if (nextMemberN b i w).pos <
@@ -308,7 +306,7 @@ theorem exprN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w)
         exprN b (exVN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val).e 0
           (fldPut (exVN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val) f)
       else .none := by
-  rw [exprN, if_neg h0, if_neg h1]
+  rw [exprN, ite_eq_right h0, ite_eq_right h1]
   simp only [dite_eq_ite]
 end
 grind_pattern [lang_grind] exprN_err => exprN b i w f, nextMemberN b i w

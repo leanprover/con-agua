@@ -12,7 +12,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -45,7 +44,7 @@ theorem checkThmVal_eq (fe : IFEnv) (cv : IConstantVal) (v : EIdx) :
       unless ← liftFueled "level comparison" (← lvlEq? u z) do
         fail (.invalid "type of theorem is not a proposition")
       dvT fe cv v (.thmInfo cv) "type mismatch in theorem") := by
-  simp only [checkThmVal, dvT, bind_assoc]
+  simp only [checkThmVal, dvT]
 
 theorem toNat_add_small (c : Word) (k : Nat) (h : c.toNat + k < 2 ^ 64) :
     (c + UInt64.ofNat k).toNat = c.toNat + k := by

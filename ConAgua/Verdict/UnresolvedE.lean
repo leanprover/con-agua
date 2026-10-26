@@ -28,8 +28,6 @@ Its two walks are memo-free (`docs/deviations.md` D16), the twin's memoized:
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -440,7 +438,7 @@ theorem umCall_proj {st : EStore} {T : NIdx} {a : AState} {o : Option Bool} (s :
   intro memo b hM ho
   rcases e : o with _ | b1 <;> rw [e] at ho <;> simp only [Option.map] at ho <;> cases ho
   obtain ⟨m1, hr1, hM1⟩ := h memo b1 hM e
-  exact ⟨m1, by simp [StateT.run_bind, hr1]; rfl, hM1⟩
+  exact ⟨m1, by simp [hr1]; rfl, hM1⟩
 
 /-- **The twin's memoized `mentionsConstGo` answers the pure walk's answer**, from a memo of
 answers. -/
@@ -488,7 +486,7 @@ theorem um_twin (a : AState) (T : NIdx) : ∀ (g : Nat) (h : EIdx) (mp : HM) (b 
           | forallE f x => exact umCall_two (child f) (child x)
           | letE t u w => exact umCall_three (child t) (child u) (child w)
         obtain ⟨mp', hr, hM'⟩ := arm _ hv trivial mp b hM hb
-        refine ⟨mp'.insert h b, by simp [StateT.run_bind, hr]; rfl, fun k r hk g' b' hb' => ?_⟩
+        refine ⟨mp'.insert h b, by simp [hr]; rfl, fun k r hk g' b' hb' => ?_⟩
         rw [Std.HashMap.getElem?_insert] at hk
         by_cases e : h = k
         · subst e
@@ -544,7 +542,7 @@ theorem hslW_pure (a : AState) : ∀ (n : Nat) (m : Mem) (f h r : Word), ArenaR 
     change hslN (hslP a.store (f - 1).toNat) v = some (r != 0)
     cases v with
     | bvar _ | sort _ | const _ _ =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, getD1_eq', getD2_eq] at hvr
       have hg := hvr.1
       rw [hslW.arm2 n m f h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide)] at hW
       cases hW; rfl
@@ -562,7 +560,7 @@ theorem hslW_pure (a : AState) : ∀ (n : Nat) (m : Mem) (f h r : Word), ArenaR 
         rw [hv] at hs; cases hs
         simp [hslN, hk0]
     | fvar _ ty =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, getD1_eq', getD2_eq] at hvr
       obtain ⟨hg, -, hy, hdy⟩ := hvr
       rw [hslW.arm3 n m f h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) hg] at hW
       simp only [hslN, ← hdy]
@@ -575,7 +573,7 @@ theorem hslW_pure (a : AState) : ∀ (n : Nat) (m : Mem) (f h r : Word), ArenaR 
       simp only [hslN, ← hdz]
       exact ih m _ _ r hA hz hW
     | app f0 x0 | lam f0 x0 | forallE f0 x0 =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, getD1_eq', getD2_eq] at hvr
       obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
       rw [hslW.arm4 n m f h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)
         (by rw [hg]; decide)] at hW
@@ -642,7 +640,7 @@ theorem umW_pure (a : AState) (T : Word) (hT : H T) : ∀ (n : Nat) (m : Mem) (f
     change umN (decI T) (umP a.store (decI T) (f - 1).toNat) v = some (r != 0)
     cases v with
     | bvar _ | sort _ =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, getD1_eq'] at hvr
       have hg := hvr.1
       rw [umW.arm1 n m f T h hf0 hne (by rw [hg]; decide)] at hW
       cases hW; rfl
@@ -651,14 +649,14 @@ theorem umW_pure (a : AState) (T : Word) (hT : H T) : ∀ (n : Nat) (m : Mem) (f
       rw [umW.arm1 n m f T h hf0 hne (by rw [hg]; decide)] at hW
       cases hW; rfl
     | const _ _ =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, getD1_eq', getD2_eq] at hvr
       obtain ⟨hg, hx, hdx, -⟩ := hvr
       rw [umW.arm2 n m f T h hf0 hne (by rw [hg]; decide) hg] at hW
       cases hW
       simp only [umN, ← hdx]
       rw [ue_beq_ite _ T hx hT]
     | fvar _ ty =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, getD1_eq', getD2_eq] at hvr
       obtain ⟨hg, -, hy, hdy⟩ := hvr
       rw [umW.arm3 n m f T h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) hg] at hW
       simp only [umN, ← hdy]
@@ -682,7 +680,7 @@ theorem umW_pure (a : AState) (T : Word) (hT : H T) : ∀ (n : Nat) (m : Mem) (f
         rw [ih m _ _ _ hA hz h1, word_or_ne, ue_beq_ite _ T hx hT]
         rfl
     | app f0 x0 | lam f0 x0 | forallE f0 x0 =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, getD1_eq', getD2_eq] at hvr
       obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
       rw [umW.arm4 n m f T h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)
         (by rw [hg]; decide)] at hW
@@ -776,10 +774,10 @@ theorem uceE_kum_cls {p : Prog} {w : Word} {r : List Word} {m : Mem} {er : Err}
     er.cls = if r.headD 0 ≠ 0 then 2 else 1 := by
   rw [uceE.k_ue_mentions_go.eq_2] at h
   by_cases h0 : r.headD 0 ≠ 0
-  · rw [if_pos h0] at h ⊢
+  · rw [ite_eq_left h0] at h ⊢
     repeat' split at h
     all_goals (cases h; rfl)
-  · rw [if_neg h0] at h ⊢
+  · rw [ite_eq_right h0] at h ⊢
     repeat' split at h
     all_goals (cases h; rfl)
 
@@ -814,7 +812,7 @@ theorem uce_rest {p : Prog} (hU : UceProg p) (hnv : closedNV p L.Checker.nvFns =
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callE (pinAt_specW p hU.pin n ⟨m, Locals.init []⟩ 13) h1
   simp only [pinAtW] at hW1
   have hflag : ¬ pinW m 0 = 0 := fun h0 => by simp [h0] at hW1
-  rw [if_neg hflag, if_neg (by decide)] at hW1
+  rw [ite_eq_right hflag, ite_eq_right (by decide)] at hW1
   simp only [Option.some.injEq, Prod.mk.injEq] at hW1
   obtain ⟨rfl, hm1⟩ := hW1
   have hm1' : m1 = m := hs1 ▸ hm1.symm
@@ -840,8 +838,8 @@ theorem uce_rest {p : Prog} (hU : UceProg p) (hnv : closedNV p L.Checker.nvFns =
   refine ⟨_, rfl, ?_⟩
   rw [hcls]
   by_cases h0 : r2.headD 0 ≠ 0
-  · rw [if_pos h0, show (r2.headD 0 != 0) = true by simpa using h0]; rfl
-  · rw [if_neg h0, show (r2.headD 0 != 0) = false by simpa using h0]; rfl
+  · rw [ite_eq_left h0, show (r2.headD 0 != 0) = true by simpa using h0]; rfl
+  · rw [ite_eq_right h0, show (r2.headD 0 != 0) = false by simpa using h0]; rfl
 
 theorem unresolvedConstsErrorL_true (wh : String) (e : EIdx) :
     unresolvedConstsErrorL true wh e = unresolvedConstsError wh e := rfl
@@ -852,7 +850,7 @@ theorem unresolvedConstsErrorL_false_run {a : AState} {b : Bool} {mp : HM} {e : 
       if b then .ok (.notImplemented "string literals before the String support declarations", a)
       else (unresolvedConstsError wh e).run a := by
   unfold unresolvedConstsErrorL
-  rw [if_pos (show (!false) = true from rfl), StateT.run_bind, hr, except_ok_bind]
+  rw [ite_eq_left (show (!false) = true from rfl), StateT.run_bind, hr, except_ok_bind]
   dsimp only
   cases b <;> rfl
 
@@ -906,7 +904,7 @@ theorem uce_claim_lo {p : Prog} (hU : UceProg p) (hnv : closedNV p L.Checker.nvF
   dsimp only
   have hA1 : ArenaR m1 a1 := hS'.arena.1
   by_cases hr1 : r1.headD 0 = 0
-  · rw [if_pos hr1] at hW
+  · rw [ite_eq_left hr1] at hW
     have hd : decBool r1 = false := by show (r1.headD 0 != 0) = false; rw [hr1]; rfl
     rw [hd]
     cases h2 : callE p n "has_str_lit_go" [CWF, e] m1 with
@@ -920,14 +918,14 @@ theorem uce_claim_lo {p : Prog} (hU : UceProg p) (hnv : closedNV p L.Checker.nvF
     rw [CWF_eq] at hr2
     rw [unresolvedConstsErrorL_false_run wh hr2]
     by_cases hr2' : r2.headD 0 ≠ 0
-    · rw [if_pos hr2'] at hW; cases hW
-      rw [if_pos (by simpa using hr2')]
+    · rw [ite_eq_left hr2'] at hW; cases hW
+      rw [ite_eq_left (by simpa using hr2')]
       exact ⟨_, _, rfl, rfl⟩
-    · rw [if_neg hr2'] at hW
-      rw [if_neg (by simpa using hr2')]
+    · rw [ite_eq_right hr2'] at hW
+      rw [ite_eq_right (by simpa using hr2')]
       obtain ⟨ce, hce, hcl⟩ := uce_rest hU hnv hA1 hS'.pins he hW hk wh
       exact ⟨ce, a1, hce, hcl⟩
-  · rw [if_neg hr1] at hW
+  · rw [ite_eq_right hr1] at hW
     have hd : decBool r1 = true := by show (r1.headD 0 != 0) = true; exact bne_iff_ne.mpr hr1
     rw [hd, unresolvedConstsErrorL_true]
     obtain ⟨ce, hce, hcl⟩ := uce_rest hU hnv hA1 hS'.pins he hW hk wh

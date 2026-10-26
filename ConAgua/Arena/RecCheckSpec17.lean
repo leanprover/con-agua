@@ -67,7 +67,7 @@ theorem decRule_fields {q q' : Nat} {rl : IRecRule} (h : decRule a q = some rl)
   rw [h3] at h
   simp only [Option.bind_eq_bind, Option.bind_some] at h
   match t, h with
-  | 0, h => simp only [Option.bind_some] at h; exact tail _ h
+  | 0, h => simp only at h; exact tail _ h
   | 1, h =>
     cases hy : (L.Arena.hlist? a (q + 4) : Option (List LIdx)) with
     | none => simp [hy] at h
@@ -115,7 +115,7 @@ theorem decRule_copy {q q' : Nat} {rl : IRecRule} (h : decRule a q = some rl) (h
     simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.bind_eq_some_iff,
       Option.some.injEq] at hx ⊢
     obtain ⟨c', hc, nf, hnf, cp, hcp, r, hr, k, hk, e, he, rfl⟩ := hx
-    simp only [Option.bind_eq_some_iff] at c n1 n2 n8 n9 n10
+    simp only at c n1 n2 n8 n9 n10
     exact ⟨_, c, _, n1, _, n2, _, n8, _, n9, _, n10, rfl⟩
   | 1, hx =>
     have l4 : ∀ {k : IdxKind} (xs : List (Idx k)), hlist? a (q + 4) = some xs → hlist? b (q' + 4) = some xs := by
@@ -555,7 +555,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
     have hk0 : k8 ≠ 0 := by intro e; apply hmem; rw [e8', e]; rfl
     refine ⟨rules, a1, ?_, by simpa using hd1, by simpa using hb1, hS1, hg1, hA1⟩
     simp only [ConRon.Arena.tgtStoredRules, StateT.run_bind, eCs, eNP, run1, except_ok_bind, eMem, decON, hk0,
-      if_false]
+      ite_false]
     rfl
   rw [tsrW.k_sum_rules.arm2 (hc1 := Decidable.of_not_not hmem)] at h
   have hk0 : k8 = 0 := by
@@ -587,7 +587,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   refine ⟨_, a2, ?_, by simpa using hd5, by simpa using hb5, hS5, (((hg1.trans hg2).trans hg3).trans hg4).trans hg5,
     tsrmW_afr _ h5 (efW_afr h4 (efW_afr h3 hA2))⟩
   simp only [ConRon.Arena.tgtStoredRules, StateT.run_bind, eCs, eNP, run1, except_ok_bind, eMem, decON, hk0,
-    if_true]
+    ite_true]
   rw [run2]; rfl
 
 end rel
@@ -601,7 +601,7 @@ neither side's result depends on.) -/
 theorem tgtStoredRules_refines (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis cv rP M rhso rhsl : Word) (cvv : IConstantVal)
     (TM : TargetMajor) (rhss : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
-    (hcv : DecB (fun m => decCVp m cv.toNat) s₀.mem cvv)
+    (_hcv : DecB (fun m => decCVp m cv.toNat) s₀.mem cvv)
     (hM : DecB (fun m => decTM m M.toNat) s₀.mem TM) (hrh : DecB (fun m => decHL m rhso.toNat rhsl.toNat) s₀.mem rhss)
     (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "tgt_stored_rules" [vis, cv, rP, M, rhso, rhsl]

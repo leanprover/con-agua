@@ -9,8 +9,6 @@ import ConAgua.Census.Attr
 
 @[expose] public section
 
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 /-!
 # The record loops, linked to con-leche
@@ -84,7 +82,7 @@ theorem ws_iff (c : UInt8) : isWs c = true ↔ (c.toUInt64 = 32 ∨ c.toUInt64 =
 
 theorem uget_byteAt (b : ByteArray) (i : USize) (h : i < b.usize) (hh) :
     b.uget i hh = byteAt b i := by
-  unfold byteAt; rw [dif_pos h]
+  unfold byteAt; rw [dite_eq_left h]
 
 /-! ## The generic object loop -/
 
@@ -204,12 +202,12 @@ theorem objN_link (F : USize → Bool → UInt32 → σ → ScanRes α) (mask : 
     · have h44' : byteW b.data i.toUInt64 = 44 := by rw [hcw, h44]; rfl
       rw [H.comma i w seen st h h44]
       by_cases hw : w = true
-      · rw [if_pos hw, objN_err]
-        rw [nextMemberN_comma _ _ _ hlt hws' h125' h44', if_pos ((bw_ne_zero w).mpr hw)]; rfl
-      · rw [if_neg hw, objN_congr _ _ _ _ _ _ (i.toUInt64 + 1) 1,
+      · rw [ite_eq_left hw, objN_err]
+        rw [nextMemberN_comma _ _ _ hlt hws' h125' h44', ite_eq_left ((bw_ne_zero w).mpr hw)]; rfl
+      · rw [ite_eq_right hw, objN_congr _ _ _ _ _ _ (i.toUInt64 + 1) 1,
           objN_link F mask bit val H (i + 1) true seen st, hs]
         · rfl
-        rw [nextMemberN_comma _ _ _ hlt hws' h125' h44', if_neg (by rw [bw_ne_zero]; exact hw)]
+        rw [nextMemberN_comma _ _ _ hlt hws' h125' h44', ite_eq_right (by rw [bw_ne_zero]; exact hw)]
     have h44' : byteW b.data i.toUInt64 ≠ 44 := by
       rw [hcw]; exact fun h' => h44 ((u8_toUInt64_eq _ 44 (by decide)).mp h')
     by_cases h34 : byteAt b i = 34
@@ -226,11 +224,11 @@ theorem objN_link (F : USize → Bool → UInt32 → σ → ScanRes α) (mask : 
       obtain ⟨hw, hk, hv⟩ := hbad
       have hw' : w = true := by simpa using hw
       subst hw'
-      simp only [bw, if_true, show (1 : Word) ≠ 0 by decide, if_false, hk, hv] at hq
+      simp only [bw, ite_true, show (1 : Word) ≠ 0 by decide, ite_false, hk, hv] at hq
       have hk0 : (nextMemberN b.data i.toUInt64 1).tag ≠ 0 := by rw [hq]; exact (by decide : (2 : Word) ≠ 0)
       have hk1 : (nextMemberN b.data i.toUInt64 1).tag ≠ 1 := by rw [hq]; exact (by decide : (2 : Word) ≠ 1)
       have hkey := H.key i seen h h34 hk hv st
-      simp only [bw, if_true]
+      simp only [bw, ite_true]
       rcases hkey with ⟨hr, hcase⟩ | ⟨hb, hd, e, seen', he, hie, hs', st', hr⟩
       · rw [hr]
         by_cases hb0 : bit (UInt64.ofNat (keyAt b i (keyEnd b (i + 1) - (i + 1))).ctorIdx) = 0
@@ -277,8 +275,8 @@ theorem keyStep_guard {sb : UInt32} (hbit : bit kc = sb.toUInt64) {X : ScanRes �
     (hX : seen &&& sb = 0 → KeyStep F bit val i v seen kc X) :
     KeyStep F bit val i v seen kc (if seen &&& sb = 0 then X else .err z) := by
   by_cases hs : seen &&& sb = 0
-  · rw [if_pos hs]; exact hX hs
-  · rw [if_neg hs]
+  · rw [ite_eq_left hs]; exact hX hs
+  · rw [ite_eq_right hs]
     refine Or.inl ⟨rfl, Or.inr (Or.inl ?_)⟩
     rw [hbit, ← UInt32.toUInt64_and]
     exact fun h => hs ((u32_toUInt64_eq_zero _).mp h)
@@ -293,13 +291,13 @@ theorem keyStep_lt {sb : UInt32} (hbit : bit kc = sb.toUInt64) (hsb : sb ≠ 0) 
     {G : ScanRes α} {y : ScanErr} (hG : ∃ st', okW G = okW (F e false (seen ||| sb) st')) :
     KeyStep F bit val i v seen kc (if i < e then G else .err y) := by
   by_cases hie : i < e
-  · rw [if_pos hie]
+  · rw [ite_eq_left hie]
     obtain ⟨st', hst⟩ := hG
     refine Or.inr ⟨?_, ?_, e, seen ||| sb, (hval hie).symm, (lt_toUInt64_iff _ _).mp hie, ?_, st', hst⟩
     · rw [hbit]; intro h; exact hsb ((u32_toUInt64_eq_zero _).mp h)
     · rw [hbit, ← UInt32.toUInt64_and, hseen]; rfl
     · rw [hbit, UInt32.toUInt64_or]
-  · rw [if_neg hie]
+  · rw [ite_eq_right hie]
     exact keyStep_err y (fun h => hie (hval' h))
 
 end keystep
@@ -327,14 +325,14 @@ theorem keyStep_num {sb : UInt32} (hbit : bit kc = sb.toUInt64) (hsb : sb ≠ 0)
       (if numEnd b v = v then .err x else if i < numEnd b v then G else .err y) := by
   have hv2 := hval.trans (slotNatN_link b h64 hsize i v)
   by_cases hn : numEnd b v = v
-  · rw [if_pos hn]; apply keyStep_err; rw [hv2, if_pos hn]; exact UInt64.not_lt_zero
-  · rw [if_neg hn]
+  · rw [ite_eq_left hn]; apply keyStep_err; rw [hv2, ite_eq_left hn]; exact UInt64.not_lt_zero
+  · rw [ite_eq_right hn]
     apply keyStep_lt hbit hsb hseen _ _ _ hG
-    · intro h; rw [hv2, if_neg hn, if_pos h]
-    · intro h; rw [hv2, if_neg hn] at h
+    · intro h; rw [hv2, ite_eq_right hn, ite_eq_left h]
+    · intro h; rw [hv2, ite_eq_right hn] at h
       by_cases h' : i < numEnd b v
       · exact h'
-      · rw [if_neg h'] at h; exact absurd h UInt64.not_lt_zero
+      · rw [ite_eq_right h'] at h; exact absurd h UInt64.not_lt_zero
 
 /-- A value read by a scanner that returns its end or `0` (`scanBinderInfo`). -/
 theorem keyStep_usz {sb : UInt32} (hbit : bit kc = sb.toUInt64) (hsb : sb ≠ 0)
@@ -344,8 +342,8 @@ theorem keyStep_usz {sb : UInt32} (hbit : bit kc = sb.toUInt64) (hsb : sb ≠ 0)
     (hG : ∃ st', okW G = okW (F u false (seen ||| sb) st')) :
     KeyStep F bit val i v seen kc (if u = 0 then .err x else if i < u then G else .err y) := by
   by_cases hn : u = 0
-  · rw [if_pos hn]; apply keyStep_err; rw [hval, hn]; exact UInt64.not_lt_zero
-  · rw [if_neg hn]
+  · rw [ite_eq_left hn]; apply keyStep_err; rw [hval, hn]; exact UInt64.not_lt_zero
+  · rw [ite_eq_right hn]
     apply keyStep_lt hbit hsb hseen _ (fun _ => hval) _ hG
     intro h; rw [hval] at h; exact (lt_toUInt64_iff _ _).mpr h
 
@@ -412,12 +410,12 @@ theorem scanBool_link (v : USize) : okW (scanBool b v) = boolEndN b.data v.toUIn
     have hp := scanBoolN_le b h64 hsize _ _ _ hs
     have hbs : b.data.size = b.size := rfl
     simp only [okW, L.Scan.Lit.encBool, List.headD_cons, List.tail_cons]
-    simp only [show ((1 : Word) = 0) = False from by decide, if_false]
+    simp only [show ((1 : Word) = 0) = False from by decide, ite_false]
     have hU : UInt64.size = 2 ^ 64 := rfl
     apply UInt64.toNat_inj.mp
     rw [UInt64.toNat_ofNat_of_lt' (by rw [hU]; omega), USize.toNat_toUInt64, USize.toNat_add]
     have hU' := usize_size_eq64 h64
-    cases x <;> simp only [if_true, Bool.false_eq_true, if_false] at hp ⊢ <;>
+    cases x <;> simp only [ite_true, Bool.false_eq_true, ite_false] at hp ⊢ <;>
       simp only [USize.toNat_ofNat, hU'] <;> omega
 
 omit h64 hsize in
@@ -462,64 +460,64 @@ theorem natListLoop_link (i : USize) (acc : List Nat) (w : Bool) (hacc : acc.len
     have hs := succ_toUInt64 b h64 hsize i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i h
     have hin := usizeInBounds b i h
-    rw [dif_pos h, dif_pos hlt]
+    rw [dite_eq_left h, dite_eq_left hlt]
     simp only [uget_byteAt _ i h, hcw]
     by_cases hws : isWs (byteAt b i) = true
-    · simp only [hws, (ws_iff _).mp hws, if_true]
+    · simp only [hws, (ws_iff _).mp hws, ite_true]
       rw [natListLoop_link (i + 1) acc w (by omega), hs]
     have hws' : ¬ ((byteAt b i).toUInt64 = 32 ∨ (byteAt b i).toUInt64 = 9 ∨
         (byteAt b i).toUInt64 = 13) := by rw [← ws_iff]; exact hws
-    simp only [hws, hws', if_false, Bool.false_eq_true]
+    simp only [hws, hws', ite_false, Bool.false_eq_true]
     by_cases h93 : byteAt b i = 93
     · have hU : UInt64.size = 2 ^ 64 := rfl
       have hz : UInt64.ofNat acc.length = 0 ↔ acc = [] := by
         rw [← List.length_eq_zero_iff, ← UInt64.toNat_inj, UInt64.toNat_ofNat_of_lt' (by rw [hU]; omega)]; rfl
       simp only [h93, show ((93 : UInt8) == 93) = true from rfl, show (93 : UInt8).toUInt64 = 93 from rfl,
-        if_true, bw_ne_zero, ne_eq, hz]
+        ite_true, bw_ne_zero, ne_eq, hz]
       by_cases hw : w = true ∧ ¬ acc = []
       · have he : acc.isEmpty = false := by cases acc <;> simp_all
         simp only [hw, he]; rfl
-      · rw [if_neg hw, if_neg (by simp only [Bool.and_eq_true, Bool.not_eq_true',
-          List.isEmpty_eq_false_iff]; exact hw)]
+      · rw [ite_eq_right hw, ite_eq_right (by simp only [Bool.and_eq_true, Bool.not_eq_true',
+                      List.isEmpty_eq_false_iff]; exact hw)]
         simp [encNL, hs]
     have h93' : ¬ (byteAt b i).toUInt64 = 93 := fun h' => h93 ((u8_toUInt64_eq _ 93 (by decide)).mp h')
-    simp only [h93', show ¬ (byteAt b i == 93) = true by simpa using h93, if_false]
+    simp only [h93', show ¬ (byteAt b i == 93) = true by simpa using h93, ite_false]
     by_cases h44 : byteAt b i = 44
     · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, show (44 : UInt8).toUInt64 = 44 from rfl,
-        if_true, bw_ne_zero, ne_eq]
+        ite_true, bw_ne_zero, ne_eq]
       by_cases hw : w = true
-      · simp only [hw, if_true]; rfl
-      · simp only [hw, if_false, Bool.false_eq_true]
+      · simp only [hw, ite_true]; rfl
+      · simp only [hw, ite_false, Bool.false_eq_true]
         rw [natListLoop_link (i + 1) acc true (by omega), hs]; rfl
     have h44' : ¬ (byteAt b i).toUInt64 = 44 := fun h' => h44 ((u8_toUInt64_eq _ 44 (by decide)).mp h')
-    simp only [h44', show ¬ (byteAt b i == 44) = true by simpa using h44, if_false]
+    simp only [h44', show ¬ (byteAt b i == 44) = true by simpa using h44, ite_false]
     by_cases hd : isDigit (byteAt b i) = true
-    · simp only [hd, (digit_iff _).mp hd, and_self, if_true]
+    · simp only [hd, (digit_iff _).mp hd, and_self, ite_true]
       by_cases hw : w = true
       · subst hw
-        simp only [bw, if_true, Bool.not_true, Bool.false_eq_true, if_false,
+        simp only [bw, ite_true, Bool.not_true, Bool.false_eq_true, ite_false,
           show ¬ ((1 : Word) = 0) from by decide]
         have hne := numEnd_toUInt64_eq b h64 (by omega) i
         simp only [USize.toNat_toUInt64]
         rw [← hne]
         by_cases he : numEnd b i = i
-        · simp only [he, beq_self_eq_true, if_true]; rfl
+        · simp only [he, beq_self_eq_true, ite_true]; rfl
         have he' : ¬ (numEnd b i).toUInt64 = i.toUInt64 := fun h' => he ((eq_toUInt64_iff _ _).mpr h')
-        simp only [he', show (numEnd b i == i) = false by simpa using he, Bool.false_eq_true, if_false]
+        simp only [he', show (numEnd b i == i) = false by simpa using he, Bool.false_eq_true, ite_false]
         by_cases hie : i < numEnd b i
-        · rw [dif_pos hie, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+        · rw [dite_eq_left hie, ite_eq_left ((lt_toUInt64_iff _ _).mp hie)]
           have hie' := USize.lt_iff_toNat_lt.mp hie
           rw [natListLoop_link (numEnd b i) (readNatAt b i (numEnd b i) :: acc) false (by simp only [List.length_cons]; omega)]
           congr 1
           simp [UInt64.ofNat_add]
-        · rw [dif_neg hie, if_neg (fun h' => hie ((lt_toUInt64_iff _ _).mpr h'))]; rfl
+        · rw [dite_eq_right hie, ite_eq_right (fun h' => hie ((lt_toUInt64_iff _ _).mpr h'))]; rfl
       · have hw' : w = false := by simpa using hw
         subst hw'
         simp [bw, encNL]
     · have hd' : ¬ (48 ≤ (byteAt b i).toUInt64 ∧ (byteAt b i).toUInt64 ≤ 57) := by
         rw [← digit_iff]; exact hd
-      simp only [hd, hd', if_false, Bool.false_eq_true]; rfl
-  · rw [dif_neg h, dif_neg (by rw [← lt_usize_iff b h64 hsize]; exact h)]; rfl
+      simp only [hd, hd', ite_false, Bool.false_eq_true]; rfl
+  · rw [dite_eq_right h, dite_eq_right (by rw [← lt_usize_iff b h64 hsize]; exact h)]; rfl
 termination_by b.size - i.toNat
 decreasing_by
   all_goals first
@@ -533,12 +531,12 @@ theorem natList_link (i : USize) :
   by_cases h : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     by_cases hc : byteAt b i = 91
-    · rw [if_pos (by simp [hc]), if_pos ⟨hlt, by rw [byteW_eq b h64 hsize, hc]; rfl⟩,
+    · rw [ite_eq_left (by simp [hc]), ite_eq_left ⟨hlt, by rw [byteW_eq b h64 hsize, hc]; rfl⟩,
         natListLoop_link b h64 hsize (i + 1) [] true (by simp), succ_toUInt64 b h64 hsize]; rfl
-    · rw [if_neg (by simp [hc]), if_neg (fun h' => hc ((u8_toUInt64_eq _ 91 (by decide)).mp
+    · rw [ite_eq_right (by simp [hc]), ite_eq_right (fun h' => hc ((u8_toUInt64_eq _ 91 (by decide)).mp
         (by rw [← byteW_eq b h64 hsize]; exact h'.2)))]; rfl
-  · have h0 : byteAt b i = 0 := by unfold byteAt; rw [dif_neg h]
-    rw [if_neg (by simp [h0]), if_neg (fun h' => h ((lt_usize_iff b h64 hsize i).mpr h'.1))]; rfl
+  · have h0 : byteAt b i = 0 := by unfold byteAt; rw [dite_eq_right h]
+    rw [ite_eq_right (by simp [h0]), ite_eq_right (fun h' => h ((lt_usize_iff b h64 hsize i).mpr h'.1))]; rfl
 
 /-- `scan_nat_list`, its end. -/
 @[refines_part ConLeche.Frontend.scanNatList "validity"]
@@ -566,17 +564,17 @@ theorem entry_link {L : ScanRes α} {z : ScanErr} {M : Word} (i : USize) (c : UI
     by_cases hb : byteAt b i = OfNat.ofNat n
     · have hb' : byteW b.data i.toUInt64 = OfNat.ofNat n := by
         rw [byteW_eq b h64 hsize]; exact (u8_toUInt64_eq _ n hn).mpr hb
-      rw [if_pos (by simp [hb]), if_pos ⟨hlt, hb'⟩, hL]
+      rw [ite_eq_left (by simp [hb]), ite_eq_left ⟨hlt, hb'⟩, hL]
     · have hb' : byteW b.data i.toUInt64 ≠ OfNat.ofNat n := by
         rw [byteW_eq b h64 hsize]; exact fun h' => hb ((u8_toUInt64_eq _ n hn).mp h')
-      rw [if_neg (by simp [hb]), if_neg (fun h' => hb' h'.2)]; rfl
-  · have h0 : byteAt b i = 0 := by unfold byteAt; rw [dif_neg h]
+      rw [ite_eq_right (by simp [hb]), ite_eq_right (fun h' => hb' h'.2)]; rfl
+  · have h0 : byteAt b i = 0 := by unfold byteAt; rw [dite_eq_right h]
     have hb : ¬ byteAt b i = OfNat.ofNat n := by
       rw [h0]; intro h'
       have := congrArg UInt8.toNat h'
       simp only [UInt8.toNat_ofNat] at this
       omega
-    rw [if_neg (by simp [hb]), if_neg (fun h' => h ((lt_usize_iff b h64 hsize i).mpr h'.1))]; rfl
+    rw [ite_eq_right (by simp [hb]), ite_eq_right (fun h' => h ((lt_usize_iff b h64 hsize i).mpr h'.1))]; rfl
 
 end entry
 
@@ -619,9 +617,9 @@ theorem listItem_ok {F : USize → List β → Bool → ScanRes (List β)} {item
       okW (if i < e then F e (x :: acc) false else .err z') = okW (F e' (x' :: acc) false)) := by
   rw [heq] at hval
   by_cases hie : i < e
-  · rw [if_pos hie]
+  · rw [ite_eq_left hie]
     exact Or.inr ⟨e, x, hval.symm, (lt_toUInt64_iff _ _).mp hie, rfl⟩
-  · rw [if_neg hie]
+  · rw [ite_eq_right hie]
     refine Or.inl ⟨rfl, ?_⟩
     rw [hval]; exact fun h => hie ((lt_toUInt64_iff _ _).mpr h)
 
@@ -656,8 +654,8 @@ theorem objListN_link (F : USize → List β → Bool → ScanRes (List β)) (it
     · have h44' : byteW b.data i.toUInt64 = 44 := by rw [hcw, h44]; rfl
       rw [H.comma i acc w h h44, objListN_comma _ _ _ _ _ hlt hws' h93' h44']
       by_cases hw : w = true
-      · rw [if_pos hw, if_pos ((bw_ne_zero w).mpr hw)]
-      · rw [if_neg hw, if_neg (by rw [bw_ne_zero]; exact hw),
+      · rw [ite_eq_left hw, ite_eq_left ((bw_ne_zero w).mpr hw)]
+      · rw [ite_eq_right hw, ite_eq_right (by rw [bw_ne_zero]; exact hw),
           objListN_link F item H (i + 1) acc true (by omega), hs]; rfl
     have h44' : byteW b.data i.toUInt64 ≠ 44 := by
       rw [hcw]; exact fun h' => h44 ((u8_toUInt64_eq _ 44 (by decide)).mp h')
@@ -667,13 +665,13 @@ theorem objListN_link (F : USize → List β → Bool → ScanRes (List β)) (it
       cases w with
       | false => rw [H.openw i acc h h123]; rfl
       | true =>
-        rw [if_neg (by decide : ¬ bw true = 0)]
+        rw [ite_eq_right (by decide : ¬ bw true = 0)]
         rcases H.item i acc h h123 with ⟨hr, hn⟩ | ⟨e, x, he, hie, hr⟩
-        · rw [hr, if_neg hn]
+        · rw [hr, ite_eq_right hn]
         · have hie' : i.toNat < e.toNat := by
             rw [UInt64.lt_iff_toNat_lt, USize.toNat_toUInt64, USize.toNat_toUInt64] at hie; exact hie
           have heU : e.toNat < 2 ^ 64 := by rw [← usize_size_eq64 h64]; exact e.toNat_lt_size
-          rw [hr, ← he, if_pos hie,
+          rw [hr, ← he, ite_eq_left hie,
             objListN_link F item H e (x :: acc) false (by simp only [List.length_cons]; omega)]
           congr 1
           simp [UInt64.ofNat_add]
@@ -731,15 +729,15 @@ syntax "obj_loop " ident ident : tactic
 macro_rules
   | `(tactic| obj_loop $f $b) => `(tactic| (
     constructor
-    · intro i w seen st h; rw [$f:ident, dif_neg h]; rfl
-    · intro i w seen st h hws; rw [$f:ident, dif_pos h]; simp only [uget_byteAt _ i h, hws, if_true]
-    · intro i w seen st h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i w seen st h; rw [$f:ident, dite_eq_right h]; rfl
+    · intro i w seen st h hws; rw [$f:ident, dite_eq_left h]; simp only [uget_byteAt _ i h, hws, ite_true]
+    · intro i w seen st h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i w seen st h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i w seen st h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i w seen st h hc hbad; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i w seen st h hc hbad; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i seen h hc hk hv; simp only [Prod.forall]; intros; rw [$f:ident, dif_pos h]
+    · intro i seen h hc hk hv; simp only [Prod.forall]; intros; rw [$f:ident, dite_eq_left h]
       simp [uget_byteAt _ i h, hc, isWs, hk, hv]
       generalize valueAt $b i (keyEnd $b (i + 1)) = v
       generalize keyAt $b i (keyEnd $b (i + 1) - (i + 1)) = K
@@ -750,7 +748,7 @@ macro_rules
         | (apply keyStep_guard (by decide)
            intro hseen
            key_value hseen)
-    · intro i w seen st h hws h1 h2 h3; rw [$f:ident, dif_pos h]
+    · intro i w seen st h hws h1 h2 h3; rw [$f:ident, dite_eq_left h]
       simp [uget_byteAt _ i h, hws, h1, h2, h3]; rfl))
 
 /-- `ListLoop b (f b) item` for con-leche's list loop `f`. -/
@@ -758,20 +756,20 @@ syntax "list_loop " ident : tactic
 macro_rules
   | `(tactic| list_loop $f) => `(tactic| (
     constructor
-    · intro i acc w h; rw [$f:ident, dif_neg h]; rfl
-    · intro i acc w h hws; rw [$f:ident, dif_pos h]; simp only [uget_byteAt _ i h, hws, if_true]
-    · intro i acc w h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i acc w h; rw [$f:ident, dite_eq_right h]; rfl
+    · intro i acc w h hws; rw [$f:ident, dite_eq_left h]; simp only [uget_byteAt _ i h, hws, ite_true]
+    · intro i acc w h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i acc w h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i acc w h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i acc h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]; rfl
-    · intro i acc h hc; rw [$f:ident, dif_pos h]
+    · intro i acc h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]; rfl
+    · intro i acc h hc; rw [$f:ident, dite_eq_left h]
       simp (config := {decide := true}) only [uget_byteAt _ i h, hc, ↓reduceIte, dite_eq_ite]
       split
       all_goals first
         | (rename_i heq; exact listItem_err _ (by link_val) _ heq _)
         | (rename_i heq; exact listItem_ok _ (by link_val) _ _ heq _)
-    · intro i acc w h hws h1 h2 h3; rw [$f:ident, dif_pos h]
+    · intro i acc w h hws h1 h2 h3; rw [$f:ident, dite_eq_left h]
       simp [uget_byteAt _ i h, hws, h1, h2, h3]; rfl))
 
 /-! ## The records, bottom-up -/

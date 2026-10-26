@@ -27,7 +27,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -79,7 +78,7 @@ theorem sliceAt_dec {k : IdxKind} {a : Array Word} {o c : Word} {l : List (Idx k
   obtain ⟨hl, hg⟩ := hslice?_get h
   unfold sliceAt
   by_cases hi : i < c
-  · rw [if_pos hi]
+  · rw [ite_eq_left hi]
     have hi' : i.toNat < c.toNat := UInt64.lt_iff_toNat_lt.mp hi
     obtain ⟨w, hw, hw32, hl'⟩ := hg i.toNat hi'
     have hb : o.toNat + i.toNat < a.size := (Array.getElem?_eq_some_iff.mp hw).1
@@ -89,7 +88,7 @@ theorem sliceAt_dec {k : IdxKind} {a : Array Word} {o c : Word} {l : List (Idx k
     rw [hr]
     refine ⟨hw32, ?_⟩
     rw [List.getD_eq_getElem?_getD, hl']; rfl
-  · rw [if_neg hi]
+  · rw [ite_eq_right hi]
     have hi' : ¬ i.toNat < c.toNat := fun h' => hi (UInt64.lt_iff_toNat_lt.mpr h')
     refine ⟨by unfold HW; decide, ?_⟩
     rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega)]; rfl
@@ -233,8 +232,8 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   simp only [ptaK1] at hW
   obtain ⟨g1, hW⟩ := of_ite_none hW
   obtain ⟨g2, hW⟩ := of_ite_none hW
-  have g3 : ¬ ¬ (136 : Word).toNat < (m₁.arr64 CTL).size := fun g3 => by rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3, ptPush_eq] at hW
+  have g3 : ¬ ¬ (136 : Word).toNat < (m₁.arr64 CTL).size := fun g3 => by rw [ite_eq_left g3] at hW; cases hW
+  rw [ite_eq_right g3, ptPush_eq] at hW
   have g2' : (to + tn).toNat < (m₁.arr64 SPN).size := Classical.not_not.mp g2
   have g3' : (136 : Word).toNat < (m₁.arr64 CTL).size := Classical.not_not.mp g3
   have htn1 : (tn + 1).toNat = tn.toNat + 1 := addW _ _ (by have h1 := hsp.bound; have h2 := hS.spn; simp only [UInt64.toNat_one]; omega)
@@ -320,7 +319,7 @@ theorem inferProj_hit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat
     (hv : a₂.store.view hh = some (.const T us))
     (h4 : fe.findProj? T i = some entry) :
     (inferProj r fe d sn i pe).run a = (projAtT sn T us entry te pe).run a₂ := by
-  simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2, h3, ht, if_true,
+  simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2, h3, ht, ite_true,
     view_run _ _ _ hv, h4]
   rfl
 
@@ -430,7 +429,7 @@ theorem inferProjAt_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
       callW_spec p n "lvl_eq_c", callW_spec p n "field_sort_zero", callW_spec p n "proj_type_at"] <;>
   simp_all [ipaW, ipaK1, ipaK2, ipaK3, ipaK4, ipaK5, guardW, sliceAt, Cmp.eval, LocEq, BinOp.eval,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, size_set64, CTL, EREC, SPN, PINS, w_lt_false,
+    Locals.init_cons_zero, Locals.init_cons_succ, CTL, EREC, PINS, w_lt_false,
     w_le_false]
 
 /-! ## `infer_proj_at` refines `projAtT` -/
@@ -593,8 +592,8 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
   have hfin : rdW (s.mem.arr64 CTL) 136 = spTop s.mem := rfl
   simp only [ipaK3] at hW
   by_cases g4 : 2 ≤ r₃.headD 0
-  · rw [if_pos g4] at hW
-    rw [if_pos (by simpa using g4)] at hT1
+  · rw [ite_eq_left g4] at hW
+    rw [ite_eq_left (by simpa using g4)] at hT1
     -- `field_sort_zero`
     obtain ⟨hlps₃, -, -, -, hgd₃⟩ := decTbl_fields hq₃ hS₃.erec
     obtain ⟨hfw, hfdec⟩ := sliceAt_dec (k := .level) hS₃.erec hgd₃ i
@@ -639,8 +638,8 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
       (by unfold ResH; rw [← hr]; exact hrw5)
     · exact hS₅.frame_stk (MemFrame.setCtl m₅ 136 _) (by simp) (by simp)
     · exact StackKept.restoreG hgK (Classical.not_not.mp g6)
-  · rw [if_neg g4] at hW
-    rw [if_neg (by simpa using g4)] at hT1
+  · rw [ite_eq_right g4] at hW
+    rw [ite_eq_right (by simpa using g4)] at hT1
     have hsp₃ : SpineR m₃ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
       hsp₁.keep hSt₃.size hSt₃.below htopv hspn₁
     obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW

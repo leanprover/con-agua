@@ -16,8 +16,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -277,9 +275,9 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
   have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
   by_cases eq2 : wn = r2.headD 0
   · ----- `Quot.sound`
-    rw [if_pos eq2] at h
+    rw [ite_eq_left eq2] at h
     rw [ep2] at eq2
-    simp only [eq2, decide_true, if_true]
+    simp only [eq2, decide_true, ite_true]
     cases e3 : callW p n "rom_basis_decls" [4] m1 with
     | none => rw [e3] at h; cases h
     | some rm3 =>
@@ -325,12 +323,12 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
     refine ⟨fe, _, ?_, by simpa using hS4, hg1.trans (hg3.trans hg4),
       hJ (by simp [cdaLeaves]) e4 hJ3⟩
     rw [StateT.run_bind, hrun3', exc_ok_bind']
-    simp only [hget, StateT.run_bind, hrun4, exc_ok_bind', if_true]
+    simp only [hget, StateT.run_bind, hrun4, exc_ok_bind', ite_true]
     rfl
   ----- the ordinary axioms
-  rw [if_neg eq2] at h
+  rw [ite_eq_right eq2] at h
   rw [ep2] at eq2
-  simp only [eq2, decide_false, Bool.false_eq_true, if_false]
+  simp only [eq2, decide_false, Bool.false_eq_true, ite_false]
   -- the constant check
   cases e3 : callW p n "check_constant_val" [vis, q + 1] m1 with
   | none => rw [e3] at h; cases h
@@ -371,15 +369,15 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
     obtain ⟨hSy, hgy⟩ := push_call hX.val.rcp e hSx (ArrExt.decCI (IWGrow.erecPExt hgx) hci1)
     exact ⟨by simpa using hSy, hgy, hJ (by simp [cdaLeaves]) e hJx⟩
   by_cases z4 : r4.headD 0 ≠ 0
-  · rw [if_pos z4] at h
+  · rw [ite_eq_left z4] at h
     have hb : b4 = true := by rw [← hb4]; simpa using z4
     obtain ⟨hS', hg', hJ'⟩ := push (rx := []) (mf := m) hS4 (hg3.trans hg4) hJ4 h
     refine ⟨_, a4, ?_, hS', hg1.trans (hg3.trans (hg4.trans hg')), hJ'⟩
-    simp only [StateT.run_bind, hrun3, exc_ok_bind', hrun4, hb, if_true]
+    simp only [StateT.run_bind, hrun3, exc_ok_bind', hrun4, hb, ite_true]
     rfl
-  rw [if_neg z4] at h
+  rw [ite_eq_right z4] at h
   have hb : b4 = false := by rw [← hb4]; simpa using z4
-  simp only [StateT.run_bind, hrun3, exc_ok_bind', hrun4, hb, Bool.false_eq_true, if_false]
+  simp only [StateT.run_bind, hrun3, exc_ok_bind', hrun4, hb, Bool.false_eq_true, ite_false]
   -- `Lean.trustCompiler`
   cases e5 : pinAtW s4.mem 42 with
   | none => rw [e5] at h; cases h
@@ -390,12 +388,11 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
   have ep5 : r5.headD 0 = pinW s4.mem (1 + (42 : Word).toNat) := by rw [hr5]; rfl
   have hb5 := decI_beq (k := .name) wn _ hwnl hl5
   rw [hm5] at h
-  simp only [trustCompilerName, pinTrustCompiler, show PIN_TRUST_COMPILER = (42 : Word).toNat from rfl,
-    StateT.run_bind, hrun5, exc_ok_bind', hb5]
+  simp only [trustCompilerName, pinTrustCompiler, show PIN_TRUST_COMPILER = (42 : Word).toNat from rfl, hrun5, exc_ok_bind', hb5]
   by_cases eq5 : wn = r5.headD 0
-  · rw [if_pos eq5] at h
+  · rw [ite_eq_left eq5] at h
     rw [ep5] at eq5
-    simp only [eq5, decide_true, if_true]
+    simp only [eq5, decide_true, ite_true]
     cases e6 : callW p n "trust_compiler_ok" [vis, q + 1] s4.mem with
     | none => rw [e6] at h; cases h
     | some rm6 =>
@@ -412,11 +409,11 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
     obtain ⟨hS', hg', hJ'⟩ := push (rx := []) (mf := m) hS6 (hg3.trans (hg4.trans hg6))
       (hJ (by simp [cdaLeaves]) e6 hJ4) h
     refine ⟨_, _, ?_, hS', hg1.trans (hg3.trans (hg4.trans (hg6.trans hg'))), hJ'⟩
-    simp only [StateT.run_bind, hrun6, exc_ok_bind', if_true]
+    simp only [StateT.run_bind, hrun6, exc_ok_bind', ite_true]
     rfl
-  rw [if_neg eq5] at h
+  rw [ite_eq_right eq5] at h
   rw [ep5] at eq5
-  simp only [eq5, decide_false, Bool.false_eq_true, if_false]
+  simp only [eq5, decide_false, Bool.false_eq_true, ite_false]
   -- the `ofReduce*` pair
   cases e7 : pinAtW s4.mem 45 with
   | none => rw [e7] at h; cases h
@@ -440,12 +437,12 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
     ofReduceBoolName, pinOfReduceBool, show PIN_OF_REDUCE_BOOL = (46 : Word).toNat from rfl,
     StateT.run_bind, hrun7, hrun8, exc_ok_bind', hb7, hb8]
   by_cases eq8 : wn = pinW s4.mem (1 + (45 : Word).toNat) ∨ wn = r8.headD 0
-  · rw [if_pos eq8] at h
+  · rw [ite_eq_left eq8] at h
     rw [ep8] at eq8
     have hor : (decide (wn = pinW s4.mem (1 + (45 : Word).toNat)) ||
         decide (wn = pinW s4.mem (1 + (46 : Word).toNat))) = true := by
       rcases eq8 with e | e <;> simp [e]
-    simp only [hor, if_true]
+    simp only [hor, ite_true]
     cases e9 : callW p n "of_reduce_ax_ok" [vis, q + 1] s4.mem with
     | none => rw [e9] at h; cases h
     | some rm9 =>
@@ -462,14 +459,14 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
     obtain ⟨hS', hg', hJ'⟩ := push (rx := []) (mf := m) hS9 (hg3.trans (hg4.trans hg9))
       (hJ (by simp [cdaLeaves]) e9 hJ4) h
     refine ⟨_, _, ?_, hS', hg1.trans (hg3.trans (hg4.trans (hg9.trans hg'))), hJ'⟩
-    simp only [StateT.run_bind, hrun9, exc_ok_bind', if_true]
+    simp only [StateT.run_bind, hrun9, exc_ok_bind', ite_true]
     rfl
-  rw [if_neg eq8] at h
+  rw [ite_eq_right eq8] at h
   rw [ep8] at eq8
   have hor : (decide (wn = pinW s4.mem (1 + (45 : Word).toNat)) ||
       decide (wn = pinW s4.mem (1 + (46 : Word).toNat))) = false := by
     simp only [not_or] at eq8; simp only [decide_eq_false eq8.1, decide_eq_false eq8.2, Bool.or_false]
-  simp only [hor, Bool.false_eq_true, if_false]
+  simp only [hor, Bool.false_eq_true, ite_false]
   -- `propext`/`choice` of another shape decline
   cases e10 : pinAtW s4.mem 32 with
   | none => rw [e10] at h; cases h
@@ -496,7 +493,7 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
     simp only [not_or] at eq11; simp only [decide_eq_false eq11.1, decide_eq_false eq11.2, Bool.or_false]
   simp only [propextName, pinPropext, show PIN_PROPEXT = (32 : Word).toNat from rfl,
     choiceName, pinChoice, show PIN_CHOICE = (33 : Word).toNat from rfl,
-    StateT.run_bind, hrun10, hrun11, exc_ok_bind', hb10, hb11, hor2, Bool.false_eq_true, if_false]
+    StateT.run_bind, hrun10, hrun11, exc_ok_bind', hb10, hb11, hor2, Bool.false_eq_true, ite_false]
   -- `sorryAx` is skipped
   cases e12 : pinAtW s4.mem 13 with
   | none => rw [e12] at h; cases h
@@ -507,14 +504,14 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
   have ep12 : r12.headD 0 = pinW s4.mem (1 + (13 : Word).toNat) := by rw [hr12]; rfl
   rw [hm12] at h
   by_cases eq12 : wn = r12.headD 0
-  · rw [if_pos eq12] at h
+  · rw [ite_eq_left eq12] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     rw [ep12] at eq12
     have hb12 := decI_beq (k := .name) wn _ hwnl hl12
     refine ⟨fe, a4, ?_, by simpa using hS4, hg1.trans (hg3.trans hg4), hJ4⟩
-    simp only [pinSorryAx, show PIN_SORRY_AX = (13 : Word).toNat from rfl, StateT.run_bind, hrun12,
-      exc_ok_bind', hb12, eq12, decide_true, if_true, beq_self_eq_true]
+    simp only [pinSorryAx, show PIN_SORRY_AX = (13 : Word).toNat from rfl, hrun12,
+      exc_ok_bind', eq12, ite_true, beq_self_eq_true]
     rfl
-  · rw [if_neg eq12] at h; cases h
+  · rw [ite_eq_right eq12] at h; cases h
 
 end L.Arena

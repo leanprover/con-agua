@@ -15,7 +15,6 @@ The walk counter `fu` is the twin's fuel exactly.
 open ConRon.Arena ConRon.Arena.Frontend
 open L.Arena L.Ind L.Front L.Front.Ind
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Checker
 
@@ -408,35 +407,35 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
       (hNoteW_iw hb) _ hs₀)
   by_cases g4 : e >>> 28 = 4
   · by_cases hc : tcnt m₀ APP (tierW e) ≤ idxW e
-    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g3, g4, hc])).elim
+    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g4, hc])).elim
     rw [hWalkW.k_hs_put.arm2 n e i k tg ws sp fu m₀ hsc g3 g4 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hAppW.eq_def]) hb
     exact wres_view (view_app m₀ a hA₀ e he (vok APP hc) g4).1
       (app_ok (ih n' rfl) hA₀ hs₀ he (vok APP hc) g4 (fun _ _ => rfl) hb)
   by_cases g5 : e >>> 28 = 5
   · by_cases hc : tcnt m₀ LAM (tierW e) ≤ idxW e
-    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g3, g4, g5, hc])).elim
+    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g5, hc])).elim
     rw [hWalkW.k_hs_put.arm3 n e i k tg ws sp fu m₀ hsc g3 g4 g5 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hLamW.eq_def]) hb
     exact wres_view (view_lam m₀ a hA₀ e he (vok LAM hc) g5).1
       (lam_ok (ih n' rfl) hA₀ hs₀ he (vok LAM hc) g5 (fun _ _ => rfl) hb)
   by_cases g6 : e >>> 28 = 6
   · by_cases hc : tcnt m₀ FORALL (tierW e) ≤ idxW e
-    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g3, g4, g5, g6, hc])).elim
+    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g6, hc])).elim
     rw [hWalkW.k_hs_put.arm4 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hForallW.eq_def]) hb
     exact wres_view (view_forall m₀ a hA₀ e he (vok FORALL hc) g6).1
       (forall_ok (ih n' rfl) hA₀ hs₀ he (vok FORALL hc) g6 (fun _ _ => rfl) hb)
   by_cases g7 : e >>> 28 = 7
   · by_cases hc : tcnt m₀ LET (tierW e) ≤ idxW e
-    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g3, g4, g5, g6, g7, hc])).elim
+    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g7, hc])).elim
     rw [hWalkW.k_hs_put.arm5 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hLetW.eq_def]) hb
     exact wres_view (view_let m₀ a hA₀ e he (vok LET hc) g7).1
       (let_ok (ih n' rfl) hA₀ hs₀ he (vok LET hc) g7 (fun _ _ => rfl) hb)
   by_cases g9 : e >>> 28 = 9
   · by_cases hc : tcnt m₀ PROJ (tierW e) ≤ idxW e
-    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, hc])).elim
+    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g9, hc])).elim
     rw [hWalkW.k_hs_put.arm6 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hProjW.eq_def]) hb
     obtain ⟨hv, hnw, hxw⟩ := view_proj m₀ a hA₀ e he (vok PROJ hc) g9
@@ -454,7 +453,7 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
       (memoRG_frame hsSch hsSch_wf bmKey _ [IW] [] (by decide) (by decide) _ _ hfr _ hs₀) hb)
   by_cases g1 : e >>> 28 = 1
   · by_cases hc : tcnt m₀ FVAR (tierW e) ≤ idxW e
-    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, g1, hc])).elim
+    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g1, hc])).elim
     rw [hWalkW.k_hs_put.arm7 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 g1 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hFvarW.eq_def]) hb
     obtain ⟨hv, hxw⟩ := view_fvar_idx m₀ a hA₀ e he (vok FVAR hc) g1
@@ -464,18 +463,18 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
     intro h; rw [h] at hb; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb); exact ⟨rfl, rfl⟩
   by_cases g0 : e >>> 28 = 0
   · by_cases hc : tcnt m₀ BVAR (tierW e) ≤ idxW e
-    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, g1, g0, hc])).elim
+    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g0, hc])).elim
     obtain ⟨rfl, rfl⟩ := fin (hWalkW.k_hs_put.arm8 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 g1 g0 hc)
     exact wres_view (view_bvar m₀ a hA₀ e he (vok BVAR hc) g0) (wres_pure hs₀)
   by_cases g2 : e >>> 28 = 2
   · by_cases hc : tcnt m₀ SORT (tierW e) ≤ idxW e
-    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, g1, g0, g2, hc])).elim
+    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g2, hc])).elim
     obtain ⟨rfl, rfl⟩ := fin (hWalkW.k_hs_put.arm9 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 g1 g0 g2 hc)
     obtain ⟨_, hv⟩ := view_sort m₀ a hA₀ e he (vok SORT hc) g2
     exact wres_view hv (wres_pure hs₀)
   by_cases g8 : e >>> 28 = 8
   · by_cases hc : tcnt m₀ LIT (tierW e) ≤ idxW e
-    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, g1, g0, g2, g8, hc])).elim
+    · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g8, hc])).elim
     obtain ⟨rfl, rfl⟩ := fin (hWalkW.k_hs_put.arm10 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 g1 g0 g2 g8 hc)
     obtain ⟨_, hv⟩ := view_lit m₀ a hA₀ e he (vok LIT hc) g8
     exact wres_view hv (wres_pure hs₀)
@@ -744,7 +743,7 @@ theorem hoistDepsOf_ok (n : Nat) :
   have e5 : rdW (m.arr64 DECL) (1 + 8 * r + 5) = dw (m.arr64 DECL) r.toNat 5 :=
     rdW_dw (m.arr64 DECL) r 5 hr (by decide)
   rw [hDepsOfW.eq_def] at hb
-  simp only [h0, ite_false, hDe, e0, e2, e3, e4, e5] at hb
+  simp only [h0, ite_false, hDe, e0, e2, e3, e4] at hb
   -- the kinds
   have one : ∀ {c : IConstantVal}, dw (m.arr64 DECL) r.toNat 0 ≠ 6 →
       decI (dw (m.arr64 DECL) r.toNat 4) = c.type →

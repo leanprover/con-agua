@@ -16,8 +16,6 @@ con-ron's `whnfTelescope_spec` on its run for the answer's denotation), the sort
 for the `CoreStep`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -149,12 +147,12 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     by simpa using hs32, by simpa using hs, hA5⟩
   · simp only [checkSumTele.checkSumTeleSlow, StateT.run_bind]
     rw [← hwd, hrun1]
-    simp only [bind, Except.bind, StateT.run_bind]
-    rw [hrun2]
     simp only [bind, Except.bind]
+    rw [hrun2]
+    simp only
     rw [← decE_eq] at hrun3
     rw [hrun3]
-    simp only [bind, Except.bind, StateT.run_bind]
+    simp only
     rw [← htyd]
     rw [hrun5]
     rfl
@@ -279,7 +277,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
         rw [← hbe, ← decE_eq]
         intro ht
         exact hf ⟨h1', (tag_sort_iff _ (by simpa using hb32)).mp (by simpa using ht)⟩
-      simp only [hnt, if_false]
+      simp only [hnt, ite_false]
       simp only [Bool.false_eq_true, ite_false]
       exact hrun2
 

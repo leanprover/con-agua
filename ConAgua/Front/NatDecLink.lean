@@ -15,8 +15,6 @@ open Std.WP
 open scoped Lean.Order
 open L.Arena
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 namespace L.Front
 
@@ -110,11 +108,11 @@ theorem madHi_split (x w y : Word) :
     rw [UInt64.lt_iff_toNat_lt, e1]; omega
   by_cases h : x * w + y < y
   · have := hc.mp h
-    rw [if_pos h, e1, UInt64.toNat_add, UInt64.toNat_ofNat']
+    rw [ite_eq_left h, e1, UInt64.toNat_add, UInt64.toNat_ofNat']
     simp only [UInt64.reduceToNat]
     omega
   · have : P % 2 ^ 64 + y.toNat < 2 ^ 64 := Nat.lt_of_not_le fun h' => h (hc.mpr h')
-    rw [if_neg h, e1, UInt64.toNat_add, UInt64.toNat_ofNat']
+    rw [ite_eq_right h, e1, UInt64.toNat_add, UInt64.toNat_ofNat']
     simp only [UInt64.reduceToNat]
     omega
 
@@ -156,7 +154,7 @@ theorem madW_val (o n w : Word) (ho : o.toNat < 2 ^ 41) :
     rw [hp1, hi1] at hag hv
     refine ⟨PFrame.trans (PFrame.set64 _ _ _ (PFrame.refl _)) hf, fun z hz => ?_, ?_⟩
     · rw [hag z (by omega), Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-      simp only [show o.toNat + i.toNat ≠ z by omega, if_false]
+      simp only [show o.toNat + i.toNat ≠ z by omega, ite_false]
     · have E1 := pv_set_mid (vpool m) o.toNat n.toNat i.toNat 0 (o.toNat + i.toNat) (x * w + y)
         (by simp) (by omega) hb
       have E2 := pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat)
@@ -278,13 +276,13 @@ theorem decW_val (b : Array UInt8) (c d top : Word) (ht : top.toNat < 2 ^ 41)
       (by
         intro _
         rw [hp2, hn1, Nat.add_sub_cancel, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-        simp only [if_true, hvb]
+        simp only [ite_true, hvb]
         simpa using hc)
       heq
     refine ⟨PFrame.trans (PFrame.trans hf (PFrame.set64 _ _ _ (PFrame.refl _))) hf',
       fun z hz => ?_, htn'', hv', hN'⟩
     rw [hag' z hz, hp2, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    simp only [show top.toNat + n.toNat ≠ z by omega, if_false]
+    simp only [show top.toNat + n.toNat ≠ z by omega, ite_false]
     exact hag z (.inl hz)
   | case3 m n i h hc ih =>
     intro m' n' hS40 hci hid htn hv hN heq
@@ -361,8 +359,8 @@ theorem decN_one (a : Array UInt8) (i : Nat) : decN a i 1 = (a.getD i 0).toNat -
 theorem uget_getD (i : USize) (h : i < b.usize) :
     (b.uget i (usizeInBounds b i h)).toNat = (b.data.getD i.toNat 0).toNat := by
   have := usizeInBounds' b i h
-  simp only [Array.getD, ByteArray.uget, ByteArray.get]
-  rw [dif_pos (show i.toNat < b.data.size from this)]
+  simp only [Array.getD, ByteArray.uget]
+  rw [dite_eq_left (show i.toNat < b.data.size from this)]
   rfl
 
 /-- `skipDigits` ends a digit run, and `readNat` reads its decimal value. -/
@@ -382,7 +380,7 @@ theorem skipDigits_readNat (i : USize) : ∀ acc : Nat,
     rw [hs] at h1 h2 h3
     have hr : readNat b i acc = readNat b (i + 1) (acc * 10 + ((b.data.getD i.toNat 0).toNat - 48)) := by
       conv => lhs; unfold readNat
-      simp only [h, dif_pos, hd, if_true]
+      simp only [h, dite_eq_left, hd, ite_true]
       rw [uget_getD b i h]
     generalize hE : (skipDigits b (i + 1)).toNat = E at h1 h2 h3
     refine ⟨by omega, fun j hj => ?_, ?_⟩
@@ -400,12 +398,12 @@ theorem skipDigits_readNat (i : USize) : ∀ acc : Nat,
     intro acc
     refine ⟨Nat.le_refl _, fun j hj => by omega, ?_⟩
     conv => lhs; unfold readNat
-    simp [h, hd, decN]
+    simp [hd, decN]
   | case3 i h =>
     intro acc
     refine ⟨Nat.le_refl _, fun j hj => by omega, ?_⟩
     conv => lhs; unfold readNat
-    rw [dif_neg h]; simp [decN]
+    rw [dite_eq_right h]; simp [decN]
 
 theorem digit_u8 (x : UInt8) : 48 ≤ x.toNat → x.toNat ≤ 57 → (x - 48).toUInt64.toNat = x.toNat - 48 := by
   revert x; decide

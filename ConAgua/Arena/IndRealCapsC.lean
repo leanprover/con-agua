@@ -23,7 +23,6 @@ store is injective (`denoteN_inj`) and `dn` agrees with it (`TwinMem.dnN`): `dec
   that has them (`ibiW_simC`: from `StageC`, `StageC.lzFacts`).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -151,7 +150,7 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
   have htop3 : erTop m3 = q.toNat + kk.toNat := by
     rw [← htop2]; simp only [erTop]; rw [hA3 CTL (by decide)]
   obtain ⟨hS3', hg3⟩ := StageR.erec hS1 hf3
-    (fun i hi => by rw [hG3, if_neg (by omega)])
+    (fun i hi => by rw [hG3, ite_eq_right (by omega)])
     (by rw [htop3]; omega) (by rw [htop3, hS3]; omega)
   obtain ⟨hS4, hg4⟩ := hS3'.of_lheap
     ((MemFrame.setCtl m3 192 (htop m)).mono (by simp) (by simp))
@@ -164,7 +163,7 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
     (fun j hj => by
       rw [hagr _ (by rw [htop4, htop3]; omega)]
       simp only [erA, hE4]
-      rw [hG3, if_pos (by omega)]
+      rw [hG3, ite_eq_left (by omega)]
       congr 3; omega)
   rw [hpw]
   simp only [pwWords, List.headD_cons, List.tail_cons, show (1 : Word).toNat = 1 from rfl, hs,

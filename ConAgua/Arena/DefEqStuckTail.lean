@@ -13,7 +13,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -124,7 +123,7 @@ theorem defeqTail_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "defeq_proj_pair",
       callW_spec p n "head_is_proj", callW_spec p n "defeq_stuck", callW_spec p n "whnf_core",
       callW_spec p n "defeq"] <;>
-  simp_all [dtK1, dtK2, dtK3, dtK4, dtK5, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+  simp_all [dtK1, dtK2, dtK3, dtK4, dtK5, call1W, LocEq, St.setLocs_cons, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 
@@ -161,7 +160,7 @@ theorem defeqTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
   by_cases h0 : r₁.headD 0 ≠ 0
   · simp only [h0, ne_eq, not_false_eq_true, ↓reduceIte] at hW1
     rw [decBool_true_of h0]; exact coreRef_true hS₁ hW1
-  simp only [h0, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
+  simp only [h0, ↓reduceIte] at hW1
   rw [decBool_false_of (by simpa using h0)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
@@ -179,10 +178,10 @@ theorem defeqTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
     by_cases x : u = 0 <;> by_cases y : v = 0 <;> simp [x, y]
   rw [hpp]
   by_cases hp0 : r₂.headD 0 = 0 ∧ r₃.headD 0 = 0
-  · rw [if_pos hp0] at hW3
+  · rw [ite_eq_left hp0] at hW3
     simp only [hp0, and_self, decide_true, ↓reduceIte]
     exact hstk _ m₃ M₃ hS₃ hW3
-  rw [if_neg hp0] at hW3
+  rw [ite_eq_right hp0] at hW3
   simp only [hp0, decide_false, Bool.false_eq_true, ↓reduceIte]
   obtain ⟨r₄, m₄, hc4, hW4⟩ := callW_cases rfl hW3
   have h₄ := CoreSpec.of_callW (hK.whnfCore F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode 0 d a1 hF hn
@@ -199,10 +198,10 @@ theorem defeqTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
     simp only [decH, decE_beq h₄.2.2.2 ha, decE_beq h₅.2.2.2 hb, Bool.decide_and]
   rw [heq]
   by_cases hm : r₄.headD 0 = a1 ∧ r₅.headD 0 = b1
-  · rw [if_pos hm] at hW5
+  · rw [ite_eq_left hm] at hW5
     simp only [hm, and_self, decide_true, ↓reduceIte]
     exact hstk _ m₅ M₅ hS₅ hW5
-  rw [if_neg hm] at hW5
+  rw [ite_eq_right hm] at hW5
   simp only [hm, decide_false, Bool.false_eq_true, ↓reduceIte]
   exact CoreSpec.of_call1W (s₀ := ⟨m₅, Locals.init []⟩)
     (hK.defeq F _ _ dn vis fe M₅ eb mode d (r₄.headD 0) (r₅.headD 0) hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩

@@ -67,34 +67,34 @@ theorem tkhW_succ : tkhW cR (n + 1) m vis q fto ftl Mc leafW majDom =
 theorem tkhK1_some : tkhK1 cR n vis q fto ftl Mc leafW majDom (some (rl, m)) =
     tkhK2 cR n vis q fto ftl Mc leafW majDom (rl.headD 0) (gafF m [CWF, majDom]) := rfl
 theorem tkhK2_l (h : lh >>> 28 ≠ 3) : tkhK2 cR n vis q fto ftl Mc leafW majDom lh (some (rm, m)) = some ([0], m) := by
-  simp only [tkhK2]; rw [if_pos h]
+  simp only [tkhK2]; rw [ite_eq_left h]
 theorem tkhK2_m (h : ¬ lh >>> 28 ≠ 3) (h2 : rm.headD 0 >>> 28 ≠ 3) :
     tkhK2 cR n vis q fto ftl Mc leafW majDom lh (some (rm, m)) = some ([0], m) := by
-  simp only [tkhK2]; rw [if_neg h, if_pos h2]
+  simp only [tkhK2]; rw [ite_eq_right h, ite_eq_left h2]
 theorem tkhK2_v1 (h : ¬ lh >>> 28 ≠ 3) (h2 : ¬ rm.headD 0 >>> 28 ≠ 3) (h3 : eViewW m lh = []) :
     tkhK2 cR n vis q fto ftl Mc leafW majDom lh (some (rm, m)) = none := by
-  simp only [tkhK2]; rw [if_neg h, if_neg h2, if_pos h3]
+  simp only [tkhK2]; rw [ite_eq_right h, ite_eq_right h2, ite_eq_left h3]
 theorem tkhK2_v2 (h : ¬ lh >>> 28 ≠ 3) (h2 : ¬ rm.headD 0 >>> 28 ≠ 3) (h3 : ¬ eViewW m lh = [])
     (h4 : eViewW m (rm.headD 0) = []) :
     tkhK2 cR n vis q fto ftl Mc leafW majDom lh (some (rm, m)) = none := by
-  simp only [tkhK2]; rw [if_neg h, if_neg h2, if_neg h3, if_pos h4]
+  simp only [tkhK2]; rw [ite_eq_right h, ite_eq_right h2, ite_eq_right h3, ite_eq_left h4]
 theorem tkhK2_ok (h : ¬ lh >>> 28 ≠ 3) (h2 : ¬ rm.headD 0 >>> 28 ≠ 3) (h3 : ¬ eViewW m lh = [])
     (h4 : ¬ eViewW m (rm.headD 0) = []) :
     tkhK2 cR n vis q fto ftl Mc leafW majDom lh (some (rm, m)) =
     tkhK3 cR n vis q fto ftl Mc majDom ((eViewW m lh).tail.headD 0) ((eViewW m lh).tail.tail.headD 0)
       ((eViewW m (rm.headD 0)).tail.headD 0) (gaaF m [CWF, leafW]) := by
-  simp only [tkhK2]; rw [if_neg h, if_neg h2, if_neg h3, if_neg h4]
+  simp only [tkhK2]; rw [ite_eq_right h, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4]
 theorem tkhK3_some : tkhK3 cR n vis q fto ftl Mc majDom ip usp ii (some (ra, m)) =
     tkhK4 cR n vis q fto ftl Mc ip usp ii ra (gaaF m [CWF, majDom]) := rfl
 theorem tkhK4_i (h : ip ≠ ii) : tkhK4 cR n vis q fto ftl Mc ip usp ii ra (some (rb, m)) = some ([0], m) := by
-  simp only [tkhK4]; rw [if_pos h]
+  simp only [tkhK4]; rw [ite_eq_left h]
 theorem tkhK4_l (h : ¬ ip ≠ ii) (h2 : ra.tail.headD 0 ≠ rb.tail.headD 0) :
     tkhK4 cR n vis q fto ftl Mc ip usp ii ra (some (rb, m)) = some ([0], m) := by
-  simp only [tkhK4]; rw [if_neg h, if_pos h2]
+  simp only [tkhK4]; rw [ite_eq_right h, ite_eq_left h2]
 theorem tkhK4_ok (h : ¬ ip ≠ ii) (h2 : ¬ ra.tail.headD 0 ≠ rb.tail.headD 0) :
     tkhK4 cR n vis q fto ftl Mc ip usp ii ra (some (rb, m)) =
     tkhK5 (tkaW cR n m vis q fto ftl Mc ip usp (ra.headD 0) (ra.tail.headD 0) (rb.headD 0) (rb.tail.headD 0)) := by
-  simp only [tkhK4]; rw [if_neg h, if_neg h2]
+  simp only [tkhK4]; rw [ite_eq_right h, ite_eq_right h2]
 theorem tkhK5_some : tkhK5 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 attribute [ind_grind] tkhW_succ tkhK1_some tkhK2_l tkhK2_m tkhK2_v1 tkhK2_v2 tkhK2_ok tkhK3_some tkhK4_i tkhK4_l tkhK4_ok tkhK5_some
@@ -142,16 +142,16 @@ variable (cR : CallM) (n : Nat) (m : Mem) (vis q fto ftl Mc teo tel majDom f lea
 theorem tkW_succ : tkW cR (n + 1) m vis q fto ftl Mc teo tel majDom f =
     tkK1 cR n vis q fto ftl Mc teo tel majDom (stripF 6 m [tel, f]) := rfl
 theorem tkK1_no (h : rs.headD 0 = 0) : tkK1 cR n vis q fto ftl Mc teo tel majDom (some (rs, m)) = some ([0], m) := by
-  simp only [tkK1]; rw [if_pos h]
+  simp only [tkK1]; rw [ite_eq_left h]
 theorem tkK1_ok (h : ¬ rs.headD 0 = 0) : tkK1 cR n vis q fto ftl Mc teo tel majDom (some (rs, m)) =
     tkK2 cR n vis q fto ftl Mc majDom (rs.tail.tail.tail.headD 0)
       (tteW n m (rs.tail.headD 0) (rs.tail.tail.headD 0) teo tel) := by
-  simp only [tkK1]; rw [if_neg h]
+  simp only [tkK1]; rw [ite_eq_right h]
 theorem tkK2_no (h : rt.headD 0 = 0) : tkK2 cR n vis q fto ftl Mc majDom leafW (some (rt, m)) = some ([0], m) := by
-  simp only [tkK2]; rw [if_pos h]
+  simp only [tkK2]; rw [ite_eq_left h]
 theorem tkK2_ok (h : ¬ rt.headD 0 = 0) : tkK2 cR n vis q fto ftl Mc majDom leafW (some (rt, m)) =
     tkK3 (tkhW cR n m vis q fto ftl Mc leafW majDom) := by
-  simp only [tkK2]; rw [if_neg h]
+  simp only [tkK2]; rw [ite_eq_right h]
 theorem tkK3_some : tkK3 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 attribute [ind_grind] tkW_succ tkK1_no tkK1_ok tkK2_no tkK2_ok tkK3_some

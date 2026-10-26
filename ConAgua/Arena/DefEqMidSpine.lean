@@ -161,8 +161,8 @@ theorem spineCmp_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d nm us nm₂ us₂ ao an bo bn : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hnm : HW nm) (hnm₂ : HW nm₂) (hus : HW us)
-    (hus₂ : HW us₂) (lu lv : List ConLeche.Level) (hdu : denoteLs a₀.store.lss (decI us) = some lu)
-    (hdv : denoteLs a₀.store.lss (decI us₂) = some lv) (xs ys : List EIdx)
+    (hus₂ : HW us₂) (lu lv : List ConLeche.Level) (_hdu : denoteLs a₀.store.lss (decI us) = some lu)
+    (_hdv : denoteLs a₀.store.lss (decI us₂) = some lv) (xs ys : List EIdx)
     (hx : SpineR s₀.mem ao an xs.toArray) (hy : SpineR s₀.mem bo bn ys.toArray)
     (hxt : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
@@ -191,7 +191,7 @@ theorem spineCmp_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo
   · rw [scW.arm1 (hc1 := hc)] at hW
     have hc' : decI nm = (decI nm₂ : NIdx) ∧ xs.length = ys.length := by
       have := hcond.mpr hc; simpa using this
-    rw [if_pos hc']
+    rw [ite_eq_left hc']
     cases hc2 : callW p n "lvls_eq_c" [us, us₂] s.mem with
     | none => rw [hc2, scW.k_lvls_eq_c.none] at hW; cases hW
     | some q =>
@@ -227,7 +227,7 @@ theorem spineCmp_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo
     obtain ⟨hr, hm⟩ := hW
     have hc' : ¬ (decI nm = (decI nm₂ : NIdx) ∧ xs.length = ys.length) := by
       intro h; apply hc; apply hcond.mp; simpa using h
-    rw [if_neg hc', ← hm]
+    rw [ite_eq_right hc', ← hm]
     exact coreRef_ret hS (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw0)
 
 /-! ## `defeq_spine2` -/
@@ -317,7 +317,7 @@ theorem defeqSpine2_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotU
       obtain ⟨mp, h⟩ := hS₃.memos.2.2.2.2.1
       unfold MemoRG MemoRV at h
       have := h.1
-      simp only [coreLsbSch] at this
+      simp only at this
       have e : (156 : Word).toNat = 156 := rfl
       omega
     have hG : GrowRefP (spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)

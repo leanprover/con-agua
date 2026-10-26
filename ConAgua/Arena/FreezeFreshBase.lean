@@ -40,7 +40,7 @@ theorem rdW_freshCtl (c : Array Word) (x : Word) :
   split
   · rename_i h
     have h1 : x.toNat < 256 := by rw [size_extract0] at h; omega
-    rw [if_pos h1, get?_extract c h1]
+    rw [ite_eq_left h1, get?_extract c h1]
   · rename_i h
     rw [size_extract0] at h
     rw [Array.getElem?_replicate]
@@ -85,8 +85,8 @@ theorem ctlCut_words (t : Mem) : (ctlCut t).words.size = t.words.size := Mem.set
 
 /-- **Cutting `CTL` is a frame of the `CTL` words from 256 on.** -/
 theorem ctlCut_frame (t : Mem) : MemFrame [] (hiC (t.arr64 CTL).size) t (ctlCut t) := by
-  refine ⟨fun b _ hb => by rw [ctlCut_arr, if_neg hb], fun x hx => ?_, fun b => ?_, ctlCut_words t⟩
-  · rw [ctlCut_arr, if_pos rfl, rdW_freshCtl]
+  refine ⟨fun b _ hb => by rw [ctlCut_arr, ite_eq_right hb], fun x hx => ?_, fun b => ?_, ctlCut_words t⟩
+  · rw [ctlCut_arr, ite_eq_left rfl, rdW_freshCtl]
     split
     · rfl
     · rename_i h
@@ -125,8 +125,8 @@ theorem freshMem_arr (m : Mem) (b : ArrId) : (freshMem m).arr64 b =
 /-- **The fresh memory from the cut one is a frame of `freshZ`.** -/
 theorem fresh_frame (m : Mem) : MemFrame freshZ [] (ctlCut (truncFrozen m)) (freshMem m) := by
   refine ⟨fun b hb hc => ?_, fun x _ => ?_, fun b => ?_, ?_⟩
-  · rw [freshMem_arr, ctlCut_arr, if_neg hc, if_neg hc, if_neg hb]
-  · rw [freshMem_arr, ctlCut_arr, if_pos rfl, if_pos rfl]
+  · rw [freshMem_arr, ctlCut_arr, ite_eq_right hc, ite_eq_right hc, ite_eq_right hb]
+  · rw [freshMem_arr, ctlCut_arr, ite_eq_left rfl, ite_eq_left rfl]
   · rw [freshMem_arr, ctlCut_arr]
     split
     · rfl
@@ -136,12 +136,12 @@ theorem fresh_frame (m : Mem) : MemFrame freshZ [] (ctlCut (truncFrozen m)) (fre
   · rw [freshMem_words, ctlCut_words]
 
 theorem fresh_ctl (m : Mem) : (freshMem m).arr64 CTL = (ctlCut (truncFrozen m)).arr64 CTL := by
-  rw [freshMem_arr, ctlCut_arr, if_pos rfl, if_pos rfl]
+  rw [freshMem_arr, ctlCut_arr, ite_eq_left rfl, ite_eq_left rfl]
 
 /-- **An array of `freshZ` other than `CTL` is zero** in the fresh memory. -/
 theorem fresh_zero (m : Mem) {b : ArrId} (hb : b ∈ freshZ) (hc : b ≠ CTL) (x : Word) :
     rdW ((freshMem m).arr64 b) x = 0 := by
-  rw [freshMem_arr, if_neg hc, if_pos hb, rdW_zeros]
+  rw [freshMem_arr, ite_eq_right hc, ite_eq_left hb, rdW_zeros]
 
 /-! ## Memos over a zero array -/
 
@@ -242,7 +242,7 @@ theorem poolTr0_of {m m' : Mem} (h0 : m'.arr64 POOL = m.arr64 POOL)
     (hc : m'.arr64 CTL = m.arr64 CTL) (htop : m.top.toNat < 2 ^ 40) : PoolTr0 m m' := by
   have hv : Agree (vpool m') (vpool m) m.top.toNat := fun j hj => by
     rw [vpool_getNat? _ j (by omega), vpool_getNat? _ j (by omega), prd_nat _ j (by omega),
-      prd_nat _ j (by omega), if_pos (by omega), h0]
+      prd_nat _ j (by omega), ite_eq_left (by omega), h0]
   refine ⟨by simp only [Mem.top, hc], htop, hv, fun j hj => ?_⟩
   rw [tpool_vpool _ j (by omega), tpool_vpool _ j (by omega)]; exact hv j hj
 
@@ -261,11 +261,11 @@ theorem rTrans_pool0 (hF : RFrame S R hs)
   have hw1 : (m.setA S.ra (m'.arr64 S.ra)).words.size = m.words.size := Mem.setA_words ..
   have hne : S.ra ≠ S.ra + 256 := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
-    simp only [m₁]; rw [Mem.setA_arr, if_neg (fun h => hne h.1)]
+    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]
     exact Mem.setA_self m m' _ hw
   have e1 : m₁.arr64 (S.ra + 256) = m'.arr64 (S.ra + 256) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
   have eo : ∀ b, b ≠ S.ra → b ≠ S.ra + 256 → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
-    simp only [m₁]; rw [Mem.setA_arr, if_neg (fun h => h2 h.1), Mem.setA_arr, if_neg (fun h => h1 h.1)]
+    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => h2 h.1), Mem.setA_arr, ite_eq_right (fun h => h1 h.1)]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
     rcases tierA_cases' S.ra t with e | e <;> rw [e]
     · exact e0

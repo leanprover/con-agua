@@ -4,7 +4,6 @@ public import ConAgua.Front.ExprIface
 
 @[expose] public section
 
-set_option linter.unusedSectionVars false
 
 /-!
 # Declaration lines: what the fields pass hands the apply step

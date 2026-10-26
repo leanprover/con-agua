@@ -19,8 +19,6 @@ name lists under the pin table, the arm's twin (`ivT`), the models. The refineme
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -226,8 +224,8 @@ theorem installStepGo_opaque (h : PinsFull m a.pins) (cv : IConstantVal) (v : EI
       else (ivT fe (.opaqueDecl cv v)).run a := by
   simp only [installStepGo, StateT.run_bind, reduceOpNames_run h, exc_ok_bind', pinnedOpaqueL]
   by_cases hc : ((List.range' 44 2).map (fun j => (decI (pinW m j) : NIdx))).contains cv.name = true
-  · simp only [hc, if_true]; rfl
-  · simp only [hc, if_false, Bool.false_eq_true]; rfl
+  · simp only [hc, ite_true]; rfl
+  · simp only [hc, ite_false, Bool.false_eq_true]; rfl
 
 end twin
 
@@ -373,7 +371,7 @@ def ivK3 (n : Nat) (vis vk q : Word) : Option (List Word × Mem) → Option (Lis
   | none => none
   | some (_, m3) => ivK4 vis vk q (callW p n "env_push" [vis, q] m3)
 
-def ivK4 (vis vk q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ivK4 (_vis vk q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r4, m4) => ivK5 (r4.headD 0) (erecVgW m4 q vk)
 

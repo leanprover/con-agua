@@ -12,7 +12,6 @@ offset is whatever its record holds), and `target_rec_pins_names`: the auxiliary
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -171,9 +170,9 @@ variable (p : Prog) (n : Nat) (m : Mem) (reco recl auxo auxl : Word) (r rw : Lis
 theorem tpnK5_some : tpnK5 (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem tpnK4_some : tpnK4 p n (some (r, m)) = tpnK5 (callW p n "sl_nodup" [r.headD 0, r.tail.headD 0] m) := rfl
 theorem tpnK3_zero (h : r.headD 0 = 0) : tpnK3 p n reco recl (some (r, m)) = some ([0], m) := by
-  simp only [tpnK3]; rw [if_pos h]
+  simp only [tpnK3]; rw [ite_eq_left h]
 theorem tpnK3_ok (h : ¬ r.headD 0 = 0) : tpnK3 p n reco recl (some (r, m)) =
-    tpnK4 p n (callW p n "ptr_list_names" [reco, recl] m) := by simp only [tpnK3]; rw [if_neg h]
+    tpnK4 p n (callW p n "ptr_list_names" [reco, recl] m) := by simp only [tpnK3]; rw [ite_eq_right h]
 theorem tpnK2_some : tpnK2 p n reco recl rw (some (r, m)) = tpnK3 p n reco recl
     (callW p n "sl_set_eq" [rw.headD 0, rw.tail.headD 0, r.headD 0, r.tail.headD 0] m) := rfl
 theorem tpnK1_some : tpnK1 p n reco recl auxo auxl (some (r, m)) =
@@ -250,10 +249,10 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
     rw [hgm, hwm, partsAll_decI wws gws hwl hgl, partsAll_decI gws wws hgl hwl, List.length_map,
       List.length_map]
     cases gws.all (fun w => wws.contains w) <;> cases wws.all (fun w => gws.contains w) <;>
-      simp [Bool.and_comm, Nat.beq_eq_true_eq, eq_comm, BEq.comm]
+      simp [Bool.and_comm, BEq.comm]
   by_cases hok : rpSetOk ((rpAux bs).map (·.cvR.name)) want = true
-  · have hro : ro.headD 0 = 1 := by rw [hset, hcond, if_pos hok]
-    rw [tpnK3_ok _ _ _ _ _ _ (by rw [hro]; decide), if_pos hok]
+  · have hro : ro.headD 0 = 1 := by rw [hset, hcond, ite_eq_left hok]
+    rw [tpnK3_ok _ _ _ _ _ _ (by rw [hro]; decide), ite_eq_left hok]
     refine Sim.mstep (K := tpnK4 p (n + 1)) rfl (fun _ _ => rfl) fun rn m4 h4 => ?_
     obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
       (ptrListNames_spec p L.alloc L.pnc L.pln (n + 1) _ reco recl) h4
@@ -273,8 +272,8 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
     simp only [List.headD_cons]
     rw [hnd, hnm, nameNodup_map nws hnl]
     by_cases h : nws.Nodup <;> simp [h]
-  · have hro : ro.headD 0 = 0 := by rw [hset, hcond, if_neg hok]
-    rw [tpnK3_zero _ _ _ _ _ _ hro, if_neg hok]
+  · have hro : ro.headD 0 = 0 := by rw [hset, hcond, ite_eq_right hok]
+    rw [tpnK3_zero _ _ _ _ _ _ hro, ite_eq_right hok]
     exact Sim.ret ⟨by simp, hS2, hg1.trans hg2⟩
 
 /-- **`target_rec_pins_names`' model refines the twin's name pins** (through the stubs
@@ -288,7 +287,7 @@ theorem tpnW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
       (fun r b m' a' => r.headD 0 = (if b then 1 else 0) ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
   unfold tpnW namesTwin
   by_cases hk : k = 0
-  · rw [if_pos hk]
+  · rw [ite_eq_left hk]
     have hm : bs.members = [] := hms.nil hk
     have h0 : rpN0 bs = internNNode .anonymous := by unfold rpN0; rw [hm]
     rw [h0]
@@ -302,7 +301,7 @@ theorem tpnW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
       (hrs.grow (fun q => decRS_mono q) hg0) (haux.grow (fun q => decRS_mono q) hg0)).mono ?_
     rintro r b m' a' ⟨h1, h2, h3⟩
     exact ⟨h1, h2, hg0.trans h3⟩
-  · rw [if_neg hk]
+  · rw [ite_eq_right hk]
     obtain ⟨pc, ms0, ms', hmeq, hw, hpb, hms0, -⟩ := partsPSl_cons (hms.pslr hk) hk
     obtain ⟨⟨ca, hca, hcv⟩, -⟩ := decMS_some (show decMS (truncM m) pc = some ms0 from hms0)
     obtain ⟨hcw, hcab, -⟩ := partsIwRd hca (UInt64.toNat_ofNat_of_lt' hpb)

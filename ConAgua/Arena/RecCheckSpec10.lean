@@ -38,8 +38,8 @@ theorem taCW_same {n : Nat} {m m' : Mem} {no nl lvls ho hl hh nn vus r : Word}
   | succ n =>
     simp only [taCW] at h
     by_cases hv : vus ≠ lvls
-    · rw [if_pos hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm
-    rw [if_neg hv] at h
+    · rw [ite_eq_left hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm
+    rw [ite_eq_right hv] at h
     rcases hf : findW n m no nl nn with _ | fr <;> rw [hf] at h <;>
       try (simp only [taCK, reduceCtorEq] at h; done)
     simp only [taCK] at h
@@ -278,13 +278,13 @@ theorem pdsK6_ok (h : ¬ 4294967296 ≤ av) : pdsK6 cR n vis d no nl lvls ho hl 
 theorem pdsK5_some : pdsK5 cR n vis d no nl lvls ho hl pfo pfl b (some (r, m)) =
     pdsK6 cR n vis d no nl lvls ho hl pfo pfl b (taF n m no nl lvls ho hl (r.headD 0)) := rfl
 theorem pdsK4_out (h : pfl < r.headD 0) : pdsK4 cR n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
-    some ([0], m) := by simp only [pdsK4]; rw [if_pos h]
+    some ([0], m) := by simp only [pdsK4]; rw [ite_eq_left h]
 theorem pdsK4_ok (h : ¬ pfl < r.headD 0) : pdsK4 cR n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
-    pdsK5 cR n vis d no nl lvls ho hl pfo pfl b (tcpF n m pfo pfl a) := by simp only [pdsK4]; rw [if_neg h]
+    pdsK5 cR n vis d no nl lvls ho hl pfo pfl b (tcpF n m pfo pfl a) := by simp only [pdsK4]; rw [ite_eq_right h]
 theorem pdsK3_out (h : pfl < r.headD 0) : pdsK3 cR n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
-    some ([0], m) := by simp only [pdsK3]; rw [if_pos h]
+    some ([0], m) := by simp only [pdsK3]; rw [ite_eq_left h]
 theorem pdsK3_ok (h : ¬ pfl < r.headD 0) : pdsK3 cR n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
-    pdsK4 cR n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, b]) := by simp only [pdsK3]; rw [if_neg h]
+    pdsK4 cR n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, b]) := by simp only [pdsK3]; rw [ite_eq_right h]
 theorem pdsK2_b (h : x ≠ 0) : pdsK2 cR n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) = some ([0], m) := by
   simp [pdsK2, h]
 theorem pdsK2_ok (h : ¬ x ≠ 0) : pdsK2 cR n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) =
@@ -354,9 +354,9 @@ theorem pdeW_cons (h : ¬ al = 0) (hb : ¬ bl = 0) : pdeW cR (n + 1) m vis d no 
       (pdsF cR n m vis d no nl lvls ho hl pfo pfl (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo)) := by
   simp [pdeW, h, hb]
 theorem pdeK1_stop (h : r.headD 0 = 0) : pdeK1 cR n vis d no nl lvls ho hl pfo pfl ao al bo bl (some (r, m1)) =
-    some ([0], m1) := by simp only [pdeK1]; rw [if_pos h]
+    some ([0], m1) := by simp only [pdeK1]; rw [ite_eq_left h]
 theorem pdeK1_go (h : ¬ r.headD 0 = 0) : pdeK1 cR n vis d no nl lvls ho hl pfo pfl ao al bo bl (some (r, m1)) =
-    pdsK11 (pdeW cR n m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1)) := by simp only [pdeK1]; rw [if_neg h]
+    pdsK11 (pdeW cR n m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1)) := by simp only [pdeK1]; rw [ite_eq_right h]
 end arms
 attribute [ind_grind] pdeW_nil pdeW_nilr pdeW_cons pdeK1_stop pdeK1_go
 

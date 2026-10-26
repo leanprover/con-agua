@@ -21,7 +21,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -62,10 +61,10 @@ theorem internLNode_zero_run (a : AState) :
   cases hp : a.store.lss.ls.pers.zeros.cons[zeroKey]? <;> cases hs : a.store.lss.ls.scratchOn <;>
     cases hc : a.store.lss.ls.scr.zeros.cons[zeroKey]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, zeroKey, ite_self, protoRun, zeroLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrZeros, withPersZeros, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      ↓reduceIte, zeroKey, protoRun, zeroLens] <;>
+    (try split) <;> simp_all [withScrZeros, withPersZeros, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `zero` tables -/
 
@@ -98,7 +97,7 @@ def zMt (m : Mem) (t i : Word) : Bool := zmatchW (m.arr64 (tierA ZREC t)) t i
 /-- **Matching is equality of `zero` nodes**: both sides are always true. -/
 theorem zeroMatchOK (m : Mem) : MatchOK ZRecRel (zMt m) m zeroKey := by
   intro t i k _
-  simp only [zMt, zmatchW, eq_iff_iff, iff_true, zeroNode_eq k]
+  simp only [zMt, zmatchW, zeroNode_eq k]
 
 theorem zeroHomeOK (m : Mem) : HomeOK zhash (zMt m) m zeroHashW := by
   intro t i _; rfl
@@ -124,9 +123,9 @@ theorem zeroCS_wf : zeroCS.WF where
   col A h := by simp [zeroCS] at h
   colRoom A h := by simp [zeroCS] at h
   colLt A h := by
-    simp only [zeroCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [zeroCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (zpushOK_room m t ((zpushOK_eqC m t).trans h)).2
-  vs ks h hk := by simp [pushArgs, zeroCS, hk]
+  vs ks h hk := by simp [pushArgs, zeroCS]
   ex _ := {
     nk := by decide
     nkw := by decide
@@ -134,8 +133,8 @@ theorem zeroCS_wf : zeroCS.WF where
     mt := by
       intro m ks h t i hl
       obtain rfl := list_zero ks (by simpa [zeroCS] using hl)
-      simp [zeroCS, zmatchW, zhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [zeroCS, zmatchW, zhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [zeroCS, zmatchW, fieldsL]
+    hs := by intro m t i; simp [zeroCS, zmatchW, zhash, fieldsL]
     qh := fun _ _ _ => rfl
     vs := by intro ks h hl f hf; simp [zeroCS, nkW] at hf }
 

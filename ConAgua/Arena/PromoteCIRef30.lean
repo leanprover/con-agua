@@ -8,7 +8,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -16,7 +15,7 @@ theorem cdec_length {dn : NIdx → Option ConLeche.Name} {A E : Array Word} :
     ∀ (j : Nat) (cs : List IConstantInfo), cdec dn A E j = some cs → cs.length = j
   | 0, cs, h => by simp [cdec] at h; subst h; rfl
   | j + 1, cs, h => by
-    simp only [cdec, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    simp only [cdec, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨p, hp, x, hx, xs, hxs, rfl⟩ := h
     simp [cdec_length j xs hxs]
 
@@ -98,10 +97,10 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hsz₁ : (m₁.arr64 EREC).size < 2 ^ 64 := hiw4
   have hts₁ : erecTop m₁ ≤ (m₁.arr64 EREC).size := hiw2
   have hD₁ : ArenaD m₁ a := hR₁.check.arena
-  simp only [newCW, if_neg hk0] at hW
+  simp only [newCW, ite_eq_right hk0] at hW
   by_cases hs128 : (m₁.arr64 CTL).size ≤ 128
-  · rw [if_pos hs128] at hW; cases hW
-  rw [if_neg hs128] at hW
+  · rw [ite_eq_left hs128] at hW; cases hW
+  rw [ite_eq_right hs128] at hW
   obtain ⟨n0, hn0⟩ : ∃ n0, n0 = rdW (m₁.arr64 CTL) 128 := ⟨_, rfl⟩
   rw [← hn0] at hW
   obtain ⟨c, hc⟩ : ∃ c, c = if n0 < k then n0 else k := ⟨_, rfl⟩
@@ -109,8 +108,8 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hcn : c.toNat = min n0.toNat k.toNat := by
     rw [hc]
     by_cases h : n0 < k
-    · rw [if_pos h]; have := UInt64.lt_iff_toNat_lt.mp h; omega
-    · rw [if_neg h]; have := UInt64.not_lt.mp h; have := UInt64.le_iff_toNat_le.mp this; omega
+    · rw [ite_eq_left h]; have := UInt64.lt_iff_toNat_lt.mp h; omega
+    · rw [ite_eq_right h]; have := UInt64.not_lt.mp h; have := UInt64.le_iff_toNat_le.mp this; omega
   -- the constants
   have hcons := hE₁.consts
   rw [envConsts_eq] at hcons

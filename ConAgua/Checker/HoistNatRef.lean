@@ -1,7 +1,5 @@
 import ConAgua.Checker.HoistClosureL
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 /-!
 # The hoist's `Nat` operation tests refine the twin's name lists (lane `front4`)
@@ -126,8 +124,8 @@ theorem natDivModNames_call {p : Prog} (hx : HoistExt p) :
     (natDivModNames_specW p (hx.get "nat_div_mod_names") (hx.get "pin_at") k ·) hc
   unfold natDivModNamesW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at hw; cases hw
-  rw [if_neg h0] at hw
+  · rw [ite_eq_left h0] at hw; cases hw
+  rw [ite_eq_right h0] at hw
   rcases hq : callW p k "iw_alloc" [8] m with _ | ⟨rq, mq⟩ <;> rw [hq] at hw
   · simp at hw
   rw [bW_some] at hw
@@ -154,8 +152,8 @@ theorem natOpNames_call {p : Prog} (hx : HoistExt p) :
     (natOpNames_specW p (hx.get "nat_op_names") (hx.get "pin_at") k ·) hc
   unfold natOpNamesW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at hw; cases hw
-  rw [if_neg h0] at hw
+  · rw [ite_eq_left h0] at hw; cases hw
+  rw [ite_eq_right h0] at hw
   rcases hq : callW p k "iw_alloc" [7] m with _ | ⟨rq, mq⟩ <;> rw [hq] at hw
   · simp at hw
   rw [bW_some] at hw
@@ -354,14 +352,14 @@ theorem armsW_slice {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : N
     intro ht hw
     simp only [armsW, depsL] at hw ⊢
     by_cases hci : w = pinW m i
-    · rw [if_pos hci] at hw ⊢
+    · rw [ite_eq_left hci] at hw ⊢
       have hi := ht _ List.mem_cons_self
       refine depsSlice_ok hal hA ?_ ?_ hw
       · simp only [List.mem_map]
         rintro _ ⟨j, hj, rfl⟩
         exact pin_lt hP j (hi.2 j hj).1 (hi.2 j hj).2
       · rw [List.length_map, UInt64.toNat_ofNat_of_lt' hi.1]
-    · rw [if_neg hci] at hw ⊢
+    · rw [ite_eq_right hci] at hw ⊢
       exact ih (fun x hx => ht x (List.mem_cons_of_mem _ hx)) hw
 
 /-- **The call of `nat_op_deps(w)`** is `natOpDeps (decI w)`: its result `(o, l)` is a slice of

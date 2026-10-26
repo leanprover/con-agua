@@ -13,9 +13,6 @@ Part 6: `bool_ctor_typed`, `type_pin_stored`, `ground_guards`, `type_pin_guard`,
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -64,14 +61,14 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
   | none =>
     rw [hf] at hfd
     have hz : rf.headD 0 = 0 := hfd
-    rw [if_pos hz] at hw
+    rw [ite_eq_left hz] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨false, a, by simp only [boolCtorTyped, hf]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
   | some ci =>
     rw [hf] at hfd
     obtain ⟨hr1, hci⟩ := hfd
-    rw [if_neg (by rw [hr1]; decide)] at hw
+    rw [ite_eq_right (by rw [hr1]; decide)] at hw
     obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hcv2⟩, hw⟩ :=
       (ciToCv_ref hD.toDmProg5.cvProg (rf.tail.headD 0) ci).bind_ ⟨hS, hci⟩ hw
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun2)
@@ -88,7 +85,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
       simp only [boolCtorTyped, hf, StateT.run_bind, boolName, hrun3]
       have hrun4' : (constE (decI (r3.headD 0))).run a3 = .ok (decI (r4.headD 0), a4) := hrun4
       simp only [hrun4', exc_ok_bind', hty]
-      simp only [bne_iff_ne, hb]
+      simp only [hb]
       try rfl
     · rw [hrd4]
       unfold decW0B
@@ -134,7 +131,7 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
   | none =>
     rw [hf] at hfd
     have hz : rf.headD 0 = 0 := hfd
-    rw [if_pos hz] at hw
+    rw [ite_eq_left hz] at hw
     obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
       (pinWord53_ref (dn := dn) (vis := vis) (fe := fe) p hD.toDmProg5.toMasterProg.lPinWord).bind_ hS hw
     obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
@@ -147,7 +144,7 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
   | some ci =>
     rw [hf] at hfd
     obtain ⟨hr1, hci⟩ := hfd
-    rw [if_neg (by rw [hr1]; decide)] at hw
+    rw [ite_eq_right (by rw [hr1]; decide)] at hw
     obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hcv2⟩, hw⟩ :=
       (ciToCv_ref hD.toDmProg5.cvProg (rf.tail.headD 0) ci).bind_ ⟨hS, hci⟩ hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -165,7 +162,7 @@ theorem typePinStored_refines (hD : DmProg6 p) (nm : Word) :
       (typePinStored fe (decI nm)) (KeepPost dn vis fe decW0E) :=
   (tps_ref hD nm).refAM
 
-def dmGgW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs pe : Word) : Option (List Word × Mem) :=
+def dmGgW (_p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs pe : Word) : Option (List Word × Mem) :=
   ntBW (lbbF m [4000000000, 0, pe]) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
   ntBW (hffF m2 [4000000000, pe]) fun r3 m3 =>

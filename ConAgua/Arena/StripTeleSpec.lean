@@ -43,20 +43,20 @@ theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h
       tfld m FORALL (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
-  simp only [h1, if_false] at hne ⊢
+  simp only [h1, ite_false] at hne ⊢
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hs] at hne
-  simp only [hs, if_false] at hne ⊢
+  simp only [hs, ite_false] at hne ⊢
   have n0 : ¬ h >>> 28 = 0 := by rw [hg]; decide
   have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
   have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
   have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
   have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
   have n5 : ¬ h >>> 28 = 5 := by rw [hg]; decide
-  simp only [n0, n1, n2, n3, n4, n5, hg, if_false, if_true] at hne ⊢
+  simp only [hg, ite_false, ite_true] at hne ⊢
   by_cases c : tcnt m FORALL (tierW h) ≤ idxW h
   · simp [c] at hne
-  simp only [c, if_false]
+  simp only [c, ite_false]
   exact ⟨⟨hs, by simpa using c⟩, rfl⟩
 
 /-- A returning `e_view` of a `lam` handle. -/
@@ -65,19 +65,19 @@ theorem eViewW_lamS (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : eViewW m h �
       tfld m LAM (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
-  simp only [h1, if_false] at hne ⊢
+  simp only [h1, ite_false] at hne ⊢
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hs] at hne
-  simp only [hs, if_false] at hne ⊢
+  simp only [hs, ite_false] at hne ⊢
   have n0 : ¬ h >>> 28 = 0 := by rw [hg]; decide
   have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
   have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
   have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
   have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
-  simp only [n0, n1, n2, n3, n4, hg, if_false, if_true] at hne ⊢
+  simp only [hg, ite_false, ite_true] at hne ⊢
   by_cases c : tcnt m LAM (tierW h) ≤ idxW h
   · simp [c] at hne
-  simp only [c, if_false]
+  simp only [c, ite_false]
   exact ⟨⟨hs, by simpa using c⟩, rfl⟩
 
 /-! ## The word model -/
@@ -108,17 +108,17 @@ section arms
 variable (tg k o : Word) (f : Nat) (m m1 : Mem) (n h q : Word)
 
 theorem stripGoW_ge (hn : ¬ n < k) : stripGoW tg k o (f + 1) m n h = some ([1, o, k, h], m) := by
-  simp only [stripGoW, hn, if_false]
+  simp only [stripGoW, hn, ite_false]
 
 theorem stripGoW_tag (hn : n < k) (hg : h >>> 28 ≠ tg) :
     stripGoW tg k o (f + 1) m n h = some ([0, 0, 0, 0], m.set64 CTL 200 o) := by
-  simp only [stripGoW, if_pos hn, if_pos hg]
+  simp only [stripGoW, ite_eq_left hn, ite_eq_left hg]
 
 theorem stripGoW_step (hn : n < k) (hg : ¬ h >>> 28 ≠ tg) (hv : eViewW m h ≠ [])
     (ha : allocW m 1 = some (q, m1)) :
     stripGoW tg k o (f + 1) m n h = stripGoW tg k o f (m1.set64 IW q ((eViewW m h).tail.headD 0))
       (n + 1) ((eViewW m h).tail.tail.headD 0) := by
-  simp only [stripGoW, if_pos hn, if_neg hg]
+  simp only [stripGoW, ite_eq_left hn, ite_eq_right hg]
   repeat' split
   all_goals simp_all
 
@@ -222,7 +222,7 @@ theorem StageR.set_top {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
   have ht : iwTop (m.set64 CTL 200 o) = o.toNat := by
     simp only [iwTop, rdW_set64]
     have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using h5
-    rw [if_pos ⟨trivial, trivial, h200⟩]
+    rw [ite_eq_left ⟨trivial, trivial, h200⟩]
   have h129 : rdW ((m.set64 CTL 200 o).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
   have hE : (m.set64 CTL 200 o).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
   refine ⟨⟨CheckR.frame_iw hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, ht⟩
@@ -325,7 +325,7 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
     have hf : MemFrame [IW] [200] m (m.set64 CTL 200 o) :=
       MemFrame.mono (MemFrame.setCtl m 200 o) (by simp) (by simp)
     refine ⟨none, ?_, hS', hf, fun i _ => by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], rfl, ht'⟩
-    simp only [stripStepT, hT h hh, decide_eq_true_iff, hg, if_false]; rfl
+    simp only [stripStepT, hT h hh, decide_eq_true_iff, hg, ite_false]; rfl
   have hg' : h >>> 28 = tg := Classical.not_not.mp hg
   by_cases hv : eViewW m h = []
   · simp [stripGoW, hn, hg, hv] at hm
@@ -352,11 +352,11 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
   have hq' : q.toNat = iwTop m := hq
   have hlowm : ∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]? := by
     intro i hi
-    rw [hlow' i (by omega), set64IW_get, if_neg (by omega), allocMem_IW]
+    rw [hlow' i (by omega), set64IW_get, ite_eq_right (by omega), allocMem_IW]
   have hat : (m'.arr64 IW)[q.toNat]? = some ((eViewW m h).tail.headD 0) := by
-    rw [hlow' _ (by omega), set64IW_get, if_pos ⟨rfl, by rw [allocMem_IW]; have := hroom; simp at this; omega⟩]
+    rw [hlow' _ (by omega), set64IW_get, ite_eq_left ⟨rfl, by rw [allocMem_IW]; have := hroom; simp at this; omega⟩]
   refine ⟨match x' with | some p => some (decE ((eViewW m h).tail.headD 0) :: p.1, p.2) | none => none, ?_, hS', hfr, hlowm, ?_⟩
-  · simp only [stripStepT, hT h hh, decide_eq_true_iff, hg', if_true, StateT.run_bind, hvr,
+  · simp only [stripStepT, hT h hh, decide_eq_true_iff, hg', ite_true, StateT.run_bind, hvr,
       except_ok_bind]
     simp only [hrun']
     cases x' <;> rfl
@@ -373,7 +373,7 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
       have hon : o.toNat + n.toNat = q.toNat := by omega
       rw [hon, show q.toNat + 1 = o.toNat + (n.toNat + 1) by omega, hdec]
       simp only [hd?, iwA, hat, Option.bind_eq_bind, Option.bind]
-      rw [if_pos hty]; rfl
+      rw [ite_eq_left hty]; rfl
 
 end loop
 

@@ -40,13 +40,13 @@ def ustW (n : Nat) (m : Mem) (cty nP j : Word) : Option (Word × Mem) :=
   ustK1 n (stripF 6 m [nP + j + 1, cty])
 
 theorem usgK1_some_zero {n : Nat} {rs : List Word} {m1 : Mem} (h : rs.headD 0 = 0) :
-    usgK1 n (some (rs, m1)) = some (0, m1) := by simp only [usgK1, if_pos h]
+    usgK1 n (some (rs, m1)) = some (0, m1) := by simp only [usgK1, ite_eq_left h]
 theorem usgK1_some_ne {n : Nat} {rs : List Word} {m1 : Mem} (h : ¬ rs.headD 0 = 0) :
-    usgK1 n (some (rs, m1)) = hbGoW n m1 CWF 0 (rs.tail.tail.tail.headD 0) := by simp only [usgK1, if_neg h]
+    usgK1 n (some (rs, m1)) = hbGoW n m1 CWF 0 (rs.tail.tail.tail.headD 0) := by simp only [usgK1, ite_eq_right h]
 theorem ustK1_some_zero {n : Nat} {rs : List Word} {m1 : Mem} (h : rs.headD 0 = 0) :
-    ustK1 n (some (rs, m1)) = some (0, m1) := by simp only [ustK1, if_pos h]
+    ustK1 n (some (rs, m1)) = some (0, m1) := by simp only [ustK1, ite_eq_left h]
 theorem ustK1_some_ne {n : Nat} {rs : List Word} {m1 : Mem} (h : ¬ rs.headD 0 = 0) :
-    ustK1 n (some (rs, m1)) = hbFastW n m1 0 (rs.tail.tail.tail.headD 0) := by simp only [ustK1, if_neg h]
+    ustK1 n (some (rs, m1)) = hbFastW n m1 0 (rs.tail.tail.tail.headD 0) := by simp only [ustK1, ite_eq_right h]
 attribute [ind_grind] usgK1_some_zero usgK1_some_ne ustK1_some_zero ustK1_some_ne
 
 section spec
@@ -337,7 +337,7 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
       refine ⟨[], mp, a, ?_, ?_, rfl, ?_, hM1, hS1, hg1⟩
       · simp [structUsedLaterList]; rfl
       · simp [decNL, bnums]
-      · simp only [List.headD_cons, List.tail_cons]; rw [htop, ← hq]
+      · simp only [List.headD_cons]; rw [htop, ← hq]
     · rw [ulW_succ k m cty nP n base hn0] at h
       have hn1 : (n - 1).toNat = n.toNat - 1 := by
         have : 1 ≤ n.toNat := by

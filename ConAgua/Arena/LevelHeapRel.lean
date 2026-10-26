@@ -22,7 +22,6 @@ functional and injective (`NameRel`): under `ArenaR`, the store's name readback
 * `lvEqW_ok`: `lv_eq` is `decide (l = r)` (`Level.beq`).
 -/
 
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -189,7 +188,7 @@ theorem HeapFrame.heap (h : HeapFrame m m') (p : Word) (hb : ¬ p >>> 32 = 0)
     (hp : lvNodeW m p ≠ []) : lvNodeW m' p = lvNodeW m p := by
   rw [lvNodeW_heap m p hb] at hp ⊢
   rw [lvNodeW_heap m' p hb]
-  have hlt0 : ¬ rdW (m.arr64 CTL) 192 < p - 4294967296 + 3 := fun e => hp (by rw [if_pos e])
+  have hlt0 : ¬ rdW (m.arr64 CTL) 192 < p - 4294967296 + 3 := fun e => hp (by rw [ite_eq_left e])
   have hlt := heap_below _ p hb hlt0
   have ht := h.top
   simp only [htop] at ht
@@ -205,7 +204,7 @@ theorem HeapFrame.heap (h : HeapFrame m m') (p : Word) (hb : ¬ p >>> 32 = 0)
   have e2 : UInt64.toNat 2 = 2 := rfl
   rw [e1] at h1
   rw [e2] at h2
-  rw [if_neg h3, if_neg hlt0, h.lh _ (by simp only [htop]; omega),
+  rw [ite_eq_right h3, ite_eq_right hlt0, h.lh _ (by simp only [htop]; omega),
     h.lh _ (by simp only [htop]; omega), h.lh _ (by simp only [htop]; omega)]
 
 theorem HeapFrame.ext (h : HeapFrame m m') : HeapExt m m' := by
@@ -299,7 +298,7 @@ theorem lhMkW_ext {g a b r : Word} (h : lhMkW m g a b = some (r, m')) :
     have htop' : htop (lhMem m (htop m) g a b) = htop m + 3 := by
       simp only [htop]; rw [lhMem_ctl _ _ _ _ _ hctl]; simp
     refine ⟨HeapFrame.ext ⟨fun A h1 h2 => lhMem_arr _ _ _ _ _ A h1 h2,
-      fun k hk => by rw [lhMem_ctl _ _ _ _ _ hctl, if_neg hk], by rw [htop', e3]; omega,
+      fun k hk => by rw [lhMem_ctl _ _ _ _ _ hctl, ite_eq_right hk], by rw [htop', e3]; omega,
       fun k hk => ?_, fun b => by simp only [lhMem, size_set64L],
       by simp only [lhMem, Mem.words_size_set64]⟩, ?_, by rw [htop', e3]⟩
     · rw [lhMem_lh _ _ _ _ _ hl ht]

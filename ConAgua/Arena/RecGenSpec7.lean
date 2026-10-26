@@ -52,7 +52,7 @@ theorem rec2DecCV_erecP {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q 
   rw [rec2DecCV_agree (a := erA m) (T := erTop m) (fun i hi => ?_) hq.1 hq.2]
   · exact h
   · simp only [erecP, erA, Array.getElem?_extract, erecTop, erTop] at hi ⊢
-    simp only [Nat.zero_add, Array.getElem?_eq_none_iff, Array.size_extract]
+    simp only [Nat.zero_add]
     split <;> simp_all <;> omega
 
 /-! ## `class_rec_ty_ok_guards` -/
@@ -116,18 +116,18 @@ variable (cR : CallM) (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis g k rc cvRi c gty 
 theorem rtoW_eq : rtoW cR (n + 1) m vis g k rc cvRi c = rtoK1 cR n vis g rc cvRi c (rgW n m g k rc c) := rfl
 theorem rtoK1_some : rtoK1 cR n vis g rc cvRi c (some (r1, m1)) = rtoK2 cR n vis rc cvRi (gtW n m1 g c) := rfl
 theorem rtoK2_fail (h : r2.headD 0 = 0) : rtoK2 cR n vis rc cvRi (some (r2, m2)) = none := by
-  rw [rtoK2, if_pos h]
+  rw [rtoK2, ite_eq_left h]
 theorem rtoK2_ok (h : r2.headD 0 ≠ 0) : rtoK2 cR n vis rc cvRi (some (r2, m2)) =
     rtoK3 cR n vis cvRi (r2.tail.headD 0)
       (cvNewW m2 (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc))
         (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc + 1)) (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc + 2))
         (r2.tail.headD 0)) := by
-  rw [rtoK2, if_neg h]
+  rw [rtoK2, ite_eq_right h]
 theorem rtoK3_some : rtoK3 cR n vis cvRi gty (some (q, m3)) = rtoK4 cR n vis cvRi gty q (ccoW cR n m3 vis q) := rfl
 theorem rtoK4_some : rtoK4 cR n vis cvRi gty q (some (r4, m4)) =
     rtoK5 q (cR n "is_def_eq_core" [vis, 0, rdW (m4.arr64 EREC) (cvRi + 3), gty] m4) := rfl
-theorem rtoK5_fail (h : r5.headD 0 = 0) : rtoK5 q (some (r5, m5)) = none := by rw [rtoK5, if_pos h]
-theorem rtoK5_ok (h : r5.headD 0 ≠ 0) : rtoK5 q (some (r5, m5)) = some ([q], m5) := by rw [rtoK5, if_neg h]
+theorem rtoK5_fail (h : r5.headD 0 = 0) : rtoK5 q (some (r5, m5)) = none := by rw [rtoK5, ite_eq_left h]
+theorem rtoK5_ok (h : r5.headD 0 ≠ 0) : rtoK5 q (some (r5, m5)) = some ([q], m5) := by rw [rtoK5, ite_eq_right h]
 end arms
 
 grind_pattern [ind_grind] rtoW_eq => rtoW cR (n + 1) m vis g k rc cvRi c
@@ -285,13 +285,13 @@ theorem rgW_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g k rc c : Word
     rw [hmem]; simp only [decON]
     by_cases hz : k8 = 0
     · subst hz
-      simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, if_false,
+      simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, ite_false,
         Decidable.not_not] at c1
       have := congrArg UInt64.toNat c1
       rw [UInt64.toNat_ofNat_of_lt' tglt] at this
       simp [this]
     · have hz' : (UInt64.ofNat k8 : Word) ≠ 0 := fun e => hz (rec2W_inj k8lt (by decide) e)
-      simp only [hz', ne_eq, not_false_eq_true, if_true, Decidable.not_not] at c1
+      simp only [hz', ne_eq, not_false_eq_true, ite_true, Decidable.not_not] at c1
       have e1 : (UInt64.ofNat k8 - 1 : Word) = UInt64.ofNat (k8 - 1) := by
         obtain ⟨j, rfl⟩ : ∃ j, k8 = j + 1 := ⟨k8 - 1, by omega⟩
         simp [UInt64.ofNat_add]
@@ -316,7 +316,7 @@ theorem rgW_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g k rc c : Word
     exact this
   have g2 : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = true := by
     simp [hrPe, hmIe]
-  simp only [g1, g2, if_true, ite_true, pure_bind]
+  simp only [g1, g2, ite_true]
   exact hrest m1 a1 tm hrun1 hS1 hg1 (hf1 hA)
 
 /-- `class_rec_ty_ok`'s result: a constant record below the record top. -/

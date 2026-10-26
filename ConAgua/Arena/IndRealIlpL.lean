@@ -23,8 +23,6 @@ from the record pool (`keys_push`, `ek_copy`); its proof carries over word for w
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -251,7 +249,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop₁ : (spTop (mc.set64 CTL 136 (spTop m + pl))).toNat = (spTop m).toNat + pl.toNat := by
     have hc' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hfc.2.2.1 CTL]; simpa using hctl
-    simp only [spTop]; rw [rdW_set64]; simp only [hc', and_self, ↓reduceIte, true_and]
+    simp only [spTop]; rw [rdW_set64]; simp only [hc', and_self, ↓reduceIte]
     rw [UInt64.toNat_add]; simp only [spTop] at t1' t2' ⊢; omega
   -- the core
   rw [← hb] at hW
@@ -272,7 +270,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
       (hSt₂.bstk.trans (BKept.of_frame hfb (by decide) (by decide))),
     (PoolGrew.of_frame hfm (by decide) (by decide)).trans
       (hSt₂.pool.trans (PoolGrew.of_frame hfb (by decide) (by decide)))⟩
-  · simp only [spTop]; rw [rdW_set64]; simp only [hc₂, and_self, ↓reduceIte, true_and]
+  · simp only [spTop]; rw [rdW_set64]; simp only [hc₂, and_self, ↓reduceIte]
   · rw [hspn₃, hSt₂.size, hspn₁, hfc.2.2.1 SPN]
   · have hi' : i.toNat < (spTop m).toNat := UInt64.lt_iff_toNat_lt.mp hi
     simp only [spW]

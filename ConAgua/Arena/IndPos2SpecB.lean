@@ -52,22 +52,22 @@ section arms
 variable (n : Nat) (m m1 m2 : Mem) (no nl us nn c v mi r s z : Word) (fr : List Word)
 theorem canonW_ne (h : v ≠ us) : canonW (n + 1) m no nl us nn c v = some ([0, 0], m) := by simp [canonW, h]
 theorem canonW_eq (h : ¬ v ≠ us) : canonW (n + 1) m no nl us nn c v = canonK0 nn m (findW n m no nl c) := by
-  simp only [canonW]; rw [if_neg h]
+  simp only [canonW]; rw [ite_eq_right h]
 theorem canonK0_miss (h : fr.headD 0 = 0) : canonK0 nn m (some fr) = some ([0, 0], m) := by
-  simp only [canonK0]; rw [if_pos h]
+  simp only [canonK0]; rw [ite_eq_left h]
 theorem canonK0_hit (h : ¬ fr.headD 0 = 0) :
     canonK0 nn m (some fr) = canonK1 nn (fr.tail.headD 0) m (pinWordV m 53) := by
-  simp only [canonK0]; rw [if_neg h]
+  simp only [canonK0]; rw [ite_eq_right h]
 theorem canonK1_big (h : 4294967296 ≤ z) : canonK1 nn mi m (some z) = none := by simp [canonK1, h]
 theorem canonK1_ok (h : ¬ 4294967296 ≤ z) : canonK1 nn mi m (some z) = canonK2 nn mi (sointernW m z) := by
-  simp only [canonK1]; rw [if_neg h]
+  simp only [canonK1]; rw [ite_eq_right h]
 theorem canonK2_big (h : 4294967296 ≤ s) : canonK2 nn mi (some (s, m1)) = none := by simp [canonK2, h]
 theorem canonK2_ok (h : ¬ 4294967296 ≤ s) :
     canonK2 nn mi (some (s, m1)) = canonK3 (fvinternW m1 (nn + mi) s) := by
-  simp only [canonK2]; rw [if_neg h]
+  simp only [canonK2]; rw [ite_eq_right h]
 theorem canonK3_big (h : 4294967296 ≤ r) : canonK3 (some (r, m2)) = none := by simp [canonK3, h]
 theorem canonK3_ok (h : ¬ 4294967296 ≤ r) : canonK3 (some (r, m2)) = some ([1, r], m2) := by
-  simp only [canonK3]; rw [if_neg h]
+  simp only [canonK3]; rw [ite_eq_right h]
 end arms
 grind_pattern [ind_grind] canonW_ne => canonW (n + 1) m no nl us nn c v
 grind_pattern [ind_grind] canonW_eq => canonW (n + 1) m no nl us nn c v
@@ -144,7 +144,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     have : ¬ ((decI v : LsIdx) == decI us) = true := by
       rw [decI_beq' v us hv hus]; simpa using hvu
-    simp only [ConRon.Arena.nestCanonSub, this, if_false]; rfl
+    simp only [ConRon.Arena.nestCanonSub, this, ite_false]; rfl
   · rw [canonW_eq n m no nl us nn c v hvu] at h
     have hvu' : v = us := by simpa using hvu
     subst hvu'
@@ -173,7 +173,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
       have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
         intro h0; simp [pinWordV, h0] at hpw
       have hz : z = pinW m 53 := by
-        simp only [pinWordV, hpne, if_false, Option.some.injEq] at hpw
+        simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hpw
         rw [← hpw]; simp [pinW, rdW]
       have hpin0 : pinW m 0 ≠ 0 := by simpa [pinW, rdW] using hpne
       have hfull := hS.1.pins.full hpin0
@@ -264,9 +264,9 @@ theorem matesW_nil (h : l = 0) : matesW (n + 1) m c off l oO oL = some ([oO, oL]
 theorem matesW_cons (h : l ≠ 0) : matesW (n + 1) m c off l oO oL =
     matesK1 n m c off l oO oL (containsW n m oO oL (rdW (m.arr64 EREC) off)) := by simp [matesW, h]
 theorem matesK1_skip (h : rdW (m.arr64 EREC) off = c ∨ b ≠ 0) : matesK1 n m c off l oO oL (some b) =
-    matesK3 (matesW n m c (off + 1) (l - 1) oO oL) := by simp only [matesK1]; rw [if_pos h]
+    matesK3 (matesW n m c (off + 1) (l - 1) oO oL) := by simp only [matesK1]; rw [ite_eq_left h]
 theorem matesK1_add (h : ¬ (rdW (m.arr64 EREC) off = c ∨ b ≠ 0)) : matesK1 n m c off l oO oL (some b) =
-    matesK2 n c off l (snocW n m oO oL (rdW (m.arr64 EREC) off)) := by simp only [matesK1]; rw [if_neg h]
+    matesK2 n c off l (snocW n m oO oL (rdW (m.arr64 EREC) off)) := by simp only [matesK1]; rw [ite_eq_right h]
 theorem matesK2_some : matesK2 n c off l (some (r2, m2)) =
     matesK3 (matesW n m2 c (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0)) := by rw [matesK2]
 theorem matesK3_some : matesK3 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := by rw [matesK3]
@@ -312,7 +312,7 @@ theorem snocW_core {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
   simp only [snocW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   rcases hal : allocW m (l + 1) with _ | ⟨q, m1⟩; · simp [hal] at h
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
@@ -343,8 +343,8 @@ theorem snocW_core {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
     intro i
     rw [set64IW_get, hql, hS, hG i]
     by_cases h1 : i = q.toNat + l.toNat
-    · rw [if_pos ⟨h1, by omega⟩, if_pos h1]
-    · rw [if_neg (by omega), if_neg h1]
+    · rw [ite_eq_left ⟨h1, by omega⟩, ite_eq_left h1]
+    · rw [ite_eq_right (by omega), ite_eq_right h1]
   have htop : rdW ((m2.set64 IW (q + l) x).arr64 CTL) 200 = q + (l + 1) := by
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + (l + 1)).toNat = q.toNat + (l.toNat + 1) := by
@@ -357,7 +357,7 @@ theorem snocW_core {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
   · omega
   · intro i hi
     simp only [iwTop, hqq] at hi
-    rw [hget, if_neg (by omega), if_neg (by omega)]
+    rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
 
 theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : List (Idx k)}
     (h : snocW n m o l x = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
@@ -376,7 +376,7 @@ theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List
     apply hslice?_congr
     intro j hj
     simp only [iwA, hget]
-    rw [if_neg (by omega), if_pos (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_left (by omega)]
     congr 1; omega
   have h2 : (hslice? (iwA m') (iwTop m + l.toNat) 1 : Option (List (Idx k))) = some [decI x] := by
     rw [hslice?_succ]
@@ -433,7 +433,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
       have hcond : ((decI w0 : NIdx) == decI c || (ws.map (fun w => (decI w : NIdx))).contains (decI w0)) =
           decide (w0 = c ∨ b ≠ 0) := by
         rw [decI_beq' w0 c hw0lt hc, contains_decI ws w0 hwlt hw0lt, hbv]
-        by_cases h1 : w0 = c <;> by_cases h2 : ws.contains w0 = true <;> simp [h1, h2]
+        by_cases h1 : w0 = c <;> by_cases h2 : ws.contains w0 = true <;> simp [h1]
       have hblock' : hslice? (erA m) (off + 1).toNat (l - 1).toNat = some rest := by
         rw [hoff1, hl1']; exact hrest
       subst hw0d
@@ -446,7 +446,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
         obtain ⟨hd, hg, hE', htop⟩ := ih m m3 c (off + 1) (l - 1) oO oL rest _ r3 hrec hsz hc200 hEs hc
           hblock' hout hit hb
         refine ⟨?_, hg, hE', by simpa using htop⟩
-        rw [ConRon.Arena.nestFrameMates.go.eq_2, if_pos (by rw [hcond]; simpa using hskip)]
+        rw [ConRon.Arena.nestFrameMates.go.eq_2, ite_eq_left (by rw [hcond]; simpa using hskip)]
         simpa using hd
       · have hskip' : ¬ (rdW (m.arr64 EREC) off = c ∨ b ≠ 0) := by rw [hrd]; exact hskip
         rw [matesK1_add n m c off l oO oL b hskip', hrd] at h
@@ -465,7 +465,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
           (by rw [hE2]; exact hEs) hc (by simp only [erA]; rw [hE2]; exact hblock') (by simpa using hdec2)
           (Nat.le_of_eq htop2) (by have : iwTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 200).toNat_lt; omega)
         refine ⟨?_, hg2.trans hg, hE'.trans hE2, by simpa using htop⟩
-        rw [ConRon.Arena.nestFrameMates.go.eq_2, if_neg (by rw [hcond]; simpa using hskip)]
+        rw [ConRon.Arena.nestFrameMates.go.eq_2, ite_eq_right (by rw [hcond]; simpa using hskip)]
         simpa using hd
 
 section census
@@ -588,21 +588,21 @@ theorem maGoW_abort (hf : f = 0) : maGoW (n + 1) m no nl f h = none := by simp [
 theorem maGoW_view (hf : f ≠ 0) : maGoW (n + 1) m no nl f h = maG1 n m no nl f h (eViewW m h) := by
   simp [maGoW, hf]
 theorem maG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8) :
-    maG1 n m no nl f h v = some (0, m) := by simp only [maG1]; rw [if_neg hv, if_pos hg]
+    maG1 n m no nl f h v = some (0, m) := by simp only [maG1]; rw [ite_eq_right hv, ite_eq_left hg]
 theorem maG1_const (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
     (h3 : v.headD 0 = 3) : maG1 n m no nl f h v = maC m (containsW n m no nl (v.tail.headD 0)) := by
-  simp only [maG1]; rw [if_neg hv, if_neg hg, if_pos h3]
+  simp only [maG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_left h3]
 theorem maG1_node (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
     (h3 : ¬ v.headD 0 = 3) : maG1 n m no nl f h v = maG3 n m no nl f h v (mfindG maSch m h 0) := by
-  simp only [maG1]; rw [if_neg hv, if_neg hg, if_neg h3]
+  simp only [maG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_right h3]
 theorem maG3_abort (hr : fr = []) : maG3 n m no nl f h v fr = none := by simp [maG3, hr]
 theorem maG3_hit (hr : fr ≠ []) (hh : fr.headD 0 ≠ 0) :
     maG3 n m no nl f h v fr = some (rdW (m.arr64 MAM) (fr.tail.headD 0 * 4 + 3), m) := by
-  simp only [maG3]; rw [if_neg hr, if_pos hh]
+  simp only [maG3]; rw [ite_eq_right hr, ite_eq_left hh]
 theorem maG3_miss (hr : fr ≠ []) (hh : ¬ fr.headD 0 ≠ 0) :
     maG3 n m no nl f h v fr = maG4 h (maNodeW n m no nl (f - 1) (v.headD 0) (v.tail.headD 0)
       (v.tail.tail.headD 0) (v.tail.tail.tail.headD 0)) := by
-  simp only [maG3]; rw [if_neg hr, if_neg hh]
+  simp only [maG3]; rw [ite_eq_right hr, ite_eq_right hh]
 theorem maG4_some : maG4 h (some (r, m1)) = maG5 r (msetG maSch m1 h 0 r) := by rw [maG4]
 theorem maG5_some : maG5 r (some m2) = some (r, m2) := by rw [maG5]
 theorem maC_some : maC m (some r) = some (r, m) := by rw [maC]
@@ -612,13 +612,13 @@ theorem maNodeW_bin (hg : g = 4 ∨ g = 5 ∨ g = 6) : maNodeW (n + 1) m no nl f
     maB1 n no nl f1 y (maGoW n m no nl f1 x) := by
   have : ¬ g = 1 := by
     intro e; rcases hg with h | h | h <;> (rw [e] at h; exact absurd h (by decide))
-  simp only [maNodeW]; rw [if_neg this, if_pos hg]
+  simp only [maNodeW]; rw [ite_eq_right this, ite_eq_left hg]
 theorem maNodeW_let (hg : g = 7) : maNodeW (n + 1) m no nl f1 g x y z =
     maL1 n no nl f1 y z (maGoW n m no nl f1 x) := by
   simp [maNodeW, hg]
 theorem maNodeW_proj (hg1 : g ≠ 1) (hg2 : ¬ (g = 4 ∨ g = 5 ∨ g = 6)) (hg3 : g ≠ 7) :
     maNodeW (n + 1) m no nl f1 g x y z = maP1 n no nl x (maGoW n m no nl f1 z) := by
-  simp only [maNodeW]; rw [if_neg hg1, if_neg hg2, if_neg hg3]
+  simp only [maNodeW]; rw [ite_eq_right hg1, ite_eq_right hg2, ite_eq_right hg3]
 theorem maB1_some : maB1 n no nl f1 y (some (b1, m1)) = maB2 b1 (maGoW n m1 no nl f1 y) := by rw [maB1]
 theorem maB2_some : maB2 b1 (some (b2, m2)) = some (if b1 ≠ 0 ∨ b2 ≠ 0 then 1 else 0, m2) := by rw [maB2]
 theorem maL1_some : maL1 n no nl f1 y z (some (b1, m1)) = maL2 n no nl f1 z b1 (maGoW n m1 no nl f1 y) := by rw [maL1]
@@ -775,7 +775,7 @@ theorem maNodeBin_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl 
     (slR_congr (maFrame_iw hf1) hws) hwlt hM1
   refine ⟨c1 || c2, mp2, ?_, ?_, hM2, hf1.trans hf2⟩
   · simp only [StateT.run_bind]
-    simp only [hr1, except_ok_bind, StateT.run_bind, hr2]
+    simp only [hr1, except_ok_bind, hr2]
     rfl
   · rw [← hb1, ← hb2]
     by_cases e1 : b1w = 0 <;> by_cases e2 : b2w = 0 <;> simp [e1, e2]
@@ -805,7 +805,7 @@ theorem maNodeLet_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl 
     (maFrame_arena (hf1.trans hf2) hA) hz (slR_congr (maFrame_iw (hf1.trans hf2)) hws) hwlt hM2
   refine ⟨c1 || c2 || c3, mp3, ?_, ?_, hM3, (hf1.trans hf2).trans hf3⟩
   · simp only [StateT.run_bind]
-    simp only [hr1, except_ok_bind, StateT.run_bind, hr2, hr3]
+    simp only [hr1, except_ok_bind, hr2, hr3]
     rfl
   · rw [← hb1, ← hb2, ← hb3]
     by_cases e1 : b1w = 0 <;> by_cases e2 : b2w = 0 <;> by_cases e3 : b3w = 0 <;> simp [e1, e2, e3]
@@ -860,26 +860,26 @@ theorem maNode_arm (k : Nat) (ih : MaGoOK k) (vl : List Word) (v : ENodeView) (h
       (r != 0) = b ∧ maMR m' mp' ∧ MemFrame [MAM] [203] m m' := by
   cases v with
   | fvar i ty =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, -, hy, hdy⟩ := hvr
     rw [hg] at hn
     have := maNodeFVar_ok k ih m m' a no nl f1 _ _ _ r ws mp hy hn hA hws hwlt hM
     rw [← hdy] at *
     simp only [maArm]; exact this
   | app f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := maNodeBin_ok k ih m m' a no nl f1 _ _ _ _ r ws mp (Or.inl hg) hx hy hn hA hws hwlt hM
     rw [hdx, hdy] at this
     simp only [maArm]; exact this
   | lam f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := maNodeBin_ok k ih m m' a no nl f1 _ _ _ _ r ws mp (Or.inr (Or.inl hg)) hx hy hn hA hws hwlt hM
     rw [hdx, hdy] at this
     simp only [maArm]; exact this
   | forallE f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := maNodeBin_ok k ih m m' a no nl f1 _ _ _ _ r ws mp (Or.inr (Or.inr hg)) hx hy hn hA hws hwlt hM
     rw [hdx, hdy] at this

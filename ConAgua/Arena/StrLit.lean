@@ -22,7 +22,6 @@ A character's `Nat` literal is interned by `rom_lit` (`RomExpr.lean`: its one li
 top). Every view is the twin's: a tag test, then `e_view`.
 -/
 
-set_option linter.unusedVariables false
 
 namespace L.Arena
 

@@ -8,7 +8,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -128,13 +127,13 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   have PE : ∀ {i : Nat} {w : Word}, i < erecTop me → (me.arr64 EREC)[i]? = some w →
       (erecP me)[i]? = some w := fun hi h => preE_of_get hi h
   have hq5 : (m.arr64 EREC)[q.toNat + 5]? = (preE m D)[q.toNat + 5]? := by
-    rw [preE_get, if_pos (by omega)]
+    rw [preE_get, ite_eq_left (by omega)]
   have hdn : (r5.headD 0).toNat = erecTop m := hdv
   have WP : ∀ i, i < 13 → i ≠ 2 → i ≠ 3 → i ≠ 6 → i ≠ 8 → i ≠ 9 → i ≠ 11 →
       (erecP me)[(r5.headD 0).toNat + i]? = (preE m D)[q.toNat + i]? := by
     intro i hi h2 h3 h6 h8 h9 h11
     rw [erecP_getElem me _ (by omega) htse, W i hi h2 h3 h6 h8 h9 h11, preE_get,
-      if_pos (by omega)]
+      ite_eq_left (by omega)]
   have hq4 : (m.arr64 EREC)[q.toNat + 4]? = some wl := by
     obtain ⟨w, hw, hwl'⟩ := nat?_get hwl
     have h1 := erecP_get hw

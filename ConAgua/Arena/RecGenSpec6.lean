@@ -102,13 +102,13 @@ theorem cfgK1_some : cfgK1 n rest mo ml io il i (some (r1, m1)) =
 theorem cfgK2_some : cfgK2 n rest io il i w (some (occ, m2)) = cfgK3 n rest w occ m2 (cfhW n m2 io il i) := rfl
 theorem cfgK3_ord (h : occ = 0 ∧ hc = 0) :
     cfgK3 n rest w occ m2 (some (hc, cls)) = cfgK5 n rest (recW m2 1 [0]) := by
-  rw [cfgK3, if_pos h]
+  rw [cfgK3, ite_eq_left h]
 theorem cfgK3_rec (h0 : ¬ (occ = 0 ∧ hc = 0)) (h : occ ≠ 0 ∧ hc = 1) :
     cfgK3 n rest w occ m2 (some (hc, cls)) = cfgK4 n rest cls (piBW n m2 CWF w) := by
-  rw [cfgK3, if_neg h0, if_pos h]
+  rw [cfgK3, ite_eq_right h0, ite_eq_left h]
 theorem cfgK3_bad (h0 : ¬ (occ = 0 ∧ hc = 0)) (h : ¬ (occ ≠ 0 ∧ hc = 1)) :
     cfgK3 n rest w occ m2 (some (hc, cls)) = none := by
-  rw [cfgK3, if_neg h0, if_neg h]
+  rw [cfgK3, ite_eq_right h0, ite_eq_right h]
 theorem cfgK4_some : cfgK4 n rest cls (some (r4, m4)) = cfgK5 n rest (recW m4 3 [1, cls, r4.tail.headD 0]) := rfl
 theorem cfgK5_some : cfgK5 n rest (some (r5, m5)) = cfgK7 n (r5.headD 0) (rest m5) := rfl
 theorem cfgK7_some (cf : Word) (r6 : List Word) (m6 : Mem) :
@@ -436,7 +436,7 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     have hb : b = false := by rw [← hob, hA.1]; rfl
     have hlen : (List.filter (fun h => h.1 == i.toNat) ihs).length = 0 := by rw [← hcnt, hA.2]; rfl
     subst hb
-    simp only [hlen, Bool.not_false, Bool.true_and, beq_self_eq_true, if_true]
+    simp only [hlen, Bool.not_false, Bool.true_and, beq_self_eq_true, ite_true]
     refine cfgTail hS2 hg12 hM2 hf12 rfl ?_ hrest
     intro m'' hw
     have := hw 0 (by simp)
@@ -448,8 +448,8 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     subst hb
     obtain ⟨hh, hhs⟩ := List.length_eq_one_iff.mp hlen
     obtain ⟨hcl, hcl64⟩ := hcls hh hhs
-    simp only [hlen, hhs, Bool.not_true, Bool.false_and, Bool.true_and, beq_self_eq_true, if_true,
-      if_false, Bool.false_eq_true]
+    simp only [hhs, Bool.not_true, Bool.false_and, Bool.true_and, ite_true,
+      ite_false, Bool.false_eq_true]
     refine RSim.bind (K := cfgK4 n _ cls) rfl (rec2SimPiBinders n hS2 hwH) ?_
     rintro ⟨r4, m4⟩ ⟨bs, e⟩ a4 - ⟨rfl, hS4, hg4, hf4, hd4⟩
     dsimp only at hS4 hg4 hf4 hd4

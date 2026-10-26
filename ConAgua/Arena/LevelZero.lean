@@ -19,7 +19,6 @@ layout: kind, name slice).
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order
@@ -84,12 +83,12 @@ section arms
 variable (n : Nat) (m m₁ : Mem) (l b x o : Word)
 theorem pushK_some : pushK (some (o, m₁)) = some (0, m₁) := rfl
 theorem zeroW_z (h : lvG m l = 0) : zeroW (n + 1) m l = some (0, m) := by rw [zeroW]; simp [h]
-theorem zeroW_s (h0 : lvG m l ≠ 0) (h : lvG m l = 1) : zeroW (n + 1) m l = some (1, m) := by
-  rw [zeroW]; simp [h0, h]
-theorem zeroW_p (h0 : lvG m l ≠ 0) (h1 : lvG m l ≠ 1) (h : lvG m l = 4) :
-    zeroW (n + 1) m l = pushK (lhPushW m (lvA m l)) := by rw [zeroW]; simp [h0, h1, h]
-theorem zeroW_i (h0 : lvG m l ≠ 0) (h1 : lvG m l ≠ 1) (h4 : lvG m l ≠ 4) (h : lvG m l = 3) :
-    zeroW (n + 1) m l = zeroW n m (lvB m l) := by rw [zeroW]; simp [h0, h1, h4, h]
+theorem zeroW_s (_h0 : lvG m l ≠ 0) (h : lvG m l = 1) : zeroW (n + 1) m l = some (1, m) := by
+  rw [zeroW]; simp [h]
+theorem zeroW_p (_h0 : lvG m l ≠ 0) (_h1 : lvG m l ≠ 1) (h : lvG m l = 4) :
+    zeroW (n + 1) m l = pushK (lhPushW m (lvA m l)) := by rw [zeroW]; simp [h]
+theorem zeroW_i (_h0 : lvG m l ≠ 0) (_h1 : lvG m l ≠ 1) (_h4 : lvG m l ≠ 4) (h : lvG m l = 3) :
+    zeroW (n + 1) m l = zeroW n m (lvB m l) := by rw [zeroW]; simp [h]
 theorem zeroW_m (h0 : lvG m l ≠ 0) (h1 : lvG m l ≠ 1) (h4 : lvG m l ≠ 4) (h3 : lvG m l ≠ 3) :
     zeroW (n + 1) m l = zK n (lvB m l) (zeroW n m (lvA m l)) := by rw [zeroW]; simp [h0, h1, h4, h3]
 theorem zK_ne (hx : x ≠ 0) : zK n b (some (x, m₁)) = some (1, m₁) := by rw [zK]; simp [hx]
@@ -173,7 +172,7 @@ theorem lhPushW_ext {m m' : Mem} {w o : Word} (h : lhPushW m w = some (o, m')) :
       fun k hk => ?_, fun b => by simp only [size_set64L],
       by simp only [Mem.words_size_set64]⟩, rfl, by rw [htop', e1], ?_⟩
     · rw [Mem.arr64_set64_ne _ _ _ _ _ h1, Mem.arr64_set64_ne _ _ _ _ _ h2]
-    · simp only [rdW_set64L, size_set64L]; simp [Ne.symm hk, hLC, Ne.symm hLC]
+    · simp only [rdW_set64L, size_set64L]; simp [Ne.symm hk, Ne.symm hLC]
     · rw [Mem.arr64_set64_ne _ _ _ _ _ hLC]
       simp only [rdW_set64L]
       have : htop m ≠ k := fun e => by rw [e] at hk; omega

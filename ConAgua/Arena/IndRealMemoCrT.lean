@@ -13,7 +13,6 @@ after. Replaced the stub contract `IndStubsT.constsResolveFFastT_spec` (deleted)
 and carry `CrMemo` (see the note there).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

@@ -11,7 +11,6 @@ universes (`check_struct_field_sorts_i`, `IndSumSpec11`'s refinement, `installSi
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -60,7 +59,7 @@ theorem iisK1_some (h : ¬ r.headD 0 = 0) : iisK1 p n vis nP ni srt (some (r, m)
     iisK2 p n (callW p n "check_struct_field_sorts_i" [vis, 1, 0, srt, nP,
       (idxTail nP (r.tail.headD 0) (r.tail.tail.headD 0)).1,
       (idxTail nP (r.tail.headD 0) (r.tail.tail.headD 0)).2, 0, 0, ni] m) := by
-  simp only [iisK1, h, ↓reduceIte, if_false]
+  simp only [iisK1, h, ↓reduceIte, ite_false]
 end arms
 attribute [ind_grind] iisK3_some iisK2_some iisK1_none iisK1_some
 
@@ -74,9 +73,8 @@ theorem iis_spec (p : Prog) (hp : p.lookup "check_block_idx_sorts_one" = some ch
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "open_pis_at_fvars_f", callW_spec p n "check_struct_field_sorts_i",
     callW_spec p n "rec2"]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, iisW, idxTail, rdW_eq]
 
 /-! ## `check_block_idx_sorts` -/

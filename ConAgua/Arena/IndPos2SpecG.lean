@@ -84,9 +84,9 @@ variable (cR : CallM) (k : Nat) (m m1 : Mem) (ctx o l : Word) (r : List Word)
 theorem ucW_nil (h : l = 0) : ucW cR (k + 1) m ctx o l = some ([1], m) := by simp [ucW, h]
 theorem ucW_cons (h : ¬ l = 0) : ucW cR (k + 1) m ctx o l =
     ucK cR k ctx o l (nuWf cR k m ctx (rdW (m.arr64 IW) (rdW (m.arr64 IW) o))) := by simp [ucW, h]
-theorem ucK_no (h : r.headD 0 = 0) : ucK cR k ctx o l (some (r, m1)) = some ([0], m1) := by rw [ucK, if_pos h]
+theorem ucK_no (h : r.headD 0 = 0) : ucK cR k ctx o l (some (r, m1)) = some ([0], m1) := by rw [ucK, ite_eq_left h]
 theorem ucK_yes (h : ¬ r.headD 0 = 0) : ucK cR k ctx o l (some (r, m1)) = ucW cR k m1 ctx (o + 1) (l - 1) := by
-  rw [ucK, if_neg h]
+  rw [ucK, ite_eq_right h]
 end arms
 attribute [ind_grind] ucW_nil ucW_cons ucK_no ucK_yes
 
@@ -124,9 +124,9 @@ theorem unW_nil (h : l = 0) : unW cR (k + 1) m ctx off l = some m := by simp [un
 theorem unW_cons (h : ¬ l = 0) : unW cR (k + 1) m ctx off l =
     unK cR k ctx off l (ucW cR k m ctx (rdW (m.arr64 IW) (rdW (m.arr64 IW) off))
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 1))) := by simp [unW, h]
-theorem unK_no (h : r.headD 0 = 0) : unK cR k ctx off l (some (r, m1)) = none := by rw [unK, if_pos h]
+theorem unK_no (h : r.headD 0 = 0) : unK cR k ctx off l (some (r, m1)) = none := by rw [unK, ite_eq_left h]
 theorem unK_yes (h : ¬ r.headD 0 = 0) : unK cR k ctx off l (some (r, m1)) = unW cR k m1 ctx (off + 1) (l - 1) := by
-  rw [unK, if_neg h]
+  rw [unK, ite_eq_right h]
 end arms
 attribute [ind_grind] unW_nil unW_cons unK_no unK_yes
 
@@ -246,7 +246,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
         (by rw [hl1, hl]; simp) (by rw [ho1]; have := hg1.1; omega)
         (by rw [ho1]; exact hcs1.grow hb1 hg1) hP1
       refine ⟨b, a', ?_, hS', hg1.trans hg', hr, hP', hJ'⟩
-      simp only [StateT.run_bind, hrun1, except_ok_bind, if_true]
+      simp only [StateT.run_bind, hrun1, except_ok_bind, ite_true]
       exact hrun
 
 /-- The members' constructor lists: headers at `off, off + 1, …`, each a `[cv, nF]` pointer slice. -/
@@ -326,7 +326,7 @@ theorem unW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
         (fun cs hcs => hPc cs (List.mem_cons_of_mem _ hcs)) (hU.grow hg1)
         (by rw [hl1, hl]; simp) (by rw [ho1]; exact hcss.tail.grow hg1) hP1
       refine ⟨a', ?_, hS', hg1.trans hg', hP', hJ'⟩
-      simp only [StateT.run_bind, hrun1, except_ok_bind, if_true]
+      simp only [StateT.run_bind, hrun1, except_ok_bind, ite_true]
       exact hrun
 
 section census

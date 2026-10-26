@@ -15,7 +15,6 @@ open ConRon.Arena ConLeche
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -407,7 +406,7 @@ theorem slMemo_ok (p : Prog) (hp : ILWLevProg p) : SlMemoOK p := by
   have hf₂ := msetG_frame lplSch lplSch_wf m₁ m₂ u 0 _ h2
   have hf₂' : MemFrame [lplSch.arr] [lplSch.cs, lplSch.cs + 1] m₁ m₂ := hf₂.mono (by simp) (by simp)
   obtain ⟨hS₂, hk₂⟩ := CoreS.frameLP lplSch (.inr (.inl rfl)) o.core hf₂'
-    (o.core.memos.frameLP hf₂' hM₂.lpMemos (by decide) (by simp [lpSch, lplSch, lplsSch]))
+    (o.core.memos.frameLP hf₂' hM₂.lpMemos (by decide) (by simp))
   refine ⟨_, ?_, ⟨M, hS₂.lpMemos a₁.memos.instLPC
       (a₁.memos.instLPLC.insert (decI u) (decI (r₁.headD 0))) a₁.memos.instLPLsC,
     KeptAll.refl _ _, o.stack.trans hk₂⟩, hM₂, ?_, o.hw, o.den⟩

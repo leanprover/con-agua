@@ -28,7 +28,6 @@ by the real refinement (lane `decls3`'s `apdEntry_ok`, the core of `apdF_okT`):
 `sctW_okR` is the walk under `StageR` with `StateOK` and the names; `sctW_okC` its `StageC` form.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -611,8 +610,8 @@ theorem ctoW_simR {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) {dn : NId
   unfold ctoW
   rw [hw0, hw1, hw2, hw3, hw4, hw5, hnpw]
   by_cases hg : UInt64.ofNat bs.nP + UInt64.ofNat nF + 1 ≤ (UInt64.ofNat bs.nP : Word)
-  · rw [if_pos hg]; exact Sim.of_none
-  rw [if_neg hg]
+  · rw [ite_eq_left hg]; exact Sim.of_none
+  rw [ite_eq_right hg]
   have hb := nPnF_bound hg
   rw [UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at hb
   obtain ⟨w, hwT, hwl, hwd⟩ := sumTypeWord (q := UInt64.ofNat cvp)

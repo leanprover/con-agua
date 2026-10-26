@@ -52,13 +52,13 @@ def whnfW (p : Prog) (n : Nat) (m : Mem) (mode vis d e : Word) : Option (Word ×
 theorem whnfW_stuck (p : Prog) (n : Nat) (m : Mem) (mode vis d e : Word)
     (h : e >>> 28 = 2 ∨ e >>> 28 = 1 ∨ e >>> 28 = 5 ∨ e >>> 28 = 6 ∨ e >>> 28 = 8) :
     whnfW p n m mode vis d e = some (e, m) := by
-  unfold whnfW; rw [if_pos h]
+  unfold whnfW; rw [ite_eq_left h]
 
 theorem whnfW_run (p : Prog) (n : Nat) (m : Mem) (mode vis d e : Word)
     (h : ¬ (e >>> 28 = 2 ∨ e >>> 28 = 1 ∨ e >>> 28 = 5 ∨ e >>> 28 = 6 ∨ e >>> 28 = 8)) :
     whnfW p n m mode vis d e =
       memoSlotW whSch m e (ebKey mode) (callW p n "whnf_loop" [mode, vis, d, e] m) := by
-  unfold whnfW; rw [if_neg h]
+  unfold whnfW; rw [ite_eq_right h]
 
 /-! ## The L spec for `whnf` -/
 
@@ -189,7 +189,7 @@ theorem knot_whnf_miss (h : whnfStuckTag e = false)
     ((coreKnot mode fe id (F + 1)).whnf d e).run a =
       .ok (x, { a₁ with caches := { a₁.caches with
         whnfC := a₁.caches.whnfC.insert e x } }) := by
-  simp [coreKnot, h, hm, StateT.run_bind, hb, except_ok_bind, whnfSet]; rfl
+  simp [coreKnot, h, hm, StateT.run_bind, hb, whnfSet]; rfl
 
 end twin
 
@@ -327,13 +327,13 @@ theorem whnf_refines (n : Nat) (hn : n ≤ 2 ^ 62) (hk : KnotUpTo p n) (hloop : 
   obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := hS.core.wh.findE hS.core.eb1 e he h0
   by_cases h1 : (mfindG whSch s.mem e (genW 0 eb)).headD 0 ≠ 0
-  · rw [if_pos h1] at hW
+  · rw [ite_eq_left h1] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
       (knot_whnf_hit _ fe F' d.toNat _ a₀ ht _ (hf.1 h1).1)
     refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
     rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
-  rw [if_neg h1] at hW
+  rw [ite_eq_right h1] at hW
   have hmiss := hf.2 (by simpa using h1)
   rcases hcall : callW p n "whnf_loop" [mode, vis, d, e] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, reduceCtorEq] at hW
   have hbody : CoreSpec p n "whnf_loop" [mode, vis, d, e]

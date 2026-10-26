@@ -8,9 +8,6 @@ import ConAgua.Arena.DeclNatGuard
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -75,7 +72,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
       decide (c = r1.headD 0 ∨ c = r2.headD 0) := by
     rw [decI_beq_word hc hp1, decI_beq_word hc hp2]; simp
   by_cases hP : c = r1.headD 0 ∨ c = r2.headD 0
-  · rw [if_pos hP] at hw
+  · rw [ite_eq_left hP] at hw
     cases h3 : callW p k "pin_at" [29] m with
     | none => rw [h3] at hw; simp [ntBW] at hw
     | some q3 =>
@@ -96,14 +93,14 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
     have hne : (decI e != x4) = decide (e ≠ r4.headD 0) := by
       rw [← hx4]; exact decI_bne_word he hx4l
     by_cases hee : e ≠ r4.headD 0
-    · rw [if_pos hee] at hw
+    · rw [ite_eq_left hee] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a4, ?_, hS4, hg4, by simp [decW0B]⟩
       simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
-        hcond, decide_eq_true hP, if_true, boolName_eq, e3, hrun4, hne, decide_eq_true hee]
+        hcond, decide_eq_true hP, ite_true, boolName_eq, e3, hrun4, hne, decide_eq_true hee]
       rfl
-    · rw [if_neg hee] at hw
+    · rw [ite_eq_right hee] at hw
       have hee' : e = r4.headD 0 := by simpa using hee
       cases h5 : callW p k "env_find" [r3.headD 0, vis] m4 with
       | none => rw [h5] at hw; simp [ntBW] at hw
@@ -116,18 +113,18 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
       | none =>
         rw [hf] at hfd
         have hz : rf.headD 0 = 0 := hfd
-        rw [if_pos hz] at hw
+        rw [ite_eq_left hz] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨false, a4, ?_, hS4, hg4, by simp [decW0B]⟩
         simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
-          hcond, decide_eq_true hP, if_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, hf]
+          hcond, decide_eq_true hP, ite_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, hf]
         rfl
       | some ci =>
         rw [hf] at hfd
         obtain ⟨hf1, hci⟩ := hfd
         have hnz : ¬ rf.headD 0 = 0 := by rw [hf1]; decide
-        rw [if_neg hnz] at hw
+        rw [ite_eq_right hnz] at hw
         cases h6 : callW p k "ci_to_cv" [rf.tail.headD 0] m4 with
         | none => rw [h6] at hw; simp [ntBW] at hw
         | some q6 =>
@@ -148,21 +145,21 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
         have hp54 : (pinW m6 54).toNat < 2 ^ 32 := hF6.lv_lt.2.2
         have hr7' : r7.headD 0 = pinW m6 54 := by rw [hr7]; rfl
         by_cases hl : rdW (m6.arr64 EREC) (r6.headD 0 + 2) = 0
-        · rw [if_neg (by simpa using hl)] at hw
+        · rw [ite_eq_right (by simpa using hl)] at hw
           simp only [Option.some.injEq, Prod.mk.injEq] at hw
           obtain ⟨rfl, rfl⟩ := hw
           have hisE : ci.toConstantVal.levelParams.isEmpty = true := hiff.mp hl
           rw [hrd, hr7']
           refine ⟨decide (wt = pinW m6 54), a4, ?_, hS6, hg4.trans hg6, ?_⟩
           · simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
-              hcond, decide_eq_true hP, if_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, Bool.false_eq_true, if_false, hf,
-              sortOne, pinSortOne_run hF6, hisE, hty, decI_beq_word hlt hp54, hrd]
+              hcond, decide_eq_true hP, ite_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, Bool.false_eq_true, ite_false, hf,
+              sortOne, pinSortOne_run hF6, hisE, hty, decI_beq_word hlt hp54]
             rfl
           · simp only [decW0B, List.headD_cons]
             by_cases he' : wt = pinW m6 54
-            · rw [if_pos he', decide_eq_true he']; decide
-            · rw [if_neg he', decide_eq_false he']; decide
-        · rw [if_pos (by simpa using hl)] at hw
+            · rw [ite_eq_left he', decide_eq_true he']; decide
+            · rw [ite_eq_right he', decide_eq_false he']; decide
+        · rw [ite_eq_left (by simpa using hl)] at hw
           simp only [Option.some.injEq, Prod.mk.injEq] at hw
           obtain ⟨rfl, rfl⟩ := hw
           have hisE : ci.toConstantVal.levelParams.isEmpty = false := by
@@ -171,10 +168,10 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
             · exact absurd (hiff.mpr h) hl
           refine ⟨false, a4, ?_, hS6, hg4.trans hg6, by simp [decW0B]⟩
           simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
-            hcond, decide_eq_true hP, if_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, Bool.false_eq_true, if_false, hf,
+            hcond, decide_eq_true hP, ite_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, Bool.false_eq_true, ite_false, hf,
             sortOne, pinSortOne_run hF6, hisE]
           rfl
-  · rw [if_neg hP] at hw
+  · rw [ite_eq_right hP] at hw
     cases h3 : callW p k "pin_at" [1] m with
     | none => rw [h3] at hw; simp [ntBW] at hw
     | some q3 =>
@@ -198,12 +195,12 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
       rw [← hx4]; exact decI_beq_word he hx4l
     refine ⟨decide (e = r4.headD 0), a4, ?_, hS4, hg4, ?_⟩
     · simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
-        hcond, decide_eq_false hP, Bool.false_eq_true, if_false, pinNat_eq, e3, hrun4, hbeq]
+        hcond, decide_eq_false hP, Bool.false_eq_true, ite_false, pinNat_eq, e3, hrun4, hbeq]
       rfl
     · simp only [decW0B, List.headD_cons]
       by_cases he' : e = r4.headD 0
-      · rw [if_pos he', decide_eq_true he']; decide
-      · rw [if_neg he', decide_eq_false he']; decide
+      · rw [ite_eq_left he', decide_eq_true he']; decide
+      · rw [ite_eq_right he', decide_eq_false he']; decide
 
 @[refines ConRon.Arena.natOpCod]
 theorem natOpCod_refines (hN : NatTyProg p) (c e : Word) :
@@ -233,7 +230,7 @@ theorem viewR_forall {rv : List Word} {v : ENodeView} (h : ViewR rv v) :
   cases v <;> simp only [ViewR] at h
   all_goals first
     | (left; obtain ⟨h0, h1, h2, h3, h4⟩ := h
-       refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [ntGetD1, getD2, H])
+       refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [H])
     | (right; refine ⟨?_, fun _ _ => by simp⟩; simp_all)
 
 theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
@@ -275,7 +272,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
   have hbeqc : ((decI c : NIdx) == decI (pr.headD 0)) = decide (c = pr.headD 0) := decI_beq_word hc hp3
   have hshort : ¬ ty >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
     intro h6
-    rw [if_pos (by simpa using h6)] at hw
+    rw [ite_eq_left (by simpa using h6)] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨false, a2, ?_, hS2, hg2, by simp [decW0B]⟩
@@ -283,9 +280,9 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
       hbeqc, htag, decide_eq_false h6]
     by_cases hcp : c = pr.headD 0
     · simp [hcp]; rfl
-    · simp [hcp]; rfl
+    · simp; rfl
   refine (if h6 : ty >>> 28 = 6 then ?_ else hshort h6)
-  rw [if_neg (by simpa using h6)] at hw
+  rw [ite_eq_right (by simpa using h6)] at hw
   cases h4 : callW p k "e_view" [ty] m2 with
   | none => rw [h4] at hw; simp [ntBW] at hw
   | some q4 =>
@@ -298,27 +295,27 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
       ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
         KeepPost dn vis fe decW0B m m' a' r x := by
     rintro ⟨hrvn, hnf⟩
-    rw [if_pos hrvn] at hw
+    rw [ite_eq_left hrvn] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨false, a4, ?_, hS4, hg02.trans hg4, by simp [decW0B]⟩
     simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
-      hbeqc, htag, decide_eq_true h6, if_true, hrun4']
+      hbeqc, htag, decide_eq_true h6, ite_true]
     by_cases hcp : c = pr.headD 0
-    · simp only [decide_eq_true hcp, if_true, StateT.run_bind, hrun4', exc_ok_bind']
+    · simp only [decide_eq_true hcp, ite_true, StateT.run_bind, hrun4', exc_ok_bind']
       cases vv <;> first | rfl | (exfalso; exact hnf _ _ rfl)
-    · simp only [decide_eq_false hcp, Bool.false_eq_true, if_false, StateT.run_bind, hrun4', exc_ok_bind']
+    · simp only [decide_eq_false hcp, Bool.false_eq_true, ite_false, StateT.run_bind, hrun4', exc_ok_bind']
       cases vv <;> first | rfl | (exfalso; exact hnf _ _ rfl)
   refine Or.elim (viewR_forall hvr) ?_ hnonf
   rintro ⟨hrv6, dom, body, hvv, hd0, hdom, hb0, hbody⟩
-  rw [if_neg (by simpa using hrv6)] at hw
+  rw [ite_eq_right (by simpa using hrv6)] at hw
   subst hvv
   by_cases hcp : c = pr.headD 0
-  · rw [if_pos hcp] at hw
+  · rw [ite_eq_left hcp] at hw
     have hdn : ((decE (rv.tail.headD 0) : EIdx) == x2) = decide (rv.tail.headD 0 = nc.headD 0) := by
       rw [← hx2]; exact decI_beq_word hd0 hx2l
     by_cases hdc : rv.tail.headD 0 = nc.headD 0
-    · rw [if_neg (by simpa using hdc)] at hw
+    · rw [ite_eq_right (by simpa using hdc)] at hw
       cases h5 : callW p k "nat_op_cod" [vis, c, rv.tail.tail.headD 0] m4 with
       | none => rw [h5] at hw; simp [ntBW] at hw
       | some q5 =>
@@ -331,15 +328,15 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
       refine ⟨x5, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simpa [decW0B] using hx5⟩
       have hrun5 : (natOpCod fe (decI c) body).run a4 = .ok (x5, a5) := by rw [← hbody]; exact hrun5
       simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
-        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_true hcp, ← hdom, hdn, decide_eq_true hdc, if_true, hrun5]
-    · rw [if_pos (by simpa using hdc)] at hw
+        hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_true hcp, ← hdom, hdn, decide_eq_true hdc, ite_true, hrun5]
+    · rw [ite_eq_left (by simpa using hdc)] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a4, ?_, hS4, hg02.trans hg4, by simp [decW0B]⟩
       simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
-        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_true hcp, ← hdom, hdn, decide_eq_false hdc, Bool.false_eq_true, if_false]
+        hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_true hcp, ← hdom, hdn, decide_eq_false hdc, Bool.false_eq_true, ite_false]
       rfl
-  · rw [if_neg hcp] at hw
+  · rw [ite_eq_right hcp] at hw
     have hdn : ((decE (rv.tail.headD 0) : EIdx) == x2) = decide (rv.tail.headD 0 = nc.headD 0) := by
       rw [← hx2]; exact decI_beq_word hd0 hx2l
     have htagb : ((decE (rv.tail.tail.headD 0) : EIdx).tag == ETag.forallE) =
@@ -347,16 +344,16 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     have hshortb : ¬ rv.tail.tail.headD 0 >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
         KeepPost dn vis fe decW0B m m' a' r x := by
       intro hb6
-      rw [if_pos (by simpa using hb6)] at hw
+      rw [ite_eq_left (by simpa using hb6)] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a4, ?_, hS4, hg02.trans hg4, by simp [decW0B]⟩
       simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
-        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
-        if_false, ← hbody, htagb, decide_eq_false hb6]
+        hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
+        ite_false, ← hbody, htagb, decide_eq_false hb6]
       rfl
     refine (if hb6 : rv.tail.tail.headD 0 >>> 28 = 6 then ?_ else hshortb hb6)
-    rw [if_neg (by simpa using hb6)] at hw
+    rw [ite_eq_right (by simpa using hb6)] at hw
     cases h5 : callW p k "e_view" [rv.tail.tail.headD 0] m4 with
     | none => rw [h5] at hw; simp [ntBW] at hw
     | some q5 =>
@@ -368,22 +365,22 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
         ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
           KeepPost dn vis fe decW0B m m' a' r x := by
       rintro ⟨hrvn, hnf⟩
-      rw [if_pos hrvn] at hw
+      rw [ite_eq_left hrvn] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simp [decW0B]⟩
       simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
-        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
-        if_false, ← hbody, htagb, decide_eq_true hb6, ← hbody, hrun5]
+        hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
+        ite_false, htagb, decide_eq_true hb6, ← hbody, hrun5]
       cases vv2 <;> first | rfl | (exfalso; exact hnf _ _ rfl)
     refine Or.elim (viewR_forall hvr2) ?_ hnonf2
     rintro ⟨hrv26, dom2, body2, hvv2, hd02, hdom2, hb02, hbody2⟩
-    rw [if_neg (by simpa using hrv26)] at hw
+    rw [ite_eq_right (by simpa using hrv26)] at hw
     subst hvv2
     have hdn2 : ((decE (rv2.tail.headD 0) : EIdx) == x2) = decide (rv2.tail.headD 0 = nc.headD 0) := by
       rw [← hx2]; exact decI_beq_word hd02 hx2l
     by_cases hdd : rv.tail.headD 0 = nc.headD 0 ∧ rv2.tail.headD 0 = nc.headD 0
-    · rw [if_neg (fun h => h.elim (fun x => x hdd.1) (fun x => x hdd.2))] at hw
+    · rw [ite_eq_right (fun h => h.elim (fun x => x hdd.1) (fun x => x hdd.2))] at hw
       cases h6' : callW p k "nat_op_cod" [vis, c, rv2.tail.tail.headD 0] m5 with
       | none => rw [h6'] at hw; simp [ntBW] at hw
       | some q6 =>
@@ -396,20 +393,20 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
       refine ⟨x6, a6, ?_, hS6, hg02.trans (hg4.trans (hg5.trans hg6)), by simpa [decW0B] using hx6⟩
       have hrun6' : (natOpCod fe (decI c) body2).run a5 = .ok (x6, a6) := by rw [← hbody2]; exact hrun6
       simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
-        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
-        if_false, ← hbody, htagb, decide_eq_true hb6, hrun5, ← hdom, ← hdom2, hdn, hdn2,
-        decide_eq_true hdd.1, decide_eq_true hdd.2, Bool.and_self, if_true, hrun6']
-    · rw [if_pos (by by_cases h1 : rv.tail.headD 0 = nc.headD 0
-                     · exact Or.inr (fun h2 => hdd ⟨h1, h2⟩)
-                     · exact Or.inl h1)] at hw
+        hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
+        ite_false, ← hbody, htagb, decide_eq_true hb6, hrun5, ← hdom, ← hdom2, hdn, hdn2,
+        decide_eq_true hdd.1, decide_eq_true hdd.2, Bool.and_self, ite_true, hrun6']
+    · rw [ite_eq_left (by by_cases h1 : rv.tail.headD 0 = nc.headD 0
+                          · exact Or.inr (fun h2 => hdd ⟨h1, h2⟩)
+                          · exact Or.inl h1)] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simp [decW0B]⟩
       simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
-        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
-        if_false, ← hbody, htagb, decide_eq_true hb6, hrun5, ← hdom, ← hdom2, hdn, hdn2]
+        hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
+        ite_false, ← hbody, htagb, decide_eq_true hb6, hrun5, ← hdom, ← hdom2, hdn, hdn2]
       simp only [Bool.and_eq_true, decide_eq_true_eq]
-      rw [if_neg hdd]
+      rw [ite_eq_right hdd]
       rfl
 
 @[refines ConRon.Arena.natOpTyPinned]
@@ -443,23 +440,23 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
   | none =>
     rw [hf] at hfd
     have hz : rf.headD 0 = 0 := hfd
-    rw [if_pos hz] at hW
+    rw [ite_eq_left hz] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨false, a, by simp only [natOpStoredOk, hf]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
   | some ci =>
     rw [hf] at hfd
     obtain ⟨hf1, hci⟩ := hfd
-    rw [if_neg (by rw [hf1]; decide)] at hW
+    rw [ite_eq_right (by rw [hf1]; decide)] at hW
     have hsz := hS.2.2.2.2.1
     rcases defnMono_words hsz hci with ⟨hne, hdm⟩ | ⟨hk1, hiff⟩
-    · rw [if_pos hne] at hW
+    · rw [ite_eq_left hne] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
       refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
       simp only [natOpStoredOk, hf]
       cases ci <;> first | rfl | (simp [defnMono] at hdm; simp [hdm]; rfl)
-    · rw [if_neg (by simpa using hk1)] at hW
+    · rw [ite_eq_right (by simpa using hk1)] at hW
       -- the record is a definition
       obtain ⟨cv, v, hint, rfl, hk, hcv⟩ : ∃ cv v hint, ci = .defnInfo cv v hint ∧
           (erecP m)[(rf.tail.headD 0).toNat]? = some 1 ∧ decCV (erecP m) ((rf.tail.headD 0).toNat + 1) = some cv := by
@@ -468,7 +465,7 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
         · exfalso; have := rdW_erec_of hsz hwk; rw [hk1] at this; exact hne this.symm
       obtain ⟨wt, hiffc, hrd, hlt, hty, -⟩ := natCvWords hsz hcv
       by_cases hl : rdW (m.arr64 EREC) (rf.tail.headD 0 + 3) = 0
-      · rw [if_neg (by simpa using hl)] at hW
+      · rw [ite_eq_right (by simpa using hl)] at hW
         cases h2 : callW p k "nat_op_ty_pinned" [vis, w, rdW (m.arr64 EREC) (rf.tail.headD 0 + 4)] m with
         | none => rw [h2] at hW; simp [ntBW] at hW
         | some q2 =>
@@ -481,9 +478,9 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
           k m a rt m2 ⟨hS, hw, hlt⟩ h2
         refine ⟨x2, a2, ?_, hS2, hg2, by simpa [decW0B] using hx2⟩
         have hisE : cv.levelParams.isEmpty = true := hiffc.mp hl
-        simp only [natOpStoredOk, hf, hisE, if_true, hty]
+        simp only [natOpStoredOk, hf, hisE, ite_true, hty]
         exact hrun2
-      · rw [if_pos (by simpa using hl)] at hW
+      · rw [ite_eq_left (by simpa using hl)] at hW
         simp only [Option.some.injEq, Prod.mk.injEq] at hW
         obtain ⟨rfl, rfl⟩ := hW
         have hisE : cv.levelParams.isEmpty = false := by
@@ -530,7 +527,7 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
     have hw := callW_model (M := fun mm => okAllW p (k + 1) mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll (k + 1) · vis o l) hc
-    simp only [okAllW.eq_2, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [okAllW.eq_2, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
   | cons n ns ih =>
@@ -541,20 +538,20 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
     obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
     have hw := callW_model (M := fun mm => okAllW p (k + 1) mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll (k + 1) · vis o l) hc
     rw [okAllW.eq_2] at hw
-    rw [if_neg hl0] at hw
+    rw [ite_eq_right hl0] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     subst hn
     obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natOpStoredOk_ref (dn := dn) (vis := vis) (fe := fe) hN
       (rdW (m.arr64 IW) o) k m a r1 m1 ⟨hS, hwlt⟩ h1
     by_cases hz : r1.headD 0 = 0
-    · rw [if_pos hz] at hw
+    · rw [ite_eq_left hz] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hx : x1 = false := by have := hx1.1; rw [hz] at this; simpa using this.symm
       refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.false_eq_true, if_false]
+      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.false_eq_true, ite_false]
       rfl
-    · rw [if_neg hz] at hw
+    · rw [ite_eq_right hz] at hw
       have hx : x1 = true := by
         have := hx1.1; have hne : (r1.headD 0 != 0) = true := by simpa using hz
         rw [hne] at this; exact this.symm
@@ -569,7 +566,7 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
         have := hg1.1; rw [ho1]; omega
       obtain ⟨x, a2, hrun2, hK⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1 hb1 h2
       refine ⟨x, a2, ?_, hK.1, hg1.trans hK.2.1, by simpa [decW0B] using hK.2.2⟩
-      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, if_true]
+      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, ite_true]
       exact hrun2
 
 @[refines ConRon.Arena.natOpStoredOkAll]

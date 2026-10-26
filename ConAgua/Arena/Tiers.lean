@@ -51,7 +51,6 @@ theorem AvoidA.of_low {lo hi : Nat} {A : List ArrId} (hA : ∀ b ∈ A, b < 64 �
     (hlo : 64 ≤ lo) (hhi : hi ≤ 256) : AvoidA lo hi A := fun b hb =>
   (hA b hb).elim (fun h => .inl (Nat.lt_of_lt_of_le h hlo)) (fun h => .inr (Nat.le_trans hhi h.1))
 
-set_option linter.unusedVariables false
 
 /-! ## The per-declaration caches: arrays 96‥127, `CTL` 96‥127
 
@@ -569,7 +568,7 @@ theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP 
   · rename_i hi
     have hi' : i < erecTop m := by simp at hi; omega
     have := h.1; have := h.2.2
-    rw [if_pos (by simp at hi ⊢; omega)]
+    rw [ite_eq_left (by simp at hi ⊢; omega)]
     simp only [Nat.zero_add] at hv ⊢
     rw [h.2.1 i hi']
     exact hv

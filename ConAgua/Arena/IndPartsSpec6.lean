@@ -10,7 +10,6 @@ import ConAgua.Arena.IndPartsSpec5
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -191,7 +190,7 @@ theorem ccW_get {n : Nat} {m m1 : Mem} {off q k cl : Word}
       refine ⟨rfl, hA, hS, hW, fun i => ?_⟩
       rw [hG i]
       have : ¬ ((q + k).toNat ≤ i ∧ i < (q + k).toNat + (0 : Word).toNat) := by simp
-      rw [if_neg this, if_neg this]
+      rw [ite_eq_right this, ite_eq_right this]
     · exact ⟨rfl, copyW_get n m m2 _ _ _ hc hsd hd hsz⟩
 
 theorem ccW_len {n : Nat} {m m1 : Mem} {off q k cl : Word}
@@ -327,9 +326,9 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
         (by rw [hqk, hclv]; omega) hsz
       have hag1 : ∀ i, i < q.toNat → (m1.arr64 IW)[i]? = (m0.arr64 IW)[i]? := by
         intro i hi
-        rw [hcells i, if_neg (by rw [hqk]; omega)]; exact hag i hi
+        rw [hcells i, ite_eq_right (by rw [hqk]; omega)]; exact hag i hi
       have hg1 : IWGrow m0 m1 := iwGrow_of_copy hg0 hA q.toNat hq (fun i hi => by
-        rw [hcells i, if_neg (by rw [hqk]; omega)])
+        rw [hcells i, ite_eq_right (by rw [hqk]; omega)])
       have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hS1]; exact hsz
       have hl1 : (l - 1).toNat = j' := by
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp [hj']
@@ -349,7 +348,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
         · rw [List.getElem_append_left hi1]
           have e1 := hor (q.toNat + k.toNat + i) (by rw [hkc]; omega)
           have e2 := hcells (q.toNat + k.toNat + i)
-          rw [if_pos (by rw [hqk, hclv]; omega), hcoW, hcoV, hqk] at e2
+          rw [ite_eq_left (by rw [hqk, hclv]; omega), hcoW, hcoV, hqk] at e2
           have e3 : q.toNat + k.toNat + i - (q.toNat + k.toNat) = i := by omega
           rw [e3] at e2
           have hci := hcc i (by omega)
@@ -366,7 +365,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
         simp
       · have hnot : ¬ (q.toNat + k.toNat ≤ i ∧ i < q.toNat + k.toNat + (wsj.length + wsr.length)) := by
           rw [List.length_append] at hi; exact hi
-        rw [hor i (by rw [hkc]; omega), hcells i, if_neg (by rw [hqk, hclv]; omega)]
+        rw [hor i (by rw [hkc]; omega), hcells i, ite_eq_right (by rw [hqk, hclv]; omega)]
 
 
 theorem numCtorsOf_sum (ms : List MemberShape) :

@@ -16,7 +16,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -95,7 +94,7 @@ theorem pendR : PendR m #[] :=
 theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.empty) := by
   have hrow : ∀ w : Word, rowTag w ≤ 2 → rowC m w = 0 := by
     intro w hw
-    simp only [rowC, if_pos hw]
+    simp only [rowC, ite_eq_left hw]
     have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
     have hl : loopZeroArr (rowArr w) := by
       simp only [loopZeroArr, rowArr]
@@ -196,7 +195,7 @@ theorem declsLpsDn_dnOf {st : EStore} {ds : Array IDeclaration}
   cases h2 : Frontend.denoteNList st.ns cv.levelParams with
   | none => rw [h2] at h1; split at h1 <;> simp_all
   | some lps =>
-  simp only [dnOf, hpk, if_true]
+  simp only [dnOf, hpk, ite_true]
   exact denoteNList_mem_some h2 k hk
 
 /-- **The loop's relation and the memory's halves at the loop's start**, at the empty environment

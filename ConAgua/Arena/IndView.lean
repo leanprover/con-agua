@@ -136,88 +136,88 @@ theorem eViewW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hne : eVi
   have h1 : ¬ (4294967295 : Word) < h := fun c => by
     have : (4294967295 : Nat) < h.toNat := c
     omega
-  simp only [h1, if_false] at hne ⊢
+  simp only [h1, ite_false] at hne ⊢
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hs] at hne
-  simp only [hs, if_false] at hne ⊢
+  simp only [hs, ite_false] at hne ⊢
   have vok : ∀ c, ¬ tcnt m c (tierW h) ≤ idxW h → viewOK m h c :=
     fun c hc => ⟨hs, by simpa using hc⟩
   by_cases g0 : h >>> 28 = 0
-  · simp only [g0, if_true] at hne ⊢
+  · simp only [g0, ite_true] at hne ⊢
     by_cases c : tcnt m BVAR (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     exact ⟨_, view_bvar m a hR h hh (vok BVAR c) g0, by simp [ViewR]⟩
-  simp only [g0, if_false] at hne ⊢
+  simp only [g0, ite_false] at hne ⊢
   by_cases g1 : h >>> 28 = 1
-  · simp only [g1, if_true] at hne ⊢
+  · simp only [g1, ite_true] at hne ⊢
     by_cases c : tcnt m FVAR (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     obtain ⟨e, hl⟩ := view_fvar_idx m a hR h hh (vok FVAR c) g1
     exact ⟨_, e, by simp [ViewR, hl]⟩
-  simp only [g1, if_false] at hne ⊢
+  simp only [g1, ite_false] at hne ⊢
   by_cases g2 : h >>> 28 = 2
-  · simp only [g2, if_true] at hne ⊢
+  · simp only [g2, ite_true] at hne ⊢
     by_cases c : tcnt m SORT (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     obtain ⟨e, hl⟩ := view_sort_f m a hR h hh (vok SORT c) g2
     exact ⟨_, e, by simp [ViewR, hl]⟩
-  simp only [g2, if_false] at hne ⊢
+  simp only [g2, ite_false] at hne ⊢
   by_cases g3 : h >>> 28 = 3
-  · simp only [g3, if_true] at hne ⊢
+  · simp only [g3, ite_true] at hne ⊢
     by_cases c : tcnt m CONST (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     obtain ⟨e, hl, hl2⟩ := view_const_f m a hR h hh (vok CONST c) g3
     exact ⟨_, e, by simp [ViewR, hl, hl2]⟩
-  simp only [g3, if_false] at hne ⊢
+  simp only [g3, ite_false] at hne ⊢
   by_cases g4 : h >>> 28 = 4
-  · simp only [g4, if_true] at hne ⊢
+  · simp only [g4, ite_true] at hne ⊢
     by_cases c : tcnt m APP (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     obtain ⟨e, hl, hl2⟩ := view_app m a hR h hh (vok APP c) g4
     exact ⟨_, e, by simp [ViewR, hl, hl2]⟩
-  simp only [g4, if_false] at hne ⊢
+  simp only [g4, ite_false] at hne ⊢
   by_cases g5 : h >>> 28 = 5
-  · simp only [g5, if_true] at hne ⊢
+  · simp only [g5, ite_true] at hne ⊢
     by_cases c : tcnt m LAM (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     obtain ⟨e, hl, hl2⟩ := view_lam m a hR h hh (vok LAM c) g5
     exact ⟨_, e, by simp [ViewR, hl, hl2]⟩
-  simp only [g5, if_false] at hne ⊢
+  simp only [g5, ite_false] at hne ⊢
   by_cases g6 : h >>> 28 = 6
-  · simp only [g6, if_true] at hne ⊢
+  · simp only [g6, ite_true] at hne ⊢
     by_cases c : tcnt m FORALL (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     obtain ⟨e, hl, hl2⟩ := view_forall m a hR h hh (vok FORALL c) g6
     exact ⟨_, e, by simp [ViewR, hl, hl2]⟩
-  simp only [g6, if_false] at hne ⊢
+  simp only [g6, ite_false] at hne ⊢
   by_cases g7 : h >>> 28 = 7
-  · simp only [g7, if_true] at hne ⊢
+  · simp only [g7, ite_true] at hne ⊢
     by_cases c : tcnt m LET (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     obtain ⟨e, hl, hl2, hl3⟩ := view_let m a hR h hh (vok LET c) g7
     exact ⟨_, e, by simp [ViewR, hl, hl2, hl3]⟩
-  simp only [g7, if_false] at hne ⊢
+  simp only [g7, ite_false] at hne ⊢
   by_cases g8 : h >>> 28 = 8
-  · simp only [g8, if_true] at hne ⊢
+  · simp only [g8, ite_true] at hne ⊢
     by_cases c : tcnt m LIT (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     obtain ⟨l, e⟩ := view_lit m a hR h hh (vok LIT c) g8
     exact ⟨_, e, by simp [ViewR]⟩
-  simp only [g8, if_false] at hne ⊢
+  simp only [g8, ite_false] at hne ⊢
   by_cases g9 : h >>> 28 = 9
-  · simp only [g9, if_true] at hne ⊢
+  · simp only [g9, ite_true] at hne ⊢
     by_cases c : tcnt m PROJ (tierW h) ≤ idxW h
     · simp [c] at hne
-    simp only [c, if_false]
+    simp only [c, ite_false]
     obtain ⟨e, hl, hl2⟩ := view_proj m a hR h hh (vok PROJ c) g9
     exact ⟨_, e, by simp [ViewR, hl, hl2]⟩
   simp [g9] at hne

@@ -15,7 +15,6 @@ abort), the record (`block_shape_pack`), `block_shape_build` composing every pie
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -78,7 +77,7 @@ theorem getDW_head {m : Mem} {io il : Word} {ns : List Nat} (h : DecB (fun m => 
   · subst hl
     have : ns = [] := by have := h; simp only [DecB, UInt64.toNat_zero] at this; simpa [decNL] using this.symm
     subst this; simp
-  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; intro e; exact hl (UInt64.toNat_inj.mp (by simpa using e)))]
+  rw [ite_eq_right (by rw [UInt64.le_iff_toNat_le]; simp; intro e; exact hl (UInt64.toNat_inj.mp (by simpa using e)))]
   obtain ⟨x, xs, rfl, hw, hxb, -, -⟩ := partsNL_cons h hb hl
   simp [hw, UInt64.toNat_ofNat_of_lt' hxb]
 
@@ -114,13 +113,13 @@ theorem bsoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   cases x1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hd1
-    simp only [h0, if_true]
+    simp only [h0, ite_true]
     exact hz _ fun z hz' => ⟨hz', rfl, hS1, hg1⟩
   | some q =>
     obtain ⟨l1, e1⟩ := q
     obtain ⟨h1', -, hbl, hbe⟩ := hd1
     rw [partsDrop3] at hbl hbe
-    simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
+    simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
     intro r m' e
     unfold bsoK2 at e
     split at e
@@ -193,7 +192,7 @@ def bbK13' (mo ml ro2 rl2 nPd s ip : Word) : Option (List Word × Mem) → Optio
   | some (r, m) => bgoK3 (bsealW m mo ml ro2 rl2 nPd s ip (r.headD 0) (r.tail.headD 0))
 
 /-- After `block_shape_recs_of`. -/
-def bbK12 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (lo ll s ip mo ml : Word) :
+def bbK12 (n : Nat) (nPd _cto _ctl _cso _csl _rso _rsl _cvT0 cvR0 : Word) (lo ll s ip mo ml : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll)
@@ -248,7 +247,7 @@ def bfW (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io lo ll s ip : W
     (bctW (n + 1) m cso csl)
 
 /-- After `lvl_eq_c`. -/
-def btK3 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) :
+def btK3 (_c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bgoK3 (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s (if r.headD 0 = 2 then 1 else 0))
@@ -316,18 +315,18 @@ theorem btK2_some : btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll s m (som
 theorem btK1_some : btK1 c n nPd cto ctl cso csl rso rsl no nl io lo ll (some (r, m)) =
     btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r.headD 0) m (pinWordV m 53) := rfl
 theorem bbH4_fail (h : r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =
-    some ([0, 0], m) := by simp only [bbH4]; exact if_pos h
+    some ([0, 0], m) := by simp only [bbH4]; exact ite_eq_left h
 theorem bbH4_ok (h : ¬ r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =
-    bgoK3 (btW c n m nPd cto ctl cso csl rso rsl no nl io il lo ll) := by simp only [bbH4]; exact if_neg h
+    bgoK3 (btW c n m nPd cto ctl cso csl rso rsl no nl io il lo ll) := by simp only [bbH4]; exact ite_eq_right h
 theorem bbH3_some : bbH3 c n nPd cto ctl cso csl rso rsl no nl io il (some (r, m)) =
     bbH4 c n nPd cto ctl cso csl rso rsl no nl io il (r.headD 0) (r.tail.headD 0)
       (bpoW (n + 2) m nPd cto ctl (r.headD 0) (r.tail.headD 0) rso rsl cso csl) := rfl
 theorem bbH2_fail (h : r.headD 0 = 0) : bbH2 c n nPd cto ctl cso csl rso rsl cvT0 no nl (some (r, m)) =
-    some ([0, 0], m) := by simp only [bbH2]; exact if_pos h
+    some ([0, 0], m) := by simp only [bbH2]; exact ite_eq_left h
 theorem bbH2_ok (h : ¬ r.headD 0 = 0) : bbH2 c n nPd cto ctl cso csl rso rsl cvT0 no nl (some (r, m)) =
     bbH3 c n nPd cto ctl cso csl rso rsl no nl (r.tail.headD 0) (r.tail.tail.headD 0)
       (erToIwW (n + 3) m (rdW (m.arr64 EREC) (cvT0 + 1)) (rdW (m.arr64 EREC) (cvT0 + 2))) := by
-  simp only [bbH2]; exact if_neg h
+  simp only [bbH2]; exact ite_eq_right h
 theorem bbH1_some : bbH1 c n nPd cto ctl cso csl rso rsl cvT0 (some (r, m)) =
     bbH2 c n nPd cto ctl cso csl rso rsl cvT0 (r.headD 0) (r.tail.headD 0)
       (bmcW (n + 2) m nPd ctl csl (r.headD 0) (r.tail.headD 0) rso rsl cto ctl) := rfl

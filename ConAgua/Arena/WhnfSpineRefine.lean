@@ -754,7 +754,7 @@ theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m
   unfold mkAppW at hI; split at hI
   · cases hI
   exact (mkK_frame appCS_wf (by decide) hI).mono
-    (by simp [ConsSch.wset, appCS, appSch, AREC, ASLOT, ADER]) (by simp [appCS, appSch])
+    (by simp [ConsSch.wset, appCS, AREC, ASLOT, ADER]) (by simp [appCS])
 
 /-- A slice of the stack survives a writer that leaves `SPN` alone. -/
 theorem SpineR.frame {m m' : Mem} {o n : Word} {xs : Array EIdx} (hx : SpineR m o n xs)

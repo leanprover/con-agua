@@ -9,7 +9,6 @@ significant first, the loop running from the end, `x / 10` as `mulhi(x, ⌈2^67/
 master's `intern_nstr`. The written words are `strWords s!"rec_{i}"` (`strWords_recI`).
 -/
 
-set_option linter.deprecated false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -65,12 +64,12 @@ theorem strWords_repr (n : Nat) : strWords n.repr = digsR (decLenN n) n := by
   | _ n ih =>
     by_cases h : n < 10
     · rw [Nat.repr_of_lt h, strWords_digit n h]
-      unfold decLenN; rw [if_pos h]
+      unfold decLenN; rw [ite_eq_left h]
       simp [digsR, Nat.mod_eq_of_lt h]
     · rw [Nat.repr_of_ge (by omega), strWords_append, ih (n / 10) (by omega),
         strWords_digit _ (Nat.mod_lt _ (by omega))]
       conv => rhs; unfold decLenN
-      rw [if_neg h]; rfl
+      rw [ite_eq_right h]; rfl
 
 theorem strWords_recI (i : Nat) :
     strWords s!"rec_{i}" = [114, 101, 99, 95] ++ digsR (decLenN i) i := by
@@ -101,9 +100,9 @@ def dlW : Nat → Word → Word → Option Word
   | f + 1, x, k => if 9 < x then dlW f (div10W x) (k + 1) else some k
 
 theorem dlW_stop (f : Nat) (x k : Word) (h : ¬ 9 < x) : dlW (f + 1) x k = some k := by
-  simp only [dlW, if_neg h]
+  simp only [dlW, ite_eq_right h]
 theorem dlW_step (f : Nat) (x k : Word) (h : 9 < x) : dlW (f + 1) x k = dlW f (div10W x) (k + 1) := by
-  simp only [dlW, if_pos h]
+  simp only [dlW, ite_eq_left h]
 
 theorem dlLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ exec p f dlLoop
@@ -140,14 +139,14 @@ theorem dlW_ok : ∀ (f : Nat) (x k r : Word), dlW f x k = some r →
       have hx' : 10 ≤ x.toNat := by have := UInt64.lt_iff_toNat_lt.mp hx; simp at this; omega
       have hd : decLenN x.toNat = decLenN (x.toNat / 10) + 1 := by
         conv => lhs; unfold decLenN
-        rw [if_neg (by omega)]
+        rw [ite_eq_right (by omega)]
       have hk : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have := ih _ _ _ h (by rw [hk, div10W_toNat]; omega)
       rw [hk, div10W_toNat] at this; omega
     · rw [dlW_stop f x k hx] at h; cases h
       have hx' : x.toNat < 10 := by
         have := mt UInt64.lt_iff_toNat_lt.mpr hx; simp at this; omega
-      unfold decLenN; rw [if_pos hx']; omega
+      unfold decLenN; rw [ite_eq_left hx']; omega
 
 /-! ## `name_rec_i`'s digit loop and body -/
 
@@ -190,10 +189,10 @@ def digW : Nat → Mem → Word → Word → Word → Word → Option Mem
 
 theorem digW_stop (f : Nat) (m : Mem) (pt pb j x : Word) (h : ¬ pb + 4 < j) :
     digW (f + 1) m pt pb j x = some m := by
-  simp only [digW, if_neg h]
+  simp only [digW, ite_eq_right h]
 theorem digW_step (f : Nat) (m : Mem) (pt pb j x : Word) (h : pb + 4 < j) : digW (f + 1) m pt pb j x =
     digW f (m.set64 (tierA 0 pt) (j - 1) (48 + (x - div10W x * 10))) pt pb (j - 1) (div10W x) := by
-  simp only [digW, if_pos h]
+  simp only [digW, ite_eq_left h]
 
 theorem digLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ exec p f digLoop
@@ -344,14 +343,14 @@ theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 
       refine ⟨hg', by rw [htop, htop1], by rw [hpc', pcap_set64], by rw [hsz', size_set64], fun t ht' => ?_, ?_⟩
       · rw [hkeep t (by omega), hv, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         have : (T >>> 40).toNat * 2 ^ 40 + (j - 1).toNat ≠ t := by omega
-        rw [if_neg this]
+        rw [ite_eq_right this]
       · have hd : j.toNat - ((T &&& 1099511627775).toNat + 4) = (j.toNat - 1 - ((T &&& 1099511627775).toNat + 4)) + 1 := by omega
         rw [hd, sliceL_snoc, digsR, ← hj1, hsl, div10W_toNat]
         congr 2
         have e : T.toNat + 4 + ((j - 1).toNat - ((T &&& 1099511627775).toNat + 4)) =
             (T >>> 40).toNat * 2 ^ 40 + (j - 1).toNat := by omega
         rw [e, hkeep _ (.inr (by omega)), hv, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-        simp only [vpool_size, show (T >>> 40).toNat * 2 ^ 40 + (j - 1).toNat < 2 ^ 41 by omega, and_self,
+        simp only [vpool_size, show (T >>> 40).toNat * 2 ^ 40 + (j - 1).toNat < 2 ^ 41 by omega,
           ↓reduceIte, Option.getD_some]
         apply UInt64.toNat_inj.mp
         have hx := x.toNat_lt
@@ -511,7 +510,7 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [hs₅'] at hI
   have hfr : MemFrame [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] m₁ m₅ :=
     ((grows_frame m₁ m₄ hg4).mono (by simp) (by simp)).trans
-      ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [ConsSch.wset, nstrCS]))
+      ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [nstrCS]))
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS
     (internNNode_str_run (decI x) s!"rec_{i.toNat}" a) hok hR₅
     hres hfr (by simp [POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)

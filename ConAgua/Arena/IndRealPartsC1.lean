@@ -11,7 +11,6 @@ import ConAgua.Arena.IndRealAbsPos
 real refinement (`lvlEqC_simC`) needs `StageC` at the call, whose memory half is `AbsOK`'s.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

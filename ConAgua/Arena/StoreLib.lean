@@ -36,7 +36,6 @@ is the one fact the generic proofs need; given it, `grind` does the rest.
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -92,7 +91,7 @@ theorem Schema.ad_inj (S : Schema) (hS : S.WF) (i f i' f' : Word)
   refine ⟨UInt64.toNat_inj.mp q, UInt64.toNat_inj.mp (by omega)⟩
 
 /-- The two tiers' arrays of a schema and `CTL` are pairwise different. -/
-theorem Schema.WF.ra_ne {S : Schema} (hS : Schema.WF S) {t t' : Word} (ht : t ≤ 1) (ht' : t' ≤ 1) (h : t ≠ t') :
+theorem Schema.WF.ra_ne {S : Schema} (_hS : Schema.WF S) {t t' : Word} (ht : t ≤ 1) (ht' : t' ≤ 1) (h : t ≠ t') :
     tierA S.ra t ≠ tierA S.ra t' := tierA_ne_tier _ ht ht' h
 
 theorem Schema.WF.ra_sa' {S : Schema} (hS : Schema.WF S) (t t' : Word) : tierA S.ra t ≠ tierA S.sa t' :=
@@ -416,14 +415,14 @@ theorem slotW_pushG (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32) (hc :
     have e := kslot_toNat S m hG t' ht j hj
     simp only [slotW, slotV, krW_pushG S hS m t' vs j c q hG ht hj t' ht',
       baseW_pushG S hS m t' vs j c q ht, pushG_sa S hS]
-    rw [if_neg (fun h => kslot1_ne S m hG t' ht j j' hj hj' h.1)]
+    rw [ite_eq_right (fun h => kslot1_ne S m hG t' ht j j' hj hj' h.1)]
     have hjn := UInt64.lt_iff_toNat_lt.mp hj
     by_cases h : j' = j
     · subst h
-      simp only [and_self, ↓reduceIte, true_and, show (krW S.sa m t' + j' * 2).toNat <
+      simp only [and_self, ↓reduceIte, show (krW S.sa m t' + j' * 2).toNat <
         (m.arr64 (tierA S.sa t')).size by omega, slotV_new m t' c ht hb hc]
-    · simp only [h, and_false, ↓reduceIte, true_and]
-      rw [if_neg (fun h' => h ((kslot_eq_iff S m hG t' ht j j' hj hj').mp h'.1).symm)]
+    · simp only [h, and_false, ↓reduceIte]
+      rw [ite_eq_right (fun h' => h ((kslot_eq_iff S m hG t' ht j j' hj hj').mp h'.1).symm)]
   · simp only [slotW, krW_pushG S hS m t vs j c q hG ht hj t' ht', baseW_pushG S hS m t vs j c q ht,
       pushG_sa_other S hS m t vs j c q t' ht ht' htt, htt, false_and, ↓reduceIte]
 
@@ -438,14 +437,14 @@ theorem slotK_pushG (t' j' : Word) (ht' : t' ≤ 1) (hj' : j' < nSl S m t') :
     have hjn := UInt64.lt_iff_toNat_lt.mp hj
     by_cases h : j' = j
     · subst h
-      simp only [and_self, ↓reduceIte, true_and, show (krW S.sa m t' + j' * 2 + 1).toNat <
+      simp only [and_self, ↓reduceIte, show (krW S.sa m t' + j' * 2 + 1).toNat <
         (m.arr64 (tierA S.sa t')).size by omega]
-    · simp only [h, and_false, ↓reduceIte, true_and]
-      rw [if_neg (fun h' => h ((kslot1_eq_iff S m hG t' ht j j' hj hj').mp h'.1).symm)]
-      rw [if_neg (fun h' => by
-        have := congrArg UInt64.toNat h'.1
-        rw [e.1, e'.2] at this
-        omega)]
+    · simp only [h, and_false, ↓reduceIte]
+      rw [ite_eq_right (fun h' => h ((kslot1_eq_iff S m hG t' ht j j' hj hj').mp h'.1).symm)]
+      rw [ite_eq_right (fun h' => by
+              have := congrArg UInt64.toNat h'.1
+              rw [e.1, e'.2] at this
+              omega)]
   · simp only [slotK, krW_pushG S hS m t vs j c q hG ht hj t' ht',
       pushG_sa_other S hS m t vs j c q t' ht ht' htt, htt, false_and, ↓reduceIte]
 

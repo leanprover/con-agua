@@ -9,8 +9,6 @@ The error halves of `newOKC_step` (`PosNew.lean`), `frameOKC_step` (`PosFrame.le
 `ggW_ok` and `gcW_ok`, on the generated error models (`PosE2M.lean`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -92,7 +90,7 @@ theorem ngcE_claim {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker.
       have hc : (!(nPc2 == nPc.toNat || ctors.length == 0)) = true := by
         simp [hneq, hlen]
       show ErrClaim (if (!(nPc2 == nPc.toNat || ctors.length == 0)) = true then _ else _) a1 _
-      rw [if_pos hc]
+      rw [ite_eq_left hc]
       exact ErrClaim.fail _ _ (by decide)
     rw [ngcE.k_nest_container.arm1 p _ vis nPc off l oo ol r1 m1 hne0 hbad] at he
     have hchk : (nPc2 == nPc.toNat || ctors.length == 0) = true := by
@@ -425,23 +423,23 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
       simp only at hna
       rw [hs1] at hna
       rw [h1, nfrE.k_intern_nanon.arm1] at he
-      exact ⟨rn, m1, by rw [if_pos h0]; exact hna, he⟩
+      exact ⟨rn, m1, by rw [ite_eq_left h0]; exact hna, he⟩
     · rw [nfrE.arm2 p n m vis ctx fu po pl hi us dO dL nPc gO gL ns h0] at he
-      exact ⟨[rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m, by rw [if_neg h0], he⟩
+      exact ⟨[rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m, by rw [ite_eq_right h0], he⟩
   have hhn : (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
         none ∨ ∃ (rn : List Word) (m1 : Mem) (a1 : AState),
       (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
         some (rn, m1) ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ MFr [] [] m m1 ∧ AFr m m1 ∧ H (rn.headD 0) ∧
       (nestHeadT grp).run a = .ok (decI (rn.headD 0), a1) := by
     by_cases h0 : gL = 0
-    · rw [if_pos h0]
+    · rw [ite_eq_left h0]
       have : grp = [] := List.eq_nil_of_length_eq_zero (by rw [← hgl, h0]; rfl)
       subst this
       rcases hst : naF m [] with _ | ⟨rn, m1⟩; · exact Or.inl rfl
       obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := naF_ok dn vis fe m m1 a rn hst hS
       exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.of_frame (naF_frame hst) (by simp [NAREC, NASLOT]) (by simp),
         naF_afr hst, hxH, by rw [hxd]; exact hrun⟩
-    · rw [if_neg h0]
+    · rw [ite_eq_right h0]
       obtain ⟨⟨cg, tg⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
         cases grp with
         | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hgl)) h0

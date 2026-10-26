@@ -18,8 +18,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Ind
 
@@ -115,7 +113,7 @@ theorem cidE_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hfold : ConRon.Bridge.FoldOK V env fe a)
     (hblk : DecB (fun m => decEBlk dn m o.toNat l.toNat) m block) (hb : o.toNat + l.toNat ≤ erTop m)
     (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block w.toNat) = some x) (hM : IndMemos m)
-    (hfB : "check_basis_decl" ∈ fsC) (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
+    (_hfB : "check_basis_decl" ∈ fsC) (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
     {fsH fsM : List FnName} (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
     (hfH : "check_block_tables" ∈ fsH) (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
@@ -162,7 +160,7 @@ theorem cidE_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   cases x with
   | some kind =>
     obtain ⟨hz, hk4, hkind⟩ := hx
-    rw [cidE.k_basis_pin_hit.eq_2, if_pos hz] at he
+    rw [cidE.k_basis_pin_hit.eq_2, ite_eq_left hz] at he
     cases c2 : callE p n "check_basis_decl" [vis, r1.tail.headD 0] m1 with
     | error e2 =>
       rw [c2, cidE.k_check_basis_decl.none] at he
@@ -176,7 +174,7 @@ theorem cidE_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
       cases he
   | none =>
   replace hx : r1.headD 0 = 0 := hx
-  rw [cidE.k_basis_pin_hit.eq_2, if_neg (fun h => h hx)] at he
+  rw [cidE.k_basis_pin_hit.eq_2, ite_eq_right (fun h => h hx)] at he
   have hbE : o.toNat + l.toNat < 2 ^ 64 := by
     have := hS.2.2.1; have := hS.2.2.2.2.1; omega
   cases c3 : callE p n "ind_params_ok" [w, o, l] m1 with

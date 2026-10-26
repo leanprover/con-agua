@@ -19,8 +19,6 @@ its error's class is the twin's `unresolvedConstsErrorL (← strLitSupported fe)
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -72,20 +70,20 @@ theorem envFindW_hitSome {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe :
   unfold envFindW at h
   by_cases ht : 2 < tagW w
   · simp [ht] at h
-  rw [if_neg ht] at h
+  rw [ite_eq_right ht] at h
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
   have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
   by_cases hc : rowCW m w = 0
-  · rw [if_pos hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
-  rw [if_neg hc] at h
+  rw [ite_eq_right hc] at h
   have hv : rowCW m w - 1 < vis := by
     refine Classical.byContradiction fun hv => ?_
-    rw [if_neg hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+    rw [ite_eq_right hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
-  rw [if_pos hv] at h
+  rw [ite_eq_left hv] at h
   rw [rowCW_eq m w hw ht2] at hc hv
   have hk := hE.keys (decI w) (by rwa [decI_word_self w hw])
   rw [decI_word_self w hw] at hk
@@ -101,7 +99,7 @@ theorem envFindW_hitSome {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe :
   | some r =>
     obtain ⟨c, ci⟩ := r
     simp only [e, Option.map_some, Option.some.injEq] at hk
-    simp [e]; omega
+    simp; omega
 
 /-- A hit of `reserved_from`: one of the reserved words is `x`. -/
 theorem resFromW_hit (n : Nat) : ∀ (m : Mem) (x j c : Word), j.toNat ≤ 16 → c ≠ 0 →
@@ -113,9 +111,9 @@ theorem resFromW_hit (n : Nat) : ∀ (m : Mem) (x j c : Word), j.toNat ≤ 16 �
     rw [resFromW_step] at h
     have hn16 : ¬ 16 ≤ j := by
       by_cases h16 : 16 ≤ j
-      · rw [if_pos h16] at h; simp at h; exact absurd h.symm hc
+      · rw [ite_eq_left h16] at h; simp at h; exact absurd h.symm hc
       · exact h16
-    rw [if_neg hn16] at h
+    rw [ite_eq_right hn16] at h
     have hj16 : j.toNat < 16 := by
       refine Classical.byContradiction fun hh => hn16 ?_
       rw [UInt64.le_iff_toNat_le]; simp; omega
@@ -123,7 +121,7 @@ theorem resFromW_hit (n : Nat) : ∀ (m : Mem) (x j c : Word), j.toNat ≤ 16 �
     · refine ⟨j.toNat, hj16, ?_⟩
       have : (55 + j).toNat = 55 + j.toNat := by rw [UInt64.toNat_add]; simp; omega
       simpa [rdW, pinW, this] using he
-    rw [if_neg he] at h
+    rw [ite_eq_right he] at h
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     exact ih m x (j + 1) c (by omega) hc h
 
@@ -136,8 +134,8 @@ theorem resContW_hit {m : Mem} {a : AState} {n : Nat} {x : Word}
   | succ n =>
   rw [resContW_step] at h
   by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at h; simp at h
-  rw [if_neg h0] at h
+  · rw [ite_eq_left h0] at h; simp at h
+  rw [ite_eq_right h0] at h
   have hF := hP.full h0
   refine ⟨_, pinReserved_run hF, ?_⟩
   obtain ⟨i, hi, e⟩ := resFromW_hit n m x 0 c (by simp) hc h
@@ -165,7 +163,7 @@ theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
   | zero => rw [installValueGuardsE.eq_1] at hW; cases hW; exact absurd rfl hk0
   | succ n =>
   rw [installValueGuardsE.eq_2] at hW
-  simp only [installValueGuards, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
+  simp only [installValueGuards, fail_bindAM]
   cases h1 : callE p n "cv_lps" [q] m with
   | error e1 =>
     rw [h1, installValueGuardsE.k_cv_lps.none] at hW; cases hW
@@ -316,7 +314,7 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   | zero => rw [installHeaderE.eq_1] at hW; cases hW; exact absurd rfl hk0
   | succ n =>
   rw [installHeaderE.arm1, ex, et] at hW
-  simp only [installHeader, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
+  simp only [installHeader, fail_bindAM]
   -- `env_find(x, vis)`
   cases h1 : callE p n "env_find" [wx, vis] m with
   | error e1 =>
@@ -329,11 +327,11 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
     (envFind_specW p hP.ix hP.rowGet hP.find n ⟨m, Locals.init []⟩ wx vis) h1
   subst hs1
   by_cases hb1 : r1.headD 0 ≠ 0
-  · rw [installHeaderE.k_env_find.eq_2, if_pos hb1] at hW; cases hW
+  · rw [installHeaderE.k_env_find.eq_2, ite_eq_left hb1] at hW; cases hW
     have : (fe.find? cv.name).isSome = true := by
       rw [hname]; exact envFindW_hitSome hW1 hS.stage.1.env hwxl hb1
     exact ErrClaim.ite_pos this (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_env_find.eq_2, if_neg hb1] at hW
+  rw [installHeaderE.k_env_find.eq_2, ite_eq_right hb1] at hW
   obtain ⟨rfl, hfind⟩ := envFindW_miss hW1 hS.stage.1.env hwxl (by simpa using hb1)
   have hfind' : (fe.find? cv.name).isSome = false := by rw [hname, hfind]; rfl
   refine ErrClaim.ite_neg (by simp [hfind']) ?_
@@ -351,11 +349,11 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   subst hm2'
   have hW2' : resContW n s1.mem wx = some (r2.headD 0) := hW2
   by_cases hb2 : r2.headD 0 ≠ 0
-  · rw [installHeaderE.k_reserved_contains.eq_2, if_pos hb2] at hW; cases hW
+  · rw [installHeaderE.k_reserved_contains.eq_2, ite_eq_left hb2] at hW; cases hW
     obtain ⟨l, hrunR, hcl⟩ := resContW_hit hb2 hW2' hS.stage.1.pins
     refine ErrClaim.bind_right hrunR (ErrClaim.ite_pos ?_ (ErrClaim.fail_abort _ _ rfl))
     rw [hname]; exact hcl
-  rw [installHeaderE.k_reserved_contains.eq_2, if_neg hb2] at hW
+  rw [installHeaderE.k_reserved_contains.eq_2, ite_eq_right hb2] at hW
   have hb2' : r2.headD 0 = 0 := by simpa using hb2
   rw [hb2'] at hW2'
   obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl hW2' hS.stage.1.pins
@@ -409,19 +407,19 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   have hm5' : m5 = s4.mem := hs5.symm.trans hm5
   subst hm5'
   by_cases hb5 : r5.headD 0 = 0
-  · rw [installHeaderE.k_sl_nodup.eq_2, if_pos hb5] at hW; cases hW
+  · rw [installHeaderE.k_sl_nodup.eq_2, ite_eq_left hb5] at hW; cases hW
     have hnd : nameNodup cv.levelParams = false := by
       rw [hlps, nameNodup_map ws hwsl]
       by_cases hn : ws.Nodup
-      · rw [if_pos hn, hb5] at hd; exact absurd hd (by decide)
+      · rw [ite_eq_left hn, hb5] at hd; exact absurd hd (by decide)
       · simp [hn]
     exact ErrClaim.ite_neg (by simp [hnd]) (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_sl_nodup.eq_2, if_neg hb5] at hW
+  rw [installHeaderE.k_sl_nodup.eq_2, ite_eq_right hb5] at hW
   have hnd : nameNodup cv.levelParams = true := by
     rw [hlps, nameNodup_map ws hwsl]
     by_cases hn : ws.Nodup
     · simp [hn]
-    · rw [if_neg hn] at hd; exact absurd hd hb5
+    · rw [ite_eq_right hn] at hd; exact absurd hd hb5
   refine ErrClaim.ite_pos hnd ?_
   -- `loose_bvars_bounded_fast(4000000000, 0, t)`
   cases h6 : callE p (n + 1) "loose_bvars_bounded_fast" [4000000000, 0, wt] s4.mem with

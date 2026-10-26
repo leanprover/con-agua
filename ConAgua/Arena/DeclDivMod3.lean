@@ -8,9 +8,6 @@ Statement records and lists (`StmtAt`, `StmtL`), `stmt1`, `cert_guard`, `cert_eq
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP
@@ -37,7 +34,7 @@ theorem Rec3At.grow {m m' : Mem} {p a b c : Word} (h : Rec3At m p a b c) (hg : I
     first | (rw [hg.2.2.1 _ (by omega)]; assumption)
 
 theorem rec3At_of_post {m m1 : Mem} {r : List Word} {a b c : Word} (h : RecPost m m1 r [a, b, c])
-    (hI : IWOK m) : Rec3At m1 (r.headD 0) a b c := by
+    (_hI : IWOK m) : Rec3At m1 (r.headD 0) a b c := by
   obtain ⟨hq, hK, hroom, htop, hget⟩ := h
   have hq' : (r.headD 0).toNat = iwTop m := by rw [hq]; rfl
   refine ⟨by rw [hq']; simp at htop; omega, ?_, ?_, ?_⟩
@@ -162,7 +159,7 @@ theorem stmtL_of_rec2 {m m1 : Mem} {r : List Word} {s1 s2 : Word} {st1 st2 : Lis
   obtain ⟨hq, hK, hroom, htop, hget⟩ := hR
   have hq' : (r.headD 0).toNat = iwTop m := by rw [hq]; rfl
   have hg := hK.1
-  simp only [decStmtL, StmtL, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil, hq']
+  simp only [decStmtL, StmtL, List.getD_cons_zero, List.getD_cons_succ, hq']
   have hl : [s1, s2].length = 2 := rfl
   have h2w : (2 : Word).toNat = 2 := rfl
   refine ⟨by rw [hl] at htop; omega, rfl, fun j hj => ?_⟩
@@ -180,7 +177,7 @@ theorem stmtL_of_rec3 {m m1 : Mem} {r : List Word} {s1 s2 s3 : Word} {st1 st2 st
   obtain ⟨hq, hK, hroom, htop, hget⟩ := hR
   have hq' : (r.headD 0).toNat = iwTop m := by rw [hq]; rfl
   have hg := hK.1
-  simp only [decStmtL, StmtL, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil, hq']
+  simp only [decStmtL, StmtL, List.getD_cons_zero, List.getD_cons_succ, hq']
   have hl : [s1, s2, s3].length = 3 := rfl
   have h3w : (3 : Word).toNat = 3 := rfl
   refine ⟨by rw [hl] at htop; omega, rfl, fun j hj => ?_⟩

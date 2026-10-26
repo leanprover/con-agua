@@ -10,7 +10,6 @@ import ConAgua.Arena.IndT.RecGen19
 `AbsOK` (no `AbsKeep` premise).
 -/
 
-set_option linter.deprecated false
 
 namespace L.Ind
 

@@ -21,7 +21,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -86,7 +85,7 @@ theorem inferProj_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
         evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [ipW, ipFirst, ipK1, ipK2, ipHead, ipK4, call1W, tierW, idxW, Cmp.eval, LocEq, BinOp.eval,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, CTL, CREC, w_lt_false, w_le_false, tfld, tcnt]
+    Locals.init_cons_zero, Locals.init_cons_succ, CTL, w_le_false, tfld, tcnt]
 
 /-! ## `infer_proj` refines `inferProj` -/
 
@@ -171,7 +170,7 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
   obtain ⟨tbl, hdt, hfe⟩ := hc.projFound n m₃ _ dn vis fe M₂ eb wT i r₄ m₄ hS₂ hc4 g4
   have hde : decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat =
       some (tbl.entry i.toNat) := by
-    unfold decEntry; rw [if_neg g4, hdt]; rfl
+    unfold decEntry; rw [ite_eq_right g4, hdt]; rfl
   rw [hde] at hrun4
   have hq₄ : decTbl (m₄.arr64 EREC) (r₄.tail.headD 0).toNat = some tbl := by rw [hE₄]; exact hdt
   have hi : i.toNat < tbl.numFields := findProj?_lt hrun4
@@ -198,12 +197,12 @@ theorem inferProj_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCalle
   · refine inferProj_grade p hp hc n hk F s₀ a₀ dn vis fe M eb mode 0 d sn i pe _ hF hn hs hpe rfl ?_
     intro r m h
     simp only [ipFirst] at h
-    rw [if_neg (by decide)] at h
+    rw [ite_eq_right (by decide)] at h
     exact CoreSpec.of_callW (hK.infer F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) h
   · refine inferProj_grade p hp hc n hk F s₀ a₀ dn vis fe M eb mode 1 d sn i pe _ hF hn hs hpe rfl ?_
     intro r m h
     simp only [ipFirst] at h
-    rw [if_pos (by decide)] at h
+    rw [ite_eq_left (by decide)] at h
     exact CoreSpec.of_callW (hK.inferIO F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) h
 
 end L.Arena

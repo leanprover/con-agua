@@ -83,7 +83,7 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
     fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [rfaW] at hW
   by_cases h1 : fireKind = 1
-  · rw [if_pos h1] at hW
+  · rw [ite_eq_left h1] at hW
     obtain ⟨lv, pins, hfire, hsp⟩ := hnest h1
     rcases hc1 : callW p n "inst_spine_pins" [po, pc, us, ao, an, rP, pvo, pvc] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [hc1, reduceCtorEq] at hW
@@ -92,7 +92,7 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
       (instSpinePins_refines' p hp hc hw hE n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pc us ao an rP
         pvo pvc lps args pins.toArray hS hus hlps hsa hsp hat (hpt h1)) hc1
     rw [recFireArgs_nested_eq rl lps (decI us) args.toList rP.toNat lv pins hfire]
-    simp only [List.toList_toArray] at hok hca hres
+    simp only at hok hca hres
     simp only [ht₁] at hxs hca
     rw [← hm]
     have hr1 : r.headD 0 = r₁.headD 0 := by
@@ -100,7 +100,7 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
     have hr2 : r.tail.headD 0 = r₁.tail.headD 0 := by
       have := congrArg (fun l => l.tail.headD 0) hr; simpa using this.symm
     exact ⟨hok, hca, xs, hres, by rw [hr1, hr2]; exact hxs⟩
-  · rw [if_neg h1] at hW
+  · rw [ite_eq_right h1] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hfire := hplain h1
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (recFireArgs_plain_run rl lps (decI us) args.toList
@@ -209,7 +209,7 @@ theorem andRescueSlotsGo_cont_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust 
     (hc : (e.ctor == ctor && e.numParams == nP && e.numFields == 2 && b) = true)
     (hr : (andRescueSlotsGo fe an ctor nP ust n (j + 1)).run a₂ = .ok (res, a₃)) :
     (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (res, a₃) := by
-  simp only [andRescueSlotsGo, h, StateT.run_bind, hb, except_ok_bind, hc, if_true]
+  simp only [andRescueSlotsGo, h, StateT.run_bind, hb, except_ok_bind, hc, ite_true]
   exact hr
 
 theorem decTbl_bound (a : Array Word) (q : Nat) (tbl : IProjTable) (h : decTbl a q = some tbl) :
@@ -283,7 +283,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     have hEr1 : m₁.arr64 EREC = m.arr64 EREC := hcc.erec k "find_proj" _ m r₁ m₁ (Or.inl rfl) hc1
     have hsome : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat =
         some (tbl.entry j.toNat) := by
-      simp only [decEntry, if_neg h0, htbl, Option.map_some]
+      simp only [decEntry, ite_eq_right h0, htbl, Option.map_some]
     rw [hsome] at hrunF
     rcases hc2 : callW p k "fire_ok" [r₁.tail.headD 0, j, us] m₁ with _ | ⟨r₂, m₂⟩
     · simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, hc2] at hL; cases hL
@@ -334,22 +334,22 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     rw [ldE_eq _ _ hx6] at hL'
     dsimp only at hL'
     by_cases hc6 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 6) = ctor
-    · rw [if_neg (by simpa using hc6)] at hL'
+    · rw [ite_eq_right (by simpa using hc6)] at hL'
       rw [ldE_eq _ _ hx5] at hL'
       dsimp only at hL'
       by_cases hc5 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 5) = nP
-      · rw [if_neg (by simpa using hc5)] at hL'
+      · rw [ite_eq_right (by simpa using hc5)] at hL'
         rw [ldE_eq _ _ hx7] at hL'
         dsimp only at hL'
         by_cases hc7 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 7) = 2
-        · rw [if_neg (by simpa using hc7)] at hL'
+        · rw [ite_eq_right (by simpa using hc7)] at hL'
           by_cases hr20 : r₂.headD 0 = 0
-          · rw [if_pos hr20] at hL'
+          · rw [ite_eq_left hr20] at hL'
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL')
             refine hfin ?_ rfl rfl
             have hb0 : decBool r₂ = false := by simp only [decBool]; rw [hr20]; rfl
             rw [hb0]; simp
-          · rw [if_neg hr20] at hL'
+          · rw [ite_eq_right hr20] at hL'
             have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat 2 j hlt
             obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hL1⟩ := ih k m₂ _ M₂ (j + 1) L m'
               (by omega) hS₂ (by
@@ -377,7 +377,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
             refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_cont_run fe (decI anW) (decI ctor) nP.toNat
               (decI us) K j.toNat a _ _ (tbl.entry j.toNat) (decBool r₂) _ hrunF hb' hcond hrunR)
               ⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩ hres3 hL1
-        · rw [if_pos (by simpa using hc7)] at hL'
+        · rw [ite_eq_left (by simpa using hc7)] at hL'
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL')
           refine hfin ?_ rfl rfl
           have : (tbl.entry j.toNat).numFields ≠ 2 := by
@@ -385,7 +385,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
             rw [hnf, ← hW7]
             intro h; apply hc7; exact UInt64.toNat_inj.mp (by simpa using h)
           simp [this]
-      · rw [if_pos (by simpa using hc5)] at hL'
+      · rw [ite_eq_left (by simpa using hc5)] at hL'
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL')
         refine hfin ?_ rfl rfl
         have : (tbl.entry j.toNat).numParams ≠ nP.toNat := by
@@ -393,7 +393,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
           rw [hnp, ← hW5]
           intro h; apply hc5; exact UInt64.toNat_inj.mp h
         simp [this]
-    · rw [if_pos (by simpa using hc6)] at hL'
+    · rw [ite_eq_left (by simpa using hc6)] at hL'
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL')
       refine hfin ?_ rfl rfl
       have hh6 : HW (rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 6)) := by rw [hW6]; exact hw6
@@ -462,7 +462,7 @@ theorem fabScopeOk_spec (p : Prog) (hp : p.lookup "fab_scope_ok" = some fabScope
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
     callW_spec p k "wscoped_bfast", callW_spec p k "loose_bvars_bounded_fast",
     callW_spec p k "leaf_guard"] <;>
-  simp_all [fsW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
+  simp_all [fsW, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
     St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 theorem fabScopeOk_stop1 (d : Nat) (fab major : EIdx) (a a₁ : AState)
@@ -483,7 +483,7 @@ theorem fabScopeOk_go (d : Nat) (fab major : EIdx) (a a₁ a₂ a₃ : AState) (
     (h3 : (leafGuard coreWalkFuel fab major).run a₂ = .ok (b, a₃)) :
     (fabScopeOk d fab major).run a = .ok (b, a₃) := by
   simp only [fabScopeOk, StateT.run_bind, h, except_ok_bind, Bool.not_true, Bool.false_eq_true,
-    ↓reduceIte, h2, Bool.not_false, h3]
+    ↓reduceIte, h2, h3]
 
 /-- **`fab_scope_ok` refines `fabScopeOk`** (the three walks as `IotaCallees`' stubs). -/
 theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) : FabScopeOkOK p := by
@@ -499,7 +499,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
     (hc.wscopedBFast n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb d fab hS hfab) hc1
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_f_m2c h0] at hrun1
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
@@ -507,7 +507,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
       hK₁, hSt₁⟩ ?_ ?_
     · simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   rw [decBool_t_m2c h0] at hrun1
   rcases hc2 : callW p n "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with _ | ⟨r₂, m₂⟩ <;>
     simp only [hc2, reduceCtorEq] at hW
@@ -516,7 +516,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   have h00 : (0 : Word).toNat = 0 := rfl
   rw [h00] at hrun2
   by_cases h20 : r₂.headD 0 = 0
-  · rw [if_pos h20] at hW
+  · rw [ite_eq_left h20] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_f_m2c h20] at hrun2
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
@@ -524,7 +524,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
       ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩ ?_ ?_
     · simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
-  rw [if_neg h20] at hW
+  rw [ite_eq_right h20] at hW
   rw [decBool_t_m2c h20] at hrun2
   rcases hc3 : callW p n "leaf_guard" [fab, major] m₂ with _ | ⟨r₃, m₃⟩ <;>
     simp only [hc3, reduceCtorEq] at hW
@@ -657,7 +657,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
   have hR := hS.arena.1
   simp only [lmW] at hW
   by_cases h8 : h >>> 28 = 8
-  · rw [if_neg (by simpa using h8)] at hW
+  · rw [ite_eq_right (by simpa using h8)] at hW
     obtain ⟨hv1, hW⟩ := of_ite_none hW
     obtain ⟨hv2, hW⟩ := of_ite_none hW
     obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8
@@ -671,7 +671,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     cases l with
     | natVal N =>
       have hk0 : kind = 0 := by rw [hkind]; exact hrel.1
-      rw [if_pos (by rw [hk0]; decide)] at hW
+      rw [ite_eq_left (by rw [hk0]; decide)] at hW
       rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
         simp only [hc1, reduceCtorEq] at hW
       obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -686,13 +686,13 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
       · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
     | strVal str =>
       have hk1 : kind = 1 := by rw [hkind]; exact hrel.1
-      rw [if_neg (by rw [hk1]; decide)] at hW
+      rw [ite_eq_right (by rw [hk1]; decide)] at hW
       rcases hc1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
         simp only [hc1, reduceCtorEq] at hW
       obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
         (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) hc1
       by_cases h0 : r₁.headD 0 = 0
-      · rw [if_pos h0] at hW
+      · rw [ite_eq_left h0] at hW
         obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
         rw [decBool_f_m2c h0] at hrun1
         have hr1 : r.headD 0 = h := by simpa using hr.symm
@@ -700,7 +700,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
           d.toNat (decE h) a₀ _ htag str hview hrun1) ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ ?_
         · simp only [decH]; rw [hr1]
         · unfold ResH HW; rw [hr1]; exact hh
-      · rw [if_neg h0] at hW
+      · rw [ite_eq_right h0] at hW
         rw [decBool_t_m2c h0] at hrun1
         rcases hc2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩ <;>
           simp only [hc2, reduceCtorEq] at hW
@@ -721,7 +721,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
           (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩) ?_ ?_
         · simp only [decH]; rw [← hr1]; exact hres3
         · unfold ResH HW; rw [← hr1]; exact hr₃
-  · rw [if_pos h8] at hW
+  · rw [ite_eq_left h8] at hW
     rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [hc1, reduceCtorEq] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -889,7 +889,7 @@ theorem projNodesGo_cons_run (T : NIdx) (b : EIdx) (n j : Nat) (a a₁ a₂ : AS
 
 /-- **The `eta_projs` loop refines `projNodesGo`**, by induction on the remaining count. -/
 theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (eb T b nF o : Word) (hT : HW T) (hb : HW b) :
+    (fe : IFEnv) (eb T b nF o : Word) (_hT : HW T) (_hb : HW b) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (m' : Mem),
       nF.toNat - j.toNat = K → j.toNat ≤ nF.toNat → CoreS dn m a vis fe M eb →
       o.toNat + nF.toNat ≤ (m.arr64 SPN).size →
@@ -954,7 +954,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     have hfrS : MemFrame [SPN] [] m₁ (m₁.set64 SPN (o + j) (r₁.headD 0)) :=
       MemFrame.set64 m₁ SPN (by decide) _ _
     have hS2 : CoreS dn (m₁.set64 SPN (o + j) (r₁.headD 0)) (AM.st (internE (.proj (decI T) j.toNat (decE b))) a)
-        vis fe M eb := hS1.frame_stk hfrS (fun b hb => by simpa using hb) (fun x hx => by simp at hx)
+        vis fe M eb := hS1.frame_stk hfrS (fun b _hb => by simpa using _hb) (fun x hx => by simp at hx)
     have hsz2 : ((m₁.set64 SPN (o + j) (r₁.headD 0)).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [size_set64, hsz1]
     have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat nF j hlt
@@ -1080,7 +1080,7 @@ theorem etaProjs_refines (p : Prog) (hp : IotaProg' p) :
     refine ⟨?_, ?_, fun i hi => ?_, hbk.trans (BKept.of_frame hfS (by decide) (by decide)),
       hpg.trans (PoolGrew.of_frame hfS (by decide) (by decide))⟩
     · unfold spTop
-      rw [rdW_set64, if_pos ⟨rfl, rfl, hg3⟩, UInt64.le_iff_toNat_le, hoo]
+      rw [rdW_set64, ite_eq_left ⟨rfl, rfl, hg3⟩, UInt64.le_iff_toNat_le, hoo]
       omega
     · rw [size_set64L, hsz]
     · rw [spW_setCtl]
@@ -1136,7 +1136,7 @@ theorem etaFabArgs_spec (p : Prog) (hp : p.lookup "eta_fab_args" = some etaFabAr
   rw [invoke_eq _ hp]
   simp only [callFn, etaFabArgsL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k "eta_projs"] <;>
-  simp_all [efaW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
+  simp_all [efaW, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
     St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 theorem etaFabArgsE_run (T : NIdx) (targs : List EIdx) (major : EIdx) (nF : Nat) (a a₁ : AState)

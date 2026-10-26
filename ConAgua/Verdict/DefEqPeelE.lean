@@ -15,7 +15,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -117,8 +116,8 @@ theorem peelDom_refinesE (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
   rw [toNat_zero_w] at e₁
   refine ErrClaim.bind_coreS e₁ (fun M₁ hS₁ hst₁ => ?_)
   by_cases he : da = db
-  · rw [if_pos he] at hW; cases hW
-  rw [if_neg he] at hW
+  · rw [ite_eq_left he] at hW; cases hW
+  rw [ite_eq_right he] at hW
   have hbq : (decE da == decE db) = false := by
     rw [decE_beq_eq _ _ ha hb]; simp [he]
   simp only [hbq, Bool.false_eq_true, ↓reduceIte]
@@ -386,8 +385,8 @@ theorem defeqBinders_refinesE (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
     (callW_of_callE hc1)
   refine ErrClaim.bind_coreS e₁ (fun M₁ hS₁ hst₁ => ?_)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decBool_t h0]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   have hso : rdW (m₁.arr64 CTL) 136 = spTop m₁ := rfl

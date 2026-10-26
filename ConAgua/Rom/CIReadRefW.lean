@@ -12,8 +12,6 @@ these models one call at a time, by induction on the L fuel.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP

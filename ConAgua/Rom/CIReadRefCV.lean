@@ -7,8 +7,6 @@ import ConAgua.Rom.CIReadRefNames
 the 4-word record at `p` decoding to the twin's value (`decCV`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP

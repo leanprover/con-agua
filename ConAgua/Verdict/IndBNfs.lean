@@ -13,8 +13,6 @@ fail with code `0`). The claim follows `cnsW_okC` (IndT/RecGen28.lean) step by s
 classes' constructor slices are decoded without a bound on an empty slice's offset.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -231,12 +229,12 @@ theorem cnsEK3_ok (h : (nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < 
     (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
     (qr + j).toNat < (m.arr64 IW).size) :
     cnsEK3 nm mw eo el qr j rest (some m) = rest (wrTail m nm mw eo el qr j) := by
-  simp only [cnsEK3]; rw [if_pos h]
+  simp only [cnsEK3]; rw [ite_eq_left h]
 theorem cnsEK3_bad (h : ¬ ((nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < (m.arr64 IW).size ∧
     (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
     (qr + j).toNat < (m.arr64 IW).size)) :
     cnsEK3 nm mw eo el qr j rest (some m) = .error .oob := by
-  simp only [cnsEK3]; rw [if_neg h]
+  simp only [cnsEK3]; rw [ite_eq_right h]
 theorem cnsEK2_none : cnsEK2 k mw eo el qr j rest none = .error .oob := rfl
 theorem cnsEK2_some : cnsEK2 k mw eo el qr j rest (some (r, m)) =
     cnsEK3 (r.headD 0) mw eo el qr j rest (ncpW (k + 1) m (r.headD 0) mw 0) := rfl
@@ -245,7 +243,7 @@ theorem cnsEK1_ok : cnsEK1 p k mw qr j rest (.ok (r, m)) =
     cnsEK2 k mw (r.headD 0) (r.tail.headD 0) qr j rest (callW p k "iw_alloc" [13] m) := rfl
 theorem cnsE_zero : cnsE p 0 m vis q fto ftl tblo tbll mo ml qr j = .error .outOfFuel := rfl
 theorem cnsE_exit (h : ¬ j < ml) : cnsE p (k + 1) m vis q fto ftl tblo tbll mo ml qr j = .ok m := by
-  simp only [cnsE]; rw [if_neg h]
+  simp only [cnsE]; rw [ite_eq_right h]
 theorem cnsE_step (h : j < ml) : cnsE p (k + 1) m vis q fto ftl tblo tbll mo ml qr j =
     cnsEK1 p k (rdW (m.arr64 IW) (mo + j)) qr j
       (fun m' => cnsE p k m' vis q fto ftl tblo tbll mo ml qr (j + 1))
@@ -254,7 +252,7 @@ theorem cnsE_step (h : j < ml) : cnsE p (k + 1) m vis q fto ftl tblo tbll mo ml 
         rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 2),
         rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 3), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 6),
         rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 7), tblo, tbll] m) := by
-  simp only [cnsE]; rw [if_pos h]
+  simp only [cnsE]; rw [ite_eq_left h]
 end arms
 
 end model
@@ -527,8 +525,8 @@ theorem cnsE_claim (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (ht
     simp only [rdW, hmt t ht, e]; simp only [iwA] at hv'; rw [hv']; rfl
   have hlow : ∀ i, i < nm.toNat → (mC.arr64 IW)[i]? = (s2.mem.arr64 IW)[i]? := by
     intro i hi
-    rw [← hC, set64IW_get, if_neg (by omega), ← hB, set64IW_get, if_neg (by omega), ← hA, set64IW_get,
-      if_neg (by omega)]
+    rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
+      ite_eq_right (by omega)]
     exact g1 i (by omega)
   have hrdC : ∀ t, t < 13 → rdW (mC.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) =
       rdW (s2.mem.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) := by
@@ -541,27 +539,27 @@ theorem cnsE_claim (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (ht
       (m4.arr64 IW)[nm.toNat + k]? = (iwA (truncM mb))[p0 + k]? := by
     intro k hk h9 h10
     obtain ⟨v, hv⟩ := decTM_get hsrc k hk
-    rw [hv, ← hE, set64IW_get, if_neg (by omega)]
+    rw [hv, ← hE, set64IW_get, ite_eq_right (by omega)]
     by_cases k12 : k = 12
     · subst k12
-      rw [← hD, set64IW_get, if_pos ⟨by omega, by rw [szC]; omega⟩]
+      rw [← hD, set64IW_get, ite_eq_left ⟨by omega, by rw [szC]; omega⟩]
       rw [show (12 : Word) = UInt64.ofNat 12 from rfl, hrdC 12 (by omega), hsrcw 12 (by omega) v hv]
-    rw [← hD, set64IW_get, if_neg (by omega)]
+    rw [← hD, set64IW_get, ite_eq_right (by omega)]
     by_cases k11 : k = 11
     · subst k11
-      rw [← hC, set64IW_get, if_pos ⟨by omega, by rw [szB]; omega⟩]
+      rw [← hC, set64IW_get, ite_eq_left ⟨by omega, by rw [szB]; omega⟩]
       rw [show (11 : Word) = UInt64.ofNat 11 from rfl, hrdB 11 (by omega), hsrcw 11 (by omega) v hv]
-    rw [← hC, set64IW_get, if_neg (by omega), ← hB, set64IW_get, if_neg (by omega), ← hA, set64IW_get,
-      if_neg (by omega), g2 k (by simp) (by omega), hsrcw k hk v hv]
+    rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
+      ite_eq_right (by omega), g2 k (by simp) (by omega), hsrcw k hk v hv]
   have hw9 : iwN m4 (nm.toNat + 9) = some (r1.headD 0).toNat := by
     simp only [iwN, nat?, iwA]
-    rw [← hE, set64IW_get, if_neg (by omega), ← hD, set64IW_get, if_neg (by omega), ← hC, set64IW_get,
-      if_neg (by omega), ← hB, set64IW_get, if_neg (by omega), ← hA, set64IW_get, if_pos ⟨by omega, by rw [hn9] at b9; exact b9⟩]
+    rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
+      ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get, ite_eq_left ⟨by omega, by rw [hn9] at b9; exact b9⟩]
     rfl
   have hw10 : iwN m4 (nm.toNat + 10) = some (r1.tail.headD 0).toNat := by
     simp only [iwN, nat?, iwA]
-    rw [← hE, set64IW_get, if_neg (by omega), ← hD, set64IW_get, if_neg (by omega), ← hC, set64IW_get,
-      if_neg (by omega), ← hB, set64IW_get, if_pos ⟨by omega, by rw [szA]; rw [hn10] at b10; exact b10⟩]
+    rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
+      ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_left ⟨by omega, by rw [szA]; rw [hn10] at b10; exact b10⟩]
     rfl
   have hFr1 : FrX (qr.toNat + j.toNat) s1.mem m4 := by
     rw [← hE]; exact (FrX.trans_grow (FrX.of_grow (IWGrow.refl _)) hgD).set _ _ hqj
@@ -580,7 +578,7 @@ theorem cnsE_claim (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (ht
     rw [hj1, decNL_snoc, decNL_frX hFr (by omega) (by right; right; omega), hws]
     have : iwN m4 (qr.toNat + j.toNat) = some nm.toNat := by
       simp only [iwN, nat?, iwA]
-      rw [← hE, set64IW_get, if_pos ⟨hqj.symm, by rw [szD]; rw [hqj] at bq; exact bq⟩]
+      rw [← hE, set64IW_get, ite_eq_left ⟨hqj.symm, by rw [szD]; rw [hqj] at bq; exact bq⟩]
       rfl
     simp [this]
   have hacc4 : FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m4) (ws ++ [nm.toNat])

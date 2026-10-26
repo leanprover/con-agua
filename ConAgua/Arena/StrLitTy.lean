@@ -13,8 +13,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 namespace L.Arena
 
@@ -58,7 +56,7 @@ theorem faEqW_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat
     (faEqT (decI ty) (decE X) (decE Y)).run a = .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold faEqW at h
   by_cases g6 : ty >>> 28 ≠ 6
-  · rw [if_pos g6] at h
+  · rw [ite_eq_left g6] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ht : ((decI ty : EIdx).tag == ETag.forallE) = false := by
@@ -67,7 +65,7 @@ theorem faEqW_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat
       · exact absurd ((decE_tag_forall ty hty).mp (beq_iff_eq.mp hb)) g6
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [faEqT, ht]; rfl
-  rw [if_neg g6] at h
+  rw [ite_eq_right g6] at h
   have g6' : ty >>> 28 = 6 := by simpa using g6
   cases hc : callW p n "e_view" [ty] m with
   | none => rw [hc] at h; cases h
@@ -90,10 +88,10 @@ theorem faEqW_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat
   have e : ((if g.tail.headD 0 = X ∧ g.tail.tail.headD 0 = Y then (1 : Word) else 0) != 0) =
       (decide (g.tail.headD 0 = X) && decide (g.tail.tail.headD 0 = Y)) := by
     by_cases c1 : g.tail.headD 0 = X <;> by_cases c2 : g.tail.tail.headD 0 = Y
-    · rw [if_pos ⟨c1, c2⟩, decide_eq_true c1, decide_eq_true c2]; rfl
-    · rw [if_neg (fun h => c2 h.2), decide_eq_true c1, decide_eq_false c2]; rfl
-    · rw [if_neg (fun h => c1 h.1), decide_eq_false c1]; rfl
-    · rw [if_neg (fun h => c1 h.1), decide_eq_false c1]; rfl
+    · rw [ite_eq_left ⟨c1, c2⟩, decide_eq_true c1, decide_eq_true c2]; rfl
+    · rw [ite_eq_right (fun h => c2 h.2), decide_eq_true c1, decide_eq_false c2]; rfl
+    · rw [ite_eq_right (fun h => c1 h.1), decide_eq_false c1]; rfl
+    · rw [ite_eq_right (fun h => c1 h.1), decide_eq_false c1]; rfl
   rw [e]
 
 /-! ## `string_ty_ok`, `char_ty_ok` -/
@@ -140,14 +138,14 @@ theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (sTy_spec p f hf n _ found q) h
   unfold sTyW at hW
   by_cases hf0 : found = 0
-  · rw [if_pos hf0] at hW
+  · rw [ite_eq_left hf0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     simp only [decFound, hf0, ↓reduceIte]
     exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
       (by unfold ResH HW; rw [← hr]; decide)
-  rw [if_neg hf0] at hW
+  rw [ite_eq_right hf0] at hW
   obtain ⟨ci, hci⟩ := hdec hf0
   have hdf : decFound dn m found q = some ci := by simp only [decFound, hf0, ↓reduceIte, hci]
   rw [hdf]
@@ -189,7 +187,7 @@ theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
       refine (decide_eq_false fun h0 => ?_).symm
       rw [h0] at hlen; simp at hlen
   rw [this]
-  by_cases c1 : c.tail.headD 0 = 0 <;> by_cases c2 : c.tail.tail.headD 0 = s.headD 0 <;> simp [c1, c2]
+  by_cases c1 : c.tail.headD 0 = 0 <;> by_cases c2 : c.tail.tail.headD 0 = s.headD 0 <;> simp
 
 /-- **`string_ty_ok` refines `stringTyOk`.** -/
 @[refines ConRon.Arena.stringTyOk]

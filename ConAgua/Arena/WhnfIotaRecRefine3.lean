@@ -16,8 +16,6 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -91,7 +89,7 @@ theorem cT_run_check (a : AState) (cv : IConstantVal) (mI rP : Nat) (rules : Lis
   subst hn
   simp only [iotaRecCT, hf, ne_eq, not_true_eq_false, ↓reduceIte, StateT.run_bind,
     viewLsLen_run, hl, except_ok_bind, hp]
-  rw [if_neg hc]; rfl
+  rw [ite_eq_right hc]; rfl
 
 theorem cT_run_major (a a' : AState) (cv : IConstantVal) (mI rP : Nat) (rules : List IRecRule)
     (usl : Nat) (pe : Option EIdx) (res : Option EIdx)
@@ -105,7 +103,7 @@ theorem cT_run_major (a a' : AState) (cv : IConstantVal) (mI rP : Nat) (rules : 
   subst hn
   simp only [iotaRecCT, hf, ne_eq, not_true_eq_false, ↓reduceIte, StateT.run_bind,
     viewLsLen_run, hl, except_ok_bind, hp]
-  rw [if_pos hc]; exact hm
+  rw [ite_eq_left hc]; exact hm
 
 end cRun
 
@@ -145,45 +143,45 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   obtain ⟨hm1, hfnone, hfsome⟩ := irEnvFind p hp.toIotaProg' n dn s₀.mem vis fe hS.env c hcw re m1 c1
   subst m1
   by_cases f0 : re.headD 0 = 0
-  · rw [if_pos f0] at hW
+  · rw [ite_eq_left f0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     exact hnone h0.symm h1.symm hm.symm (cT_run_find _ _ _ _ _ _ _ _ a₀ (fun _ _ _ _ h => by
       rw [hfnone f0] at h; cases h))
-  rw [if_neg f0] at hW
+  rw [ite_eq_right f0] at hW
   obtain ⟨ci, hfind, hci⟩ := hfsome f0
   by_cases k5 : rdW (s₀.mem.arr64 EREC) (re.tail.headD 0) ≠ 5
-  · rw [if_pos k5] at hW
+  · rw [ite_eq_left k5] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     have hnr := (decCI_rec_rd herec hci).2 k5
     exact hnone h0.symm h1.symm hm.symm (cT_run_find _ _ _ _ _ _ _ _ a₀ (fun cv mI rP rules h => by
       rw [hfind] at h; cases h; exact hnr cv mI rP rules rfl))
-  rw [if_neg k5] at hW
+  rw [ite_eq_right k5] at hW
   obtain ⟨cv, rules, rfl, hcv, hrules⟩ := (decCI_rec_rd herec hci).1 (Classical.not_not.mp k5)
   generalize hE0 : s₀.mem.arr64 EREC = E at *
   generalize hrecP : re.tail.headD 0 = recP at *
   -- the arity
   have hmIw := (rdW E (recP + 5)).toNat_lt
   by_cases s0 : sn = 0
-  · rw [if_pos s0] at hW
+  · rw [ite_eq_left s0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     exact hnone h0.symm h1.symm hm.symm (cT_run_arity _ _ _ _ _ _ _ _ a₀ _ _ _ _ hfind (by
       rw [hsz, s0]; simp))
-  rw [if_neg s0] at hW
+  rw [ite_eq_right s0] at hW
   have hsn1 : (sn - 1).toNat = sn.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (by
       have : sn.toNat ≠ 0 := fun h => s0 (UInt64.toNat_inj.mp (by simpa using h))
       rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
   have hsnp : sn.toNat ≠ 0 := fun h => s0 (UInt64.toNat_inj.mp (by simpa using h))
   by_cases a1 : sn - 1 ≠ rdW E (recP + 5)
-  · rw [if_pos a1] at hW
+  · rw [ite_eq_left a1] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     exact hnone h0.symm h1.symm hm.symm (cT_run_arity _ _ _ _ _ _ _ _ a₀ _ _ _ _ hfind (by
       rw [hsz]; intro h; apply a1; apply UInt64.toNat_inj.mp; rw [hsn1]; omega))
-  rw [if_neg a1] at hW
+  rw [ite_eq_right a1] at hW
   have hn : xs.size = (rdW E (recP + 5)).toNat + 1 := by
     have := congrArg UInt64.toNat (Classical.not_not.mp a1); rw [hsn1] at this; omega
   -- the levels' length and the telescope
@@ -213,19 +211,19 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have htk : (takeEidx xs xs.size).toList.length = (rdW E (recP + 5)).toNat + 1 := by
     rw [takeEidx_size]; simp [hn]
   by_cases u1 : [o, l].tail.headD 0 ≠ rdW E (recP + 3)
-  · rw [if_pos u1] at hW
+  · rw [ite_eq_left u1] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     exact hnone h0.symm h1.symm hm.symm (cT_run_check _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ _ hfind hn hvl hrunP'
       (fun ⟨_, h2, _⟩ => u1 (by rw [hlen] at h2; exact UInt64.toNat_inj.mp h2)))
-  rw [if_neg u1] at hW
+  rw [ite_eq_right u1] at hW
   by_cases p0 : rp.headD 0 = 0
-  · rw [if_pos p0] at hW
+  · rw [ite_eq_left p0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     exact hnone h0.symm h1.symm hm.symm (cT_run_check _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ _ hfind hn hvl hrunP'
       (fun ⟨_, _, h3⟩ => by rw [p0] at h3; simp [decOpt] at h3))
-  rw [if_neg p0] at hW
+  rw [ite_eq_right p0] at hW
   -- the major
   cases n with
   | zero => rw [callW_zero, irCW.k_iota_rec_major.none] at hW; cases hW
@@ -243,7 +241,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (cT_run_major _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ _ _ _
     hfind hn hvl hrunP' ⟨htk, by
       rw [hlen]; have := Classical.not_not.mp u1; simp only [List.tail_cons, List.headD_cons] at this
-      rw [this], by unfold decOpt; rw [if_neg p0]; rfl⟩ (by rw [takeEidx_size]; exact hrun4))
+      rw [this], by unfold decOpt; rw [ite_eq_right p0]; rfl⟩ (by rw [takeEidx_size]; exact hrun4))
   refine ⟨hokF, ⟨M4, by rw [hstF, ← hm]; exact hS4, hK4, by rw [← hm]; exact hSt4⟩, ?_, ?_⟩
   · rw [hresF]; simp only [decOptR, h0, h1]
   · unfold ResW at hr4 ⊢; rw [← h0, ← h1]; exact hr4
@@ -293,14 +291,14 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s₀.mem a₀ hS.arena.1 hd hhd rv m1 c1
   subst m1
   by_cases v0 : rv.headD 0 = 0
-  · rw [if_pos v0] at hW
+  · rw [ite_eq_left v0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     refine CoreRef.of_run (at_run_tag (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
       (decE hd) xs xs.size a₀ (hnot v0)) (hm ▸ ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩) ?_ ?_
     · rw [decOptR_none_rec r h0.symm]
     · unfold ResW HW; rw [← h0, ← h1]; decide
-  rw [if_neg v0] at hW
+  rw [ite_eq_right v0] at hW
   obtain ⟨htag, hview, hcw, husw⟩ := hyes v0
   have hvc := L.Ind.EStore.viewConst_of_view _ _ htag _ _ hview
   cases n with
