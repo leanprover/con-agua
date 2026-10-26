@@ -75,6 +75,15 @@ theorem ErrClaim.congr_run {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
   obtain ⟨ce, hce, hc⟩ := h' hk
   exact ⟨ce, h.trans hce, hc⟩
 
+/-- **A tail call's continuation**: it passes the callee's error on and maps every ok run to an
+ok result, so a failing result is the callee's own failure. -/
+theorem tailE {β γ : Type} {K : Except Err γ → Except Err β} {x : Except Err γ} {er : Err}
+    (hn : ∀ ε, K (.error ε) = .error ε) (ho : ∀ q, ∃ v, K (.ok q) = .ok v) (h : K x = .error er) :
+    x = .error er := by
+  cases x with
+  | error e => rw [hn] at h; cases h; rfl
+  | ok q => obtain ⟨v, hv⟩ := ho q; rw [hv] at h; cases h
+
 /-- The defeq family's callees outside the verdict closure. -/
 def defeqNVList : List FnName :=
   ["de_find", "de_put", "is_bool_true", "has_fvar", "head_is_proj", "lvls_eq_c", "lvl_eq_c",
