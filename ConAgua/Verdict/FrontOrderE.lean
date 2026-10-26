@@ -209,4 +209,192 @@ def OrderFail (st : StateD) (a : AState) (cts : List IndCtorRec) (CN TN : List N
     (∀ c' (hc' : c' < c), ∃ k, CtorOK st a cts CN (LS[i][c']'(by omega)) c' (TN[i]!) np fuel k) ∧
     CtorFail st a cts CN LS[i][c] c (TN[i]!) np fuel
 
+theorem run_bind_exG {α γ δ : Type} {x : AM α} {k : α → AM γ} {a : AState} (g : δ → γ) (P : α → Prop)
+    {R : δ → Prop} (hx : ∃ y, P y ∧ x.run a = .ok (y, a))
+    (hk : ∀ y, P y → ∃ z, R z ∧ (k y).run a = .ok (g z, a)) :
+    ∃ z, R z ∧ (x >>= k).run a = .ok (g z, a) := by
+  obtain ⟨y, hy, hxr⟩ := hx
+  obtain ⟨z, hz, hkr⟩ := hk y hy
+  exact ⟨z, hz, by rw [run_bind _ _ a _ hxr]; exact hkr⟩
+
+/-- **The constructor order stops**: the twin's validation returns an `.invalid` verdict. -/
+theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec}
+    {cts : List IndCtorRec} {rcs : List IndRecRec} {TN : List NIdx} {TT : List EIdx}
+    {LS : List (List NIdx)} {CN : List NIdx} {nPd fuel : Nat} (hV : VPre st a tys cts TN TT LS CN nPd)
+    (hnd : LS.flatten.Nodup) (hlen : LS.flatten.length = cts.length) (hzl : TN.length = LS.length)
+    (hRN : NamesRead st a) (hfuel : a.store.nodeCount + 1 = fuel)
+    (hO : OrderFail st a cts CN TN LS nPd fuel) :
+    ∃ z, (∃ w, z = Sum.inl (RecordVerdict.invalid w)) ∧
+      (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = .ok (z, a) := by
+  obtain ⟨i, hi, c, hc, hpre, hpre', hfail⟩ := hO
+  subst hfuel
+  -- the handles the messages read back
+  have hTNr : ∀ y ∈ TN, ∃ x, (readName y).run a = .ok (x, a) := fun y hy => by
+    obtain ⟨j, hj⟩ := (mapM_all _ (fun t : IndTypeRec => st.name t.cv.name) (fun t => name_all st t.cv.name) _ a a TN hV.tn).1 y hy
+    exact hRN j y hj
+  have hLSr : ∀ l ∈ LS, ∀ y ∈ l, ∃ x, (readName y).run a = .ok (x, a) := fun l hl y hy => by
+    have := (mapM_all (fun l : List NIdx => ∀ y ∈ l, ∃ j, st.names.get? j = some y) _
+      (fun t a v a' h => mapM_all _ _ (name_all st) t.ctors a a' v h) _ a a LS hV.ls).1 l hl y hy
+    obtain ⟨j, hj⟩ := this
+    exact hRN j y hj
+  unfold ConRon.Arena.Frontend.validateIndD
+  simp only [hV.safe, Bool.false_eq_true, ite_false]
+  rw [← hV.np1, if_pos hV.np2]
+  rw [run_bind _ _ a _ hV.tn, run_bind _ _ a _ hV.tt, run_bind _ _ a _ hV.ls, run_bind _ _ a _ hV.cn]
+  rw [if_pos hnd]
+  simp only [hlen, beq_self_eq_true, if_true]
+  rw [run_bind _ _ a _ (storeFuel_run a)]
+  let ordered : List IndCtorRec := LS.flatten.map fun nn => cts[((ctorIxOf CN)[nn]?).getD 0]!
+  have hordl : ordered.length = LS.flatten.length := by simp only [ordered, List.length_map]
+  have hord : ∀ i' (hi' : i' < LS.length) c' (hc' : c' < LS[i'].length) k,
+      (ctorIxOf CN)[LS[i'][c']]? = some k →
+      ∃ hp : fpos LS i' + c' < ordered.length, ordered[fpos LS i' + c'] = cts[k]! := by
+    intro i' hi' c' hc' k hk
+    have hp := fpos_lt LS i' c' hi' hc'
+    refine ⟨by rw [hordl]; exact hp, ?_⟩
+    simp only [ordered, List.getElem_map]
+    rw [← getElem_flatten' LS i' c' hi' hc', hk]; rfl
+  refine run_bind_ex (fun b => ∃ w, b.1 = some (Sum.inl (RecordVerdict.invalid w))) ?_ ?_
+  rotate_left
+  · rintro ⟨r, arr⟩ ⟨w, hw⟩
+    simp only at hw; subst hw
+    exact ⟨_, ⟨w, rfl⟩, rfl⟩
+  have hzl' : (TN.zip LS).length = LS.length := by simp [hzl]
+  refine forIn_done_ex _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+    (ordered.take (fpos LS i)).toArray)) (by simp [fpos]) i (by rw [hzl']; exact hi) _ ?_ ?_
+  · -- the types before: every constructor passes
+    intro i' hi''
+    have hi' : i' < LS.length := by omega
+    simp only [List.getElem_zip]
+    rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+      (ordered.take (fpos LS i' + c)).toArray, c)) ?i0 ?istep)]
+    case i0 => simp
+    case istep =>
+      intro c hc
+      obtain ⟨k, hk, hfold, hcidx, hind, cty, hcty, htele⟩ := hpre i' hi' hi'' c hc
+      obtain ⟨hp, hord'⟩ := hord i' hi' c hc k hfold
+      have hck : cts[k]! = cts[k] := getElem!_pos cts k hk
+      rw [hck] at hord'
+      have hiT : i' < TN.length := by omega
+      have hTNi : TN[i']! = TN[i'] := getElem!_pos TN i' hiT
+      rw [hTNi] at hind
+      have hA : cts.toArray[k]? = some cts[k] := by simp [hk]
+      have hpush : (ordered.take (fpos LS i' + c)).toArray.push cts[k] =
+          (ordered.take (fpos LS i' + (c + 1))).toArray := by
+        rw [← hord', take_push _ _ hp, Nat.add_assoc]
+      simp only [hfold, hA]
+      cases hci : cts[k].cidx <;> cases hiw : cts[k].induct
+      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, if_true, hpush]; rfl
+      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+          run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
+      · simp only [hcidx _ hci, beq_self_eq_true, if_true, run_bind _ _ a _ hcty,
+          run_bind _ _ a _ htele, hpush]; rfl
+      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+          run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
+    simp only [fpos_succ LS i' hi']
+    rfl
+  · simp only [List.getElem_zip]
+    refine run_bind_exG ForInStep.done
+      (fun (b : Option (RecordVerdict ⊕ List IndCtorRec × Nat) × Array IndCtorRec × Nat) =>
+        ∃ w, b.1 = some (Sum.inl (RecordVerdict.invalid w))) ?_ ?_
+    rotate_left
+    · rintro ⟨r, arr⟩ ⟨w, hw⟩
+      simp only at hw; subst hw
+      exact ⟨_, ⟨w, rfl⟩, rfl⟩
+    refine forIn_done_ex _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+      (ordered.take (fpos LS i + c)).toArray, c)) (by simp) c hc _ ?_ ?_
+    · intro c' hc'
+      have hc'' : c' < LS[i].length := by omega
+      obtain ⟨k, hk, hfold, hcidx, hind, cty, hcty, htele⟩ := hpre' c' hc'
+      obtain ⟨hp, hord'⟩ := hord i hi c' hc'' k hfold
+      have hck : cts[k]! = cts[k] := getElem!_pos cts k hk
+      rw [hck] at hord'
+      have hiT : i < TN.length := by omega
+      have hTNi : TN[i]! = TN[i] := getElem!_pos TN i hiT
+      rw [hTNi] at hind
+      have hA : cts.toArray[k]? = some cts[k] := by simp [hk]
+      have hpush : (ordered.take (fpos LS i + c')).toArray.push cts[k] =
+          (ordered.take (fpos LS i + (c' + 1))).toArray := by
+        rw [← hord', take_push _ _ hp, Nat.add_assoc]
+      simp only [hfold, hA]
+      cases hci : cts[k].cidx <;> cases hiw : cts[k].induct
+      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, if_true, hpush]; rfl
+      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+          run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
+      · simp only [hcidx _ hci, beq_self_eq_true, if_true, run_bind _ _ a _ hcty,
+          run_bind _ _ a _ htele, hpush]; rfl
+      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+          run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
+    · -- the failing constructor
+      have hiT : i < TN.length := by omega
+      have hTNi : TN[i]! = TN[i] := getElem!_pos TN i hiT
+      rw [hTNi] at hfail
+      obtain ⟨xn, hxn⟩ := hLSr LS[i] (List.getElem_mem hi) LS[i][c] (List.getElem_mem hc)
+      obtain ⟨xT, hxT⟩ := hTNr TN[i] (List.getElem_mem hiT)
+      simp only [CtorFail, ctorIxOf] at hfail
+      rcases hfail with hnone | ⟨k, hfold, hk, hfl⟩
+      · simp only [hnone]
+        refine ⟨?_, ?_, ?_⟩
+        rotate_right
+        rw [run_bind _ _ a _ hxn]; rfl
+        all_goals exact ⟨_, rfl⟩
+      have hA : cts.toArray[k]? = some cts[k] := by simp [hk]
+      simp only [hfold, hA]
+      rcases hfl with ⟨ci, hci, hne⟩ | ⟨hcidx, ⟨iw, iwn, hiw, hiwn, hne⟩ | ⟨hind, cty, tele, hcty, htele, hne⟩⟩
+      · simp only [hci, beq_iff_eq, hne, if_false]
+        refine ⟨?_, ?_, ?_⟩
+        rotate_right
+        rw [run_bind _ _ a _ hxn, run_bind _ _ a _ hxT]; rfl
+        all_goals exact ⟨_, rfl⟩
+      · obtain ⟨xi, hxi⟩ := hRN iw iwn (name_run hiwn).1
+        have hci' : ∀ ci, cts[k].cidx = some ci → (ci == c) = true := fun ci h => by simp [hcidx ci h]
+        rcases hci : cts[k].cidx with _ | ci
+        · simp only [hiw, run_bind _ _ a _ hiwn, beq_iff_eq, hne, if_false]
+          refine ⟨?_, ?_, ?_⟩
+          rotate_right
+          rw [run_bind _ _ a _ hxn, run_bind _ _ a _ hxi, run_bind _ _ a _ hxT]; rfl
+          all_goals exact ⟨_, rfl⟩
+        · simp only [hci' ci hci, if_true, hiw, run_bind _ _ a _ hiwn, beq_iff_eq, hne, if_false]
+          refine ⟨?_, ?_, ?_⟩
+          rotate_right
+          rw [run_bind _ _ a _ hxn, run_bind _ _ a _ hxi, run_bind _ _ a _ hxT]; rfl
+          all_goals exact ⟨_, rfl⟩
+      · have hci' : ∀ ci, cts[k].cidx = some ci → (ci == c) = true := fun ci h => by simp [hcidx ci h]
+        have hiw' : ∀ iw, cts[k].induct = some iw → (TN[i] == TN[i]) = true := fun _ _ => by simp
+        have htl : (nPd + cts[k].numFields == tele) = false := by simp [hne]
+        rcases hci : cts[k].cidx with _ | ci <;> rcases hiw : cts[k].induct with _ | iw
+        · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, if_false]
+          refine ⟨?_, ?_, ?_⟩
+          rotate_right
+          rw [run_bind _ _ a _ hxn]; rfl
+          all_goals exact ⟨_, rfl⟩
+        · simp only [run_bind _ _ a _ (hind iw hiw), beq_self_eq_true, if_true,
+            run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, if_false]
+          refine ⟨?_, ?_, ?_⟩
+          rotate_right
+          rw [run_bind _ _ a _ hxn]; rfl
+          all_goals exact ⟨_, rfl⟩
+        · simp only [hci' ci hci, if_true, run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, if_false]
+          refine ⟨?_, ?_, ?_⟩
+          rotate_right
+          rw [run_bind _ _ a _ hxn]; rfl
+          all_goals exact ⟨_, rfl⟩
+        · simp only [hci' ci hci, if_true, run_bind _ _ a _ (hind iw hiw), beq_self_eq_true,
+            run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, if_false]
+          refine ⟨?_, ?_, ?_⟩
+          rotate_right
+          rw [run_bind _ _ a _ hxn]; rfl
+          all_goals exact ⟨_, rfl⟩
+
+theorem validateIndD_orderFail_cls {st : StateD} {a : AState} {tys : List IndTypeRec}
+    {cts : List IndCtorRec} {rcs : List IndRecRec} {TN : List NIdx} {TT : List EIdx}
+    {LS : List (List NIdx)} {CN : List NIdx} {nPd fuel : Nat} (hV : VPre st a tys cts TN TT LS CN nPd)
+    (hnd : LS.flatten.Nodup) (hlen : LS.flatten.length = cts.length) (hzl : TN.length = LS.length)
+    (hRN : NamesRead st a) (hfuel : a.store.nodeCount + 1 = fuel)
+    (hO : OrderFail st a cts CN TN LS nPd fuel) :
+    ∃ v, (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = .ok (.inl v, a) ∧
+      twinCls v.toError = 1 := by
+  obtain ⟨z, ⟨w, rfl⟩, h⟩ := validateIndD_orderFail (rcs := rcs) hV hnd hlen hzl hRN hfuel hO
+  exact ⟨_, h, twinCls_invalid w⟩
+
 end L.Front.Ind
