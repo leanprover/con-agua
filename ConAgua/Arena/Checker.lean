@@ -110,7 +110,10 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
   · exact hR.check.env.grow (fun b h1 h2 h3 => hf.1 b (fun h => by
         have := hA b h; simp only [ArrId] at *; omega)
       (by simp only [CTL, ArrId]; omega)) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
-      hg
+      hg (TblSame.of_frame (fun b hb => by have := hA b hb; simp only [ArrId] at *; omega)
+        (fun b hb => by have := hA b hb; simp only [ArrId] at *; omega)
+        (fun h => by have := hA _ h; simp only [ETAB, ArrId] at *; omega)
+        (fun h => by have := hC _ h; simp at this) hf)
   · exact ModeOK.of_keep hR.check.mode (hf.2.1 1 (by decide)) htk
   · exact hR.pend.ext (hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide))
       (hf.2.1 130 (fun h => by have := hC _ h; simp at this)) hg.ext

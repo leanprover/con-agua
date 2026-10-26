@@ -373,7 +373,9 @@ theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
      hS.1.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
      EnvR.grow (fun b h1 h2 h3 => hf.1 b (fun hm => by simp at hm; subst hm; simp [EREC] at h3)
          (fun hm => by subst hm; simp [CTL] at h1))
-       (hf.2.1 128 (by simp)) hg hS.1.env,
+       (hf.2.1 128 (by simp)) hg
+       (TblSame.of_frame (fun b hb => by simp at hb; subst hb; decide)
+         (fun b hb => by simp at hb; subst hb; decide) (by simp) (by simp) hf) hS.1.env,
      hS.1.mode.frame hf (by simp) (by simp)⟩
   refine ⟨⟨hC, ?_, hroom, ?_, ?_, ?_⟩, ?_⟩
   · simp only [iwTop, h200, hI]; exact hI1

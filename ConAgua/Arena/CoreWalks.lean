@@ -210,7 +210,7 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     hf.1 SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
     hf.2.1 136 (fun h => absurd (hC _ h) (by decide))
-  refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
+  refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf (.of_lowT hA), ?_, ?_, ?_,
     hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 145 ▸ hS.bstk,
     hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hS.mode.frame hf hP0 hscC.1⟩,
     StackKept.of_frame hf

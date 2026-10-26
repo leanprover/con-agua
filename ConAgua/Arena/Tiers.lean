@@ -20,8 +20,8 @@ each owning a disjoint range of arrays and `CTL` words, each with **one** group 
 | `DerR` (derived columns, `DerRel.lean`) | `a.store` | 42‥46 | – | 5 compound tables |
 | `StateDR` (front, `Front/StateDR.lean`) | the parse state | 64‥66; 67‥95 reserved | 64‥95 reserved | lane `front2` |
 | `CoreR` | `a.caches` | 96‥106; 107‥127 reserved | 96‥113, 116‥119; others reserved | 11 of 14 tables, both mode-memo sets (lane `whnf`) |
-| `PinsR` | `a.pins` | 128 (`PINS`); 129‥131 reserved | – | filled (lane `pinsenv`) |
-| `EnvR` | a view `vis` of `fe : IFEnv` (an argument) | 132‥136 | 128 (129: the record top) | filled (lane `pinsenv`) |
+| `PinsR` | `a.pins` | 128 (`PINS`) | – | filled (lane `pinsenv`) |
+| `EnvR` | a view `vis` of `fe : IFEnv` (an argument) | 129‥136, 140‥143, 385‥387 | 128 (129: the record top), 133 | filled (lane `pinsenv`; tables: lane `consync`) |
 | `PendR` (`Checker.lean`) | `pend` (an argument) | 137 | 130 | lane `pinsenv` |
 | argument relations (`PMemo`, `pend`, saved `ModeMemos`, walk-local memos) | arguments | 144‥191 | 136‥191 | not yet |
 
@@ -360,14 +360,14 @@ theorem PinsR.congr {m m' : Mem} {p : Pins} (he : m'.arr64 PINS = m.arr64 PINS)
   ⟨fun h0 => (h.full (by simpa only [pinW, he] using h0)).congr he⟩
 
 theorem PinsR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {p : Pins}
-    (hA : AvoidA 128 132 A) (hf : MemFrame A C m m') (h : PinsR m p) : PinsR m' p :=
+    (hA : AvoidA 128 129 A) (hf : MemFrame A C m m') (h : PinsR m p) : PinsR m' p :=
   h.congr (hf.1 PINS (fun hm => by have := hA _ hm; revert this; decide) (by decide))
 
 /-- All-zero pins (the flag `0`) are related to every table. -/
 theorem PinsR.of_flag {m : Mem} {p : Pins} (h : pinW m 0 = 0) : PinsR m p :=
   ⟨fun h0 => absurd h h0⟩
 
-/-! ## The environment: arrays 132‥136, `CTL` 128
+/-! ## The environment: arrays 129‥136, 140‥143, 385‥387, `CTL` 128, 129, 133
 
 The twin's `IFEnv` (`Env.lean:276`) is an argument of the checker, not part of `AState`, and
 several views of one index are live at once (`restrictTo`: the same index, a smaller
@@ -451,28 +451,38 @@ theorem erecP_congr {m m' : Mem} (he : m'.arr64 EREC = m.arr64 EREC)
 /-! ### The table component
 
 The twin's projection tables (`IEnv.tables`, `IFEnv.tbls`: keyed on the structure's name, no
-counter) live in the same row arrays, above the constant rows (`rowIx w + 1 < 2^28`):
+counter) have their own arrays, as con-ron keeps them (`env.tables`, a `Vec`, and the table map):
 
-* **The table row** of name handle `w` is word `2^28 + i` (`tblIx`, `i` the handle's index) of its
-  row array `rowArr w`: the table record's pointer plus one, `0` for no table (`IFEnv.rawTable?`).
-* **The tables list** (newest first) is linked through the table records (`EnvRec.lean`'s layout,
-  word `p + 1`); its length is word `2^29` of `EIXA`, its head (pointer plus one) word `2^29 + 1`.
+* **The table rows** `TIXA`/`TIXS`/`TIXN` (129‥131, one per name tag, as `EIX*`; tier 1 at
+  `+ 256`, `tierA`): the row of name handle `w` is word `i` (the handle's index) of `tblArr w`,
+  the table record's pointer plus one, `0` for no table (`IFEnv.rawTable?`).
+* **The tables list** `ETAB` (143): the record pointer of every table by slot, oldest first (the
+  twin's `env.tables` is its reverse), `CTL[133]` of them.
 
-All of it is zero in zero memory (`mkIFEnv IEnv.empty`), and inside the arrays `EnvR` already
-owns, so every frame of `EnvR` keeps it. -/
+All of it is zero in zero memory (`mkIFEnv IEnv.empty`). -/
 
-/-- The table row's word in the row array: `2^28` plus the handle's index. -/
-def tblIx (w : Word) : Nat := 2 ^ 28 + w.toNat % 2 ^ 27
+abbrev TIXA : ArrId := 129
+abbrev TIXS : ArrId := 130
+abbrev TIXN : ArrId := 131
+abbrev ETAB : ArrId := 143
+
+/-- The table row's array: `129 + tag`, tier 1 at `+ 256`. -/
+def tblArr (w : Word) : ArrId := 129 + rowTag w + 256 * rowTier w
+
+/-- The table row's index: the handle's index. -/
+def tblIx (w : Word) : Nat := w.toNat % 2 ^ 27
 
 /-- The table row of a name handle: the table record's pointer plus one, `0` for none. -/
 def tblRow (m : Mem) (w : Word) : Word :=
-  if rowTag w ≤ 2 then (m.arr64 (rowArr w))[tblIx w]?.getD 0 else 0
+  if rowTag w ≤ 2 then (m.arr64 (tblArr w))[tblIx w]?.getD 0 else 0
 
-/-- The number of tables: word `2^29` of `EIXA`. -/
-def tblCnt (m : Mem) : Nat := ((m.arr64 EIXA)[2 ^ 29]?.getD 0).toNat
+/-- The number of tables, `CTL[133]`. -/
+def tblCnt (m : Mem) : Nat := (rdW (m.arr64 CTL) 133).toNat
 
-/-- The tables list's head (the newest table's pointer plus one): word `2^29 + 1` of `EIXA`. -/
-def tblHead (m : Mem) : Nat := ((m.arr64 EIXA)[2 ^ 29 + 1]?.getD 0).toNat
+/-- The tables, newest first, decoded. -/
+def envTables (m : Mem) : Option (List IProjTable) :=
+  (List.range (tblCnt m)).reverse.mapM fun j => do
+    decTbl (erecP m) (← nat? (m.arr64 ETAB) j)
 
 /-- **The environment, seen through the view `vis`.** -/
 structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe : IFEnv) : Prop where
@@ -489,13 +499,36 @@ structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe :
   tvals : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → tblRow m n.word.toUInt64 ≠ 0 →
     fe.tbls[n]? = decTbl (erecP m) ((tblRow m n.word.toUInt64).toNat - 1)
   /-- The tables list (`IEnv.tables`). -/
-  tables : tblList (erecP m) (tblCnt m) (tblHead m) = some fe.env.tables
+  tables : envTables m = some fe.env.tables
+
+theorem tblArr_cases (w : Word) (h : rowTag w ≤ 2) :
+    tblArr w = 129 ∨ tblArr w = 130 ∨ tblArr w = 131 ∨ tblArr w = 385 ∨ tblArr w = 386 ∨
+      tblArr w = 387 := by
+  have : rowTier w < 2 := Nat.mod_lt _ (by decide)
+  simp only [tblArr, ArrId]; omega
+
+/-- The table side of the environment: what `tkeys`, `tvals`, `tables` read besides `erecP`. -/
+def TblSame (m m' : Mem) : Prop :=
+  (∀ w, rowTag w ≤ 2 → m'.arr64 (tblArr w) = m.arr64 (tblArr w)) ∧
+    m'.arr64 ETAB = m.arr64 ETAB ∧ rdW (m'.arr64 CTL) 133 = rdW (m.arr64 CTL) 133
+
+theorem TblSame.refl (m : Mem) : TblSame m m := ⟨fun _ _ => rfl, rfl, rfl⟩
+
+/-- The table side from a frame avoiding the table arrays and `CTL[133]`. -/
+theorem TblSame.of_frame {A : List ArrId} {C : List Word} {m m' : Mem}
+    (hA : AvoidA 129 132 A) (hA1 : AvoidA 385 388 A) (hE : ETAB ∉ A) (hC : (133 : Word) ∉ C)
+    (hf : MemFrame A C m m') : TblSame m m' := by
+  refine ⟨fun w hw => hf.1 _ (fun hm => ?_)
+    (by rcases tblArr_cases w hw with h | h | h | h | h | h <;> rw [h] <;> decide),
+    hf.1 _ hE (by decide), hf.2.1 133 hC⟩
+  have h1 := hA _ hm; have h2 := hA1 _ hm; have := tblArr_cases w hw
+  simp only [ArrId] at *; omega
 
 theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
     (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 137 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
     (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128)
-    (hc9 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) (h : EnvR dn m vis fe) :
-    EnvR dn m' vis fe := by
+    (hc9 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) (ht : TblSame m m')
+    (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
     · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
@@ -512,16 +545,14 @@ theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word
   have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)
   have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by
     unfold tblRow; split
-    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
-        (by simp only [rowArr, rowTier]; omega)]
+    · rename_i hw; rw [ht.1 w hw]
     · rfl
-  have hX : m'.arr64 EIXA = m.arr64 EIXA := he _ (by decide) (by decide) (by decide)
   refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_,
     fun n hn => (hT _).symm ▸ h.tkeys n hn, fun n hn h0 => ?_, ?_⟩
   · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
   · rw [← h.consts]; simp only [envConsts, envLen, hc, hR, hN]
   · rw [hT, hR]; exact h.tvals n hn (by rwa [← hT])
-  · rw [← h.tables]; simp only [tblCnt, tblHead, hX, hR]
+  · rw [← h.tables]; simp only [envTables, tblCnt, ht.2.1, ht.2.2, hR]
 
 /-- Every record in use is in `EREC` (a decoding in `erecP` is one in the whole array). -/
 theorem erecP_ext (m : Mem) : ArrExt (erecP m) (m.arr64 EREC) := fun _ _ h => erecP_get h
@@ -554,7 +585,7 @@ theorem ErecGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : ErecGrow m₁ m₂) (h₂ 
 /-- **`EnvR` across a pool growth** (rows, constants and `CTL[128]` unchanged). -/
 theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
     (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 136 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
-    (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128) (hg : ErecGrow m m')
+    (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128) (hg : ErecGrow m m') (ht : TblSame m m')
     (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
@@ -570,10 +601,8 @@ theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
   have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)
   have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by
     unfold tblRow; split
-    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
-        (by simp only [rowArr, rowTier]; omega)]
+    · rename_i hw; rw [ht.1 w hw]
     · rfl
-  have hX : m'.arr64 EIXA = m.arr64 EIXA := he _ (by decide) (by decide) (by decide)
   have hx := hg.ext
   refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_,
     fun n hn => (hT _).symm ▸ h.tkeys n hn, fun n hn h0 => ?_, ?_⟩
@@ -599,12 +628,19 @@ theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
     cases e : fe.tbls[n]? with
     | none => simp [e, h0] at hk
     | some t => rw [e] at hv; exact (hx.decTbl hv.symm).symm
-  · simp only [tblCnt, tblHead, hX]; exact hx.tblList h.tables
+  · have hts := h.tables
+    simp only [envTables, tblCnt, ht.2.1, ht.2.2] at hts ⊢
+    exact ArrExt.mapM (fun c x hcx => by
+      simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at hcx ⊢
+      obtain ⟨q, hq, hd⟩ := hcx
+      exact ⟨q, hq, hx.decTbl hd⟩) _ _ hts
 
-/-- The frame over exactly what `EnvR` reads: arrays 132‥142 and `CTL[128]`, `CTL[129]`. -/
+/-- The frame over exactly what `EnvR` reads: arrays 129‥142 (but `PEND`‥`RMEMO`), `ETAB`, the
+table rows' tier 1 (385‥387) and `CTL[128]`, `CTL[129]`, `CTL[133]`. -/
 theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
     {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (hA : AvoidA 132 137 A) (hA1 : AvoidA 140 143 A) (hC : AvoidC 128 130 C)
+    (hA : AvoidA 129 137 A) (hA1 : AvoidA 140 144 A) (hA2 : AvoidA 385 388 A)
+    (hC : AvoidC 128 130 C) (hC3 : AvoidC 133 134 C)
     (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe :=
   h.congr (fun b h1 h2 h3 => hf.1 b (fun hm => by
@@ -612,14 +648,22 @@ theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : L
     (by simp only [CTL, ArrId]; omega))
     (hf.2.1 128 (fun hm => by have := hC _ hm; simp at this))
     (hf.2.1 129 (fun hm => by have := hC _ hm; simp at this))
+    (TblSame.of_frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) hA2
+      (fun hm => by have := hA1 _ hm; simp [ETAB] at this)
+      (fun hm => by have := hC3 _ hm; simp at this) hf)
+
+/-- A writer of the store tier (arrays below `64` and `256‥319`) avoids the table rows' tier 1. -/
+theorem AvoidA.of_lowT {A : List ArrId} (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) :
+    AvoidA 385 388 A := fun b hb => .inl (by have := hA b hb; simp only [ArrId] at *; omega)
 
 theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
     {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (hA : AvoidA 132 144 A) (hC : AvoidC 128 136 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
+    (hA : AvoidA 129 144 A) (hC : AvoidC 128 136 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe)
+    (hA2 : AvoidA 385 388 A := by decide) :
     EnvR dn m' vis fe :=
   h.frameN (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
-    (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
-    (fun x hx => by have := hC x hx; omega) hf
+    (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) hA2
+    (fun x hx => by have := hC x hx; omega) (fun x hx => by have := hC x hx; omega) hf
 
 /-! ## The whole relation -/
 
@@ -655,8 +699,8 @@ theorem CheckR.of_walkM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
     (hmode : ModeOK m') : CheckR dn m' a' vis fe := by
   have hc : a'.caches = a.caches := congrArg Prod.fst hk
   have hp : a'.pins = a.pins := congrArg Prod.snd hk
-  refine ⟨hD, ?_, ?_, hR.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf,
-    hmode⟩
+  refine ⟨hD, ?_, ?_, hR.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf
+    (.of_lowT hA), hmode⟩
   · rw [hc]; exact hR.core.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf
 
@@ -672,22 +716,26 @@ theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
 140‥142) and `CTL` words from 130 up
 (the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/
 theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
-    {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256 ∧ (b < 140 ∨ 143 ≤ b))
-    (hC : ∀ x ∈ C, 130 ≤ x.toNat) (hf : MemFrame A C m m') (h : CheckR dn m a vis fe) :
+    {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256 ∧ (b < 140 ∨ 144 ≤ b))
+    (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hf : MemFrame A C m m') (h : CheckR dn m a vis fe) :
     CheckR dn m' a vis fe := by
   have hA' : ∀ lo hi, hi ≤ 137 → AvoidA lo hi A := fun lo hi hh b hb => .inr (by
     have := (hA b hb).1; simp only [ArrId] at this ⊢; omega)
-  have hE : AvoidA 140 143 A := fun b hb => by
+  have hE : AvoidA 140 144 A := fun b hb => by
+    have := hA b hb; simp only [ArrId] at this ⊢; omega
+  have hE2 : AvoidA 385 388 A := fun b hb => by
     have := hA b hb; simp only [ArrId] at this ⊢; omega
   have hC' : ∀ lo hi, hi ≤ 130 → AvoidC lo hi C := fun lo hi hh x hx => .inr (by
-    have := hC x hx; omega)
+    have := (hC x hx).1; omega)
+  have hC3 : AvoidC 133 134 C := fun x hx => by have := hC x hx; omega
   refine ⟨⟨?_, ?_⟩, h.core.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf,
     h.pins.frame (hA' _ _ (by decide)) hf,
-    h.env.frameN (hA' _ _ (by decide)) hE (hC' _ _ (by decide)) hf,
-    h.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩
+    h.env.frameN (hA' _ _ (by decide)) hE hE2 (hC' _ _ (by decide)) hC3 hf,
+    h.mode.frame hf (fun h => by have := (hC _ h).1; simp at this)
+      (fun h => by have := (hC _ h).1; simp at this)⟩
   · exact ArenaR.frame_ext A C (fun b hb => by
       have := hA b hb; simp only [ArrId] at this ⊢; omega)
-      (fun x hx => by have := hC x hx; omega) m m' hf a h.arena.1
+      (fun x hx => by have := (hC x hx).1; omega) m m' hf a h.arena.1
   · exact DerR.frameM A C m m' hf (fun b hb => by
       have := hA b hb; simp only [ArrId] at this ⊢; omega) a h.arena.2
 
