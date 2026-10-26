@@ -19,7 +19,7 @@ open ConRon.Arena
 namespace L.Arena
 
 /-- The arrays the loop may write: all but the pin table. -/
-def loopA : List ArrId := (List.range 320).filter (· ≠ PINS)
+def loopA : List ArrId := (List.range 388).filter (· ≠ PINS)
 
 /-- The `CTL` words the loop may write. -/
 def loopC : List Word := (List.range 1024).map UInt64.ofNat

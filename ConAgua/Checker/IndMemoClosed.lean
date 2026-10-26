@@ -19,7 +19,7 @@ names_tree imCallTree : imFns ++ imLeaves
 
 /-- The arrays of `imA`, as a test. -/
 def imPa (a : ArrId) : Bool :=
-  decide (a < 320) && a != 51 && a != 155 && (decide (a < 201) || decide (208 < a))
+  decide (a < 388) && a != 51 && a != 155 && (decide (a < 201) || decide (208 < a))
 
 /-- The `CTL` words of `imC`, as a test. -/
 def imPc (w : Word) : Bool :=

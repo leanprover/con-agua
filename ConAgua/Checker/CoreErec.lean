@@ -22,7 +22,7 @@ open L.Arena L.Compiler
 names_tree coreTree : coreFns
 
 /-- The arrays of `coreErecA`, as a test. -/
-def coreErecPa (a : ArrId) : Bool := decide (a < 320) && a != EREC
+def coreErecPa (a : ArrId) : Bool := decide (a < 388) && a != EREC
 
 /-- The `CTL` words of `coreErecC`, as a test. -/
 def coreErecPc (w : Word) : Bool := decide (w.toNat < 256)

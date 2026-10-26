@@ -21,7 +21,7 @@ open L.Arena L.Ind L.Compiler
 names_tree stageCoreTree : stageCoreFns
 
 /-- The arrays of `coreStageA`, as a test. -/
-def coreStagePa (a : ArrId) : Bool := decide (a < 320) && a != EREC && a != IW && a != PINS &&
+def coreStagePa (a : ArrId) : Bool := decide (a < 388) && a != EREC && a != IW && a != PINS &&
   a != 51 && a != 155 && (decide (a < 201) || decide (208 < a))
 
 /-- The `CTL` words of `coreStageC`, as a test. -/

@@ -16,7 +16,7 @@ namespace L.Arena
 
 /-- The arrays the loop's non-inductive callees may write: all but the inductive stage's memos. -/
 def imA : List ArrId :=
-  (List.range 320).filter fun b => b ≠ 51 ∧ b ≠ 155 ∧ (b < 201 ∨ 208 < b)
+  (List.range 388).filter fun b => b ≠ 51 ∧ b ≠ 155 ∧ (b < 201 ∨ 208 < b)
 
 /-- The `CTL` words the loop's non-inductive callees may write: all but the memos' epochs. -/
 def imC : List Word :=

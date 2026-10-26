@@ -17,7 +17,7 @@ open L.Arena L.Compiler
 names_tree loopAllTree : loopFns
 
 /-- The arrays of `loopA`, as a test. -/
-def loopPa (a : ArrId) : Bool := decide (a < 320) && a != PINS
+def loopPa (a : ArrId) : Bool := decide (a < 388) && a != PINS
 
 /-- The `CTL` words of `loopC`, as a test. -/
 def loopPc (w : Word) : Bool := decide (w.toNat < 1024)

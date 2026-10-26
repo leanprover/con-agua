@@ -53,7 +53,7 @@ names_tree declLoopTree : declLoopFns
 
 /-- The arrays of `stepA`, as a test. -/
 def stepPa (a : ArrId) : Bool :=
-  decide (a < 320) && a != PEND && a != DECL && a != DLP && (decide (a < 146) || decide (149 < a))
+  decide (a < 388) && a != PEND && a != DECL && a != DLP && (decide (a < 146) || decide (149 < a))
 
 /-- The `CTL` words of `stepC`, as a test. -/
 def stepPc (w : Word) : Bool :=
