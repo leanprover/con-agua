@@ -714,7 +714,7 @@ theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
     CheckR dn m' a' vis fe :=
   ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf,
-    hR.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf, hmode⟩
+    hR.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf (.of_lowT hA), hmode⟩
 
 /-- `scratch_enter()` refines `enterScratch` under `CheckR`. -/
 @[refines ConRon.Arena.enterScratch]
