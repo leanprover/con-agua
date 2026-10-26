@@ -4,7 +4,7 @@ import ConAgua.Checker.VerdictTop
 /-!
 # The verdict theorem for the sequential driver of the committed file
 
-`checkerFile_verdict`: the harness calls the driver `ca_start` of `checker.s` as `AbiCall` says.
+`checkerFile_verdict_of`: the harness calls the driver `ca_start` of `checker.s` as `AbiCall` says.
 The machine returns to the caller, and if it reports `rdx = 2` with a code whose class
 `rax &&& 3` is `1` (reject) or `2` (decline), the twin's pipeline on `[b]` fails with an error of
 that class (`TwinVerdict`): `invalid` for a reject, `notImplemented` for a decline. Every other
@@ -56,7 +56,7 @@ theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k :
 /-- **The verdict theorem for the driver of `checker.s`**: the machine returns to `ra`, and if it
 reports `rdx = 2` with a code of class `1` or `2` (`rax &&& 3`), the twin's pipeline on `[b]`
 fails with an error of that class, given the entries' verdict claims (`SeqVerdicts`). -/
-theorem checkerFile_verdict [Host]
+theorem checkerFile_verdict_of [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
     (hc : AbiCall b pb dm ra) :
@@ -69,7 +69,7 @@ theorem checkerFile_verdict [Host]
       HDRF CTLF 132 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
 
-/-- info: 'ConAgua.Final.checkerFile_verdict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms checkerFile_verdict
+/-- info: 'ConAgua.Final.checkerFile_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_verdict_of
 
 end ConAgua.Final

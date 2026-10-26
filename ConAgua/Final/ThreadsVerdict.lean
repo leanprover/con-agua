@@ -5,7 +5,7 @@ import ConAgua.Verdict.ThreadsE
 /-!
 # The verdict theorem for the threaded harness of the committed file
 
-`checkerFile_threads_verdict`: the trusted threaded harness (`main.c`, `run_jobs`) runs entry 1
+`checkerFile_threads_verdict_of`: the trusted threaded harness (`main.c`, `run_jobs`) runs entry 1
 (`ca_start_a`) of `checker.s` and hands the buffer it left to its threads, each calling
 `ca_check_b` once per group index it claims, on its own region (as `ThreadsRun`,
 `Final/ThreadsFinal.lean`). If the run reports a failure with the code `k` (`ThreadsFail`): entry 1
@@ -268,7 +268,7 @@ harness's run reports a failure with the code `k` (`ThreadsFail`: entry 1 return
 a thread's call returned `rdx = 2` after its earlier calls accepted) and the class `k &&& 3` is
 `1` (reject) or `2` (decline), the twin's pool on `[b]` fails with that class
 (`TwinVerdictPooled`), given the L-level verdict claims (`ThreadVerdicts`). -/
-theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem checkerFile_threads_verdict_of [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
     (hV : ThreadVerdicts) (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
@@ -277,7 +277,7 @@ theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile 
   · exact (entry1Fail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ hV.entry1 hE hk).pooled
   · exact threadFail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ B t i hV.cp hT hk
 
-/-- info: 'ConAgua.Final.checkerFile_threads_verdict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms checkerFile_threads_verdict
+/-- info: 'ConAgua.Final.checkerFile_threads_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_threads_verdict_of
 
 end ConAgua.Final

@@ -11,9 +11,10 @@ claims: the twin's pipeline on the same bytes fails with an error of that class 
 The entry-2 statement has `drv_twinAccepts`' hypotheses: entry 1 returned `2^63 + k` on its
 memory, and entry 2 runs on a memory that keeps phase B's arrays.
 
-`SeqVerdicts checkerProg` is what the per-function error refinements add up to; the final verdict
-theorem (`checkerFile_verdict`, `Final/VerdictFinal.lean`) takes it as its hypothesis until it is
-proved.
+`SeqVerdicts checkerProg` is what the per-function error refinements add up to
+(`seqVerdicts_proved`, `Verdict/IndArmTopE.lean`); `checkerFile_verdict_of`
+(`Final/VerdictFinal.lean`) takes it as a hypothesis, and the final theorems
+(`Final/EndToEnd.lean`) discharge it.
 -/
 
 open ConRon.Arena ConAgua.Final
