@@ -153,8 +153,11 @@ class System:
         if rc is None:
             return "timeout"
         if self.kind == "L":
-            return {"accept": "accept", "ok 1": "reject-front", "exhausted": "exhausted",
-                    "error": "error"}.get(out, "other " + out[:40])
+            for prefix, v in (("rejected", "reject"), ("declined", "decline"), ("error", "error")):
+                if out == prefix or out.startswith(prefix + ":"):
+                    return v
+            return {"accept": "accept", "ok 1": "reject-front",
+                    "exhausted": "exhausted"}.get(out, "other " + out[:40])
         if self.kind == "con-ron":
             return {0: "accept", 1: "reject", 2: "decline", 3: "error"}.get(rc, f"exit {rc}")
         return e2e.ref_verdict(out, "ok")[0]
