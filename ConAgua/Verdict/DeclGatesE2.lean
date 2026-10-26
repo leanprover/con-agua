@@ -327,4 +327,125 @@ theorem cmE (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : 
 
 end certs
 
+section typePins
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+  {p : Prog}
+
+/-- **`check_type_pins`' error claim under `StageC`** (the error half of `ctpC`), on the model, by
+induction on the pairs. -/
+theorem ctpE (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
+    (henv : ConLeche.EnvWF env) (hcE : CoreStubsE p) (hnv : closedNV p L.Checker.nvFns = true) :
+    ∀ (tps : List (NIdx × EIdx)) (tpsP : List (ConLeche.Name × ConLeche.Expr)) (o l : Word)
+      (k : Nat), k ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (e : Err),
+      StageC dn vis fe env m a → L.Stubs.CrOK m → L.Rom.TPinsR m o l tps →
+      ConRon.Bridge.TypePinsDenote a.store tps tpsP →
+      (∀ q ∈ tpsP, (ConLeche.typePinStored env q.1).hasFvar = false ∧ q.2.hasFvar = false) →
+      checkTypePinsE p k m vis o l = .error e →
+      ErrClaim (checkTypePins V fe tps) a e := by
+  intro tps
+  induction tps with
+  | nil =>
+    intro tpsP o l k _ m a e hC _ ht hd _ hw
+    have hl : l = 0 := UInt64.toNat_inj.mp (by have := ht.2.1; simpa using this)
+    cases k with
+    | zero => rw [checkTypePinsE.eq_1] at hw; cases hw; exact fun hk => absurd rfl hk
+    | succ k => rw [checkTypePinsE.arm1 p k m vis o l hl] at hw; cases hw
+  | cons tp tps ih =>
+    intro tpsP o l k hk m a e hC hCr ht hd hcl' hw
+    cases tpsP with
+    | nil => exact hd.elim
+    | cons q qs =>
+    obtain ⟨hd1, hd2, hd3⟩ := hd
+    cases k with
+    | zero => rw [checkTypePinsE.eq_1] at hw; cases hw; exact fun hk => absurd rfl hk
+    | succ k =>
+    have hk' : k ≤ 2 ^ 62 := by omega
+    obtain ⟨hb, hlen, hv⟩ := ht
+    have hl0 : l ≠ 0 := fun e => by rw [e] at hlen; simp at hlen
+    rw [checkTypePinsE.arm2 p k m vis o l hl0] at hw
+    obtain ⟨v0, v1⟩ := hv 0 (by simp)
+    simp only [List.getElem_cons_zero, show (2 : Word) * UInt64.ofNat 0 = 0 from rfl,
+      UInt64.add_zero] at v0 v1
+    rw [v0] at hw
+    have htl := L.Rom.top_lt m
+    have hD6 := hD.toDmProg7.toDmProg6
+    simp only [checkTypePins]
+    -- the stored type
+    cases h1 : callE p k "type_pin_stored" [vis, tp.1.word.toUInt64] m with
+    | error e1 =>
+      rw [h1, checkTypePinsE.k_type_pin_stored.none] at hw; cases hw
+      exact ErrClaim.bind_left (nvlG hnv (by decide +kernel) h1)
+    | ok q1 =>
+    obtain ⟨r1, m1⟩ := q1
+    rw [h1, checkTypePinsE.k_type_pin_stored.arm1] at hw
+    obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ :=
+      (tps_ref hD6 tp.1.word.toUInt64) k m a r1 m1 ⟨hC.stage, dmWord_lt32 _⟩ (callW_of_callE h1)
+    have hCr1 := hkp.call (im_mem _ rfl) (callW_of_callE h1) hCr
+    rw [decI_word] at hrun1
+    obtain ⟨hck1, hxt1, hp1, hden1⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a) rfl hrun1
+      (ConRon.Bridge.typePinStored_spec a tp.1 q.1 hC.check hd1)
+    have c1 : CoreStep V env fe a a1 := ⟨hck1, hxt1, hp1⟩
+    have hC1 := StageC.of_core hC hS1 (callW_leafFrame hcl (leaf_mem _ (by decide)) (callW_of_callE h1)) c1
+    rw [← hx1] at hden1 hrun1
+    have hrd : rdW (m1.arr64 EREC) (o + 1) = tp.2.word.toUInt64 := by
+      rw [rdW_erec_grow hg1 (by
+        have hlen1 : l.toNat = tps.length + 1 := by simpa using hlen
+        obtain ⟨_, h1⟩ := L.Rom.pairIdx (o := o) (i := 0) (by omega)
+        simp only [show (2 : Word) * UInt64.ofNat 0 = 0 from rfl, UInt64.add_zero] at h1
+        rw [h1]; omega)]
+      exact v1
+    rw [hrd] at hw
+    refine ErrClaim.bind_right hrun1 ?_
+    -- the comparison
+    cases h2 : callE p k "is_def_eq_core" [vis, 0, r1.headD 0, tp.2.word.toUInt64] m1 with
+    | error e2 =>
+      rw [h2, checkTypePinsE.k_is_def_eq_core.none] at hw; cases hw
+      have := hcE.isDefEqCore k hk' hC1.stageT 0 (r1.headD 0) tp.2.word.toUInt64 hl1
+        (dmWord_lt32 _) _ h2
+      rw [decI_word] at this
+      exact ErrClaim.bind_left this
+    | ok q2 =>
+    obtain ⟨r2, m2⟩ := q2
+    rw [h2] at hw
+    have hCr2 := hkp.call (im_mem _ rfl) (callW_of_callE h2) hCr1
+    obtain ⟨x2, a2, hrun2, hT2, hg2, hd2'⟩ :=
+      hq.isDefEqCore_sim k hk' hC1.stageT 0 (r1.headD 0) tp.2.word.toUInt64 hl1 (dmWord_lt32 _)
+        r2 m2 (callW_of_callE h2)
+    have h0w : (0 : Word).toNat = 0 := rfl
+    rw [h0w] at hrun2
+    have hq1 := hcl' q (by simp)
+    obtain ⟨hck2, hx2', hp2, -⟩ := defeq_check henv hC1.check hden1
+      (by rw [decI_word]; exact ConRon.Bridge.denote_ext hd2 c1.ext)
+      (ConLeche.Expr.WScoped.of_not_hasFvar hq1.1) (ConLeche.Expr.WScoped.of_not_hasFvar hq1.2) hrun2
+    have c2 : CoreStep V env fe a1 a2 := ⟨hck2, hx2', hp2⟩
+    have hC2 := StageC.of_T hT2 hck2
+    have hrun2' : (isDefEqCore V fe checkFuel 0 (decI (r1.headD 0)) tp.2).run a1 = .ok (x2, a2) := by
+      rw [← decI_word tp.2]; exact hrun2
+    refine ErrClaim.bind_right hrun2' ?_
+    by_cases z2 : r2.headD 0 = 0
+    · rw [checkTypePinsE.k_is_def_eq_core.arm1 p _ _ _ _ _ _ z2] at hw; cases hw
+    rw [checkTypePinsE.k_is_def_eq_core.arm2 p _ _ _ _ _ _ z2] at hw
+    have hx2 : x2 = true := by rw [← hd2']; simpa [decBool] using z2
+    rw [hx2]
+    refine ErrClaim.ite_pos rfl ?_
+    have hG2 : IWGrow m m2 := hg1.trans hg2
+    have hlen' : l.toNat = tps.length + 1 := by simpa using hlen
+    have hrest : L.Rom.TPinsR m2 (o + 2) (l - 1) tps := by
+      have hl1' : (l - 1).toNat = l.toNat - 1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+      have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
+      refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1']; omega, by rw [hl1']; omega,
+        fun i hi => ?_⟩ ⟨hG2.2.1, hG2.2.2.2⟩
+      have := hv (i + 1) (by simpa using hi)
+      simp only [List.getElem_cons_succ] at this
+      have e : o + 2 * UInt64.ofNat (i + 1) = o + 2 + 2 * UInt64.ofNat i := by
+        rw [UInt64.ofNat_add, UInt64.ofNat_one, UInt64.mul_add, UInt64.mul_one]; ac_rfl
+      rw [e] at this
+      exact this
+    exact ih qs (o + 2) (l - 1) k hk' m2 a2 e hC2 hCr2 hrest
+      (ConRon.Bridge.TypePinsDenote.mono (c1.trans c2).ext _ _ hd3)
+      (fun r hr => hcl' r (by simp [hr])) hw
+
+end typePins
+
 end L.Arena
