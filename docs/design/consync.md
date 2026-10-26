@@ -108,3 +108,10 @@ What cost time beyond the twin's diff:
   `loopStepOut` (`LoopProgInd.lean`) and the nine lists of `IndArmFns.lean` have no generator;
   their closures were recomputed by a throwaway `#eval` over `checkerProg`'s call graph (removing `proj_table_name` took `intern_nstr` out of `coreFns`, so
   `declExtFns` gained it).
+
+Result: `scripts/diff-e2e.py --refs` on con-leche 0d2f467b's 634 fixtures: all agree with the
+expectation, with con-ron ed864140 and with `e2e-ref` (406 accepted, 228 not; no verdict kind
+differs). `scripts/e2e.py` (675 fixtures with the arena tests): 425 agree on accept, con-ron and
+`e2e-ref` disagree nowhere; its 223 `l-crash` rows are the shipped binary's `rejected: …` /
+`declined: …` lines, which `l_outcome` does not parse yet (the class word matches the reference
+on every one checked).
