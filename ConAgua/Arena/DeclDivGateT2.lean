@@ -351,9 +351,10 @@ theorem ctpC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     -- the pinned type, read after the leaf
     have hrd : rdW (m1.arr64 EREC) (o + 1) = tp.2.word.toUInt64 := by
       rw [rdW_erec_grow hg1 (by
-        obtain ⟨_, h1⟩ := L.Rom.pairIdx (o := o) (i := 0) (by simp at hlen; omega)
+        have hlen1 : l.toNat = tps.length + 1 := by simpa using hlen
+        obtain ⟨_, h1⟩ := L.Rom.pairIdx (o := o) (i := 0) (by omega)
         simp only [show (2 : Word) * UInt64.ofNat 0 = 0 from rfl, UInt64.add_zero] at h1
-        rw [h1]; simp at hlen; omega)]
+        rw [h1]; omega)]
       exact v1
     rw [hrd] at hw
     -- the comparison
@@ -391,11 +392,12 @@ theorem ctpC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hG2 : IWGrow m m2 := hg1.trans hg2
+    have hlen' : l.toNat = tps.length + 1 := by simpa using hlen
     have hrest : L.Rom.TPinsR m2 (o + 2) (l - 1) tps := by
       have hl1' : (l - 1).toNat = l.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
       have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
-      refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1']; simp at hlen; omega, by rw [hl1']; simp at hlen; omega,
+      refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1']; omega, by rw [hl1']; omega,
         fun i hi => ?_⟩ ⟨hG2.2.1, hG2.2.2.2⟩
       have := hv (i + 1) (by simpa using hi)
       simp only [List.getElem_cons_succ] at this
