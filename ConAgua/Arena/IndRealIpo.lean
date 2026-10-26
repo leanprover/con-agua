@@ -252,7 +252,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
   have n4 : ∀ x : Nat, x ≠ 4 → wk.toNat = x → wk ≠ 4 := fun x hx h0 e => hx (by rw [← h0, e]; rfl)
   rcases hk with ⟨h0, cv, -, hx⟩ | ⟨h0, cv, v, hi, -, -, -, hx⟩ | ⟨h0, cv, -, hx⟩ |
     ⟨h0, cv, caps, hcv, -, hx⟩ | ⟨h0, cv, npc, nf, -, hnpc, -, hx⟩ |
-    ⟨h0, cv, mi, rp, ro, rc, rules, -, -, -, -, -, -, hx⟩ | ⟨h0, tbl, -, hx⟩
+    ⟨h0, cv, mi, rp, ro, rc, rules, -, -, -, -, -, -, hx⟩
   · rw [hx]; exact other _ (n3 0 (by decide) h0) (n4 0 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
   · rw [hx]; exact other _ (n3 1 (by decide) h0) (n4 1 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
   · rw [hx]; exact other _ (n3 2 (by decide) h0) (n4 2 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
@@ -316,7 +316,6 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
         simp only [beq_iff_eq]; have := Classical.not_not.mp hne; rw [← this, hnpcT]
       simp [this, hres]
   · rw [hx]; exact other _ (n3 5 (by decide) h0) (n4 5 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
-  · rw [hx]; exact other _ (n3 6 (by decide) h0) (n4 6 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
 
 theorem ipoW_sig : ∀ (k : Nat) (m : Mem) (np o l j : Word) (sg : Sig), ipoW k m np o l j = some sg →
     sg = .normal ∨ sg = .ret [0] := by

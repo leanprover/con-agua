@@ -73,19 +73,11 @@ theorem ctc_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m
     (hS : StageR dn vis fe m a) {x : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) dn x.toNat = some ci) :
     decCV (erecP m) (x + 1).toNat = some ci.toConstantVal := by
-  obtain ⟨wk, e, hk⟩ := ciD hci
   have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
   have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
-  have step : ∀ {cv : IConstantVal}, decCV (erecP m) (x.toNat + 1) = some cv →
-      decCV (erecP m) (x + 1).toNat = some cv := by
-    intro cv hcv
-    obtain ⟨w, hw, -⟩ := decCV_name hcv
-    have := toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw
-    rw [this]; exact hcv
-  rcases hk with ⟨k0, cv, hcv, rfl⟩ | ⟨k0, cv, v, hi, hcv, hv, hhi, rfl⟩ | ⟨k0, cv, hcv, rfl⟩ |
-      ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
-      ⟨k0, cv, mi, rp, o, c, rules, hcv, hmi, hrp, ho, hc, hr, rfl⟩ <;>
-    exact step hcv
+  have hcv := decCI_cv hci
+  obtain ⟨w, hw, -⟩ := decCV_name hcv
+  rw [toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw]; exact hcv
 
 section refs
 variable (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)

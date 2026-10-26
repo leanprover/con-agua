@@ -52,7 +52,7 @@ def armText : Prog :=
 /-- The functions the theorem arm reaches. -/
 def thmArmFns : List FnName :=
   ["check_decl_thm", "erec_ci", "erec_alloc", "dlp_copy", "check_constant_val", "install_header",
-   "env_find", "env_row_get", "env_ix", "reserved_contains", "reserved_from", "is_proj_fn_shape",
+   "env_find", "env_row_get", "env_ix", "reserved_contains", "reserved_from",
    "cv_lps", "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains",
    "loose_bvars_bounded_fast", "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast",
    "infer_type_core", "ensure_sort_core", "check_thm_val", "pin_word", "lvl_eq_fueled", "lvl_eq_c",
@@ -65,7 +65,7 @@ def thmArmFns : List FnName :=
 def opqArmFns : List FnName :=
   ["check_decl_opaque", "check_opaque_val", "pin_at", "check_reduce_pin", "reduce_stored_ok",
    "reduce_op_cv_a", "rom_cv", "matches_pin", "cv_eq", "er_sl_eq", "reduce_elem_ok", "rom_ci", "ci_eq",
-   "tbl_eq", "tbl_eq_a", "er_sl_at", "ci_eq_rest", "hint_eq", "caps_eq", "caps_eq_a", "b_eq",
+   "er_sl_at", "ci_eq_rest", "hint_eq", "caps_eq", "caps_eq_a", "b_eq",
    "caps_eq_b", "pw_eq", "caps_eq_c", "rules_eq", "rule_eq_but_rhs", "rule_eq_a", "rule_eq_b",
    "reduce_pin_guard", "reduce_decl_pin", "rom_expr_pin", "reduce_cert_var", "const_e", "intern_const",
    "const_find", "const_push", "intern_fvar", "fvar_find", "fvar_push", "mk_app", "der_b",

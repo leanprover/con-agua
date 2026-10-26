@@ -61,38 +61,8 @@ theorem envPushW_frame {m m' : Mem} {vis q : Word} {r : List Word}
   exact (hf1.trans ((MemFrame.set64 _ ECON (by decide) _ _).mono (by simp) (by simp))).trans
     ((MemFrame.setCtl _ 128 _).mono (by simp) (by simp))
 
-/-- `is_proj_fn_shape`'s twin run keeps the state (it reads the name store). -/
-theorem isProjFnShape_st {n : NIdx} {a a' : AState} {b : Bool}
-    (h : (NIdx.isProjFnShape n).run a = .ok (b, a')) : a' = a := by
-  unfold NIdx.isProjFnShape viewN at h
-  split at h
-  · simp only [StateT.run_bind, StateT.run_get, pure_bind] at h
-    cases hv : a.store.ns.view n with
-    | none => simp [hv, fail] at h; cases h
-    | some v =>
-      simp only [hv, StateT.run_pure, pure_bind] at h
-      cases v with
-      | num p k =>
-        dsimp only at h
-        by_cases hp : Idx.tag p = NTag.str
-        · simp only [hp, beq_self_eq_true, ite_true, StateT.run_bind, StateT.run_get, pure_bind] at h
-          cases hw : a.store.ns.view p with
-          | none => simp [hw, fail] at h; cases h
-          | some w =>
-            simp only [hw, StateT.run_pure, pure_bind] at h
-            cases w <;> (simp only [StateT.run, StateT.pure, pure, Except.pure, Except.ok.injEq,
-              Prod.mk.injEq] at h; exact h.2.symm)
-        · rw [if_neg (by simpa using hp)] at h
-          simp only [StateT.run, StateT.pure, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
-          exact h.2.symm
-      | _ =>
-        simp only [StateT.run, StateT.pure, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
-        exact h.2.symm
-  · simp only [StateT.run, StateT.pure, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
-    exact h.2.symm
-
 /-- **`install_header` under `StageT`** (`ihW_ok`'s, lane `loopt2`): the copy by its frame
-(`StageT.of_iw`), `is_proj_fn_shape` and the closedness walks by their `StageT` refinements, the
+(`StageT.of_iw`), the closedness walks by their `StageT` refinements, the
 two walks real (lane `indstaget`): `all_level_params_defined` by `apdF_okT` (the parameters' names
 read back at the entry, the guards before it keeping the twin's store), `consts_resolve_ffast` by
 `crfF_okT` (its memo `CrOK` carried across the guards by their frames). `AbsOK` is kept too
@@ -136,28 +106,14 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   have hc0 : c = 0 := by simpa using hb2
   subst hc0
   obtain ⟨rl, hrunR, hrl⟩ := resContW_miss hwxl h2 hS.stage.1.pins
-  -- `is_proj_fn_shape(x)`
-  cases h3 : ipfF m1 [wx] with
-  | none => rw [h3] at h; simp [ihK3] at h
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, ihK3_some] at h
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
-    ipfF_okT dn vis fe wx hwxl m1 m3 a r3 h3 hS
-  have hCr3 := CrOK.frame hCr (ipfF_frame h3) (by decide) (by decide)
-  have hA3 : AFr m1 m3 := AFr.of_frame (ipfF_frame h3)
-  have hst3 : a3 = a := isProjFnShape_st hrun3
-  by_cases hb3 : r3.headD 0 ≠ 0
-  · rw [if_pos hb3] at h; simp at h
-  rw [if_neg hb3] at h
   -- `cv_lps(q)`
-  have hq3 : decCV (erA m3) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg3) hq
+  have hq3 : decCV (erA m1) q.toNat = some cv := hq0
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq3
-  have e1 : rdW (m3.arr64 EREC) (q + 1) = w1 :=
+  have e1 : rdW (m1.arr64 EREC) (q + 1) = w1 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw1
-  have e2 : rdW (m3.arr64 EREC) (q + 2) = w2 :=
+  have e2 : rdW (m1.arr64 EREC) (q + 2) = w2 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw2
-  have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (m3.arr64 EREC).size := by
+  have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (m1.arr64 EREC).size := by
     rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
     · exact .inl h0
     · exact .inr (L.Ind.hslice?_bound _ _ _ _ hsl h0)
@@ -165,15 +121,15 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   | zero => simp [cvLpsW, ihK4] at h
   | succ n =>
   rw [cvLpsW_step, e1, e2] at h
-  cases h4 : erToIwW n m3 w1 w2 with
+  cases h4 : erToIwW n m1 w1 w2 with
   | none => rw [h4] at h; simp [ihK4] at h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, ihK4_some] at h
-  obtain ⟨-, hr4t, hdec4, hS4R, hg4, htop4⟩ := erToIwW_stage h4 hS3.stage hsrc
-  have hS4 := StageT.of_iw hS3 hS4R (erToIwW_frame h4 hS3.stage hsrc)
-  have hCr4 := CrOK.frame hCr3 (erToIwW_frame h4 hS3.stage hsrc) (by decide) (by decide)
-  have hA4 : AFr m1 m4 := hA3.trans (erToIwW_afr h4)
+  obtain ⟨-, hr4t, hdec4, hS4R, hg4, htop4⟩ := erToIwW_stage h4 hS.stage hsrc
+  have hS4 := StageT.of_iw hS hS4R (erToIwW_frame h4 hS.stage hsrc)
+  have hCr4 := CrOK.frame hCr (erToIwW_frame h4 hS.stage hsrc) (by decide) (by decide)
+  have hA4 : AFr m1 m4 := erToIwW_afr h4
   rw [hr4t] at h
   have hdecL : decHL m4 (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
     rw [hdec4]; exact hsl
@@ -201,7 +157,7 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   obtain ⟨r6, m6⟩ := rm6
   rw [h6, ihK6_some] at h
   obtain ⟨x6, a6, hrun6, hS6, hg6, hx6, -⟩ :=
-    lbbF_okT dn vis fe 4000000000 0 wt hwtl m4 m6 a3 r6 h6 hS4
+    lbbF_okT dn vis fe 4000000000 0 wt hwtl m4 m6 a r6 h6 hS4
   have hCr6 := CrOK.frame hCr4 (lbbF_frame h6) (by decide) (by decide)
   have hA6 : AFr m1 m6 := hA4.trans (AFr.of_frame (lbbF_frame h6))
   by_cases hb6 : r6.headD 0 = 0
@@ -228,7 +184,7 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   have hdec7 : decHL m7 (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
     rw [decHL_grow (hg6.trans hg7) (by omega), hdecL]
   have hst7 : a7.store = a.store := by
-    rw [hffF_store hrun7, lbbF_store hrun6, hst3]
+    rw [hffF_store hrun7, lbbF_store hrun6]
   obtain ⟨x8, a8, hrun8, hS8, hg8, hx8, -⟩ :=
     apdF_okT dn vis fe (r4.headD 0) w2 wt hwtl cv.levelParams m7 m8 a7 r8 h8
       ⟨hS7, hdec7, by rw [hst7]; exact hlpsN⟩
@@ -251,18 +207,17 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   rw [if_neg hb9] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
-  have ex3 : x3 = false := by rw [← hx3]; simpa using hb3
   have ex6 : x6 = true := by rw [← hx6]; simpa using hb6
   have ex7 : x7 = false := by rw [← hx7]; simpa using hb7
   have ex8 : x8 = true := by rw [← hx8]; simpa using hb8
   have ex9 : x9 = true := by rw [← hx9]; simpa using hb9
   rw [fuelW] at hrun6 hrun7
   rw [show ((0 : Word).toNat) = 0 from rfl] at hrun6
-  rw [← hname] at hfind hrun3 hrl
+  rw [← hname] at hfind hrl
   rw [← hty] at hrun6 hrun7 hrun8 hrun9
-  refine ⟨a9, ?_, hS9, hg3.trans (hg4.trans (hg6.trans (hg7.trans (hg8.trans hg9)))), hCr9.crOK, hA9⟩
+  refine ⟨a9, ?_, hS9, hg4.trans (hg6.trans (hg7.trans (hg8.trans hg9))), hCr9.crOK, hA9⟩
   simp only [installHeader, StateT.run_bind, hfind, Option.isSome_none, Bool.false_eq_true,
-    if_false, hrunR, exc_ok_bind', hrl, hrun3, ex3, hnd, hrun6, ex6, hrun7, ex7, hrun8, ex8,
+    if_false, hrunR, exc_ok_bind', hrl, hnd, hrun6, ex6, hrun7, ex7, hrun8, ex8,
     hrun9, ex9, if_true, StateT.run_pure]
   rfl
 

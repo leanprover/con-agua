@@ -24,7 +24,7 @@ open L.Arena
 
 def ciTag : IConstantInfo → Nat
   | .axiomInfo _ => 0 | .defnInfo .. => 1 | .thmInfo _ => 2 | .indInfo .. => 3
-  | .ctorInfo .. => 4 | .recInfo .. => 5 | .projInfo _ => 6
+  | .ctorInfo .. => 4 | .recInfo .. => 5
 
 theorem decCI_tag {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {ci : IConstantInfo} (h : decCI a dn p = some ci) :
@@ -43,7 +43,7 @@ theorem decCI_tag {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat
   cases ha1
   refine ⟨w, hw, ?_⟩
   rw [hwk]
-  rcases k with _ | _ | _ | _ | _ | _ | _ | k
+  rcases k with _ | _ | _ | _ | _ | _ | k
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, hcv, rfl⟩ := h; rfl
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
@@ -56,8 +56,6 @@ theorem decCI_tag {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat
     obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h; rfl
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨tbl, htbl, rfl⟩ := h; rfl
   · simp at h
 
 /-- A record's constant value reads: the level-parameter count word and the type word. -/
@@ -101,15 +99,11 @@ theorem tagWord {m : Mem} {q : Word} {ci : IConstantInfo} {dn : NIdx → Option 
   obtain ⟨w, hw, ht⟩ := decCI_tag h
   rw [rdW_erec_of hsz hw, ht]
 
-/-- The inline constant value of a non-projection record decodes at `q + 1`. -/
+/-- The record's constant value decodes at `q + 1`. -/
 theorem ciCv_decodes {m : Mem} {q : Word} {ci : IConstantInfo} {cv : IConstantVal}
     {dn : NIdx → Option ConLeche.Name} (h : decCI (erecP m) dn q.toNat = some ci)
-    (hcv : ciCv? ci = some cv) : decCV (erecP m) (q.toNat + 1) = some cv := by
-  obtain ⟨w, hw, hcase⟩ := decCI_shape h
-  rcases hcase with ⟨-, cv', hcv', hdec⟩ | ⟨-, tbl, rfl, -⟩
-  · rw [hcv] at hcv'; cases hcv'; exact hdec
-  · simp [ciCv?] at hcv
-
+    (hcv : ci.toConstantVal = cv) : decCV (erecP m) (q.toNat + 1) = some cv :=
+  hcv ▸ decCI_cv h
 
 structure NatLitProg (p : Prog) : Prop extends NatCvProg p where
   lNatIndOk : p.lookup "nat_ind_ok" = some natIndOkL
@@ -188,7 +182,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
       cases ci with
       | indInfo cv caps =>
         rw [if_neg (by simpa using h3)] at hw
-        have hcvd := ciCv_decodes hci (by rfl : ciCv? (.indInfo cv caps) = some cv)
+        have hcvd := ciCv_decodes hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw
@@ -283,7 +277,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     · cases ci with
       | ctorInfo cv np nf =>
         rw [if_neg (by simpa using h4)] at hw
-        have hcvd := ciCv_decodes hci (by rfl : ciCv? (.ctorInfo cv np nf) = some cv)
+        have hcvd := ciCv_decodes hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
         obtain ⟨hm1, -, hr1⟩ := pinNat_call hN h1
@@ -394,7 +388,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     · cases ci with
       | ctorInfo cv np nf =>
         rw [if_neg (by simpa using h4)] at hw
-        have hcvd := ciCv_decodes hci (by rfl : ciCv? (.ctorInfo cv np nf) = some cv)
+        have hcvd := ciCv_decodes hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw

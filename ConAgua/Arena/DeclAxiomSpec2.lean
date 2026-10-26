@@ -119,7 +119,7 @@ theorem fpc_fail {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Wo
   have hw : wk = UInt64.ofNat wk.toNat := by simp
   rcases hk' with ⟨h1, cv, -, rfl⟩ | ⟨h1, cv, v, hi, -, -, -, rfl⟩ | ⟨h1, cv, -, rfl⟩ |
       ⟨h1, cv, caps, -, -, rfl⟩ | ⟨h1, cv, np, nf, -, hnp, hnf, rfl⟩ |
-      ⟨h1, cv, mi, rp, o, c, rules, -, -, -, -, -, -, rfl⟩ | ⟨h1, tbl, -, rfl⟩
+      ⟨h1, cv, mi, rp, o, c, rules, -, -, -, -, -, -, rfl⟩
   · simp [fpcShape]
   · simp [fpcShape]
   · simp [fpcShape]
@@ -139,7 +139,6 @@ theorem fpc_fail {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Wo
       · rw [ctor_counts hsz hnp hnf] at hf
         simp [hf]
   · simp [fpcShape]
-  · simp [fpcShape]
 
 /-- **The shape tests on a stored record, passing**: the twin's shape matches, with the constant
 value at `q + 1`. -/
@@ -154,7 +153,7 @@ theorem fpc_pass {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Wo
   subst hkw
   rcases hk' with ⟨h1, cv, -, rfl⟩ | ⟨h1, cv, v, hi, -, -, -, rfl⟩ | ⟨h1, cv, -, rfl⟩ |
       ⟨h1, cv, caps, hcv, -, rfl⟩ | ⟨h1, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
-      ⟨h1, cv, mi, rp, o, c, rules, -, -, -, -, -, -, rfl⟩ | ⟨h1, tbl, -, rfl⟩ <;>
+      ⟨h1, cv, mi, rp, o, c, rules, -, -, -, -, -, -, rfl⟩ <;>
     rcases hk with hk | hk <;> rw [hk] at h1 <;> simp at h1
   · exact ⟨cv, by simp [fpcShape, hk], hcv⟩
   · have h0 : np = 0 ∧ nf = 0 := by
@@ -171,7 +170,7 @@ theorem fpcShape_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : N
   obtain ⟨wk, -, hk'⟩ := ciD h
   rcases hk' with ⟨-, cv', -, rfl⟩ | ⟨-, cv', v, hi, -, -, -, rfl⟩ | ⟨-, cv', -, rfl⟩ |
       ⟨-, cv', caps, hcv, -, rfl⟩ | ⟨-, cv', np, nf, hcv, -, -, rfl⟩ |
-      ⟨-, cv', mi, rp, o, c, rules, -, -, -, -, -, -, rfl⟩ | ⟨-, tbl, -, rfl⟩ <;>
+      ⟨-, cv', mi, rp, o, c, rules, -, -, -, -, -, -, rfl⟩ <;>
     simp only [fpcShape] at hs <;> (try cases hs)
   · split at hs <;> cases hs; exact hcv
   · split at hs <;> cases hs; exact hcv

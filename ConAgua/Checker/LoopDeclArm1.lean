@@ -53,7 +53,7 @@ theorem checkerProg_armOwn3 : ∀ f ∈ armOwn3, checkerProg.lookup f = armText.
 /-- `armFns` but `openFns`, part 4. -/
 def armOwn4 : List FnName :=
   ["pin_at", "check_reduce_pin", "reduce_stored_ok", "reduce_op_cv_a", "matches_pin", "cv_eq",
-   "er_sl_eq", "reduce_elem_ok", "ci_eq", "tbl_eq", "tbl_eq_a", "er_sl_at"]
+   "er_sl_eq", "reduce_elem_ok", "ci_eq", "er_sl_at"]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in

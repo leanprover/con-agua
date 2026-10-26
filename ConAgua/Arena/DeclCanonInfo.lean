@@ -374,8 +374,7 @@ def cieW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, p, q =>
     if rdW (m.arr64 EREC) p ≠ rdW (m.arr64 EREC) q then some (0, m)
-    else if 6 < rdW (m.arr64 EREC) p then none
-    else if rdW (m.arr64 EREC) p = 6 then some (if tblEqB (m.arr64 EREC) p q then 1 else 0, m)
+    else if 5 < rdW (m.arr64 EREC) p then none
     else if rdW (m.arr64 EREC) p = 1 then cdW k m p q
     else if rdW (m.arr64 EREC) p = 4 ∧ (rdW (m.arr64 EREC) (p + 5) ≠ rdW (m.arr64 EREC) (q + 5) ∨
         rdW (m.arr64 EREC) (p + 6) ≠ rdW (m.arr64 EREC) (q + 6)) then some (0, m)
@@ -384,8 +383,7 @@ def cieW : Nat → Mem → Word → Word → Option (Word × Mem)
 
 theorem cieW_succ (k : Nat) (m : Mem) (p q : Word) : cieW (k + 1) m p q =
     (if rdW (m.arr64 EREC) p ≠ rdW (m.arr64 EREC) q then some (0, m)
-    else if 6 < rdW (m.arr64 EREC) p then none
-    else if rdW (m.arr64 EREC) p = 6 then some (if tblEqB (m.arr64 EREC) p q then 1 else 0, m)
+    else if 5 < rdW (m.arr64 EREC) p then none
     else if rdW (m.arr64 EREC) p = 1 then cdW k m p q
     else if rdW (m.arr64 EREC) p = 4 ∧ (rdW (m.arr64 EREC) (p + 5) ≠ rdW (m.arr64 EREC) (q + 5) ∨
         rdW (m.arr64 EREC) (p + 6) ≠ rdW (m.arr64 EREC) (q + 6)) then some (0, m)
@@ -404,7 +402,7 @@ theorem ciCanonEq_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p 
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        tblEq_spec pr hp n, ciCanonDefn_spec pr hp n, ciCanonRec_spec pr hp n,
+        ciCanonDefn_spec pr hp n, ciCanonRec_spec pr hp n,
         cvCanonEq_spec pr hp n] <;>
       finish (gen := 20)
 
@@ -431,10 +429,10 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])
   rcases hx with ⟨k0, cv, hcv, rfl⟩ | ⟨k0, cv, v, hi, hcv, hv, hhi, rfl⟩ | ⟨k0, cv, hcv, rfl⟩ |
       ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
-      ⟨k0, cv, mi, rp, o, cc, rules, hcv, hmi, hrp, ho, hcc, hr, rfl⟩ | ⟨k0, tbl, ht, rfl⟩ <;>
+      ⟨k0, cv, mi, rp, o, cc, rules, hcv, hmi, hrp, ho, hcc, hr, rfl⟩ <;>
   rcases hy with ⟨k1, cv', hcv', rfl⟩ | ⟨k1, cv', v', hi', hcv', hv', hhi', rfl⟩ | ⟨k1, cv', hcv', rfl⟩ |
       ⟨k1, cv', caps', hcv', hcaps', rfl⟩ | ⟨k1, cv', np', nf', hcv', hnp', hnf', rfl⟩ |
-      ⟨k1, cv', mi', rp', o', cc', rules', hcv', hmi', hrp', ho', hcc', hr', rfl⟩ | ⟨k1, tbl', ht', rfl⟩
+      ⟨k1, cv', mi', rp', o', cc', rules', hcv', hmi', hrp', ho', hcc', hr', rfl⟩
   all_goals first
     | (have hne : wk ≠ wk' := fun h => by have := congrArg UInt64.toNat h; omega
        rw [if_pos hne] at h
@@ -537,18 +535,6 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
     obtain ⟨b, a', hb, hr, hq⟩ := cwW_ok k h hS hp hq hP hL
     exact ⟨b, a', hb, hr, hq⟩
-  · -- proj
-    have e0 := wl wk 6 (by decide) k0
-    have e1 := wl wk' 6 (by decide) k1
-    subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hB := tblEqB_ok (a := erA m) hsz (p := p) (q := q) (ArrExt.decTbl (erecP_ext m) ht) (ArrExt.decTbl (erecP_ext m) ht')
-    refine ⟨tbl == tbl', a, ?_, ?_, hS, IWGrow.refl _, hP, hL⟩
-    · simp only [IConstantInfo.canonEq]; rfl
-    · simp only [erA] at hB
-      rw [hB]
-      by_cases e : tbl = tbl' <;> simp [e]
 
 
 /-- **`ci_canon_eq` refines `IConstantInfo.canonEq`.** -/

@@ -21,21 +21,6 @@ namespace L.Arena
 
 /-! ## Steps -/
 
-/-- **A twin step with a known run, then the rest.** -/
-theorem coreRef_bindRun {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α} {f : α → AM β}
-    {a a₁ : AState} {v : α} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name}
-    {m m₁ m' : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word}
-    {ok : List Word → Prop}
-    (hrun : T₁.run a = .ok (v, a₁)) (hA : CoreAfter dn m m₁ a₁ vis fe M eb)
-    (h₂ : ∀ M', CoreS dn m₁ a₁ vis fe M' eb → CoreRef (f v) a₁ dec dn m₁ vis fe M' eb r m' ok) :
-    CoreRef (T₁ >>= f) a dec dn m vis fe M eb r m' ok := by
-  have h₁ : CoreRef T₁ a (fun _ => v) dn m vis fe M eb [] m₁ (fun _ => True) :=
-    cref_run hrun hA rfl trivial
-  have hst : AM.st T₁ a = a₁ := (AM.of_run_ok _ _ _ _ hrun).2.1
-  refine coreRef_bind h₁ fun M' hS' => ?_
-  rw [hst] at hS' ⊢
-  exact h₂ M' hS'
-
 /-- Only the result's head word counts for a `Bool` result. -/
 theorem strHead_ref {T : AM Bool} {a : AState} {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r r' : List Word}
@@ -293,7 +278,7 @@ theorem cnTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
 /-- The twins' common prefix: the constant's value, no level parameters; then the tail `T`. -/
 def noLpT (T : EIdx → AM Bool) : Option IConstantInfo → AM Bool
   | some ci => do
-    let cv ← ci.toConstantVal
+    let cv := ci.toConstantVal
     if !cv.levelParams.isEmpty then pure false else T cv.type
   | none => pure false
 
@@ -322,8 +307,10 @@ theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   rcases h1 : callW p n "str_cv" [q] m with _ | ⟨c, m₁⟩
   · rw [h1, hn] at hW; cases hW
   rw [h1, hK] at hW
-  obtain ⟨cv, a₁, hrun, hA₁, -, -, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
-  refine coreRef_bindRun hrun hA₁ fun M₁ hS₁ => ?_
+  obtain ⟨hm₁, -, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
+  subst m₁
+  dsimp only [noLpT]
+  generalize ci.toConstantVal = cv at hlen hty
   by_cases hll : c.tail.headD 0 ≠ 0
   · rw [if_pos hll] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -333,7 +320,7 @@ theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
       · rw [hl] at hlen; exact absurd (UInt64.toNat_inj.mp (by rw [← hlen]; rfl)) hll
       · rfl
     rw [he]
-    exact coreRef_ret hS₁ (by unfold decBool; rw [← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
+    exact coreRef_ret hS (by unfold decBool; rw [← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
   rw [if_neg hll] at hW
   have he : cv.levelParams.isEmpty = true := by
     rcases hl : cv.levelParams with _ | ⟨x, xs⟩
@@ -342,7 +329,7 @@ theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
       have : c.tail.headD 0 = 0 := by simpa using hll
       rw [this] at hlen; simp at hlen
   simp only [he, Bool.not_true, Bool.false_eq_true, ↓reduceIte, hty]
-  exact htail _ _ _ _ hS₁ hhw hW
+  exact htail _ _ _ _ hS hhw hW
 
 /-- **`char_of_nat_ty_ok` refines `charOfNatTyOk`.** -/
 @[refines ConRon.Arena.charOfNatTyOk]

@@ -67,7 +67,7 @@ the ROM readers and the gates' leaves. Their specs come from their own refinemen
 `stubM_spec`), never from the texts' lookups; their write set is the checker's (`StepIn`). -/
 def openFns : List FnName :=
   ["infer_type_core", "ensure_sort_core", "is_def_eq_core", "loose_bvars_bounded_fast",
-   "has_fvar_fast", "all_level_params_defined", "is_proj_fn_shape", "nat_lit_supported", "rom_cv",
+   "has_fvar_fast", "all_level_params_defined", "nat_lit_supported", "rom_cv",
    "rom_ci", "rom_expr_pin", "rom_basis_decls", "rom_basis_decls_a", "rom_pin_sets",
    "consts_resolve_ffast"]
 

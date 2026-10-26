@@ -793,7 +793,7 @@ theorem romSetsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.me
     simp only [callFn, romSetsTo]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hp', hl', ht', ih', ha'] <;>
-      finish [Keep.size, Keep.pcap]
+      finish (gen := 30) (instances := 10000) [Keep.size, Keep.pcap, sets2K, sets3K, sets4K, setsK]
 
 theorem internPinSets_specW (n : Nat) (s₀ : St) (q : Word) (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄

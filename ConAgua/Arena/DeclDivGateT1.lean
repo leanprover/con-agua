@@ -1,6 +1,8 @@
 import ConAgua.Arena.DeclDivMod10
 import ConAgua.Arena.DeclCrpT
-import ConAgua.Arena.IndStubsT
+import ConAgua.Arena.StageTLift
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.IndRealWalkT
 import ConRon.Bridge.Checker.DivMod
 

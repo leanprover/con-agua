@@ -106,17 +106,14 @@ def erecVg : FunDecl := lfn (p, vk) locals (g) {
 
 /-- `install_header(vis, q)`: `installHeader fe cv`, `q` the constant value in `EREC`. -/
 -- con-ron: ConRon/Arena/CheckerSplit.lean:59-77 ConRon.Arena.installHeader
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.installHeader` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.installHeader]
-def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l, d, b, h, a) {
+def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a) {
   n := EREC.u64[q];
   t := EREC.u64[q + 3];
   (f, r) := call env_find(n, vis);
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   c := call reserved_contains(n);
   if c != 0 { fail R_RESERVED_BASIS_NAME };
-  s := call is_proj_fn_shape(n);
-  if s != 0 { fail R_RESERVED_PROJECTION_NAME };
   (o, l) := call cv_lps(q);
   d := call sl_nodup(o, l);
   if d == 0 { fail R_DUPLICATE_UNIVERSE_PARAMETERS };
