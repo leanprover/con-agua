@@ -7,10 +7,11 @@ public import Kraken.X64.Syntax
 @[expose] public section
 
 /-!
-# The naive compiler from L to Kraken x64
+# The compiler from L to Kraken x64
 
-See DESIGN.md, "The compiler". One pass, no register allocation: an expression is evaluated into
-`rax`, with intermediate values in fixed per-frame temporary slots.
+See DESIGN.md, "The compiler". One pass: an expression is evaluated straight into its target
+register by `gen`, with scratch registers; where `gen` does not apply, into `rax` with
+intermediate values in fixed per-frame temporary slots (`compileE`).
 
 **Machine state during L code.**
 * `r15` = `T`, the address of the run's descriptor table (`Tab`); pinned.
