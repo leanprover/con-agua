@@ -17,16 +17,18 @@ namespace L.Arena
 open L.Front (DECL DLP DeclsF)
 
 /-- **The loop's relation across a promotion-like step**: the writes land in the arrays below 50,
-`132‥136` and `146‥149` and in the `CTL` words below 64, `129`, `140‥147`; the arena side is
-given, the environment is given; the rest is a frame. -/
+`132‥136` and `146‥149`, the table arrays (`129‥131`, `143`, `385‥387`), and in the `CTL` words
+below 64, `129`, `133`, `140‥147`; the arena side is given, the environment is given; the rest is a
+frame. -/
 theorem LoopR.of_frame {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe fe' : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     {A : List ArrId} {C : List Word} {pm' : PMemo}
     (hR : LoopR pins dn m a vis fe pend ds) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, (b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
+    (hA : ∀ b ∈ A, ((b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
       (146 ≤ b ∧ b ≤ 149) ∨
-      (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320))
-    (hC : ∀ x ∈ C, x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147))
+      (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320)) ∨
+      ((129 ≤ b ∧ b ≤ 131) ∨ b = 143 ∨ (385 ≤ b ∧ b ≤ 387)))
+    (hC : ∀ x ∈ C, (x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147)) ∨ x.toNat = 133)
     (hcp : cp a' = cp a) (hg : ErecGrow m m') (hts : erecTop m' ≤ (m'.arr64 EREC).size)
     (hP : PMemoR m' pm') (hE : EnvR dn m' vis fe') (hmode : ModeOK m') :
     LoopR pins dn m' a' vis fe' pend ds := by

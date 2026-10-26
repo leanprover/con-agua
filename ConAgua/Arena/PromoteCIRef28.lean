@@ -22,7 +22,7 @@ theorem index_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     installed.length ≤ j.toNat + 1 → installed.length ≤ c.toNat →
     ConstsAt dn (erecP m) (m.arr64 ECON) j.toNat installed →
     callW p n "index_promoted" [c, j, k] m = some (r, m') →
-    EnvR dn m' vis ⟨fe.env, indexPromoted fe.idx c.toNat installed, fe.visibleBelow⟩ ∧
+    EnvR dn m' vis ⟨fe.env, indexPromoted fe.idx c.toNat installed, fe.visibleBelow, fe.tbls⟩ ∧
       MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m m' := by
   intro n
   induction n with
@@ -71,7 +71,7 @@ theorem index_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     subst hm1
     have hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m (rowSet m w c ptr) := rowSet_frame _ _ _ _ hrt
     have hE1 : EnvR dn (rowSet m w c ptr) vis
-        ⟨fe.env, fe.idx.insert (decI w) (c.toNat - 1, ci), fe.visibleBelow⟩ := by
+        ⟨fe.env, fe.idx.insert (decI w) (c.toNat - 1, ci), fe.visibleBelow, fe.tbls⟩ := by
       refine hE.setRow w c ptr hwl hrt hrb _ (some (c.toNat - 1, ci)) ?_ ?_ ?_
       · intro nn
         rw [Std.HashMap.getElem?_insert]

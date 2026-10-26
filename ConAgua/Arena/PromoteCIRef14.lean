@@ -28,14 +28,14 @@ include hp
 theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : Nat)
     (tbl : IProjTable) (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
     (hsz : (m.arr64 EREC).size < 2 ^ 64) (hts : erecTop m ≤ (m.arr64 EREC).size)
-    (htbl : decTbl (preE m D) q.toNat = some tbl) (hk6 : (m.arr64 EREC)[q.toNat]? = some 6)
+    (htbl : decTbl (preE m D) q.toNat = some tbl)
     (hqD : q.toNat + 13 ≤ D) (hDt : D ≤ erecTop m)
     (hc : callW p n "promote_proj_table" [f, q] m = some (r, m')) :
     ∃ a' pm' tbl', (promoteProjTable pm f.toNat tbl).run a = .ok ((pm', tbl'), a') ∧
       ArenaD m' a' ∧ PMemoR m' pm' ∧ cp a' = cp a ∧
       MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧ ErecGrow m m' ∧
       erecTop m' ≤ (m'.arr64 EREC).size ∧ (r.headD 0).toNat = erecTop m ∧
-      (r.headD 0).toNat + 13 ≤ erecTop m' ∧ (erecP m')[(r.headD 0).toNat]? = some 6 ∧
+      (r.headD 0).toNat + 13 ≤ erecTop m' ∧
       decTbl (erecP m') (r.headD 0).toNat = some tbl' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
@@ -192,7 +192,7 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
       exact (show (rb.tail.tail.tail.headD 0).toNat = erecTop mb + wlb.toNat from hptrg) ▸ h2
   refine ⟨b4, qm4, ⟨sn', lps', tbl.numParams, c', tbl.numFields, ss', bs'.toArray, gs'⟩, ?_, hDf, hPf, hcpc.trans hcpb, ?_,
     (TierKeep.of_frame hfa (by simp)).trans (htkb.trans (htkc.trans (TierKeep.of_frame (k2.trans w2) (by simp)))),
-    hgme, htse, ?_, ?_, ?_, ?_⟩
+    hgme, htse, ?_, ?_, ?_⟩
   · rw [promoteProjTable, run_bind_ok hrun1]
     simp only
     rw [run_bind_ok hrun3]
@@ -208,10 +208,6 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
       ((k2.trans w2).mono (by simp) (by simp))
   · rw [← hr]; exact hdv
   · rw [← hr]; show (r5.headD 0).toNat + 13 ≤ erecTop me; omega
-  · rw [← hr]
-    have := WP 0 (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
-    rw [Nat.add_zero, Nat.add_zero, preE_get, if_pos (by omega), hk6] at this
-    exact this
   · rw [← hr]
     exact decTbl_move htbl
       (by have := WP 5 (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega); exact this)
