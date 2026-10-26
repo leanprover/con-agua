@@ -181,4 +181,251 @@ theorem ensureSortCore_refinesE (p : Prog) (hp : KnotEntryProg p) (hl : InferLea
       (fun j _ => hK j) (fun j _ => hKE j) checkFuel ⟨m, Locals.init []⟩ a dn vis fe M 0 0 dep t
       (L.Ind.stage_fuel hn) (by omega) (slotPre_zero hC) (L.Ind.hw_of_h ht)) h1
   | ok q => rw [h1] at hW; simp [ensureSortCoreE.k_ensure_sort] at hW
+/-! ## The callees' error claims (hypotheses, discharged by other lanes' proofs) -/
+
+/-- The callees of the inference arms outside the verdict closure. -/
+theorem inferArmsE_nv : ∀ f ∈ ["nat_lit_supported", "str_lit_supported", "pin_at", "const_e",
+    "intern_fvar", "inst1", "inst_list", "infer_lam_result", "intern_imax", "intern_sort",
+    "intern_succ", "e_view", "head_and_args", "ar_entry", "mk_forall", "in_find", "in_put",
+    "io_find", "io_put"], f ∈ L.Checker.nvFns := by
+  decide +kernel
+
+/-- **`defeq_arg`'s error claim** at the knot (the error half of `defeqArg_any`; it reads the
+`defeq` and `defeq_e` slots). -/
+def DefeqArgE (p : Prog) : Prop :=
+  ∀ n, KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a ta ty : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW a →
+    HW ta → HW ty →
+    CoreSpecE p n "defeq_arg" [mode, vis, d, a, ta, ty]
+      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) s₀ a₀
+
+/-- **The callees' error claims the inference bodies take** (the error half of `InferCallees`):
+every callee outside the verdict closure claims nothing (`nv`), `infer_proj`'s
+(`inferProj_refinesE'`, `InferLeavesE.lean`), `defeq_arg`'s. -/
+structure InferCalleesE (p : Prog) : Prop where
+  nv : closedNV p L.Checker.nvFns = true
+  proj : InferProjOKE p
+  defeqArg : DefeqArgE p
+
+/-! ## `infer_lit` -/
+
+l_model inferLit_specE (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
+  fns [hf ↦ inferLitE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] heartbeats 400000 errors
+
+/-- The pin and `const_e` after a passed support test claim nothing. -/
+theorem inferLitE_pin {α : Type} {T : AM α} {a : AState} (p : Prog)
+    (hnv : closedNV p L.Checker.nvFns = true) (n : Nat) (k : Word) (m₁ : Mem) (er : Err)
+    (hW : inferLitE.k_pin_at p n (callE p n "pin_at" [k] m₁) = .error er) : ErrClaim T a er := by
+  cases h2 : callE p n "pin_at" [k] m₁ with
+  | error e2 =>
+    rw [h2, inferLitE.k_pin_at.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "pin_at" (by simp)) h2
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [h2] at hW; simp only [inferLitE.k_pin_at] at hW
+  cases h3 : callE p n "const_e" [r₂.headD 0] m₂ with
+  | error e3 =>
+    rw [h3, inferLitE.k_const_e.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "const_e" (by simp)) h3
+  | ok q => rw [h3] at hW; simp [inferLitE.k_const_e] at hW
+
+/-- **`infer_lit`'s verdicts**: a `Nat` literal without its basis rejects, a `String` literal
+without its support declines; the support tests, the pin and `const_e` claim nothing. -/
+theorem inferLit_refinesE (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p)
+    (hnv : closedNV p L.Checker.nvFns = true) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb e : Word) (l : ConLeche.Literal) (hS : CoreS dn s₀.mem a₀ vis fe M eb)
+    (he : HW e) (hg : e >>> 28 = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
+    CoreSpecE p (n + 1) "infer_lit" [vis, e] (inferLitT fe l) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferLit_specE p hp.inferLit (n + 1) ⟨s₀.mem, Locals.init []⟩
+    vis e) hc0 (Err.code_ne_of_cls hk0)
+  simp only [inferLitE] at hW
+  split at hW
+  · cases hW; exact ErrClaim.of_cls0 rfl
+  rename_i h1
+  split at hW
+  · cases hW; exact ErrClaim.of_cls0 rfl
+  rename_i h2
+  obtain ⟨k, hk, hrel⟩ := view_lit_f s₀.mem a₀ hS.arena.1 e he ⟨h1, by simpa using h2⟩ hg
+  rw [hv] at hk
+  have hl : l = k.l := by simpa using hk
+  subst hl
+  obtain ⟨l⟩ := k
+  split at hW
+  · rename_i h3
+    cases l with
+    | strVal str => simp [RecRel, StrRec, h3] at hrel
+    | natVal N =>
+    cases hc1 : callE p n "nat_lit_supported" [vis] s₀.mem with
+    | error e1 =>
+      rw [hc1, inferLitE.k_nat_lit_supported.none] at hW; cases hW
+      exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "nat_lit_supported" (by simp)) hc1
+    | ok q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [hc1] at hW
+    have h₁ := CoreSpec.of_callW (hc.natLitSup n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb hS)
+      (callW_of_callE hc1)
+    by_cases h0 : r₁.headD 0 = 0
+    · simp only [inferLitE.k_nat_lit_supported, h0, ↓reduceIte] at hW
+      cases hW
+      have hdb : decBool r₁ = false := by simp only [decBool, h0]; rfl
+      simp only [inferLitT]
+      refine ErrClaim.bind_ref h₁ ?_
+      simp only [hdb, Bool.false_eq_true, ↓reduceIte]
+      exact ErrClaim.fail _ _ rfl
+    · simp only [inferLitE.k_nat_lit_supported, h0, ↓reduceIte] at hW
+      exact inferLitE_pin p hnv n 1 m₁ er hW
+  · rename_i h3
+    cases l with
+    | natVal N => simp [RecRel, NatRec, h3] at hrel
+    | strVal str =>
+    cases hc1 : callE p n "str_lit_supported" [vis] s₀.mem with
+    | error e1 =>
+      rw [hc1, inferLitE.k_str_lit_supported.none] at hW; cases hW
+      exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "str_lit_supported" (by simp)) hc1
+    | ok q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [hc1] at hW
+    have h₁ := CoreSpec.of_callW (hc.strLitSup n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb hS)
+      (callW_of_callE hc1)
+    by_cases h0 : r₁.headD 0 = 0
+    · simp only [inferLitE.k_str_lit_supported, h0, ↓reduceIte] at hW
+      cases hW
+      have hdb : decBool r₁ = false := by simp only [decBool, h0]; rfl
+      simp only [inferLitT]
+      refine ErrClaim.bind_ref h₁ ?_
+      simp only [hdb, Bool.false_eq_true, ↓reduceIte]
+      exact ErrClaim.fail _ _ rfl
+    · simp only [inferLitE.k_str_lit_supported, h0, ↓reduceIte] at hW
+      exact inferLitE_pin p hnv n 5 m₁ er hW
+
+/-! ## `infer_spine_arg` -/
+
+l_model inferSpineArg_specE (p : Prog) (hf : p.lookup "infer_spine_arg" = some inferSpineArgL)
+  fns [hf ↦ inferSpineArgE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] heartbeats 400000 errors
+
+/-- **`infer_spine_arg`'s verdicts**: the argument's type (the `infer` slot), `defeq_arg`'s, a
+mismatch rejects. -/
+theorem inferSpineArg_refinesE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p)
+    (hq : SpineFProg p) (he : IsEagerReduceH p) (hda : DefeqArgE p) (n : Nat) (hk : KnotUpTo p n)
+    (hkE : KnotUpToE p n) (F : Nat)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a dom : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hdom : HW dom) :
+    CoreSpecE p (n + 1) "infer_spine_arg" [mode, vis, d, a, dom]
+      (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferSpineArg_specE p hq.arg (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a dom) hc0 (Err.code_ne_of_cls hk0)
+  simp only [inferSpineArgE] at hW
+  cases hc1 : callE p n "infer" [mode, vis, d, a] s₀.mem with
+  | error e1 =>
+    rw [hc1, inferSpineArgE.k_infer.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE
+      ((hkE n (Nat.le_refl _)).infer F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha) hc1)
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1] at hW; simp only [inferSpineArgE.k_infer] at hW
+  have h₁ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha)
+    (callW_of_callE hc1)
+  obtain ⟨M₁, hS₁, -, -⟩ := h₁.2.1
+  refine ErrClaim.bind_ref h₁ ?_
+  cases hc2 : callE p n "defeq_arg" [mode, vis, d, a, r₁.headD 0, dom] m₁ with
+  | error e2 =>
+    rw [hc2, inferSpineArgE.k_defeq_arg.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+      (hda n hk hkE F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d a (r₁.headD 0) dom hF hn
+        ⟨hS₁, hs.mode4, hs.eb_mode⟩ ha h₁.2.2.2 hdom) hc2)
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2] at hW
+  have h₂ := CoreSpec.of_callW (defeqArg_any p hp hkp he n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
+    mode d a (r₁.headD 0) dom hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ ha h₁.2.2.2 hdom) (callW_of_callE hc2)
+  by_cases h0 : r₂.headD 0 = 0
+  · simp only [inferSpineArgE.k_defeq_arg, h0, ↓reduceIte] at hW
+    cases hW
+    have hdb : decBool r₂ = false := by simp only [decBool, h0]; rfl
+    refine ErrClaim.bind_ref h₂ ?_
+    simp only [hdb, Bool.not_false, ↓reduceIte]
+    exact ErrClaim.fail _ _ rfl
+  · simp only [inferSpineArgE.k_defeq_arg, h0, ↓reduceIte] at hW; cases hW
+
+/-! ## `infer_lam_io` -/
+
+l_model inferLamIO_specE (p : Prog) (hf : p.lookup "infer_lam_io" = some inferLamIOL)
+  fns [hf ↦ inferLamIOE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] heartbeats 400000 errors
+
+/-- **`infer_lam_io`'s verdicts**: the body's type (the `infer_io` slot at `d + 1`); the rest
+claims nothing. -/
+theorem inferLamIO_refinesE (p : Prog) (hb : InferBodyProg p) (hnv : closedNV p L.Checker.nvFns = true)
+    (hi1 : Inst1OK p) (n : Nat) (hkE : KnotUpToE p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty body : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
+    CoreSpecE p (n + 1) "infer_lam_io" [mode, vis, d, ty, body]
+      (inferLamIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) d.toNat (decE ty) (decE body))
+      s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferLamIO_specE p hb.inferLamIO (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d ty body) hc0 (Err.code_ne_of_cls hk0)
+  simp only [inferLamIOE] at hW
+  split at hW
+  · cases hW; exact ErrClaim.of_cls0 rfl
+  rename_i hd
+  have hd1 := toNat_succ_of_ne hd
+  cases hc1 : callE p n "intern_fvar" [d, ty] s₀.mem with
+  | error e1 =>
+    rw [hc1, inferLamIOE.k_intern_fvar.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "intern_fvar" (by simp)) hc1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1] at hW; simp only [inferLamIOE.k_intern_fvar] at hW
+  obtain ⟨s₁, hs₁, -, hfv⟩ := triple_of_callW (internFVar_spec p hb.fvf hb.fvp hb.fvi n s₀ d ty)
+    (callW_of_callE hc1)
+  rw [hs₁] at hfv
+  have h₁ := internFVar_core hs.rel d ty hty r₁ hfv
+  obtain ⟨M₁, hS₁, -, -⟩ := h₁.2.1
+  refine ErrClaim.bind_ref h₁ ?_
+  cases hc2 : callE p n "inst1" [body, r₁.headD 0, 0] m₁ with
+  | error e2 =>
+    rw [hc2, inferLamIOE.k_inst1.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "inst1" (by simp)) hc2
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2] at hW; simp only [inferLamIOE.k_inst1] at hW
+  have h₂ := CoreSpec.of_callW (hi1 n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb body (r₁.headD 0) 0 hS₁
+    hbody h₁.2.2.2) (callW_of_callE hc2)
+  obtain ⟨M₂, hS₂, -, -⟩ := h₂.2.1
+  refine ErrClaim.bind_ref h₂ ?_
+  cases hc3 : callE p n "infer_io" [mode, vis, d + 1, r₂.headD 0] m₂ with
+  | error e3 =>
+    rw [hc3, inferLamIOE.k_infer_io.none] at hW; cases hW
+    have h3 := CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩) ((hkE n (Nat.le_refl _)).inferIO F
+      ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode (d + 1) (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩
+      h₂.2.2.2) hc3
+    rw [hd1] at h3
+    exact ErrClaim.bind_left h3
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [hc3] at hW; simp only [inferLamIOE.k_infer_io] at hW
+  cases hc4 : callE p n "infer_lam_result" [ty, r₃.headD 0, d] m₃ with
+  | error e4 =>
+    rw [hc4, inferLamIOE.k_infer_lam_result.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "infer_lam_result" (by simp)) hc4
+  | ok q => rw [hc4] at hW; simp [inferLamIOE.k_infer_lam_result] at hW
+
 end L.Arena
