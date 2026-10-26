@@ -374,5 +374,110 @@ theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
     exact ⟨rfl, hlt⟩
   · cases hx
 
+/-- **An ok `env_find` run**: the memory unchanged, the twin's `find?` decoded, a found record
+decodes. -/
+theorem envFind_callE {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
+    (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
+    {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv} {w : Word}
+    (hE : EnvR dn m vis fe) (hw : HW w) {r : List Word}
+    (hc : callE p n "env_find" [w, vis] m = .ok (r, m')) :
+    m' = m ∧ fe.find? (decI w) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
+  obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callE
+    (envFind_refines p hx hg hp n ⟨m, Locals.init []⟩ vis w hE hw) hc
+  obtain ⟨t₂, ht₂, -, -, hfound⟩ := triple_of_callE
+    (envFind_found p hx hg hp n ⟨m, Locals.init []⟩ vis w hw) hc
+  refine ⟨ht₁ ▸ hm₁, hfind, fun h0 => ?_⟩
+  obtain ⟨htag, hrow, hq⟩ := hfound h0
+  rw [hq]
+  exact hE.found_some w hw htag hrow
+
+/-- The constructor test of `projIndexedStructLike`: `c` a constructor with more than `i` fields. -/
+def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=
+  match fe.find? c with
+  | some (.ctorInfo _ _ nF) => decide (i < nF)
+  | _ => false
+
+/-- **`projIndexedStructLike` at `T = sn` from `env_find(T)`'s record**: the L test `f ≠ 0`, kind
+`3`, one constructor, fewer parameters than arguments; then the constructor test. -/
+theorem pisl_first {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {T : NIdx}
+    {f q tn : Word} {i : Nat} (hsz : (m.arr64 EREC).size < 2 ^ 63)
+    (hf : fe.find? T = decFound dn m f q)
+    (hs : f ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci) :
+    (¬ (f ≠ 0 ∧ rdW (m.arr64 EREC) q = 3 ∧ rdW (m.arr64 EREC) (q + 19) = 1 ∧
+        rdW (m.arr64 EREC) (q + 17) < tn) →
+      projIndexedStructLike fe T T i tn.toNat = false) ∧
+    ((f ≠ 0 ∧ rdW (m.arr64 EREC) q = 3 ∧ rdW (m.arr64 EREC) (q + 19) = 1 ∧
+        rdW (m.arr64 EREC) (q + 17) < tn) →
+      HW (rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (q + 18))) ∧
+      projIndexedStructLike fe T T i tn.toNat =
+        ctorFieldsGt fe (decI (rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (q + 18)))) i) := by
+  by_cases f0 : f = 0
+  · have hn : fe.find? T = none := by rw [hf]; simp [decFound, f0]
+    refine ⟨fun _ => ?_, fun h => absurd h.1 (by simpa using f0)⟩
+    simp [projIndexedStructLike, hn]
+  obtain ⟨ci, hci⟩ := hs f0
+  have hfind : fe.find? T = some ci := by rw [hf]; simp only [decFound, f0, ↓reduceIte]; exact hci
+  have hK := decCI_indK hci (erecP_ext m) hsz
+  by_cases h3 : rdW (m.arr64 EREC) q = 3
+  · obtain ⟨cv, caps, rfl⟩ := hK.1 h3
+    obtain ⟨hnp, hlen, hc⟩ := decCI_indNC hci (erecP_ext m) hsz
+    by_cases h19 : rdW (m.arr64 EREC) (q + 19) = 1
+    · have hl1 : caps.ctors.length = 1 := by rw [hlen, h19]; rfl
+      obtain ⟨c, hc1⟩ := List.length_eq_one_iff.mp hl1
+      obtain ⟨hcw, hhw⟩ := hc c hc1
+      by_cases h17 : rdW (m.arr64 EREC) (q + 17) < tn
+      · refine ⟨fun h => absurd ⟨f0, h3, h19, h17⟩ h, fun _ => ⟨hhw, ?_⟩⟩
+        have hlt : caps.nparams < tn.toNat := by rw [hnp]; exact UInt64.lt_iff_toNat_lt.mp h17
+        simp only [projIndexedStructLike, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, hfind,
+          hc1, hlt, ← hcw, ctorFieldsGt]
+        rcases fe.find? c with _ | ci
+        · rfl
+        · cases ci <;> rfl
+      · refine ⟨fun _ => ?_, fun h => absurd h.2.2.2 h17⟩
+        have hlt : ¬ caps.nparams < tn.toNat := by
+          rw [hnp]; exact fun h => h17 (UInt64.lt_iff_toNat_lt.mpr h)
+        simp only [projIndexedStructLike, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, hfind,
+          hc1, hlt]
+    · refine ⟨fun _ => ?_, fun h => absurd h.2.2.1 h19⟩
+      have hl1 : caps.ctors.length ≠ 1 := by
+        rw [hlen]; exact fun h => h19 (UInt64.toNat_inj.mp (by rw [h]; rfl))
+      simp only [projIndexedStructLike, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, hfind]
+      split
+      · rename_i c hc'; rw [hc'] at hl1; simp at hl1
+      · rfl
+  · refine ⟨fun _ => ?_, fun h => absurd h.2.1 h3⟩
+    have hni := hK.2 h3
+    simp only [projIndexedStructLike, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, hfind]
+    split
+    · rename_i cv caps hci'; cases hci'; exact absurd rfl (hni cv caps)
+    · rfl
+
+/-- **The constructor test from `env_find(c)`'s record**: `f ≠ 0`, kind `4`, `i` below the field
+count at `q + 6`. -/
+theorem ctorFieldsGt_eq {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : NIdx}
+    {f q iw : Word} (hsz : (m.arr64 EREC).size < 2 ^ 63)
+    (hf : fe.find? c = decFound dn m f q)
+    (hs : f ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci) :
+    ctorFieldsGt fe c iw.toNat = decide (f ≠ 0 ∧ rdW (m.arr64 EREC) q = 4 ∧
+      iw < rdW (m.arr64 EREC) (q + 6)) := by
+  by_cases f0 : f = 0
+  · have hn : fe.find? c = none := by rw [hf]; simp [decFound, f0]
+    simp [ctorFieldsGt, hn, f0]
+  obtain ⟨ci, hci⟩ := hs f0
+  have hfind : fe.find? c = some ci := by rw [hf]; simp only [decFound, f0, ↓reduceIte]; exact hci
+  have hK := decCI_ctorF hci (erecP_ext m) hsz
+  by_cases h4 : rdW (m.arr64 EREC) q = 4
+  · obtain ⟨cv, rfl⟩ := hK.1 h4
+    simp only [ctorFieldsGt, hfind, f0, h4, ne_eq, not_false_eq_true, true_and, decide_eq_decide]
+    exact UInt64.lt_iff_toNat_lt.symm
+  · have hni := hK.2 h4
+    have : ctorFieldsGt fe c iw.toNat = false := by
+      simp only [ctorFieldsGt, hfind]
+      split
+      · rename_i cv np nf hci'; cases hci'; exact absurd rfl (hni cv np nf)
+      · rfl
+    rw [this]; simp [h4]
+
 #exit
 end L.Arena
