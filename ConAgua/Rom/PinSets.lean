@@ -360,14 +360,14 @@ theorem TPinsR.cons {m : Mem} {o o' l l' : Word} {x : NIdx × EIdx} {ps : List (
 /-! ## Records kept by a run that only grows the record pool -/
 
 /-- `EREC` below `m`'s top unchanged, the top not lower. -/
-def EKeep (m m' : Mem) : Prop :=
+def PinEKeep (m m' : Mem) : Prop :=
   erecTop m ≤ erecTop m' ∧ ∀ i, i < erecTop m → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
 
-theorem EKeep.get {m m' : Mem} (h : EKeep m m') {x : Word} (hx : x.toNat < erecTop m) :
+theorem PinEKeep.get {m m' : Mem} (h : PinEKeep m m') {x : Word} (hx : x.toNat < erecTop m) :
     rdW (m'.arr64 EREC) x = rdW (m.arr64 EREC) x := by
   simp only [rdW, h.2 _ hx]
 
-theorem SliceR.keep {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs) (hk : EKeep m m') :
+theorem SliceR.keep {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs) (hk : PinEKeep m m') :
     SliceR m' o l hs := by
   obtain ⟨hb, hl, hv⟩ := h
   refine ⟨Nat.le_trans hb hk.1, hl, fun i hi' => ?_⟩
@@ -377,7 +377,7 @@ theorem SliceR.keep {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
   rw [← hv i hi', hk.get (by rw [hx]; omega)]
 
 theorem TPinsR.keep {m m' : Mem} {o l : Word} {ps : List (NIdx × EIdx)} (h : TPinsR m o l ps)
-    (hk : EKeep m m') : TPinsR m' o l ps := by
+    (hk : PinEKeep m m') : TPinsR m' o l ps := by
   obtain ⟨hb, hl, hv⟩ := h
   refine ⟨Nat.le_trans hb hk.1, hl, fun i hi' => ?_⟩
   have ht := top_lt m
@@ -386,7 +386,7 @@ theorem TPinsR.keep {m m' : Mem} {o l : Word} {ps : List (NIdx × EIdx)} (h : TP
   exact hv i hi'
 
 theorem PinSetR.keep {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip)
-    (hk : EKeep m m') : PinSetR m' r ip := by
+    (hk : PinEKeep m m') : PinSetR m' r ip := by
   obtain ⟨hb, hp, hc, htp⟩ := h
   have ht := top_lt m
   refine ⟨Nat.le_trans hb hk.1, hp.keep hk, fun j hj => ?_, fun j hj => ?_⟩
