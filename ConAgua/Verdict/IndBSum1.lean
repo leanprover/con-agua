@@ -28,6 +28,10 @@ l_model csfGoE_spec (p : Prog) (hf : p.lookup "check_struct_field_sorts_i_go" = 
   fns [hf ↦ csfGoE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
+l_model fsortsE_spec (p : Prog) (hf : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL)
+  fns [hf ↦ fsortsE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -217,6 +221,66 @@ theorem csfE_claim (hg : p.lookup "sl_get" = some slGet)
   obtain ⟨w6, m6⟩ := q6
   rw [h6, csfGoE.k_check_struct_field_sorts_i_go.arm1] at he
   cases he
+
+include hq henv hLC hLT hnv hcE in
+/-- **`check_struct_field_sorts_i`'s error claim** (the hypotheses of
+`checkStructFieldSortsI_refinesC`, and the core stubs' error claims): a failing call of class
+`1`/`2` claims that the twin's `checkStructFieldSortsI` fails. -/
+theorem checkStructFieldSortsI_claim (hg : p.lookup "sl_get" = some slGet)
+    (hpw : p.lookup "pin_word" = some pinWordL)
+    (het : p.lookup "lvl_eq_true" = some lvlEqTrue) (hc : p.lookup "sl_contains" = some slContains)
+    (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
+    (hgo : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL)
+    (hia : p.lookup "iw_alloc" = some iwAlloc)
+    (hp : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL) (hftd : FtdF p)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (isProp large s nP fo fl io il nW : Word)
+    (fvs idxArgs : List EIdx) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
+    (hfvs : decHL s₀.mem fo.toNat fl.toNat = some fvs) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem)
+    (hidx : decHL s₀.mem io.toNat il.toNat = some idxArgs) (hib : io.toNat + il.toNat ≤ iwTop s₀.mem)
+    (hs : H s) {sP : ConLeche.Level} (hsP : denoteL a₀.store.ls (decI s) = some sP)
+    (hnj : nP.toNat + nW.toNat < 2 ^ 64) {fvsP : List ConLeche.Expr}
+    (hfP : Frontend.denoteEList a₀.store fvs = some fvsP)
+    (hws : ∀ i, i < nW.toNat → ∀ x, fvsP[i]? = some x →
+      ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD) :
+    CoreSpecE p (n + 1) "check_struct_field_sorts_i" [vis, isProp, large, s, nP, fo, fl, io, il, nW]
+      (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs idxArgs nW.toNat)
+      s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc' => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (fsortsE_spec p hp (n + 1) ⟨s₀.mem, Locals.init []⟩ vis isProp large s nP
+    fo fl io il nW) hc' (Err.code_ne_of_cls hk0)
+  rw [fsortsE.arm1] at hW
+  cases h1 : callE p n "iw_alloc" [nW] s₀.mem with
+  | error e1 =>
+    rw [h1, fsortsE.k_iw_alloc.none] at hW
+    cases hW
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, fsortsE.k_iw_alloc.arm1] at hW
+  obtain ⟨s1, hs1, -, hal⟩ := triple_of_callW (iwAlloc_specW p hia n ⟨s₀.mem, Locals.init []⟩ nW)
+    (callW_of_callE h1)
+  subst hs1
+  obtain ⟨hS1, hg1, hrt, ht1⟩ := allocW_stage hal hC.stage
+  dsimp only at hrt ht1 hal
+  have hA1 := allocW_afr hal hA
+  have hC1 : StageC dn vis fe env s1.mem a₀ := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
+  cases h2 : callE p n "check_struct_field_sorts_i_go"
+      [vis, isProp, large, s, nP, fo, fl, io, il, r1.headD 0, nW] s1.mem with
+  | error e2 =>
+    rw [h2, fsortsE.k_check_struct_field_sorts_i_go.none] at hW
+    cases hW
+    exact csfE_claim hq henv hLC hLT hnv hcE hg hpw het hc hb hftd n hn s1.mem a₀ isProp large s nP fo fl io il
+      (r1.headD 0) nW s₀.mem 0 [] fvs idxArgs fvsP hC1 hA1 hg1 (by omega) (by omega)
+      (by simp [decHL, hslice?]) hfvs hfb hidx hib hs ⟨sP, hsP⟩ hnj hfP hws _
+      (triple_of_callE_err (csfGoE_spec p hgo n ⟨s1.mem, Locals.init []⟩ vis isProp large s nP fo fl io il
+        (r1.headD 0) nW) h2 (Err.code_ne_of_cls hk0))
+  | ok q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, fsortsE.k_check_struct_field_sorts_i_go.arm1] at hW
+  cases hW
 
 end sims
 
