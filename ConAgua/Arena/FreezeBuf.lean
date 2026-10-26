@@ -273,15 +273,15 @@ theorem frozen_facts {k : Nat} (hk : k < frozen.length) (h1 : 1 ≤ k) :
   · refine ⟨h2, fun h => ?_, h4, h5⟩
     simp [h] at h3
 
-/-- The owned arrays: not frozen, not truncated, below `320`. -/
+/-- The owned arrays: not frozen, not truncated. -/
 theorem owned_facts_all : parOwnedL.all (fun b => frozenIdsL.idxOf? b == none &&
-    !(fzSrcs.contains b) && decide (b < 320)) = true := by decide +kernel
+    !(fzSrcs.contains b)) = true := by decide +kernel
 
 theorem owned_facts {b : ArrId} (hb : b ∈ parOwnedL) :
-    frozenIdsL.idxOf? b = none ∧ b ∉ fzSrcs ∧ b < 320 := by
+    frozenIdsL.idxOf? b = none ∧ b ∉ fzSrcs := by
   have := List.all_eq_true.mp owned_facts_all b hb
-  simp only [Bool.and_eq_true, beq_iff_eq, Bool.not_eq_true', decide_eq_true_eq] at this
-  refine ⟨this.1.1, fun h => ?_, this.2⟩
+  simp only [Bool.and_eq_true, beq_iff_eq, Bool.not_eq_true'] at this
+  refine ⟨this.1, fun h => ?_⟩
   simp [h] at this
 
 /-- **A frozen array (not the header or the seed) of the thread's memory** is the buffer's image. -/
