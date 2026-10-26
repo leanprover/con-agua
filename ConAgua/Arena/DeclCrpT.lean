@@ -489,7 +489,7 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
     (denoteCV_lps hcA) hCr2
   rw [← checkOpaqueVal_dvT] at hrun3
   -- the twin's value check: `CheckOK` at the old index, `StepOK` at the pushed one
-  obtain ⟨hstep2, -, env2, F2, hstepOK2, hpure2⟩ := ConRon.Bridge.checkOpaqueVal_bridge rfl
+  obtain ⟨hstep2, -, -, env2, F2, hstepOK2, hpure2⟩ := ConRon.Bridge.checkOpaqueVal_bridge rfl
     (CoreSpec.of_core rfl) hok1 hcA (ConRon.Bridge.checkConstantVal_typeWF hpure1) hv1 hrun3
   have hok3 := hok1.ofCore hstep2
   have hnm3 : denoteN a3.store.ns (decI wn) = some c.name := by
@@ -503,7 +503,7 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
   have hck3 : CheckOK V env ((fe.push (.axiomInfo cv)).restrictTo vis.toNat) a3 := by
     rw [← hvis]; exact hok3.check.congr_find hpre rfl
   have hws : ConLeche.Expr.WScoped 0 x :=
-    ConLeche.Expr.WScoped.of_not_hasFvar (ConRon.Bridge.checkOpaqueVal_noFvar hpure2.2)
+    ConLeche.Expr.WScoped.of_not_hasFvar (ConRon.Bridge.checkOpaqueVal_noFvar hpure2)
   -- the memory's half after the push: the call's frame, the core memos
   have hf3 := (run_memFrame hlc checkOpaqueVal_loop (run_of_callW h3)).1
   have hmem3 : TwinMem dn s3.mem a3 :=

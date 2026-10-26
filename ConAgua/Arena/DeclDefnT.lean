@@ -135,7 +135,7 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
   have hPS3 := PinSetsR.step hPS2 hg3 (hfr (by decide) h3)
   rw [← checkDefnVal_dvT] at hrun3
   -- the twin's definition check: `CheckOK` at the old index, `StepOK` at the pushed one
-  obtain ⟨hstep2, -, env2, F2, hstepOK2, hpure2⟩ := ConRon.Bridge.checkDefnVal_bridge rfl
+  obtain ⟨hstep2, -, -, env2, F2, hstepOK2, hpure2⟩ := ConRon.Bridge.checkDefnVal_bridge rfl
     (CoreSpec.of_core rfl) hok1 hcA (ConRon.Bridge.checkConstantVal_typeWF hpure1) hv1 hrun3
   have hok3 := hok1.ofCore hstep2
   have hnm3 : denoteN a3.store.ns (decI wn) = some c.name := by
