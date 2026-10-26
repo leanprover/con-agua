@@ -339,7 +339,7 @@ theorem nggE_claim {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageC
 /-! ## `nest_frame` -/
 
 /-- The twin's runs agree: an error claim moves along an equation of runs. -/
-theorem ErrClaim.of_run_eq' {α β : Type} {T : AM α} {T' : AM β} {a a' : AState} {e : Err}
+theorem ErrClaim.of_run_eq_st {α β : Type} {T : AM α} {T' : AM β} {a a' : AState} {e : Err}
     (h : ∀ ce, T'.run a' = .error ce → T.run a = .error ce) (h' : ErrClaim T' a' e) : ErrClaim T a e :=
   fun hk => by
     obtain ⟨ce, hce, hc⟩ := h' hk
@@ -483,7 +483,7 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
     have : ¬ (4294967296 : Word).toNat ≤ (rn.headD 0).toNat := by simpa using hrnH
     exact fun e => this (UInt64.le_iff_toNat_le.mp e)
   rw [nfrE.j1.arm1 p n vis ctx fu po pl hi us dO dL nPc gO gL ns _ m1 hrnb] at he
-  refine ErrClaim.of_run_eq' (fun ce h => by rw [nestFrame_run hrun1]; exact h) ?_
+  refine ErrClaim.of_run_eq_st (fun ce h => by rw [nestFrame_run hrun1]; exact h) ?_
   unfold nestFrameRest
   -- the instantiation `hn.{us} ds`, typed
   cases h2 : callE p n "intern_const" [rn.headD 0, us] m1 with

@@ -3,7 +3,7 @@ import ConAgua.Verdict.PosE3O
 /-!
 # `nest_ctors`' error claim step (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
 
-`ctorsOKC_step`'s proof (`PosCtors.lean`) on the error model `ncE`: the head constructor's error is
+`ctorsOKC_step`'s proof (`PosCtors.lean`) on the error model `nctE`: the head constructor's error is
 the block's `OneOKE` at `n` (its fragment `oneK` with the rest of `nestCtors` as continuation), the
 rest's the block's `CtorsOKE` at `n`; `rec3`, `sl_snoc` claim nothing.
 -/
@@ -36,14 +36,14 @@ theorem ctorsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p d
     hcsP hcsF hnsP houtsP e he
   by_cases hk0 : e.cls = 0
   · exact ErrClaim.of_cls0 hk0
-  replace he := triple_of_callE_err (ncE_spec p L.pctors (n + 1) ⟨m, Locals.init []⟩ vis ctx root fu po pl hi us dO
+  replace he := triple_of_callE_err (nctE_spec p L.pctors (n + 1) ⟨m, Locals.init []⟩ vis ctx root fu po pl hi us dO
     dL no nl hO hL cO cL ns oO oL) he (Err.code_ne_of_cls hk0)
   simp only at he
   have hS := hC.stage
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   by_cases h0 : cL = 0
-  · rw [ncE.arm1 p n m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL h0] at he; cases he
-  rw [ncE.arm2 p n m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL h0] at he
+  · rw [nctE.arm1 p n m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL h0] at he; cases he
+  rw [nctE.arm2 p n m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL h0] at he
   obtain ⟨⟨cvv, nFn⟩, cs', rfl⟩ : ∃ x cs', cs = x :: cs' := by
     cases cs with
     | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hcl)) h0
@@ -70,7 +70,7 @@ theorem ctorsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p d
   cases c1 : callE p n "nest_ctors_one" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL,
       rdW (m.arr64 IW) w, rdW (m.arr64 IW) (w + 1), ns] m with
   | error e1 =>
-    rw [c1, ncE.k_nest_ctors_one.none] at he; cases he
+    rw [c1, nctE.k_nest_ctors_one.none] at he; cases he
     rw [← hrn]
     exact hOneE m a ctx root fu po pl hi us dO dL no nl hO hL _ _ ns c prog ds names holes cvv NS ctxP progP usP
       dsP namesP holesP cvP nsP hC hW hCc (by rw [hrq]; exact hcvv) (by rw [hrq]; exact hq3) hns hP hA hc hctx hprog
@@ -81,7 +81,7 @@ theorem ctorsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p d
     dL no nl hO hL _ _ ns) (callW_of_callE c1)
   simp only at ho
   rw [hs1] at ho
-  rw [c1, ncE.k_nest_ctors_one.arm1] at he
+  rw [c1, nctE.k_nest_ctors_one.arm1] at he
   obtain ⟨ks, closed, NS3, a1, hK1, hC1, hg1, hks, hksb, hclH, hcld, hns3, hP1, hA1, c1', ⟨oP, hoP, -⟩,
       ⟨nsP3, hns3P⟩⟩ :=
     hOne m m1 a ctx root fu po pl hi us dO dL no nl hO hL _ _ ns c prog ds names holes cvv NS _ ctxP progP usP dsP
@@ -94,7 +94,7 @@ theorem ctorsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p d
   -- its record, appended
   cases c2 : callE p n "rec3" [r1'.headD 0, r1'.tail.headD 0, r1'.tail.tail.headD 0] m1 with
   | error e2 =>
-    rw [c2, ncE.k_rec3.none] at he; cases he
+    rw [c2, nctE.k_rec3.none] at he; cases he
     exact ErrClaim.of_callE_nv hnv (by decide +kernel) c2
   | ok q2 =>
   obtain ⟨rr, m2⟩ := q2
@@ -102,13 +102,13 @@ theorem ctorsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p d
     (callW_of_callE c2)
   simp only at hr3
   rw [hs2] at hr3
-  rw [c2, ncE.k_rec3.arm1] at he
+  rw [c2, nctE.k_rec3.arm1] at he
   obtain ⟨hS2, hg2, hrq2, ht2, hget2⟩ := posRecW_stage hr3 hS1 (by simp)
   simp only [List.length_cons, List.length_nil] at ht2
   have hke := pos2_ke_rec (by omega) hget2 (hks.grow hg2) hclH hcld
   cases c3 : callE p n "sl_snoc" [oO, oL, rr.headD 0] m2 with
   | error e3 =>
-    rw [c3, ncE.k_sl_snoc.none] at he; cases he
+    rw [c3, nctE.k_sl_snoc.none] at he; cases he
     exact ErrClaim.of_callE_nv hnv (by decide +kernel) c3
   | ok q3 =>
   obtain ⟨ro, m3⟩ := q3
@@ -116,7 +116,7 @@ theorem ctorsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p d
     (callW_of_callE c3)
   simp only at hsn
   rw [hs3] at hsn
-  rw [c3, ncE.k_sl_snoc.arm1] at he
+  rw [c3, nctE.k_sl_snoc.arm1] at he
   have hg12 := hg1.trans hg2
   obtain ⟨hS3, hg3, h30, h31, ht3, hw3, hx3⟩ := snocW_words hsn hS2 (by have := hg12.1; omega)
   have hout3 : OutsB m3 (ro.headD 0).toNat (ro.tail.headD 0).toNat (outs ++ [(ks, closed)]) := by
@@ -129,9 +129,9 @@ theorem ctorsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p d
   have hC3 : StageC dn vis fe env m3 a1 := hC1.of_pstep hS3 hA3 (PStep.refl hC1.check.state)
   cases c4 : callE p n "nest_ctors" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cO + 1, cL - 1,
       r1'.tail.tail.tail.headD 0, ro.headD 0, ro.tail.headD 0] m3 with
-  | ok q4 => obtain ⟨r4, m4⟩ := q4; rw [c4, ncE.k_nest_ctors.arm1] at he; cases he
+  | ok q4 => obtain ⟨r4, m4⟩ := q4; rw [c4, nctE.k_nest_ctors.arm1] at he; cases he
   | error e4 =>
-  rw [c4, ncE.k_nest_ctors.none] at he; cases he
+  rw [c4, nctE.k_nest_ctors.none] at he; cases he
   exact hCtorsE m3 a1 ctx root fu po pl hi us dO dL no nl
     hO hL (cO + 1) (cL - 1) _ _ _ c prog ds names holes cs' NS3 (outs ++ [(ks, closed)]) ctxP progP usP dsP namesP
     holesP csP' nsP3 (outsP ++ [oP]) hC3 (hW.grow hg13)
