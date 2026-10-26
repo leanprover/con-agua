@@ -194,4 +194,134 @@ theorem bindOKE_step {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checke
   split at he <;> cases he
   exact absurd rfl hk0
 
+theorem posOKE_step {p : Prog} (L : NbLook p) (hq : KnotStageProg p)
+    (hnv : closedNV p _root_.L.Checker.nvFns = true) (hW : WhnfTopE p)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
+    (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) (ihE : NbOKE p dn vis fe env n) :
+    PosOKE p dn vis fe env (n + 1) := by
+  obtain ⟨-, hBindE, hAppE, -, -, -, -, -, -, -, -⟩ := ihE
+  intro m a ctx fu po pl dep kb e ns c prog NS ctxP progP eP nsP hC hWc he hns hP hA hc hctx hprog heP hnsP
+    hwe er hce
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have R := L.ct.cr.rx
+  replace hce := triple_of_callE_err (npE_spec p L.ppos (n + 1) ⟨m, Locals.init []⟩ vis ctx fu po pl dep kb e ns)
+    hce (Err.code_ne_of_cls hk0)
+  dsimp only at hce
+  have hS := hC.stage
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  by_cases hf0 : fu = 0
+  · rw [npE.abort1 _ _ _ _ _ _ _ _ _ _ _ _ hf0] at hce; cases hce
+    subst hf0
+    rw [show (0 : Word).toNat = 0 from rfl, ConRon.Arena.nestPos]
+    exact ErrClaim.fail _ _ (by decide)
+  rw [npE.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hf0] at hce
+  have hfu : fu.toNat = (fu - 1).toNat + 1 := by
+    have : fu.toNat ≠ 0 := fun e' => hf0 (UInt64.toNat_inj.mp (by simpa using e'))
+    rw [pos2_word_pred hf0]; omega
+  rw [hfu, nestPos_succ]
+  have hhi := hWc.hi htop
+  -- `nest_ctx_hi_at`
+  cases h1 : callE p n "nest_ctx_hi_at" [ctx, pl] m with
+  | error e1 =>
+    rw [h1, npE.k_nest_ctx_hi_at.eq_1] at hce; cases hce
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+  | ok q1 =>
+  obtain ⟨rh, m1⟩ := q1
+  obtain ⟨s1, hs1, -, hm1, hrh⟩ := triple_of_callW (nestCtxHiAt_specE p R.hi n ⟨m, Locals.init []⟩ ctx pl)
+    (callW_of_callE h1)
+  dsimp only at hm1 hrh
+  rw [hs1] at hm1
+  rw [h1, npE.k_nest_ctx_hi_at.arm1, hrh, hm1] at hce
+  -- the reduct
+  cases h2 : callE p n "whnf_top" [vis, dep, e] m with
+  | error e2 =>
+    rw [h2, npE.k_whnf_top.eq_1] at hce; cases hce
+    exact ErrClaim.bind_left (hW n hn hC.stageT dep e he _ h2)
+  | ok q2 =>
+  obtain ⟨rw, m1⟩ := q2
+  rw [h2, npE.k_whnf_top.arm1] at hce
+  obtain ⟨w, a1, hrun1, hC1, hg1, ⟨hwH, hwd⟩, hA1, c1, wP, hwP, hww⟩ :=
+    whnfC_rsim hq henv n hn hC hA dep e he heP hwe _ (callW_of_callE h2)
+  dsimp only at hC1 hg1 hwH hwd hA1
+  have hrun1' : (whnf V fe checkFuel dep.toNat (decI e)).run a = .ok (w, a1) := hrun1
+  refine ErrClaim.bind_right hrun1' ?_
+  have hS1 := hC1.stage
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have hW1 := hWc.grow hg1
+  obtain ⟨hn1, -, -, -, hnP1, -⟩ := ctx_fields hW1.u.dec hW1.u.inn htop1
+  have hne1 := ctx_names_end hW1.u.dec hW1.u.inn hW1.u.sl htop1
+  have hhi1 : (nhiW m ctx pl).toNat = c.hiAt prog.length := hhi
+  cases h3 : callE p n "nest_occ" [rdW (m1.arr64 IW) ctx, rdW (m1.arr64 IW) (ctx + 1), rdW (m1.arr64 IW) (ctx + 4),
+      nhiW m ctx pl, rw.headD 0] m1 with
+  | error e3 =>
+    rw [h3, npE.k_nest_occ.eq_1] at hce; cases hce
+    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+  | ok q3 =>
+  obtain ⟨ro, m2⟩ := q3
+  obtain ⟨s3, hs3, -, hno⟩ := triple_of_callW (nestOcc_spec' p L.nit.no n ⟨m1, Locals.init []⟩ _ _ _ _ _)
+    (callW_of_callE h3)
+  dsimp only at hno
+  rw [hs3] at hno
+  rw [h3] at hce
+  have hP1 : PosMR m1 := hP.fr (coreF_mfr hq (by decide) (callW_of_callE h2))
+  obtain ⟨mp, hmp⟩ := hP1.no
+  obtain ⟨bo, hrun2, hbo, hM2, hS2, hg2, hf2⟩ := noConstWf_ok n dn fe vis m1 m2 a1 _ _ _ _ _ _ c.names mp hno hS1 hwH hn1
+    (by omega) hmp
+  rw [hnP1, hhi1, decE_eq, hwd] at hrun2
+  refine ErrClaim.bind_right hrun2 ?_
+  by_cases ho : ro.headD 0 = 0
+  · -- no occurrence: the rest claims nothing
+    rw [npE.k_nest_occ.eq_2, if_pos ho] at hce
+    cases h4 : callE p n "nest_occ" [rdW (m2.arr64 IW) ctx, rdW (m2.arr64 IW) (ctx + 1), rdW (m2.arr64 IW) (ctx + 4),
+        nhiW m ctx pl, e] m2 with
+    | error e4 =>
+      rw [h4, npE.k_nest_occ_2.eq_1] at hce; cases hce
+      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    | ok q4 =>
+      obtain ⟨r4, m4⟩ := q4
+      rw [h4, npE.k_nest_occ_2.eq_2] at hce
+      split at hce <;> cases hce
+  rw [npE.k_nest_occ.eq_2, if_neg ho] at hce
+  have hbo' : bo = true := by rw [← hbo]; simpa using ho
+  subst hbo'
+  have hg12 := hg1.trans hg2
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have hW2 := hWc.grow hg12
+  have hns2 := hns.grow hg12 htop
+  have hP2 : PosMR m2 := hP1.setNo hf2 ⟨∅, hM2⟩
+  have hA2 : AbsOK m2 := noConstWf_afr hno hA1
+  have hC2 : StageC dn vis fe env m2 a1 := hC1.of_pstep hS2 hA2 (PStep.refl hC1.check.state)
+  have hx01 := c1.ext
+  have hwP' : denoteE a1.store (decI (rw.headD 0)) = some wP := by rw [hwd]; exact hwP
+  simp only [Bool.not_true, Bool.false_eq_true, ite_false]
+  by_cases h6 : rw.headD 0 >>> 28 = 6
+  · rw [if_pos h6] at hce
+    have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forall _ hwH).mpr h6
+    rw [if_pos (by simpa using htag)]
+    cases h5 : callE p n "nest_pos_bind" [vis, ctx, fu - 1, po, pl, dep, kb, rw.headD 0, ns] m2 with
+    | error e5 =>
+      rw [h5, npE.k_nest_pos_bind.eq_1] at hce; cases hce
+      have := hBindE m2 a1 ctx (fu - 1) po pl dep kb (rw.headD 0) ns c prog NS ctxP progP wP nsP hC2 hW2 hwH h6 hns2
+        hP2 hA2 hc (dCtx_ext _ hx01 _ _ hctx) (dProg_ext hx01 _ _ hprog) hwP' (dState_ext hx01 _ _ hnsP) hww _ h5
+      rw [hwd] at this
+      exact this
+    | ok q5 =>
+      obtain ⟨r5, m5⟩ := q5
+      rw [h5, npE.k_nest_pos_bind.eq_2] at hce; cases hce
+  · rw [if_neg h6] at hce
+    have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forall _ hwH).mp e')
+    rw [if_neg (by simpa using htag)]
+    cases h5 : callE p n "nest_pos_app" [vis, ctx, fu - 1, po, pl, kb, nhiW m ctx pl, rw.headD 0, ns] m2 with
+    | error e5 =>
+      rw [h5, npE.k_nest_pos_app.eq_1] at hce; cases hce
+      have := hAppE m2 a1 ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns c prog NS ctxP progP wP nsP dep.toNat
+        hC2 hW2 hhi1 hwH hns2 hP2 hA2 hc (dCtx_ext _ hx01 _ _ hctx) (dProg_ext hx01 _ _ hprog) hwP'
+        (dState_ext hx01 _ _ hnsP) hww _ h5
+      rw [hwd, hhi1] at this
+      exact this
+    | ok q5 =>
+      obtain ⟨r5, m5⟩ := q5
+      rw [h5, npE.k_nest_pos_app.eq_2] at hce; cases hce
+
 end L.Ind
