@@ -826,7 +826,7 @@ anything else rejects. -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:176-186 ConRon.Arena.unresolvedConstsError
 -- con-ron: ConRon/Arena/CheckerBase.lean:223-235 ConRon.Arena.unresolvedConstsErrorL
 @[l_impl ConRon.Arena.unresolvedConstsError ConRon.Arena.unresolvedConstsErrorL]
-def unresolvedConstsErrorL : FunDecl := lfn (vis, e, w) locals (s, u, r, sa, m) {
+def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (s, u, r, sa, m) {
   if w <= 1 {
     s := call str_lit_supported(vis);
     if s == 0 {
@@ -879,7 +879,7 @@ def indSumFns : Prog :=
    ("struct_proj_guards", structProjGuardsL),
    ("struct_proj_bodies_go", structProjBodiesGoL), ("struct_proj_bodies", structProjBodiesL),
    ("mentions_const_go", mentionsConstGoL), ("mentions_const", mentionsConstL),
-   ("has_str_lit_go", hasStrLitGoL), ("unresolved_consts_error", unresolvedConstsErrorL)]
+   ("has_str_lit_go", hasStrLitGoL), ("unresolved_consts_error", unresolvedConstsErrL)]
 
 /-- Stubs for the functions of OTHER modules this module calls: `close_telescope(bs.off, bs.len,
 i, body) → e` (`ConLeche/Kernel/Inductives/Positivity.lean`'s, translated in module `IndPos`). -/
