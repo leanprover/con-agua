@@ -75,12 +75,15 @@ def CheckBlockE (p : Prog) : Prop :=
       ErrClaim (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a e
 
 /-- **`check_shapeless`'s error claim**: the block's formers are checked as constants, then the
-twin declines. -/
+twin declines (`IndA5.lean` proves it from the claim of `check_constant_val`). -/
 def CheckShapelessE (p : Prog) : Prop :=
-  ∀ (_ : KnotStageProg p) (_ : ValProg p) (_ : ApdF p) (n : Nat), n ≤ 2 ^ 62 →
+  ∀ (_ : KnotStageProg p) (_ : ValProg p) (_ : ApdF p) (_ : CrKeep p)
+    (_ : p.lookup "check_shapeless_formers" = some checkShapelessFormers)
+    (_ : p.lookup "check_shapeless" = some checkShapeless) (n : Nat), n ≤ 2 ^ 62 →
     ∀ (m : Mem) (a : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {o l : Word} {block : List IConstantInfo},
     StageT dn vis fe m a → DecB (fun m => decEBlk dn m o.toNat l.toNat) m block →
+    L.Stubs.CrOK m → BlockLpsDn dn block → o.toNat + l.toNat ≤ erTop m →
     ∀ e, callE p n "check_shapeless" [vis, o, l] m = .error e →
       ErrClaim (ConRon.Arena.checkShapeless V fe block) a e
 
@@ -238,8 +241,8 @@ theorem cidE_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     | error e5 =>
       rw [c5, cidE.k_check_shapeless.none] at he
       cases he
-      exact hCS hkp hV hApd n (by omega) s4.mem a4 hC4.stageT
-        (hblk1.grow (decEBlk_mono _ _ _) hg4) _ c5
+      exact hCS hkp hV hApd hCrk P.csf P.csl n (by omega) s4.mem a4 hC4.stageT
+        (hblk1.grow (decEBlk_mono _ _ _) hg4) hIM4.cr hlpd (Nat.le_trans hb (hg1.trans hg4).2.1) _ c5
     | ok q5 =>
       rw [c5] at he
       cases he
