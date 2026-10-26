@@ -228,7 +228,7 @@ theorem decCI_reloc {T B : Array Word} {dn0 dn : NIdx → Option ConLeche.Name} 
   rw [hk0]
   rw [hk] at hc
   simp only [bind, Option.bind_some] at hc ⊢
-  rcases kk with _ | _ | _ | _ | _ | _ | _ | kk
+  rcases kk with _ | _ | _ | _ | _ | _ | kk
   · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
     obtain ⟨cv, -, rfl⟩ := hc; exact hF.elim
   · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
@@ -264,8 +264,6 @@ theorem decCI_reloc {T B : Array Word} {dn0 dn : NIdx → Option ConLeche.Name} 
       a2, h.nat (hK 6 (by omega) (by omega) (by omega)) rfl rfl h2,
       r, hr7, rc, h.nat (hK 8 (by omega) (by omega) (by omega)) rfl rfl hrc,
       rules, decRules_reloc hrules hF (hrs ro rc hro hrc), rfl⟩
-  · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
-    obtain ⟨_, -, rfl⟩ := hc; exact hF.elim
   · simp at hc
 
 end L.Arena

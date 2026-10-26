@@ -88,7 +88,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
     fun hf ⟨idx, hs⟩ => ⟨idx, memoRV_frame hnSch hnSch_wf nmKey _ A C hA76 hC75 _ _ hf
       (fun _ _ h => h) idx hs⟩
   -- the checks
-  generalize hdsA : pre.decls ++ ds = dsAll at hD hn hDsz hW
+  generalize hdsA : pre.decls ++ ds = dsAll at hD hn hDsz
   have hsz := hI.2.2.1
   have htsz : iwTop m ≤ (m.arr64 IW).size := hI.1
   cases n with
