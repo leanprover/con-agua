@@ -500,7 +500,7 @@ theorem um_twin (a : AState) (T : NIdx) : ∀ (g : Nat) (h : EIdx) (mp : HM) (b 
 
 /-! ## The L walks' models are the pure walks -/
 
-theorem eViewW_lit {m : Mem} {h : Word} (hne : eViewW m h ≠ []) (h8 : (eViewW m h).headD 0 = 8) :
+theorem ue_eViewW_lit {m : Mem} {h : Word} (hne : eViewW m h ≠ []) (h8 : (eViewW m h).headD 0 = 8) :
     viewOK m h LIT ∧ h >>> 28 = 8 := by
   unfold eViewW at hne h8
   simp only at hne h8
@@ -552,7 +552,7 @@ theorem hslW_pure (a : AState) : ∀ (n : Nat) (m : Mem) (f h r : Word), ArenaR 
       have hg : (eViewW m h).headD 0 = 8 := hvr
       rw [hslW.arm1 n m f h hf0 hne hg] at hW
       cases hW
-      obtain ⟨hok, h8⟩ := eViewW_lit hne hg
+      obtain ⟨hok, h8⟩ := ue_eViewW_lit hne hg
       have hk := defeq_view_lit_nat m a hA h hh hok h8
       by_cases hk0 : tfld m LIT (tierW h) (idxW h) 0 = 0
       · obtain ⟨N, hN, -⟩ := hk.1 hk0
