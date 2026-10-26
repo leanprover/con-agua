@@ -501,9 +501,9 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
     (hok3.check.ienv.find?_none (show denoteN a3.store.ns cv.name = some c.name by rw [hname]; exact hnm3)
       (ConRon.Bridge.checkConstantVal_fresh hpure1))
   have hck3 : CheckOK V env ((fe.push (.axiomInfo cv)).restrictTo vis.toNat) a3 := by
-    rw [← hvis]; exact hok3.check.congr_find hpre
+    rw [← hvis]; exact hok3.check.congr_find hpre rfl
   have hws : ConLeche.Expr.WScoped 0 x :=
-    ConLeche.Expr.WScoped.of_not_hasFvar (ConRon.Bridge.checkOpaqueVal_noFvar hpure2)
+    ConLeche.Expr.WScoped.of_not_hasFvar (ConRon.Bridge.checkOpaqueVal_noFvar hpure2.2)
   -- the memory's half after the push: the call's frame, the core memos
   have hf3 := (run_memFrame hlc checkOpaqueVal_loop (run_of_callW h3)).1
   have hmem3 : TwinMem dn s3.mem a3 :=

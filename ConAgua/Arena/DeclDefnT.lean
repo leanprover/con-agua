@@ -148,7 +148,7 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
     (hok3.check.ienv.find?_none (show denoteN a3.store.ns cv.name = some c.name by rw [hname]; exact hnm3)
       (ConRon.Bridge.checkConstantVal_fresh hpure1))
   have hck3 : CheckOK V env ((fe.push (.defnInfo cv v hh)).restrictTo vis.toNat) a3 := by
-    rw [← hvis]; exact hok3.check.congr_find hpre
+    rw [← hvis]; exact hok3.check.congr_find hpre rfl
   -- the memory's half after the push: the call's frame, the core memos
   have hf3 := (run_memFrame hlc checkDefnVal_loop (run_of_callW h3)).1
   have hmem3 : TwinMem dn s3.mem a3 :=
