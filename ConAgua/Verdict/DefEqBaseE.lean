@@ -90,7 +90,7 @@ def defeqNVList : List FnName :=
    "pin_word", "pin_at", "str_lit_supported", "str_lit_ctor", "get_app_args", "get_app_fn",
    "inst_list", "lams_inst", "peel_push", "spine_head", "same_const_heads", "head_hint", "hint_lt",
    "unfoldable_head", "lazy_fold_ok", "is_eager_reduce", "unfold_definition", "lit_eq", "e_view",
-   "is_nat_zero", "nat_pred"]
+   "is_nat_zero", "nat_pred", "lam_pair", "intern_fvar", "inst1", "inst_list"]
 
 theorem defeqNV : ∀ f ∈ defeqNVList, f ∈ L.Checker.nvFns := by decide +kernel
 
