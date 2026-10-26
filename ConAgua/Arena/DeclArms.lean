@@ -36,10 +36,9 @@ open L.Front (DECL)
 /-! ## The constant check -/
 
 /-- `check_constant_val(vis, q)`: `checkConstantVal fe cv` (`q` the constant value): the header's
-checks (`install_header`: the fresh name, the reserved names, the projection shape, the universe
-parameters, the type's guards), then the type's sort. -/
+checks (`install_header`: the fresh name, the reserved names, the universe parameters, the type's
+guards), then the type's sort. -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:239-265 ConRon.Arena.checkConstantVal
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.checkConstantVal]
 def checkConstantValL : FunDecl := lfn (vis, q) locals (t, z, st, u) {
   t := EREC.u64[q + 3];
@@ -119,7 +118,6 @@ def matchesPinL : FunDecl := lfn (q, pin) locals (e) {
 `3`; a constructor `4` or a recursor `5` with the two counts `a`, `b` at `+5`, `+6`), and its
 constant value matches the pin `rom_ci(id)`'s. One clause of `stdAxiomOk`'s chains. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.stdAxiomOk` changed; re-check the L code and its proofs, then delete this line
 def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
@@ -137,7 +135,6 @@ def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
 inductive at pin slot `s1` matching `rom_ci(i1)`, its constructor (`s2`, counts `c2`, `rom_ci(i2)`),
 its recursor (`s3`, counts `c3`, `rom_ci(i3)`), then the axiom `q` against `rom_cv(cvid)`. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.stdAxiomOk` changed; re-check the L code and its proofs, then delete this line
 def stdAxFamily : FunDecl :=
     lfn (vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid) locals (n, e, pa) {
   n := call pin_at(s1);
@@ -158,7 +155,6 @@ def stdAxFamily : FunDecl :=
 family, or `Classical.choice` over a standard `Nonempty` family (the `choice` name read only past
 the `propext` test). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.stdAxiomOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.stdAxiomOk]
 def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, nm, en, ea, e, cn) {
   pn := call pin_at(32);
@@ -405,7 +401,6 @@ def checkBasisDeclL : FunDecl := lfn (vis, kind) locals (en, ea, e, o, l, w) {
 /-- `quot_pin_hit(k, q)`: the constant value `q` is the pinned quotient block's constant at slot
 `k`, up to the canonical form. -/
 -- con-ron: ConRon/Arena/Basis.lean:81-90 ConRon.Arena.quotPinHit
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.quotPinHit` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.quotPinHit]
 def quotPinHitL : FunDecl := lfn (k, q) locals (o, l, c, p, e) {
   (o, l) := call rom_basis_decls(4);

@@ -1,7 +1,9 @@
 import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.KnotEntry
-import ConAgua.Arena.IndStubsT
+import ConAgua.Arena.StageTLift
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.CrOKFrame
 
 /-!

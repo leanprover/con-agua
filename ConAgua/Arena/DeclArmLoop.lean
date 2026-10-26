@@ -52,7 +52,7 @@ def armText : Prog :=
 /-- The functions the theorem arm reaches. -/
 def thmArmFns : List FnName :=
   ["check_decl_thm", "erec_ci", "erec_alloc", "dlp_copy", "check_constant_val", "install_header",
-   "env_find", "env_row_get", "env_ix", "reserved_contains", "reserved_from", "is_proj_fn_shape",
+   "env_find", "env_row_get", "env_ix", "reserved_contains", "reserved_from",
    "cv_lps", "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains",
    "loose_bvars_bounded_fast", "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast",
    "infer_type_core", "ensure_sort_core", "check_thm_val", "pin_word", "lvl_eq_fueled", "lvl_eq_c",

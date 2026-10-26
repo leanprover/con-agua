@@ -1286,7 +1286,6 @@ def checkerProg : Prog := [
   ("is_eager_reduce", L.Arena.isEagerReduceL),
   ("is_nat_zero", L.Arena.isNatZeroL),
   ("is_none", L.Arena.isNoneL),
-  ("is_proj_fn_shape", L.Checker.isProjFnShapeL),
   ("is_proof_fast", L.Arena.isProofFastL),
   ("is_some", L.Arena.isSomeL),
   ("is_str_lit", L.Arena.isStrLitL),

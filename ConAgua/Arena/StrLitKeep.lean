@@ -7,7 +7,7 @@ import ConRon.Bridge.ExprOps.MemoSpecs
 
 `VMono op`: every successful run of `op` keeps each `view` the store already answers. Closed
 under `pure`, `fail`, `bind`, `if` and `match` (by `split`), with leaves for the pin readers,
-`view`, the three interners and `toConstantVal`. `supKeep_of` discharges `SupKeep`
+`view` and the three interners. `supKeep_of` discharges `SupKeep`
 (`WhnfBase.lean`) by unfolding the twin's guards and composing.
 -/
 
@@ -73,13 +73,6 @@ theorem VMono.ite {α : Type} {c : Prop} [Decidable c] {t e : AM α} (ht : VMono
     (he : VMono e) : VMono (if c then t else e) := by
   split <;> assumption
 
-theorem vmono_toConstantVal (ci : IConstantInfo) : VMono ci.toConstantVal := by
-  cases ci <;> simp only [IConstantInfo.toConstantVal]
-  all_goals first
-    | exact VMono.pure _
-    | exact VMono.bind (vmono_internLNode _) fun _ => VMono.bind (vmono_internLNode _) fun _ =>
-        VMono.bind (vmono_internE _) fun _ => VMono.pure _
-
 /-- One step through a `do` block: split binds, `if`s and `match`es, close leaves. -/
 macro "vmono_auto" : tactic => `(tactic| (
   repeat' (first
@@ -87,11 +80,10 @@ macro "vmono_auto" : tactic => `(tactic| (
     | exact vmono_view _ | exact vmono_pinAt _ | exact vmono_pinSortOne
     | exact vmono_pinZeroLevel | exact vmono_pinEmptyLevels | exact vmono_internLNode _
     | exact vmono_internLsNode _ | exact vmono_internE _ | exact vmono_constE _
-    | exact vmono_toConstantVal _
     | (unfold pinNat) | (unfold pinNatZero) | (unfold pinNatSucc) | (unfold pinString)
     | (unfold pinStringOfList) | (unfold pinList) | (unfold pinListNil) | (unfold pinListCons)
     | (unfold pinChar) | (unfold pinCharOfNat) | (unfold sortOne) | (unfold zeroLevel)
-    | with_reducible apply VMono.bind | apply VMono.ite | intro _ | split)))
+    | with_reducible apply VMono.bind | apply VMono.ite | intro _ | split | (dsimp only))))
 
 theorem vmono_natIndOk (o : Option IConstantInfo) : VMono (natIndOk o) := by
   unfold natIndOk; vmono_auto

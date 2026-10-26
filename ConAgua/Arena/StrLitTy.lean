@@ -156,8 +156,10 @@ theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
   | some q₁ =>
   obtain ⟨c, m₁⟩ := q₁
   rw [h1] at hW; dsimp only at hW
-  obtain ⟨cv, a₁, hrun, ⟨M₁, hS₁, hK₁, hT₁⟩, -, -, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
-  cases h2 : callW p n "pin_word" [54] m₁ with
+  obtain ⟨hm₁, -, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
+  subst m₁
+  generalize hcv : ci.toConstantVal = cv at hlen hty
+  cases h2 : callW p n "pin_word" [54] m with
   | none => rw [h2] at hW; cases hW
   | some q₂ =>
   obtain ⟨s, m₂⟩ := q₂
@@ -165,15 +167,15 @@ theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
-  obtain ⟨hm21, -, hs⟩ := callW_pinWord p hp.pinWord n m₁ 54 s m₂ h2
+  obtain ⟨hm21, -, hs⟩ := callW_pinWord p hp.pinWord n m 54 s m₂ h2
   rw [hm21]
-  have hs' : s.headD 0 = pinW m₁ 54 := hs
-  have hpw : HW (pinW m₁ 54) := hS₁.pins.lv_lt.2.2
+  have hs' : s.headD 0 = pinW m 54 := hs
+  have hpw : HW (pinW m 54) := hS.pins.lv_lt.2.2
   have hrun' : (stringTyOk (some ci)).run a =
-      .ok (cv.levelParams.isEmpty && cv.type == decI (pinW m₁ 54), a₁) := by
-    simp only [stringTyOk, StateT.run_bind, hrun, except_ok_bind, sortOne,
-      pinSortOne_run hS₁.pins]; rfl
-  refine cref_run hrun' (CoreAfter.comp hK₁ hT₁ (coreAfter_refl hS₁)) ?_ (by unfold ResH; rw [← hr]; exact resH_ite01 _)
+      .ok (cv.levelParams.isEmpty && cv.type == decI (pinW m 54), a) := by
+    simp only [stringTyOk, hcv, StateT.run_bind, except_ok_bind, sortOne,
+      pinSortOne_run hS.pins]; rfl
+  refine cref_run hrun' (coreAfter_refl hS) ?_ (by unfold ResH; rw [← hr]; exact resH_ite01 _)
   have hb : decBool r = decide (c.tail.headD 0 = 0 ∧ c.tail.tail.headD 0 = s.headD 0) := by
     unfold decBool; rw [← hr]; split <;> simp_all
   rw [hb, hty, decI_beq _ _ hhw hpw, ← hs']

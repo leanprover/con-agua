@@ -26,25 +26,15 @@ set_option linter.unusedVariables false
 
 namespace L.Arena
 
-/-- `str_cv(p)`: the constant value of the record at `p` as `(lo, ll, ty)`: the level parameters
-`EREC[lo‥lo+ll)` and the type. A record of kind `≤ 5` holds it at `p + 1`; a projection table
-(kind `6`) has its own level parameters (`p + 3`, `p + 4`) and the type `Sort 1`, interned as the
-twin interns it. -/
+/-- `str_cv(p)`: the constant value of the record at `p` (`IConstantInfo.toConstantVal`, inline at
+`p + 1`) as `(lo, ll, ty)`: the level parameters `EREC[lo‥lo+ll)` and the type. -/
 -- con-ron: ConRon/Arena/Env.lean:176-180 ConRon.Arena.IConstantInfo.toConstantVal
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.IConstantInfo.toConstantVal` changed; re-check the L code and its proofs, then delete this line
-def strCvL : FunDecl := lfn (p) locals (k, z, o, t) {
-  k := EREC.u64[p];
-  if k <= 5 { return (EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4]) };
-  if k != 6 { abort };
-  z := call intern_zero();
-  o := call intern_succ(z);
-  t := call intern_sort(o);
-  return (EREC.u64[p + 3], EREC.u64[p + 4], t)
+def strCvL : FunDecl := lfn (p) locals () {
+  return (EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4])
 }
 
 /-- `string_ty_ok(found, p)`: no level parameters, type `Sort 1`. -/
 -- con-ron: ConRon/Arena/Core.lean:621-628 ConRon.Arena.stringTyOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.stringTyOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.stringTyOk]
 def stringTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, s1) {
   if found == 0 { return 0 };
@@ -56,7 +46,6 @@ def stringTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, s1) {
 
 /-- `char_ty_ok(found, p)`: `string_ty_ok`'s body (the twins are the same). -/
 -- con-ron: ConRon/Arena/Core.lean:630-637 ConRon.Arena.charTyOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.charTyOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.charTyOk]
 def charTyOkL : FunDecl := stringTyOkL
 
@@ -85,7 +74,6 @@ def strLs1L : FunDecl := lfn (u) locals (o, h, pt, pb) {
 
 /-- `list_ty_ok(found, p)`: one level parameter `u`, type `Sort (u+1) → Sort (u+1)`. -/
 -- con-ron: ConRon/Arena/Core.lean:639-656 ConRon.Arena.listTyOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.listTyOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.listTyOk]
 def listTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, pl, so, g, d, b, z) {
   if found == 0 { return 0 };
@@ -100,7 +88,6 @@ def listTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, pl, so, g, d, b, z
 
 /-- `list_nil_ty_ok(found, p)`: one level parameter `u`, type `Sort (u+1) → List.{u} #0`. -/
 -- con-ron: ConRon/Arena/Core.lean:658-692 ConRon.Arena.listNilTyOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.listNilTyOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.listNilTyOk]
 def listNilTyOkL : FunDecl :=
   lfn (found, p) locals (lo, ll, ty, pl, so, ps, li, g, d, b, z, f, x, l1, u1, i, y, w) {
@@ -127,7 +114,6 @@ def listNilTyOkL : FunDecl :=
 /-- `list_cons_ty_ok(found, p)`: one level parameter `u`, type
 `(α : Sort (u+1)) → α → List.{u} α → List.{u} α` (in de Bruijn indices). -/
 -- con-ron: ConRon/Arena/Core.lean:694-730 ConRon.Arena.listConsTyOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.listConsTyOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.listConsTyOk]
 def listConsTyOkL : FunDecl :=
   lfn (found, p) locals (lo, ll, ty, pl, so, ps, li, b0, b1, b2, l1, dom3, cod3, g, d, r, z,
@@ -158,7 +144,6 @@ def listConsTyOkL : FunDecl :=
 
 /-- `char_of_nat_ty_ok(found, p)`: no level parameters, type `Nat → Char`. -/
 -- con-ron: ConRon/Arena/Core.lean:732-747 ConRon.Arena.charOfNatTyOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.charOfNatTyOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.charOfNatTyOk]
 def charOfNatTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, nt, nc, ch, cc, g, d, b, z) {
   if found == 0 { return 0 };
@@ -176,7 +161,6 @@ def charOfNatTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, nt, nc, ch, c
 
 /-- `string_of_list_ty_ok(found, p)`: no level parameters, type `List.{0} Char → String`. -/
 -- con-ron: ConRon/Arena/Core.lean:749-770 ConRon.Arena.stringOfListTyOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.stringOfListTyOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.stringOfListTyOk]
 def stringOfListTyOkL : FunDecl :=
   lfn (found, p) locals (lo, ll, ty, zl, zs, li, lc, ch, cc, dom, st, sc, g, d, b, z) {

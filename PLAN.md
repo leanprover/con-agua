@@ -49,7 +49,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)`, then `all_goals grind [lang_grind,
   arena_grind, …, model defs]` (26 s). Often faster still, and without
   `grind`: `vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs, …]` (loads come out
-  as `rd64`, with no bound proofs inside terms) and `all_goals simp_all [LocEq, Expr.pval, ipf_rd64,
+  as `rd64`, with no bound proofs inside terms) and `all_goals simp_all [LocEq, Expr.pval, L.Arena.rd64_rdWC,
   BinOp.eval, Cmp.eval, St.setLoc*, Locals.init_cons_*, Sig.retVal, Sig.retOr, model def, its
   `*_some` continuation lemmas]` (RecGenSpec16 241 s -> 11 s, IndInstallSpec28 209 s -> 6 s).
   Before writing a spec of an L function, grep for an existing one (ProjFnShapeRef re-proved

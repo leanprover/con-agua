@@ -352,17 +352,14 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
 /-- `class_const_ok_header(vis, q)`: `classConstOk`'s guards, the syntactic checks of a constant
 (the body of lane `decls2`'s `install_header`, whose model `ihW` is this function's). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:502-523 ConRon.Arena.classConstOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.classConstOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.classConstOk]
-def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l, d, b, h, a) {
+def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a) {
   n := EREC.u64[q];
   t := EREC.u64[q + 3];
   (f, r) := call env_find(n, vis);
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   c := call reserved_contains(n);
   if c != 0 { fail R_RESERVED_BASIS_NAME };
-  s := call is_proj_fn_shape(n);
-  if s != 0 { fail R_RESERVED_PROJECTION_NAME };
   (o, l) := call cv_lps(q);
   d := call sl_nodup(o, l);
   if d == 0 { fail R_DUPLICATE_UNIVERSE_PARAMETERS_IN };
@@ -379,7 +376,6 @@ def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l,
 
 /-- `class_const_ok(vis, cv)`: a generated constant, checked (`checkConstantValF`). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:502-523 ConRon.Arena.classConstOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.classConstOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.classConstOk]
 def classConstOkL : FunDecl := lfn (vis, cv) locals (u, s) {
   u := call class_const_ok_header(vis, cv);

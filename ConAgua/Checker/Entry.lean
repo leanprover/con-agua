@@ -111,7 +111,6 @@ def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
 pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
 B's loop (`check_pending_go`); returns `ACCEPT`. -/
 -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.PooledAccepts`, `ConRon.Arena.IEnv.empty`, `ConRon.Arena.mkIFEnv` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
 def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
@@ -162,40 +161,6 @@ def instantiate1FastA : FunDecl := lfn (f, e, v, d) locals (r) {
 def inst1A : FunDecl := lfn (e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r
-}
-
-/-! ## `is_proj_fn_shape(n)` -/
-
-/-- `is_proj_fn_shape(n)`: `NIdx.isProjFnShape` — `n` is `num (str _ s) _` with `s` `"proj"` or
-`"projTable"`. The views abort where the twin's `viewN` throws (a handle past its tier's count, or
-in the scratch tier while it is off). The string is compared byte by byte in the pool (one byte
-per word, `NStrStore.lean`). -/
--- con-ron: ConRon/Arena/CheckerBase.lean:122-136 ConRon.Arena.NIdx.isProjFnShape
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.NIdx.isProjFnShape` is gone upstream; re-check the L code and its proofs, then delete this line
-@[l_impl ConRon.Arena.NIdx.isProjFnShape]
-def isProjFnShapeL : FunDecl := lfn (n) locals (t, i, p, o, l) {
-  if 4294967295 < n { abort };
-  if n >> 28 != 2 { return 0 };
-  t := ⟦n⟧.tier;
-  i := ⟦n⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if NNUM⟨t⟩.count <= i { abort };
-  p := NNUM⟨t, i⟩.p;
-  if 4294967295 < p { abort };
-  if p >> 28 != 1 { return 0 };
-  t := ⟦p⟧.tier;
-  i := ⟦p⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if NSTR⟨t⟩.count <= i { abort };
-  o := NSTR⟨t, i⟩.o;
-  l := NSTR⟨t, i⟩.l;
-  if l != 4 && l != 9 { return 0 };
-  if POOL⦃o⦄ != 112 || POOL⦃o + 1⦄ != 114 || POOL⦃o + 2⦄ != 111 ||
-     POOL⦃o + 3⦄ != 106 { return 0 };
-  if l == 4 { return 1 };
-  if POOL⦃o + 4⦄ != 84 || POOL⦃o + 5⦄ != 97 || POOL⦃o + 6⦄ != 98 ||
-     POOL⦃o + 7⦄ != 108 || POOL⦃o + 8⦄ != 101 { return 0 };
-  return 1
 }
 
 /-! ## `basis_pin_hit(off, len)` -/
@@ -283,7 +248,7 @@ def entryProg : Prog :=
    ("intern_all_pins", L.Rom.internAllPinsPB),
    ("abstract1_fast", abstract1FastA), ("instantiate1_fast", instantiate1FastA),
    ("inst1", inst1A),
-   ("is_proj_fn_shape", isProjFnShapeL), ("basis_pin_hit", basisPinHitL),
+   ("basis_pin_hit", basisPinHitL),
    ("ind_params_ok", indParamsOkL)]
 
 end L.Checker

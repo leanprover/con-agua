@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.IndRealIpf
 
 /-!
 # `install_header` refines `installHeader` (lane `decls2`, helper `decls2-header`)
@@ -225,7 +224,6 @@ structure IhProg (p : Prog) : Prop where
   nodup : p.lookup "sl_nodup" = some slNodup
   bvb : BvbProg p
   hf : HfF p
-  ipf : IpfF p
 
 mutual
 /-- **The model of `install_header`** (the name `x` and the type `t` read from `EREC` first). -/
@@ -241,11 +239,7 @@ def ihK1 (cR : CallM) (n : Nat) (vis q x t : Word) : Option (List Word × Mem) �
 
 def ihK2 (cR : CallM) (n : Nat) (vis q x t : Word) (m1 : Mem) : Option Word → Option (List Word × Mem)
   | none => none
-  | some c => if c ≠ 0 then none else ihK3 cR n vis q t (ipfF m1 [x])
-
-def ihK3 (cR : CallM) (n : Nat) (vis q t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => if r3.headD 0 ≠ 0 then none else ihK4 cR n vis t (cvLpsW n m3 q)
+  | some c => if c ≠ 0 then none else ihK4 cR n vis t (cvLpsW n m1 q)
 
 def ihK4 (cR : CallM) (n : Nat) (vis t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -278,17 +272,15 @@ def ihK9 : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 section arms
-variable (cR : CallM) (n : Nat) (m m1 m3 m4 m6 m7 m8 m9 : Mem) (vis q x t : Word) (c d : Word)
-  (r1 r3 r4 r6 r7 r8 r9 : List Word)
+variable (cR : CallM) (n : Nat) (m m1 m4 m6 m7 m8 m9 : Mem) (vis q x t : Word) (c d : Word)
+  (r1 r4 r6 r7 r8 r9 : List Word)
 theorem ihW_step : ihW cR (n + 1) m vis q =
     ihK1 cR n vis q (rdW (m.arr64 EREC) q) (rdW (m.arr64 EREC) (q + 3))
       (envFindW m (rdW (m.arr64 EREC) q) vis) := rfl
 theorem ihK1_some : ihK1 cR n vis q x t (some (r1, m1)) =
     if r1.headD 0 ≠ 0 then none else ihK2 cR n vis q x t m1 (resContW n m1 x) := rfl
 theorem ihK2_some : ihK2 cR n vis q x t m1 (some c) =
-    if c ≠ 0 then none else ihK3 cR n vis q t (ipfF m1 [x]) := rfl
-theorem ihK3_some : ihK3 cR n vis q t (some (r3, m3)) =
-    if r3.headD 0 ≠ 0 then none else ihK4 cR n vis t (cvLpsW n m3 q) := rfl
+    if c ≠ 0 then none else ihK4 cR n vis t (cvLpsW n m1 q) := rfl
 theorem ihK4_some : ihK4 cR n vis t (some (r4, m4)) =
     ihK5 cR n vis t r4 m4 (nodupW n m4 (r4.headD 0) (r4.tail.headD 0)) := rfl
 theorem ihK5_some : ihK5 cR n vis t r4 m4 (some d) =
@@ -308,7 +300,6 @@ end arms
 grind_pattern [ind_grind] ihW_step => ihW cR (n + 1) m vis q
 grind_pattern [ind_grind] ihK1_some => ihK1 cR n vis q x t (some (r1, m1))
 grind_pattern [ind_grind] ihK2_some => ihK2 cR n vis q x t m1 (some c)
-grind_pattern [ind_grind] ihK3_some => ihK3 cR n vis q t (some (r3, m3))
 grind_pattern [ind_grind] ihK4_some => ihK4 cR n vis t (some (r4, m4))
 grind_pattern [ind_grind] ihK5_some => ihK5 cR n vis t r4 m4 (some d)
 grind_pattern [ind_grind] ihK6_some => ihK6 cR n vis t r4 (some (r6, m6))
@@ -329,7 +320,6 @@ theorem ih_specW (p : Prog) (h : IhProg p) (cR : CallM) (hcR : CallSpec p cR) (n
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         envFind_specW p h.ix h.rowGet h.find n, resCont_spec p h.resF h.resC n,
         cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
-        ipfF_spec p h.ipf n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
         hcR n "all_level_params_defined", hcR n "consts_resolve_ffast"] <;>
       finish (gen := 20)
