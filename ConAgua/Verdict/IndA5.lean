@@ -37,7 +37,7 @@ l_model cslE_spec (p : Prog) (hf : p.lookup "check_shapeless" = some checkShapel
 -- `check_constant_val`'s error claim, in the shape of `checkConstantVal_refinesT`
 err_stmt CheckConstantValE := checkConstantVal_refinesT fuel n
 
-theorem erA_truncM (m : Mem) : erA (truncM m) = erecP m := by
+theorem erA_truncM_a5 (m : Mem) : erA (truncM m) = erecP m := by
   apply Array.ext_getElem?
   intro i
   rw [truncM_er_get?]
@@ -78,7 +78,7 @@ theorem decEBlk_head {dn : NIdx → Option ConLeche.Name} {m : Mem} {off cnt : W
   refine ⟨w, ?_, ?_, hoff, hcnt, ?_⟩
   · show ((m.arr64 EREC)[off.toNat]?).getD 0 = w
     rw [show (m.arr64 EREC)[off.toNat]? = some w from hw']; rfl
-  · rw [erA_truncM] at hx; exact hx
+  · rw [erA_truncM_a5] at hx; exact hx
   · show decEBlk dn (truncM m) (off + 1).toNat (cnt - 1).toNat = some xs
     rw [hoff, hcnt]; exact hxs
 
@@ -92,7 +92,7 @@ theorem mapM_denoteN_of {dn : NIdx → Option ConLeche.Name} {ns : ConRon.Arena.
     exact ⟨x :: ks, by simp [List.mapM_cons, hd k x hx, hks]⟩
 
 theorem erecP_get_lt {m : Mem} {i : Nat} {v : Word} (h : (erecP m)[i]? = some v) : i < erTop m := by
-  rw [← erA_truncM] at h
+  rw [← erA_truncM_a5] at h
   exact (truncM_er_get h).1
 
 theorem decCV_bound {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :

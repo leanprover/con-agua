@@ -28,8 +28,9 @@
                        line, which con-leche reports as an error too)
    On an abort, rax is its code: the class in bits 0-1, the reason in bits 2 and up, whose
    message M is reasons[reason] (reasons.h, generated from the twin's own messages; reason 0
-   prints no message). The classes are labels at the abort sites of the L code, checked against
-   con-ron on the test corpus, not proved.
+   prints no message). The classes are proved (`checkerFile_accepts`): rdx = 2 with class 1 or 2
+   means the twin's pipeline fails on the input with `invalid` resp. `notImplemented`; the
+   messages are not part of the theorem.
    A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
    message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
    region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
@@ -38,7 +39,8 @@
    `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
    `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. A failing
    threaded run prints the verdict of the failing group with the smallest index, which is what the
-   sequential run prints. */
+   sequential run prints; a reject or decline is covered by `checkerFile_threads_verdict`, under
+   the hypotheses `ThreadsFail` (ConAgua/Final/ThreadsVerdict.lean) states about the failing call. */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>

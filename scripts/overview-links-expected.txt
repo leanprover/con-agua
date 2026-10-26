@@ -11,7 +11,7 @@
      3  con-ron	ed864140e053a1c1deb51d39d8b8e17d5f244598	https://github.com/leanprover/con-ron.git
      4  con-leche	0d2f467bbe576f21e42ea861d246abef718f1c13	https://github.com/leanprover/con-leche.git
 
-== main.c#L1-L41
+== main.c#L1-L43
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
      2  
      3     build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
@@ -42,32 +42,34 @@
     28                         line, which con-leche reports as an error too)
     29     On an abort, rax is its code: the class in bits 0-1, the reason in bits 2 and up, whose
     30     message M is reasons[reason] (reasons.h, generated from the twin's own messages; reason 0
-    31     prints no message). The classes are labels at the abort sites of the L code, checked against
-    32     con-ron on the test corpus, not proved.
-    33     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
-    34     message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
-    35     region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
-    36  
-    37     With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
-    38     `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
-    39     `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. A failing
-    40     threaded run prints the verdict of the failing group with the smallest index, which is what the
-    41     sequential run prints. */
+    31     prints no message). The classes are proved (`checkerFile_accepts`): rdx = 2 with class 1 or 2
+    32     means the twin's pipeline fails on the input with `invalid` resp. `notImplemented`; the
+    33     messages are not part of the theorem.
+    34     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
+    35     message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
+    36     region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
+    37  
+    38     With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
+    39     `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
+    40     `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. A failing
+    41     threaded run prints the verdict of the failing group with the smallest index, which is what the
+    42     sequential run prints; a reject or decline is covered by `checkerFile_threads_verdict`, under
+    43     the hypotheses `ThreadsFail` (ConAgua/Final/ThreadsVerdict.lean) states about the failing call. */
 
-== main.c#L81-L93
-    81  /* Prints the verdict line and returns the exit status (the table above). */
-    82  static int print_verdict(ca_res r) {
-    83    if (accepted(r)) { printf("accept\n"); return 0; }
-    84    if (r.rdx == 0) { printf("ok %llu\n", (unsigned long long)r.rax); return 3; }
-    85    if (r.rdx == 1) { printf("exhausted\n"); return 3; }
-    86    uint64_t cls = r.rax & 3, why = r.rax >> 2;
-    87    const char *msg = why < sizeof reasons / sizeof *reasons ? reasons[why] : "unknown reason";
-    88    const char *sep = why ? ": " : "";
-    89    if (cls == 1) { printf("rejected%s%s\n", sep, msg); return 1; }
-    90    if (cls == 2) { printf("declined%s%s\n", sep, msg); return 2; }
-    91    printf("error%s%s\n", sep, msg);
-    92    return 3;
-    93  }
+== main.c#L83-L95
+    83  /* Prints the verdict line and returns the exit status (the table above). */
+    84  static int print_verdict(ca_res r) {
+    85    if (accepted(r)) { printf("accept\n"); return 0; }
+    86    if (r.rdx == 0) { printf("ok %llu\n", (unsigned long long)r.rax); return 3; }
+    87    if (r.rdx == 1) { printf("exhausted\n"); return 3; }
+    88    uint64_t cls = r.rax & 3, why = r.rax >> 2;
+    89    const char *msg = why < sizeof reasons / sizeof *reasons ? reasons[why] : "unknown reason";
+    90    const char *sep = why ? ": " : "";
+    91    if (cls == 1) { printf("rejected%s%s\n", sep, msg); return 1; }
+    92    if (cls == 2) { printf("declined%s%s\n", sep, msg); return 2; }
+    93    printf("error%s%s\n", sep, msg);
+    94    return 3;
+    95  }
 
 == ConAgua/Compiler/Main.lean#L25-L28
     25  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
@@ -76,21 +78,22 @@
     28    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
 
 == docs/deviations.md#L49
-    49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) at every capacity or defensive check (an unresolved constant decides its kind as the twin does, `unresolved_consts_error`: a string literal before `String` or a use of `sorryAx` declines, anything else rejects; its two walks, `has_str_lit_go` and `ue_mentions_go`, drop the twin's memo so the error path writes nothing: the same answer, but exponential time on a heavily shared term, error path only) | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the labels are trusted and checked against con-ron on the corpus |
+    49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) at every capacity or defensive check (an unresolved constant decides its kind as the twin does, `unresolved_consts_error`: a string literal before `String` or a use of `sorryAx` declines, anything else rejects; its two walks, `has_str_lit_go` and `ue_mentions_go`, drop the twin's memo so the error path writes nothing: the same answer, but exponential time on a heavily shared term, error path only) | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the classes are proved (a reject or decline is the twin's, the final theorems); the messages are not part of the theorem |
 
 == ConAgua/Final/Statement.lean#L89-L91
     89  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
     90  or an unset register is never read as accept. -/
     91  def ACCEPT : Word := 0x4143_4345_5054
 
-== ConAgua/Final/EndToEnd.lean#L66-L72
-    66  theorem checkerFile_accepts [Host]
-    67      (k0 : Nat) (hcode : Code checkerFile k0)
-    68      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    69      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    70      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    71          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    72        dm (label abiStartL) :=
+== ConAgua/Final/EndToEnd.lean#L83-L90
+    83  theorem checkerFile_accepts [Host]
+    84      (k0 : Nat) (hcode : Code checkerFile k0)
+    85      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    86      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    87      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    88          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]) ∧
+    89          (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
+    90            TwinVerdict [b] (st.data.regs.rax &&& 3)))
 
 == ConAgua/Compiler/Step.lean#L24-L29
     24  /-- Every run from `d` at `pc` reaches `Q`. -/
@@ -122,30 +125,45 @@
     41      installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList s = .ok (.ok (n, fe, pend), s') ∧
     42      checkPendingList mode fe pend.toList s'.worker = .ok (.ok (), s'')
 
-== ConAgua/Final/EndToEnd.lean#L84-L96
-    84  theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
-    85      (k0 : Nat) (hcode : Code checkerFile k0)
-    86      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    87      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    88      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    89          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
-    90            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
-    91              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
-    92              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
-    93              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
-    94                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
-    95              Nonempty (ConLeche.Model V env)))
-    96        dm (label abiStartL) :=
+== ConAgua/Final/TwinVerdict.lean#L58-L59
+    58  def TwinVerdict (chunks : List ByteArray) (c : L.Word) : Prop :=
+    59    ∃ pins, TwinFailsV (twinRun pins chunks) (AState.init EStore.empty) c
 
-== ConAgua/Final/EndToEnd.lean#L110-L117
-   110  theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
-   111      (k0 : Nat) (hcode : Code checkerFile k0)
-   112      (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
-   113      (h64 : System.Platform.numBits = 64)
-   114      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   115      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-   116          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
-   117        dm (label abiStartL) :=
+== ConAgua/Final/TwinVerdict.lean#L46-L54
+    46  def twinRun (pins : List NatOpPinSet) (chunks : List ByteArray) :
+    47      AM (Except (ConRon.Arena.CheckError × Nat) Unit) :=
+    48    internReservedPins >>= fun _ =>
+    49    thenV builtinPreludeE fun pre =>
+    50    thenV (parseChunks chunks) fun r =>
+    51    preparePrelude pre r.decls >>= fun ds =>
+    52    internAllPins pins >>= fun ipins =>
+    53    thenV (installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList) fun q =>
+    54    fun s => checkPendingList .verified q.2.1 q.2.2.toList s.worker
+
+== ConAgua/Final/EndToEnd.lean#L103-L115
+   103  theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
+   104      (k0 : Nat) (hcode : Code checkerFile k0)
+   105      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   106      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   107      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   108          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
+   109            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
+   110              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
+   111              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
+   112              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
+   113                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
+   114              Nonempty (ConLeche.Model V env)))
+   115        dm (label abiStartL) :=
+
+== ConAgua/Final/EndToEnd.lean#L129-L136
+   129  theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
+   130      (k0 : Nat) (hcode : Code checkerFile k0)
+   131      (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
+   132      (h64 : System.Platform.numBits = 64)
+   133      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   134      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   135          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
+   136        dm (label abiStartL) :=
 
 == ConAgua/Final/Twin.lean#L116-L132
    116  /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
@@ -166,14 +184,16 @@
    131      ConRon.Bridge.Arena.pooledAccepts_bridge rfl hk hind hpps hfold hipins hpd hden (pooledAccepts_of_seq hF)
    132    exact ⟨pins, preC, rc, F, env, hrc, hpure⟩
 
-== ConAgua/Final/EndToEnd.lean#L54-L60
-    54  theorem checkerFile_accepts_regs [Host]
-    55      (k0 : Nat) (hcode : Code checkerFile k0)
-    56      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    57      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    58      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-    59          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    60        dm (label abiStartL) :=
+== ConAgua/Final/EndToEnd.lean#L64-L72
+    64  theorem checkerFile_accepts_regs [Host]
+    65      (k0 : Nat) (hcode : Code checkerFile k0)
+    66      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    67      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    68      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+    69          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]) ∧
+    70          (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
+    71            TwinVerdict [b] (st.data.regs.rax &&& 3)))
+    72        dm (label abiStartL) :=
 
 == ConAgua/Final/Statement.lean#L120-L127
    120  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
@@ -185,23 +205,25 @@
    126  def RegsRestored (r0 r : Reg64s) : Prop :=
    127    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15 ∧
 
-== ConAgua/Final/EndToEnd.lean#L162-L177
-   162  /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   163  #guard_msgs in #print axioms checkerFile_accepts
-   164  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   165  #guard_msgs in #print axioms checkerFile_accepts_regs
-   166  /-- info: 'ConAgua.Final.checkerFile_model_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   167  #guard_msgs in #print axioms checkerFile_model_exists
-   168  /-- info: 'ConAgua.Final.checkerFile_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   169  #guard_msgs in #print axioms checkerFile_no_False
-   170  /-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   171  #guard_msgs in #print axioms checkerFile_threads_accept
-   172  /-- info: 'ConAgua.Final.checkerFile_threads_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   173  #guard_msgs in #print axioms checkerFile_threads_regs
-   174  /-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   175  #guard_msgs in #print axioms checkerFile_threads_model
-   176  /-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   177  #guard_msgs in #print axioms checkerFile_threads_no_False
+== ConAgua/Final/EndToEnd.lean#L192-L209
+   192  /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   193  #guard_msgs in #print axioms checkerFile_accepts
+   194  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   195  #guard_msgs in #print axioms checkerFile_accepts_regs
+   196  /-- info: 'ConAgua.Final.checkerFile_model_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   197  #guard_msgs in #print axioms checkerFile_model_exists
+   198  /-- info: 'ConAgua.Final.checkerFile_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   199  #guard_msgs in #print axioms checkerFile_no_False
+   200  /-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   201  #guard_msgs in #print axioms checkerFile_threads_accept
+   202  /-- info: 'ConAgua.Final.checkerFile_threads_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   203  #guard_msgs in #print axioms checkerFile_threads_regs
+   204  /-- info: 'ConAgua.Final.checkerFile_threads_verdict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   205  #guard_msgs in #print axioms checkerFile_threads_verdict
+   206  /-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   207  #guard_msgs in #print axioms checkerFile_threads_model
+   208  /-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   209  #guard_msgs in #print axioms checkerFile_threads_no_False
 
 == ConAgua/Audit/Final.lean#L20-L37
     20  /-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -283,26 +305,26 @@
     11  #
     12  # Usage: scripts/check-asm.sh (from anywhere in the repo; rebuilds the emitters it needs).
 
-== main.c#L146-L164
-   146  /* The input: a nonempty regular file is mapped read-only;
-   147     anything else (a pipe, a terminal, an empty file) or a file mmap refuses is read with `slurp`.
-   148     The bytes `b` the theorem talks about are whatever the buffer holds: a mapped file that
-   149     another process changes during the run changes them (and one truncated faults: a crash). */
-   150  static uint8_t *read_input(const char *path, uint64_t *n) {
-   151    int fd = open(path, O_RDONLY);
-   152    if (fd < 0) fail(path, strerror(errno));
-   153    struct stat st;
-   154    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0) {
-   155      uint8_t *buf = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-   156      if (buf != MAP_FAILED) {
-   157        close(fd);
-   158        in_mapped = 1;
-   159        *n = st.st_size;
-   160        return buf;
-   161      }
-   162    }
-   163    return slurp(fd, path, n);
-   164  }
+== main.c#L148-L166
+   148  /* The input: a nonempty regular file is mapped read-only;
+   149     anything else (a pipe, a terminal, an empty file) or a file mmap refuses is read with `slurp`.
+   150     The bytes `b` the theorem talks about are whatever the buffer holds: a mapped file that
+   151     another process changes during the run changes them (and one truncated faults: a crash). */
+   152  static uint8_t *read_input(const char *path, uint64_t *n) {
+   153    int fd = open(path, O_RDONLY);
+   154    if (fd < 0) fail(path, strerror(errno));
+   155    struct stat st;
+   156    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0) {
+   157      uint8_t *buf = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+   158      if (buf != MAP_FAILED) {
+   159        close(fd);
+   160        in_mapped = 1;
+   161        *n = st.st_size;
+   162        return buf;
+   163      }
+   164    }
+   165    return slurp(fd, path, n);
+   166  }
 
 == ConAgua/Final/ThreadsFinal.lean#L124-L148
    124  /-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
@@ -352,6 +374,66 @@
     32    (`k = rax - 2^63` from entry 1), and every index below `k` is claimed by some thread.
     33  * The verdicts: entry 1 returns `rdx = 0`, `rax ≥ 2^63`; every call returns `rdx = 0`,
     34    `rax = ACCEPT`.
+
+== ConAgua/Final/ThreadsVerdict.lean#L50-L89
+    50  structure Entry1Fail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) :
+    51      Prop where
+    52    call₀ : AbiCall b pb dm₀ ra₀
+    53    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+    54    rdx₀ : st₀.data.regs.rdx = 2
+    55  
+    56  /-- **A thread's call `i` fails** (trusted; the module doc lists it): entry 1 at `dm₀` returning
+    57  at `st₀`, the buffer `B`, and the thread `t`'s calls `0, …, i` (`ThreadsRun`'s fields for them),
+    58  the calls before `i` accepting, call `i` returning `rdx = 2`. -/
+    59  structure ThreadFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
+    60      (B : Array Word) (t : ThreadM) (i : Nat) : Prop where
+    61    call₀ : AbiCall b pb dm₀ ra₀
+    62    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+    63    rdx₀ : st₀.data.regs.rdx = 0
+    64    rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
+    65    /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
+    66    bufw : ∀ q (h : q < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
+    67    buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
+    68    /-- the calls: the buffer in place, on the thread's region -/
+    69    calls : ∀ i' ≤ i, BufCallH B (t.dm i') (t.ra i') ∧
+    70      (t.dm i').regs.rdi.toNat = outAddr dm₀.regs.r8.toNat ∧ (t.dm i').regs.rcx.toNat = t.base ∧
+    71      (t.dm i').regs.r8.toNat = t.blen
+    72    zero : ∀ x, t.base ≤ x → x < t.base + t.blen → (t.dm 0).dmem.get? (A x) = some 0
+    73    ret : ∀ i' ≤ i, FirstReturn (t.dm i') (label abiCheckBL) (t.ra i') (t.st i')
+    74    acc : ∀ i' < i, (t.st i').data.regs.rdx = 0 ∧ (t.st i').data.regs.rax = ACCEPT
+    75    rdx : (t.st i).data.regs.rdx = 2
+    76    /-- route A: the buffer's words at each accepting call's return -/
+    77    kept : ∀ i' < i, ∀ q (h : q < B.size),
+    78      rdW (t.st i').data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
+    79    next : ∀ i', i' < i → ∀ x, t.base ≤ x → x < t.base + t.blen →
+    80      (t.dm (i' + 1)).dmem.get? (A x) = (t.st i').data.dmem.get? (A x)
+    81    claimed : ∀ i' ≤ i, (t.dm i').regs.rdx < st₀.data.regs.rax - 9223372036854775808
+    82  
+    83  /-- **The threaded harness reports a failure with the code `k`**: entry 1 failed with
+    84  `rax = k`, or a thread's call `i` failed with `rax = k`. -/
+    85  def ThreadsFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
+    86      (k : Word) : Prop :=
+    87    (Entry1Fail b pb dm₀ ra₀ st₀ ∧ k = st₀.data.regs.rax) ∨
+    88    ∃ (B : Array Word) (t : ThreadM) (i : Nat), ThreadFail b pb dm₀ ra₀ st₀ B t i ∧
+    89      k = (t.st i).data.regs.rax
+
+== ConAgua/Final/ThreadsVerdict.lean#L24-L39
+    24  **What the theorem trusts of the harness** (the hypotheses of `Entry1Fail` and `ThreadFail`;
+    25  beyond them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and
+    26  loader):
+    27  
+    28  * **Entry 1's call**: `ca_start_a` is called as `AbiCall` says; **first return** (`FirstReturn`):
+    29    the harness regains control at the return address in a state with every property the machine
+    30    is guaranteed to reach there (`abiA_outcome`'s and `abiB_outcome`'s posts).
+    31  * On a thread's failure (`ThreadFail`), for the thread's calls up to the failing call `i`, what
+    32    `ThreadsRun` trusts: the buffer (`OUT`'s first `len` words at entry 1's return) stays in place
+    33    and is passed to each call (route A: read-only, `mprotect`); the thread's region is its own,
+    34    zero at the first call, and at each later call holding the bytes the previous call left; each
+    35    call is made as `BufCallH` says; every claimed group index (in `rdx`) is below `k`
+    36    (`k = rax - 2^63` from entry 1). Coverage of the group indices by the threads is not needed.
+    37  * The verdicts: entry 1 returns `rdx = 2` (`Entry1Fail`), or `rdx = 0` and `rax ≥ 2^63`, the
+    38    thread's calls before `i` return `rdx = 0`, `rax = ACCEPT`, and call `i` returns `rdx = 2`
+    39    (`ThreadFail`). The harness reports the code `k` it read from that call's `rax`.
 
 == ConAgua/Compiler/Main.lean#L24-L28
     24  /-- What the harness sees after `ca_enter` returns, against L's result. -/
@@ -487,6 +569,14 @@
     32      (hctlf : (w.arr64 CTLF).size = 0) (hv : rd64 w HDRF 3 = rd64 m₁ OUT 3)
     33      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
     34      TwinAccepts [b] := by
+
+== ConAgua/Arena/Verdict.lean#L50-L51
+    50  def ErrClaim {α : Type} (T : AM α) (a : AState) (e : Err) : Prop :=
+    51    e.cls ≠ 0 → ∃ ce, T.run a = .error ce ∧ twinCls ce = e.cls
+
+== ConAgua/Checker/NoVerdictClosed.lean#L71-L72
+    71  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
+    72    closedNV_of_all nvTree.eq checkerProg_nvChk
 
 == ConAgua/Final/DrvAbi.lean#L177-L187
    177  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
@@ -1729,35 +1819,33 @@
     33      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
     34      TwinAccepts [b] := by
 
-== main.c#L166-L184
-   166  /* `--jobs=N` (N > 1), the threaded mode.
-   167  
-   168     Entry 1 (`ca_start_a`) runs the stages and phase A in the region. On success (rdx = 0,
-   169     rax = 2^63 + k, k pending groups) it has written the frozen buffer into the array `OUT`, whose
-   170     word 1 is the buffer's length in words. The buffer stays where it is: the rest of the region is
-   171     unmapped around it and the buffer is made read-only, so a write to it faults and kills the
-   172     process, which is never an accept (route A). N threads then each map their own zero region of
-   173     ca_worker_size bytes and claim group indices from one atomic counter, calling
-   174     `ca_check_b(buf, len, j, region, region_len)` for each claimed j, one call after the other on
-   175     the region as the previous call left it.
-   176  
-   177     Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
-   178     out each of 0, 1, 2, ... once) and a stop flag that only shortens a failing run. Each thread
-   179     has its own region and its own result slot; main combines the slots after joining every
-   180     thread. Accept iff no slot holds a failure: every call that thread made accepted, and the
-   181     threads drain the counter past k unless one fails. Otherwise the verdict is that of the
-   182     failing group with the smallest index, as a one-thread run would report it: the indices are
-   183     claimed in order and a thread finishes the group it holds, so every lower group has been
-   184     checked, and accepted, when the threads are joined. */
+== main.c#L168-L186
+   168  /* `--jobs=N` (N > 1), the threaded mode.
+   169  
+   170     Entry 1 (`ca_start_a`) runs the stages and phase A in the region. On success (rdx = 0,
+   171     rax = 2^63 + k, k pending groups) it has written the frozen buffer into the array `OUT`, whose
+   172     word 1 is the buffer's length in words. The buffer stays where it is: the rest of the region is
+   173     unmapped around it and the buffer is made read-only, so a write to it faults and kills the
+   174     process, which is never an accept (route A). N threads then each map their own zero region of
+   175     ca_worker_size bytes and claim group indices from one atomic counter, calling
+   176     `ca_check_b(buf, len, j, region, region_len)` for each claimed j, one call after the other on
+   177     the region as the previous call left it.
+   178  
+   179     Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
+   180     out each of 0, 1, 2, ... once) and a stop flag that only shortens a failing run. Each thread
+   181     has its own region and its own result slot; main combines the slots after joining every
+   182     thread. Accept iff no slot holds a failure: every call that thread made accepted, and the
+   183     threads drain the counter past k unless one fails. Otherwise the verdict is that of the
+   184     failing group with the smallest index, as a one-thread run would report it: the indices are
+   185     claimed in order and a thread finishes the group it holds, so every lower group has been
+   186     checked, and accepted, when the threads are joined. */
 
-== ConAgua/Final/EndToEnd.lean#L122-L128
-   122  /-- **Threaded accept**: if the harness runs as `ThreadsRun` says (entry 1, then `ca_check_b` per
-   123  claimed group index on each thread's own region, every call accepting, every index claimed), the
-   124  twin's pooled pipeline accepts `[b]`. -/
-   125  theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-   126      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-   127      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-   128      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
+== ConAgua/Final/EndToEnd.lean#L144-L148
+   144  theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   145      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   146      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+   147      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
+   148    threadsRun_twinAcceptsPooled k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR
 
 == ConAgua/Final/TwinPooled.lean#L23-L32
     23  /-- **The twin accepts `chunks` with phase B as con-ron's pool.** -/
@@ -1771,15 +1859,34 @@
     31      internAllPins pins sD = .ok (ipins, sE) ∧
     32      ConRon.Arena.PooledAccepts .verified ipins ds sE fe sF
 
-== ConAgua/Final/EndToEnd.lean#L131-L138
-   131  /-- **The threaded harness's registers**: if the harness runs as `ThreadsRun` says, entry 1 and
-   132  every `ca_check_b` call return with the caller's callee-saved registers intact. -/
-   133  theorem checkerFile_threads_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-   134      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-   135      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-   136      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
-   137      RegsRestored dm₀.regs st₀.data.regs ∧ ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs :=
-   138    (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).2
+== ConAgua/Final/EndToEnd.lean#L152-L157
+   152  theorem checkerFile_threads_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   153      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   154      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+   155      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
+   156      RegsRestored dm₀.regs st₀.data.regs ∧ ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs :=
+   157    (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).2
+
+== ConAgua/Final/EndToEnd.lean#L164-L167
+   164  theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   165      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   166      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
+   167      (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) : TwinVerdictPooled [b] (k &&& 3) :=
+
+== ConAgua/Final/TwinVerdict.lean#L173-L185
+   173  def TwinVerdictPooled (chunks : List ByteArray) (c : L.Word) : Prop :=
+   174    TwinVerdict chunks c ∨
+   175    ∃ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx) (r : ParseResultD)
+   176      (ds : Array IDeclaration) (ipins : List INatOpPinSet) (n : Nat) (fe : IFEnv)
+   177      (pend : Array PendingCheck) (w : List PendingCheck),
+   178      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+   179      builtinPreludeE sA = .ok (.ok pre, sB) ∧
+   180      parseChunks chunks sB = .ok (.ok r, sC) ∧
+   181      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
+   182      internAllPins pins sD = .ok (ipins, sE) ∧
+   183      installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList sE = .ok (.ok (n, fe, pend), sF) ∧
+   184      (∀ pc ∈ w, pc ∈ pend.toList) ∧
+   185      TwinFailsV (checkPendingList .verified fe w) sF.worker c
 
 == docs/deviations.md#L24-L39
     24  ## Temporary
@@ -1808,7 +1915,7 @@
     46  | D13 | DESIGN.md (`readLC`/`readNC`/`readLsC`) | readback caches | not mirrored: L never reads back (the level algorithms work on handles) | none | – | by design: L works on handles and never reads back |
     47  | D14 | `lv_equiv`, DESIGN.md (levels) | con-leche's `leq` simplifies again | simplifies each side once (proved equal) | none | – | by design: proved equal; simplifying once suffices |
     48  | D15 | DESIGN.md (lane `induct`); ROADMAP §3(b) | every `CheckMode`, `checkFuel` | the `.verified` mode only, no `checkFuel` | none | – | by design: only the `.verified` mode is checked |
-    49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) at every capacity or defensive check (an unresolved constant decides its kind as the twin does, `unresolved_consts_error`: a string literal before `String` or a use of `sorryAx` declines, anything else rejects; its two walks, `has_str_lit_go` and `ue_mentions_go`, drop the twin's memo so the error path writes nothing: the same answer, but exponential time on a heavily shared term, error path only) | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the labels are trusted and checked against con-ron on the corpus |
+    49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) at every capacity or defensive check (an unresolved constant decides its kind as the twin does, `unresolved_consts_error`: a string literal before `String` or a use of `sorryAx` declines, anything else rejects; its two walks, `has_str_lit_go` and `ue_mentions_go`, drop the twin's memo so the error path writes nothing: the same answer, but exponential time on a heavily shared term, error path only) | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the classes are proved (a reject or decline is the twin's, the final theorems); the messages are not part of the theorem |
     50  | D17 | Stage B `validate` / `scan_string` (DESIGN.md, lane `stageb`) | `feed_chunk` asks `newline_from`; con-leche decodes a whole string, then checks UTF-8 | does not ask (same error, same line); checks each raw run between escapes (proved equivalent) | none | – | by design: proved equivalent |
     51  | D19 | `Rom/CIRead.lean` (the ROM constant readers) | `internCI` keeps a `sortZ` name as a value | interns it (only `Quot`'s `u`, already interned as a level parameter) | none | integrate | by design: representation only |
     52  | D20 | `Checker/Entry.lean` adapters `abstract1_fast`, `instantiate1_fast`, `inst1` | the walks take `coreWalkFuel` | the fuel argument is dropped; lane exprops4's walks count their own | none (the twin's fuel is never exhausted below `2^62`; ROADMAP §3(b)) | integrate | by design: the twin's fuel is never exhausted; the walks count their own |
