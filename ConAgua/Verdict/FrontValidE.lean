@@ -205,6 +205,7 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   rw [h3, validateE.k_vi_map.arm1] at he
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callE (map_spec p hL n ⟨m, Locals.init []⟩ _ _ _ _ _) h3
   rw [hs3] at hW3
+  dsimp only at hW3
   generalize hty : r3.headD 0 = tyn at he hW3
   obtain ⟨t1, t2, t3, -, t5, t6, t7⟩ := mapW_twin hT hW3 a tys (fun t => t.cv.name) st.name
     (by rw [hTn])
@@ -224,6 +225,7 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   rw [h4, validateE.k_vi_map_2.arm1] at he
   obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callE (map_spec p hL n ⟨m₁, Locals.init []⟩ _ _ _ _ _) h4
   rw [hs4] at hW4
+  dsimp only at hW4
   generalize htt : r4.headD 0 = tyt at he hW4
   obtain ⟨u1, u2, u3, -, u5, u6, u7⟩ := mapW_twin t3 hW4 a tys (fun t => t.cv.type) (getDeclD st)
     (by rw [hTn])
@@ -244,6 +246,7 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   rw [h5, validateE.k_vi_listed.arm1] at he
   obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callE (listed_spec p hL n ⟨m₂, Locals.init []⟩ _ _) h5
   rw [hs5] at hW5
+  dsimp only at hW5
   generalize hfo : r5.headD 0 = fo at he hW5
   generalize hxx : r5.tail.headD 0 = x at he hW5
   obtain ⟨LS, l1, l2, l3, l4, l5, l6, l7, l8, l9⟩ := listedW_twin hD a tys to tn
@@ -259,6 +262,7 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   rw [h6, validateE.k_vi_map_3.arm1] at he
   obtain ⟨s6, hs6, -, hW6⟩ := triple_of_callE (map_spec p hL n ⟨m₃, Locals.init []⟩ _ _ _ _ _) h6
   rw [hs6] at hW6
+  dsimp only at hW6
   generalize hcno : r6.headD 0 = cno at he hW6
   obtain ⟨v1, v2, v3, -, v5, v6, v7⟩ := mapW_twin l3 hW6 a cts (fun c => c.cv.name) st.name
     (by rw [hCn])
@@ -316,6 +320,260 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   rw [h8, validateE.k_vi_tail.none] at he; cases he
   have hE := triple_of_callE_err (viTail_specE p hL.vi_tail n ⟨m₄, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _) h8
     (Err.code_ne_of_cls hk)
-  sorry
+  cases n with
+  | zero => simp only [viTailE] at hE; cases hE; exact absurd rfl hk
+  | succ n =>
+  rw [viTailE.arm1] at hE
+  have hR₄ : ArenaR m₄ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₄ e14.frame a hR
+  have hD₄ : StateDR m₄ st := hD.frame e14.frame (by decide) (by decide) (by decide) (by decide) (by decide)
+  cases h9 : callE p n "store_fuel" [] m₄ with
+  | error e9 =>
+    rw [h9, viTailE.k_store_fuel.none] at hE; cases hE; exact absurd (nv _ (by decide) h9) hk
+  | ok q9 =>
+  obtain ⟨r9, m9⟩ := q9
+  rw [h9, viTailE.k_store_fuel.arm1] at hE
+  obtain ⟨s9, hs9, hsm9, hW9⟩ := triple_of_callE (storeFuel_spec p hL n ⟨m₄, Locals.init []⟩) h9
+  have hm9 : m9 = m₄ := by rw [← hs9, hsm9]
+  rw [hm9] at hE
+  generalize hfu : r9.headD 0 = fuel at hE hW9
+  have hfuel := storeFuelW_ok hR₄ hW9
+  have hps4 : ∀ i, i ≤ tys.length → psum m₄ to i = fpos LS i := fun i hi => by
+    rw [psum_congr e14.ifr]; exact psum_fpos (fun k hk => hTy.2.2 k hk) l9 i hi
+  have hLSl : LS.length = tys.length := by have := congrArg List.length l9; simpa using this
+  have hcnt : ∀ k (hk : k < tys.length), cntF m₄ to k = tys[k].ctors.length := fun k hk => by
+    simp only [cntF, wd, e14.ifr]; exact (hTy.2.2 k hk).2.1
+  have hzl : (islice (k := .name) m₁ tyn.toNat tys.length).length = LS.length := by
+    rw [islice_length, hLSl]
+  have hcntL : ∀ k (hk : k < LS.length), cntF m₄ to k = LS[k].length := fun k hk => by
+    have hk' : k < tys.length := by omega
+    rw [hcnt k hk']
+    have := congrArg (fun l => l[k]?) l9
+    simp only [List.getElem?_map, List.getElem?_eq_getElem hk, List.getElem?_eq_getElem hk',
+      Option.map_some, Option.some.injEq] at this
+    rw [← this]
+  have hnnL : ∀ i (hi : i < LS.length) c (hc : c < LS[i].length),
+      LS[i][c] = decI (wd m₄ IFL (fo.toNat + (fpos LS i + c))) := fun i hi c hc => by
+    have hpl := fpos_lt LS i c hi hc
+    rw [getElem_flatten' LS i c hi hc, List.getElem_of_eq l7, islice_get, hkeep34 _ hpl]
+  have hTNL : ∀ i, i < LS.length →
+      (islice (k := .name) m₁ tyn.toNat tys.length)[i]! = decI (wd m₄ IFL (tyn.toNat + i)) := fun i hi => by
+    have hi' : i < tys.length := by omega
+    rw [getElem!_pos _ i (by rw [islice_length]; exact hi'), islice_get,
+      ((u2.trans (l2.trans v2)).keep _ (by omega) (by omega))]
+  cases h10 : callE p n "vi_order" [to, tn, tyn, fo, cno, co, cn, fuel, np] m₄ with
+  | error e10 =>
+    rw [h10, viTailE.k_vi_order.none] at hE; cases hE
+    cases n with
+    | zero => exact absurd (callE_zero h10) hk
+    | succ n' =>
+    obtain ⟨hc1, hOW⟩ := orderE_fail hL (fun g hg => hnv g (by
+        simp only [List.mem_cons, List.not_mem_nil, or_false] at hg
+        rcases hg with rfl | rfl | rfl | rfl | rfl <;> decide)) hR₄ hD₄ v3
+      (hCt.ext e14 (fun _ _ x => x.ext e14)) hCn v7
+      (by rw [v6, v5]; omega) np3 hco ⟨by omega, by omega, by omega⟩ (by rw [hTn]; omega)
+      (by rw [hTn]; omega)
+      (fun p hp => by
+        rw [hps4 _ (by omega), hTn, ← hLSl, fpos_full] at hp
+        refine ⟨by omega, ?_⟩
+        rw [hkeep34 p hp]; exact l8 p hp)
+      (by rw [hps4 _ (by omega), hTn, ← hLSl, fpos_full, hflen]; exact Nat.le_refl _)
+      (fun k hk => by
+        rw [((u2.trans (l2.trans v2)).keep _ (by omega) (by omega))]; rw [hTn] at hk; exact t7 k hk)
+      e h10 hk
+    have hO := orderFail_of_W (LS := LS) (TN := islice (k := .name) m₁ tyn.toNat tys.length) hOW
+      (by rw [hLSl, hTn]) (fun i hi => hps4 i (by omega)) hcntL hnnL hTNL rfl
+    obtain ⟨v, hv, hc⟩ := validateIndD_orderFail_cls (rcs := rcs) hVP hnd hflen hzl hRN hfuel.symm hO
+    exact .inr ⟨v, a, hv, by rw [hc, hc1]⟩
+  | ok q10 =>
+  obtain ⟨r10, m₅⟩ := q10
+  rw [h10, viTailE.k_vi_order.arm1] at hE
+  obtain ⟨s10, hs10, -, hW10⟩ := triple_of_callE (order_spec p hL n ⟨m₄, Locals.init []⟩ _ _ _ _ _ _ _ _ _) h10
+  rw [hs10] at hW10
+  dsimp only at hW10
+  generalize hoo : r10.headD 0 = oo at hE hW10
+  obtain ⟨o1, o2, o3, o4, o5⟩ := orderW_twin hR₄ hD₄ v3 (hCt.ext e14 (fun _ _ x => x.ext e14)) hCn v7
+    (by rw [v6, v5]; omega) np3 hco ⟨by omega, by omega, by omega⟩ (by rw [hTn]; omega)
+    (by rw [hTn]; omega)
+    (fun p hp => by
+      rw [hps4 _ (by omega), hTn, ← hLSl, fpos_full] at hp
+      refine ⟨by omega, ?_⟩
+      rw [hkeep34 p hp]; exact l8 p hp)
+    (by rw [hps4 _ (by omega), hTn, ← hLSl, fpos_full, hflen]; exact Nat.le_refl _) hW10
+  cases h11 : callE p n "vi_k_expected" [to, tn, tyt, oo, fuel] m₅ with
+  | error e11 =>
+    rw [h11, viTailE.k_vi_k_expected.none] at hE; cases hE; exact absurd (nv _ (by decide) h11) hk
+  | ok q11 =>
+  obtain ⟨r11, m₆⟩ := q11
+  rw [h11, viTailE.k_vi_k_expected.arm1] at hE
+  obtain ⟨s11, hs11, -, hW11⟩ := triple_of_callE (kExp_spec p hL n ⟨m₅, Locals.init []⟩ _ _ _ _ _) h11
+  rw [hs11] at hW11
+  dsimp only at hW11
+  generalize hke' : r11.headD 0 = ke at hE hW11
+  have e15 := e14.trans o2
+  have hR₅ : ArenaR m₅ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₅ e15.frame a hR
+  -- `kExpected?`
+  obtain ⟨k1, k2, k3⟩ := kExpW_twin hR₅ hok hW11
+  have e56 := iext_of_heap k1
+  have e16 := e15.trans e56
+  have hR₆ : ArenaR m₆ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₆ e16.frame a hR
+  have hD₆ : StateDR m₆ st := hD.frame e16.frame (by decide) (by decide) (by decide) (by decide) (by decide)
+  have hIFL56 : m₆.arr64 IFL = m₅.arr64 IFL := k1.1 IFL (by decide) (by decide)
+  -- the words the twin's lists are read from
+  have hTNw : ∀ i, i < tys.length → wd m₆ IFL (tyn.toNat + i) = wd m₁ IFL (tyn.toNat + i) := fun i hi =>
+    ((u2.trans (l2.trans (v2.trans (o2.trans e56)))).keep _ (by omega) (by omega))
+  have hTTw : ∀ i, i < tys.length → wd m₆ IFL (tyt.toNat + i) = wd m₂ IFL (tyt.toNat + i) := fun i hi =>
+    ((l2.trans (v2.trans (o2.trans e56))).keep _ (by omega) (by omega))
+  have hTN : islice (k := .name) m₆ tyn.toNat tn.toNat = islice m₁ tyn.toNat tys.length := by
+    rw [hTn]; simp only [islice]; apply List.map_congr_left; intro i hi
+    simp only [List.mem_range] at hi; rw [hTNw i hi]
+  have hTT : islice (k := .expr) m₆ tyt.toNat tn.toNat = islice m₂ tyt.toNat tys.length := by
+    rw [hTn]; simp only [islice]; apply List.map_congr_left; intro i hi
+    simp only [List.mem_range] at hi; rw [hTTw i hi]
+  have hke : ke = 0 ∨ ke = 1 ∨ ke = 2 := by
+    by_cases hc : tn = 1 ∧ rdW (m₅.arr64 IFR) (to + 4) = 1
+    · obtain ⟨r, v, -, -, hn, hs⟩ := k3 hc.1 hc.2
+      by_cases hv : ∃ s, v = .sort s
+      · obtain ⟨s, hs'⟩ := hv
+        obtain ⟨L, -, hk⟩ := hs s hs'
+        rw [hk]; split <;> simp
+      · exact .inl (hn (fun s hs' => hv ⟨s, hs'⟩))
+    · exact .inr (.inl (k2 (by
+        rcases Classical.not_and_iff_not_or_not.mp hc with h | h
+        · exact .inl h
+        · exact .inr h)))
+  cases h12 : callE p n "vi_recs" [to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel] m₆ with
+  | ok q12 => obtain ⟨_, _⟩ := q12; rw [h12, viTailE.k_vi_recs.arm1] at hE; cases hE
+  | error e12 =>
+  rw [h12, viTailE.k_vi_recs.none] at hE; cases hE
+  have hTy₆ : ListF (TyF b m₆) m₆ 11 to.toNat tys := hTy.ext e16 (fun _ _ x => x.ext e16)
+  have hRc₆ : ListF (RecF b m₆) m₆ 11 ro.toNat rcs := hRc.ext e16 (fun _ _ x => x.ext e16)
+  obtain ⟨hc1, hany, hRF⟩ := viRecs_refinesE hL (fun g hg => hnv g (by
+      simp only [recsNV, List.mem_cons, List.not_mem_nil, or_false] at hg
+      rcases hg with rfl | rfl | rfl | rfl <;> decide)) hR₆ hD₆ hTy₆ hTn hto hRc₆ hRn hro np3 hke
+    (by have := t3.1; have := t3.2; have := u2.top; have := l2.top; have := v2.top; omega)
+    (by have := u3.1; have := u3.2; omega)
+    (fun i hi => by rw [hTn] at hi; rw [hTNw i hi]; exact t7 i hi) n e h12 hk
+  rw [hTN, hTT, hTn, hCn] at hRF
+  -- the order's facts, per type and position
+  have hordf : ∀ i (hi : i < LS.length) c (hc : c < LS[i].length), ∃ k,
+      ∃ _ : fpos LS i + c < (ordList m₅ oo.toNat co.toNat cts cts.length).length,
+        (ordList m₅ oo.toNat co.toNat cts cts.length)[fpos LS i + c] = cts[k]! ∧
+        CtorOK st a cts (islice m₄ cno.toNat cts.length) LS[i][c] c
+          ((islice (k := .name) m₁ tyn.toNat tys.length)[i]!) np.toNat fuel.toNat k := by
+    intro i hi c hc
+    have hi' : i < tys.length := by omega
+    have hcn' : c < cntF m₄ to i := by
+      rw [hcnt i hi']
+      have := congrArg (fun l => l[i]?) l9
+      simp only [List.getElem?_map, List.getElem?_eq_getElem hi, List.getElem?_eq_getElem hi',
+        Option.map_some, Option.some.injEq] at this
+      rw [← this]; exact hc
+    obtain ⟨kk, w1, w2⟩ := o5 i (by omega) c hcn'
+    rw [hps4 i (by omega)] at w1 w2
+    have hpl := fpos_lt LS i c hi hc
+    have hkk : kk < cts.length := w2.1
+    refine ⟨kk, by rw [ordList_length]; omega, ?_, ?_⟩
+    · rw [ordList_get, ← Nat.add_assoc, ptr_rec cts co kk hkk hco _ w1, getElem!_pos cts kk hkk]
+    · have hnn : LS[i][c] = decI (wd m₄ IFL (fo.toNat + (fpos LS i + c))) := by
+        rw [getElem_flatten' LS i c hi hc, List.getElem_of_eq l7, islice_get, hkeep34 _ hpl]
+      have htt : (islice (k := .name) m₁ tyn.toNat tys.length)[i]! = decI (wd m₄ IFL (tyn.toNat + i)) := by
+        rw [getElem!_pos _ i (by rw [islice_length]; exact hi'), islice_get,
+          ((u2.trans (l2.trans v2)).keep _ (by omega) (by omega))]
+      rw [hnn, htt, ← Nat.add_assoc]
+      exact w2
+  -- the type records' first constructor count
+  have hR4 : rdW (m₅.arr64 IFR) (to + 4) = wd m IFR (to.toNat + 4) := by
+    rw [wd_eq, widx2 _ _ (by simp; omega)]; simp only [wd, e15.ifr]; rfl
+  have hc0 : ∀ h0 : 0 < tys.length, (wd m IFR (to.toNat + 4)).toNat = tys[0].ctors.length := fun h0 => by
+    have := (hTy.2.2 0 h0).2.1; simpa using this
+  have hLS0 : ∀ hd, LS = [[hd]] → tys.length = 1 ∧ ∃ h0 : 0 < tys.length, tys[0].ctors.length = 1 := by
+    intro hd hL
+    have h1 : tys.length = 1 := by rw [← hLSl, hL]; rfl
+    refine ⟨h1, by omega, ?_⟩
+    have := congrArg (fun l => l[0]?) l9
+    rw [hL] at this
+    simp only [List.map_cons, List.map_nil, List.getElem?_cons_zero, List.length_cons, List.length_nil,
+      List.getElem?_map, List.getElem?_eq_getElem (show 0 < tys.length by omega), Option.map_some,
+      Option.some.injEq] at this
+    rw [← this]
+  -- the first ordered constructor's pointer
+  have hfirst : ∀ (h0 : 0 < tys.length) (hc : 0 < cntF m₄ to 0), ∃ kk, ∃ hk : kk < cts.length,
+      wd m₅ IFL oo.toNat = co + 10 * UInt64.ofNat kk ∧
+      ∀ hp : 0 < (ordList m₅ oo.toNat co.toNat cts cts.length).length,
+        (ordList m₅ oo.toNat co.toNat cts cts.length)[0] = cts[kk] := by
+    intro h0 hc
+    obtain ⟨kk, w1, w2⟩ := o5 0 (by omega) 0 hc
+    simp only [show psum m₄ to 0 = 0 from rfl, Nat.add_zero] at w1
+    refine ⟨kk, w2.1, w1, fun hp => ?_⟩
+    rw [ordList_get, Nat.add_zero, ptr_rec cts co kk w2.1 hco _ w1]
+  -- the facts
+  have hV : VFactsR st a tys cts (islice m₁ tyn.toNat tys.length) (islice m₂ tyt.toNat tys.length) LS
+      (islice m₄ cno.toNat cts.length) fuel.toNat np.toNat (ordList m₅ oo.toNat co.toNat cts cts.length)
+      (keOf ke) := by
+    refine ⟨?_, np1, np2, by simpa using t1, by simpa using u1, l1, by simpa using v1, hnd, hflen,
+      hfuel.symm, islice_length _ _ _, islice_length _ _ _, hLSl, ordList_length _ _ _ _ _, hordf,
+      ?_, ?_, fun r hr => by split at hr <;> simp at hr⟩
+    · rw [List.any_eq_false]
+      intro x hx
+      obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hx
+      simp [hu k hk (Nat.zero_le _)]
+    · intro hnot
+      by_cases hc : tn = 1 ∧ rdW (m₅.arr64 IFR) (to + 4) = 1
+      · exfalso; apply hnot
+        have h1 : tys.length = 1 := by rw [← hTn, hc.1]; rfl
+        refine ⟨by rw [islice_length]; exact h1, ?_⟩
+        rw [l9]
+        cases htys : tys with
+        | nil => rw [htys] at h1; simp at h1
+        | cons t ts =>
+          cases ts with
+          | cons _ _ => rw [htys] at h1; simp at h1
+          | nil =>
+            have := hc0 (by omega)
+            rw [← hR4, hc.2] at this
+            simp only [htys, List.getElem_cons_zero] at this
+            simp [← this]
+      · have := k2 (by
+          rcases Classical.not_and_iff_not_or_not.mp hc with h | h
+          · exact .inl h
+          · exact .inr h)
+        rw [this]; rfl
+    · intro ty hd c hTT hLS hord
+      obtain ⟨h1, h0, hlen1⟩ := hLS0 hd hLS
+      have htn : tn = 1 := UInt64.toNat_inj.mp (by rw [hTn, h1]; rfl)
+      have h4 : rdW (m₅.arr64 IFR) (to + 4) = 1 := by
+        rw [hR4]; apply UInt64.toNat_inj.mp; rw [hc0 h0, hlen1]; rfl
+      obtain ⟨r, v, hr, hv, hn, hs⟩ := k3 htn h4
+      have hty : ty = decE (rdW (m₅.arr64 IFL) tyt) := by
+        have := congrArg (fun l => l[0]?) hTT
+        simp only [List.getElem?_cons_zero, List.getElem?_eq_getElem (show 0 < (islice (k := .expr) m₂ tyt.toNat tys.length).length by rw [islice_length]; omega),
+          Option.some.injEq, islice_get, Nat.add_zero] at this
+        rw [← this, decE_eq, wd_eq, (l2.trans (v2.trans o2)).keep _ (by omega) (by omega)]
+      obtain ⟨kk, hk, hw, hget⟩ := hfirst h0 (by rw [hcnt 0 h0, hlen1]; decide)
+      have hc' : c = cts[kk] := by
+        have := hget (by rw [hord]; exact Nat.zero_lt_one)
+        simp only [hord, List.getElem_cons_zero] at this
+        exact this
+      refine ⟨r, v, by rw [hty]; exact hr, hv, fun hns => by rw [hn hns]; rfl, fun s hvs => ?_⟩
+      obtain ⟨L, hL, hke'⟩ := hs s hvs
+      refine ⟨L, hL, ?_⟩
+      have hkw : (UInt64.ofNat kk).toNat = kk :=
+        UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+      have hnf : rdW (m₅.arr64 IFR) (rdW (m₅.arr64 IFL) oo + 4) = wd m IFR (co.toNat + 10 * kk + 4) := by
+        rw [wd_eq (A := IFL), hw, wd_eq, widx _ _ _ _ (by rw [hkw]; simp; omega), hkw]
+        simp only [wd, e15.ifr]; rfl
+      obtain ⟨-, c4, -⟩ := hCt.2.2 kk hk
+      rw [hnf] at hke'
+      rw [hke', hc']
+      by_cases hz : cts[kk].numFields = 0
+      · have hz' : wd m IFR (co.toNat + 10 * kk + 4) = 0 := UInt64.toNat_inj.mp (by rw [c4.1, hz]; rfl)
+        by_cases he : L.isEquiv .zero = some true
+        · simp [hz', he, hz, keOf]
+        · simp [hz', he, hz, keOf]
+      · have hz' : wd m IFR (co.toNat + 10 * kk + 4) ≠ 0 := fun e => hz (by rw [← c4.1, e]; rfl)
+        simp [hz', hz, keOf]
+  rw [← ordList_length m₅ oo.toNat co.toNat cts cts.length] at hRF
+  obtain ⟨w, hw⟩ := validateIndD_recsFail hV hany hRF hRNR hVR
+  exact .inr ⟨_, a, hw, by rw [twinCls_invalid, hc1]⟩
 
 end L.Front.Ind
