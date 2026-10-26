@@ -161,3 +161,174 @@ theorem ldsRight_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hdq
     ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha e₂.2.2.2 hd) h'
 
 end L.Arena
+
+/-! ## `lds_unfold2`, `lds_same` -/
+
+namespace L.Arena
+
+l_model ldsUnfold2_specE (p : Prog) (hf : p.lookup "lds_unfold2" = some ldsUnfold2L)
+  fns [hf ↦ ldsUnfold2E] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`lds_unfold2`'s error spec** (the error half of `ldsUnfold2_refines`). -/
+def LdsUnfold2E (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    d.toNat < 2 ^ 63 →
+    CoreSpecE p (n + 1) "lds_unfold2" [mode, vis, d, a, b]
+      (unfold2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+/-- **`lds_unfold2`'s error claim**. -/
+theorem ldsUnfold2_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hdqE : DeltaQuickE p)
+    (hnv : closedNV p L.Checker.nvFns = true) : LdsUnfold2E p := by
+  intro n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (ldsUnfold2_specE p hp.unfold2 (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b) hc0 (Err.code_ne_of_cls hkc)
+  rw [ldsUnfold2E.arm1] at hW
+  have hS := hs.rel
+  unfold unfold2T
+  cases h1 : callE p n "unfold_definition" [vis, a] s₀.mem with
+  | error e =>
+    rw [h1, ldsUnfold2E.k_unfold_definition.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h1
+  | ok q =>
+  obtain ⟨ra, m₁⟩ := q
+  rw [h1, ldsUnfold2E.k_unfold_definition.arm1] at hW
+  have e₁ := CoreSpec.of_callW (hc.unfold n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb a hS ha)
+    (callW_of_callE h1)
+  refine ErrClaim.bind_core e₁ (fun M₁ hS₁ => ?_)
+  cases h2 : callE p n "unfold_definition" [vis, b] m₁ with
+  | error e =>
+    rw [h2, ldsUnfold2E.k_unfold_definition_2.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h2
+  | ok q =>
+  obtain ⟨rb, m₂⟩ := q
+  rw [h2] at hW
+  have e₂ := CoreSpec.of_callW (hc.unfold n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb b hS₁ hb)
+    (callW_of_callE h2)
+  refine ErrClaim.bind_core e₂ (fun M₂ hS₂ => ?_)
+  by_cases h0 : ra.headD 0 = 0 ∨ rb.headD 0 = 0
+  · rw [ldsUnfold2E.k_unfold_definition_2.arm1 (hc1 := h0)] at hW; cases hW
+  rw [ldsUnfold2E.k_unfold_definition_2.arm2 (hc1 := h0)] at hW
+  have ha0 : ra.headD 0 ≠ 0 := fun h => h0 (.inl h)
+  have hb0 : rb.headD 0 ≠ 0 := fun h => h0 (.inr h)
+  rw [decOptR_some ha0, decOptR_some hb0]
+  have hK := hk n (Nat.le_refl _)
+  have hKE := hkE n (Nat.le_refl _)
+  cases h3 : callE p n "whnf_core" [mode, 1, vis, d, ra.tail.headD 0] m₂ with
+  | error e =>
+    rw [h3, ldsUnfold2E.k_whnf_core.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+      (hKE.whnfCore F _ _ dn vis fe M₂ eb mode 1 d _ hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2.2) h3)
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [h3, ldsUnfold2E.k_whnf_core.arm1] at hW
+  have e₃ := CoreSpec.of_callW (hK.whnfCore F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode 1 d _ hF hn
+    ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2.2) (callW_of_callE h3)
+  refine ErrClaim.bind_core e₃ (fun M₃ hS₃ => ?_)
+  cases h4 : callE p n "whnf_core" [mode, 1, vis, d, rb.tail.headD 0] m₃ with
+  | error e =>
+    rw [h4, ldsUnfold2E.k_whnf_core_2.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+      (hKE.whnfCore F _ _ dn vis fe M₃ eb mode 1 d _ hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₂.2.2.2.2) h4)
+  | ok q =>
+  obtain ⟨r₄, m₄⟩ := q
+  rw [h4, ldsUnfold2E.k_whnf_core_2.arm1] at hW
+  have e₄ := CoreSpec.of_callW (hK.whnfCore F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode 1 d _ hF hn
+    ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₂.2.2.2.2) (callW_of_callE h4)
+  refine ErrClaim.bind_core e₄ (fun M₄ hS₄ => ?_)
+  have h5 := tailE (ldsUnfold2E.k_delta_quick.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) hW
+  refine ErrClaim.of_callE_succ h5 fun j hj h' => ?_
+  subst hj
+  exact CoreSpecE.of_callE (s₀ := ⟨m₄, Locals.init []⟩) (hdqE j (hk.mono (by omega))
+    (hkE.mono (by omega)) F _ _ dn vis fe M₄ eb mode d _ _ (by omega) (by omega)
+    ⟨hS₄, hs.mode4, hs.eb_mode⟩ e₃.2.2.2 e₄.2.2.2 hd) h'
+
+l_model ldsSame_specE (p : Prog) (hf : p.lookup "lds_same" = some ldsSameL)
+  fns [hf ↦ ldsSameE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`lds_same`'s error spec** (the error half of `ldsSame_refines`). -/
+def LdsSameE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d a b ka ha kb hb : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a →
+    HW b → d.toNat < 2 ^ 63 →
+    CoreSpecE p (n + 1) "lds_same" [mode, vis, d, a, b, ka, ha, kb, hb]
+      (sameT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
+        (decHintW ka ha) (decHintW kb hb)) s₀ a₀
+
+/-- **`lds_same`'s error claim**. -/
+theorem ldsSame_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hspE : DefeqSpineE p)
+    (hu2E : LdsUnfold2E p) (hnv : closedNV p L.Checker.nvFns = true) : LdsSameE p := by
+  intro n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b ka ha kb hb hs hwa hwb hd
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (ldsSame_specE p hp.same (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b ka ha kb hb) hc0 (Err.code_ne_of_cls hkc)
+  rw [ldsSameE.arm1] at hW
+  have hS := hs.rel
+  unfold sameT
+  cases h1 : callE p n "same_const_heads" [a, b] s₀.mem with
+  | error e =>
+    rw [h1, ldsSameE.k_same_const_heads.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1] at hW
+  obtain ⟨k, rfl⟩ := callE_succ h1
+  have e₁ := CoreSpec.of_callW (sameConstHeads_refines p hp.mid.leaf k s₀ a₀ dn vis fe M eb a b hS hwa
+    hwb) (callW_of_callE h1)
+  refine ErrClaim.bind_core e₁ (fun M₁ hS₁ => ?_)
+  rw [sameRegular_w]
+  -- the unfold arm
+  have unf : ∀ (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState), CoreS dn m₂ a₂ vis fe M₂ eb →
+      ldsSameE.j1 p (k + 1) mode vis d a b 0 m₂ = .error er →
+      ErrClaim (unfold2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+        a₂ er := by
+    intro m₂ M₂ a₂ hS₂ h
+    rw [ldsSameE.j1.arm2 (hc1 := rfl)] at h
+    have h3 := tailE (ldsSameE.k_lds_unfold2.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) h
+    exact CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+      (hu2E k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb
+        mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ hwa hwb hd) h3
+  by_cases hcnd : 2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb ∧ r₁.headD 0 ≠ 0
+  · rw [ldsSameE.k_same_const_heads.arm1 (hc1 := hcnd)] at hW
+    have hsch : (decide (2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb) && decBool r₁) = true := by
+      simp only [Bool.and_eq_true, decide_eq_true_eq, hcnd.1, hcnd.2.1, hcnd.2.2.1, true_and,
+        decBool_t hcnd.2.2.2]
+    simp only [hsch, ↓reduceIte]
+    cases h2 : callE p (k + 1) "defeq_spine" [mode, vis, d, a, b] m₁ with
+    | error e =>
+      rw [h2, ldsSameE.k_defeq_spine.none] at hW; cases hW
+      exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+        (hspE k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₁
+          eb mode d a b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hwa hwb) h2)
+    | ok q =>
+    obtain ⟨r₂, m₂⟩ := q
+    rw [h2, ldsSameE.k_defeq_spine.arm1] at hW
+    have e₂ := CoreSpec.of_callW (defeqSpine_refines p hp.spine hc.store k (hk.mono (by omega)) F
+      (by omega) (by omega) ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d a b ⟨hS₁, hs.mode4, hs.eb_mode⟩
+      hwa hwb) (callW_of_callE h2)
+    refine ErrClaim.bind_core e₂ (fun M₂ hS₂ => ?_)
+    by_cases h2 : r₂.headD 0 ≠ 0
+    · rw [ldsSameE.j1.arm1 (hc1 := h2)] at hW; cases hW
+    have h2' : r₂.headD 0 = 0 := by simpa using h2
+    rw [h2'] at hW
+    rw [decBool_f h2']
+    exact unf _ _ _ hS₂ hW
+  · rw [ldsSameE.k_same_const_heads.arm2 (hc1 := hcnd)] at hW
+    have hsch : (decide (2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb) && decBool r₁) = false := by
+      by_cases hz : r₁.headD 0 = 0
+      · rw [decBool_f hz]; simp
+      · have : ¬ (2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb) := fun h => hcnd ⟨h.1, h.2.1, h.2.2, hz⟩
+        simp [this]
+    simp only [hsch, Bool.false_eq_true, ↓reduceIte, pure_bind]
+    exact unf _ _ _ hS₁ hW
+
+end L.Arena
