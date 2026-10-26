@@ -776,6 +776,81 @@ def mentionsConstL : FunDecl := lfn (T, e) locals (u, r) {
   return r
 }
 
+/-! ## `CheckerBase.lean`: the verdict at a term whose constants do not all resolve -/
+
+/-- `has_str_lit_go(f, h)`: does `h` contain a string literal? The twin's fuel `f` (abort at `0`,
+the twin's `.internal`; the children at `f - 1`), the node viewed first and the leaves decided off
+the view (a literal of kind `≠ 0` is a string), then the visited set: the `mc` memo under the key
+`(h, 1)` (`mentions_const_go` uses `(h, 0)`), every entry `0`, inserted before the children are
+walked, so a visited node answers `0` as the twin's `memo[e]? = some _` does. Short-circuiting. -/
+-- con-ron: ConRon/Arena/CheckerBase.lean:188-221 ConRon.Arena.hasStrLitGo
+@[l_impl ConRon.Arena.hasStrLitGo]
+def hasStrLitGoL : FunDecl := lfn (f, h) locals (g, x, y, z, t, i, fd, j, d, u, r) {
+  if f == 0 { abort };
+  (g, x, y, z) := call e_view(h);
+  if g == 8 {
+    t := ⟦h⟧.tier;
+    i := ⟦h⟧.idx;
+    return u64(LIT⟨t, i⟩.kind != 0)
+  };
+  if g == 0 || g == 2 || g == 3 { return 0 };
+  (fd, j, d) := call mc_find(h, 1);
+  if fd != 0 { return 0 };
+  u := call mc_put(h, 1, 0, fd, j);
+  if g == 1 { r := call has_str_lit_go(f - 1, y); return r };
+  if g == 4 || g == 5 || g == 6 {
+    r := call has_str_lit_go(f - 1, x);
+    if r != 0 { return 1 };
+    r := call has_str_lit_go(f - 1, y);
+    return r
+  };
+  if g == 7 {
+    r := call has_str_lit_go(f - 1, x);
+    if r != 0 { return 1 };
+    r := call has_str_lit_go(f - 1, y);
+    if r != 0 { return 1 };
+    r := call has_str_lit_go(f - 1, z);
+    return r
+  };
+  r := call has_str_lit_go(f - 1, z);
+  return r
+}
+
+/-- `unresolved_consts_error(vis, e, w)`: the twin's `fail (← unresolvedConstsErrorL (←
+strLitSupported fe) where_ e)` (`w ≤ 1`) and `fail (← unresolvedConstsError where_ e)` (`w ≥ 2`):
+always aborts. `w` names the twin's `where_` (`0` "type", `1` "value", `2` "type of", `3`
+"generated rule of", `4` "the domains of a generated rule of"; the reason of each message). For
+`w ≤ 1`: without the String support declarations, a string literal in `e` (`has_str_lit_go` on a
+cleared memo) declines. Then a term mentioning `sorryAx` (pin 13, `mentions_const`) declines,
+anything else rejects. -/
+-- con-ron: ConRon/Arena/CheckerBase.lean:176-186 ConRon.Arena.unresolvedConstsError
+-- con-ron: ConRon/Arena/CheckerBase.lean:223-235 ConRon.Arena.unresolvedConstsErrorL
+@[l_impl ConRon.Arena.unresolvedConstsError ConRon.Arena.unresolvedConstsErrorL]
+def unresolvedConstsErrorL : FunDecl := lfn (vis, e, w) locals (s, u, r, sa, m) {
+  if w <= 1 {
+    s := call str_lit_supported(vis);
+    if s == 0 {
+      u := call mc_clear();
+      r := call has_str_lit_go(⟪CWF⟫, e);
+      if r != 0 { fail R_STRING_LITERALS_BEFORE }
+    }
+  };
+  sa := call pin_at(13);
+  m := call mentions_const(sa, e);
+  if m != 0 {
+    if w == 0 { fail R_USE_OF_THE_SORRYAX_IN_TYPE };
+    if w == 1 { fail R_USE_OF_THE_SORRYAX_IN_VALUE };
+    if w == 2 { fail R_USE_OF_THE_SORRYAX_IN_TYPE_OF };
+    if w == 3 { fail R_USE_OF_THE_SORRYAX_IN_GENERATED };
+    fail R_USE_OF_THE_SORRYAX_IN_THE
+  };
+  if w == 0 { fail R_UNKNOWN_CONSTANT_IN_TYPE };
+  if w == 1 { fail R_UNKNOWN_CONSTANT_IN_VALUE };
+  if w == 2 { fail R_UNKNOWN_CONSTANT_IN_TYPE_OF };
+  if w == 3 { fail R_UNKNOWN_CONSTANT_IN_GENERATED };
+  fail R_UNKNOWN_CONSTANT_IN_THE
+}
+
 /-! ## The program, the foreign stubs, and the closure check -/
 
 /-- This module's functions. -/
@@ -803,7 +878,8 @@ def indSumFns : Prog :=
    ("struct_proj_guards_col", structProjGuardsColL), ("struct_proj_guards_row", structProjGuardsRowL),
    ("struct_proj_guards", structProjGuardsL),
    ("struct_proj_bodies_go", structProjBodiesGoL), ("struct_proj_bodies", structProjBodiesL),
-   ("mentions_const_go", mentionsConstGoL), ("mentions_const", mentionsConstL)]
+   ("mentions_const_go", mentionsConstGoL), ("mentions_const", mentionsConstL),
+   ("has_str_lit_go", hasStrLitGoL), ("unresolved_consts_error", unresolvedConstsErrorL)]
 
 /-- Stubs for the functions of OTHER modules this module calls: `close_telescope(bs.off, bs.len,
 i, body) → e` (`ConLeche/Kernel/Inductives/Positivity.lean`'s, translated in module `IndPos`). -/
