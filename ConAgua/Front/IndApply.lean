@@ -619,7 +619,6 @@ def installIndD : FunDecl := lfn (to, tn, oo, on, ro, rn, np) locals (bo, u) {
 /-- `apply_ind(v)`: the `.ind` arm of `processLineCoreD` for the `inductive` object whose `{` is
 at `v`: its fields, `validateIndD`, `installIndD`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.Frontend.processLineCoreD` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.Frontend.processLineCoreD]
 def applyInd : FunDecl := lfn (v) locals (to, tn, co, cn, ro, rn, oo, np, u) {
   (to, tn, co, cn, ro, rn) := call ind_fields(v);
@@ -631,7 +630,6 @@ def applyInd : FunDecl := lfn (v) locals (to, tn, co, cn, ro, rn, oo, np, u) {
 /-- `apply_ind_line(j)`: an `inductive` declaration line (`j` after its `{`; `rec_decl_line`
 reported `pl = 25`, so its one member is `inductive`, key `23`), applied. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.Frontend.processLineCoreD` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.Frontend.processLineCoreD]
 def applyIndLine : FunDecl := lfn (j) locals (tag, ks, w, k, v, u) {
   (tag, ks, w, k, v) := call next_member(j, 1);

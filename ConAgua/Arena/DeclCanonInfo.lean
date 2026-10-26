@@ -102,7 +102,7 @@ theorem ciD_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
   obtain ⟨wk, e, hk⟩ := ciD h
   rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
       ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, hc, hnp, hnf, hx⟩ |
-      ⟨-, c, mi, rp, o, c', rules, hc, hmi, hrp, ho, hc', hr, hx⟩ | ⟨-, tbl, ht, hx⟩ <;>
+      ⟨-, c, mi, rp, o, c', rules, hc, hmi, hrp, ho, hc', hr, hx⟩ <;>
     (cases hx <;> first | exact ⟨hc, hv, hh⟩ | skip)
 
 theorem cdW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
@@ -261,7 +261,7 @@ theorem ciD_rec {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} 
   obtain ⟨wk, e, hk⟩ := ciD h
   rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
       ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, hc, hnp, hnf, hx⟩ |
-      ⟨-, c, mi', rp', o, c', rules', hc, hmi, hrp, ho, hc', hr, hx⟩ | ⟨-, tbl, ht, hx⟩ <;>
+      ⟨-, c, mi', rp', o, c', rules', hc, hmi, hrp, ho, hc', hr, hx⟩ <;>
     (cases hx <;> first | exact ⟨hc, hmi, hrp, o, c', ho, hc', hr⟩ | skip)
 
 theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)

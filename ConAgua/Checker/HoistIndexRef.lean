@@ -90,15 +90,13 @@ theorem hix_decCI_name {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p 
   obtain ⟨t, -, h⟩ := h
   split at h <;>
     simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
-      reduceCtorEq, decTbl] at h
+      reduceCtorEq] at h
   · obtain ⟨v, hv, rfl⟩ := h; exact hix_decCV_name hv
   · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
   · obtain ⟨v, hv, rfl⟩ := h; exact hix_decCV_name hv
   · obtain ⟨v, hv, _, _, rfl⟩ := h; exact hix_decCV_name hv
   · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
   · obtain ⟨v, hv, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
-  · obtain ⟨_, ⟨n, hn, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩, rfl⟩ := h
-    exact hix_hd?_some hn
 
 theorem hix_trunc_get {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i]? = some v)
     (hi : i ≠ 0) : P[i]? = some v ∧ i ≤ t := by

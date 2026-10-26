@@ -60,7 +60,7 @@ order (`OrdR`). -/
 theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AState)
     (ds : Array IDeclaration) (ord cw r : Word) (hA : ArenaR m a) (hseen : ∃ s, SeenR m s)
     (hnix : ∃ idx, NixR m idx) (hO : OrdR m ord ds) (hc : ds.size = cw.toNat)
-    (hc60 : cw.toNat < 2 ^ 60) (hW : ∀ k (h : k < ds.size), WalkableDecl ds[k]) (hI : IWOK m)
+    (hc60 : cw.toNat < 2 ^ 60) (hI : IWOK m)
     (hord : ord.toNat + cw.toNat ≤ iwTop m) (hP : PinsR m a.pins)
     (h : hNatOpGroundW p n m ord cw = some (r, m')) :
     ∃ res, (hoistNatOpGround ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧ OrdR m' r res.1 ∧
@@ -137,7 +137,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     obtain ⟨s, hs⟩ := hseen
     refine ⟨ArenaR.frame_ext _ _ hA4 hC4 m m₄ hfA a hA,
       ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ _ _ (by decide) (by decide) m m₄ hfA _ hs⟩,
-      ordR_low tg.toNat hO (by omega) (by omega) hlow hD₄ hDLP₄, hc, hc60, hW,
+      ordR_low tg.toNat hO (by omega) (by omega) hlow hD₄ hDLP₄, hc, hc60,
       memoRV_frame hnSch hnSch_wf nmKey _ [IW] [200] (by decide) (by decide) m₁ m₄
         ((hA₂.1.trans hA₃.1).trans (hf₄.mono (by simp) (by simp))) (fun _ _ h => h) _ hR₁,
       fun n j hj => by
@@ -234,8 +234,7 @@ the memory still represents the store and the pins, and the pool only grew. -/
 theorem hoistNatOpGround_refines (p : Prog) (hp : HoistProg p) (hx : HoistExt p) (n : Nat) (s₀ : St)
     (a : AState) (ds : Array IDeclaration) (ord cw : Word) (hA : ArenaR s₀.mem a)
     (hseen : ∃ s, SeenR s₀.mem s) (hnix : ∃ idx, NixR s₀.mem idx) (hO : OrdR s₀.mem ord ds)
-    (hc : ds.size = cw.toNat) (hc60 : cw.toNat < 2 ^ 60)
-    (hW : ∀ k (h : k < ds.size), WalkableDecl ds[k]) (hI : IWOK s₀.mem)
+    (hc : ds.size = cw.toNat) (hc60 : cw.toNat < 2 ^ 60) (hI : IWOK s₀.mem)
     (hord : ord.toNat + cw.toNat ≤ iwTop s₀.mem) (hP : PinsR s₀.mem a.pins) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "hoist_nat_op_ground" [ord, cw]
     ⦃fun r s' => ∃ res, (hoistNatOpGround ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧
@@ -243,7 +242,7 @@ theorem hoistNatOpGround_refines (p : Prog) (hp : HoistProg p) (hx : HoistExt p)
       (r.headD 0).toNat + cw.toNat ≤ iwTop s'.mem ∧ PinsR s'.mem a.pins ∧
       MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] s₀.mem s'.mem; ⊤⦄ :=
   triple_post (hoistNatOpGround_spec p hp hx n s₀ ord cw) (fun r s' h =>
-    hNatOpGround_ok p hx n s₀.mem s'.mem a ds ord cw (r.headD 0) hA hseen hnix hO hc hc60 hW hI hord hP h.2)
+    hNatOpGround_ok p hx n s₀.mem s'.mem a ds ord cw (r.headD 0) hA hseen hnix hO hc hc60 hI hord hP h.2)
 
 /-! ## The links
 

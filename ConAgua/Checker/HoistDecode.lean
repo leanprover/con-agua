@@ -83,8 +83,8 @@ theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q
   exact ⟨w, hw, hl, rfl⟩
 
 theorem decCI_walk {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {ci : IConstantInfo}
-    (h : decCI a dn p = some ci) (ht : ci.isTowerEntry = false) :
-    ∃ cv kw w, ci.toConstantVal = pure cv ∧ a[p]? = some kw ∧ a[p + 4]? = some w ∧
+    (h : decCI a dn p = some ci) :
+    ∃ cv kw w, ci.toConstantVal = cv ∧ a[p]? = some kw ∧ a[p + 4]? = some w ∧
       w.toNat < 2 ^ 32 ∧ cv.type = decE w ∧
       ((kw = 5 ∧ ∃ mi rp ow cw rules, ci = .recInfo cv mi rp rules ∧ a[p + 7]? = some ow ∧
           a[p + 8]? = some cw ∧ decRules a ow.toNat cw.toNat = some rules) ∨
@@ -97,7 +97,7 @@ theorem decCI_walk {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Na
   have hne : ∀ n, kw.toNat = n → n ≠ 5 → kw ≠ 5 := by
     intro n hn h5 e; subst e; exact h5 hn.symm
   generalize hn : kw.toNat = n at h
-  rcases n with _ | _ | _ | _ | _ | _ | _ | n
+  rcases n with _ | _ | _ | _ | _ | _ | n
   all_goals
     simp only [Option.pure_def, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   · obtain ⟨cv, hcv, he⟩ := h; cases Option.some.inj he
@@ -127,7 +127,6 @@ theorem decCI_walk {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Na
     rw [h7] at ho; rw [h8] at hc
     cases Option.some.inj ho; cases Option.some.inj hc
     exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inl ⟨h5, mi, rp, ow, cw, rules, rfl, rfl, rfl, hr⟩⟩
-  · obtain ⟨_, _, he⟩ := h; cases Option.some.inj he; cases ht
   · cases h
 
 theorem decRule_rhs {a : Array Word} {q : Nat} {r : IRecRule} (h : decRule a q = some r) :

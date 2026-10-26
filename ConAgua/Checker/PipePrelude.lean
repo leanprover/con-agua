@@ -61,9 +61,9 @@ theorem TwinFacts.prelude {a a' : AState} {pre : PreludeIx} (h : TwinFacts a)
 
 /-! ## The memory predicates of the parts -/
 
-/-- The records' word bounds and walkability (`prepare_prelude`'s hypotheses). -/
+/-- The records' word bounds (`prepare_prelude`'s hypotheses). -/
 def RecsOK (m : Mem) (ds : Array IDeclaration) : Prop :=
-  (∀ x < ds.size, RecOK (m.arr64 DECL) (m.arr64 DLP) x) ∧ ∀ d ∈ ds, WalkableDecl d
+  ∀ x < ds.size, RecOK (m.arr64 DECL) (m.arr64 DLP) x
 
 theorem RecsOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {ds : Array IDeclaration}
     (h : RecsOK m ds) (hf : MemFrame A C m m') (hD : DECL ∉ A) (hP : DLP ∉ A) : RecsOK m' ds := by
@@ -134,15 +134,14 @@ theorem bp_h1 (h64 : System.Platform.numBits = 64) (a : AState) :
     (ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) hA)
     (by rw [blank_pre_empty]; exact hD.frame (setIn_frame _ _) (by simp) (by simp)) ht.ok ht.off
     ht.pins (fun x hx => absurd hx (by simp)) (ModeOK.frame hmo (setIn_frame _ _) (by simp) (by simp))
-    (fun d hd => absurd hd (by simp))
   obtain ⟨hpost, -⟩ := M.of_run (P := fun x => x = s) rfl hrun
     (preSim_triple checkerProg_preSim n "front_run" isCopied_front_run [] s h0 hQ)
-  obtain ⟨st, a', hp, hA', hD', -, hM', hR, hW⟩ := hpost hr0
+  obtain ⟨st, a', hp, hA', hD', -, hM', hR⟩ := hpost hr0
   rw [pre_empty] at hD'
   have hb := builtinPreludeE_of hp
   exact ⟨st, a', hb, ArenaD.frameHi (setIn_frame' _ _) (by simp) (by simp) hA',
     hD'.frame (setIn_frame' _ _) (by simp) (by simp), ht.prelude hb,
-    ⟨fun x hx => hR x (by simpa using hx), hW⟩, ModeOK.frame hM' (setIn_frame' _ _) (by simp) (by simp)⟩
+    fun x hx => hR x (by simpa using hx), ModeOK.frame hM' (setIn_frame' _ _) (by simp) (by simp)⟩
 
 theorem bp_h2 (a : AState) : ∀ m, BP1 a m → 240 < (m.arr64 CTL).size →
     BP2 a (m.set64 CTL 240 (rdW (m.arr64 L.Front.DECL) 0)) := by
