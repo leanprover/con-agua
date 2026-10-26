@@ -759,3 +759,165 @@ theorem stuckRest_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
   exact hirr a₀ s₀.mem M hS hW2
 
 end L.Arena
+
+/-! ## `stuck_str` -/
+
+namespace L.Arena
+
+l_model stuckStr_specE (p : Prog) (hf : p.lookup "stuck_str" = some stuckStrL)
+  fns [hf ↦ stuckStrE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 1000000
+  simp [] errors
+
+/-- **`stuck_str`'s error claim** (the error half of `stuckStr_refines`). -/
+theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
+    (hirrE : StuckIrrelE p) (hnv : closedNV p L.Checker.nvFns = true)
+    (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b side lt fo : Word) (l : ConLeche.Literal) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hlt : HW lt) (hfo : HW fo)
+    (hg : lt >>> 28 = 8) (hl : a₀.store.view (decE lt) = some (.lit l)) :
+    CoreSpecE p (n + 1) "stuck_str" [mode, vis, d, a, b, side, lt, fo]
+      (stuckStrT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
+        (decE fo)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (stuckStr_specE p hq.stuckStr (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b side lt fo) hc0 (Err.code_ne_of_cls hkc)
+  have hS := hs.rel
+  have hR := hS.arena.1
+  have hKE := hkE n (Nat.le_refl _)
+  have hirr : ∀ (st : AState) (m : Mem) (M' : ModeMaps), CoreS dn m st vis fe M' eb →
+      stuckStrE.j1 p n mode vis d a b m = .error er →
+      ErrClaim (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) st er := by
+    intro st m M' hS' hW'
+    unfold stuckStrE.j1 at hW'
+    cases h : callE p n "stuck_irrel" [mode, vis, d, a, b] m with
+    | error e =>
+      rw [h, stuckStrE.k_stuck_irrel.none] at hW'; cases hW'
+      refine ErrClaim.of_callE_succ h fun j hj h' => ?_
+      subst hj
+      exact CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩) (hirrE j (hk.mono (by omega))
+        (hkE.mono (by omega)) F _ st dn vis fe M' eb mode d a b (by omega) (by omega)
+        ⟨hS', hs.mode4, hs.eb_mode⟩ ha hb) h'
+    | ok q => rw [h] at hW'; simp only [stuckStrE.k_stuck_irrel] at hW'; cases hW'
+  have hdef : ∀ (st : AState) (m : Mem) (M' : ModeMaps) (x y : Word), CoreS dn m st vis fe M' eb →
+      HW x → HW y → stuckStrE.k_defeq p (callE p n "defeq" [mode, vis, d, x, y] m) = .error er →
+      ErrClaim ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) st er := by
+    intro st m M' x y hS' hx hy hW'
+    cases h : callE p n "defeq" [mode, vis, d, x, y] m with
+    | error e =>
+      rw [h, stuckStrE.k_defeq.none] at hW'; cases hW'
+      exact CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+        (hKE.defeq F _ st dn vis fe M' eb mode d x y hF hn ⟨hS', hs.mode4, hs.eb_mode⟩ hx hy) h
+    | ok q => rw [h] at hW'; simp only [stuckStrE.k_defeq, stuckStrE.j2] at hW'; cases hW'
+  simp only [stuckStrE] at hW
+  by_cases h1 : tierW lt ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [if_pos h1] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [if_neg h1] at hW
+  by_cases h2 : tcnt s₀.mem LIT (tierW lt) ≤ idxW lt
+  · rw [if_pos h2] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+  rw [if_neg h2] at hW
+  obtain ⟨kn, hkv, hrec⟩ := view_lit_f s₀.mem a₀ hR lt hlt ⟨h1, by simpa using h2⟩ hg
+  rw [hl] at hkv
+  have hkl : kn.l = l := by cases hkv; rfl
+  obtain ⟨kl⟩ := kn
+  simp only at hkl
+  subst hkl
+  cases kl with
+  | natVal N =>
+    have h0 : tfld s₀.mem LIT (tierW lt) (idxW lt) 0 = 0 := hrec.1
+    rw [if_neg (fun h => absurd (h0 ▸ h.1) (by decide))] at hW
+    exact hirr a₀ s₀.mem M hS hW
+  | strVal st =>
+    have h0 : tfld s₀.mem LIT (tierW lt) (idxW lt) 0 = 1 := hrec.1
+    rcases (Classical.em (fo >>> 28 = 3)).symm with h3 | h3
+    · rw [if_neg (fun h => h3 h.2)] at hW
+      unfold stuckStrT
+      rw [tag_beq_const _ hfo]
+      simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte]
+      exact hirr a₀ s₀.mem M hS hW
+    rw [if_pos ⟨h0, h3⟩] at hW
+    by_cases h4 : tierW fo ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+    · rw [if_pos h4] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+    rw [if_neg h4] at hW
+    by_cases h5 : tcnt s₀.mem CONST (tierW fo) ≤ idxW fo
+    · rw [if_pos h5] at hW; cases hW; exact ErrClaim.of_cls0 rfl
+    rw [if_neg h5] at hW
+    obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR fo hfo ⟨h4, by simpa using h5⟩ h3
+    have hct : ((decE fo).tag == ETag.const) = true := by rw [tag_beq_const _ hfo]; simp [h3]
+    generalize tfld s₀.mem CONST (tierW fo) (idxW fo) 0 = co at hnw hW hv
+    generalize tfld s₀.mem CONST (tierW fo) (idxW fo) 1 = uo at huw hW hv
+    -- the pins
+    cases hp1 : callE p n "pin_word" [52] s₀.mem with
+    | error e => rw [hp1, stuckStrE.k_pin_word.none] at hW; cases hW; exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hp1
+    | ok q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [hp1] at hW
+    simp only [stuckStrE.k_pin_word] at hW
+    obtain ⟨t₁, ht₁, hm₁, -, hr₁⟩ := triple_of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+      (pinWord_rd p hq.leaf.pinword n ⟨s₀.mem, Locals.init []⟩ 52) hp1
+    have em₁ : m₁ = s₀.mem := by rw [← ht₁]; exact hm₁
+    subst em₁
+    cases hp2 : callE p n "pin_at" [6] s₀.mem with
+    | error e => rw [hp2, stuckStrE.k_pin_at.none] at hW; cases hW; exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hp2
+    | ok q =>
+    obtain ⟨r₂, m₂⟩ := q
+    obtain ⟨t₂, ht₂, hm₂, -, -, hr₂⟩ := triple_of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+      (pinAt_rd p hq.leaf.pinat n ⟨s₀.mem, Locals.init []⟩ 6) hp2
+    have em₂ : m₂ = s₀.mem := by rw [← ht₂]; exact hm₂
+    subst em₂
+    rw [hp2] at hW
+    simp only [stuckStrE.k_pin_at] at hW
+    -- `str_lit_supported`
+    refine ErrClaim.congr_run (stuckStrT_run _ fe _ _ _ _ st _ a₀ s₀.mem hS.pins _ _ hct hv) ?_
+    cases hp3 : callE p n "str_lit_supported" [vis] s₀.mem with
+    | error e =>
+      rw [hp3, stuckStrE.k_str_lit_supported.none] at hW; cases hW
+      exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hp3
+    | ok q =>
+    obtain ⟨r₃, m₃⟩ := q
+    rw [hp3] at hW
+    simp only [stuckStrE.k_str_lit_supported] at hW
+    have h₃ := CoreSpec.of_callW (hc.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb hS)
+      (callW_of_callE hp3)
+    refine ErrClaim.bind_core h₃ (fun M₃ hS₃ => ?_)
+    have hsl : HW (rdW (s₀.mem.arr64 PINS) (1 + 6)) := by
+      have := hS.pins.names_lt 6 (by decide); rwa [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl] at this
+    have hel : HW (rdW (s₀.mem.arr64 PINS) 52) := by
+      have := hS.pins.lv_lt.1; rwa [pinW_rdW s₀.mem 52 52 rfl] at this
+    simp only [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl, pinW_rdW s₀.mem 52 52 rfl, decI_eq_iff' hnw hsl,
+      decI_eq_iff' huw hel]
+    rw [hr₁, hr₂] at hW
+    by_cases hcond : co = rdW (s₀.mem.arr64 PINS) (1 + 6) ∧ uo = rdW (s₀.mem.arr64 PINS) 52 ∧
+        r₃.headD 0 ≠ 0
+    · rw [if_pos hcond] at hW
+      obtain ⟨hc₁, hc₂, hc₃⟩ := hcond
+      rw [if_pos ⟨hc₁, hc₂, decBool_true_of hc₃⟩]
+      cases hp4 : callE p n "str_lit_ctor" [lt] m₃ with
+      | error e =>
+        rw [hp4, stuckStrE.k_str_lit_ctor.none] at hW; cases hW
+        exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hp4
+      | ok q =>
+      obtain ⟨r₄, m₄⟩ := q
+      rw [hp4] at hW
+      simp only [stuckStrE.k_str_lit_ctor] at hW
+      have hv₃ := hc.supKeep fe a₀ (decE lt) _ hl
+      have h₄ := CoreSpec.of_callW (hc.strLitCtor n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb lt st hS₃
+        hlt hv₃) (callW_of_callE hp4)
+      refine ErrClaim.bind_core h₄ (fun M₄ hS₄ => ?_)
+      by_cases hsd : side = 0
+      · rw [if_pos hsd] at hW
+        simp only [hsd, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte]
+        exact hdef _ m₄ M₄ _ _ hS₄ h₄.2.2.2 hb hW
+      · rw [if_neg hsd] at hW
+        have : (side != 0) = true := by simpa using hsd
+        simp only [this, ↓reduceIte]
+        exact hdef _ m₄ M₄ _ _ hS₄ ha h₄.2.2.2 hW
+    · rw [if_neg hcond] at hW
+      rw [if_neg (fun h => hcond ⟨h.1, h.2.1, fun e => by
+        have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
+      exact hirr _ m₃ M₃ hS₃ hW
+
+end L.Arena

@@ -64,4 +64,20 @@ theorem ErrClaim.congr_run {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
   obtain ⟨ce, hce, hc⟩ := h' hk
   exact ⟨ce, h.trans hce, hc⟩
 
+/-- The defeq family's callees outside the verdict closure. -/
+def defeqNVList : List FnName :=
+  ["de_find", "de_put", "is_bool_true", "has_fvar", "head_is_proj", "lvls_eq_c", "lvl_eq_c",
+   "pin_word", "pin_at", "str_lit_supported", "str_lit_ctor", "get_app_args", "get_app_fn",
+   "inst_list", "lams_inst", "peel_push", "spine_head", "same_const_heads", "head_hint", "hint_lt",
+   "unfoldable_head", "lazy_fold_ok", "is_eager_reduce", "unfold_definition", "lit_eq", "e_view",
+   "is_nat_zero", "nat_pred"]
+
+theorem defeqNV : ∀ f ∈ defeqNVList, f ∈ L.Checker.nvFns := by decide +kernel
+
+/-- A callee of the list fails with class `0`: its failure claims nothing. -/
+theorem ErrClaim.of_nv {α : Type} {T : AM α} {a : AState} {p : Prog}
+    (hp : closedNV p L.Checker.nvFns = true) {f : FnName} (hf : f ∈ defeqNVList) {n : Nat}
+    {vs : List Word} {m : Mem} {e : Err} (h : callE p n f vs m = .error e) : ErrClaim T a e :=
+  ErrClaim.of_callE_nv hp (defeqNV f hf) h
+
 end L.Arena
