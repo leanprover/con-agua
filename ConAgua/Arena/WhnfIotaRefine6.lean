@@ -356,7 +356,7 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
   obtain ⟨hrun7, ⟨M7, hS7, hK7, hSt7⟩, hr7⟩ := CoreSpec.run
     (hcn (n' + 1) ⟨m2, Locals.init []⟩ a dn vis fe M eb po pc us swd so sc cvT.levelParams
       caps.sortZ hS hus hlps
-      (hS.den.constLps _ _ cvT hfe.choose_spec rfl (fun _ => rfl)) hpw) c7
+      (hS.den.constLps _ _ hfe.choose_spec) hpw) c7
   have hrunC : (capsNeverZero cvT.levelParams (decI us) caps).run a =
       .ok (decBool nz, AM.st (capsNeverZeroPW cvT.levelParams (decI us) caps.sortZ) a) := hrun7
   refine ⟨decBool nz, _, inpTail_full cvT caps _ a _ _ _ hvl heq hrunC, ?_,

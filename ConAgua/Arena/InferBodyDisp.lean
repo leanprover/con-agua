@@ -51,16 +51,13 @@ def inferConstIOT (fe : IFEnv) (n : NIdx) (us : LsIdx) : AM EIdx :=
     let err ← unknownConstError n
     fail err
   | some ci => do
-    if ci.isTowerEntry then do
-      fail (.invalid "projection table entry used as a constant")
-    else do
-      let cv ← ci.toConstantVal
-      match ← viewLsLen us with
-      | none => failDanglingLs
-      | some usl =>
-      if usl != cv.levelParams.length then do
-        fail (.invalid "incorrect number of universe levels")
-      else constTyAt cv us
+    let cv := ci.toConstantVal
+    match ← viewLsLen us with
+    | none => failDanglingLs
+    | some usl =>
+    if usl != cv.levelParams.length then do
+      fail (.invalid "incorrect number of universe levels")
+    else constTyAt cv us
 
 /-- `inferBodyIO`'s `.const` arm is `inferConstIOT`. -/
 @[refines_part ConRon.Arena.inferBodyIO "const"]
@@ -78,15 +75,9 @@ theorem inferConstIOT_of_T (fe : IFEnv) (n : NIdx) (us : LsIdx) (a : AState) (x 
   | none => rw [hf] at h; exact h
   | some ci =>
   rw [hf] at h
-  simp only at h ⊢
-  by_cases ht : ci.isTowerEntry
-  · simp only [ht, ↓reduceIte] at h ⊢; exact h
-  simp only [ht, Bool.false_eq_true, ↓reduceIte, StateT.run_bind] at h ⊢
-  cases hc : ci.toConstantVal.run a with
-  | error e => rw [hc] at h; cases h
-  | ok q =>
-  obtain ⟨cv, a₁⟩ := q
-  rw [hc] at h; simp only [except_ok_bind] at h ⊢
+  simp only [StateT.run_bind] at h ⊢
+  generalize ci.toConstantVal = cv at h ⊢
+  generalize a = a₁ at h ⊢
   cases hv : a₁.store.lss.view us with
   | none =>
     have e1 : ∃ err, (viewLs us).run a₁ = .error err := by
