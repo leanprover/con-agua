@@ -231,3 +231,197 @@ theorem peelStep_refinesE (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
       ⟨hs.rel, hs.mode4, hs.eb_mode⟩ hw1 hb hgb fvs hx hdk) h'
 
 end L.Arena
+
+/-! ## `defeq_peel`: the loop -/
+
+namespace L.Arena
+
+l_model defeqPeel_specE (p : Prog) (hf : p.lookup "defeq_peel" = some defeqPeelL)
+  fns [hf ↦ peelE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+theorem peelE_loop1_zero (p : Prog) (m : Mem) (mode vis d peel a b k fo : Word) :
+    peelE.loop1 p 0 m mode vis d peel a b k fo = .error .outOfFuel := by
+  unfold peelE.loop1; rfl
+
+/-- **The descent loop's error claim** (the error half of `peelW_ok`). -/
+theorem peelE_ok (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
+    (hnv : closedNV p L.Checker.nvFns = true) (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n)
+    (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (mode d fo : Word) (hmode : mode < 4) :
+    ∀ j, j ≤ n + 1 → ∀ (peel a b k : Word) (m : Mem) (s : AState) (M : ModeMaps) (eb : Word)
+      (er : Err) (fvs : Array EIdx), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a →
+      HW b → FvsR m fo k fvs → d.toNat + k.toNat + peel.toNat < 2 ^ 64 →
+      peelE.loop1 p j m mode vis d peel a b k fo = .error er →
+      ErrClaim (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b)
+        k.toNat fvs) s er := by
+  intro j
+  induction j with
+  | zero =>
+    intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ h
+    rw [peelE_loop1_zero] at h; cases h
+    exact ErrClaim.of_cls0 Err.cls_outOfFuel
+  | succ j ih =>
+    intro hjn peel a b k m s M eb er fvs hS heb ha hb hx hdk h
+    have hab : (decE a == decE b) = decide (a = b) := decE_beq_eq _ _ ha hb
+    by_cases he : a = b
+    · rw [peelE.loop1.arm1 (hc1 := rfl) (hc2 := he)] at h; cases h
+    have hab' : (decE a == decE b) = false := by rw [hab]; simp [he]
+    have hlw : (decide (peel.toNat = 0) || (decE a).tag != ETag.forallE ||
+        (decE b).tag != ETag.forallE) = decide (peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6) := by
+      simp only [bne, tag_forall_beq a ha, tag_forall_beq b hb, word_toNat_zero_iff]
+      by_cases h1 : peel = 0 <;> by_cases h2 : a >>> 28 = 6 <;> by_cases h3 : b >>> 28 = 6 <;>
+        simp [h1, h2, h3]
+    by_cases hl : peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6
+    · rw [peelE.loop1.arm2 (hc1 := rfl) (hc2 := he) (hc3 := hl)] at h
+      have h1 := tailE (peelE.k_peel_leaf.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) h
+      have hr := defeqPeel_leaf_run (coreKnot (decMode mode) fe id F) d.toNat peel.toNat _ _ k.toNat
+        fvs s hab' (by rw [hlw]; simp [hl])
+      refine ErrClaim.congr_run hr (ErrClaim.of_callE_succ h1 fun j' hj h' => ?_)
+      subst hj
+      exact CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+        (peelLeaf_refinesE p hp hil hnv j' (hkE.mono (by omega)) F (by omega) (by omega) _ s dn
+          vis fe M eb mode d a b k fo ⟨hS, hmode, heb⟩ ha hb fvs hx (by omega)) h'
+    have hp0 : peel ≠ 0 := fun h0 => hl (.inl h0)
+    have hga : a >>> 28 = 6 := Classical.byContradiction fun h' => hl (.inr (.inl h'))
+    have hgb : b >>> 28 = 6 := Classical.byContradiction fun h' => hl (.inr (.inr h'))
+    obtain ⟨q, hq⟩ : ∃ q, peel.toNat = q + 1 :=
+      ⟨peel.toNat - 1, by have : peel.toNat ≠ 0 := fun h0' => hp0 ((word_toNat_zero_iff peel).mp h0'); omega⟩
+    have hq1 : (peel - 1).toNat = q := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    have hk1 : (k + 1).toNat = k.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
+    rw [peelE.loop1.arm3 (hc1 := rfl) (hc2 := he) (hc3 := hl)] at h
+    have hr := defeqPeel_succ_eq (coreKnot (decMode mode) fe id F) d.toNat q (decE a) (decE b)
+      k.toNat fvs
+    have hl' : (decide (q + 1 = 0) || (decE a).tag != ETag.forallE ||
+        (decE b).tag != ETag.forallE) = false := by rw [← hq, hlw]; simp [hl]
+    rw [hq]
+    refine ErrClaim.congr_run ((congrArg (fun T => StateT.run T s) hr).trans
+      (peelLvl_step_run _ _ _ _ _ _ _ _ _ hab' hl')) ?_
+    cases hc : callE p j "peel_step" [mode, vis, d, a, b, k, fo] m with
+    | error e =>
+      rw [hc, peelE.k_peel_step.none] at h; cases h
+      refine ErrClaim.bind_left (ErrClaim.of_callE_succ hc fun j' hj h' => ?_)
+      subst hj
+      exact CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+        (peelStep_refinesE p hp hil hnv j' (hkE.mono (by omega)) F (by omega) (by omega) _ s dn vis
+          fe M eb mode d a b k fo ⟨hS, hmode, heb⟩ ha hb hga hgb fvs hx (by omega)) h'
+    | ok w =>
+    obtain ⟨r₁, m₁⟩ := w
+    rw [hc] at h
+    obtain ⟨j', rfl⟩ := callE_succ hc
+    have e₁ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (peelStep_refines p hp hil j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
+        mode d a b k fo ⟨hS, hmode, heb⟩ ha hb hga hgb fvs hx (by omega)) (callW_of_callE hc)
+    refine ErrClaim.bind_coreS e₁ (fun M₁ hS₁ hst₁ => ?_)
+    obtain ⟨hw0, hw1, hw2, hw3⟩ := e₁.2.2.2
+    by_cases h0 : r₁.headD 0 = 0
+    · rw [peelE.k_peel_step.arm1 (hc1 := h0)] at h; cases h
+    rw [peelE.k_peel_step.arm2 (hc1 := h0)] at h
+    have hnz : (r₁.headD 0 != 0) = true := by simpa using h0
+    simp only [decPS, hnz, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+    cases hc2 : callE p (j' + 1) "peel_push" [d, k, fo, r₁.tail.headD 0] m₁ with
+    | error e =>
+      rw [hc2, peelE.k_peel_push.none] at h; cases h
+      exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hc2
+    | ok w =>
+    obtain ⟨r₂, m₂⟩ := w
+    rw [hc2, peelE.k_peel_push.arm1] at h
+    obtain ⟨e₂, hx₂⟩ := peelPush_run hp hS₁ d k fo _ hw1 fvs (hx.kept hst₁ hS.spn)
+      (by omega) r₂ (callW_of_callE hc2)
+    refine ErrClaim.bind_grow e₂ (fun M₂ hS₂ _ => ?_)
+    have := ih (by omega) (peel - 1) _ _ (k + 1) m₂ _ M₂ eb er _ hS₂ heb hw2 hw3 hx₂
+      (by rw [hq1, hk1]; omega) h
+    rw [hq1, hk1] at this
+    exact this
+
+/-- **`defeq_peel`'s error claim** (the error half of `defeqPeel_refines`). -/
+theorem defeqPeel_refinesE (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
+    (hnv : closedNV p L.Checker.nvFns = true) (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n)
+    (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d peel a b k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
+    (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs) (hdk : d.toNat + k.toNat + peel.toNat < 2 ^ 64) :
+    CoreSpecE p (n + 1) "defeq_peel" [mode, vis, d, peel, a, b, k, fo]
+      (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b) k.toNat fvs)
+      s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (defeqPeel_specE p hp.peel (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d peel a b k fo) hc0 (Err.code_ne_of_cls hkc)
+  rw [peelE.arm1] at hW
+  exact peelE_ok p hp hil hnv n hk hkE F hF hn dn vis fe mode d fo hs.mode4 (n + 1) (Nat.le_refl _)
+    peel a b k _ a₀ M eb er fvs hs.rel hs.eb_mode ha hb hx hdk hW
+
+/-! ## `defeq_binders` -/
+
+l_model defeqBinders_specE (p : Prog) (hf : p.lookup "defeq_binders" = some defeqBindersL)
+  fns [hf ↦ defeqBindersE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`defeq_binders`' error claim** (`DefeqBindersE`, the error half of `defeqBinders_refines`). -/
+theorem defeqBinders_refinesE (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
+    (hnv : closedNV p L.Checker.nvFns = true) : DefeqBindersE p := by
+  intro n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d ty1 body1 ty2 body2 hs h1 hb1 h2 hb2 hd
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (defeqBinders_specE p hp.binders (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d ty1 body1 ty2 body2) hc0 (Err.code_ne_of_cls hkc)
+  rw [defeqBindersE.arm1] at hW
+  unfold defeqBinders
+  cases hc1 : callE p n "defeq" [mode, vis, d, ty1, ty2] s₀.mem with
+  | error e =>
+    rw [hc1, defeqBindersE.k_defeq.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE
+      ((hkE n (Nat.le_refl _)).defeq F s₀ a₀ dn vis fe M eb mode d ty1 ty2 hF hn hs h1 h2) hc1)
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1] at hW
+  simp only [defeqBindersE.k_defeq] at hW
+  have e₁ := CoreSpec.of_callW
+    ((hk n (Nat.le_refl _)).defeq F s₀ a₀ dn vis fe M eb mode d ty1 ty2 hF hn hs h1 h2)
+    (callW_of_callE hc1)
+  refine ErrClaim.bind_coreS e₁ (fun M₁ hS₁ hst₁ => ?_)
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [if_pos h0] at hW; cases hW
+  rw [if_neg h0] at hW
+  rw [decBool_t h0]
+  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+  have hso : rdW (m₁.arr64 CTL) 136 = spTop m₁ := rfl
+  rw [hso] at hW
+  cases hc2 : callE p n "peel_push" [d, 0, spTop m₁, ty2] m₁ with
+  | error e =>
+    rw [hc2, defeqBindersE.k_peel_push.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hc2
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2, defeqBindersE.k_peel_push.arm1] at hW
+  obtain ⟨n', rfl⟩ := callE_succ hc2
+  have hbnd := peelPush_bound hp d 0 (spTop m₁) ty2 (callW_of_callE hc2)
+  rw [UInt64.add_zero] at hbnd
+  obtain ⟨e₂, hx₂⟩ := peelPush_run hp hS₁ d 0 (spTop m₁) ty2 h2 #[]
+    (fvsR_empty rfl hbnd hS₁.spn) (by rw [toNat_zero_w, Nat.add_zero]; omega) r₂ (callW_of_callE hc2)
+  have e0 : d.toNat + (0 : Word).toNat = d.toNat := rfl
+  rw [e0] at e₂
+  rw [UInt64.zero_add] at hx₂
+  refine ErrClaim.bind_grow e₂ (fun M₂ hS₂ _ => ?_)
+  have h3 := tailE (defeqBindersE.k_defeq_peel.none p _) (fun ⟨_, _⟩ => ⟨_, rfl⟩) hW
+  have e1 : (16777216 : Word).toNat = peelFuel := by simp [peelFuel]
+  generalize hw : (16777216 : Word) = w at h3
+  have hwf : w.toNat = peelFuel := by rw [← hw]; exact e1
+  have hdk' : d.toNat + (1 : Word).toNat + w.toNat < 2 ^ 64 := by
+    rw [hwf, show (1 : Word).toNat = 1 from rfl]; exact hd
+  have := CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+    (defeqPeel_refinesE p hp hil hnv n' (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega)
+      (by omega) ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d w body1 body2 1 (spTop m₁)
+      ⟨hS₂, hs.mode4, hs.eb_mode⟩ hb1 hb2 _ hx₂ hdk') h3
+  rw [hwf] at this
+  have e2 : (1 : Word).toNat = 1 := rfl
+  have e3 : (#[] : Array EIdx).push (decE (r₂.headD 0)) = #[decE (r₂.headD 0)] := rfl
+  rw [e2, e3] at this
+  exact this
+
+end L.Arena
