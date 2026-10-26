@@ -340,7 +340,7 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
       cases c1
       all_goals try (simp [h1, fpShape]; done)
       simp only [h1, Option.bind_some, fpShape, ↓reduceIte, bind_assoc, pure_bind]
-      congr 1; funext c; congr 1; funext cv'; congr 1; funext b
+      congr 1; funext c; congr 1; funext b
       split
       · rfl
       congr 1; funext x2
@@ -355,7 +355,7 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
           simp only [Option.some.injEq, IConstantInfo.ctorInfo.injEq] at heq
           obtain ⟨rfl, rfl, rfl⟩ := heq
           simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc, pure_bind]
-          congr 1; funext c; congr 1; funext cv'; congr 1; funext b
+          congr 1; funext c; congr 1; funext b
           split
           · rfl
           congr 1; funext x3
