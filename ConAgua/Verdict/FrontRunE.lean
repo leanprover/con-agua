@@ -140,7 +140,8 @@ open L.Scan.Leaves (skipWsN)
 declaration record. -/
 def SafeLink (b : ByteArray) : Prop :=
   ∀ (j : USize) (r : LineRec) (e : USize) (d : DeclRec),
-    scanLineLoop b j true 0 0 .absent = .ok r e → r = .decl d → DeclSafeR d (declLineN b.data j.toUInt64)
+    scanLineLoop b j true 0 0 .absent = .ok r e → (declLineN b.data j.toUInt64).pl ≠ 0 → r = .decl d →
+      DeclSafeR d (declLineN b.data j.toUInt64)
 
 /-- **`apply_dline`'s error model claims the line's verdict**: the record is con-leche's
 (`declLine_link`); an inductive block is `apply_ind`'s claim, any other declaration
@@ -205,7 +206,7 @@ theorem applyDLineE_claim (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p) (hDL 
     | error e2 =>
       simp only [DFld.enc, List.headD_cons, List.tail_cons] at he
       rw [h2, applyDLineE.k_apply_ind.none] at he; cases he
-      have hS := hSL j (.decl d) e' d hloop rfl
+      have hS := hSL j (.decl d) e' d hloop (by rw [hf]; exact h0) rfl
       rw [hf] at hS
       exact applyDecl_refinesE p hDL hnvD b hsize m hm st a hD f d hX' hS n e h2 hk
     | ok q2 =>

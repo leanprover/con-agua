@@ -577,3 +577,24 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   exact .inr ⟨_, a, hw, by rw [twinCls_invalid, hc1]⟩
 
 end L.Front.Ind
+
+namespace L.Front.Ind
+
+theorem validNV_nv : ∀ f ∈ validNV, f ∈ L.Checker.nvFns := by decide +kernel
+
+theorem validNV_front : ∀ f ∈ validNV, L.Checker.inFront f = true := by decide
+
+/-- The callees of `validate_ind_d` outside the closure claim nothing in `frontAllProg`. -/
+theorem frontAll_validNV : NVCls frontAllProg validNV := by
+  intro g hg n args m e h
+  rw [callE_frontAll (validNV_front g hg)] at h
+  exact callE_nv L.Checker.checkerProg_nv (validNV_nv g hg) n args m h
+
+/-- **`validate_ind_d`'s claim at `frontAllProg`** (`ValidateClaim`, at the twin facts `XV`). -/
+theorem validateClaim_frontAll : ValidateClaim frontAllProg XV := by
+  intro b n m a st to tn co cn ro rn tys cts rcs e hR hD hok hT hF hIFR hX hc hk
+  exact validateE_claim frontAllProg_indApply frontAll_validNV hR hD hok hT hF hIFR hX e
+    (triple_of_callE_err (validate_specE frontAllProg frontAllProg_indApply.validate_ind_d n
+      ⟨m, Locals.init []⟩ _ _ _ _ _ _) hc (Err.code_ne_of_cls hk)) hk
+
+end L.Front.Ind

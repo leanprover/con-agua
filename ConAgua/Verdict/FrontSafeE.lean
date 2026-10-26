@@ -366,4 +366,9 @@ theorem safeLink' (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
   exact declLine_link' b h64 hsize j true 0 0 .absent DFld.none r e h
     ⟨trivial, fun d hd => by cases hd⟩ h0 d hr
 
+/-- **The scanner's `safety` converse** in the form `apply_decl`'s claim takes (`SafeLink`,
+`DeclSafeR`: the same statement as `SafeLink'`, `DeclSafeR'`). -/
+theorem safeLink (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : b.size < 2 ^ 63) :
+    SafeLink b := safeLink' h64 b hsize
+
 end L.Front

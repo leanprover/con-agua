@@ -1,4 +1,6 @@
 import ConAgua.Verdict.FrontRunE
+import ConAgua.Verdict.FrontValidE
+import ConAgua.Verdict.FrontSafeE
 import ConAgua.Verdict.FrontPreSimE
 import ConAgua.Checker.VerdictEntry1
 import ConAgua.Checker.PipeFinal
@@ -132,4 +134,19 @@ theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.Validat
     h3.twin.pins (fun x hx => absurd hx (by simp))
     (ModeOK.frame h3.mode (setIn_frame _ _) (by simp) (by simp)) e hE' hk
 
+/-! ## The two stages, discharged -/
+
+/-- **`Entry1StagesE.prelude`'s statement.** -/
+theorem checker_preludeStageE : ∀ b pb s8 s64, InputsOK b pb s64 →
+    StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb s8 s64)) (TwinVerdict [b]) :=
+  preludeStageE L.Front.Ind.validateClaim_frontAll L.Front.Ind.xOfTwin
+    (fun h64 b hs => L.Front.safeLink h64 b hs)
+
+/-- **`Entry1StagesE.front`'s statement.** -/
+theorem checker_frontStageE : ∀ b pb s8 s64, InputsOK b pb s64 →
+    StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb s8 s64)) (TwinVerdict [b]) :=
+  frontStageE L.Front.Ind.validateClaim_frontAll L.Front.Ind.xOfTwin
+    (fun h64 b hs => L.Front.safeLink h64 b hs)
+
 end L.Checker
+
