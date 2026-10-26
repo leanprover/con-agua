@@ -340,7 +340,10 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
   have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.2.1 200 (by decide)]
   have h129 : erTop m' = erTop m := by simp only [erTop, hfr.2.1 129 (by decide)]
   refine ⟨⟨hC, ?_, ?_, ?_, ?_, ?_⟩, ⟨by omega, by omega, fun i _ => by rw [hI], fun i _ => by rw [hER]⟩,
-    MFr.of_frame hfr (by decide) (by decide), AFr.of_frame hfr⟩
+    MFr.of_frame hfr (fun b hb => by
+      have : b = 143 ∨ b = 129 ∨ b = 130 ∨ b = 131 ∨ b = 385 ∨ b = 386 ∨ b = 387 := by
+        simpa [tblArrs, ETAB, TIXA, TIXS, TIXN] using hb
+      simp only [ArrId] at this ⊢; omega) (fun x hx => by simp at hx; subst hx; decide), AFr.of_frame hfr⟩
   · rw [h200, hI]; exact hI1
   · rw [h129, hER]; exact hE1
   · rw [hI]; exact hsz
