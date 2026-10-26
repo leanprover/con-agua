@@ -979,6 +979,16 @@ def promoteNewTablesL : FunDecl := lfn (kt) locals (n, c, u) {
   return 0
 }
 
+/-- `tbl_grown(nt)`: how many tables the step installed, the twin's `fe.env.tables.length - nt`
+(`Nat` subtraction: `0` if the count is below `nt`), `nt` the count read before the step. -/
+-- con-ron: ConRon/Arena/Checker.lean:191-217 ConRon.Arena.installStep
+@[l_impl ConRon.Arena.installStep]
+def tblGrownL : FunDecl := lfn (nt) locals (n) {
+  n := call tbl_cnt();
+  if nt <= n { return n - nt };
+  return 0
+}
+
 /-- `promote_new(k, kt, vis, fresh)`: `promoteNew pm coreWalkFuel k kt` at view `vis`, the memo
 `PMemo.empty` when `fresh ≠ 0` and the one `promote_vg` left otherwise: the step's constants,
 then its tables, at the one memo. -/

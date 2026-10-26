@@ -117,6 +117,7 @@ def promoteProg : Prog :=
    ("index_promoted_tables", indexPromotedTablesL),
    ("promote_new_tables", promoteNewTablesL),
    ("promote_new", promoteNewL),
+   ("tbl_grown", tblGrownL),
    ("pn_find", memoFindG pnSch),
    ("pn_put", memoPutG pnSch),
    ("pn_clear", memoClearG pnSch),
