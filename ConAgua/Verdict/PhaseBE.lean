@@ -63,6 +63,25 @@ theorem checkPendingList_fails_tail {mode : ConLeche.CheckMode} {fe : IFEnv} {pc
   unfold TwinFailsV at h ⊢
   rw [e]; exact h
 
+
+/-- **Phase B's failure on the worker is its failure on the state**, when the caches are empty
+(the error half of `checkPendingList_worker_ok`; `checkPending_worker`). -/
+theorem checkPendingList_worker_fails {mode : ConLeche.CheckMode} {fe : IFEnv}
+    {pend : List PendingCheck} {s : AState} {c : Word} (hc : pend ≠ [] → s.caches = Caches.empty)
+    (h : TwinFailsV (checkPendingList mode fe pend) s c) :
+    TwinFailsV (checkPendingList mode fe pend) s.worker c := by
+  cases pend with
+  | nil =>
+    rcases h with ⟨ce, hce, -⟩ | ⟨ce, i, a', hce, -⟩ <;> cases hce
+  | cons pc rest =>
+    have hpc := checkPending_worker (mode := mode) (fe := fe) (pc := pc) (hc (by simp))
+    have e : (checkPendingList mode fe (pc :: rest)).run s.worker =
+        (checkPendingList mode fe (pc :: rest)).run s := by
+      show checkPendingList mode fe (pc :: rest) s.worker = checkPendingList mode fe (pc :: rest) s
+      simp only [checkPendingList]; rw [hpc]
+    unfold TwinFailsV at h ⊢
+    rw [e]; exact h
+
 section phaseB
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog) (fe : IFEnv) (pend : Array PendingCheck)
