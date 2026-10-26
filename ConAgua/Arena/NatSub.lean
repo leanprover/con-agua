@@ -148,9 +148,13 @@ theorem subLoop_spec (n : Nat) (s₀ : St) (h : SubInv Pg C s₀) :
     simp only [SubInv, SubPost] at h ⊢
     rw [exec, step_while (w := subLoop) rfl]
     -- as `addLoop_spec`: the invariant unfolds into ten conjuncts
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n,
-        subBorrow_spec p hps n] <;> finish (splits := 20) [SubInv, SubPost]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n,
+      subBorrow_spec p hps n]
+    all_goals clear ih
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (splits := 20) [arena_grind, lang_grind, SubInv, SubPost]
 
 include hpl hps in
 theorem subLoop_step_spec (n : Nat) (s₀ : St) (h : SubInv Pg C s₀) :
@@ -190,7 +194,8 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   have hsm := hok.small
   have h41 := hok.top41
   have hsz := hsm.tier (s₀.mem.top >>> 40)
-  simp only [PoolOK] at hok
+  -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
+  obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpn]
@@ -198,11 +203,13 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, natcmp_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        subLoop_step_spec p hpl hps (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n] <;>
-      -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
-      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [SubInv, SubPost]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      subLoop_step_spec p hpl hps (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (ematch := 20) (splits := 30) (instances := 5000)
+      [arena_grind, lang_grind, natcmp_grind, SubInv, SubPost]
 
 end subFn
 

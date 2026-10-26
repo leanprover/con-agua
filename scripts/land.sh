@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # scripts/land.sh <branch> [build targets...]
-# Land a lane branch on master, one lane at a time (PLAN.md, "Landing").
+# COORDINATOR ONLY: the fallback when the merge queue (scripts/mq-next.sh, scripts/mq-agent.md) is not running;
+# lanes submit with scripts/submit.sh (PLAN.md, "Landing").
+# Land a lane branch on master, one lane at a time.
 # Takes an exclusive lock (_tmp/land.lock), so landings are sequential and the main checkout is never
 # mid-merge for two lanes at once. Waits for the lock rather than failing.
 #   1. In the main checkout (must be clean, on master): git merge --no-ff <branch>.

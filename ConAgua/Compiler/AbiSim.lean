@@ -429,10 +429,18 @@ theorem sim_stores (Q : MachineState → Prop) (R : Reg64s) (base : Nat) (hb : R
       simp only [Reg64s.get64_r8] at h8
       rw [hr8]; simp [BinOp.eval, h8]
 
+/-- A word whose signed value is not negative is below `2^63`. -/
+theorem toNat_lt_of_not_toInt_neg (x : UInt64) (h : ¬ x.toBitVec.toInt < (0 : UInt64).toBitVec.toInt) :
+    x.toNat < 2 ^ 63 := by
+  have hx := x.toNat_lt
+  rw [BitVec.toInt_eq_toNat_cond] at h
+  simp only [UInt64.toNat_toBitVec, UInt64.toBitVec_zero, BitVec.toInt_zero] at h
+  split at h <;> omega
+
 /-- **The stub.** From `ca_setup`, with the region's first table words mapped: if `base_len`
-(`r9`) is below `abiNeed`, the stub returns with `rdx = 1`; otherwise it writes the table's words
-(`stores … (abiVals tab)`) and jumps to `ca_enter` with `rdi = base`, `rsi = abiFuel`, the other
-registers but `rax` unchanged. -/
+(`r9`) is below `abiNeed`, or `in_len` (`rsi`) or `pins_len` (`rcx`) is `2^63` or more, the stub
+returns with `rdx = 1`; otherwise it writes the table's words (`stores … (abiVals tab)`) and jumps
+to `ca_enter` with `rdi = base`, `rsi = abiFuel`, the other registers but `rax` unchanged. -/
 theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Code (abiStub tab) k0)
     (Q : MachineState → Prop) (s : MachineData) (ra : Word)
     (hmap : abiNeed tab ≤ s.regs.r9.toNat →
@@ -443,7 +451,8 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
       st.data.regs.rsp.toBitVec = s.regs.rsp.toBitVec + 8 → st.data.regs.rbp = s.regs.rbp →
       st.data.regs.r14 = s.regs.r14 → st.data.regs.r15 = s.regs.r15 → st.data.regs.rbx = s.regs.rbx →
       st.data.regs.r12 = s.regs.r12 → st.data.regs.r13 = s.regs.r13 → st.data.dmem = s.dmem → Q st)
-    (hgo : abiNeed tab ≤ s.regs.r9.toNat → ∀ s' : MachineData,
+    (hgo : abiNeed tab ≤ s.regs.r9.toNat → s.regs.rsi.toNat < 2 ^ 63 → s.regs.rcx.toNat < 2 ^ 63 →
+      ∀ s' : MachineData,
       s'.dmem = stores s.regs s.regs.r8.toNat s.dmem 0 (abiVals tab) →
       s'.regs.rdi = s.regs.r8 → s'.regs.rsi.toNat = abiFuel →
       (∀ r, r ≠ .rax → r ≠ .rdi → r ≠ .rsi → s'.regs.get64 r = s.regs.get64 r) →
@@ -461,45 +470,57 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
   refine ev_movRI (Code.get (i := 1) hcH rfl) ?_
   refine ev_cmpRO (r := .r9) (o := oR .rax) (v := (abiNeed tab).toUInt64) (Code.get (i := 2) hcH rfl)
     (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
-  refine ev_jcc (Code.get (i := 3) hcH rfl) (fun hlt => ?_) (fun hge => ?_)
-  · -- declined
-    simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq, Reg64s.get64_r9, Reg64s.set64_rax,
-      UInt64.toNat_toBitVec] at hlt
+  -- the decline: `rdx = 1`, the caller's registers but `rax`, `rdx` and the flags
+  have hdecl : ∀ s0 : MachineData, s0.regs.rsp = s.regs.rsp → s0.regs.rbp = s.regs.rbp →
+      s0.regs.r14 = s.regs.r14 → s0.regs.r15 = s.regs.r15 → s0.regs.rbx = s.regs.rbx →
+      s0.regs.r12 = s.regs.r12 → s0.regs.r13 = s.regs.r13 → s0.dmem = s.dmem →
+      Ev Q s0 (label abiDeclineL) := by
+    intro s0 hsp hbp h14 h15 hbx h12 h13 hdm
     rw [Code.label (i := 3) hcT rfl]
     refine ev_label (Code.get (i := 3) hcT rfl) ?_
     refine ev_movRI (Code.get (i := 4) hcT rfl) ?_
     refine ev_movRI (Code.get (i := 5) hcT rfl) ?_
     refine ev_ret (Code.get (i := 6) hcT rfl) (ra := ra)
-      (by simpa [Reg64s.set64_rax, Reg64s.set64_rdx] using hra) ?_
+      (by simpa [Reg64s.set64_rax, Reg64s.set64_rdx, hsp, hdm] using hra) ?_
     exact Eventually.done _ (hdec _ rfl (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
-      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
-      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
-      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
-      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
-      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
-      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
-      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]) rfl)
-  · simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Reg64s.get64_r9, Reg64s.set64_rax,
-      UInt64.toNat_toBitVec, Nat.not_lt] at hge
-    have hge' : abiNeed tab ≤ s.regs.r9.toNat := by
-      simpa [Nat.toUInt64, UInt64.toNat_ofNat, Nat.mod_eq_of_lt hneed] using hge
-    refine sim_stores Q s.regs s.regs.r8.toNat rfl (abiVals tab) 0 _ _ hcS ?_ (abiVals_noRax tab)
-      (by omega) (by simpa using hend hge') (by simpa using hmap hge') ?_
-    · intro r hr; cases r <;> first | exact absurd rfl hr | rfl
-    intro s1 hs1 hR1
-    have hk : k0 + 0 + 1 + 1 + 1 + 1 + (storesCode 0 (abiVals tab)).length =
-        k0 + (abiHead tab ++ storesCode 0 (abiVals tab)).length := by simp [abiHead]; omega
-    rw [hk]
-    refine ev_movRR (Code.get (i := 0) hcT rfl) ?_
-    refine ev_movRI (Code.get (i := 1) hcT rfl) ?_
-    refine ev_jmp (Code.get (i := 2) hcT rfl) ?_
-    refine hgo hge' _ (by simpa using hs1) ?_ ?_ ?_
-    · have := hR1 .r8 (by decide); simp at this
-      simp [Reg64s.set64_rdi, Reg64s.set64_rsi, this]
-    · simp [Reg64s.set64_rdi, Reg64s.set64_rsi, abiFuel]; rfl
-    · intro r h1 h2 h3
-      rw [← hR1 r h1]
-      cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp, hsp])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp, hbp])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp, h14])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp, h15])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp, hbx])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp, h12])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp, h13]) hdm)
+  refine ev_jcc (Code.get (i := 3) hcH rfl) (fun _ => hdecl _ rfl rfl rfl rfl rfl rfl rfl rfl) (fun hge => ?_)
+  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Reg64s.get64_r9, Reg64s.set64_rax,
+    UInt64.toNat_toBitVec, Nat.not_lt] at hge
+  have hge' : abiNeed tab ≤ s.regs.r9.toNat := by
+    simpa [Nat.toUInt64, UInt64.toNat_ofNat, Nat.mod_eq_of_lt hneed] using hge
+  -- the buffer lengths: the top bit of `rsi`, then of `rcx`
+  refine ev_cmpRO (r := .rsi) (o := oI 0) (v := 0) (Code.get (i := 4) hcH rfl) (Or.inl rfl) ?_
+  refine ev_jcc (Code.get (i := 5) hcH rfl) (fun _ => hdecl _ rfl rfl rfl rfl rfl rfl rfl rfl) (fun hsi => ?_)
+  refine ev_cmpRO (r := .rcx) (o := oI 0) (v := 0) (Code.get (i := 6) hcH rfl) (Or.inl rfl) ?_
+  refine ev_jcc (Code.get (i := 7) hcH rfl) (fun _ => hdecl _ rfl rfl rfl rfl rfl rfl rfl rfl) (fun hcx => ?_)
+  simp only [CondCode.interp, cmpFlags_sf_of, decide_eq_false_iff_not, Reg64s.get64_rsi, Reg64s.get64_rcx,
+    Reg64s.set64_rax] at hsi hcx
+  have hsi' : s.regs.rsi.toNat < 2 ^ 63 := toNat_lt_of_not_toInt_neg _ hsi
+  have hcx' : s.regs.rcx.toNat < 2 ^ 63 := toNat_lt_of_not_toInt_neg _ hcx
+  refine sim_stores Q s.regs s.regs.r8.toNat rfl (abiVals tab) 0 _ _ hcS ?_ (abiVals_noRax tab)
+    (by omega) (by simpa using hend hge') (by simpa using hmap hge') ?_
+  · intro r hr; cases r <;> first | exact absurd rfl hr | rfl
+  intro s1 hs1 hR1
+  have hk : k0 + 0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + (storesCode 0 (abiVals tab)).length =
+      k0 + (abiHead tab ++ storesCode 0 (abiVals tab)).length := by simp [abiHead]; omega
+  rw [hk]
+  refine ev_movRR (Code.get (i := 0) hcT rfl) ?_
+  refine ev_movRI (Code.get (i := 1) hcT rfl) ?_
+  refine ev_jmp (Code.get (i := 2) hcT rfl) ?_
+  refine hgo hge' hsi' hcx' _ (by simpa using hs1) ?_ ?_ ?_
+  · have := hR1 .r8 (by decide); simp at this
+    simp [Reg64s.set64_rdi, Reg64s.set64_rsi, this]
+  · simp [Reg64s.set64_rdi, Reg64s.set64_rsi, abiFuel]; rfl
+  · intro r h1 h2 h3
+    rw [← hR1 r h1]
+    cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl
 
 
 /-- **A word written before the stores reads as written after them**, when it is outside the

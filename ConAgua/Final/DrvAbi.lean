@@ -15,12 +15,13 @@ namespace ConAgua.Final
 
 open L L.Compiler
 
-/-- **What an accepting driver run means**: entry 1's run of `check` (mode word `3`) ends with
-result `r₁`, and either `r₁ = ACCEPT` or `r₁ = 2^63 + k` (`9223372036854775808 = 2^63`) and entry 2's run from its memory
+/-- **What an accepting driver run means**: both buffers are below `2^63` bytes (the setup stub
+checked it), entry 1's run of `check` (mode word `3`) ends with result `r₁`, and either
+`r₁ = ACCEPT` or `r₁ = 2^63 + k` (`9223372036854775808 = 2^63`) and entry 2's run from its memory
 (`seqMem m₁ … 0 k`) ends with `ACCEPT`. -/
 def DrvAccepts (p : Prog) (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (b pb : ByteArray) : Prop :=
-  ∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3) =
+  b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3) =
       .ok (rs1, m1) ∧ m1.words.size = tab.nw ∧
     (rs1.getD 0 0 = ACCEPT ∨
       (2 ^ 63 ≤ (rs1.getD 0 0).toNat ∧ ∃ rs2 m2,
@@ -298,10 +299,11 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
         get?_wrW_A (by omega) hx (by omega)]
     · rw [hrsp0, rdW_wrW_same]
   -- entry 1 returned
-  intro st ⟨hpc, hRR, hfr, hout⟩
+  intro st ⟨⟨hpc, hRR, hfr, hout⟩, hsz⟩
   obtain ⟨hsp1, hbp1, h141, h151, hbx1, h121, h131⟩ := hRR
   simp only [Reg64s.r8_mk, Reg64s.rdi_mk, Reg64s.rdx_mk, Reg64s.rsp_mk, Reg64s.rbp_mk, Reg64s.r14_mk,
     Reg64s.r15_mk, Reg64s.rbx_mk, Reg64s.r12_mk, Reg64s.r13_mk] at hsp1 hbp1 h141 h151 hbx1 h121 h131 hfr hout
+  unfold SizesPost at hsz
   rw [hpc]
   simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
   have hsp1' : st.data.regs.rsp.toNat = rsp0 + 8 := by
@@ -355,6 +357,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     simp only [Bool.not_eq_false', beq_iff_eq] at hz0
     exact UInt64.toBitVec_inj.mp hz0
   have hout' := hout.resolve_left (by rw [hrdx0]; decide)
+  obtain ⟨hb, hpb⟩ := hsz.resolve_left (by rw [hrdx0]; decide)
   rcases hres : L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3)
     with e | ⟨rs1, m1⟩
   · rw [hres] at hout'
@@ -368,7 +371,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) ?_
   refine ev_jcc (Code.get (i := 23) hL3 rfl) (fun hlt => ?_) (fun hge3 => ?_)
   · -- entry 1 finished without pending work: its result is the result
-    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp fun _ hacc => ⟨rs1, m1, hres, hnw1, Or.inl ?_⟩
+    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp fun _ hacc => ⟨hb, hpb, rs1, m1, hres, hnw1, Or.inl ?_⟩
     rw [← hrax]; exact hacc
   simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge3
   rsimp at hge3
@@ -444,7 +447,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   rw [hres2] at hout2'
   obtain ⟨-, hRes2, -⟩ := hout2'
   have hrax2 : s2.regs.rax = rs2.getD 0 0 := hRes2.1 0 (by simp only [seqLayout_tab]; omega) (by decide)
-  refine ⟨rs1, m1, hres, hnw1, Or.inr ⟨?_, rs2, m2, ?_, by rw [← hrax2]; exact hax⟩⟩
+  refine ⟨hb, hpb, rs1, m1, hres, hnw1, Or.inr ⟨?_, rs2, m2, ?_, by rw [← hrax2]; exact hax⟩⟩
   · rw [← hrax]; simpa using hge3
   · rw [← hrax]; exact hres2
 
