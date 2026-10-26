@@ -29,6 +29,11 @@ l_model pdsE_spec (p : Prog) (hf : p.lookup "target_params_def_eq_step" = some t
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
 
+l_model pdeE_spec (p : Prog) (hf : p.lookup "target_params_def_eq" = some targetParamsDefEq)
+  fns [hf ↦ pdeE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
+
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -317,6 +322,134 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
   | ok q11 =>
   rw [h11, pdsE.k_is_def_eq_core.arm1] at hW
   cases hW
+
+include hq henv hnv hcE in
+/-- **`target_params_def_eq`'s model error claim** (`pdeW_okC`'s hypotheses; the recursion is the
+model's own). -/
+theorem pdeE_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) :
+    ∀ {m : Mem} {a : AState} {d no nl lvls ho hl pfo pfl ao al bo bl : Word}
+    {names : List NIdx} {holes pfvs as bs : List EIdx}
+    {namesP : List ConLeche.Name} {lvlsP : List ConLeche.Level}
+    {holesP pfvsP asP bsP : List ConLeche.Expr},
+    StageC dn vis fe env m a → AbsOK m → H lvls →
+    decHL m no.toNat nl.toNat = some names → no.toNat + nl.toNat ≤ iwTop m →
+    decHL m ho.toNat hl.toNat = some holes → ho.toNat + hl.toNat ≤ iwTop m →
+    HSl0 m pfo pfl pfvs → HSl0 m ao al as → HSl0 m bo bl bs → RcMR m →
+    TAArgs names (decI lvls) holes namesP lvlsP holesP a.store →
+    Frontend.denoteEList a.store pfvs = some pfvsP →
+    Frontend.denoteEList a.store as = some asP → Frontend.denoteEList a.store bs = some bsP →
+    (∀ e, ConLeche.Expr.WScoped d.toNat e →
+      ConLeche.Expr.WScoped d.toNat (ConLeche.targetAbs namesP lvlsP holesP e)) →
+    (∀ z ∈ pfvsP, ConLeche.Expr.WScoped d.toNat z) →
+    ∀ e, pdeE p n m vis d no nl lvls ho hl pfo pfl ao al bo bl = .error e →
+      ErrClaim (ConRon.Arena.targetParamsDefEq V fe d.toNat names (decI lvls) holes pfvs as bs) a e := by
+  induction n with
+  | zero =>
+    intro m a d no nl lvls ho hl pfo pfl ao al bo bl names holes pfvs as bs namesP lvlsP holesP pfvsP asP bsP
+      hC hA hlv hno hnob hho hhob hpf has hbs hP hTA hpfP hasP hbsP habs hpw e he
+    rw [pdeE.eq_def] at he
+    cases he
+    exact ErrClaim.of_cls0 Err.cls_outOfFuel
+  | succ n ih =>
+  intro m a d no nl lvls ho hl pfo pfl ao al bo bl names holes pfvs as bs namesP lvlsP holesP
+    pfvsP asP bsP hC hA hlv hno hnob hho hhob hpf has hbs hP hTA hpfP hasP hbsP habs hpw e he
+  by_cases hk0 : e.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hS := hC.stage
+  have hlt : ∀ {x : Nat}, x ≤ iwTop m → x < 2 ^ 64 := fun h => hS.lt64 h
+  by_cases hal : al = 0
+  · rw [pdeE.arm1 p n m vis d no nl lvls ho hl pfo pfl ao al bo bl hal] at he
+    cases he
+  by_cases hbl : bl = 0
+  · rw [pdeE.arm2 p n m vis d no nl lvls ho hl pfo pfl ao al bo bl hal hbl] at he
+    cases he
+  rw [pdeE.arm3 p n m vis d no nl lvls ho hl pfo pfl ao al bo bl hal hbl] at he
+  have hasb : ao.toNat + al.toNat ≤ iwTop m := has.2.resolve_left hal
+  have hbsb : bo.toNat + bl.toNat ≤ iwTop m := hbs.2.resolve_left hbl
+  obtain ⟨x, as', rfl, ex, hx, has'⟩ := decHL_cons has.1 hal (hlt hasb)
+  obtain ⟨y, bs', rfl, ey, hy, hbs'⟩ := decHL_cons hbs.1 hbl (hlt hbsb)
+  obtain ⟨xP, asP', hxP, hasP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hasP
+  obtain ⟨yP, bsP', hyP, hbsP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hbsP
+  rw [ex, ey] at he
+  obtain ⟨ea1, el1, hal0⟩ := slice_step hal (hlt hasb)
+  obtain ⟨eb1, ebl1, hbl0⟩ := slice_step hbl (hlt hbsb)
+  rw [tpd_cons]
+  cases h1 : callE p n "target_params_def_eq_step" [vis, d, no, nl, lvls, ho, hl, pfo, pfl, x, y] m with
+  | error e1 =>
+    rw [h1, pdeE.k_target_params_def_eq_step.none] at he
+    cases he
+    refine ErrClaim.bind_left ?_
+    rcases Nat.eq_zero_or_pos n with hn0 | hn0
+    · subst hn0
+      obtain ⟨e', he', h0⟩ := callE_zero p "target_params_def_eq_step"
+        [vis, d, no, nl, lvls, ho, hl, pfo, pfl, x, y] m
+      rw [h1] at he'
+      cases he'
+      exact ErrClaim.of_cls0 h0
+    · obtain ⟨k, rfl⟩ : ∃ k, n = k + 1 := ⟨n - 1, by omega⟩
+      exact CoreSpecE.of_callE (pdsStep_claim hq henv hnv hcE L (k + 1) (by omega) ⟨m, Locals.init []⟩ a hC hA hx hy hlv
+        hno hnob hho hhob hpf hP hTA hpfP hxP hyP habs hpw) h1
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  cases n with
+  | zero =>
+    obtain ⟨e', he', h0⟩ := callE_zero p "target_params_def_eq_step"
+      [vis, d, no, nl, lvls, ho, hl, pfo, pfl, x, y] m
+    rw [h1] at he'; cases he'
+  | succ k =>
+  obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (tpdStep_spec p L (realCall p) (realCall_spec p) k
+    ⟨m, Locals.init []⟩ vis d no nl lvls ho hl pfo pfl x y) (callW_of_callE h1)
+  subst hs1
+  dsimp only at h1m
+  obtain ⟨c, a1, run1, hc, hC1, hg1, hP1, hA1, cs1⟩ :=
+    pdsW_okC hq henv k (by omega) h1m hC hA hx hy hlv hno hnob hho hhob hpf hP hTA hpfP hxP hyP habs hpw
+  refine ErrClaim.bind_right (by simp only [← decE_eq] at run1 ⊢; exact run1) ?_
+  by_cases hr1 : r1.headD 0 = 0
+  · rw [h1, pdeE.k_target_params_def_eq_step.arm1 p (k + 1) vis d no nl lvls ho hl pfo pfl ao al bo bl r1 s1.mem hr1] at he
+    cases he
+  rw [h1, pdeE.k_target_params_def_eq_step.arm2 p (k + 1) vis d no nl lvls ho hl pfo pfl ao al bo bl r1 s1.mem hr1] at he
+  have : c = true := by rw [← hc]; simpa using hr1
+  subst this
+  simp only [if_true]
+  have hgo := hg1.1
+  exact ih (by omega) (m := s1.mem) hC1 hA1 hlv
+    (by rw [decHL_grow hg1 hnob]; exact hno) (by omega)
+    (by rw [decHL_grow hg1 hhob]; exact hho) (by omega)
+    (hpf.grow hg1)
+    (HSl0.of (by rw [decHL_grow hg1 (by rw [ea1, el1]; omega)]; exact has') (by rw [ea1, el1]; omega))
+    (HSl0.of (by rw [decHL_grow hg1 (by rw [eb1, ebl1]; omega)]; exact hbs') (by rw [eb1, ebl1]; omega)) hP1
+    (hTA.ext cs1.ext) (denoteEList_ext cs1.ext _ _ hpfP) (denoteEList_ext cs1.ext _ _ hasP')
+    (denoteEList_ext cs1.ext _ _ hbsP') habs hpw e he
+
+include hq henv hnv hcE in
+/-- **`target_params_def_eq`'s error claim** (the hypotheses of `targetParamsDefEq_refinesC`): a
+failing call of class `1`/`2` claims that the twin's `targetParamsDefEq` fails. -/
+theorem targetParamsDefEq_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
+    (a₀ : AState) (d no nl lvls ho hl pfo pfl ao al bo bl : Word)
+    (names : List NIdx) (holes pfvs as bs : List EIdx) (hC : StageC dn vis fe env s₀.mem a₀)
+    (hA : AbsOK s₀.mem) (hlv : H lvls)
+    (hno : decHL s₀.mem no.toNat nl.toNat = some names) (hnob : no.toNat + nl.toNat ≤ iwTop s₀.mem)
+    (hho : decHL s₀.mem ho.toNat hl.toNat = some holes) (hhob : ho.toNat + hl.toNat ≤ iwTop s₀.mem)
+    (hpf : HSl0 s₀.mem pfo pfl pfvs) (has : HSl0 s₀.mem ao al as) (hbs : HSl0 s₀.mem bo bl bs)
+    (hP : RcMR s₀.mem)
+    {namesP : List ConLeche.Name} {lvlsP : List ConLeche.Level}
+    {holesP pfvsP asP bsP : List ConLeche.Expr}
+    (hTA : TAArgs names (decI lvls) holes namesP lvlsP holesP a₀.store)
+    (hpfP : Frontend.denoteEList a₀.store pfvs = some pfvsP)
+    (hasP : Frontend.denoteEList a₀.store as = some asP)
+    (hbsP : Frontend.denoteEList a₀.store bs = some bsP)
+    (habs : ∀ e, ConLeche.Expr.WScoped d.toNat e →
+      ConLeche.Expr.WScoped d.toNat (ConLeche.targetAbs namesP lvlsP holesP e))
+    (hpw : ∀ z ∈ pfvsP, ConLeche.Expr.WScoped d.toNat z) :
+    CoreSpecE p n "target_params_def_eq" [vis, d, no, nl, lvls, ho, hl, pfo, pfl, ao, al, bo, bl]
+      (ConRon.Arena.targetParamsDefEq V fe d.toNat names (decI lvls) holes pfvs as bs) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc' => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (pdeE_spec p L.tpd n ⟨s₀.mem, Locals.init []⟩ vis d no nl lvls ho hl pfo pfl
+    ao al bo bl) hc' (Err.code_ne_of_cls hk0)
+  exact pdeE_claim hq henv hnv hcE L n hn hC hA hlv hno hnob hho hhob hpf has hbs hP hTA hpfP hasP hbsP habs
+    hpw er hW
 
 end sims
 
