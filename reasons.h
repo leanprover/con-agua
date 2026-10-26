@@ -3,7 +3,7 @@
 static const char *const reasons[] = {
   "",
   "an input of … bytes or more",
-  "definition with safety '…'",
+  "definition with safety …",
   "direct structure: binder domain mismatch",
   "direct sum: constructor field telescope",
   "direct sum: constructor telescope",
@@ -111,7 +111,6 @@ static const char *const reasons[] = {
   "recursor … declares … motives; the block has … inductive types",
   "recursor … declares … parameters; the block declares …",
   "reserved basis name",
-  "reserved projection name",
   "target rec: a recursor is named for a pinned basis constant, a literal guard's slot or a certified Nat operation",
   "target rec: the block does not split",
   "target rec: the block's auxiliary recursor names are not the generated ones (T.rec_1 … T.rec_n)",

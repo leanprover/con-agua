@@ -1,7 +1,7 @@
 # The abort reasons (scripts/reasons.py): name, class (reject, decline, other), message.
 # Row i (from 1) is reason i. The twin's messages first (--add appends new ones), then L's own.
 R_AN_INPUT_OF	decline	an input of … bytes or more
-R_DEFINITION_WITH_SAFETY	decline	definition with safety '…'
+R_DEFINITION_WITH_SAFETY	decline	definition with safety …
 R_DIRECT_STRUCTURE_BINDER	decline	direct structure: binder domain mismatch
 R_DIRECT_SUM_CONSTRUCTOR	decline	direct sum: constructor field telescope
 R_DIRECT_SUM_CONSTRUCTOR_TELESCOPE	decline	direct sum: constructor telescope
@@ -109,7 +109,6 @@ R_RECURSOR_DECLARES_MINOR	reject	recursor … declares … minor premises; the b
 R_RECURSOR_DECLARES_MOTIVES	reject	recursor … declares … motives; the block has … inductive types
 R_RECURSOR_DECLARES_PARAMETERS	reject	recursor … declares … parameters; the block declares …
 R_RESERVED_BASIS_NAME	reject	reserved basis name
-R_RESERVED_PROJECTION_NAME	reject	reserved projection name
 R_TARGET_REC_A	reject	target rec: a recursor is named for a pinned basis constant, a literal guard's slot or a certified Nat operation
 R_TARGET_REC_THE	reject	target rec: the block does not split
 R_TARGET_REC_THE_BLOCK	reject	target rec: the block's auxiliary recursor names are not the generated ones (T.rec_1 … T.rec_n)
