@@ -149,7 +149,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1842 functions, 0 of them stubs.
+1838 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -1059,7 +1059,7 @@ def checkerProg : Prog := [
   ("has_loose_b_var_b_fast", L.Ind.hasLooseBVarBFastL),
   ("has_loose_b_var_b_go", L.Ind.hasLooseBVarBGoL),
   ("has_loose_b_var_b_ins", L.Ind.hasLooseBVarBInsL),
-  ("has_str_lit_go", L.Ind.hasStrLitGoL),
+  ("has_str_lit_go", L.Stubs.hasStrLitGoL),
   ("hb_clear", L.Arena.memoClearG L.Ind.hbSch),
   ("hb_find", L.Arena.memoFindG L.Ind.hbSch),
   ("hb_put", L.Arena.memoPutG L.Ind.hbSch),
@@ -1463,9 +1463,6 @@ def checkerProg : Prog := [
   ("matches_pin", L.Ind.matchesPinL),
   ("max_find", L.Arena.maxFind),
   ("max_push", L.Arena.maxPush),
-  ("mc_clear", L.Arena.memoClearG L.Ind.mcSch),
-  ("mc_find", L.Arena.memoFindG L.Ind.mcSch),
-  ("mc_put", L.Arena.memoPutG L.Ind.mcSch),
   ("member_idx_at", L.Ind.memberIdxAt),
   ("member_names_copy", L.Ind.memberNamesCopy),
   ("memo_get", L.Rom.memoGet),
@@ -1473,8 +1470,6 @@ def checkerProg : Prog := [
   ("mentions_any_const", L.Ind.mentionsAnyConst),
   ("mentions_any_go", L.Ind.mentionsAnyGo),
   ("mentions_any_node", L.Ind.mentionsAnyNode),
-  ("mentions_const", L.Ind.mentionsConstL),
-  ("mentions_const_go", L.Ind.mentionsConstGoL),
   ("mk_app", L.Arena.mkApp),
   ("mk_app_n", L.Arena.mkAppNL),
   ("mk_app_n_f", L.Arena.mkAppNFL),
@@ -2105,11 +2100,12 @@ def checkerProg : Prog := [
   ("type_pins_guard", L.Ind.typePinsGuardL),
   ("type_sort_pw", L.Arena.typeSortPWL),
   ("u_next", L.Scan.Str.uNext),
+  ("ue_mentions_go", L.Stubs.ueMentionsGoL),
   ("unescape", L.Scan.Str.unescape),
   ("unfold_definition", L.Arena.unfoldDefinitionL),
   ("unfold_defn_at", L.Arena.unfoldDefnAtL),
   ("unfoldable_head", L.Arena.unfoldableHeadL),
-  ("unresolved_consts_error", L.Ind.unresolvedConstsErrL),
+  ("unresolved_consts_error", L.Stubs.unresolvedConstsErrL),
   ("unwrap_id_defs", L.Arena.unwrapIdDefsL),
   ("unwrap_step", L.Arena.unwrapStepL),
   ("utf8_char", L.Scan.Utf8.utf8Char),

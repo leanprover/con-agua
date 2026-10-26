@@ -8,7 +8,7 @@ import ConRon.Bridge.Promote.Pers
 
 `loopFns`: every function phase A's fold (`install_fold_go`) and phase B (`check_pending_go`)
 reach in the checker's program (the bracket, the arms, the core, the stage), as a literal computed from
-`checkerProg`'s call graph (1425 names; the decided check in `ConAgua/Checker/LoopAll.lean`
+`checkerProg`'s call graph (1421 names; the decided check in `ConAgua/Checker/LoopAll.lean`
 fails if a callee is missing, then recompute it). No function of it writes the pin table or a
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
@@ -186,9 +186,8 @@ def loopFns : List FnName :=
    "lvl_eq_fueled", "lvl_eq_rec", "lvl_eq_true", "lvls_eq", "lvls_eq_c", "lvls_eq_rec", "m2c_and",
    "m2c_and2", "m2c_arms", "m2c_check", "m2c_const_view", "m2c_ctor", "m2c_eta", "m2c_eta2",
    "m2c_head", "m2c_k", "m2c_k2", "m2c_pre", "ma_clear", "ma_find", "ma_put", "mac_hi",
-   "major_to_ctor", "matches_pin", "max_find", "max_push", "mc_clear", "mc_find", "mc_put",
-   "member_idx_at", "member_names_copy", "memo_get", "memo_push", "mentions_any_const",
-   "mentions_any_go", "mentions_any_node", "mentions_const", "mentions_const_go", "mk_app",
+   "major_to_ctor", "matches_pin", "max_find", "max_push", "member_idx_at", "member_names_copy",
+   "memo_get", "memo_push", "mentions_any_const", "mentions_any_go", "mentions_any_node", "mk_app",
    "mk_app_n", "mk_app_n_f", "mk_app_n_from", "mk_forall", "mk_lam", "mk_let", "mk_proj",
    "mk_target_major", "n_idxs_copy", "name_rec", "name_rec_i", "nanon_find", "nanon_push",
    "nat_add", "nat_add_lit", "nat_ap1", "nat_ap2", "nat_beq_lit", "nat_bin_op_name", "nat_ble_lit",
@@ -285,13 +284,13 @@ def loopFns : List FnName :=
    "tbl_grown", "tbl_ix", "tbl_put", "tbl_row_get", "tbl_row_set", "tgt_rule_nested",
    "tgt_stored_rules", "tgt_stored_rules_remap", "tower_slots_all", "trust_compiler_ok",
    "try_unfold_proj_app", "type_pin_guard", "type_pin_stored", "type_pins_guard", "type_sort_pw",
-   "unfold_definition", "unfold_defn_at", "unfoldable_head", "unresolved_consts_error",
-   "unwrap_id_defs", "unwrap_step", "vg_rd", "vg_wr", "view_ls", "view_ls_len", "wc_clear",
-   "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put", "whnf", "whnf_app", "whnf_core",
-   "whnf_core_app", "whnf_core_app2", "whnf_core_loop", "whnf_core_step", "whnf_core_step_proj",
-   "whnf_loop", "whnf_step", "whnf_telescope", "whnf_top", "whnf_walk_fuel", "wk_clear", "wk_find",
-   "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node", "ws_put", "wscoped_bfast", "zero_find",
-   "zero_push"]
+   "ue_mentions_go", "unfold_definition", "unfold_defn_at", "unfoldable_head",
+   "unresolved_consts_error", "unwrap_id_defs", "unwrap_step", "vg_rd", "vg_wr", "view_ls",
+   "view_ls_len", "wc_clear", "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put", "whnf",
+   "whnf_app", "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_loop", "whnf_core_step",
+   "whnf_core_step_proj", "whnf_loop", "whnf_step", "whnf_telescope", "whnf_top", "whnf_walk_fuel",
+   "wk_clear", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node", "ws_put",
+   "wscoped_bfast", "zero_find", "zero_push"]
 
 /-- **The loop's write set**: no function it reaches writes the pin table or bytes. -/
 def LoopClosed (p : Prog) : Prop := closedA p loopA loopC loopFns = true

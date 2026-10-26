@@ -7,7 +7,7 @@ import ConAgua.Arena.Globals
 # Phase B's read set in the checker's program (lane parmode)
 
 `phaseBFns`: every function `check_pending_go` (phase B's loop) reaches in `checkerProg`, as a
-literal computed from the program's call graph (584 names; `scripts/phaseb_fns.py` regenerates
+literal computed from the program's call graph (580 names; `scripts/phaseb_fns.py` regenerates
 it, and the check below fails if a callee is missing). None of them names the frozen buffer's
 arrays `OUT`, `HDRF`, `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`,
 so by `L.invoke_agree` (`L/Agree.lean`) a worker's run of `check_pending_go` is the run on any
@@ -82,10 +82,9 @@ def phaseBFns : List FnName :=
    "lvl_eq", "lvl_eq_c", "lvl_eq_rec", "lvls_eq", "lvls_eq_c", "lvls_eq_rec", "m2c_and",
    "m2c_and2", "m2c_arms", "m2c_check", "m2c_const_view", "m2c_ctor", "m2c_eta", "m2c_eta2",
    "m2c_head", "m2c_k", "m2c_k2", "m2c_pre", "mac_hi", "major_to_ctor", "max_find", "max_push",
-   "mc_clear", "mc_find", "mc_put", "mentions_const", "mentions_const_go", "mk_app", "mk_app_n",
-   "mk_app_n_from", "mk_forall", "mk_lam", "mk_let", "mk_proj", "nat_add", "nat_add_lit",
-   "nat_beq_lit", "nat_bin_op_name", "nat_ble_lit", "nat_cmp", "nat_div_lit", "nat_divmod",
-   "nat_gcd", "nat_gcd_lit", "nat_ind_ok", "nat_land", "nat_land_lit", "nat_limb",
+   "mk_app", "mk_app_n", "mk_app_n_from", "mk_forall", "mk_lam", "mk_let", "mk_proj", "nat_add",
+   "nat_add_lit", "nat_beq_lit", "nat_bin_op_name", "nat_ble_lit", "nat_cmp", "nat_div_lit",
+   "nat_divmod", "nat_gcd", "nat_gcd_lit", "nat_ind_ok", "nat_land", "nat_land_lit", "nat_limb",
    "nat_lit_supported", "nat_lit_to_ctor", "nat_lor", "nat_lor_lit", "nat_mod_lit", "nat_mul",
    "nat_mul_lit", "nat_op_is_wf", "nat_op_result", "nat_op_stored", "nat_pow", "nat_pow_lit",
    "nat_pred", "nat_pred_lit", "nat_shl", "nat_shl_lit", "nat_shr", "nat_shr_lit", "nat_sub",
@@ -108,12 +107,12 @@ def phaseBFns : List FnName :=
    "struct_eta_cert_with", "struct_eta_cert_wtb", "struct_unit_cert", "struct_unit_head",
    "struct_unit_tail", "stuck_app", "stuck_app_cong", "stuck_irrel", "stuck_rest", "stuck_str",
    "sub_borrow", "subst_pw_at", "succ_find", "succ_push", "tbl_ix", "tbl_row_get",
-   "tower_slots_all", "try_unfold_proj_app", "type_sort_pw", "unfold_definition", "unfold_defn_at",
-   "unfoldable_head", "unresolved_consts_error", "unwrap_id_defs", "unwrap_step", "wc_clear",
-   "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put", "whnf", "whnf_app", "whnf_core",
-   "whnf_core_app", "whnf_core_app2", "whnf_core_loop", "whnf_core_step", "whnf_core_step_proj",
-   "whnf_loop", "whnf_step", "wk_clear", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go",
-   "ws_node", "ws_put", "wscoped_bfast", "zero_find", "zero_push"]
+   "tower_slots_all", "try_unfold_proj_app", "type_sort_pw", "ue_mentions_go", "unfold_definition",
+   "unfold_defn_at", "unfoldable_head", "unresolved_consts_error", "unwrap_id_defs", "unwrap_step",
+   "wc_clear", "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put", "whnf", "whnf_app",
+   "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_loop", "whnf_core_step",
+   "whnf_core_step_proj", "whnf_loop", "whnf_step", "wk_clear", "wk_find", "wk_put", "ws_clear",
+   "ws_find", "ws_go", "ws_node", "ws_put", "wscoped_bfast", "zero_find", "zero_push"]
 
 /-- The word arrays phase B may name: all but the frozen buffer's (`OUT`, `HDRF`, `CTLF`). -/
 def phaseBPa (a : ArrId) : Bool := a != 240 && a != 241 && a != 242
