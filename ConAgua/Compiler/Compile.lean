@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.L.Semantics
+public import ConAgua.L.DefAssign
 public import Kraken.X64.Syntax
 
 @[expose] public section
@@ -248,6 +249,17 @@ def Prog.nrt (p : Prog) : NTree := (Prog.nrTree p).getD .leaf
 /-- The results callee `f` sets: its entry in `t`, else all `tab.nres`. -/
 def nrOf (t : NTree) (tab : Tab) (f : FnName) : Nat := (t.find (nameCode f)).getD tab.nres
 
+/-- The frame (in words) of callee `f` if it is a leaf with no stack check of its own: its entry
+in the table `sk` (`Prog.skt`), else 0. A caller's stack check leaves room for it. -/
+def skOf (sk : NTree) (f : FnName) : Nat := (sk.find (nameCode f)).getD 0
+
+/-- The largest `skOf sk g` over the functions `g` a statement calls (also by tail call). -/
+def Stmt.need (sk : NTree) : Stmt → Nat
+  | .seq s t | .ite _ s t => max (Stmt.need sk s) (Stmt.need sk t)
+  | .while _ s => Stmt.need sk s
+  | .call _ g _ => skOf sk g
+  | _ => 0
+
 /-- One more than the largest global variable an expression, a condition, a statement names. -/
 def Expr.nglob : Expr → Nat
   | .bin _ a b | .cmpw _ a b => max (Expr.nglob a) (Expr.nglob b)
@@ -401,6 +413,9 @@ structure Ctx where
   /-- The tier local (lane tiercost): a parameter of a leaf whose tier bit `x & 1` is kept in
   `rsi`, so that its tiered accesses address `[r15 + 8 rsi + d]` with no code for the tier. -/
   treg : Option Var := none
+  /-- The largest frame (in words) of the leaves without a stack check that the function calls
+  (`Stmt.need`): its own stack check leaves room for that frame below the return address. -/
+  need : Nat := 0
   deriving Repr
 
 /-- The registers a leaf keeps locals in: the argument registers (`argRegs`), then `rbx`, `r12`,
@@ -1009,13 +1024,15 @@ def storeParams (ctx : Ctx) : Nat → List Reg64 → Program
      | some _ => []
      | none => [movMR (mb .rsp (8 * i)) r]) ++ storeParams ctx (i + 1) rs
 
-/-- Zero `n` locals from `j` on. -/
-def zeroLocals (ctx : Ctx) : Nat → Nat → Program
+/-- Zero those of the `n` locals from `j` on that `need` lists (`needZero`: the others are
+assigned before they are read, `L/DefAssignSim.lean`). -/
+def zeroLocals (ctx : Ctx) (need : List Var) : Nat → Nat → Program
   | _, 0 => []
   | j, n + 1 =>
-    (match ctx.alloc.lookup j with
-     | some r => movRI r 0
-     | none => i64 (.mov (.mem (mb .rsp (8 * j))) (oI 0))) :: zeroLocals ctx (j + 1) n
+    (if need.contains j then
+      [match ctx.alloc.lookup j with
+       | some r => movRI r 0
+       | none => i64 (.mov (.mem (mb .rsp (8 * j))) (oI 0))] else []) ++ zeroLocals ctx need (j + 1) n
 
 /-! ### Locals in registers (leaf functions) -/
 
@@ -1147,20 +1164,42 @@ def tregFree (t : Option Var) (al : List (Var × Reg64)) : Bool :=
   | some x => (al.lookup x).isNone && al.all (·.2 != .rsi)
   | none => true
 
-/-- The context of the body of function `f`: a leaf keeps locals in registers (`leafAlloc`,
-used when `allocOk`), but not its tier local (`tregOf`), whose tier is in `rsi`. -/
-def fnCtx (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Ctx :=
-  let al := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) && tregFree (tregOf fd) (leafAlloc fd)
+/-- The locals of function `fd` kept in registers: a leaf's `leafAlloc` (when `allocOk`), but not
+its tier local (`tregOf`), whose tier is in `rsi`. -/
+def fnAlloc (fd : FunDecl) : List (Var × Reg64) :=
+  if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) && tregFree (tregOf fd) (leafAlloc fd)
     then leafAlloc fd else []
+
+/-- The frame of function `fd` in words: its locals and the temporaries of its body. -/
+def fnFrame (fd : FunDecl) : Nat := fd.nlocals + tempsS (fnAlloc fd) (Stmt.nret fd.body) fd.body
+
+/-- The context of the body of function `f` (`fnAlloc`); `sk` is the table of the leaves without
+a stack check (`Prog.skt`), for its own stack check (`Ctx.need`). -/
+def fnCtx (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Ctx :=
   { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
-    leaf := !Stmt.calls fd.body, alloc := al, treg := tregOf fd,
-    tailF := if Stmt.calls fd.body then some (fd.nlocals + tempsS al (Stmt.nret fd.body) fd.body) else none }
+    leaf := !Stmt.calls fd.body, alloc := fnAlloc fd, treg := tregOf fd,
+    tailF := if Stmt.calls fd.body then some (fnFrame fd) else none, need := Stmt.need sk fd.body }
 
 /-- A leaf that keeps every local in a register and needs no temporaries has no frame (and no
 stack check). -/
-def frameless (ctx : Ctx) (fd : FunDecl) : Bool :=
-  ctx.leaf && (List.range fd.nlocals).all (fun x => (ctx.alloc.lookup x).isSome) &&
-    tempsS ctx.alloc ctx.nr fd.body == 0
+def frameless (fd : FunDecl) : Bool :=
+  !Stmt.calls fd.body && (List.range fd.nlocals).all (fun x => ((fnAlloc fd).lookup x).isSome) &&
+    tempsS (fnAlloc fd) (Stmt.nret fd.body) fd.body == 0
+
+/-- Function `f` is a leaf with a frame but no stack check of its own (unless it is the entry,
+which the trampoline calls with no room checked): its callers check for its frame. -/
+def skipsCheck (entry f : FnName) (fd : FunDecl) : Bool :=
+  f != entry && !Stmt.calls fd.body && !frameless fd
+
+/-- The frames (`fnFrame`) of the functions without a stack check (`skipsCheck`), by `nameCode`;
+`none` if such a name occurs twice. -/
+def Prog.skTree (entry : FnName) : Prog → Option NTree
+  | [] => some .leaf
+  | (f, fd) :: p => (Prog.skTree entry p).bind fun t =>
+    if skipsCheck entry f fd then t.insert (nameCode f) (fnFrame fd) else some t
+
+/-- `Prog.skTree`, or the empty tree (then every function checks the stack). -/
+def Prog.skt (p : Prog) (entry : FnName) : NTree := (Prog.skTree entry p).getD .leaf
 
 /-- `rsi := x & 1` on entry, for the tier local `x` (a parameter, in its argument register). -/
 def tregEntry (ctx : Ctx) : Program :=
@@ -1168,12 +1207,12 @@ def tregEntry (ctx : Ctx) : Program :=
   | some x => [movRR .rsi (argRegs.getD x .rdi), i64 (.and (.reg (rr .rsi)) (.imm (.int64 (1 : Word).toInt64)))]
   | none => []
 
-/-- A function's code between its prologue and its epilogue: parameters, zeroed locals, body,
-results. -/
+/-- A function's code between its prologue and its epilogue: parameters, zeroed locals (those
+that may be read before they are assigned), body, results. -/
 def fnBody0 (ctx : Ctx) (fd : FunDecl) : Program :=
   (if fd.nparams ≤ argRegs.length then storeParams ctx 0 (argRegs.take fd.nparams)
    else copyParams 0 fd.nparams) ++
-  zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
+  zeroLocals ctx (needZero fd.nparams fd.body) fd.nparams (fd.nlocals - fd.nparams) ++
   compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
 
 /-- A function's code between its prologue and its epilogue: the tier local's tier into `rsi`
@@ -1182,15 +1221,20 @@ def fnBody (ctx : Ctx) (fd : FunDecl) : Program := tregEntry ctx ++ fnBody0 ctx 
 
 /-- A function: stack check, frame, parameters, body, epilogue. On entry `rsp` points at the
 return address, and the arguments are in `argRegs` (at most 6) or at `rsi`. It sets its first
-`Stmt.nret fd.body` results; `t` holds every function's count (`Prog.nrt`), for the call sites. -/
-def compileFn (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Program :=
-  let ctx := fnCtx tab t f fd
+`Stmt.nret fd.body` results; `t` holds every function's count (`Prog.nrt`), for the call sites.
+A leaf whose frame `F` is its entry in `sk` (`Prog.skt`) has no stack check: its callers check
+for room for it (`Ctx.need`), on top of their own frame and return address. -/
+def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
+  let ctx := fnCtx tab t sk f fd
   let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
-  if frameless ctx fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
+  if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
+  else if ctx.leaf && sk.find (nameCode f) == some F then
+  [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
   else
   [.label (fnL f),
    movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
-   i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8))), jccL .c exhaustedL,
+   i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
    i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
   [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
@@ -1232,19 +1276,20 @@ def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
    .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
   [movRI .rdx 0, jmpL finishL]
 
-/-- Every function of `p`, with the result counts `t`. -/
-def compileFns (tab : Tab) (t : NTree) (p : Prog) : Program :=
-  p.flatMap fun (f, fd) => compileFn tab t f fd
+/-- Every function of `p`, with the result counts `t` and the leaves without a stack check `sk`. -/
+def compileFns (tab : Tab) (t sk : NTree) (p : Prog) : Program :=
+  p.flatMap fun (f, fd) => compileFn tab t sk f fd
 
 /-- The number of parameters of the entry function. -/
 def entryNp (p : Prog) (entry : FnName) : Nat := ((p.lookup entry).map (·.nparams)).getD 0
 
-/-- The whole program, with the result counts `t`: the trampoline, then every function. -/
-def compileProgT (tab : Tab) (t : NTree) (p : Prog) (entry : FnName) : Program :=
-  trampoline tab entry (nrOf t tab entry) (entryNp p entry) ++ compileFns tab t p
+/-- The whole program, with the result counts `t` and the leaves without a stack check `sk`: the
+trampoline, then every function. -/
+def compileProgT (tab : Tab) (t sk : NTree) (p : Prog) (entry : FnName) : Program :=
+  trampoline tab entry (nrOf t tab entry) (entryNp p entry) ++ compileFns tab t sk p
 
 /-- The whole program: the trampoline, then every function. -/
 def compileProg (tab : Tab) (p : Prog) (entry : FnName) : Program :=
-  compileProgT tab (Prog.nrt p) p entry
+  compileProgT tab (Prog.nrt p) (Prog.skt p entry) p entry
 
 end L.Compiler

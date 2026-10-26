@@ -17,7 +17,10 @@ out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
 * System V arguments: `rdi`/`rsi` = the input bytes (byte array `0`), `rdx`/`rcx` = the pin-data
   bytes (byte array `1`; ignored if the program has one byte array), `r8` = `base`, `r9` =
   `base_len`. Returns `rax`/`rdx` as `ca_enter` does.
-* If `base_len < abiNeed`, it returns at once with `rdx = 1` (resources exhausted; never accept).
+* If `base_len < abiNeed`, or if `in_len` or `pins_len` is `2^63` or more (the top bit of `rsi`
+  or `rcx` set: `cmp r, 0; jl`), it returns at once with `rdx = 1` (resources exhausted; never
+  accept). So a run that gets past the stub has both buffers below `2^63` bytes, which the
+  refinements assume (`InputsOK`).
 * The region is a static partition into `abiSlot`-byte slots (no allocator; the pages that are
   never touched never become real): slot `0` is the table (`T = base`), slot `1` the L stack
   (`abiStack` bytes at its bottom), then one slot per byte array `2, …, nb - 1` and per word array.
@@ -111,7 +114,9 @@ def abiStartL : Label := "ca_start"
 
 def abiHead (tab : Tab) : Program :=
   [.label abiSetupL,
-   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiDeclineL]
+   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiDeclineL,
+   i64 (.cmp (.reg (rr .rsi)) (oI 0)), jccL .l abiDeclineL,
+   i64 (.cmp (.reg (rr .rcx)) (oI 0)), jccL .l abiDeclineL]
 
 def abiTail : Program :=
   [movRR .rdi .r8, movRI .rsi abiFuel.toUInt64, jmpL enterL,

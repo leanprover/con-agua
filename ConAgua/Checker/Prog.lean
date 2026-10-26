@@ -2264,4 +2264,9 @@ def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1
 -- code looks its callee's count up in it (`asm_lit`).
 nrt_lit checkerNrt : checkerProg
 
+-- The frames of `checkerProg`'s leaves without a stack check (`Prog.skt`), as a literal, with
+-- `checkerSkt_eq : Prog.skt checkerProg "check" = checkerSkt` (`skt_lit`): every function's stack
+-- check of the compiled code looks its callees' frames up in it (`asm_lit`).
+skt_lit checkerSkt : checkerProg "check"
+
 end L.Checker
