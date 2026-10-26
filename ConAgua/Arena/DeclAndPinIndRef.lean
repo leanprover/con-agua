@@ -183,7 +183,7 @@ theorem andPinDecls_ok {a a1 : AState} {pinned : List IConstantInfo}
   obtain ⟨m1, cis⟩ := p
   obtain ⟨hv, hst⟩ := ConRon.Bridge.AM.pure_ok hrest
   subst hv; subst hst
-  obtain ⟨hstep, hdp, -, -⟩ :=
+  obtain ⟨hstep, hdp, -⟩ :=
     ConRon.Bridge.Frontend.internCIList_sstep ConLeche.andPin hok
       (ConRon.Bridge.Frontend.EMemoOK.empty _) hgo
   exact ⟨hstep.ok, by rw [denoteCIList_length _ _ hdp]; decide⟩

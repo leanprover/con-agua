@@ -351,9 +351,10 @@ theorem ctpC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     -- the pinned type, read after the leaf
     have hrd : rdW (m1.arr64 EREC) (o + 1) = tp.2.word.toUInt64 := by
       rw [rdW_erec_grow hg1 (by
-        obtain ⟨_, h1⟩ := L.Rom.pairIdx (o := o) (i := 0) (by simp at hlen; omega)
+        have hlen1 : l.toNat = tps.length + 1 := by simpa using hlen
+        obtain ⟨_, h1⟩ := L.Rom.pairIdx (o := o) (i := 0) (by omega)
         simp only [show (2 : Word) * UInt64.ofNat 0 = 0 from rfl, UInt64.add_zero] at h1
-        rw [h1]; simp at hlen; omega)]
+        rw [h1]; omega)]
       exact v1
     rw [hrd] at hw
     -- the comparison
@@ -370,7 +371,7 @@ theorem ctpC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     rw [h0w] at hrun2
     have hq1 := hcl' q (by simp)
     obtain ⟨hck2, hx2', hp2, -⟩ := defeq_check henv hC1.check hden1
-      (by rw [decE_eq, decI_word]; exact ConRon.Bridge.denote_ext hd2 c1.ext)
+      (by rw [decI_word]; exact ConRon.Bridge.denote_ext hd2 c1.ext)
       (ConLeche.Expr.WScoped.of_not_hasFvar hq1.1) (ConLeche.Expr.WScoped.of_not_hasFvar hq1.2) hrun2
     have c2 : CoreStep V env fe a1 a2 := ⟨hck2, hx2', hp2⟩
     have hC2 := StageC.of_T hT2 hck2
@@ -391,11 +392,12 @@ theorem ctpC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hG2 : IWGrow m m2 := hg1.trans hg2
+    have hlen' : l.toNat = tps.length + 1 := by simpa using hlen
     have hrest : L.Rom.TPinsR m2 (o + 2) (l - 1) tps := by
       have hl1' : (l - 1).toNat = l.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
       have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
-      refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1']; simp at hlen; omega, by rw [hl1']; simp at hlen; omega,
+      refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1']; omega, by rw [hl1']; omega,
         fun i hi => ?_⟩ ⟨hG2.2.1, hG2.2.2.2⟩
       have := hv (i + 1) (by simpa using hi)
       simp only [List.getElem_cons_succ] at this
@@ -403,7 +405,7 @@ theorem ctpC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
         rw [UInt64.ofNat_add, UInt64.ofNat_one, UInt64.mul_add, UInt64.mul_one]; ac_rfl
       rw [e] at this
       exact this
-    obtain ⟨x3, a3, hrun3, hC3, c3, hg3, hd3'⟩ := ih qs (o + 2) (l - 1) k hk' m2 a2 r3 m' hC2 hCr2
+    obtain ⟨x3, a3, hrun3, hC3, c3, hg3, hd3'⟩ := ih qs (o + 2) (l - 1) k hk' m2 a2 r3 m3 hC2 hCr2
       hrest (ConRon.Bridge.TypePinsDenote.mono (c1.trans c2).ext _ _ hd3)
       (fun r hr => hcl' r (by simp [hr])) h3
     refine ⟨x3, a3, ?_, hC3, (c1.trans c2).trans c3, hG2.trans hg3, hd3'⟩
@@ -443,7 +445,7 @@ theorem cpvC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
   have hD5 := hD.toDmProg7.toDmProg6.toDmProg5
   have hwsP : ConLeche.Expr.WScoped 0 (ConLeche.divModDeclPin psP nm) := by
     simp only [ConLeche.divModPinGuard, Bool.and_eq_true, Bool.not_eq_true'] at hpg
-    exact ConLeche.Expr.WScoped.of_not_hasFvar hpg.1.1.2
+    exact ConLeche.Expr.WScoped.of_not_hasFvar hpg.1.1.1.2
   -- the pin
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hf1, hCr1, hw⟩ :=
     (divModDeclPin_ref hD5.toDmProg2.toDmProg1 ps c ip).bindLC hcl (leaf_mem _ (by decide)) hkp
@@ -679,7 +681,8 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
     have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
     have hrun1' : (divModPinGuard ip fe (decI c)).run a = .ok (x1, a1) := hrun1
     by_cases z1 : r1.headD 0 = 0
-    · rw [if_pos z1] at hw
+    · rw [if_neg (by simpa using z1)] at hw
+      simp only [loopW.j1] at hw
       replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
@@ -689,7 +692,7 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
       simp only [checkDivModPinLoop, StateT.run_bind, hrun1', exc_ok_bind', hx1,
         Bool.false_eq_true, if_false]
       exact hrun4
-    rw [if_neg z1] at hw
+    rw [if_pos (show r1.headD 0 ≠ 0 from z1)] at hw
     have hx1 := decW0B_true hd1 z1
     -- the certificates' guards
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
@@ -702,7 +705,8 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
     have c02 := c1.trans c2
     have hrun2' : (divModCertsGuard ip fe (decI c) (decE value)).run a1 = .ok (x2, a2) := hrun2
     by_cases z2 : r2.headD 0 = 0
-    · rw [if_pos z2] at hw
+    · rw [if_neg (by simpa using z2)] at hw
+      simp only [loopW.j1] at hw
       replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
@@ -712,7 +716,7 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
       simp only [checkDivModPinLoop, StateT.run_bind, hrun1', exc_ok_bind', hx1, if_true, hrun2',
         hx2, Bool.false_eq_true, if_false]
       exact hrun4
-    rw [if_neg z2] at hw
+    rw [if_pos (show r2.headD 0 ≠ 0 from z2)] at hw
     have hx2 := decW0B_true hd2 z2
     -- the attempt
     replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
@@ -735,6 +739,7 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
     rw [if_neg z3] at hw
     have z3' : r3.headD 0 = 0 := by simpa using z3
     have hx3 := decW0B_false hd3 z3'
+    simp only [loopW.j1] at hw
     replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
