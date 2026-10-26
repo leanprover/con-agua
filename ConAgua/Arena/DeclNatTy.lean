@@ -151,9 +151,9 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
         · rw [if_neg (by simpa using hl)] at hw
           simp only [Option.some.injEq, Prod.mk.injEq] at hw
           obtain ⟨rfl, rfl⟩ := hw
-          have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
+          have hisE : ci.toConstantVal.levelParams.isEmpty = true := hiff.mp hl
           rw [hrd, hr7']
-          refine ⟨decide (wt = pinW m6 54), a6, ?_, hS6, hg4.trans hg6, ?_⟩
+          refine ⟨decide (wt = pinW m6 54), a4, ?_, hS6, hg4.trans hg6, ?_⟩
           · simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
               hcond, decide_eq_true hP, if_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, Bool.false_eq_true, if_false, hf,
               sortOne, pinSortOne_run hF6, hisE, hty, decI_beq_word hlt hp54, hrd]
@@ -165,11 +165,11 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
         · rw [if_pos (by simpa using hl)] at hw
           simp only [Option.some.injEq, Prod.mk.injEq] at hw
           obtain ⟨rfl, rfl⟩ := hw
-          have hisE : cv.levelParams.isEmpty = false := by
-            cases h : cv.levelParams.isEmpty
+          have hisE : ci.toConstantVal.levelParams.isEmpty = false := by
+            cases h : ci.toConstantVal.levelParams.isEmpty
             · rfl
             · exact absurd (hiff.mpr h) hl
-          refine ⟨false, a6, ?_, hS6, hg4.trans hg6, by simp [decW0B]⟩
+          refine ⟨false, a4, ?_, hS6, hg4.trans hg6, by simp [decW0B]⟩
           simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
             hcond, decide_eq_true hP, if_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, Bool.false_eq_true, if_false, hf,
             sortOne, pinSortOne_run hF6, hisE]

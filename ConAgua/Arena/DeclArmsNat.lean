@@ -196,7 +196,6 @@ def natOpDepsStoredL : FunDecl := lfn (vis, o, l) locals (f, r, e) {
 
 /-- `bool_ctor_ok(p)`: the stored `Bool` constructor `p` is level-free, at the type `Bool`. -/
 -- con-ron: ConRon/Arena/Core.lean:1048-1058 ConRon.Arena.boolCtorOk
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.boolCtorOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.boolCtorOk]
 def boolCtorOkL : FunDecl := lfn (p) locals (q, n, b) {
   q := call ci_to_cv(p);
@@ -245,7 +244,6 @@ def natOpGuardL : FunDecl := lfn (vis, c) locals (s, o, l, d, be, bl, mo, ml, m,
 /-- `nat_op_cod(vis, c, e)`: `natOpCod`: `Bool` (stored at `Sort 1`) for the comparisons, `Nat`
 otherwise. -/
 -- con-ron: ConRon/Arena/Core.lean:1142-1161 ConRon.Arena.natOpCod
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.natOpCod` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.natOpCod]
 def natOpCodL : FunDecl := lfn (vis, c, e) locals (be, bl, bn, bc, f, r, q, s1, nn, nc) {
   be := call pin_at(19);
