@@ -22,9 +22,9 @@ theorem checkBasisDeclE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns =
     cbdE_okT hB hC hR hnv hpa hp hdn hk hS hQ hc
 
 theorem checkConstantValE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (hcE : CoreStubsE p) : CheckConstantValE p := by
+    (hcE : CoreStubsE p) (hUL : UceLookups p) : CheckConstantValE p := by
   intro hp hq hap hkp s₀ a₀ dn fe vis q cv hS hqd hqb hlps hCr F hF e hc
-  exact ccvE_okT hq hp hap hkp hnv hcE hF hc hS hqd hqb hlps hCr
+  exact ccvE_okT hq hp hap hkp hnv hcE hUL hF hc hS hqd hqb hlps hCr
 
 local notation "V" => ConLeche.CheckMode.verified
 
@@ -42,7 +42,7 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hfC : ∀ f ∈ cidFrameCallees, f ∈ fsC)
     (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
-    (hnv : closedNV p _root_.L.Checker.nvFns = true) (eGrc : GenRecCheckE p)
+    (hnv : closedNV p _root_.L.Checker.nvFns = true) (hUL : UceLookups p) (eGrc : GenRecCheckE p)
     (eSum : CheckSumTeleE p) (eSC : CheckSumCtorsE p) (eSF : CheckStructFieldSortsIE p)
     (eTbl : CheckStructProjTableRE p) (eKey : ClassKeyOfE p) (eClm : ClassMajorsE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
@@ -61,7 +61,7 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hlpd : BlockLpsDn dn block) :
     ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e :=
   cid_claim2 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt
-    hkr hnv (checkBasisDeclE_of hnv) (checkConstantValE_of hnv (hkp.toKnotTopProg.coreStubsE hnv)) eGrc eSum
+    hkr hnv (checkBasisDeclE_of hnv) (checkConstantValE_of hnv (hkp.toKnotTopProg.coreStubsE hnv) hUL) eGrc eSum
     eSC eSF eTbl eKey eClm hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
 
 end L.Ind
