@@ -2,6 +2,7 @@ import ConAgua.Verdict.FrontE
 import ConAgua.Front.FrontPreOK
 import ConAgua.Checker.FrontProg
 import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Final.TwinVerdict
 
 /-!
 # Error refinements of the frontend's driver: `apply_ind`, `apply_dline`, `apply_any`,
@@ -572,6 +573,46 @@ theorem loop1_claim : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : Stat
   rw [← hq] at he
   exact ih q m₁ (ln + 1) st' _ (lineNo + 1) e hInv he hk
 
+/-- **`front_run` at `frontAllProg`: a failing run (class `≠ 0`) from the driver's start
+(`frontAll_refines_pre_ok`'s hypotheses) claims that the twin's `parseBytes b` fails with that
+class.** `front_init` claims nothing; the loop is `loop1_claim` from `StateD.init`'s state. -/
+theorem frontRunE_claim (n : Nat) (m : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
+    (hA : ArenaD m a₀) (hD : StateDR m (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
+    (hR : ∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) (hmode : ModeOK m)
+    (e : Err) (he : frontRunE frontAllProg n m = .error e) (hk : e.cls ≠ 0) :
+    TwinFailsV (parseBytes b) a₀ e.cls := by
+  cases n with
+  | zero => simp only [frontRunE] at he; cases he; exact absurd rfl hk
+  | succ n =>
+  rw [frontRunE.arm1] at he
+  cases h1 : callE frontAllProg n "front_init" [] m with
+  | error e1 =>
+    rw [h1, frontRunE.k_front_init.none] at he; cases he
+    exact absurd (frontAll_nvcls.cls (by decide) h1) hk
+  | ok q1 =>
+  obtain ⟨r1, m₁⟩ := q1
+  rw [h1, frontRunE.k_front_init.arm1] at he
+  obtain ⟨s1, hs1, hK1, -, -⟩ := triple_of_callE
+    (frontInitK_spec frontAllProg frontAllProg_front frontAllProg_expr rfl n ⟨m, Locals.init []⟩) h1
+  rw [hs1] at hK1
+  obtain ⟨st₀, a₁, hrun, hI⟩ := initKW_inv_ok D b h64 hsize m m₁ a₀
+    ⟨hm, hA, hD, hok, hoff, hpins, hR, hmode⟩ hK1
+  have hz : (0 : USize).toUInt64 = 0 := rfl
+  rw [← hz] at he
+  have hf := loop1_claim D b h64 hsize hV hXT hSL (n + 1) 0 m₁ 0 st₀ a₁ 0 e hI he hk
+  rw [parseBytes_eq b (by rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega)]
+  exact ConAgua.Final.TwinFailsV.bind_ok hrun hf
+
 end loop
+
+/-- A failing run is a failing call (`callE`) from its memory. -/
+theorem callE_of_run_err {p : Prog} {k : Nat} {f : FnName} {vs : List Word} {s : St} {e : Err}
+    (h : (invoke p (exec p k) f vs).run s = .error e) : callE p k f vs s.mem = .error e := by
+  rw [invoke_run_loc'] at h
+  unfold callE
+  cases hr : (invoke p (exec p k) f vs).run ⟨s.mem, Locals.init []⟩ with
+  | error e' => rw [hr] at h; cases h; rfl
+  | ok v => rw [hr] at h; cases h
 
 end L.Front
