@@ -477,8 +477,8 @@ theorem natListLoop_link (i : USize) (acc : List Nat) (w : Bool) (hacc : acc.len
       by_cases hw : w = true ∧ ¬ acc = []
       · have he : acc.isEmpty = false := by cases acc <;> simp_all
         simp only [hw, he]; rfl
-      · rw [ite_eq_right hw, ite_eq_right (by simp only [Bool.and_eq_true, Bool.not_eq_true',
-          List.isEmpty_eq_false_iff]; exact hw)]
+      · rw [ite_eq_right hw, ite_eq_right (by
+          simp only [Bool.and_eq_true, Bool.not_eq_true', List.isEmpty_eq_false_iff]; exact hw)]
         simp [encNL, hs]
     have h93' : ¬ (byteAt b i).toUInt64 = 93 := fun h' => h93 ((u8_toUInt64_eq _ 93 (by decide)).mp h')
     simp only [h93', show ¬ (byteAt b i == 93) = true by simpa using h93, ite_false]
