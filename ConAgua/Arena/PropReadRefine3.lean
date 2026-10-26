@@ -22,14 +22,13 @@ namespace L.Arena
 open ConLeche (Name Level PropWhen)
 
 /-- **Hypothesis: a stored constant's level-parameter names read back** (under `CoreS`, for every
-constant the view finds that is not a projection table). To be folded into `StoreDen` (the
-environment loader stores only names it interned). -/
+constant the view finds). To be folded into `StoreDen` (the environment loader stores only names
+it interned). -/
 def ConstLpsDen : Prop :=
   ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb : Word), CoreS dn m a vis fe M eb →
-    ∀ (c : NIdx) (ci : IConstantInfo) (cv : IConstantVal), fe.find? c = some ci →
-      ci.isTowerEntry = false → (∀ s, ci.toConstantVal.run s = .ok (cv, s)) →
-      ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks
+    ∀ (c : NIdx) (ci : IConstantInfo), fe.find? c = some ci →
+      ∃ ks, ci.toConstantVal.levelParams.mapM (denoteN a.store.ns) = some ks
 
 /-! ## Twin fragments -/
 
@@ -42,17 +41,16 @@ def htResT (fe : IFEnv) (f k : Nat) (ty : EIdx) : AM (Option PropWhen) := do
 def cArmT (fe : IFEnv) (T : EIdx → AM (Option PropWhen)) (I : NIdx) (us : LsIdx) :
     AM (Option PropWhen) :=
   match fe.find? I with
-  | some ci =>
-    if ci.isTowerEntry then pure none else do
-      let cv ← ci.toConstantVal
-      match ← viewLsLen us with
-      | none => failDanglingLs
-      | some usl =>
-      if usl = cv.levelParams.length then do
-        match ← T cv.type with
-        | some pw => substPWAt cv.levelParams us pw
-        | none => pure none
-      else pure none
+  | some ci => do
+    let cv := ci.toConstantVal
+    match ← viewLsLen us with
+    | none => failDanglingLs
+    | some usl =>
+    if usl = cv.levelParams.length then do
+      match ← T cv.type with
+      | some pw => substPWAt cv.levelParams us pw
+      | none => pure none
+    else pure none
   | none => pure none
 
 /-! ## Run forms of the callees -/
@@ -128,21 +126,6 @@ end calls
 
 /-! ## The `.const` arm -/
 
-/-- A decoded record of kind `6` is a projection table. -/
-theorem decCI_kind6 {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
-    (hsz : b.size < 2 ^ 63) (h6 : rdW b q = 6) : ci.isTowerEntry = true := by
-  cases hq : a[q.toNat]? with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  have hrd : rdW b q = w := by
-    have := rdW_ext hab hsz (k := 0) (by decide) (by simpa using hq); simpa using this
-  rw [hrd] at h6; subst h6
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some,
-    show UInt64.toNat 6 = 6 from rfl, Option.bind_eq_some_iff] at h
-  obtain ⟨tbl, -, hc⟩ := h
-  cases hc; rfl
-
 section arm
 variable {p : Prog} (hp : PropReadProg p) (hden : CoreDen) (hlps : ConstLpsDen)
 include hp hden hlps
@@ -173,13 +156,8 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   simp only [h0, ↓reduceIte] at hW
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  by_cases h6 : rdW (m₁.arr64 EREC) (r₁.tail.headD 0) = 6
-  · simp only [h6, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
-    have htw := decCI_kind6 hci (erecP_ext _) hS.erec h6
-    exact ⟨none, a, by simp only [cArmT, hfind', htw, ↓reduceIte]; rfl, RdAfter.refl hS, rfl⟩
-  simp only [h6, ↓reduceIte] at hW
-  obtain ⟨htw, cv, hcvr, hcv⟩ := decCI_kind_ne6 hci (erecP_ext _) h6
+  have hcv := decCI_cv hci (erecP_ext _)
+  generalize hcvr : ci.toConstantVal = cv at hcv
   obtain ⟨hw1, -, hw4, hty, hsl⟩ := infer_decCV_words hcv hS.erec
   by_cases hne : lsNodeW m₁ us = []
   · simp [hne] at hW
@@ -192,7 +170,7 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
         | some pw => substPWAt cv.levelParams (decI us) pw
         | none => pure none
       else pure none).run a := by
-    simp only [cArmT, hfind', htw, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, hcvr,
+    simp only [cArmT, hfind', StateT.run_bind, hcvr,
       except_ok_bind, show ∀ x, (viewLsLen x).run a = .ok (a.store.lss.viewLen x, a) from
         fun _ => rfl, hvl]
   have hlen : ids.length = cv.levelParams.length ↔
@@ -237,7 +215,8 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h1, h2, h3, rfl⟩ := hW
   have herec := hRd₂.erec
-  obtain ⟨ks, hks⟩ := hlps dn m₁ a vis fe M eb hS _ ci cv hfind' htw hcvr
+  obtain ⟨ks, hks⟩ := hlps dn m₁ a vis fe M eb hS _ ci hfind'
+  rw [hcvr] at hks
   obtain ⟨res₃, a₃, hrun₃, hRd₃, hd₃⟩ := spa_call hp hden hRd₂.rel (by rw [herec]; exact hsl)
     ⟨ks, by rw [hst]; exact hks⟩ hus (by rw [hst]; exact hls) (by rw [hst]; exact hd₂) hc3
   refine ⟨res₃, a₃, by rw [hpre2]; exact hrun₃, hRd₂.trans hRd₃, ?_⟩
@@ -294,9 +273,8 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       (match v with
         | .const I us =>
           (match fe.find? I with
-          | some ci =>
-            if ci.isTowerEntry then pure none else do
-              let cv ← ci.toConstantVal
+          | some ci => do
+              let cv := ci.toConstantVal
               match ← viewLsLen us with
               | none => failDanglingLs
               | some usl =>

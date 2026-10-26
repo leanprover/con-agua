@@ -229,7 +229,6 @@ def headTypeResL : FunDecl := lfn (vis, f, n, ty) locals (pf, pv, k, o, c) {
 def headTypeConstL : FunDecl := lfn (vis, f, n, cn, us) locals (fd, p, lo, l, k, o, c) {
   (fd, p) := call env_find(cn, vis);
   if fd == 0 { return (0, 0, 0) };
-  if EREC.u64[p] == 6 { return (0, 0, 0) };
   (lo, l) := call ls_node(us);
   if l != EREC.u64[p + 3] { return (0, 0, 0) };
   (k, o, c) := call head_type_res(vis, f, n, EREC.u64[p + 4]);
@@ -299,7 +298,6 @@ def typeSortPWL : FunDecl := lfn (vis, f, rt) locals (r, d, t, x, cnt, fn, k, o,
 def headProofConstL : FunDecl := lfn (vis, f, cn, us) locals (fd, p, lo, l, k, o, c) {
   (fd, p) := call env_find(cn, vis);
   if fd == 0 { return (0, 0, 0) };
-  if EREC.u64[p] == 6 { return (0, 0, 0) };
   (lo, l) := call ls_node(us);
   if l != EREC.u64[p + 3] { return (0, 0, 0) };
   (k, o, c) := call type_sort_pw(vis, f, EREC.u64[p + 4]);
