@@ -29,7 +29,7 @@ def DefeqLstE (p : Prog) : Prop :=
       (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) s₀ a₀
 
 theorem whnfSetE_nv : ∀ f ∈ ["get_app_fn", "env_find", "get_app_args", "ls_node", "reserved_contains_w",
-    "lvls_eq_c", "eta_projs", "eta_ctor_shape", "ind_caps"], f ∈ L.Checker.nvFns := by
+    "lvls_eq_c", "eta_projs", "eta_ctor_shape", "ind_caps", "er_slice_eq", "tower_slots_all"], f ∈ L.Checker.nvFns := by
   decide +kernel
 
 /-! ## `struct_eta_cert_tail` -/
@@ -59,6 +59,29 @@ theorem setTail_err2 (a a₁ a₂ a₃ : AState) (projs : List EIdx)
   simp only [setTailT, StateT.run_bind, h1, except_ok_bind, liftFueled_run_some, ↓reduceIte, h2, h3, h4]
 
 end tailErr
+
+section goErr
+variable (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (b : EIdx) (c : NIdx) (us : LsIdx)
+  (cvc : IConstantVal) (T : NIdx) (us' : LsIdx) (cvT : IConstantVal) (caps : IIndCaps)
+  (aargs targs : List EIdx)
+
+theorem setGo_err {m : Mem} {a : AState} (hP : PinsFull m a.pins) (uslen : Nat)
+    (hv : a.store.lss.viewLen us' = some uslen)
+    (hcond : caps.eta = true ∧ caps.etaCtor = c ∧
+      a.pins.reserved.contains T = false ∧ a.pins.reserved.contains c = false ∧
+      targs.length = caps.etaParams ∧
+      uslen = cvT.levelParams.length ∧
+      cvc.levelParams = cvT.levelParams ∧ towerSlotsAll fe T caps.etaFields = true) (ce : CheckError)
+    (h : (setTailT r fe depth b us T us' caps.etaParams caps.etaFields aargs targs).run a = .error ce) :
+    (setGoT r fe depth b c us cvc T us' cvT caps aargs targs).run a = .error ce := by
+  rw [setGoT_run r fe depth b c us cvc T us' cvT caps aargs targs hP uslen hv]
+  simp only [StateT.run_bind]
+  show (setGoK r fe depth b c us cvc T us' cvT caps aargs targs a.pins.reserved uslen
+    (towerSlotsAll fe T caps.etaFields)).run a = _
+  unfold setGoK
+  rw [if_pos hcond]; exact h
+
+end goErr
 
 section set
 variable (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
@@ -186,6 +209,177 @@ theorem setTail_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
     rw [htk]; exact drop_min_eq _ _ _ hlen, List.toList_toArray] at h
   exact ErrClaim.of_run_err (fun ce h' => setTail_err2 (h1 := hrun1) (h2 := hrun2) (h3 := hrun3) (ce := ce)
     (h4 := h')) h
+
+set_option maxHeartbeats 800000 in
+include hq hi hc hnv hDL in
+/-- **`struct_eta_cert_go`'s verdicts** are `struct_eta_cert_tail`'s. -/
+theorem setGo_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d b us c pc T q us2 ao an to tn : Word) (aargs targs : Array EIdx)
+    (cvc : IConstantVal) (np nf : Nat) (cvT : IConstantVal) (caps : IIndCaps) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hus : HW us)
+    (hcw : HW c) (hT : HW T) (hus2 : HW us2)
+    (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
+    (hvus2 : ∃ x c', a₀.store.view x = some (.const c' (decI us2)))
+    (hcvc : decCI (erecP s₀.mem) dn pc.toNat = some (.ctorInfo cvc np nf))
+    (hcvT : decCI (erecP s₀.mem) dn q.toNat = some (.indInfo cvT caps))
+    (ha : SpineR s₀.mem ao an aargs) (ht : SpineR s₀.mem to tn targs)
+    (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
+    (htt : to.toNat + tn.toNat ≤ (spTop s₀.mem).toNat) :
+    CoreSpecE p (n + 1) "struct_eta_cert_go" [mode, vis, d, b, us, c, pc, T, q, us2, ao, an, to, tn]
+      (setGoT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc (decI T)
+        (decI us2) cvT caps aargs.toList targs.toList) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (secgE_spec p hq.setGo (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d b us c pc T q us2 ao an to tn) hc0 (Err.code_ne_of_cls hk0)
+  simp only [secgE] at hW
+  have hS := hs.rel
+  have hspn := hS.spn
+  have hIR := decCI_indCaps hcvT (erecP_ext _) hS.erec
+  have hCL := decCI_ctorLp hcvc (erecP_ext _) hS.erec
+  cases c1 : callE p n "er_slice_eq" [rdW (s₀.mem.arr64 EREC) (pc + 2), rdW (s₀.mem.arr64 EREC) (pc + 3),
+      rdW (s₀.mem.arr64 EREC) (q + 2), rdW (s₀.mem.arr64 EREC) (q + 3)] s₀.mem with
+  | error e1 =>
+    rw [c1, secgE.k_er_slice_eq.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfSetE_nv "er_slice_eq" (by simp)) c1
+  | ok q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  rw [c1] at hW
+  simp only [secgE.k_er_slice_eq] at hW
+  cases n with
+  | zero =>
+    obtain ⟨e', he', -⟩ := callE_zero p "er_slice_eq" [rdW (s₀.mem.arr64 EREC) (pc + 2),
+      rdW (s₀.mem.arr64 EREC) (pc + 3), rdW (s₀.mem.arr64 EREC) (q + 2), rdW (s₀.mem.arr64 EREC) (q + 3)]
+      s₀.mem
+    rw [he'] at c1; cases c1
+  | succ n' =>
+  obtain ⟨t₁, ht₁, hm₁, -, hr₁, -⟩ := triple_of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (erSliceEq_refines p hq.ers n' ⟨s₀.mem, Locals.init []⟩ _ _ _ _ cvc.levelParams cvT.levelParams
+      hS.erec hCL hIR.lp) c1
+  have em₁ : m₁ = s₀.mem := by rw [← ht₁]; exact hm₁
+  subst em₁
+  cases c2 : callE p (n' + 1) "reserved_contains_w" [T] s₀.mem with
+  | error e2 =>
+    rw [c2, secgE.k_reserved_contains_w.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfSetE_nv "reserved_contains_w" (by simp)) c2
+  | ok q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  rw [c2] at hW
+  simp only [secgE.k_reserved_contains_w] at hW
+  obtain ⟨hA₂, hr₂⟩ := reservedContains_callW hc hS hT (callW_of_callE c2)
+  obtain ⟨M₂, hS₂, -, hst₂⟩ := hA₂
+  cases c3 : callE p (n' + 1) "reserved_contains_w" [c] m₂ with
+  | error e3 =>
+    rw [c3, secgE.k_reserved_contains_w_2.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfSetE_nv "reserved_contains_w" (by simp)) c3
+  | ok q₃ =>
+  obtain ⟨r₃, m₃⟩ := q₃
+  rw [c3] at hW
+  simp only [secgE.k_reserved_contains_w_2] at hW
+  obtain ⟨hA₃, hr₃⟩ := reservedContains_callW hc hS₂ hcw (callW_of_callE c3)
+  obtain ⟨M₃, hS₃, -, hst₃⟩ := hA₃
+  cases c4 : callE p (n' + 1) "ls_node" [us2] m₃ with
+  | error e4 =>
+    rw [c4, secgE.k_ls_node.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfSetE_nv "ls_node" (by simp)) c4
+  | ok q₄ =>
+  obtain ⟨r₄, m₄⟩ := q₄
+  rw [c4] at hW
+  simp only [secgE.k_ls_node] at hW
+  obtain ⟨t₄, ht₄, ht₄s, hne, hr₄⟩ := triple_of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+    (lsNode_spec p hq.leaf.core.lsn (n' + 1) ⟨m₃, Locals.init []⟩ us2) c4
+  have em₄ : m₄ = m₃ := by rw [← ht₄, ht₄s]
+  subst em₄
+  rw [hr₄] at hne
+  have hvl := defeq_lsNodeW_viewLen hS₃.arena.1 hus2 hne
+  rw [← hr₄] at hvl
+  cases c5 : callE p (n' + 1) "tower_slots_all" [vis, T, rdW (s₀.mem.arr64 EREC) (q + 8)] m₄ with
+  | error e5 =>
+    rw [c5, secgE.k_tower_slots_all.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfSetE_nv "tower_slots_all" (by simp)) c5
+  | ok q₅ =>
+  obtain ⟨r₅, m₅⟩ := q₅
+  rw [c5] at hW
+  simp only [secgE.k_tower_slots_all] at hW
+  have h₅ := CoreSpec.of_callW (hc.towerSlots (n' + 1) ⟨m₄, Locals.init []⟩ a₀ dn vis fe M₃ eb T _ hS₃
+    hT) (callW_of_callE c5)
+  rw [← hIR.etaFields] at h₅
+  obtain ⟨-, ⟨M₅, hS₅, -, hst₅⟩, hres5, -⟩ := h₅
+  have hts : towerSlotsAll fe (decI T) caps.etaFields = decBool r₅ := hres5
+  have hlenT : targs.toList.length = tn.toNat := by simpa using ht.size
+  have hlpT : cvT.levelParams.length = (rdW (s₀.mem.arr64 EREC) (q + 3)).toNat := hslice?_length hIR.lp
+  have hiff : (caps.eta = true ∧ caps.etaCtor = decI c ∧
+      a₀.pins.reserved.contains (decI T) = false ∧ a₀.pins.reserved.contains (decI c) = false ∧
+      targs.toList.length = caps.etaParams ∧
+      (r₄.tail.headD 0).toNat = cvT.levelParams.length ∧
+      cvc.levelParams = cvT.levelParams ∧ decBool r₅ = true) ↔
+      sgOK s₀.mem c q tn (r₁.headD 0) (r₂.headD 0) (r₃.headD 0) (r₄.tail.headD 0) r₅ := by
+    unfold sgOK
+    rw [hIR.eta, hIR.etaCtor, ← hr₂, ← hr₃, hlenT, hIR.etaParams, hlpT]
+    have e2 : decI (rdW (s₀.mem.arr64 EREC) (q + 6)) = (decI c : NIdx) ↔
+        rdW (s₀.mem.arr64 EREC) (q + 6) = c :=
+      ⟨fun h => decI_inj hIR.etaCtor_hw hcw h, fun h => by rw [h]⟩
+    have e7 : cvc.levelParams = cvT.levelParams ↔ r₁.headD 0 ≠ 0 := by
+      have h1 : decBool r₁ = decide (cvc.levelParams = cvT.levelParams) := hr₁
+      unfold decBool at h1
+      by_cases he : cvc.levelParams = cvT.levelParams
+      · simp only [he, decide_true, bne_iff_ne, ne_eq] at h1; exact ⟨fun _ => h1, fun _ => he⟩
+      · simp only [he, decide_false, bne_eq_false_iff_eq] at h1
+        exact ⟨fun h => absurd h he, fun h => absurd h1 h⟩
+    rw [e2, e7]
+    simp only [decBool, bne_iff_ne, ne_eq, Bool.not_eq_true', bne_eq_false_iff_eq,
+      UInt64.toNat_inj]
+  by_cases hok : sgOK s₀.mem c q tn (r₁.headD 0) (r₂.headD 0) (r₃.headD 0) (r₄.tail.headD 0) r₅
+  · have hcond := hiff.mpr hok
+    obtain ⟨o1, o2, o3, o4, o5, o6, o7, o8⟩ := hok
+    subst o5
+    simp only [o1, o2, o3, o4, o6, o7, o8, ne_eq, not_true_eq_false, not_false_eq_true,
+      ↓reduceIte] at hW
+    rw [← hts] at hcond
+    have hW' := err_of_k (by intro q e; simp [secgE.k_struct_eta_cert_tail]) (fun _ => rfl) hW
+    have hk₅ := hst₂.trans (hst₃.trans hst₅)
+    have htop : spTop m₅ = spTop s₀.mem := hk₅.1
+    have h := CoreSpecE.of_callE (setTail_refinesE p hq hi hc hnv hDL n' (hk.mono (by omega))
+      (hkE.mono (by omega)) F ⟨m₅, Locals.init []⟩ a₀ dn vis fe M₅ eb mode d b us T us2 ao an to _
+      (rdW (s₀.mem.arr64 EREC) (q + 7)) (rdW (s₀.mem.arr64 EREC) (q + 8)) aargs targs (by omega) (by omega)
+      ⟨hS₅, hs.mode4, hs.eb_mode⟩ hb hus hT hus2
+      (by obtain ⟨x, c', hx⟩ := hvus
+          exact (hc.den _ _ _ _ _ _ _ hS₅).constLs _ _ _ (constLs_after_tower hx))
+      (by obtain ⟨x, c', hx⟩ := hvus2
+          exact (hc.den _ _ _ _ _ _ _ hS₅).constLs _ _ _ (constLs_after_tower hx))
+      (ha.keep hk₅.size hk₅.below hat hspn)
+      (ht.keep hk₅.size hk₅.below htt hspn) (by rw [htop]; exact hat) (by rw [htop]; exact htt)) hW'
+    rw [← hIR.etaParams, ← hIR.etaFields] at h
+    exact ErrClaim.of_run_err (fun ce h' => setGo_err _ fe _ _ _ _ cvc _ _ cvT caps _ _ hS.pins _ hvl
+      hcond ce h') h
+  · unfold sgOK at hok
+    by_cases o1 : rdW (s₀.mem.arr64 EREC) (q + 5) = 0
+    · rw [if_pos o1] at hW; cases hW
+    rw [if_neg o1] at hW
+    by_cases o2 : rdW (s₀.mem.arr64 EREC) (q + 6) ≠ c
+    · rw [if_pos o2] at hW; cases hW
+    rw [if_neg o2] at hW
+    by_cases o3 : r₂.headD 0 ≠ 0
+    · rw [if_pos o3] at hW; cases hW
+    rw [if_neg o3] at hW
+    by_cases o4 : r₃.headD 0 ≠ 0
+    · rw [if_pos o4] at hW; cases hW
+    rw [if_neg o4] at hW
+    by_cases o5 : tn ≠ rdW (s₀.mem.arr64 EREC) (q + 7)
+    · rw [if_pos o5] at hW; cases hW
+    rw [if_neg o5] at hW
+    by_cases o6 : r₄.tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (q + 3)
+    · rw [if_pos o6] at hW; cases hW
+    rw [if_neg o6] at hW
+    by_cases o7 : r₁.headD 0 = 0
+    · rw [if_pos o7] at hW; cases hW
+    rw [if_neg o7] at hW
+    by_cases o8 : r₅.headD 0 = 0
+    · rw [if_pos o8] at hW; cases hW
+    exact absurd ⟨o1, by simpa using o2, by simpa using o3, by simpa using o4, by simpa using o5,
+      by simpa using o6, o7, o8⟩ hok
 
 end set
 
