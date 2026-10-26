@@ -999,11 +999,12 @@ and README.md with the cited lines into
 `scripts/overview-links-expected.txt`, and fails when they move or change.
 
 Continuous integration
-([`.github/workflows/ci.yml`](https://github.com/leanprover/con-agua/blob/master/.github/workflows/ci.yml#L4-L71))
+([`.github/workflows/ci.yml`](https://github.com/leanprover/con-agua/blob/master/.github/workflows/ci.yml#L4-L73))
 runs on every push and pull request to master, in two jobs. The `checker` job
 needs no Lean: `make`, `make check` and `scripts/diff-e2e.py` (§10.3) on
 con-leche's tests at the vendored revision. The `proof` job runs
-`scripts/lake build` (the axiom guards and `checkerFile_eq` included), the
+`scripts/lake build` (the axiom guards and `checkerFile_eq` included) and fails on
+any warning in its log that is not Kraken's (`scripts/check-no-warnings.sh`), the
 `--check` modes of `scripts/asm_file.py` (`checker.s` and `pins.bin` are what
 the generators print) and of the closure scripts, `scripts/modules_check.py`,
 the link gate, `scripts/bump-con-ron.sh --check` (`vendor/` is the upstream

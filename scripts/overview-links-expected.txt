@@ -2067,7 +2067,7 @@
     40  compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
     41  fails), so these files (and reasons.h, the abort messages) decide whether the verdicts can change.
 
-== .github/workflows/ci.yml#L4-L71
+== .github/workflows/ci.yml#L4-L73
      4  # WHAT THE JOBS COVER
      5  #
      6  #   checker  The shipped binary, with no Lean anywhere (a few minutes):
@@ -2114,28 +2114,30 @@
     47  #                                 compiler's output (`checkerFile_eq`) and
     48  #                                 the staleness checks of the generated
     49  #                                 call closures;
-    50  #              the `--check` modes of the generators: asm_file.py
-    51  #                                 (`checker.s` and `pins.bin` are what the
-    52  #                                 generators print now, plus Kraken's own
-    53  #                                 parser reading `checker.s` as the
-    54  #                                 trusted parser does), core_fns.py,
-    55  #                                 loop_fns.py, leaf_fns.py, preloop_ws.py.
-    56  #
-    57  # WHAT IT DELIBERATELY DOES **NOT** COVER
+    50  #              check-no-warnings.sh  the build's log holds no warning
+    51  #                                 outside Kraken (a Lake dependency);
+    52  #              the `--check` modes of the generators: asm_file.py
+    53  #                                 (`checker.s` and `pins.bin` are what the
+    54  #                                 generators print now, plus Kraken's own
+    55  #                                 parser reading `checker.s` as the
+    56  #                                 trusted parser does), core_fns.py,
+    57  #                                 loop_fns.py, leaf_fns.py, preloop_ws.py.
     58  #
-    59  #   * the differential against the two reference checkers
-    60  #     (`scripts/e2e.py`: con-ron's arena checker compiled by Lean, and
-    61  #     con-ron's Rust binary), and its interpreter and per-function
-    62  #     sweeps: they need a Rust build of con-ron and Lean executables
-    63  #     on top of the proof build, and take far longer than the verdict
-    64  #     sweep above, which already compares every fixture with the
-    65  #     pinned expectation.
-    66  #   * `scripts/bench.py` and the `Init` benchmark: an export of `Init`
-    67  #     is not in the repository, and a shared runner measures noise.
-    68  #     Timings are measured with `perf stat` on a quiet machine.
-    69  #   * the progress census (`scripts/census.py`) and the build
-    70  #     statistics: reports, not gates.
-    71  #
+    59  # WHAT IT DELIBERATELY DOES **NOT** COVER
+    60  #
+    61  #   * the differential against the two reference checkers
+    62  #     (`scripts/e2e.py`: con-ron's arena checker compiled by Lean, and
+    63  #     con-ron's Rust binary), and its interpreter and per-function
+    64  #     sweeps: they need a Rust build of con-ron and Lean executables
+    65  #     on top of the proof build, and take far longer than the verdict
+    66  #     sweep above, which already compares every fixture with the
+    67  #     pinned expectation.
+    68  #   * `scripts/bench.py` and the `Init` benchmark: an export of `Init`
+    69  #     is not in the repository, and a shared runner measures noise.
+    70  #     Timings are measured with `perf stat` on a quiet machine.
+    71  #   * the progress census (`scripts/census.py`) and the build
+    72  #     statistics: reports, not gates.
+    73  #
 
 >>> README.md
 
