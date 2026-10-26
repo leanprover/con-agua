@@ -140,7 +140,7 @@ theorem iotaIndexOkE_of : IotaIndexOkE p := by
   have htx₂ : xo.toNat + xn.toNat ≤ (spTop m₂).toNat :=
     Nat.le_trans htx₁ (by have := hgrew.1; exact this)
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ n' =>
   have hhead' : r₂.headD 0 = spTop m₁ := hhead
   have htop2' : spTop m₂ = spTop m₁ + r₂.tail.headD 0 := htop2

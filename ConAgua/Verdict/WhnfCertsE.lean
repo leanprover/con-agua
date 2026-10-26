@@ -354,7 +354,7 @@ theorem icfAuxE_ok (N : Nat)
         | .error e => (.error e : Except Err (List Word × Mem))
         | .ok (r, m') => .ok ([r.headD 0], m')) (by intro q e; simp) (fun _ => rfl) hW
     cases N with
-    | zero => exact ErrClaim.of_callE_zero hW'
+    | zero => exact ErrClaim.of_callE_zeroW hW'
     | succ N' =>
     exact CoreSpecE.of_callE (hFo N' rfl F (by omega) (by omega) (hk.mono (by omega))
       (hkE.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d h aco acn ao an i acc
@@ -366,7 +366,7 @@ theorem icfAuxE_ok (N : Nat)
         | .error e => (.error e : Except Err (List Word × Mem))
         | .ok (r, m') => .ok ([r.headD 0], m')) (by intro q e; simp) (fun _ => rfl) hW
     cases N with
-    | zero => exact ErrClaim.of_callE_zero hW'
+    | zero => exact ErrClaim.of_callE_zeroW hW'
     | succ N' =>
     exact CoreSpecE.of_callE (hFl N' rfl F (by omega) (by omega) (hk.mono (by omega))
       (hkE.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d h aco acn ao an i acc

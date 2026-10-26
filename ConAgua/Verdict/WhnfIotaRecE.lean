@@ -166,7 +166,7 @@ theorem iotaRecVck_refinesE :
   · rw [if_pos q0] at hW; cases hW
     have hdo : decO (rq.headD 0) = none := by rw [q0]; rfl
     rw [hdo] at hrun1
-    refine ErrClaim.of_run_eq' (vckT_fail_lvl _ _ _ _ _ _ _ _ _ _ _ _ _ a₀ _ hrun1) ?_
+    refine ErrClaim.of_run_eqW (vckT_fail_lvl _ _ _ _ _ _ _ _ _ _ _ _ _ a₀ _ hrun1) ?_
     exact ErrClaim.fail _ _ rfl
   rw [if_neg q0] at hW
   by_cases q1 : rq.headD 0 = 1
@@ -397,7 +397,7 @@ theorem iotaRecFam_refinesE :
   rw [decBool_t_m2c g0] at hrun2
   have hW' := err_of_k (by intro q e; simp [irFamE.k_iota_rec_vck]) (fun _ => rfl) hW
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   have hvk := iotaRecVck_refinesE p hp hc hw hEI hER hEK hnv hCmp hCF hIx N (hk.mono (by omega))
     (hkE.mono (by omega)) F (by omega) (by omega) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d us
@@ -528,7 +528,7 @@ theorem iotaRecFireE_of : IotaRecFireE p := by
   have hS1 : CoreS dn m1 a₀ vis fe MM eb := hS.frame_stk fr1 (by simp) (by simp)
   have e1 : m1.arr64 EREC = s₀.mem.arr64 EREC := fr1.1 EREC (by simp [SPN, EREC]) (by decide)
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   have hf2 := iotaRecFire2_refinesE p hp hc hw hEI hER hEK hnv hCmp hCF hIx N (hk.mono (by omega))
     (hkE.mono (by omega)) F (by omega) (by omega) ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us

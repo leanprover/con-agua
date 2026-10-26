@@ -646,7 +646,7 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
   cases c2 : callE p (N' + 1) "m2c_pre" [mode, vis, d, major] m with
   | error e2 =>
     rw [c2, m2cAndE.k_m2c_pre.none] at hW; cases hW
-    refine ErrClaim.of_run_eq' (a' := a) ?_ (m2cPreE_ok p hp hnv N' F (hk.mono (Nat.le_succ _))
+    refine ErrClaim.of_run_eqW (a' := a) ?_ (m2cPreE_ok p hp hnv N' F (hk.mono (Nat.le_succ _))
       (hkE.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d major hm4 hebm hmaj m a M hS _ c2
       (fun tmaj T' ust => do
         match ← viewLsLen ust with
@@ -736,7 +736,7 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
       have hb := hsp3.bound
       rw [htop3', ← htop3, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
       exact Nat.le_refl _) hspn3
-  refine ErrClaim.of_run_eq' (hstep.trans (by rw [if_pos hcond])) ?_
+  refine ErrClaim.of_run_eqW (hstep.trans (by rw [if_pos hcond])) ?_
   exact m2cAnd2E_ok p hp hc hpi hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d ctor T _ _ _ _ major hm4 hebm hctor hT htm hus hmaj xs m4 _ M4
     hS4 hsp4 htop4
@@ -924,7 +924,7 @@ theorem m2cCtorE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
   obtain ⟨cvT, caps, rfl⟩ := hind.mpr (by simpa using g5)
   have hW' := err_of_k (by intro q e; simp [m2cCtorE.k_m2c_arms]) (fun _ => rfl) hW
   cases N with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N' =>
   refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cArmsE_ok p hp hc hpi hE hcc hnv hPI N' F
     (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ro cvjP _
@@ -1034,7 +1034,7 @@ theorem majorToCtorE_of : MajorToCtorE p := by
   simp only [mtcE] at hW
   have hW' := err_of_k (by intro q e; simp [mtcE.k_m2c_head]) (fun _ => rfl) hW
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   rw [majorToCtor_eq]
   exact m2cHeadE_ok p hp hc hpi hE hcc hnv hPI N F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))

@@ -92,7 +92,7 @@ theorem callE_reduceNatWf (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   · exact ErrClaim.of_cls0 hk0
   have hC := hS.rel
   cases n with
-  | zero => exact ErrClaim.of_callE_zero h
+  | zero => exact ErrClaim.of_callE_zeroW h
   | succ n =>
   have hW := triple_of_callE_err (reduceNatWf_specE p hp.reduceNatWf (n + 1) ⟨s₀.mem, Locals.init []⟩
     mode vis d c a b) h (Err.code_ne_of_cls hk0)
@@ -213,7 +213,7 @@ theorem callE_reduceNatWf (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   have hsome6 : rawDec m₅ r₆ = some (pv (vpool m₅) (r₆.tail.headD 0).toNat
       (r₆.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf6]
   rw [hsome6] at hrun6
-  refine ErrClaim.of_run_eq' (a' := a₀)
+  refine ErrClaim.of_run_eqW (a' := a₀)
     (T' := (ConRon.Arena.fail (.notImplemented "native Nat computation on literals") : AM (Option EIdx)))
     ?_ (ErrClaim.fail _ _ rfl)
   rw [redWf_fail _ _ _ _ _ _ a₀ a₁ a₂ a₂ a₃ a₃ _ hwf _ hsup (hbool hgo)
@@ -237,7 +237,7 @@ theorem callE_reduceNatOp (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   by_cases hk0 : er.cls = 0
   · exact ErrClaim.of_cls0 hk0
   cases n with
-  | zero => exact ErrClaim.of_callE_zero h
+  | zero => exact ErrClaim.of_callE_zeroW h
   | succ n =>
   have hW := triple_of_callE_err (reduceNatOp_specE p hp.reduceNatOp (n + 1) ⟨s₀.mem, Locals.init []⟩
     mode vis d c a b) h (Err.code_ne_of_cls hk0)
@@ -312,7 +312,7 @@ theorem callE_reduceNatSucc (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   · exact ErrClaim.of_cls0 hk0
   have hC := hS.rel
   cases n with
-  | zero => exact ErrClaim.of_callE_zero h
+  | zero => exact ErrClaim.of_callE_zeroW h
   | succ n =>
   have hW := triple_of_callE_err (reduceNatSucc_specE p hp.reduceNatSucc (n + 1)
     ⟨s₀.mem, Locals.init []⟩ mode vis d c b) h (Err.code_ne_of_cls hk0)
@@ -402,7 +402,7 @@ theorem callE_reduceNatK (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
   · exact ErrClaim.of_cls0 hk0
   have hC := hS.rel
   cases N with
-  | zero => exact ErrClaim.of_callE_zero h
+  | zero => exact ErrClaim.of_callE_zeroW h
   | succ n =>
   have hW := triple_of_callE_err (reduceNatK_specE p hp.reduceNatK (n + 1)
     ⟨s₀.mem, Locals.init []⟩ mode vis d f b) h (Err.code_ne_of_cls hk0)
@@ -434,7 +434,7 @@ theorem callE_reduceNatK (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
     (decI (tfld s₀.mem CONST (tierW f) (idxW f) 0)) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1))
     (decI (pinW s₀.mem 52)) (decE b) a₀ hel (by rw [hbne_dec _ _ hul hC.pins.lv_lt.1]; simp [hne'])
   have hcg := redHead_const (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) a₀ _ _ hview
-  refine ErrClaim.of_run_eq' (hcg.trans hcongr) ?_
+  refine ErrClaim.of_run_eqW (hcg.trans hcongr) ?_
   exact callE_reduceNatSucc p hp hnv n F (by omega) (by omega) (hk.mono (by omega)) (hkE.mono (by omega))
     s₀ a₀ dn vis fe MM eb mode d _ b hS hnl hb er
     (err_of_k (by intro q e; simp [reduceNatKE.k_reduce_nat_succ]) (fun _ => rfl) hW)
@@ -453,7 +453,7 @@ theorem callE_reduceNatAp (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
   · exact ErrClaim.of_cls0 hk0
   have hC := hS.rel
   cases N with
-  | zero => exact ErrClaim.of_callE_zero h
+  | zero => exact ErrClaim.of_callE_zeroW h
   | succ n =>
   have hW := triple_of_callE_err (reduceNatAp_specE p hp.reduceNatAp (n + 1)
     ⟨s₀.mem, Locals.init []⟩ mode vis d f b) h (Err.code_ne_of_cls hk0)
@@ -463,7 +463,7 @@ theorem callE_reduceNatAp (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
   rw [if_neg hbd] at hW
   obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg4
   have hcgH := redHead_app (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) _ _ a₀ hviewf
-  refine ErrClaim.of_run_eq' hcgH ?_
+  refine ErrClaim.of_run_eqW hcgH ?_
   generalize tfld s₀.mem APP (tierW f) (idxW f) 0 = gw at hW hgw hviewf
   generalize tfld s₀.mem APP (tierW f) (idxW f) 1 = xw at hW hxw hviewf
   by_cases g3 : gw >>> 28 ≠ 3
@@ -543,14 +543,14 @@ theorem callE_reduceNatAp (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
     have hcg : (redAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b)).run a₀ =
         (redOpT (coreKnot (decMode mode) fe id F) d.toNat (decI cw) (decE xw) (decE b)).run a₀ := by
       rw [hcongrApp, hredbin, hbool, decide_eq_true hgo]; rfl
-    exact ErrClaim.of_run_eq' hcg (callE_reduceNatOp p hp hnv n F (by omega) (by omega)
+    exact ErrClaim.of_run_eqW hcg (callE_reduceNatOp p hp hnv n F (by omega) (by omega)
       (hk.mono (by omega)) (hkE.mono (by omega)) ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d cw xw b
       hSP3 hxw hb er (err_of_k (by intro q e; simp [reduceNatApE.k_reduce_nat_op]) (fun _ => rfl) hW))
   · rw [if_neg hgo] at hW
     have hcg : (redAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b)).run a₀ =
         (redWfT (coreKnot (decMode mode) fe id F) fe d.toNat (decI cw) (decE xw) (decE b)).run a₀ := by
       rw [hcongrApp, hredbin, hbool, decide_eq_false hgo]; rfl
-    exact ErrClaim.of_run_eq' hcg (callE_reduceNatWf p hp hnv n F (by omega) (by omega)
+    exact ErrClaim.of_run_eqW hcg (callE_reduceNatWf p hp hnv n F (by omega) (by omega)
       (hk.mono (by omega)) (hkE.mono (by omega)) ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d cw xw b
       hSP3 hnl hxw hb er (err_of_k (by intro q e; simp [reduceNatApE.k_reduce_nat_op]) (fun _ => rfl) hW))
 
@@ -565,7 +565,7 @@ theorem callE_reduceNatHead (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
   by_cases hk0 : er.cls = 0
   · exact ErrClaim.of_cls0 hk0
   cases N with
-  | zero => exact ErrClaim.of_callE_zero h
+  | zero => exact ErrClaim.of_callE_zeroW h
   | succ n =>
   have hW := triple_of_callE_err (reduceNatHead_specE p hp.reduceNatHead (n + 1)
     ⟨s₀.mem, Locals.init []⟩ mode vis d f b) h (Err.code_ne_of_cls hk0)
@@ -600,7 +600,7 @@ theorem callE_reduceNat (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
   · exact ErrClaim.of_cls0 hk0
   have hC := hS.rel
   cases N with
-  | zero => exact ErrClaim.of_callE_zero h
+  | zero => exact ErrClaim.of_callE_zeroW h
   | succ n =>
   have hW := triple_of_callE_err (reduceNat_specE p hp.reduceNat (n + 1)
     ⟨s₀.mem, Locals.init []⟩ mode vis d e) h (Err.code_ne_of_cls hk0)
@@ -617,7 +617,7 @@ theorem callE_reduceNat (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
   · rw [if_pos hbd] at hW; cases hW; exact absurd rfl hk0
   rw [if_neg hbd] at hW
   obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.1 e he ⟨hsc, by simpa using hbd⟩ g4'
-  refine ErrClaim.of_run_eq' (reduceNat_head_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decE e) _ _ a₀
+  refine ErrClaim.of_run_eqW (reduceNat_head_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decE e) _ _ a₀
     hap hview) ?_
   exact callE_reduceNatHead p hp hnv n F (by omega) (by omega) (hk.mono (by omega)) (hkE.mono (by omega))
     s₀ a₀ dn vis fe MM eb mode d _ _ hS hfw hbw er

@@ -223,7 +223,7 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
       | error e2 =>
         rw [hcI, whnfAppE.k_iota_rec_at.none] at hF; cases hF
         cases k with
-        | zero => exact ErrClaim.of_callE_zero hcI
+        | zero => exact ErrClaim.of_callE_zeroW hcI
         | succ k' =>
         refine ErrClaim.of_run_err (fun ce h' => ?_) (CoreSpecE.of_callE (hI k' (hk.mono (by omega))
           (hkE.mono (by omega)) F ⟨m₂, Locals.init []⟩ a₁ dn vis fe MM eb mode d hd vo (vn + 1) _
@@ -260,7 +260,7 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
       have := ih (by omega) _ m₃ ap (vn + 1) _ (i + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) M'
         hS₃ hapW hva₃ htop₃ (by rw [hadd2]; omega) hb₃ hsz₃ er hF
       rw [hi1, evalW_eq_ne ap _ hapW hnW] at this
-      refine ErrClaim.of_run_eq' ?_ this
+      refine ErrClaim.of_run_eqW ?_ this
       rw [hunf]
       simp only [StateT.run_bind, hrunAp, except_ok_bind, hctag, ite_true]
       have hopt : decOptR rr = none := by unfold decOptR decOpt; rw [if_pos hz']
@@ -273,7 +273,7 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
       have := ih hkn' a₁ _ ap (vn + 1) _ (i + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) MM hS₂
         hapW hva₂ htop₂ htv₂ hb₂ hsz₂ er hF
       rw [hi1, evalW_eq_ne ap _ hapW hnW] at this
-      refine ErrClaim.of_run_eq' ?_ this
+      refine ErrClaim.of_run_eqW ?_ this
       rw [hunf]
       simp only [StateT.run_bind, hrunAp, except_ok_bind, hctag, Bool.false_eq_true, ite_false,
         appStepT]
@@ -364,7 +364,7 @@ theorem coreApp2_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F
     args nodes ⟨hS₃, hs.mode4, hs.eb_mode⟩ hv hhw hxs hvo har₃ hno₃ (by rw [ho3]; omega)
   have hc4 := CoreSpecE.of_callE hE hW'
   rw [evalW_eq_ne v h hv hh] at hc4
-  refine ErrClaim.of_run_eq' ?_ hc4
+  refine ErrClaim.of_run_eqW ?_ hc4
   simp only [whnfCoreApp2T, StateT.run_bind, hha, except_ok_bind]
   rfl
 

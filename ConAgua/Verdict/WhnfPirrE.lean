@@ -209,7 +209,7 @@ theorem pihE_ok (n F : Nat) (hknot : KnotUpTo p n) (hkE : KnotUpToE p n) (hnF : 
       (AM.st ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE (r1.headD 0)))
         (AM.st ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE x)) a))) =
       .ok (decE (r3.headD 0), a3) := hrun3
-  refine ErrClaim.of_run_eq' (half_fail _ _ _ k a _ _ a3 _ _ _ _ _ _ hrun1 hrun2 hrun3' htag hvw hz hrunL)
+  refine ErrClaim.of_run_eqW (half_fail _ _ _ k a _ _ a3 _ _ _ _ _ _ hrun1 hrun2 hrun3' htag hvw hz hrunL)
     (ErrClaim.fail _ _ rfl)
 
 /-- **`ProofIrrelWE`**: `proof_irrel`'s verdicts are its halves'. -/
@@ -246,7 +246,7 @@ theorem proofIrrelE_of : ProofIrrelWE p := by
   rw [if_neg hwa] at hW
   have hW' := err_of_k (by intro q e; simp only [pirrE.k_proof_irrel_half_2]; split <;> simp)
     (fun _ => rfl) hW
-  refine ErrClaim.of_run_eq' (piHalfT_run hA1 hwa _) ?_
+  refine ErrClaim.of_run_eqW (piHalfT_run hA1 hwa _) ?_
   exact pihE_ok p hp hld hnv n' F (hk.mono (Nat.le_succ n')) (hkE.mono (Nat.le_succ n')) (by omega)
     (by omega) dn vis fe eb mode d b hm4 hebm hb m1 a1 M1 hS1 _ hW' _
 

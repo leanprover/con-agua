@@ -147,7 +147,7 @@ theorem setTail_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   · rw [if_pos h0] at hW; cases hW
     have hdo : decO (r₁.headD 0) = none := by rw [h0]; rfl
     rw [hdo] at hrun1
-    refine ErrClaim.of_run_eq' (setTail_fail _ _ _ _ _ _ _ _ _ _ _ a₀ _ hrun1) ?_
+    refine ErrClaim.of_run_eqW (setTail_fail _ _ _ _ _ _ _ _ _ _ _ a₀ _ hrun1) ?_
     exact ErrClaim.fail _ _ rfl
   rw [if_neg h0] at hW
   by_cases h1 : r₁.headD 0 = 1
@@ -172,7 +172,7 @@ theorem setTail_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   cases n with
   | zero =>
     obtain ⟨e', he', -⟩ := callE_zero p "defeq_lst" [mode, vis, d, ao, tk, to, tn] m₁
-    rw [he', sectE.k_defeq_lst.none] at hW1; cases hW1; exact ErrClaim.of_callE_zero he'
+    rw [he', sectE.k_defeq_lst.none] at hW1; cases hW1; exact ErrClaim.of_callE_zeroW he'
   | succ N =>
   cases c2 : callE p (N + 1) "defeq_lst" [mode, vis, d, ao, tk, to, tn] m₁ with
   | error e2 =>
@@ -494,7 +494,7 @@ theorem setWtb_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
   have hrunW := setWtbT_ind (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
     aargs.toList _ a₀ _ hgaf _ _ hct hv cvT caps (by rw [hfind', hci_eq]) targs hargs
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ n' =>
   have h := CoreSpecE.of_callE (setGo_refinesE p hq hi hc hnv hDL n' (hk.mono (by omega))
     (hkE.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d
@@ -595,7 +595,7 @@ theorem setWith_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
     rw [if_pos (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)] at hrunW
     have hW' := err_of_k (by intro q e; simp [secwE.k_struct_eta_cert_wtb]) (fun _ => rfl) hW
     cases n with
-    | zero => exact ErrClaim.of_callE_zero hW'
+    | zero => exact ErrClaim.of_callE_zeroW hW'
     | succ n' =>
     have h := CoreSpecE.of_callE (setWtb_refinesE p hq hi hc hnv hDL n' (hk.mono (by omega))
       (hkE.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d b us k (r₂.tail.headD 0)
@@ -674,7 +674,7 @@ theorem setCert_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   rw [hres3] at hrun3
   have hW' := err_of_k (by intro q e; simp [secE.k_struct_eta_cert_with]) (fun _ => rfl) hW
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   exact ErrClaim.of_run_err (fun ce h' => setCert_err_with (h1 := hrun1) (h2 := hrun2) (h3 := hrun3) (ce := ce)
       (h := h'))

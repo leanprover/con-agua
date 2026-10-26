@@ -134,7 +134,7 @@ theorem reduceProjCore_refinesE (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
     rw [hc1, reduceProjCoreE.k_proj_lit_to_ctor.none] at hW; cases hW
     refine ErrClaim.of_run_err (fun ce h' => reduceProjCore_err _ _ _ _ _ _ _ a₀ ce h') ?_
     cases n with
-    | zero => exact ErrClaim.of_callE_zero hc1
+    | zero => exact ErrClaim.of_callE_zeroW hc1
     | succ N =>
     exact CoreSpecE.of_callE (projLitToCtor_refinesE p hp hStrSup hStrCtor hnv N
       (hkE.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode d c hs hc' hsup) hc1
@@ -248,7 +248,7 @@ theorem stepProj_refinesE (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupp
     (by intro q e'; simp only [coreStepProjE.k_reduce_proj_core]; split <;> simp) (fun _ => rfl) hW'
   refine ErrClaim.of_run_err (fun ce h' => stepProj_err2 _ _ _ _ _ _ _ _ _ a₀ a₁ _ hrun₁ ce h') ?_
   cases n with
-  | zero => exact ErrClaim.of_callE_zero herr
+  | zero => exact ErrClaim.of_callE_zeroW herr
   | succ N =>
   exact CoreSpecE.of_callE (reduceProjCore_refinesE p hp hStrSup hStrCtor hnv N (hk.mono (by omega))
     (hkE.mono (by omega)) F (by omega) (by omega) ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode d sn i

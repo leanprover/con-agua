@@ -161,7 +161,7 @@ theorem iotaRecC_refinesE :
   rw [if_neg p0] at hW
   have hW' := err_of_k (by intro q e; simp [irCE.k_iota_rec_major]) (fun _ => rfl) hW
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   have hma := hM N (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega)
     ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us recP so sn cv rules xs hS
@@ -212,7 +212,7 @@ theorem iotaRecAtE_of : IotaRecAtE p := by
   have hvc := L.Ind.EStore.viewConst_of_view _ _ htag _ _ hview
   have hW' := err_of_k (by intro q e; simp [irAtE.k_iota_rec_c]) (fun _ => rfl) hW
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   exact ErrClaim.of_run_err (fun ce h' => at_err_c _ _ _ _ _ _ _ a₀ _ _ htag hvc ce h')
     (CoreSpecE.of_callE (iotaRecC_refinesE p hp hnv hM N (hk.mono (by omega)) (hkE.mono (by omega)) F
@@ -327,7 +327,7 @@ theorem iotaRecMajorE_of : IotaRecMajorE p := by
   | error e1' =>
     rw [c1, irMajorE.k_prepare_major.none] at hW; cases hW
     cases n with
-    | zero => exact ErrClaim.of_callE_zero c1
+    | zero => exact ErrClaim.of_callE_zeroW c1
     | succ N =>
     exact ErrClaim.of_run_err (fun ce h' => majorT_err_pm (h0 := hrun0) (ce := ce)
         (h1 := by rw [hgetD]; exact h') ..)

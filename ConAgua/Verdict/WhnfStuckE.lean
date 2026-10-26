@@ -141,7 +141,7 @@ theorem propIrrel_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (
       | .error e => (.error e : Except Err (List Word × Mem))
       | .ok (r₅, m₅) => .ok ([r₅.headD 0], m₅)) (by intro q e; simp) (fun _ => rfl) hW
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   refine ErrClaim.of_run_err (fun ce h' => ?_) (CoreSpecE.of_callE (hPI N (hk.mono (Nat.le_succ N))
     (hkE.mono (Nat.le_succ N)) F (by omega) (by omega) ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode d a b hS₄
@@ -369,7 +369,7 @@ theorem etaCertBody_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n)
     have hv : (decMode mode).verifiedChecks = true := by rw [decMode_vc mode hs.mode4]; simpa using hm
     have hW' := err_of_k (by intro q e; simp [ecbE.k_eta_cert_ty]) (fun _ => rfl) hW
     cases n with
-    | zero => exact ErrClaim.of_callE_zero hW'
+    | zero => exact ErrClaim.of_callE_zeroW hW'
     | succ N =>
     exact ErrClaim.of_run_err (fun ce h' => etaBody_err_ty (a := a₀) (hv := hv) (h1 := hrun1) (h2 := hrun2)
         (h3 := hrun3) (h4 := hrun4) (ce := ce) (h5 := h'))
@@ -476,7 +476,7 @@ theorem etaCert_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   rw [decBool_true_of h40] at hrun4
   have hW' := err_of_k (by intro q e; simp [ecE.k_eta_cert_body]) (fun _ => rfl) hW
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   exact ErrClaim.of_run_err (fun ce h' => etaC_err_body (decMode mode) _ fe _ (decE ty1) (decE body1) (h1 := hrun1) (h2 := hrun2) (h3 := hrun3)
       (ht := htag) (hv := hv) (h4 := hrun4) (ce := ce) (h5 := h'))

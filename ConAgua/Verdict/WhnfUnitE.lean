@@ -299,7 +299,7 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
     | error e6 =>
       rw [c6] at hW; cases hW
       cases n with
-      | zero => exact ErrClaim.of_callE_zero c6
+      | zero => exact ErrClaim.of_callE_zeroW c6
       | succ N =>
       exact ErrClaim.of_run_err (fun ce h' => by rw [hrunH]; exact h')
         (CoreSpecE.of_callE (suTail_refinesE p hq hnv N (hk.mono (Nat.le_succ N)) (hkE.mono (Nat.le_succ N))
@@ -364,7 +364,7 @@ theorem suCert_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
   rw [hres2] at hrun2
   have hW' := err_of_k (by intro q e; simp [sucE.k_struct_unit_head]) (fun _ => rfl) hW
   cases n with
-  | zero => exact ErrClaim.of_callE_zero hW'
+  | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   exact ErrClaim.of_run_err (fun ce h' => suc_err_head (h1 := hrun1) (h2 := hrun2) (ce := ce) (h := h'))
     (CoreSpecE.of_callE (suHead_refinesE p hq hc hnv N (hk.mono (Nat.le_succ N)) (hkE.mono (Nat.le_succ N))

@@ -19,7 +19,7 @@ set_option linter.deprecated false
 namespace L.Arena
 
 /-- The twin computations agree on the run from `a`. -/
-theorem ErrClaim.of_run_eq' {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
+theorem ErrClaim.of_run_eqW {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
     (h : T.run a = T'.run a') (h' : ErrClaim T' a' e) : ErrClaim T a e := fun hk => by
   obtain ⟨ce, hce, hc⟩ := h' hk
   exact ⟨ce, h ▸ hce, hc⟩
@@ -40,7 +40,7 @@ theorem err_of_k {β γ : Type} {k : Except Err β → Except Err γ}
   | ok q => exact absurd h (hk q er)
 
 /-- A call at fuel `0` claims nothing. -/
-theorem ErrClaim.of_callE_zero {α : Type} {T : AM α} {a : AState} {p : Prog} {f : FnName}
+theorem ErrClaim.of_callE_zeroW {α : Type} {T : AM α} {a : AState} {p : Prog} {f : FnName}
     {vs : List Word} {m : Mem} {e : Err} (h : callE p 0 f vs m = .error e) : ErrClaim T a e := by
   obtain ⟨e', he', h0⟩ := callE_zero p f vs m
   rw [h] at he'; cases he'
@@ -113,9 +113,9 @@ theorem whnfCoreStep_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n
     | error e1 =>
     rw [h1, whnfCoreStepE.k_whnf_core_app.none] at hW; cases hW
     have hv := (view_app s₀.mem a₀ hR e hh ⟨ht, by simpa using hc4⟩ g4).1
-    refine ErrClaim.of_run_eq' (step_run_app _ _ hv) ?_
+    refine ErrClaim.of_run_eqW (step_run_app _ _ hv) ?_
     cases n with
-    | zero => exact ErrClaim.of_callE_zero h1
+    | zero => exact ErrClaim.of_callE_zeroW h1
     | succ N =>
     exact CoreSpecE.of_callE (hA N (hk.mono (by omega)) (hkE.mono (by omega)) F s₀ a₀ dn vis fe MM
       eb mode cheap d e (by omega) (by omega) hs he) h1
@@ -132,9 +132,9 @@ theorem whnfCoreStep_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n
     | error e1 =>
     rw [h1, whnfCoreStepE.k_whnf_core_app.none] at hW; cases hW
     obtain ⟨hv, hsn, hpe⟩ := view_proj s₀.mem a₀ hR e hh ⟨ht, by simpa using hc9⟩ g9
-    refine ErrClaim.of_run_eq' (step_run_proj _ _ _ hv) ?_
+    refine ErrClaim.of_run_eqW (step_run_proj _ _ _ hv) ?_
     cases n with
-    | zero => exact ErrClaim.of_callE_zero h1
+    | zero => exact ErrClaim.of_callE_zeroW h1
     | succ N =>
     exact CoreSpecE.of_callE (hP N (hk.mono (by omega)) (hkE.mono (by omega)) F s₀ a₀ dn vis fe MM
       eb mode cheap d e _ _ _ (by omega) (by omega) hs he hsn hpe) h1
@@ -158,7 +158,7 @@ theorem whnfCoreStep_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n
     rw [if_neg hc0] at hW
     cases hW
     have hv := view_bvar s₀.mem a₀ hR e hh ⟨ht, by simpa using hc0⟩ g0
-    refine ErrClaim.of_run_eq' (step_run_bvar _ hv) ?_
+    refine ErrClaim.of_run_eqW (step_run_bvar _ hv) ?_
     exact ErrClaim.fail _ _ rfl
   rw [if_neg g0] at hW
   repeat' split at hW
@@ -201,7 +201,7 @@ theorem coreLoopE_ok (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     | error e1 =>
       rw [hc, whnfCoreLoopE.k_whnf_core_step.none] at h; cases h
       cases k with
-      | zero => exact ErrClaim.of_callE_zero hc
+      | zero => exact ErrClaim.of_callE_zeroW hc
       | succ j =>
       obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
       refine ErrClaim.of_run_eq (fun ce h' => whnfCoreLoop_err _ _ _ _ _ K' _ a ce h') ?_
@@ -228,7 +228,7 @@ theorem coreLoopE_ok (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     have hrun := whnfCoreLoop_cont (decMode mode) (coreKnot (decMode mode) fe id F) fe
       (cheap != 0) d.toNat K' (decE e) _ a _ hsr
     obtain ⟨M', hS₁, -, -⟩ := hA'
-    exact ErrClaim.of_run_eq' hrun (ih (by omega) K' (by omega) m₁ _ M' eb _ hS₁ heb hrw.2 er h)
+    exact ErrClaim.of_run_eqW hrun (ih (by omega) K' (by omega) m₁ _ M' eb _ hS₁ heb hrw.2 er h)
 
 include hp hwc hcc hsup hnv hA hP in
 /-- **`whnf_core_loop`'s verdicts are `whnfCoreLoop`'s** at every twin loop fuel `K ≥ n`. -/
@@ -307,7 +307,7 @@ theorem whnfCoreSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
         (decE e)) a₀ er' := by
     intro c er' h2
     cases n with
-    | zero => exact ErrClaim.of_callE_zero h2
+    | zero => exact ErrClaim.of_callE_zeroW h2
     | succ n' =>
     exact CoreSpecE.of_callE (whnfCoreLoop_refinesE p hp hwc hcc hsup hnv hA hP n'
       (hk.mono (by omega)) (hkE.mono (by omega)) F' whnfCoreLoopFuel (by omega)
@@ -503,7 +503,7 @@ theorem whnfLoopE_ok (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     | error e1 =>
       rw [hc, whnfLoopE.k_whnf_step.none] at h; cases h
       cases k with
-      | zero => exact ErrClaim.of_callE_zero hc
+      | zero => exact ErrClaim.of_callE_zeroW hc
       | succ j =>
       refine ErrClaim.of_run_eq (fun ce h' => whnfLoop_err _ _ _ K' _ a ce h') ?_
       exact CoreSpecE.of_callE (whnfStep_refinesE p hdp hnv hR j (hk.mono (by omega))
@@ -523,7 +523,7 @@ theorem whnfLoopE_ok (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     simp only [decStep, h0, ↓reduceIte] at hsr
     have hrun := whnfLoop_cont (coreKnot (decMode mode) fe id F) fe d.toNat K' (decE e) _ a _ hsr
     obtain ⟨M', hS₁, -, -⟩ := hA'
-    exact ErrClaim.of_run_eq' hrun (ih (by omega) K' (by omega) m₁ _ M' eb _ hS₁ heb hrw.2 er h)
+    exact ErrClaim.of_run_eqW hrun (ih (by omega) K' (by omega) m₁ _ M' eb _ hS₁ heb hrw.2 er h)
 
 include hdp hlp hnv hR in
 /-- **`whnf_loop`'s verdicts are `whnfLoop`'s** at every twin loop fuel `K ≥ n + 1`. -/
@@ -602,7 +602,7 @@ theorem whnfSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     rw [h2, whnfE.k_whnf_loop.none] at hW; cases hW
     refine ErrClaim.of_run_eq (fun ce h' => knot_whnf_miss_err _ fe F' d.toNat _ a₀ ht hmiss ce h') ?_
     cases n with
-    | zero => exact ErrClaim.of_callE_zero h2
+    | zero => exact ErrClaim.of_callE_zeroW h2
     | succ n' =>
     exact CoreSpecE.of_callE (whnfLoop_refinesE p hdp hlp hnv hR n' (hk.mono (by omega))
       (hkE.mono (by omega)) F' whnfLoopFuel (by omega) (by simp only [whnfLoopFuel]; omega)
