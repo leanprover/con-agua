@@ -428,4 +428,241 @@ theorem inferLamIO_refinesE (p : Prog) (hb : InferBodyProg p) (hnv : closedNV p 
     exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "infer_lam_result" (by simp)) hc4
   | ok q => rw [hc4] at hW; simp [inferLamIOE.k_infer_lam_result] at hW
 
+/-! ## `infer_let` -/
+
+l_model inferLet_specE (p : Prog) (hf : p.lookup "infer_let" = some inferLetL)
+  fns [hf ↦ inferLetE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 400000 simp [tierW, idxW] errors
+
+/-- **`infer_let`'s verdicts**: the slots' (`infer`, `defeq`), `ensure_sort`'s, a value of another
+type rejects; `inst1` claims nothing. -/
+theorem inferLet_refinesE (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
+    (hnv : closedNV p L.Checker.nvFns = true) (hi1 : Inst1OK p) (n : Nat) (hk : KnotUpTo p n)
+    (hkE : KnotUpToE p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty v b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
+    (hty : HW ty) (hv : HW v) (hbb : HW b) :
+    CoreSpecE p (n + 1) "infer_let" [mode, vis, d, ty, v, b]
+      (inferLetT (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE v) (decE b)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferLet_specE p hb.inferLet (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d ty v b) hc0 (Err.code_ne_of_cls hk0)
+  simp only [inferLetE] at hW
+  have hK := hk n (Nat.le_refl _)
+  have hKE := hkE n (Nat.le_refl _)
+  have hes := ensureSortSpec_of_knot p hp n hk
+  have hesE := ensureSortSpecE_of_knot p hp n hk hkE
+  simp only [inferLetT]
+  cases hc1 : callE p n "infer" [mode, vis, d, ty] s₀.mem with
+  | error e1 =>
+    rw [hc1, inferLetE.k_infer.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (hKE.infer F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty) hc1)
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1] at hW; simp only [inferLetE.k_infer] at hW
+  have h₁ := CoreSpec.of_callW (hK.infer F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty) (callW_of_callE hc1)
+  obtain ⟨M₁, hS₁, -, -⟩ := h₁.2.1
+  refine ErrClaim.bind_ref h₁ ?_
+  cases hc2 : callE p n "ensure_sort" [mode, vis, d, r₁.headD 0] m₁ with
+  | error e2 =>
+    rw [hc2, inferLetE.k_ensure_sort.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩) (hesE F _ _ dn vis fe M₁ eb
+      mode d (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) hc2)
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2] at hW; simp only [inferLetE.k_ensure_sort] at hW
+  have h₂ := CoreSpec.of_callW (hes F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn
+    ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) (callW_of_callE hc2)
+  obtain ⟨M₂, hS₂, -, -⟩ := h₂.2.1
+  refine ErrClaim.bind_ref h₂ ?_
+  cases hc3 : callE p n "infer" [mode, vis, d, v] m₂ with
+  | error e3 =>
+    rw [hc3, inferLetE.k_infer_2.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩) (hKE.infer F _ _ dn vis fe
+      M₂ eb mode d v hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hv) hc3)
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [hc3] at hW; simp only [inferLetE.k_infer_2] at hW
+  have h₃ := CoreSpec.of_callW (hK.infer F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d v hF hn
+    ⟨hS₂, hs.mode4, hs.eb_mode⟩ hv) (callW_of_callE hc3)
+  obtain ⟨M₃, hS₃, -, -⟩ := h₃.2.1
+  refine ErrClaim.bind_ref h₃ ?_
+  cases hc4 : callE p n "defeq" [mode, vis, d, r₃.headD 0, ty] m₃ with
+  | error e4 =>
+    rw [hc4, inferLetE.k_defeq.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩) (hKE.defeq F _ _ dn vis fe
+      M₃ eb mode d (r₃.headD 0) ty hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₃.2.2.2 hty) hc4)
+  | ok q =>
+  obtain ⟨r₄, m₄⟩ := q
+  rw [hc4] at hW
+  have h₄ := CoreSpec.of_callW (hK.defeq F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode d (r₃.headD 0) ty
+    hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₃.2.2.2 hty) (callW_of_callE hc4)
+  obtain ⟨M₄, hS₄, -, -⟩ := h₄.2.1
+  refine ErrClaim.bind_ref h₄ ?_
+  by_cases h0 : r₄.headD 0 = 0
+  · simp only [inferLetE.k_defeq, h0, ↓reduceIte] at hW
+    cases hW
+    have hdb : decBool r₄ = false := by simp only [decBool, h0]; rfl
+    simp only [hdb, Bool.not_false, ↓reduceIte]
+    exact ErrClaim.fail _ _ rfl
+  simp only [inferLetE.k_defeq, h0, ↓reduceIte] at hW
+  have hdb : decBool r₄ = true := by simp only [decBool, bne_iff_ne]; exact h0
+  simp only [hdb, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+  cases hc5 : callE p n "inst1" [b, v, 0] m₄ with
+  | error e5 =>
+    rw [hc5, inferLetE.k_inst1.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "inst1" (by simp)) hc5
+  | ok q =>
+  obtain ⟨r₅, m₅⟩ := q
+  rw [hc5] at hW; simp only [inferLetE.k_inst1] at hW
+  have h₅ := CoreSpec.of_callW (hi1 n ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb b v 0 hS₄ hbb hv)
+    (callW_of_callE hc5)
+  obtain ⟨M₅, hS₅, -, -⟩ := h₅.2.1
+  refine ErrClaim.bind_ref h₅ ?_
+  cases hc6 : callE p n "infer" [mode, vis, d, r₅.headD 0] m₅ with
+  | error e6 =>
+    rw [hc6, inferLetE.k_infer_3.none] at hW; cases hW
+    exact CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩) (hKE.infer F _ _ dn vis fe M₅ eb mode d
+      (r₅.headD 0) hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₅.2.2.2) hc6
+  | ok q => rw [hc6] at hW; simp [inferLetE.k_infer_3] at hW
+
+/-! ## `infer_forall_io` -/
+
+l_model inferForallIO_specE (p : Prog) (hf : p.lookup "infer_forall_io" = some inferForallIOL)
+  fns [hf ↦ inferForallIOE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 400000 simp [tierW, idxW] errors
+
+/-- **`infer_forall_io`'s verdicts**: the slots' (`infer_io` twice, `whnf`), `ensure_sort`'s, a
+domain type that is no sort rejects; the interning and `inst1` claim nothing. -/
+theorem inferForallIO_refinesE (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
+    (hnv : closedNV p L.Checker.nvFns = true) (hi1 : Inst1OK p) (n : Nat) (hk : KnotUpTo p n)
+    (hkE : KnotUpToE p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty body : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
+    CoreSpecE p (n + 1) "infer_forall_io" [mode, vis, d, ty, body]
+      (inferForallIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty)
+        (decE body)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferForallIO_specE p hb.inferForallIO (n + 1)
+    ⟨s₀.mem, Locals.init []⟩ mode vis d ty body) hc0 (Err.code_ne_of_cls hk0)
+  simp only [inferForallIOE] at hW
+  split at hW
+  · cases hW; exact ErrClaim.of_cls0 rfl
+  rename_i hd
+  have hd1 := toNat_succ_of_ne hd
+  have hK := hk n (Nat.le_refl _)
+  have hKE := hkE n (Nat.le_refl _)
+  have hesE := ensureSortSpecE_of_knot p hp n hk hkE
+  simp only [inferForallIOT]
+  cases hc1 : callE p n "infer_io" [mode, vis, d, ty] s₀.mem with
+  | error e1 =>
+    rw [hc1, inferForallIOE.k_infer_io.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (hKE.inferIO F s₀ a₀ dn vis fe M eb mode d ty hF hn hs
+      hty) hc1)
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1] at hW; simp only [inferForallIOE.k_infer_io] at hW
+  have h₁ := CoreSpec.of_callW (hK.inferIO F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty)
+    (callW_of_callE hc1)
+  obtain ⟨M₁, hS₁, -, -⟩ := h₁.2.1
+  refine ErrClaim.bind_ref h₁ ?_
+  cases hc2 : callE p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with
+  | error e2 =>
+    rw [hc2, inferForallIOE.k_whnf.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩) (hKE.whnf F _ _ dn vis fe
+      M₁ eb mode d (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) hc2)
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2] at hW
+  have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0)
+    hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) (callW_of_callE hc2)
+  obtain ⟨M₂, hS₂, -, -⟩ := h₂.2.1
+  refine ErrClaim.bind_ref h₂ ?_
+  simp only [inferForallIOE.k_whnf] at hW
+  by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
+  · rw [if_pos g1] at hW; cases hW
+    simp only [show decH r₂ = decE (r₂.headD 0) from rfl, tag_sort_ne _ h₂.2.2.2 g1,
+      Bool.false_eq_true, ↓reduceIte]
+    exact ErrClaim.fail _ _ rfl
+  rw [if_neg g1] at hW
+  split at hW
+  · cases hW; exact ErrClaim.of_cls0 rfl
+  rename_i g2
+  split at hW
+  · cases hW; exact ErrClaim.of_cls0 rfl
+  rename_i g3
+  have hg : r₂.headD 0 >>> 28 = 2 := by simpa using g1
+  obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) h₂.2.2.2 ⟨g2, by simpa using g3⟩ hg
+  have htag : ((decH r₂).tag == ETag.sort) = true := tag_sort_beq _ h₂.2.2.2 hg
+  simp only [htag, ↓reduceIte]
+  refine ErrClaim.bind_right (view_run _ _ _ hv) ?_
+  cases hc3 : callE p n "intern_fvar" [d, ty] m₂ with
+  | error e3 =>
+    rw [hc3, inferForallIOE.k_intern_fvar.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "intern_fvar" (by simp)) hc3
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [hc3] at hW; simp only [inferForallIOE.k_intern_fvar] at hW
+  obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW
+    (internFVar_spec p hb.fvf hb.fvp hb.fvi n ⟨m₂, Locals.init []⟩ d ty) (callW_of_callE hc3)
+  rw [hs₃] at hfv
+  have h₃ := internFVar_core hS₂ d ty hty r₃ hfv
+  obtain ⟨M₃, hS₃, -, -⟩ := h₃.2.1
+  refine ErrClaim.bind_ref h₃ ?_
+  cases hc4 : callE p n "inst1" [body, r₃.headD 0, 0] m₃ with
+  | error e4 =>
+    rw [hc4, inferForallIOE.k_inst1.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "inst1" (by simp)) hc4
+  | ok q =>
+  obtain ⟨r₄, m₄⟩ := q
+  rw [hc4] at hW; simp only [inferForallIOE.k_inst1] at hW
+  have h₄ := CoreSpec.of_callW (hi1 n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb body (r₃.headD 0) 0 hS₃
+    hbody h₃.2.2.2) (callW_of_callE hc4)
+  obtain ⟨M₄, hS₄, -, -⟩ := h₄.2.1
+  refine ErrClaim.bind_ref h₄ ?_
+  cases hc5 : callE p n "infer_io" [mode, vis, d + 1, r₄.headD 0] m₄ with
+  | error e5 =>
+    rw [hc5, inferForallIOE.k_infer_io_2.none] at hW; cases hW
+    have h5 := CoreSpecE.of_callE (s₀ := ⟨m₄, Locals.init []⟩) (hKE.inferIO F _ _ dn vis fe M₄ eb mode
+      (d + 1) (r₄.headD 0) hF hn ⟨hS₄, hs.mode4, hs.eb_mode⟩ h₄.2.2.2) hc5
+    rw [hd1] at h5
+    exact ErrClaim.bind_left h5
+  | ok q =>
+  obtain ⟨r₅, m₅⟩ := q
+  rw [hc5] at hW; simp only [inferForallIOE.k_infer_io_2] at hW
+  have h₅ := CoreSpec.of_callW (hK.inferIO F ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode (d + 1)
+    (r₄.headD 0) hF hn ⟨hS₄, hs.mode4, hs.eb_mode⟩ h₄.2.2.2) (callW_of_callE hc5)
+  rw [hd1] at h₅
+  obtain ⟨M₅, hS₅, -, -⟩ := h₅.2.1
+  refine ErrClaim.bind_ref h₅ ?_
+  cases hc6 : callE p n "ensure_sort" [mode, vis, d + 1, r₅.headD 0] m₅ with
+  | error e6 =>
+    rw [hc6, inferForallIOE.k_ensure_sort.none] at hW; cases hW
+    have h6 := CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩) (hesE F _ _ dn vis fe M₅ eb mode (d + 1)
+      (r₅.headD 0) hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₅.2.2.2) hc6
+    rw [hd1] at h6
+    exact ErrClaim.bind_left h6
+  | ok q =>
+  obtain ⟨r₆, m₆⟩ := q
+  rw [hc6] at hW; simp only [inferForallIOE.k_ensure_sort] at hW
+  cases hc7 : callE p n "intern_imax" [_, r₆.headD 0] m₆ with
+  | error e7 =>
+    rw [hc7, inferForallIOE.k_intern_imax.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "intern_imax" (by simp)) hc7
+  | ok q =>
+  obtain ⟨r₇, m₇⟩ := q
+  rw [hc7] at hW; simp only [inferForallIOE.k_intern_imax] at hW
+  cases hc8 : callE p n "intern_sort" [r₇.headD 0] m₇ with
+  | error e8 =>
+    rw [hc8, inferForallIOE.k_intern_sort.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "intern_sort" (by simp)) hc8
+  | ok q => rw [hc8] at hW; simp [inferForallIOE.k_intern_sort] at hW
+
 end L.Arena
