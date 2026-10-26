@@ -1280,7 +1280,7 @@ theorem cpKey_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : 
     simp only [↓reduceIte]
     vcgen [step, evalE_spec, setLoc]
     all_goals (simp only [St.setLoc_loc, St.setLoc_mem, kwE_pval, kwP, hx, ↓reduceIte, kwQ] at *)
-    all_goals grind [lang_grind, KeepLo, argsOf, List.getD_eq_getElem?_getD]
+    all_goals grind [lang_grind, KeepLo, argsOf]
   | false =>
     simp only [Bool.false_eq_true, ↓reduceIte]
     by_cases hlt : C.nk < C.np

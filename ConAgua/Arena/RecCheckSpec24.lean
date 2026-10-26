@@ -204,7 +204,7 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (show i < UInt64.size by rw [UInt64_size_eq]; omega)]
     exact Nat.mod_eq_of_lt (by have := hT m; omega)
   have rd0 : ∀ m', IWGrow m m' → rdW (m'.arr64 IW) pp = mo := fun m' hg => by
-    have := (trpRd hg (i := 0) (by simpa using hmo) (by simpa using hi 0 (by omega))).1
+    have := (trpRd hg (i := 0) (by simpa using hmo) (by simp)).1
     simpa using this
   have rd1 : ∀ m', IWGrow m m' → rdW (m'.arr64 IW) (pp + 1) = ml := fun m' hg => by
     have := (trpRd hg (i := 1) hml (hi 1 (by omega))).1

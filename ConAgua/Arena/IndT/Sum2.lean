@@ -277,7 +277,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
         rw [← hbe, ← decE_eq]
         intro ht
         exact hf ⟨h1', (tag_sort_iff _ (by simpa using hb32)).mp (by simpa using ht)⟩
-      simp only [hnt, ite_false]
+      simp only [hnt]
       simp only [Bool.false_eq_true, ite_false]
       exact hrun2
 

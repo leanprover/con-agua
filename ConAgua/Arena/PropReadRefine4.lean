@@ -14,6 +14,7 @@ open scoped Lean.Order
 
 
 namespace L.Arena
+set_option experimental.vcgen true
 
 open ConLeche (Name Level PropWhen)
 
@@ -236,7 +237,7 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     obtain ⟨hg, hn, hn', husw, hus'⟩ := hVR
     rw [pr_getD1] at hn hn'
     rw [pr_getD2] at husw hus'
-    simp only [vG, vX, vY, hg, ↓reduceIte, ite_true] at hW
+    simp only [vG, vX, vY, hg, ↓reduceIte] at hW
     rcases hc2 : callW p n "head_proof_const" [vis, f, w.tail.headD 0, w.tail.tail.headD 0] m
       with _ | ⟨r₂, m₂⟩
     · rw [hc2] at hW; cases hW

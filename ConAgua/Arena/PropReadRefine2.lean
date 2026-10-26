@@ -267,7 +267,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     have : (k.toNat ≤ xs.length && xs.length == k.toNat) = true := by
       rw [hlen, hk]; simp
     rw [this]
-    simp only [show (1 : Word) = 0 ↔ False by decide, ↓reduceIte, ite_false]
+    simp only [show (1 : Word) = 0 ↔ False by decide, ↓reduceIte]
     congr 2
     rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by simpa using hidx),
       Option.getD_some]

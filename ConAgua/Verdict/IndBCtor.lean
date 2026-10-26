@@ -2,6 +2,7 @@ import ConAgua.Arena.IndT.RecGen27
 import ConAgua.Verdict.IndBAgree
 import ConAgua.Verdict.IndBRec1
 import ConAgua.Verdict.IndBFields
+set_option linter.unusedSectionVars false
 
 /-!
 # Error refinement of `class_ctor_of` (lane `verdicts-b`, helper `ib`)

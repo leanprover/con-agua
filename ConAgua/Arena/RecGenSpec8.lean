@@ -69,7 +69,7 @@ grind_pattern [ind_grind] rtsK2_some => rtsK2 n x (some (r2, m2))
 grind_pattern [ind_grind] rtsK3_some => rtsK3 (some (r3, m3))
 
 /-- The lookups `class_rec_tys_ok` needs. -/
-structure RtsProg (p : Prog) extends RtoProg p : Prop where
+structure RtsProg (p : Prog) : Prop extends RtoProg p where
   cons : p.lookup "sl_cons" = some slCons
   rts : p.lookup "class_rec_tys_ok" = some classRecTysOkL
 

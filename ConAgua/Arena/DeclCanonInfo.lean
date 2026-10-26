@@ -441,7 +441,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have e0 := wl wk 0 (by decide) k0
     have e1 := wl wk' 0 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and, ite_false] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and] at h
     have p1 : (p + 1).toNat = p.toNat + 1 := by
       obtain ⟨w1, hw1, -⟩ := decCV_name hcv
       exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
@@ -454,14 +454,14 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have e0 := wl wk 1 (by decide) k0
     have e1 := wl wk' 1 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [↓reduceIte, ite_false] at h
+    simp (config := { decide := true }) only [↓reduceIte] at h
     obtain ⟨b, a', hb, hr, hq⟩ := cdW_ok k h hS hp hq hP hL
     exact ⟨b, a', hb, hr, hq⟩
   · -- thm
     have e0 := wl wk 2 (by decide) k0
     have e1 := wl wk' 2 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and, ite_false] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and] at h
     have p1 : (p + 1).toNat = p.toNat + 1 := by
       obtain ⟨w1, hw1, -⟩ := decCV_name hcv
       exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
@@ -474,7 +474,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have e0 := wl wk 3 (by decide) k0
     have e1 := wl wk' 3 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and, ite_false] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and] at h
     have p1 : (p + 1).toNat = p.toNat + 1 := by
       obtain ⟨w1, hw1, -⟩ := decCV_name hcv
       exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
@@ -487,7 +487,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have e0 := wl wk 4 (by decide) k0
     have e1 := wl wk' 4 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, ite_false, true_and] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, true_and] at h
     have p1 : (p + 1).toNat = p.toNat + 1 := by
       obtain ⟨w1, hw1, -⟩ := decCV_name hcv
       exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
@@ -530,7 +530,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have e0 := wl wk 5 (by decide) k0
     have e1 := wl wk' 5 (by decide) k1
     subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and, ite_false] at h
+    simp (config := { decide := true }) only [ne_eq, ↓reduceIte, false_and] at h
     obtain ⟨b, a', hb, hr, hq⟩ := cwW_ok k h hS hp hq hP hL
     exact ⟨b, a', hb, hr, hq⟩
 

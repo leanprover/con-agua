@@ -195,7 +195,7 @@ theorem ctorNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
       have hnmj : (cvs.map (·.name))[j]'(by simpa [hlen] using hj) = nm := by
         simp [List.getElem_map, hnmE]
       rw [hnmj]
-      simp only [iwH, hd?, iwA, hGj, ite_true]
+      simp only [iwH, hd?, iwA, hGj]
       simp [hwl', hnm'])
     simpa [hlen] using this
   · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_

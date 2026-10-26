@@ -383,7 +383,7 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
       rw [e1] at he
       subst hr
       refine ⟨hm, hl, ?_⟩
-      simp only [he, ite_true, List.headD_cons]
+      simp only [he, List.headD_cons]
       simpa using hrun
     · rw [ite_eq_right he] at hpick
       obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.1.pins

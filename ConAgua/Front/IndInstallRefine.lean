@@ -239,10 +239,9 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
     have e2 := hP (q.toNat + 2) (.inl ⟨by omega, by omega⟩)
     have e3 := hP (q.toNat + 3) (.inl ⟨by omega, by omega⟩)
     rw [hw] at e0 e1 e2 e3
-    simp only [ite_eq_left rfl, show q.toNat + 1 ≠ q.toNat by omega, show q.toNat + 2 ≠ q.toNat by omega,
+    simp only [show q.toNat + 1 ≠ q.toNat by omega, show q.toNat + 2 ≠ q.toNat by omega,
            show q.toNat + 2 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat by omega,
-           show q.toNat + 3 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat + 2 by omega, ite_false,
-           ite_true, ↓reduceIte] at e0 e1 e2 e3
+           show q.toNat + 3 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat + 2 by omega, ↓reduceIte] at e0 e1 e2 e3
     have ho : (rdW (m.arr64 DLP) 0 + 1).toNat = topN m DLP + 1 := by
       rw [UInt64.toNat_add, hrdN]; simp; omega
     have hc : (lsCntN b.data (lps + 1) 0).toNat = (listN b.data lps).length := by

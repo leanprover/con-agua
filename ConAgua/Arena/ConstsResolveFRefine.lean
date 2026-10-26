@@ -4,6 +4,7 @@ import ConAgua.Arena.WhnfIotaRefine
 import ConAgua.Arena.RecClassSpecE
 import ConAgua.Arena.InferLeaves
 import ConAgua.Census.Attr
+set_option linter.unusedSectionVars false
 
 /-!
 # `consts_resolve_ffast` refines `constsResolveFFast` (lane `tails`)

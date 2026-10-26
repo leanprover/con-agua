@@ -1,5 +1,6 @@
 import ConAgua.Front.IndFieldsSpec
 import ConAgua.Front.FieldsDeclLink
+set_option linter.unusedSectionVars false
 
 /-!
 # The fields pass of an `inductive` line, linked to con-leche

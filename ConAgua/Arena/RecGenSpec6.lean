@@ -448,7 +448,7 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     subst hb
     obtain ⟨hh, hhs⟩ := List.length_eq_one_iff.mp hlen
     obtain ⟨hcl, hcl64⟩ := hcls hh hhs
-    simp only [hhs, Bool.not_true, Bool.false_and, Bool.true_and, ite_true,
+    simp only [hhs, Bool.not_true, Bool.false_and, Bool.true_and,
       ite_false, Bool.false_eq_true]
     refine RSim.bind (K := cfgK4 n _ cls) rfl (rec2SimPiBinders n hS2 hwH) ?_
     rintro ⟨r4, m4⟩ ⟨bs, e⟩ a4 - ⟨rfl, hS4, hg4, hf4, hd4⟩

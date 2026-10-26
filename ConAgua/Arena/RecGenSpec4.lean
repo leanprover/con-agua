@@ -176,7 +176,7 @@ grind_pattern [ind_grind] cruK3_some => cruK3 N visT gen (some (r3, m3))
 grind_pattern [ind_grind] cruK4_some => cruK4 gen (some (r4, m4))
 
 /-- The lookups `class_rule_ok` needs. -/
-structure CruleProg (p : Prog) extends FlushProg p : Prop where
+structure CruleProg (p : Prog) : Prop extends FlushProg p where
   alloc : p.lookup "iw_alloc" = some iwAlloc
   copy : p.lookup "er_copy" = some erCopy
   eti : p.lookup "er_to_iw" = some erToIw

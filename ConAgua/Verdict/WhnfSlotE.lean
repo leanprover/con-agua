@@ -194,7 +194,7 @@ theorem coreLoopE_ok (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     simp only [whnfCoreLoopE.loop1] at h; cases h; exact ErrClaim.of_cls0 rfl
   | succ k ih =>
     intro hkn K hK m a MM eb e hS heb he er h
-    simp only [whnfCoreLoopE.loop1, ite_eq_left rfl] at h
+    simp only [whnfCoreLoopE.loop1] at h
     cases hc : callE p k "whnf_core_step" [mode, cheap, vis, d, e] m with
     | error e1 =>
       rw [hc, whnfCoreLoopE.k_whnf_core_step.none] at h; cases h
@@ -496,7 +496,7 @@ theorem whnfLoopE_ok (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
   | succ k ih =>
     intro hkn K hK m a MM eb e hS heb he er h
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    simp only [whnfLoopE.loop1, ite_eq_left rfl] at h
+    simp only [whnfLoopE.loop1] at h
     cases hc : callE p k "whnf_step" [mode, vis, d, e] m with
     | error e1 =>
       rw [hc, whnfLoopE.k_whnf_step.none] at h; cases h

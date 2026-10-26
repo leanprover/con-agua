@@ -305,7 +305,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   by_cases hbf : blockAndNamed (andHs m) block = false
   · have hb : ¬ blockAndNamed (andHs m) block = true := by simp [hbf]
     rw [ite_eq_right hb] at h ⊢
-    simp only [ite_eq_left rfl] at h
+    simp only at h
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
   have hb : blockAndNamed (andHs m) block = true := by simpa using hbf

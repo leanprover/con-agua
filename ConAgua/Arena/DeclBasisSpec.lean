@@ -113,7 +113,7 @@ theorem oroW_ok {m m' : Mem} {a : AState} {w : Word} {r : List Word}
     rw [e1] at he
     refine ⟨hm, hl, ?_⟩
     simp only [ofReduceOp, ofReduceNatName, pinOfReduceNat, reduceNatName, pinReduceNat,
-      StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, exc_ok_bind', he, ite_true]
+      StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, exc_ok_bind', he]
     simpa [PIN_REDUCE_NAT, PIN_REDUCE_BOOL] using hrun
   · rw [ite_eq_right he, hm1] at h
     obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok h hP

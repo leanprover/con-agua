@@ -197,7 +197,7 @@ theorem icfAux_spec (p : Prog) (hp : p.lookup "iota_certs_full_aux" = some iotaC
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "iota_certs_full_forall", callW_spec p n "iota_certs_full_flush",
       callW_spec p n "expr_view_ok"] <;>
-    finish [icfAuxW, Locals.init_cons_zero, Locals.init_cons_succ]
+    finish [icfAuxW, Locals.init_cons_zero]
 
 
 section icfRun

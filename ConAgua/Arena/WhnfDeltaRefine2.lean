@@ -899,7 +899,7 @@ theorem constValAt_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec cvSch p _ hp.cvFind n, memoPutG_spec cvSch p _ hp.cvPut n,
       callW_spec p n "inst_lp"] <;>
-    finish [constValAtW, memoSlotW_hit, memoSlotW_miss, msetG_eq, mvG]
+    finish [constValAtW, memoSlotW_hit, memoSlotW_miss, mvG]
 
 
 theorem constValAt_run_hit (a : AState) (n : NIdx) (lps : List NIdx) (value : EIdx) (us : LsIdx)

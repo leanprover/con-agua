@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec28
+set_option linter.unusedSectionVars false
 
 /-!
 # Refinements of `IndInstall`, part 38 (lane `indproofs4`, helper `grc`): `gen_rec_check`'s loops

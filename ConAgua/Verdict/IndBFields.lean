@@ -179,7 +179,7 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     have hlen : (List.filter (fun h => h.1 == i.toNat) ihs).length = 1 := by rw [← hcnt, hB.2]; rfl
     obtain ⟨hh, hhs⟩ := List.length_eq_one_iff.mp hlen
     obtain ⟨hcl, hcl64⟩ := hcls hh hhs
-    simp only [hhs, Bool.not_true, Bool.false_and, Bool.true_and, ite_true,
+    simp only [hhs, Bool.not_true, Bool.false_and, Bool.true_and,
       ite_false, Bool.false_eq_true]
     cases h4 : callE p n "pi_binders" [CWF, r1.headD 0] s2.mem with
     | error e4 =>

@@ -190,7 +190,7 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
   obtain ⟨rfl, rfl⟩ := hw
   have hrun : (groundGuards fe (decI pe)).run a = .ok (x5, a5) := by
     simp only [groundGuards, StateT.run_bind, hrun2, hx2, hrun3, hx3, exc_ok_bind',
-      hrun4, hx4, Bool.not_true, Bool.false_eq_true, ite_true, ite_false]
+      hrun4, hx4, Bool.not_true, Bool.false_eq_true, ite_false]
     exact hrun5
   obtain ⟨cs, hx⟩ := fin _ _ hrun
   exact ⟨x5, a5, hrun, hC5, cs, hg2.trans (hg3.trans (hg4.trans hg5)), hd5, hx⟩
@@ -653,7 +653,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
     have hx2 := decW0B_false hd2 z2
     have hrun : (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
         .ok (false, a2) := by
-      simp only [divModCertGuard, StateT.run_bind, Bool.not_false, eq_self, ite_true, ite_false, hrun1, exc_ok_bind', hrun2, hx2]
+      simp only [divModCertGuard, StateT.run_bind, Bool.not_false, eq_self, ite_true, hrun1, exc_ok_bind', hrun2, hx2]
       rfl
     obtain ⟨cs, hx'⟩ := fin _ _ hrun
     exact ⟨false, a2, hrun, hC2, cs, hg1.trans hg2, decW0B_of_false _, hx'⟩
@@ -805,7 +805,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   have hrun : (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
       .ok (x9, a9) := by
     simp only [divModCertGuard, StateT.run_bind, Bool.not_true,
-      Bool.false_eq_true, eq_self, ite_true, ite_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
+      Bool.false_eq_true, eq_self, ite_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
       hrun4, hx4, hrun5, hx5, hrun6, hrun7, hx7, hrun8, hrun9]
   obtain ⟨cs, hx'⟩ := fin _ _ hrun
   exact ⟨x9, a9, hrun, hC9, cs, hG7.trans (hg8.trans hg9), hd9, hx'⟩

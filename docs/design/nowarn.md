@@ -55,3 +55,27 @@ The iterations cost a full rebuild each (about 20 min), because a rename can bre
 only elaboration shows (column of a `by` block, a variable the linter calls unused but a
 `decreasing_by` names). Every such case became a rule of the tool, and the tool was rerun from the
 baseline instead of patching the output.
+
+## Batch 2: the leftovers, and CI
+
+Batch 1 landed as e7289c5c (queue #17). What the tool could not place or only exposed once the first
+pass was in: 39 more unused simp arguments (tool rerun on the new log), 10 `structure S extends P : T`
+(rewritten to `structure S : T extends P`), 11 redundant `grind`/`simp` lemmas that are `@[grind]`
+already (dropped), 3 `simpa` that `simp` closes, 4 uses of `vcgen` in two files that lacked
+`set_option experimental.vcgen true`, 2 Lake warnings about importing Kraken (a package marked for
+the module system) from non-`module` files (`allowNonModules = true` on the `ConAgua` library).
+
+**Not fixed, suppressed again on purpose: `linter.unusedSectionVars`** (40 files, 74 theorems).
+These theorems are stated with section `variable`s that are `include`d, and the proof does not use
+all of them. Silencing the warning with `omit ... in` removes the hypotheses from the statement,
+which changes the theorem and every caller; keeping the file-level `set_option linter.unusedSectionVars
+false` (as the files had) leaves the statements as they are. Nothing else is suppressed.
+
+**CI.** `scripts/check-no-warnings.sh LOG` fails on any warning in the build log that is not
+Kraken's. CI runs it on the build step's log (new step after `scripts/lake build`). Not `lake build
+--wfail` (it also fails on Kraken's replayed warnings, 18 of them, from a dependency we do not edit),
+and not `warningAsError` in the lakefile (every local build would fail on any unused variable of a
+proof in progress, a `sorry` stub would be an error although PLAN.md allows it on master, and every
+module's cache key would change). Consequence for lanes: a `sorry` or any warning in new code now
+turns CI red; the merge queue's `build` gate does not check the log (the coordinator can add
+`scripts/check-no-warnings.sh` to `gates.sh`).

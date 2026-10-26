@@ -37,7 +37,7 @@ theorem eViewShape (p : Prog) (hp : p.lookup "e_view" = some eView) (n : Nat) (s
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
         evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-      finish [List.getD_cons_zero, List.getD_cons_succ, List.headD_cons]
+      finish [List.getD_cons_zero, List.getD_cons_succ]
 
 /-- `e_view`'s spec with its four result words spelt out. -/
 theorem eViewSpec4 (p : Prog) (hp : p.lookup "e_view" = some eView) (n : Nat) (s₀ : St) (h : Word) :
@@ -144,7 +144,7 @@ theorem piBinders_spec (n : Nat) : ∀ (s₀ : St) (fuel h : Word),
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         eViewSpec4 p hv n, slConsSpec2 p ha hc hs n, ih] <;>
-      finish (gen := 20) [List.getD_cons_zero, List.getD_cons_succ, List.headD_cons, Sig.retVal]
+      finish (gen := 20) [List.getD_cons_zero, List.getD_cons_succ, Sig.retVal]
 
 theorem piBinders_spec' (n : Nat) (s₀ : St) (fuel h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_binders" [fuel, h]
@@ -284,7 +284,7 @@ theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h 
   have n0 : ¬ h >>> 28 = 0 := by rw [hg]; decide
   have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
   have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
-  simp only [hg, ite_false, ite_true] at hne ⊢
+  simp only [hg, ite_true] at hne ⊢
   by_cases c : tcnt m CONST (tierW h) ≤ idxW h
   · simp [c] at hne
   simp only [c, ite_false]
@@ -718,7 +718,7 @@ theorem blockCountsHead_spec (n : Nat) (s₀ : St) (cvT : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         piBinders_spec p ha hc hv hs hpb n, eViewSpec4 p hv n] <;>
-      finish (gen := 20) [rdW_eq, CWF, List.getD_cons_zero, List.getD_cons_succ, List.headD_cons, List.tail_cons]
+      finish (gen := 20) [rdW_eq, CWF, List.getD_cons_zero, List.getD_cons_succ, List.tail_cons]
 
 theorem blockCountsHead_spec' (n : Nat) (s₀ : St) (cvT : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts_head" [cvT]

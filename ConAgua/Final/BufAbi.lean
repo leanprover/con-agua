@@ -1,4 +1,5 @@
 import ConAgua.Final.BufLayout
+set_option linter.unusedSectionVars false
 
 /-!
 # `ca_check_b` on the machine (lane parmode)

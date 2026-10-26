@@ -202,7 +202,7 @@ theorem blockRecLpsOne_spec (n : Nat) (s₀ : St) (rc wo wl : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         erToIw_specW2 p ha hc he n, slEq_spec p hq n] <;>
-      finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ, List.headD_cons,
+      finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ,
         List.tail_cons]
 
 include ha hc he hq ho hp in
@@ -317,7 +317,7 @@ theorem blockRecLpsOk_spec (n : Nat) (s₀ : St) (q : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         blockShapeLps_spec2 p ha hc he hl n, slConsSpec2 p ha hcp hsc n,
         blockRecLpsOkGo_spec p ha hc he hq ho hg n] <;>
-      finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ, List.headD_cons,
+      finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ,
         List.tail_cons]
 
 end spec2

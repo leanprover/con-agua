@@ -24,7 +24,7 @@ def fcK : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
 
 /-- The lookups `class_gen_prefix_binders` needs. -/
-structure PbProg (p : Prog) extends MnProg p : Prop where
+structure PbProg (p : Prog) : Prop extends MnProg p where
   fcg : p.lookup "class_gen_prefix_binders_find_ctor_go" = some classGenPrefixBindersFindCtorGo
   fc : p.lookup "class_gen_prefix_binders_find_ctor" = some classGenPrefixBindersFindCtor
   psg : p.lookup "class_gen_prefix_binders_slots_go" = some classGenPrefixBindersSlotsGo

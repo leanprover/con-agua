@@ -8,6 +8,7 @@ import ConAgua.Arena.AndPinScratch
 import ConAgua.Arena.DeclDefnT
 import ConAgua.Arena.DeclAxQuotT
 import ConAgua.Arena.PhaseBT
+set_option linter.unusedSectionVars false
 
 /-!
 # Phase A under `StageT` (lane `loopt2`)

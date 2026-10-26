@@ -1,5 +1,6 @@
 import ConAgua.Arena.Rom
 import ConAgua.Census.Attr
+set_option linter.unusedSectionVars false
 
 /-!
 # The ROM's levels: `rom_level(pos)` refines `internLevel`

@@ -53,7 +53,7 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
     obtain ⟨rfl, rfl⟩ := hw
     have hx1 := decW0B_false hd1 z1
     refine ⟨false, a1, ?_, hS1, hg1, decW0B_of_false _⟩
-    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, Bool.not_false, eq_self, ite_true, ite_false]
+    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, Bool.not_false, eq_self, ite_true]
     rfl
   rw [ite_eq_right z1] at hw
   have hx1 := decW0B_true hd1 z1
@@ -131,8 +131,7 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   obtain ⟨rfl, rfl⟩ := hw
   refine ⟨x10, a10, ?_, hS10, hG8.trans (hg9.trans hg10), hd10⟩
   simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
-    hrun5', bne, hb6, hrun7, hrun8, hx8, hrun9, Bool.not_true,
-    ite_true, ite_false, Bool.false_eq_true]
+    hrun5', bne, hb6, hrun7, hrun8, hx8, hrun9, Bool.not_true, ite_false, Bool.false_eq_true]
   exact hrun10
 
 @[refines ConRon.Arena.divModEnvGuard]

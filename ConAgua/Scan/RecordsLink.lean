@@ -8,6 +8,7 @@ public import ConAgua.Scan.Records
 import ConAgua.Census.Attr
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 
 /-!

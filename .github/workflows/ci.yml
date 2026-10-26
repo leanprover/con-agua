@@ -47,6 +47,8 @@
 #                                 compiler's output (`checkerFile_eq`) and
 #                                 the staleness checks of the generated
 #                                 call closures;
+#              check-no-warnings.sh  the build's log holds no warning
+#                                 outside Kraken (a Lake dependency);
 #              the `--check` modes of the generators: asm_file.py
 #                                 (`checker.s` and `pins.bin` are what the
 #                                 generators print now, plus Kraken's own
@@ -334,6 +336,11 @@ jobs:
           exit "$status"
 
       # ---- the gates on the built tree ----------------------------------
+      # The build must print no warning of ours (Kraken's own are ignored).
+      # A log check, not `--wfail` (which also fails on Kraken's warnings).
+      - name: scripts/check-no-warnings.sh (the build log)
+        run: scripts/check-no-warnings.sh _tmp/ci-logs/build.log
+
       - name: scripts/asm_file.py --check (checker.s, pins.bin)
         run: python3 scripts/asm_file.py --check
 

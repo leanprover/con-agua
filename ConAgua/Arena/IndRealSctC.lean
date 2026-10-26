@@ -34,6 +34,7 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Ind
+set_option experimental.vcgen true
 
 open L.Arena
 

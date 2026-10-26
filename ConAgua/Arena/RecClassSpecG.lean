@@ -204,7 +204,7 @@ grind_pattern [ind_grind] ssK6_ok => ssK6 N slot (some (r5, m5))
 grind_pattern [ind_grind] ssK7_some => ssK7 (some (r6, m6))
 
 /-- The lookups `class_read_slots` needs. -/
-structure SlotsProg (p : Prog) extends SlotProg p : Prop where
+structure SlotsProg (p : Prog) : Prop extends SlotProg p where
   sn : p.lookup "sl_snoc" = some slSnoc
   ff : p.lookup "fvar_find" = some fvarFind
   fp : p.lookup "fvar_push" = some fvarPush

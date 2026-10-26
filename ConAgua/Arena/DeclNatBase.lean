@@ -693,7 +693,7 @@ theorem slContains_ref {k : IdxKind} (hp : p.lookup "sl_contains" = some slConta
   by_cases hc : ws.contains x = true
   · simp only [hc, ite_true] at hr ⊢
     simp only [decW0B, hr]; decide
-  · simp only [hc, ite_false] at hr ⊢
+  · simp only [hc] at hr ⊢
     simp only [decW0B, hr]; decide
 
 end slc

@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DeclStepE
+set_option linter.unusedSectionVars false
 
 /-!
 # Phase A's fold fails only where the twin does (lane `verdicts-b`, helper `d`)
