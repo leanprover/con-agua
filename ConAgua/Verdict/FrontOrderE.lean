@@ -397,4 +397,42 @@ theorem validateIndD_orderFail_cls {st : StateD} {a : AState} {tys : List IndTyp
   obtain ⟨z, ⟨w, rfl⟩, h⟩ := validateIndD_orderFail (rcs := rcs) hV hnd hlen hzl hRN hfuel hO
   exact ⟨_, h, twinCls_invalid w⟩
 
+/-! ## The L side: `vi_ctor` -/
+
+/-- `ifl_find_last` found nothing: no word of the slice is `x`. -/
+theorem findLastW_zero : ∀ (n : Nat) (m : Mem) (o x j f k : Word), findLastW n m o x j = some (f, k) →
+    o.toNat + j.toNat < 2 ^ 64 → f = 0 → ∀ k', k' < j.toNat → wd m IFL (o.toNat + k') ≠ x := by
+  intro n
+  induction n with
+  | zero => intro m o x j f k h; simp [findLastW] at h
+  | succ n ih =>
+    intro m o x j f k h hb hf
+    simp only [findLastW] at h
+    split at h
+    · rename_i hj0; subst hj0; intro k' hk'; simp at hk'
+    rename_i hj0
+    have hj0' : j.toNat ≠ 0 := fun e => hj0 (UInt64.toNat_inj.mp (by simpa using e))
+    have hj1 : (j - 1).toNat = j.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
+    have hoj : (o + j - 1).toNat = o.toNat + (j.toNat - 1) := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [widx2 _ _ hb]; simp; omega)),
+        widx2 _ _ hb]; simp; omega
+    split at h
+    · cases h; exact absurd hf (by decide)
+    · rename_i hx
+      rw [wd_eq, hoj] at hx
+      have := ih m o x (j - 1) f k h (by rw [hj1]; omega) hf
+      rw [hj1] at this
+      intro k' hk'
+      by_cases hk : k' = j.toNat - 1
+      · subst hk; exact hx
+      · exact this k' (by omega)
+
+/-- A name absent from the constructor names has no entry in the twin's `ctorIx`. -/
+theorem ctorIx_none (l : List NIdx) (n : NIdx) (h : ∀ k (hk : k < l.length), l[k] ≠ n) :
+    (ctorIxOf l)[n]? = none := by
+  unfold ctorIxOf
+  rw [ctorIx_last.ctorIx_absent l ∅ 0 n h]
+  simp
+
 end L.Front.Ind
