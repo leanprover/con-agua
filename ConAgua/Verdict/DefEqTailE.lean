@@ -174,3 +174,120 @@ theorem defeqTail_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
   | ok q => rw [h6] at hW; simp only [defeqTailE.k_defeq_stuck] at hW; cases hW
 
 end L.Arena
+
+/-! ## `ldpr_exit`, the projection loop, `defeq_proj_pair` -/
+
+namespace L.Arena
+
+/-- **`reduce_proj_core`'s error spec** (whnf family; the error half of `ReduceProjCoreH`). -/
+def ReduceProjCoreE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d sn i c : Word), SlotPre s₀ a₀ dn vis fe MM eb mode → HW sn → HW c →
+    CoreSpecE p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
+      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+        (decE c)) s₀ a₀
+
+/-- **`lazy_delta_step`'s error spec** (the error half of `LazyDeltaStepH`). -/
+def LazyDeltaStepE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    d.toNat < 2 ^ 63 →
+    CoreSpecE p (n + 1) "lazy_delta_step" [mode, vis, d, a, b]
+      (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+l_model ldprExit_specE (p : Prog) (hf : p.lookup "ldpr_exit" = some ldprExitL)
+  fns [hf ↦ ldprExitE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`ldpr_exit`'s error claim** (the error half of `ldprExit_refines`). -/
+theorem ldprExit_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
+    (hrpE : ReduceProjCoreE p) (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d sn i a b k : Word) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn) (ha : HW a) (hb : HW b)
+    (hk0 : k ≠ 0) :
+    CoreSpecE p (n + 1) "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
+      (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+        (decE a) (decE b) (decDSs [k])) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (ldprExit_specE p hq.ldprExit (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d sn i a b k) hc0 (Err.code_ne_of_cls hkc)
+  have hS := hs.rel
+  have hKE := hkE n (Nat.le_refl _)
+  have hdef : ∀ (st : AState) (m : Mem) (M' : ModeMaps) (x y : Word), CoreS dn m st vis fe M' eb →
+      HW x → HW y → ldprExitE.k_defeq p (callE p n "defeq" [mode, vis, d, x, y] m) = .error er →
+      ErrClaim ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) st er := by
+    intro st m M' x y hS' hx hy hW'
+    cases h : callE p n "defeq" [mode, vis, d, x, y] m with
+    | error e =>
+      rw [h, ldprExitE.k_defeq.none] at hW'; cases hW'
+      exact CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+        (hKE.defeq F _ st dn vis fe M' eb mode d x y hF hn ⟨hS', hs.mode4, hs.eb_mode⟩ hx hy) h
+    | ok q => rw [h] at hW'; simp only [ldprExitE.k_defeq] at hW'; cases hW'
+  simp only [ldprExitE] at hW
+  by_cases h1 : k = 1
+  · rw [if_pos h1] at hW; cases hW
+  rw [if_neg h1] at hW
+  have hst : decDSs [k] = (if k = 2 then .diff else .unknown) := by
+    unfold decDSs; simp [hk0, h1]
+  have hbody : ∀ st, (st = DeltaStepA.diff ∨ st = DeltaStepA.unknown) →
+      ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+        (decE a) (decE b) st =
+      (do match ← reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+            (decI sn) i.toNat (decE a) with
+          | some x =>
+            match ← reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+                (decI sn) i.toNat (decE b) with
+            | some y => (coreKnot (decMode mode) fe id F).defeq d.toNat x y
+            | none => (coreKnot (decMode mode) fe id F).defeq d.toNat (decE a) (decE b)
+          | none => (coreKnot (decMode mode) fe id F).defeq d.toNat (decE a) (decE b)) := by
+    rintro st (rfl | rfl) <;> rfl
+  rw [hbody _ (by rw [hst]; split <;> simp)]
+  cases h1 : callE p n "reduce_proj_core" [mode, vis, d, sn, i, a] s₀.mem with
+  | error e1 =>
+    rw [h1, ldprExitE.k_reduce_proj_core.none] at hW; cases hW
+    refine ErrClaim.bind_left (ErrClaim.of_callE_succ h1 fun j hj h' => ?_)
+    subst hj
+    exact CoreSpecE.of_callE (hrpE j (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega)
+      (by omega) s₀ a₀ dn vis fe M eb mode d sn i a hs hsn ha) h'
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1] at hW
+  simp only [ldprExitE.k_reduce_proj_core] at hW
+  obtain ⟨n', rfl⟩ := callE_succ h1
+  have h₁ := CoreSpec.of_callW (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega) (by omega) s₀
+    a₀ dn vis fe M eb mode d sn i a hs hsn ha) (callW_of_callE h1)
+  refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
+  by_cases f1 : r₁.headD 0 ≠ 0
+  · rw [if_pos f1] at hW
+    rw [decOptR_someS f1]
+    cases h2 : callE p (n' + 1) "reduce_proj_core" [mode, vis, d, sn, i, b] m₁ with
+    | error e2 =>
+      rw [h2, ldprExitE.k_reduce_proj_core_2.none] at hW; cases hW
+      exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+        (hrpE n' (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega)
+          ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d sn i b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn hb) h2)
+    | ok q =>
+    obtain ⟨r₂, m₂⟩ := q
+    rw [h2] at hW
+    simp only [ldprExitE.k_reduce_proj_core_2] at hW
+    have h₂ := CoreSpec.of_callW (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega) (by omega)
+      ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d sn i b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn hb)
+      (callW_of_callE h2)
+    refine ErrClaim.bind_core h₂ (fun M₂ hS₂ => ?_)
+    by_cases f2 : r₂.headD 0 ≠ 0
+    · rw [if_pos f2] at hW
+      rw [decOptR_someS f2]
+      exact hdef _ m₂ M₂ _ _ hS₂ h₁.2.2.2.2 h₂.2.2.2.2 hW
+    · rw [if_neg f2] at hW
+      rw [decOptR_noneS (by simpa using f2)]
+      exact hdef _ m₂ M₂ _ _ hS₂ ha hb hW
+  · rw [if_neg f1] at hW
+    rw [decOptR_noneS (by simpa using f1)]
+    exact hdef _ m₁ M₁ _ _ hS₁ ha hb hW
+
+end L.Arena
