@@ -72,7 +72,7 @@ theorem partsCI_fields {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q 
   unfold decCI at h
   simp only [bind, Option.bind_eq_some_iff] at h
   obtain ⟨kd, hkd, h⟩ := h
-  rcases kd with _ | _ | _ | _ | _ | _ | _ | kd
+  rcases kd with _ | _ | _ | _ | _ | _ | kd
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, -, rfl⟩ := h; exact ⟨hkd, trivial⟩
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
@@ -86,8 +86,6 @@ theorem partsCI_fields {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q 
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, hcv, mI, hmI, rP, hrP, o, ho, l, hl, rules, hrules, rfl⟩ := h
     exact ⟨hkd, hcv, hmI, hrP, o, l, ho, hl, hrules⟩
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨t, -, rfl⟩ := h; exact ⟨hkd, trivial⟩
   · simp at h
 
 /-- The block's head, below the tops. -/
