@@ -160,7 +160,7 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p)
 
 The generated text (`trace`), its spec proved by the ok spec's recipe (`inferProj_spec`). -/
 
-theorem ld64_rdW_specE (a : ArrId) (i : Word) (s₀ : St) :
+theorem ld64_rdW_specOob (a : ArrId) (i : Word) (s₀ : St) :
     ⦃fun s => s = s₀⦄ ld64 a i
     ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size;
      fun e => e = .oob⦄ := by
@@ -270,7 +270,7 @@ theorem inferProj_specE (p : Prog) (hf : p.lookup "infer_proj" = some inferProjL
     ⦃fun _ _ => True; fun ε => ε.code ≠ 0 → inferProjE p n s₀.mem mode io vis d sn i pe = .error ε⦄ := by
   rw [invoke_eq _ hf]
   simp only [callFn, inferProjL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specE,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specOob,
       callE_spec p n "infer_io", callE_spec p n "infer", callE_spec p n "whnf",
       callE_spec p n "get_app_fn", callE_spec p n "find_proj", callE_spec p n "infer_proj_at",
       callE_spec p n "find_table", callE_spec p n "get_app_args", callE_spec p n "env_find",
@@ -871,7 +871,7 @@ theorem inferProjAt_specE (p : Prog) (hf : p.lookup "infer_proj_at" = some infer
     ⦃fun _ _ => True; fun ε => ε.code ≠ 0 → inferProjAtE p n s₀.mem sn i pe te T us q = .error ε⦄ := by
   rw [invoke_eq _ hf]
   simp only [callFn, inferProjAtL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specE, st64_specE,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specOob, st64_specE,
       callE_spec p n "get_app_args", callE_spec p n "ls_node", callE_spec p n "pin_word",
       callE_spec p n "lvl_eq_c", callE_spec p n "field_sort_zero", callE_spec p n "proj_type_at"] <;>
   simp_all [inferProjAtE, ipaE1, ipaE2, ipaEP, ipaE3, ipaE4, ipaE5, guardW, sliceAt, Cmp.eval, LocEq,
