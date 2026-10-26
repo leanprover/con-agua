@@ -125,11 +125,11 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
       hsp3 (htop.trans hSt3.1.symm)) c4
   rw [ht4] at hS4 hg4 hsp4
   have ok4' : AM.ok (etaFabArgsE (decI T) targs (decE major) ef.toNat)
-      (AM.st (towerSlotsAll fe (decI T) ef.toNat) a) := ok4
+      (AM.st (pure (towerSlotsAll fe (decI T) ef.toNat) : AM Bool) a) := ok4
   have res4' : AM.res (etaFabArgsE (decI T) targs (decE major) ef.toNat)
-      (AM.st (towerSlotsAll fe (decI T) ef.toNat) a) = xs := res4
+      (AM.st (pure (towerSlotsAll fe (decI T) ef.toNat) : AM Bool) a) = xs := res4
   replace hS4 : CoreS dn m4 (AM.st (etaFabArgsE (decI T) targs (decE major) ef.toNat)
-      (AM.st (towerSlotsAll fe (decI T) ef.toNat) a)) vis fe M4 eb := hS4
+      (AM.st (pure (towerSlotsAll fe (decI T) ef.toNat) : AM Bool) a)) vis fe M4 eb := hS4
   have hrun4 := AM.run_of_ok _ _ ok4'
   rw [res4'] at hrun4
   rcases c5 : callW p N "intern_const" [ec, ust] m4 with _ | ⟨r5, m5⟩ <;>
@@ -140,7 +140,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
   rw [res5] at hrun5
   have hS5 := hS4.of_const' hD5 (Keeps.run (keeps_cpl_internConst' _ _) hrun5) hfr5 hrun5 (by
     obtain ⟨x, c, hx⟩ := hvus
-    have hx1 := view_after_noLss (keeps_noLss_towerSlotsAll fe (decI T) ef.toNat) hx
+    have hx1 : (AM.st (pure (towerSlotsAll fe (decI T) ef.toNat) : AM Bool) a).store.view x = _ := hx
     exact hS4.den.constLs _ _ _ (etaFabArgsE_fwd hrun4 x _ (.inr ⟨_, _, rfl⟩) hx1))
   have hsp5 := hsp4.of_spn_core (const_spn hfr5)
   rcases c6 : callW p N "mk_app_n" [r5.headD 0, r4.headD 0, r4.tail.headD 0] m5 with _ | ⟨r6, m6⟩ <;>
@@ -166,7 +166,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
         (AM.st (fabScopeOk d.toNat (decE (r6.headD 0)) (decE major))
           (AM.st (mkAppN (decI (r5.headD 0)) xs) (AM.st (internE (.const (decI ec) (decI ust)))
             (AM.st (etaFabArgsE (decI T) targs (decE major) ef.toNat)
-              (AM.st (towerSlotsAll fe (decI T) ef.toNat) a))))) := by
+              (AM.st (pure (towerSlotsAll fe (decI T) ef.toNat) : AM Bool) a))))) := by
     simp only [m2cEta2T, StateT.run_bind, hl, except_ok_bind]
     rw [if_pos hres]
     simp only [StateT.run_bind, hrun3, except_ok_bind, ↓reduceIte, hrun4, hrun5, hrun6, hrun7]
@@ -244,7 +244,7 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   obtain ⟨hrun3, ⟨M3, hS3, hK3, hSt3⟩, -⟩ := CoreSpec.run
     (hc.capsNeverZero (N' + 1) ⟨m2, Locals.init []⟩ a1 dn vis fe M1 eb po pc _ swd so sc
       cvT.levelParams caps.sortZ hS2 hus (by rw [hEe]; exact hsl)
-      (hS2.den.constLps _ _ cvT hfe.choose_spec rfl (fun _ => rfl)) (by rw [hEe]; exact hpw)) c3
+      (hS2.den.constLps _ _ hfe.choose_spec) (by rw [hEe]; exact hpw)) c3
   have hrun3' : (capsNeverZero cvT.levelParams (decI (L.tail.tail.tail.headD 0)) caps).run a1 =
       .ok (decBool r3', AM.st (capsNeverZeroPW cvT.levelParams (decI (L.tail.tail.tail.headD 0))
         caps.sortZ) a1) := hrun3
