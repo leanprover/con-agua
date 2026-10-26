@@ -655,7 +655,7 @@ theorem decKL_get {m : Mem} {o l : Nat} {ks : List NestFieldKind} (h : decKL m o
     simp only [decKL_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
     obtain ⟨w, hw, x, hx, xs, hxs, rfl⟩ := h
     obtain ⟨h1, h2⟩ := ih hxs
-    refine ⟨by simp [h1], fun j hj => ?_⟩
+    refine ⟨by simp [h1], fun j _hj => ?_⟩
     cases j with
     | zero => exact ⟨w, by simpa using hw, by simpa using hx⟩
     | succ j =>

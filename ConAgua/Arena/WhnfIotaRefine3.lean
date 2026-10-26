@@ -954,7 +954,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     have hfrS : MemFrame [SPN] [] m₁ (m₁.set64 SPN (o + j) (r₁.headD 0)) :=
       MemFrame.set64 m₁ SPN (by decide) _ _
     have hS2 : CoreS dn (m₁.set64 SPN (o + j) (r₁.headD 0)) (AM.st (internE (.proj (decI T) j.toNat (decE b))) a)
-        vis fe M eb := hS1.frame_stk hfrS (fun b hb => by simpa using hb) (fun x hx => by simp at hx)
+        vis fe M eb := hS1.frame_stk hfrS (fun b _hb => by simpa using _hb) (fun x hx => by simp at hx)
     have hsz2 : ((m₁.set64 SPN (o + j) (r₁.headD 0)).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [size_set64, hsz1]
     have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat nF j hlt

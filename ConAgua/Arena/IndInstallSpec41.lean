@@ -339,15 +339,15 @@ theorem cgRec_decB {m : Mem} {g : Word}
     (hpre : DecB (fun m => (decHL m w12.toNat w13.toNat : Option (List EIdx))) m pre) :
     DecB (fun m => decCG m g.toNat) m (⟨nP, params, cls, ftc, slots, ctors, elim, pre⟩ : ConRon.Arena.ClassGen) := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hgw : ∀ j (hj : j < 14), (iwA (truncM m))[g.toNat + j]? =
-      some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using hj)) := by
-    intro j hj
+  have hgw : ∀ j (_hj : j < 14), (iwA (truncM m))[g.toNat + j]? =
+      some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using _hj)) := by
+    intro j _hj
     rw [truncM_iw_eq (by omega)]
-    simp only [iwA, hget j hj]
+    simp only [iwA, hget j _hj]
     rw [List.getElem?_eq_getElem (by simp; omega)]
-  have hw : ∀ j (hj : j < 14), iwN (truncM m) (g.toNat + j) =
-      some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using hj)).toNat := by
-    intro j hj; simp only [iwN, nat?, hgw j hj]; rfl
+  have hw : ∀ j (_hj : j < 14), iwN (truncM m) (g.toNat + j) =
+      some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using _hj)).toNat := by
+    intro j _hj; simp only [iwN, nat?, hgw j _hj]; rfl
   have h0' := hw 0 (by omega)
   have h1 := hw 1 (by omega)
   have h2 := hw 2 (by omega)

@@ -307,10 +307,10 @@ theorem natOpPinsA_fref (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
     (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
     FRef p "nat_op_pins_a" [q] (fun _ => True)
       (fun m m' _r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21, pinW m 22]) := by
-  intro n m r m' _ hc
+  intro n m _r m' _ hc
   obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (natOpPinsA_specW p hp hpin n _ q) hc
-  change natOpPinsAW m q = some (r, s'.mem) at hw
+  change natOpPinsAW m q = some (_r, s'.mem) at hw
   unfold natOpPinsAW at hw
   by_cases h0 : pinW m 0 = 0
   · rw [ite_eq_left h0] at hw; cases hw
@@ -342,10 +342,10 @@ theorem natOpPinsB_fref (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
     (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
     FRef p "nat_op_pins_b" [q] (fun _ => True)
       (fun m m' _r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29]) := by
-  intro n m r m' _ hc
+  intro n m _r m' _ hc
   obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (natOpPinsB_specW p hp hpin n _ q) hc
-  change natOpPinsBW m q = some (r, s'.mem) at hw
+  change natOpPinsBW m q = some (_r, s'.mem) at hw
   unfold natOpPinsBW at hw
   by_cases h0 : pinW m 0 = 0
   · rw [ite_eq_left h0] at hw; cases hw
@@ -377,10 +377,10 @@ theorem natOpPinsC_fref (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)
     (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
     FRef p "nat_op_pins_c" [q] (fun _ => True)
       (fun m m' _r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 2, pinW m 3, pinW m 4, pinW m 31, pinW m 32, pinW m 30]) := by
-  intro n m r m' _ hc
+  intro n m _r m' _ hc
   obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (natOpPinsC_specW p hp hpin n _ q) hc
-  change natOpPinsCW m q = some (r, s'.mem) at hw
+  change natOpPinsCW m q = some (_r, s'.mem) at hw
   unfold natOpPinsCW at hw
   by_cases h0 : pinW m 0 = 0
   · rw [ite_eq_left h0] at hw; cases hw

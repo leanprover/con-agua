@@ -46,6 +46,7 @@ DEP_RE = re.compile(r"^warning: (ConAgua/[^:]+\.lean):(\d+):(\d+): `([^`]+)` has
 # Columns shifted by the renames of this run: (path, line) -> [(col, delta)].  The log's simp
 # positions predate them, so fix_simp moves a position right by the renames before it.
 SHIFTS = defaultdict(list)
+RENAMED = defaultdict(set)  # path -> names bound to `_name` by fix_vars (uses were renamed too)
 MATHLIB_FIXER = Path(__file__).resolve().parent / "fix_unused_simp_args.py"
 
 
@@ -58,6 +59,10 @@ def fix_simp(lines):
             arg = lines[i + 1].strip()
             path, line, col = m[1], int(m[2]), int(m[3])
             col += sum(d for c, d in SHIFTS[(path, line)] if c < col)
+            pre = "← " if arg.startswith("←") else "- " if arg.startswith("-") else ""
+            bare = arg[len(pre):].strip() if pre else arg
+            if bare in RENAMED[path]:
+                arg = pre + "_" + bare
             key = ((path, str(line), str(col)), arg)
             if key not in seen:
                 seen.add(key)
@@ -119,19 +124,21 @@ def fix_simp(lines):
     print(f"simp: {len(seen)} warnings, {tidied} lines tidied")
 
 
-def rename_in_decreasing_by(src, line, name):
-    """`name` was bound at `line` (1-based) and is now `_name`.  The linter does not see uses
-    inside `decreasing_by`, so rename those too (up to the next top-level command)."""
+def rename_in_decreasing_by(p, src, line, name):
+    """`name` was bound at `line` (1-based) and is now `_name`.  The linter does not see every
+    use (those in `decreasing_by`, or in `simp ... at name`), so rename the later uses in the
+    same declaration too (up to the next top-level command)."""
     pat = re.compile(r"(?<![\w.'])" + re.escape(name) + r"(?![\w'!?₀₁₂₃₄₅₆₇₈₉])")
-    k, in_dec = line, False
+    k = line
     while k < len(src):
         l = src[k]
-        if k >= line and l and not l[0].isspace() and not l.startswith(("termination_by", "decreasing_by", ")", "|")):
+        if l and not l[0].isspace() and not l.startswith(("termination_by", "decreasing_by", ")", "|")):
             break
-        if l.startswith("decreasing_by"):
-            in_dec = True
-        if in_dec:
-            src[k] = pat.sub("_" + name, l)
+        ms = list(pat.finditer(l))
+        for m in ms:  # original coordinates: undo the shifts recorded so far on this line
+            back = sum(d for c, d in SHIFTS[(p, k + 1)])
+            SHIFTS[(p, k + 1)].append((max(m.start() - back, 0), 1))
+        src[k] = pat.sub("_" + name, l)
         k += 1
 
 
@@ -199,7 +206,8 @@ def fix_vars(lines):
                 src[line - 1] = s[:col] + "_" + s[col:]
                 SHIFTS[(p, line)].append((orig, 1))
                 done += 1
-                rename_in_decreasing_by(src, line, name)
+                RENAMED[p].add(name)
+                rename_in_decreasing_by(p, src, line, name)
             else:
                 print(f"  skip {p}:{line}:{col}: `{name}` not at that position")
                 skipped += 1

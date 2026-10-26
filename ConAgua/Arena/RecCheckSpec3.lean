@@ -115,12 +115,12 @@ theorem tmaW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
         simp [ConRon.Arena.targetMajorAt, List.getElem?_eq_none (by omega : ms.length ≤ c.toNat)]
       rw [hop]
       refine RSim.mono (tmdW_sim dn vis fe n m a hS |> fun h => ?_) (fun _ _ _ _ h => h)
-      intro b hb
+      intro b _hb
       cases ho : fuelW n (tmdW m) with
-      | none => rw [ho] at hb; cases hb
+      | none => rw [ho] at _hb; cases _hb
       | some b0 =>
         obtain ⟨r0, m0⟩ := b0
-        rw [ho, tmaK_some] at hb; cases hb
+        rw [ho, tmaK_some] at _hb; cases _hb
         obtain ⟨x, a', hr, hq⟩ := h _ ho
         exact ⟨x, a', hr, hq⟩
 

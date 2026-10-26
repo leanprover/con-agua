@@ -175,14 +175,14 @@ theorem andPinOk_refines {pins : List INatOpPinSet} (dn : NIdx → Option ConLec
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe pend ds ∧
       AM.res (andPinOk (dsAt ds i)) a₀ = (r.headD 0 != 0); ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i hi hone hR
+  intro n s₀ a₀ vis fe pend i _hi hone hR
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hk⟩ := M.of_run (P := fun s => s = s₀) hs hrun (andPinOk_specW p hp n s₀ i)
   subst hs
   have hdecl : DeclAt (s.mem.arr64 DECL) (s.mem.arr64 DLP) i.toNat (dsAt ds i) := by
-    have := hR.decls.recs i.toNat hi
-    exact declAt_of_F (by simpa [dsAt, Array.getD, hi] using this) hone
+    have := hR.decls.recs i.toNat _hi
+    exact declAt_of_F (by simpa [dsAt, Array.getD, _hi] using this) hone
   have hk6 : rdW (s.mem.arr64 DECL) (1 + 8 * i) ≠ 6 := by
     have h1 := hR.decls.room
     have h2 := hR.decls.dsize

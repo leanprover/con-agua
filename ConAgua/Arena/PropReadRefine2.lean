@@ -293,11 +293,11 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
       RdAfter dn m m' a a vis fe M eb ∧ HW (r.headD 0) := by
   intro n
   induction n with
-  | zero => intro dn m m' a vis fe M eb hS f k e hf he r hc; rw [callW_zero] at hc; cases hc
+  | zero => intro dn m m' a vis fe M eb _hS f k e _hf _he r _hc; rw [callW_zero] at _hc; cases _hc
   | succ n ih =>
-  intro dn m m' a vis fe M eb hS f k e hf he r hc
+  intro dn m m' a vis fe M eb _hS f k e _hf _he r _hc
   obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (unwrapIdDefs_spec p hp n ⟨m, Locals.init []⟩ vis f k e) hc
+    (unwrapIdDefs_spec p hp n ⟨m, Locals.init []⟩ vis f k e) _hc
   rw [ht] at hW
   generalize r.headD 0 = x at hW ⊢
   unfold uidW at hW
@@ -305,23 +305,23 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   · subst hk
     simp only [↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
-    exact ⟨by simp [unwrapIdDefs]; rfl, RdAfter.refl hS, he⟩
+    exact ⟨by simp [unwrapIdDefs]; rfl, RdAfter.refl _hS, _he⟩
   simp only [hk, ↓reduceIte] at hW
   obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 k hk)
   rcases hc1 : callW p n "unwrap_step" [vis, f, e] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
   · cases hW
-  obtain ⟨hRd₁, hb₁, hrun₁⟩ := uws_ok hp hS hf he hc1
+  obtain ⟨hRd₁, hb₁, hrun₁⟩ := uws_ok hp _hS _hf _he hc1
   simp only [uidK] at hW
   by_cases h0 : r₁.headD 0 = 0
   · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
-    refine ⟨by rw [hj, hrun₁ j, ite_eq_left h0], hRd₁, he⟩
+    refine ⟨by rw [hj, hrun₁ j, ite_eq_left h0], hRd₁, _he⟩
   simp only [h0, ↓reduceIte] at hW
   rcases hc2 : callW p n "unwrap_id_defs" [vis, f, k - 1, r₁.tail.headD 0] m₁ with _ | ⟨r₂, m₂⟩
   · rw [call1W, hc2] at hW; cases hW
   rw [call1W_some _ _ _ _ _ _ _ hc2] at hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  obtain ⟨hrun₂, hRd₂, hb₂⟩ := ih hRd₁.rel hf (hb₁ h0) hc2
+  obtain ⟨hrun₂, hRd₂, hb₂⟩ := ih hRd₁.rel _hf (hb₁ h0) hc2
   refine ⟨?_, hRd₁.trans hRd₂, hb₂⟩
   rw [hj, hrun₁ j]
   simp only [h0, ↓reduceIte]
@@ -339,11 +339,11 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
       RdAfter dn m m' a a vis fe M eb ∧ (r.headD 0 ≠ 0 → HW (r.tail.headD 0)) := by
   intro n
   induction n with
-  | zero => intro dn m m' a vis fe M eb hS f k e hf he r hc; rw [callW_zero] at hc; cases hc
+  | zero => intro dn m m' a vis fe M eb _hS f k e _hf _he r _hc; rw [callW_zero] at _hc; cases _hc
   | succ n ih =>
-  intro dn m m' a vis fe M eb hS f k e hf he r hc
+  intro dn m m' a vis fe M eb _hS f k e _hf _he r _hc
   obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (peelPisW_spec p hp n ⟨m, Locals.init []⟩ vis f k e) hc
+    (peelPisW_spec p hp n ⟨m, Locals.init []⟩ vis f k e) _hc
   rw [ht] at hW
   generalize r.headD 0 = x at hW ⊢
   generalize r.tail.headD 0 = y at hW ⊢
@@ -371,7 +371,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     rw [hc2] at hK
     simp only [t2W, Option.some.injEq, Prod.mk.injEq] at hK
     obtain ⟨rfl, rfl, rfl⟩ := hK
-    obtain ⟨hrun₂, hRd₂, hb₂⟩ := ih hS₁ hf h1 hc2
+    obtain ⟨hrun₂, hRd₂, hb₂⟩ := ih hS₁ _hf h1 hc2
     refine ⟨?_, hRd.trans hRd₂, hb₂⟩
     rw [pr_word_sub1 k hk] at hrun₂
     simp only [StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
@@ -385,7 +385,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     rw [call1W_some _ _ _ _ _ _ _ hc1] at hW
     simp only [ppwK0, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl⟩ := hW
-    obtain ⟨hrun₁, hRd₁, hb₁⟩ := uid_ok hp n hS hf he hc1
+    obtain ⟨hrun₁, hRd₁, hb₁⟩ := uid_ok hp n _hS _hf _he hc1
     simp only [show (4 : Word).toNat = 4 from rfl] at hrun₁
     refine ⟨?_, hRd₁, fun _ => hb₁⟩
     simp only [UInt64.toNat_zero, ConRon.Arena.peelPisW, StateT.run_bind, hrun₁, except_ok_bind]
@@ -395,20 +395,20 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   have hj' : j = k.toNat - 1 := by omega
   by_cases h6 : e >>> 28 = 6
   · simp only [h6, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-    obtain ⟨hrun, hRd, hb⟩ := step e (RdAfter.refl hS) he h6 hk hW
+    obtain ⟨hrun, hRd, hb⟩ := step e (RdAfter.refl _hS) _he h6 hk hW
     refine ⟨?_, hRd, hb⟩
     have ht : ((decE e).tag == ETag.forallE) = true := by
-      rw [tag_beq_w e he 6 (by decide) ETag.forallE rfl 6 rfl]; simp [h6]
+      rw [tag_beq_w e _he 6 (by decide) ETag.forallE rfl 6 rfl]; simp [h6]
     rw [hj, ConRon.Arena.peelPisW, hj']
     simp only [ht, ↓reduceIte]
     exact hrun
   simp only [h6, ne_eq, not_false_eq_true, ↓reduceIte] at hW
   have ht : ((decE e).tag == ETag.forallE) = false := by
-    rw [tag_beq_w e he 6 (by decide) ETag.forallE rfl 6 rfl]; simp [h6]
+    rw [tag_beq_w e _he 6 (by decide) ETag.forallE rfl 6 rfl]; simp [h6]
   rcases hc1 : callW p n "unwrap_id_defs" [vis, f, 4, e] m with _ | ⟨r₁, m₁⟩
   · rw [call1W, hc1] at hW; cases hW
   rw [call1W_some _ _ _ _ _ _ _ hc1] at hW
-  obtain ⟨hrun₁, hRd₁, hb₁⟩ := uid_ok hp n hS hf he hc1
+  obtain ⟨hrun₁, hRd₁, hb₁⟩ := uid_ok hp n _hS _hf _he hc1
   simp only [show (4 : Word).toNat = 4 from rfl] at hrun₁
   simp only [ppwK1] at hW
   generalize r₁.headD 0 = u at hW hrun₁ hb₁

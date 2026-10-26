@@ -62,7 +62,7 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
   obtain ⟨hget, hg, hf, htopW⟩ := recMem_post m [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13,
     w14, w15, w16, w17, w18] 19 hk hc (by rw [← hq]; simpa using hroom) hS.2.2.2.1
   have hqi : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
-  refine ⟨rdW (m.arr64 CTL) 200, rfl, ?_, hg, hP.fr (MFr.of_iw hf), hqi, ?_, fun j hj => hget j hj⟩
+  refine ⟨rdW (m.arr64 CTL) 200, rfl, ?_, hg, hP.fr (MFr.of_iw hf), hqi, ?_, fun j _hj => hget j _hj⟩
   · have hS1 := (StageR.alloc hS hal).1
     rw [hm1] at hS1
     exact StageR.wrIW hS1 (rdW (m.arr64 CTL) 200)
@@ -93,16 +93,16 @@ theorem bpRec_bpassR {m : Mem} {q : Word} {fe : IFEnv}
     (hcl : PSlR decTM cls w15 w16 m) (htb : PSlR decNCN tbl w17 w18 m) :
     BPassR w0 fe m q (⟨fe, cvTas, ⟨bs⟩, ctorsAs, sss, kinds, nfs, params, rd, cls, tbl⟩ : BlockPass) := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hw : ∀ j (hj : j < 19), iwN (truncM m) (q.toNat + j) =
+  have hw : ∀ j (_hj : j < 19), iwN (truncM m) (q.toNat + j) =
       some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17,
-        w18][j]'(by simpa using hj)).toNat := fun j hj => by
+        w18][j]'(by simpa using _hj)).toNat := fun j _hj => by
     rw [iwN_truncM (by omega)]
-    simp only [iwN, nat?, iwA, hget j hj]
+    simp only [iwN, nat?, iwA, hget j _hj]
     rw [List.getElem?_eq_getElem (by simp; omega)]; rfl
-  have hwm : ∀ j (hj : j < 19), iwN m (q.toNat + j) =
+  have hwm : ∀ j (_hj : j < 19), iwN m (q.toNat + j) =
       some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17,
-        w18][j]'(by simpa using hj)).toNat := fun j hj => by
-    rw [← iwN_truncM (show q.toNat + j < iwTop m by omega)]; exact hw j hj
+        w18][j]'(by simpa using _hj)).toNat := fun j _hj => by
+    rw [← iwN_truncM (show q.toNat + j < iwTop m by omega)]; exact hw j _hj
   have h0 := hw 0 (by omega)
   have h1 := hw 1 (by omega)
   have h2 := hw 2 (by omega)

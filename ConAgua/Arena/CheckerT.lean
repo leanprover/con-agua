@@ -851,11 +851,11 @@ theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode p
         vgOut s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) ∧
       (r.tail.headD 0 ≠ 0 → (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 ≠ none) ∧
       CoreMemos s'.mem ∧ IndMemos s'.mem; ⊤⦄ := by
-  intro n hn s₀ a₀ vis fe pend i hi hok0 hF hR hTw hfl hden hPD hIM
+  intro n hn s₀ a₀ vis fe pend i _hi hok0 hF hR hTw hfl hden hPD hIM
   refine triple_post (istg_specW p hG n s₀ i vis) ?_
   rintro r s' ⟨hloc, hW⟩
   obtain ⟨x, a', hrun, hL, hvg, hne, hcm, hIM'⟩ :=
-    istgW_ok mode pins dn ds p hm hCD hP hC hcl hcrf hap hn hW hR hTw hfl hF hden hPD hi hok0 hIM
+    istgW_ok mode pins dn ds p hm hCD hP hC hcl hcrf hap hn hW hR hTw hfl hF hden hPD _hi hok0 hIM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hL, by rw [hres]; exact hvg,
     fun h => by rw [hres]; exact hne h, hcm, hIM'⟩

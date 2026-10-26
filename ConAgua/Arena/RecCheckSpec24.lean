@@ -315,8 +315,8 @@ theorem targetRecPins_refines (p : Prog) (L : RpLook p) (n : Nat) (s₀ : St) (a
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetRecPins bs blk) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (trp_spec p L.pins (n + 2) s₀ pp bo bl) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hS', hg⟩ := trpW_ok p L n s₀.mem s'.mem a₀ pp bo bl r bs blk hm hS hq hblk
+  rintro _r s' ⟨hl, hm⟩
+  obtain ⟨a', hrun, hS', hg⟩ := trpW_ok p L n s₀.mem s'.mem a₀ pp bo bl _r bs blk hm hS hq hblk
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
 

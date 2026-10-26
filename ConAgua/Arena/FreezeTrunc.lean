@@ -364,7 +364,7 @@ theorem nameIn_of {m : Mem} {a : AState} (hR : ArenaR m a) {n : NIdx} {nm : ConL
     have := congrArg UInt32.toNat e; simpa [Idx.tag, UInt32.toNat_div] using this
   have hidx : n.idxNat = n.word.toNat % 134217728 := by
     simp [Idx.idxNat, Idx.index, UInt32.toNat_mod]
-  simp only [rowTag, rowTier, hw] at hn ⊢
+  simp only [rowTag, rowTier, hw] at _hn ⊢
   refine ⟨htier, ?_⟩
   by_cases h0 : n.tag == NTag.anonymous
   · simp only [h0, ↓reduceIte, Option.isSome_map] at hv

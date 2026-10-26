@@ -89,7 +89,7 @@ theorem pos2_decPL_trunc {α : Type} {f : Mem → Nat → Option α} {m : Mem} :
   | o, l + 1, xs, h => by
     obtain ⟨v0, x, xs', rfl, hv0, hx, hxs'⟩ := decPL_cons h
     obtain ⟨h1, h2⟩ := pos2_decPL_trunc hxs'
-    refine ⟨by simp [h1], fun j hj => ?_⟩
+    refine ⟨by simp [h1], fun j _hj => ?_⟩
     cases j with
     | zero =>
       obtain ⟨hi, hv⟩ := pos2_iwN_trunc hv0
