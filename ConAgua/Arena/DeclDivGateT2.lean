@@ -311,9 +311,9 @@ theorem ctpC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     cases k with
     | zero => rw [callW_zero] at hc'; cases hc'
     | succ k =>
-    have hw := callW_model (M := fun mq => ctpW p (realCall p) k mq vis o l)
+    have hw := callW_model (M := fun mq => dmCtpW p (realCall p) k mq vis o l)
       (ctp_specW p hD.lCheckTypePins (realCall p) (realCall_spec p) k · vis o l) hc'
-    simp only [ctpW, hl, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [dmCtpW, hl, if_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B]⟩
   | cons tp tps ih =>
@@ -326,9 +326,9 @@ theorem ctpC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     | zero => rw [callW_zero] at hc'; cases hc'
     | succ k =>
     have hk' : k ≤ 2 ^ 62 := by omega
-    have hw := callW_model (M := fun mq => ctpW p (realCall p) k mq vis o l)
+    have hw := callW_model (M := fun mq => dmCtpW p (realCall p) k mq vis o l)
       (ctp_specW p hD.lCheckTypePins (realCall p) (realCall_spec p) k · vis o l) hc'
-    unfold ctpW at hw
+    unfold dmCtpW at hw
     obtain ⟨hb, hlen, hv⟩ := ht
     have hl0 : l ≠ 0 := fun e => by rw [e] at hlen; simp at hlen
     rw [if_neg hl0] at hw
@@ -436,9 +436,9 @@ theorem cpvC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
   have hk' : k ≤ 2 ^ 62 := by omega
-  have hw := callW_model (M := fun mq => cpvW p (realCall p) k mq vis c value ps)
+  have hw := callW_model (M := fun mq => dmCpvW p (realCall p) k mq vis c value ps)
     (cpv_specW p hD.lCheckDivModPinValue (realCall p) (realCall_spec p) k · vis c value ps) hcall
-  unfold cpvW at hw
+  unfold dmCpvW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   have hD5 := hD.toDmProg7.toDmProg6.toDmProg5
   have hwsP : ConLeche.Expr.WScoped 0 (ConLeche.divModDeclPin psP nm) := by

@@ -91,9 +91,9 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
   cases k with
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
-  have hw := callW_model (M := fun mq => ggW p (realCall p) k mq vis pe)
+  have hw := callW_model (M := fun mq => dmGgW p (realCall p) k mq vis pe)
     (gg_specW p hD.bvb hD.hf hD.lGroundGuards (realCall p) (realCall_spec p) k · vis pe) hcall
-  unfold ggW at hw
+  unfold dmGgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   have fin : ∀ x a', (groundGuards fe (decI pe)).run a = .ok (x, a') →
       CoreStep V env fe a a' ∧ x = (P.looseBVarsBounded 0 && (!P.hasFvar &&
@@ -219,9 +219,9 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   cases k with
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
-  have hw := callW_model (M := fun mq => tpgW p (realCall p) k mq vis nw ty)
+  have hw := callW_model (M := fun mq => dmTpgW p (realCall p) k mq vis nw ty)
     (tpg_specW p hD.bvb hD.hf hD.lTypePinGuard (realCall p) (realCall_spec p) k · vis nw ty) hcall
-  unfold tpgW at hw
+  unfold dmTpgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   -- the lookup
   cases h1 : callW p k "env_find" [nw, vis] m with
