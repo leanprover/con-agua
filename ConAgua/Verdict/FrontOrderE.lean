@@ -16,6 +16,10 @@ open ConLeche.Frontend (IndCtorRec IndTypeRec IndRecRec)
 
 set_option linter.unusedSimpArgs false
 set_option linter.deprecated false
+set_option experimental.vcgen true
+
+open Std.WP
+open scoped Lean.Order
 
 namespace L.Front.Ind
 
@@ -396,6 +400,119 @@ theorem validateIndD_orderFail_cls {st : StateD} {a : AState} {tys : List IndTyp
       twinCls v.toError = 1 := by
   obtain ⟨z, ⟨w, rfl⟩, h⟩ := validateIndD_orderFail (rcs := rcs) hV hnd hlen hzl hRN hfuel hO
   exact ⟨_, h, twinCls_invalid w⟩
+
+/-! ## The L side: the error models -/
+
+l_model viCtor_specE (p : Prog) (hf : p.lookup "vi_ctor" = some viCtor)
+  fns [hf ↦ viCtorE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp [] errors
+l_model viOrderIn_specE (p : Prog) (hf : p.lookup "vi_order_in" = some viOrderIn)
+  fns [hf ↦ viOrderInE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp [] errors
+l_model viOrderGo_specE (p : Prog) (hf : p.lookup "vi_order_go" = some viOrderGo)
+  fns [hf ↦ viOrderGoE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp [] errors
+l_model viOrder_specE (p : Prog) (hf : p.lookup "vi_order" = some viOrder)
+  fns [hf ↦ viOrderE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp [] errors
+l_model viNpGo_specE (p : Prog) (hf : p.lookup "vi_np_go" = some viNpGo)
+  fns [hf ↦ viNpGoE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] errors
+l_model viNparams_specE (p : Prog) (hf : p.lookup "vi_nparams" = some viNparams)
+  fns [hf ↦ viNparamsE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] errors
+
+/-! ## The L side: `vi_np_go`, `vi_nparams` -/
+
+/-- **`vi_np_go`'s error model**: an error of class `≠ 0` (the decline) means some type record
+from `j` on has `numParams ≠ d`. -/
+theorem npGoE_claim {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn d : Word}
+    (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63) (p : Prog) :
+    ∀ n j e, viNpGoE p n m to tn d j = .error e → e.cls ≠ 0 →
+      e = .abort R_INDUCTIVE_BLOCK_WHOSE ∧
+      ∃ k, ∃ hk : k < tys.length, j.toNat ≤ k ∧ tys[k].numParams ≠ d.toNat := by
+  intro n
+  induction n with
+  | zero =>
+    intro j e h hk
+    exfalso; apply hk
+    have : viNpGoE p 0 m to tn d j = .error .outOfFuel := by simp [viNpGoE]
+    rw [this] at h; cases h; simp
+  | succ n ih =>
+    intro j e h hk
+    by_cases hle : tn ≤ j
+    · rw [viNpGoE.arm1 p n m to tn d j hle] at h; cases h
+    have hj := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
+    have hj1 := wsucc j tn (UInt64.not_le.mp hle)
+    have hix : (to + 11 * j + 10).toNat = to.toNat + 11 * j.toNat + 10 := widx _ _ _ _ (by simp; omega)
+    by_cases h0 : rdW (m.arr64 IFR) (to + 11 * j + 10) = d
+    · rw [viNpGoE.arm2 p n m to tn d j hle h0] at h
+      cases h1 : viNpGoE p n m to tn d (j + 1) with
+      | error ε =>
+        rw [h1, viNpGoE.k_vi_np_go.none] at h
+        cases h
+        obtain ⟨he, k, hk', hjk, hne⟩ := ih _ _ h1 hk
+        exact ⟨he, k, hk', by rw [hj1] at hjk; omega, hne⟩
+      | ok q =>
+        obtain ⟨u, m₁⟩ := q
+        rw [h1, viNpGoE.k_vi_np_go.arm1] at h; cases h
+    · rw [viNpGoE.abort1 p n m to tn d j hle h0] at h
+      cases h
+      refine ⟨rfl, j.toNat, by omega, Nat.le_refl _, ?_⟩
+      rw [wd_eq, hix] at h0
+      obtain ⟨-, -, -, -, -, h10⟩ := hL.2.2 j.toNat (by omega)
+      intro he
+      apply h0
+      apply UInt64.toNat_inj.mp
+      rw [h10.1, he]
+
+/-- **`vi_nparams`' error claim**: a failing call of class `≠ 0` means the type records disagree
+on `numParams` (the twin's decline). -/
+theorem viNparams_fail (p : Prog) (hp : p.lookup "vi_nparams" = some viNparams)
+    (hpg : p.lookup "vi_np_go" = some viNpGo) (n : Nat) (m : Mem)
+    {b : ByteArray} {tys : List IndTypeRec} {to tn : Word}
+    (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63)
+    (e : Err) (hc : callE p (n + 1) "vi_nparams" [to, tn] m = .error e) (hk : e.cls ≠ 0) :
+    e = .abort R_INDUCTIVE_BLOCK_WHOSE ∧ ((tys.map fun x => x.numParams).all fun x =>
+      x == (tys.map fun x => x.numParams).head?.getD 0) = false := by
+  have hW := triple_of_callE_err (viNparams_specE p hp (n + 1) ⟨m, Locals.init []⟩ to tn) hc
+    (Err.code_ne_of_cls hk)
+  by_cases h0 : tn = 0
+  · rw [viNparamsE.arm1 p n m to tn h0] at hW; cases hW
+  rw [viNparamsE.arm2 p n m to tn h0] at hW
+  cases h1 : callE p n "vi_np_go" [to, tn, rdW (m.arr64 IFR) (to + 10), 0] m with
+  | ok q => obtain ⟨r, m₁⟩ := q; rw [h1, viNparamsE.k_vi_np_go.arm1] at hW; cases hW
+  | error e1 =>
+  rw [h1, viNparamsE.k_vi_np_go.none] at hW
+  cases hW
+  have hW1 := triple_of_callE_err (viNpGo_specE p hpg n ⟨m, Locals.init []⟩ to tn _ 0) h1
+    (Err.code_ne_of_cls hk)
+  obtain ⟨he, k, hk', -, hne⟩ := npGoE_claim hL htn hto p n 0 _ hW1 hk
+  refine ⟨he, ?_⟩
+  have h0' : 0 < tys.length := by
+    have : tn.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
+    omega
+  have hix : (to + 10).toNat = to.toNat + 10 := widx2 _ _ (by simp; omega)
+  obtain ⟨-, -, -, -, -, h10⟩ := hL.2.2 0 h0'
+  simp only [Nat.mul_zero, Nat.add_zero] at h10
+  have hd : (rdW (m.arr64 IFR) (to + 10)).toNat = tys[0].numParams := by rw [wd_eq, hix, h10.1]
+  rw [hd] at hne
+  rw [List.all_eq_false]
+  refine ⟨tys[k].numParams, List.mem_map.mpr ⟨tys[k], List.getElem_mem hk', rfl⟩, ?_⟩
+  cases tys with
+  | nil => simp at h0'
+  | cons t ts => simpa using hne
+
+/-- **`vi_nparams`' error refinement** (after `vi_unsafe` ran: no unsafe type): the twin's
+`numParams` decline. -/
+theorem viNparams_refinesE (p : Prog) (hp : p.lookup "vi_nparams" = some viNparams)
+    (hpg : p.lookup "vi_np_go" = some viNpGo) (n : Nat) (m : Mem)
+    {b : ByteArray} {tys : List IndTypeRec} {to tn : Word}
+    (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63) (st : StateD) (cts : List IndCtorRec)
+    (rcs : List IndRecRec) (a : AState) (hsafe : (tys.any fun x => x.isUnsafe) = false)
+    (e : Err) (hc : callE p (n + 1) "vi_nparams" [to, tn] m = .error e) :
+    L.Front.VerdictClaimL (ConRon.Arena.Frontend.validateIndD st tys cts rcs) a e := fun hk => by
+  obtain ⟨he, hall⟩ := viNparams_fail p hp hpg n m hL htn hto e hc hk
+  obtain ⟨v, hv, hcl⟩ := validateIndD_np (st := st) (a := a) (cts := cts) (rcs := rcs) hsafe hall
+  refine .inr ⟨v, a, hv, ?_⟩
+  rw [hcl, he]; decide
 
 /-! ## The L side: `vi_ctor` -/
 
