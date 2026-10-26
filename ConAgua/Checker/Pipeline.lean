@@ -1,5 +1,6 @@
 import ConAgua.Checker.Entry
 import ConAgua.Front.RunModel
+import ConAgua.Final.Twin
 
 /-!
 # `check`'s stages composed (lane `pipeline`)
