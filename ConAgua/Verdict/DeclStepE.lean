@@ -48,7 +48,7 @@ variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : A
 /-- **`install_value`'s error claim, the common part**: the header's and (for `vk ≠ 1`) the value
 guards' failures claim the twin's; the other callees claim nothing. -/
 theorem ivE_core {p : Prog} (hP : IvProg p) (hap : ApdF p)
-    (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hivE : IvgE p)
+    (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hivE : IvgE p) (hU : UceProg p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m : Mem} {i ck vk : Word} {ds : Array IDeclaration} {ci : IConstantInfo} {env : ConLeche.Env}
     {c : ConLeche.ConstantVal}
@@ -88,7 +88,7 @@ theorem ivE_core {p : Prog} (hP : IvProg p) (hap : ApdF p)
   cases h2 : callE p n "install_header" [vis, q + 1] s1.mem with
   | error e2 =>
     rw [h2, installValueE.k_install_header.none] at hW; cases hW
-    exact ErrClaim.bind_left (ihE_okT hP.ih hap hkp hnv h2 hS1 (by rw [hq1]; exact hcv1)
+    exact ErrClaim.bind_left (ihE_okT hP.ih hap hkp hnv hU h2 hS1 (by rw [hq1]; exact hcv1)
       (by rw [hq1]; omega) (denoteCV_lps hcvd) hCr1)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
@@ -157,7 +157,7 @@ theorem ivE_core {p : Prog} (hP : IvProg p) (hap : ApdF p)
 
 /-- **`install_value`'s error claim under `StageT`** (`installValue_loopT`'s hypotheses). -/
 theorem installValue_errT {p : Prog} (hP : IvProg p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true) (hivE : IvgE p)
+    (hnv : closedNV p L.Checker.nvFns = true) (hivE : IvgE p) (hU : UceProg p)
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {vis : Word} {fe : IFEnv}
     {pend : Array PendingCheck} {i ck vk : Word} (hi : i.toNat < ds.size)
     (hk : IvArgs ck vk (dsAt ds i))
@@ -177,7 +177,7 @@ theorem installValue_errT {p : Prog} (hP : IvProg p) (hap : ApdF p) (hkp : CrKee
     simp only [Frontend.denoteDecl] at hx
     split at hx
     · rename_i c' e' hcd he
-      have := ivE_core (ci := .defnInfo cv v hint) hP hap hkp hnv hivE hS hR.decls hi
+      have := ivE_core (ci := .defnInfo cv v hint) hP hap hkp hnv hivE hU hS hR.decls hi
         (by rw [hdi]; rfl) hF (by rw [hdi]; exact hcd) hCr hc hn
       rw [hdi] at this
       simp only [stepCV, stepVal] at this
@@ -193,7 +193,7 @@ theorem installValue_errT {p : Prog} (hP : IvProg p) (hap : ApdF p) (hkp : CrKee
     simp only [Frontend.denoteDecl] at hx
     split at hx
     · rename_i c' e' hcd he
-      have := ivE_core (ci := .thmInfo cv) hP hap hkp hnv hivE hS hR.decls hi
+      have := ivE_core (ci := .thmInfo cv) hP hap hkp hnv hivE hU hS hR.decls hi
         (by rw [hdi]; rfl) hF (by rw [hdi]; exact hcd) hCr hc hn
       rw [hdi] at this
       simp only [stepCV, stepVal] at this
@@ -207,7 +207,7 @@ theorem installValue_errT {p : Prog} (hP : IvProg p) (hap : ApdF p) (hkp : CrKee
     simp only [Frontend.denoteDecl] at hx
     split at hx
     · rename_i c' e' hcd he
-      have := ivE_core (ci := .axiomInfo cv) hP hap hkp hnv hivE hS hR.decls hi
+      have := ivE_core (ci := .axiomInfo cv) hP hap hkp hnv hivE hU hS hR.decls hi
         (by rw [hdi]; rfl) hF (by rw [hdi]; exact hcd) hCr hc hn
       rw [hdi] at this
       simp only [stepCV, stepVal] at this
@@ -243,7 +243,7 @@ def InstallStepGoSpecE : Prop :=
 /-- **`install_step_go` fails only where `installStepGo` does** (through `check_decl`'s error
 claim and `install_value`'s). -/
 theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : ApdF p)
-    (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hivE : IvgE p)
+    (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hivE : IvgE p) (hU : UceProg p)
     (hCD : CheckDeclSpecE pins dn ds p) : InstallStepGoSpecE pins dn ds p := by
   intro n hn m a vis fe pend i hi hok0 hFo hR hTw hfl hden hPD hIM e hc
   by_cases hk0 : e.cls = 0
@@ -334,7 +334,7 @@ theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : A
     cases hc' : callE p n "install_value" [i, vis, 2, 1] m1 with
     | error e1 =>
       rw [hc', installStepGoE.k_install_value.none] at hW; cases hW
-      have := installValue_errT pins dn ds hP hap hkp hnv hivE hn' hi
+      have := installValue_errT pins dn ds hP hap hkp hnv hivE hU hn' hi
         (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hFo hden hIM0.cr hc'
       rw [hd] at this
       exact this
@@ -376,7 +376,7 @@ theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : A
         cases hc' : callE p n "install_value" [i, vis, 1, 0] m1 with
         | error e1 =>
           rw [hc', installStepGoE.k_install_value.none] at hW; cases hW
-          have := installValue_errT pins dn ds hP hap hkp hnv hivE hn' hi
+          have := installValue_errT pins dn ds hP hap hkp hnv hivE hU hn' hi
             (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hFo hden hIM0.cr hc'
           rw [hd] at this
           refine ErrClaim.of_run_eq (T' := ivT fe (.defnDecl cv v hint)) ?_ this
@@ -419,7 +419,7 @@ theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hap : A
         cases hc' : callE p n "install_value" [i, vis, 0, 2] m1 with
         | error e1 =>
           rw [hc', installStepGoE.k_install_value.none] at hW; cases hW
-          have := installValue_errT pins dn ds hP hap hkp hnv hivE hn' hi
+          have := installValue_errT pins dn ds hP hap hkp hnv hivE hU hn' hi
             (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hFo hden hIM0.cr hc'
           rw [hd] at this
           refine ErrClaim.of_run_eq (T' := ivT fe (.opaqueDecl cv v)) ?_ this

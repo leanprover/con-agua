@@ -53,7 +53,7 @@ def ArmSpecE (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
 /-- **`check_decl_thm`'s error claim under `StageT`.** -/
 theorem checkDeclThm_errT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
     (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
-    (hivE : IvgE p) (hnvP : NVAt p "pin_word") (hnvL : NVAt p "lvl_eq_c")
+    (hUL : UceLookups p) (hivE : IvgE p) (hnvP : NVAt p "pin_word") (hnvL : NVAt p "lvl_eq_c")
     (hnvE : NVAt p "env_push")
     (hp : p.lookup "check_decl_thm" = some checkDeclThm) (cv : IConstantVal) (v : EIdx) :
     ArmSpecE pins dn ds p "check_decl_thm" (.thmDecl cv v) := by
@@ -100,7 +100,7 @@ theorem checkDeclThm_errT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (ha
   cases h2 : callE p n "check_constant_val" [vis, q + 1] s1.mem with
   | error e2 =>
     rw [h2, checkDeclThmE.k_check_constant_val.none] at hW; cases hW
-    exact ErrClaim.bind_left (ccvE_okT hq hV hap hkp hnv hcE hn' h2 hS1 (by rw [hq1]; exact hcv1)
+    exact ErrClaim.bind_left (ccvE_okT hq hV hap hkp hnv hcE hUL hn' h2 hS1 (by rw [hq1]; exact hcv1)
       (by omega) (denoteCV_lps hcd) hCr1)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
@@ -133,7 +133,7 @@ theorem checkDeclThm_errT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (ha
 /-- **`check_decl_opaque`'s error claim under `StageT`.** -/
 theorem checkDeclOpaque_errT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg p)
     (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
+    (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p) (hUL : UceLookups p)
     (hivE : IvgE p) (hnvE : NVAt p "env_push") (hdn : DnInj dn)
     (hp : p.lookup "check_decl_opaque" = some checkDeclOpaque) (cv : IConstantVal) (v : EIdx) :
     ArmSpecE pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) := by
@@ -189,7 +189,7 @@ theorem checkDeclOpaque_errT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : 
   cases h2 : callE p n "check_constant_val" [vis, q + 1] s1.mem with
   | error e2 =>
     rw [h2, checkDeclOpaqueE.k_check_constant_val.none] at hW; cases hW
-    exact ErrClaim.bind_left (ccvE_okT hq hV hap hkp hnv hcE hn' h2 hS1 (by rw [hq1]; exact hcv1)
+    exact ErrClaim.bind_left (ccvE_okT hq hV hap hkp hnv hcE hUL hn' h2 hS1 (by rw [hq1]; exact hcv1)
       (by omega) (denoteCV_lps hcd) hCr1)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2

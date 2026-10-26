@@ -4,6 +4,7 @@ import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.DeclValT
 import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Verdict.UnresolvedE
 
 /-!
 # The verdict claims of `install_value_guards` and `install_header` (lane `verdicts-b`, helper `d`)
@@ -12,7 +13,9 @@ The error models and error refinements of the two guard functions, under the hyp
 ok refinements (`ivgW_okT`, `ihW_okT`): a failing call of class `1`/`2` claims the twin's
 `installValueGuards`/`installHeader` fails with an error of that class. The callees are all
 outside the verdict closure (`nvFns`), so their failures claim nothing; the abort sites are the
-twin's `fail`s (the consts-resolve site aborts with the class-0 code).
+twin's `fail`s. The consts-resolve site is a call of `unresolved_consts_error` (it always fails):
+its error's class is the twin's `unresolvedConstsErrorL (← strLitSupported fe) …`
+(`uce_errClaim_lo`, `UnresolvedE.lean`).
 -/
 
 set_option experimental.vcgen true
@@ -143,7 +146,7 @@ theorem resContW_hit {m : Mem} {a : AState} {n : Nat} {x : Word}
 
 /-- **`install_value_guards`' error claim under `StageT`** (the error half of `ivgW_okT`). -/
 theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true) : IvgE p := by
+    (hnv : closedNV p L.Checker.nvFns = true) (hU : UceProg p) : IvgE p := by
   intro dn vis fe a n m q v cv e hc hS hq hqb hv hlps hCr
   by_cases hk0 : e.cls = 0
   · exact ErrClaim.of_cls0 hk0
@@ -274,15 +277,25 @@ theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
     crfF_okT dn vis fe v hv m4 m5 a4 r5 (crfF_of_callW hkp.crf (callW_of_callE h5)) ⟨hS4, hCr4.crMemo⟩
   refine ErrClaim.bind_right hrun5 ?_
   by_cases hb5 : r5.headD 0 = 0
-  · rw [installValueGuardsE.k_consts_resolve_ffast.abort1 p _ _ hb5] at hW
-    cases hW
-    exact ErrClaim.of_cls0 rfl
-  rw [installValueGuardsE.k_consts_resolve_ffast.arm1 p _ _ hb5] at hW
+  · rw [installValueGuardsE.k_consts_resolve_ffast.arm1 p _ _ _ _ _ hb5] at hW
+    have ex5 : x5 = false := by rw [← hx5]; simpa using hb5
+    rw [ex5]
+    refine ErrClaim.ite_neg (by decide) ?_
+    cases h6 : callE p (n + 1) "unresolved_consts_error" [vis, v, 1] m5 with
+    | error e6 =>
+      rw [h6, installValueGuardsE.k_unresolved_consts_error.none] at hW; cases hW
+      obtain ⟨M5, hC5⟩ := hS5.core
+      exact uce_errClaim_lo hU hnv hC5 hv (by decide) h6 "value"
+    | ok q6 =>
+      obtain ⟨r6, m6⟩ := q6
+      rw [h6, installValueGuardsE.k_unresolved_consts_error.abort1] at hW; cases hW
+      exact ErrClaim.of_cls0 rfl
+  rw [installValueGuardsE.k_consts_resolve_ffast.arm2 p _ _ _ _ _ hb5] at hW
   cases hW
 
 /-- **`install_header`'s error claim under `StageT`** (the error half of `ihW_okT`). -/
 theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true)
+    (hnv : closedNV p L.Checker.nvFns = true) (hU : UceProg p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m : Mem} {q : Word} {cv : IConstantVal} {e : Err}
     (hc : callE p n "install_header" [vis, q] m = .error e) (hS : StageT dn vis fe m a)
@@ -508,10 +521,21 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   rw [← hty] at hrun9
   refine ErrClaim.bind_right hrun9 ?_
   by_cases hb9 : r9.headD 0 = 0
-  · rw [installHeaderE.k_consts_resolve_ffast.abort1 p _ _ hb9] at hW
-    cases hW
-    exact ErrClaim.of_cls0 rfl
-  rw [installHeaderE.k_consts_resolve_ffast.arm1 p _ _ hb9] at hW
+  · rw [installHeaderE.k_consts_resolve_ffast.arm1 p _ _ _ _ _ hb9] at hW
+    have ex9 : x9 = false := by rw [← hx9]; simpa using hb9
+    rw [ex9]
+    refine ErrClaim.ite_neg (by decide) ?_
+    cases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 0] m9 with
+    | error e10 =>
+      rw [h10, installHeaderE.k_unresolved_consts_error.none] at hW; cases hW
+      obtain ⟨M9, hC9⟩ := hS9.core
+      rw [hty]
+      exact uce_errClaim_lo hU hnv hC9 hwtl (by decide) h10 "type"
+    | ok q10 =>
+      obtain ⟨r10, m10⟩ := q10
+      rw [h10, installHeaderE.k_unresolved_consts_error.abort1] at hW; cases hW
+      exact ErrClaim.of_cls0 rfl
+  rw [installHeaderE.k_consts_resolve_ffast.arm2 p _ _ _ _ _ hb9] at hW
   cases hW
 
 end L.Arena
