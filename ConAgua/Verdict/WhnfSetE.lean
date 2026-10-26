@@ -4,7 +4,7 @@ import ConAgua.Arena.DefEqStuckCert
 /-!
 # `struct_eta_cert` and its pieces: error claims (lane `verdicts-b`, helper `k2`)
 
-Their verdicts are the `infer_io`, `whnf` slots', `defeq_lst`'s (a hypothesis, `DefeqLstE`, from the
+Their verdicts are the `infer_io`, `whnf` slots', `defeq_lst`'s (a hypothesis, `DefeqLstWE`, from the
 `defeq` family) and the level comparison's out-of-fuel decline (`struct_eta_cert_tail`).
 -/
 
@@ -19,7 +19,7 @@ set_option linter.unusedSectionVars false
 namespace L.Arena
 
 /-- `defeq_lst`'s error claim at fuel `n + 1` (the premises of `DefeqLstOK`). -/
-def DefeqLstE (p : Prog) : Prop :=
+def DefeqLstWE (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d ao an bo bn : Word) (xs ys : Array EIdx),
@@ -108,7 +108,7 @@ end certErr
 
 section set
 variable (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
-  (hnv : closedNV p L.Checker.nvFns = true) (hDL : DefeqLstE p)
+  (hnv : closedNV p L.Checker.nvFns = true) (hDL : DefeqLstWE p)
 
 include hq hi hc hnv hDL in
 /-- **`struct_eta_cert_tail`'s verdicts**: the level comparison's out-of-fuel decline and

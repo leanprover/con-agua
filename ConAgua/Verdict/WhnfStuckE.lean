@@ -58,7 +58,7 @@ theorem piHE_spec (p : Prog) (hp : p.lookup "prop_irrel" = some propIrrelL) (n :
 
 section pi
 variable (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hnv : closedNV p L.Checker.nvFns = true)
-  (hPI : ProofIrrelE p)
+  (hPI : ProofIrrelWE p)
 include hq hc hnv hPI
 
 /-- **`prop_irrel`'s verdicts** are `proof_irrel`'s. -/

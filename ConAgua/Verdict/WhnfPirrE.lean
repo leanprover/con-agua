@@ -5,7 +5,7 @@ import ConAgua.Verdict.WhnfM2CE
 
 `proof_irrel_half`'s level comparison out of fuel declines (the twin's `liftFueled`); its other
 claims are the `infer_io` and `whnf` slots'. The twin's `proofIrrel` is its two halves in
-continuation style (`proofIrrel_eq_halves`, `piHalfT`); `proofIrrelE_of`: `ProofIrrelE`.
+continuation style (`proofIrrel_eq_halves`, `piHalfT`); `proofIrrelE_of`: `ProofIrrelWE`.
 -/
 
 open ConRon.Arena
@@ -212,8 +212,8 @@ theorem pihE_ok (n F : Nat) (hknot : KnotUpTo p n) (hkE : KnotUpToE p n) (hnF : 
   refine ErrClaim.of_run_eq' (half_fail _ _ _ k a _ _ a3 _ _ _ _ _ _ hrun1 hrun2 hrun3' htag hvw hz hrunL)
     (ErrClaim.fail _ _ rfl)
 
-/-- **`ProofIrrelE`**: `proof_irrel`'s verdicts are its halves'. -/
-theorem proofIrrelE_of : ProofIrrelE p := by
+/-- **`ProofIrrelWE`**: `proof_irrel`'s verdicts are its halves'. -/
+theorem proofIrrelE_of : ProofIrrelWE p := by
   intro n hk hkE F hnF hn62 s₀ a₀ dn vis fe MM eb mode d a b hS hm4 hebm ha hb
   refine CoreSpecE.of_runs fun er hc0 => ?_
   by_cases hk0 : er.cls = 0

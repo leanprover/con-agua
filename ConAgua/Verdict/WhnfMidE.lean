@@ -8,7 +8,7 @@ import ConAgua.Arena.IndTwin
 `delta_quick`, `lazy_nat` (lane `verdicts-b`, helper `k2`)
 
 No verdict site of their own: their claims are the knot's slots' (`KnotUpToE`), `reduce_nat`'s
-(`callE_reduceNat`) and `quick_defeq`'s (a callee of the `defeq` family: `QuickDefeqE`).
+(`callE_reduceNat`) and `quick_defeq`'s (a callee of the `defeq` family: `QuickDefeqWE`).
 -/
 
 open ConRon.Arena
@@ -121,7 +121,7 @@ end mid
 /-! ## `delta_quick` -/
 
 /-- `quick_defeq`'s error claim at fuel `n` (the shape of `QuickDefeqSpec`). -/
-def QuickDefeqE (p : Prog) (n : Nat) : Prop :=
+def QuickDefeqWE (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW x → HW y → d.toNat < 2 ^ 63 →
@@ -129,7 +129,7 @@ def QuickDefeqE (p : Prog) (n : Nat) : Prop :=
       (quickDefEq (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE x) (decE y)) s₀ a₀
 
 /-- **`delta_quick`'s verdicts** are `quick_defeq`'s. -/
-theorem deltaQuick_refinesE (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hq : QuickDefeqE p n)
+theorem deltaQuick_refinesE (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hq : QuickDefeqWE p n)
     (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :

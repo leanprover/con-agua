@@ -6,7 +6,7 @@ import ConAgua.Arena.WhnfM2CRefine5
 # `major_to_ctor`'s verdict claims (lane `verdicts-b`, helper `k2`)
 
 No verdict site of its own: the claims are the `infer_io`, `whnf` and `defeq` slots'
-(`KnotUpToE`) and `proof_irrel`'s (`ProofIrrelE`), through `m2c_pre`, `m2c_check` and the arms
+(`KnotUpToE`) and `proof_irrel`'s (`ProofIrrelWE`), through `m2c_pre`, `m2c_check` and the arms
 (`majorToCtorE_of`: `MajorToCtorE`).
 -/
 
@@ -26,7 +26,7 @@ theorem whnfM2CE_nv : ∀ f ∈ ["get_app_fn", "m2c_const_view", "ls_node", "fab
   decide +kernel
 
 /-- `proof_irrel`'s error claim at fuel `N + 1` (the premises of `ProofIrrelOKM`). -/
-def ProofIrrelE (p : Prog) : Prop :=
+def ProofIrrelWE (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
@@ -141,7 +141,7 @@ end checkErr
 
 section check
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hnv : closedNV p L.Checker.nvFns = true)
-  (hPI : ProofIrrelE p)
+  (hPI : ProofIrrelWE p)
 include hp hc hnv hPI
 
 /-- **`m2c_check`'s verdicts** are the slots' and `proof_irrel`'s. -/
@@ -243,7 +243,7 @@ end kErr
 
 section karm
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
-  (hE : ErecKeptKnot p) (hnv : closedNV p L.Checker.nvFns = true) (hPI : ProofIrrelE p)
+  (hE : ErecKeptKnot p) (hnv : closedNV p L.Checker.nvFns = true) (hPI : ProofIrrelWE p)
 include hp hc hpi hnv hPI
 
 /-- **`m2c_k2`'s verdicts** are `m2c_check`'s. -/
@@ -499,7 +499,7 @@ end andErr
 section andarm
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
   (hE : ErecKeptKnot p) (hcc : ProjCallees p) (hnv : closedNV p L.Checker.nvFns = true)
-  (hPI : ProofIrrelE p)
+  (hPI : ProofIrrelWE p)
 include hp hc hpi hnv hPI
 
 /-- **`m2c_and2`'s verdicts** are `m2c_check`'s. -/
@@ -750,7 +750,7 @@ end andarm
 section top
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
   (hE : ErecKeptKnot p) (hcc : ProjCallees p) (hnv : closedNV p L.Checker.nvFns = true)
-  (hPI : ProofIrrelE p)
+  (hPI : ProofIrrelWE p)
 include hp hc hpi hE hcc hnv hPI
 
 /-- **`m2c_arms`'s verdicts** are the arm's. -/
