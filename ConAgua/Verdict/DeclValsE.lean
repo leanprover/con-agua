@@ -46,6 +46,7 @@ l_model checkOpaqueVal_specE (p : Prog)
 stubs by `CoreStubsE`. -/
 theorem ccvE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
+    (hUL : UceLookups p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {q : Word} {cv : IConstantVal} {e : Err}
     (hc : callE p n "check_constant_val" [vis, q] m = .error e) (hS : StageT dn vis fe m a)
@@ -69,7 +70,7 @@ theorem ccvE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF 
   cases h1 : callE p n "install_header" [vis, q] m with
   | error e1 =>
     rw [h1, checkConstantValE.k_install_header.eq_1] at hW; cases hW
-    exact ErrClaim.bind_left (ihE_okT hp.ih hap hkp hnv h1 hS hqd hqb hlps hCr)
+    exact ErrClaim.bind_left (ihE_okT hp.ih hap hkp hnv ⟨hUL, strLitSupported_core p hq.knot.str⟩ h1 hS hqd hqb hlps hCr)
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, checkConstantValE.k_install_header.eq_2] at hW

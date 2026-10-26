@@ -753,12 +753,16 @@ theorem um_callE {p : Prog} (hv : p.lookup "e_view" = some eView)
 /-! ## `unresolved_consts_error` -/
 
 /-- The lookups of `unresolved_consts_error` and its callees. -/
-structure UceProg (p : Prog) : Prop where
+structure UceLookups (p : Prog) : Prop where
   uce : p.lookup "unresolved_consts_error" = some unresolvedConstsErrL
   view : p.lookup "e_view" = some eView
   hsl : p.lookup "has_str_lit_go" = some hasStrLitGoL
   um : p.lookup "ue_mentions_go" = some ueMentionsGoL
   pin : p.lookup "pin_at" = some pinAtL
+
+/-- `unresolved_consts_error`'s program: the lookups and `str_lit_supported`'s refinement
+(`strLitSupported_core`, from a `StrLitProg`). -/
+structure UceProg (p : Prog) : Prop extends UceLookups p where
   sup : StrLitSupportedOK p
 
 /-- The callees of `unresolved_consts_error` outside the verdict closure. -/

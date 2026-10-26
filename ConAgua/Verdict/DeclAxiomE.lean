@@ -32,7 +32,7 @@ variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : A
 /-- **`check_decl_axiom`'s error claim under `StageT`.** -/
 theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hap : ApdF p)
     (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
-    (hdn : DnInj dn) (hQd : QuotDn dn) (cv : IConstantVal) :
+    (hUL : UceLookups p) (hdn : DnInj dn) (hQd : QuotDn dn) (cv : IConstantVal) :
     ArmSpecE pins dn ds p "check_decl_axiom" (.axiomDecl cv) := by
   unfold ArmSpecE
   intro n hn m a vis fe pend i hi hd hok hR hS hF hden _ hCr e hc
@@ -169,7 +169,7 @@ theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (h
     cases h3 : callE p n "check_constant_val" [vis, q + 1] s1.mem with
     | error e3 =>
       rw [h3, checkDeclAxiomE.k_check_constant_val.none] at hW; cases hW
-      exact ErrClaim.bind_left (ccvE_okT hq hX.val hap hkp hnv hcE hn' h3 hT1 hcv1' (by omega)
+      exact ErrClaim.bind_left (ccvE_okT hq hX.val hap hkp hnv hcE hUL hn' h3 hT1 hcv1' (by omega)
         (denoteCV_lps hcvd) hCr1)
     | ok q3 =>
     obtain ⟨r3, m3⟩ := q3

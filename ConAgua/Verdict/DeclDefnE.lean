@@ -59,8 +59,8 @@ variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : A
 theorem checkDeclDefn_errT {p : Prog} (hA : ArmProg p) (hV : ValProg p)
     (hG : DefnProgT p pins) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p) (hivE : IvgE p)
-    (hNG : NatGateSpecE p) (hDG : DivGateSpecE p pins) (hdn : DnInj dn)
+    (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p) (hUL : UceLookups p)
+    (hivE : IvgE p) (hNG : NatGateSpecE p) (hDG : DivGateSpecE p pins) (hdn : DnInj dn)
     (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint) :
     ArmSpecE pins dn ds p "check_decl_defn" (.defnDecl cv v hh) := by
   unfold ArmSpecE
@@ -117,7 +117,7 @@ theorem checkDeclDefn_errT {p : Prog} (hA : ArmProg p) (hV : ValProg p)
   cases h2 : callE p n "check_constant_val" [vis, q + 1] s1.mem with
   | error e2 =>
     rw [h2, checkDeclDefnE.k_check_constant_val.none] at hW; cases hW
-    exact ErrClaim.bind_left (ccvE_okT hq hV hap hkp hnv hcE hn' h2 hS1 (by rw [hq1]; exact hcv1)
+    exact ErrClaim.bind_left (ccvE_okT hq hV hap hkp hnv hcE hUL hn' h2 hS1 (by rw [hq1]; exact hcv1)
       (by omega) (denoteCV_lps hcvd) hCr1)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
