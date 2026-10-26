@@ -2,6 +2,8 @@ import ConAgua.Verdict.WhnfNatE
 import ConAgua.Verdict.WhnfProjE
 import ConAgua.Verdict.WhnfIotaRecE
 import ConAgua.Verdict.WhnfPrepE
+import ConAgua.Verdict.WhnfCertsE
+import ConAgua.Verdict.WhnfIdxE
 
 /-!
 # The `whnf` family's part of the error knot (lane `verdicts-b`, helper `k2`)
@@ -17,12 +19,11 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The error claims the slot bodies still take as hypotheses. -/
+/-- The error claims the slot bodies still take as hypotheses: `major_to_ctor`'s (this family, not
+yet proved) and `defeq_list`'s (the `defeq` family's). -/
 structure WhnfCalleesE (p : Prog) : Prop where
   majorToCtor : MajorToCtorE p
-  iotaRecCmp : IotaRecCmpE p
-  iotaCertsFull : IotaCertsFullE p
-  iotaIndexOk : IotaIndexOkE p
+  defeqList : DefeqListE p
 
 section knot
 variable {p : Prog} (hq : KnotAllProg p) (hnv : closedNV p L.Checker.nvFns = true)
@@ -39,7 +40,10 @@ include hq hnv hE in
 theorem KnotAllProg.iotaRecFireE : IotaRecFireE p :=
   iotaRecFireE_of p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl) hnv
-    hE.iotaRecCmp hE.iotaCertsFull hE.iotaIndexOk
+    (iotaRecCmpE_of p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
+      (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) hnv hE.defeqList)
+    (iotaCertsFullE_of p hq.iotaRec.toIotaProg4 (KnotAllProg.whnfC hq).instList hnv)
+    (iotaIndexOkE_of p hq.iotaRec.toIotaProg' (KnotAllProg.iotaC hq).inst1 hnv hE.defeqList)
 
 include hq hnv hE in
 theorem KnotAllProg.iotaRecAtE : IotaRecAtE p :=
