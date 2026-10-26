@@ -103,7 +103,7 @@ theorem tagWord {m : Mem} {q : Word} {ci : IConstantInfo} {dn : NIdx → Option 
 theorem ciCv_decodes {m : Mem} {q : Word} {ci : IConstantInfo} {cv : IConstantVal}
     {dn : NIdx → Option ConLeche.Name} (h : decCI (erecP m) dn q.toNat = some ci)
     (hcv : ci.toConstantVal = cv) : decCV (erecP m) (q.toNat + 1) = some cv :=
-  hcv ▸ decCI_cv h
+  hcv ▸ ciD_cv h
 
 structure NatLitProg (p : Prog) : Prop extends NatCvProg p where
   lNatIndOk : p.lookup "nat_ind_ok" = some natIndOkL

@@ -597,7 +597,7 @@ theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x :
 
 /-- **A decoded record's constant value sits at `p + 1`** (every kind holds it inline, the twin's
 pure `toConstantVal`). -/
-theorem decCI_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
+theorem ciD_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
     (h : decCI a dn p = some x) : decCV a (p + 1) = some x.toConstantVal := by
   obtain ⟨_, _, hx⟩ := ciD h
   rcases hx with ⟨-, cv, hcv, rfl⟩ | ⟨-, cv, -, -, hcv, -, -, rfl⟩ | ⟨-, cv, hcv, rfl⟩ |

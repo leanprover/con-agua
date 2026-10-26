@@ -75,7 +75,7 @@ theorem ctc_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m
     decCV (erecP m) (x + 1).toNat = some ci.toConstantVal := by
   have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
   have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
-  have hcv := decCI_cv hci
+  have hcv := ciD_cv hci
   obtain ⟨w, hw, -⟩ := decCV_name hcv
   rw [toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw]; exact hcv
 

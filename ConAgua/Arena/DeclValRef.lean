@@ -83,7 +83,7 @@ theorem decls_decCI_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {
   all_goals (try simp only [Option.bind_eq_some_iff, Option.some.injEq] at h)
   all_goals grind
 
-theorem decCI_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
+theorem decCI_cvTA {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
     {ci : IConstantInfo} {cv : IConstantVal}
     (h : decCI a dn q = some ci) (hk : ci = .thmInfo cv ∨ ci = .axiomInfo cv) :
     decCV a (q + 1) = some cv := by
