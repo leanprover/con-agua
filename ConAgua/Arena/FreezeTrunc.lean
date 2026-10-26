@@ -70,16 +70,6 @@ theorem IWOK.trunc {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (truncFrozen m) := 
   refine ⟨h1, ?_, h3, by omega, h5⟩
   simp only [erecTop] at he ⊢; omega
 
-theorem SliceR.trunc {m : Mem} {o l : Word} {hs : List EIdx} (h : L.Rom.SliceR m o l hs) :
-    L.Rom.SliceR (truncFrozen m) o l hs := by
-  obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨by rw [erecTop_trunc]; exact h1, h2, fun i hi => ?_⟩
-  rw [rdW_erec_trunc m]
-  · exact h3 i hi
-  · have := erecTop m; have := L.Rom.top_lt m
-    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
-    omega
-
 theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m ips) :
     L.Rom.PinSetsR (truncFrozen m) ips := by
   obtain ⟨h1, h2, h3⟩ := h
@@ -88,17 +78,10 @@ theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m
   refine ⟨by rw [hc]; exact h1, by rw [hc, erecTop_trunc]; exact h2, fun k hk => ?_⟩
   rw [hc, rdW_erec_trunc m (by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; omega)]
-  obtain ⟨p1, p2, p3⟩ := h3 k hk
-  generalize rdW (m.arr64 EREC) (rdW (m.arr64 CTL) 150 + UInt64.ofNat k) = r at p1 p2 p3 ⊢
-  refine ⟨by rw [erecTop_trunc]; exact p1, SliceR.trunc p2, fun j hj => ?_⟩
-  have q := p3 j hj
-  simp only [L.Rom.HdrR] at q ⊢
-  have e2 : (2 * UInt64.ofNat j).toNat = 2 * j := by
-    rw [UInt64.toNat_mul, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
-    simp; omega
-  rw [rdW_erec_trunc m (by rw [UInt64.toNat_add, UInt64.toNat_add, e2]; simp; omega),
-    rdW_erec_trunc m (by rw [UInt64.toNat_add, UInt64.toNat_add, e2]; simp; omega)]
-  exact SliceR.trunc q
+  refine L.Rom.PinSetR.keep (h3 k hk) ⟨Nat.le_of_eq (erecTop_trunc m).symm, fun i hi => ?_⟩
+  rw [truncFrozen_erec]
+  simp only [Array.getElem?_extract, Nat.zero_add]
+  by_cases h2 : i < (m.arr64 EREC).size <;> simp [hi, h2, Nat.lt_min]
 
 /-! ## The pending checks -/
 
