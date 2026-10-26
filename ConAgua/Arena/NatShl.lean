@@ -225,6 +225,51 @@ theorem shlZero_step_spec (n : Nat) (s₀ : St) (h : ShlZeroInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) shlZero ⦃fun r s' => ShlZeroPost Pg C s₀ r s'; ⊤⦄ :=
   Triple.step_exec (shlZero_spec p Pg C (n + 1) s₀ h)
 
+/-- One step of the shift loop, in the shape of `shlLoop_spec`'s arithmetic goal (applied, not
+E-matched: `grind` alone takes minutes here, chaining `pv_succ`/`pv_set_succ`/`wt_*` instances). -/
+theorem shl_step_goal (m : Mem) (Pg : Array Word) (T T11 T12 o w i b c : Word)
+    (h11 : T11 = T >>> 40) (h12 : T12 = T &&& 1099511627775)
+    (hT : T.toNat < 2 ^ 41) (hs : (m.arr64 (tierA 0 T11)).size ≤ 2 ^ 40)
+    (hst : (T12 + (w + i)).toNat < (m.arr64 (tierA 0 T11)).size)
+    (hk : T12.toNat + w.toNat + i.toNat < 2 ^ 40)
+    (hag : Agree (vpool m) Pg T.toNat) (hoi : o.toNat + i.toNat < T.toNat)
+    (hwi : T.toNat + w.toNat + i.toNat < 2 ^ 41) (hi1 : i.toNat + 1 < 2 ^ 64)
+    (hPg : Pg.size = 2 ^ 41) (hb : b.toNat < 64) (hc : c.toNat < sh b.toNat)
+    (ih : pv (vpool m) T.toNat (w.toNat + i.toNat) + c.toNat * (wt w.toNat * wt i.toNat) =
+      pv Pg o.toNat i.toNat * sh b.toNat * wt w.toNat)
+    (hld : ((o + i) &&& 1099511627775).toNat < (m.arr64 (tierA 0 ((o + i) >>> 40))).size) :
+    pv (vpool (m.set64 (tierA 0 T11) (T12 + (w + i))
+        ((m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] <<< b ||| c)))
+        T.toNat (w.toNat + (i + 1).toNat) +
+      ((m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] >>> 1 >>> (63 - b)).toNat *
+        (wt w.toNat * wt (i + 1).toNat) =
+    pv Pg o.toNat (i + 1).toNat * sh b.toNat * wt w.toNat := by
+  subst h11 h12
+  have hwi' : (w + i).toNat = w.toNat + i.toNat := by
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have hi' : (i + 1).toNat = i.toNat + 1 := by
+    rw [UInt64.toNat_add, UInt64.toNat_one]; exact Nat.mod_eq_of_lt (by omega)
+  have hoi' : (o + i).toNat = o.toNat + i.toNat := by
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have hTwi : (T + (w + i)).toNat = T.toNat + (w.toNat + i.toNat) := by
+    rw [UInt64.toNat_add, hwi']; exact Nat.mod_eq_of_lt (by omega)
+  have hvs := vpool_size m
+  have ex : (m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] = Pg[o.toNat + i.toNat] := by
+    rw [vpool_ld m (o + i) hld (by omega)]
+    simp only [hoi']
+    exact Agree.get _ _ _ _ hag hoi (by omega) (by omega)
+  rw [ex, vpool_stidx m T (w + i) _ hT hst hs (by omega), hTwi, hi']
+  have hsp := shl_split' Pg[o.toNat + i.toNat] c b hb hc
+  rw [pv_set_succ (vpool m) T.toNat (w.toNat + i.toNat) (w.toNat + (i.toNat + 1)) _ _ (by omega) rfl
+    (by omega), pv_succ Pg o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) rfl rfl (by omega),
+    wt_add w.toNat i.toNat (w.toNat + i.toNat) rfl, wt_succ i.toNat (i.toNat + 1) rfl]
+  generalize pv (vpool m) T.toNat (w.toNat + i.toNat) = A at *
+  generalize pv Pg o.toNat i.toNat = B at *
+  generalize wt w.toNat = W at *
+  generalize wt i.toNat = I at *
+  generalize sh b.toNat = S at *
+  grind
+
 set_option maxHeartbeats 2000000 in
 theorem shlLoop_spec (n : Nat) (s₀ : St) (h : ShlInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ exec p n shlLoop ⦃fun r s' => ShlPost Pg C s₀ r s'; ⊤⦄ := by
@@ -241,13 +286,52 @@ theorem shlLoop_spec (n : Nat) (s₀ : St) (h : ShlInv Pg C s₀) :
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind]
+    all_goals first
+      | (with_reducible apply shl_step_goal <;> grind)
+      | grind (splits := 40) [arena_grind, lang_grind]
 
 theorem shlLoop_step_spec (n : Nat) (s₀ : St) (h : ShlInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) shlLoop ⦃fun r s' => ShlPost Pg C s₀ r s'; ⊤⦄ :=
   Triple.step_exec (shlLoop_spec p Pg C (n + 1) s₀ h)
 
 end shl
+
+/-- The value `nat_shl` returns, in the shape of `natShl_spec`'s goal: the loop's digit equation
+(times `2^k = sh s * wt w`), the last carry stored at `top + (w + la)`, `nat_trim`, and the store
+of the new top into `CTL`. -/
+theorem shl_result_goal (m m0 : Mem) (T11 T12 w L c r top v oa la ob lb : Word)
+    (h11 : T11 = top >>> 40) (h12 : T12 = top &&& 1099511627775)
+    (hT : top.toNat < 2 ^ 41) (hs : (m.arr64 (tierA 0 T11)).size ≤ 2 ^ 40)
+    (hst : (T12 + (w + L)).toNat < (m.arr64 (tierA 0 T11)).size)
+    (hk : T12.toNat + w.toNat + L.toNat < 2 ^ 40)
+    (hwl : top.toNat + w.toNat + L.toNat < 2 ^ 41) (hL : L = la)
+    (htrim : pv (vpool (m.set64 (tierA 0 T11) (T12 + (w + L)) c)) top.toNat r.toNat =
+      pv (vpool (m.set64 (tierA 0 T11) (T12 + (w + L)) c)) top.toNat (w + L + 1).toNat)
+    (ih : pv (vpool m) top.toNat (w.toNat + L.toNat) + c.toNat * (wt w.toNat * wt L.toNat) =
+      pv (vpool m0) oa.toNat la.toNat * 2 ^ pv (vpool m0) ob.toNat lb.toNat) :
+    pv (vpool ((m.set64 (tierA 0 T11) (T12 + (w + L)) c).set64 1 0 v)) top.toNat r.toNat =
+      pv (vpool m0) oa.toNat la.toNat * 2 ^ pv (vpool m0) ob.toNat lb.toNat := by
+  subst h11 h12 hL
+  have hwl' : (w + L).toNat = w.toNat + L.toNat := by
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have hwl1 : (w + L + 1).toNat = w.toNat + L.toNat + 1 := by
+    rw [UInt64.toNat_add, hwl', UInt64.toNat_one]; exact Nat.mod_eq_of_lt (by omega)
+  have hTwl : (top + (w + L)).toNat = top.toNat + (w.toNat + L.toNat) := by
+    rw [UInt64.toNat_add, hwl']; exact Nat.mod_eq_of_lt (by omega)
+  have hvs := vpool_size m
+  rw [vpool_set64_ne _ 1 0 v (by decide), htrim, hwl1,
+    vpool_stidx m top (w + L) c hT hst hs (by omega), hTwl,
+    pv_set_succ (vpool m) top.toNat (w.toNat + L.toNat) (w.toNat + L.toNat + 1) _ _ rfl rfl (by omega),
+    wt_add w.toNat L.toNat (w.toNat + L.toNat) rfl]
+  generalize pv (vpool m) top.toNat (w.toNat + L.toNat) = A at *
+  generalize pv (vpool m0) oa.toNat L.toNat = B at *
+  generalize wt w.toNat = W at *
+  generalize wt L.toNat = I at *
+  generalize 2 ^ pv (vpool m0) ob.toNat lb.toNat = S at *
+  grind
+
+theorem shr6_zero : (0 : Word) >>> 6 = 0 := rfl
+theorem and63_zero : (0 : Word) &&& 63 = 0 := rfl
 
 section shlFn
 variable (p : Prog) (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_shl" = some natShl)
@@ -289,8 +373,14 @@ theorem natShl_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
       Nat.reduceEqDiff, UInt64.toNat_zero] at *)
-    -- One `grind` per goal (no `and_intros`: 218 goals re-preprocess the same context).
-    all_goals grind (splits := 40) [arena_grind, lang_grind, natop_grind]
+    -- One `grind` per goal (no `and_intros`: 218 goals re-preprocess the same context). The
+    -- result's value goes through `shl_result_goal` (`grind` alone: minutes per goal).
+    all_goals first
+      | (with_reducible apply shl_result_goal
+         all_goals (try simp only [shr6_zero, and63_zero, UInt64.toNat_zero, wt_zero, sh_zero,
+           pv_zero] at *)
+         all_goals grind (splits := 40) [arena_grind, lang_grind, natop_grind])
+      | grind (splits := 40) [arena_grind, lang_grind, natop_grind]
 
 end shlFn
 
