@@ -449,6 +449,9 @@ theorem callE_frontAll {g : FnName} (hg : L.Checker.inFront g = true) (n : Nat) 
     (fun f hf => L.Checker.checkerProg_frontAgree f ((L.Checker.inFront_iff f).1 hf))
     L.Checker.checkerProg_frontClosed n hg]
 
+theorem NVCls.mono {p : Prog} {fs gs : List FnName} (h : NVCls p fs) (hs : ∀ g ∈ gs, g ∈ fs) :
+    NVCls p gs := fun g hg => h g (hs g hg)
+
 /-- The frontend's callees outside the verdict closure. -/
 def frontNV : List FnName := ["ind_fields", "install_ind_d", "rec_decl_line", "apply_rec",
   "apply_expr", "rec_line_loop", "rec_expr_loop", "scan_line", "skip_ws", "front_init", "decl_cv",
@@ -469,5 +472,106 @@ theorem frontAll_nvD : ApplyDeclNV frontAllProg := by
   refine frontAll_nvcls f ?_ n args m e h
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
   rcases hf with rfl | rfl | rfl <;> decide
+
+end L.Front
+
+namespace L.Front
+
+section loop
+variable (D : Array IDeclaration) (b : ByteArray) (h64 : System.Platform.numBits = 64)
+  (hsize : b.size < 2 ^ 63) {X : StateD → AState → Prop}
+  (hV : L.Front.Ind.ValidateClaim frontAllProg X) (hXT : ∀ a st, TwinOK a st → X (st.pre D) a)
+  (hSL : SafeLink b)
+include h64 hsize hV hXT hSL
+
+/-- One line's error claim at `frontAllProg`, under the driver's invariant. -/
+theorem frontLineE_claim_all (n : Nat) (m : Mem) (a : AState) (st : StateD)
+    (hI : FrontInvOK D b m a st) (i : USize) (hi : i.toNat ≤ b.size) (e : Err)
+    (he : frontLineE frontAllProg n m i.toUInt64 = .error e) (hk : e.cls ≠ 0) :
+    ∃ r q, scanLineFwd b i = .ok r q ∧ VerdictClaimR (applyLine st r) a e := by
+  obtain ⟨⟨hm, hA, hD, hT, -⟩, -, -⟩ := hI
+  obtain ⟨r, q, hs, hc⟩ := frontLineE_claim frontAllProg frontAllProg_scan frontAllProg_indFields
+    frontAllProg_decl frontAllProg_dfields frontAllProg_indLine rfl rfl hV
+    (frontAll_nvcls.mono (by decide))
+    frontAll_nvD h64 hsize hSL hm hA hD hT.1 (hXT a st hT) i hi n e he hk
+  exact ⟨r, q, hs, claimR_of_pre D hc⟩
+
+omit h64 hsize hV hXT hSL in
+theorem twinFailsV_of_run_eq {α β : Type} {T T' : AM (Except (ConRon.Arena.CheckError × α) β)}
+    {a a' : AState} {c : Word} (h : T.run a = T'.run a') (h' : TwinFailsV T' a' c) : TwinFailsV T a c := by
+  rcases h' with ⟨ce, hce, hc⟩ | ⟨ce, i, a'', hce, hc⟩
+  · exact .inl ⟨ce, h.trans hce, hc⟩
+  · exact .inr ⟨ce, i, a'', h.trans hce, hc⟩
+
+/-- **The driver's loop**: a failing run (class `≠ 0`) from position `i`, under the driver's
+invariant, ends the twin's `finishFrom` from `i` with that class: the lines before ran ok
+(`lineKW_step_ok`, `finishFrom_next`), the failing one is `front_line`'s claim
+(`finishFrom_fail`). -/
+theorem loop1_claim : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD) (a : AState)
+    (lineNo : Nat) (e : Err), FrontInvOK D b m a st →
+    frontRunE.loop1 frontAllProg n m i.toUInt64 ln = .error e → e.cls ≠ 0 →
+    TwinFailsV (finishFrom st b i lineNo) a e.cls := by
+  intro n
+  induction n with
+  | zero =>
+    intro i m ln st a lineNo e _ he hk
+    simp [frontRunE.loop1] at he
+    subst he; exact absurd rfl hk
+  | succ n ih =>
+  intro i m ln st a lineNo e hI he hk
+  have hm : m.arr8 IN = b.data := hI.1.1
+  by_cases hlt : i.toUInt64 < m.len8 IN0
+  rotate_left
+  · rw [frontRunE.loop1.arm2 _ _ _ _ _ hlt] at he; cases he
+  rw [frontRunE.loop1.arm1 _ _ _ _ _ hlt] at he
+  have hlt' : i.toUInt64 < UInt64.ofNat b.data.size := by
+    have : m.len8 IN0 = UInt64.ofNat b.data.size := by
+      show UInt64.ofNat (m.arr8 IN).size = _; rw [hm]
+    rw [← this]; exact hlt
+  have hi : i < b.usize := (ConAgua.Scan.RecordsLink.lt_usize_iff b h64 hsize i).mpr hlt'
+  have hiN : i.toNat ≤ b.size := by
+    have := ConLeche.Frontend.usizeInBounds b i hi; omega
+  cases h1 : callE frontAllProg n "front_line" [i.toUInt64] m with
+  | error e1 =>
+    rw [h1, frontRunE.k_front_line.none] at he; cases he
+    have hE := triple_of_callE_err (frontLine_specE frontAllProg rfl n ⟨m, Locals.init []⟩ _) h1
+      (Err.code_ne_of_cls hk)
+    obtain ⟨r, q, hs, hc⟩ := frontLineE_claim_all D b h64 hsize hV hXT hSL n m a st hI i hiN e hE hk
+    exact finishFrom_fail st b i lineNo a r q hi hs e.cls (hc hk)
+  | ok q1 =>
+  obtain ⟨r1, m₁⟩ := q1
+  rw [h1] at he
+  have hK := triple_of_callE (frontLineK_spec frontAllProg frontAllProg_scan frontAllProg_front rfl
+      rfl rfl rfl rfl rfl rfl frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl
+      b.data hsize (fun m => ∃ a st, FrontInvOK D b m a st)
+      (fun m ⟨_, _, hI⟩ => ⟨hI.1.2.1.1.lit.1.2.2.1, hI.1.2.1.1.lit.1.2.2.2.1⟩)
+      (inv_step frontAllProg (FrontInvOK D b) b h64 hsize
+        (fun m m' i ok nx st a hI hi h hok => lineKW_step_ok D b h64 hsize frontAllProg
+          frontAllProg_indFields frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine
+          m m' i ok nx st a hI hi h hok)) n ⟨m, Locals.init []⟩ i.toUInt64 hm ⟨a, st, hI⟩ hlt') h1
+  obtain ⟨s1, hs1, hK1, -, -, -⟩ := hK
+  rw [hs1] at hK1
+  by_cases h0 : r1.headD 0 = 0
+  · rw [frontRunE.k_front_line.arm1 _ _ _ _ _ _ h0] at he; cases he
+  by_cases hnx : r1.tail.headD 0 = 0
+  · rw [frontRunE.k_front_line.arm2 _ _ _ _ _ _ h0 hnx] at he; cases he
+  by_cases hle : r1.tail.headD 0 ≤ i.toUInt64
+  · rw [frontRunE.k_front_line.arm3 _ _ _ _ _ _ h0 hnx hle] at he; cases he
+  rw [frontRunE.k_front_line.arm4 _ _ _ _ _ _ h0 hnx hle] at he
+  obtain ⟨r, q, st', hs, hq, hok', hres, hInv⟩ :=
+    lineKW_step_ok D b h64 hsize frontAllProg frontAllProg_indFields frontAllProg_indApply
+      frontAllProg_indInstall frontAllProg_indLine m m₁ i _ _ st a hI hi hK1 h0
+  have hrun := AM.run_of_ok _ _ hok'
+  rw [hres] at hrun
+  have hq0 : q ≠ 0 := by
+    intro h0'; apply hnx; rw [← hq, h0']; rfl
+  have hx : i.toUInt64 < r1.tail.headD 0 := UInt64.not_le.mp hle
+  have hiq : i < q := by
+    rw [ConAgua.Scan.lt_toUInt64_iff, hq]; exact hx
+  refine twinFailsV_of_run_eq (finishFrom_next st b i lineNo a r q st' _ hi hs hq0 hiq hrun) ?_
+  rw [← hq] at he
+  exact ih q m₁ (ln + 1) st' _ (lineNo + 1) e hInv he hk
+
+end loop
 
 end L.Front
