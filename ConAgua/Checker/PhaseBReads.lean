@@ -7,7 +7,7 @@ import ConAgua.Arena.Globals
 # Phase B's read set in the checker's program (lane parmode)
 
 `phaseBFns`: every function `check_pending_go` (phase B's loop) reaches in `checkerProg`, as a
-literal computed from the program's call graph (577 names; `scripts/phaseb_fns.py` regenerates
+literal computed from the program's call graph (580 names; `scripts/phaseb_fns.py` regenerates
 it, and the check below fails if a callee is missing). None of them names the frozen buffer's
 arrays `OUT`, `HDRF`, `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`,
 so by `L.invoke_agree` (`L/Agree.lean`) a worker's run of `check_pending_go` is the run on any
@@ -44,14 +44,14 @@ def phaseBFns : List FnName :=
    "field_sort_zero", "find_proj", "find_rule", "find_table", "fire_ok", "fl_clear", "fl_find",
    "fl_go", "fl_node", "fl_put", "flush_caches", "fm_clear", "fm_find", "fm_put", "forall_find",
    "forall_push", "fr_go", "fr_memo", "fr_node", "fvar_find", "fvar_push", "gcd_step",
-   "get_app_args", "get_app_fn", "get_app_spine", "has_fvar", "has_fvar_fast", "head_and_args",
-   "head_hint", "head_is_proj", "head_proof_const", "head_proof_proj", "head_proof_pw",
-   "head_type_const", "head_type_pw", "head_type_res", "hint_lt", "if_clear", "if_find", "if_put",
-   "il_app", "il_bvar", "il_forall", "il_go", "il_lam", "il_let", "il_proj", "ilg_app",
-   "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear", "ilm_find", "ilm_put",
-   "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find", "ilpl_put", "ilpls_clear",
-   "ilpls_find", "ilpls_put", "imax_find", "imax_push", "in_clear", "in_find", "in_put",
-   "ind_caps_check", "infer", "infer_app", "infer_app_io", "infer_body", "infer_body_io",
+   "get_app_args", "get_app_fn", "get_app_spine", "has_fvar", "has_fvar_fast", "has_str_lit_go",
+   "head_and_args", "head_hint", "head_is_proj", "head_proof_const", "head_proof_proj",
+   "head_proof_pw", "head_type_const", "head_type_pw", "head_type_res", "hint_lt", "if_clear",
+   "if_find", "if_put", "il_app", "il_bvar", "il_forall", "il_go", "il_lam", "il_let", "il_proj",
+   "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear", "ilm_find",
+   "ilm_put", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find", "ilpl_put",
+   "ilpls_clear", "ilpls_find", "ilpls_put", "imax_find", "imax_push", "in_clear", "in_find",
+   "in_put", "ind_caps_check", "infer", "infer_app", "infer_app_io", "infer_body", "infer_body_io",
    "infer_const", "infer_forall", "infer_forall_io", "infer_io", "infer_lam", "infer_lam_io",
    "infer_lam_result", "infer_lams", "infer_lams_leaf", "infer_let", "infer_lit", "infer_pis",
    "infer_pis_leaf", "infer_proj", "infer_proj_at", "infer_spine", "infer_spine_arg",
@@ -107,12 +107,12 @@ def phaseBFns : List FnName :=
    "struct_eta_cert_with", "struct_eta_cert_wtb", "struct_unit_cert", "struct_unit_head",
    "struct_unit_tail", "stuck_app", "stuck_app_cong", "stuck_irrel", "stuck_rest", "stuck_str",
    "sub_borrow", "subst_pw_at", "succ_find", "succ_push", "tbl_ix", "tbl_row_get",
-   "tower_slots_all", "try_unfold_proj_app", "type_sort_pw", "unfold_definition", "unfold_defn_at",
-   "unfoldable_head", "unwrap_id_defs", "unwrap_step", "wc_clear", "wc_find", "wc_put", "wh_clear",
-   "wh_find", "wh_put", "whnf", "whnf_app", "whnf_core", "whnf_core_app", "whnf_core_app2",
-   "whnf_core_loop", "whnf_core_step", "whnf_core_step_proj", "whnf_loop", "whnf_step", "wk_clear",
-   "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node", "ws_put", "wscoped_bfast",
-   "zero_find", "zero_push"]
+   "tower_slots_all", "try_unfold_proj_app", "type_sort_pw", "ue_mentions_go", "unfold_definition",
+   "unfold_defn_at", "unfoldable_head", "unresolved_consts_error", "unwrap_id_defs", "unwrap_step",
+   "wc_clear", "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put", "whnf", "whnf_app",
+   "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_loop", "whnf_core_step",
+   "whnf_core_step_proj", "whnf_loop", "whnf_step", "wk_clear", "wk_find", "wk_put", "ws_clear",
+   "ws_find", "ws_go", "ws_node", "ws_put", "wscoped_bfast", "zero_find", "zero_push"]
 
 /-- The word arrays phase B may name: all but the frozen buffer's (`OUT`, `HDRF`, `CTLF`). -/
 def phaseBPa (a : ArrId) : Bool := a != 240 && a != 241 && a != 242

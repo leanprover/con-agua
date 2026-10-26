@@ -172,7 +172,7 @@ theorem cfbE_claim {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
 
 l_model nckE_spec (p : Prog) (hf : p.lookup "nest_cont_key" = some nestContKeyL)
   fns [hf ↦ nckE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW, pos2_getElem_getD] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
 open ConRon.Bridge.Inductives (dCtx dProg dState dCtx_ext dProg_ext dState_ext)
 

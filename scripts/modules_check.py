@@ -26,6 +26,8 @@ def imports(m):
     return set(IMP.findall(open(p, encoding="utf-8", errors="replace").read()))
 
 
+# `X.+` globs: every module under `X`
+listed |= {f for g in listed if g.endswith(".+") for f in files if f.startswith(g[:-1])}
 reach, stack = set(), [m for m in listed if m in files]
 while stack:
     m = stack.pop()

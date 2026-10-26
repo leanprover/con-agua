@@ -43,7 +43,8 @@ def declExtFns : List FnName :=
    "nstr_push",
    -- lane `stubs`: the callees of `intern_ls_iw` and `consts_resolve_ffast`
    "pool_room", "iw_pool", "crf_go", "cr_leaf", "cr_lit_pins", "pin_found", "crm_find", "crm_put",
-   "crm_clear", "is_str_lit"]
+   "crm_clear", "is_str_lit",
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
 
 /-- The call-closed superset: the texts' lists, their open callees' callees and the core. -/
 def declLoopFns : List FnName :=
