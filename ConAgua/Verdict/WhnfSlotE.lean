@@ -31,6 +31,14 @@ theorem ErrClaim.of_run_err {α β : Type} {T : AM α} {T' : AM β} {a a' : ASta
   obtain ⟨ce, hce, hc⟩ := h' hk
   exact ⟨ce, h ce hce, hc⟩
 
+/-- A continuation that passes errors on and fails nowhere else: its error is its argument's. -/
+theorem err_of_k {β γ : Type} {k : Except Err β → Except Err γ}
+    (hk : ∀ q e, k (.ok q) ≠ .error e) (hn : ∀ e, k (.error e) = .error e) {c : Except Err β}
+    {er : Err} (h : k c = .error er) : c = .error er := by
+  cases c with
+  | error e => rw [hn] at h; cases h; rfl
+  | ok q => exact absurd h (hk q er)
+
 /-- A call at fuel `0` claims nothing. -/
 theorem ErrClaim.of_callE_zero {α : Type} {T : AM α} {a : AState} {p : Prog} {f : FnName}
     {vs : List Word} {m : Mem} {e : Err} (h : callE p 0 f vs m = .error e) : ErrClaim T a e := by

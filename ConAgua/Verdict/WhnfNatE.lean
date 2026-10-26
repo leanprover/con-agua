@@ -55,6 +55,23 @@ theorem redWf_fail (c : NIdx) (a b : EIdx) (s s₁ s₂ s₃ s₄ s₅ : AState)
     (redWfT r fe depth c a b).run s = .error (.notImplemented "native Nat computation on literals") := by
   simp only [redWfT, StateT.run_bind, hwf, except_ok_bind, hs, hc, ite_true, hw, hr, hw2, hr2]; rfl
 
+theorem redOp_err_a (c : NIdx) (a b : EIdx) (s : AState) (ce : CheckError)
+    (hw : (r.whnf depth a).run s = .error ce) : (redOpT r depth c a b).run s = .error ce := by
+  simp only [redOpT, StateT.run_bind, hw]; rfl
+
+theorem redOp_err_b (c : NIdx) (a b : EIdx) (s s₁ s₂ : AState) (wa : EIdx) (N : Nat)
+    (hw : (r.whnf depth a).run s = .ok (wa, s₁)) (hr : (rawNatLit? wa).run s₁ = .ok (some N, s₂))
+    (ce : CheckError) (hw2 : (r.whnf depth b).run s₂ = .error ce) :
+    (redOpT r depth c a b).run s = .error ce := by
+  simp only [redOpT, StateT.run_bind, hw, except_ok_bind, hr, hw2]; rfl
+
+theorem redSucc_err (c : NIdx) (b : EIdx) (s s₁ : AState) (m : Mem)
+    (hP : PinsFull m s.pins) (sup : Bool) (hs : (natLitSupported fe).run s = .ok (sup, s₁))
+    (hc : (c == decI (pinW m 4) && sup) = true) (ce : CheckError)
+    (hw : (r.whnf depth b).run s₁ = .error ce) :
+    (redSuccT r fe depth c b).run s = .error ce := by
+  simp only [redSuccT, StateT.run_bind, pinNatSucc_run hP, except_ok_bind, hs, hc, ite_true, hw]; rfl
+
 end redruns
 
 section wf
@@ -204,5 +221,165 @@ theorem callE_reduceNatWf (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   rfl
 
 end wf
+
+section opsucc
+variable (p : Prog) (hp : WhnfDeltaProg' p) (hnv : closedNV p L.Checker.nvFns = true)
+
+include hp hnv in
+/-- **`reduce_nat_op`'s verdicts** are the operands' head normalizations'. -/
+theorem callE_reduceNatOp (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
+    (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
+    (eb mode d c a b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode) (ha : HW a)
+    (hb : HW b) (er : Err)
+    (h : callE p n "reduce_nat_op" [mode, vis, d, c, a, b] s₀.mem = .error er) :
+    ErrClaim (redOpT (coreKnot (decMode mode) fe id F) d.toNat (decI c) (decE a) (decE b)) a₀ er := by
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  cases n with
+  | zero => exact ErrClaim.of_callE_zero h
+  | succ n =>
+  have hW := triple_of_callE_err (reduceNatOp_specE p hp.reduceNatOp (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d c a b) h (Err.code_ne_of_cls hk0)
+  simp only [reduceNatOpE] at hW
+  have hkn : KnotOK p n := hk n (by omega)
+  have hknE : KnotOKE p n := hkE n (by omega)
+  cases h1 : callE p n "whnf" [mode, vis, d, a] s₀.mem with
+  | error e1 =>
+    rw [h1, reduceNatOpE.k_whnf.none] at hW; cases hW
+    exact ErrClaim.of_run_err (fun ce h' => redOp_err_a (ce := ce) (hw := h') ..)
+      (CoreSpecE.of_callE (hknE.whnf F s₀ a₀ dn vis fe MM eb mode d a (by omega) (by omega) hS ha) h1)
+  | ok q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  rw [h1] at hW
+  simp only [reduceNatOpE.k_whnf] at hW
+  obtain ⟨hok1, ⟨M₁, hS₁, -, -⟩, hres1, hrw1⟩ := CoreSpec.of_callW
+    (hkn.whnf F s₀ a₀ dn vis fe MM eb mode d a (by omega) (by omega) hS ha) (callW_of_callE h1)
+  have hrun1 := AM.run_of_ok _ _ hok1
+  rw [hres1] at hrun1
+  generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE a)) a₀ = a₁ at hrun1 hS₁
+  cases h2 : callE p n "raw_nat_lit" [r₁.headD 0] m₁ with
+  | error e2 =>
+    rw [h2, reduceNatOpE.k_raw_nat_lit.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfNatE_nv "raw_nat_lit" (by simp)) h2
+  | ok q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  rw [h2] at hW
+  simp only [reduceNatOpE.k_raw_nat_lit] at hW
+  obtain ⟨hm2, hrun2, -, -⟩ := callW_rawNatLit p hp n ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb _
+    hS₁ hrw1 r₂ m₂ (callW_of_callE h2)
+  subst m₂
+  by_cases hf2 : r₂.headD 0 = 0
+  · rw [if_pos hf2] at hW; cases hW
+  rw [if_neg hf2] at hW
+  have hsome2 : rawDec m₁ r₂ = some (pv (vpool m₁) (r₂.tail.headD 0).toNat
+      (r₂.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf2]
+  rw [hsome2] at hrun2
+  have hSP1 : SlotPre ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode := ⟨hS₁, hS.mode4, hS.eb_mode⟩
+  cases h3 : callE p n "whnf" [mode, vis, d, b] m₁ with
+  | error e3 =>
+    rw [h3, reduceNatOpE.k_whnf_2.none] at hW; cases hW
+    exact ErrClaim.of_run_err (fun ce h' => redOp_err_b (hw := by rw [hrun1]; rfl) (hr := hrun2)
+        (ce := ce) (hw2 := h') ..)
+      (CoreSpecE.of_callE (hknE.whnf F ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode d b (by omega)
+        (by omega) hSP1 hb) h3)
+  | ok q₃ =>
+  obtain ⟨r₃, m₃⟩ := q₃
+  rw [h3] at hW
+  simp only [reduceNatOpE.k_whnf_2] at hW
+  cases h4 : callE p n "raw_nat_lit" [r₃.headD 0] m₃ with
+  | error e4 =>
+    rw [h4, reduceNatOpE.k_raw_nat_lit_2.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfNatE_nv "raw_nat_lit" (by simp)) h4
+  | ok q₄ =>
+  obtain ⟨r₄, m₄⟩ := q₄
+  rw [h4] at hW
+  simp only [reduceNatOpE.k_raw_nat_lit_2] at hW
+  split at hW
+  · cases hW
+  exact ErrClaim.of_callE_nv hnv (whnfNatE_nv "nat_op_result" (by simp))
+    (err_of_k (by intro q e; simp [reduceNatOpE.k_nat_op_result]) (fun _ => rfl) hW)
+
+include hp hnv in
+/-- **`reduce_nat_succ`'s verdicts** are the argument's head normalization's. -/
+theorem callE_reduceNatSucc (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
+    (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
+    (eb mode d c b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode) (hc : HW c) (hb : HW b)
+    (er : Err) (h : callE p n "reduce_nat_succ" [mode, vis, d, c, b] s₀.mem = .error er) :
+    ErrClaim (redSuccT (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decE b)) a₀ er := by
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hC := hS.rel
+  cases n with
+  | zero => exact ErrClaim.of_callE_zero h
+  | succ n =>
+  have hW := triple_of_callE_err (reduceNatSucc_specE p hp.reduceNatSucc (n + 1)
+    ⟨s₀.mem, Locals.init []⟩ mode vis d c b) h (Err.code_ne_of_cls hk0)
+  simp only [reduceNatSuccE] at hW
+  cases h1 : callE p n "nat_lit_supported" [vis] s₀.mem with
+  | error e1 =>
+    rw [h1, reduceNatSuccE.k_nat_lit_supported.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfNatE_nv "nat_lit_supported" (by simp)) h1
+  | ok q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  rw [h1] at hW
+  simp only [reduceNatSuccE.k_nat_lit_supported] at hW
+  obtain ⟨hok1, hS1, hres1, hfr1, -⟩ := callW_natLitSupported p hp n s₀ a₀ dn vis fe MM eb hC r₁ m₁
+    (callW_of_callE h1)
+  cases h2 : callE p n "pin_at" [3] m₁ with
+  | error e2 =>
+    rw [h2, reduceNatSuccE.k_pin_at.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfNatE_nv "pin_at" (by simp)) h2
+  | ok q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  rw [h2] at hW
+  simp only [reduceNatSuccE.k_pin_at] at hW
+  obtain ⟨hm2, -, -, hr₂⟩ := callW_pinAt p hp.pinAt n m₁ 3 r₂ m₂ (callW_of_callE h2)
+  subst m₂
+  simp only [show (3 : Word).toNat = 3 from rfl] at hr₂
+  have hr₂' : r₂.headD 0 = pinW s₀.mem 4 := by rw [hr₂, pinW_const_frame hfr1]
+  have hsup : (natLitSupported fe).run a₀ = .ok (decBool r₁, AM.st (natLitSupported fe) a₀) := by
+    have := AM.run_of_ok _ _ hok1
+    rw [hres1] at this
+    exact this
+  generalize AM.st (natLitSupported fe) a₀ = a₁ at hsup hS1
+  have hcw : HW (pinW s₀.mem 4) := hC.pins.names_lt 3 (by decide)
+  by_cases hcn : c ≠ r₂.headD 0
+  · rw [if_pos hcn] at hW; cases hW
+  rw [if_neg hcn] at hW
+  by_cases hs0 : r₁.headD 0 = 0
+  · rw [if_pos hs0] at hW; cases hW
+  rw [if_neg hs0] at hW
+  have hcond : ((decI c : NIdx) == decI (pinW s₀.mem 4) && decBool r₁) = true := by
+    rw [decI_beq _ _ hc hcw]
+    have h1 : c = pinW s₀.mem 4 := by rw [← hr₂']; simpa using hcn
+    have h2 : decBool r₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hs0
+    rw [h2]; simp [h1]
+  have hSP1 : SlotPre ⟨m₁, Locals.init []⟩ a₁ dn vis fe MM eb mode := ⟨hS1, hS.mode4, hS.eb_mode⟩
+  cases h3 : callE p n "whnf" [mode, vis, d, b] m₁ with
+  | error e3 =>
+    rw [h3, reduceNatSuccE.k_whnf.none] at hW; cases hW
+    exact ErrClaim.of_run_err (fun ce h' => redSucc_err _ _ _ _ _ _ _ _ hC.pins _ hsup hcond ce h')
+      (CoreSpecE.of_callE ((hkE n (by omega)).whnf F ⟨m₁, Locals.init []⟩ a₁ dn vis fe MM eb mode d b
+        (by omega) (by omega) hSP1 hb) h3)
+  | ok q₃ =>
+  obtain ⟨r₃, m₃⟩ := q₃
+  rw [h3] at hW
+  simp only [reduceNatSuccE.k_whnf] at hW
+  cases h4 : callE p n "raw_nat_lit" [r₃.headD 0] m₃ with
+  | error e4 =>
+    rw [h4, reduceNatSuccE.k_raw_nat_lit.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfNatE_nv "raw_nat_lit" (by simp)) h4
+  | ok q₄ =>
+  obtain ⟨r₄, m₄⟩ := q₄
+  rw [h4] at hW
+  simp only [reduceNatSuccE.k_raw_nat_lit] at hW
+  split at hW
+  · cases hW
+  exact ErrClaim.of_callE_nv hnv (whnfNatE_nv "nat_succ_lit" (by simp))
+    (err_of_k (by intro q e; simp [reduceNatSuccE.k_nat_succ_lit]) (fun _ => rfl) hW)
+
+end opsucc
 
 end L.Arena
