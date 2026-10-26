@@ -1,5 +1,5 @@
 import ConAgua.Verdict.WhnfModels6E
-import ConAgua.Verdict.WhnfSlotE
+import ConAgua.Verdict.WhnfPrepE
 import ConAgua.Arena.WhnfM2CRefine5
 
 /-!
@@ -744,5 +744,302 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
         exact ⟨_, _, view_after_noLss (keeps_noLss_andRescueSlots _ _ _ _) (hp5 g0).2.2.1⟩) er hW'
 
 end andarm
+
+/-! ## The dispatch, the family, the head, `major_to_ctor` -/
+
+section top
+variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
+  (hE : ErecKeptKnot p) (hcc : ProjCallees p) (hnv : closedNV p L.Checker.nvFns = true)
+  (hPI : ProofIrrelE p)
+include hp hc hpi hE hcc hnv hPI
+
+/-- **`m2c_arms`'s verdicts** are the arm's. -/
+theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
+    (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (eb mode d ro cvjP T indP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
+    (hT : HW T) (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat)
+    (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState) (M : ModeMaps)
+    (hS : CoreS dn m a vis fe M eb) (hrl : decRule (m.arr64 EREC) ro.toNat = some rl)
+    (hcj : decCI (m.arr64 EREC) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF)) (er : Err)
+    (h : callE p (N + 1) "m2c_arms" [mode, vis, d, ro, cvjP, T, indP, major] m = .error er) :
+    ErrClaim (m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
+      cvT caps (decE major)) a er := by
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (m2cArmsE_spec p hp.arms (N + 1) ⟨m, Locals.init []⟩
+    mode vis d ro cvjP T indP major) h (Err.code_ne_of_cls hk0)
+  simp only [m2cArmsE] at hW
+  have hsz := hS.erec
+  obtain ⟨⟨w0, e0, l0, hctor⟩, ⟨w9, e9, hkk⟩, ⟨w10, e10, heta⟩⟩ := decRule_words _ _ _ hrl
+  obtain ⟨-, ⟨w3, e3, hlp⟩, -, ⟨w5, e5, hnp⟩⟩ := decCI_ctor_words _ dn _ cvj cnP cnF hcj
+  have r0 : rdW (m.arr64 EREC) ro = w0 := by simp only [rdW, e0]; rfl
+  have r9 : rdW (m.arr64 EREC) (ro + 9) = w9 := rdW_rec (k := 9) e9 (by decide) (by omega)
+  have r10 : rdW (m.arr64 EREC) (ro + 10) = w10 := rdW_rec (k := 10) e10 (by decide) (by omega)
+  have r3 : rdW (m.arr64 EREC) (cvjP + 3) = w3 := rdW_rec (k := 3) e3 (by decide) (by omega)
+  have r5 : rdW (m.arr64 EREC) (cvjP + 5) = w5 := rdW_rec (k := 5) e5 (by decide) (by omega)
+  rw [r0, r9, r10, r3, r5] at hW
+  have hk1 : ∀ f vs, m2cArmsE.k_m2c_k p (callE p N f vs m) = .error er → callE p N f vs m = .error er :=
+    fun f vs h => err_of_k (by intro q e; simp [m2cArmsE.k_m2c_k]) (fun _ => rfl) h
+  cases N with
+  | zero =>
+    exfalso
+    split at hW
+    · obtain ⟨e', he', h0⟩ := callE_zero p "m2c_k" [mode, vis, d, T, major, w0, w3, w5] m
+      rw [hk1 _ _ hW] at he'; cases he'; exact hk0 h0
+    split at hW
+    · obtain ⟨e', he', h0⟩ := callE_zero p "m2c_eta" [mode, vis, d, T, indP, major] m
+      rw [hk1 _ _ hW] at he'; cases he'; exact hk0 h0
+    · obtain ⟨e', he', h0⟩ := callE_zero p "m2c_and" [mode, vis, d, T, major, w0, w3, w5] m
+      rw [hk1 _ _ hW] at he'; cases he'; exact hk0 h0
+  | succ N' =>
+  by_cases g9 : w9 ≠ 0
+  · rw [if_pos g9] at hW
+    have hk' : rl.k = true := by rw [hkk]; simpa using g9
+    have : m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
+        cvT caps (decE major) = m2cKT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+          (decI w0) w3.toNat w5.toNat (decI T) (decE major) := by
+      simp only [m2cArmsT, hk', ↓reduceIte, hctor, hlp, hnp]
+    rw [this]
+    exact m2cKE_ok p hp hc hpi hE hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+      (by omega) (by omega) dn vis fe eb mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS er (hk1 _ _ hW)
+  rw [if_neg g9] at hW
+  have hk' : rl.k = false := by rw [hkk]; simpa using g9
+  by_cases g10 : w10 ≠ 0
+  · rw [if_pos g10] at hW
+    have he' : rl.eta = true := by rw [heta]; simpa using g10
+    have : m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
+        cvT caps (decE major) = m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps
+          (decE major) := by
+      simp only [m2cArmsT, hk', he', Bool.false_eq_true, ↓reduceIte]
+    rw [this]
+    exact m2cEtaE_ok p hp hnv N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega)
+      (by omega) dn vis fe eb mode d T indP major hm4 hebm hmaj cvT caps m a M hS er (hk1 _ _ hW)
+  rw [if_neg g10] at hW
+  have he' : rl.eta = false := by rw [heta]; simpa using g10
+  have : m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
+      cvT caps (decE major) = m2cAndT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+        (decI w0) w3.toNat w5.toNat (decI T) (decE major) := by
+    simp only [m2cArmsT, hk', he', Bool.false_eq_true, ↓reduceIte, hctor, hlp, hnp]
+  rw [this]
+  exact m2cAndE_ok p hp hc hpi hE hcc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+    (by omega) (by omega) dn vis fe eb mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS er (hk1 _ _ hW)
+
+/-- **`m2c_ctor`'s verdicts** are `m2c_arms`'s. -/
+theorem m2cCtorE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
+    (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (eb mode d ro cvjP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
+    (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat) (m : Mem) (a : AState)
+    (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (hrl : decRule (m.arr64 EREC) ro.toNat = some rl)
+    (hcj : decCI (m.arr64 EREC) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF)) (er : Err)
+    (h : callE p (N + 1) "m2c_ctor" [mode, vis, d, ro, cvjP, major] m = .error er) :
+    ErrClaim (m2cCtorT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP
+      (decE major)) a er := by
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (m2cCtorE_spec p hp.ctor (N + 1) ⟨m, Locals.init []⟩
+    mode vis d ro cvjP major) h (Err.code_ne_of_cls hk0)
+  simp only [m2cCtorE] at hW
+  have hsz := hS.erec
+  obtain ⟨-, -, ⟨w4, e4, l4, hty⟩, -⟩ := decCI_ctor_words _ dn _ cvj cnP cnF hcj
+  have r4 : rdW (m.arr64 EREC) (cvjP + 4) = w4 := rdW_rec (k := 4) e4 (by decide) (by omega)
+  rw [r4] at hW
+  have hR := hS.arena.1
+  cases c1 : callE p N "pi_result" [w4] m with
+  | error e1 =>
+    rw [c1, m2cCtorE.k_pi_result.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "pi_result" (by simp)) c1
+  | ok q =>
+  obtain ⟨r1, m1⟩ := q
+  rw [c1] at hW
+  simp only [m2cCtorE.k_pi_result] at hW
+  obtain ⟨t1, ht1, hm1, -, hh1, hpr⟩ := triple_of_callE (s₀ := ⟨m, Locals.init []⟩)
+    (piResult_refines' p hp.spine.pires N _ a hR w4 l4) c1
+  have hm1' : m1 = m := ht1.symm.trans hm1
+  rw [hm1'] at hW
+  have hpr' : (piResult coreWalkFuel cvj.type).run a = .ok (decE (r1.headD 0), a) := by
+    rw [hty]; exact hpr
+  cases c2 : callE p N "get_app_fn" [r1.headD 0] m with
+  | error e2 =>
+    rw [c2, m2cCtorE.k_get_app_fn.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "get_app_fn" (by simp)) c2
+  | ok q =>
+  obtain ⟨r2, m2⟩ := q
+  rw [c2] at hW
+  simp only [m2cCtorE.k_get_app_fn] at hW
+  obtain ⟨t2, ht2, hm2, -, hh2, hga⟩ := triple_of_callE (s₀ := ⟨m, Locals.init []⟩)
+    (getAppFn_refines' p hp.spine.fn N _ a hR (r1.headD 0) hh1) c2
+  have hm2' : m2 = m := ht2.symm.trans hm2
+  rw [hm2'] at hW
+  by_cases g2 : r2.headD 0 >>> 28 ≠ 3
+  · rw [if_pos g2] at hW; cases hW
+  rw [if_neg g2] at hW
+  have g2' : r2.headD 0 >>> 28 = 3 := by simpa using g2
+  have ht : ((decE (r2.headD 0)).tag == ETag.const) = true := by
+    rw [decE_const_tag _ hh2]; simpa using g2'
+  cases c3 : callE p N "m2c_const_view" [r2.headD 0] m with
+  | error e3 =>
+    rw [c3, m2cCtorE.k_m2c_const_view.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "m2c_const_view" (by simp)) c3
+  | ok q =>
+  obtain ⟨r3, m3⟩ := q
+  rw [c3] at hW
+  simp only [m2cCtorE.k_m2c_const_view] at hW
+  obtain ⟨t3, ht3, -, hm3, hcv⟩ := triple_of_callE (s₀ := ⟨m, Locals.init []⟩)
+    (m2cConstView_spec p hp.constView N _ (r2.headD 0)) c3
+  have hm3' : m3 = m := ht3.symm.trans hm3
+  rw [hm3'] at hW
+  simp only [cvwW] at hcv
+  obtain ⟨v1, hcv⟩ := of_ite_none hcv
+  obtain ⟨v2, hcv⟩ := of_ite_none hcv
+  have hr3 := (Option.some.inj hcv).symm
+  obtain ⟨hvw, hn32, -⟩ := view_const_f m a hR (r2.headD 0) hh2 ⟨v1, UInt64.not_le.mp v2⟩ g2'
+  have hn0 : tfld m CONST (tierW (r2.headD 0)) (idxW (r2.headD 0)) 0 = r3.headD 0 := by
+    rw [hr3]; rfl
+  rw [hn0] at hvw hn32
+  cases c4 : callE p N "env_find" [r3.headD 0, vis] m with
+  | error e4 =>
+    rw [c4, m2cCtorE.k_env_find.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "env_find" (by simp)) c4
+  | ok q =>
+  obtain ⟨r4, m4⟩ := q
+  rw [c4] at hW
+  simp only [m2cCtorE.k_env_find] at hW
+  obtain ⟨hm4', hfind, hfound⟩ := callW_envFindI p hp.toIotaProg' N m vis _ hS.env hn32 r4 m4
+    (callW_of_callE c4)
+  rw [hm4'] at hW
+  have hview := view_run _ _ _ hvw
+  by_cases g4 : r4.headD 0 = 0
+  · rw [if_pos g4] at hW; cases hW
+  rw [if_neg g4] at hW
+  obtain ⟨ci, hci⟩ := hfound g4
+  have hciE := (erecP_ext m).decCI hci
+  have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
+    rw [hfind]; simp only [decFound, g4, ↓reduceIte]; exact hci
+  obtain ⟨wk, ewk, hind, -⟩ := decCI_kind34 _ dn _ ci hciE
+  have rk : rdW (m.arr64 EREC) (r4.tail.headD 0) = wk := by simp only [rdW, ewk]; rfl
+  rw [rk] at hW
+  by_cases g5 : wk ≠ 3
+  · rw [if_pos g5] at hW; cases hW
+  rw [if_neg g5] at hW
+  obtain ⟨cvT, caps, rfl⟩ := hind.mpr (by simpa using g5)
+  have hW' := err_of_k (by intro q e; simp [m2cCtorE.k_m2c_arms]) (fun _ => rfl) hW
+  cases N with
+  | zero => exact ErrClaim.of_callE_zero hW'
+  | succ N' =>
+  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cArmsE_ok p hp hc hpi hE hcc hnv hPI N' F
+    (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ro cvjP _
+    _ major hm4 hebm hn32 hmaj rl cvj cnP cnF cvT caps m a M hS hrl hcj er hW')
+  simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind']
+  exact h'
+
+/-- **`m2c_head`'s verdicts** are `m2c_ctor`'s. -/
+theorem m2cHeadE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
+    (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (eb mode d ro rc major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
+    (hmaj : HW major) (rules : List IRecRule) (m : Mem) (a : AState) (M : ModeMaps)
+    (hS : CoreS dn m a vis fe M eb) (hr : decRules (m.arr64 EREC) ro.toNat rc.toNat = some rules)
+    (er : Err) (h : callE p (N + 1) "m2c_head" [mode, vis, d, ro, rc, major] m = .error er) :
+    ErrClaim (m2cHeadT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rules
+      (decE major)) a er := by
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (m2cHeadE_spec p hp.head (N + 1) ⟨m, Locals.init []⟩
+    mode vis d ro rc major) h (Err.code_ne_of_cls hk0)
+  simp only [m2cHeadE] at hW
+  cases N with
+  | zero =>
+    obtain ⟨e', he', h0⟩ := callE_zero p "is_ctor_app" [vis, major] m
+    rw [he', m2cHeadE.k_is_ctor_app.none] at hW; cases hW; exact absurd h0 hk0
+  | succ N' =>
+  cases c1 : callE p (N' + 1) "is_ctor_app" [vis, major] m with
+  | error e1 =>
+    rw [c1, m2cHeadE.k_is_ctor_app.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "is_ctor_app" (by simp)) c1
+  | ok q =>
+  obtain ⟨r1, m1⟩ := q
+  rw [c1] at hW
+  simp only [m2cHeadE.k_is_ctor_app] at hW
+  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, -⟩ := CoreSpec.run
+    (isCtorApp_refines p hp.toIotaProg' N' ⟨m, Locals.init []⟩ a dn vis fe M eb major hS hmaj)
+    (callW_of_callE c1)
+  have e1 : m1.arr64 EREC = m.arr64 EREC := hE _ _ _ _ _ _ (by simp) (callW_of_callE c1)
+  by_cases g1 : r1.headD 0 ≠ 0
+  · rw [if_pos g1] at hW; cases hW
+  rw [if_neg g1] at hW
+  rw [decBool_f_m2c (by simpa using g1)] at hrun1
+  have hstep : (m2cHeadT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rules
+      (decE major)).run a = (match rules with
+        | [rl] =>
+          match fe.find? rl.ctor with
+          | some (.ctorInfo cvj cnP _cnF) =>
+            m2cCtorT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP
+              (decE major)
+          | _ => pure (decE major)
+        | _ => pure (decE major)).run (AM.st (isCtorApp fe (decE major)) a) := by
+    simp only [m2cHeadT, StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  obtain ⟨hlen, hget⟩ := decRules_get _ _ _ _ hr
+  by_cases g2 : rc ≠ 1
+  · rw [if_pos g2] at hW; cases hW
+  rw [if_neg g2] at hW
+  have g2' : rc = 1 := by simpa using g2
+  subst g2'
+  obtain ⟨rl, rfl⟩ : ∃ rl, rules = [rl] := by
+    match rules, hlen with
+    | [x], _ => exact ⟨x, rfl⟩
+  have hrl : decRule (m.arr64 EREC) ro.toNat = some rl := by
+    have := hget 0 (by decide); simpa using this
+  obtain ⟨⟨w0, e0, l0, hctor⟩, -, -⟩ := decRule_words _ _ _ hrl
+  have r0 : rdW (m1.arr64 EREC) ro = w0 := by rw [e1]; simp only [rdW, e0]; rfl
+  rw [r0] at hW
+  cases c2 : callE p (N' + 1) "env_find" [w0, vis] m1 with
+  | error e2 =>
+    rw [c2, m2cHeadE.k_env_find.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "env_find" (by simp)) c2
+  | ok q =>
+  obtain ⟨r2, m2⟩ := q
+  rw [c2] at hW
+  simp only [m2cHeadE.k_env_find] at hW
+  obtain ⟨hm2, hfind, hfound⟩ := callW_envFindI p hp.toIotaProg' (N' + 1) m1 vis _ hS1.env l0 r2 m2
+    (callW_of_callE c2)
+  rw [hm2] at hW
+  by_cases g3 : r2.headD 0 = 0
+  · rw [if_pos g3] at hW; cases hW
+  rw [if_neg g3] at hW
+  obtain ⟨ci, hci⟩ := hfound g3
+  have hciE := (erecP_ext m1).decCI hci
+  have hfind' : fe.find? rl.ctor = some ci := by
+    rw [hctor, hfind]; simp only [decFound, g3, ↓reduceIte]; exact hci
+  obtain ⟨wk, ewk, -, hctr⟩ := decCI_kind34 _ dn _ ci hciE
+  have rk : rdW (m1.arr64 EREC) (r2.tail.headD 0) = wk := by simp only [rdW, ewk]; rfl
+  rw [rk] at hW
+  by_cases g4 : wk ≠ 4
+  · rw [if_pos g4] at hW; cases hW
+  rw [if_neg g4] at hW
+  obtain ⟨cvj, cnP, cnF, rfl⟩ := hctr.mpr (by simpa using g4)
+  have hW' := err_of_k (by intro q e; simp [m2cHeadE.k_m2c_ctor]) (fun _ => rfl) hW
+  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cCtorE_ok p hp hc hpi hE hcc hnv hPI N' F
+    (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ro _
+    major hm4 hebm hmaj rl cvj cnP cnF m1 _ M1 hS1 (by rw [e1]; exact hrl) hciE er hW')
+  rw [hstep]; simp only [hfind']; exact h'
+
+/-- **`MajorToCtorE`**: `major_to_ctor`'s verdicts are `m2c_head`'s. -/
+theorem majorToCtorE_of : MajorToCtorE p := by
+  intro n hk hkE F hnF s₀ a₀ dn vis fe MM eb mode d rec ro rc major rules hn62 hS hm4 hebm hmaj hr
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (mtcE_spec p hp.majorToCtor (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d rec ro rc major) hc0 (Err.code_ne_of_cls hk0)
+  simp only [mtcE] at hW
+  have hW' := err_of_k (by intro q e; simp [mtcE.k_m2c_head]) (fun _ => rfl) hW
+  cases n with
+  | zero => exact ErrClaim.of_callE_zero hW'
+  | succ N =>
+  rw [majorToCtor_eq]
+  exact m2cHeadE_ok p hp hc hpi hE hcc hnv hPI N F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+    (by omega) (by omega) dn vis fe eb mode d ro rc major hm4 hebm hmaj rules s₀.mem a₀ MM hS hr er hW'
+
+end top
 
 end L.Arena
