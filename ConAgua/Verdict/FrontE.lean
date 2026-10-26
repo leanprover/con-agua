@@ -3,7 +3,7 @@ import ConAgua.Front.IndApplyRefine9
 import ConAgua.Arena.Verdict
 
 /-!
-# Error refinements of `decl_kind`, `vi_unsafe` (lane `verdicts-b`, helper `c5`)
+# Error refinements of `decl_kind`, `apply_decl`, `vi_unsafe` (lane `verdicts-b`, helpers `c5`, `fr`)
 -/
 
 open ConRon.Arena
@@ -112,7 +112,8 @@ theorem declKindE_claim (p : Prog) (m : Mem) (b : ByteArray) (st : StateD) (a : 
 /-- **`decl_kind`'s error refinement**: a failing call of class `1`/`2` claims the twin's record
 verdict (or failure) for the line. Hypotheses: those of the ok refinement `applyDeclW_refines`
 (`DeclR`), the scanner's `safety` converse (`DeclSafeR`), and that the twin's `parseCVD` of the
-record succeeds (L reads the kind before the names; the twin parses first). -/
+record succeeds (`apply_decl` calls `decl_kind` after `decl_cv`, con-ron's `parseCVD`; there
+`applyDecl_refinesE` derives it). -/
 theorem declKind_refinesE (p : Prog) (hp : p.lookup "decl_kind" = some declKind) (n : Nat) (m : Mem)
     (b : ByteArray) (st : StateD) (a : AState) (f : DFld) (d : DeclRec) (hR : DeclR b d f)
     (hS : DeclSafeR d f) (hP : ∀ cv, declCv? d = some cv → ∃ cvp, parseCVD st cv = pure cvp)
@@ -122,13 +123,123 @@ theorem declKind_refinesE (p : Prog) (hp : p.lookup "decl_kind" = some declKind)
     (triple_of_callE_err (declKind_specE p hp (n + 1) ⟨m, Locals.init []⟩ f.pl f.hk f.hn f.flag) hc
       (Err.code_ne_of_cls hk)) hk
 
+
+/-! ## `apply_decl`: the declines after the common data (con-ron's `parseCVD` first) -/
+
+/-- `decl_cv` ran (`cvW`): con-ron's `parseCVD` of the record's common data succeeds. -/
+theorem cvW_parse (b : ByteArray) (m m₁ : Mem) (st : StateD) (hD : StateDR m st) (f : DFld)
+    (cv : CVRec) (hcv : CVR b cv f) (h : cvW b.data m f.name f.lps f.type = some m₁) :
+    ∃ cvp, parseCVD st cv = pure cvp := by
+  obtain ⟨hcn, hcl, hct⟩ := hcv
+  unfold cvW at h
+  have hok : tblOK m NID f.name = true ∧ tblOK m EID f.type = true :=
+    Classical.byContradiction fun hok => by simp [hok] at h
+  simp only [hok, and_self, ↓reduceIte] at h
+  obtain ⟨hgn, -, hnn⟩ := tbl_read hD.names _ hok.1
+  obtain ⟨hgt, -, hnt⟩ := tbl_read hD.exprs _ hok.2
+  have hDR := hD.decls
+  unfold lpPutW at h
+  split at h
+  · cases h
+  rename_i hz
+  have hps := hDR.psize
+  have hptop := hDR.ptop
+  have hrd : rdW (m.arr64 DLP) 0 = (m.arr64 DLP)[0]?.getD 0 := rfl
+  obtain ⟨-, -, -, -, -, F6, -⟩ := lpLoopM_facts b.data (rdW (m.arr64 DLP) 0) m (f.lps + 1) 0 m₁
+    h (by rw [hrd]; simp; omega) hps
+  have hxs : Fields.itemsN b.data (f.lps + 1) = Fields.listN b.data f.lps := rfl
+  rw [hxs] at F6
+  have hmap := mapM_name m st hD.names _ _ hcl F6
+  refine ⟨⟨decI (tblW m NID f.name), (Fields.listN b.data f.lps).map fun x => decI (tblW m NID x),
+    decI (tblW m EID f.type)⟩, ?_⟩
+  simp [parseCVD, ConRon.Arena.Frontend.StateD.name, getDeclD, ConRon.Arena.Frontend.StateD.expr,
+    itemR_eq hcn hnn, itemR_eq hct hnt, hgn, hgt, hmap]
+
+theorem cvW_parse' (b : ByteArray) (m m₁ : Mem) (st : StateD) (hD : StateDR m st) (f : DFld)
+    (d : DeclRec) (hR : DeclR b d f) (h : cvW b.data m f.name f.lps f.type = some m₁) :
+    ∀ cv, declCv? d = some cv → ∃ cvp, parseCVD st cv = pure cvp := by
+  intro cv hcv
+  cases d <;> simp only [declCv?, Option.some.injEq, reduceCtorEq] at hcv <;> subst hcv
+  all_goals exact cvW_parse b m m₁ st hD f _ hR.2.1 h
+
+l_model applyDecl_specE (p : Prog) (hf : p.lookup "apply_decl" = some applyDecl)
+  fns [hf ↦ applyDeclE] grind [arena_grind] simp [] errors
+
+
+/-- The callees of `apply_decl` outside the verdict closure claim nothing (`callE_nv`). -/
+def ApplyDeclNV (p : Prog) : Prop :=
+  ∀ f ∈ ["decl_cv", "expr_get", "decl_push"], ∀ n args m e, callE p n f args m = .error e → e.cls = 0
+
+/-- **`apply_decl`'s error model claims the twin's verdict**: `decl_cv` (con-ron's `parseCVD`)
+runs first, so `decl_kind`'s declines are con-ron's (`declKindE_claim`, its `parseCVD`
+hypothesis from `decl_cv`'s run, `cvW_parse'`); every other callee claims nothing. -/
+theorem applyDeclE_claim (p : Prog) (hE : DeclLookups p) (hnv : ApplyDeclNV p) (b : ByteArray)
+    (hb : b.data.size < 2 ^ 63) (m : Mem) (hm : m.arr8 IN = b.data) (st : StateD) (a : AState)
+    (hD : StateDR m st) (f : DFld) (d : DeclRec) (hR : DeclR b d f) (hS : DeclSafeR d f) (n : Nat) :
+    ∀ e, applyDeclE p n m f.pl f.name f.lps f.type f.value f.hk f.hn f.flag = .error e →
+      VerdictClaimR (applyLine st (.decl d)) a e := by
+  intro e he hk
+  cases n with
+  | zero => simp only [applyDeclE] at he; cases he; exact absurd rfl hk
+  | succ n =>
+  simp only [applyDeclE] at he
+  cases h1 : callE p n "decl_cv" [f.name, f.lps, f.type] m with
+  | error e1 =>
+    rw [h1] at he; simp only [applyDeclE.k_decl_cv] at he; cases he
+    exact absurd (hnv "decl_cv" (by simp) _ _ _ _ h1) hk
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1] at he; simp only [applyDeclE.k_decl_cv] at he
+  obtain ⟨s1, hs1, -, -, hcw⟩ :=
+    triple_of_callE (declCv_spec p hE b.data hb n ⟨m, Locals.init []⟩ hm f.name f.lps f.type) h1
+  rw [hs1] at hcw
+  have hP := cvW_parse' b m m1 st hD f d hR hcw
+  cases h2 : callE p n "decl_kind" [f.pl, f.hk, f.hn, f.flag] m1 with
+  | error e2 =>
+    rw [h2] at he; simp only [applyDeclE.k_decl_kind] at he; cases he
+    exact declKindE_claim p m1 b st a f d hR hS hP e
+      (triple_of_callE_err (declKind_specE p hE.decl_kind n ⟨m1, Locals.init []⟩ _ _ _ _) h2
+        (Err.code_ne_of_cls hk)) hk
+  | ok q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2] at he; simp only [applyDeclE.k_decl_kind] at he
+  exfalso; apply hk
+  split at he
+  · cases h3 : callE p n "expr_get" [f.value] m2 with
+    | error e3 =>
+      rw [h3] at he; simp only [applyDeclE.k_expr_get] at he; cases he
+      exact hnv "expr_get" (by simp) _ _ _ _ h3
+    | ok q3 =>
+      rw [h3] at he; simp only [applyDeclE.k_expr_get, applyDeclE.j1, applyDeclE.k_decl_push] at he
+      split at he
+      · rename_i heq; cases he; exact hnv "decl_push" (by simp) _ _ _ _ heq
+      · cases he
+  · simp only [applyDeclE.j1, applyDeclE.k_decl_push] at he
+    split at he
+    · rename_i heq; cases he; exact hnv "decl_push" (by simp) _ _ _ _ heq
+    · cases he
+
+/-- **`apply_decl`'s error refinement**: a failing call of class `1`/`2` claims con-ron's record
+verdict (or failure) for the declaration line. Hypotheses: those of the ok refinement
+`applyDeclW_refines` (`StateDR`, `DeclR`), the scanner's `safety` converse (`DeclSafeR`), and that
+`decl_cv`, `expr_get`, `decl_push` claim nothing (`ApplyDeclNV`; on `checkerProg` by `callE_nv`). -/
+theorem applyDecl_refinesE (p : Prog) (hE : DeclLookups p) (hnv : ApplyDeclNV p) (b : ByteArray)
+    (hb : b.data.size < 2 ^ 63) (m : Mem) (hm : m.arr8 IN = b.data) (st : StateD) (a : AState)
+    (hD : StateDR m st) (f : DFld) (d : DeclRec) (hR : DeclR b d f) (hS : DeclSafeR d f) (n : Nat)
+    (e : Err) (hc : callE p n "apply_decl" [f.pl, f.name, f.lps, f.type, f.value, f.hk, f.hn, f.flag] m =
+      .error e) :
+    VerdictClaimR (applyLine st (.decl d)) a e := fun hk =>
+  applyDeclE_claim p hE hnv b hb m hm st a hD f d hR hS n e
+    (triple_of_callE_err (applyDecl_specE p hE.apply_decl n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _) hc
+      (Err.code_ne_of_cls hk)) hk
+
 end L.Front
 
 namespace L.Front.Ind
 open L.Front
 
 l_model viUnsafe_specE (p : Prog) (hf : p.lookup "vi_unsafe" = some viUnsafe)
-  fns [hf ↦ viUnsafeE] grind [arena_grind] errors
+  fns [hf ↦ viUnsafeE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] errors
 
 /-- **The error model of `vi_unsafe`**: an error of class `!= 0` (the decline) means some type
 record from `j` on is unsafe. -/
