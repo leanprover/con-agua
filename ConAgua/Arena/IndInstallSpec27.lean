@@ -26,7 +26,7 @@ open L.Arena
 def tabOne (fe : IFEnv) (bs : BlockShape) (msh : MemberShape) (cA : IConstantVal) (nF : Nat)
     (sorts : List LIdx) : AM IFEnv := do
   let guards ← structProjGuards cA.type bs.nP nF sorts
-  checkStructProjTable msh.cvT.name cA.name bs.lps bs.nP nF bs.resSort guards 1 cA fe
+  checkStructProjTable msh.cvT.name cA.name bs.lps bs.nP nF bs.resSort guards cA fe
 
 theorem cbt_one (bs : BlockShape) (msh : MemberShape) (ms : List MemberShape)
     (css : List (List (IConstantVal × Nat))) (sss : List (List (List LIdx))) (fe : IFEnv)
