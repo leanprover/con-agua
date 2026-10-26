@@ -275,4 +275,160 @@ theorem inferBody_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p
         (hcE.proj k (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe MM eb mode d _ _ _
           (by omega) (by omega) hsl h1' h3').1 h1)
 
+/-! ## `infer_body_io` -/
+
+/-- **`infer_body_io`'s verdicts** (the error half of `inferBodyIO_refines`): `InferIOBodySpecE p n`
+for every `n`. -/
+theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
+    (hcE : InferCalleesE p) : ∀ n, InferIOBodySpecE p n := by
+  intro n F s₀ a₀ dn vis fe MM eb mode d e hF hn hs he hk hkE
+  cases n with
+  | zero => exact CoreSpecE.zero p _ _ _ s₀ a₀
+  | succ n =>
+  refine CoreSpecE.of_runs fun er hc00 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferBodyIO_specE p hq.inferBodyIO (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d e) hc00 (Err.code_ne_of_cls hk0)
+  rw [inferBodyIOE.eq_2] at hW
+  have hS := hs.rel
+  have hnv := hcE.nv
+  cases hc0 : callE p n "e_view" [e] s₀.mem with
+  | error e0 =>
+    rw [hc0, inferBodyIOE.k_e_view.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "e_view" (by simp)) hc0
+  | ok q =>
+  obtain ⟨r₀, m₀⟩ := q
+  rw [hc0] at hW
+  obtain ⟨t₀, ht₀, hts, hne, hr0⟩ := triple_of_callE
+    (L.Ind.eView_spec p hq.eview n ⟨s₀.mem, Locals.init []⟩ e) hc0
+  have hm₀ : m₀ = s₀.mem := by rw [← ht₀, hts]
+  subst hm₀
+  subst hr0
+  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.1 e hne
+  have hhd := eViewW_head s₀.mem e hne
+  have hsl : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
+  cases v with
+  | bvar i =>
+    obtain ⟨hg, -⟩ := hvr
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    cases hW
+    exact ErrClaim.of_error (inferBodyIO_bvarE _ fe d.toNat (decE e) a₀ i hv) rfl
+  | fvar idx ty =>
+    obtain ⟨hg, hi, hty, hdec⟩ := hvr
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    rw [getD1] at hi
+    by_cases hlt : (L.Ind.eViewW s₀.mem e).tail.headD 0 < d
+    · simp only [hlt, ↓reduceIte] at hW; cases hW
+    · simp only [hlt, ↓reduceIte] at hW; cases hW
+      have hi' : ¬ idx < d.toNat := fun h => hlt (by
+        rw [UInt64.lt_iff_toNat_lt, hi]; exact h)
+      exact ErrClaim.of_error (inferBodyIO_fvarE _ fe d.toNat (decE e) a₀ idx ty hv hi') rfl
+  | sort u =>
+    obtain ⟨hg, hu, hdec⟩ := hvr
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    cases h1 : callE p n "intern_succ" [(L.Ind.eViewW s₀.mem e).tail.headD 0] s₀.mem with
+    | error e1 =>
+      rw [h1, inferBodyIOE.k_intern_succ.none] at hW; cases hW
+      exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "intern_succ" (by simp)) h1
+    | ok q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [h1, inferBodyIOE.k_intern_succ.arm1] at hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "intern_sort" (by simp)) (kisIOE_err hW)
+  | const nm us =>
+    obtain ⟨hg, hn1, hdn, hu2, hdu⟩ := hvr
+    rw [getD1] at hn1 hdn; rw [getD2] at hu2 hdu
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    have h1 := kisIOE_err hW
+    cases n with
+    | zero => exact absurd (callE_zero_cls h1) hk0
+    | succ k =>
+    rw [← hdn, ← hdu] at hv
+    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_const _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
+      (ErrClaim.constIO (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+        (inferConst_refinesE p hq.leaf hnv k _ a₀ dn vis fe MM eb _ _ hS hn1 hu2) h1))
+  | lit l =>
+    have hg : (L.Ind.eViewW s₀.mem e).headD 0 = 8 := hvr
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    have h1 := kisIOE_err hW
+    cases n with
+    | zero => exact absurd (callE_zero_cls h1) hk0
+    | succ k =>
+    have h8 : e >>> 28 = 8 := by rw [← hhd, hg]
+    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_lit _ fe d.toNat (decE e) a₀ l hv).trans h)
+      (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+        (inferLit_refinesE p hq.leaf hc.lit hnv k _ a₀ dn vis fe MM eb e l hS he h8 hv) h1)
+  | forallE ty b =>
+    obtain ⟨hg, h1', hd1, h2', hd2⟩ := hvr
+    rw [getD1] at h1' hd1; rw [getD2] at h2' hd2
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    have h1 := kisIOE_err hW
+    cases n with
+    | zero => exact absurd (callE_zero_cls h1) hk0
+    | succ k =>
+    rw [← hd1, ← hd2] at hv
+    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_forall _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
+      (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+        (inferForallIO_refinesE p hq.leaf hq.body hnv hc.inst1 k (hk.mono (by omega)) (hkE.mono (by omega))
+          F _ a₀ dn vis fe MM eb mode d _ _ (by omega) (by omega) hsl h1' h2') h1)
+  | lam ty b =>
+    obtain ⟨hg, h1', hd1, h2', hd2⟩ := hvr
+    rw [getD1] at h1' hd1; rw [getD2] at h2' hd2
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    have h1 := kisIOE_err hW
+    cases n with
+    | zero => exact absurd (callE_zero_cls h1) hk0
+    | succ k =>
+    rw [← hd1, ← hd2] at hv
+    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_lam _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
+      (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+        (inferLamIO_refinesE p hq.body hnv hc.inst1 k (hkE.mono (by omega)) F _ a₀ dn vis fe MM eb mode d
+          _ _ (by omega) (by omega) hsl h1' h2') h1)
+  | app f x =>
+    obtain ⟨hg, -⟩ := hvr
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    have h1 := kisIOE_err hW
+    cases n with
+    | zero => exact absurd (callE_zero_cls h1) hk0
+    | succ k =>
+    have h4 : e >>> 28 = 4 := by rw [← hhd, hg]
+    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_app _ fe d.toNat (decE e) a₀ f x hv).trans h)
+      (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+        (inferAppIO_refinesE p hq.spio hq.spine hc.instList hnv k (hk.mono (by omega))
+          (hkE.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d e hsl he h4) h1)
+  | letE ty v b =>
+    obtain ⟨hg, h1', hd1, h2', hd2, h3', hd3⟩ := hvr
+    rw [getD1] at h1' hd1; rw [getD2] at h2' hd2; rw [getD3] at h3' hd3
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    rw [← hd1, ← hd2, ← hd3] at hv
+    refine ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_let _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h) ?_
+    cases hi : callE p n "inst1" [(L.Ind.eViewW s₀.mem e).tail.tail.tail.headD 0,
+        (L.Ind.eViewW s₀.mem e).tail.tail.headD 0, 0] s₀.mem with
+    | error e1 =>
+      rw [hi, inferBodyIOE.k_inst1.none] at hW; cases hW
+      exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "inst1" (by simp)) hi
+    | ok q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [hi, inferBodyIOE.k_inst1.arm1] at hW
+    have h₁ := CoreSpec.of_callW (hc.inst1 n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb _ _ 0 hS h3' h2')
+      (callW_of_callE hi)
+    obtain ⟨M₁, hS₁, -, -⟩ := h₁.2.1
+    refine ErrClaim.bind_ref h₁ ?_
+    exact CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+      ((hkE n (by omega)).inferIO F _ _ dn vis fe M₁ eb mode d (r₁.headD 0) (by omega) (by omega)
+        ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) (kisIOE_err hW)
+  | proj sn i pe =>
+    obtain ⟨hg, h1', hd1, h2', h3', hd3⟩ := hvr
+    rw [getD1] at h1' hd1; rw [getD2] at h2'; rw [getD3] at h3' hd3
+    simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
+    have h1 := kisIOE_err hW
+    cases n with
+    | zero => exact absurd (callE_zero_cls h1) hk0
+    | succ k =>
+    rw [← hd1, ← h2', ← hd3] at hv
+    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_proj _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h)
+      (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
+        (hcE.proj k (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe MM eb mode d _ _ _
+          (by omega) (by omega) hsl h1' h3').2 h1)
+
 end L.Arena
