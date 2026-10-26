@@ -809,7 +809,14 @@ theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (listTy_spec p hp.listTyOk n _ found q) h
-  refine listPre_call (K2 := listK2 p n) p hp hS hdec hfe (fun _ => rfl) hW
+  refine listPre_call (K2 := listK2 p n)
+    (k := fun cv pl sort => do
+      if cv.type.tag == ETag.forallE then
+        match ← view cv.type with
+        | .forallE d b => pure (d == sort && b == sort)
+        | _ => pure false
+      else pure false)
+    p hp hS hdec hfe (fun _ => rfl) hW
     fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [listK2_s, faEqA_eq] at hW
   rw [hty]
@@ -829,7 +836,32 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (listNil_spec p hp.listNilTyOk n _ found q) h
-  refine listPre_call (K2 := nilK2 p n) p hp hS hdec hfe (fun _ => rfl) hW
+  refine listPre_call (K2 := nilK2 p n)
+    (k := fun cv pl sort => do
+      let ps ← internLsNode [pl]
+      let li ← pinList
+      if cv.type.tag == ETag.forallE then
+        match ← view cv.type with
+        | .forallE d b => do
+          if d != sort then pure false else
+          if b.tag == ETag.app then
+            match ← view b with
+            | .app f a =>
+              if f.tag == ETag.const then
+                match ← view f with
+                | .const l1 us1 =>
+                  if a.tag == ETag.bvar then
+                    match ← view a with
+                    | .bvar 0 => pure (l1 == li && us1 == ps)
+                    | _ => pure false
+                  else pure false
+                | _ => pure false
+              else pure false
+            | _ => pure false
+          else pure false
+        | _ => pure false
+      else pure false)
+    p hp hS hdec hfe (fun _ => rfl) hW
     fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [nilK2_s] at hW
   cases h3 : callW p n "str_ls1" [s.headD 0] m₂ with
@@ -867,7 +899,34 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (listCons_spec p hp.listConsTyOk n _ found q) h
-  refine listPre_call (K2 := consK2 p n) p hp hS hdec hfe (fun _ => rfl) hW
+  refine listPre_call (K2 := consK2 p n)
+    (k := fun cv pl sort => do
+      let ps ← internLsNode [pl]
+      let li ← pinList
+      let b0 ← internE (.bvar 0)
+      let b1 ← internE (.bvar 1)
+      let b2 ← internE (.bvar 2)
+      let l1 ← internE (.const li ps)
+      let dom3 ← internE (.app l1 b1)
+      let cod3 ← internE (.app l1 b2)
+      if cv.type.tag == ETag.forallE then
+        match ← view cv.type with
+        | .forallE d1 r1 => do
+          if d1 != sort then pure false else
+          if r1.tag == ETag.forallE then
+            match ← view r1 with
+            | .forallE d2 r2 => do
+              if d2 != b0 then pure false else
+              if r2.tag == ETag.forallE then
+                match ← view r2 with
+                | .forallE d3 c3 => pure (d3 == dom3 && c3 == cod3)
+                | _ => pure false
+              else pure false
+            | _ => pure false
+          else pure false
+        | _ => pure false
+      else pure false)
+    p hp hS hdec hfe (fun _ => rfl) hW
     fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [consK2_s] at hW
   cases h3 : callW p n "str_ls1" [s.headD 0] m₂ with
