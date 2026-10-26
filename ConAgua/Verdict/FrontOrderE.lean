@@ -741,4 +741,286 @@ theorem ctorE_fail {p : Prog} (hL : IndApplyLookups p) (hnv : CtorNV p)
   · rw [viCtorE.k_name_get.abort1 p n tt np fuel _ _ m5 (by rw [rd 9 (by decide)]; simpa using gt)] at h
     exact .inl ⟨iw, _, hiw, hnm, fun he => gt (decI_inj' _ _ hx32 htt he)⟩
 
+/-! ## The L side: `vi_order_in`, `vi_order_go`, `vi_order` -/
+
+section orderE
+variable {p : Prog} (hL : IndApplyLookups p) (hnv : CtorNV p)
+  {b : ByteArray} {m₀ : Mem} {a : AState} {st : StateD} (hR : ArenaR m₀ a)
+  (hD : StateDR m₀ st) {cts : List IndCtorRec} {fo cno co cn fuel np oo : Word}
+  (hCt : ListF (CtF b m₀) m₀ 10 co.toNat cts) (hcn : cn.toNat = cts.length)
+  (hCN : ∀ k, k < cts.length → (wd m₀ IFL (cno.toNat + k)).toNat < 2 ^ 32)
+  (hcnB : cno.toNat + cts.length ≤ oo.toNat) (hnp : np.toNat < 10 ^ 18)
+  (hco : co.toNat + 10 * cts.length < 2 ^ 63) (hsz : oo.toNat + cts.length ≤ (m₀.arr64 IFL).size)
+  (hsz63 : (m₀.arr64 IFL).size < 2 ^ 63)
+include hL hnv hR hD hCt hcn hCN hcnB hnp hco hsz hsz63
+
+/-- **`vi_order_in`'s error model**: an error of class `≠ 0` stops at a constructor `c` of the
+type (from `jj` on): the ones before pass the twin's checks, `c` fails them. -/
+theorem orderInE_fail : ∀ (n : Nat) (m : Mem) (t tt jj pos : Word) (e : Err),
+    viOrderInE p n m fo cno co cn fuel np oo t tt jj pos = .error e → e.cls ≠ 0 →
+    IOnly oo.toNat m₀ m → t.toNat + 4 < 2 ^ 63 → jj.toNat ≤ (wd m₀ IFR (t.toNat + 4)).toNat →
+    pos.toNat + ((wd m₀ IFR (t.toNat + 4)).toNat - jj.toNat) ≤ cts.length →
+    (∀ c, jj.toNat ≤ c → c < (wd m₀ IFR (t.toNat + 4)).toNat →
+      fo.toNat + pos.toNat + (c - jj.toNat) < oo.toNat ∧
+      (wd m₀ IFL (fo.toNat + pos.toNat + (c - jj.toNat))).toNat < 2 ^ 32) →
+    tt.toNat < 2 ^ 32 →
+    ∃ c, jj.toNat ≤ c ∧ c < (wd m₀ IFR (t.toNat + 4)).toNat ∧
+      (∀ c', jj.toNat ≤ c' → c' < c → ∃ k,
+        CtorOK st a cts (islice m₀ cno.toNat cts.length)
+          (decI (wd m₀ IFL (fo.toNat + pos.toNat + (c' - jj.toNat)))) c' (decI tt) np.toNat fuel.toNat k) ∧
+      CtorFail st a cts (islice m₀ cno.toNat cts.length)
+        (decI (wd m₀ IFL (fo.toNat + pos.toNat + (c - jj.toNat)))) c (decI tt) np.toNat fuel.toNat := by
+  intro n
+  induction n with
+  | zero =>
+    intro m t tt jj pos e h hk
+    rw [viOrderInE.eq_1] at h; cases h; exact absurd Err.cls_outOfFuel hk
+  | succ n ih =>
+    intro m t tt jj pos e h hk hI ht hjj hpos hfo htt
+    have h4 : rdW (m.arr64 IFR) (t + 4) = wd m₀ IFR (t.toNat + 4) := by
+      rw [wd_eq, widx2 _ _ (by simp; omega), hI.wdR]; rfl
+    by_cases hle : rdW (m.arr64 IFR) (t + 4) ≤ jj
+    · rw [viOrderInE.arm1 p n m _ _ _ _ _ _ _ _ _ _ _ hle] at h; cases h
+    rw [viOrderInE.arm2 p n m _ _ _ _ _ _ _ _ _ _ _ hle] at h
+    rw [h4] at hle
+    have hlt' := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
+    obtain ⟨hf1, hf2⟩ := hfo jj.toNat (Nat.le_refl _) hlt'
+    simp only [Nat.sub_self, Nat.add_zero] at hf1 hf2
+    have hfp : (fo + pos).toNat = fo.toNat + pos.toNat := widx2 _ _ (by omega)
+    have hop : (oo + pos).toNat = oo.toNat + pos.toNat := widx2 _ _ (by omega)
+    have hnn : rdW (m.arr64 IFL) (fo + pos) = wd m₀ IFL (fo.toNat + pos.toNat) := by
+      rw [wd_eq, hfp, hI.2 _ hf1]
+    rw [hnn] at h
+    have hCN' : ∀ k, k < cts.length → (wd m IFL (cno.toNat + k)).toNat < 2 ^ 32 := fun k hk => by
+      rw [hI.2 _ (by omega)]; exact hCN k hk
+    cases h1 : callE p n "vi_ctor" [wd m₀ IFL (fo.toNat + pos.toNat), jj, tt, np, fuel, cno, cn, co] m with
+    | error e1 =>
+      rw [h1, viOrderInE.k_vi_ctor.none] at h; cases h
+      have hW := triple_of_callE_err (viCtor_specE p hL.vi_ctor n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _) h1
+        (Err.code_ne_of_cls hk)
+      cases n with
+      | zero => rw [viCtorE.eq_1] at hW; cases hW; exact absurd Err.cls_outOfFuel hk
+      | succ n' =>
+      have hfail := ctorE_fail hL hnv (hI.arena hR) (hI.stateDR hD) (hI.listF hCt) hcn hCN' (by omega)
+        hf2 htt hnp hco _ hW hk
+      rw [hI.islice _ _ hcnB] at hfail
+      refine ⟨jj.toNat, Nat.le_refl _, hlt', fun c' h1 h2 => by omega, ?_⟩
+      simpa using hfail
+    | ok q =>
+    obtain ⟨r, m1⟩ := q
+    rw [h1, viOrderInE.k_vi_ctor.arm1] at h
+    obtain ⟨s1, hs1, hs1', hc⟩ := triple_of_callE (ctor_spec p hL n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _) h1
+    have hm1 : m1 = m := by rw [← hs1, hs1']
+    subst hm1
+    simp only at hc
+    obtain ⟨k, hk', hck, hfold, hcidx, hind, htele⟩ := ctorW_twin (hI.arena hR) (hI.stateDR hD)
+      (hI.listF hCt) hcn hCN' (by omega) hf2 hnp hco hc
+    rw [hI.islice _ _ hcnB] at hfold
+    have hj1 := wsucc jj _ (UInt64.not_le.mp hle)
+    have hp1 : (pos + 1).toNat = pos.toNat + 1 := widx2 _ _ (by simp; omega)
+    obtain ⟨c, y1, y2, y3, y4⟩ := ih (m1.set64 IFL (oo + pos) (r.headD 0)) t tt (jj + 1) (pos + 1) e h hk
+      (hI.set _ _ (by rw [hop]; omega)) ht (by rw [hj1]; omega) (by rw [hj1, hp1]; omega)
+      (fun c' h1 h2 => by
+        rw [hj1] at h1; rw [hp1, hj1]
+        have := hfo c' (by omega) h2
+        rw [show fo.toNat + (pos.toNat + 1) + (c' - (jj.toNat + 1)) = fo.toNat + pos.toNat + (c' - jj.toNat) by omega]
+        exact this) htt
+    simp only [hj1, hp1] at y1 y3 y4
+    refine ⟨c, by omega, y2, fun c' h1 h2 => ?_, ?_⟩
+    · by_cases hcj : c' = jj.toNat
+      · subst hcj
+        simp only [Nat.sub_self, Nat.add_zero]
+        exact ⟨k, hk', hfold, hcidx, hind, htele⟩
+      · obtain ⟨k', e2⟩ := y3 c' (by omega) h2
+        rw [show fo.toNat + (pos.toNat + 1) + (c' - (jj.toNat + 1)) = fo.toNat + pos.toNat + (c' - jj.toNat) by omega] at e2
+        exact ⟨k', e2⟩
+    · rw [show fo.toNat + (pos.toNat + 1) + (c - (jj.toNat + 1)) = fo.toNat + pos.toNat + (c - jj.toNat) by omega] at y4
+      exact y4
+
+
+variable {to tn tyn : Word} (hto : to.toNat + 11 * tn.toNat < 2 ^ 63) (htyn : tyn.toNat + tn.toNat ≤ oo.toNat)
+  (hfo : ∀ p, p < psum m₀ to tn.toNat → fo.toNat + p < oo.toNat ∧ (wd m₀ IFL (fo.toNat + p)).toNat < 2 ^ 32)
+  (hps : psum m₀ to tn.toNat ≤ cts.length)
+  (htt : ∀ k, k < tn.toNat → (wd m₀ IFL (tyn.toNat + k)).toNat < 2 ^ 32)
+include hto htyn hfo hps htt
+
+/-- **`vi_order_go`'s error model**: an error of class `≠ 0` stops at constructor `c` of type
+`k` (from `ti` on): every constructor before passes the twin's checks, `c` fails them. -/
+theorem orderGoE_fail : ∀ (n : Nat) (m : Mem) (ti pos : Word) (e : Err),
+    viOrderGoE p n m to tn tyn fo cno co cn fuel np oo ti pos = .error e → e.cls ≠ 0 →
+    IOnly oo.toNat m₀ m → ti ≤ tn → pos.toNat = psum m₀ to ti.toNat →
+    ∃ k, ti.toNat ≤ k ∧ k < tn.toNat ∧ ∃ c, c < cntF m₀ to k ∧
+      (∀ k', ti.toNat ≤ k' → k' < k → ∀ c', c' < cntF m₀ to k' → ∃ kk,
+        CtorOK st a cts (islice m₀ cno.toNat cts.length) (decI (wd m₀ IFL (fo.toNat + psum m₀ to k' + c')))
+          c' (decI (wd m₀ IFL (tyn.toNat + k'))) np.toNat fuel.toNat kk) ∧
+      (∀ c', c' < c → ∃ kk,
+        CtorOK st a cts (islice m₀ cno.toNat cts.length) (decI (wd m₀ IFL (fo.toNat + psum m₀ to k + c')))
+          c' (decI (wd m₀ IFL (tyn.toNat + k))) np.toNat fuel.toNat kk) ∧
+      CtorFail st a cts (islice m₀ cno.toNat cts.length) (decI (wd m₀ IFL (fo.toNat + psum m₀ to k + c)))
+        c (decI (wd m₀ IFL (tyn.toNat + k))) np.toNat fuel.toNat := by
+  intro n
+  induction n with
+  | zero =>
+    intro m ti pos e h hk
+    rw [viOrderGoE.eq_1] at h; cases h; exact absurd Err.cls_outOfFuel hk
+  | succ n ih =>
+    intro m ti pos e h hk hI hti hpos
+    by_cases hle : tn ≤ ti
+    · rw [viOrderGoE.arm1 p n m _ _ _ _ _ _ _ _ _ _ _ _ hle] at h; cases h
+    rw [viOrderGoE.arm2 p n m _ _ _ _ _ _ _ _ _ _ _ _ hle] at h
+    have hlt' := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
+    have hti1 := wsucc ti tn (UInt64.not_le.mp hle)
+    have htt' : rdW (m.arr64 IFL) (tyn + ti) = wd m₀ IFL (tyn.toNat + ti.toNat) := by
+      rw [wd_eq, widx2 _ _ (by omega), hI.2 _ (by omega)]
+    rw [htt'] at h
+    have hmono := psum_mono m₀ to (ti.toNat + 1) tn.toNat (by omega)
+    rw [psum_succ] at hmono
+    have ht : (to + 11 * ti).toNat = to.toNat + 11 * ti.toNat := by
+      have := widx to 11 ti 0 (by simp; omega); simpa using this
+    have hc4 : wd m₀ IFR ((to + 11 * ti).toNat + 4) = wd m₀ IFR (to.toNat + 11 * ti.toNat + 4) := by rw [ht]
+    have hfo' : ∀ c, (0 : Word).toNat ≤ c → c < (wd m₀ IFR ((to + 11 * ti).toNat + 4)).toNat →
+        fo.toNat + pos.toNat + (c - (0 : Word).toNat) < oo.toNat ∧
+        (wd m₀ IFL (fo.toNat + pos.toNat + (c - (0 : Word).toNat))).toNat < 2 ^ 32 := fun c h1 h2 => by
+      simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero] at h2 ⊢
+      rw [hc4] at h2
+      have := hfo (pos.toNat + c) (by rw [hpos]; unfold cntF at hmono; omega)
+      rw [Nat.add_assoc]; exact this
+    have hpos' : pos.toNat + ((wd m₀ IFR ((to + 11 * ti).toNat + 4)).toNat - (0 : Word).toNat) ≤ cts.length := by
+      simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero]; rw [hc4]; unfold cntF at hmono; omega
+    cases h1 : callE p n "vi_order_in" [fo, cno, co, cn, fuel, np, oo, to + 11 * ti,
+        wd m₀ IFL (tyn.toNat + ti.toNat), 0, pos] m with
+    | error e1 =>
+      rw [h1, viOrderGoE.k_vi_order_in.none] at h; cases h
+      have hW := triple_of_callE_err (viOrderIn_specE p hL.vi_order_in n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _) h1
+        (Err.code_ne_of_cls hk)
+      obtain ⟨c, -, c2, c3, c4⟩ := orderInE_fail hL hnv hR hD hCt hcn hCN hcnB hnp hco hsz hsz63 n m
+        (to + 11 * ti) _ 0 pos _ hW hk hI (by rw [ht]; omega) (by simp) hpos' hfo' (htt _ hlt')
+      simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero] at c2 c3 c4
+      rw [hc4] at c2
+      refine ⟨ti.toNat, Nat.le_refl _, hlt', c, c2, fun k' h1 h2 => by omega, fun c' hc' => ?_, ?_⟩
+      · obtain ⟨kk, hkk⟩ := c3 c' (Nat.zero_le _) hc'
+        rw [← hpos]; exact ⟨kk, hkk⟩
+      · rw [← hpos]; exact c4
+    | ok q =>
+    obtain ⟨r, m₁⟩ := q
+    rw [h1, viOrderGoE.k_vi_order_in.arm1] at h
+    obtain ⟨s1, hs1, -, hin⟩ := triple_of_callE (orderIn_spec p hL n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _) h1
+    rw [hs1] at hin
+    simp only at hin
+    obtain ⟨x1, x2, -, x4⟩ := orderInW_twin hR hD hCt hcn hCN hcnB hnp hco hsz hsz63 n m m₁
+      (to + 11 * ti) _ 0 pos _ hin hI (by rw [ht]; omega) (by simp) hpos' hfo'
+    simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero] at x2
+    rw [hc4] at x2
+    cases h2 : viOrderGoE p n m₁ to tn tyn fo cno co cn fuel np oo (ti + 1) (r.headD 0) with
+    | ok q2 => obtain ⟨u, m₂⟩ := q2; rw [h2, viOrderGoE.k_vi_order_go.arm1] at h; cases h
+    | error e2 =>
+    rw [h2, viOrderGoE.k_vi_order_go.none] at h; cases h
+    obtain ⟨k, y1, y2, c, y3, y4, y5, y6⟩ := ih m₁ (ti + 1) (r.headD 0) _ h2 hk x1
+      (UInt64.le_iff_toNat_le.mpr (by rw [hti1]; exact hlt')) (by rw [hti1, psum_succ, x2, hpos]; rfl)
+    rw [hti1] at y1 y4
+    refine ⟨k, by omega, y2, c, y3, fun k' h1 h2 c' hc' => ?_, y5, y6⟩
+    by_cases hk' : k' = ti.toNat
+    · subst hk'
+      obtain ⟨kk, e2⟩ := x4 c' (Nat.zero_le _) (by rw [hc4]; exact hc')
+      simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero] at e2
+      rw [← hpos]; exact ⟨kk, e2.2⟩
+    · exact y4 k' (by omega) h2 c' hc'
+
+end orderE
+
+/-- **Where `vi_order` stops**, on the memory `m` it was called from: constructor `c` of type `k`
+fails the twin's checks, every constructor before passes them (`orderW_twin`'s form). -/
+def OrderFailW (st : StateD) (a : AState) (cts : List IndCtorRec) (m : Mem) (to tn tyn fo cno : Word)
+    (np fuel : Nat) : Prop :=
+  ∃ k, k < tn.toNat ∧ ∃ c, c < cntF m to k ∧
+    (∀ k', k' < k → ∀ c', c' < cntF m to k' → ∃ kk,
+      CtorOK st a cts (islice m cno.toNat cts.length) (decI (wd m IFL (fo.toNat + psum m to k' + c')))
+        c' (decI (wd m IFL (tyn.toNat + k'))) np fuel kk) ∧
+    (∀ c', c' < c → ∃ kk,
+      CtorOK st a cts (islice m cno.toNat cts.length) (decI (wd m IFL (fo.toNat + psum m to k + c')))
+        c' (decI (wd m IFL (tyn.toNat + k))) np fuel kk) ∧
+    CtorFail st a cts (islice m cno.toNat cts.length) (decI (wd m IFL (fo.toNat + psum m to k + c)))
+      c (decI (wd m IFL (tyn.toNat + k))) np fuel
+
+/-- The callees of `vi_order` and below, outside the verdict closure. -/
+def OrderNV (p : Prog) : Prop :=
+  NVCls p ["ifl_find_last", "name_get", "expr_get", "ind_pi_tele_len", "ifl_alloc"]
+
+theorem OrderNV.ctor {p : Prog} (h : OrderNV p) : CtorNV p := fun g hg => h g (by
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hg ⊢
+  rcases hg with rfl | rfl | rfl | rfl <;> simp)
+
+/-- **`vi_order`'s error claim**: a failing call of class `≠ 0` stops the twin's constructor order
+(`OrderFailW`). Hypotheses of `orderW_twin`, and the type name handles below `2^32`. -/
+theorem orderE_fail {p : Prog} (hL : IndApplyLookups p) (hnv : OrderNV p)
+    {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
+    (hR : ArenaR m a) (hD : StateDR m st) {cts : List IndCtorRec}
+    {to tn tyn fo cno co cn fuel np : Word} (hT : TopOK m)
+    (hCt : ListF (CtF b m) m 10 co.toNat cts) (hcn : cn.toNat = cts.length)
+    (hCN : ∀ k, k < cts.length → (wd m IFL (cno.toNat + k)).toNat < 2 ^ 32)
+    (hcnB : cno.toNat + cts.length ≤ topN m IFL + 1) (hnp : np.toNat < 10 ^ 18)
+    (hco : co.toNat + 10 * cts.length < 2 ^ 63) (h1 : 1 ≤ cno.toNat ∧ 1 ≤ fo.toNat ∧ 1 ≤ tyn.toNat)
+    (hto : to.toNat + 11 * tn.toNat < 2 ^ 63) (htyn : tyn.toNat + tn.toNat ≤ topN m IFL + 1)
+    (hfo : ∀ p, p < psum m to tn.toNat → fo.toNat + p ≤ topN m IFL ∧ (wd m IFL (fo.toNat + p)).toNat < 2 ^ 32)
+    (hps : psum m to tn.toNat ≤ cts.length)
+    (htt : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32)
+    (e : Err) (hc : callE p (n + 1) "vi_order" [to, tn, tyn, fo, cno, co, cn, fuel, np] m = .error e)
+    (hk : e.cls ≠ 0) :
+    OrderFailW st a cts m to tn tyn fo cno np.toNat fuel.toNat := by
+  obtain ⟨h1a, h1b, h1c⟩ := h1
+  have h := triple_of_callE_err (viOrder_specE p hL.vi_order (n + 1) ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _) hc
+    (Err.code_ne_of_cls hk)
+  rw [viOrderE.arm1] at h
+  cases ha : callE p n "ifl_alloc" [cn] m with
+  | error e1 =>
+    rw [ha, viOrderE.k_ifl_alloc.none] at h; cases h
+    exact absurd (hnv.cls (by simp) ha) hk
+  | ok q =>
+  obtain ⟨r, m₁⟩ := q
+  rw [ha, viOrderE.k_ifl_alloc.arm1] at h
+  obtain ⟨s1, hs1, -, hal⟩ := triple_of_callE (iflAlloc_spec p hL.ifl_alloc n ⟨m, Locals.init []⟩ cn) ha
+  rw [hs1] at hal
+  simp only at hal
+  cases hg : callE p n "vi_order_go" [to, tn, tyn, fo, cno, co, cn, fuel, np, r.headD 0, 0, 0] m₁ with
+  | ok q2 => obtain ⟨u, m₂⟩ := q2; rw [hg, viOrderE.k_vi_order_go.arm1] at h; cases h
+  | error e2 =>
+  rw [hg, viOrderE.k_vi_order_go.none] at h; cases h
+  have hW := triple_of_callE_err (viOrderGo_specE p hL.vi_order_go n ⟨m₁, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _) hg
+    (Err.code_ne_of_cls hk)
+  obtain ⟨a1, a2, a3, a4⟩ := allocW_ok hT hal
+  obtain ⟨-, -, a5, -, -⟩ := allocW_factsA (by decide) hT.1 (by have := hT.1; have := hT.2; omega) hal
+  rw [hcn] at a4 a5
+  have hR₁ : ArenaR m₁ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₁ a1.frame a hR
+  have hD₁ : StateDR m₁ st := hD.frame a1.frame (by decide) (by decide) (by decide) (by decide) (by decide)
+  have hps₁ := psum_congr a1.ifr to
+  have hkeep : ∀ i, 1 ≤ i → i ≤ topN m IFL → wd m₁ IFL i = wd m IFL i := a1.keep
+  have hCN₁ : ∀ k, k < cts.length → (wd m₁ IFL (cno.toNat + k)).toNat < 2 ^ 32 := fun k hk => by
+    rw [hkeep _ (by omega) (by omega)]; exact hCN k hk
+  have hCt₁ : ListF (CtF b m₁) m₁ 10 co.toNat cts := hCt.ext a1 (fun _ _ x => x.ext a1)
+  rw [← hps₁] at hfo hps
+  have hcnt : ∀ k, cntF m₁ to k = cntF m to k := fun k => by simp only [cntF, wd, a1.ifr]
+  obtain ⟨k, -, hk', c, hc', g1, g2, g3⟩ := orderGoE_fail hL hnv.ctor hR₁ hD₁ hCt₁ hcn hCN₁ (by omega) hnp hco
+    (by rw [a1.size]; omega) a2.1 hto (by omega)
+    (fun p hp => by
+      obtain ⟨f1, f2⟩ := hfo p hp
+      exact ⟨by omega, by rw [hkeep _ (by omega) f1]; exact f2⟩) hps
+    (fun k hk => by rw [hkeep _ (by omega) (by omega)]; exact htt k hk) n m₁ 0 0 _ hW hk
+    (IOnly.refl _ _) (UInt64.le_iff_toNat_le.mpr (Nat.zero_le _)) (by simp [psum])
+  have hsl := islice_ext (k := .name) a1 cno.toNat cts.length (by omega) hcnB
+  have hpos : ∀ k' c', k' < tn.toNat → c' < cntF m to k' → psum m to k' + c' < psum m to tn.toNat := by
+    intro k' c' h1 h2
+    have := psum_mono m to (k' + 1) tn.toNat (by omega)
+    rw [psum_succ] at this; omega
+  have hfo' := fun p hp => (hfo p (by rw [hps₁]; exact hp)).1
+  simp only [hps₁, hcnt] at g1 g2 g3 hc'
+  refine ⟨k, hk', c, hc', fun k' hk'' c' hc'' => ?_, fun c' hc'' => ?_, ?_⟩
+  · obtain ⟨kk, e2⟩ := g1 k' (Nat.zero_le _) hk'' c' hc''
+    rw [hsl, hkeep _ (by omega) (by have := hfo' _ (hpos k' c' (by omega) hc''); omega), hkeep _ (by omega) (by omega)] at e2
+    exact ⟨kk, e2⟩
+  · obtain ⟨kk, e2⟩ := g2 c' hc''
+    rw [hsl, hkeep _ (by omega) (by have := hfo' _ (hpos k c' hk' (by omega)); omega), hkeep _ (by omega) (by omega)] at e2
+    exact ⟨kk, e2⟩
+  · rw [hsl, hkeep _ (by omega) (by have := hfo' _ (hpos k c hk' hc'); omega), hkeep _ (by omega) (by omega)] at g3
+    exact g3
+
 end L.Front.Ind
