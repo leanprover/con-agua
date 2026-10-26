@@ -45,7 +45,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
 include hq henv hLC hLT hnv hcE in
 /-- **`check_struct_field_sorts_i_go`'s model error claim** (`csfW_okC`'s hypotheses; the recursion is
 the model's own). -/
-theorem csfE_claim (hg : p.lookup "sl_get" = some slGet)
+theorem csfE_claimB (hg : p.lookup "sl_get" = some slGet)
     (hpw : p.lookup "pin_word" = some pinWordL)
     (het : p.lookup "lvl_eq_true" = some lvlEqTrue) (hc : p.lookup "sl_contains" = some slContains)
     (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
@@ -276,7 +276,7 @@ theorem checkStructFieldSortsI_claim (hg : p.lookup "sl_get" = some slGet)
   | error e2 =>
     rw [h2, fsortsE.k_check_struct_field_sorts_i_go.none] at hW
     cases hW
-    exact csfE_claim hq henv hLC hLT hnv hcE hg hpw het hc hb hftd n hn s1.mem a₀ isProp large s nP fo fl io il
+    exact csfE_claimB hq henv hLC hLT hnv hcE hg hpw het hc hb hftd n hn s1.mem a₀ isProp large s nP fo fl io il
       (r1.headD 0) nW s₀.mem 0 [] fvs idxArgs fvsP hC1 hA1 hg1 (by omega) (by omega)
       (by simp [decHL, hslice?]) hfvs hfb hidx hib hs ⟨sP, hsP⟩ hnj hfP hws _
       (triple_of_callE_err (csfGoE_spec p hgo n ⟨s1.mem, Locals.init []⟩ vis isProp large s nP fo fl io il

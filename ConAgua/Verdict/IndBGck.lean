@@ -30,7 +30,7 @@ l_model gckE_spec (p : Prog) (hf : p.lookup "gen_rec_check" = some genRecCheckL)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
 
-theorem ErrClaim.of_run {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
+theorem ErrClaim.of_runB {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
     (h : T.run a = T'.run a') (h' : ErrClaim T' a' e) : ErrClaim T a e := fun hk => by
   obtain ⟨ce, hce, hc⟩ := h' hk
   exact ⟨ce, by rw [h]; exact hce, hc⟩
@@ -107,7 +107,7 @@ theorem gckE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
   have e3 : rdW (s1.mem.arr64 IW) (rd + 3) = rdW (m.arr64 IW) (rd + 3) :=
     partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
   rw [e2, e3] at he
-  refine ErrClaim.of_run (hrunP (grcTwinR V fe bs rdv)) ?_
+  refine ErrClaim.of_runB (hrunP (grcTwinR V fe bs rdv)) ?_
   unfold grcTwinR
   -- `class_fe_r`
   cases h2 : callE p (n + 1) "class_fe_r" [pp, r1.tail.headD 0, r1.tail.tail.headD 0, rdW (m.arr64 IW) (rd + 2),
