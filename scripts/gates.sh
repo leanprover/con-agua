@@ -14,14 +14,16 @@
 #   modules     scripts/modules_check.py             every module is built by a target
 #   provenance  scripts/provenance.py check          every FunDecl's twin citation is exact
 #   reasons     scripts/reasons.py --check           (when the script exists)
-#   build       scripts/lake build ConAgua           (timeout 50 min)
+#   build       scripts/lake build ConAgua           (timeout 90 min: catches a hang; a tree any
+#                                                    worktree has built is cache hits, minutes)
 #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
 #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 #
 # The lanes run this in their worktree after merging master (`scripts/gates.sh`), the merge queue
 # runs `--changed <master>` on its merge: the same selection. One OK/FAIL/SKIP line per step; the full output
 # of each step goes to $GATES_LOGDIR (default _tmp/gates-<hash of the checkout>/<n>-<step>.log).
-# A green run on a clean tree stamps _tmp/mq/green/<commit> (scripts/submit.sh looks for it).
+# A green run on a clean tree stamps _tmp/mq/green/<commit> (scripts/submit.sh looks for it; the queue
+# skips the expensive steps the stamp covers when its merge result is exactly that commit's tree).
 set -uo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
@@ -77,7 +79,7 @@ run vendor     scripts/bump-con-ron.sh --check
 run modules    python3 scripts/modules_check.py
 run provenance python3 scripts/provenance.py check
 run reasons    reasons
-run build      timeout 10800 scripts/lake build ConAgua
+run build      timeout 5400 scripts/lake build ConAgua
 run core-fns   timeout 600 python3 scripts/core_fns.py --check
 run loop-fns   timeout 600 python3 scripts/loop_fns.py --check
 run leaf-fns   timeout 600 python3 scripts/leaf_fns.py --check

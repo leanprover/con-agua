@@ -3372,6 +3372,54 @@ the new one. Coordinator: `rm -rf _tmp/lake-cache` again once every lane has mer
 Nondeterministic oleans mean a publish may find "same input, different bytes" mappings; the wrapper
 keeps the first and notes the count.
 
+## Cache misses between worktrees (2026-10-26, lane `gatecache`)
+
+**Symptom.** The queue's gate build of consync's entry compiled 831 modules and hit the 50 min timeout
+(`_tmp/mq/logs/20261026-092911-consync/gates/6-build.log`), although consync had built exactly that tree
+(the queue merged it onto the master consync had merged; tree identical) and its own `gates.sh` build was
+all replays. slownat and slownat2 took 51 and 46 min in the queue the same way.
+
+**Not the cause.** Publishing and reading work: a branch built in one worktree (812 modules compiled,
+35 min) builds in a second worktree that had master built in 11 s, 0 compiled. No absolute paths enter the
+input hash (paths are only captions in the trace). The coordinator's reset (2026-10-25 21:20) was before
+consync's last builds. consync did publish: 735 of the 831 modules the queue compiled have a mapping
+published during consync's work (03:07-09:29) with the same `.ilean` -- under a *different input hash*.
+
+**Mechanism.** A module's input hash contains the hashes of its imports' artifacts (`importAllArts`), so
+it depends on which `.olean` *bytes* each import has. Lean's oleans are not byte-for-byte deterministic
+(same input, same `.ilean`/`.c`, different `.olean`: e.g. `ConRon.Bridge.Frontend.Lines`, 24 MB; already
+noted in "Cache incident"). And Lake (`getArtifacts?`, `Lake/Build/Common.lean`) takes a module's outputs
+from the worktree's LOCAL trace when its input hash matches, before it looks at the cache's mapping; the
+publish keeps the first mapping (no-clobber). So a worktree that compiled a module itself while another
+compiled the same input (concurrent lanes on the same master, helper lanes merging each other, the queue),
+or compiled it with the cache unreadable, or whose mapping a reset dropped and someone else re-published,
+keeps its own olean variant forever: every module downstream gets input hashes nobody else has. That
+worktree's builds are replays locally and publish mappings no other worktree can use; the queue, restoring
+the canonical variants from the cache, misses everything downstream. Second cause: `LAKE_ARTIFACT_CACHE=false`
+(the documented way to keep a build out of the cache) turned off cache READS too (Lake's
+`Package.isArtifactCacheReadable` is `enableArtifactCache?.getD true`; `false` disables both): such a
+build compiles everything it does not have locally, creating exactly such private variants.
+
+**Reproduction** (`_tmp/wt/gatecache2`, master built from the cache): set the local trace of
+`ConAgua.Checker.ParThreadTwin` to another olean variant of the same module (what a private compile
+leaves behind). Old wrapper: its three dependents are compiled (and the next build says nothing: the
+divergence is silent and permanent). New wrapper: "1 module(s) here had other outputs than the shared cache
+has", 0 compiled, 14 s. Deleting `Inst1Emit`'s local state and building with `LAKE_ARTIFACT_CACHE=false`
+compiled it five times although the cache had it.
+
+**Fix (`scripts/lake`).** (1) Before every build (writing or not), under the worktree lock, the wrapper
+compares each local module trace with the shared mapping for the same input hash and deletes the local
+state of the modules that differ; Lake then restores the cache's outputs, and the downstream input hashes
+are everyone's (~0.3 s for 1800 traces). (2) `LAKE_ARTIFACT_CACHE=false` is passed to Lake as *unset*:
+reads on, writes off. Resets of the cache are no longer needed for correctness of hits; a dropped mapping
+is re-published by the next writing build that has it locally.
+
+**Queue (`scripts/mq.py`).** When the merge result's tree equals the entry's commit's tree and
+`_tmp/mq/green/<commit>` exists, the steps the stamp covers among build, the closure checks and e2e are
+not rerun (same tree, same result; the landing note says so). `_tmp/mq-log.csv` gets `built`/`jobs`: the
+modules the gate build compiled, so misses show. The build gate's timeout is back to 90 min (it was raised
+to 3 h as a stopgap).
+
 ## Does the relation scale? (2026-10-21, lane `scale`)
 
 Question: does the L ⊑ twin relation (`ArenaR`, `ArenaD`, the `GoOK`-style specs) scale to all the
