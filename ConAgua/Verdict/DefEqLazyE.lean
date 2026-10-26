@@ -332,3 +332,237 @@ theorem ldsSame_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hspE
     exact unf _ _ _ hS₁ hW
 
 end L.Arena
+
+/-! ## `lds_both`, `lazy_delta_step` -/
+
+namespace L.Arena
+
+l_model ldsBoth_specE (p : Prog) (hf : p.lookup "lds_both" = some ldsBothL)
+  fns [hf ↦ ldsBothE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`lds_both`'s error spec** (the error half of `ldsBoth_refines`). -/
+def LdsBothE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    d.toNat < 2 ^ 63 →
+    CoreSpecE p (n + 1) "lds_both" [mode, vis, d, a, b]
+      (bothT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+/-- **`lds_both`'s error claim**. -/
+theorem ldsBoth_refinesE (p : Prog) (hp : LazyProg p) (hlE : LdsOneE p "lds_left" true)
+    (hrE : LdsOneE p "lds_right" false) (hsE : LdsSameE p) (hnv : closedNV p L.Checker.nvFns = true) :
+    LdsBothE p := by
+  intro n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (ldsBoth_specE p hp.both (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b) hc0 (Err.code_ne_of_cls hkc)
+  rw [ldsBothE.arm1] at hW
+  have hS := hs.rel
+  unfold bothT
+  cases h1 : callE p n "head_hint" [vis, a] s₀.mem with
+  | error e =>
+    rw [h1, ldsBothE.k_head_hint.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h1
+  | ok q =>
+  obtain ⟨ra, m₁⟩ := q
+  rw [h1, ldsBothE.k_head_hint.arm1] at hW
+  obtain ⟨k, rfl⟩ := callE_succ h1
+  have e₁ := CoreSpec.of_callW (headHint_refines p hp.mid.leaf k s₀ a₀ dn vis fe M eb a hS ha)
+    (callW_of_callE h1)
+  refine ErrClaim.bind_core e₁ (fun M₁ hS₁ => ?_)
+  cases h2 : callE p (k + 1) "head_hint" [vis, b] m₁ with
+  | error e =>
+    rw [h2, ldsBothE.k_head_hint_2.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h2
+  | ok q =>
+  obtain ⟨rb, m₂⟩ := q
+  rw [h2, ldsBothE.k_head_hint_2.arm1] at hW
+  have e₂ := CoreSpec.of_callW (headHint_refines p hp.mid.leaf k ⟨m₁, Locals.init []⟩ _ dn vis fe M₁
+    eb b hS₁ hb) (callW_of_callE h2)
+  refine ErrClaim.bind_core e₂ (fun M₂ hS₂ => ?_)
+  -- an arm's failure is its callee's
+  have arm : ∀ (f : FnName) (args : List Word) (m₃ : Mem) (T : AM DeltaStepA) (a₂ : AState),
+      ldsBothE.k_lds_left p (callE p (k + 1) f args m₃) = .error er →
+      (∀ e, callE p (k + 1) f args m₃ = .error e → ErrClaim T a₂ e) → ErrClaim T a₂ er := by
+    intro f args m₃ T a₂ h hT
+    exact hT er (tailE (ldsBothE.k_lds_left.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) h)
+  cases h3 : callE p (k + 1) "hint_lt" [rb.headD 0, rb.tail.headD 0, ra.headD 0, ra.tail.headD 0] m₂
+    with
+  | error e =>
+    rw [h3, ldsBothE.k_hint_lt.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h3
+  | ok q =>
+  obtain ⟨rl, m₃⟩ := q
+  rw [h3] at hW
+  obtain ⟨t₃, ht₃, hm₃, -, hlt₁, -⟩ := triple_of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+    (hintLt_refines p hp.mid.leaf k ⟨m₂, Locals.init []⟩ _ _ _ _) h3
+  have hm₃' : m₃ = m₂ := by rw [← ht₃, hm₃]
+  subst hm₃'
+  have hdh : ∀ r : List Word, decHintR r = decHintW (r.headD 0) (r.tail.headD 0) := fun _ => rfl
+  rw [hdh ra, hdh rb]
+  by_cases h1 : rl.headD 0 ≠ 0
+  · rw [ldsBothE.k_hint_lt.arm1 (hc1 := h1)] at hW
+    have hl : ConLeche.ReducibilityHint.lt (decHintW (rb.headD 0) (rb.tail.headD 0))
+        (decHintW (ra.headD 0) (ra.tail.headD 0)) = true := by rw [← hlt₁]; exact decBool_t h1
+    simp only [hl, ↓reduceIte]
+    exact arm _ _ _ _ _ hW (fun e he => CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+      (hlE k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₂ eb
+        mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd) he)
+  have h1' : rl.headD 0 = 0 := by simpa using h1
+  rw [ldsBothE.k_hint_lt.arm2 (hc1 := h1')] at hW
+  have hl : ConLeche.ReducibilityHint.lt (decHintW (rb.headD 0) (rb.tail.headD 0))
+      (decHintW (ra.headD 0) (ra.tail.headD 0)) = false := by rw [← hlt₁]; exact decBool_f h1'
+  simp only [hl, Bool.false_eq_true, ↓reduceIte]
+  cases h5 : callE p (k + 1) "hint_lt" [ra.headD 0, ra.tail.headD 0, rb.headD 0, rb.tail.headD 0] m₃
+    with
+  | error e =>
+    rw [h5, ldsBothE.k_hint_lt_2.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h5
+  | ok q =>
+  obtain ⟨rl₂, m₅⟩ := q
+  rw [h5] at hW
+  obtain ⟨t₅, ht₅, hm₅, -, hlt₂, -⟩ := triple_of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+    (hintLt_refines p hp.mid.leaf k ⟨m₃, Locals.init []⟩ _ _ _ _) h5
+  have hm₅' : m₅ = m₃ := by rw [← ht₅, hm₅]
+  subst hm₅'
+  simp only [ldsBothE.k_hint_lt_2] at hW
+  by_cases h2 : rl₂.headD 0 ≠ 0
+  · rw [if_pos h2] at hW
+    have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
+        (decHintW (rb.headD 0) (rb.tail.headD 0)) = true := by rw [← hlt₂]; exact decBool_t h2
+    simp only [hl2, ↓reduceIte]
+    exact arm _ _ _ _ _ hW (fun e he => CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩)
+      (hrE k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₂ eb
+        mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd) he)
+  have h2' : rl₂.headD 0 = 0 := by simpa using h2
+  rw [if_neg h2] at hW
+  have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
+      (decHintW (rb.headD 0) (rb.tail.headD 0)) = false := by rw [← hlt₂]; exact decBool_f h2'
+  simp only [hl2, Bool.false_eq_true, ↓reduceIte]
+  exact arm _ _ _ _ _ hW (fun e he => CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩)
+    (hsE k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₂ eb
+      mode d a b _ _ _ _ ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd) he)
+
+l_model lazyDeltaStep_specE (p : Prog) (hf : p.lookup "lazy_delta_step" = some lazyDeltaStepL)
+  fns [hf ↦ lazyDeltaStepE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`lazy_delta_step`'s error claim** (`LazyDeltaStepE`, the error half of
+`lazyDeltaStep_refines`). -/
+theorem lazyDeltaStep_refinesE (p : Prog) (hp : LazyProg p)
+    (hdqE : DeltaQuickE p) (htuE : TryUnfoldProjAppE p) (hlE : LdsOneE p "lds_left" true)
+    (hrE : LdsOneE p "lds_right" false) (hbE : LdsBothE p) (hnv : closedNV p L.Checker.nvFns = true) :
+    LazyDeltaStepE p := by
+  intro n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (lazyDeltaStep_specE p hp.step (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b) hc0 (Err.code_ne_of_cls hkc)
+  simp only [lazyDeltaStepE] at hW
+  have hS := hs.rel
+  rw [lazyDeltaStep_eq]
+  cases h1 : callE p n "unfoldable_head" [vis, a] s₀.mem with
+  | error e =>
+    rw [h1, lazyDeltaStepE.k_unfoldable_head.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h1
+  | ok q =>
+  obtain ⟨ra, m₁⟩ := q
+  rw [h1] at hW
+  simp only [lazyDeltaStepE.k_unfoldable_head] at hW
+  obtain ⟨k, rfl⟩ := callE_succ h1
+  have e₁ := CoreSpec.of_callW (unfoldableHead_refines p hp.mid.leaf k s₀ a₀ dn vis fe M eb a hS ha)
+    (callW_of_callE h1)
+  refine ErrClaim.bind_core e₁ (fun M₁ hS₁ => ?_)
+  cases h2 : callE p (k + 1) "unfoldable_head" [vis, b] m₁ with
+  | error e =>
+    rw [h2, lazyDeltaStepE.k_unfoldable_head_2.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) h2
+  | ok q =>
+  obtain ⟨rb, m₂⟩ := q
+  rw [h2] at hW
+  simp only [lazyDeltaStepE.k_unfoldable_head_2] at hW
+  have e₂ := CoreSpec.of_callW (unfoldableHead_refines p hp.mid.leaf k ⟨m₁, Locals.init []⟩ _ dn vis
+    fe M₁ eb b hS₁ hb) (callW_of_callE h2)
+  refine ErrClaim.bind_core e₂ (fun M₂ hS₂ => ?_)
+  have arm : ∀ (f : FnName) (args : List Word) (m₃ : Mem) (T : AM DeltaStepA) (a₂ : AState),
+      lazyDeltaStepE.k_delta_quick p (callE p (k + 1) f args m₃) = .error er →
+      (∀ e, callE p (k + 1) f args m₃ = .error e → ErrClaim T a₂ e) → ErrClaim T a₂ er := by
+    intro f args m₃ T a₂ h hT
+    exact hT er (tailE (lazyDeltaStepE.k_delta_quick.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) h)
+  have hk' : KnotUpTo p k := hk.mono (by omega)
+  have hkE' : KnotUpToE p k := hkE.mono (by omega)
+  by_cases h00 : ra.headD 0 = 0 ∧ rb.headD 0 = 0
+  · rw [if_pos h00] at hW; cases hW
+  rw [if_neg h00] at hW
+  by_cases hb0 : rb.headD 0 = 0
+  · have ha0 : ra.headD 0 ≠ 0 := fun h => h00 ⟨h, hb0⟩
+    rw [if_pos hb0] at hW
+    rw [decBool_t ha0, decBool_f hb0]
+    cases h3 : callE p (k + 1) "try_unfold_proj_app" [mode, vis, d, b] m₂ with
+    | error e =>
+      rw [h3, lazyDeltaStepE.k_try_unfold_proj_app.none] at hW; cases hW
+      exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+        (htuE k hk' hkE' F _ _ dn vis fe M₂ eb mode d b (by omega) (by omega)
+          ⟨hS₂, hs.mode4, hs.eb_mode⟩ hb) h3)
+    | ok q =>
+    obtain ⟨rt, m₃⟩ := q
+    rw [h3] at hW
+    simp only [lazyDeltaStepE.k_try_unfold_proj_app] at hW
+    have e₃ := CoreSpec.of_callW (tryUnfoldProjApp_refines p hp.mid k hk' F ⟨m₂, Locals.init []⟩ _ dn
+      vis fe M₂ eb mode d b (by omega) (by omega) ⟨hS₂, hs.mode4, hs.eb_mode⟩ hb) (callW_of_callE h3)
+    refine ErrClaim.bind_core e₃ (fun M₃ hS₃ => ?_)
+    by_cases ht : rt.headD 0 ≠ 0
+    · rw [if_pos ht] at hW
+      rw [decOptR_some ht]
+      exact arm _ _ _ _ _ hW (fun e he => ErrClaim.of_callE_succ he fun j hj h' => by
+        cases Nat.add_right_cancel hj
+        exact CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+          (hdqE k hk' hkE' F _ _ dn vis fe M₃ eb mode d a _ (by omega) (by omega)
+            ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha e₃.2.2.2.2 hd) h')
+    rw [if_neg ht] at hW
+    rw [decOptR_none (by simpa using ht)]
+    exact arm _ _ _ _ _ hW (fun e he => CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+      (hlE k hk' hkE' F (by omega) (by omega) _ _ dn vis fe M₃ eb mode d a b
+        ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd) he)
+  rw [if_neg hb0] at hW
+  by_cases ha0 : ra.headD 0 = 0
+  · rw [if_pos ha0] at hW
+    rw [decBool_f ha0, decBool_t hb0]
+    cases h3 : callE p (k + 1) "try_unfold_proj_app" [mode, vis, d, a] m₂ with
+    | error e =>
+      rw [h3, lazyDeltaStepE.k_try_unfold_proj_app_2.none] at hW; cases hW
+      exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+        (htuE k hk' hkE' F _ _ dn vis fe M₂ eb mode d a (by omega) (by omega)
+          ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha) h3)
+    | ok q =>
+    obtain ⟨rt, m₃⟩ := q
+    rw [h3] at hW
+    simp only [lazyDeltaStepE.k_try_unfold_proj_app_2] at hW
+    have e₃ := CoreSpec.of_callW (tryUnfoldProjApp_refines p hp.mid k hk' F ⟨m₂, Locals.init []⟩ _ dn
+      vis fe M₂ eb mode d a (by omega) (by omega) ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha) (callW_of_callE h3)
+    refine ErrClaim.bind_core e₃ (fun M₃ hS₃ => ?_)
+    by_cases ht : rt.headD 0 ≠ 0
+    · rw [if_pos ht] at hW
+      rw [decOptR_some ht]
+      exact arm _ _ _ _ _ hW (fun e he => ErrClaim.of_callE_succ he fun j hj h' => by
+        cases Nat.add_right_cancel hj
+        exact CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+          (hdqE k hk' hkE' F _ _ dn vis fe M₃ eb mode d _ b (by omega) (by omega)
+            ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₃.2.2.2.2 hb hd) h')
+    rw [if_neg ht] at hW
+    rw [decOptR_none (by simpa using ht)]
+    exact arm _ _ _ _ _ hW (fun e he => CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+      (hrE k hk' hkE' F (by omega) (by omega) _ _ dn vis fe M₃ eb mode d a b
+        ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd) he)
+  rw [if_neg ha0] at hW
+  rw [decBool_t ha0, decBool_t hb0]
+  exact arm _ _ _ _ _ hW (fun e he => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+    (hbE k hk' hkE' F (by omega) (by omega) _ _ dn vis fe M₂ eb mode d a b
+      ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd) he)
+
+end L.Arena
