@@ -487,20 +487,14 @@ l_model towerSlotsAll_spec (p : Prog) (hp : p.lookup "tower_slots_all" = some to
   specs [callW_spec p n "find_proj"]
   grind [arena_grind] simp []
 
-theorem towerSlotsAllGo_zero_run (fe : IFEnv) (T : NIdx) (j : Nat) (a : AState) :
-    (towerSlotsAllGo fe T 0 j).run a = .ok (true, a) := by
-  simp [towerSlotsAllGo]; rfl
+theorem towerSlotsAllGo_stop (fe : IFEnv) (T : NIdx) (n j : Nat) (h : fe.findProj? T j = none) :
+    towerSlotsAllGo fe T (n + 1) j = false := by
+  simp only [towerSlotsAllGo, h]
 
-theorem towerSlotsAllGo_stop_run (fe : IFEnv) (T : NIdx) (n j : Nat) (a a₁ : AState)
-    (o : Option IProjEntry) (h : (fe.findProj? T j).run a = .ok (o, a₁)) (ho : o.isSome = false) :
-    (towerSlotsAllGo fe T (n + 1) j).run a = .ok (false, a₁) := by
-  simp only [towerSlotsAllGo, StateT.run_bind, h, except_ok_bind, ho]; rfl
-
-theorem towerSlotsAllGo_cont_run (fe : IFEnv) (T : NIdx) (n j : Nat) (a a₁ a₂ : AState)
-    (o : Option IProjEntry) (b : Bool) (h : (fe.findProj? T j).run a = .ok (o, a₁))
-    (ho : o.isSome = true) (hr : (towerSlotsAllGo fe T n (j + 1)).run a₁ = .ok (b, a₂)) :
-    (towerSlotsAllGo fe T (n + 1) j).run a = .ok (b, a₂) := by
-  simp only [towerSlotsAllGo, StateT.run_bind, h, except_ok_bind, ho]; exact hr
+theorem towerSlotsAllGo_cont (fe : IFEnv) (T : NIdx) (n j : Nat) (e : IProjEntry)
+    (h : fe.findProj? T j = some e) :
+    towerSlotsAllGo fe T (n + 1) j = towerSlotsAllGo fe T n (j + 1) := by
+  simp only [towerSlotsAllGo, h]
 
 /-- **The `tower_slots_all` loop refines `towerSlotsAllGo`**, by induction on the remaining count. -/
 theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -508,9 +502,8 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
       nF.toNat - j.toNat = K → j.toNat ≤ nF.toNat → CoreS dn m a vis fe M eb →
       tsW.loop1 p k m vis T nF j = some (L, m') →
-      AM.ok (towerSlotsAllGo fe (decI T) K j.toNat) a ∧
-      CoreAfter dn m m' (AM.st (towerSlotsAllGo fe (decI T) K j.toNat) a) vis fe M eb ∧
-      AM.res (towerSlotsAllGo fe (decI T) K j.toNat) a = decBool L ∧ HW (L.headD 0) := by
+      CoreAfter dn m m' a vis fe M eb ∧
+      towerSlotsAllGo fe (decI T) K j.toNat = decBool L ∧ HW (L.headD 0) := by
   intro K
   induction K with
   | zero =>
@@ -523,9 +516,8 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
     | succ k =>
     rw [tsW.loop1.arm2 (hc1 := hn)] at hL
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-    refine CoreRef.of_run (ok := ResH) (towerSlotsAllGo_zero_run fe (decI T) j.toNat a) ⟨M, hS, KeptAll.refl _
-      _, StackKept.refl _⟩ ?_ (by simp [ResH, HW])
-    · simp [decBool]
+    exact ⟨⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, by simp [towerSlotsAllGo, decBool],
+      by simp [HW]⟩
   | succ K ih =>
     intro k m a M j L m' hK hj hS hL
     have hlt : j < nF := by
@@ -536,30 +528,27 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
     | succ k =>
     rcases hc : callW p k "find_proj" [vis, T, j] m with _ | ⟨r₁, m₁⟩
     · rw [tsW.loop1.arm1 (hc1 := hlt), hc, tsW.k_find_proj.none] at hL; cases hL
-    obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
+    obtain ⟨-, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
       (hfp k ⟨m, Locals.init []⟩ a dn vis fe M eb T j hS hT) hc
-    have hrunF := AM.run_of_ok _ _ hok
+    have hfx : fe.findProj? (decI T) j.toNat =
+        decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat := hres
     by_cases h0 : r₁.headD 0 = 0
     · rw [tsW.loop1.arm1 (hc1 := hlt), hc, tsW.k_find_proj.arm1 (hc1 := h0)] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      have hnone : AM.res (fe.findProj? (decI T) j.toNat) a = none := by
-        rw [hres]; simp only [decEntry, h0, ↓reduceIte]
-      rw [hnone] at hrunF
-      refine CoreRef.of_run (ok := ResH) (towerSlotsAllGo_stop_run fe (decI T) K j.toNat a _ none hrunF rfl)
-        ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ (by simp [ResH, HW])
-      · simp [decBool]
+      have hnone : fe.findProj? (decI T) j.toNat = none := by
+        rw [hfx]; simp only [decEntry, h0, ↓reduceIte]
+      exact ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, by rw [towerSlotsAllGo_stop _ _ _ _ hnone]; simp [decBool],
+        by simp [HW]⟩
     · rw [tsW.loop1.arm1 (hc1 := hlt), hc, tsW.k_find_proj.arm2 (hc1 := h0)] at hL
       obtain ⟨tbl, htbl, -⟩ := hpf k m a dn vis fe M eb T j r₁ m₁ hS hc h0
-      have hsome : AM.res (fe.findProj? (decI T) j.toNat) a = some (tbl.entry j.toNat) := by
-        rw [hres]; simp only [decEntry, if_neg h0, htbl, Option.map_some]
-      rw [hsome] at hrunF
+      have hsome : fe.findProj? (decI T) j.toNat = some (tbl.entry j.toNat) := by
+        rw [hfx]; simp only [decEntry, if_neg h0, htbl, Option.map_some]
       have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat nF j hlt
-      obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hL1⟩ := ih k m₁ _ M₁ (j + 1) L m'
+      obtain ⟨⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hL1⟩ := ih k m₁ _ M₁ (j + 1) L m'
         (by omega) (by omega) hS₁ hL
-      rw [h1] at hok2 hS₂ hres2
-      have hrunR := AM.run_of_ok _ _ hok2
-      refine CoreRef.of_run (ok := ResH) (towerSlotsAllGo_cont_run fe (decI T) K j.toNat a _ _ _ _ hrunF rfl
-        hrunR) ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩ hres2 hL1
+      rw [h1] at hres2
+      exact ⟨⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩,
+        by rw [towerSlotsAllGo_cont _ _ _ _ _ hsome]; exact hres2, hL1⟩
 
 /-- **`tower_slots_all` refines `towerSlotsAll`** (`find_proj` and its decoding fact as
 `ProjCallees`'s two fields). -/
@@ -572,11 +561,11 @@ theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hfp : FindProjOK p
   refine triple_post (towerSlotsAll_spec p hp.towerSlotsAll (n + 1) s₀ vis T nF) fun r s' ⟨hloc, hW⟩ =>
     ⟨hloc, ?_⟩
   rw [tsW.arm1] at hW
-  obtain ⟨hok, hca, hres, hL1⟩ := tsW_ok p hfp hpf dn vis fe eb T nF hT (nF.toNat - (0 : Word).toNat) (n + 1)
+  obtain ⟨hca, hres, hL1⟩ := tsW_ok p hfp hpf dn vis fe eb T nF hT (nF.toNat - (0 : Word).toNat) (n + 1)
     s₀.mem a₀ MM 0 r s'.mem rfl (by simp) hS hW
-  refine ⟨hok, ?_, ?_, hL1⟩
-  · simpa [towerSlotsAll] using hca
-  · simpa [towerSlotsAll] using hres
+  refine ⟨by unfold AM.ok; exact trivial, hca, ?_, hL1⟩
+  · show towerSlotsAll fe (decI T) nF.toNat = decBool r
+    simpa [towerSlotsAll] using hres
 
 
 /-! ## `inst_spine(ao, an, t, e)` -/
