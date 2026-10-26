@@ -9,8 +9,10 @@ The fixtures and the expected exit codes are con-leche's `tests/` at the revisio
 pins: `tests/e2e-expected.txt` ("<exit> <fixture>" under `tests/e2e/`, gzipped or not) and
 `tests/arena-expected.txt` ("<exit> <path>" inside `tests/arena/lean-arena-tests.tar.gz`).
 con-leche's exit codes are 0 accept, 1 reject, 2 decline, 3 error, 124 a deliberate non-terminating
-input. `--tests` names that directory (default `$CON_LECHE_TESTS`, else `_tmp/ref/con-leche/tests`);
-it is checked against `vendor/UPSTREAM` when it is a git checkout.
+input. `--tests` names that directory (default `$CON_LECHE_TESTS`, else the tests at exactly the pinned
+revision, extracted from the reference clone `_tmp/ref/con-leche` with `git archive` into
+`_tmp/ref/con-leche-tests/<rev>/` by `scripts/conleche_tests.py`, fetching if needed; the clone's
+working tree is never used). An override is not checked against the pin.
 
 The checker exits 0 only on accept, 1 on a reject, 2 on a decline, 3 otherwise (`main.c`'s usage
 text). Its reject/decline labels follow con-ron's twin, not con-leche, so a fixture is compared on
@@ -223,8 +225,8 @@ def main():
     ap.add_argument("--jobs", type=int, default=1, help="the checker's --jobs=N (1: sequential)")
     ap.add_argument("--parallel", type=int, default=4, help="fixtures run at once")
     ap.add_argument("--timeout", type=float, default=300.0, help="seconds per run")
-    ap.add_argument("--tests", default=os.environ.get("CON_LECHE_TESTS",
-                                                      os.path.join(ROOT, "_tmp", "ref", "con-leche", "tests")))
+    ap.add_argument("--tests", default=None,
+                    help="con-leche's tests/ (default: $CON_LECHE_TESTS, else the pinned revision read from git)")
     ap.add_argument("--only", default=None, help="regex on fixture ids")
     ap.add_argument("--refs", action="store_true", help="also compare with con-ron and e2e-ref (cached)")
     ap.add_argument("--no-cache", action="store_true", help="with --refs: ignore the cached reference verdicts")
@@ -234,16 +236,14 @@ def main():
     if not os.access(a.bin, os.X_OK):
         print(f"diff-e2e: {a.bin} is not executable (run make)", file=sys.stderr)
         return 2
+    if a.tests is None:
+        import conleche_tests
+        a.tests = conleche_tests.tests_dir()
     if not os.path.isfile(os.path.join(a.tests, "e2e-expected.txt")):
         print(f"diff-e2e: no con-leche tests at {a.tests} (set --tests or CON_LECHE_TESTS)", file=sys.stderr)
         return 2
-    want_rev = upstream_rev("con-leche")
-    r = subprocess.run(["git", "-C", a.tests, "rev-parse", "HEAD"], capture_output=True, text=True)
-    if r.returncode == 0 and r.stdout.strip() != want_rev:
-        print(f"diff-e2e: {a.tests} is at con-leche {r.stdout.strip()[:12]}, vendor/UPSTREAM pins "
-              f"{want_rev[:12]}", file=sys.stderr)
-        return 2
 
+    want_rev = upstream_rev("con-leche")
     refs = Refs(not a.no_cache) if a.refs else None
     with tempfile.TemporaryDirectory(prefix="diff-e2e-") as work:
         fx, missing = fixtures(a.tests, work)

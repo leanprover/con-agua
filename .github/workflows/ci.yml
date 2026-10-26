@@ -181,8 +181,8 @@ jobs:
         run: echo "conleche=$(awk '$1 == "con-leche" { print $2 }' vendor/UPSTREAM)" >> "$GITHUB_OUTPUT"
 
       # The fixtures and their expected exit codes, at the revision the
-      # vendored files come from; `_tmp/ref/con-leche` is where
-      # scripts/diff-e2e.py looks by default.
+      # vendored files come from; `_tmp/ref/con-leche` is the clone
+      # scripts/conleche_tests.py reads the pinned revision's tests from.
       - name: Check out con-leche's tests
         uses: actions/checkout@v7
         with:

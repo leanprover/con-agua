@@ -50,8 +50,10 @@ import tarfile
 import threading
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import conleche_tests  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REF = os.path.join(ROOT, "_tmp", "ref", "con-leche", "tests")
 WORK = os.path.join(ROOT, "_tmp", "e2e", os.path.basename(ROOT))
 BIN = os.path.join(ROOT, ".lake", "build", "bin")
 
@@ -71,7 +73,7 @@ TRACE_MAX_BYTES = 1 << 20  # the tracing interpreter on l-error fixtures up to t
 TRACE_WORDS = 1 << 18
 DEFAULT_JOBS = 8           # shared machine: at most ~8 runs at a time (each well under PER_RUN_GB)
 # classes that count as passing for `--rerun-failing`
-PASSING = ("agree-accept", "agree-reject", "agree-reject (L aborts)", "agree-timeout", "agree-memout")
+PASSING = ("agree-accept", "agree-reject", "agree-reject (L aborts)", "agree-decline", "agree-timeout", "agree-memout")
 
 # the real con-ron binary (the Rust checker, built from the vendored revision: DESIGN.md, lane
 # `integrate`, "A second reference"); `$CON_RON` overrides
@@ -478,15 +480,15 @@ def fixtures():
     os.makedirs(fx, exist_ok=True)
     out = []
     exp = {}
-    for line in open(os.path.join(REF, "e2e-expected.txt"), encoding="utf-8"):
+    for line in open(os.path.join(conleche_tests.tests_dir(), "e2e-expected.txt"), encoding="utf-8"):
         w = line.split()
         if len(w) >= 2 and not line.startswith("#") and w[0].isdigit():
             exp["e2e/" + w[1]] = int(w[0])
-    for line in open(os.path.join(REF, "arena-expected.txt"), encoding="utf-8"):
+    for line in open(os.path.join(conleche_tests.tests_dir(), "arena-expected.txt"), encoding="utf-8"):
         w = line.split()
         if len(w) >= 2 and not line.startswith("#") and w[0].isdigit():
             exp["arena/" + w[1]] = int(w[0])
-    for f in sorted(glob.glob(os.path.join(REF, "e2e", "*.ndjson*"))):
+    for f in sorted(glob.glob(os.path.join(conleche_tests.tests_dir(), "e2e", "*.ndjson*"))):
         name = os.path.basename(f)
         if name.endswith(".gz"):
             name = name[:-3]
@@ -499,7 +501,7 @@ def fixtures():
         out.append(("e2e/" + name, f, exp.get("e2e/" + name)))
     arena = os.path.join(WORK, "arena-tests")
     if not os.path.isdir(arena):
-        with tarfile.open(os.path.join(REF, "arena", "lean-arena-tests.tar.gz")) as t:
+        with tarfile.open(os.path.join(conleche_tests.tests_dir(), "arena", "lean-arena-tests.tar.gz")) as t:
             t.extractall(arena, filter="data")
     for f in sorted(glob.glob(os.path.join(arena, "**", "*.ndjson"), recursive=True)):
         rel = os.path.relpath(f, arena)
@@ -549,7 +551,11 @@ def l_outcome(out, st, stubs_by_code):
         return "exhausted"
     if out.startswith("missing "):
         return "missing " + stubs_by_code.get(int(out.split()[1]), "?")
-    if out == "error":
+    if out == "rejected" or out.startswith("rejected: "):
+        return "reject-abort"
+    if out == "declined" or out.startswith("declined: "):
+        return "decline-abort"
+    if out == "error" or out.startswith("error: "):
         return "error"
     return "crash"
 
@@ -585,6 +591,16 @@ def classify(lo, ref, where=""):
         if racc:
             return "DISAGREE-reject"
         return "agree-reject" if where == "line" else "agree-reject, stage differs"
+    if lo in ("reject-abort", "decline-abort"):
+        # the checker's abort class (main.c): where the reference reports the kind, it must match
+        kind = "reject" if lo == "reject-abort" else "decline"
+        if racc:
+            return "DISAGREE-reject" if kind == "reject" else "l-decline"
+        if ref in ("reject", "decline") and ref != kind:
+            return "DISAGREE-kind"
+        if kind == "decline":
+            return "agree-decline"
+        return "agree-reject, stage differs" if where == "line" else "agree-reject"
     if lo == "error":
         return "l-error" if racc else "agree-reject (L aborts)"
     return "DISAGREE-other"
@@ -643,7 +659,7 @@ def report(res, asm, compiled, clashes, args, t0):
             for g, n in miss.most_common():
                 code = asm["stubs"].get(g, (0,))[0]
                 lines.append(f"| `{g}` | {n} | {code} | {', '.join('`' + c + '`' for c in sorted(asm['callers'].get(g, []))[:4])} |")
-        errs = [r for r in res if r[entry]["class"] in ("l-error", "DISAGREE-accept", "DISAGREE-reject", "DISAGREE-other", "l-crash", "agree-reject, stage differs")]
+        errs = [r for r in res if r[entry]["class"] in ("l-error", "DISAGREE-accept", "DISAGREE-reject", "DISAGREE-other", "DISAGREE-kind", "l-decline", "l-crash", "agree-reject, stage differs")]
         if errs:
             lines += ["", "Disagreements, L errors where the reference accepts, and rejects at different stages "
                       "(smallest first; *where* is the tracing interpreter's stop: `abort #k` is the k-th `abort` "
@@ -1017,7 +1033,7 @@ def main():
                 cnt = collections.Counter(r[entry]["class"] for r in res)
                 miss = collections.Counter(r[entry]["l"][8:] for r in res if r[entry]["class"] == "missing")
                 dis = sum(v for k, v in cnt.items() if k.startswith("DISAGREE"))
-                arej = sum(v for k, v in cnt.items() if k.startswith("agree-reject"))
+                arej = sum(v for k, v in cnt.items() if k.startswith(("agree-reject", "agree-decline")))
                 known = cnt["agree-accept"] + arej + cnt["missing"] + cnt["l-error"] + dis
                 fh.write(",".join(map(str, [
                     datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M"), rev, entry, len(res),

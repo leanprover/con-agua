@@ -144,7 +144,7 @@ theorem checkB_thr0 (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
       | exact hv' ‹_›
       | exact hv0 ‹_›
       | (exact hI1 ‹_›)
-      | trace_state; sorry
+      | (trace_state; fail "ParThreadCall: no closing tactic applies")
 
 /-- **`check` with the mode word `2` on a thread's memory**: `check_b` (as `checkB_thr0`). -/
 theorem checkThr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
@@ -181,7 +181,7 @@ theorem checkThr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .ver
     all_goals first
       | (simp_all (config := { decide := true }); done)
       | (simp_all [St.setLoc]; done)
-      | trace_state; sorry
+      | (trace_state; fail "ParThreadCall: no closing tactic applies")
 
 /-- **One call, as a run**: `L.run checkerProg n "check" [] w` that returns, from a memory `w`
 with the mode word `2`, the range `[j, j + 1)`, the view in the header's word `3`, and `seedMem w`
