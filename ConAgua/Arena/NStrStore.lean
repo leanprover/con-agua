@@ -235,7 +235,7 @@ theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS wh
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [nstrCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
+    simp only [nstrCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
 
 theorem nspushOK_eqC (m : Mem) (t : Word) : nspushOK m t = pushOKC nstrCS m t := by
   rw [nspushOK, pushOKC, dec_le_not_lt ((nscnt m t + 1) * 4) (m.len64 (tierA NSREC t))]

@@ -218,7 +218,7 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
       have hnmj : bs.memberNames[j] = nm := by
         simp [BlockShape.memberNames, List.getElem_map, hy', hnmE]
       rw [hnmj]
-      simp only [iwH, hd?, iwA, hGj]
+      simp only [iwH, hd?, iwA, hGj, ite_true]
       simp [hwl', hnm'])
     rw [hxs] at this
     exact this

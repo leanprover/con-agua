@@ -199,14 +199,14 @@ theorem imaxOK : ConsOK p imaxCS where
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
     fun s => by simp [imaxCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
-    simp only [imaxCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval]; rfl
+    simp only [imaxCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by
     intro e he
     simp [imaxCS] at he
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [imaxCS, Option.some.injEq] at h; (try subst h); (try decide)⟩
+    simp only [imaxCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [imaxCS] at h
   mloc := fun h => by simp [imaxCS] at h
   exnk := fun _ => by decide

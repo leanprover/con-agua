@@ -201,7 +201,7 @@ theorem idxW_lt (h : Word) : idxW h < 134217728 := by
 /-- The memory after appending node `c = CTL[k + t]` to a binary table (records `R`, one packed
 word `f | a << 32` per node; slot array `S`, range words `D`, each tiered), outside the slot
 array (the library's `pushRec`), with the new node's range slot zeroed. -/
-def pushZ (R _S D : ArrId) (k : Word) (m : Mem) (t f a : Word) : Mem :=
+def pushZ (R S D : ArrId) (k : Word) (m : Mem) (t f a : Word) : Mem :=
   let c := rdW (m.arr64 CTL) (k + t)
   (((m.set64 (tierA R t) (c * 1 + 0) (f ||| a <<< 32)).set64 CTL (k + (t &&& 1))
     (c + 1)).set64 (tierA D t) c 0)
@@ -224,8 +224,8 @@ theorem pushZ_ctl (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
       else rdW (m.arr64 CTL) x := by
   rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
   rcases h01 t ht with rfl | rfl <;>
-  simp [pushZ, Mem.arr64_set64_ne, rdW_set64E, CTL, ADER, AREC, LADER, LAREC,
-    FADER, FAREC]
+  simp [pushZ, Mem.arr64_set64_ne, rdW_set64E, CTL, ADER, AREC, ASLOT, LADER, LAREC, LASLOT,
+    FADER, FAREC, FASLOT]
 
 theorem pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
     rdW ((pushZ R S D k m t f a).arr64 (tierA D t)) x =
@@ -234,8 +234,8 @@ theorem pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
       else rdW (m.arr64 (tierA D t)) x := by
   rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
   rcases h01 t ht with rfl | rfl <;>
-  simp [pushZ, Mem.arr64_set64_ne, rdW_set64E, CTL, ADER, AREC, LADER, LAREC,
-    FADER, FAREC] <;> rfl
+  simp [pushZ, Mem.arr64_set64_ne, rdW_set64E, CTL, ADER, AREC, ASLOT, LADER, LAREC, LASLOT,
+    FADER, FAREC, FASLOT] <;> rfl
 
 /-- A field of a store other than the pushed table's records and range column is unchanged. -/
 theorem tfld_pushZ_other (X : TRec) (hX : X.arr < 256) (hc : X.arr ≠ CTL) (hR : X.arr ≠ R)

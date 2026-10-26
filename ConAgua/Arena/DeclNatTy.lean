@@ -371,7 +371,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
       refine ⟨false, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simp [decW0B]⟩
       simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
         hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
-        ite_false, - hbody, htagb, decide_eq_true hb6, ← hbody, hrun5]
+        ite_false, htagb, decide_eq_true hb6, ← hbody, hrun5]
       cases vv2 <;> first | rfl | (exfalso; exact hnf _ _ rfl)
     refine Or.elim (viewR_forall hvr2) ?_ hnonf2
     rintro ⟨hrv26, dom2, body2, hvv2, hd02, hdom2, hb02, hbody2⟩

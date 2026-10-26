@@ -126,7 +126,7 @@ def LoopInv (s : Option (RecordVerdict ⊕ List IndCtorRec × Nat) × Unit) : Pr
 set_option hygiene false in
 /-- The recursor loop of `validateIndD`, once `kExpected?` is `KE`, stopping at the failing record. -/
 macro "recsfail_tac" : tactic => `(tactic| (
-  rw [hnest, if_neg Bool.false_ne_true]
+  rw [hnest, ite_eq_right Bool.false_ne_true]
   obtain ⟨j, hj, hpre, rn, hrn, hfc⟩ := hF
   apply exInv_of
   refine run_bind_exR (P := LoopInv) ?_ ?_
@@ -141,9 +141,9 @@ macro "recsfail_tac" : tactic => `(tactic| (
     intro j hj
     obtain ⟨rn, hrn, h1, h2, h3, hk, v, hv, hin⟩ := hpre j hj
     rw [run_bind _ _ a _ hrn]
-    simp only [h1, h2, h3, beq_self_eq_true, if_true]
+    simp only [h1, h2, h3, beq_self_eq_true, ite_true]
     rcases hK : KE with _ | kE
-    all_goals (try simp only [hk _ hK, beq_self_eq_true, if_true])
+    all_goals (try simp only [hk _ hK, beq_self_eq_true, ite_true])
     all_goals
       rw [run_bind _ _ a _ hv]
       rcases v with _ | ⟨T, sv⟩ | ⟨T, nv⟩
@@ -161,12 +161,12 @@ macro "recsfail_tac" : tactic => `(tactic| (
             have hj1 : j' < TN.length := by omega
             by_cases hT : TN[j']'hj1 = T
             · obtain ⟨o, ho, hon⟩ := hin T rfl j' (by omega) (by omega) hT
-              simp only [hT, beq_self_eq_true, if_true]
+              simp only [hT, beq_self_eq_true, ite_true]
               rw [run_bind _ _ a _ ho]
               cases o with
               | none => rfl
-              | some x => simp only [hon x rfl, beq_self_eq_true, if_true]; rfl
-            · simp only [hT, beq_iff_eq, if_false]
+              | some x => simp only [hon x rfl, beq_self_eq_true, ite_true]; rfl
+            · simp only [hT, beq_iff_eq, ite_false]
               rfl
         · split
           · rename_i heq
@@ -179,22 +179,22 @@ macro "recsfail_tac" : tactic => `(tactic| (
     rw [run_bind _ _ a _ hrn]
     obtain ⟨xr, hxr⟩ := hRN _ _ hrn
     rcases hfc with hp | ⟨hp, hm | ⟨hm, hn | ⟨hn, hk | ⟨hk, T, hv, jj, hjj, hjj', hpre2, hT, kk, hk2, hne⟩⟩⟩⟩
-    · rw [if_neg (by simpa using hp)]
+    · rw [ite_eq_right (by simpa using hp)]
       rw [run_bind _ _ a _ hxr]; exact ⟨_, rfl, _, rfl, _, rfl⟩
-    · rw [if_pos (by simpa using hp), if_neg (by simpa using hm)]
+    · rw [ite_eq_left (by simpa using hp), ite_eq_right (by simpa using hm)]
       rw [run_bind _ _ a _ hxr]; exact ⟨_, rfl, _, rfl, _, rfl⟩
-    · rw [if_pos (by simpa using hp), if_pos (by simpa using hm), if_neg (by simpa using hn)]
+    · rw [ite_eq_left (by simpa using hp), ite_eq_left (by simpa using hm), ite_eq_right (by simpa using hn)]
       rw [run_bind _ _ a _ hxr]; exact ⟨_, rfl, _, rfl, _, rfl⟩
-    · rw [if_pos (by simpa using hp), if_pos (by simpa using hm), if_pos (by simpa using hn)]
+    · rw [ite_eq_left (by simpa using hp), ite_eq_left (by simpa using hm), ite_eq_left (by simpa using hn)]
       obtain ⟨kE, hKE', hne⟩ := hk
       subst hKE'
       try simp only []
-      rw [if_neg (by simpa using hne)]
+      rw [ite_eq_right (by simpa using hne)]
       rw [run_bind _ _ a _ hxr]; exact ⟨_, rfl, _, rfl, _, rfl⟩
-    · rw [if_pos (by simpa using hp), if_pos (by simpa using hm), if_pos (by simpa using hn)]
+    · rw [ite_eq_left (by simpa using hp), ite_eq_left (by simpa using hm), ite_eq_left (by simpa using hn)]
       obtain ⟨xT, hxT⟩ := hRV _ _ _ hv
       rcases hK : KE with _ | kE
-      all_goals (try simp only [hk _ hK, beq_self_eq_true, if_true])
+      all_goals (try simp only [hk _ hK, beq_self_eq_true, ite_true])
       all_goals
         rw [run_bind _ _ a _ hv]
         try simp only []
@@ -211,17 +211,17 @@ macro "recsfail_tac" : tactic => `(tactic| (
           simp only [List.getElem_zip]
           by_cases hT' : TN[j']'(by omega) = T
           · obtain ⟨o, ho, hon⟩ := hpre2 j' hj' hT'
-            simp only [hT', beq_self_eq_true, if_true]
+            simp only [hT', beq_self_eq_true, ite_true]
             rw [run_bind _ _ a _ ho]
             cases o with
             | none => rfl
-            | some x => simp only [hon x rfl, beq_self_eq_true, if_true]; rfl
-          · simp only [hT', beq_iff_eq, if_false]
+            | some x => simp only [hon x rfl, beq_self_eq_true, ite_true]; rfl
+          · simp only [hT', beq_iff_eq, ite_false]
             rfl
-        · simp only [List.getElem_zip, hT, beq_self_eq_true, if_true]
+        · simp only [List.getElem_zip, hT, beq_self_eq_true, ite_true]
           rw [run_bind _ _ a _ hk2]
           try simp only []
-          rw [if_neg (by simpa using hne)]
+          rw [ite_eq_right (by simpa using hne)]
           rw [run_bind _ _ a _ hxr, run_bind _ _ a _ hxT]
           exact ⟨_, rfl, _, rfl, _, rfl⟩))
 

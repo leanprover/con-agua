@@ -192,7 +192,7 @@ theorem letOK : ConsOK p letCS where
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [letCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
+    simp only [letCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun _ _ _ _ _ => rfl
   mloc := fun h => by simp [letCS] at h
   exnk := fun h => by simp [letCS] at h

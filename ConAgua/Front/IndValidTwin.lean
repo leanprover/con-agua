@@ -88,9 +88,9 @@ macro "recs_tac" : tactic => `(tactic| (
     intro j hj
     obtain ⟨rn, hrn, h1, h2, h3, hk, v, hv, hin⟩ := hV.recs _ (List.getElem_mem hj)
     rw [run_bind _ _ a _ hrn]
-    simp only [h1, h2, h3, beq_self_eq_true, if_true]
+    simp only [h1, h2, h3, beq_self_eq_true, ite_true]
     rcases hK : KE with _ | kE
-    all_goals (try simp only [hk _ hK, beq_self_eq_true, if_true])
+    all_goals (try simp only [hk _ hK, beq_self_eq_true, ite_true])
     all_goals
       rw [run_bind _ _ a _ hv]
       rcases v with _ | ⟨T, sv⟩ | ⟨T, nv⟩
@@ -108,12 +108,12 @@ macro "recs_tac" : tactic => `(tactic| (
             have hj1 : j' < TN.length := by omega
             by_cases hT : TN[j']'hj1 = T
             · obtain ⟨o, ho, hon⟩ := hin T rfl j' (by omega) (by omega) hT
-              simp only [hT, beq_self_eq_true, if_true]
+              simp only [hT, beq_self_eq_true, ite_true]
               rw [run_bind _ _ a _ ho]
               cases o with
               | none => rfl
-              | some x => simp only [hon x rfl, beq_self_eq_true, if_true]; rfl
-            · simp only [hT, beq_iff_eq, if_false]
+              | some x => simp only [hon x rfl, beq_self_eq_true, ite_true]; rfl
+            · simp only [hT, beq_iff_eq, ite_false]
               rfl
         · split
           · rename_i heq

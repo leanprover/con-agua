@@ -462,21 +462,21 @@ end vals
 set_option hygiene false in
 /-- The arms of a `DObjLoop` other than the key and the closing brace. -/
 macro "dloop_stop " f:ident : tactic => `(tactic| (
-  intro i w seen st d e h; rw [$f:ident, dif_neg h]; simp))
+  intro i w seen st d e h; rw [$f:ident, dite_eq_right h]; simp))
 set_option hygiene false in
 macro "dloop_ws " f:ident : tactic => `(tactic| (
-  intro i w seen st h hws; rw [$f:ident, dif_pos h]; simp only [uget_byteAt _ i h, hws, if_true]))
+  intro i w seen st h hws; rw [$f:ident, dite_eq_left h]; simp only [uget_byteAt _ i h, hws, ite_true]))
 set_option hygiene false in
 macro "dloop_comma " f:ident : tactic => `(tactic| (
   intro i w seen st d e h hc hok
-  rw [$f:ident, dif_pos h] at hok
+  rw [$f:ident, dite_eq_left h] at hok
   simp [uget_byteAt _ i h, hc, isWs] at hok
   split at hok; cases hok
   · exact ⟨by simpa using ‹¬w = true›, hok⟩))
 set_option hygiene false in
 macro "dloop_quote " f:ident : tactic => `(tactic| (
   intro i w seen st d e h hc hok
-  rw [$f:ident, dif_pos h] at hok
+  rw [$f:ident, dite_eq_left h] at hok
   simp [uget_byteAt _ i h, hc, isWs] at hok
   split at hok; cases hok
   split at hok; cases hok
@@ -485,13 +485,13 @@ macro "dloop_quote " f:ident : tactic => `(tactic| (
 set_option hygiene false in
 macro "dloop_other " f:ident : tactic => `(tactic| (
   intro i w seen st d e h hws h1 h2 h3 hok
-  rw [$f:ident, dif_pos h] at hok
+  rw [$f:ident, dite_eq_left h] at hok
   simp [uget_byteAt _ i h, hws, h1, h2, h3] at hok))
 set_option hygiene false in
 /-- The closing brace: the record and its relation. -/
 macro "dloop_close " f:ident : tactic => `(tactic| (
   intro i w seen st f d e h hc hok hR
-  rw [$f:ident, dif_pos h] at hok
+  rw [$f:ident, dite_eq_left h] at hok
   simp [uget_byteAt _ i h, hc, isWs] at hok
   split at hok; cases hok
   split at hok
@@ -504,7 +504,7 @@ set_option hygiene false in
 /-- A key's arm, entering it: the key's `seen` check passed. -/
 macro "dloop_key " f:ident : tactic => `(tactic| (
   intro i seen st f d e h hc hk hv hvle hok hR
-  rw [$f:ident, dif_pos h] at hok
+  rw [$f:ident, dite_eq_left h] at hok
   simp [uget_byteAt _ i h, hc, isWs, hk, hv] at hok
   generalize valueAt b i (keyEnd b (i + 1)) = v at hok hvle ⊢
   generalize keyAt b i (keyEnd b (i + 1) - (i + 1)) = K at hok ⊢

@@ -260,34 +260,34 @@ end tuples
 syntax "vloop_stop " ident : tactic
 macro_rules
   | `(tactic| vloop_stop $f) => `(tactic| (
-      intro i w seen st r e h; rw [$f:ident, dif_neg h]; simp))
+      intro i w seen st r e h; rw [$f:ident, dite_eq_right h]; simp))
 syntax "vloop_ws " ident : tactic
 macro_rules
   | `(tactic| vloop_ws $f) => `(tactic| (
-      intro i w seen st h hws; rw [$f:ident, dif_pos h]; simp only [uget_byteAt _ i h, hws, if_true]))
+      intro i w seen st h hws; rw [$f:ident, dite_eq_left h]; simp only [uget_byteAt _ i h, hws, ite_true]))
 syntax "vloop_comma " ident : tactic
 macro_rules
   | `(tactic| vloop_comma $f) => `(tactic| (
-      intro i w seen st r e h hc hok; rw [$f:ident, dif_pos h] at hok
+      intro i w seen st r e h hc hok; rw [$f:ident, dite_eq_left h] at hok
       simp [uget_byteAt _ i h, hc, isWs] at hok
       split at hok; cases hok
       · rename_i hw; exact ⟨by simpa using hw, hok⟩))
 syntax "vloop_quote " ident : tactic
 macro_rules
   | `(tactic| vloop_quote $f) => `(tactic| (
-      intro i w seen st r e h hc hbad hok; rw [$f:ident, dif_pos h] at hok
+      intro i w seen st r e h hc hbad hok; rw [$f:ident, dite_eq_left h] at hok
       simp [uget_byteAt _ i h, hc, isWs] at hok
       rcases hbad with hb | hb | hb <;> (repeat' split at hok) <;> simp_all))
 syntax "vloop_other " ident : tactic
 macro_rules
   | `(tactic| vloop_other $f) => `(tactic| (
-      intro i w seen st r e h hws h1 h2 h3 hok; rw [$f:ident, dif_pos h] at hok
+      intro i w seen st r e h hws h1 h2 h3 hok; rw [$f:ident, dite_eq_left h] at hok
       simp [uget_byteAt _ i h, hws, h1, h2, h3] at hok))
 /-- The `close` arm: the record, then the result relation `hres`. -/
 syntax "vloop_close " ident : tactic
 macro_rules
   | `(tactic| vloop_close $f) => `(tactic| (
-      intro i w seen st r e h hc hok; rw [$f:ident, dif_pos h] at hok
+      intro i w seen st r e h hc hok; rw [$f:ident, dite_eq_left h] at hok
       simp [uget_byteAt _ i h, hc, isWs] at hok
       split at hok; cases hok
       split at hok
@@ -327,7 +327,7 @@ macro_rules
   | `(tactic| vloop_key $f $b) => `(tactic| (
       intro i seen st r e h hc hk hv
       have hRd := rd_item $b ‹_› ‹_› i h hk hv hc
-      rw [$f:ident, dif_pos h]
+      rw [$f:ident, dite_eq_left h]
       simp [uget_byteAt _ i h, hc, isWs, hk, hv]
       generalize valueAt $b i (keyEnd $b (i + 1)) = v at hRd ⊢
       generalize keyAt $b i (keyEnd $b (i + 1) - (i + 1)) = K
@@ -359,7 +359,7 @@ macro_rules
 syntax "vloop_res " ident : tactic
 macro_rules
   | `(tactic| vloop_res $f) => `(tactic| (
-      intro i w seen st r e h hc hok; rw [$f:ident, dif_pos h] at hok
+      intro i w seen st r e h hc hok; rw [$f:ident, dite_eq_left h] at hok
       simp [uget_byteAt _ i h, hc, isWs] at hok
       split at hok; cases hok
       split at hok

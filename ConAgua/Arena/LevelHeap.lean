@@ -194,7 +194,7 @@ theorem lvEqW_param (hpq : p ≠ q) (hg : lvG m p = lvG m q) (h4 : lvG m p = 4) 
 theorem lvEqW_rec (hpq : p ≠ q) (hg : lvG m p = lvG m q) (h4 : lvG m p ≠ 4) :
     lvEqW (n + 1) m p q = eqK n m (lvB m p) (lvB m q) (lvEqW n m (lvA m p) (lvA m q)) := by
   have h4' : lvG m q ≠ 4 := hg ▸ h4
-  simp only [lvEqW, hpq, ↓reduceIte, hg, h4', ne_eq, not_true_eq_false]
+  simp only [lvEqW, hpq, ↓reduceIte, hg, h4', ne_eq, not_true_eq_false, not_false_eq_true]
 theorem eqK_zero : eqK n m b d (some 0) = some 0 := by simp [eqK]
 theorem eqK_ne (hx : x ≠ 0) : eqK n m b d (some x) = lvEqW n m b d := by simp [eqK, hx]
 

@@ -72,6 +72,33 @@ def fix_simp(lines):
     before = {p: Path(p).read_text() for p in touched if Path(p).exists()}
     with tempfile.NamedTemporaryFile("w", suffix=".log", delete=False) as t:
         t.write("\n".join(out) + "\n")
+    orig_remove = fixer.remove_arg
+
+    def remove_arg(text, span, target):
+        # Mathlib turns an unused `← X` into `- X` (erasing a simp lemma); a local hypothesis
+        # cannot be erased, so drop it.
+        bare = target.strip().lstrip("←").strip()
+        if target.strip().startswith("←") and re.fullmatch(r"h[\w']*", bare):
+            return _drop(text, span, bare)
+        return orig_remove(text, span, target)
+
+    def _drop(text, span, bare):
+        lb, rb = span
+        inner = text[lb + 1 : rb]
+        items = fixer.split_top_level(inner)
+        for idx, (a, b) in enumerate(items):
+            if fixer._bare_name(inner[a:b])[1] != bare or not inner[a:b].strip().startswith("←"):
+                continue
+            if idx < len(items) - 1:
+                ra, rb2 = a, items[idx + 1][0]
+            elif idx > 0:
+                ra, rb2 = items[idx - 1][1], b
+            else:
+                ra, rb2 = a, b
+            return text[: lb + 1] + inner[:ra] + inner[rb2:] + text[rb:], True
+        return text, False
+
+    fixer.remove_arg = remove_arg
     sys.argv = ["fix_unused_simp_args.py", t.name]
     fixer.main()
     tidied = 0
@@ -108,6 +135,38 @@ def rename_in_decreasing_by(src, line, name):
         k += 1
 
 
+def reindent_blocks():
+    """A rename that lengthens a line moves a `by` block on that line to the right; the block's
+    continuation lines (a tactic sequence aligned with its first tactic) must move with it, or
+    the block no longer parses.  For each edited line with a `by` after a rename and an
+    unclosed bracket, shift the following lines until the bracket closes."""
+    opens, closes = "([⟨{", ")]⟩}"
+    moved = 0
+    by_file = defaultdict(list)
+    for (p, line), sh in SHIFTS.items():
+        by_file[p].append((line, sh))
+    for p, items in by_file.items():
+        src = Path(p).read_text().split("\n")
+        for line, sh in sorted(items):
+            s = src[line - 1]
+            for mm in re.finditer(r"(?<![\w.'])by\b", s):
+                d = sum(dl for c, dl in sh if c < mm.start())
+                if d <= 0:
+                    continue
+                bal = sum(s[mm.start():].count(c) for c in opens) - sum(s[mm.start():].count(c) for c in closes)
+                k = line
+                while bal > 0 and k < len(src):
+                    t = src[k]
+                    src[k] = " " * d + t if t.strip() else t
+                    SHIFTS[(p, k + 1)].append((0, d))
+                    moved += 1
+                    bal += sum(t.count(c) for c in opens) - sum(t.count(c) for c in closes)
+                    k += 1
+                break
+        Path(p).write_text("\n".join(src))
+    print(f"reindent: {moved} continuation lines moved")
+
+
 def fix_vars(lines):
     edits = defaultdict(set)
     for ln in lines:
@@ -118,11 +177,13 @@ def fix_vars(lines):
     for p, es in edits.items():
         src = Path(p).read_text().splitlines(keepends=True)
         for line, col, name in sorted(es, reverse=True):
+            orig = col
+            col += sum(d for c, d in SHIFTS[(p, line)] if c < col)
             s = src[line - 1]
             end = col + len(name)
             if s[col:end] == name and (end == len(s) or not (s[end].isalnum() or s[end] in "_'!?₀₁₂₃₄₅₆₇₈₉")):
                 src[line - 1] = s[:col] + "_" + s[col:]
-                SHIFTS[(p, line)].append((col, 1))
+                SHIFTS[(p, line)].append((orig, 1))
                 done += 1
                 rename_in_decreasing_by(src, line, name)
             else:
@@ -142,6 +203,7 @@ def fix_deprecated(lines):
     ident = "_'!?₀₁₂₃₄₅₆₇₈₉."
     for p, es in edits.items():
         src = Path(p).read_text().splitlines(keepends=True)
+        retry = set()
         for line, col, old, new in sorted(es, reverse=True):
             s = src[line - 1]
             old_parts, new_parts = old.split("."), new.split(".")
@@ -159,11 +221,18 @@ def fix_deprecated(lines):
                 src[line - 1] = s[:col] + hit[1] + s[hit[0]:]
                 SHIFTS[(p, line)].append((col, len(hit[1]) - (hit[0] - col)))
                 done += 1
-            else:
-                print(f"  skip {p}:{line}:{col}: `{old}` not at that position")
+            else:  # raised inside a macro or syntax quotation: fixed file-wide below
+                retry.add((old, new))
                 skipped += 1
         Path(p).write_text("".join(src))
-    print(f"deprecated: {done} renamed, {skipped} skipped")
+        if retry:
+            text = Path(p).read_text()
+            for old, new in sorted(retry):
+                pat = re.compile(r"(?<![\w.'])" + re.escape(old) + r"(?![\w.'!?₀₁₂₃₄₅₆₇₈₉])")
+                text, n = pat.subn(new, text)
+                print(f"  {p}: `{old}` -> `{new}` file-wide ({n} places; the warning is raised by a macro)")
+            Path(p).write_text(text)
+    print(f"deprecated: {done} renamed, {skipped} sites handled file-wide")
 
 
 def main():
@@ -178,6 +247,7 @@ def main():
         fix_deprecated(lines)
     if a.only in (None, "vars"):
         fix_vars(lines)
+    reindent_blocks()
     if a.only in (None, "simp"):
         fix_simp(lines)
 

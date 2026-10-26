@@ -198,7 +198,7 @@ theorem projOK : ConsOK p projCS where
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [projCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
+    simp only [projCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun _ _ _ _ _ => rfl
   mloc := fun h => by simp [projCS] at h
   exnk := fun h => by simp [projCS] at h

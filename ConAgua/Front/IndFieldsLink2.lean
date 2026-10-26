@@ -27,7 +27,7 @@ set_option hygiene false in
 /-- A key's arm of an `IObjLoop`, entering it: the key's `seen` check passed. -/
 macro "iloop_key " f:ident : tactic => `(tactic| (
   intro i seen st m d e e' m' h hc hk hv hvle hok hR hmem hlt
-  rw [$f:ident, dif_pos h] at hok
+  rw [$f:ident, dite_eq_left h] at hok
   simp [uget_byteAt _ i h, hc, isWs, hk, hv] at hok
   have hiv := valueAt_gt b h64 hsize i h hk hv
   generalize valueAt b i (keyEnd b (i + 1)) = v at hok hvle hmem hiv ⊢
@@ -138,22 +138,22 @@ theorem recInv_alloc (A : ArrId) (hA : A = IFR ∨ A = IFL) (sz : Nat) (n q : Wo
 set_option hygiene false in
 macro "ilist_shape " G:ident : tactic => `(tactic| (
   constructor
-  · intro i acc w l e h; rw [$G:ident, dif_neg h]; simp
-  · intro i acc w h hws; rw [$G:ident, dif_pos h]; simp only [uget_byteAt _ i h, hws, if_true]
+  · intro i acc w l e h; rw [$G:ident, dite_eq_right h]; simp
+  · intro i acc w h hws; rw [$G:ident, dite_eq_left h]; simp only [uget_byteAt _ i h, hws, ite_true]
   · intro i acc w l e h hc hok
-    rw [$G:ident, dif_pos h] at hok
+    rw [$G:ident, dite_eq_left h] at hok
     simp [uget_byteAt _ i h, hc, isWs] at hok
     split at hok
     · cases hok
     · simp only [ScanRes.ok.injEq] at hok; obtain ⟨rfl, rfl⟩ := hok; exact ⟨rfl, rfl⟩
   · intro i acc w l e h hc hok
-    rw [$G:ident, dif_pos h] at hok
+    rw [$G:ident, dite_eq_left h] at hok
     simp [uget_byteAt _ i h, hc, isWs] at hok
     split at hok
     · cases hok
     · exact hok
   · intro i acc w l e h hc hok
-    rw [$G:ident, dif_pos h] at hok
+    rw [$G:ident, dite_eq_left h] at hok
     simp [uget_byteAt _ i h, hc, isWs] at hok
     split at hok
     · cases hok
@@ -164,7 +164,7 @@ macro "ilist_shape " G:ident : tactic => `(tactic| (
     · rename_i hie; exact ⟨x, e₁, hx, hie, hok⟩
     · cases hok
   · intro i acc w l e h hws h1 h2 h3 hok
-    rw [$G:ident, dif_pos h] at hok
+    rw [$G:ident, dite_eq_left h] at hok
     simp [uget_byteAt _ i h, hws, h1, h2, h3] at hok))
 
 theorem ruleList_shape : IListLoop b (scanRuleListLoop b) (scanRule b) := by

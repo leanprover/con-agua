@@ -53,7 +53,7 @@ theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h
   have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
   have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
   have n5 : ¬ h >>> 28 = 5 := by rw [hg]; decide
-  simp only [hg, ite_true] at hne ⊢
+  simp only [hg, ite_false, ite_true] at hne ⊢
   by_cases c : tcnt m FORALL (tierW h) ≤ idxW h
   · simp [c] at hne
   simp only [c, ite_false]
@@ -74,7 +74,7 @@ theorem eViewW_lamS (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : eViewW m h �
   have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
   have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
   have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
-  simp only [hg, ite_true] at hne ⊢
+  simp only [hg, ite_false, ite_true] at hne ⊢
   by_cases c : tcnt m LAM (tierW h) ≤ idxW h
   · simp [c] at hne
   simp only [c, ite_false]

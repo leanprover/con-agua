@@ -211,7 +211,7 @@ theorem fvarOK : ConsOK p fvarCS where
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [fvarCS, Option.some.injEq] at h; (try subst h); (try decide)⟩
+    simp only [fvarCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [fvarCS] at h
   mloc := fun h => by simp [fvarCS] at h
   exnk := fun _ => by decide

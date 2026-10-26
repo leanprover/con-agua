@@ -162,14 +162,14 @@ theorem nanonOK : ConsOK p nanonCS where
       subst he; simp [Expr.pval],
     fun s => by simp [nanonCS, Expr.pval]⟩
   room := fun s => by
-    simp only [nanonCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval]; rfl
+    simp only [nanonCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by intro e he; simp [nanonCS] at he
   pre := rfl
   colA := by simp [nanonCS]
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [nanonCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
+    simp only [nanonCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [nanonCS] at h
   mloc := fun h => by simp [nanonCS] at h
   exnk := fun _ => by decide

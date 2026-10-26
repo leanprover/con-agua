@@ -477,8 +477,8 @@ theorem natListLoop_link (i : USize) (acc : List Nat) (w : Bool) (hacc : acc.len
       by_cases hw : w = true ∧ ¬ acc = []
       · have he : acc.isEmpty = false := by cases acc <;> simp_all
         simp only [hw, he]; rfl
-      · rw [ite_eq_right hw, ite_eq_right (by
-          simp only [Bool.and_eq_true, Bool.not_eq_true', List.isEmpty_eq_false_iff]; exact hw)]
+      · rw [ite_eq_right hw, ite_eq_right (by simp only [Bool.and_eq_true, Bool.not_eq_true',
+                      List.isEmpty_eq_false_iff]; exact hw)]
         simp [encNL, hs]
     have h93' : ¬ (byteAt b i).toUInt64 = 93 := fun h' => h93 ((u8_toUInt64_eq _ 93 (by decide)).mp h')
     simp only [h93', show ¬ (byteAt b i == 93) = true by simpa using h93, ite_false]
@@ -534,7 +534,7 @@ theorem natList_link (i : USize) :
     · rw [ite_eq_left (by simp [hc]), ite_eq_left ⟨hlt, by rw [byteW_eq b h64 hsize, hc]; rfl⟩,
         natListLoop_link b h64 hsize (i + 1) [] true (by simp), succ_toUInt64 b h64 hsize]; rfl
     · rw [ite_eq_right (by simp [hc]), ite_eq_right (fun h' => hc ((u8_toUInt64_eq _ 91 (by decide)).mp
-        (by rw [← byteW_eq b h64 hsize]; exact h'.2)))]; rfl
+              (by rw [← byteW_eq b h64 hsize]; exact h'.2)))]; rfl
   · have h0 : byteAt b i = 0 := by unfold byteAt; rw [dite_eq_right h]
     rw [ite_eq_right (by simp [h0]), ite_eq_right (fun h' => h ((lt_usize_iff b h64 hsize i).mpr h'.1))]; rfl
 
@@ -729,15 +729,15 @@ syntax "obj_loop " ident ident : tactic
 macro_rules
   | `(tactic| obj_loop $f $b) => `(tactic| (
     constructor
-    · intro i w seen st h; rw [$f:ident, dif_neg h]; rfl
-    · intro i w seen st h hws; rw [$f:ident, dif_pos h]; simp only [uget_byteAt _ i h, hws, if_true]
-    · intro i w seen st h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i w seen st h; rw [$f:ident, dite_eq_right h]; rfl
+    · intro i w seen st h hws; rw [$f:ident, dite_eq_left h]; simp only [uget_byteAt _ i h, hws, ite_true]
+    · intro i w seen st h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i w seen st h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i w seen st h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i w seen st h hc hbad; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i w seen st h hc hbad; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i seen h hc hk hv; simp only [Prod.forall]; intros; rw [$f:ident, dif_pos h]
+    · intro i seen h hc hk hv; simp only [Prod.forall]; intros; rw [$f:ident, dite_eq_left h]
       simp [uget_byteAt _ i h, hc, isWs, hk, hv]
       generalize valueAt $b i (keyEnd $b (i + 1)) = v
       generalize keyAt $b i (keyEnd $b (i + 1) - (i + 1)) = K
@@ -748,7 +748,7 @@ macro_rules
         | (apply keyStep_guard (by decide)
            intro hseen
            key_value hseen)
-    · intro i w seen st h hws h1 h2 h3; rw [$f:ident, dif_pos h]
+    · intro i w seen st h hws h1 h2 h3; rw [$f:ident, dite_eq_left h]
       simp [uget_byteAt _ i h, hws, h1, h2, h3]; rfl))
 
 /-- `ListLoop b (f b) item` for con-leche's list loop `f`. -/
@@ -756,20 +756,20 @@ syntax "list_loop " ident : tactic
 macro_rules
   | `(tactic| list_loop $f) => `(tactic| (
     constructor
-    · intro i acc w h; rw [$f:ident, dif_neg h]; rfl
-    · intro i acc w h hws; rw [$f:ident, dif_pos h]; simp only [uget_byteAt _ i h, hws, if_true]
-    · intro i acc w h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i acc w h; rw [$f:ident, dite_eq_right h]; rfl
+    · intro i acc w h hws; rw [$f:ident, dite_eq_left h]; simp only [uget_byteAt _ i h, hws, ite_true]
+    · intro i acc w h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i acc w h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]
+    · intro i acc w h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]
       (repeat' split) <;> simp_all [okW]
-    · intro i acc h hc; rw [$f:ident, dif_pos h]; simp [uget_byteAt _ i h, hc, isWs]; rfl
-    · intro i acc h hc; rw [$f:ident, dif_pos h]
+    · intro i acc h hc; rw [$f:ident, dite_eq_left h]; simp [uget_byteAt _ i h, hc, isWs]; rfl
+    · intro i acc h hc; rw [$f:ident, dite_eq_left h]
       simp (config := {decide := true}) only [uget_byteAt _ i h, hc, ↓reduceIte, dite_eq_ite]
       split
       all_goals first
         | (rename_i heq; exact listItem_err _ (by link_val) _ heq _)
         | (rename_i heq; exact listItem_ok _ (by link_val) _ _ heq _)
-    · intro i acc w h hws h1 h2 h3; rw [$f:ident, dif_pos h]
+    · intro i acc w h hws h1 h2 h3; rw [$f:ident, dite_eq_left h]
       simp [uget_byteAt _ i h, hws, h1, h2, h3]; rfl))
 
 /-! ## The records, bottom-up -/

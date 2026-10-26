@@ -171,7 +171,7 @@ theorem nnumOK : ConsOK p nnumCS where
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [nnumCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
+    simp only [nnumCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun _ _ _ _ _ => rfl
   mloc := fun h => by simp [nnumCS] at h
   exnk := fun h => by simp [nnumCS] at h

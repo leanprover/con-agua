@@ -522,7 +522,7 @@ variable (p : Prog)
 theorem litCSk_room (kd : Word) (mf fname pname : String)
     (mt : Array Word → Array Word → Word → Word → Word → Word → Word → Bool) :
     RoomOK (litCSk kd mf fname pname mt) := fun s => by
-  simp only [litCSk, condOf, Cond.pval, Expr.pval, Cmp.eval, BinOp.eval]; rfl
+  simp only [litCSk, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
 
 theorem litCSk_recs (kd : Word) (mf fname pname : String)
     (mt : Array Word → Array Word → Word → Word → Word → Word → Word → Bool) :
@@ -542,7 +542,7 @@ theorem litCSk_ihash (kd : Word) (mf fname pname : String)
     List.cons_append, List.getD_cons_zero, List.getD_cons_succ] at hs hb ⊢
   vcgen [step, evalArgs, evalE, setLocs,
     litHash_spec p hph n s₀ (s₀.loc (0 + 0)) (s₀.loc (1 + 0)) hs hb]
-  all_goals simp_all [St.setLocs_cons, St.setLocs_nil]
+  all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Nat.zero_add]
 
 theorem litOK (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_eq" = some limbsEq)
     (hpm : p.lookup "lit_match" = some litMatch) : ConsOK p litCS where
