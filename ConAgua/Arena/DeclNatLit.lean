@@ -182,7 +182,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
       cases ci with
       | indInfo cv caps =>
         rw [if_neg (by simpa using h3)] at hw
-        have hcvd := ciCv_decodes hci rfl
+        have hcvd := ciCv_decodes (cv := cv) hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw
@@ -277,7 +277,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     · cases ci with
       | ctorInfo cv np nf =>
         rw [if_neg (by simpa using h4)] at hw
-        have hcvd := ciCv_decodes hci rfl
+        have hcvd := ciCv_decodes (cv := cv) hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
         obtain ⟨hm1, -, hr1⟩ := pinNat_call hN h1
@@ -388,7 +388,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     · cases ci with
       | ctorInfo cv np nf =>
         rw [if_neg (by simpa using h4)] at hw
-        have hcvd := ciCv_decodes hci rfl
+        have hcvd := ciCv_decodes (cv := cv) hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw
