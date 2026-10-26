@@ -380,4 +380,231 @@ theorem m2cKE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N 
 
 end karm
 
+/-! ## The η arm -/
+
+section eta
+variable (p : Prog) (hp : M2CProg' p) (hnv : closedNV p L.Checker.nvFns = true)
+include hp hnv
+
+/-- **`m2c_eta`'s verdicts** are `m2c_pre`'s (its fabrication `m2c_eta2` is outside the verdict
+closure). -/
+theorem m2cEtaE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
+    (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (eb mode d T indP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
+    (hmaj : HW major) (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState)
+    (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (er : Err)
+    (h : callE p (N + 1) "m2c_eta" [mode, vis, d, T, indP, major] m = .error er) :
+    ErrClaim (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
+      er := by
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (m2cEtaE_spec p hp.eta (N + 1) ⟨m, Locals.init []⟩
+    mode vis d T indP major) h (Err.code_ne_of_cls hk0)
+  simp only [m2cEtaE] at hW
+  cases N with
+  | zero =>
+    obtain ⟨e', he', h0⟩ := callE_zero p "m2c_pre" [mode, vis, d, major] m
+    rw [he', m2cEtaE.k_m2c_pre.none] at hW; cases hW; exact absurd h0 hk0
+  | succ N' =>
+  cases c1 : callE p (N' + 1) "m2c_pre" [mode, vis, d, major] m with
+  | error e1 =>
+    rw [c1, m2cEtaE.k_m2c_pre.none] at hW; cases hW
+    unfold m2cEtaT
+    exact m2cPreE_ok p hp hnv N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega)
+      (by omega) dn vis fe eb mode d major hm4 hebm hmaj m a M hS _ c1 _
+  | ok q =>
+  obtain ⟨L, m1⟩ := q
+  rw [c1] at hW
+  simp only [m2cEtaE.k_m2c_pre] at hW
+  split at hW
+  · cases hW
+  cases c2 : callE p (N' + 1) "get_app_args" [L.tail.headD 0] m1 with
+  | error e2 =>
+    rw [c2, m2cEtaE.k_get_app_args.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "get_app_args" (by simp)) c2
+  | ok q =>
+  rw [c2] at hW
+  simp only [m2cEtaE.k_get_app_args] at hW
+  cases c3 : callE p (N' + 1) "caps_never_zero" _ _ with
+  | error e3 =>
+    rw [c3, m2cEtaE.k_caps_never_zero.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "caps_never_zero" (by simp)) c3
+  | ok q =>
+  rw [c3] at hW
+  simp only [m2cEtaE.k_caps_never_zero] at hW
+  repeat' split at hW
+  all_goals first
+    | cases hW
+    | exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "m2c_eta2" (by simp))
+        (err_of_k (by intro q e; simp [m2cEtaE.k_m2c_eta2]) (fun _ => rfl) hW)
+
+end eta
+
+/-! ## The `And` arm -/
+
+/-- Error model of `m2c_and2`, by hand (the ok model `m2cAnd2W`: the pushes as `and2Push`). -/
+def m2cAnd2HE (p : Prog) (n : Nat) (m : Mem) (mode vis d ctor T tmaj to tn ust major : Word) :
+    Except Err (List Word × Mem) :=
+  match callE p n "mk_proj" [T, 0, major] m with
+  | .error e => .error e
+  | .ok (r₁, m₁) =>
+  match callE p n "mk_proj" [T, 1, major] m₁ with
+  | .error e => .error e
+  | .ok (r₂, m₂) =>
+  match and2Push m₂ to tn (r₁.headD 0) (r₂.headD 0) with
+  | none => .error (.abort 0)
+  | some m₃ =>
+  match callE p n "intern_const" [ctor, ust] m₃ with
+  | .error e => .error e
+  | .ok (r₄, m₄) =>
+  match callE p n "mk_app_n" [r₄.headD 0, to, tn + 2] m₄ with
+  | .error e => .error e
+  | .ok (r₅, m₅) =>
+  match callE p n "m2c_check" [mode, vis, d, tmaj, r₅.headD 0, major] m₅ with
+  | .error e => .error e
+  | .ok (r₆, m₆) => .ok ([r₆.headD 0], m₆)
+
+set_option experimental.vcgen true in
+theorem m2cAnd2HE_spec (p : Prog) (hp : p.lookup "m2c_and2" = some m2cAnd2L) (n : Nat) (s₀ : St)
+    (mode vis d ctor T tmaj to tn ust major : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (n + 1)) "m2c_and2" [mode, vis, d, ctor, T, tmaj, to, tn, ust, major]
+    ⦃fun _ _ => True; fun ε => ε.code ≠ 0 →
+      m2cAnd2HE p n s₀.mem mode vis d ctor T tmaj to tn ust major = .error ε⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, m2cAnd2L]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    callE_spec p n "mk_proj", callE_spec p n "intern_const", callE_spec p n "mk_app_n",
+    callE_spec p n "m2c_check"] <;>
+  simp_all [-UInt64.toNat_add, m2cAnd2HE, and2Push, Mem.len64, SPN, CTL, BinOp.eval, Cmp.eval, LocEq,
+    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
+    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+
+section andErr
+variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
+
+theorem and2_err_check (ctor T : NIdx) (tmaj : EIdx) (targs : List EIdx) (ust : LsIdx) (major : EIdx)
+    (a a1 a2 a4 a5 : AState) (p0 p1 hd fab : EIdx)
+    (h1 : (internE (.proj T 0 major)).run a = .ok (p0, a1))
+    (h2 : (internE (.proj T 1 major)).run a1 = .ok (p1, a2))
+    (h4 : (internE (.const ctor ust)).run a2 = .ok (hd, a4))
+    (h5 : (mkAppN hd (targs ++ [p0, p1])).run a4 = .ok (fab, a5)) (ce : CheckError)
+    (h6 : (m2cCheckT mode r fe depth tmaj fab major).run a5 = .error ce) :
+    (m2cAnd2T mode r fe depth ctor T tmaj targs ust major).run a = .error ce := by
+  simp only [m2cAnd2T, StateT.run_bind, h1, except_ok_bind, h2, h4, h5]
+  exact h6
+
+end andErr
+
+section andarm
+variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
+  (hE : ErecKeptKnot p) (hcc : ProjCallees p) (hnv : closedNV p L.Checker.nvFns = true)
+  (hPI : ProofIrrelE p)
+include hp hc hpi hnv hPI
+
+/-- **`m2c_and2`'s verdicts** are `m2c_check`'s. -/
+theorem m2cAnd2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
+    (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (eb mode d ctor T tmaj to tn ust major : Word) (hm4 : mode < 4)
+    (hebm : eb = (mode >>> 1) &&& 1) (hctor : HW ctor) (hT : HW T) (htm : HW tmaj) (hus : HW ust)
+    (hmaj : HW major) (targs : List EIdx) (m : Mem) (a : AState) (M : ModeMaps)
+    (hS : CoreS dn m a vis fe M eb) (hsp : SpineR m to tn targs.toArray) (htop : to + tn = spTop m)
+    (hvus : ∃ x c, a.store.view x = some (.const c (decI ust))) (er : Err)
+    (h : callE p (N + 1) "m2c_and2" [mode, vis, d, ctor, T, tmaj, to, tn, ust, major] m = .error er) :
+    ErrClaim (m2cAnd2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+      (decI T) (decE tmaj) targs (decI ust) (decE major)) a er := by
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (m2cAnd2HE_spec p hp.and2 N ⟨m, Locals.init []⟩
+    mode vis d ctor T tmaj to tn ust major) h (Err.code_ne_of_cls hk0)
+  simp only [m2cAnd2HE] at hW
+  cases N with
+  | zero =>
+    obtain ⟨e', he', h0⟩ := callE_zero p "mk_proj" [T, 0, major] m
+    rw [he'] at hW; cases hW; exact absurd h0 hk0
+  | succ N' =>
+  cases c1 : callE p (N' + 1) "mk_proj" [T, 0, major] m with
+  | error e1 =>
+    rw [c1] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "mk_proj" (by simp)) c1
+  | ok q =>
+  obtain ⟨r1, m1⟩ := q
+  rw [c1] at hW
+  simp only at hW
+  obtain ⟨ok1, hD1, res1, hfr1, hh1⟩ := callW_mkProj p hp.toIotaProg' (N' + 1) ⟨m, Locals.init []⟩ a
+    hS.arena T 0 major r1 m1 (callW_of_callE c1)
+  have hrun1 := AM.run_of_ok _ _ ok1
+  rw [res1, show (0 : Word).toNat = 0 from rfl] at hrun1
+  have hS1 := hS.of_proj hD1 (Keeps.run (keeps_cpl_internProj _ _ _) hrun1) hfr1
+  obtain ⟨e1, t1⟩ := store_spn hfr1.pjStore
+  cases c2 : callE p (N' + 1) "mk_proj" [T, 1, major] m1 with
+  | error e2 =>
+    rw [c2] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "mk_proj" (by simp)) c2
+  | ok q =>
+  obtain ⟨r2, m2⟩ := q
+  rw [c2] at hW
+  simp only at hW
+  obtain ⟨ok2, hD2, res2, hfr2, hh2⟩ := callW_mkProj p hp.toIotaProg' (N' + 1) ⟨m1, Locals.init []⟩ _
+    hS1.arena T 1 major r2 m2 (callW_of_callE c2)
+  have hrun2 := AM.run_of_ok _ _ ok2
+  rw [res2, show (1 : Word).toNat = 1 from rfl] at hrun2
+  have hS2 := hS1.of_proj hD2 (Keeps.run (keeps_cpl_internProj _ _ _) hrun2) hfr2
+  obtain ⟨e2, t2⟩ := store_spn hfr2.pjStore
+  have hsp2 : SpineR m2 to tn targs.toArray := (hsp.of_spn_core e1).of_spn_core e2
+  cases c3 : and2Push m2 to tn (r1.headD 0) (r2.headD 0) with
+  | none => rw [c3] at hW; cases hW; exact absurd rfl hk0
+  | some m3 =>
+  rw [c3] at hW
+  simp only at hW
+  obtain ⟨hS3, hg3, hsp3⟩ := and2Push_ok hS2 hsp2 (by rw [t2, t1]; exact htop) hh1 hh2 c3
+  cases c4 : callE p (N' + 1) "intern_const" [ctor, ust] m3 with
+  | error e4 =>
+    rw [c4] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "intern_const" (by simp)) c4
+  | ok q =>
+  obtain ⟨r4, m4⟩ := q
+  rw [c4] at hW
+  simp only at hW
+  obtain ⟨ok4, hD4, res4, hfr4, hh4⟩ := callW_internConst' p hp.constFind' hp.constPush'
+    hp.internConst' (N' + 1) m3 _ hS3.arena ctor ust hctor hus r4 m4 (callW_of_callE c4)
+  have hrun4 := AM.run_of_ok _ _ ok4
+  rw [res4] at hrun4
+  have hS4 := hS3.of_const' hD4 (Keeps.run (keeps_cpl_internConst' _ _) hrun4) hfr4 hrun4 (by
+    obtain ⟨x, c, hx⟩ := hvus
+    have hx1 := internNodeE_fwd (v := .proj _ _ _) (by simpa [internE] using hrun1) x _
+      (.inr ⟨_, _, rfl⟩) hx
+    have hx2 := internNodeE_fwd (v := .proj _ _ _) (by simpa [internE] using hrun2) x _
+      (.inr ⟨_, _, rfl⟩) hx1
+    exact hS3.den.constLs _ _ _ hx2)
+  have hsp4 := hsp3.of_spn_core (const_spn hfr4)
+  cases c5 : callE p (N' + 1) "mk_app_n" [r4.headD 0, to, tn + 2] m4 with
+  | error e5 =>
+    rw [c5] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfM2CE_nv "mk_app_n" (by simp)) c5
+  | ok q =>
+  obtain ⟨r5, m5⟩ := q
+  rw [c5] at hW
+  simp only at hW
+  obtain ⟨ok5, hD5, res5, hfr5, hh5⟩ := callW_mkAppN' p hp.spine (N' + 1) m4 _ hS4.arena
+    (r4.headD 0) to (tn + 2) _ hh4 hsp4 r5 m5 (callW_of_callE c5)
+  have hrun5 := AM.run_of_ok _ _ ok5
+  rw [res5] at hrun5
+  have hS5 := hS4.of_app hD5 (Keeps.run (keeps_cpl_mkAppN' _ _) hrun5) hfr5
+  have hW' := err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
+      | .error e => (.error e : Except Err (List Word × Mem))
+      | .ok (r₆, m₆) => .ok ([r₆.headD 0], m₆)) (by intro q e; simp) (fun _ => rfl) hW
+  have el : ((targs.toArray.push (decE (r1.headD 0))).push (decE (r2.headD 0))).toList =
+      targs ++ [decE (r1.headD 0), decE (r2.headD 0)] := by simp
+  rw [el, show decE (r4.headD 0) = decI (r4.headD 0) from rfl] at hrun5 hS5
+  have z0 : (0 : Word).toNat = 0 := rfl
+  have z1 : (1 : Word).toNat = 1 := rfl
+  simp only [z0, z1] at hrun2 hrun4 hrun5 hS5
+  exact ErrClaim.of_run_err (fun ce h' => and2_err_check _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      hrun1 hrun2 hrun4 hrun5 ce h')
+    (m2cCheckE_ok p hp hc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega)
+      (by omega) dn vis fe eb mode d tmaj (r5.headD 0) major hm4 hebm htm hh5 hmaj m5 _ M hS5 er hW')
+
+end andarm
+
 end L.Arena
