@@ -2,6 +2,8 @@ import ConAgua.Arena.DefEqStuck
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 
 /-!
 # `eta_cert` refines `etaCert` (lane `defeq`, helper `defeq-top`)
@@ -93,177 +95,23 @@ theorem etaCert_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (dept
 
 /-! ## The models -/
 
-section ecK
-variable (p : Prog) (n : Nat) (mode vis d ty1 body1 b cod2 : Word)
+l_model etaCertTy_spec (p : Prog) (hq : StuckProg p)
+  fns [hq.etaCertTy ↦ ectW]
+  specs [callW_spec p n "infer", callW_spec p n "inst1", callW_spec p n "defeq"]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-/-- `eta_cert_ty` past `infer`'s run. -/
-def ectK2 (t1 : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => call1W p n "defeq" [mode, vis, d + 1, t1, r.headD 0] m
+l_model etaCertBody_spec (p : Prog) (hq : StuckProg p)
+  fns [hq.etaCertBody ↦ ecbW]
+  specs [callW_spec p n "intern_fvar", callW_spec p n "inst1", callW_spec p n "mk_app",
+    callW_spec p n "defeq", callW_spec p n "eta_cert_ty"]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-def ectK1 (fv : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => ectK2 p n mode vis d (r.headD 0) (callW p n "inst1" [cod2, fv, 0] m)
-
-/-- `eta_cert_body` past the bodies' comparison. -/
-def ecbK4 (fv lhs : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, m)
-    else if mode &&& 1 = 0 then call1W p n "eta_cert_ty" [mode, vis, d, lhs, cod2, fv] m
-    else some (1, m)
-
-def ecbK3 (fv lhs : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => ecbK4 p n mode vis d cod2 fv lhs (callW p n "defeq" [mode, vis, d + 1, lhs, r.headD 0] m)
-
-def ecbK2 (fv : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => ecbK3 p n mode vis d cod2 fv (r.headD 0) (callW p n "mk_app" [b, fv] m)
-
-def ecbK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => ecbK2 p n mode vis d b cod2 (r.headD 0) (callW p n "inst1" [body1, r.headD 0, 0] m)
-
-/-- **The model of `eta_cert_body`.** -/
-def ecbK (m : Mem) : Option (Word × Mem) :=
-  if d + 1 = 0 then none else ecbK1 p n mode vis d body1 b cod2 (callW p n "intern_fvar" [d, ty1] m)
-
-/-- `eta_cert` past the domains' comparison. -/
-def ecK4 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, m)
-    else call1W p n "eta_cert_body" [mode, vis, d, ty1, body1, b, cod2] m
-
-/-- `eta_cert` past `whnf`: the `∀` view. -/
-def ecK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 >>> 28 ≠ 6 then some (0, m)
-    else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m FORALL (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
-    else ecK4 p n mode vis d ty1 body1 b
-      (tfld m FORALL (tierW (r.headD 0)) (idxW (r.headD 0)) 1)
-      (callW p n "defeq" [mode, vis, d,
-        tfld m FORALL (tierW (r.headD 0)) (idxW (r.headD 0)) 0, ty1] m)
-
-def ecK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => ecK3 p n mode vis d ty1 body1 b (callW p n "whnf" [mode, vis, d, r.headD 0] m)
-
-/-- **The model of `eta_cert`** past `io_neutral`'s run. -/
-def ecK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, m)
-    else ecK2 p n mode vis d ty1 body1 b (callW p n "infer_io" [mode, vis, d, b] m)
-
-variable (r : List Word) (m : Mem) (t1 fv lhs : Word)
-
-theorem ectK2_some : ectK2 p n mode vis d t1 (some (r, m)) =
-    call1W p n "defeq" [mode, vis, d + 1, t1, r.headD 0] m := rfl
-theorem ectK1_some : ectK1 p n mode vis d cod2 fv (some (r, m)) =
-    ectK2 p n mode vis d (r.headD 0) (callW p n "inst1" [cod2, fv, 0] m) := rfl
-theorem ecbK4_no (h : r.headD 0 = 0) : ecbK4 p n mode vis d cod2 fv lhs (some (r, m)) = some (0, m) := by
-  simp only [ecbK4, h, ↓reduceIte]
-theorem ecbK4_vc (h : r.headD 0 ≠ 0) (hm : mode &&& 1 = 0) : ecbK4 p n mode vis d cod2 fv lhs (some (r, m)) =
-    call1W p n "eta_cert_ty" [mode, vis, d, lhs, cod2, fv] m := by
-  simp only [ecbK4, h, hm, ↓reduceIte]
-theorem ecbK4_tr (h : r.headD 0 ≠ 0) (hm : ¬ mode &&& 1 = 0) :
-    ecbK4 p n mode vis d cod2 fv lhs (some (r, m)) = some (1, m) := by
-  simp only [ecbK4, h, hm, ↓reduceIte]
-theorem ecbK3_some : ecbK3 p n mode vis d cod2 fv lhs (some (r, m)) =
-    ecbK4 p n mode vis d cod2 fv lhs (callW p n "defeq" [mode, vis, d + 1, lhs, r.headD 0] m) := rfl
-theorem ecbK2_some : ecbK2 p n mode vis d b cod2 fv (some (r, m)) =
-    ecbK3 p n mode vis d cod2 fv (r.headD 0) (callW p n "mk_app" [b, fv] m) := rfl
-theorem ecbK1_some : ecbK1 p n mode vis d body1 b cod2 (some (r, m)) =
-    ecbK2 p n mode vis d b cod2 (r.headD 0) (callW p n "inst1" [body1, r.headD 0, 0] m) := rfl
-theorem ecbK_ok (h : ¬ d + 1 = 0) : ecbK p n mode vis d ty1 body1 b cod2 m =
-    ecbK1 p n mode vis d body1 b cod2 (callW p n "intern_fvar" [d, ty1] m) := by
-  simp only [ecbK, h, ↓reduceIte]
-theorem ecK4_no (h : r.headD 0 = 0) : ecK4 p n mode vis d ty1 body1 b cod2 (some (r, m)) = some (0, m) := by
-  simp only [ecK4, h, ↓reduceIte]
-theorem ecK4_yes (h : r.headD 0 ≠ 0) : ecK4 p n mode vis d ty1 body1 b cod2 (some (r, m)) =
-    call1W p n "eta_cert_body" [mode, vis, d, ty1, body1, b, cod2] m := by
-  simp only [ecK4, h, ↓reduceIte]
-theorem ecK3_no (h : r.headD 0 >>> 28 ≠ 6) : ecK3 p n mode vis d ty1 body1 b (some (r, m)) = some (0, m) := by
-  simp only [ecK3, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem ecK3_ok (h1 : r.headD 0 >>> 28 = 6) (h2 : ¬ (tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (h3 : idxW (r.headD 0) < tcnt m FORALL (tierW (r.headD 0))) :
-    ecK3 p n mode vis d ty1 body1 b (some (r, m)) = ecK4 p n mode vis d ty1 body1 b
-      (tfld m FORALL (tierW (r.headD 0)) (idxW (r.headD 0)) 1)
-      (callW p n "defeq" [mode, vis, d,
-        tfld m FORALL (tierW (r.headD 0)) (idxW (r.headD 0)) 0, ty1] m) := by
-  have h3' : ¬ tcnt m FORALL (tierW (r.headD 0)) ≤ idxW (r.headD 0) := by simpa using h3
-  simp only [ecK3, h1, h2, h3', ne_eq, not_true_eq_false, ↓reduceIte]
-theorem ecK2_some : ecK2 p n mode vis d ty1 body1 b (some (r, m)) =
-    ecK3 p n mode vis d ty1 body1 b (callW p n "whnf" [mode, vis, d, r.headD 0] m) := rfl
-theorem ecK1_no (h : r.headD 0 = 0) : ecK1 p n mode vis d ty1 body1 b (some (r, m)) = some (0, m) := by
-  simp only [ecK1, h, ↓reduceIte]
-theorem ecK1_yes (h : r.headD 0 ≠ 0) : ecK1 p n mode vis d ty1 body1 b (some (r, m)) =
-    ecK2 p n mode vis d ty1 body1 b (callW p n "infer_io" [mode, vis, d, b] m) := by
-  simp only [ecK1, h, ↓reduceIte]
-
-end ecK
-
-/-! ## The L specs -/
-
-section ecspec
-variable (p : Prog) (hq : StuckProg p)
-
-include hq in
-theorem etaCertTy_spec (n : Nat) (s₀ : St) (mode vis d lhs cod2 fv : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "eta_cert_ty" [mode, vis, d, lhs, cod2, fv]
-    ⦃fun r s' => LocEq s' s₀ ∧ ectK1 p n mode vis d cod2 fv
-      (callW p n "infer" [mode, vis, d + 1, lhs] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.etaCertTy]
-  simp only [callFn, etaCertTyL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "infer",
-      callW_spec p n "inst1", callW_spec p n "defeq"] <;>
-    finish (gen := 20) [ectK1_some, ectK2_some, call1W_some]
-
-include hq in
-theorem etaCertBody_spec (n : Nat) (s₀ : St) (mode vis d ty1 body1 b cod2 : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "eta_cert_body" [mode, vis, d, ty1, body1, b, cod2]
-    ⦃fun r s' => LocEq s' s₀ ∧ ecbK p n mode vis d ty1 body1 b cod2 s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.etaCertBody]
-  simp only [callFn, etaCertBodyL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "intern_fvar",
-      callW_spec p n "inst1", callW_spec p n "mk_app", callW_spec p n "defeq",
-      callW_spec p n "eta_cert_ty"] <;>
-  simp_all [ecbK, ecbK1, ecbK2, ecbK3, ecbK4, call1W, Cmp.eval, BinOp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
-include hq in
-theorem etaCert_spec (n : Nat) (s₀ : St) (mode vis d ty1 body1 b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "eta_cert" [mode, vis, d, ty1, body1, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ ecK1 p n mode vis d ty1 body1 b
-      (callW p n "io_neutral" [b] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.etaCert]
-  simp only [callFn, etaCertL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
-    evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p n "io_neutral", callW_spec p n "infer_io", callW_spec p n "whnf",
-      callW_spec p n "defeq", callW_spec p n "eta_cert_body"] <;>
-  simp_all [ecK1, ecK2, ecK3, ecK4, call1W, tierW, idxW, LocEq, BinOp.eval,
-    St.setLocs_cons, CTL,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ]
-
-end ecspec
+l_model etaCert_spec (p : Prog) (hq : StuckProg p)
+  fns [hq.etaCert ↦ ecW]
+  specs [callW_spec p n "io_neutral", callW_spec p n "infer_io", callW_spec p n "whnf",
+    callW_spec p n "defeq", callW_spec p n "eta_cert_body"]
+  grind [arena_grind] extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+    simp [tierW, idxW, CTL]
 
 /-! ## The refinements -/
 
@@ -280,25 +128,28 @@ theorem etaCertTy_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (etaCertTy_spec p hq n s₀ mode vis d lhs cod2 fv)
+    (etaCertTy_spec p hq (n + 1) s₀ mode vis d lhs cod2 fv)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
   have hd1 := toNat_succ_of_ne hd
+  rw [ectW.arm1] at hW
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  rw [ectK1_some] at hW
+  rw [ectW.k_infer.arm1] at hW
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  rw [ectK2_some] at hW
+  rw [ectW.k_inst1.arm1] at hW
+  obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
+  rw [ectW.k_defeq.arm1] at hW
   have h₁ := CoreSpec.of_callW (hK.infer F s a₀ dn vis fe M eb mode (d + 1) lhs hF hn hs hl) hc1
   rw [hd1] at h₁
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   have h₂ := CoreSpec.of_callW (hc.inst1 n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb cod2 fv 0 hS₁
     hcod hfv) hc2
   refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
-  have h₃ := CoreSpec.of_call1W (s₀ := ⟨m₂, Locals.init []⟩)
+  have h₃ := CoreSpec.of_call1W (s₀ := ⟨m₂, Locals.init []⟩) (r := r) (m' := s'.mem)
     (hK.defeq F _ _ dn vis fe M₂ eb mode (d + 1) (r₁.headD 0) (r₂.headD 0) hF hn
       ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₁.2.2.2 h₂.2.2.2)
-    (fun r r' h => by simp only [decBool, h]) hW
+    (fun r r' h => by simp only [decBool, h]) (by rw [call1W_some _ _ _ _ _ _ _ hc3]; exact hW)
   rw [hd1] at h₃
   exact h₃
 
@@ -336,19 +187,19 @@ theorem etaCertBody_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) 
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (etaCertBody_spec p hq n s₀ mode vis d ty1 body1 b cod2)
+    (etaCertBody_spec p hq (n + 1) s₀ mode vis d ty1 body1 b cod2)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
-  have hd : ¬ d + 1 = 0 := fun hd => by simp only [ecbK, hd, ↓reduceIte] at hW; cases hW
-  rw [ecbK_ok (h := hd)] at hW
+  have hd : ¬ d + 1 = 0 := fun hd => by rw [ecbW.abort1 (hc1 := hd)] at hW; cases hW
+  rw [ecbW.arm1 (hc1 := hd)] at hW
   have hd1 := toNat_succ_of_ne hd
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  rw [ecbK1_some] at hW
+  rw [ecbW.k_intern_fvar.arm1] at hW
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  rw [ecbK2_some] at hW
+  rw [ecbW.k_inst1.arm1] at hW
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  rw [ecbK3_some] at hW
+  rw [ecbW.k_mk_app.arm1] at hW
   obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases rfl hW
   obtain ⟨s₁, hs₁, -, hfv⟩ := triple_of_callW
     (internFVar_spec p hq.body.fvf hq.body.fvp hq.body.fvi n s d ty1) hc1
@@ -365,20 +216,22 @@ theorem etaCertBody_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) 
   rw [hd1] at h₄
   refine coreRef_bind h₄ (fun M₄ hS₄ => ?_)
   by_cases h0 : r₄.headD 0 = 0
-  · rw [ecbK4_no (h := h0)] at hW
+  · rw [ecbW.k_defeq.arm1 (hc1 := h0)] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_false_of h0]
     exact coreRef_pure hS₄ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
   rw [decBool_true_of h0, decMode_vc mode hs.mode4]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   by_cases hm : mode &&& 1 = 0
-  · rw [ecbK4_vc (h := h0) (hm := hm)] at hW
+  · rw [ecbW.k_defeq.arm2 (hc1 := h0) (hc2 := hm)] at hW
+    obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
+    rw [ecbW.k_eta_cert_ty.arm1] at hW
     simp only [hm, decide_true, ↓reduceIte]
-    exact CoreSpec.of_call1W (s₀ := ⟨m₄, Locals.init []⟩)
+    exact CoreSpec.of_call1W (s₀ := ⟨m₄, Locals.init []⟩) (r := r) (m' := s'.mem)
       (etaCertTy_at p hq hc n hk F _ _ dn vis fe M₄ eb mode d (r₂.headD 0) cod2 (r₁.headD 0) hF hn
         ⟨hS₄, hs.mode4, hs.eb_mode⟩ hd h₂.2.2.2 hcod h₁.2.2.2)
-      (fun r r' h => by simp only [decBool, h]) hW
-  · rw [ecbK4_tr (h := h0) (hm := hm)] at hW
+      (fun r r' h => by simp only [decBool, h]) (by rw [call1W_some _ _ _ _ _ _ _ hc5]; exact hW)
+  · rw [ecbW.k_defeq.arm3 (hc1 := h0) (hc2 := hm)] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     simp only [hm, decide_false, Bool.false_eq_true, ↓reduceIte]
     exact coreRef_pure hS₄ rfl (decBool_true_of (by rw [← hr]; decide)).symm
@@ -413,24 +266,25 @@ theorem etaCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (etaCert_spec p hq n s₀ mode vis d ty1 body1 b)
+    (etaCert_spec p hq (n + 1) s₀ mode vis d ty1 body1 b)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
   rw [etaCert_eq]
+  rw [ecW.arm1] at hW
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
   have h₁ := CoreSpec.of_callW (ioNeutral_at p hq.leaf n s a₀ dn vis fe M eb b hs.rel hb) hc1
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [ecK1_no (h := h0)] at hW
+  · rw [ecW.k_io_neutral.arm1 (hc1 := h0)] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_false_of h0]
     exact coreRef_pure hS₁ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
-  rw [ecK1_yes (h := h0)] at hW
+  rw [ecW.k_io_neutral.arm2 (hc1 := h0)] at hW
   rw [decBool_true_of h0]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  rw [ecK2_some] at hW
+  rw [ecW.k_infer_io.arm1] at hW
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
   have h₂ := CoreSpec.of_callW (hK.inferIO F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF hn
     ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb) hc2
@@ -442,17 +296,17 @@ theorem etaCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
   simp only [decH]
   simp only [tag_beq_w _ hh3 6 (by decide) ETag.forallE rfl 6 rfl]
   by_cases h6 : r₃.headD 0 >>> 28 ≠ 6
-  · rw [ecK3_no (h := h6)] at hW
+  · rw [ecW.k_whnf.arm1 (hc1 := h6)] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     simp only [h6, decide_false, Bool.false_eq_true, ↓reduceIte]
     exact coreRef_pure hS₃ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
   have h6' : r₃.headD 0 >>> 28 = 6 := by simpa using h6
   by_cases ht : tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0
-  · simp only [ecK3, h6', ht, ne_eq, not_true_eq_false, ↓reduceIte] at hW; cases hW
+  · rw [ecW.k_whnf.abort1 (hc1 := h6') (hc2 := ht)] at hW; cases hW
   by_cases hi : tcnt m₃ FORALL (tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
-  · simp only [ecK3, h6', ht, hi, ne_eq, not_true_eq_false, ↓reduceIte] at hW; cases hW
+  · rw [ecW.k_whnf.abort2 (hc1 := h6') (hc2 := ht) (hc3 := hi)] at hW; cases hW
   have hi' : idxW (r₃.headD 0) < tcnt m₃ FORALL (tierW (r₃.headD 0)) := by simpa using hi
-  rw [ecK3_ok (h1 := h6') (h2 := ht) (h3 := hi')] at hW
+  rw [ecW.k_whnf.arm2 (hc1 := h6') (hc2 := ht) (hc3 := hi)] at hW
   simp only [h6', decide_true, ↓reduceIte]
   obtain ⟨hv, hty2, hcod2⟩ := view_forall m₃ _ hS₃.arena.1 (r₃.headD 0) hh3 ⟨ht, hi'⟩ h6'
   refine coreRef_view hv ?_
@@ -462,16 +316,18 @@ theorem etaCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
     ⟨hS₃, hs.mode4, hs.eb_mode⟩ hty2 hty) hc4
   refine coreRef_bind h₄ (fun M₄ hS₄ => ?_)
   by_cases h40 : r₄.headD 0 = 0
-  · rw [ecK4_no (h := h40)] at hW
+  · rw [ecW.k_defeq.arm1 (hc1 := h40)] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_false_of h40]
     exact coreRef_pure hS₄ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
-  rw [ecK4_yes (h := h40)] at hW
+  rw [ecW.k_defeq.arm2 (hc1 := h40)] at hW
+  obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
+  rw [ecW.k_eta_cert_body.arm1] at hW
   rw [decBool_true_of h40]
   simp only [↓reduceIte]
-  exact CoreSpec.of_call1W (s₀ := ⟨m₄, Locals.init []⟩)
+  exact CoreSpec.of_call1W (s₀ := ⟨m₄, Locals.init []⟩) (r := r) (m' := s'.mem)
     (etaCertBody_at p hq hc n hk F _ _ dn vis fe M₄ eb mode d ty1 body1 b _ hF hn
       ⟨hS₄, hs.mode4, hs.eb_mode⟩ hty hbody hb hcod2)
-    (fun r r' h => by simp only [decBool, h]) hW
+    (fun r r' h => by simp only [decBool, h]) (by rw [call1W_some _ _ _ _ _ _ _ hc5]; exact hW)
 
 end L.Arena
