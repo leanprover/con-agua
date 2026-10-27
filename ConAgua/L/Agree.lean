@@ -608,7 +608,7 @@ theorem run_agree_ok {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
 /-! ## Example
 
 `sum` adds up word array `3` through the callee `get` and stores the total into tier `1` of the
-tiered array `5` (word array `5 + tierOff = 261`). Its call closure reads only `3`, `5`, `261`. -/
+tiered array `5` (`tierA 5 1`). Its call closure reads only `3`, `5`, `tierA 5 1`. -/
 
 /-- The body of `sum`. -/
 def agreeExSum : Stmt :=
@@ -620,7 +620,7 @@ def agreeExSum : Stmt :=
       (.seq (.st64t 5 (.const 1) (.const 0) (.var 1)) (.ret [.var 1])))
 
 /-- The word arrays `sum` reads. -/
-def w3 : ArrId → Bool := ([3, 5, 261] : List ArrId).contains
+def w3 : ArrId → Bool := ([3, 5, tierA 5 1] : List ArrId).contains
 
 /-- No byte arrays. -/
 def none8 : ArrId → Bool := fun _ => false
@@ -630,11 +630,10 @@ def agreeEx : Prog :=
   [("get", { nparams := 1, nlocals := 1, body := .ret [.ld64 3 (.var 0)] }),
    ("sum", { nparams := 0, nlocals := 3, body := agreeExSum })]
 
-#guard readsIn agreeEx w3 none8 ["get", "sum"]
--- a tiered store names both tiers
-#guard !readsIn agreeEx ([3, 5] : List ArrId).contains none8 ["get", "sum"]
+-- a tiered store names both tiers (by `decide`: `#guard` cannot run `tierA`, which is not compiled)
+example : readsIn agreeEx ([3, 5] : List ArrId).contains none8 ["get", "sum"] = false := by decide
 -- the set must be call-closed
-#guard !readsIn agreeEx w3 none8 ["sum"]
+example : readsIn agreeEx w3 none8 ["sum"] = false := by decide
 
 theorem agreeEx_reads : readsIn agreeEx w3 none8 ["get", "sum"] = true := by decide
 

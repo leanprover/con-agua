@@ -1275,20 +1275,20 @@
     32  #guard memoArrs.all checkerArrays.wordSlots.contains
     33  #guard slotArrs.all checkerArrays.wordSlots.contains
 
-== ConAgua/L/Arrays.lean#L134-L138
-   134  /-- **Well-formed**: every number below `tierOff`, the numbers of each kind distinct, only word
-   135  arrays tiered. -/
-   136  def wf (T : ArrTable) : Bool :=
-   137    T.all (fun d => d.id < tierOff && (d.tiered → d.kind == .word)) &&
-   138      nodupB (T.ids .byte) && nodupB (T.ids .word)
+== ConAgua/L/Arrays.lean#L153-L157
+   153  /-- **Well-formed**: every number below `tierOff`, the numbers of each kind distinct, only word
+   154  arrays tiered. -/
+   155  def wf (T : ArrTable) : Bool :=
+   156    T.all (fun d => d.id < tierOff && (d.tiered → d.kind == .word)) &&
+   157      nodupB (T.ids .byte) && nodupB (T.ids .word)
 
-== ConAgua/L/Arrays.lean#L225-L230
-   225  /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
-   226  (`useOK`); a function in `exempt` may name any word slot below `T`'s extent (`slotOK`). -/
-   227  def ArrTable.progOK (T : ArrTable) (exempt : List FnName) (p : Prog) : Bool :=
-   228    p.all fun (f, fd) =>
-   229      if exempt.contains f then (Uses.stmt fd.body).all T.slotOK
-   230      else (Uses.stmt fd.body).all T.useOK
+== ConAgua/L/Arrays.lean#L244-L249
+   244  /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
+   245  (`useOK`); a function in `exempt` may name any word slot below `T`'s extent (`slotOK`). -/
+   246  def ArrTable.progOK (T : ArrTable) (exempt : List FnName) (p : Prog) : Bool :=
+   247    p.all fun (f, fd) =>
+   248      if exempt.contains f then (Uses.stmt fd.body).all T.slotOK
+   249      else (Uses.stmt fd.body).all T.useOK
 
 == ConAgua/Arena/LevelEquiv.lean#L255-L265
    255  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
@@ -1407,31 +1407,31 @@
     61    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
     62  ```
 
-== ConAgua/Arena/ArenaRel.lean#L273-L296
-   273  /-- **The arena relation**: every represented table and the pool (the store tier, over
-   274  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
-   275  opaque to `grind` (DESIGN.md, "Does the relation scale?"): proofs name its fields. -/
-   276  structure ArenaR (m : Mem) (a : AState) : Prop where
-   277    lit : LitR m a
-   278    app : AppR m a
-   279    sort : SortR m a
-   280    const : ConstR m a
-   281    letE : LetR m a
-   282    bvar : BVarR m a
-   283    fvar : FVarR m a
-   284    lam : LamR m a
-   285    forallE : ForallR m a
-   286    proj : ProjR m a
-   287    zero : ZeroR m a
-   288    succ : SuccR m a
-   289    max : MaxR m a
-   290    imax : ImaxR m a
-   291    param : ParamR m a
-   292    ls : LsR m a
-   293    nanon : NAnonR m a
-   294    nstr : NStrR m a
-   295    nnum : NNumR m a
-   296    memos : MemosR m a.memos
+== ConAgua/Arena/ArenaRel.lean#L281-L304
+   281  /-- **The arena relation**: every represented table and the pool (the store tier, over
+   282  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
+   283  opaque to `grind` (DESIGN.md, "Does the relation scale?"): proofs name its fields. -/
+   284  structure ArenaR (m : Mem) (a : AState) : Prop where
+   285    lit : LitR m a
+   286    app : AppR m a
+   287    sort : SortR m a
+   288    const : ConstR m a
+   289    letE : LetR m a
+   290    bvar : BVarR m a
+   291    fvar : FVarR m a
+   292    lam : LamR m a
+   293    forallE : ForallR m a
+   294    proj : ProjR m a
+   295    zero : ZeroR m a
+   296    succ : SuccR m a
+   297    max : MaxR m a
+   298    imax : ImaxR m a
+   299    param : ParamR m a
+   300    ls : LsR m a
+   301    nanon : NAnonR m a
+   302    nstr : NStrR m a
+   303    nnum : NNumR m a
+   304    memos : MemosR m a.memos
 
 == ConAgua/Arena/ConsLibRel.lean#L7-L27
      7  /-!

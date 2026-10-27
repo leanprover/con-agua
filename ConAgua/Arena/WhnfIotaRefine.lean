@@ -600,7 +600,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       have h' := congrArg UInt64.toNat h
       simp at h'; omega)
   refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
-  · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega)
+  · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; omega)
       (fun x hx => by
         simp at hx; subst hx
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
@@ -617,7 +617,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   · exact hf.2.2.1 EREC ▸ hS.erec
   · exact hf.2.2.1 SPN ▸ hS.spn
   · exact hS.memos.frame_hi hf
-      (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega)
+      (fun b hb => by simp at hb; subst hb; rw [← har]; omega)
       (fun x hx => by
         simp at hx; subst hx
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by

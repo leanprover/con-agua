@@ -211,7 +211,7 @@ structure SInv (mem : Mem) (a : AState) : Prop where
   /-- The pool's mode (lane tierpool). -/
   mode : ModeOK mem
 
-theorem hiA : ∀ b ∈ ([EREC] : List ArrId), 64 ≤ b ∧ b < 256 := by decide
+theorem hiA : ∀ b ∈ ([EREC] : List ArrId), InHigh b := by decide
 theorem hiC : ∀ x ∈ ([129, 150, 151] : List Word), 64 ≤ x.toNat := by simp
 theorem hiC' : ∀ x ∈ ([132, 148, 149] : List Word), 64 ≤ x.toNat := by simp
 

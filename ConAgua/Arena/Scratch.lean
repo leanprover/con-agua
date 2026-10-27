@@ -80,11 +80,14 @@ tables' tier-1 table (the growth's zero loop `kzeroLs`), and restarts `B` at `0`
 the slot tables carry `B`: the memos have their own stamps. -/
 
 /-- The 19 tables' slot arrays (tier 0's ids; the wrap vacates tier 1, `tier1 sa`). -/
-def scrSlots : List ArrId := [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 26, 28, 30, 32, 34, 36, 38, 40]
+def scrSlots : List ArrId := [SLOT, ASLOT, SSLOT, ZSLOT, MSLOT, ISLOT, PSLOT, SOSLOT, CSLOT,
+  LESLOT, BSLOT, FVSLOT, LASLOT, FASLOT, PJSLOT, NASLOT, NSSLOT, NNSLOT, LSSLOT]
 
 /-- The scratch tables' slot arrays (tier 1, `tier1 sa`), which the wrap writes. -/
 def slot1Arrs : List ArrId :=
-  [259, 261, 263, 265, 267, 269, 271, 273, 275, 277, 279, 282, 284, 286, 288, 290, 292, 294, 296]
+  [tier1 SLOT, tier1 ASLOT, tier1 SSLOT, tier1 ZSLOT, tier1 MSLOT, tier1 ISLOT, tier1 PSLOT,
+   tier1 SOSLOT, tier1 CSLOT, tier1 LESLOT, tier1 BSLOT, tier1 FVSLOT, tier1 LASLOT, tier1 FASLOT,
+   tier1 PJSLOT, tier1 NASLOT, tier1 NSSLOT, tier1 NNSLOT, tier1 LSSLOT]
 
 theorem slot1Arrs_eq : slot1Arrs = scrSlots.map (tierA · 1) := rfl
 

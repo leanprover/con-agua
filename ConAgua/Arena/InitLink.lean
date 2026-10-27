@@ -16,9 +16,9 @@ open ConRon.Arena
 /-- **The zeroed L memory is the twin's empty store** (`arenaD_init`). -/
 @[refines ConRon.Arena.EStore.empty]
 theorem estoreEmpty_refines (sizes : List Nat) (hlen : 64 ≤ sizes.length)
-    (hctl : 64 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 40)
-    (hpool1 : sizes[256]?.getD 0 < 2 ^ 40)
-    (hsz : ∀ b, b < 64 ∨ (256 ≤ b ∧ b < 320) →
+    (hctl : 64 ≤ sizes[CTL]?.getD 0) (hpool : sizes[POOL]?.getD 0 < 2 ^ 40)
+    (hpool1 : sizes[POOL1]?.getD 0 < 2 ^ 40)
+    (hsz : ∀ b, InStoreTier b →
       consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 61) :
     ArenaD (initMem sizes) (AState.init EStore.empty) :=
   arenaD_init sizes hlen hctl hpool hpool1 hsz
@@ -29,7 +29,7 @@ The harness hands L zeroed memory; the twin starts from `AState.init EStore.empt
 IEnv.empty` and `Caches.empty`. Each initial value gets the relation of its tier, at `initMem`. -/
 
 /-- The core-tier schemas' control words fit: `CTL` reaches `120` (the last memo's stamp is `119`). -/
-private theorem initMem_ctl (sizes : List Nat) (h : 120 ≤ sizes[1]?.getD 0) :
+private theorem initMem_ctl (sizes : List Nat) (h : 120 ≤ sizes[CTL]?.getD 0) :
     120 ≤ ((initMem sizes).arr64 CTL).size := by
   rw [initMem_arr]; simpa [CTL] using h
 
@@ -50,15 +50,15 @@ private theorem initMem_tcnt (sizes : List Nat) : rdW ((initMem sizes).arr64 CTL
 start from it): the four represented tables are the empty map. -/
 @[refines ConRon.Arena.Memos.empty]
 theorem memosEmpty_refines (sizes : List Nat) (_hlen : 64 ≤ sizes.length)
-    (hctl : 64 ≤ sizes[1]?.getD 0) (_hpool : sizes[0]?.getD 0 < 2 ^ 40)
-    (_hpool1 : sizes[256]?.getD 0 < 2 ^ 40) :
+    (hctl : 64 ≤ sizes[CTL]?.getD 0) (_hpool : sizes[POOL]?.getD 0 < 2 ^ 40)
+    (_hpool1 : sizes[POOL1]?.getD 0 < 2 ^ 40) :
     MemosR (initMem sizes) Memos.empty :=
   memosR_init sizes hctl
 
 /-- **The mode memos are empty in zeroed memory**: all six tables are the empty map, the plain
 tower's bank `0` and the eager set (`ModeMemos.empty` is both) bank `1`, at eager bit `0`. -/
 @[refines ConRon.Arena.ModeMemos.empty]
-theorem modeMemosEmpty_refines (sizes : List Nat) (hctl : 120 ≤ sizes[1]?.getD 0) :
+theorem modeMemosEmpty_refines (sizes : List Nat) (hctl : 120 ≤ sizes[CTL]?.getD 0) :
     ∃ M : ModeMaps, M = ModeMaps.empty ∧
       ModeR wcSch eKeyG VH (initMem sizes) M.wc 0 ModeMemos.empty.whnfCoreC ModeMemos.empty.whnfCoreC ∧
       ModeR wkSch eKeyG VH (initMem sizes) M.wk 0 ModeMemos.empty.whnfCoreCheapC ModeMemos.empty.whnfCoreCheapC ∧
@@ -81,7 +81,7 @@ theorem modeMemosEmpty_refines (sizes : List Nat) (hctl : 120 ≤ sizes[1]?.getD
 /-- **The per-declaration caches are empty in zeroed memory** (`Caches.empty`, what `flushCaches`
 installs and a run starts from): the core tier relates them. -/
 @[refines ConRon.Arena.Caches.empty]
-theorem cachesEmpty_refines (sizes : List Nat) (hctl : 120 ≤ sizes[1]?.getD 0) :
+theorem cachesEmpty_refines (sizes : List Nat) (hctl : 120 ≤ sizes[CTL]?.getD 0) :
     CoreR (initMem sizes) Caches.empty := by
   have hz := initMem_rd sizes
   have hc := initMem_ctl sizes hctl
@@ -112,9 +112,9 @@ theorem pinsEmpty_refines (sizes : List Nat) :
 EStore.empty` at once; with the store `st` arbitrary the other three parts are `.empty`. -/
 @[refines ConRon.Arena.AState.init]
 theorem aStateInit_refines (sizes : List Nat) (hlen : 64 ≤ sizes.length)
-    (hctl : 120 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 40)
-    (hpool1 : sizes[256]?.getD 0 < 2 ^ 40)
-    (hsz : ∀ b, b < 64 ∨ (256 ≤ b ∧ b < 320) →
+    (hctl : 120 ≤ sizes[CTL]?.getD 0) (hpool : sizes[POOL]?.getD 0 < 2 ^ 40)
+    (hpool1 : sizes[POOL1]?.getD 0 < 2 ^ 40)
+    (hsz : ∀ b, InStoreTier b →
       consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 61) :
     ArenaD (initMem sizes) (AState.init EStore.empty) ∧
     CoreR (initMem sizes) (AState.init EStore.empty).caches ∧

@@ -339,11 +339,15 @@ def ilpfFns : List FnName := ilpfP.map (·.1)
 /-- What it writes: the stack, the level heap, the expression, level, level-list and name-lookup
 tables (both tiers), the pool scratch, the three `instLP` memos (52‥54). -/
 def ilpfA : List ArrId :=
-  [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 25, 26, 27, 28, 29, 30, 31,
-   32, 39, 40, 42, 43, 44, 45, 46, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 144, 192,
-   256, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277,
-   281, 282, 283, 284, 285, 286, 287, 288, 295, 296, 298, 299, 300, 301, 302, 311, 312, 313,
-   314, 315, 316, 317]
+  [POOL, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, SOREC,
+   SOSLOT, CREC, CSLOT, LEREC, LESLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT,
+   LSREC, LSSLOT, ADER, LADER, FADER, LEDER, PJDER, LPMEMO, LPLMEMO, LPLSMEMO, SHP, MHP, IHP, LSHP,
+   SOLP, CLP, FVLP, SPN, LH, tier1 POOL, tier1 AREC, tier1 ASLOT, tier1 SREC, tier1 SSLOT,
+   tier1 ZREC, tier1 ZSLOT, tier1 MREC, tier1 MSLOT, tier1 IREC, tier1 ISLOT, tier1 PREC,
+   tier1 PSLOT, tier1 SOREC, tier1 SOSLOT, tier1 CREC, tier1 CSLOT, tier1 LEREC, tier1 LESLOT,
+   tier1 FVREC, tier1 FVSLOT, tier1 LAREC, tier1 LASLOT, tier1 FAREC, tier1 FASLOT, tier1 PJREC,
+   tier1 PJSLOT, tier1 LSREC, tier1 LSSLOT, tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER,
+   tier1 PJDER, tier1 SHP, tier1 MHP, tier1 IHP, tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP]
 /-- The `CTL` words it writes: the stack top (136), the heap top (192), the pool top (0), the
 memos' stamps and counts (54‥59), the tables' counts. -/
 def ilpfC : List Word :=

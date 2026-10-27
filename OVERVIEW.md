@@ -689,10 +689,10 @@ and its number, which is its slot. The table is the memory layout of record.
 `Checker/ArrCheck.lean` checks it against the program
 ([the checks](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ArrCheck.lean#L24-L33)):
 the numbers are distinct and below `256`, so no array is another's tier 1
-([`wf`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L134-L138)).
+([`wf`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L153-L157)).
 A byte access names a byte array of the table, a tiered access a tiered array,
 and a plain word access a word array of the table, so never a tier-1 number
-([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L225-L230)).
+([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L244-L249)).
 There is no exception: `cap_check` reads every slot's length by name, a tier 1
 through a tiered access. The program's extent is the table's, and the parallel mode's frozen and
 owned arrays are slots of the table. The harness and the entry stub lay out the
@@ -735,7 +735,7 @@ function with many paths is proved by plain `vcgen` followed by `simp_all` or
 
 The relations nest by scope: one per store (`LitR`, `AppR`, …), the arena
 relation over all stores, the pool and the memos
-([`ArenaR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ArenaRel.lean#L273-L296)),
+([`ArenaR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ArenaRel.lean#L281-L304)),
 the core relation with the caches, the stage relation of the declaration
 checks, the loop relation of the fold. A refinement is stated at the smallest
 relation that suffices and lifted.

@@ -117,7 +117,7 @@ theorem preMem_pt0 (m : Mem) : (preMem m).arr64 PT0 = m.arr64 PT0 := by
 theorem preMem_eq_of_lt (m : Mem) (h : ¬ SCBLIM ≤ rdW (m.arr64 CTL) SCB) : preMem m = m :=
   ite_eq_right h
 
-theorem slot1Arrs_ge : ∀ b ∈ slot1Arrs, 256 ≤ b := by decide
+theorem slot1Arrs_ge : ∀ b ∈ slot1Arrs, IsTier1 b := by decide
 
 theorem not_mem_slot1 {b : ArrId} (h : b < 256) : b ∉ slot1Arrs := fun hb => by
   have := slot1Arrs_ge b hb; simp only [ArrId] at *; omega
@@ -702,14 +702,14 @@ theorem enterMem_frame (m : Mem) : MemFrame scrArrs ((0 :: resetCtl) ++ memoCtl)
 theorem resetCtl_lt : ∀ x ∈ (0 :: resetCtl) ++ memoCtl, x.toNat < 64 := by
   simp [resetCtl, scratchCnts, memoCtl, SCB]
 
-theorem scrArrs_low : ∀ b ∈ scrArrs, b < 64 ∨ (256 ≤ b ∧ b < 320) := by decide
+theorem scrArrs_low : ∀ b ∈ scrArrs, InStoreTier b := by decide
 
 /-- The bracket keeps the pins and the environment: it writes arrays below 64 and `CTL` words
 below 128 only. -/
 theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe)
     (hD : ArenaD m' a') (hc : CoreR m' a'.caches) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320))
+    (hA : ∀ b ∈ A, InStoreTier b)
     (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
     CheckR dn m' a' vis fe :=
   ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf,

@@ -47,7 +47,7 @@ theorem AvoidC.of_lt {k lo hi : Nat} {C : List Word} (hC : ∀ x ∈ C, x.toNat 
     AvoidC lo hi C := fun x hx => .inl (Nat.lt_of_lt_of_le (hC x hx) hk)
 /-- A writer of the store tier (arrays below `64` and their tier-1 twins `256‥319`) avoids every
 range inside `[64, 256)`. -/
-theorem AvoidA.of_low {lo hi : Nat} {A : List ArrId} (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320))
+theorem AvoidA.of_low {lo hi : Nat} {A : List ArrId} (hA : ∀ b ∈ A, InStoreTier b)
     (hlo : 64 ≤ lo) (hhi : hi ≤ 256) : AvoidA lo hi A := fun b hb =>
   (hA b hb).elim (fun h => .inl (Nat.lt_of_lt_of_le h hlo)) (fun h => .inr (Nat.le_trans hhi h.1))
 
@@ -763,7 +763,7 @@ theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : L
       (fun hm => by have := hC3 _ hm; simp at this) hf)
 
 /-- A writer of the store tier (arrays below `64` and `256‥319`) avoids the table rows' tier 1. -/
-theorem AvoidA.of_lowT {A : List ArrId} (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) :
+theorem AvoidA.of_lowT {A : List ArrId} (hA : ∀ b ∈ A, InStoreTier b) :
     AvoidA 385 388 A := fun b hb => .inl (by have := hA b hb; simp only [ArrId] at *; omega)
 
 theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
@@ -805,7 +805,7 @@ structure CheckR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vi
 `PinsR` and `EnvR`; the walk's own theorem gives `ArenaD`. -/
 theorem CheckR.of_walkM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
+    (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (hmode : ModeOK m') : CheckR dn m' a' vis fe := by
   have hc : a'.caches = a.caches := congrArg Prod.fst hk
   have hp : a'.pins = a.pins := congrArg Prod.snd hk
@@ -818,7 +818,7 @@ theorem CheckR.of_walkM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
 frame. -/
 theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
+    (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) : CheckR dn m' a' vis fe :=
   hR.of_walkM hD hf hA hC hk (hR.mode.frame hf h01.1 h01.2)
 

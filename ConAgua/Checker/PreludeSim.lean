@@ -36,13 +36,13 @@ def preIn : Array UInt8 := preludeBytes.toArray
 
 /-- A byte source other than byte array `0`. -/
 def _root_.L.BSrc.noIn : BSrc → Bool
-  | .arr a => a != 0
+  | .arr a => a != IN
   | .rom _ => true
 
 /-- No access to byte array `0`. -/
 def _root_.L.Expr.noIn : Expr → Bool
-  | .ld8 a i => a != 0 && i.noIn
-  | .len8 a => a != 0
+  | .ld8 a i => a != IN && i.noIn
+  | .len8 a => a != IN
   | .ld64 _ i | .ldc _ i => i.noIn
   | .bin _ a b | .cmpw _ a b => a.noIn && b.noIn
   | .ld64t _ t i => t.noIn && i.noIn
@@ -62,7 +62,7 @@ def _root_.L.Cond.noIn : Cond → Bool
 /-- No access to byte array `0` (no read, no store). -/
 def _root_.L.Stmt.noIn : Stmt → Bool
   | .set _ e | .gset _ e => e.noIn
-  | .st8 a i e => a != 0 && i.noIn && e.noIn
+  | .st8 a i e => a != IN && i.noIn && e.noIn
   | .st64 _ i e => i.noIn && e.noIn
   | .seq s t => s.noIn && t.noIn
   | .ite c s t => c.noIn && s.noIn && t.noIn
@@ -76,7 +76,7 @@ def _root_.L.Stmt.noIn : Stmt → Bool
 
 /-- No store into byte array `0`. -/
 def _root_.L.Stmt.noSt8In : Stmt → Bool
-  | .st8 a _ _ => a != 0
+  | .st8 a _ _ => a != IN
   | .seq s t => s.noSt8In && t.noSt8In
   | .ite _ s t => s.noSt8In && t.noSt8In
   | .while _ s => s.noSt8In

@@ -399,7 +399,7 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, tierOff, natA, POOL, POOL1, CREC, CSLOT, CLP])
+    (by simp [tier1, tierOff, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP])
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -409,13 +409,13 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
-    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [tier1, tierOff, natA, POOL, POOL1, CREC, CSLOT, CLP, EREC]) (by decide))
+    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [tier1, tierOff, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, EREC]) (by decide))
       hv) (hmode := hS.mode.poolGrew hP)
 
 theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [tier1, tierOff, natA, POOL, POOL1, CREC, CSLOT, CLP, SPN]) (by decide)
+    hf.1 SPN (by simp [tier1, tierOff, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp [natC])
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf (by decide) (by decide), hP⟩

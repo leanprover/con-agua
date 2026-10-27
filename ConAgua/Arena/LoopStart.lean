@@ -27,7 +27,7 @@ environment's index rows (132‥134), the promotion memo (146‥149), `consts_re
 def loopZeroArr (b : Nat) : Prop :=
   b = 49 ∨ b = 50 ∨ b = 52 ∨ b = 53 ∨ b = 54 ∨ b = 151 ∨ b = 152 ∨ b = 153 ∨
     (132 ≤ b ∧ b ≤ 134) ∨ (146 ≤ b ∧ b ≤ 149) ∨ b = 155 ∨ (201 ≤ b ∧ b ≤ 208) ∨ b = 51 ∨
-    (140 ≤ b ∧ b ≤ 142) ∨ (129 ≤ b ∧ b ≤ 131) ∨ (385 ≤ b ∧ b ≤ 387)
+    (140 ≤ b ∧ b ≤ 142) ∨ (129 ≤ b ∧ b ≤ 131) ∨ Tier1In 129 132 b
 
 /-- The `CTL` words the loop needs zero at its start: the core's memo stamps, the number of
 constants (128), of pending checks (130), the promotion memo's words (140‥147),

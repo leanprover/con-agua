@@ -17,8 +17,8 @@ namespace L.Arena
 
 /-- The arrays a leaf may write (both tiers): all but the pin table and the core's memos. -/
 def leafA : List ArrId :=
-  (List.range 388).filter fun b => b ≠ PINS ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 52 ∧ b ≠ 53 ∧ b ≠ 54 ∧
-    b ≠ 151 ∧ b ≠ 152 ∧ b ≠ 153
+  (List.range 388).filter fun b => b ≠ PINS ∧ b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ LPMEMO ∧
+    b ≠ LPLMEMO ∧ b ≠ LPLSMEMO ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM
 
 /-- The `CTL` words a leaf may write: all but the core memos' stamps. -/
 def leafC : List Word :=

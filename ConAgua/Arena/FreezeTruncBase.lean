@@ -118,9 +118,11 @@ theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
 
 /-- The frozen arrays (sources), as a literal. -/
 def fzSrcs : List ArrId :=
-  [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-   25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 55, 56,
-   57, 58, 59, 60, 61, 128, 132, 133, 134, 129, 130, 131, 136, 137]
+  [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
+   FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
+   FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA, EIXS, EIXN, TIXA, TIXS,
+   TIXN, EREC, PEND]
 
 theorem frozen_srcs : (frozen.drop 1).map (·.2.src) = fzSrcs := by decide
 
