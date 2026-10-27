@@ -140,15 +140,15 @@ def GFr (sa : ArrId) (m m' : Mem) : Prop :=
   (∀ b, b ≠ sa → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
     m.SameShape m'
 
-theorem GFr.refl (sa : ArrId) (m : Mem) : GFr sa m m := ⟨fun _ _ => rfl, fun _ => rfl, rfl⟩
+theorem GFr.refl (sa : ArrId) (m : Mem) : GFr sa m m := ⟨fun _ _ => rfl, fun _ => rfl, .refl m⟩
 
 theorem GFr.trans {sa : ArrId} {m₁ m₂ m₃ : Mem} (h₁ : GFr sa m₁ m₂) (h₂ : GFr sa m₂ m₃) :
     GFr sa m₁ m₃ :=
   ⟨fun b hb => (h₂.1 b hb).trans (h₁.1 b hb), fun b => (h₂.2.1 b).trans (h₁.2.1 b),
-    h₂.2.2.trans h₁.2.2⟩
+    h₁.2.2.trans h₂.2.2⟩
 
 theorem GFr.set64 (sa : ArrId) (m : Mem) (i v : Word) : GFr sa m (m.set64 sa i v) := by
-  refine ⟨fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb, fun b => ?_, Mem.words_size_set64 _ _ _ _⟩
+  refine ⟨fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb, fun b => ?_, Mem.sameShape_set64 _ _ _ _⟩
   by_cases h : b = sa
   · subst h; exact Mem.size_arr64_set64 _ _ _ _
   · rw [Mem.arr64_set64_ne _ _ _ _ _ h]

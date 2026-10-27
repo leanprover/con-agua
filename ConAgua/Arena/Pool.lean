@@ -106,6 +106,8 @@ grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
     ((m.set64 a i v).arr64 a).size = (m.arr64 a).size := by
   rw [Mem.arr64_set64_same]; simp
 
+attribute [arena_grind =] Mem.hasW_set64 Mem.hasW_setG
+
 @[arena_grind =] theorem Mem.bytes_set64 (m : Mem) (a : ArrId) (i v : Word) :
     (m.set64 a i v).bytes = m.bytes := rfl
 
