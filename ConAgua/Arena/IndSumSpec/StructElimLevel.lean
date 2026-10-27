@@ -161,7 +161,7 @@ open L.Arena
 
 /-- A writer of neither `IW`, `EREC` nor `CTL[129]`, `CTL[200]` keeps the pool's growth. -/
 theorem IWGrow.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : IW ∉ A ∧ EREC ∉ A) (hC : (200 : Word) ∉ C ∧ (129 : Word) ∉ C) : IWGrow m m' := by
+    (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A) (hC : (200 : Word) ∉ C ∧ (129 : Word) ∉ C) : IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW hA.1 (by decide)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC hA.2 (by decide)
   refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩

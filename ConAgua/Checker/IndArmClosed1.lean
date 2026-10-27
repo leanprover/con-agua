@@ -14,7 +14,7 @@ open L.Arena L.Ind L.Compiler
 
 names_tree armPosTree : armPosFns
 prog_all checkerProg_armPosChk : checkerProg (wsChk CTL
-  (tA fun b => decide (b ∉ [NOM, DPM, RAM, HBM, RFM]))
+  (tA fun b => decide (b ∉ ([NOM, DPM, RAM, HBM, RFM] : List TieredArray)))
   (tC fun c => decide (c ∉ [204, 206, 208, 210, 214, 218, 219])) armPosTree)
 
 /-! ## `hbFree`: `tailCallees` -/
@@ -27,7 +27,7 @@ prog_all checkerProg_armHbChk : checkerProg (wsChk CTL
 
 names_tree armRcTree : armRcFns
 prog_all checkerProg_armRcChk : checkerProg (wsChk CTL
-  (tA fun b => decide (b ∉ [NOM, DPM, RAM, HBM, RFM, TAM]))
+  (tA fun b => decide (b ∉ ([NOM, DPM, RAM, HBM, RFM, TAM] : List TieredArray)))
   (tC fun c => decide (c ∉ [204, 206, 208, 210, 212, 213, 214, 218, 219])) armRcTree)
 
 end L.Checker

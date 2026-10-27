@@ -25,11 +25,6 @@ open L L.Arena L.Ind
 
 /-! ## Capacities at entry (the arrays the driver lays out must be there and in range) -/
 
-/-- One more than the largest word slot the checker names (the tier-1 arrays `tier1 a`
-included): the program's word extent (`Prog.arrs`, `ProgTab.lean`) and the table's
-(`ArrCheck.lean`). -/
-def wordArrays : Nat := 388
-
 /-- The least `CTL` length `check` runs with: every fixed `CTL` slot the lanes use is below it
 (the largest is `249`, the prelude parse's id tables), and `arenaR_init`'s `64 ≤ |CTL|`. -/
 def ctlMin : Nat := 256
@@ -37,11 +32,10 @@ def ctlMin : Nat := 256
 /-- The slot arrays of the 19 cons tables (`ConsLib.lean`), both tiers: at least
 `consMinWords` words each (the initial table, `consR_init`) and below `2^61` (the growth's
 offsets, `TierLay`). -/
-def slotArrs : List ArrId := [SLOT, ASLOT, SSLOT, ZSLOT, MSLOT, ISLOT, PSLOT, SOSLOT, CSLOT,
-  LESLOT, BSLOT, FVSLOT, LASLOT, FASLOT, PJSLOT, NASLOT, NSSLOT, NNSLOT, LSSLOT,
-  tier1 SLOT, tier1 ASLOT, tier1 SSLOT, tier1 ZSLOT, tier1 MSLOT, tier1 ISLOT, tier1 PSLOT,
-  tier1 SOSLOT, tier1 CSLOT, tier1 LESLOT, tier1 BSLOT, tier1 FVSLOT, tier1 LASLOT, tier1 FASLOT,
-  tier1 PJSLOT, tier1 NASLOT, tier1 NSSLOT, tier1 NNSLOT, tier1 LSSLOT]
+def slotArrs : List TieredArray := tier0s [SLOT, ASLOT, SSLOT, ZSLOT, MSLOT, ISLOT, PSLOT, SOSLOT, CSLOT,
+  LESLOT, BSLOT, FVSLOT, LASLOT, FASLOT, PJSLOT, NASLOT, NSSLOT, NNSLOT, LSSLOT] ++
+  tier1s [SLOT, ASLOT, SSLOT, ZSLOT, MSLOT, ISLOT, PSLOT, SOSLOT, CSLOT, LESLOT, BSLOT, FVSLOT,
+  LASLOT, FASLOT, PJSLOT, NASLOT, NSSLOT, NNSLOT, LSSLOT]
 
 /-- The word slots `cap_check` tests, as (array, tier 1?) pairs: every word array of the table
 (`(a, false)`), then the tier 1 of every tiered one (`(a, true)`). Their arrays (`capSlotA`) are
@@ -50,7 +44,7 @@ def capSlots : List (ArrId × Bool) :=
   (checkerArrays.ids .word).map (·, false) ++ checkerArrays.tieredIds.map (·, true)
 
 /-- A slot's array: `a` or `tier1 a`. -/
-def capSlotA (p : ArrId × Bool) : ArrId := if p.2 then tier1 p.1 else p.1
+def capSlotA (p : ArrId × Bool) : TieredArray := if p.2 then tier1 p.1 else ↑p.1
 
 /-- A slot's length as code: `len(a.u64)`, or for tier 1 the tiered access `len(a⟨1⟩.u64)`,
 so that no tier-1 number appears in the program. -/

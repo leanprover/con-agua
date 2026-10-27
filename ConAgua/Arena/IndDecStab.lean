@@ -519,27 +519,20 @@ end decoders
 
 /-- The memory with both pools cut at their tops. -/
 def truncM (m : Mem) : Mem :=
-  ⟨m.bytes, (m.words.set! IW ((m.arr64 IW).extract 0 (iwTop m))).set! EREC
-      ((m.arr64 EREC).extract 0 (erTop m)), m.glob⟩
+  ⟨m.bytes, fun b => if b = ↑IW then (m.arr64 IW).extract 0 (iwTop m)
+      else if b = ↑EREC then (m.arr64 EREC).extract 0 (erTop m) else m.words b, m.glob⟩
 
 /-- A word of the cut `IW`: the pool's word below the top. -/
 theorem truncM_iw_get? (m : Mem) (i : Nat) :
     (iwA (truncM m))[i]? = if i < iwTop m then (iwA m)[i]? else none := by
-  simp only [iwA, truncM, Mem.arr64, Array.getD_eq_getD_getElem?]
-  by_cases h : IW < m.words.size
-  · simp [Array.set!_eq_setIfInBounds, h, Array.getElem?_extract, IW, EREC]
-    split <;> split <;> simp_all <;> omega
-  · have h' : m.words[IW]? = none := Array.getElem?_eq_none (Nat.le_of_not_lt h)
-    simp [Array.set!_eq_setIfInBounds, h, IW, EREC]
+  simp only [iwA, truncM, Mem.arr64, ite_true, Array.getElem?_extract]
+  split <;> simp_all <;> omega
 
 theorem truncM_er_get? (m : Mem) (i : Nat) :
     (erA (truncM m))[i]? = if i < erTop m then (erA m)[i]? else none := by
-  simp only [erA, truncM, Mem.arr64, Array.getD_eq_getD_getElem?]
-  by_cases h : EREC < m.words.size
-  · simp [Array.set!_eq_setIfInBounds, h, Array.getElem?_extract]
-    split <;> simp_all <;> omega
-  · have h' : m.words[EREC]? = none := Array.getElem?_eq_none (Nat.le_of_not_lt h)
-    simp [Array.set!_eq_setIfInBounds, h]
+  simp only [erA, truncM, Mem.arr64, ite_true, Array.getElem?_extract,
+    show (EREC : TieredArray) ≠ IW by decide, ite_false]
+  split <;> simp_all <;> omega
 
 /-- A word of the cut pool is a word below the top. -/
 theorem truncM_iw_get {m : Mem} {i : Nat} {v : Word} (h : (iwA (truncM m))[i]? = some v) :
