@@ -364,7 +364,7 @@ theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hcp : cp (AM.st (mkAppN (decE f) xs) a) = cp a :=
     congrArg (fun x => (x.1, x.2.1)) (hkeep.run hrun)
   obtain ⟨hS2, hg2⟩ := StageR.of_walk hS1 hD2 hfr2
-    (fun b hb => by simp only [List.mem_cons, List.not_mem_nil] at hb; rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | h <;> simp_all [AREC, ASLOT, ADER])
+    (fun b hb => by simp only [tier1, tierOff, List.mem_cons, List.not_mem_nil] at hb; rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | h <;> simp_all [AREC, ASLOT, ADER])
     (fun x hx => by simp only [List.mem_cons, List.not_mem_nil] at hx; rcases hx with rfl | rfl | h <;> simp_all) hcp
   -- the top put back
   obtain ⟨hS3, hg3⟩ := stageR_hi hS2 (MemFrame.setCtl m2 136 top) (by simp) (by simp) (by decide) (by decide)

@@ -515,7 +515,7 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [nstrCS]))
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS
     (internNNode_str_run (decI x) s!"rec_{i.toNat}" a) hok hR₅
-    hres hfr (by simp [POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [tier1, tierOff, POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
     (hmo₄.frame (consInternM_frame nstrCS_wf hI) (by simp [nstrCS]) (by simp [nstrCS]))
   rw [hr] at hrun c
