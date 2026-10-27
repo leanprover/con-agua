@@ -1,12 +1,7 @@
 import ConAgua.Arena.Checker
-import ConAgua.Arena.IndTwin
-import ConAgua.Arena.TwinStep
-import ConRon.Bridge.Promote.Walk
-import ConAgua.Arena.IndPosMemo
-import ConAgua.Arena.IndPos2SpecB
 import ConAgua.Arena.RecCheckSpec7
-import ConAgua.Arena.ConstsResolveFRefine2
 import ConAgua.Arena.CrOKFrame
+import ConAgua.Arena.IndPosSpec.FgW
 
 /-!
 # The declaration loop with the core's invariants: `LoopT` (lane `loopt`)

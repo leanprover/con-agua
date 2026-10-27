@@ -1,10 +1,7 @@
 import ConAgua.Arena.DeclApd
 import ConAgua.Arena.IndStubs
-import ConAgua.Arena.IndPos2SpecB
 import ConAgua.Arena.IndView
-import ConAgua.Arena.LevelEquiv
-import ConAgua.Arena.LevelArena
-import ConAgua.Arena.StoreDen
+import ConAgua.Scan.Common
 
 /-!
 # `all_level_params_defined`: the word models and the `vcgen` specs (lane `decls3`)

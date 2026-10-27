@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndT.PosFields
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndPosSpec.P2sfW
 
 /-!
 # `nest_ctors_walk` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

@@ -1,5 +1,4 @@
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPos2SpecB
+import ConAgua.Arena.IndPosSpec.NodeV
 
 /-!
 # Refinements of `IndSum`, fifth file (lane `indproofs`, helper `memo`)

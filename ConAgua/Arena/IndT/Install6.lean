@@ -2,6 +2,7 @@ import ConAgua.Arena.IndT.Install5
 import ConAgua.Arena.IndInstallSpec20
 import ConAgua.Arena.IndRealSctC
 import ConAgua.Arena.IndInstallSpec19
+import ConAgua.Arena.IndPosSpec.KlB
 
 /-!
 # `checkAbsCtorSorts`, `checkAbsCtorSortsAll` under `StageC` (lane `indstaget`)

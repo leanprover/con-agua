@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndSumSpec6
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.RecStab
+import ConAgua.Arena.IndPosSpec.SlRCongr
 
 /-!
 # `check_struct_proj_table` refines `checkStructProjTable` (lane `indproofs2`)

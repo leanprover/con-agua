@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndInstallSpec11
 import ConAgua.Arena.IndInstallSpec13
 import ConAgua.Arena.IndSumSpec4
+import ConAgua.Arena.IndPosSpec.FgW
 
 /-!
 # `targetMajorOf` (lane `indproofs3`, helper `indproofs3-pos-cls`): the twin's two branches

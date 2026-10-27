@@ -1,6 +1,7 @@
 import ConAgua.Arena.RecCheckSpec5
-import ConAgua.Arena.IndPos2SpecE
 import ConAgua.Arena.RecGenSpec5
+import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.Arena.IndPosSpec.PiBWStage
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`): `targetOutsideInst`

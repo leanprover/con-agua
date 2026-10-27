@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndPos2SpecA
 import ConAgua.Arena.IndSumSpec2A
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 
 /-!
 # Refinements of `IndSum`, third file (lane `indproofs`)

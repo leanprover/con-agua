@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclApdSpec
+import ConAgua.Arena.IndPosSpec.MatesW
 
 /-!
 # `all_level_params_defined` refines `allLevelParamsDefined` (lane `decls3`)

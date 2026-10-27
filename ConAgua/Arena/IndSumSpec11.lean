@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndPos2SpecB
+import ConAgua.Arena.IndPosSpec.MatesW
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 
 /-!
 # `check_struct_field_sorts_i` refines `checkStructFieldSortsI` (lane `indproofs2`)

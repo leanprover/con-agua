@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPartsSpec8
+import ConAgua.Arena.IndPosSpec.NestOccGo
 
 /-!
 # Refinements of `IndParts`, part 9 (lane `indproofs2`, helper `parts`): the groups

@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndPos2SpecQ
 import ConAgua.Arena.IndSumSpec8
 import ConAgua.Arena.RecStab
 

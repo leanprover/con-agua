@@ -1,6 +1,6 @@
-import ConAgua.Arena.IndPosSpec
 import ConAgua.Arena.RecCheck
 import ConAgua.Arena.RecSim
+import ConAgua.Arena.IndPosSpec.NestKeyMap
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`): `blockNestedBit`
