@@ -270,3 +270,100 @@ Left: `Arena.Lift` (32 s, `liftGo_spec.step1` 21 s: the `simp […]` option does
 `specs` are long, `l_model` wraps the spec terms across lines; without `gen 20` the proof fails),
 `Verdict.InferBindE` (32 s, the generated `inferPisE.loop1.spec`), `Front.Fields` (31 s,
 `recLoop_spec`: would need `Scan.Line`'s per-arm split), `Arena.LpCol` (needs the decode cut).
+
+## Measured before and after
+
+Same machine, otherwise idle (the merge queue held, no other `lean` process), `LAKE_COLD=1
+scripts/lake build` from an empty `.lake/build`, one job per core (`LEAN_NUM_THREADS=96`, what an
+unset variable meant for the baseline), wall and CPU from the build's resource usage (logs
+`_tmp/buildtime/{before,after}-cold.log`):
+
+| | master 8a4d29c7 (before) | master 8a84fd4e (after) |
+|---|---:|---:|
+| wall | 578 s | **429 s** |
+| CPU | 13 640 s | 13 430 s |
+| sum of module times | 8 928 s | 8 425 s |
+| critical path (from the module times) | 568 s | **421 s** |
+
+(Between the two, other lanes landed too: namedarrays, sectionvars, leanthreads.) Peak session
+memory during the after build: 32 GB.
+
+Per module (cold build, before → after), the ones this lane changed:
+
+| module | before | after |
+|---|---:|---:|
+| `Verdict.IndBGrpM` | 324 s | 101 s |
+| `Verdict.InferLeavesE` | 118 s | 24 s |
+| `Checker.IndArmClosed` | 108 s | 61 + 42 + 68 s in parallel (`IndArmClosed1`…`3`) |
+| `Checker.Prog` | 72 s | 2 s (+ `ProgSkt` 78 s, `ProgTab` 20 s, `ProgNrt` 19 s in parallel, only the compiled code waits for them) |
+| `Verdict.IndBTmn` | 62 s | 2 s |
+| `Verdict.DeclValE` | 57 s | 6 s |
+| `Arena.RecGenSpec.ClassFeR` | 56 s | 10 s |
+| `Arena.RecClassSpec.CrW` | 51 s | 28 s |
+| `Arena.StrLitChar` | 50 s | 7 s |
+| `Arena.RecCheckSpec.Tka` | 48 s | 15 s |
+| `Arena.DeclDivModSpec.SubstConst0List` | 48 s | 4 s |
+| `Rom.CIReadRefW` | 48 s | 11 s |
+| `Checker.LoopDeclArm1` | 48 s | 10 s |
+| `Scan.Line` | 46 s | 11 s |
+| `Checker.RomProgA` | 43 s | 4 s |
+| `Verdict.IndBSum3` | 42 s | 24 s |
+| `Arena.IndSumSpec.McGoStep` | 41 s | 18 s |
+| `Checker.LoopDeclAgree` | 40 s | 5 s |
+| `Arena.IndSumSpec.CtlW` | 40 s | 7 s |
+| `Scan.RecordsLink` | 39 s | 13 s |
+| `Verdict.IndBTka` | 38 s | 7 s |
+| `Arena.RecClassSpec.PrefixBinders` | 38 s | 29 s |
+| `Checker.LoopDeclArm` | 37 s | 10 s |
+| `Checker.RomProgB` | 37 s | 9 s |
+| `Arena.RecGenSpec.Rec3TmdWDecB` | 37 s | 18 s |
+| `Checker.LoopProg` | 35 s | 16 s |
+| `Verdict.PosE2` | 32 s | 7 s |
+| `Arena.ConsLibSpec` | 31 s | 15 s |
+| `Verdict.IndArmTopE` | 31 s | 3 s |
+| `Checker.IndArm` | 31 s | 11 s |
+| `Arena.DeclNatDeps` | 30 s | 22 s |
+| `Arena.StubNamesRefine` | 29 s | 2 s |
+| `Scan.RecordsSpec` | 28 s | 6 s |
+| `Arena.RecCheckSpec.Tpd` | 27 s | 4 s |
+| `Arena.RecClassSpec.MnW` | 27 s | 17 s |
+| `Arena.PinsNatOp` | 25 s | 21 s |
+| `Scan.Key` | 24 s | 7 s |
+| `Verdict.KnotAllE` | 21 s | 9 s |
+| `Arena.ExprMk` | 21 s | 10 s |
+| `Arena.ArRangeSpec` | 20 s | 10 s |
+| `Arena.Abs1Spec` | 19 s | 9 s |
+| `Arena.IndPartsSpec.BlockRecNamesUnreserved` | 19 s | 5 s |
+
+The Nat ops were not sped up, only made parallel (`NatShl` 54 → 64 s, `NatDiv` 32 → 40 s under
+the busier start of the build); they have ~85 s slack now.
+
+## Shared causes (the lessons)
+
+* **Kernel checks of one module run serially** (`addDecl` waits for the checks before it; also
+  for separate `theorem`s, measured). A module of many kernel checks (`prog_all` chunks) is split
+  into modules that Lake builds in parallel; elaboration of separate theorems is parallel, so a
+  proof over many arms is split into one theorem per arm.
+* **`String` comparisons in the kernel**: `checkerProg.lookup … := by rfl`, `decide +kernel` over
+  name lists (`nvFns`, callee lists). Use the chunked positions (`chk_lk`, `prog_bundle`,
+  `lk_agree`) and the name-code trees (`nv_mem`, `mem_of_tree`).
+* **Locals as `setLoc` chains** behind `sym … => vcgen … <;> finish`, `simp_all` and `grind`: plain
+  `vcgen` with `ld64_rd_spec` (no bound proof inside a load), `subst_vars`, `simp only [LocEq] at
+  *`, `simp only [*, St.setLoc_loc, …] at *`, then `grind`; for a long function, cut it after its
+  decodes (`seqTake`/`seqDrop`) and specify the rest over named locals.
+* **Unused hypotheses in `simp_all`'s context** (induction hypotheses after `vcgen`): clear them.
+* **Imports for one definition**: a module that needs only a definition or a lemma of a slow one
+  imports a small module holding it (`NatShiftFacts`, `LiftL`, `ProgTab`).
+
+## Left
+
+The critical path (421 s) now runs Scan → `Front.Fields` (32 s, `recLoop_spec`: the per-arm
+split `Scan.Line` got) → the ROM and declaration setup → `Arena.DeclCanonSpec`/`DeclCanonLvl`/
+`DeclCanonExpr` (27/25/37 s) → `Arena.Checker` → `Checker.LoopProgInd` (33 s) → `LoopProg` →
+`IndArm` → `CheckARun` (22 s) → `VerdictEntry1` → the `Verdict` top. Off it: `Verdict.IndBGrpM`
+(101 s; the long pole of the 4-core CI build: `simp_all` over 144 goals whose cost grows with the
+goals before it; tried variants in the round-2 section), `Checker.ProgSkt` (78 s, 11 GB, one
+kernel check of `Prog.skt`), `IndArmClosed1`…`3` (one walk checking all arms per function would
+cut their CPU several-fold), `Arena.Lift` (`l_model`'s `simp` option does not parse long `specs`),
+`Verdict.InferBindE`, `Arena.LpCol`. The second shake round (attribute, `Std` and `meta` imports,
+the macro modules) was not done: with the path in proof modules it would not shorten it.
