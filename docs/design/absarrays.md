@@ -549,3 +549,46 @@ tree.
   (`checkerWordArrays.contains a`) instead of `a < 388`. `wordArrays` (388) is gone, and
   `ArrCheck` checks the table against the compiler's layout (`checkerTab.dom64`/`dom8`) instead of
   an extent.
+* **Day 1, evening: green.** The whole tree builds at the lane head, with master 1d08f395
+  (localsnf, btfix) merged. That merge folded IndArmClosed1–3 into btfix's
+  `IndArmTests`/`IndArmTrees` split, and WhnfCoreAppLoop took localsnf's proof. `gates.sh`
+  passes: 12 steps, and e2e is skipped because `checker.s`, `pins.bin` and `main.c` did not
+  change, byte for byte (`asm_file.py --check`). The statements of the final theorems, `AbiCall`,
+  `HarnessCall`, `ThreadsRun`/`ThreadsFail` and `outAddr` are unchanged; I compared them
+  declaration by declaration against master. The axiom guards are unchanged.
+* **Size of the change:** 352 files, +4 075 / −4 249 lines. L core, compiler and `Layout`:
+  28 files, +1 112 / −888. Final: 13 files, +370 / −355. The rest: 311 files, +2 593 / −3 006.
+* **Layout left above the compiler:** `tierOff` appears outside `Compiler/` only in
+  `Final/SeqLayout.lean` (3 lines, the sequential driver's stub proof: `seqParamsOk` requires
+  `out`, `hdrf`, `ctlf < tierOff`). That is a stub, the allowed exception. There is no `+ 256`,
+  no `388` extent (`List.range 388`, `HasWs 388`, `< 388`), no `AvoidA 385 388`, no
+  `tblArr_cases` numerals and no `rciA_mem`. No `x < 256` hypothesis on arrays remains; the
+  ones left bound `CTL` words or bytes. Numeral array ids survive in four places:
+  * `L/Agree.lean`'s small test example (`↑(3 : ArrId)`);
+  * `Front/Unescape.lean`'s `tierA 0` (19 occurrences). The program side elaborates `POOL` to
+    `0`, and `omega` needs the two to agree;
+  * CoreLevels' local `S.arr ≠ 105/106`, discharged by `decide`;
+  * single-array cases `b.arr = 143/136/135` inside range predicates that `omega` reads.
+  These are source numbers (names), not layout.
+* **Kernel checks** over write and read sets now test membership in `checkerWordArrays`
+  (`List.contains` on `TieredArray`, equality through `code`) instead of `a < 388`. The cost is
+  unchanged within the noise: IndMemoClosed 28 s (master CI 32 s), IndArmClosed2 51 s (65 s),
+  IndCore 13 s (40 s), on a loaded machine.
+
+### 9.3 Left for batches 7 and 8
+
+* **Batch 7 (dense layout):** the compiler still uses today's numbering (`curNum`: tier 1 at
+  `a + tierOff`, then `wpos`) as its layout map, with 388 descriptor positions, holes included.
+  `Prog.layout` from the program text, a literal map in `checkerTab`, the stubs by position, and
+  the deletion of `tierOff`/`wpos` remain to do. `SeqLayout`'s `< tierOff` premises go with them.
+  Byte and word arrays as one space with a kind also remain.
+* **Batch 8 (cleanup):**
+  * `Mem.HasW`, `HasWs`, `HasB` and `SameShape` are `True`, but their 180 or so uses remain:
+    hypotheses, `trivial` arguments, the `SameShape` conjunct of `MemFrame`/`OutFrame`. Delete
+    the predicates and the conjuncts.
+  * The numeral ids above: `Unescape`'s `tierA 0`; the `TRec` rows (`⟨2, 4, 2, 0⟩`) by name.
+  * IdTable's `szC b = b + 6` and `spS`'s `2 * b - 64` derive `CTL` offsets from an array's
+    number.
+  * `loadMem`'s `words := fun s => Array.replicate (sz s) 0` builds a fresh array at each read
+    of an unwritten array in interpreter runs (E2E works around it with a shared zero array).
+  * `ArrCheck` could check the table against `Prog.layout` once that exists.
