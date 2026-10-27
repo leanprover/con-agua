@@ -26,12 +26,12 @@ local notation "V" => ConLeche.CheckMode.verified
 l_model ctlE_spec (p : Prog) (hf : p.lookup "check_sum_ctor_tail" = some checkSumCtorTailL)
   fns [hf ↦ ctlE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
+  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors locals
 
 l_model ctorE_spec (p : Prog) (hf : p.lookup "check_sum_ctor" = some checkSumCtorL)
   fns [hf ↦ ctorE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
+  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors locals
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
