@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfBase
+import ConAgua.Layout
 
 /-!
 # `instantiateLevelParams` in L: `inst_lp`, its walk, its three memos
@@ -42,18 +43,12 @@ namespace L.Arena
 
 /-! ## The three memos -/
 
-abbrev LPMEMO : ArrId := 52
-abbrev LPLMEMO : ArrId := 53
-abbrev LPLSMEMO : ArrId := 54
 /-- `instLPC`: array 52, stamp `CTL[54]`, count `CTL[55]`. -/
 abbrev lpSch : MemoSch := ⟨LPMEMO, 54⟩
 /-- `instLPLC`: array 53, stamp `CTL[56]`, count `CTL[57]`. -/
 abbrev lplSch : MemoSch := ⟨LPLMEMO, 56⟩
 /-- `instLPLsC`: array 54, stamp `CTL[58]`, count `CTL[59]`. -/
 abbrev lplsSch : MemoSch := ⟨LPLSMEMO, 58⟩
-
-/-- Lane `induct`'s handle-slice array. -/
-abbrev LPIW : ArrId := 200
 
 /-! ## `keys_push_iw(lo, ll)`: an `IW` name slice onto the spine stack -/
 

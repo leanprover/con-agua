@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -44,8 +45,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The scope walk's memo (`wscopedBGo`'s walk-local map). -/
-abbrev WSM : ArrId := 151
 /-- Its schema: array 151, stamp/count `CTL[152]`/`CTL[153]`. -/
 abbrev wsSch : MemoSch := ⟨WSM, 152⟩
 

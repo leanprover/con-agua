@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndIface
 import ConAgua.Arena.LevelApd
+import ConAgua.Layout
 
 /-!
 # `all_level_params_defined(o, l, e)`: the twin's memoized `allLevelParamsDefined` (lane `decls3`)
@@ -26,9 +27,6 @@ open ConRon.Arena
 namespace L.Ind
 
 open L.Arena
-
-/-- The walk's memo table. -/
-abbrev APDM : ArrId := 151
 
 /-- Its schema: array 151, `CTL[152]`, `CTL[153]`. -/
 abbrev apdSch : MemoSch := ⟨APDM, 152⟩

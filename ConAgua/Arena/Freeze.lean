@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclBase
+import ConAgua.Layout
 
 /-!
 # The frozen buffer: compaction of the persistent tier (lane parmode, docs/design/parmode.md)
@@ -32,13 +33,6 @@ as a prefix of its own array (`ca_check_seq`), so nothing is copied.
 namespace L.Arena
 
 open L
-
-/-- The buffer array (written by entry 1; the harness and entry 2 read it). -/
-abbrev OUT : ArrId := 240
-/-- The header, as entry 2 sees it. -/
-abbrev HDRF : ArrId := 241
-/-- The seed of `CTL`, as entry 2 sees it. -/
-abbrev CTLF : ArrId := 242
 
 /-- The magic word of a frozen buffer (`"PARMODE1"`). -/
 def fzMagic : Word := 0x5041524d4f444531

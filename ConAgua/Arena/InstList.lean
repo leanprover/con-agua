@@ -9,6 +9,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -43,12 +44,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The spine stack (`WhnfBase.lean`'s `SPN`): the substitution's slice lives here. -/
-abbrev ILSPN : ArrId := 144
-
-/-- The slots of `instantiateList`'s memo (`instLC`, keys `(handle, depth)`). -/
-abbrev ILMEMO : ArrId := 50
 
 /-- `instLC`: array 50, stamp `CTL[50]`, count `CTL[51]`. -/
 abbrev ilSch : MemoSch := ⟨ILMEMO, 50⟩

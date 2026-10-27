@@ -1,5 +1,6 @@
 import ConAgua.Arena.WhnfSpine
 import ConAgua.Arena.Env
+import ConAgua.Layout
 
 /-!
 # `whnfCore`: the knot's slot, the loop, the step, the batched β spine, projections
@@ -36,11 +37,6 @@ open scoped Lean.Order
 set_option experimental.vcgen true
 
 namespace L.Arena
-
-/-- The cheap-mode `whnfCore` memo's slots (`wkSch`). -/
-abbrev WKM : ArrId := 97
-/-- The `whnfCore` memo's slots (`wcSch`). -/
-abbrev WCM : ArrId := 96
 
 /-! ## The L code -/
 

@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Layout
 
 /-!
 # `consts_resolve_ffast(vis, e)`: the twin's memoized `constsResolve` (lane `stubs`)
@@ -26,9 +27,6 @@ returned (as `alpd_go`).
 namespace L.Stubs
 
 open L.Arena L.Ind
-
-/-- The walk's memo table. -/
-abbrev CRM : ArrId := 155
 
 /-- Its schema: array 155, `CTL[158]`, `CTL[159]`. -/
 abbrev crSch : MemoSch := ⟨CRM, 158⟩

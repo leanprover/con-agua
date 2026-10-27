@@ -1,5 +1,6 @@
 import ConAgua.Arena.PromoteMemo
 import ConAgua.Rom.PinSets
+import ConAgua.Layout
 
 /-!
 # The declaration loop's relation (`LoopR`) and the pending checks (`PendR`)
@@ -24,8 +25,6 @@ open L.Front (DECL DLP DeclsF)
 instance : Inhabited IFEnv := ⟨mkIFEnv IEnv.empty⟩
 
 /-! ## The pending checks: `PEND` (137), `CTL[130]` -/
-
-abbrev PEND : ArrId := 137
 
 /-- The number of pending checks, `CTL[130]`. -/
 def pendCount (m : Mem) : Nat := (rdW (m.arr64 CTL) 130).toNat
@@ -107,6 +106,5 @@ theorem FoldOut.eq {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
 /-- A value group out of `install_step_go`: flag `f` (`0`: none) and record `g`. -/
 def vgOut (m : Mem) (f g : Word) : Option ValueGroup :=
   if f = 0 then none else decVG (erecP m) g.toNat
-
 
 end L.Arena

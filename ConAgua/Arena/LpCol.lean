@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -49,21 +50,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-abbrev SHP : ArrId := 55
-abbrev MHP : ArrId := 56
-abbrev IHP : ArrId := 57
-abbrev LSHP : ArrId := 58
-abbrev SOLP : ArrId := 59
-abbrev CLP : ArrId := 60
-abbrev FVLP : ArrId := 61
-
-/-- The compound tables' derived words (`ExprMk.lean`, `DerRel.lean`). -/
-abbrev ADER : ArrId := 42
-abbrev LADER : ArrId := 43
-abbrev FADER : ArrId := 44
-abbrev LEDER : ArrId := 45
-abbrev PJDER : ArrId := 46
 
 theorem tierW_le (h : Word) : tierW h ≤ 1 := by
   simp only [tierW]; exact UInt64.and_le_right

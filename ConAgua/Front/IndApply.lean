@@ -1,6 +1,7 @@
 import ConAgua.Front.IndFields
 import ConAgua.Front.ApplyDecl
 import ConAgua.Census.Attr
+import ConAgua.Layout
 
 /-!
 # `inductive` lines into the parse state: `validateIndD`, `installIndD` (lane `induct`, worker I)
@@ -65,10 +66,6 @@ open L.Arena
 namespace L.Front.Ind
 
 open L.Front
-
-/-- The constant records of the installed inductive blocks: they share `DLP`'s pool (word `0` its
-top), so that the declarations relation reads one pool (`DeclAtF`, `StateDR.lean`). -/
-abbrev DIND : ArrId := DLP
 
 /-! ## Telescopes -/
 

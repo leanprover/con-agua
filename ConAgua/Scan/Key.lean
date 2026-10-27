@@ -10,6 +10,7 @@ public import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 set_option linter.unusedSectionVars false
@@ -55,9 +56,6 @@ namespace L.Scan.Key
 
 open L.Scan.Utf8 (byteW)
 open L.Scan.Leaves (skipWsN)
-
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
 
 /-! ## `key_at` -/
 

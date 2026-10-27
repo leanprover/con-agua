@@ -14,6 +14,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -44,11 +45,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The level-list records, both tiers interleaved (three words per node). -/
-abbrev LSREC : ArrId := 39
-/-- The level-list cons-table slots, both tiers interleaved. -/
-abbrev LSSLOT : ArrId := 40
 
 /-! ## `ls_match(t, i, o, l, h)` -/
 

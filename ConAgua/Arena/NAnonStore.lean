@@ -9,6 +9,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -37,12 +38,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The name store's `anonymous` records, both tiers interleaved (one dummy word per node). -/
-abbrev NAREC : ArrId := 33
-/-- The name store's `anonymous` cons-table slots, both tiers interleaved. -/
-abbrev NASLOT : ArrId := 34
-
 
 /-- The (constant) hash of the `anonymous` record: there is only one key, so the home slot of
 every probe is the same, fixed slot. -/

@@ -10,6 +10,7 @@ public import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -37,9 +38,6 @@ open scoped Lean.Order
 namespace L.Front
 
 open L.Arena (POOL)
-
-/-- The input buffer (byte array 0). -/
-abbrev IN0 : ArrId := 0
 
 def runLoop : Stmt := lblk (i, ok, nx, ln) {
   while i < len(IN0.u8) {
@@ -123,8 +121,6 @@ grind_pattern [lang_grind] runK_last => runK lineW sz i ln (some (ok, nx, m'))
 grind_pattern [lang_grind] runK_next => runK lineW sz i ln (some (ok, nx, m'))
 grind_pattern [lang_grind] runK_noprog => runK lineW sz i ln (some (ok, nx, m'))
 
-
-
 section spec
 variable (p : Prog) (lineW : Mem → Word → Option (Word × Word × Mem)) (B : Array UInt8) (Z : Nat)
   (hline : ∀ n (s₀ : St) (i : Word), s₀.mem.arr8 IN0 = B → (s₀.mem.arr64 POOL).size = Z →
@@ -184,7 +180,6 @@ theorem frontRun_spec (initW : Mem → Option Mem)
         runLoop_step_spec p lineW B Z hline n] <;> finish
 
 end spec
-
 
 /-! ## With a run invariant
 

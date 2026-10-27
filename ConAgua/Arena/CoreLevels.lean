@@ -4,6 +4,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Layout
 
 /-!
 # The level-verdict caches in front of the level algorithms
@@ -31,9 +32,6 @@ open scoped Lean.Order
 set_option experimental.vcgen true
 
 namespace L.Arena
-
-abbrev LQ : ArrId := 105
-abbrev LSQ : ArrId := 106
 
 /-- The answer word of a level comparison, decoded (`encO`'s inverse). -/
 def decO (w : Word) : Option Bool := if w = 0 then none else if w = 1 then some false else some true

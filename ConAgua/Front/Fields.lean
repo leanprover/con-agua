@@ -11,6 +11,7 @@ import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -56,9 +57,6 @@ open L.Scan.Utf8 (byteW)
 open L.Scan.Member
 open L.Scan.Values
 open L.Scan.Leaves (numEndN)
-
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
 
 /-- A number too long to be read (19 digits or more). -/
 def NONE : Word := 0xFFFFFFFFFFFFFFFF

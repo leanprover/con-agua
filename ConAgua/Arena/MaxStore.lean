@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -38,11 +39,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The `max` records, both tiers interleaved (one packed word per node). -/
-abbrev MREC : ArrId := 10
-/-- The `max` cons-table slots, both tiers interleaved. -/
-abbrev MSLOT : ArrId := 11
 
 /-- The hash of a `max` record (FNV-1a over its two handle words). -/
 def maxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime

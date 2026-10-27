@@ -4,6 +4,7 @@ import ConAgua.Arena.EnvRec
 import ConAgua.Arena.MemoBank
 import ConAgua.Arena.CoreCaches
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Layout
 
 /-!
 # The relation by tier, over projections of the state
@@ -50,7 +51,6 @@ range inside `[64, 256)`. -/
 theorem AvoidA.of_low {lo hi : Nat} {A : List ArrId} (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320))
     (hlo : 64 ≤ lo) (hhi : hi ≤ 256) : AvoidA lo hi A := fun b hb =>
   (hA b hb).elim (fun h => .inl (Nat.lt_of_lt_of_le h hlo)) (fun h => .inr (Nat.le_trans hhi h.1))
-
 
 /-! ## The per-declaration caches: arrays 96‥127, `CTL` 96‥127
 
@@ -322,9 +322,6 @@ is empty in the twin, so every read fails there too). So the relation claims not
 flag is `0`, and all-zero memory is related to every `Pins` (in particular `Pins.empty`).
 -/
 
-/-- The pin array. -/
-abbrev PINS : ArrId := 128
-
 /-- Word `i` of the pin array (`0` out of bounds). -/
 def pinW (m : Mem) (i : Nat) : Word := (m.arr64 PINS)[i]?.getD 0
 
@@ -391,15 +388,6 @@ and the constants list decodes in order. `find?` follows (`EnvR.find?`); a raw r
 name handles back (`EnvRec.lean`).
 -/
 
-abbrev EIXA : ArrId := 132
-abbrev EIXS : ArrId := 133
-abbrev EIXN : ArrId := 134
-abbrev ECON : ArrId := 135
-abbrev EREC : ArrId := 136
-abbrev EIXA1 : ArrId := 140
-abbrev EIXS1 : ArrId := 141
-abbrev EIXN1 : ArrId := 142
-
 /-- The constructor tag of a name handle word. -/
 def rowTag (w : Word) : Nat := w.toNat / 2 ^ 28
 /-- The tier bit of a name handle word. -/
@@ -459,11 +447,6 @@ counter) have their own arrays, as con-ron keeps them (`env.tables`, a `Vec`, an
   twin's `env.tables` is its reverse), `CTL[133]` of them.
 
 All of it is zero in zero memory (`mkIFEnv IEnv.empty`). -/
-
-abbrev TIXA : ArrId := 129
-abbrev TIXS : ArrId := 130
-abbrev TIXN : ArrId := 131
-abbrev ETAB : ArrId := 143
 
 /-- The table row's array: `129 + tag`, tier 1 at `+ 256`. -/
 def tblArr (w : Word) : ArrId := 129 + rowTag w + 256 * rowTier w

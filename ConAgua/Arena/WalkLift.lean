@@ -11,6 +11,7 @@ public import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -43,8 +44,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- `instantiate1LiftGo`'s memo (`inst1LC`). -/
-abbrev ILFM : ArrId := 51
 abbrev i1lSch : MemoSch := ⟨ILFM, 52⟩
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1897-1926 ConRon.Arena.instantiate1LiftGo -/

@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Semantics
 public import ConAgua.Arena.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -30,16 +31,6 @@ lemmas are guarded equations about the named functions `pv`, `xv`, `lv`, registe
 namespace L.Arena
 
 open L
-
-/-- The limb pool: word array 0. -/
-abbrev POOL : ArrId := 0
-/-- Word 0 of this array is the tier-0 pool top while the scratch tier is open (`CTL[0]` then
-holds the tier-1 top; lane tierpool): saved by `scratch_reset` when it leaves tier 0, restored
-when it drops the scratch tier. An array, not a global: every memory frame (`MemFrame`, the
-stores' `OutEq`) keeps it. -/
-abbrev PT0 : ArrId := 62
-/-- The control words: word array 1; word 0 is the pool top. -/
-abbrev CTL : ArrId := 1
 
 /-- The weight of limb `i`: `2^(64 i)`. A named function, so that `grind`'s ring solver treats
 it as one atom (`2 ^ (64 * i)` is "a ring term with unexpected instance" to it). -/
@@ -130,7 +121,6 @@ theorem Frame.set64_both (a b : ArrId) (m m' : Mem) (i v : Word) (h : Frame a m 
   · rw [Mem.arr64_set64_ne _ _ _ _ _ hcb, Mem.arr64_set64_ne _ _ _ _ _ hcb, h3 c hc]
 grind_pattern [arena_grind] Frame.set64_both => Frame a (m.set64 b i v) (m'.set64 b i v)
 
-
 /-! ## The virtual pool: the pool as proofs see it (lane tierpool)
 
 The pool is a tiered word array: tier `t` is array `tierA 0 t` (`POOL` = 0, `POOL1` = 256).
@@ -143,9 +133,6 @@ Proofs read the pool only through `vpool m`, an array with a word for every addr
 `2^41`: `prd m x`, what the L load `POOL⦃x⦄` reads (`0` where it aborts). They bound addresses
 with `pcap m` (`2^41 - 1` on a pool whose tier arrays have fewer than `2^40` words, so that a
 hypothesis `pcap m < 2^64` carries the tier arrays' bound), and never unfold `vpool`/`prd`. -/
-
-/-- The pool's tier-1 array, `tierA 0 1`. -/
-abbrev POOL1 : ArrId := 256
 
 theorem tierA_pool0 : tierA 0 0 = POOL := by decide
 theorem tierA_pool1 : tierA 0 1 = POOL1 := by decide
@@ -673,7 +660,6 @@ structure PFrame (m m' : Mem) : Prop where
   size1 : (m'.arr64 POOL1).size = (m.arr64 POOL1).size
   glob : m'.glob = m.glob
 
-
 grind_pattern [arena_grind] PFrame.size => PFrame m m', m'.words.size
 grind_pattern [arena_grind] PFrame.bytes => PFrame m m', m'.bytes
 grind_pattern [arena_grind] PFrame.glob => PFrame m m', m'.glob
@@ -800,7 +786,6 @@ structure Grows (m m' : Mem) : Prop where
   pcapEq : pcap m' = pcap m
   tier : m'.top.toNat < 2 ^ 40 ∨ 2 ^ 40 ≤ m.top.toNat
   inn : (m'.top &&& 1099511627775).toNat ≤ (m'.arr64 (tierA 0 (m'.top >>> 40))).size
-
 
 /-- A slice of the pool in use: below the top, and, while the scratch tier is open (the top in
 tier 1), a slice of tier 0 lies below the saved tier-0 top `PT0[0]` (the words of tier 0 above

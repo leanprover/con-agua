@@ -9,6 +9,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -36,11 +37,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The `param` records, both tiers interleaved (one word per node). -/
-abbrev PREC : ArrId := 14
-/-- The `param` cons-table slots, both tiers interleaved. -/
-abbrev PSLOT : ArrId := 15
 
 /-- The hash of a `param` record (FNV-1a over its word). -/
 def paramHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime

@@ -9,6 +9,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -47,11 +48,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The `lam` records, both tiers interleaved (one packed word per node). -/
-abbrev LAREC : ArrId := 27
-/-- The `lam` cons-table slots, both tiers interleaved. -/
-abbrev LASLOT : ArrId := 28
 
 /-- The hash of a `lam` record (FNV-1a over its two handle words). -/
 def lamHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime

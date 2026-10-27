@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -42,14 +43,8 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- `fvarLeavesGo`'s `seen` set. -/
-abbrev FLM : ArrId := 152
 abbrev flSch : MemoSch := ⟨FLM, 154⟩
-/-- `leavesSubGo`'s memo. -/
-abbrev LSM : ArrId := 153
 abbrev lsbSch : MemoSch := ⟨LSM, 156⟩
-/-- The leaf list (`fvarLeavesGo`'s accumulator): `(idx, ty)` at words `2 j`, `2 j + 1`. -/
-abbrev LVS : ArrId := 154
 
 /-! ## `fl_go`: the leaves of `base` -/
 

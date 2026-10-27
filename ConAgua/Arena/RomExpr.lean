@@ -4,6 +4,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Layout
 
 /-!
 # The ROM's expressions: `rom_expr(pos)` refines `internExprGo`, its memo mirrored
@@ -33,9 +34,6 @@ set_option experimental.vcgen true
 namespace L.Rom
 
 open L.Arena
-
-/-- The memo of the expression interner. -/
-abbrev RMEMO : ArrId := 139
 
 /-- Its count, `CTL[132]`. -/
 def memoCnt (m : Mem) : Word := rdW (m.arr64 CTL) 132
@@ -81,13 +79,6 @@ def encExprM (seen : List ConLeche.Expr) : ConLeche.Expr → List UInt8 × List 
       (10 :: (encName n ++ u64B i ++ r.1), r.2 ++ [e])
 
 /-! ## `memo_push(h)`, `rom_expr(pos)` -/
-
-/-- **The handles of the memo's entries, as a set** (the memo library's schema: array `150`,
-`CTL[148]`, `CTL[149]`). `memo_push` aborts when the handle is already there: an explicitly encoded
-compound subterm the twin's memo would have hit. The canonical encoding never does that; on
-untrusted bytes (the pin data) the check is what makes the twin's memo miss wherever L interns
-(DESIGN.md, "The pin data as an input"). -/
-abbrev RSET : ArrId := 150
 
 /-- The schema of `RSET`. -/
 def rsetSch : MemoSch := ⟨RSET, 148⟩
@@ -685,7 +676,6 @@ theorem exNodeK_topK {q h q' : Word} {r : Option (Word × Mem)} {m m' : Mem}
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨-, -, rfl⟩ := hW
     exact (hr w m₁ rfl).trans (mpushW_topK hp)
-
 
 theorem romLeafW_topK (rom : List UInt8) (n : Nat) (m : Mem) (pos t h q : Word) (m' : Mem)
     (hW : romLeafW rom n m pos t = some (h, q, m')) : TopK m m' := by

@@ -9,6 +9,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -47,11 +48,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The `forallE` records, both tiers interleaved (one packed word per node). -/
-abbrev FAREC : ArrId := 29
-/-- The `forallE` cons-table slots, both tiers interleaved. -/
-abbrev FASLOT : ArrId := 30
 
 /-- The hash of a `forallE` record (FNV-1a over its two handle words). -/
 def forallHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime

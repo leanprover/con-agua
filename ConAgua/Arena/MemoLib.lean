@@ -12,6 +12,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -673,26 +674,14 @@ theorem bankLeaveG_spec (c : Word) (p : Prog) (f : FnName) (hp : p.lookup f = so
 
 /-! ## The instances -/
 
-/-- The slots of `bvarBound`'s memo (`bvarBC`, one-word keys). -/
-abbrev BMEMO : ArrId := 24
-
 /-- `bvarBC`: array 24, stamp `CTL[24]`, count `CTL[25]`. -/
 abbrev bmSch : MemoSch := ⟨BMEMO, 24⟩
-
-/-- The slots of `liftLooseBVars`' memo (`liftC`, keys `(handle, cutoff)`). -/
-abbrev LMEMO : ArrId := 41
 
 /-- `liftC`: array 41, stamp `CTL[42]`, count `CTL[43]`. -/
 abbrev lfSch : MemoSch := ⟨LMEMO, 42⟩
 
-/-- The slots of `instantiate1`'s memo (`inst1C`, keys `(handle, depth)`). -/
-abbrev IMEMO : ArrId := 47
-
 /-- `inst1C`: array 47, stamp `CTL[44]`, count `CTL[45]`. -/
 abbrev imSch : MemoSch := ⟨IMEMO, 44⟩
-
-/-- The slots of `fvarRange`'s memo (`fvarBC`, one-word keys, `bvarBC`'s codec: `bmKey`). -/
-abbrev FRMEMO : ArrId := 48
 
 /-- `fvarBC`: array 48, stamp `CTL[46]`, count `CTL[47]`. -/
 abbrev frSch : MemoSch := ⟨FRMEMO, 46⟩

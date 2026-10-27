@@ -6,6 +6,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Layout
 
 /-!
 # The `whnf` half of the whnf family: `whnf`, its loop, the literal/delta step, and their helpers
@@ -49,16 +50,10 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-
 namespace L.Arena
 set_option experimental.vcgen true
 
 /-! ## Two more cache arrays, read directly on a memo hit -/
-
-/-- `whnfC`'s array (`whSch.arr`): the `whnf` memo, hit value at `WH.u64[j * 4 + 3]`. -/
-abbrev WH : ArrId := 98
-/-- `constValC`'s array (`cvSch.arr`): the `const_val_at` memo, hit value at `CV.u64[j * 4 + 3]`. -/
-abbrev CV : ArrId := 103
 
 /-! ## The L code -/
 

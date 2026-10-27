@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -46,9 +47,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The slots of `abstract1`'s memo (`abs1C`, keys `(handle, k)`). -/
-abbrev ABMEMO : ArrId := 49
 
 /-- `abs1C`: array 49, stamp `CTL[48]`, count `CTL[49]`. -/
 abbrev abSch : MemoSch := ⟨ABMEMO, 48⟩

@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -45,9 +46,6 @@ open L.Scan.Utf8 (byteW)
 open L.Scan.Member
 open L.Scan.Values
 open L.Scan.Records
-
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
 
 /-! ## `scan_line_loop` -/
 
@@ -454,7 +452,6 @@ theorem lineLoop_spec (n : Nat) (s₀ : St) :
       decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
     all_goals grind (splits := 40) [lang_grind, byteW]
 
-
 theorem scanLineLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_line_loop" [i]
@@ -486,7 +483,6 @@ theorem scanLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
         L.Scan.Leaves.skipWs_spec p ‹_› b hb64 n,
         scanLineLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n] <;> finish
 
-
 theorem validateLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n validateLoop
@@ -498,7 +494,6 @@ theorem validateLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := validateLoop) rfl]
     sym only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, scanLine_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n] <;> finish
-
 
 theorem validate_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
     ⦃fun s => s = s₀⦄

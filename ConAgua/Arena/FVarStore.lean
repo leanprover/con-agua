@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -43,11 +44,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The `fvar` records, both tiers interleaved (two words per node). -/
-abbrev FVREC : ArrId := 25
-/-- The `fvar` cons-table slots, both tiers interleaved. -/
-abbrev FVSLOT : ArrId := 26
 
 /-- The hash of an `fvar` record (FNV-1a over its two words). -/
 def fvarHashW (u ty : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ ty) * fnvPrime

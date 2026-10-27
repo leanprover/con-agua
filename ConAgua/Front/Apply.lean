@@ -12,6 +12,7 @@ import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Layout
 
 /-!
 # The parse state's id tables in L: `front_init`, `apply_nstr`, `apply_nnum`, `apply_level`
@@ -44,15 +45,6 @@ open scoped Lean.Order
 open L.Arena
 
 namespace L.Front
-
-/-- Export name id ↦ name handle word `+ 1`. -/
-abbrev NID : ArrId := 64
-/-- Export level id ↦ level handle word `+ 1`. -/
-abbrev LID : ArrId := 65
-/-- Export expression id ↦ expression handle word `+ 1` (`ConAgua.Front.ApplyExpr`). -/
-abbrev EID : ArrId := 66
-/-- The input buffer (byte array 0). -/
-abbrev IN : ArrId := 0
 
 /-! ## `name_get`, `level_get`, `name_fresh`, `level_fresh`, `name_put`, `level_put` -/
 

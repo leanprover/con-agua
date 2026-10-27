@@ -1,5 +1,6 @@
 import ConAgua.Arena.Tiers
 import ConRon.Arena.Inductives.GenRec
+import ConAgua.Layout
 
 /-!
 # The inductive stage in L: the interface (lane `induct`)
@@ -98,18 +99,6 @@ namespace L.Ind
 open L.Arena
 
 /-! ## Arrays -/
-
-/-- The work pool. -/
-abbrev IW : ArrId := 200
-/-- The memo arrays of the per-call walks. -/
-abbrev MAM : ArrId := 201
-abbrev NOM : ArrId := 202
-abbrev DPM : ArrId := 203
-abbrev RFM : ArrId := 204
-abbrev RAM : ArrId := 205
-abbrev TAM : ArrId := 206
-abbrev HBM : ArrId := 207
-abbrev MCM : ArrId := 208
 
 /-- The memo schemas. -/
 def maSch : MemoSch := ⟨MAM, 202⟩

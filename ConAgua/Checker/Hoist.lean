@@ -8,6 +8,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Layout
 
 /-!
 # The ground hoist: `hoistNatOpGround` in L (lane `front3`)
@@ -64,10 +65,6 @@ namespace L.Checker
 
 open L L.Arena L.Ind L.Front L.Front.Ind
 
-/-- The hoist's expression visited set (one record's, or one block's). -/
-abbrev HSEEN : ArrId := 75
-/-- The hoist's name index: name handle ↦ the first position declaring it. -/
-abbrev HNIX : ArrId := 76
 abbrev hsSch : MemoSch := ⟨HSEEN, 73⟩
 abbrev hnSch : MemoSch := ⟨HNIX, 75⟩
 
