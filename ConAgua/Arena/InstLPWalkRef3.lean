@@ -1,5 +1,4 @@
 import ConAgua.Arena.InstLPWalkRef2
-import ConAgua.Arena.InstLPWalkLet
 import ConAgua.Arena.InstLPLevel2
 import ConAgua.Arena.InstLPWalkArms
 import ConAgua.Arena.InstLPWalkGo
