@@ -34,8 +34,8 @@ theorem lt_of_not_len64_le {m : Mem} {a : ArrId} {x : Word} (hsz : (m.arr64 a).s
 theorem tfld_spPush (m : Mem) (co cn v t x f : Word) :
     tfld (spPush m co cn v) FORALL t x f = tfld m FORALL t x f := by
   simp only [tfld, spPush]
-  rw [Mem.arr64_set64_ne _ _ _ _ _ (by intro h; have h' : 29 + 256 * (t &&& 1).toNat = (1 : Nat) := h; omega),
-    Mem.arr64_set64_ne _ _ _ _ _ (by intro h; have h' : 29 + 256 * (t &&& 1).toNat = (144 : Nat) := h; omega)]
+  rw [Mem.arr64_set64_ne _ _ _ _ _ (L.tierA_ne (by decide) t),
+    Mem.arr64_set64_ne _ _ _ _ _ (L.tierA_ne (by decide) t)]
 
 theorem spPush_zero (m : Mem) (co v : Word) :
     (m.set64 SPN co v).set64 CTL 136 (co + 1) = spPush m co 0 v := by

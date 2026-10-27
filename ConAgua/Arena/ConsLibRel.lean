@@ -130,7 +130,7 @@ structure ConsSch.WF (C : ConsSch) : Prop where
     C.w.toNat * ((cntC C m t).toNat + 1) ≤ (m.arr64 (tierA C.ra t)).size
   colRoom : ∀ A, C.col = some A → ∀ (m : Mem) (t : Word), t ≤ 1 → pushOKC C m t = true →
     (cntC C m t).toNat < (m.arr64 (tierA A t)).size
-  /-- The column is a tier-0 id (tier 1 is `+ 256`). -/
+  /-- The column is a tier-0 id (tier 1 is `tier1`). -/
   colLt : ∀ A, C.col = some A → A < 256
   vs : ∀ (ks : List Word) (h : Word), ks.length = C.nk →
     (C.vsM (pushArgs C ks h)).length = C.w.toNat
