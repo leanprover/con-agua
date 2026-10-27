@@ -82,3 +82,25 @@ estimated as above (all importers, no early cutoff):
 | `Final.Statement` | 709 modules | 46 modules, 193 s |
 
 (Module counts here include the edited module itself.)
+
+## Batch 2: `Verdict` imports what it uses
+
+The `Verdict` modules (154; the error refinements, one `l_model`/`err_stmt` group per L function
+already) were written as chains: each imports the one before it (`IndBSum1 → … → IndBCcs →
+IndBGrpM → IndBGrp → … → IndBTbl`), so `IndBGrpM` (406 s, one `l_model` command) could start
+only at 1142 s. Now each imports the modules whose constants it uses (a list from the elaborated
+environment: every constant of every `ConAgua` module and the modules of the constants its type
+and value mention, equation lemmas and other realizable auxiliaries counted at their parent),
+plus the modules defining the tactics, commands and `grind` attributes its text uses, plus the
+modules declaring names its text mentions that only a command reads (`err_stmt X := name`,
+`l_model … extra [name]`), keeping the imports of non-`Verdict` modules; then imports another
+import already reaches are dropped. 104 of 154 modules changed imports.
+
+What constant lists miss (found by building): global `@[simp]` lemmas a `simp` used without the
+proof term naming them — `exc_ok_bind` (`Arena/Checker.lean`) in `IndsE4` and `IndBRecPins`, and
+`open` of a namespace (`IndBTmm` opens `ConRon.Bridge.Inductives`). Those import the providing
+module directly.
+
+`IndBGrpM` now starts at 197 s (finishes at 603 s). Estimated critical path 1710 s → 1353 s; it
+now runs through the `Arena` proof families and `Checker.IndArmClosed`, and `Verdict` contributes
+only its last three modules (`FrontStageE`, `TopE`, `IndArmTopE`).
