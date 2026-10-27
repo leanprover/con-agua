@@ -830,7 +830,7 @@ theorem axEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanAxiomDecl b 
   unfold scanAxiomDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (axiom_loop b h64 hsize) (v + 1) true 0 (false, [], 0, 0)
       DFld.init d e h ⟨rfl, .inr rfl, itemR_zero, itemR_zero⟩
   · cases h
@@ -841,7 +841,7 @@ theorem defEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanDefDecl b v
   unfold scanDefDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (def_loop b h64 hsize) (v + 1) true 0
       (.regular 0, [], 0, "", 0, 0) DFld.init d e h
       ⟨⟨rfl, itemR_zero⟩, .inr rfl, itemR_zero, fun h => absurd h (by decide), itemR_zero, itemR_zero⟩
@@ -853,7 +853,7 @@ theorem thmEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanThmDecl b v
   unfold scanThmDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (thm_loop b h64 hsize) (v + 1) true 0 ([], 0, 0, 0)
       DFld.init d e h ⟨.inr rfl, itemR_zero, itemR_zero, itemR_zero⟩
   · cases h
@@ -864,7 +864,7 @@ theorem opaqueEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanOpaqueDe
   unfold scanOpaqueDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (opaque_loop b h64 hsize) (v + 1) true 0 (false, [], 0, 0, 0)
       DFld.init d e h ⟨rfl, .inr rfl, itemR_zero, itemR_zero, itemR_zero⟩
   · cases h
@@ -875,7 +875,7 @@ theorem quotEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanQuotDecl b
   unfold scanQuotDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (quot_loop b h64 hsize) (v + 1) true 0 ("", [], 0, 0)
       DFld.init d e h ⟨⟨fun h => absurd h (by decide), fun h => absurd h (by decide),
         fun h => absurd h (by decide), fun h => absurd h (by decide)⟩, .inr rfl, itemR_zero, itemR_zero⟩

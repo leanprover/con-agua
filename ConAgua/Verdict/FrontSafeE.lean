@@ -192,7 +192,7 @@ theorem defEntry_link' (v : USize) (d : DeclRec) (e : USize) (h : scanDefDecl b 
   unfold scanDefDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     obtain ⟨h1, h2, h3⟩ := dobj_link b h64 hsize _ _ _ (def_loop' b h64 hsize) (v + 1) true 0
       (.regular 0, [], 0, "", 0, 0) DFld.init d e h
       ⟨⟨⟨rfl, itemR_zero⟩, .inr rfl, itemR_zero, fun h => absurd h (by decide), itemR_zero, itemR_zero⟩,

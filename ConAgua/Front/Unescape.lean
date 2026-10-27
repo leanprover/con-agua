@@ -473,6 +473,7 @@ theorem escSur_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : W
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         L.Scan.Str.byteIn_spec p b hpb n, L.Scan.Str.hex3_spec p b hpb hph hp3 n] <;> finish
 
+omit hb in
 include hpb hph hp4 hp3 hps hpo in
 attribute [local lang_grind] escOneN in
 theorem escOne_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
@@ -556,7 +557,7 @@ theorem escLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := escLoop) rfl]
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, escRun_spec p b n,
-        escOne_spec p b hb hpb hph hp4 hp3 hps hpo n, utf8Put_spec p hpu n] <;> finish [Mem.src8]
+        escOne_spec p b hpb hph hp4 hp3 hps hpo n, utf8Put_spec p hpu n] <;> finish [Mem.src8]
 
 theorem escLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧

@@ -148,6 +148,7 @@ theorem natListLoop_len (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) 
       | (rename_i hj ih
          exact ih (by simp only [List.length_cons]; have := USize.lt_iff_toNat_lt.mp hj; omega) h)
 
+omit h64 hsize in
 theorem scanNatList_len (v : USize) (us : List Nat) (p : USize) (h : scanNatList b v = .ok us p) :
     us.length ≤ p.toNat := by
   unfold scanNatList at h
@@ -263,7 +264,7 @@ theorem lineLoop_link (i : USize) (w : Bool) (idxKind : UInt8) (idx : Nat) (pl :
                 split
                 · rename_i heq; rw [heq]; simp [encNL, okW]
                 · rename_i us e heq
-                  have hlen := scanNatList_len b h64 hsize v us e heq
+                  have hlen := scanNatList_len b v us e heq
                   rw [heq]; simp only [encNL]
                   split
                   · by_cases he0 : e.toUInt64 = 0

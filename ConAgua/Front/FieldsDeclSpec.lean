@@ -249,7 +249,7 @@ theorem declVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs,
-      recDeclObj_spec p hL b hb n, declCode_spec p hL b n,
+      recDeclObj_spec p hL b hb n, declCode_spec p hL n,
       L.Scan.Records.scanIndD_spec p b hb (hL.get "skip_ws") (hL.get "skip_digits") (hL.get "key_end") (hL.get "num_end")
         (hL.get "key_at_g1") (hL.get "key_at_g2") (hL.get "key_at_g3") (hL.get "key_at_g4") (hL.get "key_at_g5") (hL.get "key_at_g6") (hL.get "key_at")
         (hL.get "value_at") (hL.get "next_member") (hL.get "slot_nat") (hL.get "match_word") (hL.get "scan_binder_info") (hL.get "hints_num")

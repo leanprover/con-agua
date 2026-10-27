@@ -558,6 +558,7 @@ decreasing_by
     | (have := USize.lt_iff_toNat_lt.mp ‹i < numEnd b _›; omega)
     | (have := USize.lt_iff_toNat_lt.mp ‹i < _›; omega)
 
+omit hsize in
 theorem obj_open (v : USize) (hc : (byteAt b v == 123) = true) :
     v < b.usize ∧ (v + 1).toUInt64 = v.toUInt64 + 1 := by
   have hv : v < b.usize := by
@@ -574,7 +575,7 @@ theorem strEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanStrName b v
   split at h
   · rename_i hc
     unfold strRecEntryN
-    rw [← (obj_open b h64 hsize v hc).2]
+    rw [← (obj_open b h64 v hc).2]
     exact strRec_link b h64 hsize (v + 1) true 0 0 "" r e 0 0 0 h itemR_zero (fun h => absurd rfl h)
   · cases h
 
@@ -585,7 +586,7 @@ theorem numEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanNumName b v
   split at h
   · rename_i hc
     unfold numRecEntryN
-    rw [← (obj_open b h64 hsize v hc).2]
+    rw [← (obj_open b h64 v hc).2]
     exact numRec_link b h64 hsize (v + 1) true 0 0 0 r e 0 0 h itemR_zero itemR_zero
   · cases h
 

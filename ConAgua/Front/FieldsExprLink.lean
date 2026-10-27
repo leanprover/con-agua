@@ -659,7 +659,7 @@ theorem objEntry_link {σ : Type} (F : USize → Bool → UInt32 → σ → Scan
     (e : USize) (h : F (v + 1) true 0 st₀ = .ok r e) :
     (recObjN b.data v.toUInt64).e = e.toUInt64 ∧ ORes b k r (recObjN b.data v.toUInt64) := by
   unfold recObjN
-  rw [← (obj_open b h64 hsize v hc).2]
+  rw [← (obj_open b h64 v hc).2]
   exact objRec_link b h64 hsize F R (ORes b k) H (v + 1) true 0 st₀ r e _ h h₀
 
 /-- A sub-object at `v`, by the payload key `k` and its con-leche scanner. -/
