@@ -714,7 +714,7 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
   have herr : ∀ s', s'.dmem = d.dmem → KeepR s' d → ¬ (vi ≤ ve ∧ ve.toNat ≤ (σ.mem.src8 s).size) →
       Ev Q s' (label errorL) := fun s' hd hk hn =>
     hK.err s' ⟨.oob, by rw [hrun, ite_eq_right hn], by simp⟩ (gpost_mem hG hTab hd hk.rbp)
-  refine sim_srcLen hG hT hTab hI hws (r := .rdx) hpre.head ?_
+  refine sim_srcLen hT hTab hI hws (r := .rdx) hpre.head ?_
   refine ev_movRO hpre.tail.head (opnd_reads hG hTab hT hF (hInv _ (by rfl) ((KeepR.refl d).ofEq (by keep_tac))) hwe hve) ?_
   refine ev_cmpRO (v := UInt64.ofNat (σ.mem.src8 s).size) hpre.tail.tail.head
     (.inr (.inr ⟨.rdx, rfl, by simp⟩)) ?_
@@ -1045,7 +1045,7 @@ theorem sim_copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) :
   have hLlt := src8_size_lt hG hI.mem hws
   have hsl : (UInt64.ofNat (σ.mem.src8 s).size).toNat = (σ.mem.src8 s).size := UInt64.toNat_ofNat_of_lt' hLlt
   -- the source
-  refine sim_srcLen hG hT hTab hI hws (r := .rax) h1.head ?_
+  refine sim_srcLen hT hTab hI hws (r := .rax) h1.head ?_
   have hk1 : KeepR { d0 with regs := d0.regs.set64 .rax (UInt64.ofNat (σ.mem.src8 s).size).toBitVec } d0 :=
     (KeepR.refl d0).ofEq (by keep_tac)
   refine sim_lenChk hG hTab (L := UInt64.ofNat (σ.mem.src8 s).size) (vo := vj) (vn := vk) hlenS (by simp)

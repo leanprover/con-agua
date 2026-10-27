@@ -470,7 +470,7 @@ theorem escSur_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : W
   | succ n =>
     sym (gen := 24) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Scan.Str.byteIn_spec p b hb hpb n, L.Scan.Str.hex3_spec p b hb hpb hph hp3 n] <;> finish
+        L.Scan.Str.byteIn_spec p b hpb n, L.Scan.Str.hex3_spec p b hb hpb hph hp3 n] <;> finish
 
 include hpb hph hp4 hp3 hps hpo in
 attribute [local lang_grind] escOneN in
@@ -486,7 +486,7 @@ theorem escOne_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Wor
   | succ n =>
     sym (gen := 24) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Scan.Str.byteIn_spec p b hb hpb n, L.Scan.Str.hex4_spec p b hb hpb hph hp4 n,
+        L.Scan.Str.byteIn_spec p b hpb n, L.Scan.Str.hex4_spec p b hb hpb hph hp4 n,
         escSur_spec p b hb hpb hph hp3 hps n] <;> finish
 
 end specs

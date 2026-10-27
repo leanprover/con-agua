@@ -305,7 +305,7 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt
             rw [hV _ (hw e), ite_eq_right (Ne.symm hne)]; exact hl
         · left; exact ⟨j'', hj'', by rw [hV _ hj'', ite_eq_right (Ne.symm e)]; exact hm⟩
       · right
-        refine foundU_keep sa ob N n bt c hsm m0 hob hNL hL hbt hnN mi _ x hx (fun j' hj' hl => ?_) hN0 hf
+        refine foundU_keep sa ob N bt c hsm hbt mi _ x hx (fun j' hj' hl => ?_) hN0 hf
         rw [hV _ hj', ite_eq_right]; rintro rfl; exact hiL hl
     · rw [hV _ hiN]; simp only [↓reduceIte, mark_le_iff]; have := UInt64.lt_iff_toNat_lt.mp hXl.2
       rw [MARK_toNat] at this; omega
@@ -368,7 +368,7 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt
               rw [← hmx, hYv]
             · left; exact ⟨j'', hj'', by rw [hV _ hj'', ite_eq_right (Ne.symm e), ite_eq_right (Ne.symm e')]; exact hmx⟩
         · right
-          refine foundU_keep sa ob N n bt c hsm m0 hob hNL hL hbt hnN mi _ x hx (fun j' hj' hl => ?_) hN0 hf
+          refine foundU_keep sa ob N bt c hsm hbt mi _ x hx (fun j' hj' hl => ?_) hN0 hf
           rw [hV _ hj', ite_eq_right (fun h' => hiL (by rw [h']; exact hl)), ite_eq_right (fun h' => hjnL (by rw [h']; exact hl))]
     · -- move to the free slot `j`
       simp only [show ¬ MARK ≤ rdW (mi.arr64 sa) (ob + j * 2) from hm, ↓reduceIte]
@@ -413,7 +413,7 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt
                 rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega)]; omega)
             left; exact ⟨j'', hj'', by rw [hV _ hj'', ite_eq_right (Ne.symm e), ite_eq_right (Ne.symm e')]; exact hmx⟩
         · right
-          refine foundU_keep sa ob N n bt c hsm m0 hob hNL hL hbt hnN mi _ x hx (fun j' hj' hl => ?_) hN0 hf
+          refine foundU_keep sa ob N bt c hsm hbt mi _ x hx (fun j' hj' hl => ?_) hN0 hf
           rw [hV _ hj', ite_eq_right (fun h' => hiL (by rw [h']; exact hl)), ite_eq_right (fun h' => hjnL (by rw [h']; exact hl))]
       · rw [hV _ hiN, ite_eq_left rfl, mark_le_iff]; simp
 
@@ -474,7 +474,7 @@ theorem krehashW_inv (i e : Word) (mi mf : Mem) (hin : i ≤ n)
   | case2 i e mi hi m1 e1 h1 ih =>
     obtain ⟨hI1, hm1⟩ := kinnerW_inv sa ob N n bt c KPm hsm m0 hob hNL hL hbt hnN G hGh hN0 i hi e _ mi m1 e1
       hI (fun _ => rfl) (fun h => h) h1
-    refine ih mf ?_ (rinv_succ sa ob N n bt c KPm hsm m0 hob hNL hL hbt hnN G hGh hN0 m1 i hi hI1 hm1) h
+    refine ih mf ?_ (rinv_succ sa ob N n bt c KPm hsm m0 m1 i hi hI1 hm1) h
     have := UInt64.lt_iff_toNat_lt.mp hi
     rw [UInt64.le_iff_toNat_le, UInt64.toNat_add]; simp; omega
   | case3 i e mi hi =>

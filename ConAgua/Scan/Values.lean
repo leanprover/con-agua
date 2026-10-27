@@ -573,7 +573,7 @@ theorem hintsObj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (q : Wor
     sym (gen := 16) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
         L.Scan.Leaves.keyEnd_spec p hpk b hb64 n,
-        L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b hb n,
+        L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b n,
         L.Scan.Key.valueAt_spec p hpw hpv b hb n,
         hintsNum_spec p b hb hpw hpd hpn hphn n] <;> finish
 
