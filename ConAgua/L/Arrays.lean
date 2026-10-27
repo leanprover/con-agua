@@ -98,6 +98,10 @@ structure ArrDecl where
   id : ArrId
   kind : ArrKind
   tiered : Bool
+  /-- A minimum length in words (a hint for the compiler, word arrays only): every entry stub
+  gives the array at least this many words (both tiers), so a constant index below it needs no
+  bounds check in the machine code. L's semantics still checks every access. -/
+  min : Nat := 0
   deriving Repr, DecidableEq, Inhabited
 
 /-- A program's arrays. -/
@@ -122,9 +126,16 @@ def nodupB (l : List Nat) : Bool :=
   let s := l.mergeSort
   (s.zip s.tail).all fun (x, y) => x != y
 
-/-- **Well-formed**: the numbers of each kind distinct, only word arrays tiered. -/
+/-- The word arrays with a minimum length (`ArrDecl.min`), as `(code, minimum)`
+(`TieredArray.code`): tier 0 of the array, and tier 1 of a tiered one. -/
+def mins (T : ArrTable) : List (Nat × Nat) :=
+  (T.filter fun d => d.kind == .word && d.min != 0).flatMap fun d =>
+    ((TieredArray.t0 d.id).code :: if d.tiered then [(tier1 d.id).code] else []).map fun c => (c, d.min)
+
+/-- **Well-formed**: the numbers of each kind distinct, only word arrays tiered or with a
+minimum length. -/
 def wf (T : ArrTable) : Bool :=
-  T.all (fun d => d.tiered → d.kind == .word) &&
+  T.all (fun d => d.tiered → d.kind == .word) && T.all (fun d => d.min != 0 → d.kind == .word) &&
     nodupB (T.ids .byte) && nodupB (T.ids .word)
 
 /-! ### The surface check -/
@@ -208,8 +219,9 @@ def ArrTable.progOK (T : ArrTable) (p : Prog) : Bool :=
 /-! ## `declare_arrays` -/
 
 /-- One row of `declare_arrays`: `| /-- doc -/ NAME : byte := n`, `| … NAME : word := n`, or
-`| … NAME : word tiered := n`. -/
-syntax arrRow := "| " docComment ident " : " ident (&" tiered")? " := " num
+`| … NAME : word tiered := n`; a word array may carry a minimum length, `… : word min k := n`
+(`ArrDecl.min`). -/
+syntax arrRow := "| " docComment ident " : " ident (&" tiered")? (&" min" num)? " := " num
 
 /-- `declare_arrays T` followed by rows declares each row's array as `abbrev NAME : L.ArrId := n`
 (with the row's doc comment) and `T : L.ArrTable` listing them all, so each number is written
@@ -222,7 +234,7 @@ macro_rules
     let mut rowsT : Array Lean.Term := #[]
     for r in rows do
       match r with
-      | `(arrRow| | $doc:docComment $n:ident : $k:ident $[tiered%$t]? := $v:num) =>
+      | `(arrRow| | $doc:docComment $n:ident : $k:ident $[tiered%$t]? $[min $mn:num]? := $v:num) =>
         cmds := cmds.push (← `($doc:docComment abbrev $n : L.ArrId := $v))
         let nm := Lean.Syntax.mkStrLit n.getId.getString!
         let kind ← match k.getId with
@@ -230,7 +242,11 @@ macro_rules
           | `word => `(L.ArrKind.word)
           | _ => Lean.Macro.throwErrorAt k "expected `byte` or `word`"
         let tiered ← if t.isSome then `(true) else `(false)
-        rowsT := rowsT.push (← `(({ name := $nm, id := $n, kind := $kind, tiered := $tiered } : L.ArrDecl)))
+        let mn : Lean.Term := match mn with
+          | some m => m
+          | none => Lean.Syntax.mkNumLit "0"
+        rowsT := rowsT.push
+          (← `(({ name := $nm, id := $n, kind := $kind, tiered := $tiered, min := $mn } : L.ArrDecl)))
       | _ => Lean.Macro.throwUnsupported
     let tdef ← match tdoc with
       | some d => `($d:docComment def $tbl : L.ArrTable := [$rowsT,*])

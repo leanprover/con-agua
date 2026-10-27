@@ -396,6 +396,47 @@ theorem genSt_tailWK {ctx : Ctx} {F : Nat} {a' : TieredArray} (ha : G.tab.dom64 
       · simp only; rw [haddr, rget_set, ite_eq_right hrt, hr]
         exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
 
+omit hTab in
+/-- The base and the store of a word (`genSt`), a constant index `k` below the minimum length: no
+bounds check. -/
+theorem genSt_tailWKm {ctx : Ctx} {F : Nat} {a' : TieredArray} (ha : G.tab.dom64 a' = true)
+    {bs : AddrExpr} {σ : St} {d s2 : MachineData} {t : Reg64} {src : Operand .W64} {kk vb : Word}
+    {kT : Nat} {Q : MachineState → Prop} (hk : kk.toNat < 2 ^ 28)
+    (hcR : Code [movRM t bs, i64 (.mov (.mem (mb t (8 * kk.toNat))) src)] kT)
+    (hI2 : Inv G ctx F σ s2) (hS2 : SPost G F d s2) (htP : t ∈ ctx.pool)
+    (hsrc : src = .imm (.int64 vb.toInt64) ∨ ∃ r, src = oR r ∧ r ≠ t ∧ s2.regs.get64 r = vb.toBitVec)
+    (hbs : MemW s2 bs (UInt64.ofNat (G.b64 (G.tab.pos64 a'))))
+    (hj : kk.toNat < (σ.mem.arr64 a').size)
+    (hok : ∀ s', Inv G ctx F { σ with mem := σ.mem.set64 a' kk vb } s' →
+      SPost G F d s' → Ev Q s' (at_ (kT + 2))) :
+    Ev Q s2 (at_ kT) := by
+  have hsz := hI2.mem.size64 a' ha
+  have hendp := G.tab.pos64_lt ha
+  have hend := hG.end64 _ hendp
+  refine ev_movRA hcR.head hbs ?_
+  have hC := CPost.setPool hI2 htP (UInt64.ofNat (G.b64 (G.tab.pos64 a'))).toBitVec s2.status
+  have hoff : SmallOff (8 * (kk.toNat : Int)) := ⟨by omega, by omega⟩
+  have haddr : A (((s2.regs.set64 t (UInt64.ofNat (G.b64 (G.tab.pos64 a'))).toBitVec).get64 t).toNat + (8 * (kk.toNat : Int)).toNat) =
+      A (G.b64 (G.tab.pos64 a') + 8 * kk.toNat) := by
+    rw [rget_set, ite_eq_left rfl, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' (show G.b64 (G.tab.pos64 a') < 2 ^ 64 by omega)]
+    congr 1 <;> omega
+  have hmap : (rdW s2.dmem (A (G.b64 (G.tab.pos64 a') + 8 * kk.toNat))).isSome := by
+    rw [hI2.mem.get64 a' ha kk.toNat hj]; rfl
+  have hfin : ∀ (s3 : MachineData), Inv G ctx F σ s3 → SPost G F d s3 →
+      Ev Q { s3 with dmem := wrW s3.dmem (A (G.b64 (G.tab.pos64 a') + 8 * kk.toNat)) vb.toBitVec } (at_ (kT + 1 + 1)) := by
+    intro s3 hI3 hS3
+    refine hok _ (hI3.store64 hG ha hj vb) ?_
+    exact hS3.trans ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.store64 hG ha (by omega) _⟩
+  rcases hsrc with rfl | ⟨r, rfl, hrt, hr⟩
+  · refine ev_movMW hcR.tail.head hoff ?_ ?_
+    · simp only; rw [haddr]; exact hmap
+    · simp only; rw [haddr]
+      exact hfin _ hC.1 (hS2.trans hC.2.1)
+  · refine ev_movMR hcR.tail.head hoff ?_ ?_
+    · simp only; rw [haddr]; exact hmap
+    · simp only; rw [haddr, rget_set, ite_eq_right hrt, hr]
+      exact hfin _ hC.1 (hS2.trans hC.2.1)
+
 omit [Host] hG in
 /-- A plain word array's descriptor words. -/
 theorem descW_plain {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
@@ -508,9 +549,10 @@ theorem sim_genStV {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
 descriptor words `[ln]`, `[bs]` the code does not change. -/
 theorem sim_genStW {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
     {ln bs : AddrExpr} {a' : TieredArray} (ha : G.tab.dom64 a' = true) {i e : Expr} {code : Program}
-    (hg : genSt ctx ln bs i e ctx.pool = some code) {k : Nat} (hc : Code code k)
+    {mn : Nat} (hg : genSt ctx ln bs mn i e ctx.pool = some code) {k : Nat} (hc : Code code k)
     (hwi : Expr.wf ctx.nl G.tab i = true) (hwe : Expr.wf ctx.nl G.tab e = true)
     {σ : St} {d : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ d)
+    (hmn : mn ≤ (σ.mem.arr64 a').size)
     (hD : ∀ s', XPost ctx.pool d s' → MemW s' ln (UInt64.ofNat (σ.mem.arr64 a').size) ∧
       MemW s' bs (UInt64.ofNat (G.b64 (G.tab.pos64 a'))))
     (hok : ∀ j vb s', evalP σ i = .ok j → evalP σ e = .ok vb → j.toNat < (σ.mem.arr64 a').size →
@@ -542,6 +584,20 @@ theorem sim_genStW {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
     split at hg
     case h_2 => cases hg
     rename_i t rest
+    split at hg
+    · -- below the minimum length: no bounds check
+      rename_i hkm
+      cases hg
+      refine step1 _ rfl ?_
+      intro vb s1 hvb hX1 hfr1 hfn1 hsrc hc2
+      have hC1 := CPost.ofX hI hX1 hpool
+      have ht : t ∈ ctx.pool := hfr1 t List.mem_cons_self
+      have hj : kk.toNat < (σ.mem.arr64 a').size := Nat.lt_of_lt_of_le hkm hmn
+      refine genSt_tailWKm hG ha hk hc2 hC1.1 hC1.2.1 ht ?_ (hD s1 hX1).2 hj
+        (fun s' hI' hS' => ev_congr (hok kk vb s' rfl hvb hj hI' hS') (by simp; omega))
+      rcases hsrc with h1 | ⟨r, h1, h2, h3⟩
+      · exact .inl h1
+      · exact .inr ⟨r, h1, fun e => h2 (by rw [e]; exact List.mem_cons_self), h3⟩
     cases hg
     refine step1 _ rfl ?_
     intro vb s1 hvb hX1 hfr1 hfn1 hsrc hc2
@@ -704,10 +760,10 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a
   have hTab' := hTab; simp only [maxOff] at hTab'
   have hsp := hI.hi
   have hhi := hG.hi_le
-  cases hgs : genSt ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) i e ctx.pool
+  cases hgs : genSt ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) (ctx.tab.min64 a) i e ctx.pool
   case some code =>
     simp only [hgs] at hc hK
-    refine sim_genStW hG hTab hT hF ha hgs hc hwi hwe hI
+    refine sim_genStW hG hTab hT hF ha hgs hc hwi hwe hI (by rw [hT, hI.mem.size64 _ ha]; exact hG.min64 _ ha)
       (fun s' hX => descW_plain hTab hT ha (CPost.ofX hI hX (fun r h => h)).1) ?_ ?_
     · intro j vb s' hj hvb hjs hI' hS'
       exact hK.normal _ s' (by rw [step_st64_run, hj]; simp only [hvb]; rw [ite_eq_left hjs]) hI' hS'
@@ -897,7 +953,8 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
   simp only [tempsS] at htmp
   simp only [compileS] at hc hK
   cases hgs : (if ctx.isT t then
-      genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) i e ctx.pool else none)
+      genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64t a) i e ctx.pool
+      else none)
   case some code =>
     simp only [hgs] at hc hK
     split at hgs
@@ -910,6 +967,8 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
       rw [hX.keep .rsi fun h => (pool_dreg h).rsi (by simp [hx]) rfl]
       simp [Reg64s.get64, hI.tr x hx]
     refine sim_genStW hG hTab hT hF (G.tab.dom64_tierA ha _) hgs hc hwi hwe hI
+      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]
+          exact Nat.le_trans (G.tab.min64t_le a _) (hG.min64 _ (G.tab.dom64_tierA ha _)))
       (fun s' hX => descW_tier hTab hT ha (CPost.ofX hI hX (fun r h => h)).1 (hrsi s' hX)) ?_ ?_
     · intro j vb s' hj hvb hjs hI' hS'
       exact hK.normal _ s' (by rw [step_st64t_run]; simp only [evalP, hj, hvb]; rw [ite_eq_left hjs]) hI' hS'

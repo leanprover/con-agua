@@ -13,7 +13,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-ROW = re.compile(r"\|\s*/--.*?-/\s*([\w.]+)\s*:\s*(byte|word)(\s+tiered)?\s*:=\s*(\d+)", re.S)
+ROW = re.compile(r"\|\s*/--.*?-/\s*([\w.]+)\s*:\s*(byte|word)(\s+tiered)?(?:\s+min\s+\d+)?\s*:=\s*(\d+)", re.S)
 
 
 def _rows():

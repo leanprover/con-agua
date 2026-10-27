@@ -153,6 +153,10 @@ structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Wo
 /-- The frozen arrays are in the checker's layout (the kernel evaluates the layout map). -/
 theorem frozenIdsL_dom : frozenIdsL.all (checkerTab.dom64 ·) = true := by decide +kernel
 
+/-- Every array with a minimum length is frozen or owned (`ca_check_b`'s layout gives the others
+no memory). -/
+theorem checker_bufMinOk : bufMinOk checkerTab frozenIdsL parOwnedL = true := by decide +kernel
+
 /-- The owned arrays are in the checker's layout. -/
 theorem parOwnedL_dom : ∀ a ∈ parOwnedL, checkerTab.dom64 a = true := by
   have h : parOwnedL.all (checkerTab.dom64 ·) = true := by decide +kernel
@@ -288,7 +292,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
           have hEv := abiB_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf MODE PLO PHI OUT HDRF
             CTLF 132 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
             (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i) (t.ra i) hbc
-            (by rw [hcx]; exact hr)
+            (by rw [hcx]; exact hr) checker_bufMinOk
           rw [hdi, hcx] at hEv
           exact hR.ret t ht i hi _ hEv (fun s h => h.1))
         (hR.acc t ht) (hR.next t ht)

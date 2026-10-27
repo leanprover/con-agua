@@ -57,10 +57,12 @@ theorem romVals_length : ∀ bs : List UInt8, (romVals bs).length = (bs.length +
   | [_, _, _, _, _, _, _] => by simp [romVals]
 
 /-- What the stub needs of the table: two byte arrays, the table within the first `2^31` bytes
-(the stores' displacements are 32-bit), and the region size below `2^64`. -/
+(the stores' displacements are 32-bit), the region size below `2^64`, and every minimum length
+(`Tab.min64`) below `2^31` (a slot has `abiWords`; `ca_check_b` compares with a 32-bit
+immediate). -/
 def abiTabOk (tab : Tab) : Bool :=
-  tab.nb == 2 && decide (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ 2 ^ 31) &&
-    decide (abiNeed tab < 2 ^ 64)
+  (tab.nb == 2 && decide (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ 2 ^ 31) &&
+    decide (abiNeed tab < 2 ^ 64)) && tab.mins.all (fun x => decide (x.2 < 2 ^ 31))
 
 theorem abiVals_length (tab : Tab) (h : tab.nb = 2) :
     (abiVals tab).length = 6 + 2 * tab.nw + tab.romWords := by
@@ -155,7 +157,16 @@ theorem stores_byte (R : Reg64s) (base : Nat) :
 theorem abiTabOk_spec {tab : Tab} (h : abiTabOk tab = true) :
     tab.nb = 2 ∧ 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ 2 ^ 31 ∧
       abiNeed tab < 2 ^ 64 := by
-  simpa [abiTabOk, Bool.and_eq_true, decide_eq_true_eq, and_assoc] using h
+  have h' := ((Bool.and_eq_true _ _).mp h).1
+  simpa [Bool.and_eq_true, decide_eq_true_eq, and_assoc] using h'
+
+/-- Every minimum length is below `2^31`. -/
+theorem abiTabOk_minLt {tab : Tab} (h : abiTabOk tab = true) (s : TieredArray) : tab.min64 s < 2 ^ 31 :=
+  Tab.min64_lt (by decide) ((Bool.and_eq_true _ _).mp h).2 s
+
+/-- Every minimum length fits a slot. -/
+theorem abiTabOk_min {tab : Tab} (h : abiTabOk tab = true) (s : TieredArray) : tab.min64 s ≤ abiWords := by
+  have := abiTabOk_minLt h s; simp only [abiWords]; omega
 
 theorem abiVals_noRax (tab : Tab) : ∀ v ∈ abiVals tab, v.noRax := by
   intro v hv
@@ -420,6 +431,7 @@ theorem abiLayout_ok {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n pi
     have := tab.wposInv_ltN hb
     simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h5 h6
     rcases hb8 a ha x hin with h | h <;> omega
+  · intro s _; simp only [abiLayout_tab, abiLayout_s64]; exact abiTabOk_min hok s
 
 section
 variable [Host]

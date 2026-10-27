@@ -193,6 +193,8 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   have hcs24 := hc.hcs24
   have hcP := hcode.left
   simp only [parStub] at hcP
+  replace hcP := hcP.left
+  simp only [parStub0] at hcP
   have hcQ := hcP
   rw [List.append_assoc] at hcQ
   obtain ⟨K, hL3⟩ : ∃ K, Code _ K := ⟨_, hcQ.right.right⟩

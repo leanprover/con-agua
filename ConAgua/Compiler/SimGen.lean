@@ -581,12 +581,12 @@ theorem lookup_ne_of_readsReg {al : List (Var × Reg64)} {x : Var} {r d : Reg64}
 section
 variable [Host] {G : Layout} {ctx : Ctx} {F : Nat}
 
-/-- `d := A[i]` for a word array (`genLd`). -/
-theorem genLdW_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi : GenF}
+/-- `d := A[i]` for a word array (`genLd`), `mn` a minimum length of `A`. -/
+theorem genLdW_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {mn : Nat} {i : Expr} {gi : GenF}
     (hi : GenSpec G ctx F i gi) {d : Reg64} {fr : List Reg64} {code : Program} {k : Nat}
-    (hg : genLd ctx ln bs false i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
+    (hg : genLd ctx ln bs false mn i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
     (hwf : Expr.wf ctx.nl G.tab i = true) {arr : Array Word}
-    {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s)
+    {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s) (hmn : mn ≤ arr.size)
     (hA : ∀ s', XPost (d :: fr) s s' → ArrW s' ln bs arr)
     (hv : ∀ j (h : j.toNat < arr.size) s', evalP σ i = .ok j → s'.regs.get64 d = arr[j.toNat].toBitVec →
       XPost (d :: fr) s s' → Ev Q s' (at_ (k + code.length)))
@@ -600,6 +600,20 @@ theorem genLdW_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi
     split at hg
     case isFalse => cases hg
     rename_i hk
+    split at hg
+    · -- below the minimum length: no bounds check
+      rename_i hkm
+      cases hg
+      simp only [ldA, Bool.false_eq_true, ite_false] at hc hv
+      have hj : kk.toNat < arr.size := Nat.lt_of_lt_of_le hkm hmn
+      obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s (XPost.refl _ s)
+      refine ev_movRA hc.head hB ?_
+      refine ev_movRM hc.tail.head ⟨by omega, by omega⟩ (v := arr[kk.toNat]) ?_ ?_
+      · simp only [rget_set, ite_true, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' (show B < 2 ^ 64 by omega)]
+        rw [show (8 * (kk.toNat : Int)).toNat = 8 * kk.toNat by omega]
+        exact hget _ hj
+      · refine ev_congr (hv kk hj _ rfl (by simp [rget_set]) ?_) (by simp)
+        exact ((XPost.refl _ s).set hd _ _).set hd _ _
     cases hg
     simp only [ldA, Bool.false_eq_true, ite_false] at hc hv
     obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s (XPost.refl _ s)
@@ -689,7 +703,7 @@ theorem genLdW_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi
 /-- `d := A[i]` for a byte array (`genLd`). -/
 theorem genLdB_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi : GenF}
     (hi : GenSpec G ctx F i gi) {d : Reg64} {fr : List Reg64} {code : Program} {k : Nat}
-    (hg : genLd ctx ln bs true i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
+    (hg : genLd ctx ln bs true 0 i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
     (hwf : Expr.wf ctx.nl G.tab i = true) {arr : Array UInt8}
     {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s)
     (hA : ∀ s', XPost (d :: fr) s s' → ArrB s' ln bs arr)
@@ -705,6 +719,8 @@ theorem genLdB_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi
     split at hg
     case isFalse => cases hg
     rename_i hk
+    split at hg
+    · rename_i h0; exact absurd h0 (Nat.not_lt_zero _)
     cases hg
     simp only [ldA, ite_true] at hc hv
     obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s (XPost.refl _ s)
@@ -987,6 +1003,7 @@ theorem gen_ld64 (a : ArrId) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
   simp only [Expr.wf, Bool.and_eq_true] at hwf
   have hoki : GOk ctx i d fr := hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h
   refine genLdW_spec hF hi hg hc hoki hwf.2 hI (arr := σ.mem.arr64 a)
+    (by rw [hT, hI.mem.size64 _ hwf.1]; exact hG.min64 _ hwf.1)
     (fun s' hX => by have := arrW_plain hG hT hTab hwf.1 (hI.ghost hX hok.dr); exact this) ?_ ?_
   · intro j hj s' hji hd hX
     exact hv _ s' (by simp [evalP, hji, hj, bind, Except.bind]) hd hX
@@ -1034,6 +1051,8 @@ theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
       simp [Reg64s.get64, hI.tr x hx]
     refine genLdW_spec hF hi hg hc (hok.sub hok.nd (fun r h => h) hri) hwi hI
       (arr := σ.mem.arr64 (tierA a (σ.loc x)))
+      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]
+          exact Nat.le_trans (G.tab.min64t_le a _) (hG.min64 _ (G.tab.dom64_tierA ha _)))
       (fun s' hX => by have := arrW_tier hG hT hTab ha (hI.ghost hX hok.dr) (hrsi s' hX); exact this) ?_ ?_
     · intro j hj s' hji hd hX
       exact hv _ s' (by simp [evalP, hji, hj, bind, Except.bind]) hd hX
@@ -1072,7 +1091,9 @@ theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
     have hev : ∀ (R : Reg64s) e', (∀ r, Expr.readsReg ctx.alloc r (.ld64t a t i) = false →
         Expr.readsReg ctx.alloc r e' = false) → evalP (σ.ghost ctx.alloc (s0 :: fr') R) e' = evalP σ e' :=
       fun R e' h => evalP_ghost e' fun r hr => h r (hok.rd r (hW1 r hr))
-    refine genLdW_spec hF hi hcg hcc hoki hwi hI2 (arr := σ.mem.arr64 (tierA a u)) ?_ ?_ ?_
+    refine genLdW_spec hF hi hcg hcc hoki hwi hI2 (arr := σ.mem.arr64 (tierA a u))
+      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]
+          exact Nat.le_trans (G.tab.min64t_le a _) (hG.min64 _ (G.tab.dom64_tierA ha _))) ?_ ?_ ?_
     · intro s' hX
       have hs0' : s'.regs.get64 s0 = (u &&& 1).toBitVec := by
         rw [hX.keep s0 (fun h => by

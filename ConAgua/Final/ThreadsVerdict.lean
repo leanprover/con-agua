@@ -230,7 +230,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     have hEv := abiB_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf MODE PLO PHI OUT HDRF
       CTLF 132 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i') (t.ra i') hbc
-      (by rw [hcx]; exact hr)
+      (by rw [hcx]; exact hr) checker_bufMinOk
     rw [hdi, hcx] at hEv
     exact hR.ret i' hi _ hEv (fun s h => h.1)
   -- the calls before `i` (`thread_chain`)

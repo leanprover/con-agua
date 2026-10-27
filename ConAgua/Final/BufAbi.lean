@@ -54,8 +54,66 @@ theorem shl3_add (w : Word) (buf : Nat) :
 theorem Code.right' [Host] {a b : Program} {k n : Nat} (h : Code (a ++ b) k) (hn : a.length = n) :
     Code b (k + n) := hn ▸ h.right
 
+theorem ofInt_natSmall {m : Nat} (hm : m < 2 ^ 31) :
+    (Int64.ofInt (m : Int)).toBitVec = (UInt64.ofNat m).toBitVec := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [Int64.toBitVec_ofInt, BitVec.toNat_ofInt, UInt64.toNat_toBitVec,
+    UInt64.toNat_ofNat_of_lt' (show m < 2 ^ 64 by omega)]
+  have : ((m : Int) % (2 ^ 64 : Nat) : Int) = m := Int.emod_eq_of_lt (by omega) (by omega)
+  omega
+
 section
 variable [Host] {tab : Tab} {fz own : List TieredArray} {B : Array Word} {buf base blen : Nat}
+
+/-- **`ca_check_b`'s length tests** (`bufMinChk`, from entry `j` of the frozen list on): each test
+passes (the frozen array's length in the buffer is at least its minimum) or the stub declines. -/
+theorem sim_bufMinChk (hok : abiTabOk tab = true) (Q : MachineState → Prop) (s : MachineData)
+    (hrdi : (s.regs.get64 .rdi).toNat = buf) (hB : ∀ i (h : i < B.size), rdW s.dmem (A (buf + 8 * i)) = some B[i])
+    (hdecl : ∀ st, Ev Q { s with status := st } (label abiDeclineL)) :
+    ∀ (l : List TieredArray) (j k : Nat) (st0 : StatusFlags), (∀ i < l.length, 9 + 2 * (j + i) < B.size) →
+      9 + 2 * (j + l.length) < 2 ^ 27 → Code (bufMinChk tab j l) k →
+      (∀ st, (∀ i (h : i < l.length), tab.min64 l[i] ≤ (bufEntry B (j + i)).2) →
+        Ev Q { s with status := st } (at_ (k + (bufMinChk tab j l).length))) →
+      Ev Q { s with status := st0 } (at_ k)
+  | [], j, k, st0, _, _, _, hgo => by simpa [bufMinChk] using hgo st0 (fun i h => absurd h (by simp))
+  | a :: l, j, k, st0, hsz, hsm, hc, hgo => by
+    have ih := sim_bufMinChk hok Q s hrdi hB hdecl l (j + 1)
+    simp only [List.length_cons] at hsz hsm
+    have hgo' : ∀ st, tab.min64 a ≤ (bufEntry B j).2 → (∀ i (h : i < l.length), tab.min64 l[i] ≤ (bufEntry B (j + 1 + i)).2) →
+        Ev Q { s with status := st } (at_ (k + (bufMinChk tab j (a :: l)).length)) := by
+      intro st h0 hl
+      refine hgo st fun i hi => ?_
+      cases i with
+      | zero => simpa using h0
+      | succ i =>
+        have := hl i (by simp at hi; omega)
+        simpa [show j + (i + 1) = j + 1 + i by omega] using this
+    by_cases hm : tab.min64 a = 0
+    · have hc' : Code (bufMinChk tab (j + 1) l) k := by simpa [bufMinChk, hm] using hc
+      refine ih k st0 (fun i hi => by have := hsz (i + 1) (by omega); omega) (by omega) hc' fun st hl => ?_
+      have := hgo' st (by rw [hm]; exact Nat.zero_le _) hl
+      simpa [bufMinChk, hm] using this
+    · have hc' : Code ([i64 (.cmp (.mem (mb .rdi (8 * (9 + 2 * j : Nat)))) (oI (tab.min64 a))), jccL .c abiDeclineL] ++
+          bufMinChk tab (j + 1) l) k := by simpa [bufMinChk, hm] using hc
+      have hj : 9 + 2 * j < B.size := by simpa using hsz 0 (by omega)
+      have hmlt := abiTabOk_minLt hok a
+      refine ev_cmpAI (Code.get (i := 0) hc'.left rfl) (v := B[9 + 2 * j])
+        (.inl ⟨.rdi, _, rfl, ⟨by omega, by omega⟩, ?_⟩) ?_
+      · show rdW s.dmem (A ((s.regs.get64 .rdi).toNat + ((8 * (9 + 2 * j) : Nat) : Int).toNat)) = some B[9 + 2 * j]
+        rw [hrdi, Int.toNat_natCast]; exact hB _ hj
+      rw [ofInt_natSmall hmlt]
+      refine ev_jcc (Code.get (i := 1) hc'.left rfl) (fun _ => hdecl _) (fun hcc => ?_)
+      rw [interp_c] at hcc
+      simp only [decide_eq_false_iff_not, UInt64.lt_iff_toNat_lt,
+        UInt64.toNat_ofNat_of_lt' (show tab.min64 a < 2 ^ 64 by omega)] at hcc
+      have h0 : tab.min64 a ≤ (bufEntry B j).2 := by
+        simp only [bufEntry, Array.getD_eq_getD_getElem?, Array.getElem?_eq_getElem hj, Option.getD_some]; omega
+      refine ev_congr (ih (k + 2) _ (fun i hi => by have := hsz (i + 1) (by omega); omega) (by omega) ?_
+        fun st hl => ?_) (by simp)
+      · simpa [Nat.add_assoc] using hc'.right
+      · rw [show k + 2 + (bufMinChk tab (j + 1) l).length = k + (bufMinChk tab j (a :: l)).length by
+          simp [bufMinChk, hm]; omega]
+        exact hgo' st h0 hl
 
 /-- A table store: `[rcx + 8q] := r` with `r` holding table word `q`. -/
 theorem ev_storeQ {Q : MachineState → Prop} {k : Nat} {s : MachineData} {r : Reg64} {off : Int}
@@ -322,19 +380,20 @@ structure BufCall (tab : Tab) (fz own : List TieredArray) (B : Array Word) (dm :
   hcs24 : 24 ≤ dm.regs.rsp.toNat
   hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
-/-- **From `ca_check_b`**: on a region that holds `r` (`RegionRel`) and a buffer that holds `B`,
-the run of `check` from `bufMemG … B r j` (`j` from `rdx`) in `ca_check_b`'s layout. -/
-theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+/-- **From `ca_check_b` past its length tests** (`abiB_outcome`): the run of `check` in
+`ca_check_b`'s layout, the frozen arrays at least their minimum lengths. -/
+theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
     (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (B : Array Word) (r : Mem) (dm : MachineData) (ra : Word) (hc : BufCall tab fz own B dm ra)
-    (hr : RegionRel tab dm.regs.rcx.toNat own r dm.dmem) :
+    (hr : RegionRel tab dm.regs.rcx.toNat own r dm.dmem) (hmo : bufMinOk tab fz own = true)
+    (hmin : ∀ i (h : i < fz.length), tab.min64 fz[i] ≤ (bufEntry B i).2) :
     Ev (EntryPost (bufLayout tab dm.regs.rdi.toNat B dm.regs.rcx.toNat fz own) dm ra
         (L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B r dm.regs.rdx)))
-      dm (label abiCheckBL) := by
+      dm (label abiCheckB1L) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hg := hc.geom
   obtain ⟨buf, hbuf⟩ : ∃ buf, dm.regs.rdi.toNat = buf := ⟨_, rfl⟩
@@ -356,6 +415,8 @@ theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   have hcP := hcode.left
   have hcC := hcode.right.right
   simp only [parStub] at hcP
+  replace hcP := hcP.left
+  simp only [parStub0] at hcP
   have hL1 := hcP.left.left.left.left.left.left
   have hF1 := hcP.left.left.left.left.left.right
   have hF2 := hcP.left.left.left.left.right
@@ -501,7 +562,7 @@ theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     · obtain ⟨i, hi, rfl⟩ := List.mem_map.mp h
       rw [List.mem_range, hrl] at hi
       simp only [bufN, Tab.romWords]; omega
-  have hG := bufLayout_ok hok hg
+  have hG := bufLayout_ok hok hg hmo hmin
   have hm0 := buf_memRel hok hg r dm.dmem hr hB0 hmap0 qsT hqT hqT'
   obtain ⟨-, hcellT, hmapT⟩ := qwrs_facts hok hg (bufVal tab buf B base fz own) dm.dmem hB0 hmap0 qsT hqT'
   -- the globals
@@ -621,5 +682,53 @@ theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   · have := buf_save (x := (bufLayout tab buf B base fz own).tabEnd + 31) hok hg (by omega) (by omega)
     have := hg.fits
     omega
+
+/-- **From `ca_check_b`**: on a region that holds `r` (`RegionRel`) and a buffer that holds `B`,
+the run of `check` from `bufMemG … B r j` (`j` from `rdx`) in `ca_check_b`'s layout; or, if a
+frozen array is shorter than its minimum length (`bufMinChk`), a decline (`rdx = 1`, memory
+unchanged). -/
+theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+    (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+    (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
+    (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20) (k0 : Nat)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (B : Array Word) (r : Mem) (dm : MachineData) (ra : Word) (hc : BufCall tab fz own B dm ra)
+    (hr : RegionRel tab dm.regs.rcx.toNat own r dm.dmem) (hmo : bufMinOk tab fz own = true) :
+    Ev (EntryPost (bufLayout tab dm.regs.rdi.toNat B dm.regs.rcx.toNat fz own) dm ra
+        (L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B r dm.regs.rdx)))
+      dm (label abiCheckBL) := by
+  have hcP := hcode.left
+  simp only [parStub] at hcP
+  have hX := hcP.right
+  unfold bufMinStub at hX
+  have hcT := hcode.right.left.right
+  simp only [abiTail] at hcT
+  have hg := hc.geom
+  -- the decline: `rax := 0`, `rdx := 1`, return; the memory and the caller's registers unchanged
+  have hdecl : ∀ st, Ev (EntryPost (bufLayout tab dm.regs.rdi.toNat B dm.regs.rcx.toNat fz own) dm ra
+      (L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B r dm.regs.rdx)))
+      { dm with status := st } (label abiDeclineL) := by
+    intro st
+    rw [Code.label (i := 3) hcT rfl]
+    refine ev_label (Code.get (i := 3) hcT rfl) ?_
+    refine ev_movRI (Code.get (i := 4) hcT rfl) ?_
+    refine ev_movRI (Code.get (i := 5) hcT rfl) ?_
+    refine ev_ret (Code.get (i := 6) hcT rfl) (ra := ra) (by simpa [Reg64s.set64_rax, Reg64s.set64_rdx] using hc.hra) ?_
+    refine Eventually.done _ ⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨fun _ h => h, fun _ _ _ _ _ _ _ => rfl⟩, .inl ?_⟩
+    · have := hc.hcs8
+      simp only [Reg64s.set64_rsp, Reg64s.set64_rax, Reg64s.set64_rdx, UInt64.toNat_ofBitVec, BitVec.toNat_add,
+        UInt64.toNat_toBitVec, show (8 : BitVec 64).toNat = 8 from rfl]
+      omega
+    all_goals simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]
+  rw [Code.label (i := 0) hX rfl]
+  refine ev_label (Code.get (i := 0) hX rfl) ?_
+  have hBd : ∀ i (h : i < B.size), rdW dm.dmem (A (dm.regs.rdi.toNat + 8 * i)) = some B[i] := hc.hB
+  refine sim_bufMinChk hok _ dm (by simp) hBd hdecl fz 0 _ dm.status
+    (fun i hi => by have := hg.hdr i hi; omega) (by omega) hX.left.right fun st hmin => ?_
+  refine ev_congr (ev_jmp (Code.get (i := 0) hX.right rfl) ?_) (by simp; omega)
+  exact abiB_go p tab hok hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23 hfzl k0 hcode
+    fd hentry hnp B r { dm with status := st } ra
+    ⟨hc.geom, hc.hB, hc.hmap, hc.hra, hc.hcs, hc.hcs24, hc.hcs8⟩ hr hmo (by simpa using hmin)
 
 end ConAgua.Final
