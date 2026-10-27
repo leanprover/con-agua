@@ -177,17 +177,17 @@ def natShrProg : Prog := natProg ++ [("nat_shr", natShr)]
 
 /- `[0, 6, 2] >>> 65 = [3, 1]`: `a` at 0, `b = [65]` at 3, top 4. -/
 #guard (run natShrProg 100 "nat_shr" [0, 3, 3, 1]
-  { words := #[#[0, 6, 2, 65, 0, 0, 0], #[4]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([2], #[#[0, 6, 2, 65, 3, 1, 0], #[6]])
+  (Mem.ofWords [(POOL, #[0, 6, 2, 65, 0, 0, 0]), (CTL, #[4])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([2], #[0, 6, 2, 65, 3, 1, 0], #[6])
 /- `a >>> 0 = a`; `[1] >>> 64 = 0`; `[1] >>> 2^64 = 0`. -/
 #guard (run natShrProg 100 "nat_shr" [0, 2, 0, 0]
-  { words := #[#[7, 9, 0, 0], #[2]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([2], #[#[7, 9, 7, 9], #[4]])
+  (Mem.ofWords [(POOL, #[7, 9, 0, 0]), (CTL, #[2])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([2], #[7, 9, 7, 9], #[4])
 #guard (run natShrProg 100 "nat_shr" [0, 1, 1, 1]
-  { words := #[#[1, 64, 0], #[2]] }).toOption.map (fun (r, m) => (r, m.words.back!)) ==
+  (Mem.ofWords [(POOL, #[1, 64, 0]), (CTL, #[2])])).toOption.map (fun (r, m) => (r, m.arr64 CTL)) ==
   some ([0], #[2])
 #guard (run natShrProg 100 "nat_shr" [0, 1, 1, 2]
-  { words := #[#[1, 0, 1, 0], #[3]] }).toOption.map (fun (r, m) => (r, m.words.back!)) ==
+  (Mem.ofWords [(POOL, #[1, 0, 1, 0]), (CTL, #[3])])).toOption.map (fun (r, m) => (r, m.arr64 CTL)) ==
   some ([0], #[3])
 
 section shr

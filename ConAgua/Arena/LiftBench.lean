@@ -20,9 +20,9 @@ namespace L.Arena
 /-- The walk, the stores, `mk_*` and `intern_sort`. -/
 def liftTestProg : Prog := liftProg ++ sortProg
 
-/-- A memory with room for `c` nodes per table: 64 word arrays of `8 c` zeros, `CTL` of 64. -/
+/-- A memory with room for `c` nodes per table: the word arrays of the arena layout (`POOL`‥`PT0`) of `8 c` zeros, `CTL` of 64. -/
 def liftMem (c : Nat) : Mem :=
-  { words := withTiers <| (Array.replicate 64 (Array.replicate (8 * c) 0)).set! 1 (Array.replicate 64 0) }
+  Mem.ofWords <| ArrTable.zeroBoth (checkerArrays.filter (·.id ≤ PT0)) fun a => if a = CTL then 64 else 8 * c
 
 /-- Run `f`; the first result and the memory. -/
 def liftRun (f : FnName) (args : List Word) (m : Mem) : Option (Word × Mem) :=

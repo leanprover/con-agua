@@ -610,9 +610,9 @@ def exprProg : Prog := frontProg ++
    ("esc_one", L.Front.Unescape.escOne), ("utf8_put", L.Front.Unescape.utf8Put),
    ("str_put_esc", L.Front.Unescape.strPutEsc)]
 
-/-- Every word array 128 words (all zero), the input `[0, 1]`. -/
+/-- Every word array of the front end's layout (`POOL`‥`Front.EIDS`) 128 words (all zero), the input `[0, 1]`. -/
 def exprMem : Mem :=
-  { bytes := #["[0, 1]5".toUTF8.data], words := Array.replicate 75 (Array.replicate 128 0) }
+  (Mem.ofWords (ArrTable.zeroWords (checkerArrays.filter (·.id ≤ Front.EIDS)) fun _ => 128)).putBytes IN "[0, 1]5".toUTF8.data
 
 /-- Run the calls in turn; the results. -/
 def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word))
@@ -647,7 +647,7 @@ def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word)
 
 /-- Input `"ab""cd"`: two quoted strings, no escapes. -/
 def exprStrMem : Mem :=
-  { bytes := #["\"ab\"\"cd\"".toUTF8.data], words := Array.replicate 75 (Array.replicate 128 0) }
+  (Mem.ofWords (ArrTable.zeroWords (checkerArrays.filter (·.id ≤ Front.EIDS)) fun _ => 128)).putBytes IN "\"ab\"\"cd\"".toUTF8.data
 
 /- `"ab"` interned twice (the same handle, `0x80000000`), `"cd"` a different one (`0x80000001`). -/
 #guard exprRuns exprStrMem

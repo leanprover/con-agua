@@ -89,18 +89,18 @@ def encScan : ScanRes Bool → List Word
 @[refines ConLeche.Frontend.scanBool]
 theorem scanBool_run (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 64)
     (fuel : Nat) (i : USize) (hi : i.toNat + 5 < 2 ^ 64) (r : List Word) (m' : Mem)
-    (h : run litProg fuel "scan_bool" [i.toUInt64] { bytes := #[b.data] } = .ok (r, m')) :
-    r = encScan (ConLeche.Frontend.scanBool b i) ∧ m' = { bytes := #[b.data] } := by
+    (h : run litProg fuel "scan_bool" [i.toUInt64] (Mem.ofBytes [(IN, b.data)]) = .ok (r, m')) :
+    r = encScan (ConLeche.Frontend.scanBool b i) ∧ m' = (Mem.ofBytes [(IN, b.data)]) := by
   have hU := usize_size_eq64 h64
   simp only [run] at h
   cases hr : (invoke litProg (exec litProg fuel) "scan_bool" [i.toUInt64]).run
-      { mem := { bytes := #[b.data] }, loc := Locals.init [] } with
+      { mem := (Mem.ofBytes [(IN, b.data)]), loc := Locals.init [] } with
   | error e => simp [hr, Except.map] at h
   | ok rs =>
     simp only [hr, Except.map] at h
     injection h with h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj h
-    have := M.of_run (P := fun s => s = { mem := { bytes := #[b.data] }, loc := Locals.init [] }) rfl hr
+    have := M.of_run (P := fun s => s = { mem := (Mem.ofBytes [(IN, b.data)]), loc := Locals.init [] }) rfl hr
       (scanBool_spec litProg rfl rfl b.data hb fuel _ rfl i.toUInt64 (by simpa using hi))
     refine ⟨?_, this.1 ▸ rfl⟩
     rw [this.2, scanBool_eq_N b i (by omega)]

@@ -134,12 +134,13 @@ def internSort : FunDecl := consInternG sortCS
 def sortProg : Prog :=
   [("sort_find", sortFind), ("sort_push", sortPush), ("intern_sort", internSort)]
 
-/-- A memory with 8 `sort` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
-0‥15 (the other tables') are unused here and left empty. -/
+/-- A memory with 8 `sort` nodes and `SN0` slots per tier, the scratch tier closed or open. The other
+tables' arrays are unused here and left empty. -/
 def sortMem (scratch : Word) : Mem :=
-  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[],
-      #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0,
-      Array.replicate consTestWords 0] ++ Array.replicate 44 (Array.replicate consTestWords 0) }
+  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+    withTiers [(SOREC, Array.replicate 16 0),
+      (SOSLOT, Array.replicate consTestWords 0),
+      (SOLP, Array.replicate consTestWords 0)]
 
 /-- Intern each handle word in turn; the handles. -/
 def internSorts (m : Mem) : List Word → Option (List Word)

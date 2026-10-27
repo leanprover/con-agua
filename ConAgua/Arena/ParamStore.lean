@@ -112,11 +112,12 @@ def internParam : FunDecl := consInternG paramCS
 def paramProg : Prog :=
   [("param_find", paramFind), ("param_push", paramPush), ("intern_param", internParam)]
 
-/-- A memory with 8 `param` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
-0‥13 (the other tables' `REC`/`SLOT` arrays) are unused here and left empty. -/
+/-- A memory with 8 `param` nodes and `SN0` slots per tier, the scratch tier closed or open. The other
+tables' arrays are unused here and left empty. -/
 def paramMem (scratch : Word) : Mem :=
-  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[],
-      #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0, Array.replicate consTestWords 0] }
+  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+    withTiers [(PREC, Array.replicate 16 0),
+      (PSLOT, Array.replicate consTestWords 0)]
 
 /-- Intern each (name handle) word in turn; the handles. -/
 def internParams (m : Mem) : List Word → Option (List Word)

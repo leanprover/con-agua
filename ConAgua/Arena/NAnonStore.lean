@@ -114,11 +114,12 @@ def internNAnon : FunDecl := consInternG nanonCS
 def nanonProg : Prog :=
   [("nanon_find", nanonFind), ("nanon_push", nanonPush), ("intern_nanon", internNAnon)]
 
-/-- A memory with 8 `anonymous` slots per tier, the scratch tier closed or open. Arrays 0‥32 (the
-other tables') are unused here and left empty. -/
+/-- A memory with 8 `anonymous` slots per tier, the scratch tier closed or open. The other
+tables' arrays are unused here and left empty. -/
 def nanonMem (scratch : Word) : Mem :=
-  { words := withTiers <| ((Array.replicate 33 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
-      #[Array.replicate 16 0, Array.replicate consTestWords 0] }
+  Mem.ofWords <| [(CTL, (Array.replicate 64 0).set! 1 scratch)] ++
+    withTiers [(NAREC, Array.replicate 16 0),
+      (NASLOT, Array.replicate consTestWords 0)]
 
 /-- Intern `anonymous` `k` times in a row: the handle, every time, is the first persistent
 node. -/

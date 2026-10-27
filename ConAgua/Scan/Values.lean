@@ -5,6 +5,7 @@ public import ConAgua.L.Logic
 public import ConAgua.Scan.Leaves
 public import ConAgua.Scan.Utf8
 meta import ConAgua.L.Semantics
+meta import ConAgua.Layout
 public import ConAgua.Scan.Lit
 public import ConAgua.Scan.Key
 import ConAgua.Census.Attr
@@ -632,13 +633,13 @@ def hintsProg : Prog := [("match_word", matchWord), ("scan_hints", scanHints)]
 
 -- `"abbrev"`: a quoted-literal hint (`scan_hints`' own two literals are `abbrev"`/`opaque"`,
 -- not `scan_binder_info`'s four).
-#guard (run hintsProg 100 "scan_hints" [0] { bytes := #["\"abbrev\"".toUTF8.data] }).toOption.map (·.1)
+#guard (run hintsProg 100 "scan_hints" [0] (Mem.ofBytes [(IN, "\"abbrev\"".toUTF8.data)])).toOption.map (·.1)
   == some [8]
 -- `"opaque"`: the other quoted literal.
-#guard (run hintsProg 100 "scan_hints" [0] { bytes := #["\"opaque\"".toUTF8.data] }).toOption.map (·.1)
+#guard (run hintsProg 100 "scan_hints" [0] (Mem.ofBytes [(IN, "\"opaque\"".toUTF8.data)])).toOption.map (·.1)
   == some [8]
 -- Neither literal: fails.
-#guard (run hintsProg 100 "scan_hints" [0] { bytes := #["\"nope\"".toUTF8.data] }).toOption.map (·.1)
+#guard (run hintsProg 100 "scan_hints" [0] (Mem.ofBytes [(IN, "\"nope\"".toUTF8.data)])).toOption.map (·.1)
   == some [0]
 
 end L.Scan.Values

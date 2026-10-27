@@ -117,11 +117,12 @@ def internNNum : FunDecl := consInternG nnumCS
 def nnumProg : Prog :=
   [("nnum_find", nnumFind), ("nnum_push", nnumPush), ("intern_nnum", internNNum)]
 
-/-- A memory with 8 `num` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
-0‥36 (the other tables') are unused here and left empty. -/
+/-- A memory with 8 `num` nodes and `SN0` slots per tier, the scratch tier closed or open. The other
+tables' arrays are unused here and left empty. -/
 def nnumMem (scratch : Word) : Mem :=
-  { words := withTiers <| ((Array.replicate 37 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
-      #[Array.replicate consTestWords 0, Array.replicate consTestWords 0] }
+  Mem.ofWords <| [(CTL, (Array.replicate 64 0).set! 1 scratch)] ++
+    withTiers [(NNREC, Array.replicate consTestWords 0),
+      (NNSLOT, Array.replicate consTestWords 0)]
 
 /-- Intern each `(pre, u)` pair in turn; the handles. -/
 def internNNums (m : Mem) : List (Word × Word) → Option (List Word)

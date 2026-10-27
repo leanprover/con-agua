@@ -520,7 +520,7 @@ def armsTestMem : Mem :=
     |>.set! 8 0 |>.set! 9 7 |>.set! 10 22 |>.set! 11 2 |>.set! 12 9
     |>.set! 16 0 |>.set! 17 7 |>.set! 18 20 |>.set! 19 2 |>.set! 20 3 |>.set! 21 4
     |>.set! 22 3 |>.set! 23 4
-  { testMem with words := testMem.words.set! EREC e }
+  testMem.putWords EREC e
 
 -- `ci_eq` of two equal axiom records (their parameter slices at different places), and of two
 -- that differ in the type (`EREC[16‥]`'s type word is `EREC[20] = 3`).

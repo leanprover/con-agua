@@ -722,7 +722,7 @@ def strProg : Prog := [("str_close", L.Examples.strClose), ("has_escape", L.Scan
 
 /-- `scan_string(0)` on `s` with the L program. -/
 def runStr (s : String) : Option Word :=
-  match run strProg 10000 "scan_string" [0] { bytes := #[s.toUTF8.data] } with
+  match run strProg 10000 "scan_string" [0] (Mem.ofBytes [(IN, s.toUTF8.data)]) with
   | .ok ([e], _) => some e
   | _ => none
 

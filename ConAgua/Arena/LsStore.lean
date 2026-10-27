@@ -171,9 +171,10 @@ def lsProg : Prog :=
 /-- A memory with the lists `[5]`, `[7]`, `[5]`, `[5, 7]`, `[]` in the pool (top 5), 8 nodes and
 `SN0` slots per tier, the scratch tier closed or open. -/
 def lsMem (scratch : Word) : Mem :=
-  { words := withTiers <| #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
-      Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate consTestWords 0] ++
-      Array.replicate 62 (Array.replicate consTestWords 0) }
+  Mem.ofWords <| [(CTL, ((Array.replicate 64 0).set! 1 scratch).set! 0 5)] ++
+    withTiers [(POOL, #[5, 7, 5, 5, 7, 0, 0, 0]), (LSREC, Array.replicate 48 0),
+      (LSSLOT, Array.replicate consTestWords 0),
+      (LSHP, Array.replicate consTestWords 0)]
 
 /-- Intern each slice in turn; the handles. -/
 def internLss (m : Mem) : List (Word × Word) → Option (List Word)

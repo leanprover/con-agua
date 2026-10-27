@@ -8,7 +8,7 @@ meta import ConAgua.Scan.Lit
 meta import ConAgua.Scan.Utf8
 public import ConAgua.Compiler.Run
 public import ConAgua.L.Notation
-public import ConAgua.L.Arrays
+public import ConAgua.Layout
 /-!
 # Differential tests: compiled code on Kraken's semantics against `L.run`
 
@@ -27,7 +27,7 @@ def agrees (p : Prog) (f : FnName) (args : List Word) (m : Mem) (fuel : Nat := 1
   (runKraken p f args m fuel.toUInt64 stack).toOption ==
     some (Outcome.ofL (Prog.tab p m.bytes.size m.words.size).nres (run p fuel f args m))
 
-def inp (s : String) : Mem := { bytes := #[s.toUTF8.data] }
+def inp (s : String) : Mem := Mem.ofBytes [(IN, s.toUTF8.data)]
 
 /-! `skip_braced` and `str_close` (`L/Examples.lean`). -/
 
@@ -73,7 +73,7 @@ def mix : FunDecl := lfn (n) locals (i, s, t) {
   return t + W.u64[n] + B.u8[1]
 }
 
-def mixMem : Mem := { bytes := #[#[1, 2, 3, 200]], words := #[#[5, 0xffffffffffffff00, 7, 0]] }
+def mixMem : Mem := (Mem.ofWords [(W, #[5, 0xffffffffffffff00, 7, 0])]).putBytes B #[1, 2, 3, 200]
 
 #guard agrees [("mix", mix)] "mix" [3] mixMem
 -- Out of bounds: `W.u64[4]` does not exist.
@@ -224,10 +224,10 @@ open L.Scan.Utf8 in
     [0x80], [0xC0, 0x80], [0xE0, 0x80, 0x80], [0xED, 0xA0, 0x80], [0xF4, 0x90, 0x80, 0x80],
     [0xF5, 0x80, 0x80, 0x80], [0xE2, 0x86], [0x41, 0xC3, 0xA9, 0x42]].all fun (bs : List UInt8) =>
   agrees utf8Prog "utf8_decode" [0, UInt64.ofNat bs.length]
-    { bytes := #[bs.toArray], words := #[Array.replicate 16 0] }
+    ((Mem.ofWords [(L.Scan.Utf8.OUT, Array.replicate 16 0)]).putBytes IN bs.toArray)
 -- `OUT` too small: an out-of-bounds store.
 open L.Scan.Utf8 in
-#guard (runKraken utf8Prog "utf8_decode" [0, 5] { bytes := #["hello".toUTF8.data], words := #[#[0, 0]] }
+#guard (runKraken utf8Prog "utf8_decode" [0, 5] ((Mem.ofWords [(OUT, #[0, 0])]).putBytes IN "hello".toUTF8.data)
   100000).toOption == some .error
 
 /-! Global variables (`GVar`): reads, writes, `+=`, across calls and in conditions, next to
@@ -249,9 +249,9 @@ def globProg : Prog := [("gmain", gmain), ("gbump", gbump)]
 
 #guard (Prog.tab globProg 0 1).ng == 3
 #guard Prog.wf (Prog.tab globProg 0 1) globProg
-#guard agrees globProg "gmain" [5] { words := #[#[0]] }
-#guard agrees globProg "gmain" [0] { words := #[#[0]] }
-#guard (runKraken globProg "gmain" [4] { words := #[#[0]] } 1000).toOption ==
+#guard agrees globProg "gmain" [5] (Mem.ofWords [(W, #[0])])
+#guard agrees globProg "gmain" [0] (Mem.ofWords [(W, #[0])])
+#guard (runKraken globProg "gmain" [4] (Mem.ofWords [(W, #[0])]) 1000).toOption ==
   some (.ok [16, 4, 16, 16, 4, 0, 20, 4, 16])
 -- Initial values of the globals come from the memory.
 #guard (runKraken globProg "gbump" [1] { glob := fun g => if g = GA then 41 else 0 } 1000).toOption ==
@@ -259,11 +259,11 @@ def globProg : Prog := [("gmain", gmain), ("gbump", gbump)]
 
 /-! Records (`R[i].f`, `L/Records.lean`): field stores and reads compile to word-array accesses. -/
 
-#guard agrees L.Examples.nodeProg "node_mk" [2, 0, 7, 9] { words := #[#[], Array.replicate 9 5] }
-#guard (runKraken L.Examples.nodeProg "node_mk" [2, 0, 7, 9] { words := #[#[], Array.replicate 9 5] }
+#guard agrees L.Examples.nodeProg "node_mk" [2, 0, 7, 9] (Mem.ofWords [(NODE.arr, Array.replicate 9 5)])
+#guard (runKraken L.Examples.nodeProg "node_mk" [2, 0, 7, 9] (Mem.ofWords [(NODE.arr, Array.replicate 9 5)])
   1000).toOption == some (.ok [7, 5, 10])
 -- record 3 is past the end: an out-of-bounds store
-#guard (runKraken L.Examples.nodeProg "node_mk" [3, 0, 7, 9] { words := #[#[], Array.replicate 9 5] }
+#guard (runKraken L.Examples.nodeProg "node_mk" [3, 0, 7, 9] (Mem.ofWords [(NODE.arr, Array.replicate 9 5)])
   1000).toOption == some .error
 
 /-! Tiered arrays (lane tierarr): tier `t` of word array `W` is `W` or `W + tierOff`. The tier of
@@ -287,8 +287,7 @@ def tierProg : Prog := [("tiers", tiers)]
 
 /-- Array `0` (tier 0 of `W`) has 4 words, array `256` (its tier 1) 6. -/
 def tierMem : Mem :=
-  { words := ((Array.replicate 257 (#[] : Array Word)).set! 0 (Array.replicate 4 7)).set! 256
-      (Array.replicate 6 9) }
+  Mem.ofWords [(W, Array.replicate 4 7), (tier1 W, Array.replicate 6 9)]
 
 #guard Prog.wf { nb := 0, nw := 257 } tierProg
 #guard Prog.arrs tierProg == (0, 257)

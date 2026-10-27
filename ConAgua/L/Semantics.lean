@@ -367,4 +367,27 @@ def exec (p : Prog) : Nat → Stmt → M Sig
 def run (p : Prog) (fuel : Nat) (f : FnName) (vs : List Word) (m : Mem) : Except Err (List Word × Mem) :=
   ((invoke p (exec p fuel) f vs).run { mem := m, loc := Locals.init [] }).map fun (r, s) => (r, s.mem)
 
+/-! ## Test memories -/
+
+/-- Word array `a` of a test memory set to `xs`; the memory grows (with empty arrays) if it has
+no array `a` yet. -/
+def Mem.putWords (m : Mem) (a : ArrId) (xs : Array Word) : Mem :=
+  { m with words := (m.words ++ Array.replicate (a + 1 - m.words.size) #[]).set! a xs }
+
+/-- Byte array `a` of a test memory set to `xs`; the memory grows (with empty arrays) if it has
+no array `a` yet. -/
+def Mem.putBytes (m : Mem) (a : ArrId) (xs : Array UInt8) : Mem :=
+  { m with bytes := (m.bytes ++ Array.replicate (a + 1 - m.bytes.size) #[]).set! a xs }
+
+/-- **A test memory built from named byte arrays** (`IN`, `Rom.PB`, …), like `Mem.ofWords`. -/
+def Mem.ofBytes (l : List (ArrId × Array UInt8)) : Mem :=
+  l.foldl (fun m p => m.putBytes p.1 p.2) {}
+
+/-- **A test memory built from named word arrays.** The list gives each array's contents by its
+name (`CTL`, `REC`, …), not by its position in `words`; the arrays it does not mention are empty.
+A later entry for the same array wins. The memory has exactly as many word arrays as the largest
+number mentioned, plus one. -/
+def Mem.ofWords (l : List (ArrId × Array Word)) : Mem :=
+  l.foldl (fun m p => m.putWords p.1 p.2) {}
+
 end L

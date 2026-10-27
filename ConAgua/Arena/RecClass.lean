@@ -952,7 +952,7 @@ def RecClassForeign : Prog :=
 #guard
   let iw : Array Word :=
     #[0, 4, 0, 0, 10, 20, 0, 0, 1, 5, 7, 0, 0, 0, 0, 0, 0, 8, 0, 0, 3, 0, 0, 0, 0]
-  let m : Mem := { words := (Array.replicate 224 (#[] : Array Word)) |>.set! CTL ((Array.replicate 256 0).set! 200 21) |>.set! IW iw |>.set! EREC (Array.replicate 8 0) }
+  let m : Mem := Mem.ofWords [(CTL, (Array.replicate 256 0).set! 200 21), (IW, iw), (EREC, Array.replicate 8 0)]
   let prog := recClassFns ++ libFns ++ stubFns ++ masterFns ++ RecClassForeign
   match run prog 1000 "class_read_classes" [16, 2] m with
   | .ok ([q, 1], m1) =>
