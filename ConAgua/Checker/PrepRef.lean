@@ -65,10 +65,10 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
       (m'.arr64 DECL).size = (m.arr64 DECL).size ∧ a'.store.pers = a.store.pers ∧
       a'.store.scr = a.store.scr ∧ a'.pins = a.pins ∧ ds'.size ≤ (pre.decls ++ ds).size := by
   -- the big frame of the passes (the store tier's arrays and `IW`; `CTL` words below 64)
-  let A : List ArrId := lowTierArrs ++ [IW]
+  let A : List TieredArray := lowTierArrs ++ [(IW : TieredArray)]
   let C : List Word := (List.range 64).map UInt64.ofNat ++ [200]
-  have hA75 : HSEEN ∉ A := by decide
-  have hA76 : HNIX ∉ A := by decide
+  have hA75 : (HSEEN : TieredArray) ∉ A := by decide
+  have hA76 : (HNIX : TieredArray) ∉ A := by decide
   have hC73 : (73 : Word) ∉ C := by decide
   have hC75 : (75 : Word) ∉ C := by decide
   have pfr_mf : ∀ {ord mk nw : Word} {m₁ m₂ : Mem}, PFr ord mk nw m₁ m₂ → MemFrame A C m₁ m₂ := by

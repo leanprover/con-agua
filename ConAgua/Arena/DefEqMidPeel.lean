@@ -636,7 +636,7 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
     -- the two writes
     have hfr : MemFrame [SPN] [136] m₁ s'.mem := by
       rw [← hm]
-      exact (MemFrame.set64 m₁ 144 (by decide) _ _).mono (by simp) (by simp) |>.trans
+      exact (MemFrame.set64 m₁ SPN (by decide) _ _).mono (by simp) (by simp) |>.trans
         ((MemFrame.setCtl _ 136 _).mono (by simp) (by simp))
     have hS₂ := hS₁.frame_stk hfr (by simp) (by simp)
     have hspn' : s'.mem.arr64 SPN = (m₁.set64 SPN (fo + k) (r₁.headD 0)).arr64 SPN := by
@@ -658,7 +658,7 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
       have := hx.fit; omega
     · have hi' : i ≠ fo + k := fun h => by rw [h, ← hx.top] at hi; exact absurd hi (by simp)
       unfold spW
-      rw [hspn', show (144 : ArrId) = SPN from rfl, rdW_set64L, ite_eq_right (fun h => hi' h.2.1.symm)]
+      rw [hspn', rdW_set64L, ite_eq_right (fun h => hi' h.2.1.symm)]
       exact hst₁.below i hi
   · cases hW
 
