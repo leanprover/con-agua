@@ -47,7 +47,7 @@ private theorem pos_mapM_mem {α β : Type} {f : α → Option β} :
     · exact pos_mapM_mem hys x hx
 /-! ## `block_nest_ctx` with the real `open_pis_at_fvars_f` -/
 
-theorem opfA_stage : ∀ b ∈ opfA, b < 201 ∨ 208 < b := by
+theorem opfA_stage : ∀ b ∈ opfA, b.arr < 201 ∨ 208 < b.arr := by
   decide
 theorem opfC_stage : ∀ x ∈ opfC, x.toNat < 202 ∨ 219 < x.toNat := by
   simp [opfC, instListC, mkC, instC, liftC]
