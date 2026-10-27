@@ -227,7 +227,7 @@ theorem truncList_bytes (m₀ : Mem) : ∀ (zs : List (ArrId × Fz)) (m : Mem),
   | (_, _) :: zs, m => by rw [truncList, truncList_bytes m₀ zs]
 
 theorem freshMem_arr8 (m : Mem) (b : ArrId) : (freshMem m).arr8 b = m.arr8 b := by
-  show (truncFrozen m).bytes.getD b #[] = m.bytes.getD b #[]
+  show (truncFrozen m).bytes b = m.bytes b
   rw [truncFrozen, truncList_bytes]
 
 section start
