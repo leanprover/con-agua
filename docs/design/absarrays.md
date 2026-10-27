@@ -497,3 +497,30 @@ interleaved rounds, load average 6–34 during the run):
 The instruction count drops by exactly the 682 instructions removed from `cap_check`. That is
 5·10⁻⁷ of the small fixture and nothing measurable on Init. The wall times differ by less than their
 spread. The change has no performance effect.
+
+## 9. The switch (batch 6)
+
+Branch `absarrays-switch`: the prototype P (§8) merged with master and carried through the whole
+tree.
+
+### 9.1 Decisions
+
+* The type is `TieredArray` (the user's name). It is defined with the syntax (`L/Syntax.lean`).
+  `tierOff` moved into the compiler (`L.Compiler.tierOff`, `Compiler/Compile.lean`): only the
+  compiler's current layout (`curNum`, `Tab.wpos`, `Tab.dom64`, `Tab.pos64`) and the stub proofs
+  use it.
+* `Mem.HasW`, `HasWs`, `HasB` and `SameShape` are `True` (every array exists). Their lemmas keep
+  their names, with trivial proofs, so that the switch does not have to touch every caller.
+  Deleting them is left for batch 8.
+* `loadMem b pb sz` (`Final/Statement.lean`) takes the word arrays' sizes as a function
+  `sz : TieredArray → Nat` and puts the input and the pin data in the byte arrays named `IN` and
+  `Rom.PB`. The old `s8` (sizes of further byte arrays) went away: the checker has no other byte
+  arrays. The final theorems do not mention `loadMem`, so their statements are unchanged.
+* `grind` needs `TieredArray.mk.injEq` and `tierA_arr` to decide `↑a ≠ ↑b` and
+  `tierA a t ≠ ↑b`: it does not use injectivity of structure constructors by itself. Both are
+  in the default `grind` set (`L/Logic.lean`).
+* The range lemmas lose their hypotheses: `tierA_ne (h : a ≠ b)`, `ne_tierA (h : a ≠ b)`,
+  `tierA_ne_tierA`, `not_mem_tiers_of_ne`. `tier1_ne`/`ne_tier1` became the simp lemmas
+  `tier1_ne_t0`/`t0_ne_tier1`. The `x < 256` arguments are gone.
+
+### 9.2 Journal

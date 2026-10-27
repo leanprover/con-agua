@@ -25,14 +25,14 @@ theorem rdW_set! (a : Array Word) (k : Nat) (v x : Word) :
   simp only [rdW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   grind
 
-theorem rdW_set64 (m : Mem) (a b : ArrId) (k v x : Word) :
+theorem rdW_set64 (m : Mem) (a b : TieredArray) (k v x : Word) :
     rdW ((m.set64 a k v).arr64 b) x =
       if b = a ∧ k = x ∧ k.toNat < (m.arr64 a).size then v else rdW (m.arr64 b) x := by
   by_cases h : b = a
   · subst h; rw [Mem.arr64_set64_same, rdW_set!]; grind
   · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
 
-theorem size_set64 (m : Mem) (a b : ArrId) (k v : Word) :
+theorem size_set64 (m : Mem) (a b : TieredArray) (k v : Word) :
     ((m.set64 a k v).arr64 b).size = (m.arr64 b).size := by
   by_cases h : b = a
   · subst h; rw [Mem.arr64_set64_same]; simp
@@ -40,7 +40,7 @@ theorem size_set64 (m : Mem) (a b : ArrId) (k v : Word) :
 
 theorem top_rdW (m : Mem) : m.top = rdW (m.arr64 CTL) 0 := rfl
 
-theorem len64_eq (m : Mem) (a : ArrId) : m.len64 a = UInt64.ofNat (m.arr64 a).size := rfl
+theorem len64_eq (m : Mem) (a : TieredArray) : m.len64 a = UInt64.ofNat (m.arr64 a).size := rfl
 
 attribute [store_grind =] rdW_set64 size_set64 top_rdW len64_eq
 
