@@ -21,30 +21,14 @@ open ConRon.Arena ConRon.Arena.Frontend
 section
 variable (b pb : ByteArray) (sz : TieredArray → Nat)
 
-theorem loadMem_arr (a : ArrId) :
-    (loadMem b pb sz).arr64 a = Array.replicate (s64[a]?.getD 0) 0 := by
-  simp only [Mem.arr64, loadMem, Array.getD_eq_getD_getElem?]
-  cases h : s64[a]? <;> simp [h]
+theorem loadMem_arr (a : TieredArray) : (loadMem b pb sz).arr64 a = Array.replicate (sz a) 0 := rfl
 
-theorem loadMem_rd (a : ArrId) (x : Word) : rdW ((loadMem b pb sz).arr64 a) x = 0 := by
+theorem loadMem_rd (a : TieredArray) (x : Word) : rdW ((loadMem b pb sz).arr64 a) x = 0 := by
   rw [loadMem_arr]; simp only [rdW, Array.getElem?_replicate]; split <;> rfl
-
-theorem loadMem_words_size : (loadMem b pb sz).words.size = s64.length := by
-  simp [loadMem]
 
 /-- The pin-data buffer is byte array `PB`. -/
 theorem loadMem_pb : (loadMem b pb sz).arr8 PB = pb.data.toList.toArray := by
   simp [Mem.arr8, loadMem, PB]
-
-/-- `CTL` exists: it has at least `ctlMin` words. -/
-theorem loadMem_ctl_lt (hc : CapsOK (loadMem b pb sz)) : (loadMem b pb sz).HasW CTL := by
-  have h := hc.2.1
-  rw [loadMem_arr] at h
-  unfold Mem.HasW; rw [loadMem_words_size]
-  simp only [Array.size_replicate] at h
-  cases hs : s64[CTL]? with
-  | none => rw [hs] at h; simp [ctlMin] at h
-  | some _ => exact (List.getElem?_eq_some_iff.1 hs).1
 
 /-- **`ArenaR` at the start**, on the loaded memory (`arenaR_init`'s proof over `loadMem`). -/
 theorem arenaR_loadMem (hc : CapsOK (loadMem b pb sz)) :
@@ -57,7 +41,7 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb sz)) :
   have ht0 : (loadMem b pb sz).top = 0 := by simp only [top_rdW, hz]
   have hpt0 : (loadMem b pb sz).ptop0 = 0 := by
     simp only [Mem.ptop0]; rw [loadMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
-  have hw := loadMem_ctl_lt b pb sz hc
+  have hw : (loadMem b pb sz).HasW CTL := trivial
   have hsl : ∀ a ∈ slotArrs, a ∈ checkerArrays.wordSlots := by decide
   have hs : ∀ a, a ∈ slotArrs → tier1 a ∈ slotArrs → ∀ t,
       consMinWords ≤ ((loadMem b pb sz).arr64 (tierA a t)).size ∧
@@ -121,7 +105,7 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb sz)) :
     TblR.zero _ a ha (loadMem_rd b pb sz) (h63 a hs) hctl
   have hf : ((loadMem b pb sz).arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧
       ((loadMem b pb sz).arr64 L.Front.Ind.IFL).size < 2 ^ 62 :=
-    ⟨(hc.1 70 (by decide)).1, (hc.1 71 (by decide)).1⟩
+    ⟨(hc.1 L.Front.Ind.IFR (by decide)).1, (hc.1 L.Front.Ind.IFL (by decide)).1⟩
   refine ⟨hT NID (.inl rfl) (by decide), hT LID (.inr (.inl rfl)) (by decide),
     hT EID (.inr (.inr rfl)) (by decide), ?_, hf⟩
   have hd : 1 ≤ ((loadMem b pb sz).arr64 DECL).size := hc.2.2.1
@@ -138,12 +122,10 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb sz)) :
   · rw [Array.getElem?_replicate]; split <;> simp <;> omega
 
 /-- The loaded word arrays' sizes are words when the harness's sizes are (`InputsOK`). -/
-theorem loadMem_wordsFit (hs : ∀ n ∈ s64, n < 2 ^ 64) : WordsFit (loadMem b pb sz) := by
+theorem loadMem_wordsFit (hs : ∀ s, sz s < 2 ^ 64) : WordsFit (loadMem b pb sz) := by
   intro a _
   rw [loadMem_arr, Array.size_replicate]
-  cases h : s64[a]? with
-  | none => simp
-  | some n => exact hs n (List.mem_of_getElem? h)
+  exact hs a
 
 end
 

@@ -108,16 +108,12 @@ theorem core_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} {sA : AState} {
     (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
     (h7 : R7 (ConAgua.Final.loadMem b pb sz) m pb ds ipins sE) : CoreR m sE.caches := by
   rw [(prefix_caches hpx).1]
-  have hctl : 120 ≤ s64[1]?.getD 0 := by
+  have hctl : 120 ≤ sz CTL := by
     have := h7.since.caps.2.1
-    rw [loadMem_arr] at this; simp only [Array.size_replicate, ctlMin, CTL] at this; omega
-  obtain ⟨M, hM⟩ := cachesEmpty_refines s64 hctl
-  have hf0 : MemFrame [] [] (initMem s64) (ConAgua.Final.loadMem b pb sz) := by
-    refine ⟨fun a _ _ => ?_, fun x _ => ?_, fun a => ?_, ?_⟩
-    · rw [loadMem_arr, initMem_arr]
-    · rw [loadMem_arr, initMem_arr]
-    · rw [loadMem_arr, initMem_arr]
-    · simp [Mem.SameShape, ConAgua.Final.loadMem, initMem]
+    rw [loadMem_arr] at this; simp only [Array.size_replicate, ctlMin] at this; omega
+  obtain ⟨M, hM⟩ := cachesEmpty_refines sz hctl
+  have hf0 : MemFrame [] [] (initMem sz) (ConAgua.Final.loadMem b pb sz) :=
+    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
   exact ⟨M, (hM.frame (fun _ h => by simp at h) (fun _ h => by simp at h) hf0).frame
     preLoopA_avoidCore preLoopC_avoidCore h7.since.frame⟩
 
