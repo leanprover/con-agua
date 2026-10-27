@@ -29,7 +29,7 @@ def PbPre (pb : ByteArray) : Prop := pb.data.toList = romData ++ pb.data.toList.
 
 /-- **What holds since the loaded memory** `l`. -/
 structure Since (l m : Mem) (pb : ByteArray) : Prop where
-  keep : Keep l m
+  keep : L.Keep l m
   caps : CapsOK l
   pbpre : PbPre pb
   frame : MemFrame preLoopA preLoopC l m
@@ -93,7 +93,7 @@ theorem triple_and {α : Type} {prog : M α} {s₀ : St} {Q₁ Q₂ : α → St 
 /-- Keep and the frame before the loop, for a stage. -/
 theorem stage_since (n : Nat) {f : FnName} (hf : f ∈ preLoopFns) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) f []
-    ⦃fun _ s' => LocEq s' s₀ ∧ Keep s₀.mem s'.mem ∧ MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ := by
+    ⦃fun _ s' => LocEq s' s₀ ∧ L.Keep s₀.mem s'.mem ∧ MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   have h1 := M.of_run (P := fun s => s = s₀) hs hrun
@@ -101,7 +101,7 @@ theorem stage_since (n : Nat) {f : FnName} (hf : f ∈ preLoopFns) (s₀ : St) :
   have h2 := M.of_run (P := fun s => s = s₀) hs hrun (preLoop_frame n hf s₀)
   exact ⟨h1.2.2, h1.2.1, h2⟩
 
-theorem Since.step {l m m' : Mem} {pb : ByteArray} (h : Since l m pb) (hk : Keep m m')
+theorem Since.step {l m m' : Mem} {pb : ByteArray} (h : Since l m pb) (hk : L.Keep m m')
     (hf : MemFrame preLoopA preLoopC m m') : Since l m' pb :=
   ⟨⟨hk.1.trans h.keep.1, fun a => (hk.2 a).trans (h.keep.2 a)⟩, h.caps, h.pbpre, h.frame.trans hf⟩
 
