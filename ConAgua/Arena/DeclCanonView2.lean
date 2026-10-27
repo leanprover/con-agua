@@ -28,17 +28,17 @@ def poolCopyW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, d, s, l =>
     if l = 0 then some m
-    else if (m.arr64 (tierA 0 (s >>> 40))).size ≤ (s &&& 1099511627775).toNat then none
+    else if (m.arr64 (tierA POOL (s >>> 40))).size ≤ (s &&& 1099511627775).toNat then none
     else poolCopyW n (m.set64 IW d (prd m s)) (d + 1) (s + 1) (l - 1)
 
 section arms
 variable (n : Nat) (m : Mem) (d s l : Word)
 theorem poolCopyW_nil (hl : l = 0) : poolCopyW (n + 1) m d s l = some m := by simp [poolCopyW, hl]
-theorem poolCopyW_step (hl : l ≠ 0) (hs : (s &&& 1099511627775).toNat < (m.arr64 (tierA 0 (s >>> 40))).size) :
+theorem poolCopyW_step (hl : l ≠ 0) (hs : (s &&& 1099511627775).toNat < (m.arr64 (tierA POOL (s >>> 40))).size) :
     poolCopyW (n + 1) m d s l =
       poolCopyW n (m.set64 IW d (prd m s)) (d + 1) (s + 1) (l - 1) := by
   rw [poolCopyW]; simp only [hl, ↓reduceIte]; rw [ite_eq_right (Nat.not_le.mpr hs)]
-theorem poolCopyW_oob (hl : l ≠ 0) (hs : (m.arr64 (tierA 0 (s >>> 40))).size ≤ (s &&& 1099511627775).toNat) :
+theorem poolCopyW_oob (hl : l ≠ 0) (hs : (m.arr64 (tierA POOL (s >>> 40))).size ≤ (s &&& 1099511627775).toNat) :
     poolCopyW (n + 1) m d s l = none := by
   rw [poolCopyW]; simp only [hl, ↓reduceIte]; rw [ite_eq_left hs]
 end arms
@@ -84,7 +84,7 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
-    · by_cases hso : (m.arr64 (tierA 0 (s >>> 40))).size ≤ (s &&& 1099511627775).toNat
+    · by_cases hso : (m.arr64 (tierA POOL (s >>> 40))).size ≤ (s &&& 1099511627775).toNat
       · rw [poolCopyW_oob n m d s l hl hso] at h; simp at h
       rw [poolCopyW_step n m d s l hl (by omega)] at h
       have hl0 : 0 < l.toNat := by

@@ -183,8 +183,8 @@ def ShlBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 6).toNat + (s.loc 1).toNat + 1 ≤ C ∧
   s.loc 11 = s.loc 4 >>> 40 ∧ s.loc 12 = s.loc 4 &&& 1099511627775 ∧
-  (s.loc 12).toNat + (s.loc 6).toNat + (s.loc 1).toNat + 1 ≤ (s.mem.arr64 (tierA 0 (s.loc 11))).size ∧
-  (s.mem.arr64 (tierA 0 (s.loc 11))).size ≤ 2 ^ 40 ∧ (s.loc 11).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
+  (s.loc 12).toNat + (s.loc 6).toNat + (s.loc 1).toNat + 1 ≤ (s.mem.arr64 (tierA POOL (s.loc 11))).size ∧
+  (s.mem.arr64 (tierA POOL (s.loc 11))).size ≤ 2 ^ 40 ∧ (s.loc 11).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧ (s.loc 7).toNat < 64
 
 def ShlZeroInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
@@ -236,19 +236,19 @@ theorem shlZero_step_spec (n : Nat) (s₀ : St) (h : ShlZeroInv Pg C s₀) :
 E-matched: `grind` alone takes minutes here, chaining `pv_succ`/`pv_set_succ`/`wt_*` instances). -/
 theorem shl_step_goal (m : Mem) (Pg : Array Word) (T T11 T12 o w i b c : Word)
     (h11 : T11 = T >>> 40) (h12 : T12 = T &&& 1099511627775)
-    (hT : T.toNat < 2 ^ 41) (hs : (m.arr64 (tierA 0 T11)).size ≤ 2 ^ 40)
-    (hst : (T12 + (w + i)).toNat < (m.arr64 (tierA 0 T11)).size)
+    (hT : T.toNat < 2 ^ 41) (hs : (m.arr64 (tierA POOL T11)).size ≤ 2 ^ 40)
+    (hst : (T12 + (w + i)).toNat < (m.arr64 (tierA POOL T11)).size)
     (hk : T12.toNat + w.toNat + i.toNat < 2 ^ 40)
     (hag : Agree (vpool m) Pg T.toNat) (hoi : o.toNat + i.toNat < T.toNat)
     (hwi : T.toNat + w.toNat + i.toNat < 2 ^ 41) (hi1 : i.toNat + 1 < 2 ^ 64)
     (hPg : Pg.size = 2 ^ 41) (hb : b.toNat < 64) (hc : c.toNat < sh b.toNat)
     (ih : pv (vpool m) T.toNat (w.toNat + i.toNat) + c.toNat * (wt w.toNat * wt i.toNat) =
       pv Pg o.toNat i.toNat * sh b.toNat * wt w.toNat)
-    (hld : ((o + i) &&& 1099511627775).toNat < (m.arr64 (tierA 0 ((o + i) >>> 40))).size) :
-    pv (vpool (m.set64 (tierA 0 T11) (T12 + (w + i))
-        ((m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] <<< b ||| c)))
+    (hld : ((o + i) &&& 1099511627775).toNat < (m.arr64 (tierA POOL ((o + i) >>> 40))).size) :
+    pv (vpool (m.set64 (tierA POOL T11) (T12 + (w + i))
+        ((m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] <<< b ||| c)))
         T.toNat (w.toNat + (i + 1).toNat) +
-      ((m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] >>> 1 >>> (63 - b)).toNat *
+      ((m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] >>> 1 >>> (63 - b)).toNat *
         (wt w.toNat * wt (i + 1).toNat) =
     pv Pg o.toNat (i + 1).toNat * sh b.toNat * wt w.toNat := by
   subst h11 h12
@@ -261,7 +261,7 @@ theorem shl_step_goal (m : Mem) (Pg : Array Word) (T T11 T12 o w i b c : Word)
   have hTwi : (T + (w + i)).toNat = T.toNat + (w.toNat + i.toNat) := by
     rw [UInt64.toNat_add, hwi']; exact Nat.mod_eq_of_lt (by omega)
   have hvs := vpool_size m
-  have ex : (m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] = Pg[o.toNat + i.toNat] := by
+  have ex : (m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] = Pg[o.toNat + i.toNat] := by
     rw [vpool_ld m (o + i) hld (by omega)]
     simp only [hoi']
     exact Agree.get _ _ _ _ hag hoi (by omega) (by omega)
@@ -308,15 +308,15 @@ end shl
 of the new top into `CTL`. -/
 theorem shl_result_goal (m m0 : Mem) (T11 T12 w L c r top v oa la ob lb : Word)
     (h11 : T11 = top >>> 40) (h12 : T12 = top &&& 1099511627775)
-    (hT : top.toNat < 2 ^ 41) (hs : (m.arr64 (tierA 0 T11)).size ≤ 2 ^ 40)
-    (hst : (T12 + (w + L)).toNat < (m.arr64 (tierA 0 T11)).size)
+    (hT : top.toNat < 2 ^ 41) (hs : (m.arr64 (tierA POOL T11)).size ≤ 2 ^ 40)
+    (hst : (T12 + (w + L)).toNat < (m.arr64 (tierA POOL T11)).size)
     (hk : T12.toNat + w.toNat + L.toNat < 2 ^ 40)
     (hwl : top.toNat + w.toNat + L.toNat < 2 ^ 41) (hL : L = la)
-    (htrim : pv (vpool (m.set64 (tierA 0 T11) (T12 + (w + L)) c)) top.toNat r.toNat =
-      pv (vpool (m.set64 (tierA 0 T11) (T12 + (w + L)) c)) top.toNat (w + L + 1).toNat)
+    (htrim : pv (vpool (m.set64 (tierA POOL T11) (T12 + (w + L)) c)) top.toNat r.toNat =
+      pv (vpool (m.set64 (tierA POOL T11) (T12 + (w + L)) c)) top.toNat (w + L + 1).toNat)
     (ih : pv (vpool m) top.toNat (w.toNat + L.toNat) + c.toNat * (wt w.toNat * wt L.toNat) =
       pv (vpool m0) oa.toNat la.toNat * 2 ^ pv (vpool m0) ob.toNat lb.toNat) :
-    pv (vpool ((m.set64 (tierA 0 T11) (T12 + (w + L)) c).set64 1 0 v)) top.toNat r.toNat =
+    pv (vpool ((m.set64 (tierA POOL T11) (T12 + (w + L)) c).set64 1 0 v)) top.toNat r.toNat =
       pv (vpool m0) oa.toNat la.toNat * 2 ^ pv (vpool m0) ob.toNat lb.toNat := by
   subst h11 h12 hL
   have hwl' : (w + L).toNat = w.toNat + L.toNat := by

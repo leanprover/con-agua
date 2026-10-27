@@ -213,11 +213,11 @@ def romRefW (m : Mem) (pos : Word) : Option (Word × Word × Mem) :=
 
 /-- The memory after the limb `k` went to the pool top. -/
 def litWordMem (m : Mem) (k : Word) : Mem :=
-  (m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k).set64 CTL 0 (m.top + 1)
+  (m.set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) k).set64 CTL 0 (m.top + 1)
 
 /-- The model of `rom_lit`. -/
 def romLitW (m : Mem) (k : Word) : Option (Word × Mem) :=
-  if m.len64 (tierA 0 (m.top >>> 40)) ≤ (m.top &&& 1099511627775) then none
+  if m.len64 (tierA POOL (m.top >>> 40)) ≤ (m.top &&& 1099511627775) then none
   else if k = 0 then internW m m.top 0 else internW (litWordMem m k) m.top 1
 
 /-- `rom_lit(k)`: intern the `natVal` literal `k` (its one limb at the pool top, none for `0`). -/
@@ -238,39 +238,39 @@ def romLit : FunDecl := lfn (k) locals (o, h, pt, pb) {
 }
 
 /-- `rom_lit`'s length check bounds its one-limb slice by the pool's capacity. -/
-theorem romLit_cap (m : Mem) (h : ¬ m.len64 (tierA 0 (m.top >>> 40)) ≤ (m.top &&& 1099511627775))
+theorem romLit_cap (m : Mem) (h : ¬ m.len64 (tierA POOL (m.top >>> 40)) ≤ (m.top &&& 1099511627775))
     (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) : m.top.toNat + 1 ≤ pcap m := by
   have hsz := pcap_tier m (m.top >>> 40) hc
   have hsplit := tag_split m.top
   have htier := tag_tier_le m.top ht
-  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ (by omega)
   have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h)
   rw [hlen] at this
   rw [pcap_eq m hc]
   omega
-grind_pattern [arena_grind] romLit_cap => m.len64 (tierA 0 (m.top >>> 40)), pcap m
+grind_pattern [arena_grind] romLit_cap => m.len64 (tierA POOL (m.top >>> 40)), pcap m
 
 /-- **`rom_lit`'s pool write**: the limb at the old top, the pool grew by one word. -/
 theorem litWordMem_facts (m : Mem) (k : Word) (hpool : PoolOK m)
-    (h : ¬ m.len64 (tierA 0 (m.top >>> 40)) ≤ (m.top &&& 1099511627775)) :
+    (h : ¬ m.len64 (tierA POOL (m.top >>> 40)) ≤ (m.top &&& 1099511627775)) :
     Grows m (litWordMem m k) ∧ SliceOK (litWordMem m k) m.top 1 ∧
     (vpool (litWordMem m k))[m.top.toNat]? = some k := by
   have hsm := hpool.small
   have h41 := hpool.top41
   have hsz := hsm.tier (m.top >>> 40)
   have hc : pcap m < 2 ^ 64 := by have := hpool.2.2.1; omega
-  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ (by omega)
   have hi := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h)
   rw [hlen] at hi
-  have hv : vpool (m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k) =
+  have hv : vpool (m.set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) k) =
       (vpool m).set! m.top.toNat k := vpool_stidx0 m m.top k h41 hi (by omega)
   have hg : Grows m (litWordMem m k) :=
     Grows.write m _ 1 hpool (PFrame.set64 _ _ _ (PFrame.refl _))
       (by rw [hv]; exact Agree.set _ _ _ _ _ (Agree.refl _ _) (Nat.le_refl _))
       (by have : (1 : Word).toNat = 1 := rfl; omega)
-  have hctl : 0 < ((m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k).arr64 CTL).size := by
+  have hctl : 0 < ((m.set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) k).arr64 CTL).size := by
     rw [arr64_set64_tier_ne _ _ _ _ _ ⟨by decide, by decide⟩]; exact hpool.2.1
   refine ⟨hg, SliceOK.fresh hg (Mem.top_set64 _ _ hctl), ?_⟩
   rw [litWordMem, vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, hv, Array.set!_eq_setIfInBounds,
@@ -630,11 +630,11 @@ theorem romLitW_topK {m m' : Mem} {k r : Word} (h : romLitW m k = some (r, m')) 
     · have hsz := pcap_tier m (m.top >>> 40) hc
       have hsplit := tag_split m.top
       have htier := tag_tier_le m.top ht
-      have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+      have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
         simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
       have hi := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hl)
       rw [hlen] at hi
-      have htop0 : (m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k).top = m.top :=
+      have htop0 : (m.set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) k).top = m.top :=
         top_set64_arr _ _ _ _ (Ne.symm (tierA_pool_ne _ _ (by decide) (by decide)))
       have hflag : (litWordMem m k).flag = m.flag := by
         rw [litWordMem, Mem.flag_set64_top, Mem.flag_set64_ne _ _ _ _ (Ne.symm (tierA_pool_ne _ _ (by decide) (by decide)))]
@@ -642,7 +642,7 @@ theorem romLitW_topK {m m' : Mem} {k r : Word} (h : romLitW m k = some (r, m')) 
       · exact .inl (by rw [hflag]; exact hf)
       · right
         have hT : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-        rcases top_set64_cases (m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k) (m.top + 1) with e | e
+        rcases top_set64_cases (m.set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) k) (m.top + 1) with e | e
         · show (litWordMem m k).top.toNat < _
           rw [litWordMem, e, hT]; omega
         · show (litWordMem m k).top.toNat < _

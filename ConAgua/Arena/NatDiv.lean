@@ -183,7 +183,7 @@ def Shl1Inv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
   POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 3).toNat ≤ (s.loc 1).toNat ∧
   s.loc 6 = s.loc 0 >>> 40 ∧ s.loc 7 = s.loc 0 &&& 1099511627775 ∧
-  (s.mem.arr64 (tierA 0 (s.loc 6))).size ≤ 2 ^ 40 ∧ (s.loc 6).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 6))).size ≤ 2 ^ 40 ∧ (s.loc 6).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
   (s.loc 4).toNat ≤ 1 ∧ Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 3).toNat ∧
   pv (vpool s.mem) (s.loc 0).toNat (s.loc 3).toNat + (s.loc 4).toNat * wt (s.loc 3).toNat =
     2 * pv P0 (s.loc 0).toNat (s.loc 3).toNat + (s.loc 2).toNat
@@ -212,7 +212,7 @@ def DSubInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
   POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
   s.loc 8 = s.loc 0 >>> 40 ∧ s.loc 9 = s.loc 0 &&& 1099511627775 ∧
-  (s.mem.arr64 (tierA 0 (s.loc 8))).size ≤ 2 ^ 40 ∧ (s.loc 8).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 8))).size ≤ 2 ^ 40 ∧ (s.loc 8).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
   (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
   Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
   pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat +
@@ -247,7 +247,7 @@ def DAddInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
   POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
   s.loc 8 = s.loc 0 >>> 40 ∧ s.loc 9 = s.loc 0 &&& 1099511627775 ∧
-  (s.mem.arr64 (tierA 0 (s.loc 8))).size ≤ 2 ^ 40 ∧ (s.loc 8).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 8))).size ≤ 2 ^ 40 ∧ (s.loc 8).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
   (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
   Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
   pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat + (s.loc 5).toNat * wt (s.loc 4).toNat =
@@ -513,7 +513,7 @@ pattern puts the `Grows` fact into a goal about the final memory (`PoolOK`, `Sli
 theorem Grows.write_at (m m₂ : Mem) (v : Word) (hok : PoolOK m) (hf : PFrame m m₂)
     (ha : Agree (vpool m₂) (vpool m) m.top.toNat) (hv : m.top.toNat ≤ v.toNat)
     (hk : (m.top &&& 1099511627775).toNat + (v.toNat - m.top.toNat) ≤
-      (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+      (m.arr64 (tierA POOL (m.top >>> 40))).size) :
     Grows m (m₂.set64 CTL 0 v) := by
   have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.2.1
   have htop : (m₂.set64 CTL 0 v).top = v := Mem.top_set64 _ _ hctl
@@ -528,7 +528,7 @@ would fire on every frame `Grows.intro` builds). -/
 theorem PoolOK.write_at (m m₂ : Mem) (v : Word) (hok : PoolOK m) (hf : PFrame m m₂)
     (ha : Agree (vpool m₂) (vpool m) m.top.toNat) (hv : m.top.toNat ≤ v.toNat)
     (hk : (m.top &&& 1099511627775).toNat + (v.toNat - m.top.toNat) ≤
-      (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+      (m.arr64 (tierA POOL (m.top >>> 40))).size) :
     PoolOK (m₂.set64 CTL 0 v) := hok.grows (Grows.write_at m m₂ v hok hf ha hv hk)
 grind_pattern [arena_grind] PoolOK.write_at => PoolOK m, PoolOK (m₂.set64 CTL 0 v)
 
@@ -536,7 +536,7 @@ grind_pattern [arena_grind] PoolOK.write_at => PoolOK m, PoolOK (m₂.set64 CTL 
 theorem SliceOK.write_at (m m₂ : Mem) (v o l : Word) (hok : PoolOK m) (hf : PFrame m m₂)
     (ha : Agree (vpool m₂) (vpool m) m.top.toNat) (hv : m.top.toNat ≤ v.toNat)
     (hk : (m.top &&& 1099511627775).toNat + (v.toNat - m.top.toNat) ≤
-      (m.arr64 (tierA 0 (m.top >>> 40))).size)
+      (m.arr64 (tierA POOL (m.top >>> 40))).size)
     (ho : m.top.toNat ≤ o.toNat) (hl : o.toNat + l.toNat ≤ v.toNat) :
     SliceOK (m₂.set64 CTL 0 v) o l := by
   have hg := Grows.write_at m m₂ v hok hf ha hv hk
@@ -685,8 +685,8 @@ def DivBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   (s.loc 6).toNat = (s.loc 4).toNat + (s.loc 1).toNat ∧ (s.loc 5).toNat = (s.loc 3).toNat + 1 ∧
   (s.loc 6).toNat + (s.loc 5).toNat ≤ C ∧
   s.loc 14 = s.loc 4 >>> 40 ∧ s.loc 15 = s.loc 4 &&& 1099511627775 ∧
-  (s.loc 15).toNat + (s.loc 1).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA 0 (s.loc 14))).size ∧
-  (s.mem.arr64 (tierA 0 (s.loc 14))).size ≤ 2 ^ 40 ∧ (s.loc 14).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
+  (s.loc 15).toNat + (s.loc 1).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA POOL (s.loc 14))).size ∧
+  (s.mem.arr64 (tierA POOL (s.loc 14))).size ≤ 2 ^ 40 ∧ (s.loc 14).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   0 < pv Pg (s.loc 2).toNat (s.loc 3).toNat

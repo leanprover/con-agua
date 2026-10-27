@@ -263,7 +263,7 @@ theorem romLitW_core (hS : CoreS dn m a vis fe M eb) (c w : Word) (hI : L.Rom.ro
     CoreRef (internE (.lit (.natVal c.toNat))) a decH dn m vis fe M eb [w] m' := by
   have hpool : PoolOK m := hS.arena.1.lit.1
   unfold L.Rom.romLitW at hI
-  by_cases hlen : m.len64 (tierA 0 (m.top >>> 40)) ≤ (m.top &&& 1099511627775)
+  by_cases hlen : m.len64 (tierA POOL (m.top >>> 40)) ≤ (m.top &&& 1099511627775)
   · rw [ite_eq_left hlen] at hI; cases hI
   rw [ite_eq_right hlen] at hI
   by_cases hc : c = 0
@@ -288,9 +288,9 @@ end litc
 /-- The model of `str_ls1`: the handle `u` at the pool top (in the top's tier, relative to its
 base), the top moved past it, then `intern_ls(top, 1)`. -/
 def ls1W (p : Prog) (n : Nat) (m : Mem) (u : Word) : Option (Word × Mem) :=
-  if m.len64 (tierA 0 (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40 then none
+  if m.len64 (tierA POOL (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40 then none
   else match callW p n "intern_ls" [m.top, 1]
-      ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) u).set64 CTL 0 (m.top + 1)) with
+      ((m.set64 (tierA POOL (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) u).set64 CTL 0 (m.top + 1)) with
     | none => none
     | some (r, m') => some (r.headD 0, m')
 
@@ -301,19 +301,19 @@ theorem tag_sub_base' (x : Word) : x - (x >>> 40) <<< 40 = x &&& 1099511627775 :
 /-- **A one-word push at the top** (`POOL⟨⦃top⦄.tier⟩[top - ⦃top⦄.base] := v; CTL[0] := top + 1`,
 inside the top's tier array): the pool grew, and the new word is `v`. -/
 theorem Grows.push1t (m : Mem) (v : Word) (h : PoolOK m)
-    (hs : ¬ m.len64 (tierA 0 (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40) :
-    Grows m ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) v).set64 CTL 0
+    (hs : ¬ m.len64 (tierA POOL (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40) :
+    Grows m ((m.set64 (tierA POOL (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) v).set64 CTL 0
       (m.top + 1)) ∧
-    (vpool ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) v).set64 CTL 0
+    (vpool ((m.set64 (tierA POOL (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) v).set64 CTL 0
       (m.top + 1)))[m.top.toNat]? = some v ∧
-    ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) v).set64 CTL 0
+    ((m.set64 (tierA POOL (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) v).set64 CTL 0
       (m.top + 1)).top = m.top + 1 := by
   have h41 := h.top41
   have hsz := h.small.tier (m.top >>> 40)
   rw [tag_sub_base'] at hs ⊢
-  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
-  have hlt : (m.top &&& 1099511627775).toNat < (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hlt : (m.top &&& 1099511627775).toNat < (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     rw [UInt64.not_le, UInt64.lt_iff_toNat_lt, hlen] at hs; exact hs
   have hv := vpool_stidx0 m m.top v h41 hlt (by omega)
   have hg := Grows.write m _ 1 h (PFrame.set64 _ _ _ (PFrame.refl _))
@@ -430,11 +430,11 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (strLs1_spec p hp.strLs1 n _ u) h
   have hpool : PoolOK m := hS.arena.1.lit.1
   unfold ls1W at hW
-  by_cases hlen : m.len64 (tierA 0 (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40
+  by_cases hlen : m.len64 (tierA POOL (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40
   · simp only [hlen, ↓reduceIte] at hW; cases hW
   simp only [hlen, ↓reduceIte] at hW
   cases h1 : callW p n "intern_ls" [m.top, 1]
-      ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) u).set64 CTL 0
+      ((m.set64 (tierA POOL (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) u).set64 CTL 0
         (m.top + 1)) with
   | none => rw [h1] at hW; cases hW
   | some q =>
@@ -446,7 +446,7 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
   obtain ⟨hg, hpwv, htop⟩ := Grows.push1t m u hpool hlen
   have hK := CoreK.grow (dn := dn) (vis := vis) (fe := fe) (M := M) (eb := eb) (m₀ := m)
     ⟨hS, StackKept.refl _⟩ hg
-  obtain ⟨m₀, hm₀⟩ : ∃ m₀, m₀ = (m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40)
+  obtain ⟨m₀, hm₀⟩ : ∃ m₀, m₀ = (m.set64 (tierA POOL (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40)
       u).set64 CTL 0 (m.top + 1) := ⟨_, rfl⟩
   rw [← hm₀] at h1 hK hg hpwv htop
   have hq : SliceOK m₀ m.top 1 := SliceOK.fresh hg htop

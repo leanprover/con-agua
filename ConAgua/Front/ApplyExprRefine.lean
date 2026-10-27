@@ -505,9 +505,9 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
   split at hP
   · cases hP
   rename_i hle
-  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
-  have ht' : (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have ht' : (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     have := UInt64.not_lt.mp hle; rw [UInt64.le_iff_toNat_le, hlen] at this; exact this
   obtain ⟨F1, -, F4, F5, F6, F7, F8⟩ := lsLoopM_facts b.data m.top h41 m (c + 1) 0 m₂ hP
     (by simpa using ht') hsz

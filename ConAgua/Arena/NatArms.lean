@@ -254,8 +254,8 @@ def natPredArm (a : Nat) : AM (Option EIdx) := do
 
 /-- Pushing one limb at the top is growing the pool. -/
 theorem Grows.push1 (m : Mem) (t v : Word) (ht : t = m.top) (h : PoolOK m)
-    (hs : (t &&& 1099511627775).toNat < (m.arr64 (tierA 0 (t >>> 40))).size) :
-    Grows m ((m.set64 (tierA 0 (t >>> 40)) (t &&& 1099511627775) v).set64 CTL 0 (t + 1)) := by
+    (hs : (t &&& 1099511627775).toNat < (m.arr64 (tierA POOL (t >>> 40))).size) :
+    Grows m ((m.set64 (tierA POOL (t >>> 40)) (t &&& 1099511627775) v).set64 CTL 0 (t + 1)) := by
   subst ht
   have h41 := h.top41
   have hsz := h.small.tier (m.top >>> 40)
@@ -264,7 +264,7 @@ theorem Grows.push1 (m : Mem) (t v : Word) (ht : t = m.top) (h : PoolOK m)
     exact Agree.set _ _ _ _ _ (Agree.refl _ _) (Nat.le_refl _)
   · simp only [show (1 : Word).toNat = 1 from rfl]; omega
 grind_pattern [arena_grind] Grows.push1 =>
-  (m.set64 (tierA 0 (t >>> 40)) (t &&& 1099511627775) v).set64 CTL 0 (t + 1)
+  (m.set64 (tierA POOL (t >>> 40)) (t &&& 1099511627775) v).set64 CTL 0 (t + 1)
 
 section pred
 variable (p : Prog) (R : Mem → AState → Prop)

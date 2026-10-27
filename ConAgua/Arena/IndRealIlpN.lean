@@ -186,14 +186,14 @@ def digW : Nat → Mem → Word → Word → Word → Word → Option Mem
   | 0, _, _, _, _, _ => none
   | f + 1, m, pt, pb, j, x =>
     if pb + 4 < j then
-      digW f (m.set64 (tierA 0 pt) (j - 1) (48 + (x - div10W x * 10))) pt pb (j - 1) (div10W x)
+      digW f (m.set64 (tierA POOL pt) (j - 1) (48 + (x - div10W x * 10))) pt pb (j - 1) (div10W x)
     else some m
 
 theorem digW_stop (f : Nat) (m : Mem) (pt pb j x : Word) (h : ¬ pb + 4 < j) :
     digW (f + 1) m pt pb j x = some m := by
   simp only [digW, ite_eq_right h]
 theorem digW_step (f : Nat) (m : Mem) (pt pb j x : Word) (h : pb + 4 < j) : digW (f + 1) m pt pb j x =
-    digW f (m.set64 (tierA 0 pt) (j - 1) (48 + (x - div10W x * 10))) pt pb (j - 1) (div10W x) := by
+    digW f (m.set64 (tierA POOL pt) (j - 1) (48 + (x - div10W x * 10))) pt pb (j - 1) (div10W x) := by
   simp only [digW, ite_eq_left h]
 
 theorem digLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
@@ -210,8 +210,8 @@ theorem digLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
 
 /-- The four bytes `rec_` at `o`. -/
 def recIBytes (m : Mem) (o : Word) : Mem :=
-  (((m.set64 (tierA 0 (o >>> 40)) (o &&& 1099511627775) 114).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 1) 101).set64
-    (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 2) 99).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 3) 95
+  (((m.set64 (tierA POOL (o >>> 40)) (o &&& 1099511627775) 114).set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 1) 101).set64
+    (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 2) 99).set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 3) 95
 
 /-- `name_rec_i`'s body over its callees' runs. -/
 def nriW (p : Prog) (n : Nat) (m : Mem) (x i : Word) : Option (Word × Mem) :=
@@ -285,13 +285,13 @@ theorem sliceL_congr {p p' : Array Word} {o l : Nat} (h : ∀ t < l, p[o + t]? =
 array, keeps a growth a growth. -/
 theorem grows_pset_ti {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {t i x : Word}
     (ht : t.toNat ≤ 1) (hq : m₀.top.toNat ≤ t.toNat * 2 ^ 40 + i.toNat)
-    (hi : i.toNat < (m.arr64 (tierA 0 t)).size) :
-    Grows m₀ (m.set64 (tierA 0 t) i x) := by
+    (hi : i.toNat < (m.arr64 (tierA POOL t)).size) :
+    Grows m₀ (m.set64 (tierA POOL t) i x) := by
   have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.2.2.1; omega
   have hsz := pcap_tier m t hpc
   have hv := vpool_set64t m t i x ht hi (by omega)
-  have hne : tierA 0 t ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
-  have htop : (m.set64 (tierA 0 t) i x).top = m.top := L.Rom.top_set64_arr _ _ _ _ hne
+  have hne : tierA POOL t ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+  have htop : (m.set64 (tierA POOL t) i x).top = m.top := L.Rom.top_set64_arr _ _ _ _ hne
   obtain ⟨hf, ha, hle, hcap, hpe, htr, hin⟩ := hg
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [htop]; exact PFrame.set64 _ _ _ hf
@@ -307,17 +307,17 @@ digits of `x`; nothing else in the pool changes, the growth from `m₀` is kept.
 theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 41)
     (hT0 : m₀.top.toNat ≤ T.toNat) : ∀ (f : Nat) (m m' : Mem) (j x : Word),
     digW f m (T >>> 40) (T &&& 1099511627775) j x = some m' →
-    (T &&& 1099511627775).toNat + 4 ≤ j.toNat → j.toNat ≤ (m.arr64 (tierA 0 (T >>> 40))).size →
+    (T &&& 1099511627775).toNat + 4 ≤ j.toNat → j.toNat ≤ (m.arr64 (tierA POOL (T >>> 40))).size →
     Grows m₀ m →
     Grows m₀ m' ∧ m'.top = m.top ∧ pcap m' = pcap m ∧
-      (m'.arr64 (tierA 0 (T >>> 40))).size = (m.arr64 (tierA 0 (T >>> 40))).size ∧
+      (m'.arr64 (tierA POOL (T >>> 40))).size = (m.arr64 (tierA POOL (T >>> 40))).size ∧
       (∀ t, (t < T.toNat + 4 ∨ T.toNat + (j.toNat - (T &&& 1099511627775).toNat) ≤ t) → (vpool m')[t]? = (vpool m)[t]?) ∧
       sliceL (vpool m') (T.toNat + 4) (j.toNat - ((T &&& 1099511627775).toNat + 4)) =
         digsR (j.toNat - ((T &&& 1099511627775).toNat + 4)) x.toNat := by
   have hsplit := tag_split T
   have htier := tag_tier_le T hT
   have hidx := tag_idx_lt T
-  have hne : tierA 0 (T >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+  have hne : tierA POOL (T >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
   intro f
   induction f with
   | zero => intro m m' j x h; simp [digW] at h
@@ -338,7 +338,7 @@ theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 
         (by omega) (by omega)
       obtain ⟨hg', htop, hpc', hsz', hkeep, hsl⟩ := ih _ m' (j - 1) (div10W x) h (by omega)
         (by rw [size_set64]; omega) hg1
-      have htop1 : (m.set64 (tierA 0 (T >>> 40)) (j - 1) (48 + (x - div10W x * 10))).top = m.top :=
+      have htop1 : (m.set64 (tierA POOL (T >>> 40)) (j - 1) (48 + (x - div10W x * 10))).top = m.top :=
         L.Rom.top_set64_arr _ _ _ _ hne
       have haddr : (T >>> 40).toNat * 2 ^ 40 + (j - 1).toNat = T.toNat + (j.toNat - 1 - (T &&& 1099511627775).toNat) := by
         omega
@@ -369,19 +369,19 @@ theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 
 
 /-- **The bytes `rec_` after the reserved room** grow the pool. -/
 theorem recIBytes_ok (m : Mem) (hpool : PoolOK m) (R : Word) (hR : 4 ≤ R.toNat)
-    (hroom : (m.top &&& 1099511627775).toNat + R.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+    (hroom : (m.top &&& 1099511627775).toNat + R.toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size) :
     Grows m (recIBytes (m.set64 CTL 0 (m.top + R)) m.top) ∧
       (recIBytes (m.set64 CTL 0 (m.top + R)) m.top).top = m.top + R ∧
-      ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 (tierA 0 (m.top >>> 40))).size =
-        (m.arr64 (tierA 0 (m.top >>> 40))).size ∧
+      ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 (tierA POOL (m.top >>> 40))).size =
+        (m.arr64 (tierA POOL (m.top >>> 40))).size ∧
       sliceL (vpool (recIBytes (m.set64 CTL 0 (m.top + R)) m.top)) m.top.toNat 4 = [114, 101, 99, 95] := by
   have hc := hpool.2.1
   have h41 := hpool.top41
   have hsz := hpool.small.tier (m.top >>> 40)
   have hsplit := tag_split m.top
   have htier := tag_tier_le m.top h41
-  have hne : tierA 0 (m.top >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
-  have hX : (m.set64 CTL 0 (m.top + R)).arr64 (tierA 0 (m.top >>> 40)) = m.arr64 (tierA 0 (m.top >>> 40)) :=
+  have hne : tierA POOL (m.top >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+  have hX : (m.set64 CTL 0 (m.top + R)).arr64 (tierA POOL (m.top >>> 40)) = m.arr64 (tierA POOL (m.top >>> 40)) :=
     Mem.arr64_set64_ne _ _ _ _ _ hne
   have e1 : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (m.top + 2).toNat = m.top.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
@@ -399,8 +399,8 @@ theorem recIBytes_ok (m : Mem) (hpool : PoolOK m) (R : Word) (hR : 4 ≤ R.toNat
     rw [L.Rom.top_set64_arr _ _ _ _ hne, L.Rom.top_set64_arr _ _ _ _ hne, L.Rom.top_set64_arr _ _ _ _ hne,
       L.Rom.top_set64_arr _ _ _ _ hne]
     exact Mem.top_set64 _ _ hc
-  have hsz' : ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 (tierA 0 (m.top >>> 40))).size =
-      (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hsz' : ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 (tierA POOL (m.top >>> 40))).size =
+      (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [recIBytes, size_set64, hX]
   refine ⟨g4, htop, hsz', ?_⟩
   have hv : vpool (recIBytes (m.set64 CTL 0 (m.top + R)) m.top) =

@@ -58,7 +58,7 @@ theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v :
     DK m (m.set64 b i v) :=
   ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hd), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hq)⟩
 
-theorem DK.tset64 (m : Mem) (t i v : Word) : DK m (m.set64 (tierA 0 t) i v) :=
+theorem DK.tset64 (m : Mem) (t i v : Word) : DK m (m.set64 (tierA POOL t) i v) :=
   ⟨arr64_set64_tier_ne _ _ _ _ _ (by decide), arr64_set64_tier_ne _ _ _ _ _ (by decide)⟩
 
 theorem DK.ofAbove {m m' : Mem} (h : Above64 m m') : DK m m' :=

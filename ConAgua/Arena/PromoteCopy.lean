@@ -37,7 +37,7 @@ def alloc0Mem (m : Mem) (l : Word) : Mem :=
 
 /-- The model of `pool_copy0`'s loop: `POOL⦃o + j⦄` to `POOL⟨0⟩[q + j]`, `j` up to `l`. -/
 def cp0W (m : Mem) (q o l j : Word) : Mem :=
-  if j < l then cp0W (m.set64 (tierA 0 0) (q + j) (prd m (o + j))) q o l (j + 1) else m
+  if j < l then cp0W (m.set64 (tierA POOL 0) (q + j) (prd m (o + j))) q o l (j + 1) else m
 termination_by l.toNat - j.toNat
 decreasing_by
   have : j.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹j < l›
@@ -50,7 +50,7 @@ theorem cp0W_end (m : Mem) (q o l j : Word) (hj : ¬ j < l) : cp0W m q o l j = m
   rw [cp0W]; simp only [hj, ↓reduceIte]
 
 theorem cp0W_step (m m' : Mem) (q o l j j' : Word) (hj : j < l) (hj' : j' = j + 1)
-    (hm' : m' = m.set64 (tierA 0 0) (q + j) (prd m (o + j))) :
+    (hm' : m' = m.set64 (tierA POOL 0) (q + j) (prd m (o + j))) :
     cp0W m q o l j = cp0W m' q o l j' := by
   subst hj' hm'
   rw [cp0W]; simp only [hj, ↓reduceIte]
@@ -84,7 +84,7 @@ theorem copy0Loop_step_spec (n : Nat) (s₀ : St) :
 
 /-- `pool_alloc0`'s checks: the slice fits in tier 0 above the allocation point. -/
 def Alloc0OK (m : Mem) (l : Word) : Prop :=
-  alloc0Q m ≤ m.len64 (tierA 0 0) ∧ l ≤ m.len64 (tierA 0 0) - alloc0Q m ∧
+  alloc0Q m ≤ m.len64 (tierA POOL 0) ∧ l ≤ m.len64 (tierA POOL 0) - alloc0Q m ∧
     (m.top >>> 40 ≠ 0 → 0 < (m.arr64 PT0).size)
 
 instance (m : Mem) (l : Word) : Decidable (Alloc0OK m l) := by unfold Alloc0OK; infer_instance
@@ -270,7 +270,7 @@ theorem ArenaD.grow0 {m m' : Mem} {a : AState} (h : Grow0 m m') (hD : ArenaD m a
 
 /-! ## `pool_copy0`'s memory -/
 
-theorem tierA_00 : tierA 0 0 = POOL := rfl
+theorem tierA_00 : tierA POOL 0 = POOL := rfl
 
 /-- A tier-1 word is not moved by a tier-0 store. -/
 theorem prd_set64_pool (m : Mem) (i v : Word) (x : Nat) (hx : 2 ^ 40 ≤ x) (hx' : x < 2 ^ 41) :
@@ -367,7 +367,7 @@ theorem copy0_facts (m : Mem) (o l : Word) (hp : PoolOK m) (ht : m.top >>> 40 �
   obtain ⟨hA1, hA2, hA3⟩ := hA
   have hpt := hA3 ht
   rw [hq, tierA_00] at hA1 hA2
-  have hlen := len64_toNat' m (tierA 0 0) (by rw [tierA_00]; have := hsm.1; omega)
+  have hlen := len64_toNat' m (tierA POOL 0) (by rw [tierA_00]; have := hsm.1; omega)
   rw [tierA_00] at hlen
   have hq1 := UInt64.le_iff_toNat_le.mp hA1
   rw [hlen] at hq1

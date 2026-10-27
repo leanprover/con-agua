@@ -121,14 +121,14 @@ def okRes (nx : Word) (m : Mem) : List Word × Mem := ([1, nx], m)
 def strK (idx a o : Word) : Option (Word × Mem) → Option Mem
   | none => none
   | some (l, m₁) =>
-    if m₁.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
+    if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else applyNStrW m₁ idx a o l
 
 @[arena_grind =] theorem strK_none (idx a o : Word) : strK idx a o none = none := rfl
 @[arena_grind =] theorem strK_some (idx a o l : Word) (m₁ : Mem) : strK idx a o (some (l, m₁)) =
-    if m₁.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
+    if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else applyNStrW m₁ idx a o l := rfl
 
 theorem strK_intern {idx a o l : Word} {m₁ m' : Mem} (h : strK idx a o (some (l, m₁)) = some m') :
