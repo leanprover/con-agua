@@ -82,3 +82,54 @@ lists them, and `AsmPart4`…`9`, whose imports the generator writes).
 | `Checker.ProgSkt` | – | 42 s (peak 11 GB) |
 
 `checker.s` and `pins.bin` are unchanged (`asm_file.py --check`).
+
+### Single slow proofs in the `Arena` families (batch 3)
+
+Most were `grind` searches over goals whose locals were still `setLoc` chains. Three fixes, in most
+places together:
+
+1. **Loads as `rdW`.** `vcgen`'s own unfolding of `ld64` leaves each read as `a[i.toNat]'h`, a bound
+   proof inside the term, so `simp` could not normalize the locals. `ld64_rd_spec`
+   (`Arena/LdRd.lean`) answers `rdW` with no proof inside. (The import gate cannot see that
+   `vcgen [ld64_rd_spec]` needs the module: the proof term does not keep the name; allowlisted.)
+2. **Plain `vcgen` instead of `sym … => vcgen … <;> finish`** (the PLAN recipe), then
+   `subst_vars` and `simp only [St.setLoc_loc, …]`; `L.evalC_spec` and `Cond.pval` for long `||`
+   conditions.
+3. **`simp only [LocEq] at *`, then `simp only [*, St.setLoc_loc, …] at *` before `grind`**: the
+   callee posts rewrite the locals, and `grind` no longer walks `LocEq` chains (`ctlW_spec` 32 →
+   4 s; `tkh_spec`, `cg_specW`, `classFeRGo_spec`, `ci_specW` 3–4×).
+
+Special cases: `natOpDeps_specW` (32 goals each re-simplified the 16 pin reads): the body is cut
+after the reads (`seqTake`/`seqDrop`, `seqTake_drop`) and the dispatch has its own spec over named
+locals; `natOpResultL_refinesR` (160 goals carrying the arms structure into `grind`): `clear` it,
+and `rdW_PINS_ofNat` turns pin reads into `pinW`.
+
+| module (cold build) | before | after |
+|---|---:|---:|
+| `Arena.DeclNatDeps` | 30 s | 16 s |
+| `Arena.RecGenSpec.Rec3TmdWDecB` | 37 s | 19 s |
+| `Arena.RecClassSpec.PrefixBinders` | 38 s | 26 s |
+| `Arena.RecClassSpec.MnW` | 27 s | 15 s |
+| `Arena.IndPartsSpec.BlockRecNamesUnreserved` | 19 s | 4 s |
+| `Arena.StubNamesRefine` | 29 s | 2 s |
+| `Arena.PinsNatOp` | 25 s | 13 s |
+| `Arena.RecCheckSpec.Tka` | 48 s | 12 s |
+| `Arena.IndSumSpec.CtlW` | 40 s | 7 s |
+| `Arena.StrLitChar` | 50 s | 5 s |
+| `Arena.DeclDivModSpec.SubstConst0List` | 48 s | 4 s |
+| `Rom.CIReadRefW` | 48 s | 8 s |
+| `Arena.RecGenSpec.ClassFeR` | 56 s | 10 s |
+| `Arena.RecClassSpec.CrW` | 51 s | 22 s |
+| `Arena.IndSumSpec.McGoStep` | 41 s | 14 s |
+
+Left: `l_model` steps in these modules (`classGenMinorTyBody_spec.step1` 7 s,
+`ruleBody_spec.step1` 6 s), `natOpDeps_run`'s kernel check (6–8 s, from its `simp` over 15 nested
+`if`s), `classReadRecCls_spec` (10 s), `tka_spec` (14 s).
+
+### `IndArmClosed` in three modules
+
+The kernel checks of one module run one after another (`addDecl` waits for the checks before it;
+measured: six `decide +kernel` theorems of 21 s each take 130 s in one file, with
+`Elab.async` too). `IndArmClosed`'s nine arms (~100 s of kernel checks) are now in
+`IndArmClosed1`…`3`, three arms each, which Lake builds in parallel; `IndArmClosed` keeps the
+array tests `tA`/`tC`.

@@ -2,6 +2,7 @@ import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.IndReal
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 
@@ -301,10 +302,12 @@ theorem blockShapeWithSort_specC (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        pinWord_specV p hpw n, hcR n "lvl_eq_c", iwAlloc_specW p ha n] <;>
-      finish (gen := 20) [wsWrites, cpyIW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64,
+      pinWord_specV p hpw n, hcR n "lvl_eq_c", iwAlloc_specW p ha n]
+    all_goals subst_vars
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, wsWrites, cpyIW]
 
 end spec
 
