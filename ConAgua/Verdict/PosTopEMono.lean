@@ -1,7 +1,5 @@
 import ConAgua.L.FuelMono
 import ConAgua.L.ErrSpec
-import ConAgua.Compiler.RunEq
-import ConAgua.L.Notation
 
 /-!
 # More fuel, the same error of class `1`/`2` (lane `verdicts-b`, helper `ia2`, fork `top`)

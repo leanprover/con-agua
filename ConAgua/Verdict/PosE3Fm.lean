@@ -1,5 +1,7 @@
 import ConAgua.Arena.IndPos2
 import ConAgua.L.ErrSpec
+import ConAgua.Verdict.PosE
+import ConAgua.Verdict.DeclValE
 
 /-!
 # `nest_fields`' error model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
