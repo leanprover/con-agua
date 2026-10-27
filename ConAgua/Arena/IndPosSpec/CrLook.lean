@@ -19,7 +19,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem dpMR_mfr {S0 : List TieredArray} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : DPM ∉ S0)
+theorem dpMR_mfr {S0 : List TieredArray} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : (DPM : TieredArray) ∉ S0)
     (hT : (206 : Word) ∉ T0) {mp : Std.HashMap EIdx Nat} (h : dpMR m mp) : dpMR m' mp := by
   obtain ⟨A, C, f, hA, hC⟩ := hf.memo DPM 206 (by decide) (by decide) hS hT
   exact memoRG_frame dpSch dpSch_wf bmKey (fun w : Word => w.toNat) A C hA hC m m' f mp h
