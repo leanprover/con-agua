@@ -111,7 +111,7 @@ theorem tierA_lt (a : Nat) (ha : a < 256) (t : Word) : tierA a t < 512 := by
 theorem tierA_cases' (a : Nat) (t : Word) : tierA a t = a ∨ tierA a t = tier1 a := by
   have := and_one_le t
   rw [tierA_val]
-  rcases (show (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 by omega) with h | h <;> simp [h]
+  rcases (show (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 by omega) with h | h <;> simp [h] <;> rfl
 
 theorem tierA_inj {a b : Nat} (ha : a < 256) (hb : b < 256) {t u : Word} (ht : t ≤ 1)
     (hu : u ≤ 1) : tierA a t = tierA b u ↔ a = b ∧ t = u := by
@@ -131,7 +131,7 @@ theorem tierA_ne {a b : Nat} (ha : a < 256) (hb : b < 256) (h : a ≠ b) (t u : 
     tierA a t ≠ tierA b u := by
   intro e
   rcases tierA_cases' a t with e1 | e1 <;> rcases tierA_cases' b u with e2 | e2 <;>
-    rw [e1, e2] at e <;> (have e' : (_ : Nat) = _ := e; omega)
+    rw [e1, e2] at e <;> (have e' : (_ : Nat) = _ := e; (try simp only [tier1, tierOff] at e'); omega)
 
 /-- A plain array below `256` is neither tier of another such array. -/
 theorem ne_tierA {a b : Nat} (ha : a < 256) (hb : b < 256) (h : a ≠ b) (t : Word) :
