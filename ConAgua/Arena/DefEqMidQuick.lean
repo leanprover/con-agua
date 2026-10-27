@@ -546,10 +546,8 @@ theorem coreRef_redec {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {de
 theorem tag_bne (x y : Word) (hx : HW x) (hy : HW y) :
     ((decE x).tag != (decE y).tag) = decide (x >>> 28 ≠ y >>> 28) := by
   rw [decE_tag x hx, decE_tag y hy]
-  have h1 : (x >>> 28).toNat < 2 ^ 32 := by
-    rw [UInt64.toNat_shiftRight]; unfold HW at hx; simp; omega
-  have h2 : (y >>> 28).toNat < 2 ^ 32 := by
-    rw [UInt64.toNat_shiftRight]; unfold HW at hy; simp; omega
+  have h1 : (x >>> 28).toNat < 2 ^ 32 := by have := shr28_lt x hx; omega
+  have h2 : (y >>> 28).toNat < 2 ^ 32 := by have := shr28_lt y hy; omega
   rw [Bool.eq_iff_iff]
   simp only [bne_iff_ne, ne_eq, decide_eq_true_eq]
   constructor

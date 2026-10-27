@@ -189,8 +189,7 @@ theorem derAt_proj (hg : h >>> 28 = 9) : tb.derAt (decE h) = tb.projs.derAt (idx
 theorem derAt_other (h0 : h >>> 28 ≠ 0) (h1 : h >>> 28 ≠ 1) (h2 : h >>> 28 ≠ 2)
     (h3 : h >>> 28 ≠ 3) (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5) (h6 : h >>> 28 ≠ 6)
     (h7 : h >>> 28 ≠ 7) (h8 : h >>> 28 ≠ 8) (h9 : h >>> 28 ≠ 9) : tb.derAt (decE h) = 0 := by
-  have hl : (h >>> 28).toNat < 16 := by
-    simp only [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; simp; omega
+  have hl : (h >>> 28).toNat < 16 := shr28_lt h hh
   have ne : ∀ k : Nat, h >>> 28 ≠ UInt64.ofNat k → (h >>> 28).toNat ≠ k := by
     intro k hk e; apply hk; apply UInt64.toNat_inj.mp; simp [e]; omega
   have := ne 0 h0; have := ne 1 h1; have := ne 2 h2; have := ne 3 h3; have := ne 4 h4
