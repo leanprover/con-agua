@@ -25,29 +25,49 @@ open L L.Compiler
 /-- What `ca_check_seq`'s layout needs of its parameters: `out`, `hdrf`, `ctlf` are tier-0 numbers
 of today's layout (below `tierOff`), so that they name the arrays `↑out`, `↑hdrf`, `↑ctlf`; and the
 minimum lengths (`Tab.min64`) hold in it: `out` and `ctlf` (no memory) have none, `hdrf` (`hw`
-words) one of at most `hw`. -/
+words) one of at most `hw`; none of the three is the table-relative array (`Tab.tbl64`). -/
 def seqParamsOk (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) : Bool :=
   (decide (out < tab.nw) && decide (hdrf < tab.nw) && decide (hdrf ≠ out) && decide (hdrf ≠ ctlf) &&
     decide (hw ≤ abiWords) && decide (out < tierOff) && decide (hdrf < tierOff) && decide (ctlf < tierOff)) &&
-  (decide (tab.min64 out = 0) && decide (tab.min64 ctlf = 0) && decide (tab.min64 hdrf ≤ hw))
+  (decide (tab.min64 out = 0) && decide (tab.min64 ctlf = 0) && decide (tab.min64 hdrf ≤ hw)) &&
+  ((tab.tbl64 out).isNone && (tab.tbl64 hdrf).isNone && (tab.tbl64 ctlf).isNone)
 
 theorem seqParamsOk_spec {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat}
     (h : seqParamsOk tab out hdrf ctlf hw = true) :
     out < tab.nw ∧ hdrf < tab.nw ∧ hdrf ≠ out ∧ hdrf ≠ ctlf ∧ hw ≤ abiWords := by
   simp only [seqParamsOk, Bool.and_eq_true, decide_eq_true_eq] at h
-  exact ⟨h.1.1.1.1.1.1.1.1, h.1.1.1.1.1.1.1.2, h.1.1.1.1.1.1.2, h.1.1.1.1.1.2, h.1.1.1.1.2⟩
+  exact ⟨h.1.1.1.1.1.1.1.1.1, h.1.1.1.1.1.1.1.1.2, h.1.1.1.1.1.1.1.2, h.1.1.1.1.1.1.2, h.1.1.1.1.1.2⟩
 
 theorem seqParamsOk_tier {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat}
     (h : seqParamsOk tab out hdrf ctlf hw = true) :
     out < tierOff ∧ hdrf < tierOff ∧ ctlf < tierOff := by
   simp only [seqParamsOk, Bool.and_eq_true, decide_eq_true_eq] at h
-  exact ⟨h.1.1.1.2, h.1.1.2, h.1.2⟩
+  exact ⟨h.1.1.1.1.2, h.1.1.1.2, h.1.1.2⟩
 
 theorem seqParamsOk_min {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat}
     (h : seqParamsOk tab out hdrf ctlf hw = true) :
     tab.min64 out = 0 ∧ tab.min64 ctlf = 0 ∧ tab.min64 hdrf ≤ hw := by
   simp only [seqParamsOk, Bool.and_eq_true, decide_eq_true_eq] at h
+  exact ⟨h.1.2.1.1, h.1.2.1.2, h.1.2.2⟩
+
+theorem seqParamsOk_tbl {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat}
+    (h : seqParamsOk tab out hdrf ctlf hw = true) :
+    tab.tbl64 out = none ∧ tab.tbl64 hdrf = none ∧ tab.tbl64 ctlf = none := by
+  simp only [seqParamsOk, Bool.and_eq_true, Option.isNone_iff_eq_none] at h
   exact ⟨h.2.1.1, h.2.1.2, h.2.2⟩
+
+/-- An array that is not `out`, `hdrf`, `ctlf` but the table-relative one. -/
+theorem seq_tbl_ne {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (h : seqParamsOk tab out hdrf ctlf hw = true)
+    {p c : Nat} (hc : tab.tbl64 (tab.wAt p) = some c) :
+    tab.wposInv p ≠ out ∧ tab.wposInv p ≠ hdrf ∧ tab.wposInv p ≠ ctlf := by
+  obtain ⟨to, th, tc⟩ := seqParamsOk_tier h
+  obtain ⟨no, nh, nc⟩ := seqParamsOk_tbl h
+  have hw : ∀ a : ArrId, a < tierOff → tab.tbl64 (TieredArray.t0 a) = none → tab.wposInv p ≠ a := by
+    intro a ha hn e
+    have : tab.wAt p = TieredArray.t0 a := by
+      rw [← (curNum_eq_iff ha)]; rw [tab.curNum_wAt, e]
+    rw [this, hn] at hc; cases hc
+  exact ⟨hw out to no, hw hdrf th nh, hw ctlf tc nc⟩
 
 /-- The slot word array `a` lives in: `hdrf` in `out`'s. -/
 def seqSlot (out hdrf a : Nat) : Nat := if a = hdrf then out else a
@@ -63,9 +83,9 @@ def seqLayout (tab : Tab) (base : Nat) (out hdrf ctlf : ArrId) (hw : Nat) : L.Co
   b8 _ := 0
   s8 _ := 0
   b64 p := if tab.wposInv p = out ∨ tab.wposInv p = ctlf then 0
-    else base + abiSlot * abiSlot64 tab (seqSlot out hdrf (tab.wposInv p))
+    else if tab.wposInv p = hdrf then base + abiSlot * abiSlot64 tab out else base + abiOff tab p
   s64 p := if tab.wposInv p = out ∨ tab.wposInv p = ctlf then 0
-    else if tab.wposInv p = hdrf then hw else abiWords
+    else if tab.wposInv p = hdrf then hw else abiSz tab (tab.wAt p)
   lo := base + abiSlot
   hi := base + abiSlot + abiStack
   nargs := 0
@@ -81,35 +101,49 @@ variable (tab : Tab) (base : Nat) (out hdrf ctlf : ArrId) (hw : Nat)
 @[simp] theorem seqLayout_nargs : (seqLayout tab base out hdrf ctlf hw).nargs = 0 := rfl
 theorem seqLayout_b64 (p : Nat) : (seqLayout tab base out hdrf ctlf hw).b64 p =
     if tab.wposInv p = out ∨ tab.wposInv p = ctlf then 0
-    else base + abiSlot * abiSlot64 tab (seqSlot out hdrf (tab.wposInv p)) := by simp only [seqLayout]
+    else if tab.wposInv p = hdrf then base + abiSlot * abiSlot64 tab out else base + abiOff tab p := by
+  simp only [seqLayout]
 theorem seqLayout_s64 (p : Nat) : (seqLayout tab base out hdrf ctlf hw).s64 p =
     if tab.wposInv p = out ∨ tab.wposInv p = ctlf then 0
-    else if tab.wposInv p = hdrf then hw else abiWords := by simp only [seqLayout]
+    else if tab.wposInv p = hdrf then hw else abiSz tab (tab.wAt p) := by simp only [seqLayout]
 end
 
 section
 variable {tab : Tab} {base : Nat} {out hdrf ctlf : ArrId} {hw : Nat}
 
 /-- A byte at descriptor position `p` (word array number `a = wposInv p`) is in slot
-`abiSlot64 (seqSlot a)`; `a` has memory. -/
+`abiSlot64 (seqSlot a)`, or (the table-relative array) in `InTbl`; `a` has memory. -/
 theorem seq_in64 (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf ctlf hw = true)
     {p x : Nat} (hp' : p < tab.nw) (h : (seqLayout tab base out hdrf ctlf hw).In64 p x) :
-    ¬ (tab.wposInv p = out ∨ tab.wposInv p = ctlf) ∧ seqSlot out hdrf (tab.wposInv p) < tab.nw ∧
-      InSlot base (abiSlot64 tab (seqSlot out hdrf (tab.wposInv p))) x := by
+    ¬ (tab.wposInv p = out ∨ tab.wposInv p = ctlf) ∧
+      ((seqSlot out hdrf (tab.wposInv p) < tab.nw ∧
+        InSlot base (abiSlot64 tab (seqSlot out hdrf (tab.wposInv p))) x ∧
+        (tab.wposInv p ≠ hdrf → tab.tbl64 (tab.wAt p) = none)) ∨
+      (∃ c, tab.tbl64 (tab.wAt p) = some c ∧ InTbl tab base x)) := by
   obtain ⟨hnb, -, -⟩ := abiTabOk_spec hok
   obtain ⟨hout, hhdr, -, -, hhw⟩ := seqParamsOk_spec hp
-  unfold Layout.In64 at h
-  rw [seqLayout_b64, seqLayout_s64] at h
+  obtain ⟨h1, h2⟩ := h
+  rw [seqLayout_b64] at h1; rw [seqLayout_b64, seqLayout_s64] at h2
   have ha := tab.wposInv_ltN hp'
-  generalize tab.wposInv p = a at h ha ⊢
-  by_cases hs : a = out ∨ a = ctlf
-  · simp only [hs, ite_true] at h; omega
-  · simp only [hs, ite_false] at h
-    refine ⟨hs, seqSlot_lt hout ha, ?_⟩
-    have hle : (if a = hdrf then hw else abiWords) ≤ abiWords := by split <;> omega
-    unfold InSlot
-    simp only [abiWords, abiSlot] at hle h ⊢
-    omega
+  by_cases hs : tab.wposInv p = out ∨ tab.wposInv p = ctlf
+  · simp only [hs, ite_true] at h1 h2; omega
+  · simp only [hs, ite_false] at h1 h2
+    refine ⟨hs, ?_⟩
+    by_cases hh : tab.wposInv p = hdrf
+    · simp only [hh, ite_true] at h1 h2
+      refine .inl ⟨by simp only [seqSlot, hh, ite_true]; exact hout, ?_, fun e => absurd hh e⟩
+      simp only [seqSlot, hh, ite_true]
+      unfold InSlot; simp only [abiSlot, abiWords] at h1 h2 hhw ⊢; omega
+    · simp only [hh, ite_false] at h1 h2
+      cases hc : tab.tbl64 (tab.wAt p) with
+      | none =>
+        rw [abiOff_slot hc] at h1 h2; rw [abiSz_slot hc] at h2
+        refine .inl ⟨seqSlot_lt hout ha, ?_, fun _ => rfl⟩
+        simp only [seqSlot, hh, ite_false]
+        unfold InSlot; simp only [abiSlot, abiWords] at h1 h2 ⊢; omega
+      | some c =>
+        rw [abiOff_tbl hc] at h1 h2; rw [abiSz_tbl hc] at h2
+        exact .inr ⟨c, rfl, abiTabOk_inTbl hok hc h1 h2⟩
 
 /-- Table bytes are in slot `0`. -/
 theorem seq_inTab (hok : abiTabOk tab = true) {x : Nat} (h : (seqLayout tab base out hdrf ctlf hw).InTab x) :
@@ -130,15 +164,16 @@ theorem seq_notIn8 {a x : Nat} : ¬ (seqLayout tab base out hdrf ctlf hw).In8 a 
 
 theorem seq_inArr (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf ctlf hw = true) {x : Nat}
     (h : (seqLayout tab base out hdrf ctlf hw).InArr x) :
-    ∃ j, 2 ≤ j ∧ j < 2 + tab.nw ∧ InSlot base j x := by
+    (∃ j, 2 ≤ j ∧ j < 2 + tab.nw ∧ InSlot base j x) ∨ InTbl tab base x := by
   obtain ⟨hnb, -, -⟩ := abiTabOk_spec hok
   rcases h with ⟨a, _, h⟩ | ⟨a, ha, h⟩
   · exact absurd h seq_notIn8
   · simp only [seqLayout_tab] at ha
-    obtain ⟨-, hlt, hs⟩ := seq_in64 hok hp ha h
-    have hj : abiSlot64 tab (seqSlot out hdrf (tab.wposInv a)) < 2 + tab.nw := by
-      simp only [abiSlot64, hnb]; omega
-    exact ⟨abiSlot64 tab (seqSlot out hdrf (tab.wposInv a)), by simp only [abiSlot64]; omega, hj, hs⟩
+    obtain ⟨-, ⟨hlt, hs, -⟩ | ⟨-, -, ht⟩⟩ := seq_in64 hok hp ha h
+    · have hj : abiSlot64 tab (seqSlot out hdrf (tab.wposInv a)) < 2 + tab.nw := by
+        simp only [abiSlot64, hnb]; omega
+      exact .inl ⟨abiSlot64 tab (seqSlot out hdrf (tab.wposInv a)), by simp only [abiSlot64]; omega, hj, hs⟩
+    · exact .inr ht
 
 /-- A byte outside the region is in no part of the layout. -/
 theorem seq_out (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf ctlf hw = true)
@@ -151,9 +186,10 @@ theorem seq_out (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf ctlf 
   · have h1 := seq_inStack h
     have := h1.lt (n := 2 + tab.nw) (by omega)
     unfold InSlot at h1; omega
-  · obtain ⟨j, -, hj, h1⟩ := seq_inArr hok hp h
-    have := h1.lt hj
-    unfold InSlot at h1; omega
+  · rcases seq_inArr hok hp h with ⟨j, -, hj, h1⟩ | ⟨h1, h2⟩
+    · have := h1.lt hj
+      unfold InSlot at h1; omega
+    · simp only [hn, abiSlot] at hneed; omega
   · have h1 := (seq_inTab hok h).1
     have := h1.lt (n := 2 + tab.nw) (by omega)
     unfold InSlot at h1; omega
@@ -169,15 +205,19 @@ theorem seq_save (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf ctlf
   refine ⟨by omega, by omega, fun h => ?_, fun h => ?_⟩
   · have := seq_inStack h
     unfold InSlot abiSlot at this; omega
-  · obtain ⟨j, hj, -, h3⟩ := seq_inArr hok hp h
-    have : abiSlot * 2 ≤ abiSlot * j := Nat.mul_le_mul_left _ hj
-    unfold InSlot at h3; simp only [abiSlot] at this h3; omega
+  · rcases seq_inArr hok hp h with ⟨j, hj, -, h3⟩ | ⟨h3, -⟩
+    · have : abiSlot * 2 ≤ abiSlot * j := Nat.mul_le_mul_left _ hj
+      unfold InSlot at h3; simp only [abiSlot] at this h3; omega
+    · omega
 
 theorem seqLayout_ok (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf ctlf hw = true)
     (hfit : base + abiNeed tab < 2 ^ 64) : (seqLayout tab base out hdrf ctlf hw).Ok := by
   obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
   obtain ⟨hout, hhdr, hho, hhc, hhw⟩ := seqParamsOk_spec hp
   have hn : abiNeed tab = abiSlot * (2 + tab.nw) := by simp [abiNeed, hnb]
+  have hslot : ∀ j, j < 2 + tab.nw → base + abiSlot * j + abiSlot < 2 ^ 64 := fun j hj => by
+    have := (show InSlot base j (base + abiSlot * j) by unfold InSlot; simp only [abiSlot]; omega).lt hj
+    simp only [hn, abiSlot] at hfit this ⊢; omega
   constructor
   · simp only [Layout.tabEnd, seqLayout_T, seqLayout_tab, seqLayout_nargs]
     simp only [hn, abiSlot] at hfit; omega
@@ -188,43 +228,53 @@ theorem seqLayout_ok (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf 
     simp only [seqLayout_tab] at hp'
     rw [seqLayout_b64, seqLayout_s64]
     have ha := tab.wposInv_ltN hp'
-    generalize tab.wposInv p = a at ha ⊢
     split
     · simp
-    · have hs : seqSlot out hdrf a < tab.nw := seqSlot_lt hout ha
-      have hle : (if a = hdrf then hw else abiWords) ≤ abiWords := by split <;> omega
-      have hj : abiSlot64 tab (seqSlot out hdrf a) < 2 + tab.nw := by
-        have := hs; simp only [abiSlot64, hnb]; omega
-      have := (show InSlot base (abiSlot64 tab (seqSlot out hdrf a)) (base + abiSlot * abiSlot64 tab (seqSlot out hdrf a)) by
-        unfold InSlot; simp only [abiSlot]; omega).lt hj
-      simp only [hn, abiSlot, abiWords] at hfit hle this ⊢
-      omega
+    · split
+      · have hj : abiSlot64 tab out < 2 + tab.nw := by
+          have ho : @LT.lt Nat _ out tab.nw := hout; simp only [abiSlot64, hnb]; omega
+        have := hslot _ hj; simp only [abiSlot, abiWords] at this hhw ⊢; omega
+      · cases hc : tab.tbl64 (tab.wAt p) with
+        | none =>
+          rw [abiOff_slot hc, abiSz_slot hc]
+          have hj : abiSlot64 tab (tab.wposInv p) < 2 + tab.nw := by simp only [abiSlot64, hnb]; omega
+          have := hslot _ hj; simp only [abiSlot, abiWords] at this ⊢; omega
+        | some c =>
+          rw [abiOff_tbl hc, abiSz_tbl hc]
+          have := abiTabOk_tbl hok hc; simp only [hn, abiSlot] at hfit; omega
   · intro x h1 h2
     exact absurd (InSlot.eq (seq_inTab hok h1).1 (seq_inStack h2)) (by omega)
   · intro x h1 h2
-    obtain ⟨j, hj, -, hs⟩ := seq_inArr hok hp h2
-    exact absurd (InSlot.eq (seq_inTab hok h1).1 hs) (by omega)
+    rcases seq_inArr hok hp h2 with ⟨j, hj, -, hs⟩ | ht
+    · exact absurd (InSlot.eq (seq_inTab hok h1).1 hs) (by omega)
+    · unfold Layout.InTab Layout.tabEnd at h1
+      simp only [seqLayout_T, seqLayout_tab, seqLayout_nargs] at h1
+      unfold InTbl at ht; omega
   · intro x h1 h2
-    obtain ⟨j, hj, -, hs⟩ := seq_inArr hok hp h2
-    exact absurd (InSlot.eq (seq_inStack h1) hs) (by omega)
+    rcases seq_inArr hok hp h2 with ⟨j, hj, -, hs⟩ | ht
+    · exact absurd (InSlot.eq (seq_inStack h1) hs) (by omega)
+    · exact ht.not_slot (Nat.le_refl _) (seq_inStack h1)
   · intro a _ b _ _ x h; exact absurd h seq_notIn8
   · intro p hpa q hqb hpq x h1 h2
     simp only [seqLayout_tab] at hpa hqb
-    obtain ⟨ha', hsa, s1⟩ := seq_in64 hok hp hpa h1
-    obtain ⟨hb', hsb, s2⟩ := seq_in64 hok hp hqb h2
-    have hab : tab.wposInv p ≠ tab.wposInv q := fun e => hpq (by
-      rw [← tab.wpos_wposInv hpa, ← tab.wpos_wposInv hqb, e])
-    generalize tab.wposInv p = a at ha' hsa s1 hab
-    generalize tab.wposInv q = b at hb' hsb s2 hab
-    have e := InSlot.eq s1 s2
-    simp only [abiSlot64] at e
-    have e' : seqSlot out hdrf a = seqSlot out hdrf b := by omega
-    unfold seqSlot at e'
-    by_cases h1 : a = hdrf <;> by_cases h2 : b = hdrf
-    · exact hab (h1.trans h2.symm)
-    · rw [ite_eq_left h1, ite_eq_right h2] at e'; exact hb' (Or.inl e'.symm)
-    · rw [ite_eq_right h1, ite_eq_left h2] at e'; exact ha' (Or.inl e')
-    · rw [ite_eq_right h1, ite_eq_right h2] at e'; exact hab e'
+    obtain ⟨ha', ⟨hsa, s1, -⟩ | ⟨c, hc, t1⟩⟩ := seq_in64 hok hp hpa h1 <;>
+      obtain ⟨hb', ⟨hsb, s2, -⟩ | ⟨c', hc', t2⟩⟩ := seq_in64 hok hp hqb h2
+    · have hab : @Ne Nat (tab.wposInv p) (tab.wposInv q) := fun e => hpq (by
+        rw [← tab.wpos_wposInv hpa, ← tab.wpos_wposInv hqb, e])
+      generalize tab.wposInv p = a at ha' hsa s1 hab
+      generalize tab.wposInv q = b at hb' hsb s2 hab
+      have e := InSlot.eq s1 s2
+      simp only [abiSlot64] at e
+      have e' : seqSlot out hdrf a = seqSlot out hdrf b := by omega
+      unfold seqSlot at e'
+      by_cases h1 : a = hdrf <;> by_cases h2 : b = hdrf
+      · exact hab (h1.trans h2.symm)
+      · rw [ite_eq_left h1, ite_eq_right h2] at e'; exact hb' (Or.inl e'.symm)
+      · rw [ite_eq_right h1, ite_eq_left h2] at e'; exact ha' (Or.inl e')
+      · rw [ite_eq_right h1, ite_eq_right h2] at e'; exact hab e'
+    · exact t2.not_slot (by simp only [abiSlot64]; omega) s1
+    · exact t1.not_slot (by simp only [abiSlot64]; omega) s2
+    · exact hpq (tbl_pos_eq hpa hqb hc hc')
   · intro a _ b _ x h; exact absurd h seq_notIn8
   · intro s hs
     simp only [seqLayout_tab] at hs ⊢
@@ -238,7 +288,12 @@ theorem seqLayout_ok (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf 
       · rw [(curNum_eq_iff tc).mp h]; exact Nat.le_of_eq mc
     · split
       · rename_i _ h; rw [(curNum_eq_iff th).mp h]; exact mh
-      · exact abiTabOk_min hok s
+      · rw [tab.wAt_pos64 hs]; exact min64_le_abiSz hok s
+  · intro s c hs hc
+    simp only [seqLayout_tab, seqLayout_T] at hs hc ⊢
+    have hc' : tab.tbl64 (tab.wAt (tab.pos64 s)) = some c := by rw [tab.wAt_pos64 hs]; exact hc
+    obtain ⟨no, nh, nc⟩ := seq_tbl_ne hp hc'
+    rw [seqLayout_b64, ite_eq_right (fun h => h.elim no nc), ite_eq_right nh, abiOff_tbl hc']
 
 end
 
@@ -265,22 +320,22 @@ theorem seqMem0_arr64 (m : Mem) (out hdrf ctlf : ArrId) (hw : Nat) (s : TieredAr
 
 /-! ## The stores -/
 
-/-- `ca_check_seq`'s base word for word array `a`. -/
-def seqBase (tab : Tab) (out hdrf ctlf : ArrId) (a : ArrId) : SVal :=
-  if a = out ∨ a = ctlf then .imm 0
-  else if a = hdrf then .addr (abiSlot * abiSlot64 tab out)
-  else .addr (abiSlot * abiSlot64 tab a)
+/-- `ca_check_seq`'s base word for descriptor position `p`. -/
+def seqBase (tab : Tab) (out hdrf ctlf : ArrId) (p : Nat) : SVal :=
+  if tab.wposInv p = out ∨ tab.wposInv p = ctlf then .imm 0
+  else if tab.wposInv p = hdrf then .addr (abiSlot * abiSlot64 tab out)
+  else .addr (abiOff tab p)
 
-/-- `ca_check_seq`'s length word for word array `a`. -/
-def seqLen (out hdrf ctlf : ArrId) (hw : Nat) (a : ArrId) : SVal :=
-  if a = out ∨ a = ctlf then .imm 0
-  else if a = hdrf then .imm hw.toUInt64
-  else .imm abiWords.toUInt64
+/-- `ca_check_seq`'s length word for descriptor position `p`. -/
+def seqLen (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) (p : Nat) : SVal :=
+  if tab.wposInv p = out ∨ tab.wposInv p = ctlf then .imm 0
+  else if tab.wposInv p = hdrf then .imm hw.toUInt64
+  else .imm (abiSz tab (tab.wAt p)).toUInt64
 
 theorem seqVals_eq {tab : Tab} (h : tab.nb = 2) (out hdrf ctlf : ArrId) (hw : Nat) :
     seqVals tab out hdrf ctlf hw = [.addr (abiSlot + abiStack), .addr abiSlot, .imm 0, .imm 0, .imm 0, .imm 0] ++
-      (List.range tab.nw).map (fun p => seqBase tab out hdrf ctlf (tab.wposInv p)) ++
-      (List.range tab.nw).map (fun p => seqLen out hdrf ctlf hw (tab.wposInv p)) ++
+      (List.range tab.nw).map (fun p => seqBase tab out hdrf ctlf p) ++
+      (List.range tab.nw).map (fun p => seqLen tab out hdrf ctlf hw p) ++
       romVals tab.rom := by
   simp only [seqVals, h]; rfl
 
@@ -295,8 +350,8 @@ theorem seqVals_getElem? {tab : Tab} (h : tab.nb = 2) (out hdrf ctlf : ArrId) (h
     (seqVals tab out hdrf ctlf hw)[0]? = some (.addr (abiSlot + abiStack)) ∧
     (seqVals tab out hdrf ctlf hw)[1]? = some (.addr abiSlot) ∧
     (∀ i, 2 ≤ i → i < 6 → (seqVals tab out hdrf ctlf hw)[i]? = some (.imm 0)) ∧
-    (∀ p < tab.nw, (seqVals tab out hdrf ctlf hw)[6 + p]? = some (seqBase tab out hdrf ctlf (tab.wposInv p)) ∧
-      (seqVals tab out hdrf ctlf hw)[6 + tab.nw + p]? = some (seqLen out hdrf ctlf hw (tab.wposInv p))) ∧
+    (∀ p < tab.nw, (seqVals tab out hdrf ctlf hw)[6 + p]? = some (seqBase tab out hdrf ctlf p) ∧
+      (seqVals tab out hdrf ctlf hw)[6 + tab.nw + p]? = some (seqLen tab out hdrf ctlf hw p)) ∧
     (∀ i, (seqVals tab out hdrf ctlf hw)[6 + 2 * tab.nw + i]? = (romVals tab.rom)[i]?) := by
   rw [seqVals_eq h]
   refine ⟨rfl, rfl, fun i h1 h2 => ?_, fun p hw => ?_, fun i => ?_⟩
@@ -328,31 +383,28 @@ theorem seqVals_noRax (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) (h : tab.nb
 
 /-- The base word `ca_check_seq` writes at descriptor position `p`. -/
 theorem seqBase_val {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (R : Reg64s) {base : Nat}
-    (hR : R.r8.toNat = base) {p : Nat}
-    (hfit : base + abiSlot * abiSlot64 tab (seqSlot out hdrf (tab.wposInv p)) < 2 ^ 64) :
-    UInt64.ofBitVec ((seqBase tab out hdrf ctlf (tab.wposInv p)).val R) =
+    (hR : R.r8.toNat = base) {p : Nat} (hfo : base + abiSlot * abiSlot64 tab out < 2 ^ 64)
+    (hfp : base + abiOff tab p < 2 ^ 64) :
+    UInt64.ofBitVec ((seqBase tab out hdrf ctlf p).val R) =
       UInt64.ofNat ((seqLayout tab base out hdrf ctlf hw).b64 p) := by
   rw [seqLayout_b64]
-  generalize tab.wposInv p = a at hfit ⊢
   unfold seqBase
-  by_cases h1 : a = out ∨ a = ctlf
+  by_cases h1 : tab.wposInv p = out ∨ tab.wposInv p = ctlf
   · simp only [h1, ite_true, SVal.val]; rfl
   · simp only [h1, ite_false]
-    unfold seqSlot at hfit ⊢
-    by_cases h2 : a = hdrf
-    · simp only [h2, ite_true] at hfit ⊢; rw [addr_val _ _ (by omega)]; try rw [hR]
-    · simp only [h2, ite_false] at hfit ⊢; rw [addr_val _ _ (by omega)]; try rw [hR]
+    by_cases h2 : tab.wposInv p = hdrf
+    · simp only [h2, ite_true]; rw [addr_val _ _ (by omega)]; try rw [hR]
+    · simp only [h2, ite_false]; rw [addr_val _ _ (by omega)]; try rw [hR]
 
 theorem seqLen_val {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (R : Reg64s) (base p : Nat) :
-    UInt64.ofBitVec ((seqLen out hdrf ctlf hw (tab.wposInv p)).val R) =
+    UInt64.ofBitVec ((seqLen tab out hdrf ctlf hw p).val R) =
       UInt64.ofNat ((seqLayout tab base out hdrf ctlf hw).s64 p) := by
   rw [seqLayout_s64]
-  generalize tab.wposInv p = a
   unfold seqLen
-  by_cases h1 : a = out ∨ a = ctlf
+  by_cases h1 : tab.wposInv p = out ∨ tab.wposInv p = ctlf
   · simp only [h1, ite_true, SVal.val] <;> rfl
   · simp only [h1, ite_false]
-    by_cases h2 : a = hdrf
+    by_cases h2 : tab.wposInv p = hdrf
     · simp only [h2, ite_true, SVal.val] <;> rfl
     · simp only [h2, ite_false, SVal.val] <;> rfl
 
@@ -379,7 +431,9 @@ theorem seq_memRel {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (hok : abiTabO
   have hW : ∀ i v, (seqVals tab out hdrf ctlf hw)[i]? = some v →
       rdW (stores R base d 0 (seqVals tab out hdrf ctlf hw)) (A (base + 8 * i)) = some (UInt64.ofBitVec (v.val R)) :=
     fun i v hv => stores_rdW? R base _ _ i v hv hend
-  have hout64 : (m.arr64 out).size = abiWords := hm.size64 _ dout
+  have hout64 : (m.arr64 out).size = abiWords := by
+    rw [hm.size64 _ dout]; simp only [abiLayout_s64, abiLayout_tab]
+    rw [tab.wAt_pos64 dout, abiSz_slot (seqParamsOk_tbl hp).1]
   -- word arrays live in slots `≥ 2`, past the stores
   have harr : ∀ a < tab.nw, ∀ i, i < abiWords →
       rdW (stores R base d 0 (seqVals tab out hdrf ctlf hw)) (A (base + abiSlot * abiSlot64 tab a + 8 * i)) =
@@ -393,6 +447,27 @@ theorem seq_memRel {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (hok : abiTabO
     · rw [hL]; simp only [abiSlot64, abiSlot, hnb] at hle ⊢; omega
   have hcur : ∀ s, tab.dom64 s = true → tab.wposInv (tab.pos64 s) = curNum s := fun s hs =>
     tab.wposInv_pos64 hs
+  obtain ⟨no, -, -⟩ := seqParamsOk_tbl hp
+  -- the table-relative array lies past the stores
+  have hoff : ∀ p < tab.nw, base + abiOff tab p + 8 * abiSz tab (tab.wAt p) ≤ base + abiSlot * (2 + tab.nw) ∧
+      (∀ i, i < abiSz tab (tab.wAt p) →
+        rdW (stores R base d 0 (seqVals tab out hdrf ctlf hw)) (A (base + abiOff tab p + 8 * i)) =
+          rdW d (A (base + abiOff tab p + 8 * i))) := by
+    intro p hp'
+    have ha := tab.wposInv_ltN hp'
+    cases hc : tab.tbl64 (tab.wAt p) with
+    | none =>
+      rw [abiOff_slot hc, abiSz_slot hc]
+      have hj : abiSlot64 tab (tab.wposInv p) < 2 + tab.nw := by simp only [abiSlot64, hnb]; omega
+      have hle : abiSlot * abiSlot64 tab (tab.wposInv p) + abiSlot ≤ abiSlot * (2 + tab.nw) := by
+        rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ hj
+      refine ⟨by simp only [abiSlot, abiWords] at hle ⊢; omega, fun i hi => harr _ ha i hi⟩
+    | some c =>
+      rw [abiOff_tbl hc, abiSz_tbl hc]
+      have := abiTabOk_tbl hok hc
+      refine ⟨by simp only [abiSlot]; omega, fun i hi => honly.rdW_eq ?_ (Or.inr ?_)⟩
+      · simp only [hn, abiSlot] at hfit; omega
+      · rw [hL]; simp only [hnb, Tab.romWords] at this ⊢; omega
   constructor
   · intro a _; simp [seqMem0_arr8]
   · intro s hs
@@ -414,20 +489,20 @@ theorem seq_memRel {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (hok : abiTabO
     · simp only [e, h1, ite_true] at hi; simp at hi
     · simp only [h1, ite_false]
       simp only [e, ite_eq_right h1] at hi ⊢
-      unfold seqSlot
       simp only [curNum_eq_iff thdr]
       by_cases h2 : s = ↑hdrf
       · simp only [ite_eq_left h2, Array.size_extract, hout64] at hi ⊢
         rw [harr out hout i (by omega)]
         have := hm.get64 _ dout i (by omega)
-        simp only [abiLayout_b64, abiLayout_tab, hcur _ dout, curNum_t0] at this
+        simp only [abiLayout_b64, abiLayout_tab] at this
+        rw [abiOff_slot (by rw [tab.wAt_pos64 dout]; exact no), hcur _ dout, curNum_t0] at this
         rw [this]; simp
       · simp only [ite_eq_right h2] at hi ⊢
         have hs' := hm.size64 s hs
-        simp only [abiLayout_s64] at hs'
-        rw [harr (curNum s) (tab.curNum_lt hs) i (by omega)]
+        simp only [abiLayout_s64, abiLayout_tab] at hs'
+        rw [(hoff _ (tab.pos64_lt hs)).2 i (by omega)]
         have := hm.get64 s hs i hi
-        simp only [abiLayout_b64, abiLayout_tab, hcur s hs] at this
+        simp only [abiLayout_b64, abiLayout_tab] at this
         exact this
   · have := hW 1 _ g1
     rw [addr_val _ _ (by rw [hR]; simp only [hn, abiSlot] at hfit ⊢; omega), hR] at this
@@ -450,11 +525,13 @@ theorem seq_memRel {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (hok : abiTabO
     simp only [seqLayout_tab] at hp'
     have ha := tab.wposInv_ltN hp'
     have := hW (6 + p) _ (gw p hp').1
-    have hj : abiSlot64 tab (seqSlot out hdrf (tab.wposInv p)) < 2 + tab.nw := by
-      have := seqSlot_lt (hdrf := hdrf) hout ha; simp only [abiSlot64, hnb]; omega
-    have hle : abiSlot * abiSlot64 tab (seqSlot out hdrf (tab.wposInv p)) + abiSlot ≤ abiSlot * (2 + tab.nw) := by
+    have hj : abiSlot64 tab out < 2 + tab.nw := by
+      have ho : @LT.lt Nat _ out tab.nw := hout; simp only [abiSlot64, hnb]; omega
+    have hle : abiSlot * abiSlot64 tab out + abiSlot ≤ abiSlot * (2 + tab.nw) := by
       rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ hj
-    rw [seqBase_val (hw := hw) R hR (by simp only [hn, abiSlot] at hfit hle ⊢; omega)] at this
+    have hp2 := (hoff p hp').1
+    rw [seqBase_val (hw := hw) R hR (by simp only [hn, abiSlot] at hfit hle ⊢; omega)
+      (by simp only [hn, abiSlot] at hfit hp2 ⊢; omega)] at this
     simp only [seqLayout_T, seqLayout_tab, Tab.dbase64, hnb]
     rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (p : Int)).toNat = 8 * (6 + p) by omega]
     exact this

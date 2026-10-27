@@ -229,11 +229,14 @@ def ArrTable.progOK (T : ArrTable) (p : Prog) : Bool :=
 
 /-! ## `declare_arrays` -/
 
+/-- The table-relative hint of a row, `at table` (`ArrDecl.atTable`). -/
+syntax atTableHint := &" at" &" table"
+
 /-- One row of `declare_arrays`: `| /-- doc -/ NAME : byte := n`, `| … NAME : word := n`, or
 `| … NAME : word tiered := n`; a word array may carry a minimum length, `… : word min k := n`
 (`ArrDecl.min`), and such an array may be table-relative, `… : word min k at table := n`
 (`ArrDecl.atTable`). -/
-syntax arrRow := "| " docComment ident " : " ident (&" tiered")? (&" min" num)? (&" at" &" table")?
+syntax arrRow := "| " docComment ident " : " ident (&" tiered")? (&" min" num)? (atTableHint)?
   " := " num
 
 /-- `declare_arrays T` followed by rows declares each row's array as `abbrev NAME : L.ArrId := n`
@@ -247,7 +250,7 @@ macro_rules
     let mut rowsT : Array Lean.Term := #[]
     for r in rows do
       match r with
-      | `(arrRow| | $doc:docComment $n:ident : $k:ident $[tiered%$t]? $[min $mn:num]? $[at%$at table]? := $v:num) =>
+      | `(arrRow| | $doc:docComment $n:ident : $k:ident $[tiered%$t]? $[min $mn:num]? $[$ath:atTableHint]? := $v:num) =>
         cmds := cmds.push (← `($doc:docComment abbrev $n : L.ArrId := $v))
         let nm := Lean.Syntax.mkStrLit n.getId.getString!
         let kind ← match k.getId with
@@ -258,10 +261,9 @@ macro_rules
         let mn : Lean.Term := match mn with
           | some m => m
           | none => Lean.Syntax.mkNumLit "0"
-        let atT ← if at.isSome then `(true) else `(false)
-        rowsT := rowsT.push
-          (← `(({ name := $nm, id := $n, kind := $kind, tiered := $tiered, min := $mn,
-            atTable := $atT } : L.ArrDecl)))
+        let atT ← if ath.isSome then `(true) else `(false)
+        let row ← `(({ name := $nm, id := $n, kind := $kind, tiered := $tiered, min := $mn, atTable := $atT } : L.ArrDecl))
+        rowsT := rowsT.push row
       | _ => Lean.Macro.throwUnsupported
     let tdef ← match tdoc with
       | some d => `($d:docComment def $tbl : L.ArrTable := [$rowsT,*])
