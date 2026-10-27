@@ -155,19 +155,29 @@ theorem noGo_step (n : Nat) (ih : NoNodeSpec p n) : NoGoSpec p (n + 1) := by
   unfold NoNodeSpec at ih
   intro s₀ no nl lo hi f h
   simp only [invoke_eq _ hgo, callFn, nestOccGo]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      eView_spec p hv n, slContains_spec p hc n, memoFindG_spec noSch p _ hf n,
-      memoPutG_spec noSch p _ hput n, ih] <;> finish (gen := 20)
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+    eView_spec p hv n, slContains_spec p hc n, memoFindG_spec noSch p _ hf n,
+    memoPutG_spec noSch p _ hput n, ih]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 include hnode in
 theorem noNode_step (n : Nat) (ih : NoGoSpec p n) : NoNodeSpec p (n + 1) := by
   unfold NoGoSpec at ih
   intro s₀ no nl lo hi f1 g x y z
   simp only [invoke_eq _ hnode, callFn, nestOccNode]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      ih] <;> finish (gen := 20)
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+    ih]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 include hv hc hf hput hgo hnode in
 theorem noGo_spec (n : Nat) : NoGoSpec p n ∧ NoNodeSpec p n := by
