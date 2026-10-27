@@ -182,7 +182,7 @@ theorem envPushW_mfr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m
   have hmem : rowArr (rdW (m.arr64 EREC) (q + 1)) < 201 := by
     exact Nat.lt_trans (rowArr_lt _) (by decide)
   have h1 : MFr [] [] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) :=
-    MFr.of_frame ((MemFrame.set64 m _ hra _ _).trans (MemFrame.set64 _ _ hra _ _))
+    MFr.of_frame ((MemFrame.set64 m _ hra _ _).trans (MemFrame.set64 _ _ (TieredArray.t0_ne hra) _ _))
       (by intro b hb; simp at hb; subst hb; exact .inl hmem) (by simp)
   refine MFr.trans h1 ?_
   simp only [envPushK.eq_def] at h

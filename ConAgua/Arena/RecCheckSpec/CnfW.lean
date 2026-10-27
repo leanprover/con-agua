@@ -85,13 +85,13 @@ theorem KeepW.set8 {m m' : Mem} (h : KeepW m m') (a : ArrId) (i v : Word) : Keep
 theorem KeepW.setG {m m' : Mem} (h : KeepW m m') (g : GVar) (v : Word) : KeepW m (m'.setG g v) := h
 
 /-- A continuation that keeps `KeepW`. -/
-theorem KeepW.copy64 {m m' : Mem} (h : KeepW m m') (d : ArrId) (di : Word) (s : ArrId) (si : Word)
+theorem KeepW.copy64 {m m' : Mem} (h : KeepW m m') (d : TieredArray) (di : Word) (s : TieredArray) (si : Word)
     (n : Nat) : KeepW m (m'.copy64 d di s si n) := by
   induction n generalizing m' di si with
   | zero => exact h
   | succ n ih => exact ih (h.set64 _ _ _) _ _
 
-theorem KeepW.copy8w {m m' : Mem} (h : KeepW m m') (d : ArrId) (di : Word) (b : Array UInt8) (si : Word)
+theorem KeepW.copy8w {m m' : Mem} (h : KeepW m m') (d : TieredArray) (di : Word) (b : Array UInt8) (si : Word)
     (n : Nat) : KeepW m (m'.copy8w d di b si n) := by
   induction n generalizing m' di si with
   | zero => exact h
