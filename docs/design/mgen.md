@@ -305,7 +305,7 @@ that unfold the hand models structurally.
 ## 7. Where the roll-out stands (master d23b4b5d)
 
 `l_model` names **627** of the 1 526 plain functions (537 on 386bf921); 840 are hand-specified
-(930). Five landings of conversions (#60 pilots, #64, #65, #68, #70), about 115 functions, ≈ −4 100
+(930). Five landings of conversions (#60 pilots, #64, #65, #68, #70), about 115 functions, ≈ −4 250
 lines net in `ConAgua/` with their refinements. The 50 hand-specified functions that still use a
 construct the generator lacked before this lane are all pool-slice, block-operation or
 nested-loop functions whose models are blocked by something else (bounds checks, reach, shape).
