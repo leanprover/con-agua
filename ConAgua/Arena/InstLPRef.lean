@@ -207,19 +207,19 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     -- the store on the stack
     have hf₂ : MemFrame [SPN] [] m₁ (m₁.set64 SPN b h) := MemFrame.set64 _ _ (by decide) _ _
     have hA₂ : ArenaD (m₁.set64 SPN b h) a₁ := arenaD_frame_hi hA₁ hf₂ (by simp [SPN]) (by simp)
-    have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := hf₁.1 SPN (by simp [lvArrs, LH, SPN, ZREC, ZSLOT, SREC, SSLOT, SHP,
+    have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := hf₁.1 SPN (by simp [tier1, tierOff, lvArrs, LH, SPN, ZREC, ZSLOT, SREC, SSLOT, SHP,
       MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
     have herec₂ : (m₁.set64 SPN b h).arr64 EREC = m.arr64 EREC := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      exact hf₁.1 EREC (by simp [lvArrs, LH, EREC, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
+      exact hf₁.1 EREC (by simp [tier1, tierOff, lvArrs, LH, EREC, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
         PREC, PSLOT]) (by decide)
     have hpool₂ : (m₁.set64 SPN b h).arr64 POOL = m.arr64 POOL := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      exact hf₁.1 POOL (by simp [lvArrs, LH, POOL, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
+      exact hf₁.1 POOL (by simp [tier1, tierOff, lvArrs, LH, POOL, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
         PREC, PSLOT]) (by decide)
     have hpool₂' : (m₁.set64 SPN b h).arr64 POOL1 = m.arr64 POOL1 := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      exact hf₁.1 POOL1 (by simp [lvArrs, LH, POOL1, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
+      exact hf₁.1 POOL1 (by simp [tier1, tierOff, lvArrs, LH, POOL1, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
         PREC, PSLOT]) (by decide)
     have hpool₂v := vpool_congr hpool₂ hpool₂'
     have hpool₂c := pcap_congr' hpool₂ hpool₂'
@@ -394,19 +394,19 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     -- the store on the stack
     have hf₂ : MemFrame [SPN] [] m₁ (m₁.set64 SPN b h) := MemFrame.set64 _ _ (by decide) _ _
     have hA₂ : ArenaD (m₁.set64 SPN b h) a₁ := arenaD_frame_hi hA₁ hf₂ (by simp [SPN]) (by simp)
-    have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := hf₁.1 SPN (by simp [lvArrs, SPN, ZREC, ZSLOT, SREC, SSLOT, SHP,
+    have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := hf₁.1 SPN (by simp [tier1, tierOff, lvArrs, SPN, ZREC, ZSLOT, SREC, SSLOT, SHP,
       MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
     have herec₂ : (m₁.set64 SPN b h).arr64 EREC = m.arr64 EREC := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      exact hf₁.1 EREC (by simp [lvArrs, EREC, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
+      exact hf₁.1 EREC (by simp [tier1, tierOff, lvArrs, EREC, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
         PREC, PSLOT]) (by decide)
     have hpool₂ : (m₁.set64 SPN b h).arr64 POOL = m.arr64 POOL := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      exact hf₁.1 POOL (by simp [lvArrs, POOL, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
+      exact hf₁.1 POOL (by simp [tier1, tierOff, lvArrs, POOL, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
         PREC, PSLOT]) (by decide)
     have hpool₂' : (m₁.set64 SPN b h).arr64 POOL1 = m.arr64 POOL1 := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      exact hf₁.1 POOL1 (by simp [lvArrs, POOL1, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
+      exact hf₁.1 POOL1 (by simp [tier1, tierOff, lvArrs, POOL1, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
         PREC, PSLOT]) (by decide)
     have hpool₂v := vpool_congr hpool₂ hpool₂'
     have hpool₂c := pcap_congr' hpool₂ hpool₂'
@@ -498,9 +498,9 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   rw [res] at hrun
   obtain ⟨hca, hpi, hme⟩ := internLsNode_keep _ _ _ _ hrun
   have hpool₃ : m'.arr64 POOL = m₂.arr64 POOL :=
-    hf₃.1 POOL (by simp [lsSch, LSREC, LSSLOT, LSHP, POOL]) (by decide)
+    hf₃.1 POOL (by simp [tier1, tierOff, lsSch, LSREC, LSSLOT, LSHP, POOL]) (by decide)
   have hpool₃' : m'.arr64 POOL1 = m₂.arr64 POOL1 :=
-    hf₃.1 POOL1 (by simp [lsSch, LSREC, LSSLOT, LSHP, POOL1]) (by decide)
+    hf₃.1 POOL1 (by simp [tier1, tierOff, lsSch, LSREC, LSSLOT, LSHP, POOL1]) (by decide)
   have htop₃ : m'.top = m₂.top := by simp only [top_rdW]; exact hf₃.2.1 0 (by simp [lsSch])
   refine ⟨_, hrun, hA₃, hr, ?_, ?_, ?_, ?_, hca, hpi, hme⟩
   · exact (hmf.mono (by simp) (by simp)).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
