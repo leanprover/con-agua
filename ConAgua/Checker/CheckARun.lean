@@ -43,7 +43,7 @@ def loadMemM (b pb : ByteArray) (sz : TieredArray → Nat) (w : Word) : Mem := (
 
 /-- A global write is a frame with no array write. -/
 theorem memFrame_setG (m : Mem) (g : GVar) (w : Word) : MemFrame [] [] m (m.setG g w) :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
 
 theorem capStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hs : ∀ s, sz s < 2 ^ 64) (w : Word) :
     RelSpec checkerProg "cap_check" (· = loadMemM b pb sz w)
