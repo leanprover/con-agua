@@ -577,7 +577,7 @@ def stop_leftovers(cur):
         pass
 
 
-EXPENSIVE = ("build",) + tuple(gate_select.CLOSURES) + ("e2e",)
+EXPENSIVE = ("build", "shake") + tuple(gate_select.CLOSURES) + ("e2e",)
 
 
 def green_steps(merged, steps):

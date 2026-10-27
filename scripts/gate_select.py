@@ -26,7 +26,8 @@ The table (first match per path; "cheap" = links, vendor, modules, provenance, r
                                                               of ConAguaAsm; both go into ./checker)
   main.c, Makefile, reasons.h, scripts/{diff-e2e,e2e}.py      e2e
   scripts/{core,loop,leaf}_fns.{py,lean}, preloop_ws.py       build + that closure check
-  ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build; + the four closure checks if
+  scripts/shake{.py,-setup.sh,-allowlist.txt,-keep.txt}       build, shake
+  ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the four closure checks if
                                                               the module is in the import closure of
                                                               ConAgua.Checker.Prog or of a closure's
                                                               generated file (CoreErec, LoopFns,
@@ -48,7 +49,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHEAP = ["links", "vendor", "modules", "provenance", "reasons"]
 CLOSURES = ["core-fns", "loop-fns", "leaf-fns", "preloop-ws"]
-ORDER = CHEAP + ["build"] + CLOSURES + ["e2e"]
+ORDER = CHEAP + ["build", "shake"] + CLOSURES + ["e2e"]
 
 ALL_EXACT = {"lakefile.toml", "lake-manifest.json", "lean-toolchain", "scripts/lake",
              "scripts/gates.sh", "scripts/gate_select.py"}
@@ -60,6 +61,8 @@ CLOSURE_SCRIPTS = {
     "scripts/leaf_fns.py": "leaf-fns", "scripts/leaf_fns.lean": "leaf-fns",
     "scripts/preloop_ws.py": "preloop-ws",
 }
+SHAKE_FILES = {"scripts/shake.py", "scripts/shake-setup.sh", "scripts/shake-allowlist.txt",
+               "scripts/shake-keep.txt"}
 # the closure checks read checkerProg (ConAgua.Checker.Prog) and rewrite these files
 CLOSURE_ROOTS = ["ConAgua.Checker.Prog", "ConAgua.Arena.CoreErec", "ConAgua.Arena.LoopFns",
                  "ConAgua.Arena.LeafFns", "ConAgua.Checker.PreLoopWS", "ConAgua.Checker.PreLoopWSStages"]
@@ -103,11 +106,13 @@ def classify(path, root):
         return {"e2e"}
     if path in CLOSURE_SCRIPTS:
         return {"build", CLOSURE_SCRIPTS[path]}
+    if path in SHAKE_FILES:
+        return {"build", "shake"}
     if path == "ConAgua.lean" or (top == "ConAgua" and path.endswith(".lean")) or top == "ConAguaAsm":
         m = module_of(path)
         if m and m in closure_modules(root):
-            return {"build", *CLOSURES}
-        return {"build"}
+            return {"build", "shake", *CLOSURES}
+        return {"build", "shake"}
     if top == "scripts":
         return set()
     return {"ALL"}

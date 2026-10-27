@@ -1,0 +1,66 @@
+# scripts/shake-keep.txt: modules scripts/shake.py does not minimize (one per line, `#` comments).
+# Their imports serve what the tool cannot see; see scripts/shake.py's docstring.
+ConAgua.Arena.DeclAll            # imports only: one build checks the declaration loop's modules together
+ConAgua.Arena.IndAll             # imports only: the same for the inductive stage
+ConAgua.Compiler.WFAll           # `#guard`s only
+ConAgua.Audit.Final              # `#guard_msgs in #print axioms` of imported theorems
+ConAgua.Arena.WalkBench          # `#guard`s that evaluate imported programs (needs their IR, `meta import`)
+ConAgua.Rom.CIReadRefData        # a statement with a proof inside (`basisKinds[i]'(by simp …)`): its term follows the simp set
+# generated (scripts/{core,loop,leaf}_fns.py, preloop_ws.py, checker_prog.py write the imports)
+ConAgua.Arena.CoreErec
+ConAgua.Arena.LoopFns
+ConAgua.Arena.LeafFns
+ConAgua.Checker.PreLoopWS
+ConAgua.Checker.PreLoopWSStages
+ConAgua.Checker.Prog
+ConAgua.Checker.ProgWf
+ConAgua.Checker.Asm
+ConAgua.Checker.AsmPart0
+ConAgua.Checker.AsmPart1
+ConAgua.Checker.AsmPart2
+ConAgua.Checker.AsmPart3
+# macros, notations, syntax used by other modules: a name in a quotation must resolve in the macro's module
+ConAgua.Arena.AndPinScratch
+ConAgua.Arena.ArenaRel
+ConAgua.Arena.CoreWalks
+ConAgua.Arena.IndPosSpec.NoGoStep
+ConAgua.Arena.IndRealAbs
+ConAgua.Arena.IndRealPartsC2
+ConAgua.Arena.IndT.CheckIndDecl
+ConAgua.Arena.Keeps
+ConAgua.Arena.NStrStore
+ConAgua.Arena.NatGrindAttr
+ConAgua.Arena.RecGen
+ConAgua.Arena.StrLitCtor
+ConAgua.Arena.StrLitKeep
+ConAgua.Arena.WalkLiftRefine
+ConAgua.Arena.WhnfBase
+ConAgua.AsmFile.Eq
+ConAgua.AsmFile.Include
+ConAgua.AsmFile.ListEq
+ConAgua.Census.Attr
+ConAgua.Census.Main
+ConAgua.Checker.FrontProgAgree
+ConAgua.Checker.LoopProgTac
+ConAgua.Checker.PreludeSimProg
+ConAgua.Checker.TwinCaches
+ConAgua.Compiler.AsmLit
+ConAgua.Compiler.Main
+ConAgua.Compiler.Rel
+ConAgua.Compiler.SimCall
+ConAgua.Compiler.SimExpr
+ConAgua.Compiler.WFSplit
+ConAgua.Compiler.WriteSetSplit
+ConAgua.Front.FieldsDeclLink
+ConAgua.Front.FieldsExprLink
+ConAgua.Front.FrontPreOK
+ConAgua.Front.IndFieldsLink2
+ConAgua.Front.IndFieldsLink3
+ConAgua.Front.IndValidTwin
+ConAgua.Front.StateDR
+ConAgua.L.ModelGen
+ConAgua.L.Notation
+ConAgua.Scan.RecordsLink
+ConAgua.Verdict.FrontPreSimE
+ConAgua.Verdict.FrontRecsE
+ConAgua.Verdict.IndAGen
