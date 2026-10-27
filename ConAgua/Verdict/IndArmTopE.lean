@@ -64,34 +64,12 @@ namespace L.Checker
 open L L.Arena L.Front L.Rom L.Compiler L.Ind ConAgua.Final
 
 /-- **The inductive arm's error claim at the programs phase A runs** (`indArmSpec_checker`'s
-program facts). -/
+program facts, `indArmProgs_checker`). -/
 theorem indArmVerdict_proved : IndArmVerdict := by
   intro bs hr hpre dn hdn _hQd
-  have hrom := checkerProg_romRefsPB bs hr hpre
-  have hkp : KnotStageProg (Prog.subPB bs checkerProg) := by
-    prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
-      checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
-      (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
-      closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
-      hrom]
-  have hV : ValProg (Prog.subPB bs checkerProg) := by
-    prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
-      checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
-      (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
-      closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
-      hrom]
-  have P : CidProg (Prog.subPB bs checkerProg) := by prog_bundle [hrom]
-  have hOpf : OpfF (Prog.subPB bs checkerProg) := by prog_bundle []
-  have hLC : LvlCacheProg (Prog.subPB bs checkerProg) := by prog_bundle []
-  have hLT : (Prog.subPB bs checkerProg).lookup "lv_leq_top" = some lvLeqTop := by prog_bundle []
-  have hApd : ApdF (Prog.subPB bs checkerProg) := by prog_bundle []
-  have hCrk : CrKeep (Prog.subPB bs checkerProg) :=
-    ⟨closedWL_subPB bs checkerProg_indMemo, by prog_bundle []⟩
-  have hIlpf : IlpfF (Prog.subPB bs checkerProg) := by prog_bundle []
-  have hLz : LzcF (Prog.subPB bs checkerProg) := by prog_bundle []
-  have hk : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
-      AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
-    absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
+  have H := indArmProgs_checker bs hr hpre
+  have hkp := H.kp
+  have hk := indArmKeep_checker bs
   have hnv := checkerProg_nvPB bs
   have hU : UceProg (Prog.subPB bs checkerProg) :=
     ⟨checkerProg_uceLookupsPB bs, strLitSupported_core _ hkp.knot.str⟩
@@ -101,18 +79,18 @@ theorem indArmVerdict_proved : IndArmVerdict := by
   have hcE : CoreStubsE (Prog.subPB bs checkerProg) := hkp.toKnotTopProg.coreStubsE hnv
   have hCns : CnsProg (Prog.subPB bs checkerProg) := by prog_bundle []
   have hK53 : K53Look (Prog.subPB bs checkerProg) := by prog_bundle []
-  exact indArmSpecE_of hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P
-    (closedW_subPB bs checkerProg_armPos) (by decide +kernel) (by decide +kernel)
-    (closedW_subPB bs checkerProg_armHb) (by decide +kernel)
-    (closedW_subPB bs checkerProg_armRc) (by decide +kernel)
-    (closedW_subPB bs checkerProg_armTa) (by decide +kernel)
-    (closedW_subPB bs checkerProg_armCid) (by decide +kernel)
+  exact indArmSpecE_of hkp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.lz H.cid
+    (closedW_subPB bs checkerProg_armPos) armPos_pass armPos_raw
+    (closedW_subPB bs checkerProg_armHb) armHb_tail
+    (closedW_subPB bs checkerProg_armRc) armRc_tail
+    (closedW_subPB bs checkerProg_armTa) armTa_block
+    (closedW_subPB bs checkerProg_armCid) armCid_frame
     (fun f hf => hk f (by simp [hf]))
     (fun f hf => hk f (by simp [hf]))
     (hk _ (by simp))
-    (by decide +kernel) (by decide +kernel)
-    (closedW_subPB bs checkerProg_armRcHb) (by decide +kernel)
-    (closedW_subPB bs checkerProg_armMa) (by decide +kernel)
+    armCid_basis armRc_grc
+    (closedW_subPB bs checkerProg_armRcHb) armRcHb_tables
+    (closedW_subPB bs checkerProg_armMa) armMa_pass
     hnv hU hW
     (fun dn vis fe _env henv => classesNfsE_of hkp henv hCns hnv hcE dn vis fe)
     (fun dn vis fe _env henv => tkaE_of hkp henv hnv hcE hK53 dn vis fe) dn hdn
