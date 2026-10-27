@@ -262,13 +262,12 @@ theorem initK_inv (Inv : Mem → AState → StateD → Prop) (Inv₀ : Mem → A
   obtain ⟨st₀, a₁, -, hI⟩ := hinit _ _ _ h₀ hi
   exact ⟨a₁, st₀, hI⟩
 
-include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz hpi hpd hFI hAI hII hXI in
+include hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz hpi hpd hFI hAI hII hXI in
 /-- **Bytes → stores, in one theorem**: when `front_run()` returns `0` on a memory holding the
 input `b` and related to the arena state `a₀` (by `ArenaD`) and to the blank parse state, con-ron's
 `parseBytes b` accepts from `a₀`, and the memory after is related to its final arena state by
 `ArenaD` and to its final parse state by `StateDR`. -/
 
-omit hps in
 @[refines ConRon.Arena.Frontend.parseBytes]
 theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)

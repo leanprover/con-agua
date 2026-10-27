@@ -843,6 +843,7 @@ theorem indDLoop_spec (n : Nat) (s₀ : St) :
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD in
 @[refines_part ConLeche.Frontend.scanIndDecl "validity"]
 theorem scanIndD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄

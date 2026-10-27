@@ -1026,6 +1026,7 @@ theorem m2cHeadE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
     major hm4 hebm hmaj rl cvj cnP cnF m1 _ M1 hS1 (by rw [e1]; exact hrl) hciE er hW')
   rw [hstep]; simp only [hfind']; exact h'
 
+omit hpi in
 /-- **`MajorToCtorE`**: `major_to_ctor`'s verdicts are `m2c_head`'s. -/
 theorem majorToCtorE_of : MajorToCtorE p := by
   intro n hk hkE F hnF s₀ a₀ dn vis fe MM eb mode d rec ro rc major rules hn62 hS hm4 hebm hmaj hr
