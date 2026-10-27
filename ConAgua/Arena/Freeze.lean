@@ -87,9 +87,9 @@ scratch heaps, the stores' tier-1 arrays. Entry 2 gives them slots in the worker
 other array gets no memory (an access is out of bounds, an error). `Checker/ParOwned.lean` checks
 the list against the program. -/
 def parOwned : List TieredArray :=
-  [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH, INM,
-   IOM, DEM, CTM, CV, RRM, LQ, LSQ, EIXA1, EIXS1, EIXN1, SPN, BSTK, WSM, FLM, LSM, LVS, Stubs.CRM,
-   LH, Ind.IW, tier1 POOL, tier1 TIXA, tier1 TIXS, tier1 TIXN] ++
+  tier0s [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH,
+    INM, IOM, DEM, CTM, CV, RRM, LQ, LSQ, EIXA1, EIXS1, EIXN1, SPN, BSTK, WSM, FLM, LSM, LVS,
+    Stubs.CRM, LH, Ind.IW] ++ tier1s [POOL, TIXA, TIXS, TIXN] ++
   ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [tier1 x.1, tier1 x.2.1]) ++
     fzCols.map (fun (x : ArrId × Nat) => tier1 x.1)).mergeSort (fun a b => a.code ≤ b.code))
 
@@ -143,7 +143,7 @@ def parCompactL : FunDecl :=
 /-- `frozenIds` as a literal (what the entry stub is built from: the kernel checks the committed
 file's stub against it, and a computed list would be re-evaluated in every piece). -/
 def frozenIdsL : List TieredArray :=
-  [HDRF, CTLF, POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT,
+  tier0s [HDRF, CTLF, POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT,
    PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC,
    LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC,
    LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA,
@@ -151,16 +151,14 @@ def frozenIdsL : List TieredArray :=
 
 /-- `parOwned` as a literal (as `frozenIdsL`). -/
 def parOwnedL : List TieredArray :=
-  [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH, INM,
-   IOM, DEM, CTM, CV, RRM, LQ, LSQ, EIXA1, EIXS1, EIXN1, SPN, BSTK, WSM, FLM, LSM, LVS, Stubs.CRM,
-   LH, Ind.IW, tier1 POOL, tier1 TIXA, tier1 TIXS, tier1 TIXN, tier1 REC, tier1 SLOT, tier1 AREC,
-   tier1 ASLOT, tier1 SREC, tier1 SSLOT, tier1 ZREC, tier1 ZSLOT, tier1 MREC, tier1 MSLOT,
-   tier1 IREC, tier1 ISLOT, tier1 PREC, tier1 PSLOT, tier1 SOREC, tier1 SOSLOT, tier1 CREC,
-   tier1 CSLOT, tier1 LEREC, tier1 LESLOT, tier1 BREC, tier1 BSLOT, tier1 FVREC, tier1 FVSLOT,
-   tier1 LAREC, tier1 LASLOT, tier1 FAREC, tier1 FASLOT, tier1 PJREC, tier1 PJSLOT, tier1 NAREC,
-   tier1 NASLOT, tier1 NSREC, tier1 NSSLOT, tier1 NNREC, tier1 NNSLOT, tier1 LSREC, tier1 LSSLOT,
-   tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER, tier1 PJDER, tier1 SHP, tier1 MHP, tier1 IHP,
-   tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP]
+  tier0s [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH,
+    INM, IOM, DEM, CTM, CV, RRM, LQ, LSQ, EIXA1, EIXS1, EIXN1, SPN, BSTK, WSM, FLM, LSM, LVS,
+    Stubs.CRM, LH, Ind.IW] ++
+  tier1s [POOL, TIXA, TIXS, TIXN, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT,
+    IREC, ISLOT, PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC,
+    FVSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC,
+    NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP,
+    FVLP]
 
 #guard frozenIdsL == frozenIds
 #guard parOwnedL == parOwned
