@@ -31,24 +31,10 @@ theorem twinFold_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB :
   exact ⟨⟨ConLeche.Env.empty, hfold, by simp [ConLeche.NodupNames, ConLeche.Env.empty]⟩,
     ⟨_, hpd⟩, hpp, hdp, ⟨_, hden⟩, by simp, hoff⟩
 
-/-- The arrays `LoopZero` asks zero, as a list. -/
-def loopZeroArrs : List Nat :=
-  [ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, EIXA, EIXS, EIXN, PNM, PLM, PLSM, PEM,
-   Stubs.CRM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, ILFM, EIXA1,
-   EIXS1, EIXN1, TIXA, TIXS, TIXN, tier1 TIXA, tier1 TIXS, tier1 TIXN]
-
 /-- The `CTL` words `LoopZero` asks zero, as a list. -/
 def loopZeroCtls : List Nat :=
   [48, 50, 54, 56, 58, 152, 154, 156, 158, 128, 130, 140, 141, 142, 143, 144, 145, 146, 147, 202,
     203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 52, 133]
-
-theorem loopZeroArr_mem {b : Nat} (h : loopZeroArr b) : b ∈ loopZeroArrs := by
-  simp only [loopZeroArr] at h
-  simp only [loopZeroArrs, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, EIXA, EIXS,
-    EIXN, PNM, PLM, PLSM, PEM, Stubs.CRM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM,
-    Ind.HBM, Ind.MCM, ILFM, EIXA1, EIXS1, EIXN1, TIXA, TIXS, TIXN, tier1, List.mem_cons,
-    List.not_mem_nil, or_false]
-  omega
 
 theorem loopZeroCtl_mem {x : Nat} (h : loopZeroCtl x) : x ∈ loopZeroCtls := by
   simp only [loopZeroCtl] at h
@@ -69,7 +55,7 @@ theorem loopZero_of_since {b pb : ByteArray} {sz : TieredArray → Nat} {m : Mem
   have hf := h.frame
   refine ⟨?_, fun a ha j => ?_, fun x hx => ?_⟩
   · rw [hf.2.2.1]; have := h.caps.2.1; simp only [ctlMin] at this; omega
-  · have hm := loopZeroArr_mem ha
+  · have hm : a ∈ loopZeroArrs := ha
     have hn : a ∉ preLoopA := by
       intro hc
       have := List.all_eq_true.mp preLoopA_loopZeroArrs a hm
@@ -89,7 +75,7 @@ theorem frontDecls_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB
 
 theorem preLoopA_avoidCore : AvoidA 96 128 preLoopA := by
   intro b hb
-  have : preLoopA.all (fun b => decide (b < 96 ∨ 128 ≤ b)) = true := by decide +kernel
+  have : preLoopA.all (fun b => decide (b.arr < 96 ∨ 128 ≤ b.arr)) = true := by decide +kernel
   simpa using List.all_eq_true.mp this b hb
 
 theorem preLoopC_avoidCoreN : (preLoopC.map UInt64.toNat).all (fun x => decide (x < 96 ∨ 128 ≤ x)) = true := by

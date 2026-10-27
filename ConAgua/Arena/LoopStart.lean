@@ -22,12 +22,17 @@ namespace L.Arena
 open L.Front (DECL DLP DeclsF)
 
 /-- The arrays the loop needs zero at its start: the core's memos (49, 50, 52‥54, 151‥153), the
-environment's index rows (132‥134), the promotion memo (146‥149), `consts_resolve_ffast`'s memo
-(155), the inductive stage's memos (201‥208), `instantiate1Lift`'s memo (51). -/
-def loopZeroArr (b : Nat) : Prop :=
-  b = 49 ∨ b = 50 ∨ b = 52 ∨ b = 53 ∨ b = 54 ∨ b = 151 ∨ b = 152 ∨ b = 153 ∨
-    (132 ≤ b ∧ b ≤ 134) ∨ (146 ≤ b ∧ b ≤ 149) ∨ b = 155 ∨ (201 ≤ b ∧ b ≤ 208) ∨ b = 51 ∨
-    (140 ≤ b ∧ b ≤ 142) ∨ (129 ≤ b ∧ b ≤ 131) ∨ Tier1In 129 132 b
+environment's index rows (132‥134, 140‥142), the projection-table rows (129‥131, both tiers), the
+promotion memo (146‥149), `consts_resolve_ffast`'s memo (155), the inductive stage's memos
+(201‥208), `instantiate1Lift`'s memo (51). -/
+def loopZeroArrs : List TieredArray :=
+  tier0s [ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, EIXA, EIXS, EIXN, PNM, PLM,
+    PLSM, PEM, Stubs.CRM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM,
+    ILFM, EIXA1, EIXS1, EIXN1, TIXA, TIXS, TIXN] ++
+  tier1s [TIXA, TIXS, TIXN]
+
+/-- An array the loop needs zero at its start. -/
+abbrev loopZeroArr (b : TieredArray) : Prop := b ∈ loopZeroArrs
 
 /-- The `CTL` words the loop needs zero at its start: the core's memo stamps, the number of
 constants (128), of pending checks (130), the promotion memo's words (140‥147),
@@ -43,10 +48,10 @@ structure LoopZero (m : Mem) : Prop where
   arr : ∀ b, loopZeroArr b → ∀ j, rdW (m.arr64 b) j = 0
   word : ∀ x : Word, loopZeroCtl x.toNat → rdW (m.arr64 CTL) x = 0
 
-theorem lz_row {b : ArrId} (h1 : 132 ≤ b) (h2 : b ≤ 134) : loopZeroArr b :=
-  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
-theorem lz_stage {b : ArrId} (h1 : 201 ≤ b) (h2 : b ≤ 208) : loopZeroArr b :=
-  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
+theorem lz_stage {b : ArrId} (h1 : 201 ≤ b) (h2 : b ≤ 208) : loopZeroArr b := by
+  obtain rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl : b = 201 ∨ b = 202 ∨ b = 203 ∨ b = 204 ∨
+    b = 205 ∨ b = 206 ∨ b = 207 ∨ b = 208 := by simp only [ArrId] at *; omega
+  all_goals decide
 theorem lzc_pm {x : Nat} (h1 : 140 ≤ x) (h2 : x ≤ 147) : loopZeroCtl x :=
   .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 
@@ -57,20 +62,20 @@ include h
 theorem coreMemos : CoreMemos m :=
   CoreMemos.zero (by have := h.ctl; omega)
     (fun b hb j => h.arr b (by
-      rcases hb with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> simp [loopZeroArr]) j)
+      rcases hb with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide) j)
     (fun x hx => h.word x (by
       unfold loopZeroCtl
       rcases hx with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide))
 
 theorem crOK : L.Stubs.CrOK m :=
-  CrOK.zero (by have := h.ctl; omega) (fun j => h.arr _ (by unfold loopZeroArr; decide) j)
+  CrOK.zero (by have := h.ctl; omega) (fun j => h.arr _ (by decide) j)
     (h.word 158 (by unfold loopZeroCtl; decide))
 
 theorem indMemos : IndMemos m :=
   IndMemos.zero h.ctl (fun b hb j => h.arr b (by
       rcases hb with rfl | rfl | ⟨h1, h2⟩
-      · unfold loopZeroArr; decide
-      · unfold loopZeroArr; decide
+      · decide
+      · decide
       · exact lz_stage h1 h2) j)
     (fun x hx => h.word x (by unfold loopZeroCtl; omega))
 
@@ -79,13 +84,13 @@ theorem pmemo : PMemoR m PMemo.empty := by
     fun x h1 h2 => h.word x (lzc_pm h1 h2)
   have hs := h.ctl
   exact ⟨memoRV_zeroAt _ _ _ m (by simp; omega) (hc _ (by decide) (by decide))
-      (h.arr _ (by unfold loopZeroArr; decide)),
+      (h.arr _ (by decide)),
     memoRV_zeroAt _ _ _ m (by simp; omega) (hc _ (by decide) (by decide))
-      (h.arr _ (by unfold loopZeroArr; decide)),
+      (h.arr _ (by decide)),
     memoRV_zeroAt _ _ _ m (by simp; omega) (hc _ (by decide) (by decide))
-      (h.arr _ (by unfold loopZeroArr; decide)),
+      (h.arr _ (by decide)),
     memoRV_zeroAt _ _ _ m (by simp; omega) (hc _ (by decide) (by decide))
-      (h.arr _ (by unfold loopZeroArr; decide))⟩
+      (h.arr _ (by decide))⟩
 
 theorem pendR : PendR m #[] :=
   ⟨by simp [pendCount, h.word 130 (by unfold loopZeroCtl; decide)], fun j hj => by simp at hj,
@@ -96,7 +101,6 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
     intro w hw
     simp only [rowC, ite_eq_left hw]
     have hl : loopZeroArr (rowArr w) := by
-      unfold loopZeroArr
       rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
     have hz := h.arr (rowArr w) hl (UInt64.ofNat (rowIx w))
     have hlt : rowIx w < 2 ^ 64 := by unfold rowIx; omega
@@ -107,8 +111,9 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
     split
     · rename_i hw
       have hl : loopZeroArr (tblArr w) := by
-        unfold loopZeroArr
-        rcases tblArr_cases w hw with e | e | e | e | e | e <;> rw [e] <;> decide
+        rw [tblArr_eq]
+        rcases tierA_eq_or (tixArr (rowTag w)) (UInt64.ofNat (rowTier w)) with e | e <;> rw [e] <;>
+          rcases tixArr_mem (rowTag w) with e' | e' | e' <;> rw [e'] <;> decide
       have hz := h.arr (tblArr w) hl (UInt64.ofNat (tblIx w))
       have hlt : tblIx w < 2 ^ 64 := by unfold tblIx; omega
       simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
