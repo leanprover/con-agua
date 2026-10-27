@@ -65,7 +65,7 @@ theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, CREC, CSLOT, CLP])
+    (by decide)
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)

@@ -102,7 +102,7 @@ theorem CoreS.arena_frameD {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cpl a' = cpl a)
     (hf : MemFrame A C m m')
-    (h128 : ∀ b ∈ A, b.arr < 96 ∨ 128 ≤ b.arr) (hpins : ((128 : ArrId) : TieredArray) ∉ A)
+    (h128 : ∀ b ∈ A, b.arr < 96 ∨ 128 ≤ b.arr) (hpins : (PINS : TieredArray) ∉ A)
     (henv : ∀ b ∈ A, b.arr < 129 ∨ 144 ≤ b.arr)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat) (hden : StoreDen dn m' a' fe)
@@ -133,7 +133,7 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cpl a' = cpl a)
     (hf : MemFrame A C m m')
-    (h128 : ∀ b ∈ A, b.arr < 96 ∨ 128 ≤ b.arr) (hpins : ((128 : ArrId) : TieredArray) ∉ A)
+    (h128 : ∀ b ∈ A, b.arr < 96 ∨ 128 ≤ b.arr) (hpins : (PINS : TieredArray) ∉ A)
     (henv : ∀ b ∈ A, b.arr < 129 ∨ 144 ≤ b.arr)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)

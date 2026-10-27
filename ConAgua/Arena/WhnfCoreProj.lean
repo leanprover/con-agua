@@ -417,7 +417,7 @@ theorem CoreS.of_bvar {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, BREC, BSLOT])
+    (by decide)
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl <;> decide)

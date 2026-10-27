@@ -36,8 +36,8 @@ open L.Arena
 
 /-- A list of arrays apart from the walk memos' (49, 50, 51, 155; the core's 151‥153, 52‥54) and
 the pins. -/
-def memoFreeA (A : List TieredArray) : Bool := A.all fun b => b != ↑(49 : ArrId) && b != ↑(50 : ArrId) && b != ↑(51 : ArrId) && b != ↑(155 : ArrId) &&
-  b != PINS && b != ↑(151 : ArrId) && b != ↑(152 : ArrId) && b != ↑(153 : ArrId) && b != ↑(52 : ArrId) && b != ↑(53 : ArrId) && b != ↑(54 : ArrId)
+def memoFreeA (A : List TieredArray) : Bool := A.all fun b => b != ↑ABMEMO && b != ↑ILMEMO && b != ↑ILFM && b != ↑Stubs.CRM &&
+  b != PINS && b != ↑WSM && b != ↑FLM && b != ↑LSM && b != ↑LPMEMO && b != ↑LPLMEMO && b != ↑LPLSMEMO
 
 /-- A list of `CTL` words apart from the walk memos' epoch words (48, 50, 52, 158; the core's 152,
 154, 156, 54, 56, 58). -/

@@ -171,7 +171,7 @@ theorem internFVar_core (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW 
       (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, FVREC, FVSLOT, FVLP])
+    (by decide)
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
@@ -193,7 +193,7 @@ theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
   have hS' := hS.arena_frameD hD (Keeps.run (keeps_cpl_internSort _) (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, SOREC, SOSLOT, SOLP])
+    (by decide)
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx

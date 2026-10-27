@@ -62,7 +62,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx â
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
         rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-      (by simp [tier1, FVREC, FVSLOT, FVLP])
+      (by decide)
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
         rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)

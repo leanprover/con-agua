@@ -53,7 +53,7 @@ theorem CidMemos.frame {m m' : Mem} (h : CidMemos m) (hf : MemFrame cidFreeA cid
     CidMemos m' := by
   have hM : MFr [] [] m m' := MFr.of_frame hf
     (fun b hb => by
-      simp only [cidFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
+      simp only [cidFreeA, List.mem_filter, decide_eq_true_eq] at hb
       exact hb.2.1)
     (fun x hx => by
       simp only [cidFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx
