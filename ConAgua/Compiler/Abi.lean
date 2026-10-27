@@ -152,7 +152,8 @@ arrays.
   the table at `region`, the L stack in its second slot, the arrays `own` in the slots after it,
   frozen array `i` at `buf + 8 · buf[8 + 2i]` with length `buf[9 + 2i]`, every other array
   `(0, 0)`, the constant data as `ca_setup`; `plo := j`, `phi := j + 1` (one pending group), the
-  mode word `2`; then `ca_enter`. Declines (`rdx = 1`) if `region_len < workerNeed own`.
+  mode word `2`; then `ca_enter`. Declines (`rdx = 1`) if a frozen array is shorter than its
+  minimum length (`Tab.min64`, `bufMinStub`) or `region_len < workerNeed own`.
 * `ca_check_seq` (**entry 2 in place**, the sequential driver; the region in `r8`, the range
   `lo`, `hi` in `rsi`, `rdx`), on a region entry 1 left: the table as `ca_setup` lays it out, except
   that `out`, the seed of `CTL` and the byte arrays get no memory and the header `hdrf` is the
@@ -173,6 +174,8 @@ arrays.
 def abiStartAL : Label := "ca_start_a"
 def abiStartA0L : Label := "ca_start_a0"
 def abiCheckBL : Label := "ca_check_b"
+/-- `ca_check_b` past its length tests (`bufMinStub`). -/
+def abiCheckB1L : Label := "ca_check_b_go"
 def abiCheckSL : Label := "ca_check_seq"
 def abiDrvDoneL : Label := "ca_drv_done"
 def abiDrvDeclineL : Label := "ca_drv_decline"
@@ -227,9 +230,24 @@ def immStores (r : Reg64) (d : Nat) : List SVal → Program
   | .imm w :: vs => [movRI .rax w, movMR (mb r d) .rax] ++ immStores r (d + 8) vs
   | _ :: vs => immStores r (d + 8) vs
 
+/-- `ca_check_b`'s test of the frozen arrays' lengths against their minimum lengths (`Tab.min64`,
+which the code generator relies on): for frozen array `fz[i]` with a minimum `k`,
+`cmp [rdi + 8 (9 + 2i)], k; jb ca_abi_decline` (`rdi` the buffer, word `9 + 2i` entry `i`'s length).
+Below the minimum the call declines (`rdx = 1`, never an accept). -/
+def bufMinChk (tab : Tab) : Nat → List TieredArray → Program
+  | _, [] => []
+  | i, a :: l =>
+    (if tab.min64 a = 0 then [] else
+      [i64 (.cmp (.mem (mb .rdi (8 * (9 + 2 * i : Nat)))) (oI (tab.min64 a))), jccL .c abiDeclineL]) ++
+    bufMinChk tab (i + 1) l
+
+/-- `ca_check_b`'s entry: the length tests (`bufMinChk`), then the stub proper (`parStub0`). -/
+def bufMinStub (tab : Tab) (fz : List TieredArray) : Program :=
+  [.label abiCheckBL] ++ bufMinChk tab 0 fz ++ [jmpL abiCheckB1L]
+
 /-- The parallel mode's entries, for the globals `mode`, `plo`, `phi`, the buffer array `out`, the
-frozen arrays `fz` and the owned arrays `own`. -/
-def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray) :
+frozen arrays `fz` and the owned arrays `own` (`ca_check_b`'s length tests apart, `parStub`). -/
+def parStub0 (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray) :
     Program :=
   -- entry 1, and the driver's entry 1
   [.label abiStartAL,
@@ -238,8 +256,8 @@ def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
    .label abiStartA0L,
    movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiSetupL,
    movRI .rax 3, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiSetupL,
-  -- entry 2 over a buffer
-   .label abiCheckBL,
+  -- entry 2 over a buffer, past its length tests
+   .label abiCheckB1L,
    movRI .rax (workerNeed own).toUInt64, i64 (.cmp (.reg (rr .r8)) (oR .rax)), jccL .c abiDeclineL,
    movRR .r9 .rdx, i64 (.add (.reg (rr .r9)) (oI 1)),
    movRI .rax (abiSlot + abiStack).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
@@ -276,6 +294,11 @@ def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
    movRM .rsi (mb .rax 8), movRM .r15 (mb .rax 0), movRR .rax .rcx,
    i64 (.push (oR .rsi)), i64 .ret,
    .label abiDrvDeclineL, movRI .rax 0, movRI .rdx 1, i64 .ret]
+
+/-- The parallel mode's entries (`parStub0`), then `ca_check_b`'s length tests (`bufMinStub`). -/
+def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray) :
+    Program :=
+  parStub0 tab mode plo phi out hdrf ctlf hw fz own ++ bufMinStub tab fz
 
 /-- The symbols of the parallel mode for the harness. -/
 def parSymbols (tab : Tab) (out : ArrId) (own : List TieredArray) : String :=

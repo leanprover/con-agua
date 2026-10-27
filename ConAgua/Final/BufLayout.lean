@@ -165,6 +165,23 @@ theorem idxOf?_inj {l : List TieredArray} {a b : TieredArray} {i : Nat} (ha : l.
   obtain ⟨hl', e2, -⟩ := List.idxOf?_eq_some_iff.mp hb
   exact e1.symm.trans e2
 
+/-- **The minimum lengths in `ca_check_b`'s layout, statically**: an array with a minimum length
+(`Tab.min64`) is frozen (its length is the buffer's, which the stub tests: `bufMinChk`) or owned
+(a slot of `abiWords` words); every other array gets no memory. -/
+def bufMinOk (tab : Tab) (fz own : List TieredArray) : Bool :=
+  (List.range tab.nw).all fun p =>
+    tab.min64 (tab.wAt p) == 0 || fz.contains (tab.wAt p) || own.contains (tab.wAt p)
+
+theorem idxOf?_of_contains {l : List TieredArray} {a : TieredArray} (h : l.contains a = true) :
+    ∃ k, l.idxOf? a = some k := by
+  have hm : a ∈ l := by simpa using h
+  exact Option.isSome_iff_exists.mp (by simpa [List.isSome_idxOf?] using hm)
+
+theorem idxOf?_of_not_contains {l : List TieredArray} {a : TieredArray} (h : ¬ l.contains a = true) :
+    l.idxOf? a = none := by
+  have hm : a ∉ l := by simpa using h
+  simpa [List.idxOf?_eq_none_iff] using hm
+
 section
 variable {tab : Tab} {fz own : List TieredArray} {B : Array Word} {buf base blen : Nat}
 
@@ -251,7 +268,9 @@ theorem buf_save (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base
       · have : abiSlot * 2 ≤ abiSlot * (2 + k) := Nat.mul_le_mul_left _ (by omega)
         unfold InSlot at h3; simp only [abiSlot] at this h3; omega
 
-theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base blen) :
+theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base blen)
+    (hmo : bufMinOk tab fz own = true)
+    (hmin : ∀ i (h : i < fz.length), tab.min64 fz[i] ≤ (bufEntry B i).2) :
     (bufLayout tab buf B base fz own).Ok := by
   obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
   have hn := hg.need
@@ -312,6 +331,25 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
     · have e := InSlot.eq hs hs'
       exact hab (idxOf?_inj hk (by rw [show k = k' by omega]; exact hk'))
   · intro a _ b _ x h; exact absurd h buf_notIn8
+  · intro s hs
+    simp only [bufLayout_tab, bufLayout_s64] at hs ⊢
+    have hp := List.all_eq_true.mp hmo _ (List.mem_range.mpr (tab.pos64_lt hs))
+    rw [tab.wAt_pos64 hs] at hp ⊢
+    simp only [bufL]
+    split
+    · rename_i i hi
+      obtain ⟨hl, e1, -⟩ := List.idxOf?_eq_some_iff.mp hi
+      have := hmin i hl
+      rwa [e1] at this
+    · rename_i hn
+      split
+      · exact abiTabOk_min hok s
+      · rename_i hn'
+        simp only [Bool.or_eq_true, beq_iff_eq] at hp
+        rcases hp with (hp | hp) | hp
+        · exact Nat.le_of_eq hp
+        · obtain ⟨k, hk⟩ := idxOf?_of_contains hp; rw [hn] at hk; cases hk
+        · obtain ⟨k, hk⟩ := idxOf?_of_contains hp; rw [hn'] at hk; cases hk
 
 end
 
@@ -383,16 +421,6 @@ theorem bufMem0_arr64 (fz own : List TieredArray) (B : Array Word) (r : Mem) (s 
     (bufMem0 fz own B r).arr64 s = match fz.idxOf? s with
       | some i => bufImg B i
       | none => if own.contains s then r.arr64 s else #[] := rfl
-
-theorem idxOf?_of_contains {l : List TieredArray} {a : TieredArray} (h : l.contains a = true) :
-    ∃ k, l.idxOf? a = some k := by
-  have hm : a ∈ l := by simpa using h
-  exact Option.isSome_iff_exists.mp (by simpa [List.isSome_idxOf?] using hm)
-
-theorem idxOf?_of_not_contains {l : List TieredArray} {a : TieredArray} (h : ¬ l.contains a = true) :
-    l.idxOf? a = none := by
-  have hm : a ∉ l := by simpa using h
-  simpa [List.idxOf?_eq_none_iff] using hm
 
 section
 variable {tab : Tab} {fz own : List TieredArray} {B : Array Word} {buf base blen : Nat}

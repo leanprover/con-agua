@@ -276,6 +276,8 @@ theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       dm (label abiStartAL) := by
   have hcP := hcode.left
   simp only [parStub] at hcP
+  replace hcP := hcP.left
+  simp only [parStub0] at hcP
   exact abiMode_outcome p tab hok hwf mode hng 1 abiStartAL k0 _ (Code.label (i := 0) hcP rfl)
     (Code.get (i := 0) hcP rfl) (Code.get (i := 1) hcP rfl) (Code.get (i := 2) hcP rfl)
     (Code.get (i := 3) hcP rfl) (Code.get (i := 4) hcP rfl) (Code.get (i := 5) hcP rfl)
@@ -294,6 +296,8 @@ theorem abiA0_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       dm (label abiStartA0L) := by
   have hcP := hcode.left
   simp only [parStub] at hcP
+  replace hcP := hcP.left
+  simp only [parStub0] at hcP
   exact abiMode_outcome p tab hok hwf mode hng 3 abiStartA0L (k0 + 7) _ (Code.label (i := 7) hcP rfl)
     (Code.get (i := 7) hcP rfl) (Code.get (i := 8) hcP rfl) (Code.get (i := 9) hcP rfl)
     (Code.get (i := 10) hcP rfl) (Code.get (i := 11) hcP rfl) (Code.get (i := 12) hcP rfl)

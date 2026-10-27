@@ -23,22 +23,31 @@ namespace ConAgua.Final
 open L L.Compiler
 
 /-- What `ca_check_seq`'s layout needs of its parameters: `out`, `hdrf`, `ctlf` are tier-0 numbers
-of today's layout (below `tierOff`), so that they name the arrays `↑out`, `↑hdrf`, `↑ctlf`. -/
+of today's layout (below `tierOff`), so that they name the arrays `↑out`, `↑hdrf`, `↑ctlf`; and the
+minimum lengths (`Tab.min64`) hold in it: `out` and `ctlf` (no memory) have none, `hdrf` (`hw`
+words) one of at most `hw`. -/
 def seqParamsOk (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) : Bool :=
-  decide (out < tab.nw) && decide (hdrf < tab.nw) && decide (hdrf ≠ out) && decide (hdrf ≠ ctlf) &&
-    decide (hw ≤ abiWords) && decide (out < tierOff) && decide (hdrf < tierOff) && decide (ctlf < tierOff)
+  (decide (out < tab.nw) && decide (hdrf < tab.nw) && decide (hdrf ≠ out) && decide (hdrf ≠ ctlf) &&
+    decide (hw ≤ abiWords) && decide (out < tierOff) && decide (hdrf < tierOff) && decide (ctlf < tierOff)) &&
+  (decide (tab.min64 out = 0) && decide (tab.min64 ctlf = 0) && decide (tab.min64 hdrf ≤ hw))
 
 theorem seqParamsOk_spec {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat}
     (h : seqParamsOk tab out hdrf ctlf hw = true) :
     out < tab.nw ∧ hdrf < tab.nw ∧ hdrf ≠ out ∧ hdrf ≠ ctlf ∧ hw ≤ abiWords := by
   simp only [seqParamsOk, Bool.and_eq_true, decide_eq_true_eq] at h
-  exact ⟨h.1.1.1.1.1.1.1, h.1.1.1.1.1.1.2, h.1.1.1.1.1.2, h.1.1.1.1.2, h.1.1.1.2⟩
+  exact ⟨h.1.1.1.1.1.1.1.1, h.1.1.1.1.1.1.1.2, h.1.1.1.1.1.1.2, h.1.1.1.1.1.2, h.1.1.1.1.2⟩
 
 theorem seqParamsOk_tier {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat}
     (h : seqParamsOk tab out hdrf ctlf hw = true) :
     out < tierOff ∧ hdrf < tierOff ∧ ctlf < tierOff := by
   simp only [seqParamsOk, Bool.and_eq_true, decide_eq_true_eq] at h
-  exact ⟨h.1.1.2, h.1.2, h.2⟩
+  exact ⟨h.1.1.1.2, h.1.1.2, h.1.2⟩
+
+theorem seqParamsOk_min {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat}
+    (h : seqParamsOk tab out hdrf ctlf hw = true) :
+    tab.min64 out = 0 ∧ tab.min64 ctlf = 0 ∧ tab.min64 hdrf ≤ hw := by
+  simp only [seqParamsOk, Bool.and_eq_true, decide_eq_true_eq] at h
+  exact ⟨h.2.1.1, h.2.1.2, h.2.2⟩
 
 /-- The slot word array `a` lives in: `hdrf` in `out`'s. -/
 def seqSlot (out hdrf a : Nat) : Nat := if a = hdrf then out else a
@@ -236,6 +245,19 @@ theorem seqLayout_ok (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf 
     · rw [ite_eq_right h1, ite_eq_left h2] at e'; exact ha' (Or.inl e')
     · rw [ite_eq_right h1, ite_eq_right h2] at e'; exact hab e'
   · intro a _ b _ x h; exact absurd h seq_notIn8
+  · intro s hs
+    simp only [seqLayout_tab] at hs ⊢
+    obtain ⟨mo, mc, mh⟩ := seqParamsOk_min hp
+    obtain ⟨to, th, tc⟩ := seqParamsOk_tier hp
+    rw [seqLayout_s64, tab.wposInv_pos64 hs]
+    split
+    · rename_i h
+      rcases h with h | h
+      · rw [(curNum_eq_iff to).mp h]; exact Nat.le_of_eq mo
+      · rw [(curNum_eq_iff tc).mp h]; exact Nat.le_of_eq mc
+    · split
+      · rename_i _ h; rw [(curNum_eq_iff th).mp h]; exact mh
+      · exact abiTabOk_min hok s
 
 end
 

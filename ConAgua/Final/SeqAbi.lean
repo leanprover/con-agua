@@ -54,6 +54,8 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   have hcP := hcode.left
   have hcC := hcode.right.right
   simp only [parStub] at hcP
+  replace hcP := hcP.left
+  simp only [parStub0] at hcP
   have hL2 := hcP.left.left.right
   have hcQ := hcP
   rw [List.append_assoc] at hcQ

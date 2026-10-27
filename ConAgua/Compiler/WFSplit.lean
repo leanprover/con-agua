@@ -62,9 +62,17 @@ partial def bytesToExpr (bs : Array UInt8) : Lean.Expr :=
       (mkApp2 (mkConst ``instHAppendOfAppend [0]) ty (mkApp (mkConst ``List.instAppend [0]) (mkConst ``UInt8)))
       (bytesToExpr (bs.extract 0 h)) (bytesToExpr (bs.extract h bs.size))
 
+/-- A list of number pairs as a term. -/
+def natPairsToExpr (l : List (Nat × Nat)) : Lean.Expr :=
+  let ty := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat)
+  l.foldr (fun (a, b) acc => mkApp3 (mkConst ``List.cons [0]) ty
+    (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``Nat) (mkConst ``Nat) (mkNatLit a) (mkNatLit b)) acc)
+    (mkApp (mkConst ``List.nil [0]) ty)
+
 def tabToExpr (t : Tab) : Lean.Expr :=
-  mkApp7 (mkConst ``Tab.mk) (mkNatLit t.nb) (mkNatLit t.nw) (bytesToExpr t.rom.toArray) (mkNatLit t.nres)
-    (mkNatLit t.ng) (mkNatLit t.rom.length) (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Nat) (mkNatLit t.rom.length))
+  mkAppN (mkConst ``Tab.mk) #[mkNatLit t.nb, mkNatLit t.nw, bytesToExpr t.rom.toArray, mkNatLit t.nres,
+    mkNatLit t.ng, natPairsToExpr t.mins, mkNatLit t.rom.length,
+    mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Nat) (mkNatLit t.rom.length)]
 
 unsafe def evalNats (e : Lean.Expr) : MetaM (List Nat) :=
   evalExpr (List Nat) (mkApp (mkConst ``List [0]) (mkConst ``Nat)) e

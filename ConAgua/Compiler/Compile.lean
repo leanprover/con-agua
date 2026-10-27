@@ -60,6 +60,10 @@ structure Tab where
   nres : Nat := 1
   /-- The number of global variables: global `g` (with `g.id < ng`) is the word at `globOff g`. -/
   ng : Nat := 0
+  /-- Minimum lengths (`L.ArrDecl.min`): `(a, k)` says that both tiers of word array `a` have at
+  least `k` words in every layout the code runs in (`Layout.Ok.min64`; the entry stubs establish
+  it), so a constant index below `k` needs no bounds check (`Tab.min64`). -/
+  mins : List (ArrId × Nat) := []
   /-- `rom.length`, stored: the offsets past the constant data (`resOff`, `globOff`, `args`) are
   then arithmetic on the table's fields, and the kernel does not count the bytes of a large ROM
   each time it evaluates the code generator (DESIGN.md, "Kernel-checked compiler output"). -/
@@ -255,6 +259,25 @@ def Tab.base8 (t : Tab) (a : ArrId) : Int := t.dbase8 (t.pos8 a)
 def Tab.len8 (t : Tab) (a : ArrId) : Int := t.dlen8 (t.pos8 a)
 def Tab.base64 (t : Tab) (s : TieredArray) : Int := t.dbase64 (t.pos64 s)
 def Tab.len64 (t : Tab) (s : TieredArray) : Int := t.dlen64 (t.pos64 s)
+
+/-- The minimum length of word array `s` (`Tab.mins`; the same for both tiers), `0` if it has
+none. -/
+def Tab.min64 (t : Tab) (s : TieredArray) : Nat := (t.mins.lookup s.arr).getD 0
+
+theorem lookup_getD_lt : ∀ (l : List (ArrId × Nat)) (a c : Nat), 0 < c →
+    l.all (fun x => decide (x.2 < c)) = true → (l.lookup a).getD 0 < c
+  | [], _, _, hc, _ => by simpa using hc
+  | (b, k) :: l, a, c, hc, h => by
+    simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at h
+    simp only [List.lookup_cons]
+    split
+    · simpa using h.1
+    · exact lookup_getD_lt l a c hc h.2
+
+/-- Every minimum length is below `c`. -/
+theorem Tab.min64_lt {t : Tab} {c : Nat} (hc : 0 < c) (h : t.mins.all (fun x => decide (x.2 < c)) = true)
+    (s : TieredArray) : t.min64 s < c :=
+  lookup_getD_lt t.mins s.arr c hc h
 
 /-- The words the constant data takes. -/
 def Tab.romWords (t : Tab) : Nat := (t.romLen + 7) / 8
@@ -923,12 +946,16 @@ def ldA (byte : Bool) (d : Reg64) (m : AddrExpr) : Directive :=
 def mbx (b i : Reg64) (byte : Bool) : AddrExpr := ⟨some (.reg b), some ⟨i, if byte then .W8 else .W64⟩, .int64 0⟩
 
 /-- `d := A[i]`, where `[ln]` is `A`'s length and `[bs]` its base: the bounds check, then the load,
-with a constant index folded into the displacement and a local's register as the index. -/
-def genLd (ctx : Ctx) (ln bs : AddrExpr) (byte : Bool) (i : Expr) (gi : GenF) (d : Reg64)
+with a constant index folded into the displacement and a local's register as the index. A
+constant index below `mn`, a minimum length of `A` (`Tab.min64`), needs no check. -/
+def genLd (ctx : Ctx) (ln bs : AddrExpr) (byte : Bool) (mn : Nat) (i : Expr) (gi : GenF) (d : Reg64)
     (fr : List Reg64) : Option Program :=
   match i with
   | .const k =>
     if k.toNat < 2 ^ 28 then
+      if k.toNat < mn then
+        some [movRM d bs, ldA byte d (mb d (if byte then k.toNat else 8 * k.toNat))]
+      else
       some [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL, movRM d bs,
         ldA byte d (mb d (if byte then k.toNat else 8 * k.toNat))]
     else none
@@ -972,15 +999,18 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
   | .len8 a, d, _ => some [movRM d (mb .r15 (ctx.tab.len8 a))]
   | .len64 a, d, _ => some [movRM d (mb .r15 (ctx.tab.len64 a))]
   | .bin op a b, d, fr => genBin ctx op a b (gen ctx a) (gen ctx b) d fr
-  | .ld8 a i, d, fr => genLd ctx (mb .r15 (ctx.tab.len8 a)) (mb .r15 (ctx.tab.base8 a)) true i (gen ctx i) d fr
-  | .ld64 a i, d, fr => genLd ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) false i (gen ctx i) d fr
+  | .ld8 a i, d, fr => genLd ctx (mb .r15 (ctx.tab.len8 a)) (mb .r15 (ctx.tab.base8 a)) true 0 i (gen ctx i) d fr
+  | .ld64 a i, d, fr =>
+    genLd ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) false (ctx.tab.min64 a) i (gen ctx i) d fr
   | .ld64t a t i, d, fr =>
     if ctx.isT t then
-      genLd ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) false i (gen ctx i) d fr
+      genLd ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) false (ctx.tab.min64 a) i
+        (gen ctx i) d fr
     else
       match fr with
       | s :: fr' => (gen ctx t s fr').bind fun ct =>
-          (genLd ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) false i (gen ctx i) d fr').map
+          (genLd ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) false (ctx.tab.min64 a) i
+            (gen ctx i) d fr').map
             fun c => ct ++ tierDesc s ++ c
       | [] => none
   | .len64t a t, d, fr =>
@@ -1231,9 +1261,9 @@ def genStV (ctx : Ctx) (e : Expr) (fr : List Reg64) : Option (Program × Operand
 
 /-- `A.u64[i] := e` through the register stack, where `[ln]` is `A`'s length and `[bs]` its base:
 the value (`genStV`), the index (a constant folded into the displacement, a local's register, or
-evaluated into a scratch register), the bounds check, the base into a scratch register, the
-store. -/
-def genSt (ctx : Ctx) (ln bs : AddrExpr) (i e : Expr) (fr : List Reg64) : Option Program :=
+evaluated into a scratch register), the bounds check (none for a constant index below the minimum
+length `mn`), the base into a scratch register, the store. -/
+def genSt (ctx : Ctx) (ln bs : AddrExpr) (mn : Nat) (i e : Expr) (fr : List Reg64) : Option Program :=
   match genStV ctx e fr with
   | none => none
   | some (cv, src, fr1) =>
@@ -1241,7 +1271,9 @@ def genSt (ctx : Ctx) (ln bs : AddrExpr) (i e : Expr) (fr : List Reg64) : Option
     | .const k =>
       if k.toNat < 2 ^ 28 then
         match fr1 with
-        | t :: _ => some (cv ++ [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL, movRM t bs,
+        | t :: _ =>
+          if k.toNat < mn then some (cv ++ [movRM t bs, i64 (.mov (.mem (mb t (8 * k.toNat))) src)])
+          else some (cv ++ [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL, movRM t bs,
             i64 (.mov (.mem (mb t (8 * k.toNat))) src)])
         | [] => none
       else none
@@ -1364,7 +1396,7 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
        movRM .rcx (mb .r15 (ctx.tab.base8 a)),
        i8 (.mov (.mem (mbi .rcx .rax .W8)) (.regOrMem (.reg (.low .rdx .W8))))]
   | .st64 a i e =>
-    match genSt ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) i e ctx.pool with
+    match genSt ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) (ctx.tab.min64 a) i e ctx.pool with
     | some code => code
     | none =>
     (match loadInto ctx .rdx e with
@@ -1412,7 +1444,7 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
   | .st64t a t i e =>
     match (if ctx.isT t then
-        genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) i e ctx.pool
+        genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64 a) i e ctx.pool
       else none) with
     | some code => code
     | none =>
