@@ -40,7 +40,7 @@ theorem idxW_hdW (g t n : Word) (_hg : g.toNat < 16) (ht : t ≤ 1) (hn : n.toNa
     simp; omega
 
 theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s r d : Word)
-    (h : derPutW A c m₁ s r d = some m') : MemFrame [A, A + 256] [] m₁ m' := by
+    (h : derPutW A c m₁ s r d = some m') : MemFrame [A, tier1 A] [] m₁ m' := by
   unfold derPutW at h
   split at h
   · cases h; exact MemFrame.refl _ _ _
@@ -54,7 +54,7 @@ theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s
 /-- **The frame of a `mk_*`**: the interning's arrays and counts, then the derived column `A`. -/
 theorem mkK_frame {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : A ≠ CTL) {c s d r : Word}
     {m m' : Mem} {ks : List Word} (h : mkK A c s d (consInternM C m ks) = some (r, m')) :
-    MemFrame (C.wset ++ [A, A + 256]) [C.ca, C.ca + 1] m m' := by
+    MemFrame (C.wset ++ [A, tier1 A]) [C.ca, C.ca + 1] m m' := by
   rcases hI : consInternM C m ks with _ | ⟨r₁, m₁⟩ <;> rw [hI] at h
   · cases h
   rcases hP : derPutW A c m₁ s r₁ d with _ | m₂ <;> simp only [mkK_some, hP, reduceCtorEq] at h
@@ -236,7 +236,7 @@ theorem colT_mono {A : ArrId} {f : δ → Word} {m m' : Mem} {t : Word} {tb : Tb
 
 /-- **A column survives a writer that keeps its arrays** (both tiers). -/
 theorem ColT2.frame {L : Lens α δ k} {A : ArrId} {f : δ → Word} {m m' : Mem} {a : AState}
-    (h : ColT2 L A f m a) (he : m'.arr64 A = m.arr64 A) (he' : m'.arr64 (A + 256) = m.arr64 (A + 256)) :
+    (h : ColT2 L A f m a) (he : m'.arr64 A = m.arr64 A) (he' : m'.arr64 (tier1 A) = m.arr64 (tier1 A)) :
     ColT2 L A f m' a :=
   ⟨colT_mono h.1 (fun _ _ => by simp only [tierA_zero, he]),
     colT_mono h.2 (fun _ _ => by simp only [tierA_one, he'])⟩
@@ -244,7 +244,7 @@ theorem ColT2.frame {L : Lens α δ k} {A : ArrId} {f : δ → Word} {m m' : Mem
 /-- `ColT2.frame` across a `MemFrame` that avoids the column (both tiers). -/
 theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List ArrId} {C : List Word}
     {m m' : Mem} {a : AState} (h : ColT2 L A f m a) (hf : MemFrame Ar C m m') (hA : A ∉ Ar)
-    (hA' : A + 256 ∉ Ar) (hc : A ≠ CTL) : ColT2 L A f m' a :=
+    (hA' : tier1 A ∉ Ar) (hc : A ≠ CTL) : ColT2 L A f m' a :=
   h.frame (hf.1 A hA hc) (hf.1 _ hA' (by simp [CTL]))
 
 theorem tbl_push_size (tb : Tbl α (Idx k) δ) (key : α) (d : δ) (y : Idx k) :

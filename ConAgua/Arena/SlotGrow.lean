@@ -80,8 +80,8 @@ def consGrowWords : Nat := 2 + 12 * 8
 
 /-! ## Tier arrays (lane tierswitch)
 
-Tier `t` of a store's array `a` is the word array `tierA a t` (`a`, or `a + 256`). The facts the
-store library needs: for `t ≤ 1` it is `a + 256 t`, and on ids below `256` it is injective in
+Tier `t` of a store's array `a` is the word array `tierA a t` (`a`, or `tier1 a`). The facts the
+store library needs: for `t ≤ 1` it is `a + tierOff · t`, and on ids below `256` it is injective in
 both. -/
 
 theorem tierOff_eq : tierOff = 256 := rfl
@@ -93,7 +93,7 @@ theorem tierA_of_le (a : Nat) (t : Word) (ht : t ≤ 1) : tierA a t = a + 256 * 
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_one.symm)]; rfl
 
 @[simp] theorem tierA_zero (a : Nat) : tierA a 0 = a := rfl
-@[simp] theorem tierA_one (a : Nat) : tierA a 1 = a + 256 := rfl
+@[simp] theorem tierA_one (a : Nat) : tierA a 1 = tier1 a := rfl
 
 theorem tierA_and_one (a : Nat) (t : Word) : tierA a (t &&& 1) = tierA a t := by
   simp only [tierA, UInt64.and_assoc, UInt64.and_self]
@@ -108,7 +108,7 @@ theorem tierA_lt (a : Nat) (ha : a < 256) (t : Word) : tierA a t < 512 := by
   show a + tierOff * (t &&& 1).toNat < 512
   rw [tierOff_eq]; omega
 
-theorem tierA_cases' (a : Nat) (t : Word) : tierA a t = a ∨ tierA a t = a + 256 := by
+theorem tierA_cases' (a : Nat) (t : Word) : tierA a t = a ∨ tierA a t = tier1 a := by
   have := and_one_le t
   rw [tierA_val]
   rcases (show (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 by omega) with h | h <;> simp [h]
@@ -146,7 +146,7 @@ theorem tierA_ne_tier (a : Nat) {t u : Word} (ht : t ≤ 1) (hu : u ≤ 1) (h : 
     (tierA_of_le a t ht).symm.trans (e.trans (tierA_of_le a u hu))
   exact h (UInt64.toNat_inj.mp (by omega))
 
-/-- A test memory's word arrays with each array `a` also as its tier-1 array `a + 256` (the
+/-- A test memory's word arrays with each array `a` also as its tier-1 array `tier1 a` (the
 tiered stores: `L.tierA`). -/
 def withTiers (ws : Array (Array Word)) : Array (Array Word) :=
   ws ++ Array.replicate (256 - ws.size) #[] ++ ws

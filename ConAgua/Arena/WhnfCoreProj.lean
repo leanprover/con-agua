@@ -392,7 +392,7 @@ theorem binternW_hw (m : Mem) (a : AState) (hR : BVarR m a) (u w : Word) (m' : M
   exact consInternM_lt bvarCS_wf hR hI
 
 theorem binternW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : binternW m u = some (w, m')) :
-    MemFrame [BREC, BSLOT, BREC + 256, BSLOT + 256] [22, 23] m m' := by
+    MemFrame [BREC, BSLOT, tier1 BREC, tier1 BSLOT] [22, 23] m m' := by
   exact (consInternM_frame bvarCS_wf hI).mono (by simp [ConsSch.wset, bvarCS])
     (by simp [bvarCS])
 
@@ -403,7 +403,7 @@ theorem callW_internBVar (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     AM.ok (internE (.bvar u.toNat)) a₀ ∧
     ArenaD m' (AM.st (internE (.bvar u.toNat)) a₀) ∧
     AM.res (internE (.bvar u.toNat)) a₀ = decE (r.headD 0) ∧
-    MemFrame [BREC, BSLOT, BREC + 256, BSLOT + 256] [22, 23] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [BREC, BSLOT, tier1 BREC, tier1 BSLOT] [22, 23] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, -, hm⟩ := triple_of_callW (internBVar_spec p hp.bvf hp.bvp hp.bvi n s₀ u) h
   obtain ⟨h1, h2, h3⟩ := internBVar_D s₀.mem a₀ hD u _ _ hm
   exact ⟨h1, h2, h3, binternW_frame _ _ _ _ hm, binternW_hw _ a₀ hD.1.bvar _ _ _ hm⟩
@@ -411,7 +411,7 @@ theorem callW_internBVar (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
 /-- **`CoreS` across a `bvar` interning step.** -/
 theorem CoreS.of_bvar {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
-    (hcpl : cpl a' = cpl a) (hf : MemFrame [BREC, BSLOT, BREC + 256, BSLOT + 256] [22, 23] m m') :
+    (hcpl : cpl a' = cpl a) (hf : MemFrame [BREC, BSLOT, tier1 BREC, tier1 BSLOT] [22, 23] m m') :
     CoreS dn m' a' vis fe M eb :=
   hS.arena_frame hD hcpl hf
     (fun b hb => by
@@ -428,7 +428,7 @@ theorem CoreS.of_bvar {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
 
-theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT, BREC + 256, BSLOT + 256] [22, 23] m m') :
+theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT, tier1 BREC, tier1 BSLOT] [22, 23] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)

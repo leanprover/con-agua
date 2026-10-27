@@ -252,7 +252,7 @@ def nriProg : Prog :=
 def nriFns : List FnName := nriProg.map (·.1)
 
 /-- `name_rec_i` writes the pool (and its top) and the `str` table. -/
-theorem nriProg_closed : closedA nriProg [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] nriFns = true := by
+theorem nriProg_closed : closedA nriProg [POOL, POOL1, NSREC, tier1 NSREC, NSSLOT, tier1 NSSLOT] [0, 36, 37] nriFns = true := by
   decide +kernel
 
 abbrev NriF (p : Prog) : Prop := ProgHas p nriProg
@@ -510,7 +510,7 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   simp only at hs₅ hR₅ hs₅' hI
   rw [hs₅] at hR₅
   rw [hs₅'] at hI
-  have hfr : MemFrame [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] m₁ m₅ :=
+  have hfr : MemFrame [POOL, POOL1, NSREC, tier1 NSREC, NSSLOT, tier1 NSSLOT] [0, 36, 37] m₁ m₅ :=
     ((grows_frame m₁ m₄ hg4).mono (by simp) (by simp)).trans
       ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [nstrCS]))
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS

@@ -149,7 +149,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
     (h : callW p n "spn_ls" [b, l] m = some (rs, m')) :
     ∃ a', (internLsNode hs).run a = .ok (decI (rs.headD 0), a') ∧ CoreS dn m' a' vis fe M eb ∧
       StackKept m m' ∧ HW (rs.headD 0) ∧ (∃ ls, denoteLs a'.store.lss (decI (rs.headD 0)) = some ls) ∧
-      ILWGrow a a' ∧ a'.memos = a.memos ∧ MemFrame [POOL, POOL1, LSREC, LSSLOT, LSHP, LSREC + 256, LSSLOT + 256, LSHP + 256] [0, 40, 41] m m' := by
+      ILWGrow a a' ∧ a'.memos = a.memos ∧ MemFrame [POOL, POOL1, LSREC, LSSLOT, LSHP, tier1 LSREC, tier1 LSSLOT, tier1 LSHP] [0, 40, 41] m m' := by
   have hp := hS.arena.1.lit.1
   obtain ⟨s₄, hs₄m, -, hW⟩ := triple_of_callW (spnLs_spec p hL n ⟨m, Locals.init []⟩ b l
     (by show pcap m < 2 ^ 64; have := hp.2.2.1; omega) hp.top41) h

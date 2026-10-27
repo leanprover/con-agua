@@ -122,7 +122,7 @@ include hp in
 /-- **`mk_app_n` refines `mkAppN`** under `ArenaD`, the list a stack slice.
 
 **Changed from the original statement**: `Grows s₀.mem s'.mem` (the Nat-limb pool's growth,
-`Pool.lean`) replaced by `MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem s'.mem` (what `mk_app`
+`Pool.lean`) replaced by `MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] s₀.mem s'.mem` (what `mk_app`
 actually touches: the two `app` tables and their derived-range cache) — `mk_app` never grows
 the limb pool, so the original conjunct was unmeetable. The `HW (r.headD 0)` conjunct is
 **dropped**: proving it needs a fresh handle-index bound (`aprobeW`'s hit index `<` the table's
@@ -138,7 +138,7 @@ theorem mkAppN_refines (n : Nat) (s₀ : St) (a₀ : AState) (hD : ArenaD s₀.m
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (mkAppN (decE f) xs.toList) a₀ ∧
       ArenaD s'.mem (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
       AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
-      MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem s'.mem; ⊤⦄ :=
+      MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] s₀.mem s'.mem; ⊤⦄ :=
   mkAppN_refines' p hp.mkn hp.derb hp.appf hp.appp hp.appi hp.mkapp n s₀ a₀ hD f o k xs hx
 
 include hp in
@@ -155,7 +155,7 @@ theorem mkAppNFrom_refines (n : Nat) (s₀ : St) (a₀ : AState) (hD : ArenaD s�
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (mkAppNFrom (decE f) xs i.toNat) a₀ ∧
       ArenaD s'.mem (AM.st (mkAppNFrom (decE f) xs i.toNat) a₀) ∧
       AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧
-      MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem s'.mem; ⊤⦄ :=
+      MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] s₀.mem s'.mem; ⊤⦄ :=
   mkAppNFrom_refines' p hp.mknf hp.derb hp.appf hp.appp hp.appi hp.mkapp n s₀ a₀ hD f o k i xs hx hik
 
 include hp in

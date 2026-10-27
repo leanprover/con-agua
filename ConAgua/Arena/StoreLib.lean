@@ -571,7 +571,7 @@ def StoreR (m : Mem) (on : Bool) (tbP tbS : Tbl α (Idx k) δ) : Prop :=
 /-- `m'` agrees with `m` outside the table's arrays (both tiers) and `CTL`, and at the pool top
 `CTL[0]`. -/
 def OutEq (m m' : Mem) : Prop :=
-  (∀ b, b ≠ S.ra → b ≠ S.ra + 256 → b ≠ S.sa → b ≠ S.sa + 256 → b ≠ CTL → m'.arr64 b = m.arr64 b) ∧
+  (∀ b, b ≠ S.ra → b ≠ tier1 S.ra → b ≠ S.sa → b ≠ tier1 S.sa → b ≠ CTL → m'.arr64 b = m.arr64 b) ∧
   rdW (m'.arr64 CTL) 0 = rdW (m.arr64 CTL) 0
 
 /-- **The instance's frame obligation**: a node's relation and hash depend on its own words and

@@ -211,7 +211,7 @@ theorem fvarColFree : ColFree fvarCS FVRecRel := by
 
 /-- **What `intern_fvar` changes**: the table's arrays, the column, the counts. -/
 theorem fvinternW_frame (m : Mem) (u ty : Word) (w : Word) (m' : Mem) (hI : fvinternW m u ty = some (w, m')) :
-    MemFrame [FVREC, FVREC + 256, FVSLOT, FVSLOT + 256, FVLP, FVLP + 256] [26, 27] m m' :=
+    MemFrame [FVREC, tier1 FVREC, FVSLOT, tier1 FVSLOT, FVLP, tier1 FVLP] [26, 27] m m' :=
   consInternM_frame fvarCS_wf hI
 
 theorem fvarLocal : RLocal fvarSch FVRecRel fvhash [] [] := by

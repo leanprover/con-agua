@@ -441,9 +441,9 @@ theorem natPredLit_inst (hp : WhnfDeltaProg' p) : InternSpec p ArenaD :=
 /-- The functions of `intern_lit`: they write the `lit` table only, never the pool. -/
 def litFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
 
-theorem litFns_closed : closedA storeProg [REC, REC + 256, SLOT, SLOT + 256] [2, 3] litFns = true := by decide +kernel
+theorem litFns_closed : closedA storeProg [REC, tier1 REC, SLOT, tier1 SLOT] [2, 3] litFns = true := by decide +kernel
 
-theorem WhnfDeltaProg'.litClosed (hp : WhnfDeltaProg' p) : closedA p [REC, REC + 256, SLOT, SLOT + 256] [2, 3] litFns = true :=
+theorem WhnfDeltaProg'.litClosed (hp : WhnfDeltaProg' p) : closedA p [REC, tier1 REC, SLOT, tier1 SLOT] [2, 3] litFns = true :=
   closedW_of_agree litFns_closed (by
     intro f hf
     simp only [litFns, List.mem_cons, List.mem_nil_iff, or_false] at hf
@@ -788,8 +788,8 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     rwa [hdb] at this
   have hE : m₁.arr64 REC = s₀.mem.arr64 REC :=
     hfr1.arr_eq REC (by simp [CREC, CSLOT, CLP, REC]) (by decide)
-  have hE' : m₁.arr64 (REC + 256) = s₀.mem.arr64 (REC + 256) :=
-    hfr1.arr_eq (REC + 256) (by simp [CREC, CSLOT, CLP, REC]) (by decide)
+  have hE' : m₁.arr64 (tier1 REC) = s₀.mem.arr64 (tier1 REC) :=
+    hfr1.arr_eq (tier1 REC) (by simp [CREC, CSLOT, CLP, REC]) (by decide)
   have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
     hfr1.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
   have hPool1 : m₁.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
@@ -1109,12 +1109,12 @@ theorem callW_mkAppN (hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : AState) (h
     (m' : Mem) (h : callW p n "mk_app_n" [f, o, k] s₀.mem = some (r, m')) :
     AM.ok (mkAppN (decE f) xs.toList) a₀ ∧ ArenaD m' (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
     AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
-    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, -, hok, hD', hres, hfr⟩ := triple_of_callW (Q := fun r s' =>
       LocEq s' s₀ ∧ AM.ok (mkAppN (decE f) xs.toList) a₀ ∧
         ArenaD s'.mem (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
         AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
-        MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem s'.mem)
+        MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] s₀.mem s'.mem)
     (mkAppN_refines p hp n s₀ a₀ hD f o k xs hf hx) h
   obtain ⟨s'', hm⟩ := triple_of_callW (mkAppNL_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp hp.mkn
     n s₀ f o k) h

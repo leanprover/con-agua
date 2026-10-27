@@ -57,7 +57,7 @@ theorem keeps_cpl_internConst' (n : NIdx) (us : LsIdx) : Keeps cpl (internE (.co
 
 theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m')
+    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m')
     {n : NIdx} {us : LsIdx} {r : EIdx} (hrun : (internE (.const n us)).run a = .ok (r, a'))
     (hus : ∃ ls, denoteLs a.store.lss us = some ls) :
     CoreS dn m' a' vis fe M eb :=
@@ -78,7 +78,7 @@ theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
     (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)))
     (hmode := hS.mode.frame hf (by decide) (by decide))
 
-theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m') :
+theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
@@ -101,7 +101,7 @@ theorem callW_internConst' (hpf : p.lookup "const_find" = some constFind)
     AM.ok (internE (.const (decI f) (decI x))) a₀ ∧
     ArenaD m' (AM.st (internE (.const (decI f) (decI x))) a₀) ∧
     AM.res (internE (.const (decI f) (decI x))) a₀ = decI (r.headD 0) ∧
-    MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m' ∧ HW (r.headD 0) := by
+    MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internConst_spec p hpf hpp hp n _ f x) h
   obtain ⟨-, hm⟩ := hm
@@ -116,13 +116,13 @@ theorem callW_mkAppN' (hp : SpineProg p) (n : Nat) (m : Mem) (a₀ : AState) (hD
     (m' : Mem) (h : callW p n "mk_app_n" [f, o, k] m = some (r, m')) :
     AM.ok (mkAppN (decE f) xs.toList) a₀ ∧ ArenaD m' (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
     AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
-    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m' ∧ HW (r.headD 0) := by
+    MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, -, hok, hD', hres, hfr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (Q := fun r s' =>
       LocEq s' ⟨m, Locals.init []⟩ ∧ AM.ok (mkAppN (decE f) xs.toList) a₀ ∧
         ArenaD s'.mem (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
         AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
-        MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m s'.mem)
+        MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m s'.mem)
     (mkAppN_refines p hp n _ a₀ hD f o k xs hf hx) h
   obtain ⟨s'', hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (mkAppNL_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp hp.mkn n _ f o k) h

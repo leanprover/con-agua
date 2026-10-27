@@ -365,7 +365,7 @@ theorem der_congr {S : ArrId} (hS : S = ASLOT ∨ S = LASLOT ∨ S = FASLOT) (t 
     derBW m₂ h = derBW m₃ h ∧ derFW m₂ h = derFW m₃ h ∧ exprLPW m₂ h = exprLPW m₃ h := by
   have hS' : S < 256 := by rcases hS with rfl | rfl | rfl <;> decide
   have hf' : ∀ b : ArrId, b < 256 → b ≠ S → m₂.arr64 b = m₃.arr64 b ∧
-      m₂.arr64 (b + 256) = m₃.arr64 (b + 256) := fun b hb hbS =>
+      m₂.arr64 (tier1 b) = m₃.arr64 (tier1 b) := fun b hb hbS =>
     ⟨hf _ (by simpa using tierA_ne hb hS' hbS 0 t), hf _ (by simpa using tierA_ne hb hS' hbS 1 t)⟩
   have e := fun (b : ArrId) (hb : b < 256) (hbS : b ≠ S) => hf' b hb hbS
   rcases hS with rfl | rfl | rfl <;>

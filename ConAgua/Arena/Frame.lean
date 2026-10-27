@@ -42,14 +42,14 @@ theorem MemFrame.mono {A A' : List ArrId} {C C' : List Word} {m m' : Mem} (h : M
 
 /-- Both tiers of an array outside a frame's arrays are unchanged. -/
 theorem MemFrame.tier {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
-    (B : ArrId) (hB : B ∉ A) (hB' : B + 256 ∉ A) (hc : B ≠ CTL) (t : Word) :
+    (B : ArrId) (hB : B ∉ A) (hB' : tier1 B ∉ A) (hc : B ≠ CTL) (t : Word) :
     m'.arr64 (tierA B t) = m.arr64 (tierA B t) := by
   rcases tierA_cases' B t with e | e <;> rw [e]
   · exact h.1 B hB hc
   · exact h.1 _ hB' (by simp [CTL])
 
 /-- The arrays below `64` and their tier-1 twins `256‥319` (the store tier's), as a list. -/
-def lowTierArrs : List ArrId := List.range 64 ++ (List.range 64).map (· + 256)
+def lowTierArrs : List ArrId := List.range 64 ++ (List.range 64).map tier1
 
 theorem low_tier_mem (b : Nat) (h : b < 64 ∨ (256 ≤ b ∧ b < 320)) : b ∈ lowTierArrs := by
   rcases h with h | ⟨h1, h2⟩
@@ -154,9 +154,9 @@ def RLocal (A₀ : List ArrId) (C₀ : List Word) : Prop :=
     (∀ t i a, R m t i a → R m' t i a) ∧ ∀ t i, hs m' t i = hs m t i
 
 /-- A table (and the arrays `A₀` and words `C₀` its records refer to) is apart from a writer of
-`A` and `C` (the table's arrays in both tiers: `a` and `a + 256`). -/
+`A` and `C` (the table's arrays in both tiers: `a` and `tier1 a`). -/
 def Apart (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word) : Prop :=
-  S.ra ∉ A ∧ S.ra + 256 ∉ A ∧ S.sa ∉ A ∧ S.sa + 256 ∉ A ∧ (∀ b ∈ A₀, b ∉ A ∧ b ≠ CTL) ∧
+  S.ra ∉ A ∧ tier1 S.ra ∉ A ∧ S.sa ∉ A ∧ tier1 S.sa ∉ A ∧ (∀ b ∈ A₀, b ∉ A ∧ b ≠ CTL) ∧
     S.ca ∉ C ∧ S.ca + 1 ∉ C ∧ (1 : Word) ∉ C ∧ SCB ∉ C ∧ ∀ x ∈ C₀, x ∉ C
 
 instance (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word) :
@@ -173,7 +173,7 @@ theorem apart_hi (ka kc : Nat) (A₀ : List ArrId) (C₀ : List Word) (A : List 
     (hA : ∀ b ∈ A, ka ≤ b ∧ (b < 256 ∨ 256 + ka ≤ b)) (hC : ∀ x ∈ C, kc ≤ x.toNat) :
     Apart S A₀ C₀ A C := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := hlo
-  have tw : ∀ r : ArrId, r < ka → r + 256 ∉ A := fun r hr h => by
+  have tw : ∀ r : ArrId, r < ka → tier1 r ∉ A := fun r hr h => by
     rcases (hA _ h).2 with h' | h'
     · exact absurd h' (Nat.not_lt.mpr (Nat.le_add_left 256 r))
     · exact absurd hr (Nat.not_lt.mpr

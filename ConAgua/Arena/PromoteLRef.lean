@@ -138,10 +138,10 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
 
 /-- The arrays and `CTL` words a level promotion writes (the names' and the level tables'). -/
 abbrev lArrs : List ArrId :=
-  [POOL, PT0, NAREC, NAREC + 256, NASLOT, NASLOT + 256, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC,
-    NNREC + 256, NNSLOT, NNSLOT + 256, PNM, ZREC, ZREC + 256, ZSLOT, ZSLOT + 256, SREC, SREC + 256,
-    SSLOT, SSLOT + 256, MREC, MREC + 256, MSLOT, MSLOT + 256, IREC, IREC + 256, ISLOT, ISLOT + 256,
-    PREC, PREC + 256, PSLOT, PSLOT + 256, PLM, SHP, SHP + 256, MHP, MHP + 256, IHP, IHP + 256]
+  [POOL, PT0, NAREC, tier1 NAREC, NASLOT, tier1 NASLOT, NSREC, tier1 NSREC, NSSLOT, tier1 NSSLOT, NNREC,
+    tier1 NNREC, NNSLOT, tier1 NNSLOT, PNM, ZREC, tier1 ZREC, ZSLOT, tier1 ZSLOT, SREC, tier1 SREC,
+    SSLOT, tier1 SSLOT, MREC, tier1 MREC, MSLOT, tier1 MSLOT, IREC, tier1 IREC, ISLOT, tier1 ISLOT,
+    PREC, tier1 PREC, PSLOT, tier1 PSLOT, PLM, SHP, tier1 SHP, MHP, tier1 MHP, IHP, tier1 IHP]
 abbrev lCtl : List Word := [34, 35, 36, 37, 38, 39, 141, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 143]
 
 /-- **What a successful run of a level promotion gives** (`PNOk` at the level frame). -/

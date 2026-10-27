@@ -297,7 +297,7 @@ theorem mkForallW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m'
   exact fainternW_hw m a hA.1.forallE t b _ m₁ hI₁
 
 theorem mkForallW_frame {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some (r, m')) :
-    MemFrame [FADER, FAREC, FASLOT, FADER + 256, FAREC + 256, FASLOT + 256] [30, 31] m m' := by
+    MemFrame [FADER, FAREC, FASLOT, tier1 FADER, tier1 FAREC, tier1 FASLOT] [30, 31] m m' := by
   unfold mkForallW at hI; split at hI; · cases hI
   exact (L.Ind.mkK_frame (by decide) (fun r₁ m₁ hx => by
     exact consInternM_frame forallCS_wf hx) hI).mono

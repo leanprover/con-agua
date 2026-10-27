@@ -223,10 +223,10 @@ theorem HeapFrame.ext (h : HeapFrame m m') : HeapExt m m' := by
     have aM : m'.arr64 MREC = m.arr64 MREC := h.arr MREC (by decide) (by decide)
     have aI : m'.arr64 IREC = m.arr64 IREC := h.arr IREC (by decide) (by decide)
     have aP : m'.arr64 PREC = m.arr64 PREC := h.arr PREC (by decide) (by decide)
-    have aS' : m'.arr64 (SREC + 256) = m.arr64 (SREC + 256) := h.arr _ (by decide) (by decide)
-    have aM' : m'.arr64 (MREC + 256) = m.arr64 (MREC + 256) := h.arr _ (by decide) (by decide)
-    have aI' : m'.arr64 (IREC + 256) = m.arr64 (IREC + 256) := h.arr _ (by decide) (by decide)
-    have aP' : m'.arr64 (PREC + 256) = m.arr64 (PREC + 256) := h.arr _ (by decide) (by decide)
+    have aS' : m'.arr64 (tier1 SREC) = m.arr64 (tier1 SREC) := h.arr _ (by decide) (by decide)
+    have aM' : m'.arr64 (tier1 MREC) = m.arr64 (tier1 MREC) := h.arr _ (by decide) (by decide)
+    have aI' : m'.arr64 (tier1 IREC) = m.arr64 (tier1 IREC) := h.arr _ (by decide) (by decide)
+    have aP' : m'.arr64 (tier1 PREC) = m.arr64 (tier1 PREC) := h.arr _ (by decide) (by decide)
     simp only [c1, c8, c6, c10, c12, c14, tfld_arr_eq (R := SUCC) aS aS',
       tfld_arr_eq (R := MAX) aM aM', tfld_arr_eq (R := IMAX) aI aI', tfld_arr_eq (R := PARAM) aP aP']
   · exact h.heap p hb hp

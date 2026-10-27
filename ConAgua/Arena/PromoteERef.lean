@@ -137,12 +137,12 @@ theorem promote_lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
 
 /-- The arrays and `CTL` words an expression promotion writes. -/
 abbrev eArrs : List ArrId :=
-  lsArrs ++ [REC, REC + 256, SLOT, SLOT + 256, AREC, AREC + 256, ASLOT, ASLOT + 256, SOREC, SOREC
-    + 256, SOSLOT, SOSLOT + 256, CREC, CREC + 256, CSLOT, CSLOT + 256, LEREC, LEREC + 256, LESLOT,
-    LESLOT + 256, BREC, BREC + 256, BSLOT, BSLOT + 256, FVREC, FVREC + 256, FVSLOT, FVSLOT + 256,
-    LAREC, LAREC + 256, LASLOT, LASLOT + 256, FAREC, FAREC + 256, FASLOT, FASLOT + 256, PJREC, PJREC
-    + 256, PJSLOT, PJSLOT + 256, ADER, ADER + 256, LADER, LADER + 256, FADER, FADER + 256, LEDER,
-    LEDER + 256, PJDER, PJDER + 256, PEM, SOLP, SOLP + 256, CLP, CLP + 256, FVLP, FVLP + 256]
+  lsArrs ++ [REC, tier1 REC, SLOT, tier1 SLOT, AREC, tier1 AREC, ASLOT, tier1 ASLOT, SOREC, SOREC
+    + 256, SOSLOT, tier1 SOSLOT, CREC, tier1 CREC, CSLOT, tier1 CSLOT, LEREC, tier1 LEREC, LESLOT,
+    tier1 LESLOT, BREC, tier1 BREC, BSLOT, tier1 BSLOT, FVREC, tier1 FVREC, FVSLOT, tier1 FVSLOT,
+    LAREC, tier1 LAREC, LASLOT, tier1 LASLOT, FAREC, tier1 FAREC, FASLOT, tier1 FASLOT, PJREC, PJREC
+    + 256, PJSLOT, tier1 PJSLOT, ADER, tier1 ADER, LADER, tier1 LADER, FADER, tier1 FADER, LEDER,
+    tier1 LEDER, PJDER, tier1 PJDER, PEM, SOLP, tier1 SOLP, CLP, tier1 CLP, FVLP, tier1 FVLP]
 abbrev eCtl : List Word :=
   lsCtl ++ [2, 3, 4, 5, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 147]
 

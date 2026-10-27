@@ -246,7 +246,7 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
     rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₂⟩ <;> simp only [hP, litStrK, reduceCtorEq] at h
     split at h; cases h
     split at h; cases h
-    exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] _ _))
+    exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, tier1 litSch.ra, litSch.sa, tier1 litSch.sa] [litSch.ca, litSch.ca + 1] _ _))
 
 /-- **An expression line leaves `DECL`, `DLP` alone.** -/
 theorem applyExprW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)

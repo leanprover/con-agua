@@ -268,7 +268,7 @@ def mknProg : Prog :=
 def mknFns : List FnName := mknProg.map (·.1)
 
 /-- `mk_app_n_f` writes the stack, its top, and the app tables (`mk_app`). -/
-theorem mknProg_closed : closedA mknProg [SPN, AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [136, 4, 5] mknFns = true := by
+theorem mknProg_closed : closedA mknProg [SPN, AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [136, 4, 5] mknFns = true := by
   decide +kernel
 
 abbrev MknF (p : Prog) : Prop := ProgHas p mknProg
@@ -283,7 +283,7 @@ theorem mknF_spec0 (p : Prog) (hp : MknF p) (n : Nat) (s₀ : St) (args : List W
   callF_spec mknProg_closed (hp.agree mknFns) (by decide) n s₀ args
 
 theorem mknF_frame {m m' : Mem} {args r : List Word} (h : mknF m args = some (r, m')) :
-    MemFrame [SPN, AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [136, 4, 5] m m' := by
+    MemFrame [SPN, AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [136, 4, 5] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame mknProg_closed (by decide) (run_of_callW hc)).1
 

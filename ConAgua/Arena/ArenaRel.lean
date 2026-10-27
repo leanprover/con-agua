@@ -60,7 +60,7 @@ namespace L.Arena
 
 /-- The store tier's arrays: the pool, the 19 tables' record and slot arrays, and the seven
 level-parameter columns 55‥61 (`LpCol.lean`, helper `whnf4-d23`), each table array and column in
-both tiers (tier 1 of array `a` is `a + 256`, lane tierswitch). -/
+both tiers (tier 1 of array `a` is `tier1 a`, lane tierswitch). -/
 def storeArrs : List ArrId :=
   [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 55, 56, 57, 58, 59, 60, 61,
    258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 311, 312, 313, 314, 315, 316, 317, 62, 256]
@@ -210,8 +210,8 @@ include hf in
 /-- **A level-parameter column across a writer apart from its table and column** (the column
 is the table's extra array `B` in `Apart`). -/
 theorem ColT2.frameAp (S : Schema) {L : Lens α δ k} {B : ArrId} {f : δ → Word}
-    (hap : Apart S [B, B + 256] [] A C) (h : ColT2 L B f m a) : ColT2 L B f m' a :=
-  h.frameM hf (hap.2.2.2.2.1 B (by simp)).1 (hap.2.2.2.2.1 (B + 256) (by simp)).1
+    (hap : Apart S [B, tier1 B] [] A C) (h : ColT2 L B f m a) : ColT2 L B f m' a :=
+  h.frameM hf (hap.2.2.2.2.1 B (by simp)).1 (hap.2.2.2.2.1 (tier1 B) (by simp)).1
     (hap.2.2.2.2.1 B (by simp)).2
 
 end lpframes
@@ -225,7 +225,7 @@ of one per writer. The lists are concrete, so a writer's side conditions are `by
 /-- A table is apart from a writer that avoids what the table's group owns. -/
 theorem apart_own (S : Schema) (A₀ : List ArrId)
     (C₀ : List Word) (own : List ArrId) (ownC : List Word)
-    (hown : S.ra ∈ own ∧ S.ra + 256 ∈ own ∧ S.sa ∈ own ∧ S.sa + 256 ∈ own ∧
+    (hown : S.ra ∈ own ∧ tier1 S.ra ∈ own ∧ S.sa ∈ own ∧ tier1 S.sa ∈ own ∧
       (∀ b ∈ A₀, b ∈ own ∧ b ≠ CTL) ∧ S.ca ∈ ownC ∧
       S.ca + 1 ∈ ownC ∧ (1 : Word) ∈ ownC ∧ SCB ∈ ownC ∧ ∀ x ∈ C₀, x ∈ ownC)
     (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, b ∉ own) (hC : ∀ x ∈ C, x ∉ ownC) :
@@ -476,133 +476,133 @@ include hR
 
 /-- Interning into `lit` keeps `ArenaR`. -/
 theorem ArenaR.lift_lit (hX : LitR m' a')
-    (hf : MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m')
+    (hf : MemFrame [litSch.ra, tier1 litSch.ra, litSch.sa, tier1 litSch.sa] [litSch.ca, litSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = litLens.setP a t) ∨ (∃ t, a' = litLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `app` keeps `ArenaR`. -/
 theorem ArenaR.lift_app (hX : AppR m' a')
-    (hf : MemFrame [appSch.ra, appSch.ra + 256, appSch.sa, appSch.sa + 256] [appSch.ca, appSch.ca + 1] m m')
+    (hf : MemFrame [appSch.ra, tier1 appSch.ra, appSch.sa, tier1 appSch.sa] [appSch.ca, appSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = appLens.setP a t) ∨ (∃ t, a' = appLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `sort` keeps `ArenaR`. -/
 theorem ArenaR.lift_sort (hX : SortR m' a' ∧ ColT2 sortLens SOLP lpW m' a')
-    (hf : MemFrame [sortSch.ra, sortSch.ra + 256, sortSch.sa, sortSch.sa + 256, SOLP, SOLP + 256] [sortSch.ca, sortSch.ca + 1] m m')
+    (hf : MemFrame [sortSch.ra, tier1 sortSch.ra, sortSch.sa, tier1 sortSch.sa, SOLP, tier1 SOLP] [sortSch.ca, sortSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = sortLens.setP a t) ∨ (∃ t, a' = sortLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `const` keeps `ArenaR`. -/
 theorem ArenaR.lift_const (hX : ConstR m' a' ∧ ColT2 constLens CLP lpW m' a')
-    (hf : MemFrame [constSch.ra, constSch.ra + 256, constSch.sa, constSch.sa + 256, CLP, CLP + 256] [constSch.ca, constSch.ca + 1] m m')
+    (hf : MemFrame [constSch.ra, tier1 constSch.ra, constSch.sa, tier1 constSch.sa, CLP, tier1 CLP] [constSch.ca, constSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = constLens.setP a t) ∨ (∃ t, a' = constLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `letE` keeps `ArenaR`. -/
 theorem ArenaR.lift_letE (hX : LetR m' a')
-    (hf : MemFrame [letSch.ra, letSch.ra + 256, letSch.sa, letSch.sa + 256] [letSch.ca, letSch.ca + 1] m m')
+    (hf : MemFrame [letSch.ra, tier1 letSch.ra, letSch.sa, tier1 letSch.sa] [letSch.ca, letSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = letLens.setP a t) ∨ (∃ t, a' = letLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `bvar` keeps `ArenaR`. -/
 theorem ArenaR.lift_bvar (hX : BVarR m' a')
-    (hf : MemFrame [bvarSch.ra, bvarSch.ra + 256, bvarSch.sa, bvarSch.sa + 256] [bvarSch.ca, bvarSch.ca + 1] m m')
+    (hf : MemFrame [bvarSch.ra, tier1 bvarSch.ra, bvarSch.sa, tier1 bvarSch.sa] [bvarSch.ca, bvarSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = bvarLens.setP a t) ∨ (∃ t, a' = bvarLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `fvar` keeps `ArenaR`. -/
 theorem ArenaR.lift_fvar (hX : FVarR m' a' ∧ ColT2 fvarLens FVLP lpW m' a')
-    (hf : MemFrame [fvarSch.ra, fvarSch.ra + 256, fvarSch.sa, fvarSch.sa + 256, FVLP, FVLP + 256] [fvarSch.ca, fvarSch.ca + 1] m m')
+    (hf : MemFrame [fvarSch.ra, tier1 fvarSch.ra, fvarSch.sa, tier1 fvarSch.sa, FVLP, tier1 FVLP] [fvarSch.ca, fvarSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = fvarLens.setP a t) ∨ (∃ t, a' = fvarLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `lam` keeps `ArenaR`. -/
 theorem ArenaR.lift_lam (hX : LamR m' a')
-    (hf : MemFrame [lamSch.ra, lamSch.ra + 256, lamSch.sa, lamSch.sa + 256] [lamSch.ca, lamSch.ca + 1] m m')
+    (hf : MemFrame [lamSch.ra, tier1 lamSch.ra, lamSch.sa, tier1 lamSch.sa] [lamSch.ca, lamSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = lamLens.setP a t) ∨ (∃ t, a' = lamLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `forallE` keeps `ArenaR`. -/
 theorem ArenaR.lift_forallE (hX : ForallR m' a')
-    (hf : MemFrame [forallSch.ra, forallSch.ra + 256, forallSch.sa, forallSch.sa + 256] [forallSch.ca, forallSch.ca + 1] m m')
+    (hf : MemFrame [forallSch.ra, tier1 forallSch.ra, forallSch.sa, tier1 forallSch.sa] [forallSch.ca, forallSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = forallLens.setP a t) ∨ (∃ t, a' = forallLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `proj` keeps `ArenaR`. -/
 theorem ArenaR.lift_proj (hX : ProjR m' a')
-    (hf : MemFrame [projSch.ra, projSch.ra + 256, projSch.sa, projSch.sa + 256] [projSch.ca, projSch.ca + 1] m m')
+    (hf : MemFrame [projSch.ra, tier1 projSch.ra, projSch.sa, tier1 projSch.sa] [projSch.ca, projSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = projLens.setP a t) ∨ (∃ t, a' = projLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `zero` keeps `ArenaR`. -/
 theorem ArenaR.lift_zero (hX : ZeroR m' a' ∧ ConstT2 zeroLens (fun d : LDer => hpW d = 0) a')
-    (hf : MemFrame [zeroSch.ra, zeroSch.ra + 256, zeroSch.sa, zeroSch.sa + 256] [zeroSch.ca, zeroSch.ca + 1] m m')
+    (hf : MemFrame [zeroSch.ra, tier1 zeroSch.ra, zeroSch.sa, tier1 zeroSch.sa] [zeroSch.ca, zeroSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = zeroLens.setP a t) ∨ (∃ t, a' = zeroLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `succ` keeps `ArenaR`. -/
 theorem ArenaR.lift_succ (hX : SuccR m' a' ∧ ColT2 succLens SHP hpW m' a')
-    (hf : MemFrame [succSch.ra, succSch.ra + 256, succSch.sa, succSch.sa + 256, SHP, SHP + 256] [succSch.ca, succSch.ca + 1] m m')
+    (hf : MemFrame [succSch.ra, tier1 succSch.ra, succSch.sa, tier1 succSch.sa, SHP, tier1 SHP] [succSch.ca, succSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = succLens.setP a t) ∨ (∃ t, a' = succLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `max` keeps `ArenaR`. -/
 theorem ArenaR.lift_max (hX : MaxR m' a' ∧ ColT2 maxLens MHP hpW m' a')
-    (hf : MemFrame [maxSch.ra, maxSch.ra + 256, maxSch.sa, maxSch.sa + 256, MHP, MHP + 256] [maxSch.ca, maxSch.ca + 1] m m')
+    (hf : MemFrame [maxSch.ra, tier1 maxSch.ra, maxSch.sa, tier1 maxSch.sa, MHP, tier1 MHP] [maxSch.ca, maxSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = maxLens.setP a t) ∨ (∃ t, a' = maxLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `imax` keeps `ArenaR`. -/
 theorem ArenaR.lift_imax (hX : ImaxR m' a' ∧ ColT2 imaxLens IHP hpW m' a')
-    (hf : MemFrame [imaxSch.ra, imaxSch.ra + 256, imaxSch.sa, imaxSch.sa + 256, IHP, IHP + 256] [imaxSch.ca, imaxSch.ca + 1] m m')
+    (hf : MemFrame [imaxSch.ra, tier1 imaxSch.ra, imaxSch.sa, tier1 imaxSch.sa, IHP, tier1 IHP] [imaxSch.ca, imaxSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = imaxLens.setP a t) ∨ (∃ t, a' = imaxLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `param` keeps `ArenaR`. -/
 theorem ArenaR.lift_param (hX : ParamR m' a' ∧ ConstT2 paramLens (fun d : LDer => hpW d = 1) a')
-    (hf : MemFrame [paramSch.ra, paramSch.ra + 256, paramSch.sa, paramSch.sa + 256] [paramSch.ca, paramSch.ca + 1] m m')
+    (hf : MemFrame [paramSch.ra, tier1 paramSch.ra, paramSch.sa, tier1 paramSch.sa] [paramSch.ca, paramSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = paramLens.setP a t) ∨ (∃ t, a' = paramLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `ls` keeps `ArenaR`. -/
 theorem ArenaR.lift_ls (hX : LsR m' a' ∧ ColT2 lsLens LSHP hpW m' a')
-    (hf : MemFrame [lsSch.ra, lsSch.ra + 256, lsSch.sa, lsSch.sa + 256, LSHP, LSHP + 256] [lsSch.ca, lsSch.ca + 1] m m')
+    (hf : MemFrame [lsSch.ra, tier1 lsSch.ra, lsSch.sa, tier1 lsSch.sa, LSHP, tier1 LSHP] [lsSch.ca, lsSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = lsLens.setP a t) ∨ (∃ t, a' = lsLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `nanon` keeps `ArenaR`. -/
 theorem ArenaR.lift_nanon (hX : NAnonR m' a')
-    (hf : MemFrame [nanonSch.ra, nanonSch.ra + 256, nanonSch.sa, nanonSch.sa + 256] [nanonSch.ca, nanonSch.ca + 1] m m')
+    (hf : MemFrame [nanonSch.ra, tier1 nanonSch.ra, nanonSch.sa, tier1 nanonSch.sa] [nanonSch.ca, nanonSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = nanonLens.setP a t) ∨ (∃ t, a' = nanonLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `nstr` keeps `ArenaR`. -/
 theorem ArenaR.lift_nstr (hX : NStrR m' a')
-    (hf : MemFrame [nstrSch.ra, nstrSch.ra + 256, nstrSch.sa, nstrSch.sa + 256] [nstrSch.ca, nstrSch.ca + 1] m m')
+    (hf : MemFrame [nstrSch.ra, tier1 nstrSch.ra, nstrSch.sa, tier1 nstrSch.sa] [nstrSch.ca, nstrSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = nstrLens.setP a t) ∨ (∃ t, a' = nstrLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `nnum` keeps `ArenaR`. -/
 theorem ArenaR.lift_nnum (hX : NNumR m' a')
-    (hf : MemFrame [nnumSch.ra, nnumSch.ra + 256, nnumSch.sa, nnumSch.sa + 256] [nnumSch.ca, nnumSch.ca + 1] m m')
+    (hf : MemFrame [nnumSch.ra, tier1 nnumSch.ra, nnumSch.sa, tier1 nnumSch.sa] [nnumSch.ca, nnumSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = nnumLens.setP a t) ∨ (∃ t, a' = nnumLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX

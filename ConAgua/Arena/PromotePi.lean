@@ -314,7 +314,7 @@ include hp
 theorem piNAnon_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Mem)
     (h : piW p n "intern_nanon" [] m = some (r, m')) :
     ∃ a', (internPersistentN .anonymous).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [NAREC, NAREC + 256, NASLOT, NASLOT + 256] [34, 35] m m' := by
+      cp a' = cp a ∧ MemFrame [NAREC, tier1 NAREC, NASLOT, tier1 NASLOT] [34, 35] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_nanon" [] (m.set64 CTL 1 0) with
@@ -343,7 +343,7 @@ theorem piNAnon_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Me
 theorem piNNum_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q u : Word) (hq : PW q) (r : Word)
     (m' : Mem) (h : piW p n "intern_nnum" [q, u] m = some (r, m')) :
     ∃ a', (internPersistentN (.num (decI q) u.toNat)).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
-      PW r ∧ cp a' = cp a ∧ MemFrame [NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [38, 39] m m' := by
+      PW r ∧ cp a' = cp a ∧ MemFrame [NNREC, tier1 NNREC, NNSLOT, tier1 NNSLOT] [38, 39] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_nnum" [q, u] (m.set64 CTL 1 0) with
@@ -374,7 +374,7 @@ theorem piNStr_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq 
     (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
     (r : Word) (m' : Mem) (h : piW p n "intern_nstr" [q, o, l] m = some (r, m')) :
     ∃ a', (internPersistentN (.str (decI q) s)).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
-      PW r ∧ cp a' = cp a ∧ MemFrame [NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [36, 37] m m' := by
+      PW r ∧ cp a' = cp a ∧ MemFrame [NSREC, tier1 NSREC, NSSLOT, tier1 NSSLOT] [36, 37] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_nstr" [q, o, l] (m.set64 CTL 1 0) with
@@ -417,7 +417,7 @@ theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq :
     (r : Word) (m' : Mem) (h : pcW p n "intern_nstr" [q] o l m = some (r, m')) :
     ∃ a', (internPersistentN (.str (decI q) s)).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧
-      MemFrame [POOL, PT0, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [36, 37] m m' ∧
+      MemFrame [POOL, PT0, NSREC, tier1 NSREC, NSSLOT, tier1 NSSLOT] [36, 37] m m' ∧
       SlKeep m m' := by
   obtain ⟨m₁, o₁, h₁, hD₁, hs₁, ho₁, hf₁, -, hv, hk₁⟩ := pc_cases hD hsl h
   obtain ⟨a', e1, e2, e3, e4, e5⟩ := piNStr_rel0 p hp n m₁ a hD₁ q o₁ l hq hs₁ ho₁ s
@@ -435,7 +435,7 @@ include hp
 theorem piZero_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Mem)
     (h : piW p n "intern_zero" [] m = some (r, m')) :
     ∃ a', (internPersistentL .zero).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [ZREC, ZREC + 256, ZSLOT, ZSLOT + 256] [8, 9] m m' := by
+      cp a' = cp a ∧ MemFrame [ZREC, tier1 ZREC, ZSLOT, tier1 ZSLOT] [8, 9] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_zero" [] (m.set64 CTL 1 0) with
@@ -465,7 +465,7 @@ theorem piZero_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Mem
 theorem piSucc_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW u) (r : Word) (m' : Mem)
     (h : piW p n "intern_succ" [u] m = some (r, m')) :
     ∃ a', (internPersistentL (.succ (decI u))).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [SREC, SREC + 256, SSLOT, SSLOT + 256, SHP, SHP + 256] [6, 7] m m' := by
+      cp a' = cp a ∧ MemFrame [SREC, tier1 SREC, SSLOT, tier1 SSLOT, SHP, tier1 SHP] [6, 7] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_succ" [u] (m.set64 CTL 1 0) with
@@ -495,7 +495,7 @@ theorem piSucc_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
 theorem piMax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : PW u) (hv : PW v) (r : Word) (m' : Mem)
     (h : piW p n "intern_max" [u, v] m = some (r, m')) :
     ∃ a', (internPersistentL (.max (decI u) (decI v))).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [MREC, MREC + 256, MSLOT, MSLOT + 256, MHP, MHP + 256] [10, 11] m m' := by
+      cp a' = cp a ∧ MemFrame [MREC, tier1 MREC, MSLOT, tier1 MSLOT, MHP, tier1 MHP] [10, 11] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_max" [u, v] (m.set64 CTL 1 0) with
@@ -525,7 +525,7 @@ theorem piMax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : PW
 theorem piImax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : PW u) (hv : PW v) (r : Word) (m' : Mem)
     (h : piW p n "intern_imax" [u, v] m = some (r, m')) :
     ∃ a', (internPersistentL (.imax (decI u) (decI v))).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [IREC, IREC + 256, ISLOT, ISLOT + 256, IHP, IHP + 256] [12, 13] m m' := by
+      cp a' = cp a ∧ MemFrame [IREC, tier1 IREC, ISLOT, tier1 ISLOT, IHP, tier1 IHP] [12, 13] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_imax" [u, v] (m.set64 CTL 1 0) with
@@ -555,7 +555,7 @@ theorem piImax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : P
 theorem piParam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW u) (r : Word) (m' : Mem)
     (h : piW p n "intern_param" [u] m = some (r, m')) :
     ∃ a', (internPersistentL (.param (decI u))).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [PREC, PREC + 256, PSLOT, PSLOT + 256] [14, 15] m m' := by
+      cp a' = cp a ∧ MemFrame [PREC, tier1 PREC, PSLOT, tier1 PSLOT] [14, 15] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_param" [u] (m.set64 CTL 1 0) with
@@ -587,7 +587,7 @@ theorem piLs_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : S
     (ho : o.toNat < 2 ^ 40) (us : List LIdx) (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us)
     (hus : lsKids us) (r : Word) (m' : Mem) (h : piW p n "intern_ls" [o, l] m = some (r, m')) :
     ∃ a', (internPersistentLs us).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
-      PW r ∧ cp a' = cp a ∧ MemFrame [LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [40, 41] m m' := by
+      PW r ∧ cp a' = cp a ∧ MemFrame [LSREC, tier1 LSREC, LSSLOT, tier1 LSSLOT, LSHP, tier1 LSHP] [40, 41] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_ls" [o, l] (m.set64 CTL 1 0) with
@@ -634,7 +634,7 @@ theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : Sl
     (hus : lsKids us) (r : Word) (m' : Mem) (h : pcW p n "intern_ls" [] o l m = some (r, m')) :
     ∃ a', (internPersistentLs us).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧
-      MemFrame [POOL, PT0, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [40, 41] m m' := by
+      MemFrame [POOL, PT0, LSREC, tier1 LSREC, LSSLOT, tier1 LSSLOT, LSHP, tier1 LSHP] [40, 41] m m' := by
   obtain ⟨m₁, o₁, h₁, hD₁, hs₁, ho₁, hf₁, -, hv, -⟩ := pc_cases hD hsl h
   obtain ⟨a', e1, e2, e3, e4, e5⟩ := piLs_rel0 p hp n m₁ a hD₁ o₁ l hs₁ ho₁ us
     (by rw [← hk]; exact (sliceL_eq_iff _ _ _ _ _).mpr hv) hus r m' h₁

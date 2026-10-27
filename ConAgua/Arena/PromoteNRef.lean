@@ -133,8 +133,8 @@ end view
 /-! ## The relation -/
 
 /-- The arrays and `CTL` words a name promotion writes. -/
-abbrev nArrs : List ArrId := [POOL, PT0, NAREC, NAREC + 256, NASLOT, NASLOT + 256, NSREC, NSREC + 256, NSSLOT,
-  NSSLOT + 256, NNREC, NNREC + 256, NNSLOT, NNSLOT + 256, PNM]
+abbrev nArrs : List ArrId := [POOL, PT0, NAREC, tier1 NAREC, NASLOT, tier1 NASLOT, NSREC, tier1 NSREC, NSSLOT,
+  tier1 NSSLOT, NNREC, tier1 NNREC, NNSLOT, tier1 NNSLOT, PNM]
 abbrev nCtl : List Word := [34, 35, 36, 37, 38, 39, 141]
 
 /-- **What a successful run of a name promotion gives**: the twin's run `op` succeeds with the
