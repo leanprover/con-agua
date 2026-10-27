@@ -87,25 +87,6 @@ theorem seqLayout_s64 (p : Nat) : (seqLayout tab base out hdrf ctlf hw).s64 p =
     else if tab.wposInv p = hdrf then hw else abiWords := by simp only [seqLayout]
 end
 
-/-- Byte `x` is in slot `j` of the region at `base`. -/
-def InSlot (base j x : Nat) : Prop := base + abiSlot * j ≤ x ∧ x < base + abiSlot * j + abiSlot
-
-theorem InSlot.eq {base j j' x : Nat} (h : InSlot base j x) (h' : InSlot base j' x) : j = j' := by
-  rcases Nat.lt_trichotomy j j' with h1 | h1 | h1
-  · have : abiSlot * j + abiSlot ≤ abiSlot * j' := by
-      rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ h1
-    unfold InSlot at *; omega
-  · exact h1
-  · have : abiSlot * j' + abiSlot ≤ abiSlot * j := by
-      rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ h1
-    unfold InSlot at *; omega
-
-theorem InSlot.lt {base j x : Nat} (h : InSlot base j x) {n : Nat} (hj : j < n) :
-    x < base + abiSlot * n := by
-  have : abiSlot * j + abiSlot ≤ abiSlot * n := by
-    rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ hj
-  unfold InSlot at h; omega
-
 section
 variable {tab : Tab} {base : Nat} {out hdrf ctlf : ArrId} {hw : Nat}
 
