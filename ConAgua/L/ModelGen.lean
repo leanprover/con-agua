@@ -106,6 +106,11 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   them (`pcap`, the input buffer `arr8 IN`) holds again after each call, for the next call's
   side goal (the `grind` patterns `Keep.size`, `Keep.arr8`, `Keep.pcap`). The specs' binders
   must all be explicit.
+* `defs` / `nodefs`: the same command twice, first with `defs` (only the models, the
+  continuations and their arms, with the `grind` patterns), then with `nodefs` (only the specs):
+  facts about the models proved in between (a recursive reader keeps the pool top in a tier,
+  `romNameW_top'`) can serve the steps, e.g. for a precondition after a recursive call. Both
+  runs need the same `fns`, `specs`, `grind` and `fold`.
 * `errors`: (pass `L.Arena.ld64_rdW_specE` in `extra`: word loads are not unfolded) the models keep the errors (the verdict proofs, `Arena/Verdict.lean`). A model is
   `Except L.Err …` (`.ok` for `some`); an `abort R` is `.error (.abort R)` (`abort` is code `0`);
   a continuation passes a callee's error on (`| .error ε => .error ε`, its equation `k.none`); a
@@ -1754,7 +1759,9 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" simp " "[" term,* "]")?
   (&" errors")?
   (&" trace")?
-  (&" locals")? : command
+  (&" locals")?
+  (&" defs")?
+  (&" nodefs")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1816,6 +1823,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let exc := stx[21].getNumArgs != 0
   let doTrace := stx[22].getNumArgs != 0
   let preLocals := stx[23].getNumArgs != 0
+  -- `defs`: only the models, continuations and arms; `nodefs`: only the specs (the same command
+  -- run before with `defs`), so that facts about the models can be proved in between
+  let defsOnly := stx[24].getNumArgs != 0
+  let noDefs := stx[25].getNumArgs != 0
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -2074,6 +2085,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
           def $(mkIdent kd.name):ident $binders* : $argT → $rT
             | $(← failPat) => $(← failRhs)
             | $pat => $body)
+  let emitD (cmd : Syntax) : CommandElabM Unit := unless noDefs do emit doTrace cmd
   -- emit the components, each after the ones it refers to
   let mut emitted := Array.replicate nodes.size false
   let mut left := nodes.size
@@ -2089,8 +2101,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       let recursive := comp.size > 1 || reach[i]![i]!
       let wf := recursive && comp.any (· ≥ fis.size)
       let defs ← comp.mapM (defOf · wf)
-      if defs.size == 1 then emit doTrace defs[0]!
-      else emit doTrace (← `(command| mutual $defs* end))
+      if defs.size == 1 then emitD defs[0]!
+      else emitD (← `(command| mutual $defs* end))
       for c in comp do emitted := emitted.set! c true
       left := left - comp.size
       progress := true
@@ -2112,7 +2124,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     | _ => return (← `(¬ $(← c.render)), ← `(Lean.Parser.Tactic.rwRule| ite_eq_right $h:ident))
   let attrsOf (thm : Ident) (lhs : Term) : CommandElabM Unit := do
     for a in attrIds do
-      emit doTrace (← `(command| grind_pattern [$a:ident] $thm:ident => $lhs))
+      emitD (← `(command| grind_pattern [$a:ident] $thm:ident => $lhs))
   let eqns (name : Name) (binders : Array (TSyntax ``Lean.Parser.Term.bracketedBinder)) (lhs : Term)
       (body : MR) (eqLemma : Name := `eq_2) : CommandElabM Nat := do
     let ls := leaves body
@@ -2131,7 +2143,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         rules := rules.push rule
       let rhs ← liftTermElabM (leaf.render exc)
       let thm := mkIdent (name ++ Name.mkSimple s!"arm{k}")
-      emit doTrace (← `(command|
+      emitD (← `(command|
         theorem $thm:ident $binders* $hyps* : $lhs = $rhs := by rw [$rules,*]))
       attrsOf thm lhs
     -- the aborts: `name.abortᵢ`, without patterns
@@ -2149,7 +2161,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         rules := rules.push rule
       let thm := mkIdent (name ++ Name.mkSimple s!"abort{a}")
       let rhs ← liftTermElabM (leaf.render exc)
-      emit doTrace (← `(command|
+      emitD (← `(command|
         theorem $thm:ident $binders* $hyps* : $lhs = $rhs := by rw [$rules,*]))
       -- `errors` mode: an abort is an error the spec states, so its equation gets patterns
       if exc then attrsOf thm lhs
@@ -2199,15 +2211,16 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       -- the failed call
       let thm := mkIdent (kd.name ++ `none)
       if exc then
-        emit doTrace (← `(command|
+        emitD (← `(command|
           theorem $thm:ident $binders* ($(mkIdent `ε) : L.Err) :
               $(mkIdent kd.name) $args* (Except.error $(mkIdent `ε)) = Except.error $(mkIdent `ε) := by
             rw [$(mkIdent (kd.name ++ `eq_1)):ident]))
         attrsOf thm (← `($(mkIdent kd.name) $args* (Except.error $(mkIdent `ε))))
       else
-        emit doTrace (← `(command|
+        emitD (← `(command|
           theorem $thm:ident $binders* : $(mkIdent kd.name) $args* Option.none = Option.none := by
             rw [$(mkIdent (kd.name ++ `eq_1)):ident]))
+  if defsOnly then return
   -- the proofs, as text
   -- on one line: a term wrapped onto a new line at a lower column than the tactic it sits in
   -- does not parse back (an application's arguments must lie right of the tactic's column; long

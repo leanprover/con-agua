@@ -366,4 +366,51 @@ l_model tKeepR_spec (p : Prog) (hn : p.noSt8 = true) (hp : p.lookup "t_keep_r" =
   keep [hn]
   grind [arena_grind] extra [ld64_rd_spec]
 
+/-- `defs` / `nodefs`: the models first, then a fact about them, then the specs, whose steps use
+the fact (the second recursive call's precondition after the first call). -/
+-- con-ron: none — an `l_model` test function
+def tTwo : FunDecl := lfn (i) locals (x, y) {
+  if i == 0 { return 0 };
+  x := call t_two(i - 1);
+  y := call t_two(i - 1);
+  TW.u64[0] := 0;
+  return x + y
+}
+
+l_model tTwo_spec (p : Prog) (hp : p.lookup "t_two" = some tTwo)
+  fns [hp ↦ tTwoW]
+  grind [arena_grind] defs
+
+theorem tTwoW_z (n : Nat) : ∀ (m : Mem) (i r : Word) (m' : Mem), rdW (m.arr64 TW) 0 = 0 →
+    tTwoW n m i = some (r, m') → rdW (m'.arr64 TW) 0 = 0 := by
+  induction n with
+  | zero => intro m i r m' _ h; simp [tTwoW] at h
+  | succ n ih =>
+    intro m i r m' h0 h
+    by_cases hi : i = 0
+    · rw [tTwoW.arm1 n m i hi] at h; cases h; exact h0
+    rw [tTwoW.eq_2, if_neg hi] at h
+    cases h1 : tTwoW n m (i - 1) with
+    | none => rw [h1, tTwoW.k_t_two.none] at h; cases h
+    | some x =>
+      obtain ⟨x, m₁⟩ := x
+      rw [h1, tTwoW.k_t_two.arm1] at h
+      cases h2 : tTwoW n m₁ (i - 1) with
+      | none => rw [h2, tTwoW.k_t_two_2.none] at h; cases h
+      | some y =>
+        obtain ⟨y, m₂⟩ := y
+        rw [h2, tTwoW.k_t_two_2.arm1] at h
+        cases h
+        simp only [rdW, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+        split <;> simp_all <;> split <;> rfl
+
+theorem tTwoW_z' (n : Nat) (m : Mem) (i r : Word) (m' : Mem) (h : tTwoW n m i = some (r, m'))
+    (h0 : rdW (m.arr64 TW) 0 = 0) : rdW (m'.arr64 TW) 0 = 0 := tTwoW_z n m i r m' h0 h
+grind_pattern [arena_grind] tTwoW_z' => tTwoW n m i, some (r, m')
+
+l_model tTwo_spec (p : Prog) (hp : p.lookup "t_two" = some tTwo)
+  fns [hp ↦ tTwoW]
+  pre [rdW (s₀.mem.arr64 TW) 0 = 0]
+  grind [arena_grind] nodefs
+
 end L.ModelGenTest
