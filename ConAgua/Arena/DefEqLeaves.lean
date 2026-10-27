@@ -124,7 +124,7 @@ l_model isBoolTrue_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.bt ↦ isBoolTrueW ro]
   specs [pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp []
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW]
 
 theorem decI_bne {k : IdxKind} (v w : Word) (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32) :
     ((decI v : Idx k) != decI w) = !decide (v = w) := by
@@ -286,7 +286,7 @@ l_model isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.eager ↦ isEagerReduceW ro]
   specs [pinAt_rd p hp.pinat n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp []
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW]
 
 theorem tag_beq_app (h : Word) (hh : HW h) :
     ((decE h).tag == ETag.app) = decide (h >>> 28 = 4) := tag_beq_w h hh 4 (by decide) _ rfl 4 rfl
@@ -409,7 +409,7 @@ l_model isNatZero_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.natzero ↦ isNatZeroW ro]
   specs [pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp []
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW]
 
 theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
     (e : Word) (he : HW e) (w : Word) (hW : isNatZeroW m e = some w) :
