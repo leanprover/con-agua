@@ -27,6 +27,8 @@ ConAgua/Arena/IndPosSpec/MW9.lean	public import ConAgua.Arena.Reasons	# a consta
 ConAgua/Arena/IndPosSpec/NodeV.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPosSpec/PcrK3.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPosSpec/SgF.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/IndRealBph.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`'s `extra`, named only in its generated proofs
+ConAgua/Arena/IndRealBph.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: `callW_spec` in the `l_model`'s `specs`, named only in its generated proofs
 ConAgua/Arena/IndSumSpec/Bnums.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndSumSpec/ColW.lean	public import ConAgua.Arena.IndSum	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/IndT/KeepC.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
