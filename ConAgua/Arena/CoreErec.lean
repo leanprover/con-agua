@@ -1,6 +1,5 @@
 import ConAgua.Arena.WhnfBase
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.Frame
 
 /-!
 # The core leaves the record pool alone: a write set from the program text (lane `whnf3`)

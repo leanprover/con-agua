@@ -1,7 +1,7 @@
+import ConAgua.Arena.Frame
+import ConAgua.Arena.Tiers
 import ConAgua.Arena.WhnfBase
 import ConRon.Bridge.Promote.Pers
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The declaration loop's call closure and its write set (lane `loopt2`)
