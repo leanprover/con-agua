@@ -77,7 +77,7 @@ theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     · rfl
     · rw [seqMem_arr64]; simp
     · simp only [rd64, seqMem_arr64]
-      rw [if_neg (by decide), if_pos rfl]
+      rw [ite_eq_right (by decide), ite_eq_left rfl]
       simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
       by_cases h3 : 3 < (m₁.arr64 OUT).size
       · have h4 : 3 < min 132 (m₁.arr64 OUT).size := by omega
