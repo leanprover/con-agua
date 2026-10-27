@@ -75,7 +75,7 @@ end twin
 
 /-! ## Memo frames from the program text -/
 
-/-- Every word array below 320 (both tiers) but the recursor check's walk memos. -/
+/-- Every word array of the checker (`checkerWordArrays`) but the recursor check's walk memos. -/
 def rcFreeA : List TieredArray := checkerWordArrays.filter (fun b => b ∉ ([NOM, DPM, RAM, HBM, RFM, TAM] : List TieredArray))
 /-- Every `CTL` word below 256 but those memos' control words. -/
 def rcFreeC : List Word :=

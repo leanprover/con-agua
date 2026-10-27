@@ -17,7 +17,7 @@ open L.Arena
 
 /-! ## Write sets from the program text -/
 
-/-- Every word array below 320 (both tiers) but the `has_loose_bvar_b` memo's. -/
+/-- Every word array of the checker (`checkerWordArrays`) but the `has_loose_bvar_b` memo's. -/
 def hbFreeA : List TieredArray := checkerWordArrays.filter (· ≠ HBM)
 /-- Every `CTL` word below 256 but the `hb` memo's stamp word. -/
 def hbFreeC : List Word := ((List.range 256).filter (· ≠ 214)).map Nat.toUInt64
@@ -46,7 +46,7 @@ theorem HbMemo.ofClosed {p : Prog} {fs : List FnName} (hcl : closedA p hbFreeA h
   obtain ⟨mp, hmp⟩ := hM
   exact ⟨mp, hbMR_mfr (hbFree_mfr (run_memFrame hcl hf (run_of_callW h)).1) (by decide) (by decide) hmp⟩
 
-/-- Every word array below 320 (both tiers) but the five walk memos'. -/
+/-- Every word array of the checker (`checkerWordArrays`) but the five walk memos'. -/
 def posFreeA : List TieredArray := checkerWordArrays.filter (fun b => b ∉ ([NOM, DPM, RAM, HBM, RFM] : List TieredArray))
 /-- Every `CTL` word below 256 but the five memos' stamp words (and the banked memo's two). -/
 def posFreeC : List Word :=

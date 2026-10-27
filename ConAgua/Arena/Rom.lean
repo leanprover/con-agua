@@ -904,7 +904,7 @@ end nameSpec
 
 /-! ## `rom_name` refines `internName` -/
 
-/-- The store tier's arrays (below 64, and their tier-1 twins `256‥319`) and `CTL` words (below
+/-- The store tier's arrays (both tiers of the arrays below 64) and `CTL` words (below
 64): every intern writes only there. -/
 def StoreA : List TieredArray := lowTierArrs
 def StoreC : List Word := (List.range 64).map UInt64.ofNat

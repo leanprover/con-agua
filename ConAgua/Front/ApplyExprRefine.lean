@@ -141,8 +141,8 @@ end leaves
 
 /-! ## Frames: nothing at or above array 64 changes -/
 
-/-- No word array and no `CTL` word at or above `64` (the id tables) changes, but the store tier's
-tier-1 arrays `256‥319`. -/
+/-- No word array outside the store tier (`lowTierArrs`: both tiers of the arrays below `64`) and
+no `CTL` word at or above `64` (the id tables) changes. -/
 def Above64 (m m' : Mem) : Prop :=
   MemFrame lowTierArrs ((List.range 64).map UInt64.ofNat) m m'
 

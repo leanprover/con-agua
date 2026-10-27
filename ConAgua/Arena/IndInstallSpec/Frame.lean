@@ -33,7 +33,7 @@ end model
 
 /-! ## The write set of `basis_pin_hit` and `block_parts` -/
 
-/-- The arrays they may write: all below 320 (both tiers) but the stage memos' (`201..208`) and `abstract1`'s
+/-- The arrays they may write: every word array of the checker but the stage memos' (`201..208`) and `abstract1`'s
 memo (`49`), and since lane `indstaget` the pins and the core's walk memos. -/
 def cidFreeA : List TieredArray := checkerWordArrays.filter (fun b => (b.arr < 201 ∨ 208 < b.arr) ∧
   b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ b ≠ PINS ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM ∧
