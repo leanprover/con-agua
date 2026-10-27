@@ -1,6 +1,4 @@
-import ConAgua.Arena.IndRealLvlZ
 import ConAgua.Arena.TwinStep
-import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.CapsNeverZeroCore
 
 /-!

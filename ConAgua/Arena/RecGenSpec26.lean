@@ -1,5 +1,5 @@
-import ConAgua.Arena.RecGenSpec25
-import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.RecGenSpec24
+import ConAgua.Arena.RecGenSpec6
 
 /-!
 # `classCtorOf` (lane `indproofs4`, helper `cls`)

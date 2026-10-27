@@ -1,6 +1,6 @@
-import ConAgua.Arena.RecCheckSpec20
-import ConAgua.Arena.IndInstallSpec23
 import ConAgua.Arena.IndRealIlpN
+import ConAgua.Arena.IndPartsSpec10
+import ConAgua.Arena.RecCheckSpec13
 
 /-!
 # `RecCheck`: `targetRecPins`' callees (lane `indproofs3`, helper `rec2`)

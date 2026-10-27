@@ -1,7 +1,6 @@
-import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.StubInd
-import ConAgua.Arena.StripTeleSpec
 import ConAgua.Arena.DeclNatLit
+import ConAgua.Arena.IndRealFvt
 
 /-!
 # `open_pis_at_fvars_f`'s model (lane `indproofs4`, helper `opf`)

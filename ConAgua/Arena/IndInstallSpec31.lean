@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndInstallSpec30
 import ConAgua.Arena.IndInstallSpec41
+import ConAgua.Arena.IndInstallSpec28
 
 /-!
 # Refinements of `IndInstall`, part 31 (lane `indproofs3`, helper `tail`): `checkBlockTail`, the

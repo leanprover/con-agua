@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndInstallSpec27
+import ConAgua.Arena.IndInstallSpec23
 
 /-!
 # Refinements of `IndInstall`, part 28 (lane `indproofs3`, helper `tail`): `checkBlockPass`,

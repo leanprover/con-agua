@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPartsSpec4
 
 /-!
 # Pin reads, `of_reduce_op`, `install_basis_decl(s)` (lane `decls3`)

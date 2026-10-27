@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.StageC
-import ConAgua.Arena.IndRealAbs
 import ConRon.Bridge.Inductives.Rel
 
 /-!

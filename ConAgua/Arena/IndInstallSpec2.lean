@@ -1,6 +1,8 @@
-import ConAgua.Arena.IndPartsSpec6
-import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndInstall
+import ConAgua.Arena.IndPartsSpec2
+import ConAgua.L.ModelGen
+import ConAgua.Scan.Common
 
 /-!
 # Refinements of `IndInstall`, part 2 (lane `indproofs`, helper `install`)

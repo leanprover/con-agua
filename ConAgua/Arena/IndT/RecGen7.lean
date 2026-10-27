@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndT.RecGen3
 import ConAgua.Arena.RecGenSpec8
 import ConAgua.Arena.IndT.Lift
-import ConRon.Bridge.Inductives.GenRec
 
 /-!
 # `classRecTyOk`, `classRecTysOk` under `StageC` (lane `indstaget`)

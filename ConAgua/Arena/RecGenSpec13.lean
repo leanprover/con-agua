@@ -1,7 +1,4 @@
 import ConAgua.Arena.RecGenSpec2
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.IndPosSpec7
-import ConAgua.Arena.IndPosMemo
 import ConAgua.Arena.IndPos2SpecO
 
 /-!

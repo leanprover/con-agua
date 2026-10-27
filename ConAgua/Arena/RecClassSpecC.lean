@@ -1,6 +1,6 @@
 import ConAgua.Arena.RecStab
-import ConAgua.Arena.RecCheckSpec3
 import ConAgua.Arena.IndPartsSpec3
+import ConAgua.Arena.WhnfCoreProj
 
 /-!
 # `RecClass`: `classReadMinor` (lane `indproofs2`, helper `rec`)

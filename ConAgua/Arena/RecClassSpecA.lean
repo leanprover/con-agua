@@ -1,9 +1,3 @@
-import ConAgua.Arena.IndSumSpec
-import ConAgua.Arena.RecClass
-import ConAgua.Arena.IndInstallSpec
-import ConAgua.Arena.IndView
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndRealSpine
 import ConAgua.Arena.IndRealAbs
 
 /-!

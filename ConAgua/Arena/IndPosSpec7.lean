@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndPosSpec6
 import ConAgua.Arena.IndPos2SpecF
+import ConAgua.Arena.IndPosSpec5
 
 /-! # `nestSeedOf` (lane `indproofs2`, helper `pos`): a resolved class's parameters, each through
 `replaceApps` then `replaceFVars (.keyMap params holes)`, written into a fresh slice. -/

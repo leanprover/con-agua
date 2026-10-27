@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndSumSpec12
-import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.RecClassSpecD
 
 /-!
 # `check_sum_ctors` refines `checkSumCtors` (lane `indproofs2`)

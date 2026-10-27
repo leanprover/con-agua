@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecCheckSpec22
+import ConAgua.Arena.IndPartsSpec6
 
 /-!
 # `RecCheck`: `targetRecPins` (lane `indproofs3`, helper `rec2`)

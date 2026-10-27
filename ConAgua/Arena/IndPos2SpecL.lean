@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndPos2SpecK
-import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndSumSpec7
-import ConAgua.Arena.IndPosSpec7
+import ConAgua.Arena.IndPosSpec5
 
 /-! # `IndPos2`, the `nestPos` block's leaves (lane `indproofs2`, helper `pos2`): word models and
 specs of the block's non-recursive helpers (`nest_frame_mates` with the stage relation,

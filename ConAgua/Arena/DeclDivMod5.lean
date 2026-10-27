@@ -1,9 +1,5 @@
-import ConAgua.Arena.DeclDivMod4
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndCopy
 import ConAgua.Arena.IndRealApdT
-import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclDivMod2
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: applying a certificate (lane `decls3`, `decls3-divmod`)

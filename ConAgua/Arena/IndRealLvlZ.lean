@@ -1,6 +1,5 @@
 import ConAgua.Arena.StubInd
 import ConAgua.Arena.CallF
-import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndInstallSpec2
 
 /-!

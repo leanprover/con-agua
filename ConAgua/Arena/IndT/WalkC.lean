@@ -1,6 +1,4 @@
-import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.IndRealMemoCrT
 
 /-!
 # `AbsOK` across the real `all_level_params_defined` and `consts_resolve_ffast` (lane `indstaget`)

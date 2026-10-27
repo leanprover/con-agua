@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndSumSpec10
+import ConAgua.Arena.IndPos2SpecB
 
 /-!
 # `check_struct_field_sorts_i` refines `checkStructFieldSortsI` (lane `indproofs2`)

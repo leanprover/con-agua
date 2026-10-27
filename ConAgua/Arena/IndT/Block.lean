@@ -1,5 +1,3 @@
-import ConAgua.Arena.IndInstallSpec37
-import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Pass
 
 /-!

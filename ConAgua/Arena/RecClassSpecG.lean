@@ -1,5 +1,4 @@
 import ConAgua.Arena.RecClassSpecF
-import ConAgua.Arena.StageInst1
 
 /-!
 # `RecClass`: `classReadSlots` (lane `indproofs2`, helper `rec`)

@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec20
+import ConAgua.Arena.RecGenSpec15
 
 /-!
 # A stably decoding class reading is decoded below the tops (lane `indproofs4`)

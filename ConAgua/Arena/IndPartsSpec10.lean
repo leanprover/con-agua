@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPartsSpec9
+import ConAgua.Arena.IndPartsSpec5
 
 /-!
 # Refinements of `IndParts`, part 10 (lane `indproofs2`, helper `parts`): the recursor name set

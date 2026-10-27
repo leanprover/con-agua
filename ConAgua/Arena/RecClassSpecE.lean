@@ -1,7 +1,5 @@
-import ConAgua.Arena.RecClassSpecD
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPos2SpecA
-import ConAgua.Arena.DeclHeader
+import ConAgua.Arena.IndPartsSpec4
+import ConAgua.Arena.RecStab
 
 /-!
 # `RecClass`: `classNPcOf`, `classReadSlot`, `classReadSlots` (lane `indproofs2`, helper `rec`)

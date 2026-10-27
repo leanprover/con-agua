@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecClassSpecE
 import ConAgua.Arena.IndSumSpec4
+import ConAgua.Arena.RecClassSpecD
 
 /-!
 # `RecClass`: `classReadSlot`, `classReadSlots` (lane `indproofs2`, helper `rec`)

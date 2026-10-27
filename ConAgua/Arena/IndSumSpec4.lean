@@ -1,6 +1,5 @@
-import ConAgua.Arena.IndSumSpec3
 import ConAgua.Arena.IndPartsSpec5
-import ConAgua.Arena.PinsNatOp
+import ConAgua.Arena.IndSumSpec2
 
 /-!
 # Refinements of `IndSum`, fourth file (lane `indproofs`)

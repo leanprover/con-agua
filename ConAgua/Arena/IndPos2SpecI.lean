@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecH
+import ConAgua.Arena.WhnfCoreProj
 
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestInstType`'s
 relational side, `nestGrowGroup`. -/

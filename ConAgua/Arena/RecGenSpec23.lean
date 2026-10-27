@@ -1,5 +1,4 @@
-import ConAgua.Arena.RecCheckSpec16
-import ConAgua.Arena.RecGenSpec
+import ConAgua.Arena.RecCheckSpec14
 
 /-!
 # `classNodesAgree` (lane `indproofs4`, helper `cls`)

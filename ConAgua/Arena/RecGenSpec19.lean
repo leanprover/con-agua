@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec18
+import ConAgua.Arena.RecGenSpec14
 
 /-!
 # `classMajors` (lane `indproofs3`, helper `indproofs3-pos-cls`)

@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndPartsSpec14
 import ConAgua.Arena.IndRealPartsC1
 
 /-!

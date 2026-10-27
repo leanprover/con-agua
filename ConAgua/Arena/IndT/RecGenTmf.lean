@@ -1,13 +1,9 @@
-import ConAgua.Arena.RecGenSpec19
-import ConAgua.Arena.IndT.RecCheckPins
-import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.RecClassSpecI
-import ConAgua.Arena.IndSumSpec4
 import ConAgua.Arena.IndInstallSpec23
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndRealLvlC
 import ConRon.Bridge.Inductives.GenRec
-import ConRon.Bridge.Inductives.RecCheck
+import ConAgua.Arena.RecClassSpecF
+import ConAgua.Arena.RecGenSpec18
 
 /-!
 # `target_major_of` under `StageC` with the real `inst_lp_fast` (lane `indstaget`, helper `rcC`)

@@ -1,5 +1,4 @@
 import ConAgua.Arena.RecClassSpecJ
-import ConAgua.Arena.StageInst1
 
 /-!
 # `RecClass`: `ClassGen.minorTy` — models and specs (lane `indproofs2`, helper `rec2`)

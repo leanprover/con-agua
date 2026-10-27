@@ -1,5 +1,7 @@
-import ConAgua.Arena.RecCheckSpec16
 import ConAgua.Arena.IndSumSpec14
+import ConAgua.Arena.IndSumSpec10
+import ConAgua.Arena.RecCheckSpec8
+import ConAgua.Arena.RecCheckSpec9
 
 /-!
 # `RecCheck`: `tgtStoredRules` (lane `indproofs3`, helper `rec`)

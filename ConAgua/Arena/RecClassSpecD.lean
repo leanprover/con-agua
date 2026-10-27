@@ -1,5 +1,7 @@
 import ConAgua.Arena.RecClassSpecC
 import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndPartsSpec4
+import ConAgua.Arena.RecClassSpecB
 
 /-!
 # `RecClass`: `classReadMinor`'s relational lemmas (lane `indproofs2`, helper `rec`)

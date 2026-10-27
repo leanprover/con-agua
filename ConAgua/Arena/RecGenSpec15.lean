@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecGenSpec14
 import ConAgua.Arena.IndPos2SpecV
+import ConAgua.Arena.IndPosSpec7
 
 /-!
 # `classSeeds` (lane `indproofs3`, helper `indproofs3-pos-cls`)

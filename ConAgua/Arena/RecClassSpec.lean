@@ -1,4 +1,5 @@
-import ConAgua.Arena.RecClassSpecB
+import ConAgua.Arena.IndRealOpf3
+import ConAgua.Arena.RecClassSpecA
 
 /-! Continued from `RecClassSpecB.lean` (split by size; lane `indproofs`). -/
 

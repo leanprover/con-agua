@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecL
+import ConAgua.Arena.StubIndRefine
 
 /-! # `IndPos2`, the `nestPos` block's leaves, continued (lane `indproofs2`, helper `pos2`): the
 walk's state record (`NestState`, decoded below the tops), `nest_cont_new_finish`. -/

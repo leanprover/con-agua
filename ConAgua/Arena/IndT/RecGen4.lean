@@ -2,6 +2,8 @@ import ConAgua.Arena.RecGenSpec4
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.WalkC
 import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.IndSumSpec2C
 
 /-!
 # `classRuleOk` under `StageC` (lane `indstaget`)

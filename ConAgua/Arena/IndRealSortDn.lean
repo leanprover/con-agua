@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndRealCapsC
-import ConAgua.Final.Twin
 
 /-!
 # `SortDn` of member 0's former sort (lane `indproofs4`, helper `sdn`)

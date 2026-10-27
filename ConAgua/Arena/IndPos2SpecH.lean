@@ -1,7 +1,5 @@
 import ConAgua.Arena.IndPos2SpecG
 import ConAgua.Arena.IndInstallSpec3
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.StageInst1
 
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestInstType`
 (with `nest_occ_any`, `nest_inst_type_ty`), `nestGrowGroup`. -/

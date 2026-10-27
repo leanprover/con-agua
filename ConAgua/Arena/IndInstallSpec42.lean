@@ -1,9 +1,5 @@
 import ConAgua.Arena.IndInstallSpec37
-import ConAgua.Arena.IndRealIpo
-import ConAgua.Arena.IndPartsSpec15
-import ConAgua.Arena.DeclBasisSpec2
 import ConAgua.Arena.IndRealBph2
-import ConAgua.Census.Attr
 
 /-!
 # `check_ind_decl(vis, boff, blen, nP)`: the inductive arm at `StageR` (lane `indproofs4`)

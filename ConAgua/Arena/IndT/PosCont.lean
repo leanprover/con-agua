@@ -1,4 +1,7 @@
-import ConAgua.Arena.IndT.PosKey
+import ConAgua.Arena.IndPos2SpecS
+import ConAgua.Arena.IndT.PosDefs
+import ConAgua.Arena.IndT.PosNit
+import ConAgua.Arena.IndT.RecGen19
 
 /-!
 # `nest_cont` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

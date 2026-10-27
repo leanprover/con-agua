@@ -1,7 +1,4 @@
 import ConAgua.Arena.DeclAndPinIndRef
-import ConAgua.Arena.IndPartsSpec8
-import ConAgua.Checker.Entry
-import ConAgua.Census.Attr
 
 /-!
 # `basis_pin_hit(off, len)`: the loops and their models (lane `indproofs4`, helper `bph`)

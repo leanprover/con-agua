@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndT.PosCtors
+import ConAgua.Arena.IndPos2SpecS
+import ConAgua.Arena.IndT.PosCrest
 
 /-!
 # `nest_frame` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndT.PosFrame
 import ConAgua.Arena.IndT.Install2
 
 /-!

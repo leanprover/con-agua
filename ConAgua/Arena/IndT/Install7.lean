@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndT.Sum5
 import ConAgua.Arena.IndT.Install5
 import ConAgua.Arena.IndInstallSpec23
+import ConAgua.Arena.IndInstallSpec22
 
 /-!
 # `checkBlockCtors` under `StageC` (lane `indstaget`)

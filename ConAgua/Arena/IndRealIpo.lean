@@ -1,7 +1,6 @@
-import ConAgua.Arena.IndInstallSpec37
 import ConAgua.Front.IndApplyRefine
-import ConAgua.Checker.Entry
-import ConAgua.Census.Attr
+import ConAgua.Arena.IndInstallSpec39
+import ConAgua.Arena.IndPartsSpec8
 
 /-!
 # `ind_params_ok(nP, off, len)` refines `indParamsOk` (lane `indproofs4`)

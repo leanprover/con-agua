@@ -1,4 +1,5 @@
-import ConAgua.Arena.RecGenSpec10
+import ConAgua.Arena.RecGenSpec
+import ConAgua.Arena.RecGenSpec7
 
 /-!
 # Discharging `RecsOK` and `SlotsExt` from decodings below the tops (lane `indproofs2`, helper `rec3`)

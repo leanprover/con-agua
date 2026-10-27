@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndInstallSpec14
+import ConAgua.Arena.IndInstallSpec9
 
 /-!
 # Refinements of `IndInstall`, part 15 (lane `indproofs2`, helper `install`): `checkBlockInds`

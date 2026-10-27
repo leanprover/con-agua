@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndTwin
-import ConAgua.Arena.IndRealAbs
 
 /-!
 # `AbsOK` from the twin's invariants (lane `indproofs4`, helpers `abs`, `memo`)

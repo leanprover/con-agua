@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndPartsSpec13
 import ConAgua.Arena.IndSumSpec2
-import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.IndCallM
+import ConAgua.Arena.IndPartsSpec12
 
 /-!
 # Refinements of `IndParts`, part 14 (lane `indproofs2`, helper `parts`): `blockShape?`

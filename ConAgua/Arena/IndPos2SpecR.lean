@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndPos2SpecQ
+import ConAgua.Arena.IndPos2SpecN
+import ConAgua.Arena.IndPos2SpecP
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the relational side's
 statements — each function of the block, its model at exec fuel `n`, simulated by the twin. -/

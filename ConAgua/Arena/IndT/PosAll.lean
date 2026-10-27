@@ -1,4 +1,12 @@
 import ConAgua.Arena.IndT.PosBind
+import ConAgua.Arena.IndT.PosApp
+import ConAgua.Arena.IndT.PosCont
+import ConAgua.Arena.IndT.PosCtors
+import ConAgua.Arena.IndT.PosFrame
+import ConAgua.Arena.IndT.PosKey
+import ConAgua.Arena.IndT.PosNew
+import ConAgua.Arena.IndT.PosOne
+import ConAgua.Arena.IndT.PosWalk
 
 /-!
 # `nest_pos` and the whole walk under `StageC` (lane `indstaget`, helper `indstaget-pos`)

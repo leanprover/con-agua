@@ -1,6 +1,5 @@
-import ConAgua.Arena.IndSumSpec4
-import ConAgua.Arena.IndPos2Spec
-import ConAgua.Arena.BvarBRefine
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPos2SpecB
 
 /-!
 # Refinements of `IndSum`, fifth file (lane `indproofs`, helper `memo`)

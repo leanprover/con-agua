@@ -1,7 +1,3 @@
-import ConAgua.Arena.StageInst1
-import ConAgua.Arena.CoreWalks
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndRealSpine
 
 /-!

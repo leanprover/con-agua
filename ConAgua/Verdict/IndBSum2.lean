@@ -6,6 +6,9 @@ import ConAgua.Arena.IndT.Sum1
 import ConAgua.Arena.RecGenSpec9
 import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictFns
+import ConAgua.Arena.RecGenSpec7
+import ConRon.Bridge.Inductives.FieldTele
+import ConRon.Bridge.Inductives.SumInstall
 set_option linter.unusedSectionVars false
 
 /-!

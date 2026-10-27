@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec7
+import ConAgua.Arena.RecGenSpec
 
 /-!
 # `RecGen`: `classRecTysOk` (lane `indproofs2`, helper `rec2`)

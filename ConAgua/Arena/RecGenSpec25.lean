@@ -1,6 +1,6 @@
-import ConAgua.Arena.RecGenSpec24
 import ConAgua.Arena.RecGenSpec22
-import ConAgua.Front.Preserve
+import ConAgua.Arena.IndSumSpec10
+import ConAgua.Arena.RecCheckSpec13
 
 /-!
 # `classCtorOf`'s entries: `class_ctor_of_nfs` (lane `indproofs4`, helper `cls`)

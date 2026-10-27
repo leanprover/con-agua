@@ -1,7 +1,7 @@
 import ConAgua.Arena.IndPosSpec2
-import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPartsSpec3
 
 /-! # `IndPos2`'s leaves (lane `indproofs2`, helper `pos`, fork E)
 

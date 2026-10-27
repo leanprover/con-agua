@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPosMemo
-import ConAgua.Arena.RecCheckSpec8
+import ConAgua.Arena.IndPosSpec5
+import ConAgua.Arena.RecCheckSpec7
 
 /-!
 # `RecCheck`: `eraseFVarTys`, `targetCanonParams`, `targetCtorsOf` (lane `indproofs3`, helper `rec`)

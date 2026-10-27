@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPos2SpecD
-import ConAgua.Arena.StripTeleSpec
 set_option linter.unusedSectionVars false
 
 /-! Continued from `IndPos2SpecD.lean` (split by size; lane `indproofs`). -/

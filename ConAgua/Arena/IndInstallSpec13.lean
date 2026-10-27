@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec12
+import ConAgua.Arena.IndInstallSpec9
 
 /-!
 # Refinements of `IndInstall`, part 13 (lane `indproofs2`, helper `install`): `blockCapsAt`, the

@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecGenSpec4
+import ConAgua.Arena.IlpRd
+import ConAgua.Arena.IndPartsSpec3
+import ConAgua.Arena.RecClassSpecB
+import ConAgua.Arena.RecClassSpecE
+import ConAgua.Arena.RecGenSpec2
 
 /-!
 # `RecGen`: `classFormerTy` (lane `indproofs2`, helper `rec`)

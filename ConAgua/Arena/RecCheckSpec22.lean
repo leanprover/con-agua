@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecCheckSpec21
-import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.IndInstallSpec20
+import ConAgua.Arena.IndInstallSpec9
 
 /-!
 # `RecCheck`: `targetRecPins`' name pins (lane `indproofs3`, helper `rec2`)

@@ -1,4 +1,7 @@
-import ConAgua.Arena.IndInstallSpec24
+import ConAgua.Arena.IndPosMemo
+import ConAgua.Arena.IndPosSpec5
+import ConAgua.Arena.IndSumSpec14
+import ConAgua.Arena.IndSumSpec8
 
 /-!
 # Refinements of `IndInstall`, part 25 (lane `indproofs3`, helper `tail`): memo frames for

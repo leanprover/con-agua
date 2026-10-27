@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclApdRef
 import ConAgua.Arena.MemoRekey
-import ConAgua.Arena.IndReal
 import ConAgua.Arena.StageTLift
 
 /-!

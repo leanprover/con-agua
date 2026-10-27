@@ -1,7 +1,5 @@
-import ConAgua.Arena.CallF
 import ConAgua.Arena.StubNamesRefine
 import ConAgua.Arena.StubIndRefine
-import ConAgua.Arena.StageInst1
 
 /-!
 # Stub contracts discharged by real refinements (lane `indproofs4`)

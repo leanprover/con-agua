@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecJ
+import ConAgua.Arena.IndPartsSpec5
 
 /-! # `IndPos2`, the frame's helpers (lane `indproofs2`, helper `pos2`): records decoded below the
 tops (`DecB`) as the words L reads; `NestKey` equality and membership; `nestAcceptGroup`. -/

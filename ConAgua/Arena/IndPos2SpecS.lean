@@ -1,6 +1,4 @@
-import ConAgua.Arena.IndPos2SpecR
-import ConAgua.Arena.StageInst1
-import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndPos2SpecQ
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the relational steps,
 `nest_fields` and `nest_ctors_walk`. -/

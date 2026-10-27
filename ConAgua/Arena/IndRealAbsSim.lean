@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.RecSim
 import ConAgua.Arena.IndRealNames
 
 /-!

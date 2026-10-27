@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndT.RecCheckK53
 import ConAgua.Arena.RecGenSpec23
 import ConAgua.Arena.RecClassSpecL
-import ConRon.Bridge.Inductives.GenRec
 
 /-!
 # `classNodesAgree` under `StageC` (lane `indstaget`, helper `pds`)

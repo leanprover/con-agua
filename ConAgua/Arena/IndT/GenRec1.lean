@@ -2,7 +2,8 @@ import ConAgua.Arena.IndInstallSpec41
 import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Arena.IndT.RecGen28
-import ConRon.Bridge.Inductives.BlockRec
+import ConAgua.Arena.IndInstallSpec15
+import ConAgua.Arena.RecCheckSpec24
 
 /-!
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)

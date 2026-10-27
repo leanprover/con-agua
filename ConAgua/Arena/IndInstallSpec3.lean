@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndInstallSpec2
+import ConAgua.Arena.IndRealSpine
 
 /-!
 # Refinements of `IndInstall`, part 3 (lane `indproofs`, helper `install`)

@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndT.PosWalk
-import ConAgua.Arena.IlpRdReal
+import ConAgua.Arena.IndT.PosDefs
+import ConAgua.Arena.IndT.RecGen19
 
 /-!
 # `nest_ctors_crest` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

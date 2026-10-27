@@ -1,5 +1,7 @@
-import ConAgua.Arena.IndInstallSpec16
-import ConAgua.Arena.IndSumSpec13
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndInstall
+import ConAgua.Arena.WhnfBase
+import ConAgua.Scan.Common
 
 /-!
 # Refinements of `IndInstall`, part 17 (lane `indproofs2`, helper `install`): `checkBlockIdxSorts`

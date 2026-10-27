@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndSumSpec4
-import ConAgua.Arena.IndRealMemo
 import ConAgua.Arena.IndRealIlpP
 
 /-!

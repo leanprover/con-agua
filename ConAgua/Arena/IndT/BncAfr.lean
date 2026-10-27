@@ -1,6 +1,6 @@
-import ConAgua.Arena.IndInstallSpec33
-import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndT.RecGen19
+import ConAgua.Arena.DefEqKnot
+import ConAgua.Arena.IndInstallSpec23
+import ConAgua.Arena.RecClassSpecF
 
 /-!
 # `block_nest_ctx`'s pure parts keep the walk memos (lane `indstaget`)

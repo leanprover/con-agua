@@ -1,11 +1,7 @@
-import ConAgua.Arena.IndInstallSpec42
-import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndRealPartsC2
 import ConAgua.Arena.IndT.Block
-import ConAgua.Arena.IndT.ArmMemos
-import ConAgua.Arena.IndRealAbsT
-import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndArmLps
+import ConAgua.Arena.IndRealIpo
 
 /-!
 # `check_ind_decl` under `StageC` (lane `indstaget`)

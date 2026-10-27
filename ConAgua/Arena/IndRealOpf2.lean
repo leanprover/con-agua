@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndRealOpf
+import ConAgua.Arena.IndRealAbs
 
 /-!
 # `open_pis_at_fvars_f`'s callees under the stage relation (lane `indproofs4`, helper `opf`)

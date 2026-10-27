@@ -1,5 +1,6 @@
-import ConAgua.Arena.IndT.RecGen24
 import ConAgua.Arena.RecGenSpec28
+import ConAgua.Arena.IndT.RecCheckTmn
+import ConAgua.Arena.RecGenSpec27
 
 /-!
 # `classesNfs` under `StageC` (lane `indstaget`, helper `pds`)

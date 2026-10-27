@@ -1,15 +1,5 @@
-import ConAgua.Arena.IndRealFvtD
-import ConAgua.Arena.CallF
 import ConAgua.Arena.WhnfEntry
-import ConAgua.Arena.WhnfSpineArgs
 import ConAgua.Arena.DeclNatSpec
-import ConAgua.Arena.IndStubs
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.IndView
-import ConAgua.Arena.TeleLift
-import ConAgua.Arena.StripTeleSpec
-import ConAgua.Arena.StageInst1
-import ConAgua.Arena.IndPartsSpec2
 
 /-!
 # `fvar_type_ds`, `get_app_args_f`: stub contracts discharged (lane `indproofs4`, helper `fvt`)

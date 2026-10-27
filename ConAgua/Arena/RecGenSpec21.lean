@@ -1,6 +1,6 @@
 import ConAgua.Arena.RecGenSpec22
-import ConAgua.Arena.RecGenSpec11
-import ConAgua.Arena.IndInstallSpec30
+import ConAgua.Arena.RecClassSpecH
+import ConAgua.Arena.RecGenSpec19
 
 /-!
 # `checkBlockClasses` (lane `indproofs4`)
