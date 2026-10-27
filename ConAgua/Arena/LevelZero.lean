@@ -172,7 +172,7 @@ theorem lhPushW_ext {m m' : Mem} {w o : Word} (h : lhPushW m w = some (o, m')) :
       have := Nat.mod_le (m.arr64 LH).size 18446744073709551616
       omega
     have e1 : (htop m + 1).toNat = (htop m).toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hLC : (LH : ArrId) ≠ CTL := by decide
+    have hLC : (LH : TieredArray) ≠ CTL := by decide
     have htop' : htop ((m.set64 LH (htop m) w).set64 CTL 192 (htop m + 1)) = htop m + 1 := by
       simp only [htop, rdW_set64L, size_set64L]; simp [hctl]
     refine ⟨HeapFrame.ext ⟨fun A h1 h2 => ?_, fun k hk => ?_, by rw [htop', e1]; omega,

@@ -207,7 +207,7 @@ theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
   have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241).size),
       ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241)[(3 : Word).toNat] = v := by
     intro hb
-    simp only [arr64_copy64_ne _ _ _ _ _ _ (show (241 : ArrId) ≠ 1 by decide)] at hb ⊢
+    simp only [arr64_copy64_ne _ _ _ _ _ _ (show (HDRF : TieredArray) ≠ CTL by decide)] at hb ⊢
     exact hv' hb
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
