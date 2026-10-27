@@ -112,7 +112,7 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
           fun h => absurd (hA _ h) (by simp)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩,
-      hf.2.2.1 145 ▸ hS.bstk,
+      hf.2.2.1 BSTK ▸ hS.bstk,
       hS.den.mono (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext) (by rw [hL.pins])
         (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)

@@ -172,14 +172,14 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cplL a' = cplL a)
     (hf : MemFrame A C m m')
-    (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b) (hpins : (128 : ArrId) ∉ A)
+    (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b) (hpins : ((128 : ArrId) : TieredArray) ∉ A)
     (henv : ∀ b ∈ A, b < 129 ∨ (144 ≤ b ∧ ¬ Tier1In 129 132 b))
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
-    (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
-    (hmWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
+    (hmA : ((50 : ArrId) : TieredArray) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
+    (hmWA : ((151 : ArrId) : TieredArray) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
-    (hmLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
+    (hmLA : ((52 : ArrId) : TieredArray) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
     (hscA : (SOREC : TieredArray) ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
@@ -191,7 +191,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
       (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf
       (fun b hb => by have := henv b hb; simp only [ArrId] at this ⊢; omega), ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
-      hf.2.2.1 145 ▸ hS.bstk,
+      hf.2.2.1 BSTK ▸ hS.bstk,
       hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hmode⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
