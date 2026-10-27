@@ -192,9 +192,9 @@ theorem DerR.frameT {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
 theorem ArenaD.putT (m m' : Mem) (a : AState) (hA : ArenaD m a) (b : ArrId) (hb : TblIx b)
     (i w : Word) (h : tblPutW m b i w = some m') : ArenaD m' a := by
   have hf := tblPutW_frame hb h
-  exact ⟨ArenaR.frame_ext _ _ (by rcases hb with rfl | rfl | rfl <;> simp)
+  exact ⟨ArenaR.frame_ext _ _ (by rcases hb with rfl | rfl | rfl <;> simp [spArr, NID, LID, NIDS, LIDS, EIDS])
       (by rcases hb with rfl | rfl | rfl <;> simp [szC, spS]) m m' hf a hA.1,
-    DerR.frameT hf (by rcases hb with rfl | rfl | rfl <;> simp) hA.2⟩
+    DerR.frameT hf (by rcases hb with rfl | rfl | rfl <;> simp [spArr, NID, LID, NIDS, LIDS, EIDS]) hA.2⟩
 
 /-- Appending to the pool keeps the mode (the flag stays, a tier-0 top stays in tier 0). -/
 theorem ModeOK.growsF {m m' : Mem} (h : ModeOK m) (hg : Grows m m') : ModeOK m' := by

@@ -14,14 +14,13 @@ open scoped Lean.Order
 namespace L.Arena
 set_option experimental.vcgen true
 
-theorem rowSet_frame (m : Mem) (w c q : Word) (ht : rowTag w ≤ 2) :
+theorem rowSet_frame (m : Mem) (w c q : Word) (_ht : rowTag w ≤ 2) :
     MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m (rowSet m w c q) := by
-  have hne : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
+  have hne : rowArr w ≠ CTL := by rowarr_omega [CTL]
   have h1 := MemFrame.set64 m (rowArr w) hne (ixW w) c
   have h2 := MemFrame.set64 (m.set64 (rowArr w) (ixW w) c) (rowArr w) hne (ixW w + 1) q
   have hmem : rowArr w ∈ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] := by
-    have : rowTier w < 2 := Nat.mod_lt _ (by decide)
-    simp only [rowArr, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ArrId, List.mem_cons, List.not_mem_nil, or_false]; omega
+    rcases rowArr_names w with h | h | h | h | h | h <;> rw [h] <;> simp
   exact (h1.trans h2).mono (by simpa using hmem) (by simp)
 
 /-- **`EnvR` after a promotion**: the rows (constant and table) are untouched, the pool grew, the
@@ -35,15 +34,13 @@ theorem EnvR.promoted {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : W
     EnvR dn m' vis ⟨⟨consts', tables'⟩, fe.idx, fe.visibleBelow, fe.tbls⟩ := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
-    · have : rowTier w < 2 := Nat.mod_lt _ (by decide)
-      rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr]; omega)
-        (by simp only [rowArr]; omega)]
+    · rw [he _ (by rowarr_omega) (by rowarr_omega)
+        (by rowarr_omega)]
     · rfl
   have hP : ∀ w, rowP m' w = rowP m w := fun w => by
     unfold rowP; split
-    · have : rowTier w < 2 := Nat.mod_lt _ (by decide)
-      rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr]; omega)
-        (by simp only [rowArr]; omega)]
+    · rw [he _ (by rowarr_omega) (by rowarr_omega)
+        (by rowarr_omega)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by

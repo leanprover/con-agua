@@ -300,13 +300,8 @@ theorem envPushW_afr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m
   rename_i hc
   obtain ⟨ht, -⟩ := hc
   have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON, 140, 141, 142] := by
-    have htr : rowTier (rdW (m.arr64 EREC) (q + 1)) < 2 := Nat.mod_lt _ (by decide)
-    rcases (by omega : rowTag (rdW (m.arr64 EREC) (q + 1)) = 0 ∨ rowTag (rdW (m.arr64 EREC) (q + 1)) = 1 ∨
-      rowTag (rdW (m.arr64 EREC) (q + 1)) = 2) with h1 | h1 | h1 <;>
-    rcases (by omega : rowTier (rdW (m.arr64 EREC) (q + 1)) = 0 ∨
-      rowTier (rdW (m.arr64 EREC) (q + 1)) = 1) with h2 | h2 <;>
-    simp [rowArr, h1, h2]
-  have hne : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
+    rcases rowArr_names (rdW (m.arr64 EREC) (q + 1)) with h | h | h | h | h | h <;> rw [h] <;> decide
+  have hne : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by rowarr_omega [CTL]
   have h49 : memoFreeA [rowArr (rdW (m.arr64 EREC) (q + 1))] = true := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hrow
     rcases hrow with h | h | h | h | h | h | h <;> rw [h] <;> decide
