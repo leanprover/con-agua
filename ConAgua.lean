@@ -9,6 +9,7 @@ public import ConAgua.L.FuelMono
 public import ConAgua.L.ProgHas
 public import ConAgua.L.WriteSet
 public import ConAgua.L.Records
+public import ConAgua.L.Arrays
 public import ConAgua.L.Examples
 public import ConAgua.Compiler.Compile
 public import ConAgua.Compiler.Run
