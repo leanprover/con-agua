@@ -21,7 +21,7 @@ open L.Arena
 
 /-! ## The memos of the recursor check -/
 
-theorem taMR_mfr {S : List TieredArray} {T : List Word} {m m' : Mem} (hf : MFr S T m m') (hS : TAM ∉ S)
+theorem taMR_mfr {S : List TieredArray} {T : List Word} {m m' : Mem} (hf : MFr S T m m') (hS : (TAM : TieredArray) ∉ S)
     (hT : (212 : Word) ∉ T) {mp : Std.HashMap EIdx EIdx} (h : taMR m mp) : taMR m' mp := by
   obtain ⟨A, C, f, hA, hC⟩ := hf.memo TAM 212 (by decide) (by decide) hS hT
   exact memoRG_frame taSch taSch_wf bmKey (fun w : Word => decE w) A C hA hC m m' f mp h

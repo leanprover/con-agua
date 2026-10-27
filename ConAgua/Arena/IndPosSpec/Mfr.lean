@@ -18,7 +18,7 @@ namespace L.Ind
 open L.Arena
 
 theorem RfInv.mfr {S : List TieredArray} {T : List Word} {m m' : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word}
-    (h : RfInv m M G g) (hf : MFr S T m m') (hS : RFM ∉ S)
+    (h : RfInv m M G g) (hf : MFr S T m m') (hS : (RFM : TieredArray) ∉ S)
     (hT : (208 : Word) ∉ T ∧ (218 : Word) ∉ T ∧ (219 : Word) ∉ T) : RfInv m' M G g :=
   h.frame (RfFr.of_mfr hf hS hT)
 
