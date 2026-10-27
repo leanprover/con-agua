@@ -17,6 +17,7 @@
 #   build       scripts/lake build ConAgua           (timeout 90 min)
 #   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
 #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
+#   checker-prog  scripts/checker_prog.py --no-build --check   the generated program files are current
 #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 #
 # The lanes run this in their worktree after merging master (`scripts/gates.sh`), the merge queue
@@ -85,6 +86,7 @@ run core-fns   timeout 600 python3 scripts/core_fns.py --check
 run loop-fns   timeout 600 python3 scripts/loop_fns.py --check
 run leaf-fns   timeout 600 python3 scripts/leaf_fns.py --check
 run preloop-ws timeout 900 python3 scripts/preloop_ws.py --check
+run checker-prog timeout 1800 python3 scripts/checker_prog.py --no-build --check
 run e2e        e2e
 
 echo "gates: $ran OK, $skipped skipped"

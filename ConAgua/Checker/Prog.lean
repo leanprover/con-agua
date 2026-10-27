@@ -76,7 +76,6 @@ import ConAgua.Arena.NatShr
 import ConAgua.Arena.NatSub
 import ConAgua.Arena.ParamStore
 import ConAgua.Arena.Pins
-import ConAgua.Arena.Pool
 import ConAgua.Arena.ProjStore
 import ConAgua.Arena.Promote
 import ConAgua.Arena.PropRead
@@ -98,7 +97,6 @@ import ConAgua.Arena.StripTele
 import ConAgua.Arena.StubInd
 import ConAgua.Arena.StubNames
 import ConAgua.Arena.TeleLift
-import ConAgua.Arena.Tiers
 import ConAgua.Arena.Walk
 import ConAgua.Arena.WalkLeaves
 import ConAgua.Arena.WalkLift
@@ -129,6 +127,7 @@ import ConAgua.Front.NatDec
 import ConAgua.Front.Unescape
 import ConAgua.L.Examples
 import ConAgua.L.Syntax
+import ConAgua.Layout
 import ConAgua.Rom.CIRead
 import ConAgua.Rom.PinRead
 import ConAgua.Scan.Key
@@ -2276,25 +2275,5 @@ def checkerProg : Prog := [
   ("pre_utf8_char", preFn preTree (L.Scan.Utf8.utf8Char)),
   ("pre_utf8_valid", preFn preTree (L.Scan.Str.utf8Valid)),
   ("pre_value_at", preFn preTree (L.Scan.Key.valueAt))]
-
-set_option maxRecDepth 100000 in
-/-- The table for the arrays the program names (`Prog.wfAuto`'s), as a literal (`tab_lit%`: every
-per-chunk check of `checkerProg_wf` unfolds it). -/
-def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2)
-
-#guard checkerTab == Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
-
--- the word arrays are the ones `cap_check` checks
-#guard (Prog.arrs checkerProg).2 == wordArrays
-
--- The result counts of `checkerProg`'s functions (`Prog.nrt`), as a literal, with
--- `checkerNrt_eq : Prog.nrt checkerProg = checkerNrt` (`nrt_lit`): every call site of the compiled
--- code looks its callee's count up in it (`asm_lit`).
-nrt_lit checkerNrt : checkerProg
-
--- The frames of `checkerProg`'s leaves without a stack check (`Prog.skt`), as a literal, with
--- `checkerSkt_eq : Prog.skt checkerProg "check" = checkerSkt` (`skt_lit`): every function's stack
--- check of the compiled code looks its callees' frames up in it (`asm_lit`).
-skt_lit checkerSkt : checkerProg "check"
 
 end L.Checker
