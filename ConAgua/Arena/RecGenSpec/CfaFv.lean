@@ -212,7 +212,7 @@ theorem tmdW_mfr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : MFr 
   rw [tmdW_eq] at h
   obtain ⟨⟨ra, m1⟩, h1, h⟩ := of_K h rfl
   rw [tmdK1_some] at h
-  refine (MFr.of_frame (naF_frame h1) (by simp [NAREC, NASLOT]) (by simp)).trans ?_
+  refine (MFr.of_frame (naF_frame h1) (by simp [tier1, tierOff, NAREC, NASLOT]) (by simp)).trans ?_
   obtain ⟨ls, hp, h⟩ := of_K h rfl
   rw [tmdK2_some] at h
   obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
@@ -343,7 +343,7 @@ theorem cfaFv_ok {k : Nat} {m m0 : Mem} {a : AState} {i : Word} {r0 : List Word}
       (internBVar_spec p P.bf P.bp P.ib k _ 0) h
     obtain ⟨a', hrun, hS', hg⟩ := internBVar_stage hS 0 hb
     have hH := binternW_hw _ a hS.1.arena.1.bvar _ _ _ hb
-    refine ⟨a', ?_, hH, hS', hg, hP.fr (MFr.of_frame (binternW_frame _ _ _ _ hb) (by simp [BREC, BSLOT]) (by simp))⟩
+    refine ⟨a', ?_, hH, hS', hg, hP.fr (MFr.of_frame (binternW_frame _ _ _ _ hb) (by simp [tier1, tierOff, BREC, BSLOT]) (by simp))⟩
     have hge : fvl.toNat ≤ i.toNat := by
       have : ¬ i.toNat < fvl.toNat := fun h => hi (UInt64.lt_iff_toNat_lt.mpr h)
       omega
