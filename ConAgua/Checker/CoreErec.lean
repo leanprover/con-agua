@@ -30,8 +30,8 @@ def coreErecPa (a : TieredArray) : Bool := checkerWordArrays.contains a && a != 
 def coreErecPc (w : Word) : Bool := decide (w.toNat < 256)
 
 theorem coreErecPa_mem (a : TieredArray) (h : coreErecPa a = true) : a ∈ coreErecA := by
-  simp only [coreErecPa, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
-  simp [coreErecA, List.mem_filter, List.mem_range, h.1, h.2]
+  simp only [coreErecPa, Bool.and_eq_true, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
+  simp [coreErecA, List.mem_filter, h.1, h.2]
 
 theorem coreErecPc_mem (w : Word) (h : coreErecPc w = true) : w ∈ coreErecC := by
   simp only [coreErecPc, decide_eq_true_eq] at h
