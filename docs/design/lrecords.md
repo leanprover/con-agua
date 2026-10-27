@@ -522,6 +522,11 @@ expected: the deleted lemmas were each cheap; the saving is in lines and in one 
 (raw record reads I2 through `tfld`, the comparators and room checks of the store instances
 through accessors, `TRec` rows by array name) is next.
 
+**Second R0 landing.** The hand-written handle arithmetic now uses the API (`Env.lean`,
+`DerRel.lean`, `ExprMk.lean`, `LpColRel.idxW_hdW` deleted, local `>>> 28` bounds by `shr28_lt`):
+8 files, −30 lines. The other `>>>` proofs are not about handle words (slot counts, limb
+arithmetic, `>>> 40` pool tags) or work on the twin's `Idx` directly. The record side is §7.4.
+
 ### 7.2 R2 deferred with S
 
 An exact two-word key already aborts unless both words are below `2^32`
