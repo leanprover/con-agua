@@ -4,7 +4,7 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 public import ConAgua.Arena.FVarRange
 import ConAgua.Census.Attr
-public import ConAgua.Arena.LiftSpec
+public import ConAgua.Arena.LiftL
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -609,6 +609,27 @@ def absProj : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, nm, ix, e, x
   u := call ab_put(h, k, r, fd, j);
   return r
 }
+
+/-- con-ron: ConRon/Arena/ExprOps.lean:1719-1725 ConRon.Arena.abstract1Fast -/
+@[l_impl ConRon.Arena.abstract1Fast]
+def absEntry : FunDecl := lfn (e, d, k) locals (r, u) {
+  u := call ab_clear();
+  r := call abs_go(e, k, d, 4000000000);
+  u := call ab_clear();
+  return r & 4294967295
+}
+
+/-- After the walk: clear the memo again; the handle word is returned masked to 32 bits (the
+callers' contract `HW`; `decE` reads the same handle). -/
+def aclrK : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (r, m₁) =>
+    if rdW (m₁.arr64 CTL) 48 + 2 = 0 then none else some (r &&& 4294967295, mclearG abSch m₁)
+
+theorem aclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 48 + 2 ≠ 0) :
+    aclrK (some (r, m₁)) = some (r &&& 4294967295, mclearG abSch m₁) := by simp [aclrK, h0]
+
+grind_pattern [arena_grind] aclrK_some => aclrK (some (r, m₁))
 
 /-! ## The program and its specs -/
 

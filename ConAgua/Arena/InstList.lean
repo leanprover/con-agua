@@ -3,7 +3,7 @@ module
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
-public import ConAgua.Arena.LiftSpec
+public import ConAgua.Arena.LiftL
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop

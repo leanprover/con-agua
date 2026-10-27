@@ -133,23 +133,6 @@ theorem depsArmW_15 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw
 theorem nd_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
   simp [rdW, h]
 
-/-- The statement after the first `k` of a right-nested `seq` chain. -/
-def seqDrop : Nat → Stmt → Stmt
-  | k + 1, .seq _ t => seqDrop k t
-  | _, s => s
-
-/-- The first `k` statements of a `seq` chain, followed by `r`. -/
-def seqTake : Nat → Stmt → Stmt → Stmt
-  | k + 1, .seq a t, r => .seq a (seqTake k t r)
-  | _, _, r => r
-
-theorem seqTake_drop : ∀ (k : Nat) (s : Stmt), seqTake k s (seqDrop k s) = s
-  | 0, s => by cases s <;> rfl
-  | k + 1, s => by
-    cases s with
-    | seq a t => simp only [seqTake, seqDrop, seqTake_drop k t]
-    | _ => rfl
-
 /-- `nat_op_deps` after the pin reads: the dispatch. -/
 def depsTailS : Stmt := seqDrop 16 natOpDepsL.body
 
