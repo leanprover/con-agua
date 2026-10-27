@@ -156,7 +156,7 @@ theorem bufKept_of_memRel {B : Array Word} {buf base : Nat} {r : Mem} {d : DataM
     (hent : ∀ i < frozenIdsL.length, (bufEntry B i).1 + (bufEntry B i).2 ≤ B.size)
     (hkept : ∀ q (h : q < B.size), rdW d (A (buf + 8 * q)) = some B[q]) : BufKept B r := by
   intro k hk h1
-  obtain ⟨hidx, -, -, -⟩ := frozen_facts hk h1
+  obtain ⟨hidx, -, -⟩ := frozen_facts hk h1
   have hnw : checkerTab.dom64 ↑frozen[k].1 = true := by
     obtain ⟨hl, e, -⟩ := List.idxOf?_eq_some_iff.mp hidx
     rw [← e]; exact List.all_eq_true.mp frozenIdsL_dom _ (List.getElem_mem _)

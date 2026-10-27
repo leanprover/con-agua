@@ -233,19 +233,11 @@ end buf
 
 /-! ## The thread's memory `bufMem` -/
 
-theorem bufMem_arr (B : Array Word) (r : Mem) (j : Word) (b : ArrId) :
-    (bufMem B r j).arr64 b = if r.HasW b then
+theorem bufMem_arr (B : Array Word) (r : Mem) (j : Word) (b : TieredArray) :
+    (bufMem B r j).arr64 b =
       (match frozenIdsL.idxOf? b with
        | some i => bufImg B i
-       | none => if parOwnedL.contains b then r.arr64 b else #[]) else #[] := by
-  unfold Mem.HasW
-  by_cases h : b < r.words.size
-  · simp only [bufMem, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map,
-      Array.getElem?_range, h, ↓reduceIte, Option.map_some, Option.getD_some]
-    rfl
-  · simp only [h, ↓reduceIte]
-    simp only [bufMem, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map,
-      Array.getElem?_range, h, ↓reduceIte, Option.map_none, Option.getD_none]
+       | none => if parOwnedL.contains b then r.arr64 b else #[]) := rfl
 
 theorem bufMem_glob_init (B : Array Word) (r : Mem) (j : Word) :
     (bufMem B r j).glob INIT = r.glob INIT := rfl
@@ -255,30 +247,29 @@ theorem bufMem_glob_phi (B : Array Word) (r : Mem) (j : Word) :
     (bufMem B r j).glob PHI = j + 1 := rfl
 
 /-- The frozen entries but the header and the seed: their position in `frozenIdsL`, not `CTL`,
-not zeroed by `freshMem`, below `320`. -/
+not zeroed by `freshMem`. -/
 theorem frozen_facts_all : (List.range 61).all (fun k => k == 0 ||
-    (frozenIdsL.idxOf? (frozen.map (·.1))[k]! == some (k + 1) &&
-      !(freshZ.contains (frozen.map (·.1))[k]!) &&
-      (frozen.map (·.1))[k]! != CTL && decide ((frozen.map (·.1))[k]! < 388))) = true := by
+    (frozenIdsL.idxOf? ↑(frozen.map (·.1))[k]! == some (k + 1) &&
+      !(freshZ.contains ↑(frozen.map (·.1))[k]!) &&
+      (frozen.map (·.1))[k]! != CTL)) = true := by
   decide +kernel
 
 theorem frozen_facts {k : Nat} (hk : k < frozen.length) (h1 : 1 ≤ k) :
-    frozenIdsL.idxOf? frozen[k].1 = some (k + 1) ∧ frozen[k].1 ∉ freshZ ∧ frozen[k].1 ≠ CTL ∧
-      frozen[k].1 < 388 := by
+    frozenIdsL.idxOf? ↑frozen[k].1 = some (k + 1) ∧ (frozen[k].1 : TieredArray) ∉ freshZ ∧
+      frozen[k].1 ≠ CTL := by
   have := List.all_eq_true.mp frozen_facts_all k (List.mem_range.mpr (by rwa [frozen_length] at hk))
   rw [getElem!_pos (frozen.map (·.1)) k (by simpa using hk), List.getElem_map] at this
-  simp only [Bool.or_eq_true, beq_iff_eq, Bool.and_eq_true, Bool.not_eq_true', bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at this
-  rcases this with h | ⟨⟨⟨h2, h3⟩, h4⟩, h5⟩
+  simp only [Bool.or_eq_true, beq_iff_eq, Bool.and_eq_true, Bool.not_eq_true', bne_iff_ne, ne_eq] at this
+  rcases this with h | ⟨⟨h2, h3⟩, h4⟩
   · omega
-  · refine ⟨h2, fun h => ?_, h4, h5⟩
+  · refine ⟨h2, fun h => ?_, h4⟩
     simp [h] at h3
 
 /-- The owned arrays: not frozen, not truncated. -/
 theorem owned_facts_all : parOwnedL.all (fun b => frozenIdsL.idxOf? b == none &&
     !(fzSrcs.contains b)) = true := by decide +kernel
 
-theorem owned_facts {b : ArrId} (hb : b ∈ parOwnedL) :
+theorem owned_facts {b : TieredArray} (hb : b ∈ parOwnedL) :
     frozenIdsL.idxOf? b = none ∧ b ∉ fzSrcs := by
   have := List.all_eq_true.mp owned_facts_all b hb
   simp only [Bool.and_eq_true, beq_iff_eq, Bool.not_eq_true'] at this
@@ -287,25 +278,21 @@ theorem owned_facts {b : ArrId} (hb : b ∈ parOwnedL) :
 
 /-- **A frozen array (not the header or the seed) of the thread's memory** is the buffer's image. -/
 theorem bufMem_frozen (B : Array Word) (r : Mem) (j : Word) {k : Nat} (hk : k < frozen.length)
-    (h1 : 1 ≤ k) : (bufMem B r j).arr64 frozen[k].1 =
-      if r.HasW frozen[k].1 then bufImg B (k + 1) else #[] := by
+    (h1 : 1 ≤ k) : (bufMem B r j).arr64 frozen[k].1 = bufImg B (k + 1) := by
   rw [bufMem_arr, (frozen_facts hk h1).1]
 
 /-- **An owned array of the thread's memory** is the region's. -/
-theorem bufMem_owned (B : Array Word) (r : Mem) (j : Word) {b : ArrId} (hb : b ∈ parOwnedL) :
+theorem bufMem_owned (B : Array Word) (r : Mem) (j : Word) {b : TieredArray} (hb : b ∈ parOwnedL) :
     (bufMem B r j).arr64 b = r.arr64 b := by
   rw [bufMem_arr, (owned_facts hb).1]
   simp only [List.contains_iff_mem, hb, ↓reduceIte]
-  split
-  · rfl
-  · rename_i h; rw [Mem.arr64_oob _ _ h]
 
 theorem bufMem_hdr (B : Array Word) (r : Mem) (j : Word) :
-    (bufMem B r j).arr64 HDRF = if r.HasW HDRF then bufImg B 0 else #[] := by
+    (bufMem B r j).arr64 HDRF = bufImg B 0 := by
   rw [bufMem_arr]; rfl
 
 theorem bufMem_ctlf (B : Array Word) (r : Mem) (j : Word) :
-    (bufMem B r j).arr64 CTLF = if r.HasW CTLF then bufImg B 1 else #[] := by
+    (bufMem B r j).arr64 CTLF = bufImg B 1 := by
   rw [bufMem_arr]; rfl
 
 theorem bufMem_ctl (B : Array Word) (r : Mem) (j : Word) :
@@ -313,7 +300,7 @@ theorem bufMem_ctl (B : Array Word) (r : Mem) (j : Word) :
   bufMem_owned B r j (by decide)
 
 theorem bufMem_words (B : Array Word) (r : Mem) (j : Word) :
-    r.SameShape (bufMem B r j) := by simp [Mem.SameShape, bufMem]
+    r.SameShape (bufMem B r j) := trivial
 
 /-- `freshCtl` word by word. -/
 theorem getD_freshCtl (c : Array Word) (k : Nat) :
