@@ -149,8 +149,8 @@ theorem vacL_pt0 (m : Mem) : (vacL scrSlots m).arr64 PT0 = m.arr64 PT0 :=
   vacL_arr _ _ _ (by decide)
 
 theorem vacL_words : ∀ (l : List ArrId) (m : Mem), m.SameShape (vacL l m)
-  | [], _ => rfl
-  | a :: as, m => by simp only [vacL]; rw [vacL_words as]; exact (kzeroW_fr _ _ _ m).2.2
+  | [], m => .refl m
+  | a :: as, m => by simp only [vacL]; exact (kzeroW_fr _ _ _ m).2.2.trans (vacL_words as _)
 
 /-- `scratch_reset`'s head: at the limit the wrap (the scratch tables vacated, the slot base
 restarted at `0`). -/

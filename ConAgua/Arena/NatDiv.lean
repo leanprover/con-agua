@@ -480,7 +480,7 @@ grind_pattern [natop_grind] pv_exit => pv p pa i.toNat, pv p oa la.toNat, i < la
 theorem Grows.refl (m : Mem) (h : PoolOK m) : Grows m m := by
   have h2 := h.2.1
   have hf : PFrame (m.set64 CTL 0 m.top) m := by
-    refine ⟨by rw [Mem.bytes_set64], by rw [Mem.words_size_set64], fun b _ _ => ?_,
+    refine ⟨by rw [Mem.bytes_set64], (Mem.sameShape_set64 _ _ _ _).symm, fun b _ _ => ?_,
       by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)],
       by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], rfl⟩
     by_cases hb : b = CTL

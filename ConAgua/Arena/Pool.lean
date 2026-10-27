@@ -107,6 +107,8 @@ grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
   rw [Mem.arr64_set64_same]; simp
 
 attribute [arena_grind =] Mem.hasW_set64 Mem.hasW_setG
+grind_pattern [arena_grind] Mem.HasW.of_sameShape => m.SameShape m', m'.HasW a
+grind_pattern [arena_grind] Mem.SameShape.trans => m₁.SameShape m₂, m₂.SameShape m₃
 
 @[arena_grind =] theorem Mem.bytes_set64 (m : Mem) (a : ArrId) (i v : Word) :
     (m.set64 a i v).bytes = m.bytes := rfl
