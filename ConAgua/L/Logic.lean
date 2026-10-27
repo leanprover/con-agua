@@ -55,6 +55,7 @@ attribute [lang_grind] Mem.len8 Mem.len64
 -- Word arrays are distinct by their source array or tier: `grind` decides `↑a ≠ ↑b`,
 -- `tierA a t ≠ ↑b` (`a ≠ b`) and `↑a ≠ tier1 b` with these, in every `grind` set.
 attribute [grind =] TieredArray.mk.injEq tierA_arr
+attribute [lang_grind =] TieredArray.mk.injEq tierA_arr
 
 /-- A word store leaves the byte arrays alone. -/
 @[lang_grind =] theorem Mem.arr8_set64_apply (m : Mem) (a : TieredArray) (i v : Word) (x : ArrId) :
