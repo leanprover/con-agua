@@ -49,7 +49,7 @@ theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s
   · cases h
     rcases tierA_cases' A (tierW r) with e | e <;> rw [e]
     · exact (MemFrame.set64 m₁ A hA _ _).mono (by simp) (by simp)
-    · exact (MemFrame.set64 m₁ _ (by simp [CTL]) _ _).mono (by simp) (by simp)
+    · exact (MemFrame.set64 m₁ _ (tier1_ne (by decide)) _ _).mono (by simp) (by simp)
 
 /-- **The frame of a `mk_*`**: the interning's arrays and counts, then the derived column `A`. -/
 theorem mkK_frame {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : A ≠ CTL) {c s d r : Word}
@@ -239,7 +239,7 @@ theorem ColT2.frame {L : Lens α δ k} {A : ArrId} {f : δ → Word} {m m' : Mem
     (h : ColT2 L A f m a) (he : m'.arr64 A = m.arr64 A) (he' : m'.arr64 (tier1 A) = m.arr64 (tier1 A)) :
     ColT2 L A f m' a :=
   ⟨colT_mono h.1 (fun _ _ => by simp only [tierA_zero, he]),
-    colT_mono h.2 (fun _ _ => by simp only [tierA_one, he'])⟩
+    colT_mono h.2 (fun _ _ => by simp only [tierA_one_eq, he'])⟩
 
 /-- `ColT2.frame` across a `MemFrame` that avoids the column (both tiers). -/
 theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List ArrId} {C : List Word}
