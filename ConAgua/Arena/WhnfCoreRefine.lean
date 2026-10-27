@@ -242,7 +242,7 @@ theorem CoreS.frame_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b = SPN)
     (hC : ∀ x ∈ C, x = 136) : CoreS dn m' a vis fe M eb := by
   have aA : ∀ lo hi : Nat, hi ≤ 144 → AvoidA lo hi A := fun lo hi h b hb => by
-    have := hA b hb; simp only [SPN, ArrId] at this ⊢; omega
+    rw [hA b hb]; right; simp only [SPN]; omega
   have aC : ∀ lo hi : Nat, hi ≤ 136 → AvoidC lo hi C := fun lo hi h x hx => by
     have := hA; rw [hC x hx]; right; simpa using h
   exact ⟨⟨ArenaR.frame_ext A C (fun b hb => by rw [hA b hb]; decide)
@@ -250,12 +250,11 @@ theorem CoreS.frame_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
       DerR.frameM A C m m' hf (fun b hb => by rw [hA b hb]; decide) a hS.arena.2⟩,
     hS.core.frame (aA 96 128 (by decide)) (aC 96 128 (by decide)) hf,
     hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp [PINS, SPN] at this) (by decide)),
-    hS.env.frame (aA 129 144 (by decide)) (aC 128 136 (by decide)) hf
-      (fun b hb => by have := hA b hb; simp only [SPN, ArrId] at this ⊢; omega),
+    hS.env.frame (aA 129 144 (by decide)) (aC 128 136 (by decide)) hf,
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
     hS.memos.frame_hi hf (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide)
       (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide),
-    hf.2.2.1 145 ▸ hS.bstk,
+    hf.2.2.1 BSTK ▸ hS.bstk,
     hS.den.frameE (hf.1 EREC (fun h => by have := hA _ h; simp [EREC, SPN] at this) (by decide)),
     hS.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩
 

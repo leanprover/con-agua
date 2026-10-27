@@ -582,7 +582,7 @@ theorem natZeroOk_run_ctor {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins) 
   simp only [natZeroOk, StateT.run_bind, pinNat_run hP, except_ok_bind, h]; rfl
 
 theorem MemFrame.arr_eq {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (b : ArrId) (hb : b ∉ A) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := hf.1 b hb hc
+    (b : TieredArray) (hb : b ∉ A) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := hf.1 b hb hc
 
 section refs3
 variable (p : Prog)

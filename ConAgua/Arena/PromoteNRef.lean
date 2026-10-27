@@ -169,17 +169,17 @@ theorem PMemoR.setN {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h r : Word) (h
 theorem PMemoR.frameLo {A : List TieredArray} {C : List Word} {m m' : Mem} {pm : PMemo}
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hf : MemFrame A C m m')
     (h : PMemoR m pm) : PMemoR m' pm :=
-  h.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+  h.frame (fun b hb => by have := hA b hb; simp only [InStoreTier] at this; omega)
     (fun x hx => .inl (Nat.lt_trans (hC x hx) (by decide))) hf
 
 /-- A memo write keeps the arena relation. -/
 theorem ArenaD.memo {m m' : Mem} {a : AState} (hD : ArenaD m a) (S : MemoSch) (hS : S.WF)
-    (h1 : 64 ≤ S.arr) (h1' : S.arr < 256) (h2 : 64 ≤ (S.cs + 1).toNat) (h r : Word) (hs : msetG S m h 0 r = some m') :
+    (h1 : 64 ≤ S.arr) (h2 : 64 ≤ (S.cs + 1).toNat) (h r : Word) (hs : msetG S m h 0 r = some m') :
     ArenaD m' a := by
   have hf := msetG_frame S hS m m' h 0 r hs
-  exact ⟨ArenaR.frame_ext _ _ (by simpa using ⟨h1, h1'⟩) (by simp; exact h2) m m' hf a hD.1,
+  exact ⟨ArenaR.frame_ext _ _ (by simpa using h1) (by simp; exact h2) m m' hf a hD.1,
     DerR.frameM _ _ m m' hf (fun b hb => by
-      rw [List.mem_singleton.mp hb]; simp only [ArrId] at h1 h1' ⊢; omega) a hD.2⟩
+      rw [List.mem_singleton.mp hb]; simp only [ArrId] at h1 ⊢; omega) a hD.2⟩
 
 theorem run_bind_ok {α β : Type} {x : AM α} {f : α → AM β} {a a₁ : AState} {v : α}
     (h : x.run a = .ok (v, a₁)) : (x >>= f).run a = (f v).run a₁ := by
@@ -314,7 +314,7 @@ theorem pn_rel : ∀ n : Nat,
     obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he, hl, hls, hsk⟩ :=
       ih.2 m a pm (f - 1) h r₁ m₁ hD hP hh ht hca
     refine ⟨a₁, { pm₁ with nM := pm₁.nM.insert (decI h) (decI (r₁.headD 0)) }, ?_,
-      hD₁.memo pnSch pnSch_wf (by decide) (by decide) (by decide) h _ hs,
+      hD₁.memo pnSch pnSch_wf (by decide) (by decide) h _ hs,
       hP₁.setN h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he, hl, hls,
       hsk.trans (SlKeep.of_frame (msetG_frame pnSch pnSch_wf _ _ _ _ _ hs) (by decide) (by decide))⟩
     · rw [run_bind_ok hrun, ← hr]; rfl

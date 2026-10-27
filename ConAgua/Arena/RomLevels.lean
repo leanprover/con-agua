@@ -184,7 +184,7 @@ def stkPoolOK (m : Mem) (k : Word) : Prop :=
   (m.top &&& (1099511627775 : Word)) ≤ m.len64 (tierA POOL (m.top >>> 40)) ∧
     k ≤ m.len64 (tierA POOL (m.top >>> 40)) - (m.top &&& 1099511627775)
 
-theorem sputW_size (pt pb b k : Word) (a : ArrId) :
+theorem sputW_size (pt pb b k : Word) (a : TieredArray) :
     ∀ (d : Nat) (m : Mem) (j : Word), k.toNat - j.toNat = d →
       ((sputW m pt pb b k j).arr64 a).size = (m.arr64 a).size := by
   intro d
@@ -311,7 +311,7 @@ grind_pattern [arena_grind] lvsK_some => lvsK b k (some (q, m₁)), stkPoolOK m�
 @[arena_grind =] theorem pushMem_mtop (m : Mem) (h : Word) : (pushMem m h).top = m.top := by
   simp only [pushMem]
   rw [top_set64_ne _ _ _ (by decide)]
-  simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RSTK by decide)]
+  simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (show (CTL : TieredArray) ≠ RSTK by decide)]
 
 @[arena_grind =] theorem pushMem_pcap (m : Mem) (h : Word) : pcap (pushMem m h) = pcap m := by
   simp only [pushMem, pcap_set64]
@@ -330,7 +330,7 @@ theorem pushMem_topK (m : Mem) (h : Word) : TopK m (pushMem m h) := by
   exact (TopK.of_eq (top_set64_arr _ _ _ _ (by decide)) (pcap_set64 _ _ _ _)
     (Mem.flag_set64_ne _ _ _ _ (by decide))).trans (setCtl_topK _ _ _)
 
-theorem sputW_arr (pt pb b0 k : Word) (b : ArrId) (hb : b ≠ POOL ∧ b ≠ POOL1) :
+theorem sputW_arr (pt pb b0 k : Word) (b : TieredArray) (hb : b ≠ POOL ∧ b ≠ POOL1) :
     ∀ (d : Nat) (m : Mem) (j : Word), k.toNat - j.toNat = d →
       (sputW m pt pb b0 k j).arr64 b = m.arr64 b := by
   intro d
@@ -535,12 +535,12 @@ theorem pushMem_frame (m : Mem) (h : Word) : MemFrame RomA RomC m (pushMem m h) 
 theorem pushMem_top (m : Mem) (h : Word) (hc : 131 < (m.arr64 CTL).size) :
     stkTop (pushMem m h) = stkTop m + 1 := by
   simp only [stkTop, pushMem, Mem.arr64_set64_same, rdW_set!,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RSTK by decide)]
+    Mem.arr64_set64_ne _ _ _ _ _ (show (CTL : TieredArray) ≠ RSTK by decide)]
   simp [hc]
 
 theorem pushMem_stk (m : Mem) (h x : Word) (hx : (stkTop m).toNat < (m.arr64 RSTK).size) :
     rdW ((pushMem m h).arr64 RSTK) x = if x = stkTop m then h else rdW (m.arr64 RSTK) x := by
-  simp only [pushMem, Mem.arr64_set64_ne _ _ _ _ _ (show RSTK ≠ CTL by decide), Mem.arr64_set64_same,
+  simp only [pushMem, Mem.arr64_set64_ne _ _ _ _ _ (show (RSTK : TieredArray) ≠ CTL by decide), Mem.arr64_set64_same,
     rdW_set!]
   by_cases e : x = stkTop m
   · subst e; simp [hx]

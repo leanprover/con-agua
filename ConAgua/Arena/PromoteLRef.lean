@@ -167,7 +167,7 @@ theorem PMemoR.setL {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h r : Word) (h
       (fun _ _ h => h) _ hP.e⟩
 
 theorem nFrame_l {m m' : Mem} (h : MemFrame nArrs nCtl m m') : MemFrame lArrs lCtl m m' :=
-  h.mono (by simp) (by simp)
+  h.mono (by decide) (by simp)
 
 /-- **The end of a chain into `PLOk`.** -/
 theorem PLOk.of_sim {α : Type} {op : AM (PMemo × α)} {dec : Word → α} {m : Mem} {a : AState}
@@ -245,7 +245,7 @@ theorem pl_rel : ∀ n : Nat,
     obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he, hls, hsk⟩ :=
       ih.2 m a pm (f - 1) h r₁ m₁ hD hP hh hca
     refine ⟨a₁, { pm₁ with lM := pm₁.lM.insert (decI h) (decI (r₁.headD 0)) }, ?_,
-      hD₁.memo plSch plSch_wf (by decide) (by decide) (by decide) h _ hs,
+      hD₁.memo plSch plSch_wf (by decide) (by decide) h _ hs,
       hP₁.setL h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he, hls,
       hsk.trans (SlKeep.of_frame (msetG_frame plSch plSch_wf _ _ _ _ _ hs) (by decide) (by decide))⟩
     · rw [run_bind_ok hrun, ← hr]; rfl

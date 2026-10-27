@@ -293,8 +293,8 @@ theorem pool_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q
     exact h2 k hk
   · have hfw : MemFrame (POOL1 :: lArrs) lCtl m₁ m₁' := by
       rw [← hm₁']; rcases tierA_pool (q >>> 40) with e | e <;> rw [e] <;>
-        exact (MemFrame.set64 _ _ (by decide) _ _).mono (by simp) (by simp)
-    exact ((hfr₁.mono (by simp) (by simp)).trans hfw).trans hfr₂
+        exact (MemFrame.set64 _ _ (by decide) _ _).mono (by decide) (by simp)
+    exact ((hfr₁.mono (by decide) (by simp)).trans hfw).trans hfr₂
 
 end pool
 
@@ -359,8 +359,8 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   exact ⟨_, rfl⟩
 
 /-- The arrays and `CTL` words a level-list promotion writes. -/
-abbrev lsArrs : List TieredArray := (POOL : TieredArray) :: (POOL1 : TieredArray) :: lArrs ++ [LSREC, tier1 LSREC, LSSLOT, tier1 LSSLOT, PLSM,
-  LSHP, tier1 LSHP]
+abbrev lsArrs : List TieredArray := (POOL : TieredArray) :: (POOL1 : TieredArray) :: lArrs ++ [(LSREC : TieredArray), tier1 LSREC, (LSSLOT : TieredArray), tier1 LSSLOT,
+  (PLSM : TieredArray), (LSHP : TieredArray), tier1 LSHP]
 abbrev lsCtl : List Word := lCtl ++ [0, 40, 41, 145]
 
 theorem plsSch_wf : plsSch.WF := ⟨by decide, by decide⟩
@@ -480,8 +480,8 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
     rw [run_bind_ok (promote_viewLs_run hv), run_bind_ok hrun₁]
     simp only
     rw [run_bind_ok hrun₂, ← hr]; rfl
-  · exact ((hfr₁.mono (by simp) (by simp)).trans
-      ((MemFrame.setCtl _ 0 _).mono (by simp) (by simp))).trans (hfr₂.mono (by simp) (by simp))
+  · exact ((hfr₁.mono (by decide) (by simp)).trans
+      ((MemFrame.setCtl _ 0 _).mono (by decide) (by simp))).trans (hfr₂.mono (by decide) (by simp))
 
 /-- **`promote_ls` refines `promoteLs`** (the fuel passed on unchanged). -/
 theorem pls_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : List Word)
@@ -532,7 +532,7 @@ theorem pls_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : 
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he, tk⟩ := plsArm_rel p hp n m a pm f h r₁ m₁ hD hP hh hca
   refine ⟨a₁, { pm₁ with lsM := pm₁.lsM.insert (decI h) (decI (r₁.headD 0)) }, ?_,
-    hD₁.memo plsSch plsSch_wf (by decide) (by decide) (by decide) h _ hs,
+    hD₁.memo plsSch plsSch_wf (by decide) (by decide) h _ hs,
     hP₁.setLs h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he,
     tk.trans (TierKeep.of_frame (msetG_frame plsSch plsSch_wf _ _ _ _ _ hs) (by decide))⟩
   · rw [run_bind_ok hrun, ← hr]; rfl
