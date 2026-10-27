@@ -375,7 +375,7 @@ more. Each is still blocked, or not worth converting, for one of the other reaso
 | pin-data readers (`rom_exprs_to` … `intern_all_pins`) | `Rom/PinReadSpec` (9.0 s user), `Rom/PinSets` | continuations passed as arguments (`pinsK (romPinsToW n)`), used 48 times in `PinSets`; the same `u64OK` and `rclearOK` guards; the `TopK` proofs |
 | front, input buffer (`apply_str`, `apply_ind`, `node_*`, `ind_*`, `nat_dec`, `str_put_esc`) | `Front/Line`, `IndApplySpec3`, `ApplyExpr`, `IndFieldsSpec`, `NatDec`, `Unescape` | fuel-free well-founded models over `b` (`objW b m …`, `applyStrW b m …`) that the refinements use as total functions; the generated models are fuel-indexed and read `m.arr8 IN`. Small flat models (`ApplyExpr`: 5–15 lines each, module 4.6 s). `validate_ind_d`'s nested result `((a, b), m)` is not a model shape. `IndApplySpec2` was converted once (batch 4) and was 2× slower. |
 
-So the coordinator's expectation (Keep plus `pre` opens `Front/` and the ROM readers) does not
+So §7's expectation (`Keep` plus `pre` opens `Front/` and the ROM readers) does not
 hold: `Keep` was one blocker among several in each family, and in the ROM family, where it was
 the most visible one, the hand specs are fast and the models small, so by the roll-out rules a
 conversion would not pay for its re-threaded refinements.
