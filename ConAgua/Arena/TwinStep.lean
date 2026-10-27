@@ -84,7 +84,7 @@ with the name store (`dnN`). The projection tables' readbacks are the environmen
 structure TwinMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : Prop where
   erec : (m.arr64 EREC).size < 2 ^ 63
   spn : (m.arr64 SPN).size < 2 ^ 63
-  bstk : (m.arr64 145).size < 2 ^ 63
+  bstk : (m.arr64 BSTK).size < 2 ^ 63
   memos : CoreMemos m
   dnN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x
 
@@ -255,7 +255,7 @@ theorem TwinOK.of_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     {fe : IFEnv} (h : TwinOK dn m a fe) (hwf : StoreWF a'.store) (hx : Ext a.store a'.store)
     (hc : a'.caches = a.caches) (hp : a'.pins = a.pins)
     (hE : (m'.arr64 EREC).size < 2 ^ 63) (hS : (m'.arr64 SPN).size < 2 ^ 63)
-    (hB : (m'.arr64 145).size < 2 ^ 63) (hM : CoreMemos m') : TwinOK dn m' a' fe := by
+    (hB : (m'.arr64 BSTK).size < 2 ^ 63) (hM : CoreMemos m') : TwinOK dn m' a' fe := by
   obtain ⟨rk, hw⟩ := hwf
   have hw' : StoreWF' a'.store := StoreWF'.of_wf ⟨rk, hw⟩
   obtain ⟨rk', hw''⟩ := hw'
@@ -305,7 +305,7 @@ a well-formed store: `internName_sstep`, `internExprGo_sstep`, `internCIList_sst
 theorem TwinOK.of_istep {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {fe : IFEnv} (h : TwinOK dn m a fe) (hs : ConRon.Bridge.Frontend.IStepS a a')
     (hE : (m'.arr64 EREC).size < 2 ^ 63) (hS : (m'.arr64 SPN).size < 2 ^ 63)
-    (hB : (m'.arr64 145).size < 2 ^ 63) (hM : CoreMemos m') : TwinOK dn m' a' fe :=
+    (hB : (m'.arr64 BSTK).size < 2 ^ 63) (hM : CoreMemos m') : TwinOK dn m' a' fe :=
   h.of_grow hs.ok.wf hs.ext hs.caches hs.pins hE hS hB hM
 
 end L.Arena

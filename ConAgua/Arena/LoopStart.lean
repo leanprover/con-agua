@@ -203,7 +203,7 @@ theorem loop_start {pins : List INatOpPinSet} {ds : Array IDeclaration} {m : Mem
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hPS : L.Rom.PinSetsR m pins)
     (hiw : L.Ind.IWOK m) (hz : LoopZero m) (hpin : pinW m 0 ≠ 0)
     (hE : (m.arr64 EREC).size < 2 ^ 63) (hS : (m.arr64 SPN).size < 2 ^ 63)
-    (hB : (m.arr64 145).size < 2 ^ 63) (hmode : ModeOK m) :
+    (hB : (m.arr64 BSTK).size < 2 ^ 63) (hmode : ModeOK m) :
     LoopR pins (dnOf a.store) m a 0 (mkIFEnv IEnv.empty) #[] ds ∧
       LoopMem (dnOf a.store) m a ∧ CoreMemos m ∧ IndMemos m :=
   ⟨⟨⟨hA, hcore, ⟨fun _ => hpf⟩, hz.envR _, hmode⟩, hz.pendR, hD, hiw, ⟨_, hz.pmemo⟩, hPS⟩,

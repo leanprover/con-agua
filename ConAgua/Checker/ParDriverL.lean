@@ -102,7 +102,7 @@ theorem checkB_agree0 (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerP
   have hl : (UInt64.toNat (s₀.mem.len64 242)) = 0 := by simp [Mem.len64, show (242 : ArrId) = CTLF from rfl, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = k := hhi
-  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 241).size), (s₀.mem.arr64 241)[(3 : Word).toNat] = v := by
+  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 HDRF).size), (s₀.mem.arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb; rw [← hv]; unfold rd64; rw [Array.getD, dite_eq_left hb]; rfl
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]

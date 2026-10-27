@@ -194,7 +194,7 @@ theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
     ⦃fun _ _ => True; ErrClaim (checkPending mode fe (pdAt pend j)) a⦄ := by
   have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
-  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 241).size), (s₀.mem.arr64 241)[(3 : Word).toNat] = v := by
+  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 HDRF).size), (s₀.mem.arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb; exact hv hb
   have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v
       { bytes := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).bytes,
@@ -204,8 +204,8 @@ theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
     intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
   have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v s₀.mem a := by
     intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
-  have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241).size),
-      ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241)[(3 : Word).toNat] = v := by
+  have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 HDRF).size),
+      ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb
     simp only [arr64_copy64_ne _ _ _ _ _ _ (show (HDRF : TieredArray) ≠ CTL by decide)] at hb ⊢
     exact hv' hb

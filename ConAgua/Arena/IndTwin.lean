@@ -146,7 +146,7 @@ theorem _root_.L.Arena.TwinOK.frame_iw {m m' : Mem} {a : AState} (hf : MemFrame 
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
   have hSp : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [SPN, IW]) (by decide)
-  have hB : m'.arr64 145 = m.arr64 145 := hf.1 145 (by simp [IW]) (by decide)
+  have hB : m'.arr64 BSTK = m.arr64 BSTK := hf.1 145 (by simp [IW]) (by decide)
   exact ⟨h.readL, h.readLs, h.nwf, by rw [hE]; exact h.erec, by rw [hSp]; exact h.spn,
     h.memos.frame hf (by simp [IW]) (by simp) (by simp [IW]) (by simp), by rw [hB]; exact h.bstk,
     h.den.frameE hE⟩

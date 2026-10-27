@@ -55,8 +55,8 @@ structure HZ (m : Mem) : Prop where
   c75 : rdW (m.arr64 CTL) 75 = 0
   c129 : rdW (m.arr64 CTL) 129 = 0
   c200 : rdW (m.arr64 CTL) 200 = 0
-  seen : ∀ j, rdW (m.arr64 75) j = 0
-  nix : ∀ j, rdW (m.arr64 76) j = 0
+  seen : ∀ j, rdW (m.arr64 HSEEN) j = 0
+  nix : ∀ j, rdW (m.arr64 HNIX) j = 0
 
 theorem HZ.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : HZ m) (hf : MemFrame A C m m')
     (h75 : 75 ∉ A) (h76 : 76 ∉ A) (c73 : (73 : Word) ∉ C) (c75 : (75 : Word) ∉ C)
