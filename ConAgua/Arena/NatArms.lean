@@ -345,6 +345,14 @@ variable (p : Prog) (R : Mem → AState → Prop)
   (hph : p.lookup "mac_hi" = some macHi) (hpt : p.lookup "nat_trim" = some natTrim)
   (hpm : p.lookup "nat_mul" = some natMul) (hpn : p.lookup "nat_pow" = some natPow)
 
+/-- A power whose exponent is known to be `0` (`grind` does not rewrite an exponent by an equation). -/
+theorem pow_of_eq_zero (a b : Nat) (h : b = 0) : a ^ b = 1 := by subst h; rfl
+
+/-- An empty slice, from a bound. -/
+theorem pv_of_lt_one (v : Array Word) (o l : Nat) (h : l < 1) : pv v o l = 0 := by
+  obtain rfl : l = 0 := by omega
+  rfl
+
 include hpool hgrow hI hph hpt hpm hpn in
 theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Nat) (s₀ : St)
     (a₀ : AState) (hR : R s₀.mem a₀) (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la)
@@ -371,7 +379,7 @@ theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Na
     sym only [lang_grind, arena_grind, natop_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         natPow_spec p hph hpt hpm hpn n, hI a₀ n] <;>
-      finish (gen := 20) [natPowArm]
+      finish (gen := 20) [natPowArm, pv_of_lt_one, pow_of_eq_zero]
 
 end pow
 
