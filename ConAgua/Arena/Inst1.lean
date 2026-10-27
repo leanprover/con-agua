@@ -2,7 +2,7 @@ module
 
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
-public import ConAgua.Arena.Lift
+public import ConAgua.Arena.LiftL
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

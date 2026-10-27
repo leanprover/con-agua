@@ -92,7 +92,35 @@ theorem tka_ite_neg {α : Sort _} {x K : Word} {a b : α} (h : K ≤ x) : (if x 
 theorem tka_ite_pos {α : Sort _} {x K : Word} {a b : α} (h : x < K) : (if x < K then a else b) = a :=
   ite_eq_left h
 
-set_option maxHeartbeats 8000000 in
+/-- `target_k53_args` after the parameter count and the two index slices: the calls. Its own spec
+(`tkaTail_specE`, over the named locals) is proved once, not once per path through the slices'
+two `if`s (one proof over all 101 goals: 43 s; cut: 5 s). -/
+def tkaTailS : Stmt := seqDrop 3 targetK53Args.body
+
+/-- The index slices of `target_k53_args`'s major, after the parameter count `nPc`. -/
+def TkaLocs (s : St) : Prop :=
+  s.loc 14 = (if s.loc 10 < s.loc 11 then s.loc 9 else s.loc 9 + s.loc 11) ∧
+    s.loc 15 = (if s.loc 10 < s.loc 11 then 0 else s.loc 10 - s.loc 11)
+
+theorem tkaTail_specE (p : Prog) (n : Nat) (s₁ : St) (hL : TkaLocs s₁) :
+    ⦃fun s => s = s₁⦄ step p (exec p n) tkaTailS
+    ⦃fun _ _ => True; fun ε => ε.code ≠ 0 → tkaE.k1 p n (s₁.loc 0) (s₁.loc 1) (s₁.loc 2) (s₁.loc 3)
+      (s₁.loc 4) (s₁.loc 5) (s₁.loc 6) (s₁.loc 7) (s₁.loc 8) (s₁.loc 9) (s₁.loc 10) (s₁.loc 11)
+      (callE p n "erase_each" [s₁.loc 12, s₁.loc 13] s₁.mem) = .error ε⦄ := by
+  obtain ⟨h14, h15⟩ := hL
+  simp only [tkaTailS, targetK53Args, seqDrop]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specE,
+    callE_spec p n "erase_each", callE_spec p n "sl_eq", callE_spec p n "intern_const",
+    callE_spec p n "mk_app_n_f", callE_spec p n "block_shape_member_names", callE_spec p n "nest_occ",
+    callE_spec p n "target_class_match"]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+  all_goals (try simp_all [tka_ite_neg, tkaE.k1, tkaE.k2, tkaE.k3, tkaE.k4, tkaE.k5, tkaE.k6, tkaE.k7, tkaE.k8])
+  all_goals grind [lang_grind, arena_grind, tkaE.k1, tkaE.k2, tkaE.k3, tkaE.k4, tkaE.k5, tkaE.k6,
+    tkaE.k7, tkaE.k8]
+
 theorem tkaE_spec (p : Prog) (hf : p.lookup "target_k53_args" = some targetK53Args) (n : Nat) (s₀ : St)
     (vis q fto ftl Mc ip usp lao lal mao mal : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_k53_args" [vis, q, fto, ftl, Mc, ip, usp, lao, lal, mao, mal]
@@ -104,18 +132,16 @@ theorem tkaE_spec (p : Prog) (hf : p.lookup "target_k53_args" = some targetK53Ar
     vcgen [exec] <;> grind
   | succ n =>
     rw [invoke_eq _ hf]
-    simp only [callFn, targetK53Args]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specE,
-      callE_spec p n "erase_each", callE_spec p n "sl_eq", callE_spec p n "intern_const",
-      callE_spec p n "mk_app_n_f", callE_spec p n "block_shape_member_names", callE_spec p n "nest_occ",
-      callE_spec p n "target_class_match"]
-    all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
-        Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-        reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-    all_goals (try simp_all [tka_ite_neg, tkaE, tkaE.k1, tkaE.k2, tkaE.k3, tkaE.k4, tkaE.k5, tkaE.k6, tkaE.k7, tkaE.k8])
-    all_goals grind [lang_grind, arena_grind, tkaE, tkaE.k1, tkaE.k2, tkaE.k3, tkaE.k4, tkaE.k5, tkaE.k6,
-      tkaE.k7, tkaE.k8]
+    simp only [callFn]
+    rw [← seqTake_drop 3 targetK53Args.body, show seqDrop 3 targetK53Args.body = tkaTailS from rfl]
+    simp only [targetK53Args, seqTake]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specE, tkaTail_specE p n]
+    all_goals subst_vars
+    all_goals (try simp only [TkaLocs, St.setLoc_loc, St.setLoc_mem,
+      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, decide_eq_true_eq] at *)
+    all_goals (try simp_all [tkaE, tka_ite_neg])
+    all_goals grind [lang_grind, arena_grind, tkaE]
 
 /-! ## The claim -/
 

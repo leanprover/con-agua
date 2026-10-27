@@ -9,6 +9,7 @@ public import ConAgua.Arena.LamStore
 public import ConAgua.Arena.ForallStore
 public import ConAgua.Arena.ProjStore
 import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.LdRd
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -144,20 +145,47 @@ def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   return (0, 0, 0)
 }
 
-set_option maxHeartbeats 1000000 in
+/-- `der_b` after its three decodes (`g`, `t`, `i`): the dispatch. -/
+def derTailS : Stmt := seqDrop 3 derB.body
+
+/-- The decoded locals of `der_b`. -/
+def DerLocs (s : St) : Prop :=
+  s.loc 1 = s.loc 0 >>> 28 ∧ s.loc 2 = tierW (s.loc 0) ∧ s.loc 3 = idxW (s.loc 0)
+
+theorem derTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
+    ⦃fun s => s = s₁⦄ step p (exec p n) derTailS
+    ⦃fun r s' => s'.mem = s₁.mem ∧ r.retVal.headD 0 = derBW s₁.mem (s₁.loc 0) ∧
+      r.retVal.tail.headD 0 = derFW s₁.mem (s₁.loc 0) ∧
+      r.retVal.tail.tail.headD 0 = exprLPW s₁.mem (s₁.loc 0); ⊤⦄ := by
+  obtain ⟨h1, h2, h3⟩ := hL
+  simp only [derTailS, derB, seqDrop]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  all_goals subst_vars
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq, bne_iff_ne, ne_eq, h1, h2, h3] at *)
+  all_goals (try simp_all [derBW, derFW, exprLPW, BVAR, APP, APP_DER, LAM, LAM_DER, FORALL, FORALL_DER, LET,
+    LET_DER, PROJ, PROJ_DER, FVAR, FVAR_LP, SORT, SORT_LP, CONST, CONST_LP, Sig.retVal, Sig.retOr])
+  all_goals grind [lang_grind, arena_grind, derBW, derFW, exprLPW, tierW, idxW, satSuccW]
+
+/-- **`der_b`**: the three decodes, then the dispatch (`derTail_spec`, over the named locals:
+its 160 goals see `g`, `t`, `i` as `DerLocs`, not as the decodes' `setLoc` chain; 18 s -> 5 s). -/
 theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀ : St) (h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "der_b" [h]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = derBW s₀.mem h ∧
       r.tail.headD 0 = derFW s₀.mem h ∧ r.tail.tail.headD 0 = exprLPW s₀.mem h; ⊤⦄ := by
   rw [invoke_eq _ hp]
-  simp only [callFn, derB]
+  simp only [callFn]
   cases n with
-  | zero => vcgen [exec] <;> grind
+  | zero => simp only [derB]; vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-      finish [derBW, derFW, exprLPW, tierW, idxW, satSuccW]
+    rw [← seqTake_drop 3 derB.body, show seqDrop 3 derB.body = derTailS from rfl]
+    simp only [derB, seqTake]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, derTail_spec p n]
+    all_goals subst_vars
+    all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff,
+      Locals.init_cons_zero, reduceIte] at *)
+    all_goals grind [lang_grind, arena_grind, LocEq]
 
 attribute [arena_grind =] mkK_some
 
@@ -275,12 +303,11 @@ theorem tfld_pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (X : TRec) (hX : X.a
     rw [pushZ_arr m t f a _ hDc' (tierA_ne hDl hRl (Ne.symm hRD) u t) (tierA_ne_tier _ hu ht hut)]
     simp [hut]
 
+/-! The three tables, one theorem each (elaborated in parallel). -/
+
 set_option linter.unusedSimpArgs false in
-/-- **The append, with the new slot zeroed, changes none of `der_b`'s three reads**, for every
-handle: a handle other than the new node reads what it read before (another tier's array, or
-another index), and the new node reads `0` (before: its index was past the count). -/
-theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (k + t) < 134217728)
-    (h : Word) :
+theorem der_pushZ_A (hT : BinTbl R S D k) (hsel : R = AREC ∧ S = ASLOT ∧ D = ADER ∧ k = 4)
+    (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (k + t) < 134217728) (h : Word) :
     derBW (pushZ R S D k m t f a) h = derBW m h ∧ derFW (pushZ R S D k m t f a) h = derFW m h ∧
       exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by
   have hctl := pushZ_ctl m t f a hT ht
@@ -320,8 +347,8 @@ theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (
           (rdW (m.arr64 CTL) (k + t)).toNat < (m.arr64 (tierA D t)).size then 0
       else tfld m X (tierW h) i 0 :=
     fun X h1 h2 i => tfld_pushZ_der m t f a hT ht X h1 h2 _ htw i
-  rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
-    rcases h01 t ht with rfl | rfl
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := hsel
+  rcases h01 t ht with rfl | rfl
   all_goals simp (config := {decide := true}) only [derBW, derFW, exprLPW, h1, hcnt]
   all_goals simp only [ho BVAR (by decide) (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide) (by decide),
     ho CONST_LP (by decide) (by decide) (by decide) (by decide), ho LET_DER (by decide) (by decide) (by decide) (by decide), ho PROJ_DER (by decide) (by decide) (by decide) (by decide)]
@@ -337,6 +364,138 @@ theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (
         FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
         and_false, and_true, tcnt, tfld, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
       grind (splits := 24)
+
+set_option linter.unusedSimpArgs false in
+theorem der_pushZ_LA (hT : BinTbl R S D k) (hsel : R = LAREC ∧ S = LASLOT ∧ D = LADER ∧ k = 28)
+    (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (k + t) < 134217728) (h : Word) :
+    derBW (pushZ R S D k m t f a) h = derBW m h ∧ derFW (pushZ R S D k m t f a) h = derFW m h ∧
+      exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by
+  have hctl := pushZ_ctl m t f a hT ht
+  have hid := idxW_lt h
+  have htw := tierW_le h
+  have hcnt : ∀ X : TRec, tcnt (pushZ R S D k m t f a) X (tierW h) =
+      if k + t = X.ca + tierW h ∧ (k + t).toNat < (m.arr64 CTL).size then
+        rdW (m.arr64 CTL) (k + t) + 1 else tcnt m X (tierW h) := fun X => by
+    simp only [tcnt, hctl]
+  have h1 : rdW ((pushZ R S D k m t f a).arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := by
+    rw [hctl]
+    rcases hT with ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ <;>
+      rcases h01 t ht with rfl | rfl <;> simp
+  have key : rdW (m.arr64 CTL) (k + t) ≤ idxW h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxW h →
+      idxW h = rdW (m.arr64 CTL) (k + t) := by
+    simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  have key2 : idxW h < rdW (m.arr64 CTL) (k + t) + 1 → ¬ idxW h < rdW (m.arr64 CTL) (k + t) →
+      idxW h = rdW (m.arr64 CTL) (k + t) := by
+    simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  have oob : ∀ (b : ArrId) x, ¬x.toNat < (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+    intro b x hx; simp only [rdW]; grind
+  have hRl : R < 256 := by
+    rcases hT with ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ <;> decide
+  have hDl : D < 256 := by
+    rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
+  have ho : ∀ X : TRec, X.arr < 256 → X.arr ≠ CTL → X.arr ≠ R → X.arr ≠ D → ∀ u i g,
+      tfld (pushZ R S D k m t f a) X u i g = tfld m X u i g :=
+    fun X h1 h2 h3 h4 => tfld_pushZ_other m t f a X h1 h2 h3 h4 hRl hDl
+  have hd : ∀ X : TRec, X.arr = D → X.w = 1 → ∀ i, tfld (pushZ R S D k m t f a) X (tierW h) i 0 =
+      if tierW h = t ∧ rdW (m.arr64 CTL) (k + t) = i ∧
+          (rdW (m.arr64 CTL) (k + t)).toNat < (m.arr64 (tierA D t)).size then 0
+      else tfld m X (tierW h) i 0 :=
+    fun X h1 h2 i => tfld_pushZ_der m t f a hT ht X h1 h2 _ htw i
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := hsel
+  rcases h01 t ht with rfl | rfl
+  all_goals simp (config := {decide := true}) only [derBW, derFW, exprLPW, h1, hcnt]
+  all_goals simp only [ho BVAR (by decide) (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide) (by decide),
+    ho CONST_LP (by decide) (by decide) (by decide) (by decide), ho LET_DER (by decide) (by decide) (by decide) (by decide), ho PROJ_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho APP_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho LAM_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho FORALL_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals try simp only [hd APP_DER rfl rfl]
+  all_goals try simp only [hd LAM_DER rfl rfl]
+  all_goals try simp only [hd FORALL_DER rfl rfl]
+  all_goals
+    rcases h01 _ htw with e | e <;> simp only [e] <;>
+      simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, APP, LAM, FORALL, BVAR,
+        FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
+        and_false, and_true, tcnt, tfld, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
+      grind (splits := 24)
+
+set_option linter.unusedSimpArgs false in
+theorem der_pushZ_FA (hT : BinTbl R S D k) (hsel : R = FAREC ∧ S = FASLOT ∧ D = FADER ∧ k = 30)
+    (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (k + t) < 134217728) (h : Word) :
+    derBW (pushZ R S D k m t f a) h = derBW m h ∧ derFW (pushZ R S D k m t f a) h = derFW m h ∧
+      exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by
+  have hctl := pushZ_ctl m t f a hT ht
+  have hid := idxW_lt h
+  have htw := tierW_le h
+  have hcnt : ∀ X : TRec, tcnt (pushZ R S D k m t f a) X (tierW h) =
+      if k + t = X.ca + tierW h ∧ (k + t).toNat < (m.arr64 CTL).size then
+        rdW (m.arr64 CTL) (k + t) + 1 else tcnt m X (tierW h) := fun X => by
+    simp only [tcnt, hctl]
+  have h1 : rdW ((pushZ R S D k m t f a).arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := by
+    rw [hctl]
+    rcases hT with ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ <;>
+      rcases h01 t ht with rfl | rfl <;> simp
+  have key : rdW (m.arr64 CTL) (k + t) ≤ idxW h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxW h →
+      idxW h = rdW (m.arr64 CTL) (k + t) := by
+    simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  have key2 : idxW h < rdW (m.arr64 CTL) (k + t) + 1 → ¬ idxW h < rdW (m.arr64 CTL) (k + t) →
+      idxW h = rdW (m.arr64 CTL) (k + t) := by
+    simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  have oob : ∀ (b : ArrId) x, ¬x.toNat < (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+    intro b x hx; simp only [rdW]; grind
+  have hRl : R < 256 := by
+    rcases hT with ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ <;> decide
+  have hDl : D < 256 := by
+    rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
+  have ho : ∀ X : TRec, X.arr < 256 → X.arr ≠ CTL → X.arr ≠ R → X.arr ≠ D → ∀ u i g,
+      tfld (pushZ R S D k m t f a) X u i g = tfld m X u i g :=
+    fun X h1 h2 h3 h4 => tfld_pushZ_other m t f a X h1 h2 h3 h4 hRl hDl
+  have hd : ∀ X : TRec, X.arr = D → X.w = 1 → ∀ i, tfld (pushZ R S D k m t f a) X (tierW h) i 0 =
+      if tierW h = t ∧ rdW (m.arr64 CTL) (k + t) = i ∧
+          (rdW (m.arr64 CTL) (k + t)).toNat < (m.arr64 (tierA D t)).size then 0
+      else tfld m X (tierW h) i 0 :=
+    fun X h1 h2 i => tfld_pushZ_der m t f a hT ht X h1 h2 _ htw i
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := hsel
+  rcases h01 t ht with rfl | rfl
+  all_goals simp (config := {decide := true}) only [derBW, derFW, exprLPW, h1, hcnt]
+  all_goals simp only [ho BVAR (by decide) (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide) (by decide),
+    ho CONST_LP (by decide) (by decide) (by decide) (by decide), ho LET_DER (by decide) (by decide) (by decide) (by decide), ho PROJ_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho APP_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho LAM_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho FORALL_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals try simp only [hd APP_DER rfl rfl]
+  all_goals try simp only [hd LAM_DER rfl rfl]
+  all_goals try simp only [hd FORALL_DER rfl rfl]
+  all_goals
+    rcases h01 _ htw with e | e <;> simp only [e] <;>
+      simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, APP, LAM, FORALL, BVAR,
+        FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
+        and_false, and_true, tcnt, tfld, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
+      grind (splits := 24)
+
+/-- **The append, with the new slot zeroed, changes none of `der_b`'s three reads**, for every
+handle: a handle other than the new node reads what it read before (another tier's array, or
+another index), and the new node reads `0` (before: its index was past the count). -/
+theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (k + t) < 134217728)
+    (h : Word) :
+    derBW (pushZ R S D k m t f a) h = derBW m h ∧ derFW (pushZ R S D k m t f a) h = derFW m h ∧
+      exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by
+  rcases hT with hs | hs | hs
+  · exact der_pushZ_A m t f a (.inl hs) hs ht hc h
+  · exact der_pushZ_LA m t f a (.inr (.inl hs)) hs ht hc h
+  · exact der_pushZ_FA m t f a (.inr (.inr hs)) hs ht hc h
 
 end pushZ
 

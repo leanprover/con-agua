@@ -202,3 +202,71 @@ Left: the hand-written copies of the recipe (`inferProj_specE` in `Verdict.Infer
 the pre-pass gives only 158 → 140 s); `DeclValE`'s `finish` recipe (`checkValueGroup_specE.step1`,
 45 s); `CkcW` and `ErToIwWStage` pass `simp [getElem_rdW']` without importing the lemma, so their
 `simp_all` always fails under `try` and `grind` alone proves the steps.
+
+## Midway measurement
+
+Master cec860c2 (batches 1–5 and the other lanes' landings), cold build with 16 jobs on a loaded
+machine (load 55 at the start; not comparable with the baseline's wall time): CPU 13 448 s,
+**critical path 485 s** from the module times (568 s at 8a4d29c7). The path now starts with the
+Arena libraries `ConsLibSpec` → `ExprMk` → `Lift` → `Abs1Spec` → `ArRangeSpec` and ends with
+`IndPosSpec` → `RecCheckSpec.Tpd` → `Verdict.IndBK53` → `IndBAgree` → `IndBCtor` → `IndBNfs`.
+
+### Round 2 (batch 6)
+
+* **`Scan.RecordsSpec`** (33 s wall, 246 CPU-s): every one of the 17 record loops was its own
+  `sym … finish` proof. Each loop is now `objLoop mask disp` (equal to the original by `rfl`; the
+  L code is unchanged), a dispatch over arms of four kinds (`slot_nat`, `scan_nat_list`,
+  `scan_bool`, a one-result scanner); each kind, the dispatch and the loop are proved once, and a
+  record's spec plugs in its arms: 5 s wall, 32 CPU-s.
+* **`f ∈ nvFns` by `decide +kernel`** (306 error-claim proofs, a `String` compared with up to 1537
+  names, ~2.3 s each, serial within a module): now looked up in `nvTree`, a name-code tree
+  checked once (`Checker.NoVerdictTree`, `nv_mem`/`nv_sub`); ~700 CPU-s over the build
+  (`Verdict.PosE2` 38 → 7 s, `IndBSum3` 59 → 31 s, `IndBK53` 9.5 → 3.4 s, `IndBAgree` 14 → 8.5 s).
+* **`checkerProg.lookup f = … := by rfl`** (~140 in the loop and ROM program proofs, each
+  comparing `String`s, ~1 s in the elaborator and the kernel): `lk_agree` (chunked position lookup
+  plus the text side's `rfl`). `Checker.LoopDeclArm1` 33 → 10 s, `LoopDeclArm` 46 → 12.5 s,
+  `LoopDeclAgree` 32 → 5 s, `RomProgA` 40 → 4 s, `RomProgB` 38 → 7 s; peak RSS of `LoopDeclArm1`
+  4.1 → 2.6 GB (the 16 GB kills of the first profiling run came from `trace.profiler`, not from the
+  modules).
+* `RecCheckSpec.Tpd` 24 → 4 s, `TruncSl` 10 → 2 s, `IndPosSpec.NestHoles` 7.8 → 3 s (plain
+  `vcgen`, locals by `simp`).
+
+Tried on `IndBGrpM`'s step (93 s with `locals`): `simp only [models, *]` instead of `simp_all`
+fails; `simp_all only […]` or no `simp_all` at all (only `grind`) run past 500 s; `subst_vars`
+before `simp_all` changes nothing (73 vs 76 s).
+
+### Round 3 (batch 7): the Arena libraries at the start, the `Infer` errors
+
+After round 1 the path started with `Arena.ConsLibSpec` → `ExprMk` → `Lift` → `Abs1Spec` →
+`ArRangeSpec`.
+
+* **Import cuts.** `Arena.LiftL` holds the lift L code, `LiftProg`, `liftProg`; `Abs1`, `Inst1`,
+  `InstList` and `Checker.Prog` import it instead of `Lift`/`LiftSpec` and no longer wait for
+  `Lift`'s 32 s `l_model` (`Lift`, `LiftSpec` `import all` it: `l_model` reads a definition's
+  source from another module only so). `absEntry`/`aclrK` moved into `Abs1`, so `ArRangeSpec`
+  and `Abs1Spec` build in parallel. `seqTake`/`seqDrop` moved to `Arena.LdRd`.
+* **One theorem per arm** (`ConsLibSpec`: `consInternG_spec`, `cfLoop_spec`; `ExprMk`:
+  `der_pushZ` per table): Lean elaborates separate theorems in parallel.
+* **Cut a function after its decodes** (`seqTake`/`seqDrop`, the rest specified over named
+  locals): `ExprMk`'s `derB_spec` (160 goals each re-simplified the decode chain),
+  `Verdict.InferLeavesE`'s hand-written `inferProj_specE` (262 goals; three pieces),
+  `Verdict.IndBTka`'s `tkaE_spec` (its two slice `if`s repeated all calls 4×).
+* `Abs1Spec`, `ArRangeSpec`, `MemoLib`: plain `vcgen [ld64_rd_spec]` + `subst_vars` + `simp only` +
+  `grind` instead of `sym … finish (gen 20)`. `Verdict.DeclValE`: its `l_model` uses `simp []
+  errors locals` instead of `finish (gen 20, instances 4000)`.
+
+| module (cold build) | before | after |
+|---|---:|---:|
+| `Arena.ConsLibSpec` | 51 s | 16 s |
+| `Arena.ExprMk` | 24 s | 8 s |
+| `Arena.Abs1Spec` | 27 s | 10 s |
+| `Arena.ArRangeSpec` | 28 s | 10 s |
+| `Arena.MemoLib` | 17 s | 10 s |
+| `Verdict.InferLeavesE` | 101 s | 19 s |
+| `Verdict.DeclValE` | 53 s | 4 s |
+| `Verdict.IndBTka` | 59 s | 11 s |
+
+Left: `Arena.Lift` (32 s, `liftGo_spec.step1` 21 s: the `simp […]` option does not parse when the
+`specs` are long, `l_model` wraps the spec terms across lines; without `gen 20` the proof fails),
+`Verdict.InferBindE` (32 s, the generated `inferPisE.loop1.spec`), `Front.Fields` (31 s,
+`recLoop_spec`: would need `Scan.Line`'s per-arm split), `Arena.LpCol` (needs the decode cut).

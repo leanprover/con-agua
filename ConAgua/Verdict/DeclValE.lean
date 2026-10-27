@@ -28,23 +28,12 @@ l_model lvlEqFueled_specE (p : Prog) (hf : p.lookup "lvl_eq_fueled" = some lvlEq
   fns [hf ↦ lvlEqFueledE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
 
-/-- A bounded read is the defaulting one (for `grind`, in `check_value_group`'s error model:
-the run's loads are bounded, the model's are `rdW`). -/
-theorem getElem_eq_getD_W (a : Array Word) (i : Nat) (h : i < a.size) : a[i] = a[i]?.getD 0 := by
-  simp [h]
-theorem rdW_def_W (a : Array Word) (x : Word) : rdW a x = a[x.toNat]?.getD 0 := rfl
-
-section cvg
-attribute [local grind =] getElem_eq_getD_W rdW_def_W
-
-/- `finish` with `gen 20`, `instances 4000` (the default `1000` is reached: the injectivity of
-the calls' argument lists); `simp []` fails here (its `simp_all` unfolds the continuations). -/
+/- The `simp` recipe with `locals` (the locals evaluated before `simp_all`): 4 s; `finish`
+(`gen 20`, `instances 4000`) took 45 s. -/
 l_model checkValueGroup_specE (p : Prog) (hf : p.lookup "check_value_group" = some checkValueGroupL)
   fns [hf ↦ checkValueGroupE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] gen 20
-  heartbeats 4000000 instances 4000 errors
-
-end cvg
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  simp [] errors locals
 
 l_model checkThmVal_specE (p : Prog) (hf : p.lookup "check_thm_val" = some checkThmValL)
   fns [hf ↦ checkThmValE] grind [arena_grind] fold [tierW, idxW]

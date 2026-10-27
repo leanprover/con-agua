@@ -314,62 +314,94 @@ theorem addc_eq_addc (a b nk c : Nat) (h : a ≠ b) : (a + nk + c = b + nk + c) 
 theorem lit_eq_addc (a b nk c : Nat) (h : a < b) : (a = b + nk + c) = False := by
   simp only [eq_iff_iff, iff_false]; omega
 
+/-- `cf_loop`'s spec at fuel `n` (the induction's statement). -/
+def CfLoopSpec (p : Prog) (C : ConsSch) (n : Nat) : Prop :=
+  ∀ s₀ : St, ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (argsOf 1 C.nk s₀)⦄
+    exec p n (cfLoop C)
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
+      r.retOr (fprobe C s₀) = fprobe C s₀; ⊤⦄
+
+/-! The induction step, one theorem per shape of the match (elaborated in parallel). -/
+
+theorem cfLoop_succ_exact (p : Prog) (C : ConsSch) (n : Nat) (ih : CfLoopSpec p C n)
+    (hx : C.exact = true) : CfLoopSpec p C (n + 1) := by
+  intro s₀
+  unfold CfLoopSpec at ih
+  rw [exec, step_while (w := cfLoop C) rfl]
+  simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf, hx, ↓reduceIte, List.map,
+    mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT, Nat.reduceEqDiff]
+  vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, ih]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
+    Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide),
+    argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 4 (by decide),
+    argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add1 1 C.nk 5 (by decide),
+    argsOf_setLoc_add 1 C.nk 5 (by decide), argsOf_setLoc_addc 1 C.nk 9 C.mloc (by decide),
+    argsOf_setLoc_addc0 1 C.nk 9 C.mloc (by decide), addc_eq_add, add_eq_addc,
+    lit_eq_addc, ↓reduceIte] at *)
+  all_goals grind [lang_grind, arena_grind]
+
+theorem cfLoop_succ_none (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat)
+    (ih : CfLoopSpec p C n) (hx : C.exact = false) (hm : C.mpre = none) :
+    CfLoopSpec p C (n + 1) := by
+  intro s₀
+  unfold CfLoopSpec at ih
+  rw [exec, step_while (w := cfLoop C) rfl]
+  unfold CMatchOK at hM
+  simp only [hm] at hM
+  simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf, hx, Bool.false_eq_true,
+    ↓reduceIte, seqO, hm, List.map, mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT,
+    Nat.reduceEqDiff]
+  vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, ih]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
+    Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide),
+    argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 4 (by decide),
+    argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add1 1 C.nk 5 (by decide),
+    argsOf_setLoc_add 1 C.nk 5 (by decide), argsOf_setLoc_addc 1 C.nk 9 C.mloc (by decide),
+    argsOf_setLoc_addc0 1 C.nk 9 C.mloc (by decide), addc_eq_add, add_eq_addc,
+    lit_eq_addc, ↓reduceIte, hM] at *)
+  all_goals grind [lang_grind, arena_grind]
+
+theorem cfLoop_succ_some (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat)
+    (ih : CfLoopSpec p C n) (hx : C.exact = false) (b : Stmt) (hm : C.mpre = some b)
+    (hml : 1 ≤ C.mloc) : CfLoopSpec p C (n + 1) := by
+  intro s₀
+  unfold CfLoopSpec at ih
+  rw [exec, step_while (w := cfLoop C) rfl]
+  unfold CMatchOK at hM
+  simp only [hm] at hM
+  simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf, hx, Bool.false_eq_true,
+    ↓reduceIte, seqO, hm, List.map, mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT,
+    Nat.reduceEqDiff]
+  vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hM n, ih]
+  all_goals (try simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
+    Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide),
+    argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 4 (by decide),
+    argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add1 1 C.nk 5 (by decide),
+    argsOf_setLoc_add 1 C.nk 5 (by decide), argsOf_setLoc_addc 1 C.nk 9 C.mloc (by decide),
+    argsOf_setLoc_addc0 1 C.nk 9 C.mloc (by decide), addc_eq_add, add_eq_addc,
+    lit_eq_addc, ↓reduceIte] at *)
+  all_goals grind [lang_grind, arena_grind]
+
 theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (hml : C.mpre ≠ none → 1 ≤ C.mloc)
     (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (argsOf 1 C.nk s₀)⦄
     exec p n (cfLoop C)
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (fprobe C s₀) = fprobe C s₀; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
+  revert s₀
+  change CfLoopSpec p C n
+  induction n with
+  | zero => intro s₀; vcgen [exec] <;> grind
   | succ n ih =>
-    rw [exec, step_while (w := cfLoop C) rfl]
-    unfold CMatchOK at hM
     cases hx : C.exact with
-    | true =>
-      simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf, hx, ↓reduceIte, List.map,
-        mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT, Nat.reduceEqDiff]
-      vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, ih]
-      all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
-        Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide),
-        argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 4 (by decide),
-        argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add1 1 C.nk 5 (by decide),
-        argsOf_setLoc_add 1 C.nk 5 (by decide), argsOf_setLoc_addc 1 C.nk 9 C.mloc (by decide),
-        argsOf_setLoc_addc0 1 C.nk 9 C.mloc (by decide), addc_eq_add, add_eq_addc,
-        lit_eq_addc, ↓reduceIte] at *)
-      all_goals grind [lang_grind, arena_grind]
+    | true => exact cfLoop_succ_exact p C n ih hx
     | false =>
     cases hm : C.mpre with
-    | none =>
-      simp only [hm] at hM
-      simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf, hx, Bool.false_eq_true,
-        ↓reduceIte, seqO, hm, List.map, mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT, Nat.reduceEqDiff]
-      vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, ih]
-      all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, hM,
-        Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide),
-        argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 4 (by decide),
-        argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add1 1 C.nk 5 (by decide),
-        argsOf_setLoc_add 1 C.nk 5 (by decide), argsOf_setLoc_addc 1 C.nk 9 C.mloc (by decide),
-        argsOf_setLoc_addc0 1 C.nk 9 C.mloc (by decide), addc_eq_add, add_eq_addc,
-        lit_eq_addc, ↓reduceIte] at *)
-      all_goals grind [lang_grind, arena_grind]
-    | some b =>
-      have hml := hml (by simp [hm])
-      simp only [hm] at hM
-      simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf, hx, Bool.false_eq_true,
-        ↓reduceIte, seqO, hm, List.map, mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT, Nat.reduceEqDiff]
-      vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hM n, ih]
-      all_goals (try simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
-        Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide),
-        argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 4 (by decide),
-        argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add1 1 C.nk 5 (by decide),
-        argsOf_setLoc_add 1 C.nk 5 (by decide), argsOf_setLoc_addc 1 C.nk 9 C.mloc (by decide),
-        argsOf_setLoc_addc0 1 C.nk 9 C.mloc (by decide), addc_eq_add, add_eq_addc,
-        lit_eq_addc, ↓reduceIte] at *)
-      all_goals grind [lang_grind, arena_grind]
+    | none => exact cfLoop_succ_none p C hM n ih hx hm
+    | some b => exact cfLoop_succ_some p C hM n ih hx b hm (hml (by simp [hm]))
 
 theorem cfLoop_step_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     (hml : C.mpre ≠ none → 1 ≤ C.mloc) (n : Nat) (s₀ : St) :
@@ -1610,8 +1642,175 @@ theorem init_push_j (C : ConsSch) (hn : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk) (t 
   apply init_last
   split <;> simp <;> omega
 
--- the no-skip arm's normalising `simp` needs more than the default (heartbeats, not search)
+/-! `intern_X(k)`'s spec, one theorem per arm (skip or not, exact pair or not; elaborated in
+parallel). -/
+
+-- the arms' normalising `simp` needs more than the default (heartbeats, not search)
 set_option maxHeartbeats 1600000 in
+theorem consInternG_sk_x (p : Prog) (C : ConsSch) (hO : ConsOK p C)
+    (hpf : p.lookup C.fname = some (consFindG C)) (hpp : p.lookup C.pname = some (consPushG C))
+    (fn : FnName)
+    (hpi : p.lookup fn = some (consInternG C)) (n : Nat) (s₀ : St) (ks : List Word)
+    (hks : ks.length = C.nk) (hk : C.keyOK s₀.mem ks)
+    (e : Expr) (hsk : C.skipW = some e) (hb : C.exact = true ∧ C.nk = 2) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) fn ks
+    ⦃fun r s' => LocEq s' s₀ ∧ consInternM C s₀.mem ks = some (r.headD 0, s'.mem); ⊤⦄ := by
+  have hn := hO.push_np
+  have hml := hO.mloc
+  rw [invoke_eq _ hpi]
+  simp only [callFn]
+  rw [consInternG.eq_def]; simp only [hsk]
+  rw [ciChk_pos hb]
+  all_goals simp only [seqs, List.cons_append, List.nil_append, ciFind, ciHit, ciScr, ciEnd,
+    ciPush, ciOpen]
+  all_goals cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
+      consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
+    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
+      Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
+      List.map_append, map_hOpt] at *)
+    all_goals subst_vars
+    all_goals (simp only [hO.skips e hsk, Nat.add_right_cancel_iff, Nat.reduceEqDiff,
+      argsOf_setLoc 0 C.nk C.nk (by omega), argsOf_setLoc_add 0 C.nk 1 (by omega),
+      argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
+      argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
+      argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
+      Locals.init_cons_zero,
+      init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
+      argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil,
+      self_ne_add 1 C.nk (by decide), ↓reduceIte] at *)
+    all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
+      bne_iff_ne, beq_iff_eq, ne_eq, LocEq, Sig.retOr, bigK] at *)
+    all_goals (simp_all [Locals.init])
+
+-- the arms' normalising `simp` needs more than the default (heartbeats, not search)
+set_option maxHeartbeats 1600000 in
+theorem consInternG_sk_nx (p : Prog) (C : ConsSch) (hO : ConsOK p C)
+    (hpf : p.lookup C.fname = some (consFindG C)) (hpp : p.lookup C.pname = some (consPushG C))
+    (fn : FnName)
+    (hpi : p.lookup fn = some (consInternG C)) (n : Nat) (s₀ : St) (ks : List Word)
+    (hks : ks.length = C.nk) (hk : C.keyOK s₀.mem ks)
+    (e : Expr) (hsk : C.skipW = some e) (hb : ¬ (C.exact = true ∧ C.nk = 2)) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) fn ks
+    ⦃fun r s' => LocEq s' s₀ ∧ consInternM C s₀.mem ks = some (r.headD 0, s'.mem); ⊤⦄ := by
+  have hn := hO.push_np
+  have hml := hO.mloc
+  rw [invoke_eq _ hpi]
+  simp only [callFn]
+  rw [consInternG.eq_def]; simp only [hsk]
+  rw [ciChk_neg hb]
+  all_goals simp only [seqs, List.cons_append, List.nil_append, ciFind, ciHit, ciScr, ciEnd,
+    ciPush, ciOpen]
+  all_goals cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
+      consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
+    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
+      Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
+      List.map_append, map_hOpt] at *)
+    all_goals subst_vars
+    all_goals (simp only [hO.skips e hsk, Nat.add_right_cancel_iff, Nat.reduceEqDiff,
+      argsOf_setLoc 0 C.nk C.nk (by omega), argsOf_setLoc_add 0 C.nk 1 (by omega),
+      argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
+      argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
+      argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
+      Locals.init_cons_zero,
+      init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
+      argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil,
+      self_ne_add 1 C.nk (by decide), ↓reduceIte] at *)
+    all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
+      bne_iff_ne, beq_iff_eq, ne_eq, LocEq, Sig.retOr, bigK] at *)
+    all_goals (simp_all [Locals.init])
+
+-- the arms' normalising `simp` needs more than the default (heartbeats, not search)
+set_option maxHeartbeats 1600000 in
+theorem consInternG_nsk_x (p : Prog) (C : ConsSch) (hO : ConsOK p C)
+    (hpf : p.lookup C.fname = some (consFindG C)) (hpp : p.lookup C.pname = some (consPushG C))
+    (fn : FnName)
+    (hpi : p.lookup fn = some (consInternG C)) (n : Nat) (s₀ : St) (ks : List Word)
+    (hks : ks.length = C.nk) (hk : C.keyOK s₀.mem ks)
+    (hsk : C.skipW = none) (hb : C.exact = true ∧ C.nk = 2) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) fn ks
+    ⦃fun r s' => LocEq s' s₀ ∧ consInternM C s₀.mem ks = some (r.headD 0, s'.mem); ⊤⦄ := by
+  have hn := hO.push_np
+  have hml := hO.mloc
+  rw [invoke_eq _ hpi]
+  simp only [callFn]
+  rw [consInternG.eq_def]; simp only [hsk]
+  rw [ciChk_pos hb]
+  all_goals simp only [seqs, List.cons_append, List.nil_append, ciFind, ciHit, ciScr, ciEnd,
+    ciPush, ciOpen]
+  all_goals cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
+      consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
+    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
+      Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
+      List.map_append, map_hOpt] at *)
+    all_goals subst_vars
+    all_goals (simp only [Nat.add_right_cancel_iff, Nat.reduceEqDiff,
+      argsOf_setLoc 0 C.nk C.nk (by omega),
+      argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
+      argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
+      argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
+      Locals.init_cons_zero,
+      init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
+      argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil, ↓reduceIte] at *)
+    all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
+      bne_iff_ne, ne_eq, LocEq, Sig.retOr, bigK] at *)
+    all_goals (simp_all [Locals.init])
+
+-- the arms' normalising `simp` needs more than the default (heartbeats, not search)
+set_option maxHeartbeats 1600000 in
+theorem consInternG_nsk_nx (p : Prog) (C : ConsSch) (hO : ConsOK p C)
+    (hpf : p.lookup C.fname = some (consFindG C)) (hpp : p.lookup C.pname = some (consPushG C))
+    (fn : FnName)
+    (hpi : p.lookup fn = some (consInternG C)) (n : Nat) (s₀ : St) (ks : List Word)
+    (hks : ks.length = C.nk) (hk : C.keyOK s₀.mem ks)
+    (hsk : C.skipW = none) (hb : ¬ (C.exact = true ∧ C.nk = 2)) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) fn ks
+    ⦃fun r s' => LocEq s' s₀ ∧ consInternM C s₀.mem ks = some (r.headD 0, s'.mem); ⊤⦄ := by
+  have hn := hO.push_np
+  have hml := hO.mloc
+  rw [invoke_eq _ hpi]
+  simp only [callFn]
+  rw [consInternG.eq_def]; simp only [hsk]
+  rw [ciChk_neg hb]
+  all_goals simp only [seqs, List.cons_append, List.nil_append, ciFind, ciHit, ciScr, ciEnd,
+    ciPush, ciOpen]
+  all_goals cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
+      consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
+    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
+      Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
+      List.map_append, map_hOpt] at *)
+    all_goals subst_vars
+    all_goals (simp only [Nat.add_right_cancel_iff, Nat.reduceEqDiff,
+      argsOf_setLoc 0 C.nk C.nk (by omega),
+      argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
+      argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
+      argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
+      Locals.init_cons_zero,
+      init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
+      argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil, ↓reduceIte] at *)
+    all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
+      bne_iff_ne, ne_eq, LocEq, Sig.retOr, bigK] at *)
+    all_goals simp_all
+
 /-- **`intern_X(k)`** returns the handle and the memory of `consInternM`. -/
 theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     (hpf : p.lookup C.fname = some (consFindG C)) (hpp : p.lookup C.pname = some (consPushG C))
@@ -1621,67 +1820,15 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) fn ks
     ⦃fun r s' => LocEq s' s₀ ∧ consInternM C s₀.mem ks = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have hn := hO.push_np
-  have hml := hO.mloc
-  rw [invoke_eq _ hpi]
-  simp only [callFn]
   cases hsk : C.skipW with
   | some e =>
-    have he := hO.skips e hsk
     by_cases hb : C.exact = true ∧ C.nk = 2
-    all_goals rw [consInternG.eq_def]; simp only [hsk]
-    all_goals (first | rw [ciChk_pos hb] | rw [ciChk_neg hb])
-    all_goals simp only [seqs, List.cons_append, List.nil_append, ciFind, ciHit, ciScr, ciEnd,
-      ciPush, ciOpen]
-    all_goals cases n with
-    | zero => vcgen [exec] <;> grind
-    | succ n =>
-      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
-        consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
-      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-        List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
-        Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
-        List.map_append, map_hOpt] at *)
-      all_goals subst_vars
-      all_goals (simp only [hO.skips e hsk, Nat.add_right_cancel_iff, Nat.reduceEqDiff,
-        argsOf_setLoc 0 C.nk C.nk (by omega), argsOf_setLoc_add 0 C.nk 1 (by omega),
-        argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
-        argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
-        argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
-        Locals.init_cons_zero,
-        init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
-        argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil,
-        self_ne_add 1 C.nk (by decide), ↓reduceIte] at *)
-      all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
-        bne_iff_ne, beq_iff_eq, ne_eq, LocEq, Sig.retOr, bigK] at *)
-      all_goals (simp_all [Locals.init])
+    · exact consInternG_sk_x p C hO hpf hpp fn hpi n s₀ ks hks hk e hsk hb
+    · exact consInternG_sk_nx p C hO hpf hpp fn hpi n s₀ ks hks hk e hsk hb
   | none =>
     by_cases hb : C.exact = true ∧ C.nk = 2
-    all_goals rw [consInternG.eq_def]; simp only [hsk]
-    all_goals (first | rw [ciChk_pos hb] | rw [ciChk_neg hb])
-    all_goals simp only [seqs, List.cons_append, List.nil_append, ciFind, ciHit, ciScr, ciEnd,
-      ciPush, ciOpen]
-    all_goals cases n with
-    | zero => vcgen [exec] <;> grind
-    | succ n =>
-      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
-        consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
-      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-        List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
-        Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
-        List.map_append, map_hOpt] at *)
-      all_goals subst_vars
-      all_goals (simp only [Nat.add_right_cancel_iff, Nat.reduceEqDiff,
-        argsOf_setLoc 0 C.nk C.nk (by omega),
-        argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
-        argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
-        argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
-        Locals.init_cons_zero,
-        init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
-        argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil, ↓reduceIte] at *)
-      all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
-        bne_iff_ne, ne_eq, LocEq, Sig.retOr, bigK] at *)
-      all_goals (simp_all [Locals.init])
+    · exact consInternG_nsk_x p C hO hpf hpp fn hpi n s₀ ks hks hk hsk hb
+    · exact consInternG_nsk_nx p C hO hpf hpp fn hpi n s₀ ks hks hk hsk hb
 
 /-! ## What an interning does to memory -/
 

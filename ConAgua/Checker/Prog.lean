@@ -2,7 +2,6 @@ import ConAgua.Compiler.WFSplit
 import ConAgua.Checker.Entry
 import ConAgua.Checker.Prelude
 import ConAgua.Arena.Abs1
-import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.AppStore
 import ConAgua.Arena.ArRange
 import ConAgua.Arena.ArRangeSpec
@@ -55,8 +54,7 @@ import ConAgua.Arena.LevelSubst
 import ConAgua.Arena.LevelSubstL
 import ConAgua.Arena.LevelSubstLP
 import ConAgua.Arena.LevelZero
-import ConAgua.Arena.Lift
-import ConAgua.Arena.LiftSpec
+import ConAgua.Arena.LiftL
 import ConAgua.Arena.LsStore
 import ConAgua.Arena.MaxStore
 import ConAgua.Arena.MemoLib
