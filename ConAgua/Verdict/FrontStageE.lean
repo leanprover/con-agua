@@ -130,7 +130,7 @@ theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.Validat
   have hD0 : StateDR (s.mem.setIn preIn) (StateD.blank.pre #[]) := by
     rw [blank_pre_empty]; exact h3.sdr.frame (setIn_frame _ _) (by simp) (by simp)
   exact frontRunE_claim #[] preludeText hin.1 preludeText_size hV (hXT #[]) (hSL hin.1 _ preludeText_size) n
-    (s.mem.setIn preIn) sA (by rw [setIn_arr8_zero _ _ h0, preIn_eq])
+    (s.mem.setIn preIn) sA (by rw [Mem.arr8_setIn_zero, preIn_eq])
     (L.Rom.ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) h3.arena) hD0 h3.twin.ok h3.twin.off
     h3.twin.pins (fun x hx => absurd hx (by simp))
     (ModeOK.frame h3.mode (setIn_frame _ _) (by simp) (by simp)) e hE' hk

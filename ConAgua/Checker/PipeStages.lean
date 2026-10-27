@@ -59,12 +59,12 @@ structure HZ (m : Mem) : Prop where
   nix : ∀ j, rdW (m.arr64 HNIX) j = 0
 
 theorem HZ.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : HZ m) (hf : MemFrame A C m m')
-    (h75 : 75 ∉ A) (h76 : 76 ∉ A) (c73 : (73 : Word) ∉ C) (c75 : (75 : Word) ∉ C)
+    (h75 : (HSEEN : TieredArray) ∉ A) (h76 : (HNIX : TieredArray) ∉ A) (c73 : (73 : Word) ∉ C) (c75 : (75 : Word) ∉ C)
     (c129 : (129 : Word) ∉ C) (c200 : (200 : Word) ∉ C) : HZ m' :=
   ⟨by rw [hf.2.1 _ c73]; exact h.c73, by rw [hf.2.1 _ c75]; exact h.c75,
     by rw [hf.2.1 _ c129]; exact h.c129, by rw [hf.2.1 _ c200]; exact h.c200,
-    fun j => by rw [hf.1 75 h75 (by decide)]; exact h.seen j,
-    fun j => by rw [hf.1 76 h76 (by decide)]; exact h.nix j⟩
+    fun j => by rw [hf.1 _ h75 (by decide)]; exact h.seen j,
+    fun j => by rw [hf.1 _ h76 (by decide)]; exact h.nix j⟩
 
 /-- **After `intern_reserved_pins`**. -/
 structure R3 (l m : Mem) (pb : ByteArray) (a : AState) : Prop where
@@ -137,15 +137,11 @@ theorem pinA_idArrs : ∀ x ∈ PinA, x ∉ idArrs := by
   simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false, NID, LID, EID, NIDS, LIDS, EIDS] at hm
   rcases hm with rfl | rfl | rfl | rfl | rfl | rfl <;> revert hx <;> decide
 
-theorem pinA_not {x : ArrId} (h : InHigh x) (h' : x ≠ PINS) : x ∉ PinA := by
-  obtain ⟨n, rfl⟩ : ∃ n : Nat, n = x := ⟨x, rfl⟩
+theorem pinA_not {x : TieredArray} (h : InHigh x) (h' : x ≠ PINS) : x ∉ PinA := by
   intro hx
-  simp only [tier1, PinA, StoreA, lowTierArrs, List.mem_cons, List.mem_append, List.mem_range,
-    List.mem_map] at hx
-  rcases hx with hx | hx | ⟨y, -, e⟩
+  rcases List.mem_cons.mp hx with hx | hx
   · exact h' hx
-  · simp only [ArrId] at *; omega
-  · simp only [ArrId] at *; omega
+  · exact h.not_storeTier (storeTier_of_mem hx)
 
 theorem irpStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63) :
     RelSpec checkerProg "intern_reserved_pins" (fun m => R2 (loadMem b pb sz) m pb)

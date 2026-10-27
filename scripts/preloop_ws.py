@@ -161,7 +161,7 @@ theorem stageFrame_{g} (n : Nat) (s₀ : St) :
     (mem_of_tree stageTree_{g}.eq {q} (by decide +kernel)) s₀
 """)
     if g in NOPINS:
-        parts.append(f"""theorem stageA_{g}_pins : PINS ∉ stageA_{g} := by decide +kernel
+        parts.append(f"""theorem stageA_{g}_pins : (PINS : TieredArray) ∉ stageA_{g} := by decide +kernel
 """)
     if off:
         parts.append(f"""/-- Of the `CTL` words {", ".join(map(str, WATCH))}, `{g}` writes
