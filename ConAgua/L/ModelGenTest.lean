@@ -2,6 +2,7 @@ import ConAgua.Arena.LdRd
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Front.Preserve
 
 /-!
 # Tests of `l_model` (`L/ModelGen.lean`)
@@ -320,5 +321,49 @@ l_model tPre_spec (p : Prog) (hp : p.lookup "t_pre" = some tPre)
 l_model tNestR2_spec (p : Prog) (hp : p.lookup "t_nest_r2" = some tNestR2)
   fns [hp ↦ tNestR2W]
   grind [arena_grind] extra [ld64_rd_spec] simp []
+
+/-- `keep [h]` (`h : p.noSt8 = true`): the callees' specs and the induction hypotheses wrapped in
+`Triple.keep`, whose conjunct `Keep s₀.mem s'.mem` is a fact, not the model; the precondition
+over an array's size holds again after each call, for the next call's side goal. -/
+-- con-ron: none — an `l_model` test function
+def tKeepC : FunDecl := lfn (i) {
+  TW.u64[i & 7] := i;
+  return i + 1
+}
+
+-- con-ron: none — an `l_model` test function
+def tKeep : FunDecl := lfn (i) locals (x, y) {
+  x := call t_keep_c(i);
+  y := call t_keep_c(x);
+  return x + y
+}
+
+/-- Recursive: the second recursive call's precondition from the first one's `Keep`. -/
+-- con-ron: none — an `l_model` test function
+def tKeepR : FunDecl := lfn (i) locals (x, y) {
+  if i == 0 { return 0 };
+  x := call t_keep_r(i - 1);
+  y := call t_keep_r(i - 1);
+  return x + y + TW.u64[i & 7]
+}
+
+l_model tKeepC_spec (p : Prog) (hp : p.lookup "t_keep_c" = some tKeepC)
+  fns [hp ↦ tKeepCW]
+  pre [(s₀.mem.arr64 TW).size = 8]
+  grind [arena_grind] simp []
+
+l_model tKeep_spec (p : Prog) (hn : p.noSt8 = true) (hp : p.lookup "t_keep" = some tKeep)
+    (hc : p.lookup "t_keep_c" = some tKeepC)
+  fns [hp ↦ tKeepW]
+  specs [tKeepC_spec p hc n]
+  pre [(s₀.mem.arr64 TW).size = 8]
+  keep [hn]
+  grind [arena_grind]
+
+l_model tKeepR_spec (p : Prog) (hn : p.noSt8 = true) (hp : p.lookup "t_keep_r" = some tKeepR)
+  fns [hp ↦ tKeepRW]
+  pre [(s₀.mem.arr64 TW).size = 8]
+  keep [hn]
+  grind [arena_grind] extra [ld64_rd_spec]
 
 end L.ModelGenTest
