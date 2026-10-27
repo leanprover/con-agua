@@ -49,7 +49,7 @@ theorem stackPut_core {m₀ m₁ : Mem} {a : AState} {b h : Word} (hS : CoreS dn
     CoreS dn (m₁.set64 SPN b h) a vis fe M eb ∧ StackKept m₀ (m₁.set64 SPN b h) := by
   have hf₂ : MemFrame [SPN] [] m₁ (m₁.set64 SPN b h) := MemFrame.set64 _ _ (by decide) _ _
   have htop₂ : spTop (m₁.set64 SPN b h) = spTop m₁ := by
-    simp only [spTop, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SPN by decide)]
+    simp only [spTop, Mem.arr64_set64_ne _ _ _ _ _ (show (CTL : TieredArray) ≠ SPN by decide)]
   refine ⟨hS.frame_stk hf₂ (by simp) (by simp), hk.trans ?_⟩
   exact StackKept.of_spnFrame (hf₂.mono (by simp) (by simp)) htop₂ (fun i hi => by
     simp only [spW]; rw [rdW_set64]
