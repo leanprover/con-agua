@@ -53,8 +53,10 @@ public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatMul
 public import ConAgua.Arena.NatBits
 public import ConAgua.Arena.NatGrindAttr
+public import ConAgua.Arena.NatCmpFacts
 public import ConAgua.Arena.NatCmp
 public import ConAgua.Arena.NatSub
+public import ConAgua.Arena.NatShiftFacts
 public import ConAgua.Arena.NatShl
 public import ConAgua.Arena.NatShr
 public import ConAgua.Arena.NatPow

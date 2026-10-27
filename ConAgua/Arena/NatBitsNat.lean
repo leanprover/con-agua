@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.NatBits
 public import ConAgua.Arena.NatShr
+import ConAgua.Arena.NatCmpFacts
 @[expose] public section
 
 /-!
