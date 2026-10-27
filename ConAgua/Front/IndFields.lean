@@ -1,5 +1,6 @@
 import ConAgua.Front.Apply
 import ConAgua.Census.Attr
+import ConAgua.Layout
 
 /-!
 # The fields of an `inductive` line (lane `induct`, worker I)
@@ -43,11 +44,6 @@ open L.Arena
 namespace L.Front.Ind
 
 open L.Front
-
-/-- The fixed-size field records of the current inductive line. -/
-abbrev IFR : ArrId := 70
-/-- The word lists and rule records of the current inductive line. -/
-abbrev IFL : ArrId := 71
 
 /-! ## The scratch arrays -/
 

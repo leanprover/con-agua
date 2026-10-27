@@ -1,4 +1,3 @@
-import ConAgua.Front.IndFields
 import ConAgua.Front.ExprIface
 
 /-!

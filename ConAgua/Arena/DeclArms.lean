@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclArmsNat
 import ConAgua.Arena.IndProg
-import ConAgua.Front.ApplyDecl
 
 /-!
 # `checkDecl`'s one-constant arms in L, part 3: the arms (lane `decls2`)

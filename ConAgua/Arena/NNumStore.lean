@@ -40,11 +40,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `num` records, both tiers interleaved (two words per node). -/
-abbrev NNREC : ArrId := 37
-/-- The `num` cons-table slots, both tiers interleaved. -/
-abbrev NNSLOT : ArrId := 38
-
 /-- The hash of a `num` record (FNV-1a over its two words). -/
 def nnumHashW (pre u : Word) : Word := ((fnvBasis ^^^ pre) * fnvPrime ^^^ u) * fnvPrime
 

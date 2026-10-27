@@ -31,9 +31,6 @@ namespace L.Rom
 
 open L.Arena
 
-/-- The ROM interner's handle stack. -/
-abbrev RSTK : ArrId := 138
-
 /-- Its top, `CTL[131]`. -/
 def stkTop (m : Mem) : Word := rdW (m.arr64 CTL) 131
 
@@ -293,7 +290,6 @@ def romLevelsW : Nat → Mem → Word → Option (Word × Word × Mem)
     else lvsK (stkTop m) (u64W rom pos) (romLvlsW rom n m (pos + 8) (u64W rom pos))
 
 end lv
-
 
 theorem lsK_some (q h : Word) (m : Mem) (hh : ¬ 4294967296 ≤ h) : lsK q (some (h, m)) = some (h, q, m) := by
   simp [lsK, hh]
@@ -739,7 +735,6 @@ theorem romLvlsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true) :
       have : i ≠ stkTop m := fun e => by subst e; omega
       simp [this]
 
-
 set_option linter.constructorNameAsVariable false in
 /-- **The model of `rom_levels` refines `internLevels`**: the stack is back at its base. -/
 theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true) (n : Nat) (m : Mem)
@@ -824,7 +819,6 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
     simp [hc2]
 
 end ref
-
 
 /-- **`rom_lvls_go` refines `internLevelList`**: the handles pushed on `RSTK` in order. -/
 @[refines ConRon.Arena.internLevelList]

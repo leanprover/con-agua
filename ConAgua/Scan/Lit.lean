@@ -9,6 +9,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -30,9 +31,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Scan.Lit
-
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
 
 /-- The literals of `scan_bool`: `true` at `0`, `false` at `4`. -/
 def LITS : List UInt8 := [116, 114, 117, 101, 102, 97, 108, 115, 101]
@@ -101,7 +99,6 @@ grind_pattern [lang_grind] matchLitN_end => matchLitN b i L o n k
 
 end
 
-
 section matchLit
 variable (p : Prog) (hp : p.lookup "match_lit" = some matchLit)
     (b : Array UInt8) (hb : b.size < 2 ^ 64)
@@ -121,7 +118,6 @@ theorem matchLitLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     rw [exec, step_while (w := matchLitLoop) rfl]
     sym only [lang_grind, LITS_length] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ldc, ih] <;> finish
-
 
 include hp in
 @[refines ConLeche.Frontend.matchLit]

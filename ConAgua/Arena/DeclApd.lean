@@ -27,9 +27,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-- The walk's memo table. -/
-abbrev APDM : ArrId := 151
-
 /-- Its schema: array 151, `CTL[152]`, `CTL[153]`. -/
 abbrev apdSch : MemoSch := ⟨APDM, 152⟩
 

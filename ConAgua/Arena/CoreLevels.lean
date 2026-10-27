@@ -32,9 +32,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-abbrev LQ : ArrId := 105
-abbrev LSQ : ArrId := 106
-
 /-- The answer word of a level comparison, decoded (`encO`'s inverse). -/
 def decO (w : Word) : Option Bool := if w = 0 then none else if w = 1 then some false else some true
 

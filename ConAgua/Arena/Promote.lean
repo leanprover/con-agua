@@ -38,11 +38,6 @@ open L.Ind (CWF)
 
 /-! ## The four memos -/
 
-abbrev PNM : ArrId := 146
-abbrev PLM : ArrId := 147
-abbrev PLSM : ArrId := 148
-abbrev PEM : ArrId := 149
-
 abbrev pnSch : MemoSch := ⟨PNM, 140⟩
 abbrev plSch : MemoSch := ⟨PLM, 142⟩
 abbrev plsSch : MemoSch := ⟨PLSM, 144⟩

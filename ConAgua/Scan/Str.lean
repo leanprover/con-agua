@@ -54,9 +54,6 @@ open L.Scan.Utf8 (byteW utf8CharN)
 open L.Scan.Leaves (hasEscapeN)
 open L.Examples (strCloseN)
 
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
-
 /-! ## `utf8_valid` -/
 
 def utf8ValidLoop : Stmt := lblk (k, n, cp, l) {
@@ -542,7 +539,6 @@ theorem utf8ValidLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, L.Scan.Utf8.utf8Char_spec p hpc b n, ih] <;>
       finish [Mem.src8]
 
-
 include hpc hpv in
 theorem utf8Valid_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
     ⦃fun s => s = s₀⦄
@@ -655,7 +651,6 @@ theorem unescapeLoop_spec (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
         utf8Valid_spec p b hb hpc hpv n, byteIn_spec p b hb hpb n,
         hex4_spec p b hb hpb hph hp4 n, uNext_spec p b hb hpb hph hp3 hpx n] <;> finish
-
 
 include hpc hpv hpb hph hp4 hp3 hpx hpu in
 theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :

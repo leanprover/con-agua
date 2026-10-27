@@ -27,9 +27,6 @@ namespace L.Stubs
 
 open L.Arena L.Ind
 
-/-- The walk's memo table. -/
-abbrev CRM : ArrId := 155
-
 /-- Its schema: array 155, `CTL[158]`, `CTL[159]`. -/
 abbrev crSch : MemoSch := ⟨CRM, 158⟩
 

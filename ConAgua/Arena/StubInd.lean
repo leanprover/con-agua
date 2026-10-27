@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.WhnfBase
 
 /-!
 # Former stubs: the inductive stage's telescopes, zero-ness, rule bits (lane `stubs`)

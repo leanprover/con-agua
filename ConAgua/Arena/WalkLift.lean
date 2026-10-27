@@ -43,8 +43,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- `instantiate1LiftGo`'s memo (`inst1LC`). -/
-abbrev ILFM : ArrId := 51
 abbrev i1lSch : MemoSch := ⟨ILFM, 52⟩
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1897-1926 ConRon.Arena.instantiate1LiftGo -/

@@ -40,11 +40,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `letE` records, both tiers interleaved (two words per node). -/
-abbrev LEREC : ArrId := 20
-/-- The `letE` cons-table slots, both tiers interleaved. -/
-abbrev LESLOT : ArrId := 21
-
 /-- The hash of a `letE` record (FNV-1a over its three fields). -/
 def letHashW (ty val body : Word) : Word :=
   (((fnvBasis ^^^ ty) * fnvPrime ^^^ val) * fnvPrime ^^^ body) * fnvPrime

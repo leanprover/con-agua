@@ -39,12 +39,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `zero` records, both tiers interleaved (one dummy word per node). -/
-abbrev ZREC : ArrId := 8
-/-- The `zero` cons-table slots, both tiers interleaved. -/
-abbrev ZSLOT : ArrId := 9
-
-
 /-- The (constant) hash of the `zero` record: there is only one key, so the home slot of every
 probe is the same, fixed slot. -/
 def zeroHashW : Word := fnvBasis

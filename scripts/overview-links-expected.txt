@@ -497,19 +497,19 @@
     30    | .error .outOfFuel, _ => False
     31    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
 
-== ConAgua/Arena/IndIface.lean#L308-L319
-   308  /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
-   309  against `a₀`, a returning run keeps the caller's locals, the twin's run succeeds, and `post`
-   310  relates the memories before and after, the twin's state after, the L results and the twin's
-   311  result. Every stub spec and every refinement of the stage has this shape. -/
-   312  def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
-   313      (pre : Mem → AState → Prop) (op : AM α)
-   314      (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
-   315    ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
-   316      ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
-   317      ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧
-   318        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
-   319  
+== ConAgua/Arena/IndIface.lean#L296-L307
+   296  /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
+   297  against `a₀`, a returning run keeps the caller's locals, the twin's run succeeds, and `post`
+   298  relates the memories before and after, the twin's state after, the L results and the twin's
+   299  result. Every stub spec and every refinement of the stage has this shape. -/
+   300  def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
+   301      (pre : Mem → AState → Prop) (op : AM α)
+   302      (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
+   303    ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
+   304      ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+   305      ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧
+   306        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
+   307  
 
 == ConAgua/Checker/Pipeline.lean#L92-L125
     92  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
@@ -972,6 +972,31 @@
     34  /-- The array of tier `t` of the tiered array `a`. -/
     35  @[expose] def tierA (a : ArrId) (t : UInt64) : ArrId := a + tierOff * (t &&& 1).toNat
 
+== ConAgua/L/Arrays.lean#L34-L56
+    34  @[expose, reducible] def tier1 (a : ArrId) : ArrId := a + tierOff
+    35  
+    36  /-- The two tiers of the tiered array `a`. -/
+    37  @[expose, reducible] def tiers (a : ArrId) : List ArrId := [a, tier1 a]
+    38  
+    39  theorem and_one_cases' (t : Word) : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
+    40    rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
+    41  
+    42  @[simp] theorem tierA_zero (a : ArrId) : tierA a 0 = a := rfl
+    43  
+    44  theorem tierA_one_eq (a : ArrId) : tierA a 1 = tier1 a := rfl
+    45  
+    46  /-- Tier `t` of `a` is `a` or `tier1 a`. -/
+    47  theorem tierA_eq_or (a : ArrId) (t : Word) : tierA a t = a ∨ tierA a t = tier1 a := by
+    48    rcases and_one_cases' t with h | h <;> simp [tierA, tier1, h]
+    49  
+    50  /-- **The arrays `tierA a t` can be are `tiers a`.** -/
+    51  theorem tierA_mem_tiers (a : ArrId) (t : Word) : tierA a t ∈ tiers a := by
+    52    rcases tierA_eq_or a t with h | h <;> simp [tiers, h]
+    53  
+    54  /-- An array that is neither tier of `a` is not `tierA a t`. -/
+    55  theorem tierA_ne {a b : ArrId} (h : b ∉ tiers a) (t : Word) : tierA a t ≠ b := fun e =>
+    56    h (e ▸ tierA_mem_tiers a t)
+
 == ConAgua/L/TRec.lean#L7-L31
      7  /-!
      8  # Tiered store records (surface syntax)
@@ -1177,27 +1202,27 @@
     44  * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
     45  -/
 
-== ConAgua/Arena/Pool.lean#L9-L28
-     9  /-!
-    10  # The limb pool: layout, abstraction, invariant
-    11  
-    12  con-ron's `ron::Nat` (`crates/con-ron-core/src/ron/nat.rs`) is a `Vec<u64>` of little-endian
-    13  limbs with no trailing zero limb. In L there are no vectors: every number lives in ONE word array,
-    14  the limb pool `POOL`, as a slice `(o, l)` (offset, length). The pool grows at the top: word 0 of
-    15  the control array `CTL` holds the top `T`; `[0, T)` is in use, `[T, len(POOL))` is free. A
-    16  function that makes a number appends its limbs at `T` and moves `T` up; nothing below `T` is
-    17  ever written again, so every slice handed out stays valid (the frame is `Agree`).
-    18  
-    19  * abstraction: `pv p o l` is the number the slice `(o, l)` of the pool array `p` denotes,
-    20    `Σ_{i<l} p[o+i] * 2^(64 i)`;
-    21  * normal form: `Norm p o l`: the slice has no trailing zero limb (con-ron's `Nat.WF`), so equal
-    22    numbers have equal slices up to position;
-    23  * invariant of the pool (`PoolOK`): `T ≤ len(POOL) < 2^64` and `CTL` has its word.
-    24  
-    25  All of this is stated over the pool *array* `p : Array Word` and Lean `Nat` positions, and the
-    26  lemmas are guarded equations about the named functions `pv`, `xv`, `lv`, registered for
-    27  `grind` with multi-patterns that bind every variable (DESIGN.md, "Proof recipe").
-    28  -/
+== ConAgua/Arena/Pool.lean#L10-L29
+    10  /-!
+    11  # The limb pool: layout, abstraction, invariant
+    12  
+    13  con-ron's `ron::Nat` (`crates/con-ron-core/src/ron/nat.rs`) is a `Vec<u64>` of little-endian
+    14  limbs with no trailing zero limb. In L there are no vectors: every number lives in ONE word array,
+    15  the limb pool `POOL`, as a slice `(o, l)` (offset, length). The pool grows at the top: word 0 of
+    16  the control array `CTL` holds the top `T`; `[0, T)` is in use, `[T, len(POOL))` is free. A
+    17  function that makes a number appends its limbs at `T` and moves `T` up; nothing below `T` is
+    18  ever written again, so every slice handed out stays valid (the frame is `Agree`).
+    19  
+    20  * abstraction: `pv p o l` is the number the slice `(o, l)` of the pool array `p` denotes,
+    21    `Σ_{i<l} p[o+i] * 2^(64 i)`;
+    22  * normal form: `Norm p o l`: the slice has no trailing zero limb (con-ron's `Nat.WF`), so equal
+    23    numbers have equal slices up to position;
+    24  * invariant of the pool (`PoolOK`): `T ≤ len(POOL) < 2^64` and `CTL` has its word.
+    25  
+    26  All of this is stated over the pool *array* `p : Array Word` and Lean `Nat` positions, and the
+    27  lemmas are guarded equations about the named functions `pv`, `xv`, `lv`, registered for
+    28  `grind` with multi-patterns that bind every variable (DESIGN.md, "Proof recipe").
+    29  -/
 
 == ConAgua/Compiler/Abi.lean#L8-L35
      8  # The entry stubs (lane `abi`)
@@ -1228,6 +1253,42 @@
     33  machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
     34  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
     35  the trampoline. -/
+
+== ConAgua/Layout.lean#L28-L34
+    28  namespace L
+    29  
+    30  /-- **The checker's arrays.** Tiered rows are the persistent (tier 0) and scratch (tier 1) tiers
+    31  of con-ron's per-tier tables. -/
+    32  declare_arrays checkerArrays
+    33    -- byte arrays
+    34    | /-- The input buffer. -/ IN : byte := 0
+
+== ConAgua/Checker/ArrCheck.lean#L24-L33
+    24  
+    25  #guard checkerArrays.wf
+    26  #guard checkerArrays.progOK ["cap_check"] checkerProg
+    27  #guard Prog.arrs checkerProg == checkerArrays.extent
+    28  #guard checkerArrays.extent.2 == wordArrays
+    29  #guard frozenIds.all checkerArrays.wordSlots.contains
+    30  #guard parOwned.all checkerArrays.wordSlots.contains
+    31  #guard storeArrs.all checkerArrays.wordSlots.contains
+    32  #guard memoArrs.all checkerArrays.wordSlots.contains
+    33  #guard slotArrs.all checkerArrays.wordSlots.contains
+
+== ConAgua/L/Arrays.lean#L134-L138
+   134  /-- **Well-formed**: every number below `tierOff`, the numbers of each kind distinct, only word
+   135  arrays tiered. -/
+   136  def wf (T : ArrTable) : Bool :=
+   137    T.all (fun d => d.id < tierOff && (d.tiered → d.kind == .word)) &&
+   138      nodupB (T.ids .byte) && nodupB (T.ids .word)
+
+== ConAgua/L/Arrays.lean#L225-L230
+   225  /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
+   226  (`useOK`); a function in `exempt` may name any word slot below `T`'s extent (`slotOK`). -/
+   227  def ArrTable.progOK (T : ArrTable) (exempt : List FnName) (p : Prog) : Bool :=
+   228    p.all fun (f, fd) =>
+   229      if exempt.contains f then (Uses.stmt fd.body).all T.slotOK
+   230      else (Uses.stmt fd.body).all T.useOK
 
 == ConAgua/Arena/LevelEquiv.lean#L255-L265
    255  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a

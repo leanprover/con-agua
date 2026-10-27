@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndIface
 import ConAgua.Arena.Prelude
 
 /-!
