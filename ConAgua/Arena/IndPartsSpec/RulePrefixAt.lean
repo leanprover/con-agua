@@ -551,7 +551,7 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
     (m.arr64 IW).size < 2 ^ 64 →
     (∀ j < l.toNat, P (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))) d.toNat) →
     (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-    m'.words.size = m.words.size ∧
+    m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat
       then some (g m (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat)))))
@@ -625,7 +625,7 @@ theorem nIdxsCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nIdxsCopyW n
     (m.arr64 IW).size < 2 ^ 64 →
     (∀ j < l.toNat, (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j)) + 1).toNat < d.toNat) →
     (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-    m'.words.size = m.words.size ∧
+    m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat
       then some (rdW (m.arr64 IW) (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) + 1))

@@ -43,7 +43,7 @@ theorem getD_extract (a : Array Word) {e i : Nat} (h : i < e) :
 def _root_.L.Mem.setA (m : Mem) (b : ArrId) (v : Array Word) : Mem := { m with words := m.words.set! b v }
 
 theorem Mem.setA_arr (m : Mem) (b c : ArrId) (v : Array Word) :
-    (m.setA b v).arr64 c = if c = b ∧ b < m.words.size then v else m.arr64 c := by
+    (m.setA b v).arr64 c = if c = b ∧ m.HasW b then v else m.arr64 c := by
   simp only [Mem.setA, Mem.arr64, Array.getD_eq_getD_getElem?, Array.set!_eq_setIfInBounds,
     Array.getElem?_setIfInBounds]
   by_cases h1 : c = b
@@ -54,15 +54,15 @@ theorem Mem.setA_arr (m : Mem) (b c : ArrId) (v : Array Word) :
   · simp [Ne.symm h1, h1]
 
 theorem Mem.setA_words (m : Mem) (b : ArrId) (v : Array Word) :
-    (m.setA b v).words.size = m.words.size := by
+    m.SameShape (m.setA b v) := by
   simp [Mem.setA]
 
-theorem Mem.arr64_oob (m : Mem) (b : ArrId) (h : ¬ b < m.words.size) : m.arr64 b = #[] := by
+theorem Mem.arr64_oob (m : Mem) (b : ArrId) (h : ¬ m.HasW b) : m.arr64 b = #[] := by
   simp [Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_eq_none (Nat.le_of_not_lt h)]
 
 /-- **Replace an array by the one another memory of the same shape holds**: then it is that
 memory's (out of range both are empty). -/
-theorem Mem.setA_self (m m' : Mem) (b : ArrId) (hw : m'.words.size = m.words.size) :
+theorem Mem.setA_self (m m' : Mem) (b : ArrId) (hw : m.SameShape m') :
     (m.setA b (m'.arr64 b)).arr64 b = m'.arr64 b := by
   rw [Mem.setA_arr]
   by_cases h : b < m.words.size
@@ -73,7 +73,7 @@ theorem Mem.setA_self (m m' : Mem) (b : ArrId) (hw : m'.words.size = m.words.siz
 /-! ## `truncList` -/
 
 theorem truncList_words (m₀ : Mem) :
-    ∀ (zs : List (ArrId × Fz)) (m : Mem), (truncList m₀ m zs).words.size = m.words.size
+    ∀ (zs : List (ArrId × Fz)) (m : Mem), m.SameShape (truncList m₀ m zs)
   | [], _ => rfl
   | (_, z) :: zs, m => by
     rw [truncList, truncList_words m₀ zs]; simp
@@ -90,8 +90,8 @@ theorem truncList_other (m₀ : Mem) (b : ArrId) :
 
 theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
     ∀ (zs : List (ArrId × Fz)) (m : Mem), (x, z) ∈ zs →
-      zs.Pairwise (fun e e' => e.2.src ≠ e'.2.src) → m.words.size = m₀.words.size →
-      (∀ b, ¬ b < m.words.size → m.arr64 b = m₀.arr64 b) →
+      zs.Pairwise (fun e e' => e.2.src ≠ e'.2.src) → m₀.SameShape m →
+      (∀ b, ¬ m.HasW b → m.arr64 b = m₀.arr64 b) →
       (truncList m₀ m zs).arr64 z.src = (m₀.arr64 z.src).extract 0 (fzExt m₀ z)
   | [], _, h, _, _, _ => by cases h
   | (x', z') :: zs, m, h, hp, hw, ho => by
@@ -110,8 +110,8 @@ theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
     · refine truncList_mem m₀ x z zs _ e hp.2 (by simp [hw]) (fun b hb => ?_)
       have := Mem.setA_arr m z'.src b ((m₀.arr64 z'.src).extract 0 (fzExt m₀ z'))
       simp only [Mem.setA] at this hb
-      have hb' : ¬ b < m.words.size := by simpa using hb
-      rw [this, ite_eq_right (fun (hc : b = z'.src ∧ z'.src < m.words.size) => hb' (hc.1 ▸ hc.2))]
+      have hb' : ¬ m.HasW b := by simpa using hb
+      rw [this, ite_eq_right (fun (hc : b = z'.src ∧ m.HasW z'.src) => hb' (hc.1 ▸ hc.2))]
       exact ho b hb'
 
 /-! ## `truncFrozen` -/
@@ -131,7 +131,7 @@ theorem frozen_pairwise : (frozen.drop 1).Pairwise (fun e e' => e.2.src ≠ e'.2
   rw [← frozen_srcs, List.Nodup, List.pairwise_map] at this
   exact this
 
-theorem truncFrozen_words (m : Mem) : (truncFrozen m).words.size = m.words.size :=
+theorem truncFrozen_words (m : Mem) : m.SameShape (truncFrozen m) :=
   truncList_words m _ m
 
 /-- **An array that is not frozen is unchanged.** -/

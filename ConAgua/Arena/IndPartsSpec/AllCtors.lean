@@ -79,7 +79,7 @@ theorem ccW_get {n : Nat} {m m1 : Mem} {off q k cl : Word}
     (hd : (q + k).toNat + cl.toNat ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     cl = rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) ∧
     (∀ b, b ≠ IW → m1.arr64 b = m.arr64 b) ∧ (m1.arr64 IW).size = (m.arr64 IW).size ∧
-    m1.words.size = m.words.size ∧
+    m.SameShape m1 ∧
     ∀ i, (m1.arr64 IW)[i]? =
       if (q + k).toNat ≤ i ∧ i < (q + k).toNat + cl.toNat then
         (m.arr64 IW)[(rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2)).toNat + (i - (q + k).toNat)]?
@@ -167,7 +167,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       (∀ i, ¬ (q.toNat + k.toNat ≤ i ∧ i < q.toNat + k.toNat + ws.length) →
         (mf.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
       (∀ b, b ≠ IW → mf.arr64 b = m.arr64 b) ∧ (mf.arr64 IW).size = (m.arr64 IW).size ∧
-      mf.words.size = m.words.size := by
+      m.SameShape mf := by
   induction n with
   | zero => intro m0 m mf off l q k ms h; simp [acGoW] at h
   | succ n ih =>

@@ -429,7 +429,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     rw [initMem_arr]; simp [CTL]
   have hp : ((initMem sizes).arr64 POOL).size = sizes[0]?.getD 0 := by
     rw [initMem_arr]; simp [POOL]
-  have hw : CTL < (initMem sizes).words.size := by
+  have hw : (initMem sizes).HasW CTL := by
     show 1 < (sizes.map _).toArray.size; simp only [List.size_toArray, List.length_map]; omega
   refine ⟨⟨?_, consR_init hz (by rw [hc]; simp [litCS, litCSk]; omega) (hs _ (by decide))⟩,
     consR_init hz (by rw [hc]; simp [appCS]; omega) (hs _ (by decide)),

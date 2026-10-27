@@ -138,7 +138,7 @@ def kgrowM (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem) : Optio
 /-- From `m` to `m'` only array `sa` changes, and no size. -/
 def GFr (sa : ArrId) (m m' : Mem) : Prop :=
   (∀ b, b ≠ sa → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
-    m'.words.size = m.words.size
+    m.SameShape m'
 
 theorem GFr.refl (sa : ArrId) (m : Mem) : GFr sa m m := ⟨fun _ _ => rfl, fun _ => rfl, rfl⟩
 

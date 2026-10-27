@@ -308,7 +308,7 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
     s.toNat + l.toNat < 2 ^ 64 →
     d.toNat + l.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
     (∀ b, b ≠ EREC → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 EREC).size = (m.arr64 EREC).size ∧
-    m'.words.size = m.words.size ∧
+    m.SameShape m' ∧
     ∀ i, (m'.arr64 EREC)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat then some ((m.arr64 src)[s.toNat + (i - d.toNat)]?.getD 0)
       else (m.arr64 EREC)[i]? := by
@@ -368,7 +368,7 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
 three facts) is a `MemFrame [EREC] [129]`. -/
 theorem erAllocCopy_frame {m m2 : Mem} {l : Word}
     (hA : ∀ b, b ≠ EREC → m2.arr64 b = (erAllocMem m l).arr64 b)
-    (hS : (m2.arr64 EREC).size = (m.arr64 EREC).size) (hW : m2.words.size = (erAllocMem m l).words.size) :
+    (hS : (m2.arr64 EREC).size = (m.arr64 EREC).size) (hW : (erAllocMem m l).SameShape m2) :
     MemFrame [EREC] [129] m m2 := by
   refine ⟨fun b hb hcb => ?_, fun x hx => ?_, fun b => ?_, ?_⟩
   · rw [hA b (by simpa using hb), erAllocMem, Mem.arr64_set64_ne _ _ _ _ _ hcb]

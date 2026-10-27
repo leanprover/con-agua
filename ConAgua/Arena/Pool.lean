@@ -60,9 +60,9 @@ def Agree (p q : Array Word) (t : Nat) : Prop := ∀ j, j < t → p[j]? = q[j]?
 
 /-- `m'` is `m` with at most word array `a` changed: the frame of a function that writes only
 `a`. A named predicate with its own `grind` lemmas, rather than an equation
-`m' = m.setArr64 a (m'.arr64 a)`, whose read-back needs `a < m.words.size` at every use. -/
+`m' = m.setArr64 a (m'.arr64 a)`, whose read-back needs `m.HasW a` at every use. -/
 def Frame (a : ArrId) (m m' : Mem) : Prop :=
-  m'.bytes = m.bytes ∧ m'.words.size = m.words.size ∧ ∀ b, b ≠ a → m'.arr64 b = m.arr64 b
+  m'.bytes = m.bytes ∧ m.SameShape m' ∧ ∀ b, b ≠ a → m'.arr64 b = m.arr64 b
 
 theorem Frame.refl (a : ArrId) (m : Mem) : Frame a m m := ⟨rfl, rfl, fun _ _ => rfl⟩
 grind_pattern [arena_grind] Frame.refl => Frame a m m
@@ -85,9 +85,9 @@ theorem Frame.arr64 (a b : ArrId) (m m' : Mem) (h : Frame a m m') (hb : b ≠ a)
     m'.arr64 b = m.arr64 b := h.2.2 b hb
 grind_pattern [arena_grind] Frame.arr64 => Frame a m m', m'.arr64 b
 
-theorem Frame.size (a : ArrId) (m m' : Mem) (h : Frame a m m') : m'.words.size = m.words.size :=
+theorem Frame.size (a : ArrId) (m m' : Mem) (h : Frame a m m') : m.SameShape m' :=
   h.2.1
-grind_pattern [arena_grind] Frame.size => Frame a m m', m'.words.size
+grind_pattern [arena_grind] Frame.size => Frame a m m'
 
 theorem Frame.bytes (a : ArrId) (m m' : Mem) (h : Frame a m m') : m'.bytes = m.bytes := h.1
 grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
@@ -105,9 +105,6 @@ grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
 @[arena_grind =] theorem Mem.size_arr64_set64 (m : Mem) (a : ArrId) (i v : Word) :
     ((m.set64 a i v).arr64 a).size = (m.arr64 a).size := by
   rw [Mem.arr64_set64_same]; simp
-
-@[arena_grind =] theorem Mem.words_size_set64 (m : Mem) (a : ArrId) (i v : Word) :
-    (m.set64 a i v).words.size = m.words.size := by simp [Mem.set64]
 
 @[arena_grind =] theorem Mem.bytes_set64 (m : Mem) (a : ArrId) (i v : Word) :
     (m.set64 a i v).bytes = m.bytes := rfl
@@ -654,13 +651,13 @@ theorem pcap_congr' {m m' : Mem} (h0 : m'.arr64 POOL = m.arr64 POOL)
 the globals unchanged: the frame of a pool writer. -/
 structure PFrame (m m' : Mem) : Prop where
   bytes : m'.bytes = m.bytes
-  size : m'.words.size = m.words.size
+  size : m.SameShape m'
   arr : ∀ b, b ≠ POOL → b ≠ POOL1 → m'.arr64 b = m.arr64 b
   size0 : (m'.arr64 POOL).size = (m.arr64 POOL).size
   size1 : (m'.arr64 POOL1).size = (m.arr64 POOL1).size
   glob : m'.glob = m.glob
 
-grind_pattern [arena_grind] PFrame.size => PFrame m m', m'.words.size
+grind_pattern [arena_grind] PFrame.size => PFrame m m'
 grind_pattern [arena_grind] PFrame.bytes => PFrame m m', m'.bytes
 grind_pattern [arena_grind] PFrame.glob => PFrame m m', m'.glob
 grind_pattern [arena_grind] PFrame.size0 => PFrame m m', (m'.arr64 POOL).size
@@ -770,7 +767,7 @@ while the top is in tier 1, the saved tier-0 top `PT0[0]` is inside tier 0's arr
 in tier 0, `PT0[0]` is dead: `scratch_reset` overwrites it before reading it, `pool_alloc0`
 reads it only in tier 1; so the truncation, which cuts `POOL` to the top, keeps the invariant). -/
 def PoolOK (m : Mem) : Prop :=
-  CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m ∧
+  m.HasW CTL ∧ 0 < (m.arr64 CTL).size ∧ pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m ∧
   (m.top.toNat < 2 ^ 40 ∨ m.ptop0.toNat ≤ (m.arr64 POOL).size) ∧
   (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size
 
@@ -866,7 +863,7 @@ theorem ptop0_congr {m m' : Mem} (h : m'.arr64 PT0 = m.arr64 PT0) : m'.ptop0 = m
 theorem PoolOK.frame {m m' : Mem} (h : PoolOK m) (h0 : m'.arr64 POOL = m.arr64 POOL)
     (h1 : m'.arr64 POOL1 = m.arr64 POOL1) (ht : m'.arr64 PT0 = m.arr64 PT0)
     (hc : (m'.arr64 CTL).size = (m.arr64 CTL).size) (htop : m'.top = m.top)
-    (hw : m'.words.size = m.words.size) : PoolOK m' := by
+    (hw : m.SameShape m') : PoolOK m' := by
   obtain ⟨a1, a2, a3, a4, a5, a6⟩ := h
   have hp : pcap m' = pcap m := pcap_congr' h0 h1
   refine ⟨by rw [hw]; exact a1, by rw [hc]; exact a2, by rw [hp]; exact a3, by rw [hp, htop]; exact a4,

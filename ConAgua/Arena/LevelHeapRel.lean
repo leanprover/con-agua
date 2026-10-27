@@ -82,7 +82,7 @@ structure HeapExt (m m' : Mem) : Prop where
   ctl : ∀ k : Word, k ≠ 192 → rdW (m'.arr64 CTL) k = rdW (m.arr64 CTL) k
   /-- No array changes its size. -/
   size : ∀ b : ArrId, (m'.arr64 b).size = (m.arr64 b).size
-  wsize : m'.words.size = m.words.size
+  wsize : m.SameShape m'
   /-- The heap top does not move down, and the heap below it stays. -/
   top : (htop m).toNat ≤ (htop m').toNat
   lh : ∀ k : Word, k.toNat < (htop m).toNat → rdW (m'.arr64 LH) k = rdW (m.arr64 LH) k
@@ -133,7 +133,7 @@ structure HeapFrame (m m' : Mem) : Prop where
   top : (htop m).toNat ≤ (htop m').toNat
   lh : ∀ k : Word, k.toNat < (htop m).toNat → rdW (m'.arr64 LH) k = rdW (m.arr64 LH) k
   size : ∀ b : ArrId, (m'.arr64 b).size = (m.arr64 b).size
-  wsize : m'.words.size = m.words.size
+  wsize : m.SameShape m'
 
 theorem tierW_lt (p : Word) : (tierW p).toNat ≤ 1 := by
   have h : tierW p ≤ 1 := UInt64.and_le_right

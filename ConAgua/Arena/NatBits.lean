@@ -169,7 +169,7 @@ operands lie below `top`, the result fits above it, and the first `i` limbs of t
 `f`-combined from the (zero-extended) operand limbs — the house shape of `AddInv`, without a
 carry. -/
 def BitInv (f : Word → Word → Word) (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 41 ∧
+  s.mem.HasW POOL ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 41 ∧
   pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
   s.loc 9 = s.loc 4 >>> 40 ∧ s.loc 10 = s.loc 4 &&& 1099511627775 ∧

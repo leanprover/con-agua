@@ -259,7 +259,7 @@ memory `r` with `INIT = 0` and every owned array zero (at its size in `m`), the 
 theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
     (hS : PhaseBStart pins dn ds fe pend m a v) (hPB : m.arr8 PB = bs.toArray)
     (hne : pend.size ≠ 0) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r : Mem) (j : Word) (hr : 388 ≤ r.words.size)
+    (r : Mem) (j : Word) (hr : r.HasWs 388)
     (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size) (hI : r.glob INIT = 0) :
     ThreadRel pins dn ds fe pend bs v (seedMem (bufMem (bufOf m v) r j)) a.worker ∧
       (seedMem (bufMem (bufOf m v) r j)).glob INIT = 1 := by
@@ -268,7 +268,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
   generalize hW : bufMem (bufOf m v) r j = W
   obtain ⟨hseed, h256⟩ := bufImg_seed (v := v) hok hlt
   have hctlf : W.arr64 CTLF = (m.arr64 CTL).extract 0 256 := by
-    rw [← hW, bufMem_ctlf, ite_eq_left (show 242 < r.words.size by omega), hseed]
+    rw [← hW, bufMem_ctlf, ite_eq_left (show r.HasW 242 by omega), hseed]
   have hlen : (W.len64 CTLF).toNat = 256 := by
     simp only [Mem.len64, hctlf, size_extract0, Nat.min_eq_left h256]; rfl
   have hctl : W.arr64 CTL = zeros (m.arr64 CTL).size := by
@@ -328,7 +328,7 @@ theorem thrCall_first (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode =
     {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
     (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
     (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r : Mem) (hr : 388 ≤ r.words.size) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
+    (r : Mem) (hr : r.HasWs 388) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
     (hI : r.glob INIT = 0) (j : Word) (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62)
     (n : Nat) (hn : n ≤ 2 ^ 62) {rs : List Word} {r' : Mem}
     (hrun : L.run checkerProg n "check" [] (bufMem (bufOf m v) r j) = .ok (rs, r')) :

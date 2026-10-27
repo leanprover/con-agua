@@ -234,7 +234,7 @@ end buf
 /-! ## The thread's memory `bufMem` -/
 
 theorem bufMem_arr (B : Array Word) (r : Mem) (j : Word) (b : ArrId) :
-    (bufMem B r j).arr64 b = if b < r.words.size then
+    (bufMem B r j).arr64 b = if r.HasW b then
       (match frozenIdsL.idxOf? b with
        | some i => bufImg B i
        | none => if parOwnedL.contains b then r.arr64 b else #[]) else #[] := by
@@ -300,11 +300,11 @@ theorem bufMem_owned (B : Array Word) (r : Mem) (j : Word) {b : ArrId} (hb : b â
   Â· rename_i h; rw [Mem.arr64_oob _ _ h]
 
 theorem bufMem_hdr (B : Array Word) (r : Mem) (j : Word) :
-    (bufMem B r j).arr64 HDRF = if HDRF < r.words.size then bufImg B 0 else #[] := by
+    (bufMem B r j).arr64 HDRF = if r.HasW HDRF then bufImg B 0 else #[] := by
   rw [bufMem_arr]; rfl
 
 theorem bufMem_ctlf (B : Array Word) (r : Mem) (j : Word) :
-    (bufMem B r j).arr64 CTLF = if CTLF < r.words.size then bufImg B 1 else #[] := by
+    (bufMem B r j).arr64 CTLF = if r.HasW CTLF then bufImg B 1 else #[] := by
   rw [bufMem_arr]; rfl
 
 theorem bufMem_ctl (B : Array Word) (r : Mem) (j : Word) :
@@ -312,7 +312,7 @@ theorem bufMem_ctl (B : Array Word) (r : Mem) (j : Word) :
   bufMem_owned B r j (by decide)
 
 theorem bufMem_words (B : Array Word) (r : Mem) (j : Word) :
-    (bufMem B r j).words.size = r.words.size := by simp [bufMem]
+    r.SameShape (bufMem B r j) := by simp [bufMem]
 
 /-- `freshCtl` word by word. -/
 theorem getD_freshCtl (c : Array Word) (k : Nat) :

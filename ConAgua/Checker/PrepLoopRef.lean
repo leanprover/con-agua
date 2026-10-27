@@ -43,7 +43,7 @@ size, and the `IW` words outside `[ord, mk + n)`. -/
 def PFr (ord mk nw : Word) (m m' : Mem) : Prop :=
   (∀ b : ArrId, b ∉ lowTierArrs → b ≠ IW → m'.arr64 b = m.arr64 b) ∧
     (∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
-    (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size ∧
+    (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m' ∧
     ∀ x : Nat, (x < ord.toNat ∨ mk.toNat + nw.toNat ≤ x) → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?
 
 

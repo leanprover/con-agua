@@ -24,7 +24,7 @@ size. -/
 def MemFrame (A : List ArrId) (C : List Word) (m m' : Mem) : Prop :=
   (∀ b, b ∉ A → b ≠ CTL → m'.arr64 b = m.arr64 b) ∧
   (∀ x, x ∉ C → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
-  (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size
+  (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m'
 
 theorem MemFrame.refl (A : List ArrId) (C : List Word) (m : Mem) : MemFrame A C m m :=
   ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩

@@ -284,7 +284,7 @@ theorem wrRec_read (S : Schema) (hS : S.WF) (t c i f : Word) (hc : c.toNat < 2 ^
       grind
 
 theorem wrRec_words (S : Schema) (t c : Word) :
-    ∀ (vs : List Word) (m : Mem) (f : Word), (wrRec S t c m f vs).words.size = m.words.size := by
+    ∀ (vs : List Word) (m : Mem) (f : Word), m.SameShape (wrRec S t c m f vs) := by
   intro vs
   induction vs with
   | nil => intro m f; rfl
@@ -308,7 +308,7 @@ theorem pushG_arr (b : ArrId) (h1 : b ≠ tierA S.ra t) (h2 : b ≠ tierA S.sa t
     ((pushG S m t vs j c q).arr64 b).size = (m.arr64 b).size := by
   rw [pushG, size_set64, size_set64, size_set64, wrRec_size]
 
-@[store_grind =] theorem pushG_words : (pushG S m t vs j c q).words.size = m.words.size := by
+@[store_grind =] theorem pushG_words : m.SameShape (pushG S m t vs j c q) := by
   rw [pushG, Mem.words_size_set64, Mem.words_size_set64, Mem.words_size_set64, wrRec_words]
 
 include hS in

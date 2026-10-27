@@ -1857,7 +1857,7 @@ theorem consInternM_cases {C : ConsSch} {m m₁ : Mem} {ks : List Word} {r : Wor
 theorem kgrowIf_frame (C : ConsSch) (t : Word) (m₀ m m' : Mem) (c : Word)
     (h : kgrowIf C t m₀ m c = some m') :
     (∀ b, b ≠ tierA C.sa t → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
-      m'.words.size = m.words.size := by
+      m.SameShape m' := by
   change GFr (tierA C.sa t) m m'
   unfold kgrowIf at h
   split at h
@@ -1878,7 +1878,7 @@ theorem wrRecK_size (ra : ArrId) (k : Word) (b : ArrId) :
   | cons v vs ih => intro m f; rw [wrRecK, ih, arr64_size_set64]
 
 theorem wrRecK_words (ra : ArrId) (k : Word) :
-    ∀ (vs : List Word) (m : Mem) (f : Word), (wrRecK ra k m f vs).words.size = m.words.size := by
+    ∀ (vs : List Word) (m : Mem) (f : Word), m.SameShape (wrRecK ra k m f vs) := by
   intro vs
   induction vs with
   | nil => intro m f; rfl
@@ -1906,7 +1906,7 @@ theorem colW_size (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId) :
   · exact arr64_size_set64 _ _ _ _ _
 
 theorem colW_words (C : ConsSch) (t c x : Word) (m : Mem) :
-    (colW C t c x m).words.size = m.words.size := by
+    m.SameShape (colW C t c x m) := by
   unfold colW; split
   · rfl
   · exact Mem.words_size_set64 _ _ _ _
@@ -1944,7 +1944,7 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
     (h : consInternM C m ks = some (w, m')) :
     m' = m ∨ ∃ t, t ≤ 1 ∧ pushOKC C m t = true ∧ w = (if t = 0 then C.P else C.S) + cntC C m t ∧
       (∀ b, b ≠ tierA C.sa t → m'.arr64 b = (pushRec C m t ks).arr64 b) ∧
-      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size := by
+      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m' := by
   rcases consInternM_cases h with e | ⟨t, j, ht, hok, hg, hr⟩
   · exact .inl e
   refine .inr ⟨t, ht, hok, hr, ?_⟩

@@ -81,7 +81,7 @@ theorem ctlCut_arr (t : Mem) (b : ArrId) :
       rw [Mem.arr64_oob t CTL hs, freshCtl_empty]
   · simp [hb]
 
-theorem ctlCut_words (t : Mem) : (ctlCut t).words.size = t.words.size := Mem.setA_words ..
+theorem ctlCut_words (t : Mem) : t.SameShape (ctlCut t) := Mem.setA_words ..
 
 /-- **Cutting `CTL` is a frame of the `CTL` words from 256 on.** -/
 theorem ctlCut_frame (t : Mem) : MemFrame [] (hiC (t.arr64 CTL).size) t (ctlCut t) := by
@@ -99,7 +99,7 @@ theorem ctlCut_frame (t : Mem) : MemFrame [] (hiC (t.arr64 CTL).size) t (ctlCut 
 
 /-! ## The fresh memory -/
 
-theorem freshMem_words (m : Mem) : (freshMem m).words.size = (truncFrozen m).words.size := by
+theorem freshMem_words (m : Mem) : (truncFrozen m).SameShape (freshMem m) := by
   simp [freshMem]
 
 theorem freshMem_arr (m : Mem) (b : ArrId) : (freshMem m).arr64 b =
@@ -113,7 +113,7 @@ theorem freshMem_arr (m : Mem) (b : ArrId) : (freshMem m).arr64 b =
       simp only [freshMem, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map,
         Array.getElem?_range, h, ↓reduceIte, Option.map_some, Option.getD_some]
     rw [e]
-  · have ho : ∀ c, ¬ c < (truncFrozen m).words.size → (truncFrozen m).arr64 c = #[] :=
+  · have ho : ∀ c, ¬ (truncFrozen m).HasW c → (truncFrozen m).arr64 c = #[] :=
       fun c hc => Mem.arr64_oob _ c hc
     rw [Mem.arr64_oob _ b (by rw [freshMem_words]; exact h)]
     split
@@ -255,10 +255,10 @@ theorem rTrans_pool0 (hF : RFrame S R hs)
     (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA S.ra t) = m₁.arr64 (tierA S.ra t)) → PoolTr0 m₁ m₂ →
       (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, hs m₂ t i = hs m₁ t i)
     (hx : ∀ b ∈ [POOL, POOL1, CTL], b ≠ S.ra ∧ b ≠ tier1 S.ra)
-    {m m' : Mem} (hw : m'.words.size = m.words.size) (hp : PoolTr0 m m') : RTrans S R hs m m' := by
+    {m m' : Mem} (hw : m.SameShape m') (hp : PoolTr0 m m') : RTrans S R hs m m' := by
   intro t i hf
   let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
-  have hw1 : (m.setA S.ra (m'.arr64 S.ra)).words.size = m.words.size := Mem.setA_words ..
+  have hw1 : m.SameShape (m.setA S.ra (m'.arr64 S.ra)) := Mem.setA_words ..
   have hne : S.ra ≠ tier1 S.ra := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]

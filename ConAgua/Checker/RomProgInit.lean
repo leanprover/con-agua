@@ -37,7 +37,7 @@ theorem loadMem_pb : (loadMem b pb s8 s64).arr8 PB = pb.data.toList.toArray := b
   simp [Mem.arr8, loadMem, PB]
 
 /-- `CTL` exists: it has at least `ctlMin` words. -/
-theorem loadMem_ctl_lt (hc : CapsOK (loadMem b pb s8 s64)) : CTL < (loadMem b pb s8 s64).words.size := by
+theorem loadMem_ctl_lt (hc : CapsOK (loadMem b pb s8 s64)) : (loadMem b pb s8 s64).HasW CTL := by
   have h := hc.2.1
   rw [loadMem_arr] at h
   rw [loadMem_words_size]

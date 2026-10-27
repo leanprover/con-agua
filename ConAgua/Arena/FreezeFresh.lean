@@ -87,7 +87,7 @@ variable (m : Mem)
 theorem fresh_keep {b : ArrId} (hb : b ∉ freshZ) : (freshMem m).arr64 b = (cutT m).arr64 b :=
   (fresh_frame m).1 b hb (fun h => hb (h ▸ ctl_mem_freshZ))
 
-theorem fresh_words : (freshMem m).words.size = (cutT m).words.size := (fresh_frame m).2.2.2
+theorem fresh_words : (cutT m).SameShape (freshMem m) := (fresh_frame m).2.2.2
 
 theorem fresh_size (b : ArrId) : ((freshMem m).arr64 b).size = ((cutT m).arr64 b).size :=
   (fresh_frame m).2.2.1 b
