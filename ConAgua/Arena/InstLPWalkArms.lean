@@ -1,4 +1,4 @@
-import ConAgua.Arena.InstLPWalk
+import ConAgua.Arena.InstLPWalkLet
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec

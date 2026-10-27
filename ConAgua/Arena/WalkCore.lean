@@ -63,7 +63,7 @@ theorem leafGuard_core (hp : LgProg p) : LeafGuardOK p := by
   unfold CoreSpec
   apply L.M.triple_of_run
   intro s r s' hs hr
-  obtain ⟨hloc, hI⟩ := L.M.of_run (P := fun s => s = s₀) hs hr (leafGuard_spec p hp n s₀ fab major)
+  obtain ⟨hloc, hI⟩ := L.M.of_run (P := fun s => s = s₀) hs hr (leafGuard_spec p hp (n + 1) s₀ fab major)
   subst hs
   obtain ⟨hrun, hM', hle, hf⟩ :=
     lgW_ok n _ _ a₀ hS.arena ⟨hS.memos.2.2.2.1, hS.memos.2.2.2.2.1⟩ fab major _ hF hJ hI

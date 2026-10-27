@@ -221,10 +221,12 @@ theorem ctlSumW_eq : ∀ (n : Nat) (m : Mem) (k c s : Word), ctlSumW n m k c = s
     split at h
     · cases h; rename_i hc; subst hc; rfl
     · rename_i hc
-      rcases hr : ctlSumW n m (k + 1) (c - 1) with _ | r <;> simp only [hr, addK, reduceCtorEq] at h
-      cases h
-      rw [ih _ _ _ _ hr, fuel_pred hc]
-      rfl
+      rcases hr : ctlSumW n m (k + 1) (c - 1) with _ | r
+      · rw [hr, ctlSumW.k_ctl_sum.none] at h; cases h
+      · rw [hr, ctlSumW.k_ctl_sum.arm1] at h
+        cases h
+        rw [ih _ _ _ _ hr, fuel_pred hc]
+        rfl
 
 /-- **`store_fuel` is the twin's `storeFuel`**: the store's node count `+ 1`. -/
 @[refines ConRon.Arena.Frontend.storeFuel]

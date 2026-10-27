@@ -460,7 +460,7 @@ theorem fvbW_okD (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
   have hd := derFW_ok m a hA.1 hA.2 h hh
   rw [fvarB_run, ← hd]
   by_cases hs : derFW m h = 32767
-  · rw [fvbW_sat n m h f hs] at hb
+  · rw [fvbW.arm1 n m h f hs] at hb
     have hs' : ((derFW m h).toNat == ConLeche.satRange) = true := by rw [hs]; rfl
     rw [ite_eq_left hs']
     obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [fvbN]⟩
@@ -470,7 +470,7 @@ theorem fvbW_okD (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     simp only [fsp, Prod.mk.injEq] at hk
     have hf := frMemoW_frame n m m' h f x hb
     exact ⟨a', ha', ⟨hR', DerR.of_store m' a a' (DerR.frameM _ _ m m' hf (by decide) a hA.2) hk.1⟩, hf⟩
-  · rw [fvbW_pk n m h f hs] at hb
+  · rw [fvbW.arm2 n m h f hs] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     have hs' : ((derFW m h).toNat == ConLeche.satRange) = false := by
