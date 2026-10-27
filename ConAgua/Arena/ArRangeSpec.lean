@@ -5,7 +5,6 @@ meta import ConAgua.Arena.Store
 public import ConAgua.Arena.ArRange
 import ConAgua.Arena.LdRd
 import ConAgua.Census.Attr
-public import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec

@@ -1,5 +1,6 @@
 import ConAgua.Arena.Inst1Spec
 import ConAgua.Arena.ArRangeSpec
+import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.InstListSpec
 import ConAgua.Arena.BvarB
 import ConAgua.Arena.Frame
