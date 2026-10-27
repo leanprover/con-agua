@@ -41,11 +41,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `sort` records, both tiers interleaved (one word per node). -/
-abbrev SOREC : ArrId := 16
-/-- The `sort` cons-table slots, both tiers interleaved. -/
-abbrev SOSLOT : ArrId := 17
-
 /-- The hash of a `sort` record (FNV-1a over its word). -/
 def sortHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 

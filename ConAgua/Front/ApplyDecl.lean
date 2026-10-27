@@ -49,11 +49,6 @@ open L.Front.Fields (rdNatN NONE itemsN itemsN_end itemsN_close itemsN_digit ite
 
 namespace L.Front
 
-/-- The declaration records. -/
-abbrev DECL : ArrId := 67
-/-- The universe parameter names of the declaration records. -/
-abbrev DLP : ArrId := 68
-
 /-! ## `lp_put(v)` -/
 
 def lpLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h) {

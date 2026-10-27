@@ -56,9 +56,6 @@ open L.Scan.Member
 open L.Scan.Values
 open L.Scan.Leaves (numEndN)
 
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
-
 /-- A number too long to be read (19 digits or more). -/
 def NONE : Word := 0xFFFFFFFFFFFFFFFF
 

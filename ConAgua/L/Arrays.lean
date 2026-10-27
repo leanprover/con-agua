@@ -20,8 +20,8 @@ arrays are declared in:
   array is another one's tier 1.
 * **The surface check** (`ArrTable.progOK`) reads a program's text: a byte access names a byte
   array of the table, a tiered access (`A⟨t⟩[i]`) a tiered array, and a plain word access a word
-  array of the table, so never a tier-1 number. A function on the exemption list may name any slot
-  the table occupies (a capacity check that walks every slot by number).
+  array of the table, so never a tier-1 number. A function on the exemption list may name any word
+  slot below the table's extent (a capacity check that walks every slot by number).
 * **Tiers.** Proofs name tier 1 of `a` as `tier1 a` and both tiers as `tiers a`, and reason with
   the lemmas below (`tierA_mem_tiers`, `tierA_ne`, `tier1_ne`, …) instead of the encoding.
 -/
@@ -158,10 +158,11 @@ def useOK (T : ArrTable) : Use → Bool
   | .word a => T.ids .word |>.contains a
   | .tier a => T.tieredIds.contains a
 
-/-- Whether an exempt function may use the operand: any slot of `T`. -/
+/-- Whether an exempt function may use the operand: any word slot below the table's extent
+(the slots between the arrays included), else as `useOK`. -/
 def slotOK (T : ArrTable) : Use → Bool
   | .byte a => T.ids .byte |>.contains a
-  | .word a => T.wordSlots.contains a
+  | .word a => a < T.extent.2
   | .tier a => T.tieredIds.contains a
 
 end ArrTable
@@ -222,7 +223,7 @@ def stmt : Stmt → List Use
 end Uses
 
 /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
-(`useOK`); a function in `exempt` may name any slot of `T` (`slotOK`). -/
+(`useOK`); a function in `exempt` may name any word slot below `T`'s extent (`slotOK`). -/
 def ArrTable.progOK (T : ArrTable) (exempt : List FnName) (p : Prog) : Bool :=
   p.all fun (f, fd) =>
     if exempt.contains f then (Uses.stmt fd.body).all T.slotOK

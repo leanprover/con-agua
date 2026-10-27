@@ -51,9 +51,6 @@ open L.Scan.Utf8 (byteW)
 open L.Scan.Leaves (keyEndN)
 open L.Scan.Key (keyAtN valueAtN)
 
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
-
 /-! ## `next_member` -/
 
 def nextMemberLoop : Stmt := lblk (i, w, c, ke, v, k) {
@@ -223,7 +220,6 @@ theorem nextMemberLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
         L.Scan.Leaves.keyEnd_spec p hpk b hb' n, L.Scan.Key.valueAt_spec p hpw hpv b hb n,
         L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b n] <;> finish
-
 
 include hpm in
 theorem nextMember_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i w : Word) :

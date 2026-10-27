@@ -717,7 +717,7 @@ theorem strPutEsc_spec (p : Prog) (hpb : p.lookup "byte_in" = some L.Scan.Str.by
     (hpo : p.lookup "esc_one" = some escOne) (hpu : p.lookup "utf8_put" = some utf8Put)
     (hpe : p.lookup "str_put_esc" = some strPutEsc)
     (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : b.size < 2 ^ 63) (n : Nat)
-    (s₀ : St) (hm : s₀.mem.arr8 L.Front.Unescape.IN = b.data) (a₀ : ConRon.Arena.AState) (hR : ArenaR s₀.mem a₀)
+    (s₀ : St) (hm : s₀.mem.arr8 L.IN = b.data) (a₀ : ConRon.Arena.AState) (hR : ArenaR s₀.mem a₀)
     (c d : Word) (str : String) (hS : StrR b c d str) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "str_put_esc" [c, d]

@@ -37,11 +37,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-/-- The cheap-mode `whnfCore` memo's slots (`wkSch`). -/
-abbrev WKM : ArrId := 97
-/-- The `whnfCore` memo's slots (`wcSch`). -/
-abbrev WCM : ArrId := 96
-
 /-! ## The L code -/
 
 /-- The knot's `whnfCore` slot. -/

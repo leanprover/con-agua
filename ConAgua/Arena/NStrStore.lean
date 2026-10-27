@@ -12,6 +12,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -45,11 +46,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- The name `str` records, both tiers interleaved (four words per node). -/
-abbrev NSREC : ArrId := 35
-/-- The name `str` cons-table slots, both tiers interleaved. -/
-abbrev NSSLOT : ArrId := 36
 
 /-! ## `nstr_match(t, i, q, o, l, h)` -/
 

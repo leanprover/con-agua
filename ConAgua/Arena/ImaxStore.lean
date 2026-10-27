@@ -39,11 +39,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `imax` records, both tiers interleaved (one packed word per node). -/
-abbrev IREC : ArrId := 12
-/-- The `imax` cons-table slots, both tiers interleaved. -/
-abbrev ISLOT : ArrId := 13
-
 /-- The hash of an `imax` record (FNV-1a over its two handle words). -/
 def imaxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 

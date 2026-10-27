@@ -29,9 +29,6 @@ namespace L.Scan.Records
 open L.Scan.Member
 open L.Scan.Values
 
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
-
 grind_pattern [lang_grind] slotNatN_pos => slotNatN b ks v
 
 /-- The end of a `true`/`false` at `v`, or `0`: what `scan_bool`'s three results
@@ -41,7 +38,6 @@ def boolEndN (b : Array UInt8) (v : Word) : Word :=
   else (L.Scan.Lit.encBool (L.Scan.Lit.scanBoolN b v.toNat) v).tail.tail.headD 0
 
 attribute [local lang_grind] boolEndN
-
 
 /-! ## `scan_str_name`: `{"pre":p,"str":s}` -/
 
@@ -94,7 +90,6 @@ def strNameVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_str_name(i)`. -/
 def strNameN (b : Array UInt8) (i : Word) : Word := objEntryN strNameBit (strNameVal b) 3 b i
 
-
 /-! ## `scan_num_name`: `{"i":n,"pre":p}` -/
 
 def numNameLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
@@ -145,7 +140,6 @@ def numNameVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_num_name(i)`. -/
 def numNameN (b : Array UInt8) (i : Word) : Word := objEntryN numNameBit (numNameVal b) 3 b i
 
-
 /-! ## `scan_app`: `{"arg":A,"fn":F}` -/
 
 def appLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
@@ -195,7 +189,6 @@ def appVal (b : Array UInt8) (k ks v : Word) : Word :=
   if k = 3 then slotNatN b ks v else if k = 13 then slotNatN b ks v else 0
 /-- `scan_app(i)`. -/
 def appN (b : Array UInt8) (i : Word) : Word := objEntryN appBit (appVal b) 3 b i
-
 
 /-! ## `scan_binder`: a `lam` or `forallE` binder (con-leche's two loops have the same keys; Rust's `scan_binder_expr_loop`) -/
 
@@ -259,7 +252,6 @@ def binderVal (b : Array UInt8) (k ks v : Word) : Word :=
   if k = 5 then binderInfoN b v else if k = 6 then slotNatN b ks v else if k = 34 then slotNatN b ks v else if k = 61 then slotNatN b ks v else 0
 /-- `scan_binder(i)`. -/
 def binderN (b : Array UInt8) (i : Word) : Word := objEntryN binderBit (binderVal b) 15 b i
-
 
 /-! ## `scan_let`: a `letE` -/
 
@@ -327,7 +319,6 @@ def letEVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_let(i)`. -/
 def letEN (b : Array UInt8) (i : Word) : Word := objEntryN letEBit (letEVal b) 27 b i
 
-
 /-! ## `scan_const`: `{"name":N,"us":[…]}` -/
 
 def constELoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
@@ -378,7 +369,6 @@ def constEVal (b : Array UInt8) (k ks v : Word) : Word :=
   if k = 34 then slotNatN b ks v else if k = 64 then (natListEntryN b v).1 else 0
 /-- `scan_const(i)`. -/
 def constEN (b : Array UInt8) (i : Word) : Word := objEntryN constEBit (constEVal b) 3 b i
-
 
 /-! ## `scan_proj`: `{"idx":i,"struct":S,"typeName":T}` -/
 
@@ -435,7 +425,6 @@ def projVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_proj(i)`. -/
 def projN (b : Array UInt8) (i : Word) : Word := objEntryN projBit (projVal b) 7 b i
 
-
 /-! ## `scan_rule`: a recursor rule -/
 
 def ruleLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
@@ -491,7 +480,6 @@ def ruleVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_rule(i)`. -/
 def ruleN (b : Array UInt8) (i : Word) : Word := objEntryN ruleBit (ruleVal b) 7 b i
 
-
 /-! ## `scan_rules`: the `[…]` of rules -/
 
 def rulesLoop : Stmt := lblk (i, cnt, w, c, e) {
@@ -534,7 +522,6 @@ def scanRules : FunDecl := lfn (i) locals (cnt, w, c, e) {
 
 /-- `scan_rules(i)`. -/
 def rulesN (b : Array UInt8) (i : Word) : Word := objListEntryN (ruleN b) b i
-
 
 /-! ## `scan_ind_rec`: a recursor of an inductive declaration -/
 
@@ -636,7 +623,6 @@ def indRecVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_ind_rec(i)`. -/
 def indRecN (b : Array UInt8) (i : Word) : Word := objEntryN indRecBit (indRecVal b) 2046 b i
 
-
 /-! ## `scan_ind_recs`: the `[…]` of recursors -/
 
 def indRecsLoop : Stmt := lblk (i, cnt, w, c, e) {
@@ -679,7 +665,6 @@ def scanIndRecs : FunDecl := lfn (i) locals (cnt, w, c, e) {
 
 /-- `scan_ind_recs(i)`. -/
 def indRecsN (b : Array UInt8) (i : Word) : Word := objListEntryN (indRecN b) b i
-
 
 /-! ## `scan_ind_type`: a type of an inductive declaration -/
 
@@ -782,7 +767,6 @@ def indTypeVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_ind_type(i)`. -/
 def indTypeN (b : Array UInt8) (i : Word) : Word := objEntryN indTypeBit (indTypeVal b) 2046 b i
 
-
 /-! ## `scan_ind_types`: the `[…]` of types -/
 
 def indTypesLoop : Stmt := lblk (i, cnt, w, c, e) {
@@ -825,7 +809,6 @@ def scanIndTypes : FunDecl := lfn (i) locals (cnt, w, c, e) {
 
 /-- `scan_ind_types(i)`. -/
 def indTypesN (b : Array UInt8) (i : Word) : Word := objListEntryN (indTypeN b) b i
-
 
 /-! ## `scan_ind_ctor`: a constructor of an inductive declaration -/
 
@@ -909,7 +892,6 @@ def indCtorVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_ind_ctor(i)`. -/
 def indCtorN (b : Array UInt8) (i : Word) : Word := objEntryN indCtorBit (indCtorVal b) 252 b i
 
-
 /-! ## `scan_ind_ctors`: the `[…]` of constructors -/
 
 def indCtorsLoop : Stmt := lblk (i, cnt, w, c, e) {
@@ -952,7 +934,6 @@ def scanIndCtors : FunDecl := lfn (i) locals (cnt, w, c, e) {
 
 /-- `scan_ind_ctors(i)`. -/
 def indCtorsN (b : Array UInt8) (i : Word) : Word := objListEntryN (indCtorN b) b i
-
 
 /-! ## `scan_axiom`: an `axiom` declaration -/
 
@@ -1015,7 +996,6 @@ def axiomDVal (b : Array UInt8) (k ks v : Word) : Word :=
   if k = 26 then boolEndN b v else if k = 31 then (natListEntryN b v).1 else if k = 34 then slotNatN b ks v else if k = 61 then slotNatN b ks v else 0
 /-- `scan_axiom(i)`. -/
 def axiomDN (b : Array UInt8) (i : Word) : Word := objEntryN axiomDBit (axiomDVal b) 15 b i
-
 
 /-! ## `scan_def`: a `def` declaration -/
 
@@ -1096,7 +1076,6 @@ def defDVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_def(i)`. -/
 def defDN (b : Array UInt8) (i : Word) : Word := objEntryN defDBit (defDVal b) 124 b i
 
-
 /-! ## `scan_thm`: a `thm` declaration -/
 
 def thmDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
@@ -1163,7 +1142,6 @@ def thmDVal (b : Array UInt8) (k ks v : Word) : Word :=
   if k = 1 then (natListEntryN b v).1 else if k = 31 then (natListEntryN b v).1 else if k = 34 then slotNatN b ks v else if k = 61 then slotNatN b ks v else if k = 65 then slotNatN b ks v else 0
 /-- `scan_thm(i)`. -/
 def thmDN (b : Array UInt8) (i : Word) : Word := objEntryN thmDBit (thmDVal b) 30 b i
-
 
 /-! ## `scan_opaque`: an `opaque` declaration -/
 
@@ -1238,7 +1216,6 @@ def opaqueDVal (b : Array UInt8) (k ks v : Word) : Word :=
 /-- `scan_opaque(i)`. -/
 def opaqueDN (b : Array UInt8) (i : Word) : Word := objEntryN opaqueDBit (opaqueDVal b) 62 b i
 
-
 /-! ## `scan_quot`: a `quot` declaration -/
 
 def quotDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
@@ -1300,7 +1277,6 @@ def quotDVal (b : Array UInt8) (k ks v : Word) : Word :=
   if k = 28 then L.Scan.Str.scanStringN b v else if k = 31 then (natListEntryN b v).1 else if k = 34 then slotNatN b ks v else if k = 61 then slotNatN b ks v else 0
 /-- `scan_quot(i)`. -/
 def quotDN (b : Array UInt8) (i : Word) : Word := objEntryN quotDBit (quotDVal b) 15 b i
-
 
 /-! ## `scan_ind_decl`: an `inductive` declaration -/
 

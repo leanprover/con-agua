@@ -7,6 +7,7 @@ import ConRon.Arena.Core
 import ConAgua.Census.Attr
 import ConAgua.Arena.StoreDen
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Layout
 
 /-!
 # The whnf family's shared statements: arguments, the spine stack, the relation, the knot
@@ -41,7 +42,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-
 namespace L.Arena
 
 /-! ## Arguments -/
@@ -69,8 +69,6 @@ def decStep (r : List Word) : WhnfStep :=
 
 /-! ## The spine stack: array 144, top `CTL[136]` -/
 
-abbrev SPN : ArrId := 144
-
 /-- The stack top. -/
 def spTop (m : Mem) : Word := rdW (m.arr64 CTL) 136
 
@@ -91,9 +89,6 @@ telescopes `infer_lams`/`infer_pis` push onto it, and they put the top back) and
 the limb pool (`POOL` below the old top `CTL[0]` unchanged, the top no lower, the size the same:
 the `Nat` arithmetic and the interning of literals, level lists and string names write above the
 top). Both are fields of `StackKept`/`StackGrew`, so `CoreAfter` carries them (lane `whnf3`). -/
-
-/-- The binder stack (lane `defeq`'s, `Infer.lean`). -/
-abbrev BSTK : ArrId := 145
 
 /-- The binder stack's top. -/
 def bTop (m : Mem) : Word := rdW (m.arr64 CTL) 137
@@ -621,8 +616,6 @@ def CoreRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List W
     (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb : Word) (r : List Word) (m : Mem) (ok : List Word → Prop := ResH) : Prop :=
   AM.ok T a₀ ∧ CoreAfter dn m₀ m (AM.st T a₀) vis fe M eb ∧ AM.res T a₀ = dec r ∧ ok r
-
-
 
 /-- The spec shape: from `s₀` under `CoreS`, the call refines `T`. -/
 def CoreSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args : List Word)

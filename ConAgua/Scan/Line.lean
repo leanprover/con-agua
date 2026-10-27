@@ -45,9 +45,6 @@ open L.Scan.Member
 open L.Scan.Values
 open L.Scan.Records
 
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
-
 /-! ## `scan_line_loop` -/
 
 def lineLoop : Stmt := lblk (i, w, idx, pl, tag, ks, k, v, e, ok, x) {
@@ -501,7 +498,6 @@ theorem validateLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := validateLoop) rfl]
     sym only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, scanLine_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln n] <;> finish
-
 
 theorem validate_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
     ⦃fun s => s = s₀⦄

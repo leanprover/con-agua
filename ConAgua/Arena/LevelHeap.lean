@@ -46,9 +46,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The level scratch heap: three words per node. -/
-abbrev LH : ArrId := 192
-
 /-! ## `lv_node(p)`: the view of a level pointer -/
 
 /-- **The model of `lv_node`**: `[tag, a, b]`, or `[]` where the L code aborts. -/

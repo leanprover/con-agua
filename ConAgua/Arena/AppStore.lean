@@ -41,11 +41,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `app` records, both tiers interleaved (one packed word per node). -/
-abbrev AREC : ArrId := 4
-/-- The `app` cons-table slots, both tiers interleaved. -/
-abbrev ASLOT : ArrId := 5
-
 /-- The hash of an `app` record (FNV-1a over its two handle words). -/
 def appHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
