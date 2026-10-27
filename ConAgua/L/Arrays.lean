@@ -61,6 +61,18 @@ theorem ne_tierA {a b : ArrId} (h : b ∉ tiers a) (t : Word) : b ≠ tierA a t 
 theorem not_mem_tiers {a b : ArrId} : b ∉ tiers a ↔ b ≠ a ∧ b ≠ tier1 a := by
   simp [tiers]
 
+/-- `simp` evaluates `tier1 n` for a numeral `n` (pre-order, before `tier1 0` could be rewritten
+as `0 + tierOff`): a concrete tier-1 array reads as its number, so `simp` decides
+`tier1 REC ≠ CTL` once the names are unfolded, as it does `2 ≠ 1`. The value is `n + 256`, the
+encoding (`tierOff`); the result is checked by definitional unfolding (the examples below). -/
+simproc ↓ [simp] reduceTier1 (tier1 _) := fun e => do
+  let_expr tier1 a ← e | return .continue
+  let some n := a.rawNatLit? <|> a.nat? | return .continue
+  return .done { expr := Lean.mkNatLit (n + 256) }
+
+example : tier1 2 = 258 := by simp
+example : tier1 0 ≠ 1 := by simp
+
 /-! The proofs below see the encoding (`tier1 a = a + 256`) through `show` with `Nat` binders:
 `omega` does not read a comparison at type `ArrId`. -/
 
