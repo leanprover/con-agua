@@ -795,7 +795,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       rw [Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]; exact hI.frame x hwf hl
   | len8 a =>
     intro t k hc hwf _ σ s Q hI hok _
-    simp only [Expr.wf, decide_eq_true_eq] at hwf
+    simp only [Expr.wf] at hwf
     have hp := G.tab.pos8_lt hwf
     refine ev_movRM hc.head ⟨by simp [hT, Tab.len8, Tab.dlen8]; lomega, by simp [hT, Tab.len8, Tab.dlen8]; lomega⟩
       (v := UInt64.ofNat (G.s8 (G.tab.pos8 a))) ?_
@@ -804,7 +804,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     · simp [Mem.len8, hI.mem.size8 a hwf]
   | len64 a =>
     intro t k hc hwf _ σ s Q hI hok _
-    simp only [Expr.wf, decide_eq_true_eq] at hwf
+    simp only [Expr.wf] at hwf
     have hw64 := G.tab.pos64_lt hwf
     refine ev_movRM hc.head ⟨by simp [Tab.len64, Tab.dlen64]; lomega, by simp [hT, Tab.len64, Tab.dlen64]; lomega⟩
       (v := UInt64.ofNat (G.s64 (G.tab.pos64 a))) ?_
@@ -1043,7 +1043,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       exact ⟨x, by simp [evalP, hx]; rfl⟩
   | ld8 a i ih =>
     intro t k hc hwf htmp σ s Q hI hok herr
-    simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+    simp only [Expr.wf, Bool.and_eq_true] at hwf
     simp only [tempsE] at htmp
     simp only [compileE] at hc hok
     have hcR := hc.right
@@ -1090,7 +1090,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       exact ⟨x, by simp [evalP, hx]; rfl⟩
   | ld64 a i ih =>
     intro t k hc hwf htmp σ s Q hI hok herr
-    simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+    simp only [Expr.wf, Bool.and_eq_true] at hwf
     simp only [tempsE] at htmp
     simp only [compileE] at hc hok
     have hcR := hc.right
@@ -1138,7 +1138,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
 
   | ld64t a tt i iht ihi =>
     intro t k hc hwf htmp σ s Q hI hok herr
-    simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+    simp only [Expr.wf, Bool.and_eq_true] at hwf
     obtain ⟨⟨ha, hwt⟩, hwi⟩ := hwf
     simp only [tempsE] at htmp
     simp only [compileE] at hc hok
@@ -1310,7 +1310,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       exact ⟨x, by simp [evalP, hx]; rfl⟩
   | len64t a tt iht =>
     intro t k hc hwf htmp σ s Q hI hok herr
-    simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+    simp only [Expr.wf, Bool.and_eq_true] at hwf
     obtain ⟨ha, hwt⟩ := hwf
     simp only [tempsE] at htmp
     simp only [compileE, List.append_assoc] at hc hok

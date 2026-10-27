@@ -696,7 +696,7 @@ theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F +
 
 theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a i e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
-  simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Stmt.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
   simp only [tempsS] at htmp
   simp only [compileS, List.append_assoc, List.cons_append, List.nil_append] at hc hK
@@ -885,7 +885,7 @@ theorem sim_st64t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
 
 theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st64t a t i e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
-  simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Stmt.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨⟨⟨ha, hst⟩, hwt⟩, hwi⟩, hwe⟩ := hwf
   obtain ⟨ld, hld⟩ := Option.isSome_iff_exists.mp (loadInto_isSome (ctx := ctx) (r := .rcx) hst)
   obtain ⟨u0, hu0⟩ := evalP_simple hst σ
@@ -1086,7 +1086,7 @@ theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 
 
 theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st8 a i e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
-  simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Stmt.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
   simp only [tempsS] at htmp
   simp only [compileS, List.append_assoc, List.cons_append, List.nil_append] at hc hK

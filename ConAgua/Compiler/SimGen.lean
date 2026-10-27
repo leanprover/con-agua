@@ -984,7 +984,7 @@ theorem gen_ld64 (a : ArrId) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
     GenSpec G ctx F (.ld64 a i) (gen ctx (.ld64 a i)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
   simp only [gen] at hg
-  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
   have hoki : GOk ctx i d fr := hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h
   refine genLdW_spec hF hi hg hc hoki hwf.2 hI (arr := σ.mem.arr64 a)
     (fun s' hX => by have := arrW_plain hG hT hTab hwf.1 (hI.ghost hX hok.dr); exact this) ?_ ?_
@@ -1000,7 +1000,7 @@ theorem gen_ld8 (a : ArrId) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
     GenSpec G ctx F (.ld8 a i) (gen ctx (.ld8 a i)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
   simp only [gen] at hg
-  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
   have hoki : GOk ctx i d fr := hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h
   refine genLdB_spec hF hi hg hc hoki hwf.2 hI (arr := σ.mem.arr8 a)
     (fun s' hX => by have := arrB_plain hG hT hTab hwf.1 (hI.ghost hX hok.dr); exact this) ?_ ?_
@@ -1017,7 +1017,7 @@ theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
     GenSpec G ctx F (.ld64t a t i) (gen ctx (.ld64t a t i)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
   simp only [gen] at hg
-  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨ha, hwt⟩, hwi⟩ := hwf
   have hrt : ∀ r, Expr.readsReg ctx.alloc r (.ld64t a t i) = false → Expr.readsReg ctx.alloc r t = false :=
     fun r h => by simp only [Expr.readsReg, Bool.or_eq_false_iff] at h; exact h.1
@@ -1109,7 +1109,7 @@ theorem gen_len64t (a : ArrId) {t : Expr} (ht : GenSpec G ctx F t (gen ctx t)) :
     GenSpec G ctx F (.len64t a t) (gen ctx (.len64t a t)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
   simp only [gen] at hg
-  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
   obtain ⟨ha, hwt⟩ := hwf
   have hd : d ∈ d :: fr := List.mem_cons_self
   split at hg

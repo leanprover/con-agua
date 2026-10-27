@@ -365,7 +365,7 @@ theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 
   simp only [Layout.tabEnd] at hTE
   cases w with
   | plain a =>
-    simp only [WArr.wf, decide_eq_true_eq] at hw
+    simp only [WArr.wf] at hw
     simp only [warrP, Except.ok.injEq] at hwp
     subst hwp
     simp only [warrDesc, List.length_nil, Nat.add_zero] at h ⊢
@@ -376,7 +376,7 @@ theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 
     · have := G.tab.pos64_lt hw; rw [hT]; simp [Tab.len64, Tab.dlen64, WArr.arr]; lomega
     · have := G.tab.pos64_lt hw; rw [hT]; simp [Tab.base64, Tab.dbase64, WArr.arr]; lomega
   | tier a t =>
-    simp only [WArr.wf, Bool.and_eq_true, decide_eq_true_eq] at hw
+    simp only [WArr.wf, Bool.and_eq_true] at hw
     obtain ⟨⟨ha, hto⟩, hwt⟩ := hw
     obtain ⟨u, hu⟩ := opnd_ok (σ := σ) (nl := ctx.nl) (G := G) (e := t) (by simp [Expr.opndWf, hto, hwt])
     simp only [warrP, hu, Except.map, Except.ok.injEq] at hwp

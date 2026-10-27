@@ -84,7 +84,7 @@ theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (sz : Tiered
   obtain ⟨hR, hM, hc, hIM⟩ := loop_start (pins := ipins) h7.arena hcore h7.pinsFull h7.decls
     h7.pinSets h7.iw (loopZero_of_since h7.since) h7.pin0
     (by have := hcaps.1 EREC (by decide); omega) (by have := hcaps.1 SPN (by decide); omega)
-    (by have := hcaps.1 145 (by decide); omega) h7.mode
+    (by have := hcaps.1 BSTK (by decide); omega) h7.mode
   have hsz : ds.size < 2 ^ 63 := by have := hR.decls.dsize; have := hR.decls.room; omega
   -- the leaves' claims at the substituted program
   have hnv := checkerProg_nvPB pb.data.toList
