@@ -47,7 +47,7 @@ theorem sliceRes_spec (p : Prog) (k : Stmt → M Sig) (o l t x : Var) (hto : t �
   have hot : o ≠ t := Ne.symm hto
   all_goals (simp_all [St.setLoc, Cmp.eval, BinOp.eval])
   rename_i h
-  rw [if_neg (Ne.symm hto)] at h
+  rw [ite_eq_right (Ne.symm hto)] at h
   have hx := tag_idx_lt (s₀.loc o)
   have h1 := UInt64.le_iff_toNat_le.mp h
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp at hx ⊢; omega))] at h1

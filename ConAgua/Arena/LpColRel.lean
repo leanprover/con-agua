@@ -1,5 +1,6 @@
 import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.LpCol
+set_option linter.unusedSectionVars false
 
 /-!
 # The level-parameter columns: the relation, generically (helper `whnf4-d23`)

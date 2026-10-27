@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+set_option linter.unusedSectionVars false
 
 /-!
 # The in-place growth's re-insertion keeps every node findable (lane memlay)

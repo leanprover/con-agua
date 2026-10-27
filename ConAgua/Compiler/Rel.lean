@@ -123,7 +123,7 @@ structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
 
 theorem mem_allocRegs {r : Reg64} : r ∈ allocRegs ↔
     r = .rdi ∨ r = .r8 ∨ r = .r9 ∨ r = .r10 ∨ r = .r11 ∨ r = .rsi ∨ r = .rbx ∨ r = .r12 ∨ r = .r13 := by
-  simp [allocRegs, argRegs]
+  simp [allocRegs]
 
 theorem argRegs_sub {r : Reg64} (h : r ∈ argRegs) : r ∈ allocRegs := by
   simp only [argRegs, List.mem_cons, List.not_mem_nil, or_false] at h
@@ -483,7 +483,7 @@ theorem Layout.Ok.notArr_of_res {x : Nat} (h : G.InRes x) : ¬ G.InArr x := hG.t
 /-- A result cell and a stack cell do not overlap. -/
 theorem Layout.Ok.res_stack_disj {x y : Nat} (hx : ∀ t < 8, G.InRes (x + t)) (hy : ∀ t < 8, G.InStack (y + t)) :
     y + 8 ≤ x ∨ x + 8 ≤ y :=
-  cell_disj hx hy fun t h1 h2 => hG.notStack_of_res h1 h2
+  cell_disj hx hy fun _t h1 h2 => hG.notStack_of_res h1 h2
 
 /-- A change inside the result area keeps the memory relation. -/
 theorem MemRel.only_res {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')

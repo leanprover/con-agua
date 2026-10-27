@@ -47,7 +47,7 @@ structure AbiCall (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
   hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
 /-- A word of zero bytes reads as `0`. -/
-theorem rdW_of_zero {d : DataMem} {x : Nat} (hx : x + 8 ≤ 2 ^ 64)
+theorem rdW_of_zero {d : DataMem} {x : Nat} (_hx : x + 8 ≤ 2 ^ 64)
     (h : ∀ j < 8, d.get? (A (x + j)) = some 0) : rdW d (A x) = some 0 := by
   have : rdW d (A x) = rdW (wrW d (A x) 0) (A x) := by
     refine rdW_congr fun j hj => ?_

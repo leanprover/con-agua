@@ -123,7 +123,7 @@ theorem whnfAppLamW_spec (p : Prog) (n : Nat) (s₀ : St) :
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
       evalE_tierE, evalE_idxE, st64,
       callW_spec p n "beta_peel"] <;>
-    finish [lamW, tierW, idxW, St.setLoc_loc, St.setLoc_mem]
+    finish [lamW, tierW, idxW, St.setLoc_mem]
 
 /-- The model of the ι arm at callee fuel `k`. -/
 def iotaW (p : Prog) (k : Nat) (m : Mem) (mode vis d hd vo vn ao an i top : Word) :
@@ -153,7 +153,7 @@ theorem whnfAppIotaW_spec (p : Prog) (n : Nat) (s₀ : St) :
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "iota_rec_at", callW_spec p n "mk_app_n_from"] <;>
-    finish [iotaW, St.setLoc_loc, St.setLoc_mem]
+    finish [iotaW, St.setLoc_mem]
 
 /-- The next spine node of the walk: the saved node (`same`), else `mk_app(v, a)`. -/
 def apW (p : Prog) (k : Nat) (m : Mem) (v same a node : Word) : Option (Word × Mem) :=

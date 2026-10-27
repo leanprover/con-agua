@@ -159,14 +159,14 @@ theorem paramOK : ConsOK p paramCS where
       subst he; simp [Expr.pval, h],
     fun s => by simp [paramCS, argsOf, Expr.pval, List.range_succ]⟩
   room := fun s => by
-    simp only [paramCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+    simp only [paramCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval]; rfl
   skips := by intro e he; simp [paramCS] at he
   pre := rfl
   colA := by simp [paramCS]
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [paramCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+    simp only [paramCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [paramCS] at h
   mloc := fun h => by simp [paramCS] at h
   exnk := fun _ => by decide

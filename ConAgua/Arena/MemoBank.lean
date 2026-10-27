@@ -1,4 +1,5 @@
 import ConAgua.Arena.MemoLibRel
+set_option linter.unusedSectionVars false
 
 /-!
 # Memo banks: generation-tagged keys (the mode-memo bank stack)

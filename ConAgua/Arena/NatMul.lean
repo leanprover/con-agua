@@ -368,8 +368,7 @@ theorem natMul_spec (n : Nat) (sâ‚€ : St) (oa la ob lb : Word) (hok : PoolOK sâ‚
     all_goals (try simp only [ZeroInv, RowInv, MulBase] at *)
     all_goals (try subst_vars)
     -- `setLoc` lemmas, not unfolding; no `and_intros` (one `grind` per goal: 12 goals, not 42)
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
       Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals grind (splits := 40) [arena_grind, lang_grind]

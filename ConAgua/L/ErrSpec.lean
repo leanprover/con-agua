@@ -107,7 +107,7 @@ theorem ld8_specE (a : ArrId) (i : Word) (s₀ : St) :
     simp only [ld8, StateT.run_bind, StateT.run_get, pure_bind] at hrun
     split at hrun
     · rename_i h
-      simp only [StateT.run_pure, Except.ok.injEq, Prod.mk.injEq] at hrun
+      simp only [StateT.run_pure] at hrun
       obtain ⟨rfl, rfl⟩ := hrun
       exact ⟨rfl, by simp [h], h⟩
     · simp [StateT.lift, StateT.run, throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at hrun

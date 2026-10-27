@@ -191,7 +191,7 @@ theorem lamOK : ConsOK p lamCS where
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
     fun s => by simp [lamCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
-    simp only [lamCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+    simp only [lamCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval]; rfl
   skips := by
     intro e he s
     simp only [lamCS, Option.some.injEq] at he
@@ -202,7 +202,7 @@ theorem lamOK : ConsOK p lamCS where
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [lamCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+    simp only [lamCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [lamCS] at h
   mloc := fun h => by simp [lamCS] at h
   exnk := fun _ => by decide

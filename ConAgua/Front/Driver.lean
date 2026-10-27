@@ -64,7 +64,7 @@ applied, `(k, memory)` when line `k` did not scan or made no progress, `none` wh
 aborts (a line model is `none`). -/
 def runW (lineW : Mem → Word → Option (Word × Word × Mem)) (sz : Nat) (m : Mem) (i ln : Word) :
     Option (Word × Mem) :=
-  if h : i < UInt64.ofNat sz then
+  if _h : i < UInt64.ofNat sz then
     match lineW m i with
     | none => none
     | some (ok, nx, m') =>
@@ -75,7 +75,7 @@ def runW (lineW : Mem → Word → Option (Word × Word × Mem)) (sz : Nat) (m :
   else some (0, m)
 termination_by sz - i.toNat
 decreasing_by
-  have := L.Scan.lt_of_lt_ofNat h
+  have := L.Scan.lt_of_lt_ofNat _h
   rw [UInt64.lt_iff_toNat_lt] at _hx
   omega
 
@@ -92,9 +92,9 @@ def runK (lineW : Mem → Word → Option (Word × Word × Mem)) (sz : Nat) (i l
 section
 variable (lineW : Mem → Word → Option (Word × Word × Mem)) (sz : Nat) (m m' : Mem) (i ln ok nx : Word)
 theorem runW_end (h : ¬ i < UInt64.ofNat sz) : runW lineW sz m i ln = some (0, m) := by
-  rw [runW, dif_neg h]
+  rw [runW, dite_eq_right h]
 theorem runW_step (h : i < UInt64.ofNat sz) : runW lineW sz m i ln = runK lineW sz i ln (lineW m i) := by
-  rw [runW, dif_pos h]
+  rw [runW, dite_eq_left h]
   cases lineW m i with
   | none => rfl
   | some x => obtain ⟨ok, nx, m'⟩ := x; simp only [runK, dite_eq_ite]

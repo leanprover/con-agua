@@ -75,7 +75,7 @@ theorem whnf_spec (n : Nat) (s₀ : St) (mode vis d e : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec whSch p _ hp.whFind n, memoPutG_spec whSch p _ hp.whPut n,
       callW_spec p n "whnf_loop"] <;>
-    finish [whnfW_stuck, whnfW_run, memoSlotW_hit, memoSlotW_miss, msetG_eq, mvG, ebKey]
+    finish [whnfW_stuck, whnfW_run, memoSlotW_hit, memoSlotW_miss, mvG, ebKey]
 
 end spec
 
