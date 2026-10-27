@@ -28,7 +28,7 @@ open L.Arena
 
 /-- The frame of a `mk_*` tail: the interning's, plus the derived-range array. -/
 theorem mkK_frame {A : ArrId} (hA : A ≠ CTL) {c s d : Word} {x : Option (Word × Mem)} {m m' : Mem}
-    {r : Word} {A₀ : List ArrId} {C₀ : List Word}
+    {r : Word} {A₀ : List TieredArray} {C₀ : List Word}
     (hx : ∀ r₁ m₁, x = some (r₁, m₁) → MemFrame A₀ C₀ m m₁) (h : mkK A c s d x = some (r, m')) :
     MemFrame (A :: (tier1 A) :: A₀) C₀ m m' := by
   match x, hx, h with
@@ -47,7 +47,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : 
 
 /-- From the `AM.ok`/`ArenaD`/`AM.res` triple of a master `_ok`/`_D` lemma, a frame below 64
 and `Keeps cp`: the stage relation after. -/
-theorem stage_of_ok {op : AM EIdx} {A : List ArrId} {C : List Word} (hS : StageR dn vis fe m a)
+theorem stage_of_ok {op : AM EIdx} {A : List TieredArray} {C : List Word} (hS : StageR dn vis fe m a)
     (hok : AM.ok op a) (hD : ArenaD m' (AM.st op a)) (hres : AM.res op a = decE r)
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64)
     (hk : Keeps cp op) (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :
@@ -63,7 +63,7 @@ theorem internBVar_stage (hS : StageR dn vis fe m a) (u : Word) (hI : binternW m
   obtain ⟨hok, hD, hres⟩ := internBVar_D m a hS.1.arena u r m' hI
   have hI₂ := hI
   exact stage_of_ok hS hok hD hres (consInternM_frame bvarCS_wf hI₂)
-    (by simp [tier1, tierOff, ConsSch.wset, bvarCS, BREC, BSLOT]) (by simp [bvarCS]) (keeps_internE _)
+    (by simp [tier1, ConsSch.wset, bvarCS, BREC, BSLOT]) (by simp [bvarCS]) (keeps_internE _)
 
 theorem internFVar_stage (hS : StageR dn vis fe m a) (u ty : Word) (hty : ty.toNat < 2 ^ 32)
     (hI : fvinternW m u ty = some (r, m')) :
@@ -71,7 +71,7 @@ theorem internFVar_stage (hS : StageR dn vis fe m a) (u ty : Word) (hty : ty.toN
       IWGrow m m' := by
   obtain ⟨hok, hD, hres⟩ := internFVar_D m a hS.1.arena u ty r hty m' hI
   exact stage_of_ok hS hok hD hres (fvinternW_frame m u ty _ _ hI)
-    (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP]) (by simp) (keeps_internE _)
+    (by simp [tier1, FVREC, FVSLOT, FVLP]) (by simp) (keeps_internE _)
 
 theorem internSort_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 2 ^ 32)
     (hI : sointernW m u = some (r, m')) :
@@ -79,7 +79,7 @@ theorem internSort_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 
       IWGrow m m' := by
   obtain ⟨hok, hD, hres⟩ := internSort_D m a hS.1.arena u r hu m' hI
   exact stage_of_ok hS hok hD hres (sointernW_frame m u _ _ hI)
-    (by simp [tier1, tierOff, SOREC, SOSLOT, SOLP]) (by simp) (keeps_internE _)
+    (by simp [tier1, SOREC, SOSLOT, SOLP]) (by simp) (keeps_internE _)
 
 theorem internConst_stage (hS : StageR dn vis fe m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) (hI : ceinternW m f x = some (r, m')) :
@@ -87,7 +87,7 @@ theorem internConst_stage (hS : StageR dn vis fe m a) (f x : Word) (hf : f.toNat
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
   obtain ⟨hok, hD, hres⟩ := internConst_D m a hS.1.arena f x r hf hx m' hI
   exact stage_of_ok hS hok hD hres (ceinternW_frame m f x _ _ hI)
-    (by simp [tier1, tierOff, CREC, CSLOT, CLP]) (by simp) (keeps_internE _)
+    (by simp [tier1, CREC, CSLOT, CLP]) (by simp) (keeps_internE _)
 
 theorem mkApp_stage (hS : StageR dn vis fe m a) (f x : Word) (hI : mkAppW m f x = some (r, m')) :
     ∃ a', (internE (.app (decE f) (decE x))).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
@@ -97,7 +97,7 @@ theorem mkApp_stage (hS : StageR dn vis fe m a) (f x : Word) (hI : mkAppW m f x 
     unfold mkAppW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame appCS_wf hx) hI
-  exact stage_of_ok hS hok hD hres hf (by simp [tier1, tierOff, ADER, AREC, ASLOT]) (by simp) (keeps_internE _)
+  exact stage_of_ok hS hok hD hres hf (by simp [tier1, ADER, AREC, ASLOT]) (by simp) (keeps_internE _)
 
 theorem mkLam_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkLamW m t b = some (r, m')) :
     ∃ a', (internE (.lam (decE t) (decE b))).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
@@ -107,7 +107,7 @@ theorem mkLam_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkLamW m t b 
     unfold mkLamW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame lamCS_wf hx) hI
-  exact stage_of_ok hS hok hD hres hf (by simp [tier1, tierOff, LADER, LAREC, LASLOT]) (by simp) (keeps_internE _)
+  exact stage_of_ok hS hok hD hres hf (by simp [tier1, LADER, LAREC, LASLOT]) (by simp) (keeps_internE _)
 
 theorem mkForall_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkForallW m t b = some (r, m')) :
     ∃ a', (internE (.forallE (decE t) (decE b))).run a = .ok (decE r, a') ∧
@@ -117,7 +117,7 @@ theorem mkForall_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkForallW 
     unfold mkForallW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame forallCS_wf hx) hI
-  exact stage_of_ok hS hok hD hres hf (by simp [tier1, tierOff, FADER, FAREC, FASLOT]) (by simp) (keeps_internE _)
+  exact stage_of_ok hS hok hD hres hf (by simp [tier1, FADER, FAREC, FASLOT]) (by simp) (keeps_internE _)
 
 theorem mkLet_stage (hS : StageR dn vis fe m a) (t v b : Word) (hI : mkLetW m t v b = some (r, m')) :
     ∃ a', (internE (.letE (decE t) (decE v) (decE b))).run a = .ok (decE r, a') ∧
@@ -127,7 +127,7 @@ theorem mkLet_stage (hS : StageR dn vis fe m a) (t v b : Word) (hI : mkLetW m t 
     unfold mkLetW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame letCS_wf hx) hI
-  exact stage_of_ok hS hok hD hres hf (by simp [tier1, tierOff, LEDER, LEREC, LESLOT]) (by simp) (keeps_internE _)
+  exact stage_of_ok hS hok hD hres hf (by simp [tier1, LEDER, LEREC, LESLOT]) (by simp) (keeps_internE _)
 
 theorem mkProj_stage (hS : StageR dn vis fe m a) (n i e : Word) (hI : mkProjW m n i e = some (r, m')) :
     ∃ a', (internE (.proj (decI n) i.toNat (decE e))).run a = .ok (decE r, a') ∧
@@ -137,7 +137,7 @@ theorem mkProj_stage (hS : StageR dn vis fe m a) (n i e : Word) (hI : mkProjW m 
     unfold mkProjW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame projCS_wf hx) hI
-  exact stage_of_ok hS hok hD hres hf (by simp [tier1, tierOff, PJDER, PJREC, PJSLOT]) (by simp) (keeps_internE _)
+  exact stage_of_ok hS hok hD hres hf (by simp [tier1, PJDER, PJREC, PJSLOT]) (by simp) (keeps_internE _)
 
 end
 
@@ -204,7 +204,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : 
 tables, caches and pins are untouched, so `DerR` and `cp` carry over. -/
 theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .level} {op : AM LIdx}
     {key : β} {tag : UInt32} {pf : Option LIdx} {d : LDer} {err : CheckError}
-    {A : List ArrId} {C : List Word}
+    {A : List TieredArray} {C : List Word}
     (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ Tier1In 0 42 b ∨ Tier1In 55 64 b) (hC : ∀ x ∈ C, x.toNat < 64)
@@ -237,7 +237,7 @@ theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat <
   have hfr := consInternM_frame paramCS_wf hI₂
   exact stage_of_level hS (internLNode_param_run _ a) hok
     (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
-    hres hfr (by simp [tier1, tierOff, ConsSch.wset, paramCS, PREC, PSLOT]) (by simp [paramCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [tier1, ConsSch.wset, paramCS, PREC, PSLOT]) (by simp [paramCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 
@@ -251,7 +251,7 @@ theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r,
   have hfr := consInternM_frame zeroCS_wf hI₂
   exact stage_of_level hS (internLNode_zero_run a) hok
     (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
-    hres hfr (by simp [tier1, tierOff, ConsSch.wset, zeroCS, ZREC, ZSLOT]) (by simp [zeroCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [tier1, ConsSch.wset, zeroCS, ZREC, ZSLOT]) (by simp [zeroCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 
@@ -265,7 +265,7 @@ theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat <
   exact stage_of_level hS (internLNode_max_run _ _ a) hok
     (hR.lift_max _ _ _ _ ⟨hX, mintern_hp m a hR.max u v hu hv hR.maxHp (lvlHPW_or m a hR u v hu hv) _ _ hI⟩
       hfr (AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
-    hres hfr (by simp [tier1, tierOff, MREC, MSLOT, MHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [tier1, MREC, MSLOT, MHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 

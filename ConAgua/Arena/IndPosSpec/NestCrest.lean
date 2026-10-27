@@ -23,7 +23,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem RfFr.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m') (hA : RFM ∉ A)
+theorem RfFr.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m') (hA : RFM ∉ A)
     (hC : (208 : Word) ∉ C ∧ (218 : Word) ∉ C ∧ (219 : Word) ∉ C) : RfFr m m' :=
   ⟨A, C, hf, hA, hC.1, hC.2.1, hC.2.2⟩
 

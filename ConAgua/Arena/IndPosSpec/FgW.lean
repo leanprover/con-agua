@@ -27,12 +27,12 @@ namespace L.Ind
 open L.Arena
 
 /-- The five memos' arrays and stamp words. -/
-abbrev PosAv (S : List ArrId) (T : List Word) : Prop :=
+abbrev PosAv (S : List TieredArray) (T : List Word) : Prop :=
   (NOM ∉ S ∧ DPM ∉ S ∧ RAM ∉ S ∧ HBM ∉ S ∧ RFM ∉ S) ∧
   ((204 : Word) ∉ T ∧ (206 : Word) ∉ T ∧ (210 : Word) ∉ T ∧ (214 : Word) ∉ T ∧ (208 : Word) ∉ T ∧
     (218 : Word) ∉ T ∧ (219 : Word) ∉ T)
 
-theorem PosMR.mfr {S : List ArrId} {T : List Word} {m m' : Mem} (h : PosMR m) (hf : MFr S T m m')
+theorem PosMR.mfr {S : List TieredArray} {T : List Word} {m m' : Mem} (h : PosMR m) (hf : MFr S T m m')
     (hv : PosAv S T) : PosMR m' := by
   obtain ⟨⟨h1, h2, h3, h4, h5⟩, ⟨t1, t2, t3, t4, t5, t6, t7⟩⟩ := hv
   obtain ⟨⟨a, ha⟩, ⟨b, hb⟩, ⟨c, hc⟩, ⟨d, hd⟩, ⟨M, G, g, hR⟩⟩ := h

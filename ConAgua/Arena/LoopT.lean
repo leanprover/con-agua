@@ -61,7 +61,7 @@ theorem memoRG_mfr0 {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} (hS : S.
   exact memoRG_frame S hS K dv A C hA hC m m' f mp h
 
 /-- **`StageMemos` across a writer outside arrays 201‥208 and `CTL` 202‥219.** -/
-theorem StageMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : StageMemos m)
+theorem StageMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : StageMemos m)
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 201 ∨ 208 < b)
     (hC : ∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) : StageMemos m' := by
   have hM : MFr [] [] m m' := MFr.of_frame hf hA hC
@@ -144,7 +144,7 @@ theorem IndMemos.zero {m : Mem} (hsz : 220 ≤ (m.arr64 CTL).size)
     CrOK.zero (by omega) (hA _ (.inr (.inl rfl))) (hC 158 (.inr (.inl rfl)))⟩
 
 /-- **`IndMemos` across a writer outside its arrays and `CTL` words.** -/
-theorem IndMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : IndMemos m)
+theorem IndMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : IndMemos m)
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b ≠ 51 ∧ b ≠ 155 ∧ (b < 201 ∨ 208 < b))
     (hC : ∀ x ∈ C, x.toNat ≠ 52 ∧ x.toNat ≠ 158 ∧ (x.toNat < 202 ∨ 219 < x.toNat)) :
     IndMemos m' :=

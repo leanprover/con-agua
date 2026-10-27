@@ -323,7 +323,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   have hn' : nSl S m' t = n * 2 := kn'
   have hsat : ∀ b, b ≠ S.sa → b ≠ tier1 S.sa → b ≠ sa := fun b h1 h2 e => by
     rw [← hsa] at e
-    rcases tierA_cases' S.sa t with e' | e' <;> rw [e'] at e <;> contradiction
+    rcases tierA_eq_or S.sa t with e' | e' <;> rw [e'] at e <;> contradiction
   have hout : OutEq S m m' := ⟨fun b _ _ hb hb' _ => arr' b (hsat b hb hb'), by rw [ctl']⟩
   have hra : ∀ t', tierA S.ra t' ≠ sa := fun t' => by rw [← hsa]; exact hS.ra_sa' t' t
   have hfe : ∀ t' i f, f < S.w → fld S m' t' i f = fld S m t' i f := fun t' i f _ => by

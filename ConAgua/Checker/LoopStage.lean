@@ -46,7 +46,7 @@ theorem loopZeroArr_mem {b : Nat} (h : loopZeroArr b) : b ∈ loopZeroArrs := by
   simp only [loopZeroArr] at h
   simp only [loopZeroArrs, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, EIXA, EIXS,
     EIXN, PNM, PLM, PLSM, PEM, Stubs.CRM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM,
-    Ind.HBM, Ind.MCM, ILFM, EIXA1, EIXS1, EIXN1, TIXA, TIXS, TIXN, tier1, tierOff, List.mem_cons,
+    Ind.HBM, Ind.MCM, ILFM, EIXA1, EIXS1, EIXN1, TIXA, TIXS, TIXN, tier1, List.mem_cons,
     List.not_mem_nil, or_false]
   omega
 
@@ -64,8 +64,8 @@ theorem preLoopC_loopZeroCtls :
 
 /-- **The zeros the loop starts from**: the loaded memory's words (`loadMem_rd`), which no stage
 before the loop writes (`Since.frame`: `preLoopA`, `preLoopC`). -/
-theorem loopZero_of_since {b pb : ByteArray} {s8 s64 : List Nat} {m : Mem}
-    (h : Since (ConAgua.Final.loadMem b pb s8 s64) m pb) : LoopZero m := by
+theorem loopZero_of_since {b pb : ByteArray} {sz : TieredArray → Nat} {m : Mem}
+    (h : Since (ConAgua.Final.loadMem b pb sz) m pb) : LoopZero m := by
   have hf := h.frame
   refine ⟨?_, fun a ha j => ?_, fun x hx => ?_⟩
   · rw [hf.2.2.1]; have := h.caps.2.1; simp only [ctlMin] at this; omega
@@ -76,9 +76,9 @@ theorem loopZero_of_since {b pb : ByteArray} {s8 s64 : List Nat} {m : Mem}
       simp [hc] at this
     have hc : a ≠ CTL := by
       intro e; subst e; exact absurd hm (by decide)
-    rw [hf.1 a hn hc]; exact loadMem_rd (b := b) (pb := pb) (s8 := s8) (s64 := s64) a j
+    rw [hf.1 a hn hc]; exact loadMem_rd (b := b) (pb := pb) (sz := sz) a j
   · rw [hf.2.1 x (not_mem_of_toNat preLoopC_loopZeroCtls x (loopZeroCtl_mem hx))]
-    exact loadMem_rd (b := b) (pb := pb) (s8 := s8) (s64 := s64) _ x
+    exact loadMem_rd (b := b) (pb := pb) (sz := sz) _ x
 
 /-- `FrontDecls` from the twin prefix's shape fact (lane `pipeline`'s `prefix_frontDecls`). -/
 theorem frontDecls_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}
@@ -102,17 +102,17 @@ theorem preLoopC_avoidCore : AvoidC 96 128 preLoopC := by
 /-- **The core tier at the loop's start**: the twin's caches are `AState.init`'s (lane `pipeline`'s
 `prefix_caches`), the core's memos the loaded memory's zeros (lane `inits`' `cachesEmpty_refines`),
 which no stage before the loop writes (`CoreRM.frame` over `preLoopA`, `preLoopC`). -/
-theorem core_of_R7 {b pb : ByteArray} {s8 s64 : List Nat} {sA : AState} {pre : PreludeIx}
+theorem core_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} {sA : AState} {pre : PreludeIx}
     {sB : AState} {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
     {pins : List ConLeche.NatOpPinSet} {ipins : List INatOpPinSet} {sE : AState} {m : Mem}
     (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
-    (h7 : R7 (ConAgua.Final.loadMem b pb s8 s64) m pb ds ipins sE) : CoreR m sE.caches := by
+    (h7 : R7 (ConAgua.Final.loadMem b pb sz) m pb ds ipins sE) : CoreR m sE.caches := by
   rw [(prefix_caches hpx).1]
   have hctl : 120 ≤ s64[1]?.getD 0 := by
     have := h7.since.caps.2.1
     rw [loadMem_arr] at this; simp only [Array.size_replicate, ctlMin, CTL] at this; omega
   obtain ⟨M, hM⟩ := cachesEmpty_refines s64 hctl
-  have hf0 : MemFrame [] [] (initMem s64) (ConAgua.Final.loadMem b pb s8 s64) := by
+  have hf0 : MemFrame [] [] (initMem s64) (ConAgua.Final.loadMem b pb sz) := by
     refine ⟨fun a _ _ => ?_, fun x _ => ?_, fun a => ?_, ?_⟩
     · rw [loadMem_arr, initMem_arr]
     · rw [loadMem_arr, initMem_arr]

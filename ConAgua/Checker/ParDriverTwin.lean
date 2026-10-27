@@ -20,9 +20,9 @@ namespace L.Checker
 open L L.Arena L.Rom
 
 /-- **The driver's two runs accept ⇒ the twin accepts.** -/
-theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+theorem drv_twinAccepts (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-    (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 3) = .ok (rs₁, m₁))
+    (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
     (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
@@ -31,7 +31,7 @@ theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b
     (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
     TwinAccepts [b] := by
   have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
-  obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ := checkA_run b pb s8 s64 hin 3 (Or.inr rfl) N₁ hN₁ rs₁ m₁ h₁ hr
+  obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ := checkA_run b pb sz hin 3 (Or.inr rfl) N₁ hN₁ rs₁ m₁ h₁ hr
   have hflag : modeFlag 3 = 0 := rfl
   rw [hflag] at hok hm₁
   -- the twin's facts behind the program bundle (as `foldStage_checker`)

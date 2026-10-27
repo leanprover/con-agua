@@ -35,19 +35,19 @@ namespace L.Arena
 open ConRon.Arena
 
 /-- The words of a range, `lo ≤ x < hi`, apart from a writer. -/
-def AvoidA (lo hi : Nat) (A : List ArrId) : Prop := ∀ b ∈ A, b < lo ∨ hi ≤ b
+def AvoidA (lo hi : Nat) (A : List TieredArray) : Prop := ∀ b ∈ A, b < lo ∨ hi ≤ b
 def AvoidC (lo hi : Nat) (C : List Word) : Prop := ∀ x ∈ C, x.toNat < lo ∨ hi ≤ x.toNat
 
-instance (lo hi : Nat) (A : List ArrId) : Decidable (AvoidA lo hi A) := by unfold AvoidA; infer_instance
+instance (lo hi : Nat) (A : List TieredArray) : Decidable (AvoidA lo hi A) := by unfold AvoidA; infer_instance
 
 /-- A writer of arrays and words below `k` avoids every range starting at `k` or above. -/
-theorem AvoidA.of_lt {k lo hi : Nat} {A : List ArrId} (hA : ∀ b ∈ A, b < k) (hk : k ≤ lo) :
+theorem AvoidA.of_lt {k lo hi : Nat} {A : List TieredArray} (hA : ∀ b ∈ A, b < k) (hk : k ≤ lo) :
     AvoidA lo hi A := fun b hb => .inl (Nat.lt_of_lt_of_le (hA b hb) hk)
 theorem AvoidC.of_lt {k lo hi : Nat} {C : List Word} (hC : ∀ x ∈ C, x.toNat < k) (hk : k ≤ lo) :
     AvoidC lo hi C := fun x hx => .inl (Nat.lt_of_lt_of_le (hC x hx) hk)
 /-- A writer of the store tier (arrays below `64` and their tier-1 twins `256‥319`) avoids every
 range inside `[64, 256)`. -/
-theorem AvoidA.of_low {lo hi : Nat} {A : List ArrId} (hA : ∀ b ∈ A, InStoreTier b)
+theorem AvoidA.of_low {lo hi : Nat} {A : List TieredArray} (hA : ∀ b ∈ A, InStoreTier b)
     (hlo : 64 ≤ lo) (hhi : hi ≤ 256) : AvoidA lo hi A := fun b hb =>
   (hA b hb).elim (fun h => .inl (Nat.lt_of_lt_of_le h hlo)) (fun h => .inr (Nat.le_trans hhi h.1))
 
@@ -138,7 +138,7 @@ theorem vb_const : VConst VB := fun _ _ _ _ h => h
 
 theorem ModeR.frame {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
     {VR : Mem → Word → ν → Prop} {m m' : Mem} {M : Std.HashMap (κ × Word) ν} {eb : Word}
-    {t te : Std.HashMap κ ν} {A : List ArrId} {C : List Word} (hS : S.WF) (hV : VConst VR)
+    {t te : Std.HashMap κ ν} {A : List TieredArray} {C : List Word} (hS : S.WF) (hV : VConst VR)
     (hA : S.arr ∉ A) (hC : S.cs ∉ C) (hf : MemFrame A C m m') (h : ModeR S K VR m M eb t te) :
     ModeR S K VR m' M eb t te :=
   ⟨memoRV_frame S hS K VR A C hA hC m m' hf (hV m m') M h.memo, h.cur, h.stored, h.empty⟩
@@ -165,7 +165,7 @@ def CoreR (m : Mem) (c : Caches) : Prop := ∃ M, CoreRM m c M 0
 theorem coreSch_wf (a : ArrId) (c : Word) (h1 : a ≠ CTL) (h2 : c.toNat + 2 < 2 ^ 32) :
     MemoSch.WF ⟨a, c⟩ := ⟨h1, h2⟩
 
-theorem CoreRM.frame {A : List ArrId} {C : List Word} {m m' : Mem} {c : Caches} {M : ModeMaps}
+theorem CoreRM.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {c : Caches} {M : ModeMaps}
     {eb : Word} (hA : AvoidA 96 128 A) (hC : AvoidC 96 128 C) (hf : MemFrame A C m m')
     (h : CoreRM m c M eb) : CoreRM m' c M eb := by
   have nA : ∀ b : ArrId, 96 ≤ b → b < 128 → b ∉ A := fun b h1 h2 hb => by
@@ -197,7 +197,7 @@ theorem CoreRM.frame {A : List ArrId} {C : List Word} {m m' : Mem} {c : Caches} 
     memoRG_frame _ (wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) m m' hf _ h.lsq⟩
 
-theorem CoreR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {c : Caches}
+theorem CoreR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {c : Caches}
     (hA : AvoidA 96 128 A) (hC : AvoidC 96 128 C) (hf : MemFrame A C m m') (h : CoreR m c) :
     CoreR m' c := by
   obtain ⟨M, h⟩ := h
@@ -354,7 +354,7 @@ theorem PinsR.congr {m m' : Mem} {p : Pins} (he : m'.arr64 PINS = m.arr64 PINS)
     (h : PinsR m p) : PinsR m' p :=
   ⟨fun h0 => (h.full (by simpa only [pinW, he] using h0)).congr he⟩
 
-theorem PinsR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {p : Pins}
+theorem PinsR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {p : Pins}
     (hA : AvoidA 128 129 A) (hf : MemFrame A C m m') (h : PinsR m p) : PinsR m' p :=
   h.congr (hf.1 PINS (fun hm => by have := hA _ hm; revert this; decide) (by decide))
 
@@ -550,7 +550,7 @@ theorem tblArr_spec (w : Word) (ht : rowTag w ≤ 2) :
   have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
   rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with h1 | h1 | h1 <;>
   rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h2 | h2 <;>
-  · simp [tblArr, tixArr, tierA, tier1, tierOff, h1, h2, TIXA, TIXS, TIXN]
+  · simp [tblArr, tixArr, tierA, tier1, h1, h2, TIXA, TIXS, TIXN]
 
 /-- The table row's index: the handle's index. -/
 def tblIx (w : Word) : Nat := w.toNat % 2 ^ 27
@@ -625,7 +625,7 @@ def TblSame (m m' : Mem) : Prop :=
 theorem TblSame.refl (m : Mem) : TblSame m m := ⟨fun _ _ => rfl, rfl, rfl⟩
 
 /-- The table side from a frame avoiding the table arrays and `CTL[133]`. -/
-theorem TblSame.of_frame {A : List ArrId} {C : List Word} {m m' : Mem}
+theorem TblSame.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem}
     (hA : AvoidA 129 132 A) (hA1 : AvoidA 385 388 A) (hE : ETAB ∉ A) (hC : (133 : Word) ∉ C)
     (hf : MemFrame A C m m') : TblSame m m' := by
   refine ⟨fun w hw => hf.1 _ (fun hm => ?_)
@@ -747,7 +747,7 @@ theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
 
 /-- The frame over exactly what `EnvR` reads: arrays 129‥142 (but `PEND`‥`RMEMO`), `ETAB`, the
 table rows' tier 1 (385‥387) and `CTL[128]`, `CTL[129]`, `CTL[133]`. -/
-theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
+theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List TieredArray} {C : List Word}
     {m m' : Mem} {vis : Word} {fe : IFEnv}
     (hA : AvoidA 129 137 A) (hA1 : AvoidA 140 144 A) (hA2 : AvoidA 385 388 A)
     (hC : AvoidC 128 130 C) (hC3 : AvoidC 133 134 C)
@@ -763,10 +763,10 @@ theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : L
       (fun hm => by have := hC3 _ hm; simp at this) hf)
 
 /-- A writer of the store tier (arrays below `64` and `256‥319`) avoids the table rows' tier 1. -/
-theorem AvoidA.of_lowT {A : List ArrId} (hA : ∀ b ∈ A, InStoreTier b) :
+theorem AvoidA.of_lowT {A : List TieredArray} (hA : ∀ b ∈ A, InStoreTier b) :
     AvoidA 385 388 A := fun b hb => .inl (by have := hA b hb; simp only [ArrId] at *; omega)
 
-theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
+theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List TieredArray} {C : List Word}
     {m m' : Mem} {vis : Word} {fe : IFEnv}
     (hA : AvoidA 129 144 A) (hC : AvoidC 128 136 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe)
     (hA2 : AvoidA 385 388 A := by decide) :
@@ -777,14 +777,14 @@ theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : Li
 
 /-! ## The whole relation -/
 
-theorem MemFrame.top_eq {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem MemFrame.top_eq {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hC : (0 : Word) ∉ C) : m'.top = m.top := by
   have := hf.2.1 0 hC
   simp only [rdW] at this
   simpa [Mem.top] using this
 
 /-- **The mode across a frame** that keeps `CTL[0]` and `CTL[1]`. -/
-theorem ModeOK.frame {m m' : Mem} {A : List ArrId} {C : List Word} (h : ModeOK m)
+theorem ModeOK.frame {m m' : Mem} {A : List TieredArray} {C : List Word} (h : ModeOK m)
     (hf : MemFrame A C m m') (h0 : (0 : Word) ∉ C) (h1 : (1 : Word) ∉ C) : ModeOK m' := by
   have ht : m'.top = m.top := hf.top_eq h0
   have hfl : m'.flag = m.flag := hf.2.1 1 h1
@@ -804,7 +804,7 @@ structure CheckR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vi
 `WriteSets.lean`) and whose twin side keeps `cp` (every walk, `Keeps.lean`) keeps `CoreR`,
 `PinsR` and `EnvR`; the walk's own theorem gives `ArenaD`. -/
 theorem CheckR.of_walkM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
-    {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
+    {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (hmode : ModeOK m') : CheckR dn m' a' vis fe := by
   have hc : a'.caches = a.caches := congrArg Prod.fst hk
@@ -817,7 +817,7 @@ theorem CheckR.of_walkM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
 /-- `CheckR.of_walkM` for a walk that keeps `CTL[0]` and `CTL[1]` (an interning): the mode by the
 frame. -/
 theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
-    {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
+    {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) : CheckR dn m' a' vis fe :=
   hR.of_walkM hD hf hA hC hk (hR.mode.frame hf h01.1 h01.2)
@@ -825,7 +825,7 @@ theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
 /-- **Every tier but the arena's above a writer**: arrays from 137 (but the env index's tier 1,
 140‥142) and `CTL` words from 130 up
 (the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/
-theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
+theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List TieredArray} {C : List Word}
     {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256 ∧ (b < 140 ∨ 144 ≤ b))
     (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hf : MemFrame A C m m') (h : CheckR dn m a vis fe) :
     CheckR dn m' a vis fe := by

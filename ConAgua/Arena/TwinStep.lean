@@ -34,7 +34,7 @@ variable {dn : NIdx → Option ConLeche.Name} {fe : IFEnv}
 /-- **`TwinOK` across a writer** that leaves the core memos (arrays 49, 50, 52‥54, 151‥153, `CTL`
 48, 50, 54, 56, 58, 152, 154, 156) alone, `EREC` writers included (no part of `TwinOK` reads the
 records: `StoreDen.mem`); the twin state and the environment unchanged. -/
-theorem TwinOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+theorem TwinOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A)
     (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
     (hWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
@@ -47,7 +47,7 @@ theorem TwinOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
 
 /-- `TwinOK` across a writer of `PT0`, arrays from 256 on and `CTL` words below 48 or in 60‥127
 only (the bracket's). -/
-theorem TwinOK.frameLo {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+theorem TwinOK.frameLo {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b = 62 ∨ IsTier1 b)
     (hC : ∀ x ∈ C, x.toNat < 48 ∨ (60 ≤ x.toNat ∧ x.toNat < 128))
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
@@ -64,7 +64,7 @@ theorem TwinOK.frameLo {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState
 
 end frames
 
-theorem pinW_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem pinW_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hP : PINS ∉ A) : pinW m' 0 = pinW m 0 := by
   simp only [pinW, hf.1 PINS hP (by decide)]
 

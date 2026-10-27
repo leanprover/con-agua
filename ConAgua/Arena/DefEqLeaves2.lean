@@ -169,7 +169,7 @@ theorem keeps_cplL_internNodeE (v : ENodeView) : Keeps cplL (internNodeE v) := b
 
 /-- **`CoreS` across an interning step** (`WhnfCoreApp.lean`'s `CoreS.arena_frame`, copied). -/
 theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
-    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cplL a' = cplL a)
     (hf : MemFrame A C m m')
     (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b) (hpins : (128 : ArrId) ∉ A)
@@ -258,7 +258,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       cplL a₀ := by
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
-  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [tier1, tierOff, ConsSch.wset, REC, SLOT]) (by simp [tier1, tierOff, ConsSch.wset, REC, SLOT]) (by simp [tier1, tierOff, ConsSch.wset, REC, SLOT])
+  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [tier1, ConsSch.wset, REC, SLOT]) (by simp [tier1, ConsSch.wset, REC, SLOT]) (by simp [tier1, ConsSch.wset, REC, SLOT])
     (by simp) (by simp)
     (hmode := hK.1.mode.frame hfr (by simp) (by simp)), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 

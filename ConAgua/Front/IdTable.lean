@@ -417,7 +417,7 @@ structure TblSame (m m' : Mem) (b : ArrId) : Prop where
   z : rdW (m'.arr64 CTL) (szC b) = rdW (m.arr64 CTL) (szC b)
   e : rdW (m'.arr64 CTL) (spS b).cs = rdW (m.arr64 CTL) (spS b).cs
 
-theorem TblSame.of_frameD {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
+theorem TblSame.of_frameD {A : List TieredArray} {C : List Word} {m m' : Mem} {b : ArrId}
     (hf : MemFrame A C m m') (hb : TblIx b) (hbA : b ∉ A) (hb8 : spArr b ∉ A) (hzC : szC b ∉ C)
     (heC : (spS b).cs ∉ C) : TblSame m m' b :=
   ⟨hf.1 b hbA (by rcases hb with rfl | rfl | rfl <;> decide),
@@ -430,7 +430,7 @@ theorem TblSame.of_eq {m m' : Mem} {b : ArrId} (h : m'.arr64 b = m.arr64 b)
 
 /-- Table `b`'s arrays and `CTL` words are outside a frame of arrays outside `idArrs` and `CTL`
 words outside `idCtl`. -/
-theorem tbl_apart {A : List ArrId} {C : List Word} {b : ArrId} (hb : TblIx b)
+theorem tbl_apart {A : List TieredArray} {C : List Word} {b : ArrId} (hb : TblIx b)
     (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x ∉ idCtl) :
     b ∉ A ∧ spArr b ∉ A ∧ szC b ∉ C ∧ (spS b).cs ∉ C :=
   ⟨fun h => by have := hA b h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, NID, LID, EID, NIDS, LIDS, EIDS],
@@ -438,7 +438,7 @@ theorem tbl_apart {A : List ArrId} {C : List Word} {b : ArrId} (hb : TblIx b)
     fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [szC, idCtl] at this,
     fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [spS, idCtl] at this⟩
 
-theorem TblSame.of_frame {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
+theorem TblSame.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} {b : ArrId}
     (hf : MemFrame A C m m') (hb : TblIx b) (hA : ∀ x ∈ A, x ∉ idArrs)
     (hC : ∀ x ∈ C, x ∉ idCtl) : TblSame m m' b :=
   have h := tbl_apart hb hA hC
@@ -460,7 +460,7 @@ theorem tblW_congr {m m' : Mem} {b : ArrId} (h : TblSame m m' b) (i : Word) :
   unfold tblW; rw [spF_congr h, szW_congr h, h.d]; simp only [mvG, spS, h.s]
 
 /-- **The relation survives a writer of other arrays and `CTL` words.** -/
-theorem TblR.frameD {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
+theorem TblR.frameD {A : List TieredArray} {C : List Word} {m m' : Mem} {b : ArrId}
     {t : ConLeche.Frontend.IdTable (Idx k)} (h : TblR m b t) (hf : MemFrame A C m m')
     (hb : TblIx b) (hbA : b ∉ A) (hb8 : spArr b ∉ A) (hzC : szC b ∉ C) (heC : (spS b).cs ∉ C) :
     TblR m' b t := by
@@ -474,7 +474,7 @@ theorem TblR.frameD {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
   · intro i hi; exact hg i (hz ▸ hi)
 
 /-- **The relation survives a writer of arrays outside `idArrs` and `CTL` words outside `idCtl`.** -/
-theorem TblR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
+theorem TblR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {b : ArrId}
     {t : ConLeche.Frontend.IdTable (Idx k)} (h : TblR m b t) (hf : MemFrame A C m m')
     (hb : TblIx b) (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x ∉ idCtl) :
     TblR m' b t :=

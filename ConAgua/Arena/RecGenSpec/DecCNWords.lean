@@ -102,7 +102,7 @@ theorem AgreeA.set_iw {b : Nat} (m : Mem) {i : Word} (v : Word) (hi : i.toNat < 
   · rw [set64IW_get]; rw [ite_eq_right (by omega)]
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
 
-theorem KeepW.of_mfr {S : List ArrId} {T : List Word} {m m' : Mem} (h : MFr S T m m') : KeepW m m' := by
+theorem KeepW.of_mfr {S : List TieredArray} {T : List Word} {m m' : Mem} (h : MFr S T m m') : KeepW m m' := by
   obtain ⟨A, C, hf, -, -⟩ := h
   exact hf.2.2.1
 

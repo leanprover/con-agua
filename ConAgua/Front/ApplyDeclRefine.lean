@@ -39,7 +39,7 @@ theorem arr_set64 (m : Mem) (a : ArrId) (i v : Word) (j : Nat) :
     · simp [h2]
   · simp [h]
 
-theorem MemFrame.set64' {A : List ArrId} {C : List Word} {m m₁ : Mem} (h : MemFrame A C m m₁)
+theorem MemFrame.set64' {A : List TieredArray} {C : List Word} {m m₁ : Mem} (h : MemFrame A C m m₁)
     (a : ArrId) (ha : a ≠ CTL) (hA : a ∈ A) (i v : Word) : MemFrame A C m (m₁.set64 a i v) :=
   h.trans ((MemFrame.set64 m₁ a ha i v).mono (by simpa using hA) (by simp))
 

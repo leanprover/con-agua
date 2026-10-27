@@ -68,7 +68,7 @@ structure LoopR (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) 
   pinsets : L.Rom.PinSetsR m pins
 
 /-- `IWOK` survives a frame that keeps `IW`, `EREC` and the two tops `CTL[129]`, `CTL[200]`. -/
-theorem IWOK.frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem IWOK.frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hA : L.Ind.IW ∉ A) (hE : EREC ∉ A) (h129 : (129 : Word) ∉ C) (h200 : (200 : Word) ∉ C)
     (h : L.Ind.IWOK m) : L.Ind.IWOK m' := by
   have hI : m'.arr64 L.Ind.IW = m.arr64 L.Ind.IW := hf.1 _ hA (by decide)

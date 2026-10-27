@@ -106,7 +106,7 @@ theorem mentionsAnyConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NId
 end census3
 
 /-- A memo-free frame is one for any memo sets. -/
-theorem MFr.up {S : List ArrId} {T : List Word} {m m' : Mem} (h : MFr [] [] m m') : MFr S T m m' :=
+theorem MFr.up {S : List TieredArray} {T : List Word} {m m' : Mem} (h : MFr [] [] m m') : MFr S T m m' :=
   h.mono (by simp) (by simp)
 
 section census

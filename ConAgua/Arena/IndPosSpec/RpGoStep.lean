@@ -103,10 +103,10 @@ theorem LowFr.trans {m₁ m₂ m₃ : Mem} (h₁ : LowFr m₁ m₂) (h₂ : LowF
   · intro x hx; rcases List.mem_append.mp hx with h | h; exact c₁ x h; exact c₂ x h
 
 theorem sointernW_low {m m' : Mem} {u r : Word} (h : sointernW m u = some (r, m')) : LowFr m m' := by
-  exact ⟨_, _, (sointernW_frame (hI := h)), by simp [tier1, tierOff, SOREC, SOSLOT, SOLP], by simp⟩
+  exact ⟨_, _, (sointernW_frame (hI := h)), by simp [tier1, SOREC, SOSLOT, SOLP], by simp⟩
 
 theorem fvinternW_low {m m' : Mem} {u ty r : Word} (h : fvinternW m u ty = some (r, m')) : LowFr m m' := by
-  exact ⟨_, _, (fvinternW_frame (hI := h)), by simp [tier1, tierOff, FVREC, FVSLOT, FVLP], by simp⟩
+  exact ⟨_, _, (fvinternW_frame (hI := h)), by simp [tier1, FVREC, FVSLOT, FVLP], by simp⟩
 
 theorem canonW_low (n : Nat) {m m' : Mem} {no nl us nn c v : Word} {r : List Word}
     (h : canonW n m no nl us nn c v = some (r, m')) : LowFr m m' := by
@@ -420,12 +420,12 @@ theorem MFr.of_low {m m' : Mem} (h : LowFr m m') : MFr [] [] m m' := by
   · have := hA b hb; simp only [ArrId] at this ⊢; omega
   · have := hC x hx; left; omega
 
-theorem rpMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : RAM ∉ S0)
+theorem rpMR_mfr {S0 : List TieredArray} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : RAM ∉ S0)
     (hT : (210 : Word) ∉ T0) {mp : Std.HashMap EIdx EIdx} (h : rpMR m mp) : rpMR m' mp := by
   obtain ⟨A, C, f, hA, hC⟩ := hf.memo RAM 210 (by decide) (by decide) hS hT
   exact memoRG_frame raSch raSch_wf bmKey (fun w : Word => decE w) A C hA hC m m' f mp h
 
-theorem noMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : NOM ∉ S0)
+theorem noMR_mfr {S0 : List TieredArray} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : NOM ∉ S0)
     (hT : (204 : Word) ∉ T0) {mp : Std.HashMap EIdx Bool} (h : noMR m mp) : noMR m' mp := by
   obtain ⟨A, C, f, hA, hC⟩ := hf.memo NOM 204 (by decide) (by decide) hS hT
   exact memoRG_frame noSch noSch_wf bmKey (fun w : Word => w != 0) A C hA hC m m' f mp h

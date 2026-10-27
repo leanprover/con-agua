@@ -23,7 +23,7 @@ namespace L.Arena
 open L.Ind
 
 /-- **`CrOK` across a writer outside `CRM` and `CTL[158]`.** -/
-theorem CrOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : L.Stubs.CrOK m)
+theorem CrOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : L.Stubs.CrOK m)
     (hf : MemFrame A C m m') (hA : L.Stubs.CRM ∉ A) (hC : (158 : Word) ∉ C) : L.Stubs.CrOK m' :=
   let ⟨mp, hm⟩ := h
   ⟨mp, memoRV_frame (S := L.Stubs.crSch) (hS := L.Stubs.crSch_wf) (K := bmKey) (VR := L.Stubs.CrV)

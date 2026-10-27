@@ -437,16 +437,16 @@ theorem litNewOK :
     NewOKR litSch RecRel litH m [0, o, l, hashN (tpool m) o.toNat l.toNat]
       (litKey (.natVal (pv (vpool m) o.toNat l.toNat))) (hashN (tpool m) o.toNat l.toNat) := by
   intro t ht hroom ht0
-  have hpr : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
+  have hpr : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) t) _ m 0
   have hpr₁ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (tierA_ne_pool _ (by decide) t).2.symm _ m 0
-  have hprₜ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
+  have hprₜ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) t) _ m 0
   have hprv := vpool_congr hpr hpr₁
   have hprc := pcap_congr' hpr hpr₁
   have hp : vpool (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr hpr₁
   have hpc : pcap (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) = pcap m := pcap_congr' hpr hpr₁
   have htop : rdW ((newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
-    rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (ne_tierA (by decide) (by decide) (by decide) t)]
+    rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (ne_tierA (by decide) t)]
   have hqt : tpool (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) = tpool m := tpool_congr hpr hpr₁
   have hrs : RSlice (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) t o l :=
     (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hprₜ)).mpr (RSlice.intern hq hq0 ht0)
@@ -537,16 +537,16 @@ theorem litNewOKStr :
     NewOKR litSch RecRel litH m [1, o, l, hashN (tpool m) o.toNat l.toNat]
       (litKey (.strVal s)) (hashN (tpool m) o.toNat l.toNat) := by
   intro t ht hroom ht0
-  have hpr : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
+  have hpr : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) t) _ m 0
   have hpr₁ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (tierA_ne_pool _ (by decide) t).2.symm _ m 0
-  have hprₜ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
+  have hprₜ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) t) _ m 0
   have hprv := vpool_congr hpr hpr₁
   have hprc := pcap_congr' hpr hpr₁
   have hp : vpool (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr hpr₁
   have hpc : pcap (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) = pcap m := pcap_congr' hpr hpr₁
   have htop : rdW ((newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
-    rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (ne_tierA (by decide) (by decide) (by decide) t)]
+    rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (ne_tierA (by decide) t)]
   have hqt : tpool (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) = tpool m := tpool_congr hpr hpr₁
   have hrs : RSlice (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) t o l :=
     (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hprₜ)).mpr (RSlice.intern hq hq0 ht0)
@@ -677,7 +677,7 @@ theorem grow_ctl (x : Word) (hx : x ≠ 0) : rdW (m'.arr64 CTL) x = rdW (m.arr64
 include hg in
 theorem RecRel_grow (hpool : PoolOK m) (t i : Word) (k : LitNode) (h : RecRel m t i k) : RecRel m' t i k := by
   have hr := grow_arr m m' hg (tierA REC t) (tierA_ne_pool _ (by decide) t)
-    (ne_tierA (by decide) (by decide) (by decide) t).symm
+    (ne_tierA (by decide) t).symm
   have h41 := hpool.top41
   have hta := hg.tagree (by omega)
   have hag := hg.agree
@@ -699,11 +699,11 @@ theorem LitR.grow (a : AState) (hR : LitR m a) : LitR m' a := by
   obtain ⟨hpool, hS⟩ := hR
   have hr : ∀ t, m'.arr64 (tierA REC t) = m.arr64 (tierA REC t) := fun t =>
     grow_arr m m' hg _ (tierA_ne_pool _ (by decide) t)
-      (ne_tierA (by decide) (by decide) (by decide) t).symm
+      (ne_tierA (by decide) t).symm
   have := hg.frame.size
   refine ⟨hpool.grows hg, ConsR.mono hS hr (fun t => grow_arr m m' hg _
       (tierA_ne_pool _ (by decide) t)
-      (ne_tierA (by decide) (by decide) (by decide) t).symm)
+      (ne_tierA (by decide) t).symm)
     (by rw [hg.frame.ctl, Mem.size_arr64_set64]) (fun x hx => grow_ctl m m' hg x (by rcases hx with rfl | rfl | rfl | rfl <;> decide))
     (fun t i k => RecRel_grow m m' hg hpool t i k) (fun t i => by simp only [litCS, litCSk, litH, hr])⟩
 

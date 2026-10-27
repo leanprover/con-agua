@@ -44,9 +44,9 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 /-- **Entry 1's buffer** (the first `len` words of `OUT`, `len` its word `1`, after a run of
 `check` in mode `1` that returned `2^63 + k`): inside `OUT`, at least the header long, its header
 entries inside it and in increasing order. -/
-theorem entry1_buf (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+theorem entry1_buf (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64)
     (N : Nat) (hN : N < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-    (h₁ : L.run checkerProg N "check" [] (loadMemM b pb s8 s64 1) = .ok (rs₁, m₁))
+    (h₁ : L.run checkerProg N "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     (B : Array Word) (hB : B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat) :
     ((m₁.arr64 OUT).getD 1 0).toNat ≤ (m₁.arr64 OUT).size ∧ 132 ≤ ((m₁.arr64 OUT).getD 1 0).toNat ∧
@@ -54,7 +54,7 @@ theorem entry1_buf (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s
       (∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i < i' →
         (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1) := by
   have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
-  obtain ⟨PA, m, v, hS, -, -, hok, hm₁, -⟩ := checkA_run b pb s8 s64 hin 1 (Or.inl rfl) N hN rs₁ m₁ h₁ hr
+  obtain ⟨PA, m, v, hS, -, -, hok, hm₁, -⟩ := checkA_run b pb sz hin 1 (Or.inl rfl) N hN rs₁ m₁ h₁ hr
   have hflag : modeFlag 1 = 1 := rfl
   rw [hflag] at hok hm₁
   have hF := parCompactMem_out m v 1

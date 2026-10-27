@@ -61,48 +61,46 @@ def Agree (p q : Array Word) (t : Nat) : Prop := ∀ j, j < t → p[j]? = q[j]?
 /-- `m'` is `m` with at most word array `a` changed: the frame of a function that writes only
 `a`. A named predicate with its own `grind` lemmas, rather than an equation
 `m' = m.setArr64 a (m'.arr64 a)`, whose read-back needs `m.HasW a` at every use. -/
-def Frame (a : ArrId) (m m' : Mem) : Prop :=
+def Frame (a : TieredArray) (m m' : Mem) : Prop :=
   m'.bytes = m.bytes ∧ m.SameShape m' ∧ ∀ b, b ≠ a → m'.arr64 b = m.arr64 b
 
-theorem Frame.refl (a : ArrId) (m : Mem) : Frame a m m := ⟨rfl, .refl m, fun _ _ => rfl⟩
+theorem Frame.refl (a : TieredArray) (m : Mem) : Frame a m m := ⟨rfl, .refl m, fun _ _ => rfl⟩
 grind_pattern [arena_grind] Frame.refl => Frame a m m
 
-theorem Frame.set64 (a : ArrId) (m m' : Mem) (i v : Word) (h : Frame a m m') :
+theorem Frame.set64 (a : TieredArray) (m m' : Mem) (i v : Word) (h : Frame a m m') :
     Frame a m (m'.set64 a i v) := by
   obtain ⟨h1, h2, h3⟩ := h
   refine ⟨h1, h2.set64 a i v, fun b hb => ?_⟩
   rw [← h3 b hb]
-  simp only [Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?]; grind
+  simp only [Mem.set64, Mem.arr64, hb, ite_false]
 grind_pattern [arena_grind] Frame.set64 => Frame a m (m'.set64 a i v)
 
-theorem Frame.trans (a : ArrId) (m m' m'' : Mem) (h : Frame a m m') (h' : Frame a m' m'') :
+theorem Frame.trans (a : TieredArray) (m m' m'' : Mem) (h : Frame a m m') (h' : Frame a m' m'') :
     Frame a m m'' := by
   obtain ⟨h1, h2, h3⟩ := h; obtain ⟨h1', h2', h3'⟩ := h'
   exact ⟨h1'.trans h1, h2.trans h2', fun b hb => (h3' b hb).trans (h3 b hb)⟩
 grind_pattern [arena_grind] Frame.trans => Frame a m m'', Frame a m' m''
 
-theorem Frame.arr64 (a b : ArrId) (m m' : Mem) (h : Frame a m m') (hb : b ≠ a) :
+theorem Frame.arr64 (a b : TieredArray) (m m' : Mem) (h : Frame a m m') (hb : b ≠ a) :
     m'.arr64 b = m.arr64 b := h.2.2 b hb
 grind_pattern [arena_grind] Frame.arr64 => Frame a m m', m'.arr64 b
 
-theorem Frame.size (a : ArrId) (m m' : Mem) (h : Frame a m m') : m.SameShape m' :=
+theorem Frame.size (a : TieredArray) (m m' : Mem) (h : Frame a m m') : m.SameShape m' :=
   h.2.1
 grind_pattern [arena_grind] Frame.size => Frame a m m'
 
-theorem Frame.bytes (a : ArrId) (m m' : Mem) (h : Frame a m m') : m'.bytes = m.bytes := h.1
+theorem Frame.bytes (a : TieredArray) (m m' : Mem) (h : Frame a m m') : m'.bytes = m.bytes := h.1
 grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
 
-@[arena_grind =] theorem Mem.arr64_set64_same (m : Mem) (a : ArrId) (i v : Word) :
+@[arena_grind =] theorem Mem.arr64_set64_same (m : Mem) (a : TieredArray) (i v : Word) :
     (m.set64 a i v).arr64 a = (m.arr64 a).set! i.toNat v := by
-  simp only [Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?]
-  by_cases h : a < m.words.size <;> simp [h]
+  simp only [Mem.set64, Mem.arr64, ite_true]
 
-@[arena_grind =] theorem Mem.arr64_set64_ne (m : Mem) (a b : ArrId) (i v : Word) (h : b ≠ a) :
+@[arena_grind =] theorem Mem.arr64_set64_ne (m : Mem) (a b : TieredArray) (i v : Word) (h : b ≠ a) :
     (m.set64 a i v).arr64 b = m.arr64 b := by
-  simp only [Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?]
-  grind
+  simp only [Mem.set64, Mem.arr64, h, ite_false]
 
-@[arena_grind =] theorem Mem.size_arr64_set64 (m : Mem) (a : ArrId) (i v : Word) :
+@[arena_grind =] theorem Mem.size_arr64_set64 (m : Mem) (a : TieredArray) (i v : Word) :
     ((m.set64 a i v).arr64 a).size = (m.arr64 a).size := by
   rw [Mem.arr64_set64_same]; simp
 
@@ -110,10 +108,10 @@ attribute [arena_grind =] Mem.hasW_set64 Mem.hasW_setG
 grind_pattern [arena_grind] Mem.HasW.of_sameShape => m.SameShape m', m'.HasW a
 grind_pattern [arena_grind] Mem.SameShape.trans => m₁.SameShape m₂, m₂.SameShape m₃
 
-@[arena_grind =] theorem Mem.bytes_set64 (m : Mem) (a : ArrId) (i v : Word) :
+@[arena_grind =] theorem Mem.bytes_set64 (m : Mem) (a : TieredArray) (i v : Word) :
     (m.set64 a i v).bytes = m.bytes := rfl
 
-theorem Frame.set64_both (a b : ArrId) (m m' : Mem) (i v : Word) (h : Frame a m m') (hb : b ≠ a) :
+theorem Frame.set64_both (a b : TieredArray) (m m' : Mem) (i v : Word) (h : Frame a m m') (hb : b ≠ a) :
     Frame a (m.set64 b i v) (m'.set64 b i v) := by
   obtain ⟨h1, h2, h3⟩ := h
   refine ⟨h1, h2.set64_both b i v, fun c hc => ?_⟩
@@ -124,7 +122,7 @@ grind_pattern [arena_grind] Frame.set64_both => Frame a (m.set64 b i v) (m'.set6
 
 /-! ## The virtual pool: the pool as proofs see it (lane tierpool)
 
-The pool is a tiered word array: tier `t` is array `tierA POOL t` (`POOL` = 0, `POOL1` = 256).
+The pool is a tiered word array: tier `t` is array `tierA POOL t` (`↑POOL` or `POOL1 = tier1 POOL`).
 Its slices are named by *tier-tagged* addresses: bit 40 is the tier, the low 40 bits are the
 index into the tier's array (`⦃x⦄.tier`, `⦃x⦄.idx`, `L/Notation.lean`). Tier 1 is the scratch
 tier, open while the arena's scratch flag is set (`scratch_reset`, `Scratch.lean`): `CTL[0]` is
@@ -135,48 +133,29 @@ Proofs read the pool only through `vpool m`, an array with a word for every addr
 with `pcap m` (`2^41 - 1` on a pool whose tier arrays have fewer than `2^40` words, so that a
 hypothesis `pcap m < 2^64` carries the tier arrays' bound), and never unfold `vpool`/`prd`. -/
 
-theorem tierA_pool0 : tierA POOL 0 = POOL := by decide
-theorem tierA_pool1 : tierA POOL 1 = POOL1 := by decide
+theorem tierA_pool0 : tierA POOL 0 = POOL := rfl
+theorem tierA_pool1 : tierA POOL 1 = POOL1 := rfl
 
 /-- The pool's tiers are its two arrays. -/
-theorem tierA_pool (t : Word) : tierA POOL t = POOL ∨ tierA POOL t = POOL1 := by
-  have h : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
-    rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
-  rcases h with h | h <;> simp [tierA, tierOff, h]
+theorem tierA_pool (t : Word) : tierA POOL t = POOL ∨ tierA POOL t = POOL1 := tierA_eq_or POOL t
 
 /-- A store into a pool tier leaves the other arrays alone (no case split on the tier). -/
-theorem arr64_set64_tier_ne (m : Mem) (t i v : Word) (b : ArrId) (h : b ≠ POOL ∧ b ≠ POOL1) :
+theorem arr64_set64_tier_ne (m : Mem) (t i v : Word) (b : TieredArray) (h : b ≠ POOL ∧ b ≠ POOL1) :
     (m.set64 (tierA POOL t) i v).arr64 b = m.arr64 b := by
   rcases tierA_pool t with e | e <;> rw [e] <;> exact Mem.arr64_set64_ne _ _ _ _ _ (by
     first | exact h.1 | exact h.2)
 grind_pattern [arena_grind] arr64_set64_tier_ne => (m.set64 (tierA POOL t) i v).arr64 b
 
-/-- A tiered store array (an id in `1‥255`) is neither of the pool's arrays. -/
-theorem tierA_ne_pool (a : Nat) (ha : 0 < a ∧ a < 256) (t : Word) :
+/-- A tiered store array other than the pool is neither of the pool's arrays. -/
+theorem tierA_ne_pool (a : Nat) (ha : a ≠ POOL) (t : Word) :
     tierA a t ≠ POOL ∧ tierA a t ≠ POOL1 := by
-  have h : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
-    rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
-  have e : (tierA a t : Nat) = a + 256 * (t &&& 1).toNat := rfl
-  obtain ⟨h1, h2⟩ := ha
-  constructor
-  · intro hc
-    have h' : (a + 256 * (t &&& 1).toNat : Nat) = 0 := e.symm.trans hc
-    rcases h with h | h <;> rw [h] at h' <;> omega
-  · intro hc
-    have h' : (a + 256 * (t &&& 1).toNat : Nat) = 256 := e.symm.trans hc
-    rcases h with h | h <;> rw [h] at h' <;> omega
+  constructor <;> intro e <;> exact ha (by simpa using congrArg TieredArray.arr e)
 
-/-- Tier `t` of a store array `a < 256` is not another array `b < 256`. -/
-theorem tierA_ne_small (a b : Nat) (ha : a < 256) (hb : b < 256) (h : b ≠ a) (t : Word) :
-    tierA a t ≠ b := by
-  have hc : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
-    rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
-  have e : (tierA a t : Nat) = a + 256 * (t &&& 1).toNat := rfl
-  intro hc'
-  have h' : (a + 256 * (t &&& 1).toNat : Nat) = b := e.symm.trans hc'
-  rcases hc with hc | hc <;> rw [hc] at h' <;> omega
+/-- Tier `t` of a store array `a` is not another array `b`. -/
+theorem tierA_ne_small (a b : Nat) (h : b ≠ a) (t : Word) : tierA a t ≠ b := by
+  intro e; exact h (by simpa using (congrArg TieredArray.arr e).symm)
 
-theorem tierA_pool_ne (t : Word) (b : ArrId) (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : b ≠ tierA POOL t := by
+theorem tierA_pool_ne (t : Word) (b : TieredArray) (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : b ≠ tierA POOL t := by
   rcases tierA_pool t with h | h <;> rw [h] <;> assumption
 
 theorem tag_tier_toNat (x : Word) : (x >>> 40).toNat = x.toNat / 2 ^ 40 := by
@@ -213,17 +192,18 @@ theorem tag_tier_le (x : Word) (h : x.toNat < 2 ^ 41) : (x >>> 40).toNat ≤ 1 :
 grind_pattern [arena_grind] tag_tier_le => x >>> 40
 
 theorem tierA_word (t : Word) (ht : t.toNat ≤ 1) :
-    tierA POOL t = if t.toNat = 0 then POOL else POOL1 := by
+    tierA POOL t = if t.toNat = 0 then (POOL : TieredArray) else POOL1 := by
   have e : (t &&& 1).toNat = t.toNat := by
     rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
-  unfold tierA tierOff; rw [e]
   by_cases h : t.toNat = 0
-  · simp [h]
-  · have : t.toNat = 1 := by omega
-    simp [this]
+  · have : t &&& 1 = 0 := UInt64.toNat_inj.mp (by rw [e, h]; rfl)
+    simp [tierA, h, this]
+  · have h1 : t.toNat = 1 := by omega
+    have : t &&& 1 = 1 := UInt64.toNat_inj.mp (by rw [e, h1]; rfl)
+    simp [tierA, h, this]
 
 theorem tierA_tag (x : Word) (hx : x.toNat < 2 ^ 41) :
-    tierA POOL (x >>> 40) = if x.toNat < 2 ^ 40 then POOL else POOL1 := by
+    tierA POOL (x >>> 40) = if x.toNat < 2 ^ 40 then (POOL : TieredArray) else POOL1 := by
   have h1 : (x >>> 40).toNat ≤ 1 := by rw [tag_tier_toNat]; omega
   rw [tierA_word _ h1, tag_tier_toNat]
   by_cases h : x.toNat < 2 ^ 40
@@ -402,7 +382,7 @@ theorem tpool_congr {m m' : Mem} (h0 : m'.arr64 POOL = m.arr64 POOL)
     rcases tierA_pool t with h | h <;> rw [h] <;> assumption
   simp only [tpool, prd, e]
 
-theorem tpool_set64_ne (m : Mem) (a : ArrId) (i v : Word) (h : a ≠ POOL ∧ a ≠ POOL1) :
+theorem tpool_set64_ne (m : Mem) (a : TieredArray) (i v : Word) (h : a ≠ POOL ∧ a ≠ POOL1) :
     tpool (m.set64 a i v) = tpool m :=
   tpool_congr (Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h.1)) (Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h.2))
 grind_pattern [arena_grind] tpool_set64_ne => tpool (m.set64 a i v)
@@ -424,7 +404,7 @@ theorem tag_of (t i : Word) (ht : t.toNat ≤ 1) (hi : i.toNat < 2 ^ 40) :
 /-- `prd` at a `Nat` address of a tier. -/
 theorem prd_nat (m : Mem) (x : Nat) (hx : x < 2 ^ 41) :
     prd m (UInt64.ofNat x) =
-      (m.arr64 (if x < 2 ^ 40 then POOL else POOL1))[x % 2 ^ 40]?.getD 0 := by
+      (m.arr64 (if x < 2 ^ 40 then (POOL : TieredArray) else POOL1))[x % 2 ^ 40]?.getD 0 := by
   have hxw : (UInt64.ofNat x).toNat = x := UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
   unfold prd
   rw [tierA_tag _ (by rw [hxw]; exact hx), hxw, tag_idx_toNat, hxw]
@@ -447,12 +427,12 @@ theorem prd_set64t (m : Mem) (t i v : Word) (x : Nat) (ht : t.toNat ≤ 1)
       · have e2 : ¬ x = 0 * 2 ^ 40 + i.toNat := by omega
         simp only [e, e2, ↓reduceIte]
     · have e2 : ¬ x = 0 * 2 ^ 40 + i.toNat := by omega
-      simp only [hx0, e2, ↓reduceIte, Mem.arr64_set64_ne _ _ _ _ _ (show POOL1 ≠ POOL by decide)]
+      simp only [hx0, e2, ↓reduceIte, Mem.arr64_set64_ne _ _ _ _ _ (show POOL1 ≠ (POOL : TieredArray) by decide)]
   · have ht1 : t.toNat = 1 := by omega
     simp only [ht0, ↓reduceIte] at hi hs ⊢
     by_cases hx0 : x < 2 ^ 40
     · have e2 : ¬ x = t.toNat * 2 ^ 40 + i.toNat := by omega
-      simp only [hx0, e2, ↓reduceIte, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ POOL1 by decide)]
+      simp only [hx0, e2, ↓reduceIte, Mem.arr64_set64_ne _ _ _ _ _ (show (POOL : TieredArray) ≠ POOL1 by decide)]
     · simp only [hx0, ↓reduceIte, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
         Array.getElem?_setIfInBounds]
       by_cases e : i.toNat = x % 2 ^ 40
@@ -614,7 +594,7 @@ theorem vpool_set64t_get (m : Mem) (t i v : Word) (j : Nat) (ht : t.toNat ≤ 1)
   simp [hij]
 
 /-- Stores elsewhere leave the virtual pool alone. -/
-theorem vpool_set64_ne (m : Mem) (a : ArrId) (i v : Word) (h : a ≠ POOL ∧ a ≠ POOL1) :
+theorem vpool_set64_ne (m : Mem) (a : TieredArray) (i v : Word) (h : a ≠ POOL ∧ a ≠ POOL1) :
     vpool (m.set64 a i v) = vpool m := by
   have e : ∀ t, (m.set64 a i v).arr64 (tierA POOL t) = m.arr64 (tierA POOL t) := fun t =>
     Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (tierA_pool_ne t a h.1 h.2))
@@ -636,7 +616,7 @@ theorem pcap_congr' {m m' : Mem} (h0 : m'.arr64 POOL = m.arr64 POOL)
     (h1 : m'.arr64 POOL1 = m.arr64 POOL1) : pcap m' = pcap m :=
   pcap_congr (by rw [h0]) (by rw [h1])
 
-@[arena_grind =] theorem pcap_set64 (m : Mem) (a : ArrId) (i v : Word) :
+@[arena_grind =] theorem pcap_set64 (m : Mem) (a : TieredArray) (i v : Word) :
     pcap (m.set64 a i v) = pcap m := by
   apply pcap_congr
   · by_cases h : a = POOL
@@ -656,7 +636,7 @@ the globals unchanged: the frame of a pool writer. -/
 structure PFrame (m m' : Mem) : Prop where
   bytes : m'.bytes = m.bytes
   size : m.SameShape m'
-  arr : ∀ b, b ≠ POOL → b ≠ POOL1 → m'.arr64 b = m.arr64 b
+  arr : ∀ b : TieredArray, b ≠ POOL → b ≠ POOL1 → m'.arr64 b = m.arr64 b
   size0 : (m'.arr64 POOL).size = (m.arr64 POOL).size
   size1 : (m'.arr64 POOL1).size = (m.arr64 POOL1).size
   glob : m'.glob = m.glob
@@ -687,7 +667,7 @@ theorem PFrame.set64 {m m' : Mem} (t i v : Word) (h : PFrame m m') :
     · rw [Mem.size_arr64_set64, h.size1]
 grind_pattern [arena_grind] PFrame.set64 => PFrame m (m'.set64 (tierA POOL t) i v)
 
-theorem PFrame.set64_both {m m' : Mem} (b : ArrId) (i v : Word) (h : PFrame m m')
+theorem PFrame.set64_both {m m' : Mem} (b : TieredArray) (i v : Word) (h : PFrame m m')
     (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : PFrame (m.set64 b i v) (m'.set64 b i v) := by
   refine ⟨h.bytes, h.size.set64_both b i v, fun c c0 c1 => ?_, ?_, ?_, h.glob⟩
   · by_cases hcb : c = b
@@ -697,7 +677,7 @@ theorem PFrame.set64_both {m m' : Mem} (b : ArrId) (i v : Word) (h : PFrame m m'
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h1), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h1), h.size1]
 grind_pattern [arena_grind] PFrame.set64_both => PFrame (m.set64 b i v) (m'.set64 b i v)
 
-theorem PFrame.arr64 {m m' : Mem} (b : ArrId) (h : PFrame m m') (h0 : b ≠ POOL ∧ b ≠ POOL1) :
+theorem PFrame.arr64 {m m' : Mem} (b : TieredArray) (h : PFrame m m') (h0 : b ≠ POOL ∧ b ≠ POOL1) :
     m'.arr64 b = m.arr64 b := h.arr b h0.1 h0.2
 grind_pattern [arena_grind] PFrame.arr64 => PFrame m m', m'.arr64 b
 
@@ -733,7 +713,7 @@ theorem Mem.ptop0_set64 (m : Mem) (v : Word) (h : 0 < (m.arr64 PT0).size) :
   simp [Mem.ptop0, Mem.arr64_set64_same, h]
 grind_pattern [arena_grind] Mem.ptop0_set64 => (m.set64 PT0 0 v).ptop0
 
-@[arena_grind =] theorem Mem.ptop0_set64_ne (m : Mem) (a : ArrId) (i v : Word) (h : a ≠ PT0) :
+@[arena_grind =] theorem Mem.ptop0_set64_ne (m : Mem) (a : TieredArray) (i v : Word) (h : a ≠ PT0) :
     (m.set64 a i v).ptop0 = m.ptop0 := by
   simp only [Mem.ptop0, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)]
 
@@ -963,7 +943,7 @@ grind_pattern [arena_grind] PFrame.flag => PFrame m m', m'.flag
   simp only [Mem.flag, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp
 
-@[arena_grind =] theorem Mem.flag_set64_ne (m : Mem) (a : ArrId) (i v : Word) (h : a ≠ CTL) :
+@[arena_grind =] theorem Mem.flag_set64_ne (m : Mem) (a : TieredArray) (i v : Word) (h : a ≠ CTL) :
     (m.set64 a i v).flag = m.flag := by
   simp only [Mem.flag, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)]
 

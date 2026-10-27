@@ -36,7 +36,7 @@ theorem _root_.L.Arena.TwinOK.withMemos {m : Mem} {a : AState} (h : TwinOK dn m 
 memos (readers, checks, the walks over `a.memos`) and whose L run leaves the core memos and the
 pins alone (`hfr`; lane `loopt`'s `TwinOK.frame`). One line per existing stage theorem. -/
 theorem StageT.lift_keep {β α : Type} {mo : Option (β × Mem)} {op : AM α} {m : Mem} {a : AState}
-    {Q : β → α → Mem → AState → Prop} {A : List ArrId} {C : List Word}
+    {Q : β → α → Mem → AState → Prop} {A : List TieredArray} {C : List Word}
     (hT : StageT dn vis fe m a)
     (h : Sim mo op a (fun r x m' a' => StageR dn vis fe m' a' ∧ Q r x m' a'))
     (hkeep : ∀ x a', op.run a = .ok (x, a') → ∃ X, a' = { a with memos := X })

@@ -199,7 +199,7 @@ theorem keepsW_arFast (F : Nat) (e : EIdx) (d k c : Nat) :
 /-- **`CoreS` across a walk**: the walk tier from the walk's own theorem, the walk memos from its
 post and frame (`hmem`), everything else by the frame below 64 and the twin's `cpl`. -/
 theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hk : cpl a' = cpl a)
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64)
     (hmem : CoreMemos m') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
@@ -256,12 +256,12 @@ theorem ArenaD.memo_irrel {m : Mem} {a : AState} (h : ArenaD m a) (X Y : Std.Has
     DerR.of_store _ _ _ hD rfl⟩
 
 /-- The abstraction memo's well-formedness across a writer that avoids it. -/
-theorem coreAb_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem coreAb_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (49 : ArrId) ∉ A) (hC : (48 : Word) ∉ C) (h : CoreMemos m) :
     ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m' mp :=
   let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
 
-theorem coreIl_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem coreIl_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (50 : ArrId) ∉ A) (hC : (50 : Word) ∉ C) (h : CoreMemos m) :
     ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreIlSch lfKey decE m' mp :=
   let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
@@ -270,7 +270,7 @@ theorem lt64_of_all {C : List Word} (h : C.all (fun x => decide (x.toNat < 64)) 
     ∀ x ∈ C, x.toNat < 64 := fun x hx => by
   have := List.all_eq_true.mp h x hx; simpa using this
 
-theorem lt64A_of_all {A : List ArrId}
+theorem lt64A_of_all {A : List TieredArray}
     (h : A.all (fun b => decide (InStoreTier b)) = true) :
     ∀ b ∈ A, InStoreTier b := fun b hb => by
   have := List.all_eq_true.mp h b hb; simpa using this

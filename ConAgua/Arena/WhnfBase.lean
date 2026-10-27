@@ -103,7 +103,7 @@ theorem BKept.refl (m : Mem) : BKept m m := ⟨rfl, rfl, fun _ _ => rfl⟩
 theorem BKept.trans {m₁ m₂ m₃ : Mem} (h₁ : BKept m₁ m₂) (h₂ : BKept m₂ m₃) : BKept m₁ m₃ :=
   ⟨h₂.1.trans h₁.1, h₂.2.1.trans h₁.2.1, fun j hj => (h₂.2.2 j (h₁.1 ▸ hj)).trans (h₁.2.2 j hj)⟩
 
-theorem BKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem BKept.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hA : BSTK ∉ A) (hC : (137 : Word) ∉ C) : BKept m m' := by
   have hb : m'.arr64 BSTK = m.arr64 BSTK := hf.1 BSTK hA (by decide)
   exact ⟨hf.2.1 137 hC, by rw [hb], fun j _ => by rw [hb]⟩
@@ -148,7 +148,7 @@ theorem LvlCnt.refl (m : Mem) : LvlCnt m m := ⟨rfl, fun _ _ => Nat.le_refl _�
 theorem LvlCnt.trans {m₁ m₂ m₃ : Mem} (h₁ : LvlCnt m₁ m₂) (h₂ : LvlCnt m₂ m₃) : LvlCnt m₁ m₃ :=
   ⟨h₂.flag.trans h₁.flag, fun x hx => Nat.le_trans (h₁.cnt x hx) (h₂.cnt x hx)⟩
 
-theorem LvlCnt.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem LvlCnt.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hL : LvlFree C) : LvlCnt m m' :=
   ⟨hf.2.1 1 (hL 1 (by decide)), fun x hx => by rw [hf.2.1 x (hL x hx)]; exact Nat.le_refl _⟩
 
@@ -180,7 +180,7 @@ theorem PoolGrew.of_eq {m m' : Mem} (hp : m'.arr64 POOL = m.arr64 POOL)
   ⟨by rw [ht]; exact Nat.le_refl _, pcap_congr' hp hp1, fun j _ => by rw [vpool_congr hp hp1], hlc,
     by rw [ht]; omega, ptop0_congr hpt⟩
 
-theorem PoolGrew.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem PoolGrew.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hA : POOL ∉ A) (hC : (0 : Word) ∉ C) (hL : LvlFree C := by lvl_free)
     (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) : PoolGrew m m' :=
   PoolGrew.of_eq (hf.1 POOL hA (by decide)) (hf.1 POOL1 hA1 (by decide)) (hf.1 PT0 hA2 (by decide))
@@ -263,7 +263,7 @@ theorem StackKept.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht 
     PoolGrew.of_frame hf (by decide) (by decide)⟩
 
 /-- **A frame that avoids both stacks and the pool keeps them.** -/
-theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem StackKept.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
     (hL : LvlFree C := by lvl_free) (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) :
@@ -274,7 +274,7 @@ theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : M
     BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2 hL hA1 hA2⟩
 
 /-- `StackKept.of_frame` for a writer of the level tables, their growth given (`hlc`). -/
-theorem StackKept.of_frameL {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem StackKept.of_frameL {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A) (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C)
     (hlc : LvlCnt m m') (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) :
     StackKept m m' := by
@@ -286,7 +286,7 @@ theorem StackKept.of_frameL {m m' : Mem} {A : List ArrId} {C : List Word} (hf : 
       (hf.1 PT0 hA2 (by decide)) (hf.top_eq hC.2.2) hlc⟩
 
 /-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
-theorem StackKept.of_frame_range {m m' : Mem} {A : List ArrId} {C : List Word}
+theorem StackKept.of_frame_range {m m' : Mem} {A : List TieredArray} {C : List Word}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 1 ≤ b ∧ b < 144)
     (hC : ∀ x ∈ C, 1 ≤ x.toNat ∧ x.toNat < 136) (hL : LvlFree C := by lvl_free)
     (hA2 : PT0 ∉ A := by decide) : StackKept m m' :=
@@ -307,7 +307,7 @@ theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
     BKept.of_frame hgf (by decide) (by decide), PoolGrew.of_grows hg⟩
 
 /-- **A frame that avoids both stacks and appends to the pool** (`Grows` on the pool's part). -/
-theorem StackKept.of_frame_grows {m m₁ m' : Mem} {A : List ArrId} {C : List Word}
+theorem StackKept.of_frame_grows {m m₁ m' : Mem} {A : List TieredArray} {C : List Word}
     (hg : Grows m m₁) (hf : MemFrame A C m₁ m')
     (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
@@ -395,7 +395,7 @@ theorem coreLplSch_wf : coreLplSch.WF := ⟨by decide, by decide⟩
 theorem coreLplsSch_wf : coreLplsSch.WF := ⟨by decide, by decide⟩
 
 /-- **`LPMemos` across a writer** that avoids arrays 52‥54 and `CTL` words 54, 56, 58. -/
-theorem LPMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem LPMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A)
     (hC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) (h : LPMemos m) : LPMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1;
@@ -423,7 +423,7 @@ theorem coreFlSch_wf : coreFlSch.WF := ⟨by decide, by decide⟩
 theorem coreLsbSch_wf : coreLsbSch.WF := ⟨by decide, by decide⟩
 
 /-- **`WalkMemos` across a writer** that avoids arrays 151‥153 and `CTL` words 152, 154, 156. -/
-theorem WalkMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem WalkMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
     (hC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C) (h : WalkMemos m)
     (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
@@ -435,7 +435,7 @@ theorem WalkMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemF
 
 /-- **`CoreMemos` across a writer** that avoids arrays 49, 50, 151‥153 and `CTL` words 48, 50, 152,
 154, 156 (the last two avoidances are auto-params: `decide` on concrete lists). -/
-theorem CoreMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem CoreMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m)
     (hWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
@@ -448,7 +448,7 @@ theorem CoreMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemF
 
 /-- **`CoreMemos` across a write of the `instLP` walk's memos** (arrays 52‥54, `CTL[54‥59]`), the
 walk memos after it given. -/
-theorem CoreMemos.frameLP {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem CoreMemos.frameLP {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (h : CoreMemos m) (hLP : LPMemos m')
     (hA : ∀ b ∈ A, 52 ≤ b ∧ b ≤ 54 := by decide) (hC : ∀ x ∈ C, 54 ≤ x.toNat ∧ x.toNat ≤ 59 := by simp) :
     CoreMemos m' :=
@@ -466,7 +466,7 @@ theorem CoreMemos.frameLP {A : List ArrId} {C : List Word} {m m' : Mem} (hf : Me
 
 /-- **`CoreMemos` across a writer at or above array 64** (and `CTL` word 64), away from the walk
 memos (arrays 151‥153, `CTL` 152‥157). -/
-theorem CoreMemos.frame_hi {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem CoreMemos.frame_hi {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : CoreMemos m)
     (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) : CoreMemos m' :=
@@ -513,7 +513,7 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
 (`hmem`): arrays `≥ 145` (or the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack,
 the level heap, the walk-local memos. -/
 theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b) ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
     (hmem : CoreMemos m') :
@@ -540,7 +540,7 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
 
 /-- `CoreS.frameSM` away from the walk-local memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b) ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
     (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
@@ -551,7 +551,7 @@ theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
 /-- **The relation across a writer outside every tier and the stacks**, the walk memos given:
 arrays `≥ 146` (or 64‥95), `CTL` words `≥ 138` (or 64‥95). The stacks and the pool are kept. -/
 theorem CoreS.frameM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 146 ≤ b) ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
     (hmem : CoreMemos m') :
@@ -571,7 +571,7 @@ theorem CoreS.frameM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
 /-- **The relation across a writer outside every tier and the stacks**, away from the walk-local
 memos: the level heap (`LH`, `CTL[192]`), say. -/
 theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 146 ≤ b) ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
     (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)

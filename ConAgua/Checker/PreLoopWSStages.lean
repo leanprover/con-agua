@@ -27,7 +27,7 @@ theorem mem_of_tree {fs : List FnName} {t : NTree} (ht : namesTree fs = some t) 
   rw [h] at this; exact of_decide_eq_true this.symm
 
 /-- `invoke_memFrame` without the byte arrays, at no arguments. -/
-theorem memFrame_of_closed {A : List ArrId} {C : List Word} {fs : List FnName}
+theorem memFrame_of_closed {A : List TieredArray} {C : List Word} {fs : List FnName}
     (hp : closedA checkerProg A C fs = true) (n : Nat) {f : FnName} (hf : f ∈ fs) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) f []
     ⦃fun _ s' => MemFrame A C s₀.mem s'.mem; ⊤⦄ := by

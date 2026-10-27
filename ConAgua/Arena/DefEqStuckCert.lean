@@ -19,7 +19,7 @@ namespace L.Arena
 
 /-! ## Records -/
 
-theorem erecP_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem erecP_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : EREC ∉ A) (hC : (129 : Word) ∉ C) : erecP m' = erecP m := by
   unfold erecP erecTop
   rw [hf.1 EREC hA (by decide), hf.2.1 129 hC]

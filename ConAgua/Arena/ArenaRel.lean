@@ -86,13 +86,13 @@ def arenaCtl : List Word := storeCtl ++ memoCtl
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate (`tier1`, `tierOff` turn a tier-1 array into its number). -/
-macro "apart" : tactic => `(tactic| simp [tier1, tierOff, Apart, ConsSch.wset, memoArrs, memoCtl, storeArrs, storeCtl, POOL, POOL1, PT0, CTL, SCB, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
+macro "apart" : tactic => `(tactic| simp [tier1, Apart, ConsSch.wset, memoArrs, memoCtl, storeArrs, storeCtl, POOL, POOL1, PT0, CTL, SCB, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
 
 /-- The side condition of `apart_hi` for a concrete schema. -/
-macro "lo_apart" : tactic => `(tactic| simp [tier1, tierOff, POOL, POOL1, PT0, CTL, SCB, BMEMO, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
+macro "lo_apart" : tactic => `(tactic| simp [tier1, POOL, POOL1, PT0, CTL, SCB, BMEMO, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
 
 /-- The ownership side condition of `apart_own` for a concrete schema of the store tier. -/
-macro "own" : tactic => `(tactic| (simp [tier1, tierOff, storeArrs, storeCtl, POOL, POOL1, PT0, CTL, SCB, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, List.mem_cons, List.not_mem_nil, List.forall_mem_cons]))
+macro "own" : tactic => `(tactic| (simp [tier1, storeArrs, storeCtl, POOL, POOL1, PT0, CTL, SCB, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, List.mem_cons, List.not_mem_nil, List.forall_mem_cons]))
 
 /-! ## Locality of each table's records -/
 
@@ -159,7 +159,7 @@ theorem nnumLocal : RLocal nnumSch NnRecRel nnhash [] [] := by
 /-! ## Each table relation across a writer it is apart from -/
 
 section frames
-variable (A : List ArrId) (C : List Word) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
+variable (A : List TieredArray) (C : List Word) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
 
 include hf
 
@@ -212,7 +212,7 @@ end frames
 
 section lpframes
 variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ]
-  (A : List ArrId) (C : List Word) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
+  (A : List TieredArray) (C : List Word) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
 
 include hf in
 /-- **A level-parameter column across a writer apart from its table and column** (the column
@@ -231,12 +231,12 @@ keeps it (`MemosR.frame`, `ArenaR.frame`): one lemma per group, from the ownersh
 of one per writer. The lists are concrete, so a writer's side conditions are `by decide`. -/
 
 /-- A table is apart from a writer that avoids what the table's group owns. -/
-theorem apart_own (S : Schema) (A₀ : List ArrId)
-    (C₀ : List Word) (own : List ArrId) (ownC : List Word)
+theorem apart_own (S : Schema) (A₀ : List TieredArray)
+    (C₀ : List Word) (own : List TieredArray) (ownC : List Word)
     (hown : S.ra ∈ own ∧ tier1 S.ra ∈ own ∧ S.sa ∈ own ∧ tier1 S.sa ∈ own ∧
       (∀ b ∈ A₀, b ∈ own ∧ b ≠ CTL) ∧ S.ca ∈ ownC ∧
       S.ca + 1 ∈ ownC ∧ (1 : Word) ∈ ownC ∧ SCB ∈ ownC ∧ ∀ x ∈ C₀, x ∈ ownC)
-    (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, b ∉ own) (hC : ∀ x ∈ C, x ∉ ownC) :
+    (A : List TieredArray) (C : List Word) (hA : ∀ b ∈ A, b ∉ own) (hC : ∀ x ∈ C, x ∉ ownC) :
     Apart S A₀ C₀ A C := by
   obtain ⟨h1, h1', h2, h2', h3, h4, h5, h6, h8, h7⟩ := hown
   exact ⟨fun h => hA _ h h1, fun h => hA _ h h1', fun h => hA _ h h2, fun h => hA _ h h2',
@@ -256,7 +256,7 @@ structure MemosR (m : Mem) (ms : Memos) : Prop where
   fvar : MemoRG frSch bmKey (·.toNat) m ms.fvarBC
 
 /-- **The memo tier's group frame.** -/
-theorem MemosR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {ms : Memos}
+theorem MemosR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {ms : Memos}
     (hA : ∀ b ∈ A, b ∉ memoArrs) (hC : ∀ x ∈ C, x ∉ memoCtl) (hf : MemFrame A C m m')
     (h : MemosR m ms) : MemosR m' ms :=
   ⟨memoRG_frame bmSch bmSch_wf bmKey _ A C (fun h => hA _ h (by simp [memoArrs, BMEMO, LMEMO, IMEMO, FRMEMO]))
@@ -355,14 +355,14 @@ macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq : tactic =>
 /-- **A memo writer keeps `ArenaR`**: the tables by the frame (the writer avoids the store
 tier), the memo tier as given; the arena state changed only in `memos`, so the tables' relations
 read the same fields. -/
-theorem ArenaR.with_memos {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState} {ms : Memos}
+theorem ArenaR.with_memos {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState} {ms : Memos}
     (hR : ArenaR m a) (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b ∉ storeArrs)
     (hC : ∀ x ∈ C, x ∉ storeCtl) (hM : MemosR m' ms) : ArenaR m' { a with memos := ms } := by
   arena_build hR, hf with exact hM using exact apart_own _ _ _ storeArrs storeCtl (by own) _ _ hA hC
 
 /-- **The store and memo tiers' group frame**: a writer that avoids `arenaArrs` and `arenaCtl`
 keeps `ArenaR`. -/
-theorem ArenaR.frame {A : List ArrId} {C : List Word} (hA : ∀ b ∈ A, b ∉ arenaArrs)
+theorem ArenaR.frame {A : List TieredArray} {C : List Word} (hA : ∀ b ∈ A, b ∉ arenaArrs)
     (hC : ∀ x ∈ C, x ∉ arenaCtl) {m m' : Mem} (hf : MemFrame A C m m') {a : AState}
     (hR : ArenaR m a) : ArenaR m' a :=
   hR.with_memos hf (fun b hb h => hA b hb (List.mem_append_left _ h))
@@ -379,7 +379,7 @@ theorem not_mem_arenaCtl (x : Word) (hx : 64 ≤ x.toNat) : x ∉ arenaCtl := by
 
 /-- **A writer of the derived-range arrays 42‥46 (and `CTL` words `≥ 64`) keeps `ArenaR`**: nothing
 in it reads them (they are `DerR`'s, `ExprMk.lean`). -/
-theorem ArenaR.frame_above (A : List ArrId) (C : List Word)
+theorem ArenaR.frame_above (A : List TieredArray) (C : List Word)
     (hA : ∀ b ∈ A, (42 ≤ b ∧ b < 47) ∨ Tier1In 42 47 b)
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
     (hR : ArenaR m a) : ArenaR m' a :=
@@ -390,7 +390,7 @@ theorem ArenaR.frame_above (A : List ArrId) (C : List Word)
 /-- **The extension point for other lanes**: arrays in `[64, 256)` and `CTL` words `≥ 64` are
 outside every relation of `ArenaR` (ids from `256` on are tier-1 arrays). A writer of only such
 arrays and words keeps `ArenaR`. -/
-theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, InHigh b)
+theorem ArenaR.frame_ext (A : List TieredArray) (C : List Word) (hA : ∀ b ∈ A, InHigh b)
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
     (hR : ArenaR m a) : ArenaR m' a :=
   have hlt : ∀ y ∈ arenaArrs, ¬ InHigh y := by decide
@@ -432,7 +432,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
   have hs : ∀ (a : Nat), a < 64 → ∀ t, consMinWords ≤ ((initMem sizes).arr64 (tierA a t)).size ∧
       ((initMem sizes).arr64 (tierA a t)).size < 2 ^ 61 := fun a ha t => by
     rw [initMem_arr]
-    rcases tierA_cases' a t with e | e <;> rw [e] <;> simpa using hsz _ (by omega)
+    rcases tierA_eq_or a t with e | e <;> rw [e] <;> simpa using hsz _ (by omega)
   have hc : ((initMem sizes).arr64 CTL).size = sizes[CTL]?.getD 0 := by
     rw [initMem_arr]; simp [CTL]
   have hp : ((initMem sizes).arr64 POOL).size = sizes[POOL]?.getD 0 := by

@@ -158,7 +158,7 @@ theorem viewsKept_of {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : Arena
       have := q.toNat_lt; omega
     obtain ⟨v, hv⟩ := lvNodeW_view hR hh hq
     rw [lvNodeW_store hR hh hv, lvNodeW_store hR' hh (hk.1 _ _ hv)]
-  · have hLH : m'.arr64 LH = m.arr64 LH := hf.1 LH (by simp [tier1, tierOff, lvArrs, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]) (by decide)
+  · have hLH : m'.arr64 LH = m.arr64 LH := hf.1 LH (by simp [tier1, lvArrs, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]) (by decide)
     have h192 : rdW (m'.arr64 CTL) 192 = rdW (m.arr64 CTL) 192 := hf.2.1 192 (by simp [lvCtl])
     rw [lvNodeW_heap m' q hb, lvNodeW_heap m q hb, hLH, h192]
 
@@ -537,7 +537,7 @@ theorem ekCopyW_ok {N : Word → Name → Prop} : ∀ (ks : List Name) (n : Nat)
 
 /-! ## `caps_never_zero` refines `capsNeverZero`'s computation -/
 
-theorem arenaD_frame_hi {m m' : Mem} {a : AState} {A : List ArrId} {C : List Word}
+theorem arenaD_frame_hi {m m' : Mem} {a : AState} {A : List TieredArray} {C : List Word}
     (hA : ArenaD m a) (hf : MemFrame A C m m') (hA' : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) :
     ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA' hC m m' hf a hA.1,

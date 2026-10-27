@@ -55,7 +55,7 @@ theorem internLsNode_step (v : LsNodeView) (a a' : AState) (h : LsIdx)
 /-- **`CoreS` across a level-list interning** whose memory writes are confined to the level
 stores' arrays (below 42) and counts (`CTL` below 42). -/
 theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LsStep a a') (hR : ArenaR m' a')
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ Tier1In 0 42 b ∨ Tier1In 55 64 b) (hC : ∀ x ∈ C, x.toNat < 42)
     (hlsa : LsAll a') (hlc : LvlCnt m m')
@@ -250,7 +250,7 @@ theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : Sli
     hres, internW_hw m a hK.1.arena.1.lit o l w m' hI⟩
   · intro b hb; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
     rcases hb with rfl | rfl | rfl | rfl <;> decide
-  · simp [tier1, tierOff, REC, SLOT]
+  · simp [tier1, REC, SLOT]
   · intro b hb; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
     rcases hb with rfl | rfl | rfl | rfl <;> decide
   · intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx

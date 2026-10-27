@@ -309,7 +309,7 @@ end
 
 /-- **What a call needs of the region's memory `d`**: the owned arrays and the globals of the L
 memory `r` in place (`own[k]` in slot `2 + k`, the globals in the table at `base`). -/
-structure RegionRel (tab : Tab) (base : Nat) (own : List ArrId) (r : Mem) (d : DataMem) : Prop where
+structure RegionRel (tab : Tab) (base : Nat) (own : List TieredArray) (r : Mem) (d : DataMem) : Prop where
   nw : r.words.size = tab.nw
   size : ∀ a < tab.nw, ∀ k, own.idxOf? a = some k → (r.arr64 a).size = abiWords
   get : ∀ a < tab.nw, ∀ k, own.idxOf? a = some k → ∀ i (h : i < (r.arr64 a).size),

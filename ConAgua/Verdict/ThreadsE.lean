@@ -406,9 +406,9 @@ open ConAgua.Final in
 Then the twin's pool fails with that class (`TwinVerdictPooled`, its second disjunct: the worker
 checking the thread's groups up to and including `j`). -/
 theorem threads_twinVerdictPooled (hCP : CPVerdict)
-    (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+    (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-    (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 1) = .ok (rs₁, m₁))
+    (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     (B : Array Word) (hB : B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat)
     (r₀ : Mem) (hr : r₀.HasWs 388) (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m₁.arr64 b).size)
@@ -419,7 +419,7 @@ theorem threads_twinVerdictPooled (hCP : CPVerdict)
     TwinVerdictPooled [b] e.cls := by
   have hr' : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
   obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ :=
-    checkA_run b pb s8 s64 hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr'
+    checkA_run b pb sz hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr'
   have hflag : modeFlag 1 = 1 := rfl
   rw [hflag] at hok hm₁
   have hrom : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1

@@ -713,7 +713,7 @@ theorem TopK.of_eq {m m' : Mem} (ht : m'.top = m.top) (hp : pcap m' = pcap m) (h
     TopK m m' :=
   fun _ h => ⟨ht ▸ h, hp, fun hm => by unfold ModeOK at *; rw [ht, hf]; exact hm⟩
 
-theorem memFrame_top {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
+theorem memFrame_top {A : List TieredArray} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
     (h0 : (0 : Word) ∉ C) (h1 : (1 : Word) ∉ C := by decide) : TopK m m' :=
   TopK.of_eq (by simpa [Mem.top, rdW] using h.2.1 0 h0) (pcap_congr (h.2.2.1 _) (h.2.2.1 _))
     (by simpa [Mem.flag, rdW] using h.2.1 1 h1)
@@ -909,7 +909,7 @@ end nameSpec
 def StoreA : List ArrId := lowTierArrs
 def StoreC : List Word := (List.range 64).map UInt64.ofNat
 
-theorem frame_store {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
+theorem frame_store {A : List TieredArray} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) : MemFrame StoreA StoreC m m' :=
   h.mono (fun b hb => low_tier_mem b (hA b hb)) (fun x hx => by
     simp only [StoreC, List.mem_map, List.mem_range]
@@ -968,7 +968,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     obtain ⟨rfl, rfl, rfl⟩ := hW
     obtain ⟨hok, hR, hres, hf⟩ := L.Front.nanon_A m a hA w m₁ hI
     refine ⟨hok, hR, hres, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, ?_,
-      frame_store hf (by simp [tier1, tierOff, nanonSch, NAREC, NASLOT]) (by simp [nanonSch])⟩
+      frame_store hf (by simp [tier1, nanonSch, NAREC, NASLOT]) (by simp [nanonSch])⟩
     exact drop_pos rom hr pos (encName .anonymous) rest hd 1 (by simp [encName])
   | str pre str ih =>
     intro n m a pos rest h q m' hA hmo hd hW
@@ -1041,7 +1041,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     · simp only [encName, strB, List.length_cons, List.length_append, hsz]
       rw [UInt64.toNat_add, hq8, hlN]; simp [u64B] at hlen ⊢; omega
     · exact (hf1.trans (frame_grows hg)).trans
-        (frame_store hf2 (by simp [tier1, tierOff, nstrSch, NSREC, NSSLOT]) (by simp [nstrSch]))
+        (frame_store hf2 (by simp [tier1, nstrSch, NSREC, NSSLOT]) (by simp [nstrSch]))
   | num pre k ih =>
     intro n m a pos rest h q m' hA hmo hd hW
     simp only [nameFits, Bool.and_eq_true, decide_eq_true_eq] at hx
@@ -1094,7 +1094,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     · rw [hX, AM.res_bind _ _ _ ok1, res1]; exact res2
     · simp only [encName, List.length_cons, List.length_append]
       rw [UInt64.toNat_add]; simp [u64B] at hlen ⊢; omega
-    · exact hf1.trans (frame_store hf2 (by simp [tier1, tierOff, nnumSch, NNREC, NNSLOT]) (by simp [nnumSch]))
+    · exact hf1.trans (frame_store hf2 (by simp [tier1, nnumSch, NNREC, NNSLOT]) (by simp [nnumSch]))
 
 end nameRef
 
@@ -1119,7 +1119,7 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
   exact ⟨hloc, romNameW_ok rom hr x hx n _ a₀ pos rest _ _ _ hA hmo hd hW⟩
 
 /-- `ArenaD` across writes at or above array 64 and `CTL` word 64. -/
-theorem ArenaD.frameHi {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+theorem ArenaD.frameHi {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
     ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,

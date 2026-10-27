@@ -181,9 +181,9 @@ theorem entry2Verdict_of
       PhaseBProg (Prog.subPB bs checkerProg) → ∀ pins ds fe pend,
       CPErrT .verified pins dn ds (Prog.subPB bs checkerProg) fe pend) :
     Entry2Verdict checkerProg := by
-  intro b pb s8 s64 hin N₁ hN₁ rs₁ m₁ h₁ hge N₂ hN₂ w hw hmode hlo hhi hctlf hv e h₂ hk0
+  intro b pb sz hin N₁ hN₁ rs₁ m₁ h₁ hge N₂ hN₂ w hw hmode hlo hhi hctlf hv e h₂ hk0
   have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
-  obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ := checkA_run b pb s8 s64 hin 3 (Or.inr rfl) N₁ hN₁ rs₁ m₁ h₁ hr
+  obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ := checkA_run b pb sz hin 3 (Or.inr rfl) N₁ hN₁ rs₁ m₁ h₁ hr
   have hflag : modeFlag 3 = 0 := rfl
   rw [hflag] at hok hm₁
   have hrom : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1

@@ -899,7 +899,7 @@ theorem tierA_tbl (w : Word) (g : Nat) (hg : rowTag w = g) (hg2 : g ≤ 2) :
     rw [UInt64.toNat_and, tierW_toNat]
     have : rowTier w < 2 := Nat.mod_lt _ (by decide)
     rw [show (1 : Word).toNat = 1 from rfl, Nat.and_one_is_mod]; omega
-  simp only [tierA, tierOff, h1, tblArr, hg, hx, h2]
+  simp only [tierA, h1, tblArr, hg, hx, h2]
 
 section specs
 variable (p : Prog)

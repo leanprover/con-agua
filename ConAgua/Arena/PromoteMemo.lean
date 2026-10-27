@@ -39,7 +39,7 @@ structure PMemoR (m : Mem) (pm : PMemo) : Prop where
   e : MemoRV peSch (hKey .expr) (VP .expr) m pm.eM
 
 /-- **The promotion memo's frame**: a writer of other arrays and other `CTL` words keeps it. -/
-theorem PMemoR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {pm : PMemo}
+theorem PMemoR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {pm : PMemo}
     (hA : ∀ b ∈ A, b < 146 ∨ 149 < b) (hC : ∀ x ∈ C, x.toNat < 140 ∨ 147 < x.toNat)
     (hf : MemFrame A C m m') (h : PMemoR m pm) : PMemoR m' pm :=
   ⟨memoRV_frame pnSch ⟨by decide, by decide⟩ _ _ A C (fun h => by have := hA _ h; revert this; decide)

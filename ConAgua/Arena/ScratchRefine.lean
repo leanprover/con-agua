@@ -332,7 +332,7 @@ variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
 /-- **A table across `scratch_reset(f)`'s wrap and counts**: tier 0 as before (its records, the
 arrays `A₀` and words `C₀` they refer to are not written), tier 1 empty (its slots read free:
 against the raised base, or zeroed by the wrap), the flag `f ≠ 0`. -/
-theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {A₀ : List ArrId}
+theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {A₀ : List TieredArray}
     {C₀ : List Word} (hW : C.WF) (hl : RLocal C.sch R C.hsM A₀ C₀)
     (hA₀ : ∀ b ∈ A₀, b ∉ slot1Arrs ∧ b ≠ CTL) (hC₀ : ∀ x ∈ C₀, x ∉ resetCtl)
     (hca : C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts) (hsa : C.sa ∈ scrSlots)
@@ -430,7 +430,7 @@ theorem ArenaD.resetA (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
   have hf : MemFrame slot1Arrs resetCtl m (resetMemA (preMem m) f) :=
     ((preMem_frame m).mono (by simp) (by simp [resetCtl])).trans
       ((resetMemA_frame (preMem m) f).mono (by simp) (by simp))
-  have e : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {A₀ : List ArrId} {C₀ : List Word}
+  have e : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {A₀ : List TieredArray} {C₀ : List Word}
       (C : ConsSch) (R : Mem → Word → Word → α → Prop), C.WF →
       RLocal C.sch R C.hsM A₀ C₀ → (∀ b ∈ A₀, b ∉ slot1Arrs ∧ b ≠ CTL) → (∀ x ∈ C₀, x ∉ resetCtl) →
       C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts → C.sa ∈ scrSlots → tier1 C.ra ∉ slot1Arrs →
@@ -707,7 +707,7 @@ theorem scrArrs_low : ∀ b ∈ scrArrs, InStoreTier b := by decide
 /-- The bracket keeps the pins and the environment: it writes arrays below 64 and `CTL` words
 below 128 only. -/
 theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
-    {vis : Word} {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe)
+    {vis : Word} {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR dn m a vis fe)
     (hD : ArenaD m' a') (hc : CoreR m' a'.caches) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b)
     (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :

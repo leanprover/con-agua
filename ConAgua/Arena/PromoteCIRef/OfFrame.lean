@@ -20,7 +20,7 @@ below 64, `129`, `133`, `140‥147`; the arena side is given, the environment is
 frame. -/
 theorem LoopR.of_frame {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe fe' : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
-    {A : List ArrId} {C : List Word} {pm' : PMemo}
+    {A : List TieredArray} {C : List Word} {pm' : PMemo}
     (hR : LoopR pins dn m a vis fe pend ds) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, ((b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
       (146 ≤ b ∧ b ≤ 149) ∨

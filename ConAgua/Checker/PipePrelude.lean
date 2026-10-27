@@ -63,7 +63,7 @@ theorem TwinFacts.prelude {a a' : AState} {pre : PreludeIx} (h : TwinFacts a)
 def RecsOK (m : Mem) (ds : Array IDeclaration) : Prop :=
   ∀ x < ds.size, RecOK (m.arr64 DECL) (m.arr64 DLP) x
 
-theorem RecsOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {ds : Array IDeclaration}
+theorem RecsOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {ds : Array IDeclaration}
     (h : RecsOK m ds) (hf : MemFrame A C m m') (hD : DECL ∉ A) (hP : DLP ∉ A) : RecsOK m' ds := by
   rw [RecsOK, hf.1 DECL hD (by decide), hf.1 DLP hP (by decide)]; exact h
 

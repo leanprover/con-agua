@@ -132,7 +132,7 @@ theorem IdTable.get?_empty {α : Type} (i : Nat) : (({} : IdTable α)).get? i = 
 /-! ## Frames -/
 
 /-- `NID`, `LID` are not among a store's arrays (concrete schemas, by their array ids). -/
-macro "tapart" : tactic => `(tactic| simp [tier1, tierOff, ConsSch.wset, nanonCS, nanonSch, NAREC, NASLOT, zeroCS, zeroSch, ZREC, ZSLOT, nstrCS, nstrSch,
+macro "tapart" : tactic => `(tactic| simp [tier1, ConsSch.wset, nanonCS, nanonSch, NAREC, NASLOT, zeroCS, zeroSch, ZREC, ZSLOT, nstrCS, nstrSch,
   NSREC, NSSLOT, nnumCS, nnumSch, NNREC, NNSLOT, succCS, succSch, SREC, SSLOT, maxCS, maxSch, MREC, MSLOT, imaxCS, imaxSch, IREC,
   ISLOT, paramCS, paramSch, PREC, PSLOT, POOL, POOL1, NID, LID, EID, lsCS, lsSch, LSREC, LSSLOT, sortCS, sortSch, SOREC, SOSLOT,
   constCS, constSch, CREC, CSLOT, bvarCS, bvarSch, BREC, BSLOT, litCS, litStrCS, litCSk, litSch, REC, SLOT, appCS, appSch, AREC, ASLOT, lamCS, lamSch, LAREC,
@@ -157,7 +157,7 @@ macro "t01" : tactic => `(tactic| (simp (config := { failIfUnchanged := false })
   DECL, DLP, szC, spS]) <;> decide)
 
 /-- A frame that keeps `CTL[0]` (the top) and `CTL[1]` (the scratch flag) keeps the mode. -/
-theorem MemFrame.modeOK {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem MemFrame.modeOK {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (h0 : (0 : Word) ∉ C := by t01) (h1 : (1 : Word) ∉ C := by t01) (h : ModeOK m) : ModeOK m' := by
   have et : m'.top = m.top := hf.2.1 0 h0
   have ef : m'.flag = m.flag := hf.2.1 1 h1
@@ -166,7 +166,7 @@ theorem MemFrame.modeOK {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemF
 
 /-- `StateDR` reads only the id tables (arrays `64‥66`, `72‥74`, `CTL` words `64‥72`) and
 `DECL`, `DLP`. -/
-theorem StateDR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {st : StateD}
+theorem StateDR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {st : StateD}
     (hf : MemFrame A C m m') (_hn : NID ∉ A) (_hl : LID ∉ A) (_he : EID ∉ A := by tapart)
     (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart)
     (hs : ∀ x ∈ A, x ∉ idArrs := by tctl) (hc : ∀ x ∈ C, x ∉ idCtl := by tctl)
@@ -183,7 +183,7 @@ theorem DerR.congrSt {m : Mem} {a a' : AState} (hp : a'.store.pers = a.store.per
   constructor <;> simp only [DerT2, hp, hs] <;> assumption
 
 /-- A memory frame that leaves the five derived arrays alone keeps `DerR`. -/
-theorem DerR.frameT {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+theorem DerR.frameT {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, (b < 42 ∨ 46 < b) ∧ (b < 298 ∨ 302 < b)) (hD : DerR m a) :
     DerR m' a :=
   DerR.frameM A C m m' hf hA a hD
@@ -211,7 +211,7 @@ theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a
   ⟨ArenaR.grow m m' hg a hA.1, DerR.frameT (grows_frame m m' hg) (by simp [POOL, POOL1]) hA.2⟩
 
 /-- Name id `i` bound to `w` after a frame: the name table with `i` bound to `w`. -/
-theorem StateDR.putName {A : List ArrId} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
+theorem StateDR.putName {A : List TieredArray} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
     (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (i w : Word)
     (hp : tblPutW m₁ NID i w = some m₂) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.names.get? j = if j = i.toNat then some (decI w) else st.names.get? j)
@@ -229,7 +229,7 @@ theorem StateDR.putName {A : List ArrId} {C : List Word} {m m₁ m₂ : Mem} {st
     exact h₁.decls
 
 /-- Level id `i` bound to `w` after a frame: the level table with `i` bound to `w`. -/
-theorem StateDR.putLevel {A : List ArrId} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
+theorem StateDR.putLevel {A : List TieredArray} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
     (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (i w : Word)
     (hp : tblPutW m₁ LID i w = some m₂) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.levels.get? j = if j = i.toNat then some (decI w) else st.levels.get? j)
@@ -247,7 +247,7 @@ theorem StateDR.putLevel {A : List ArrId} {C : List Word} {m m₁ m₂ : Mem} {s
     exact h₁.decls
 
 /-- Expression id `i` bound to `w` after a frame: the expression table with `i` bound to `w`. -/
-theorem StateDR.putExpr {A : List ArrId} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
+theorem StateDR.putExpr {A : List TieredArray} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
     (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A)
     (i w : Word) (hp : tblPutW m₁ EID i w = some m₂) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.exprs.get? j = if j = i.toNat then some (decI w) else st.exprs.get? j)
@@ -482,7 +482,7 @@ variable (m m' : Mem) (a : AState) (st : StateD) (hR : ArenaD m a) (hD : StateDR
 include hD in
 /-- The common end of a level entry: the interning `x` succeeded at `w` into `m₁`, `LID[i]` was
 written. -/
-theorem levelFinish {A : List ArrId} {C : List Word} (i w : Word) (r : LevelRec) (x : AM LIdx)
+theorem levelFinish {A : List TieredArray} {C : List Word} (i w : Word) (r : LevelRec) (x : AM LIdx)
     (m₁ m₂ : Mem) (hX : parseLevelEntryD st i.toNat r =
       (x >>= fun l => pure { st with levels := st.levels.insert i.toNat l }))
     (hok : AM.ok x a) (hR₁ : ArenaD m₁ (AM.st x a)) (hres : AM.res x a = decI w)

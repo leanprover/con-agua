@@ -132,7 +132,7 @@ def spioLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
 /-- The push's stores (`SPN`, `CTL`) leave both tiers of the `forallE` records alone. -/
 theorem forall_arr_set64 (m : Mem) (a : ArrId) (k v t : Word) (h : 29 ≠ a) (h' : 285 ≠ a) :
     (m.set64 a k v).arr64 (tierA 29 t) = m.arr64 (tierA 29 t) := by
-  rcases tierA_cases' 29 t with e | e <;> rw [e]
+  rcases tierA_eq_or 29 t with e | e <;> rw [e]
   · exact Mem.arr64_set64_ne _ _ _ _ _ h
   · exact Mem.arr64_set64_ne _ _ _ _ _ h'
 

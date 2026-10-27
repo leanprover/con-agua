@@ -884,7 +884,7 @@ def RInv {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ)
   (∀ j : Word, j.toNat < slotsG S m₀ → (mstG S m j).toNat ≤ e.toNat) ∧
   MemoAt S K VR e nb nn m (rfun S K m₀ mp e b i)
 
-theorem slotsG_frame (S : MemoSch) {A : List ArrId} {C : List Word} {m m' : Mem}
+theorem slotsG_frame (S : MemoSch) {A : List TieredArray} {C : List Word} {m m' : Mem}
     (h : MemFrame A C m m') : slotsG S m' = slotsG S m := by
   simp only [slotsG, len64_eq, h.2.2.1]
 
@@ -1256,7 +1256,7 @@ include hS in
 omit [LawfulBEq κ] [LawfulHashable κ] in
 /-- **The memo relation survives a writer of other arrays and of `CTL` words other than the
 stamp**, when the values' denotations do (a heap that only grows, say). -/
-theorem memoRV_frame (A : List ArrId) (C : List Word) (hA : S.arr ∉ A) (hC : S.cs ∉ C)
+theorem memoRV_frame (A : List TieredArray) (C : List Word) (hA : S.arr ∉ A) (hC : S.cs ∉ C)
     (m m' : Mem) (hf : MemFrame A C m m') (hV : ∀ w v, VR m w v → VR m' w v)
     (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp) : MemoRV S K VR m' mp := by
   have hb : m'.arr64 S.arr = m.arr64 S.arr := hf.1 S.arr hA hS.arr_ctl
@@ -1316,7 +1316,7 @@ theorem memoRG_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRG S K dv m mp
 
 include hS in
 omit [LawfulBEq κ] [LawfulHashable κ] in
-theorem memoRG_frame (A : List ArrId) (C : List Word) (hA : S.arr ∉ A) (hC : S.cs ∉ C)
+theorem memoRG_frame (A : List TieredArray) (C : List Word) (hA : S.arr ∉ A) (hC : S.cs ∉ C)
     (m m' : Mem) (hf : MemFrame A C m m') (mp : Std.HashMap κ ν) (hR : MemoRG S K dv m mp) :
     MemoRG S K dv m' mp :=
   memoRV_frame S hS K _ A C hA hC m m' hf (fun _ _ h => h) mp hR

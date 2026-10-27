@@ -60,7 +60,7 @@ theorem opfV_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) 
   exact ⟨hvr.1, hvr.2.2.1, by rw [opf_view_run hv, hvr.2.1, hvr.2.2.2]⟩
 
 /-- The writers below array 64 keep the spine stack and its top. -/
-theorem spn_of_lt64 {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem spn_of_lt64 {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) :
     m'.arr64 SPN = m.arr64 SPN ∧ rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
   ⟨hf.1 SPN (fun h => by have := hA _ h; simp [SPN] at this) (by decide),
@@ -108,7 +108,7 @@ theorem opfFv_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
   rw [hs'] at hI
   have hfr := fvinternW_frame m u ty _ _ hI
   obtain ⟨a', hrun, hS', hg⟩ := internFVar_stage hS u ty hty hI
-  obtain ⟨h1, h2⟩ := spn_of_lt64 hfr (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP]) (by simp)
+  obtain ⟨h1, h2⟩ := spn_of_lt64 hfr (by simp [tier1, FVREC, FVSLOT, FVLP]) (by simp)
   exact ⟨a', hrun, hS', hg, hAb.frameD hfr (by decide) (by decide), h1, h2,
     fvinternW_hw m a hS.1.arena.1.fvar u ty _ _ hI⟩
 

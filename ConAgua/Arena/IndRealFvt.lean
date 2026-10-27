@@ -40,7 +40,7 @@ open L.Arena
 /-- The stage relation across a writer above array 136 and `CTL[129]` that leaves the pool alone
 (`IndPosSpec/MatesW`'s `StageR.frame_hi`, which sits above this file). -/
 theorem stageR_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} {A : List ArrId} {C : List Word} (hS : StageR dn vis fe m a) (hf : MemFrame A C m m')
+    {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR dn vis fe m a) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256 ∧ (b < 140 ∨ 144 ≤ b)) (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hA2 : IW ∉ A) (hC2 : (200 : Word) ∉ C) :
     StageR dn vis fe m' a ∧ IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW hA2 (by decide)

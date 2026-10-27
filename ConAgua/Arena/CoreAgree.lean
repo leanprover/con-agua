@@ -11,7 +11,7 @@ of `fs` in `q` calls only into `fs` (`Stmt.okW`'s `call` clause), so it is the c
 
 namespace L
 
-theorem exec_agreeOn {ctl : ArrId} {A : List ArrId} {C : List Word} {fs : List FnName} {p q : Prog}
+theorem exec_agreeOn {ctl : ArrId} {A : List TieredArray} {C : List Word} {fs : List FnName} {p q : Prog}
     (hq : closedW ctl q A C fs = true) (hpq : ∀ f ∈ fs, p.lookup f = q.lookup f) :
     ∀ (n : Nat) (st : Stmt), st.okW ctl A C fs = true → exec p n st = exec q n st := by
   intro n
@@ -44,7 +44,7 @@ theorem exec_agreeOn {ctl : ArrId} {A : List ArrId} {C : List Word} {fs : List F
     | _ => rfl
 
 /-- **A call into an agreeing program**: the same computation. -/
-theorem invoke_agreeOn {ctl : ArrId} {A : List ArrId} {C : List Word} {fs : List FnName} {p q : Prog}
+theorem invoke_agreeOn {ctl : ArrId} {A : List TieredArray} {C : List Word} {fs : List FnName} {p q : Prog}
     (hq : closedW ctl q A C fs = true) (hpq : ∀ f ∈ fs, p.lookup f = q.lookup f) (n : Nat)
     {f : FnName} (hf : f ∈ fs) (vs : List Word) :
     invoke p (exec p n) f vs = invoke q (exec q n) f vs := by

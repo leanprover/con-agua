@@ -610,8 +610,8 @@ theorem outEq_pushG (hS : S.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (vs : List W
     OutEq S m (pushG S m t vs j c q) := by
   have := hS.ca
   refine ⟨fun b h1 h1' h2 h2' h3 => pushG_arr S m t vs j c q b
-    (by rcases tierA_cases' S.ra t with e | e <;> rw [e] <;> assumption)
-    (by rcases tierA_cases' S.sa t with e | e <;> rw [e] <;> assumption) h3, ?_⟩
+    (by rcases tierA_eq_or S.ra t with e | e <;> rw [e] <;> assumption)
+    (by rcases tierA_eq_or S.sa t with e | e <;> rw [e] <;> assumption) h3, ?_⟩
   rw [pushG_ctl S hS _ _ _ _ _ _ ht]
   grind
 

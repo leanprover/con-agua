@@ -384,7 +384,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 /-- **`StageT` after a run framed away from the pools and the pins**, from `CoreS` after it
 (`StageT.of_core` at a write set from the callee's own program text). -/
-theorem StageT.of_coreFrame {A : List ArrId} {C : List Word} {m m' : Mem} {a a' : AState}
+theorem StageT.of_coreFrame {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : AState}
     {M : ModeMaps} (hfr : MemFrame A C m m') (hIW : IW ∉ A) (hE : EREC ∉ A) (hP : PINS ∉ A)
     (h129 : (129 : Word) ∉ C) (h200 : (200 : Word) ∉ C) (hS : StageT dn vis fe m a)
     (hC : CoreS dn m' a' vis fe M 0) : StageT dn vis fe m' a' ∧ IWGrow m m' := by

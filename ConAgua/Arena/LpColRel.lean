@@ -46,9 +46,9 @@ theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s
   split at h
   · cases h
   · cases h
-    rcases tierA_cases' A (tierW r) with e | e <;> rw [e]
+    rcases tierA_eq_or A (tierW r) with e | e <;> rw [e]
     · exact (MemFrame.set64 m₁ A hA _ _).mono (by simp) (by simp)
-    · exact (MemFrame.set64 m₁ _ (tier1_ne (by decide)) _ _).mono (by simp) (by simp)
+    · exact (MemFrame.set64 m₁ _ ((tier1_ne_t0 _ _)) _ _).mono (by simp) (by simp)
 
 /-- **The frame of a `mk_*`**: the interning's arrays and counts, then the derived column `A`. -/
 theorem mkK_frame {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : A ≠ CTL) {c s d r : Word}
@@ -241,10 +241,10 @@ theorem ColT2.frame {L : Lens α δ k} {A : ArrId} {f : δ → Word} {m m' : Mem
     colT_mono h.2 (fun _ _ => by simp only [tierA_one_eq, he'])⟩
 
 /-- `ColT2.frame` across a `MemFrame` that avoids the column (both tiers). -/
-theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List ArrId} {C : List Word}
+theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List TieredArray} {C : List Word}
     {m m' : Mem} {a : AState} (h : ColT2 L A f m a) (hf : MemFrame Ar C m m') (hA : A ∉ Ar)
     (hA' : tier1 A ∉ Ar) (hc : A ≠ CTL) : ColT2 L A f m' a :=
-  h.frame (hf.1 A hA hc) (hf.1 _ hA' (tier1_ne (by decide)))
+  h.frame (hf.1 A hA hc) (hf.1 _ hA' ((tier1_ne_t0 _ _)))
 
 omit [Inhabited δ] in
 theorem tbl_push_size (tb : Tbl α (Idx k) δ) (key : α) (d : δ) (y : Idx k) :

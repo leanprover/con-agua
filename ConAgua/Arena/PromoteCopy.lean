@@ -447,7 +447,7 @@ theorem SlKeep.trans {m₁ m₂ m₃ : Mem} (h₁ : SlKeep m₁ m₂) (h₂ : Sl
       ((h₂.2.2 o l (h₁.2.2 o l h).1).2 k hk).trans ((h₁.2.2 o l h).2 k hk)⟩⟩
 
 /-- A frame away from the pool's arrays, the saved tier-0 top and the top keeps the slices. -/
-theorem SlKeep.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem SlKeep.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hA : POOL ∉ A ∧ POOL1 ∉ A ∧ PT0 ∉ A) (hC : (0 : Word) ∉ C) : SlKeep m m' := by
   have h0 := hf.1 POOL hA.1 (by decide)
   have h1 := hf.1 POOL1 hA.2.1 (by decide)
@@ -478,7 +478,7 @@ theorem TierKeep.refl (m : Mem) : TierKeep m m := id
 theorem TierKeep.trans {m₁ m₂ m₃ : Mem} (h₁ : TierKeep m₁ m₂) (h₂ : TierKeep m₂ m₃) : TierKeep m₁ m₃ :=
   fun h => h₂ (h₁ h)
 
-theorem TierKeep.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem TierKeep.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (h0 : (0 : Word) ∉ C) : TierKeep m m' := fun h => by
   have := hf.2.1 0 h0; simp only [rdW] at this
   have ht : m'.top = m.top := by simpa [Mem.top] using this

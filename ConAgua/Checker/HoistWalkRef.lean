@@ -22,12 +22,12 @@ open L.Arena L.Ind L.Front L.Front.Ind
 namespace L.Checker
 
 
-theorem _root_.L.Arena.MemFrame.symmH {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m') :
+theorem _root_.L.Arena.MemFrame.symmH {A : List TieredArray} {C : List Word} {m m' : Mem} (h : MemFrame A C m m') :
     MemFrame A C m' m :=
   ⟨fun b hb hc => (h.1 b hb hc).symm, fun x hx => (h.2.1 x hx).symm, fun b => (h.2.2.1 b).symm,
     h.2.2.2.symm⟩
 
-theorem _root_.L.Arena.MemFrame.set64_bothH {A : List ArrId} {C : List Word} {m₁ m₂ : Mem} (h : MemFrame A C m₁ m₂)
+theorem _root_.L.Arena.MemFrame.set64_bothH {A : List TieredArray} {C : List Word} {m₁ m₂ : Mem} (h : MemFrame A C m₁ m₂)
     (b : ArrId) (hb : b ≠ CTL) (k v : Word) : MemFrame A C (m₁.set64 b k v) (m₂.set64 b k v) := by
   refine ⟨fun b' hb' hc => ?_, fun x hx => ?_, fun b' => ?_, ?_⟩
   · by_cases e : b' = b
@@ -289,7 +289,7 @@ theorem two_ok (ih : WalkOK n) (R : ArrId) (hR1 : R ≠ IW) (hR2 : R ≠ HSEEN) 
 theorem tier_ok (a : ArrId) (t : Word)
     (h : ∀ b ∈ [a, tier1 a], b ≠ IW ∧ b ≠ HSEEN ∧ b ≠ CTL) :
     tierA a t ≠ IW ∧ tierA a t ≠ HSEEN ∧ tierA a t ≠ CTL := by
-  rcases tierA_cases' a t with e | e <;> rw [e]
+  rcases tierA_eq_or a t with e | e <;> rw [e]
   · exact h a (by simp)
   · exact h (tier1 a) (by simp)
 

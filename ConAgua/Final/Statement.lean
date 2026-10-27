@@ -1,4 +1,5 @@
 import ConAgua.Compiler.Rel
+import ConAgua.Layout
 
 /-!
 # The final theorem's vocabulary: the verdict, the loaded memory, the calls
@@ -89,11 +90,11 @@ open L L.Compiler
 or an unset register is never read as accept. -/
 def ACCEPT : Word := 0x4143_4345_5054
 
-/-- The memory the loader sets up: the input bytes in byte array `0`, the pin data in byte array
-`1`, the other byte arrays of sizes `s8` and the word arrays of sizes `s64`, all zero. -/
-def loadMem (b pb : ByteArray) (s8 s64 : List Nat) : Mem :=
-  { bytes := (b.data :: pb.data :: s8.map (Array.replicate · 0)).toArray
-    words := (s64.map (Array.replicate · 0)).toArray }
+/-- The memory the loader sets up: the input bytes in byte array `IN`, the pin data in byte array
+`Rom.PB`, and every word array `s` of `sz s` words, all zero (every other byte array empty). -/
+def loadMem (b pb : ByteArray) (sz : TieredArray → Nat) : Mem :=
+  { bytes := fun a => if a = IN then b.data else if a = Rom.PB then pb.data else #[]
+    words := fun s => Array.replicate (sz s) 0 }
 
 /-- **How `ca_enter` is called** (`compile_correct`'s premises about the machine state, with no
 entry arguments; the setup stub establishes them, `abi_harness`): the table address in `rdi`, the

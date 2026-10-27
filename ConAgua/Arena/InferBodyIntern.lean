@@ -83,7 +83,7 @@ theorem DerR.of_tiers (m : Mem) (a a' : AState) (hD : DerR m a) (hp : a'.store.p
 /-- **`CoreS` across a level-node interning** whose memory writes are confined to the level
 store's arrays (below 42) and counts (`CTL` below 42). -/
 theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LvlStep a a') (hR : ArenaR m' a')
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ Tier1In 0 42 b ∨ Tier1In 55 64 b) (hC : ∀ x ∈ C, x.toNat < 42)
     (hlv : LvlAll a') (hlc : LvlCnt m m') (hP : POOL ∉ A := by decide)
@@ -172,7 +172,7 @@ theorem internFVar_core (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW 
       (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP])
+    (by simp [tier1, FVREC, FVSLOT, FVLP])
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
@@ -194,14 +194,14 @@ theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
   have hS' := hS.arena_frameD hD (Keeps.run (keeps_cpl_internSort _) (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, tierOff, SOREC, SOSLOT, SOLP])
+    (by simp [tier1, SOREC, SOSLOT, SOLP])
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.1 EREC (by simp [tier1, tierOff, SOREC, SOSLOT, SOLP, EREC]) (by decide)))
+    (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.1 EREC (by simp [tier1, SOREC, SOSLOT, SOLP, EREC]) (by decide)))
     (hmode := hS.mode.frame hf (by simp) (by simp))
   have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩

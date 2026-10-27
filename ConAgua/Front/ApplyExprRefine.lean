@@ -87,7 +87,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, tierOff, ConsSch.wset, litCS, litCSk, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, ConsSch.wset, litCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -112,7 +112,7 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, tierOff, ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -149,7 +149,7 @@ def Above64 (m m' : Mem) : Prop :=
 theorem Above64.trans {m₁ m₂ m₃ : Mem} (h₁ : Above64 m₁ m₂) (h₂ : Above64 m₂ m₃) : Above64 m₁ m₃ :=
   MemFrame.trans h₁ h₂
 
-theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem MemFrame.above {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64 := by tctl) : Above64 m m' :=
   hf.mono (fun b hb => low_tier_mem b (hA b hb))
     (fun x hx => by
@@ -169,7 +169,7 @@ theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above6
       simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false, NID, LID, EID, NIDS, LIDS, EIDS] at h
       simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at hx
       rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> rcases hx with hx | ⟨y, hy, hy'⟩ <;>
-        first | (revert hx; decide) | exact absurd hy' (tier1_ne (by decide))) (fun x hx => by
+        first | (revert hx; decide) | exact absurd hy' ((tier1_ne_t0 _ _))) (fun x hx => by
       simp only [List.mem_map, List.mem_range] at hx
       obtain ⟨n, hn, rfl⟩ := hx
       intro h
@@ -198,27 +198,27 @@ theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m
 theorem mkAppW_above {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m')) : Above64 m m' := by
   unfold mkAppW at h; split at h; · cases h
   exact mkK_above ADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame appCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, appCS, AREC, ASLOT])) h
+    exact MemFrame.above (consInternM_frame appCS_wf hx) (by simp [tier1, ConsSch.wset, appCS, AREC, ASLOT])) h
 theorem mkLamW_above {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) : Above64 m m' := by
   unfold mkLamW at h; split at h; · cases h
   exact mkK_above LADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame lamCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, lamCS, LAREC, LASLOT])) h
+    exact MemFrame.above (consInternM_frame lamCS_wf hx) (by simp [tier1, ConsSch.wset, lamCS, LAREC, LASLOT])) h
 theorem mkForallW_above {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m')) :
     Above64 m m' := by
   unfold mkForallW at h; split at h; · cases h
   exact mkK_above FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact MemFrame.above (consInternM_frame forallCS_wf hx)
-      (by simp [tier1, tierOff, ConsSch.wset, forallCS, FAREC, FASLOT])) h
+      (by simp [tier1, ConsSch.wset, forallCS, FAREC, FASLOT])) h
 theorem mkLetW_above {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     Above64 m m' := by
   unfold mkLetW at h; split at h; · cases h
   exact mkK_above LEDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame letCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, letCS, LEREC, LESLOT])) h
+    exact MemFrame.above (consInternM_frame letCS_wf hx) (by simp [tier1, ConsSch.wset, letCS, LEREC, LESLOT])) h
 theorem mkProjW_above {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) :
     Above64 m m' := by
   unfold mkProjW at h; split at h; · cases h
   exact mkK_above PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, projCS, PJREC, PJSLOT])) h
+    exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [tier1, ConsSch.wset, projCS, PJREC, PJSLOT])) h
 
 theorem mkK_mode (A : ArrId) (hC : A ≠ CTL) (c s d r : Word) (m m' : Mem)
     (x : Option (Word × Mem)) (hx : ∀ r₁ m₁, x = some (r₁, m₁) → ModeOK m → ModeOK m₁)
@@ -309,7 +309,7 @@ theorem node_bvar (k : Nat) (x y z : Word) (hx : ItemR x k) (hI : nodeW b.data m
   rename_i hn
   rw [itemR_eq hx hn]
   obtain ⟨h1, h2, h3, hf⟩ := internBVar_DF m a hA w m₁ x hI
-  exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [tier1, tierOff, bvarSch, BREC, BSLOT])),
+  exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [tier1, bvarSch, BREC, BSLOT])),
     MemFrame.modeOK hf (by decide) (by decide) hmode⟩
 
 theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m 9 x y z = some (w, m₁)) :
@@ -323,7 +323,7 @@ theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m
       simp [exprOp, StateD.level, hg]
     obtain ⟨h1, h2, h3, hf⟩ := internSort_D m a hA w m₁ _ hw hI
     unfold NodeOK; rw [hop]
-    exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [tier1, tierOff, sortSch, SOREC, SOSLOT, SOLP])),
+    exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [tier1, sortSch, SOREC, SOSLOT, SOLP])),
       MemFrame.modeOK hf (by decide) (by decide) hmode⟩
   · cases hI
 
@@ -420,7 +420,7 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
   obtain ⟨h1, h2, h3, hf⟩ := internLit_D m₂ a hA' w m₁ m.top l hsl hnm (ModeOK.slice0 hmo₂ hsl) hI
   rw [hpv, ← hn] at h1 h2 h3
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
-    (MemFrame.above hf (by simp [tier1, tierOff, litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
+    (MemFrame.above hf (by simp [tier1, litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
 
 theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (x y z : Word)
     (s : String) (hv : StrR b y z s) (hI : nodeW b.data m 17 x y z = some (w, m₁)) :
@@ -446,7 +446,7 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
   have hmo₂ := ModeOK.growsF hmode hg
   obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk (ModeOK.slice0 hmo₂ hsl) hI
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
-    (MemFrame.above hf (by simp [tier1, tierOff, litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
+    (MemFrame.above hf (by simp [tier1, litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
 
 omit hA hD hmode in
 /-- A universe list whose items are bound level ids: `mapM st.level` is pure. -/
@@ -546,8 +546,8 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     (MemFrame.modeOK lf (by decide) (by decide) hmo₂)⟩
   · rw [hop] at hok' ⊢; rw [AM.st_bind _ _ _ hok', l3]; exact c2
   · rw [hop, AM.res_bind _ _ _ l1, l3]; exact c3
-  · exact ((hD.above hab).above (MemFrame.above lf (by simp [tier1, tierOff, lsSch, LSREC, LSSLOT, LSHP]))).above
-      (MemFrame.above cf (by simp [tier1, tierOff, constSch, CREC, CSLOT, CLP]))
+  · exact ((hD.above hab).above (MemFrame.above lf (by simp [tier1, lsSch, LSREC, LSSLOT, LSHP]))).above
+      (MemFrame.above cf (by simp [tier1, constSch, CREC, CSLOT, CLP]))
 
 /-- **Every expression kind**: the node the fields `f` describe is interned. -/
 theorem node_ok (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (f : Fld)

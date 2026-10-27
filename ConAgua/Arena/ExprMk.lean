@@ -575,7 +575,7 @@ theorem ainternW_der {m m₁ : Mem} {f a r q u : Word} (hI : ainternW m f a = so
     simp only [pushRec, colW, appCS, cntC, acnt, pushZ, pushArgs]; rfl
   obtain ⟨e1, e2, e3⟩ := der_congr (.inl rfl) t
     (fun b hb => (OutSa.set64 (fun b hb => he b hb)
-      (tierA_ne (a := ADER) (b := ASLOT) (by decide) (by decide) (by decide) t t) _ _ b hb).trans
+      (tierA_ne (a := ADER) (b := ASLOT) (by decide) t t) _ _ b hb).trans
       (by rw [ez])) x
   obtain ⟨f1, f2, f3⟩ := der_pushZ (R := AREC) (S := ASLOT) (D := ADER) (k := 4) m t f a
     (.inl ⟨rfl, rfl, rfl, rfl⟩) ht hc' x
@@ -616,7 +616,7 @@ theorem lainternW_der {m m₁ : Mem} {f a r q u : Word} (hI : lainternW m f a = 
     simp only [pushRec, colW, lamCS, cntC, lacnt, pushZ, pushArgs]; rfl
   obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inl rfl)) t
     (fun b hb => (OutSa.set64 (fun b hb => he b hb)
-      (tierA_ne (a := LADER) (b := LASLOT) (by decide) (by decide) (by decide) t t) _ _ b hb).trans
+      (tierA_ne (a := LADER) (b := LASLOT) (by decide) t t) _ _ b hb).trans
       (by rw [ez])) x
   obtain ⟨f1, f2, f3⟩ := der_pushZ (R := LAREC) (S := LASLOT) (D := LADER) (k := 28) m t f a
     (.inr (.inl ⟨rfl, rfl, rfl, rfl⟩)) ht hc' x
@@ -657,7 +657,7 @@ theorem fainternW_der {m m₁ : Mem} {f a r q u : Word} (hI : fainternW m f a = 
     simp only [pushRec, colW, forallCS, cntC, facnt, pushZ, pushArgs]; rfl
   obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inr rfl)) t
     (fun b hb => (OutSa.set64 (fun b hb => he b hb)
-      (tierA_ne (a := FADER) (b := FASLOT) (by decide) (by decide) (by decide) t t) _ _ b hb).trans
+      (tierA_ne (a := FADER) (b := FASLOT) (by decide) t t) _ _ b hb).trans
       (by rw [ez])) x
   obtain ⟨f1, f2, f3⟩ := der_pushZ (R := FAREC) (S := FASLOT) (D := FADER) (k := 30) m t f a
     (.inr (.inr ⟨rfl, rfl, rfl, rfl⟩)) ht hc' x

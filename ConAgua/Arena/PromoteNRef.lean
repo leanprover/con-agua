@@ -165,7 +165,7 @@ theorem PMemoR.setN {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h r : Word) (h
       (fun _ _ h => h) _ hP.e⟩
 
 /-- A writer of the store tier keeps the promotion memo. -/
-theorem PMemoR.frameLo {A : List ArrId} {C : List Word} {m m' : Mem} {pm : PMemo}
+theorem PMemoR.frameLo {A : List TieredArray} {C : List Word} {m m' : Mem} {pm : PMemo}
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hf : MemFrame A C m m')
     (h : PMemoR m pm) : PMemoR m' pm :=
   h.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
@@ -337,7 +337,7 @@ theorem pn_rel : ∀ n : Nat,
       refine PNOk.of_sim (Sim.bind_twin (viewN_anon hD.1 hh hv g0 hcnt) ((Sim.hd1 (sim_pi
         (fun n s₀ => piNAnon_spec p hp n s₀) fun n _ _ h => piNAnon_rel p hp n m a hD _ _ h)).mono ?_)) hW
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr⟩
-      exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, tierOff, NAREC, NASLOT]) (by simp) hfr, hpw, hcp,
+      exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, NAREC, NASLOT]) (by simp) hfr, hpw, hcp,
         hfr.mono (by simp) (by simp), rfl, rfl, rfl, SlKeep.of_frame hfr (by decide) (by decide)⟩
     by_cases g1 : h >>> 28 = 1
     · by_cases hcnt : tcnt m NSTR (tierW h) ≤ idxW h
@@ -353,7 +353,7 @@ theorem pn_rel : ∀ n : Nat,
         piNStr_rel p hp n m₁ a₁ hD₁ _ _ _ hpw₁ hsl₁ st
           (by rw [← hk]; exact (sliceL_eq_iff _ _ _ _ _).mpr hv₁) _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂, hsk₂⟩
-      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, tierOff, POOL, PT0, NSREC, NSSLOT]) (by simp) hfr₂, hpw₂,
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, POOL, PT0, NSREC, NSSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hl₁, hls₁, hsk₁.trans hsk₂⟩
     by_cases g2 : h >>> 28 = 2
     · by_cases hcnt : tcnt m NNUM (tierW h) ≤ idxW h
@@ -367,7 +367,7 @@ theorem pn_rel : ∀ n : Nat,
       refine (Sim.hd1 (sim_pi (fun n s₀ => piNNum_spec p hp n s₀ _ _) fun n _ _ h =>
         piNNum_rel p hp n m₁ a₁ hD₁ _ _ hpw₁ _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
-      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, tierOff, NNREC, NNSLOT]) (by simp) hfr₂, hpw₂,
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, NNREC, NNSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hl₁, hls₁,
         hsk₁.trans (SlKeep.of_frame hfr₂ (by decide) (by decide))⟩
     simp [pnArmW, hh', hv, g0, g1, g2] at hW

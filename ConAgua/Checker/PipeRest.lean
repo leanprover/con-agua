@@ -26,7 +26,7 @@ structure PinFacts (m : Mem) (p : Pins) : Prop where
   full : PinsFull m p
   pin0 : pinW m 0 ≠ 0
 
-theorem PinFacts.frame {A : List ArrId} {C : List Word} {m m' : Mem} {p : Pins} (h : PinFacts m p)
+theorem PinFacts.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {p : Pins} (h : PinFacts m p)
     (hf : MemFrame A C m m') (hP : PINS ∉ A) (hR1 : RSET ∉ A) (hR2 : RMEMO ∉ A)
     (h131 : (131 : Word) ∉ C) (h132 : (132 : Word) ∉ C) (h148 : (148 : Word) ∉ C) :
     PinFacts m' p := by
@@ -51,20 +51,20 @@ structure R4 (l m : Mem) (pb : ByteArray) (pre : PreludeIx) (a : AState) : Prop 
 theorem bytes_pos {l m : Mem} {pb : ByteArray} (h : Since l m pb) (hl : l.HasB IN) :
     m.HasB IN := by unfold Mem.HasB at *; rw [h.keep.1]; exact hl
 
-theorem loadMem_bytes (b pb : ByteArray) (s8 s64 : List Nat) : (loadMem b pb s8 s64).HasB IN := by
+theorem loadMem_bytes (b pb : ByteArray) (sz : TieredArray → Nat) : (loadMem b pb sz).HasB IN := by
   simp [loadMem, Mem.HasB]
 
 theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArray)
-    (s8 s64 : List Nat) (a : AState) :
-    RelSpec checkerProg "builtin_prelude" (fun m => R3 (loadMem b pb s8 s64) m pb a) fun _ m =>
-      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ R4 (loadMem b pb s8 s64) m pb pre a' := by
+    (sz : TieredArray → Nat) (a : AState) :
+    RelSpec checkerProg "builtin_prelude" (fun m => R3 (loadMem b pb sz) m pb a) fun _ m =>
+      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ R4 (loadMem b pb sz) m pb pre a' := by
   intro n _hn s₀ h3
   refine triple_post (triple_and (triple_and (builtinPrelude_checker h64 a n _hn s₀)
     (stage_since n (preLoop_mem "builtin_prelude" (by decide +kernel)) s₀))
     (stageFrame_builtin_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hbp⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   have hc := CapsOK.keep h3.since.keep h3.since.caps
   obtain ⟨st, a', hb, hA, hD, ht, h240, hrk, hmo⟩ := hbp ⟨h3.arena, h3.sdr, h3.twin, by have := hc.pool; omega,
-    bytes_pos h3.since (loadMem_bytes b pb s8 s64), h3.mode⟩
+    bytes_pos h3.since (loadMem_bytes b pb sz), h3.mode⟩
   obtain ⟨hstep, -, -, -⟩ := ConRon.Bridge.Frontend.builtinPreludeE_run h3.twin.ok h3.twin.off
     h3.twin.pins hb
   have hpf0 : PinFacts s₀.mem a.pins := ⟨h3.rset, h3.stk, h3.pinsFull, h3.pin0⟩
@@ -94,17 +94,17 @@ structure R5 (l m : Mem) (pb : ByteArray) (pre : PreludeIx) (rc : ParseResultD) 
   rok : RecsOK m (pre.decls ++ rc.decls)
   mode : ModeOK m
 
-theorem loadMem_in (b pb : ByteArray) (s8 s64 : List Nat) : (loadMem b pb s8 s64).arr8 IN = b.data := by
+theorem loadMem_in (b pb : ByteArray) (sz : TieredArray → Nat) : (loadMem b pb sz).arr8 IN = b.data := by
   simp [loadMem, Mem.arr8, IN]
 
 theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArray)
-    (hb : b.size < 2 ^ 63) (s8 s64 : List Nat) (pre : PreludeIx) (a : AState) :
-    RelSpec checkerProg "front_run" (fun m => R4 (loadMem b pb s8 s64) m pb pre a) fun r m =>
+    (hb : b.size < 2 ^ 63) (sz : TieredArray → Nat) (pre : PreludeIx) (a : AState) :
+    RelSpec checkerProg "front_run" (fun m => R4 (loadMem b pb sz) m pb pre a) fun r m =>
       r.headD 0 = 0 → ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧
-        R5 (loadMem b pb s8 s64) m pb pre rc a' := by
+        R5 (loadMem b pb sz) m pb pre rc a' := by
   intro n _hn s₀ h4
   have hc := CapsOK.keep h4.since.keep h4.since.caps
-  have hm : s₀.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb s8 s64
+  have hm : s₀.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb sz
   refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm (by have := hc.pool; omega)
     a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok h4.mode)
     (stage_since n (preLoop_mem "front_run" (by decide +kernel)) s₀))
@@ -152,10 +152,10 @@ structure R6 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (a : AState)
   iw : L.Ind.IWOK m
   mode : ModeOK m
 
-theorem prepareStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (pre : PreludeIx)
+theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre : PreludeIx)
     (rc : ParseResultD) (a : AState) :
-    RelSpec checkerProg "prepare_prelude" (fun m => R5 (loadMem b pb s8 s64) m pb pre rc a) fun _ m =>
-      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ R6 (loadMem b pb s8 s64) m pb ds a' := by
+    RelSpec checkerProg "prepare_prelude" (fun m => R5 (loadMem b pb sz) m pb pre rc a) fun _ m =>
+      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ R6 (loadMem b pb sz) m pb ds a' := by
   intro n _hn s₀ h5
   have hc := CapsOK.keep h5.since.keep h5.since.caps
   have hctl : 256 ≤ (s₀.mem.arr64 CTL).size := hc.2.1
@@ -232,17 +232,17 @@ structure R7 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (ipins : Lis
   iw : L.Ind.IWOK m
   mode : ModeOK m
 
-theorem pinsStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63)
+theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
     (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD) (sC : AState)
     (ds : Array IDeclaration) (a : AState) (hpx : TwinPrefix4 b sA pre sB rc sC ds a) :
-    RelSpec checkerProg "intern_all_pins" (fun m => R6 (loadMem b pb s8 s64) m pb ds a) fun _ m =>
+    RelSpec checkerProg "intern_all_pins" (fun m => R6 (loadMem b pb sz) m pb ds a) fun _ m =>
       ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧
-        R7 (loadMem b pb s8 s64) m pb ds ipins a' := by
+        R7 (loadMem b pb sz) m pb ds ipins a' := by
   intro n _hn s₀ h6
   have hc := CapsOK.keep h6.since.keep h6.since.caps
   obtain ⟨hok, hoff, hpins, hpp⟩ := prefix4_facts hpx
   have hbs : s₀.mem.arr8 PB = pb.data.toList.toArray := by
-    rw [h6.since.keep.arr8]; exact loadMem_pb b pb s8 s64
+    rw [h6.since.keep.arr8]; exact loadMem_pb b pb sz
   refine triple_post (triple_and (triple_and (checkerProg_internAllPins_PB pb.data.toList
     (by simpa [RomOK] using hpb) h6.since.pbpre n s₀ a hbs h6.arena h6.mode h6.pf.full.names_size hok hpins hpp
     hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl)

@@ -120,7 +120,7 @@ theorem EW.trans {lo hi lo₂ hi₂ : Nat} {m₁ m₂ m₃ : Mem} (h₁ : EW lo 
    h₂.size.trans h₁.size, h₂.c150.trans h₁.c150, h₂.c151.trans h₁.c151⟩
 
 /-- A frame that keeps `EREC`, its top and the header is an `EW` of any window. -/
-theorem EW.frame {A : List ArrId} {C : List Word} {m m' : Mem} (lo hi : Nat) (hf : MemFrame A C m m')
+theorem EW.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (lo hi : Nat) (hf : MemFrame A C m m')
     (hA : EREC ∉ A) (h1 : (129 : Word) ∉ C) (h2 : (150 : Word) ∉ C) (h3 : (151 : Word) ∉ C) :
     EW lo hi m m' := by
   have hE := hf.1 EREC hA (by decide)

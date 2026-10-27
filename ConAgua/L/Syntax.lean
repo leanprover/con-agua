@@ -65,6 +65,8 @@ instance : Coe ArrId TieredArray := ⟨TieredArray.t0⟩
 
 @[simp] theorem TieredArray.t0_inj {a b : ArrId} : TieredArray.t0 a = TieredArray.t0 b ↔ a = b := by
   simp [TieredArray.t0]
+theorem TieredArray.t0_ne {a b : ArrId} (h : a ≠ b) : TieredArray.t0 a ≠ TieredArray.t0 b :=
+  fun e => h (TieredArray.t0_inj.1 e)
 @[simp] theorem t0_ne_tier1 (a b : ArrId) : TieredArray.t0 a ≠ tier1 b := by simp [TieredArray.t0, tier1]
 @[simp] theorem tier1_ne_t0 (a b : ArrId) : tier1 a ≠ TieredArray.t0 b := by simp [TieredArray.t0, tier1]
 @[simp] theorem tier1_inj {a b : ArrId} : tier1 a = tier1 b ↔ a = b := by simp [tier1]

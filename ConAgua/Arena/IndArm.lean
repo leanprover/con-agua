@@ -20,7 +20,7 @@ namespace L.Ind
 open L.Arena
 
 /-- **`AbsKeep` from a write set** that leaves the walk memos alone. -/
-theorem absKeep_of_closed {p : Prog} {A : List ArrId} {C : List Word} {fs : List FnName}
+theorem absKeep_of_closed {p : Prog} {A : List TieredArray} {C : List Word} {fs : List FnName}
     (hcl : closedA p A C fs = true) (hA : memoFreeA A = true) (hC : memoFreeC C = true)
     {f : FnName} (hf : f ∈ fs) : AbsKeep p f :=
   fun _ _ _ _ _ h => AFr.of_frame (run_memFrame hcl hf (run_of_callW h)).1 hA hC

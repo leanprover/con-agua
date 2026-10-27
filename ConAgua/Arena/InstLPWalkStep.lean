@@ -57,7 +57,7 @@ variable {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : W
   {M : ModeMaps} {eb : Word}
 
 /-- **An expression interning that creates no `sort`/`const` view**, as a walk step. -/
-theorem ilw_internE {v : ENodeView} {A : List ArrId} {C : List Word} (r : Word)
+theorem ilw_internE {v : ENodeView} {A : List TieredArray} {C : List Word} (r : Word)
     (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a)
     (hok : AM.ok (internE v) a) (hD : ArenaD m' (AM.st (internE v) a))
     (hres : AM.res (internE v) a = decE r) (hr : HW r) (hf : MemFrame A C m m')

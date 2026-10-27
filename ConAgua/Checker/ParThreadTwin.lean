@@ -146,14 +146,14 @@ end chain
 /-! ## With entry 1 -/
 
 /-- The word arrays after a run from the loaded memory are below `2^64` words. -/
-theorem run_load_size {b pb : ByteArray} {s8 s64 : List Nat} (hs : ∀ n ∈ s64, n < 2 ^ 64) {w : Word}
+theorem run_load_size {b pb : ByteArray} {sz : TieredArray → Nat} (hs : ∀ n ∈ s64, n < 2 ^ 64) {w : Word}
     {N : Nat} {rs : List Word} {m' : Mem}
-    (h : L.run checkerProg N "check" [] (loadMemM b pb s8 s64 w) = .ok (rs, m')) (a : ArrId) :
+    (h : L.run checkerProg N "check" [] (loadMemM b pb sz w) = .ok (rs, m')) (a : ArrId) :
     (m'.arr64 a).size < 2 ^ 64 := by
   have t := Triple.keep checkerProg_noSt8 (n := N) (f := "check") (vs := [])
-    (s₀ := ⟨loadMemM b pb s8 s64 w, Locals.init []⟩) (Q := fun _ _ => True)
+    (s₀ := ⟨loadMemM b pb sz w, Locals.init []⟩) (Q := fun _ _ => True)
     (M.triple_of_run fun _ _ _ _ _ => trivial)
-  have hk := run_post (Q := fun _ m => L.Keep (loadMemM b pb s8 s64 w) m) h (by
+  have hk := run_post (Q := fun _ m => L.Keep (loadMemM b pb sz w) m) h (by
     apply M.triple_of_run
     intro s r s' hs' hrun
     exact (M.of_run (P := fun x => x = _) hs' hrun t).2.1)
@@ -170,9 +170,9 @@ theorem run_load_size {b pb : ByteArray} {s8 s64 : List Nat} (hs : ∀ n ∈ s64
 array zero at its size in entry 1's memory, at least `388` arrays (`checkerTab.nw`)) with its calls (`ThreadRuns`:
 each call's run of `check` on `bufMem B r j` returns, and the buffer is unchanged after it), every
 claimed index below `k`, and every index below `k` claimed by some thread. -/
-theorem threads_twinAcceptsPooled (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+theorem threads_twinAcceptsPooled (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-    (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 1) = .ok (rs₁, m₁))
+    (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     (B : Array Word) (hB : B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat)
     (ths : List (Mem × List (Word × Nat × Mem)))
@@ -182,7 +182,7 @@ theorem threads_twinAcceptsPooled (b pb : ByteArray) (s8 s64 : List Nat) (hin : 
     TwinAcceptsPooled [b] := by
   have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
   obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ :=
-    checkA_run b pb s8 s64 hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr
+    checkA_run b pb sz hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr
   have hflag : modeFlag 1 = 1 := rfl
   rw [hflag] at hok hm₁
   -- the twin's facts behind the program bundle (as `drv_twinAccepts`)

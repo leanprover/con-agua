@@ -44,10 +44,10 @@ theorem checkerProg_uceLookupsPB (bs : List UInt8) : UceLookups (Prog.subPB bs c
 
 /-- **Phase A's fold from `R7`, error half** (`foldStage_checker`'s): a failing
 `install_fold_go(0, cnt, 0)` with class `≠ 0` is the twin pipeline's failure. -/
-theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (s8 s64 : List Nat)
+theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (sz : TieredArray → Nat)
     (hin : InputsOK b pb s64) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
-    ⦃fun _ s' => LocEq s' s₀; fun e => Q7 b (checkerRels b pb s8 s64) s₀.mem →
+    ⦃fun _ s' => LocEq s' s₀; fun e => Q7 b (checkerRels b pb sz) s₀.mem →
       (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
       e.cls ≠ 0 → TwinVerdict [b] e.cls⦄ := by
   apply M.triple_of_run'
@@ -70,7 +70,7 @@ theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (s8 s64 : Li
     (indArmSpec_checker _ hr h7.since.pbpre _ hdn) hQd
   have hP := checkerProg_loopTopPB pb.data.toList
   have hpb : s.mem.arr8 PB = pb.data.toList.toArray := by
-    rw [h7.since.keep.arr8]; exact loadMem_pb b pb s8 s64
+    rw [h7.since.keep.arr8]; exact loadMem_pb b pb sz
   have hD0 : 0 < (s.mem.arr64 DECL).size := by have := hcaps.2.2.1; simp only [DECL] at this ⊢; omega
   have hcnt' : cnt.toNat = ds.size := by
     rw [hcnt hD0]; have := h7.decls.count; simpa [hD0] using this
@@ -105,7 +105,7 @@ theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (s8 s64 : Li
 /-- **Entry 1's verdict claim** from the inductive arm's. -/
 theorem entry1Verdict_of_ind (hia : IndArmVerdict) : Entry1Verdict checkerProg :=
   entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE,
-    fun b pb s8 s64 hin n hn s₀ cnt => foldStageE_checker hia b pb s8 s64 hin n hn s₀ cnt⟩
+    fun b pb sz hin n hn s₀ cnt => foldStageE_checker hia b pb sz hin n hn s₀ cnt⟩
 
 /-- **`check_pending`'s error claim at the programs phase B runs** (`CPVerdict`): proved, no
 hypothesis. -/

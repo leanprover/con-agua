@@ -920,7 +920,7 @@ open L.Arena
 `MFr S T` (`IndPosSpec/RpGoStep`): the writers below leave every per-call memo outside `S` alone; the
 banked memo's `RfFr` is a corollary (`RfFr.of_mfr`). -/
 
-theorem RfFr.of_mfr {S : List ArrId} {T : List Word} {m m' : Mem} (h : MFr S T m m') (hS : RFM ∉ S)
+theorem RfFr.of_mfr {S : List TieredArray} {T : List Word} {m m' : Mem} (h : MFr S T m m') (hS : RFM ∉ S)
     (hT : (208 : Word) ∉ T ∧ (218 : Word) ∉ T ∧ (219 : Word) ∉ T) : RfFr m m' := by
   obtain ⟨A, C, f, a, c⟩ := h
   refine ⟨A, C, f, fun hm => ?_, fun hm => ?_, fun hm => ?_, fun hm => ?_⟩
