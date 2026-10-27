@@ -39,3 +39,27 @@ simp lists in the file (hypotheses, binders) are skipped; `Lean.*` (builtin simp
 `reduceIte`) counts as always in scope.
 
 On master d6368206 it reports exactly the two cases above and nothing else. Not a gate (yet).
+
+## `l_model`'s `simp` option and long `specs` (`Arena.Lift`)
+
+The generated step proofs are text, parsed back as a tactic. `l_model` printed each spec term
+with the default width (120), so a long one wrapped onto a new line at column 2, left of the
+tactic it sits in (`… ; (vcgen [… mkForall_spec p … (hp.get "intern_forall")⏎  (hp.get
+"mk_forall") n, ih1] <;> …)`); an application's arguments must lie right of the enclosing
+tactic block's column (`checkColGt`), so the proof did not parse ("expected checkColGt"). The
+`finish` recipe has the same text but was not affected in practice. Now every term is printed
+on one line (`Format.pretty` with width 100000). And a `simp` lemma that is neither a binder of
+the `l_model` nor a constant in scope is an error at the `l_model` (it would make every step's
+`simp_all` fail silently, as in `CkcW`).
+
+`Arena.Lift` (`liftGo_spec`), alone, two interleaved runs each:
+
+| recipe | CPU | wall |
+|---|---:|---:|
+| `finish [tierW, idxW] gen 20 heartbeats 1000000` (before) | 31.2–31.7 s | 22.3–22.7 s |
+| `heartbeats 1000000 simp [tierW, idxW]` | 22.0–22.6 s | 16.6–16.9 s |
+| `heartbeats 1000000 simp [tierW, idxW] locals` (landed) | 20.9 s | 15.8 s |
+
+Without `heartbeats` (the existing value, not raised) the `simp` variants run out of heartbeats
+in `step1` (`lift_go`'s dispatch: `simp_all` 10.8 s of the module). The `finish` time was
+`grind` (20.6 s); with `simp` it is `simp` (10.8 s) and `grind` (1.9 s).
