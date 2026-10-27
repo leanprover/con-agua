@@ -52,14 +52,12 @@ theorem taMR.ofClosed {p : Prog} {fs : List FnName} (hcl : closedA p taFreeA taF
     {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word} {m' : Mem}
     (h : callW p n f vs m = some (r, m')) (hM : ∃ mp, taMR m mp) : ∃ mp, taMR m' mp := by
   obtain ⟨mp, hm⟩ := hM
-  refine ⟨mp, taMR_mfr (S := [201, 202, 203, 204, 205, 207, 208])
+  have hA : ∀ b ∈ taFreeA, b.arr < 201 ∨ 208 < b.arr ∨
+      b ∈ ([MAM, NOM, DPM, RFM, RAM, HBM, MCM] : List TieredArray) := by decide +kernel
+  refine ⟨mp, taMR_mfr (S := [MAM, NOM, DPM, RFM, RAM, HBM, MCM])
     (T := [202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 214, 215, 216, 217, 218, 219])
-    ⟨taFreeA, taFreeC, (run_memFrame hcl hf (run_of_callW h)).1, fun b hb => ?_, fun x hx => ?_⟩
+    ⟨taFreeA, taFreeC, (run_memFrame hcl hf (run_of_callW h)).1, hA, fun x hx => ?_⟩
     (by decide) (by decide) hm⟩
-  · simp only [taFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
-    have key : ∀ x < 388, x ≠ 206 → x < 201 ∨ 208 < x ∨ x ∈ [201, 202, 203, 204, 205, 207, 208] := by
-      decide +kernel
-    exact key b hb.1 (by simpa [TAM] using hb.2)
   · simp only [taFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx
     obtain ⟨c, ⟨hc, h2⟩, rfl⟩ := hx
     have : (Nat.toUInt64 c).toNat = c := by simp; omega
