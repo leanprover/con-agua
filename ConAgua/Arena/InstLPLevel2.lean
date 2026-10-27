@@ -88,7 +88,7 @@ theorem slsElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := o₁.frame.1 SPN (by decide) (by decide)
     have htop₁ : spTop m₁ = spTop m := o₁.stack.top
     have htop₂ : spTop (m₁.set64 SPN b h) = spTop m₁ := by
-      simp only [spTop, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SPN by decide)]
+      simp only [spTop, Mem.arr64_set64_ne _ _ _ _ _ (show (CTL : TieredArray) ≠ SPN by decide)]
     have hk₂ : StackKept m₁ (m₁.set64 SPN b h) :=
       StackKept.of_spnFrame (hf₂.mono (by simp) (by simp)) htop₂ (fun i hi => by
         simp only [spW]; rw [rdW_set64]
