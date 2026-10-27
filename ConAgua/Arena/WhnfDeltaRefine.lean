@@ -288,24 +288,11 @@ theorem CoreSpec.zero {α : Type} [Inhabited α] {p : Prog} {f : FnName} {fd : F
 /-! ## `const_e` -/
 
 /-- The model of `const_e`. -/
-def constEW (p : Prog) (n : Nat) (m : Mem) (nm : Word) : Option (Word × Mem) :=
-  match callW p n "pin_word" [52] m with
-  | none => none
-  | some (r₁, m₁) =>
-    match callW p n "intern_const" [nm, r₁.headD 0] m₁ with
-    | none => none
-    | some (r₂, m₂) => some (r₂.headD 0, m₂)
-
-theorem constE_spec (p : Prog) (hp : p.lookup "const_e" = some constEL) (n : Nat) (s₀ : St)
-    (nm : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "const_e" [nm]
-    ⦃fun r s' => LocEq s' s₀ ∧ constEW p n s₀.mem nm = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, constEL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "pin_word", callW_spec p n "intern_const"] <;>
-    finish [constEW]
+l_model constE_spec (p : Prog) (hp : p.lookup "const_e" = some constEL)
+  fns [hp ↦ constEW]
+  specs [callW_spec p n "pin_word", callW_spec p n "intern_const"]
+  grind [arena_grind]
+  gen 30
 
 theorem constE_run {m : Mem} {a : AState} (h : PinsFull m a.pins) (n : NIdx) :
     (constE n).run a = (internE (.const n (decI (pinW m 52)))).run a := by
@@ -340,18 +327,18 @@ theorem callW_constE (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AStat
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (constE_spec p hp.constE n s₀ nm) h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (constE_spec p hp.constE (n + 1) s₀ nm) h
   cases h1 : callW p n "pin_word" [52] s₀.mem with
-  | none => simp only [constEW, h1] at hW; cases hW
+  | none => simp only [constEW, constEW.k_pin_word, h1] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₁, m₁⟩ := q₁
   obtain ⟨rfl, -, hr₁⟩ := callW_pinWord p hp.pinWord n s₀.mem 52 r₁ m₁ h1
   simp only [show (52 : Word).toNat = 52 from rfl] at hr₁
   cases h2 : callW p n "intern_const" [nm, r₁.headD 0] s₀.mem with
-  | none => simp only [constEW, h1, h2] at hW; cases hW
+  | none => simp only [constEW, constEW.k_pin_word, constEW.k_intern_const, h1, h2] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
-  simp only [constEW, h1, h2, Option.some.injEq, Prod.mk.injEq] at hW
+  simp only [constEW, constEW.k_pin_word, constEW.k_intern_const, h1, h2, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   have hpw : HW (r₁.headD 0) := by rw [hr₁]; exact hC.pins.lv_lt.1
   obtain ⟨hok, hD', hres, hfr, hhw⟩ := callW_internConst p hp.constFind' hp.constPush' hp.internConst n
@@ -382,23 +369,11 @@ end refs
 /-! ## `nat_ind_ok`, `nat_zero_ok`, `nat_succ_ok` -/
 
 /-- The model of `nat_ind_ok`. -/
-def natIndOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (Word × Mem) :=
-  if found = 0 then some (0, m)
-  else if rdW (m.arr64 EREC) q ≠ 3 then some (0, m)
-  else if rdW (m.arr64 EREC) (q + 3) ≠ 0 then some (0, m)
-  else match callW p n "pin_word" [54] m with
-    | none => none
-    | some (r₁, m₁) => some (if rdW (m₁.arr64 EREC) (q + 4) = r₁.headD 0 then 1 else 0, m₁)
-
-theorem natIndOk_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (found q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_ind_ok" [found, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ natIndOkW p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.natIndOk]
-  simp only [callFn, natIndOkL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "pin_word"] <;>
-    finish [natIndOkW]
+l_model natIndOk_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.natIndOk ↦ natIndOkW]
+  specs [callW_spec p n "pin_word"]
+  grind [arena_grind]
+  gen 30
 
 /-- **A call that may only intern `const` nodes**: the twin's run succeeds, the relation holds
 after it at the same maps, the result words decode to the twin's result, and the memory moved only in
@@ -464,9 +439,9 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natIndOk_spec p hp n s₀ found q) h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natIndOk_spec p hp (n + 1) s₀ found q) h
   by_cases hf : found = 0
-  · unfold natIndOkW at hW
+  · rw [natIndOkW.eq_2] at hW
     rw [ite_eq_left hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -480,7 +455,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
   rw [hdf]
   have hsp := decCI_split hci (erecP_ext _) hC.erec
   obtain ⟨-, -, hind, hnind, -, -⟩ := hsp
-  unfold natIndOkW at hW
+  rw [natIndOkW.eq_2] at hW
   rw [ite_eq_right hf] at hW
   by_cases hk3 : rdW (s₀.mem.arr64 EREC) q ≠ 3
   · rw [ite_eq_left hk3] at hW
@@ -510,7 +485,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
   rw [ite_eq_right hk4] at hW
   have hk4' : rdW (s₀.mem.arr64 EREC) (q + 3) = 0 := by simpa using hk4
   rcases h1 : callW p n "pin_word" [54] s₀.mem with _ | ⟨r₁, m₁⟩
-    <;> simp only [h1, reduceCtorEq] at hW
+    <;> simp only [h1, natIndOkW.k_pin_word, reduceCtorEq] at hW
   obtain ⟨rfl, -, hr₁⟩ := callW_pinWord p hp.pinWord n s₀.mem 54 r₁ m₁ h1
   simp only [show (54 : Word).toNat = 54 from rfl] at hr₁
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -542,27 +517,11 @@ end refs2
 /-! ## `nat_zero_ok` -/
 
 /-- The model of `nat_zero_ok`. -/
-def natZeroOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (Word × Mem) :=
-  if found = 0 then some (0, m)
-  else if rdW (m.arr64 EREC) q ≠ 4 then some (0, m)
-  else match callW p n "pin_at" [1] m with
-    | none => none
-    | some (r₁, m₁) =>
-      match callW p n "const_e" [r₁.headD 0] m₁ with
-      | none => none
-      | some (r₂, m₂) =>
-        if rdW (m₂.arr64 EREC) (q + 3) ≠ 0 then some (0, m₂)
-        else some (if rdW (m₂.arr64 EREC) (q + 4) = r₂.headD 0 then 1 else 0, m₂)
-
-theorem natZeroOk_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (found q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_zero_ok" [found, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ natZeroOkW p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.natZeroOk]
-  simp only [callFn, natZeroOkL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish [natZeroOkW]
+l_model natZeroOk_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.natZeroOk ↦ natZeroOkW]
+  specs [callW_spec p n "pin_at", callW_spec p n "const_e"]
+  grind [arena_grind]
+  gen 30
 
 theorem pinNat_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
     pinNat.run a = .ok (decI (pinW m 2), a) := pinAt_run h 1 (by decide)
@@ -596,9 +555,9 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natZeroOk_spec p hp.toWhnfDeltaProg n s₀ found q) h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natZeroOk_spec p hp.toWhnfDeltaProg (n + 1) s₀ found q) h
   by_cases hf : found = 0
-  · unfold natZeroOkW at hW
+  · rw [natZeroOkW.eq_2] at hW
     rw [ite_eq_left hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -611,7 +570,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hdf : decFound dn s₀.mem found q = some ci := by simp only [decFound, hf, ↓reduceIte, hci]
   rw [hdf]
   obtain ⟨-, -, -, -, hctor, hnctor⟩ := decCI_split hci (erecP_ext _) hC.erec
-  unfold natZeroOkW at hW
+  rw [natZeroOkW.eq_2] at hW
   rw [ite_eq_right hf] at hW
   by_cases hk4 : rdW (s₀.mem.arr64 EREC) q ≠ 4
   · rw [ite_eq_left hk4] at hW
@@ -625,22 +584,20 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erecP_ext s₀.mem) hC.erec hcv
   cases h1 : callW p n "pin_at" [1] s₀.mem with
-  | none => rw [h1] at hW; cases hW
+  | none => rw [h1, natZeroOkW.k_pin_at.none] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₁, m₁⟩ := q₁
-  rw [h1] at hW
+  rw [h1, natZeroOkW.k_pin_at.eq_2] at hW
   obtain ⟨rfl, -, -, hr₁⟩ := callW_pinAt p hp.pinAt n s₀.mem 1 r₁ m₁ h1
   simp only [show (1 : Word).toNat = 1 from rfl] at hr₁
-  dsimp only at hW
   have hnt : HW (r₁.headD 0) := by
     rw [hr₁]; exact hC.pins.names_lt 1 (by decide)
   cases h2 : callW p n "const_e" [r₁.headD 0] s₀.mem with
-  | none => rw [h2] at hW; cases hW
+  | none => rw [h2, natZeroOkW.k_const_e.none] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
-  rw [h2] at hW
+  rw [h2, natZeroOkW.k_const_e.eq_2] at hW
   obtain ⟨hok, hS, hres, hfr, hhw⟩ := callW_constE p hp n s₀ a₀ dn vis fe MM eb _ hC hnt r₂ m₂ h2
-  dsimp only at hW
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
   have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC := hfr.arr_eq EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
@@ -695,33 +652,12 @@ end refs3
 /-! ## `nat_succ_ok` -/
 
 /-- The model of `nat_succ_ok`. -/
-def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (Word × Mem) :=
-  if found = 0 then some (0, m)
-  else if rdW (m.arr64 EREC) q ≠ 4 then some (0, m)
-  else if rdW (m.arr64 EREC) (q + 3) ≠ 0 then some (0, m)
-  else match callW p n "pin_at" [1] m with
-    | none => none
-    | some (r₁, m₁) =>
-      match callW p n "const_e" [r₁.headD 0] m₁ with
-      | none => none
-      | some (r₂, m₂) =>
-        if rdW (m₂.arr64 EREC) (q + 4) >>> 28 ≠ 6 then some (0, m₂)
-        else if tierW (rdW (m₂.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0 then none
-        else if tcnt m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) ≤
-            idxW (rdW (m₂.arr64 EREC) (q + 4)) then none
-        else some (if tfld m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) (idxW (rdW (m₂.arr64 EREC) (q + 4))) 0 = r₂.headD 0 ∧
-            tfld m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) (idxW (rdW (m₂.arr64 EREC) (q + 4))) 1 = r₂.headD 0 then 1 else 0, m₂)
-
-theorem natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (found q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_succ_ok" [found, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ natSuccOkW p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.natSuccOk]
-  simp only [callFn, natSuccOkL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish [natSuccOkW, tierW, idxW]
+l_model natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.natSuccOk ↦ natSuccOkW]
+  specs [callW_spec p n "pin_at", callW_spec p n "const_e"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 30
 
 theorem natSuccOk_run_none (a : AState) : (natSuccOk none).run a = .ok (false, a) := rfl
 
@@ -755,6 +691,11 @@ theorem natSuccOk_run_forall {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins
 section refs4
 variable (p : Prog)
 
+/-- The generated models branch outside the result tuple. -/
+theorem ite_some_pair {α β : Type} (c : Prop) [Decidable c] (a b : α) (m : β) :
+    (if c then some (a, m) else some (b, m)) = some (if c then a else b, m) := by
+  split <;> rfl
+
 theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
@@ -764,9 +705,9 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natSuccOk_spec p hp.toWhnfDeltaProg n s₀ found q) h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natSuccOk_spec p hp.toWhnfDeltaProg (n + 1) s₀ found q) h
   by_cases hf : found = 0
-  · unfold natSuccOkW at hW
+  · rw [natSuccOkW.eq_2] at hW
     rw [ite_eq_left hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -779,7 +720,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hdf : decFound dn s₀.mem found q = some ci := by simp only [decFound, hf, ↓reduceIte, hci]
   rw [hdf]
   obtain ⟨-, -, -, -, hctor, hnctor⟩ := decCI_split hci (erecP_ext _) hC.erec
-  unfold natSuccOkW at hW
+  rw [natSuccOkW.eq_2] at hW
   rw [ite_eq_right hf] at hW
   by_cases hk4 : rdW (s₀.mem.arr64 EREC) q ≠ 4
   · rw [ite_eq_left hk4] at hW
@@ -809,22 +750,20 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hl0 : cv.levelParams.isEmpty = true := by
     simp only [List.isEmpty_iff, ← List.length_eq_zero_iff]; rw [hlen, hk3']; rfl
   cases h1 : callW p n "pin_at" [1] s₀.mem with
-  | none => rw [h1] at hW; cases hW
+  | none => rw [h1, natSuccOkW.k_pin_at.none] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₁, m₁⟩ := q₁
-  rw [h1] at hW
+  rw [h1, natSuccOkW.k_pin_at.eq_2] at hW
   obtain ⟨rfl, -, -, hr₁⟩ := callW_pinAt p hp.pinAt n s₀.mem 1 r₁ m₁ h1
   simp only [show (1 : Word).toNat = 1 from rfl] at hr₁
-  dsimp only at hW
   have hnt : HW (r₁.headD 0) := by
     rw [hr₁]; exact hC.pins.names_lt 1 (by decide)
   cases h2 : callW p n "const_e" [r₁.headD 0] s₀.mem with
-  | none => rw [h2] at hW; cases hW
+  | none => rw [h2, natSuccOkW.k_const_e.none] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
-  rw [h2] at hW
+  rw [h2, natSuccOkW.k_const_e.eq_2] at hW
   obtain ⟨hok, hS, hres, hfr, hhw⟩ := callW_constE p hp n s₀ a₀ dn vis fe MM eb _ hC hnt r₂ m₂ h2
-  dsimp only at hW
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
   have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC :=
@@ -857,6 +796,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       idxW (rdW (s₀.mem.arr64 EREC) (q + 4))
   · rw [ite_eq_left hbd] at hW; cases hW
   rw [ite_eq_right hbd] at hW
+  rw [ite_some_pair] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
@@ -913,22 +853,11 @@ end refs5
 /-! ## `nat_op_stored` -/
 
 /-- The model of `nat_op_stored`. -/
-def natOpStoredW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (Word × Mem) :=
-  match callW p n "env_find" [c, vis] m with
-  | none => none
-  | some (r₁, m₁) =>
-    if r₁.headD 0 = 0 then some (0, m₁)
-    else some (if rdW (m₁.arr64 EREC) (r₁.tail.headD 0) = 1 then 1 else 0, m₁)
-
-theorem natOpStored_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_stored" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ natOpStoredW p n s₀.mem vis c = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.natOpStored]
-  simp only [callFn, natOpStoredL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "env_find"] <;>
-    finish [natOpStoredW]
+l_model natOpStored_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.natOpStored ↦ natOpStoredW]
+  specs [callW_spec p n "env_find"]
+  grind [arena_grind]
+  gen 30
 
 theorem natOpStored_run_other {ci : IConstantInfo} (h : ∀ cv v hint, ci ≠ .defnInfo cv v hint)
     (fe : IFEnv) (a : AState) (c : NIdx) (hf : fe.find? c = some ci) :
@@ -958,15 +887,14 @@ theorem callW_natOpStored (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : 
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natOpStored_spec p hp.toWhnfDeltaProg n s₀ vis c) h
-  unfold natOpStoredW at hW
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natOpStored_spec p hp.toWhnfDeltaProg (n + 1) s₀ vis c) h
+  rw [natOpStoredW.eq_2] at hW
   cases h1 : callW p n "env_find" [c, vis] s₀.mem with
-  | none => rw [h1] at hW; cases hW
+  | none => rw [h1, natOpStoredW.k_env_find.none] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₁, m₁⟩ := q₁
-  rw [h1] at hW
+  rw [h1, natOpStoredW.k_env_find.eq_2] at hW
   obtain ⟨rfl, hfind, hdec⟩ := callW_envFind p hp n s₀ vis c hC.env hc r₁ m₁ h1
-  dsimp only at hW
   by_cases hf : r₁.headD 0 = 0
   · rw [ite_eq_left hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -1007,53 +935,11 @@ end refs6
 /-! ## `nat_lit_supported` -/
 
 /-- The model of `nat_lit_supported`. -/
-def natLitSupportedW (p : Prog) (n : Nat) (m : Mem) (vis : Word) : Option (Word × Mem) :=
-  match callW p n "pin_at" [1] m with
-  | none => none
-  | some (a₁, m₁) =>
-  match callW p n "env_find" [a₁.headD 0, vis] m₁ with
-  | none => none
-  | some (b₁, m₂) =>
-  match callW p n "nat_ind_ok" [b₁.headD 0, b₁.tail.headD 0] m₂ with
-  | none => none
-  | some (c₁, m₃) =>
-  if c₁.headD 0 = 0 then some (0, m₃) else
-  match callW p n "pin_at" [2] m₃ with
-  | none => none
-  | some (a₂, m₄) =>
-  match callW p n "env_find" [a₂.headD 0, vis] m₄ with
-  | none => none
-  | some (b₂, m₅) =>
-  match callW p n "nat_zero_ok" [b₂.headD 0, b₂.tail.headD 0] m₅ with
-  | none => none
-  | some (c₂, m₆) =>
-  if c₂.headD 0 = 0 then some (0, m₆) else
-  match callW p n "pin_at" [3] m₆ with
-  | none => none
-  | some (a₃, m₇) =>
-  match callW p n "env_find" [a₃.headD 0, vis] m₇ with
-  | none => none
-  | some (b₃, m₈) =>
-  match callW p n "nat_succ_ok" [b₃.headD 0, b₃.tail.headD 0] m₈ with
-  | none => none
-  | some (c₃, m₉) => some (c₃.headD 0, m₉)
-
-section nls
-variable (p : Prog) (n : Nat) (vis : Word) (m m₁ m₂ m₃ m₄ m₅ m₆ m₇ m₈ m₉ : Mem)
-  (a₁ b₁ c₁ a₂ b₂ c₂ a₃ b₃ c₃ : List Word)
-
-end nls
-
-theorem natLitSupported_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (vis : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_lit_supported" [vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ natLitSupportedW p n s₀.mem vis = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.natLitSupported]
-  simp only [callFn, natLitSupportedL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "nat_ind_ok",
-      callW_spec p n "nat_zero_ok", callW_spec p n "nat_succ_ok"] <;>
-    finish (gen := 30) [natLitSupportedW]
+l_model natLitSupported_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.natLitSupported ↦ natLitSupportedW]
+  specs [callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "nat_ind_ok", callW_spec p n "nat_zero_ok", callW_spec p n "nat_succ_ok"]
+  grind [arena_grind]
+  gen 30
 
 theorem pinNatZero_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
     pinNatZero.run a = .ok (decI (pinW m 3), a) := pinAt_run h 2 (by decide)
@@ -1123,17 +1009,17 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natLitSupported_spec p hp.toWhnfDeltaProg n s₀ vis) h
-  unfold natLitSupportedW at hW
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natLitSupported_spec p hp.toWhnfDeltaProg (n + 1) s₀ vis) h
+  rw [natLitSupportedW.eq_2] at hW
   -- stage 1
-  rcases h1 : callW p n "pin_at" [1] s₀.mem with _ | ⟨a₁, m₁⟩ <;> simp only [h1, reduceCtorEq] at hW
+  rcases h1 : callW p n "pin_at" [1] s₀.mem with _ | ⟨a₁, m₁⟩ <;> simp only [h1, natLitSupportedW.k_pin_at, reduceCtorEq] at hW
   rcases h2 : callW p n "env_find" [a₁.headD 0, vis] m₁ with _ | ⟨b₁, m₂⟩
-    <;> simp only [h2, reduceCtorEq] at hW
+    <;> simp only [h2, natLitSupportedW.k_env_find, reduceCtorEq] at hW
   obtain ⟨hm1, hm2, hfind1, hdec1⟩ := callW_pinFind p hp 1 (by decide) n s₀.mem vis ⟨MM, eb, hC⟩
     a₁ m₁ b₁ m₂ h1 h2
   subst hm1 hm2
   rcases h3 : callW p n "nat_ind_ok" [b₁.headD 0, b₁.tail.headD 0] s₀.mem with _ | ⟨c₁, m₃⟩
-    <;> simp only [h3, reduceCtorEq] at hW
+    <;> simp only [h3, natLitSupportedW.k_nat_ind_ok, reduceCtorEq] at hW
   obtain ⟨hok1, hS1, hres1, hfr1, hrh1⟩ := callW_natIndOk p hp.toWhnfDeltaProg n s₀ a₀ dn vis fe MM eb
     _ _ hC hdec1 c₁ m₃ h3
   have hI : (natIndOk (fe.find? (decI (pinW s₀.mem 2)))).run a₀ =
@@ -1158,14 +1044,14 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   have hb : decBool c₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hc1
   rw [hb] at hI
   -- stage 2
-  rcases h4 : callW p n "pin_at" [2] m₃ with _ | ⟨a₂, m₄⟩ <;> simp only [h4, reduceCtorEq] at hW
+  rcases h4 : callW p n "pin_at" [2] m₃ with _ | ⟨a₂, m₄⟩ <;> simp only [h4, natLitSupportedW.k_pin_at_2, reduceCtorEq] at hW
   rcases h5 : callW p n "env_find" [a₂.headD 0, vis] m₄ with _ | ⟨b₂, m₅⟩
-    <;> simp only [h5, reduceCtorEq] at hW
+    <;> simp only [h5, natLitSupportedW.k_env_find_2, reduceCtorEq] at hW
   obtain ⟨hm4, hm5, hfind2, hdec2⟩ := callW_pinFind p hp 2 (by decide) n m₃ vis ⟨_, _, hS1⟩
     a₂ m₄ b₂ m₅ h4 h5
   subst m₄ m₅
   rcases h6 : callW p n "nat_zero_ok" [b₂.headD 0, b₂.tail.headD 0] m₃ with _ | ⟨c₂, m₆⟩
-    <;> simp only [h6, reduceCtorEq] at hW
+    <;> simp only [h6, natLitSupportedW.k_nat_zero_ok, reduceCtorEq] at hW
   obtain ⟨hok2, hS2, hres2, hfr2, hrh2⟩ : CRef
       (natZeroOk (decFound dn m₃ (b₂.headD 0) (b₂.tail.headD 0)))
       (AM.st (natIndOk (decFound dn s₀.mem (b₁.headD 0) (b₁.tail.headD 0))) a₀) decBool dn m₃ vis fe
@@ -1195,14 +1081,14 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   have hb2 : decBool c₂ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hc2
   rw [hb2] at hZ
   -- stage 3
-  rcases h7 : callW p n "pin_at" [3] m₆ with _ | ⟨a₃, m₇⟩ <;> simp only [h7, reduceCtorEq] at hW
+  rcases h7 : callW p n "pin_at" [3] m₆ with _ | ⟨a₃, m₇⟩ <;> simp only [h7, natLitSupportedW.k_pin_at_3, reduceCtorEq] at hW
   rcases h8 : callW p n "env_find" [a₃.headD 0, vis] m₇ with _ | ⟨b₃, m₈⟩
-    <;> simp only [h8, reduceCtorEq] at hW
+    <;> simp only [h8, natLitSupportedW.k_env_find_3, reduceCtorEq] at hW
   obtain ⟨hm7, hm8, hfind3, hdec3⟩ := callW_pinFind p hp 3 (by decide) n m₆ vis ⟨_, _, hS2⟩
     a₃ m₇ b₃ m₈ h7 h8
   subst m₇ m₈
   rcases h9 : callW p n "nat_succ_ok" [b₃.headD 0, b₃.tail.headD 0] m₆ with _ | ⟨c₃, m₉⟩
-    <;> simp only [h9, reduceCtorEq] at hW
+    <;> simp only [h9, natLitSupportedW.k_nat_succ_ok, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
