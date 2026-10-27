@@ -168,13 +168,13 @@ theorem rTrans_local (hS : S.WF) (hF : RFrame S R hs) (hL : RLocal S R hs [] [])
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right hne]
     exact Mem.setA_self m m' _
   have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _
-  have eo : ∀ b, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
+  have eo : ∀ b : TieredArray, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right h2, Mem.setA_arr, ite_eq_right h1]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
     rcases tierA_eq_or S.ra t with e | e <;> rw [e]
     · exact e0
     · exact e1
-  have hctl : m₁.arr64 CTL = m.arr64 CTL := eo CTL hS.ra_ctl.symm ((t0_ne_tier1 _ _))
+  have hctl : m₁.arr64 CTL = m.arr64 CTL := eo CTL (TieredArray.t0_ne hS.ra_ctl.symm) ((t0_ne_tier1 _ _))
   have hout : OutEq S m m₁ := ⟨fun b h1 h1' _ _ _ => eo b h1 h1', by rw [hctl]⟩
   have hf1 : ∀ f, f < S.w → fld S m₁ t i f = fld S m t i f := fun f hf' => by
     simp only [fld, et]; exact hf f hf'
