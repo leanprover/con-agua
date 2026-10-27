@@ -197,3 +197,28 @@ On `InstLPWalk`'s memo functions `finish` beat `simp … locals` too (`lp_fvar` 
 `match` per call, `Option.bind` chains, sub-models shared by several functions, a model with a
 Lean parameter shared by three functions such as `ilwBinW R mk`), where the refinement needs
 re-threading rather than renames; group splits across files (`lp_go`'s arms in other modules).
+
+### Batch 2
+
+No generator change. Module times are user seconds of `lake env lean` on the file, two runs,
+old then new; "steps" the `trace.profiler` time of the hand specs against the generated
+`….stepᵢ`.
+
+| file(s) | functions | lines | module time | steps |
+|---|---|---:|---|---|
+| `IndInstallSpec/GfcW` | `gen_rec_check_former_tys(_c)`, `gen_rec_check_minor_ok` (with 4 loops, one fused) | 730 → 427 | 4.8 → 4.1 | 2.30 → 1.49 s |
+| `DeclAxiomSpec4` | `std_ax_family`, `std_axiom_ok` | 436 → 277 | 4.8 → 2.1 | 3.87 → 0.80 s |
+| `DefEqStuckEta` | `eta_cert_ty`, `eta_cert_body`, `eta_cert` | 477 → 333 | 4.1 → 3.7 | 2.28 → 2.00 s |
+| `DefEqBody` | `defeq_body` | 352 → 256 | 8.4 → 6.7 | 8.9 → 8.8 s (`simp [] locals`; plain `simp []` 12.4 s, `finish` fails) |
+| `InferBodyLet`, `InferBodyBindPi`, `InferBodySpineF` | 8 (`infer_let`, `infer_pis`, `infer_app`, …) | −505 | 0–15 % slower (noisy) | not profiled |
+| `StrLitChar` | `char_of_nat_ty_ok`, `string_of_list_ty_ok` | 440 → 334 | 8.0 → 7.5 | 3.26 → 2.28 s |
+| `RecClassSpec/PrefixBinders`, `RuW` | the slot walk group (3), `class_gen_rule_call1`, `class_gen_rule_calls_go` | 802 → 569 | 26.0 → 17.6 | 15.3 → 6.6 s |
+| `InstLPWalk` (recipe only) | `finish` for four memo functions | 0 | 7.4–8.3 → 6.6–7.3 | `lp_fvar` 1.11 → 0.84, `lp_proj` 1.22 → 0.93 s |
+
+Skipped in these files: `infer_spine` (its hand model checks bounds that `spFull_ref` uses, and
+its spec states `136 < size`), the whole of `Rom/PinReadSpec` (every spec there has the
+precondition `pcap s₀.mem < 2^63 ∧ s₀.mem.top.toNat < 2^41`, and so do its callees' specs:
+`l_model` has no preconditions; `rom_u64`'s post `u64OK rom i ∧ r = [u64W rom i]` and
+`memo_clear`'s `… ≠ 0 ∧ s'.mem = mclearG …` are not model shapes; `pb_check` is a template).
+Two hand models checked bounds the generated ones do not (`infer_pis`, `infer_forall`): the
+guards were derived instead from the generated `len64` aborts and `CoreS` (three lemmas).
