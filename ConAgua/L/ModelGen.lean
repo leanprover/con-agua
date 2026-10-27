@@ -85,7 +85,9 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   setLocs, ld64, st64, setG`); `finish`, `gen`, `instances`: the hints and configuration of
   `finish`; `sym "…"`: options of `sym`; `simp [lemmas]`: prove each step by `vcgen` and
   `simp_all` over the models' equations, the locals' lemmas and `lemmas` instead of
-  `sym … finish` (cheaper for many paths and small functions); `heartbeats`: per step theorem; `trace`: log the
+  `sym … finish` (cheaper for many paths and small functions); `locals` (with `simp`): evaluate the
+  locals by `simp only` before `simp_all` (cheaper for long functions with many calls and stores,
+  IndBGrpM); `heartbeats`: per step theorem; `trace`: log the
   generated commands.
 * `errors`: (pass `L.Arena.ld64_rdW_specE` in `extra`: word loads are not unfolded) the models keep the errors (the verdict proofs, `Arena/Verdict.lean`). A model is
   `Except L.Err …` (`.ok` for `some`); an `abort R` is `.error (.abort R)` (`abort` is code `0`);
@@ -1549,7 +1551,8 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" instances " num)?
   (&" simp " "[" term,* "]")?
   (&" errors")?
-  (&" trace")? : command
+  (&" trace")?
+  (&" locals")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1608,6 +1611,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let simpTs? : Option (Array Term) := if stx[18].getNumArgs == 0 then none else some ((optList 18).map (⟨·⟩))
   let exc := stx[19].getNumArgs != 0
   let doTrace := stx[20].getNumArgs != 0
+  let preLocals := stx[21].getNumArgs != 0
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
@@ -2003,16 +2007,18 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let user ← ts.toList.mapM (pp ·.raw)
     let models := (fis.toList.map (s!"{·.model}")) ++ (st.ks.toList.map (s!"{·.name}"))
     pure (String.intercalate ", " (simpBase ++ models ++ user))
-  -- Before `simp_all`: the induction hypotheses `ihs` are cleared (`vcgen` has used them;
-  -- `simp_all` would simplify them again and again, against every other hypothesis: IndBTmn
-  -- 60 s -> 3 s), and the locals are evaluated by one `simp only … at *` (`vcgen` leaves each local
-  -- as a chain of `setLoc`s through the states of all statements before it, in every hypothesis,
-  -- and `simp_all` evaluated them again in each round: IndBGrpM 270 s -> 85 s).
+  -- Before `simp_all`, the induction hypotheses `ihs` are cleared: `vcgen` has used them, and
+  -- `simp_all` would simplify them again and again, against every other hypothesis (IndBTmn
+  -- 60 s -> 3 s). With `locals`, the locals are first evaluated by one `simp only … at *`: `vcgen`
+  -- leaves each local as a chain of `setLoc`s through the states of all statements before it, in
+  -- every hypothesis, and `simp_all` evaluates them again in each round (IndBGrpM 270 s -> 85 s).
+  -- Not the default: on small functions the extra pass costs more than it saves (WhnfModels7E), and
+  -- where `simp_all` does not apply, `grind` needs the `LocEq`s folded (CkcW).
   let stepTac (attrs vcg : String) (ihs : List String) : String := match simpTxt? with
     | some l =>
       let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
-      s!"(vcgen [{vcg}]{clr} <;> (try simp only [{String.intercalate ", " simpBase}] at *) <;> " ++
-        s!"(try simp_all [{l}]) <;> grind [{attrs}])"
+      let pre := if preLocals then s!" <;> (try simp only [{String.intercalate ", " simpBase}] at *)" else ""
+      s!"(vcgen [{vcg}]{clr}{pre} <;> (try simp_all [{l}]) <;> grind [{attrs}])"
     | none => s!"sym {symCfg}only [{attrs}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
   let parseTac (txt : String) : CommandElabM Syntax := do
     -- the library's names root-qualified, so that a binder `L` does not capture them
