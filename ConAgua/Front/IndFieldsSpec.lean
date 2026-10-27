@@ -516,7 +516,7 @@ theorem idsLoop_spec (n : Nat) (s₀ : St) :
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
         L.Scan.Leaves.numEnd_spec p hL.skip_digits hL.num_end b hb64 n,
-        L.Front.Fields.readNat_spec p b hb hL.read_nat n, hpush] <;> finish [NONE]
+        L.Front.Fields.readNat_spec p b hL.read_nat n, hpush] <;> finish [NONE]
 
 theorem idsLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
@@ -550,7 +550,7 @@ theorem indNum_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q ks
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         slotNat_spec p b hb hL.skip_digits hL.num_end hL.slot_nat n,
-        L.Front.Fields.readNat_spec p b hb hL.read_nat n, fldPut_spec p hL n] <;>
+        L.Front.Fields.readNat_spec p b hL.read_nat n, fldPut_spec p hL n] <;>
       finish [numW, NONE]
 
 theorem indBool_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q v h s : Word)

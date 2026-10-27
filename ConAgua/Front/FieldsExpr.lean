@@ -398,7 +398,7 @@ theorem objLoop_spec (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
         nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         objVal_spec p b hb hpd hpn hps hpmw hpi hpl hpml hpbo hpov n,
-        readNat_spec p b hb hprn n] <;> finish
+        readNat_spec p b hprn n] <;> finish
 
 include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hprn hpov in
 theorem objLoop_step_spec (n : Nat) (s₀ : St) :
@@ -440,7 +440,7 @@ theorem exprVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k ks v :
   | succ n =>
     sym (gen := 16) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        slotNat_spec p b hb hpd hpn hps n, readNat_spec p b hb hprn n,
+        slotNat_spec p b hb hpd hpn hps n, readNat_spec p b hprn n,
         scanQuotedNat_spec p b hb hpd hpq n,
         L.Scan.Str.scanString_spec p b hb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt n,
         recObj_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hprn hpov hpro n] <;>

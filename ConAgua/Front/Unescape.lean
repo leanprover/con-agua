@@ -457,6 +457,7 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
   (hpe : p.lookup "str_put_esc" = some strPutEsc)
 include hb
 
+omit hb in
 include hpb hph hp3 hps in
 attribute [local lang_grind] escSurN pairCp in
 theorem escSur_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : Word) :
@@ -487,7 +488,7 @@ theorem escOne_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Wor
     sym (gen := 24) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         L.Scan.Str.byteIn_spec p b hpb n, L.Scan.Str.hex4_spec p b hpb hph hp4 n,
-        escSur_spec p b hb hpb hph hp3 hps n] <;> finish
+        escSur_spec p b hpb hph hp3 hps n] <;> finish
 
 end specs
 

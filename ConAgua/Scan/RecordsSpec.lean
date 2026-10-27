@@ -112,6 +112,7 @@ theorem strNameLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpl hpml hpb hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanStrName "validity"]
 theorem scanStrName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -146,6 +147,7 @@ theorem numNameLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanNumName "validity"]
 theorem scanNumName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -180,6 +182,7 @@ theorem appLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanAppExpr "validity"]
 theorem scanApp_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -215,6 +218,7 @@ theorem binderLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanLamExpr "validity", refines_part ConLeche.Frontend.scanForallExpr "validity"]
 theorem scanBinder_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -251,6 +255,7 @@ theorem letELoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpl hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanLetExpr "validity"]
 theorem scanLetE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -286,6 +291,7 @@ theorem constELoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanConstExpr "validity"]
 theorem scanConstE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -320,6 +326,7 @@ theorem projLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanProjExpr "validity"]
 theorem scanProj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -354,6 +361,7 @@ theorem ruleLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanRule "validity"]
 theorem scanRule_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -383,7 +391,7 @@ theorem rulesLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := rulesLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanRule_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanRule_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_rule n] <;> finish
 
 
 @[refines_part ConLeche.Frontend.scanRules "validity"]
@@ -496,6 +504,7 @@ theorem indTypeLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanIndType "validity"]
 theorem scanIndType_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -525,7 +534,7 @@ theorem indTypesLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := indTypesLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanIndType_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanIndType_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indType n] <;> finish
 
 
 @[refines_part ConLeche.Frontend.scanIndTypes "validity"]
@@ -565,6 +574,7 @@ theorem indCtorLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanIndCtor "validity"]
 theorem scanIndCtor_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -594,7 +604,7 @@ theorem indCtorsLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := indCtorsLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanIndCtor_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanIndCtor_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indCtor n] <;> finish
 
 
 @[refines_part ConLeche.Frontend.scanIndCtors "validity"]
@@ -634,6 +644,7 @@ theorem axiomDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanAxiomDecl "validity"]
 theorem scanAxiomD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -671,6 +682,7 @@ theorem defDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpi hpml hpb hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanDefDecl "validity"]
 theorem scanDefD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -706,6 +718,7 @@ theorem thmDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanThmDecl "validity"]
 theorem scanThmD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -743,6 +756,7 @@ theorem opaqueDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanOpaqueDecl "validity"]
 theorem scanOpaqueD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -779,6 +793,7 @@ theorem quotDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpml hpb hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_indD in
 @[refines_part ConLeche.Frontend.scanQuotDecl "validity"]
 theorem scanQuotD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄

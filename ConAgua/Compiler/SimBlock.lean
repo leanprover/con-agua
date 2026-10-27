@@ -188,6 +188,7 @@ variable [Host] {G : Layout} (hG : G.Ok)
   (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop) {sk : NTree}
 include hG hTab
 
+omit [Host] in
 omit hG in
 /-- A block operand reads its value. -/
 theorem opnd_reads {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St}
@@ -460,6 +461,7 @@ theorem rdW_slot_store64 {d : DataMem} {X : Nat} (hX1 : G.lo ≤ X) (hX2 : X + 8
   exact cell_disj (P := G.In64 a) (Q := G.InStack) (fun k hk => ⟨by omega, by omega⟩)
     (fun k hk => ⟨by omega, by omega⟩) fun t h1 h2 => hG.stack_arr t h2 (Or.inr ⟨a, ha, h1⟩)
 
+omit hTab in
 /-- **The copy loop of `copy64`**: from `rcx` = word `u` of `sa`, `rdx` = word `w` of `da`, the end
 of the source in the stack cell `[rsp + eoff]`; `n > 0` words left. It leaves at `X` with the
 memory of `m.copy64 da w sa u n`. -/
@@ -593,6 +595,7 @@ theorem sim_endPtr8 {ctx : Ctx} {n : Expr} {k : Nat}
   simp [A]
   omega
 
+omit hTab in
 /-- **The copy loop of `copy8w`**: as `copy64_loop`, from `rcx` = the address of byte `u` of the
 source `b` at `B`. -/
 theorem copy8w_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {Q : MachineState → Prop}
@@ -1000,7 +1003,7 @@ theorem sim_copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr) :
     have hLl : label (ctx.lbl path "L") = at_ (k + (List.length (warrDesc ctx .rcx s).fst + (0 + 1) + 5 + 5 +
         List.length (warrDesc ctx .rdx d).fst + (0 + 1) + 5 + 5 + 6)) := by
       have := Code.label hloop (i := 0) rfl; simpa using this
-    refine ev_congr (copy64_loop hG hTab hloop hLl hD4.arr hD1.arr hoff0 (σ := σ) (s0 := d0) (top := top d0 F)
+    refine ev_congr (copy64_loop hG hloop hLl hD4.arr hD1.arr hoff0 (σ := σ) (s0 := d0) (top := top d0 F)
       (by have := hI.lo; omega) (by have := hI.hi; omega) vk.toNat σ.mem vi vj _
       (hI8.keepR rfl ((KeepR.refl _).flags _)) (hk8.flags _) hrcx8 hrdx8 ?_ hk0 hbnd.1 hbnd.2
       fun s' hI' hK' hP' => ?_) (by omega)
@@ -1160,7 +1163,7 @@ theorem sim_copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) :
     have hLl : label (ctx.lbl path "L") = at_ (k + (0 + 1 + 5 + (0 + 1 + 1 + 1 + 1) +
         List.length (warrDesc ctx .rdx d).fst + (0 + 1) + 5 + 5 + 5)) := by
       have := Code.label hloop (i := 0) rfl; simpa using this
-    refine ev_congr (copy8w_loop hG hTab hloop hLl hD4.arr hoff0 (σ := σ) (s0 := d0) (top := top d0 F)
+    refine ev_congr (copy8w_loop hG hloop hLl hD4.arr hoff0 (σ := σ) (s0 := d0) (top := top d0 F)
       (by have := hI.lo; omega) (by have := hI.hi; omega) vk.toNat σ.mem vi vj _
       (hI8.keepR rfl ((KeepR.refl _).flags _)) (hk8.flags _) hB8 hrcx8 hrdx8 ?_ hk0 hbnd.1 hbnd.2
       fun s' hI' hK' hP' => ?_) (by omega)

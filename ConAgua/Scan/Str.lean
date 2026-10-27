@@ -624,6 +624,7 @@ theorem hex3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word)
 
 end hex4Hex3
 
+omit hb in
 include hpb hph hp3 hpx in
 attribute [local lang_grind] uNextN in
 theorem uNext_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : Word) :
@@ -657,7 +658,7 @@ theorem unescapeLoop_spec (n : Nat) (s₀ : St) :
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
         utf8Valid_spec p b hb hpc hpv n, byteIn_spec p b hpb n,
-        hex4_spec p b hpb hph hp4 n, uNext_spec p b hb hpb hph hp3 hpx n] <;> finish
+        hex4_spec p b hpb hph hp4 n, uNext_spec p b hpb hph hp3 hpx n] <;> finish
 
 
 include hpc hpv hpb hph hp4 hp3 hpx hpu in

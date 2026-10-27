@@ -347,7 +347,7 @@ theorem lpLoop_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : S
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ld64, st64, ih,
         L.Scan.Leaves.numEnd_spec p hE.expr.skip_digits hE.expr.num_end b hb64 n,
-        L.Front.Fields.readNat_spec p b hb hE.expr.read_nat n,
+        L.Front.Fields.readNat_spec p b hE.expr.read_nat n,
         nameGet_spec p hE.expr.front n] <;> finish [NONE]
 
 theorem lpLoop_step_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St) :

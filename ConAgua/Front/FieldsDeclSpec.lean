@@ -148,7 +148,7 @@ theorem hintsVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Wor
         L.Scan.Leaves.keyEnd_spec p (hL.get "key_end") b hb64 n,
         L.Scan.Key.valueAt_spec p (hL.get "skip_ws") (hL.get "value_at") b hb n,
         L.Scan.Leaves.numEnd_spec p (hL.get "skip_digits") (hL.get "num_end") b hb64 n,
-        readNat_spec p b hb (hL.get "read_nat") n] <;> finish
+        readNat_spec p b (hL.get "read_nat") n] <;> finish
 
 attribute [local lang_grind] dendN dnumN dlpsN dhkN dhnN dflagN boolValN in
 set_option maxHeartbeats 1600000 in
@@ -166,7 +166,7 @@ theorem dMember_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (ks k v n
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        slotNat_spec p b hb (hL.get "skip_digits") (hL.get "num_end") (hL.get "slot_nat") n, readNat_spec p b hb (hL.get "read_nat") n,
+        slotNat_spec p b hb (hL.get "skip_digits") (hL.get "num_end") (hL.get "slot_nat") n, readNat_spec p b (hL.get "read_nat") n,
         scanNatList_spec p b hb (hL.get "skip_digits") (hL.get "num_end") (hL.get "scan_nat_list") n,
         L.Scan.Lit.scanBool_spec p (hL.get "match_lit") (hL.get "scan_bool") b hb64 n,
         scanHints_spec p b hb (hL.get "skip_ws") (hL.get "skip_digits") (hL.get "key_end") (hL.get "num_end") (hL.get "key_at_g1")
