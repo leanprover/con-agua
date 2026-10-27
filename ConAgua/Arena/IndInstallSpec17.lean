@@ -7,7 +7,7 @@ import ConAgua.Scan.Common
 # Refinements of `IndInstall`, part 17 (lane `indproofs2`, helper `install`): `checkBlockIdxSorts`
 
 Per member: the former's telescope opened (`open_pis_at_fvars_f`'s stub), the index binders'
-universes (`check_struct_field_sorts_i`, `IndSumSpec11`'s refinement, `installSimFsorts`), recursion as the twin's with the pointers consed (D18).
+universes (`check_struct_field_sorts_i`, `IndSumSpec/CheckStructFieldSortsISucc`'s refinement, `installSimFsorts`), recursion as the twin's with the pointers consed (D18).
 -/
 
 noncomputable section
@@ -24,7 +24,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-! ## `check_struct_field_sorts_i` as a callee (lane `indproofs2`'s `IndSumSpec11`) -/
+/-! ## `check_struct_field_sorts_i` as a callee (lane `indproofs2`'s `IndSumSpec/CheckStructFieldSortsISucc`) -/
 
 /-! ## `check_block_idx_sorts_one` -/
 

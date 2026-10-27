@@ -1,11 +1,11 @@
-import ConAgua.Arena.RecGenSpec6
 import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictFns
+import ConAgua.Arena.RecGenSpec.ClassFieldsOf
 
 /-!
 # Error refinement of `class_fields_of(_go)` (lane `verdicts-b`, helper `ib`)
 
-Mirrors `cfgW_sim` / `cfoW_sim` (`RecGenSpec6`): the callees are all `closedNV`, so an error comes
+Mirrors `cfgW_sim` / `cfoW_sim` (`RecGenSpec/ClassFieldsOf`): the callees are all `closedNV`, so an error comes
 from the single abort (`R_GENERATED_RECURSOR_THE_INDUCTIVE`, the twin's `fail`) or is a callee's.
 -/
 

@@ -1,8 +1,9 @@
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.RecGenSpec9
-import ConAgua.Arena.RecGenSpec
-import ConAgua.Arena.RecGenSpec7
+import ConAgua.Arena.RecClassSpec.CrW
+import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 
 /-!
 # `classStreamRecs` under `StageC` (lane `indstaget`)

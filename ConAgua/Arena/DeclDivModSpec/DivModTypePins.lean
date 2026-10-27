@@ -1,5 +1,5 @@
 import ConAgua.Arena.DeclNatEq
-import ConAgua.Arena.RecCheckSpec
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 
 /-!
 # DivModTypePins: `ConRon.Arena.divModCertProofs`, `ConRon.Arena.divModDeclPin`, `ConRon.Arena.divModTypePins`

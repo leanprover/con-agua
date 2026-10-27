@@ -1,5 +1,7 @@
-import ConAgua.Arena.RecGenSpec27
 import ConAgua.Arena.IndT.RecGen24
+import ConAgua.Arena.RecCheckSpec.TargetMajorAt
+import ConAgua.Arena.RecGenSpec.DecCNWords
+import ConAgua.Arena.RecGenSpec.DecTMSlices
 
 /-!
 # `classCtorOf`, `classCtorsOf`, `classesCtors` under `StageC` (lane `indstaget`, helper `pds`)

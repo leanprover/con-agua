@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndPosSpec.NoConstWf
-import ConAgua.Arena.RecCheckSpec
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 
 /-!
 # NestOccAny

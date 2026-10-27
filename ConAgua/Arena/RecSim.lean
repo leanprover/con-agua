@@ -5,7 +5,7 @@ import ConAgua.Arena.IndCopy2
 /-!
 # A word model simulates a twin run (lane `indproofs2`, helper `rec`)
 
-The relational half of the phase-8 template (`IndSumSpec.lean`) as a few combinators, so that a
+The relational half of the phase-8 template (`IndSumSpec/StructElimLevel.lean`) as a few combinators, so that a
 relational lemma is a chain of `RSim.bind` steps instead of a hand-written case split ending in a
 step-by-step rewrite of the twin's run.
 

@@ -1,6 +1,8 @@
 import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.GrpAt
-import ConAgua.Arena.IndSumSpec7
+import ConAgua.Arena.RecGenSpec.Set64
+import ConAgua.Arena.DeclHeader
+import ConAgua.Arena.IndPosSpec.MatesW
 
 /-!
 # FgW2

@@ -7,7 +7,7 @@ import ConAgua.Compiler.RunEq
 
 `ClassesNfsE` (IndBGrp.lean) proved. `classes_nfs` has nested loops (the generator cannot model
 it): its error model is written by hand over the ok model's pieces (`cnsW`, `ncpW`,
-RecGenSpec28.lean), keeping only what an error of class `≠ 0` can come from, the
+RecGenSpec/DecB.lean), keeping only what an error of class `≠ 0` can come from, the
 `target_major_nfs` call (`iw_alloc` is outside the verdict closure, the copy loop and the stores
 fail with code `0`). The claim follows `cnsW_okC` (IndT/RecGen28.lean) step by step;
 `target_major_nfs`' claim in `tmnW_okPC`'s shape (`tmnE_claimP`, a copy of `tmnE_claim`): the

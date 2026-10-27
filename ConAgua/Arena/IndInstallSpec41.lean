@@ -2,9 +2,12 @@ import ConAgua.Arena.IndInstallSpec40
 import ConAgua.Arena.IndInstallSpec30
 import ConAgua.Arena.IndRealBle
 import ConAgua.Arena.IndInstallSpec39
-import ConAgua.Arena.RecCheckSpec22
-import ConAgua.Arena.RecGenSpec27
-import ConAgua.Arena.RecGenSpec28
+import ConAgua.Arena.RecCheckSpec.RpLook
+import ConAgua.Arena.RecGenSpec.ClassRecTysOk
+import ConAgua.Arena.RecGenSpec.DecB
+import ConAgua.Arena.RecGenSpec.DecCIIndCv
+import ConAgua.Arena.RecGenSpec.DecCNWords
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 
 /-!
 # Refinements of `IndInstall`, part 41 (lane `indproofs4`, helper `grc`): `genRecCheck`

@@ -1,8 +1,8 @@
 import ConAgua.Arena.DeclArmT
-import ConAgua.Arena.RecGenSpec9
-import ConAgua.Arena.RecGenSpec11
 import ConAgua.Arena.IndT.Sum3
-import ConAgua.Arena.IndSumSpec12
+import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 
 /-!
 # `checkSumCtor` under `StageC` (lane `indstaget`)

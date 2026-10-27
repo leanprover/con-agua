@@ -1,8 +1,7 @@
 import ConAgua.Arena.StrLitSup
-import ConAgua.Arena.IndSumSpec5
-import ConAgua.Arena.DeclBasisSpec
 import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.Verdict
+import ConAgua.Arena.IndSumSpec.McGoStep
 
 /-!
 # The verdict at a term whose constants do not resolve (lane `verdicts-b`, helper `ue`)

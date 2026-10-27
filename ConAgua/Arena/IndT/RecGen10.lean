@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndT.RecGen9
-import ConAgua.Arena.RecGenSpec10
+import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 
 /-!
 # `classRecsRulesOk` under `StageC` (lane `indstaget`)

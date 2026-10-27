@@ -187,3 +187,27 @@ warning; theorem statements are untouched (each declaration's text moved verbati
 Estimated critical path (old module times, the new modules' times from their cold compile)
 1118 s → 979 s. It now runs `IndSumSpec5`, `RecCheckSpec10…15` (83 s for `RecCheckSpec15`),
 `Checker.IndArmClosed` (162 s) and the inductive arm's top.
+
+## Batch 6: `RecCheckSpec*`, `RecGenSpec*`, `RecClassSpec*`, `IndSumSpec*` regrouped by function
+
+The same tool on the next 84 modules (32 000 lines): 147 new modules in `ConAgua/Arena/RecCheckSpec/`,
+`RecGenSpec/`, `RecClassSpec/`, `IndSumSpec/`. Two more rules: the old files are emitted into a
+new module in an order consistent with the whole import graph, outside modules included (an old
+file that reached another only through an outside module could otherwise come first and use
+names not yet declared); and names in a kept `variable` line that no declaration of the new
+module mentions (the section stays because of a `def` that does not use them) get their
+module imported. All new and changed modules compiled from scratch (`LAKE_COLD=1`), no warning.
+
+The critical path stays about the same (979 s → 974 s, estimated): this family was no longer on
+it. The gain is in what a proof edit rebuilds. A proof edit in one module of a family, median
+over the family's modules, everything downstream rebuilt (no early cutoff), critical path among
+the rebuilt modules:
+
+| family | before (master 5b9bde54) | after |
+|---|---|---|
+| `IndPosSpec*`/`IndPos2Spec*`/`DeclDivMod*` (batch 5) | 435 modules, 1185 s | 221 modules, 528 s |
+| `RecCheckSpec*`/`RecGenSpec*`/`RecClassSpec*`/`IndSumSpec*` (batch 6) | 204 modules, 1015 s | 108 modules, 410 s |
+
+With all inductive-proof families at 1 s per module the critical path would still be 887 s: what is
+left is `Checker.Prog` (99 s) and the whole-program proofs after it (`Checker.LoopDecl*`,
+`Checker.IndArm`, `Checker.IndArmClosed` 162 s), and the `Verdict` top.

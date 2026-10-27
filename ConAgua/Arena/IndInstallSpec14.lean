@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndInstallSpec13
-import ConAgua.Arena.IndSumSpec9
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
 
 /-!
 # Refinements of `IndInstall`, part 14 (lane `indproofs2`, helper `install`): `consBlockInds`

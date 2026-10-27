@@ -1,5 +1,5 @@
 import ConAgua.Arena.DeclValT
-import ConAgua.Arena.RecGenSpec3
+import ConAgua.Arena.RecGenSpec.ClassConstOk
 
 /-!
 # `classConstOk` under `StageT` (lane `indstaget`)

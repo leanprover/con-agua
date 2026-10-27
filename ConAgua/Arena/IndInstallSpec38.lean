@@ -1,5 +1,6 @@
-import ConAgua.Arena.RecGenSpec28
-import ConAgua.Arena.RecGenSpec5
+import ConAgua.Arena.RecGenSpec.DecB
+import ConAgua.Arena.RecGenSpec.DecCIIndCv
+import ConAgua.Arena.RecGenSpec.DecCNWords
 set_option linter.unusedSectionVars false
 
 /-!

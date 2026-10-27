@@ -6,7 +6,7 @@ import ConAgua.Arena.IndCallM
 # Refinements of `IndInstall` (lane `induct`)
 
 `check_block_doms_at` refines `ConRon.Arena.checkBlockDomsAt .verified`, by the lane's template
-(`IndSumSpec.lean`'s `struct_ps_at_go`): a word model `domsW` that calls the stubs' word models
+(`IndSumSpec/StructElimLevel.lean`'s `struct_ps_at_go`): a word model `domsW` that calls the stubs' word models
 (`stubM`) and itself, a `vcgen` spec of `domsW` with no twin values in sight, a relational lemma
 (by induction on the model's fuel) using the stubs' `RelAM` facts, and the census theorem by
 `triple_post` + `AM.of_run_ok`.

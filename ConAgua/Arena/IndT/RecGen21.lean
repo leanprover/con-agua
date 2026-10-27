@@ -1,4 +1,3 @@
-import ConAgua.Arena.RecGenSpec21
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndInstallSpec30
 

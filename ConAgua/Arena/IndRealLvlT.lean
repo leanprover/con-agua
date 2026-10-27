@@ -3,7 +3,7 @@ import ConAgua.Arena.IndTwin
 /-!
 # `lvl_eq_c`, `lvls_eq_c` under `StageT` with the exact verdict word (lane `indproofs4`, helper `lvl`)
 
-The stub contracts `IndStubs.lvlEqStub_spec` and `RecCheckSpec12.lvlsEqStub_spec` decode the verdict
+The stub contracts `IndStubs.lvlEqStub_spec` and `RecCheckSpec/TcmLook.lvlsEqStub_spec` decode the verdict
 by `decLvlEq` (the word is exactly `0`, `1` or `2`), what the stage's callers test (`r == 2`). Lane
 `whnf`'s refinements (`lvlEqC_refines`, `lvlsEqC_refines`, through `IndTwin.lvlEqC_simT`) state the
 verdict as `decO r` only. `lvlEqCW_enc`, `lvlsEqCW_enc`: the word is one of the three (a cache hit
@@ -173,7 +173,7 @@ theorem lvlEqC_simTE (n : Nat) {m : Mem} {a : AState} (hS : StageT dn vis fe m a
   exact lvlEqCW_enc hC k u v hu hv lu lv hdu hdv _ hW
 
 include hcl hL in
-/-- **`lvls_eq_c` under `StageT`** (replaces `RecCheckSpec12.lvlsEqStub_spec` for a caller carrying
+/-- **`lvls_eq_c` under `StageT`** (replaces `RecCheckSpec/TcmLook.lvlsEqStub_spec` for a caller carrying
 `StageT`), from lane `whnf`'s `lvlsEqC_refines`: no readback hypothesis (a returning run read both
 handles, `StoreDen.lsAll`). -/
 theorem lvlsEqC_simT (n : Nat) {m : Mem} {a : AState} (hS : StageT dn vis fe m a) (us vs : Word)

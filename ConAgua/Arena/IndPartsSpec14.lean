@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndPartsSpec13
-import ConAgua.Arena.IndSumSpec2
 import ConAgua.Arena.IndPartsSpec12
+import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.RecGenSpec.Set64
 
 /-!
 # Refinements of `IndParts`, part 14 (lane `indproofs2`, helper `parts`): `blockShape?`

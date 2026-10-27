@@ -1,7 +1,7 @@
 import ConAgua.Arena.DeclArmT
-import ConAgua.Arena.RecGenSpec9
 import ConAgua.Arena.IndT.Sum1
-import ConAgua.Arena.RecGenSpec7
+import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 
 /-!
 # `checkSumTele.checkSumTeleSlow`, `checkSumTele` under `StageC` (lane `indstaget`)

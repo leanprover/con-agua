@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndT.RecGenTmf
 import ConAgua.Arena.IndT.RecCheckPins
-import ConAgua.Arena.RecGenSpec19
+import ConAgua.Arena.RecGenSpec.Clm
+import ConAgua.Arena.RecGenSpec.CntW
 
 /-!
 # `classMajors` under `StageC` (lane `indstaget`, helper `indstaget-tpt`)

@@ -1,7 +1,6 @@
-import ConAgua.Arena.RecGenSpec4
 import ConAgua.Arena.IndInstallSpec26
-import ConAgua.Arena.IndInstallSpec5
-import ConAgua.Arena.RecClassSpecH
+import ConAgua.Arena.RecClassSpec.ReadProg
+import ConAgua.Arena.RecGenSpec.FlushStage
 
 /-!
 # Refinements of `IndInstall`, part 30 (lane `indproofs3`, helper `tail`): the walk memos from the

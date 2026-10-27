@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclNatGateSpec
 import ConAgua.Arena.DeclCrpT
-import ConRon.Bridge.Checker.Arms
 
 /-!
 # The structural-`Nat` gate under `StageC` (lane `loopt3`, helper `loopt3-nat`)
