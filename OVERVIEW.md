@@ -566,25 +566,28 @@ A partial-correctness triple has exception postcondition `⊤` and is proved by
 induction on the fuel, without ever mentioning it.
 
 **The memory model**
-([`Mem`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L25-L32)):
-an array of byte arrays, an array of word arrays, and a total map of globals.
-Arrays are disjoint by construction and their lengths are fixed for a run.
-A missing array reads as empty, so every access to it is out of bounds. This
-is the whole memory story: there is no separation logic, because there are no
-pointers; "disjoint and in bounds" is proved once, by the compiler (§8.2).
+([`Mem`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L25-L34)):
+three total maps: byte arrays by name, word arrays by name and tier
+(`TieredArray`, §5.3), and globals. Every array exists, possibly empty, so an
+access to an array a run never filled is out of bounds. Arrays are disjoint by
+construction, because they are different keys, and their lengths are fixed for a run. L has
+no addresses: an array's number is a name, not a position in memory, and where
+the arrays live is the compiler's choice (§8.1). This is the whole memory
+story: there is no separation logic, because there are no pointers; "disjoint
+and in bounds" is proved once, by the compiler (§8.2).
 
 ### 5.3 Tiered arrays
 
-con-ron keeps a persistent and a scratch tier of every table (§6.2). L names
-tier `1` of word array `a` as array `a + 256`, and an access with a run-time
-tier word `t` uses `tierA a t`, the tier masked with `1`
-([`tierA`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L28-L35)):
-`A⟨t⟩[i]` in the surface syntax. The encoding stays in the core. Proofs name
-tier `1` of `a` as `tier1 a` and both tiers as `tiers a`. They reason with
-lemmas such as "the arrays `tierA a t` can be are `tiers a`"
-([`tier1`, `tiers`, the lemmas](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L34-L56)). The compiler puts tier 1's descriptor right
-after tier 0's, so a tiered access costs one indexed load more than a plain one
-(§8.1). The node stores are accessed through
+con-ron keeps a persistent and a scratch tier of every table (§6.2). A word
+array of L's memory is a `TieredArray`: tier `hi` of array `arr`. A plain
+access names tier 0 (`↑a`); an access with a run-time tier word `t` names
+`tierA a t`, the tier masked with `1`
+([`TieredArray`, `tierA`, `tiers`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L29-L84)):
+`A⟨t⟩[i]` in the surface syntax. Tier 1 of `a` is `tier1 a`, both tiers are
+`tiers a`, and distinct arrays and the two tiers of one array are distinct keys
+by construction, with no numbering involved. The compiler puts tier 1's
+descriptor right after tier 0's, so a tiered access costs one indexed load more
+than a plain one (§8.1). The node stores are accessed through
 [record accessors](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L7-L31)
 (`R⟨t, i⟩.f`, `R⟦h⟧.f`, `R⟨t⟩.count`), which fix the layout in one place.
 
@@ -679,24 +682,28 @@ globals), slot 1 the L stack (1 GiB at its bottom), then one slot per array,
 each array getting its whole slot (`2^32` words). There is no allocator: the
 pages a run never touches never become real (`MAP_NORESERVE`), so the
 capacities cost address space, not memory. The checker has 390 slots (two,
-then one per word array: `388`, below), about 12 TiB of address space
-(`ca_region_size` in `checker.s`).
+then one per word-array descriptor position: the compiler's current layout has
+`388` positions, unused ones between the arrays included), about 12 TiB of
+address space (`ca_region_size` in `checker.s`).
 
 **The arrays.** Every array of the checker is declared once, in one table
 ([`checkerArrays`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Layout.lean#L28-L34)): its
 name, its kind (byte or word: two separate number spaces), whether it is tiered,
-and its number, which is its slot. The table is the memory layout of record.
-`Checker/ArrCheck.lean` checks it against the program
+and its number. The number is a name: the table is the list of arrays, not the
+layout. `Checker/ArrCheck.lean` checks it against the program and the compiler
 ([the checks](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ArrCheck.lean#L24-L33)):
-the numbers are distinct and below `256`, so no array is another's tier 1
-([`wf`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L153-L157)).
-A byte access names a byte array of the table, a tiered access a tiered array,
-and a plain word access a word array of the table, so never a tier-1 number
-([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L244-L249)).
-There is no exception: `cap_check` reads every slot's length by name, a tier 1
-through a tiered access. The program's extent is the table's, and the parallel mode's frozen and
-owned arrays are slots of the table. The harness and the entry stub lay out the
-slots by number and do not use the names.
+the numbers are distinct per kind; a byte access names a byte array of the
+table, a tiered access a tiered array, and a plain word access a word array of
+the table
+([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L196-L200));
+the compiler's layout has a position for every array of the table; and the
+parallel mode's frozen and owned arrays are arrays of the table.
+
+**The layout.** The compiler maps each array a program names to a descriptor
+position, tier 1 of a tiered array right after its tier 0 (§8.1), and the
+entry stub gives position `p` its slot. The harness reads the layout only
+through the symbols the stub exports (`ca_region_size`, `ca_slot`, …), so it
+does not know the arrays at all.
 
 Where L's representation differs from con-ron's beyond layout, it is listed in
 [`docs/deviations.md`](docs/deviations.md) (§10.2).
@@ -808,8 +815,16 @@ function keeps its locals in nine registers
 the tier local of a leaf stays in `rsi`; a leaf with a frame, other than the
 entry, checks no stack limit: its callers' checks leave room for its frame
 ([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1521-L1533)); a tiered access finds tier 1's
-descriptor at a fixed offset after tier 0's
-([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L74-L88)).
+descriptor at a fixed offset after tier 0's.
+
+**The layout map.** Only the compiler knows where arrays live. Its layout
+([`WLay`, `BLay`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L114-L135))
+maps every array a program may name (`dom`) to a descriptor position (`pos`),
+injectively and below the table's size, with `pos (tier1 a) = pos ↑a + 1` for a
+tiered array. The checker's layout is computed from the table's size
+([`Tab.wl`, `Tab.bl`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L157-L215)),
+and its definitions are irreducible past their lemmas, so no simulation proof
+reads a position. `Prog.wf` checks every operand against `dom`.
 
 ### 8.2 The proof
 
@@ -819,8 +834,9 @@ in continuation-passing style
 then expressions, statements, calls, functions and blocks (`SimExpr` …
 `SimBlock`), composed by induction on the fuel and then on the statement
 (`execSim_all`). The relation is
-[`MemRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Rel.lean#L104-L123)
-under a layout whose regions are in the address space and pairwise disjoint
+[`MemRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Rel.lean#L107-L123),
+which relates L's array `s` to the machine region at position `pos s`, for
+every `s` in `dom`, under a layout whose regions are in the address space and pairwise disjoint
 ([`Layout.Ok`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Rel.lean#L67-L79)).
 Well-formedness of a program (`Prog.wf`) is a `Bool` check, evaluated by the
 kernel through a fast variant keyed by name codes.
