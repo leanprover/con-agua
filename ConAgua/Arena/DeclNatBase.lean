@@ -671,7 +671,7 @@ theorem slContains_ref {k : IdxKind} (hp : p.lookup "sl_contains" = some slConta
     (decHL_bnd _ o l hd hS.2.2.2.1)
   rw [UInt64.ofNat_toNat, UInt64.ofNat_toNat] at hws
   have hr := containsW_ok n _ _ _ _ _ _ hws hcw
-  rw [contains_map_decI x hx] ws hlt
+  rw [contains_map_decI x hx ws hlt]
   refine ⟨hl, _, a₀, rfl, hm ▸ hS, hm ▸ IWGrow.refl _, ?_⟩
   by_cases hc : ws.contains x = true
   · simp only [hc, ite_true] at hr ⊢

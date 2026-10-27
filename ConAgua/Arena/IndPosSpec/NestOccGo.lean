@@ -289,7 +289,7 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
         have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
         have hl' : (g :: vt).tail.tail.headD 0 = lvls := by simpa using hl
         have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
-        have hfi := findIdx_map_decI ((g :: vt).tail.headD 0) hx ws hwlt
+        have hfi := findIdx_map_decI (k := .name) ((g :: vt).tail.headD 0) hx ws hwlt
         refine ⟨rfl, (ws.map (fun w => (decI w : NIdx))).findIdx? (· == nn), ?_, ?_⟩
         · simp only [ConRon.Arena.memberIdxAt?, htg, ite_true, StateT.run_bind]
           rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]

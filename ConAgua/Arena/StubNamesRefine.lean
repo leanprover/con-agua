@@ -333,7 +333,7 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
       intro w hw; simp only [List.mem_map, List.mem_range] at hw
       obtain ⟨i, hi, rfl⟩ := hw; exact hF.reserved_lt i hi) hx]
     simp [List.mem_map, List.mem_range]
-  have c2 := contains_map_decI_iff (ws := [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8,
+  have c2 := contains_map_decI_iff (k := .name) (ws := [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8,
       pinW m 9, pinW m 10, pinW m 11, pinW m 13]) (by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
@@ -348,7 +348,7 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
     · exact lt 9 (by decide)
     · exact lt 10 (by decide)
     · exact lt 12 (by decide)) hx
-  have c3 := contains_map_decI_iff (ws := [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20,
+  have c3 := contains_map_decI_iff (k := .name) (ws := [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20,
       pinW m 21]) (by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
@@ -360,7 +360,7 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
     · exact lt 18 (by decide)
     · exact lt 19 (by decide)
     · exact lt 20 (by decide)) hx
-  have c4 := contains_map_decI_iff (ws := [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27,
+  have c4 := contains_map_decI_iff (k := .name) (ws := [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27,
       pinW m 28, pinW m 29]) (by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw

@@ -108,7 +108,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
       have := decHL_length m hdec; simp at this; omega
     rcases hfw : findW n m no nl c with _ | fr <;> rw [hfw] at h; · simp [canonK0] at h
     have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
-    have hfi := findIdx_map_decI c hc ws hwlt
+    have hfi := findIdx_map_decI (k := .name) c hc ws hwlt
     cases hwi : ws.findIdx? (· == c) with
     | none =>
       rw [hwi] at hfr

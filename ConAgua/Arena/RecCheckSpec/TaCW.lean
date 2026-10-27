@@ -358,7 +358,7 @@ theorem taCW_ok (n : Nat) {m m' : Mem} {no nl lvls ho hl h nn vus r : Word} {nam
   rcases hfw : findW n m no nl nn with _ | fr <;> rw [hfw] at hc <;>
     try (simp only [taCK, reduceCtorEq] at hc; done)
   have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
-  have hfi := findIdx_map_decI nn hn ws hwlt
+  have hfi := findIdx_map_decI (k := .name) nn hn ws hwlt
   cases hwi : ws.findIdx? (· == nn) with
   | none =>
     rw [hwi] at hfr; subst hfr

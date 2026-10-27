@@ -456,7 +456,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rcases hf : findW n m3 no nl ((eViewW m3 (r3.headD 0)).getD 1 0) with _ | rf
         · rw [hf] at hrt; simp [recTK5] at hrt
         have hfk := findW_ok n m3 no nl _ rf ws hws hf hlen
-        have hfi := findIdx_map_decI _ hxlt ws hwlt
+        have hfi := findIdx_map_decI (k := .name) _ hxlt ws hwlt
         rw [← hnm] at hfi
         have hctag : (x3.tag == ETag.const) = true := by
           simp only [beq_iff_eq]; rw [← hdI3]; exact (decE_tag_const _ hdl3).mpr hc3
