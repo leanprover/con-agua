@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
+import ConAgua.Arena.RecStab
 
 /-!
 # Rec2SimTMA

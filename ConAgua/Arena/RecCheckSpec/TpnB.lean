@@ -1,4 +1,6 @@
 import ConAgua.Arena.RecCheckSpec.RpLook
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
 
 /-!
 # TpnB

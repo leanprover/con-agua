@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndInstallSpec9
 import ConAgua.Arena.RecGenSpec.KofProg
 
 /-!

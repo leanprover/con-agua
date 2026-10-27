@@ -1,5 +1,4 @@
 import ConAgua.Arena.IlpRd
-import ConAgua.Arena.IndPartsSpec3
 
 /-!
 # DecCIIndCv

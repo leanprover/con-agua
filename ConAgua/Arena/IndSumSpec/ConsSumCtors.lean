@@ -1,6 +1,6 @@
-import ConAgua.Arena.IndInstallSpec2
-import ConAgua.Arena.IndPartsSpec4
 import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 
 /-!
 # ConsSumCtors: `ConRon.Arena.consSumCtors`

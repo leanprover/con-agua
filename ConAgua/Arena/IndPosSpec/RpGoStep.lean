@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPosSpec.MkLook
 import ConAgua.Arena.IndPosSpec.NestOccGo
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 /-!
 # RpGoStep

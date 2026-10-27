@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
+import ConAgua.Arena.IndSumSpec.StructProjArgP
 
 /-!
 # TargetMajorDefault: `ConRon.Arena.targetMajorDefault`

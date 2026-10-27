@@ -1,7 +1,4 @@
-import ConAgua.Arena.DeclArms
-import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclStepGo
-import ConAgua.Arena.IndInstallSpec3
 
 noncomputable section
 

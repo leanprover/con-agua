@@ -1,8 +1,8 @@
 import ConAgua.Arena.IndT.RecGen4
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecClassSpec.RuW
-import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+import ConAgua.Arena.IndPartsSpec.PlW
 
 /-!
 # `classRulesOk` under `StageC` (lane `indstaget`)

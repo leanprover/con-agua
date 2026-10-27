@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndT.Sum2
 import ConAgua.Arena.IndT.Install1
-import ConAgua.Arena.IndInstallSpec9
+import ConAgua.Arena.IndInstallSpec.InstallSimCall
 
 /-!
 # `checkBlockTele`, `checkBlockTeles` under `StageC` (lane `indstaget`)

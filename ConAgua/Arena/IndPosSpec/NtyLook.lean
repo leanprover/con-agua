@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndInstallSpec3
 import ConAgua.Arena.IndPosSpec.PiBWStage
 
 /-!

@@ -1,5 +1,7 @@
 import ConAgua.Arena.IndSumSpec.DecHLTake
 import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.IndPartsSpec.EqW
+import ConAgua.Arena.IndRealAbs
 
 /-!
 # StructCtorResidOk: `ConRon.Arena.structCtorResidOk`

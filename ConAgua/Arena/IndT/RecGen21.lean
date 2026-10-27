@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndT.RecGen19
-import ConAgua.Arena.IndInstallSpec30
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 
 /-!
 # `checkBlockClasses` under `StageC` (lane `indstaget`)

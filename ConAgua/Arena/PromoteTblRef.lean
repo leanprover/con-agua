@@ -1,5 +1,9 @@
-import ConAgua.Arena.PromoteCIRef30
 import ConAgua.Arena.TblFrame
+import ConAgua.Arena.PromoteCIRef.PmDecTblBound
+import ConAgua.Arena.PromoteCIRef.PreESizeLe
+import ConAgua.Arena.PromoteCIRef.Proj
+import ConAgua.Arena.PromoteCIRef.TdecJoin
+import ConAgua.Arena.PromoteCIRef.OfFrame
 
 /-!
 # The table side of the promotion: `erase_installed_tables`, `promote_proj_tables`,

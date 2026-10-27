@@ -1,10 +1,11 @@
-import ConAgua.Arena.IndInstallSpec41
 import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Arena.IndT.RecGen28
-import ConAgua.Arena.IndInstallSpec15
 import ConAgua.Arena.RecCheckSpec.TargetRecPins
 import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.IndInstallSpec.GpbWSimF
+import ConAgua.Arena.IndInstallSpec.Icvg
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 
 /-!
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)

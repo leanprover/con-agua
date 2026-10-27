@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndInstallSpec20
-import ConAgua.Arena.IndInstallSpec9
+import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
+import ConAgua.Arena.IndPosSpec.NkcW
 
 /-!
 # PtrNamesWDec

@@ -1,5 +1,6 @@
 import ConAgua.Arena.WhnfEntry
 import ConAgua.Arena.DeclNatSpec
+import ConAgua.Arena.IndRealFvtD
 
 /-!
 # `fvar_type_ds`, `get_app_args_f`: stub contracts discharged (lane `indproofs4`, helper `fvt`)

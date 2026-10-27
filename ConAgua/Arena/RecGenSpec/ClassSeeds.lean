@@ -1,6 +1,8 @@
 import ConAgua.Arena.RecGenSpec.DecNLAt
 import ConAgua.Arena.RecGenSpec.KcW
 import ConAgua.Arena.RecGenSpec.KeysProg
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 
 /-!
 # ClassSeeds: `ConRon.Arena.classSeeds`

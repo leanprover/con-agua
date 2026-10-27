@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndT.Pass
+import ConAgua.Arena.IndInstallSpec.BlockRawRec
 
 /-!
 # `checkBlock` under `StageC` (lane `indstaget`)

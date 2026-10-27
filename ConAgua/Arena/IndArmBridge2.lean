@@ -1,8 +1,4 @@
-import ConAgua.Arena.IndInstallSpec36
-import ConRon.Bridge.Promote.Exact
-import ConAgua.Arena.IndPartsSpec8
-import ConAgua.Arena.DeclBasisSpec
-import ConAgua.Front.StateDR
+import ConAgua.Arena.IndInstallSpec.PapW
 
 /-!
 # The inductive arm's block: the front's decoding is the stage's (lane `indproofs4`)

@@ -2,6 +2,7 @@ import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Arena.RecGenSpec.CfoProg
+import ConAgua.Arena.IndPartsSpec.BlockCounts
 
 /-!
 # ClassFieldsOf: `ConRon.Arena.classFieldsOf`

@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndRealIlpN
 import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
+import ConAgua.Arena.IndPartsSpec.SetEqW
 
 /-!
 # RpLook

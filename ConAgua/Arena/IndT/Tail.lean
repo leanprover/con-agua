@@ -1,11 +1,12 @@
-import ConAgua.Arena.IndInstallSpec35
 import ConAgua.Arena.IndT.Install5
 import ConAgua.Arena.IndT.GenRec3
 import ConAgua.Arena.IndT.ArmMemos
 import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.IndInstallSpec29
 import ConAgua.Arena.IndT.Install4
 import ConAgua.Arena.RecCheckSpec.BlockNestedBit
+import ConAgua.Arena.IndInstallSpec.BpRecBpassR
+import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
+import ConAgua.Arena.IndInstallSpec.Icb
 
 /-!
 # `checkBlockTail` under `StageC` (lane `indstaget`)

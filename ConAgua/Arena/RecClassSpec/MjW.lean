@@ -1,6 +1,7 @@
 import ConAgua.Arena.RecClassSpec.MkTMWAfr
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 import ConAgua.Arena.RecClassSpec.Rec2SimTMA
+import ConAgua.Arena.RecClassSpec.PiBWRoom
 
 /-!
 # MjW

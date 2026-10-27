@@ -1,10 +1,4 @@
-import ConAgua.Arena.CrOKFrame
-import ConAgua.Arena.DeclValSpec
-import ConAgua.Arena.IndInstallSpec10
-import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.KnotEntry
 import ConAgua.Verdict.IndAGen
-import ConRon.Bridge.Inductives.BlockInstall
 import ConAgua.Verdict.IndsE1
 
 /-!

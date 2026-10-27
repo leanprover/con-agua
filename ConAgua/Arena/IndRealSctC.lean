@@ -1,14 +1,15 @@
-import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
-import ConAgua.Arena.IndInstallSpec27
 import ConAgua.Arena.TblFrame
-import ConAgua.Final.Twin
-import ConAgua.Arena.DefEqKnot
-import ConAgua.Arena.IndInstallSpec23
-import ConAgua.Arena.IndInstallSpec24
-import ConAgua.Arena.IndInstallSpec26
 import ConAgua.Arena.IndSumSpec.CheckSumCtor
+import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+import ConAgua.Arena.IndInstallSpec.CtbW
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConAgua.Arena.IndInstallSpec.NestCtx
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+import ConAgua.Arena.IndInstallSpec.SpgWZero
+import ConAgua.Arena.IndInstallSpec.TabSimSpg
+import ConAgua.Arena.PromoteCIRef.OfFrame
 
 /-!
 # `check_struct_proj_table_scoped` through the real `all_level_params_defined` (lane `indproofs4`, helper `sct`)

@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndSumSpec.PBDecA
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
+import ConAgua.Arena.IndPosSpec.MatesW
 
 /-!
 # StructProjBodies: `ConRon.Arena.structProjBodiesGo`, `ConRon.Arena.structProjBodies`

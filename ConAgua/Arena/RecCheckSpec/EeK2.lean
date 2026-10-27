@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndPartsSpec5
 import ConAgua.Arena.IndPosSpec.NoGoStep
+import ConAgua.Arena.IndPartsSpec.EqW
 
 /-!
 # EeK2

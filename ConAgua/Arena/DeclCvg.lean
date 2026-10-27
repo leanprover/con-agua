@@ -1,13 +1,8 @@
 import ConAgua.Arena.DeclStep
 import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.CoreLevels
-import ConAgua.Arena.Pins
-import ConAgua.Arena.Frame
-import ConAgua.Arena.IndPartsSpec2
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndInstallSpec
-import ConAgua.Arena.IndStubs
 import ConAgua.Arena.IndCallM
+import ConAgua.Arena.IndPartsSpec.MemberNames
 
 /-!
 # Phase B's check, `check_value_group`: its write set from the text

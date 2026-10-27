@@ -2,6 +2,7 @@ import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
+import ConAgua.Arena.IndPartsSpec.RecTW
 
 /-!
 # CftW

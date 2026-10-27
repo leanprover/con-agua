@@ -1,7 +1,7 @@
-import ConAgua.Arena.IndInstallSpec14
 import ConAgua.Arena.IndRealLvlZT
 import ConAgua.Final.Twin
 import ConAgua.Arena.IndRealLvlZ
+import ConAgua.Arena.IndInstallSpec.IcaW
 
 /-!
 # `lv_zero_caps` under the stage relation with the twin's read-back facts (lane `indproofs4`,

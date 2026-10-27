@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndPartsSpec8
 import ConAgua.Arena.RecCheckSpec.TcmLook
 
 /-!

@@ -1,5 +1,7 @@
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Arena.RecGenSpec.KeysProg
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 
 /-!
 # CntW

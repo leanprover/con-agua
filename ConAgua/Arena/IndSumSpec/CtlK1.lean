@@ -1,7 +1,7 @@
-import ConAgua.Arena.IndPartsSpec5
 import ConAgua.Arena.IndSumSpec.ColW
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.IndSumSpec.SumProg
+import ConAgua.Arena.IndPartsSpec.EqW
 
 /-!
 # CtlK1

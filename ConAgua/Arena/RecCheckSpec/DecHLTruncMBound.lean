@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndRealSpine
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 /-!
 # DecHLTruncMBound
