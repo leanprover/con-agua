@@ -274,6 +274,32 @@ theorem curNum_eq_iff {s : TieredArray} {a : ArrId} (ha : a < tierOff) :
   · have ha' : @LT.lt Nat _ a tierOff := ha
     simp only [curNum, TieredArray.t0, TieredArray.mk.injEq, ite_true]; simp; omega
 
+/-- The array at a position has that position's number. -/
+theorem Tab.curNum_wAt (t : Tab) (p : Nat) : curNum (t.wAt p) = t.wposInv p := by
+  simp only [Tab.wAt]
+  split
+  · simp
+  · rename_i h
+    have h' : ¬ @LT.lt Nat _ (t.wposInv p) tierOff := h
+    simp only [curNum, ite_true]; omega
+
+/-- Distinct positions hold distinct arrays. -/
+theorem Tab.wAt_inj (t : Tab) {p q : Nat} (hp : p < t.nw) (hq : q < t.nw) (h : t.wAt p = t.wAt q) :
+    p = q := by
+  have e : t.wposInv p = t.wposInv q := by rw [← t.curNum_wAt, ← t.curNum_wAt, h]
+  rw [← t.wpos_wposInv hp, ← t.wpos_wposInv hq, e]
+
+/-- Word array `s` sits at its position. -/
+theorem Tab.wAt_pos64 (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : t.wAt (t.pos64 s) = s := by
+  have hn := t.wposInv_pos64 h
+  have hd := h
+  unfold Tab.dom64 at hd
+  simp only [Tab.wAt, hn]
+  rcases s with ⟨a, _ | _⟩
+  · simp only [Bool.false_eq_true, ite_false, Bool.and_eq_true, decide_eq_true_eq] at hd
+    simp [curNum, hd.1]
+  · simp [curNum, tierOff]
+
 /-- `wposInv_lt` at type `Nat` (`omega` does not read a comparison at type `ArrId`). -/
 theorem Tab.wposInv_ltN (t : Tab) {p : Nat} (h : p < t.nw) : @LT.lt Nat _ (t.wposInv p) t.nw :=
   t.wposInv_lt h

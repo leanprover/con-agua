@@ -179,22 +179,29 @@ def abiDrvDeclineL : Label := "ca_drv_decline"
 
 
 /-- The worker region's size for the owned arrays `own`: the table, the stack, one slot each. -/
-def workerNeed (own : List ArrId) : Nat := abiSlot * (2 + own.length)
+def workerNeed (own : List TieredArray) : Nat := abiSlot * (2 + own.length)
 
-/-- `ca_check_b`'s descriptor words for word array `a` (`rdi` the buffer, `rcx` the table). -/
-def parDescB (tab : Tab) (fz own : List ArrId) (a : ArrId) : Program :=
-  match fz.idxOf? a with
+/-- The word array whose descriptor words are at position `p` (today's layout: the number
+`wposInv p`, then its tier). -/
+def Tab.wAt (tab : Tab) (p : Nat) : TieredArray :=
+  let n := tab.wposInv p
+  if n < tierOff then TieredArray.t0 n else tier1 (n - tierOff)
+
+/-- `ca_check_b`'s descriptor words at position `p`, for the word array `tab.wAt p` there (`rdi` the
+buffer, `rcx` the table). -/
+def parDescB (tab : Tab) (fz own : List TieredArray) (p : Nat) : Program :=
+  match fz.idxOf? (tab.wAt p) with
   | some i =>
     [movRM .rax (mb .rdi (8 * (8 + 2 * i))), i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-     i64 (.add (.reg (rr .rax)) (oR .rdi)), movMR (mb .rcx (tab.base64 a)) .rax,
-     movRM .rax (mb .rdi (8 * (9 + 2 * i))), movMR (mb .rcx (tab.len64 a)) .rax]
+     i64 (.add (.reg (rr .rax)) (oR .rdi)), movMR (mb .rcx (tab.dbase64 p)) .rax,
+     movRM .rax (mb .rdi (8 * (9 + 2 * i))), movMR (mb .rcx (tab.dlen64 p)) .rax]
   | none =>
-    match own.idxOf? a with
+    match own.idxOf? (tab.wAt p) with
     | some k =>
       [movRI .rax (abiSlot * (2 + k)).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
-       movMR (mb .rcx (tab.base64 a)) .rax, movRI .rax abiWords.toUInt64,
-       movMR (mb .rcx (tab.len64 a)) .rax]
-    | none => [movRI .rax 0, movMR (mb .rcx (tab.base64 a)) .rax, movMR (mb .rcx (tab.len64 a)) .rax]
+       movMR (mb .rcx (tab.dbase64 p)) .rax, movRI .rax abiWords.toUInt64,
+       movMR (mb .rcx (tab.dlen64 p)) .rax]
+    | none => [movRI .rax 0, movMR (mb .rcx (tab.dbase64 p)) .rax, movMR (mb .rcx (tab.dlen64 p)) .rax]
 
 /-- `ca_check_seq`'s table words, in `abiVals`' order: `ca_setup`'s layout of the region, except
 that `out`, the seed `ctlf` and the byte arrays get no memory and the header `hdrf` is the first
@@ -222,7 +229,7 @@ def immStores (r : Reg64) (d : Nat) : List SVal → Program
 
 /-- The parallel mode's entries, for the globals `mode`, `plo`, `phi`, the buffer array `out`, the
 frozen arrays `fz` and the owned arrays `own`. -/
-def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List ArrId) :
+def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray) :
     Program :=
   -- entry 1, and the driver's entry 1
   [.label abiStartAL,
@@ -241,7 +248,7 @@ def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
    movMR (mb .rcx Tab.stackLimit) .rax,
    movRI .rax 0] ++
   ((List.range tab.nb).flatMap fun a => [movMR (mb .rcx (tab.base8 a)) .rax, movMR (mb .rcx (tab.len8 a)) .rax]) ++
-  ((List.range tab.nw).flatMap fun p => parDescB tab fz own (tab.wposInv p)) ++
+  ((List.range tab.nw).flatMap fun p => parDescB tab fz own p) ++
   immStores .rcx tab.romBase.toNat (romVals tab.rom) ++
   [movMR (mb .rcx (tab.globOff plo)) .rdx, movMR (mb .rcx (tab.globOff phi)) .r9,
    movRI .rax 2, movMR (mb .rcx (tab.globOff mode)) .rax,
@@ -271,12 +278,12 @@ def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
    .label abiDrvDeclineL, movRI .rax 0, movRI .rdx 1, i64 .ret]
 
 /-- The symbols of the parallel mode for the harness. -/
-def parSymbols (tab : Tab) (out : ArrId) (own : List ArrId) : String :=
+def parSymbols (tab : Tab) (out : ArrId) (own : List TieredArray) : String :=
   s!".section .rodata\n.globl ca_out_off\n.globl ca_worker_size\nca_out_off: .quad {abiSlot * abiSlot64 tab out}\nca_worker_size: .quad {workerNeed own}\n"
 
 /-- The assembler file with the parallel mode's entries (`parStub`) before the stub. -/
 def asmTextAbiPar (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
-    (fz own : List ArrId) (code : Program) : String :=
+    (fz own : List TieredArray) (code : Program) : String :=
   ".text\n.globl " ++ abiStartL ++ "\n.globl " ++ abiStartAL ++ "\n.globl " ++ abiCheckBL ++ "\n.globl " ++
     abiCheckSL ++ "\n" ++
     asmTextOf tab (parStub tab mode plo phi out hdrf ctlf hw fz own ++ abiStub tab ++ code) ++
