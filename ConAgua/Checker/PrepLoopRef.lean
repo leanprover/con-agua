@@ -146,11 +146,11 @@ theorem pick_miss (k : NIdx) (dsAll : Array IDeclaration) (l : List Nat)
 theorem PFr.trans {ord mk nw : Word} {m₁ m₂ m₃ : Mem} (h₁ : PFr ord mk nw m₁ m₂)
     (h₂ : PFr ord mk nw m₂ m₃) : PFr ord mk nw m₁ m₃ :=
   ⟨fun b hb hi => (h₂.1 b hb hi).trans (h₁.1 b hb hi), fun x hx => (h₂.2.1 x hx).trans (h₁.2.1 x hx),
-    fun b => (h₂.2.2.1 b).trans (h₁.2.2.1 b), h₂.2.2.2.1.trans h₁.2.2.2.1,
+    fun b => (h₂.2.2.1 b).trans (h₁.2.2.1 b), h₁.2.2.2.1.trans h₂.2.2.2.1,
     fun x hx => (h₂.2.2.2.2 x hx).trans (h₁.2.2.2.2 x hx)⟩
 
 theorem PFr.refl (ord mk nw : Word) (m : Mem) : PFr ord mk nw m m :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl, fun _ _ => rfl⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl m, fun _ _ => rfl⟩
 
 theorem PFr.of_high {ord mk nw : Word} {m m' : Mem} (h : HighFr m m') : PFr ord mk nw m m' :=
   ⟨fun b hb _ => h.1 b hb, h.2.1, h.2.2.1, h.2.2.2, fun x _ => by rw [h.1 IW (by decide)]⟩

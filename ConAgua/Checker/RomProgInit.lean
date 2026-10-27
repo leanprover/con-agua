@@ -40,7 +40,7 @@ theorem loadMem_pb : (loadMem b pb s8 s64).arr8 PB = pb.data.toList.toArray := b
 theorem loadMem_ctl_lt (hc : CapsOK (loadMem b pb s8 s64)) : (loadMem b pb s8 s64).HasW CTL := by
   have h := hc.2.1
   rw [loadMem_arr] at h
-  rw [loadMem_words_size]
+  unfold Mem.HasW; rw [loadMem_words_size]
   simp only [Array.size_replicate] at h
   cases hs : s64[CTL]? with
   | none => rw [hs] at h; simp [ctlMin] at h
