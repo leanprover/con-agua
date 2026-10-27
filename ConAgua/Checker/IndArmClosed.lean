@@ -1,4 +1,4 @@
-import ConAgua.L.Syntax
+import ConAgua.Layout
 
 /-!
 # The write sets of the inductive arm's callees in `checkerProg` (lane `indproofs4`)
@@ -15,16 +15,16 @@ another (`addDecl` waits for the checks before it), so the modules run them in p
 
 namespace L.Checker
 
-/-- An array test: below 320 (both tiers) and `f`. -/
-def tA (f : Nat → Bool) (a : ArrId) : Bool := decide (a < 388) && f a
+/-- An array test: one of the checker's word arrays (`checkerWordArrays`) and `f`. -/
+def tA (f : TieredArray → Bool) (a : TieredArray) : Bool := checkerWordArrays.contains a && f a
 
 /-- A `CTL` word test: below 256 and `g`. -/
 def tC (g : Nat → Bool) (w : Word) : Bool := decide (w.toNat < 256) && g w.toNat
 
-theorem tA_mem {f : Nat → Bool} {a : ArrId} (h : tA f a = true) : a ∈ checkerWordArrays.filter f := by
-  simp only [tA, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [List.mem_filter, List.mem_range]
-  exact ⟨h.1, h.2⟩
+theorem tA_mem {f : TieredArray → Bool} {a : TieredArray} (h : tA f a = true) :
+    a ∈ checkerWordArrays.filter f := by
+  simp only [tA, Bool.and_eq_true, List.contains_iff_mem] at h
+  exact List.mem_filter.2 h
 
 theorem tC_mem {g : Nat → Bool} {w : Word} (h : tC g w = true) :
     w ∈ ((List.range 256).filter g).map Nat.toUInt64 := by
