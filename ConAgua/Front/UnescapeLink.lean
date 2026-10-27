@@ -728,7 +728,7 @@ theorem strPutEsc_spec (p : Prog) (hpb : p.lookup "byte_in" = some L.Scan.Str.by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hr, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (strPutEsc_specW p b.data hsize hpb hph hp4 hp3 hps hpo hpu hpe n s₀ hm c d)
+    (strPutEsc_specW p b.data hpb hph hp4 hp3 hps hpo hpu hpe n s₀ hm c d)
   subst hs
   obtain ⟨hg, hsl, hk⟩ := strPutEsc_link h64 b hsize s.mem s'.mem hR.lit.1 c d str hS _ hW
   exact ⟨hloc, hr, hg, hsl, hk, ArenaR.grow _ _ hg _ hR, DerR.grow _ _ hg _⟩

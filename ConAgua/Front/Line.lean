@@ -237,6 +237,7 @@ include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz hb
 
 attribute [local lang_grind =] map_okRes
 
+omit hb in
 omit hpf hps hpu hpl hpr hpy hF hDL hpz in
 theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
@@ -274,7 +275,7 @@ theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        applyStr_spec p hS hL hpn hpt hE b hb n,
+        applyStr_spec p hS hL hpn hpt hE b n,
         applyNNum_spec p hL hpu n, applyLevel_spec p hL hpl n] <;> finish [lineRecW, NONE]
 
 omit hS hL hpf hps hpn hpu hpl hpr hpt hE hpy in
