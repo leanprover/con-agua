@@ -268,7 +268,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
   generalize hW : bufMem (bufOf m v) r j = W
   obtain ⟨hseed, h256⟩ := bufImg_seed (v := v) hok hlt
   have hctlf : W.arr64 CTLF = (m.arr64 CTL).extract 0 256 := by
-    rw [← hW, bufMem_ctlf, ite_eq_left (show r.HasW 242 by omega), hseed]
+    rw [← hW, bufMem_ctlf, ite_eq_left (hr.hasW (by decide)), hseed]
   have hlen : (W.len64 CTLF).toNat = 256 := by
     simp only [Mem.len64, hctlf, size_extract0, Nat.min_eq_left h256]; rfl
   have hctl : W.arr64 CTL = zeros (m.arr64 CTL).size := by
@@ -295,7 +295,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
     · rw [arr64_copy64_ne _ _ _ _ _ _ hbc, ← hW]
       rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
       · obtain ⟨-, hz', hc, h388⟩ := frozen_facts hk h1
-        rw [bufMem_frozen _ r j hk h1, ite_eq_left (Nat.lt_of_lt_of_le h388 hr), bufImg_trunc hok hlt hk h1, freshMem_arr,
+        rw [bufMem_frozen _ r j hk h1, ite_eq_left (hr.hasW h388), bufImg_trunc hok hlt hk h1, freshMem_arr,
           ite_eq_right hc, ite_eq_right hz']
       · obtain ⟨-, hsrc⟩ := owned_facts ho
         rw [bufMem_owned _ r j ho, hz b ho, freshMem_arr, ite_eq_right hbc,
