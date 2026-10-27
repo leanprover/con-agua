@@ -1,7 +1,6 @@
 import ConAgua.Checker.Prog
 import ConAgua.Checker.IndArmFns
 import ConAgua.Compiler.WriteSetSplit
-import ConAgua.Arena.IndIface
 import ConAgua.Arena.IndRealAbs
 
 /-!

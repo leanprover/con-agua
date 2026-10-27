@@ -23,3 +23,41 @@ modules on the path; the last module, `Verdict.IndArmTopE`, 31 s). So the gains 
 that many modules share.
 
 ## Causes found
+
+### The inductive arm's top (`Checker.IndArm*`, `Verdict.IndArmTopE`; batch 1)
+
+The last modules of the critical path, `Checker.IndArmClosed` (108 s) → `Checker.IndArm` (31 s) →
+`Verdict.IndArmTopE` (31 s), were almost all kernel time:
+
+* **Lookups in `prog_bundle`/`chk_lk`.** A lookup `checkerProg.lookup "f" = some fd` was proved
+  from `checkerProg[n]? = some ("f", fd)`: the kernel walked up to 1838 cons cells (~17 µs each,
+  ~18 ms per lookup), and the bundles of the two modules made ~1160 lookups each (~11 s for
+  `KnotStageProg`, ~11 s for `CidProg`), both bundles proved twice (once in each module). Now
+  `chunk_checker_prog` cuts `checkerProg` into chunks of 32 functions (`checkerProg.chunk<j>`,
+  `checkerProg_chunks : checkerProg = checkerChunks.flatten`, one kernel check), and a lookup is
+  `lk_of_chunk` (at most ~90 cells). Every `prog_bundle` user gains (`Verdict.KnotAllE` 21 → 4 s,
+  `Checker.LoopProg` 35 → 19 s).
+* **`by decide +kernel` memberships** (`∀ f ∈ passCallees, f ∈ armPosFns`, ~1000 names): `String`
+  comparisons, ~19 s per module, in both modules. Now proved from the `names_tree`s
+  (`subset_of_tree`/`mem_of_tree`), no `String` comparisons.
+* The program facts of the arm are one structure `IndArmProgs` proved once
+  (`indArmProgs_checker`, one `prog_bundle`, shared lookups proved once) and the `AbsKeep` facts
+  `indArmKeep_checker`; `Verdict.IndArmTopE` reuses them.
+* **`IndArmClosed`** (9 arms × ~58 `prog_all` chunks over the whole program, ~100 s of kernel
+  checks, serial: `addDecl` inside one command runs each kernel check after the previous one,
+  `Lean/AddDecl.lean`, `BaseIO.mapTask … env.checked`; separate `theorem` commands do run in
+  parallel) waited ~47 s for late `Arena` imports that its chunk checks do not need. It now
+  imports only `Checker.Prog`, `IndArmFns`, `WriteSetSplit`, `IndRealAbs`; the 9 composition
+  theorems `checkerProg_armX` moved to `Checker.IndArm`. Its own time is unchanged.
+
+| module | before | after |
+|---|---:|---:|
+| `Verdict.IndArmTopE` | 31 s | 3 s |
+| `Checker.IndArm` | 31 s | 6 s |
+| `Verdict.KnotAllE` | 21 s | 4 s |
+| `Checker.LoopProg` | 35 s | 19 s |
+| `Checker.IndArmClosed` | 108 s, done at 466 s | same time, done at ~418 s |
+
+(After: `Built X (t)` times on a loaded machine. Estimated critical path 568 → ~540 s.) Left:
+`IndArmClosed`'s CPU (~100 s): one walk checking all nine arms per function (a per-name bitmask)
+would cut it several-fold.
