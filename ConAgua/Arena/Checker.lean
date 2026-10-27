@@ -95,20 +95,25 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
   have hpA : a'.pins = a₀.pins := congrArg Prod.snd hcp
   have hA := vg_arrs
   have hC := vg_ctl
+  have hA' : ∀ b ∈ (EREC : TieredArray) :: eArrs, b.arr < 64 ∨ b.arr = 136 ∨ (146 ≤ b.arr ∧ b.arr < 150) :=
+    fun b hb => by
+      rcases hA b hb with h | rfl | h
+      · omega
+      · decide
+      · simp only [Tier0In] at h; omega
   have hIW : s'.mem.arr64 L.Ind.IW = s₀.mem.arr64 L.Ind.IW :=
     hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide)
   refine ⟨hl, hok, ⟨⟨hD, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ⟨pm', hP'⟩, ?_⟩, hP', hdec⟩
   · rw [hcA]
-    exact hR.check.core.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+    exact hR.check.core.frame (fun b hb => by have := hA' b hb; omega)
       (fun x hx => by have := hC x hx; omega) hf
   · rw [hpA]
-    exact hR.check.pins.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) hf
+    exact hR.check.pins.frame (fun b hb => by have := hA' b hb; omega) hf
   · exact hR.check.env.grow (fun b h1 h2 h3 => hf.1 b (fun h => by
-        have := hA b h; simp only [ArrId] at *; omega)
-      (by simp only [CTL, ArrId]; omega)) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
-      hg (TblSame.of_frame (fun b hb => by have := hA b hb; simp only [ArrId] at *; omega)
-        (fun b hb => by have := hA b hb; simp only [ArrId] at *; omega)
-        (fun h => by have := hA _ h; simp only [ETAB, ArrId] at *; omega)
+        have := hA' _ h; simp only [TieredArray.t0] at this; omega)
+      (TieredArray.t0_ne (show b ≠ (1 : Nat) by omega))) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
+      hg (TblSame.of_frame (fun b hb => by have := hA' b hb; omega)
+        (fun h => by have := hA' _ h; revert this; decide)
         (fun h => by have := hC _ h; simp at this) hf)
   · exact ModeOK.of_keep hR.check.mode (hf.2.1 1 (by decide)) htk
   · exact hR.pend.ext (hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide))
