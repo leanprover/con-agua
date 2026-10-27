@@ -256,7 +256,7 @@ variable {N : Word → Name → Prop}
 /-- **`lv_spw` is `bindZ.go`** with the datum's names on the heap itself (below its top; lane
 `levels`' `spwW_ok` wants them elsewhere): a slice below the top survives the pushes. -/
 theorem spwW_ok_lh (hN : NameRel N) {KA VA : ArrId} (hKA : KA ≠ LH ∧ KA ≠ CTL)
-    (hVA : VA ≠ LH ∧ VA ≠ CTL ∧ VA < 256) (ks : List Name) (vs : List Level)
+    (hVA : VA ≠ LH ∧ VA ≠ CTL) (ks : List Name) (vs : List Level)
     (n : Nat) : ∀ (m m' : Mem) (po pc ko kc vo vc x : Word) (ps : List Name),
       NmsR N m LH po pc ps → po.toNat + pc.toNat ≤ (htop m).toNat →
       NmsR N m KA ko kc ks → LvsAR N m VA vo vc vs →

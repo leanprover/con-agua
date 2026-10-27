@@ -363,7 +363,7 @@ def RfInv (m : Mem) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
 
 /-- A writer that leaves the memo's array and its stamp and bank words alone. -/
 def RfFr (m m' : Mem) : Prop :=
-  ∃ (A : List TieredArray) (C : List Word), MemFrame A C m m' ∧ RFM ∉ A ∧ (208 : Word) ∉ C ∧
+  ∃ (A : List TieredArray) (C : List Word), MemFrame A C m m' ∧ (RFM : TieredArray) ∉ A ∧ (208 : Word) ∉ C ∧
     (218 : Word) ∉ C ∧ (219 : Word) ∉ C
 
 theorem RfInv.frame {m m' : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (h : RfInv m M G g)

@@ -368,7 +368,7 @@ theorem headProofProj_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
   simp only [callFn, headProofProjL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "find_proj", callW_spec p n "type_sort_pw"] <;>
-  simp_all [hppK1, hppK2, hppB, LocEq, BinOp.eval, St.setLocs_cons, EREC,
+  simp_all [hppK1, hppK2, hppB, LocEq, BinOp.eval, St.setLocs_cons, EREC, TieredArray.t0,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
   all_goals
