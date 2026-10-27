@@ -1881,8 +1881,8 @@ theorem wrRecK_words (ra : ArrId) (k : Word) :
     ∀ (vs : List Word) (m : Mem) (f : Word), m.SameShape (wrRecK ra k m f vs) := by
   intro vs
   induction vs with
-  | nil => intro m f; rfl
-  | cons v vs ih => intro m f; rw [wrRecK, ih, Mem.words_size_set64]
+  | nil => intro m f; exact .refl m
+  | cons v vs ih => intro m f; rw [wrRecK]; exact (Mem.sameShape_set64 _ _ _ _).trans (ih _ _)
 
 
 /-- The memory after the append of the key's node to tier `t`, outside the slot array: the
@@ -1908,8 +1908,8 @@ theorem colW_size (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId) :
 theorem colW_words (C : ConsSch) (t c x : Word) (m : Mem) :
     m.SameShape (colW C t c x m) := by
   unfold colW; split
-  · rfl
-  · exact Mem.words_size_set64 _ _ _ _
+  · exact .refl m
+  · exact Mem.sameShape_set64 _ _ _ _
 
 theorem arr64_set64_congr {M₁ M₂ : Mem} {a b : ArrId} (h : M₁.arr64 a = M₂.arr64 a)
     (hb : M₁.arr64 b = M₂.arr64 b) (i v : Word) :
@@ -1959,8 +1959,9 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
     exact OutSa.set64_sa (OutSa.set64_sa (fun _ _ => rfl) _ _) _ _ b hb
   · rw [g2 b]
     simp only [pushMX, pushMC, tailM, colW_size, arr64_size_set64, wrRecK_size]
-  · rw [g3]
-    simp only [pushMX, pushMC, tailM, colW_words, Mem.words_size_set64, wrRecK_words]
+  · refine Mem.SameShape.trans ?_ g3
+    simp only [pushMX, pushMC, tailM]
+    exact ((((wrRecK_words _ _ _ m 0).set64 _ _ _).set64 _ _ _).set64 _ _ _).trans (colW_words _ _ _ _ _)
 
 
 

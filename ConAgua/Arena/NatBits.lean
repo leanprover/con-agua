@@ -274,6 +274,7 @@ theorem natLand_spec (hpa : p.lookup "nat_land" = some natLand) (n : Nat) (s₀ 
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
   obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpa]
@@ -307,6 +308,7 @@ theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : S
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
   obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpo]
@@ -340,6 +342,7 @@ theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : S
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
   obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpx]
