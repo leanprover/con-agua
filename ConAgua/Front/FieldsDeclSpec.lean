@@ -18,7 +18,6 @@ import Std.WP.Triple.SpecLemmas
 /-! # The specs of the declaration fields pass (`ConAgua.Front.FieldsDecl`) -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order
@@ -149,7 +148,7 @@ theorem hintsVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Wor
         L.Scan.Leaves.keyEnd_spec p (hL.get "key_end") b hb64 n,
         L.Scan.Key.valueAt_spec p (hL.get "skip_ws") (hL.get "value_at") b hb n,
         L.Scan.Leaves.numEnd_spec p (hL.get "skip_digits") (hL.get "num_end") b hb64 n,
-        readNat_spec p b hb (hL.get "read_nat") n] <;> finish
+        readNat_spec p b (hL.get "read_nat") n] <;> finish
 
 attribute [local lang_grind] dendN dnumN dlpsN dhkN dhnN dflagN boolValN in
 set_option maxHeartbeats 1600000 in
@@ -167,7 +166,7 @@ theorem dMember_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (ks k v n
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        slotNat_spec p b hb (hL.get "skip_digits") (hL.get "num_end") (hL.get "slot_nat") n, readNat_spec p b hb (hL.get "read_nat") n,
+        slotNat_spec p b hb (hL.get "skip_digits") (hL.get "num_end") (hL.get "slot_nat") n, readNat_spec p b (hL.get "read_nat") n,
         scanNatList_spec p b hb (hL.get "skip_digits") (hL.get "num_end") (hL.get "scan_nat_list") n,
         L.Scan.Lit.scanBool_spec p (hL.get "match_lit") (hL.get "scan_bool") b hb64 n,
         scanHints_spec p b hb (hL.get "skip_ws") (hL.get "skip_digits") (hL.get "key_end") (hL.get "num_end") (hL.get "key_at_g1")
@@ -220,6 +219,7 @@ theorem recDeclObj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc,
         dobjLoop_step_spec p hL b hb n] <;> finish [DFld.enc]
 
+omit hb in
 attribute [local lang_grind] declCode in
 theorem declCode_spec (n : Nat) (s₀ : St) (k : Word) :
     ⦃fun s => s = s₀⦄
@@ -249,16 +249,11 @@ theorem declVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs,
-      recDeclObj_spec p hL b hb n, declCode_spec p hL b hb n,
+      recDeclObj_spec p hL b hb n, declCode_spec p hL n,
       L.Scan.Records.scanIndD_spec p b hb (hL.get "skip_ws") (hL.get "skip_digits") (hL.get "key_end") (hL.get "num_end")
         (hL.get "key_at_g1") (hL.get "key_at_g2") (hL.get "key_at_g3") (hL.get "key_at_g4") (hL.get "key_at_g5") (hL.get "key_at_g6") (hL.get "key_at")
-        (hL.get "value_at") (hL.get "next_member") (hL.get "slot_nat") (hL.get "match_word") (hL.get "scan_binder_info") (hL.get "hints_num")
-        (hL.get "hints_obj") (hL.get "scan_hints") (hL.get "scan_nat_list") (hL.get "match_lit") (hL.get "scan_bool") (hL.get "utf8_char")
-        (hL.get "utf8_valid") (hL.get "byte_in") (hL.get "hex_val") (hL.get "hex4") (hL.get "hex3") (hL.get "u_next") (hL.get "unescape") (hL.get "str_close")
-        (hL.get "has_escape") (hL.get "scan_string") (hL.get "scan_str_name") (hL.get "scan_num_name") (hL.get "scan_app") (hL.get "scan_binder")
-        (hL.get "scan_let") (hL.get "scan_const") (hL.get "scan_proj") (hL.get "scan_rule") (hL.get "scan_rules") (hL.get "scan_ind_rec")
-        (hL.get "scan_ind_recs") (hL.get "scan_ind_type") (hL.get "scan_ind_types") (hL.get "scan_ind_ctor") (hL.get "scan_ind_ctors")
-        (hL.get "scan_axiom") (hL.get "scan_def") (hL.get "scan_thm") (hL.get "scan_opaque") (hL.get "scan_quot") (hL.get "scan_ind_decl") n]
+        (hL.get "value_at") (hL.get "next_member") (hL.get "slot_nat") (hL.get "scan_nat_list") (hL.get "match_lit") (hL.get "scan_bool") (hL.get "scan_rule") (hL.get "scan_rules") (hL.get "scan_ind_rec")
+        (hL.get "scan_ind_recs") (hL.get "scan_ind_type") (hL.get "scan_ind_types") (hL.get "scan_ind_ctor") (hL.get "scan_ind_ctors") (hL.get "scan_ind_decl") n]
     -- The key test's `||` chain through `L.evalC_spec`: one path per `if`, not one per exit.
     all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, beq_iff_eq] at *)
     all_goals grind (gen := 16) (instances := 5000) [lang_grind]

@@ -134,15 +134,15 @@ theorem memK_some (r : List Word) (m : Mem) : memK (some (r, m)) = some m := rfl
 def poolK (p : Prog) (n : Nat) (f o l q : Word) : Option (List Word × Mem) → Option Mem
   | none => none
   | some (r, m₁) =>
-    if (m₁.arr64 (tierA 0 (q >>> 40))).size ≤ (q - (q >>> 40 <<< 40)).toNat then none
+    if (m₁.arr64 (tierA POOL (q >>> 40))).size ≤ (q - (q >>> 40 <<< 40)).toNat then none
     else memK (callW p n "promote_l_pool" [f, o + 1, l - 1, q + 1]
-      (m₁.set64 (tierA 0 (q >>> 40)) (q - (q >>> 40 <<< 40)) (r.headD 0)))
+      (m₁.set64 (tierA POOL (q >>> 40)) (q - (q >>> 40 <<< 40)) (r.headD 0)))
 
 /-- **The model of `promote_l_pool(f, o, l, q)`** (the memory after; it returns `0`): the
 scratch list's words at the tagged address `o`, promoted, to the tagged address `q`. -/
 def plPoolW (p : Prog) (n : Nat) (m : Mem) (f o l q : Word) : Option Mem :=
   if l = 0 then some m
-  else if (m.arr64 (tierA 0 (o >>> 40))).size ≤ (o &&& 1099511627775).toNat then none
+  else if (m.arr64 (tierA POOL (o >>> 40))).size ≤ (o &&& 1099511627775).toNat then none
   else poolK p n f o l q (callW p n "promote_l" [f, prd m o] m)
 
 /-- After the elements: raise the top over them and intern the slice. -/
@@ -157,8 +157,8 @@ pool top `q`, in the top's tier. -/
 def plsArmW (p : Prog) (n : Nat) (m : Mem) (f h : Word) : Option (Word × Mem) :=
   if 4294967295 < h ∨ lsNodeW m h = [] then none
   else if (m.arr64 CTL).size = 0 then none
-  else if m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) then none
-  else if m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) <
+  else if m.len64 (tierA POOL (m.top >>> 40)) < (m.top &&& 1099511627775) then none
+  else if m.len64 (tierA POOL (m.top >>> 40)) - (m.top &&& 1099511627775) <
     (lsNodeW m h).tail.headD 0 then none
   else plsK p n m.top ((lsNodeW m h).tail.headD 0)
     (callW p n "promote_l_pool" [f, (lsNodeW m h).headD 0, (lsNodeW m h).tail.headD 0, m.top] m)
@@ -174,15 +174,15 @@ def plsW (p : Prog) (n : Nat) (m : Mem) (f h : Word) : Option (Word × Mem) :=
 section eqs2
 variable (p : Prog) (n : Nat) (m m₁ : Mem) (f h o l q : Word) (r : List Word)
 
-theorem poolK_some (hq : ¬ (m₁.arr64 (tierA 0 (q >>> 40))).size ≤ (q - (q >>> 40 <<< 40)).toNat) :
+theorem poolK_some (hq : ¬ (m₁.arr64 (tierA POOL (q >>> 40))).size ≤ (q - (q >>> 40 <<< 40)).toNat) :
     poolK p n f o l q (some (r, m₁)) =
       memK (callW p n "promote_l_pool" [f, o + 1, l - 1, q + 1]
-        (m₁.set64 (tierA 0 (q >>> 40)) (q - (q >>> 40 <<< 40)) (r.headD 0))) := by
+        (m₁.set64 (tierA POOL (q >>> 40)) (q - (q >>> 40 <<< 40)) (r.headD 0))) := by
   simp only [poolK, hq, ↓reduceIte]
 
 theorem plPoolW_nil (hl : l = 0) : plPoolW p n m f o l q = some m := by simp [plPoolW, hl]
 theorem plPoolW_cons (hl : l ≠ 0)
-    (ho : ¬ (m.arr64 (tierA 0 (o >>> 40))).size ≤ (o &&& 1099511627775).toNat) :
+    (ho : ¬ (m.arr64 (tierA POOL (o >>> 40))).size ≤ (o &&& 1099511627775).toNat) :
     plPoolW p n m f o l q = poolK p n f o l q (callW p n "promote_l" [f, prd m o] m) := by
   simp only [plPoolW, hl, ho, ↓reduceIte]
 
@@ -191,8 +191,8 @@ theorem plsK_some (hc : (m₁.arr64 CTL).size ≠ 0) :
   simp only [plsK, hc, ↓reduceIte]
 
 theorem plsArmW_eq (hh : ¬ 4294967295 < h) (hne : lsNodeW m h ≠ []) (hc : (m.arr64 CTL).size ≠ 0)
-    (h1 : ¬ m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775))
-    (h2 : ¬ m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) < (lsNodeW m h).tail.headD 0) :
+    (h1 : ¬ m.len64 (tierA POOL (m.top >>> 40)) < (m.top &&& 1099511627775))
+    (h2 : ¬ m.len64 (tierA POOL (m.top >>> 40)) - (m.top &&& 1099511627775) < (lsNodeW m h).tail.headD 0) :
     plsArmW p n m f h = plsK p n m.top ((lsNodeW m h).tail.headD 0)
       (callW p n "promote_l_pool" [f, (lsNodeW m h).headD 0, (lsNodeW m h).tail.headD 0, m.top] m) := by
   simp only [plsArmW, hh, hne, hc, h1, h2, or_self, ↓reduceIte]

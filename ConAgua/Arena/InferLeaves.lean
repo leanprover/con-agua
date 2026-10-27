@@ -297,7 +297,7 @@ theorem mkForallW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m'
   exact fainternW_hw m a hA.1.forallE t b _ m₁ hI₁
 
 theorem mkForallW_frame {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some (r, m')) :
-    MemFrame [FADER, FAREC, FASLOT, FADER + 256, FAREC + 256, FASLOT + 256] [30, 31] m m' := by
+    MemFrame [FADER, FAREC, FASLOT, tier1 FADER, tier1 FAREC, tier1 FASLOT] [30, 31] m m' := by
   unfold mkForallW at hI; split at hI; · cases hI
   exact (L.Ind.mkK_frame (by decide) (fun r₁ m₁ hx => by
     exact consInternM_frame forallCS_wf hx) hI).mono
@@ -315,7 +315,7 @@ theorem mkForall_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [FADER, FAREC, FASLOT])
+    (by simp [tier1, tierOff, FADER, FAREC, FASLOT])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -325,7 +325,7 @@ theorem mkForall_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [FADER, FAREC, FASLOT, SPN]) (by decide)
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [tier1, tierOff, FADER, FAREC, FASLOT, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _,
       StackKept.of_frame hf⟩,

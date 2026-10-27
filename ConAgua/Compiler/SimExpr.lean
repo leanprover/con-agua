@@ -4,7 +4,6 @@ public import ConAgua.Compiler.Rel
 import Kraken.X64.Registers
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 /-!
 # Expressions and conditions
@@ -256,6 +255,7 @@ section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
 
+omit hG in
 /-- `r := len(s)`. -/
 theorem sim_srcLen {ctx : Ctx} (hT : ctx.tab = G.tab)
     (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) {F : Nat} {σ : St} {s : MachineData}
@@ -355,6 +355,7 @@ theorem src8_size_lt {G : Layout} (hG : G.Ok) {σ : St} {d : DataMem} (hm : MemR
 section
 variable [Host] {G : Layout}
 
+omit [Host] in
 /-- A simple operand reads the value of its expression. -/
 theorem simpleOp_reads {ctx : Ctx} (hT : ctx.tab = G.tab)
     (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
@@ -672,6 +673,7 @@ section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
 
+omit [Host] in
 /-- The descriptor block's address does not wrap: the table has `a + tierOff + 1` word arrays. -/
 theorem tier_T {a : ArrId} (ha : a + tierOff < G.tab.nw) : G.T + 4096 + 16 + 16 * G.tab.nb < 2 ^ 64 := by
   have := hG.tab_end
@@ -1249,7 +1251,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       have hI1 : Inv G ctx F σ s1 := hI.ofE hG hE1
       have hLlt := src8_size_lt hG hI1.mem hwf.1
       have h8 : (8 : UInt64).toNat = 8 := rfl
-      refine sim_srcLen hG hT hTab0 hI1 hwf.1 (r := .rdx) hcR.head ?_
+      refine sim_srcLen hT hTab0 hI1 hwf.1 (r := .rdx) hcR.head ?_
       refine ev_cmpRO (v := 8) hcR.tail.head (.inl rfl) ?_
       refine ev_jcc hcR.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
       · refine herr _ ⟨.oob, ?_⟩ (hE1.trans (EPost.of_eq (EPost.refl _ _ _ _) rfl (by simp) (by simp)

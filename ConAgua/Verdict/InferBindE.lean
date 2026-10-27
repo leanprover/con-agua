@@ -395,7 +395,7 @@ theorem lamsFullE_ref (p : Prog) (_hp : InferLeafProg p) (hq : BindProg p) (hb :
       have hrw4 := h₄.2.2.2
       have hB₄ : BKept m₃ m₄ := by
         exact BKept.of_frame ((fvinternW_frame (hI := hfv)))
-          (by simp [FVREC, FVSLOT, FVLP, BSTK]) (by simp)
+          (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP, BSTK]) (by simp)
       refine ErrClaim.bind_ref h₄ ?_
       split at hF
       · rw [inferLamsE.k_loop1.none] at hF
@@ -654,7 +654,7 @@ theorem pisFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       have hrw4 := h₄.2.2.2
       have hB₄ : BKept m₃ m₄ := by
         exact BKept.of_frame ((fvinternW_frame (hI := hfv)))
-          (by simp [FVREC, FVSLOT, FVLP, BSTK]) (by simp)
+          (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP, BSTK]) (by simp)
       refine ErrClaim.bind_ref h₄ ?_
       split at hF
       · rw [inferPisE.k_loop1.none] at hF

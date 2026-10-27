@@ -50,7 +50,7 @@ theorem poolCopyW_iwFrame : ∀ (n : Nat) (m m' : Mem) (d s l : Word), poolCopyW
   | n + 1, m, m', d, s, l, h => by
     by_cases hl : l = 0
     · rw [poolCopyW_nil n m d s l hl] at h; cases h; exact MemFrame.refl _ _ _
-    · by_cases hs : (s &&& 1099511627775).toNat < (m.arr64 (tierA 0 (s >>> 40))).size
+    · by_cases hs : (s &&& 1099511627775).toNat < (m.arr64 (tierA POOL (s >>> 40))).size
       · rw [poolCopyW_step n m d s l hl hs] at h
         exact (set64IW_frame _ _ _).trans (poolCopyW_iwFrame n _ _ _ _ _ h)
       · rw [poolCopyW_oob n m d s l hl (by omega)] at h; cases h

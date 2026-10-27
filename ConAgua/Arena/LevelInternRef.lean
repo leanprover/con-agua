@@ -122,18 +122,18 @@ theorem internLNode_keep (w : LNodeView) (a a' : AState) (i : LIdx)
 
 /-- The level store's arrays: every level interning writes only there. -/
 abbrev lvArrs : List ArrId := [ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, SHP, MHP, IHP,
-  ZREC + 256, ZSLOT + 256, SREC + 256, SSLOT + 256, MREC + 256, MSLOT + 256, IREC + 256, ISLOT + 256,
-  PREC + 256, PSLOT + 256, SHP + 256, MHP + 256, IHP + 256]
+  tier1 ZREC, tier1 ZSLOT, tier1 SREC, tier1 SSLOT, tier1 MREC, tier1 MSLOT, tier1 IREC, tier1 ISLOT,
+  tier1 PREC, tier1 PSLOT, tier1 SHP, tier1 MHP, tier1 IHP]
 /-- The level store's counts. -/
 abbrev lvCtl : List Word := [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 section
 set_option maxRecDepth 4000
-theorem lvSch_sub : (∀ b ∈ [zeroSch.ra, zeroSch.ra + 256, zeroSch.sa, zeroSch.sa + 256], b ∈ lvArrs) ∧ (∀ x ∈ [zeroSch.ca, zeroSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [succSch.ra, succSch.ra + 256, succSch.sa, succSch.sa + 256, SHP, SHP + 256], b ∈ lvArrs) ∧ (∀ x ∈ [succSch.ca, succSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [maxSch.ra, maxSch.ra + 256, maxSch.sa, maxSch.sa + 256, MHP, MHP + 256], b ∈ lvArrs) ∧ (∀ x ∈ [maxSch.ca, maxSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [imaxSch.ra, imaxSch.ra + 256, imaxSch.sa, imaxSch.sa + 256, IHP, IHP + 256], b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [paramSch.ra, paramSch.ra + 256, paramSch.sa, paramSch.sa + 256], b ∈ lvArrs) ∧ (∀ x ∈ [paramSch.ca, paramSch.ca + 1], x ∈ lvCtl) := by
+theorem lvSch_sub : (∀ b ∈ [zeroSch.ra, tier1 zeroSch.ra, zeroSch.sa, tier1 zeroSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [zeroSch.ca, zeroSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [succSch.ra, tier1 succSch.ra, succSch.sa, tier1 succSch.sa, SHP, tier1 SHP], b ∈ lvArrs) ∧ (∀ x ∈ [succSch.ca, succSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [maxSch.ra, tier1 maxSch.ra, maxSch.sa, tier1 maxSch.sa, MHP, tier1 MHP], b ∈ lvArrs) ∧ (∀ x ∈ [maxSch.ca, maxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [imaxSch.ra, tier1 imaxSch.ra, imaxSch.sa, tier1 imaxSch.sa, IHP, tier1 IHP], b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [paramSch.ra, tier1 paramSch.ra, paramSch.sa, tier1 paramSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [paramSch.ca, paramSch.ca + 1], x ∈ lvCtl) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [lvArrs, lvCtl, zeroSch, succSch, maxSch, imaxSch, paramSch, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]
 end
@@ -158,7 +158,7 @@ theorem viewsKept_of {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : Arena
       have := q.toNat_lt; omega
     obtain ⟨v, hv⟩ := lvNodeW_view hR hh hq
     rw [lvNodeW_store hR hh hv, lvNodeW_store hR' hh (hk.1 _ _ hv)]
-  · have hLH : m'.arr64 LH = m.arr64 LH := hf.1 LH (by simp [lvArrs, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]) (by decide)
+  · have hLH : m'.arr64 LH = m.arr64 LH := hf.1 LH (by simp [tier1, tierOff, lvArrs, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]) (by decide)
     have h192 : rdW (m'.arr64 CTL) 192 = rdW (m.arr64 CTL) 192 := hf.2.1 192 (by simp [lvCtl])
     rw [lvNodeW_heap m' q hb, lvNodeW_heap m q hb, hLH, h192]
 

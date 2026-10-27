@@ -13,7 +13,6 @@ import ConAgua.L.GrindAttr
 
 section
 
-set_option linter.unusedSectionVars false
 
 /-!
 # Refinements of `IndParts`, part 13 (lane `indproofs2`, helper `parts`): `blockShape?`'s pins
@@ -58,6 +57,7 @@ theorem bpf_spec (hp : p.lookup "block_shape_pins_formers" = some blockShapePins
         erToIw_specW p hP.alloc hec het n, slEq_spec p hseq n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
+omit hP in
 theorem bpr_spec (hp : p.lookup "block_shape_pins_recs" = some blockShapePinsRecs) (n : Nat) :
     ∀ (s₀ : St) (ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_pins_recs" [ro, rl]
@@ -104,7 +104,7 @@ theorem bpo_spec (p : Prog) (hP : IndPartsProg4 p) (hrf : p.lookup "reserved_fro
   simp only [callFn, blockShapePinsOk]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bpf_spec p hP hrf hrc hec het hseq hf n,
-      bpr_spec p hP hrf hrc hr n, bpc_spec p hP hrf hrc hec het hseq hc n] <;>
+      bpr_spec p hrf hrc hr n, bpc_spec p hP hrf hrc hec het hseq hc n] <;>
     finish (gen := 20) [bpoW]
 
 theorem bsl_spec (p : Prog) (hP : IndPartsProg4 p) (hec : p.lookup "er_copy" = some erCopy)

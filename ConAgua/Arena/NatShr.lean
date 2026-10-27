@@ -201,8 +201,8 @@ def ShrInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧ (s.loc 0).toNat + (s.loc 5).toNat ≤ (s.loc 4).toNat ∧
   s.loc 11 = s.loc 4 >>> 40 ∧ s.loc 12 = s.loc 4 &&& 1099511627775 ∧
-  (s.loc 12).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA 0 (s.loc 11))).size ∧
-  (s.mem.arr64 (tierA 0 (s.loc 11))).size ≤ 2 ^ 40 ∧ (s.loc 11).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
+  (s.loc 12).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA POOL (s.loc 11))).size ∧
+  (s.mem.arr64 (tierA POOL (s.loc 11))).size ≤ 2 ^ 40 ∧ (s.loc 11).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 7).toNat < 64 ∧ (s.loc 8).toNat ≤ (s.loc 5).toNat ∧
   (s.loc 9).toNat = lv Pg (s.loc 0).toNat (s.loc 5).toNat (s.loc 8).toNat ∧
   pv (vpool s.mem) (s.loc 4).toNat (s.loc 8).toNat * sh (s.loc 7).toNat +

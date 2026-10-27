@@ -24,6 +24,6 @@ open L.Arena
 l_model grpE_spec (p : Prog) (hf : p.lookup "gen_rec_check_prep" = some genRecCheckPrep)
   fns [hf ↦ grpE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 20000000 simp [Cmp.evalW, Cmp.eval] errors
+  heartbeats 20000000 simp [Cmp.evalW, Cmp.eval] errors locals
 
 end L.Ind

@@ -11,7 +11,6 @@ import Std.WP.Tactic
 `pinWordV`, `pinWord_specV`, `canonK3`, `canonK2`, `canonK1`, `canonK0` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

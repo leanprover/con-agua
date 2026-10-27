@@ -1,5 +1,4 @@
 import ConAgua.Arena.FreezeTruncArena
-set_option linter.unusedSectionVars false
 
 /-!
 # The truncation theorem (lane parmode, docs/design/parmode.md, "Redesign", "Step 4")
@@ -169,6 +168,7 @@ theorem row_trunc (w : Word) :
       exact ⟨.inl rfl, fun h => by omega, fun _ => ⟨rfl, rfl⟩⟩
   · simp [hg]
 
+omit hcnt in
 /-- A tier-0 table-row array under the truncation. -/
 theorem tix_trunc (g : Nat) (hg : g ≤ 2) :
     (truncFrozen m).arr64 (129 + g) = (m.arr64 (129 + g)).extract 0 (nmCnt m g) := by
@@ -177,6 +177,7 @@ theorem tix_trunc (g : Nat) (hg : g ≤ 2) :
   · rw [show 129 + 1 = TIXS from rfl, truncFrozen_tixs]; rfl
   · rw [show 129 + 2 = TIXN from rfl, truncFrozen_tixn]; rfl
 
+omit hcnt in
 theorem tblRow_trunc (w : Word) :
     (tblRow (truncFrozen m) w = tblRow m w ∨ tblRow (truncFrozen m) w = 0) ∧
     (rowTier w = 0 → rowTag w ≤ 2 → tblIx w < nmCnt m (rowTag w) →
@@ -188,7 +189,7 @@ theorem tblRow_trunc (w : Word) :
     rcases ht with ht | ht
     · have ha : tblArr w = 129 + rowTag w := by
         unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 0 : Nat) = 129 + rowTag w; omega
-      rw [ha, tix_trunc hcnt _ hg, getD_extract']
+      rw [ha, tix_trunc _ hg, getD_extract']
       refine ⟨by split <;> simp, fun _ _ hr => ?_⟩
       rw [ite_eq_left hr]
     · have ha : tblArr w ∉ fzSrcs := by
@@ -223,13 +224,13 @@ theorem EnvR.trunc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have tin : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → (fe.tbls[n]?).isSome →
       tblRow (truncFrozen m) n.word.toUInt64 = tblRow m n.word.toUInt64 := fun n hn hs => by
     obtain ⟨ht, hr⟩ := hk.tbls n hs hn
-    exact (tblRow_trunc hcnt _).2 ht hn hr
+    exact (tblRow_trunc _).2 ht hn hr
   have tout : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → fe.tbls[n]? = none →
       tblRow (truncFrozen m) n.word.toUInt64 = 0 := fun n hn hs => by
     have := h.tkeys n hn
     rw [hs] at this
     have h0 : tblRow m n.word.toUInt64 = 0 := by simpa using this.symm
-    rcases (tblRow_trunc hcnt n.word.toUInt64).1 with e' | e'
+    rcases (tblRow_trunc n.word.toUInt64).1 with e' | e'
     · rw [e']; exact h0
     · exact e'
   have hET : (truncFrozen m).arr64 ETAB = m.arr64 ETAB := truncFrozen_other m _ (by decide)

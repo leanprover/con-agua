@@ -1,5 +1,4 @@
 import ConAgua.Arena.FreezeTruncBase
-set_option linter.unusedSectionVars false
 
 /-!
 # The truncation theorem, part 3: a store under truncation of its tier 0 (lane parmode)
@@ -18,7 +17,7 @@ namespace L.Arena
 open ConRon.Arena
 
 theorem tierA_zero' (a : ArrId) : tierA a 0 = a := by simp [tierA]
-theorem tierA_one' (a : ArrId) : tierA a 1 = a + 256 := by simp [tierA, tierOff]
+theorem tierA_one' (a : ArrId) : tierA a 1 = tier1 a := by simp [tierA, tierOff]
 
 section store
 variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
@@ -35,8 +34,8 @@ def RTrans (m m' : Mem) : Prop :=
 count, tier 0's slots cut to the table. -/
 structure StoreTr (m m' : Mem) : Prop where
   ctl : m'.arr64 CTL = m.arr64 CTL
-  ra1 : m'.arr64 (S.ra + 256) = m.arr64 (S.ra + 256)
-  sa1 : m'.arr64 (S.sa + 256) = m.arr64 (S.sa + 256)
+  ra1 : m'.arr64 (tier1 S.ra) = m.arr64 (tier1 S.ra)
+  sa1 : m'.arr64 (tier1 S.sa) = m.arr64 (tier1 S.sa)
   ra0 : m'.arr64 S.ra = (m.arr64 S.ra).extract 0 (cntW S m 0 * S.w).toNat
   sa0 : m'.arr64 S.sa = (m.arr64 S.sa).extract 0 (2 + 2 * knW S.sa m 0).toNat
 
@@ -63,13 +62,15 @@ section slots
 variable {m m' : Mem} (hT : StoreTr S m m') (hG : GrowR S m) (hko : koW S.sa m 0 = 0)
 include hT hG hko
 
+omit hT hko in
 theorem ext_slot_toNat : (2 + 2 * knW S.sa m 0).toNat = 2 + 2 * (knW S.sa m 0).toNat := by
   have := (knW_toNat S m hG 0 (by decide)).1
   rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
 
+omit hko in
 theorem knW_trunc0 : knW S.sa m' 0 = knW S.sa m 0 ∧ koW S.sa m' 0 = koW S.sa m 0 := by
   have e : (2 + 2 * (rdW (m.arr64 S.sa) 0 + SN0)).toNat = 2 + 2 * (knW S.sa m 0).toNat :=
-    ext_slot_toNat S hT hG hko
+    ext_slot_toNat S hG
   simp only [knW, koW, tierA_zero', hT.sa0]
   constructor
   · rw [rdW_extract]; rw [e]; simp only [UInt64.toNat_zero]; omega
@@ -77,8 +78,8 @@ theorem knW_trunc0 : knW S.sa m' 0 = knW S.sa m 0 ∧ koW S.sa m' 0 = koW S.sa m
 
 theorem slots_trunc0 (j : Word) (hj : j < nSl S m 0) :
     slotW S m' 0 j = slotW S m 0 j ∧ slotK S m' 0 j = slotK S m 0 j := by
-  have e := ext_slot_toNat S hT hG hko
-  obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG hko
+  have e := ext_slot_toNat S hG
+  obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG
   have hkr : krW S.sa m' 0 = krW S.sa m 0 := by simp only [krW, ho]
   have hkr2 : (krW S.sa m 0).toNat = 2 := by simp only [krW, hko]; rfl
   obtain ⟨k1, k2⟩ := kslot_toNat S m hG 0 (by decide) j hj
@@ -106,7 +107,7 @@ theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreT
     have hfl0 : ∀ i : Word, i.toNat < tbP.nodes.size → ∀ f, f < S.w →
         fld S m' 0 i f = fld S m 0 i f := fun i hi f hf =>
       fld_trunc0 S hS hT hc27 (by rw [hc]; exact hi) hf
-    have hn : nSl S m' 0 = nSl S m 0 := (knW_trunc0 S hT hG hko).1
+    have hn : nSl S m' 0 = nSl S m 0 := (knW_trunc0 S hT hG).1
     have hsl0 := slots_trunc0 S hT hG hko
     have hpos : 0 < nSl S m 0 := by
       have := (lay S m hG 0 (by decide)).1
@@ -140,8 +141,8 @@ theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreT
       (fun i a h => (hR 1 i (fun f _ => hfl1 i f)).1 a h) (fun i => (hR 1 i (fun f _ => hfl1 i f)).2)
       (fun i K h => hK m m' 1 i (fun f _ => hfl1 i f) (hR 1 i (fun f _ => hfl1 i f)).2 K h) hT1
   · -- layout
-    obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG hko
-    have e := ext_slot_toNat S hT hG hko
+    obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG
+    have e := ext_slot_toNat S hG
     obtain ⟨⟨a0, a1, a2, a3, -⟩, h1⟩ := hG
     refine ⟨⟨?_, by rw [hn]; exact a1, by rw [hn]; exact a2, ?_, fun _ => by rw [ho, hko]⟩, ?_⟩
     · rw [tierA_zero', hT.sa0, size_extract0]; rw [tierA_zero'] at a0; omega
@@ -161,20 +162,20 @@ variable {α : Type} {S : Schema} {R : Mem → Word → Word → α → Prop} {h
 theorem rTrans_local (hS : S.WF) (hF : RFrame S R hs) (hL : RLocal S R hs [] []) {m m' : Mem}
     (hw : m'.words.size = m.words.size) : RTrans S R hs m m' := by
   intro t i hf
-  let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (S.ra + 256) (m'.arr64 (S.ra + 256))
+  let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
   have hw1 : (m.setA S.ra (m'.arr64 S.ra)).words.size = m.words.size := Mem.setA_words ..
-  have hne : S.ra ≠ S.ra + 256 := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
+  have hne : S.ra ≠ tier1 S.ra := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]
     exact Mem.setA_self m m' _ hw
-  have e1 : m₁.arr64 (S.ra + 256) = m'.arr64 (S.ra + 256) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
-  have eo : ∀ b, b ≠ S.ra → b ≠ S.ra + 256 → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
+  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
+  have eo : ∀ b, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => h2 h.1), Mem.setA_arr, ite_eq_right (fun h => h1 h.1)]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
     rcases tierA_cases' S.ra t with e | e <;> rw [e]
     · exact e0
     · exact e1
-  have hctl : m₁.arr64 CTL = m.arr64 CTL := eo CTL hS.ra_ctl.symm (by simp [CTL])
+  have hctl : m₁.arr64 CTL = m.arr64 CTL := eo CTL hS.ra_ctl.symm (ne_tier1 (by decide))
   have hout : OutEq S m m₁ := ⟨fun b h1 h1' _ _ _ => eo b h1 h1', by rw [hctl]⟩
   have hf1 : ∀ f, f < S.w → fld S m₁ t i f = fld S m t i f := fun f hf' => by
     simp only [fld, et]; exact hf f hf'

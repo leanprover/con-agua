@@ -287,11 +287,11 @@ theorem two_ok (ih : WalkOK n) (R : ArrId) (hR1 : R ≠ IW) (hR2 : R ≠ HSEEN) 
   exact walk_then ih hA W1 h2w hf hb
 
 theorem tier_ok (a : ArrId) (t : Word)
-    (h : ∀ b ∈ [a, a + 256], b ≠ IW ∧ b ≠ HSEEN ∧ b ≠ CTL) :
+    (h : ∀ b ∈ [a, tier1 a], b ≠ IW ∧ b ≠ HSEEN ∧ b ≠ CTL) :
     tierA a t ≠ IW ∧ tierA a t ≠ HSEEN ∧ tierA a t ≠ CTL := by
   rcases tierA_cases' a t with e | e <;> rw [e]
   · exact h a (by simp)
-  · exact h (a + 256) (by simp)
+  · exact h (tier1 a) (by simp)
 
 theorem app_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
     (hv : viewOK m e APP) (hg : e >>> 28 = 4)
@@ -350,7 +350,7 @@ theorem let_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
   refine wres_bind W1 fun seen₁ ns₁ hs1 _ => ?_
   rw [hf]
   have heq := W1.arr LEREC (by decide) (by decide) (by decide)
-  have heq' := W1.arr (LEREC + 256) (by decide) (by decide) (by decide)
+  have heq' := W1.arr (tier1 LEREC) (by decide) (by decide) (by decide)
   simp only [tfld_arr_eq (R := LET) heq.symm heq'.symm] at h2w h3w ⊢
   obtain ⟨n1, n2, n3⟩ := tier_ok LEREC (tierW e) (by decide)
   exact two_ok ih _ n1 n2 n3 (fun r => LET.ex 1 (rdW r (LET.ad (idxW e) 1)))
@@ -449,7 +449,7 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
     simp only at hb
     have hfr := hNoteW_iw h1
     have heq : m₁.arr64 PJREC = m₀.arr64 PJREC := hfr.1 _ (by decide) (by decide)
-    have heq' : m₁.arr64 (PJREC + 256) = m₀.arr64 (PJREC + 256) := hfr.1 _ (by decide) (by decide)
+    have heq' : m₁.arr64 (tier1 PJREC) = m₀.arr64 (tier1 PJREC) := hfr.1 _ (by decide) (by decide)
     rw [tfld_arr_eq (R := PROJ) heq heq'] at hb
     exact wres_cons hnw h1 ((ih n' rfl) _ _ _ _ _ _ _ _ _ _ _ _ _
       (iw_arena hfr hA₀) hxw

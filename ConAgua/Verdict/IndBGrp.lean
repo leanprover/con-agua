@@ -5,7 +5,6 @@ import ConAgua.Verdict.IndBRecPins
 import ConAgua.Verdict.IndBCcs
 import ConAgua.Verdict.IndBStream
 import ConAgua.Checker.NoVerdictTree
-set_option linter.unusedSectionVars false
 
 /-!
 # Error refinement of `gen_rec_check_prep` (lane `verdicts-b`, helper `ib`)
@@ -64,7 +63,7 @@ variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLech
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
   (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p) (hCcv : CcvE p)
 
-include hkp henv hApd hCrk hIlpf hnv hcE hU in
+include hkp henv hApd hCrk hnv hcE hU in
 /-- **`gen_rec_check_prep`'s third part, error claim** (`grpCW_okC`'s hypotheses): the generator
 record, its prefix, the recursor types. -/
 theorem grpCE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Option ConLeche.Name}
@@ -529,7 +528,7 @@ theorem grpBE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
     have e5 := ConRon.Bridge.Inductives.dClassCtors_ext (c6.ext.trans p7.ext) _ _ hctors
     simp only [dClassGen, e1, e2, e3, e4, e5, helim, Frontend.denoteEList, hnPe, Option.bind_eq_bind,
       Option.bind_some, Option.pure_def]
-  exact grpCE_claim hkp henv hApd hCrk hIlpf hnv hcE hU P n hn hC6 (hbs.grow hg16)
+  exact grpCE_claim hkp henv hApd hCrk hnv hcE hU P n hn hC6 (hbs.grow hg16)
     (hrb.grow hg16 (by omega)) (decHL_grow' hg16 hparb hpar) (Nat.le_trans hparb hg16.1)
     (hrd.grow (decCR_mono _) hg16) (hms2.grow (fun q => decTM_mono q) (hg3.trans (hg5.trans hg6)))
     (hctD.grow (OMono.decPL decCC_lh_mono _ _) (hg5.trans hg6))

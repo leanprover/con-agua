@@ -219,7 +219,7 @@ theorem nextMemberLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
     sym only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
         L.Scan.Leaves.keyEnd_spec p hpk b hb' n, L.Scan.Key.valueAt_spec p hpw hpv b hb n,
-        L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b hb n] <;> finish
+        L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b n] <;> finish
 
 include hpm in
 theorem nextMember_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i w : Word) :

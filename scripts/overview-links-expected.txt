@@ -1433,28 +1433,28 @@
    295    nnum : NNumR m a
    296    memos : MemosR m a.memos
 
-== ConAgua/Arena/ConsLibRel.lean#L8-L28
-     8  /-!
-     9  # The cons-table library: the relation and the user API (lane conslib)
-    10  
-    11  A cons table `C` (`ConsLib.lean`) represents the arena's two `Tbl`s of one constructor (the twin's
-    12  `HashMap2`s: persistent and scratch) by **`ConsR C R m on P Q`**: both tiers hold the same nodes
-    13  in the same order (node `i` of tier `t` related to `nodes[i]` by the instance's record relation
-    14  `R`), the same key → handle map, the node counts at `CTL[ca + t]`, the scratch flag `CTL[1]` is
-    15  `on`; and the slots index the nodes (the slot layout, the probing and the growth state, which no
-    16  user sees). The L model of every `intern_X` is `consInternM C m ks` (`ConsLibSpec.lean`).
-    17  
-    18  Both are irreducible outside this file: the lemmas below are the whole interface.
-    19  
-    20  * **Reading the relation**: `ConsR.flag`, `ConsR.ctl`, `ConsR.cnt`, `ConsR.cap`, `ConsR.rec`,
-    21    `ConsR.cons`, `ConsR.back`, `ConsR.recSize`, `ConsR.node`, `ConsR.cons_hit`.
-    22  * **Keeping it**: `ConsR.frame` (a writer apart from the table), `ConsR.setFlag` (`CTL[1]`),
-    23    `ConsR.reset` (the scratch reset), `consR_init` (the all-zero memory), `ConsR.congr`.
-    24  * **An interning**: `consIntern_correct` (it refines the arena's hash-consing, from the
-    25    instance's obligations `ConsKeyOK`), `consInternM_frame` (what it writes), `consInternM_word`,
-    26    `consInternM_lt`, `consInternM_pw` (the handle word), `consInternM_out` (a hit, or the append
-    27    of node `cntC`: the memory outside the slot array is `pushRec`).
-    28  
+== ConAgua/Arena/ConsLibRel.lean#L7-L27
+     7  /-!
+     8  # The cons-table library: the relation and the user API (lane conslib)
+     9  
+    10  A cons table `C` (`ConsLib.lean`) represents the arena's two `Tbl`s of one constructor (the twin's
+    11  `HashMap2`s: persistent and scratch) by **`ConsR C R m on P Q`**: both tiers hold the same nodes
+    12  in the same order (node `i` of tier `t` related to `nodes[i]` by the instance's record relation
+    13  `R`), the same key → handle map, the node counts at `CTL[ca + t]`, the scratch flag `CTL[1]` is
+    14  `on`; and the slots index the nodes (the slot layout, the probing and the growth state, which no
+    15  user sees). The L model of every `intern_X` is `consInternM C m ks` (`ConsLibSpec.lean`).
+    16  
+    17  Both are irreducible outside this file: the lemmas below are the whole interface.
+    18  
+    19  * **Reading the relation**: `ConsR.flag`, `ConsR.ctl`, `ConsR.cnt`, `ConsR.cap`, `ConsR.rec`,
+    20    `ConsR.cons`, `ConsR.back`, `ConsR.recSize`, `ConsR.node`, `ConsR.cons_hit`.
+    21  * **Keeping it**: `ConsR.frame` (a writer apart from the table), `ConsR.setFlag` (`CTL[1]`),
+    22    `ConsR.reset` (the scratch reset), `consR_init` (the all-zero memory), `ConsR.congr`.
+    23  * **An interning**: `consIntern_correct` (it refines the arena's hash-consing, from the
+    24    instance's obligations `ConsKeyOK`), `consInternM_frame` (what it writes), `consInternM_word`,
+    25    `consInternM_lt`, `consInternM_pw` (the handle word), `consInternM_out` (a hit, or the append
+    26    of node `cntC`: the memory outside the slot array is `pushRec`).
+    27  
 
 == ConAgua/L/WriteSet.lean#L13-L30
     13  /-!

@@ -1,7 +1,6 @@
 import ConAgua.Verdict.WhnfModels5E
 import ConAgua.Verdict.WhnfIotaRecE
 import ConAgua.Checker.NoVerdictTree
-set_option linter.unusedSectionVars false
 
 /-!
 # `iota_certs_full`'s verdict claims (lane `verdicts-b`, helper `k2`)
@@ -328,7 +327,7 @@ theorem icfFlushE_ok (N : Nat)
       mode d (r1.headD 0) (aco + acn) 0 ao an i #[] args hS1 hm4 hebm hr1 trivial hnil hargs1
       (by rw [UInt64.add_zero]; exact hsp1.symm) (by omega)) hW')
 
-include hp hil hnv in
+include hp hnv in
 theorem icfAuxE_ok (N : Nat)
     (hFo : ∀ N', N = N' + 1 →
       ICFSpecE p "iota_certs_full_forall" (fun h an i => h >>> 28 = 6 ∧ i < an) N')
@@ -383,11 +382,11 @@ theorem icf_allE (N : Nat) :
     ICFSpecE p "iota_certs_full_flush" (fun h an i => h >>> 28 = 0 ∧ i < an) N := by
   induction N with
   | zero =>
-    exact ⟨icfAuxE_ok p hp hil hnv 0 (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
+    exact ⟨icfAuxE_ok p hp hnv 0 (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
       icfForallE_ok p hp hil hnv 0 (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
       icfFlushE_ok p hp hil hnv 0 (fun _ h => absurd h (by simp))⟩
   | succ N ih =>
-    exact ⟨icfAuxE_ok p hp hil hnv (N + 1) (fun N' h => by cases Nat.succ.inj h; exact ih.2.1)
+    exact ⟨icfAuxE_ok p hp hnv (N + 1) (fun N' h => by cases Nat.succ.inj h; exact ih.2.1)
         (fun N' h => by cases Nat.succ.inj h; exact ih.2.2),
       icfForallE_ok p hp hil hnv (N + 1)
         (fun N' h => by cases Nat.succ.inj h; exact iotaCertsFullAux_refines' p hp hil N)

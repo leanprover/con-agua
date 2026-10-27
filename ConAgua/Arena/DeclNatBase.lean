@@ -460,7 +460,7 @@ theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
   exact stage_of_level hS (internLNode_succ_run _ a) hok
     (hR.lift_succ _ _ _ _ ⟨hX, sintern_hp m a hR.succ u hu hR.succHp (lvlHPW_ok m a hR u hu) _ _ hI⟩
       hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
-    hres hfr (by simp [SREC, SSLOT, SHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [tier1, tierOff, SREC, SSLOT, SHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 

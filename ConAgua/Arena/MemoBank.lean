@@ -1,6 +1,5 @@
 import ConAgua.Arena.MemoLibRel
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # Memo banks: generation-tagged keys (the mode-memo bank stack)
@@ -75,6 +74,7 @@ theorem bank_set (M : Std.HashMap (κ × Word) ν) (g : Word) (mp : Std.HashMap 
   rw [Std.HashMap.getElem?_insert, Std.HashMap.getElem?_insert, h k']
   by_cases e : k = k' <;> simp [e]
 
+omit [LawfulHashable κ] in
 /-- ... and leaves the banks of the other generations alone. -/
 theorem bank_other (M : Std.HashMap (κ × Word) ν) (g g' : Word) (mp : Std.HashMap κ ν)
     (h : Bank M g' mp) (hne : g ≠ g') (k : κ) (v : ν) : Bank (M.insert (k, g) v) g' mp := by
@@ -83,6 +83,7 @@ theorem bank_other (M : Std.HashMap (κ × Word) ν) (g g' : Word) (mp : Std.Has
   have : ¬ ((k, g) == (k', g')) = true := by simp [hne]
   simp [this]
 
+omit [LawfulHashable κ] in
 theorem fresh_set (M : Std.HashMap (κ × Word) ν) (G g : Word) (hF : Fresh M G) (hg : g ≤ G)
     (k : κ) (v : ν) : Fresh (M.insert (k, g) v) G := by
   intro k' g' v' h
@@ -99,6 +100,7 @@ theorem bank_fresh (M : Std.HashMap (κ × Word) ν) (G : Word) (hF : Fresh M G)
   | none => simp
   | some v => have := hF _ _ _ h; exfalso; rw [UInt64.le_iff_toNat_le] at this; omega
 
+omit [LawfulBEq κ] [LawfulHashable κ] in
 theorem fresh_mono (M : Std.HashMap (κ × Word) ν) (G : Word) (hF : Fresh M G)
     (hG : (G + 1).toNat = G.toNat + 1) : Fresh M (G + 1) := by
   intro k g v h; have := hF k g v h; rw [UInt64.le_iff_toNat_le] at this ⊢; omega
@@ -185,6 +187,7 @@ theorem bank_put (S : MemoSch) (hS : S.WF) (K : MemoKey κ)
     by rw [hcw c (.inl rfl)]; exact hB1, by rw [hcw (c + 1) (.inr rfl)]; exact hB2, hgG, hGl,
     by rw [hf.2.2.1]; exact hsz⟩
 
+omit [LawfulBEq κ] [LawfulHashable κ] in
 /-- **A probe at the current generation is a lookup in the current bank**: a hit is the bank's
 entry, a miss its absence. -/
 theorem bank_find (S : MemoSch) (K : MemoKey κ) (h2 : ∀ k1 k2, K.ok k1 k2 → k2.toNat < 2 ^ 32)

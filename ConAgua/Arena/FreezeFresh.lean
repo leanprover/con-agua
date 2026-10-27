@@ -78,7 +78,7 @@ abbrev cutT (m : Mem) : Mem := ctlCut (truncFrozen m)
 
 theorem ctl_mem_freshZ : CTL ∈ freshZ := by decide
 
-theorem tier1_ne_ctl (b : ArrId) : b + 256 ≠ CTL :=
+theorem tier1_ne_ctl (b : ArrId) : tier1 b ≠ CTL :=
   Nat.ne_of_gt (Nat.lt_of_lt_of_le (by decide) (Nat.le_add_left 256 b))
 
 section zero
@@ -112,7 +112,7 @@ empty. -/
 theorem consR_freshL {C : ConsSch} {R : Mem → Word → Word → α → Prop} {on : Bool}
     {P Q : Tbl α (Idx k) δ} (hW : C.WF) (hF : RFrame C.sch R C.hsM)
     (hL : RLocal C.sch R C.hsM [] []) (h1 : C.ra ∉ freshZ) (h2 : C.sa ∉ freshZ)
-    (h3 : C.sa + 256 ∈ freshZ) (h0 : Q.nodes.size = 0) (h : ConsR C R (cutT m) on P Q) :
+    (h3 : tier1 C.sa ∈ freshZ) (h0 : Q.nodes.size = 0) (h : ConsR C R (cutT m) on P Q) :
     ConsR C R (freshMem m) on P Q :=
   consR_iff.mpr (storeR_fresh C.sch R C.hsM C.KP hW.kframe (fresh_ctl m) (fresh_keep m h1)
     (fresh_keep m h2) (fresh_zero m h3 (tier1_ne_ctl C.sa)) (fresh_size m _)
@@ -123,10 +123,10 @@ theorem consR_freshP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
     {P Q : Tbl α (Idx k) δ} (hW : C.WF) (hF : RFrame C.sch R C.hsM)
     (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA C.sch.ra t) = m₁.arr64 (tierA C.sch.ra t)) →
       PoolTr0 m₁ m₂ → (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, C.hsM m₂ t i = C.hsM m₁ t i)
-    (hx : ∀ b ∈ [POOL, POOL1, CTL], b ≠ C.sch.ra ∧ b ≠ C.sch.ra + 256)
+    (hx : ∀ b ∈ [POOL, POOL1, CTL], b ≠ C.sch.ra ∧ b ≠ tier1 C.sch.ra)
     (htop : (cutT m).top.toNat < 2 ^ 40)
     (h1 : C.ra ∉ freshZ) (h2 : C.sa ∉ freshZ)
-    (h3 : C.sa + 256 ∈ freshZ) (h0 : Q.nodes.size = 0) (h : ConsR C R (cutT m) on P Q) :
+    (h3 : tier1 C.sa ∈ freshZ) (h0 : Q.nodes.size = 0) (h : ConsR C R (cutT m) on P Q) :
     ConsR C R (freshMem m) on P Q :=
   consR_iff.mpr (storeR_fresh C.sch R C.hsM C.KP hW.kframe (fresh_ctl m) (fresh_keep m h1)
     (fresh_keep m h2) (fresh_zero m h3 (tier1_ne_ctl C.sa)) (fresh_size m _)

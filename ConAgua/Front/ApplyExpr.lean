@@ -125,8 +125,8 @@ def lsLoopM (b : Array UInt8) (m : Mem) (top i cnt : Word) : Option Mem :=
       if hj : i < UInt64.ofNat (numEndN b i.toNat) then
         if rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) = NONE then none
         else if tblOK m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))) = true ∧
-            (top &&& (1099511627775 : Word)) + cnt < m.len64 (tierA 0 (top >>> 40)) then
-          lsLoopM b (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + cnt)
+            (top &&& (1099511627775 : Word)) + cnt < m.len64 (tierA POOL (top >>> 40)) then
+          lsLoopM b (m.set64 (tierA POOL (top >>> 40)) ((top &&& 1099511627775) + cnt)
             (tblW m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))) top
             (UInt64.ofNat (numEndN b i.toNat)) (cnt + 1)
         else none
@@ -171,8 +171,8 @@ theorem lsLoopM_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     lsLoopM b m top i cnt =
       if rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) = NONE then none
       else if tblOK m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))) = true ∧
-          (top &&& (1099511627775 : Word)) + cnt < m.len64 (tierA 0 (top >>> 40)) then
-        lsLoopM b (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + cnt)
+          (top &&& (1099511627775 : Word)) + cnt < m.len64 (tierA POOL (top >>> 40)) then
+        lsLoopM b (m.set64 (tierA POOL (top >>> 40)) ((top &&& 1099511627775) + cnt)
           (tblW m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))) top
           (UInt64.ofNat (numEndN b i.toNat)) (cnt + 1)
       else none := by
@@ -199,7 +199,7 @@ grind_pattern [lang_grind] lsLoopM_other => lsLoopM b m top i cnt, b[i.toNat]
 
 /-- The model of `ls_put(v)`: the memory after. -/
 def lsPutW (b : Array UInt8) (m : Mem) (v : Word) : Option Mem :=
-  if m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) then none
+  if m.len64 (tierA POOL (m.top >>> 40)) < (m.top &&& 1099511627775) then none
   else lsLoopM b m m.top (v + 1) 0
 
 /-- The length of the slice `ls_put(v)` returns. -/
@@ -213,10 +213,10 @@ them, and changes nothing else. -/
 theorem lsLoopM_facts (b : Array UInt8) (top : Word) (ht : top.toNat < 2 ^ 41) :
     ∀ (m : Mem) (i cnt : Word) (m' : Mem),
     lsLoopM b m top i cnt = some m' →
-    (top &&& 1099511627775).toNat + cnt.toNat ≤ (m.arr64 (tierA 0 (top >>> 40))).size →
-    (m.arr64 (tierA 0 (top >>> 40))).size < 2 ^ 40 →
+    (top &&& 1099511627775).toNat + cnt.toNat ≤ (m.arr64 (tierA POOL (top >>> 40))).size →
+    (m.arr64 (tierA POOL (top >>> 40))).size < 2 ^ 40 →
     (lsCntN b i cnt).toNat = cnt.toNat + (itemsN b i).length ∧ pcap m' = pcap m ∧
-    (top &&& 1099511627775).toNat + (lsCntN b i cnt).toNat ≤ (m.arr64 (tierA 0 (top >>> 40))).size ∧
+    (top &&& 1099511627775).toNat + (lsCntN b i cnt).toNat ≤ (m.arr64 (tierA POOL (top >>> 40))).size ∧
     (∀ j, j < top.toNat + cnt.toNat → (vpool m')[j]? = (vpool m)[j]?) ∧
     (∀ k (hk : k < (itemsN b i).length), (vpool m')[top.toNat + cnt.toNat + k]? =
         some (tblW m LID (itemsN b i)[k])) ∧
@@ -239,7 +239,7 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) (ht : top.toNat < 2 ^ 41) :
   | case3 m i cnt h1 h2 h3 h4 h5 h6 ih =>
     intro m' h hr hs
     obtain ⟨hok, hlt⟩ := h6
-    have hlen : (m.len64 (tierA 0 (top >>> 40))).toNat = (m.arr64 (tierA 0 (top >>> 40))).size := by
+    have hlen : (m.len64 (tierA POOL (top >>> 40))).toNat = (m.arr64 (tierA POOL (top >>> 40))).size := by
       simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
     have hIc : ((top &&& 1099511627775) + cnt).toNat = (top &&& 1099511627775).toNat + cnt.toNat := by
       rw [UInt64.toNat_add]; omega
@@ -249,10 +249,10 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) (ht : top.toNat < 2 ^ 41) :
       rw [UInt64.toNat_add]; omega
     have hc1 : (cnt + 1).toNat = cnt.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hP : ∀ B, B ≠ POOL ∧ B ≠ POOL1 →
-        (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + cnt)
+        (m.set64 (tierA POOL (top >>> 40)) ((top &&& 1099511627775) + cnt)
           (tblW m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))).arr64 B =
           m.arr64 B := fun B hB => arr64_set64_tier_ne _ _ _ _ _ hB
-    have hst : ∀ v, vpool (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + cnt) v) =
+    have hst : ∀ v, vpool (m.set64 (tierA POOL (top >>> 40)) ((top &&& 1099511627775) + cnt) v) =
         (vpool m).set! (top.toNat + cnt.toNat) v := fun v => by
       rw [vpool_stidx m top cnt v ht (by rw [hIc]; exact hlt') (by omega) (by omega), htc]
     obtain ⟨i1, i3, i4, i5, i6, i7, i8⟩ := ih m' h
@@ -317,9 +317,9 @@ theorem lsPut_room (b : Array UInt8) (m m' : Mem) (v : Word) (h : lsPutW b m v =
   have hsz := pcap_tier m (m.top >>> 40) (by omega)
   have hsp := tag_split m.top
   have htr := tag_tier_le m.top ht41
-  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
-  have ht' : (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have ht' : (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     have := UInt64.not_lt.mp hle; rw [UInt64.le_iff_toNat_le, hlen] at this; exact this
   obtain ⟨-, h3, h4, -⟩ := lsLoopM_facts b m.top ht41 m _ 0 m' h (by simpa using ht') hsz
   refine ⟨by omega, ?_⟩
@@ -329,8 +329,8 @@ theorem lsPut_room (b : Array UInt8) (m m' : Mem) (v : Word) (h : lsPutW b m v =
 /-- The length checks of `node_lit`/`node_lit_str`/`apply_str` on a slice `(o, l)` at an address
 of a tier: the slice lies below `pcap` (what the stores' `intern_*` need). -/
 theorem slice_room (m : Mem) (o l : Word) (hs : pcap m < 2 ^ 64) (ho : o.toNat ≤ pcap m)
-    (h1 : ¬ m.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40)
-    (h2 : ¬ m.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l) :
+    (h1 : ¬ m.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40)
+    (h2 : ¬ m.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l) :
     o.toNat + l.toNat ≤ pcap m := by
   have hp := pcap_eq m hs
   have hsz := pcap_tier m (o >>> 40) hs
@@ -338,14 +338,14 @@ theorem slice_room (m : Mem) (o l : Word) (hs : pcap m < 2 ^ 64) (ho : o.toNat �
   have htr := tag_tier_le o (by omega)
   have hb : (o - (o >>> 40) <<< 40).toNat = (o &&& 1099511627775).toNat := by
     rw [tag_off_toNat, tag_idx_toNat]
-  have hlen : (m.len64 (tierA 0 (o >>> 40))).toNat = (m.arr64 (tierA 0 (o >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (o >>> 40))).toNat = (m.arr64 (tierA POOL (o >>> 40))).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
   rw [UInt64.not_lt, UInt64.le_iff_toNat_le, hlen, hb] at h1
   rw [UInt64.not_lt, UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _
     (UInt64.le_iff_toNat_le.mpr (by rw [hlen, hb]; exact h1)), hlen, hb] at h2
   omega
 grind_pattern [arena_grind] slice_room =>
-  m.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l, pcap m
+  m.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l, pcap m
 
 theorem Keep.pcap {m m' : Mem} (h : Keep m m') : pcap m' = pcap m := pcap_congr (h.2 _) (h.2 _)
 grind_pattern [arena_grind] Keep.pcap => Keep m m', pcap m'
@@ -461,14 +461,14 @@ def nodeLit : FunDecl := lfn (c, d) locals (o, l, h) {
 def litK : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (r, m₁) =>
-    if m₁.len64 (tierA 0 (r.headD 0 >>> 40)) < r.headD 0 - (r.headD 0 >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA 0 (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
+    if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) < r.headD 0 - (r.headD 0 >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
     else internW m₁ (r.headD 0) (r.tail.headD 0)
 
 @[arena_grind =] theorem litK_none : litK none = none := rfl
 @[arena_grind =] theorem litK_some (r : List Word) (m₁ : Mem) : litK (some (r, m₁)) =
-    if m₁.len64 (tierA 0 (r.headD 0 >>> 40)) < r.headD 0 - (r.headD 0 >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA 0 (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
+    if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) < r.headD 0 - (r.headD 0 >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
     else internW m₁ (r.headD 0) (r.tail.headD 0) := rfl
 
 theorem litK_intern {r : List Word} {m₁ m' : Mem} {w : Word} (h : litK (some (r, m₁)) = some (w, m')) :
@@ -504,14 +504,14 @@ def nodeLitStr : FunDecl := lfn (c, d) locals (o, l, h) {
 def litStrK (o : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (l, m₁) =>
-    if m₁.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
+    if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else internWStr m₁ o l
 
 @[arena_grind =] theorem litStrK_none (o : Word) : litStrK o none = none := rfl
 @[arena_grind =] theorem litStrK_some (o l : Word) (m₁ : Mem) : litStrK o (some (l, m₁)) =
-    if m₁.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
+    if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else internWStr m₁ o l := rfl
 
 theorem litStrK_intern {o l : Word} {m₁ m' : Mem} {w : Word}
@@ -761,7 +761,7 @@ theorem lsLoop_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : S
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ld64, st64, ih,
         L.Scan.Leaves.numEnd_spec p hE.skip_digits hE.num_end b hb64 n,
-        L.Front.Fields.readNat_spec p b hb hE.read_nat n,
+        L.Front.Fields.readNat_spec p b hE.read_nat n,
         levelGet_spec p hE.front n] <;> finish [NONE]
 
 theorem lsLoop_step_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St) :
@@ -852,7 +852,7 @@ theorem nodeLit_spec (b : Array UInt8) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8
           hE.intern_lit n] <;>
       finish [litW, Keep.size]
 
-theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
+theorem nodeLitStr_spec (b : Array UInt8)
     (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
     (hph : p.lookup "hex_val" = some L.Scan.Str.hexVal)
     (hp4 : p.lookup "hex4" = some L.Scan.Str.hex4) (hp3 : p.lookup "hex3" = some L.Scan.Str.hex3)
@@ -874,7 +874,7 @@ theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
         ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
           strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
           Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
-      Triple.keep hE.no_st8 (strPutEsc_specW p b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n s₁ hm₁ c d)
+      Triple.keep hE.no_st8 (strPutEsc_specW p b hpb hph hp4 hp3 hpsu hpo hpu hpe n s₁ hm₁ c d)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
         internLitStr_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match_str hE.lit_find_str
@@ -923,7 +923,7 @@ theorem exprNode_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
         internSort_spec p hE.sort_find hE.sort_push hE.intern_sort n,
         nodeBin_spec p hE n, nodeLet_spec p hE n, nodeProj_spec p hE n,
         nodeConst_spec p hE b hb n, nodeLit_spec p hE b n,
-        nodeLitStr_spec p hE b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
+        nodeLitStr_spec p hE b hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
       finish [nodeW, NONE]
 
 theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)

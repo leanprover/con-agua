@@ -3,7 +3,6 @@ import ConAgua.Arena.DerRel
 import ConAgua.Front.FieldsLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # `str_put_esc` against con-leche's `scanString`
@@ -306,7 +305,7 @@ theorem tag_rel_add (x k : Word) : x + k - (x >>> 40) <<< 40 = (x &&& 1099511627
 from the top's index on), and changed nothing else of the memory `m₀` it started from. -/
 def PoolInv (m₀ m : Mem) (top k : Word) (L : List UInt8) : Prop :=
   PFrame m₀ m ∧ Agree (vpool m) (vpool m₀) top.toNat ∧
-  (top &&& 1099511627775).toNat + k.toNat ≤ (m.arr64 (tierA 0 (top >>> 40))).size ∧
+  (top &&& 1099511627775).toNat + k.toNat ≤ (m.arr64 (tierA POOL (top >>> 40))).size ∧
   k.toNat = L.length ∧ sliceL (vpool m) top.toNat k.toNat = L.map UInt8.toUInt64
 
 theorem poolInv_init (m : Mem) (hp : PoolOK m) : PoolInv m m m.top 0 [] :=
@@ -317,25 +316,25 @@ variable (m₀ : Mem) (hs : PSmall m₀) (top : Word) (ht : top.toNat < 2 ^ 41)
 include hs ht
 
 theorem poolInv_write (m : Mem) (k : Word) (L : List UInt8) (h : PoolInv m₀ m top k L)
-    (hl : ¬ m.len64 (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + k) (x : UInt8) :
-    PoolInv m₀ (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + k) x.toUInt64) top
+    (hl : ¬ m.len64 (tierA POOL (top >>> 40)) ≤ (top &&& 1099511627775) + k) (x : UInt8) :
+    PoolInv m₀ (m.set64 (tierA POOL (top >>> 40)) ((top &&& 1099511627775) + k) x.toUInt64) top
       (k + 1) (L ++ [x]) := by
   obtain ⟨hf, hag, hb, hk, hsl⟩ := h
-  have hsz : (m.arr64 (tierA 0 (top >>> 40))).size < 2 ^ 40 := by
+  have hsz : (m.arr64 (tierA POOL (top >>> 40))).size < 2 ^ 40 := by
     rw [PFrame.tsize _ hf]; exact hs.tier _
   have hI := tag_idx_lt top
   have hsp := tag_split top
   have htr := tag_tier_le top ht
-  have hlen : (m.len64 (tierA 0 (top >>> 40))).toNat = (m.arr64 (tierA 0 (top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (top >>> 40))).toNat = (m.arr64 (tierA POOL (top >>> 40))).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
   have hIk : ((top &&& 1099511627775) + k).toNat = (top &&& 1099511627775).toNat + k.toNat := by
     rw [UInt64.toNat_add]; omega
-  have hlt : (top &&& 1099511627775).toNat + k.toNat < (m.arr64 (tierA 0 (top >>> 40))).size := by
+  have hlt : (top &&& 1099511627775).toNat + k.toNat < (m.arr64 (tierA POOL (top >>> 40))).size := by
     rw [UInt64.le_iff_toNat_le, hlen, hIk] at hl; omega
   have htk : (top + k).toNat = top.toNat + k.toNat := by rw [UInt64.toNat_add]; omega
   have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hvs : top.toNat + k.toNat < (vpool m).size := by rw [vpool_size]; omega
-  have hset : vpool (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + k) x.toUInt64) =
+  have hset : vpool (m.set64 (tierA POOL (top >>> 40)) ((top &&& 1099511627775) + k) x.toUInt64) =
       (vpool m).set! (top.toNat + k.toNat) x.toUInt64 := by
     rw [vpool_stidx m top k _ ht (by rw [hIk]; exact hlt) (by omega) (by omega), htk]
   refine ⟨PFrame.set64 _ _ _ hf, fun j hj => ?_, ?_, ?_, ?_⟩
@@ -360,7 +359,7 @@ theorem poolInv_write (m : Mem) (k : Word) (L : List UInt8) (h : PoolInv m₀ m 
 
 theorem poolInv_wrs (bs : List UInt8) : ∀ (m : Mem) (k : Word) (L : List UInt8),
     PoolInv m₀ m top k L →
-    (top &&& 1099511627775).toNat + k.toNat + bs.length ≤ (m.arr64 (tierA 0 (top >>> 40))).size →
+    (top &&& 1099511627775).toNat + k.toNat + bs.length ≤ (m.arr64 (tierA POOL (top >>> 40))).size →
     PoolInv m₀ (wrs m (top >>> 40) (top + k) ((top >>> 40) <<< 40) (bs.map UInt8.toUInt64)) top
       (k + UInt64.ofNat bs.length) (L ++ bs) := by
   induction bs with
@@ -372,14 +371,14 @@ theorem poolInv_wrs (bs : List UInt8) : ∀ (m : Mem) (k : Word) (L : List UInt8
   | cons x xs ih =>
     intro m k L h hb
     simp only [List.length_cons] at hb
-    have hsz : (m.arr64 (tierA 0 (top >>> 40))).size < 2 ^ 40 := by
+    have hsz : (m.arr64 (tierA POOL (top >>> 40))).size < 2 ^ 40 := by
       rw [PFrame.tsize _ h.1]; exact hs.tier _
     have hI := tag_idx_lt top
-    have hlen : (m.len64 (tierA 0 (top >>> 40))).toNat = (m.arr64 (tierA 0 (top >>> 40))).size := by
+    have hlen : (m.len64 (tierA POOL (top >>> 40))).toNat = (m.arr64 (tierA POOL (top >>> 40))).size := by
       simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
     have hIk : ((top &&& 1099511627775) + k).toNat = (top &&& 1099511627775).toNat + k.toNat := by
       rw [UInt64.toNat_add]; omega
-    have hl : ¬ m.len64 (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + k := by
+    have hl : ¬ m.len64 (tierA POOL (top >>> 40)) ≤ (top &&& 1099511627775) + k := by
       rw [UInt64.le_iff_toNat_le, hlen, hIk]; omega
     have h1 := poolInv_write m₀ hs top ht m k L h hl x
     have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -390,11 +389,12 @@ theorem poolInv_wrs (bs : List UInt8) : ∀ (m : Mem) (k : Word) (L : List UInt8
         rw [UInt64.ofNat_add]; simp; ac_rfl]
     simpa using this
 
+omit hs ht in
 /-- What `utf8_put` did, when it returned. -/
 theorem u8PutW_eq (m : Mem) (k cp k' : Word) (m' : Mem) (h : u8PutW m top k cp = some (k', m')) :
     k' = k + UInt64.ofNat (encW cp).length ∧
       m' = wrs m (top >>> 40) (top + k) ((top >>> 40) <<< 40) (encW cp) ∧
-      ¬ m.len64 (tierA 0 (top >>> 40)) ≤
+      ¬ m.len64 (tierA POOL (top >>> 40)) ≤
         top + k + UInt64.ofNat ((encW cp).length - 1) - (top >>> 40) <<< 40 ∧
       (encW cp).length ≤ 4 := by
   unfold u8PutW at h
@@ -437,15 +437,15 @@ theorem poolInv_u8 (m : Mem) (k : Word) (L : List UInt8) (v : UInt32) (k' : Word
     (h : PoolInv m₀ m top k L) (hv : v.toNat.isValidChar)
     (hu : u8PutW m top k v.toUInt64 = some (k', m')) :
     PoolInv m₀ m' top k' (L ++ (utf8Of v).data.toList) := by
-  obtain ⟨rfl, rfl, hl, h4⟩ := u8PutW_eq m₀ hs top ht m k _ k' m' hu
+  obtain ⟨rfl, rfl, hl, h4⟩ := u8PutW_eq top m k _ k' m' hu
   have hw := utf8Of_words v hv
   have hlen' : (encW v.toUInt64).length = (utf8Of v).data.toList.length := by
     rw [← hw, List.length_map]
-  have hsz : (m.arr64 (tierA 0 (top >>> 40))).size < 2 ^ 40 := by
+  have hsz : (m.arr64 (tierA POOL (top >>> 40))).size < 2 ^ 40 := by
     rw [PFrame.tsize _ h.1]; exact hs.tier _
   have hb := h.2.2.1
   have hI := tag_idx_lt top
-  have hlen : (m.len64 (tierA 0 (top >>> 40))).toNat = (m.arr64 (tierA 0 (top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (top >>> 40))).toNat = (m.arr64 (tierA POOL (top >>> 40))).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
   have hc : (UInt64.ofNat ((encW v.toUInt64).length - 1)).toNat = (encW v.toUInt64).length - 1 :=
     UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
@@ -626,7 +626,7 @@ theorem strR_body (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
     rw [h0] at hq; exact hq (by decide)
   have hv1 : (v + 1).toNat = v.toNat + 1 := usizeStep b v hv
   have hcU : (v + 1).toUInt64 = c := by
-    rw [ConAgua.Scan.RecordsLink.succ_toUInt64 b h64 hsize, hc]
+    rw [ConAgua.Scan.RecordsLink.succ_toUInt64 h64, hc]
   have hsc := strClose_toNat_eq b h64 (by omega) (v + 1)
   dsimp only at h
   split at h
@@ -640,7 +640,7 @@ theorem strR_body (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
   have hcN : c.toNat = (v + 1).toNat := by rw [← hcU, USize.toNat_toUInt64]
   have hE : e = strClose b (v + 1) + 1 → d.toNat = (strClose b (v + 1)).toNat := by
     intro he'
-    rw [← hd, he', ConAgua.Scan.RecordsLink.succ_toUInt64 b h64 hsize, UInt64.add_sub_cancel,
+    rw [← hd, he', ConAgua.Scan.RecordsLink.succ_toUInt64 h64, UInt64.add_sub_cancel,
       USize.toNat_toUInt64]
   split at h
   · rename_i hesc
@@ -728,7 +728,7 @@ theorem strPutEsc_spec (p : Prog) (hpb : p.lookup "byte_in" = some L.Scan.Str.by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hr, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (strPutEsc_specW p b.data hsize hpb hph hp4 hp3 hps hpo hpu hpe n s₀ hm c d)
+    (strPutEsc_specW p b.data hpb hph hp4 hp3 hps hpo hpu hpe n s₀ hm c d)
   subst hs
   obtain ⟨hg, hsl, hk⟩ := strPutEsc_link h64 b hsize s.mem s'.mem hR.lit.1 c d str hS _ hW
   exact ⟨hloc, hr, hg, hsl, hk, ArenaR.grow _ _ hg _ hR, DerR.grow _ _ hg _⟩

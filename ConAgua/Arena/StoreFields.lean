@@ -264,10 +264,10 @@ theorem evalE_idxE (h : Expr) : evalE (idxE h) = (do let x ← evalE h; pure (id
 
 /-- A field depends only on its record arrays (both tiers). -/
 theorem tfld_arr_eq {m m' : Mem} {R : TRec} (h : m.arr64 R.arr = m'.arr64 R.arr)
-    (h' : m.arr64 (R.arr + 256) = m'.arr64 (R.arr + 256)) (t i f : Word) :
+    (h' : m.arr64 (tier1 R.arr) = m'.arr64 (tier1 R.arr)) (t i f : Word) :
     tfld m R t i f = tfld m' R t i f := by
   simp only [tfld]
-  rcases tierA_cases' R.arr t with e | e <;> rw [e] <;> simp only [h, h']
+  rcases tierA_eq_or R.arr t with e | e <;> rw [e] <;> simp only [h, h']
 
 /-- A node count depends only on `CTL`. -/
 theorem tcnt_arr_eq {m m' : Mem} (R : TRec) (h : m.arr64 CTL = m'.arr64 CTL) (t : Word) :
@@ -275,10 +275,10 @@ theorem tcnt_arr_eq {m m' : Mem} (R : TRec) (h : m.arr64 CTL = m'.arr64 CTL) (t 
   simp only [tcnt, h]
 
 theorem tfld_set64_ne (m : Mem) (R : TRec) (a : ArrId) (k v t i f : Word) (h : a ≠ R.arr)
-    (h' : a ≠ R.arr + 256) :
+    (h' : a ≠ tier1 R.arr) :
     tfld (m.set64 a k v) R t i f = tfld m R t i f := by
   simp only [tfld]
-  rcases tierA_cases' R.arr t with e | e <;> rw [e] <;>
+  rcases tierA_eq_or R.arr t with e | e <;> rw [e] <;>
     simp only [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h')]
 
 theorem tcnt_set64_ne (m : Mem) (R : TRec) (a : ArrId) (k v t : Word) (h : a ≠ CTL) :

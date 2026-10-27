@@ -40,7 +40,7 @@ theorem strCode_safe (v : USize) (e : USize)
     have h0 : byteAt b v = 0 := by unfold byteAt; rw [dite_eq_right hn]
     rw [h0] at hq; exact hq (by decide)
   have hv1 : (v.toUInt64 + 1).toNat = (v + 1).toNat := by
-    rw [← succ_toUInt64 b h64 hsize, USize.toNat_toUInt64]
+    rw [← succ_toUInt64 h64, USize.toNat_toUInt64]
   have hc := strClose_toNat_eq b h64 (by omega) (v + 1)
   dsimp only at h
   split at h; cases h; rename_i hz
@@ -59,7 +59,7 @@ theorem strCode_safe (v : USize) (e : USize)
       · cases h
   subst he
   have he1 : ((strClose b (v + 1) + 1).toUInt64 - 1).toNat = (strClose b (v + 1)).toNat := by
-    rw [succ_toUInt64 b h64 hsize, UInt64.add_sub_cancel, USize.toNat_toUInt64]
+    rw [succ_toUInt64 h64, UInt64.add_sub_cancel, USize.toNat_toUInt64]
   generalize hC : v.toUInt64 + 1 = C at hv1 hS ⊢
   generalize hD : (strClose b (v + 1) + 1).toUInt64 - 1 = Dw at he1 hS ⊢
   rw [hc] at he1
@@ -192,7 +192,7 @@ theorem defEntry_link' (v : USize) (d : DeclRec) (e : USize) (h : scanDefDecl b 
   unfold scanDefDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     obtain ⟨h1, h2, h3⟩ := dobj_link b h64 hsize _ _ _ (def_loop' b h64 hsize) (v + 1) true 0
       (.regular 0, [], 0, "", 0, 0) DFld.init d e h
       ⟨⟨⟨rfl, itemR_zero⟩, .inr rfl, itemR_zero, fun h => absurd h (by decide), itemR_zero, itemR_zero⟩,

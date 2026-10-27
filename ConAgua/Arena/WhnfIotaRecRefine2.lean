@@ -260,7 +260,7 @@ theorem irCallW_mkAppN (p : Prog) (hp : SpineProg p) (n : Nat) (m : Mem) (a : AS
     (r : List Word) (m' : Mem) (h : callW p n "mk_app_n" [f, o, k] m = some (r, m')) :
     (mkAppN (decE f) xs.toList).run a = .ok (decE (r.headD 0), AM.st (mkAppN (decE f) xs.toList) a) ∧
     ArenaD m' (AM.st (mkAppN (decE f) xs.toList) a) ∧
-    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m' ∧ HW (r.headD 0) := by
+    MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, -, hok, hD', hres, hfr⟩ := triple_of_callW
     (mkAppN_refines' p hp.mkn hp.derb hp.appf hp.appp hp.appi hp.mkapp n ⟨m, Locals.init []⟩ a hD f o
       k xs hx) h
@@ -278,7 +278,7 @@ theorem irCallW_mkAppNFrom (p : Prog) (hp : SpineProg p) (n : Nat) (m : Mem) (a 
     (mkAppNFrom (decE f) xs i.toNat).run a =
       .ok (decE (r.headD 0), AM.st (mkAppNFrom (decE f) xs i.toNat) a) ∧
     ArenaD m' (AM.st (mkAppNFrom (decE f) xs i.toNat) a) ∧
-    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m' ∧ HW (r.headD 0) := by
+    MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, -, hok, hD', hres, hfr⟩ := triple_of_callW
     (mkAppNFrom_refines' p hp.mknf hp.derb hp.appf hp.appp hp.appi hp.mkapp n ⟨m, Locals.init []⟩ a hD
       f o k i xs hx hik) h
@@ -698,9 +698,9 @@ theorem irCallW_internBVar (p : Prog) (hp : IotaRecProg' p) (n : Nat)
     have := keeps_cpl_internBVar u.toNat
     unfold Keeps at this
     exact this a _ _ hrun
-  refine ⟨hrun, hS.of_bvar h2 hcpl hfr, ?_, hfr.1 EREC (by simp [BREC, BSLOT, EREC]) (by decide),
-    hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)⟩
-  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
+  refine ⟨hrun, hS.of_bvar h2 hcpl hfr, ?_, hfr.1 EREC (by simp [tier1, tierOff, BREC, BSLOT, EREC]) (by decide),
+    hfr.1 SPN (by simp [tier1, tierOff, BREC, BSLOT, SPN]) (by decide)⟩
+  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hfr.1 SPN (by simp [tier1, tierOff, BREC, BSLOT, SPN]) (by decide)
   have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hfr.2.1 136 (by simp)
   exact StackKept.of_frame hfr
 

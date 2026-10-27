@@ -172,7 +172,7 @@ theorem internFVar_core (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW 
       (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [FVREC, FVSLOT, FVLP])
+    (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP])
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
@@ -194,14 +194,14 @@ theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
   have hS' := hS.arena_frameD hD (Keeps.run (keeps_cpl_internSort _) (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [SOREC, SOSLOT, SOLP])
+    (by simp [tier1, tierOff, SOREC, SOSLOT, SOLP])
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.1 EREC (by simp [SOREC, SOSLOT, SOLP, EREC]) (by decide)))
+    (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.1 EREC (by simp [tier1, tierOff, SOREC, SOSLOT, SOLP, EREC]) (by decide)))
     (hmode := hS.mode.frame hf (by simp) (by simp))
   have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩

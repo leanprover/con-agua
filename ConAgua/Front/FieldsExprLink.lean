@@ -8,7 +8,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 
 /-!
@@ -99,7 +98,7 @@ theorem objRec_link (F : USize → Bool → UInt32 → σ → ScanRes α) (R : U
     · obtain ⟨rfl, hres⟩ := H.close i w seen st r e hi h125 h
       rw [objRecN_close _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
         nm_close b h64 hsize i _ hi hws h125]
-      exact ⟨by simp only [succ_toUInt64 b h64 hsize], H.res_e _ _ _ (hres o hR)⟩
+      exact ⟨by simp only [succ_toUInt64 h64], H.res_e _ _ _ (hres o hR)⟩
     by_cases h44 : byteAt b i = 44
     · obtain ⟨rfl, h'⟩ := H.comma i w seen st r e hi h44 h
       simp only [bw, Bool.false_eq_true, ite_false]
@@ -395,7 +394,7 @@ theorem items_link (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (e : 
   by_cases hi : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp hi
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i hi
     have hin := usizeInBounds b i hi
     rw [dite_eq_left hi] at h
@@ -471,7 +470,7 @@ theorem list_link (v : USize) (us : List Nat) (e : USize) (h : scanNatList b v =
       have h0 : byteAt b v = 0 := by unfold byteAt; rw [dite_eq_right hn]
       rw [h0] at hc; exact absurd hc (by decide)
     unfold listN
-    rw [← succ_toUInt64 b h64 hsize]
+    rw [← succ_toUInt64 h64]
     simpa using items_link b h64 hsize (v + 1) [] true us e h [] trivial
   · cases h
 
@@ -660,7 +659,7 @@ theorem objEntry_link {σ : Type} (F : USize → Bool → UInt32 → σ → Scan
     (e : USize) (h : F (v + 1) true 0 st₀ = .ok r e) :
     (recObjN b.data v.toUInt64).e = e.toUInt64 ∧ ORes b k r (recObjN b.data v.toUInt64) := by
   unfold recObjN
-  rw [← (obj_open b h64 hsize v hc).2]
+  rw [← (obj_open b h64 v hc).2]
   exact objRec_link b h64 hsize F R (ORes b k) H (v + 1) true 0 st₀ r e _ h h₀
 
 /-- A sub-object at `v`, by the payload key `k` and its con-leche scanner. -/
@@ -692,6 +691,7 @@ theorem obj_link (k : Word) (v : USize) (r : ExprRec) (e : USize)
         ⟨itemR_zero, itemR_zero, itemR_zero⟩ v ‹_› r e h
     · cases h
 
+omit h64 hsize in
 theorem skipDigits_ge (i : USize) : i.toNat ≤ (skipDigits b i).toNat := by
   fun_induction skipDigits b i with
   | case1 i h _ ih => have := usizeStep b i h; omega
@@ -721,9 +721,9 @@ theorem natVal_link (v : USize) (n : Nat) (e : USize) (h : scanQuotedNat b v = .
     refine Classical.byContradiction fun hn => ?_
     have h0 : byteAt b (skipDigits b (v + 1)) = 0 := by unfold byteAt; rw [dite_eq_right hn]
     rw [h0] at hq34; exact absurd hq34 (by decide)
-  have hv1 := succ_toUInt64 b h64 hsize v
-  have hd1 := succ_toUInt64 b h64 hsize (skipDigits b (v + 1))
-  have hge := skipDigits_ge b h64 hsize (v + 1)
+  have hv1 := succ_toUInt64 h64 v
+  have hd1 := succ_toUInt64 h64 (skipDigits b (v + 1))
+  have hge := skipDigits_ge b (v + 1)
   have hlt : v + 1 < skipDigits b (v + 1) := by
     rw [USize.lt_iff_toNat_lt]
     have : (v + 1).toNat ≠ (skipDigits b (v + 1)).toNat := fun h' => hne1 (USize.toNat_inj.mp h').symm

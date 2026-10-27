@@ -143,7 +143,7 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
     (hmLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
-    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ SOREC + 256 ∉ A ∧ CREC + 256 ∉ A := by decide)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
       by decide) (hC0 : (0 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb := by
@@ -212,7 +212,7 @@ theorem callW_mkApp (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : 
     AM.ok (internE (.app (decE f) (decE x))) a₀ ∧
     ArenaD m' (AM.st (internE (.app (decE f) (decE x))) a₀) ∧
     AM.res (internE (.app (decE f) (decE x))) a₀ = decE (r.headD 0) ∧
-    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (mkApp_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp n
     s₀ f x) h
   obtain ⟨-, hm⟩ := hm
@@ -227,35 +227,35 @@ theorem callW_mkAppNFrom (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a�
     AM.ok (mkAppNFrom (decE f) xs i.toNat) a₀ ∧
     ArenaD m' (AM.st (mkAppNFrom (decE f) xs i.toNat) a₀) ∧
     AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧
-    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, -, hok, hD', hres, hfr⟩ := triple_of_callW (Q := fun r s' =>
       LocEq s' s₀ ∧ AM.ok (mkAppNFrom (decE f) xs i.toNat) a₀ ∧
         ArenaD s'.mem (AM.st (mkAppNFrom (decE f) xs i.toNat) a₀) ∧
         AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧
-        MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem s'.mem)
+        MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] s₀.mem s'.mem)
     (mkAppNFrom_refines p hp n s₀ a₀ hD f o k i xs hf hx hik) h
   obtain ⟨s'', hm⟩ := triple_of_callW (mkAppNFromL_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp
     hp.mknf n s₀ f o k i) h
   exact ⟨hok, hD', hres, hfr, mkAppNFromW_hw _ s₀.mem a₀ f o k i rfl hD hf _ _ hm.2.2⟩
 
 /-- **The `app` interning writes neither the stack nor its top.** -/
-theorem StackKept.of_app_frame {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m') :
+theorem StackKept.of_app_frame {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [AREC, ASLOT, ADER, SPN]) (by decide)
+    hf.1 SPN (by simp [tier1, tierOff, AREC, ASLOT, ADER, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact StackKept.of_frame hf
 
 /-- **`CoreS` across an `app` interning step.** -/
 theorem CoreS.of_app {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
-    (hcpl : cpl a' = cpl a) (hf : MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m') :
+    (hcpl : cpl a' = cpl a) (hf : MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m m') :
     CoreS dn m' a' vis fe M eb :=
   hS.arena_frame hD hcpl hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [AREC, ASLOT, ADER])
+    (by simp [tier1, tierOff, AREC, ASLOT, ADER])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)

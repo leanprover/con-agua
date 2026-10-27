@@ -189,7 +189,7 @@ theorem imaxColFree : ColFree imaxCS IRecRel := by
 
 /-- **What `intern_imax` changes**: the table's arrays, the column, the counts. -/
 theorem iminternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : iminternW m u v = some (w, m')) :
-    MemFrame [IREC, IREC + 256, ISLOT, ISLOT + 256, IHP, IHP + 256] [12, 13] m m' :=
+    MemFrame [IREC, tier1 IREC, ISLOT, tier1 ISLOT, IHP, tier1 IHP] [12, 13] m m' :=
   consInternM_frame imaxCS_wf hI
 
 theorem imaxLocal : RLocal imaxSch IRecRel imhash [] [] := by

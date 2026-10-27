@@ -181,7 +181,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
     (hmLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
-    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ SOREC + 256 ∉ A ∧ CREC + 256 ∉ A := by decide)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
       by decide) (hmode : ModeOK m') :
     CoreS dn m' a' vis fe M eb := by
@@ -258,7 +258,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       cplL a₀ := by
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
-  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [ConsSch.wset, REC, SLOT]) (by simp [ConsSch.wset, REC, SLOT]) (by simp [ConsSch.wset, REC, SLOT])
+  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [tier1, tierOff, ConsSch.wset, REC, SLOT]) (by simp [tier1, tierOff, ConsSch.wset, REC, SLOT]) (by simp [tier1, tierOff, ConsSch.wset, REC, SLOT])
     (by simp) (by simp)
     (hmode := hK.1.mode.frame hfr (by simp) (by simp)), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 

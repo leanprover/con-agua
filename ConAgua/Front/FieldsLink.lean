@@ -9,7 +9,6 @@ import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 
 /-!
@@ -119,7 +118,7 @@ theorem rdLoop_link (v e : USize) (x : UInt64) (he : e.toNat ≤ b.size) :
     rdLoopN b.data v.toUInt64 e.toUInt64 x = readNat64 b v e x := by
   fun_induction readNat64 b v e x with
   | case1 i acc h hie ih =>
-    rw [rdLoopN_step _ _ _ _ ((lt_toUInt64_iff _ _).mp hie), ← succ_toUInt64 b h64 hsize,
+    rw [rdLoopN_step _ _ _ _ ((lt_toUInt64_iff _ _).mp hie), ← succ_toUInt64 h64,
       byteW_eq b h64 hsize, digit_sub]
     simp only [uget_byteAt _ i h] at ih ⊢
     exact ih
@@ -163,7 +162,7 @@ theorem pair_link (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (e : U
   by_cases hi : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp hi
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i hi
     have hin := usizeInBounds b i hi
     rw [dite_eq_left hi] at h
@@ -263,12 +262,13 @@ theorem pairEntry_link (v : USize) (x y : Nat) (e : USize) (h : scanNatList b v 
     have := pair_link b h64 hsize (v + 1) [] true [x, y] e 0 0 0 h rfl (by simp)
       (by simp) (by simp)
     unfold pairEntryN
-    rw [← succ_toUInt64 b h64 hsize]
+    rw [← succ_toUInt64 h64]
     exact ⟨this.1, this.2.1 (by simp), this.2.2 (by simp)⟩
   · cases h
 
 /-! ## A string's body -/
 
+omit h64 hsize in
 theorem hasEscape_noEsc (j e : USize) : hasEscape b j e = true → ¬ NoEsc b j.toNat e.toNat := by
   fun_induction hasEscape b j e with
   | case1 j h hlt hc =>
@@ -295,7 +295,7 @@ theorem scanString_strOK (v : USize) (x : String) (e' : USize)
     have h0 : byteAt b v = 0 := by unfold byteAt; rw [dite_eq_right hn]
     rw [h0] at hq; exact hq (by decide)
   have hv1 : (v.toUInt64 + 1).toNat = (v + 1).toNat := by
-    rw [← succ_toUInt64 b h64 hsize, USize.toNat_toUInt64]
+    rw [← succ_toUInt64 h64, USize.toNat_toUInt64]
   have hc := strClose_toNat_eq b h64 (by omega) (v + 1)
   dsimp only at h
   split at h; cases h; rename_i hz
@@ -305,14 +305,14 @@ theorem scanString_strOK (v : USize) (x : String) (e' : USize)
   have hlt := (L.Examples.strCloseN_bounds b.data (v + 1).toNat hcn).2
   have hbs : b.data.size = b.size := rfl
   have he1 : ((strClose b (v + 1) + 1).toUInt64 - 1).toNat = (strClose b (v + 1)).toNat := by
-    rw [succ_toUInt64 b h64 hsize, UInt64.add_sub_cancel, USize.toNat_toUInt64]
+    rw [succ_toUInt64 h64, UInt64.add_sub_cancel, USize.toNat_toUInt64]
   split at h
   · rename_i hesc
     split at h
     · obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
       intro hn
       rw [hv1, he1] at hn
-      exact absurd hn (hasEscape_noEsc b h64 hsize _ _ hesc)
+      exact absurd hn (hasEscape_noEsc b _ _ hesc)
     · cases h
   · split at h
     · rename_i s hs
@@ -325,7 +325,7 @@ theorem scanString_strOK (v : USize) (x : String) (e' : USize)
 
 theorem nm_ws (i : USize) (x : Word) (hi : i < b.usize) (hws : isWs (byteAt b i) = true) :
     nextMemberN b.data i.toUInt64 x = nextMemberN b.data (i + 1).toUInt64 x := by
-  rw [succ_toUInt64 b h64 hsize]
+  rw [succ_toUInt64 h64]
   exact nextMemberN_ws _ _ _ ((lt_usize_iff b h64 hsize i).mp hi)
     (by rw [byteW_eq b h64 hsize]; exact (ws_iff _).mp hws)
 
@@ -342,7 +342,7 @@ theorem nm_comma (i : USize) (hi : i < b.usize) (hws : ¬ isWs (byteAt b i) = tr
     (hc : byteAt b i = 44) : nextMemberN b.data i.toUInt64 0 = nextMemberN b.data (i + 1).toUInt64 1 := by
   rw [nextMemberN_comma _ _ _ ((lt_usize_iff b h64 hsize i).mp hi) (nm_notws b h64 hsize i hws)
     (by rw [byteW_eq b h64 hsize, hc]; decide) (by rw [byteW_eq b h64 hsize, hc]; rfl),
-    ite_eq_right (by decide), succ_toUInt64 b h64 hsize]
+    ite_eq_right (by decide), succ_toUInt64 h64]
 
 theorem nm_key (i : USize) (hi : i < b.usize) (hc : byteAt b i = 34) (hk : keyEnd b (i + 1) ≠ 0)
     (hv : valueAt b i (keyEnd b (i + 1)) ≠ i) :
@@ -404,7 +404,7 @@ theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : Stri
       split at h; cases h
       obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
       rw [strRecN_close _ _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
-        nm_close b h64 hsize i _ hi hws h125, succ_toUInt64 b h64 hsize]
+        nm_close b h64 hsize i _ hi hws h125, succ_toUInt64 h64]
       exact ⟨rfl, rfl, hp, hs⟩
     simp only [show (byteAt b i == 125) = false by simpa using h125, Bool.false_eq_true,
       ite_false] at h
@@ -493,7 +493,7 @@ theorem numRec_link (i : USize) (w : Bool) (seen : UInt32) (n pre : Nat) (r : Na
       split at h; cases h
       obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
       rw [numRecN_close _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
-        nm_close b h64 hsize i _ hi hws h125, succ_toUInt64 b h64 hsize]
+        nm_close b h64 hsize i _ hi hws h125, succ_toUInt64 h64]
       exact ⟨rfl, rfl, hp, hn⟩
     simp only [show (byteAt b i == 125) = false by simpa using h125, Bool.false_eq_true,
       ite_false] at h
@@ -558,13 +558,14 @@ decreasing_by
     | (have := USize.lt_iff_toNat_lt.mp ‹i < numEnd b _›; omega)
     | (have := USize.lt_iff_toNat_lt.mp ‹i < _›; omega)
 
+omit hsize in
 theorem obj_open (v : USize) (hc : (byteAt b v == 123) = true) :
     v < b.usize ∧ (v + 1).toUInt64 = v.toUInt64 + 1 := by
   have hv : v < b.usize := by
     refine Classical.byContradiction fun hn => ?_
     have h0 : byteAt b v = 0 := by unfold byteAt; rw [dite_eq_right hn]
     rw [h0] at hc; exact absurd hc (by decide)
-  exact ⟨hv, succ_toUInt64 b h64 hsize v⟩
+  exact ⟨hv, succ_toUInt64 h64 v⟩
 
 theorem strEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanStrName b v = .ok r e) :
     (strRecEntryN b.data v.toUInt64).1 = e.toUInt64 ∧
@@ -574,7 +575,7 @@ theorem strEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanStrName b v
   split at h
   · rename_i hc
     unfold strRecEntryN
-    rw [← (obj_open b h64 hsize v hc).2]
+    rw [← (obj_open b h64 v hc).2]
     exact strRec_link b h64 hsize (v + 1) true 0 0 "" r e 0 0 0 h itemR_zero (fun h => absurd rfl h)
   · cases h
 
@@ -585,7 +586,7 @@ theorem numEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanNumName b v
   split at h
   · rename_i hc
     unfold numRecEntryN
-    rw [← (obj_open b h64 hsize v hc).2]
+    rw [← (obj_open b h64 v hc).2]
     exact numRec_link b h64 hsize (v + 1) true 0 0 0 r e 0 0 h itemR_zero itemR_zero
   · cases h
 

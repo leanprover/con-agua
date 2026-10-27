@@ -175,7 +175,7 @@ theorem keeps_cpl_internLit (l : ConLeche.Literal) : Keeps cpl (internE (.lit l)
 
 theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m')
+    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m')
     {n : NIdx} {us : LsIdx} {r : EIdx} (hrun : (internE (.const n us)).run a = .ok (r, a'))
     (hus : ∃ ls, denoteLs a.store.lss us = some ls) :
     CoreS dn m' a' vis fe M eb :=
@@ -183,7 +183,7 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [CREC, CSLOT, CLP])
+    (by simp [tier1, tierOff, CREC, CSLOT, CLP])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -193,13 +193,13 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
-    (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)))
+    (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [tier1, tierOff, CREC, CSLOT, CLP, EREC]) (by decide)))
     (hmode := hS.mode.frame hf (by decide) (by decide))
 
-theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m') :
+theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
+    hf.1 SPN (by simp [tier1, tierOff, CREC, CSLOT, CLP, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact StackKept.of_frame hf
 
@@ -220,7 +220,7 @@ theorem callW_internConst (hpf : p.lookup "const_find" = some constFind)
     AM.ok (internE (.const (decI f) (decI x))) a₀ ∧
     ArenaD m' (AM.st (internE (.const (decI f) (decI x))) a₀) ∧
     AM.res (internE (.const (decI f) (decI x))) a₀ = decI (r.headD 0) ∧
-    MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (internConst_spec p hpf hpp hp n s₀ f x) h
   obtain ⟨-, hm⟩ := hm
   obtain ⟨h1, h2, h3⟩ := internConst_D s₀.mem a₀ hD f x _ hf hx _ hm
@@ -237,7 +237,7 @@ def natArmProg' : Prog := natArmProg ++ [("nat_succ_lit", natSuccLitL)]
 def natFns : List FnName := natArmProg'.map (·.1)
 /-- What they write: the pool, the `lit` table (2, 3), the `const` table (18, 19 = `CREC`, `CSLOT`,
 and its `lp` column `CLP`), and the counts. -/
-def natA : List ArrId := [POOL, POOL1, 2, 258, 3, 259, CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256]
+def natA : List ArrId := [POOL, POOL1, 2, 258, 3, 259, CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP]
 def natC : List Word := [0, 2, 3, 18, 19]
 theorem natArmProg'_closed : closedA natArmProg' natA natC natFns = true := by decide +kernel
 
@@ -335,7 +335,7 @@ theorem callW_constE (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AStat
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hnm : HW nm) (r : List Word) (m' : Mem)
     (h : callW p n "const_e" [nm] s₀.mem = some (r, m')) :
     AM.ok (constE (decI nm)) a₀ ∧ CoreS dn m' (AM.st (constE (decI nm)) a₀) vis fe MM eb ∧
-    AM.res (constE (decI nm)) a₀ = decH r ∧ MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] s₀.mem m' ∧
+    AM.res (constE (decI nm)) a₀ = decH r ∧ MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] s₀.mem m' ∧
     HW (r.headD 0) := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
@@ -407,7 +407,7 @@ def CRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word
     (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb : Word) (r : List Word) (m' : Mem) (ok : List Word → Prop) : Prop :=
   AM.ok T a₀ ∧ CoreS dn m' (AM.st T a₀) vis fe M eb ∧ AM.res T a₀ = dec r ∧
-    MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m₀ m' ∧ ok r
+    MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m₀ m' ∧ ok r
 
 theorem CRef.pure {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec : List Word → α}
     {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
@@ -643,7 +643,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   dsimp only at hW
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
-  have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC := hfr.arr_eq EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)
+  have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC := hfr.arr_eq EREC (by simp [tier1, tierOff, CREC, CSLOT, CLP, EREC]) (by decide)
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by
@@ -828,7 +828,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
   have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC :=
-    hfr.arr_eq EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)
+    hfr.arr_eq EREC (by simp [tier1, tierOff, CREC, CSLOT, CLP, EREC]) (by decide)
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by

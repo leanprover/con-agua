@@ -19,7 +19,6 @@ their specs one induction on the fuel over the conjunction (`mutual_specs`). `in
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order
@@ -517,7 +516,7 @@ theorem idsLoop_spec (n : Nat) (s₀ : St) :
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
         L.Scan.Leaves.numEnd_spec p hL.skip_digits hL.num_end b hb64 n,
-        L.Front.Fields.readNat_spec p b hb hL.read_nat n, hpush] <;> finish [NONE]
+        L.Front.Fields.readNat_spec p b hL.read_nat n, hpush] <;> finish [NONE]
 
 theorem idsLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
@@ -551,7 +550,7 @@ theorem indNum_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q ks
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         slotNat_spec p b hb hL.skip_digits hL.num_end hL.slot_nat n,
-        L.Front.Fields.readNat_spec p b hb hL.read_nat n, fldPut_spec p hL n] <;>
+        L.Front.Fields.readNat_spec p b hL.read_nat n, fldPut_spec p hL n] <;>
       finish [numW, NONE]
 
 theorem indBool_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q v h s : Word)
@@ -639,6 +638,7 @@ theorem objLoop_succ (n : Nat) (hmem : MemberS p b n) (hloop : ObjLoopS p b n) :
       nextMember_spec p b hb hL.skip_ws hL.key_end hL.key_at_g1 hL.key_at_g2 hL.key_at_g3
         hL.key_at_g4 hL.key_at_g5 hL.key_at_g6 hL.key_at hL.value_at hL.next_member n] <;> finish
 
+omit hb in
 theorem obj_succ (n : Nat) (hloop : ObjLoopS p b (n + 1)) : ObjS p b (n + 1) := by
   intro s₀ i kind q hm
   rw [invoke_eq _ hL.ind_obj]
@@ -659,6 +659,7 @@ theorem member_succ (n : Nat) (hlist : ListS p b n) : MemberS p b (n + 1) := by
       indSlot_spec p hL n, indNum_spec p hL b hb n, indBool_spec p hL b hb n,
       indNList_spec p hL b hb n, fldPut_spec p hL n] <;> finish
 
+omit hb in
 theorem listLoop_succ (n : Nat) (hobj : ObjS p b n) (hloop : ListLoopS p b n) :
     ListLoopS p b (n + 1) := by
   intro s₀
@@ -671,6 +672,7 @@ theorem listLoop_succ (n : Nat) (hobj : ObjS p b n) (hloop : ListLoopS p b n) :
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, st64, ih, ho', ha'] <;>
     finish [flagsW]
 
+omit hb in
 theorem list_succ (n : Nat) (hloop : ListLoopS p b (n + 1)) : ListS p b (n + 1) := by
   intro s₀ v sub hm
   rw [invoke_eq _ hL.ind_list]
@@ -699,8 +701,8 @@ theorem mutual_specs (n : Nat) :
   | succ n ih =>
     obtain ⟨h1, h2, h3, h4, h5⟩ := ih
     have l1 := objLoop_succ p hL b hb n h3 h1
-    have l5 := listLoop_succ p hL b hb n h2 h5
-    exact ⟨l1, obj_succ p hL b hb n l1, member_succ p hL b hb n h4, list_succ p hL b hb n l5, l5⟩
+    have l5 := listLoop_succ p hL b n h2 h5
+    exact ⟨l1, obj_succ p hL b n l1, member_succ p hL b hb n h4, list_succ p hL b n l5, l5⟩
 
 end mspecs
 

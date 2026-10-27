@@ -182,7 +182,7 @@ theorem succColFree : ColFree succCS SRecRel := by
 
 /-- **What `intern_succ` changes**: the table's arrays, the column, the counts. -/
 theorem sinternW_frame (m : Mem) (u : Word) (w : Word) (m' : Mem) (hI : sinternW m u = some (w, m')) :
-    MemFrame [SREC, SREC + 256, SSLOT, SSLOT + 256, SHP, SHP + 256] [6, 7] m m' :=
+    MemFrame [SREC, tier1 SREC, SSLOT, tier1 SSLOT, SHP, tier1 SHP] [6, 7] m m' :=
   consInternM_frame succCS_wf hI
 
 theorem succLocal : RLocal succSch SRecRel shash [] [] := by

@@ -3,7 +3,6 @@ import ConAgua.Arena.Frame
 import ConAgua.Arena.StoreGrow
 import ConAgua.Arena.StoreFields
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The cons-table library: the relation and the user API (lane conslib)
@@ -61,11 +60,11 @@ theorem storeR_frame (hS : S.WF) (hkm : KMono S hs KP) (A₀ : List ArrId) (C₀
   have era : ∀ t, m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t) := fun t => by
     rcases tierA_cases' S.ra t with e | e <;> rw [e]
     · exact hfa _ hra hS.ra_ctl
-    · exact hfa _ hra' (by simp [CTL])
+    · exact hfa _ hra' (tier1_ne (by decide))
   have esa : ∀ t, m'.arr64 (tierA S.sa t) = m.arr64 (tierA S.sa t) := fun t => by
     rcases tierA_cases' S.sa t with e | e <;> rw [e]
     · exact hfa _ hsa hS.sa_ctl
-    · exact hfa _ hsa' (by simp [CTL])
+    · exact hfa _ hsa' (tier1_ne (by decide))
   have hloc := hl m m' era (fun b hb => hfa b (hA₀ b hb).1 (hA₀ b hb).2) (fun x hx => hfc x (h0 x hx))
   have ec : ∀ t : Word, t ≤ 1 → cntW S m' t = cntW S m t := by
     intro t ht
@@ -130,7 +129,7 @@ structure ConsSch.WF (C : ConsSch) : Prop where
     C.w.toNat * ((cntC C m t).toNat + 1) ≤ (m.arr64 (tierA C.ra t)).size
   colRoom : ∀ A, C.col = some A → ∀ (m : Mem) (t : Word), t ≤ 1 → pushOKC C m t = true →
     (cntC C m t).toNat < (m.arr64 (tierA A t)).size
-  /-- The column is a tier-0 id (tier 1 is `+ 256`). -/
+  /-- The column is a tier-0 id (tier 1 is `tier1`). -/
   colLt : ∀ A, C.col = some A → A < 256
   vs : ∀ (ks : List Word) (h : Word), ks.length = C.nk →
     (C.vsM (pushArgs C ks h)).length = C.w.toNat
@@ -872,7 +871,7 @@ theorem ghC_kp {C : ConsSch} (hW : C.WF) (m mi : Mem) (t i K : Word) (hK : C.KP 
 
 /-- A column's tier arrays are not `b` when neither of the column's ids is. -/
 theorem col_tier_ne {C : ConsSch} {b : ArrId}
-    (hcol : ∀ A, C.col = some A → A ≠ b ∧ A + 256 ≠ b) (t : Word) :
+    (hcol : ∀ A, C.col = some A → A ≠ b ∧ tier1 A ≠ b) (t : Word) :
     ∀ A, C.col = some A → tierA A t ≠ b := fun A hA e => by
   rcases tierA_cases' A t with e' | e' <;> rw [e'] at e
   · exact (hcol A hA).1 e
@@ -880,8 +879,8 @@ theorem col_tier_ne {C : ConsSch} {b : ArrId}
 
 /-- Outside the table's records (both tiers), counts and column, `pushRec` is the old memory. -/
 theorem pushRec_arr (C : ConsSch) (m : Mem) (t : Word) (ks : List Word) (b : ArrId)
-    (hb : b ≠ C.ra) (hb' : b ≠ C.ra + 256) (hc : b ≠ CTL)
-    (hcol : ∀ A, C.col = some A → A ≠ b ∧ A + 256 ≠ b) :
+    (hb : b ≠ C.ra) (hb' : b ≠ tier1 C.ra) (hc : b ≠ CTL)
+    (hcol : ∀ A, C.col = some A → A ≠ b ∧ tier1 A ≠ b) :
     (pushRec C m t ks).arr64 b = m.arr64 b := by
   have hbt : b ≠ tierA C.ra t := fun e => by
     rcases tierA_cases' C.ra t with e' | e' <;> rw [e'] at e <;> contradiction
@@ -903,8 +902,8 @@ theorem pushRec_col (C : ConsSch) (hW : C.WF) {A : ArrId} (hA : C.col = some A) 
 theorem pushRec_cnt (C : ConsSch) (hW : C.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (ks : List Word)
     (hctl : C.ca.toNat + 2 ≤ (m.arr64 CTL).size) (t' : Word) (ht' : t' ≤ 1) :
     cntC C (pushRec C m t ks) t' = if t' = t then cntC C m t + 1 else cntC C m t' := by
-  have hcol : ∀ A, C.col = some A → A ≠ CTL ∧ A + 256 ≠ CTL := fun A hA =>
-    ⟨(hW.col A hA).2.2.1, by simp [CTL]⟩
+  have hcol : ∀ A, C.col = some A → A ≠ CTL ∧ tier1 A ≠ CTL := fun A hA =>
+    ⟨(hW.col A hA).2.2.1, tier1_ne (by decide)⟩
   have hca := hW.sch.ca
   simp only [ConsSch.sch] at hca
   simp only [cntC, pushRec, colW_arr C _ _ _ _ CTL (col_tier_ne hcol t), rdW_set64, wrRecK_eq,
@@ -925,7 +924,7 @@ theorem consInternM_out (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}
 /-- The arrays an interning of `C` writes: both tiers of its record and slot arrays and of its
 column. -/
 def ConsSch.wset (C : ConsSch) : List ArrId :=
-  C.ra :: (C.ra + 256) :: C.sa :: (C.sa + 256) :: (C.col.toList ++ C.col.toList.map (· + 256))
+  C.ra :: (tier1 C.ra) :: C.sa :: (tier1 C.sa) :: (C.col.toList ++ C.col.toList.map tier1)
 
 /-- **What an interning writes**: the table's arrays and column (both tiers), its two counts. -/
 theorem consInternM_frame (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}
@@ -943,8 +942,8 @@ theorem consInternM_frame (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}
     refine pushRec_arr C m t ks b hb.1 hb.2.1 hc (fun A hA => ⟨fun e => ?_, fun e => ?_⟩)
     · exact hb.2.2.2.2.1 (by simp [hA, e])
     · exact hb.2.2.2.2.2 ⟨A, by simp [hA], e⟩
-  · have hcol : ∀ A, C.col = some A → A ≠ CTL ∧ A + 256 ≠ CTL := fun A hA =>
-      ⟨(hW.col A hA).2.2.1, by simp [CTL]⟩
+  · have hcol : ∀ A, C.col = some A → A ≠ CTL ∧ tier1 A ≠ CTL := fun A hA =>
+      ⟨(hW.col A hA).2.2.1, tier1_ne (by decide)⟩
     rw [he CTL (hW.sch.sa_ctl' t).symm, pushRec, colW_arr C _ _ _ _ CTL (col_tier_ne hcol t), rdW_set64,
       wrRecK_eq, wrRec_arr_ne C.sch _ _ CTL (hW.sch.ra_ctl' t).symm]
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hx
@@ -958,6 +957,7 @@ section word
 variable (hW : C.WF) (hR : ConsR C R m on P Q)
 include hW hR
 
+omit hW in
 /-- A hit's index is below the tier's node count, so below `2^27`. -/
 theorem probeC_hit_lt (ks : List Word) (h t : Word) (ht : t ≤ 1) (hr : probeC C m ks h t ≠ [])
     (hh : (probeC C m ks h t).headD 0 ≠ 0) : ((probeC C m ks h t).tail.headD 0).toNat < 2 ^ 27 := by
@@ -994,7 +994,7 @@ theorem consInternM_word {ks : List Word} {w : Word} {m' : Mem}
   · rename_i hn hh
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, -⟩ := h
-    exact ⟨0, _, by decide, probeC_hit_lt hW hR ks (C.qhM m ks) 0 (by decide)
+    exact ⟨0, _, by decide, probeC_hit_lt hR ks (C.qhM m ks) 0 (by decide)
       (fun e => hn ⟨hh.1, e⟩) hh.2, b0 _, fun _ => rfl⟩
   split at h
   · rename_i hfl
@@ -1004,7 +1004,7 @@ theorem consInternM_word {ks : List Word} {w : Word} {m' : Mem}
     · rename_i hz hhit
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, -⟩ := h
-      exact ⟨1, _, by decide, probeC_hit_lt hW hR ks (C.qhM m ks) 1 (by decide) hz hhit, b1 _,
+      exact ⟨1, _, by decide, probeC_hit_lt hR ks (C.qhM m ks) 1 (by decide) hz hhit, b1 _,
         fun h0 => absurd h0 hfl⟩
     split at h
     · rename_i hp

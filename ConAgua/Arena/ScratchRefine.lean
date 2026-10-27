@@ -336,7 +336,7 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
     {C₀ : List Word} (hW : C.WF) (hl : RLocal C.sch R C.hsM A₀ C₀)
     (hA₀ : ∀ b ∈ A₀, b ∉ slot1Arrs ∧ b ≠ CTL) (hC₀ : ∀ x ∈ C₀, x ∉ resetCtl)
     (hca : C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts) (hsa : C.sa ∈ scrSlots)
-    (hra : C.ra + 256 ∉ slot1Arrs)
+    (hra : tier1 C.ra ∉ slot1Arrs)
     (m : Mem) (f : Word) (hlo : (rdW ((preMem m).arr64 CTL) SCB).toNat < 2 ^ 62)
     (h62 : SCB.toNat < ((preMem m).arr64 CTL).size) {on : Bool} {tbP tbS : Tbl α (Idx k) δ}
     (hR : ConsR C R m on tbP tbS) :
@@ -433,7 +433,7 @@ theorem ArenaD.resetA (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
   have e : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {A₀ : List ArrId} {C₀ : List Word}
       (C : ConsSch) (R : Mem → Word → Word → α → Prop), C.WF →
       RLocal C.sch R C.hsM A₀ C₀ → (∀ b ∈ A₀, b ∉ slot1Arrs ∧ b ≠ CTL) → (∀ x ∈ C₀, x ∉ resetCtl) →
-      C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts → C.sa ∈ scrSlots → C.ra + 256 ∉ slot1Arrs →
+      C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts → C.sa ∈ scrSlots → tier1 C.ra ∉ slot1Arrs →
       ∀ (on' : Bool) (tbP tbS : Tbl α (Idx k) δ),
       ConsR C R m on' tbP tbS → ConsR C R (resetMemA (preMem m) f) (f != 0) tbP Tbl.empty :=
     fun C R hW hl hA₀ hC₀ hca hsa hra on' tbP tbS h =>
@@ -444,7 +444,7 @@ theorem ArenaD.resetA (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
       hf.2.2.2
   have hM : MemosR (resetMemA (preMem m) f) a.memos :=
     hR.memos.frame (by decide) (by simp [resetCtl, scratchCnts, memoCtl, SCB]) hf
-  have hcP : ∀ {α : Type} A, A ≠ CTL → A ∉ slot1Arrs → A + 256 ∉ slot1Arrs →
+  have hcP : ∀ {α : Type} A, A ≠ CTL → A ∉ slot1Arrs → tier1 A ∉ slot1Arrs →
       cP (α := α) A (resetMemA (preMem m) f) = cP A m := fun A hA h1 h2 => by
     funext t i x d; simp only [cP, hf.tier A h1 h2 hA]
   have hE : ∀ {α : Type} [BEq α] [Hashable α] (P : Nat → α → UInt64 → Prop),

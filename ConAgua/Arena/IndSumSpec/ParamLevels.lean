@@ -173,7 +173,7 @@ set_option experimental.vcgen true
 /-! ## Frames -/
 
 theorem pinternW_mfrP {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
-  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h, by simp [ConsSch.wset, paramCS, PREC, PSLOT],
+  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h, by simp [tier1, tierOff, ConsSch.wset, paramCS, PREC, PSLOT],
     by simp [paramCS]⟩
 
 theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
@@ -212,7 +212,7 @@ theorem plW_mfrP {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k 
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
   rw [plK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
-  rw [← h.2]; exact MFr.of_frame (ilF_frame h2) (by simp [POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
+  rw [← h.2]; exact MFr.of_frame (ilF_frame h2) (by simp [tier1, tierOff, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
 
 def tmmK3 (p : Prog) (n : Nat) (I us fvo fl2 nP nidx co cl t pfo pfl blvls : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)

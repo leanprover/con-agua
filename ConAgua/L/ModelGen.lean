@@ -85,7 +85,9 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   setLocs, ld64, st64, setG`); `finish`, `gen`, `instances`: the hints and configuration of
   `finish`; `sym "…"`: options of `sym`; `simp [lemmas]`: prove each step by `vcgen` and
   `simp_all` over the models' equations, the locals' lemmas and `lemmas` instead of
-  `sym … finish` (cheaper for many paths and small functions); `heartbeats`: per step theorem; `trace`: log the
+  `sym … finish` (cheaper for many paths and small functions); `locals` (with `simp`): evaluate the
+  locals by `simp only` before `simp_all` (cheaper for long functions with many calls and stores,
+  IndBGrpM); `heartbeats`: per step theorem; `trace`: log the
   generated commands.
 * `errors`: (pass `L.Arena.ld64_rdW_specE` in `extra`: word loads are not unfolded) the models keep the errors (the verdict proofs, `Arena/Verdict.lean`). A model is
   `Except L.Err …` (`.ok` for `some`); an `abort R` is `.error (.abort R)` (`abort` is code `0`);
@@ -1549,7 +1551,8 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" instances " num)?
   (&" simp " "[" term,* "]")?
   (&" errors")?
-  (&" trace")? : command
+  (&" trace")?
+  (&" locals")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1608,6 +1611,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let simpTs? : Option (Array Term) := if stx[18].getNumArgs == 0 then none else some ((optList 18).map (⟨·⟩))
   let exc := stx[19].getNumArgs != 0
   let doTrace := stx[20].getNumArgs != 0
+  let preLocals := stx[21].getNumArgs != 0
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
@@ -1995,16 +1999,27 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let hintsT := if hintsTxt.isEmpty then "" else s!"[{String.intercalate ", " hintsTxt}]"
   -- `simp [..]`: the steps by `vcgen` then `simp_all` over the models' equations (PLAN.md, "no
   -- `sym … finish` on a function with many paths"), instead of `sym … => vcgen … <;> finish`
-  let simpTxt? ← simpTs?.mapM fun ts => do
-    let user ← ts.toList.mapM (pp ·.raw)
-    let base := ["L.LocEq", "L.St.setLoc_loc", "L.St.setLoc_mem", "L.St.setLocs_nil",
+  let simpBase := ["L.LocEq", "L.St.setLoc_loc", "L.St.setLoc_mem", "L.St.setLocs_nil",
       "L.St.setLocs_cons", "L.Locals.init_nil", "L.Locals.init_cons_zero", "L.Locals.init_cons_succ",
       "L.Sig.retVal", "L.Sig.retOr", "L.BinOp.eval", "L.Cmp.eval", "List.headD_cons", "List.headD_nil",
       "List.tail_cons", "List.tail_nil"]
+  let simpTxt? ← simpTs?.mapM fun ts => do
+    let user ← ts.toList.mapM (pp ·.raw)
     let models := (fis.toList.map (s!"{·.model}")) ++ (st.ks.toList.map (s!"{·.name}"))
-    pure (String.intercalate ", " (base ++ models ++ user))
-  let stepTac (attrs vcg : String) : String := match simpTxt? with
-    | some l => s!"(vcgen [{vcg}] <;> (try simp_all [{l}]) <;> grind [{attrs}])"
+    pure (String.intercalate ", " (simpBase ++ models ++ user))
+  -- Before `simp_all`, the induction hypotheses `ihs` are cleared: `vcgen` has used them, and
+  -- `simp_all` would simplify them again and again, against every other hypothesis (IndBTmn
+  -- 106 s -> 9 s). With `locals`, the locals are first evaluated by one `simp only … at *`: `vcgen`
+  -- leaves each local as a chain of `setLoc`s through the states of all statements before it, in
+  -- every hypothesis, and `simp_all` evaluates them again in each round (IndBGrpM 335 s -> 93 s).
+  -- Not the default: on small functions the extra pass costs more than it saves (WhnfModels7E runs
+  -- out of heartbeats, ClassFeR 35 s -> 48 s), and where `simp_all` fails, `grind` needs the
+  -- `LocEq`s folded (CkcW).
+  let stepTac (attrs vcg : String) (ihs : List String) : String := match simpTxt? with
+    | some l =>
+      let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
+      let pre := if preLocals then s!" <;> (try simp only [{String.intercalate ", " simpBase}] at *)" else ""
+      s!"(vcgen [{vcg}]{clr}{pre} <;> (try simp_all [{l}]) <;> grind [{attrs}])"
     | none => s!"sym {symCfg}only [{attrs}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
   let parseTac (txt : String) : CommandElabM Syntax := do
     -- the library's names root-qualified, so that a binder `L` does not capture them
@@ -2075,7 +2090,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let vcg := String.intercalate ", "
       ((["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs"] ++ loadTxt ++ ["L.st64", "L.setG"] ++
         extraTxt).eraseDups ++ calleeSpecs lm.called ++ ["ih"])
-    let tac ← parseTac s!"induction n generalizing s₀ with\n  | zero => vcgen [L.exec] <;> grind\n  | succ n ih => rw [L.exec, L.step_while (w := {lm.stmt}) rfl]; {stepTac attrsTxt vcg}"
+    let tac ← parseTac s!"induction n generalizing s₀ with\n  | zero => vcgen [L.exec] <;> grind\n  | succ n ih => rw [L.exec, L.step_while (w := {lm.stmt}) rfl]; {stepTac attrsTxt vcg ["ih"]}"
     emit doTrace (← withHB (← `(command|
       /-- The loop's spec (generated by `l_model`): its model is its meaning. -/
       theorem $(mkIdent (lm.name ++ `spec)):ident $bs* ($nI : Nat) ($s0 : L.St) :
@@ -2155,9 +2170,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let g := if k == 1 then "" else s!"case g{i+1} => "
     zero := zero ++ s!"\n    {g}({pre}; vcgen [L.exec] <;> grind)"
     -- under `simp`, an unused induction hypothesis is cleared (`simp_all` would rewrite it)
-    let ihTxt := if simpTs?.isSome && !fis.any (called.contains ·.lname) then "clear ih"
-      else if k == 1 then "have ih1 := ih" else s!"obtain ⟨{ihs}⟩ := ih"
-    let tac ← parseTac s!"{ihTxt}; {pre}; {stepTac attrsTxt vcg}"
+    let (ihTxt, ihNames) := if simpTs?.isSome && !fis.any (called.contains ·.lname) then ("clear ih", [])
+      else if k == 1 then ("have ih1 := ih", ["ih", "ih1"])
+      else (s!"obtain ⟨{ihs}⟩ := ih", (List.range k).map fun i => s!"ih{i+1}")
+    let tac ← parseTac s!"{ihTxt}; {pre}; {stepTac attrsTxt vcg ihNames}"
     let stepName := mkIdent (specName.getId ++ Name.mkSimple s!"step{i+1}")
     emit doTrace (← withHB (← `(command|
       theorem $stepName:ident $bs* $nB:bracketedBinder $ihB:bracketedBinder : $ci := by $(⟨tac⟩):tactic)))
