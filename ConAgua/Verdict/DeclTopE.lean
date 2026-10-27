@@ -1,4 +1,7 @@
 import ConAgua.Verdict.DeclDefnE
+import ConAgua.Verdict.DeclAxiomE
+import ConAgua.Verdict.DeclFoldE
+import ConAgua.Verdict.DeclQuotE
 
 /-!
 # Phase A's fold: the error claim from the leaves' (lane `verdicts-b`, helper `d`)

@@ -1,4 +1,6 @@
-import ConAgua.Verdict.IndBTmo
+import ConAgua.Arena.RecGenSpec17
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictFns
 
 /-!
 # Error refinement of `target_major_of_member` (lane `verdicts-b`, helper `ib`)

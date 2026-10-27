@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndT.RecGen7
 import ConAgua.Verdict.IndBHdr
 import ConAgua.Verdict.IndBRec1
 

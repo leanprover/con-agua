@@ -1,5 +1,5 @@
-import ConAgua.Verdict.IndA2
-import ConAgua.Arena.DeclArmT
+import ConAgua.Verdict.IndA1
+import ConAgua.Verdict.IndAGen
 
 /-!
 # `check_shapeless_formers` and `check_shapeless`: ok run and error claims (lane `verdicts-b`, helper `ia`)

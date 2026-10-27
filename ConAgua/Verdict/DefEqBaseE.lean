@@ -1,5 +1,3 @@
-import ConAgua.L.ModelGen
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.KnotE
 import ConAgua.Arena.DefEqKnot
 import ConAgua.Checker.NoVerdictFns

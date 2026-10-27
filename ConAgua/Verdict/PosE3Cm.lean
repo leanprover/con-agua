@@ -1,4 +1,5 @@
-import ConAgua.Verdict.PosE3Fm
+import ConAgua.Arena.IndPos2
+import ConAgua.Arena.Verdict
 
 /-!
 # `nest_ctors`' error model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)

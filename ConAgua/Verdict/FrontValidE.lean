@@ -1,8 +1,6 @@
 import ConAgua.Verdict.FrontOrderE
 import ConAgua.Verdict.FrontRecsE
 import ConAgua.Verdict.FrontRunE
-import ConAgua.Front.DeclsPre
-import ConRon.Bridge.Promote.Walk
 
 /-!
 # `validate_ind_d`'s error refinement (lane `verdicts-b`, helper `f2`)

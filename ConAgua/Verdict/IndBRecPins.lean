@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecCheckSpec24
-import ConAgua.Verdict.IndBStream
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictFns
 
 /-!
 # Error refinement of `target_rec_pins` (lane `verdicts-b`, helper `ib`)

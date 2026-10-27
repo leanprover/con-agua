@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.RecCheckTpd
-import ConAgua.Verdict.IndBRec6
+import ConAgua.Checker.NoVerdictFns
+import ConAgua.Verdict.DeclValE
 
 /-!
 # Error refinement of `target_params_def_eq_step` (lane `verdicts-b`, helper `ib`)

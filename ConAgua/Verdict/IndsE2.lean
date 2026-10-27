@@ -1,4 +1,10 @@
-import ConAgua.Verdict.IndsE1
+import ConAgua.Arena.CrOKFrame
+import ConAgua.Arena.DeclValSpec
+import ConAgua.Arena.IndInstallSpec10
+import ConAgua.Arena.IndRealApdT
+import ConAgua.Arena.KnotEntry
+import ConAgua.Verdict.IndAGen
+import ConRon.Bridge.Inductives.BlockInstall
 
 /-!
 # `check_block_inds`' callees: the error-claim statements (lane `verdicts-b`, helper `ia2-inds`)

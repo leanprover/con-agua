@@ -1,8 +1,5 @@
-import ConAgua.Verdict.IndA3
-import ConAgua.Verdict.IndA5
-import ConAgua.Verdict.IndBE
-import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.IndT.Install4
+import ConAgua.Arena.Verdict
 
 /-!
 # `check_block_inds`' error refinement: the error models (lane `verdicts-b`, helper `ia2-inds`)

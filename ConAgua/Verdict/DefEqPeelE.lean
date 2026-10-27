@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DefEqQuickE
+import ConAgua.Compiler.RunEq
 
 /-!
 # The batched ∀ descent's error claims: `peel_*`, `defeq_peel`, `defeq_binders` (lane `verdicts-b`,

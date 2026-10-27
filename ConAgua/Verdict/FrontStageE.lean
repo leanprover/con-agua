@@ -1,9 +1,7 @@
-import ConAgua.Verdict.FrontRunE
 import ConAgua.Verdict.FrontValidE
 import ConAgua.Verdict.FrontSafeE
 import ConAgua.Verdict.FrontPreSimE
 import ConAgua.Checker.VerdictEntry1
-import ConAgua.Checker.PipeFinal
 
 /-!
 # The frontend's two stages' error specs: `builtin_prelude`, `front_run` (lane `verdicts-b`,

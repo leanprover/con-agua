@@ -1,5 +1,4 @@
-import ConAgua.Verdict.DeclFoldE
-import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Verdict.DeclHdrE
 
 /-!
 # The verdict claims of `install_basis_decl`, `install_basis_decls`, `check_basis_decl`

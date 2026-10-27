@@ -1,4 +1,6 @@
-import ConAgua.Verdict.PosTopE2
+import ConAgua.Checker.NoVerdictFns
+import ConAgua.Verdict.IndBE
+import ConAgua.Verdict.PosTopE1
 
 /-!
 # The error claims of `check_abs_ctor_sorts_one`, `check_abs_ctor_sorts`,

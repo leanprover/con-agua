@@ -1,5 +1,5 @@
-import ConAgua.Verdict.WhnfUnitE
-import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Verdict.WhnfModels7E
+import ConAgua.Verdict.WhnfSlotE
 
 /-!
 # `struct_eta_cert` and its pieces: error claims (lane `verdicts-b`, helper `k2`)

@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfModelsE
 import ConAgua.Arena.KnotE
-import ConAgua.Arena.WhnfCoreLoop
-import ConAgua.Arena.WhnfDeltaSlot
 import ConAgua.Arena.DefEqKnot
 import ConAgua.Checker.NoVerdictClosed
 

@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.CheckIndDecl
-import ConAgua.Verdict.IndE
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictFns
 
 /-!
 # Error refinements of the recursor generation's leaves (lane `verdicts-b`, helper `ib`)

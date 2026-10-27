@@ -1,4 +1,5 @@
-import ConAgua.Verdict.IndBCcs
+import ConAgua.Arena.RecGen
+import ConAgua.Arena.Verdict
 
 /-!
 # The error model of `gen_rec_check_prep` (lane `verdicts-b`, helper `ib`)

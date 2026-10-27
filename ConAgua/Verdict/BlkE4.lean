@@ -1,6 +1,5 @@
 import ConAgua.Verdict.IndA3
 import ConAgua.Verdict.IndBE
-import ConAgua.Arena.IndT.RecGen21
 
 /-!
 # `check_block_classes`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)

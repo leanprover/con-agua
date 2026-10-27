@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfNatE
 import ConAgua.Verdict.WhnfProjE
-import ConAgua.Verdict.WhnfIotaRecE
-import ConAgua.Verdict.WhnfPrepE
 import ConAgua.Verdict.WhnfCertsE
 import ConAgua.Verdict.WhnfIdxE
 import ConAgua.Verdict.WhnfPirrE

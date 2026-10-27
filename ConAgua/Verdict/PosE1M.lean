@@ -1,4 +1,5 @@
-import ConAgua.Verdict.PosE
+import ConAgua.Arena.IndPos2
+import ConAgua.Arena.Verdict
 
 /-!
 # Error models of `nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`, their leaves

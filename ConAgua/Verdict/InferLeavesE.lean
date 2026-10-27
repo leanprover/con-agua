@@ -1,9 +1,7 @@
 import ConAgua.Arena.InferProj2
-import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.KnotE
 import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Arena.DefEqStuckCert
-import ConAgua.Arena.DefEqStuckShape
 
 /-!
 # Error refinements of `infer_const`, `infer_proj`, `infer_proj_at` (lane `verdicts-b`, helper `c1`)

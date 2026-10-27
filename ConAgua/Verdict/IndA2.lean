@@ -1,6 +1,5 @@
 import ConAgua.Verdict.IndA1
 import ConAgua.Verdict.IndAGen
-import ConAgua.Arena.IndT.Block
 
 /-!
 # `check_block`'s error refinement (lane `verdicts-b`, helper `ia`)
