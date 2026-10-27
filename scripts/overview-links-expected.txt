@@ -2090,7 +2090,7 @@
     43  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
     44  """
 
-== scripts/gates.sh#L11-L20
+== scripts/gates.sh#L11-L21
     11  # Steps, in order (stops at the first failure):
     12  #   links       scripts/overview-links.sh            OVERVIEW.md/README.md line anchors
     13  #   vendor      scripts/bump-con-ron.sh --check      vendor/ = upstream + patches
@@ -2100,9 +2100,10 @@
     17  #   build       scripts/lake build ConAgua           (timeout 90 min)
     18  #   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
     19  #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
-    20  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
+    20  #   checker-prog  scripts/checker_prog.py --no-build --check   the generated program files are current
+    21  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 
-== scripts/gate_select.py#L17-L42
+== scripts/gate_select.py#L17-L43
     17  The table (first match per path; "cheap" = links, vendor, modules, provenance, reasons, always run):
     18  
     19    path                                                        steps
@@ -2113,22 +2114,23 @@
     24      .gitattributes, .github/**
     25    checker.s, pins.bin                                         build, e2e (checker.s is an input file
     26                                                                of ConAguaAsm; both go into ./checker)
-    27    main.c, Makefile, reasons.h, scripts/{diff-e2e,e2e}.py      e2e
+    27    main.c, Makefile, reasons.h, scripts/diff-e2e.py            e2e
     28    scripts/{core,loop,leaf}_fns.{py,lean}, preloop_ws.py       build + that closure check
     29    scripts/shake{.py,-setup.sh,-allowlist.txt,-keep.txt}       build, shake
-    30    ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the four closure checks if
-    31                                                                the module is in the import closure of
-    32                                                                ConAgua.Checker.Prog or of a closure's
-    33                                                                generated file (CoreErec, LoopFns,
-    34                                                                LeafFns, PreLoopWS, PreLoopWSStages)
-    35    other scripts/** (not run by a gate)                        cheap
-    36    anything else                                               ALL (when unsure, everything)
-    37  
-    38  The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py --check`) run
-    39  `lake env lean` against ConAgua.Checker.Prog, so they imply `build`. `e2e` is `make checker` and
-    40  `scripts/diff-e2e.py`: the binary is exactly main.c + checker.s + pins.bin (a change to L code, the
-    41  compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
-    42  fails), so these files (and reasons.h, the abort messages) decide whether the verdicts can change.
+    30    scripts/checker_prog.py; ConAgua/E2E/Dump.lean,             build, checker-prog (`checker_prog.py
+    31      ConAgua/Checker/{Sources,Entry,Prelude}.lean and the        --no-build --check`: the generator still
+    32      generated ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgSkt,    runs and writes the committed text);
+    33      ProgWf,Asm,AsmPart*}.lean; scripts/e2e.py                   .lean files also shake + the closures,
+    34                                                                e2e.py also e2e
+    35    ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the four closure checks if
+    36                                                                the module is in the import closure of
+    37                                                                ConAgua.Checker.Prog or of a closure's
+    38                                                                generated file (CoreErec, LoopFns,
+    39                                                                LeafFns, PreLoopWS, PreLoopWSStages)
+    40    other scripts/** (not run by a gate)                        cheap
+    41    anything else                                               ALL (when unsure, everything)
+    42  
+    43  The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py --check`) run
 
 == .github/workflows/ci.yml#L4-L76
      4  # WHAT THE JOBS COVER
