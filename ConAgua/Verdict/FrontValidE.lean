@@ -166,7 +166,7 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, validateE.k_vi_unsafe.arm1] at he
-  obtain ⟨s1, hs1, hsm1, hW1⟩ := triple_of_callE (unsafe_spec p hL n ⟨m, Locals.init []⟩ to tn 0) h1
+  obtain ⟨s1, hs1, -, hsm1, hW1⟩ := triple_of_callE (unsafe_spec p hL n ⟨m, Locals.init []⟩ to tn 0) h1
   rw [← hs1, hsm1] at he
   have hu := unsafeW_twin hTy hTn hto n 0 hW1
   have hsafe : (tys.any fun x => x.isUnsafe) = false := by

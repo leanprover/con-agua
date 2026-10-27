@@ -252,3 +252,52 @@ Some conversions cost time (`WhnfIotaRecRefine2`, `WhnfDeltaRefine*`): the gener
 inline `max`/`min` as arithmetic (`x + (y - x) * (if x < y then 1 else 0)`) and lift an `if` out
 of a result tuple (`if c then some (1, m) else some (0, m)` for `some (if c then 1 else 0, m)`),
 which the refinements bridge with small lemmas; and `fold` takes no `if` patterns (`ispLen`).
+
+### The generator's fixed cost (master 821c7d28, all 197 `l_model` modules)
+
+Each module alone (`lake env lean`, `trace.profiler` at 1 ms plus the profiler's cumulative
+categories, `_tmp/mgen/cost/`), summed, CPU seconds:
+
+| | s | share |
+|---|---:|---:|
+| generated step proofs (`….stepᵢ`) | 1 032 | the work the hand specs did before |
+| generated loop specs | 85 | likewise |
+| `l_model` commands, synchronous part (the elaborator, the models' definitions with their equation lemmas, the arms' statements, `grind_pattern`s) | 166 | ≈ 7 % of these modules |
+| of which the interpreted elaborator (`interpretation`) | 59 | ≈ 2.5 % (0.3 s per module) |
+| the arms' proofs (`….armᵢ`, `abortᵢ`, `none`) | 22 | ≈ 1 % |
+| equation lemmas (`Elab.definition.eqns`, `matchEqs`, top level) | < 1 | |
+| all categories | ≈ 2 400 | |
+
+**Precompiling the elaborator** would save at most the 59 s of interpretation, ≈ 1 % of the
+build's 5 200 s of module time, spread over 197 modules that build in parallel. It needs the
+elaborator's imports (`L/Notation`, `L/Logic`, `L/ErrSpec` and theirs) compiled to a shared
+library as well and loaded by every importer, and the artifact cache would have to carry the
+library. Not done: the saving is below the noise of a cold build.
+
+**Fewer arms**: the arms' proofs cost 22 s in all; their statements and patterns are part of the
+166 s. The refinements use the arms by name, and the `finish` recipe needs their patterns, so
+dropping them would trade a few percent of the generated modules' time for hand lemmas in the
+refinements. Not done. What does show, per module, is the cost against a *small fast* hand spec:
+there the hand proof was cheaper than the arms that replace it, hence the roll-out rule since
+batch 3 (convert where the hand spec was slow or long).
+
+### Batch 4
+
+Generator: `u64(a ⋈ b)` is a comparison word that `fold` patterns match (`if a < b then 1 else 0`,
+`Cmp.ult.evalW a b`): `iota_rec_fire2` with `fold [rpLen]` 2.48 → 1.27 s (hand 0.70 s), its
+bridge lemma gone; `pre [P]` moved right after `specs` (written after the recipe, it did not
+parse as part of the command).
+
+| file(s) | functions | lines | module time |
+|---|---|---:|---|
+| `Front/IndApplySpec` (+ `IndApplyRefine2/3/5/7`) | `unsafe`, `np_go`, `ids_go`, `listed_go`, `order_go`, `rec_idx` (`void`) | −122 | 16.8 → 16.7 |
+| `WhnfIotaRecRefine2` (`fold [rpLen]`) | | −5 | −1.2 s |
+
+Tried and not converted (the rule: no slower modules): `Front/IndApplySpec2` (every function
+generated, but the module went 7.4 → 14.5 s: the steps 1.5–2× the hand ones, plus `arr8 IN`
+lemmas for the preconditions at each call); `Front/IndFieldsSpec`, `ApplyDecl` (`decl_kind`
++4 % for −19 lines; the rest checks input bounds or is used as total functions);
+`Front/NatDec`, `Unescape`, `Line` (fuel-free well-founded hand models proved by
+`fun_induction`; callee posts carry `Keep s₀.mem s'.mem`, which `l_model` rejects). So `pre`
+unblocked little in `Front/` too: what blocks there is `Keep` in callee posts and refinements
+that unfold the hand models structurally.

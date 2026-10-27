@@ -307,15 +307,15 @@ def tPre : FunDecl := lfn (i) locals (x) {
 
 l_model tPreC_spec (p : Prog) (hp : p.lookup "t_pre_c" = some tPreC)
   fns [hp ↦ tPreCW ro]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
   pre [i < 5]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 l_model tPre_spec (p : Prog) (hp : p.lookup "t_pre" = some tPre)
     (hc : p.lookup "t_pre_c" = some tPreC)
   fns [hp ↦ tPreW]
   specs [tPreC_spec p hc n]
-  grind [arena_grind] simp []
   pre [i < 4]
+  grind [arena_grind] simp []
 
 l_model tNestR2_spec (p : Prog) (hp : p.lookup "t_nest_r2" = some tNestR2)
   fns [hp ↦ tNestR2W]

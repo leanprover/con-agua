@@ -81,7 +81,8 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   call stays `callW p n "f" …`; also lets a loop call its own function). A conjunct
   `r = [r.headD 0, …]` (the result's length) is ignored.
 * `fold`: named functions whose bodies are folded back into the model: word arithmetic
-  (`tierW h = (h >>> 27) &&& 1`) or a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`).
+  (`tierW h = (h >>> 27) &&& 1`, also with comparison words `if a < b then 1 else 0` or
+  `Cmp.ult.evalW a b`, the model of `u64(a < b)`: `maxW`, `rpLen`) or a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`).
 * `bind c`: the code after a call with several results is an inline continuation
   `c (call) fun ρᵢ μᵢ => …` instead of a named one (`bind ntBW`: the hand models of `Decl*`).
 * `extra`: more lemmas for `vcgen` (the default is `exec, step, evalE, evalC, evalArgs, setLoc,
@@ -209,6 +210,11 @@ meta partial def MT.render : MT → MetaM Term
     | "<<<" => `(($a <<< $b : L.Word))
     | ">>>" => `(($a >>> $b : L.Word))
     | "mulhi" => `((UInt64.ofNat (($a).toNat * ($b).toNat / 2 ^ 64)))
+    -- `u64(a ⋈ b)`: the comparison's word (as `fold` patterns, `max`/`min` idioms)
+    | "u=" => `((if $a = $b then (1 : Word) else 0))
+    | "u≠" => `((if $a ≠ $b then (1 : Word) else 0))
+    | "u<" => `((if $a < $b then (1 : Word) else 0))
+    | "u≤" => `((if $a ≤ $b then (1 : Word) else 0))
     | _ => throwError "l_model: unknown operator {o}"
 
 meta partial def MC.render : MC → MetaM Term
@@ -280,6 +286,26 @@ meta partial def exprPat (e : Lean.Expr) : MetaM MT := do
   | (``HXor.hXor, #[_, _, _, _, a, b]) => return .op "^^^" (← exprPat a) (← exprPat b)
   | (``HShiftLeft.hShiftLeft, #[_, _, _, _, a, b]) => return .op "<<<" (← exprPat a) (← exprPat b)
   | (``HShiftRight.hShiftRight, #[_, _, _, _, a, b]) => return .op ">>>" (← exprPat a) (← exprPat b)
+  | (``ite, #[_, c, _, t, f]) =>
+    -- `if a ⋈ b then 1 else 0`
+    let lit (x : Lean.Expr) : Option Nat := match x.consumeMData.getAppFnArgs with
+      | (``OfNat.ofNat, #[_, n, _]) => n.rawNatLit?
+      | _ => x.rawNatLit?
+    unless lit t == some 1 && lit f == some 0 do throwError "l_model: fold pattern: unsupported term {e}"
+    match c.consumeMData.getAppFnArgs with
+    | (``LT.lt, #[_, _, a, b]) => return .op "u<" (← exprPat a) (← exprPat b)
+    | (``LE.le, #[_, _, a, b]) => return .op "u≤" (← exprPat a) (← exprPat b)
+    | (``Eq, #[_, a, b]) => return .op "u=" (← exprPat a) (← exprPat b)
+    | (``Ne, #[_, a, b]) => return .op "u≠" (← exprPat a) (← exprPat b)
+    | _ => throwError "l_model: fold pattern: unsupported condition {c}"
+  | (``L.Cmp.evalW, #[c, a, b]) =>
+    let o ← match c.consumeMData.constName? with
+      | some ``L.Cmp.eq => pure "u="
+      | some ``L.Cmp.ne => pure "u≠"
+      | some ``L.Cmp.ult => pure "u<"
+      | some ``L.Cmp.ule => pure "u≤"
+      | _ => throwError "l_model: fold pattern: unsupported comparison {c}"
+    return .op o (← exprPat a) (← exprPat b)
   | _ => throwError "l_model: fold pattern: unsupported term {e}"
 
 /-- `l = g.tail.….tail` (`j` tails): `(g, j)`. -/
@@ -904,8 +930,15 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     pure (.raw (← `(L.le64 $src (UInt64.toNat $(← (← transE E ctx i).render)))))
   | `(lexpr| mulhi($a:lexpr, $b:lexpr)) => bin "mulhi" a b
   | `(lexpr| u64($c:lcond)) => do
-    let c ← transC E ctx c
-    pure (.raw (← `(if $(← c.render) then (1 : Word) else 0)))
+    match ← transC E ctx c with
+    | .cmp o a b =>
+      match o with
+      | "=" => pure (foldRoot E.folds (.op "u=" a b))
+      | "≠" => pure (foldRoot E.folds (.op "u≠" a b))
+      | "<" => pure (foldRoot E.folds (.op "u<" a b))
+      | "≤" => pure (foldRoot E.folds (.op "u≤" a b))
+      | _ => pure (.raw (← `(if $(← (MC.cmp o a b).render) then (1 : Word) else 0)))
+    | c => pure (.raw (← `(if $(← c.render) then (1 : Word) else 0)))
   | `(lexpr| ($e:lexpr)) => transE E ctx e
   | `(lexpr| $a:lexpr * $b:lexpr) => bin "*" a b
   | `(lexpr| $a:lexpr + $b:lexpr) => bin "+" a b
@@ -1692,6 +1725,7 @@ syntax lmodelFn := term " ↦ " ident (&" ro")? (&" list")? (&" tuple")? (&" voi
 syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   &" fns " "[" lmodelFn,* "]"
   (&" specs " "[" term,* "]")?
+  (&" pre " "[" term "]")?
   (&" grind " "[" ident,* "]")?
   (&" fold " "[" ident,* "]")?
   (&" extra " "[" term,* "]")?
@@ -1705,8 +1739,7 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" simp " "[" term,* "]")?
   (&" errors")?
   (&" trace")?
-  (&" locals")?
-  (&" pre " "[" term "]")? : command
+  (&" locals")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1754,21 +1787,21 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let fnStx : Array (TSyntax `L.ModelGen.lmodelFn) := stx[5].getSepArgs.map (⟨·⟩)
   let optList (k : Nat) : Array Syntax := if stx[k].getNumArgs == 0 then #[] else stx[k][2].getSepArgs
   let specTs : Array Term := (optList 7).map (⟨·⟩)
-  let attrIds : Array Ident := (optList 8).map (⟨·⟩)
-  let foldIds : Array Ident := (optList 9).map (⟨·⟩)
-  let extraTs : Array Term := (optList 10).map (⟨·⟩)
-  let hintTs : Array Term := (optList 11).map (⟨·⟩)
-  let genN : Option Nat := if stx[12].getNumArgs == 0 then none else stx[12][1].isNatLit?
-  let hbN : Option Nat := if stx[13].getNumArgs == 0 then none else stx[13][1].isNatLit?
-  let noguard : Array String := (optList 14).filterMap (·.isStrLit?)
-  let symCfg : String := if stx[15].getNumArgs == 0 then "" else (stx[15][1].isStrLit?.getD "") ++ " "
-  let bindC : Option Name := if stx[16].getNumArgs == 0 then none else some stx[16][1].getId
-  let instN : Option Nat := if stx[17].getNumArgs == 0 then none else stx[17][1].isNatLit?
-  let simpTs? : Option (Array Term) := if stx[18].getNumArgs == 0 then none else some ((optList 18).map (⟨·⟩))
-  let exc := stx[19].getNumArgs != 0
-  let doTrace := stx[20].getNumArgs != 0
-  let preLocals := stx[21].getNumArgs != 0
-  let preT? : Option Term := if stx[22].getNumArgs == 0 then none else some ⟨stx[22][2]⟩
+  let attrIds : Array Ident := (optList 9).map (⟨·⟩)
+  let foldIds : Array Ident := (optList 10).map (⟨·⟩)
+  let extraTs : Array Term := (optList 11).map (⟨·⟩)
+  let hintTs : Array Term := (optList 12).map (⟨·⟩)
+  let genN : Option Nat := if stx[13].getNumArgs == 0 then none else stx[13][1].isNatLit?
+  let hbN : Option Nat := if stx[14].getNumArgs == 0 then none else stx[14][1].isNatLit?
+  let noguard : Array String := (optList 15).filterMap (·.isStrLit?)
+  let symCfg : String := if stx[16].getNumArgs == 0 then "" else (stx[16][1].isStrLit?.getD "") ++ " "
+  let bindC : Option Name := if stx[17].getNumArgs == 0 then none else some stx[17][1].getId
+  let instN : Option Nat := if stx[18].getNumArgs == 0 then none else stx[18][1].isNatLit?
+  let simpTs? : Option (Array Term) := if stx[19].getNumArgs == 0 then none else some ((optList 19).map (⟨·⟩))
+  let exc := stx[20].getNumArgs != 0
+  let doTrace := stx[21].getNumArgs != 0
+  let preLocals := stx[22].getNumArgs != 0
+  let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
