@@ -135,94 +135,6 @@ def Mem.set64 (m : Mem) (a : ArrId) (i v : Word) : Mem :=
 def Mem.setG (m : Mem) (g : GVar) (v : Word) : Mem :=
   { m with glob := fun h => if h = g then v else m.glob h }
 
-/-! ## Which arrays exist
-
-Statements say that an array exists, or that a step adds or drops none, through these names
-and the lemmas below, never through `bytes.size` or `words.size`: how the memory holds its arrays
-is the semantics' business. -/
-
-/-- Word array `a` exists in `m`. -/
-def Mem.HasW (m : Mem) (a : ArrId) : Prop := a < m.words.size
-
-instance (m : Mem) (a : ArrId) : Decidable (m.HasW a) := Nat.decLt _ _
-
-/-- Byte array `a` exists in `m`. -/
-def Mem.HasB (m : Mem) (a : ArrId) : Prop := a < m.bytes.size
-
-instance (m : Mem) (a : ArrId) : Decidable (m.HasB a) := Nat.decLt _ _
-
-/-- Word arrays `0, …, n - 1` exist in `m`. -/
-def Mem.HasWs (m : Mem) (n : Nat) : Prop := n ≤ m.words.size
-
-/-- `m'` has the word arrays of `m`: a step from `m` to `m'` added or dropped none. -/
-def Mem.SameShape (m m' : Mem) : Prop := m'.words.size = m.words.size
-
-theorem Mem.SameShape.refl (m : Mem) : m.SameShape m := rfl
-
-theorem Mem.SameShape.symm {m m' : Mem} (h : m.SameShape m') : m'.SameShape m := Eq.symm h
-
-theorem Mem.SameShape.trans {m₁ m₂ m₃ : Mem} (h₁ : m₁.SameShape m₂) (h₂ : m₂.SameShape m₃) :
-    m₁.SameShape m₃ := Eq.trans h₂ h₁
-
-theorem Mem.sameShape_set64 (m : Mem) (a : ArrId) (i v : Word) : m.SameShape (m.set64 a i v) := by
-  simp only [Mem.SameShape, Mem.set64, Array.size_set!]
-
-theorem Mem.sameShape_set8 (m : Mem) (a : ArrId) (i v : Word) : m.SameShape (m.set8 a i v) := rfl
-
-theorem Mem.sameShape_setG (m : Mem) (g : GVar) (v : Word) : m.SameShape (m.setG g v) := rfl
-
-theorem Mem.SameShape.set64 {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
-    m.SameShape (m'.set64 a i v) := h.trans (Mem.sameShape_set64 m' a i v)
-
-theorem Mem.SameShape.set8 {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
-    m.SameShape (m'.set8 a i v) := h.trans (Mem.sameShape_set8 m' a i v)
-
-theorem Mem.SameShape.setG {m m' : Mem} (h : m.SameShape m') (g : GVar) (v : Word) :
-    m.SameShape (m'.setG g v) := h.trans (Mem.sameShape_setG m' g v)
-
-@[simp] theorem Mem.sameShape_set64_iff {m m' : Mem} (a : ArrId) (i v : Word) :
-    m.SameShape (m'.set64 a i v) ↔ m.SameShape m' :=
-  ⟨fun h => h.trans (Mem.sameShape_set64 m' a i v).symm, fun h => h.set64 a i v⟩
-
-@[simp] theorem Mem.sameShape_set8_iff {m m' : Mem} (a : ArrId) (i v : Word) :
-    m.SameShape (m'.set8 a i v) ↔ m.SameShape m' :=
-  ⟨fun h => h.trans (Mem.sameShape_set8 m' a i v).symm, fun h => h.set8 a i v⟩
-
-@[simp] theorem Mem.sameShape_setG_iff {m m' : Mem} (g : GVar) (v : Word) :
-    m.SameShape (m'.setG g v) ↔ m.SameShape m' :=
-  ⟨fun h => h.trans (Mem.sameShape_setG m' g v).symm, fun h => h.setG g v⟩
-
-@[simp] theorem Mem.set64_sameShape_iff {m m' : Mem} (a : ArrId) (i v : Word) :
-    (m.set64 a i v).SameShape m' ↔ m.SameShape m' :=
-  ⟨fun h => (Mem.sameShape_set64 m a i v).trans h, fun h => (Mem.sameShape_set64 m a i v).symm.trans h⟩
-
-attribute [simp] Mem.SameShape.refl
-
-theorem Mem.SameShape.set64_both {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
-    (m.set64 a i v).SameShape (m'.set64 a i v) :=
-  ((Mem.sameShape_set64 m a i v).symm.trans h).set64 a i v
-
-theorem Mem.HasW.of_sameShape {m m' : Mem} {a : ArrId} (h : m.SameShape m') (ha : m.HasW a) :
-    m'.HasW a := by
-  unfold Mem.HasW Mem.SameShape at *; rw [h]; exact ha
-
-theorem Mem.HasW.mono {m : Mem} {a b : Nat} (h : m.HasW b) (hab : a ≤ b) : m.HasW a :=
-  Nat.lt_of_le_of_lt hab h
-
-theorem Mem.hasW_set64 (m : Mem) (a : ArrId) (i v : Word) (b : ArrId) :
-    (m.set64 a i v).HasW b = m.HasW b := by
-  simp only [Mem.HasW, Mem.set64, Array.size_set!]
-
-theorem Mem.hasW_setG (m : Mem) (g : GVar) (v : Word) (b : ArrId) :
-    (m.setG g v).HasW b = m.HasW b := rfl
-
-theorem Mem.HasWs.of_sameShape {m m' : Mem} {n : Nat} (h : m.SameShape m') (ha : m.HasWs n) :
-    m'.HasWs n := by
-  unfold Mem.HasWs Mem.SameShape at *; rw [h]; exact ha
-
-theorem Mem.HasWs.hasW {m : Mem} {n : Nat} (h : m.HasWs n) {a : Nat} (ha : a < n) : m.HasW a :=
-  Nat.lt_of_lt_of_le ha h
-
 /-! ## Blocks (lane blkcopy) -/
 
 /-- The bytes of a byte source. -/
@@ -454,5 +366,93 @@ def exec (p : Prog) : Nat → Stmt → M Sig
 /-- Run function `f` of `p` on memory `m`: its results and the final memory. -/
 def run (p : Prog) (fuel : Nat) (f : FnName) (vs : List Word) (m : Mem) : Except Err (List Word × Mem) :=
   ((invoke p (exec p fuel) f vs).run { mem := m, loc := Locals.init [] }).map fun (r, s) => (r, s.mem)
+
+/-! ## Which arrays exist
+
+Statements say that an array exists, or that a step adds or drops none, through these names
+and the lemmas below, never through `bytes.size` or `words.size`: how the memory holds its arrays
+is the semantics' business. -/
+
+/-- Word array `a` exists in `m`. -/
+def Mem.HasW (m : Mem) (a : ArrId) : Prop := a < m.words.size
+
+instance (m : Mem) (a : ArrId) : Decidable (m.HasW a) := Nat.decLt _ _
+
+/-- Byte array `a` exists in `m`. -/
+def Mem.HasB (m : Mem) (a : ArrId) : Prop := a < m.bytes.size
+
+instance (m : Mem) (a : ArrId) : Decidable (m.HasB a) := Nat.decLt _ _
+
+/-- Word arrays `0, …, n - 1` exist in `m`. -/
+def Mem.HasWs (m : Mem) (n : Nat) : Prop := n ≤ m.words.size
+
+/-- `m'` has the word arrays of `m`: a step from `m` to `m'` added or dropped none. -/
+def Mem.SameShape (m m' : Mem) : Prop := m'.words.size = m.words.size
+
+theorem Mem.SameShape.refl (m : Mem) : m.SameShape m := rfl
+
+theorem Mem.SameShape.symm {m m' : Mem} (h : m.SameShape m') : m'.SameShape m := Eq.symm h
+
+theorem Mem.SameShape.trans {m₁ m₂ m₃ : Mem} (h₁ : m₁.SameShape m₂) (h₂ : m₂.SameShape m₃) :
+    m₁.SameShape m₃ := Eq.trans h₂ h₁
+
+theorem Mem.sameShape_set64 (m : Mem) (a : ArrId) (i v : Word) : m.SameShape (m.set64 a i v) := by
+  simp only [Mem.SameShape, Mem.set64, Array.size_set!]
+
+theorem Mem.sameShape_set8 (m : Mem) (a : ArrId) (i v : Word) : m.SameShape (m.set8 a i v) := rfl
+
+theorem Mem.sameShape_setG (m : Mem) (g : GVar) (v : Word) : m.SameShape (m.setG g v) := rfl
+
+theorem Mem.SameShape.set64 {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
+    m.SameShape (m'.set64 a i v) := h.trans (Mem.sameShape_set64 m' a i v)
+
+theorem Mem.SameShape.set8 {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
+    m.SameShape (m'.set8 a i v) := h.trans (Mem.sameShape_set8 m' a i v)
+
+theorem Mem.SameShape.setG {m m' : Mem} (h : m.SameShape m') (g : GVar) (v : Word) :
+    m.SameShape (m'.setG g v) := h.trans (Mem.sameShape_setG m' g v)
+
+@[simp] theorem Mem.sameShape_set64_iff {m m' : Mem} (a : ArrId) (i v : Word) :
+    m.SameShape (m'.set64 a i v) ↔ m.SameShape m' :=
+  ⟨fun h => h.trans (Mem.sameShape_set64 m' a i v).symm, fun h => h.set64 a i v⟩
+
+@[simp] theorem Mem.sameShape_set8_iff {m m' : Mem} (a : ArrId) (i v : Word) :
+    m.SameShape (m'.set8 a i v) ↔ m.SameShape m' :=
+  ⟨fun h => h.trans (Mem.sameShape_set8 m' a i v).symm, fun h => h.set8 a i v⟩
+
+@[simp] theorem Mem.sameShape_setG_iff {m m' : Mem} (g : GVar) (v : Word) :
+    m.SameShape (m'.setG g v) ↔ m.SameShape m' :=
+  ⟨fun h => h.trans (Mem.sameShape_setG m' g v).symm, fun h => h.setG g v⟩
+
+@[simp] theorem Mem.set64_sameShape_iff {m m' : Mem} (a : ArrId) (i v : Word) :
+    (m.set64 a i v).SameShape m' ↔ m.SameShape m' :=
+  ⟨fun h => (Mem.sameShape_set64 m a i v).trans h, fun h => (Mem.sameShape_set64 m a i v).symm.trans h⟩
+
+attribute [simp] Mem.SameShape.refl
+
+theorem Mem.SameShape.set64_both {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
+    (m.set64 a i v).SameShape (m'.set64 a i v) :=
+  ((Mem.sameShape_set64 m a i v).symm.trans h).set64 a i v
+
+theorem Mem.HasW.of_sameShape {m m' : Mem} {a : ArrId} (h : m.SameShape m') (ha : m.HasW a) :
+    m'.HasW a := by
+  unfold Mem.HasW Mem.SameShape at *; rw [h]; exact ha
+
+theorem Mem.HasW.mono {m : Mem} {a b : Nat} (h : m.HasW b) (hab : a ≤ b) : m.HasW a :=
+  Nat.lt_of_le_of_lt hab h
+
+theorem Mem.hasW_set64 (m : Mem) (a : ArrId) (i v : Word) (b : ArrId) :
+    (m.set64 a i v).HasW b = m.HasW b := by
+  simp only [Mem.HasW, Mem.set64, Array.size_set!]
+
+theorem Mem.hasW_setG (m : Mem) (g : GVar) (v : Word) (b : ArrId) :
+    (m.setG g v).HasW b = m.HasW b := rfl
+
+theorem Mem.HasWs.of_sameShape {m m' : Mem} {n : Nat} (h : m.SameShape m') (ha : m.HasWs n) :
+    m'.HasWs n := by
+  unfold Mem.HasWs Mem.SameShape at *; rw [h]; exact ha
+
+theorem Mem.HasWs.hasW {m : Mem} {n : Nat} (h : m.HasWs n) {a : Nat} (ha : a < n) : m.HasW a :=
+  Nat.lt_of_lt_of_le ha h
 
 end L
