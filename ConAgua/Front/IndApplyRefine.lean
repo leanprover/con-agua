@@ -17,7 +17,6 @@ open L.Ind (eViewW eViewW_ok ViewR)
 open ConRon.Arena
 open ConRon.Arena.Frontend
 
-
 namespace L.Front.Ind
 
 /-! ## Runs -/
@@ -205,7 +204,6 @@ theorem sortTeleW_ok : ∀ (n : Nat) (f h ok r : Word), sortTeleW n m f h = some
 
 end tele
 
-
 /-! ## The store's fuel -/
 
 /-- The sum of `c` words of `CTL` from `k`. -/
@@ -267,7 +265,6 @@ theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Wo
   simp only [UInt64.toNat_add, UInt64.toNat_zero, UInt64.toNat_one] at *
   omega
 
-
 /-! ## Names: `name_rec_pre` against `viewN` -/
 
 theorem decN_tag (h : Word) (hh : h.toNat < 2 ^ 32) :
@@ -297,9 +294,6 @@ theorem nview_tier {m : Mem} {a : AState} (hR : ArenaR m a) (h : Word) (hh : h.t
       rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hv ⟨ht, h1⟩
     simp only [tierW] at ht
     simp [ht, hon, tierW]
-
-theorem shr28_lt (h : Word) (hh : h.toNat < 2 ^ 32) : (h >>> 28).toNat < 16 := by
-  simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; omega
 
 theorem viewN_run {a : AState} {h : NIdx} {v : NNodeView} (hv : a.store.ns.view h = some v) :
     (viewN h).run a = .ok (v, a) := by

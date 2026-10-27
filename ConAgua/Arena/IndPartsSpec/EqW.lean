@@ -262,20 +262,6 @@ theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   | nil => rfl
   | cons a as => cases as <;> rfl
 
-theorem map_decI_beq (ws1 ws2 : List Word) (h1 : ∀ w ∈ ws1, w.toNat < 2 ^ 32)
-    (h2 : ∀ w ∈ ws2, w.toNat < 2 ^ 32) :
-    ((ws1.map (decI : Word → NIdx)) == ws2.map decI) = decide (ws1 = ws2) := by
-  induction ws1 generalizing ws2 with
-  | nil => cases ws2 <;> simp
-  | cons a as ih =>
-    cases ws2 with
-    | nil => simp
-    | cons b bs =>
-      simp only [List.map_cons, List.cons_beq_cons]
-      rw [L.Arena.decI_beq a b (h1 a (List.mem_cons_self ..)) (h2 b (List.mem_cons_self ..)),
-        ih bs (fun w hw => h1 w (List.mem_cons_of_mem _ hw)) (fun w hw => h2 w (List.mem_cons_of_mem _ hw))]
-      by_cases hab : a = b <;> by_cases hbs : as = bs <;> simp [hab, hbs]
-
 end L.Ind
 
 end

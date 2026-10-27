@@ -32,7 +32,6 @@ and record length), `RFrame C.sch R C.hsM` (a node's relation and hash depend on
 
 open ConRon.Arena
 
-
 namespace L.Arena
 
 /-! ## A store relation across a writer apart from it (`Frame.lean`'s `Apart`) -/
@@ -86,7 +85,6 @@ end frame
 
 /-- The store schema of a cons table (`StoreLib.lean`). -/
 def ConsSch.sch (C : ConsSch) : Schema := ⟨C.ra, C.sa, C.w, C.ca, C.tag⟩
-
 
 /-- Key word `f` of node `i` of tier `t`: record word `f`, or (a packed record, `kpk`) the low
 (`f = 0`) or high half of record word `0`. -/
@@ -167,15 +165,6 @@ theorem ConsSch.WF.room' (m : Mem) (t : Word) (h : pushOKC C m t = true) : PushR
   exact ⟨by have := h.1; simp only [cntC] at this; exact this, h1⟩
 
 end shape
-
-theorem hdW_toNat (g t i : Word) (hg : g.toNat < 16) (ht : t ≤ 1) (hi : i.toNat < 2 ^ 27) :
-    (hdW g t i).toNat = g.toNat * 268435456 + t.toNat * 134217728 + i.toNat := by
-  have ht' : t.toNat ≤ 1 := ht
-  simp only [hdW, UInt64.toNat_add, UInt64.toNat_mul]
-  have h1 : (0x10000000 : Word).toNat = 268435456 := rfl
-  have h2 : (0x8000000 : Word).toNat = 134217728 := rfl
-  rw [h1, h2]
-  omega
 
 /-! ## The key words of a slot -/
 
@@ -1203,7 +1192,6 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
   · simp at hI
 
 end rel
-
 
 -- The relation is opaque outside the library: the lemmas above are its interface.
 attribute [irreducible] ConsR

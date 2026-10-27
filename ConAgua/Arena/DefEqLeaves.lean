@@ -138,10 +138,6 @@ theorem isBoolTrue_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) 
       pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n] <;>
     finish [isBoolTrueW, tierW, idxW, rdW]
 
-theorem decI_bne {k : IdxKind} (v w : Word) (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32) :
-    ((decI v : Idx k) != decI w) = !decide (v = w) := by
-  simp only [bne, decI_beq v w hv hw]
-
 theorem tag_const : ETag.const = UInt32.ofNat 3 := rfl
 
 theorem tag_beq_const (h : Word) (hh : HW h) :

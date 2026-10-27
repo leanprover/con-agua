@@ -45,6 +45,83 @@ open L
 def tierW (h : Word) : Word := (h >>> 27) &&& 1
 def idxW (h : Word) : Word := h &&& 134217727
 
+/-- The handle word of node `i` of tier `t` of the constructor with tag `g`. -/
+def hdW (g t i : Word) : Word := g * 0x10000000 + t * 0x8000000 + i
+
+/-- The tag of a handle word: bits 28 and up (`h >> 28` in L). -/
+def tagW (w : Word) : Word := w >>> 28
+
+/-! ### Decoding as numbers -/
+
+theorem shr28_toNat (h : Word) : (h >>> 28).toNat = h.toNat / 2 ^ 28 := by
+  simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+
+/-- Bit 27 of a word (the tier bit of a handle word). -/
+theorem bit27_toNat (w : Word) : ((w >>> 27) &&& 1).toNat = w.toNat / 2 ^ 27 % 2 := by
+  simp [UInt64.toNat_and, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow, Nat.and_one_is_mod]
+
+theorem tierW_toNat' (w : Word) : (tierW w).toNat = w.toNat / 2 ^ 27 % 2 := bit27_toNat w
+
+theorem idxW_toNat (w : Word) : (idxW w).toNat = w.toNat % 2 ^ 27 := by
+  simp only [idxW, UInt64.toNat_and]
+  rw [show (134217727 : Word).toNat = 2 ^ 27 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+
+theorem mask32_toNat (w : Word) : (w &&& 4294967295).toNat = w.toNat % 2 ^ 32 := by
+  simp only [UInt64.toNat_and]
+  rw [show (4294967295 : Word).toNat = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+
+theorem shr28_lt (h : Word) (hh : h.toNat < 2 ^ 32) : (h >>> 28).toNat < 16 := by
+  rw [shr28_toNat]; omega
+
+theorem tierW_le (h : Word) : tierW h ≤ 1 := by
+  simp only [tierW]; exact UInt64.and_le_right
+
+theorem tierW_lt (p : Word) : (tierW p).toNat ≤ 1 := by
+  rw [tierW_toNat']; omega
+
+theorem idxW_lt (h : Word) : idxW h < 134217728 := by
+  rw [UInt64.lt_iff_toNat_lt, idxW_toNat]; exact Nat.lt_of_lt_of_le (Nat.mod_lt _ (by decide)) (by decide)
+
+theorem mask_lt (w : Word) : (w &&& 4294967295).toNat < 2 ^ 32 := by
+  rw [mask32_toNat]; omega
+
+theorem bit27_or (f a : Word) :
+    (((f ||| a) >>> 27) &&& 1 = 0) ↔ ((f >>> 27) &&& 1 = 0 ∧ (a >>> 27) &&& 1 = 0) := by
+  have h : ∀ x : Word, ((x >>> 27) &&& 1 = 0) ↔ x.toNat.testBit 27 = false := by
+    intro x
+    rw [← UInt64.toNat_inj, bit27_toNat, Nat.testBit_eq_decide_div_mod_eq]
+    simp
+  rw [h, h, h, UInt64.toNat_or, Nat.testBit_or]; simp
+
+/-! ### The laws of `hdW` -/
+
+section hdW
+variable (g t i : Word) (hg : g.toNat < 16) (ht : t ≤ 1) (hi : i.toNat < 2 ^ 27)
+include hg ht hi
+
+theorem hdW_toNat : (hdW g t i).toNat = g.toNat * 268435456 + t.toNat * 134217728 + i.toNat := by
+  have ht' : t.toNat ≤ 1 := ht
+  simp only [hdW, UInt64.toNat_add, UInt64.toNat_mul]
+  simp; omega
+
+theorem hdW_lt : (hdW g t i).toNat < 2 ^ 32 := by
+  have ht' : t.toNat ≤ 1 := ht
+  rw [hdW_toNat g t i hg ht hi]; omega
+
+theorem hdW_tag : hdW g t i >>> 28 = g := by
+  have ht' : t.toNat ≤ 1 := ht
+  apply UInt64.toNat_inj.mp; rw [shr28_toNat, hdW_toNat g t i hg ht hi]; omega
+
+theorem hdW_tier : tierW (hdW g t i) = t := by
+  have ht' : t.toNat ≤ 1 := ht
+  apply UInt64.toNat_inj.mp; rw [tierW_toNat', hdW_toNat g t i hg ht hi]; omega
+
+theorem hdW_idx : idxW (hdW g t i) = i := by
+  have ht' : t.toNat ≤ 1 := ht
+  apply UInt64.toNat_inj.mp; rw [idxW_toNat, hdW_toNat g t i hg ht hi]; omega
+
+end hdW
+
 /-! ## The stores -/
 
 /-- `lit` (`REC`): kind (`0` nat, `1` string), pool offset, length, hash. -/
