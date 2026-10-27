@@ -8,7 +8,8 @@ public section
 L is the small first-order language the checker is written in (see `DESIGN.md`, "The language L").
 Values are 64-bit words with wrapping arithmetic. A function has numbered locals, the first
 `nparams` of which are its parameters. Memory is a fixed set of arrays: byte arrays (the input
-buffer) and word arrays, each named by a static index, and a store of global word variables
+buffer), named by a static index, and word arrays, named by a static index and a tier
+(`TieredArray`), and a store of global word variables
 (`GVar`), also named by static indices. Expressions have no side effects and
 make no calls; a call is a statement. Conditions are a separate type, with short-circuit `&&`/`||`
 so that a guard such as `i < len && b[i] == c` cannot read out of bounds.
@@ -25,52 +26,58 @@ abbrev Var := Nat
 /-- An array: a static index into the byte arrays or into the word arrays. -/
 abbrev ArrId := Nat
 
-/-- The distance of tier `1`'s number from tier `0`'s in the old numeric encoding. L no longer
-uses it (prototype absarrays); only the compiler's current layout (`Tab.wpos`, `curLay`) does. -/
-@[expose] def tierOff : Nat := 256
+/-! ## Word arrays as L sees them
 
-/-! ## Word arrays as L sees them (prototype absarrays)
-
-`TArr` is the name of a word array in L's memory: tier `hi` of source array `arr`. The type name
-is a working name, kept in this one place (`abbrev`s and lemmas below), so a rename is mechanical. -/
+A word array of L's memory is a `TieredArray`: tier `hi` of source array `arr`. An untiered array
+is its tier 0 (`↑a`, the coercion `TieredArray.t0`); tier 1 of a tiered array `a` is `tier1 a`.
+Distinct source arrays, and the two tiers of one array, are distinct `TieredArray`s by
+construction: no numbering is involved. Where the arrays live in machine memory is the
+compiler's choice (its layout map, `Compiler.WLay`); L and the proofs above it never see it. -/
 
 /-- Tier `hi` of source array `arr` (`hi = false`: tier 0, which is every untiered array). -/
-structure TArr where
+structure TieredArray where
   /-- An `ArrId`, typed `Nat` so that `omega` reads `s.arr < 64`. -/
   arr : Nat
   hi : Bool
   deriving Repr, Inhabited
 
-/-- A number per word array, for equality tests only: the kernel compares one `Nat` (as `GVar`). -/
-@[expose] def TArr.code (s : TArr) : Nat := 2 * s.arr + (if s.hi then 1 else 0)
+/-- A number per word array, for equality tests only: the kernel compares one `Nat` (as for
+`GVar`), which `decide +kernel` over lists of arrays needs. -/
+@[expose] def TieredArray.code (s : TieredArray) : Nat := 2 * s.arr + (if s.hi then 1 else 0)
 
-theorem TArr.code_inj {a b : TArr} : a.code = b.code ↔ a = b := by
-  rcases a with ⟨a, _ | _⟩ <;> rcases b with ⟨b, _ | _⟩ <;> simp [TArr.code] <;> omega
+theorem TieredArray.code_inj {a b : TieredArray} : a.code = b.code ↔ a = b := by
+  rcases a with ⟨a, _ | _⟩ <;> rcases b with ⟨b, _ | _⟩ <;> simp [TieredArray.code] <;> omega
 
-instance : DecidableEq TArr := fun a b => decidable_of_iff (a.code = b.code) TArr.code_inj
+instance : DecidableEq TieredArray := fun a b => decidable_of_iff (a.code = b.code) TieredArray.code_inj
 
 /-- A source array as a word array: its tier 0. -/
-@[coe, reducible, expose] def TArr.t0 (a : ArrId) : TArr := ⟨a, false⟩
-instance : Coe ArrId TArr := ⟨TArr.t0⟩
+@[coe, reducible, expose] def TieredArray.t0 (a : ArrId) : TieredArray := ⟨a, false⟩
+instance : Coe ArrId TieredArray := ⟨TieredArray.t0⟩
 
 /-- Tier 1 of `a`. -/
-@[reducible, expose] def tier1 (a : ArrId) : TArr := ⟨a, true⟩
+@[reducible, expose] def tier1 (a : ArrId) : TieredArray := ⟨a, true⟩
 
 /-- The array of tier `t` (masked: `t & 1`) of the tiered array `a`. -/
-@[expose] def tierA (a : ArrId) (t : UInt64) : TArr := ⟨a, t &&& 1 != 0⟩
+@[expose] def tierA (a : ArrId) (t : UInt64) : TieredArray := ⟨a, t &&& 1 != 0⟩
 
 /-- Both tiers of `a`. -/
-@[reducible, expose] def tiers (a : ArrId) : List TArr := [TArr.t0 a, tier1 a]
+@[reducible, expose] def tiers (a : ArrId) : List TieredArray := [TieredArray.t0 a, tier1 a]
 
-@[simp] theorem TArr.t0_inj {a b : ArrId} : TArr.t0 a = TArr.t0 b ↔ a = b := by simp [TArr.t0]
-@[simp] theorem t0_ne_tier1 (a b : ArrId) : TArr.t0 a ≠ tier1 b := by simp [TArr.t0, tier1]
-@[simp] theorem tier1_ne_t0 (a b : ArrId) : tier1 a ≠ TArr.t0 b := by simp [TArr.t0, tier1]
+@[simp] theorem TieredArray.t0_inj {a b : ArrId} : TieredArray.t0 a = TieredArray.t0 b ↔ a = b := by
+  simp [TieredArray.t0]
+@[simp] theorem t0_ne_tier1 (a b : ArrId) : TieredArray.t0 a ≠ tier1 b := by simp [TieredArray.t0, tier1]
+@[simp] theorem tier1_ne_t0 (a b : ArrId) : tier1 a ≠ TieredArray.t0 b := by simp [TieredArray.t0, tier1]
 @[simp] theorem tier1_inj {a b : ArrId} : tier1 a = tier1 b ↔ a = b := by simp [tier1]
 @[simp] theorem tierA_arr (a : ArrId) (t : UInt64) : (tierA a t).arr = a := rfl
+@[simp] theorem TieredArray.t0_arr (a : ArrId) : (TieredArray.t0 a).arr = a := rfl
+@[simp] theorem TieredArray.t0_hi (a : ArrId) : (TieredArray.t0 a).hi = false := rfl
+@[simp] theorem tier1_arr (a : ArrId) : (tier1 a).arr = a := rfl
+@[simp] theorem tier1_hi (a : ArrId) : (tier1 a).hi = true := rfl
 
-theorem tierA_eq_or (a : ArrId) (u : UInt64) : tierA a u = TArr.t0 a ∨ tierA a u = tier1 a := by
-  unfold tierA; cases (u &&& 1 != 0) <;> simp [TArr.t0, tier1]
+theorem tierA_eq_or (a : ArrId) (u : UInt64) : tierA a u = TieredArray.t0 a ∨ tierA a u = tier1 a := by
+  unfold tierA; cases (u &&& 1 != 0) <;> simp [TieredArray.t0, tier1]
 
+/-- **The arrays `tierA a t` can be are `tiers a`.** -/
 theorem tierA_mem_tiers (a : ArrId) (u : UInt64) : tierA a u ∈ tiers a := by
   rcases tierA_eq_or a u with h | h <;> simp [tiers, h]
 
@@ -125,8 +132,8 @@ inductive Expr where
   | ldc (d : List UInt8) (i : Expr)
   /-- The global variable `g`. -/
   | glob (g : GVar)
-  /-- Word `i` of tier `t` of the tiered array `a`: word array `tierA a t` (`a` for `t & 1 = 0`,
-  `a + tierOff` for `t & 1 = 1`; lane tierarr). -/
+  /-- Word `i` of tier `t` of the tiered array `a`: word array `tierA a t` (`↑a` for `t & 1 = 0`,
+  `tier1 a` for `t & 1 = 1`). -/
   | ld64t (a : ArrId) (t i : Expr)
   /-- The length of tier `t` of the tiered array `a`. -/
   | len64t (a : ArrId) (t : Expr)

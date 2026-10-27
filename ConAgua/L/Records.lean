@@ -78,7 +78,7 @@ theorem Record.ad_inj (R : Record) {i j : Word} {f g : Field} (hi : R.Ok i) (hj 
   rw [hq] at e; omega
 
 /-- A read of a field, as `vcgen` leaves it (`arr[addr]` with the bound), is `Mem.fld`. -/
-theorem fld_getElem (m : Mem) (R : Record) (a : ArrId) (j : Word) (f : Field) (ha : a = R.arr)
+theorem fld_getElem (m : Mem) (R : Record) (a : TieredArray) (j : Word) (f : Field) (ha : a = ↑R.arr)
     (h : (R.ad j f).toNat < (m.arr64 a).size) : (m.arr64 a)[(R.ad j f).toNat] = m.fld R j f := by
   subst ha; simp [Mem.fld, Array.getD, h]
 
@@ -86,34 +86,31 @@ grind_pattern [lang_grind] fld_getElem => (m.arr64 a)[(R.ad j f).toNat]
 
 /-- **A field after a field store**: the stored word if it is the same record and field (and the
 store was in bounds), else the old field. -/
-theorem fld_set64 (m : Mem) (R : Record) (a : ArrId) (i j : Word) (f g : Field) (v : Word)
-    (ha : a = R.arr) (hi : R.Ok i) (hj : R.Ok j) (hf : f.off < R.stride) (hg : g.off < R.stride) :
+theorem fld_set64 (m : Mem) (R : Record) (a : TieredArray) (i j : Word) (f g : Field) (v : Word)
+    (ha : a = ↑R.arr) (hi : R.Ok i) (hj : R.Ok j) (hf : f.off < R.stride) (hg : g.off < R.stride) :
     (m.set64 a (R.ad i f) v).fld R j g =
       if i = j ∧ f.off = g.off ∧ (R.ad i f).toNat < (m.arr64 R.arr).size then v else m.fld R j g := by
   subst ha
-  simp only [Mem.fld, Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?]
-  by_cases ha : R.arr < m.words.size
-  · simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, ha, ite_true]
-    by_cases e : i = j ∧ f.off = g.off
-    · obtain ⟨rfl, hfg⟩ := e
-      have : R.ad i f = R.ad i g := by simp [Record.ad, hfg]
-      rw [this]
-      by_cases hb : (R.ad i g).toNat < (m.words[R.arr]).size <;>
-        simp [hb, hfg, Array.getElem?_eq_getElem ha]
-    · have hne : (R.ad i f).toNat ≠ (R.ad j g).toNat := fun h' =>
-        e (R.ad_inj hi hj hf hg (UInt64.toNat_inj.mp h'))
-      rw [ite_eq_right (fun h' => e ⟨h'.1, h'.2.1⟩)]
-      simp [hne]
-  · simp [Array.set!_eq_setIfInBounds, ha]
+  simp only [Mem.fld, Mem.set64, Mem.arr64, ite_true, Array.getD_eq_getD_getElem?,
+    Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  by_cases e : i = j ∧ f.off = g.off
+  · obtain ⟨rfl, hfg⟩ := e
+    have : R.ad i f = R.ad i g := by simp [Record.ad, hfg]
+    rw [this]
+    by_cases hb : (R.ad i g).toNat < (m.words ↑R.arr).size <;> simp [hb, hfg]
+  · have hne : (R.ad i f).toNat ≠ (R.ad j g).toNat := fun h' =>
+      e (R.ad_inj hi hj hf hg (UInt64.toNat_inj.mp h'))
+    have e' : ¬ (i = j ∧ f.off = g.off ∧ (R.ad i f).toNat < (m.words ↑R.arr).size) :=
+      fun h' => e ⟨h'.1, h'.2.1⟩
+    simp only [e', ite_false]
+    simp [hne]
 
 grind_pattern [lang_grind] fld_set64 => (m.set64 a (R.ad i f) v).fld R j g
 
 /-- A store into another array leaves fields alone. -/
-theorem fld_set64_ne (m : Mem) (R : Record) (a : ArrId) (k v j : Word) (g : Field) (h : a ≠ R.arr) :
-    (m.set64 a k v).fld R j g = m.fld R j g := by
-  simp only [Mem.fld, Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?]
-  by_cases ha : a < m.words.size <;>
-    simp [Array.set!_eq_setIfInBounds, ha, h]
+theorem fld_set64_ne (m : Mem) (R : Record) (a : TieredArray) (k v j : Word) (g : Field)
+    (h : a ≠ ↑R.arr) : (m.set64 a k v).fld R j g = m.fld R j g := by
+  simp only [Mem.fld, Mem.set64, Mem.arr64, Ne.symm h, ite_false]
 
 grind_pattern [lang_grind] fld_set64_ne => (m.set64 a k v).fld R j g
 
@@ -124,13 +121,10 @@ grind_pattern [lang_grind] fld_set64_ne => (m.set64 a k v).fld R j g
     (m.set8 a k v).fld R j g = m.fld R j g := rfl
 
 /-- Stores keep every word array's size. -/
-@[lang_grind =] theorem Mem.size64_set64 (m : Mem) (a b : ArrId) (k v : Word) :
+@[lang_grind =] theorem Mem.size64_set64 (m : Mem) (a b : TieredArray) (k v : Word) :
     ((m.set64 a k v).arr64 b).size = (m.arr64 b).size := by
-  simp only [Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?, Array.set!_eq_setIfInBounds,
-    Array.getElem?_setIfInBounds]
-  by_cases h : a = b
-  · subst h; by_cases ha : a < m.words.size <;> simp [ha]
-  · simp [h]
+  simp only [Mem.set64, Mem.arr64]
+  split <;> simp_all
 
 /-- **The bound of a field access** from a bound `n` on the record number, with room for `n`
 records. -/

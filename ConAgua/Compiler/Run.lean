@@ -89,7 +89,7 @@ def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (nb nw : 
     (stackBytes : Nat := 4096) : Except String Outcome := do
   let tab : Tab := Prog.tab p nb nw
   -- the word array at each descriptor position (today's layout: `wposInv`, then the tier)
-  let atW : Nat → TArr := fun q => let n := tab.wposInv q; if n < tierOff then TArr.t0 n else tier1 (n - tierOff)
+  let atW : Nat → TieredArray := fun q => let n := tab.wposInv q; if n < tierOff then TieredArray.t0 n else tier1 (n - tierOff)
   let T := 0x10000
   let stackTop := 0x400000
   let ra : Nat := 0xdead0

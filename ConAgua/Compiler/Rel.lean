@@ -139,10 +139,10 @@ theorem base8A (hm : MemRel G m d) {a : ArrId} (h : G.tab.dom8 a = true) :
 theorem len8A (hm : MemRel G m d) {a : ArrId} (h : G.tab.dom8 a = true) :
     rdW d (A (G.T + (G.tab.len8 a).toNat)) = some (UInt64.ofNat (G.s8 (G.tab.pos8 a))) :=
   hm.len8 _ (G.tab.pos8_lt h)
-theorem base64A (hm : MemRel G m d) {s : TArr} (h : G.tab.dom64 s = true) :
+theorem base64A (hm : MemRel G m d) {s : TieredArray} (h : G.tab.dom64 s = true) :
     rdW d (A (G.T + (G.tab.base64 s).toNat)) = some (UInt64.ofNat (G.b64 (G.tab.pos64 s))) :=
   hm.base64 _ (G.tab.pos64_lt h)
-theorem len64A (hm : MemRel G m d) {s : TArr} (h : G.tab.dom64 s = true) :
+theorem len64A (hm : MemRel G m d) {s : TieredArray} (h : G.tab.dom64 s = true) :
     rdW d (A (G.T + (G.tab.len64 s).toNat)) = some (UInt64.ofNat (G.s64 (G.tab.pos64 s))) :=
   hm.len64 _ (G.tab.pos64_lt h)
 

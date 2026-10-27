@@ -675,7 +675,7 @@ include hG
 omit [Host] in
 /-- The descriptor block's address does not wrap: tier 1's descriptor is in the table. -/
 theorem tier_T {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) :
-    G.T + 16 + 16 * G.tab.nb + 8 * G.tab.nw + 8 * (G.tab.pos64 (TArr.t0 a) + 1) < 2 ^ 64 := by
+    G.T + 16 + 16 * G.tab.nb + 8 * G.tab.nw + 8 * (G.tab.pos64 (TieredArray.t0 a) + 1) < 2 ^ 64 := by
   have := hG.tab_end
   have := G.tab.pos64_lt ha
   rw [(G.tab.adj64 a ha).2] at this

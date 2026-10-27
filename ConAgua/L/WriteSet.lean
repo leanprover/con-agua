@@ -44,18 +44,18 @@ def ctlIdx : Expr → Option (List Word)
   | _ => none
 
 /-- A block destination allowed by the write set: never `ctl`, both tiers of a tiered one. -/
-def WArr.okW (ctl : ArrId) (A : List ArrId) : WArr → Bool
-  | .plain a => a ≠ ctl && a ∈ A
-  | .tier a _ => a ≠ ctl && a + tierOff ≠ ctl && a ∈ A && a + tierOff ∈ A
+def WArr.okW (ctl : ArrId) (A : List TieredArray) : WArr → Bool
+  | .plain a => a ≠ ctl && (a : TieredArray) ∈ A
+  | .tier a _ => a ≠ ctl && (a : TieredArray) ∈ A && tier1 a ∈ A
 
 /-- Stores only into word arrays of `A` (never `ctl`) and into `ctl` words of `C`, no byte
 stores; calls only into `fs` (global variables: any). -/
-def Stmt.okW (ctl : ArrId) (A : List ArrId) (C : List Word) (fs : List FnName) : Stmt → Bool
+def Stmt.okW (ctl : ArrId) (A : List TieredArray) (C : List Word) (fs : List FnName) : Stmt → Bool
   | .st8 .. => false
   | .st64 a i _ =>
     if a = ctl then (match ctlIdx i with | some ws => ws.all (· ∈ C) | none => false)
-    else a ∈ A
-  | .st64t a _ _ _ => a ≠ ctl && a + tierOff ≠ ctl && a ∈ A && a + tierOff ∈ A
+    else (a : TieredArray) ∈ A
+  | .st64t a _ _ _ => a ≠ ctl && (a : TieredArray) ∈ A && tier1 a ∈ A
   | .copy64 d .. | .copy8w d .. => d.okW ctl A
   | .seq s t => s.okW ctl A C fs && t.okW ctl A C fs
   | .ite _ s t => s.okW ctl A C fs && t.okW ctl A C fs
@@ -65,12 +65,12 @@ def Stmt.okW (ctl : ArrId) (A : List ArrId) (C : List Word) (fs : List FnName) :
 
 /-- **The write set of a call-closed function set**: every function of `fs` that `p` defines
 satisfies `okW`. -/
-def closedW (ctl : ArrId) (p : Prog) (A : List ArrId) (C : List Word) (fs : List FnName) : Bool :=
+def closedW (ctl : ArrId) (p : Prog) (A : List TieredArray) (C : List Word) (fs : List FnName) : Bool :=
   fs.all fun f => match p.lookup f with
     | some fd => fd.body.okW ctl A C fs
     | none => true
 
-theorem closedW_lookup {ctl : ArrId} {p : Prog} {A : List ArrId} {C : List Word}
+theorem closedW_lookup {ctl : ArrId} {p : Prog} {A : List TieredArray} {C : List Word}
     {fs : List FnName} (hp : closedW ctl p A C fs = true) {f : FnName} (hf : f ∈ fs) {fd : FunDecl}
     (h : p.lookup f = some fd) : fd.body.okW ctl A C fs = true := by
   simp only [closedW, List.all_eq_true] at hp
@@ -81,7 +81,7 @@ theorem closedW_lookup {ctl : ArrId} {p : Prog} {A : List ArrId} {C : List Word}
 /-- `closedW` reads only the lookups of `fs`: a program that agrees with a concrete one on them
 has its write set. This is how a program predicate (`LiftProg p`, …) gets its write set from the
 concrete program's, which is `by decide +kernel`. -/
-theorem closedW_of_agree {ctl : ArrId} {p q : Prog} {A : List ArrId} {C : List Word}
+theorem closedW_of_agree {ctl : ArrId} {p q : Prog} {A : List TieredArray} {C : List Word}
     {fs : List FnName} (hq : closedW ctl q A C fs = true)
     (hpq : ∀ f ∈ fs, p.lookup f = q.lookup f) : closedW ctl p A C fs = true := by
   simp only [closedW, List.all_eq_true] at hq ⊢
@@ -91,9 +91,10 @@ theorem closedW_of_agree {ctl : ArrId} {p q : Prog} {A : List ArrId} {C : List W
 
 /-- A frame relation for the write set `(A, C)` of control array `ctl`: reflexive, and closed under
 every word store the check allows. -/
-structure WFrame (ctl : ArrId) (A : List ArrId) (C : List Word) (Fr : Mem → Mem → Prop) : Prop where
+structure WFrame (ctl : ArrId) (A : List TieredArray) (C : List Word) (Fr : Mem → Mem → Prop) : Prop where
   refl : ∀ m, Fr m m
-  st64 : ∀ m₀ m a i v, Fr m₀ m → (a ≠ ctl ∧ a ∈ A) ∨ (a = ctl ∧ i ∈ C) → Fr m₀ (m.set64 a i v)
+  st64 : ∀ m₀ m (a : TieredArray) i v, Fr m₀ m → (a ≠ ctl ∧ a ∈ A) ∨ (a = ctl ∧ i ∈ C) →
+    Fr m₀ (m.set64 a i v)
   /-- A frame over the arrays does not look at the global variables (their write sets are
   `closedG`'s). -/
   setG : ∀ m₀ m g v, Fr m₀ m → Fr m₀ (m.setG g v)
@@ -116,10 +117,6 @@ theorem and_one_of_le (t : Word) (h : t ≤ 1) : t &&& 1 = t := by
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_zero.symm)]; decide
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_one.symm)]; decide
 
-/-- A tier's array is the array or its tier-1 twin. -/
-theorem tierA_cases (a : ArrId) (t : Word) : tierA a t = a ∨ tierA a t = a + tierOff := by
-  rcases and_one_cases t with h | h <;> simp [tierA, h]
-
 theorem ctlIdx_sound (e : Expr) (ws : List Word) (he : ctlIdx e = some ws) :
     ∀ s₀ : St, ⦃fun s => s = s₀⦄ evalE e ⦃fun j s => s = s₀ ∧ j ∈ ws; ⊤⦄ := by
   unfold ctlIdx at he
@@ -131,10 +128,10 @@ theorem ctlIdx_sound (e : Expr) (ws : List Word) (he : ctlIdx e = some ws) :
   · cases he
 
 section frame
-variable {ctl : ArrId} {A : List ArrId} {C : List Word} {fs : List FnName} {Fr : Mem → Mem → Prop}
+variable {ctl : ArrId} {A : List TieredArray} {C : List Word} {fs : List FnName} {Fr : Mem → Mem → Prop}
 
 /-- A continuation that keeps the frame on `okW` statements. -/
-def FrK (ctl : ArrId) (A : List ArrId) (C : List Word) (fs : List FnName) (Fr : Mem → Mem → Prop)
+def FrK (ctl : ArrId) (A : List TieredArray) (C : List Word) (fs : List FnName) (Fr : Mem → Mem → Prop)
     (k : Stmt → M Sig) : Prop :=
   ∀ st, st.okW ctl A C fs = true → ∀ m₀, ⦃fun s => Fr m₀ s.mem⦄ k st ⦃fun _ s => Fr m₀ s.mem; ⊤⦄
 
@@ -149,20 +146,20 @@ theorem invoke_fr (p : Prog) (hp : closedW ctl p A C fs = true) (k : Stmt → M 
     simp only [callFn]
     vcgen [hk fd.body hb m₀] <;> grind
 
-theorem st64_fr (hW : WFrame ctl A C Fr) (m₀ : Mem) (a : ArrId) (j v : Word) :
+theorem st64_fr (hW : WFrame ctl A C Fr) (m₀ : Mem) (a : TieredArray) (j v : Word) :
     ⦃fun s => Fr m₀ s.mem ∧ ((a ≠ ctl ∧ a ∈ A) ∨ (a = ctl ∧ j ∈ C))⦄ L.st64 a j v
     ⦃fun _ s => Fr m₀ s.mem; ⊤⦄ := by
   have := hW.st64
   vcgen [L.st64] <;> grind
 
-theorem WFrame.copy64 (hW : WFrame ctl A C Fr) {m₀ m : Mem} (h : Fr m₀ m) {a : ArrId}
-    (ha : a ≠ ctl ∧ a ∈ A) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
+theorem WFrame.copy64 (hW : WFrame ctl A C Fr) {m₀ m : Mem} (h : Fr m₀ m) {a : TieredArray}
+    (ha : a ≠ ctl ∧ a ∈ A) (di : Word) (s : TieredArray) (si : Word) (n : Nat) :
     Fr m₀ (m.copy64 a di s si n) := by
   induction n generalizing m di si with
   | zero => exact h
   | succ n ih => exact ih (hW.st64 _ _ _ _ _ h (.inl ha)) _ _
 
-theorem WFrame.copy8w (hW : WFrame ctl A C Fr) {m₀ m : Mem} (h : Fr m₀ m) {a : ArrId}
+theorem WFrame.copy8w (hW : WFrame ctl A C Fr) {m₀ m : Mem} (h : Fr m₀ m) {a : TieredArray}
     (ha : a ≠ ctl ∧ a ∈ A) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) :
     Fr m₀ (m.copy8w a di b si n) := by
   induction n generalizing m di si with
@@ -170,14 +167,14 @@ theorem WFrame.copy8w (hW : WFrame ctl A C Fr) {m₀ m : Mem} (h : Fr m₀ m) {a
   | succ n ih => exact ih (hW.st64 _ _ _ _ _ h (.inl ha)) _ _
 
 theorem warr_okW (w : WArr) (hw : w.okW ctl A = true) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ warr w ⦃fun a s => s = s₀ ∧ a ≠ ctl ∧ a ∈ A; ⊤⦄ := by
+    ⦃fun s => s = s₀⦄ warr w ⦃fun (a : TieredArray) s => s = s₀ ∧ a ≠ ctl ∧ a ∈ A; ⊤⦄ := by
   cases w with
   | plain a =>
     simp only [WArr.okW, Bool.and_eq_true, decide_eq_true_eq] at hw
     vcgen [warr] <;> grind
   | tier a t =>
     simp only [WArr.okW, Bool.and_eq_true, decide_eq_true_eq] at hw
-    have := tierA_cases a
+    have := tierA_eq_or a
     vcgen [warr, evalE_same t] <;> grind
 
 theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A C Fr)
@@ -200,16 +197,16 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
       vcgen [step, evalE_same i, evalE_same e, st64_fr hW m₀] <;> grind
   | st64t a t i e =>
     simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq] at hst
-    have := tierA_cases a
+    have := tierA_eq_or a
     vcgen [step, evalE_same t, evalE_same i, evalE_same e, st64_fr hW m₀] <;> grind
   | copy64 d di s si n =>
     simp only [Stmt.okW] at hst
-    have h1 : ∀ m a di s si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy64 a di s si n) :=
+    have h1 : ∀ m (a : TieredArray) di s si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy64 a di s si n) :=
       fun _ _ _ _ _ _ h ha => hW.copy64 h ha _ _ _ _
     vcgen [step, warr_okW d hst, warr_same s, evalE_same di, evalE_same si, evalE_same n] <;> grind
   | copy8w d di s si n =>
     simp only [Stmt.okW] at hst
-    have h1 : ∀ m a di b si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy8w a di b si n) :=
+    have h1 : ∀ m (a : TieredArray) di b si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy8w a di b si n) :=
       fun _ _ _ _ _ _ h ha => hW.copy8w h ha _ _ _ _
     vcgen [step, warr_okW d hst, evalE_same di, evalE_same si, evalE_same n] <;> grind
   | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
@@ -311,17 +308,17 @@ grind_pattern [lang_grind] GFrame.glob => GFrame G m m', m'.glob g
 
 theorem GFrame.refl (G : List GVar) (m : Mem) : GFrame G m m := fun _ _ => rfl
 
-theorem GFrame.set64 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : ArrId) (i v : Word) :
+theorem GFrame.set64 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : TieredArray) (i v : Word) :
     GFrame G m₀ (m.set64 a i v) := h
 
 theorem GFrame.set8 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : ArrId) (i v : Word) :
     GFrame G m₀ (m.set8 a i v) := h
 
-theorem GFrame.copy64 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (d : ArrId) (di : Word)
-    (s : ArrId) (si : Word) (n : Nat) : GFrame G m₀ (m.copy64 d di s si n) := fun g hg => by
+theorem GFrame.copy64 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (d : TieredArray) (di : Word)
+    (s : TieredArray) (si : Word) (n : Nat) : GFrame G m₀ (m.copy64 d di s si n) := fun g hg => by
   rw [Mem.copy64_glob]; exact h g hg
 
-theorem GFrame.copy8w {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (d : ArrId) (di : Word)
+theorem GFrame.copy8w {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (d : TieredArray) (di : Word)
     (b : Array UInt8) (si : Word) (n : Nat) : GFrame G m₀ (m.copy8w d di b si n) := fun g hg => by
   rw [Mem.copy8w_glob]; exact h g hg
 

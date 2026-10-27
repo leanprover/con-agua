@@ -33,7 +33,7 @@ namespace L
 not throw). -/
 def rd8 (m : Mem) (a : ArrId) (i : Word) : Word := ((m.arr8 a).getD i.toNat 0).toUInt64
 /-- Word `i` of word array `a`, `0` out of bounds. -/
-def rd64 (m : Mem) (a : ArrId) (i : Word) : Word := (m.arr64 a).getD i.toNat 0
+def rd64 (m : Mem) (a : TieredArray) (i : Word) : Word := (m.arr64 a).getD i.toNat 0
 /-- Byte `i` of a constant byte string, `0` out of bounds. -/
 def rdc (d : List UInt8) (i : Word) : Word := (d.getD i.toNat 0).toUInt64
 

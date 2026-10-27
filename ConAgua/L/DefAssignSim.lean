@@ -230,7 +230,7 @@ theorem rdA_ok {N : Var → Prop} {D vs R : List Var} (h : ∀ x ∈ rdA D vs R,
 section eval
 variable {N : Var → Prop} {D : List Var}
 
-theorem ld64_rsim (a : TArr) (i : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (ld64 a i) := by
+theorem ld64_rsim (a : TieredArray) (i : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (ld64 a i) := by
   unfold ld64
   refine DaSim.get_bind fun s₁ s₂ h => ?_
   dsimp only
@@ -251,7 +251,7 @@ theorem ld8x8_rsim (b : BSrc) (i : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) 
   rw [h.1]
   exact DaSim.ite (fun _ => DaSim.pure _ fun _ _ h => h) (fun _ => DaSim.throw _) s₁ s₂ h
 
-theorem st64_rsim (a : TArr) (i v : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (st64 a i v) := by
+theorem st64_rsim (a : TieredArray) (i v : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (st64 a i v) := by
   unfold st64
   refine DaSim.get_bind fun s₁ s₂ h => ?_
   rw [h.1]
@@ -345,7 +345,7 @@ theorem evalArgs_rsim : ∀ (es : List Expr), DaRd N D (es.flatMap Expr.rv) →
       DaSim.pure _ fun _ _ h => h
 
 theorem warr_bind_rsim {β : Type} {Q : β → St → St → Prop} {w : WArr} (hw : DaRd N D w.rv)
-    {g : TArr → M β} (hg : ∀ a, DaSim (DaAg N D) Q (g a)) : DaSim (DaAg N D) Q (warr w >>= g) := by
+    {g : TieredArray → M β} (hg : ∀ a, DaSim (DaAg N D) Q (g a)) : DaSim (DaAg N D) Q (warr w >>= g) := by
   cases w with
   | plain a =>
     simp only [warr, pure_bind]

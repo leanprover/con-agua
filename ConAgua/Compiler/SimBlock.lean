@@ -342,7 +342,7 @@ theorem sim_tierBlk {r : Reg64} (hr : r = .rcx ∨ r = .rdx) {k : Nat} {s : Mach
   exact this
 
 /-- Where a block operand's descriptor block is: `R`. -/
-structure DescAt (G : Layout) (ctx : Ctx) (D : DataMem) (R : Nat) (wa : ArrId) (aw : TArr) : Prop where
+structure DescAt (G : Layout) (ctx : Ctx) (D : DataMem) (R : Nat) (wa : ArrId) (aw : TieredArray) : Prop where
   arr : G.tab.dom64 aw = true
   len : rdW D (A (R + (ctx.tab.len64 wa).toNat)) = some (UInt64.ofNat (G.s64 (G.tab.pos64 aw)))
   base : rdW D (A (R + (ctx.tab.base64 wa).toNat)) = some (UInt64.ofNat (G.b64 (G.tab.pos64 aw)))
@@ -354,7 +354,7 @@ structure DescAt (G : Layout) (ctx : Ctx) (D : DataMem) (R : Nat) (wa : ArrId) (
 for a tiered one. -/
 theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St}
     {s : MachineData} (hI : Inv G ctx F σ s) {w : WArr} (hw : WArr.wf ctx.nl G.tab w = true) {r : Reg64}
-    (hr : r = .rcx ∨ r = .rdx) {k : Nat} (hc : Code (warrDesc ctx r w).1 k) {aw : TArr}
+    (hr : r = .rcx ∨ r = .rdx) {k : Nat} (hc : Code (warrDesc ctx r w).1 k) {aw : TieredArray}
     (hwp : warrP σ w = .ok aw) {Q : MachineState → Prop}
     (h : ∀ s' (R : Nat), s'.dmem = s.dmem → KeepR s' s → (∀ r', r' ≠ r → s'.regs.get64 r' = s.regs.get64 r') →
       s'.regs.get64 (warrDesc ctx r w).2 = A R →
@@ -411,7 +411,7 @@ theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 
 
 omit hTab in
 /-- `r := base + 8 o` for the block operand whose descriptor block is at `R`. -/
-theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (_hR : R ≠ .rax) {a : ArrId} {aw : TArr}
+theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (_hR : R ≠ .rax) {a : ArrId} {aw : TieredArray}
     {o : Expr} {k : Nat} (hc : Code (wordPtr ctx r R a o) k) {s : MachineData} {RV : Nat} {D : DataMem}
     {Q : MachineState → Prop} {vo : Word} (hd : s.dmem = D) (hRV : s.regs.get64 R = A RV)
     (hdesc : DescAt G ctx D RV a aw) (_hvo : vo.toNat ≤ G.s64 (G.tab.pos64 aw))
@@ -441,13 +441,13 @@ theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (_hR 
 
 omit [Host] in
 omit hG hTab in
-theorem arr64_size_set64 (m : Mem) (a : TArr) (i v : Word) (b : TArr) :
+theorem arr64_size_set64 (m : Mem) (a : TieredArray) (i v : Word) (b : TieredArray) :
     ((m.set64 a i v).arr64 b).size = (m.arr64 b).size := by
   rw [Mem.arr64_set64]; split <;> simp_all
 
 omit [Host] hTab in
 /-- An 8-byte stack cell survives a store into a word array. -/
-theorem rdW_slot_store64 {d : DataMem} {X : Nat} (hX1 : G.lo ≤ X) (hX2 : X + 8 ≤ G.hi) {a : TArr}
+theorem rdW_slot_store64 {d : DataMem} {X : Nat} (hX1 : G.lo ≤ X) (hX2 : X + 8 ≤ G.hi) {a : TieredArray}
     (ha : G.tab.dom64 a = true) {j : Nat} (hj : j < G.s64 (G.tab.pos64 a)) (v : BitVec 64) :
     rdW (wrW d (A (G.b64 (G.tab.pos64 a) + 8 * j)) v) (A X) = rdW d (A X) := by
   have hendp := G.tab.pos64_lt ha
@@ -463,7 +463,7 @@ of the source in the stack cell `[rsp + eoff]`; `n > 0` words left. It leaves at
 memory of `m.copy64 da w sa u n`. -/
 theorem copy64_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {Q : MachineState → Prop}
     (hcode : Code (copy64Loop Lb (mb .rsp eoff)) kL) (hL : label Lb = at_ kL)
-    {da sa : TArr} (hda : G.tab.dom64 da = true) (hsa : G.tab.dom64 sa = true) (hEoff : SmallOff eoff)
+    {da sa : TieredArray} (hda : G.tab.dom64 da = true) (hsa : G.tab.dom64 sa = true) (hEoff : SmallOff eoff)
     {σ : St} {s0 : MachineData} {top : Nat}
     (hX1 : G.lo ≤ s0.regs.rsp.toNat + eoff.toNat) (hX2 : s0.regs.rsp.toNat + eoff.toNat + 8 ≤ G.hi) :
     ∀ n (m : Mem) (w u : Word) (s : MachineData), Inv G ctx F { σ with mem := m } s → KeepR s s0 →
@@ -549,7 +549,7 @@ theorem copy64_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {
 
 omit [Host] hTab in
 /-- The source bytes survive a store into a word array. -/
-theorem SrcAt.store64 {b : Array UInt8} {D : DataMem} {B : Nat} (h : SrcAt G b D B) {a : TArr}
+theorem SrcAt.store64 {b : Array UInt8} {D : DataMem} {B : Nat} (h : SrcAt G b D B) {a : TieredArray}
     (ha : G.tab.dom64 a = true) {j : Nat} (hj : j < G.s64 (G.tab.pos64 a)) (v : BitVec 64) :
     SrcAt G b (wrW D (A (G.b64 (G.tab.pos64 a) + 8 * j)) v) B := by
   have hendp := G.tab.pos64_lt ha
@@ -599,7 +599,7 @@ omit hTab in
 source `b` at `B`. -/
 theorem copy8w_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {Q : MachineState → Prop}
     (hcode : Code (copy8wLoop Lb (mb .rsp eoff)) kL) (hL : label Lb = at_ kL)
-    {da : TArr} (hda : G.tab.dom64 da = true) (hEoff : SmallOff eoff) {b : Array UInt8} {B : Nat}
+    {da : TieredArray} (hda : G.tab.dom64 da = true) (hEoff : SmallOff eoff) {b : Array UInt8} {B : Nat}
     {σ : St} {s0 : MachineData} {top : Nat}
     (hX1 : G.lo ≤ s0.regs.rsp.toNat + eoff.toNat) (hX2 : s0.regs.rsp.toNat + eoff.toNat + 8 ≤ G.hi) :
     ∀ n (m : Mem) (w u : Word) (s : MachineData), Inv G ctx F { σ with mem := m } s → KeepR s s0 →

@@ -19,7 +19,7 @@ open L
 attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s.set64_rsi
   Reg64s.set64_rsp Reg64s.set64_r14
 
-theorem Mem.arr64_set64 (m : Mem) (a a' : TArr) (i v : Word) :
+theorem Mem.arr64_set64 (m : Mem) (a a' : TieredArray) (i v : Word) :
     (m.set64 a i v).arr64 a' = if a = a' then (m.arr64 a).set! i.toNat v else m.arr64 a' := by
   simp only [Mem.set64, Mem.arr64]; by_cases h : a = a' <;> simp [h, eq_comm]
 
@@ -27,14 +27,14 @@ theorem Mem.arr8_set8 (m : Mem) (a a' : ArrId) (i v : Word) :
     (m.set8 a i v).arr8 a' = if a = a' then (m.arr8 a).set! i.toNat v.toUInt8 else m.arr8 a' := by
   simp only [Mem.set8, Mem.arr8]; by_cases h : a = a' <;> simp [h, eq_comm]
 
-theorem Mem.arr8_set64 (m : Mem) (a : TArr) (i v : Word) : (m.set64 a i v).arr8 = m.arr8 := rfl
+theorem Mem.arr8_set64 (m : Mem) (a : TieredArray) (i v : Word) : (m.set64 a i v).arr8 = m.arr8 := rfl
 theorem Mem.arr64_set8 (m : Mem) (a : ArrId) (i v : Word) : (m.set8 a i v).arr64 = m.arr64 := rfl
 
 section
 variable {G : Layout} (hG : G.Ok)
 include hG
 
-theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : TArr} (ha : G.tab.dom64 a = true)
+theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : TieredArray} (ha : G.tab.dom64 a = true)
     {i : Word} (hi : i.toNat < (m.arr64 a).size) (v : Word) :
     MemRel G (m.set64 a i v) (wrW d (A (G.b64 (G.tab.pos64 a) + 8 * i.toNat)) v.toBitVec) := by
   have hsz := hm.size64 a ha
@@ -183,7 +183,7 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
     rw [show G.T + (G.globAddr g - G.T) = G.globAddr g by simp only [Layout.globAddr, Layout.globStart]; omega] at this
     rw [this]; exact hm.glob g hg
 
-theorem Inv.store64 {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) {a : TArr}
+theorem Inv.store64 {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) {a : TieredArray}
     (ha : G.tab.dom64 a = true) {i : Word} (hi : i.toNat < (σ.mem.arr64 a).size) (v : Word) :
     Inv G ctx F { σ with mem := σ.mem.set64 a i v }
       { s with dmem := wrW s.dmem (A (G.b64 (G.tab.pos64 a) + 8 * i.toNat)) v.toBitVec } := by
@@ -215,7 +215,7 @@ theorem Inv.store8 {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G
     (Or.inl ⟨_, hp, show G.In8 (G.tab.pos8 a) _ from ⟨by omega, by omega⟩⟩)
 
 /-- A store into an array keeps every byte outside the arrays. -/
-theorem Pres.store64 {top : Nat} {d : DataMem} {a : TArr} (ha : G.tab.dom64 a = true) {j : Nat} (hj : j < G.s64 (G.tab.pos64 a))
+theorem Pres.store64 {top : Nat} {d : DataMem} {a : TieredArray} (ha : G.tab.dom64 a = true) {j : Nat} (hj : j < G.s64 (G.tab.pos64 a))
     (v : BitVec 64) : Pres G top d (wrW d (A (G.b64 (G.tab.pos64 a) + 8 * j)) v) := by
   have hp := G.tab.pos64_lt ha
   have hend := hG.end64 _ hp
@@ -285,7 +285,7 @@ theorem CPost.setPool {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : In
 
 omit hTab in
 /-- The bounds check, the base and the store of a word (`genSt`), the index `j` in register `X`. -/
-theorem genSt_tailWX {ctx : Ctx} {F : Nat} {a' : TArr} (ha : G.tab.dom64 a' = true)
+theorem genSt_tailWX {ctx : Ctx} {F : Nat} {a' : TieredArray} (ha : G.tab.dom64 a' = true)
     {ln bs : AddrExpr} {σ : St} {d s2 : MachineData} {X t : Reg64} {src : Operand .W64} {j vb : Word}
     {kT : Nat} {Q : MachineState → Prop}
     (hcR : Code [i64 (.cmp (.reg (rr X)) (oM ln)), jccL .nc errorL, movRM t bs,
@@ -343,7 +343,7 @@ theorem genSt_tailWX {ctx : Ctx} {F : Nat} {a' : TArr} (ha : G.tab.dom64 a' = tr
 
 omit hTab in
 /-- The bounds check, the base and the store of a word (`genSt`), a constant index `k`. -/
-theorem genSt_tailWK {ctx : Ctx} {F : Nat} {a' : TArr} (ha : G.tab.dom64 a' = true)
+theorem genSt_tailWK {ctx : Ctx} {F : Nat} {a' : TieredArray} (ha : G.tab.dom64 a' = true)
     {ln bs : AddrExpr} {σ : St} {d s2 : MachineData} {t : Reg64} {src : Operand .W64} {kk vb : Word}
     {kT : Nat} {Q : MachineState → Prop} (hk : kk.toNat < 2 ^ 28)
     (hcR : Code [i64 (.cmp (.mem ln) (oI kk.toNat)), jccL .be errorL, movRM t bs,
@@ -399,7 +399,7 @@ theorem genSt_tailWK {ctx : Ctx} {F : Nat} {a' : TArr} (ha : G.tab.dom64 a' = tr
 omit [Host] hG in
 /-- A plain word array's descriptor words. -/
 theorem descW_plain {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
-    {a : TArr} (ha : G.tab.dom64 a = true) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) :
+    {a : TieredArray} (ha : G.tab.dom64 a = true) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) :
     MemW s (mb .r15 (ctx.tab.len64 a)) (UInt64.ofNat (σ.mem.arr64 a).size) ∧
     MemW s (mb .r15 (ctx.tab.base64 a)) (UInt64.ofNat (G.b64 (G.tab.pos64 a))) := by
   have hTab' := hTab
@@ -507,7 +507,7 @@ theorem sim_genStV {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
 /-- `A.u64[i] := e` through the register stack (`genSt`), for a word array `a'` whose
 descriptor words `[ln]`, `[bs]` the code does not change. -/
 theorem sim_genStW {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
-    {ln bs : AddrExpr} {a' : TArr} (ha : G.tab.dom64 a' = true) {i e : Expr} {code : Program}
+    {ln bs : AddrExpr} {a' : TieredArray} (ha : G.tab.dom64 a' = true) {i e : Expr} {code : Program}
     (hg : genSt ctx ln bs i e ctx.pool = some code) {k : Nat} (hc : Code code k)
     (hwi : Expr.wf ctx.nl G.tab i = true) (hwe : Expr.wf ctx.nl G.tab e = true)
     {σ : St} {d : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ d)
@@ -638,7 +638,7 @@ theorem sim_genStW {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
 
 /-- The bounds check and the store of `A.u64[i] := e`, from `rax = i`, `rdx = e`. -/
 theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
-    {a : ArrId} (ha : G.tab.dom64 (TArr.t0 a) = true) {i e : Expr} {σ : St} {d s3 : MachineData} {vi ve : Word}
+    {a : ArrId} (ha : G.tab.dom64 (TieredArray.t0 a) = true) {i e : Expr} {σ : St} {d s3 : MachineData} {vi ve : Word}
     {kT kend : Nat} {Q : MachineState → Prop}
     (hcR : Code [i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (mb .r15 (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx] kT)

@@ -13,12 +13,12 @@ and its number. `checkerArrays` is the table; `Checker/ArrCheck.lean` checks it 
 program (the surface check: plain word accesses only name tier-0 numbers, tiered accesses only
 tiered arrays) and against the lists the entries and the parallel mode use.
 
-**The memory layout.** Byte array `0` is the input, byte array `1` the pin data. Word array `a`
-gets slot `2 + a` of the region (`L.Compiler.abiSlot64`; slot `0` is the descriptor table, slot
-`1` the L stack), `2^32` words; the tier-1 array of a tiered array `a` is word array `tier1 a`
-(`a + 256`), so the program has `256 + 132 = 388` word slots (`Prog.arrs`), and the numbers
-between the rows below are unused slots. The harness (`main.c`) and the entry stub
-(`Compiler/Abi.lean`) lay the slots out by number and know nothing of the names.
+**Numbers are names.** A row's number names the array in L's syntax; it is not an address. A word
+array of L's memory is a `TieredArray`: tier 0 of every word array (`↑a`) and tier 1 of every
+tiered one (`tier1 a`). Where each array lives is the compiler's choice: its layout map
+(`L.Compiler.WLay`, `L.Compiler.BLay`) gives every array the program names a descriptor
+position, tier 1 right after tier 0, and the entry stub (`Compiler/Abi.lean`) gives each position
+a region. The harness (`main.c`) reads the layout only through the symbols the stub exports.
 
 Kept apart from the rows: the aliases (one array under a second name, for a second, time-disjoint
 use) and the stand-alone example programs' arrays (`L.Examples.HIST`, `L.Scan.Utf8.OUT`,
@@ -188,9 +188,8 @@ declare_arrays checkerArrays
 
 /-- The input buffer (the driver's name). -/
 abbrev Front.IN0 : ArrId := IN
-/-- The pool's tier-1 array, `tier1 POOL` (`POOL1_eq`), as a numeral: the pool's proofs decide
-`b ≠ POOL1` by `grind` and `simp`, which do not unfold `tierOff`. -/
-abbrev Arena.POOL1 : ArrId := 256
+/-- The pool's tier-1 array. -/
+abbrev Arena.POOL1 : TieredArray := tier1 Arena.POOL
 
 theorem Arena.POOL1_eq : Arena.POOL1 = tier1 Arena.POOL := rfl
 /-- The spine stack, as `instantiateList`'s substitution slice. -/
@@ -205,29 +204,27 @@ abbrev Front.Ind.DIND : ArrId := Front.DLP
 
 /-! ## Groups of arrays by number
 
-Frame lemmas quantify over two groups of word arrays. They are named here so that the lemmas
-and their callers do not spell out the numbering (tier 1 of `a` is `tier1 a`, `a + 256` today):
-when the tiers become abstract, these definitions change and the lemmas below keep their
-statements. Both are `@[simp] abbrev`s, so `decide`, `omega` and `simp` read them as the numeric
-ranges today. Tier-1 ranges in general: `IsTier1`, `Tier1In` (`L/Arrays.lean`). -/
+Frame lemmas quantify over two groups of word arrays, named here by the source numbers of their
+arrays (a numbering convention of the table above, not a layout). -/
 
-/-- **The store tier**: the arrays below `64` (the pool, the stores' record and slot arrays, their
-derived columns, the walk memos, `PT0`) and the tier-1 arrays of the tiered ones. A walk writes
-only these (`WriteSets.lean`), and `ArenaR` reads only these (`arenaArrs`). -/
-@[simp] abbrev InStoreTier (b : Nat) : Prop := b < 64 ∨ Tier1In 0 64 b
+/-- **The store tier**: both tiers of the arrays below `64` (the pool, the stores' record and slot
+arrays, their derived columns, the walk memos, `PT0`). A walk writes only these
+(`WriteSets.lean`), and `ArenaR` reads only these (`arenaArrs`). -/
+@[simp] abbrev InStoreTier (b : TieredArray) : Prop := b.arr < 64
 
 /-- **The high arrays**: the tier-0 arrays from `64` on (the front end, the per-declaration caches,
 the environment, the walk stacks, the inductive checks, the phase boundary). None is in the store
 tier (`InHigh.not_storeTier`), and none is a tier-1 array (`InHigh.ne_tier1`). -/
-@[simp] abbrev InHigh (b : Nat) : Prop := 64 ≤ b ∧ b < 256
+@[simp] abbrev InHigh (b : TieredArray) : Prop := b.hi = false ∧ 64 ≤ b.arr
 
-theorem InStoreTier.of_lt {b : Nat} (h : b < 64) : InStoreTier b := .inl h
+theorem InStoreTier.of_lt {b : Nat} (h : b < 64) : InStoreTier ↑b := h
 
-theorem InStoreTier.of_tier1 {a : Nat} (h : a < 64) : InStoreTier (tier1 a) :=
-  .inr (Tier1In.tier1 (Nat.zero_le a) h)
+theorem InStoreTier.of_tier1 {a : Nat} (h : a < 64) : InStoreTier (tier1 a) := h
 
-theorem InHigh.not_storeTier {b : Nat} (h : InHigh b) : ¬ InStoreTier b := by omega
+theorem InHigh.not_storeTier {b : TieredArray} (h : InHigh b) : ¬ InStoreTier b := by
+  simp only [InHigh, InStoreTier] at *; omega
 
-theorem InHigh.ne_tier1 {b : Nat} (h : InHigh b) (a : Nat) : b ≠ tier1 a := L.ne_tier1 h.2
+theorem InHigh.ne_tier1 {b : TieredArray} (h : InHigh b) (a : Nat) : b ≠ tier1 a := by
+  rintro rfl; simp at h
 
 end L

@@ -109,14 +109,14 @@ end keeps
 
 /-! ## Memory operations other than `setG` keep every global -/
 
-theorem Mem.glob_copy64 (d : ArrId) (s : ArrId) :
+theorem Mem.glob_copy64 (d : TieredArray) (s : TieredArray) :
     ∀ (n : Nat) (m : Mem) (di si : Word), (m.copy64 d di s si n).glob = m.glob
   | 0, _, _, _ => rfl
   | n + 1, m, di, si => by
     simp only [Mem.copy64]
     exact Mem.glob_copy64 d s n _ _ _
 
-theorem Mem.glob_copy8w (d : ArrId) (b : Array UInt8) :
+theorem Mem.glob_copy8w (d : TieredArray) (b : Array UInt8) :
     ∀ (n : Nat) (m : Mem) (di si : Word), (m.copy8w d di b si n).glob = m.glob
   | 0, _, _, _ => rfl
   | n + 1, m, di, si => by
@@ -132,7 +132,7 @@ theorem St.setLocs_mem' : ∀ (s : St) (xs : List Var) (vs : List Word), (s.setL
 section eval
 variable {G : GVar → Bool}
 
-theorem ld64_keepsG (a : ArrId) (i : Word) : KeepsG G (ld64 a i) := by
+theorem ld64_keepsG (a : TieredArray) (i : Word) : KeepsG G (ld64 a i) := by
   unfold ld64
   exact KeepsG.get_bind fun s => KeepsG.dite_pure s
 
@@ -144,7 +144,7 @@ theorem ld8x8_keepsG (b : BSrc) (i : Word) : KeepsG G (ld8x8 b i) := by
   unfold ld8x8
   exact KeepsG.get_bind fun s => KeepsG.ite (KeepsG.pure _) (KeepsG.throw _) s
 
-theorem st64_keepsG (a : ArrId) (i v : Word) : KeepsG G (st64 a i v) := by
+theorem st64_keepsG (a : TieredArray) (i v : Word) : KeepsG G (st64 a i v) := by
   unfold st64
   refine KeepsG.get_bind fun s r s' h g _ => ?_
   split at h
@@ -208,7 +208,7 @@ theorem evalArgs_keepsG : ∀ (es : List Expr), KeepsG G (evalArgs es)
 
 theorem warr_keepsG (w : WArr) : KeepsG G (warr w) := by
   cases w with
-  | plain a => exact KeepsG.pure a
+  | plain a => exact KeepsG.pure _
   | tier a t => exact KeepsG.bind (evalE_keepsG t) fun _ => KeepsG.pure _
 
 end eval

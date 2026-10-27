@@ -69,6 +69,11 @@ structure Tab where
 
 def Tab.stackTop : Int := 0
 def Tab.stackLimit : Int := 8
+/-- The current layout numbers tier 1 of word array `a` as `a + tierOff` (`curNum`) and then
+permutes the numbers into descriptor positions (`wpos`). Only the compiler and the entry stubs
+use it. -/
+def tierOff : Nat := 256
+
 /-- The number of word arrays with both tiers in the table (`a` and `a + tierOff` below `nw`). -/
 def Tab.wK (t : Tab) : Nat := min (t.nw - tierOff) tierOff
 /-- The position of word array `a`'s descriptor words (lane tiercost): a permutation of
@@ -106,20 +111,20 @@ theorem Tab.wpos_tier (t : Tab) {a : ArrId} (h : a < t.wK) (b : Nat) (hb : b ≤
   simp only [Tab.wpos, Tab.wK, tierOff] at *
   rcases (by omega : b = 0 ∨ b = 1) with rfl | rfl <;> grind
 
-/-! ## The layout map (prototype absarrays)
+/-! ## The layout map
 
-L's arrays are names: byte arrays `ArrId`, word arrays `TArr`. The compiler alone maps each name a
+L's arrays are names: byte arrays `ArrId`, word arrays `TieredArray`. The compiler alone maps each name a
 program may use (`dom`) to a descriptor position (`pos`), injectively, with a tiered array's tier 1
 right after its tier 0 (the one indexed load). The simulation relation (`MemRel`) relates L's
 arrays to the machine's regions through this map; nothing above the compiler sees positions. -/
 
 /-- The compiler's layout of the word arrays: `nw` descriptor positions. -/
 structure WLay (nw : Nat) where
-  dom : TArr → Bool
-  pos : TArr → Nat
+  dom : TieredArray → Bool
+  pos : TieredArray → Nat
   pos_lt : ∀ s, dom s → pos s < nw
   pos_inj : ∀ s s', dom s → dom s' → pos s = pos s' → s = s'
-  adj : ∀ a, dom (tier1 a) → dom (TArr.t0 a) ∧ pos (tier1 a) = pos (TArr.t0 a) + 1
+  adj : ∀ a, dom (tier1 a) → dom (TieredArray.t0 a) ∧ pos (tier1 a) = pos (TieredArray.t0 a) + 1
 
 /-- The compiler's layout of the byte arrays: `nb` descriptor positions. The ABI's fixed
 positions (the input, the pin data) are constraints on this map, used only by the stub's proof. -/
@@ -131,7 +136,7 @@ structure BLay (nb : Nat) where
 
 /-- The tier's descriptor is `(u & 1)` positions after tier 0's. -/
 theorem WLay.pos_tierA {nw : Nat} (L : WLay nw) {a : ArrId} (h : L.dom (tier1 a)) (u : Word) :
-    L.pos (tierA a u) = L.pos (TArr.t0 a) + (u &&& 1).toNat := by
+    L.pos (tierA a u) = L.pos (TieredArray.t0 a) + (u &&& 1).toNat := by
   have : u &&& 1 = 0 ∨ u &&& 1 = 1 := by
     have : (u &&& 1).toNat ≤ 1 := by rw [UInt64.toNat_and]; exact Nat.and_le_right
     rcases (by omega : (u &&& 1).toNat = 0 ∨ (u &&& 1).toNat = 1) with h | h
@@ -150,21 +155,21 @@ theorem WLay.dom_tierA {nw : Nat} (L : WLay nw) {a : ArrId} (h : L.dom (tier1 a)
 /-! ### Today's layout as a layout map (`curLay`): the generated code does not change -/
 
 /-- The number today's layout gives a word array: tier `t` of `a` is `a + tierOff t`. -/
-def curNum (s : TArr) : Nat := if s.hi then s.arr + tierOff else s.arr
+def curNum (s : TieredArray) : Nat := if s.hi then s.arr + tierOff else s.arr
 
 /-- The word arrays a program may name under today's layout. -/
-def Tab.dom64 (t : Tab) (s : TArr) : Bool :=
+def Tab.dom64 (t : Tab) (s : TieredArray) : Bool :=
   if s.hi then decide (s.arr < t.wK) else decide (s.arr < tierOff) && decide (s.arr < t.nw)
 
 /-- Word array `s`'s descriptor position. -/
-def Tab.pos64 (t : Tab) (s : TArr) : Nat := t.wpos (curNum s)
+def Tab.pos64 (t : Tab) (s : TieredArray) : Nat := t.wpos (curNum s)
 
-theorem Tab.curNum_lt (t : Tab) {s : TArr} (h : t.dom64 s = true) : curNum s < t.nw := by
+theorem Tab.curNum_lt (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : curNum s < t.nw := by
   rcases s with ⟨a, _ | _⟩ <;> simp [Tab.dom64, curNum] at h ⊢
   · omega
   · obtain ⟨h1, h2⟩ := t.wK_spec h; omega
 
-theorem Tab.curNum_inj (t : Tab) {s s' : TArr} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+theorem Tab.curNum_inj (t : Tab) {s s' : TieredArray} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
     (e : curNum s = curNum s') : s = s' := by
   rcases s with ⟨a, _ | _⟩ <;> rcases s' with ⟨b, _ | _⟩ <;>
     simp [Tab.dom64, curNum] at h h' e ⊢
@@ -173,10 +178,10 @@ theorem Tab.curNum_inj (t : Tab) {s s' : TArr} (h : t.dom64 s = true) (h' : t.do
   · have := t.wK_spec h; simp only [tierOff] at *; omega
   · omega
 
-theorem Tab.pos64_lt (t : Tab) {s : TArr} (h : t.dom64 s = true) : t.pos64 s < t.nw := by
+theorem Tab.pos64_lt (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : t.pos64 s < t.nw := by
   simp only [Tab.pos64]; exact t.wpos_lt (t.curNum_lt h)
 
-theorem Tab.pos64_inj (t : Tab) {s s' : TArr} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+theorem Tab.pos64_inj (t : Tab) {s s' : TieredArray} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
     (e : t.pos64 s = t.pos64 s') : s = s' := by
   simp only [Tab.pos64] at e
   have e2 := congrArg t.wposInv e
@@ -184,12 +189,12 @@ theorem Tab.pos64_inj (t : Tab) {s s' : TArr} (h : t.dom64 s = true) (h' : t.dom
   exact t.curNum_inj h h' e2
 
 theorem Tab.adj64 (t : Tab) (a : ArrId) (h : t.dom64 (tier1 a) = true) :
-    t.dom64 (TArr.t0 a) = true ∧ t.pos64 (tier1 a) = t.pos64 (TArr.t0 a) + 1 := by
+    t.dom64 (TieredArray.t0 a) = true ∧ t.pos64 (tier1 a) = t.pos64 (TieredArray.t0 a) + 1 := by
   simp only [Tab.dom64, ite_true, decide_eq_true_eq] at h
   obtain ⟨h1, h2⟩ := t.wK_spec h
   refine ⟨by simp only [Tab.dom64, Bool.false_eq_true, ite_false, Bool.and_eq_true, decide_eq_true_eq]; exact ⟨h1, Nat.lt_of_le_of_lt (Nat.le_add_right _ _) h2⟩, ?_⟩
   have := t.wpos_tier h 1 (by omega)
-  simpa [Tab.pos64, curNum, tier1, TArr.t0] using this
+  simpa [Tab.pos64, curNum, tier1, TieredArray.t0] using this
 
 /-- **Today's layout as a `WLay`**: tier `t` of `a` at `wpos (a + 256 t)`. -/
 def Tab.wl (t : Tab) : WLay t.nw where
@@ -212,12 +217,12 @@ def Tab.bl (t : Tab) : BLay t.nb where
 /-! The layout facts the simulation uses, through the maps (`Tab.wl`, `Tab.bl`) only. -/
 
 theorem Tab.pos8_lt (t : Tab) {a : ArrId} (h : t.dom8 a = true) : t.pos8 a < t.nb := t.bl.pos_lt a h
-theorem Tab.pos64_ne (t : Tab) {s s' : TArr} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+theorem Tab.pos64_ne (t : Tab) {s s' : TieredArray} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
     (e : s ≠ s') : t.pos64 s ≠ t.pos64 s' := fun e' => e (t.pos64_inj h h' e')
 theorem Tab.pos8_ne (t : Tab) {a a' : ArrId} (h : t.dom8 a = true) (h' : t.dom8 a' = true)
     (e : a ≠ a') : t.pos8 a ≠ t.pos8 a' := fun e' => e (t.bl.pos_inj a a' h h' e')
 theorem Tab.pos64_tierA (t : Tab) {a : ArrId} (h : t.dom64 (tier1 a) = true) (u : Word) :
-    t.pos64 (tierA a u) = t.pos64 (TArr.t0 a) + (u &&& 1).toNat := by
+    t.pos64 (tierA a u) = t.pos64 (TieredArray.t0 a) + (u &&& 1).toNat := by
   have : u &&& 1 = 0 ∨ u &&& 1 = 1 := by
     have : (u &&& 1).toNat ≤ 1 := by rw [UInt64.toNat_and]; exact Nat.and_le_right
     rcases (by omega : (u &&& 1).toNat = 0 ∨ (u &&& 1).toNat = 1) with h | h
@@ -232,7 +237,7 @@ theorem Tab.dom64_tierA (t : Tab) {a : ArrId} (h : t.dom64 (tier1 a) = true) (u 
   · exact (t.adj64 a h).1
   · exact h
 theorem Tab.dom64_t0 (t : Tab) {a : ArrId} (h : t.dom64 (tier1 a) = true) :
-    t.dom64 (TArr.t0 a) = true := (t.adj64 a h).1
+    t.dom64 (TieredArray.t0 a) = true := (t.adj64 a h).1
 
 /- The proofs above the layout use only the lemmas above (`pos64_lt`, `pos64_ne`, `pos64_tierA`,
 …): unfolding today's layout in a goal makes `whnf` run `Nat` arithmetic on `tierOff`. The kernel
@@ -248,8 +253,8 @@ def Tab.dlen64 (t : Tab) (p : Nat) : Int := 16 + 16 * t.nb + 8 * t.nw + 8 * p
 /-- The descriptor words of byte array `a` and of word array `s`, through the layout map. -/
 def Tab.base8 (t : Tab) (a : ArrId) : Int := t.dbase8 (t.pos8 a)
 def Tab.len8 (t : Tab) (a : ArrId) : Int := t.dlen8 (t.pos8 a)
-def Tab.base64 (t : Tab) (s : TArr) : Int := t.dbase64 (t.pos64 s)
-def Tab.len64 (t : Tab) (s : TArr) : Int := t.dlen64 (t.pos64 s)
+def Tab.base64 (t : Tab) (s : TieredArray) : Int := t.dbase64 (t.pos64 s)
+def Tab.len64 (t : Tab) (s : TieredArray) : Int := t.dlen64 (t.pos64 s)
 
 /-- The words the constant data takes. -/
 def Tab.romWords (t : Tab) : Nat := (t.romLen + 7) / 8

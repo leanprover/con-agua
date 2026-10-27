@@ -10,8 +10,8 @@ public import ConAgua.L.Semantics
 `readsIn p S S8 fs` is a `Bool` check of the program text: every function of `fs` that `p`
 defines calls only into `fs`, and every array its body names (loaded, stored, measured, copied
 from or to, scanned) is a word array of `S` or a byte array of `S8`. The array sets are
-predicates (`S S8 : ArrId → Bool`; a list `l` is `l.contains`). A tiered access
-`a⟨t⟩` names both tiers, `a` and `a + tierOff`. Global variables are not restricted.
+predicates (`S : TieredArray → Bool`, `S8 : ArrId → Bool`; a list `l` is `l.contains`). A
+tiered access `a⟨t⟩` names both tiers, `↑a` and `tier1 a`. Global variables are not restricted.
 (`Stmt.rdOk` takes the callee set as a predicate too: `readsIn` uses membership in `fs`, the
 per-function split for a large program (`Compiler/ReadSetSplit.lean`) a tree of name codes.)
 
@@ -40,10 +40,10 @@ def BSrc.rdOk (S8 : ArrId → Bool) : BSrc → Bool
   | .rom _ => true
 
 /-- Both tiers of the tiered array `a` are in `S`. -/
-def tierOk (S : ArrId → Bool) (a : ArrId) : Bool := S a && S (a + tierOff)
+def tierOk (S : TieredArray → Bool) (a : ArrId) : Bool := S a && S (tier1 a)
 
 /-- An expression names only word arrays of `S` and byte arrays of `S8`. -/
-def Expr.rdOk (S S8 : ArrId → Bool) : Expr → Bool
+def Expr.rdOk (S : TieredArray → Bool) (S8 : ArrId → Bool) : Expr → Bool
   | .const _ => true
   | .var _ => true
   | .glob _ => true
@@ -59,11 +59,11 @@ def Expr.rdOk (S S8 : ArrId → Bool) : Expr → Bool
   | .ld8x8 s i => s.rdOk S8 && i.rdOk S S8
 
 /-- A block operand names only word arrays of `S` (a tiered one: both tiers). -/
-def WArr.rdOk (S S8 : ArrId → Bool) : WArr → Bool
+def WArr.rdOk (S : TieredArray → Bool) (S8 : ArrId → Bool) : WArr → Bool
   | .plain a => S a
   | .tier a t => tierOk S a && t.rdOk S S8
 
-def Cond.rdOk (S S8 : ArrId → Bool) : Cond → Bool
+def Cond.rdOk (S : TieredArray → Bool) (S8 : ArrId → Bool) : Cond → Bool
   | .cmp _ a b => a.rdOk S S8 && b.rdOk S S8
   | .and p q => p.rdOk S S8 && q.rdOk S S8
   | .or p q => p.rdOk S S8 && q.rdOk S S8
@@ -71,7 +71,7 @@ def Cond.rdOk (S S8 : ArrId → Bool) : Cond → Bool
 
 /-- A statement names only word arrays of `S` and byte arrays of `S8`, and calls only
 functions `cf` accepts. -/
-def Stmt.rdOk (S S8 : ArrId → Bool) (cf : FnName → Bool) : Stmt → Bool
+def Stmt.rdOk (S : TieredArray → Bool) (S8 : ArrId → Bool) (cf : FnName → Bool) : Stmt → Bool
   | .skip => true
   | .brk => true
   | .abort e => e.rdOk S S8
@@ -93,12 +93,12 @@ def Stmt.rdOk (S S8 : ArrId → Bool) (cf : FnName → Bool) : Stmt → Bool
 
 /-- **The read set of a call-closed function set**: every function of `fs` that `p` defines
 names only arrays of `S` (words) and `S8` (bytes) and calls only into `fs`. -/
-def readsIn (p : Prog) (S S8 : ArrId → Bool) (fs : List FnName) : Bool :=
+def readsIn (p : Prog) (S : TieredArray → Bool) (S8 : ArrId → Bool) (fs : List FnName) : Bool :=
   fs.all fun f => match p.lookup f with
     | some fd => fd.body.rdOk S S8 (fun g => decide (g ∈ fs))
     | none => true
 
-theorem readsIn_lookup {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
+theorem readsIn_lookup {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName}
     (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) {fd : FunDecl}
     (h : p.lookup f = some fd) : fd.body.rdOk S S8 (fun g => decide (g ∈ fs)) = true := by
   simp only [readsIn, List.all_eq_true] at hp
@@ -109,25 +109,25 @@ theorem readsIn_lookup {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
 /-! ## Agreeing memories, states, results -/
 
 /-- The memories agree on the word arrays `S`, the byte arrays `S8` and the globals. -/
-def Agree (S S8 : ArrId → Bool) (m₁ m₂ : Mem) : Prop :=
+def Agree (S : TieredArray → Bool) (S8 : ArrId → Bool) (m₁ m₂ : Mem) : Prop :=
   (∀ a, S a = true → m₁.arr64 a = m₂.arr64 a) ∧ (∀ a, S8 a = true → m₁.arr8 a = m₂.arr8 a) ∧ m₁.glob = m₂.glob
 
 /-- Agreeing memories and equal locals. -/
-def StAgree (S S8 : ArrId → Bool) (s₁ s₂ : St) : Prop :=
+def StAgree (S : TieredArray → Bool) (S8 : ArrId → Bool) (s₁ s₂ : St) : Prop :=
   Agree S S8 s₁.mem s₂.mem ∧ s₁.loc = s₂.loc
 
 /-- Two run results correspond: the same error, or the same value and agreeing states. -/
-def ResAgree {α : Type} (S S8 : ArrId → Bool) : Except Err (α × St) → Except Err (α × St) → Prop
+def ResAgree {α : Type} (S : TieredArray → Bool) (S8 : ArrId → Bool) : Except Err (α × St) → Except Err (α × St) → Prop
   | .ok r₁, .ok r₂ => r₁.1 = r₂.1 ∧ StAgree S S8 r₁.2 r₂.2
   | .error e₁, .error e₂ => e₁ = e₂
   | _, _ => False
 
 /-- A computation whose runs from agreeing states correspond. -/
-def Sim {α : Type} (S S8 : ArrId → Bool) (x : M α) : Prop :=
+def Sim {α : Type} (S : TieredArray → Bool) (S8 : ArrId → Bool) (x : M α) : Prop :=
   ∀ s₁ s₂, StAgree S S8 s₁ s₂ → ResAgree S S8 (x.run s₁) (x.run s₂)
 
 section sim
-variable {S S8 : ArrId → Bool}
+variable {S : TieredArray → Bool} {S8 : ArrId → Bool}
 
 theorem ResAgree.ok {α : Type} {a₁ a₂ : α} {s₁ s₂ : St} (ha : a₁ = a₂) (h : StAgree S S8 s₁ s₂) :
     ResAgree S S8 (.ok (a₁, s₁)) (.ok (a₂, s₂)) := ⟨ha, h⟩
@@ -192,24 +192,16 @@ end sim
 
 /-! ## Memory operations keep agreement -/
 
-private theorem arr64_set64 (m : Mem) (a b : ArrId) (i v : Word) :
-    (m.set64 a i v).arr64 b = if b = a then (m.arr64 a).set! i.toNat v else m.arr64 b := by
-  simp only [Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?]
-  by_cases hb : b = a
-  · subst hb; by_cases h : b < m.words.size <;> simp [h]
-  · simp only [hb, ite_false]; grind
+private theorem arr64_set64 (m : Mem) (a b : TieredArray) (i v : Word) :
+    (m.set64 a i v).arr64 b = if b = a then (m.arr64 a).set! i.toNat v else m.arr64 b := rfl
 
 private theorem arr8_set8 (m : Mem) (a b : ArrId) (i v : Word) :
-    (m.set8 a i v).arr8 b = if b = a then (m.arr8 a).set! i.toNat v.toUInt8 else m.arr8 b := by
-  simp only [Mem.set8, Mem.arr8, Array.getD_eq_getD_getElem?]
-  by_cases hb : b = a
-  · subst hb; by_cases h : b < m.bytes.size <;> simp [h]
-  · simp only [hb, ite_false]; grind
+    (m.set8 a i v).arr8 b = if b = a then (m.arr8 a).set! i.toNat v.toUInt8 else m.arr8 b := rfl
 
 section mem
-variable {S S8 : ArrId → Bool} {m₁ m₂ : Mem}
+variable {S : TieredArray → Bool} {S8 : ArrId → Bool} {m₁ m₂ : Mem}
 
-theorem Agree.set64 (h : Agree S S8 m₁ m₂) {a : ArrId} (ha : S a = true) (i v : Word) :
+theorem Agree.set64 (h : Agree S S8 m₁ m₂) {a : TieredArray} (ha : S a = true) (i v : Word) :
     Agree S S8 (m₁.set64 a i v) (m₂.set64 a i v) := by
   refine ⟨fun b hb => ?_, fun b hb => h.2.1 b hb, h.2.2⟩
   rw [arr64_set64, arr64_set64, h.1 a ha, h.1 b hb]
@@ -224,7 +216,7 @@ theorem Agree.setG (h : Agree S S8 m₁ m₂) (g : GVar) (v : Word) :
   refine ⟨h.1, h.2.1, ?_⟩
   simp only [Mem.setG, h.2.2]
 
-theorem Agree.copy64 {d s : ArrId} (hd : S d = true) (hs : S s = true) :
+theorem Agree.copy64 {d s : TieredArray} (hd : S d = true) (hs : S s = true) :
     ∀ (n : Nat) {m₁ m₂ : Mem} (di si : Word), Agree S S8 m₁ m₂ →
       Agree S S8 (m₁.copy64 d di s si n) (m₂.copy64 d di s si n)
   | 0, _, _, _, _, h => h
@@ -233,7 +225,7 @@ theorem Agree.copy64 {d s : ArrId} (hd : S d = true) (hs : S s = true) :
     rw [h.1 s hs]
     exact Agree.copy64 hd hs n _ _ (h.set64 hd _ _)
 
-theorem Agree.copy8w {d : ArrId} (hd : S d = true) (b : Array UInt8) :
+theorem Agree.copy8w {d : TieredArray} (hd : S d = true) (b : Array UInt8) :
     ∀ (n : Nat) {m₁ m₂ : Mem} (di si : Word), Agree S S8 m₁ m₂ →
       Agree S S8 (m₁.copy8w d di b si n) (m₂.copy8w d di b si n)
   | 0, _, _, _, _, h => h
@@ -247,13 +239,12 @@ theorem Agree.src8 (h : Agree S S8 m₁ m₂) {s : BSrc} (hs : s.rdOk S8 = true)
   | arr a => simp only [BSrc.rdOk] at hs; exact h.2.1 a hs
   | rom d => rfl
 
-theorem tierA_mem {S : ArrId → Bool} {a : ArrId} (h : tierOk S a = true) (t : Word) :
+theorem tierA_mem {S : TieredArray → Bool} {a : ArrId} (h : tierOk S a = true) (t : Word) :
     S (tierA a t) = true := by
   simp only [tierOk, Bool.and_eq_true] at h
-  have h2 : (t &&& 1).toNat < 2 := by
-    rw [UInt64.toNat_and]; exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
-  rcases (show (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 by omega) with e | e <;>
-    simp [tierA, e, h.1, h.2]
+  rcases tierA_eq_or a t with e | e <;> rw [e]
+  · exact h.1
+  · exact h.2
 
 theorem StAgree.setLoc {s₁ s₂ : St} (h : StAgree S S8 s₁ s₂) (x : Var) (v : Word) :
     StAgree S S8 (s₁.setLoc x v) (s₂.setLoc x v) := by
@@ -270,9 +261,9 @@ end mem
 /-! ## Expressions, conditions, arguments -/
 
 section eval
-variable {S S8 : ArrId → Bool}
+variable {S : TieredArray → Bool} {S8 : ArrId → Bool}
 
-theorem ld64_sim {a : ArrId} (ha : S a = true) (i : Word) : Sim S S8 (ld64 a i) := by
+theorem ld64_sim {a : TieredArray} (ha : S a = true) (i : Word) : Sim S S8 (ld64 a i) := by
   unfold ld64
   refine Sim.get_bind fun s₁ s₂ h => ?_
   have e := h.1.1 a ha
@@ -302,7 +293,7 @@ theorem ld8x8_sim {b : BSrc} (hb : b.rdOk S8 = true) (i : Word) : Sim S S8 (ld8x
   generalize s₂.mem.src8 b = B
   exact Sim.ite (fun _ => Sim.pure _) (fun _ => Sim.throw _) s₁ s₂ h
 
-theorem st64_sim {a : ArrId} (ha : S a = true) (i v : Word) : Sim S S8 (st64 a i v) := by
+theorem st64_sim {a : TieredArray} (ha : S a = true) (i v : Word) : Sim S S8 (st64 a i v) := by
   unfold st64
   refine Sim.get_bind fun s₁ s₂ h => ?_
   rw [h.1.1 a ha]
@@ -390,7 +381,7 @@ theorem evalArgs_sim : ∀ (es : List Expr), es.all (·.rdOk S S8) = true → Si
     exact Sim.bind (evalE_sim e hr.1) fun _ => Sim.bind (evalArgs_sim es hr.2) fun _ => Sim.pure _
 
 /-- A block operand of `S`, then a computation that runs alike for every array of `S`. -/
-theorem warr_bind_sim {β : Type} {w : WArr} (hw : w.rdOk S S8 = true) {g : ArrId → M β}
+theorem warr_bind_sim {β : Type} {w : WArr} (hw : w.rdOk S S8 = true) {g : TieredArray → M β}
     (hg : ∀ a, S a = true → Sim S S8 (g a)) : Sim S S8 (warr w >>= g) := by
   cases w with
   | plain a =>
@@ -407,10 +398,10 @@ end eval
 /-! ## Statements, calls, fuel -/
 
 section stmt
-variable {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
+variable {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName}
 
 /-- A continuation whose runs of every checked statement correspond. -/
-def KSim (S S8 : ArrId → Bool) (fs : List FnName) (k : Stmt → M Sig) : Prop :=
+def KSim (S : TieredArray → Bool) (S8 : ArrId → Bool) (fs : List FnName) (k : Stmt → M Sig) : Prop :=
   ∀ st, st.rdOk S S8 (fun g => decide (g ∈ fs)) = true → Sim S S8 (k st)
 
 theorem invoke_sim (hp : readsIn p S S8 fs = true) {k : Stmt → M Sig} (hk : KSim S S8 fs k)
@@ -536,14 +527,14 @@ end stmt
 /-- **Non-interference.** A function of a set whose bodies read only the word arrays `S` and the
 byte arrays `S8` (and call only into the set) runs alike from two states that agree on them and
 have the same locals: the same error, or the same results from states that agree again. -/
-theorem invoke_agree {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
+theorem invoke_agree {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName}
     (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) (n : Nat) (vs : List Word)
     {s₁ s₂ : St} (hm : Agree S S8 s₁.mem s₂.mem) (hl : s₁.loc = s₂.loc) :
     ResAgree S S8 ((invoke p (exec p n) f vs).run s₁) ((invoke p (exec p n) f vs).run s₂) :=
   invoke_sim hp (exec_sim hp n) hf vs s₁ s₂ ⟨hm, hl⟩
 
 /-- The same, for a successful run from the first state. -/
-theorem invoke_agree_ok {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
+theorem invoke_agree_ok {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName}
     (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word}
     {s₁ s₂ : St} (hm : Agree S S8 s₁.mem s₂.mem) (hl : s₁.loc = s₂.loc) {rs : List Word}
     {s₁' : St} (h : (invoke p (exec p n) f vs).run s₁ = .ok (rs, s₁')) :
@@ -564,13 +555,13 @@ theorem invoke_agree_ok {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
 
 /-- Two results of `L.run` correspond: the same error, or the same values and agreeing final
 memories. -/
-def RunAgree (S S8 : ArrId → Bool) : Except Err (List Word × Mem) → Except Err (List Word × Mem) → Prop
+def RunAgree (S : TieredArray → Bool) (S8 : ArrId → Bool) : Except Err (List Word × Mem) → Except Err (List Word × Mem) → Prop
   | .ok r₁, .ok r₂ => r₁.1 = r₂.1 ∧ Agree S S8 r₁.2 r₂.2
   | .error e₁, .error e₂ => e₁ = e₂
   | _, _ => False
 
 /-- **Non-interference for `L.run`.** -/
-theorem run_agree {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
+theorem run_agree {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName}
     (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) (n : Nat) (vs : List Word)
     {m₁ m₂ : Mem} (hm : Agree S S8 m₁ m₂) :
     RunAgree S S8 (run p n f vs m₁) (run p n f vs m₂) := by
@@ -587,7 +578,7 @@ theorem run_agree {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
   · exact ⟨h.1, h.2.1⟩
 
 /-- The same, for a successful run on the first memory. -/
-theorem run_agree_ok {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
+theorem run_agree_ok {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName}
     (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word}
     {m₁ m₂ : Mem} (hm : Agree S S8 m₁ m₂) {rs : List Word} {m₁' : Mem}
     (h : run p n f vs m₁ = .ok (rs, m₁')) :
@@ -620,7 +611,7 @@ def agreeExSum : Stmt :=
       (.seq (.st64t 5 (.const 1) (.const 0) (.var 1)) (.ret [.var 1])))
 
 /-- The word arrays `sum` reads. -/
-def w3 : ArrId → Bool := ([3, 5, tierA 5 1] : List ArrId).contains
+def w3 : TieredArray → Bool := [↑(3 : ArrId), ↑(5 : ArrId), tierA 5 1].contains
 
 /-- No byte arrays. -/
 def none8 : ArrId → Bool := fun _ => false
@@ -631,13 +622,13 @@ def agreeEx : Prog :=
    ("sum", { nparams := 0, nlocals := 3, body := agreeExSum })]
 
 -- a tiered store names both tiers (by `decide`: `#guard` cannot run `tierA`, which is not compiled)
-example : readsIn agreeEx ([3, 5] : List ArrId).contains none8 ["get", "sum"] = false := by decide
+example : readsIn agreeEx [↑(3 : ArrId), ↑(5 : ArrId)].contains none8 ["get", "sum"] = false := by decide
 -- the set must be call-closed
 example : readsIn agreeEx w3 none8 ["sum"] = false := by decide
 
 theorem agreeEx_reads : readsIn agreeEx w3 none8 ["get", "sum"] = true := by decide
 
-/-- Two memories that agree on arrays `3`, `5`, `261` and the globals run `sum` alike (whatever
+/-- Two memories that agree on arrays `3`, `5`, `tier1 5` and the globals run `sum` alike (whatever
 else they hold). -/
 example (n : Nat) (m₁ m₂ : Mem) (h : Agree w3 none8 m₁ m₂) :
     RunAgree w3 none8 (run agreeEx n "sum" [] m₁) (run agreeEx n "sum" [] m₂) :=

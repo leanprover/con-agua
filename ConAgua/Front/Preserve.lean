@@ -50,29 +50,24 @@ theorem Keep.trans {m₁ m₂ m₃ : Mem} (h₁ : Keep m₁ m₂) (h₂ : Keep m
 
 theorem Keep.arr8 {m m' : Mem} (h : Keep m m') (a : ArrId) : m'.arr8 a = m.arr8 a := by
   simp only [Mem.arr8, h.1]
-theorem Keep.size {m m' : Mem} (h : Keep m m') (a : ArrId) : (m'.arr64 a).size = (m.arr64 a).size :=
+theorem Keep.size {m m' : Mem} (h : Keep m m') (a : TieredArray) : (m'.arr64 a).size = (m.arr64 a).size :=
   h.2 a
 grind_pattern [lang_grind] Keep.arr8 => Keep m m', m'.arr8 a
 grind_pattern [lang_grind] Keep.size => Keep m m', m'.arr64 a
 
-theorem Keep.set64 {m m' : Mem} (h : Keep m m') (a : ArrId) (i v : Word) : Keep m (m'.set64 a i v) := by
+theorem Keep.set64 {m m' : Mem} (h : Keep m m') (a : TieredArray) (i v : Word) : Keep m (m'.set64 a i v) := by
   refine ⟨h.1, fun b => ?_⟩
   rw [← h.2 b]
   simp only [Mem.set64, Mem.arr64]
-  rw [Array.getD_eq_getD_getElem?, Array.getD_eq_getD_getElem?, Array.set!_eq_setIfInBounds,
-    Array.getElem?_setIfInBounds]
-  by_cases hb : a = b
-  · subst hb
-    by_cases ha : a < m'.words.size <;> simp [ha]
-  · simp [hb]
+  split <;> simp_all
 
-theorem Keep.copy64 {m m' : Mem} (h : Keep m m') (d : ArrId) (di : Word) (s : ArrId) (si : Word)
+theorem Keep.copy64 {m m' : Mem} (h : Keep m m') (d : TieredArray) (di : Word) (s : TieredArray) (si : Word)
     (n : Nat) : Keep m (m'.copy64 d di s si n) := by
   induction n generalizing m' di si with
   | zero => exact h
   | succ n ih => exact ih (h.set64 _ _ _) _ _
 
-theorem Keep.copy8w {m m' : Mem} (h : Keep m m') (d : ArrId) (di : Word) (b : Array UInt8) (si : Word)
+theorem Keep.copy8w {m m' : Mem} (h : Keep m m') (d : TieredArray) (di : Word) (b : Array UInt8) (si : Word)
     (n : Nat) : Keep m (m'.copy8w d di b si n) := by
   induction n generalizing m' di si with
   | zero => exact h
