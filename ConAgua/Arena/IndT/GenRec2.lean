@@ -8,7 +8,7 @@ import ConAgua.Arena.IndInstallSpec.IcvgW
 /-!
 # `genRecCheck` under `StageC`, part 2 (lane `indstaget`, helper `grc`)
 
-`gen_rec_check_prep`'s second and third parts (`grpBW_ok`'s, `grpCW_ok`'s, `IndInstallSpec41`)
+`gen_rec_check_prep`'s second and third parts (`grpBW_ok`'s, `grpCW_ok`'s, `IndInstallSpec/GpbWSimF`)
 under `StageC`; twin side con-ron's `genRecCheck_spec`'s proof: `classesNfs`
 (`classesNfs_refinesLpC`, `classesNfs_spec`), `classesCtors` (`classesCtors_refinesC`,
 `classesCtors_spec`), the formers (`GR.mapM_cspecF` of `classFormerTy_spec`), `structElimLevel`

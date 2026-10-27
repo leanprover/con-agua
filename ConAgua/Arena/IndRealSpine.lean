@@ -7,7 +7,7 @@ import ConAgua.Arena.IndRealFvt
 spine walks (`WhnfEntry.lean`), as program- and fuel-free models `callF P f` (`CallF.lean`, the
 recipe of `IndReal.lean`) with the relational facts of the `IndStubs` contracts (`gafF_ok`,
 `pirF_ok`, `mknF_ok`), and one program bundle `AdF` for the three. This file sits below the
-stage's spec files (`IndPartsSpec3`, …), so it does not import `IndReal`/`StubIndRefine`: the
+stage's spec files (`IndPartsSpec/RecTW`, …), so it does not import `IndReal`/`StubIndRefine`: the
 adapter specs are restated here.
 
 * `get_app_fn_f`, `pi_result_f` abort at any fuel word other than `CWF`, so the contracts hold at

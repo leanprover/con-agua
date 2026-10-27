@@ -8,7 +8,7 @@ This file held the stub contracts of the inductive stage's callees (`stubM_spec`
 statement per stub, all `sorry`). Every callee is now the program's own call (`realCall`) or a
 pure model, and the contracts and the `StageR` theorems through them are gone (lane `cleanup`).
 What is left: the opaque word model `stubM` (still named in a few
-models, e.g. `IndPartsSpec4`'s `wsK2`), `RelAM`, the walk-memo predicates that
+models, e.g. `IndPartsSpec/BlockRecNamesUnreserved`'s `wsK2`), `RelAM`, the walk-memo predicates that
 make up `AbsOK`, and the result decoders `pwWords`, `decZC`, `decLvlEq`.
 
 `H w`: a handle word (below `2^32`).

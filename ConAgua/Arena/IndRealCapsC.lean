@@ -19,7 +19,7 @@ The names of the zero-ness datum decode by the name store; the stage relation's 
 store is injective (`denoteN_inj`) and `dn` agrees with it (`TwinMem.dnN`): `decZC_toDn`.
 
 * `lzcSimR_of`: the `lv_zero_caps` call of `block_caps_at` at every state of the invariant
-  `LzInv st₀` (store `st₀`, `ReadLCOK`), as `icbiW_simG` (`IndInstallSpec14.lean`) takes it.
+  `LzInv st₀` (store `st₀`, `ReadLCOK`), as `icbiW_simG` (`IndInstallSpec/IcaW.lean`) takes it.
 * `consBlockInds_refinesR`: `cons_block_inds` refines `consBlockInds` from the stage relation and
   the twin's read-back facts (no stub contract): replaces `consBlockInds_refines` for a caller
   that has them (`ibiW_simC`: from `StageC`, `StageC.lzFacts`).

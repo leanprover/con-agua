@@ -9,7 +9,7 @@ The program- and fuel-free model `ftdF := callF ftdProg "fvar_type_d"` (`CallF.l
 of `IndReal.lean`) and `ftdF_ok`, the `IndStubs` contract's relational fact under `StageR`: the
 tag test, then `e_view`'s third word (`viewFVarTy` of the `fvar` view). Writes nothing; the twin's
 state is unchanged (`ftdW_ok`). Kept apart from `IndRealFvt.lean` (`fvar_type_ds`,
-`get_app_args_f`) with imports below `IndInstallSpec`, which calls `fvar_type_d`
+`get_app_args_f`) with imports below `IndInstallSpec/DomsW`, which calls `fvar_type_d`
 (`check_block_doms_at`): `IndRealFvt.lean` needs `DeclNatBase`, which sits above it.
 -/
 

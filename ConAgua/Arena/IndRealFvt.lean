@@ -8,7 +8,7 @@ import ConAgua.Arena.IndRealFvtD
 Program- and fuel-free models `callF P f` (`CallF.lean`, the recipe of `IndReal.lean`) with the
 relational facts of the `IndStubs` contracts, under `StageR`:
 
-* `fvar_type_d` (`ftdF`, `ftdF_ok`) is in `IndRealFvtD.lean` (imports below `IndInstallSpec`).
+* `fvar_type_d` (`ftdF`, `ftdF_ok`) is in `IndRealFvtD.lean` (imports below `IndInstallSpec/DomsW`).
 * `fvar_type_ds` (`ftdsF`, `ftdsF_ok`): a fresh `IW` slice, then one `fvar_type_d` per input
   word, written at the slice; the memory after is `wrIW (allocMem m l) q ws` and `slice_keep`
   gives the post. **The contract's pre is strengthened** by `0 < l → o + l ≤ iwTop m` (a

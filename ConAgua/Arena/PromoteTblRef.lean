@@ -11,7 +11,7 @@ import ConAgua.Arena.PromoteCIRef.OfFrame
 
 The tables a step installed are the newest `ETAB` slots (`IEnv.tables` newest first, `ETAB` oldest
 first), as the constants are the newest `ECON` slots: the walks mirror `erase_installed`,
-`promote_ci_list`, `index_promoted` (`PromoteCIRef24.lean`, `27`, `28`), over `TablesAt` and
+`promote_ci_list`, `index_promoted` (`PromoteCIRef/CiList.lean`, `27`, `28`), over `TablesAt` and
 `decTbl` instead of `ConstsAt` and `decCI`, the rows written by `tbl_row_set` (`EnvR.setTblRow`).
 -/
 

@@ -9,7 +9,7 @@ import ConAgua.Arena.IndPartsSpec.BrsW
 /-!
 # `check_block_positivity` under `StageC` (lane `indstaget`, helper `indstaget-cbpos`)
 
-`cbposW_ok`'s proof (`IndInstallSpec34`) under `StageC`, its twin side transcribed from con-ron's
+`cbposW_ok`'s proof (`IndInstallSpec/Pos3Init`) under `StageC`, its twin side transcribed from con-ron's
 `checkBlockPositivity_spec`: the walk's context (`bncW_sim`, con-ron's `blockNestCtx_spec` on its
 run for the `CoreStep` and the context's denotation), `nest_uniform` (`nestUniform_refines`,
 `nestUniform_spec`), the fresh state (an L-only step), `nest_root` (`nestRoot_refinesC`; con-ron's

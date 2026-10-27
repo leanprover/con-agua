@@ -5,7 +5,7 @@ import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 # `block_nest_ctx`'s pure parts keep the walk memos (lane `indstaget`)
 
 `AFr` (`AbsOK m → AbsOK m'`) across `nckW` (the context record) and `nhW` (the holes): the
-`AFr` twins of `IndInstallSpec33`'s `MFr` lemmas, so that `block_nest_ctx` under `StageC` returns
+`AFr` twins of `IndInstallSpec/Pos3NhGoWMfr`'s `MFr` lemmas, so that `block_nest_ctx` under `StageC` returns
 `AbsOK` (no `AbsKeep` premise).
 -/
 
