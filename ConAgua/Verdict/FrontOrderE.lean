@@ -591,7 +591,7 @@ theorem ctorE_fail {p : Prog} (hL : IndApplyLookups p) (hnv : CtorNV p)
     rw [islice_length] at hk'
     rw [islice_get] at he
     exact findLastW_zero n m1 cno nn cn _ _ hfl (by omega) hf0 k' (by omega)
-      (decI_inj' _ _ (hCN k' hk') hnn he)
+      (decI_inj (hCN k' hk') hnn he)
   obtain ⟨f1, f2, f3⟩ := findLastW_facts n m1 cno nn cn _ _ hfl (by omega) hf0
   rw [hcn] at f1 f3
   obtain ⟨k, hkdef⟩ : ∃ k, r.tail.headD 0 = k := ⟨_, rfl⟩
@@ -609,7 +609,7 @@ theorem ctorE_fail {p : Prog} (hL : IndApplyLookups p) (hnv : CtorNV p)
       (by rw [islice_length]; exact f1) (by rw [islice_get, f2]) (fun k' h1 h2 => by
         rw [islice_get]; intro e
         rw [islice_length] at h2
-        exact f3 k' h1 h2 (decI_inj' _ _ (hCN k' h2) hnn e))
+        exact f3 k' h1 h2 (decI_inj (hCN k' h2) hnn e))
     simpa [ctorIxOf] using this
   right
   refine ⟨k.toNat, hfold, f1, ?_⟩
@@ -745,7 +745,7 @@ theorem ctorE_fail {p : Prog} (hL : IndApplyLookups p) (hnv : CtorNV p)
     rw [hiw] at hiw'; cases hiw'
     rw [hnm, gt]
   · rw [viCtorE.k_name_get.abort1 p n tt np fuel _ _ m5 (by rw [rd 9 (by decide)]; simpa using gt)] at h
-    exact .inl ⟨iw, _, hiw, hnm, fun he => gt (decI_inj' _ _ hx32 htt he)⟩
+    exact .inl ⟨iw, _, hiw, hnm, fun he => gt (decI_inj hx32 htt he)⟩
 
 /-- `vi_ctor`'s errors of class `≠ 0` are its own aborts, all of class `1` (rejects). -/
 theorem ctorE_cls {p : Prog} (hnv : CtorNV p) (n : Nat) (m : Mem) (nn j tt np fuel cno cn co : Word)

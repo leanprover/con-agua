@@ -13,7 +13,6 @@ canonical comparison (`canonEqList_refines`, whose literal premise `LitInj` come
 state's `StateOK`, threaded through the pinned blocks' interning: `BasisKind.decls_run`).
 -/
 
-
 open ConRon.Arena
 
 namespace L.Ind
@@ -45,13 +44,6 @@ theorem bph_decls_ne (k : Nat) (hk : k < 4) : (ConLeche.BasisKind.decls (basisOf
 def BphR : Option ConLeche.BasisKind → List Word → Prop
   | none, r => r.headD 0 = 0
   | some k, r => r.headD 0 ≠ 0 ∧ (r.tail.headD 0).toNat < 4 ∧ basisOfW (r.tail.headD 0).toNat = k
-
-theorem bphDecI_inj {v w : Word} (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32)
-    (h : (decI v : NIdx) = decI w) : v = w := by
-  have := (word_decI (decI v : NIdx) w hw).mpr h
-  rw [← this]
-  apply UInt64.toNat_inj.mp
-  simp [decI]; omega
 
 theorem bphDecEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat}
     {blk : List IConstantInfo} (h : decEBlk dn m o l = some blk) (j : Nat) (hj : j < l) :
@@ -149,7 +141,7 @@ theorem bphNames_iff {dn : NIdx → Option ConLeche.Name} {m : Mem} {o bo l : Wo
     rw [ha1, hb1]
     have e : (blockNames pinned)[i.toNat]? = (blockNames blk)[i.toNat]? := by rw [h]
     simp only [blockNames, List.getElem?_map, ha3, hb3, Option.map_some, Option.some.injEq] at e
-    exact bphDecI_inj ha2 hb2 (by rw [← ha4, ← hb4, e])
+    exact decI_inj ha2 hb2 (by rw [← ha4, ← hb4, e])
 
 /-- **The name pre-filter's model** (`bphW.loop2`): it keeps the memory, and reaches `l` exactly
 when the name words agree from `j` on. -/

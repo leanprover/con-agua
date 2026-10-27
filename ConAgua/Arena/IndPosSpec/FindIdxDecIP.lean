@@ -23,7 +23,7 @@ theorem findIdx_decIP (ws : List Word) (c : Word) (hws : ∀ w ∈ ws, w.toNat <
   induction ws with
   | nil => rfl
   | cons w ws ih =>
-    simp only [List.map_cons, List.findIdx?_cons, decI_beq' w c (hws w (by simp)) hc]
+    simp only [List.map_cons, List.findIdx?_cons, decI_beq w c (hws w (by simp)) hc]
     by_cases h : w = c
     · simp [h]
     · simp [h]

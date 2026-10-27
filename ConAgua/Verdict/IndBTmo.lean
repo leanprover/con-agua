@@ -79,7 +79,7 @@ theorem tmoE_claim (n : Nat) {m : Mem} {a : AState}
     exact ErrClaim.fail _ _ (by decide)
   rw [tmoE.k_pin_at.arm1 p n vis pp pfo pfl I us ao al mno mnl [pinW m (1 + (47 : Word).toNat)] m hIq] at he
   have hne : ((decI I : NIdx) == decI (pinW m (1 + (47 : Word).toNat))) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq]; rw [clsDecI_inj hI hqH]; exact hIq
+    simp only [beq_eq_false_iff_ne, ne_eq]; rw [decI_inj_iff hI hqH]; exact hIq
   simp only [hne, Bool.false_eq_true, ite_false]
   -- `target_ctors_of`
   cases h2 : callE p n "target_ctors_of" [vis, I] m with

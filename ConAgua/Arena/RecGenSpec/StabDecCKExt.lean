@@ -95,7 +95,7 @@ theorem stab_decCK_ext {m : Mem} {k : Nat} {ck : ClassKey} (h : StabD (fun m => 
   rw [hset] at hw'; cases hw'
   have : (decI w : EIdx) = decI (w + 1) := by
     first | exact hwd.symm.trans hwd' | exact hwd.trans hwd'.symm | exact hwd.symm.trans hwd'.symm | exact hwd.trans hwd'
-  exact word_succ_ne w (congrArg UInt64.toNat ((clsDecI_inj hwH hwH').mp this).symm)
+  exact word_succ_ne w (congrArg UInt64.toNat ((decI_inj_iff hwH hwH').mp this).symm)
 
 theorem decCK_lt_size {m : Mem} {k : Nat} {ck : ClassKey} (h : decCK m k = some ck) : k < (m.arr64 IW).size := by
   simp only [decCK, bind, Option.bind_eq_some_iff] at h

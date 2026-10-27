@@ -163,7 +163,7 @@ theorem dmChoose_run {γ : Type} (xs : List γ) (d : γ) {m : Mem} {a : AState} 
     PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT, dmSlotW]
   have p : ∀ i (hi : i < 51), (pinAt i).run a = .ok (decI (pinW m (1 + i)), a) := pinAt_run hF
   have b : ∀ i (hi : i < 51), ((decI c : NIdx) == decI (pinW m (1 + i))) = decide (c = pinW m (1 + i)) :=
-    fun i hi => decI_beq_word hc (hF.names_lt i hi)
+    fun i hi => decI_beq _ _ hc (hF.names_lt i hi)
   simp only [StateT.run_bind, p 21 (by decide), exc_ok_bind', b 21 (by decide), decide_eq_true_eq]
   by_cases e0 : c = pinW m 22
   · rw [ite_eq_left e0, ite_eq_left e0]; rfl

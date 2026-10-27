@@ -93,7 +93,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
       have hl1' : (l - 1).toNat = l.toNat - 1 := toNat_sub_one' hl
       have hcond : ((decI w0 : NIdx) == decI c || (ws.map (fun w => (decI w : NIdx))).contains (decI w0)) =
           decide (w0 = c ∨ b ≠ 0) := by
-        rw [decI_beq' w0 c hw0lt hc, contains_decI ws w0 hwlt hw0lt, hbv]
+        rw [decI_beq w0 c hw0lt hc, contains_decI ws w0 hwlt hw0lt, hbv]
         by_cases h1 : w0 = c <;> by_cases h2 : ws.contains w0 = true <;> simp [h1]
       have hblock' : hslice? (erA m) (off + 1).toNat (l - 1).toNat = some rest := by
         rw [hoff1, hl1']; exact hrest

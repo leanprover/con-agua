@@ -346,11 +346,11 @@ theorem taCW_ok (n : Nat) {m m' : Mem} {no nl lvls ho hl h nn vus r : Word} {nam
   by_cases hv : vus ≠ lvls
   · rw [taCW_ne (hv := hv)] at hc
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
-    have : ¬ ((decI vus : LsIdx) == decI lvls) = true := by rw [decI_beq' vus lvls hvus hlv]; simpa using hv
+    have : ¬ ((decI vus : LsIdx) == decI lvls) = true := by rw [decI_beq vus lvls hvus hlv]; simpa using hv
     refine ⟨rfl, ?_⟩
     simp only [taConstT, this]; rfl
   rw [taCW_eq (hv := hv)] at hc
-  have hbeq : ((decI vus : LsIdx) == decI lvls) = true := by rw [decI_beq' vus lvls hvus hlv]; simpa using hv
+  have hbeq : ((decI vus : LsIdx) == decI lvls) = true := by rw [decI_beq vus lvls hvus hlv]; simpa using hv
   obtain ⟨ws, hws, rfl, hwlt⟩ := slR_of_decHL m _ _ names hdec hno
   simp only [UInt64.ofNat_toNat] at hws
   have hlen : ws.length < 2 ^ 64 := by have := decHL_length m hdec; simp at this; omega

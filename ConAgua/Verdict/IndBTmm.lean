@@ -35,16 +35,6 @@ l_model tmmE_spec (p : Prog) (hf : p.lookup "target_major_of_member" = some targ
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
 
-theorem map_decI_inj' {k : IdxKind} : ∀ (ws1 ws2 : List Word), (∀ w ∈ ws1, w.toNat < 2 ^ 32) →
-    (∀ w ∈ ws2, w.toNat < 2 ^ 32) → ws1.map (decI : Word → Idx k) = ws2.map decI → ws1 = ws2
-  | [], [], _, _, _ => rfl
-  | [], _ :: _, _, _, h => by simp at h
-  | _ :: _, [], _, _, h => by simp at h
-  | a :: as, b :: bs, h1, h2, h => by
-    simp only [List.map_cons, List.cons.injEq] at h
-    have hab := decI_inj (h1 a (by simp)) (h2 b (by simp)) h.1
-    rw [hab, map_decI_inj' as bs (fun w hw => h1 w (by simp [hw])) (fun w hw => h2 w (by simp [hw])) h.2]
-
 section sims
 variable {p : Prog} (hP : TmmProg p) (hnv : closedNV p _root_.L.Checker.nvFns = true) {env : ConLeche.Env}
   {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -180,7 +170,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
     cases he
     have hne : ¬ ((decI us == AM.res (paramLevels bs.lps) a) && (List.take bs.nP args == List.take bs.nP fvs)) = true := by
       rw [← hd2]
-      have : (decI us : LsIdx) ≠ decI (r2.headD 0) := fun h => hu0 ((clsDecI_inj hus hH2).mp h)
+      have : (decI us : LsIdx) ≠ decI (r2.headD 0) := fun h => hu0 ((decI_inj_iff hus hH2).mp h)
       simp only [Bool.and_eq_true, beq_iff_eq]; exact fun h => this h.1
     exact ErrClaim.ite_neg hne (ErrClaim.fail _ _ (by decide))
   replace hu0 : us = r2.headD 0 := Classical.byContradiction hu0
@@ -191,7 +181,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
     have hne : ¬ ((decI us == AM.res (paramLevels bs.lps) a) && (List.take bs.nP args == List.take bs.nP fvs)) = true := by
       intro hc
       simp only [Bool.and_eq_true, beq_iff_eq] at hc
-      have hws : ws1 = ws2 := map_decI_inj' ws1 ws2 hlt1 hlt2 (by rw [← hws1, ← hws2]; exact hc.2)
+      have hws : ws1 = ws2 := (map_decI_inj ws1 ws2 hlt1 hlt2).mp (by rw [← hws1, ← hws2]; exact hc.2)
       rw [ite_eq_left hws] at heq
       rw [h3] at heq
       exact absurd heq (by decide)

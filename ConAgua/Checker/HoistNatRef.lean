@@ -106,7 +106,7 @@ theorem contains_decI {w : Word} (hw : w.toNat < 2 ^ 32) :
   | x :: xs, hl => by
     have ih := contains_decI hw xs (fun y hy => hl y (by simp [hy]))
     simp only [List.map_cons, List.contains_cons, Bool.or_eq_true, ih, List.mem_cons]
-    rw [decI_beq_word hw (hl x (by simp))]
+    rw [decI_beq _ _ hw (hl x (by simp))]
     simp
 
 /-- What a name-list call leaves: a fresh slice `[o, |ws|]` of the words `ws`. -/

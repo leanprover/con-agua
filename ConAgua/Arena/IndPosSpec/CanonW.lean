@@ -97,7 +97,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     have : ¬ ((decI v : LsIdx) == decI us) = true := by
-      rw [decI_beq' v us hv hus]; simpa using hvu
+      rw [decI_beq v us hv hus]; simpa using hvu
     simp only [ConRon.Arena.nestCanonSub, this]; rfl
   · rw [canonW_eq n m no nl us nn c v hvu] at h
     have hvu' : v = us := by simpa using hvu
@@ -268,7 +268,7 @@ theorem contains_decI (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat <
   induction ws with
   | nil => rfl
   | cons w ws ih =>
-    simp only [List.map_cons, List.contains_cons, decI_beq' x w hx (hws w (by simp))]
+    simp only [List.map_cons, List.contains_cons, decI_beq x w hx (hws w (by simp))]
     have := ih (fun y hy => hws y (by simp [hy]))
     rw [this]
     by_cases h : x = w <;> simp [h]

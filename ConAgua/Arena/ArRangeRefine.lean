@@ -213,7 +213,7 @@ theorem rappArm_ok (hg : h >>> 28 = 4) :
     refine ⟨?_, mkApp_okA m₂ a₂ hA₂ x y r₃ m₃ hI⟩
     rcases Decidable.em (decE x = decE (tfld m APP (tierW h) (idxW h) 0)) with e1 | e1
     · have e2 : decE y ≠ decE (tfld m APP (tierW h) (idxW h) 1) :=
-        fun e2 => hn ⟨decE_inj _ _ hx hfw e1, decE_inj _ _ hy haw e2⟩
+        fun e2 => hn ⟨decI_inj hx hfw e1, decI_inj hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
 
@@ -249,7 +249,7 @@ theorem rlamArm_ok (hg : h >>> 28 = 5) :
     refine ⟨?_, mkLam_okA m₂ a₂ hA₂ x y r₃ m₃ hI⟩
     rcases Decidable.em (decE x = decE (tfld m LAM (tierW h) (idxW h) 0)) with e1 | e1
     · have e2 : decE y ≠ decE (tfld m LAM (tierW h) (idxW h) 1) :=
-        fun e2 => hn ⟨decE_inj _ _ hx hfw e1, decE_inj _ _ hy haw e2⟩
+        fun e2 => hn ⟨decI_inj hx hfw e1, decI_inj hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
 
@@ -285,7 +285,7 @@ theorem rforallArm_ok (hg : h >>> 28 = 6) :
     refine ⟨?_, mkForall_okA m₂ a₂ hA₂ x y r₃ m₃ hI⟩
     rcases Decidable.em (decE x = decE (tfld m FORALL (tierW h) (idxW h) 0)) with e1 | e1
     · have e2 : decE y ≠ decE (tfld m FORALL (tierW h) (idxW h) 1) :=
-        fun e2 => hn ⟨decE_inj _ _ hx hfw e1, decE_inj _ _ hy haw e2⟩
+        fun e2 => hn ⟨decI_inj hx hfw e1, decI_inj hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
 
@@ -323,7 +323,7 @@ theorem rletArm_ok (hg : h >>> 28 = 7) :
     · rcases Decidable.em (decE y = decE (tfld m LET (tierW h) (idxW h) 1))
         with e2 | e2
       · have e3 : decE z ≠ decE (tfld m LET (tierW h) (idxW h) 2) :=
-          fun e3 => hn ⟨decE_inj _ _ hx htw e1, decE_inj _ _ hy hvw e2, decE_inj _ _ hz hbw e3⟩
+          fun e3 => hn ⟨decI_inj hx htw e1, decI_inj hy hvw e2, decI_inj hz hbw e3⟩
         simp [e1, e2, e3]
       · simp [e1, e2]
     · simp [e1]) hb
@@ -350,7 +350,7 @@ theorem rprojArm_ok (hg : h >>> 28 = 9) :
     have hx := mkProjW_lt m₁ _ _ x r₃ m₃ hI
     refine ⟨?_, mkProj_okA m₁ a₁ hA₁ _ _ x r₃ m₃ hI⟩
     have e1 : decE x ≠ decE (tfld m PROJ (tierW h) (idxW h) 2) :=
-      fun e1 => hn (decE_inj _ _ hx hew e1)
+      fun e1 => hn (decI_inj hx hew e1)
     simp [e1]) hb
 
 end arms

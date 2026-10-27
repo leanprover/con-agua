@@ -195,7 +195,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
           have hrun : (natIndOk (some (.indInfo cv caps))).run a =
               .ok (decide (rdW (m.arr64 EREC) (q + 4) = pinW m 54), a) := by
             simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
-              Bool.true_and, hty, hrd, decI_beq_word hlt hp54, StateT.run_pure]
+              Bool.true_and, hty, hrd, decI_beq _ _ hlt hp54, StateT.run_pure]
             rfl
           refine ⟨_, a, hrun, hS, IWGrow.refl _, ?_⟩
           by_cases he : rdW (m.arr64 EREC) (q + 4) = pinW m 54
@@ -298,7 +298,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
           have hrun : (natZeroOk (some (.ctorInfo cv np nf))).run a =
               .ok (decide (wt = r2.headD 0), a2) := by
             simp only [natZeroOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
-              Bool.true_and, hty, decI_beq_word hlt hx2l, ← hx2, StateT.run_pure]
+              Bool.true_and, hty, decI_beq _ _ hlt hx2l, ← hx2, StateT.run_pure]
             rfl
           refine ⟨_, a2, hrun, hS2, hg2, ?_⟩
           rw [hst4] at *
@@ -426,7 +426,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
               rw [tagForallIff wt hlt]
               simp only [h6, decide_true, ite_true, ← decE_eq]
               simp only [StateT.run_bind, view_run (decE wt) a2 _ hview]
-              simp only [exc_ok_bind', decE_eq, decI_beq_word hdlt hx2l, decI_beq_word hblt hx2l,
+              simp only [exc_ok_bind', decE_eq, decI_beq _ _ hdlt hx2l, decI_beq _ _ hblt hx2l,
                 ← hx2, Bool.decide_and, StateT.run_pure]
               rfl
             refine ⟨_, a2, hrun, hS2, hg2, ?_⟩

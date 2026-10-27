@@ -78,7 +78,7 @@ theorem eqW_dec {n : Nat} {m : Mem} {o1 l1 o2 l2 e : Word} {xs1 xs2 : List EIdx}
         have := congrArg (·[i]?) h
         simp only [List.getElem?_map, List.getElem?_eq_getElem hi1, List.getElem?_eq_getElem hi2,
           Option.map_some, Option.some.injEq] at this
-        exact decE_inj _ _ (hw1 _ (List.getElem_mem hi1)) (hw2 _ (List.getElem_mem hi2)) this
+        exact decI_inj (hw1 _ (List.getElem_mem hi1)) (hw2 _ (List.getElem_mem hi2)) this
   by_cases hq : ws1 = ws2
   · simp [hq]
   · rw [ite_eq_right hq, ite_eq_right (fun h => hq (this.mpr h))]

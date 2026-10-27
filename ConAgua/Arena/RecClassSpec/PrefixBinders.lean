@@ -187,9 +187,6 @@ l_model prefixBinders_spec (p : Prog) (h : PbProg p)
 
 /-! ## Finding the constructor -/
 
-theorem rec2DecI_inj {k : IdxKind} {v w : Word} (hv : H v) (hw : H w) (h : (decI v : Idx k) = decI w) : v = w := by
-  rw [← decI_word_self (k := k) v hv, ← decI_word_self (k := k) w hw, h]
-
 /-- What `find_ctor(_go)` returns. -/
 def FcRes (m : Mem) (r : List Word) : Option ClassCtor → Prop
   | none => r.headD 0 = 0
@@ -242,7 +239,7 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
     refine ⟨rfl, ?_⟩
     have : (X0.cv.name == decI cn) = false := by
       rw [← hwd]; simp only [beq_eq_false_iff_ne, ne_eq]
-      exact fun e => hhit (rec2DecI_inj hwH hcn e)
+      exact fun e => hhit (decI_inj hwH hcn e)
     simp only [List.find?_cons, this]
     exact hres
 

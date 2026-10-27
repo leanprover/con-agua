@@ -214,7 +214,7 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩)
       (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
-    have hcond : ¬ ((decI T : NIdx) = decI (r1.headD 0)) := fun e => g1 ((decI_inj_m2c hT hanHW).mp e)
+    have hcond : ¬ ((decI T : NIdx) = decI (r1.headD 0)) := fun e => g1 ((decI_inj_iff hT hanHW).mp e)
     simp only [m2cAndT, StateT.run_bind, hpin', except_ok_bind]
     rw [ite_eq_right hcond]; rfl
   rw [ite_eq_right g1] at hW
@@ -274,7 +274,7 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   by_cases g2 : L.tail.tail.headD 0 ≠ T
   · rw [ite_eq_left g2] at hW
     obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => g2 ((decI_inj_m2c hT2 hT).mp e.1)) hr hm
+    exact hmaj' (fun e => g2 ((decI_inj_iff hT2 hT).mp e.1)) hr hm
   rw [ite_eq_right g2] at hW
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
   by_cases g3 : r3.tail.headD 0 ≠ cnP

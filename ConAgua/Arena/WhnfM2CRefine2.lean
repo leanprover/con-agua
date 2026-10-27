@@ -408,10 +408,6 @@ theorem keeps_cpl_mkAppN' (f : EIdx) (xs : List EIdx) : Keeps cpl (mkAppN f xs) 
   have := keeps_cpl_mkAppNFrom f xs.toArray 0
   rwa [mkAppNFrom_eq_mkAppN, List.toList_toArray] at this
 
-theorem decI_inj_m2c {k : IdxKind} {x y : Word} (hx : HW x) (hy : HW y) :
-    (decI x : Idx k) = decI y ↔ x = y := by
-  rw [decI_eq_iff x hx, decI_word_self y hy]
-
 theorem SpineR.take' {m : Mem} {o n k : Word} {xs : List EIdx} (h : SpineR m o n xs.toArray)
     (hk : k.toNat ≤ n.toNat) : SpineR m o k (xs.take k.toNat).toArray := by
   have hs : xs.length = n.toNat := by simpa using h.size
@@ -558,7 +554,7 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩) (decH_of _ _ hr)
       (resH_of_m2c _ _ hr hmaj)
     have hc : ¬ ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=
-      fun e => g2 ((decI_inj_m2c hT2 hT).mp e.1)
+      fun e => g2 ((decI_inj_iff hT2 hT).mp e.1)
     unfold m2cKT; rw [hpre']
     simp only [StateT.run_bind, hvls, except_ok_bind]
     rw [ite_eq_right hc]; rfl

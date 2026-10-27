@@ -890,8 +890,8 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
       have := hS.pins.names_lt 6 (by decide); rwa [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl] at this
     have hel : HW (rdW (s₀.mem.arr64 PINS) 52) := by
       have := hS.pins.lv_lt.1; rwa [pinW_rdW s₀.mem 52 52 rfl] at this
-    simp only [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl, pinW_rdW s₀.mem 52 52 rfl, decI_eq_iff' hnw hsl,
-      decI_eq_iff' huw hel]
+    simp only [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl, pinW_rdW s₀.mem 52 52 rfl, decI_inj_iff hnw hsl,
+      decI_inj_iff huw hel]
     rw [hr₁, hr₂] at hW
     by_cases hcond : co = rdW (s₀.mem.arr64 PINS) (1 + 6) ∧ uo = rdW (s₀.mem.arr64 PINS) 52 ∧
         r₃.headD 0 ≠ 0

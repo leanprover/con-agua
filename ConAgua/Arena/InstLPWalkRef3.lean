@@ -18,16 +18,7 @@ open ConRon.Arena ConLeche
 open Std.WP
 open scoped Lean.Order
 
-
 namespace L.Arena
-
-theorem ilw_beqI {k : IdxKind} {x y : Word} (hx : HW x) (hy : HW y) :
-    ((decI x : Idx k) == decI y) = decide (x = y) := by
-  by_cases h : x = y
-  · subst h; simp
-  · have : (decI x : Idx k) ≠ decI y := fun e => h (by
-      rw [← (word_decI _ x hx).mpr rfl, ← (word_decI _ y hy).mpr rfl, e])
-    simp [h, this]
 
 section steps
 variable {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
@@ -197,7 +188,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨a₃, r3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hM₃, hg₃, -⟩ :=
       ilw_internSort hp.mkp n (ys.headD 0) zs hS₂ hM₂ hy hdy h3
     refine ⟨a₃, ?_, ⟨M₃, hS₃, hK₂.trans hK₃, hSt₂.trans hSt₃⟩, hM₃, hg₂.trans hg₃, hz⟩
-    simp only [StateT.run_bind, r2, except_ok_bind, ilw_beqI hy hx, same, decide_false,
+    simp only [StateT.run_bind, r2, except_ok_bind, decI_beq _ _ hy hx, same, decide_false,
       internRebuiltSort, Bool.false_eq_true, ↓reduceIte, internSortE]
     exact r3
   by_cases g3 : h >>> 28 = 3
@@ -230,7 +221,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨a₃, r3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hM₃, hg₃, -⟩ :=
       ilw_internConst hp.mkp n cw (ys.headD 0) zs hS₂ hM₂ hcw hy hdy h3
     refine ⟨a₃, ?_, ⟨M₃, hS₃, hK₂.trans hK₃, hSt₂.trans hSt₃⟩, hM₃, hg₂.trans hg₃, hz⟩
-    simp only [StateT.run_bind, r2, except_ok_bind, ilw_beqI hy hx, same, decide_false,
+    simp only [StateT.run_bind, r2, except_ok_bind, decI_beq _ _ hy hx, same, decide_false,
       internRebuiltConst, Bool.false_eq_true, ↓reduceIte, internConstE]
     exact r3
   -- the compound arms

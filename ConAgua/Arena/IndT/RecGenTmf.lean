@@ -266,7 +266,7 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   · simp only [hIq, ite_true]; exact Sim.of_none
   simp only [hIq, ite_false]
   have hne : ((decI I : NIdx) == decI (pinW m (1 + (47 : Word).toNat))) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq]; rw [clsDecI_inj hI hqH]; exact hIq
+    simp only [beq_eq_false_iff_ne, ne_eq]; rw [decI_inj_iff hI hqH]; exact hIq
   simp only [hne, Bool.false_eq_true, ite_false]
   -- `target_ctors_of`
   refine Sim.bindK (K := tmoK2 p n vis pp I us ao al pfo pfl mno mnl) rfl (fun _ _ => rfl)

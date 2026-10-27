@@ -370,14 +370,6 @@ theorem EStore.view_const (st : EStore) (i : EIdx) (ht : i.tag = ETag.const) (v 
     · exact ETables.get_const _ _ ht v h
     · simp at h
 
-theorem decI_beq' {k : IdxKind} (v w : Word) (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32) :
-    ((decI v : Idx k) == decI w) = decide (v = w) := by
-  by_cases h : v = w
-  · subst h; simp
-  · have : (decI v : Idx k) ≠ decI w := fun e => h (by
-      rw [(decI_eq_iff v hv _).mp e]; exact decI_word_self w hw)
-    simp [h, this]
-
 /-! ## `nest_res_head` -/
 
 def resHeadK : Option (List Word × Mem) → Option (List Word × Mem)

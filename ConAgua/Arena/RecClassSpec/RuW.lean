@@ -149,7 +149,7 @@ theorem fsgW_ok (n : Nat) : ∀ (m m' : Mem) (so sl j c cn : Word) (r : List Wor
         · rw [← e1']; exact tc.symm
         · rw [← hcwd, e2']
       · rintro ⟨e1', e2'⟩
-        refine ⟨?_, rec2DecI_inj hcwH hcn (by rw [hcwd, e2'])⟩
+        refine ⟨?_, decI_inj hcwH hcn (by rw [hcwd, e2'])⟩
         apply UInt64.toNat_inj.mp; rw [tc, e1']
   rw [hzip, List.find?_cons, hP]
   by_cases hh : rec2SlotHit c.toNat (decI cn) (slots[j.toNat]'(by omega)) = true

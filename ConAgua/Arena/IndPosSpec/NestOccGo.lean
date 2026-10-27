@@ -274,7 +274,7 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
       have hview : a.store.viewConst (decE e) = some (nn, us0) :=
         EStore.viewConst_of_view _ _ ht nn us0 hv
       have hbeq : (us0 == decI lvls) = decide ((g :: vt).tail.tail.headD 0 = lvls) := by
-        rw [← hdy]; exact decI_beq' _ _ hy hlv
+        rw [← hdy]; exact decI_beq _ _ hy hlv
       by_cases hl : (g :: vt).tail.tail.headD 0 ≠ lvls
       · rw [memK_miss n m no nl lvls _ (by simp) hl] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

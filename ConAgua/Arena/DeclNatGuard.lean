@@ -100,7 +100,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
       rw [hr2]; exact this
     have hrun : (boolCtorOk ci).run a = .ok (decide (wt = r3.headD 0), a3) := by
       simp only [boolCtorOk, hisE, ite_true, StateT.run_bind, exc_ok_bind', boolName_eq, e2, hrun3,
-        hty, decI_beq_word hlt hx3l, ← hx3, StateT.run_pure]
+        hty, decI_beq _ _ hlt hx3l, ← hx3, StateT.run_pure]
       rfl
     refine ⟨_, a3, hrun, hS3, hg1.trans hg3, ?_⟩
     simp only [decW0B, List.headD_cons]
@@ -402,7 +402,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   subst ha7
   have hcond : ((decI c : NIdx) == decI (r4.headD 0) || (decI c : NIdx) == decI (r5.headD 0) || dm.contains (decI c)) =
       decide (c = r4.headD 0 ∨ c = r5.headD 0 ∨ r7.headD 0 ≠ 0) := by
-    rw [decI_beq_word hc hp4, decI_beq_word hc hp5, ← hx7']
+    rw [decI_beq _ _ hc hp4, decI_beq _ _ hc hp5, ← hx7']
     have := hx7.1
     rw [← this]
     have hb : (r7.headD 0 != 0) = decide (r7.headD 0 ≠ 0) := by

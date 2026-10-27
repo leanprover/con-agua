@@ -278,7 +278,7 @@ theorem sumContains_decI {k : IdxKind} (x : Word) (hx : H x) : ∀ (ws : List Wo
   | [], _ => rfl
   | w :: ws, h => by
     simp only [List.map_cons, List.contains_cons]
-    rw [decI_beq' x w hx (h w (by simp)), sumContains_decI x hx ws (fun v hv => h v (by simp [hv]))]
+    rw [decI_beq x w hx (h w (by simp)), sumContains_decI x hx ws (fun v hv => h v (by simp [hv]))]
     by_cases e : w = x
     · subst e; simp
     · simp [Ne.symm e]

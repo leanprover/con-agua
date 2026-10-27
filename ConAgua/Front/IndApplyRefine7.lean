@@ -138,7 +138,7 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
     rw [ite_eq_left hf] at h
     simp only [islice_length] at hj hj'
     rw [islice_get] at hTj ⊢
-    have hw : wd m IFL (tyn.toNat + j) = tt := decI_inj' _ _ (hTN j hj) htt hTj
+    have hw : wd m IFL (tyn.toNat + j) = tt := decI_inj (hTN j hj) htt hTj
     have e5 : rdW (m.arr64 IFR) (r + 5) = wd m IFR (r.toNat + 5) := by
       have := ix 5 (by decide); simpa using this
     rw [e5] at h
