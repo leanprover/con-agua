@@ -1,7 +1,5 @@
 import ConAgua.Checker.LoopProg
-import ConAgua.Checker.IndArmClosed1
-import ConAgua.Checker.IndArmClosed2
-import ConAgua.Checker.IndArmClosed3
+import ConAgua.Checker.IndArmClosed
 import ConAgua.Arena.IndArm
 
 /-!

@@ -681,6 +681,9 @@ open L.Arena
 def iirWs (m : Mem) (cv caps : Word) : List Word :=
   [3, rdW (m.arr64 EREC) cv, rdW (m.arr64 EREC) (cv + 1), rdW (m.arr64 EREC) (cv + 2), rdW (m.arr64 EREC) (cv + 3), rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1), rdW (m.arr64 IW) (caps + 2), rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4), rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6), rdW (m.arr64 IW) (caps + 7), rdW (m.arr64 IW) (caps + 8), rdW (m.arr64 IW) (caps + 9), rdW (m.arr64 IW) (caps + 10), rdW (m.arr64 IW) (caps + 11), rdW (m.arr64 IW) (caps + 12), rdW (m.arr64 IW) (caps + 13), rdW (m.arr64 IW) (caps + 14)]
 
+/- `(ematch := 8)`: a depth, not a search. With the locals read in one step (`L/LocNF.lean`),
+each of the five stores' addresses meets `wrER`'s in a later E-matching round than before, past
+the default five rounds. -/
 theorem erPut5_spec (p : Prog) (hp : p.lookup "er_put5" = some erPut5) (n : Nat) (s₀ : St)
     (d x0 x1 x2 x3 x4 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "er_put5" [d, x0, x1, x2, x3, x4]
@@ -689,7 +692,7 @@ theorem erPut5_spec (p : Prog) (hp : p.lookup "er_put5" = some erPut5) (n : Nat)
   simp only [callFn, erPut5]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
-    finish [wrER, UInt64.add_assoc]
+    finish (ematch := 8) [wrER, UInt64.add_assoc]
 
 /-- The model of `ind_info_rec(cv, caps)`. -/
 def iirW (m : Mem) (cv caps : Word) : Option (Word × Mem) :=

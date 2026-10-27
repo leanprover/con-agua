@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.L.Semantics
+public import ConAgua.L.LocNF
 public import Std.Do.Triple.SpecLemmas
 public import Std.WP.Monad.Instances
 public import Std.WP.Triple.Basic

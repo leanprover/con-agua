@@ -5,7 +5,6 @@ public import ConAgua.Front.FieldsDecl
 public import ConAgua.L.ProgHas
 import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
-import ConAgua.Scan.Common
 import ConAgua.Scan.RecordsSpec
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec

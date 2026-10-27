@@ -1,7 +1,6 @@
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.RecGenSpec.FlushStage
-import ConAgua.Arena.RecSim
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -320,7 +319,7 @@ theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : CallSp
       classRuleOkGuards_spec p h cR hcR N, hcR N "infer_type_core",
       flushCaches_spec p h.toFlushProg N, stripLams_specF p h.strip N,
       classRuleOkDomains_spec p h.dom h.hcr N, hcR N "unresolved_consts_error"] <;>
-    finish (gen := 20) [loc_init4]
+    finish (gen := 20)
 
 end L.Ind
 

@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndInstall
 import ConAgua.Arena.WhnfBase
-import ConAgua.Scan.Common
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

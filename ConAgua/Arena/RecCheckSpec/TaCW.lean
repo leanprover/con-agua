@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.RpGoStep
 import ConAgua.Arena.IndSim
-import ConAgua.Arena.RecSim
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -174,7 +173,7 @@ theorem taConst_spec (n : Nat) (s₀ : St) (no nl lvls ho hl h nn vus : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slFind_spec p L.hf n] <;>
-      finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
+      finish (gen := 20) [rdW_eq]
 
 def TaGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (no nl lvls ho hl f h : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_abs_go" [no, nl, lvls, ho, hl, f, h]
@@ -193,7 +192,7 @@ theorem taGo_step (n : Nat) (ih : TaNodeSpec p n) : TaGoSpec p (n + 1) := by
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p L.hv n, taConst_spec p L n, memoFindG_spec taSch p _ L.tf n,
-      memoPutG_spec taSch p _ L.tp n, ih] <;> finish (gen := 20) [St.setLocs_mem', loc_init4, loc_init5, loc_init6]
+      memoPutG_spec taSch p _ L.tp n, ih] <;> finish (gen := 20) [St.setLocs_mem']
 
 include L in
 theorem taNode_step (n : Nat) (ih : TaGoSpec p n) : TaNodeSpec p (n + 1) := by
@@ -209,7 +208,7 @@ theorem taNode_step (n : Nat) (ih : TaGoSpec p n) : TaNodeSpec p (n + 1) := by
       mkForall_spec p hk.hd hk.forF hk.forP hk.forI hk.forM n,
       mkLet_spec p hk.hd hk.ltF hk.ltP hk.ltI hk.ltM n,
       mkProj_spec p hk.hd hk.prjF hk.prjP hk.prjI hk.prjM n] <;>
-    finish (gen := 20) [St.setLocs_mem', rpMkW, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9]
+    finish (gen := 20) [St.setLocs_mem', rpMkW]
 
 include L in
 theorem taGo_spec (n : Nat) : TaGoSpec p n ∧ TaNodeSpec p n := by

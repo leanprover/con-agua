@@ -204,11 +204,12 @@ theorem whnfAppRestW_spec (p : Prog) (n : Nat) (s₀ : St) :
           s'.loc 5 = s₀.loc 5 ∧ s'.loc 8 = s₀.loc 8 ∧ s'.loc 9 = s₀.loc 9 ∧
           s'.loc 11 = s₀.loc 11; ⊤⦄ := by
   rw [exec]; unfold whnfAppRestW L.Notation.blk
-  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-    callW_spec p n "mk_app", fun s => Triple.step_exec (whnfAppIotaW_spec p n s)]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, appRestW, apW]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "mk_app", fun s => Triple.step_exec (whnfAppIotaW_spec p n s)] <;>
+    -- `(splits := 12)`: the fourteen locals' frame equations of `whnf_app_iota`'s post need one
+    -- more split than the default nine once each read resolves in one step (`L/LocNF.lean`)
+    finish (splits := 12) [appRestW, apW]
 
 theorem getElem_toNat_rdW (a : Array Word) (x : Word) (h : x.toNat < a.size) :
     a[x.toNat]'h = rdW a x := by simp [rdW, h]

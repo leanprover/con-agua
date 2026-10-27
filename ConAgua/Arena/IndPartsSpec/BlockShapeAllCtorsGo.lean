@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
-import ConAgua.Scan.Common
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

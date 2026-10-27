@@ -1,4 +1,6 @@
-import ConAgua.Layout
+import ConAgua.Checker.Prog
+import ConAgua.Checker.IndArmTrees1
+import ConAgua.Checker.IndArmTrees2
 
 /-!
 # The write sets of the inductive arm's callees in `checkerProg` (lane `indproofs4`)
@@ -9,27 +11,45 @@ sets of `Checker/IndArmFns.lean`; and behind the write set (apart from the walk 
 `AbsKeep` callees that reach no walk (`armAbsFns`). As `Checker/IndMemoClosed.lean`. They are put
 together by `closedW_of_all` in `Checker/IndArm.lean`: this module needs only `checkerProg` and
 the array names, so its kernel checks run early in the build, beside the arm's proofs. The
-checks are in `IndArmClosed1`…`3`, three arms each: the kernel checks of one module run one after
-another (`addDecl` waits for the checks before it), so the modules run them in parallel.
+nine arms are checked together, one `prog_all` over `wsChkM` (each function's name code and body
+reduced once per chunk check, not once per arm: ~26 CPU-s instead of ~90 in three modules).
 -/
 
 namespace L.Checker
 
-/-- An array test: one of the checker's word arrays (`checkerWordArrays`) and `f`. -/
-def tA (f : TieredArray → Bool) (a : TieredArray) : Bool := checkerWordArrays.contains a && f a
+open L.Arena L.Ind L.Compiler
 
-/-- A `CTL` word test: below 256 and `g`. -/
-def tC (g : Nat → Bool) (w : Word) : Bool := decide (w.toNat < 256) && g w.toNat
+/-! ## The checks -/
 
-theorem tA_mem {f : TieredArray → Bool} {a : TieredArray} (h : tA f a = true) :
-    a ∈ checkerWordArrays.filter f := by
-  simp only [tA, Bool.and_eq_true, List.contains_iff_mem] at h
-  exact List.mem_filter.2 h
+prog_all checkerProg_armChk : checkerProg
+  (wsChkM CTL [armPosT, armHbT, armRcT, armTaT, armCidT, armRcHbT, armMaT, armMcT, armAbsT])
 
-theorem tC_mem {g : Nat → Bool} {w : Word} (h : tC g w = true) :
-    w ∈ ((List.range 256).filter g).map Nat.toUInt64 := by
-  simp only [tC, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [List.mem_map, List.mem_filter, List.mem_range]
-  exact ⟨w.toNat, ⟨h.1, h.2⟩, UInt64.ofNat_toNat⟩
+theorem checkerProg_armPosChk :
+    ∀ x ∈ checkerProg, wsChk CTL armPosT.1 armPosT.2.1 armPosT.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armHbChk :
+    ∀ x ∈ checkerProg, wsChk CTL armHbT.1 armHbT.2.1 armHbT.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armRcChk :
+    ∀ x ∈ checkerProg, wsChk CTL armRcT.1 armRcT.2.1 armRcT.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armTaChk :
+    ∀ x ∈ checkerProg, wsChk CTL armTaT.1 armTaT.2.1 armTaT.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armCidChk :
+    ∀ x ∈ checkerProg, wsChk CTL armCidT.1 armCidT.2.1 armCidT.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armRcHbChk :
+    ∀ x ∈ checkerProg, wsChk CTL armRcHbT.1 armRcHbT.2.1 armRcHbT.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armMaChk :
+    ∀ x ∈ checkerProg, wsChk CTL armMaT.1 armMaT.2.1 armMaT.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armMcChk :
+    ∀ x ∈ checkerProg, wsChk CTL armMcT.1 armMcT.2.1 armMcT.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armAbsChk :
+    ∀ x ∈ checkerProg, wsChk CTL armAbsT.1 armAbsT.2.1 armAbsT.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
 
 end L.Checker

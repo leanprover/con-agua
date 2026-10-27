@@ -17,7 +17,7 @@ allowNonModules = true
 # `ConAgua.Arena.Refine` imports con-ron's arena (not `module` files), so the `module` root
 # `ConAgua` cannot import it; it is built through the glob (the root is listed too, see
 # vendor/README.md, "Lake quirk").
-globs = ["ConAgua", "ConAgua.Arena.PromoteCIRef.+", "ConAgua.Arena.IndPartsSpec.+", "ConAgua.Arena.IndInstallSpec.+", "ConAgua.Arena.RecGenSpec.+", "ConAgua.Arena.RecClassSpec.+", "ConAgua.Arena.RecCheckSpec.+", "ConAgua.Arena.IndSumSpec.+", "ConAgua.Arena.IndPosSpec.+", "ConAgua.Arena.DeclDivModSpec.+", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.Arena.StoreLib", "ConAgua.Arena.LitRefine",
+globs = ["ConAgua", "ConAgua.L.ModelGenTest", "ConAgua.Arena.PromoteCIRef.+", "ConAgua.Arena.IndPartsSpec.+", "ConAgua.Arena.IndInstallSpec.+", "ConAgua.Arena.RecGenSpec.+", "ConAgua.Arena.RecClassSpec.+", "ConAgua.Arena.RecCheckSpec.+", "ConAgua.Arena.IndSumSpec.+", "ConAgua.Arena.IndPosSpec.+", "ConAgua.Arena.DeclDivModSpec.+", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.Arena.StoreLib", "ConAgua.Arena.LitRefine",
   "ConAgua.Arena.AppStore", "ConAgua.Arena.AppRefine",
   "ConAgua.Arena.Verdict", "ConAgua.Arena.KnotE", "ConAgua.Checker.NoVerdictFns", "ConAgua.Checker.NoVerdictClosed",
   "ConAgua.Checker.VerdictTop", "ConAgua.Final.TwinVerdict", "ConAgua.Final.VerdictFinal", "ConAgua.Final.ThreadsVerdict",

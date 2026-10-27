@@ -156,6 +156,9 @@ theorem erecWr3_spec (d a b c : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
       finish [stP, UInt64.add_zero]
 
+/- `(ematch := 8)` in the next three: a depth, not a search. With the locals read in one step
+(`L/LocNF.lean`), each store's address `BinOp.add.eval d k` meets `stP`'s `d + k` in a later
+E-matching round than before, and four or more stores need more than the default five rounds. -/
 theorem erecWr4_spec (d a b c e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_wr4" [d, a, b, c, e]
     ⦃fun _ s' => LocEq s' s₀ ∧ stP d s₀.mem [(0, a), (1, b), (2, c), (3, e)] = some s'.mem; ⊤⦄ := by
@@ -166,7 +169,7 @@ theorem erecWr4_spec (d a b c e : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
-      finish [stP, UInt64.add_zero]
+      finish (ematch := 8) [stP, UInt64.add_zero]
 
 theorem erecWr5_spec (d a b c e g : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_wr5" [d, a, b, c, e, g]
@@ -178,7 +181,7 @@ theorem erecWr5_spec (d a b c e g : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
-      finish [stP, UInt64.add_zero]
+      finish (ematch := 8) [stP, UInt64.add_zero]
 
 theorem capsWr_spec (d c a k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_wr" [d, c, a, k]
@@ -203,7 +206,7 @@ theorem projWr_spec (d sn lp c ss bs gs : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
-      finish [stP]
+      finish (ematch := 8) [stP]
 
 theorem erecCp_spec (d s l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "erec_cp" [d, s, l]

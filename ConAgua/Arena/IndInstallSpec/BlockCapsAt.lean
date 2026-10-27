@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec.MemberNames
-import ConAgua.Scan.Common
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
