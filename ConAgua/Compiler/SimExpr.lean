@@ -3,6 +3,7 @@ module
 public import ConAgua.Compiler.Rel
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # Expressions and conditions

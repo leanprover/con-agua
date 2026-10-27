@@ -4,6 +4,7 @@ public import ConAgua.Compiler.SimStore
 public import ConAgua.L.Blocks
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # Blocks: `copy64`, `copy8w`, `scan8` (lane blkcopy)

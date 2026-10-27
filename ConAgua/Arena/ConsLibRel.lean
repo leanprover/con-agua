@@ -2,6 +2,7 @@ import ConAgua.Arena.ConsLibSpec
 import ConAgua.Arena.ViewL
 import ConAgua.Arena.Frame
 import ConAgua.Arena.StoreGrow
+set_option linter.unusedSectionVars false
 
 /-!
 # The cons-table library: the relation and the user API (lane conslib)

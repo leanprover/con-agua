@@ -4,6 +4,7 @@ public import ConAgua.Compiler.SimExpr
 public import ConAgua.Compiler.StepGen
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # The register-stack code generator (lane leafgen, step G2)

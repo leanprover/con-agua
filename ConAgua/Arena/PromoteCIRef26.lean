@@ -10,6 +10,7 @@ open scoped Lean.Order
 
 
 namespace L.Arena
+set_option experimental.vcgen true
 
 theorem rowSet_frame (m : Mem) (w c q : Word) (ht : rowTag w ≤ 2) :
     MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m (rowSet m w c q) := by

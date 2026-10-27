@@ -4,6 +4,7 @@ public import ConAgua.Compiler.RunEq
 public import ConAgua.Compiler.SimGen
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # Statements

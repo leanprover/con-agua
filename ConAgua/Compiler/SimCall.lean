@@ -3,6 +3,7 @@ module
 public import ConAgua.Compiler.SimStmt
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # Calls

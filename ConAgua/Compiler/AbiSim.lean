@@ -6,6 +6,7 @@ public import ConAgua.Compiler.Rel
 import all Kraken.Mem
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # The entry stub's stores, on the machine

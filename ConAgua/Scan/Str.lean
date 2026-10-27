@@ -13,6 +13,7 @@ meta import ConAgua.Scan.Utf8
 import ConAgua.Census.Attr
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # `scan_string` (`scan_fast.rs:1087`), validating only
