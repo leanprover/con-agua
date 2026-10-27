@@ -4,6 +4,8 @@ import ConAgua.Arena.IndPartsSpec.PartsConsPL
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 
 /-!
 # GfcW
@@ -42,101 +44,30 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `gen_rec_check_former_tys`: `cvTas.map (·.type)` -/
 
-/-- The loop of `genRecCheckFormerTys` (RecGen.lean), named for its spec. -/
--- con-ron: none — `genRecCheckFormerTys`' own loop (`rfl`), a named block for the proof
-def gftLoop : Stmt := lblk (cvTasOff, cvTasLen, q, j) {
-  while j < cvTasLen { IW.u64[q + j] := EREC.u64[IW.u64[cvTasOff + j] + 3]; j += 1 }
-}
-
-/-- `genRecCheckFormerTys`, its loop spliced from `gftLoop`. -/
--- con-ron: none — `genRecCheckFormerTys` itself (`rfl`), its loop a named block for the proof
-def genRecCheckFormerTys' : FunDecl := lfn (cvTasOff, cvTasLen) locals (q, j) {
-  q := call iw_alloc(cvTasLen);
-  j := 0;
-  ⟪gftLoop⟫;
-  return (q, cvTasLen)
-}
-
-theorem genRecCheckFormerTys_eq : genRecCheckFormerTys = genRecCheckFormerTys' := rfl
-
-/-- **The model of the loop** at fuel `f`: word `j` of the result the type word of constant `j`. -/
-def gftW : Nat → Mem → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _ => none
-  | f + 1, m, o, l, q, j =>
-    if j < l then
-      gftW f (m.set64 IW (q + j) (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + j) + 3))) o l q (j + 1)
-    else some m
-
-section arms
-variable (f : Nat) (m : Mem) (o l q j : Word)
-theorem gftW_exit (h : ¬ j < l) : gftW (f + 1) m o l q j = some m := by simp only [gftW]; rw [ite_eq_right h]
-theorem gftW_step (h : j < l) : gftW (f + 1) m o l q j =
-    gftW f (m.set64 IW (q + j) (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + j) + 3))) o l q (j + 1) := by
-  simp only [gftW]; rw [ite_eq_left h]
-end arms
-
-def gftK2 (q l : Word) : Option Mem → Option (List Word × Mem)
-  | none => none
-  | some m => some ([q, l], m)
-
-def gftK1 (n : Nat) (o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => gftK2 (r.headD 0) l (gftW (n + 1) m o l (r.headD 0) 0)
-
-/-- **The model of `gen_rec_check_former_tys`** (exec fuel `n + 1`). -/
-def gftF (p : Prog) (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
-  gftK1 n o l (callW p n "iw_alloc" [l] m)
-
-theorem gftK2_some (q l : Word) (m : Mem) : gftK2 q l (some m) = some ([q, l], m) := rfl
-theorem gftK1_some (n : Nat) (o l : Word) (r : List Word) (m : Mem) :
-    gftK1 n o l (some (r, m)) = gftK2 (r.headD 0) l (gftW (n + 1) m o l (r.headD 0) 0) := rfl
-theorem gftF_eq (p : Prog) (n : Nat) (m : Mem) (o l : Word) :
-    gftF p n m o l = gftK1 n o l (callW p n "iw_alloc" [l] m) := rfl
-
-attribute [ind_grind] gftW_exit gftW_step gftK2_some gftK1_some
-
-theorem gftLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p f gftLoop
-    ⦃fun r s' => r = .normal ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
-      gftW f s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) = some s'.mem; ⊤⦄ := by
-  induction f generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ f ih =>
-    rw [exec, step_while (w := gftLoop) rfl]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
-
-theorem gft_spec (p : Prog) (hp : p.lookup "gen_rec_check_former_tys" = some genRecCheckFormerTys) (n : Nat)
-    (s₀ : St) (o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "gen_rec_check_former_tys" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ gftF p n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp, genRecCheckFormerTys_eq]
-  simp only [callFn, genRecCheckFormerTys']
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "iw_alloc",
-      fun s => Triple.step_exec (gftLoop_spec p (n + 1) s)] <;>
-    finish (gen := 40) (instances := 20000) [gftF_eq]
+l_model gft_spec (p : Prog) (hp : p.lookup "gen_rec_check_former_tys" = some genRecCheckFormerTys)
+  fns [hp ↦ gftW list]
+  specs [callW_spec p n "iw_alloc"]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 section rel
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
 
 /-- **The loop writes the types.** -/
-theorem gftW_ok (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantVal)
+theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantVal)
     (hcv : PSlR decCVp cvTas o l s0) (hq : q.toNat = iwTop s0) (hT : iwTop m1 = q.toNat + l.toNat)
-    (f : Nat) : ∀ (m m' : Mem) (j : Word), gftW f m o l q j = some m' →
+    (f : Nat) : ∀ (m m' : Mem) (j : Word), gftW.loop1 p f m o l q j = some m' →
     StageR dn vis fe m a → IWGrow s0 m → iwTop m = iwTop m1 → MFr [] [] m1 m → j ≤ l →
     decHL m q.toNat j.toNat = some ((cvTas.map (·.type)).take j.toNat) →
     StageR dn vis fe m' a ∧ IWGrow s0 m' ∧ iwTop m' = iwTop m1 ∧ MFr [] [] m1 m' ∧
       decHL m' q.toNat l.toNat = some (cvTas.map (·.type)) := by
   induction f with
-  | zero => intro m m' j h; simp [gftW] at h
+  | zero => intro m m' j h; simp [gftW.loop1] at h
   | succ f ih =>
   intro m m' j h hS hg ht hfr hjl hacc
   have hlen : cvTas.length = l.toNat := decPL_length _ hcv.1
   have hjl' : j.toNat ≤ l.toNat := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : ¬ j < l
-  · rw [gftW_exit (h := hj)] at h
+  · rw [gftW.loop1.arm2 (hc1 := hj)] at h
     cases h
     have hj' : j.toNat = l.toNat := by
       have : ¬ j.toNat < l.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
@@ -144,7 +75,7 @@ theorem gftW_ok (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantVal)
     refine ⟨hS, hg, ht, hfr, ?_⟩
     rw [← hj', hacc, List.take_of_length_le (by simp; omega)]
   simp only [Decidable.not_not] at hj
-  rw [gftW_step (h := hj)] at h
+  rw [gftW.loop1.arm1 (hc1 := hj)] at h
   have hjn : j.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hj
   obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.2
   have hT0 := hcv.2
@@ -184,19 +115,19 @@ theorem genRecCheckFormerTys_refines {p : Prog} (ha : p.lookup "iw_alloc" = some
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  refine triple_post (gft_spec p hp n s₀ cO cL) ?_
+  refine triple_post (gft_spec p hp (n + 1) s₀ cO cL) ?_
   rintro r s' ⟨hl, hm⟩
-  rw [gftF_eq] at hm
-  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl; rw [gftK1_some] at hm
-  cases c1 : gftW (n + 1) m0 cO cL (r0.headD 0) 0 with
+  rw [gftW.arm1] at hm
+  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl; rw [gftW.k_iw_alloc.arm1] at hm
+  cases c1 : gftW.loop1 p (n + 1) m0 cO cL (r0.headD 0) 0 with
   | none => rw [c1] at hm; cases hm
   | some mF =>
-  rw [c1, gftK2_some] at hm
+  rw [c1, gftW.k_loop1.arm1] at hm
   simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, hmF⟩ := hm
   obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p ha n _ cL) c0
   simp only at hs0 hw0; subst hs0
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hS
-  obtain ⟨hSF, hgF, htF, hfF, hdF⟩ := gftW_ok s₀.mem s0.mem cO cL (r0.headD 0) cvTas hcv hq0 (by omega) (n + 1)
+  obtain ⟨hSF, hgF, htF, hfF, hdF⟩ := gftW_ok p s₀.mem s0.mem cO cL (r0.headD 0) cvTas hcv hq0 (by omega) (n + 1)
     s0.mem mF 0 c1 hS0 hg0 rfl (MFr.refl _ _ _) UInt64.zero_le (by simp [decHL, hslice?])
   rw [← hmF]
   refine ⟨hl, hSF, hgF, (allocW_mfr hw0).trans hfF, by simpa using hdF, ?_⟩
@@ -204,104 +135,10 @@ theorem genRecCheckFormerTys_refines {p : Prog} (ha : p.lookup "iw_alloc" = some
 
 /-! ## `gen_rec_check_former_tys_c`: `ms2.mapM (classFormerTy fe cvTas)` -/
 
-/-- The loop of `genRecCheckFormerTysC` (RecGen.lean), named for its spec. -/
--- con-ron: none — `genRecCheckFormerTysC`' own loop (`rfl`), a named block for the proof
-def gfcLoop : Stmt := lblk (vis, cvTasOff, cvTasLen, ms2Off, ms2Len, q, j, e) {
-  while j < ms2Len {
-    e := call class_former_ty(vis, cvTasOff, cvTasLen, IW.u64[ms2Off + j]);
-    IW.u64[q + j] := e;
-    j += 1
-  }
-}
-
-/-- `genRecCheckFormerTysC`, its loop spliced from `gfcLoop`. -/
--- con-ron: none — `genRecCheckFormerTysC` itself (`rfl`), its loop a named block for the proof
-def genRecCheckFormerTysC' : FunDecl := lfn (vis, cvTasOff, cvTasLen, ms2Off, ms2Len)
-    locals (q, j, e) {
-  q := call iw_alloc(ms2Len);
-  j := 0;
-  ⟪gfcLoop⟫;
-  return (q, ms2Len)
-}
-
-theorem genRecCheckFormerTysC_eq : genRecCheckFormerTysC = genRecCheckFormerTysC' := rfl
-
-section model
-variable (p : Prog)
-
-/-- After `class_former_ty`: the write, then the rest. -/
-def gfcK (q j : Word) (rest : Mem → Option Mem) : Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (r, m) => rest (m.set64 IW (q + j) (r.headD 0))
-
-/-- **The model of the loop** at fuel `k`, from cursor `j`. -/
-def gfcW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, vis, co, cl, mo, ml, q, j =>
-    if j < ml then
-      gfcK q j (fun m' => gfcW k m' vis co cl mo ml q (j + 1))
-        (callW p k "class_former_ty" [vis, co, cl, rdW (m.arr64 IW) (mo + j)] m)
-    else some m
-
-end model
-
-section arms
-variable (p : Prog) (k : Nat) (m : Mem) (vis co cl mo ml q j : Word) (r : List Word)
-  (rest : Mem → Option Mem)
-theorem gfcK_some : gfcK q j rest (some (r, m)) = rest (m.set64 IW (q + j) (r.headD 0)) := rfl
-theorem gfcW_exit (h : ¬ j < ml) : gfcW p (k + 1) m vis co cl mo ml q j = some m := by
-  simp only [gfcW]; rw [ite_eq_right h]
-theorem gfcW_step (h : j < ml) : gfcW p (k + 1) m vis co cl mo ml q j =
-    gfcK q j (fun m' => gfcW p k m' vis co cl mo ml q (j + 1))
-      (callW p k "class_former_ty" [vis, co, cl, rdW (m.arr64 IW) (mo + j)] m) := by
-  simp only [gfcW]; rw [ite_eq_left h]
-end arms
-
-def gfcF2 (q l : Word) : Option Mem → Option (List Word × Mem)
-  | none => none
-  | some m => some ([q, l], m)
-
-def gfcF1 (p : Prog) (n : Nat) (vis co cl mo ml : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => gfcF2 (r.headD 0) ml (gfcW p (n + 1) m vis co cl mo ml (r.headD 0) 0)
-
-/-- **The model of `gen_rec_check_former_tys_c`** (exec fuel `n + 1`). -/
-def gfcF (p : Prog) (n : Nat) (m : Mem) (vis co cl mo ml : Word) : Option (List Word × Mem) :=
-  gfcF1 p n vis co cl mo ml (callW p n "iw_alloc" [ml] m)
-
-theorem gfcF2_some (q l : Word) (m : Mem) : gfcF2 q l (some m) = some ([q, l], m) := rfl
-theorem gfcF1_some (p : Prog) (n : Nat) (vis co cl mo ml : Word) (r : List Word) (m : Mem) :
-    gfcF1 p n vis co cl mo ml (some (r, m)) =
-      gfcF2 (r.headD 0) ml (gfcW p (n + 1) m vis co cl mo ml (r.headD 0) 0) := rfl
-theorem gfcF_eq (p : Prog) (n : Nat) (m : Mem) (vis co cl mo ml : Word) :
-    gfcF p n m vis co cl mo ml = gfcF1 p n vis co cl mo ml (callW p n "iw_alloc" [ml] m) := rfl
-
-attribute [ind_grind] gfcK_some gfcW_exit gfcW_step gfcF2_some gfcF1_some
-
-theorem gfcLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p k gfcLoop
-    ⦃fun r s' => r = .normal ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧
-      gfcW p k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6) =
-        some s'.mem; ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := gfcLoop) rfl]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-        callW_spec p k "class_former_ty"] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
-
-theorem gfc_spec (p : Prog) (hp : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC)
-    (n : Nat) (s₀ : St) (vis co cl mo ml : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "gen_rec_check_former_tys_c" [vis, co, cl, mo, ml]
-    ⦃fun r s' => LocEq s' s₀ ∧ gfcF p n s₀.mem vis co cl mo ml = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp, genRecCheckFormerTysC_eq]
-  simp only [callFn, genRecCheckFormerTysC']
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "iw_alloc",
-      fun s => Triple.step_exec (gfcLoop_spec p (n + 1) s)] <;>
-    finish (gen := 40) (instances := 20000) [gfcF_eq, loc_init4]
+l_model gfc_spec (p : Prog) (hp : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC)
+  fns [hp ↦ gfcW list]
+  specs [callW_spec p n "iw_alloc", callW_spec p n "class_former_ty"]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 section rel
 variable {p : Prog} (P : CftProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -320,20 +157,20 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
       ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR dn vis fe m1 a1 ∧
         IWGrow m m1 ∧ decW0E m1 r x ∧ J m1 a1)
     (k : Nat) : ∀ (m m' : Mem) (a : AState) (j : Word) (acc : List EIdx),
-    gfcW p k m vis co cl mo ml q j = some m' →
+    gfcW.loop1 p k m vis co cl mo ml q j = some m' →
     StageR dn vis fe m a → J m a → IWGrow s0 m → q.toNat + ml.toNat ≤ iwTop m → j ≤ ml →
     decHL m q.toNat j.toNat = some acc →
     ∃ rest a', ((ms.drop j.toNat).mapM (ConRon.Arena.classFormerTy fe cvTas)).run a = .ok (rest, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow s0 m' ∧ q.toNat + ml.toNat ≤ iwTop m' ∧
       decHL m' q.toNat ml.toNat = some (acc ++ rest) ∧ J m' a' := by
   induction k with
-  | zero => intro m m' a j acc h; simp [gfcW] at h
+  | zero => intro m m' a j acc h; simp [gfcW.loop1] at h
   | succ k ih =>
   intro m m' a j acc h hS hJ hg ht hjl hacc
   have hlen : ms.length = ml.toNat := decPL_length _ hms.1
   have hjl' : j.toNat ≤ ml.toNat := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : ¬ j < ml
-  · rw [gfcW_exit (h := hj)] at h
+  · rw [gfcW.loop1.arm2 (hc1 := hj)] at h
     cases h
     have hj' : j.toNat = ml.toNat := by
       have : ¬ j.toNat < ml.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
@@ -341,7 +178,7 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
     refine ⟨[], a, ?_, hS, hg, ht, by rw [← hj']; simpa using hacc, hJ⟩
     rw [List.drop_eq_nil_of_le (by omega)]; rfl
   simp only [Decidable.not_not] at hj
-  rw [gfcW_step (h := hj)] at h
+  rw [gfcW.loop1.arm1 (hc1 := hj)] at h
   have hjn : j.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hj
   obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.2
   have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hI1 hsz
@@ -357,8 +194,8 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   have hdcv : decPL m (decCVp m) co.toNat cl.toNat = some cvTas :=
     hcvm.1.get (OMono.decPL (fun q => OMono.decCVp q) _ _)
   rcases c1 : callW p k "class_former_ty" [vis, co, cl, rdW (m.arr64 IW) (mo + j)] m with _ | ⟨r1, m1⟩
-  · rw [c1] at h; simp [gfcK] at h
-  rw [c1, gfcK_some] at h
+  · rw [c1] at h; simp [gfcW.k_class_former_ty] at h
+  rw [c1, gfcW.k_class_former_ty.arm1] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, ⟨hr1, he1⟩, hJ1⟩ := hcft k m m1 a _ _ r1 hJ hS (List.getElem_mem _) hM hdcv
     (by have := hcvm.2; omega) c1
   obtain ⟨hS1', hI1', hsz1, -, -⟩ := hS1.2
@@ -406,14 +243,14 @@ theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
       J s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀); ⊤⦄ := by
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  refine triple_post (gfc_spec p hp n s₀ vis cO cL mO mL) ?_
+  refine triple_post (gfc_spec p hp (n + 1) s₀ vis cO cL mO mL) ?_
   rintro r s' ⟨hl, hm⟩
-  rw [gfcF_eq] at hm
-  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl; rw [gfcF1_some] at hm
-  cases c1 : gfcW p (n + 1) m0 vis cO cL mO mL (r0.headD 0) 0 with
+  rw [gfcW.arm1] at hm
+  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl; rw [gfcW.k_iw_alloc.arm1] at hm
+  cases c1 : gfcW.loop1 p (n + 1) m0 vis cO cL mO mL (r0.headD 0) 0 with
   | none => rw [c1] at hm; cases hm
   | some mF =>
-  rw [c1, gfcF2_some] at hm
+  rw [c1, gfcW.k_loop1.arm1] at hm
   simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, hmF⟩ := hm
   obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.alloc n _ mL) c0
   simp only at hs0 hw0; subst hs0
@@ -446,165 +283,26 @@ theorem classSlotIsMinor_val (p : Prog) (hp : p.lookup "class_slot_is_minor" = s
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [UInt64.ofNat_toNat]
 
-/-- The slot loop of `genRecCheckMinorOk` (RecGen.lean), named for its spec. -/
--- con-ron: none — `genRecCheckMinorOk`' own loop (`rfl`), a named block for the proof
-def mkLoop1 : Stmt := lblk (slotsOff, slotsLen, ctorsOff, ctorsLen, j, s, minorCnt, ctorSum, hdr) {
-  while j < slotsLen {
-    s := call class_slot_is_minor(IW.u64[slotsOff + j]);
-    minorCnt := minorCnt + s;
-    j += 1
-  }
-}
-
-/-- The constructor loop of `genRecCheckMinorOk` (RecGen.lean), named for its spec. -/
--- con-ron: none — `genRecCheckMinorOk`' own loop (`rfl`), a named block for the proof
-def mkLoop2 : Stmt := lblk (slotsOff, slotsLen, ctorsOff, ctorsLen, j, s, minorCnt, ctorSum, hdr) {
-  while j < ctorsLen {
-    hdr := IW.u64[ctorsOff + j];
-    if ctorSum + IW.u64[hdr + 1] < ctorSum { return 0 };
-    ctorSum := ctorSum + IW.u64[hdr + 1];
-    j += 1
-  }
-}
-
-/-- `genRecCheckMinorOk`, its loops spliced. -/
--- con-ron: none — `genRecCheckMinorOk` itself (`rfl`), its loops named blocks for the proof
-def genRecCheckMinorOk' : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
-    locals (j, s, minorCnt, ctorSum, hdr) {
-  minorCnt := 0;
-  j := 0;
-  ⟪mkLoop1⟫;
-  ctorSum := 0;
-  j := 0;
-  ⟪mkLoop2⟫;
-  return u64(minorCnt == ctorSum)
-}
-
-theorem genRecCheckMinorOk_eq : genRecCheckMinorOk = genRecCheckMinorOk' := rfl
-
-section model
-variable (p : Prog)
-
-/-- After `class_slot_is_minor`: the rest at its word. -/
-def mk1K (rest : Word → Mem → Option (Word × Mem)) : Option (List Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m) => rest (r.headD 0) m
-
-/-- **The model of the slot loop** at fuel `k`: the count at the exit, and the memory. -/
-def mk1W : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | k + 1, m, so, sl, j, c =>
-    if j < sl then
-      mk1K (fun s m' => mk1W k m' so sl (j + 1) (c + s))
-        (callW p k "class_slot_is_minor" [rdW (m.arr64 IW) (so + j)] m)
-    else some (c, m)
-
-end model
-
-/-- **The model of the constructor loop** at fuel `f`: the loop's signal and the sum. -/
-def mk2W : Nat → Mem → Word → Word → Word → Word → Option (Sig × Word)
-  | 0, _, _, _, _, _ => none
-  | f + 1, m, co, cl, j, t =>
-    if j < cl then
-      if t + rdW (m.arr64 IW) (rdW (m.arr64 IW) (co + j) + 1) < t then some (.ret [0], t)
-      else mk2W f m co cl (j + 1) (t + rdW (m.arr64 IW) (rdW (m.arr64 IW) (co + j) + 1))
-    else some (.normal, t)
-
-section arms
-variable (p : Prog) (k : Nat) (m : Mem) (so sl co cl j c t : Word) (r : List Word)
-  (rest : Word → Mem → Option (Word × Mem))
-theorem mk1K_some : mk1K rest (some (r, m)) = rest (r.headD 0) m := rfl
-theorem mk1W_exit (h : ¬ j < sl) : mk1W p (k + 1) m so sl j c = some (c, m) := by
-  simp only [mk1W]; rw [ite_eq_right h]
-theorem mk1W_step (h : j < sl) : mk1W p (k + 1) m so sl j c =
-    mk1K (fun s m' => mk1W p k m' so sl (j + 1) (c + s))
-      (callW p k "class_slot_is_minor" [rdW (m.arr64 IW) (so + j)] m) := by
-  simp only [mk1W]; rw [ite_eq_left h]
-theorem mk2W_exit (h : ¬ j < cl) : mk2W (k + 1) m co cl j t = some (.normal, t) := by
-  simp only [mk2W]; rw [ite_eq_right h]
-theorem mk2W_ovf (h : j < cl) (ho : t + rdW (m.arr64 IW) (rdW (m.arr64 IW) (co + j) + 1) < t) :
-    mk2W (k + 1) m co cl j t = some (.ret [0], t) := by
-  simp only [mk2W]; rw [ite_eq_left h, ite_eq_left ho]
-theorem mk2W_step (h : j < cl) (ho : ¬ t + rdW (m.arr64 IW) (rdW (m.arr64 IW) (co + j) + 1) < t) :
-    mk2W (k + 1) m co cl j t = mk2W k m co cl (j + 1) (t + rdW (m.arr64 IW) (rdW (m.arr64 IW) (co + j) + 1)) := by
-  simp only [mk2W]; rw [ite_eq_left h, ite_eq_right ho]
-end arms
-
-/-- After the constructor loop: its signal, else the comparison. -/
-def mkF2 (c : Word) (m : Mem) : Option (Sig × Word) → Option (List Word × Mem)
-  | none => none
-  | some (sg, t) => some (sg.retOr [if c = t then 1 else 0], m)
-
-/-- After the slot loop: the constructor loop. -/
-def mkF1 (n : Nat) (co cl : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (c, m) => mkF2 c m (mk2W (n + 1) m co cl 0 0)
-
-/-- **The model of `gen_rec_check_minor_ok`** (exec fuel `n + 1`). -/
-def mkF (p : Prog) (n : Nat) (m : Mem) (so sl co cl : Word) : Option (List Word × Mem) :=
-  mkF1 n co cl (mk1W p (n + 1) m so sl 0 0)
-
-theorem mkF2_some (c : Word) (m : Mem) (sg : Sig) (t : Word) :
-    mkF2 c m (some (sg, t)) = some (sg.retOr [if c = t then 1 else 0], m) := rfl
-theorem mkF1_some (n : Nat) (co cl c : Word) (m : Mem) :
-    mkF1 n co cl (some (c, m)) = mkF2 c m (mk2W (n + 1) m co cl 0 0) := rfl
-theorem mkF_eq (p : Prog) (n : Nat) (m : Mem) (so sl co cl : Word) :
-    mkF p n m so sl co cl = mkF1 n co cl (mk1W p (n + 1) m so sl 0 0) := rfl
-
-attribute [ind_grind] mk1K_some mk1W_exit mk1W_step mk2W_exit mk2W_ovf mk2W_step mkF2_some mkF1_some
-
-theorem mkLoop1_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p k mkLoop1
-    ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      mk1W p k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 4) (s₀.loc 6) = some (s'.loc 6, s'.mem); ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := mkLoop1) rfl]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
-        callW_spec p k "class_slot_is_minor"] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
-
-theorem mkLoop2_spec (p : Prog) (f : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p f mkLoop2
-    ⦃fun r s' => s'.mem = s₀.mem ∧ s'.loc 6 = s₀.loc 6 ∧ r ≠ .brk ∧
-      mk2W f s₀.mem (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 7) = some (r, s'.loc 7); ⊤⦄ := by
-  induction f generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ f ih =>
-    rw [exec, step_while (w := mkLoop2) rfl]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
-
-theorem mk_spec (p : Prog) (hp : p.lookup "gen_rec_check_minor_ok" = some genRecCheckMinorOk)
-    (n : Nat) (s₀ : St) (so sl co cl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "gen_rec_check_minor_ok" [so, sl, co, cl]
-    ⦃fun r s' => LocEq s' s₀ ∧ mkF p n s₀.mem so sl co cl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp, genRecCheckMinorOk_eq]
-  simp only [callFn, genRecCheckMinorOk']
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (mkLoop1_spec p (n + 1) s),
-      fun s => Triple.step_exec (mkLoop2_spec p (n + 1) s)] <;>
-    finish (gen := 40) (instances := 20000) [mkF_eq]
+l_model mk_spec (p : Prog) (hp : p.lookup "gen_rec_check_minor_ok" = some genRecCheckMinorOk)
+  fns [hp ↦ mkW list]
+  specs [callW_spec p n "class_slot_is_minor"]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-- **The slot loop counts the minor premises.** -/
-theorem mk1W_ok {p : Prog} (hm : p.lookup "class_slot_is_minor" = some classSlotIsMinor) (so sl : Word)
+theorem mkW_loop1_ok {p : Prog} (hm : p.lookup "class_slot_is_minor" = some classSlotIsMinor) (so sl : Word)
     (slots : List ClassSlot) (k : Nat) : ∀ (m m' : Mem) (j c c' : Word),
-    mk1W p k m so sl j c = some (c', m') →
+    mkW.loop1 p k m so sl j c = some (c', m') →
     decPL m (decCS m) so.toNat sl.toNat = some slots → so.toNat + sl.toNat < 2 ^ 64 → j ≤ sl →
     c.toNat = ((slots.take j.toNat).filter ConRon.Arena.ClassSlot.isMinor).length →
     m' = m ∧ c'.toNat = (slots.filter ConRon.Arena.ClassSlot.isMinor).length := by
   induction k with
-  | zero => intro m m' j c c' h; simp [mk1W] at h
+  | zero => intro m m' j c c' h; simp [mkW.loop1] at h
   | succ k ih =>
   intro m m' j c c' h hsl hb hjl hc
   have hlen : slots.length = sl.toNat := decPL_length _ hsl
   have hjl' : j.toNat ≤ sl.toNat := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : ¬ j < sl
-  · rw [mk1W_exit (h := hj)] at h
+  · rw [mkW.loop1.arm2 (hc1 := hj)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hj' : j.toNat = sl.toNat := by
       have : ¬ j.toNat < sl.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
@@ -612,13 +310,13 @@ theorem mk1W_ok {p : Prog} (hm : p.lookup "class_slot_is_minor" = some classSlot
     refine ⟨rfl, ?_⟩
     rw [hc, hj', List.take_of_length_le (by omega)]
   simp only [Decidable.not_not] at hj
-  rw [mk1W_step (h := hj)] at h
+  rw [mkW.loop1.arm1 (hc1 := hj)] at h
   have hjn : j.toNat < sl.toNat := UInt64.lt_iff_toNat_lt.mp hj
   obtain ⟨v, hv, hcs⟩ := decPL_getH m hsl j.toNat hjn
   have hrv : (rdW (m.arr64 IW) (so + j)).toNat = v := rd_iwN hv (by omega)
   rcases c1 : callW p k "class_slot_is_minor" [rdW (m.arr64 IW) (so + j)] m with _ | ⟨r1, m1⟩
-  · rw [c1] at h; simp [mk1K] at h
-  rw [c1, mk1K_some] at h
+  · rw [c1] at h; simp [mkW.k_class_slot_is_minor] at h
+  rw [c1, mkW.k_class_slot_is_minor.arm1] at h
   obtain ⟨s1, hs1, hst, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (classSlotIsMinor_val p hm k _ _ _ (by rw [hrv]; exact hcs)) c1
   subst hs1; subst hst; simp only at h
@@ -633,26 +331,27 @@ theorem mk1W_ok {p : Prog} (hm : p.lookup "class_slot_is_minor" = some classSlot
 
 /-- **The constructor loop sums the classes' constructors** (past `2^64`: the early `0`), and
 the comparison is the count's. -/
-theorem mk2W_ok (m : Mem) (co cl : Word) (ctors : List (List ClassCtor)) (c : Word)
+theorem mkW_loop2_ok (p : Prog) (m : Mem) (co cl : Word) (ctors : List (List ClassCtor)) (c : Word)
     (hct : decPL m (decLH m (decPL m (decCC m))) co.toNat cl.toNat = some ctors)
     (hb : co.toNat + cl.toNat < 2 ^ 64) (hsz : (m.arr64 IW).size < 2 ^ 64) (f : Nat) :
-    ∀ (j t t' : Word) (sg : Sig), mk2W f m co cl j t = some (sg, t') → j ≤ cl →
+    ∀ (j t : Word) (r : List Word) (m' : Mem), mkW.loop2 p f m co cl j c t = some (r, m') → j ≤ cl →
     t.toNat = ((ctors.take j.toNat).map List.length).sum →
-    sg.retOr [if c = t' then 1 else 0] = [if c.toNat = (ctors.map List.length).sum then 1 else 0] := by
+    r = [if c.toNat = (ctors.map List.length).sum then 1 else 0] ∧ m' = m := by
   have hlen : ctors.length = cl.toNat := decPL_length _ hct
   induction f with
-  | zero => intro j t t' sg h; simp [mk2W] at h
+  | zero => intro j t r m' h; simp [mkW.loop2] at h
   | succ f ih =>
-  intro j t t' sg h hjl ht
+  intro j t r m' h hjl ht
   have hjl' : j.toNat ≤ cl.toNat := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : ¬ j < cl
-  · rw [mk2W_exit (h := hj)] at h
+  · rw [mkW.loop2.arm3 (hc1 := hj)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hj' : j.toNat = cl.toNat := by
       have : ¬ j.toNat < cl.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
       omega
     rw [hj', List.take_of_length_le (by omega)] at ht
-    simp only [Sig.retOr, ← ht]
+    refine ⟨?_, rfl⟩
+    simp only [← ht]
     by_cases e : c = t
     · subst e; simp
     · have : c.toNat ≠ t.toNat := fun h' => e (UInt64.toNat_inj.mp h')
@@ -681,7 +380,7 @@ theorem mk2W_ok (m : Mem) (co cl : Word) (ctors : List (List ClassCtor)) (c : Wo
     simp only [List.map_append, List.sum_append] at e
     omega
   by_cases ho : t + w < t
-  · rw [mk2W_ovf (h := hj) (ho := by rw [hw]; exact ho)] at h
+  · rw [mkW.loop2.arm1 (hc1 := hj) (hc2 := by rw [hw]; exact ho)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hov : 2 ^ 64 ≤ t.toNat + w.toNat := by
       have h1 := UInt64.lt_iff_toNat_lt.mp ho
@@ -690,15 +389,15 @@ theorem mk2W_ok (m : Mem) (co cl : Word) (ctors : List (List ClassCtor)) (c : Wo
       · rw [Nat.mod_eq_of_lt hc'] at h1; omega
       · exact hc'
     have : ¬ c.toNat = (ctors.map List.length).sum := by have := c.toNat_lt; omega
-    simp [Sig.retOr, this]
-  rw [mk2W_step (h := hj) (ho := by rw [hw]; exact ho), hw] at h
+    exact ⟨by simp [this], rfl⟩
+  rw [mkW.loop2.arm2 (hc1 := hj) (hc2 := by rw [hw]; exact ho), hw] at h
   have hnov : t.toNat + w.toNat < 2 ^ 64 := by
     rcases Nat.lt_or_ge (t.toNat + w.toNat) (2 ^ 64) with hc' | hc'
     · exact hc'
     · exfalso; apply ho; apply UInt64.lt_iff_toNat_lt.mpr; rw [UInt64.toNat_add]
       have := t.toNat_lt; have := w.toNat_lt; omega
   have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  refine ih (j + 1) _ t' sg h (UInt64.le_iff_toNat_le.mpr (by omega)) ?_
+  refine ih (j + 1) _ r m' h (UInt64.le_iff_toNat_le.mpr (by omega)) ?_
   rw [hj1, hsum, UInt64.toNat_add, Nat.mod_eq_of_lt hnov, hrl]
 
 /-- **`gen_rec_check_minor_ok` compares the minor premises with the constructors.** -/
@@ -713,15 +412,13 @@ theorem genRecCheckMinorOk_refines {p : Prog} (hm : p.lookup "class_slot_is_mino
       (r.headD 0 != 0) = ((slots.filter ConRon.Arena.ClassSlot.isMinor).length == (ctors.map List.length).sum); ⊤⦄ := by
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  refine triple_post (mk_spec p hp n s₀ so sl co cl) ?_
+  refine triple_post (mk_spec p hp (n + 1) s₀ so sl co cl) ?_
   rintro r s' ⟨hl, hmk⟩
-  rw [mkF_eq] at hmk
-  obtain ⟨⟨c, m1⟩, c1, hmk⟩ := of_K hmk rfl; rw [mkF1_some] at hmk
-  obtain ⟨rfl, hc⟩ := mk1W_ok hm so sl slots (n + 1) s₀.mem m1 0 0 c c1 hsl hslb UInt64.zero_le (by simp)
-  obtain ⟨⟨sg, t⟩, c2, hmk⟩ := of_K hmk rfl; rw [mkF2_some] at hmk
-  obtain ⟨rfl, hmem⟩ := Prod.mk.inj (Option.some.inj hmk)
-  have := mk2W_ok s₀.mem co cl ctors c hct hctb hsz (n + 1) 0 0 t sg c2 UInt64.zero_le (by simp)
-  refine ⟨hl, hmem.symm, ?_⟩
+  rw [mkW.arm1] at hmk
+  obtain ⟨⟨c, m1⟩, c1, hmk⟩ := of_K hmk rfl; rw [mkW.k_loop1.arm1] at hmk
+  obtain ⟨rfl, hc⟩ := mkW_loop1_ok hm so sl slots (n + 1) s₀.mem m1 0 0 c c1 hsl hslb UInt64.zero_le (by simp)
+  obtain ⟨this, hmem⟩ := mkW_loop2_ok p s₀.mem co cl ctors c hct hctb hsz (n + 1) 0 0 _ _ hmk UInt64.zero_le (by simp)
+  refine ⟨hl, hmem, ?_⟩
   rw [this, ← hc]
   by_cases e : c.toNat = (ctors.map List.length).sum <;> simp [e]
 
