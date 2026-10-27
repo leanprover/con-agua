@@ -100,38 +100,11 @@ theorem coreRef_pre {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec 
 
 /-! ## `struct_unit_tail` -/
 
-section utK
-variable (p : Prog) (n : Nat) (mode vis d b wta : Word)
-
-def utK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 >>> 28 = 6 then some (0, m)
-    else call1W p n "defeq" [mode, vis, d, wta, r.headD 0] m
-
-def utK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => utK2 p n mode vis d wta (callW p n "whnf" [mode, vis, d, r.headD 0] m)
-
-variable (r : List Word) (m : Mem)
-theorem utK1_some : utK1 p n mode vis d wta (some (r, m)) =
-    utK2 p n mode vis d wta (callW p n "whnf" [mode, vis, d, r.headD 0] m) := rfl
-
-end utK
-
-theorem suTail_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d b wta : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_unit_tail" [mode, vis, d, b, wta]
-    ⦃fun r s' => LocEq s' s₀ ∧ utK1 p n mode vis d wta
-      (callW p n "infer_io" [mode, vis, d, b] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.suTail]
-  simp only [callFn, structUnitTailL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "infer_io",
-      callW_spec p n "whnf", callW_spec p n "defeq"] <;>
-  simp_all [utK1, utK2, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
+/-- **`struct_unit_tail` is its model `suTailW`** (generated). -/
+l_model suTail_spec (p : Prog) (hq : StuckProg p)
+  fns [hq.suTail ↦ suTailW]
+  specs [callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "defeq"]
+  grind [arena_grind] simp []
 
 /-- **`struct_unit_tail` refines `suTailT`** at the knot. -/
 @[refines_part ConRon.Arena.structUnitCert "b's type against a's (suTailT)"]
@@ -145,12 +118,13 @@ theorem suTail_refines (p : Prog) (hq : StuckProg p) (n : Nat) (hk : KnotUpTo p 
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (suTail_spec p hq n s₀ mode vis d b wta)
+    (suTail_spec p hq (n + 1) s₀ mode vis d b wta)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
+  rw [suTailW.arm1] at hW
   obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
-  rw [utK1_some] at hW1
+  rw [suTailW.k_infer_io.arm1] at hW1
   obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
   have h₁ := CoreSpec.of_callW (hK.inferIO F s a₀ dn vis fe M eb mode d b hF hn hs hb) hc1
   unfold suTailT
@@ -160,18 +134,17 @@ theorem suTail_refines (p : Prog) (hq : StuckProg p) (n : Nat) (hk : KnotUpTo p 
   refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
   have hh2 : HW (r₂.headD 0) := h₂.2.2.2
   simp only [isForallE, decH, tag_beq_w _ hh2 6 (by decide) ETag.forallE rfl 6 rfl]
-  simp only [utK2] at hW2
   by_cases h6 : r₂.headD 0 >>> 28 = 6
-  · simp only [h6, ↓reduceIte] at hW2
+  · rw [suTailW.k_whnf.arm1 (hc1 := h6)] at hW2
     obtain ⟨hr, hm⟩ := some_pair_inj hW2
     rw [← hm]
     simp only [h6, decide_true, ↓reduceIte]
     exact coreRef_pure hS₂ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
-  simp only [h6, ↓reduceIte] at hW2
+  rw [suTailW.k_whnf.arm2 (hc1 := h6)] at hW2
   simp only [h6, decide_false, Bool.false_eq_true, ↓reduceIte]
   exact CoreSpec.of_call1W (s₀ := ⟨m₂, Locals.init []⟩)
     (hK.defeq F _ _ dn vis fe M₂ eb mode d wta (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hwta hh2)
-    (fun r r' h => by simp only [decBool, h]) hW2
+    (fun r r' h => by simp only [decBool, h]) (by rw [call1W]; exact hW2)
 
 theorem suTail_at (p : Prog) (hq : StuckProg p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
@@ -419,39 +392,11 @@ theorem suHead_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
 
 /-! ## `struct_unit_cert` -/
 
-section sucK
-variable (p : Prog) (n : Nat) (mode vis d a b : Word)
-
-def sucK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => call1W p n "struct_unit_head" [mode, vis, d, b, r.headD 0] m
-
-/-- **The model of `struct_unit_cert`** past `infer_io`'s run. -/
-def sucK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => sucK2 p n mode vis d b (callW p n "whnf" [mode, vis, d, r.headD 0] m)
-
-variable (r : List Word) (m : Mem)
-theorem sucK2_some : sucK2 p n mode vis d b (some (r, m)) =
-    call1W p n "struct_unit_head" [mode, vis, d, b, r.headD 0] m := rfl
-theorem sucK1_some : sucK1 p n mode vis d b (some (r, m)) =
-    sucK2 p n mode vis d b (callW p n "whnf" [mode, vis, d, r.headD 0] m) := rfl
-
-end sucK
-
-theorem suCert_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_unit_cert" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ sucK1 p n mode vis d b
-      (callW p n "infer_io" [mode, vis, d, a] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.sunit]
-  simp only [callFn, structUnitCertL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "infer_io",
-      callW_spec p n "whnf", callW_spec p n "struct_unit_head"] <;>
-  simp_all [sucK1, sucK2, call1W, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
+/-- **`struct_unit_cert` is its model `suCertW`** (generated). -/
+l_model suCert_spec (p : Prog) (hq : StuckProg p)
+  fns [hq.sunit ↦ suCertW]
+  specs [callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "struct_unit_head"]
+  grind [arena_grind] simp []
 
 /-- **`struct_unit_cert` refines `structUnitCert`** at the knot. -/
 @[refines ConRon.Arena.structUnitCert]
@@ -465,15 +410,16 @@ theorem suCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : 
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (suCert_spec p hq n s₀ mode vis d a b)
+    (suCert_spec p hq (n + 1) s₀ mode vis d a b)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
   rw [structUnitCert_eq]
+  rw [suCertW.arm1] at hW
   obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
-  rw [sucK1_some] at hW1
+  rw [suCertW.k_infer_io.arm1] at hW1
   obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
-  rw [sucK2_some] at hW2
+  rw [suCertW.k_whnf.arm1] at hW2
   have h₁ := CoreSpec.of_callW (hK.inferIO F s a₀ dn vis fe M eb mode d a hF hn hs ha) hc1
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0)
@@ -482,6 +428,6 @@ theorem suCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : 
   exact CoreSpec.of_call1W (s₀ := ⟨m₂, Locals.init []⟩)
     (suHead_at p hq hc n hk F _ _ dn vis fe M₂ eb mode d b (r₂.headD 0) hF hn
       ⟨hS₂, hs.mode4, hs.eb_mode⟩ hb h₂.2.2.2)
-    (fun r r' h => by simp only [decBool, h]) hW2
+    (fun r r' h => by simp only [decBool, h]) (by rw [call1W]; exact hW2)
 
 end L.Arena
