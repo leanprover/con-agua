@@ -34,19 +34,23 @@ abbrev R8 : Word := 8
 /-- The byte class of the decimal digits. -/
 def digC : List UInt8 := (List.range 256).map fun i => if 48 ≤ i ∧ i ≤ 57 then 1 else 0
 
+-- con-ron: none — an `l_model` test function
 def tPool : FunDecl := lfn (x) {
   return TP⦃x⦄ + ⦃x⦄.tier + ⦃x⦄.idx + ⦃x⦄.base
 }
 
+-- con-ron: none — an `l_model` test function
 def tLe : FunDecl := lfn (i) {
   return le64!(TB.u8, i) + 1
 }
 
+-- con-ron: none — an `l_model` test function
 def tScan : FunDecl := lfn (i, e) locals (j) {
   j := scan!(TB.u8, i, e, digC);
   return j + 1
 }
 
+-- con-ron: none — an `l_model` test function
 def tCopy : FunDecl := lfn (d, s, k) {
   copy!(TW.u64, d, TP.u64⟨1⟩, s, k);
   copy!(TP.u64⟨0⟩, d + k, TB.u8, s, k);
@@ -54,12 +58,14 @@ def tCopy : FunDecl := lfn (d, s, k) {
   return TW.u64[d]
 }
 
+-- con-ron: none — an `l_model` test function
 def tSt8 : FunDecl := lfn (i, v) {
   TB.u8[i] := v;
   TB.u8[i + 1] := v >> 8;
   return 0
 }
 
+-- con-ron: none — an `l_model` test function
 def tSeq : FunDecl := lfn (n) locals (i, s) {
   i := 0;
   while i < n { s += 1; i += 1 };
@@ -68,6 +74,7 @@ def tSeq : FunDecl := lfn (n) locals (i, s) {
   return s
 }
 
+-- con-ron: none — an `l_model` test function
 def tNest : FunDecl := lfn (n) locals (i, j, s) {
   i := 0;
   while i < n {
@@ -79,6 +86,7 @@ def tNest : FunDecl := lfn (n) locals (i, j, s) {
 }
 
 /-- A `break` and a `return` in the inner loop; the outer loop is fused (`return 99` after it). -/
+-- con-ron: none — an `l_model` test function
 def tNestR : FunDecl := lfn (n) locals (i, j) {
   i := 0;
   while i < n {
@@ -94,6 +102,7 @@ def tNestR : FunDecl := lfn (n) locals (i, j) {
 }
 
 /-- The outer loop not fused: code after it reads a local it assigns. -/
+-- con-ron: none — an `l_model` test function
 def tNestR2 : FunDecl := lfn (n) locals (i, j, r) {
   i := 0;
   while i < n {
@@ -142,6 +151,7 @@ l_model tNestR_spec (p : Prog) (hp : p.lookup "t_nest_r" = some tNestR)
   grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-- `errors` mode: the aborts' codes kept, through the nested loops and the block operations. -/
+-- con-ron: none — an `l_model` test function
 def tNestE : FunDecl := lfn (n, d) locals (i, j) {
   i := 0;
   while i < n {
@@ -162,6 +172,7 @@ l_model tNestE_spec (p : Prog) (hp : p.lookup "t_nest_e" = some tNestE)
   grind [arena_grind] simp [] errors
 
 /-- A loop that never exits normally, then `abort`: fused (the loop's model is the function's). -/
+-- con-ron: none — an `l_model` test function
 def tFor : FunDecl := lfn (n) locals (i) {
   i := 0;
   while 0 == 0 {
@@ -176,6 +187,7 @@ l_model tFor_spec (p : Prog) (hp : p.lookup "t_for" = some tFor)
   grind [arena_grind] simp []
 
 /-- A loop that may exit normally, then `abort`: not fused (`errors` mode). -/
+-- con-ron: none — an `l_model` test function
 def tExit : FunDecl := lfn (n, d) locals (i) {
   i := 0;
   while i < n {
@@ -191,6 +203,7 @@ l_model tExit_spec (p : Prog) (hp : p.lookup "t_exit" = some tExit)
   grind [arena_grind] simp [] errors
 
 /-- A function that only changes the memory (no `return`: the result `0`). -/
+-- con-ron: none — an `l_model` test function
 def tMem : FunDecl := lfn (i, v) {
   TW.u64[i] := v;
   TB.u8[i] := v
