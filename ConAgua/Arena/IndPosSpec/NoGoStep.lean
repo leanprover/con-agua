@@ -167,7 +167,7 @@ theorem noNode_step (n : Nat) (ih : NoGoSpec p n) : NoNodeSpec p (n + 1) := by
   simp only [invoke_eq _ hnode, callFn, nestOccNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      slContains_spec p hc n, ih] <;> finish (gen := 20)
+      ih] <;> finish (gen := 20)
 
 include hv hc hf hput hgo hnode in
 theorem noGo_spec (n : Nat) : NoGoSpec p n ∧ NoNodeSpec p n := by

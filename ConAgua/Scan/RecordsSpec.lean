@@ -395,6 +395,7 @@ theorem rulesLoop_spec (n : Nat) (s₀ : St) :
         scanRule_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_rule n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanRules "validity"]
 theorem scanRules_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -430,7 +431,7 @@ theorem indRecLoop_spec (n : Nat) (s₀ : St) :
         nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
-        scanRules_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+        scanRules_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_rule hp_rules n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
@@ -539,6 +540,7 @@ theorem indTypesLoop_spec (n : Nat) (s₀ : St) :
         scanIndType_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indType n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanIndTypes "validity"]
 theorem scanIndTypes_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -610,6 +612,7 @@ theorem indCtorsLoop_spec (n : Nat) (s₀ : St) :
         scanIndCtor_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indCtor n] <;> finish
 
 
+omit hpmw hpi hphn hpho hph hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
 @[refines_part ConLeche.Frontend.scanIndCtors "validity"]
 theorem scanIndCtors_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -829,9 +832,9 @@ theorem indDLoop_spec (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
         nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
-        scanIndCtors_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+        scanIndCtors_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indCtor hp_indCtors n,
         scanIndRecs_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        scanIndTypes_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+        scanIndTypes_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indType hp_indTypes n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 

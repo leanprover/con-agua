@@ -545,6 +545,7 @@ theorem escRun_spec (n : Nat) (s₀ : St) :
   rw [UInt64.toNat_sub_of_le _ _ h1] at h2'
   exact escLoopW_run b _ _ _ _ _ hp.2.2.2 h0.2 (by omega)
 
+omit hb in
 theorem escLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
       s.loc 10 = s.loc 2 &&& 1099511627775⦄
@@ -565,7 +566,7 @@ theorem escLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) escLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧
       escLoopW b s₀.mem (s₀.loc 2) (s₀.loc 1) (s₀.loc 4) (s₀.loc 3) = some (s'.loc 3, s'.mem); ⊤⦄ :=
-  Triple.step_exec (escLoop_spec p b hb hpb hph hp4 hp3 hps hpo hpu (n + 1) s₀)
+  Triple.step_exec (escLoop_spec p b hpb hph hp4 hp3 hps hpo hpu (n + 1) s₀)
 
 theorem strPutEsc_specW (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
     (hm : s₀.mem.arr8 IN = b) (vs ve : Word) :
