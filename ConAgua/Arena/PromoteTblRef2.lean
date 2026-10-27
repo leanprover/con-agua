@@ -22,7 +22,7 @@ theorem ptnew_arrs : ∀ b ∈ tblArrs ++ ETAB :: EREC :: eArrs,
   rcases List.mem_append.mp hb with hb | hb
   · simp only [tblArrs, List.mem_cons, List.not_mem_nil, or_false] at hb
     right
-    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> simp [TIXA, TIXS, TIXN]
+    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> simp [TIXA, TIXS, TIXN, tier1, tierOff]
   rcases List.mem_cons.mp hb with rfl | hb
   · right; right; left; rfl
   · rcases vg_arrs b hb with h | h | h
