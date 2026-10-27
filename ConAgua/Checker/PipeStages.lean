@@ -137,7 +137,7 @@ theorem pinA_idArrs : ∀ x ∈ PinA, x ∉ idArrs := by
   simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false, NID, LID, EID, NIDS, LIDS, EIDS] at hm
   rcases hm with rfl | rfl | rfl | rfl | rfl | rfl <;> revert hx <;> decide
 
-theorem pinA_not {x : ArrId} (h : 64 ≤ x ∧ x < 256) (h' : x ≠ PINS) : x ∉ PinA := by
+theorem pinA_not {x : ArrId} (h : InHigh x) (h' : x ≠ PINS) : x ∉ PinA := by
   obtain ⟨n, rfl⟩ : ∃ n : Nat, n = x := ⟨x, rfl⟩
   intro hx
   simp only [tier1, tierOff, PinA, StoreA, lowTierArrs, List.mem_cons, List.mem_append, List.mem_range,

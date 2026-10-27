@@ -467,7 +467,7 @@ theorem CoreMemos.frameLP {A : List ArrId} {C : List Word} {m m' : Mem} (hf : Me
 /-- **`CoreMemos` across a writer at or above array 64** (and `CTL` word 64), away from the walk
 memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreMemos.frame_hi {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 64 ≤ b ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : CoreMemos m)
+    (hA : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : CoreMemos m)
     (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) : CoreMemos m' :=
   h.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩

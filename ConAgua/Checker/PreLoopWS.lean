@@ -101,12 +101,19 @@ def preLoopFns : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `preLoopFns` store into. -/
 def preLoopA : List ArrId := [
-  0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27,
-  28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 55, 56, 57, 58, 59, 60,
-  61, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74, 75, 76, 128, 136, 138, 139, 150, 192, 200, 256, 258,
-  259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277,
-  278, 279, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 298,
-  299, 300, 301, 302, 311, 312, 313, 314, 315, 316, 317]
+  POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+  SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
+  FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
+  FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, Front.NID, Front.LID, Front.EID,
+  Front.DECL, Front.DLP, Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, HSEEN,
+  HNIX, PINS, EREC, Rom.RSTK, Rom.RMEMO, Rom.RSET, LH, Ind.IW, tier1 POOL, tier1 REC, tier1 SLOT,
+  tier1 AREC, tier1 ASLOT, tier1 SREC, tier1 SSLOT, tier1 ZREC, tier1 ZSLOT, tier1 MREC,
+  tier1 MSLOT, tier1 IREC, tier1 ISLOT, tier1 PREC, tier1 PSLOT, tier1 SOREC, tier1 SOSLOT,
+  tier1 CREC, tier1 CSLOT, tier1 LEREC, tier1 LESLOT, tier1 BREC, tier1 BSLOT, tier1 FVREC,
+  tier1 FVSLOT, tier1 LAREC, tier1 LASLOT, tier1 FAREC, tier1 FASLOT, tier1 PJREC, tier1 PJSLOT,
+  tier1 NAREC, tier1 NASLOT, tier1 NSREC, tier1 NSSLOT, tier1 NNREC, tier1 NNSLOT, tier1 LSREC,
+  tier1 LSSLOT, tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER, tier1 PJDER, tier1 SHP,
+  tier1 MHP, tier1 IHP, tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP]
 
 /-- The `CTL` words the functions of `preLoopFns` store into. -/
 def preLoopC : List Word := [
@@ -176,8 +183,9 @@ theorem preLoopFrame_intern_all_pins (n : Nat) (s₀ : St) :
 
 /-- The arrays the declaration loop needs zero at its start are not written before it. -/
 theorem preLoopA_loopZero :
-    ∀ b ∈ ([49, 50, 52, 53, 54, 151, 152, 153, 155, 201, 202, 203, 204, 205, 206, 207, 208] :
-      List ArrId), b ∉ preLoopA := by
+    ∀ b ∈ ([ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, Stubs.CRM,
+      Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM] : List ArrId),
+      b ∉ preLoopA := by
   decide +kernel
 
 /-- The `CTL` words the declaration loop needs zero at its start (as numbers). -/

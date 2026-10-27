@@ -166,7 +166,7 @@ theorem PMemoR.setN {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h r : Word) (h
 
 /-- A writer of the store tier keeps the promotion memo. -/
 theorem PMemoR.frameLo {A : List ArrId} {C : List Word} {m m' : Mem} {pm : PMemo}
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hf : MemFrame A C m m')
     (h : PMemoR m pm) : PMemoR m' pm :=
   h.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
     (fun x hx => .inl (Nat.lt_trans (hC x hx) (by decide))) hf

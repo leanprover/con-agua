@@ -87,8 +87,9 @@ scratch heaps, the stores' tier-1 arrays. Entry 2 gives them slots in the worker
 other array gets no memory (an access is out of bounds, an error). `Checker/ParOwned.lean` checks
 the list against the program. -/
 def parOwned : List ArrId :=
-  [1, 24, 47, 48, 49, 50, 52, 53, 54, 62, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106,
-   140, 141, 142, 144, 145, 151, 152, 153, 154, 155, 192, 200, 256, 385, 386, 387] ++
+  [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH, INM,
+   IOM, DEM, CTM, CV, RRM, LQ, LSQ, EIXA1, EIXS1, EIXN1, SPN, BSTK, WSM, FLM, LSM, LVS, Stubs.CRM,
+   LH, Ind.IW, tier1 POOL, tier1 TIXA, tier1 TIXS, tier1 TIXN] ++
   ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [tier1 x.1, tier1 x.2.1]) ++
     fzCols.map (fun (x : ArrId × Nat) => tier1 x.1)).mergeSort : List ArrId)
 
@@ -142,17 +143,24 @@ def parCompactL : FunDecl :=
 /-- `frozenIds` as a literal (what the entry stub is built from: the kernel checks the committed
 file's stub against it, and a computed list would be re-evaluated in every piece). -/
 def frozenIdsL : List ArrId :=
-  [241, 242, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-   25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 55, 56,
-   57, 58, 59, 60, 61, 128, 132, 133, 134, 129, 130, 131, 136, 137]
+  [HDRF, CTLF, POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT,
+   PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC,
+   LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC,
+   LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA,
+   EIXS, EIXN, TIXA, TIXS, TIXN, EREC, PEND]
 
 /-- `parOwned` as a literal (as `frozenIdsL`). -/
 def parOwnedL : List ArrId :=
-  [1, 24, 47, 48, 49, 50, 52, 53, 54, 62, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 140,
-   141, 142, 144, 145, 151, 152, 153, 154, 155, 192, 200, 256, 385, 386, 387, 258, 259, 260, 261, 262, 263, 264,
-   265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 281, 282, 283, 284,
-   285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 298, 299, 300, 301, 302, 311, 312,
-   313, 314, 315, 316, 317]
+  [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH, INM,
+   IOM, DEM, CTM, CV, RRM, LQ, LSQ, EIXA1, EIXS1, EIXN1, SPN, BSTK, WSM, FLM, LSM, LVS, Stubs.CRM,
+   LH, Ind.IW, tier1 POOL, tier1 TIXA, tier1 TIXS, tier1 TIXN, tier1 REC, tier1 SLOT, tier1 AREC,
+   tier1 ASLOT, tier1 SREC, tier1 SSLOT, tier1 ZREC, tier1 ZSLOT, tier1 MREC, tier1 MSLOT,
+   tier1 IREC, tier1 ISLOT, tier1 PREC, tier1 PSLOT, tier1 SOREC, tier1 SOSLOT, tier1 CREC,
+   tier1 CSLOT, tier1 LEREC, tier1 LESLOT, tier1 BREC, tier1 BSLOT, tier1 FVREC, tier1 FVSLOT,
+   tier1 LAREC, tier1 LASLOT, tier1 FAREC, tier1 FASLOT, tier1 PJREC, tier1 PJSLOT, tier1 NAREC,
+   tier1 NASLOT, tier1 NSREC, tier1 NSSLOT, tier1 NNREC, tier1 NNSLOT, tier1 LSREC, tier1 LSSLOT,
+   tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER, tier1 PJDER, tier1 SHP, tier1 MHP, tier1 IHP,
+   tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP]
 
 #guard frozenIdsL == frozenIds
 #guard parOwnedL == parOwned

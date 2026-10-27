@@ -117,7 +117,7 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA hb; omega
   have nC : ∀ x : Word, (x.toNat < 96 ∨ 128 ≤ x.toNat) → x ∉ [C] := fun x hx h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
-  have gA : ∀ b ∈ [A], 64 ≤ b ∧ b < 256 := fun b h => by
+  have gA : ∀ b ∈ [A], InHigh b := fun b h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA ⊢; omega
   have gC : ∀ x ∈ [C], 64 ≤ x.toNat := fun x h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega

@@ -32,15 +32,11 @@ def RciA : List ArrId := EREC :: IW :: ExprA
 def RciC : List Word := 129 :: 200 :: ExprC
 
 theorem rciA_mem {b : Nat} (h : b ∈ RciA) :
-    b = 136 ∨ b = 200 ∨ b = 139 ∨ b = 150 ∨ b = 138 ∨ b < 64 ∨ (256 ≤ b ∧ b < 320) := by
+    b = 136 ∨ b = 200 ∨ b = 139 ∨ b = 150 ∨ b = 138 ∨ InStoreTier b := by
   simp only [RciA, ExprA, RomA, StoreA, EREC, IW, RMEMO, RSET, RSTK, List.mem_cons] at h
   rcases h with h | h | h | h | h | h
   any_goals (subst h; simp)
-  simp only [tier1, tierOff, lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at h
-  rcases h with h | ⟨y, hy, e⟩
-  · omega
-  · have e' : (y : Nat) + 256 = b := e
-    omega
+  exact .inr (.inr (.inr (.inr (.inr (storeTier_of_mem h)))))
 
 theorem rciC_mem {x : Word} (h : x ∈ RciC) :
     x = 129 ∨ x = 200 ∨ x = 132 ∨ x = 148 ∨ x = 149 ∨ x = 131 ∨ x.toNat < 64 := by

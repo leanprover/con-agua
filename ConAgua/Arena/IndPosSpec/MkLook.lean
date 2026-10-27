@@ -23,7 +23,7 @@ open L.Arena
 /-! ## Low frames: writers of the store tiers (arrays and `CTL` words below 64) -/
 
 def LowFr (m m' : Mem) : Prop :=
-  ∃ (A : List ArrId) (C : List Word), MemFrame A C m m' ∧ (∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) ∧ (∀ x ∈ C, x.toNat < 64)
+  ∃ (A : List ArrId) (C : List Word), MemFrame A C m m' ∧ (∀ b ∈ A, InStoreTier b) ∧ (∀ x ∈ C, x.toNat < 64)
 
 theorem mkAppW_low {m m' : Mem} {f x r : Word} (hI : mkAppW m f x = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (ADER :: (tier1 ADER) :: appCS.wset) [appCS.ca, appCS.ca + 1] m m' := by

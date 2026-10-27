@@ -702,14 +702,14 @@ theorem enterMem_frame (m : Mem) : MemFrame scrArrs ((0 :: resetCtl) ++ memoCtl)
 theorem resetCtl_lt : ∀ x ∈ (0 :: resetCtl) ++ memoCtl, x.toNat < 64 := by
   simp [resetCtl, scratchCnts, memoCtl, SCB]
 
-theorem scrArrs_low : ∀ b ∈ scrArrs, b < 64 ∨ (256 ≤ b ∧ b < 320) := by decide
+theorem scrArrs_low : ∀ b ∈ scrArrs, InStoreTier b := by decide
 
 /-- The bracket keeps the pins and the environment: it writes arrays below 64 and `CTL` words
 below 128 only. -/
 theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe)
     (hD : ArenaD m' a') (hc : CoreR m' a'.caches) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320))
+    (hA : ∀ b ∈ A, InStoreTier b)
     (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
     CheckR dn m' a' vis fe :=
   ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf,

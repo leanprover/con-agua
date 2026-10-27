@@ -47,8 +47,8 @@ theorem mkK_store (A : ArrId) (hA : A < 56) (hC : A ≠ CTL) (c s d r : Word) (m
       cases h
       exact (hx _ _ rfl).trans (frame_store (derPutW_frame A hC _ _ _ _ _ _ hP)
         (fun b hb => by
-          have key : ∀ n : Nat, n < 56 → (n < 64 ∨ (256 ≤ n ∧ n < 320)) ∧
-              (n + 256 < 64 ∨ (256 ≤ n + 256 ∧ n + 256 < 320)) := fun n h => by omega
+          have key : ∀ n : Nat, n < 56 → InStoreTier n ∧ InStoreTier (tier1 n) := fun n h =>
+            ⟨.of_lt (by omega), .of_tier1 (by omega)⟩
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
           rcases hb with rfl | rfl
           · exact (key _ hA).1

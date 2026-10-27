@@ -49,7 +49,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : 
 and `Keeps cp`: the stage relation after. -/
 theorem stage_of_ok {op : AM EIdx} {A : List ArrId} {C : List Word} (hS : StageR dn vis fe m a)
     (hok : AM.ok op a) (hD : ArenaD m' (AM.st op a)) (hres : AM.res op a = decE r)
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64)
     (hk : Keeps cp op) (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :
     ∃ a', op.run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   have hrun := AM.run_of_ok op a hok
@@ -367,7 +367,7 @@ theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 200 (by simp)
   have hg : ErecGrow m m' := ⟨htop, hlow, hf.2.2.1 EREC⟩
   have hC : CheckR dn m' a vis fe :=
-    ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, EREC, BMEMO, LMEMO, IMEMO, FRMEMO])
+    ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hS.1.arena.1,
       DerR.frameM _ _ m m' hf (by decide) a hS.1.arena.2⟩,
      hS.1.core.frame (fun b hb => by simp at hb; subst hb; decide)

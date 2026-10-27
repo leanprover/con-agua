@@ -237,7 +237,7 @@ def natArmProg' : Prog := natArmProg ++ [("nat_succ_lit", natSuccLitL)]
 def natFns : List FnName := natArmProg'.map (·.1)
 /-- What they write: the pool, the `lit` table (2, 3), the `const` table (18, 19 = `CREC`, `CSLOT`,
 and its `lp` column `CLP`), and the counts. -/
-def natA : List ArrId := [POOL, POOL1, 2, 258, 3, 259, CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP]
+def natA : List ArrId := [POOL, POOL1, REC, tier1 REC, SLOT, tier1 SLOT, CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP]
 def natC : List Word := [0, 2, 3, 18, 19]
 theorem natArmProg'_closed : closedA natArmProg' natA natC natFns = true := by decide +kernel
 

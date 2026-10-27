@@ -31,7 +31,7 @@ namespace L.Arena
 theorem CoreS.frame_lhs {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     (hf : MemFrame [LH, SPN] [192, 136] m m') : CoreS dn m' a vis fe M eb := by
-  have hA64 : ∀ b ∈ [LH, SPN], 64 ≤ b ∧ b < 256 := by decide
+  have hA64 : ∀ b ∈ [LH, SPN], InHigh b := by decide
   have hC2 : ∀ x ∈ ([192, 136] : List Word), x = 192 ∨ x = 136 := by simp
   have hC64 : ∀ x ∈ ([192, 136] : List Word), 64 ≤ x.toNat := fun x hx => by
     rcases hC2 x hx with rfl | rfl <;> simp
