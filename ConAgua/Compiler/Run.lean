@@ -85,16 +85,18 @@ def kWordBytes (v : Word) : List UInt8 :=
 /-- Run `entry` of the compiled `p` on Kraken's semantics: the table at `0x10000`, the L stack
 (`stackBytes` bytes) below `0x400000`, the arrays from `0x1000000` on, the trampoline's caller
 stack at `0x8000`, returning to `0xdead0`. Returns `(rax, rdx)` at the return. -/
-def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (fuel : Word)
+def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (nb nw : Nat) (fuel : Word)
     (stackBytes : Nat := 4096) : Except String Outcome := do
-  let tab : Tab := Prog.tab p m.bytes.size m.words.size
+  let tab : Tab := Prog.tab p nb nw
+  -- the word array at each descriptor position (today's layout: `wposInv`, then the tier)
+  let atW : Nat → TArr := fun q => let n := tab.wposInv q; if n < tierOff then TArr.t0 n else tier1 (n - tierOff)
   let T := 0x10000
   let stackTop := 0x400000
   let ra : Nat := 0xdead0
   let csp := 0x8000
   -- the arrays, one after the other
-  let (bases8, next) := m.bytes.foldl (fun (acc, a) arr => (acc.push a, a + arr.size + 64)) (#[], 0x1000000)
-  let (bases64, _) := m.words.foldl (fun (acc, a) arr => (acc.push a, a + 8 * arr.size + 64)) (#[], next)
+  let (bases8, next) := (List.range nb).foldl (fun (acc, a) q => (acc.push a, a + (m.arr8 q).size + 64)) (#[], 0x1000000)
+  let (bases64, _) := (List.range nw).foldl (fun (acc, a) q => (acc.push a, a + 8 * (m.arr64 (atW q)).size + 64)) (#[], next)
   let mut d : DataMem := ∅
   -- the caller's stack: 64 bytes below and the return address
   d := kStoreBytes d (csp - 64) (List.replicate 64 0)
@@ -104,14 +106,16 @@ def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (fuel : W
   -- the table
   d := kStoreWord d (T + Tab.stackTop.toNat) stackTop.toUInt64
   d := kStoreWord d (T + Tab.stackLimit.toNat) (stackTop - stackBytes).toUInt64
-  for a in [0:m.bytes.size] do
-    d := kStoreWord d (T + (tab.base8 a).toNat) (bases8[a]!).toUInt64
+  for a in [0:nb] do
+    let b8 : Nat := bases8[a]!
+    d := kStoreWord d (T + (tab.base8 a).toNat) b8.toUInt64
     d := kStoreWord d (T + (tab.len8 a).toNat) (m.arr8 a).size.toUInt64
-    d := kStoreBytes d bases8[a]! (m.arr8 a).toList
-  for a in [0:m.words.size] do
-    d := kStoreWord d (T + (tab.base64 a).toNat) (bases64[a]!).toUInt64
-    d := kStoreWord d (T + (tab.len64 a).toNat) (m.arr64 a).size.toUInt64
-    d := kStoreBytes d bases64[a]! ((m.arr64 a).toList.flatMap kWordBytes)
+    d := kStoreBytes d b8 (m.arr8 a).toList
+  for q in [0:nw] do
+    let b64 : Nat := bases64[q]!
+    d := kStoreWord d (T + (tab.dbase64 q).toNat) b64.toUInt64
+    d := kStoreWord d (T + (tab.dlen64 q).toNat) (m.arr64 (atW q)).size.toUInt64
+    d := kStoreBytes d b64 ((m.arr64 (atW q)).toList.flatMap kWordBytes)
   d := kStoreBytes d (T + tab.romBase.toNat) tab.rom
   d := kStoreBytes d (T + tab.resBase.toNat) (List.replicate (8 * tab.nxres) 0)
   for g in [0:tab.ng] do

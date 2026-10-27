@@ -69,8 +69,6 @@ structure Tab where
 
 def Tab.stackTop : Int := 0
 def Tab.stackLimit : Int := 8
-def Tab.base8 (_ : Tab) (a : ArrId) : Int := 16 + 16 * a
-def Tab.len8 (_ : Tab) (a : ArrId) : Int := 24 + 16 * a
 /-- The number of word arrays with both tiers in the table (`a` and `a + tierOff` below `nw`). -/
 def Tab.wK (t : Tab) : Nat := min (t.nw - tierOff) tierOff
 /-- The position of word array `a`'s descriptor words (lane tiercost): a permutation of
@@ -86,9 +84,6 @@ def Tab.wposInv (t : Tab) (p : Nat) : ArrId :=
   if p < 2 * t.wK then (if p % 2 = 0 then p / 2 else tierOff + p / 2)
   else if p < tierOff + t.wK then p - t.wK
   else p
-/-- The word arrays' bases, then their lengths, each at position `wpos a`. -/
-def Tab.base64 (t : Tab) (a : ArrId) : Int := 16 + 16 * t.nb + 8 * t.wpos a
-def Tab.len64 (t : Tab) (a : ArrId) : Int := 16 + 16 * t.nb + 8 * t.nw + 8 * t.wpos a
 theorem Tab.wpos_lt (t : Tab) {a : ArrId} (h : a < t.nw) : t.wpos a < t.nw := by
   simp only [Tab.wpos, Tab.wK, tierOff]; grind
 
@@ -110,6 +105,112 @@ theorem Tab.wpos_tier (t : Tab) {a : ArrId} (h : a < t.wK) (b : Nat) (hb : b ≤
     t.wpos (a + tierOff * b) = t.wpos a + b := by
   simp only [Tab.wpos, Tab.wK, tierOff] at *
   rcases (by omega : b = 0 ∨ b = 1) with rfl | rfl <;> grind
+
+/-! ## The layout map (prototype absarrays)
+
+L's arrays are names: byte arrays `ArrId`, word arrays `TArr`. The compiler alone maps each name a
+program may use (`dom`) to a descriptor position (`pos`), injectively, with a tiered array's tier 1
+right after its tier 0 (the one indexed load). The simulation relation (`MemRel`) relates L's
+arrays to the machine's regions through this map; nothing above the compiler sees positions. -/
+
+/-- The compiler's layout of the word arrays: `nw` descriptor positions. -/
+structure WLay (nw : Nat) where
+  dom : TArr → Bool
+  pos : TArr → Nat
+  pos_lt : ∀ s, dom s → pos s < nw
+  pos_inj : ∀ s s', dom s → dom s' → pos s = pos s' → s = s'
+  adj : ∀ a, dom (tier1 a) → dom (TArr.t0 a) ∧ pos (tier1 a) = pos (TArr.t0 a) + 1
+
+/-- The compiler's layout of the byte arrays: `nb` descriptor positions. The ABI's fixed
+positions (the input, the pin data) are constraints on this map, used only by the stub's proof. -/
+structure BLay (nb : Nat) where
+  dom : ArrId → Bool
+  pos : ArrId → Nat
+  pos_lt : ∀ a, dom a → pos a < nb
+  pos_inj : ∀ a a', dom a → dom a' → pos a = pos a' → a = a'
+
+/-- The tier's descriptor is `(u & 1)` positions after tier 0's. -/
+theorem WLay.pos_tierA {nw : Nat} (L : WLay nw) {a : ArrId} (h : L.dom (tier1 a)) (u : Word) :
+    L.pos (tierA a u) = L.pos (TArr.t0 a) + (u &&& 1).toNat := by
+  have : u &&& 1 = 0 ∨ u &&& 1 = 1 := by
+    have : (u &&& 1).toNat ≤ 1 := by rw [UInt64.toNat_and]; exact Nat.and_le_right
+    rcases (by omega : (u &&& 1).toNat = 0 ∨ (u &&& 1).toNat = 1) with h | h
+    · exact .inl (UInt64.toNat_inj.mp h)
+    · exact .inr (UInt64.toNat_inj.mp h)
+  rcases this with e | e
+  · simp [tierA, e]
+  · simp [tierA, e, (L.adj a h).2]
+
+theorem WLay.dom_tierA {nw : Nat} (L : WLay nw) {a : ArrId} (h : L.dom (tier1 a)) (u : Word) :
+    L.dom (tierA a u) := by
+  rcases tierA_eq_or a u with e | e <;> rw [e]
+  · exact (L.adj a h).1
+  · exact h
+
+/-! ### Today's layout as a layout map (`curLay`): the generated code does not change -/
+
+/-- The number today's layout gives a word array: tier `t` of `a` is `a + tierOff t`. -/
+def curNum (s : TArr) : Nat := if s.hi then s.arr + tierOff else s.arr
+
+/-- The word arrays a program may name under today's layout. -/
+def Tab.dom64 (t : Tab) (s : TArr) : Bool :=
+  if s.hi then decide (s.arr < t.wK) else decide (s.arr < tierOff) && decide (s.arr < t.nw)
+
+/-- Word array `s`'s descriptor position. -/
+def Tab.pos64 (t : Tab) (s : TArr) : Nat := t.wpos (curNum s)
+
+theorem Tab.curNum_lt (t : Tab) {s : TArr} (h : t.dom64 s = true) : curNum s < t.nw := by
+  rcases s with ⟨a, _ | _⟩ <;> simp [Tab.dom64, curNum] at h ⊢
+  · omega
+  · obtain ⟨h1, h2⟩ := t.wK_spec h; omega
+
+theorem Tab.curNum_inj (t : Tab) {s s' : TArr} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+    (e : curNum s = curNum s') : s = s' := by
+  rcases s with ⟨a, _ | _⟩ <;> rcases s' with ⟨b, _ | _⟩ <;>
+    simp [Tab.dom64, curNum] at h h' e ⊢
+  · omega
+  · have := t.wK_spec h'; simp only [tierOff] at *; omega
+  · have := t.wK_spec h; simp only [tierOff] at *; omega
+  · omega
+
+/-- **Today's layout as a `WLay`**: tier `t` of `a` at `wpos (a + 256 t)`. -/
+def Tab.wl (t : Tab) : WLay t.nw where
+  dom := t.dom64
+  pos := t.pos64
+  pos_lt _ h := t.wpos_lt (t.curNum_lt h)
+  pos_inj s s' h h' e := by
+    have e2 := congrArg t.wposInv e
+    simp only [Tab.pos64] at e2
+    rw [t.wposInv_wpos (t.curNum_lt h), t.wposInv_wpos (t.curNum_lt h')] at e2
+    exact t.curNum_inj h h' e2
+  adj a h := by
+    simp only [Tab.dom64, ite_true, decide_eq_true_eq] at h
+    obtain ⟨h1, h2⟩ := t.wK_spec h
+    refine ⟨by simp only [Tab.dom64, Bool.false_eq_true, ite_false, Bool.and_eq_true, decide_eq_true_eq]; exact ⟨h1, Nat.lt_of_le_of_lt (Nat.le_add_right _ _) h2⟩, ?_⟩
+    have := t.wpos_tier h 1 (by omega)
+    simpa [Tab.pos64, curNum, tier1, TArr.t0] using this
+
+/-- The byte arrays a program may name, and their positions, under today's layout: `a` at `a`. -/
+def Tab.dom8 (t : Tab) (a : ArrId) : Bool := decide (a < t.nb)
+def Tab.pos8 (_ : Tab) (a : ArrId) : Nat := a
+
+def Tab.bl (t : Tab) : BLay t.nb where
+  dom := t.dom8
+  pos := t.pos8
+  pos_lt _ h := by simpa [Tab.dom8, Tab.pos8] using h
+  pos_inj _ _ _ _ e := e
+
+/-- The descriptor words of byte position `p`, and of word position `p`. -/
+def Tab.dbase8 (_ : Tab) (p : Nat) : Int := 16 + 16 * p
+def Tab.dlen8 (_ : Tab) (p : Nat) : Int := 24 + 16 * p
+def Tab.dbase64 (t : Tab) (p : Nat) : Int := 16 + 16 * t.nb + 8 * p
+def Tab.dlen64 (t : Tab) (p : Nat) : Int := 16 + 16 * t.nb + 8 * t.nw + 8 * p
+
+/-- The descriptor words of byte array `a` and of word array `s`, through the layout map. -/
+def Tab.base8 (t : Tab) (a : ArrId) : Int := t.dbase8 (t.pos8 a)
+def Tab.len8 (t : Tab) (a : ArrId) : Int := t.dlen8 (t.pos8 a)
+def Tab.base64 (t : Tab) (s : TArr) : Int := t.dbase64 (t.pos64 s)
+def Tab.len64 (t : Tab) (s : TArr) : Int := t.dlen64 (t.pos64 s)
 
 /-- The words the constant data takes. -/
 def Tab.romWords (t : Tab) : Nat := (t.romLen + 7) / 8
