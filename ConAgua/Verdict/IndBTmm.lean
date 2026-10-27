@@ -1,6 +1,5 @@
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndSumSpec.ParamLevels
-import ConAgua.Arena.RecGenSpec.SlRGrow
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

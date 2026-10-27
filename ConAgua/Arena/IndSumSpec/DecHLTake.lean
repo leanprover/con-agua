@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.PinsNatOp
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

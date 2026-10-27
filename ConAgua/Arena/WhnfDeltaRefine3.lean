@@ -1,4 +1,3 @@
-import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.WhnfDeltaRefine2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatGrindAttr

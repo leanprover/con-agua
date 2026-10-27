@@ -1,5 +1,4 @@
 import ConAgua.Checker.Prelude
-import ConAgua.Arena.PinsNatOp
 import ConAgua.Checker.HoistIndexRef
 import ConRon.Arena.Frontend.Prepare
 

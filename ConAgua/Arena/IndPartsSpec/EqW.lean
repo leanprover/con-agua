@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPartsSpec.MemberNames
-import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
