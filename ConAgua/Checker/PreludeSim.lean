@@ -26,7 +26,8 @@ open Std.WP
 open scoped Lean.Order
 
 /-- Byte array `0` replaced by `x`. -/
-def _root_.L.Mem.setIn (m : Mem) (x : Array UInt8) : Mem := { m with bytes := m.bytes.set! 0 x }
+def _root_.L.Mem.setIn (m : Mem) (x : Array UInt8) : Mem :=
+  { m with bytes := fun a => if a = 0 then x else m.bytes a }
 
 /-- Byte array `0` of the state's memory replaced by `x`. -/
 def _root_.L.St.setIn (s : St) (x : Array UInt8) : St := { s with mem := s.mem.setIn x }
@@ -108,43 +109,35 @@ structure PreSimProg (p : Prog) (t : NTree) (S : FnName → Bool) : Prop where
 @[simp] theorem _root_.L.St.setIn_mem (s : St) (x : Array UInt8) : (s.setIn x).mem = s.mem.setIn x := rfl
 @[simp] theorem _root_.L.St.setIn_loc (s : St) (x : Array UInt8) : (s.setIn x).loc = s.loc := rfl
 
-@[simp] theorem _root_.L.Mem.setIn_size (m : Mem) (x : Array UInt8) :
-    (m.setIn x).bytes.size = m.bytes.size := by
-  simp [Mem.setIn]
-
 theorem _root_.L.Mem.arr8_setIn_ne {m : Mem} {x : Array UInt8} {a : ArrId} (ha : a ≠ 0) :
     (m.setIn x).arr8 a = m.arr8 a := by
-  simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds_ne, Ne.symm ha]
+  simp [Mem.setIn, Mem.arr8, ha]
 
-theorem _root_.L.Mem.arr8_setIn_zero {m : Mem} {x : Array UInt8} (h : m.HasB IN) :
-    (m.setIn x).arr8 0 = x := by
-  simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, show 0 < m.bytes.size from h]
+@[simp] theorem _root_.L.Mem.arr8_setIn_zero (m : Mem) (x : Array UInt8) : (m.setIn x).arr8 0 = x := by
+  simp [Mem.setIn, Mem.arr8]
 
 theorem _root_.L.Mem.set8_setIn {m : Mem} {x : Array UInt8} {a : ArrId} (ha : a ≠ 0) (i v : Word) :
     (m.set8 a i v).setIn x = (m.setIn x).set8 a i v := by
   unfold Mem.set8
   rw [Mem.arr8_setIn_ne ha]
-  simp only [Mem.setIn, Array.set!]
-  rw [Array.setIfInBounds_comm _ _ (Ne.symm ha)]
+  simp only [Mem.setIn, Mem.mk.injEq, and_true]
+  funext b
+  by_cases hb : b = 0 <;> by_cases hb' : b = a <;> simp_all
 
 theorem _root_.L.Mem.arr8_set8_ne {m : Mem} {a b : ArrId} (ha : a ≠ b) (i v : Word) :
     (m.set8 a i v).arr8 b = m.arr8 b := by
-  simp [Mem.set8, Mem.arr8, Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds_ne, ha]
+  simp [Mem.set8, Mem.arr8, Ne.symm ha]
 
-@[simp] theorem _root_.L.Mem.set8_size (m : Mem) (a : ArrId) (i v : Word) :
-    (m.set8 a i v).bytes.size = m.bytes.size := by
-  simp [Mem.set8]
-
-@[simp] theorem _root_.L.Mem.arr64_setIn (m : Mem) (x : Array UInt8) (a : ArrId) :
+@[simp] theorem _root_.L.Mem.arr64_setIn (m : Mem) (x : Array UInt8) (a : TieredArray) :
     (m.setIn x).arr64 a = m.arr64 a := rfl
 
-theorem _root_.L.Mem.copy64_setIn (m : Mem) (x : Array UInt8) (d : ArrId) (di : Word) (s : ArrId)
+theorem _root_.L.Mem.copy64_setIn (m : Mem) (x : Array UInt8) (d : TieredArray) (di : Word) (s : TieredArray)
     (si : Word) (n : Nat) : (m.copy64 d di s si n).setIn x = (m.setIn x).copy64 d di s si n := by
   induction n generalizing m di si with
   | zero => rfl
   | succ n ih => simp only [Mem.copy64_succ, ih]; rfl
 
-theorem _root_.L.Mem.copy8w_setIn (m : Mem) (x : Array UInt8) (d : ArrId) (di : Word) (b : Array UInt8)
+theorem _root_.L.Mem.copy8w_setIn (m : Mem) (x : Array UInt8) (d : TieredArray) (di : Word) (b : Array UInt8)
     (si : Word) (n : Nat) : (m.copy8w d di b si n).setIn x = (m.setIn x).copy8w d di b si n := by
   induction n generalizing m di si with
   | zero => rfl
@@ -162,19 +155,16 @@ theorem _root_.L.St.setLocs_mem (s : St) (xs : List Var) (vs : List Word) :
   | nil => rfl
   | cons y ys ih => exact ih (s.setLoc y (vs.headD 0)) vs.tail
 
-/-- The copy's run keeps the input array and the number of byte arrays. -/
-def Keep (s s1 : St) : Prop := s1.mem.arr8 0 = s.mem.arr8 0 ∧ s1.mem.bytes.size = s.mem.bytes.size
+/-- The copy's run keeps the input array. -/
+def Keep (s s1 : St) : Prop := s1.mem.arr8 0 = s.mem.arr8 0
 
-theorem Keep.refl (s : St) : Keep s s := ⟨rfl, rfl⟩
+theorem Keep.refl (s : St) : Keep s s := rfl
 
 theorem Keep.of_mem {s s1 : St} (h : s1.mem = s.mem) : Keep s s1 := by
-  unfold Keep; rw [h]; exact ⟨rfl, rfl⟩
+  unfold Keep; rw [h]
 
 theorem Keep.trans {s s1 s2 : St} (h1 : Keep s s1) (h2 : Keep s1 s2) : Keep s s2 :=
-  ⟨h2.1.trans h1.1, h2.2.trans h1.2⟩
-
-theorem Keep.pos {s s1 : St} (h : Keep s s1) (h0 : s.mem.HasB IN) : s1.mem.HasB IN := by
-  unfold Mem.HasB at *; rw [h.2]; exact h0
+  h2.trans h1
 
 theorem pure_run_ok {α : Type} {a b : α} {s s1 : St} (h : (pure a : M α).run s = .ok (b, s1)) :
     a = b ∧ s = s1 := by
@@ -244,7 +234,7 @@ theorem ld8_run (a : ArrId) (j : Word) (s : St) :
   simp only [StateT.run_bind, StateT.run_get, pure_bind]
   split <;> rfl
 
-theorem ld64_run (a : ArrId) (j : Word) (s : St) :
+theorem ld64_run (a : TieredArray) (j : Word) (s : St) :
     (ld64 a j).run s = if h : j.toNat < (s.mem.arr64 a).size
       then .ok ((s.mem.arr64 a)[j.toNat], s) else .error .oob := by
   unfold ld64
@@ -273,22 +263,25 @@ theorem erel_ld8_zero {ci oi : Expr} (hi : ERel ci oi) :
   refine ERel.load hi (fc := ldc preludeBytes) (fo := ld8 0) ?_ (fun _ => rfl) (fun _ => rfl)
   intro s j v s1 h0 h
   rw [ldc_run] at h; rw [ld8_run]
-  simp only [St.setIn_mem, Mem.arr8_setIn_zero h0, preIn, List.size_toArray, List.getElem_toArray]
+  simp only [St.setIn_mem, Mem.arr8_setIn_zero, preIn, List.size_toArray, List.getElem_toArray]
   split at h
   · simp only [Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp_all
   · cases h
 
-theorem erel_ld64 {a : ArrId} {ci oi : Expr} (hi : ERel ci oi) : ERel (.ld64 a ci) (.ld64 a oi) := by
-  refine ERel.load hi (fc := ld64 a) (fo := ld64 a) ?_ (fun _ => rfl) (fun _ => rfl)
-  intro s j v s1 _ h
+theorem ld64_sim (b : TieredArray) (s : St) (j v : Word) (s1 : St) (h : (ld64 b j).run s = .ok (v, s1)) :
+    s = s1 ∧ (ld64 b j).run (s.setIn preIn) = .ok (v, s.setIn preIn) := by
   rw [ld64_run] at h ⊢
   split at h
   · simp only [Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨rfl, dite_eq_left ‹_›⟩
   · cases h
+
+theorem erel_ld64 {a : ArrId} {ci oi : Expr} (hi : ERel ci oi) : ERel (.ld64 a ci) (.ld64 a oi) :=
+  ERel.load hi (fc := ld64 a) (fo := ld64 a) (fun s j v s1 _ h => ld64_sim _ s j v s1 h)
+    (fun _ => rfl) (fun _ => rfl)
 
 theorem erel_ldc {d : List UInt8} {ci oi : Expr} (hi : ERel ci oi) : ERel (.ldc d ci) (.ldc d oi) := by
   refine ERel.load hi (fc := ldc d) (fo := ldc d) ?_ (fun _ => rfl) (fun _ => rfl)
@@ -316,8 +309,10 @@ theorem erel_ld64t {a : ArrId} {ct ot ci oi : Expr} (ht : ERel ct ot) (hi : ERel
   simp only [evalE] at h ⊢
   obtain ⟨u, s2, h1, h2⟩ := run_bind_ok h
   obtain ⟨rfl, h1'⟩ := ht s u s2 h0 h1
-  have := erel_ld64 (a := tierA a u) hi s v s1 h0 h2
-  exact ⟨this.1, run_bind_of h1' this.2⟩
+  obtain ⟨j, s3, h3, h4⟩ := run_bind_ok h2
+  obtain ⟨rfl, h3'⟩ := hi s j s3 h0 h3
+  obtain ⟨rfl, h4'⟩ := ld64_sim _ s j v s1 h4
+  exact ⟨rfl, run_bind_of h1' (run_bind_of h3' h4')⟩
 
 theorem erel_len64t {a : ArrId} {ct ot : Expr} (ht : ERel ct ot) :
     ERel (.len64t a ct) (.len64t a ot) := by
@@ -325,10 +320,8 @@ theorem erel_len64t {a : ArrId} {ct ot : Expr} (ht : ERel ct ot) :
   simp only [evalE] at h ⊢
   obtain ⟨u, s2, h1, h2⟩ := run_bind_ok h
   obtain ⟨rfl, h1'⟩ := ht s u s2 h0 h1
-  have := erel_leaf (ec := .len64 (tierA a u)) (eo := .len64 (tierA a u))
-    (fun s => s.mem.len64 (tierA a u)) (fun s => s.mem.len64 (tierA a u)) (fun _ => rfl) (fun _ => rfl)
-    (fun _ _ => rfl) s v s1 h0 h2
-  exact ⟨this.1, run_bind_of h1' this.2⟩
+  obtain ⟨rfl, rfl⟩ : s.mem.len64 (tierA a u) = v ∧ s = s1 := by cases h2; exact ⟨rfl, rfl⟩
+  exact ⟨rfl, run_bind_of h1' rfl⟩
 
 /-- A byte source of the copy reads, on a state, what the original's reads on the renamed state. -/
 def BRel (cb ob : BSrc) : Prop := ∀ s : St, s.mem.HasB IN → (s.setIn preIn).mem.src8 ob = s.mem.src8 cb
@@ -336,7 +329,7 @@ def BRel (cb ob : BSrc) : Prop := ∀ s : St, s.mem.HasB IN → (s.setIn preIn).
 theorem brel_preB : ∀ b, BRel (preB b) b
   | .arr a, s, h0 => by
     by_cases ha : a = 0
-    · subst ha; simp [preB, Mem.src8, Mem.arr8_setIn_zero h0, preIn]
+    · subst ha; simp [preB, Mem.src8, Mem.arr8_setIn_zero, preIn]
     · simp [preB, ha, Mem.src8, Mem.arr8_setIn_ne ha]
   | .rom d, _, _ => rfl
 
@@ -386,7 +379,7 @@ theorem erel_preE : ∀ e, ERel (preE e) e
     · subst ha; simp only [preE, ite_true]
       refine erel_leaf (fun _ => preludeLenW) (fun s => s.mem.len8 0) (fun _ => rfl) (fun _ => rfl)
         (fun s h0 => ?_)
-      simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_zero h0, preIn, List.size_toArray, preludeLenW]
+      simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_zero, preIn, List.size_toArray, preludeLenW]
     · simp only [preE, ha, ite_false]
       refine erel_leaf (fun s => s.mem.len8 a) (fun s => s.mem.len8 a) (fun _ => rfl) (fun _ => rfl) (fun s _ => ?_)
       simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_ne ha]
@@ -420,7 +413,7 @@ theorem erel_noIn : ∀ e, e.noIn = true → ERel e e
     simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_ne h]
 
 /-- A block operand of the copy names, on a state, the original's array on the renamed state. -/
-def WRel (cw ow : WArr) : Prop := ∀ (s : St) (a : ArrId) (s1 : St), s.mem.HasB IN →
+def WRel (cw ow : WArr) : Prop := ∀ (s : St) (a : TieredArray) (s1 : St), s.mem.HasB IN →
   (warr cw).run s = .ok (a, s1) → s = s1 ∧ (warr ow).run (s.setIn preIn) = .ok (a, s.setIn preIn)
 
 theorem wrel_of {ct ot : Expr} (ht : ERel ct ot) (a : ArrId) : WRel (.tier a ct) (.tier a ot) := by
@@ -738,7 +731,7 @@ theorem st8_run (a : ArrId) (j v : Word) (s : St) :
   simp only [StateT.run_bind, StateT.run_get, pure_bind]
   split <;> rfl
 
-theorem st64_run (a : ArrId) (j v : Word) (s : St) :
+theorem st64_run (a : TieredArray) (j v : Word) (s : St) :
     (st64 a j v).run s = if j.toNat < (s.mem.arr64 a).size
       then .ok ((), { s with mem := s.mem.set64 a j v }) else .error .oob := by
   unfold st64
@@ -783,7 +776,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     obtain ⟨-, rfl⟩ := h3
     obtain ⟨rfl, rfl⟩ := pure_run_ok h4
     exact ⟨run_bind_of h1' (run_bind_of (a := ()) (s' := (s.setG g v).setIn preIn) rfl rfl),
-      ⟨rfl, rfl⟩⟩
+      rfl⟩
   | st8 ha hi he =>
     intro s r s1 h0 h
     simp only [step] at h ⊢
@@ -800,7 +793,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       obtain ⟨-, rfl⟩ := h5
       refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
         (s' := ({ s with mem := s.mem.set8 _ j v } : St).setIn preIn) ?_ rfl)),
-        Mem.arr8_set8_ne ha j v, Mem.set8_size _ _ _ _⟩
+        Mem.arr8_set8_ne ha j v⟩
       rw [st8_run, ite_eq_left (by simpa [Mem.arr8_setIn_ne ha] using hlt)]
       simp only [St.setIn, Mem.set8_setIn ha]
     · cases h5
@@ -819,7 +812,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       simp only [Except.ok.injEq, Prod.mk.injEq] at h5
       obtain ⟨-, rfl⟩ := h5
       refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
-        (s' := ({ s with mem := s.mem.set64 a j v } : St).setIn preIn) ?_ rfl)), rfl, rfl⟩
+        (s' := ({ s with mem := s.mem.set64 a j v } : St).setIn preIn) ?_ rfl)), rfl⟩
       rw [st64_run]
       exact ite_eq_left hlt
     · cases h5
@@ -840,7 +833,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       simp only [Except.ok.injEq, Prod.mk.injEq] at h5
       obtain ⟨-, rfl⟩ := h5
       refine ⟨run_bind_of h0'' (run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
-        (s' := ({ s with mem := s.mem.set64 (tierA a u) j v } : St).setIn preIn) ?_ rfl))), rfl, rfl⟩
+        (s' := ({ s with mem := s.mem.set64 (tierA a u) j v } : St).setIn preIn) ?_ rfl))), rfl⟩
       rw [st64_run]
       exact ite_eq_left hlt
     · cases h5
@@ -868,7 +861,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       obtain ⟨rfl, rfl⟩ := pure_run_ok h14
       refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of h5' (run_bind_of h7' (run_bind_of h9'
         (run_bind_of (a := s.setIn preIn) (s' := s.setIn preIn) rfl ?_))))),
-        Mem.copy64_arr8 _ _ _ _ _ _ _, by simp [Mem.copy64_bytes]⟩
+        Mem.copy64_arr8 _ _ _ _ _ _ _⟩
       simp only [St.setIn_mem, Mem.arr64_setIn, hc, and_self, ↓reduceIte]
       refine run_bind_of (a := ()) (s' := ({ s with mem := s.mem.copy64 da i sa j k.toNat } : St).setIn preIn) ?_ rfl
       simp only [StateT.run_set, St.setIn, Mem.copy64_setIn]
@@ -897,7 +890,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       obtain ⟨rfl, rfl⟩ := pure_run_ok h14
       refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of h7' (run_bind_of h9'
         (run_bind_of (a := s.setIn preIn) (s' := s.setIn preIn) rfl ?_)))),
-        Mem.copy8w_arr8 _ _ _ _ _ _ _, by simp [Mem.copy8w_bytes]⟩
+        Mem.copy8w_arr8 _ _ _ _ _ _ _⟩
       simp only [St.setIn_mem] at hb
       simp only [St.setIn_mem, Mem.arr64_setIn, hb, hc, and_self, ↓reduceIte]
       refine run_bind_of (a := ())
@@ -936,7 +929,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     obtain ⟨h1', hK⟩ := ih1 s a s2 h0 h1
     refine bind_sim h1' (keep_sim hK ?_)
     cases a with
-    | normal => exact ih2 s2 r s1 (hK.pos h0) h2
+    | normal => exact ih2 s2 r s1 trivial h2
     | brk => obtain ⟨rfl, rfl⟩ := pure_run_ok h2; exact ⟨rfl, Keep.refl _⟩
     | ret v => obtain ⟨rfl, rfl⟩ := pure_run_ok h2; exact ⟨rfl, Keep.refl _⟩
   | ite hc _ _ ih1 ih2 =>
@@ -960,7 +953,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       obtain ⟨h3', hK⟩ := ihb s a s3 h0 h3
       refine bind_sim h3' (keep_sim hK ?_)
       cases a with
-      | normal => exact ihn _ _ (.while hc hb) s3 r s1 (hK.pos h0) h4
+      | normal => exact ihn _ _ (.while hc hb) s3 r s1 trivial h4
       | brk => obtain ⟨rfl, rfl⟩ := pure_run_ok h4; exact ⟨rfl, Keep.refl _⟩
       | ret v => obtain ⟨rfl, rfl⟩ := pure_run_ok h4; exact ⟨rfl, Keep.refl _⟩
   | ret ha =>
