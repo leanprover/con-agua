@@ -213,7 +213,7 @@ end specs
 def TblIx (b : ArrId) : Prop := b = 64 ∨ b = 65 ∨ b = 66
 
 /-- The tables' arrays: dense `64‥66`, sparse `72‥74`. -/
-def idArrs : List ArrId := [64, 65, 66, 72, 73, 74]
+def idArrs : List ArrId := [NID, LID, EID, NIDS, LIDS, EIDS]
 
 /-- The tables' `CTL` words: sparse stamps and counts `64‥69`, dense sizes `70‥72`. -/
 def idCtl : List Word := [64, 65, 66, 67, 68, 69, 70, 71, 72]

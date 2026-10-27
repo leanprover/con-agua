@@ -22,21 +22,21 @@ open scoped Lean.Order
 
 /-- **The capacities `check` needs**: every word array the checker names is shorter than `2^62`
 words (a slot array at least `consMinWords` and shorter than `2^61`), `CTL` has at least `ctlMin`
-words, `DECL` (67) and `DLP` (68) are not empty, and the pool's tier arrays (0, 256) have fewer
+words, `DECL` and `DLP` are not empty, and the pool's tier arrays `POOL`, `POOL1` have fewer
 than `2^40` words. -/
 def CapsOK (m : Mem) : Prop :=
   (∀ a < wordArrays, (m.arr64 a).size < 2 ^ 62 ∧
     (a ∈ slotArrs → consMinWords ≤ (m.arr64 a).size ∧ (m.arr64 a).size < 2 ^ 61)) ∧
     ctlMin ≤ (m.arr64 CTL).size ∧
-    1 ≤ (m.arr64 67).size ∧ 1 ≤ (m.arr64 68).size ∧ (m.arr64 0).size < 2 ^ 40 ∧
-    (m.arr64 256).size < 2 ^ 40
+    1 ≤ (m.arr64 DECL).size ∧ 1 ≤ (m.arr64 DLP).size ∧ (m.arr64 POOL).size < 2 ^ 40 ∧
+    (m.arr64 POOL1).size < 2 ^ 40
 
 /-- What `cap_check` observes: the lengths as words (`len64`, the size modulo `2^64`). -/
 def CapsW (m : Mem) : Prop :=
   (∀ a < wordArrays, (m.len64 a).toNat < 2 ^ 62 ∧
     (a ∈ slotArrs → consMinWords ≤ (m.len64 a).toNat ∧ (m.len64 a).toNat < 2 ^ 61)) ∧
     ctlMin ≤ (m.arr64 CTL).size ∧
-    m.len64 67 ≠ 0 ∧ m.len64 68 ≠ 0 ∧ (m.len64 0).toNat < 2 ^ 40 ∧ (m.len64 256).toNat < 2 ^ 40
+    m.len64 DECL ≠ 0 ∧ m.len64 DLP ≠ 0 ∧ (m.len64 POOL).toNat < 2 ^ 40 ∧ (m.len64 POOL1).toNat < 2 ^ 40
 
 /-- Every word array the checker names has a size that is a word. -/
 def WordsFit (m : Mem) : Prop := ∀ a < wordArrays, (m.arr64 a).size < 2 ^ 64
@@ -47,10 +47,10 @@ theorem CapsW.capsOK {m : Mem} (h : CapsW m) (hf : WordsFit m) : CapsOK m := by
   have hne : ∀ a < wordArrays, m.len64 a ≠ 0 → 1 ≤ (m.arr64 a).size := fun a ha h => by
     rw [← hsz a ha]
     exact Nat.one_le_iff_ne_zero.2 (fun h0 => h (UInt64.toNat_inj.1 (by simpa using h0)))
-  refine ⟨fun a ha => ?_, h.2.1, hne 67 (by decide) h.2.2.1, hne 68 (by decide) h.2.2.2.1, ?_, ?_⟩
+  refine ⟨fun a ha => ?_, h.2.1, hne DECL (by decide) h.2.2.1, hne DLP (by decide) h.2.2.2.1, ?_, ?_⟩
   · rw [← hsz a ha]; exact h.1 a ha
-  · rw [← hsz 0 (by decide)]; exact h.2.2.2.2.1
-  · rw [← hsz 256 (by decide)]; exact h.2.2.2.2.2
+  · rw [← hsz POOL (by decide)]; exact h.2.2.2.2.1
+  · rw [← hsz POOL1 (by decide)]; exact h.2.2.2.2.2
 
 theorem run_throw' {α : Type} (e : Err) (s : St) : StateT.run (throw e : M α) s = .error e := rfl
 
@@ -66,10 +66,10 @@ def capStep (b : Nat) (s : Stmt) : Stmt :=
 /-- The `CTL`, `DECL`, `DLP` checks and the return. -/
 def capTail : Stmt :=
   .seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const R_CAP_REGION)) .skip)
-    (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
-      (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
-        (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) (.abort (.const R_CAP_REGION)) .skip)
-          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 256)) (.abort (.const R_CAP_REGION)) .skip)
+    (.seq (.ite (.cmp .eq (.len64 DECL) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+      (.seq (.ite (.cmp .eq (.len64 DLP) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+        (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 POOL)) (.abort (.const R_CAP_REGION)) .skip)
+          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 POOL1)) (.abort (.const R_CAP_REGION)) .skip)
             (.ret [.const 0])))))
 
 /-- A run of the checks of the arrays `l`, then `t`, that returns: every array of `l` has a
@@ -116,25 +116,25 @@ theorem capFold_run {p : Prog} {k : Stmt → M Sig} (t : Stmt) :
 
 theorem capTail_run {p : Prog} {k : Stmt → M Sig} (s : St) (r : Sig) (s' : St)
     (h : (step p k capTail).run s = .ok (r, s')) :
-    ctlMin ≤ (s.mem.arr64 CTL).size ∧ s.mem.len64 67 ≠ 0 ∧ s.mem.len64 68 ≠ 0 ∧
-      (s.mem.len64 0).toNat < 2 ^ 40 ∧ (s.mem.len64 256).toNat < 2 ^ 40 ∧ r = .ret [0] ∧ s' = s := by
+    ctlMin ≤ (s.mem.arr64 CTL).size ∧ s.mem.len64 DECL ≠ 0 ∧ s.mem.len64 DLP ≠ 0 ∧
+      (s.mem.len64 POOL).toNat < 2 ^ 40 ∧ (s.mem.len64 POOL1).toNat < 2 ^ 40 ∧ r = .ret [0] ∧ s' = s := by
   simp [capTail, step, evalC, evalE, evalArgs, Cmp.eval] at h
   by_cases hc : s.mem.len64 CTL < UInt64.ofNat ctlMin
   · simp [hc, run_throw', error_bind'] at h
-  by_cases hd : s.mem.len64 67 = 0
+  by_cases hd : s.mem.len64 DECL = 0
   · simp [hc, hd, run_throw', error_bind'] at h
-  by_cases hq : s.mem.len64 68 = 0
+  by_cases hq : s.mem.len64 DLP = 0
   · simp [hc, hd, hq, run_throw', error_bind'] at h
-  by_cases hp : (1099511627776 : Word) ≤ s.mem.len64 0
+  by_cases hp : (1099511627776 : Word) ≤ s.mem.len64 POOL
   · simp [hc, hd, hq, hp, run_throw', error_bind'] at h
-  by_cases hp1 : (1099511627776 : Word) ≤ s.mem.len64 256
+  by_cases hp1 : (1099511627776 : Word) ≤ s.mem.len64 POOL1
   · simp [hc, hd, hq, hp, hp1, run_throw', error_bind'] at h
   · simp [hc, hd, hq, hp, hp1] at h
     change Except.ok _ = _ at h
     cases h
-    have hp' : (s.mem.len64 0).toNat < 2 ^ 40 := by
+    have hp' : (s.mem.len64 POOL).toNat < 2 ^ 40 := by
       simp only [UInt64.not_le, UInt64.lt_iff_toNat_lt] at hp; exact hp
-    have hp1' : (s.mem.len64 256).toNat < 2 ^ 40 := by
+    have hp1' : (s.mem.len64 POOL1).toNat < 2 ^ 40 := by
       simp only [UInt64.not_le, UInt64.lt_iff_toNat_lt] at hp1; exact hp1
     refine ⟨?_, hd, hq, hp', hp1', rfl, rfl⟩
     simp only [UInt64.not_lt, UInt64.le_iff_toNat_le, Mem.len64, UInt64.toNat_ofNat'] at hc
