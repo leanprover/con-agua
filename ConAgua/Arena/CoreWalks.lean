@@ -257,12 +257,12 @@ theorem ArenaD.memo_irrel {m : Mem} {a : AState} (h : ArenaD m a) (X Y : Std.Has
 
 /-- The abstraction memo's well-formedness across a writer that avoids it. -/
 theorem coreAb_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (49 : ArrId) ∉ A) (hC : (48 : Word) ∉ C) (h : CoreMemos m) :
+    (hA : ((49 : ArrId) : TieredArray) ∉ A) (hC : (48 : Word) ∉ C) (h : CoreMemos m) :
     ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m' mp :=
   let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
 
 theorem coreIl_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (50 : ArrId) ∉ A) (hC : (50 : Word) ∉ C) (h : CoreMemos m) :
+    (hA : ((50 : ArrId) : TieredArray) ∉ A) (hC : (50 : Word) ∉ C) (h : CoreMemos m) :
     ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreIlSch lfKey decE m' mp :=
   let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
 

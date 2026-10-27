@@ -78,7 +78,7 @@ theorem ccW_get {n : Nat} {m m1 : Mem} {off q k cl : Word}
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2)).toNat + cl.toNat ≤ (q + k).toNat)
     (hd : (q + k).toNat + cl.toNat ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     cl = rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) ∧
-    (∀ b, b ≠ IW → m1.arr64 b = m.arr64 b) ∧ (m1.arr64 IW).size = (m.arr64 IW).size ∧
+    (∀ b : TieredArray, b ≠ ↑IW → m1.arr64 b = m.arr64 b) ∧ (m1.arr64 IW).size = (m.arr64 IW).size ∧
     m.SameShape m1 ∧
     ∀ i, (m1.arr64 IW)[i]? =
       if (q + k).toNat ≤ i ∧ i < (q + k).toNat + cl.toNat then
@@ -116,7 +116,7 @@ theorem ccW_len {n : Nat} {m m1 : Mem} {off q k cl : Word}
     exact h.1.symm
 
 /-- A copy above the original top keeps the pool's growth relation. -/
-theorem iwGrow_of_copy {m0 m m1 : Mem} (hg : IWGrow m0 m) (hA : ∀ b, b ≠ IW → m1.arr64 b = m.arr64 b)
+theorem iwGrow_of_copy {m0 m m1 : Mem} (hg : IWGrow m0 m) (hA : ∀ b : TieredArray, b ≠ ↑IW → m1.arr64 b = m.arr64 b)
     (q : Nat) (hq : iwTop m0 ≤ q)
     (hG : ∀ i, i < q → (m1.arr64 IW)[i]? = (m.arr64 IW)[i]?) : IWGrow m0 m1 := by
   have htop : iwTop m1 = iwTop m := by simp only [iwTop, hA CTL (by decide)]
@@ -166,7 +166,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       ws.mapM (fun w => decCN (truncM m0) w.toNat) = some (ms.map (·.ctors)).flatten ∧
       (∀ i, ¬ (q.toNat + k.toNat ≤ i ∧ i < q.toNat + k.toNat + ws.length) →
         (mf.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
-      (∀ b, b ≠ IW → mf.arr64 b = m.arr64 b) ∧ (mf.arr64 IW).size = (m.arr64 IW).size ∧
+      (∀ b : TieredArray, b ≠ ↑IW → mf.arr64 b = m.arr64 b) ∧ (mf.arr64 IW).size = (m.arr64 IW).size ∧
       m.SameShape mf := by
   induction n with
   | zero => intro m0 m mf off l q k ms h; simp [acGoW] at h
