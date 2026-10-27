@@ -57,7 +57,7 @@ literal the entry stub is built from), and the lift memo
 `CTL`), so it is neither frozen nor owned, but `ArenaR` ties it to the twin's `liftC`, which a
 worker (`AState.worker`) has empty; the worker's actual memory has no `LMEMO` at all
 (`L/Agree.lean` bridges arrays outside phase B's read set). -/
-def freshZ : List TieredArray := LMEMO :: parOwnedL
+def freshZ : List TieredArray := (LMEMO : TieredArray) :: parOwnedL
 
 /-- The `CTL` of a fresh worker: the seed (its first 256 words), then zeros. -/
 def freshCtl (c : Array Word) : Array Word := c.extract 0 256 ++ zeros (c.size - 256)

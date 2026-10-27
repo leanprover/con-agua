@@ -66,7 +66,7 @@ def instFns : List FnName :=
     "inst_proj", "inst_entry"] ++ liftFns
 
 /-- `liftA` and the `instantiate1` memo `IMEMO` (47). -/
-def instA : List TieredArray := IMEMO :: liftA
+def instA : List TieredArray := (IMEMO : TieredArray) :: liftA
 /-- `liftC` and the `instantiate1` memo's stamp and count (44, 45). -/
 def instC : List Word := 44 :: 45 :: liftC
 
@@ -150,7 +150,7 @@ theorem AbsProg.agree {p : Prog} (hp : AbsProg p) :
   ProgHas.agreeWith hp absProg_ok absWalkFns
 
 /-- The `abstract1` memo `ABMEMO` (49), the `fvarRange` memo, and `mkA`. -/
-def absA : List TieredArray := ABMEMO :: frA ++ mkA
+def absA : List TieredArray := (ABMEMO : TieredArray) :: frA ++ mkA
 /-- The `abstract1` memo's stamp and count (48, 49), `frC` and `mkC`. -/
 def absC : List Word := 48 :: 49 :: frC ++ mkC
 
@@ -187,7 +187,7 @@ def instListFns : List FnName :=
 
 /-- The `instantiateList` memo `ILMEMO` (50) and `mkA`; the spine stack `ILSPN` (144) is only
 read. -/
-def instListA : List TieredArray := ILMEMO :: mkA
+def instListA : List TieredArray := (ILMEMO : TieredArray) :: mkA
 /-- The memo's stamp and count (50, 51) and `mkC`. -/
 def instListC : List Word := 50 :: 51 :: mkC
 
