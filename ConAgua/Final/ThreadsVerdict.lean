@@ -189,7 +189,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   have hget : ∀ i (h : i < (m₁.arr64 OUT).size),
       rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some (m₁.arr64 OUT)[i] := fun i h => by
     have := hMem₁.get64 _ hOUT i h
-    simpa only [abiLayout_b64, abiLayout_tab, checkerTab.wposInv_pos64 hOUT, curNum_t0] using this
+    simpa only [abiLayout_b64, abiLayout_tab, checkerTab.wposInv_pos64 hOUT, curNum_t0, outAddr] using this
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
