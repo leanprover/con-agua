@@ -6,9 +6,11 @@ import ConAgua.Checker.RomProg0
 
 `rfl` on `checkerProg.lookup "f" = some fd` compares `f` with every name before it as `String`s
 in the kernel (~0.5 s each). Here a lookup is `lookup_of_mem checkerProg_nodup` (the names are
-distinct, `checkerProg_wf`) of the membership `checkerProg[i]? = some ("f", fd)` at the position
-`i` (found by compiled code at elaboration time; the kernel walks `i` cons cells and compares no
-`String`): ~50 ms each.
+distinct, `checkerProg_wf`) of the membership of `("f", fd)` in `checkerProg` at a position found
+by compiled code at elaboration time; the kernel compares no `String`. The position is a chunk
+`j` of `checkerChunks` (`checkerProg` cut into lists of `chkChunk` functions,
+`checkerProg_chunks`) and an index `i` in it (`lk_of_chunk`): the kernel walks `j + i` cons cells,
+at most ~90, where `checkerProg[n]?` walked up to 1838 (~17 µs each).
 
 * `chk_lk` closes a goal `checkerProg.lookup "f" = some fd`.
 * `prog_bundle [h₁, …]` closes a program bundle at `checkerProg`: a lookup by `chk_lk`, a goal
@@ -24,6 +26,44 @@ open L
 theorem lk_of_idx {i : Nat} {f : FnName} {fd : FunDecl} (h : checkerProg[i]? = some (f, fd)) :
     checkerProg.lookup f = some fd :=
   lookup_of_mem checkerProg_nodup (List.mem_of_getElem? h)
+
+/-! ## `checkerProg` in chunks -/
+
+/-- The functions per chunk of `checkerChunks`. -/
+def chkChunk : Nat := 32
+
+open Lean Meta Elab Command in
+/-- Declares `checkerProg.chunk<j>` (the functions `chkChunk * j, …` of `checkerProg`, the same
+terms), `checkerChunks` (their list) and `checkerProg_chunks : checkerProg = checkerChunks.flatten`
+(one kernel check). -/
+elab "chunk_checker_prog" : command => liftTermElabM <|
+    withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
+  let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
+  let progTy := mkConst ``Prog
+  let elems ← L.Compiler.listElems (mkConst ``checkerProg)
+  let mut cs : Array Lean.Expr := #[]
+  let mut i := 0
+  while i < elems.size do
+    let n := ``checkerProg ++ Name.mkSimple s!"chunk{cs.size}"
+    let lit ← mkListLit elemTy (elems.extract i (i + chkChunk)).toList
+    addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit (.regular 0) .safe []))
+    cs := cs.push (mkConst n)
+    i := i + chkChunk
+  let csLit ← mkListLit progTy cs.toList
+  addDecl (.defnDecl (mkDefinitionValEx `L.Checker.checkerChunks [] (mkApp (mkConst ``List [0]) progTy) csLit
+    (.regular 0) .safe []))
+  let rhs := mkApp2 (mkConst ``List.flatten [0]) elemTy (mkConst `L.Checker.checkerChunks)
+  addDecl (L.Compiler.thm `L.Checker.checkerProg_chunks (mkApp3 (mkConst ``Eq [1]) progTy (mkConst ``checkerProg) rhs)
+    (mkApp2 (mkConst ``Eq.refl [1]) progTy (mkConst ``checkerProg)) [])
+
+chunk_checker_prog
+
+theorem lk_of_chunk {j i : Nat} {c : Prog} {f : FnName} {fd : FunDecl}
+    (hc : (checkerChunks : List Prog)[j]? = some c) (h : c[i]? = some (f, fd)) :
+    checkerProg.lookup f = some fd := by
+  refine lookup_of_mem checkerProg_nodup ?_
+  rw [checkerProg_chunks]
+  exact List.mem_flatten.mpr ⟨c, List.mem_of_getElem? hc, List.mem_of_getElem? h⟩
 
 /-- **`p` agrees with `fs` on `fs`'s names** (`ProgHas.agree` without the decided side condition). -/
 theorem ProgHas.agreeNames {p fs : Prog} (h : ProgHas p fs) :
@@ -70,10 +110,11 @@ def lookupGoal? (ty : Lean.Expr) : Option (String × Lean.Expr × Lean.Expr × O
   guard (rhs.isAppOfArity ``Option.some 2)
   return (f, fE, rhs.appArg!, bs?)
 
-/-- `checkerProg`'s element at position `n`, by `whnf`. -/
+/-- `checkerProg`'s element at position `n`, by `whnf` of its chunk. -/
 def chkElem (n : Nat) : MetaM Lean.Expr := do
-  let mut l ← whnfD (mkConst ``checkerProg)
-  for _ in [0:n] do l ← whnfD l.appArg!
+  let c := mkConst (``checkerProg ++ Name.mkSimple s!"chunk{n / chkChunk}")
+  let mut l ← whnfD c
+  for _ in [0:n % chkChunk] do l ← whnfD l.appArg!
   unless l.isAppOfArity ``List.cons 3 do throwError "chk_lk: no element {n}"
   return l.appFn!.appArg!
 
@@ -84,11 +125,15 @@ def chkLookup (idx : ChkIdx) (g : MVarId) (f : String) (fE fd : Lean.Expr)
     (bs? : Option Lean.Expr) : MetaM Unit := do
   let some n := idx.pos[f]? | throwError "chk_lk: {f} is not a function of checkerProg"
   let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
+  let progTy := mkConst ``Prog
+  let c := mkConst (``checkerProg ++ Name.mkSimple s!"chunk{n / chkChunk}")
+  let hc := mkApp2 (mkConst ``Eq.refl [1]) (mkApp (mkConst ``Option [0]) progTy)
+    (mkApp2 (mkConst ``Option.some [0]) progTy c)
   let hIdx (fd : Lean.Expr) :=
     let some_ := mkApp2 (mkConst ``Option.some [0]) elemTy
       (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``String) (mkConst ``FunDecl) fE fd)
-    mkApp4 (mkConst ``lk_of_idx) (mkNatLit n) fE fd
-      (mkApp2 (mkConst ``Eq.refl [1]) (mkApp (mkConst ``Option [0]) elemTy) some_)
+    mkAppN (mkConst ``lk_of_chunk) #[mkNatLit (n / chkChunk), mkNatLit (n % chkChunk), c, fE, fd,
+      hc, mkApp2 (mkConst ``Eq.refl [1]) (mkApp (mkConst ``Option [0]) elemTy) some_]
   match bs? with
   | none => g.assign (hIdx fd)
   | some bs =>
