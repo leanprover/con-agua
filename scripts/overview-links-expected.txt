@@ -1085,29 +1085,29 @@
    167  termination_by e - i
    168  
 
-== ConAgua/Compiler/Compile.lean#L781-L792
-   781  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
-   782  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
-   783  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
-   784    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
-   785    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
-   786    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
-   787    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
-   788    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
-   789     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-   790     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
-   791     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
-   792    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
+== ConAgua/Compiler/Compile.lean#L810-L821
+   810  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
+   811  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
+   812  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
+   813    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+   814    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
+   815    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+   816    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+   817    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
+   818     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   819     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+   820     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+   821    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
 
-== ConAgua/Compiler/Compile.lean#L814-L821
-   814  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
-   815  tests, 7 instructions. -/
-   816  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
-   817    [.label Lb,
-   818     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
-   819     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
-   820     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
-   821     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
+== ConAgua/Compiler/Compile.lean#L843-L850
+   843  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
+   844  tests, 7 instructions. -/
+   845  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
+   846    [.label Lb,
+   847     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
+   848     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+   849     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
+   850     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
 
 == ConAgua/L/TRec.lean#L93-L97
     93  /-- The tier of a handle word: bit 27. -/
@@ -1281,14 +1281,14 @@
     34  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
     35  the trampoline. -/
 
-== ConAgua/Layout.lean#L28-L34
-    28  namespace L
-    29  
-    30  /-- **The checker's arrays.** Tiered rows are the persistent (tier 0) and scratch (tier 1) tiers
-    31  of con-ron's per-tier tables. -/
-    32  declare_arrays checkerArrays
-    33    -- byte arrays
-    34    | /-- The input buffer. -/ IN : byte := 0
+== ConAgua/Layout.lean#L37-L43
+    37  namespace L
+    38  
+    39  /-- **The checker's arrays.** Tiered rows are the persistent (tier 0) and scratch (tier 1) tiers
+    40  of con-ron's per-tier tables. -/
+    41  declare_arrays checkerArrays
+    42    -- byte arrays
+    43    | /-- The input buffer. -/ IN : byte := 0
 
 == ConAgua/Checker/ArrCheck.lean#L25-L34
     25  
@@ -1302,11 +1302,11 @@
     33  #guard memoArrs.all checkerArrays.wordSlots.contains
     34  #guard slotArrs.all checkerArrays.wordSlots.contains
 
-== ConAgua/L/Arrays.lean#L203-L206
-   203  /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
-   204  (`useOK`). -/
-   205  def ArrTable.progOK (T : ArrTable) (p : Prog) : Bool :=
-   206    p.all fun (_, fd) => (Uses.stmt fd.body).all T.useOK
+== ConAgua/L/Arrays.lean#L214-L217
+   214  /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
+   215  (`useOK`). -/
+   216  def ArrTable.progOK (T : ArrTable) (p : Prog) : Bool :=
+   217    p.all fun (_, fd) => (Uses.stmt fd.body).all T.useOK
 
 == ConAgua/Arena/LevelEquiv.lean#L255-L265
    255  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
@@ -1582,134 +1582,134 @@
     32  normal return has `rdx` = 0 and the result in `rax`.
     33  -/
 
-== ConAgua/Compiler/Compile.lean#L1695-L1716
-  1695  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
-  1696    [.label enterL,
-  1697     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
-  1698     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
-  1699     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
-  1700     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
-  1701     movRM .rsp (mb .r15 Tab.stackTop),
-  1702     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
-  1703    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
-  1704    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
-  1705     jmpL okL,
-  1706     .label exhaustedL, movRI .rdx 1, jmpL finishL,
-  1707     .label errorL, movRI .rbx 0,
-  1708     .label abortL, movRR .rax .rbx, movRI .rdx 2,
-  1709     .label finishL, movRR .rsp .rbp,
-  1710     i64 (.pop (.reg (rr .r15))),
-  1711     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
-  1712     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
-  1713     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
-  1714     i64 .ret,
-  1715     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
-  1716    [movRI .rdx 0, jmpL finishL]
+== ConAgua/Compiler/Compile.lean#L1733-L1754
+  1733  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
+  1734    [.label enterL,
+  1735     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
+  1736     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
+  1737     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
+  1738     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
+  1739     movRM .rsp (mb .r15 Tab.stackTop),
+  1740     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
+  1741    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
+  1742    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
+  1743     jmpL okL,
+  1744     .label exhaustedL, movRI .rdx 1, jmpL finishL,
+  1745     .label errorL, movRI .rbx 0,
+  1746     .label abortL, movRR .rax .rbx, movRI .rdx 2,
+  1747     .label finishL, movRR .rsp .rbp,
+  1748     i64 (.pop (.reg (rr .r15))),
+  1749     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
+  1750     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
+  1751     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+  1752     i64 .ret,
+  1753     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
+  1754    [movRI .rdx 0, jmpL finishL]
 
-== ConAgua/Compiler/Compile.lean#L570
-   570  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+== ConAgua/Compiler/Compile.lean#L599
+   599  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
 
-== ConAgua/Compiler/Compile.lean#L1666-L1678
-  1666  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
-  1667    let ctx := fnCtx tab t sk f fd
-  1668    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
-  1669    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
-  1670    else if ctx.leaf && sk.find (nameCode f) == some F then
-  1671    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  1672    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
-  1673    else
-  1674    [.label (fnL f),
-  1675     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
-  1676     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
-  1677     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  1678    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+== ConAgua/Compiler/Compile.lean#L1704-L1716
+  1704  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
+  1705    let ctx := fnCtx tab t sk f fd
+  1706    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
+  1707    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
+  1708    else if ctx.leaf && sk.find (nameCode f) == some F then
+  1709    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  1710    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+  1711    else
+  1712    [.label (fnL f),
+  1713     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
+  1714     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
+  1715     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  1716    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
-== ConAgua/Compiler/Compile.lean#L114-L135
-   114  /-! ## The layout map
-   115  
-   116  L's arrays are names: byte arrays `ArrId`, word arrays `TieredArray`. The compiler alone maps each name a
-   117  program may use (`dom`) to a descriptor position (`pos`), injectively, with a tiered array's tier 1
-   118  right after its tier 0 (the one indexed load). The simulation relation (`MemRel`) relates L's
-   119  arrays to the machine's regions through this map; nothing above the compiler sees positions. -/
-   120  
-   121  /-- The compiler's layout of the word arrays: `nw` descriptor positions. -/
-   122  structure WLay (nw : Nat) where
-   123    dom : TieredArray → Bool
-   124    pos : TieredArray → Nat
-   125    pos_lt : ∀ s, dom s → pos s < nw
-   126    pos_inj : ∀ s s', dom s → dom s' → pos s = pos s' → s = s'
-   127    adj : ∀ a, dom (tier1 a) → dom (TieredArray.t0 a) ∧ pos (tier1 a) = pos (TieredArray.t0 a) + 1
-   128  
-   129  /-- The compiler's layout of the byte arrays: `nb` descriptor positions. The ABI's fixed
-   130  positions (the input, the pin data) are constraints on this map, used only by the stub's proof. -/
-   131  structure BLay (nb : Nat) where
-   132    dom : ArrId → Bool
-   133    pos : ArrId → Nat
-   134    pos_lt : ∀ a, dom a → pos a < nb
-   135    pos_inj : ∀ a a', dom a → dom a' → pos a = pos a' → a = a'
+== ConAgua/Compiler/Compile.lean#L118-L139
+   118  /-! ## The layout map
+   119  
+   120  L's arrays are names: byte arrays `ArrId`, word arrays `TieredArray`. The compiler alone maps each name a
+   121  program may use (`dom`) to a descriptor position (`pos`), injectively, with a tiered array's tier 1
+   122  right after its tier 0 (the one indexed load). The simulation relation (`MemRel`) relates L's
+   123  arrays to the machine's regions through this map; nothing above the compiler sees positions. -/
+   124  
+   125  /-- The compiler's layout of the word arrays: `nw` descriptor positions. -/
+   126  structure WLay (nw : Nat) where
+   127    dom : TieredArray → Bool
+   128    pos : TieredArray → Nat
+   129    pos_lt : ∀ s, dom s → pos s < nw
+   130    pos_inj : ∀ s s', dom s → dom s' → pos s = pos s' → s = s'
+   131    adj : ∀ a, dom (tier1 a) → dom (TieredArray.t0 a) ∧ pos (tier1 a) = pos (TieredArray.t0 a) + 1
+   132  
+   133  /-- The compiler's layout of the byte arrays: `nb` descriptor positions. The ABI's fixed
+   134  positions (the input, the pin data) are constraints on this map, used only by the stub's proof. -/
+   135  structure BLay (nb : Nat) where
+   136    dom : ArrId → Bool
+   137    pos : ArrId → Nat
+   138    pos_lt : ∀ a, dom a → pos a < nb
+   139    pos_inj : ∀ a a', dom a → dom a' → pos a = pos a' → a = a'
 
-== ConAgua/Compiler/Compile.lean#L155-L215
-   155  /-! ### Today's layout as a layout map (`curLay`): the generated code does not change -/
-   156  
-   157  /-- The number today's layout gives a word array: tier `t` of `a` is `a + tierOff t`. -/
-   158  def curNum (s : TieredArray) : Nat := if s.hi then s.arr + tierOff else s.arr
-   159  
-   160  /-- The word arrays a program may name under today's layout. -/
-   161  def Tab.dom64 (t : Tab) (s : TieredArray) : Bool :=
-   162    if s.hi then decide (s.arr < t.wK) else decide (s.arr < tierOff) && decide (s.arr < t.nw)
+== ConAgua/Compiler/Compile.lean#L159-L219
+   159  /-! ### Today's layout as a layout map (`curLay`): the generated code does not change -/
+   160  
+   161  /-- The number today's layout gives a word array: tier `t` of `a` is `a + tierOff t`. -/
+   162  def curNum (s : TieredArray) : Nat := if s.hi then s.arr + tierOff else s.arr
    163  
-   164  /-- Word array `s`'s descriptor position. -/
-   165  def Tab.pos64 (t : Tab) (s : TieredArray) : Nat := t.wpos (curNum s)
-   166  
-   167  theorem Tab.curNum_lt (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : curNum s < t.nw := by
-   168    rcases s with ⟨a, _ | _⟩ <;> simp [Tab.dom64, curNum] at h ⊢
-   169    · omega
-   170    · obtain ⟨h1, h2⟩ := t.wK_spec h; omega
-   171  
-   172  theorem Tab.curNum_inj (t : Tab) {s s' : TieredArray} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
-   173      (e : curNum s = curNum s') : s = s' := by
-   174    rcases s with ⟨a, _ | _⟩ <;> rcases s' with ⟨b, _ | _⟩ <;>
-   175      simp [Tab.dom64, curNum] at h h' e ⊢
-   176    · omega
-   177    · have := t.wK_spec h'; simp only [tierOff] at *; omega
-   178    · have := t.wK_spec h; simp only [tierOff] at *; omega
-   179    · omega
-   180  
-   181  theorem Tab.pos64_lt (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : t.pos64 s < t.nw := by
-   182    simp only [Tab.pos64]; exact t.wpos_lt (t.curNum_lt h)
-   183  
-   184  theorem Tab.pos64_inj (t : Tab) {s s' : TieredArray} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
-   185      (e : t.pos64 s = t.pos64 s') : s = s' := by
-   186    simp only [Tab.pos64] at e
-   187    have e2 := congrArg t.wposInv e
-   188    rw [t.wposInv_wpos (t.curNum_lt h), t.wposInv_wpos (t.curNum_lt h')] at e2
-   189    exact t.curNum_inj h h' e2
-   190  
-   191  theorem Tab.adj64 (t : Tab) (a : ArrId) (h : t.dom64 (tier1 a) = true) :
-   192      t.dom64 (TieredArray.t0 a) = true ∧ t.pos64 (tier1 a) = t.pos64 (TieredArray.t0 a) + 1 := by
-   193    simp only [Tab.dom64, ite_true, decide_eq_true_eq] at h
-   194    obtain ⟨h1, h2⟩ := t.wK_spec h
-   195    refine ⟨by simp only [Tab.dom64, Bool.false_eq_true, ite_false, Bool.and_eq_true, decide_eq_true_eq]; exact ⟨h1, Nat.lt_of_le_of_lt (Nat.le_add_right _ _) h2⟩, ?_⟩
-   196    have := t.wpos_tier h 1 (by omega)
-   197    simpa [Tab.pos64, curNum, tier1, TieredArray.t0] using this
-   198  
-   199  /-- **Today's layout as a `WLay`**: tier `t` of `a` at `wpos (a + 256 t)`. -/
-   200  def Tab.wl (t : Tab) : WLay t.nw where
-   201    dom := t.dom64
-   202    pos := t.pos64
-   203    pos_lt _ h := t.pos64_lt h
-   204    pos_inj _ _ h h' e := t.pos64_inj h h' e
-   205    adj a h := t.adj64 a h
-   206  
-   207  /-- The byte arrays a program may name, and their positions, under today's layout: `a` at `a`. -/
-   208  def Tab.dom8 (t : Tab) (a : ArrId) : Bool := decide (a < t.nb)
-   209  def Tab.pos8 (_ : Tab) (a : ArrId) : Nat := a
+   164  /-- The word arrays a program may name under today's layout. -/
+   165  def Tab.dom64 (t : Tab) (s : TieredArray) : Bool :=
+   166    if s.hi then decide (s.arr < t.wK) else decide (s.arr < tierOff) && decide (s.arr < t.nw)
+   167  
+   168  /-- Word array `s`'s descriptor position. -/
+   169  def Tab.pos64 (t : Tab) (s : TieredArray) : Nat := t.wpos (curNum s)
+   170  
+   171  theorem Tab.curNum_lt (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : curNum s < t.nw := by
+   172    rcases s with ⟨a, _ | _⟩ <;> simp [Tab.dom64, curNum] at h ⊢
+   173    · omega
+   174    · obtain ⟨h1, h2⟩ := t.wK_spec h; omega
+   175  
+   176  theorem Tab.curNum_inj (t : Tab) {s s' : TieredArray} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+   177      (e : curNum s = curNum s') : s = s' := by
+   178    rcases s with ⟨a, _ | _⟩ <;> rcases s' with ⟨b, _ | _⟩ <;>
+   179      simp [Tab.dom64, curNum] at h h' e ⊢
+   180    · omega
+   181    · have := t.wK_spec h'; simp only [tierOff] at *; omega
+   182    · have := t.wK_spec h; simp only [tierOff] at *; omega
+   183    · omega
+   184  
+   185  theorem Tab.pos64_lt (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : t.pos64 s < t.nw := by
+   186    simp only [Tab.pos64]; exact t.wpos_lt (t.curNum_lt h)
+   187  
+   188  theorem Tab.pos64_inj (t : Tab) {s s' : TieredArray} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+   189      (e : t.pos64 s = t.pos64 s') : s = s' := by
+   190    simp only [Tab.pos64] at e
+   191    have e2 := congrArg t.wposInv e
+   192    rw [t.wposInv_wpos (t.curNum_lt h), t.wposInv_wpos (t.curNum_lt h')] at e2
+   193    exact t.curNum_inj h h' e2
+   194  
+   195  theorem Tab.adj64 (t : Tab) (a : ArrId) (h : t.dom64 (tier1 a) = true) :
+   196      t.dom64 (TieredArray.t0 a) = true ∧ t.pos64 (tier1 a) = t.pos64 (TieredArray.t0 a) + 1 := by
+   197    simp only [Tab.dom64, ite_true, decide_eq_true_eq] at h
+   198    obtain ⟨h1, h2⟩ := t.wK_spec h
+   199    refine ⟨by simp only [Tab.dom64, Bool.false_eq_true, ite_false, Bool.and_eq_true, decide_eq_true_eq]; exact ⟨h1, Nat.lt_of_le_of_lt (Nat.le_add_right _ _) h2⟩, ?_⟩
+   200    have := t.wpos_tier h 1 (by omega)
+   201    simpa [Tab.pos64, curNum, tier1, TieredArray.t0] using this
+   202  
+   203  /-- **Today's layout as a `WLay`**: tier `t` of `a` at `wpos (a + 256 t)`. -/
+   204  def Tab.wl (t : Tab) : WLay t.nw where
+   205    dom := t.dom64
+   206    pos := t.pos64
+   207    pos_lt _ h := t.pos64_lt h
+   208    pos_inj _ _ h h' e := t.pos64_inj h h' e
+   209    adj a h := t.adj64 a h
    210  
-   211  def Tab.bl (t : Tab) : BLay t.nb where
-   212    dom := t.dom8
-   213    pos := t.pos8
-   214    pos_lt _ h := by simpa [Tab.dom8, Tab.pos8] using h
-   215    pos_inj _ _ _ _ e := e
+   211  /-- The byte arrays a program may name, and their positions, under today's layout: `a` at `a`. -/
+   212  def Tab.dom8 (t : Tab) (a : ArrId) : Bool := decide (a < t.nb)
+   213  def Tab.pos8 (_ : Tab) (a : ArrId) : Nat := a
+   214  
+   215  def Tab.bl (t : Tab) : BLay t.nb where
+   216    dom := t.dom8
+   217    pos := t.pos8
+   218    pos_lt _ h := by simpa [Tab.dom8, Tab.pos8] using h
+   219    pos_inj _ _ _ _ e := e
 
 == ConAgua/Compiler/Step.lean#L11-L19
     11  /-!
@@ -1722,41 +1722,44 @@
     18  `Eventually` at the next state, the conclusion the `Eventually` at this one.
     19  -/
 
-== ConAgua/Compiler/Rel.lean#L107-L125
-   107  structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
-   108    size8 : ∀ a, G.tab.dom8 a → (m.arr8 a).size = G.s8 (G.tab.pos8 a)
-   109    size64 : ∀ s, G.tab.dom64 s → (m.arr64 s).size = G.s64 (G.tab.pos64 s)
-   110    get8 : ∀ a, G.tab.dom8 a → ∀ (i : Nat) (h : i < (m.arr8 a).size),
-   111      d.get? (A (G.b8 (G.tab.pos8 a) + i)) = some (m.arr8 a)[i]
-   112    get64 : ∀ s, G.tab.dom64 s → ∀ (i : Nat) (h : i < (m.arr64 s).size),
-   113      rdW d (A (G.b64 (G.tab.pos64 s) + 8 * i)) = some (m.arr64 s)[i]
-   114    limit : rdW d (A (G.T + 8)) = some (UInt64.ofNat G.lo)
-   115    /-- The descriptors, by position: no L array in them. -/
-   116    base8 : ∀ p < G.tab.nb, rdW d (A (G.T + (G.tab.dbase8 p).toNat)) = some (UInt64.ofNat (G.b8 p))
-   117    len8 : ∀ p < G.tab.nb, rdW d (A (G.T + (G.tab.dlen8 p).toNat)) = some (UInt64.ofNat (G.s8 p))
-   118    base64 : ∀ p < G.tab.nw, rdW d (A (G.T + (G.tab.dbase64 p).toNat)) = some (UInt64.ofNat (G.b64 p))
-   119    len64 : ∀ p < G.tab.nw, rdW d (A (G.T + (G.tab.dlen64 p).toNat)) = some (UInt64.ofNat (G.s64 p))
-   120    rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
-   121      d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
-   122    stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
-   123    res : ∀ x, G.InRes x → (d.get? (A x)).isSome
-   124    /-- The global variables. -/
-   125    glob : ∀ g : GVar, g.id < G.tab.ng → rdW d (A (G.globAddr g)) = some (m.glob g)
+== ConAgua/Compiler/Rel.lean#L110-L128
+   110  structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
+   111    size8 : ∀ a, G.tab.dom8 a → (m.arr8 a).size = G.s8 (G.tab.pos8 a)
+   112    size64 : ∀ s, G.tab.dom64 s → (m.arr64 s).size = G.s64 (G.tab.pos64 s)
+   113    get8 : ∀ a, G.tab.dom8 a → ∀ (i : Nat) (h : i < (m.arr8 a).size),
+   114      d.get? (A (G.b8 (G.tab.pos8 a) + i)) = some (m.arr8 a)[i]
+   115    get64 : ∀ s, G.tab.dom64 s → ∀ (i : Nat) (h : i < (m.arr64 s).size),
+   116      rdW d (A (G.b64 (G.tab.pos64 s) + 8 * i)) = some (m.arr64 s)[i]
+   117    limit : rdW d (A (G.T + 8)) = some (UInt64.ofNat G.lo)
+   118    /-- The descriptors, by position: no L array in them. -/
+   119    base8 : ∀ p < G.tab.nb, rdW d (A (G.T + (G.tab.dbase8 p).toNat)) = some (UInt64.ofNat (G.b8 p))
+   120    len8 : ∀ p < G.tab.nb, rdW d (A (G.T + (G.tab.dlen8 p).toNat)) = some (UInt64.ofNat (G.s8 p))
+   121    base64 : ∀ p < G.tab.nw, rdW d (A (G.T + (G.tab.dbase64 p).toNat)) = some (UInt64.ofNat (G.b64 p))
+   122    len64 : ∀ p < G.tab.nw, rdW d (A (G.T + (G.tab.dlen64 p).toNat)) = some (UInt64.ofNat (G.s64 p))
+   123    rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
+   124      d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
+   125    stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
+   126    res : ∀ x, G.InRes x → (d.get? (A x)).isSome
+   127    /-- The global variables. -/
+   128    glob : ∀ g : GVar, g.id < G.tab.ng → rdW d (A (G.globAddr g)) = some (m.glob g)
 
-== ConAgua/Compiler/Rel.lean#L67-L79
-    67  /-- The regions are inside the address space and pairwise disjoint. -/
-    68  structure Ok : Prop where
-    69    tab_end : G.tabEnd < 2 ^ 64
-    70    hi_le : G.hi < 2 ^ 64
-    71    lo_le : G.lo ≤ G.hi
-    72    end8 : ∀ a < G.tab.nb, G.b8 a + G.s8 a < 2 ^ 64
-    73    end64 : ∀ a < G.tab.nw, G.b64 a + 8 * G.s64 a < 2 ^ 64
-    74    tab_stack : ∀ x, G.InTab x → ¬ G.InStack x
-    75    tab_arr : ∀ x, G.InTab x → ¬ G.InArr x
-    76    stack_arr : ∀ x, G.InStack x → ¬ G.InArr x
-    77    arr8_disj : ∀ a < G.tab.nb, ∀ b < G.tab.nb, a ≠ b → ∀ x, G.In8 a x → ¬ G.In8 b x
-    78    arr64_disj : ∀ a < G.tab.nw, ∀ b < G.tab.nw, a ≠ b → ∀ x, G.In64 a x → ¬ G.In64 b x
-    79    arr8_64 : ∀ a < G.tab.nb, ∀ b < G.tab.nw, ∀ x, G.In8 a x → ¬ G.In64 b x
+== ConAgua/Compiler/Rel.lean#L67-L82
+    67  /-- The regions are inside the address space and pairwise disjoint, and every word array the
+    68  program may name has at least its minimum length (`Tab.min64`, the hint the code generator drops
+    69  constant-index bounds checks by). -/
+    70  structure Ok : Prop where
+    71    tab_end : G.tabEnd < 2 ^ 64
+    72    hi_le : G.hi < 2 ^ 64
+    73    lo_le : G.lo ≤ G.hi
+    74    end8 : ∀ a < G.tab.nb, G.b8 a + G.s8 a < 2 ^ 64
+    75    end64 : ∀ a < G.tab.nw, G.b64 a + 8 * G.s64 a < 2 ^ 64
+    76    tab_stack : ∀ x, G.InTab x → ¬ G.InStack x
+    77    tab_arr : ∀ x, G.InTab x → ¬ G.InArr x
+    78    stack_arr : ∀ x, G.InStack x → ¬ G.InArr x
+    79    arr8_disj : ∀ a < G.tab.nb, ∀ b < G.tab.nb, a ≠ b → ∀ x, G.In8 a x → ¬ G.In8 b x
+    80    arr64_disj : ∀ a < G.tab.nw, ∀ b < G.tab.nw, a ≠ b → ∀ x, G.In64 a x → ¬ G.In64 b x
+    81    arr8_64 : ∀ a < G.tab.nb, ∀ b < G.tab.nw, ∀ x, G.In8 a x → ¬ G.In64 b x
+    82    min64 : ∀ s, G.tab.dom64 s = true → G.tab.min64 s ≤ G.s64 (G.tab.pos64 s)
 
 == ConAgua/Compiler/Abi.lean#L8-L35
      8  # The entry stubs (lane `abi`)
@@ -1931,17 +1934,17 @@
    137    return 71757147230292
    138  }
 
-== ConAgua/Compiler/Abi.lean#L162-L171
-   162  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
-   163    harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
-   164    returns `rdx = 0` and `rax = 2^63 + k`, `ca_check_seq` on the same region for `[0, k)`, whose
-   165    result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
-   166    on the arrays as phase A left them.
-   167    It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
-   168    driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
-   169    address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
-   170    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
-   171    the driver touches no callee-saved register but `r15`. -/
+== ConAgua/Compiler/Abi.lean#L163-L172
+   163  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
+   164    harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
+   165    returns `rdx = 0` and `rax = 2^63 + k`, `ca_check_seq` on the same region for `[0, k)`, whose
+   166    result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
+   167    on the arrays as phase A left them.
+   168    It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
+   169    driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
+   170    address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
+   171    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
+   172    the driver touches no callee-saved register but `r15`. -/
 
 == ConAgua/Final/DrvAbi.lean#L179-L189
    179  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
