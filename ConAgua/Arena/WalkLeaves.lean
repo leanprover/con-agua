@@ -3,7 +3,8 @@ module
 public import ConAgua.L.PureEval
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
-public import ConAgua.Arena.WalkScope
+public import ConAgua.Arena.ExprMk
+public import ConAgua.Arena.MemoLib
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 public import ConAgua.L.ModelGen
