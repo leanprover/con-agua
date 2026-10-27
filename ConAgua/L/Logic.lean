@@ -53,11 +53,11 @@ attribute [lang_grind =] List.headD_cons List.headD_nil List.tail_cons List.tail
 attribute [lang_grind] Mem.len8 Mem.len64
 
 /-- A word store leaves the byte arrays alone. -/
-@[lang_grind =] theorem Mem.arr8_set64_apply (m : Mem) (a : ArrId) (i v : Word) (x : ArrId) :
+@[lang_grind =] theorem Mem.arr8_set64_apply (m : Mem) (a : TArr) (i v : Word) (x : ArrId) :
     (m.set64 a i v).arr8 x = m.arr8 x := rfl
 
 /-- A byte store leaves the word arrays alone. -/
-@[lang_grind =] theorem Mem.arr64_set8_apply (m : Mem) (a : ArrId) (i v : Word) (x : ArrId) :
+@[lang_grind =] theorem Mem.arr64_set8_apply (m : Mem) (a : ArrId) (i v : Word) (x : TArr) :
     (m.set8 a i v).arr64 x = m.arr64 x := rfl
 
 /-! ### Global variables
@@ -76,7 +76,7 @@ not touch each other. With these, `vcgen` + `finish` treat globals as they treat
 @[lang_grind =] theorem Mem.setG_arr8 (m : Mem) (g : GVar) (v : Word) (a : ArrId) :
     (m.setG g v).arr8 a = m.arr8 a := rfl
 
-@[lang_grind =] theorem Mem.setG_arr64 (m : Mem) (g : GVar) (v : Word) (a : ArrId) :
+@[lang_grind =] theorem Mem.setG_arr64 (m : Mem) (g : GVar) (v : Word) (a : TArr) :
     (m.setG g v).arr64 a = m.arr64 a := rfl
 
 @[lang_grind =] theorem Mem.setG_bytes (m : Mem) (g : GVar) (v : Word) :
@@ -85,7 +85,7 @@ not touch each other. With these, `vcgen` + `finish` treat globals as they treat
 @[lang_grind =] theorem Mem.setG_words (m : Mem) (g : GVar) (v : Word) :
     (m.setG g v).words = m.words := rfl
 
-@[lang_grind =] theorem Mem.set64_glob (m : Mem) (a : ArrId) (i v : Word) (g : GVar) :
+@[lang_grind =] theorem Mem.set64_glob (m : Mem) (a : TArr) (i v : Word) (g : GVar) :
     (m.set64 a i v).glob g = m.glob g := rfl
 
 @[lang_grind =] theorem Mem.set8_glob (m : Mem) (a : ArrId) (i v : Word) (g : GVar) :

@@ -22,12 +22,14 @@ It is executable (`#eval`), and it is what `vcgen` steps through in a proof.
 
 namespace L
 
-/-- The memory: a fixed set of byte arrays and word arrays, indexed by `ArrId`, and the global
-variables. The arrays' lengths are fixed for the run (a growable vector is a fixed-capacity array
-plus a length kept in a word). Every global variable has a value (`0` unless written). -/
+/-- The memory: byte arrays by name (`ArrId`), word arrays by (array, tier) (`TArr`), and the
+global variables. Every array exists (possibly empty): the memory is a total map, and which arrays
+a program may name is the compiler's business (`Prog.wf` against its layout). The arrays' lengths
+are fixed for the run (a growable vector is a fixed-capacity array plus a length kept in a word).
+Every global variable has a value (`0` unless written). -/
 structure Mem where
-  bytes : Array (Array UInt8) := #[]
-  words : Array (Array Word) := #[]
+  bytes : ArrId → Array UInt8 := fun _ => #[]
+  words : TArr → Array Word := fun _ => #[]
   glob : GVar → Word := fun _ => 0
   deriving Inhabited
 
@@ -113,23 +115,25 @@ def Cmp.evalW (c : Cmp) (a b : Word) : Word := if c.eval a b then 1 else 0
 
 /-! ## Memory access -/
 
-/-- Byte array `a`; an array that does not exist reads as empty. -/
-def Mem.arr8 (m : Mem) (a : ArrId) : Array UInt8 := m.bytes.getD a #[]
+/-- Byte array `a`. -/
+def Mem.arr8 (m : Mem) (a : ArrId) : Array UInt8 := m.bytes a
 
-/-- Word array `a`; an array that does not exist reads as empty. -/
-def Mem.arr64 (m : Mem) (a : ArrId) : Array Word := m.words.getD a #[]
+/-- Word array `s`. -/
+def Mem.arr64 (m : Mem) (s : TArr) : Array Word := m.words s
 
 def Mem.len8 (m : Mem) (a : ArrId) : Word := UInt64.ofNat (m.arr8 a).size
 
-def Mem.len64 (m : Mem) (a : ArrId) : Word := UInt64.ofNat (m.arr64 a).size
+def Mem.len64 (m : Mem) (s : TArr) : Word := UInt64.ofNat (m.arr64 s).size
 
 /-- Byte array `a` with byte `i` set to the low byte of `v` (no change out of bounds). -/
 def Mem.set8 (m : Mem) (a : ArrId) (i v : Word) : Mem :=
-  { m with bytes := m.bytes.set! a ((m.arr8 a).set! i.toNat v.toUInt8) }
+  let b := (m.arr8 a).set! i.toNat v.toUInt8
+  { m with bytes := fun a' => if a' = a then b else m.bytes a' }
 
-/-- Word array `a` with word `i` set to `v` (no change out of bounds). -/
-def Mem.set64 (m : Mem) (a : ArrId) (i v : Word) : Mem :=
-  { m with words := m.words.set! a ((m.arr64 a).set! i.toNat v) }
+/-- Word array `s` with word `i` set to `v` (no change out of bounds). -/
+def Mem.set64 (m : Mem) (s : TArr) (i v : Word) : Mem :=
+  let w := (m.arr64 s).set! i.toNat v
+  { m with words := fun s' => if s' = s then w else m.words s' }
 
 /-- Global `g` set to `v`. -/
 def Mem.setG (m : Mem) (g : GVar) (v : Word) : Mem :=
@@ -148,12 +152,12 @@ def le64 (b : Array UInt8) (k : Nat) : Word :=
   UInt64.ofNat (((List.range 8).map fun j => b[k + j]!).foldr (fun x acc => acc * 256 + x.toNat) 0)
 
 /-- `D[di + j] := S[si + j]` for `j < n`, ascending (each word read after the writes before it). -/
-def Mem.copy64 (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) : Nat → Mem
+def Mem.copy64 (m : Mem) (d : TArr) (di : Word) (s : TArr) (si : Word) : Nat → Mem
   | 0 => m
   | n + 1 => (m.set64 d di ((m.arr64 s)[si.toNat]!)).copy64 d (di + 1) s (si + 1) n
 
 /-- `D[di + j] := b[si + j]` (zero-extended) for `j < n`, ascending. -/
-def Mem.copy8w (m : Mem) (d : ArrId) (di : Word) (b : Array UInt8) (si : Word) : Nat → Mem
+def Mem.copy8w (m : Mem) (d : TArr) (di : Word) (b : Array UInt8) (si : Word) : Nat → Mem
   | 0 => m
   | n + 1 => (m.set64 d di (b[si.toNat]!).toUInt64).copy8w d (di + 1) b (si + 1) n
 
@@ -172,7 +176,7 @@ def ld8 (a : ArrId) (i : Word) : M Word := do
   if h : i.toNat < (m.arr8 a).size then return (m.arr8 a)[i.toNat].toUInt64 else throw .oob
 
 /-- Word `i` of word array `a`; `oob` out of bounds. -/
-def ld64 (a : ArrId) (i : Word) : M Word := do
+def ld64 (a : TArr) (i : Word) : M Word := do
   let m := (← get).mem
   if h : i.toNat < (m.arr64 a).size then return (m.arr64 a)[i.toNat] else throw .oob
 
@@ -191,7 +195,7 @@ def st8 (a : ArrId) (i v : Word) : M Unit := do
   if i.toNat < (s.mem.arr8 a).size then set { s with mem := s.mem.set8 a i v } else throw .oob
 
 /-- Store `v` at word `i` of word array `a`; `oob` out of bounds. -/
-def st64 (a : ArrId) (i v : Word) : M Unit := do
+def st64 (a : TArr) (i v : Word) : M Unit := do
   let s ← get
   if i.toNat < (s.mem.arr64 a).size then set { s with mem := s.mem.set64 a i v } else throw .oob
 
@@ -221,7 +225,7 @@ def evalE : Expr → M Word
   | .ld8x8 s i => do ld8x8 s (← evalE i)
 
 /-- The array a block operand names. -/
-def warr : WArr → M ArrId
+def warr : WArr → M TArr
   | .plain a => pure a
   | .tier a t => do return tierA a (← evalE t)
 

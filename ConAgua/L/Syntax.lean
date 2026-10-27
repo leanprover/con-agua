@@ -25,14 +25,54 @@ abbrev Var := Nat
 /-- An array: a static index into the byte arrays or into the word arrays. -/
 abbrev ArrId := Nat
 
-/-- **Tiered arrays** (lane tierarr). Tier `1` of word array `a` is word array `a + tierOff`;
-an access with a run-time tier word `t` uses `tierA a t` (the tier is masked: `t & 1`). So a
-program sees one array per tier, as con-ron's per-tier tables, and the compiler finds tier `1`'s
-descriptor at a fixed distance from tier `0`'s. -/
+/-- The distance of tier `1`'s number from tier `0`'s in the old numeric encoding. L no longer
+uses it (prototype absarrays); only the compiler's current layout (`Tab.wpos`, `curLay`) does. -/
 @[expose] def tierOff : Nat := 256
 
-/-- The array of tier `t` of the tiered array `a`. -/
-@[expose] def tierA (a : ArrId) (t : UInt64) : ArrId := a + tierOff * (t &&& 1).toNat
+/-! ## Word arrays as L sees them (prototype absarrays)
+
+`TArr` is the name of a word array in L's memory: tier `hi` of source array `arr`. The type name
+is a working name, kept in this one place (`abbrev`s and lemmas below), so a rename is mechanical. -/
+
+/-- Tier `hi` of source array `arr` (`hi = false`: tier 0, which is every untiered array). -/
+structure TArr where
+  /-- An `ArrId`, typed `Nat` so that `omega` reads `s.arr < 64`. -/
+  arr : Nat
+  hi : Bool
+  deriving Repr, Inhabited
+
+/-- A number per word array, for equality tests only: the kernel compares one `Nat` (as `GVar`). -/
+@[expose] def TArr.code (s : TArr) : Nat := 2 * s.arr + (if s.hi then 1 else 0)
+
+theorem TArr.code_inj {a b : TArr} : a.code = b.code ↔ a = b := by
+  rcases a with ⟨a, _ | _⟩ <;> rcases b with ⟨b, _ | _⟩ <;> simp [TArr.code] <;> omega
+
+instance : DecidableEq TArr := fun a b => decidable_of_iff (a.code = b.code) TArr.code_inj
+
+/-- A source array as a word array: its tier 0. -/
+@[coe, reducible, expose] def TArr.t0 (a : ArrId) : TArr := ⟨a, false⟩
+instance : Coe ArrId TArr := ⟨TArr.t0⟩
+
+/-- Tier 1 of `a`. -/
+@[reducible, expose] def tier1 (a : ArrId) : TArr := ⟨a, true⟩
+
+/-- The array of tier `t` (masked: `t & 1`) of the tiered array `a`. -/
+@[expose] def tierA (a : ArrId) (t : UInt64) : TArr := ⟨a, t &&& 1 != 0⟩
+
+/-- Both tiers of `a`. -/
+@[reducible, expose] def tiers (a : ArrId) : List TArr := [TArr.t0 a, tier1 a]
+
+@[simp] theorem TArr.t0_inj {a b : ArrId} : TArr.t0 a = TArr.t0 b ↔ a = b := by simp [TArr.t0]
+@[simp] theorem t0_ne_tier1 (a b : ArrId) : TArr.t0 a ≠ tier1 b := by simp [TArr.t0, tier1]
+@[simp] theorem tier1_ne_t0 (a b : ArrId) : tier1 a ≠ TArr.t0 b := by simp [TArr.t0, tier1]
+@[simp] theorem tier1_inj {a b : ArrId} : tier1 a = tier1 b ↔ a = b := by simp [tier1]
+@[simp] theorem tierA_arr (a : ArrId) (t : UInt64) : (tierA a t).arr = a := rfl
+
+theorem tierA_eq_or (a : ArrId) (u : UInt64) : tierA a u = TArr.t0 a ∨ tierA a u = tier1 a := by
+  unfold tierA; cases (u &&& 1 != 0) <;> simp [TArr.t0, tier1]
+
+theorem tierA_mem_tiers (a : ArrId) (u : UInt64) : tierA a u ∈ tiers a := by
+  rcases tierA_eq_or a u with h | h <;> simp [tiers, h]
 
 /-- A function name. -/
 abbrev FnName := String

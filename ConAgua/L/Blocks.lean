@@ -12,48 +12,48 @@ What `Mem.copy64`, `Mem.copy8w` and `scanN` leave alone, and how they unfold.
 
 namespace L
 
-theorem Mem.copy64_bytes (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
+theorem Mem.copy64_bytes (m : Mem) (d : TArr) (di : Word) (s : TArr) (si : Word) (n : Nat) :
     (m.copy64 d di s si n).bytes = m.bytes := by
   induction n generalizing m di si with
   | zero => rfl
   | succ n ih => simp only [Mem.copy64, ih]; rfl
 
-theorem Mem.copy64_glob (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
+theorem Mem.copy64_glob (m : Mem) (d : TArr) (di : Word) (s : TArr) (si : Word) (n : Nat) :
     (m.copy64 d di s si n).glob = m.glob := by
   induction n generalizing m di si with
   | zero => rfl
   | succ n ih => simp only [Mem.copy64, ih]; rfl
 
-theorem Mem.copy8w_bytes (m : Mem) (d : ArrId) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) :
+theorem Mem.copy8w_bytes (m : Mem) (d : TArr) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) :
     (m.copy8w d di b si n).bytes = m.bytes := by
   induction n generalizing m di si with
   | zero => rfl
   | succ n ih => simp only [Mem.copy8w, ih]; rfl
 
-theorem Mem.copy8w_glob (m : Mem) (d : ArrId) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) :
+theorem Mem.copy8w_glob (m : Mem) (d : TArr) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) :
     (m.copy8w d di b si n).glob = m.glob := by
   induction n generalizing m di si with
   | zero => rfl
   | succ n ih => simp only [Mem.copy8w, ih]; rfl
 
-theorem Mem.copy64_arr8 (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) (n : Nat) (a : ArrId) :
+theorem Mem.copy64_arr8 (m : Mem) (d : TArr) (di : Word) (s : TArr) (si : Word) (n : Nat) (a : ArrId) :
     (m.copy64 d di s si n).arr8 a = m.arr8 a := by
   simp only [Mem.arr8, Mem.copy64_bytes]
 
-theorem Mem.copy8w_arr8 (m : Mem) (d : ArrId) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) (a : ArrId) :
+theorem Mem.copy8w_arr8 (m : Mem) (d : TArr) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) (a : ArrId) :
     (m.copy8w d di b si n).arr8 a = m.arr8 a := by
   simp only [Mem.arr8, Mem.copy8w_bytes]
 
-theorem Mem.copy64_zero (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) :
+theorem Mem.copy64_zero (m : Mem) (d : TArr) (di : Word) (s : TArr) (si : Word) :
     m.copy64 d di s si 0 = m := rfl
 
-theorem Mem.copy64_succ (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
+theorem Mem.copy64_succ (m : Mem) (d : TArr) (di : Word) (s : TArr) (si : Word) (n : Nat) :
     m.copy64 d di s si (n + 1) = (m.set64 d di ((m.arr64 s)[si.toNat]!)).copy64 d (di + 1) s (si + 1) n := rfl
 
-theorem Mem.copy8w_zero (m : Mem) (d : ArrId) (di : Word) (b : Array UInt8) (si : Word) :
+theorem Mem.copy8w_zero (m : Mem) (d : TArr) (di : Word) (b : Array UInt8) (si : Word) :
     m.copy8w d di b si 0 = m := rfl
 
-theorem Mem.copy8w_succ (m : Mem) (d : ArrId) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) :
+theorem Mem.copy8w_succ (m : Mem) (d : TArr) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) :
     m.copy8w d di b si (n + 1) = (m.set64 d di (b[si.toNat]!).toUInt64).copy8w d (di + 1) b (si + 1) n := rfl
 
 theorem scanN_end (b : Array UInt8) (c : List UInt8) (i e : Nat) (h : ¬ i < e) : scanN b c i e = i := by
