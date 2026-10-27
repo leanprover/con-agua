@@ -71,7 +71,14 @@ theorem listedGoW_twin : ∀ (n : Nat) (m m' : Mem) (j : Word), listedGoW n m to
       widx _ _ _ _ (by simp; omega)
     have hi4 : (to + 11 * j + 4).toNat = to.toNat + 11 * j.toNat + 4 :=
       widx _ _ _ _ (by simp; omega)
-    rcases hg : idsGoW n m (rdW (m.arr64 IFR) (to + 11 * j + 3)) (rdW (m.arr64 IFR) (to + 11 * j + 4)) 0 with _ | m₁ <;> simp only [hg, mK, reduceCtorEq] at h
+    rcases hg : idsGoW n m (rdW (m.arr64 IFR) (to + 11 * j + 3)) (rdW (m.arr64 IFR) (to + 11 * j + 4)) 0 with _ | m₁ <;> rw [hg] at h
+    · rw [listedGoW.k_vi_ids_go.none] at h; cases h
+    rw [listedGoW.k_vi_ids_go.arm1] at h
+    rcases hq : listedGoW n m₁ to tn (j + 1) with _ | m₂ <;> rw [hq] at h
+    · rw [listedGoW.k_vi_listed_go.none] at h; cases h
+    rw [listedGoW.k_vi_listed_go.arm1] at h
+    cases h
+    have h := hq
     rw [wd_eq, wd_eq, hi3, hi4, hE.wdR, hE.wdR] at hg
     have hnums' := hnums.ext hE
     obtain ⟨n1, n2, n3⟩ := hnums'

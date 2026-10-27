@@ -271,10 +271,17 @@ theorem idsGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l k : Word),
     have hkn := UInt64.lt_iff_toNat_lt.mp hkl'
     have hok : (o + k).toNat = o.toNat + k.toNat := widx2 _ _ (by have := hT.1; have := hT.2; omega)
     cases hk : lkW m NID (rdW (m.arr64 IFL) (o + k)) with
-    | none => rw [hk, lkPushK_none, restK_none] at h; cases h
+    | none => rw [hk, idsGoW.k_name_get.none] at h; cases h
     | some w =>
-    rw [hk, lkPushK_some] at h
-    rcases hp : pushLW m w with _ | ⟨o1, m₁⟩ <;> simp only [hp, restK, reduceCtorEq] at h
+    rw [hk, idsGoW.k_name_get.arm1] at h
+    rcases hp : pushLW m w with _ | ⟨o1, m₁⟩ <;> rw [hp] at h
+    · rw [idsGoW.k_ifl_push.none] at h; cases h
+    rw [idsGoW.k_ifl_push.arm1] at h
+    rcases hq : idsGoW n m₁ o l (k + 1) with _ | m₂ <;> rw [hq] at h
+    · rw [idsGoW.k_vi_ids_go.none] at h; cases h
+    rw [idsGoW.k_vi_ids_go.arm1] at h
+    cases h
+    have h := hq
     obtain ⟨x1, x2, x3, x4⟩ := pushLW_ok hT hp
     have hk1 := wsucc k l hkl'
     obtain ⟨y1, y2, y3, y4⟩ := ih m₁ m' o l (k + 1) h x2
