@@ -24,13 +24,14 @@ The table (first match per path; "cheap" = links, vendor, modules, provenance, r
     .gitattributes, .github/**
   checker.s, pins.bin                                         build, e2e (checker.s is an input file
                                                               of ConAguaAsm; both go into ./checker)
-  main.c, Makefile, reasons.h, scripts/{diff-e2e,e2e}.py      e2e
+  main.c, Makefile, reasons.h, scripts/diff-e2e.py            e2e
   scripts/{core,loop,leaf}_fns.{py,lean}, preloop_ws.py       build + that closure check
   scripts/shake{.py,-setup.sh,-allowlist.txt,-keep.txt}       build, shake
   scripts/checker_prog.py; ConAgua/E2E/Dump.lean,             build, checker-prog (`checker_prog.py
     ConAgua/Checker/{Sources,Entry,Prelude}.lean and the        --no-build --check`: the generator still
     generated ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgSkt,    runs and writes the committed text);
-    ProgWf,Asm,AsmPart*}.lean; scripts/e2e.py                   .lean files also shake + the closures
+    ProgWf,Asm,AsmPart*}.lean; scripts/e2e.py                   .lean files also shake + the closures,
+                                                              e2e.py also e2e
   ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the four closure checks if
                                                               the module is in the import closure of
                                                               ConAgua.Checker.Prog or of a closure's
