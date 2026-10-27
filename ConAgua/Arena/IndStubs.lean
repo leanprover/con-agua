@@ -63,7 +63,7 @@ Carried in `AbsOK` so that every model frame (`AFr`) carries it too: what lifts 
 to `StageC` (`IndT/Lift.lean`). -/
 def WkOK (m : Mem) : Prop :=
   WalkMemos m ∧ (m.arr64 EREC).size < 2 ^ 63 ∧ (m.arr64 SPN).size < 2 ^ 63 ∧
-    (m.arr64 145).size < 2 ^ 63 ∧ pinW m 0 ≠ 0
+    (m.arr64 BSTK).size < 2 ^ 63 ∧ pinW m 0 ≠ 0
 
 /-- **The walk memos outside the stage relation are well formed** (lane `indproofs4`, helpers
 `abs`, `memo`): the memos of `abstract1` (array 49), `instantiate1Lift` (51), `constsResolveF`

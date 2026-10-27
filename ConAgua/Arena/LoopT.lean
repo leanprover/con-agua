@@ -129,7 +129,7 @@ structure IndMemos (m : Mem) : Prop where
   cr : L.Stubs.CrOK m
 
 /-- **The zeroed memory has a well-formed `instantiate1Lift` memo** (empty, epoch `0`). -/
-theorem I1Memo.zero {m : Mem} (hsz : 54 ≤ (m.arr64 CTL).size) (hA : ∀ j, rdW (m.arr64 51) j = 0)
+theorem I1Memo.zero {m : Mem} (hsz : 54 ≤ (m.arr64 CTL).size) (hA : ∀ j, rdW (m.arr64 ILFM) j = 0)
     (hC : rdW (m.arr64 CTL) 52 = 0) : I1Memo m :=
   ⟨_, memoRV_zeroAt ⟨51, 52⟩ lfKey _ m (by simp; omega) hC hA⟩
 
