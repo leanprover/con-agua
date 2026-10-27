@@ -11,7 +11,7 @@ import ConAgua.Arena.IndT.PosWalk
 /-!
 # `nest_pos` and the whole walk under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`posOK_step`'s proof (`IndPos2SpecS`) at `realCall p`, its twin side con-ron's `nestPos_succ`'s:
+`posOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) at `realCall p`, its twin side con-ron's `nestPos_succ`'s:
 the reduct (`whnfC_rsim`), its occurrence checks (no state change), then hole-free, a binder (the
 block's `BindOKC` at `n`) or a head (`AppOKC` at `n`). Then the block's `StageC` facts at every
 exec fuel up to the core walk's (`nbOKC_all`).

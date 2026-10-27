@@ -1,12 +1,12 @@
-import ConAgua.Arena.IndPos2SpecS
 import ConAgua.Arena.IndT.PosDefs
 import ConAgua.Arena.IndT.PosNit
 import ConAgua.Arena.IndT.RecGen19
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 
 /-!
 # `nest_cont` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`contOK_step`'s proof (`IndPos2SpecS`) with the twin side of con-ron's `nestCont_spec`: the
+`contOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestCont_spec`: the
 container (`nestContainer_spec`), the parameters' locality (`paramsLocal_spec`; the index checks
 and `Quot`'s pin leave the state), the instantiation's former (`nestInstType_spec`), the
 instantiation met (the block's `KeyOKC` at `n`).

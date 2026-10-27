@@ -1,10 +1,10 @@
-import ConAgua.Arena.IndPos2SpecS
 import ConAgua.Arena.IndT.PosCrest
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 
 /-!
 # `nest_frame` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`frameOK_step`'s proof (`IndPos2SpecS`) at `realCall p`, its twin side con-ron's
+`frameOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) at `realCall p`, its twin side con-ron's
 `nestFrame_spec`'s: the group's head name (`internNNode_run`), the instantiation (`internConstE_run`,
 `mkAppN_run`) typed (`inferC_rsim`), the group's constructors (`nestGroupCtors_spec`), the frame's
 holes (`frameHoles_run`), the constructors walked (the block's `CtorsOKC` at `n`).

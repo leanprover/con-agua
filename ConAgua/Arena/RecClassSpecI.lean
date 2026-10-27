@@ -1,7 +1,8 @@
 import ConAgua.Arena.RecCheckSpec3
-import ConAgua.Arena.IndPosSpec2A
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.RecClassSpecD
+import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.Arena.IndPosSpec.RootHoles
 
 /-!
 # `RecClass`: `ClassGen.major` (lane `indproofs2`, helper `rec2`)

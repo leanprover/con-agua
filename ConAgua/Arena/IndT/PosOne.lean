@@ -3,7 +3,7 @@ import ConAgua.Arena.IndT.PosCrest
 /-!
 # `nest_ctors_one` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`oneOK_step`'s proof (`IndPos2SpecS`) with the twin side of con-ron's `nestCtors_spec` (its cons
+`oneOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestCtors_spec` (its cons
 case): the crest typed (`p2ctW_okC`), the fields walked (the block's `WalkOKC` at `n`), the
 later-use check (`anyM_pstep`, `structUsedLater_spec`), the result's head (`nestResHead_spec`,
 `nestOcc_spec`), the constructor's normal form (`nestCtorNf_spec`).

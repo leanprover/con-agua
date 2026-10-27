@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndPartsSpec4
 import ConAgua.Arena.RecStab
+import ConAgua.Arena.IndPosSpec.EntryW
 
 /-!
 # `RecClass`: `classNPcOf`, `classReadSlot`, `classReadSlots` (lane `indproofs2`, helper `rec`)

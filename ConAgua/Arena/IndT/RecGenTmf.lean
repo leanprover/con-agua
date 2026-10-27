@@ -4,6 +4,7 @@ import ConAgua.Arena.IndRealLvlC
 import ConRon.Bridge.Inductives.GenRec
 import ConAgua.Arena.RecClassSpecF
 import ConAgua.Arena.RecGenSpec18
+import ConAgua.Arena.IndPosSpec.NestCrest
 
 /-!
 # `target_major_of` under `StageC` with the real `inst_lp_fast` (lane `indstaget`, helper `rcC`)

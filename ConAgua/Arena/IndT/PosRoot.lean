@@ -1,10 +1,12 @@
-import ConAgua.Arena.IndPos2SpecV
 import ConAgua.Arena.IndT.PosAll
+import ConAgua.Arena.IndPosSpec.NestSeeds
+import ConAgua.Arena.IndPosSpec.P2sdW
+import ConAgua.Arena.IndPosSpec.UnW2
 
 /-!
 # `nest_root` and `nest_seeds` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`p2rtW_ok`'s and `p2sdW_ok`'s proofs (`IndPos2SpecV`) at `realCall p`, their twin sides con-ron's
+`p2rtW_ok`'s and `p2sdW_ok`'s proofs (`IndPosSpec/NestSeeds`) at `realCall p`, their twin sides con-ron's
 `nestRoot_spec` (each member's constructors through `nestCtors_spec` at the root key) and
 `nestSeeds_spec` (the seed's fuel by `seedFuel_spec`, its former by `nestInstType_spec`, the
 instantiation met by `nestContKey_spec`), and the census links `nestRoot_refinesC`,

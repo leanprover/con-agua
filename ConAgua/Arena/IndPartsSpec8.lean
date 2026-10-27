@@ -1,7 +1,7 @@
 import ConAgua.Arena.IndPartsSpec7
 import ConAgua.Arena.RecClassSpec
 import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.IndPartsSpec4
+import ConAgua.Arena.IndPosSpec.RootHoles
 
 /-!
 # Refinements of `IndParts`, part 8 (lane `indproofs2`, helper `parts`): the block split, relations

@@ -1,6 +1,5 @@
-import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatSub
-import ConAgua.Arena.DeclDivMod5
+import ConAgua.Arena.DeclDivModSpec.SubstConst0List
 
 /-!
 # The structural-`Nat` gate: constant substitution under binders (lane `decls4`, helper `decls4-sca`)
@@ -310,7 +309,7 @@ theorem substConstAll_refines (hN : NatSubAllProg p) (nm r fuel h : Word) :
   CallRef.refAM (fun k m a res m' ⟨hS, hn, hr, hh⟩ hc =>
     sca_ref hN nm r fuel.toNat fuel rfl h k m a res m' hS hn hr hh hc)
 
-/-- **`subst_const_all` at the walk fuel**: `DeclDivMod5`'s `SubstCAll`. -/
+/-- **`subst_const_all` at the walk fuel**: `DeclDivModSpec/SubstConst0List`'s `SubstCAll`. -/
 theorem substCAll_of (hN : NatSubAllProg p) : ∀ dn vis fe, SubstCAll p dn vis fe :=
   fun _ _ _ nm r h hn hr hh k m a res m' hS hc =>
     sca_ref hN nm r coreWalkFuel 4000000000 rfl h k m a res m' hS hn hr hh hc

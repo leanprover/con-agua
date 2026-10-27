@@ -3,7 +3,7 @@ import ConAgua.Arena.DeclDivGateT2
 /-!
 # The `Nat.div`-family pin gate under `StageC` (lane `loopt3`, helper `loopt3-div`)
 
-`defn_div_gate` (`DeclDivMod10.lean`, `divGateSpecD` at `StageR` through `stubCall`) runs after the
+`defn_div_gate` (`DeclDivModSpec/RomPinSets.lean`, `divGateSpecD` at `StageR` through `stubCall`) runs after the
 definition arm's push, at the pre-insertion view `vis` for its core calls and at the pushed view `w`
 for the environment guard. It runs here from the real program (`realCall p`) under `StageC`
 (`TwinStep.lean`), mirroring con-ron's `checkDivModPin_bridge` (`Bridge/Checker/DivMod.lean`), as

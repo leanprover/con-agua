@@ -1,12 +1,12 @@
 import ConAgua.Arena.IndT.PosNit
-import ConAgua.Arena.IndPos2SpecS
 import ConAgua.Arena.IndT.PosDefs
 import ConAgua.Arena.IndT.RecGen19
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 
 /-!
 # `nest_cont_new` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`newOK_step`'s proof (`IndPos2SpecS`) with the twin side of con-ron's `nestContNew_spec`: the walk
+`newOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestContNew_spec`: the walk
 stack (`nestWalkStack_spec`), the group grown (`nestGrowGroup_spec`), the frame (the block's
 `FrameOKC` at `n`), the cache (`closedAll_spec`).
 -/

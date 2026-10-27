@@ -1,7 +1,4 @@
 import ConAgua.Arena.ConstsResolveFRefine
-import ConAgua.Arena.IndPos2SpecB
-import ConAgua.Arena.FVarRangeRefine
-import ConAgua.Census.Attr
 
 /-!
 # `consts_resolve_ffast` refines `constsResolveFFast`: the walk (lane `tails`)

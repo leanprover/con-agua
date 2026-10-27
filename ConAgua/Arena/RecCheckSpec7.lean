@@ -1,13 +1,13 @@
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPosSpec2A
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.RecStab
+import ConAgua.Arena.IndPosSpec.CtxFields
+import ConAgua.Arena.IndPosSpec.RpGoStep
 
 /-!
 # `RecCheck`: `targetAbsGo`, `targetAbs` (lane `indproofs2`, helper `rec3`)
 
 The member abstraction, one memoised DAG walk (memo `ta`: array `TAM`, `CTL[212]`). The shape is
-`IndPos2SpecD.lean`'s `replace_apps_go` (an `EIdx`-valued memo, the interning arms through `rpMkW`):
+`IndPosSpec/MkLook.lean`'s `replace_apps_go` (an `EIdx`-valued memo, the interning arms through `rpMkW`):
 word models by exec fuel, the L specs by `vcgen`, the relational lemma by strong induction.
 -/
 

@@ -1,6 +1,6 @@
 import ConAgua.Arena.RecClassSpecI
-import ConAgua.Arena.IndPos2SpecF
 import ConAgua.Arena.RecClassSpecG
+import ConAgua.Arena.IndPosSpec.SnocWStage
 
 /-!
 # `RecClass`: `classGenRecTy` (lane `indproofs2`, helper `rec2`)

@@ -1,11 +1,12 @@
 import ConRon.Bridge.Inductives.Positivity
-import ConAgua.Arena.IndPos2SpecR
 import ConAgua.Arena.TwinStep
+import ConAgua.Arena.IndPosSpec.OneK
+import ConAgua.Arena.IndPosSpec.WalkOK
 
 /-!
 # The positivity walk under `StageC`: the statements (lane `indstaget`, helper `indstaget-pos`)
 
-The `StageC` companions of `IndPos2SpecR`'s predicates: each function of the `nestPos` block, its
+The `StageC` companions of `IndPosSpec/WalkOK`'s predicates: each function of the `nestPos` block, its
 model at `realCall p` and exec fuel `n`, simulated by the twin from `StageC` (the stage relation
 with con-ron's `CheckOK`) and con-ron's preconditions of the twin op (`Bridge/Inductives/
 Positivity.lean`: the context, the frame stack, the inputs and the walk's state denoting, the

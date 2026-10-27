@@ -1,11 +1,11 @@
-import ConAgua.Arena.IndPos2SpecA
 import ConAgua.Arena.IndSumSpec2A
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 
 /-!
 # Refinements of `IndSum`, third file (lane `indproofs`)
 
 Functions of `IndSum.lean` that call into `IndPos` (`close_telescope`, helper `pos`'s
-`IndPos2Spec.lean`): `check_sum_tele_slow`, `check_sum_tele`.
+`IndPosSpec/DepthGo.lean`): `check_sum_tele_slow`, `check_sum_tele`.
 -/
 
 noncomputable section

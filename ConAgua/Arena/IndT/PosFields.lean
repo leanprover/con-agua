@@ -1,11 +1,12 @@
 import ConAgua.Arena.IndT.PosDefs
-import ConAgua.Arena.IndPos2SpecS
 import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.IndPosSpec.GgW2
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 
 /-!
 # `nest_fields` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`fieldsOK_step`'s proof (`IndPos2SpecS`) with the twin side of con-ron's `nestFields_spec`: the
+`fieldsOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestFields_spec`: the
 field's domain walked (the block's `PosOKC` at `n`, con-ron's `nestPos_spec` on its run for the
 walked domain's and the state's denotations), its variable interned (`internFVarE_run`), the body
 opened (`instantiate1Fast_run`), the rest by the block's `FieldsOKC` at `n`.

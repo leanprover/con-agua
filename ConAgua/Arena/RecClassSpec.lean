@@ -1,8 +1,6 @@
 import ConAgua.Arena.IndRealOpf3
 import ConAgua.Arena.RecClassSpecA
 
-/-! Continued from `RecClassSpecB.lean` (split by size; lane `indproofs`). -/
-
 noncomputable section
 
 set_option experimental.vcgen true

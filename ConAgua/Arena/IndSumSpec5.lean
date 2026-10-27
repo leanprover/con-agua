@@ -1,11 +1,10 @@
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPos2SpecB
+import ConAgua.Arena.IndPosSpec.NodeV
 
 /-!
 # Refinements of `IndSum`, fifth file (lane `indproofs`, helper `memo`)
 
 The memoised walks of `IndSum.lean`: `mentions_const_go` / `mentions_const` (twins `mentionsConstGo`,
-`mentionsConst`), `has_loose_b_var_b_*` and `struct_used_later_*`. The shape is `IndPos2Spec.lean`'s
+`mentionsConst`), `has_loose_b_var_b_*` and `struct_used_later_*`. The shape is `IndPosSpec/DepthGo.lean`'s
 `mentions_any_go` (`e_view`, a memo of `Bool`s keyed by the node).
 -/
 

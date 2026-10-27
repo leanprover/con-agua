@@ -1,17 +1,14 @@
-import ConAgua.Arena.DeclDivMod10
 import ConAgua.Arena.DeclCrpT
-import ConAgua.Arena.StageTLift
-import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.IndRealWalkT
-import ConRon.Bridge.Checker.DivMod
-import ConAgua.Arena.DeclDivMod4
+import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
+import ConAgua.Arena.DeclDivModSpec.CertDivModEqs
+import ConAgua.Arena.DeclDivModSpec.CertTwoEqs
+import ConAgua.Arena.DeclDivModSpec.SubstConst0List
 
 /-!
 # The `Nat.div`-family pin gate under `StageC`, part 1: the guards (lane `loopt3`, `loopt3-div`)
 
 `div_mod_pin_guard` (`pgC`) and `div_mod_cert_guard` (`cgC`) under `StageC`: their leaves by their
-`StageR` refinements (`DeclDivMod*.lean`), the leaves' write set and con-ron's step lemmas
+`StageR` refinements (`DeclDivModSpec/`), the leaves' write set and con-ron's step lemmas
 (`StageC.of_core`), the walks the stubs stand for by their `StageT` refinements (`IndRealWalkT.lean`, `apdF_okT`,
 `crfF_okT` with `consts_resolve_ffast`'s memo threaded: `CrKeep`, `CrOKFrame.lean`)
 and con-ron's `RunsC` lemmas (`lbbF_runsC`, `hasFvarF_runsC`, `alpd0_runsC`, `crF_runsC`). The twin

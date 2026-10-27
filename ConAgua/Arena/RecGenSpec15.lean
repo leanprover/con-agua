@@ -1,6 +1,6 @@
 import ConAgua.Arena.RecGenSpec14
-import ConAgua.Arena.IndPos2SpecV
-import ConAgua.Arena.IndPosSpec7
+import ConAgua.Arena.IndPosSpec.NestSeedOf
+import ConAgua.Arena.IndPosSpec.NestSeeds
 
 /-!
 # `classSeeds` (lane `indproofs3`, helper `indproofs3-pos-cls`)
