@@ -64,8 +64,8 @@ def RecsOK (m : Mem) (ds : Array IDeclaration) : Prop :=
   ∀ x < ds.size, RecOK (m.arr64 DECL) (m.arr64 DLP) x
 
 theorem RecsOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {ds : Array IDeclaration}
-    (h : RecsOK m ds) (hf : MemFrame A C m m') (hD : DECL ∉ A) (hP : DLP ∉ A) : RecsOK m' ds := by
-  rw [RecsOK, hf.1 DECL hD (by decide), hf.1 DLP hP (by decide)]; exact h
+    (h : RecsOK m ds) (hf : MemFrame A C m m') (hD : (DECL : TieredArray) ∉ A) (hP : (DLP : TieredArray) ∉ A) : RecsOK m' ds := by
+  rw [RecsOK, hf.1 _ hD (by decide), hf.1 _ hP (by decide)]; exact h
 
 /-- Before: the arena and the blank parse state. -/
 def BP0 (a : AState) (m : Mem) : Prop :=
@@ -88,14 +88,11 @@ def BP3 (a : AState) (m : Mem) : Prop :=
     StateDR m (StateD.blank.pre st.decls) ∧ TwinFacts a' ∧ (rdW (m.arr64 CTL) 240).toNat = st.decls.size ∧
     RecsOK m st.decls ∧ ModeOK m
 
-theorem setIn_arr8_zero (m : Mem) (x : Array UInt8) (h : m.HasB IN) : (m.setIn x).arr8 0 = x := by
-  simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, show 0 < m.bytes.size from h]
-
 theorem setIn_frame (m : Mem) (x : Array UInt8) : MemFrame [] [] m (m.setIn x) :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
 
 theorem setIn_frame' (m : Mem) (x : Array UInt8) : MemFrame [] [] (m.setIn x) m :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
 
 theorem preIn_eq : preIn = preludeText.data := by
   simp only [preIn, preludeBytes_eq, Array.toArray_toList]
@@ -128,7 +125,7 @@ theorem bp_h1 (h64 : System.Platform.numBits = 64) (a : AState) :
   refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun ⟨hA, hD, ht, hpool, h0, hmo⟩ hr0 => ?_⟩
   subst hs
   have hQ := L.Front.frontRunOK_checker #[] preludeText h64 preludeText_size n (s.setIn preIn)
-    (by show (s.mem.setIn preIn).arr8 0 = _; rw [setIn_arr8_zero _ _ h0, preIn_eq]) hpool a
+    (by show (s.mem.setIn preIn).arr8 0 = _; rw [Mem.arr8_setIn_zero, preIn_eq]) hpool a
     (ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) hA)
     (by rw [blank_pre_empty]; exact hD.frame (setIn_frame _ _) (by simp) (by simp)) ht.ok ht.off
     ht.pins (fun x hx => absurd hx (by simp)) (ModeOK.frame hmo (setIn_frame _ _) (by simp) (by simp))
