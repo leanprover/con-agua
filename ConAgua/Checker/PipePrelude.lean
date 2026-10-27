@@ -70,7 +70,7 @@ theorem RecsOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {ds : Array I
 /-- Before: the arena and the blank parse state. -/
 def BP0 (a : AState) (m : Mem) : Prop :=
   ArenaD m a ∧ StateDR m StateD.blank ∧ TwinFacts a ∧ (m.arr64 POOL).size < 2 ^ 63 ∧
-    0 < m.bytes.size ∧ ModeOK m
+    m.HasB IN ∧ ModeOK m
 
 /-- After `pre_front_run`. -/
 def BP1 (a : AState) (m : Mem) : Prop :=
@@ -88,14 +88,14 @@ def BP3 (a : AState) (m : Mem) : Prop :=
     StateDR m (StateD.blank.pre st.decls) ∧ TwinFacts a' ∧ (rdW (m.arr64 CTL) 240).toNat = st.decls.size ∧
     RecsOK m st.decls ∧ ModeOK m
 
-theorem setIn_arr8_zero (m : Mem) (x : Array UInt8) (h : 0 < m.bytes.size) : (m.setIn x).arr8 0 = x := by
-  simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, h]
+theorem setIn_arr8_zero (m : Mem) (x : Array UInt8) (h : m.HasB IN) : (m.setIn x).arr8 0 = x := by
+  simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, show 0 < m.bytes.size from h]
 
 theorem setIn_frame (m : Mem) (x : Array UInt8) : MemFrame [] [] m (m.setIn x) :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
 
 theorem setIn_frame' (m : Mem) (x : Array UInt8) : MemFrame [] [] (m.setIn x) m :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
 
 theorem preIn_eq : preIn = preludeText.data := by
   simp only [preIn, preludeBytes_eq, Array.toArray_toList]

@@ -79,7 +79,7 @@ theorem ccW_get {n : Nat} {m m1 : Mem} {off q k cl : Word}
     (hd : (q + k).toNat + cl.toNat ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     cl = rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) ∧
     (∀ b, b ≠ IW → m1.arr64 b = m.arr64 b) ∧ (m1.arr64 IW).size = (m.arr64 IW).size ∧
-    m1.words.size = m.words.size ∧
+    m.SameShape m1 ∧
     ∀ i, (m1.arr64 IW)[i]? =
       if (q + k).toNat ≤ i ∧ i < (q + k).toNat + cl.toNat then
         (m.arr64 IW)[(rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2)).toNat + (i - (q + k).toNat)]?
@@ -167,7 +167,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       (∀ i, ¬ (q.toNat + k.toNat ≤ i ∧ i < q.toNat + k.toNat + ws.length) →
         (mf.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
       (∀ b, b ≠ IW → mf.arr64 b = m.arr64 b) ∧ (mf.arr64 IW).size = (m.arr64 IW).size ∧
-      mf.words.size = m.words.size := by
+      m.SameShape mf := by
   induction n with
   | zero => intro m0 m mf off l q k ms h; simp [acGoW] at h
   | succ n ih =>
@@ -180,7 +180,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
         have := decPL_length _ (show decPL _ _ _ _ = _ from hmsB)
         rw [hl] at this; simpa using this
       subst hmsn
-      exact ⟨[], rfl, fun i hi => absurd hi (by simp), rfl, fun i _ => rfl, fun _ _ => rfl, rfl, rfl⟩
+      exact ⟨[], rfl, fun i hi => absurd hi (by simp), rfl, fun i _ => rfl, fun _ _ => rfl, rfl, .refl _⟩
     · obtain ⟨j', hj'⟩ : ∃ j', l.toNat = j' + 1 := by
         have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
         exact ⟨l.toNat - 1, by omega⟩
@@ -252,7 +252,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
         (by show decPL _ _ _ _ = _; rw [hoff1, hl1]; exact decPL_tail hdB)
         (by rw [hkc, hS1]; omega)
       refine ⟨wsj ++ wsr, by rw [List.length_append, hlj, hlr, hrestsum], fun i hi => ?_, ?_, fun i hi => ?_,
-        fun b hb => (hAr b hb).trans (hA b hb), hSr.trans hS1, hWr.trans hW1⟩
+        fun b hb => (hAr b hb).trans (hA b hb), hSr.trans hS1, hW1.trans hWr⟩
       · by_cases hi1 : i < wsj.length
         · rw [List.getElem_append_left hi1]
           have e1 := hor (q.toNat + k.toNat + i) (by rw [hkc]; omega)

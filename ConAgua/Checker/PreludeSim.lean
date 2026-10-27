@@ -116,9 +116,9 @@ theorem _root_.L.Mem.arr8_setIn_ne {m : Mem} {x : Array UInt8} {a : ArrId} (ha :
     (m.setIn x).arr8 a = m.arr8 a := by
   simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds_ne, Ne.symm ha]
 
-theorem _root_.L.Mem.arr8_setIn_zero {m : Mem} {x : Array UInt8} (h : 0 < m.bytes.size) :
+theorem _root_.L.Mem.arr8_setIn_zero {m : Mem} {x : Array UInt8} (h : m.HasB IN) :
     (m.setIn x).arr8 0 = x := by
-  simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, h]
+  simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, show 0 < m.bytes.size from h]
 
 theorem _root_.L.Mem.set8_setIn {m : Mem} {x : Array UInt8} {a : ArrId} (ha : a ≠ 0) (i v : Word) :
     (m.set8 a i v).setIn x = (m.setIn x).set8 a i v := by
@@ -173,8 +173,8 @@ theorem Keep.of_mem {s s1 : St} (h : s1.mem = s.mem) : Keep s s1 := by
 theorem Keep.trans {s s1 s2 : St} (h1 : Keep s s1) (h2 : Keep s1 s2) : Keep s s2 :=
   ⟨h2.1.trans h1.1, h2.2.trans h1.2⟩
 
-theorem Keep.pos {s s1 : St} (h : Keep s s1) (h0 : 0 < s.mem.bytes.size) : 0 < s1.mem.bytes.size :=
-  h.2 ▸ h0
+theorem Keep.pos {s s1 : St} (h : Keep s s1) (h0 : s.mem.HasB IN) : s1.mem.HasB IN := by
+  unfold Mem.HasB at *; rw [h.2]; exact h0
 
 theorem pure_run_ok {α : Type} {a b : α} {s s1 : St} (h : (pure a : M α).run s = .ok (b, s1)) :
     a = b ∧ s = s1 := by
@@ -190,14 +190,14 @@ theorem keep_sim {X : Prop} {s s1 s2 : St} (hK : Keep s s1) (H : X ∧ Keep s1 s
 /-! ## Expressions and conditions -/
 
 /-- `ce` on `s` evaluates as `oe` on `s` with the input replaced. -/
-def ERel (ce oe : Expr) : Prop := ∀ (s : St) (v : Word) (s1 : St), 0 < s.mem.bytes.size →
+def ERel (ce oe : Expr) : Prop := ∀ (s : St) (v : Word) (s1 : St), s.mem.HasB IN →
   (evalE ce).run s = .ok (v, s1) → s = s1 ∧ (evalE oe).run (s.setIn preIn) = .ok (v, s.setIn preIn)
 
-def CRel (cc co : Cond) : Prop := ∀ (s : St) (v : Bool) (s1 : St), 0 < s.mem.bytes.size →
+def CRel (cc co : Cond) : Prop := ∀ (s : St) (v : Bool) (s1 : St), s.mem.HasB IN →
   (evalC cc).run s = .ok (v, s1) → s = s1 ∧ (evalC co).run (s.setIn preIn) = .ok (v, s.setIn preIn)
 
 def ARel (ces oes : List Expr) : Prop := ∀ (s : St) (v : List Word) (s1 : St),
-  0 < s.mem.bytes.size → (evalArgs ces).run s = .ok (v, s1) →
+  s.mem.HasB IN → (evalArgs ces).run s = .ok (v, s1) →
     s = s1 ∧ (evalArgs oes).run (s.setIn preIn) = .ok (v, s.setIn preIn)
 
 theorem ERel.bin {op : BinOp} {ca cb oa ob : Expr} (ha : ERel ca oa) (hb : ERel cb ob) :
@@ -226,7 +226,7 @@ theorem ERel.cmpw {c : Cmp} {ca cb oa ob : Expr} (ha : ERel ca oa) (hb : ERel cb
 
 /-- An index expression followed by a stateless read that agrees on the two states. -/
 theorem ERel.load {ci oi : Expr} (hi : ERel ci oi) {fc fo : Word → M Word}
-    (hf : ∀ (s : St) (j v : Word) (s1 : St), 0 < s.mem.bytes.size → (fc j).run s = .ok (v, s1) →
+    (hf : ∀ (s : St) (j v : Word) (s1 : St), s.mem.HasB IN → (fc j).run s = .ok (v, s1) →
       s = s1 ∧ (fo j).run (s.setIn preIn) = .ok (v, s.setIn preIn))
     {ec eo : Expr} (hc : ∀ s, (evalE ec).run s = (evalE ci >>= fc).run s)
     (ho : ∀ s, (evalE eo).run s = (evalE oi >>= fo).run s) : ERel ec eo := by
@@ -303,7 +303,7 @@ theorem erel_ldc {d : List UInt8} {ci oi : Expr} (hi : ERel ci oi) : ERel (.ldc 
 /-- A stateless leaf expression whose value on the renamed state is the copy's. -/
 theorem erel_leaf {ec eo : Expr} (fc fo : St → Word) (hc : ∀ s, (evalE ec).run s = .ok (fc s, s))
     (ho : ∀ s, (evalE eo).run s = .ok (fo s, s))
-    (hf : ∀ s, 0 < s.mem.bytes.size → fo (s.setIn preIn) = fc s) : ERel ec eo := by
+    (hf : ∀ s, s.mem.HasB IN → fo (s.setIn preIn) = fc s) : ERel ec eo := by
   intro s v s1 h0 h
   rw [hc] at h
   simp only [Except.ok.injEq, Prod.mk.injEq] at h
@@ -331,7 +331,7 @@ theorem erel_len64t {a : ArrId} {ct ot : Expr} (ht : ERel ct ot) :
   exact ⟨this.1, run_bind_of h1' this.2⟩
 
 /-- A byte source of the copy reads, on a state, what the original's reads on the renamed state. -/
-def BRel (cb ob : BSrc) : Prop := ∀ s : St, 0 < s.mem.bytes.size → (s.setIn preIn).mem.src8 ob = s.mem.src8 cb
+def BRel (cb ob : BSrc) : Prop := ∀ s : St, s.mem.HasB IN → (s.setIn preIn).mem.src8 ob = s.mem.src8 cb
 
 theorem brel_preB : ∀ b, BRel (preB b) b
   | .arr a, s, h0 => by
@@ -420,7 +420,7 @@ theorem erel_noIn : ∀ e, e.noIn = true → ERel e e
     simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_ne h]
 
 /-- A block operand of the copy names, on a state, the original's array on the renamed state. -/
-def WRel (cw ow : WArr) : Prop := ∀ (s : St) (a : ArrId) (s1 : St), 0 < s.mem.bytes.size →
+def WRel (cw ow : WArr) : Prop := ∀ (s : St) (a : ArrId) (s1 : St), s.mem.HasB IN →
   (warr cw).run s = .ok (a, s1) → s = s1 ∧ (warr ow).run (s.setIn preIn) = .ok (a, s.setIn preIn)
 
 theorem wrel_of {ct ot : Expr} (ht : ERel ct ot) (a : ArrId) : WRel (.tier a ct) (.tier a ot) := by
@@ -658,7 +658,7 @@ theorem sim_noIn {t : NTree} {S : FnName → Bool} : ∀ s : Stmt, s.noIn = true
 
 /-- `k` runs the copy `c` as the original `o`. -/
 def KRel (k : Stmt → M Sig) (c o : Stmt) : Prop := ∀ (s : St) (r : Sig) (s1 : St),
-  0 < s.mem.bytes.size → (k c).run s = .ok (r, s1) →
+  s.mem.HasB IN → (k c).run s = .ok (r, s1) →
     (k o).run (s.setIn preIn) = .ok (r, s1.setIn preIn) ∧ Keep s s1
 
 theorem lookupFn_ok {p : Prog} {f : FnName} {s : St} {fd : FunDecl} {s1 : St}
@@ -677,7 +677,7 @@ theorem lookupFn_run {p : Prog} {f : FnName} {fd : FunDecl} (h : p.lookup f = so
   unfold lookupFn; rw [h]; rfl
 
 theorem callFn_sim {k : Stmt → M Sig} {dc dd : FunDecl} (hk : KRel k dc.body dd.body)
-    (vs : List Word) (s : St) (r : List Word) (s1 : St) (h0 : 0 < s.mem.bytes.size)
+    (vs : List Word) (s : St) (r : List Word) (s1 : St) (h0 : s.mem.HasB IN)
     (h : (callFn k dc vs).run s = .ok (r, s1)) :
     (callFn k dd vs).run (s.setIn preIn) = .ok (r, s1.setIn preIn) ∧ Keep s s1 := by
   unfold callFn at h ⊢
@@ -707,7 +707,7 @@ def KSim (p : Prog) (t : NTree) (S : FnName → Bool) (n : Nat) : Prop :=
 
 theorem invoke_sim_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (n : Nat) (ih : KSim p t S n) (g : FnName) (hg : isCopied t g = true) (vs : List Word) (s : St)
-    (r : List Word) (s1 : St) (h0 : 0 < s.mem.bytes.size)
+    (r : List Word) (s1 : St) (h0 : s.mem.HasB IN)
     (h : (invoke p (exec p n) ("pre_" ++ g) vs).run s = .ok (r, s1)) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .ok (r, s1.setIn preIn) ∧ Keep s s1 := by
   unfold invoke at h ⊢
@@ -721,7 +721,7 @@ theorem invoke_sim_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSi
 
 theorem invoke_sim_shared {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (n : Nat) (ih : KSim p t S n) (g : FnName) (hg : S g = true) (vs : List Word) (s : St)
-    (r : List Word) (s1 : St) (h0 : 0 < s.mem.bytes.size)
+    (r : List Word) (s1 : St) (h0 : s.mem.HasB IN)
     (h : (invoke p (exec p n) g vs).run s = .ok (r, s1)) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .ok (r, s1.setIn preIn) ∧ Keep s s1 := by
   unfold invoke at h ⊢
@@ -1009,7 +1009,7 @@ theorem ksim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S
 /-- **The simulation.** -/
 theorem preSim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S) (n : Nat)
     (f : FnName) (hf : isCopied t f = true) (vs : List Word) (s : St) (r : List Word) (s' : St)
-    (h0 : 0 < s.mem.bytes.size)
+    (h0 : s.mem.HasB IN)
     (h : (invoke p (exec p n) ("pre_" ++ f) vs).run s = .ok (r, s')) :
     (invoke p (exec p n) f vs).run (s.setIn preIn) = .ok (r, s'.setIn preIn) ∧
       s'.mem.arr8 0 = s.mem.arr8 0 := by
@@ -1019,7 +1019,7 @@ theorem preSim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t
 /-- **A spec of `f` is a spec of its copy**, on the memory with the prelude's bytes as input. -/
 theorem preSim_triple {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (n : Nat) (f : FnName) (hf : isCopied t f = true) (vs : List Word)
-    (s₀ : St) (h0 : 0 < s₀.mem.bytes.size) {Q : List Word → St → Prop}
+    (s₀ : St) (h0 : s₀.mem.HasB IN) {Q : List Word → St → Prop}
     (hQ : ⦃fun s => s = s₀.setIn preIn⦄ invoke p (exec p n) f vs ⦃fun r s => Q r s; ⊤⦄) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) ("pre_" ++ f) vs
     ⦃fun r s => Q r (s.setIn preIn) ∧ s.mem.arr8 0 = s₀.mem.arr8 0; ⊤⦄ := by

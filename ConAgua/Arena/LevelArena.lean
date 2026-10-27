@@ -276,7 +276,7 @@ theorem HeapExt.memFrame {m m' : Mem} (h : HeapExt m m') : MemFrame [LH] [192] m
 
 theorem reset_frame (m : Mem) : MemFrame [] [192] m (m.set64 CTL 192 0) := by
   refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_, fun b => size_set64L _ _ _ _ _,
-    Mem.words_size_set64 _ _ _ _⟩
+    Mem.sameShape_set64 _ _ _ _⟩
   rw [rdW_set64L]; simp only [List.mem_singleton] at hx; simp [Ne.symm hx]
 
 theorem lh_not_arena : ∀ b ∈ [LH], b ∉ arenaArrs := by decide
