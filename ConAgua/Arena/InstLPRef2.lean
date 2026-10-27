@@ -74,7 +74,7 @@ def FireR (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjL
 
 /-- What `rec_fire_levels` writes. -/
 abbrev rflArrs : List TieredArray :=
-  LH :: SPN :: POOL :: POOL1 :: LSREC :: LSSLOT :: LSHP :: (tier1 LSREC) :: (tier1 LSSLOT) :: (tier1 LSHP) :: lvArrs
+  (LH : TieredArray) :: (SPN : TieredArray) :: (POOL : TieredArray) :: (POOL1 : TieredArray) :: (LSREC : TieredArray) :: (LSSLOT : TieredArray) :: (LSHP : TieredArray) :: (tier1 LSREC) :: (tier1 LSSLOT) :: (tier1 LSHP) :: lvArrs
 abbrev rflCtl : List Word := 136 :: 192 :: 0 :: 40 :: 41 :: lvCtl
 
 /-- **What a run of `rec_fire_levels` gives**: the twin's state and the memory facts a core

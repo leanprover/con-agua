@@ -83,7 +83,7 @@ theorem ArenaA.amemo_clear (m : Mem) (a : AState) (hA : ArenaA m a)
 
 /-- **`AbsR` survives a writer apart from it, if the twin's memo did not move.** -/
 theorem AbsR.across {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : AState}
-    (hR : AbsR m a) (hf : MemFrame A C m m') (hA : ABMEMO ∉ A) (hC : (48 : Word) ∉ C)
+    (hR : AbsR m a) (hf : MemFrame A C m m') (hA : (ABMEMO : TieredArray) ∉ A) (hC : (48 : Word) ∉ C)
     (he : a'.memos.abs1C = a.memos.abs1C) : AbsR m' a' := by
   unfold AbsR; rw [he]
   exact memoRG_frame abSch abSch_wf lfKey decE A C hA hC m m' hf _ hR

@@ -26,7 +26,7 @@ open L.Arena
 /-! ## Frames of the expression constructors -/
 
 /-- The expression interner's frame: the store tier, the stack, the memo and its handle set. -/
-def ExprA : List TieredArray := RMEMO :: RSET :: RomA
+def ExprA : List TieredArray := (RMEMO : TieredArray) :: (RSET : TieredArray) :: RomA
 def ExprC : List Word := 132 :: 148 :: 149 :: RomC
 
 theorem frame_exprA {m m' : Mem} (h : MemFrame RomA RomC m m') : MemFrame ExprA ExprC m m' :=

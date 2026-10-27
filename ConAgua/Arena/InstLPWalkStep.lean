@@ -68,14 +68,14 @@ theorem ilw_internE {v : ENodeView} {A : List TieredArray} {C : List Word} (r : 
     (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
     (hmWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
-    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
+    (hscA : (SOREC : TieredArray) ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
       by decide)
     (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
-    (hSA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
+    (hSA : (SPN : TieredArray) ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
     (hSC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
-    (hL : LvlFree C := by lvl_free) (hP1 : POOL1 ∉ A := by decide) (hPT : PT0 ∉ A := by decide) :
+    (hL : LvlFree C := by lvl_free) (hP1 : (POOL1 : TieredArray) ∉ A := by decide) (hPT : (PT0 : TieredArray) ∉ A := by decide) :
     ILWStep (internE v) a dn m m' vis fe M eb r := by
   have hrun := AM.run_of_ok _ _ hok
   have hk := Keeps.run (keepsW_internE v) hrun

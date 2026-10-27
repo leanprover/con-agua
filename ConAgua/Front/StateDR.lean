@@ -167,8 +167,8 @@ theorem MemFrame.modeOK {A : List TieredArray} {C : List Word} {m m' : Mem} (hf 
 /-- `StateDR` reads only the id tables (arrays `64‥66`, `72‥74`, `CTL` words `64‥72`) and
 `DECL`, `DLP`. -/
 theorem StateDR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {st : StateD}
-    (hf : MemFrame A C m m') (_hn : NID ∉ A) (_hl : LID ∉ A) (_he : EID ∉ A := by tapart)
-    (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart)
+    (hf : MemFrame A C m m') (_hn : (NID : TieredArray) ∉ A) (_hl : (LID : TieredArray) ∉ A) (_he : (EID : TieredArray) ∉ A := by tapart)
+    (hd : (DECL : TieredArray) ∉ A := by tapart) (hq : (DLP : TieredArray) ∉ A := by tapart)
     (hs : ∀ x ∈ A, x ∉ idArrs := by tctl) (hc : ∀ x ∈ C, x ∉ idCtl := by tctl)
     (h : StateDR m st) : StateDR m' st :=
   ⟨h.names.frame hf (.inl rfl) hs hc, h.levels.frame hf (.inr (.inl rfl)) hs hc,
@@ -184,7 +184,7 @@ theorem DerR.congrSt {m : Mem} {a a' : AState} (hp : a'.store.pers = a.store.per
 
 /-- A memory frame that leaves the five derived arrays alone keeps `DerR`. -/
 theorem DerR.frameT {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, (b < 42 ∨ 46 < b) ∧ (b < 298 ∨ 302 < b)) (hD : DerR m a) :
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b.arr < 42 ∨ 46 < b.arr) (hD : DerR m a) :
     DerR m' a :=
   DerR.frameM A C m m' hf hA a hD
 
@@ -212,11 +212,11 @@ theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a
 
 /-- Name id `i` bound to `w` after a frame: the name table with `i` bound to `w`. -/
 theorem StateDR.putName {A : List TieredArray} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
-    (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (i w : Word)
+    (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : (NID : TieredArray) ∉ A) (hl : (LID : TieredArray) ∉ A) (i w : Word)
     (hp : tblPutW m₁ NID i w = some m₂) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.names.get? j = if j = i.toNat then some (decI w) else st.names.get? j)
-    (hlv : st'.levels = st.levels) (hex : st'.exprs = st.exprs) (he : EID ∉ A := by tapart)
-    (hdc : st'.decls = st.decls := by rfl) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart)
+    (hlv : st'.levels = st.levels) (hex : st'.exprs = st.exprs) (he : (EID : TieredArray) ∉ A := by tapart)
+    (hdc : st'.decls = st.decls := by rfl) (hd : (DECL : TieredArray) ∉ A := by tapart) (hq : (DLP : TieredArray) ∉ A := by tapart)
     (hs : ∀ x ∈ A, x ∉ idArrs := by tctl) (hc : ∀ x ∈ C, x ∉ idCtl := by tctl) :
     StateDR m₂ st' := by
   have h₁ := h.frame hf hn hl he hd hq hs hc
@@ -230,11 +230,11 @@ theorem StateDR.putName {A : List TieredArray} {C : List Word} {m m₁ m₂ : Me
 
 /-- Level id `i` bound to `w` after a frame: the level table with `i` bound to `w`. -/
 theorem StateDR.putLevel {A : List TieredArray} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
-    (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (i w : Word)
+    (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : (NID : TieredArray) ∉ A) (hl : (LID : TieredArray) ∉ A) (i w : Word)
     (hp : tblPutW m₁ LID i w = some m₂) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.levels.get? j = if j = i.toNat then some (decI w) else st.levels.get? j)
-    (hnm : st'.names = st.names) (hex : st'.exprs = st.exprs) (he : EID ∉ A := by tapart)
-    (hdc : st'.decls = st.decls := by rfl) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart)
+    (hnm : st'.names = st.names) (hex : st'.exprs = st.exprs) (he : (EID : TieredArray) ∉ A := by tapart)
+    (hdc : st'.decls = st.decls := by rfl) (hd : (DECL : TieredArray) ∉ A := by tapart) (hq : (DLP : TieredArray) ∉ A := by tapart)
     (hs : ∀ x ∈ A, x ∉ idArrs := by tctl) (hc : ∀ x ∈ C, x ∉ idCtl := by tctl) :
     StateDR m₂ st' := by
   have h₁ := h.frame hf hn hl he hd hq hs hc
@@ -248,11 +248,11 @@ theorem StateDR.putLevel {A : List TieredArray} {C : List Word} {m m₁ m₂ : M
 
 /-- Expression id `i` bound to `w` after a frame: the expression table with `i` bound to `w`. -/
 theorem StateDR.putExpr {A : List TieredArray} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
-    (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A)
+    (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : (NID : TieredArray) ∉ A) (hl : (LID : TieredArray) ∉ A) (he : (EID : TieredArray) ∉ A)
     (i w : Word) (hp : tblPutW m₁ EID i w = some m₂) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.exprs.get? j = if j = i.toNat then some (decI w) else st.exprs.get? j)
     (hnm : st'.names = st.names) (hlv : st'.levels = st.levels)
-    (hdc : st'.decls = st.decls := by rfl) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart)
+    (hdc : st'.decls = st.decls := by rfl) (hd : (DECL : TieredArray) ∉ A := by tapart) (hq : (DLP : TieredArray) ∉ A := by tapart)
     (hs : ∀ x ∈ A, x ∉ idArrs := by tctl) (hc : ∀ x ∈ C, x ∉ idCtl := by tctl) :
     StateDR m₂ st' := by
   have h₁ := h.frame hf hn hl he hd hq hs hc
@@ -486,9 +486,9 @@ theorem levelFinish {A : List TieredArray} {C : List Word} (i w : Word) (r : Lev
     (m₁ m₂ : Mem) (hX : parseLevelEntryD st i.toNat r =
       (x >>= fun l => pure { st with levels := st.levels.insert i.toNat l }))
     (hok : AM.ok x a) (hR₁ : ArenaD m₁ (AM.st x a)) (hres : AM.res x a = decI w)
-    (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A)
+    (hf : MemFrame A C m m₁) (hn : (NID : TieredArray) ∉ A) (hl : (LID : TieredArray) ∉ A) (he : (EID : TieredArray) ∉ A)
     (hp : tblPutW m₁ LID i w = some m₂)
-    (hw : w.toNat < 2 ^ 32) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart)
+    (hw : w.toNat < 2 ^ 32) (hd : (DECL : TieredArray) ∉ A := by tapart) (hq : (DLP : TieredArray) ∉ A := by tapart)
     (hs : ∀ x ∈ A, x ∉ idArrs := by tctl) (hc : ∀ x ∈ C, x ∉ idCtl := by tctl)
     (h0 : (0 : Word) ∉ C := by t01) (h1 : (1 : Word) ∉ C := by t01) :
     AM.ok (parseLevelEntryD st i.toNat r) a ∧

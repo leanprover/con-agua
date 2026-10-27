@@ -24,13 +24,13 @@ open L.Arena L.Compiler
 names_tree coreTree : coreFns
 
 /-- The arrays of `coreErecA`, as a test. -/
-def coreErecPa (a : ArrId) : Bool := decide (a < 388) && a != EREC
+def coreErecPa (a : TieredArray) : Bool := checkerWordArrays.contains a && a != EREC
 
 /-- The `CTL` words of `coreErecC`, as a test. -/
 def coreErecPc (w : Word) : Bool := decide (w.toNat < 256)
 
-theorem coreErecPa_mem (a : ArrId) (h : coreErecPa a = true) : a ∈ coreErecA := by
-  simp only [coreErecPa, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at h
+theorem coreErecPa_mem (a : TieredArray) (h : coreErecPa a = true) : a ∈ coreErecA := by
+  simp only [coreErecPa, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
   simp [coreErecA, List.mem_filter, List.mem_range, h.1, h.2]
 
 theorem coreErecPc_mem (w : Word) (h : coreErecPc w = true) : w ∈ coreErecC := by

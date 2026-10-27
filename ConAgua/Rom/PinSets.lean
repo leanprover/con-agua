@@ -85,7 +85,7 @@ def PinSetsR (mem : Mem) (ips : List INatOpPinSet) : Prop :=
 
 /-- The frame of the stage: the record pool, its top, the variant list's header, and the
 expression reader's frame. -/
-def PinsA : List TieredArray := EREC :: ExprA
+def PinsA : List TieredArray := (EREC : TieredArray) :: ExprA
 def PinsC : List Word := 129 :: 150 :: 151 :: ExprC
 
 /-! ## Word arithmetic -/

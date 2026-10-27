@@ -104,7 +104,7 @@ theorem BKept.trans {m₁ m₂ m₃ : Mem} (h₁ : BKept m₁ m₂) (h₂ : BKep
   ⟨h₂.1.trans h₁.1, h₂.2.1.trans h₁.2.1, fun j hj => (h₂.2.2 j (h₁.1 ▸ hj)).trans (h₁.2.2 j hj)⟩
 
 theorem BKept.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
-    (hA : BSTK ∉ A) (hC : (137 : Word) ∉ C) : BKept m m' := by
+    (hA : (BSTK : TieredArray) ∉ A) (hC : (137 : Word) ∉ C) : BKept m m' := by
   have hb : m'.arr64 BSTK = m.arr64 BSTK := hf.1 BSTK hA (by decide)
   exact ⟨hf.2.1 137 hC, by rw [hb], fun j _ => by rw [hb]⟩
 
@@ -181,8 +181,8 @@ theorem PoolGrew.of_eq {m m' : Mem} (hp : m'.arr64 POOL = m.arr64 POOL)
     by rw [ht]; omega, ptop0_congr hpt⟩
 
 theorem PoolGrew.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
-    (hA : POOL ∉ A) (hC : (0 : Word) ∉ C) (hL : LvlFree C := by lvl_free)
-    (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) : PoolGrew m m' :=
+    (hA : (POOL : TieredArray) ∉ A) (hC : (0 : Word) ∉ C) (hL : LvlFree C := by lvl_free)
+    (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) : PoolGrew m m' :=
   PoolGrew.of_eq (hf.1 POOL hA (by decide)) (hf.1 POOL1 hA1 (by decide)) (hf.1 PT0 hA2 (by decide))
     (hf.top_eq hC) (LvlCnt.of_frame hf hL)
 
@@ -264,9 +264,9 @@ theorem StackKept.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht 
 
 /-- **A frame that avoids both stacks and the pool keeps them.** -/
 theorem StackKept.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
-    (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
+    (hA : (SPN : TieredArray) ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
-    (hL : LvlFree C := by lvl_free) (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) :
+    (hL : LvlFree C := by lvl_free) (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
@@ -275,8 +275,8 @@ theorem StackKept.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (
 
 /-- `StackKept.of_frame` for a writer of the level tables, their growth given (`hlc`). -/
 theorem StackKept.of_frameL {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
-    (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A) (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C)
-    (hlc : LvlCnt m m') (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) :
+    (hA : (SPN : TieredArray) ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A) (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C)
+    (hlc : LvlCnt m m') (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
@@ -289,7 +289,7 @@ theorem StackKept.of_frameL {m m' : Mem} {A : List TieredArray} {C : List Word} 
 theorem StackKept.of_frame_range {m m' : Mem} {A : List TieredArray} {C : List Word}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 1 ≤ b ∧ b < 144)
     (hC : ∀ x ∈ C, 1 ≤ x.toNat ∧ x.toNat < 136) (hL : LvlFree C := by lvl_free)
-    (hA2 : PT0 ∉ A := by decide) : StackKept m m' :=
+    (hA2 : (PT0 : TieredArray) ∉ A := by decide) : StackKept m m' :=
   StackKept.of_frame hf
     ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
      fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega,
@@ -309,9 +309,9 @@ theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
 /-- **A frame that avoids both stacks and appends to the pool** (`Grows` on the pool's part). -/
 theorem StackKept.of_frame_grows {m m₁ m' : Mem} {A : List TieredArray} {C : List Word}
     (hg : Grows m m₁) (hf : MemFrame A C m₁ m')
-    (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
+    (hA : (SPN : TieredArray) ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
-    (hL : LvlFree C := by lvl_free) (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) :
+    (hL : LvlFree C := by lvl_free) (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) :
     StackKept m m' := by
   exact (StackKept.of_grows hg).trans (StackKept.of_frame hf hA hC hL hA1 hA2)
 

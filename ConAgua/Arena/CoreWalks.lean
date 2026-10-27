@@ -202,11 +202,11 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hk : cpl a' = cpl a)
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64)
-    (hmem : CoreMemos m') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
-    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
+    (hmem : CoreMemos m') (hP : (POOL : TieredArray) ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
+    (hscA : (SOREC : TieredArray) ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
-      by decide) (hLv : LvlFree C := by lvl_free) (hP1 : POOL1 ∉ A := by decide)
-    (hPT : PT0 ∉ A := by decide) :
+      by decide) (hLv : LvlFree C := by lvl_free) (hP1 : (POOL1 : TieredArray) ∉ A := by decide)
+    (hPT : (PT0 : TieredArray) ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   simp only [cpl, Prod.mk.injEq] at hk
   obtain ⟨hc, hp, hl⟩ := hk

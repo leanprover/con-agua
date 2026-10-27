@@ -27,7 +27,7 @@ namespace L.Rom
 open L.Arena L.Ind
 
 /-- The arrays a reader writes: the ROM interner's, the records and the pool. -/
-def RciA : List TieredArray := EREC :: IW :: ExprA
+def RciA : List TieredArray := (EREC : TieredArray) :: (IW : TieredArray) :: ExprA
 /-- The `CTL` words a reader writes. -/
 def RciC : List Word := 129 :: 200 :: ExprC
 
