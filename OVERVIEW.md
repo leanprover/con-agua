@@ -656,7 +656,7 @@ persistent one, as con-ron's `promote` does.
 The **memos** (con-ron's per-call maps) are one generic library: a schema names
 the array and the stamp word, four words per slot, epoch stamps, growth at load
 3/4
-([`MemoLib`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L18-L45)).
+([`MemoLib`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L19-L46)).
 
 ### 6.3 The limb pool
 
