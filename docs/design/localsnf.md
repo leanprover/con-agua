@@ -37,3 +37,45 @@ an `if k = x` that `grind` decides by its literal arithmetic; a goal has tens of
 up to ~30 layers, in each of up to ~150 goals. In `simp`/`simp_all`, the same equation rewrites
 each layer (one rewrite, one `Nat` literal comparison, one `ite` reduction per layer and per
 read), again in every round of `simp_all`, and the proof term carries every step.
+
+## 2. Design
+
+Three candidates were on the table: a simproc that resolves reads through the chain, a different
+representation of the locals (in the frame or in `vcgen`'s output), and fixed `simp only` lemma
+sets. The representation change touches `L/Semantics.lean` and with it the compiler proofs and
+every spec; the lemma sets exist already (299 hand-written copies) and are what costs the time. The
+simproc needs no change to any statement and reaches `grind` as well as `simp`, so it came first,
+and the prototype (§2.1) left no reason to try the others.
+
+**`ConAgua/L/LocNF.lean`** has three simprocs, imported by `L/Logic.lean`, so every L proof has
+them:
+
+* `L.reduceLoc`: `St.loc s y` for a literal `y`. It walks the writes at the top of `s`: a
+  `setLoc x v` with a literal `x` gives `v` if `x = y` and is skipped otherwise; a `setLocs xs vs`
+  with a literal list of literal locals is stepped through one entry at a time (taking the entries
+  of `vs` when it is a literal list); a `setG` is skipped; a literal frame `St.mk m l` gives `l y`,
+  and an entry of a literal `Locals.init` list (or `0` past its end).
+* `L.reduceLocalsInit`: `Locals.init vs y` for a literal list `vs` and a literal `y`.
+* `L.reduceLocMem`: `St.mem s` through the writes to literal locals at the top of `s`.
+
+Each step is a small lemma (`loc_setLoc_eq`, `loc_setLoc_ne`, `loc_setLocs_cons_cons`, …,
+`mem_setLocs`) instantiated by hand, the literal comparisons are `Nat.beq` facts by `rfl`, and the
+proof is the chain of `Eq.trans`. The simprocs are registered for **`seval`**, the simproc set
+that `grind`'s normalizer runs on every term it internalizes, so `grind`, `finish` and `sym … =>
+vcgen … <;> finish` resolve each read once, when it enters the e-graph, instead of instantiating
+`St.setLoc_loc` once per layer and deciding an `if` per instance. Each is registered twice, before
+the subterms (`↓`) and after them (a read that appears only once a subterm is simplified, such as
+`(x, s).snd.loc 5`). `simp`, `simp_all` and `simp only` use them when listed.
+
+Decisions, each forced by a failure of the simpler version:
+
+* **Not in the default `simp` set.** With `[simp]`, every `simp [St.setLoc_loc, …]` list
+  (299 in 115 files) turns into unused-argument warnings, which fail CI, and `Arena.Store`'s
+  `simp_all` hits the recursion limit. As `seval` only, no `simp` call changes.
+* **Proofs, not definitional steps.** As `dsimproc`s (result definitionally equal, no proof) the
+  kernel has to check `chain.loc 7 ≡ v` on its own, and it unfolds the value side first: "deep
+  recursion" in `FVarRange`, `Walk`, `WalkScope`, `Inst1`, `InstListSpec`, `RomExpr`.
+* **Literal locals only.** A walk through `setLoc x v` with a variable `x` would rewrite the left
+  sides of the general equations themselves when they are registered as `grind` patterns
+  (`St.setLoc_mem`, `Scan.St.setLocs_mem`, `Locals.init_cons_zero`: "invalid pattern"). The
+  verification conditions only have literal locals.
