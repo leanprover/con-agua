@@ -187,7 +187,7 @@ theorem CoreS.set_in {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         inferC := a.caches.inferC.insert (decE e) (decE x) } } vis fe
       { M with inf := M.inf.insert (decE e, eb) (decE x) } eb ∧ StackKept m m' := by
-  have hf : MemFrame [99] [103] m m' := msetG_frame inSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
+  have hf : MemFrame [(INM : TieredArray)] [103] m m' := msetG_frame inSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   have c := hS.core
   exact hS.set_core hf ⟨c.wc.frame1 hf, c.wk.frame1 hf, c.wh.frame1 hf, c.inf.setE
     (coreSch_wf _ _ (by decide) (by decide)) c.eb1 e x he hx m' hs, c.io.frame1 hf, c.de.frame1 hf,
