@@ -137,9 +137,13 @@ theorem lgh_spec (p : Prog) (hp : p.lookup "lit_guard_has" = some litGuardHas)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_eq p hpin n] <;>
-      finish (gen := 20) [lghW]
+    vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, pinAt_eq p hpin n]
+    all_goals subst_vars
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
+      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true] at *)
+    all_goals grind [lang_grind, arena_grind, lghW]
 
 /-! ## `reserved_rec_name(x)` -/
 
