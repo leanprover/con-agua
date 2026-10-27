@@ -1,9 +1,10 @@
 import ConAgua.Arena.IndRealLvlC
+import ConAgua.Arena.IndPartsSpec.BpW
 
 /-!
 # `blockShape?`, `blockParts?` under `StageC`, `lvl_eq_c` the real call (lane `indproofs4`, helper `bp`)
 
-`IndPartsSpec15`'s sims read `lvl_eq_c` through `LvlHyp`: the call's `Sim` at the twin's prefix of
+`IndPartsSpec/PlW`'s sims read `lvl_eq_c` through `LvlHyp`: the call's `Sim` at the twin's prefix of
 `blockShape?` (`TshT`: the split, the counts, the reserved names, the result sort) and at the model's
 prefix (`AFr`). Under `StageC` and `AbsOK` at entry the real call meets it (`lvlHyp_real`): con-ron's
 frame lemmas make the twin's prefix a `PStep` (`blockMemberCounts?_spec`, `reservedBasisNames_pstep`;

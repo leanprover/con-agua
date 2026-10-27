@@ -2,6 +2,7 @@ import ConAgua.Arena.IndRealPartsC2
 import ConAgua.Arena.IndT.Block
 import ConAgua.Arena.IndArmLps
 import ConAgua.Arena.IndRealIpo
+import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
 
 /-!
 # `check_ind_decl` under `StageC` (lane `indstaget`)

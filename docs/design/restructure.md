@@ -211,3 +211,21 @@ the rebuilt modules:
 With all inductive-proof families at 1 s per module the critical path would still be 887 s: what is
 left is `Checker.Prog` (99 s) and the whole-program proofs after it (`Checker.LoopDecl*`,
 `Checker.IndArm`, `Checker.IndArmClosed` 162 s), and the `Verdict` top.
+
+## Batch 7: `IndInstallSpec*`, `IndPartsSpec*`, `PromoteCIRef*` regrouped by function
+
+87 modules (22 400 lines) → 113 in `ConAgua/Arena/{IndInstallSpec,IndPartsSpec,PromoteCIRef}/`. One
+forced pair: `bprW_cons` states its right-hand side with a `match` and is proved by unfolding
+`bprW`; in another module than `bprW` the `match` elaborates to a different matcher than the
+definition's, so the two sides no longer agree by `rfl` (`together: bprW, bprW_cons, bprW_nil`).
+Cold-checked, no warnings.
+
+Proof-edit rebuild, median over the family (as above):
+
+| family | before (master 5b9bde54) | after |
+|---|---|---|
+| `IndInstallSpec*` (41 → 55 modules) | 181 modules, 988 s | 106 modules, 370 s |
+| `IndPartsSpec*` (15 → 30) | 426 modules, 1206 s | 207 modules, 437 s |
+| `PromoteCIRef*` (31 → 28) | 246 modules, 1022 s | 114 modules, 415 s |
+
+Estimated cold critical path, with the new modules' measured times: 930 s.

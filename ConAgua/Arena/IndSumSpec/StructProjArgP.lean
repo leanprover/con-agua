@@ -1,6 +1,6 @@
-import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndRealCrF
 import ConAgua.Arena.IndSumSpec.StructElimLevel
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 /-!
 # StructProjArgP: `ConRon.Arena.structProjArgP`, `ConRon.Arena.structProjPs`, `ConRon.Arena.structPsAt`

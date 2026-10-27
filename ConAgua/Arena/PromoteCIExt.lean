@@ -1,4 +1,5 @@
-import ConAgua.Arena.PromoteCIRef6
+import ConAgua.Arena.PromoteCIRef.DecRuleMk
+import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
 
 /-!
 # Decoding a rule record is stable when the pool is extended on the words it reads

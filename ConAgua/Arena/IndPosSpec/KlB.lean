@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndInstallSpec2
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 
 /-!
 # KlB

@@ -639,7 +639,7 @@ theorem decRL_decB {k : IdxKind} {m : Mem} {i : Nat} {r : List Word} {xs : List 
 
 /-! ## The old per-decoder lemmas as instances
 
-`decHL_grow` (lane `indproofs`, `IndInstallSpec.lean`) is the generic lemma at `decHL`. -/
+`decHL_grow` (lane `indproofs`, `IndInstallSpec/DomsW.lean`) is the generic lemma at `decHL`. -/
 
 theorem decHL_grow' {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
     {xs : List (Idx k)} (hb : o + l ≤ iwTop m) (h : decHL m o l = some xs) :

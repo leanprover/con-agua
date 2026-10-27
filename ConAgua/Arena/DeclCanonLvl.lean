@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclCanonView2
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 /-!
 # The canonical level comparison in L (lane `decls3`, helper `decls3-canon`)

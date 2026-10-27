@@ -1,5 +1,5 @@
-import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatGuard
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 /-!
 # The structural-`Nat` gate: the pinned types (lane `decls3`, helper `decls3-nat`)

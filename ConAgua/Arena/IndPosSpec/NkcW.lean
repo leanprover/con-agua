@@ -1,7 +1,8 @@
 import ConAgua.Arena.DeclDivModSpec.Cons
-import ConAgua.Arena.IndPartsSpec5
 import ConAgua.Arena.IndPosSpec.NkFields
 import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndPartsSpec.EqW
 
 /-!
 # NkcW

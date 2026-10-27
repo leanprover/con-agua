@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.Install2
 import ConAgua.Arena.IndPosSpec.NitLe
+import ConAgua.Arena.IndRealAbsPos
 
 /-!
 # `nest_inst_type`'s level comparison under `StageC` (lane `indstaget`, helper `rcF`)

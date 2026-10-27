@@ -1,5 +1,8 @@
-import ConAgua.Arena.IndPartsSpec14
 import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndPartsSpec.BmgW
+import ConAgua.Arena.IndPartsSpec.BmoW
+import ConAgua.Arena.IndPartsSpec.BpcW
+import ConAgua.Arena.IndPartsSpec.BsoK2
 
 /-!
 # `blockShape?` under `StageC`, part 1: the walk memos across `block_shape`'s first callees

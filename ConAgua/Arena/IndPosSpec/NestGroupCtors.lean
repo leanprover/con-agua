@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPosSpec.NcGoW
 import ConAgua.Arena.IndPosSpec.NoConstWf
+import ConAgua.Arena.IndPartsSpec.BlockCounts
 
 /-!
 # NestGroupCtors: `ConRon.Arena.nestArity`, `ConRon.Arena.nestGroupCtors`, `ConRon.Arena.nestWalkStack`, `ConRon.Arena.piDomsOcc`

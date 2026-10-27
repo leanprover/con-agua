@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndInstallSpec9
+import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndPos
 
 /-!
 # SlRGrow

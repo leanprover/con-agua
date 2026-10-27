@@ -1,11 +1,12 @@
 import ConAgua.Arena.IndT.GenRec2
 import ConAgua.Arena.IndT.RecGen10
-import ConAgua.Arena.IndInstallSpec21
+import ConAgua.Arena.IndInstallSpec.Icr
+import ConAgua.Arena.IndInstallSpec.InstallSimCall
 
 /-!
 # `genRecCheck`, `checkBlockRec` under `StageC` (lane `indstaget`, helper `grc`)
 
-`gen_rec_check`'s model (`gckW`, `IndInstallSpec41`) under `StageC`: the prep (`grpW_okC`, parts
+`gen_rec_check`'s model (`gckW`, `IndInstallSpec/GpbWSimF`) under `StageC`: the prep (`grpW_okC`, parts
 `GenRec1`/`GenRec2`), then the pushes, the rules, the pops and the flushes; twin side con-ron's
 `genRecCheck_spec`'s proof: the pushed index (`GR.classFeR_go_ok`; the constructors' view,
 `GR.classFeR_go_view`, `RC.IFEnvOK.of_find?`), the flush into it (`ReadOK.flush`; the rules run
@@ -260,7 +261,7 @@ hypotheses, the inputs' denotations and scoping as con-ron's `genRecCheck_spec` 
 coherent (`IFEnvCoh`); after it, `StageC` at the returned view and index (con-ron's `CheckOK` at the
 entry environment) and the twin's run a `CoreStep`. The program facts: `ValProg p` and `AbsKeep`
 of `check_constant_val` (the stream's recursors, `classStreamRecs_refinesC`). Through
-`block_large_elim_allowed`'s contract (`IndInstallSpec39`). -/
+`block_large_elim_allowed`'s contract (`IndInstallSpec/PapW`). -/
 @[refines ConRon.Arena.genRecCheck]
 theorem genRecCheck_refinesC (P : GrcProg p) {fsR : List FnName}
     (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat)

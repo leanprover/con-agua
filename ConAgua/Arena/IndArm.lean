@@ -1,5 +1,4 @@
 import ConAgua.Arena.CheckerT
-import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Arena.IndArmBridge2
 

@@ -1,6 +1,7 @@
 import ConAgua.Arena.RecCheckSpec.TcmF
 import ConAgua.Arena.RecCheckSpec.Tpd
 import ConAgua.Arena.RecGenSpec.Rec3IwSlice
+import ConAgua.Arena.IndSumSpec.Row
 
 /-!
 # TruncSl

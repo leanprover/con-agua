@@ -1,7 +1,8 @@
 import ConAgua.Arena.IndT.RecCheckTpd
-import ConAgua.Arena.IndInstallSpec23
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConAgua.Arena.IndInstallSpec.NestCtx
 
 /-!
 # `targetClassMatch` under `StageC` (lane `indstaget`, helper `pds`)

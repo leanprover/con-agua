@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.RecGenSpec.ClassMinorSlotHit
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 /-!
 # CloseLams: `ConRon.Arena.ClassGen.binder`, `ConRon.Arena.classBinder`, `ConRon.Arena.classOfMotiveVar`, `ConRon.Arena.closeLams`, `ConRon.Arena.exprGetD`, `ConRon.Arena.fvarHead`

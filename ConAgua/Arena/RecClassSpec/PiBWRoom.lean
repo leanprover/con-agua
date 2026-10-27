@@ -1,7 +1,7 @@
-import ConAgua.Arena.IndPartsSpec3
-import ConAgua.Arena.IndPartsSpec4
 import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.IndRealOpf3
+import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 
 /-!
 # PiBWRoom

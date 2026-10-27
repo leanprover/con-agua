@@ -4,6 +4,8 @@ import ConAgua.Arena.RecGenSpec.DecTMDecBOf
 import ConAgua.Arena.RecGenSpec.KcW
 import ConAgua.Arena.RecGenSpec.KeysProg
 import ConAgua.Arena.RecGenSpec.StabDecCRDecB
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndInstallSpec.PartsAt
 
 /-!
 # OcW

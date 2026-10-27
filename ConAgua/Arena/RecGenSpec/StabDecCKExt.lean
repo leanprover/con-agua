@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec.SlRGrow
+import ConAgua.Arena.RecStab
 
 /-!
 # StabDecCKExt

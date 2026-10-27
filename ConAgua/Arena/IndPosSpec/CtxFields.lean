@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndInstallSpec2
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 
 /-!

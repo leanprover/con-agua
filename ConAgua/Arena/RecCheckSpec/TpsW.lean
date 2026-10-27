@@ -1,5 +1,6 @@
-import ConAgua.Arena.IndPartsSpec6
 import ConAgua.Arena.RecCheckSpec.RpLook
+import ConAgua.Arena.IndPartsSpec.AllCtors
+import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 
 /-!
 # TpsW

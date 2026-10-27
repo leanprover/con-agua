@@ -1,8 +1,9 @@
-import ConAgua.Arena.IndInstallSpec14
 import ConAgua.Arena.IndSumSpec.StructProjBodies
 import ConAgua.Arena.IndSumSpec.TsrW
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RecGenSpec.DecRR
+import ConAgua.Arena.IndInstallSpec.IcbiW
+import ConAgua.Arena.IndInstallSpec.PapW
 
 /-!
 # ConsBlockRecsTF: `ConRon.Arena.consBlockRecsTF`

@@ -4,6 +4,7 @@ import ConAgua.Arena.RecGenSpec.CrsProg
 import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.RecGenSpec.Rec3CVX
 import ConAgua.Arena.RecGenSpec.RgW
+import ConAgua.Arena.IndSumSpec.Row
 
 /-!
 # Rec3TmdWDecB

@@ -1,13 +1,6 @@
-import ConAgua.Arena.DeclBase
-import ConAgua.Arena.DeclAndPin
-import ConAgua.Arena.DeclStep
-import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.DeclStepGo
-import ConAgua.Arena.PromoteRecRef
 import ConAgua.Arena.DeclCheckLoop
-import ConAgua.Arena.PromoteCIRef31
-import ConAgua.Arena.DeclTwin
 import ConAgua.Arena.CheckerL
+import ConAgua.Arena.PromoteCIRef.PromoteNew
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`

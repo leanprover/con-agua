@@ -1,6 +1,5 @@
-import ConAgua.Arena.IndInstallSpec11
-import ConAgua.Arena.IndInstallSpec13
 import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndRealNames
 
 /-!
 # DecTMDecBOf

@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclDivModSpec.Cons
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 /-!
 # InstW

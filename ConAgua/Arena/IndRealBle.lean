@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndRealCapsC
-import ConAgua.Arena.IndInstallSpec23
 import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.IndInstallSpec.InstallIwB
 
 /-!
 # `block_large_elim_allowed` refines `blockLargeElimAllowed` (lane `indproofs4`, helper `lz`)
@@ -9,7 +9,7 @@ import ConAgua.Arena.IndT.Lift
 sort (`nzW_ok`: `isNeverZero` on the heap), then `block_shape_num_ctors` and two shape words; it
 writes nothing. The twin reads the result sort back (`readLevelM`), so the refinement needs the
 readback cache holding readbacks and the sort's readback (`StageR` alone does not give them; this
-is why `IndInstallSpec39.blockLargeElimAllowed_spec` was a stub contract):
+is why `IndInstallSpec/PapW.blockLargeElimAllowed_spec` was a stub contract):
 
 * `bleW_ok`: under `StageR`, `ReadLCOK` and the sort's readback, the twin's run, the memory
   unchanged, the verdict as a word, the twin's store unchanged and its cache holding readbacks;
@@ -224,7 +224,7 @@ theorem blockLargeElimAllowed_sim {p : Prog} (P : BleProg p) (n : Nat) {m : Mem}
   exact bleW_ok P hW hS hq hsrc hrl hd
 
 /-- **`block_large_elim_allowed` refines `blockLargeElimAllowed` under `StageC`** (for lane
-`indstaget`'s `grpAW_okC`, replacing `IndInstallSpec39.blockLargeElimAllowed_spec`): from the
+`indstaget`'s `grpAW_okC`, replacing `IndInstallSpec/PapW.blockLargeElimAllowed_spec`): from the
 shape's denotation (con-ron's `blockLargeElimAllowed_spec`'s precondition) and `AbsOK` (the memory
 is unchanged), `StageC` after, the twin's step a `PStep`, the verdict con-leche's. -/
 theorem blockLargeElimAllowed_simC {p : Prog} (P : BleProg p) (n : Nat) {env : ConLeche.Env}

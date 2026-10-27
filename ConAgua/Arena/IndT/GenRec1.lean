@@ -1,15 +1,16 @@
-import ConAgua.Arena.IndInstallSpec41
 import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Arena.IndT.RecGen28
-import ConAgua.Arena.IndInstallSpec15
 import ConAgua.Arena.RecCheckSpec.TargetRecPins
 import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.IndInstallSpec.GpbWSimF
+import ConAgua.Arena.IndInstallSpec.Icvg
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 
 /-!
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)
 
-`gen_rec_check_prep`'s first part (`grpAW_ok`'s, `IndInstallSpec41`) under `StageC`; twin side
+`gen_rec_check_prep`'s first part (`grpAW_ok`'s, `IndInstallSpec/GpbWSimF`) under `StageC`; twin side
 con-ron's `genRecCheck_spec`'s proof: `targetRecPins` (`targetRecPins_spec`, a `PSpecP`),
 `classStreamRecs` (`classStreamRecs_refinesC`, con-ron's `classStreamRecs_spec` on its run),
 `blockLargeElimAllowed` (`blockLargeElimAllowed_simC`, `IndRealBle`). Also:

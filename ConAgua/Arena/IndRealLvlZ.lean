@@ -1,6 +1,6 @@
 import ConAgua.Arena.StubInd
 import ConAgua.Arena.CallF
-import ConAgua.Arena.IndInstallSpec2
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 
 /-!
 # `lv_zero_caps`' model (lane `indproofs4`, helper `lvl`)

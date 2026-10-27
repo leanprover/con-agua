@@ -1,15 +1,6 @@
 import ConAgua.Arena.DeclLvlStage
-import ConAgua.Arena.CoreErec
-import ConAgua.Arena.KnotSlot
-import ConAgua.Arena.WhnfEntry
-import ConAgua.Arena.InferLeaves
-import ConAgua.Arena.InferBodyIntern
-import ConAgua.Arena.CoreLevels
-import ConAgua.Arena.WhnfIotaRefine4
-import ConAgua.Arena.LevelEquivRel
-import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.InstLPLevel
-import ConAgua.Arena.IndInstallSpec8
+import ConAgua.Arena.IndInstallSpec.NhW
 
 /-!
 # The stage relation with the twin's invariants: `StageT` (lane `indproofs3`)

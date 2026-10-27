@@ -1,8 +1,8 @@
 import ConAgua.Arena.IndT.Install1
-import ConAgua.Arena.IndInstallSpec10
 import ConRon.Bridge.Inductives.BlockInstall
-import ConAgua.Arena.IndInstallSpec9
 import ConAgua.Arena.IndRealLvlC
+import ConAgua.Arena.IndInstallSpec.IagW
+import ConAgua.Arena.IndInstallSpec.InstallSimCall
 
 /-!
 # `checkBlockAgree` under `StageC` (lane `indstaget`)

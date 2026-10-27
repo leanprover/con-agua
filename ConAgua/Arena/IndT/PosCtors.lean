@@ -2,6 +2,7 @@ import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.PosDefs
 import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+import ConAgua.Arena.IndRealAbsPos
 
 /-!
 # `nest_ctors` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

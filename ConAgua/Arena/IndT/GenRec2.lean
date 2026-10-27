@@ -1,13 +1,14 @@
 import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.RecGen7
 import ConAgua.Arena.IndT.RecGen27
-import ConAgua.Arena.IndInstallSpec38
 import ConAgua.Arena.RecGenSpec.CftW
+import ConAgua.Arena.IndInstallSpec.GfcW
+import ConAgua.Arena.IndInstallSpec.IcvgW
 
 /-!
 # `genRecCheck` under `StageC`, part 2 (lane `indstaget`, helper `grc`)
 
-`gen_rec_check_prep`'s second and third parts (`grpBW_ok`'s, `grpCW_ok`'s, `IndInstallSpec41`)
+`gen_rec_check_prep`'s second and third parts (`grpBW_ok`'s, `grpCW_ok`'s, `IndInstallSpec/GpbWSimF`)
 under `StageC`; twin side con-ron's `genRecCheck_spec`'s proof: `classesNfs`
 (`classesNfs_refinesLpC`, `classesNfs_spec`), `classesCtors` (`classesCtors_refinesC`,
 `classesCtors_spec`), the formers (`GR.mapM_cspecF` of `classFormerTy_spec`), `structElimLevel`

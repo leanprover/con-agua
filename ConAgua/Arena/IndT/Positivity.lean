@@ -2,14 +2,14 @@ import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.PosRoot
 import ConAgua.Arena.IndT.BncAfr
 import ConAgua.Arena.IndT.Install6
-import ConAgua.Arena.IndInstallSpec34
-import ConAgua.Arena.IndInstallSpec30
-import ConAgua.Arena.IndInstallSpec33
+import ConAgua.Arena.IndInstallSpec.Pos3Init
+import ConAgua.Arena.IndInstallSpec.Pos3NhGoWMfr
+import ConAgua.Arena.IndPartsSpec.BrsW
 
 /-!
 # `check_block_positivity` under `StageC` (lane `indstaget`, helper `indstaget-cbpos`)
 
-`cbposW_ok`'s proof (`IndInstallSpec34`) under `StageC`, its twin side transcribed from con-ron's
+`cbposW_ok`'s proof (`IndInstallSpec/Pos3Init`) under `StageC`, its twin side transcribed from con-ron's
 `checkBlockPositivity_spec`: the walk's context (`bncW_sim`, con-ron's `blockNestCtx_spec` on its
 run for the `CoreStep` and the context's denotation), `nest_uniform` (`nestUniform_refines`,
 `nestUniform_spec`), the fresh state (an L-only step), `nest_root` (`nestRoot_refinesC`; con-ron's

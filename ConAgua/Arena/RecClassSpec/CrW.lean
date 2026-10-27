@@ -3,6 +3,7 @@ import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecClassSpec.ReadProg
+import ConAgua.Arena.IndPartsSpec.BlockCounts
 
 /-!
 # CrW

@@ -1,5 +1,7 @@
 import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.RecCheckSpec.TpsW
+import ConAgua.Arena.IndInstallSpec.NhW
+import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
 
 /-!
 # TargetRecPins: `ConRon.Arena.targetRecPins`

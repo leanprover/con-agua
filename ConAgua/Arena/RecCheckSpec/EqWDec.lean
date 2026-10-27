@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndPartsSpec5
+import ConAgua.Arena.IndInstallSpec.PapW
 
 /-!
 # EqWDec

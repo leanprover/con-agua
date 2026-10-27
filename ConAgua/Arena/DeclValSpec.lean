@@ -1,7 +1,4 @@
-import ConAgua.Arena.DeclArms
-import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclStepGo
-import ConAgua.Arena.IndInstallSpec3
 
 noncomputable section
 
@@ -200,7 +197,7 @@ theorem ov_specW (h : ValProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s�
 /-! ## `check_thm_val(vis, c)` -/
 
 /-- The model of `lvl_eq_fueled(u, v)` at L fuel `n`, its call of `lvl_eq_c` read through `cl`
-(`IndInstallSpec3`'s `lveW` is the stubs' reading, `lfW_stub`). -/
+(`IndInstallSpec/LvlEqFueledSpecC`'s `lveW` is the stubs' reading, `lfW_stub`). -/
 def lfW (cl : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, u, v =>

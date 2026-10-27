@@ -1,8 +1,6 @@
 import ConAgua.Rom.PinRead
-import ConAgua.Arena.RomItems
 import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndPartsSpec2
-import ConAgua.Arena.Prelude
+import ConAgua.Arena.PromoteCIRef.Of
 
 /-!
 # The pin-data readers compute their models (lane `romload`)

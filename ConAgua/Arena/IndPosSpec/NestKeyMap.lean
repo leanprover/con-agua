@@ -1,9 +1,9 @@
-import ConAgua.Arena.IndPartsSpec
 import ConAgua.Arena.IndPos
 import ConAgua.Arena.IndStubs
 import ConAgua.Arena.IndView
 import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Scan.Common
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 /-!
 # NestKeyMap: `ConRon.Arena.NestCtx.hiAt`, `ConRon.Arena.NestFieldKind.flat`, `ConRon.Arena.nestKeyMap`, `ConRon.Arena.nestKindsFlat`

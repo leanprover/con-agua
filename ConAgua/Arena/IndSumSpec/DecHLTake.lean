@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndPartsSpec5
+import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.PinsNatOp
 
 /-!
 # DecHLTake
