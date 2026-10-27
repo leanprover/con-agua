@@ -31,6 +31,10 @@ def fcK : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
 
+theorem fcK_some (r : List Word) (m : Mem) : fcK (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
+
+attribute [ind_grind] fcK_some
+
 l_model findCtorGo_spec (p : Prog) (h : PbProg p)
   fns [h.fcg ↦ fcgW list]
   grind [arena_grind] simp [rdW_eq]
@@ -40,145 +44,12 @@ l_model findCtor_spec (p : Prog) (h : PbProg p)
   specs [findCtorGo_spec p h n]
   grind [arena_grind] simp [rdW_eq]
 
-def pfK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => some ([1, r3.headD 0, r3.tail.headD 0], m3)
-
-def pfK2 (n : Nat) (ty : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0, 0, 0], m2)
-    else pfK3 (consW n m2 ty (r2.tail.headD 0) (r2.tail.tail.headD 0))
-
-/-- After the slot's type: the rest (`next`), then the cons. -/
-def pfK1 (n : Nat) (next : Mem → Option (List Word × Mem)) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => if r1.headD 0 = 0 then some ([0, 0, 0], m1) else pfK2 n (r1.tail.headD 0) (next m1)
-
-/-- After `find_ctor`: the minor premise's type. -/
-def pfK4 (n : Nat) (next : Mem → Option (List Word × Mem)) (g cls d : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) =>
-    if r4.headD 0 = 0 then some ([0, 0, 0], m4)
-    else pfK1 n next (mnW n m4 g cls (r4.tail.headD 0) d)
-
-def pfR : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], m)
-
-mutual
-/-- **The model of `class_gen_prefix_binders_slots_go`.** -/
-def psW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, g, s, mc =>
-    if rdW (m.arr64 IW) (g + 8) ≤ s then some ([1, 0, 0], m)
-    else if rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s)) = 0 then
-      pfR (smW n m g s mc (rdW (m.arr64 IW) g + s))
-    else pfR (snW n m g s mc (rdW (m.arr64 IW) g + s)
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s) + 1))
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s) + 2)))
-/-- **The model of `class_gen_prefix_binders_slot_motive`.** -/
-def smW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, g, s, mc, d => pfK1 n (fun m1 => psW n m1 g (s + 1) (mc + 1)) (motW n m g mc d)
-/-- **The model of `class_gen_prefix_binders_slot_minor`.** -/
-def snW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, g, s, mc, d, cls, ctor => pfK4 n (fun m1 => psW n m1 g (s + 1) mc) g cls d (fcW n m g cls ctor)
-end
-
-/-! ## Arms -/
-
-section arms
-variable (n : Nat) (m m1 m2 m3 m4 : Mem) (g c cn io il s mc ty cls d pbo pbl : Word)
-  (r r1 r2 r3 r4 : List Word) (next : Mem → Option (List Word × Mem))
-theorem fcK_some : fcK (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-theorem pfK3_some : pfK3 (some (r3, m3)) = some ([1, r3.headD 0, r3.tail.headD 0], m3) := rfl
-theorem pfK2_fail (h : r2.headD 0 = 0) : pfK2 n ty (some (r2, m2)) = some ([0, 0, 0], m2) := by
-  rw [pfK2, ite_eq_left h]
-theorem pfK2_ok (h : r2.headD 0 ≠ 0) : pfK2 n ty (some (r2, m2)) =
-    pfK3 (consW n m2 ty (r2.tail.headD 0) (r2.tail.tail.headD 0)) := by rw [pfK2, ite_eq_right h]
-theorem pfK1_fail (h : r1.headD 0 = 0) : pfK1 n next (some (r1, m1)) = some ([0, 0, 0], m1) := by
-  rw [pfK1, ite_eq_left h]
-theorem pfK1_ok (h : r1.headD 0 ≠ 0) : pfK1 n next (some (r1, m1)) = pfK2 n (r1.tail.headD 0) (next m1) := by
-  rw [pfK1, ite_eq_right h]
-theorem pfK4_fail (h : r4.headD 0 = 0) : pfK4 n next g cls d (some (r4, m4)) = some ([0, 0, 0], m4) := by
-  rw [pfK4, ite_eq_left h]
-theorem pfK4_ok (h : r4.headD 0 ≠ 0) : pfK4 n next g cls d (some (r4, m4)) =
-    pfK1 n next (mnW n m4 g cls (r4.tail.headD 0) d) := by rw [pfK4, ite_eq_right h]
-theorem pfR_some : pfR (some (r, m)) = some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], m) := rfl
-theorem psW_end (h : rdW (m.arr64 IW) (g + 8) ≤ s) : psW (n + 1) m g s mc = some ([1, 0, 0], m) := by
-  simp only [psW]; rw [ite_eq_left h]
-theorem psW_mot (h : ¬ rdW (m.arr64 IW) (g + 8) ≤ s)
-    (h2 : rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s)) = 0) :
-    psW (n + 1) m g s mc = pfR (smW n m g s mc (rdW (m.arr64 IW) g + s)) := by
-  simp only [psW]; rw [ite_eq_right h, ite_eq_left h2]
-theorem psW_min (h : ¬ rdW (m.arr64 IW) (g + 8) ≤ s)
-    (h2 : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s)) = 0) :
-    psW (n + 1) m g s mc = pfR (snW n m g s mc (rdW (m.arr64 IW) g + s)
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s) + 1))
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s) + 2))) := by
-  simp only [psW]; rw [ite_eq_right h, ite_eq_right h2]
-theorem smW_eq : smW (n + 1) m g s mc d = pfK1 n (fun m1 => psW n m1 g (s + 1) (mc + 1)) (motW n m g mc d) := by
-  simp only [smW]
-theorem snW_eq (ctor : Word) : snW (n + 1) m g s mc d cls ctor =
-    pfK4 n (fun m1 => psW n m1 g (s + 1) mc) g cls d (fcW n m g cls ctor) := by
-  simp only [snW]
-end arms
-
-attribute [ind_grind] fcK_some pfK3_some pfK2_fail pfK2_ok
-  pfK1_fail pfK1_ok pfK4_fail pfK4_ok pfR_some psW_end psW_mot psW_min smW_eq snW_eq
-
-/-! ## Specs -/
-
-section specs
-variable (p : Prog) (h : PbProg p)
-include h
-
-/-- The specs of the slot walk at exec fuel `n`. -/
-def SlotsSpec (n : Nat) : Prop :=
-  (∀ (s₀ : St) (g s mc : Word), ⦃fun st => st = s₀⦄ invoke p (exec p n) "class_gen_prefix_binders_slots_go" [g, s, mc]
-    ⦃fun r s' => LocEq s' s₀ ∧ psW n s₀.mem g s mc = some (r, s'.mem); ⊤⦄) ∧
-  (∀ (s₀ : St) (g s mc d : Word), ⦃fun st => st = s₀⦄
-    invoke p (exec p n) "class_gen_prefix_binders_slot_motive" [g, s, mc, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ smW n s₀.mem g s mc d = some (r, s'.mem); ⊤⦄) ∧
-  (∀ (s₀ : St) (g s mc d cls ctor : Word), ⦃fun st => st = s₀⦄
-    invoke p (exec p n) "class_gen_prefix_binders_slot_minor" [g, s, mc, d, cls, ctor]
-    ⦃fun r s' => LocEq s' s₀ ∧ snW n s₀.mem g s mc d cls ctor = some (r, s'.mem); ⊤⦄)
-
-theorem slots_spec (n : Nat) : SlotsSpec p n := by
-  induction n with
-  | zero =>
-    refine ⟨?_, ?_, ?_⟩ <;> intros
-    · rw [invoke_eq _ h.psg]; simp only [callFn, classGenPrefixBindersSlotsGo]; vcgen [exec] <;> grind
-    · rw [invoke_eq _ h.psm]; simp only [callFn, classGenPrefixBindersSlotMotive]; vcgen [exec] <;> grind
-    · rw [invoke_eq _ h.psn]; simp only [callFn, classGenPrefixBindersSlotMinor]; vcgen [exec] <;> grind
-  | succ n ih =>
-    obtain ⟨ihg, ihm, ihn⟩ := ih
-    refine ⟨?_, ?_, ?_⟩
-    · intro s₀ g s mc
-      rw [invoke_eq _ h.psg]
-      simp only [callFn, classGenPrefixBindersSlotsGo]
-      sym only [lang_grind, arena_grind, ind_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ihm, ihn] <;>
-        finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
-    · intro s₀ g s mc d
-      rw [invoke_eq _ h.psm]
-      simp only [callFn, classGenPrefixBindersSlotMotive]
-      sym only [lang_grind, arena_grind, ind_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-          classGenMotiveTy_spec p h.toMtProg n, slCons_specW p h.alloc h.copy h.cons n, ihg] <;>
-        finish (gen := 20)
-    · intro s₀ g s mc d cls ctor
-      rw [invoke_eq _ h.psn]
-      simp only [callFn, classGenPrefixBindersSlotMinor]
-      sym only [lang_grind, arena_grind, ind_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-          findCtor_spec p h n, classGenMinorTy_spec p h.toMnProg n, slCons_specW p h.alloc h.copy h.cons n, ihg] <;>
-        finish (gen := 20) [loc_init4, loc_init5]
-
-end specs
+/-- **The slot walk is its models `psW`, `smW`, `snW`** (generated; fuel `n`). -/
+l_model slots_spec (p : Prog) (h : PbProg p)
+  fns [h.psg ↦ psW list, h.psm ↦ smW list, h.psn ↦ snW list]
+  specs [findCtor_spec p h n, classGenMotiveTy_spec p h.toMtProg n, classGenMinorTy_spec p h.toMnProg n,
+    slCons_specW p h.alloc h.copy h.cons n]
+  grind [arena_grind] finish [] gen 20
 
 l_model prefixBinders_spec (p : Prog) (h : PbProg p)
   fns [h.pb ↦ gpbW list]
@@ -337,22 +208,22 @@ theorem pfTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m
     (rest : Option (List Word × Mem)) (opR : AM (Option (List EIdx)))
     (hrest : RSim rest opR a1
       (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2)) :
-    RSim (pfR (pfK2 n ty rest)) (do
+    RSim (psW.k_class_gen_prefix_binders_slot_motive (smW.k_class_gen_prefix_binders_slots_go n ty rest)) (do
       let __do_lift ← opR
       match __do_lift with
       | none => pure none
       | some rest => pure (some (decI ty :: rest))) a1
       (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2) := by
-  refine RSim.bind (K := fun o => pfR (pfK2 n ty o)) rfl hrest ?_
+  refine RSim.bind (K := fun o => psW.k_class_gen_prefix_binders_slot_motive (smW.k_class_gen_prefix_binders_slots_go n ty o)) rfl hrest ?_
   rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
   dsimp only at hS2 hg2 ho
   rcases o with _ | rl
-  · rw [pfK2_fail (h := ho)]; exact RSim.pure_some ⟨hS2, hg1.trans hg2, rfl, hA2⟩
+  · rw [smW.k_class_gen_prefix_binders_slots_go.arm1 (hc1 := ho)]; exact RSim.pure_some ⟨hS2, hg1.trans hg2, rfl, hA2⟩
   obtain ⟨h21, hd2, hb2⟩ := ho
-  rw [pfK2_ok (h := by rw [h21]; decide)]
-  refine RSim.lstep (K := fun o => pfR (pfK3 o)) rfl fun ⟨r3, m3⟩ h3 => ?_
+  rw [smW.k_class_gen_prefix_binders_slots_go.arm2 (hc1 := by rw [h21]; decide)]
+  refine RSim.lstep (K := fun o => psW.k_class_gen_prefix_binders_slot_motive (smW.k_sl_cons o)) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hty hd2
-  simp only [pfK3_some, pfR_some, List.headD_cons, List.tail_cons]
+  simp only [smW.k_sl_cons.arm1, psW.k_class_gen_prefix_binders_slot_motive.arm1, List.headD_cons, List.tail_cons]
   exact RSim.pure_some ⟨hS3, hg1.trans (hg2.trans hg3), ⟨rfl, by simpa using hd3,
     by simp only [List.tail_cons, List.headD_cons]; exact Nat.le_of_eq ht3⟩, consW_afr h3 hA2⟩
 
@@ -377,7 +248,7 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   simp only [show UInt64.ofNat 8 = (8 : Word) from rfl, show UInt64.ofNat 7 = (7 : Word) from rfl,
     show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e8 e7 e0
   by_cases hend : rdW (m.arr64 IW) (g + 8) ≤ s
-  · rw [psW_end (h := hend)]
+  · rw [psW.arm1 (hc1 := hend)]
     have : G.slots.length ≤ s.toNat := by
       rw [e8] at hend; have := UInt64.le_iff_toNat_le.mp hend; rw [t8] at this; omega
     rw [List.drop_eq_nil_of_le this, ConRon.Arena.ClassGen.prefixBinders.slotsGo.eq_1]
@@ -402,19 +273,20 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have h0 := rec2DecCS_mot hdp
     obtain ⟨e00, -⟩ := rec2RdN (w := UInt64.ofNat p) (k := 0) (by simpa [UInt64.toNat_ofNat_of_lt' plt] using h0) hsz
     simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e00
-    rw [psW_mot (h := hend) (h2 := by rw [ep, e00]), ConRon.Arena.ClassGen.prefixBinders.slotsGo.eq_2]
+    rw [psW.arm2 (hc1 := hend) (hc2 := by rw [ep, e00]), ConRon.Arena.ClassGen.prefixBinders.slotsGo.eq_2]
     rcases n with _ | n
-    · intro b hb; simp [smW, pfR] at hb
-    rw [smW_eq]
+    · intro b hb; simp [smW, psW.k_class_gen_prefix_binders_slot_motive] at hb
+    rw [smW.arm1]
     have hm := motW_sim dn vis fe n m a g mc (rdW (m.arr64 IW) g + s) G hS hG hA
     rw [hmc, hd] at hm
-    refine RSim.bind (K := fun o => pfR (pfK1 n (fun m1 => psW n m1 g (s + 1) (mc + 1)) o)) rfl hm ?_
+    refine RSim.bind (K := fun o => psW.k_class_gen_prefix_binders_slot_motive (smW.k_class_gen_motive_ty n g s mc o))
+      (by rw [smW.k_class_gen_motive_ty.none, psW.k_class_gen_prefix_binders_slot_motive.none]) hm ?_
     rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, ho⟩, hA1⟩
     dsimp only at hS1 hg1 ho
     rcases o with _ | ty
-    · rw [pfK1_fail (h := ho)]; exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
+    · rw [smW.k_class_gen_motive_ty.arm1 (hc1 := ho)]; exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
     obtain ⟨h11, htyH, htyd⟩ := ho
-    rw [pfK1_ok (h := by rw [h11]; decide)]
+    rw [smW.k_class_gen_motive_ty.arm2 (hc1 := by rw [h11]; decide)]
     dsimp only
     rw [← htyd]
     have hmcs : mc.toNat ≤ s.toNat := by
@@ -432,12 +304,13 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     obtain ⟨cw, ecw, hcwH, hcwd⟩ := iwH_rdW_at (w := UInt64.ofNat p) (k := 2) (by rw [hp']; exact hC) hsz
     simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero, show UInt64.ofNat 1 = (1 : Word) from rfl,
       show UInt64.ofNat 2 = (2 : Word) from rfl] at e01 ec ecw
-    rw [psW_min (h := hend) (h2 := by rw [ep, e01]; decide), ConRon.Arena.ClassGen.prefixBinders.slotsGo.eq_3]
+    rw [psW.arm3 (hc1 := hend) (hc2 := by rw [ep, e01]; decide), ConRon.Arena.ClassGen.prefixBinders.slotsGo.eq_3]
     rw [ep, ec, ecw]
     rcases n with _ | n
-    · intro b hb; simp [snW, pfR] at hb
-    rw [snW_eq]
-    refine RSim.lstep (K := fun o => pfR (pfK4 n (fun m1 => psW n m1 g (s + 1) mc) g _ _ o)) rfl
+    · intro b hb; simp [snW, psW.k_class_gen_prefix_binders_slot_motive] at hb
+    rw [snW.arm1]
+    refine RSim.lstep (K := fun o => psW.k_class_gen_prefix_binders_slot_motive (snW.k_class_gen_prefix_binders_find_ctor n g s mc _ _ o))
+      (by rw [snW.k_class_gen_prefix_binders_find_ctor.none, psW.k_class_gen_prefix_binders_slot_motive.none])
       fun ⟨r4, m4⟩ h4 => ?_
     obtain ⟨hm4, hres⟩ := fcW_ok n m m4 g _ cw r4 G h4 hG hcwH hsz
     subst m4
@@ -445,23 +318,24 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     cases hf : (G.ctors.getD c []).find? (fun x => x.cv.name == C) with
     | none =>
       rw [hf] at hres
-      rw [pfK4_fail (h := hres)]
+      rw [snW.k_class_gen_prefix_binders_find_ctor.arm1 (hc1 := hres)]
       simp only [pure_bind]
       exact RSim.pure_some ⟨hS, IWGrow.refl m, rfl, hA⟩
     | some X =>
     rw [hf] at hres
     obtain ⟨h41, hX⟩ := hres
-    rw [pfK4_ok (h := by rw [h41]; decide)]
+    rw [snW.k_class_gen_prefix_binders_find_ctor.arm2 (hc1 := by rw [h41]; decide)]
     simp only []
     have hm := mnW_sim dn vis fe n m a g (UInt64.ofNat c) (r4.tail.headD 0) (rdW (m.arr64 IW) g + s) G X hS hG hns hX hA
     rw [tc, hd] at hm
-    refine RSim.bind (K := fun o => pfR (pfK1 n (fun m1 => psW n m1 g (s + 1) mc) o)) rfl hm ?_
+    refine RSim.bind (K := fun o => psW.k_class_gen_prefix_binders_slot_motive (snW.k_class_gen_minor_ty n g s mc o))
+      (by rw [snW.k_class_gen_minor_ty.none, psW.k_class_gen_prefix_binders_slot_motive.none]) hm ?_
     rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, ho⟩, hA1⟩
     dsimp only at hS1 hg1 ho
     rcases o with _ | ty
-    · rw [pfK1_fail (h := ho)]; exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
+    · rw [snW.k_class_gen_minor_ty.arm1 (hc1 := ho)]; exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
     obtain ⟨h11, htyH, htyd⟩ := ho
-    rw [pfK1_ok (h := by rw [h11]; decide)]
+    rw [snW.k_class_gen_minor_ty.arm2 (hc1 := by rw [h11]; decide)]
     dsimp only
     rw [← htyd]
     have hr := ih n (by omega) m1 a1 (s + 1) mc hS1 (hG.grow (decCG_mono _) hg1) (by omega)
@@ -597,156 +471,49 @@ l_model call1Tail_spec (p : Prog) (h : RuProg p)
     slSnoc_specW p h.alloc h.copy h.snoc n, call1Close_spec p h n]
   grind [arena_grind] simp []
 
-def c1K3 (n : Nat) (fvso fvsl pvo pvl rlvls xso xsl idxo idxl i e : Word) (m2 : Mem) :
-    Option (List Word) → Option (List Word × Mem)
-  | none => none
-  | some r3 =>
-    if r3.headD 0 = 0 then some ([0, 0], m2)
-    else fcK (c1tW n m2 fvso fvsl pvo pvl rlvls xso xsl idxo idxl (r3.tail.headD 0) i e)
-
-def c1K2 (n : Nat) (t fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0, 0], m2)
-    else c1K3 n fvso fvsl pvo pvl rlvls (r2.tail.headD 0) (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0)
-      (r2.tail.tail.tail.tail.headD 0) i e m2 (classRecOfW n m2 rco rcl cgo cgl t)
-
-def c1K1 (n : Nat) (g t tele fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    c1K2 n t fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (rec2IhF n m1 g t tele (r1.headD 0) e)
-
-/-- **The model of `class_gen_rule_call1`.** -/
-def c1W : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, g, t, tele, wso, wsl, fvso, fvsl, pvo, pvl, rlvls, rco, rcl, cgo, cgl, i, e =>
-    c1K1 n g t tele fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (fuelW n (exprGetDW m wso wsl i))
-
-section arms1
-variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (next : Mem → Option (List Word × Mem))
-  (g x so sl j c cn rP i v e app fvso fvsl pvo pvl rlvls xso xsl idxo idxl r t tele wso wsl rco rcl cgo cgl
-    nn s fo fl ihso ihsl body sv rc fx : Word) (r1 r2 r3 r4 r5 r6 : List Word)
-theorem c1W_eq : c1W (n + 1) m g t tele wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e =
-    c1K1 n g t tele fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (fuelW n (exprGetDW m wso wsl i)) := rfl
-theorem c1K1_some : c1K1 n g t tele fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (some (r1, m1)) =
-    c1K2 n t fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (rec2IhF n m1 g t tele (r1.headD 0) e) := rfl
-theorem c1K2_fail (h : r2.headD 0 = 0) : c1K2 n t fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (some (r2, m2)) =
-    some ([0, 0], m2) := by rw [c1K2, ite_eq_left h]
-theorem c1K2_ok (h : r2.headD 0 ≠ 0) : c1K2 n t fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (some (r2, m2)) =
-    c1K3 n fvso fvsl pvo pvl rlvls (r2.tail.headD 0) (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0)
-      (r2.tail.tail.tail.tail.headD 0) i e m2 (classRecOfW n m2 rco rcl cgo cgl t) := by rw [c1K2, ite_eq_right h]
-theorem c1K3_fail (h : r3.headD 0 = 0) : c1K3 n fvso fvsl pvo pvl rlvls xso xsl idxo idxl i e m2 (some r3) =
-    some ([0, 0], m2) := by rw [c1K3, ite_eq_left h]
-theorem c1K3_ok (h : r3.headD 0 ≠ 0) : c1K3 n fvso fvsl pvo pvl rlvls xso xsl idxo idxl i e m2 (some r3) =
-    fcK (c1tW n m2 fvso fvsl pvo pvl rlvls xso xsl idxo idxl (r3.tail.headD 0) i e) := by rw [c1K3, ite_eq_right h]
-end arms1
-
-attribute [ind_grind] c1W_eq c1K1_some c1K2_fail c1K2_ok c1K3_fail c1K3_ok
-
-section specs
-variable (p : Prog) (h : RuProg p)
-include h
-
-theorem call1_spec (n : Nat) (s₀ : St) (g t tele wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_call1"
-      [g, t, tele, wso, wsl, fvso, fvsl, pvo, pvl, rlvls, rco, rcl, cgo, cgl, i, e]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      c1W n s₀.mem g t tele wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.c1]
-  simp only [callFn, classGenRuleCall1]
-  rcases n with _ | n
-  · vcgen [exec] <;> grind
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-    rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad h.opf n,
+/-- **`class_gen_rule_call1` is its model `c1W`** (generated). -/
+l_model call1_spec (p : Prog) (h : RuProg p)
+  fns [h.c1 ↦ c1W list]
+  specs [rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad h.opf n,
     classRecOf_spec p h.cro n, call1Tail_spec p h n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
-  all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
+  grind [arena_grind] finish [] gen 20 trace
 
-end specs
+theorem c1W_tail_eq : c1W.k_class_gen_rule_call1_tail = fcK := by
+  funext o; cases o <;> rfl
 
 /-! ## The calls -/
 
-mutual
-/-- **The model of `class_gen_rule_calls_go`.** -/
-def cgW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, g, x, wso, wsl, fvso, fvsl, pvo, pvl, rlvls, rco, rcl, cgo, cgl, e, nn, i =>
-    if nn = 0 then some ([1, 0, 0], m)
-    else if isTag m x i = 1 then
-      cgK1 n g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i
-        (c1W n m g (rdW (m.arr64 IW) (isKp m x i + 1)) (rdW (m.arr64 IW) (isKp m x i + 2)) wso wsl fvso fvsl
-          pvo pvl rlvls rco rcl cgo cgl i e)
-    else isK3 (cgW n m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e (nn - 1) (i + 1))
-def cgK1 (n : Nat) (g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    if r1.headD 0 = 0 then some ([0, 0, 0], m1)
-    else isK2 n (r1.tail.headD 0)
-      (cgW n m1 g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e (nn - 1) (i + 1))
-end
+/-- **`class_gen_rule_calls_go` is its model `cgW`** (generated). -/
+l_model callsGo_spec (p : Prog) (h : RuProg p)
+  fns [h.cg ↦ cgW list]
+  specs [call1_spec p h n, slCons_specW p h.alloc h.copy h.cons n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-/-! ## Arms -/
+section cgArms
+variable (n : Nat) (m : Mem) (g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i : Word)
 
-section arms
-variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (next : Mem → Option (List Word × Mem))
-  (g x so sl j c cn rP i v e app fvso fvsl pvo pvl rlvls xso xsl idxo idxl r t tele wso wsl rco rcl cgo cgl
-    nn s fo fl ihso ihsl body sv rc fx : Word) (r1 r2 r3 r4 r5 r6 : List Word)
-theorem cgW_end (h : nn = 0) : cgW (n + 1) m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i =
-    some ([1, 0, 0], m) := by simp only [cgW]; rw [ite_eq_left h]
-theorem cgW_rec (h : ¬ nn = 0) (ht : isTag m x i = 1) :
-    cgW (n + 1) m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i =
-      cgK1 n g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i
-        (c1W n m g (rdW (m.arr64 IW) (isKp m x i + 1)) (rdW (m.arr64 IW) (isKp m x i + 2)) wso wsl fvso fvsl
-          pvo pvl rlvls rco rcl cgo cgl i e) := by
-  simp only [cgW]; rw [ite_eq_right h, ite_eq_left ht]
+/-- A field that is not a recursive call: the walk goes on. -/
 theorem cgW_ord (h : ¬ nn = 0) (ht : ¬ isTag m x i = 1) :
     cgW (n + 1) m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i =
-      isK3 (cgW n m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e (nn - 1) (i + 1)) := by
-  simp only [cgW]; rw [ite_eq_right h, ite_eq_right ht]
-theorem cgK1_fail (h : r1.headD 0 = 0) :
-    cgK1 n g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i (some (r1, m1)) = some ([0, 0, 0], m1) := by
-  rw [cgK1, ite_eq_left h]
-theorem cgK1_ok (h : r1.headD 0 ≠ 0) :
-    cgK1 n g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i (some (r1, m1)) =
-      isK2 n (r1.tail.headD 0) (cgW n m1 g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e (nn - 1) (i + 1)) := by
-  rw [cgK1, ite_eq_right h]
-end arms
+      cgW.k_class_gen_rule_calls_go_2
+        (cgW n m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e (nn - 1) (i + 1)) := by
+  by_cases hi : i < rdW (m.arr64 IW) (x + 3)
+  · rw [cgW.arm2 (hc1 := h) (hc2 := hi), cgW.j1.arm2 (hc1 := by simpa [isTag, hi] using ht)]
+  · rw [cgW.arm3 (hc1 := h) (hc2 := hi), cgW.j1.arm2 (hc1 := by simp)]
 
-attribute [ind_grind] cgW_end cgW_rec cgW_ord cgK1_fail cgK1_ok
-
-section specs
-variable (p : Prog) (h : RuProg p)
-include h
-
-set_option maxHeartbeats 2000000 in
-theorem callsGo_spec (n : Nat) : ∀ (s₀ : St) (g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_calls_go"
-      [g, x, wso, wsl, fvso, fvsl, pvo, pvl, rlvls, rco, rcl, cgo, cgl, e, nn, i]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      cgW n s₀.mem g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intros
-    rw [invoke_eq _ h.cg]; simp only [callFn, classGenRuleCallsGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i
-    rw [invoke_eq _ h.cg]
-    simp only [callFn, classGenRuleCallsGo]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
-      call1_spec p h n, slCons_specW p h.alloc h.copy h.cons n, ih]
-    all_goals subst_vars
-    all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init,
-      List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, isTag, isKp, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
-
-end specs
+/-- A recursive field: its call, then the walk. -/
+theorem cgW_rec (h : ¬ nn = 0) (ht : isTag m x i = 1) :
+    cgW (n + 1) m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i =
+      cgW.k_class_gen_rule_call1 n g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i
+        (c1W n m g (rdW (m.arr64 IW) (isKp m x i + 1)) (rdW (m.arr64 IW) (isKp m x i + 2)) wso wsl fvso fvsl
+          pvo pvl rlvls rco rcl cgo cgl i e) := by
+  have hi : i < rdW (m.arr64 IW) (x + 3) := by
+    by_cases hi : i < rdW (m.arr64 IW) (x + 3)
+    · exact hi
+    · simp [isTag, hi] at ht
+  rw [cgW.arm2 (hc1 := h) (hc2 := hi), cgW.j1.arm1 (hc1 := by simpa [isTag, hi] using ht)]
+  rfl
+end cgArms
 
 /-! ## The closing, the body, the rule -/
 
