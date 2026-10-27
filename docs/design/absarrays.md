@@ -477,3 +477,23 @@ revisited in batch 7, where the displacements change anyway.
 * No step of the plan hard-codes byte arrays as positional any more. Batch 1 names
   `0 < m.bytes.size` as `m.HasB IN`, batch 2 builds byte test memories with `Mem.ofBytes`, and
   batches 3–5 write byte arrays by name.
+
+### 8.5 Batch 5's cost (`cap_check` from the table, #52)
+
+`cap_check` runs once per run, as the first call of `check_a` (entry 1, `Checker/Entry.lean`).
+It is straight-line code (the `foldr` unrolls), so each instruction runs once. Batch 5 cut it from
+1651 to 969 instructions: 181 slot tests instead of 388. The tier-1 tests compute their tier at run
+time (`len64t a (const 1)`), because the compiler does not fold a constant tier yet.
+
+Measured with `scripts/bench.py --set init --asm before=… --asm after=… --no-conron --no-ref
+--reps 10` (`checker.s` of master 7d95f1ef vs 1323a59c, which differ only in `cap_check`;
+interleaved rounds, load average 6–34 during the run):
+
+| fixture | instructions before | after | Δ | wall before | after |
+|---|---:|---:|---:|---:|---:|
+| `arena/good/init-prelude.ndjson` (min of 10) | 1 490 598 225 | 1 490 597 543 | −682 | 0.121 s (spread 25%) | 0.124 s (19%) |
+| `init435.ndjson` (median of 10) | 273 416 044 367 | 273 416 048 072 | noise (±50 000 between runs) | 20.92 s (40%) | 20.53 s (53%) |
+
+The instruction count drops by exactly the 682 instructions removed from `cap_check`. That is
+5·10⁻⁷ of the small fixture and nothing measurable on Init. The wall times differ by less than their
+spread. The change has no performance effect.
