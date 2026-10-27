@@ -23,33 +23,11 @@ namespace L.Arena
 
 /-! ## `rec_fire_args(fireKind, pvo, pvc, po, pc, us, ao, an, rP, ctorParams)` -/
 
-/-- Model of `rec_fire_args`. -/
-def rfaW (p : Prog) (k : Nat) (m : Mem) (fireKind pvo pvc po pc us ao an rP cp : Word) :
-    Option (List Word × Mem) :=
-  if fireKind = 1 then
-    match callW p k "inst_spine_pins" [po, pc, us, ao, an, rP, pvo, pvc] m with
-    | none => none
-    | some (r, m₁) => some ([r.headD 0, r.tail.headD 0], m₁)
-  else some ([ao, ispLen cp an], m)
-
-theorem recFireArgs_spec (p : Prog) (hp : p.lookup "rec_fire_args" = some recFireArgsL) (k : Nat)
-    (s₀ : St) (fireKind pvo pvc po pc us ao an rP cp : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "rec_fire_args" [fireKind, pvo, pvc, po, pc, us, ao, an, rP, cp]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      rfaW p k s₀.mem fireKind pvo pvc po pc us ao an rP cp = some ([r.headD 0, r.tail.headD 0], s'.mem);
-      ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, recFireArgsL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-    callW_spec p k "inst_spine_pins"] <;>
-  simp_all [rfaW, ispLen, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
-    St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
-    Sig.retOr] <;>
-  (intro h; rename_i hd
-   first
-   | exact absurd (of_decide_eq_true hd) (UInt64.not_lt.mpr h)
-   | exact absurd h (of_decide_eq_false hd))
+/-- **`rec_fire_args` is its model `rfaW`** (generated). -/
+l_model recFireArgs_spec (p : Prog) (hp : p.lookup "rec_fire_args" = some recFireArgsL)
+  fns [hp ↦ rfaW list]
+  specs [callW_spec p n "inst_spine_pins"]
+  grind [arena_grind] simp []
 
 theorem recFireArgs_nested_eq (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
     (rP : Nat) (lv : List LIdx) (pins : List EIdx) (h : rl.fire = .nested lv pins) :
@@ -85,9 +63,9 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (recFireArgs_spec p hp.recFireArgs n s₀ fireKind pvo pvc po pc us ao an rP cp)
+  refine triple_post (recFireArgs_spec p hp.recFireArgs (n + 1) s₀ fireKind pvo pvc po pc us ao an rP cp)
     fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  simp only [rfaW] at hW
+  simp only [rfaW, rfaW.k_inst_spine_pins, rfaW.j1] at hW
   by_cases h1 : fireKind = 1
   · rw [ite_eq_left h1] at hW
     obtain ⟨lv, pins, hfire, hsp⟩ := hnest h1
@@ -107,7 +85,9 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
       have := congrArg (fun l => l.tail.headD 0) hr; simpa using this.symm
     exact ⟨hok, hca, xs, hres, by rw [hr1, hr2]; exact hxs⟩
   · rw [ite_eq_right h1] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hW' : some ([ao, ispLen cp an], s₀.mem) = some (r, s'.mem) := by
+      rw [← hW]; by_cases ha : an < cp <;> simp [ispLen, ha]
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW')
     have hfire := hplain h1
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (recFireArgs_plain_run rl lps (decI us) args.toList
       rP.toNat hfire a₀)
@@ -444,32 +424,12 @@ theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees
 
 /-! ## `fab_scope_ok(d, fab, major)` -/
 
-/-- Model of `fab_scope_ok`. -/
-def fsW (p : Prog) (k : Nat) (m : Mem) (d fab major : Word) : Option (List Word × Mem) :=
-  match callW p k "wscoped_bfast" [d, fab] m with
-  | none => none
-  | some (r₁, m₁) =>
-    if r₁.headD 0 = 0 then some ([0], m₁)
-    else match callW p k "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with
-      | none => none
-      | some (r₂, m₂) =>
-        if r₂.headD 0 = 0 then some ([0], m₂)
-        else match callW p k "leaf_guard" [fab, major] m₂ with
-          | none => none
-          | some (r₃, m₃) => some ([r₃.headD 0], m₃)
-
-theorem fabScopeOk_spec (p : Prog) (hp : p.lookup "fab_scope_ok" = some fabScopeOkL) (k : Nat)
-    (s₀ : St) (d fab major : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "fab_scope_ok" [d, fab, major]
-    ⦃fun r s' => LocEq s' s₀ ∧ fsW p k s₀.mem d fab major = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, fabScopeOkL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-    callW_spec p k "wscoped_bfast", callW_spec p k "loose_bvars_bounded_fast",
-    callW_spec p k "leaf_guard"] <;>
-  simp_all [fsW, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+/-- **`fab_scope_ok` is its model `fsW`** (generated). -/
+l_model fabScopeOk_spec (p : Prog) (hp : p.lookup "fab_scope_ok" = some fabScopeOkL)
+  fns [hp ↦ fsW list]
+  specs [callW_spec p n "wscoped_bfast", callW_spec p n "loose_bvars_bounded_fast",
+    callW_spec p n "leaf_guard"]
+  grind [arena_grind] simp []
 
 theorem fabScopeOk_stop1 (d : Nat) (fab major : EIdx) (a a₁ : AState)
     (h : (wscopedBFast coreWalkFuel d fab).run a = .ok (false, a₁)) :
@@ -497,9 +457,9 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (fabScopeOk_spec p hp.fabScopeOk n s₀ d fab major) fun r s' ⟨hloc, hW⟩ =>
+  refine triple_post (fabScopeOk_spec p hp.fabScopeOk (n + 1) s₀ d fab major) fun r s' ⟨hloc, hW⟩ =>
     ⟨hloc, ?_⟩
-  simp only [fsW] at hW
+  simp only [fsW, fsW.k_wscoped_bfast, fsW.k_loose_bvars_bounded_fast, fsW.k_leaf_guard] at hW
   rcases hc1 : callW p n "wscoped_bfast" [d, fab] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
     simp only [hc1, reduceCtorEq] at hW
   obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
@@ -508,7 +468,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   · rw [ite_eq_left h0] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_f_m2c h0] at hrun1
-    have hr0 : r.headD 0 = 0 := by simpa using hr.symm
+    have hr0 : r.headD 0 = 0 := by rw [← hr]; rfl
     refine CoreRef.of_run (fabScopeOk_stop1 d.toNat (decE fab) (decE major) a₀ _ hrun1) ⟨M₁, hS₁,
       hK₁, hSt₁⟩ ?_ ?_
     · simp only [decBool]; rw [hr0]; rfl
@@ -525,7 +485,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   · rw [ite_eq_left h20] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_f_m2c h20] at hrun2
-    have hr0 : r.headD 0 = 0 := by simpa using hr.symm
+    have hr0 : r.headD 0 = 0 := by rw [← hr]; rfl
     refine CoreRef.of_run (fabScopeOk_stop2 d.toNat (decE fab) (decE major) a₀ _ _ hrun1 hrun2)
       ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩ ?_ ?_
     · simp only [decBool]; rw [hr0]; rfl
@@ -538,7 +498,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
     (hc.leafGuard n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb fab major hS₂ hfab hmaj) hc3
   have hrun3 := AM.run_of_ok _ _ hok3
-  have hr3 : r₃.headD 0 = r.headD 0 := by simpa using hr
+  have hr3 : r₃.headD 0 = r.headD 0 := by rw [← hr]; rfl
   refine CoreRef.of_run (fabScopeOk_go d.toNat (decE fab) (decE major) a₀ _ _ _ _ hrun1 hrun2
     hrun3) ⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩ ?_ ?_
   · rw [hres3]; simp only [decBool]; rw [hr3]
@@ -1127,23 +1087,11 @@ theorem SpineR.append {m : Mem} {off a b : Word} {xs ys : Array EIdx} (hx : Spin
       have := hy.get (i - a.toNat) (by rw [hy.size]; omega)
       simpa [hx.size] using this
 
-/-- Model of `eta_fab_args`. -/
-def efaW (p : Prog) (k : Nat) (m : Mem) (T to tn major nF : Word) : Option (List Word × Mem) :=
-  match callW p k "eta_projs" [T, major, nF] m with
-  | none => none
-  | some (r, m₁) => some ([to, tn + r.tail.headD 0], m₁)
-
-theorem etaFabArgs_spec (p : Prog) (hp : p.lookup "eta_fab_args" = some etaFabArgsL) (k : Nat)
-    (s₀ : St) (T to tn major nF : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "eta_fab_args" [T, to, tn, major, nF]
-    ⦃fun r s' => LocEq s' s₀ ∧ efaW p k s₀.mem T to tn major nF = some ([r.headD 0, r.tail.headD 0], s'.mem);
-      ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, etaFabArgsL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k "eta_projs"] <;>
-  simp_all [efaW, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+/-- **`eta_fab_args` is its model `efaW`** (generated). -/
+l_model etaFabArgs_spec (p : Prog) (hp : p.lookup "eta_fab_args" = some etaFabArgsL)
+  fns [hp ↦ efaW list]
+  specs [callW_spec p n "eta_projs"]
+  grind [arena_grind] simp []
 
 theorem etaFabArgsE_run (T : NIdx) (targs : List EIdx) (major : EIdx) (nF : Nat) (a a₁ : AState)
     (ps : List EIdx) (h : (etaProjs T major nF).run a = .ok (ps, a₁)) :
@@ -1168,9 +1116,9 @@ theorem etaFabArgs_refines (p : Prog) (hp : IotaProg' p) :
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (etaFabArgs_spec p hp.etaFabArgs n s₀ T to tn major nF) fun r s' ⟨hloc, hW⟩ =>
+  refine triple_post (etaFabArgs_spec p hp.etaFabArgs (n + 1) s₀ T to tn major nF) fun r s' ⟨hloc, hW⟩ =>
     ⟨hloc, ?_⟩
-  simp only [efaW] at hW
+  simp only [efaW, efaW.k_eta_projs] at hW
   rcases hc1 : callW p n "eta_projs" [T, major, nF] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
     simp only [hc1, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -1188,9 +1136,9 @@ theorem etaFabArgs_refines (p : Prog) (hp : IotaProg' p) :
     rw [← this, htop]
     exact Nat.le_refl _
   have hr1 : r.headD 0 = to := by
-    have := congrArg (fun l => l.headD 0) hr.symm; simpa using this
+    have := congrArg (fun l => l.headD 0) hr; simpa using this.symm
   have hr2 : r.tail.headD 0 = tn + r₁.tail.headD 0 := by
-    have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
+    have := congrArg (fun l => l.tail.headD 0) hr; simpa using this.symm
   have hys' : SpineR m₁ (to + tn) (r₁.tail.headD 0) ys.toArray := by
     have : r₁.headD 0 = to + tn := by rw [htop]; exact hhead
     rw [← this]; exact hys
