@@ -1,6 +1,7 @@
 module
 
 meta import ConAgua.L.Semantics
+meta import ConAgua.Layout
 meta import ConAgua.L.ByteClass
 public import ConAgua.L.Notation
 public import ConAgua.L.WriteSet
@@ -122,10 +123,10 @@ def findProg : Prog := [("find_byte", findByte)]
 
 /- `"hello"` has its first `l` at 2; from 4 on there is none, so the answer is the length. -/
 #guard (run findProg 100 "find_byte" [0, 'l'.toNat.toUInt64]
-  { bytes := #["hello".toUTF8.data] }).toOption.map (·.1) == some [2]
+  (Mem.ofBytes [(IN, "hello".toUTF8.data)])).toOption.map (·.1) == some [2]
 
 #guard (run findProg 100 "find_byte" [4, 'l'.toNat.toUInt64]
-  { bytes := #["hello".toUTF8.data] }).toOption.map (·.1) == some [5]
+  (Mem.ofBytes [(IN, "hello".toUTF8.data)])).toOption.map (·.1) == some [5]
 
 /-! ## `str_close` and `skip_braced`
 
@@ -192,7 +193,7 @@ def skipBraced : FunDecl := lfn (i, depth) locals (c, e) {
 def scanProg : Prog := [("str_close", strClose), ("skip_braced", skipBraced)]
 
 #guard (run scanProg 1000 "skip_braced" [1, 0]
-  { bytes := #["{\"a\":[1,{\"b\\\"\":2}]} x".toUTF8.data] }).toOption.map (·.1) == some [19]
+  (Mem.ofBytes [(IN, "{\"a\":[1,{\"b\\\"\":2}]} x".toUTF8.data)])).toOption.map (·.1) == some [19]
 
 /-! A word-array smoke test: `histogram` counts the bytes of `IN` into word array `HIST`. -/
 
@@ -210,7 +211,7 @@ def histogram : FunDecl := lfn () locals (i, c) {
 }
 
 #guard (run [("histogram", histogram)] 100 "histogram" []
-  { bytes := #["banana".toUTF8.data], words := #[Array.replicate 256 0] }).toOption.map (·.1)
+  ((Mem.ofWords [(HIST, Array.replicate 256 0)]).putBytes IN "banana".toUTF8.data)).toOption.map (·.1)
   == some [3]
 
 /-- con-leche's `strClose` (`ConLeche/Frontend/Scan/Fast.lean`), with `Nat` positions. -/
@@ -454,17 +455,17 @@ end scan
 answer, and the memory is unchanged. -/
 theorem skipBraced_run (b : Array UInt8) (hb : b.size < 2 ^ 64) (fuel : Nat) (i d : Word)
     (hi : i.toNat ≤ b.size) (hd : d.toNat + (b.size - i.toNat) < 2 ^ 64) (r : List Word) (m' : Mem)
-    (h : run scanProg fuel "skip_braced" [i, d] { bytes := #[b] } = .ok (r, m')) :
-    r = [UInt64.ofNat (skipBracedN b i.toNat d.toNat)] ∧ m' = { bytes := #[b] } := by
+    (h : run scanProg fuel "skip_braced" [i, d] (Mem.ofBytes [(IN, b)]) = .ok (r, m')) :
+    r = [UInt64.ofNat (skipBracedN b i.toNat d.toNat)] ∧ m' = (Mem.ofBytes [(IN, b)]) := by
   simp only [run] at h
   cases hr : (invoke scanProg (exec scanProg fuel) "skip_braced" [i, d]).run
-      { mem := { bytes := #[b] }, loc := Locals.init [] } with
+      { mem := (Mem.ofBytes [(IN, b)]), loc := Locals.init [] } with
   | error e => simp [hr, Except.map] at h
   | ok rs =>
     simp only [hr, Except.map] at h
     injection h with h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj h
-    have := M.of_run (P := fun s => s = { mem := { bytes := #[b] }, loc := Locals.init [] }) rfl hr
+    have := M.of_run (P := fun s => s = { mem := (Mem.ofBytes [(IN, b)]), loc := Locals.init [] }) rfl hr
       (skipBraced_spec scanProg rfl rfl b hb fuel _ rfl i d hi hd)
     grind
 

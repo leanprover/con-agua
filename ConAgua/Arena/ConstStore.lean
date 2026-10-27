@@ -138,11 +138,12 @@ def constProg : Prog :=
   [("const_find", constFind), ("const_push", constPush), ("intern_const", internConst)]
 
 /-- A memory with 8 `const` nodes and `SN0` slots per tier, the scratch tier closed or open.
-Arrays 0‥17 (the other tables') are unused here and left empty. -/
+The other tables' arrays are unused here and left empty. -/
 def constMem (scratch : Word) : Mem :=
-  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[],
-      #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
+  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+    withTiers [(CREC, Array.replicate consTestWords 0),
+      (CSLOT, Array.replicate consTestWords 0),
+      (CLP, Array.replicate consTestWords 0)]
 
 /-- Intern each pair in turn; the handles. -/
 def internConsts (m : Mem) : List (Word × Word) → Option (List Word)

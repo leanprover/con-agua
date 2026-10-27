@@ -265,17 +265,17 @@ def natDecProg : Prog := [("dec_chunk", decChunk), ("nat_mad", natMad), ("nat_de
 /- `12345678901234567890123` (23 digits, two chunks) at pool top 1: limbs
 `[4807115922877859019, 669]` at 1, the top moves to 3. -/
 #guard (run natDecProg 1000 "nat_dec" [1, 24]
-  { bytes := #["x12345678901234567890123".toUTF8.data], words := #[#[7, 0, 0, 0], #[1]] }).toOption.map
-  (fun (r, m) => (r, m.words)) == some ([1, 2], #[#[7, 4807115922877859019, 669, 0], #[3]])
+  ((Mem.ofWords [(POOL, #[7, 0, 0, 0]), (CTL, #[1])]).putBytes IN "x12345678901234567890123".toUTF8.data)).toOption.map
+  (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) == some ([1, 2], #[7, 4807115922877859019, 669, 0], #[3])
 /- `0` and `00` have no limbs; `7` one. -/
 #guard (run natDecProg 1000 "nat_dec" [0, 2]
-  { bytes := #["00".toUTF8.data], words := #[#[0], #[0]] }).toOption.map (·.1) == some [0, 0]
+  ((Mem.ofWords [(POOL, #[0]), (CTL, #[0])]).putBytes IN "00".toUTF8.data)).toOption.map (·.1) == some [0, 0]
 #guard (run natDecProg 1000 "nat_dec" [0, 1]
-  { bytes := #["7".toUTF8.data], words := #[#[0], #[0]] }).toOption.map (fun (r, m) => (r, m.words))
-  == some ([0, 1], #[#[7], #[1]])
+  ((Mem.ofWords [(POOL, #[0]), (CTL, #[0])]).putBytes IN "7".toUTF8.data)).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL))
+  == some ([0, 1], #[7], #[1])
 /- A full pool aborts. -/
 #guard (run natDecProg 1000 "nat_dec" [0, 1]
-  { bytes := #["7".toUTF8.data], words := #[#[], #[0]] }).toOption.isNone
+  ((Mem.ofWords [(POOL, #[]), (CTL, #[0])]).putBytes IN "7".toUTF8.data)).toOption.isNone
 
 /-! ## The specs -/
 

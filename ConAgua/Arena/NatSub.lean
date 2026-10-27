@@ -93,14 +93,14 @@ def natSubProg : Prog := natProg ++ [("sub_borrow", subBorrow), ("nat_sub", natS
 
 /- `2^64 - 1 = [max]`: operands `[0, 1]` at 0 and `[1]` at 2, top 3. -/
 #guard (run natSubProg 100 "nat_sub" [0, 2, 2, 1]
-  { words := #[#[0, 1, 1, 0, 0], #[3]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([1], #[#[0, 1, 1, 0xFFFFFFFFFFFFFFFF, 0], #[4]])
+  (Mem.ofWords [(POOL, #[0, 1, 1, 0, 0]), (CTL, #[3])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([1], #[0, 1, 1, 0xFFFFFFFFFFFFFFFF, 0], #[4])
 /- `1 - 2^64 = 0`, and `5 - 5 = 0`; the top stays. -/
 #guard (run natSubProg 100 "nat_sub" [2, 1, 0, 2]
-  { words := #[#[0, 1, 1, 0, 0], #[3]] }).toOption.map (fun (r, m) => (r, m.words.back!)) ==
+  (Mem.ofWords [(POOL, #[0, 1, 1, 0, 0]), (CTL, #[3])])).toOption.map (fun (r, m) => (r, m.arr64 CTL)) ==
   some ([0], #[3])
 #guard (run natSubProg 100 "nat_sub" [0, 1, 1, 1]
-  { words := #[#[5, 5, 0], #[2]] }).toOption.map (fun (r, m) => (r, m.words.back!)) ==
+  (Mem.ofWords [(POOL, #[5, 5, 0]), (CTL, #[2])])).toOption.map (fun (r, m) => (r, m.arr64 CTL)) ==
   some ([0], #[2])
 
 section sub

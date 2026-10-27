@@ -624,15 +624,15 @@ def natDivProg : Prog := natProg ++ [("sub_borrow", subBorrow), ("div_shl1", div
 
 /- `(2^64 + 5) / 3 = 6148914691236517207, rem 0`; quotient `[0x5555555555555557]`. -/
 #guard (run natDivProg 100000 "nat_divmod" [0, 2, 2, 1]
-  { words := #[#[5, 1, 3, 0, 0, 0, 0, 0], #[3]] }).toOption.map
-  (fun (r, m) => (r, m.words[0]![3]!, m.words[1]!)) ==
+  (Mem.ofWords [(POOL, #[5, 1, 3, 0, 0, 0, 0, 0]), (CTL, #[3])])).toOption.map
+  (fun (r, m) => (r, (m.arr64 POOL)[3]!, m.arr64 CTL)) ==
   some ([3, 1, 5, 0], 0x5555555555555557, #[7])
 /- `7 / 2 = 3 rem 1`; `5 / 0 = 0 rem 5` (the remainder is `a`'s slice). -/
 #guard (run natDivProg 100000 "nat_divmod" [0, 1, 1, 1]
-  { words := #[#[7, 2, 0, 0, 0, 0], #[2]] }).toOption.map
-  (fun (r, m) => (r, m.words[0]![2]!, m.words[0]![3]!)) == some ([2, 1, 3, 1], 3, 1)
+  (Mem.ofWords [(POOL, #[7, 2, 0, 0, 0, 0]), (CTL, #[2])])).toOption.map
+  (fun (r, m) => (r, (m.arr64 POOL)[2]!, (m.arr64 POOL)[3]!)) == some ([2, 1, 3, 1], 3, 1)
 #guard (run natDivProg 100000 "nat_divmod" [0, 1, 1, 0]
-  { words := #[#[5, 0], #[1]] }).toOption.map (·.1) == some [1, 0, 0, 1]
+  (Mem.ofWords [(POOL, #[5, 0]), (CTL, #[1])])).toOption.map (·.1) == some [1, 0, 0, 1]
 
 section step
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
