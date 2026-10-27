@@ -99,8 +99,7 @@ theorem internE_forall_run (ty b : EIdx) (a : AState) :
 def forallSch : Schema := ⟨FAREC, FASLOT, 1, 30, ETag.forallE⟩
 
 theorem forallSch_wf : forallSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_fa0 (m : Mem) (t i : Word) :
     fld forallSch m t i 0 = rdW (m.arr64 (tierA FAREC t)) i := by
@@ -185,8 +184,6 @@ theorem forallCS_wf : forallCS.WF where
   S := by decide
   col A h := by simp [forallCS] at h
   colRoom A h := by simp [forallCS] at h
-  colLt A h := by
-    simp only [forallCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (fapushOK_room m t ((fapushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, forallCS, hk]
   ex _ := {

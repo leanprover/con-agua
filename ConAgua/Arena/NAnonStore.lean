@@ -117,7 +117,7 @@ def nanonProg : Prog :=
 /-- A memory with 8 `anonymous` slots per tier, the scratch tier closed or open. The other
 tables' arrays are unused here and left empty. -/
 def nanonMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (Array.replicate 64 0).set! 1 scratch)] ++
+  Mem.ofWords <| [((CTL : TieredArray), (Array.replicate 64 0).set! 1 scratch)] ++
     withTiers [(NAREC, Array.replicate 16 0),
       (NASLOT, Array.replicate consTestWords 0)]
 
@@ -167,8 +167,6 @@ theorem nanonOK : ConsOK p nanonCS where
   colA := by simp [nanonCS]
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [nanonCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [nanonCS] at h
   mloc := fun h => by simp [nanonCS] at h
   exnk := fun _ => by decide

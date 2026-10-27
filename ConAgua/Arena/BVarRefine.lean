@@ -70,8 +70,7 @@ theorem internE_bvar_run (i : Nat) (a : AState) :
 def bvarSch : Schema := ⟨BREC, BSLOT, 1, 22, ETag.bvar⟩
 
 theorem bvarSch_wf : bvarSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_bvar0 (m : Mem) (t i : Word) : fld bvarSch m t i 0 = rdW (m.arr64 (tierA BREC t)) i := by
   simp [fld, Schema.ad, bvarSch]
@@ -147,8 +146,6 @@ theorem bvarCS_wf : bvarCS.WF where
   S := by decide
   col A h := by simp [bvarCS] at h
   colRoom A h := by simp [bvarCS] at h
-  colLt A h := by
-    simp only [bvarCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (bpushOK_room m t ((bpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, bvarCS, hk]
   ex _ := {

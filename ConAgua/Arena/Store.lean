@@ -396,7 +396,7 @@ def litProg : Prog :=
 /-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and `SN0` slots per
 tier, the scratch tier closed or open. -/
 def litMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, #[5, scratch] ++ Array.replicate 62 0)] ++
+  Mem.ofWords <| [((CTL : TieredArray), #[5, scratch] ++ Array.replicate 62 0)] ++
     withTiers [(POOL, #[5, 7, 5, 1, 2, 0, 0, 0]), (REC, Array.replicate 64 0),
       (SLOT, Array.replicate consTestWords 0)]
 
@@ -416,7 +416,7 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 
 /-- 13 limbs in the pool, the slot array `slots`. -/
 def litGrowMem (slots : Array Word) : Mem :=
-  Mem.ofWords <| [(CTL, #[13] ++ Array.replicate 63 0)] ++
+  Mem.ofWords <| [((CTL : TieredArray), #[13] ++ Array.replicate 63 0)] ++
     withTiers [(POOL, (Array.range 13).map (UInt64.ofNat · + 1)), (REC, Array.replicate 256 0),
       (SLOT, slots)]
 
@@ -570,7 +570,6 @@ theorem litOK (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_
   skips := by intro e he; simp [litCS, litCSk] at he
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by simp [litCS, litCSk] at h⟩
 
 theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq)
@@ -596,7 +595,6 @@ theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
   skips := by intro e he; simp [litStrCS, litCSk] at he
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by simp [litStrCS, litCSk] at h⟩
 
 theorem pushOK_eqC (m : Mem) (t : Word) : pushOK m t = pushOKC litCS m t := by
   rw [pushOK, pushOKC, dec_lt_not_le' (cnt m t) (m.len64 (tierA REC t) >>> 2)]; rfl

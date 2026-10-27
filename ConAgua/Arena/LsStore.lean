@@ -171,7 +171,7 @@ def lsProg : Prog :=
 /-- A memory with the lists `[5]`, `[7]`, `[5]`, `[5, 7]`, `[]` in the pool (top 5), 8 nodes and
 `SN0` slots per tier, the scratch tier closed or open. -/
 def lsMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, ((Array.replicate 64 0).set! 1 scratch).set! 0 5)] ++
+  Mem.ofWords <| [((CTL : TieredArray), ((Array.replicate 64 0).set! 1 scratch).set! 0 5)] ++
     withTiers [(POOL, #[5, 7, 5, 5, 7, 0, 0, 0]), (LSREC, Array.replicate 48 0),
       (LSSLOT, Array.replicate consTestWords 0),
       (LSHP, Array.replicate consTestWords 0)]
@@ -248,8 +248,6 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
   skips := by intro e he; simp [lsCS] at he
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [lsCS, Option.some.injEq] at h; (try subst h); (try decide)⟩
 
 theorem lspushOK_eqC (m : Mem) (t : Word) : lspushOK m t = pushOKC lsCS m t := by
   rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 3) (m.len64 (tierA LSREC t)),

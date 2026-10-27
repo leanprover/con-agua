@@ -83,8 +83,7 @@ theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
 def constSch : Schema := ⟨CREC, CSLOT, 1, 18, ETag.const⟩
 
 theorem constSch_wf : constSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = rdW (m.arr64 (tierA CREC t)) i := by
   simp [fld, Schema.ad, constSch]
@@ -174,8 +173,6 @@ theorem constCS_wf : constCS.WF where
     rw [← cepushOK_eqC] at hp
     simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m CLP _ t hp.2
-  colLt A h := by
-    simp only [constCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, constCS, hk]
   ex _ := {
     nk := by decide

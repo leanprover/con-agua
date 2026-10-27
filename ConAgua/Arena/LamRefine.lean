@@ -100,8 +100,7 @@ theorem internE_lam_run (ty b : EIdx) (a : AState) :
 def lamSch : Schema := ⟨LAREC, LASLOT, 1, 28, ETag.lam⟩
 
 theorem lamSch_wf : lamSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_la0 (m : Mem) (t i : Word) :
     fld lamSch m t i 0 = rdW (m.arr64 (tierA LAREC t)) i := by
@@ -184,8 +183,6 @@ theorem lamCS_wf : lamCS.WF where
   S := by decide
   col A h := by simp [lamCS] at h
   colRoom A h := by simp [lamCS] at h
-  colLt A h := by
-    simp only [lamCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (lapushOK_room m t ((lapushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, lamCS, hk]
   ex _ := {

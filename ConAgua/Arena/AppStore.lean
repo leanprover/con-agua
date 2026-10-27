@@ -129,7 +129,7 @@ def appProg : Prog :=
 
 /-- A memory with 8 `app` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def appMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+  Mem.ofWords <| [((CTL : TieredArray), (#[0, scratch] ++ Array.replicate 62 0))] ++
     withTiers [(AREC, Array.replicate consTestWords 0),
       (ASLOT, Array.replicate consTestWords 0)]
 
@@ -185,8 +185,6 @@ theorem appOK : ConsOK p appCS where
   colA := by simp [appCS]
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [appCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [appCS] at h
   mloc := fun h => by simp [appCS] at h
   exnk := fun _ => by decide
