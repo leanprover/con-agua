@@ -27,6 +27,10 @@ The table (first match per path; "cheap" = links, vendor, modules, provenance, r
   main.c, Makefile, reasons.h, scripts/{diff-e2e,e2e}.py      e2e
   scripts/{core,loop,leaf}_fns.{py,lean}, preloop_ws.py       build + that closure check
   scripts/shake{.py,-setup.sh,-allowlist.txt,-keep.txt}       build, shake
+  scripts/checker_prog.py; ConAgua/E2E/Dump.lean,             build, checker-prog (`checker_prog.py
+    ConAgua/Checker/{Sources,Entry,Prelude}.lean and the        --no-build --check`: the generator still
+    generated ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgSkt,    runs and writes the committed text);
+    ProgWf,Asm,AsmPart*}.lean; scripts/e2e.py                   .lean files also shake + the closures
   ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the four closure checks if
                                                               the module is in the import closure of
                                                               ConAgua.Checker.Prog or of a closure's
@@ -49,7 +53,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHEAP = ["links", "vendor", "modules", "provenance", "reasons"]
 CLOSURES = ["core-fns", "loop-fns", "leaf-fns", "preloop-ws"]
-ORDER = CHEAP + ["build", "shake"] + CLOSURES + ["e2e"]
+ORDER = CHEAP + ["build", "shake"] + CLOSURES + ["checker-prog", "e2e"]
 
 ALL_EXACT = {"lakefile.toml", "lake-manifest.json", "lean-toolchain", "scripts/lake",
              "scripts/gates.sh", "scripts/gate_select.py"}
@@ -61,6 +65,9 @@ CLOSURE_SCRIPTS = {
     "scripts/leaf_fns.py": "leaf-fns", "scripts/leaf_fns.lean": "leaf-fns",
     "scripts/preloop_ws.py": "preloop-ws",
 }
+# `scripts/checker_prog.py --no-build --check`: the generator, its inputs' readers and its outputs
+PROG_GEN = re.compile(r"^(scripts/checker_prog\.py|ConAgua/E2E/Dump\.lean|"
+                      r"ConAgua/Checker/(Sources|Entry|Prelude|Prog|ProgTab|ProgNrt|ProgSkt|ProgWf|Asm|AsmPart\d+)\.lean)$")
 SHAKE_FILES = {"scripts/shake.py", "scripts/shake-setup.sh", "scripts/shake-allowlist.txt",
                "scripts/shake-keep.txt"}
 # the closure checks read checkerProg (ConAgua.Checker.Prog) and rewrite these files
@@ -102,8 +109,12 @@ def classify(path, root):
         return set()
     if path in ("checker.s", "pins.bin"):
         return {"build", "e2e"}
+    if path == "scripts/e2e.py":
+        return {"build", "checker-prog", "e2e"}  # `dump_sets`, the generator's dump
     if path in E2E_EXACT:
         return {"e2e"}
+    if PROG_GEN.match(path):
+        return {"build", "shake", "checker-prog", *CLOSURES} if path.endswith(".lean") else {"build", "checker-prog"}
     if path in CLOSURE_SCRIPTS:
         return {"build", CLOSURE_SCRIPTS[path]}
     if path in SHAKE_FILES:

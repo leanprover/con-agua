@@ -76,7 +76,6 @@ import ConAgua.Arena.NatShr
 import ConAgua.Arena.NatSub
 import ConAgua.Arena.ParamStore
 import ConAgua.Arena.Pins
-import ConAgua.Arena.Pool
 import ConAgua.Arena.ProjStore
 import ConAgua.Arena.Promote
 import ConAgua.Arena.PropRead
@@ -98,7 +97,6 @@ import ConAgua.Arena.StripTele
 import ConAgua.Arena.StubInd
 import ConAgua.Arena.StubNames
 import ConAgua.Arena.TeleLift
-import ConAgua.Arena.Tiers
 import ConAgua.Arena.Walk
 import ConAgua.Arena.WalkLeaves
 import ConAgua.Arena.WalkLift
@@ -129,6 +127,7 @@ import ConAgua.Front.NatDec
 import ConAgua.Front.Unescape
 import ConAgua.L.Examples
 import ConAgua.L.Syntax
+import ConAgua.Layout
 import ConAgua.Rom.CIRead
 import ConAgua.Rom.PinRead
 import ConAgua.Scan.Key
