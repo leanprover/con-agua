@@ -181,6 +181,10 @@ def main():
     env = dict(os.environ)
     env["LAKE_CACHE_DIR"] = shared
     env.setdefault("LAKE_RESTORE_ARTIFACTS", "true")
+    # The user session has a 50 GB memory cap shared by every agent and build; a full rebuild at
+    # Lake's default parallelism (one job per core, 96 here) reached it. LEAN_NUM_THREADS caps both
+    # Lake's job pool and each lean's threads; set it explicitly to override.
+    env.setdefault("LEAN_NUM_THREADS", "16")
     cold = truthy(env.get("LAKE_COLD", "false"))
     writes = truthy(env.get("LAKE_ARTIFACT_CACHE", "true")) and not cold
     sub = subcommand(args)
