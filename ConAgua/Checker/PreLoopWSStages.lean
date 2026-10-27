@@ -267,7 +267,7 @@ theorem stageFrame_builtin_prelude (n : Nat) (s₀ : St) :
   memFrame_of_closed checkerProg_stageClosed_builtin_prelude n
     (mem_of_tree stageTree_builtin_prelude.eq "builtin_prelude" (by decide +kernel)) s₀
 
-theorem stageA_builtin_prelude_pins : PINS ∉ stageA_builtin_prelude := by decide +kernel
+theorem stageA_builtin_prelude_pins : (PINS : TieredArray) ∉ stageA_builtin_prelude := by decide +kernel
 
 /-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `builtin_prelude` writes
 240. -/
@@ -360,7 +360,7 @@ theorem stageFrame_front_run (n : Nat) (s₀ : St) :
   memFrame_of_closed checkerProg_stageClosed_front_run n
     (mem_of_tree stageTree_front_run.eq "front_run" (by decide +kernel)) s₀
 
-theorem stageA_front_run_pins : PINS ∉ stageA_front_run := by decide +kernel
+theorem stageA_front_run_pins : (PINS : TieredArray) ∉ stageA_front_run := by decide +kernel
 
 /-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `front_run` writes
 none. -/
@@ -416,7 +416,7 @@ theorem stageFrame_prepare_prelude (n : Nat) (s₀ : St) :
   memFrame_of_closed checkerProg_stageClosed_prepare_prelude n
     (mem_of_tree stageTree_prepare_prelude.eq "prepare_prelude" (by decide +kernel)) s₀
 
-theorem stageA_prepare_prelude_pins : PINS ∉ stageA_prepare_prelude := by decide +kernel
+theorem stageA_prepare_prelude_pins : (PINS : TieredArray) ∉ stageA_prepare_prelude := by decide +kernel
 
 /-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `prepare_prelude` writes
 none. -/
