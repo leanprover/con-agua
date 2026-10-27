@@ -77,8 +77,7 @@ theorem internNNode_num_run (pre : NIdx) (n : Nat) (a : AState) :
 def nnumSch : Schema := ⟨NNREC, NNSLOT, 2, 38, NTag.num⟩
 
 theorem nnumSch_wf : nnumSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_nn0 (m : Mem) (t i : Word) :
     fld nnumSch m t i 0 = rdW (m.arr64 (tierA NNREC t)) (i * 2) := by
@@ -175,8 +174,6 @@ theorem nnumCS_wf : nnumCS.WF where
   S := by decide
   col A h := by simp [nnumCS] at h
   colRoom A h := by simp [nnumCS] at h
-  colLt A h := by
-    simp only [nnumCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (nnpushOK_room m t ((nnpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nnumCS, hk]
   ex h := by simp [nnumCS] at h

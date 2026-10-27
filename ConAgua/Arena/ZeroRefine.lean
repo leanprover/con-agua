@@ -71,8 +71,7 @@ theorem internLNode_zero_run (a : AState) :
 def zeroSch : Schema := ⟨ZREC, ZSLOT, 1, 8, LTag.zero⟩
 
 theorem zeroSch_wf : zeroSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 /-- Node `i` of tier `t` holds the `zero` node: trivially (there is only one `ZeroNode`). -/
 def ZRecRel (_m : Mem) (_t _i : Word) (_k : ZeroNode) : Prop := True
@@ -121,8 +120,6 @@ theorem zeroCS_wf : zeroCS.WF where
   S := by decide
   col A h := by simp [zeroCS] at h
   colRoom A h := by simp [zeroCS] at h
-  colLt A h := by
-    simp only [zeroCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (zpushOK_room m t ((zpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, zeroCS]
   ex _ := {

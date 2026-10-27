@@ -71,8 +71,7 @@ theorem internLNode_imax_run (u v : LIdx) (a : AState) :
 def imaxSch : Schema := ⟨IREC, ISLOT, 1, 12, LTag.imax⟩
 
 theorem iimaxSch_wf : imaxSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 (tierA IREC t)) i := by
   simp [fld, Schema.ad, imaxSch]
@@ -163,8 +162,6 @@ theorem imaxCS_wf : imaxCS.WF where
     rw [← impushOK_eqC] at hp
     simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m IHP _ t hp.2
-  colLt A h := by
-    simp only [imaxCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, imaxCS, hk]
   ex _ := {
     nk := by decide

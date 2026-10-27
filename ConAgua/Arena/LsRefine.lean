@@ -81,8 +81,7 @@ theorem internLsNode_run (us : List LIdx) (a : AState) :
 def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 40, LsTag.list⟩
 
 theorem lsSch_wf : lsSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = rdW (m.arr64 (tierA LSREC t)) (i * 3) := by
   simp [fld, Schema.ad, lsSch]
@@ -239,8 +238,6 @@ theorem lsCS_wf : lsCS.WF where
     rw [← lspushOK_eqC] at hp
     simp only [lspushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m LSHP _ t hp.2
-  colLt A h := by
-    simp only [lsCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, lsCS, hk]
   ex h := by simp [lsCS] at h
 

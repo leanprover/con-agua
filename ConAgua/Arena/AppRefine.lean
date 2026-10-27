@@ -79,8 +79,7 @@ theorem internE_app_run (f x : EIdx) (a : AState) :
 def appSch : Schema := ⟨AREC, ASLOT, 1, 4, ETag.app⟩
 
 theorem appSch_wf : appSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_app0 (m : Mem) (t i : Word) : fld appSch m t i 0 = rdW (m.arr64 (tierA AREC t)) i := by
   simp [fld, Schema.ad, appSch]
@@ -161,8 +160,6 @@ theorem appCS_wf : appCS.WF where
   S := by decide
   col A h := by simp [appCS] at h
   colRoom A h := by simp [appCS] at h
-  colLt A h := by
-    simp only [appCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (apushOK_room m t ((apushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, appCS, hk]
   ex _ := {

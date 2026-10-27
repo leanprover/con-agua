@@ -130,7 +130,7 @@ def maxProg : Prog :=
 
 /-- A memory with 8 `max` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def maxMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+  Mem.ofWords <| [((CTL : TieredArray), (#[0, scratch] ++ Array.replicate 62 0))] ++
     withTiers [(MREC, Array.replicate consTestWords 0),
       (MSLOT, Array.replicate consTestWords 0),
       (MHP, Array.replicate consTestWords 0)]
@@ -204,8 +204,6 @@ theorem maxOK : ConsOK p maxCS where
     simp [maxCS] at he
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [maxCS, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [maxCS] at h
   mloc := fun h => by simp [maxCS] at h
   exnk := fun _ => by decide

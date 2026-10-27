@@ -79,8 +79,7 @@ theorem internE_sort_run (u : LIdx) (a : AState) :
 def sortSch : Schema := ⟨SOREC, SOSLOT, 1, 16, ETag.sort⟩
 
 theorem sortSch_wf : sortSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_sort0 (m : Mem) (t i : Word) :
     fld sortSch m t i 0 = rdW (m.arr64 (tierA SOREC t)) i := by
@@ -169,8 +168,6 @@ theorem sortCS_wf : sortCS.WF where
     rw [← sopushOK_eqC] at hp
     simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m SOLP _ t hp.2
-  colLt A h := by
-    simp only [sortCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, sortCS, hk]
   ex _ := {
     nk := by decide

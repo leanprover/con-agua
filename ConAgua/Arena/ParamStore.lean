@@ -115,7 +115,7 @@ def paramProg : Prog :=
 /-- A memory with 8 `param` nodes and `SN0` slots per tier, the scratch tier closed or open. The other
 tables' arrays are unused here and left empty. -/
 def paramMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+  Mem.ofWords <| [((CTL : TieredArray), (#[0, scratch] ++ Array.replicate 62 0))] ++
     withTiers [(PREC, Array.replicate 16 0),
       (PSLOT, Array.replicate consTestWords 0)]
 
@@ -165,8 +165,6 @@ theorem paramOK : ConsOK p paramCS where
   colA := by simp [paramCS]
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [paramCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [paramCS] at h
   mloc := fun h => by simp [paramCS] at h
   exnk := fun _ => by decide

@@ -143,7 +143,7 @@ def forallProg : Prog :=
 /-- A memory with 8 `forallE` nodes and `SN0` slots per tier, the scratch tier closed or open.
 Arrays other than `CTL`/`FAREC`/`FASLOT` are unused here and left empty. -/
 def forallMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+  Mem.ofWords <| [((CTL : TieredArray), (#[0, scratch] ++ Array.replicate 62 0))] ++
     withTiers [(FAREC, Array.replicate consTestWords 0),
       (FASLOT, Array.replicate consTestWords 0)]
 
@@ -200,8 +200,6 @@ theorem forallOK : ConsOK p forallCS where
   colA := by simp [forallCS]
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [forallCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [forallCS] at h
   mloc := fun h => by simp [forallCS] at h
   exnk := fun _ => by decide

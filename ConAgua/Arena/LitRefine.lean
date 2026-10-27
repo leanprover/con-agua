@@ -300,8 +300,7 @@ theorem strWords_inj (s s' : String) (h : strWords s = strWords s') : s = s' :=
 def litSch : Schema := ⟨REC, SLOT, 4, 2, ETag.lit⟩
 
 theorem litS_wf : litSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_lit0 (m : Mem) (t i : Word) : fld litSch m t i 0 = rdW (m.arr64 (tierA REC t)) (i * 4) := by
   simp [fld, Schema.ad, litSch]
@@ -586,7 +585,6 @@ theorem litCS_wf : litCS.WF where
   S := by decide
   col A h := by simp [litCS, litCSk] at h
   colRoom A h := by simp [litCS, litCSk] at h
-  colLt A h := by simp [litCS, litCSk] at h
   room m t h := (pushOK_room m t ((pushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, litCS, litCSk, hk]
   ex h := by simp [litCS, litCSk] at h
@@ -597,7 +595,6 @@ theorem litStrCS_wf : litStrCS.WF where
   S := by decide
   col A h := by simp [litStrCS, litCSk] at h
   colRoom A h := by simp [litStrCS, litCSk] at h
-  colLt A h := by simp [litStrCS, litCSk] at h
   room m t h := (pushOK_room m t ((pushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, litStrCS, litCSk, hk]
   ex h := by simp [litStrCS, litCSk] at h
@@ -667,7 +664,7 @@ section grow
 variable (m m' : Mem) (hg : Grows m m')
 
 include hg in
-theorem grow_arr (b : ArrId) (hb : b ≠ POOL ∧ b ≠ POOL1) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := by
+theorem grow_arr (b : TieredArray) (hb : b ≠ POOL ∧ b ≠ POOL1) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := by
   rw [hg.frame.arr b hb.1 hb.2, Mem.arr64_set64_ne _ _ _ _ _ hc]
 
 include hg in
@@ -741,7 +738,7 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
 
 /- `5 + 7` twice and `12` (`7 + 5`): one node, handle `0x80000000`; `5 + 5` is the second. -/
 #guard
-  let m : Mem := Mem.ofWords <| [(CTL, #[2] ++ Array.replicate 63 0)] ++
+  let m : Mem := Mem.ofWords <| [((CTL : TieredArray), #[2] ++ Array.replicate 63 0)] ++
     withTiers [(POOL, #[5, 7, 0, 0, 0, 0, 0, 0, 0, 0]), (REC, Array.replicate 64 0),
       (SLOT, Array.replicate consTestWords 0)]
   let go (m : Mem) (a b : Word) : Option (Word × Mem) :=

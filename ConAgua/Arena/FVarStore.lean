@@ -140,7 +140,7 @@ def fvarProg : Prog :=
 /-- A memory with 8 `fvar` nodes and `SN0` slots per tier, the scratch tier closed or open. The other
 tables' arrays are unused here and left empty. -/
 def fvarMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (Array.replicate 64 0).set! 1 scratch)] ++
+  Mem.ofWords <| [((CTL : TieredArray), (Array.replicate 64 0).set! 1 scratch)] ++
     withTiers [(FVREC, Array.replicate consTestWords 0),
       (FVSLOT, Array.replicate consTestWords 0),
       (FVLP, Array.replicate consTestWords 0)]
@@ -210,8 +210,6 @@ theorem fvarOK : ConsOK p fvarCS where
     simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [fvarCS, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [fvarCS] at h
   mloc := fun h => by simp [fvarCS] at h
   exnk := fun _ => by decide

@@ -70,8 +70,7 @@ theorem internLNode_succ_run (u : LIdx) (a : AState) :
 def succSch : Schema := ⟨SREC, SSLOT, 1, 6, LTag.succ⟩
 
 theorem succSch_wf : succSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 (tierA SREC t)) i := by
   simp [fld, Schema.ad, succSch]
@@ -159,8 +158,6 @@ theorem succCS_wf : succCS.WF where
     rw [← spushOK_eqC] at hp
     simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m SHP _ t hp.2
-  colLt A h := by
-    simp only [succCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, succCS, hk]
   ex _ := {
     nk := by decide

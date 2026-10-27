@@ -129,7 +129,7 @@ def succProg : Prog :=
 
 /-- A memory with 8 `succ` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def succMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+  Mem.ofWords <| [((CTL : TieredArray), (#[0, scratch] ++ Array.replicate 62 0))] ++
     withTiers [(SREC, Array.replicate 16 0),
       (SSLOT, Array.replicate consTestWords 0),
       (SHP, Array.replicate consTestWords 0)]
@@ -205,8 +205,6 @@ theorem succOK : ConsOK p succCS where
     simp [succCS] at he
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [succCS, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [succCS] at h
   mloc := fun h => by simp [succCS] at h
   exnk := fun _ => by decide

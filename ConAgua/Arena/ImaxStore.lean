@@ -130,7 +130,7 @@ def imaxProg : Prog :=
 
 /-- A memory with 8 `imax` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def imaxMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+  Mem.ofWords <| [((CTL : TieredArray), (#[0, scratch] ++ Array.replicate 62 0))] ++
     withTiers [(IREC, Array.replicate consTestWords 0),
       (ISLOT, Array.replicate consTestWords 0),
       (IHP, Array.replicate consTestWords 0)]
@@ -204,8 +204,6 @@ theorem imaxOK : ConsOK p imaxCS where
     simp [imaxCS] at he
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [imaxCS, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [imaxCS] at h
   mloc := fun h => by simp [imaxCS] at h
   exnk := fun _ => by decide

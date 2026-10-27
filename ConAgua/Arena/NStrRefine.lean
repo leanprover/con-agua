@@ -76,8 +76,7 @@ theorem internNNode_str_run (pre : NIdx) (s : String) (a : AState) :
 def nstrSch : Schema := ⟨NSREC, NSSLOT, 4, 36, NTag.str⟩
 
 theorem nstrSch_wf : nstrSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_nstr0 (m : Mem) (t i : Word) :
     fld nstrSch m t i 0 = rdW (m.arr64 (tierA NSREC t)) (i * 4) := by
@@ -244,8 +243,6 @@ theorem nstrCS_wf : nstrCS.WF where
   S := by decide
   col A h := by simp [nstrCS] at h
   colRoom A h := by simp [nstrCS] at h
-  colLt A h := by
-    simp only [nstrCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (nspushOK_room m t ((nspushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nstrCS, hk]
   ex h := by simp [nstrCS] at h
