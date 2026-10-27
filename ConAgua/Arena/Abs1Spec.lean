@@ -3,7 +3,6 @@ module
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 public import ConAgua.Arena.Abs1
-import ConAgua.Arena.LdRd
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
