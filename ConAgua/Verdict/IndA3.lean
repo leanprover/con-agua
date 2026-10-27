@@ -2,8 +2,6 @@ import ConAgua.Verdict.IndA2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Verdict.IndAGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `check_block_pass`'s error refinement (lane `verdicts-b`, helper `ia`)
 

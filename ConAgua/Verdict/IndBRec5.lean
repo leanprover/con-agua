@@ -3,8 +3,6 @@ import ConAgua.Verdict.IndBRec4
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinements of `class_rules_ok_one` and `class_rules_ok` (lane `verdicts-b`, helper `ib`)
 -/

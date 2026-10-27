@@ -1,4 +1,3 @@
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.Arena.ConstsResolveF

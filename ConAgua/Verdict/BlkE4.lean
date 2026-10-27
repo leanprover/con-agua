@@ -2,8 +2,6 @@ import ConAgua.Verdict.IndA3
 import ConAgua.Verdict.IndBE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `check_block_classes`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)
 

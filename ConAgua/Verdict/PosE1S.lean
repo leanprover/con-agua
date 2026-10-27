@@ -1,8 +1,6 @@
 import ConAgua.Verdict.PosE1L
 import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndT.PosCrest
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # The positivity walk's error steps: `nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`
 (lane `verdicts-b`, helper `ia2`, fork `kn1`)

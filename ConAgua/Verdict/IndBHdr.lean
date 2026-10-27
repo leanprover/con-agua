@@ -3,8 +3,6 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.UnresolvedE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `class_const_ok_header`'s error claim (lane `verdicts-b`, helper `ib`)
 

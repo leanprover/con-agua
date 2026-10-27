@@ -1,6 +1,4 @@
 import ConAgua.Verdict.IndsE4
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `check_block_agree`'s error refinement (lane `verdicts-b`, helper `ia2-inds`)
 

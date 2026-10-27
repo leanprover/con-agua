@@ -4,8 +4,6 @@ import ConAgua.Arena.InferBodySpineF
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinements of the inference arms (lane `verdicts-b`, helper `k1`)
 

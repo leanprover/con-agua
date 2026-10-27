@@ -2,8 +2,6 @@ import ConAgua.Verdict.IndA5
 import ConAgua.Verdict.IndBE
 import ConAgua.Verdict.IndsE1
 import ConAgua.Verdict.IndsE2
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `check_block_tele`'s, `check_block_teles`' error refinements (lane `verdicts-b`, helper `ia2-inds`)
 

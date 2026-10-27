@@ -5,8 +5,6 @@ import ConAgua.Verdict.DeclPendE
 import ConAgua.Verdict.CheckBE
 import ConAgua.Verdict.FrontStageE
 import ConAgua.Final.ThreadsVerdict
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # The verdict claims from the inductive arm's (lane `verdicts-b`, helper `sg`)
 

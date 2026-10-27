@@ -1,4 +1,3 @@
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.DefEqMid
 import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictTree

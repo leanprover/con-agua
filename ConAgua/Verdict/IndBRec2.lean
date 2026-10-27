@@ -3,8 +3,6 @@ import ConAgua.Verdict.IndBRec1
 import ConAgua.Arena.IndT.RecGen7
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinement of `class_rec_ty_ok` (lane `verdicts-b`, helper `ib`)
 -/

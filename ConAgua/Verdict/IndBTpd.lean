@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.RecCheckTpd
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

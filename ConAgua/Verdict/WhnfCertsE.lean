@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfModels5E
 import ConAgua.Verdict.WhnfIotaRecE
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `iota_certs_full`'s verdict claims (lane `verdicts-b`, helper `k2`)
 

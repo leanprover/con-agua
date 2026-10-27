@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfModels6E
 import ConAgua.Verdict.WhnfPrepE
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `major_to_ctor`'s verdict claims (lane `verdicts-b`, helper `k2`)
 

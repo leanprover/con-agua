@@ -1,8 +1,6 @@
 import ConAgua.Verdict.DeclDefnE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # The verdict claims of the definition arm's gates (lane `verdicts-b`, helper `d`)
 

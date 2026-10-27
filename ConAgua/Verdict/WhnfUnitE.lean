@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfSlotE
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `struct_unit_cert`, `struct_unit_head`, `struct_unit_tail`: error claims (lane `verdicts-b`, helper `k2`)
 

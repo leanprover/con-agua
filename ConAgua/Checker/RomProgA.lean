@@ -1,4 +1,3 @@
-import ConAgua.Checker.RomProg0
 import ConAgua.Checker.LoopProgTac
 
 /-!

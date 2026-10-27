@@ -2,8 +2,6 @@ import ConAgua.Arena.IndT.RecCheckTmn
 import ConAgua.Verdict.IndBTcm
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinement of `target_major_nfs` (lane `verdicts-b`, helper `ib`)
 -/

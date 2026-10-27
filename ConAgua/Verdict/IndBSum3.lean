@@ -4,8 +4,6 @@ import ConAgua.Arena.IndT.Sum4
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinements of `check_sum_ctor_tail`, `check_sum_ctor`, `check_sum_ctors`
 (lane `verdicts-b`, helper `ib`)

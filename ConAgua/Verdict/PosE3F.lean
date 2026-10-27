@@ -1,8 +1,6 @@
 import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosE3Fm
 import ConAgua.Arena.IndT.PosFields
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `nest_fields`' error claim step (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
 

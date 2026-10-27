@@ -1,5 +1,4 @@
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.IndSumSpec.ParamLevels
 import ConAgua.Arena.RecGenSpec.SlRGrow
 import ConAgua.Arena.GrindAttr

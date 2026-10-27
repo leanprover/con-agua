@@ -4,8 +4,6 @@ import ConAgua.Verdict.IndBFields
 import ConAgua.Arena.IndT.RecGen27
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinement of `class_ctor_of` (lane `verdicts-b`, helper `ib`)
 

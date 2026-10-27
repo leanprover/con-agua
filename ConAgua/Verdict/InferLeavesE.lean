@@ -1,7 +1,6 @@
 import ConAgua.Arena.KnotE
 import ConAgua.Arena.DefEqStuckCert
 import ConAgua.Arena.InferProj
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndT.Sum1
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConRon.Bridge.Inductives.SumInstall
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB

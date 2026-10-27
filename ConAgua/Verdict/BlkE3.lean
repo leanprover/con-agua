@@ -2,8 +2,6 @@ import ConAgua.Verdict.IndA4
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `check_block_tables`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)
 

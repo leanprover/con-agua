@@ -3,8 +3,6 @@ import ConAgua.Verdict.FrontRecsE
 import ConAgua.Verdict.FrontRunE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `validate_ind_d`'s error refinement (lane `verdicts-b`, helper `f2`)
 

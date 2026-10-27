@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclArmLoop
-import ConAgua.Checker.Prog
 import ConAgua.Checker.LoopProgTac
 
 /-!

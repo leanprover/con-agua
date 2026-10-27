@@ -3,8 +3,6 @@ import ConAgua.Verdict.IndBTmn
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `classes_nfs`' error claim (lane `verdicts-b`, helper `verdicts-b-fin`, fork `nfs`)
 

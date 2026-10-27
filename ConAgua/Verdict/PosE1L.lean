@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.PosCont
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Verdict.PosE1M
 import ConAgua.Checker.NoVerdictTree
 

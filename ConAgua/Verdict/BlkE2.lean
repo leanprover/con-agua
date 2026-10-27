@@ -3,8 +3,6 @@ import ConAgua.Verdict.IndBE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `check_block_idx_sorts`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)
 

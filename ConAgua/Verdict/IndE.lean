@@ -7,7 +7,6 @@ import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

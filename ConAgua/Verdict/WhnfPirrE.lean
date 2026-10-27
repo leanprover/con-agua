@@ -1,6 +1,4 @@
 import ConAgua.Verdict.WhnfM2CE
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `proof_irrel`'s verdict claims (lane `verdicts-b`, helper `k2`)
 

@@ -1,7 +1,5 @@
 import ConAgua.Checker.Prog
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.L.ErrSpec
-import ConAgua.Compiler.WriteSetSplit
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.LevelIntern
 import ConAgua.Arena.LevelSubstLP

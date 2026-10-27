@@ -1,4 +1,3 @@
-import ConAgua.Checker.Prog
 import ConAgua.Checker.LoopProgTac
 import ConAgua.Arena.DeclStepGo
 

@@ -2,8 +2,6 @@ import ConAgua.Verdict.IndBTmt
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinement of `target_major_of_outside` (lane `verdicts-b`, helper `ib`)
 

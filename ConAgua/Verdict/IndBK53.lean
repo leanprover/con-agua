@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndT.RecCheckK53
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree

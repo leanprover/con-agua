@@ -3,8 +3,6 @@ import ConAgua.Verdict.IndBNodes
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinement of `class_fields_agree` (lane `verdicts-b`, helper `ib`)
 

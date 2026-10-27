@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfNatE
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # The `whnf` family's `defeq` helpers: `whnf_top`, `bool_true_shortcut`, `try_unfold_proj_app`,
 `delta_quick`, `lazy_nat` (lane `verdicts-b`, helper `k2`)

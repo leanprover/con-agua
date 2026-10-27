@@ -1,8 +1,6 @@
 import ConAgua.Verdict.WhnfModels2E
 import ConAgua.Verdict.WhnfSlotE
 import ConAgua.Arena.Checker
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # The `proj` arm's verdict claims (lane `verdicts-b`, helper `k2`)
 

@@ -3,8 +3,6 @@ import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinement of `class_stream_recs` (lane `verdicts-b`, helper `ib`)
 

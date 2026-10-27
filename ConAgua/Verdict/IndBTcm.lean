@@ -3,8 +3,6 @@ import ConAgua.Verdict.IndBTpd
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinement of `target_class_match` (lane `verdicts-b`, helper `ib`)
 -/

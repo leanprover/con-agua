@@ -1,4 +1,3 @@
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Verdict.IndBE
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Arena.IndT.Install6

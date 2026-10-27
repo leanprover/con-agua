@@ -2,8 +2,6 @@ import ConAgua.Verdict.IndsE3
 import ConAgua.Verdict.IndsE2
 import ConAgua.Arena.IndT.Install2
 import ConAgua.Arena.Checker
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `check_block_agree_one`'s error refinement (lane `verdicts-b`, helper `ia2-inds`)
 

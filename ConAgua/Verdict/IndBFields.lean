@@ -1,5 +1,4 @@
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.RecGenSpec.ClassFieldsOf
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

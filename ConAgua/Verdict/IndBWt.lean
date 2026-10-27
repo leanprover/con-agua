@@ -4,8 +4,6 @@ import ConAgua.Verdict.KnotAllE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `whnf_telescope`'s error claim (lane `verdicts-b`, helper `fin`, fork `wt`)
 

@@ -1,4 +1,3 @@
-import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.LoopProgInd
 import ConAgua.Checker.LoopDeclArm
 import ConAgua.Checker.LoopDeclAgree

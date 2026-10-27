@@ -3,8 +3,6 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinements of the direct sums' field sorts (lane `verdicts-b`, helper `ib`)
 

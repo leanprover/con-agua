@@ -1,5 +1,4 @@
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.RecCheckSpec.ToiW
 import ConAgua.Arena.GrindAttr

@@ -1,6 +1,4 @@
 import ConAgua.Verdict.WhnfIotaRecE
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # `iota_index_ok`'s and `iota_rec_cmp`'s verdict claims (lane `verdicts-b`, helper `k2`)
 

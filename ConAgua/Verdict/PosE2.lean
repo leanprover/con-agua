@@ -3,8 +3,6 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndT.PosCrest
 import ConAgua.Arena.IndT.PosNew
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # The positivity walk's error claims: `nest_cont_new`, `nest_frame` and their leaves
 `nest_grow_group`, `nest_group_ctors` (lane `verdicts-b`, helper `ia2`, fork `kn2a`)

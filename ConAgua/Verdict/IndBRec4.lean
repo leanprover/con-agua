@@ -3,8 +3,6 @@ import ConAgua.Verdict.UnresolvedE
 import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # Error refinement of `class_rule_ok` (lane `verdicts-b`, helper `ib`)
 

@@ -5,8 +5,6 @@ import ConAgua.Arena.KnotE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-
 /-!
 # The knot's `defeq` slot: its error claim one level up (lane `verdicts-b`, helper `k3`)
 
