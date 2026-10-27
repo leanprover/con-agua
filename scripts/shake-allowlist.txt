@@ -127,3 +127,5 @@ ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install2	# the buil
 ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/InferLeavesE.lean	public import ConAgua.Arena.WhnfIotaRefine6	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Checker/LoopStage.lean	public import ConAgua.Arena.LoopStart	# the build needs it (loopZeroCtl, LoopZero, FrontDecls; the tool attributes them through another module)
+ConAgua/Checker/CheckARun.lean	public import ConAgua.Checker.IndArm	# the build needs it (indArmSpec_checker; the tool would add the import to PreLoopWSStages instead, a generated file)
