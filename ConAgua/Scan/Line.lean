@@ -245,6 +245,217 @@ grind_pattern [lang_grind] lineN_pay => lineN b i w idx pl, nextMemberN b i w
 
 end
 
+/-! ## One step of the line, and the arms of `lineLoop`
+
+`lineLoop_spec` is split into one spec per arm of the key dispatch (`lineArm*_spec`), which Lean
+elaborates in parallel, and a loop spec that takes the arms as named blocks (one `vcgen` over all
+arms: 46 s, most of it `simp`/`grind` on the long path conditions). The arms are projections of
+`lineLoop`'s syntax tree; the L code stays one block. -/
+
+/-- The value, index code and payload kind after one member that is neither the closing brace
+nor an error: `(e, idx, pl)`, `e = 0` if the line fails there. -/
+def lineStepN (b : Array UInt8) (k ks v idx pl : Word) : Word × Word × Word :=
+  if k = 21 ∨ k = 19 ∨ k = 18 then
+    if idx = 0 ∧ ks < slotNatN b ks v then (slotNatN b ks v, idxCode k, pl) else (0, idx, pl)
+  else if lineKind k ≠ 0 ∧ pl = 0 ∧ ks < lineVal b k ks v then (lineVal b k ks v, idx, lineKind k)
+  else (0, idx, pl)
+
+theorem lineN_step (b : Array UInt8) (i w idx pl : Word) (h0 : (nextMemberN b i w).tag ≠ 0)
+    (h1 : (nextMemberN b i w).tag ≠ 1) :
+    lineN b i w idx pl =
+      if (lineStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val
+          idx pl).1 = 0 then 0
+      else lineN b
+        (lineStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val idx pl).1
+        0
+        (lineStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val
+          idx pl).2.1
+        (lineStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val
+          idx pl).2.2 := by
+  by_cases hk : (nextMemberN b i w).key = 21 ∨ (nextMemberN b i w).key = 19 ∨
+      (nextMemberN b i w).key = 18
+  · rw [lineN_idx b i w idx pl h0 h1 hk]
+    simp only [lineStepN, hk, ↓reduceIte]
+    by_cases hi : idx = 0 <;>
+      by_cases hs : (nextMemberN b i w).pos < slotNatN b (nextMemberN b i w).pos (nextMemberN b i w).val <;>
+      simp [hi, hs]
+    exact fun h => absurd hs (by simp [h])
+  · rw [lineN_pay b i w idx pl h0 h1 hk]
+    simp only [lineStepN, hk, ↓reduceIte]
+    by_cases hl : lineKind (nextMemberN b i w).key = 0 <;> by_cases hp : pl = 0 <;>
+      by_cases hs : (nextMemberN b i w).pos <
+        lineVal b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val <;>
+      simp [hl, hp, hs]
+    exact fun h => absurd hs (by simp [h])
+
+grind_pattern [lang_grind] lineN_step => lineN b i w idx pl, nextMemberN b i w
+
+/-- The parts of a statement (for naming the arms of `lineLoop`). -/
+def sBody : Stmt → Stmt | .while _ s => s | s => s
+def sFst : Stmt → Stmt | .seq s _ => s | s => s
+def sSnd : Stmt → Stmt | .seq _ t => t | s => s
+def sThen : Stmt → Stmt | .ite _ s _ => s | s => s
+def sElse : Stmt → Stmt | .ite _ _ t => t | s => s
+
+/-- The key dispatch of `lineLoop` and its arms. -/
+def lineDisp : Stmt := sFst (sSnd (sSnd (sSnd (sBody lineLoop))))
+def lineArmIdx : Stmt := sThen lineDisp
+def lineArmNat : Stmt := sThen (sElse lineDisp)
+def lineArmList : Stmt := sThen (sElse (sElse lineDisp))
+def lineArmName : Stmt := sThen (sElse (sElse (sElse lineDisp)))
+def lineArmExpr : Stmt := sThen (sElse (sElse (sElse (sElse lineDisp))))
+def lineArmLit : Stmt := sThen (sElse (sElse (sElse (sElse (sElse lineDisp)))))
+def lineArmDecl : Stmt := sThen (sElse (sElse (sElse (sElse (sElse (sElse lineDisp))))))
+def lineArmMeta : Stmt := sThen (sElse (sElse (sElse (sElse (sElse (sElse (sElse lineDisp)))))))
+
+/-- What an arm does: the state's memory stays, and the arm either sets `e`, `idx` and `pl` as
+`lineStepN` says or returns `0`, as `lineStepN`'s `e = 0` says. -/
+def LineArmPost (b : Array UInt8) (s₁ : St) (r : Sig) (s' : St) : Prop :=
+  s'.mem = s₁.mem ∧ r ≠ .brk ∧
+  (r = .normal →
+    s'.loc 8 = (lineStepN b (s₁.loc 6) (s₁.loc 5) (s₁.loc 7) (s₁.loc 2) (s₁.loc 3)).1 ∧
+    s'.loc 2 = (lineStepN b (s₁.loc 6) (s₁.loc 5) (s₁.loc 7) (s₁.loc 2) (s₁.loc 3)).2.1 ∧
+    s'.loc 3 = (lineStepN b (s₁.loc 6) (s₁.loc 5) (s₁.loc 7) (s₁.loc 2) (s₁.loc 3)).2.2 ∧
+    (lineStepN b (s₁.loc 6) (s₁.loc 5) (s₁.loc 7) (s₁.loc 2) (s₁.loc 3)).1 ≠ 0) ∧
+  (r ≠ .normal → r.retOr [0] = [0] ∧
+    (lineStepN b (s₁.loc 6) (s₁.loc 5) (s₁.loc 7) (s₁.loc 2) (s₁.loc 3)).1 = 0)
+
+/-! The value scanner and the payload kind of each payload key, one equation per key: `grind`
+matches them modulo the key's value in the context, instead of unfolding the 20 arms of
+`lineVal`/`lineKind` in every goal. -/
+
+@[local lang_grind =] theorem lineVal_7 (b : Array UInt8) (ks v : Word) :
+    lineVal b 7 ks v = slotNatN b ks v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_55 (b : Array UInt8) (ks v : Word) :
+    lineVal b 55 ks v = slotNatN b ks v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_59 (b : Array UInt8) (ks v : Word) :
+    lineVal b 59 ks v = slotNatN b ks v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_46 (b : Array UInt8) (ks v : Word) :
+    lineVal b 46 ks v = slotNatN b ks v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_32 (b : Array UInt8) (ks v : Word) :
+    lineVal b 32 ks v = (if (natListEntryN b v).1 = 0 then 0
+      else if (natListEntryN b v).2 = 2 then (natListEntryN b v).1 else 0) := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_20 (b : Array UInt8) (ks v : Word) :
+    lineVal b 20 ks v = (if (natListEntryN b v).1 = 0 then 0
+      else if (natListEntryN b v).2 = 2 then (natListEntryN b v).1 else 0) := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_56 (b : Array UInt8) (ks v : Word) :
+    lineVal b 56 ks v = strNameN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_38 (b : Array UInt8) (ks v : Word) :
+    lineVal b 38 ks v = numNameN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_2 (b : Array UInt8) (ks v : Word) :
+    lineVal b 2 ks v = appN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_29 (b : Array UInt8) (ks v : Word) :
+    lineVal b 29 ks v = binderN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_14 (b : Array UInt8) (ks v : Word) :
+    lineVal b 14 ks v = binderN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_30 (b : Array UInt8) (ks v : Word) :
+    lineVal b 30 ks v = letEN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_9 (b : Array UInt8) (ks v : Word) :
+    lineVal b 9 ks v = constEN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_48 (b : Array UInt8) (ks v : Word) :
+    lineVal b 48 ks v = projN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_35 (b : Array UInt8) (ks v : Word) :
+    lineVal b 35 ks v = quotedNatN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_57 (b : Array UInt8) (ks v : Word) :
+    lineVal b 57 ks v = L.Scan.Str.scanStringN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_4 (b : Array UInt8) (ks v : Word) :
+    lineVal b 4 ks v = axiomDN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_12 (b : Array UInt8) (ks v : Word) :
+    lineVal b 12 ks v = defDN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_60 (b : Array UInt8) (ks v : Word) :
+    lineVal b 60 ks v = thmDN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_45 (b : Array UInt8) (ks v : Word) :
+    lineVal b 45 ks v = opaqueDN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_49 (b : Array UInt8) (ks v : Word) :
+    lineVal b 49 ks v = quotDN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_23 (b : Array UInt8) (ks v : Word) :
+    lineVal b 23 ks v = indDN b v := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineVal_33 (b : Array UInt8) (ks v : Word) :
+    lineVal b 33 ks v = (if v < UInt64.ofNat b.size ∧ byteW b v = 123 then
+      UInt64.ofNat (L.Examples.skipBracedN b (v + 1).toNat 0) else 0) := by
+  simp [lineVal]
+
+@[local lang_grind =] theorem lineKind_7 : lineKind 7 = 3 := by decide
+@[local lang_grind =] theorem lineKind_55 : lineKind 55 = 3 := by decide
+@[local lang_grind =] theorem lineKind_59 : lineKind 59 = 2 := by decide
+@[local lang_grind =] theorem lineKind_46 : lineKind 46 = 2 := by decide
+@[local lang_grind =] theorem lineKind_32 : lineKind 32 = 2 := by decide
+@[local lang_grind =] theorem lineKind_20 : lineKind 20 = 2 := by decide
+@[local lang_grind =] theorem lineKind_56 : lineKind 56 = 1 := by decide
+@[local lang_grind =] theorem lineKind_38 : lineKind 38 = 1 := by decide
+@[local lang_grind =] theorem lineKind_2 : lineKind 2 = 3 := by decide
+@[local lang_grind =] theorem lineKind_29 : lineKind 29 = 3 := by decide
+@[local lang_grind =] theorem lineKind_14 : lineKind 14 = 3 := by decide
+@[local lang_grind =] theorem lineKind_30 : lineKind 30 = 3 := by decide
+@[local lang_grind =] theorem lineKind_9 : lineKind 9 = 3 := by decide
+@[local lang_grind =] theorem lineKind_48 : lineKind 48 = 3 := by decide
+@[local lang_grind =] theorem lineKind_35 : lineKind 35 = 3 := by decide
+@[local lang_grind =] theorem lineKind_57 : lineKind 57 = 3 := by decide
+@[local lang_grind =] theorem lineKind_4 : lineKind 4 = 4 := by decide
+@[local lang_grind =] theorem lineKind_12 : lineKind 12 = 4 := by decide
+@[local lang_grind =] theorem lineKind_60 : lineKind 60 = 4 := by decide
+@[local lang_grind =] theorem lineKind_45 : lineKind 45 = 4 := by decide
+@[local lang_grind =] theorem lineKind_49 : lineKind 49 = 4 := by decide
+@[local lang_grind =] theorem lineKind_23 : lineKind 23 = 4 := by decide
+@[local lang_grind =] theorem lineKind_33 : lineKind 33 = 5 := by decide
+
+theorem lineStepN_idx (b : Array UInt8) (k ks v idx pl : Word) (hk : k = 21 ∨ k = 19 ∨ k = 18) :
+    lineStepN b k ks v idx pl =
+      if idx = 0 ∧ ks < slotNatN b ks v then (slotNatN b ks v, idxCode k, pl) else (0, idx, pl) := by
+  simp only [lineStepN, hk, ↓reduceIte]
+theorem lineStepN_pay (b : Array UInt8) (k ks v idx pl : Word) (h1 : k ≠ 21) (h2 : k ≠ 19)
+    (h3 : k ≠ 18) :
+    lineStepN b k ks v idx pl =
+      if lineKind k ≠ 0 ∧ pl = 0 ∧ ks < lineVal b k ks v then (lineVal b k ks v, idx, lineKind k)
+      else (0, idx, pl) := by
+  simp only [lineStepN, h1, h2, h3, or_self, ↓reduceIte]
+grind_pattern [lang_grind] lineStepN_idx => lineStepN b k ks v idx pl
+grind_pattern [lang_grind] lineStepN_pay => lineStepN b k ks v idx pl
+
 /-- A line's closing brace is inside the array. -/
 theorem lineN_le (b : Array UInt8) (i w idx pl : Word) (h : lineN b i w idx pl ≠ 0) :
     (lineN b i w idx pl).toNat ≤ b.size := by
@@ -408,9 +619,179 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpvd : p.lookup "validate" = some validate)
 include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
 
-attribute [local lang_grind] Mbr.err idxCode lineKind lineVal
+attribute [local lang_grind] Mbr.err idxCode
 
-set_option maxHeartbeats 4000000 in
+theorem lineArmIdx_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 21 ∨ s.loc 6 = 19 ∨ s.loc 6 = 18)⦄
+    step p (exec p n) lineArmIdx
+    ⦃fun r s' => LineArmPost b s₁ r s'; ⊤⦄ := by
+  have hb64 : b.size < 2 ^ 64 := by omega
+  dsimp only [lineArmIdx, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      slotNat_spec p b hb ‹_› ‹_› ‹_› n]
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval, beq_iff_eq, bne_iff_ne, ne_eq, Nat.reduceEqDiff,
+      reduceIte] at *
+  all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
+
+theorem lineArmNat_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 7 ∨ s.loc 6 = 55 ∨ s.loc 6 = 59 ∨ s.loc 6 = 46)⦄
+    step p (exec p n) lineArmNat
+    ⦃fun r s' => LineArmPost b s₁ r s'; ⊤⦄ := by
+  have hb64 : b.size < 2 ^ 64 := by omega
+  dsimp only [lineArmNat, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      slotNat_spec p b hb ‹_› ‹_› ‹_› n]
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval, Bool.or_eq_true, beq_iff_eq, bne_iff_ne, ne_eq,
+      Nat.reduceEqDiff, reduceIte] at *
+  all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
+
+theorem lineArmList_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 32 ∨ s.loc 6 = 20)⦄
+    step p (exec p n) lineArmList
+    ⦃fun r s' => LineArmPost b s₁ r s'; ⊤⦄ := by
+  have hb64 : b.size < 2 ^ 64 := by omega
+  dsimp only [lineArmList, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      scanNatList_spec p b hb ‹_› ‹_› ‹_› n]
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq,
+      Nat.reduceEqDiff, reduceIte] at *
+  all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
+
+theorem lineArmName_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 56 ∨ s.loc 6 = 38)⦄
+    step p (exec p n) lineArmName
+    ⦃fun r s' => LineArmPost b s₁ r s'; ⊤⦄ := by
+  have hb64 : b.size < 2 ^ 64 := by omega
+  dsimp only [lineArmName, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      L.Scan.Records.scanStrName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanNumName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n]
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq,
+      Nat.reduceEqDiff, reduceIte] at *
+  all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
+
+theorem lineArmExpr_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 2 ∨ s.loc 6 = 29 ∨ s.loc 6 = 14 ∨ s.loc 6 = 30 ∨ s.loc 6 = 9 ∨ s.loc 6 = 48)⦄
+    step p (exec p n) lineArmExpr
+    ⦃fun r s' => LineArmPost b s₁ r s'; ⊤⦄ := by
+  have hb64 : b.size < 2 ^ 64 := by omega
+  dsimp only [lineArmExpr, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      L.Scan.Records.scanApp_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanBinder_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanLetE_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanConstE_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanProj_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n]
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval, Bool.or_eq_true, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
+  all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
+
+theorem lineArmLit_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 35 ∨ s.loc 6 = 57)⦄
+    step p (exec p n) lineArmLit
+    ⦃fun r s' => LineArmPost b s₁ r s'; ⊤⦄ := by
+  have hb64 : b.size < 2 ^ 64 := by omega
+  dsimp only [lineArmLit, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      scanQuotedNat_spec p b hb ‹_› ‹_› n,
+      L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n]
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq,
+      Nat.reduceEqDiff, reduceIte] at *
+  all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
+
+theorem lineArmDecl_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 4 ∨ s.loc 6 = 12 ∨ s.loc 6 = 60 ∨ s.loc 6 = 45 ∨ s.loc 6 = 49 ∨ s.loc 6 = 23)⦄
+    step p (exec p n) lineArmDecl
+    ⦃fun r s' => LineArmPost b s₁ r s'; ⊤⦄ := by
+  have hb64 : b.size < 2 ^ 64 := by omega
+  dsimp only [lineArmDecl, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      L.Scan.Records.scanAxiomD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanDefD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanThmD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanOpaqueD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanQuotD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      L.Scan.Records.scanIndD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n]
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq,
+      Nat.reduceEqDiff, reduceIte] at *
+  all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
+
+theorem lineArmMeta_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 33)⦄
+    step p (exec p n) lineArmMeta
+    ⦃fun r s' => LineArmPost b s₁ r s'; ⊤⦄ := by
+  have hb64 : b.size < 2 ^ 64 := by omega
+  dsimp only [lineArmMeta, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      L.Examples.skipBraced_spec p ‹_› ‹_› b hb64 n]
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.not_eq_true', beq_iff_eq,
+      bne_iff_ne, ne_eq, decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
+  all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
+
+/-- The key dispatch: on its entry state (a variable, so the conditions stay short), one path
+per arm, each arm by its spec. -/
+theorem lineDisp_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size⦄
+    step p (exec p n) lineDisp
+    ⦃fun r s' => LineArmPost b s₁ r s'; ⊤⦄ := by
+  have eIdx : lineArmIdx = sThen lineDisp := rfl
+  have eNat : lineArmNat = sThen (sElse lineDisp) := rfl
+  have eList : lineArmList = sThen (sElse (sElse lineDisp)) := rfl
+  have eName : lineArmName = sThen (sElse (sElse (sElse lineDisp))) := rfl
+  have eExpr : lineArmExpr = sThen (sElse (sElse (sElse (sElse lineDisp)))) := rfl
+  have eLit : lineArmLit = sThen (sElse (sElse (sElse (sElse (sElse lineDisp))))) := rfl
+  have eDecl : lineArmDecl = sThen (sElse (sElse (sElse (sElse (sElse (sElse lineDisp)))))) := rfl
+  have eMeta : lineArmMeta = sThen (sElse (sElse (sElse (sElse (sElse (sElse (sElse lineDisp))))))) := rfl
+  dsimp only [lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop] at eIdx eNat eList eName eExpr eLit eDecl eMeta
+  dsimp only [lineDisp, sFst, sSnd, sBody, lineLoop]
+  rw [← eIdx, ← eNat, ← eList, ← eName, ← eExpr, ← eLit, ← eDecl, ← eMeta]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs,
+      lineArmIdx_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
+      lineArmNat_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
+      lineArmList_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
+      lineArmName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
+      lineArmExpr_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
+      lineArmLit_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
+      lineArmDecl_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
+      lineArmMeta_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n]
+  all_goals clear eIdx eNat eList eName eExpr eLit eDecl eMeta hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, beq_iff_eq] at *
+  all_goals grind (splits := 40) [lang_grind, LineArmPost, lineKind]
+
 theorem lineLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n lineLoop
@@ -420,36 +801,20 @@ theorem lineLoop_spec (n : Nat) (s₀ : St) :
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := lineLoop) rfl]
-    have hb64 : b.size < 2 ^ 64 := by omega
+    -- the key dispatch as a named block, specified by `lineDisp_spec`
+    have eD : lineDisp = sFst (sSnd (sSnd (sSnd (sBody lineLoop)))) := rfl
+    dsimp only [sFst, sSnd, sBody, lineLoop] at eD
+    rw [← eD]
     vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs, ih,
         nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
-        slotNat_spec p b hb ‹_› ‹_› ‹_› n,
-        scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
-        scanQuotedNat_spec p b hb ‹_› ‹_› n,
-        L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
-        L.Examples.skipBraced_spec p ‹_› ‹_› b hb64 n,
-        L.Scan.Records.scanStrName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanNumName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanApp_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanBinder_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanLetE_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanConstE_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanProj_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanAxiomD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanDefD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanThmD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanOpaqueD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanQuotD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        L.Scan.Records.scanIndD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n]
-    all_goals try (intro h; cases h; done)
-    all_goals clear ih hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+        lineDisp_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n]
+    all_goals clear ih eD hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
     all_goals subst_vars
     all_goals try rfl
-    all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
-      St.setLocs_cons, List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval,
-      Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true', beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
-    all_goals grind (splits := 40) [lang_grind, byteW]
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+        St.setLocs_cons, List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.and_eq_true,
+        Bool.or_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, Nat.reduceEqDiff, reduceIte] at *
+    all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
 
 theorem scanLineLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
