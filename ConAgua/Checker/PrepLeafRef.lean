@@ -19,7 +19,7 @@ namespace L.Checker
 (`lowTierArrs`: the records, the pool, the pins, the hoist's memos) and the `CTL` words from `64`
 on, every array's size. -/
 def HighFr (m m' : Mem) : Prop :=
-  (∀ b : ArrId, b ∉ lowTierArrs → m'.arr64 b = m.arr64 b) ∧
+  (∀ b : TieredArray, b ∉ lowTierArrs → m'.arr64 b = m.arr64 b) ∧
     (∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
     (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m'
 
