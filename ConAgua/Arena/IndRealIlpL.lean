@@ -59,7 +59,7 @@ def keysPushIWW : Nat → Mem → Word → Word → Option (Word × Mem)
 
 /-- **The model of `inst_lp_fast`** at L fuel `n + 1`. -/
 def ilpfW (p : Prog) (n : Nat) (m : Mem) (f lo ll us e : Word) : Option (Word × Mem) :=
-  if f ≠ 4000000000 then none else ilwLPK₁ p n ll us e (callW p n "keys_push_iw" [lo, ll] m)
+  if f ≠ 4000000000 then none else ilwLPW.k_keys_push p n ll us e (callW p n "keys_push_iw" [lo, ll] m)
 
 section specs
 variable (p : Prog) (hkp : p.lookup "keys_push_iw" = some keysPushIW) (hik : p.lookup "ik_copy" = some ikCopy)
@@ -212,7 +212,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
   -- `keys_push_iw`
   rcases h1 : callW p k "keys_push_iw" [po, pl] m with _ | ⟨bs, m₁⟩
   · rw [h1] at hW; cases hW
-  rw [h1, ilwLPK₁_some] at hW
+  rw [h1, ilwLPW.k_keys_push.arm1] at hW
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (keysPushIW_spec p hkp hik k _ po pl) h1
   rw [hs1] at hW1
@@ -256,7 +256,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
   rw [← hb] at hW
   rcases h2 : callW p (k + 1) "inst_lp_core" [spTop m, pl, us, e] (mc.set64 CTL 136 (spTop m + pl)) with _ | ⟨r2, m₂⟩
   · rw [h2] at hW; cases hW
-  rw [h2, ilwLPK₂_some] at hW
+  rw [h2, ilwLPW.k_inst_lp_core.arm1] at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hok, ⟨M', hS₂, hK₂, hSt₂⟩, hres, hw⟩ := ilwCore_ok hp k hS₁ he hus (by rw [hspn₁]; exact hsl)
     (Nat.le_of_eq htop₁.symm) h2

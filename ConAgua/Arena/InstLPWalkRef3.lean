@@ -253,7 +253,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
   · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 1 FVAR "lp_fvar" g1 (ilwDispW_fvar p n m₁ h ko kc vo vc fu hs g1)
     obtain ⟨hv, hty⟩ := view_fvar_idx m₁ a hR h hh hvk g1
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-      (lpFVar_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
+      (lpFVar_spec p hp.lev.ilw (k + 1) _ h ko kc vo vc (fu - 1)) h2
     rw [hs2] at hW2
     exact hrun _ hv _ rfl (ilw_fvarArm hp.mkp (ih k (by omega)) hS hM hE hh hty hW2)
   by_cases g4 : h >>> 28 = 4
@@ -294,7 +294,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
   · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 9 PROJ "lp_proj" g9 (ilwDispW_proj p n m₁ h ko kc vo vc fu hs g9)
     obtain ⟨hv, -, he⟩ := view_proj m₁ a hR h hh hvk g9
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-      (lpProj_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
+      (lpProj_spec p hp.lev.ilw (k + 1) _ h ko kc vo vc (fu - 1)) h2
     rw [hs2] at hW2
     exact hrun _ hv _ rfl (ilw_projArm hp.mkp (ih k (by omega)) hS hM hE hh he hW2)
   rw [ilwDispW_other p n m₁ h ko kc vo vc fu hs g0 g1 g2 g3 g4 g5 g6 g7 g8 g9] at hW
