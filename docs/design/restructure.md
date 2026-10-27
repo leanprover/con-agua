@@ -276,9 +276,9 @@ the 45 final-theorem modules above it.
 * **Build time on the critical path** (722 s now). It runs ROM/declaration setup, then
   `Checker.Prog` and the whole-program proofs after it: `Checker.LoopDecl` → `LoopDeclAgree` →
   `LoopDeclArm1` → `LoopDeclArm` → `LoopProg` (14–32 s each), `Checker.IndArm` (31 s),
-  `Verdict.TopE`, `Verdict.IndArmTopE` (31 s); `Checker.IndArmClosed` (162 s in the busy-machine
-  log) is next to it. Single slow modules off the path but large: `Verdict.IndBGrpM` (one `l_model`
-  command, 406 s busy / about 240 s quiet), `Checker.ProgWf`, `Checker.Prog` itself.
+  `Verdict.TopE`, `Verdict.IndArmTopE` (31 s); `Checker.IndArmClosed` (97 s) is next to it. Large
+  single modules: `Checker.Prog` (69 s, on the path), `Checker.ProgWf` (55 s), `Verdict.IndBGrpM`
+  (one `l_model` command, 284 s; off the path since batch 2). Times from the quiet cold build.
 * **Families not regrouped**: `Arena/IndT/*` (already one function per module, linear `RecGen1…11`,
   `Install1…7`), `Verdict` (one function per module already; imports fixed in batch 2), the
   `Front/IndApplyRefine*` and `WhnfIotaRefine*`/`WhnfM2CRefine*` chains (small).
