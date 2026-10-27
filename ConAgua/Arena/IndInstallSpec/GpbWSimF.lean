@@ -41,8 +41,8 @@ theorem genRecCheck_split (mode : ConLeche.CheckMode) (fe : IFEnv) (p : BlockSha
 
 theorem iwGrow_truncM (m : Mem) : IWGrow m (truncM m) := by
   have hc : (truncM m).arr64 CTL = m.arr64 CTL := by
-    simp only [truncM, Mem.arr64, Array.getD_eq_getD_getElem?]
-    simp [Array.set!_eq_setIfInBounds, CTL, IW, EREC]
+    simp only [truncM, Mem.arr64]
+    simp [CTL, IW, EREC]
   refine ⟨by simp only [iwTop, hc]; exact Nat.le_refl _, by simp only [erTop, hc]; exact Nat.le_refl _,
     fun i hi => ?_, fun i hi => ?_⟩
   · have := truncM_iw_eq (m := m) hi; simpa [iwA] using this
@@ -111,12 +111,9 @@ theorem classesLp_of_cnsRec {mb mF : Mem} {mo ml qr : Word} {hi : Nat} {ws : Lis
 
 theorem rcFree_mfr {m m' : Mem} (h : MemFrame rcFreeA rcFreeC m m') :
     MFr [MAM, MCM] [202, 203, 205, 207, 209, 211, 215, 216, 217] m m' := by
-  refine ⟨rcFreeA, rcFreeC, h, fun b hb => ?_, fun x hx => ?_⟩
-  · simp only [rcFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq, List.mem_cons,
-      List.not_mem_nil, or_false] at hb
-    simp only [NOM, DPM, RAM, HBM, RFM, TAM, MAM, MCM, ArrId] at hb ⊢
-    simp only [List.mem_cons, List.not_mem_nil, or_false]
-    omega
+  have hA : ∀ b ∈ rcFreeA, b.arr < 201 ∨ 208 < b.arr ∨
+      b ∈ ([MAM, MCM] : List TieredArray) := by decide +kernel
+  refine ⟨rcFreeA, rcFreeC, h, hA, fun x hx => ?_⟩
   · simp only [rcFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq, List.mem_cons,
       List.not_mem_nil, or_false] at hx
     obtain ⟨c, ⟨hc, h2⟩, rfl⟩ := hx
