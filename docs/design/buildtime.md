@@ -234,3 +234,39 @@ Arena libraries `ConsLibSpec` → `ExprMk` → `Lift` → `Abs1Spec` → `ArRang
 Tried on `IndBGrpM`'s step (93 s with `locals`): `simp only [models, *]` instead of `simp_all`
 fails; `simp_all only […]` or no `simp_all` at all (only `grind`) run past 500 s; `subst_vars`
 before `simp_all` changes nothing (73 vs 76 s).
+
+### Round 3 (batch 7): the Arena libraries at the start, the `Infer` errors
+
+After round 1 the path started with `Arena.ConsLibSpec` → `ExprMk` → `Lift` → `Abs1Spec` →
+`ArRangeSpec`.
+
+* **Import cuts.** `Arena.LiftL` holds the lift L code, `LiftProg`, `liftProg`; `Abs1`, `Inst1`,
+  `InstList` and `Checker.Prog` import it instead of `Lift`/`LiftSpec` and no longer wait for
+  `Lift`'s 32 s `l_model` (`Lift`, `LiftSpec` `import all` it: `l_model` reads a definition's
+  source from another module only so). `absEntry`/`aclrK` moved into `Abs1`, so `ArRangeSpec`
+  and `Abs1Spec` build in parallel. `seqTake`/`seqDrop` moved to `Arena.LdRd`.
+* **One theorem per arm** (`ConsLibSpec`: `consInternG_spec`, `cfLoop_spec`; `ExprMk`:
+  `der_pushZ` per table): Lean elaborates separate theorems in parallel.
+* **Cut a function after its decodes** (`seqTake`/`seqDrop`, the rest specified over named
+  locals): `ExprMk`'s `derB_spec` (160 goals each re-simplified the decode chain),
+  `Verdict.InferLeavesE`'s hand-written `inferProj_specE` (262 goals; three pieces),
+  `Verdict.IndBTka`'s `tkaE_spec` (its two slice `if`s repeated all calls 4×).
+* `Abs1Spec`, `ArRangeSpec`, `MemoLib`: plain `vcgen [ld64_rd_spec]` + `subst_vars` + `simp only` +
+  `grind` instead of `sym … finish (gen 20)`. `Verdict.DeclValE`: its `l_model` uses `simp []
+  errors locals` instead of `finish (gen 20, instances 4000)`.
+
+| module (cold build) | before | after |
+|---|---:|---:|
+| `Arena.ConsLibSpec` | 51 s | 16 s |
+| `Arena.ExprMk` | 24 s | 8 s |
+| `Arena.Abs1Spec` | 27 s | 10 s |
+| `Arena.ArRangeSpec` | 28 s | 10 s |
+| `Arena.MemoLib` | 17 s | 10 s |
+| `Verdict.InferLeavesE` | 101 s | 19 s |
+| `Verdict.DeclValE` | 53 s | 4 s |
+| `Verdict.IndBTka` | 59 s | 11 s |
+
+Left: `Arena.Lift` (32 s, `liftGo_spec.step1` 21 s: the `simp […]` option does not parse when the
+`specs` are long, `l_model` wraps the spec terms across lines; without `gen 20` the proof fails),
+`Verdict.InferBindE` (32 s, the generated `inferPisE.loop1.spec`), `Front.Fields` (31 s,
+`recLoop_spec`: would need `Scan.Line`'s per-arm split), `Arena.LpCol` (needs the decode cut).
