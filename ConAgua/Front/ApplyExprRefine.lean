@@ -159,7 +159,7 @@ theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFr
 
 theorem not_low_tier (b : Nat) (h : 64 ≤ b ∧ b < 256) : b ∉ lowTierArrs := by
   simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map, not_or, not_exists, not_and]
-  exact ⟨by omega, fun y hy e => by omega⟩
+  exact ⟨by omega, fun y _ e => tier1_ne h.2 e⟩
 
 theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above64 m m') :
     StateDR m' st :=
@@ -169,7 +169,7 @@ theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above6
       simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at h
       simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at hx
       rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> rcases hx with hx | ⟨y, hy, hy'⟩ <;>
-        first | (revert hx; decide) | (have h' : (y : Nat) + 256 = _ := hy'; omega)) (fun x hx => by
+        first | (revert hx; decide) | exact absurd hy' (tier1_ne (by decide))) (fun x hx => by
       simp only [List.mem_map, List.mem_range] at hx
       obtain ⟨n, hn, rfl⟩ := hx
       intro h
