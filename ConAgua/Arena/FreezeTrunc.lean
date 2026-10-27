@@ -155,13 +155,13 @@ theorem row_trunc (w : Word) :
   · simp only [hg, ↓reduceIte]
     rcases ht with ht | ht
     · have ha : rowArr w = 132 + rowTag w := by
-        unfold rowArr; rw [ht]; show (132 + rowTag w + 8 * 0 : Nat) = 132 + rowTag w; omega
+        exact rowArr_tier0 hg ht
       rw [ha, eix_trunc hcnt _ hg, getD_extract', getD_extract']
       refine ⟨by split <;> simp, fun _ _ hr => ?_, fun h => absurd ht h⟩
       rw [ite_eq_left (by omega), ite_eq_left (by omega)]; exact ⟨rfl, rfl⟩
     · have ha : rowArr w ∉ fzSrcs := by
         have : rowArr w = 140 + rowTag w := by
-          unfold rowArr; rw [ht]; show (132 + rowTag w + 8 * 1 : Nat) = 140 + rowTag w; omega
+          exact rowArr_tier1 hg ht
         rw [this]; rcases (show rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 by omega) with e | e | e <;>
           rw [e] <;> decide
       rw [truncFrozen_other m _ ha]
@@ -188,13 +188,13 @@ theorem tblRow_trunc (w : Word) :
   · simp only [hg, ↓reduceIte]
     rcases ht with ht | ht
     · have ha : tblArr w = 129 + rowTag w := by
-        unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 0 : Nat) = 129 + rowTag w; omega
+        exact tblArr_tier0 hg ht
       rw [ha, tix_trunc _ hg, getD_extract']
       refine ⟨by split <;> simp, fun _ _ hr => ?_⟩
       rw [ite_eq_left hr]
     · have ha : tblArr w ∉ fzSrcs := by
         have : tblArr w = 385 + rowTag w := by
-          unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 1 : Nat) = 385 + rowTag w; omega
+          exact tblArr_tier1 hg ht
         rw [this]; rcases (show rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 by omega) with e | e | e <;>
           rw [e] <;> decide
       rw [truncFrozen_other m _ ha]

@@ -336,7 +336,7 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
     ⟨⟨ArenaR.frame (fun b hb => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
           rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-            simp [arenaArrs, storeArrs, memoArrs, ETAB, TIXA, TIXS, TIXN, BMEMO, LMEMO, IMEMO, FRMEMO])
+            simp [arenaArrs, storeArrs, memoArrs, ETAB, TIXA, TIXS, TIXN, tier1, tierOff, BMEMO, LMEMO, IMEMO, FRMEMO])
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
         hS.1.arena.1,
       DerR.frameM _ _ m _ hfr (by decide) a hS.1.arena.2⟩,
@@ -350,7 +350,7 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
   refine ⟨⟨hC, ?_, ?_, ?_, ?_, ?_⟩, ⟨by omega, by omega, fun i _ => by rw [hI], fun i _ => by rw [hER]⟩,
     MFr.of_frame hfr (fun b hb => by
       have : b = 143 ∨ b = 129 ∨ b = 130 ∨ b = 131 ∨ b = 385 ∨ b = 386 ∨ b = 387 := by
-        simpa [tblArrs, ETAB, TIXA, TIXS, TIXN] using hb
+        simpa [tblArrs, ETAB, TIXA, TIXS, TIXN, tier1, tierOff] using hb
       simp only [ArrId] at this ⊢; omega) (fun x hx => by simp at hx; subst hx; decide), AFr.of_frame hfr⟩
   · rw [h200, hI]; exact hI1
   · rw [h129, hER]; exact hE1

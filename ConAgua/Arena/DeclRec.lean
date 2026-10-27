@@ -483,8 +483,8 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   · rw [ite_eq_right hc] at h; cases h
   rw [ite_eq_left hc] at h
   obtain ⟨ht, hb⟩ := hc
-  have hra : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
-  have hre : rowArr w ≠ ECON := by simp only [rowArr, ECON, ArrId]; omega
+  have hra : rowArr w ≠ CTL := rowArr_ne _ (by decide)
+  have hre : rowArr w ≠ ECON := rowArr_ne _ (by decide)
   have hctl : (rowSet m w (vis + 1) q).arr64 CTL = m.arr64 CTL := rowSet_arr _ _ _ _ _ (Ne.symm hra)
   have hecon : (rowSet m w (vis + 1) q).arr64 ECON = m.arr64 ECON :=
     rowSet_arr _ _ _ _ _ (Ne.symm hre)
@@ -508,9 +508,7 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     have h1 : MemFrame [rowArr w] [] m (rowSet m w (vis + 1) q) :=
       (MemFrame.set64 m _ hra _ _).trans (MemFrame.set64 _ _ hra _ _)
     have hmem : rowArr w = EIXA ∨ rowArr w = EIXS ∨ rowArr w = EIXN ∨ rowArr w = EIXA1 ∨
-        rowArr w = EIXS1 ∨ rowArr w = EIXN1 := by
-      have : rowTier w < 2 := Nat.mod_lt _ (by decide)
-      simp only [rowArr, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ArrId]; omega
+        rowArr w = EIXS1 ∨ rowArr w = EIXN1 := rowArr_names w
     rw [← hM]
     refine ((h1.mono ?_ (by simp)).trans
       ((MemFrame.set64 _ ECON (by decide) _ _).mono (by simp) (by simp))).trans

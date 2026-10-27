@@ -370,8 +370,8 @@ several views of one index are live at once (`restrictTo`: the same index, a sma
 
 * **The index, directly addressed by the name handle** (no hashing, no tombstones): a name
   handle is `tag · 2^28 + tier · 2^27 + i` with `tag` 0 (`anonymous`), 1 (`str`), 2 (`num`), so
-  its row is words `2 i`, `2 i + 1` of array `EIXA`/`EIXS`/`EIXN` (132 + `tag`) for tier 0 and
-  `EIXA1`/`EIXS1`/`EIXN1` (140 + `tag`) for tier 1 (`rowArr`): the counter plus one (`0`: no row)
+  its row is words `2 i`, `2 i + 1` of array `EIXA`/`EIXS`/`EIXN` for tier 0 and
+  `EIXA1`/`EIXS1`/`EIXN1` for tier 1 (`rowArr`, by `selArr`): the counter plus one (`0`: no row)
   and the record pointer. `erase` writes `0`. The arrays are sized like the name tables (an index
   past the end aborts, a capacity). One array per tier (lane parmode, docs/design/parmode.md), as
   the stores have: the parallel mode freezes tier 0 and gives each worker its own tier 1.
@@ -391,8 +391,92 @@ name handles back (`EnvRec.lean`).
 def rowTag (w : Word) : Nat := w.toNat / 2 ^ 28
 /-- The tier bit of a name handle word. -/
 def rowTier (w : Word) : Nat := w.toNat / 2 ^ 27 % 2
-/-- The row's array: `132 + tag` for tier 0, `140 + tag` for tier 1. -/
-def rowArr (w : Word) : ArrId := 132 + rowTag w + 8 * rowTier w
+/-- `w`'s row array selector as an L expression computes it: `2 tag + tier` (`w >> 27`). -/
+def rowSelW (w : Word) : Word := w >>> 27
+
+theorem rowSelW_toNat (w : Word) : (rowSelW w).toNat = 2 * rowTag w + rowTier w := by
+  have h0 : (w >>> 27).toNat = w.toNat / 2 ^ 27 := by
+    simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+  simp only [rowSelW, rowTag, rowTier, h0]
+  have h1 := Nat.div_add_mod (w.toNat / 2 ^ 27) 2
+  have h2 : w.toNat / 2 ^ 28 = w.toNat / 2 ^ 27 / 2 := by rw [Nat.div_div_eq_div_mul]
+  omega
+
+/-- The row array of selector `g` (`rowSelW`): tier 0's `EIXA`, `EIXS`, `EIXN` at `0, 2, 4`, tier 1's
+at `1, 3, 5`. -/
+def selArr (g : Word) : ArrId :=
+  if g = 0 then EIXA else if g = 1 then EIXA1 else if g = 2 then EIXS
+  else if g = 3 then EIXS1 else if g = 4 then EIXN else EIXN1
+
+/-- The row's array: `EIXA`, `EIXS`, `EIXN` for tier 0, `EIXA1`, `EIXS1`, `EIXN1` for tier 1
+(`rowArr_spec`; `rowArr_eq`). -/
+def rowArr (w : Word) : ArrId := selArr (rowSelW w)
+
+theorem rowArr_eq (w : Word) : rowArr w = selArr (rowSelW w) := rfl
+
+theorem selArr_rowSelW (w : Word) (_ht : rowTag w ≤ 2) : selArr (rowSelW w) = rowArr w := rfl
+
+/-- `rowArr` by the selector's value (what the L code branches on). -/
+theorem rowArr_sel (w : Word) :
+    (rowSelW w = 0 → rowArr w = EIXA) ∧ (rowSelW w = 1 → rowArr w = EIXA1) ∧
+    (rowSelW w = 2 → rowArr w = EIXS) ∧ (rowSelW w = 3 → rowArr w = EIXS1) ∧
+    (rowSelW w = 4 → rowArr w = EIXN) ∧ (rowSelW w = 5 → rowArr w = EIXN1) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intro h <;> simp [rowArr, selArr, h]
+
+theorem rowArr_names (w : Word) : rowArr w = EIXA ∨ rowArr w = EIXS ∨ rowArr w = EIXN ∨
+    rowArr w = EIXA1 ∨ rowArr w = EIXS1 ∨ rowArr w = EIXN1 := by
+  unfold rowArr selArr
+  split <;> (try split) <;> (try split) <;> (try split) <;> (try split) <;> simp
+
+/-- The six row arrays, as numbers (for the range arguments). -/
+theorem rowArr_cases (w : Word) : (rowArr w : Nat) = 132 ∨ (rowArr w : Nat) = 133 ∨ (rowArr w : Nat) = 134 ∨
+    (rowArr w : Nat) = 140 ∨ (rowArr w : Nat) = 141 ∨ (rowArr w : Nat) = 142 := by
+  rcases rowArr_names w with h | h | h | h | h | h <;> rw [h] <;> decide
+
+theorem rowArr_ne (w : Word) {b : ArrId} (h : b ∉ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) :
+    rowArr w ≠ b := by
+  intro hb
+  rcases rowArr_names w with e | e | e | e | e | e <;> rw [e] at hb <;> apply h <;> rw [← hb] <;> simp
+
+theorem rowArr_ge (w : Word) : 132 ≤ rowArr w := by
+  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
+
+theorem rowArr_lt (w : Word) : rowArr w < 143 := by
+  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
+
+/-- Tier 0 rows are below `ECON`, tier 1 rows above the pool. -/
+theorem rowArr_lt_or (w : Word) : rowArr w < 135 ∨ 140 ≤ rowArr w := by
+  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
+
+theorem rowArr_congr {w w' : Word} (h1 : rowTag w = rowTag w') (h2 : rowTier w = rowTier w') :
+    rowArr w = rowArr w' := by
+  have a := rowSelW_toNat w; have b := rowSelW_toNat w'
+  have : rowSelW w = rowSelW w' := UInt64.toNat_inj.mp (by omega)
+  simp only [rowArr, this]
+
+/-- Which array a row of tag `≤ 2` lives in, by tag and tier. -/
+theorem rowArr_spec (w : Word) (ht : rowTag w ≤ 2) :
+    (rowTag w = 0 ∧ rowTier w = 0 ∧ rowArr w = EIXA) ∨
+    (rowTag w = 0 ∧ rowTier w = 1 ∧ rowArr w = EIXA1) ∨
+    (rowTag w = 1 ∧ rowTier w = 0 ∧ rowArr w = EIXS) ∨
+    (rowTag w = 1 ∧ rowTier w = 1 ∧ rowArr w = EIXS1) ∨
+    (rowTag w = 2 ∧ rowTier w = 0 ∧ rowArr w = EIXN) ∨
+    (rowTag w = 2 ∧ rowTier w = 1 ∧ rowArr w = EIXN1) := by
+  have h := rowSelW_toNat w
+  have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
+  have e : ∀ k : Nat, k < 6 → (rowSelW w).toNat = k → rowSelW w = UInt64.ofNat k := fun k hk e =>
+    UInt64.toNat_inj.mp (by rw [e]; simp; omega)
+  have hk := e (2 * rowTag w + rowTier w) (by omega) h
+  rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with h1 | h1 | h1 <;>
+  rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h2 | h2 <;>
+  · simp [rowArr, selArr, hk, h1, h2]
+
+/-- Distinct (tag `≤ 2`) handles' row arrays determine tag and tier. -/
+theorem rowArr_inj {w w' : Word} (h : rowTag w ≤ 2) (h' : rowTag w' ≤ 2)
+    (ha : rowArr w = rowArr w') : rowTag w = rowTag w' ∧ rowTier w = rowTier w' := by
+  rcases rowArr_spec w h with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
+  rcases rowArr_spec w' h' with ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ <;>
+  first | exact ⟨by omega, by omega⟩ | (exfalso; rw [c, c'] at ha; revert ha; decide)
 /-- The first word of a name handle's row in its array. -/
 def rowIx (w : Word) : Nat := 2 * (w.toNat % 2 ^ 27)
 
@@ -439,7 +523,7 @@ theorem erecP_congr {m m' : Mem} (he : m'.arr64 EREC = m.arr64 EREC)
 The twin's projection tables (`IEnv.tables`, `IFEnv.tbls`: keyed on the structure's name, no
 counter) have their own arrays, as con-ron keeps them (`env.tables`, a `Vec`, and the table map):
 
-* **The table rows** `TIXA`/`TIXS`/`TIXN` (129‥131, one per name tag, as `EIX*`; tier 1 at
+* **The table rows** `TIXA`/`TIXS`/`TIXN` (one per name tag `tixArr`, as `EIX*`; tier 1 at
   `+ 256`, `tierA`): the row of name handle `w` is word `i` (the handle's index) of `tblArr w`,
   the table record's pointer plus one, `0` for no table (`IFEnv.rawTable?`).
 * **The tables list** `ETAB` (143): the record pointer of every table by slot, oldest first (the
@@ -447,8 +531,26 @@ counter) have their own arrays, as con-ron keeps them (`env.tables`, a `Vec`, an
 
 All of it is zero in zero memory (`mkIFEnv IEnv.empty`). -/
 
-/-- The table row's array: `129 + tag`, tier 1 at `+ 256`. -/
-def tblArr (w : Word) : ArrId := 129 + rowTag w + 256 * rowTier w
+/-- The table-row array (tier 0) of name tag `g`: `TIXA`, `TIXS`, `TIXN`. -/
+def tixArr (g : Nat) : ArrId := if g = 0 then TIXA else if g = 1 then TIXS else TIXN
+
+/-- The table row's array: tag `g`'s `tixArr`, tier 1 by `tierA`. -/
+def tblArr (w : Word) : ArrId := tierA (tixArr (rowTag w)) (UInt64.ofNat (rowTier w))
+
+theorem tblArr_eq (w : Word) : tblArr w = tierA (tixArr (rowTag w)) (UInt64.ofNat (rowTier w)) := rfl
+
+/-- Which array a table row of tag `≤ 2` lives in, by tag and tier. -/
+theorem tblArr_spec (w : Word) (ht : rowTag w ≤ 2) :
+    (rowTag w = 0 ∧ rowTier w = 0 ∧ tblArr w = TIXA) ∨
+    (rowTag w = 0 ∧ rowTier w = 1 ∧ tblArr w = tier1 TIXA) ∨
+    (rowTag w = 1 ∧ rowTier w = 0 ∧ tblArr w = TIXS) ∨
+    (rowTag w = 1 ∧ rowTier w = 1 ∧ tblArr w = tier1 TIXS) ∨
+    (rowTag w = 2 ∧ rowTier w = 0 ∧ tblArr w = TIXN) ∨
+    (rowTag w = 2 ∧ rowTier w = 1 ∧ tblArr w = tier1 TIXN) := by
+  have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
+  rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with h1 | h1 | h1 <;>
+  rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h2 | h2 <;>
+  · simp [tblArr, tixArr, tierA, tier1, tierOff, h1, h2, TIXA, TIXS, TIXN]
 
 /-- The table row's index: the handle's index. -/
 def tblIx (w : Word) : Nat := w.toNat % 2 ^ 27
@@ -482,11 +584,38 @@ structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe :
   /-- The tables list (`IEnv.tables`). -/
   tables : envTables m = some fe.env.tables
 
+/-- The row array by tag, tier 0 (`EIXA`, `EIXS`, `EIXN` are consecutive numbers). -/
+theorem rowArr_tier0 {w : Word} (hg : rowTag w ≤ 2) (ht : rowTier w = 0) : rowArr w = 132 + rowTag w := by
+  rcases rowArr_spec w hg with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
+    first | (rw [c, a]; done) | (rw [c, a]; decide) | omega
+
+/-- The row array by tag, tier 1 (`EIXA1`, `EIXS1`, `EIXN1`). -/
+theorem rowArr_tier1 {w : Word} (hg : rowTag w ≤ 2) (ht : rowTier w = 1) : rowArr w = 140 + rowTag w := by
+  rcases rowArr_spec w hg with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
+    first | (rw [c, a]; done) | (rw [c, a]; decide) | omega
+
+/-- The table array by tag, tier 0 (`TIXA`, `TIXS`, `TIXN`). -/
+theorem tblArr_tier0 {w : Word} (hg : rowTag w ≤ 2) (ht : rowTier w = 0) : tblArr w = 129 + rowTag w := by
+  rcases tblArr_spec w hg with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
+    first | (rw [c, a]; done) | (rw [c, a]; decide) | omega
+
+/-- The table array by tag, tier 1 (`tier1` of the tier-0 array). -/
+theorem tblArr_tier1 {w : Word} (hg : rowTag w ≤ 2) (ht : rowTier w = 1) : tblArr w = 385 + rowTag w := by
+  rcases tblArr_spec w hg with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
+    first | (rw [c, a]; done) | (rw [c, a]; decide) | omega
+
+/-- Distinct (tag `≤ 2`) handles' table arrays determine tag and tier. -/
+theorem tblArr_inj {w w' : Word} (h : rowTag w ≤ 2) (h' : rowTag w' ≤ 2)
+    (ha : tblArr w = tblArr w') : rowTag w = rowTag w' ∧ rowTier w = rowTier w' := by
+  rcases tblArr_spec w h with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
+  rcases tblArr_spec w' h' with ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ <;>
+  first | exact ⟨by omega, by omega⟩ | (exfalso; rw [c, c'] at ha; revert ha; decide)
+
 theorem tblArr_cases (w : Word) (h : rowTag w ≤ 2) :
     tblArr w = 129 ∨ tblArr w = 130 ∨ tblArr w = 131 ∨ tblArr w = 385 ∨ tblArr w = 386 ∨
       tblArr w = 387 := by
-  have : rowTier w < 2 := Nat.mod_lt _ (by decide)
-  simp only [tblArr, ArrId]; omega
+  rcases tblArr_spec w h with ⟨_, _, h⟩ | ⟨_, _, h⟩ | ⟨_, _, h⟩ | ⟨_, _, h⟩ | ⟨_, _, h⟩ | ⟨_, _, h⟩ <;>
+    rw [h] <;> decide
 
 /-- The table side of the environment: what `tkeys`, `tvals`, `tables` read besides `erecP`. -/
 def TblSame (m m' : Mem) : Prop :=
@@ -512,13 +641,13 @@ theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word
     (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
-        (by simp only [rowArr, rowTier]; omega)]
+    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
+        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
     · rfl
   have hP : ∀ w, rowP m' w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
-        (by simp only [rowArr, rowTier]; omega)]
+    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
+        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hR : erecP m' = erecP m := by
@@ -570,13 +699,13 @@ theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
     (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
-        (by simp only [rowArr, rowTier]; omega)]
+    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
+        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
     · rfl
   have hP : ∀ w, rowP m' w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
-        (by simp only [rowArr, rowTier]; omega)]
+    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
+        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)
