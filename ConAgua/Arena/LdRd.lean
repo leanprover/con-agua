@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.SlotGrow
 public import ConAgua.L.Logic
-import Std.WP.Tactic
 
 @[expose] public section
 
@@ -14,8 +13,6 @@ proof argument inside the term: `simp` cannot rewrite under it, so the locals st
 `setLoc` chains and `grind` crawls them. `ld64_rd_spec` answers `rdW` and leaves no bound
 hypothesis behind (`L.Arena.ld64_rdW_spec`, `InferBodyIntern.lean`, keeps the bound).
 -/
-
-set_option experimental.vcgen true
 
 open Std.WP
 open scoped Lean.Order
