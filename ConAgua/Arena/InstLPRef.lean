@@ -266,7 +266,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       rw [hbl' i (by rw [hb1]; omega), rdW_set64, hspn₁]
       have : ¬ b = i := fun e => by subst e; omega
       simp [this]
-    · exact (hf₁.mono (by simp; try tauto) (by simp)).trans ((hf₂.mono (by simp) (by simp)).trans hf')
+    · exact (hf₁.mono (by simp; try grind) (by simp)).trans ((hf₂.mono (by simp) (by simp)).trans hf')
 
 theorem ReadNCOK.ext {a a' : AState} (hc : ReadNCOK a) (hx : Ext a.store a'.store)
     (hca : a'.caches.readNC = a.caches.readNC) : ReadNCOK a' := by
@@ -453,7 +453,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       rw [hbl' i (by rw [hb1]; omega), rdW_set64, hspn₁]
       have : ¬ b = i := fun e => by subst e; omega
       simp [this]
-    · exact (hf₁.mono (by simp; try tauto) (by simp)).trans ((hf₂.mono (by simp) (by simp)).trans hf')
+    · exact (hf₁.mono (by simp; try grind) (by simp)).trans ((hf₂.mono (by simp) (by simp)).trans hf')
 
 
 /-! ## `spn_pool`, `spn_ls`: the list interned -/
