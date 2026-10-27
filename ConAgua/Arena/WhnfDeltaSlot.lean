@@ -113,19 +113,19 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
     (h3 : c.readNC = a.caches.readNC) (hA : 96 ≤ A ∧ A < 128 := by decide)
     (hC : 96 ≤ C.toNat ∧ C.toNat < 128 := by decide) :
     CoreS dn m' { a with caches := c } vis fe M' eb ∧ StackKept m m' := by
-  have nA : ∀ b : ArrId, (b < 96 ∨ 128 ≤ b) → (b : TieredArray) ∉ ([A] : List TieredArray) := fun b hb h => by
-    simp only [List.mem_cons, List.not_mem_nil, or_false, TieredArray.t0_inj] at h; subst h
-    simp only [ArrId] at hA hb; omega
+  have nA : ∀ b : TieredArray, (b.arr < 96 ∨ 128 ≤ b.arr) → b ∉ ([A] : List TieredArray) := fun b hb h => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h
+    change A < 96 ∨ 128 ≤ A at hb; simp only [ArrId] at hA hb; omega
   have nC : ∀ x : Word, (x.toNat < 96 ∨ 128 ≤ x.toNat) → x ∉ [C] := fun x hx h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
   have gA : ∀ b ∈ ([A] : List TieredArray), InHigh b := fun b h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h
-    refine ⟨rfl, ?_⟩; show 64 ≤ A; simp only [ArrId] at hA; omega
+    refine ⟨rfl, ?_⟩; show 64 ≤ A; simp only [ArrId] at hA ⊢; omega
   have gC : ∀ x ∈ [C], 64 ≤ x.toNat := fun x h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
   have eA : AvoidA 129 144 ([A] : List TieredArray) := fun b h => .inl (by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h
-    show A < 129; simp only [ArrId] at hA; omega)
+    show A < 129; simp only [ArrId] at hA ⊢; omega)
   have eC : AvoidC 128 136 [C] := fun x h => .inl (by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega)
   have lf : LvlFree [C] := fun x hx => nC _ (by
@@ -155,7 +155,7 @@ theorem CoreS.set_wh {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         whnfC := a.caches.whnfC.insert (decE e) (decE x) } } vis fe
       { M with wh := M.wh.insert (decE e, eb) (decE x) } eb ∧ StackKept m m' := by
-  have hf : MemFrame [98] [101] m m' := msetG_frame whSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
+  have hf : MemFrame [((98 : ArrId) : TieredArray)] [101] m m' := msetG_frame whSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   have c := hS.core
   exact hS.set_core hf ⟨c.wc.frame1 hf, c.wk.frame1 hf,
     c.wh.setE (coreSch_wf _ _ (by decide) (by decide)) c.eb1 e x he hx m' hs, c.inf.frame1 hf,

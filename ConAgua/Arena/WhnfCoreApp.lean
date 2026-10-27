@@ -530,7 +530,7 @@ theorem SpineR.setCtl {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m
 
 /-- A write to `CTL` keeps `spW` and the stack's size. -/
 theorem spW_setCtl (m : Mem) (c w j : Word) : spW (m.set64 CTL c w) j = spW m j := by
-  simp only [spW, Mem.arr64_set64_ne _ _ _ _ _ (show SPN ≠ CTL by decide)]
+  simp only [spW, Mem.arr64_set64_ne _ _ _ _ _ (show (SPN : TieredArray) ≠ CTL by decide)]
 
 /-- The top put back after a run that kept the stack below the loop's own start. -/
 theorem peel_restore {m₀ m m₃ : Mem} {co cn : Word} (hco : co = spTop m₀)
