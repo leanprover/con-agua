@@ -104,3 +104,21 @@ module directly.
 `IndBGrpM` now starts at 197 s (finishes at 603 s). Estimated critical path 1710 s → 1353 s; it
 now runs through the `Arena` proof families and `Checker.IndArmClosed`, and `Verdict` contributes
 only its last three modules (`FrontStageE`, `TopE`, `IndArmTopE`).
+
+## Batch 4: the declaration loop's L functions apart from their proofs
+
+`Checker.Prog` (the assembled program, 99 s, imported by every whole-program proof:
+`ProgWf`, the asm parts, the loop and inductive-arm closures) imports the module of every L
+function it binds (`scripts/checker_prog.py`). All of them were done by 410 s except
+`Arena.Checker`, done at 721 s: it holds the declaration loop's ten `FunDecl`s
+(`install_step` … `check_pending_next`) and their refinements, and imports the proofs those
+need (`DeclCheckLoop`, `DeclDivMod*`, `PromoteCIRef31`, …). The `FunDecl`s (text unchanged, with
+their citations and `@[l_impl]` tags) moved to `Arena/CheckerL.lean`, which imports only
+`DeclBase`, `Reasons` and `Census.Attr`; `Arena.Checker` imports it. The regenerated
+`Checker/Prog.lean` differs in that one import; `checker.s` and `pins.bin` are unchanged
+(`asm_file.py --check`). Three `Verdict` modules (`WhnfProjE`, `DeclBasisE`, `InferArmsE`) used
+`Arena.Checker`'s lemmas (and its `@[simp] exc_ok_bind`) through `Checker.Prog` and import it
+directly now.
+
+`Checker.Prog` can start at 410 s instead of 721 s. On its own this does not shorten the critical
+path (other paths reach 1353 s), together with batch 3 it does (below).
