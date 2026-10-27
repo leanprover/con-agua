@@ -631,7 +631,7 @@ comparing two words.
 Each store keeps, per tier, one word array of fixed-size records (node `i` of
 tier `t` at `arr⟨t⟩[i * w ..]`) and its node count in a control word; the
 stores and their fields are declared in one file,
-[`ConAgua/Arena/StoreFields.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/StoreFields.lean#L11-L33).
+[`ConAgua/Arena/StoreFields.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/StoreFields.lean#L11-L34).
 A store whose two key fields are handles packs them into one record word.
 
 Each store's **cons table**, the hash map from a node's fields to its handle,
@@ -725,7 +725,7 @@ Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
 3. **The refinement**: under the arena relation, a model that returns `z`
    gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
    and the relation holds again
-   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L290-L296),
+   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L261-L266),
    against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L132-L149)).
 
 The split keeps `vcgen` away from the twin's monad and the twin's proofs away

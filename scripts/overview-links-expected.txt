@@ -1116,7 +1116,7 @@
     96  /-- The node index of a handle word: the low 27 bits. -/
     97  @[expose] def idxE (h : Expr) : Expr := .bin .and h (.const 134217727)
 
-== ConAgua/Arena/StoreFields.lean#L11-L33
+== ConAgua/Arena/StoreFields.lean#L11-L34
     11  # The store records: one accessor per field, one evaluation lemma per accessor (lane tieracc)
     12  
     13  Every node store of the arena keeps its records in a word array and its node counts in `CTL`
@@ -1127,19 +1127,20 @@
     18    `L.TRec` values, with a constant per field (`APP.f`, `APP.a`, …). L code reads them as
     19    `APP⟨t, i⟩.f`, `APP⟦h⟧.a`, `APP⟨t⟩.count` (`L/Notation.lean`).
     20  * **The proof accessors** `tfld m R t i f` (field `f` of node `i` of tier `t`) and `tcnt m R t`
-    21    (the node count of tier `t`), and the handle decoders `tierW`, `idxW`.
-    22  * **One evaluation lemma per accessor**: `evalE_tld` / `tld_eq` (pass both to `vcgen`, as
-    23    `ld64`), `evalE_cnt` / `tcntM_eq`, `evalE_tierE`, `evalE_idxE`, and the pure forms
-    24    `Expr.pval_tld`, `Expr.pval_cntE`, … (`lang_grind`); the frame lemmas `tfld_set64_ne`,
-    25    `tcnt_set64_ne`, `tfld_setG`, ….
-    26  
-    27  Proofs outside the store library state models and relations with `tfld` and `tcnt` and never
-    28  unfold them (`TRec.ad` stays folded). The layout (one tiered array per store, lane
-    29  `tierswitch`: tier `t` of array `a` is `tierA a t`) lives in `L/TRec.lean`, the definitions and
-    30  lemma proofs here, and the store library.
-    31  
-    32  The array and control-word ids below are the memory map's (`AREC` = `APP.arr`, …): each store
-    33  file's `abbrev` must agree, `StoreFieldsCheck.lean` checks it.
+    21    (the node count of tier `t`), and the handle words: `hdW`, `tagW`, `tierW`, `idxW` and their
+    22    laws, proved once through `toNat` (the bridge to the twin's `Idx` is `Handle.lean`).
+    23  * **One evaluation lemma per accessor**: `evalE_tld` / `tld_eq` (pass both to `vcgen`, as
+    24    `ld64`), `evalE_cnt` / `tcntM_eq`, `evalE_tierE`, `evalE_idxE`, and the pure forms
+    25    `Expr.pval_tld`, `Expr.pval_cntE`, … (`lang_grind`); the frame lemmas `tfld_set64_ne`,
+    26    `tcnt_set64_ne`, `tfld_setG`, ….
+    27  
+    28  Proofs outside the store library state models and relations with `tfld` and `tcnt` and never
+    29  unfold them (`TRec.ad` stays folded). The layout (one tiered array per store, lane
+    30  `tierswitch`: tier `t` of array `a` is `tierA a t`) lives in `L/TRec.lean`, the definitions and
+    31  lemma proofs here, and the store library.
+    32  
+    33  The array and control-word ids below are the memory map's (`AREC` = `APP.arr`, …): each store
+    34  file's `abbrev` must agree, `StoreFieldsCheck.lean` checks it.
 
 == ConAgua/Arena/ConsLib.lean#L206-L215
    206  /-! ## The slot layout (KSTP)
@@ -1341,14 +1342,13 @@
    278        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
    279        finish (gen := 20) [lvlEqW]
 
-== ConAgua/Arena/LevelArena.lean#L290-L296
-   290  @[refines ConRon.Arena.lvlEq?]
-   291  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
-   292      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
-   293      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
-   294      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
-   295      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
-   296      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
+== ConAgua/Arena/LevelArena.lean#L261-L266
+   261  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
+   262      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
+   263      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
+   264      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
+   265      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
+   266      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
 
 == vendor/con-ron/ConRon/Arena/Core.lean#L132-L149
    132  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`
