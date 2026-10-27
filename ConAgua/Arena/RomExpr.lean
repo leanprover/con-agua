@@ -1,3 +1,4 @@
+import ConAgua.L.ModelGen
 import ConAgua.Arena.RomLevels
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -108,32 +109,12 @@ def mpushMem (m : Mem) (h : Word) : Mem :=
   ((mpushPut m h).set64 RMEMO (memoCnt (mpushPut m h)) h).set64 CTL 132
     (memoCnt (mpushPut m h) + 1)
 
-/-- **The model of `memo_push`**: `none` where it aborts. -/
-def mpushW (m : Mem) (h : Word) : Option Mem :=
-  if mfindG rsetSch m h 0 = [] then none
-  else if (mfindG rsetSch m h 0).headD 0 ≠ 0 then none
-  else match mputG rsetSch m h 0 1 0 ((mfindG rsetSch m h 0).tail.headD 0) with
-    | none => none
-    | some m₁ =>
-      if memoCnt m₁ < m₁.len64 RMEMO then
-        some ((m₁.set64 RMEMO (memoCnt m₁) h).set64 CTL 132 (memoCnt m₁ + 1))
-      else none
-
-theorem memoPush_spec (p : Prog) (hp : p.lookup "memo_push" = some memoPush)
+l_model memoPush_spec (p : Prog) (hp : p.lookup "memo_push" = some memoPush)
     (hf : p.lookup "rset_find" = some (memoFindG rsetSch))
-    (hu : p.lookup "rset_put" = some (memoPutG rsetSch)) (n : Nat) (s₀ : St) (h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "memo_push" [h]
-    ⦃fun _ s' => LocEq s' s₀ ∧ mpushW s₀.mem h = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, memoPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        memoFindG_spec rsetSch p "rset_find" hf n, memoPutG_spec rsetSch p "rset_put" hu n] <;>
-      finish [mpushW, memoCnt]
+    (hu : p.lookup "rset_put" = some (memoPutG rsetSch))
+  fns [hp ↦ mpushW void]
+  specs [memoFindG_spec rsetSch p "rset_find" hf n, memoPutG_spec rsetSch p "rset_put" hu n]
+  grind [arena_grind] finish [memoCnt]
 
 theorem mpushPut_frame (m : Mem) (h : Word) : MemFrame [RSET] [149] m (mpushPut m h) := by
   unfold mpushPut
@@ -152,22 +133,27 @@ theorem mpushPut_memo (m : Mem) (h : Word) :
 /-- What `memo_push` checked, and its memory. -/
 theorem mpushW_eq {m m' : Mem} {h : Word} (hW : mpushW m h = some m') :
     memoCnt m < m.len64 RMEMO ∧ rsetOK m h ∧ m' = mpushMem m h := by
-  unfold mpushW at hW
+  rw [mpushW.eq_1] at hW
   split at hW; · cases hW
   rename_i h1
   split at hW; · cases hW
   rename_i h2
-  split at hW; · cases hW
-  rename_i m₁ hput
+  rcases hput : mputG rsetSch m h 0 1 ((mfindG rsetSch m h 0).headD 0) ((mfindG rsetSch m h 0).tail.headD 0)
+    with _ | m₁
+  · rw [hput, mpushW.k_rset_put.none] at hW; cases hW
+  rw [hput] at hW
+  have h2' : (mfindG rsetSch m h 0).headD 0 = 0 := Decidable.not_not.mp h2
+  rw [h2'] at hput
   have hpp : mpushPut m h = m₁ := by simp only [mpushPut, hput, Option.getD_some]
   obtain ⟨hc, hl, -⟩ := mpushPut_memo m h
   rw [hpp] at hc hl
-  split at hW
-  · rename_i h4
-    cases hW
-    rw [hc, hl] at h4
-    exact ⟨h4, ⟨h1, by simpa using h2⟩, by simp only [mpushMem, hpp]⟩
-  · cases hW
+  by_cases h4 : m₁.len64 RMEMO ≤ rdW (m₁.arr64 CTL) 132
+  · rw [mpushW.k_rset_put.abort1 _ _ h4] at hW; cases hW
+  rw [mpushW.k_rset_put.arm1 _ _ h4] at hW
+  cases hW
+  have h4' : memoCnt m₁ < m₁.len64 RMEMO := UInt64.not_le.mp h4
+  rw [hc, hl] at h4'
+  exact ⟨h4', ⟨h1, by simpa using h2⟩, by simp only [mpushMem, hpp]; rfl⟩
 
 /-- The back reference `k` is to an entry of the memo. -/
 def memoOk (m : Mem) (k : Word) : Prop := k < memoCnt m
@@ -214,11 +200,6 @@ def romRefW (m : Mem) (pos : Word) : Option (Word × Word × Mem) :=
 /-- The memory after the limb `k` went to the pool top. -/
 def litWordMem (m : Mem) (k : Word) : Mem :=
   (m.set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) k).set64 CTL 0 (m.top + 1)
-
-/-- The model of `rom_lit`. -/
-def romLitW (m : Mem) (k : Word) : Option (Word × Mem) :=
-  if m.len64 (tierA POOL (m.top >>> 40)) ≤ (m.top &&& 1099511627775) then none
-  else if k = 0 then internW m m.top 0 else internW (litWordMem m k) m.top 1
 
 /-- `rom_lit(k)`: intern the `natVal` literal `k` (its one limb at the pool top, none for `0`). -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:194-256 ConRon.Arena.Frontend.internExprGo
@@ -277,23 +258,19 @@ theorem litWordMem_facts (m : Mem) (k : Word) (hpool : PoolOK m)
     Array.getElem?_setIfInBounds]
   simp [vpool_size, h41]
 
-theorem romLit_spec (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
+l_model romLit_spec (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match" = some litMatch)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hpi : p.lookup "intern_lit" = some internLit) (hp : p.lookup "rom_lit" = some romLit)
-    (n : Nat) (s₀ : St) (k : Word) (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rom_lit" [k]
-    ⦃fun r s' => LocEq s' s₀ ∧ romLitW s₀.mem k = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, romLit]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        internLit_spec p hph hpe hpm hpf hpp hpi n] <;>
-      finish [romLitW, litWordMem]
+  fns [hp ↦ romLitW]
+  specs [internLit_spec p hph hpe hpm hpf hpp hpi n]
+  grind [arena_grind] finish [litWordMem]
+  pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
+
+/-- The generated `romLitW`, with the pool top as `m.top` and the limb write as `litWordMem`. -/
+theorem romLitW_eq (m : Mem) (k : Word) : romLitW m k =
+    if m.len64 (tierA POOL (m.top >>> 40)) ≤ (m.top &&& 1099511627775) then none
+    else if k = 0 then internW m m.top 0 else internW (litWordMem m k) m.top 1 := rfl
 
 /-- `rom_ex_leaf(pos, t)`: a `bvar` (`t = 0`), `sort` (`1`), `const` (`2`) or literal (`3`) node. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:194-256 ConRon.Arena.Frontend.internExprGo
@@ -616,7 +593,7 @@ theorem mkProjW_topK {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (
   exact memFrame_top (mkK_frame projCS_wf (by decide) h) (by decide)
 
 theorem romLitW_topK {m m' : Mem} {k r : Word} (h : romLitW m k = some (r, m')) : TopK m m' := by
-  unfold romLitW at h
+  rw [romLitW_eq] at h
   split at h; · cases h
   rename_i hl
   split at h

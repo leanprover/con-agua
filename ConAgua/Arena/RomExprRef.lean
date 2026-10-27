@@ -250,22 +250,29 @@ theorem RsetR.push {mem mem' : Mem} {h : Word} (hR : RsetR mem) (hh : h.toNat < 
     (hW : mpushW mem h = some mem') : RsetR mem' := by
   obtain ⟨mp, hG, hc⟩ := hR
   have hW' := hW
-  unfold mpushW at hW
+  rw [mpushW.eq_1] at hW
   split at hW; · cases hW
   rename_i h1
   split at hW; · cases hW
   rename_i h2
-  split at hW; · cases hW
-  rename_i m₁ hput
-  split at hW
-  case isFalse => cases hW
-  cases hW
+  rcases hput : mputG rsetSch mem h 0 1 ((mfindG rsetSch mem h 0).headD 0) ((mfindG rsetSch mem h 0).tail.headD 0)
+    with _ | m₁
+  · rw [hput, mpushW.k_rset_put.none] at hW; cases hW
+  rw [hput] at hW
+  have h2' : (mfindG rsetSch mem h 0).headD 0 = 0 := Decidable.not_not.mp h2
+  rw [h2'] at hput
+  by_cases h4 : m₁.len64 RMEMO ≤ rdW (m₁.arr64 CTL) 132
+  · rw [mpushW.k_rset_put.abort1 _ _ h4] at hW; cases hW
+  rw [mpushW.k_rset_put.arm1 _ _ h4] at hW
+  have hm' : mem' = ((m₁.set64 RMEMO (memoCnt m₁) h).set64 CTL 132 (memoCnt m₁ + 1)) :=
+    (Option.some.inj hW).symm
+  subst hm'
+  have hsz : memoCnt m₁ < m₁.len64 RMEMO := UInt64.not_le.mp h4
   have hset : msetG rsetSch mem h 0 1 = some m₁ := by
     simp only [msetG, h1, ite_false]
     have : (mfindG rsetSch mem h 0).headD 0 = 0 := by simpa using h2
     rw [this]; exact hput
   have hG1 := memoRG_set rsetSch rsetSch_wf bmKey (fun _ => ()) mem mp hG h 0 1 ⟨hh, rfl⟩ m₁ hset
-  rename_i hsz
   have hf1 := mputG_frame rsetSch rsetSch_wf mem m₁ _ _ _ _ _ hput
   have hc1 : memoCnt m₁ = memoCnt mem := hf1.2.1 132 (by simp [rsetSch])
   have hR1 : m₁.arr64 RMEMO = mem.arr64 RMEMO := hf1.1 RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)
@@ -822,7 +829,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
       have hp := drop_pos rom hr pos _ rest hd 9 (by simp [u64B])
       simp only [show UInt64.ofNat 9 = (9 : Word) from rfl] at hp
       rw [hp]; simp [u64B]
-    simp only [romLitW] at hI
+    rw [romLitW_eq] at hI
     split at hI
     · cases hI
     rename_i hroom

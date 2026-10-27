@@ -258,7 +258,7 @@ theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : Sli
 theorem romLitW_core (hS : CoreS dn m a vis fe M eb) (c w : Word) (hI : L.Rom.romLitW m c = some (w, m')) :
     CoreRef (internE (.lit (.natVal c.toNat))) a decH dn m vis fe M eb [w] m' := by
   have hpool : PoolOK m := hS.arena.1.lit.1
-  unfold L.Rom.romLitW at hI
+  rw [L.Rom.romLitW_eq] at hI
   by_cases hlen : m.len64 (tierA POOL (m.top >>> 40)) ≤ (m.top &&& 1099511627775)
   · rw [ite_eq_left hlen] at hI; cases hI
   rw [ite_eq_right hlen] at hI
