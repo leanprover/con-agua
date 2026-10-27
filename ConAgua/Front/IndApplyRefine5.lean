@@ -152,7 +152,9 @@ theorem orderInW_twin : ∀ (n : Nat) (m m' : Mem) (t tt jj pos pos' : Word),
     have hnn : rdW (m.arr64 IFL) (fo + pos) = wd m₀ IFL (fo.toNat + pos.toNat) := by
       rw [wd_eq, hfp, hI.2 _ hf1]
     rw [hnn] at h
-    rcases hc : ctorW n m (wd m₀ IFL (fo.toNat + pos.toNat)) jj tt np fuel cno cn co with _ | c <;> simp only [hc, wK, reduceCtorEq] at h
+    rcases hc : ctorW n m (wd m₀ IFL (fo.toNat + pos.toNat)) jj tt np fuel cno cn co with _ | c
+    · rw [hc, orderInW.k_vi_ctor.none] at h; cases h
+    rw [hc, orderInW.k_vi_ctor.arm1] at h
     -- the constructor, against the twin
     have hCN' : ∀ k, k < cts.length → (wd m IFL (cno.toNat + k)).toNat < 2 ^ 32 := fun k hk => by
       rw [hI.2 _ (by omega)]; exact hCN k hk
