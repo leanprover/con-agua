@@ -69,7 +69,7 @@ theorem checkPendingGo_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs c
   subst hx hy hz
   -- phase A's memory with the worker's globals and byte arrays
   let m₂ : Mem := { m with glob := s.mem.glob }
-  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
   have h₂ := PhaseBStart.frame0 hf h
   let s₂ : St := ⟨m₂, s.loc⟩
   have hAg : Agree phaseBS (fun _ => false) s.mem s₂.mem :=
@@ -99,7 +99,7 @@ theorem checkB_agree0 (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerP
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
     ⦃fun r _ => r.headD 0 = ConAgua.Final.ACCEPT →
       ∃ s'', checkPendingList mode fe pend.toList a.worker = .ok (.ok (), s''); ⊤⦄ := by
-  have hl : (UInt64.toNat (s₀.mem.len64 242)) = 0 := by simp [Mem.len64, show (242 : ArrId) = CTLF from rfl, hctlf]
+  have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = k := hhi
   have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 HDRF).size), (s₀.mem.arr64 HDRF)[(3 : Word).toNat] = v := by
