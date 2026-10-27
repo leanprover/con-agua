@@ -22,7 +22,7 @@ theorem pc_get_set64 (m : Mem) (a b : ArrId) (k v : Word) (x : Nat) :
   by_cases h : b = a
   · subst h; rw [Mem.arr64_set64_same]
     simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; grind
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne h)]; simp [h]
 
 theorem pc_toNat3 (a b c : Word) (h : a.toNat + 8 * b.toNat + c.toNat < 2 ^ 64) :
     (a + 8 * b + c).toNat = a.toNat + 8 * b.toNat + c.toNat := by

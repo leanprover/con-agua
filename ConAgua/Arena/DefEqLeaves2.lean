@@ -211,7 +211,7 @@ theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     CoreK dn vis fe M eb m₀ m' a := by
   have hf := grows_frame m m' hg
   refine ⟨h.1.arenaFrame (ArenaD.grow m m' hg a h.1.arena) rfl hf (by simp [POOL, POOL1]) (by simp [POOL, POOL1])
-    (by simp [POOL, POOL1]) (by simp) (by simp)
+    (by decide) (by simp) (by simp)
     (hmode := h.1.mode.grows hg),
     h.2.trans (StackKept.of_grows hg)⟩
 
@@ -257,7 +257,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       cplL a₀ := by
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
-  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [tier1, ConsSch.wset, REC, SLOT]) (by simp [tier1, ConsSch.wset, REC, SLOT]) (by simp [tier1, ConsSch.wset, REC, SLOT])
+  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [tier1, ConsSch.wset, REC, SLOT]) (by simp [tier1, ConsSch.wset, REC, SLOT]) (by decide)
     (by simp) (by simp)
     (hmode := hK.1.mode.frame hfr (by simp) (by simp)), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 
