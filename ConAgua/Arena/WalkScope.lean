@@ -4,6 +4,7 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 public import ConAgua.Arena.MemoLib
 public import ConAgua.Arena.ExprMk
+public import ConAgua.L.ModelGen
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -46,207 +47,6 @@ namespace L.Arena
 
 /-- Its schema: array 151, stamp/count `CTL[152]`/`CTL[153]`. -/
 abbrev wsSch : MemoSch := ⟨WSM, 152⟩
-
-/-- Record the result `r` at `(h, d)` and return it. -/
-def wsSet (m : Mem) (h d r : Word) : Option (Word × Mem) :=
-  match msetG wsSch m h d r with
-  | none => none
-  | some m' => some (r, m')
-
-mutual
-/-- **The model of `ws_go`** at L fuel `n`. -/
-def wscW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, h, d, c =>
-    if c = 0 then none
-    else if derFW m h = 0 then some (1, m)
-    else if mfindG wsSch m h d = [] then none
-    else if (mfindG wsSch m h d).headD 0 ≠ 0 then
-      some (if rdW (m.arr64 WSM) ((mfindG wsSch m h d).tail.headD 0 * 4 + 3) ≠ 0 then 1 else 0, m)
-    else
-      match wsNodeW n m h d (c - 1) with
-      | none => none
-      | some (r, m₁) => wsSet m₁ h d r
-
-/-- **The model of `ws_node`**: the view and the dispatch on the tag. -/
-def wsNodeW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, h, d, c =>
-    if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if h >>> 28 = 0 then
-      if tcnt m BVAR (tierW h) ≤ idxW h then none else some (1, m)
-    else if h >>> 28 = 1 then
-      if tcnt m FVAR (tierW h) ≤ idxW h then none
-      else if tfld m FVAR (tierW h) (idxW h) 0 < d then
-        wscW n m (tfld m FVAR (tierW h) (idxW h) 1)
-          (tfld m FVAR (tierW h) (idxW h) 0) c
-      else some (0, m)
-    else if h >>> 28 = 4 then
-      if tcnt m APP (tierW h) ≤ idxW h then none
-      else
-        match wscW n m (tfld m APP (tierW h) (idxW h) 0) d c with
-        | none => none
-        | some (x, m₁) =>
-          if x = 0 then some (0, m₁) else wscW n m₁ (tfld m APP (tierW h) (idxW h) 1) d c
-    else if h >>> 28 = 5 then
-      if tcnt m LAM (tierW h) ≤ idxW h then none
-      else
-        match wscW n m (tfld m LAM (tierW h) (idxW h) 0) d c with
-        | none => none
-        | some (x, m₁) =>
-          if x = 0 then some (0, m₁) else wscW n m₁ (tfld m LAM (tierW h) (idxW h) 1) d c
-    else if h >>> 28 = 6 then
-      if tcnt m FORALL (tierW h) ≤ idxW h then none
-      else
-        match wscW n m (tfld m FORALL (tierW h) (idxW h) 0) d c with
-        | none => none
-        | some (x, m₁) =>
-          if x = 0 then some (0, m₁) else wscW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) d c
-    else if h >>> 28 = 9 then
-      if tcnt m PROJ (tierW h) ≤ idxW h then none
-      else wscW n m (tfld m PROJ (tierW h) (idxW h) 2) d c
-    else if h >>> 28 = 7 then
-      if tcnt m LET (tierW h) ≤ idxW h then none
-      else
-        match wscW n m (tfld m LET (tierW h) (idxW h) 0) d c with
-        | none => none
-        | some (x, m₁) =>
-          if x = 0 then some (0, m₁) else
-          match wscW n m₁ (tfld m LET (tierW h) (idxW h) 1) d c with
-          | none => none
-          | some (y, m₂) =>
-            if y = 0 then some (0, m₂) else wscW n m₂ (tfld m LET (tierW h) (idxW h) 2) d c
-    else if h >>> 28 = 2 then
-      if tcnt m SORT (tierW h) ≤ idxW h then none else some (1, m)
-    else if h >>> 28 = 3 then
-      if tcnt m CONST (tierW h) ≤ idxW h then none else some (1, m)
-    else if h >>> 28 = 8 then
-      if tcnt m LIT (tierW h) ≤ idxW h then none else some (1, m)
-    else none
-end
-
-/-! ### The guarded equations, one per reachable arm -/
-
-/-- After `ws_node`: record the result. -/
-def wsK (h d : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m₁) => wsSet m₁ h d r
-
-/-- After `ws_put`. -/
-def wsSetK (r : Word) : Option Mem → Option (Word × Mem)
-  | none => none
-  | some m' => some (r, m')
-
-/-- A short-circuiting `&&` of two children: after the first, the second if the first is `1`. -/
-def wsAndK (n : Nat) (b d c : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => if x = 0 then some (0, m₁) else wscW n m₁ b d c
-
-/-- The `letE` arm after its first child. -/
-def wsLetK (n : Nat) (v b d c : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => if x = 0 then some (0, m₁) else wsAndK n b d c (wscW n m₁ v d c)
-
-section arms
-variable (n : Nat) (m m₁ : Mem) (h r x d c b v : Word)
-
-theorem wsK_some : wsK h d (some (r, m₁)) = wsSet m₁ h d r := rfl
-theorem wsSetK_some : wsSetK r (some m₁) = some (r, m₁) := rfl
-theorem wsAndK_zero : wsAndK n b d c (some (0, m₁)) = some (0, m₁) := by simp [wsAndK]
-theorem wsAndK_ne (hx : x ≠ 0) : wsAndK n b d c (some (x, m₁)) = wscW n m₁ b d c := by
-  simp [wsAndK, hx]
-theorem wsLetK_zero : wsLetK n v b d c (some (0, m₁)) = some (0, m₁) := by simp [wsLetK]
-theorem wsLetK_ne (hx : x ≠ 0) : wsLetK n v b d c (some (x, m₁)) = wsAndK n b d c (wscW n m₁ v d c) := by
-  simp [wsLetK, hx]
-
-theorem wsSet_eq : wsSet m h d r = wsSetK r (msetG wsSch m h d r) := by
-  simp only [wsSet, wsSetK]
-
-theorem wscW_cut (hc : c ≠ 0) (hf : derFW m h = 0) : wscW (n + 1) m h d c = some (1, m) := by
-  rw [wscW]; simp [hc, hf]
-
-theorem wscW_hit (hc : c ≠ 0) (hf : derFW m h ≠ 0) (hr : mfindG wsSch m h d ≠ [])
-    (hh : (mfindG wsSch m h d).headD 0 ≠ 0) :
-    wscW (n + 1) m h d c =
-      some (if rdW (m.arr64 WSM) ((mfindG wsSch m h d).tail.headD 0 * 4 + 3) ≠ 0 then 1 else 0, m) := by
-  rw [wscW]; simp only [hc, hf, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem wscW_miss (hc : c ≠ 0) (hf : derFW m h ≠ 0) (hr : mfindG wsSch m h d ≠ [])
-    (hh : (mfindG wsSch m h d).headD 0 = 0) :
-    wscW (n + 1) m h d c = wsK h d (wsNodeW n m h d (c - 1)) := by
-  rw [wscW]; simp only [hc, hf, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, wsK]
-
-theorem wsNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h BVAR) : wsNodeW (n + 1) m h d c = some (1, m) := by
-  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
-
-theorem wsNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h SORT) : wsNodeW (n + 1) m h d c = some (1, m) := by
-  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
-
-theorem wsNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h CONST) : wsNodeW (n + 1) m h d c = some (1, m) := by
-  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
-
-theorem wsNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h LIT) : wsNodeW (n + 1) m h d c = some (1, m) := by
-  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
-
-theorem wsNodeW_fvar_lt (hg : h >>> 28 = 1) (hv : viewOK m h FVAR)
-    (hl : tfld m FVAR (tierW h) (idxW h) 0 < d) :
-    wsNodeW (n + 1) m h d c = wscW n m (tfld m FVAR (tierW h) (idxW h) 1)
-      (tfld m FVAR (tierW h) (idxW h) 0) c := by
-  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, hl]
-
-theorem wsNodeW_fvar_ge (hg : h >>> 28 = 1) (hv : viewOK m h FVAR)
-    (hl : ¬ tfld m FVAR (tierW h) (idxW h) 0 < d) :
-    wsNodeW (n + 1) m h d c = some (0, m) := by
-  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, hl]
-
-theorem wsNodeW_app (hv : viewOK m h APP) (hg : h >>> 28 = 4) :
-    wsNodeW (n + 1) m h d c = wsAndK n (tfld m APP (tierW h) (idxW h) 1) d c
-      (wscW n m (tfld m APP (tierW h) (idxW h) 0) d c) := by
-  rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsAndK]
-  simp
-
-theorem wsNodeW_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
-    wsNodeW (n + 1) m h d c = wsAndK n (tfld m LAM (tierW h) (idxW h) 1) d c
-      (wscW n m (tfld m LAM (tierW h) (idxW h) 0) d c) := by
-  rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsAndK]
-  simp
-
-theorem wsNodeW_forall (hv : viewOK m h FORALL) (hg : h >>> 28 = 6) :
-    wsNodeW (n + 1) m h d c = wsAndK n (tfld m FORALL (tierW h) (idxW h) 1) d c
-      (wscW n m (tfld m FORALL (tierW h) (idxW h) 0) d c) := by
-  rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsAndK]
-  simp
-
-theorem wsNodeW_proj (hv : viewOK m h PROJ) (hg : h >>> 28 = 9) :
-    wsNodeW (n + 1) m h d c = wscW n m (tfld m PROJ (tierW h) (idxW h) 2) d c := by
-  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
-
-theorem wsNodeW_let (hv : viewOK m h LET) (hg : h >>> 28 = 7) :
-    wsNodeW (n + 1) m h d c = wsLetK n (tfld m LET (tierW h) (idxW h) 1)
-      (tfld m LET (tierW h) (idxW h) 2) d c
-      (wscW n m (tfld m LET (tierW h) (idxW h) 0) d c) := by
-  rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsLetK, wsAndK]
-  split <;> simp_all
-
-end arms
-
-attribute [arena_grind =] wsK_some wsSetK_some wsAndK_zero wsLetK_zero wsSet_eq
-grind_pattern [arena_grind] wsAndK_ne => wsAndK n b d c (some (x, m₁))
-grind_pattern [arena_grind] wsLetK_ne => wsLetK n v b d c (some (x, m₁))
-grind_pattern [arena_grind] wscW_cut => wscW (n + 1) m h d c
-grind_pattern [arena_grind] wscW_hit => wscW (n + 1) m h d c
-grind_pattern [arena_grind] wscW_miss => wscW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_bvar => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_sort => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_const => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_lit => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_fvar_lt => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_fvar_ge => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_app => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_lam => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_forall => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_proj => wsNodeW (n + 1) m h d c
-grind_pattern [arena_grind] wsNodeW_let => wsNodeW (n + 1) m h d c
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:953-981 ConRon.Arena.wscopedBGo -/
 @[l_impl ConRon.Arena.wscopedBGo]
@@ -332,57 +132,16 @@ def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
   abort
 }
 
-section go
-variable (p : Prog) (hpd : p.lookup "der_b" = some derB)
+/-- **`ws_go` and `ws_node` are their models** `wscW`, `wsNodeW`, at every fuel. -/
+l_model wsGo_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   (hpf : p.lookup "ws_find" = some (memoFindG wsSch))
   (hps : p.lookup "ws_put" = some (memoPutG wsSch)) (hp : p.lookup "ws_go" = some wsGo)
   (hpn : p.lookup "ws_node" = some wsNode)
-
-/-- The spec of `ws_go` at fuel `n`. -/
-def WsGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (h d c : Word),
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "ws_go" [h, d, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ wscW n s₀.mem h d c = some (r.headD 0, s'.mem); ⊤⦄
-
-/-- The spec of `ws_node` at fuel `n`. -/
-def WsNodeSpec (n : Nat) : Prop := ∀ (s₀ : St) (h d c : Word),
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "ws_node" [h, d, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ wsNodeW n s₀.mem h d c = some (r.headD 0, s'.mem); ⊤⦄
-
-include hpd hpf hps hp in
-theorem wsGo_step (n : Nat) (ih : WsNodeSpec p n) : WsGoSpec p (n + 1) := by
-  unfold WsNodeSpec at ih
-  intro s₀ h d c
-  rw [invoke_eq _ hp]
-  simp only [callFn, wsGo]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, derB_spec p hpd n,
-      memoFindG_spec wsSch p _ hpf n, memoPutG_spec wsSch p _ hps n, ih] <;>
-    -- the miss path (cutoff, probe, node, put) is deeper than the default search reaches
-    finish (instances := 5000) (gen := 12)
-
-set_option maxHeartbeats 1000000 in
-include hpn in
-theorem wsNode_step (n : Nat) (ih : WsGoSpec p n) : WsNodeSpec p (n + 1) := by
-  unfold WsGoSpec at ih
-  intro s₀ h d c
-  rw [invoke_eq _ hpn]
-  simp only [callFn, wsNode]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, ih] <;>
-    finish [viewOK, tierW, idxW]
-
-include hpd hpf hps hp hpn in
-/-- **`ws_go` and `ws_node` are their models**, at every fuel. -/
-theorem wsGo_spec (n : Nat) : WsGoSpec p n ∧ WsNodeSpec p n := by
-  induction n with
-  | zero =>
-    constructor
-    · intro s₀ h d c; rw [invoke_eq _ hp]; simp only [callFn, wsGo]; vcgen [exec] <;> grind
-    · intro s₀ h d c; rw [invoke_eq _ hpn]; simp only [callFn, wsNode]; vcgen [exec] <;> grind
-  | succ n ih => exact ⟨wsGo_step p hpd hpf hps hp n ih.2, wsNode_step p hpn n ih.1⟩
+  fns [hp ↦ wscW, hpn ↦ wsNodeW]
+  specs [derB_spec p hpd n, memoFindG_spec wsSch p _ hpf n, memoPutG_spec wsSch p _ hps n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-! ## `wscoped_bfast(d, e)`: the entry -/
 
@@ -403,21 +162,20 @@ def wscopedBFastL : FunDecl := lfn (d, e) locals (r, u) {
   return r
 }
 
-include hpd hpf hps hp hpn in
-theorem wscopedBFast_spec (hpc : p.lookup "ws_clear" = some (memoClearG wsSch))
+theorem wscopedBFast_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "ws_find" = some (memoFindG wsSch))
+    (hps : p.lookup "ws_put" = some (memoPutG wsSch)) (hp : p.lookup "ws_go" = some wsGo)
+    (hpn : p.lookup "ws_node" = some wsNode) (hpc : p.lookup "ws_clear" = some (memoClearG wsSch))
     (hpm : p.lookup "wscoped_bfast" = some wscopedBFastL) (n : Nat) (s₀ : St) (d e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (n + 1)) "wscoped_bfast" [d, e]
     ⦃fun r s' => LocEq s' s₀ ∧ wsFastW n s₀.mem d e = some (r.headD 0, s'.mem); ⊤⦄ := by
   have ih := (wsGo_spec p hpd hpf hps hp hpn n).1
-  unfold WsGoSpec at ih
   rw [invoke_eq _ hpm]
   simp only [callFn, wscopedBFastL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec wsSch p _ hpc n, ih] <;>
     finish
-
-end go
 
 /-- What the specs need of the program. -/
 structure WsProg (p : Prog) : Prop where

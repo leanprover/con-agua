@@ -109,32 +109,35 @@ def FrNodeOK (n : Nat) : Prop :=
 theorem frGoOK_succ (n : Nat) (ih : FrNodeOK n) : FrGoOK (n + 1) := by
   intro F m m' a h c r hF hR hh hb
   by_cases hc : c = 0
-  · rw [frW] at hb; simp [hc] at hb
+  · rw [frW.abort1 n m h c hc] at hb; cases hb
   have hc1 := ctrW_toNat c hc
   obtain ⟨G, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
   rw [fvarRangeGo_succ', StateT.run_bind, fvarBGet_run]
   by_cases hr : mfindG frSch m h 0 = []
-  · rw [frW] at hb; simp [hc, hr] at hb
+  · rw [frW.abort2 n m h c hc hr] at hb; cases hb
   by_cases hh0 : (mfindG frSch m h 0).headD 0 ≠ 0
-  · rw [frW_hit n m h c hc hr hh0] at hb
+  · rw [frW.arm1 n m h c hc hr hh0] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     rw [show a.memos.fvarBC[decE h]? = _ from memoRG_hit frSch bmKey _ m _ hR.memos.fvar h 0 hr hh0 ⟨hh, rfl⟩]
     exact ⟨a, rfl, hR⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
-    rw [frW_miss n m h c hc hr hh0] at hb
+    rw [frW.arm2 n m h c hc hr hh0] at hb
     rw [show a.memos.fvarBC[decE h]? = none from
       memoRG_miss frSch bmKey _ m _ hR.memos.fvar h 0 ⟨hh, rfl⟩ hr hh0]
     cases hn : frNodeW n m h (c - 1) with
-    | none => simp [frK, hn] at hb
+    | none => rw [hn, frW.k_fr_node.none] at hb; cases hb
     | some p =>
       obtain ⟨r₁, m₁⟩ := p
-      simp only [hn, frK, frSet_eq] at hb
+      rw [hn] at hb
+      by_cases hr₁ : mfindG frSch m₁ h 0 = []
+      · rw [frW.k_fr_node.abort1 h r₁ m₁ hr₁] at hb; cases hb
+      rw [frW.k_fr_node.arm1 h r₁ m₁ hr₁, ← msetG_eq frSch m₁ h 0 r₁ hr₁] at hb
       cases hs : msetG frSch m₁ h 0 r₁ with
-      | none => simp [hs, frSetK] at hb
+      | none => rw [hs, frW.k_fm_put.none] at hb; cases hb
       | some m₂ =>
-        simp only [hs, frSetK, Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
+        rw [hs, frW.k_fm_put.arm1] at hb
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         obtain ⟨a₁, ha₁, hR₁⟩ := ih G m m₁ a h (c - 1) r₁ (by omega) hR hh hn
         refine ⟨_, ?_, ArenaR.fmemo_set m₁ m₂ a₁ hR₁ h r₁ hh hs⟩
         change StateT.run (do let r ← frNodeA G (decE h); fvarBSet (decE h) r; pure r) a = _
@@ -145,12 +148,14 @@ theorem frGoOK_succ (n : Nat) (ih : FrNodeOK n) : FrGoOK (n + 1) := by
 theorem frAppArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AState)
     (hR : ArenaR m a) (c fw aw r : Word) (hf : fw.toNat < 2 ^ 32) (ha : aw.toNat < 2 ^ 32)
     (hF : c.toNat ≤ F ∨ n ≤ F)
-    (hb : frAppK₁ n c aw (frW n m fw c) = some (r, m')) :
+    (hb : frNodeW.k_fr_go n c aw (frW n m fw c) = some (r, m')) :
     ∃ a', (fvarRangeArmApp F (decE fw) (decE aw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
   unfold fvarRangeArmApp
-  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+  refine SimD.exists (Sim.bindD (K := frNodeW.k_fr_go n c aw) (frNodeW.k_fr_go.none n c aw)
+    (fun x m₁ => frNodeW.k_fr_go.arm1 n c aw x m₁)
     (Sim.ofD fun x m₁ e => ih F m m₁ a _ c x hF hR hf e) fun x m₁ a₁ hR₁ => ?_) hb
-  refine Sim.bindD (K := frAppK₁.frAppK₂ x) rfl (fun _ _ => rfl)
+  refine Sim.bindD (K := frNodeW.k_fr_go_2 x) (frNodeW.k_fr_go_2.none x)
+    (fun y m₂ => frNodeW.k_fr_go_2.arm1 x y m₂)
     (Sim.ofD fun y m₂ e => ih F m₁ m₂ a₁ _ c y hF hR₁ ha e) fun y m₂ a₂ hR₂ => ?_
   exact Sim.ret ⟨(maxW_toNat x y).symm, hR₂⟩
 
@@ -158,12 +163,14 @@ theorem frAppArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AState
 theorem frBindArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AState)
     (hR : ArenaR m a) (c tw bw r : Word) (ht : tw.toNat < 2 ^ 32) (hb' : bw.toNat < 2 ^ 32)
     (hF : c.toNat ≤ F ∨ n ≤ F)
-    (hb : frBindK₁ n c bw (frW n m tw c) = some (r, m')) :
+    (hb : frNodeW.k_fr_go n c bw (frW n m tw c) = some (r, m')) :
     ∃ a', (fvarRangeArmBind F (decE tw) (decE bw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
   unfold fvarRangeArmBind
-  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+  refine SimD.exists (Sim.bindD (K := frNodeW.k_fr_go n c bw) (frNodeW.k_fr_go.none n c bw)
+    (fun x m₁ => frNodeW.k_fr_go.arm1 n c bw x m₁)
     (Sim.ofD fun x m₁ e => ih F m m₁ a _ c x hF hR ht e) fun x m₁ a₁ hR₁ => ?_) hb
-  refine Sim.bindD (K := frBindK₁.frBindK₂ x) rfl (fun _ _ => rfl)
+  refine Sim.bindD (K := frNodeW.k_fr_go_2 x) (frNodeW.k_fr_go_2.none x)
+    (fun y m₂ => frNodeW.k_fr_go_2.arm1 x y m₂)
     (Sim.ofD fun y m₂ e => ih F m₁ m₂ a₁ _ c y hF hR₁ hb' e) fun y m₂ a₂ hR₂ => ?_
   exact Sim.ret ⟨(maxW_toNat x y).symm, hR₂⟩
 
@@ -171,23 +178,26 @@ theorem frBindArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AStat
 theorem frLetArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AState)
     (hR : ArenaR m a) (c tw vw bw r : Word) (ht : tw.toNat < 2 ^ 32) (hv : vw.toNat < 2 ^ 32)
     (hb' : bw.toNat < 2 ^ 32) (hF : c.toNat ≤ F ∨ n ≤ F)
-    (hb : frLetK₁ n c vw bw (frW n m tw c) = some (r, m')) :
+    (hb : frNodeW.k_fr_go_3 n c vw bw (frW n m tw c) = some (r, m')) :
     ∃ a', (fvarRangeArmLet F (decE tw) (decE vw) (decE bw)).run a = .ok (r.toNat, a') ∧
       ArenaR m' a' := by
   unfold fvarRangeArmLet
-  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+  refine SimD.exists (Sim.bindD (K := frNodeW.k_fr_go_3 n c vw bw) (frNodeW.k_fr_go_3.none n c vw bw)
+    (fun x m₁ => frNodeW.k_fr_go_3.arm1 n c vw bw x m₁)
     (Sim.ofD fun x m₁ e => ih F m m₁ a _ c x hF hR ht e) fun x m₁ a₁ hR₁ => ?_) hb
-  refine Sim.bindD (K := frLetK₁.frLetK₂ n c bw x) rfl (fun _ _ => rfl)
+  refine Sim.bindD (K := frNodeW.k_fr_go_4 n c bw x) (frNodeW.k_fr_go_4.none n c bw x)
+    (fun y m₂ => frNodeW.k_fr_go_4.arm1 n c bw x y m₂)
     (Sim.ofD fun y m₂ e => ih F m₁ m₂ a₁ _ c y hF hR₁ hv e) fun y m₂ a₂ hR₂ => ?_
-  refine Sim.bindD (K := frLetK₁.frLetK₃ x y) rfl (fun _ _ => rfl)
+  refine Sim.bindD (K := frNodeW.k_fr_go_5 x y) (frNodeW.k_fr_go_5.none x y)
+    (fun z m₃ => frNodeW.k_fr_go_5.arm1 x y z m₃)
     (Sim.ofD fun z m₃ e => ih F m₂ m₃ a₂ _ c z hF hR₂ hb' e) fun z m₃ a₃ hR₃ => ?_
-  exact Sim.ret ⟨by rw [maxW_toNat, maxW_toNat], hR₃⟩
+  exact Sim.ret ⟨by show _ = (maxW (maxW x y) z).toNat; rw [maxW_toNat, maxW_toNat], hR₃⟩
 
 theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
   intro F m m' a h c r hF hR hh hb
   have hF' : c.toNat ≤ F ∨ n ≤ F := by omega
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [frNodeW] at hb; simp only [ite_eq_left hs, reduceCtorEq] at hb
+  · rw [frNodeW.abort1 n m h c hs] at hb; cases hb
   have vok : ∀ c, ¬ tcnt m c (tierW h) ≤ idxW h → viewOK m h c :=
     fun c hc => ⟨hs, UInt64.not_le.mp hc⟩
   have zero : ∀ v, a.store.view (decE h) = some v → frArm F v = pure 0 → r = 0 → m' = m →
@@ -196,16 +206,16 @@ theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
     exact ⟨a, by rw [frNodeA_run F _ a _ hv, hx]; rfl, hR⟩
   by_cases g0 : h >>> 28 = 0
   · by_cases hc : tcnt m BVAR (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g0, hc] at hb
-    rw [frNodeW_bvar n m h c g0 (vok BVAR hc)] at hb
+    · rw [frNodeW.abort2 n m h c hs g0 hc] at hb; cases hb
+    rw [frNodeW.arm1 n m h c hs g0 hc] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ (view_bvar m a hR h hh (vok BVAR hc) g0) rfl rfl rfl
   by_cases g1 : h >>> 28 = 1
   · by_cases hc : tcnt m FVAR (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g1, hc] at hb
+    · rw [frNodeW.abort3 n m h c hs g0 g1 hc] at hb; cases hb
     by_cases h1 : tfld m FVAR (tierW h) (idxW h) 0 + 1 = 0
-    · rw [frNodeW] at hb; simp [hs, g1, hc, h1] at hb
-    rw [frNodeW_fvar n m h c (vok FVAR hc) g1 h1] at hb
+    · rw [frNodeW.abort4 n m h c hs g0 g1 hc h1] at hb; cases hb
+    rw [frNodeW.arm2 n m h c hs g0 g1 hc h1] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     obtain ⟨hv, -⟩ := view_fvar_idx m a hR h hh (vok FVAR hc) g1
     refine ⟨a, ?_, hR⟩
@@ -214,68 +224,69 @@ theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
     rfl
   by_cases g4 : h >>> 28 = 4
   · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g4, hc] at hb
+    · rw [frNodeW.abort5 n m h c hs g0 g1 g4 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok APP hc) g4
-    rw [frNodeW_app n m h c (vok APP hc) g4] at hb
+    rw [frNodeW.arm3 n m h c hs g0 g1 g4 hc] at hb
     obtain ⟨a', h1, h2⟩ := frAppArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g5 : h >>> 28 = 5
   · by_cases hc : tcnt m LAM (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g5, hc] at hb
+    · rw [frNodeW.abort6 n m h c hs g0 g1 g4 g5 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok LAM hc) g5
-    rw [frNodeW_lam n m h c (vok LAM hc) g5] at hb
+    rw [frNodeW.arm4 n m h c hs g0 g1 g4 g5 hc] at hb
     obtain ⟨a', h1, h2⟩ := frBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g6 : h >>> 28 = 6
   · by_cases hc : tcnt m FORALL (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g6, hc] at hb
+    · rw [frNodeW.abort7 n m h c hs g0 g1 g4 g5 g6 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok FORALL hc) g6
-    rw [frNodeW_forall n m h c (vok FORALL hc) g6] at hb
+    rw [frNodeW.arm5 n m h c hs g0 g1 g4 g5 g6 hc] at hb
     obtain ⟨a', h1, h2⟩ := frBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
-    exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g7 : h >>> 28 = 7
-  · by_cases hc : tcnt m LET (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g7, hc] at hb
-    obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok LET hc) g7
-    rw [frNodeW_let n m h c (vok LET hc) g7] at hb
-    obtain ⟨a', h1, h2⟩ := frLetArm_ok n ih F m m' a hR c _ _ _ r ht hv' hb' hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g9 : h >>> 28 = 9
   · by_cases hc : tcnt m PROJ (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g9, hc] at hb
+    · rw [frNodeW.abort8 n m h c hs g0 g1 g4 g5 g6 g9 hc] at hb; cases hb
     obtain ⟨hv, -, he⟩ := view_proj m a hR h hh (vok PROJ hc) g9
-    rw [frNodeW_proj n m h c (vok PROJ hc) g9] at hb
+    rw [frNodeW.arm6 n m h c hs g0 g1 g4 g5 g6 g9 hc] at hb
     obtain ⟨a', h1, h2⟩ := ih F m m' a _ c r hF' hR he hb
+    exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
+  by_cases g7 : h >>> 28 = 7
+  · by_cases hc : tcnt m LET (tierW h) ≤ idxW h
+    · rw [frNodeW.abort9 n m h c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb; cases hb
+    obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok LET hc) g7
+    rw [frNodeW.arm7 n m h c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb
+    obtain ⟨a', h1, h2⟩ := frLetArm_ok n ih F m m' a hR c _ _ _ r ht hv' hb' hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g2 : h >>> 28 = 2
   · by_cases hc : tcnt m SORT (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g2, hc] at hb
-    rw [frNodeW_sort n m h c g2 (vok SORT hc)] at hb
+    · rw [frNodeW.abort10 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb; cases hb
+    rw [frNodeW.arm8 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb
     obtain ⟨_, hv⟩ := view_sort m a hR h hh (vok SORT hc) g2
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
   by_cases g3 : h >>> 28 = 3
   · by_cases hc : tcnt m CONST (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g3, hc] at hb
-    rw [frNodeW_const n m h c g3 (vok CONST hc)] at hb
+    · rw [frNodeW.abort11 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb; cases hb
+    rw [frNodeW.arm9 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb
     obtain ⟨_, _, hv⟩ := view_const m a hR h hh (vok CONST hc) g3
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
   by_cases g8 : h >>> 28 = 8
   · by_cases hc : tcnt m LIT (tierW h) ≤ idxW h
-    · rw [frNodeW] at hb; simp [hs, g8, hc] at hb
-    rw [frNodeW_lit n m h c g8 (vok LIT hc)] at hb
+    · rw [frNodeW.abort12 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb; cases hb
+    rw [frNodeW.arm10 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb
     obtain ⟨_, hv⟩ := view_lit m a hR h hh (vok LIT hc) g8
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
-  rw [frNodeW] at hb; simp [hs, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9] at hb
+  rw [frNodeW.abort13 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8] at hb; cases hb
 
 /-- **The model of `fr_go` refines `fvarRangeGo`** at every fuel. -/
 theorem frGoOK (n : Nat) : FrGoOK n ∧ FrNodeOK n := by
   induction n with
   | zero =>
-    exact ⟨fun _ _ _ _ _ _ _ _ _ _ hb => by simp [frW] at hb,
-      fun _ _ _ _ _ _ _ _ _ _ hb => by simp [frNodeW] at hb⟩
+    refine ⟨fun _ _ _ _ _ _ _ _ _ _ hb => ?_, fun _ _ _ _ _ _ _ _ _ _ hb => ?_⟩
+    · rw [frW.eq_1] at hb; cases hb
+    · rw [frNodeW.eq_1] at hb; cases hb
   | succ n ih => exact ⟨frGoOK_succ n ih.2, frNodeOK_succ n ih.1⟩
 
 /-! ## The entry `fr_memo` refines `fvarRangeMemo` -/
