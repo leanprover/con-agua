@@ -28,7 +28,8 @@ open L.Arena
 
 /-- The five memos' arrays and stamp words. -/
 abbrev PosAv (S : List TieredArray) (T : List Word) : Prop :=
-  (NOM ∉ S ∧ DPM ∉ S ∧ RAM ∉ S ∧ HBM ∉ S ∧ RFM ∉ S) ∧
+  ((NOM : TieredArray) ∉ S ∧ (DPM : TieredArray) ∉ S ∧ (RAM : TieredArray) ∉ S ∧
+    (HBM : TieredArray) ∉ S ∧ (RFM : TieredArray) ∉ S) ∧
   ((204 : Word) ∉ T ∧ (206 : Word) ∉ T ∧ (210 : Word) ∉ T ∧ (214 : Word) ∉ T ∧ (208 : Word) ∉ T ∧
     (218 : Word) ∉ T ∧ (219 : Word) ∉ T)
 
