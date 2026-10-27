@@ -111,11 +111,11 @@ theorem run_err {p : Prog} {N : Nat} {f : FnName} {m : Mem} {e : Err}
 /-- The error specs of the three stages that can claim a verdict, at the checker's stage
 relations. -/
 structure Entry1StagesE : Prop where
-  prelude : ∀ b pb sz, InputsOK b pb s64 →
+  prelude : ∀ b pb sz, InputsOK b pb sz →
     StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb sz)) (TwinVerdict [b])
-  front : ∀ b pb sz, InputsOK b pb s64 →
+  front : ∀ b pb sz, InputsOK b pb sz →
     StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb sz)) (TwinVerdict [b])
-  fold : ∀ b pb sz, InputsOK b pb s64 → ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+  fold : ∀ b pb sz, InputsOK b pb sz → ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
     ⦃fun _ s' => LocEq s' s₀; fun e => Q7 b (checkerRels b pb sz) s₀.mem →
       (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →

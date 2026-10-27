@@ -27,7 +27,7 @@ open L L.Arena L.Rom
 /-- **Entry 1's verdict claim**: a run of `check` from the loaded memory with the mode word `1`
 or `3` that fails with an error of class other than `0` claims the twin's failure with that class. -/
 def Entry1Verdict (p : Prog) : Prop :=
-  ∀ (b pb : ByteArray) (sz : TieredArray → Nat), InputsOK b pb s64 → ∀ (w : Word), (w = 1 ∨ w = 3) →
+  ∀ (b pb : ByteArray) (sz : TieredArray → Nat), InputsOK b pb sz → ∀ (w : Word), (w = 1 ∨ w = 3) →
     ∀ (N : Nat), N < 2 ^ 62 → ∀ (e : Err), L.run p N "check" [] (loadMemM b pb sz w) = .error e →
       e.cls ≠ 0 → TwinVerdict [b] e.cls
 
@@ -36,7 +36,7 @@ a run of `check` with the mode word `2` on a memory that keeps entry 1's phase-B
 `[0, k)`, an empty seed and the view in the header, that fails with an error of class other than
 `0`, claims the twin's failure with that class. -/
 def Entry2Verdict (p : Prog) : Prop :=
-  ∀ (b pb : ByteArray) (sz : TieredArray → Nat), InputsOK b pb s64 →
+  ∀ (b pb : ByteArray) (sz : TieredArray → Nat), InputsOK b pb sz →
     ∀ (N₁ : Nat), N₁ < 2 ^ 62 → ∀ (rs₁ : List Word) (m₁ : Mem),
     L.run p N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁) →
     9223372036854775808 ≤ (rs₁.headD 0).toNat →

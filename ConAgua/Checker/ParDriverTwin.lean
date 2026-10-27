@@ -20,7 +20,7 @@ namespace L.Checker
 open L L.Arena L.Rom
 
 /-- **The driver's two runs accept ⇒ the twin accepts.** -/
-theorem drv_twinAccepts (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64)
+theorem drv_twinAccepts (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)

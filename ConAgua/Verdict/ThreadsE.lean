@@ -406,7 +406,7 @@ open ConAgua.Final in
 Then the twin's pool fails with that class (`TwinVerdictPooled`, its second disjunct: the worker
 checking the thread's groups up to and including `j`). -/
 theorem threads_twinVerdictPooled (hCP : CPVerdict)
-    (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64)
+    (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)

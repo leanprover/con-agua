@@ -132,7 +132,7 @@ def FoldA (b pb : ByteArray) (v : Word) (m : Mem) : Prop :=
 
 /-- **The fold from `R7`** (and the twin's stages before the loop), with `cnt` the count
 `DECL[0]`: at the substituted program (`installFoldGo_start`). -/
-theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64)
+theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
     {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
     {ipins : List INatOpPinSet} {sE : AState} (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
@@ -169,7 +169,7 @@ theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : I
   exact ⟨hl, fe, pend, a', h1, h2, by rw [hk.arr8]; exact hpb⟩
 
 /-- The fold's spec at the stages' end `Q7`, in the form `checkA_of_stages` takes. -/
-theorem foldSpec_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64) :
+theorem foldSpec_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) :
     ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
       ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
       ⦃fun r s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
@@ -278,7 +278,7 @@ and header) or `w = 3` (the header only) that returns anything but `1` is an acc
 phase A (`PhaseA b`) whose state the memory `m` after the fold is `PhaseBStart` to, at the fold's
 result `v`; the final memory is the frozen buffer's, `parCompactMem m v (modeFlag w)` (in bounds),
 and the result is `2^63 + |pend|`. -/
-theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64) (w : Word)
+theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) (w : Word)
     (hw : w = 1 ∨ w = 3) (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
     (hrun : L.run checkerProg N "check" [] (loadMemM b pb sz w) = .ok (rs, m'))
     (hr : rs.headD 0 ≠ 1) :
