@@ -3,7 +3,7 @@ module
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 public import ConAgua.Arena.MemoLib
-public import ConAgua.Arena.ViewL
+public import ConAgua.Arena.StoreFields
 public import ConAgua.L.ModelGen
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
