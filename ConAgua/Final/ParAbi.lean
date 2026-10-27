@@ -266,7 +266,7 @@ theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true
 /-- **From `ca_start_a`** (entry 1, mode word `1`). -/
 theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
-    (fz own : List ArrId) (hng : mode.id < tab.ng) (k0 : Nat)
+    (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
@@ -284,7 +284,7 @@ theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
 /-- **From `ca_start_a0`** (the sequential driver's entry 1, mode word `3`). -/
 theorem abiA0_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
-    (fz own : List ArrId) (hng : mode.id < tab.ng) (k0 : Nat)
+    (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
