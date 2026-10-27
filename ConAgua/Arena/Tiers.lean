@@ -4,7 +4,6 @@ import ConAgua.Arena.EnvRec
 import ConAgua.Arena.MemoBank
 import ConAgua.Arena.CoreCaches
 import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Layout
 
 /-!
 # The relation by tier, over projections of the state

@@ -8,8 +8,6 @@ public import ConAgua.Arena.LetStore
 public import ConAgua.Arena.LamStore
 public import ConAgua.Arena.ForallStore
 public import ConAgua.Arena.ProjStore
-public import ConAgua.Arena.BVarStore
-public import ConAgua.Arena.FVarStore
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations

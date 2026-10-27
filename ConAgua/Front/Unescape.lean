@@ -16,7 +16,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Layout
 
 @[expose] public section
 

@@ -6,7 +6,6 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Layout
 
 /-!
 # The `whnf` half of the whnf family: `whnf`, its loop, the literal/delta step, and their helpers

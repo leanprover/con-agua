@@ -5,7 +5,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Layout
 
 /-!
 # The ROM's universe-argument lists: `rom_levels(pos)` refines `internLevels`

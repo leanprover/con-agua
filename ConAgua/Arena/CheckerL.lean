@@ -1,4 +1,3 @@
-import ConAgua.Arena.DeclBase
 
 /-!
 # The declaration loop's L functions: `install_fold_go`, `check_pending_go` and their steps

@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Layout
 
 /-!
 # `consts_resolve_ffast(vis, e)`: the twin's memoized `constsResolve` (lane `stubs`)

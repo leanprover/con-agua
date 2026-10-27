@@ -1,5 +1,4 @@
 import ConAgua.Arena.SlotGrow
-import ConAgua.Front.Fields
 import ConAgua.Scan.Common
 import Std.Data.DTreeMap.Internal.Operations
 import Std.WP.Triple.SpecLemmas

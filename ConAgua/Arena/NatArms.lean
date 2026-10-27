@@ -1,4 +1,3 @@
-import ConAgua.Arena.Tiers
 import ConAgua.Arena.NatGcd
 import ConAgua.Arena.NatCmp
 import ConAgua.Arena.NatBitsNat

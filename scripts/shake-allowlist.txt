@@ -99,3 +99,6 @@ ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install3	# the buil
 ConAgua/Verdict/InferLeavesE.lean	public import ConAgua.Arena.WhnfIotaRefine6	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 
+ConAgua/Checker/ArrCheck.lean	public import ConAgua.Arena.ArenaRel	# `#guard`s read it (they leave no constant the tool sees)
+ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.CapCheck	# `#guard`s read it (they leave no constant the tool sees)
+ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.ParOwned	# `#guard`s read it (they leave no constant the tool sees)

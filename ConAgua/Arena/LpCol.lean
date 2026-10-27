@@ -8,7 +8,6 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Layout
 
 @[expose] public section
 

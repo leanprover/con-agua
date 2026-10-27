@@ -1,6 +1,5 @@
 import ConAgua.Arena.PromoteMemo
 import ConAgua.Rom.PinSets
-import ConAgua.Layout
 
 /-!
 # The declaration loop's relation (`LoopR`) and the pending checks (`PendR`)

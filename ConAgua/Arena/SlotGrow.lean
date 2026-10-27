@@ -1,7 +1,6 @@
 module
 
 meta import ConAgua.L.Semantics
-public import ConAgua.Arena.Pool
 import ConAgua.Arena.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Prop

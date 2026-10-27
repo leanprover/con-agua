@@ -1,4 +1,3 @@
-import ConAgua.Arena.WhnfBase
 
 /-!
 # The prop-ness readers `notProofFast` / `isProofFast` in L (lane `defeq2`, helper `defeq2-prop`)

@@ -6,7 +6,6 @@ public import ConAgua.Scan.Member
 public import ConAgua.Scan.Str
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
-public import ConAgua.Layout
 
 @[expose] public section
 

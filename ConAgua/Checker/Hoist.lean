@@ -1,4 +1,3 @@
-import ConAgua.Front.IndApply
 import ConAgua.Arena.DeclArmsNat
 import ConAgua.L.ProgHas
 import ConAgua.Arena.IndCopy
@@ -8,7 +7,6 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Layout
 
 /-!
 # The ground hoist: `hoistNatOpGround` in L (lane `front3`)

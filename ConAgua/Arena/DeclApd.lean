@@ -1,6 +1,4 @@
-import ConAgua.Arena.IndIface
 import ConAgua.Arena.LevelApd
-import ConAgua.Layout
 
 /-!
 # `all_level_params_defined(o, l, e)`: the twin's memoized `allLevelParamsDefined` (lane `decls3`)

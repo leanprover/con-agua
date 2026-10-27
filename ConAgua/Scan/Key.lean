@@ -10,7 +10,6 @@ public import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Layout
 
 @[expose] public section
 set_option linter.unusedSectionVars false

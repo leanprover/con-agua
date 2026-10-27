@@ -1,5 +1,3 @@
-import ConAgua.Arena.DeclBase
-import ConAgua.Layout
 
 /-!
 # The frozen buffer: compaction of the persistent tier (lane parmode, docs/design/parmode.md)

@@ -1,4 +1,3 @@
-import ConAgua.Arena.Tiers
 
 /-!
 # Projection tables: `find_proj`, `fire_ok` (lane `whnf3`)
