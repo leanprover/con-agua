@@ -250,7 +250,13 @@ theorem orderGoW_twin : ∀ (n : Nat) (m m' : Mem) (ti pos : Word),
     rw [htt] at h
     have hmono := psum_mono m₀ to (ti.toNat + 1) tn.toNat (by omega)
     rw [psum_succ] at hmono
-    rcases hin : orderInW n m fo cno co cn fuel np oo (to + 11 * ti) (wd m₀ IFL (tyn.toNat + ti.toNat)) 0 pos with _ | ⟨q, m₁⟩ <;> simp only [hin, allocK, reduceCtorEq] at h
+    rcases hin : orderInW n m fo cno co cn fuel np oo (to + 11 * ti) (wd m₀ IFL (tyn.toNat + ti.toNat)) 0 pos with _ | ⟨q, m₁⟩ <;> rw [hin] at h
+    · rw [orderGoW.k_vi_order_in.none] at h; cases h
+    rw [orderGoW.k_vi_order_in.arm1] at h
+    rcases hgo : orderGoW n m₁ to tn tyn fo cno co cn fuel np oo (ti + 1) q with _ | m₂ <;> rw [hgo] at h
+    · rw [orderGoW.k_vi_order_go.none] at h; cases h
+    rw [orderGoW.k_vi_order_go.arm1] at h
+    have h := hgo.trans h
     have ht : (to + 11 * ti).toNat = to.toNat + 11 * ti.toNat := by
       have := widx to 11 ti 0 (by simp; omega); simpa using this
     have hc4 : wd m₀ IFR ((to + 11 * ti).toNat + 4) = wd m₀ IFR (to.toNat + 11 * ti.toNat + 4) := by rw [ht]
