@@ -1,4 +1,4 @@
-import ConAgua.Checker.Prog
+import ConAgua.Checker.ProgTab
 import ConAgua.Compiler.AbiSim
 
 /-!
