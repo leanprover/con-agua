@@ -655,6 +655,10 @@ meta structure LoopMeta where
   or `abort` (`#[]`, `abortRest`); the loop's model returns the function's result -/
   fusedD : Option (Array Term) := none
   abortRest : Bool := false
+  /-- the loop whose body contains this one (a nested loop) -/
+  parent : Option Name := none
+  /-- the loops nested directly in this one's body (their specs go into its spec's `vcgen`) -/
+  loops : Array Name := #[]
   deriving Inhabited
 
 /-- Inside a loop's body: where `break`, `return` and the end of the body go. -/
@@ -685,6 +689,10 @@ meta structure GenState where
   seq : Nat := 0
   /-- `errors` mode: the callees without a spec, called through `callE_spec p n "f"` -/
   autoE : Array String := #[]
+  /-- more lemmas for `vcgen` that the code needs (`noteVcg`: block operations, byte stores) -/
+  vcgX : Array String := #[]
+  /-- the loops of the function being translated so far (names `fW.loopᵢ` in source order) -/
+  loopN : Nat := 0
   deriving Inhabited
 
 
@@ -756,6 +764,10 @@ meta def splitArr (id : Ident) : GenM (Term × String) := do
   | .str pre "c8" => return (mkIdentFrom id pre, "c8")
   | _ => throwErrorAt id "expected `A.u8`, `A.u64` or `D.c8`"
 
+/-- The step proofs need these lemmas in `vcgen` (the block operations' monadic pieces). -/
+meta def noteVcg (xs : Array String) : GenM Unit :=
+  modify fun st => { st with vcgX := xs.foldl (fun a x => if a.contains x then a else a.push x) st.vcgX }
+
 /-- A store-record field constant (`APP.a : Word`, an `abbrev` of a numeral) as that numeral, so
 that models and proofs state field offsets as numbers (`tfld m APP t i 1`). -/
 meta def fieldNum (fI : Ident) : GenM Term := do
@@ -766,6 +778,15 @@ meta def fieldNum (fI : Ident) : GenM Term := do
   match n? with
   | some n => pure (Syntax.mkNumLit (toString n))
   | none => throwErrorAt fI m!"field constant {c} is not a numeral: {v}"
+
+/-- The bytes of a byte source `A.u8` / `D.c8`, as the semantics reads them (`Mem.src8`). -/
+meta def bsrc (ctx : Ctx) (a : Ident) : GenM Term := do
+  let (arr, k) ← splitArr a
+  let s ← match k with
+    | "u8" => `(L.BSrc.arr $arr)
+    | "c8" => `(L.BSrc.rom $arr)
+    | _ => throwErrorAt a "expected bytes `A.u8` or `D.c8`"
+  `(L.Mem.src8 $(← ctx.mem.render) $s)
 
 mutual
 meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
@@ -824,6 +845,23 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     | "u8" => pure (.raw (← `(L.Mem.len8 $(← ctx.mem.render) $arr)))
     | "u64" => pure (.raw (← `(L.Mem.len64 $(← ctx.mem.render) $arr)))
     | _ => pure (.raw (← `(UInt64.ofNat (List.length $arr))))
+  | `(lexpr| $a:ident⦃$x:lexpr⦄) => do
+    -- a pool slice word: word `x & (2^40 - 1)` of tier `x >> 40` of `a`
+    let x ← transE E ctx x
+    let t ← (foldRoot E.folds (.op ">>>" x (.lit 40))).render
+    pure (.rd ctx.mem (← `(L.tierA $a $t)) (foldRoot E.folds (.op "&&&" x (.lit 1099511627775))))
+  | `(lexpr| ⦃$x:lexpr⦄.$c:ident) => do
+    let x ← transE E ctx x
+    let tier := foldRoot E.folds (.op ">>>" x (.lit 40))
+    match c.getId with
+    | `tier => pure tier
+    | `idx => pure (foldRoot E.folds (.op "&&&" x (.lit 1099511627775)))
+    | `base => pure (foldRoot E.folds (.op "<<<" tier (.lit 40)))
+    | _ => throwErrorAt c "expected `⦃x⦄.tier`, `⦃x⦄.idx` or `⦃x⦄.base`"
+  | `(lexpr| le64!($a:ident, $i:lexpr)) => do
+    noteVcg #["L.ld8x8"]
+    let src ← bsrc ctx a
+    pure (.raw (← `(L.le64 $src ($(← (← transE E ctx i).render)).toNat)))
   | `(lexpr| mulhi($a:lexpr, $b:lexpr)) => bin "mulhi" a b
   | `(lexpr| u64($c:lcond)) => do
     let c ← transC E ctx c
@@ -950,6 +988,7 @@ meta partial def assignedIn (ctx : Ctx) (s : Syntax) (acc : Array Nat := #[]) : 
     | `(lstmt| $x:ident := call $_:ident($_,*)) => add acc x
     | `(lstmt| ($x:ident, $xs:ident,* ) := call $_:ident($_,*)) => xs.getElems.foldl add (add acc x)
     | `(lstmt| $x:ident := $_:lexpr) => add acc x
+    | `(lstmt| $x:ident := scan!($_:ident, $_:lexpr, $_:lexpr, $_:ident)) => add acc x
     | `(lstmt| $x:ident += $_:lexpr) => add acc x
     | `(lstmt| $x:ident -= $_:lexpr) => add acc x
     | _ => acc
@@ -1006,6 +1045,8 @@ meta partial def liveS (E : Env) (ctx : Ctx) (ss : List (TSyntax `lstmt)) (out b
     | `(lstmt| ($x:ident, $xs:ident,* ) := call $_:ident($args,*)) =>
       unionN (kill (#[x] ++ xs.getElems) after) (usesOf ctx (mkNullNode (args.getElems.map (·.raw))))
     | `(lstmt| $x:ident := $e:lexpr) => unionN (kill #[x] after) (usesOf ctx e)
+    | `(lstmt| $x:ident := scan!($_:ident, $i:lexpr, $e:lexpr, $_:ident)) =>
+      unionN (kill #[x] after) (unionN (usesOf ctx i) (usesOf ctx e))
     | `(lstmt| if $c:lcond $b:lblock) =>
       unionN (unionN (usesOf ctx c) (liveS E ctx (blk b) after brk)) after
     | `(lstmt| if $c:lcond $b:lblock else $t:lblock) =>
@@ -1093,8 +1134,43 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       store (← `(L.tierA $a $(← (← transE E ctx t).render))) (← transE E ctx i) e
     | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
       let (arr, k) ← splitArr a
-      unless k == "u64" do throwErrorAt s "l_model: byte stores are not supported"
-      store arr (← transE E ctx i) e
+      match k with
+      | "u64" => store arr (← transE E ctx i) e
+      | "u8" =>
+        if ctx.ro then throwErrorAt s "l_model: a read-only model cannot write"
+        noteVcg #["L.st8"]
+        let i ← (← transE E ctx i).render
+        let v ← (← transE E ctx e).render
+        transS E { ctx with mem := .raw (← `(L.Mem.set8 $(← ctx.mem.render) $arr $i $v)) } rest
+      | _ => throwErrorAt s "l_model: constant data cannot be written"
+    | `(lstmt| $x:ident := scan!($a:ident, $i:lexpr, $e:lexpr, $c:ident)) => do
+      -- the first `j ∈ [i, e)` whose byte is in the class `c`, else `e` (`scanN`)
+      let some k := ctx.idx x | throwErrorAt x "l_model: `scan!` assigns a local"
+      let src ← bsrc ctx a
+      let i ← (← transE E ctx i).render
+      let e ← (← transE E ctx e).render
+      transS E (setEnv ctx k (.raw (← `(UInt64.ofNat (L.scanN $src $c ($i).toNat ($e).toNat))))) rest
+    | `(lstmt| copy!($d:ident $[⟨$dt:lexpr⟩]?, $di:lexpr, $src:ident $[⟨$st:lexpr⟩]?, $si:lexpr, $n:lexpr)) => do
+      -- `D[di + j] := S[si + j]` for `j < n` (`Mem.copy64`, `Mem.copy8w`)
+      if ctx.ro then throwErrorAt s "l_model: a read-only model cannot write"
+      noteVcg #["L.warr"]
+      let warrT (a : Term) (t? : Option (TSyntax `lexpr)) : GenM Term := do
+        match t? with
+        | some t => `(L.tierA $a $(← (← transE E ctx t).render))
+        | none => pure a
+      let (da, dk) ← splitArr d
+      unless dk == "u64" do throwErrorAt d "l_model: the destination of a copy is a word array"
+      let dA ← warrT da dt
+      let di ← (← transE E ctx di).render
+      let si ← (← transE E ctx si).render
+      let n ← (← transE E ctx n).render
+      let m ← ctx.mem.render
+      let (sa, sk) ← splitArr src
+      let m' ← if sk == "u64" then do
+          `(L.Mem.copy64 $m $dA $di $(← warrT sa st) $si ($n).toNat)
+        else do
+          `(L.Mem.copy8w $m $dA $di $(← bsrc ctx src) $si ($n).toNat)
+      transS E { ctx with mem := .raw m' } rest
     | `(lstmt| if $c:lcond $b:lblock) => ite c (← blockStmts b) []
     | `(lstmt| if $c:lcond $b:lblock else $t:lblock) => ite c (← blockStmts b) (← blockStmts t)
     | `(lstmt| if $c:lcond $b:lblock else $t:lstmt) => ite c (← blockStmts b) [t]
@@ -1356,19 +1432,18 @@ code after the loop is a continuation of that result. -/
 meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : Option Syntax)
     (c : TSyntax `lcond) (body : List (TSyntax `lstmt)) (rest : List (TSyntax `lstmt)) :
     GenM MR := do
-  if ctx.loop.isSome then throwError "l_model: nested loops are not supported"
   let bodyNode := mkNullNode (body.toArray.map (·.raw))
   let A := (assignedIn ctx bodyNode).qsort (· < ·)
   let sig := hasReturn bodyNode
   let st0 ← get
-  let lcnt := (st0.loops.filter (·.model == st0.base)).size
-  let name := st0.base ++ Name.mkSimple s!"loop{lcnt + 1}"
+  modify fun st => { st with loopN := st.loopN + 1 }
+  let name := st0.base ++ Name.mkSimple s!"loop{st0.loopN + 1}"
   let raws (xs : Array Name) : Array MT := xs.map fun x => MT.raw (mkIdent x)
   -- fused: a loop with a `return`, followed by the function's last statement, `return …` or
   -- `abort`: the loop's model returns the function's result (the hand models' shape, the spec
   -- `fW.loopᵢ … = some ((r.retOr [e…]).headD 0, s'.mem)`)
   let fuse? : Option (Option (Array (TSyntax `lexpr))) :=
-    if !(sig && ctx.ft.isNone) then none else
+    if !(sig && ctx.ft.isNone && ctx.loop.isNone) then none else
     match rest with
     | [s] => match s with
       | `(lstmt| return $e:lexpr) => some (some #[e])
@@ -1383,13 +1458,15 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
     let L : LoopInfo := { name, params := P, outs := #[], sig, exitStmts := some rest }
     let ctxL : Ctx := { ctx with env := envL, mem := .raw (mkIdent memIdent), ft := none, loop := some L }
     let saved := (← get).called
-    modify fun st => { st with called := #[] }
+    let savedL := (← get).loopsCalled
+    modify fun st => { st with called := #[], loopsCalled := #[] }
     let cond ← transC E ctxL c
     let bodyR ← transS E ctxL body
     let exitR ← transS E ctxL rest
     let lbody := MR.ite cond bodyR exitR
     let calledL := (← get).called
-    modify fun st => { st with called := saved }
+    let loopsL := (← get).loopsCalled
+    modify fun st => { st with called := saved, loopsCalled := savedL }
     -- the results of `rest` over the final state `s'`
     let ctxS : Ctx := { ctx with env := ctx.names.mapIdx (fun j _ => MT.raw (Syntax.mkApp (mkIdent `L.St.loc)
       #[mkIdent `s', mkNum j])), mem := .raw (Syntax.mkApp (mkIdent `L.St.mem) #[mkIdent `s']) }
@@ -1398,7 +1475,7 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
     let st ← get
     let refs := st.ks.filterMap fun kd => if usedL.contains kd.name then some kd.name else none
     let kd : KDef := { name, fuel := true, caps := P.map (ctx.names[·]!), capMem := true, binder := 7, res := `r, body := lbody, key := toString name, refs }
-    let lm : LoopMeta := { name, model := st.base, stmt := cst.getD (name ++ `stmt), direct, params := P, outs := #[], frames := #[], sig, ro := ctx.ro, called := calledL, fusedD := some D, abortRest := retEs?.isNone }
+    let lm : LoopMeta := { name, model := st.base, stmt := cst.getD (name ++ `stmt), direct, params := P, outs := #[], frames := #[], sig, ro := ctx.ro, called := calledL, fusedD := some D, abortRest := retEs?.isNone, loops := loopsL }
     modify fun st => { st with ks := st.ks.push kd, loops := st.loops.push lm, loopsCalled := st.loopsCalled.push name }
     return .tail (.app name (raws E.mps ++ #[.raw (← `($(mkIdent `n) + 1))] ++ #[ctx.mem] ++
       P.map (ctx.env[·]!)))
@@ -1409,7 +1486,12 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
   let bodyK ← transS E ctxK rest
   let rI := mkIdent `r
   let bodyK ← if sig then do
-      let retB ← ctxK.retList (← `(L.Sig.retVal $rI))
+      -- a `return` in the loop: the function's result, or in an enclosing loop that loop's
+      -- result with the signal passed on (a nested loop)
+      let retB ← match ctx.loop with
+        | some L => if L.exitStmts.isSome then ctxK.retList (← `(L.Sig.retVal $rI))
+            else pure (loopLeaf ctxK L (some (.raw rI)))
+        | none => ctxK.retList (← `(L.Sig.retVal $rI))
       pure (MR.ite (.cmp "=" (.raw rI) (.raw (mkIdent `L.Sig.normal))) bodyK retB)
     else pure bodyK
   let bodyKT ← bodyK.render E.exc
@@ -1444,17 +1526,20 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
   let L : LoopInfo := { name, params := P, outs, sig }
   let ctxL : Ctx := { ctx with env := envL, mem := .raw (mkIdent memIdent), ft := none, loop := some L }
   let saved := (← get).called
-  modify fun st => { st with called := #[] }
+  let savedL := (← get).loopsCalled
+  modify fun st => { st with called := #[], loopsCalled := #[] }
   let cond ← transC E ctxL c
   let bodyR ← transS E ctxL body
   let lbody := MR.ite cond bodyR (loopLeaf ctxL L none)
   let calledL := (← get).called
-  modify fun st => { st with called := saved }
+  let loopsL := (← get).loopsCalled
+  modify fun st => { st with called := saved, loopsCalled := savedL }
   let usedL := idents (← lbody.render E.exc).raw
   let st ← get
   let refs := st.ks.filterMap fun kd => if usedL.contains kd.name then some kd.name else none
   let kd : KDef := { name, fuel := true, caps := P.map (ctx.names[·]!), capMem := true, binder := 7, res := `r, body := lbody, key := toString name, refs }
-  let lm : LoopMeta := { name, model := st.base, stmt := cst.getD (name ++ `stmt), direct, params := P, outs, frames, sig, ro := ctx.ro, called := calledL }
+  let lm : LoopMeta := { name, model := st.base, stmt := cst.getD (name ++ `stmt), direct, params := P, outs, frames, sig, ro := ctx.ro, called := calledL, loops := loopsL,
+    parent := ctx.loop.map (·.name) }
   modify fun st => { st with ks := st.ks.push kd, loops := st.loops.push lm, loopsCalled := st.loopsCalled.push name }
   -- 4. the enclosing code: the continuation, applied to the loop at `n + 1`
   let loopCall : MT := .app name (raws E.mps ++ #[.raw (← `($(mkIdent `n) + 1))] ++ #[ctx.mem] ++
@@ -1683,7 +1768,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
     let go : GenM (Array (MR × Array String × Array Name)) := fis.mapM fun fi => do
-      modify fun st => { st with base := fi.model, called := #[], loopsCalled := #[] }
+      modify fun st => { st with base := fi.model, called := #[], loopsCalled := #[], loopN := 0 }
       let names := fi.params ++ fi.lcls
       let env := names.mapIdx fun i n => if i < fi.params.size then MT.raw (mkIdent n) else .lit 0
       let ctx0 : Ctx := { names, env, mem := .raw (mkIdent memIdent), ro := fi.ro, multi := fi.multi, tup := fi.tup, clash := mps }
@@ -2062,7 +2147,18 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- the loops: their statements (a `while` written in the `lfn` becomes a named block), specs
   for lm in st.loops do
     let fi := fis.find? (·.model == lm.model) |>.getD fis[0]!
+    -- the loops nested in it (written in the `lfn`) become named blocks
+    let inner := st.loops.filter fun l => l.parent == some lm.name && l.direct.isSome
+    if lm.direct.isNone && !inner.isEmpty then
+      throwError "l_model: a loop nested in the named block {lm.stmt} must be a named block itself"
     if let some w := lm.direct then
+      let mut w := w
+      for l in inner do
+        let some w2 := l.direct | continue
+        let sp ← `(lstmt| ⟪$(mkIdent l.stmt)⟫)
+        w := replaceStx w fun t =>
+          if t.getKind == w2.getKind && t.getPos? == w2.getPos? && t.getTailPos? == w2.getTailPos? then
+            some sp.raw else none
       let w : TSyntax `lstmt := ⟨w⟩
       emit doTrace (← `(command|
         /-- A loop of the L code, named for its spec (generated by `l_model`). -/
@@ -2099,7 +2195,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       else `(Lean.Order.top)
     let vcg := String.intercalate ", "
       ((["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs"] ++ loadTxt ++ ["L.st64", "L.setG"] ++
-        extraTxt).eraseDups ++ calleeSpecs lm.called ++ ["ih"])
+        extraTxt ++ st.vcgX.toList).eraseDups ++ calleeSpecs lm.called ++ (lm.loops.toList.map loopSpecTxt) ++ ["ih"])
     let tac ← parseTac s!"induction n generalizing s₀ with\n  | zero => vcgen [L.exec] <;> grind\n  | succ n ih => rw [L.exec, L.step_while (w := {lm.stmt}) rfl]; {stepTac attrsTxt vcg ["ih"]}"
     emit doTrace (← withHB (← `(command|
       /-- The loop's spec (generated by `l_model`): its model is its meaning. -/
@@ -2109,7 +2205,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- a function with a `while` in its text: its `lfn` with the loop as a named block
   let mut unfoldOf : Array String := #[]
   for fi in fis do
-    let direct := st.loops.filter (fun lm => lm.model == fi.model && lm.direct.isSome)
+    let direct := st.loops.filter (fun lm => lm.model == fi.model && lm.direct.isSome && lm.parent.isNone)
     if direct.isEmpty then
       unfoldOf := unfoldOf.push s!"{fi.decl}"
       continue
@@ -2166,7 +2262,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let ihs := String.intercalate ", " ((List.range k).map fun i => s!"ih{i+1}")
   let vcgOf (called : Array String) (loops : Array Name) : String := String.intercalate ", "
     ((["L.exec", "L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs"] ++ loadTxt ++ ["L.st64", "L.setG"] ++
-      extraTxt).eraseDups ++ calleeSpecs called ++ (loops.toList.map loopSpecTxt) ++
+      extraTxt ++ st.vcgX.toList).eraseDups ++ calleeSpecs called ++ (loops.toList.map loopSpecTxt) ++
       ((List.range k).filter (called.contains fis[·]!.lname)).map fun i => s!"ih{i+1}")
   let nB ← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat))
   let ihB ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent `ih) : $stmt))
