@@ -103,11 +103,11 @@ def WsNodeOK (n : Nat) : Prop :=
 
 theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
   intro m m' a memo h d c r hD hM hh hb
-  have hc : ¬ c = 0 := fun hc => by rw [wscW] at hb; simp [hc] at hb
+  have hc : ¬ c = 0 := fun hc => by rw [wscW.abort1 n m h d c hc] at hb; cases hb
   rw [ctrW_toNat c hc, wscopedBGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
-  · rw [wscW_cut n m h d c hc hf] at hb
+  · rw [wscW.arm1 n m h d c hc hf] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     refine ⟨memo, by rw [hf]; rfl, hM, by decide, MemFrame.refl _ _ _⟩
   have hf' : ((derFW m h).toNat == 0) = false := by
@@ -115,11 +115,19 @@ theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
     intro e; exact hf (UInt64.toNat_inj.mp (by simpa using e))
   rw [hf']
   simp only [Bool.false_eq_true, ↓reduceIte]
-  have hr : ¬ mfindG wsSch m h d = [] := fun hr => by rw [wscW] at hb; simp [hc, hf, hr] at hb
+  have hr : ¬ mfindG wsSch m h d = [] := fun hr => by rw [wscW.abort2 n m h d c hc hf hr] at hb; cases hb
   have hk : lfKey.ok h d := hh
   by_cases hh0 : (mfindG wsSch m h d).headD 0 ≠ 0
-  · rw [wscW_hit n m h d c hc hf hr hh0] at hb
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+  · have hb' : r = (if rdW (m.arr64 WSM) ((mfindG wsSch m h d).tail.headD 0 * 4 + 3) ≠ 0
+        then 1 else 0) ∧ m = m' := by
+      by_cases hv : rdW (m.arr64 WSM) ((mfindG wsSch m h d).tail.headD 0 * 4 + 3) = 0
+      · rw [wscW.arm2 n m h d c hc hf hr hh0 hv] at hb
+        obtain ⟨e1, e2⟩ := Prod.mk.inj (Option.some.inj hb)
+        exact ⟨e1.symm.trans (ite_eq_right (not_not_intro hv)).symm, e2⟩
+      · rw [wscW.arm3 n m h d c hc hf hr hh0 hv] at hb
+        obtain ⟨e1, e2⟩ := Prod.mk.inj (Option.some.inj hb)
+        exact ⟨e1.symm.trans (ite_eq_left hv).symm, e2⟩
+    obtain ⟨rfl, rfl⟩ := hb'
     have e := memoRG_hit wsSch lfKey decBW m memo hM h d hr hh0 hk
     simp only [lfKey] at e
     rw [e]
@@ -132,16 +140,21 @@ theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
     · have : rdW (m.arr64 WSM) ((mfindG wsSch m h d).tail.headD 0 * 4 + 3) = 0 := by simpa using hv
       simp only [this]; rfl
   · simp only [ne_eq, Decidable.not_not] at hh0
-    rw [wscW_miss n m h d c hc hf hr hh0] at hb
+    rw [wscW.arm4 n m h d c hc hf hr hh0] at hb
     have e := memoRG_miss wsSch lfKey decBW m memo hM h d hk hr hh0
     simp only [lfKey] at e
     rw [e]
-    rcases hn : wsNodeW n m h d (c - 1) with _ | ⟨r₁, m₁⟩ <;> simp only [hn, wsK, wsSet_eq, reduceCtorEq] at hb
+    rcases hn : wsNodeW n m h d (c - 1) with _ | ⟨r₁, m₁⟩
+    · rw [hn, wscW.k_ws_node.none] at hb; cases hb
+    rw [hn] at hb
+    by_cases hr₁ : mfindG wsSch m₁ h d = []
+    · rw [wscW.k_ws_node.abort1 h d r₁ m₁ hr₁] at hb; cases hb
+    rw [wscW.k_ws_node.arm1 h d r₁ m₁ hr₁, ← msetG_eq wsSch m₁ h d r₁ hr₁] at hb
     cases hs : msetG wsSch m₁ h d r₁ with
-    | none => simp [hs, wsSetK] at hb
+    | none => rw [hs, wscW.k_ws_put.none] at hb; cases hb
     | some m₂ =>
-      simp only [hs, wsSetK, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
+      rw [hs, wscW.k_ws_put.arm1] at hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       obtain ⟨memo₁, ha₁, hM₁, hle, hf₁⟩ := ih m m₁ a memo h d (c - 1) r₁ hD hM hh hn
       refine ⟨memo₁.insert (decE h, d.toNat) (r₁ != 0), ?_, ?_, hle, ?_⟩
       · simp only [StateT.run_bind, ha₁, except_ok_bind]; rfl
@@ -153,35 +166,43 @@ theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
 theorem wsAnd_ok (n : Nat) (ih : WsGoOK n) (m m' : Mem) (a : AState)
     (memo : Std.HashMap (EIdx × Nat) Bool) (hD : ArenaD m a) (hM : MemoRG wsSch lfKey decBW m memo)
     (fw bw d c r : Word) (hf : fw.toNat < 2 ^ 32) (hb' : bw.toNat < 2 ^ 32)
-    (hb : wsAndK n bw d c (wscW n m fw d c) = some (r, m')) :
+    (hb : wsNodeW.k_ws_go n d c bw (wscW n m fw d c) = some (r, m')) :
     ∃ memo', (do
         let (rf, memo) ← wscopedBGo memo c.toNat d.toNat (decE fw)
         if rf then wscopedBGo memo c.toNat d.toNat (decE bw) else pure (false, memo) :
           AM (Bool × Std.HashMap (EIdx × Nat) Bool)).run a = .ok ((r != 0, memo'), a) ∧
       MemoRG wsSch lfKey decBW m' memo' ∧ r ≤ 1 ∧ WsFrame m m' := by
   cases h1 : wscW n m fw d c with
-  | none => simp only [h1, wsAndK, reduceCtorEq] at hb
+  | none => rw [h1, wsNodeW.k_ws_go.none] at hb; cases hb
   | some q =>
     obtain ⟨x, m₁⟩ := q
     obtain ⟨memo₁, ha₁, hM₁, hx, hf₁⟩ := ih m m₁ a memo fw d c x hD hM hf h1
     rw [h1] at hb
     by_cases hx0 : x = 0
     · subst hx0
-      rw [wsAndK_zero] at hb
+      rw [wsNodeW.k_ws_go.arm1 n d c bw 0 m₁ rfl] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       exact ⟨memo₁, by simp only [StateT.run_bind, ha₁, except_ok_bind]; rfl, hM₁, by decide, hf₁⟩
-    · rw [wsAndK_ne n m₁ x d c bw hx0] at hb
+    · rw [wsNodeW.k_ws_go.arm2 n d c bw x m₁ hx0] at hb
       obtain ⟨memo₂, ha₂, hM₂, hle, hf₂⟩ := ih m₁ m' a memo₁ bw d c r (hf₁.arenaD hD) hM₁ hb' hb
       refine ⟨memo₂, ?_, hM₂, hle, hf₁.trans hf₂⟩
       have : (x != 0) = true := by simpa using hx0
       simp only [StateT.run_bind, ha₁, except_ok_bind, this, ↓reduceIte]
       exact ha₂
 
+theorem wsNodeW.k_ws_go_3_eq (n : Nat) (d c b : Word) (o : Option (Word × Mem)) :
+    wsNodeW.k_ws_go_3 n d c b o = wsNodeW.k_ws_go n d c b o := by
+  rcases o with _ | ⟨x, m₁⟩
+  · rw [wsNodeW.k_ws_go_3.none, wsNodeW.k_ws_go.none]
+  · by_cases hx : x = 0
+    · rw [wsNodeW.k_ws_go_3.arm1 n d c b x m₁ hx, wsNodeW.k_ws_go.arm1 n d c b x m₁ hx]
+    · rw [wsNodeW.k_ws_go_3.arm2 n d c b x m₁ hx, wsNodeW.k_ws_go.arm2 n d c b x m₁ hx]
+
 theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
   intro m m' a memo h d c r hD hM hh hb
   have hR := hD.1
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [wsNodeW] at hb; simp only [ite_eq_left hs, reduceCtorEq] at hb
+  · rw [wsNodeW.abort1 n m h d c hs] at hb; cases hb
   have vok : ∀ c, ¬ tcnt m c (tierW h) ≤ idxW h → viewOK m h c :=
     fun c hc => ⟨hs, UInt64.not_le.mp hc⟩
   have one : ∀ v, a.store.view (decE h) = some v → wsArm memo c.toNat d.toNat v = pure (true, memo) →
@@ -191,20 +212,20 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
     intro v hv hx e; rw [e] at hb; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact ⟨memo, by rw [wsNodeA_run _ _ _ _ a _ hv, hx]; rfl, hM, by decide, MemFrame.refl _ _ _⟩
   by_cases g0 : h >>> 28 = 0
-  · have hvo := vok BVAR fun hc => by rw [wsNodeW] at hb; simp [hs, g0, hc] at hb
-    exact one _ (view_bvar m a hR h hh hvo g0) rfl (wsNodeW_bvar n m h d c g0 hvo)
+  · have hvo := vok BVAR fun hc => by rw [wsNodeW.abort2 n m h d c hs g0 hc] at hb; cases hb
+    exact one _ (view_bvar m a hR h hh hvo g0) rfl (wsNodeW.arm1 n m h d c hs g0 (UInt64.not_le.mpr hvo.2))
   by_cases g1 : h >>> 28 = 1
-  · have hvo := vok FVAR fun hc => by rw [wsNodeW] at hb; simp [hs, g1, hc] at hb
+  · have hvo := vok FVAR fun hc => by rw [wsNodeW.abort3 n m h d c hs g0 g1 hc] at hb; cases hb
     obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh hvo g1
     by_cases hl : tfld m FVAR (tierW h) (idxW h) 0 < d
-    · rw [wsNodeW_fvar_lt n m h d c g1 hvo hl] at hb
+    · rw [wsNodeW.arm2 n m h d c hs g0 g1 (UInt64.not_le.mpr hvo.2) hl] at hb
       obtain ⟨memo', ha, hM', hle, hf⟩ := ih m m' a memo _ _ c r hD hM hty hb
       refine ⟨memo', ?_, hM', hle, hf⟩
       rw [wsNodeA_run _ _ _ _ a _ hv]
       have : (tfld m FVAR (tierW h) (idxW h) 0).toNat < d.toNat := UInt64.lt_iff_toNat_lt.mp hl
       simp only [wsArm, this, ↓reduceIte]
       exact ha
-    · rw [wsNodeW_fvar_ge n m h d c g1 hvo hl] at hb
+    · rw [wsNodeW.arm3 n m h d c hs g0 g1 (UInt64.not_le.mpr hvo.2) hl] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       refine ⟨memo, ?_, hM, by decide, MemFrame.refl _ _ _⟩
       rw [wsNodeA_run _ _ _ _ a _ hv]
@@ -212,72 +233,73 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
         fun e => hl (UInt64.lt_iff_toNat_lt.mpr e)
       simp only [wsArm, this, ↓reduceIte]; rfl
   by_cases g4 : h >>> 28 = 4
-  · have hvo := vok APP fun hc => by rw [wsNodeW] at hb; simp [hs, g4, hc] at hb
+  · have hvo := vok APP fun hc => by rw [wsNodeW.abort4 n m h d c hs g0 g1 g4 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh hvo g4
-    rw [wsNodeW_app n m h d c hvo g4] at hb
+    rw [wsNodeW.arm4 n m h d c hs g0 g1 g4 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨memo', h1, h2⟩ := wsAnd_ok n ih m m' a memo hD hM _ _ d c r hf ha hb
     exact ⟨memo', (wsNodeA_run _ _ _ _ a _ hv).trans (by simp only [wsArm, wscopedBGoArmApp]; exact h1), h2⟩
   by_cases g5 : h >>> 28 = 5
-  · have hvo := vok LAM fun hc => by rw [wsNodeW] at hb; simp [hs, g5, hc] at hb
+  · have hvo := vok LAM fun hc => by rw [wsNodeW.abort5 n m h d c hs g0 g1 g4 g5 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh hvo g5
-    rw [wsNodeW_lam n m h d c hvo g5] at hb
+    rw [wsNodeW.arm5 n m h d c hs g0 g1 g4 g5 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨memo', h1, h2⟩ := wsAnd_ok n ih m m' a memo hD hM _ _ d c r hf ha hb
     exact ⟨memo', (wsNodeA_run _ _ _ _ a _ hv).trans (by simp only [wsArm, wscopedBGoArmBind]; exact h1), h2⟩
   by_cases g6 : h >>> 28 = 6
-  · have hvo := vok FORALL fun hc => by rw [wsNodeW] at hb; simp [hs, g6, hc] at hb
+  · have hvo := vok FORALL fun hc => by rw [wsNodeW.abort6 n m h d c hs g0 g1 g4 g5 g6 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh hvo g6
-    rw [wsNodeW_forall n m h d c hvo g6] at hb
+    rw [wsNodeW.arm6 n m h d c hs g0 g1 g4 g5 g6 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨memo', h1, h2⟩ := wsAnd_ok n ih m m' a memo hD hM _ _ d c r hf ha hb
     exact ⟨memo', (wsNodeA_run _ _ _ _ a _ hv).trans (by simp only [wsArm, wscopedBGoArmBind]; exact h1), h2⟩
+  by_cases g9 : h >>> 28 = 9
+  · have hvo := vok PROJ fun hc => by rw [wsNodeW.abort7 n m h d c hs g0 g1 g4 g5 g6 g9 hc] at hb; cases hb
+    obtain ⟨hv, -, he⟩ := view_proj m a hR h hh hvo g9
+    rw [wsNodeW.arm7 n m h d c hs g0 g1 g4 g5 g6 g9 (UInt64.not_le.mpr hvo.2)] at hb
+    obtain ⟨memo', h1, h2⟩ := ih m m' a memo _ d c r hD hM he hb
+    exact ⟨memo', (wsNodeA_run _ _ _ _ a _ hv).trans h1, h2⟩
   by_cases g7 : h >>> 28 = 7
-  · have hvo := vok LET fun hc => by rw [wsNodeW] at hb; simp [hs, g7, hc] at hb
+  · have hvo := vok LET fun hc => by rw [wsNodeW.abort8 n m h d c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb; cases hb
     obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh hvo g7
-    rw [wsNodeW_let n m h d c hvo g7] at hb
+    rw [wsNodeW.arm8 n m h d c hs g0 g1 g4 g5 g6 g9 g7 (UInt64.not_le.mpr hvo.2)] at hb
     rw [wsNodeA_run _ _ _ _ a _ hv]
     simp only [wsArm, wscopedBGoArmLet]
     cases h1 : wscW n m (tfld m LET (tierW h) (idxW h) 0) d c with
-    | none => simp only [h1, wsLetK, reduceCtorEq] at hb
+    | none => rw [h1, wsNodeW.k_ws_go_2.none] at hb; cases hb
     | some q =>
       obtain ⟨x, m₁⟩ := q
       obtain ⟨memo₁, ha₁, hM₁, hx, hf₁⟩ := ih m m₁ a memo _ d c x hD hM ht h1
       rw [h1] at hb
       by_cases hx0 : x = 0
       · subst hx0
-        rw [wsLetK_zero] at hb
+        rw [wsNodeW.k_ws_go_2.arm1 n d c _ _ 0 m₁ rfl] at hb
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact ⟨memo₁, by simp only [StateT.run_bind, ha₁, except_ok_bind]; rfl, hM₁, by decide, hf₁⟩
-      · rw [wsLetK_ne n m₁ x d c _ _ hx0] at hb
+      · rw [wsNodeW.k_ws_go_2.arm2 n d c _ _ x m₁ hx0, wsNodeW.k_ws_go_3_eq] at hb
         obtain ⟨memo₂, ha₂, hM₂, hle, hf₂⟩ := wsAnd_ok n ih m₁ m' a memo₁ (hf₁.arenaD hD) hM₁ _ _ d c r hv' hb' hb
         refine ⟨memo₂, ?_, hM₂, hle, hf₁.trans hf₂⟩
         have : (x != 0) = true := by simpa using hx0
         simp only [StateT.run_bind, ha₁, except_ok_bind, this, ↓reduceIte]
         exact ha₂
-  by_cases g9 : h >>> 28 = 9
-  · have hvo := vok PROJ fun hc => by rw [wsNodeW] at hb; simp [hs, g9, hc] at hb
-    obtain ⟨hv, -, he⟩ := view_proj m a hR h hh hvo g9
-    rw [wsNodeW_proj n m h d c hvo g9] at hb
-    obtain ⟨memo', h1, h2⟩ := ih m m' a memo _ d c r hD hM he hb
-    exact ⟨memo', (wsNodeA_run _ _ _ _ a _ hv).trans h1, h2⟩
   by_cases g2 : h >>> 28 = 2
-  · have hvo := vok SORT fun hc => by rw [wsNodeW] at hb; simp [hs, g2, hc] at hb
+  · have hvo := vok SORT fun hc => by rw [wsNodeW.abort9 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb; cases hb
     obtain ⟨_, hv⟩ := view_sort m a hR h hh hvo g2
-    exact one _ hv rfl (wsNodeW_sort n m h d c g2 hvo)
+    exact one _ hv rfl (wsNodeW.arm9 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 (UInt64.not_le.mpr hvo.2))
   by_cases g3 : h >>> 28 = 3
-  · have hvo := vok CONST fun hc => by rw [wsNodeW] at hb; simp [hs, g3, hc] at hb
+  · have hvo := vok CONST fun hc => by rw [wsNodeW.abort10 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb; cases hb
     obtain ⟨_, _, hv⟩ := view_const m a hR h hh hvo g3
-    exact one _ hv rfl (wsNodeW_const n m h d c g3 hvo)
+    exact one _ hv rfl (wsNodeW.arm10 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 (UInt64.not_le.mpr hvo.2))
   by_cases g8 : h >>> 28 = 8
-  · have hvo := vok LIT fun hc => by rw [wsNodeW] at hb; simp [hs, g8, hc] at hb
+  · have hvo := vok LIT fun hc => by rw [wsNodeW.abort11 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb; cases hb
     obtain ⟨_, hv⟩ := view_lit m a hR h hh hvo g8
-    exact one _ hv rfl (wsNodeW_lit n m h d c g8 hvo)
-  rw [wsNodeW] at hb; simp [hs, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9] at hb
+    exact one _ hv rfl (wsNodeW.arm11 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 (UInt64.not_le.mpr hvo.2))
+  rw [wsNodeW.abort12 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8] at hb; cases hb
 
 /-- **The model of `ws_go` refines `wscopedBGo`** at every L fuel. -/
 theorem wsGoOK (n : Nat) : WsGoOK n ∧ WsNodeOK n := by
   induction n with
   | zero =>
-    exact ⟨fun _ _ _ _ _ _ _ _ _ _ _ hb => by simp [wscW] at hb,
-      fun _ _ _ _ _ _ _ _ _ _ _ hb => by simp [wsNodeW] at hb⟩
+    refine ⟨fun _ _ _ _ _ _ _ _ _ _ _ hb => ?_, fun _ _ _ _ _ _ _ _ _ _ _ hb => ?_⟩
+    · rw [wscW.eq_1] at hb; cases hb
+    · rw [wsNodeW.eq_1] at hb; cases hb
   | succ n ih => exact ⟨wsGoOK_succ n ih.2, wsNodeOK_succ n ih.1⟩
 
 /-! ## The entry -/

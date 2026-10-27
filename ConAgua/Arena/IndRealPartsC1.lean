@@ -25,23 +25,26 @@ open L.Arena
 
 theorem bsrW_afr : ∀ (n : Nat) (m m' : Mem) (off l : Word) (r : List Word),
     bsrW n m off l = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, h => by simp [bsrW] at h
+  | 0, _, _, _, _, _, h => by simp [bsrW.eq_1] at h
   | n + 1, m, m', off, l, r, h => by
-    simp only [bsrW, bsrK1.eq_def, bsrK2.eq_def, bsK3.eq_def] at h
+    simp only [bsrW.eq_2, bsrW.k_block_split_recs.eq_def, bsrW.k_rec5.eq_def,
+      bsrW.k_sl_cons.eq_def] at h
     afr_auto h [bsrW_afr n _ _ _ _ _, posRecW_afr, consW_afr]
 
 theorem bscW_afr : ∀ (n : Nat) (m m' : Mem) (off l : Word) (r : List Word),
     bscW n m off l = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, h => by simp [bscW] at h
+  | 0, _, _, _, _, _, h => by simp [bscW.eq_1] at h
   | n + 1, m, m', off, l, r, h => by
-    simp only [bscW, bscK1.eq_def, bscK2.eq_def, bscKR.eq_def] at h
+    simp only [bscW.eq_2, bscW.k_block_split_ctors.eq_def, bscW.k_rec3.eq_def, bscW.k_sl_cons.eq_def,
+      bscW.k_block_split_recs.eq_def] at h
     afr_auto h [bscW_afr n _ _ _ _ _, bsrW_afr n _ _ _ _ _, posRecW_afr, consW_afr]
 
 theorem bsW_afr : ∀ (n : Nat) (m m' : Mem) (off l : Word) (r : List Word),
     bsW n m off l = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, h => by simp [bsW] at h
+  | 0, _, _, _, _, _, h => by simp [bsW.eq_1] at h
   | n + 1, m, m', off, l, r, h => by
-    simp only [bsW, bsK1.eq_def, bsK2.eq_def, bsKC.eq_def] at h
+    simp only [bsW.eq_2, bsW.k_block_split.eq_def, bsW.k_sl_cons.eq_def, bsW.k_rec6.eq_def,
+      bsW.k_rec6_2.eq_def, bsW.k_block_split_ctors.eq_def] at h
     afr_auto h [bsW_afr n _ _ _ _ _, bscW_afr n _ _ _ _ _, posRecW_afr, consW_afr]
 
 /-! ## `block_shape_names_of` -/
