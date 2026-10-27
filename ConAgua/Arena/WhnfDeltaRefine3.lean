@@ -348,83 +348,17 @@ end redruns
 /-! ## `reduce_nat_succ`, `reduce_nat_op`, `reduce_nat_wf` -/
 
 /-- The model of `reduce_nat_succ`: `(flag, result, memory)`. -/
-def reduceNatSuccW (p : Prog) (n : Nat) (m : Mem) (mode vis d c b : Word) :
-    Option (Word × Word × Mem) :=
-  match callW p n "nat_lit_supported" [vis] m with
-  | none => none
-  | some (r₁, m₁) =>
-  match callW p n "pin_at" [3] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  if c ≠ r₂.headD 0 then some (0, 0, m₂)
-  else if r₁.headD 0 = 0 then some (0, 0, m₂)
-  else
-  match callW p n "whnf" [mode, vis, d, b] m₂ with
-  | none => none
-  | some (r₃, m₃) =>
-  match callW p n "raw_nat_lit" [r₃.headD 0] m₃ with
-  | none => none
-  | some (r₄, m₄) =>
-  if r₄.headD 0 = 0 then some (0, 0, m₄)
-  else
-  match callW p n "nat_succ_lit" [r₄.tail.headD 0, r₄.tail.tail.headD 0] m₄ with
-  | none => none
-  | some (r₅, m₅) => some (1, r₅.headD 0, m₅)
-
-theorem reduceNatSucc_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
-    (mode vis d c b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_nat_succ" [mode, vis, d, c, b]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      reduceNatSuccW p n s₀.mem mode vis d c b = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.reduceNatSucc]
-  simp only [callFn, reduceNatSuccL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "nat_lit_supported", callW_spec p n "pin_at", callW_spec p n "whnf",
-      callW_spec p n "raw_nat_lit", callW_spec p n "nat_succ_lit"] <;>
-    finish (gen := 30) [reduceNatSuccW]
+l_model reduceNatSucc_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatSucc ↦ reduceNatSuccW tuple]
+  specs [callW_spec p n "nat_lit_supported", callW_spec p n "pin_at", callW_spec p n "whnf",
+    callW_spec p n "raw_nat_lit", callW_spec p n "nat_succ_lit"]
+  grind [arena_grind] finish [tierW, idxW] gen 30
 
 /-- The model of `reduce_nat_op`: `(flag, result, memory)`. -/
-def reduceNatOpW (p : Prog) (n : Nat) (m : Mem) (mode vis d c a b : Word) :
-    Option (Word × Word × Mem) :=
-  match callW p n "whnf" [mode, vis, d, a] m with
-  | none => none
-  | some (r₁, m₁) =>
-  match callW p n "raw_nat_lit" [r₁.headD 0] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  if r₂.headD 0 = 0 then some (0, 0, m₂)
-  else
-  match callW p n "whnf" [mode, vis, d, b] m₂ with
-  | none => none
-  | some (r₃, m₃) =>
-  match callW p n "raw_nat_lit" [r₃.headD 0] m₃ with
-  | none => none
-  | some (r₄, m₄) =>
-  if r₄.headD 0 = 0 then some (0, 0, m₄)
-  else
-  match callW p n "nat_op_result" [c, r₂.tail.headD 0, r₂.tail.tail.headD 0, r₄.tail.headD 0,
-      r₄.tail.tail.headD 0] m₄ with
-  | none => none
-  | some (r₅, m₅) => some (Cmp.evalW .ne (r₅.headD 0) 0, BinOp.eval .and (r₅.tail.headD 0) 4294967295, m₅)
-
-section ropw
-variable (p : Prog) (n : Nat) (mode vis d c a b : Word) (m m₁ m₂ m₃ m₄ m₅ : Mem)
-  (r₁ r₂ r₃ r₄ r₅ : List Word)
-
-end ropw
-
-theorem reduceNatOp_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
-    (mode vis d c a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_nat_op" [mode, vis, d, c, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      reduceNatOpW p n s₀.mem mode vis d c a b = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.reduceNatOp]
-  simp only [callFn, reduceNatOpL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "whnf", callW_spec p n "raw_nat_lit", callW_spec p n "nat_op_result"] <;>
-  simp_all [reduceNatOpW, Cmp.evalW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
-    Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+l_model reduceNatOp_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatOp ↦ reduceNatOpW tuple]
+  specs [callW_spec p n "whnf", callW_spec p n "raw_nat_lit", callW_spec p n "nat_op_result"]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 30
 
 /-- `natOpWfNames` with its pins read: pin word `k` is `w k`. -/
 def natOpWfSel (w : Nat → Word) (c : Word) : Bool :=
@@ -485,184 +419,41 @@ theorem wfContains {m : Mem} {a : AState} (h : PinsFull m a.pins) (c : Word) (hc
   decide
 
 /-- The model of `reduce_nat_wf`: `(flag, result, memory)` (`none` where the L code aborts). -/
-def reduceNatWfW (p : Prog) (n : Nat) (m : Mem) (mode vis d c a b : Word) :
-    Option (Word × Word × Mem) :=
-  match callW p n "nat_op_is_wf" [c] m with
-  | none => none
-  | some (r₁, m₁) =>
-  match callW p n "nat_lit_supported" [vis] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  if r₁.headD 0 ≠ 0 ∧ r₂.headD 0 ≠ 0 then
-    match callW p n "whnf" [mode, vis, d, a] m₂ with
-    | none => none
-    | some (r₃, m₃) =>
-    match callW p n "raw_nat_lit" [r₃.headD 0] m₃ with
-    | none => none
-    | some (r₄, m₄) =>
-    if r₄.headD 0 = 0 then some (0, 0, m₄)
-    else
-    match callW p n "whnf" [mode, vis, d, b] m₄ with
-    | none => none
-    | some (r₅, m₅) =>
-    match callW p n "raw_nat_lit" [r₅.headD 0] m₅ with
-    | none => none
-    | some (r₆, m₆) =>
-    if r₆.headD 0 = 0 then some (0, 0, m₆) else none
-  else some (0, 0, m₂)
-
-theorem reduceNatWf_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
-    (mode vis d c a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_nat_wf" [mode, vis, d, c, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      reduceNatWfW p n s₀.mem mode vis d c a b = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.reduceNatWf]
-  simp only [callFn, reduceNatWfL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "nat_op_is_wf", callW_spec p n "nat_lit_supported", callW_spec p n "whnf",
-      callW_spec p n "raw_nat_lit"] <;>
-  simp_all [reduceNatWfW, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
+l_model reduceNatWf_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatWf ↦ reduceNatWfW tuple]
+  specs [callW_spec p n "nat_op_is_wf", callW_spec p n "nat_lit_supported", callW_spec p n "whnf", callW_spec p n "raw_nat_lit"]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 30
 /-- The model of `reduce_nat_k`: `(flag, result, memory)`. -/
-def reduceNatKW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
-    Option (Word × Word × Mem) :=
-  if tcnt m CONST (tierW f) ≤ idxW f then none
-  else
-    match callW p n "pin_word" [52] m with
-    | none => none
-    | some (r₁, m₁) =>
-      if tfld m CONST (tierW f) (idxW f) 1 ≠ r₁.headD 0 then some (0, 0, m₁)
-      else
-        match callW p n "reduce_nat_succ" [mode, vis, d, tfld m CONST (tierW f) (idxW f) 0,
-            b] m₁ with
-        | none => none
-        | some (r₂, m₂) => some (r₂.headD 0, r₂.tail.headD 0, m₂)
-
-theorem reduceNatK_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (mode vis d f b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_nat_k" [mode, vis, d, f, b]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      reduceNatKW p n s₀.mem mode vis d f b = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.reduceNatK]
-  simp only [callFn, reduceNatKL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p n "pin_word", callW_spec p n "reduce_nat_succ"] <;>
-    finish (gen := 30) [reduceNatKW, tierW, idxW]
+l_model reduceNatK_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatK ↦ reduceNatKW tuple]
+  specs [callW_spec p n "pin_word", callW_spec p n "reduce_nat_succ"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 30
 
 /-- The model of `reduce_nat_ap`: `(flag, result, memory)`. -/
-def reduceNatApW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
-    Option (Word × Word × Mem) :=
-  if tcnt m APP (tierW f) ≤ idxW f then none
-  else if tfld m APP (tierW f) (idxW f) 0 >>> 28 ≠ 3 then some (0, 0, m)
-  else if tierW (tfld m APP (tierW f) (idxW f) 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) ≤
-      idxW (tfld m APP (tierW f) (idxW f) 0) then none
-  else
-    match callW p n "pin_word" [52] m with
-    | none => none
-    | some (r₁, m₁) =>
-      if tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 1 ≠ r₁.headD 0 then
-        some (0, 0, m₁)
-      else
-        match callW p n "nat_bin_op_name" [tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0] m₁ with
-        | none => none
-        | some (r₂, m₂) =>
-        match callW p n "nat_op_stored" [vis, tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0] m₂ with
-        | none => none
-        | some (r₃, m₃) =>
-        if r₂.headD 0 ≠ 0 ∧ r₃.headD 0 ≠ 0 then
-          match callW p n "reduce_nat_op" [mode, vis, d, tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0,
-              tfld m APP (tierW f) (idxW f) 1, b] m₃ with
-          | none => none
-          | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄)
-        else
-          match callW p n "reduce_nat_wf" [mode, vis, d, tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0,
-              tfld m APP (tierW f) (idxW f) 1, b] m₃ with
-          | none => none
-          | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄)
-
-set_option maxHeartbeats 4000000 in
-theorem reduceNatAp_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (mode vis d f b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_nat_ap" [mode, vis, d, f, b]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      reduceNatApW p n s₀.mem mode vis d f b = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.reduceNatAp]
-  simp only [callFn, reduceNatApL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p n "pin_word", callW_spec p n "nat_bin_op_name", callW_spec p n "nat_op_stored",
-      callW_spec p n "reduce_nat_op", callW_spec p n "reduce_nat_wf"] <;>
-    finish (gen := 30) [reduceNatApW, tierW, idxW]
+l_model reduceNatAp_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatAp ↦ reduceNatApW tuple]
+  specs [callW_spec p n "pin_word", callW_spec p n "nat_bin_op_name", callW_spec p n "nat_op_stored", callW_spec p n "reduce_nat_op", callW_spec p n "reduce_nat_wf"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 30
 
 /-- The model of `reduce_nat_head`: `(flag, result, memory)`. -/
-def reduceNatHeadW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
-    Option (Word × Word × Mem) :=
-  if tierW f ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if f >>> 28 = 3 then
-    (match callW p n "reduce_nat_k" [mode, vis, d, f, b] m with
-      | none => none
-      | some (r₁, m₁) => some (r₁.headD 0, r₁.tail.headD 0, m₁))
-  else if f >>> 28 = 4 then
-    (match callW p n "reduce_nat_ap" [mode, vis, d, f, b] m with
-      | none => none
-      | some (r₁, m₁) => some (r₁.headD 0, r₁.tail.headD 0, m₁))
-  else if f >>> 28 = 0 then
-    (if tcnt m BVAR (tierW f) ≤ idxW f then none else some (0, 0, m))
-  else if f >>> 28 = 1 then
-    (if tcnt m FVAR (tierW f) ≤ idxW f then none else some (0, 0, m))
-  else if f >>> 28 = 2 then
-    (if tcnt m SORT (tierW f) ≤ idxW f then none else some (0, 0, m))
-  else if f >>> 28 = 5 then
-    (if tcnt m LAM (tierW f) ≤ idxW f then none else some (0, 0, m))
-  else if f >>> 28 = 6 then
-    (if tcnt m FORALL (tierW f) ≤ idxW f then none else some (0, 0, m))
-  else if f >>> 28 = 7 then
-    (if tcnt m LET (tierW f) ≤ idxW f then none else some (0, 0, m))
-  else if f >>> 28 = 8 then
-    (if tcnt m LIT (tierW f) ≤ idxW f then none else some (0, 0, m))
-  else if f >>> 28 ≠ 9 then none
-  else if tcnt m PROJ (tierW f) ≤ idxW f then none
-  else some (0, 0, m)
-
-theorem reduceNatHead_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
-    (mode vis d f b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_nat_head" [mode, vis, d, f, b]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      reduceNatHeadW p n s₀.mem mode vis d f b = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.reduceNatHead]
-  simp only [callFn, reduceNatHeadL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p n "reduce_nat_k", callW_spec p n "reduce_nat_ap"] <;>
-    finish (gen := 30) [reduceNatHeadW, tierW, idxW]
+l_model reduceNatHead_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatHead ↦ reduceNatHeadW tuple]
+  specs [callW_spec p n "reduce_nat_k", callW_spec p n "reduce_nat_ap"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 30
 
 /-- The model of `reduce_nat`: `(flag, result, memory)`. -/
-def reduceNatW (p : Prog) (n : Nat) (m : Mem) (mode vis d e : Word) :
-    Option (Word × Word × Mem) :=
-  if e >>> 28 ≠ 4 then some (0, 0, m)
-  else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m APP (tierW e) ≤ idxW e then none
-  else
-    match callW p n "reduce_nat_head" [mode, vis, d, tfld m APP (tierW e) (idxW e) 0,
-        tfld m APP (tierW e) (idxW e) 1] m with
-    | none => none
-    | some (r₁, m₁) => some (r₁.headD 0, r₁.tail.headD 0, m₁)
-
-theorem reduceNat_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (mode vis d e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_nat" [mode, vis, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      reduceNatW p n s₀.mem mode vis d e = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.reduceNat]
-  simp only [callFn, reduceNatL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p n "reduce_nat_head"] <;>
-    finish (gen := 30) [reduceNatW, tierW, idxW]
+l_model reduceNat_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNat ↦ reduceNatW tuple]
+  specs [callW_spec p n "reduce_nat_head"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 30
 
 theorem natAddArm_run_internE {a₁ a₂ : AState} {x : EIdx} {u v : Nat}
     (h : (natAddArm u v).run a₁ = .ok (some x, a₂)) :
@@ -701,21 +492,19 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatSucc_spec p hp.toWhnfDeltaProg n s₀ mode vis d c b) h
-  unfold reduceNatSuccW at hW
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatSucc_spec p hp.toWhnfDeltaProg (n + 1) s₀ mode vis d c b) h
+  rw [reduceNatSuccW.arm1] at hW
   cases h1 : callW p n "nat_lit_supported" [vis] s₀.mem with
-  | none => rw [h1] at hW; cases hW
+  | none => rw [h1, reduceNatSuccW.k_nat_lit_supported.none] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₁, m₁⟩ := q₁
-  rw [h1] at hW
-  dsimp only at hW
+  rw [h1, reduceNatSuccW.k_nat_lit_supported.arm1] at hW
   obtain ⟨hok1, hS1, hres1, hfr1, hrh1⟩ := callW_natLitSupported p hp n s₀ a₀ dn vis fe MM eb hC r₁ m₁ h1
   cases h2 : callW p n "pin_at" [3] m₁ with
-  | none => rw [h2] at hW; cases hW
+  | none => rw [h2, reduceNatSuccW.k_pin_at.none] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
   rw [h2] at hW
-  dsimp only at hW
   obtain ⟨hm2, -, -, hr₂⟩ := callW_pinAt p hp.pinAt n m₁ 3 r₂ m₂ h2
   subst m₂
   simp only [show (3 : Word).toNat = 3 from rfl] at hr₂
@@ -745,7 +534,7 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
     have h2 : decBool r₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hh2
     rw [h2]; simp [h1]
   by_cases hcn : c ≠ r₂.headD 0
-  · rw [ite_eq_left hcn] at hW
+  · rw [reduceNatSuccW.k_pin_at.arm1 _ _ _ _ _ _ _ _ _ _ hcn] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -755,9 +544,9 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
     refine CRef.core (m' := m₁) ⟨hok', by rw [hst']; exact hS1, ?_, hfr1, ?_⟩
     · rw [hres']; simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [ite_eq_right hcn] at hW
+  have hcn' : c = r₂.headD 0 := Classical.not_not.mp hcn
   by_cases hs0 : r₁.headD 0 = 0
-  · rw [ite_eq_left hs0] at hW
+  · rw [reduceNatSuccW.k_pin_at.arm2 _ _ _ _ _ _ _ _ _ _ hcn' hs0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -767,25 +556,23 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
     refine CRef.core (m' := m₁) ⟨hok', by rw [hst']; exact hS1, ?_, hfr1, ?_⟩
     · rw [hres']; simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [ite_eq_right hs0] at hW
+  rw [reduceNatSuccW.k_pin_at.arm3 _ _ _ _ _ _ _ _ _ _ hcn' hs0] at hW
   have hcond := hgo (by simpa using hcn) hs0
   -- `whnf`
   cases h3 : callW p n "whnf" [mode, vis, d, b] m₁ with
-  | none => rw [h3] at hW; cases hW
+  | none => rw [h3, reduceNatSuccW.k_whnf.none] at hW; cases hW
   | some q₃ =>
   obtain ⟨r₃, m₃⟩ := q₃
-  rw [h3] at hW
-  dsimp only at hW
+  rw [h3, reduceNatSuccW.k_whnf.arm1] at hW
   have hSP1 : SlotPre ⟨m₁, Locals.init []⟩ a₁ dn vis fe MM eb mode := ⟨hS1, hS.mode4, hS.eb_mode⟩
   have hkn : KnotOK p n := hk n (by omega)
   obtain ⟨hok3, ⟨M', hS3, hK3, hSt3⟩, hres3, hrw3⟩ := CoreSpec.of_callW
     (hkn.whnf F ⟨m₁, Locals.init []⟩ a₁ dn vis fe MM eb mode d b (by omega) (by omega) hSP1 hb) h3
   cases h4 : callW p n "raw_nat_lit" [r₃.headD 0] m₃ with
-  | none => rw [h4] at hW; cases hW
+  | none => rw [h4, reduceNatSuccW.k_raw_nat_lit.none] at hW; cases hW
   | some q₄ =>
   obtain ⟨r₄, m₄⟩ := q₄
   rw [h4] at hW
-  dsimp only at hW
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE b)) a₁ = a₂ at hrun3 hS3
@@ -794,7 +581,7 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
   subst m₄
   have hStK1 := StackKept.of_const_frame hfr1
   by_cases hf : r₄.headD 0 = 0
-  · rw [ite_eq_left hf] at hW
+  · rw [reduceNatSuccW.k_raw_nat_lit.arm1 _ _ _ _ hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -807,14 +594,13 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
     · rw [hst']; exact ⟨M', hS3, hK3, hStK1.trans hSt3⟩
     · rw [hres']; simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [ite_eq_right hf] at hW
+  rw [reduceNatSuccW.k_raw_nat_lit.arm2 _ _ _ _ hf] at hW
   obtain ⟨hsl, hnorm⟩ := hslice4 hf
   cases h5 : callW p n "nat_succ_lit" [r₄.tail.headD 0, r₄.tail.tail.headD 0] m₃ with
-  | none => rw [h5] at hW; cases hW
+  | none => rw [h5, reduceNatSuccW.k_nat_succ_lit.none] at hW; cases hW
   | some q₅ =>
   obtain ⟨r₅, m₅⟩ := q₅
-  rw [h5] at hW
-  dsimp only at hW
+  rw [h5, reduceNatSuccW.k_nat_succ_lit.arm1] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   rw [← hm]
@@ -871,14 +657,14 @@ theorem hw_mask32 (y : Word) : HW (y &&& 4294967295) := and32_lt y
 
 /-- `reduce_nat_op`'s normalised result reads as `nat_op_result`'s. -/
 theorem decOpt_norm (x y : Word) :
-    decOpt (Cmp.evalW .ne x 0) (BinOp.eval .and y 4294967295) = decOpt x y := by
+    decOpt (if x ≠ 0 then 1 else 0) (y &&& 4294967295) = decOpt x y := by
   by_cases hx : x = 0
-  · subst hx; simp [decOpt, Cmp.evalW, Cmp.eval]
-  · simp [decOpt, Cmp.evalW, Cmp.eval, hx, BinOp.eval, decE_and32]
+  · subst hx; simp [decOpt]
+  · simp [decOpt, hx, decE_and32]
 
-theorem resW_norm (x y : Word) : ResW [Cmp.evalW .ne x 0, BinOp.eval .and y 4294967295] := by
+theorem resW_norm (x y : Word) : ResW [if x ≠ 0 then 1 else 0, y &&& 4294967295] := by
   refine ⟨?_, hw_mask32 y⟩
-  unfold HW; simp only [List.headD_cons, Cmp.evalW]; split <;> decide
+  unfold HW; simp only [List.headD_cons]; split <;> decide
 
 section refs19
 variable (p : Prog)
@@ -895,32 +681,30 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatOp_spec p hp.toWhnfDeltaProg n s₀ mode vis d c a b) h
-  unfold reduceNatOpW at hW
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatOp_spec p hp.toWhnfDeltaProg (n + 1) s₀ mode vis d c a b) h
+  rw [reduceNatOpW.arm1] at hW
   have hkn : KnotOK p n := hk n (by omega)
   -- first `whnf`
   cases h1 : callW p n "whnf" [mode, vis, d, a] s₀.mem with
-  | none => rw [h1] at hW; cases hW
+  | none => rw [h1, reduceNatOpW.k_whnf.none] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₁, m₁⟩ := q₁
-  rw [h1] at hW
-  dsimp only at hW
+  rw [h1, reduceNatOpW.k_whnf.arm1] at hW
   obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW
     (hkn.whnf F s₀ a₀ dn vis fe MM eb mode d a (by omega) (by omega) hS ha) h1
   have hrun1 := AM.run_of_ok _ _ hok1
   rw [hres1] at hrun1
   generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE a)) a₀ = a₁ at hrun1 hS₁
   cases h2 : callW p n "raw_nat_lit" [r₁.headD 0] m₁ with
-  | none => rw [h2] at hW; cases hW
+  | none => rw [h2, reduceNatOpW.k_raw_nat_lit.none] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
   rw [h2] at hW
-  dsimp only at hW
   obtain ⟨hm2, hrun2, hres2, hslice2⟩ := callW_rawNatLit p hp n ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb _
     hS₁ hrw1 r₂ m₂ h2
   subst m₂
   by_cases hf2 : r₂.headD 0 = 0
-  · rw [ite_eq_left hf2] at hW
+  · rw [reduceNatOpW.k_raw_nat_lit.arm1 _ _ _ _ _ _ _ _ _ hf2] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -933,18 +717,17 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
     · rw [hst']; exact ⟨M₁, hS₁, hK₁, hSt₁⟩
     · rw [hres']; simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [ite_eq_right hf2] at hW
+  rw [reduceNatOpW.k_raw_nat_lit.arm2 _ _ _ _ _ _ _ _ _ hf2] at hW
   obtain ⟨hsl2, hnorm2⟩ := hslice2 hf2
   have hsome2 : rawDec m₁ r₂ = some (pv (vpool m₁) (r₂.tail.headD 0).toNat
       (r₂.tail.tail.headD 0).toNat) := by unfold rawDec; rw [ite_eq_right hf2]
   rw [hsome2] at hrun2
   -- second `whnf`
   cases h3 : callW p n "whnf" [mode, vis, d, b] m₁ with
-  | none => rw [h3] at hW; cases hW
+  | none => rw [h3, reduceNatOpW.k_whnf_2.none] at hW; cases hW
   | some q₃ =>
   obtain ⟨r₃, m₃⟩ := q₃
-  rw [h3] at hW
-  dsimp only at hW
+  rw [h3, reduceNatOpW.k_whnf_2.arm1] at hW
   have hSP₂ : SlotPre ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode := ⟨hS₁, hS.mode4, hS.eb_mode⟩
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW
     (hkn.whnf F ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode d b (by omega) (by omega) hSP₂ hb) h3
@@ -953,16 +736,15 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
   rw [hres3] at hrun3
   generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE b)) a₁ = a₂ at hrun3 hS₃
   cases h4 : callW p n "raw_nat_lit" [r₃.headD 0] m₃ with
-  | none => rw [h4] at hW; cases hW
+  | none => rw [h4, reduceNatOpW.k_raw_nat_lit_2.none] at hW; cases hW
   | some q₄ =>
   obtain ⟨r₄, m₄⟩ := q₄
   rw [h4] at hW
-  dsimp only at hW
   obtain ⟨hm4, hrun4, hres4, hslice4⟩ := callW_rawNatLit p hp n ⟨m₃, Locals.init []⟩ a₂ dn vis fe M₃ eb _
     hS₃ hrw3 r₄ m₄ h4
   subst m₄
   by_cases hf4 : r₄.headD 0 = 0
-  · rw [ite_eq_left hf4] at hW
+  · rw [reduceNatOpW.k_raw_nat_lit_2.arm1 _ _ _ _ _ _ _ hf4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -976,7 +758,7 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
     · rw [hst']; exact ⟨M₃, hS₃, hK₁.trans hK₃, hSt₁.trans hSt₃⟩
     · rw [hres']; simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [ite_eq_right hf4] at hW
+  rw [reduceNatOpW.k_raw_nat_lit_2.arm2 _ _ _ _ _ _ _ hf4] at hW
   obtain ⟨hsl4, hnorm4⟩ := hslice4 hf4
   have hsome4 : rawDec m₃ r₄ = some (pv (vpool m₃) (r₄.tail.headD 0).toNat
       (r₄.tail.tail.headD 0).toNat) := by unfold rawDec; rw [ite_eq_right hf4]
@@ -984,11 +766,10 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
   obtain ⟨hsl2', hpv2, hnorm2'⟩ := hgrow.slice hsl2 hnorm2
   cases h5 : callW p n "nat_op_result" [c, r₂.tail.headD 0, r₂.tail.tail.headD 0, r₄.tail.headD 0,
       r₄.tail.tail.headD 0] m₃ with
-  | none => rw [h5] at hW; cases hW
+  | none => rw [h5, reduceNatOpW.k_nat_op_result.none] at hW; cases hW
   | some q₅ =>
   obtain ⟨r₅, m₅⟩ := q₅
-  rw [h5] at hW
-  dsimp only at hW
+  rw [h5, reduceNatOpW.k_nat_op_result.arm1] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   rw [← hm]
@@ -1029,25 +810,23 @@ theorem callW_reduceNatWf (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (hn
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatWf_spec p hp.toWhnfDeltaProg n s₀ mode vis d c a b) h
-  unfold reduceNatWfW at hW
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatWf_spec p hp.toWhnfDeltaProg (n + 1) s₀ mode vis d c a b) h
+  rw [reduceNatWfW.arm1] at hW
   have hkn : KnotOK p n := hk n (by omega)
   cases h1 : callW p n "nat_op_is_wf" [c] s₀.mem with
-  | none => rw [h1] at hW; cases hW
+  | none => rw [h1, reduceNatWfW.k_nat_op_is_wf.none] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₁, m₁⟩ := q₁
-  rw [h1] at hW
-  dsimp only at hW
+  rw [h1, reduceNatWfW.k_nat_op_is_wf.arm1] at hW
   obtain ⟨s₁', hs₁', hm₁, -, -, hwfsel, -⟩ := triple_of_callW
     (natOpIsWfL_spec p hp.natOpIsWf n ⟨s₀.mem, Locals.init []⟩ c) h1
   have hm1 : m₁ = s₀.mem := by rw [← hs₁', hm₁]
   subst hm1
   cases h2 : callW p n "nat_lit_supported" [vis] s₀.mem with
-  | none => rw [h2] at hW; cases hW
+  | none => rw [h2, reduceNatWfW.k_nat_lit_supported.none] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
   rw [h2] at hW
-  dsimp only at hW
   obtain ⟨hok2, hS2, hres2, hfr2, hrh2⟩ := callW_natLitSupported p hp n s₀ a₀ dn vis fe MM eb hC r₂ m₂ h2
   have hsup : (natLitSupported fe).run a₀ = .ok (decBool r₂, AM.st (natLitSupported fe) a₀) := by
     have := AM.run_of_ok _ _ hok2
@@ -1065,30 +844,28 @@ theorem callW_reduceNatWf (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (hn
     have h2 : decBool r₂ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hh.2
     rw [h1, h2]; rfl
   by_cases hgo : r₁.headD 0 ≠ 0 ∧ r₂.headD 0 ≠ 0
-  · rw [ite_eq_left hgo] at hW
+  · rw [reduceNatWfW.k_nat_lit_supported.arm1 _ _ _ _ _ _ _ _ _ _ hgo.1 hgo.2] at hW
     have hSP1 : SlotPre ⟨m₂, Locals.init []⟩ a₁ dn vis fe MM eb mode := ⟨hS2, hS.mode4, hS.eb_mode⟩
     cases h3 : callW p n "whnf" [mode, vis, d, a] m₂ with
-    | none => rw [h3] at hW; cases hW
+    | none => rw [h3, reduceNatWfW.k_whnf.none] at hW; cases hW
     | some q₃ =>
     obtain ⟨r₃, m₃⟩ := q₃
-    rw [h3] at hW
-    dsimp only at hW
+    rw [h3, reduceNatWfW.k_whnf.arm1] at hW
     obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW
       (hkn.whnf F ⟨m₂, Locals.init []⟩ a₁ dn vis fe MM eb mode d a (by omega) (by omega) hSP1 ha) h3
     have hrun3 := AM.run_of_ok _ _ hok3
     rw [hres3] at hrun3
     generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE a)) a₁ = a₂ at hrun3 hS₃
     cases h4 : callW p n "raw_nat_lit" [r₃.headD 0] m₃ with
-    | none => rw [h4] at hW; cases hW
+    | none => rw [h4, reduceNatWfW.k_raw_nat_lit.none] at hW; cases hW
     | some q₄ =>
     obtain ⟨r₄, m₄⟩ := q₄
     rw [h4] at hW
-    dsimp only at hW
     obtain ⟨hm4, hrun4, hres4, hslice4⟩ := callW_rawNatLit p hp n ⟨m₃, Locals.init []⟩ a₂ dn vis fe M₃ eb _
       hS₃ hrw3 r₄ m₄ h4
     subst m₄
     by_cases hf4 : r₄.headD 0 = 0
-    · rw [ite_eq_left hf4] at hW
+    · rw [reduceNatWfW.k_raw_nat_lit.arm2 _ _ _ _ _ _ _ _ hf4, reduceNatWfW.j1.arm1] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr0, hr1, hm⟩ := hW
       rw [← hm]
@@ -1101,17 +878,16 @@ theorem callW_reduceNatWf (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (hn
       · rw [hst']; exact ⟨M₃, hS₃, hK₃, (StackKept.of_const_frame hfr2).trans hSt₃⟩
       · rw [hres']; simp only [decOptR, decOpt, ← hr0]; rfl
       · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-    rw [ite_eq_right hf4] at hW
+    rw [reduceNatWfW.k_raw_nat_lit.arm1 _ _ _ _ _ _ _ _ hf4] at hW
     obtain ⟨hsl4, hnorm4⟩ := hslice4 hf4
     have hsome4 : rawDec m₃ r₄ = some (pv (vpool m₃) (r₄.tail.headD 0).toNat
         (r₄.tail.tail.headD 0).toNat) := by unfold rawDec; rw [ite_eq_right hf4]
     rw [hsome4] at hrun4
     cases h5 : callW p n "whnf" [mode, vis, d, b] m₃ with
-    | none => rw [h5] at hW; cases hW
+    | none => rw [h5, reduceNatWfW.k_whnf_2.none] at hW; cases hW
     | some q₅ =>
     obtain ⟨r₅, m₅⟩ := q₅
-    rw [h5] at hW
-    dsimp only at hW
+    rw [h5, reduceNatWfW.k_whnf_2.arm1] at hW
     have hSP3 : SlotPre ⟨m₃, Locals.init []⟩ a₂ dn vis fe M₃ eb mode := ⟨hS₃, hS.mode4, hS.eb_mode⟩
     obtain ⟨hok5, ⟨M₅, hS₅, hK₅, hSt₅⟩, hres5, hrw5⟩ := CoreSpec.of_callW
       (hkn.whnf F ⟨m₃, Locals.init []⟩ a₂ dn vis fe M₃ eb mode d b (by omega) (by omega) hSP3 hb) h5
@@ -1119,16 +895,15 @@ theorem callW_reduceNatWf (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (hn
     rw [hres5] at hrun5
     generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE b)) a₂ = a₃ at hrun5 hS₅
     cases h6 : callW p n "raw_nat_lit" [r₅.headD 0] m₅ with
-    | none => rw [h6] at hW; cases hW
+    | none => rw [h6, reduceNatWfW.k_raw_nat_lit_2.none] at hW; cases hW
     | some q₆ =>
     obtain ⟨r₆, m₆⟩ := q₆
     rw [h6] at hW
-    dsimp only at hW
     obtain ⟨hm6, hrun6, hres6, hslice6⟩ := callW_rawNatLit p hp n ⟨m₅, Locals.init []⟩ a₃ dn vis fe M₅ eb _
       hS₅ hrw5 r₆ m₆ h6
     subst m₆
     by_cases hf6 : r₆.headD 0 = 0
-    · rw [ite_eq_left hf6] at hW
+    · rw [reduceNatWfW.k_raw_nat_lit_2.arm1 _ _ _ hf6, reduceNatWfW.j1.arm1] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr0, hr1, hm⟩ := hW
       rw [← hm]
@@ -1142,8 +917,12 @@ theorem callW_reduceNatWf (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (hn
       · rw [hst']; exact ⟨M₅, hS₅, hK₃.trans hK₅, ((StackKept.of_const_frame hfr2).trans hSt₃).trans hSt₅⟩
       · rw [hres']; simp only [decOptR, decOpt, ← hr0]; rfl
       · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-    · rw [ite_eq_right hf6] at hW; cases hW
-  · rw [ite_eq_right hgo] at hW
+    · rw [reduceNatWfW.k_raw_nat_lit_2.abort1 _ _ _ hf6] at hW; cases hW
+  · rw [show reduceNatWfW.k_nat_lit_supported p n mode vis d a b (r₁.headD 0) (some (r₂, m₂)) = reduceNatWfW.j1 p m₂ by
+      by_cases h1 : r₁.headD 0 = 0
+      · exact reduceNatWfW.k_nat_lit_supported.arm3 _ _ _ _ _ _ _ _ _ _ h1
+      · exact reduceNatWfW.k_nat_lit_supported.arm2 _ _ _ _ _ _ _ _ _ _ h1
+          (Classical.byContradiction fun h2 => hgo ⟨h1, h2⟩), reduceNatWfW.j1.arm1] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
