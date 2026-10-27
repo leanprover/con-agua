@@ -1,4 +1,5 @@
 import ConAgua.Verdict.InferLeavesE
+import ConAgua.Arena.Checker
 
 /-!
 # Error refinements of the inference arms (lane `verdicts-b`, helper `k1`)
