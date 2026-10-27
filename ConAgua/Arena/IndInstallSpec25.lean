@@ -1,6 +1,5 @@
-import ConAgua.Arena.IndSumSpec14
-import ConAgua.Arena.IndSumSpec8
-import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+import ConAgua.Arena.IndSumSpec.StructProjGuards
 
 /-!
 # Refinements of `IndInstall`, part 25 (lane `indproofs3`, helper `tail`): memo frames for

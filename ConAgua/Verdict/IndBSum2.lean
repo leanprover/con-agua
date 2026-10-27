@@ -1,14 +1,12 @@
 import ConAgua.Arena.CrOKFrame
-import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndT.Sum1
-import ConAgua.Arena.RecGenSpec9
 import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictFns
-import ConAgua.Arena.RecGenSpec7
-import ConRon.Bridge.Inductives.FieldTele
 import ConRon.Bridge.Inductives.SumInstall
+import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 set_option linter.unusedSectionVars false
 
 /-!

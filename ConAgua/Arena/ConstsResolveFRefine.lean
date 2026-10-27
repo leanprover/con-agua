@@ -1,9 +1,6 @@
 import ConAgua.Arena.ConstsResolveF
-import ConAgua.Arena.DeclNatSpec
-import ConAgua.Arena.WhnfIotaRefine
-import ConAgua.Arena.RecClassSpecE
 import ConAgua.Arena.InferLeaves
-import ConAgua.Census.Attr
+import ConAgua.Arena.RecClassSpec.ClassNPcOf
 set_option linter.unusedSectionVars false
 
 /-!

@@ -1,5 +1,5 @@
-import ConAgua.Arena.RecGenSpec12
 import ConAgua.Arena.DeclNatSub
+import ConAgua.Arena.RecGenSpec.ClassFeR
 
 /-!
 # Refinements of `IndInstall`, part 39 (lane `indproofs4`, helper `grc`): the pop, the elimination level, the large-eliminator contract

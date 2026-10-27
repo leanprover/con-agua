@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.Sum4
-import ConAgua.Arena.IndSumSpec13
+import ConAgua.Arena.IndSumSpec.CtorX
+import ConAgua.Arena.IndSumSpec.SoaW
 
 /-!
 # `checkSumCtors` under `StageC` (lane `indstaget`)

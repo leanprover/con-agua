@@ -1,8 +1,7 @@
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.DeclArmOpaque
 import ConAgua.Arena.StageC
-import ConAgua.Arena.LoopFns
-import ConRon.Bridge.Checker.Arms
+import ConAgua.Arena.RecGenSpec.CruleProg
 
 /-!
 # The reduce-pin gate and the opaque arm under `StageC` (lane `loopt2`)

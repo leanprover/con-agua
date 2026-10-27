@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndPartsSpec8
-import ConAgua.Arena.IndSumSpec12
-import ConAgua.Arena.RecClassSpecI
+import ConAgua.Arena.IndSumSpec.SumProg
+import ConAgua.Arena.RecClassSpec.MjProg
 
 /-!
 # Refinements of `IndInstall`, part 20 (lane `indproofs2`, helper `install`): `checkAbsCtorSorts`,

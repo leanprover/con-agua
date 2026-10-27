@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndInstallSpec8
-import ConAgua.Arena.RecClassSpecI
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.RecClassSpec.PiBWRoom
 
 /-!
 # Refinements of `IndInstall`, part 9 (lane `indproofs2`, helper `install`): `checkBlockTeles`

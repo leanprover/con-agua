@@ -1,11 +1,8 @@
-import ConAgua.Arena.RecGenSpec17
 import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictFns
 import ConRon.Bridge.Inductives.Decl
-import ConAgua.Arena.IndInstallSpec11
-import ConAgua.Arena.IndInstallSpec13
-import ConAgua.Arena.IndSumSpec4
-import ConAgua.Arena.RecGenSpec16
+import ConAgua.Arena.IndSumSpec.ParamLevels
+import ConAgua.Arena.RecGenSpec.SlRGrow
 
 /-!
 # Error refinement of `target_major_of_member` (lane `verdicts-b`, helper `ib`)

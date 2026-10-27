@@ -1,7 +1,9 @@
-import ConAgua.Arena.RecGenSpec21
 import ConAgua.Arena.IndInstallSpec34
 import ConAgua.Arena.IndInstallSpec16
 import ConAgua.Arena.IndInstallSpec31
+import ConAgua.Arena.RecGenSpec.ClassSeeds
+import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.RecGenSpec.OcW
 
 /-!
 # Refinements of `IndInstall`, part 36 (lane `indproofs4`): `checkBlockPass`

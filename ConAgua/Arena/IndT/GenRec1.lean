@@ -3,7 +3,8 @@ import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Arena.IndT.RecGen28
 import ConAgua.Arena.IndInstallSpec15
-import ConAgua.Arena.RecCheckSpec24
+import ConAgua.Arena.RecCheckSpec.TargetRecPins
+import ConAgua.Arena.RecGenSpec.Classes
 
 /-!
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)

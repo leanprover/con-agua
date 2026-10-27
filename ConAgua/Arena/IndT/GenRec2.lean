@@ -2,6 +2,7 @@ import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.RecGen7
 import ConAgua.Arena.IndT.RecGen27
 import ConAgua.Arena.IndInstallSpec38
+import ConAgua.Arena.RecGenSpec.CftW
 
 /-!
 # `genRecCheck` under `StageC`, part 2 (lane `indstaget`, helper `grc`)

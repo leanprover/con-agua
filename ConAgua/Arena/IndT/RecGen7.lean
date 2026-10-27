@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndT.RecGen3
-import ConAgua.Arena.RecGenSpec8
 import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecGenSpec.ClassRecTysOk
 
 /-!
 # `classRecTyOk`, `classRecTysOk` under `StageC` (lane `indstaget`)
