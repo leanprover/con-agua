@@ -19,7 +19,6 @@ Factored out of `WalkRefine.lean` (lane `walk`) for the walks after it (`LiftRef
 
 open ConRon.Arena
 
-
 namespace L.Arena
 
 /-! ## Handle words -/
@@ -151,9 +150,6 @@ theorem word_lt {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
 
 theorem except_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) :
     (Except.ok x >>= f) = f x := rfl
-
-theorem decI_word {k : IdxKind} (x : Idx k) : decI x.word.toUInt64 = x := by
-  cases x; simp [decI]
 
 /-! ## The view, one lemma per tag -/
 

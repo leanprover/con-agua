@@ -62,7 +62,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-
 /-! ## `der_b(h)`: the range field of `derived h` -/
 
 /-- **The model of `der_b`.** The five compound arms read a word packed by `packBF` (bvar range
@@ -227,10 +226,6 @@ theorem slot_eq_iff {i c t u : Word} (hi : i < 134217728) (hc : c < 134217728) (
 theorem h01 (x : Word) (hx : x ≤ 1) : x = 0 ∨ x = 1 := by
   simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj] at *
   have : (1 : Word).toNat = 1 := rfl; have : (0 : Word).toNat = 0 := rfl; omega
-
-theorem idxW_lt (h : Word) : idxW h < 134217728 := by
-  simp only [idxW, UInt64.lt_iff_toNat_lt, UInt64.toNat_and]
-  exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
 
 /-- The memory after appending node `c = CTL[k + t]` to a binary table (records `R`, one packed
 word `f | a << 32` per node; slot array `S`, range words `D`, each tiered), outside the slot
@@ -799,7 +794,6 @@ theorem packBFL_L (b f l : Word) :
     BinOp.add.eval (packBF b f) (BinOp.mul.eval l 1073741824) = packBFL b f l := rfl
 
 /-! ## The specs -/
-
 
 section specs
 variable (p : Prog) (hd : p.lookup "der_b" = some derB)

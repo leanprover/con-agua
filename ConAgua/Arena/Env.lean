@@ -34,8 +34,6 @@ namespace L.Arena
 
 /-! ## Row addresses -/
 
-/-- `w`'s tag as an L expression computes it. -/
-def tagW (w : Word) : Word := w >>> 28
 theorem tagW_toNat (w : Word) : (tagW w).toNat = rowTag w := by
   simp [tagW, rowTag, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
 
@@ -273,16 +271,6 @@ theorem envRowSet_spec (hx : p.lookup "env_ix" = some envIxL)
 end specs
 
 /-! ## The relation's facts -/
-
-theorem decI_word_self {k : IdxKind} (w : Word) (hw : w.toNat < 2 ^ 32) :
-    (decI w : Idx k).word.toUInt64 = w := by
-  apply UInt64.toNat_inj.mp; simp [decI]; omega
-
-theorem decI_eq_iff {k : IdxKind} (w : Word) (hw : w.toNat < 2 ^ 32) (n : Idx k) :
-    (decI w = n) ↔ (w = n.word.toUInt64) := by
-  constructor
-  · rintro rfl; exact (decI_word_self w hw).symm
-  · rintro rfl; exact decI_word _
 
 /-- What a found row decodes to: `(0, _)` is `none`, `(1, q)` the record at `q`. -/
 def decFound (dn : NIdx → Option ConLeche.Name) (m : Mem) (f q : Word) : Option IConstantInfo :=
