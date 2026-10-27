@@ -43,9 +43,9 @@ theorem envPushW_frame {m m' : Mem} {vis q : Word} {r : List Word}
     rcases rowArr_names (rdW (m.arr64 EREC) (q + 1)) with h | h | h | h | h | h <;> rw [h] <;> decide
   have hf1 : MemFrame [132, 133, 134, ECON, 140, 141, 142] [128] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
     unfold rowSet
-    exact ((MemFrame.set64 m _ (by rowarr_omega [CTL]) _ _).mono
+    exact ((MemFrame.set64 m _ (rowArr_ne _ (by decide)) _ _).mono
       (by intro b hb; simp at hb; subst hb; exact hrow) (by simp)).trans
-      ((MemFrame.set64 _ _ (by rowarr_omega [CTL]) _ _).mono
+      ((MemFrame.set64 _ _ (rowArr_ne _ (by decide)) _ _).mono
         (by intro b hb; simp at hb; subst hb; exact hrow) (by simp))
   simp only [envPushK] at h
   split at h

@@ -178,9 +178,9 @@ theorem envPushW_mfr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m
   rotate_left; · cases h
   rename_i hc
   obtain ⟨ht, -⟩ := hc
-  have hra : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by rowarr_omega [CTL]
+  have hra : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := rowArr_ne _ (by decide)
   have hmem : rowArr (rdW (m.arr64 EREC) (q + 1)) < 201 := by
-    rowarr_omega
+    exact Nat.lt_trans (rowArr_lt _) (by decide)
   have h1 : MFr [] [] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) :=
     MFr.of_frame ((MemFrame.set64 m _ hra _ _).trans (MemFrame.set64 _ _ hra _ _))
       (by intro b hb; simp at hb; subst hb; exact .inl hmem) (by simp)

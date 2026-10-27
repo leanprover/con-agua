@@ -301,7 +301,7 @@ theorem envPushW_afr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m
   obtain ⟨ht, -⟩ := hc
   have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON, 140, 141, 142] := by
     rcases rowArr_names (rdW (m.arr64 EREC) (q + 1)) with h | h | h | h | h | h <;> rw [h] <;> decide
-  have hne : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by rowarr_omega [CTL]
+  have hne : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := rowArr_ne _ (by decide)
   have h49 : memoFreeA [rowArr (rdW (m.arr64 EREC) (q + 1))] = true := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hrow
     rcases hrow with h | h | h | h | h | h | h <;> rw [h] <;> decide

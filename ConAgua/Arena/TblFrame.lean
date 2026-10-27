@@ -12,7 +12,7 @@ A table-row write (`tbl_row_set`, `tblSet`) touches only the six table-row array
 namespace L.Arena
 
 /-- The table-row arrays (both tiers). -/
-abbrev tblArrs : List ArrId := [TIXA, TIXS, TIXN, 385, 386, 387]
+abbrev tblArrs : List ArrId := [TIXA, TIXS, TIXN, tier1 TIXA, tier1 TIXS, tier1 TIXN]
 
 theorem tblArr_mem (w : Word) (hw : rowTag w ≤ 2) : tblArr w ∈ tblArrs := by
   rcases tblArr_cases w hw with h | h | h | h | h | h <;> rw [h] <;> decide

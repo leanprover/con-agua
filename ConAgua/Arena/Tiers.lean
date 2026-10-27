@@ -433,42 +433,20 @@ theorem rowArr_cases (w : Word) : (rowArr w : Nat) = 132 ∨ (rowArr w : Nat) = 
     (rowArr w : Nat) = 140 ∨ (rowArr w : Nat) = 141 ∨ (rowArr w : Nat) = 142 := by
   rcases rowArr_names w with h | h | h | h | h | h <;> rw [h] <;> decide
 
-open Lean Elab Tactic in
-/-- `rowarr_omega [defs]`: `omega` after `rowArr_cases` for every `rowArr x` in the goal and the
-hypotheses, with `ArrId` and `defs` (names of arrays, as `CTL`) unfolded. The row arrays are
-named (`rowArr_names`); this is the one place that reads them as numbers. -/
-syntax (name := rowarrOmega) "rowarr_omega" (" [" term,* "]")? : tactic
+theorem rowArr_ne (w : Word) {b : ArrId} (h : b ∉ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) :
+    rowArr w ≠ b := by
+  intro hb
+  rcases rowArr_names w with e | e | e | e | e | e <;> rw [e] at hb <;> apply h <;> rw [← hb] <;> simp
 
-open Lean Elab Tactic Meta in
-@[tactic rowarrOmega] def evalRowarrOmega : Tactic := fun stx => withMainContext do
-  let ids : Array Syntax := match stx with
-    | `(tactic| rowarr_omega [$ts,*]) => ts.getElems.map (·.raw)
-    | _ => #[]
-  let rec collect (e : Lean.Expr) : StateT (Array Lean.Expr) MetaM Unit := do
-    if e.isApp && e.getAppFn.isConstOf ``rowArr && e.getAppNumArgs == 1 then
-      let a := e.appArg!
-      unless (← get).contains a do modify (·.push a)
-    match e with
-    | Lean.Expr.app f a => collect f; collect a
-    | Lean.Expr.lam _ t b _ | Lean.Expr.forallE _ t b _ => collect t; collect b
-    | Lean.Expr.mdata _ b => collect b
-    | _ => pure ()
-  let mut st : Array Lean.Expr := #[]
-  for ld in (← getLCtx) do
-    unless ld.isImplementationDetail do
-      st := (← (collect (← instantiateMVars ld.type)).run st).2
-  st := (← (collect (← instantiateMVars (← getMainTarget))).run st).2
-  for x in st do
-    try
-      let pf ← mkAppM ``rowArr_cases #[x]
-      let (_, g) ← (← getMainGoal).note `this pf
-      replaceMainGoal [g]
-    catch _ => pure ()
-  let ids' : Array (TSyntax ``Lean.Parser.Tactic.simpLemma) ← ids.mapM fun t =>
-    `(Lean.Parser.Tactic.simpLemma| $(⟨t⟩):term)
-  evalTactic (← `(tactic| try intros))
-  evalTactic (← `(tactic| simp only [ArrId, $ids',*] at *))
-  evalTactic (← `(tactic| omega))
+theorem rowArr_ge (w : Word) : 132 ≤ rowArr w := by
+  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
+
+theorem rowArr_lt (w : Word) : rowArr w < 143 := by
+  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
+
+/-- Tier 0 rows are below `ECON`, tier 1 rows above the pool. -/
+theorem rowArr_lt_or (w : Word) : rowArr w < 135 ∨ 140 ≤ rowArr w := by
+  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
 
 theorem rowArr_congr {w w' : Word} (h1 : rowTag w = rowTag w') (h2 : rowTier w = rowTier w') :
     rowArr w = rowArr w' := by
@@ -663,13 +641,13 @@ theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word
     (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [he (rowArr w) (by rowarr_omega) (by rowarr_omega)
-        (by rowarr_omega)]
+    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
+        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
     · rfl
   have hP : ∀ w, rowP m' w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [he (rowArr w) (by rowarr_omega) (by rowarr_omega)
-        (by rowarr_omega)]
+    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
+        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hR : erecP m' = erecP m := by
@@ -721,13 +699,13 @@ theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
     (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [he (rowArr w) (by rowarr_omega) (by rowarr_omega)
-        (by rowarr_omega)]
+    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
+        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
     · rfl
   have hP : ∀ w, rowP m' w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [he (rowArr w) (by rowarr_omega) (by rowarr_omega)
-        (by rowarr_omega)]
+    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
+        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)

@@ -96,7 +96,8 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
     intro w hw
     simp only [rowC, ite_eq_left hw]
     have hl : loopZeroArr (rowArr w) := by
-      unfold loopZeroArr; rowarr_omega
+      unfold loopZeroArr
+      rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
     have hz := h.arr (rowArr w) hl (UInt64.ofNat (rowIx w))
     have hlt : rowIx w < 2 ^ 64 := by unfold rowIx; omega
     simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
@@ -106,8 +107,8 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
     split
     · rename_i hw
       have hl : loopZeroArr (tblArr w) := by
-        have := tblArr_cases w hw
-        unfold loopZeroArr; rowarr_omega
+        unfold loopZeroArr
+        rcases tblArr_cases w hw with e | e | e | e | e | e <;> rw [e] <;> decide
       have hz := h.arr (tblArr w) hl (UInt64.ofNat (tblIx w))
       have hlt : tblIx w < 2 ^ 64 := by unfold tblIx; omega
       simpa [rdW, Nat.mod_eq_of_lt hlt] using hz

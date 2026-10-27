@@ -16,7 +16,7 @@ set_option experimental.vcgen true
 
 theorem rowSet_frame (m : Mem) (w c q : Word) (_ht : rowTag w ≤ 2) :
     MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m (rowSet m w c q) := by
-  have hne : rowArr w ≠ CTL := by rowarr_omega [CTL]
+  have hne : rowArr w ≠ CTL := rowArr_ne _ (by decide)
   have h1 := MemFrame.set64 m (rowArr w) hne (ixW w) c
   have h2 := MemFrame.set64 (m.set64 (rowArr w) (ixW w) c) (rowArr w) hne (ixW w + 1) q
   have hmem : rowArr w ∈ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] := by
@@ -34,13 +34,11 @@ theorem EnvR.promoted {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : W
     EnvR dn m' vis ⟨⟨consts', tables'⟩, fe.idx, fe.visibleBelow, fe.tbls⟩ := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [he _ (by rowarr_omega) (by rowarr_omega)
-        (by rowarr_omega)]
+    · rw [he _ (rowArr_ge _) (rowArr_lt _) (rowArr_lt_or _)]
     · rfl
   have hP : ∀ w, rowP m' w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [he _ (by rowarr_omega) (by rowarr_omega)
-        (by rowarr_omega)]
+    · rw [he _ (rowArr_ge _) (rowArr_lt _) (rowArr_lt_or _)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by

@@ -141,8 +141,8 @@ theorem tblRow_eq (m : Mem) (w : Word) (h : rowTag w ≤ 2) :
 
 theorem tblArr_ne_rowArr {w w' : Word} (h : rowTag w ≤ 2) :
     tblArr w ≠ rowArr w' := by
-  have := tblArr_cases w h
-  rowarr_omega
+  rcases tblArr_cases w h with a | a | a | a | a | a <;>
+  rcases rowArr_cases w' with b | b | b | b | b | b <;> rw [a, b] <;> decide
 
 /-- **The table side across a memory step** that keeps it (`TblSame`) and the record pool. -/
 theorem EnvR.tblSame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe fe' : IFEnv}
@@ -163,8 +163,8 @@ theorem EnvR.tblSame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Wo
 
 theorem TblSame.rowSet (m : Mem) (w c p : Word) (_hw : rowTag w ≤ 2) : TblSame m (rowSet m w c p) :=
   ⟨fun w' hw' => rowSet_arr _ _ _ _ _ (tblArr_ne_rowArr hw'),
-    rowSet_arr _ _ _ _ _ (by rowarr_omega [ETAB]),
-    by rw [rowSet_arr _ _ _ _ _ (by rowarr_omega [CTL])]⟩
+    rowSet_arr _ _ _ _ _ (rowArr_ne _ (by decide)).symm,
+    by rw [rowSet_arr _ _ _ _ _ (rowArr_ne _ (by decide)).symm]⟩
 
 /-! ## `env_row_get`, `env_row_set` -/
 
@@ -411,9 +411,9 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
   obtain ⟨w, hw1, hw2, hname⟩ := decCI_name hci
   have hw : rdN (m.arr64 EREC) (q.toNat + 1) = w := by simp [rdN, erecP_get hw1]
   rw [hw] at ht hb
-  have hra : rowArr w ≠ CTL := by rowarr_omega [CTL]
-  have hre : rowArr w ≠ ECON := by rowarr_omega [ECON]
-  have hrr : rowArr w ≠ EREC := by rowarr_omega [EREC]
+  have hra : rowArr w ≠ CTL := rowArr_ne _ (by decide)
+  have hre : rowArr w ≠ ECON := rowArr_ne _ (by decide)
+  have hrr : rowArr w ≠ EREC := rowArr_ne _ (by decide)
   have hk0 : rdW ((rowSet m w (vis + 1) q).arr64 CTL) 128 = rdW (m.arr64 CTL) 128 := by
     rw [rowSet_arr _ _ _ _ _ (Ne.symm hra)]
   -- the arrays of the result
@@ -422,10 +422,10 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
     rw [Mem.arr64_set64_ne _ _ _ _ _ h1, Mem.arr64_set64_ne _ _ _ _ _ h2]
   have hC : ∀ w', rowTag w' ≤ 2 → rowC (envPushMem m vis q) w' = rowC (rowSet m w (vis + 1) q) w' := by
     intro w' h'; simp only [rowC, h', ite_true]
-    rw [hA _ (by rowarr_omega [CTL]) (by rowarr_omega [ECON])]
+    rw [hA _ (rowArr_ne _ (by decide)) (rowArr_ne _ (by decide))]
   have hP : ∀ w', rowTag w' ≤ 2 → rowP (envPushMem m vis q) w' = rowP (rowSet m w (vis + 1) q) w' := by
     intro w' h'; simp only [rowP, h', ite_true]
-    rw [hA _ (by rowarr_omega [CTL]) (by rowarr_omega [ECON])]
+    rw [hA _ (rowArr_ne _ (by decide)) (rowArr_ne _ (by decide))]
   have hR : erecP (envPushMem m vis q) = erecP m := by
     apply erecP_congr
     · rw [hA _ (by decide) (by decide), rowSet_arr _ _ _ _ _ (Ne.symm hrr)]
@@ -459,7 +459,7 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
         (by have := tblArr_cases w' hw'; simp only [ECON, ArrId] at *; omega)]
       exact rowSet_arr _ _ _ _ _ (tblArr_ne_rowArr hw')
     · rw [hA _ (by decide) (by decide)]
-      exact rowSet_arr _ _ _ _ _ (by rowarr_omega [ETAB])
+      exact rowSet_arr _ _ _ _ _ (rowArr_ne _ (by decide)).symm
     · simp only [envPushMem, hw, Mem.arr64_set64_same, rdW_set!,
         Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ ECON by decide), rowSet_arr _ _ _ _ _ (Ne.symm hra)]
       simp
@@ -553,11 +553,11 @@ theorem envPush_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   simp only [hw] at key
   have hrc : ∀ (h : q.toNat + 1 < (s₀.mem.arr64 EREC).size), (s₀.mem.arr64 EREC)[q.toNat + 1] = w := by
     intro h; simpa [h] using hw1
-  have hra : rowArr w ≠ CTL := by rowarr_omega [CTL]
+  have hra : rowArr w ≠ CTL := rowArr_ne _ (by decide)
   have hctl : ∀ c p', (rowSet s₀.mem w c p').arr64 CTL = s₀.mem.arr64 CTL :=
     fun c p' => rowSet_arr _ _ _ _ _ (Ne.symm hra)
   have hcon : rowTag w ≤ 2 → ∀ c p', (rowSet s₀.mem w c p').arr64 ECON = s₀.mem.arr64 ECON :=
-    fun ht c p' => rowSet_arr _ _ _ _ _ (by rowarr_omega [ECON])
+    fun ht c p' => rowSet_arr _ _ _ _ _ (rowArr_ne _ (by decide)).symm
   have hrd : ∀ (h : 128 < (s₀.mem.arr64 CTL).size), rdW (s₀.mem.arr64 CTL) 128 = (s₀.mem.arr64 CTL)[128] :=
     fun h => rdW_eq _ _ 128 rfl h
   simp only [envPushMem, hw, hctl] at key
@@ -586,9 +586,9 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
     (hR1 : R.map Prod.fst = if c = 0 then none else some (c.toNat - 1))
     (hR2 : c ≠ 0 → R.map Prod.snd = decCI (erecP m) dn q.toNat) :
     EnvR dn (rowSet m w c q) vis ⟨fe.env, idx', fe.visibleBelow, fe.tbls⟩ := by
-  have hrr : rowArr w ≠ EREC := by rowarr_omega [EREC]
-  have hre : rowArr w ≠ ECON := by rowarr_omega [ECON]
-  have hra : rowArr w ≠ CTL := by rowarr_omega [CTL]
+  have hrr : rowArr w ≠ EREC := rowArr_ne _ (by decide)
+  have hre : rowArr w ≠ ECON := rowArr_ne _ (by decide)
+  have hra : rowArr w ≠ CTL := rowArr_ne _ (by decide)
   have hE' : erecP (rowSet m w c q) = erecP m :=
     erecP_congr (rowSet_arr _ _ _ _ _ (Ne.symm hrr)) (by rw [rowSet_arr _ _ _ _ _ (Ne.symm hra)])
   obtain ⟨htk, htv, hts⟩ := h.tblSame (fe' := ⟨fe.env, idx', fe.visibleBelow, fe.tbls⟩)
@@ -670,11 +670,11 @@ theorem EnvR.popLen {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
   simp only at hv
   have hC : ∀ w, rowC (popLenMem m) w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [hframe _ (by rowarr_omega [CTL])]
+    · rw [hframe _ (rowArr_ne _ (by decide))]
     · rfl
   have hP : ∀ w, rowP (popLenMem m) w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [hframe _ (by rowarr_omega [CTL])]
+    · rw [hframe _ (rowArr_ne _ (by decide))]
     · rfl
   have hW : ∀ w, rowW (popLenMem m) w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hR : erecP (popLenMem m) = erecP m := by
@@ -791,7 +791,7 @@ theorem envPopTemp_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     | some ci => simp only [e, Option.map_some, Option.some.injEq] at hprev; subst hprev; simp
   have key := fun ht hb hc =>
     (hE.setRow w c q hw ht hb _ prev hidx hR1 hR2).popLen hc
-  have hra : rowArr w ≠ CTL := by rowarr_omega [CTL]
+  have hra : rowArr w ≠ CTL := rowArr_ne _ (by decide)
   have hctl : (rowSet s₀.mem w c q).arr64 CTL = s₀.mem.arr64 CTL := rowSet_arr _ _ _ _ _ (Ne.symm hra)
   have hrd : ∀ (h : 128 < (s₀.mem.arr64 CTL).size),
       rdW (s₀.mem.arr64 CTL) 128 = (s₀.mem.arr64 CTL)[128] := fun h => rdW_eq _ _ 128 rfl h
@@ -1020,7 +1020,7 @@ theorem tblIx_inj {w w' : Word} (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2)
     (by simp only [tblIx, rowIx] at hi ⊢; omega)
 
 theorem rowArr_bnd (w : Word) : rowArr w < 129 ∨ (131 < rowArr w ∧ rowArr w < 385) ∨ 387 < rowArr w := by
-  rowarr_omega
+  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
 
 theorem tblArr_ne {w : Word} (h : rowTag w ≤ 2) (b : ArrId) (hb : b < 129 ∨ (131 < b ∧ b < 385) ∨ 387 < b) :
     tblArr w ≠ b := by
@@ -1105,13 +1105,13 @@ theorem EnvR.pushList {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word
     simp
   have hC : ∀ w', rowC (tblListPush m q) w' = rowC m w' := fun w' => by
     unfold rowC; split
-    · rw [hA _ (by rowarr_omega [CTL])
-        (by rowarr_omega [ETAB])]
+    · rw [hA _ (rowArr_ne _ (by decide))
+        (rowArr_ne _ (by decide))]
     · rfl
   have hP : ∀ w', rowP (tblListPush m q) w' = rowP m w' := fun w' => by
     unfold rowP; split
-    · rw [hA _ (by rowarr_omega [CTL])
-        (by rowarr_omega [ETAB])]
+    · rw [hA _ (rowArr_ne _ (by decide))
+        (rowArr_ne _ (by decide))]
     · rfl
   have hW : ∀ w', rowW (tblListPush m q) w' = rowW m w' := fun w' => by simp only [rowW, hC, hP]
   have hT : ∀ w', tblRow (tblListPush m q) w' = tblRow m w' := fun w' => by

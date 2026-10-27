@@ -483,8 +483,8 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   · rw [ite_eq_right hc] at h; cases h
   rw [ite_eq_left hc] at h
   obtain ⟨ht, hb⟩ := hc
-  have hra : rowArr w ≠ CTL := by rowarr_omega [CTL]
-  have hre : rowArr w ≠ ECON := by rowarr_omega [ECON]
+  have hra : rowArr w ≠ CTL := rowArr_ne _ (by decide)
+  have hre : rowArr w ≠ ECON := rowArr_ne _ (by decide)
   have hctl : (rowSet m w (vis + 1) q).arr64 CTL = m.arr64 CTL := rowSet_arr _ _ _ _ _ (Ne.symm hra)
   have hecon : (rowSet m w (vis + 1) q).arr64 ECON = m.arr64 ECON :=
     rowSet_arr _ _ _ _ _ (Ne.symm hre)
