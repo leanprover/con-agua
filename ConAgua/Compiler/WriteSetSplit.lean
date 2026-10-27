@@ -59,17 +59,17 @@ theorem namesTree_spec : ∀ {fs : List FnName} {t : NTree}, namesTree fs = some
 /-! ## The per-function check -/
 
 /-- `WArr.okW` with the store set as a predicate. -/
-def _root_.L.WArr.okWB (ctl : ArrId) (pa : ArrId → Bool) : WArr → Bool
+def _root_.L.WArr.okWB (ctl : ArrId) (pa : TieredArray → Bool) : WArr → Bool
   | .plain a => a ≠ ctl && pa a
-  | .tier a _ => a ≠ ctl && a + tierOff ≠ ctl && pa a && pa (a + tierOff)
+  | .tier a _ => a ≠ ctl && pa a && pa (tier1 a)
 
 /-- `Stmt.okW` with the store sets as predicates and the callee set as a name tree. -/
-def _root_.L.Stmt.okWB (ctl : ArrId) (pa : ArrId → Bool) (pc : Word → Bool) (t : NTree) : Stmt → Bool
+def _root_.L.Stmt.okWB (ctl : ArrId) (pa : TieredArray → Bool) (pc : Word → Bool) (t : NTree) : Stmt → Bool
   | .st8 .. => false
   | .st64 a i _ =>
     if a = ctl then (match ctlIdx i with | some ws => ws.all pc | none => false)
     else pa a
-  | .st64t a _ _ _ => a ≠ ctl && a + tierOff ≠ ctl && pa a && pa (a + tierOff)
+  | .st64t a _ _ _ => a ≠ ctl && pa a && pa (tier1 a)
   | .copy64 d .. | .copy8w d .. => d.okWB ctl pa
   | .seq s u => s.okWB ctl pa pc t && u.okWB ctl pa pc t
   | .ite _ s u => s.okWB ctl pa pc t && u.okWB ctl pa pc t
@@ -77,8 +77,8 @@ def _root_.L.Stmt.okWB (ctl : ArrId) (pa : ArrId → Bool) (pc : Word → Bool) 
   | .call _ f _ => (t.find (nameCode f)).isSome
   | _ => true
 
-theorem _root_.L.Stmt.okW_of_okWB {ctl : ArrId} {pa : ArrId → Bool} {pc : Word → Bool} {t : NTree}
-    {A : List ArrId} {C : List Word} {fs : List FnName} (ht : namesTree fs = some t)
+theorem _root_.L.Stmt.okW_of_okWB {ctl : ArrId} {pa : TieredArray → Bool} {pc : Word → Bool} {t : NTree}
+    {A : List TieredArray} {C : List Word} {fs : List FnName} (ht : namesTree fs = some t)
     (hpa : ∀ a, pa a = true → a ∈ A) (hpc : ∀ w, pc w = true → w ∈ C) :
     ∀ {s : Stmt}, s.okWB ctl pa pc t = true → s.okW ctl A C fs = true := by
   intro s h
@@ -94,31 +94,31 @@ theorem _root_.L.Stmt.okW_of_okWB {ctl : ArrId} {pa : ArrId → Bool} {pc : Word
         exact fun w hw => hpc w (h w hw)
     · simp only [Stmt.okWB, hc, ite_false] at h
       simp only [Stmt.okW, hc, ite_false]
-      exact decide_eq_true (hpa a h)
+      exact decide_eq_true (hpa _ h)
   | st64t a _ _ _ =>
     simp only [Stmt.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
     simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq]
-    exact ⟨⟨⟨h.1.1.1, h.1.1.2⟩, hpa a h.1.2⟩, hpa _ h.2⟩
+    exact ⟨⟨h.1.1, hpa _ h.1.2⟩, hpa _ h.2⟩
   | copy64 d _ _ _ _ =>
     cases d with
     | plain a =>
       simp only [Stmt.okWB, WArr.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
       simp only [Stmt.okW, WArr.okW, Bool.and_eq_true, decide_eq_true_eq]
-      exact ⟨h.1, hpa a h.2⟩
+      exact ⟨h.1, hpa _ h.2⟩
     | tier a _ =>
       simp only [Stmt.okWB, WArr.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
       simp only [Stmt.okW, WArr.okW, Bool.and_eq_true, decide_eq_true_eq]
-      exact ⟨⟨⟨h.1.1.1, h.1.1.2⟩, hpa a h.1.2⟩, hpa _ h.2⟩
+      exact ⟨⟨h.1.1, hpa _ h.1.2⟩, hpa _ h.2⟩
   | copy8w d _ _ _ _ =>
     cases d with
     | plain a =>
       simp only [Stmt.okWB, WArr.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
       simp only [Stmt.okW, WArr.okW, Bool.and_eq_true, decide_eq_true_eq]
-      exact ⟨h.1, hpa a h.2⟩
+      exact ⟨h.1, hpa _ h.2⟩
     | tier a _ =>
       simp only [Stmt.okWB, WArr.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
       simp only [Stmt.okW, WArr.okW, Bool.and_eq_true, decide_eq_true_eq]
-      exact ⟨⟨⟨h.1.1.1, h.1.1.2⟩, hpa a h.1.2⟩, hpa _ h.2⟩
+      exact ⟨⟨h.1.1, hpa _ h.1.2⟩, hpa _ h.2⟩
   | seq s u ihs ihu | ite _ s u ihs ihu =>
     simp only [Stmt.okWB, Bool.and_eq_true] at h
     simp only [Stmt.okW, Bool.and_eq_true]
@@ -132,14 +132,14 @@ theorem _root_.L.Stmt.okW_of_okWB {ctl : ArrId} {pa : ArrId → Bool} {pc : Word
   | _ => rfl
 
 /-- One function's write-set check: not in the set, or its body passes `okWB`. -/
-def wsChk (ctl : ArrId) (pa : ArrId → Bool) (pc : Word → Bool) (t : NTree)
+def wsChk (ctl : ArrId) (pa : TieredArray → Bool) (pc : Word → Bool) (t : NTree)
     (x : FnName × FunDecl) : Bool :=
   !(t.find (nameCode x.1)).isSome || x.2.body.okWB ctl pa pc t
 
 /-- **A program's write set from per-function checks**: the function set `fs` as a tree, the
 store sets as predicates, and `wsChk` for every function of `p` (by `prog_all`). -/
-theorem closedW_of_all {ctl : ArrId} {p : Prog} {A : List ArrId} {C : List Word}
-    {fs : List FnName} {t : NTree} {pa : ArrId → Bool} {pc : Word → Bool}
+theorem closedW_of_all {ctl : ArrId} {p : Prog} {A : List TieredArray} {C : List Word}
+    {fs : List FnName} {t : NTree} {pa : TieredArray → Bool} {pc : Word → Bool}
     (ht : namesTree fs = some t) (hpa : ∀ a, pa a = true → a ∈ A)
     (hpc : ∀ w, pc w = true → w ∈ C) (h : ∀ x ∈ p, wsChk ctl pa pc t x = true) :
     closedW ctl p A C fs = true := by

@@ -408,10 +408,9 @@ theorem utf8CharN_eq (b : Array UInt8) (k n : Word) (B : ByteArray) (i : Nat) (h
     simp [show ¬ B[i].toNat < 128 by omega, show ¬ B[i].toNat < 194 by omega,
       show ¬ B[i].toNat < 224 by omega, show ¬ B[i].toNat < 240 by omega, show ¬ B[i].toNat < 245 by omega]
 
-theorem size_set64 (m : Mem) (a : ArrId) (c v : Word) :
+theorem size_set64 (m : Mem) (a : TieredArray) (c v : Word) :
     ((m.set64 a c v).arr64 a).size = (m.arr64 a).size := by
-  simp only [Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?, Array.set!, Array.getElem?_setIfInBounds]
-  by_cases h : a < m.words.size <;> simp [h]
+  simp [Mem.set64, Mem.arr64]
 
 theorem word_add (k : Word) (i : Nat) (h : k.toNat + i < 2 ^ 64) :
     (k + UInt64.ofNat i).toNat = k.toNat + i := by
@@ -420,7 +419,6 @@ theorem word_add (k : Word) (i : Nat) (h : k.toNat + i < 2 ^ 64) :
 
 theorem arr64_set64_same (m : Mem) (c v : Word) :
     (m.set64 OUT c v).arr64 OUT = (m.arr64 OUT).set! c.toNat v := by
-  simp only [Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?, Array.set!, Array.getElem?_setIfInBounds]
-  by_cases h : OUT < m.words.size <;> simp [h]
+  simp [Mem.set64, Mem.arr64]
 
 end ConAgua.Scan

@@ -141,7 +141,7 @@ theorem Agree.dite {c : Prop} [Decidable c] {x y : c → M α} {x' y' : ¬c → 
 theorem Agree.ld8 (a : ArrId) (v : Word) : Agree bs (L.ld8 a v) (L.ld8 a v) :=
   Agree.get_bind fun _ _ => Agree.dite (fun _ => Agree.pure _) (fun _ => Agree.throw _)
 
-theorem Agree.ld64 (a : ArrId) (v : Word) : Agree bs (L.ld64 a v) (L.ld64 a v) :=
+theorem Agree.ld64 (a : TieredArray) (v : Word) : Agree bs (L.ld64 a v) (L.ld64 a v) :=
   Agree.get_bind fun _ _ => Agree.dite (fun _ => Agree.pure _) (fun _ => Agree.throw _)
 
 theorem Agree.ldc (d : List UInt8) (v : Word) : Agree bs (L.ldc d v) (L.ldc d v) :=
@@ -234,8 +234,7 @@ theorem evalArgs_subPB (es : List Expr) :
 
 theorem arr8_set8_ne (m : Mem) {a b : ArrId} (h : a ≠ b) (i v : Word) :
     (m.set8 a i v).arr8 b = m.arr8 b := by
-  simp only [Mem.set8, Mem.arr8, Array.getD_eq_getD_getElem?, Array.set!_eq_setIfInBounds,
-    Array.getElem?_setIfInBounds_ne h]
+  simp only [Mem.set8, Mem.arr8, Ne.symm h, ite_false]
 
 theorem St.setLocs_mem (s : St) (xs : List Var) (vs : List Word) : (s.setLocs xs vs).mem = s.mem := by
   induction xs generalizing s vs with

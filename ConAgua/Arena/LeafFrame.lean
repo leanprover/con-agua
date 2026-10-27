@@ -146,14 +146,14 @@ open L
 
 /-- One function's check with leaves: not in the set `t`, or its body passes `okWB` with the
 callees in `tc` (the set and the leaves). -/
-def wsChkL (ctl : ArrId) (pa : ArrId → Bool) (pc : Word → Bool) (t tc : NTree)
+def wsChkL (ctl : ArrId) (pa : TieredArray → Bool) (pc : Word → Bool) (t tc : NTree)
     (x : FnName × FunDecl) : Bool :=
   !(t.find (nameCode x.1)).isSome || x.2.body.okWB ctl pa pc tc
 
 /-- **A write set with leaves from per-function checks** (`closedW_of_all` with the callee tree
 of `fs ++ L`). -/
 theorem closedWL_of_all {ctl : ArrId} {p : Prog} {A : List TieredArray} {C : List Word}
-    {fs L : List FnName} {t tc : NTree} {pa : ArrId → Bool} {pc : Word → Bool}
+    {fs L : List FnName} {t tc : NTree} {pa : TieredArray → Bool} {pc : Word → Bool}
     (ht : namesTree fs = some t) (htc : namesTree (fs ++ L) = some tc)
     (hpa : ∀ a, pa a = true → a ∈ A) (hpc : ∀ w, pc w = true → w ∈ C)
     (h : ∀ x ∈ p, wsChkL ctl pa pc t tc x = true) :
