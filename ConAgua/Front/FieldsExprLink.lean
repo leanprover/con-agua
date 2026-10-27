@@ -98,7 +98,7 @@ theorem objRec_link (F : USize → Bool → UInt32 → σ → ScanRes α) (R : U
     · obtain ⟨rfl, hres⟩ := H.close i w seen st r e hi h125 h
       rw [objRecN_close _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
         nm_close b h64 hsize i _ hi hws h125]
-      exact ⟨by simp only [succ_toUInt64 b h64 hsize], H.res_e _ _ _ (hres o hR)⟩
+      exact ⟨by simp only [succ_toUInt64 h64], H.res_e _ _ _ (hres o hR)⟩
     by_cases h44 : byteAt b i = 44
     · obtain ⟨rfl, h'⟩ := H.comma i w seen st r e hi h44 h
       simp only [bw, Bool.false_eq_true, ite_false]
@@ -394,7 +394,7 @@ theorem items_link (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (e : 
   by_cases hi : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp hi
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i hi
     have hin := usizeInBounds b i hi
     rw [dite_eq_left hi] at h
@@ -470,7 +470,7 @@ theorem list_link (v : USize) (us : List Nat) (e : USize) (h : scanNatList b v =
       have h0 : byteAt b v = 0 := by unfold byteAt; rw [dite_eq_right hn]
       rw [h0] at hc; exact absurd hc (by decide)
     unfold listN
-    rw [← succ_toUInt64 b h64 hsize]
+    rw [← succ_toUInt64 h64]
     simpa using items_link b h64 hsize (v + 1) [] true us e h [] trivial
   · cases h
 
@@ -721,8 +721,8 @@ theorem natVal_link (v : USize) (n : Nat) (e : USize) (h : scanQuotedNat b v = .
     refine Classical.byContradiction fun hn => ?_
     have h0 : byteAt b (skipDigits b (v + 1)) = 0 := by unfold byteAt; rw [dite_eq_right hn]
     rw [h0] at hq34; exact absurd hq34 (by decide)
-  have hv1 := succ_toUInt64 b h64 hsize v
-  have hd1 := succ_toUInt64 b h64 hsize (skipDigits b (v + 1))
+  have hv1 := succ_toUInt64 h64 v
+  have hd1 := succ_toUInt64 h64 (skipDigits b (v + 1))
   have hge := skipDigits_ge b h64 hsize (v + 1)
   have hlt : v + 1 < skipDigits b (v + 1) := by
     rw [USize.lt_iff_toNat_lt]

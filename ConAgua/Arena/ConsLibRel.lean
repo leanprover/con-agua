@@ -994,7 +994,7 @@ theorem consInternM_word {ks : List Word} {w : Word} {m' : Mem}
   · rename_i hn hh
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, -⟩ := h
-    exact ⟨0, _, by decide, probeC_hit_lt hW hR ks (C.qhM m ks) 0 (by decide)
+    exact ⟨0, _, by decide, probeC_hit_lt hR ks (C.qhM m ks) 0 (by decide)
       (fun e => hn ⟨hh.1, e⟩) hh.2, b0 _, fun _ => rfl⟩
   split at h
   · rename_i hfl
@@ -1004,7 +1004,7 @@ theorem consInternM_word {ks : List Word} {w : Word} {m' : Mem}
     · rename_i hz hhit
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, -⟩ := h
-      exact ⟨1, _, by decide, probeC_hit_lt hW hR ks (C.qhM m ks) 1 (by decide) hz hhit, b1 _,
+      exact ⟨1, _, by decide, probeC_hit_lt hR ks (C.qhM m ks) 1 (by decide) hz hhit, b1 _,
         fun h0 => absurd h0 hfl⟩
     split at h
     · rename_i hp

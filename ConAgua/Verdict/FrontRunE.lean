@@ -371,7 +371,7 @@ theorem frontLineE_claim (p : Prog) (hS : ScanLookups p) (hFI : L.Front.Ind.IndF
       · cases hsc'; rfl
       · cases hsc'
   subst hrr
-  rw [← succ_toUInt64 b h64 hsize] at h3
+  rw [← succ_toUInt64 h64] at h3
   exact applyAnyE_claim p hS hFI hDL hF hXI hpz hV
     (fun g hg => hnv g (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hg ⊢; rcases hg with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp))
     hnvD h64 hsize hSL hm hA hD hok hX (s + 1) r' j hloop n e

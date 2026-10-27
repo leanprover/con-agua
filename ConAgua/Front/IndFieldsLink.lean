@@ -440,7 +440,7 @@ theorem iobj_link {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanR
       rw [objLoopW_close _ _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
         nm_close b h64 hsize i _ hi hws h125] at hm
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
-      exact ⟨(succ_toUInt64 b h64 hsize i).symm, hF⟩
+      exact ⟨(succ_toUInt64 h64 i).symm, hF⟩
     by_cases h44 : byteAt b i = 44
     · obtain ⟨rfl, h'⟩ := H.comma i w seen st d e hi h44 h
       simp only [bw, Bool.false_eq_true, ite_false] at hm
@@ -558,19 +558,19 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
         rw [h'] at this
         rcases hk with rfl | rfl <;> revert this <;> decide
       rw [listLoopW_other _ _ _ _ _ _ _ hiW (hne 93 (.inl rfl)) (hne 123 (.inr rfl)),
-        ← succ_toUInt64 b h64 hsize] at hm
+        ← succ_toUInt64 h64] at hm
       exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab Q hQr hQt hQa item (i + 1) acc w m o cnt l e r m' h hR hc
         ho hrun hm
     by_cases h93 : byteAt b i = 93
     · obtain ⟨rfl, rfl⟩ := HG.close i acc w l e hi h93 h
       rw [listLoopW_close _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h93]; rfl)] at hm
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
-      refine ⟨rfl, by simp [hc], (succ_toUInt64 b h64 hsize i).symm, hrun, IGrow.refl _ _ _ _, hR,
+      refine ⟨rfl, by simp [hc], (succ_toUInt64 h64 i).symm, hrun, IGrow.refl _ _ _ _, hR,
         by simpa using ho, hQr _⟩
     by_cases h44 : byteAt b i = 44
     · have h' := HG.comma i acc w l e hi h44 h
       rw [listLoopW_other _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h44]; decide)
-        (by rw [byteW_eq b h64 hsize, h44]; decide), ← succ_toUInt64 b h64 hsize] at hm
+        (by rw [byteW_eq b h64 hsize, h44]; decide), ← succ_toUInt64 h64] at hm
       exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab Q hQr hQt hQa item (i + 1) acc true m o cnt l e r m' h'
         hR hc ho hrun hm
     by_cases h123 : byteAt b i = 123
@@ -658,7 +658,7 @@ theorem ilistW_link {α : Type} (G : USize → List α → Bool → ScanRes (Lis
   | none => rw [hal, listK0_none] at hm; cases hm
   | some om =>
   obtain ⟨o, m₁⟩ := om
-  rw [hal, listK0_some, ← succ_toUInt64 b h64 hsize] at hm
+  rw [hal, listK0_some, ← succ_toUInt64 h64] at hm
   obtain ⟨a1, a2, a3, a4, -, -, -⟩ := allocW_facts m m₁ A hA _ o hR hal
   have a2' : topN m₁ A = topN m A := by rw [a2]; rfl
   obtain ⟨c1, c2, c3, c4, c5, c6, c7, c8⟩ := ilist_link b h64 hsize G S HG sub A hA sz hsz1 hsz hfa Rec

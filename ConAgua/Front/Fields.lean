@@ -573,7 +573,7 @@ theorem readNatLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) readNatLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [rdLoopN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (readNatLoop_spec p b hb (n + 1) s₀)
+  Triple.step_exec (readNatLoop_spec p b (n + 1) s₀)
 
 include hprn in
 attribute [local lang_grind] rdNatN NONE in

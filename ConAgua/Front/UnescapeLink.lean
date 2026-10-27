@@ -626,7 +626,7 @@ theorem strR_body (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
     rw [h0] at hq; exact hq (by decide)
   have hv1 : (v + 1).toNat = v.toNat + 1 := usizeStep b v hv
   have hcU : (v + 1).toUInt64 = c := by
-    rw [ConAgua.Scan.RecordsLink.succ_toUInt64 b h64 hsize, hc]
+    rw [ConAgua.Scan.RecordsLink.succ_toUInt64 h64, hc]
   have hsc := strClose_toNat_eq b h64 (by omega) (v + 1)
   dsimp only at h
   split at h
@@ -640,7 +640,7 @@ theorem strR_body (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
   have hcN : c.toNat = (v + 1).toNat := by rw [← hcU, USize.toNat_toUInt64]
   have hE : e = strClose b (v + 1) + 1 → d.toNat = (strClose b (v + 1)).toNat := by
     intro he'
-    rw [← hd, he', ConAgua.Scan.RecordsLink.succ_toUInt64 b h64 hsize, UInt64.add_sub_cancel,
+    rw [← hd, he', ConAgua.Scan.RecordsLink.succ_toUInt64 h64, UInt64.add_sub_cancel,
       USize.toNat_toUInt64]
   split at h
   · rename_i hesc

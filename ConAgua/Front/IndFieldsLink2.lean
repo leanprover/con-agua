@@ -126,7 +126,7 @@ theorem item_gen {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanRe
     (hS' : S i = .ok x e) (h0 : R m₁ q 0 st0 m₁)
     (hob : objW b.data m₁ i.toUInt64 kind q = some (e₂, m₂)) :
     e₂ = e.toUInt64 ∧ Fn m₁ q x m₂ := by
-  rw [objW_eq, ← succ_toUInt64 b h64 hsize, show (1 : Word) = bw true from rfl] at hob
+  rw [objW_eq, ← succ_toUInt64 h64, show (1 : Word) = bw true from rfl] at hob
   exact iobj_link b h64 hsize F kind q (R m₁ q) _ (H m₁ q) (i + 1) true 0 st0 m₁ x e
     e₂ m₂ (hS i x e hS') h0 hob
 

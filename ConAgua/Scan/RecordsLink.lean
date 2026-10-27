@@ -148,7 +148,7 @@ theorem nextMemberN_quote_link (i : USize) (w : Word) (h : i < b.usize) (hc : by
     rw [byteW_eq b h64 hsize, hc]; rfl
   rw [nextMemberN_quote b.data i.toUInt64 w hlt (by rw [hcw]; decide) (by rw [hcw]; decide)
     (by rw [hcw]; decide) hcw]
-  have hs := succ_toUInt64 b h64 hsize i
+  have hs := succ_toUInt64 h64 i
   have hke : UInt64.ofNat (keyEndN b.data (i.toUInt64 + 1).toNat) = (keyEnd b (i + 1)).toUInt64 := by
     rw [← hs, USize.toNat_toUInt64, keyEnd_toUInt64_eq b h64 (by omega)]
   simp only [hke]
@@ -186,7 +186,7 @@ theorem objN_link (F : USize → Bool → UInt32 → σ → ScanRes α) (mask : 
   by_cases h : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i h
     have hin := usizeInBounds b i h
     by_cases hws : isWs (byteAt b i) = true
@@ -414,7 +414,7 @@ theorem scanBool_link (v : USize) : okW (scanBool b v) = boolEndN b.data v.toUIn
   | none => simp [okW, L.Scan.Lit.encBool]
   | some vp =>
     obtain ⟨x, p⟩ := vp
-    have hp := scanBoolN_le b h64 hsize _ _ _ hs
+    have hp := scanBoolN_le b _ _ _ hs
     have hbs : b.data.size = b.size := rfl
     simp only [okW, L.Scan.Lit.encBool, List.headD_cons, List.tail_cons]
     simp only [show ((1 : Word) = 0) = False from by decide, ite_false]
@@ -464,7 +464,7 @@ theorem natListLoop_link (i : USize) (acc : List Nat) (w : Bool) (hacc : acc.len
   by_cases h : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i h
     have hin := usizeInBounds b i h
     rw [dite_eq_left h, dite_eq_left hlt]
@@ -539,7 +539,7 @@ theorem natList_link (i : USize) :
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     by_cases hc : byteAt b i = 91
     · rw [ite_eq_left (by simp [hc]), ite_eq_left ⟨hlt, by rw [byteW_eq b h64 hsize, hc]; rfl⟩,
-        natListLoop_link b h64 hsize (i + 1) [] true (by simp), succ_toUInt64 b h64 hsize]; rfl
+        natListLoop_link b h64 hsize (i + 1) [] true (by simp), succ_toUInt64 h64]; rfl
     · rw [ite_eq_right (by simp [hc]), ite_eq_right (fun h' => hc ((u8_toUInt64_eq _ 91 (by decide)).mp
         (by rw [← byteW_eq b h64 hsize]; exact h'.2)))]; rfl
   · have h0 : byteAt b i = 0 := by unfold byteAt; rw [dite_eq_right h]
@@ -640,7 +640,7 @@ theorem objListN_link (F : USize → List β → Bool → ScanRes (List β)) (it
   by_cases h : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i h
     have hin := usizeInBounds b i h
     by_cases hws : isWs (byteAt b i) = true
@@ -722,7 +722,7 @@ syntax "key_value " ident : tactic
 macro_rules
   | `(tactic| key_value $hs) => `(tactic| first
       | (apply keyStep_num _ ‹_› ‹_› (by decide) (by decide) $hs rfl; tuple_ex)
-      | (apply keyStep_usz _ ‹_› ‹_› (by decide) (by decide) $hs _ (by link_val); tuple_ex)
+      | (apply keyStep_usz (by decide) (by decide) $hs _ (by link_val); tuple_ex)
       | (split
          all_goals first
            | (rename_i heq; exact keyStep_res_err _ (by link_val) _ heq _)
@@ -798,7 +798,7 @@ theorem strName_link (i : USize) : okW (ConLeche.Frontend.scanStrName b i) = str
   unfold ConLeche.Frontend.scanStrName strNameN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (strNameLoop_link b h64 hsize (i + 1) true 0 0 "")]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [strName_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -815,7 +815,7 @@ theorem numName_link (i : USize) : okW (ConLeche.Frontend.scanNumName b i) = num
   unfold ConLeche.Frontend.scanNumName numNameN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (numNameLoop_link b h64 hsize (i + 1) true 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [numName_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -832,7 +832,7 @@ theorem app_link (i : USize) : okW (ConLeche.Frontend.scanAppExpr b i) = appN b.
   unfold ConLeche.Frontend.scanAppExpr appN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (appLoop_link b h64 hsize (i + 1) true 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [app_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -849,7 +849,7 @@ theorem lam_link (i : USize) : okW (ConLeche.Frontend.scanLamExpr b i) = binderN
   unfold ConLeche.Frontend.scanLamExpr binderN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (lamLoop_link b h64 hsize (i + 1) true 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [lam_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -866,7 +866,7 @@ theorem forall_link (i : USize) : okW (ConLeche.Frontend.scanForallExpr b i) = b
   unfold ConLeche.Frontend.scanForallExpr binderN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (forallLoop_link b h64 hsize (i + 1) true 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [forall_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -883,7 +883,7 @@ theorem letE_link (i : USize) : okW (ConLeche.Frontend.scanLetExpr b i) = letEN 
   unfold ConLeche.Frontend.scanLetExpr letEN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (letELoop_link b h64 hsize (i + 1) true 0 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [letE_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -900,7 +900,7 @@ theorem constE_link (i : USize) : okW (ConLeche.Frontend.scanConstExpr b i) = co
   unfold ConLeche.Frontend.scanConstExpr constEN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (constELoop_link b h64 hsize (i + 1) true 0 0 [])]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [constE_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -917,7 +917,7 @@ theorem proj_link (i : USize) : okW (ConLeche.Frontend.scanProjExpr b i) = projN
   unfold ConLeche.Frontend.scanProjExpr projN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (projLoop_link b h64 hsize (i + 1) true 0 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [proj_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -934,7 +934,7 @@ theorem rule_link (i : USize) : okW (ConLeche.Frontend.scanRule b i) = ruleN b.d
   unfold ConLeche.Frontend.scanRule ruleN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (ruleLoop_link b h64 hsize (i + 1) true 0 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [rule_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -949,7 +949,7 @@ theorem rulesLoop_link (i : USize) (acc : List RuleRec) (w : Bool) (hacc : acc.l
 theorem rules_link (i : USize) : okW (ConLeche.Frontend.scanRules b i) = rulesN b.data i.toUInt64 := by
   unfold ConLeche.Frontend.scanRules rulesN objListEntryN
   rw [entry_link b h64 hsize i 91 91 (by decide) rfl (by decide)
-    (rulesLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 b h64 hsize]; rfl
+    (rulesLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [rules_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -966,7 +966,7 @@ theorem indRec_link (i : USize) : okW (ConLeche.Frontend.scanIndRec b i) = indRe
   unfold ConLeche.Frontend.scanIndRec indRecN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (indRecLoop_link b h64 hsize (i + 1) true 0 false false _ 0 0 0 0 0 _ 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [indRec_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -981,7 +981,7 @@ theorem indRecsLoop_link (i : USize) (acc : List IndRecRec) (w : Bool) (hacc : a
 theorem indRecs_link (i : USize) : okW (ConLeche.Frontend.scanIndRecs b i) = indRecsN b.data i.toUInt64 := by
   unfold ConLeche.Frontend.scanIndRecs indRecsN objListEntryN
   rw [entry_link b h64 hsize i 91 91 (by decide) rfl (by decide)
-    (indRecsLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 b h64 hsize]; rfl
+    (indRecsLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [indRecs_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -998,7 +998,7 @@ theorem indType_link (i : USize) : okW (ConLeche.Frontend.scanIndType b i) = ind
   unfold ConLeche.Frontend.scanIndType indTypeN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (indTypeLoop_link b h64 hsize (i + 1) true 0 _ false false false _ 0 0 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [indType_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -1013,7 +1013,7 @@ theorem indTypesLoop_link (i : USize) (acc : List IndTypeRec) (w : Bool) (hacc :
 theorem indTypes_link (i : USize) : okW (ConLeche.Frontend.scanIndTypes b i) = indTypesN b.data i.toUInt64 := by
   unfold ConLeche.Frontend.scanIndTypes indTypesN objListEntryN
   rw [entry_link b h64 hsize i 91 91 (by decide) rfl (by decide)
-    (indTypesLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 b h64 hsize]; rfl
+    (indTypesLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [indTypes_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -1030,7 +1030,7 @@ theorem indCtor_link (i : USize) : okW (ConLeche.Frontend.scanIndCtor b i) = ind
   unfold ConLeche.Frontend.scanIndCtor indCtorN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (indCtorLoop_link b h64 hsize (i + 1) true 0 false _ 0 0 0 0 _ _)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [indCtor_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -1045,7 +1045,7 @@ theorem indCtorsLoop_link (i : USize) (acc : List IndCtorRec) (w : Bool) (hacc :
 theorem indCtors_link (i : USize) : okW (ConLeche.Frontend.scanIndCtors b i) = indCtorsN b.data i.toUInt64 := by
   unfold ConLeche.Frontend.scanIndCtors indCtorsN objListEntryN
   rw [entry_link b h64 hsize i 91 91 (by decide) rfl (by decide)
-    (indCtorsLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 b h64 hsize]; rfl
+    (indCtorsLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [indCtors_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -1062,7 +1062,7 @@ theorem axiomD_link (i : USize) : okW (ConLeche.Frontend.scanAxiomDecl b i) = ax
   unfold ConLeche.Frontend.scanAxiomDecl axiomDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (axiomDLoop_link b h64 hsize (i + 1) true 0 false _ 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [axiomD_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -1079,7 +1079,7 @@ theorem defD_link (i : USize) : okW (ConLeche.Frontend.scanDefDecl b i) = defDN 
   unfold ConLeche.Frontend.scanDefDecl defDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (defDLoop_link b h64 hsize (i + 1) true 0 _ _ 0 "" 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [defD_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -1096,7 +1096,7 @@ theorem thmD_link (i : USize) : okW (ConLeche.Frontend.scanThmDecl b i) = thmDN 
   unfold ConLeche.Frontend.scanThmDecl thmDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (thmDLoop_link b h64 hsize (i + 1) true 0 _ 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [thmD_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -1113,7 +1113,7 @@ theorem opaqueD_link (i : USize) : okW (ConLeche.Frontend.scanOpaqueDecl b i) = 
   unfold ConLeche.Frontend.scanOpaqueDecl opaqueDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (opaqueDLoop_link b h64 hsize (i + 1) true 0 false _ 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [opaqueD_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -1130,7 +1130,7 @@ theorem quotD_link (i : USize) : okW (ConLeche.Frontend.scanQuotDecl b i) = quot
   unfold ConLeche.Frontend.scanQuotDecl quotDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (quotDLoop_link b h64 hsize (i + 1) true 0 "" _ 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [quotD_link _ ‹_› ‹_›]) <;> rfl)
 
@@ -1147,7 +1147,7 @@ theorem indD_link (i : USize) : okW (ConLeche.Frontend.scanIndDecl b i) = indDN 
   unfold ConLeche.Frontend.scanIndDecl indDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (indDLoop_link b h64 hsize (i + 1) true 0 _ _ _)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 macro_rules | `(tactic| link_val) => `(tactic| (rw [indD_link _ ‹_› ‹_›]) <;> rfl)
 

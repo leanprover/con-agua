@@ -164,7 +164,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       have hpW := (lt_usize_iff b h64 hsize p).mp hpU
       have hpN := usizeInBounds b p hpU
       have hpEq : UInt64.ofNat (L.Scan.Leaves.skipWsN b.data (v.toUInt64 + 1).toNat) = p.toUInt64 := by
-        rw [← hp, skipWs_toUInt64_eq b h64 hb64, ← succ_toUInt64 b h64 hsize, USize.toNat_toUInt64]
+        rw [← hp, skipWs_toUInt64_eq b h64 hb64, ← succ_toUInt64 h64, USize.toNat_toUInt64]
       split at h; cases h; rename_i hke
       have hke' : keyEnd b (p + 1) ≠ 0 := by simpa using hke
       generalize hk : keyEnd b (p + 1) = ke at h hke'
@@ -175,7 +175,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       have hkb := keyEndN_bounds b.data _ hkn0
       have hp1 : (p + 1).toNat = p.toNat + 1 := usizeStep b p hpU
       have hkeEq : UInt64.ofNat (L.Scan.Leaves.keyEndN b.data (p.toUInt64 + 1).toNat) = ke.toUInt64 := by
-        rw [← succ_toUInt64 b h64 hsize p, USize.toNat_toUInt64, ← keyEnd_toUInt64_eq b h64 hb64, hk]
+        rw [← succ_toUInt64 h64 p, USize.toNat_toUInt64, ← keyEnd_toUInt64_eq b h64 hb64, hk]
       have hkeU : ke.toNat < b.size := by rw [hkeN]; exact hkb.2
       unfold hkvN
       rw [ite_eq_right (by intro h'; exact absurd hvW (UInt64.not_lt.mpr h')),
@@ -386,7 +386,7 @@ theorem dobj_link {σ : Type} (F : USize → Bool → UInt32 → σ → ScanRes 
     by_cases h125 : byteAt b i = 125
     · obtain ⟨rfl, hF⟩ := H.close i w seen st f d e hi h125 h hR
       rw [dobjN_close _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
-        nm_close b h64 hsize i _ hi hws h125, ← succ_toUInt64 b h64 hsize]
+        nm_close b h64 hsize i _ hi hws h125, ← succ_toUInt64 h64]
       exact ⟨rfl, hF⟩
     by_cases h44 : byteAt b i = 44
     · obtain ⟨rfl, h'⟩ := H.comma i w seen st d e hi h44 h

@@ -1241,9 +1241,9 @@ theorem sim_gen : ∀ e, GenSpec G ctx F e (gen ctx e) := by
   | ld8 a i ih => exact gen_ld8 hG hT hTab hF a ih
   | ld64 a i ih => exact gen_ld64 hG hT hTab hF a ih
   | ld64t a t i iht ihi => exact gen_ld64t hG hT hTab hF a iht ihi
-  | len64t a t ih => exact gen_len64t hG hT hTab hF a ih
-  | ldc dd i ih => exact gen_ldc hG hT hTab hF dd ih
-  | cmpw op a b iha ihb => exact gen_cmpw hG hT hTab hF op iha ihb
+  | len64t a t ih => exact gen_len64t hG hT hTab a ih
+  | ldc dd i ih => exact gen_ldc hG hT hTab dd ih
+  | cmpw op a b iha ihb => exact gen_cmpw hT hTab hF op iha ihb
   | ld8x8 s i ih => intro d fr code k hg; simp [gen] at hg
 
 end

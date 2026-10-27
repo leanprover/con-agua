@@ -314,7 +314,7 @@ theorem frontLineW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
         · cases hsc'
     subst hrr
     obtain ⟨m₁, hW, hm₁⟩ := Option.map_eq_some_iff.mp h
-    rw [← succ_toUInt64 b h64 hsize] at hW
+    rw [← succ_toUInt64 h64] at hW
     simp only [okRes, Prod.mk.injEq] at hm₁
     obtain ⟨hnx, rfl⟩ := hm₁
     have hnx' : nx = (lineFwdN b.data i.toUInt64).2 := by
