@@ -8,7 +8,7 @@ import ConAgua.Arena.DeclAndPinIndRef
 The models of `IndRealBph.lean` against the twin's `basisPinHitGo` over
 `[eqK, natK, emptyK, falseK]`: per kind the pinned block (`rom_basis_decls`, `RomRefs.basis`), the
 name pre-filter (`blockNames pinned == blockNames block`: the inner loop compares the name words,
-`bphNW_iff`, `bphNames_iff`), then the block copied to `IW` (`er_to_iw`, `erToIw_blk`) and the
+`bphW_loop2_iff`, `bphNames_iff`), then the block copied to `IW` (`er_to_iw`, `erToIw_blk`) and the
 canonical comparison (`canonEqList_refines`, whose literal premise `LitInj` comes from the twin
 state's `StateOK`, threaded through the pinned blocks' interning: `BasisKind.decls_run`).
 -/
@@ -151,25 +151,28 @@ theorem bphNames_iff {dn : NIdx → Option ConLeche.Name} {m : Mem} {o bo l : Wo
     simp only [blockNames, List.getElem?_map, ha3, hb3, Option.map_some, Option.some.injEq] at e
     exact bphDecI_inj ha2 hb2 (by rw [← ha4, ← hb4, e])
 
-/-- **The inner loop's model**: it reaches `l` exactly when the name words agree from `j` on. -/
-theorem bphNW_iff (m : Mem) (bo o l : Word) : ∀ (f : Nat) (j jf : Word),
-    bphNW f m bo o l j = some jf → j ≤ l →
-    (jf = l ↔ ∀ i : Word, j ≤ i → i < l → rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + i) + 1) =
+/-- **The name pre-filter's model** (`bphW.loop2`): it keeps the memory, and reaches `l` exactly
+when the name words agree from `j` on. -/
+theorem bphW_loop2_iff (p : Prog) (m : Mem) (bo o l : Word) : ∀ (f : Nat) (j jf : Word) (m' : Mem),
+    bphW.loop2 p f m bo o l j = some (jf, m') → j ≤ l →
+    m' = m ∧ (jf = l ↔ ∀ i : Word, j ≤ i → i < l → rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + i) + 1) =
         rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (bo + i) + 1)) := by
   intro f
   induction f with
-  | zero => intro j jf h; simp [bphNW] at h
+  | zero => intro j jf m' h; rw [bphW.loop2.eq_1] at h; cases h
   | succ f ih =>
-  intro j jf h hjl
+  intro j jf m' h hjl
   have hjl' := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : j < l
   · have hj' := UInt64.lt_iff_toNat_lt.mp hj
     by_cases hd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + j) + 1) =
         rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (bo + j) + 1)
-    · rw [bphNW_next f m bo o l j hj hd] at h
+    · rw [bphW.loop2.arm2 p f m bo o l j hj hd, bphW.j2.arm1] at h
       have hj1 : (j + 1).toNat = j.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; have := l.toNat_lt; omega
-      rw [ih (j + 1) jf h (UInt64.le_iff_toNat_le.mpr (by omega))]
+      obtain ⟨hm, hiff⟩ := ih (j + 1) jf m' h (UInt64.le_iff_toNat_le.mpr (by omega))
+      refine ⟨hm, ?_⟩
+      rw [hiff]
       constructor
       · intro H i h1 h2
         by_cases e : i = j
@@ -178,13 +181,15 @@ theorem bphNW_iff (m : Mem) (bo o l : Word) : ∀ (f : Nat) (j jf : Word),
           exact H i (UInt64.le_iff_toNat_le.mpr (by have := UInt64.le_iff_toNat_le.mp h1; omega)) h2
       · intro H i h1 h2
         exact H i (UInt64.le_iff_toNat_le.mpr (by have := UInt64.le_iff_toNat_le.mp h1; omega)) h2
-    · rw [bphNW_brk f m bo o l j hj hd, Option.some.injEq] at h
-      subst h
+    · rw [bphW.loop2.arm1 p f m bo o l j hj hd, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨rfl, ?_⟩
       constructor
       · intro e; subst e; exact absurd hj (by simp)
       · intro H; exact absurd (H j (UInt64.le_iff_toNat_le.mpr (Nat.le_refl _)) hj) hd
-  · rw [bphNW_exit f m bo o l j hj, Option.some.injEq] at h
-    subst h
+  · rw [bphW.loop2.arm3 p f m bo o l j hj, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨rfl, ?_⟩
     have : j.toNat = l.toNat := by
       have : ¬ j.toNat < l.toNat := fun h' => hj (UInt64.lt_iff_toNat_lt.mpr h')
       omega
@@ -228,22 +233,22 @@ theorem bph_run_hit (blk pinned : List IConstantInfo) (K : ConLeche.BasisKind) (
   simp only [StateT.run_bind, h, exc_ok_bind']
   cases b <;> rfl
 
-/-- **The loop over the kinds refines `basisPinHitGo`** on the kinds from `k`. -/
-theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+/-- **The loop over the kinds (`bphW.loop1`) refines `basisPinHitGo`** on the kinds from `k`. -/
+theorem bphW_loop1_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (bo bl : Word) (blk : List IConstantInfo) :
     ∀ (f : Nat) (m m' : Mem) (a : AState) (k : Word) (r : List Word),
-      bphGoW p f m bo bl k = some (r, m') → StageR dn vis fe m a → ConRon.Bridge.StateOK a →
+      bphW.loop1 p f m bo bl k = some (r, m') → StageR dn vis fe m a → ConRon.Bridge.StateOK a →
       DecB (fun m => decEBlk dn m bo.toNat bl.toNat) m blk → k.toNat ≤ 4 →
       ∃ x a', (basisPinHitGo blk (bphKinds.drop k.toNat)).run a = .ok (x, a') ∧
         StageR dn vis fe m' a' ∧ IWGrow m m' ∧ BphR x r := by
   intro f
   induction f with
-  | zero => intro m m' a k r h; simp [bphGoW] at h
+  | zero => intro m m' a k r h; rw [bphW.loop1.eq_1] at h; cases h
   | succ f ih =>
   intro m m' a k r h hS hok hB hk4
   by_cases hk : k < 4
   rotate_left
-  · rw [bphGoW_exit p f m bo bl k hk, Option.some.injEq, Prod.mk.injEq] at h
+  · rw [bphW.loop1.arm2 p f m bo bl k hk, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have : k.toNat = 4 := by
       have : ¬ k.toNat < 4 := fun h' => hk (UInt64.lt_iff_toNat_lt.mpr (by simpa using h'))
@@ -254,8 +259,8 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   rw [bphKinds_drop _ hkn]
   rcases h1 : callW p f "rom_basis_decls" [k] m with _ | ⟨r1, m1⟩
-  · rw [bphGoW_none1 p f m bo bl k hk h1] at h; cases h
-  rw [bphGoW_step p f m m1 bo bl k r1 hk h1] at h
+  · rw [bphW.loop1.arm1 p f m bo bl k hk, h1, bphW.k_rom_basis_decls.none] at h; cases h
+  rw [bphW.loop1.arm1 p f m bo bl k hk, h1] at h
   obtain ⟨pinned, a1, hrun1, hS1, hg1, hDR1⟩ := P.rom.basis dn vis fe k hkn f m a r1 m1 hS h1
   have hrun1' : BasisKind.decls (basisOfW k.toNat) a = .ok (pinned, a1) := hrun1
   obtain ⟨hok1, -, -, -, hden1⟩ := ConRon.Bridge.BasisKind.decls_run hok hrun1'
@@ -270,7 +275,7 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
     rw [mapM_opt_length _ _ _ this]; simp
   rw [bph_run_step blk pinned _ _ a a1 hrun1]
   -- the next kind
-  have next : bphGoW p f m1 bo bl (k + 1) = some (r, m') →
+  have next : bphW.loop1 p f m1 bo bl (k + 1) = some (r, m') →
       blockNames pinned ≠ blockNames blk →
       ∃ x a', (if blockNames pinned == blockNames blk then
           (do if ← canonEqList blk pinned then pure (some (basisOfW k.toNat)) else pure none)
@@ -283,35 +288,37 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
     exact ⟨x, a', hr, hS', hg1.trans hg', hR'⟩
   by_cases hl : r1.tail.headD 0 = bl
   rotate_left
-  · rw [ite_eq_right hl] at h
+  · rw [bphW.k_rom_basis_decls.arm2 p f bo bl k r1 m1 hl, bphW.j1.arm1] at h
     refine next h fun he => hl (UInt64.toNat_inj.mp ?_)
     have := congrArg List.length he
     simp only [blockNames, List.length_map] at this
     omega
-  rw [ite_eq_left hl] at h
-  cases hn : bphNW (f + 1) m1 bo (r1.headD 0) (r1.tail.headD 0) 0 with
-  | none => rw [hn] at h; cases h
-  | some j =>
-  rw [hn, bphK2_some] at h
+  rw [bphW.k_rom_basis_decls.arm1 p f bo bl k r1 m1 hl] at h
+  cases hn : bphW.loop2 p (f + 1) m1 bo (r1.headD 0) (r1.tail.headD 0) 0 with
+  | none => rw [hn, bphW.k_loop2.none] at h; cases h
+  | some jm =>
+  obtain ⟨j, m1'⟩ := jm
+  rw [hn] at h
   have hI1 := hS1.2.2.2.1
   have hE1 := hS1.2.2.2.2.1
   have hB1' : decEBlk dn (truncM m1) bo.toNat (r1.tail.headD 0).toNat = some blk := by
     rw [hl]; exact hB1
-  have hiff := bphNW_iff m1 bo (r1.headD 0) (r1.tail.headD 0) (f + 1) 0 j hn
+  obtain ⟨hm1, hiff⟩ := bphW_loop2_iff p m1 bo (r1.headD 0) (r1.tail.headD 0) (f + 1) 0 j m1' hn
     (UInt64.le_iff_toNat_le.mpr (by simp))
+  rw [hm1] at h
   have hnames := bphNames_iff hD1 hB1' hI1 hE1
   by_cases hj : j = r1.tail.headD 0
   rotate_left
-  · rw [ite_eq_right hj] at h
+  · rw [bphW.k_loop2.arm2 p f bo bl k _ _ j m1 hj, bphW.j1.arm1] at h
     refine next h fun he => hj ?_
     exact hiff.mpr fun i _ hi => hnames.mpr he i hi
-  rw [ite_eq_left hj] at h
+  rw [bphW.k_loop2.arm1 p f bo bl k _ _ j m1 hj] at h
   have heq : blockNames pinned = blockNames blk :=
     hnames.mp fun i hi => hiff.mp hj i (UInt64.le_iff_toNat_le.mpr (by simp)) hi
   rw [ite_eq_left (by simpa using heq)]
   have hne : bl.toNat ≠ 0 := by rw [← hl, ← hl1]; exact hpne
   -- `er_to_iw`
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [bphK3_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (bphW.k_er_to_iw.none _ _ _ _ _); rw [bphW.k_er_to_iw.arm1] at h
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (L.Ind.erToIw_specW p P.iw_alloc P.er_copy P.er_to_iw f ⟨m1, Locals.init []⟩ _ _) h2
   subst hs2
@@ -320,7 +327,7 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   obtain ⟨hp1, hpb1⟩ := decRBlk_canon hDR1 hpne
   have hp2 := decPL_growAP hp1 hpb1 hg2
   -- `canon_eq_list`
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [bphK4_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (bphW.k_canon_eq_list.none _ _)
   rw [hl2] at h3
   obtain ⟨s3, hs3, -, hok3, ⟨⟨hS3, hg3, hd3⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (canonEqList_refines p P.canon dn vis fe _ _ _ _ blk pinned f ⟨s2.mem, Locals.init []⟩ a1
@@ -333,12 +340,12 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   refine ⟨if b then some (basisOfW k.toNat) else none, a3, bph_run_hit _ _ _ _ _ _ hrun3, ?_⟩
   obtain ⟨hd3a, -⟩ := hd3
   by_cases hb : r3.headD 0 = 0
-  · rw [ite_eq_right (by simpa using hb), Option.some.injEq, Prod.mk.injEq] at h
+  · rw [bphW.k_canon_eq_list.arm2 p k r3 _ hb, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have : b = false := by rw [← hd3a, hb]; rfl
     subst this
     exact ⟨hS3, hg1.trans (hg2.trans hg3), rfl⟩
-  · rw [ite_eq_left hb, Option.some.injEq, Prod.mk.injEq] at h
+  · rw [bphW.k_canon_eq_list.arm1 p k r3 _ hb, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have : b = true := by rw [← hd3a]; simpa using hb
     subst this
@@ -362,9 +369,10 @@ theorem basisPinHit_ok {p : Prog} (P : BphProg p) :
   rcases n with _ | n
   · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (bph_specW p P.bph n ⟨m, Locals.init []⟩ o l) hc
+    (bph_specW p P.bph (n + 1) ⟨m, Locals.init []⟩ o l) hc
   subst hs'
-  obtain ⟨x, a', hrun, hS', hg, hR⟩ := bphGoW_ok P dn vis fe o l blk (n + 1) m s'.mem a 0 r hW hS hok
+  rw [bphW.arm1] at hW
+  obtain ⟨x, a', hrun, hS', hg, hR⟩ := bphW_loop1_ok P dn vis fe o l blk (n + 1) m s'.mem a 0 r hW hS hok
     hB (by simp)
   refine ⟨x, a', hrun, hS', hg, ?_⟩
   cases x <;> exact hR

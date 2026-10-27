@@ -72,3 +72,87 @@ docs:
 
 So one is a missing construct (nested loops, now generated); the others are proof failures or
 copies of hand ok models, which go away only with the ok model (§3).
+
+## 2. Generator changes (landed, #59, master e2f3ea22)
+
+`ConAgua/L/ModelGen.lean`, tests in `ConAgua/L/ModelGenTest.lean` (one small function per
+feature, each with its `l_model`; the module takes about 2 s):
+
+* **Pool slices**: `A⦃x⦄` is `rdW (m.arr64 (tierA A (x >>> 40))) (x &&& 1099511627775)`;
+  `⦃x⦄.tier`, `.idx`, `.base` the same words (each through the `fold` rules).
+* **Block operations**: `le64!(A.u8, i)` is `le64 (m.src8 (.arr A)) i.toNat`;
+  `x := scan!(A.u8, i, e, C)` is `UInt64.ofNat (scanN (m.src8 (.arr A)) C i.toNat e.toNat)`;
+  `copy!(…)` is `Mem.copy64`/`Mem.copy8w` (tiered operands through `tierA`). The byte source is
+  kept as `Mem.src8 m s`, the shape `step` produces, so no unfolding is needed. The step proofs get
+  `L.ld8x8` / `L.warr` / `L.st8` in `vcgen` only when the code has them (no change for the
+  existing 172 `l_model` modules).
+* **Byte stores** `A.u8[i] := e`: `Mem.set8`.
+* **Nested loops**: a loop in a loop body is a loop model of its own (`fW.loopᵢ`, numbered in
+  source order), applied by the enclosing loop's body at `n + 1` as at the top level; the code
+  after it in the enclosing body is a continuation whose result is the enclosing loop's; a
+  `return` inside passes `Sig.ret` on (or is the function's result in a fused loop). The enclosing
+  loop's spec gets the inner loop's spec in `vcgen`. A `while` written in the `lfn` inside another
+  becomes the named block `fW.loopᵢ.stmt` inside the outer one's; named blocks may splice named
+  blocks. Termination: the inner loop is called at the same fuel as the outer one and is lower in
+  the depth order (the second component of `(fuel, depth)`).
+* **Fixes**: loops are numbered by a counter (two loops in one function no longer both get
+  `loop1`); a loop followed by `abort` is fused only for `while k == k` (the other case made the
+  generated spec unprovable); the named blocks spliced in a loop body count for the loop's
+  analysis (the locals they assign, their `return`s; before, the loop's spec claimed a frame for a
+  local the block assigns).
+
+Not supported still: `FunDecl`s with parameters (the 311 template instances, `memoFindG S`; they
+share generic hand specs), a loop calling a member of its own group, global updates `g += e`,
+stores `R⟨t, i⟩.f := e` (no hand-specified function uses the last two).
+
+The gate build after the change (every `l_model` module rebuilt) took 365–400 s and passed
+unchanged: no existing model changed its names or shape.
+
+## 3. Pilot conversions
+
+Three functions in files without array or tier reasoning, outside the absarrays-switch's set:
+
+| function | file(s) | what changed | lines | elaboration |
+|---|---|---|---:|---|
+| `basis_pin_hit` (nested loops) | `Arena/IndRealBph.lean`, `IndRealBph2.lean` | 2 named blocks, 3 hand models, 3 continuations, 9 arm lemmas, 5 patterns, 3 specs → one `l_model` (`bphW`, `bphW.loop1`, `bphW.loop2`); the refinement (`bphW_loop2_iff`, `bphW_loop1_ok`) rewritten against the generated arms, same structure | −212 +53 = **−159** | 1.69 s → 1.77 s in declarations over 20 ms (both modules; noise level) |
+| `class_read_minor`, `class_read_minor_tail` | `Arena/RecClassSpec/CrW.lean` | 2 models, 8 continuations, 15 arm lemmas, 14 patterns, 2 specs → two `l_model`s; the refinements `tailW_sim`, `minorW_sim` only renamed (`mK2_ok` → `minorW.k_open_pis_at_fvars_f.arm2`, `(K := mK1 n nP mo ml d cR dom)` → `(K := minorW.k_pi_binders cR n nP mo ml d dom)`) | −180 +57 = **−123** | the two specs 4.07 s → 1.28 s (`trace.profiler`, the generated step proofs; the `l_model` commands under 0.11 s) |
+
+Per function about 60–160 lines, as lrecords estimated (50–70 for a typical function, more for
+loops). Time: where the hand spec used `sym … finish`, the generated `simp` recipe with loads as
+`rdW` (`extra [ld64_rd_spec] simp []`) is 3× faster; elsewhere neutral. The statements callers use
+kept their names and shapes (`bph_specW` now at fuel `n` with `bphW.arm1` unfolding it; the CrW
+specs unchanged), so no file outside the converted ones changed.
+
+What a conversion takes: the generator's continuation names (`fW.k_<callee>`) and argument
+order (the models' Lean parameters first, then the fuel, then the captured locals in declaration
+order) replace the hand names; arm lemmas become `fW.k_….armᵢ` with the hypothesis `hc1`; zero
+fuel is `fW.eq_1`. When the hand model had the generator's shape (CrW) this is a rename (15 min);
+when it was shaped differently (bph: the inner loop inlined into the outer model, a continuation
+taking "the rest" as an argument) the refinement's case split needs re-threading (1 h).
+
+## 4. Roll-out (after absarrays-switch lands)
+
+`_tmp/mgen/rollout.json` (from `inventory.py`): 241 of the 412 files with hand specs have no array
+or tier vocabulary (`tier1`, `tierOff`, `words.size`, `HasW`, `SameShape`, `Frame`, `tierA`) and
+are outside the switch's current branches; their hand specs name 1 122 functions (with repeats
+across files). Largest first by hand `…W` definitions: `Arena/PromoteCI.lean` (36),
+`Front/IndApplySpec.lean` (30), `Rom/CIReadRefW.lean` (21), `Arena/WhnfM2CRefine.lean` (14),
+`Front/IndFieldsSpec.lean` (13), `Arena/Abs1.lean` (13), `Arena/InstLPWalk.lean`,
+`Arena/PropReadW.lean`, `Front/IndApplySpec2.lean` (11 each), `Arena/DefEqLeaves.lean` (10). The
+list is recomputed once the switch has landed (its final file set is larger than its branches
+today). Order: files where the hand model already has the generator's shape (continuations named
+after callees, arm lemmas used by `rw`) first, since there the refinement only needs renames.
+
+## 5. What stays hand-written, and why
+
+* the 311 template instances (`memoFindG S`, …): generic specs over the schema, one per template;
+  the generator would need `FunDecl`s with parameters;
+* hand ok models whose refinements need bounds or shapes the generator does not produce:
+  `classes_nfs` (`cnsW` checks every store in bounds, the refinement uses it), `struct_unit_head`'s
+  error model (the same), `m2c_and2` (the pushes as `and2Push`), models over `prd` and other
+  named readers until a `fold` for loads exists;
+* the error models of §1.2 that copy hand ok models: they go with their ok model;
+* the error models whose generated proof fails or times out (`target_k53_args`, `infer_proj_at`,
+  `infer_proj`, `iota_rec_vck`, `iota_rec_fire2`): proof work, not coverage;
+* the scanners (`skip_ws`, `key_end`, …): their specs state pure models (`skipWsN`) the twin
+  bridge uses, not word models, so a generated word model would add a layer, not remove one.
