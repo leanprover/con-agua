@@ -62,7 +62,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
         rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-      (by simp [FVREC, FVSLOT, FVLP])
+      (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP])
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
         rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -72,7 +72,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
       (fun x hx => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
         rcases hx with rfl | rfl <;> decide)
-  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [FVREC, FVSLOT, FVLP, SPN]) (by decide)
+  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP, SPN]) (by decide)
   have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact ⟨⟨hok, ⟨M, hS', KeptAll.refl _ _,
       StackKept.of_frame hf⟩,

@@ -952,7 +952,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     have hrun1 := AM.run_of_ok _ _ hok1
     have hspn1 : m₁.arr64 SPN = m.arr64 SPN :=
       hfr1c.1 SPN (fun h => by
-        unfold L.Rom.StoreA at h; simp [lowTierArrs, SPN] at h) (by decide)
+        unfold L.Rom.StoreA at h; simp [tier1, tierOff, lowTierArrs, SPN] at h) (by decide)
     have hcpl := Keeps.run (keeps_cpl_internProj (decI T) j.toNat (decE b)) hrun1
     have hS1 : CoreS dn m₁ (AM.st (internE (.proj (decI T) j.toNat (decE b))) a) vis fe M eb :=
       hS.of_proj hD1 hcpl hfr1

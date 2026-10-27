@@ -140,7 +140,7 @@ theorem pinA_idArrs : ∀ x ∈ PinA, x ∉ idArrs := by
 theorem pinA_not {x : ArrId} (h : 64 ≤ x ∧ x < 256) (h' : x ≠ PINS) : x ∉ PinA := by
   obtain ⟨n, rfl⟩ : ∃ n : Nat, n = x := ⟨x, rfl⟩
   intro hx
-  simp only [PinA, StoreA, lowTierArrs, List.mem_cons, List.mem_append, List.mem_range,
+  simp only [tier1, tierOff, PinA, StoreA, lowTierArrs, List.mem_cons, List.mem_append, List.mem_range,
     List.mem_map] at hx
   rcases hx with hx | hx | ⟨y, -, e⟩
   · exact h' hx
