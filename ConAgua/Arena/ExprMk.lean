@@ -484,16 +484,13 @@ theorem hw_fields (G c : Word) (hc : c < 134217728) :
   simp only [UInt64.lt_iff_toNat_lt, show (134217728 : Word).toNat = 134217728 from rfl] at hc
   constructor
   · apply UInt64.toNat_inj.mp
-    simp only [idxW, UInt64.toNat_and]
-    rw [show (134217727 : Word).toNat = 2 ^ 27 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+    rw [idxW_toNat]
     simp only [UInt64.toNat_add, UInt64.toNat_mul, show (134217728 : Word).toNat = 134217728 from rfl]
     omega
   · apply UInt64.toNat_inj.mp
-    simp only [tierW, UInt64.toNat_and, UInt64.toNat_shiftRight, UInt64.toNat_add, UInt64.toNat_mul,
-      UInt64.toNat_mod, Nat.shiftRight_eq_div_pow, Nat.and_one_is_mod,
-      show (134217728 : Word).toNat = 134217728 from rfl, show (2 : Word).toNat = 2 from rfl,
-      show (27 : Word).toNat = 27 from rfl, show (1 : Word).toNat = 1 from rfl,
-      show 2 ^ (27 % 64) = 134217728 from rfl]
+    rw [tierW_toNat']
+    simp only [UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_mod,
+      show (134217728 : Word).toNat = 134217728 from rfl, show (2 : Word).toNat = 2 from rfl]
     omega
 
 /-- `der_b`'s three reads do not look at the binary tables' slot arrays (a growth changes only

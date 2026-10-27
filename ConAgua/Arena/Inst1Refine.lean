@@ -147,8 +147,7 @@ def IArmOK (n : Nat) : Prop :=
 /-- The tag word and its `UInt32` (the twin's `h.tag`). -/
 theorem tag_iff (h g : Word) (hh : h.toNat < 2 ^ 32) (hg : g.toNat < 16) :
     h >>> 28 = g ↔ (h >>> 28).toUInt32 = g.toUInt32 := by
-  have hl : (h >>> 28).toNat < 16 := by
-    rw [UInt64.toNat_shiftRight]; simp only [Nat.shiftRight_eq_div_pow]; simp; omega
+  have hl : (h >>> 28).toNat < 16 := shr28_lt h hh
   constructor
   · intro e; rw [e]
   · intro e

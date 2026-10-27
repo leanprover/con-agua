@@ -67,20 +67,18 @@ theorem idxW_tierW_of_decE (r w : Word) (h : decE r = decE w) :
     have := congrArg UInt32.toNat e; simpa [UInt64.toNat_toUInt32] using this
   constructor
   · apply UInt64.toNat_inj.mp
-    simp only [idxW, UInt64.toNat_and]
-    have : (134217727 : Word).toNat = 2 ^ 27 - 1 := rfl
-    rw [this, Nat.and_two_pow_sub_one_eq_mod, Nat.and_two_pow_sub_one_eq_mod]; omega
+    rw [idxW_toNat, idxW_toNat]; omega
   · apply UInt64.toNat_inj.mp
-    simp only [tierW, bit27_toNat]; omega
+    rw [tierW_toNat', tierW_toNat']; omega
 
 /-- The handle words of the node an append made: its index and tier. -/
 theorem new_handle (r : Word) (g : UInt32) (t : Word) (n : Nat) (hg : g.toNat < 16) (ht : t ≤ 1)
     (hn : n < 2 ^ 27) (h : decE r = decI (hdW g.toUInt64 t (UInt64.ofNat n))) :
     idxW r = UInt64.ofNat n ∧ tierW r = t := by
   obtain ⟨h1, h2⟩ := idxW_tierW_of_decE r _ h
-  obtain ⟨h3, h4⟩ := idxW_hdW g.toUInt64 t (UInt64.ofNat n) (by simpa using hg) ht
-    (by simp; omega)
-  exact ⟨h1.trans h3, h2.trans h4⟩
+  have hn' : (UInt64.ofNat n).toNat < 2 ^ 27 := by simp; omega
+  exact ⟨h1.trans (hdW_idx _ t _ (by simpa using hg) ht hn'),
+    h2.trans (hdW_tier _ t _ (by simpa using hg) ht hn')⟩
 
 /-! ## One tier's derived words across a change -/
 

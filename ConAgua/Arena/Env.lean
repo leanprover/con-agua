@@ -35,15 +35,13 @@ namespace L.Arena
 /-! ## Row addresses -/
 
 theorem tagW_toNat (w : Word) : (tagW w).toNat = rowTag w := by
-  simp [tagW, rowTag, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+  rw [tagW, shr28_toNat]; rfl
 
 /-- `w`'s row index as an L expression computes it: `2 (w mod 2^27)`. -/
 def ixW (w : Word) : Word := (w &&& 134217727) <<< 1
 
 theorem ixW_toNat (w : Word) (_hw : w.toNat < 2 ^ 32) : (ixW w).toNat = rowIx w := by
-  have h1 : (w &&& 134217727).toNat = w.toNat % 2 ^ 27 := by
-    rw [UInt64.toNat_and]
-    rw [show (134217727 : UInt64).toNat = 2 ^ 27 - 1 by rfl, Nat.and_two_pow_sub_one_eq_mod]
+  have h1 : (w &&& 134217727).toNat = w.toNat % 2 ^ 27 := idxW_toNat w
   rw [ixW, UInt64.toNat_shiftLeft, h1]; simp [Nat.shiftLeft_eq, rowIx]; omega
 
 theorem nat_split27 (a : Nat) :
@@ -869,18 +867,15 @@ def tblPutL : FunDecl := lfn (j, q) locals () {
 def tixW (w : Word) : Word := w &&& 134217727
 
 theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := by
-  rw [tixW, UInt64.toNat_and]
-  rw [show (134217727 : UInt64).toNat = 2 ^ 27 - 1 by rfl, Nat.and_two_pow_sub_one_eq_mod]; rfl
+  rw [tixW]; exact idxW_toNat w
 
 /-- The memory after `tbl_row_set(w, v)`. -/
 def tblSet (m : Mem) (w v : Word) : Mem := m.set64 (tblArr w) (tixW w) v
 
 theorem tagW28_toNat (w : Word) : (w >>> 28).toNat = rowTag w := by
-  simp [rowTag, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+  rw [shr28_toNat]; rfl
 
-theorem tierW_toNat (w : Word) : ((w >>> 27) &&& 1).toNat = rowTier w := by
-  rw [UInt64.toNat_and]
-  simp [rowTier, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow, Nat.and_one_is_mod]
+theorem tierW_toNat (w : Word) : ((w >>> 27) &&& 1).toNat = rowTier w := bit27_toNat w
 
 theorem tierA_tbl (w : Word) (g : Nat) (hg : rowTag w = g) (hg2 : g ≤ 2) :
     tierA (129 + g) ((w >>> 27) &&& 1) = tblArr w := by

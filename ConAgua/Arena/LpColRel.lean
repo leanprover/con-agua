@@ -23,20 +23,6 @@ namespace L.Arena
 
 /-! ## Moved here from `DerRel.lean` (generic in the table) -/
 
-theorem idxW_hdW (g t n : Word) (_hg : g.toNat < 16) (ht : t ≤ 1) (hn : n.toNat < 2 ^ 27) :
-    idxW (hdW g t n) = n ∧ tierW (hdW g t n) = t := by
-  have ht' : t.toNat ≤ 1 := ht
-  constructor
-  · apply UInt64.toNat_inj.mp
-    simp only [idxW, hdW, UInt64.toNat_and]
-    have : (134217727 : Word).toNat = 2 ^ 27 - 1 := rfl
-    rw [this, Nat.and_two_pow_sub_one_eq_mod]
-    simp only [UInt64.toNat_add, UInt64.toNat_mul]
-    simp; omega
-  · apply UInt64.toNat_inj.mp
-    simp only [tierW, bit27_toNat, hdW, UInt64.toNat_add, UInt64.toNat_mul]
-    simp; omega
-
 theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s r d : Word)
     (h : derPutW A c m₁ s r d = some m') : MemFrame [A, tier1 A] [] m₁ m' := by
   unfold derPutW at h

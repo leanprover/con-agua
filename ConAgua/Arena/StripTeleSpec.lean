@@ -263,9 +263,7 @@ def StripRes (o k n : Word) (m' : Mem) (r : List Word) : Option (List EIdx × EI
 theorem tag_beq_iff (w : Word) (hw : H w) (t : Word) (ht : t.toNat < 16) :
     ((decE w).tag == t.toUInt32) = decide (w >>> 28 = t) := by
   rw [decE_tag w hw]
-  have key : (w >>> 28).toNat = w.toNat / 268435456 := by
-    rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]
-  have hlt : (w >>> 28).toNat < 16 := by simp only [H] at hw; rw [key]; omega
+  have hlt : (w >>> 28).toNat < 16 := shr28_lt w hw
   by_cases h : w >>> 28 = t
   · simp [h]
   · simp only [h, decide_false]
