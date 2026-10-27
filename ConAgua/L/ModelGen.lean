@@ -99,9 +99,23 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   (an abort) is the model's; out of bounds, where the model reads a default, has code `0` and is
   left out.
 
-Not supported (an error names the statement or the callee): nested loops, a loop that calls a
-member of its own group (unless through its spec, above), byte stores, `FunDecl`s with parameters (`memoFindG S`) and models with
-Lean parameters, members that only change the memory. Array bounds are not modelled: a load is
+* the **block operations and byte accesses**: a pool slice word `A⦃x⦄` is `rdW` of tier `x >>> 40`
+  at `x &&& (2^40 - 1)` (`⦃x⦄.tier`, `.idx`, `.base` the same words); `le64!(A.u8, i)` is
+  `le64 (m.src8 (.arr A)) i.toNat`; `x := scan!(A.u8, i, e, C)` is `UInt64.ofNat (scanN (m.src8 …) C
+  i.toNat e.toNat)`; `copy!(…)` is `Mem.copy64`/`Mem.copy8w` and a byte store `A.u8[i] := e` is
+  `Mem.set8` (no change out of bounds, as `set64`); the step proofs get `L.warr`, `L.ld8x8`,
+  `L.st8` in `vcgen` as needed;
+* **nested loops**: a loop in a loop's body is a loop model of its own, applied by the enclosing
+  loop's body; a `return` in it passes the signal on to the enclosing loop (or is the function's
+  result if that loop is fused); the enclosing loop's spec uses the inner loop's spec. A `while`
+  written in the `lfn` inside another becomes the named block `fW.loopᵢ.stmt` in the outer one's;
+  a loop nested in a named block must be a named block itself. Loops are numbered in source
+  order (`loop1` the outermost first). A loop followed by `abort` is fused only if it never exits
+  normally (`while 0 == 0`).
+
+Not supported (an error names the statement or the callee): a loop that calls a member of its own
+group (unless through its spec, above), `FunDecl`s with parameters (`memoFindG S`), global
+updates `g += e`, stores `R⟨t, i⟩.f := e`. Array bounds are not modelled: a load is
 `rdW` (`0` out of bounds), a store is `Mem.set64` (no change out of bounds); where L aborts, the
 spec says nothing.
 -/
@@ -861,7 +875,7 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
   | `(lexpr| le64!($a:ident, $i:lexpr)) => do
     noteVcg #["L.ld8x8"]
     let src ← bsrc ctx a
-    pure (.raw (← `(L.le64 $src ($(← (← transE E ctx i).render)).toNat)))
+    pure (.raw (← `(L.le64 $src (UInt64.toNat $(← (← transE E ctx i).render)))))
   | `(lexpr| mulhi($a:lexpr, $b:lexpr)) => bin "mulhi" a b
   | `(lexpr| u64($c:lcond)) => do
     let c ← transC E ctx c
@@ -1149,7 +1163,7 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       let src ← bsrc ctx a
       let i ← (← transE E ctx i).render
       let e ← (← transE E ctx e).render
-      transS E (setEnv ctx k (.raw (← `(UInt64.ofNat (L.scanN $src $c ($i).toNat ($e).toNat))))) rest
+      transS E (setEnv ctx k (.raw (← `(UInt64.ofNat (L.scanN $src $c (UInt64.toNat $i) (UInt64.toNat $e)))))) rest
     | `(lstmt| copy!($d:ident $[⟨$dt:lexpr⟩]?, $di:lexpr, $src:ident $[⟨$st:lexpr⟩]?, $si:lexpr, $n:lexpr)) => do
       -- `D[di + j] := S[si + j]` for `j < n` (`Mem.copy64`, `Mem.copy8w`)
       if ctx.ro then throwErrorAt s "l_model: a read-only model cannot write"
@@ -1167,9 +1181,9 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       let m ← ctx.mem.render
       let (sa, sk) ← splitArr src
       let m' ← if sk == "u64" then do
-          `(L.Mem.copy64 $m $dA $di $(← warrT sa st) $si ($n).toNat)
+          `(L.Mem.copy64 $m $dA $di $(← warrT sa st) $si (UInt64.toNat $n))
         else do
-          `(L.Mem.copy8w $m $dA $di $(← bsrc ctx src) $si ($n).toNat)
+          `(L.Mem.copy8w $m $dA $di $(← bsrc ctx src) $si (UInt64.toNat $n))
       transS E { ctx with mem := .raw m' } rest
     | `(lstmt| if $c:lcond $b:lblock) => ite c (← blockStmts b) []
     | `(lstmt| if $c:lcond $b:lblock else $t:lblock) => ite c (← blockStmts b) (← blockStmts t)
@@ -1442,14 +1456,19 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
   -- fused: a loop with a `return`, followed by the function's last statement, `return …` or
   -- `abort`: the loop's model returns the function's result (the hand models' shape, the spec
   -- `fW.loopᵢ … = some ((r.retOr [e…]).headD 0, s'.mem)`)
+  let forever : Bool := match c with
+    | `(lcond| $a:num == $b:num) => a.getNat == b.getNat
+    | _ => false
   let fuse? : Option (Option (Array (TSyntax `lexpr))) :=
     if !(sig && ctx.ft.isNone && ctx.loop.isNone) then none else
     match rest with
     | [s] => match s with
       | `(lstmt| return $e:lexpr) => some (some #[e])
       | `(lstmt| return ($e:lexpr, $es:lexpr,*)) => some (some (#[e] ++ es.getElems))
-      | `(lstmt| abort) | `(lstmt| abort $_:ident) => some none
-      | s => if s.raw.isOfKind ``L.Notation.lfail then some none else none
+      -- an `abort` after the loop only when the loop never exits normally (`while 0 == 0`):
+      -- otherwise its normal exit, the abort, is outside the loop's statement and its spec
+      | `(lstmt| abort) | `(lstmt| abort $_:ident) => if forever then some none else none
+      | s => if forever && s.raw.isOfKind ``L.Notation.lfail then some none else none
     | _ => none
   if let some retEs? := fuse? then
     let outUses : Array Nat := (retEs?.getD #[]).foldl (fun acc e => unionN acc (usesOf ctx e)) #[]
@@ -1488,10 +1507,11 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
   let bodyK ← if sig then do
       -- a `return` in the loop: the function's result, or in an enclosing loop that loop's
       -- result with the signal passed on (a nested loop)
-      let retB ← match ctx.loop with
-        | some L => if L.exitStmts.isSome then ctxK.retList (← `(L.Sig.retVal $rI))
-            else pure (loopLeaf ctxK L (some (.raw rI)))
-        | none => ctxK.retList (← `(L.Sig.retVal $rI))
+      let rv ← `(L.Sig.retVal $rI)
+      let nest : Option LoopInfo := ctx.loop.filter (·.exitStmts.isNone)
+      let retB ← match nest with
+        | some oL => pure (loopLeaf ctxK oL (some (MT.raw rI)))
+        | none => ctxK.retList rv
       pure (MR.ite (.cmp "=" (.raw rI) (.raw (mkIdent `L.Sig.normal))) bodyK retB)
     else pure bodyK
   let bodyKT ← bodyK.render E.exc
@@ -1538,8 +1558,7 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
   let st ← get
   let refs := st.ks.filterMap fun kd => if usedL.contains kd.name then some kd.name else none
   let kd : KDef := { name, fuel := true, caps := P.map (ctx.names[·]!), capMem := true, binder := 7, res := `r, body := lbody, key := toString name, refs }
-  let lm : LoopMeta := { name, model := st.base, stmt := cst.getD (name ++ `stmt), direct, params := P, outs, frames, sig, ro := ctx.ro, called := calledL, loops := loopsL,
-    parent := ctx.loop.map (·.name) }
+  let lm : LoopMeta := { name, model := st.base, stmt := cst.getD (name ++ `stmt), direct, params := P, outs, frames, sig, ro := ctx.ro, called := calledL, loops := loopsL, parent := ctx.loop.map (·.name) }
   modify fun st => { st with ks := st.ks.push kd, loops := st.loops.push lm, loopsCalled := st.loopsCalled.push name }
   -- 4. the enclosing code: the continuation, applied to the loop at `n + 1`
   let loopCall : MT := .app name (raws E.mps ++ #[.raw (← `($(mkIdent `n) + 1))] ++ #[ctx.mem] ++
@@ -2152,14 +2171,14 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     if lm.direct.isNone && !inner.isEmpty then
       throwError "l_model: a loop nested in the named block {lm.stmt} must be a named block itself"
     if let some w := lm.direct then
-      let mut w := w
+      let mut wn := w
       for l in inner do
         let some w2 := l.direct | continue
         let sp ← `(lstmt| ⟪$(mkIdent l.stmt)⟫)
-        w := replaceStx w fun t =>
+        wn := replaceStx wn fun t =>
           if t.getKind == w2.getKind && t.getPos? == w2.getPos? && t.getTailPos? == w2.getTailPos? then
             some sp.raw else none
-      let w : TSyntax `lstmt := ⟨w⟩
+      let w : TSyntax `lstmt := ⟨wn⟩
       emit doTrace (← `(command|
         /-- A loop of the L code, named for its spec (generated by `l_model`). -/
         def $(mkIdent lm.stmt):ident : L.Stmt := lblk ($fi.vars,*) { $w:lstmt }))
