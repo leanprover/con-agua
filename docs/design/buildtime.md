@@ -61,3 +61,24 @@ The last modules of the critical path, `Checker.IndArmClosed` (108 s) → `Check
 (After: `Built X (t)` times on a loaded machine. Estimated critical path 568 → ~540 s.) Left:
 `IndArmClosed`'s CPU (~100 s): one walk checking all nine arms per function (a per-name bitmask)
 would cut it several-fold.
+
+### `Checker.Prog`'s literals (batch 2)
+
+`Checker.Prog` (72 s in the cold build) is imported by every whole-program proof (`ProgWf`, the
+loop and arm closures, `LoopProg`, `RomProg*`, …). Its time was not the program: `checkerSkt_eq :
+Prog.skt checkerProg "check" = checkerSkt` is a 45 s kernel check (peak 11 GB), `checkerNrt_eq` 9 s,
+`skt_lit`'s evaluation 9.5 s and `checkerTab`'s `#guard` 9 s. Only the compiled code
+(`AsmPart*`, `AsmEmit`, `AsmFinal`) and the static check (`ProgWf`) read these literals. They now
+sit in three generated modules after `Prog.lean`, built in parallel: `Checker.ProgTab`
+(`checkerTab` and its `#guard`s), `Checker.ProgNrt`, `Checker.ProgSkt` (`scripts/checker_prog.py`;
+the merge queue regenerates them with the others, `scripts/mq.py`'s `GEN_PROG`; `shake-keep.txt`
+lists them, and `AsmPart4`…`9`, whose imports the generator writes).
+
+| module (alone) | before | after |
+|---|---:|---:|
+| `Checker.Prog` | 66 s | 2 s |
+| `Checker.ProgTab` | – | 14 s |
+| `Checker.ProgNrt` | – | 12 s |
+| `Checker.ProgSkt` | – | 42 s (peak 11 GB) |
+
+`checker.s` and `pins.bin` are unchanged (`asm_file.py --check`).
