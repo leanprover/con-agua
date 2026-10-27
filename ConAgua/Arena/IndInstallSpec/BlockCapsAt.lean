@@ -307,7 +307,7 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
     (n : Nat) : ∀ (m m' : Mem) (d s l : Word), F n m d s l = some m' →
     s.toNat + l.toNat < 2 ^ 64 →
     d.toNat + l.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
-    (∀ b, b ≠ EREC → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 EREC).size = (m.arr64 EREC).size ∧
+    (∀ b : TieredArray, b ≠ ↑EREC → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 EREC).size = (m.arr64 EREC).size ∧
     m.SameShape m' ∧
     ∀ i, (m'.arr64 EREC)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat then some ((m.arr64 src)[s.toNat + (i - d.toNat)]?.getD 0)
@@ -336,7 +336,7 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
       have hsz1 : (m1.arr64 EREC).size = (m.arr64 EREC).size := by
         rw [hm1, Mem.arr64_set64_same]; simp
       have hE1 : m1.arr64 src = m.arr64 src := by
-        rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hsrc]
+        rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hsrc)]
       have hget1 : ∀ i, (m1.arr64 EREC)[i]? = if i = d.toNat then some ((m.arr64 src)[s.toNat]?.getD 0)
           else (m.arr64 EREC)[i]? := by
         intro i
@@ -367,7 +367,7 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
 /-- **An `EREC` allocation followed by a write of `EREC` only** (a copy, `erCopy_get`'s first
 three facts) is a `MemFrame [EREC] [129]`. -/
 theorem erAllocCopy_frame {m m2 : Mem} {l : Word}
-    (hA : ∀ b, b ≠ EREC → m2.arr64 b = (erAllocMem m l).arr64 b)
+    (hA : ∀ b : TieredArray, b ≠ ↑EREC → m2.arr64 b = (erAllocMem m l).arr64 b)
     (hS : (m2.arr64 EREC).size = (m.arr64 EREC).size) (hW : (erAllocMem m l).SameShape m2) :
     MemFrame [EREC] [129] m m2 := by
   refine ⟨fun b hb hcb => ?_, fun x hx => ?_, fun b => ?_, ?_⟩
