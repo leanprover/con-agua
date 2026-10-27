@@ -72,14 +72,19 @@ theorem targetClassMatch_spec (p : Prog) (L : TcmLook p) (cR : CallM) (hcR : Cal
       tcmW cR n s₀.mem vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ L.tcm]
   simp only [callFn, targetClassMatch]
-  sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      hcR n "lvls_eq_c", blockShapeMemberNames_spec p L.ha L.mnc L.mn n,
-      blockShapeLps_spec p L.ha L.erc L.eri L.lps n,
-      plW_spec p L.ha L.ic L.sc L.sg L.pf L.pp L.ip L.plg L.pl L.il n,
-      targetHoles_spec p L.ff L.fp L.iff L.ic L.ha L.sc L.th n, tpd_spec p L.tp cR hcR n] <;>
-    finish (gen := 40) (instances := 20000) [tcmW, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
-      loc_init9, loc_init10, loc_init11]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    hcR n "lvls_eq_c", blockShapeMemberNames_spec p L.ha L.mnc L.mn n,
+    blockShapeLps_spec p L.ha L.erc L.eri L.lps n,
+    plW_spec p L.ha L.ic L.sc L.sg L.pf L.pp L.ip L.plg L.pl L.il n,
+    targetHoles_spec p L.ff L.fp L.iff L.ic L.ha L.sc L.th n, tpd_spec p L.tp cR hcR n]
+  all_goals (try clear hcR)
+  all_goals subst_vars
+  -- locals resolved by `simp` before `grind` (the `sym … finish` form: 9 s)
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+    reduceIte, decide_eq_true_eq] at *)
+  all_goals grind (gen := 40) (instances := 20000) [lang_grind, arena_grind, ind_grind, tcmW]
 
 end L.Ind
 
