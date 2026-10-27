@@ -138,7 +138,7 @@ theorem vb_const : VConst VB := fun _ _ _ _ h => h
 theorem ModeR.frame {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
     {VR : Mem → Word → ν → Prop} {m m' : Mem} {M : Std.HashMap (κ × Word) ν} {eb : Word}
     {t te : Std.HashMap κ ν} {A : List TieredArray} {C : List Word} (hS : S.WF) (hV : VConst VR)
-    (hA : S.arr ∉ A) (hC : S.cs ∉ C) (hf : MemFrame A C m m') (h : ModeR S K VR m M eb t te) :
+    (hA : (S.arr : TieredArray) ∉ A) (hC : S.cs ∉ C) (hf : MemFrame A C m m') (h : ModeR S K VR m M eb t te) :
     ModeR S K VR m' M eb t te :=
   ⟨memoRV_frame S hS K VR A C hA hC m m' hf (hV m m') M h.memo, h.cur, h.stored, h.empty⟩
 
@@ -168,7 +168,7 @@ theorem CoreRM.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {c : Ca
     {eb : Word} (hA : AvoidA 96 128 A) (hC : AvoidC 96 128 C) (hf : MemFrame A C m m')
     (h : CoreRM m c M eb) : CoreRM m' c M eb := by
   have nA : ∀ b : ArrId, 96 ≤ b → b < 128 → (b : TieredArray) ∉ A := fun b h1 h2 hb => by
-    have := hA _ hb; simp only [TieredArray.t0] at this; omega
+    have := hA _ hb; simp only [ArrId] at *; omega
   have nC : ∀ x : Word, 96 ≤ x.toNat → x.toNat < 128 → x ∉ C := fun x h1 h2 hx => by
     have := hC x hx; omega
   have wf := coreSch_wf
@@ -618,6 +618,15 @@ theorem tblArr_inj {w w' : Word} (h : rowTag w ≤ 2) (h' : rowTag w' ≤ 2)
   rcases tblArr_spec w h with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
   rcases tblArr_spec w' h' with ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ <;>
   first | exact ⟨by omega, by omega⟩ | (exfalso; rw [c, c'] at ha; revert ha; decide)
+
+/-- A table-row array is no array but `TIXA`, `TIXS`, `TIXN` (in either tier). -/
+theorem tblArr_ne_t0 (w : Word) {b : ArrId} (h1 : b ≠ TIXA) (h2 : b ≠ TIXS) (h3 : b ≠ TIXN) :
+    tblArr w ≠ b := fun e => by
+  have := congrArg TieredArray.arr e; rw [tblArr_arr] at this
+  rcases tixArr_mem (rowTag w) with e' | e' | e' <;> rw [e'] at this
+  · exact h1 this.symm
+  · exact h2 this.symm
+  · exact h3 this.symm
 
 /-- The table side of the environment: what `tkeys`, `tvals`, `tables` read besides `erecP`. -/
 def TblSame (m m' : Mem) : Prop :=

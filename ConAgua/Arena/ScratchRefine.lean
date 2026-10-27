@@ -164,7 +164,7 @@ theorem vacL_rd (sa : ArrId) : ∀ (l : List ArrId) (m : Mem), l.Nodup → sa �
     by_cases ha : a = sa
     · subst ha
       have e : (vacL as (vacW a m)).arr64 (tierA a 1) = (vacW a m).arr64 (tierA a 1) :=
-        vacL_arr as _ _ (fun b hb' => tierA_ne (fun h => hna (h ▸ hb')) 1 1)
+        vacL_arr as _ _ (fun b hb' => tierA_ne (fun h : a = b => hna (h ▸ hb')) 1 1)
       rw [e]
       exact ⟨(kzeroW_fr _ _ _ m).2.1 _, kzeroW_rd _ _ _ m hb⟩
     · have hin' : sa ∈ as := by simpa [Ne.symm ha] using hin
@@ -439,7 +439,7 @@ theorem ArenaD.resetA (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
       hf.2.2.2
   have hM : MemosR (resetMemA (preMem m) f) a.memos :=
     hR.memos.frame (by decide) (by simp [resetCtl, scratchCnts, memoCtl, SCB]) hf
-  have hcP : ∀ {α : Type} A, A ≠ CTL → A ∉ slot1Arrs → tier1 A ∉ slot1Arrs →
+  have hcP : ∀ {α : Type} (A : ArrId), A ≠ CTL → (A : TieredArray) ∉ slot1Arrs → tier1 A ∉ slot1Arrs →
       cP (α := α) A (resetMemA (preMem m) f) = cP A m := fun A hA h1 h2 => by
     funext t i x d; simp only [cP, hf.tier A h1 h2 hA]
   have hE : ∀ {α : Type} [BEq α] [Hashable α] (P : Nat → α → UInt64 → Prop),
@@ -795,10 +795,10 @@ written), and the next reset (`scratch_drop`) vacates every scratch table (a gro
 of `ASLOT`: 16 slots at offset 2) and restarts the base: `2^32`. -/
 #guard
   let ctl : Array Word := (Array.replicate 120 0).set! 62 (4611686018427387904 - 4294967296)
-  let slot (a : Nat) : Array Word :=
+  let slot (a : TieredArray) : Array Word :=
     if a = tier1 ASLOT then #[8, 2, 5, 5] ++ Array.replicate 32 7
     else if a ∈ slot1Arrs then #[0, 0] ++ Array.replicate 16 7 else #[]
-  let m : Mem := Mem.ofWords ([(CTL, ctl), (PT0, #[0])] ++ slot1Arrs.map fun a => (a, slot a))
+  let m : Mem := Mem.ofWords ([((CTL : TieredArray), ctl), ((PT0 : TieredArray), #[0])] ++ slot1Arrs.map fun a => (a, slot a))
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
     | .ok (_, m2) => (m1.arr64 CTL)[62]! == 4611686018427387904 && (m1.arr64 (tier1 SLOT))[2]! == 7 &&
