@@ -3,6 +3,7 @@ import ConAgua.Front.IndAlloc
 import ConAgua.Arena.IndView
 import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LdRd
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -73,10 +74,9 @@ def addK (x : Word) : Option Word → Option Word
 
 @[arena_grind =] theorem addK_some (x r : Word) : addK x (some r) = some (x + r) := rfl
 
-/-- **The model of `ctl_sum(k, c)`.** -/
-def ctlSumW : Nat → Mem → Word → Word → Option Word
-  | 0, _, _, _ => none
-  | n + 1, m, k, c => if c = 0 then some 0 else addK (rdW (m.arr64 CTL) k) (ctlSumW n m (k + 1) (c - 1))
+l_model ctlSum_spec (p : Prog) (hL : IndApplyLookups p)
+  fns [hL.ctl_sum ↦ ctlSumW ro]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-- After the three sums. -/
 def sfK (a b c : Option Word) : Option Word :=
@@ -89,16 +89,30 @@ def storeFuelW : Nat → Mem → Option Word
   | 0, _ => none
   | n + 1, m => sfK (ctlSumW n m 2 4) (ctlSumW n m 16 8) (ctlSumW n m 26 8)
 
+section
+variable (p : Prog) (hL : IndApplyLookups p)
+include hL
+
+theorem storeFuel_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "store_fuel" []
+    ⦃fun r s' => s' = s₀ ∧ storeFuelW n s₀.mem = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hL.store_fuel]
+  simp only [callFn, storeFuel]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ctlSum_spec p hL n] <;>
+        finish [storeFuelW, sfK]
+
+end
+
 /-! ## Telescopes -/
 
-/-- **The model of `pi_result_d(f, h)`.** -/
-def piResW : Nat → Mem → Word → Word → Option Word
-  | 0, _, _, _ => none
-  | n + 1, m, f, h =>
-    if f = 0 then none
-    else if eViewW m h = [] then none
-    else if (eViewW m h).headD 0 = 6 then piResW n m (f - 1) ((eViewW m h).tail.tail.headD 0)
-    else some h
+l_model piRes_spec (p : Prog) (hL : IndApplyLookups p)
+  fns [hL.pi_result_d ↦ piResW ro]
+  specs [eView_spec p hL.e_view n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-- After `ind_pi_tele_len`'s recursive call. -/
 def teleK : Option Word → Option Word
@@ -115,6 +129,25 @@ def teleW : Nat → Mem → Word → Word → Option Word
     else if eViewW m h = [] then none
     else if (eViewW m h).headD 0 = 6 then teleK (teleW n m (f - 1) ((eViewW m h).tail.tail.headD 0))
     else some 0
+
+section
+variable (p : Prog) (hL : IndApplyLookups p)
+include hL
+
+theorem tele_spec (n : Nat) : ∀ (s₀ : St) (f h : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_pi_tele_len" [f, h]
+    ⦃fun r s' => s' = s₀ ∧ teleW n s₀.mem f h = some (r.headD 0); ⊤⦄ := by
+  induction n with
+  | zero => intro s₀ f h; rw [invoke_eq _ hL.ind_pi_tele_len]; simp only [callFn, indPiTeleLen]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ f h
+    rw [invoke_eq _ hL.ind_pi_tele_len]
+    simp only [callFn, indPiTeleLen]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
+        eView_spec p hL.e_view n] <;> finish [teleW]
+
+end
 
 /-- After `pi_sort_tele_len`'s recursive call. -/
 def stK : Option (Word × Word) → Option (Word × Word)
@@ -134,6 +167,25 @@ def sortTeleW : Nat → Mem → Word → Word → Option (Word × Word)
     else if (eViewW m h).headD 0 = 2 then some (1, 0)
     else some (0, 0)
 
+section
+variable (p : Prog) (hL : IndApplyLookups p)
+include hL
+
+theorem sortTele_spec (n : Nat) : ∀ (s₀ : St) (f h : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_sort_tele_len" [f, h]
+    ⦃fun r s' => s' = s₀ ∧ sortTeleW n s₀.mem f h = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
+  induction n with
+  | zero => intro s₀ f h; rw [invoke_eq _ hL.pi_sort_tele_len]; simp only [callFn, piSortTeleLen]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ f h
+    rw [invoke_eq _ hL.pi_sort_tele_len]
+    simp only [callFn, piSortTeleLen]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
+        eView_spec p hL.e_view n] <;> finish [sortTeleW]
+
+end
+
 /-- `name_rec_pre`'s `str` arm, at node `i` of tier `t`: its string is `rec`. -/
 def nrpStr (m : Mem) (t i : Word) : Option (Word × Word) :=
   if tfld m NSTR t i 2 ≠ 3 then some (0, 0)
@@ -152,6 +204,25 @@ def nrpW (m : Mem) (h : Word) : Option (Word × Word) :=
   else if tcnt m NSTR (tierW h) ≤ idxW h then none
   else nrpStr m (tierW h) (idxW h)
 
+section
+variable (p : Prog) (hL : IndApplyLookups p)
+include hL
+
+set_option maxHeartbeats 1600000 in
+theorem nrp_spec (n : Nat) (s₀ : St) (h : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "name_rec_pre" [h]
+    ⦃fun r s' => s' = s₀ ∧ nrpW s₀.mem h = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hL.name_rec_pre]
+  simp only [callFn, nameRecPre]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE] <;> finish [nrpW, nrpStr, tierW, idxW]
+
+end
+
 /-! ## `IFL` slices -/
 
 /-- **The model of `ifl_contains(o, l, x, j)`.** -/
@@ -161,6 +232,24 @@ def containsW : Nat → Mem → Word → Word → Word → Word → Option Word
     if l ≤ j then some 0
     else if rdW (m.arr64 IFL) (o + j) = x then some 1
     else containsW n m o l x (j + 1)
+
+section
+variable (p : Prog) (hL : IndApplyLookups p)
+include hL
+
+theorem contains_spec (n : Nat) : ∀ (s₀ : St) (o l x j : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ifl_contains" [o, l, x, j]
+    ⦃fun r s' => s' = s₀ ∧ containsW n s₀.mem o l x j = some (r.headD 0); ⊤⦄ := by
+  induction n with
+  | zero => intro s₀ o l x j; rw [invoke_eq _ hL.ifl_contains]; simp only [callFn, iflContains]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o l x j
+    rw [invoke_eq _ hL.ifl_contains]
+    simp only [callFn, iflContains]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [containsW]
+
+end
 
 /-- After `ifl_nodup`'s `ifl_contains`: `rest` the recursive call's result. -/
 def nodupK (rest : Option Word) : Option Word → Option Word
@@ -178,107 +267,9 @@ def nodupW : Nat → Mem → Word → Word → Word → Option Word
     if l ≤ j then some 1
     else nodupK (nodupW n m o l (j + 1)) (containsW n m o l (rdW (m.arr64 IFL) (o + j)) (j + 1))
 
-/-- **The model of `ifl_find_last(o, x, j)`**: `(ok, k)`. -/
-def findLastW : Nat → Mem → Word → Word → Word → Option (Word × Word)
-  | 0, _, _, _, _ => none
-  | n + 1, m, o, x, j =>
-    if j = 0 then some (0, 0)
-    else if rdW (m.arr64 IFL) (o + j - 1) = x then some (1, j - 1)
-    else findLastW n m o x (j - 1)
-
-/-! ## Specs -/
-
-section specs
+section
 variable (p : Prog) (hL : IndApplyLookups p)
 include hL
-
-theorem ctlSum_spec (n : Nat) : ∀ (s₀ : St) (k c : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ctl_sum" [k, c]
-    ⦃fun r s' => s' = s₀ ∧ ctlSumW n s₀.mem k c = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ k c; rw [invoke_eq _ hL.ctl_sum]; simp only [callFn, ctlSum]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ k c
-    rw [invoke_eq _ hL.ctl_sum]
-    simp only [callFn, ctlSum]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [ctlSumW]
-
-theorem storeFuel_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "store_fuel" []
-    ⦃fun r s' => s' = s₀ ∧ storeFuelW n s₀.mem = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hL.store_fuel]
-  simp only [callFn, storeFuel]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ctlSum_spec p hL n] <;>
-        finish [storeFuelW, sfK]
-
-theorem piRes_spec (n : Nat) : ∀ (s₀ : St) (f h : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_result_d" [f, h]
-    ⦃fun r s' => s' = s₀ ∧ piResW n s₀.mem f h = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ f h; rw [invoke_eq _ hL.pi_result_d]; simp only [callFn, piResultD]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ f h
-    rw [invoke_eq _ hL.pi_result_d]
-    simp only [callFn, piResultD]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        eView_spec p hL.e_view n] <;> finish [piResW]
-
-theorem tele_spec (n : Nat) : ∀ (s₀ : St) (f h : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_pi_tele_len" [f, h]
-    ⦃fun r s' => s' = s₀ ∧ teleW n s₀.mem f h = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ f h; rw [invoke_eq _ hL.ind_pi_tele_len]; simp only [callFn, indPiTeleLen]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ f h
-    rw [invoke_eq _ hL.ind_pi_tele_len]
-    simp only [callFn, indPiTeleLen]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        eView_spec p hL.e_view n] <;> finish [teleW]
-
-theorem sortTele_spec (n : Nat) : ∀ (s₀ : St) (f h : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_sort_tele_len" [f, h]
-    ⦃fun r s' => s' = s₀ ∧ sortTeleW n s₀.mem f h = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ f h; rw [invoke_eq _ hL.pi_sort_tele_len]; simp only [callFn, piSortTeleLen]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ f h
-    rw [invoke_eq _ hL.pi_sort_tele_len]
-    simp only [callFn, piSortTeleLen]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        eView_spec p hL.e_view n] <;> finish [sortTeleW]
-
-set_option maxHeartbeats 1600000 in
-theorem nrp_spec (n : Nat) (s₀ : St) (h : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "name_rec_pre" [h]
-    ⦃fun r s' => s' = s₀ ∧ nrpW s₀.mem h = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hL.name_rec_pre]
-  simp only [callFn, nameRecPre]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE] <;> finish [nrpW, nrpStr, tierW, idxW]
-
-theorem contains_spec (n : Nat) : ∀ (s₀ : St) (o l x j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ifl_contains" [o, l, x, j]
-    ⦃fun r s' => s' = s₀ ∧ containsW n s₀.mem o l x j = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ o l x j; rw [invoke_eq _ hL.ifl_contains]; simp only [callFn, iflContains]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o l x j
-    rw [invoke_eq _ hL.ifl_contains]
-    simp only [callFn, iflContains]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [containsW]
 
 theorem nodup_spec (n : Nat) : ∀ (s₀ : St) (o l j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ifl_nodup" [o, l, j]
@@ -293,6 +284,20 @@ theorem nodup_spec (n : Nat) : ∀ (s₀ : St) (o l j : Word),
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
         contains_spec p hL n] <;> finish [nodupW]
 
+end
+
+/-- **The model of `ifl_find_last(o, x, j)`**: `(ok, k)`. -/
+def findLastW : Nat → Mem → Word → Word → Word → Option (Word × Word)
+  | 0, _, _, _, _ => none
+  | n + 1, m, o, x, j =>
+    if j = 0 then some (0, 0)
+    else if rdW (m.arr64 IFL) (o + j - 1) = x then some (1, j - 1)
+    else findLastW n m o x (j - 1)
+
+section
+variable (p : Prog) (hL : IndApplyLookups p)
+include hL
+
 theorem findLast_spec (n : Nat) : ∀ (s₀ : St) (o x j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ifl_find_last" [o, x, j]
     ⦃fun r s' => s' = s₀ ∧ findLastW n s₀.mem o x j = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
@@ -305,7 +310,7 @@ theorem findLast_spec (n : Nat) : ∀ (s₀ : St) (o x j : Word),
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [findLastW]
 
-end specs
+end
 
 /-! ## `validateIndD`'s loops: models -/
 
@@ -544,8 +549,6 @@ theorem listed_spec (n : Nat) (s₀ : St) (to tn : Word) :
 
 end specs2
 
-/-! ## The constructors in the block's order, `kExpected?`, the recursors: models -/
-
 /-- After a call that returns a word: the rest. -/
 def wK {α : Type} (rest : Word → Option α) : Option Word → Option α
   | none => none
@@ -600,15 +603,32 @@ def ctorW : Nat → Mem → Word → Word → Word → Word → Word → Word �
   | n + 1, m, nn, j, tt, np, fuel, cno, cn, co =>
     pK (fun f k => if f = 0 then none else ctorAt n m j tt np fuel (co + 10 * k)) (findLastW n m cno nn cn)
 
-/-- **The model of `vi_order_in(fo, cno, co, cn, fuel, np, oo, t, tt, jj, pos)`**: the position
-after. -/
-def orderInW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, fo, cno, co, cn, fuel, np, oo, t, tt, jj, pos =>
-    if rdW (m.arr64 IFR) (t + 4) ≤ jj then some (pos, m)
-    else wK (fun c => orderInW n (m.set64 IFL (oo + pos) c) fo cno co cn fuel np oo t tt (jj + 1) (pos + 1))
-      (ctorW n m (rdW (m.arr64 IFL) (fo + pos)) jj tt np fuel cno cn co)
+/-! ## The constructors in the block's order, `kExpected?`, the recursors -/
+
+section specs3
+variable (p : Prog) (hL : IndApplyLookups p)
+include hL
+
+set_option maxHeartbeats 2000000 in
+theorem ctor_spec (n : Nat) (s₀ : St) (nn j tt np fuel cno cn co : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_ctor" [nn, j, tt, np, fuel, cno, cn, co]
+    ⦃fun r s' => s' = s₀ ∧ ctorW n s₀.mem nn j tt np fuel cno cn co = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hL.vi_ctor]
+  simp only [callFn, viCtor]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        findLast_spec p hL n, nameGet_spec p hL.decl.expr.front n, exprGet_spec p hL.decl.expr n,
+        tele_spec p hL n] <;> finish (gen := 20) [ctorW, ctorAt, ctorTail, lkW]
+
+end specs3
+
+l_model orderIn_spec (p : Prog) (hL : IndApplyLookups p)
+  fns [hL.vi_order_in ↦ orderInW]
+  specs [ctor_spec p hL n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-- **The model of `vi_order_go(to, tn, tyn, fo, cno, co, cn, fuel, np, oo, ti, pos)`.** -/
 def orderGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
@@ -742,42 +762,9 @@ def validateW : Nat → Mem → Word → Word → Word → Word → Word → Wor
         (mapW n m₁ to tn 11 2 1)) (mapW n m to tn 11 0 0))
       (nparamsW n m to tn)) (unsafeW n m to tn 0)
 
-/-! ## The constructors in the block's order, `kExpected?`, the recursors: specs -/
-
-section specs3
+section specs4
 variable (p : Prog) (hL : IndApplyLookups p)
 include hL
-
-set_option maxHeartbeats 2000000 in
-theorem ctor_spec (n : Nat) (s₀ : St) (nn j tt np fuel cno cn co : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_ctor" [nn, j, tt, np, fuel, cno, cn, co]
-    ⦃fun r s' => s' = s₀ ∧ ctorW n s₀.mem nn j tt np fuel cno cn co = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hL.vi_ctor]
-  simp only [callFn, viCtor]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        findLast_spec p hL n, nameGet_spec p hL.decl.expr.front n, exprGet_spec p hL.decl.expr n,
-        tele_spec p hL n] <;> finish (gen := 20) [ctorW, ctorAt, ctorTail, lkW]
-
-theorem orderIn_spec (n : Nat) : ∀ (s₀ : St) (fo cno co cn fuel np oo t tt jj pos : Word),
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "vi_order_in" [fo, cno, co, cn, fuel, np, oo, t, tt, jj, pos]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      orderInW n s₀.mem fo cno co cn fuel np oo t tt jj pos = some (r.headD 0, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ fo cno co cn fuel np oo t tt jj pos
-    rw [invoke_eq _ hL.vi_order_in]; simp only [callFn, viOrderIn]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ fo cno co cn fuel np oo t tt jj pos
-    rw [invoke_eq _ hL.vi_order_in]
-    simp only [callFn, viOrderIn]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-        ctor_spec p hL n] <;> finish (gen := 20) [orderInW]
 
 theorem orderGo_spec (n : Nat) : ∀ (s₀ : St) (to tn tyn fo cno co cn fuel np oo ti pos : Word),
     ⦃fun s => s = s₀⦄
@@ -917,6 +904,6 @@ theorem validate_spec (n : Nat) (s₀ : St) (to tn co cn ro rn : Word) :
         unsafe_spec p hL n, nparams_spec p hL n, map_spec p hL n, listed_spec p hL n,
         nodup_spec p hL n, tail_spec p hL n] <;> finish (gen := 20) [validateW]
 
-end specs3
+end specs4
 
 end L.Front.Ind
