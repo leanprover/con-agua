@@ -207,7 +207,7 @@ theorem pval_exE (s : St) (R : TRec) (f : Word) (e : Expr) :
     simp [h1, h2, h3, Expr.pval, BinOp.eval]
 
 /-- The tier expression a load passes reads as the tier, up to the mask a tiered access applies. -/
-theorem evalE_tierX_bind {β : Type} (t : Expr) (a : ArrId) (K : ArrId → M β) :
+theorem evalE_tierX_bind {β : Type} (t : Expr) (a : ArrId) (K : TieredArray → M β) :
     (do let u ← evalE (TRec.tierX t); K (tierA a u)) = (do let u ← evalE t; K (tierA a u)) := by
   unfold TRec.tierX
   split
@@ -274,14 +274,14 @@ theorem tcnt_arr_eq {m m' : Mem} (R : TRec) (h : m.arr64 CTL = m'.arr64 CTL) (t 
     tcnt m R t = tcnt m' R t := by
   simp only [tcnt, h]
 
-theorem tfld_set64_ne (m : Mem) (R : TRec) (a : ArrId) (k v t i f : Word) (h : a ≠ R.arr)
+theorem tfld_set64_ne (m : Mem) (R : TRec) (a : TieredArray) (k v t i f : Word) (h : a ≠ R.arr)
     (h' : a ≠ tier1 R.arr) :
     tfld (m.set64 a k v) R t i f = tfld m R t i f := by
   simp only [tfld]
   rcases tierA_eq_or R.arr t with e | e <;> rw [e] <;>
     simp only [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h')]
 
-theorem tcnt_set64_ne (m : Mem) (R : TRec) (a : ArrId) (k v t : Word) (h : a ≠ CTL) :
+theorem tcnt_set64_ne (m : Mem) (R : TRec) (a : TieredArray) (k v t : Word) (h : a ≠ CTL) :
     tcnt (m.set64 a k v) R t = tcnt m R t := by
   simp only [tcnt, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)]
 
@@ -308,6 +308,6 @@ example : tfld m LET t i LET.b = rdW (m.arr64 (tierA 20 t)) (i * 2 + 1) := rfl
 example : tfld m PROJ t i PROJ.i = rdW (m.arr64 (tierA 31 t)) (i * 2 + 1) := rfl
 example : tfld m PROJ t i PROJ.e = rdW (m.arr64 (tierA 31 t)) (i * 2) >>> 32 := rfl
 example : tfld m BVAR t i BVAR.i = rdW (m.arr64 (tierA 22 t)) i := rfl
-example : tcnt m APP t = rdW (m.arr64 1) (4 + t) := rfl
+example : tcnt m APP t = rdW (m.arr64 CTL) (4 + t) := rfl
 end test
 end L.Arena
