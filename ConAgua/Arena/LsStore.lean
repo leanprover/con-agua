@@ -217,7 +217,7 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
       List.cons_append, List.getD_cons_zero, List.getD_cons_succ] at hs hb ⊢
     vcgen [step, evalArgs, evalE, setLocs,
       litHash_spec p hph n s₀ (s₀.loc (0 + 0)) (s₀.loc (1 + 0)) hs hb]
-    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Nat.zero_add]
+    all_goals simp_all [St.setLocs_cons, St.setLocs_nil]
   pre := by
     unfold PreOK
     simp only [lsCS]
@@ -242,12 +242,12 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
       rcases he with rfl | rfl | rfl <;> simp [Expr.pval, h],
     fun s => by simp [lsCS, argsOf, Expr.pval, List.range_succ]⟩
   room := fun s => by
-    simp only [lsCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+    simp only [lsCS, condOf, Cond.pval, Expr.pval, Cmp.eval, BinOp.eval]; rfl
   skips := by intro e he; simp [lsCS] at he
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [lsCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+    simp only [lsCS, Option.some.injEq] at h; (try subst h); (try decide)⟩
 
 theorem lspushOK_eqC (m : Mem) (t : Word) : lspushOK m t = pushOKC lsCS m t := by
   rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 3) (m.len64 (tierA LSREC t)),

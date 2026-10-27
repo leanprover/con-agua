@@ -88,7 +88,7 @@ theorem loadArgs_length (tab : Tab) : ∀ (i : Nat) (rs : List Reg64), (loadArgs
   | i, _ :: rs => by simp [loadArgs, loadArgs_length tab (i + 1) rs]
 
 /-- The entry's arguments from the table into the registers `rs` (`loadArgs`). -/
-theorem sim_loadArgs [Host] {G : Layout} (tab : Tab) (hT : tab = G.tab) (vs : List Word)
+theorem sim_loadArgs [Host] {G : Layout} (tab : Tab) (_hT : tab = G.tab) (vs : List Word)
     (Q : MachineState → Prop) :
     ∀ (rs : List Reg64) (i k : Nat) (s : MachineData), Code (loadArgs tab i rs) k → s.regs.r15.toNat = G.T →
     (∀ r ∈ rs, r ∈ allocRegs) → rs.Nodup → i + rs.length ≤ vs.length →
@@ -117,11 +117,11 @@ theorem sim_loadArgs [Host] {G : Layout} (tab : Tab) (hT : tab = G.tab) (vs : Li
       (fun r' h => hrs r' (List.mem_cons_of_mem _ h)) (List.nodup_cons.mp hnd).2 (by omega) (by omega) hv ?_
     intro s' hd hk hreg
     refine ev_congr (hK s' hd (fun r' hr' => ?_) (fun j hj => ?_)) (by simp; omega)
-    · rw [hk r' (fun h => hr' (List.mem_cons_of_mem _ h)), rget_set, if_neg (fun (e : r' = r) => hr' (e ▸ List.mem_cons_self))]
+    · rw [hk r' (fun h => hr' (List.mem_cons_of_mem _ h)), rget_set, ite_eq_right (fun (e : r' = r) => hr' (e ▸ List.mem_cons_self))]
     · cases j with
       | zero =>
         simp only [List.getD_cons_zero, Nat.add_zero]
-        rw [hk r hnr, rget_set, if_pos rfl]
+        rw [hk r hnr, rget_set, ite_eq_left rfl]
         simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (show i < vs.length by omega)]
       | succ j =>
         have := hreg j (by simpa using hj)
@@ -248,22 +248,21 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
     · addr_simp; rw [hbp]; exact h15
     have hT' : (UInt64.ofBitVec d.regs.rdi.toBitVec).toNat = G.T := by simpa using hT
     refine ev_movRM (Code.get (i := 15) htP rfl) ⟨by omega, by omega⟩ (v := vbx) ?_ ?_
-    · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, UInt64.toNat_toBitVec, Reg64s.r15_mk]
+    · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, UInt64.toNat_toBitVec]
       rw [hT', show (G.tab.save fd.nparams + 8).toNat = (G.tab.save fd.nparams).toNat + 8 by omega,
         ← Nat.add_assoc, hsaveE]; exact hs1
     refine ev_movRM (Code.get (i := 16) htP rfl) ⟨by omega, by omega⟩ (v := v12) ?_ ?_
-    · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, UInt64.toNat_toBitVec,
-        Reg64s.r15_mk]
+    · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, UInt64.toNat_toBitVec]
       rw [hT', show (G.tab.save fd.nparams + 16).toNat = (G.tab.save fd.nparams).toNat + 16 by omega,
         ← Nat.add_assoc, hsaveE]; exact hs2
     refine ev_movRM (Code.get (i := 17) htP rfl) ⟨by omega, by omega⟩ (v := v13) ?_ ?_
     · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, Reg64s.set64_r12,
-        UInt64.toNat_toBitVec, Reg64s.r15_mk]
+        UInt64.toNat_toBitVec]
       rw [hT', show (G.tab.save fd.nparams + 24).toNat = (G.tab.save fd.nparams).toNat + 24 by omega,
         ← Nat.add_assoc, hsaveE]; exact hs3
     refine ev_movRM (Code.get (i := 18) htP rfl) ⟨by omega, by omega⟩ (v := v15) ?_ ?_
     · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, Reg64s.set64_r12,
-        Reg64s.set64_r13, UInt64.toNat_toBitVec, Reg64s.r15_mk]
+        Reg64s.set64_r13, UInt64.toNat_toBitVec]
       rw [hT', hsaveE]; exact hs0
     refine ev_pop (Code.get (i := 19) htP rfl) (v := d.regs.r14) ?_ ?_
     · simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact h14
@@ -282,8 +281,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
         generalize run p N entry args m = res
         rcases res with e | ⟨r, m'⟩
         · cases e <;> simp [OutcomeRel]
-        · simp only [OutcomeRel, Reg64s.set64_rsp, Reg64s.set64_r15, Reg64s.set64_r14, Reg64s.set64_rbp,
-            Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]
+        · simp only [OutcomeRel]
           rintro ⟨h1, ⟨h2, h4⟩, h3⟩
           exact ⟨h1, ⟨h2.congr rfl rfl rfl rfl rfl rfl, h4⟩, h3⟩
   have hsp0 := hcs24
@@ -317,7 +315,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
     simp only [Reg64s.set64_rsp]
     rw [e2, e1]
     refine ev_push (Code.get (i := 7) ht rfl) ?_ ?_
-    · simp only [Reg64s.set64_rsp]; rw [e3, rdW_wrW_A (by omega) (by omega) (by omega),
+    · simp only; rw [e3, rdW_wrW_A (by omega) (by omega) (by omega),
         rdW_wrW_A (by omega) (by omega) (by omega)]
       exact hm _ (by omega) (by omega)
     simp only [Reg64s.set64_rsp]
@@ -393,7 +391,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
     have hc := hcellS i hi
     rw [h8m, ← hargv i hi, h3O.rdW_eq (by omega) ?_]
     refine Classical.byContradiction fun hc' => ?_
-    simp only [not_or, Nat.not_le, Nat.not_lt] at hc'
+    simp only [not_or, Nat.not_le] at hc'
     by_cases hb : G.T + G.tab.args.toNat + 8 * i ≤ d.regs.rsp.toNat - 24
     · exact (hcs (d.regs.rsp.toNat - 24) (Nat.le_refl _) (by omega)).2.2.2
         (by have := hcell i hi (d.regs.rsp.toNat - 24 - (G.T + G.tab.args.toNat + 8 * i)) (by omega)
@@ -414,7 +412,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
         MemFrameT G d.regs.rsp.toNat d.dmem st.data.dmem ∧
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s9 (at_ K) by
     by_cases hnp6 : fd.nparams ≤ argRegs.length
-    · rw [if_pos hnp6] at htArg hK
+    · rw [ite_eq_left hnp6] at htArg hK
       have hnp6' : fd.nparams ≤ 6 := by simpa [argRegs] using hnp6
       have hlen : (argRegs.take fd.nparams).length = fd.nparams := by simp; omega
       refine ev_congr (sim_loadArgs G.tab rfl args _ (argRegs.take fd.nparams) 0 _ s8 htArg
@@ -429,12 +427,12 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
         (UInt64.toBitVec_inj.mp (hkeep .r14 (by decide))) hd9 (fun _ i hi => ?_) (fun h => by omega)) ?_
       · have := hr9 i (by rw [hlen]; omega)
         have htk : (argRegs.take fd.nparams).getD i .rax = argRegs.getD i .rax := by
-          simp [List.getD_eq_getElem?_getD, List.getElem?_take, show i < fd.nparams by omega]
+          simp [List.getD_eq_getElem?_getD, show i < fd.nparams by omega]
         rw [htk] at this
         rw [this]
         simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi]
       · rw [hK, loadArgs_length, hlen]
-    · rw [if_neg hnp6] at htArg hK
+    · rw [ite_eq_right hnp6] at htArg hK
       exact ev_congr (H9 s8 rfl rfl rfl rfl rfl (fun h => absurd h (by omega)) (fun _ => rfl))
         (by rw [hK]; simp)
   intro s9 h9sp h9bp h915 h914 h9m hreg9 hrsi9
@@ -531,7 +529,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
       · have hc := hcellS i hi
         simp only [h8si' hl]
         rw [rdW_wrW_A (by omega) (by omega) (by omega), hargs8 i hi]
-      · simp only [UInt64.toNat_mk', A_toNat, h8si' hl]
+      · simp only [UInt64.toNat_mk', h8si' hl]
         have hc := hcellS 0 (by omega)
         rcases hc with hc | hc
         · right
@@ -539,8 +537,8 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
           exact hG.notStack_of_tab (x := G.lo) ⟨by omega, by omega⟩ ⟨Nat.le_refl _, by omega⟩
         · left; simp only [A, BitVec.toNat_ofNat]; omega
       · simp only [h8si' hl]; omega
-    · simp only [UInt64.toNat_mk', A_toNat, A, BitVec.toNat_ofNat, skOf_skt_entry]; omega
-    · simp only [UInt64.toNat_mk', A_toNat, A, BitVec.toNat_ofNat]; omega
+    · simp only [UInt64.toNat_mk', A, BitVec.toNat_ofNat, skOf_skt_entry]; omega
+    · simp only [UInt64.toNat_mk', A, BitVec.toNat_ofNat]; omega
     · exact h815
     · rw [h8m]
       exact hm3.only hG (Only.wrW (x := G.hi - 8) (by omega)) fun x h1 h2 => ⟨by omega, by omega⟩
@@ -576,11 +574,11 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
         exact hF9.same x hx hs ha ht hsp
     · -- the entry function returned
       intro r σ' d' hinv hm' hloc hrsp' hrbp' hr15' hr14' hrax' hpres'
-      simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
+      simp only [Int64.ofBitVec_toBitVec]
       refine ev_jmp (Code.get (i := 3) htP rfl) ?_
       rw [hlOk]
       refine ev_label (Code.get (i := 22) htP rfl) ?_
-      simp only [UInt64.toNat_mk', A_toNat] at hpres' hrsp'
+      simp only [UInt64.toNat_mk'] at hpres' hrsp'
       have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
       rw [hsz] at hpres' hrsp'
       have hTab' := hTab; simp only [maxOff] at hTab'
@@ -618,7 +616,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
       exact ResRel.set64 (n := G.tab.nres) (fun j hj hm => hR j (by omega) hm) (Or.inr (Or.inl rfl)) _
     · -- an error with code `0`: `rax := 0`, `rdx := 2`
       intro d' ⟨x, hx, hne⟩ hG'
-      simp only [UInt64.toNat_mk', A_toNat] at hG'
+      simp only [UInt64.toNat_mk'] at hG'
       have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
       rw [hsz] at hG'
       rw [hlErr]
@@ -636,7 +634,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
       · rw [hne.2]; simp [Reg64s.set64, Reg64s.get64]
     · -- an abort, its code in `rax`: `rdx := 2`
       intro d' k hx hG' hrax
-      simp only [UInt64.toNat_mk', A_toNat] at hG'
+      simp only [UInt64.toNat_mk'] at hG'
       have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
       rw [hsz] at hG'
       rw [hlAbort]
@@ -652,7 +650,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
       · simp [Reg64s.set64, Reg64s.get64, Err.code, hrax]
     · -- out of fuel or stack
       intro d' hG'
-      simp only [UInt64.toNat_mk', A_toNat] at hG'
+      simp only [UInt64.toNat_mk'] at hG'
       have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
       rw [hsz] at hG'
       exact hexh _ (by simp [hG'.rbp, h8bp]) (fun y h1 h2 => hcsS _ hG'.mem y h1 h2) (hfrS _ hG'.mem)

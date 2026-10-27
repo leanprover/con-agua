@@ -189,7 +189,7 @@ theorem vacB_spec (p : Prog) (sa : ArrId) (n : Nat) (s₀ : St) :
     step p (exec p n) (mapS (· + 1) (vacB sa))
     ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.mem = vacW sa s₀.mem; ⊤⦄ := by
   unfold vacB
-  simp only [L.Notation.blk, mapS, mapE]
+  simp only [mapS, mapE]
   vcgen [step, evalE_spec, setLoc, vacZ_step p sa n]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
     Expr.pval, rd64_rdWC, ↓reduceIte, Keep2] at *)

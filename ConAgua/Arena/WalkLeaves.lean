@@ -338,12 +338,10 @@ theorem flNode_step (n : Nat) (ih : FlGoSpec p n) : FlNodeSpec p (n + 1) := by
   simp only [callFn, flNode]
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, ih]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true,
-    Bool.and_eq_true, wl_getElem_rdW, wl_rd64_rdW, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE,
-    Expr.pval_idxE] at *)
+    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval,
+    Bool.and_eq_true, wl_rd64_rdW, Expr.pval_cntE] at *)
   all_goals grind [lang_grind, arena_grind, viewOK, tierW, idxW, lvsPush]
 
 include hpd hpf hps hp hpn in
@@ -747,12 +745,10 @@ theorem lsbNode_step (n : Nat) (ih : LsbGoSpec p n) : LsbNodeSpec p (n + 1) := b
   simp only [callFn, lsbNode]
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, leafMem_spec p hpm n, ih]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true,
-    Bool.and_eq_true, wl_getElem_rdW, wl_rd64_rdW, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE,
-    Expr.pval_idxE] at *)
+    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval,
+    Bool.and_eq_true, wl_rd64_rdW, Expr.pval_cntE] at *)
   all_goals grind [lang_grind, arena_grind, viewOK, tierW, idxW]
 
 include hpd hpf hps hp hpn hpm in

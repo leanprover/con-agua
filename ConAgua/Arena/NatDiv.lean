@@ -193,9 +193,8 @@ theorem shl1Loop_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 C s₀) :
     rw [exec, step_while (w := shl1Loop) rfl]
     vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
     all_goals clear ih
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
-      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
     all_goals grind (splits := 20) [arena_grind, lang_grind, Shl1Inv, Shl1Post]
 
 /-- The invariant of `div_sub`'s pass. -/
@@ -229,9 +228,8 @@ theorem dsubLoop_spec (n : Nat) (s₀ : St) (h : DSubInv P0 C s₀) :
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, natLimb_spec p hpl n,
       subBorrow_spec p hps n]
     all_goals clear ih
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
-      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
     all_goals grind (splits := 20) [arena_grind, lang_grind, DSubInv, DSubPost]
 
 /-- The invariant of `div_add`'s pass. -/
@@ -264,9 +262,8 @@ theorem daddLoop_spec (n : Nat) (s₀ : St) (h : DAddInv P0 C s₀) :
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, natLimb_spec p hpl n,
       addCarry_spec p hpc n]
     all_goals clear ih
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
-      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
     all_goals grind (splits := 20) [arena_grind, lang_grind, DAddInv, DAddPost]
 
 theorem shl1Loop_step_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 C s₀) :
@@ -844,7 +841,7 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
     all_goals (try simp only [RzInv, LimbInv, DivBase, RzPost, LimbPost] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      List.headD_cons, List.tail_cons, Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
       Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retVal, Sig.retOr] at *)
     all_goals grind (gen := 40) (ematch := 20) (splits := 30) (instances := 5000)

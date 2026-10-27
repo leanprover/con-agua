@@ -67,7 +67,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 0 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 0 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ((0:Word) = 0 ∨ (0:Word) = 2) by decide, show ¬((0:Word) = 1) by decide, show ¬((0:Word) = 3) by decide, show ¬((0:Word) = 4) by decide, show ¬((0:Word) = 5) by decide, ↓reduceIte] at hW
+    simp only [ show ¬((0:Word) = 1) by decide, show ¬((0:Word) = 3) by decide, show ¬((0:Word) = 4) by decide, show ¬((0:Word) = 5) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -88,7 +88,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 1 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 1 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ¬((1:Word) = 0 ∨ (1:Word) = 2) by decide, show ((1:Word) = 1) by decide, show ¬((1:Word) = 3) by decide, show ¬((1:Word) = 4) by decide, show ¬((1:Word) = 5) by decide, ↓reduceIte] at hW
+    simp only [show ¬((1:Word) = 0 ∨ (1:Word) = 2) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -121,7 +121,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 2 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 2 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ((2:Word) = 0 ∨ (2:Word) = 2) by decide, show ¬((2:Word) = 1) by decide, show ¬((2:Word) = 3) by decide, show ¬((2:Word) = 4) by decide, show ¬((2:Word) = 5) by decide, ↓reduceIte] at hW
+    simp only [ show ¬((2:Word) = 1) by decide, show ¬((2:Word) = 3) by decide, show ¬((2:Word) = 4) by decide, show ¬((2:Word) = 5) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -142,7 +142,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 3 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 3 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ¬((3:Word) = 0 ∨ (3:Word) = 2) by decide, show ¬((3:Word) = 1) by decide, show ((3:Word) = 3) by decide, show ¬((3:Word) = 4) by decide, show ¬((3:Word) = 5) by decide, ↓reduceIte] at hW
+    simp only [show ¬((3:Word) = 0 ∨ (3:Word) = 2) by decide, show ¬((3:Word) = 1) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -164,7 +164,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 4 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 4 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ¬((4:Word) = 0 ∨ (4:Word) = 2) by decide, show ¬((4:Word) = 1) by decide, show ¬((4:Word) = 3) by decide, show ((4:Word) = 4) by decide, show ¬((4:Word) = 5) by decide, ↓reduceIte] at hW
+    simp only [show ¬((4:Word) = 0 ∨ (4:Word) = 2) by decide, show ¬((4:Word) = 1) by decide, show ¬((4:Word) = 3) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -187,7 +187,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 5 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 5 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ¬((5:Word) = 0 ∨ (5:Word) = 2) by decide, show ¬((5:Word) = 1) by decide, show ¬((5:Word) = 3) by decide, show ¬((5:Word) = 4) by decide, show ((5:Word) = 5) by decide, ↓reduceIte] at hW
+    simp only [show ¬((5:Word) = 0 ∨ (5:Word) = 2) by decide, show ¬((5:Word) = 1) by decide, show ¬((5:Word) = 3) by decide, show ¬((5:Word) = 4) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW

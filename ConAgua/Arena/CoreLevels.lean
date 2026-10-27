@@ -162,7 +162,7 @@ theorem lvlEqRec_spec (n : Nat) (s₀ : St) (u v : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       memoFindG_spec lqSch p _ hp.lqf n, memoPutG_spec lqSch p _ hp.lqp n,
       lvlEq_spec p hp.lev hp.equiv hp.lvleq n] <;>
-    finish [rcdK_zero, rcdK_ne, msetG_eq]
+    finish [rcdK_zero, rcdK_ne]
 
 include hp in
 theorem lvlsEqRec_spec (n : Nat) (s₀ : St) (us vs : Word) :
@@ -175,7 +175,7 @@ theorem lvlsEqRec_spec (n : Nat) (s₀ : St) (us vs : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       memoFindG_spec lsqSch p _ hp.lsqf n, memoPutG_spec lsqSch p _ hp.lsqp n,
       lvlsEq_spec p hp.lev hp.equiv hp.equivs hp.lsnode hp.lvlseq n] <;>
-    finish [rcdK_zero, rcdK_ne, msetG_eq]
+    finish [rcdK_zero, rcdK_ne]
 
 include hp in
 theorem lvlEqC_spec (n : Nat) (s₀ : St) (u v : Word) :

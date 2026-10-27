@@ -4,6 +4,7 @@ public import ConAgua.Compiler.SimExpr
 public import ConAgua.Compiler.StepGen
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # The register-stack code generator (lane leafgen, step G2)
@@ -25,7 +26,7 @@ theorem reg64_beq_iff {a b : Reg64} : (a == b) = true ↔ a = b := by
 
 instance : LawfulBEq Reg64 where
   eq_of_beq h := reg64_beq_iff.mp h
-  rfl {a} := reg64_beq_iff.mpr rfl
+  rfl {_a} := reg64_beq_iff.mpr rfl
 
 /-- What the register-stack code changes: the registers `W` and the flags; not memory. -/
 structure XPost (W : List Reg64) (s s' : MachineData) : Prop where
@@ -201,7 +202,7 @@ theorem XPost.upd {W : List Reg64} {s s1 : MachineData} (h : XPost W s s1) {R : 
 theorem XPost.set {W : List Reg64} {s s1 : MachineData} (h : XPost W s s1) {r : Reg64} (hr : r ∈ W)
     (v : BitVec 64) (st : StatusFlags) :
     XPost W s { s1 with regs := s1.regs.set64 r v, status := st } :=
-  h.upd (fun r' hr' => by rw [rget_set, if_neg (by intro e; subst e; exact hr' hr)]) st
+  h.upd (fun r' hr' => by rw [rget_set, ite_eq_right (by intro e; subst e; exact hr' hr)]) st
 
 theorem XPost.flags {W : List Reg64} {s s1 : MachineData} (h : XPost W s s1) (st : StatusFlags) :
     XPost W s { s1 with status := st } := h.upd (fun _ _ => rfl) st
@@ -305,7 +306,7 @@ theorem genLea_spec {op : BinOp} {a b : Expr} {d : Reg64} {code : Program} (hg :
         cases a <;> simp_all [regOf]
       have hxl : x < ctx.nl := by simpa [Expr.wf] using hwf.1
       refine ev_leaS hc.head (hv _ _ (evalP_bin rfl rfl) ?_ ((XPost.refl _ s).set hd _ s.status))
-      simp only [rget_set, ite_true, hI.reg x hxl r hx, ofInt_toInt64, BinOp.eval, UInt64.toBitVec_add,
+      simp only [rget_set, ite_true, hI.reg x hxl r hx, ofInt_toInt64, BinOp.eval,
         UInt64.toBitVec_sub]
       simp [BitVec.sub_eq_add_neg]
     · cases hg
@@ -580,7 +581,7 @@ section
 variable [Host] {G : Layout} {ctx : Ctx} {F : Nat}
 
 /-- `d := A[i]` for a word array (`genLd`). -/
-theorem genLdW_spec (hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi : GenF}
+theorem genLdW_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi : GenF}
     (hi : GenSpec G ctx F i gi) {d : Reg64} {fr : List Reg64} {code : Program} {k : Nat}
     (hg : genLd ctx ln bs false i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
     (hwf : Expr.wf ctx.nl G.tab i = true) {arr : Array Word}
@@ -643,7 +644,7 @@ theorem genLdW_spec (hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi 
         have hj : (σ.loc x).toNat < arr.size := by omega
         refine ev_movRA hc.tail.tail.head hB ?_
         refine ev_ldX hc.tail.tail.tail.head (v := arr[(σ.loc x).toNat]) ?_ ?_
-        · simp only [rget_set, ite_true, if_neg hrd, hI.reg x hxl r hx]
+        · simp only [rget_set, ite_true, ite_eq_right hrd, hI.reg x hxl r hx]
           rw [← hget _ hj]; congr 1
           apply BitVec.eq_of_toNat_eq
           simp [A, UInt64.toNat_ofNat_of_lt' (show B < 2 ^ 64 by omega)]
@@ -676,7 +677,7 @@ theorem genLdW_spec (hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi 
         obtain ⟨_, B', hB', -, -⟩ := hA _ (hX1.flags (cmpFlags j.toBitVec (UInt64.ofNat arr.size).toBitVec))
         refine ev_movRA hcR.tail.tail.head hB ?_
         refine ev_ldX hcR.tail.tail.tail.head (v := arr[j.toNat]) ?_ ?_
-        · simp only [rget_set, ite_true, if_neg (Ne.symm htd), hd1]
+        · simp only [rget_set, ite_true, ite_eq_right (Ne.symm htd), hd1]
           rw [← hget _ hjs]; congr 1
           apply BitVec.eq_of_toNat_eq
           simp [A, UInt64.toNat_ofNat_of_lt' (show B < 2 ^ 64 by omega)]
@@ -685,7 +686,7 @@ theorem genLdW_spec (hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi 
           exact ((hX1.flags _).set ht _ _).set hd _ _
 
 /-- `d := A[i]` for a byte array (`genLd`). -/
-theorem genLdB_spec (hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi : GenF}
+theorem genLdB_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi : GenF}
     (hi : GenSpec G ctx F i gi) {d : Reg64} {fr : List Reg64} {code : Program} {k : Nat}
     (hg : genLd ctx ln bs true i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
     (hwf : Expr.wf ctx.nl G.tab i = true) {arr : Array UInt8}
@@ -748,7 +749,7 @@ theorem genLdB_spec (hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi 
         have hj : (σ.loc x).toNat < arr.size := by omega
         refine ev_movRA hc.tail.tail.head hB ?_
         refine ev_movzxX hc.tail.tail.tail.head (v := arr[(σ.loc x).toNat]) ?_ ?_
-        · simp only [rget_set, ite_true, if_neg hrd, hI.reg x hxl r hx]
+        · simp only [rget_set, ite_true, ite_eq_right hrd, hI.reg x hxl r hx]
           rw [← hget _ hj]; congr 1
           apply BitVec.eq_of_toNat_eq
           simp [A, UInt64.toNat_ofNat_of_lt' (show B < 2 ^ 64 by omega)]
@@ -780,7 +781,7 @@ theorem genLdB_spec (hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi 
         obtain ⟨_, B', hB', -, -⟩ := hA _ (hX1.flags (cmpFlags j.toBitVec (UInt64.ofNat arr.size).toBitVec))
         refine ev_movRA hcR.tail.tail.head hB ?_
         refine ev_movzxX hcR.tail.tail.tail.head (v := arr[j.toNat]) ?_ ?_
-        · simp only [rget_set, ite_true, if_neg (Ne.symm htd), hd1]
+        · simp only [rget_set, ite_true, ite_eq_right (Ne.symm htd), hd1]
           rw [← hget _ hjs]; congr 1
           apply BitVec.eq_of_toNat_eq
           simp [A, UInt64.toNat_ofNat_of_lt' (show B < 2 ^ 64 by omega)]
@@ -813,8 +814,8 @@ theorem arrB_plain {a : ArrId} (ha : a < G.tab.nb) {σ : St} {s : MachineData} (
   simp only [maxOff] at hTab
   have hsz := hI.mem.size8 a ha
   have hend := hG.end8 a ha
-  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [Tab.len8]; lomega, by simp [hT, Tab.len8]; lomega⟩, ?_⟩,
-    G.b8 a, .inl ⟨_, _, rfl, ⟨by simp [Tab.base8]; lomega, by simp [hT, Tab.base8]; lomega⟩, ?_⟩,
+  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [Tab.len8]; lomega, by simp [Tab.len8]; lomega⟩, ?_⟩,
+    G.b8 a, .inl ⟨_, _, rfl, ⟨by simp [Tab.base8]; lomega, by simp [Tab.base8]; lomega⟩, ?_⟩,
     by rw [hsz]; exact hend, fun j hj => hI.mem.get8 a ha j hj⟩
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len8 a ha
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base8 a ha
@@ -1173,7 +1174,7 @@ theorem gen_ldc (dd : List UInt8) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)
       rw [(List.isPrefixOf_iff_prefix.mp hwf.1).getElem hcc, List.getElem_drop]
     rw [hdj] at hb
     refine ev_movzxX hcR.tail.tail.tail.head (v := dd[j.toNat]) ?_ ?_
-    · simp only [rget_set, ite_true, if_neg (Ne.symm htd), hd1, Reg64s.get64_r15, UInt64.toNat_toBitVec]
+    · simp only [rget_set, ite_true, ite_eq_right (Ne.symm htd), hd1, Reg64s.get64_r15, UInt64.toNat_toBitVec]
       have h15 := hI1.r15
       rw [show A (s1.regs.r15.toNat + (G.tab.romBase + (romIdx dd G.tab.rom : Int)).toNat) + j.toBitVec =
           A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + (romIdx dd G.tab.rom + j.toNat)) from ?_]
@@ -1206,7 +1207,7 @@ theorem gen_cmpw (op : Cmp) {a b : Expr} (ha : GenSpec G ctx F a (gen ctx a)) (h
     refine ev_congr (hv (op.evalW va vb) _ ?_ ?_ (((hX1.set List.mem_cons_self _ _).set ht _ _).set
       List.mem_cons_self _ _)) (by simp; omega)
     · simp [evalP, hva, hvb]; rfl
-    · by_cases hcv : op.eval va vb = true <;> simp [rget_set, htd, Ne.symm htd, Cmp.evalW, hcc, hcv]
+    · by_cases hcv : op.eval va vb = true <;> simp [rget_set, Ne.symm htd, Cmp.evalW, hcc, hcv]
   · intro s1 he hX
     refine herr s1 ?_ hX
     obtain ⟨x, hx⟩ := he

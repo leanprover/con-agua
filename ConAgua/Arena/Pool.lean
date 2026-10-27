@@ -454,7 +454,7 @@ theorem prd_set64t (m : Mem) (t i v : Word) (x : Nat) (ht : t.toNat ≤ 1)
         Array.getElem?_setIfInBounds]
       by_cases e : i.toNat = x % 2 ^ 40
       · have e2 : x = 0 * 2 ^ 40 + i.toNat := by omega
-        rw [if_pos e, if_pos hi, if_pos e2]; rfl
+        rw [ite_eq_left e, ite_eq_left hi, ite_eq_left e2]; rfl
       · have e2 : ¬ x = 0 * 2 ^ 40 + i.toNat := by omega
         simp only [e, e2, ↓reduceIte]
     · have e2 : ¬ x = 0 * 2 ^ 40 + i.toNat := by omega
@@ -468,7 +468,7 @@ theorem prd_set64t (m : Mem) (t i v : Word) (x : Nat) (ht : t.toNat ≤ 1)
         Array.getElem?_setIfInBounds]
       by_cases e : i.toNat = x % 2 ^ 40
       · have e2 : x = t.toNat * 2 ^ 40 + i.toNat := by omega
-        rw [if_pos e, if_pos hi, if_pos e2]; rfl
+        rw [ite_eq_left e, ite_eq_left hi, ite_eq_left e2]; rfl
       · have e2 : ¬ x = t.toNat * 2 ^ 40 + i.toNat := by omega
         simp only [e, e2, ↓reduceIte]
 

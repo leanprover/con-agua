@@ -156,17 +156,17 @@ theorem Prog.skTree_spec (entry : FnName) : ∀ {p : Prog} {t : NTree}, Prog.skT
     have ih := Prog.skTree_spec entry h0
     intro k v hv
     by_cases hs : skipsCheck entry f fd = true
-    · rw [if_pos hs] at hi
+    · rw [ite_eq_left hs] at hi
       obtain ⟨_, hf'⟩ := NTree.find_insert hi
       rw [hf'] at hv
       by_cases hk : k = nameCode f
-      · rw [if_pos hk] at hv; cases hv
+      · rw [ite_eq_left hk] at hv; cases hv
         simp only [skipsCheck, Bool.and_eq_true, bne_iff_ne, ne_eq] at hs
         exact ⟨f, fd, List.mem_cons_self .., hk, hs.1.1, rfl⟩
-      · rw [if_neg hk] at hv
+      · rw [ite_eq_right hk] at hv
         obtain ⟨g, gd, hm, h1, h2, h3⟩ := ih k v hv
         exact ⟨g, gd, List.mem_cons_of_mem _ hm, h1, h2, h3⟩
-    · rw [if_neg hs] at hi; cases hi
+    · rw [ite_eq_right hs] at hi; cases hi
       obtain ⟨g, gd, hm, h1, h2, h3⟩ := ih k v hv
       exact ⟨g, gd, List.mem_cons_of_mem _ hm, h1, h2, h3⟩
 

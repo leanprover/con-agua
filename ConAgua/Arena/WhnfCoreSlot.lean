@@ -129,8 +129,7 @@ theorem whnfCore_spec (n : Nat) (s₀ : St) (mode cheap vis d e : Word) :
       memoFindG_spec wkSch p _ hp.wkf n, memoPutG_spec wkSch p _ hp.wkp n,
       memoFindG_spec wcSch p _ hp.wcf n, memoPutG_spec wcSch p _ hp.wcp n,
       callW_spec p n "whnf_core_loop"] <;>
-    finish [whnfCoreW_stuck, whnfCoreW_cheap, whnfCoreW_full, memoSlotW_hit, memoSlotW_miss,
-      msetG_eq, mvG, ebKey]
+    finish [whnfCoreW_stuck, whnfCoreW_cheap, whnfCoreW_full, memoSlotW_hit, memoSlotW_miss, mvG, ebKey]
 
 end spec
 

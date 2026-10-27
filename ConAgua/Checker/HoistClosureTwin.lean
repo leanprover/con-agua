@@ -35,7 +35,7 @@ theorem mem_pushOne (k : Nat) :
     · rename_i m hm
       rw [mem_pushOne k ns]
       by_cases hc : (m > i && m != k) = true
-      · rw [if_pos hc]
+      · rw [ite_eq_left hc]
         simp only [Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at hc
         constructor
         · rintro (h | ⟨n', hn', h1, h2⟩)
@@ -48,7 +48,7 @@ theorem mem_pushOne (k : Nat) :
           · rcases List.mem_cons.mp hn' with rfl | hn'
             · rw [hm] at h1; cases h1; exact Or.inl List.mem_cons_self
             · exact Or.inr ⟨n', hn', h1, h2⟩
-      · rw [if_neg hc]
+      · rw [ite_eq_right hc]
         simp only [Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq, not_and,
           Decidable.not_not] at hc
         constructor
@@ -79,11 +79,11 @@ theorem mem_dropDone (T : Std.HashMap Nat Nat) :
   | k :: stack, x, h => by
     unfold hoistDropDone
     by_cases hk : hoistDone T k i = true
-    · rw [if_pos hk]
+    · rw [ite_eq_left hk]
       rcases List.mem_cons.mp h with rfl | h
       · exact Or.inl hk
       · exact mem_dropDone T stack x h
-    · rw [if_neg hk]; exact Or.inr h
+    · rw [ite_eq_right hk]; exact Or.inr h
 
 /-- Done is "has an entry" when every target is `≤ i`. -/
 theorem hoistDone_iff (T : Std.HashMap Nat Nat) (hT : ∀ (k t : Nat), T[k]? = some t → t ≤ i) (k : Nat) :
@@ -117,14 +117,14 @@ theorem pend_insert (N : Nat → Prop) (T : Std.HashMap Nat Nat) (k : Nat) (hk :
         apply List.filter_congr
         intro x hx
         have : k ≠ x := fun e => hnot (e ▸ hx)
-        rw [hins, if_neg this]
+        rw [hins, ite_eq_right this]
       rcases List.mem_cons.mp hkl with rfl | hkl'
       · have hnot : k ∉ l := (List.nodup_cons.mp hl).1
-        rw [List.filter_cons, List.filter_cons, hrest l hnot, hins, if_pos rfl]
+        rw [List.filter_cons, List.filter_cons, hrest l hnot, hins, ite_eq_left rfl]
         simp [hN, hT]
       · have hyk : k ≠ y := fun e => (List.nodup_cons.mp hl).1 (e ▸ hkl')
         have ih' := ih (List.nodup_cons.mp hl).2 hkl'
-        rw [List.filter_cons, List.filter_cons, hins y, if_neg hyk]
+        rw [List.filter_cons, List.filter_cons, hins y, ite_eq_right hyk]
         split <;> (try simp only [List.length_cons]) <;> omega
   exact key _ (List.nodup_range) (List.mem_range.mpr hk)
 
@@ -243,8 +243,8 @@ theorem closure_twin (a : AState) (D : Nat → List NIdx) (N : Nat → Prop) (T�
       have hpush : (hoistClosure.pushDeps ds idx i k rest).run a =
           .ok (hoistClosure.pushOne idx i k (D k) rest, a) := by
         unfold hoistClosure.pushDeps
-        rw [dif_pos hks, run_bind, hrun]
-        simp only [List.toList_toArray]
+        rw [dite_eq_left hks, run_bind, hrun]
+        simp only
         rfl
       rw [run_bind, hpush]
       simp only
@@ -282,7 +282,7 @@ theorem closure_twin (a : AState) (D : Nat → List NIdx) (N : Nat → Prop) (T�
         · subst e
           obtain ⟨n, hn, h1, h2⟩ := hm
           exact Or.inr ((mem_pushOne idx i k (D k) rest m).mpr (Or.inr ⟨n, hn, h1, h2⟩))
-        · have hkT' : (T[k']?).isSome := by rw [hT₁, if_neg e] at hkT; exact hkT
+        · have hkT' : (T[k']?).isSome := by rw [hT₁, ite_eq_right e] at hkT; exact hkT
           rcases hC k' hk' hkT' m hm with h | h
           · exact Or.inl (by rw [hmono m h]; exact h)
           · rcases mem_dropDone i T S m h with h' | h'
@@ -290,7 +290,7 @@ theorem closure_twin (a : AState) (D : Nat → List NIdx) (N : Nat → Prop) (T�
               exact Or.inl (by rw [hmono m h'']; exact h'')
             · rw [hd] at h'
               rcases List.mem_cons.mp h' with rfl | h'
-              · exact Or.inl (by rw [hT₁, if_pos rfl]; rfl)
+              · exact Or.inl (by rw [hT₁, ite_eq_left rfl]; rfl)
               · exact Or.inr ((mem_pushOne idx i k (D k) rest m).mpr (Or.inl h'))
       have hp₁ : pend ds N T₁ ≤ f := by omega
       obtain ⟨T', hrun', hE', hS', hC', hM'⟩ := ih T₁ _ hE₁ hS₁ hC₁ hp₁
@@ -301,7 +301,7 @@ theorem closure_twin (a : AState) (D : Nat → List NIdx) (N : Nat → Prop) (T�
           rw [hM' x (by rw [hmono x h']; exact h'), hmono x h']; exact h'
         · rw [hd] at h
           rcases List.mem_cons.mp h with rfl | h
-          · rw [hM' x (by rw [hT₁, if_pos rfl]; rfl), hT₁, if_pos rfl]; rfl
+          · rw [hM' x (by rw [hT₁, ite_eq_left rfl]; rfl), hT₁, ite_eq_left rfl]; rfl
           · exact hS' x ((mem_pushOne idx i k (D k) rest x).mpr (Or.inl h))
       · intro x hx
         rw [hM' x (by rw [hmono x hx]; exact hx), hmono x hx]
@@ -356,8 +356,8 @@ theorem closure_exact (a : AState) (D : Nat → List NIdx) (N : Nat → Prop) (T
       · exact e
   intro k
   by_cases hk : N k
-  · rw [if_pos hk]; exact key k (hR k hk)
-  · rw [if_neg hk]
+  · rw [ite_eq_left hk]; exact key k (hR k hk)
+  · rw [ite_eq_right hk]
     rcases hE k with e | ⟨h, -⟩
     · exact e
     · exact absurd h hk
