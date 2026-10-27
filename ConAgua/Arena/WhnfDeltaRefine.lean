@@ -183,7 +183,7 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [CREC, CSLOT, CLP])
+    (by simp [tier1, tierOff, CREC, CSLOT, CLP])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -193,13 +193,13 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
-    (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)))
+    (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [tier1, tierOff, CREC, CSLOT, CLP, EREC]) (by decide)))
     (hmode := hS.mode.frame hf (by decide) (by decide))
 
 theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
+    hf.1 SPN (by simp [tier1, tierOff, CREC, CSLOT, CLP, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact StackKept.of_frame hf
 
@@ -643,7 +643,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   dsimp only at hW
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
-  have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC := hfr.arr_eq EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)
+  have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC := hfr.arr_eq EREC (by simp [tier1, tierOff, CREC, CSLOT, CLP, EREC]) (by decide)
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by
@@ -828,7 +828,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
   have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC :=
-    hfr.arr_eq EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)
+    hfr.arr_eq EREC (by simp [tier1, tierOff, CREC, CSLOT, CLP, EREC]) (by decide)
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by

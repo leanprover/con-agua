@@ -803,14 +803,14 @@ theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
   hS.arena_frame hD hcpl hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [PJREC, PJSLOT, PJDER])
+    (by simp [tier1, tierOff, PJREC, PJSLOT, PJDER])
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (by simp [PJREC, PJSLOT, PJDER]) (by simp)
+    (by simp [tier1, tierOff, PJREC, PJSLOT, PJDER]) (by simp)
 
 /-! ## `eta_projs(T, b, nF)` -/
 

@@ -532,10 +532,10 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   have hrun := internReservedPins_run a ok1 ok2 ok3 _ rfl ok4 ok5 _ rfl ok6
   obtain ⟨okX, stX, -⟩ := AM.of_run_ok _ _ _ _ hrun
   have hfS : MemFrame StoreA StoreC m₂ m₆ :=
-    ((frame_store hf3 (by simp [lsSch, LSREC, LSSLOT, LSHP]) (by simp [lsSch])).trans
-      (frame_store hf4 (by simp [zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]))).trans
-      ((frame_store hf5 (by simp [succSch, SREC, SSLOT, SHP]) (by simp [succSch])).trans
-      (frame_store hf6 (by simp [sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
+    ((frame_store hf3 (by simp [tier1, tierOff, lsSch, LSREC, LSSLOT, LSHP]) (by simp [lsSch])).trans
+      (frame_store hf4 (by simp [tier1, tierOff, zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]))).trans
+      ((frame_store hf5 (by simp [tier1, tierOff, succSch, SREC, SSLOT, SHP]) (by simp [succSch])).trans
+      (frame_store hf6 (by simp [tier1, tierOff, sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
   have hsz : (m₆.arr64 PINS).size = (m.arr64 PINS).size := by
     rw [hfS.2.2.1, hf2'.2.2.1, hf1'.2.2.1]
   have hsz71 : 71 ≤ (m.arr64 PINS).size := by
