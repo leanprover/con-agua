@@ -6,6 +6,7 @@ import ConAgua.Arena.RecGenSpec.Rec3CVX
 import ConAgua.Arena.RecGenSpec.RgW
 import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 
@@ -467,13 +468,17 @@ theorem classRecsRulesOkGo_spec (p : Prog) (h : CrrProg p) (cR : CallM) (hcR : C
     intro s₀ visT visR g rco rcl cgo cgl vo vl co cl
     rw [invoke_eq _ h.go]
     simp only [callFn, classRecsRulesOkGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classRulesOk_spec p h.crs cR hcR n,
-        targetMajorAt_spec p h.crs.alloc h.pw h.mtm h.tmd h.tma h.na n,
-        rec4_specW p h.crs.alloc n h.rec4, slCons_specW p h.crs.alloc h.crs.copy h.crs.cons n, ih] <;>
-      finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
-        loc_init9, loc_init10]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+      classRulesOk_spec p h.crs cR hcR n,
+      targetMajorAt_spec p h.crs.alloc h.pw h.mtm h.tmd h.tma h.na n,
+      rec4_specW p h.crs.alloc n h.rec4, slCons_specW p h.crs.alloc h.crs.copy h.crs.cons n, ih]
+    all_goals subst_vars
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
+      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4,
+      loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10]
 
 theorem classRecsRulesOk_spec (p : Prog) (h : CrrProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (visT visR g rco rcl cgo cgl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_recs_rules_ok" [visT, visR, g, rco, rcl, cgo, cgl]
