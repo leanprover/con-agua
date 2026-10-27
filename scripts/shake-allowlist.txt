@@ -136,6 +136,7 @@ ConAgua/Front/IndFields.lean	public import ConAgua.Front.Apply	# the build needs
 ConAgua/Front/NatDec.lean	public import ConAgua.Front.Fields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/L/Logic.lean	public import ConAgua.L.LocNF	# the build needs it: its simprocs act through their `seval` attribute in the `grind` of every L proof, which records no use
 ConAgua/L/ModelGenTest.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
+ConAgua/L/ModelGenTest.lean	public import ConAgua.Front.Preserve	# the build needs it: `Triple.keep` from the `l_model`s' `keep`, named only in their generated proofs
 ConAgua/Rom/CIReadRefW.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Rom/PinRead.lean	public import ConAgua.Arena.IndIface	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Scan/Member.lean	public import ConAgua.L.Logic	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
