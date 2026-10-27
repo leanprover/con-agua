@@ -565,12 +565,18 @@ theorem hintsObj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (q : Wor
   | succ n =>
     have hb64 : b.size < 2 ^ 64 := by omega
     have hval := L.Scan.Key.valueAtN_le b
-    sym (gen := 16) only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
-        L.Scan.Leaves.keyEnd_spec p hpk b hb64 n,
-        L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b n,
-        L.Scan.Key.valueAt_spec p hpw hpv b hb n,
-        hintsNum_spec p b hb hpw hpd hpn hphn n] <;> finish
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
+      L.Scan.Leaves.keyEnd_spec p hpk b hb64 n,
+      L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b n,
+      L.Scan.Key.valueAt_spec p hpw hpv b hb n,
+      hintsNum_spec p b hb hpw hpd hpn hphn n]
+    all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hphn hpho
+    all_goals subst_vars
+    all_goals simp only [Cond.pval, Expr.pval, L.Scan.Key.rd8_byteW, Locals.init, St.setLoc_loc,
+      St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.tail_cons,
+      List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval,
+      Bool.not_eq_true', beq_iff_eq, bne_iff_ne, ne_eq] at *
+    all_goals grind [lang_grind, hintsN.hintsObjN]
 
 include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hphn hpho hph in
 attribute [local lang_grind] hintsN in

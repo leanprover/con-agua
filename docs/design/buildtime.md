@@ -133,3 +133,39 @@ measured: six `decide +kernel` theorems of 21 s each take 130 s in one file, wit
 `Elab.async` too). `IndArmClosed`'s nine arms (~100 s of kernel checks) are now in
 `IndArmClosed1`…`3`, three arms each, which Lake builds in parallel; `IndArmClosed` keeps the
 array tests `tA`/`tC`.
+
+### The start of the path: the Nat ops and Scan (batch 4)
+
+The path began with the chain `NatAdd` → `NatCmp` → `NatSub` → `NatShl` → `NatShr` → `NatDiv`
+(165 s before anything above it started), and beside it Scan (`Utf8` → `Key` → … → `RecordsSpec`
+→ `Line`, ~8 s slack).
+
+* **Nat chain**: the modules waited on each other only for a few helper lemmas. They are in two
+  small modules now, `Arena.NatCmpFacts` (`cmpW`, `pv_lt_wt`, `pv_succ_lt`, `pv_len_lt`,
+  `pv_append`, `pv_ge_wt`) and `Arena.NatShiftFacts` (`sh`, the `shl_*` word facts, `and63_lt`,
+  `sh_zero`, `sh_pos`, `shamt`, `pv_one`); `NatCmp`, `NatSub`, `NatShl`, `NatShr` import only
+  `NatAdd` and these, `NatDiv` imports `NatSub` and these. In the model the Nat side is done at
+  ~80 s instead of 173 s (and has ~85 s slack, so its proofs were left as they are).
+* **`Scan.Line`** (46 s): `lineLoop_spec` was one proof over 223 goals with long path conditions.
+  Now one spec per arm of the key dispatch (the arms are Lean projections of `lineLoop`'s syntax
+  tree; the L code is unchanged) and one for the dispatch, which Lean elaborates in parallel; a
+  step model `lineStepN` (`lineN_step`), one equation per key for `lineVal`/`lineKind`.
+* **`Scan.RecordsLink`** (39 s): each `link_val` `macro_rules` after a record waited for all proofs
+  before it (a command that changes the environment ends the parallel elaboration of the proofs
+  before it), so the file ran serially. The 22 `macro_rules` are up front now.
+* **`Scan.Key`**: `grind` case-split on `Bool` copies of the path conditions; `subst_vars` first,
+  then `simp only [model, *, reduceIte]`. **`Utf8`, `Values`, `Str`**: plain `vcgen` + `simp` +
+  `grind` instead of `sym … finish`; `L.evalC_spec` for `Str`'s 8-way escape test.
+
+| module | before | after |
+|---|---:|---:|
+| `Scan.Key` | 24 s | 5–7 s |
+| `Scan.Values` | 10 s | 5 s |
+| `Scan.Utf8` | 9 s | 6–7 s |
+| `Scan.Str` | 15 s | 7–11 s |
+| `Scan.Line` | 46 s | 9–11 s |
+| `Scan.RecordsLink` | 39 s | 10–12 s |
+| Nat ops | a chain, 165 s | in parallel, ~80 s |
+
+(After: single-file times on a loaded machine.) Left: `Scan.RecordsSpec` (28 s; the same arm
+split for its two 11-key loops would gain ~7 s on the path).
