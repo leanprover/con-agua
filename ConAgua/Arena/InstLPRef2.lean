@@ -119,8 +119,8 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     spnLsW_ok n m₂ m₃ a₂ c l (rs.headD 0) hs hA₂ hmode₂ hsl₂ hcl64 hW₄
   obtain ⟨hls₃, hlsx₃⟩ := internLsNode_ext _ _ _ _ hrun
   have hframe : MemFrame rflArrs rflCtl m (m₃.set64 CTL 136 b) :=
-    (hf₁.mono (by simp) (by simp)).trans ((hf₂.mono (by simp) (by simp)).trans
-      ((hf₃.mono (by simp) (by simp)).trans ((MemFrame.setCtl _ _ _).mono (by simp) (by simp))))
+    (hf₁.mono (by simp; try grind) (by simp)).trans ((hf₂.mono (by simp; try grind) (by simp)).trans
+      ((hf₃.mono (by simp; try grind) (by simp)).trans ((MemFrame.setCtl _ _ _).mono (by simp; try grind) (by simp))))
   have hctl' : (136 : Word).toNat < (m₃.arr64 CTL).size := by
     have := hframe.2.2.1 CTL
     rw [Mem.size_arr64_set64] at this; rw [this]; simpa using hctl
@@ -248,7 +248,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     obtain ⟨a₃, hrun₃, hok⟩ := rflTail_ok p hL n m₀ m₁ m₂ m₃ a a₂ (bs.headD 0) (spTop m₁) qc hs rs hmode hsz hctl
       hbc (by omega) hb hf₁ hbel₁ hA₂ (StoreWF.nwf hwf₂) hnc₂ (hlcl.ext hx₂ (by rw [hca₂]))
       (hlscl.ext hx₂.lss (by rw [hca₂])) (by rw [hca₂, ← hal]; dsimp only; rw [eq₂]; dsimp only; rw [eq₁])
-      (by rw [hpi₂, ← hal]) (by rw [hme₂, ← hal]) hsl₂ hbl₂ (hf₂.mono (by simp) (by simp)) h4
+      (by rw [hpi₂, ← hal]) (by rw [hme₂, ← hal]) hsl₂ hbl₂ (hf₂.mono (by simp; try grind) (by simp)) h4
     refine ⟨a₃, ?_, hok⟩
     simp only [recFireLevels, hpl, StateT.run_bind, hrn, except_ok_bind, hrl, hrun₂, hrun₃]
   · -- nested

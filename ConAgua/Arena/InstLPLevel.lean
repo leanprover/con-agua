@@ -71,12 +71,12 @@ theorem CoreS.withReadLsC {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AS
 
 section
 set_option maxRecDepth 8000
-theorem lvArrs_lo : ∀ b ∈ lvArrs, b < 42 ∨ (54 < b ∧ b < 64) ∨ Tier1In 0 42 b ∨ Tier1In 55 64 b := by decide
+theorem lvArrs_lo : ∀ b ∈ lvArrs, b.arr < 42 ∨ (54 < b.arr ∧ b.arr < 64) := by decide
 theorem lvCtl_lo : ∀ x ∈ lvCtl, x.toNat < 42 := by
   intro x hx
   simp only [lvCtl, List.mem_cons, List.mem_nil_iff, or_false] at hx
   rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
-theorem lvArrs_stk : SPN ∉ lvArrs ∧ BSTK ∉ lvArrs ∧ POOL ∉ lvArrs := by decide
+theorem lvArrs_stk : (SPN : TieredArray) ∉ lvArrs ∧ (BSTK : TieredArray) ∉ lvArrs ∧ (POOL : TieredArray) ∉ lvArrs := by decide
 theorem lvCtl_stk : (136 : Word) ∉ lvCtl ∧ (137 : Word) ∉ lvCtl ∧ (0 : Word) ∉ lvCtl := by decide
 theorem lvCtl_one : (1 : Word) ∉ lvCtl := by decide
 end

@@ -259,7 +259,7 @@ theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s
     have hv₁ := vpool_stidx0 m d (rdW (m.arr64 IW) s) hd41 (by omega) (by omega)
     obtain ⟨hg', hf, hbl, hsl⟩ := ih _ _ _ _ _ h hg₁ (by omega) (by omega)
       (by rw [et, ei, hlm, size_set64]; omega) (by rw [hs1, hlm]; omega)
-    have hmem : tierA POOL (d >>> 40) ∈ [POOL, POOL1] := by
+    have hmem : tierA POOL (d >>> 40) ∈ ([POOL, POOL1] : List TieredArray) := by
       rcases tierA_pool (d >>> 40) with e | e <;> simp [e]
     refine ⟨hg', ((MemFrame.set64 _ _ hne _ _).mono (by simpa using hmem) (by simp)).trans hf,
       fun i hi => ?_, ?_⟩

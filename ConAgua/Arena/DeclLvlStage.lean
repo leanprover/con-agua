@@ -70,6 +70,6 @@ def lvlFns : List FnName :=
 
 theorem lvlText_closed : closedA cvgProg lvlA lvlC lvlFns = true := by decide +kernel
 
-theorem lvlA_erec : EREC ∉ lvlA := by simp [lvlA]
+theorem lvlA_erec : (EREC : TieredArray) ∉ lvlA := by decide
 
 end L.Arena

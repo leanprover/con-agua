@@ -421,7 +421,7 @@ theorem pinW_wrIW (m : Mem) (q : Word) (ws : List Word) (j : Nat) :
   simp only [pinW, wrIW_arr_ne ws m q PINS (by decide)]
 
 theorem pinW_allocMem (m : Mem) (k : Word) (j : Nat) : pinW (allocMem m k) j = pinW m j := by
-  simp only [pinW, allocMem, Mem.arr64_set64_ne _ _ _ _ _ (show PINS ≠ CTL by decide)]
+  simp only [pinW, allocMem, Mem.arr64_set64_ne _ _ _ _ _ (show (PINS : TieredArray) ≠ CTL by decide)]
 
 /-- **`nat_op_pins`**: the record of the pin words, a fresh slice of the pool. -/
 theorem natOpPins_fref (hN : NatGateProg p) :
@@ -477,7 +477,7 @@ theorem natOpPins_fref (hN : NatGateProg p) :
   rw [hcomp]
   refine ⟨h0, hrec.1.symm ▸ hrec, ?_, rfl⟩
   rw [wrIW_arr_ne _ _ _ _ (by decide)]
-  simp only [allocMem, Mem.arr64_set64_ne _ _ _ _ _ (show PINS ≠ CTL by decide)]
+  simp only [allocMem, Mem.arr64_set64_ne _ _ _ _ _ (show (PINS : TieredArray) ≠ CTL by decide)]
 
 end pins
 
