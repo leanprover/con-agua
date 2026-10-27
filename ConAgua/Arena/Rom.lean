@@ -360,7 +360,7 @@ def romPutOK (m : Mem) (i l : Word) : Prop :=
 instance (m : Mem) (i l : Word) : Decidable (romPutOK rom m i l) := by
   unfold romPutOK; infer_instance
 
-theorem rputW_size (pt pb i l : Word) (b : ArrId) :
+theorem rputW_size (pt pb i l : Word) (b : TieredArray) :
     ∀ (d : Nat) (m : Mem) (j : Word), l.toNat - j.toNat = d →
       ((rputW rom m pt pb i l j).arr64 b).size = (m.arr64 b).size := by
   intro d
@@ -689,7 +689,7 @@ theorem top_set64_ctl (m : Mem) (c v : Word) (hc : c.toNat ≠ 0) : (m.set64 CTL
   top_set64_ne m c v hc
 grind_pattern [arena_grind] top_set64_ctl => (m.set64 CTL c v).top
 
-theorem top_set64_arr (m : Mem) (b : ArrId) (i v : Word) (hb : b ≠ CTL) : (m.set64 b i v).top = m.top := by
+theorem top_set64_arr (m : Mem) (b : TieredArray) (i v : Word) (hb : b ≠ CTL) : (m.set64 b i v).top = m.top := by
   simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb)]
 grind_pattern [arena_grind] top_set64_arr => (m.set64 b i v).top
 
@@ -725,7 +725,7 @@ theorem cons_topK {C : ConsSch} (hW : C.WF) (hc : C.ca ≠ 0) (hc1 : C.ca + 1 �
     (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro (e | e) <;> first | exact hc e.symm | exact hc1 e.symm)
     (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro (e | e) <;> first | exact hd e.symm | exact hd1 e.symm)
 
-theorem rputW_arr (rom : List UInt8) (pt pb i l : Word) (b : ArrId) (hb : b ≠ POOL ∧ b ≠ POOL1) :
+theorem rputW_arr (rom : List UInt8) (pt pb i l : Word) (b : TieredArray) (hb : b ≠ POOL ∧ b ≠ POOL1) :
     ∀ (d : Nat) (m : Mem) (j : Word), l.toNat - j.toNat = d →
       (rputW rom m pt pb i l j).arr64 b = m.arr64 b := by
   intro d
@@ -1124,6 +1124,6 @@ theorem ArenaD.frameHi {A : List TieredArray} {C : List Word} {m m' : Mem} {a : 
     ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
    DerR.frameM A C m m' hf (fun b hb => by
-     have := hA b hb; simp only [ArrId] at this ⊢; omega) a h.2⟩
+     have := hA b hb; simp only [InHigh] at this; omega) a h.2⟩
 
 end L.Rom

@@ -239,7 +239,7 @@ theorem pi_lens {β δ : Type} {k : IdxKind} [BEq β] [Hashable β] {L : Lens β
     (hD : ArenaD m a) (hrun : op.run (onA false a) = protoRun L key tag pf d err (onA false a))
     (hok : AM.ok op (onA false a)) (hR₁ : ArenaR m₁ (AM.st op (onA false a)))
     (hres : AM.res op (onA false a) = decI r) (hf : MemFrame A C (m.set64 CTL 1 0) m₁)
-    (hA : ∀ b ∈ A, (b < 42 ∨ 46 < b) ∧ (b < 298 ∨ 302 < b))
+    (hA : ∀ b ∈ A, b.arr < 42 ∨ 46 < b.arr)
     (hset : ∀ t, (L.setP (onA false a) t).store.pers = a.store.pers ∧
       (L.setP (onA false a) t).store.scr = a.store.scr ∧ cp (L.setP (onA false a) t) = cp a)
     (hsetS : ∀ t, (L.setS (onA false a) t).store.pers = a.store.pers ∧

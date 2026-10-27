@@ -842,7 +842,7 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         constValC := a.caches.constValC.insert (decI nm, decI us) (decE x) } } vis fe M eb ∧
       StackKept m m' := by
-  have hf : MemFrame [103] [111] m m' :=
+  have hf : MemFrame [((103 : ArrId) : TieredArray)] [111] m m' :=
     msetG_frame cvSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   have hq := memoRV_set cvSch (coreSch_wf _ _ (by decide) (by decide)) pairKey VH
     (fun _ _ _ _ _ h => h) m a.caches.constValC hS.core.cv nm us x ⟨hn, hu⟩ (decE x) ⟨rfl, hx⟩ m' hs
@@ -850,7 +850,7 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       (mp : Std.HashMap κ ν), S.WF → S.arr ≠ 103 → S.cs ≠ 111 → MemoRG S K dv m mp →
       MemoRG S K dv m' mp :=
     fun S K dv mp hS' h1 h2 hR =>
-      memoRV_frame S hS' K _ [103] [111] (by simpa using h1) (by simpa using h2) m m' hf
+      memoRV_frame S hS' K _ [((103 : ArrId) : TieredArray)] [111] (by simpa using h1) (by simpa using h2) m m' hf
         (fun _ _ h => h) mp hR
   have mr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
       {VR : Mem → Word → ν → Prop} {M₀ : Std.HashMap (κ × Word) ν} {t te : Std.HashMap κ ν}, S.WF →
@@ -861,12 +861,12 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       (mp : Std.HashMap κ EIdx), S.WF → S.arr ≠ 103 → S.cs ≠ 111 → MemoRV S K VH m mp →
       MemoRV S K VH m' mp :=
     fun S K mp hS' h1 h2 hR =>
-      memoRV_frame S hS' K _ [103] [111] (by simpa using h1) (by simpa using h2) m m' hf
+      memoRV_frame S hS' K _ [((103 : ArrId) : TieredArray)] [111] (by simpa using h1) (by simpa using h2) m m' hf
         (vh_const m m') mp hR
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
-  refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [103] [111] (by simp) (by simp) m m' hf a
-        hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [103] [111] m m' hf (by simp) a hS.arena.2) rfl⟩,
+  refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [((103 : ArrId) : TieredArray)] [111] (by simp) (by simp) m m' hf a
+        hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [((103 : ArrId) : TieredArray)] [111] m m' hf (by simp) a hS.arena.2) rfl⟩,
       ⟨mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wc,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wk,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wh,
@@ -883,7 +883,7 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 BSTK ▸ hS.bstk,
       (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl,
       hS.mode.frame hf (by simp) (by simp)⟩,
     StackKept.of_frame hf⟩

@@ -572,7 +572,7 @@ theorem iotaRecFire_spec (p : Prog) (hp : p.lookup "iota_rec_fire" = some iotaRe
   simp_all [irFireW, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
     Sig.retVal, Sig.retOr, rdW, CTL] <;>
-  (have h136 : 136 < (s₀.mem.arr64 1).size := by assumption
+  (have h136 : 136 < (s₀.mem.arr64 CTL).size := by assumption
    exact ⟨h136, by simp [getD_136 _ h136]⟩)
 
 /-- **`iota_rec_fire` refines the fire** (the major's arguments, then `iotaRecFire2T`). -/

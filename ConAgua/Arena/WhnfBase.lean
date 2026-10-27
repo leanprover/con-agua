@@ -264,7 +264,7 @@ theorem StackKept.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht 
 
 /-- **A frame that avoids both stacks and the pool keeps them.** -/
 theorem StackKept.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
-    (hA : (SPN : TieredArray) ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
+    (hA : (SPN : TieredArray) ∉ A ∧ (BSTK : TieredArray) ∉ A ∧ (POOL : TieredArray) ∉ A := by decide)
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
     (hL : LvlFree C := by lvl_free) (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) :
     StackKept m m' := by
@@ -275,7 +275,7 @@ theorem StackKept.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (
 
 /-- `StackKept.of_frame` for a writer of the level tables, their growth given (`hlc`). -/
 theorem StackKept.of_frameL {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
-    (hA : (SPN : TieredArray) ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A) (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C)
+    (hA : (SPN : TieredArray) ∉ A ∧ (BSTK : TieredArray) ∉ A ∧ (POOL : TieredArray) ∉ A) (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C)
     (hlc : LvlCnt m m') (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
@@ -287,16 +287,16 @@ theorem StackKept.of_frameL {m m' : Mem} {A : List TieredArray} {C : List Word} 
 
 /-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
 theorem StackKept.of_frame_range {m m' : Mem} {A : List TieredArray} {C : List Word}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 1 ≤ b ∧ b < 144)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 1 ≤ b.arr ∧ b.arr < 144)
     (hC : ∀ x ∈ C, 1 ≤ x.toNat ∧ x.toNat < 136) (hL : LvlFree C := by lvl_free)
     (hA2 : (PT0 : TieredArray) ∉ A := by decide) : StackKept m m' :=
   StackKept.of_frame hf
-    ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
-     fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega,
-     fun h => by have := hA _ h; simp only [POOL, ArrId] at this; omega⟩
+    ⟨fun h => absurd (hA _ h) (by decide),
+     fun h => absurd (hA _ h) (by decide),
+     fun h => absurd (hA _ h) (by decide)⟩
     ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
      fun h => by have := hC _ h; simp at this⟩ hL
-    (fun h => by have := hA _ h; simp only [POOL1, ArrId] at this; omega) hA2
+    (fun h => absurd (hA _ h) (by decide)) hA2
 
 /-- **Appending to the pool** keeps the stacks. -/
 theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
@@ -309,7 +309,7 @@ theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
 /-- **A frame that avoids both stacks and appends to the pool** (`Grows` on the pool's part). -/
 theorem StackKept.of_frame_grows {m m₁ m' : Mem} {A : List TieredArray} {C : List Word}
     (hg : Grows m m₁) (hf : MemFrame A C m₁ m')
-    (hA : (SPN : TieredArray) ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
+    (hA : (SPN : TieredArray) ∉ A ∧ (BSTK : TieredArray) ∉ A ∧ (POOL : TieredArray) ∉ A := by decide)
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
     (hL : LvlFree C := by lvl_free) (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) :
     StackKept m m' := by
@@ -396,7 +396,7 @@ theorem coreLplsSch_wf : coreLplsSch.WF := ⟨by decide, by decide⟩
 
 /-- **`LPMemos` across a writer** that avoids arrays 52‥54 and `CTL` words 54, 56, 58. -/
 theorem LPMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A)
+    (hA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A)
     (hC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) (h : LPMemos m) : LPMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1;
     ⟨mp, memoRV_frame coreLpSch coreLpSch_wf lfKey VH A C hA.1 hC.1 m m' hf (fun _ _ h => h) mp hm⟩,
@@ -424,9 +424,9 @@ theorem coreLsbSch_wf : coreLsbSch.WF := ⟨by decide, by decide⟩
 
 /-- **`WalkMemos` across a writer** that avoids arrays 151‥153 and `CTL` words 152, 154, 156. -/
 theorem WalkMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
+    (hA : ((151 : ArrId) : TieredArray) ∉ A ∧ ((152 : ArrId) : TieredArray) ∉ A ∧ ((153 : ArrId) : TieredArray) ∉ A)
     (hC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C) (h : WalkMemos m)
-    (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
+    (hLA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A := by decide)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) : WalkMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C hA.1 hC.1 m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C hA.2.1 hC.2.1 m m' hf mp hm⟩,
@@ -436,10 +436,10 @@ theorem WalkMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf 
 /-- **`CoreMemos` across a writer** that avoids arrays 49, 50, 151‥153 and `CTL` words 48, 50, 152,
 154, 156 (the last two avoidances are auto-params: `decide` on concrete lists). -/
 theorem CoreMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m)
-    (hWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
+    (hA : ((50 : ArrId) : TieredArray) ∉ A ∧ ((49 : ArrId) : TieredArray) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m)
+    (hWA : ((151 : ArrId) : TieredArray) ∉ A ∧ ((152 : ArrId) : TieredArray) ∉ A ∧ ((153 : ArrId) : TieredArray) ∉ A := by decide)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
-    (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
+    (hLA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A := by decide)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) :
     CoreMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA.1 hC.1 m m' hf mp hm⟩,
@@ -450,7 +450,7 @@ theorem CoreMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf 
 walk memos after it given. -/
 theorem CoreMemos.frameLP {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (h : CoreMemos m) (hLP : LPMemos m')
-    (hA : ∀ b ∈ A, 52 ≤ b ∧ b ≤ 54 := by decide) (hC : ∀ x ∈ C, 54 ≤ x.toNat ∧ x.toNat ≤ 59 := by simp) :
+    (hA : ∀ b ∈ A, 52 ≤ b.arr ∧ b.arr ≤ 54 := by decide) (hC : ∀ x ∈ C, 54 ≤ x.toNat ∧ x.toNat ≤ 59 := by simp) :
     CoreMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
@@ -468,7 +468,7 @@ theorem CoreMemos.frameLP {A : List TieredArray} {C : List Word} {m m' : Mem} (h
 memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreMemos.frame_hi {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : CoreMemos m)
-    (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
+    (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) : CoreMemos m' :=
   h.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
     ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
@@ -501,7 +501,7 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   memos : CoreMemos m
   /-- The binder stack's size (lane `defeq`'s `BSTK`, array 145; a capacity checked at entry):
   its offsets do not wrap. -/
-  bstk : (m.arr64 145).size < 2 ^ 63
+  bstk : (m.arr64 BSTK).size < 2 ^ 63
   /-- **Stored levels read back** (`StoreDen.lean`, lane `defeq2`): what the level readers need,
   since the twin compares levels on their readbacks. -/
   den : StoreDen dn m a fe
@@ -515,25 +515,24 @@ the level heap, the walk-local memos. -/
 theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b) ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 145 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
     (hmem : CoreMemos m') :
     CoreS dn m' a vis fe M eb := by
   have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
-    have := hA b hb; simp only [ArrId] at this ⊢; omega
+    have := hA b hb; omega
   have aC : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 137 → AvoidC lo hi C := fun lo hi h1 h2 x hx => by
     have := hC x hx; omega
-  exact ⟨⟨ArenaR.frame_ext A C (fun b hb => ⟨(hA b hb).1, (hA b hb).2.2⟩) (fun x hx => (hC x hx).1) m m'
+  exact ⟨⟨ArenaR.frame_ext A C (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) m m'
         hf a hS.arena.1,
-      DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+      DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega)
         a hS.arena.2⟩,
     hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
-    hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp only [PINS, ArrId] at this; omega)
+    hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide))
       (by decide)),
-    hS.env.frame (aA 129 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf
-      (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega),
+    hS.env.frame (aA 129 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
-    hmem, hf.2.2.1 145 ▸ hS.bstk,
-    hS.den.frameE (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega)
+    hmem, hf.2.2.1 BSTK ▸ hS.bstk,
+    hS.den.frameE (hf.1 EREC (fun h => absurd (hA _ h) (by decide))
       (by decide)),
     hS.mode.frame hf (fun h => by have := hC _ h; simp at this)
       (fun h => by have := hC _ h; simp at this)⟩
@@ -542,42 +541,42 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b) ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
-    (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 145 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) :
     CoreS dn m' a vis fe M eb :=
-  hS.frameSM hf hA hC (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.2⟩) (fun x hx => (hC x hx).1) hWA hWC)
+  hS.frameSM hf hA hC (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) hWA hWC)
 
 /-- **The relation across a writer outside every tier and the stacks**, the walk memos given:
 arrays `≥ 146` (or 64‥95), `CTL` words `≥ 138` (or 64‥95). The stacks and the pool are kept. -/
 theorem CoreS.frameM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 146 ≤ b) ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 146 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
     (hmem : CoreMemos m') :
     CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
-  refine ⟨hS.frameSM hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+  refine ⟨hS.frameSM hf (fun b hb => by have := hA b hb; exact ⟨this.1, this.2.1, by omega⟩)
     (fun x hx => by have := hC x hx; omega) hmem, ?_⟩
   exact StackKept.of_frame hf
-    ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
-     fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega,
-     fun h => by have := hA _ h; simp only [POOL, ArrId] at this; omega⟩
+    ⟨fun h => absurd (hA _ h) (by decide),
+     fun h => absurd (hA _ h) (by decide),
+     fun h => absurd (hA _ h) (by decide)⟩
     ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
      fun h => by have := hC _ h; simp at this⟩
     (LvlFree.of_ge fun x hx => by have := hC x hx; omega)
-    (fun h => by have := hA _ h; simp only [POOL1, ArrId] at this; omega)
-    (fun h => by have := hA _ h; simp only [PT0, ArrId] at this; omega)
+    (fun h => absurd (hA _ h) (by decide))
+    (fun h => absurd (hA _ h) (by decide))
 
 /-- **The relation across a writer outside every tier and the stacks**, away from the walk-local
 memos: the level heap (`LH`, `CTL[192]`), say. -/
 theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 146 ≤ b) ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
-    (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 146 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
+    (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) :
     CoreS dn m' a vis fe M eb ∧ StackKept m m' :=
-  hS.frameM hf hA hC (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.2⟩) (fun x hx => (hC x hx).1) hWA hWC)
+  hS.frameM hf hA hC (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) hWA hWC)
 
 /-- **After a core run** from `m₀` at maps `M`, `G`, generation `g`: the relation holds at some
 maps that keep every other generation's bank, and the stack below the top is as it was. -/

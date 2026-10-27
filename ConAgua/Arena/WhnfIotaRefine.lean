@@ -584,7 +584,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   have n1 : 96 ≤ ar := by rw [har]; exact h1
   have n2 : ar < 128 := by rw [har]; exact h2
   have aA : ∀ lo hi : Nat, hi ≤ 96 ∨ 128 ≤ lo → AvoidA lo hi [S.arr] := fun lo hi h b hb => by
-    simp only [List.mem_singleton] at hb; subst hb; rw [← har]; simp only [ArrId]; omega
+    simp only [List.mem_singleton] at hb; subst hb; simp only; rw [← har]; omega
   have aC : ∀ lo hi : Nat, hi ≤ 96 ∨ 128 ≤ lo → AvoidC lo hi [S.cs + 1] := fun lo hi h x hx => by
     simp only [List.mem_singleton] at hx; subst hx
     have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
@@ -600,38 +600,38 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       have h' := congrArg UInt64.toNat h
       simp at h'; omega)
   refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
-  · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; omega)
+  · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by
+      simp at hb; subst hb; refine ⟨rfl, ?_⟩; simp only; rw [← har]; omega)
       (fun x hx => by
         simp at hx; subst hx
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega) m m' hf a hS.arena.1).caches_irrel c
-  · have := DerR.frameM [S.arr] [S.cs + 1] m m' hf (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega) a hS.arena.2
+  · have := DerR.frameM [S.arr] [S.cs + 1] m m' hf (fun b hb => by simp at hb; subst hb; simp only; rw [← har]; omega) a hS.arena.2
     exact DerR.of_store _ _ _ this rfl
   · exact hS.pins.congr (hf.1 PINS (fun h => by simp at h; simp only [PINS] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide))
       (by decide))
   · exact hS.env.frame (aA 129 144 (Or.inr (by omega))) (aC 128 136 (Or.inr (by omega))) hf
-      (aA 385 388 (Or.inr (by omega)))
   · intro h l e; exact hS.readL h l (by simpa [hL] using e)
   · intro h l e; exact hS.readLs h l (by simpa [hLs] using e)
   · exact hf.2.2.1 EREC ▸ hS.erec
   · exact hf.2.2.1 SPN ▸ hS.spn
   · exact hS.memos.frame_hi hf
-      (fun b hb => by simp at hb; subst hb; rw [← har]; omega)
+      (fun b hb => by simp at hb; subst hb; refine ⟨rfl, ?_⟩; simp only; rw [← har]; omega)
       (fun x hx => by
         simp at hx; subst hx
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega)
-      (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega)
+      (fun b hb => by simp at hb; subst hb; simp only; rw [← har]; omega)
       (fun x hx => by
         simp at hx; subst hx
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega)
-  · exact hf.2.2.1 145 ▸ hS.bstk
+  · exact hf.2.2.1 BSTK ▸ hS.bstk
   · exact (hS.den.frameE (hf.1 EREC (fun h => by
-      simp only [List.mem_singleton] at h; have h2' := h2; rw [← h] at h2'
+      simp only [List.mem_singleton, TieredArray.t0_inj] at h; have h2' := h2; rw [← h] at h2'
       exact absurd h2' (by decide))
       (by decide))).caches rfl rfl hN
   · have hcs : (S.cs + 1).toNat = S.cs.toNat + 1 := by
@@ -640,7 +640,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       (fun h => by simp at h; have h' := congrArg UInt64.toNat h; simp at h'; omega)
       (fun h => by simp at h; have h' := congrArg UInt64.toNat h; simp at h'; omega)
   · refine StackKept.of_frame_range hf (fun b hb => by
-      simp only [List.mem_singleton] at hb; subst hb; constructor <;> simp only [ArrId] <;> omega)
+      simp only [List.mem_singleton] at hb; subst hb; simp only; omega)
       (fun x hx => by
       simp at hx; subst hx
       have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
@@ -651,7 +651,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega)
-      (fun h => by simp only [List.mem_singleton] at h; have h1' := h1; rw [← h] at h1'; simp [PT0] at h1')
+      (fun h => by simp only [List.mem_singleton, TieredArray.t0_inj] at h; have h1' := h1; rw [← h] at h1'; simp [PT0] at h1')
 
 /-- **`constTyC`'s `find; put`**: the tier across it. -/
 theorem CoreRM.setCt {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)

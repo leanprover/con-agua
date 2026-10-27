@@ -996,7 +996,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     · rw [hsz3, hsz2]
     · rw [htop3]
       unfold spTop
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SPN by decide)]
+      rw [Mem.arr64_set64_ne _ _ _ _ _ (show (CTL : TieredArray) ≠ SPN by decide)]
       exact hfr1c.2.1 136 (fun h => by
         unfold L.Rom.StoreC at h
         obtain ⟨k', hk', hkk⟩ := List.mem_map.mp h

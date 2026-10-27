@@ -129,11 +129,11 @@ abbrev lvCtl : List Word := [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 section
 set_option maxRecDepth 4000
-theorem lvSch_sub : (∀ b ∈ [zeroSch.ra, tier1 zeroSch.ra, zeroSch.sa, tier1 zeroSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [zeroSch.ca, zeroSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [succSch.ra, tier1 succSch.ra, succSch.sa, tier1 succSch.sa, SHP, tier1 SHP], b ∈ lvArrs) ∧ (∀ x ∈ [succSch.ca, succSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [maxSch.ra, tier1 maxSch.ra, maxSch.sa, tier1 maxSch.sa, MHP, tier1 MHP], b ∈ lvArrs) ∧ (∀ x ∈ [maxSch.ca, maxSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [imaxSch.ra, tier1 imaxSch.ra, imaxSch.sa, tier1 imaxSch.sa, IHP, tier1 IHP], b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [paramSch.ra, tier1 paramSch.ra, paramSch.sa, tier1 paramSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [paramSch.ca, paramSch.ca + 1], x ∈ lvCtl) := by
+theorem lvSch_sub : (∀ b ∈ ([zeroSch.ra, tier1 zeroSch.ra, zeroSch.sa, tier1 zeroSch.sa] : List TieredArray), b ∈ lvArrs) ∧ (∀ x ∈ [zeroSch.ca, zeroSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ ([succSch.ra, tier1 succSch.ra, succSch.sa, tier1 succSch.sa, SHP, tier1 SHP] : List TieredArray), b ∈ lvArrs) ∧ (∀ x ∈ [succSch.ca, succSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ ([maxSch.ra, tier1 maxSch.ra, maxSch.sa, tier1 maxSch.sa, MHP, tier1 MHP] : List TieredArray), b ∈ lvArrs) ∧ (∀ x ∈ [maxSch.ca, maxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ ([imaxSch.ra, tier1 imaxSch.ra, imaxSch.sa, tier1 imaxSch.sa, IHP, tier1 IHP] : List TieredArray), b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ ([paramSch.ra, tier1 paramSch.ra, paramSch.sa, tier1 paramSch.sa] : List TieredArray), b ∈ lvArrs) ∧ (∀ x ∈ [paramSch.ca, paramSch.ca + 1], x ∈ lvCtl) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [lvArrs, lvCtl, zeroSch, succSch, maxSch, imaxSch, paramSch, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]
 end
@@ -541,7 +541,7 @@ theorem arenaD_frame_hi {m m' : Mem} {a : AState} {A : List TieredArray} {C : Li
     (hA : ArenaD m a) (hf : MemFrame A C m m') (hA' : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) :
     ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA' hC m m' hf a hA.1,
-    DerR.frameM A C m m' hf (fun b hb => by have := hA' b hb; simp only [ArrId] at this ⊢; omega) a hA.2⟩
+    DerR.frameM A C m m' hf (fun b hb => by have := hA' b hb; simp only [InHigh] at this; omega) a hA.2⟩
 
 /-- **The model of `caps_never_zero` is `(substPW ks vs pw).isNever`**, the keys an `EREC` name
 slice, the values the readback of the list `us`, the datum `pw` related at `(swd, so, sc)`; it
