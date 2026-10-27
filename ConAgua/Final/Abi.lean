@@ -58,11 +58,11 @@ theorem rdW_of_zero {d : DataMem} {x : Nat} (_hx : x + 8 ≤ 2 ^ 64)
   rw [this, rdW_wrW_same]; rfl
 
 /-- The memory the stub leaves: L's initial memory (`loadMem` with the input bytes, the pin data
-and every word array `abiWords` zeros) in the stub's layout. -/
+and every word array zeros of the length `abiSz` gives it) in the stub's layout. -/
 theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (b pb : ByteArray) (dm : MachineData)
     (ra : Word) (hc : AbiCall b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) :
     MemRel (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-      (loadMem b pb fun _ => abiWords)
+      (loadMem b pb (abiSz tab))
       (stores dm.regs dm.regs.r8.toNat dm.dmem 0 (abiVals tab)) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hL := abiVals_length tab hnb
@@ -93,7 +93,7 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (b pb : ByteArray) (d
     simp only [abiLayout_tab, Tab.dom8_iff, hnb] at ha
     rw [Tab.pos8_eq]
     rcases h2 a ha with rfl | rfl <;> simp [loadMem, Mem.arr8, IN, Rom.PB]
-  · intro s _; simp [loadMem, Mem.arr64]
+  · intro s hs; simp [loadMem, Mem.arr64, tab.wAt_pos64 hs]
   · intro a ha i hi
     simp only [abiLayout_tab, Tab.dom8_iff, hnb] at ha
     rw [Tab.pos8_eq]
@@ -112,15 +112,18 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (b pb : ByteArray) (d
       simp [loadMem, Mem.arr8, IN, Rom.PB]; rfl
   · intro s ha i hi
     simp only [abiLayout_tab] at ha
-    have hp := tab.wposInv_ltN (tab.pos64_lt ha)
-    have hi' : i < 2 ^ 32 := by simpa [loadMem, Mem.arr64, abiWords] using hi
-    simp only [loadMem, Mem.arr64, abiLayout_b64, abiLayout_tab, Array.getElem_replicate]
-    simp only [abiSlot64, hnb, abiSlot]
-    generalize tab.wposInv (tab.pos64 s) = q at hp ⊢
-    have hle : 2 ^ 35 * (2 + (2 - 2) + q) + 2 ^ 35 ≤ 2 ^ 35 * (2 + tab.nw) :=
-      by rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
-    refine rdW_of_zero (by omega) fun j hj => hz _ ?_ (by omega)
-    rw [hL]; omega
+    have hi' : i < abiSz tab (tab.wAt (tab.pos64 s)) := by
+      rw [tab.wAt_pos64 ha]; simpa [loadMem, Mem.arr64] using hi
+    simp only [loadMem, Mem.arr64, Array.getElem_replicate]
+    have hb := fun j (hj : j < 8) => abiLayout_in64_bounds (inp := dm.regs.rdi.toNat) (n := b.size)
+      (pins := dm.regs.rdx.toNat) (np := pb.size) (base := base) hok (tab.pos64_lt ha)
+      (x := base + abiOff tab (tab.pos64 s) + 8 * i + j)
+      ⟨by simp only [abiLayout_b64]; omega, by simp only [abiLayout_b64, abiLayout_s64]; omega⟩
+    have hb0 := hb 0 (by omega); have hb7 := hb 7 (by omega)
+    simp only [abiLayout_b64, abiLayout_tab]
+    refine rdW_of_zero (by simp only [abiNeed, hnb, abiSlot] at hb7; omega) fun j hj => hz _ ?_ ?_
+    · rw [hL]; simp only [hnb, Tab.romWords] at hb0 ⊢; omega
+    · have := hb j hj; simp only [abiNeed, hnb, abiSlot] at this; omega
   · have := hW 1 _ g1
     rw [addr_val _ _ (by rw [hbase]; simp only [abiSlot]; omega), hbase] at this
     simpa only [abiLayout_T, abiLayout_lo] using this
@@ -146,7 +149,15 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (b pb : ByteArray) (d
     simp only [abiLayout_tab] at hp
     have hq := tab.wposInv_ltN hp
     have := hW (6 + p) _ (gw p hp).1
-    rw [addr_val _ _ (by simp only [abiSlot64, hnb, abiSlot] at hneed' ⊢; rw [hbase]; omega), hbase] at this
+    have hoff : abiOff tab p < 2 ^ 35 * (2 + tab.nw) := by
+      cases hc : tab.tbl64 (tab.wAt p) with
+      | none =>
+        rw [abiOff_slot hc]
+        have : abiSlot * abiSlot64 tab (tab.wposInv p) + abiSlot ≤ abiSlot * (2 + tab.nw) := by
+          rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by simp only [abiSlot64, hnb]; omega)
+        simp only [abiSlot] at this ⊢; omega
+      | some c => rw [abiOff_tbl hc]; have := abiTabOk_tbl hok hc; omega
+    rw [addr_val _ _ (by rw [hbase]; omega), hbase] at this
     simp only [abiLayout_T, abiLayout_tab, abiLayout_b64, Tab.dbase64, hnb]
     rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (p : Int)).toNat = 8 * (6 + p) by omega]
     exact this
@@ -241,11 +252,8 @@ theorem abi_harness {tab : Tab} (hok : abiTabOk tab = true) {b pb : ByteArray} {
           · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4; exact hin ⟨h3, h4⟩
           · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hpins ⟨h3, h4⟩
         · simp only [abiLayout_tab] at ha
-          have := tab.wposInv_ltN ha
-          simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4
-          have hle : 2 ^ 35 * (2 + (2 - 2) + tab.wposInv a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + tab.nw) :=
-            by rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
-          omega
+          have := abiLayout_in64_bounds hok ha ⟨h3, h4⟩
+          simp only [abiNeed, hnb, abiSlot] at this; omega
       · intro ⟨h3, h4⟩
         simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4; omega
     · rw [hsp]; exact hc.hcs24
@@ -264,8 +272,7 @@ theorem abi_harness {tab : Tab} (hok : abiTabOk tab = true) {b pb : ByteArray} {
           · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4
             rcases hc.hpinsDisj x h3 h4 with h | h <;> omega
         · simp only [abiLayout_tab] at ha
-          have := tab.wposInv_ltN ha
-          simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4
+          have := abiLayout_in64_bounds hok ha ⟨h3, h4⟩
           omega
       · rw [hsp]
         refine Classical.byContradiction fun hn => ?_

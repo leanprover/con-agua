@@ -468,6 +468,23 @@ theorem abiLayout_in64 {tab : Tab} (hok : abiTabOk tab = true) {base inp n pins 
     rw [abiOff_tbl hc] at h1 h2; rw [abiSz_tbl hc] at h2
     exact .inr (abiTabOk_inTbl hok hc h1 h2)
 
+/-- A byte of a word array in `ca_setup`'s layout lies past the table and its save area and inside
+the region the stub needs (`abiNeed`). -/
+theorem abiLayout_in64_bounds {tab : Tab} (hok : abiTabOk tab = true) {base inp n pins np p x : Nat}
+    (hp : p < tab.nw) (h : (abiLayout tab base inp n pins np).In64 p x) :
+    base + (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32) ≤ x ∧
+      x < base + abiNeed tab := by
+  obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
+  have := tab.wposInv_ltN hp
+  rcases abiLayout_in64 hok h with ⟨-, h1, h2⟩ | ⟨h1, h2⟩
+  · have hj : abiSlot64 tab (tab.wposInv p) < 2 + (tab.nb - 2) + tab.nw := by simp only [abiSlot64]; omega
+    have hle : abiSlot * abiSlot64 tab (tab.wposInv p) + abiSlot ≤ abiSlot * (2 + (tab.nb - 2) + tab.nw) := by
+      rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ hj
+    have h2s : abiSlot * 2 ≤ abiSlot * abiSlot64 tab (tab.wposInv p) := Nat.mul_le_mul_left _ (by
+      simp only [abiSlot64]; omega)
+    simp only [abiNeed]; simp only [abiSlot] at h1 h2 hle h2s ⊢; omega
+  · simp only [abiNeed, abiSlot]; omega
+
 /-- The caller's side of the stub's layout: the region `[base, base + blen)` is large enough and
 in the address space, the buffers are in the address space, apart from the region and from each
 other. -/
