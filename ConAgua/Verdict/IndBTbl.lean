@@ -172,27 +172,27 @@ theorem tblE_claim (n : Nat) {m : Mem} {a : AState} {T C lo ll nP nF rs go gl cv
   split at he
   · cases he
     have hc := ‹callE _ _ _ _ _ = Except.error _›
-    exact absurd (callE_nv hnv (by decide +kernel) _ _ _ hc) hk0
+    exact absurd (callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ hc) hk0
   unfold tblE.k_er_from_iw_2 at he
   split at he
   · cases he
     have hc := ‹callE _ _ _ _ _ = Except.error _›
-    exact absurd (callE_nv hnv (by decide +kernel) _ _ _ hc) hk0
+    exact absurd (callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ hc) hk0
   unfold tblE.k_er_from_iw_3 at he
   split at he
   · cases he
     have hc := ‹callE _ _ _ _ _ = Except.error _›
-    exact absurd (callE_nv hnv (by decide +kernel) _ _ _ hc) hk0
+    exact absurd (callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ hc) hk0
   unfold tblE.k_erec_alloc at he
   split at he
   · cases he
     have hc := ‹callE _ _ _ _ _ = Except.error _›
-    exact absurd (callE_nv hnv (by decide +kernel) _ _ _ hc) hk0
+    exact absurd (callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ hc) hk0
   unfold tblE.k_env_push_table at he
   split at he
   · cases he
     have hc := ‹callE _ _ _ _ _ = Except.error _›
-    exact absurd (callE_nv hnv (by decide +kernel) _ _ _ hc) hk0
+    exact absurd (callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ hc) hk0
   cases he
 
 include hP hp hnv in

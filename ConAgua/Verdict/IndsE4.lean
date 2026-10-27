@@ -168,7 +168,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
     have hx03 := p1.ext.trans (p2.ext.trans c3.ext)
     obtain ⟨lu, hlu⟩ : ∃ l, denoteL a3.store.ls (decI s) = some l := ⟨_, ConRon.Bridge.denoteL_ext hsP hx03⟩
     obtain ⟨lv, hlv⟩ : ∃ l, denoteL a3.store.ls (decI s0) = some l := ⟨_, ConRon.Bridge.denoteL_ext hs0P hx03⟩
-    have hcl := lvlEqFueled_errT hq hLC hl (fun n args m e h => callE_nv hnv (by decide +kernel) n args m h)
+    have hcl := lvlEqFueled_errT hq hLC hl (fun n args m e h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) n args m h)
       (fun c : Bool => if c = true then (pure () : AM Unit) else
         ConRon.Arena.fail (.invalid "mutually inductive types must live in the same universe"))
       hC3.stageT hs hs0 lu lv hlu hlv h4

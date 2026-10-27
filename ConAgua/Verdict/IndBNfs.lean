@@ -272,7 +272,7 @@ theorem iwAlloc_specNV {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = tru
   Triple.and_err (callW_spec p k "iw_alloc" vs s₀)
     (M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ hr =>
       M.of_run_err (P := fun _ => True) trivial hr
-        (invoke_nv p hnv k "iw_alloc" (by decide +kernel) vs))
+        (invoke_nv p hnv k "iw_alloc" (_root_.L.Checker.nv_mem (by decide +kernel)) vs))
 
 /-- The copy loop's ok model and its failures' class `0`. -/
 theorem ncpLoop_specNV {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) (f : Nat) (s₀ : St) :

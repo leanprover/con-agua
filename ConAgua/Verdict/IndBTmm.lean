@@ -202,7 +202,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
   unfold tmmE.k_mk_target_major at he
   split at he
   · cases he
-    exact ErrClaim.of_callE_nv (f := "mk_target_major") hnv (by decide +kernel) ‹callE _ _ _ _ _ = Except.error _›
+    exact ErrClaim.of_callE_nv (f := "mk_target_major") hnv (_root_.L.Checker.nv_mem (by decide +kernel)) ‹callE _ _ _ _ _ = Except.error _›
   · cases he
 
 include hP hnv in

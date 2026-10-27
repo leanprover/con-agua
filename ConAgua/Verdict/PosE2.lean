@@ -420,7 +420,7 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
       cases h1 : callE p n "intern_nanon" [] m with
       | error e1 =>
         rw [h1, nfrE.k_intern_nanon.none] at he; cases he
-        exact absurd (callE_nv hnv (by decide +kernel) n [] m h1) hk0
+        exact absurd (callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) n [] m h1) hk0
       | ok q1 =>
       obtain ⟨rn, m1⟩ := q1
       obtain ⟨s1, hs1, -, hna⟩ := triple_of_callW (naF_spec p LK.na n ⟨m, Locals.init []⟩ []) (callW_of_callE h1)

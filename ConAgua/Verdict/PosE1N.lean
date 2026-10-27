@@ -388,7 +388,7 @@ theorem nitE_all {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF
   cases h5 : callE p (k + 1) "lvl_eq_fueled" [(eViewW m2' (rs.getD 2 0)).tail.headD 0, rdW (m3.arr64 IW) (ctx + 9)] m3 with
   | error e5 =>
     rw [h5, nitE.k_lvl_eq_fueled.eq_1] at he; cases he
-    exact lvlEqFueled_errT hq hLC hl.hlf (nvAt_of hnv (by decide +kernel)) _ hC3.stageT huH' hsH _ _ hsL hdv h5
+    exact lvlEqFueled_errT hq hLC hl.hlf (nvAt_of hnv (_root_.L.Checker.nv_mem (by decide +kernel))) _ hC3.stageT huH' hsH _ _ hsL hdv h5
   | ok q5 =>
   obtain ⟨r4, m4⟩ := q5
   rw [h5] at he

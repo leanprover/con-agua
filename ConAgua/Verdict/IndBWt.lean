@@ -210,7 +210,7 @@ theorem wtE_claim (k : Nat) (hk : k ≤ 2 ^ 62) :
     cases h6 : callE p k "sl_cons" [x, rr.headD 0, rr.tail.headD 0] m5 with
     | error e6 =>
       rw [h6, wtE.k_sl_cons.none] at h; cases h
-      exact absurd (callE_nv hnv (by decide +kernel) _ _ _ h6) hk0
+      exact absurd (callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h6) hk0
     | ok q6 =>
     obtain ⟨ro, m6⟩ := q6
     rw [h6, wtE.k_sl_cons.arm1] at h; cases h

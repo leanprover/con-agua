@@ -5,6 +5,7 @@ import ConAgua.Verdict.DeclPendE
 import ConAgua.Verdict.CheckBE
 import ConAgua.Verdict.FrontStageE
 import ConAgua.Final.ThreadsVerdict
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The verdict claims from the inductive arm's (lane `verdicts-b`, helper `sg`)
@@ -117,11 +118,11 @@ theorem cpVerdict_proved : CPVerdict := by
     ⟨checkerProg_uceLookupsPB bs, strLitSupported_core _ hP.knot.knot.str⟩
   have hivE : IvgE (Prog.subPB bs checkerProg) := ivgE_okT hP.cvg hP.apd hP.crk hnv hU
   exact checkPending_errT .verified pins dn ds _ fe pend rfl hP (checkerProg_coreStubsEPB bs) hivE
-    (fun _ _ _ _ h => callE_nv hnv (by decide +kernel) _ _ _ h)
-    (fun _ _ _ _ h => callE_nv hnv (by decide +kernel) _ _ _ h)
-    (fun _ _ _ _ h => callE_nv hnv (by decide +kernel) _ _ _ h)
-    (fun _ _ _ _ h => callE_nv hnv (by decide +kernel) _ _ _ h)
-    (fun _ _ _ _ h => callE_nv hnv (by decide +kernel) _ _ _ h)
+    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
+    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
+    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
+    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
+    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
 
 /-- **The sequential driver's verdict claims** from the inductive arm's. -/
 theorem seqVerdicts_of (hia : IndArmVerdict) : SeqVerdicts checkerProg :=
