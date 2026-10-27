@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.SlotGrow
 public import ConAgua.L.PureEval
+public import ConAgua.L.TRec
+import ConAgua.L.GrindAttr
 
 @[expose] public section
 

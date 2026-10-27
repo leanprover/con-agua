@@ -1,7 +1,8 @@
 import ConAgua.Arena.IndT.RecGen3
 import ConAgua.Verdict.DeclValE
-import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Verdict.UnresolvedE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `class_const_ok_header`'s error claim (lane `verdicts-b`, helper `ib`)

@@ -1,4 +1,7 @@
 import ConAgua.Arena.DeclNatBase
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # CmW

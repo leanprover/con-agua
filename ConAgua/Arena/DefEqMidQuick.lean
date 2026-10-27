@@ -1,5 +1,9 @@
 import ConAgua.Arena.DefEqMidLams
 import ConAgua.Arena.CoreDen
+import ConAgua.Arena.DefEqLeaves2
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # The easy cases: `quick_defeq` (lane `defeq`)

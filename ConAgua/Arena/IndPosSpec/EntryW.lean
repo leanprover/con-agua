@@ -1,4 +1,7 @@
-import ConAgua.Arena.DeclDivModSpec.Cons
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # EntryW

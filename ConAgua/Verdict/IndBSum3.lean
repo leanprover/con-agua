@@ -1,5 +1,9 @@
 import ConAgua.Verdict.IndBSum2
 import ConAgua.Verdict.IndBSum1
+import ConAgua.Arena.IndT.Sum4
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinements of `check_sum_ctor_tail`, `check_sum_ctor`, `check_sum_ctors`

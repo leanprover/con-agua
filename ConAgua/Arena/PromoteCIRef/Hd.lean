@@ -1,4 +1,5 @@
-import ConAgua.Arena.PromoteCIExt
+import ConAgua.Arena.PromoteCIRef.DecRuleMk
+import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
 
 /-!
 # Hd

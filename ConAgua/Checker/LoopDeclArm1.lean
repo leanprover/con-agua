@@ -1,4 +1,5 @@
-import ConAgua.Checker.LoopDeclAgree
+import ConAgua.Arena.DeclArmLoop
+import ConAgua.Checker.Prog
 
 /-!
 # The arms' text agreement for the checker's program, parts 0‥5 (lane `loopt2`)

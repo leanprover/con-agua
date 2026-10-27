@@ -1,6 +1,10 @@
 import ConAgua.Arena.IndPosSpec.MapOKStep
-import ConAgua.Arena.IndPosSpec.NcGoW
 import ConAgua.Arena.IndPosSpec.NcnW
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPosSpec.EnvFindWHit
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NcnW2

@@ -1,7 +1,5 @@
 import ConAgua.Checker.ParDriverL
 import ConAgua.Checker.CheckARun
-import ConAgua.Checker.IndArm
-import ConAgua.Checker.TwinShapeQuot
 
 /-!
 # The sequential driver's two runs give `TwinAccepts` (lane parmode)

@@ -1,5 +1,10 @@
 import ConAgua.Arena.PromoteL
 import ConAgua.Arena.IndView
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `promote_e`, `pe_arm` and the arms: models and specs

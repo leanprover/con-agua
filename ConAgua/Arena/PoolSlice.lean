@@ -1,4 +1,3 @@
-import ConAgua.Arena.LitRefine
 
 /-!
 # Slices of the pool as keys

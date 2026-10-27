@@ -1,4 +1,7 @@
 import ConAgua.Arena.ConsLibRel
+import ConAgua.Arena.Store
+import ConAgua.Arena.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The `lit` store refines the arena's `lit` tables; `natAddLit_refines` without hypotheses

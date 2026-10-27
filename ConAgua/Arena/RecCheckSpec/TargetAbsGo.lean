@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecCheckSpec.TaCW
+import ConAgua.Census.Attr
 
 /-!
 # TargetAbsGo: `ConRon.Arena.targetAbsGo`, `ConRon.Arena.targetAbs`

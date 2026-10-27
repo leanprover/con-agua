@@ -1,5 +1,8 @@
 import ConAgua.Verdict.DefEqLoopsE
 import ConAgua.Verdict.DefEqLazyE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `defeq_spine`'s error claim (lane `verdicts-b`, helper `k3`)

@@ -9,7 +9,11 @@ import ConAgua.Arena.IndInstallSpec.NestCtx
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.IndInstallSpec.SpgWZero
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
-import ConAgua.Arena.PromoteCIRef.OfFrame
+import ConAgua.Arena.IndRealApdT
+import ConRon.Bridge.Inductives.BlockTail
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # `check_struct_proj_table_scoped` through the real `all_level_params_defined` (lane `indproofs4`, helper `sct`)

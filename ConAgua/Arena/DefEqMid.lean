@@ -1,5 +1,9 @@
-import ConAgua.Arena.DefEqLeaves2
-import ConAgua.Arena.InferLeaves
+import ConAgua.Arena.DefEqLeaves
+import ConAgua.Arena.InferBodyLet
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Refinements of `DefEq.lean`'s middle layer (lane `defeq`, helper `defeq-mid`)

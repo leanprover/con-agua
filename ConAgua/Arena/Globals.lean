@@ -1,5 +1,4 @@
 import ConAgua.L.Syntax
-import ConAgua.Arena.Reasons
 
 /-!
 # The checker's global variables

@@ -2,6 +2,9 @@ import ConAgua.Verdict.FrontValidE
 import ConAgua.Verdict.FrontSafeE
 import ConAgua.Verdict.FrontPreSimE
 import ConAgua.Checker.VerdictEntry1
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The frontend's two stages' error specs: `builtin_prelude`, `front_run` (lane `verdicts-b`,

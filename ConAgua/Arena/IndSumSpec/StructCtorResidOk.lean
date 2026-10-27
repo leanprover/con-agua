@@ -2,6 +2,10 @@ import ConAgua.Arena.IndSumSpec.DecHLTake
 import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.Arena.IndPartsSpec.EqW
 import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # StructCtorResidOk: `ConRon.Arena.structCtorResidOk`

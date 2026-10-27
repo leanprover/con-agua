@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndT.RecCheckTmn
-import ConAgua.Arena.RecGenSpec.DecB
-import ConAgua.Arena.RecGenSpec.DecCNWords
+import ConAgua.Census.Attr
 
 /-!
 # `classesNfs` under `StageC` (lane `indstaget`, helper `pds`)

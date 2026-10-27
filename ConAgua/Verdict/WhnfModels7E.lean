@@ -1,6 +1,11 @@
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.DefEq
 import ConAgua.Arena.WhnfEntry
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Error models of the `whnf` family's `defeq` helpers (lane `verdicts-b`, helper `k2`)

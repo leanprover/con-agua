@@ -1,7 +1,9 @@
 import ConAgua.Arena.PromoteCIRef.CiList
 import ConAgua.Arena.PromoteCIRef.Erase
 import ConAgua.Arena.PromoteCIRef.Index
-import ConAgua.Arena.PromoteTblRef2
+import ConAgua.Arena.PromoteCIRef.OfFrame
+import ConAgua.Arena.PromoteCIRef.TakeDropMin
+import ConAgua.Arena.PromoteCIRef.TdecJoin
 
 /-!
 # PnewMain

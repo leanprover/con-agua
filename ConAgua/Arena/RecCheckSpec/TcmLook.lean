@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndSumSpec.ColW
 import ConAgua.Arena.RecCheckSpec.TaGoWMfr
 import ConAgua.Arena.RecCheckSpec.TcmK6
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # TcmLook

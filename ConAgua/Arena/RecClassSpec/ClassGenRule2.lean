@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecClassSpec.RuW
+import ConAgua.Census.Attr
 
 /-!
 # ClassGenRule2: `ConRon.Arena.classGenRule`

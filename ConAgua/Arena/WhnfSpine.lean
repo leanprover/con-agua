@@ -1,5 +1,5 @@
-import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.WhnfSpineArgs
+import ConAgua.Census.Attr
 
 /-!
 # Application spines and ∀-telescopes in L, on the spine stack

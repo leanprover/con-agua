@@ -1,6 +1,7 @@
 import ConAgua.Final.BufChain
 import ConAgua.Final.DrvFinal
 import ConAgua.Checker.ParThreadTwin
+import ConAgua.Final.BufAbi
 
 /-!
 # The threads end to end, for the committed file

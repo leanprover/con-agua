@@ -1,5 +1,4 @@
 import ConAgua.Arena.StoreDen
-import ConAgua.Arena.Keeps
 
 /-!
 # `StoreDen` across the interning of a `sort` or a `const` node (lane `defeq2`)

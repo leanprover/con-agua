@@ -1,4 +1,5 @@
 import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Census.Attr
 
 /-!
 # `struct_unit_cert` refines `structUnitCert` (lane `defeq`, helper `defeq-top`)

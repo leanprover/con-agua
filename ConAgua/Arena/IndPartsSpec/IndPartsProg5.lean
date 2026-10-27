@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPartsSpec.Bsp
-import ConAgua.Arena.IndRealPartsC1
 
 /-!
 # IndPartsProg5

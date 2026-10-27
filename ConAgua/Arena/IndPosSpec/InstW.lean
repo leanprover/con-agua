@@ -1,5 +1,5 @@
-import ConAgua.Arena.DeclDivModSpec.Cons
 import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 
 /-!
 # InstW

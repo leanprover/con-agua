@@ -2,6 +2,10 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndPosSpec.NestGroupCtors
 import ConAgua.Arena.IndPosSpec.UnW
+import ConAgua.Arena.IlpRd
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NuW

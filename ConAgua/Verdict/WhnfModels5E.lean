@@ -1,5 +1,7 @@
-import ConAgua.Arena.WhnfIotaRefine5
-import ConAgua.Arena.Verdict
+import ConAgua.Arena.WhnfIota
+import ConAgua.L.ErrSpec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # Error models of `iota_certs_full` and its helpers, by hand (lane `verdicts-b`, helper `k2`)

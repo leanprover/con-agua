@@ -1,4 +1,7 @@
-import ConAgua.Arena.IndIface
+import ConAgua.L.Semantics
+import ConRon.Arena.Handle
+import Std.WP.Assertion
+import ConAgua.Arena.Reasons
 
 /-!
 # BmfK2

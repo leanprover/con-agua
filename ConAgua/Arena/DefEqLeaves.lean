@@ -1,5 +1,9 @@
+import ConAgua.Arena.DefEq
+import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.DefEqGrindAttr
-import ConAgua.Arena.IndInstallSpec.PapW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # Refinements of `DefEq.lean`'s small leaves

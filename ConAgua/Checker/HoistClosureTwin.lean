@@ -1,4 +1,6 @@
 import ConRon.Arena.Frontend.NatOpGround
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The twin's worklist closure, characterised (lane `front4`)

@@ -1,4 +1,3 @@
-import ConAgua.Arena.LitRefine
 import ConAgua.Arena.AppRefine
 import ConAgua.Arena.SortRefine
 import ConAgua.Arena.ConstRefine
@@ -19,6 +18,7 @@ import ConAgua.Arena.NStrRefine
 import ConAgua.Arena.NNumRefine
 import ConAgua.Arena.MemoLibRel
 import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The arena relation: one relation for the whole L memory

@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndRealIlpP
+import ConAgua.Arena.IndIface
 
 /-!
 # PBDecA

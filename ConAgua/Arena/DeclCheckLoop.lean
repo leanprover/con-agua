@@ -1,7 +1,12 @@
 import ConAgua.Arena.DeclArmAxiom
 import ConAgua.Arena.DeclNatGateSpec
-import ConAgua.Arena.DeclNatSubAll
 import ConAgua.Arena.DeclDivModSpec.RomPinSets
+import ConAgua.Arena.DeclArmLoop
+import ConAgua.Arena.DeclNatOpEq
+import ConAgua.Arena.DeclReducePin
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `check_decl`'s arms at the loop's relation (lane `decls3`)

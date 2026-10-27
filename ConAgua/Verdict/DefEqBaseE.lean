@@ -1,6 +1,6 @@
-import ConAgua.Arena.KnotE
-import ConAgua.Arena.DefEqKnot
 import ConAgua.Checker.NoVerdictFns
+import ConAgua.Arena.DefEqMid
+import ConAgua.Arena.Verdict
 
 /-!
 # The defeq family's error claims: the kit (lane `verdicts-b`, helper `k3`)

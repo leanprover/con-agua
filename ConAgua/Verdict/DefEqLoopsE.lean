@@ -1,4 +1,7 @@
 import ConAgua.Verdict.DefEqTailE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The `defeq` loops' error claims: `defeq_lst`, `defeq_list_rev` (lane `verdicts-b`, helper `k3`)

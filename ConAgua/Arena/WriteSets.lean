@@ -1,13 +1,9 @@
 import ConAgua.Arena.Inst1Spec
-import ConAgua.Arena.Walk
-import ConAgua.Arena.FVarRange
-import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.ArRangeSpec
 import ConAgua.Arena.InstListSpec
-import ConAgua.Arena.HasFvar
 import ConAgua.Arena.BvarB
-import ConAgua.Arena.LitRefine
 import ConAgua.Arena.Frame
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The write sets of the walks and the store programs, from the text

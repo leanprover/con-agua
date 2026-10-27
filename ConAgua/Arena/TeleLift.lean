@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.WalkLift
 import ConAgua.Census.Attr
 
 /-!

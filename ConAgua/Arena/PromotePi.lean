@@ -1,7 +1,12 @@
-import ConAgua.Arena.PromoteMemo
 import ConAgua.Arena.PromoteFlag
 import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.PromoteCopy
+import ConAgua.Arena.PromoteProg
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The persistent interners `pi_*`: the flag bracket

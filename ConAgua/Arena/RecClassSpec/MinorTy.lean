@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecClassSpec.MnW
+import ConAgua.Census.Attr
 
 /-!
 # MinorTy: `ConRon.Arena.ClassGen.minorTy`

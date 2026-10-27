@@ -1,5 +1,3 @@
-import ConRon.Arena.Basis
-import ConRon.Bridge.Promote.Pers
 import ConRon.Bridge.Checker.Basis
 
 /-!

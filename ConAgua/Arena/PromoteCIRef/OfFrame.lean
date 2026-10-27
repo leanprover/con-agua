@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndInstallSpec.Frame
+import ConAgua.Arena.DeclStepSpec
 
 /-!
 # OfFrame

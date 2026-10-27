@@ -1,4 +1,7 @@
 import ConAgua.Arena.SlotRehash
+import ConAgua.Arena.StoreLib
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The store library: the growth keeps the relation (lane kstp)

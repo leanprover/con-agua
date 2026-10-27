@@ -1,4 +1,7 @@
 import ConAgua.Checker.HoistDecode
+import ConAgua.Arena.IndView
+import ConAgua.Checker.HoistRefBase
+import ConRon.Arena.Frontend.NatOpGround
 
 /-!
 # The hoist's walk refines `usedConsts` (lane `front4`)

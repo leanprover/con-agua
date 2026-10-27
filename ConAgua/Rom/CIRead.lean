@@ -1,7 +1,5 @@
-import ConAgua.Rom.PinRead
-import ConAgua.Arena.PromoteProg
-import ConAgua.Arena.LiftSpec
-import ConAgua.Arena.DeclRomStubs
+import ConAgua.Arena.IndIface
+import ConAgua.Arena.Prelude
 import ConAgua.Census.Attr
 
 /-!

@@ -1,5 +1,8 @@
 import ConAgua.Arena.RecCheckSpec.TruncSl
-import ConAgua.Arena.RecGenSpec.ClassFieldsOf
+import ConAgua.Arena.RecStab
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # DecB

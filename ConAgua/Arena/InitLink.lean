@@ -1,5 +1,3 @@
-import ConAgua.Arena.DerRel
-import ConAgua.Arena.Tiers
 import ConAgua.Arena.Env
 import ConAgua.Census.Attr
 

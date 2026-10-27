@@ -1,7 +1,5 @@
 import ConAgua.Arena.IndInstallSpec.TabsProg
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.RecClassSpec.ReadProg
-import ConAgua.Arena.RecGenSpec.FlushStage
 
 /-!
 # HbFreeMfr

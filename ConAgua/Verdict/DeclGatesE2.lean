@@ -1,5 +1,7 @@
 import ConAgua.Verdict.DeclGatesE
 import ConAgua.Verdict.DivModPinE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claims of the `Nat.div`-family pin gate (lane `verdicts-b`, helper `d`)

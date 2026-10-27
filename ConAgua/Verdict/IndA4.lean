@@ -1,4 +1,7 @@
 import ConAgua.Verdict.IndA2
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Verdict.IndAGen
 
 /-!
 # `check_block_tail`'s error refinement (lane `verdicts-b`, helper `ia`)

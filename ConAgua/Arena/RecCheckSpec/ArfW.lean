@@ -3,6 +3,9 @@ import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.RecGenSpec.Rec3IwSlice
 import ConAgua.Arena.RecStab
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # ArfW

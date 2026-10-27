@@ -1,8 +1,13 @@
 import ConAgua.Arena.WhnfIota
-import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.RomExprRef
+import ConAgua.Arena.CoreRefine
+import ConAgua.Scan.Common
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs (primed)

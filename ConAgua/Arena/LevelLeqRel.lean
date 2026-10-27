@@ -1,8 +1,13 @@
 module
 
 public import ConAgua.Arena.LevelLeq
-public import ConAgua.Arena.LevelSimpRel
 import ConAgua.Census.Attr
+public import ConAgua.Arena.LevelHeapRel
+public import ConLeche.Kernel.Level
+import ConAgua.Arena.LevelSimpRel
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

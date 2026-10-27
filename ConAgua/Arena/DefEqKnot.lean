@@ -1,23 +1,17 @@
 import ConAgua.Arena.DefEqBody
-import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.WhnfDeltaRefine4
 import ConAgua.Arena.WhnfCoreLoop
-import ConAgua.Arena.CoreWalks
-import ConAgua.Arena.WhnfM2CRefine
-import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.InferFieldSortNat
-import ConAgua.Arena.WhnfIotaRecRefine
 import ConAgua.Arena.PropReadRefine4
 import ConAgua.Arena.InferProj2
 import ConAgua.Arena.StrLitSup
 import ConAgua.Arena.StrLitCtor
-import ConAgua.Arena.StrLitKeep
 import ConAgua.Arena.WhnfProjRefine3
 import ConAgua.Arena.WhnfIotaRecRefine3
 import ConAgua.Arena.WalkCore
 import ConAgua.Arena.InstLPEntry
-import ConAgua.Arena.CapsNeverZeroCore
-import ConAgua.Arena.RecFireCore
+import ConAgua.Arena.WhnfM2CRefine5
+import ConAgua.Census.Attr
 
 /-!
 # The knot tied (lane `defeq`)

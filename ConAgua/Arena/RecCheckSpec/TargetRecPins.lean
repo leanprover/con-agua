@@ -2,6 +2,10 @@ import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.RecCheckSpec.TpsW
 import ConAgua.Arena.IndInstallSpec.NhW
 import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # TargetRecPins: `ConRon.Arena.targetRecPins`

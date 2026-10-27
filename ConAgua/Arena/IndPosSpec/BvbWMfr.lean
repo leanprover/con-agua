@@ -3,7 +3,6 @@ import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import ConAgua.Arena.IndPosSpec.PiBWStage
 import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-import ConAgua.Arena.IndSumSpec.StructElimLevel
 
 /-!
 # BvbWMfr

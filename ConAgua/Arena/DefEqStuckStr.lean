@@ -1,4 +1,5 @@
 import ConAgua.Arena.DefEqStuckIrrel
+import ConAgua.Census.Attr
 
 /-!
 # `stuck_str` refines `defeqStuck`'s string-literal arms (lane `defeq`, helper `defeq-top`)

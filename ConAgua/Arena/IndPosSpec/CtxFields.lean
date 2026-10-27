@@ -1,4 +1,9 @@
 import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.IndStubs
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # CtxFields

@@ -1,7 +1,13 @@
 module
 
-public import ConAgua.Compiler.Correct
-public import ConAgua.Compiler.WFFast
+public import ConAgua.Compiler.Rel
+public import ConAgua.Compiler.Step
+public import ConAgua.Compiler.WF
+public import Std.Do.Triple.SpecLemmas
+import ConAgua.Compiler.Correct
+import ConAgua.Compiler.SimFun
+import ConAgua.Compiler.WFFast
+import Kraken.X64.Registers
 
 @[expose] public section
 

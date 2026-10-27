@@ -1,7 +1,4 @@
-import ConAgua.Final.DrvFinal
-import ConAgua.Final.ThreadsFinal
 import ConAgua.Final.VerdictFinal
-import ConAgua.Final.ThreadsVerdict
 import ConAgua.Verdict.IndArmTopE
 
 /-!

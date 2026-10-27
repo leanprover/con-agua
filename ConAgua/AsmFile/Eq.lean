@@ -1,5 +1,6 @@
 import ConAgua.AsmFile.Term
-import ConAgua.Compiler.Compile
+import Lean.Elab.Command
+import Std.Do.Triple.SpecLemmas
 
 /-!
 # The file's code is the compiler's output (kernel-checked; not trusted)

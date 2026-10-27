@@ -1,7 +1,9 @@
 module
 
 public import ConAgua.L.Logic
-public import ConAgua.L.Blocks
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

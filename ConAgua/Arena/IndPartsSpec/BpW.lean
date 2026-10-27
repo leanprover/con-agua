@@ -1,5 +1,7 @@
 import ConAgua.Arena.IndPartsSpec.Bf
 import ConAgua.Arena.IndPartsSpec.BrsW
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # BpW

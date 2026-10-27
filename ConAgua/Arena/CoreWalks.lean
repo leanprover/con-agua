@@ -3,9 +3,12 @@ import ConAgua.Arena.InstListRefine
 import ConAgua.Arena.ArRangeRefine
 import ConAgua.Arena.HasFvarRefine
 import ConAgua.Arena.BvarBRefine
-import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.WriteSets
 import ConAgua.Arena.WhnfIota
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The verified walks as the core's callees (lane `whnf2`)

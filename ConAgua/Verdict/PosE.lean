@@ -1,4 +1,5 @@
 import ConAgua.Verdict.IndE
+import ConAgua.Arena.IndT.PosDefs
 
 /-!
 # The positivity walk's error claims: the statements (lane `verdicts-b`, helper `ia2`)

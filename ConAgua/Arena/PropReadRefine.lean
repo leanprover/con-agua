@@ -1,7 +1,6 @@
 import ConAgua.Arena.PropReadW
-import ConAgua.Arena.DefEqMidQuick
-import ConAgua.Arena.LevelArena
 import ConAgua.Arena.InferFieldSort
+import ConAgua.Arena.CoreDen
 
 /-!
 # The prop-ness readers: the relations, `residual_pw`, `subst_pw_at` (helper `defeq2-prop`)

@@ -1,4 +1,6 @@
 import ConAgua.Final.Abi
+import ConAgua.Compiler.Main
+import Kraken.X64.Registers
 
 /-!
 # The parallel mode's entry 1 on the machine (lane parmode)

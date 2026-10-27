@@ -1,5 +1,7 @@
 import ConAgua.Arena.DeclCvg
-import ConAgua.Arena.IndRealWalk
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `install_header` refines `installHeader` (lane `decls2`, helper `decls2-header`)

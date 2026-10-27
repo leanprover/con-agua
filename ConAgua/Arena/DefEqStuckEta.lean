@@ -1,4 +1,7 @@
 import ConAgua.Arena.DefEqStuck
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # `eta_cert` refines `etaCert` (lane `defeq`, helper `defeq-top`)

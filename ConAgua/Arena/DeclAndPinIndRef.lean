@@ -1,7 +1,10 @@
 import ConAgua.Arena.DeclAndPinIndCopy2
 import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclArmQuot
-import ConAgua.Rom.CIReadSpec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # The `And` pin's inductive arm, part 3: `and_pin_ok(i)` refines `andPinOk (.indDecl block nP)`

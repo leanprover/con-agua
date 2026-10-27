@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.Reasons
+import ConAgua.Census.Attr
 
 /-!
 # The recursor stage's class kit, in L (lane `induct`, module `RecCheck`)

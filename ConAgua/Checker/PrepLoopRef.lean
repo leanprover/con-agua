@@ -1,4 +1,6 @@
 import ConAgua.Checker.PrepLeafRef
+import ConAgua.Checker.HoistClosureL
+import ConAgua.Checker.HoistOrderRef3
 
 /-!
 # `prepare_prelude`'s loops: `prep_front` refines `frontOf`, `prep_rest` its rest (lane `front4`)

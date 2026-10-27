@@ -1,11 +1,16 @@
 module
 
 public import ConAgua.Scan.WordLink
-public import ConAgua.Scan.LeafLink
-public import ConAgua.Scan.LitLink
-public import ConAgua.Scan.KeyLink
 public import ConAgua.Scan.Values
 import ConAgua.Census.Attr
+public import ConLeche.Frontend.Scan.Naive
+import ConAgua.Scan.KeyLink
+import ConAgua.Scan.LeafLink
+import ConAgua.Scan.Link
+import ConAgua.Scan.LitLink
+import ConLeche.Frontend.Scan.Equiv.Scalars
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

@@ -1,4 +1,5 @@
 import ConAgua.Rom.CIReadRefCaps
+import ConAgua.Census.Attr
 
 /-!
 # The ROM constant readers: recursor rules (helper `decls4-rom`)

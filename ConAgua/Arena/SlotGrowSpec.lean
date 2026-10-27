@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.SlotGrow
-meta import ConAgua.L.Semantics
+public import ConAgua.L.Logic
+import ConAgua.L.GrindAttr
 
 @[expose] public section
 

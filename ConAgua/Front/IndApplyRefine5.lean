@@ -1,4 +1,5 @@
 import ConAgua.Front.IndApplyRefine4
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The apply step of an `inductive` line against the twin, V: the constructors in the block's order

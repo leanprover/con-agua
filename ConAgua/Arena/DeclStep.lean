@@ -1,5 +1,3 @@
-import ConAgua.Arena.DeclBase
-import ConAgua.Arena.IndProg
 import ConAgua.Arena.DeclArms
 import ConAgua.Front.IndApply
 import ConAgua.Census.Attr

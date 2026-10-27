@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndRealMemoCr
 import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Census.Attr
 
 /-!
 # FieldDomsResolve: `ConRon.Arena.fieldDomsResolve`, `ConRon.Arena.idxArgsResolve`

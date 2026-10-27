@@ -1,4 +1,7 @@
 import ConAgua.Arena.DeclNatSpec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # `nat_op_deps` refines `natOpDeps` (lane `decls3`, helper `decls3-nat`)

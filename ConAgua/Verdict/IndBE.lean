@@ -1,8 +1,16 @@
+import ConAgua.Arena.CrOKFrame
+import ConAgua.Arena.DeclValSpec
+import ConAgua.Arena.IndInstallSpec.CapsProg
+import ConAgua.Arena.IndInstallSpec.DecCNS
+import ConAgua.Arena.IndRealApdT
+import ConAgua.Arena.IndRealIlpL
+import ConAgua.Arena.IndSumSpec.SumProg
+import ConAgua.Arena.IndSumSpec.TblProg
+import ConAgua.Arena.KnotEntry
+import ConAgua.Arena.RecGenSpec.OcW
+import ConAgua.Arena.Verdict
+import ConRon.Bridge.Inductives.ClassRead
 import ConAgua.Verdict.IndAGen
-import ConAgua.Arena.IndT.Sum2
-import ConAgua.Arena.IndT.Sum5
-import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.IndT.RecGen19
 
 /-!
 # The `indB` family's error claims used by `check_ind_decl`'s pass and tail (lane `verdicts-b`,

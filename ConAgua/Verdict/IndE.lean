@@ -1,7 +1,16 @@
-import ConAgua.Arena.IndT.Sum3
-import ConAgua.Arena.IndT.PosCensus
-import ConAgua.Arena.KnotE
-import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.NbLook
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndRealLvlC
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictFns
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinements of `check_field_sort_bound`, `nest_cont_key` (lane `verdicts-b`, helper `c6`)

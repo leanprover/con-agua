@@ -1,5 +1,5 @@
 import ConAgua.Arena.DeclDivModSpec.PureRun
-import ConAgua.Arena.DeclRomStubs
+import ConAgua.Arena.DeclNatBase
 
 /-!
 # Cons

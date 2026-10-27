@@ -1,5 +1,7 @@
 import ConAgua.Arena.ConstsResolveF
 import ConAgua.Arena.StageInst1
+import ConAgua.Arena.Pins
+import ConAgua.Arena.WhnfIota
 
 /-!
 # `consts_resolve_ffast`'s model (lane `indproofs4`, helper `memo`)

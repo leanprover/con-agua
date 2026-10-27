@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclBase
-import ConAgua.Arena.Reasons
 import ConAgua.Census.Attr
 
 /-!

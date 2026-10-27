@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndRealSpine
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `abstract1_fast` under the stage relation and the `abstract1` memo (lane `indproofs4`, helper `abs`)

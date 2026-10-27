@@ -1,6 +1,11 @@
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndPartsSpec.SetEqW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # BlockRecNameSetOk: `ConRon.Arena.blockGroups`, `ConRon.Arena.blockRecNameSetOk`, `ConRon.Arena.ctorMember`

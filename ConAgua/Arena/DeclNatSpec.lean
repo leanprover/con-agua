@@ -1,5 +1,7 @@
 import ConAgua.Arena.DeclNatBase
-import ConAgua.Arena.DeclCanonSpec2
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # The structural-`Nat` gate: the name lists and the dependency tables (lane `decls3`, helper `decls3-nat`)

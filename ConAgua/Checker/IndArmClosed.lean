@@ -1,7 +1,8 @@
 import ConAgua.Checker.Prog
 import ConAgua.Checker.IndArmFns
-import ConAgua.Arena.IndArm
-import ConAgua.Compiler.WriteSetSplit
+import ConAgua.Arena.IndInstallSpec.GrcTwinA
+import ConAgua.Arena.IndInstallSpec.HbFreeMfr
+import ConAgua.Arena.IndT.ArmMemos
 
 /-!
 # The write sets of the inductive arm's callees in `checkerProg` (lane `indproofs4`)

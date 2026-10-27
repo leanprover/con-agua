@@ -1,4 +1,8 @@
 import ConAgua.Arena.DefEqMidQuick
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The same-head spine comparison: `defeq_spine` (lane `defeq`)

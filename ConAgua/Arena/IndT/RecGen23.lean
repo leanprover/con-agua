@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndT.RecCheckK53
-import ConAgua.Arena.RecGenSpec.PdWMfr
+import ConAgua.Census.Attr
 
 /-!
 # `classNodesAgree` under `StageC` (lane `indstaget`, helper `pds`)

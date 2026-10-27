@@ -1,6 +1,9 @@
 import ConAgua.Checker.ParEntryA
 import ConAgua.Checker.IndArm
 import ConAgua.Arena.PhaseAEntry
+import ConAgua.Checker.LoopStage
+import ConAgua.Checker.PipeFinal
+import ConAgua.Checker.TwinShapeQuot
 
 /-!
 # Entry 1 at the checker's program: `checkA_run` (lane parmode)

@@ -1,4 +1,5 @@
 import ConAgua.Rom.CIReadRefNames
+import ConAgua.Census.Attr
 
 /-!
 # The ROM constant readers: constant values (helper `decls4-rom`)

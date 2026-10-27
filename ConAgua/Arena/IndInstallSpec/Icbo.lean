@@ -1,7 +1,10 @@
-import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndInstall
 import ConAgua.Arena.WhnfBase
 import ConAgua.Scan.Common
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Icbo

@@ -1,10 +1,5 @@
-import ConAgua.Arena.Env
-import ConAgua.Arena.IndIface
-import ConAgua.Arena.CoreRefine
-import ConAgua.Front.StateDR
 import ConAgua.Arena.PromoteMemo
-import ConRon.Arena.Checker
-import ConAgua.Arena.DeclPins
+import ConAgua.Rom.PinSets
 
 /-!
 # The declaration loop's relation (`LoopR`) and the pending checks (`PendR`)

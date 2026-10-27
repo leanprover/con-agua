@@ -1,4 +1,7 @@
 import ConAgua.Arena.DefEqMidLoops
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # The batched ∀ descent: `defeq_peel` and `defeq_binders` (lane `defeq`)

@@ -1,4 +1,4 @@
-import ConAgua.Rom.CIReadRefBlock
+import ConAgua.Rom.CIReadRefCaps
 
 /-!
 # The ROM constant readers: the region's layout, the slot and the fresh memo (helper `decls4-rom`)

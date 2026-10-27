@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.Keeps
 import ConRon.Bridge.ExprOps.MemoSpecs
 
 /-!

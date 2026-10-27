@@ -1,6 +1,7 @@
 import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
 import ConAgua.Arena.ProjStore
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The `proj` store refines the arena's `proj` tables

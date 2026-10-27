@@ -1,9 +1,9 @@
 module
 
 public import ConAgua.Front.DeclIface
-public import ConAgua.Scan.Records
-public import ConAgua.Census.Attr
-meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.Scan.Common
 
 @[expose] public section
 

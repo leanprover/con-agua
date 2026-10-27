@@ -1,5 +1,9 @@
 import ConAgua.Arena.IndPos2
 import ConAgua.Arena.Verdict
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Error models of `nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`, their leaves

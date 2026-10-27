@@ -1,7 +1,11 @@
 import ConAgua.Arena.BvarB
-import ConAgua.Arena.Abs1Refine
 import ConAgua.Arena.WalkRefine
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.Keeps
+import ConAgua.Arena.LiftRefine
 import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `bvar_b` refines `bvarB`, `loose_bvars_bounded_fast` refines `looseBVarsBoundedFast`

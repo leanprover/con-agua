@@ -3,9 +3,7 @@ import ConAgua.Arena.IndInstallSpec.DecISS
 import ConAgua.Arena.IndInstallSpec.HbFreeMfr
 import ConAgua.Arena.IndInstallSpec.Icp
 import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
-import ConAgua.Arena.RecGenSpec.ClassSeeds
 import ConAgua.Arena.RecGenSpec.Classes
-import ConAgua.Arena.RecGenSpec.OcW
 
 /-!
 # BpRecBpassR

@@ -1,4 +1,3 @@
-import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.Pins
 import ConAgua.Census.Attr
 

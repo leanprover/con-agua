@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.L.Logic
-public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.Semantics
+import ConAgua.Arena.GrindAttr
+import Std.Data.DTreeMap.Internal.Operations
 
 @[expose] public section
 

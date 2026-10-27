@@ -1,4 +1,7 @@
 import ConAgua.Verdict.DeclArmsE
+import ConAgua.Arena.CheckerT
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claim of `check_decl` (lane `verdicts-b`, helper `d`)

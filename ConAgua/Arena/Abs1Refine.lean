@@ -1,9 +1,8 @@
 import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.Inst1Refine
-import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.Keeps
-import ConAgua.Arena.SimLib
 import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `abs_go` refines the arena's `abstract1Go`

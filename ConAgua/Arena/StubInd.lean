@@ -1,10 +1,5 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.LevelZero
 import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.WhnfEntry
-import ConAgua.Arena.InstListSpec
-import ConAgua.Arena.Inst1Spec
-import ConAgua.Arena.FVarStore
 import ConAgua.Census.Attr
 
 /-!

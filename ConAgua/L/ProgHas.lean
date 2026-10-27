@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.L.Semantics
+public import ConAgua.L.Syntax
 
 @[expose] public section
 

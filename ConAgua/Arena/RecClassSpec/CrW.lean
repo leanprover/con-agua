@@ -4,6 +4,11 @@ import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecClassSpec.ReadProg
 import ConAgua.Arena.IndPartsSpec.BlockCounts
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # CrW

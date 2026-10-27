@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NestBlockOfKey

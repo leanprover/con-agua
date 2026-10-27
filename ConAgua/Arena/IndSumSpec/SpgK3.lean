@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.ColW
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # SpgK3

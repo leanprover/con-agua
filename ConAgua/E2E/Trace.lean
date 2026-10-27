@@ -1,5 +1,5 @@
 import ConAgua.L.Semantics
-import Std.Data.HashMap
+import Std.Data.HashMap.Basic
 
 /-!
 # A tracing interpreter for L (lane `e2e`, diagnosis only)

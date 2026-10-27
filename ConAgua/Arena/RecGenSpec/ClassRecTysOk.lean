@@ -1,5 +1,8 @@
 import ConAgua.Arena.RecGenSpec.ClassConstOk
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # ClassRecTysOk

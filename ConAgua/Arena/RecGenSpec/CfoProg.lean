@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndPosSpec.NoConstWf
-import ConAgua.Arena.IndPosSpec.RootHoles
 import ConAgua.Arena.RecStab
+import ConAgua.Arena.RecSim
 
 /-!
 # CfoProg

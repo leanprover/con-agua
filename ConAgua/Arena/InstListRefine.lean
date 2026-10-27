@@ -1,8 +1,8 @@
 import ConAgua.Arena.InstListSpec
 import ConAgua.Arena.Abs1Refine
 import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.SimLib
 import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `inst_list` refines the arena's `instantiateListFast`

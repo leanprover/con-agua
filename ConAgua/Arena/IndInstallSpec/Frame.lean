@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndInstallSpec.OfClosed
-import ConAgua.Arena.IndRealBph2
+import ConAgua.Arena.IndPosSpec.FgW
 
 /-!
 # Frame

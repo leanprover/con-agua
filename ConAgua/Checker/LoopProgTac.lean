@@ -1,4 +1,5 @@
 import ConAgua.Checker.PreludeSimProg
+import ConAgua.Rom.Stage
 import ConAgua.Checker.RomProg0
 
 /-!

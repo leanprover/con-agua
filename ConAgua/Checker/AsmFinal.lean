@@ -1,8 +1,5 @@
-import ConAgua.Checker.AsmFileEq
-import ConAgua.Checker.ProgWf
-import ConAgua.Final.Statement
-import ConAgua.Final.Abi
-import ConAgua.Checker.AsmStubEq
+import ConAgua.Checker.Prog
+import ConAgua.Compiler.AbiSim
 
 /-!
 # The committed assembler file `checker.s`: the checker's facts the final theorems use

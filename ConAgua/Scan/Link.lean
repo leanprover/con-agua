@@ -2,8 +2,8 @@ module
 
 public import ConAgua.L.Examples
 public import ConLeche.Frontend.Scan.Fast
-public import ConLeche.Frontend.Scan.Equiv.Scalars
 import ConAgua.Census.Attr
+import ConLeche.Frontend.Scan.Equiv.Scalars
 
 @[expose] public section
 

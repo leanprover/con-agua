@@ -1,9 +1,7 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
-import ConAgua.Arena.PoolSlice
-import ConAgua.Arena.LsStore
 
 import ConAgua.Arena.NStrStore
+import ConAgua.Arena.LitRefine
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The name store's `str` table refines the arena's `str` tables

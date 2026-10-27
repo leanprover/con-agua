@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclNatGateT
 import ConAgua.Arena.DeclDivGateT
+import ConAgua.Census.Attr
 
 /-!
 # The definition arm under `StageT` (lane `loopt3`, helper `loopt3-nat`)

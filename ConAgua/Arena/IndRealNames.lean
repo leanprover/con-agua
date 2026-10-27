@@ -3,7 +3,8 @@ import ConAgua.Arena.RecSim
 import ConAgua.Arena.DeclMasterStage
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.InstLPRef
-import ConAgua.Arena.WhnfProjRefine
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Name and level-list interning stubs discharged (lane `indproofs4`, helper `indproofs4-names`)

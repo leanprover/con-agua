@@ -1,5 +1,6 @@
 import ConAgua.Rom.CIReadRefCV
 import ConAgua.Arena.LevelInternRef
+import ConAgua.Census.Attr
 
 /-!
 # The ROM constant readers: an inductive's capabilities (helper `decls4-rom`)

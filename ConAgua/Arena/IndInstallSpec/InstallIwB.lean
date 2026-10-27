@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndInstallSpec.InstallCvDecB
 import ConAgua.Arena.IndSumSpec.SumProg
-import ConAgua.Arena.RecClassSpec.PiBWRoom
 
 /-!
 # InstallIwB

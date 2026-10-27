@@ -1,7 +1,5 @@
-import ConAgua.Arena.WhnfCore
-import ConAgua.Arena.CoreLevels
-import ConAgua.Arena.NStrStore
-import ConAgua.Arena.NNumStore
+import ConAgua.Arena.Tiers
+import ConAgua.Census.Attr
 
 /-!
 # Projection tables: `find_proj`, `fire_ok` (lane `whnf3`)

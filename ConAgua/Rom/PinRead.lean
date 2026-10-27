@@ -1,6 +1,6 @@
-import ConAgua.Rom.PinStream
 import ConAgua.Rom.DataLit
 import ConAgua.Rom.Subst
+import ConAgua.Census.Attr
 import ConAgua.Arena.IndIface
 
 /-!

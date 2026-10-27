@@ -3,6 +3,10 @@ import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.IlpRd
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # CftW

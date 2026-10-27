@@ -1,4 +1,6 @@
 import ConAgua.Verdict.DeclCdE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claims of `install_value`, `install_step_go`, `install_step`, `install_decl_step`

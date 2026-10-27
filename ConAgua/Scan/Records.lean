@@ -1,14 +1,10 @@
 module
 
-public import ConAgua.L.Notation
-public import ConAgua.L.Logic
-public import ConAgua.Scan.Common
 public import ConAgua.Scan.Values
 public import ConAgua.Scan.Member
-public import ConAgua.Scan.Lit
 public import ConAgua.Scan.Str
-meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 @[expose] public section
 

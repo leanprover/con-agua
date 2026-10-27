@@ -1,4 +1,6 @@
 import ConAgua.Front.IndApplyRefine7
+import ConAgua.Front.IndApplyRefine5
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `validateIndD` from clean facts

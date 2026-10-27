@@ -1,4 +1,8 @@
 import ConAgua.Arena.IndSumSpec.McGoStep
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # MentionsConst: `ConRon.Arena.hasLooseBVarBFast`, `ConRon.Arena.hasLooseBVarBGo`, `ConRon.Arena.hasLooseBVarBIns`, `ConRon.Arena.mentionsConstGo`, `ConRon.Arena.mentionsConst`

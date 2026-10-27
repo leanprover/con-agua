@@ -1,8 +1,9 @@
 import ConAgua.Arena.RomLevels
-import ConAgua.Arena.MemoLibRel
-import ConAgua.Arena.Store
-import ConLeche.Verify.Cached.Erase
-import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The ROM's expressions: `rom_expr(pos)` refines `internExprGo`, its memo mirrored

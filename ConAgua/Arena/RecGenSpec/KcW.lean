@@ -1,6 +1,10 @@
-import ConAgua.Arena.RecCheckSpec.EeW2
 import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.RecGenSpec.KofProg
+import ConAgua.Arena.IndPosSpec.GgW2
+import ConAgua.Arena.IndPosSpec.SgGoW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # KcW

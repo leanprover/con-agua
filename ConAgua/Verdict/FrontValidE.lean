@@ -1,6 +1,8 @@
 import ConAgua.Verdict.FrontOrderE
 import ConAgua.Verdict.FrontRecsE
 import ConAgua.Verdict.FrontRunE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `validate_ind_d`'s error refinement (lane `verdicts-b`, helper `f2`)

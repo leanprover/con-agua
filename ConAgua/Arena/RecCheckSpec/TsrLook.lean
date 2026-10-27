@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecCheckSpec.ArfW
 import ConAgua.Arena.RecCheckSpec.RcLook
+import ConAgua.Arena.IndReal
 
 /-!
 # TsrLook

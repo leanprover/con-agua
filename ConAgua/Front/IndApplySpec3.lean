@@ -1,5 +1,9 @@
 import ConAgua.Front.IndApplySpec2
 import ConAgua.Front.IndFieldsSpec
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The apply step of an `inductive` line: word models and specs, III (the entries)

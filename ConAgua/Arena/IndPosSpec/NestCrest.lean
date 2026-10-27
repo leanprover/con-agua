@@ -3,6 +3,7 @@ import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndPosSpec.MapOKStep
 import ConAgua.Arena.IndPosSpec.NcnW
 import ConAgua.Arena.IndPosSpec.NtyW
+import ConAgua.Census.Attr
 
 /-!
 # NestCrest: `ConRon.Arena.nestCanonCrest`, `ConRon.Arena.nestCrest`

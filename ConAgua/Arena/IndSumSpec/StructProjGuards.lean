@@ -1,6 +1,11 @@
 import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.Arena.IndSumSpec.SpgK3
 import ConAgua.Arena.IndSumSpec.StructUsedLater
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # StructProjGuards: `ConRon.Arena.structProjGuards`

@@ -1,7 +1,7 @@
 import ConAgua.Arena.IndT.PosAll
-import ConAgua.Arena.IndPosSpec.NestSeeds
 import ConAgua.Arena.IndPosSpec.P2sdW
 import ConAgua.Arena.IndPosSpec.UnW2
+import ConAgua.Census.Attr
 
 /-!
 # `nest_root` and `nest_seeds` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

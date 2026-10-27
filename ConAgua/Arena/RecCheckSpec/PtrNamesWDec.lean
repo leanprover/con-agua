@@ -1,5 +1,9 @@
 import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 import ConAgua.Arena.IndPosSpec.NkcW
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # PtrNamesWDec

@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndIface
 import ConAgua.Arena.LevelApd
-import ConAgua.Arena.MemoLib
 import ConAgua.Census.Attr
 
 /-!

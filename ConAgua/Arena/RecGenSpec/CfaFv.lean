@@ -1,5 +1,8 @@
 import ConAgua.Arena.RecGenSpec.IwNLtSize
 import ConAgua.Arena.RecGenSpec.PdWMfr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # CfaFv

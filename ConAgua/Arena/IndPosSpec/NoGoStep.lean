@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndPosSpec.CanonW
 import ConAgua.Arena.IndPosSpec.SlRCongr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NoGoStep

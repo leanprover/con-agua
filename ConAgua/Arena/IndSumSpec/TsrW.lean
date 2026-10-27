@@ -1,6 +1,10 @@
 import ConAgua.Arena.IndSumSpec.SumRules
 import ConAgua.Arena.IndSumSpec.TblProg
 import ConAgua.Arena.RecCheckSpec.TsrLook
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # TsrW

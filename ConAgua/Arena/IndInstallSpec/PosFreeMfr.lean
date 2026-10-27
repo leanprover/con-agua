@@ -1,6 +1,8 @@
 import ConAgua.Arena.IndInstallSpec.HbFreeMfr
 import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.RecClassSpec.ReadProg
+import ConAgua.Arena.RecGenSpec.FlushStage
 
 /-!
 # PosFreeMfr

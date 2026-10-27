@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndSumSpec.TsrW
+import ConAgua.Census.Attr
 
 /-!
 # TgtStoredRules: `ConRon.Arena.tgtStoredRules`

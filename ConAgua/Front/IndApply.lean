@@ -1,6 +1,5 @@
 import ConAgua.Front.IndFields
-import ConAgua.Arena.IndIface
-import ConAgua.Arena.LevelEquiv
+import ConAgua.Front.ApplyDecl
 import ConAgua.Census.Attr
 
 /-!

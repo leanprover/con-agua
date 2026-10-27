@@ -1,7 +1,6 @@
 module
 
 public import Kraken.Mem
-public import Kraken.ToBytes
 import all Kraken.Mem
 
 @[expose] public section

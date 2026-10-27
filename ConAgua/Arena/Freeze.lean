@@ -1,24 +1,4 @@
-import ConAgua.Arena.Store
-import ConAgua.Arena.AppStore
-import ConAgua.Arena.LevelStore
-import ConAgua.Arena.ZeroStore
-import ConAgua.Arena.MaxStore
-import ConAgua.Arena.ImaxStore
-import ConAgua.Arena.ParamStore
-import ConAgua.Arena.SortStore
-import ConAgua.Arena.ConstStore
-import ConAgua.Arena.LetStore
-import ConAgua.Arena.BVarStore
-import ConAgua.Arena.FVarStore
-import ConAgua.Arena.LamStore
-import ConAgua.Arena.ForallStore
-import ConAgua.Arena.ProjStore
-import ConAgua.Arena.NAnonStore
-import ConAgua.Arena.NStrStore
-import ConAgua.Arena.NNumStore
-import ConAgua.Arena.LsStore
 import ConAgua.Arena.DeclBase
-import ConAgua.Arena.Globals
 
 /-!
 # The frozen buffer: compaction of the persistent tier (lane parmode, docs/design/parmode.md)

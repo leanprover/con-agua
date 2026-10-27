@@ -1,7 +1,5 @@
 import ConAgua.Arena.IndT.RecGen23
-import ConAgua.Arena.RecGenSpec.CfaFv
-import ConAgua.Arena.RecGenSpec.ClassMinorSlot
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+import ConAgua.Census.Attr
 
 /-!
 # `classFieldsAgree` under `StageC` (lane `indstaget`, helper `pds`)

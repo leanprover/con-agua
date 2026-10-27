@@ -1,8 +1,13 @@
-import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.RecGen
 import ConAgua.Arena.WhnfBase
 import ConAgua.L.Records
 import ConAgua.Scan.Common
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # GenRecCheckPrep

@@ -1,8 +1,8 @@
 import ConAgua.Arena.LiftSpec
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.FVarRangeRefine
-import ConRon.Arena.ExprOps
 import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `lift_go` refines the arena's `liftLooseBVarsGo`

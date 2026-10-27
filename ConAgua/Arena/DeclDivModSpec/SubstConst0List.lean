@@ -1,4 +1,7 @@
 import ConAgua.Arena.DeclDivModSpec.Sc0List
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # SubstConst0List: `ConRon.Arena.divModCertApplied`, `ConRon.Arena.substConst0List`

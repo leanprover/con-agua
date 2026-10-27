@@ -1,4 +1,6 @@
-import ConAgua.Arena.IndInstallSpec.PapW
+import ConAgua.Arena.Abs1Refine
+import ConAgua.Arena.IndPartsSpec.EqW
+import ConRon.Bridge.Grind
 
 /-!
 # EqWDec

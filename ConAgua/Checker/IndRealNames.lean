@@ -1,5 +1,5 @@
-import ConAgua.Checker.Prog
-import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.Reasons
+import ConAgua.Arena.LevelView
 
 /-!
 # The name and level-list stubs' program bundles for the checker's program (lane `indproofs4`)

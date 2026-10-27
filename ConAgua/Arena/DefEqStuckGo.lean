@@ -1,4 +1,6 @@
 import ConAgua.Arena.DefEqStuckWith
+import ConAgua.Arena.DefEqLeaves2
+import ConAgua.Census.Attr
 
 /-!
 # `struct_eta_cert_go` refines `structEtaCertWith`'s keys (lane `defeq`, helper `defeq-top`)

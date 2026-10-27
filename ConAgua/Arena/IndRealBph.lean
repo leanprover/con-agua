@@ -1,4 +1,8 @@
-import ConAgua.Arena.DeclAndPinIndRef
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Checker.Entry
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `basis_pin_hit(off, len)`: the loops and their models (lane `indproofs4`, helper `bph`)

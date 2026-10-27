@@ -1,9 +1,13 @@
 module
 
 public import ConAgua.Arena.MemoLib
-meta import ConAgua.L.Semantics
-meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

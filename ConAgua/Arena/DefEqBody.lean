@@ -1,6 +1,6 @@
 import ConAgua.Arena.DefEqStuckTail
 import ConAgua.Arena.DefEqMidLazy2
-import ConAgua.Arena.KnotSlot
+import ConAgua.Census.Attr
 
 /-!
 # `defeq_body` refines `defeqBody`; the knot's `defeq` slot one level up (lane `defeq`)

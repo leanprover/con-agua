@@ -1,10 +1,4 @@
-import ConAgua.Arena.IndRealBle
-import ConAgua.Arena.RecCheckSpec.RpLook
-import ConAgua.Arena.RecGenSpec.ClassRecTysOk
-import ConAgua.Arena.RecGenSpec.DecB
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.RecGenSpec.DecCNWords
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+import ConAgua.Arena.IndIface
 
 /-!
 # GrcTwinA

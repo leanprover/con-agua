@@ -2,6 +2,11 @@ import ConAgua.Arena.RecClassSpec.GtProg
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.MjW
 import ConAgua.Arena.RecClassSpec.SlotsProg
+import ConAgua.Arena.IndPosSpec.SnocWStage
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # ClassGenRecTy: `ConRon.Arena.classGenRecTy`

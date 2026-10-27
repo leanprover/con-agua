@@ -1,7 +1,6 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
 import ConAgua.Arena.ParamStore
 import ConAgua.Arena.LpColRel
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The level `param` store refines the arena's `param` tables

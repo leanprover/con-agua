@@ -1,5 +1,9 @@
 import ConAgua.Arena.IndPartsSpec.IndPartsProg5
 import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
+import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Bf

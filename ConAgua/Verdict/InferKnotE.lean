@@ -1,4 +1,9 @@
 import ConAgua.Verdict.InferBindE
+import ConAgua.Arena.InferBodyDisp
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinements of the inference bodies and the knot's `infer`, `infer_io` slots

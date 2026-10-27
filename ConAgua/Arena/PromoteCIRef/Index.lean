@@ -1,7 +1,8 @@
-import ConAgua.Arena.IndInstallSpec.PapW
 import ConAgua.Arena.PromoteCIInfra
 import ConAgua.Arena.PromoteCIRef.ConstsAt
 import ConAgua.Arena.PromoteCIRef.Promoted
+import Std.Tactic.BVDecide.Normalize.Prop
+import ConRon.Bridge.Grind
 
 /-!
 # Index

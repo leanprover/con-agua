@@ -1,4 +1,5 @@
 import ConAgua.Arena.FreezeFreshBase
+import ConAgua.Arena.FreezeTrunc
 
 /-!
 # A fresh worker memory, part 2: phase B starts from it (lane parmode)

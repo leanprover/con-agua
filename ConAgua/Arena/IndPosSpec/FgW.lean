@@ -5,6 +5,7 @@ import ConAgua.Arena.IndPosSpec.Mfr
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 import ConAgua.Arena.IndPosSpec.U4W
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # FgW

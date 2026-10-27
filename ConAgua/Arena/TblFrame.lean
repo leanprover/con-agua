@@ -1,4 +1,5 @@
 import ConAgua.Arena.Env
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The table-row arrays as a frame

@@ -1,9 +1,8 @@
-import ConAgua.Arena.InferBodyDisp
-import ConAgua.Arena.DefEqMidQuick
 import ConAgua.Arena.InferFieldSort
-import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.DefEqLeaves2
-import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.CoreDen
+import ConAgua.Arena.InferBodySpine
+import ConAgua.Census.Attr
 
 /-!
 # `inferProj`: `proj_type_at` and `infer_proj_at` (lane `defeq2`, helper `defeq2-proj`)

@@ -1,9 +1,8 @@
-import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfDelta
-import ConAgua.Arena.IndView
-import ConAgua.Arena.SimLib
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The structural-`Nat` gate: shared pieces (lane `decls3`, helper `decls3-nat`)

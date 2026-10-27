@@ -1,5 +1,7 @@
-import ConAgua.Arena.DeclNatOpEq
 import ConAgua.Arena.DeclArmDefn
+import ConAgua.Arena.DeclNatEq
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 
 /-!

@@ -1,4 +1,6 @@
 import ConAgua.Rom.CIReadRefData
+import ConAgua.Rom.CIReadRefLayout
+import ConAgua.Census.Attr
 
 /-!
 # The ROM constant readers refine the twin (helper `decls4-rom`)

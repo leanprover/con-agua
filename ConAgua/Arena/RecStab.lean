@@ -1,6 +1,4 @@
-import ConAgua.Arena.RecSim
 import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.RecGenSpec.Set64
 
 /-!
 # Stable decodings (lane `indproofs2`, helper `rec`)

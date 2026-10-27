@@ -1,8 +1,6 @@
 module
 
 public import ConAgua.Scan.Line
-public import ConAgua.Compiler.WFFast
-meta import ConAgua.L.Semantics
 
 @[expose] public section
 

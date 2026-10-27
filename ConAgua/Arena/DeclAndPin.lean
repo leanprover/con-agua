@@ -1,8 +1,9 @@
 import ConAgua.Arena.DeclBase
 import ConAgua.Arena.Pins
-import ConAgua.Arena.Rom
-import ConAgua.Census.Attr
 import ConAgua.Arena.WhnfBase
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # The fold's `And` pin: `and_pin_ok(i)` refines `andPinOk` (con-leche's ANDPIN)

@@ -1,6 +1,6 @@
 import ConAgua.Final.ThreadsFinal
-import ConAgua.Final.VerdictFinal
 import ConAgua.Verdict.ThreadsE
+import ConAgua.Checker.VerdictTop
 
 /-!
 # The verdict theorem for the threaded harness of the committed file

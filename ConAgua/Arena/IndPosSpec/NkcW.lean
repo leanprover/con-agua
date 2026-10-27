@@ -1,8 +1,12 @@
-import ConAgua.Arena.DeclDivModSpec.Cons
 import ConAgua.Arena.IndPosSpec.NkFields
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.EqW
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NkcW

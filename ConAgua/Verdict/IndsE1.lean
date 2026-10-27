@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndT.Install4
 import ConAgua.Arena.Verdict
+import ConAgua.Arena.IndInstall
+import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `check_block_inds`' error refinement: the error models (lane `verdicts-b`, helper `ia2-inds`)

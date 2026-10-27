@@ -3,7 +3,6 @@ import ConAgua.Arena.IndPosSpec.Mfr
 import ConAgua.Arena.IndPosSpec.P2rtW
 import ConAgua.Arena.IndPosSpec.Pos2WfWfSome
 import ConAgua.Arena.IndPosSpec.RootOutsB
-import ConAgua.Arena.IndPosSpec.Snoc
 
 /-!
 # P2sfW

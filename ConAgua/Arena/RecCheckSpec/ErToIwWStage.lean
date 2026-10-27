@@ -1,6 +1,9 @@
-import ConAgua.Arena.IlpRd
 import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # ErToIwWStage

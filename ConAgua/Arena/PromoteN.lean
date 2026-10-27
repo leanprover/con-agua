@@ -1,4 +1,10 @@
-import ConAgua.Arena.PromotePi
+import ConAgua.Arena.PromoteProg
+import ConAgua.Arena.WhnfBase
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `promote_n` and `pn_arm`: models and specs

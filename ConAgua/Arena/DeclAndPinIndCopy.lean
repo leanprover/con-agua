@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclAndPinIndDec
 import ConAgua.Arena.DeclStep
 import ConAgua.Arena.IndMaster
+import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
 
 /-!
 # The `And` pin's inductive arm, part 2b: the word models of `ind_block_to_erec`

@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPosSpec.RpGoStep
+import ConAgua.Census.Attr
 
 /-!
 # ReplaceAppsGo: `ConRon.Arena.appHole`, `ConRon.Arena.replaceAppsGo`, `ConRon.Arena.replaceApps`

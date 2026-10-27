@@ -1,6 +1,8 @@
-import ConAgua.Arena.IndRealOpf3
-import ConAgua.Arena.IndSumSpec.StructElimLevel
 import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Classes: `ConRon.Arena.ClassRead.classes`

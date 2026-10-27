@@ -1,21 +1,6 @@
 import ConAgua.Arena.Promote
-import ConAgua.Arena.LiftSpec
-import ConAgua.Arena.SortStore
-import ConAgua.Arena.ConstStore
-import ConAgua.Arena.FVarStore
-import ConAgua.Arena.NAnonStore
-import ConAgua.Arena.NStrStore
-import ConAgua.Arena.NNumStore
-import ConAgua.Arena.ZeroStore
-import ConAgua.Arena.LevelStore
-import ConAgua.Arena.MaxStore
-import ConAgua.Arena.ImaxStore
-import ConAgua.Arena.ParamStore
-import ConAgua.Arena.LsStore
 import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.Env
-import ConAgua.Compiler.WF
-import ConAgua.Compiler.WFFast
 import ConAgua.L.ProgHas
 
 /-!

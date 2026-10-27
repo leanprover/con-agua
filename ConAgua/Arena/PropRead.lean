@@ -1,7 +1,4 @@
-import ConAgua.Arena.LevelSubstL
-import ConAgua.Arena.WhnfSpineRefine
-import ConAgua.Arena.IndView
-import ConAgua.Arena.Env
+import ConAgua.Arena.WhnfBase
 import ConAgua.Census.Attr
 
 /-!

@@ -3,7 +3,12 @@ import ConAgua.Arena.IndSumSpec.TsrW
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.IndInstallSpec.IcbiW
-import ConAgua.Arena.IndInstallSpec.PapW
+import ConAgua.Arena.IndPartsSpec.PartsConsPL
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # ConsBlockRecsTF: `ConRon.Arena.consBlockRecsTF`

@@ -1,5 +1,12 @@
 import ConAgua.Arena.Knot
 import ConAgua.Arena.WhnfDeltaSlot
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The knot's `infer`, `infer_io`, `defeq`, `defeq_e` slots one level up (lane `defeq`)

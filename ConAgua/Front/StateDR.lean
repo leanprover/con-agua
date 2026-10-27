@@ -4,6 +4,7 @@ import ConAgua.Arena.EnvRec
 import ConAgua.Front.IndFields
 import ConRon.Arena.Frontend.ExportC
 import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The parse state relation `StateDR`, and the refinement of the front functions

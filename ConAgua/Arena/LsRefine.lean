@@ -1,8 +1,7 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
-import ConAgua.Arena.PoolSlice
 import ConAgua.Arena.LsStore
 import ConAgua.Arena.LpColRel
+import ConAgua.Arena.LitRefine
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The level-list store refines the arena's level-list tables

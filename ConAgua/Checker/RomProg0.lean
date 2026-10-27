@@ -1,5 +1,6 @@
 import ConAgua.Checker.Prog
 import ConAgua.Rom.Stage
+import ConAgua.Compiler.WFFast
 import ConAgua.Compiler.WriteSetSplit
 
 /-!

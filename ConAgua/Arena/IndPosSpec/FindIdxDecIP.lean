@@ -1,4 +1,4 @@
-import ConAgua.Arena.DeclDivModSpec.Cons
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 
 /-!
 # FindIdxDecIP

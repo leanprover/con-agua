@@ -1,4 +1,3 @@
-import ConAgua.L.Logic
 import ConAgua.L.FuelMono
 
 /-!

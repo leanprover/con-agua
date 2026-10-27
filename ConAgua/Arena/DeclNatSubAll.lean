@@ -1,5 +1,9 @@
 import ConAgua.Arena.DeclNatSub
 import ConAgua.Arena.DeclDivModSpec.SubstConst0List
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The structural-`Nat` gate: constant substitution under binders (lane `decls4`, helper `decls4-sca`)

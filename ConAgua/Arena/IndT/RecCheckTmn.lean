@@ -4,6 +4,7 @@ import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.RecCheckSpec.CnfW
 import ConAgua.Arena.RecCheckSpec.TargetMajorDefault
 import ConAgua.Arena.RecCheckSpec.Tmn
+import ConAgua.Census.Attr
 
 /-!
 # `targetMajorNfs` under `StageC` (lane `indstaget`, helper `pds`)

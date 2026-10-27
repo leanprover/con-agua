@@ -1,4 +1,5 @@
 import ConAgua.Checker.HoistRefBase
+import ConRon.Arena.Frontend.NatOpGround
 
 /-!
 # The hoist's name index refines `nameIndex` (lane `front4`)

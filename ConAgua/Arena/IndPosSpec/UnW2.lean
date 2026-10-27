@@ -1,4 +1,7 @@
 import ConAgua.Arena.IndPosSpec.NuW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # UnW2

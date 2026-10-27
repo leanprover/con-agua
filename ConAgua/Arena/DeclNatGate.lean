@@ -1,5 +1,8 @@
-import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatCv
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The structural-`Nat` gate: stored definitions and the guard (lane `decls3`, helper `decls3-nat`)

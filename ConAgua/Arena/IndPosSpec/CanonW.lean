@@ -1,4 +1,8 @@
 import ConAgua.Arena.IndPosSpec.FindIdxDecIP
+import ConAgua.Arena.IndPosSpec.MatesW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # CanonW

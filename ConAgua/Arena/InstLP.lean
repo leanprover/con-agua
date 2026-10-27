@@ -1,10 +1,4 @@
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.MemoLib
-import ConAgua.Arena.ExprMk
-import ConAgua.Arena.LsStore
-import ConAgua.Arena.SortStore
-import ConAgua.Arena.ConstStore
-import ConAgua.Arena.FVarStore
+import ConAgua.Arena.WhnfBase
 import ConAgua.Census.Attr
 
 /-!

@@ -10,9 +10,6 @@ import ConAgua.Checker.RomProgB
 import ConAgua.Rom.CIReadRefs
 import ConAgua.Arena.LoopStart
 import ConAgua.Checker.IndMemoClosed
-import ConAgua.Checker.Prog
-import ConAgua.Arena.IndRealMemo
-import ConAgua.Arena.IndRealCrF
 
 /-!
 # The declaration loop's program hypotheses at the substituted checker program (lane `loopt3`)

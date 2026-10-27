@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `name_rec_i` discharged (lane `indproofs4`, helper `indproofs4-ilp`)

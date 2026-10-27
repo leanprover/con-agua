@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPosSpec.NcGoW
+import ConAgua.Census.Attr
 
 /-!
 # NestContainer: `ConRon.Arena.nestContainer`

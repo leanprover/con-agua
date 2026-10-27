@@ -1,5 +1,6 @@
-import ConAgua.Arena.IndInstallSpec.Cons
 import ConAgua.Arena.IndPartsSpec.BlockShapeAllCtorsGo
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Census.Attr
 
 /-!
 # AllCtors: `ConRon.Arena.BlockShape.allCtors`

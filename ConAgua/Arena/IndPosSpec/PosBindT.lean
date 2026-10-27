@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndIface
+import ConRon.Arena.Inductives.Positivity
 
 /-!
 # PosBindT

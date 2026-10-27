@@ -1,4 +1,6 @@
 import ConAgua.Arena.InferProj
+import ConAgua.Arena.InferBodyDisp
+import ConAgua.Census.Attr
 
 /-!
 # `inferProj`: `infer_proj` (lane `defeq2`, helper `defeq2-proj`)

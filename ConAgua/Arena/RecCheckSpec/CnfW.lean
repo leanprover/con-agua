@@ -1,6 +1,11 @@
 import ConAgua.Arena.IndSumSpec.SumRules
 import ConAgua.Arena.RecCheckSpec.TruncSl
 import ConAgua.Arena.RecGenSpec.StabDecCRDecB
+import ConAgua.Arena.IndPartsSpec.PartsConsPL
+import ConAgua.Arena.RecGenSpec.Set64
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # CnfW

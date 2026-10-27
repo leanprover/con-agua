@@ -1,6 +1,10 @@
 import ConAgua.Rom.PinRead
 import ConAgua.Arena.IndMaster
-import ConAgua.Arena.PromoteCIRef.Of
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
 
 /-!
 # The pin-data readers compute their models (lane `romload`)

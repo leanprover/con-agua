@@ -1,5 +1,5 @@
 import ConAgua.Arena.WhnfIotaRecRefine2
-import ConAgua.Arena.WhnfM2CRefine5
+import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 
 /-!

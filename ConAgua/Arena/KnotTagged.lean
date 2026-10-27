@@ -1,14 +1,4 @@
 import ConAgua.Arena.DefEqKnot
-import ConAgua.Arena.WhnfCoreLoop
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.WhnfCoreAppLoop
-import ConAgua.Arena.WhnfDeltaRefine4
-import ConAgua.Arena.WhnfIotaRefine
-import ConAgua.Arena.WhnfIotaRefine2
-import ConAgua.Arena.WhnfIotaRefine3
-import ConAgua.Arena.WhnfIotaRefine4
-import ConAgua.Arena.WhnfIotaRecRefine3
-import ConAgua.Arena.WhnfM2CRefine5
 import ConAgua.Census.Attr
 
 /-!

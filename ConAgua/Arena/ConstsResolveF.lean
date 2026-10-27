@@ -1,9 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.MemoLib
-import ConAgua.Arena.Env
-import ConAgua.Arena.Pins
-import ConAgua.Arena.WhnfIota
-import ConAgua.Arena.Reasons
 import ConAgua.Census.Attr
 
 /-!

@@ -1,7 +1,7 @@
 module
 
-public meta import Lean.Meta.Tactic.Grind.Attr
 import Lean.Meta.Tactic.Grind.RegisterCommand
+public meta import Lean.Meta.Tactic.Grind.Extension
 
 public section
 

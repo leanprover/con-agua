@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.L.Semantics
 public import ConAgua.L.DefAssign
 public import Kraken.X64.Syntax
 

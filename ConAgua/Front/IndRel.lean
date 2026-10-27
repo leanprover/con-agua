@@ -1,6 +1,5 @@
 import ConAgua.Front.IndFields
-import ConAgua.Front.FieldsLink
-import ConAgua.Front.DeclIface
+import ConAgua.Front.ExprIface
 
 /-!
 # The records of an `inductive` line in `IFR`/`IFL`, related to con-leche's

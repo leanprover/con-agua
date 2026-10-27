@@ -1,6 +1,8 @@
 import ConAgua.Arena.IndPosSpec.NodeV
 import ConAgua.Arena.IndPosSpec.SlRCongr
 import ConAgua.Arena.IndPosSpec.SnocWDecK
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
 
 /-!
 # MentionsAnyGo: `ConRon.Arena.mentionsAnyGo`, `ConRon.Arena.nestCanonSub`

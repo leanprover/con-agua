@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreDen
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Interned levels read back (lane `defeq2`)

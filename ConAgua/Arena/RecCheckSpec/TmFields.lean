@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecCheckSpec.EqWDec
 import ConAgua.Arena.RecCheckSpec.TruncSl
+import ConAgua.Arena.RecCheckSpec.EeW2
 
 /-!
 # TmFields

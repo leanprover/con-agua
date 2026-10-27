@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndPosSpec.NitLe
 import ConAgua.Arena.IndPosSpec.NtyW
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # NitW

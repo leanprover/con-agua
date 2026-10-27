@@ -1,6 +1,7 @@
-import ConAgua.Arena.DeclDivGateT
-import ConAgua.Arena.KnotE
-import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Arena.DeclDivGateT2
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictFns
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claim of the `Nat.div` family's pin gate: `check_div_mod_pin_loop`, `check_div_mod_pin`

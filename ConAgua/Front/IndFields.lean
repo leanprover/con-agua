@@ -1,7 +1,5 @@
-import ConAgua.Front.ApplyDecl
-import ConAgua.Compiler.WF
+import ConAgua.Front.Apply
 import ConAgua.Census.Attr
-import ConAgua.Compiler.WFFast
 
 /-!
 # The fields of an `inductive` line (lane `induct`, worker I)

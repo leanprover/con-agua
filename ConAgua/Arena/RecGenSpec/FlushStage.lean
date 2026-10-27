@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.RecGenSpec.CruleProg
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # FlushStage

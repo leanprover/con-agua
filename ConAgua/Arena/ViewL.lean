@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.Store
 public import ConAgua.Arena.StoreFields
 
 @[expose] public section

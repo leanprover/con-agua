@@ -1,4 +1,8 @@
 import ConAgua.Arena.DeclReduceSpec2
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # The `ofReduce*` axioms: `of_reduce_ax_ok(vis, q)` refines `ofReduceAxOk` (lane `decls3`)

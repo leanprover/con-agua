@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.PiBWStage
-import ConAgua.Arena.WhnfCoreProj
 
 /-!
 # NkFields

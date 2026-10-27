@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.L.Syntax
-public import ConAgua.L.TRec
-public meta import Lean
+public meta import Lean.Elab.Term.TermElabM
+import Lean.Exception
 
 public section
 

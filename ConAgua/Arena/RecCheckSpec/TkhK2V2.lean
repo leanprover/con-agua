@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecCheckSpec.TkhK2
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # TkhK2V2

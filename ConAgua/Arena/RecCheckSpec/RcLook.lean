@@ -1,6 +1,5 @@
-import ConAgua.Arena.IndPosSpec.NestCrest
-import ConAgua.Arena.IndPosSpec.SgGoW
 import ConAgua.Arena.RecCheckSpec.TaCW
+import ConAgua.Arena.IndPosSpec.BvbWMfr
 
 /-!
 # RcLook

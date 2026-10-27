@@ -1,8 +1,8 @@
-import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.MkLook
 import ConAgua.Arena.IndRealSpine
-import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndPosSpec.MatesW
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # RxMapW

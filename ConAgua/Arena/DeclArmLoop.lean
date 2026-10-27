@@ -1,5 +1,8 @@
-import ConAgua.Arena.DeclReduceSpec
-import ConAgua.Arena.DeclCanonSpec
+import ConAgua.Arena.DeclStepGo
+import ConAgua.Arena.WhnfDelta
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The `checkDecl` arms at the loop's relation: the text, the theorem arm (lane `decls3`)

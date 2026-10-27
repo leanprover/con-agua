@@ -1,4 +1,9 @@
-import ConAgua.Arena.PromoteRecRef
+import ConAgua.Arena.PromoteL
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The constant side of the promotion: models and specs

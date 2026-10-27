@@ -1,4 +1,8 @@
 import ConAgua.Front.NatDec
+import ConAgua.Arena.LitRefine
+import ConAgua.Front.ExprIface
+import ConAgua.Scan.LeafLink
+import ConAgua.Scan.Link
 import ConAgua.Census.Attr
 
 /-!

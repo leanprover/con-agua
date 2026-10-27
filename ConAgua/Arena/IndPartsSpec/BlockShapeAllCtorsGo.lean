@@ -1,6 +1,11 @@
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
-import ConAgua.L.ModelGen
 import ConAgua.Scan.Common
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # BlockShapeAllCtorsGo

@@ -1,6 +1,6 @@
-import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.IndStubs
+import ConAgua.Arena.SimLib
 
 /-!
 # Composing relational lemmas (lane `indproofs2`)

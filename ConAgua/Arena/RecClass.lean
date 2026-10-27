@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Census.Attr
 
 /-!
 # The generated-recursor stage in L: the pre-pass and the generator (lane `induct`)

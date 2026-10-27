@@ -1,5 +1,8 @@
-import ConAgua.Arena.PromoteProg
-import ConAgua.Arena.PromoteFlag
+import ConAgua.Arena.Promote
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `pool_alloc0` and `pool_copy0`: the promotion's tier-0 slices (lane tierpool)

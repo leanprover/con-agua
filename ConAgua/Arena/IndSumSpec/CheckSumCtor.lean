@@ -2,6 +2,8 @@ import ConAgua.Arena.IndSumSpec.CtlK1
 import ConAgua.Arena.IndSumSpec.FieldDomsResolve
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecGenSpec.CruleProg
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # CheckSumCtor

@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.IndSumSpec.Row
-import ConAgua.Arena.RecGenSpec.Set64
+import ConAgua.Arena.StripTeleSpec
 
 /-!
 # BsoK2

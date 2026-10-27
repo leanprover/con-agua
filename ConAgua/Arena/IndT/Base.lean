@@ -1,5 +1,4 @@
 import ConAgua.Arena.KnotEntry
-import ConAgua.Arena.StageTLift
 
 /-!
 # The inductive stage under `StageT`: the shared pieces (lane `indstaget`)

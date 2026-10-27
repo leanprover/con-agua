@@ -1,9 +1,5 @@
 import ConAgua.Arena.WhnfProj
-import ConAgua.Arena.CoreWalks
-import ConAgua.Arena.InferBodyIntern
-import ConAgua.Arena.PromoteNRef
-import ConAgua.Arena.PromoteLsRef
-import ConRon.Arena.WFProofs
+import ConAgua.Arena.Env
 
 /-!
 # The projection lookups' programs (lane `whnf3`, helper `whnf3-proj`)

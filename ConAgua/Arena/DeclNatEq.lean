@@ -1,5 +1,8 @@
-import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatTy
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The structural-`Nat` gate: the recurrence equations (lane `decls3`, helper `decls3-nat`)

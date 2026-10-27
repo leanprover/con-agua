@@ -1,5 +1,11 @@
 import ConAgua.Arena.ProjView
 import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.WhnfCoreSlot
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # Refinements of `WhnfCore.lean`'s projection functions

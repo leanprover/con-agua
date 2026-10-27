@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DeclRec
+import ConAgua.Census.Attr
 
 /-!
 # `ci_to_cv` in L (lane `decls3`, helper `decls3-canon`)

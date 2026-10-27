@@ -1,5 +1,6 @@
 import ConAgua.Checker.PrepLoopRef
 import ConAgua.Checker.PrepCopyRef
+import ConAgua.Checker.HoistRef
 import ConAgua.Census.Attr
 
 /-!

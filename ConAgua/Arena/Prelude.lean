@@ -1,5 +1,4 @@
 import ConAgua.Arena.RomCI
-import ConAgua.Arena.RomPins
 import ConAgua.Rom.CIEnc
 import ConAgua.Census.Attr
 

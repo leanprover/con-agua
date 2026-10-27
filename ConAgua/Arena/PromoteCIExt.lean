@@ -1,5 +1,6 @@
 import ConAgua.Arena.PromoteCIRef.DecRuleMk
 import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+import ConRon.Bridge.Grind
 
 /-!
 # Decoding a rule record is stable when the pool is extended on the words it reads

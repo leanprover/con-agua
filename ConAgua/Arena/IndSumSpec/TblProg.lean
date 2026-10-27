@@ -1,8 +1,9 @@
-import ConAgua.Arena.IndPosSpec.SlRCongr
 import ConAgua.Arena.IndRealCrF
 import ConAgua.Arena.IndRealIlpP
-import ConAgua.Arena.IndSim
-import ConAgua.Arena.RecStab
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # TblProg

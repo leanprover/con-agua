@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndRealCrF
-import ConAgua.Arena.RecSim
-import ConAgua.Arena.StubIndRefine
+import ConAgua.Arena.DeclCvg
 
 /-!
 # CruleProg

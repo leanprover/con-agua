@@ -1,7 +1,7 @@
 import ConAgua.Front.FrontPreOK3
 import ConAgua.Front.FrontPre
-import ConAgua.Checker.HoistWalkRef
 import ConAgua.Checker.FrontProg
+import ConAgua.Checker.HoistRefBase
 set_option linter.unusedSectionVars false
 
 /-!

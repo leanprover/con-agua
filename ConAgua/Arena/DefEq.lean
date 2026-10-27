@@ -1,6 +1,4 @@
-import ConAgua.Arena.WhnfIota
-import ConAgua.Arena.WhnfDelta
-import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.WhnfBase
 import ConAgua.Census.Attr
 
 /-!

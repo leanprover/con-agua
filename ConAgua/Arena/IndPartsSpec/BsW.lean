@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndPartsSpec.PartsConsPL
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndPosSpec.RootHoles
 
 /-!
 # BsW

@@ -1,6 +1,9 @@
-import ConAgua.Arena.DeclCanonView
-import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.LevelArena
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
 
 /-!
 # `view_ls` in L: the level-list handle's slice copied into the pool (lane `decls3`)

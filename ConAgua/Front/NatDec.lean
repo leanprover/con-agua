@@ -1,6 +1,14 @@
-import ConAgua.Arena.ArenaRel
-import ConAgua.Front.ExprIface
+import ConAgua.Arena.SlotGrow
+import ConAgua.Front.Fields
+import ConAgua.Scan.Common
+import Std.Data.DTreeMap.Internal.Operations
+import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # Decimal `Nat` literals into the limb pool: `nat_dec(c, d)`

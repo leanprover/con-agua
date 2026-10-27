@@ -1,7 +1,9 @@
-import ConAgua.Arena.DeclRomStubs
-import ConAgua.Arena.IndRealWalk
 import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.WhnfDeltaRefine
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # Pin-selected ROM values: `reduceOpCvA`, `ofReducePinA`, `reduceDeclPin` (lane `decls3`)

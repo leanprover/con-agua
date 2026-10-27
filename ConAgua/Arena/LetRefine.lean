@@ -1,6 +1,7 @@
 import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
 import ConAgua.Arena.LetStore
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The `letE` store refines the arena's `letE` tables

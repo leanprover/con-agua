@@ -1,7 +1,6 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
 import ConAgua.Arena.ZeroStore
 import ConAgua.Arena.LpColRel
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The level `zero` store refines the arena's `zero` tables

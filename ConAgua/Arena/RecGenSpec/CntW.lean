@@ -2,6 +2,10 @@ import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Arena.RecGenSpec.KeysProg
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # CntW

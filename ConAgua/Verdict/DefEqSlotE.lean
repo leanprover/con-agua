@@ -1,5 +1,10 @@
 import ConAgua.Verdict.DefEqBaseE
-import ConAgua.Arena.KnotEntry
+import ConAgua.Arena.DefEqKnot
+import ConAgua.Arena.IndTwin
+import ConAgua.Arena.KnotE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The knot's `defeq` slot: its error claim one level up (lane `verdicts-b`, helper `k3`)

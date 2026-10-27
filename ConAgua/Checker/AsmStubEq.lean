@@ -1,7 +1,6 @@
 import ConAgua.Checker.AsmFileEq
 import ConAgua.Compiler.Abi
 import ConAgua.AsmFile.ListEq
-import ConAgua.Arena.Freeze
 
 /-!
 # The committed file's stub is the entry stub

@@ -1,13 +1,13 @@
 import ConAgua.Arena.LoopT
 import ConAgua.Arena.IndArmLps
-import ConAgua.Arena.StageC
-import ConAgua.Arena.DeclArmT
-import ConAgua.Arena.DeclCrpT
 import ConAgua.Arena.DeclAndPinIndRef
 import ConAgua.Arena.AndPinScratch
 import ConAgua.Arena.DeclDefnT
 import ConAgua.Arena.DeclAxQuotT
-import ConAgua.Arena.PhaseBT
+import ConAgua.Arena.DeclNatSubAll
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 set_option linter.unusedSectionVars false
 
 /-!

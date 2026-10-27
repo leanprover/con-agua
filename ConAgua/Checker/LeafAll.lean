@@ -1,6 +1,5 @@
 import ConAgua.Checker.Prog
 import ConAgua.Arena.LeafFns
-import ConAgua.Compiler.WriteSetSplit
 
 /-!
 # The leaves' write set in the checker's program (lane `loopt2`)

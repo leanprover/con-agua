@@ -5,6 +5,9 @@ import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.RecGenSpec.Rec3CVX
 import ConAgua.Arena.RecGenSpec.RgW
 import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Rec3TmdWDecB

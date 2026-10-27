@@ -3,9 +3,6 @@ import ConAgua.Arena.LevelInternRef
 import ConRon.Bridge.SpecsL
 import ConAgua.Arena.CoreLevels
 import ConAgua.Front.ApplyExprRefine
-import ConAgua.Arena.PromoteLsRef
-import ConAgua.Arena.NatPow
-import ConAgua.Arena.NatDiv
 import ConAgua.Census.Attr
 
 /-!

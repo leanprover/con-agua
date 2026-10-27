@@ -1,10 +1,11 @@
 module
 
 public import ConAgua.Arena.ConsLibSpec
-meta import ConAgua.L.Semantics
-meta import ConAgua.Arena.SlotGrow
-meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

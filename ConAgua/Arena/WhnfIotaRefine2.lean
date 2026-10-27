@@ -1,6 +1,13 @@
 import ConAgua.Arena.CoreErec
 import ConAgua.Arena.WhnfIotaRefine
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.L.Records
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 2 (`defeq_list` … `inst_spine_pins`)

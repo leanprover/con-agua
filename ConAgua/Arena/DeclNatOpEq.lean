@@ -1,4 +1,8 @@
 import ConAgua.Arena.DeclNatSub
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `nat_op_equations` refines `natOpEquations` (lane `decls3`, helper `decls3-nat`)

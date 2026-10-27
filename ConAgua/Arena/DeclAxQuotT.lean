@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.DeclArmAxiom
 import ConAgua.Arena.StageC
+import ConAgua.Census.Attr
 
 /-!
 # The axiom and quotient arms under `StageT` (lane `loopt3`, helper `loopt3-axq`)

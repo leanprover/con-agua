@@ -3,7 +3,6 @@ import ConAgua.Arena.IndInstallSpec.IagW
 import ConAgua.Arena.IndInstallSpec.Pos3Init
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.RecGenSpec.ClassSeeds
-import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.RecGenSpec.OcW
 
 /-!

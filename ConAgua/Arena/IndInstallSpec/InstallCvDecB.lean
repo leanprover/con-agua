@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.RecStab
+import ConAgua.Arena.RecClassSpec.Classes
 
 /-!
 # InstallCvDecB

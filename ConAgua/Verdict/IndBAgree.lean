@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndT.RecGen24
 import ConAgua.Verdict.IndBNodes
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `class_fields_agree` (lane `verdicts-b`, helper `ib`)

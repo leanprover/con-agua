@@ -1,5 +1,7 @@
 import ConAgua.Checker.Prelude
-import ConAgua.Checker.HoistRef
+import ConAgua.Arena.PinsNatOp
+import ConAgua.Checker.HoistIndexRef
+import ConRon.Arena.Frontend.Prepare
 
 /-!
 # `prepare_prelude`'s leaves: `decl_declares`, `decl_key`, `prep_find` (lane `front4`)

@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.Pool
+public import ConAgua.L.Syntax
+import ConAgua.Arena.GrindAttr
 
 @[expose] public section
 

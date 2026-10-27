@@ -1,9 +1,9 @@
 module
 
-public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
-meta import ConAgua.L.Semantics
-import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

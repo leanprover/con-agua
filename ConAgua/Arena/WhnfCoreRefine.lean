@@ -1,5 +1,11 @@
 import ConAgua.Arena.PinsNatOp
-import ConAgua.Arena.WhnfCoreSlot
+import ConAgua.Arena.WhnfCore
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # Refinements of `WhnfCore.lean`'s functions (other than the slot and the loop)

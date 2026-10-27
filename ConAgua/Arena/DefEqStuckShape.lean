@@ -1,4 +1,6 @@
-import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.DefEqStuck
+import ConAgua.Arena.InferBodySpine
+import ConAgua.Census.Attr
 
 /-!
 # `eta_ctor_shape` refines `etaCtorShape` (lane `defeq`, helper `defeq-top`)

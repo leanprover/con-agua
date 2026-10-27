@@ -1,5 +1,4 @@
 import ConAgua.Checker.PipeRest
-import ConAgua.Checker.TwinPins
 
 /-!
 # The twin's prefix leaves the caches and the pin table (lane `pipeline`)

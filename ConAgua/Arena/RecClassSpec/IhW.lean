@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndRealOpf3
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # IhW

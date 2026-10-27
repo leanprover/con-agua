@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndPosSpec.P2sfW
 import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Arena.IndPosSpec.KlB
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Census.Attr
 
 /-!
 # NestSeeds: `ConRon.Arena.nestSeeds` (the seed's fuel fold (nest_seeds_fuel))

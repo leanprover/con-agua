@@ -1,6 +1,9 @@
-import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatLit
 import ConAgua.Arena.DeclNatDeps
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The structural-`Nat` gate: `bool_ctor_ok` and `nat_op_guard` (lane `decls3`, helper `decls3-nat`)

@@ -1,7 +1,6 @@
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # PiBWStage

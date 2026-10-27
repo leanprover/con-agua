@@ -1,5 +1,8 @@
 import ConAgua.Arena.DeclDivModSpec.DivModTypePins
-import ConAgua.Arena.DeclReducePin
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # DecCIDefnValue

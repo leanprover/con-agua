@@ -1,8 +1,10 @@
 import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.GrpAt
-import ConAgua.Arena.RecGenSpec.Set64
 import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.IndPosSpec.MatesW
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # FgW2

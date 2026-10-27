@@ -1,4 +1,8 @@
-import ConAgua.Arena.InferBodySpineF
+import ConAgua.Arena.InferBodySpine
+import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The binder telescopes: `infer_lams`, `infer_pis`, their leaves, `infer_lam`, `infer_forall`

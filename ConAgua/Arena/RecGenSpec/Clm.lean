@@ -1,6 +1,10 @@
 import ConAgua.Arena.RecGen
 import ConAgua.Arena.WhnfBase
 import ConAgua.Scan.Common
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Clm

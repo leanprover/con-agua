@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecCheckSpec.BvbWStageC
 import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # TaGoWMfr

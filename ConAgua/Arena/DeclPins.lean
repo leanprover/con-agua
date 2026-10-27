@@ -1,5 +1,4 @@
 import ConAgua.Rom.PinSets
-import ConAgua.Arena.IndIface
 
 /-!
 # The pin variant list across the declaration loop (lane `decls3`)

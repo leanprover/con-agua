@@ -1,5 +1,6 @@
 import ConAgua.Arena.PropReadRefine2
 import ConAgua.Arena.InferBodyDisp
+import ConAgua.Census.Attr
 
 /-!
 # The prop-ness readers: `headTypePW`, `typeSortPW` (helper `defeq2-prop`)

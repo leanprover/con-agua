@@ -1,4 +1,6 @@
-import ConAgua.Front.IndApplyRefine6
+import ConAgua.Front.IndApplyRefine3
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The apply step of an `inductive` line against the twin, VII: the recursor records

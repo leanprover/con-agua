@@ -4,6 +4,7 @@ import ConRon.Bridge.Inductives.GenRec
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndSumSpec.FieldDomsResolve
 import ConAgua.Arena.RecGenSpec.CfhW
+import ConAgua.Census.Attr
 
 /-!
 # `classRuleOk` under `StageC` (lane `indstaget`)

@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndRealMemoCr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `consts_resolve_ffast` keeps its memo well formed, from any memory (lane `indproofs4`, helper `kc`)

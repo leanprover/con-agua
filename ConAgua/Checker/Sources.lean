@@ -1,4 +1,3 @@
-import Lean
 import ConAgua.E2E.Dump
 
 /-!

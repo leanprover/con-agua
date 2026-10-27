@@ -1,7 +1,12 @@
 module
 
-public import ConAgua.Scan.LineLink
 public import ConAgua.Front.Fields
+public import ConAgua.Scan.RecordsLink
+import ConAgua.Scan.LeafLink
+import ConAgua.Scan.LineLink
+import ConAgua.Scan.Link
+import Std.Tactic.BVDecide.Normalize.Bool
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 set_option linter.unusedSectionVars false

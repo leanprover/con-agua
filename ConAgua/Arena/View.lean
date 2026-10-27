@@ -1,6 +1,4 @@
 import ConAgua.Arena.ArenaRel
-import ConAgua.Arena.ViewL
-import ConRon.Arena.ExprOps
 
 /-!
 # The arena side of the expression view: what every walk's refinement shares

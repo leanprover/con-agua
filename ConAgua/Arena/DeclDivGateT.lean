@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclDivGateT2
+import ConAgua.Arena.DeclArmDefn
 
 /-!
 # The `Nat.div`-family pin gate under `StageC` (lane `loopt3`, helper `loopt3-div`)

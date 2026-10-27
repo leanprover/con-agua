@@ -1,4 +1,6 @@
 import ConAgua.Verdict.IndA1
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 import ConAgua.Verdict.IndAGen
 
 /-!

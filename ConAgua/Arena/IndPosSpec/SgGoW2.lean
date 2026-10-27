@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPosSpec.RpGoStep
 import ConAgua.Arena.IndPosSpec.RxMapW
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # SgGoW2

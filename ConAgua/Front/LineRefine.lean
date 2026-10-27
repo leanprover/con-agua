@@ -1,11 +1,8 @@
 import ConAgua.Front.Line
-import ConAgua.Front.ApplyExprRefine
-import ConAgua.Front.FieldsExprLink
-import ConAgua.Front.UnescapeLink
-import ConAgua.Front.FieldsDeclLink
-import ConAgua.Front.ApplyDeclRefine
 import ConAgua.Front.IndApplyTwin
+import ConAgua.Scan.LineLink
 import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `front_line` refines con-ron's per-line step

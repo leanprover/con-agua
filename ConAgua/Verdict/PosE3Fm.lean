@@ -1,7 +1,8 @@
 import ConAgua.Arena.IndPos2
 import ConAgua.L.ErrSpec
-import ConAgua.Verdict.PosE
-import ConAgua.Verdict.DeclValE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
 
 /-!
 # `nest_fields`' error model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)

@@ -1,4 +1,6 @@
-import ConAgua.Checker.PrepLeafRef
+import ConAgua.Checker.HoistOrderRef3
+import ConAgua.Checker.HoistTargetsRef
+import ConAgua.Checker.Prelude
 
 /-!
 # `prepare_prelude`'s rewrite of `DECL` (lane `front4`)

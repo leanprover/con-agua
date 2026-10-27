@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.L.Logic
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

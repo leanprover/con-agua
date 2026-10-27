@@ -1,4 +1,7 @@
 import ConAgua.Verdict.IndBToi
+import ConAgua.Arena.IndT.RecGenTmf
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `target_major_of_outside_tail` (lane `verdicts-b`, helper `ib`)

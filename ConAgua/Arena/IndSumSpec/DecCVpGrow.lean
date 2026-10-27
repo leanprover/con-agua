@@ -1,4 +1,7 @@
 import ConAgua.Arena.IndSumSpec.WtW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # DecCVpGrow

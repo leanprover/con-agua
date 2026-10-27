@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Compiler.Rel
+public import ConAgua.Compiler.Step
+import Kraken.X64.Registers
 
 @[expose] public section
 

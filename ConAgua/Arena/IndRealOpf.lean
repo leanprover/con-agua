@@ -1,6 +1,7 @@
 import ConAgua.Arena.StubInd
-import ConAgua.Arena.DeclNatLit
 import ConAgua.Arena.IndRealFvt
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `open_pis_at_fvars_f`'s model (lane `indproofs4`, helper `opf`)

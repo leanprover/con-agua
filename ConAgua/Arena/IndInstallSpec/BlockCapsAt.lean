@@ -1,8 +1,14 @@
 import ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec.MemberNames
-import ConAgua.L.ModelGen
 import ConAgua.Scan.Common
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # BlockCapsAt: `ConRon.Arena.blockCapsAt` (an IW slice copied into fresh EREC words), `ConRon.Arena.blockCapsAt` (the ctor-name list), `ConRon.Arena.checkBlockPositivity` (the empty NestState)

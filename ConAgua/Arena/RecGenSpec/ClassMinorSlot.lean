@@ -3,6 +3,10 @@ import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.RecGenSpec.ClassMinorSlotW
 import ConAgua.Arena.RecGenSpec.IwNLtSize
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 
 /-!
 # ClassMinorSlot: `ConRon.Arena.ClassSlot.isMinor`, `ConRon.Arena.classLeafAt`, `ConRon.Arena.classMinorSlot`

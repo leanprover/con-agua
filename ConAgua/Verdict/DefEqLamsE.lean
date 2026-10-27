@@ -1,5 +1,6 @@
 import ConAgua.Verdict.DefEqQuickE
-import ConAgua.Compiler.RunEq
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `defeq_lams`' error claim (lane `verdicts-b`, helper `k3`)

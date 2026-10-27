@@ -1,7 +1,11 @@
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.WhnfCore
 import ConAgua.Arena.WhnfDelta
-import ConAgua.Compiler.RunEq
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Error models of `reduce_nat`'s family and the `whnf_core` arms (lane `verdicts-b`, helper `k2`)

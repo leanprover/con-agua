@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPosSpec.NestHoles
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # UnW

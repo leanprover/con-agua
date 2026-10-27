@@ -1,6 +1,9 @@
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.PinsNatOp
-import ConAgua.Arena.StoreDenIntern
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `beta_peel` (proved) and `whnf_app` (groundwork): the batched β spine

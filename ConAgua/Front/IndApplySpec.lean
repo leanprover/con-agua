@@ -1,6 +1,12 @@
 import ConAgua.Front.IndApply
 import ConAgua.Front.IndAlloc
 import ConAgua.Arena.IndView
+import ConAgua.Arena.LevelEquiv
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The apply step of an `inductive` line: word models and specs, I (`validateIndD`'s side)

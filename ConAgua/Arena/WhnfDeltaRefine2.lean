@@ -1,4 +1,10 @@
 import ConAgua.Arena.WhnfDeltaRefine
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # δ and `Nat` literals: proofs of `WhnfDelta.lean`'s specs, part 2 (`raw_nat_lit` … `unfold_definition`)

@@ -3,6 +3,9 @@ import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.IndCallM
 import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Phase B's check, `check_value_group`: its write set from the text

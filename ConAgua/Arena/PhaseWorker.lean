@@ -1,6 +1,4 @@
-import ConAgua.Arena.Checker
 import ConRon.Arena.Phased
-import ConAgua.Census.Attr
 
 /-!
 # Phase B on the worker (lane `tails`)
