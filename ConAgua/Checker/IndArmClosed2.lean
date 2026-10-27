@@ -20,8 +20,9 @@ prog_all checkerProg_armTaChk : checkerProg (wsChk CTL
 
 names_tree armCidTree : armCidFns
 prog_all checkerProg_armCidChk : checkerProg (wsChk CTL
-  (tA fun b => decide ((b < 201 ∨ 208 < b) ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155 ∧
-    b ≠ PINS ∧ b ≠ 151 ∧ b ≠ 152 ∧ b ≠ 153 ∧ b ≠ 52 ∧ b ≠ 53 ∧ b ≠ 54))
+  (tA fun b => decide ((b.arr < 201 ∨ 208 < b.arr) ∧
+    b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ b ≠ PINS ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM ∧
+    b ≠ LPMEMO ∧ b ≠ LPLMEMO ∧ b ≠ LPLSMEMO))
   (tC fun c => decide ((c < 202 ∨ 219 < c) ∧ c ≠ 48 ∧ c ≠ 50 ∧ c ≠ 52 ∧ c ≠ 158 ∧
     c ≠ 152 ∧ c ≠ 154 ∧ c ≠ 156 ∧ c ≠ 54 ∧ c ≠ 56 ∧ c ≠ 58)) armCidTree)
 
