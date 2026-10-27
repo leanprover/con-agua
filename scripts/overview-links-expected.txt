@@ -80,10 +80,10 @@
 == docs/deviations.md#L49
     49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) at every capacity or defensive check (an unresolved constant decides its kind as the twin does, `unresolved_consts_error`: a string literal before `String` or a use of `sorryAx` declines, anything else rejects; its two walks, `has_str_lit_go` and `ue_mentions_go`, drop the twin's memo so the error path writes nothing: the same answer, but exponential time on a heavily shared term, error path only) | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the classes are proved (a reject or decline is the twin's, the final theorems); the messages are not part of the theorem |
 
-== ConAgua/Final/Statement.lean#L88-L90
-    88  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
-    89  or an unset register is never read as accept. -/
-    90  def ACCEPT : Word := 0x4143_4345_5054
+== ConAgua/Final/Statement.lean#L89-L91
+    89  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
+    90  or an unset register is never read as accept. -/
+    91  def ACCEPT : Word := 0x4143_4345_5054
 
 == ConAgua/Final/EndToEnd.lean#L80-L87
     80  theorem checkerFile_accepts [Host]
@@ -195,15 +195,15 @@
     68            TwinVerdict [b] (st.data.regs.rax &&& 3)))
     69        dm (label abiStartL) :=
 
-== ConAgua/Final/Statement.lean#L119-L126
-   119  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
-   120  `rsp` is past the return address and the other callee-saved registers of System V, `rbp`,
-   121  `r14`, `r15`, `rbx`, `r12`, `r13`, hold their values from the call. The trampoline `ca_enter`
-   122  saves and restores them (`rbp`, `r14` on the machine stack, the others past the table), so this
-   123  holds whatever registers the compiled code uses. Together with the verdict in `rdx`/`rax` this is
-   124  all the harness relies on after the call. -/
-   125  def RegsRestored (r0 r : Reg64s) : Prop :=
-   126    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15 ∧
+== ConAgua/Final/Statement.lean#L120-L127
+   120  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
+   121  `rsp` is past the return address and the other callee-saved registers of System V, `rbp`,
+   122  `r14`, `r15`, `rbx`, `r12`, `r13`, hold their values from the call. The trampoline `ca_enter`
+   123  saves and restores them (`rbp`, `r14` on the machine stack, the others past the table), so this
+   124  holds whatever registers the compiled code uses. Together with the verdict in `rdx`/`rax` this is
+   125  all the harness relies on after the call. -/
+   126  def RegsRestored (r0 r : Reg64s) : Prop :=
+   127    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15 ∧
 
 == ConAgua/Final/EndToEnd.lean#L189-L206
    189  /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -288,8 +288,8 @@
 == ConAgua/Checker/Pipeline.lean#L69-L72
     69  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
     70  bytes, every word array below `2^64` words. -/
-    71  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
-    72    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
+    71  def InputsOK (b pb : ByteArray) (sz : TieredArray → Nat) : Prop :=
+    72    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ s, sz s < 2 ^ 64
 
 == scripts/check-asm.sh#L1-L12
      1  #!/usr/bin/env bash
@@ -451,18 +451,19 @@
     11  git = "https://github.com/sgraf812/kraken"
     12  rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
 
-== ConAgua/L/Syntax.lean#L5-L15
+== ConAgua/L/Syntax.lean#L5-L16
      5  /-!
      6  # L: abstract syntax
      7  
      8  L is the small first-order language the checker is written in (see `DESIGN.md`, "The language L").
      9  Values are 64-bit words with wrapping arithmetic. A function has numbered locals, the first
     10  `nparams` of which are its parameters. Memory is a fixed set of arrays: byte arrays (the input
-    11  buffer) and word arrays, each named by a static index, and a store of global word variables
-    12  (`GVar`), also named by static indices. Expressions have no side effects and
-    13  make no calls; a call is a statement. Conditions are a separate type, with short-circuit `&&`/`||`
-    14  so that a guard such as `i < len && b[i] == c` cannot read out of bounds.
-    15  -/
+    11  buffer), named by a static index, and word arrays, named by a static index and a tier
+    12  (`TieredArray`), and a store of global word variables
+    13  (`GVar`), also named by static indices. Expressions have no side effects and
+    14  make no calls; a call is a statement. Conditions are a separate type, with short-circuit `&&`/`||`
+    15  so that a guard such as `i < len && b[i] == c` cannot read out of bounds.
+    16  -/
 
 == ConAgua/Compiler/Main.lean#L774-L797
    774  /-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
@@ -513,44 +514,44 @@
 
 == ConAgua/Checker/Pipeline.lean#L92-L125
     92  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
-    93  def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-    94    RelSpec p "cap_check" (· = loadMem b pb s8 s64) fun _ => (ρ b pb s8 s64).R1
+    93  def CapStage : Prop := ∀ b pb sz, InputsOK b pb sz →
+    94    RelSpec p "cap_check" (· = loadMem b pb sz) fun _ => (ρ b pb sz).R1
     95  
     96  /-- **Stage `pb_check`**: `R1` to `R2`. -/
-    97  def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-    98    RelSpec p "pb_check" (ρ b pb s8 s64).R1 fun _ => (ρ b pb s8 s64).R2
+    97  def PbStage : Prop := ∀ b pb sz, InputsOK b pb sz →
+    98    RelSpec p "pb_check" (ρ b pb sz).R1 fun _ => (ρ b pb sz).R2
     99  
    100  /-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
-   101  def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-   102    RelSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 fun _ m =>
-   103      ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb s8 s64).R3 m a'
+   101  def IrpStage : Prop := ∀ b pb sz, InputsOK b pb sz →
+   102    RelSpec p "intern_reserved_pins" (ρ b pb sz).R2 fun _ m =>
+   103      ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb sz).R3 m a'
    104  
    105  /-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
-   106  def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb s64 →
-   107    RelSpec p "builtin_prelude" ((ρ b pb s8 s64).R3 · a) fun _ m =>
-   108      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb s8 s64).R4 m pre a'
+   106  def PreludeStage : Prop := ∀ b pb sz a, InputsOK b pb sz →
+   107    RelSpec p "builtin_prelude" ((ρ b pb sz).R3 · a) fun _ m =>
+   108      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb sz).R4 m pre a'
    109  
    110  /-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
-   111  def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb s64 →
-   112    RelSpec p "front_run" ((ρ b pb s8 s64).R4 · pre a) fun r m => r.headD 0 = 0 →
-   113      ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb s8 s64).R5 m pre rc a'
+   111  def FrontStage : Prop := ∀ b pb sz pre a, InputsOK b pb sz →
+   112    RelSpec p "front_run" ((ρ b pb sz).R4 · pre a) fun r m => r.headD 0 = 0 →
+   113      ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb sz).R5 m pre rc a'
    114  
    115  /-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
-   116  def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb s64 →
-   117    RelSpec p "prepare_prelude" ((ρ b pb s8 s64).R5 · pre rc a) fun _ m =>
-   118      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb s8 s64).R6 m ds a'
+   116  def PrepareStage : Prop := ∀ b pb sz pre rc a, InputsOK b pb sz →
+   117    RelSpec p "prepare_prelude" ((ρ b pb sz).R5 · pre rc a) fun _ m =>
+   118      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb sz).R6 m ds a'
    119  
    120  /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
    121  to). -/
-   122  def PinsStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds a, InputsOK b pb s64 →
+   122  def PinsStage : Prop := ∀ b pb sz sA pre sB rc sC ds a, InputsOK b pb sz →
    123    TwinPrefix4 b sA pre sB rc sC ds a →
-   124    RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
-   125      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
+   124    RelSpec p "intern_all_pins" ((ρ b pb sz).R6 · ds a) fun _ m =>
+   125      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb sz).R7 m ds ipins a'
 
 == ConAgua/Checker/CheckARun.lean#L281-L289
-   281  theorem checkA_run (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64) (w : Word)
+   281  theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) (w : Word)
    282      (hw : w = 1 ∨ w = 3) (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
-   283      (hrun : L.run checkerProg N "check" [] (loadMemM b pb s8 s64 w) = .ok (rs, m'))
+   283      (hrun : L.run checkerProg N "check" [] (loadMemM b pb sz w) = .ok (rs, m'))
    284      (hr : rs.headD 0 ≠ 1) :
    285      ∃ (PA : PhaseA b) (m : Mem) (v : Word),
    286        PhaseBStart PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend m PA.sF v ∧
@@ -559,9 +560,9 @@
    289        rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.pend.size := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L23-L32
-    23  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+    23  theorem drv_twinAccepts (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     24      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-    25      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 3) = .ok (rs₁, m₁))
+    25      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
     26      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     27      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
     28      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
@@ -578,56 +579,56 @@
     71  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
     72    closedNV_of_all nvTree.eq checkerProg_nvChk
 
-== ConAgua/Final/DrvAbi.lean#L178-L188
-   178  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-   179      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
-   180      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
-   181      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   182      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
-   183      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   184      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   185      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   186          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
-   187          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
-   188        dm (label abiStartL) := by
+== ConAgua/Final/DrvAbi.lean#L179-L189
+   179  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+   180      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   181      (hw : Nat) (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
+   182      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+   183      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   184      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+   185      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   186      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   187          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p mode plo phi out hdrf ctlf hw b pb) ∧
+   188          (st.data.regs.rdx = 2 → DrvErr p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+   189        dm (label abiStartL) := by
 
-== ConAgua/Final/DrvFinal.lean#L102-L108
-   102  theorem checkerFile_drv_accepts_regs [Host]
-   103      (k0 : Nat) (hcode : Code checkerFile k0)
-   104      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
-   105      (hc : AbiCall b pb dm ra) :
-   106      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   107          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-   108        dm (label abiStartL) :=
+== ConAgua/Final/DrvFinal.lean#L89-L95
+    89  theorem checkerFile_drv_accepts_regs [Host]
+    90      (k0 : Nat) (hcode : Code checkerFile k0)
+    91      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
+    92      (hc : AbiCall b pb dm ra) :
+    93      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+    94          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+    95        dm (label abiStartL) :=
 
-== ConAgua/Checker/Entry.lean#L146-L153
-   146  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
-   147  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
-   148  def checkL : FunDecl := lfn () locals (r) {
-   149    if MODE == 1 { r := call check_a(1); return r };
-   150    if MODE == 3 { r := call check_a(0); return r };
-   151    if MODE == 2 { r := call check_b(); return r };
-   152    abort
-   153  }
+== ConAgua/Checker/Entry.lean#L140-L147
+   140  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
+   141  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
+   142  def checkL : FunDecl := lfn () locals (r) {
+   143    if MODE == 1 { r := call check_a(1); return r };
+   144    if MODE == 3 { r := call check_a(0); return r };
+   145    if MODE == 2 { r := call check_b(); return r };
+   146    abort
+   147  }
 
-== ConAgua/Checker/Entry.lean#L111-L127
-   111  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-   112  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-   113  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-   114  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
-   115    z := call cap_check();
-   116    z := call pb_check();
-   117    z := call intern_reserved_pins();
-   118    z := call builtin_prelude();
-   119    r := call front_run();
-   120    if r != 0 { return 1 };
-   121    z := call prepare_prelude();
-   122    z := call intern_all_pins();
-   123    cnt := L.Front.DECL.u64[0];
-   124    v := call install_fold_go(0, cnt, 0);
-   125    z := call par_compact(v, c);
-   126    return 9223372036854775808 + CTL.u64[130]
-   127  }
+== ConAgua/Checker/Entry.lean#L105-L121
+   105  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+   106  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+   107  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+   108  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+   109    z := call cap_check();
+   110    z := call pb_check();
+   111    z := call intern_reserved_pins();
+   112    z := call builtin_prelude();
+   113    r := call front_run();
+   114    if r != 0 { return 1 };
+   115    z := call prepare_prelude();
+   116    z := call intern_all_pins();
+   117    cnt := L.Front.DECL.u64[0];
+   118    v := call install_fold_go(0, cnt, 0);
+   119    z := call par_compact(v, c);
+   120    return 9223372036854775808 + CTL.u64[130]
+   121  }
 
 == vendor/con-ron/ConRon/Arena/Main.lean#L154-L190
    154  def runPipelineHead :
@@ -688,86 +689,86 @@
    496    | some v => pure v
    497    | none => fail (.internal "arena: dangling level-list handle")
 
-== ConAgua/L/Syntax.lean#L69-L95
-    69  /-- Word expressions. Reading an array can fail (out of bounds); nothing else can. -/
-    70  inductive Expr where
-    71    | const (w : Word)
-    72    | var (x : Var)
-    73    | bin (op : BinOp) (a b : Expr)
-    74    /-- Byte `i` of byte array `a`, zero-extended. -/
-    75    | ld8 (a : ArrId) (i : Expr)
-    76    /-- Word `i` of word array `a`. -/
-    77    | ld64 (a : ArrId) (i : Expr)
-    78    /-- The length (in elements) of byte array `a`. -/
-    79    | len8 (a : ArrId)
-    80    /-- The length (in elements) of word array `a`. -/
-    81    | len64 (a : ArrId)
-    82    /-- A comparison as a word: `1` if it holds, else `0`. -/
-    83    | cmpw (c : Cmp) (a b : Expr)
-    84    /-- Byte `i` of the constant byte string `d` (read-only data, part of the program). -/
-    85    | ldc (d : List UInt8) (i : Expr)
-    86    /-- The global variable `g`. -/
-    87    | glob (g : GVar)
-    88    /-- Word `i` of tier `t` of the tiered array `a`: word array `tierA a t` (`a` for `t & 1 = 0`,
-    89    `a + tierOff` for `t & 1 = 1`; lane tierarr). -/
-    90    | ld64t (a : ArrId) (t i : Expr)
-    91    /-- The length of tier `t` of the tiered array `a`. -/
-    92    | len64t (a : ArrId) (t : Expr)
-    93    /-- The little-endian word of the bytes `i, …, i + 7` of `s` (lane blkcopy). -/
-    94    | ld8x8 (s : BSrc) (i : Expr)
-    95    deriving Repr, DecidableEq, Inhabited
+== ConAgua/L/Syntax.lean#L118-L144
+   118  /-- Word expressions. Reading an array can fail (out of bounds); nothing else can. -/
+   119  inductive Expr where
+   120    | const (w : Word)
+   121    | var (x : Var)
+   122    | bin (op : BinOp) (a b : Expr)
+   123    /-- Byte `i` of byte array `a`, zero-extended. -/
+   124    | ld8 (a : ArrId) (i : Expr)
+   125    /-- Word `i` of word array `a`. -/
+   126    | ld64 (a : ArrId) (i : Expr)
+   127    /-- The length (in elements) of byte array `a`. -/
+   128    | len8 (a : ArrId)
+   129    /-- The length (in elements) of word array `a`. -/
+   130    | len64 (a : ArrId)
+   131    /-- A comparison as a word: `1` if it holds, else `0`. -/
+   132    | cmpw (c : Cmp) (a b : Expr)
+   133    /-- Byte `i` of the constant byte string `d` (read-only data, part of the program). -/
+   134    | ldc (d : List UInt8) (i : Expr)
+   135    /-- The global variable `g`. -/
+   136    | glob (g : GVar)
+   137    /-- Word `i` of tier `t` of the tiered array `a`: word array `tierA a t` (`↑a` for `t & 1 = 0`,
+   138    `tier1 a` for `t & 1 = 1`). -/
+   139    | ld64t (a : ArrId) (t i : Expr)
+   140    /-- The length of tier `t` of the tiered array `a`. -/
+   141    | len64t (a : ArrId) (t : Expr)
+   142    /-- The little-endian word of the bytes `i, …, i + 7` of `s` (lane blkcopy). -/
+   143    | ld8x8 (s : BSrc) (i : Expr)
+   144    deriving Repr, DecidableEq, Inhabited
 
-== ConAgua/L/Syntax.lean#L117-L153
-   117  /-- Statements. -/
-   118  inductive Stmt where
-   119    | skip
-   120    /-- `x := e` -/
-   121    | set (x : Var) (e : Expr)
-   122    /-- `a.u8[i] := e` (the low byte of `e`) -/
-   123    | st8 (a : ArrId) (i e : Expr)
-   124    /-- `a.u64[i] := e` -/
-   125    | st64 (a : ArrId) (i e : Expr)
-   126    | seq (s t : Stmt)
-   127    | ite (c : Cond) (s t : Stmt)
-   128    /-- `while c { s }`. Each iteration costs one unit of fuel. -/
-   129    | while (c : Cond) (s : Stmt)
-   130    /-- Leave the innermost loop. -/
-   131    | brk
-   132    /-- Return from the function with the values `es` (usually one). -/
-   133    | ret (es : List Expr)
-   134    /-- `(x₀, x₁, …) := f(args)`: `xᵢ` gets the callee's `i`-th result, `0` if it returned fewer.
-   135    A call costs one unit of fuel. -/
-   136    | call (xs : List Var) (f : FnName) (args : List Expr)
-   137    /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …) whose code is
-   138    the value of `e` (`Err.abort`): the low two bits are the class (`0` other, `1` reject, `2`
-   139    decline), the rest a reason. A bare `abort` is `abort 0`. -/
-   140    | abort (e : Expr)
-   141    /-- `g := e` for a global variable `g`. -/
-   142    | gset (g : GVar) (e : Expr)
-   143    /-- `a⟨t⟩.u64[i] := e`: word `i` of tier `t` of the tiered array `a`. -/
-   144    | st64t (a : ArrId) (t i e : Expr)
-   145    /-- `copy D[di ..] := S[si ..] for n`: words `si, …, si + n - 1` of `S` to `di, …` of `D`, in
-   146    ascending order; bounds checked once, before anything is written (lane blkcopy). -/
-   147    | copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr)
-   148    /-- `copy D[di ..] := S.u8[si ..] for n`: the bytes zero-extended into words. -/
-   149    | copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr)
-   150    /-- `x := scan S.u8[i .. e] until c`: the first `j` in `[i, e)` with `c[S[j]] ≠ 0`, else `e`
-   151    (`c`: a 256-byte class table, constant data). -/
-   152    | scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8)
-   153    deriving Repr, Inhabited
+== ConAgua/L/Syntax.lean#L166-L202
+   166  /-- Statements. -/
+   167  inductive Stmt where
+   168    | skip
+   169    /-- `x := e` -/
+   170    | set (x : Var) (e : Expr)
+   171    /-- `a.u8[i] := e` (the low byte of `e`) -/
+   172    | st8 (a : ArrId) (i e : Expr)
+   173    /-- `a.u64[i] := e` -/
+   174    | st64 (a : ArrId) (i e : Expr)
+   175    | seq (s t : Stmt)
+   176    | ite (c : Cond) (s t : Stmt)
+   177    /-- `while c { s }`. Each iteration costs one unit of fuel. -/
+   178    | while (c : Cond) (s : Stmt)
+   179    /-- Leave the innermost loop. -/
+   180    | brk
+   181    /-- Return from the function with the values `es` (usually one). -/
+   182    | ret (es : List Expr)
+   183    /-- `(x₀, x₁, …) := f(args)`: `xᵢ` gets the callee's `i`-th result, `0` if it returned fewer.
+   184    A call costs one unit of fuel. -/
+   185    | call (xs : List Var) (f : FnName) (args : List Expr)
+   186    /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …) whose code is
+   187    the value of `e` (`Err.abort`): the low two bits are the class (`0` other, `1` reject, `2`
+   188    decline), the rest a reason. A bare `abort` is `abort 0`. -/
+   189    | abort (e : Expr)
+   190    /-- `g := e` for a global variable `g`. -/
+   191    | gset (g : GVar) (e : Expr)
+   192    /-- `a⟨t⟩.u64[i] := e`: word `i` of tier `t` of the tiered array `a`. -/
+   193    | st64t (a : ArrId) (t i e : Expr)
+   194    /-- `copy D[di ..] := S[si ..] for n`: words `si, …, si + n - 1` of `S` to `di, …` of `D`, in
+   195    ascending order; bounds checked once, before anything is written (lane blkcopy). -/
+   196    | copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr)
+   197    /-- `copy D[di ..] := S.u8[si ..] for n`: the bytes zero-extended into words. -/
+   198    | copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr)
+   199    /-- `x := scan S.u8[i .. e] until c`: the first `j` in `[i, e)` with `c[S[j]] ≠ 0`, else `e`
+   200    (`c`: a 256-byte class table, constant data). -/
+   201    | scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8)
+   202    deriving Repr, Inhabited
 
-== ConAgua/L/Syntax.lean#L155-L165
-   155  /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start
-   156  at `0`), and a body. Falling off the end of the body (or a `break` outside a loop) returns no
-   157  values (so every result the caller reads is `0`). -/
-   158  structure FunDecl where
-   159    nparams : Nat
-   160    nlocals : Nat
-   161    body : Stmt
-   162    deriving Repr, Inhabited
-   163  
-   164  /-- A program: its functions, by name. The first binding of a name wins. -/
-   165  abbrev Prog := List (FnName × FunDecl)
+== ConAgua/L/Syntax.lean#L204-L214
+   204  /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start
+   205  at `0`), and a body. Falling off the end of the body (or a `break` outside a loop) returns no
+   206  values (so every result the caller reads is `0`). -/
+   207  structure FunDecl where
+   208    nparams : Nat
+   209    nlocals : Nat
+   210    body : Stmt
+   211    deriving Repr, Inhabited
+   212  
+   213  /-- A program: its functions, by name. The first binding of a name wins. -/
+   214  abbrev Prog := List (FnName × FunDecl)
 
 == ConAgua/L/Notation.lean#L75-L157
     75  declare_syntax_cat lexpr
@@ -880,8 +881,8 @@
     29  * `R[i].f` reads field `f` of record `i` of the record layout `R : L.Record` (a Lean constant;
     30    the field is the constant `R.f : L.Field`), `R[i].f := e` writes it: the word
     31    `i * stride + f.off` of the word array `R.arr` (`L/Records.lean`).
-    32  * `A⟨t⟩[i]` reads word `i` of tier `t` of the tiered word array `A` (`L.tierA A t`: `A`, or
-    33    `A + tierOff` when `t & 1 = 1`); `len(A⟨t⟩)` is that tier's length, `A⟨t⟩[i] := e` writes it,
+    32  * `A⟨t⟩[i]` reads word `i` of tier `t` of the tiered word array `A` (`L.tierA A t`: `↑A`, or
+    33    `tier1 A` when `t & 1 = 1`); `len(A⟨t⟩)` is that tier's length, `A⟨t⟩[i] := e` writes it,
     34    and `R⟨t⟩[i].f` / `R⟨t⟩[i].f := e` are records in a tiered array (lane tierarr).
     35  * The node stores' records (`L/TRec.lean`, the stores in `Arena/StoreFields.lean`; lane tieracc):
     36    `R⟨t, i⟩.f` is field `f` of node `i` of tier `t` of the store `R : L.TRec` (`R⟨t, i⟩` a one-word
@@ -929,73 +930,98 @@
     20    triple (exception post `⊤`) is proved by induction on `n` and never mentions fuel.
     21  -/
 
-== ConAgua/L/Semantics.lean#L45-L55
-    45  /-- The ways a run can fail. -/
-    46  inductive Err where
-    47    /-- The fuel (nesting of loop iterations and calls) ran out. -/
-    48    | outOfFuel
-    49    /-- An array access out of bounds, or to an array that does not exist. -/
-    50    | oob
-    51    /-- A call to an undefined function. -/
-    52    | noFun (f : FnName)
-    53    /-- An `abort e` statement, with the value `k` of `e`: the error's code (`Stmt.abort`). -/
-    54    | abort (k : Word)
-    55    deriving Repr, DecidableEq, Inhabited
+== ConAgua/L/Semantics.lean#L47-L57
+    47  /-- The ways a run can fail. -/
+    48  inductive Err where
+    49    /-- The fuel (nesting of loop iterations and calls) ran out. -/
+    50    | outOfFuel
+    51    /-- An array access out of bounds, or to an array that does not exist. -/
+    52    | oob
+    53    /-- A call to an undefined function. -/
+    54    | noFun (f : FnName)
+    55    /-- An `abort e` statement, with the value `k` of `e`: the error's code (`Stmt.abort`). -/
+    56    | abort (k : Word)
+    57    deriving Repr, DecidableEq, Inhabited
 
-== ConAgua/L/Semantics.lean#L361-L368
-   361  /-- The interpreter with `n` units of fuel. -/
-   362  def exec (p : Prog) : Nat → Stmt → M Sig
-   363    | 0, _ => throw .outOfFuel
-   364    | n + 1, s => step p (exec p n) s
-   365  
-   366  /-- Run function `f` of `p` on memory `m`: its results and the final memory. -/
-   367  def run (p : Prog) (fuel : Nat) (f : FnName) (vs : List Word) (m : Mem) : Except Err (List Word × Mem) :=
-   368    ((invoke p (exec p fuel) f vs).run { mem := m, loc := Locals.init [] }).map fun (r, s) => (r, s.mem)
+== ConAgua/L/Semantics.lean#L365-L372
+   365  /-- The interpreter with `n` units of fuel. -/
+   366  def exec (p : Prog) : Nat → Stmt → M Sig
+   367    | 0, _ => throw .outOfFuel
+   368    | n + 1, s => step p (exec p n) s
+   369  
+   370  /-- Run function `f` of `p` on memory `m`: its results and the final memory. -/
+   371  def run (p : Prog) (fuel : Nat) (f : FnName) (vs : List Word) (m : Mem) : Except Err (List Word × Mem) :=
+   372    ((invoke p (exec p fuel) f vs).run { mem := m, loc := Locals.init [] }).map fun (r, s) => (r, s.mem)
 
-== ConAgua/L/Semantics.lean#L25-L32
-    25  /-- The memory: a fixed set of byte arrays and word arrays, indexed by `ArrId`, and the global
-    26  variables. The arrays' lengths are fixed for the run (a growable vector is a fixed-capacity array
-    27  plus a length kept in a word). Every global variable has a value (`0` unless written). -/
-    28  structure Mem where
-    29    bytes : Array (Array UInt8) := #[]
-    30    words : Array (Array Word) := #[]
-    31    glob : GVar → Word := fun _ => 0
-    32    deriving Inhabited
+== ConAgua/L/Semantics.lean#L25-L34
+    25  /-- The memory: byte arrays by name (`ArrId`), word arrays by (array, tier) (`TieredArray`), and the
+    26  global variables. Every array exists (possibly empty): the memory is a total map, and which arrays
+    27  a program may name is the compiler's business (`Prog.wf` against its layout). The arrays' lengths
+    28  are fixed for the run (a growable vector is a fixed-capacity array plus a length kept in a word).
+    29  Every global variable has a value (`0` unless written). -/
+    30  structure Mem where
+    31    bytes : ArrId → Array UInt8 := fun _ => #[]
+    32    words : TieredArray → Array Word := fun _ => #[]
+    33    glob : GVar → Word := fun _ => 0
+    34    deriving Inhabited
 
-== ConAgua/L/Syntax.lean#L28-L35
-    28  /-- **Tiered arrays** (lane tierarr). Tier `1` of word array `a` is word array `a + tierOff`;
-    29  an access with a run-time tier word `t` uses `tierA a t` (the tier is masked: `t & 1`). So a
-    30  program sees one array per tier, as con-ron's per-tier tables, and the compiler finds tier `1`'s
-    31  descriptor at a fixed distance from tier `0`'s. -/
-    32  @[expose] def tierOff : Nat := 256
-    33  
-    34  /-- The array of tier `t` of the tiered array `a`. -/
-    35  @[expose] def tierA (a : ArrId) (t : UInt64) : ArrId := a + tierOff * (t &&& 1).toNat
-
-== ConAgua/L/Arrays.lean#L34-L56
-    34  @[expose, reducible] def tier1 (a : ArrId) : ArrId := a + tierOff
-    35  
-    36  /-- The two tiers of the tiered array `a`. -/
-    37  @[expose, reducible] def tiers (a : ArrId) : List ArrId := [a, tier1 a]
-    38  
-    39  theorem and_one_cases' (t : Word) : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
-    40    rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
-    41  
-    42  @[simp] theorem tierA_zero (a : ArrId) : tierA a 0 = a := rfl
+== ConAgua/L/Syntax.lean#L29-L84
+    29  /-! ## Word arrays as L sees them
+    30  
+    31  A word array of L's memory is a `TieredArray`: tier `hi` of source array `arr`. An untiered array
+    32  is its tier 0 (`↑a`, the coercion `TieredArray.t0`); tier 1 of a tiered array `a` is `tier1 a`.
+    33  Distinct source arrays, and the two tiers of one array, are distinct `TieredArray`s by
+    34  construction: no numbering is involved. Where the arrays live in machine memory is the
+    35  compiler's choice (its layout map, `Compiler.WLay`); L and the proofs above it never see it. -/
+    36  
+    37  /-- Tier `hi` of source array `arr` (`hi = false`: tier 0, which is every untiered array). -/
+    38  structure TieredArray where
+    39    /-- An `ArrId`, typed `Nat` so that `omega` reads `s.arr < 64`. -/
+    40    arr : Nat
+    41    hi : Bool
+    42    deriving Repr, Inhabited
     43  
-    44  theorem tierA_one_eq (a : ArrId) : tierA a 1 = tier1 a := rfl
-    45  
-    46  /-- Tier `t` of `a` is `a` or `tier1 a`. -/
-    47  theorem tierA_eq_or (a : ArrId) (t : Word) : tierA a t = a ∨ tierA a t = tier1 a := by
-    48    rcases and_one_cases' t with h | h <;> simp [tierA, tier1, h]
-    49  
-    50  /-- **The arrays `tierA a t` can be are `tiers a`.** -/
-    51  theorem tierA_mem_tiers (a : ArrId) (t : Word) : tierA a t ∈ tiers a := by
-    52    rcases tierA_eq_or a t with h | h <;> simp [tiers, h]
-    53  
-    54  /-- An array that is neither tier of `a` is not `tierA a t`. -/
-    55  theorem tierA_ne {a b : ArrId} (h : b ∉ tiers a) (t : Word) : tierA a t ≠ b := fun e =>
-    56    h (e ▸ tierA_mem_tiers a t)
+    44  /-- A number per word array, for equality tests only: the kernel compares one `Nat` (as for
+    45  `GVar`), which `decide +kernel` over lists of arrays needs. -/
+    46  @[expose] def TieredArray.code (s : TieredArray) : Nat := 2 * s.arr + (if s.hi then 1 else 0)
+    47  
+    48  theorem TieredArray.code_inj {a b : TieredArray} : a.code = b.code ↔ a = b := by
+    49    rcases a with ⟨a, _ | _⟩ <;> rcases b with ⟨b, _ | _⟩ <;> simp [TieredArray.code] <;> omega
+    50  
+    51  instance : DecidableEq TieredArray := fun a b => decidable_of_iff (a.code = b.code) TieredArray.code_inj
+    52  
+    53  /-- A source array as a word array: its tier 0. -/
+    54  @[coe, reducible, expose] def TieredArray.t0 (a : ArrId) : TieredArray := ⟨a, false⟩
+    55  instance : Coe ArrId TieredArray := ⟨TieredArray.t0⟩
+    56  
+    57  /-- Tier 1 of `a`. -/
+    58  @[reducible, expose] def tier1 (a : ArrId) : TieredArray := ⟨a, true⟩
+    59  
+    60  /-- The array of tier `t` (masked: `t & 1`) of the tiered array `a`. -/
+    61  @[expose] def tierA (a : ArrId) (t : UInt64) : TieredArray := ⟨a, t &&& 1 != 0⟩
+    62  
+    63  /-- Both tiers of `a`. -/
+    64  @[reducible, expose] def tiers (a : ArrId) : List TieredArray := [TieredArray.t0 a, tier1 a]
+    65  
+    66  @[simp] theorem TieredArray.t0_inj {a b : ArrId} : TieredArray.t0 a = TieredArray.t0 b ↔ a = b := by
+    67    simp [TieredArray.t0]
+    68  theorem TieredArray.t0_ne {a b : ArrId} (h : a ≠ b) : TieredArray.t0 a ≠ TieredArray.t0 b :=
+    69    fun e => h (TieredArray.t0_inj.1 e)
+    70  @[simp] theorem t0_ne_tier1 (a b : ArrId) : TieredArray.t0 a ≠ tier1 b := by simp [TieredArray.t0, tier1]
+    71  @[simp] theorem tier1_ne_t0 (a b : ArrId) : tier1 a ≠ TieredArray.t0 b := by simp [TieredArray.t0, tier1]
+    72  @[simp] theorem tier1_inj {a b : ArrId} : tier1 a = tier1 b ↔ a = b := by simp [tier1]
+    73  @[simp] theorem tierA_arr (a : ArrId) (t : UInt64) : (tierA a t).arr = a := rfl
+    74  @[simp] theorem TieredArray.t0_arr (a : ArrId) : (TieredArray.t0 a).arr = a := rfl
+    75  @[simp] theorem TieredArray.t0_hi (a : ArrId) : (TieredArray.t0 a).hi = false := rfl
+    76  @[simp] theorem tier1_arr (a : ArrId) : (tier1 a).arr = a := rfl
+    77  @[simp] theorem tier1_hi (a : ArrId) : (tier1 a).hi = true := rfl
+    78  
+    79  theorem tierA_eq_or (a : ArrId) (u : UInt64) : tierA a u = TieredArray.t0 a ∨ tierA a u = tier1 a := by
+    80    unfold tierA; cases (u &&& 1 != 0) <;> simp [TieredArray.t0, tier1]
+    81  
+    82  /-- **The arrays `tierA a t` can be are `tiers a`.** -/
+    83  theorem tierA_mem_tiers (a : ArrId) (u : UInt64) : tierA a u ∈ tiers a := by
+    84    rcases tierA_eq_or a u with h | h <;> simp [tiers, h]
 
 == ConAgua/L/TRec.lean#L7-L31
      7  /-!
@@ -1037,51 +1063,51 @@
    154  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
    155    lexpr ")" : lstmt
 
-== ConAgua/L/Semantics.lean#L145-L164
-   145  /-- The little-endian word of the bytes `k, …, k + 7` of `b` (as the machine's 8-byte load
-   146  reads them: Kraken's `Nat.ofBytes`). -/
-   147  def le64 (b : Array UInt8) (k : Nat) : Word :=
-   148    UInt64.ofNat (((List.range 8).map fun j => b[k + j]!).foldr (fun x acc => acc * 256 + x.toNat) 0)
-   149  
-   150  /-- `D[di + j] := S[si + j]` for `j < n`, ascending (each word read after the writes before it). -/
-   151  def Mem.copy64 (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) : Nat → Mem
-   152    | 0 => m
-   153    | n + 1 => (m.set64 d di ((m.arr64 s)[si.toNat]!)).copy64 d (di + 1) s (si + 1) n
-   154  
-   155  /-- `D[di + j] := b[si + j]` (zero-extended) for `j < n`, ascending. -/
-   156  def Mem.copy8w (m : Mem) (d : ArrId) (di : Word) (b : Array UInt8) (si : Word) : Nat → Mem
-   157    | 0 => m
-   158    | n + 1 => (m.set64 d di (b[si.toNat]!).toUInt64).copy8w d (di + 1) b (si + 1) n
-   159  
-   160  /-- The first `j` in `[i, e)` with `c[b[j]] ≠ 0`, else `e` (for `i ≤ e`). -/
-   161  def scanN (b : Array UInt8) (c : List UInt8) (i e : Nat) : Nat :=
-   162    if i < e then (if c[(b[i]!).toNat]! ≠ 0 then i else scanN b c (i + 1) e) else i
-   163  termination_by e - i
-   164  
+== ConAgua/L/Semantics.lean#L149-L168
+   149  /-- The little-endian word of the bytes `k, …, k + 7` of `b` (as the machine's 8-byte load
+   150  reads them: Kraken's `Nat.ofBytes`). -/
+   151  def le64 (b : Array UInt8) (k : Nat) : Word :=
+   152    UInt64.ofNat (((List.range 8).map fun j => b[k + j]!).foldr (fun x acc => acc * 256 + x.toNat) 0)
+   153  
+   154  /-- `D[di + j] := S[si + j]` for `j < n`, ascending (each word read after the writes before it). -/
+   155  def Mem.copy64 (m : Mem) (d : TieredArray) (di : Word) (s : TieredArray) (si : Word) : Nat → Mem
+   156    | 0 => m
+   157    | n + 1 => (m.set64 d di ((m.arr64 s)[si.toNat]!)).copy64 d (di + 1) s (si + 1) n
+   158  
+   159  /-- `D[di + j] := b[si + j]` (zero-extended) for `j < n`, ascending. -/
+   160  def Mem.copy8w (m : Mem) (d : TieredArray) (di : Word) (b : Array UInt8) (si : Word) : Nat → Mem
+   161    | 0 => m
+   162    | n + 1 => (m.set64 d di (b[si.toNat]!).toUInt64).copy8w d (di + 1) b (si + 1) n
+   163  
+   164  /-- The first `j` in `[i, e)` with `c[b[j]] ≠ 0`, else `e` (for `i ≤ e`). -/
+   165  def scanN (b : Array UInt8) (c : List UInt8) (i e : Nat) : Nat :=
+   166    if i < e then (if c[(b[i]!).toNat]! ≠ 0 then i else scanN b c (i + 1) e) else i
+   167  termination_by e - i
+   168  
 
-== ConAgua/Compiler/Compile.lean#L636-L647
-   636  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
-   637  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
-   638  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
-   639    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
-   640    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
-   641    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
-   642    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
-   643    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
-   644     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-   645     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
-   646     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
-   647    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
+== ConAgua/Compiler/Compile.lean#L781-L792
+   781  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
+   782  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
+   783  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
+   784    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+   785    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
+   786    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+   787    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+   788    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
+   789     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   790     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+   791     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+   792    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
 
-== ConAgua/Compiler/Compile.lean#L669-L676
-   669  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
-   670  tests, 7 instructions. -/
-   671  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
-   672    [.label Lb,
-   673     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
-   674     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
-   675     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
-   676     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
+== ConAgua/Compiler/Compile.lean#L814-L821
+   814  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
+   815  tests, 7 instructions. -/
+   816  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
+   817    [.label Lb,
+   818     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
+   819     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+   820     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
+   821     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
 
 == ConAgua/L/TRec.lean#L93-L97
     93  /-- The tier of a handle word: bit 27. -/
@@ -1263,32 +1289,23 @@
     33    -- byte arrays
     34    | /-- The input buffer. -/ IN : byte := 0
 
-== ConAgua/Checker/ArrCheck.lean#L24-L33
-    24  
-    25  #guard checkerArrays.wf
-    26  #guard checkerArrays.progOK [] checkerProg
-    27  #guard Prog.arrs checkerProg == checkerArrays.extent
-    28  #guard checkerArrays.extent.2 == wordArrays
-    29  #guard frozenIds.all checkerArrays.wordSlots.contains
-    30  #guard parOwned.all checkerArrays.wordSlots.contains
-    31  #guard storeArrs.all checkerArrays.wordSlots.contains
-    32  #guard memoArrs.all checkerArrays.wordSlots.contains
-    33  #guard slotArrs.all checkerArrays.wordSlots.contains
+== ConAgua/Checker/ArrCheck.lean#L25-L34
+    25  
+    26  #guard checkerArrays.wf
+    27  #guard checkerArrays.progOK checkerProg
+    28  #guard checkerArrays.wordSlots.all checkerTab.dom64
+    29  #guard (checkerArrays.ids .byte).all checkerTab.dom8
+    30  #guard frozenIds.all checkerArrays.wordSlots.contains
+    31  #guard parOwned.all checkerArrays.wordSlots.contains
+    32  #guard storeArrs.all checkerArrays.wordSlots.contains
+    33  #guard memoArrs.all checkerArrays.wordSlots.contains
+    34  #guard slotArrs.all checkerArrays.wordSlots.contains
 
-== ConAgua/L/Arrays.lean#L153-L157
-   153  /-- **Well-formed**: every number below `tierOff`, the numbers of each kind distinct, only word
-   154  arrays tiered. -/
-   155  def wf (T : ArrTable) : Bool :=
-   156    T.all (fun d => d.id < tierOff && (d.tiered → d.kind == .word)) &&
-   157      nodupB (T.ids .byte) && nodupB (T.ids .word)
-
-== ConAgua/L/Arrays.lean#L244-L249
-   244  /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
-   245  (`useOK`); a function in `exempt` may name any word slot below `T`'s extent (`slotOK`). -/
-   246  def ArrTable.progOK (T : ArrTable) (exempt : List FnName) (p : Prog) : Bool :=
-   247    p.all fun (f, fd) =>
-   248      if exempt.contains f then (Uses.stmt fd.body).all T.slotOK
-   249      else (Uses.stmt fd.body).all T.useOK
+== ConAgua/L/Arrays.lean#L203-L206
+   203  /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
+   204  (`useOK`). -/
+   205  def ArrTable.progOK (T : ArrTable) (p : Prog) : Bool :=
+   206    p.all fun (_, fd) => (Uses.stmt fd.body).all T.useOK
 
 == ConAgua/Arena/LevelEquiv.lean#L255-L265
    255  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
@@ -1476,12 +1493,12 @@
     29  every run of `f ∈ fs` keeps the globals outside `G` (`GFrame`), and `Triple.gframe` adds that to a
     30  callee's spec for its caller's `vcgen`.
 
-== ConAgua/L/Agree.lean#L572-L576
-   572  /-- **Non-interference for `L.run`.** -/
-   573  theorem run_agree {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName}
-   574      (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) (n : Nat) (vs : List Word)
-   575      {m₁ m₂ : Mem} (hm : Agree S S8 m₁ m₂) :
-   576      RunAgree S S8 (run p n f vs m₁) (run p n f vs m₂) := by
+== ConAgua/L/Agree.lean#L563-L567
+   563  /-- **Non-interference for `L.run`.** -/
+   564  theorem run_agree {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName}
+   565      (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) (n : Nat) (vs : List Word)
+   566      {m₁ m₂ : Mem} (hm : Agree S S8 m₁ m₂) :
+   567      RunAgree S S8 (run p n f vs m₁) (run p n f vs m₂) := by
 
 == ConAgua/L/Agree.lean#L7-L31
      7  /-!
@@ -1490,8 +1507,8 @@
     10  `readsIn p S S8 fs` is a `Bool` check of the program text: every function of `fs` that `p`
     11  defines calls only into `fs`, and every array its body names (loaded, stored, measured, copied
     12  from or to, scanned) is a word array of `S` or a byte array of `S8`. The array sets are
-    13  predicates (`S S8 : ArrId → Bool`; a list `l` is `l.contains`). A tiered access
-    14  `a⟨t⟩` names both tiers, `a` and `a + tierOff`. Global variables are not restricted.
+    13  predicates (`S : TieredArray → Bool`, `S8 : ArrId → Bool`; a list `l` is `l.contains`). A
+    14  tiered access `a⟨t⟩` names both tiers, `↑a` and `tier1 a`. Global variables are not restricted.
     15  (`Stmt.rdOk` takes the callee set as a predicate too: `readsIn` uses membership in `fs`, the
     16  per-function split for a large program (`Compiler/ReadSetSplit.lean`) a tree of name codes.)
     17  
@@ -1518,12 +1535,12 @@
     48      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
 
 == ConAgua/Checker/CheckARun.lean#L135-L144
-   135  theorem foldStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+   135  theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
    136      {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
    137      {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
    138      {ipins : List INatOpPinSet} {sE : AState} (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
    139      (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word)
-   140      (h7 : R7 (loadMem b pb s8 s64) s₀.mem pb ds ipins sE)
+   140      (h7 : R7 (loadMem b pb sz) s₀.mem pb ds ipins sE)
    141      (hcnt : ∀ h : 0 < (s₀.mem.arr64 DECL).size, cnt = (s₀.mem.arr64 DECL)[0]) :
    142      ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
    143      ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (sF : AState),
@@ -1532,8 +1549,8 @@
 == ConAgua/Checker/Pipeline.lean#L69-L72
     69  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
     70  bytes, every word array below `2^64` words. -/
-    71  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
-    72    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
+    71  def InputsOK (b pb : ByteArray) (sz : TieredArray → Nat) : Prop :=
+    72    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ s, sz s < 2 ^ 64
 
 == ConAgua/Compiler/Compile.lean#L8-L33
      8  /-!
@@ -1563,64 +1580,134 @@
     32  normal return has `rdx` = 0 and the result in `rax`.
     33  -/
 
-== ConAgua/Compiler/Compile.lean#L1550-L1571
-  1550  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
-  1551    [.label enterL,
-  1552     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
-  1553     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
-  1554     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
-  1555     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
-  1556     movRM .rsp (mb .r15 Tab.stackTop),
-  1557     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
-  1558    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
-  1559    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
-  1560     jmpL okL,
-  1561     .label exhaustedL, movRI .rdx 1, jmpL finishL,
-  1562     .label errorL, movRI .rbx 0,
-  1563     .label abortL, movRR .rax .rbx, movRI .rdx 2,
-  1564     .label finishL, movRR .rsp .rbp,
-  1565     i64 (.pop (.reg (rr .r15))),
-  1566     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
-  1567     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
-  1568     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
-  1569     i64 .ret,
-  1570     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
-  1571    [movRI .rdx 0, jmpL finishL]
+== ConAgua/Compiler/Compile.lean#L1695-L1716
+  1695  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
+  1696    [.label enterL,
+  1697     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
+  1698     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
+  1699     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
+  1700     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
+  1701     movRM .rsp (mb .r15 Tab.stackTop),
+  1702     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
+  1703    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
+  1704    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
+  1705     jmpL okL,
+  1706     .label exhaustedL, movRI .rdx 1, jmpL finishL,
+  1707     .label errorL, movRI .rbx 0,
+  1708     .label abortL, movRR .rax .rbx, movRI .rdx 2,
+  1709     .label finishL, movRR .rsp .rbp,
+  1710     i64 (.pop (.reg (rr .r15))),
+  1711     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
+  1712     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
+  1713     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+  1714     i64 .ret,
+  1715     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
+  1716    [movRI .rdx 0, jmpL finishL]
 
-== ConAgua/Compiler/Compile.lean#L425
-   425  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+== ConAgua/Compiler/Compile.lean#L570
+   570  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
 
-== ConAgua/Compiler/Compile.lean#L1521-L1533
-  1521  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
-  1522    let ctx := fnCtx tab t sk f fd
-  1523    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
-  1524    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
-  1525    else if ctx.leaf && sk.find (nameCode f) == some F then
-  1526    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  1527    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
-  1528    else
-  1529    [.label (fnL f),
-  1530     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
-  1531     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
-  1532     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  1533    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+== ConAgua/Compiler/Compile.lean#L1666-L1678
+  1666  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
+  1667    let ctx := fnCtx tab t sk f fd
+  1668    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
+  1669    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
+  1670    else if ctx.leaf && sk.find (nameCode f) == some F then
+  1671    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  1672    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+  1673    else
+  1674    [.label (fnL f),
+  1675     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
+  1676     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
+  1677     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  1678    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
-== ConAgua/Compiler/Compile.lean#L74-L88
-    74  /-- The number of word arrays with both tiers in the table (`a` and `a + tierOff` below `nw`). -/
-    75  def Tab.wK (t : Tab) : Nat := min (t.nw - tierOff) tierOff
-    76  /-- The position of word array `a`'s descriptor words (lane tiercost): a permutation of
-    77  `[0, nw)` that puts tier `1` of a tiered array right after tier `0` (`wpos (a + tierOff) =
-    78  wpos a + 1` for `a < wK`), so that a tiered access addresses `[r15 + 8 (t & 1) + d]`. -/
-    79  def Tab.wpos (t : Tab) (a : ArrId) : Nat :=
-    80    if a < t.wK then 2 * a
-    81    else if a < tierOff then a + t.wK
-    82    else if a < tierOff + t.wK then 2 * (a - tierOff) + 1
-    83    else a
-    84  /-- The array whose descriptor words are at position `p` (`wpos`'s inverse). -/
-    85  def Tab.wposInv (t : Tab) (p : Nat) : ArrId :=
-    86    if p < 2 * t.wK then (if p % 2 = 0 then p / 2 else tierOff + p / 2)
-    87    else if p < tierOff + t.wK then p - t.wK
-    88    else p
+== ConAgua/Compiler/Compile.lean#L114-L135
+   114  /-! ## The layout map
+   115  
+   116  L's arrays are names: byte arrays `ArrId`, word arrays `TieredArray`. The compiler alone maps each name a
+   117  program may use (`dom`) to a descriptor position (`pos`), injectively, with a tiered array's tier 1
+   118  right after its tier 0 (the one indexed load). The simulation relation (`MemRel`) relates L's
+   119  arrays to the machine's regions through this map; nothing above the compiler sees positions. -/
+   120  
+   121  /-- The compiler's layout of the word arrays: `nw` descriptor positions. -/
+   122  structure WLay (nw : Nat) where
+   123    dom : TieredArray → Bool
+   124    pos : TieredArray → Nat
+   125    pos_lt : ∀ s, dom s → pos s < nw
+   126    pos_inj : ∀ s s', dom s → dom s' → pos s = pos s' → s = s'
+   127    adj : ∀ a, dom (tier1 a) → dom (TieredArray.t0 a) ∧ pos (tier1 a) = pos (TieredArray.t0 a) + 1
+   128  
+   129  /-- The compiler's layout of the byte arrays: `nb` descriptor positions. The ABI's fixed
+   130  positions (the input, the pin data) are constraints on this map, used only by the stub's proof. -/
+   131  structure BLay (nb : Nat) where
+   132    dom : ArrId → Bool
+   133    pos : ArrId → Nat
+   134    pos_lt : ∀ a, dom a → pos a < nb
+   135    pos_inj : ∀ a a', dom a → dom a' → pos a = pos a' → a = a'
+
+== ConAgua/Compiler/Compile.lean#L155-L215
+   155  /-! ### Today's layout as a layout map (`curLay`): the generated code does not change -/
+   156  
+   157  /-- The number today's layout gives a word array: tier `t` of `a` is `a + tierOff t`. -/
+   158  def curNum (s : TieredArray) : Nat := if s.hi then s.arr + tierOff else s.arr
+   159  
+   160  /-- The word arrays a program may name under today's layout. -/
+   161  def Tab.dom64 (t : Tab) (s : TieredArray) : Bool :=
+   162    if s.hi then decide (s.arr < t.wK) else decide (s.arr < tierOff) && decide (s.arr < t.nw)
+   163  
+   164  /-- Word array `s`'s descriptor position. -/
+   165  def Tab.pos64 (t : Tab) (s : TieredArray) : Nat := t.wpos (curNum s)
+   166  
+   167  theorem Tab.curNum_lt (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : curNum s < t.nw := by
+   168    rcases s with ⟨a, _ | _⟩ <;> simp [Tab.dom64, curNum] at h ⊢
+   169    · omega
+   170    · obtain ⟨h1, h2⟩ := t.wK_spec h; omega
+   171  
+   172  theorem Tab.curNum_inj (t : Tab) {s s' : TieredArray} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+   173      (e : curNum s = curNum s') : s = s' := by
+   174    rcases s with ⟨a, _ | _⟩ <;> rcases s' with ⟨b, _ | _⟩ <;>
+   175      simp [Tab.dom64, curNum] at h h' e ⊢
+   176    · omega
+   177    · have := t.wK_spec h'; simp only [tierOff] at *; omega
+   178    · have := t.wK_spec h; simp only [tierOff] at *; omega
+   179    · omega
+   180  
+   181  theorem Tab.pos64_lt (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : t.pos64 s < t.nw := by
+   182    simp only [Tab.pos64]; exact t.wpos_lt (t.curNum_lt h)
+   183  
+   184  theorem Tab.pos64_inj (t : Tab) {s s' : TieredArray} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+   185      (e : t.pos64 s = t.pos64 s') : s = s' := by
+   186    simp only [Tab.pos64] at e
+   187    have e2 := congrArg t.wposInv e
+   188    rw [t.wposInv_wpos (t.curNum_lt h), t.wposInv_wpos (t.curNum_lt h')] at e2
+   189    exact t.curNum_inj h h' e2
+   190  
+   191  theorem Tab.adj64 (t : Tab) (a : ArrId) (h : t.dom64 (tier1 a) = true) :
+   192      t.dom64 (TieredArray.t0 a) = true ∧ t.pos64 (tier1 a) = t.pos64 (TieredArray.t0 a) + 1 := by
+   193    simp only [Tab.dom64, ite_true, decide_eq_true_eq] at h
+   194    obtain ⟨h1, h2⟩ := t.wK_spec h
+   195    refine ⟨by simp only [Tab.dom64, Bool.false_eq_true, ite_false, Bool.and_eq_true, decide_eq_true_eq]; exact ⟨h1, Nat.lt_of_le_of_lt (Nat.le_add_right _ _) h2⟩, ?_⟩
+   196    have := t.wpos_tier h 1 (by omega)
+   197    simpa [Tab.pos64, curNum, tier1, TieredArray.t0] using this
+   198  
+   199  /-- **Today's layout as a `WLay`**: tier `t` of `a` at `wpos (a + 256 t)`. -/
+   200  def Tab.wl (t : Tab) : WLay t.nw where
+   201    dom := t.dom64
+   202    pos := t.pos64
+   203    pos_lt _ h := t.pos64_lt h
+   204    pos_inj _ _ h h' e := t.pos64_inj h h' e
+   205    adj a h := t.adj64 a h
+   206  
+   207  /-- The byte arrays a program may name, and their positions, under today's layout: `a` at `a`. -/
+   208  def Tab.dom8 (t : Tab) (a : ArrId) : Bool := decide (a < t.nb)
+   209  def Tab.pos8 (_ : Tab) (a : ArrId) : Nat := a
+   210  
+   211  def Tab.bl (t : Tab) : BLay t.nb where
+   212    dom := t.dom8
+   213    pos := t.pos8
+   214    pos_lt _ h := by simpa [Tab.dom8, Tab.pos8] using h
+   215    pos_inj _ _ _ _ e := e
 
 == ConAgua/Compiler/Step.lean#L11-L19
     11  /-!
@@ -1633,27 +1720,26 @@
     18  `Eventually` at the next state, the conclusion the `Eventually` at this one.
     19  -/
 
-== ConAgua/Compiler/Rel.lean#L104-L123
-   104  /-- L's memory `m` in the machine's data memory `d`. -/
-   105  structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
-   106    nb : m.bytes.size = G.tab.nb
-   107    nw : m.words.size = G.tab.nw
-   108    size8 : ∀ a < G.tab.nb, (m.arr8 a).size = G.s8 a
-   109    size64 : ∀ a < G.tab.nw, (m.arr64 a).size = G.s64 a
-   110    get8 : ∀ a < G.tab.nb, ∀ (i : Nat) (h : i < (m.arr8 a).size), d.get? (A (G.b8 a + i)) = some (m.arr8 a)[i]
-   111    get64 : ∀ a < G.tab.nw, ∀ (i : Nat) (h : i < (m.arr64 a).size),
-   112      rdW d (A (G.b64 a + 8 * i)) = some (m.arr64 a)[i]
-   113    limit : rdW d (A (G.T + 8)) = some (UInt64.ofNat G.lo)
-   114    base8 : ∀ a < G.tab.nb, rdW d (A (G.T + (G.tab.base8 a).toNat)) = some (UInt64.ofNat (G.b8 a))
-   115    len8 : ∀ a < G.tab.nb, rdW d (A (G.T + (G.tab.len8 a).toNat)) = some (UInt64.ofNat (G.s8 a))
-   116    base64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.base64 a).toNat)) = some (UInt64.ofNat (G.b64 a))
-   117    len64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.len64 a).toNat)) = some (UInt64.ofNat (G.s64 a))
-   118    rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
-   119      d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
-   120    stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
-   121    res : ∀ x, G.InRes x → (d.get? (A x)).isSome
-   122    /-- The global variables. -/
-   123    glob : ∀ g : GVar, g.id < G.tab.ng → rdW d (A (G.globAddr g)) = some (m.glob g)
+== ConAgua/Compiler/Rel.lean#L107-L125
+   107  structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
+   108    size8 : ∀ a, G.tab.dom8 a → (m.arr8 a).size = G.s8 (G.tab.pos8 a)
+   109    size64 : ∀ s, G.tab.dom64 s → (m.arr64 s).size = G.s64 (G.tab.pos64 s)
+   110    get8 : ∀ a, G.tab.dom8 a → ∀ (i : Nat) (h : i < (m.arr8 a).size),
+   111      d.get? (A (G.b8 (G.tab.pos8 a) + i)) = some (m.arr8 a)[i]
+   112    get64 : ∀ s, G.tab.dom64 s → ∀ (i : Nat) (h : i < (m.arr64 s).size),
+   113      rdW d (A (G.b64 (G.tab.pos64 s) + 8 * i)) = some (m.arr64 s)[i]
+   114    limit : rdW d (A (G.T + 8)) = some (UInt64.ofNat G.lo)
+   115    /-- The descriptors, by position: no L array in them. -/
+   116    base8 : ∀ p < G.tab.nb, rdW d (A (G.T + (G.tab.dbase8 p).toNat)) = some (UInt64.ofNat (G.b8 p))
+   117    len8 : ∀ p < G.tab.nb, rdW d (A (G.T + (G.tab.dlen8 p).toNat)) = some (UInt64.ofNat (G.s8 p))
+   118    base64 : ∀ p < G.tab.nw, rdW d (A (G.T + (G.tab.dbase64 p).toNat)) = some (UInt64.ofNat (G.b64 p))
+   119    len64 : ∀ p < G.tab.nw, rdW d (A (G.T + (G.tab.dlen64 p).toNat)) = some (UInt64.ofNat (G.s64 p))
+   120    rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
+   121      d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
+   122    stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
+   123    res : ∀ x, G.InRes x → (d.get? (A x)).isSome
+   124    /-- The global variables. -/
+   125    glob : ∀ g : GVar, g.id < G.tab.ng → rdW d (A (G.globAddr g)) = some (m.glob g)
 
 == ConAgua/Compiler/Rel.lean#L67-L79
     67  /-- The regions are inside the address space and pairwise disjoint. -/
@@ -1798,50 +1884,50 @@
     12  (`Arena.pooledAccepts_bridge`), which is what `twinAccepts_pure` already uses.
     13  (Lane parallel's `Twin.lean` changes, as a separate file.)
 
-== ConAgua/Checker/Entry.lean#L103-L108
-   103  
-   104  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
-   105  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
-   106  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
-   107  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
-   108  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
+== ConAgua/Checker/Entry.lean#L97-L102
+    97  
+    98  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
+    99  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
+   100  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
+   101  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
+   102  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
 
-== ConAgua/Checker/Entry.lean#L111-L127
-   111  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-   112  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-   113  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-   114  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
-   115    z := call cap_check();
-   116    z := call pb_check();
-   117    z := call intern_reserved_pins();
-   118    z := call builtin_prelude();
-   119    r := call front_run();
-   120    if r != 0 { return 1 };
-   121    z := call prepare_prelude();
-   122    z := call intern_all_pins();
-   123    cnt := L.Front.DECL.u64[0];
-   124    v := call install_fold_go(0, cnt, 0);
-   125    z := call par_compact(v, c);
-   126    return 9223372036854775808 + CTL.u64[130]
-   127  }
+== ConAgua/Checker/Entry.lean#L105-L121
+   105  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+   106  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+   107  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+   108  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+   109    z := call cap_check();
+   110    z := call pb_check();
+   111    z := call intern_reserved_pins();
+   112    z := call builtin_prelude();
+   113    r := call front_run();
+   114    if r != 0 { return 1 };
+   115    z := call prepare_prelude();
+   116    z := call intern_all_pins();
+   117    cnt := L.Front.DECL.u64[0];
+   118    v := call install_fold_go(0, cnt, 0);
+   119    z := call par_compact(v, c);
+   120    return 9223372036854775808 + CTL.u64[130]
+   121  }
 
-== ConAgua/Checker/Entry.lean#L129-L144
-   129  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
-   130  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
-   131  B's loop (`check_pending_go`); returns `ACCEPT`. -/
-   132  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
-   133  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
-   134  def checkBL : FunDecl := lfn () locals (z, n) {
-   135    if INIT == 0 {
-   136      n := len(CTLF.u64);
-   137      copy!(CTL.u64, 0, CTLF.u64, 0, n);
-   138      INIT := 1
-   139    };
-   140    if CTL.u64[130] < PHI { abort };
-   141    if PHI < PLO { abort };
-   142    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
-   143    return 71757147230292
-   144  }
+== ConAgua/Checker/Entry.lean#L123-L138
+   123  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
+   124  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
+   125  B's loop (`check_pending_go`); returns `ACCEPT`. -/
+   126  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
+   127  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
+   128  def checkBL : FunDecl := lfn () locals (z, n) {
+   129    if INIT == 0 {
+   130      n := len(CTLF.u64);
+   131      copy!(CTL.u64, 0, CTLF.u64, 0, n);
+   132      INIT := 1
+   133    };
+   134    if CTL.u64[130] < PHI { abort };
+   135    if PHI < PLO { abort };
+   136    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
+   137    return 71757147230292
+   138  }
 
 == ConAgua/Compiler/Abi.lean#L162-L171
    162  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
@@ -1855,23 +1941,23 @@
    170    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
    171    the driver touches no callee-saved register but `r15`. -/
 
-== ConAgua/Final/DrvAbi.lean#L178-L188
-   178  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-   179      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
-   180      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
-   181      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   182      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
-   183      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   184      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   185      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   186          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
-   187          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
-   188        dm (label abiStartL) := by
+== ConAgua/Final/DrvAbi.lean#L179-L189
+   179  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+   180      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   181      (hw : Nat) (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
+   182      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+   183      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   184      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+   185      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   186      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   187          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p mode plo phi out hdrf ctlf hw b pb) ∧
+   188          (st.data.regs.rdx = 2 → DrvErr p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+   189        dm (label abiStartL) := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L23-L32
-    23  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+    23  theorem drv_twinAccepts (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     24      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-    25      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 3) = .ok (rs₁, m₁))
+    25      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
     26      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     27      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
     28      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
@@ -1958,7 +2044,7 @@
     29  | D3 | `Front/FieldsDecl.lean:73,103` `str_code`; `ApplyDecl.lean:23` | the `safety` / quotient `kind` strings are compared after unescaping | a backslash in these strings reads as "not `safe`" and aborts | completeness (lean4export never escapes them) | front2 (done) → unassigned | compare after `str_put_esc` |
     30  | D6 | `Arena/Rom.lean:220-266` (`ascii_loop`, `rom_put`, `rom_lit`, `memo_push`) | `internPinSets` takes any con-leche value | pin data aborts on non-ASCII names, `natVal ≥ 2^64`, string literals, non-canonical back references | completeness (unusual pin data only) | romload (done) → unassigned | add the readers when a toolchain needs them |
     31  | D8 | `Front/IdTable.lean` `tbl_fresh` | `IdTable.bound` skips the hash when `sparse.isEmpty` | probes the sparse memo (one slot when empty): one hash per line | performance (constant) | twinaudit (done) → unassigned | relate the memo's live count to the map's emptiness (`MemoRV` does not), then test it first |
-    32  | D10 | ROADMAP "Known costs" 1; `Arena/Pool.lean`, `Arena/Scratch.lean` `scratch_reset`, `Arena/Promote.lean` `pool_alloc0`/`pool_copy0`/`pi_lit`/`pi_nstr`/`pi_ls` | Rust frees transient `Nat`s | the limb and string pool is append-only within a tier; it has two tiers (array 0, array 256; tier = the scratch flag, addresses tagged by bit 40): the scratch tier's limbs are dropped with `scratch_reset`, a promoted node's tier-1 slice is first copied to tier 0 (`pool_copy0`, above the saved tier-0 top `PT0[0]`); `pls_arm` stages a promoted level list above the top and `pi_ls` copies it | performance (memory): transient `Nat`s accumulate only within one declaration; a promoted slice is copied once more than in Rust (it clones the `Vec`) | tierpool | stays: the per-declaration tier is the scratch region; within a declaration L has no allocator to free a single `Nat` |
+    32  | D10 | ROADMAP "Known costs" 1; `Arena/Pool.lean`, `Arena/Scratch.lean` `scratch_reset`, `Arena/Promote.lean` `pool_alloc0`/`pool_copy0`/`pi_lit`/`pi_nstr`/`pi_ls` | Rust frees transient `Nat`s | the limb and string pool is append-only within a tier; it has two tiers (`↑POOL` and `tier1 POOL`; tier = the scratch flag, addresses tagged by bit 40): the scratch tier's limbs are dropped with `scratch_reset`, a promoted node's tier-1 slice is first copied to tier 0 (`pool_copy0`, above the saved tier-0 top `PT0[0]`); `pls_arm` stages a promoted level list above the top and `pi_ls` copies it | performance (memory): transient `Nat`s accumulate only within one declaration; a promoted slice is copied once more than in Rust (it clones the `Vec`) | tierpool | stays: the per-declaration tier is the scratch region; within a declaration L has no allocator to free a single `Nat` |
     33  | D11 | ROADMAP "Known costs" 2; DESIGN.md (strings) | packed bytes | strings one byte per word | performance (memory, 8×) | unassigned | intent unclear: packed strings if it matters |
     34  | D12 | ROADMAP "Known costs" 3 | hash maps delete and grow | memo generations and tombstones stay until the next clear | performance (load, probe length) | unassigned | intent unclear: resize/compaction (layout only; `MemoRG` unchanged) |
     35  | D18 | `Arena/RecGen.lean` `class_fields_of_go`, `class_rec_tys_ok`, `class_rules_ok`, `class_recs_rules_ok_go`, `check_block_classes_keys`, `class_majors`, `class_seeds`; `Arena/RecClass.lean` `class_gen_minor_ty_ihs_go`; `Arena/RecCheck.lean` `target_major_nfs`, `erase_each`, `block_rec_split_own_aux`, `block_rec_want_aux_names`, `tgt_stored_rules_remap`; `Arena/IndSum.lean` `check_sum_ctors`; `Arena/IndParts.lean` `block_split*`, `block_groups*`, `block_rec_want`/`_got`, `block_member_counts_go`, `block_shape_names_of`/`_ctors_of`/`_members_of`/`_rhss_of`/`_recs_of`; `Arena/IndInstall.lean` `check_block_teles`, `check_block_inds_cv_tas(_go)`, `check_block_idx_sorts`, `check_block_ctors_go`, `check_block_positivity_nfs(_member)` | `classFieldsOf`, `classRecTysOk`, `classRulesOk`, `classRecsRulesOk`, `checkBlockClasses`' `ks.mapM`, `classMajors`, `classSeeds`, `targetMajorNfs`, `targetK53`'s `mapM`s, `targetRecPins`' `filter`s and `mapM`, `tgtStoredRules`' `map`, `checkSumCtors`, the block splitters, `checkBlockTeles`, `checkBlockInds`, `checkBlockIdxSorts`, `checkBlockCtors` build their result lists by `::` (constant time per element); `checkBlockPositivity` maps `outs` | self-recursion as the twin's, each element (or record) `sl_cons`ed onto the rest's `IW` slice: a copy per element, so that every written word lies above the old pool top and the decodings stay stable | performance (quadratic in the list's length: a block's members, constructors, fields, recursors, rules; small lists) | rec2, indproofs2, indproofs3 | intent unclear: an in-place slice writer (preallocate, and a frame lemma for writes above a slice), if blocks get large |
@@ -1996,7 +2082,7 @@
     65  - **D4** (fixed by lane consync, helper consync-pins): con-ron ed864140 retired `orElseAttempt` (its task #129): an error inside a pin-variant attempt is the run's error in the twin too, and L's loop is the twin's boolean decision loop (`check_div_mod_pin_loop`); the attempt flag `ATT` and the `fail R` class masking are gone.
     66  - **D21, D22, D29** (fixed by lane consync, the twin bump to con-ron `ed864140`): the projection tables left the constants (con-leche task #362): no reserved table name is interned any more (`proj_table_name` is gone; tables are keyed on the structure name in the environment's table component, `find_table`), and no constant is a projection table (the ROM reader has no kind `6` to refuse).
     67  - **D39** (fixed by lane epochwrap): `scratch_reset` aborted after `2^30` resets (the slot base `B = CTL[62]` at `2^62`); now at `B ≥ 2^62` it vacates the 19 scratch slot tables (the growth's zero loop `kzeroLs`) and restarts `B` at `0`, as con-ron's `HashMap2::clear` at `EPOCH_MAX` (docs/design/epochwrap.md).
-    68  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is `a + 256`, lane tierarr's `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
+    68  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is the word array `tierA a t`, `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
     69  - **D1** (fixed by decls3 landing 4 and lane integrate): `and_pin_ok`'s inductive arm landed (kind `6`) and `rom_and_pin` got L code, so the real `And` block is accepted.
     70  - **F1** (fixed by lane twinaudit): id tables dense + sparse (`IdTable`); ids past the end no longer abort (`e2e/rounds_huge_gaps`).
     71  - **F2** (fixed by lane front2): strings with escapes (`Unescape.lean`, `str_put_esc`).
