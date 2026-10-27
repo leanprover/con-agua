@@ -15,7 +15,7 @@
 #   provenance  scripts/provenance.py check          every FunDecl's twin citation is exact
 #   reasons     scripts/reasons.py --check           (when the script exists)
 #   build       scripts/lake build ConAgua           (timeout 90 min)
-#   shake       scripts/shake.py                     no import the import minimizer finds unused, but listed
+#   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
 #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
 #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 #

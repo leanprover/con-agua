@@ -71,59 +71,59 @@
     94    return 3;
     95  }
 
-== ConAgua/Compiler/Main.lean#L25-L28
-    25  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
-    26    | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G G.tab.nres rs s ∧ MemRel G m' s.dmem
-    27    | .error .outOfFuel, _ => False
-    28    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
+== ConAgua/Compiler/Main.lean#L28-L31
+    28  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
+    29    | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G G.tab.nres rs s ∧ MemRel G m' s.dmem
+    30    | .error .outOfFuel, _ => False
+    31    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
 
 == docs/deviations.md#L49
     49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) at every capacity or defensive check (an unresolved constant decides its kind as the twin does, `unresolved_consts_error`: a string literal before `String` or a use of `sorryAx` declines, anything else rejects; its two walks, `has_str_lit_go` and `ue_mentions_go`, drop the twin's memo so the error path writes nothing: the same answer, but exponential time on a heavily shared term, error path only) | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the classes are proved (a reject or decline is the twin's, the final theorems); the messages are not part of the theorem |
 
-== ConAgua/Final/Statement.lean#L89-L91
-    89  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
-    90  or an unset register is never read as accept. -/
-    91  def ACCEPT : Word := 0x4143_4345_5054
+== ConAgua/Final/Statement.lean#L88-L90
+    88  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
+    89  or an unset register is never read as accept. -/
+    90  def ACCEPT : Word := 0x4143_4345_5054
 
-== ConAgua/Final/EndToEnd.lean#L83-L90
-    83  theorem checkerFile_accepts [Host]
-    84      (k0 : Nat) (hcode : Code checkerFile k0)
-    85      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    86      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    87      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    88          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]) ∧
-    89          (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
-    90            TwinVerdict [b] (st.data.regs.rax &&& 3)))
+== ConAgua/Final/EndToEnd.lean#L80-L87
+    80  theorem checkerFile_accepts [Host]
+    81      (k0 : Nat) (hcode : Code checkerFile k0)
+    82      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    83      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    84      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    85          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]) ∧
+    86          (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
+    87            TwinVerdict [b] (st.data.regs.rax &&& 3)))
 
-== ConAgua/Compiler/Step.lean#L24-L29
-    24  /-- Every run from `d` at `pc` reaches `Q`. -/
-    25  abbrev Ev (Q : MachineState → Prop) (d : MachineData) (pc : Int64) : Prop :=
-    26    Eventually (step1 Host.exe) Q ⟨d, pc⟩
-    27  
-    28  /-- The code `c` sits at index `k` of the host program. -/
-    29  abbrev Code (c : Program) (k : Nat) : Prop := c.IsInfixAt Host.prog k
+== ConAgua/Compiler/Step.lean#L25-L30
+    25  /-- Every run from `d` at `pc` reaches `Q`. -/
+    26  abbrev Ev (Q : MachineState → Prop) (d : MachineData) (pc : Int64) : Prop :=
+    27    Eventually (step1 Host.exe) Q ⟨d, pc⟩
+    28  
+    29  /-- The code `c` sits at index `k` of the host program. -/
+    30  abbrev Code (c : Program) (k : Nat) : Prop := c.IsInfixAt Host.prog k
 
-== ConAgua/Final/Twin.lean#L54-L64
-    54  /-- **The twin accepts `chunks`**: the stages con-ron's binary runs, from the twin's start state
-    55  `AState.init EStore.empty`, at some pin list, the fold on one worker. -/
-    56  def TwinAccepts (chunks : List ByteArray) : Prop :=
-    57    ∃ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx) (r : ParseResultD)
-    58      (ds : Array IDeclaration) (ipins : List INatOpPinSet) (fe : IFEnv),
-    59      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
-    60      builtinPreludeE sA = .ok (.ok pre, sB) ∧
-    61      parseChunks chunks sB = .ok (.ok r, sC) ∧
-    62      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
-    63      internAllPins pins sD = .ok (ipins, sE) ∧
-    64      SeqAccepts .verified ipins ds sE fe sF
+== ConAgua/Final/Twin.lean#L57-L67
+    57  /-- **The twin accepts `chunks`**: the stages con-ron's binary runs, from the twin's start state
+    58  `AState.init EStore.empty`, at some pin list, the fold on one worker. -/
+    59  def TwinAccepts (chunks : List ByteArray) : Prop :=
+    60    ∃ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx) (r : ParseResultD)
+    61      (ds : Array IDeclaration) (ipins : List INatOpPinSet) (fe : IFEnv),
+    62      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    63      builtinPreludeE sA = .ok (.ok pre, sB) ∧
+    64      parseChunks chunks sB = .ok (.ok r, sC) ∧
+    65      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
+    66      internAllPins pins sD = .ok (ipins, sE) ∧
+    67      SeqAccepts .verified ipins ds sE fe sF
 
-== ConAgua/Final/Twin.lean#L36-L42
-    36  /-- **The x64 checker's fold**: phase A accepted with environment `fe` and pending records `pend`,
-    37  ending in `s'`; phase B, every pending record in order on one worker made from `s'`, accepted. -/
-    38  def SeqAccepts (mode : CheckMode) (pins : List INatOpPinSet) (ds : Array IDeclaration)
-    39      (s : AState) (fe : IFEnv) (s' : AState) : Prop :=
-    40    ∃ (n : Nat) (pend : Array PendingCheck) (s'' : AState),
-    41      installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList s = .ok (.ok (n, fe, pend), s') ∧
-    42      checkPendingList mode fe pend.toList s'.worker = .ok (.ok (), s'')
+== ConAgua/Final/Twin.lean#L39-L45
+    39  /-- **The x64 checker's fold**: phase A accepted with environment `fe` and pending records `pend`,
+    40  ending in `s'`; phase B, every pending record in order on one worker made from `s'`, accepted. -/
+    41  def SeqAccepts (mode : CheckMode) (pins : List INatOpPinSet) (ds : Array IDeclaration)
+    42      (s : AState) (fe : IFEnv) (s' : AState) : Prop :=
+    43    ∃ (n : Nat) (pend : Array PendingCheck) (s'' : AState),
+    44      installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList s = .ok (.ok (n, fe, pend), s') ∧
+    45      checkPendingList mode fe pend.toList s'.worker = .ok (.ok (), s'')
 
 == ConAgua/Final/TwinVerdict.lean#L58-L59
     58  def TwinVerdict (chunks : List ByteArray) (c : L.Word) : Prop :=
@@ -140,90 +140,90 @@
     53    thenV (installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList) fun q =>
     54    fun s => checkPendingList .verified q.2.1 q.2.2.toList s.worker
 
-== ConAgua/Final/EndToEnd.lean#L103-L115
-   103  theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
-   104      (k0 : Nat) (hcode : Code checkerFile k0)
-   105      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-   106      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   107      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-   108          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
-   109            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
-   110              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
-   111              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
-   112              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
-   113                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
-   114              Nonempty (ConLeche.Model V env)))
-   115        dm (label abiStartL) :=
+== ConAgua/Final/EndToEnd.lean#L100-L112
+   100  theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
+   101      (k0 : Nat) (hcode : Code checkerFile k0)
+   102      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   103      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   104      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   105          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
+   106            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
+   107              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
+   108              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
+   109              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
+   110                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
+   111              Nonempty (ConLeche.Model V env)))
+   112        dm (label abiStartL) :=
 
-== ConAgua/Final/EndToEnd.lean#L129-L136
-   129  theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
-   130      (k0 : Nat) (hcode : Code checkerFile k0)
-   131      (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
-   132      (h64 : System.Platform.numBits = 64)
-   133      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   134      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-   135          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
-   136        dm (label abiStartL) :=
+== ConAgua/Final/EndToEnd.lean#L126-L133
+   126  theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
+   127      (k0 : Nat) (hcode : Code checkerFile k0)
+   128      (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
+   129      (h64 : System.Platform.numBits = 64)
+   130      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   131      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   132          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
+   133        dm (label abiStartL) :=
 
-== ConAgua/Final/Twin.lean#L116-L132
-   116  /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
-   117  con-leche's pure fold accepts the parsed records prepared with some prelude, at the twin's pin
-   118  list. `stages_frame`, then Theorem 1 (`Arena.pooledAccepts_bridge`, with its two tier specs
-   119  discharged by `CoreSpec.of_core` and `indSpec_of_bridge`). -/
-   120  theorem twinAccepts_pure {chunks : List ByteArray} (h : TwinAccepts chunks) :
-   121      ∃ (pins : List NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
-   122        (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : Env),
-   123        ConLeche.Frontend.parseChunks chunks = .ok rc ∧
-   124        checkDeclsPure .verified (fueledOps .verified F) pins
-   125          (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env := by
-   126    obtain ⟨pins, sA, sB, sC, sD, sE, sF, pre, r, ds, ipins, fe, hA, hB, hC, hD, hE, hF⟩ := h
-   127    have hk : CoreSpec .verified ConRon.Arena.checkFuel := CoreSpec.of_core rfl
-   128    have hind : IndSpec .verified := ConRon.Bridge.Inductives.indSpec_of_bridge rfl hk
-   129    obtain ⟨-, hfold, hipins, hpps, hpd, preC, rc, hrc, hden⟩ := stages_frame hA hB hC hD hE
-   130    obtain ⟨env, F, -, hpure⟩ :=
-   131      ConRon.Bridge.Arena.pooledAccepts_bridge rfl hk hind hpps hfold hipins hpd hden (pooledAccepts_of_seq hF)
-   132    exact ⟨pins, preC, rc, F, env, hrc, hpure⟩
+== ConAgua/Final/Twin.lean#L119-L135
+   119  /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
+   120  con-leche's pure fold accepts the parsed records prepared with some prelude, at the twin's pin
+   121  list. `stages_frame`, then Theorem 1 (`Arena.pooledAccepts_bridge`, with its two tier specs
+   122  discharged by `CoreSpec.of_core` and `indSpec_of_bridge`). -/
+   123  theorem twinAccepts_pure {chunks : List ByteArray} (h : TwinAccepts chunks) :
+   124      ∃ (pins : List NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
+   125        (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : Env),
+   126        ConLeche.Frontend.parseChunks chunks = .ok rc ∧
+   127        checkDeclsPure .verified (fueledOps .verified F) pins
+   128          (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env := by
+   129    obtain ⟨pins, sA, sB, sC, sD, sE, sF, pre, r, ds, ipins, fe, hA, hB, hC, hD, hE, hF⟩ := h
+   130    have hk : CoreSpec .verified ConRon.Arena.checkFuel := CoreSpec.of_core rfl
+   131    have hind : IndSpec .verified := ConRon.Bridge.Inductives.indSpec_of_bridge rfl hk
+   132    obtain ⟨-, hfold, hipins, hpps, hpd, preC, rc, hrc, hden⟩ := stages_frame hA hB hC hD hE
+   133    obtain ⟨env, F, -, hpure⟩ :=
+   134      ConRon.Bridge.Arena.pooledAccepts_bridge rfl hk hind hpps hfold hipins hpd hden (pooledAccepts_of_seq hF)
+   135    exact ⟨pins, preC, rc, F, env, hrc, hpure⟩
 
-== ConAgua/Final/EndToEnd.lean#L64-L72
-    64  theorem checkerFile_accepts_regs [Host]
-    65      (k0 : Nat) (hcode : Code checkerFile k0)
-    66      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    67      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    68      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-    69          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]) ∧
-    70          (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
-    71            TwinVerdict [b] (st.data.regs.rax &&& 3)))
-    72        dm (label abiStartL) :=
+== ConAgua/Final/EndToEnd.lean#L61-L69
+    61  theorem checkerFile_accepts_regs [Host]
+    62      (k0 : Nat) (hcode : Code checkerFile k0)
+    63      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    64      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    65      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+    66          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]) ∧
+    67          (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
+    68            TwinVerdict [b] (st.data.regs.rax &&& 3)))
+    69        dm (label abiStartL) :=
 
-== ConAgua/Final/Statement.lean#L120-L127
-   120  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
-   121  `rsp` is past the return address and the other callee-saved registers of System V, `rbp`,
-   122  `r14`, `r15`, `rbx`, `r12`, `r13`, hold their values from the call. The trampoline `ca_enter`
-   123  saves and restores them (`rbp`, `r14` on the machine stack, the others past the table), so this
-   124  holds whatever registers the compiled code uses. Together with the verdict in `rdx`/`rax` this is
-   125  all the harness relies on after the call. -/
-   126  def RegsRestored (r0 r : Reg64s) : Prop :=
-   127    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15 ∧
+== ConAgua/Final/Statement.lean#L119-L126
+   119  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
+   120  `rsp` is past the return address and the other callee-saved registers of System V, `rbp`,
+   121  `r14`, `r15`, `rbx`, `r12`, `r13`, hold their values from the call. The trampoline `ca_enter`
+   122  saves and restores them (`rbp`, `r14` on the machine stack, the others past the table), so this
+   123  holds whatever registers the compiled code uses. Together with the verdict in `rdx`/`rax` this is
+   124  all the harness relies on after the call. -/
+   125  def RegsRestored (r0 r : Reg64s) : Prop :=
+   126    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15 ∧
 
-== ConAgua/Final/EndToEnd.lean#L192-L209
-   192  /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   193  #guard_msgs in #print axioms checkerFile_accepts
-   194  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   195  #guard_msgs in #print axioms checkerFile_accepts_regs
-   196  /-- info: 'ConAgua.Final.checkerFile_model_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   197  #guard_msgs in #print axioms checkerFile_model_exists
-   198  /-- info: 'ConAgua.Final.checkerFile_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   199  #guard_msgs in #print axioms checkerFile_no_False
-   200  /-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   201  #guard_msgs in #print axioms checkerFile_threads_accept
-   202  /-- info: 'ConAgua.Final.checkerFile_threads_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   203  #guard_msgs in #print axioms checkerFile_threads_regs
-   204  /-- info: 'ConAgua.Final.checkerFile_threads_verdict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   205  #guard_msgs in #print axioms checkerFile_threads_verdict
-   206  /-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   207  #guard_msgs in #print axioms checkerFile_threads_model
-   208  /-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   209  #guard_msgs in #print axioms checkerFile_threads_no_False
+== ConAgua/Final/EndToEnd.lean#L189-L206
+   189  /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   190  #guard_msgs in #print axioms checkerFile_accepts
+   191  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   192  #guard_msgs in #print axioms checkerFile_accepts_regs
+   193  /-- info: 'ConAgua.Final.checkerFile_model_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   194  #guard_msgs in #print axioms checkerFile_model_exists
+   195  /-- info: 'ConAgua.Final.checkerFile_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   196  #guard_msgs in #print axioms checkerFile_no_False
+   197  /-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   198  #guard_msgs in #print axioms checkerFile_threads_accept
+   199  /-- info: 'ConAgua.Final.checkerFile_threads_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   200  #guard_msgs in #print axioms checkerFile_threads_regs
+   201  /-- info: 'ConAgua.Final.checkerFile_threads_verdict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   202  #guard_msgs in #print axioms checkerFile_threads_verdict
+   203  /-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   204  #guard_msgs in #print axioms checkerFile_threads_model
+   205  /-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   206  #guard_msgs in #print axioms checkerFile_threads_no_False
 
 == ConAgua/Audit/Final.lean#L20-L37
     20  /-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -251,45 +251,45 @@
     49    let ⟨b, hb⟩ := jsonWithTheoremFalse_inhabited
     50    ⟨b, twinAccepts_no_False V hb⟩
 
-== ConAgua/Final/Abi.lean#L21-L47
-    21  /-- **How the harness calls `ca_start`**: System V arguments `rdi, rsi` = the input buffer and its
-    22  length, `rdx, rcx` = the pin-data buffer and its length, `r8, r9` = the region and its length;
-    23  the buffers hold `b` and `pb`; the region is zero, in the address space, and apart from both
-    24  buffers; the buffers are apart from each other; the return address is on the machine stack, whose
-    25  32 bytes around `rsp` are mapped and apart from the region and the buffers. -/
-    26  structure AbiCall (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
-    27    hin : ∀ i (h : i < b.size), dm.dmem.get? (A (dm.regs.rdi.toNat + i)) = some b[i]
-    28    hn : dm.regs.rsi.toNat = b.size
-    29    hpins : ∀ i (h : i < pb.size), dm.dmem.get? (A (dm.regs.rdx.toNat + i)) = some pb[i]
-    30    hnp : dm.regs.rcx.toNat = pb.size
-    31    hzero : ∀ x, dm.regs.r8.toNat ≤ x → x < dm.regs.r8.toNat + dm.regs.r9.toNat → dm.dmem.get? (A x) = some 0
-    32    hfits : dm.regs.r8.toNat + dm.regs.r9.toNat < 2 ^ 64
-    33    hinEnd : dm.regs.rdi.toNat + b.size < 2 ^ 64
-    34    hpinsEnd : dm.regs.rdx.toNat + pb.size < 2 ^ 64
-    35    hinDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
-    36      x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
-    37    hpinsDisj : ∀ x, dm.regs.rdx.toNat ≤ x → x < dm.regs.rdx.toNat + pb.size →
-    38      x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
-    39    hbufDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
-    40      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
-    41    hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra
-    42    hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
-    43      (dm.dmem.get? (A x)).isSome ∧ (x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x) ∧
-    44      ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + b.size) ∧
-    45      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
-    46    hcs24 : 24 ≤ dm.regs.rsp.toNat
-    47    hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
+== ConAgua/Final/Abi.lean#L22-L48
+    22  /-- **How the harness calls `ca_start`**: System V arguments `rdi, rsi` = the input buffer and its
+    23  length, `rdx, rcx` = the pin-data buffer and its length, `r8, r9` = the region and its length;
+    24  the buffers hold `b` and `pb`; the region is zero, in the address space, and apart from both
+    25  buffers; the buffers are apart from each other; the return address is on the machine stack, whose
+    26  32 bytes around `rsp` are mapped and apart from the region and the buffers. -/
+    27  structure AbiCall (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
+    28    hin : ∀ i (h : i < b.size), dm.dmem.get? (A (dm.regs.rdi.toNat + i)) = some b[i]
+    29    hn : dm.regs.rsi.toNat = b.size
+    30    hpins : ∀ i (h : i < pb.size), dm.dmem.get? (A (dm.regs.rdx.toNat + i)) = some pb[i]
+    31    hnp : dm.regs.rcx.toNat = pb.size
+    32    hzero : ∀ x, dm.regs.r8.toNat ≤ x → x < dm.regs.r8.toNat + dm.regs.r9.toNat → dm.dmem.get? (A x) = some 0
+    33    hfits : dm.regs.r8.toNat + dm.regs.r9.toNat < 2 ^ 64
+    34    hinEnd : dm.regs.rdi.toNat + b.size < 2 ^ 64
+    35    hpinsEnd : dm.regs.rdx.toNat + pb.size < 2 ^ 64
+    36    hinDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
+    37      x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
+    38    hpinsDisj : ∀ x, dm.regs.rdx.toNat ≤ x → x < dm.regs.rdx.toNat + pb.size →
+    39      x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
+    40    hbufDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
+    41      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
+    42    hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra
+    43    hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+    44      (dm.dmem.get? (A x)).isSome ∧ (x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x) ∧
+    45      ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + b.size) ∧
+    46      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
+    47    hcs24 : 24 ≤ dm.regs.rsp.toNat
+    48    hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
-== ConAgua/Final/Twin.lean#L24-L26
-    24  The prelude is free: `builtinPreludeE_run` gives *some* con-leche prelude `preC` the twin's prelude
-    25  denotes, and con-leche's `preparePrelude` puts its records into the checked stream, so soundness
-    26  holds whatever the prelude bytes are. The pins are free for the same reason as in con-leche.
+== ConAgua/Final/Twin.lean#L27-L29
+    27  The prelude is free: `builtinPreludeE_run` gives *some* con-leche prelude `preC` the twin's prelude
+    28  denotes, and con-leche's `preparePrelude` puts its records into the checked stream, so soundness
+    29  holds whatever the prelude bytes are. The pins are free for the same reason as in con-leche.
 
-== ConAgua/Checker/Pipeline.lean#L67-L70
-    67  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
-    68  bytes, every word array below `2^64` words. -/
-    69  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
-    70    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
+== ConAgua/Checker/Pipeline.lean#L69-L72
+    69  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
+    70  bytes, every word array below `2^64` words. -/
+    71  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
+    72    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
 
 == scripts/check-asm.sh#L1-L12
      1  #!/usr/bin/env bash
@@ -326,54 +326,54 @@
    165    return slurp(fd, path, n);
    166  }
 
-== ConAgua/Final/ThreadsFinal.lean#L124-L148
-   124  /-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
-   125  returning at `st₀`, the buffer `B`, and the threads `ths`. -/
-   126  structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-   127      (B : Array Word) (ths : List ThreadM) : Prop where
-   128    call₀ : AbiCall b pb dm₀ ra₀
-   129    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
-   130    rdx₀ : st₀.data.regs.rdx = 0
-   131    rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
-   132    /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
-   133    bufw : ∀ i (h : i < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some B[i]
-   134    buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
-   135    /-- the calls: the buffer in place, each thread on its region -/
-   136    calls : ∀ t ∈ ths, ∀ i < t.n, BufCallH B (t.dm i) (t.ra i) ∧
-   137      (t.dm i).regs.rdi.toNat = outAddr dm₀.regs.r8.toNat ∧ (t.dm i).regs.rcx.toNat = t.base ∧
-   138      (t.dm i).regs.r8.toNat = t.blen
-   139    zero : ∀ t ∈ ths, 0 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen → (t.dm 0).dmem.get? (A x) = some 0
-   140    ret : ∀ t ∈ ths, ∀ i < t.n, FirstReturn (t.dm i) (label abiCheckBL) (t.ra i) (t.st i)
-   141    acc : ∀ t ∈ ths, ∀ i < t.n, (t.st i).data.regs.rdx = 0 ∧ (t.st i).data.regs.rax = ACCEPT
-   142    /-- route A: the buffer's words at each call's return -/
-   143    kept : ∀ t ∈ ths, ∀ i < t.n, ∀ q (h : q < B.size),
-   144      rdW (t.st i).data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
-   145    next : ∀ t ∈ ths, ∀ i, i + 1 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen →
-   146      (t.dm (i + 1)).dmem.get? (A x) = (t.st i).data.dmem.get? (A x)
-   147    claimed : ∀ t ∈ ths, ∀ i < t.n, (t.dm i).regs.rdx < st₀.data.regs.rax - 9223372036854775808
-   148    cover : ∀ j : Word, j < st₀.data.regs.rax - 9223372036854775808 → ∃ t ∈ ths, ∃ i < t.n, (t.dm i).regs.rdx = j
+== ConAgua/Final/ThreadsFinal.lean#L125-L149
+   125  /-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
+   126  returning at `st₀`, the buffer `B`, and the threads `ths`. -/
+   127  structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
+   128      (B : Array Word) (ths : List ThreadM) : Prop where
+   129    call₀ : AbiCall b pb dm₀ ra₀
+   130    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+   131    rdx₀ : st₀.data.regs.rdx = 0
+   132    rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
+   133    /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
+   134    bufw : ∀ i (h : i < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some B[i]
+   135    buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
+   136    /-- the calls: the buffer in place, each thread on its region -/
+   137    calls : ∀ t ∈ ths, ∀ i < t.n, BufCallH B (t.dm i) (t.ra i) ∧
+   138      (t.dm i).regs.rdi.toNat = outAddr dm₀.regs.r8.toNat ∧ (t.dm i).regs.rcx.toNat = t.base ∧
+   139      (t.dm i).regs.r8.toNat = t.blen
+   140    zero : ∀ t ∈ ths, 0 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen → (t.dm 0).dmem.get? (A x) = some 0
+   141    ret : ∀ t ∈ ths, ∀ i < t.n, FirstReturn (t.dm i) (label abiCheckBL) (t.ra i) (t.st i)
+   142    acc : ∀ t ∈ ths, ∀ i < t.n, (t.st i).data.regs.rdx = 0 ∧ (t.st i).data.regs.rax = ACCEPT
+   143    /-- route A: the buffer's words at each call's return -/
+   144    kept : ∀ t ∈ ths, ∀ i < t.n, ∀ q (h : q < B.size),
+   145      rdW (t.st i).data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
+   146    next : ∀ t ∈ ths, ∀ i, i + 1 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen →
+   147      (t.dm (i + 1)).dmem.get? (A x) = (t.st i).data.dmem.get? (A x)
+   148    claimed : ∀ t ∈ ths, ∀ i < t.n, (t.dm i).regs.rdx < st₀.data.regs.rax - 9223372036854775808
+   149    cover : ∀ j : Word, j < st₀.data.regs.rax - 9223372036854775808 → ∃ t ∈ ths, ∃ i < t.n, (t.dm i).regs.rdx = j
 
-== ConAgua/Final/ThreadsFinal.lean#L15-L34
-    15  **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`; beyond them, what
-    16  `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
-    17  
-    18  * **Entry 1's call**: `ca_start_a` is called as `AbiCall` says (the input and pin buffers, a zero
-    19    region, the 32 bytes of machine stack around `rsp`; `mmap` gives the stated memory facts).
-    20  * **First return** (`FirstReturn`): the harness regains control, at each call's return address,
-    21    in a state that has every property the machine is guaranteed to reach at that address
-    22    (`abiA_outcome`'s and `abiB_outcome`'s posts).
-    23  * **The buffer** is the first `len` words of `OUT`'s slot of entry 1's region at its return, `len`
-    24    `OUT`'s word `1`, and stays in place: every thread's call is passed its address and sees the
-    25    same words, before the call and at its return (**route A**: read-only, `mprotect`).
-    26  * **Each thread's region** is its own (pthreads: the threads' regions are apart from each other,
-    27    from the buffer and from every thread's stack window): zero at the thread's first call, and at
-    28    each later call holding the bytes the previous call left. Each call is made as `BufCallH` says
-    29    (the region mapped and large enough, the buffer apart from it, the return address and the
-    30    32-byte stack window).
-    31  * **The claim counter's coverage**: every claimed group index `j` (in `rdx`) is below `k`
-    32    (`k = rax - 2^63` from entry 1), and every index below `k` is claimed by some thread.
-    33  * The verdicts: entry 1 returns `rdx = 0`, `rax ≥ 2^63`; every call returns `rdx = 0`,
-    34    `rax = ACCEPT`.
+== ConAgua/Final/ThreadsFinal.lean#L16-L35
+    16  **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`; beyond them, what
+    17  `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
+    18  
+    19  * **Entry 1's call**: `ca_start_a` is called as `AbiCall` says (the input and pin buffers, a zero
+    20    region, the 32 bytes of machine stack around `rsp`; `mmap` gives the stated memory facts).
+    21  * **First return** (`FirstReturn`): the harness regains control, at each call's return address,
+    22    in a state that has every property the machine is guaranteed to reach at that address
+    23    (`abiA_outcome`'s and `abiB_outcome`'s posts).
+    24  * **The buffer** is the first `len` words of `OUT`'s slot of entry 1's region at its return, `len`
+    25    `OUT`'s word `1`, and stays in place: every thread's call is passed its address and sees the
+    26    same words, before the call and at its return (**route A**: read-only, `mprotect`).
+    27  * **Each thread's region** is its own (pthreads: the threads' regions are apart from each other,
+    28    from the buffer and from every thread's stack window): zero at the thread's first call, and at
+    29    each later call holding the bytes the previous call left. Each call is made as `BufCallH` says
+    30    (the region mapped and large enough, the buffer apart from it, the return address and the
+    31    32-byte stack window).
+    32  * **The claim counter's coverage**: every claimed group index `j` (in `rdx`) is below `k`
+    33    (`k = rax - 2^63` from entry 1), and every index below `k` is claimed by some thread.
+    34  * The verdicts: entry 1 returns `rdx = 0`, `rax ≥ 2^63`; every call returns `rdx = 0`,
+    35    `rax = ACCEPT`.
 
 == ConAgua/Final/ThreadsVerdict.lean#L50-L89
     50  structure Entry1Fail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) :
@@ -435,12 +435,12 @@
     38    thread's calls before `i` return `rdx = 0`, `rax = ACCEPT`, and call `i` returns `rdx = 2`
     39    (`ThreadFail`). The harness reports the code `k` it read from that call's `rax`.
 
-== ConAgua/Compiler/Main.lean#L24-L28
-    24  /-- What the harness sees after `ca_enter` returns, against L's result. -/
-    25  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
-    26    | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G G.tab.nres rs s ∧ MemRel G m' s.dmem
-    27    | .error .outOfFuel, _ => False
-    28    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
+== ConAgua/Compiler/Main.lean#L27-L31
+    27  /-- What the harness sees after `ca_enter` returns, against L's result. -/
+    28  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
+    29    | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G G.tab.nres rs s ∧ MemRel G m' s.dmem
+    30    | .error .outOfFuel, _ => False
+    31    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
 
 == lean-toolchain#L1
      1  leanprover/lean4:nightly-2026-10-20
@@ -464,170 +464,170 @@
     14  so that a guard such as `i < len && b[i] == c` cannot read out of bounds.
     15  -/
 
-== ConAgua/Compiler/Main.lean#L771-L794
-   771  /-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
-   772  caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
-   773  registers the compiled functions use. -/
-   774  theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
-   775      (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
-   776      (fd : FunDecl) (hentry : p.lookup entry = some fd)
-   777      (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
-   778      (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
-   779      (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
-   780      (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
-   781      (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
-   782      (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
-   783      (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
-   784      (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
-   785        (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
-   786      (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
-   787      (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
-   788        ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
-   789      (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
-   790      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-   791          st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-   792          CalleeKept d.regs st.data.regs ∧
-   793          (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
-   794        d (label enterL) :=
+== ConAgua/Compiler/Main.lean#L774-L797
+   774  /-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
+   775  caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
+   776  registers the compiled functions use. -/
+   777  theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
+   778      (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
+   779      (fd : FunDecl) (hentry : p.lookup entry = some fd)
+   780      (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
+   781      (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
+   782      (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
+   783      (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
+   784      (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
+   785      (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
+   786      (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
+   787      (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
+   788        (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+   789      (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
+   790      (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
+   791        ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
+   792      (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
+   793      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
+   794          st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
+   795          CalleeKept d.regs st.data.regs ∧
+   796          (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
+   797        d (label enterL) :=
 
-== ConAgua/Compiler/Main.lean#L24-L28
-    24  /-- What the harness sees after `ca_enter` returns, against L's result. -/
-    25  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
-    26    | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G G.tab.nres rs s ∧ MemRel G m' s.dmem
-    27    | .error .outOfFuel, _ => False
-    28    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
+== ConAgua/Compiler/Main.lean#L27-L31
+    27  /-- What the harness sees after `ca_enter` returns, against L's result. -/
+    28  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
+    29    | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G G.tab.nres rs s ∧ MemRel G m' s.dmem
+    30    | .error .outOfFuel, _ => False
+    31    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
 
-== ConAgua/Arena/IndIface.lean#L311-L322
-   311  /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
-   312  against `a₀`, a returning run keeps the caller's locals, the twin's run succeeds, and `post`
-   313  relates the memories before and after, the twin's state after, the L results and the twin's
-   314  result. Every stub spec and every refinement of the stage has this shape. -/
-   315  def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
-   316      (pre : Mem → AState → Prop) (op : AM α)
-   317      (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
-   318    ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
-   319      ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
-   320      ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧
-   321        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
-   322  
+== ConAgua/Arena/IndIface.lean#L308-L319
+   308  /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
+   309  against `a₀`, a returning run keeps the caller's locals, the twin's run succeeds, and `post`
+   310  relates the memories before and after, the twin's state after, the L results and the twin's
+   311  result. Every stub spec and every refinement of the stage has this shape. -/
+   312  def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
+   313      (pre : Mem → AState → Prop) (op : AM α)
+   314      (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
+   315    ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
+   316      ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+   317      ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧
+   318        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
+   319  
 
-== ConAgua/Checker/Pipeline.lean#L90-L123
-    90  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
-    91  def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-    92    RelSpec p "cap_check" (· = loadMem b pb s8 s64) fun _ => (ρ b pb s8 s64).R1
-    93  
-    94  /-- **Stage `pb_check`**: `R1` to `R2`. -/
-    95  def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-    96    RelSpec p "pb_check" (ρ b pb s8 s64).R1 fun _ => (ρ b pb s8 s64).R2
-    97  
-    98  /-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
-    99  def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-   100    RelSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 fun _ m =>
-   101      ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb s8 s64).R3 m a'
-   102  
-   103  /-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
-   104  def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb s64 →
-   105    RelSpec p "builtin_prelude" ((ρ b pb s8 s64).R3 · a) fun _ m =>
-   106      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb s8 s64).R4 m pre a'
-   107  
-   108  /-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
-   109  def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb s64 →
-   110    RelSpec p "front_run" ((ρ b pb s8 s64).R4 · pre a) fun r m => r.headD 0 = 0 →
-   111      ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb s8 s64).R5 m pre rc a'
-   112  
-   113  /-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
-   114  def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb s64 →
-   115    RelSpec p "prepare_prelude" ((ρ b pb s8 s64).R5 · pre rc a) fun _ m =>
-   116      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb s8 s64).R6 m ds a'
-   117  
-   118  /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
-   119  to). -/
-   120  def PinsStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds a, InputsOK b pb s64 →
-   121    TwinPrefix4 b sA pre sB rc sC ds a →
-   122    RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
-   123      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
+== ConAgua/Checker/Pipeline.lean#L92-L125
+    92  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
+    93  def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
+    94    RelSpec p "cap_check" (· = loadMem b pb s8 s64) fun _ => (ρ b pb s8 s64).R1
+    95  
+    96  /-- **Stage `pb_check`**: `R1` to `R2`. -/
+    97  def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
+    98    RelSpec p "pb_check" (ρ b pb s8 s64).R1 fun _ => (ρ b pb s8 s64).R2
+    99  
+   100  /-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
+   101  def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
+   102    RelSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 fun _ m =>
+   103      ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb s8 s64).R3 m a'
+   104  
+   105  /-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
+   106  def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb s64 →
+   107    RelSpec p "builtin_prelude" ((ρ b pb s8 s64).R3 · a) fun _ m =>
+   108      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb s8 s64).R4 m pre a'
+   109  
+   110  /-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
+   111  def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb s64 →
+   112    RelSpec p "front_run" ((ρ b pb s8 s64).R4 · pre a) fun r m => r.headD 0 = 0 →
+   113      ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb s8 s64).R5 m pre rc a'
+   114  
+   115  /-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
+   116  def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb s64 →
+   117    RelSpec p "prepare_prelude" ((ρ b pb s8 s64).R5 · pre rc a) fun _ m =>
+   118      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb s8 s64).R6 m ds a'
+   119  
+   120  /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
+   121  to). -/
+   122  def PinsStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds a, InputsOK b pb s64 →
+   123    TwinPrefix4 b sA pre sB rc sC ds a →
+   124    RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
+   125      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
 
-== ConAgua/Checker/CheckARun.lean#L278-L286
-   278  theorem checkA_run (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64) (w : Word)
-   279      (hw : w = 1 ∨ w = 3) (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
-   280      (hrun : L.run checkerProg N "check" [] (loadMemM b pb s8 s64 w) = .ok (rs, m'))
-   281      (hr : rs.headD 0 ≠ 1) :
-   282      ∃ (PA : PhaseA b) (m : Mem) (v : Word),
-   283        PhaseBStart PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend m PA.sF v ∧
-   284        m.arr8 PB = pb.data.toList.toArray ∧ PbPre pb ∧
-   285        parCompactOK m (modeFlag w) = true ∧ m' = parCompactMem m v (modeFlag w) ∧
-   286        rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.pend.size := by
+== ConAgua/Checker/CheckARun.lean#L281-L289
+   281  theorem checkA_run (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64) (w : Word)
+   282      (hw : w = 1 ∨ w = 3) (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
+   283      (hrun : L.run checkerProg N "check" [] (loadMemM b pb s8 s64 w) = .ok (rs, m'))
+   284      (hr : rs.headD 0 ≠ 1) :
+   285      ∃ (PA : PhaseA b) (m : Mem) (v : Word),
+   286        PhaseBStart PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend m PA.sF v ∧
+   287        m.arr8 PB = pb.data.toList.toArray ∧ PbPre pb ∧
+   288        parCompactOK m (modeFlag w) = true ∧ m' = parCompactMem m v (modeFlag w) ∧
+   289        rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.pend.size := by
 
-== ConAgua/Checker/ParDriverTwin.lean#L25-L34
-    25  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
-    26      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-    27      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 3) = .ok (rs₁, m₁))
-    28      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
-    29      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
-    30      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
-    31      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
-    32      (hctlf : (w.arr64 CTLF).size = 0) (hv : rd64 w HDRF 3 = rd64 m₁ OUT 3)
-    33      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
-    34      TwinAccepts [b] := by
+== ConAgua/Checker/ParDriverTwin.lean#L23-L32
+    23  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+    24      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
+    25      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 3) = .ok (rs₁, m₁))
+    26      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
+    27      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
+    28      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
+    29      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
+    30      (hctlf : (w.arr64 CTLF).size = 0) (hv : rd64 w HDRF 3 = rd64 m₁ OUT 3)
+    31      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
+    32      TwinAccepts [b] := by
 
 == ConAgua/Arena/Verdict.lean#L50-L51
     50  def ErrClaim {α : Type} (T : AM α) (a : AState) (e : Err) : Prop :=
     51    e.cls ≠ 0 → ∃ ce, T.run a = .error ce ∧ twinCls ce = e.cls
 
-== ConAgua/Checker/NoVerdictClosed.lean#L71-L72
-    71  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
-    72    closedNV_of_all nvTree.eq checkerProg_nvChk
+== ConAgua/Checker/NoVerdictClosed.lean#L73-L74
+    73  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
+    74    closedNV_of_all nvTree.eq checkerProg_nvChk
 
-== ConAgua/Final/DrvAbi.lean#L176-L186
-   176  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-   177      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
-   178      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
-   179      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   180      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
-   181      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   182      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   183      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   184          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
-   185          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
-   186        dm (label abiStartL) := by
+== ConAgua/Final/DrvAbi.lean#L178-L188
+   178  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+   179      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   180      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
+   181      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+   182      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   183      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+   184      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   185      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   186          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
+   187          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+   188        dm (label abiStartL) := by
 
-== ConAgua/Final/DrvFinal.lean#L101-L107
-   101  theorem checkerFile_drv_accepts_regs [Host]
-   102      (k0 : Nat) (hcode : Code checkerFile k0)
-   103      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
-   104      (hc : AbiCall b pb dm ra) :
-   105      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   106          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-   107        dm (label abiStartL) :=
+== ConAgua/Final/DrvFinal.lean#L102-L108
+   102  theorem checkerFile_drv_accepts_regs [Host]
+   103      (k0 : Nat) (hcode : Code checkerFile k0)
+   104      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
+   105      (hc : AbiCall b pb dm ra) :
+   106      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   107          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+   108        dm (label abiStartL) :=
 
-== ConAgua/Checker/Entry.lean#L126-L133
-   126  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
-   127  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
-   128  def checkL : FunDecl := lfn () locals (r) {
-   129    if MODE == 1 { r := call check_a(1); return r };
-   130    if MODE == 3 { r := call check_a(0); return r };
-   131    if MODE == 2 { r := call check_b(); return r };
-   132    abort
-   133  }
+== ConAgua/Checker/Entry.lean#L120-L127
+   120  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
+   121  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
+   122  def checkL : FunDecl := lfn () locals (r) {
+   123    if MODE == 1 { r := call check_a(1); return r };
+   124    if MODE == 3 { r := call check_a(0); return r };
+   125    if MODE == 2 { r := call check_b(); return r };
+   126    abort
+   127  }
 
-== ConAgua/Checker/Entry.lean#L91-L107
-    91  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-    92  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-    93  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-    94  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
-    95    z := call cap_check();
-    96    z := call pb_check();
-    97    z := call intern_reserved_pins();
-    98    z := call builtin_prelude();
-    99    r := call front_run();
-   100    if r != 0 { return 1 };
-   101    z := call prepare_prelude();
-   102    z := call intern_all_pins();
-   103    cnt := L.Front.DECL.u64[0];
-   104    v := call install_fold_go(0, cnt, 0);
-   105    z := call par_compact(v, c);
-   106    return 9223372036854775808 + CTL.u64[130]
-   107  }
+== ConAgua/Checker/Entry.lean#L85-L101
+    85  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+    86  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+    87  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+    88  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+    89    z := call cap_check();
+    90    z := call pb_check();
+    91    z := call intern_reserved_pins();
+    92    z := call builtin_prelude();
+    93    r := call front_run();
+    94    if r != 0 { return 1 };
+    95    z := call prepare_prelude();
+    96    z := call intern_all_pins();
+    97    cnt := L.Front.DECL.u64[0];
+    98    v := call install_fold_go(0, cnt, 0);
+    99    z := call par_compact(v, c);
+   100    return 9223372036854775808 + CTL.u64[130]
+   101  }
 
 == vendor/con-ron/ConRon/Arena/Main.lean#L154-L190
    154  def runPipelineHead :
@@ -668,16 +668,16 @@
    189    | .error (e, n) => pure (.error (atDecl e n))
    190    | .ok _ => pure (.ok records)
 
-== ConAgua/Arena/LevelEquiv.lean#L286-L294
-   286  /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
-   287  def lsNode : FunDecl := lfn (h) locals (t, i) {
-   288    if h >> 28 != 0 { abort };
-   289    t := ⟦h⟧.tier;
-   290    i := ⟦h⟧.idx;
-   291    if t != 0 && CTL.u64[1] == 0 { abort };
-   292    if LVLS⟨t⟩.count <= i { abort };
-   293    return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
-   294  }
+== ConAgua/Arena/LevelEquiv.lean#L293-L301
+   293  /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
+   294  def lsNode : FunDecl := lfn (h) locals (t, i) {
+   295    if h >> 28 != 0 { abort };
+   296    t := ⟦h⟧.tier;
+   297    i := ⟦h⟧.idx;
+   298    if t != 0 && CTL.u64[1] == 0 { abort };
+   299    if LVLS⟨t⟩.count <= i { abort };
+   300    return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
+   301  }
 
 == vendor/con-ron/ConRon/Arena/Monad.lean#L491-L497
    491  /-- con-leche: ConLeche/Kernel/Expr.lean:256-375 Expr — decode a
@@ -769,148 +769,148 @@
    164  /-- A program: its functions, by name. The first binding of a name wins. -/
    165  abbrev Prog := List (FnName × FunDecl)
 
-== ConAgua/L/Notation.lean#L74-L156
-    74  declare_syntax_cat lexpr
-    75  declare_syntax_cat lcond
-    76  declare_syntax_cat lstmt (behavior := both)
-    77  declare_syntax_cat lblock
-    78  
-    79  syntax num : lexpr
-    80  syntax char : lexpr
-    81  syntax "⟪" term "⟫" : lexpr
-    82  syntax ident : lexpr
-    83  syntax ident noWs "[" lexpr "]" : lexpr
-    84  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
-    85  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
-    86  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
-    87  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
-    88  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
-    89  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
-    90  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
-    91  syntax ident noWs "⟦" lexpr "⟧" : lexpr
-    92  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
-    93  syntax "len" "(" ident ")" : lexpr
-    94  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
-    95  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
-    96  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
-    97  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
-    98  syntax "u64" "(" lcond ")" : lexpr
-    99  syntax ident noWs "⦃" lexpr "⦄" : lexpr
-   100  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
-   101  syntax "(" lexpr ")" : lexpr
-   102  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
-   103  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
-   104  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
-   105  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
-   106  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
-   107  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
-   108  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
-   109  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
-   110  
-   111  syntax:50 lexpr:51 " == " lexpr:51 : lcond
-   112  syntax:50 lexpr:51 " != " lexpr:51 : lcond
-   113  syntax:50 lexpr:51 " < " lexpr:51 : lcond
-   114  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
-   115  syntax:50 lexpr:51 " > " lexpr:51 : lcond
-   116  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
-   117  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
-   118  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
-   119  syntax:35 lcond:36 " && " lcond:35 : lcond
-   120  syntax:30 lcond:31 " || " lcond:30 : lcond
-   121  syntax:max "!" lcond:max : lcond
-   122  syntax "(" lcond ")" : lcond
-   123  
-   124  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
-   125  
-   126  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
-   127  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
-   128  syntax ident " := " lexpr : lstmt
-   129  syntax ident " += " lexpr : lstmt
-   130  syntax ident " -= " lexpr : lstmt
-   131  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
-   132  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
-   133  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
-   134  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
-   135  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
-   136  syntax "if " lcond lblock : lstmt
-   137  syntax "if " lcond lblock " else " lblock : lstmt
-   138  syntax "if " lcond lblock " else " lstmt : lstmt
-   139  syntax "while " lcond lblock : lstmt
-   140  syntax "break" : lstmt
-   141  syntax "return " lexpr : lstmt
-   142  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
-   143  syntax "abort" : lstmt
-   144  /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
-   145  syntax "abort " ident : lstmt
-   146  /-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
-   147  syntax (name := lfail) &"fail" ident : lstmt
-   148  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
-   149  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
-   150  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
-   151  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
-   152  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
-   153  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
-   154    lexpr ")" : lstmt
-   155  syntax "skip" : lstmt
-   156  syntax "⟪" term "⟫" : lstmt
+== ConAgua/L/Notation.lean#L75-L157
+    75  declare_syntax_cat lexpr
+    76  declare_syntax_cat lcond
+    77  declare_syntax_cat lstmt (behavior := both)
+    78  declare_syntax_cat lblock
+    79  
+    80  syntax num : lexpr
+    81  syntax char : lexpr
+    82  syntax "⟪" term "⟫" : lexpr
+    83  syntax ident : lexpr
+    84  syntax ident noWs "[" lexpr "]" : lexpr
+    85  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    86  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
+    87  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    88  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
+    89  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
+    90  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
+    91  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    92  syntax ident noWs "⟦" lexpr "⟧" : lexpr
+    93  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    94  syntax "len" "(" ident ")" : lexpr
+    95  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
+    96  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
+    97  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+    98  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+    99  syntax "u64" "(" lcond ")" : lexpr
+   100  syntax ident noWs "⦃" lexpr "⦄" : lexpr
+   101  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
+   102  syntax "(" lexpr ")" : lexpr
+   103  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
+   104  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
+   105  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
+   106  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
+   107  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
+   108  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
+   109  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
+   110  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
+   111  
+   112  syntax:50 lexpr:51 " == " lexpr:51 : lcond
+   113  syntax:50 lexpr:51 " != " lexpr:51 : lcond
+   114  syntax:50 lexpr:51 " < " lexpr:51 : lcond
+   115  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
+   116  syntax:50 lexpr:51 " > " lexpr:51 : lcond
+   117  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
+   118  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
+   119  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
+   120  syntax:35 lcond:36 " && " lcond:35 : lcond
+   121  syntax:30 lcond:31 " || " lcond:30 : lcond
+   122  syntax:max "!" lcond:max : lcond
+   123  syntax "(" lcond ")" : lcond
+   124  
+   125  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
+   126  
+   127  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
+   128  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
+   129  syntax ident " := " lexpr : lstmt
+   130  syntax ident " += " lexpr : lstmt
+   131  syntax ident " -= " lexpr : lstmt
+   132  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
+   133  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   134  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
+   135  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
+   136  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   137  syntax "if " lcond lblock : lstmt
+   138  syntax "if " lcond lblock " else " lblock : lstmt
+   139  syntax "if " lcond lblock " else " lstmt : lstmt
+   140  syntax "while " lcond lblock : lstmt
+   141  syntax "break" : lstmt
+   142  syntax "return " lexpr : lstmt
+   143  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
+   144  syntax "abort" : lstmt
+   145  /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
+   146  syntax "abort " ident : lstmt
+   147  /-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
+   148  syntax (name := lfail) &"fail" ident : lstmt
+   149  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   150  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   151  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   152  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   153  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   154  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   155    lexpr ")" : lstmt
+   156  syntax "skip" : lstmt
+   157  syntax "⟪" term "⟫" : lstmt
 
-== ConAgua/L/Notation.lean#L397-L398
-   397  
-   398  macro_rules
+== ConAgua/L/Notation.lean#L398-L399
+   398  
+   399  macro_rules
 
-== ConAgua/L/Notation.lean#L10-L61
-    10  # L: concrete syntax
-    11  
-    12  A Rust-like surface for writing L functions by hand:
-    13  
-    14  ```
-    15  lfn (b_dummy, j) locals (c) {
-    16    while j < len(IN.u8) {
-    17      c := IN.u8[j];
-    18      if c == '"' { return j } else { j += 1 }
-    19    };
-    20    return 0
-    21  }
-    22  ```
-    23  
-    24  * `lfn (params) locals (more) { body }` is a term of type `L.FunDecl`. Variable names resolve to
-    25    local indices in declaration order (parameters first).
-    26  * `A.u8[i]` / `A.u64[i]` read byte / word array `A`, where `A` is a Lean constant of type
-    27    `L.ArrId`; `len(A.u8)` / `len(A.u64)` are the lengths. Stores are `A.u8[i] := e`.
-    28  * `R[i].f` reads field `f` of record `i` of the record layout `R : L.Record` (a Lean constant;
-    29    the field is the constant `R.f : L.Field`), `R[i].f := e` writes it: the word
-    30    `i * stride + f.off` of the word array `R.arr` (`L/Records.lean`).
-    31  * `A⟨t⟩[i]` reads word `i` of tier `t` of the tiered word array `A` (`L.tierA A t`: `A`, or
-    32    `A + tierOff` when `t & 1 = 1`); `len(A⟨t⟩)` is that tier's length, `A⟨t⟩[i] := e` writes it,
-    33    and `R⟨t⟩[i].f` / `R⟨t⟩[i].f := e` are records in a tiered array (lane tierarr).
-    34  * The node stores' records (`L/TRec.lean`, the stores in `Arena/StoreFields.lean`; lane tieracc):
-    35    `R⟨t, i⟩.f` is field `f` of node `i` of tier `t` of the store `R : L.TRec` (`R⟨t, i⟩` a one-word
-    36    column), `R⟦h⟧.f` / `R⟦h⟧` the node the handle word `h` names, `R⟨t⟩.count` the node count of
-    37    tier `t`, `⟦h⟧.tier` / `⟦h⟧.idx` a handle's tier bit and index; `R⟨t, i⟩.f := e` writes a field
-    38    (the store library only).
-    39  * `⦃x⦄.tier`, `⦃x⦄.idx`, `⦃x⦄.base` are the tier (bit 40), the index (the low 40 bits) and the
-    40    tier's base address (`(x >> 40) << 40`) of a tier-tagged address `x`, and `A⦃x⦄` reads the word
-    41    at the tagged address `x` of the tiered word array `A` (`A⟨⦃x⦄.tier⟩[⦃x⦄.idx]`). The limb
-    42    pool's slices are named by such addresses: the tier is `1` for a slice of the scratch tier (open
-    43    while the arena's scratch flag is set) and `0` otherwise (lane tierpool). A
-    44    store's tier must be simple, so a writer decodes the tier and base of its top once into locals
-    45    and indexes relative to the base: `t := ⦃top⦄.tier; b := ⦃top⦄.base; … A⟨t⟩[top + j - b] := e`
-    46    (for a tier-0 top this is exactly `A[top + j]`, out-of-bounds aborts included). This macro is
-    47    the one place that fixes the encoding.
-    48  * `D.c8[i]` reads byte `i` of the constant byte string `D : List UInt8` (a Lean constant);
-    49    `len(D.c8)` is its length (a constant).
-    50  * Literals: numbers, characters (`'{'` is `123`), and `⟪t⟫` for any Lean term of type `Word`.
-    51  * An identifier that is not a local names a global variable: a Lean constant `g : L.GVar`
-    52    (`abbrev HTOP : L.GVar := ⟨3⟩`). `g` reads it, `g := e`, `g += e`, `g -= e` write it.
-    53  * Operators `+ - * & | ^ << >>` (wrapping, as in Rust's `wrapping_*`), `mulhi(a, b)` (the high
-    54    word of the 128-bit product), `u64(a < b)` (a comparison as `1`/`0`, Rust's `(a < b) as u64`),
-    55    comparisons
-    56    `== != < <= > >=` (unsigned) and `<ₛ ≤ₛ` (signed), and short-circuit `&& || !`.
-    57  * Statements are separated by `;`: `x := e`, `x += e`, `x -= e`, `x := call f(e, …)`,
-    58    `(x, y, …) := call f(e, …)` (several results), `if c { … } else { … }` (with `else if`),
-    59    `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `abort R`, `fail R`, `skip`, and `⟪t⟫` for a
-    60    named block `t : L.Stmt` (see `lblk`; a block written with other variables than a prefix of
-    61    the enclosing ones is an error).
+== ConAgua/L/Notation.lean#L11-L62
+    11  # L: concrete syntax
+    12  
+    13  A Rust-like surface for writing L functions by hand:
+    14  
+    15  ```
+    16  lfn (b_dummy, j) locals (c) {
+    17    while j < len(IN.u8) {
+    18      c := IN.u8[j];
+    19      if c == '"' { return j } else { j += 1 }
+    20    };
+    21    return 0
+    22  }
+    23  ```
+    24  
+    25  * `lfn (params) locals (more) { body }` is a term of type `L.FunDecl`. Variable names resolve to
+    26    local indices in declaration order (parameters first).
+    27  * `A.u8[i]` / `A.u64[i]` read byte / word array `A`, where `A` is a Lean constant of type
+    28    `L.ArrId`; `len(A.u8)` / `len(A.u64)` are the lengths. Stores are `A.u8[i] := e`.
+    29  * `R[i].f` reads field `f` of record `i` of the record layout `R : L.Record` (a Lean constant;
+    30    the field is the constant `R.f : L.Field`), `R[i].f := e` writes it: the word
+    31    `i * stride + f.off` of the word array `R.arr` (`L/Records.lean`).
+    32  * `A⟨t⟩[i]` reads word `i` of tier `t` of the tiered word array `A` (`L.tierA A t`: `A`, or
+    33    `A + tierOff` when `t & 1 = 1`); `len(A⟨t⟩)` is that tier's length, `A⟨t⟩[i] := e` writes it,
+    34    and `R⟨t⟩[i].f` / `R⟨t⟩[i].f := e` are records in a tiered array (lane tierarr).
+    35  * The node stores' records (`L/TRec.lean`, the stores in `Arena/StoreFields.lean`; lane tieracc):
+    36    `R⟨t, i⟩.f` is field `f` of node `i` of tier `t` of the store `R : L.TRec` (`R⟨t, i⟩` a one-word
+    37    column), `R⟦h⟧.f` / `R⟦h⟧` the node the handle word `h` names, `R⟨t⟩.count` the node count of
+    38    tier `t`, `⟦h⟧.tier` / `⟦h⟧.idx` a handle's tier bit and index; `R⟨t, i⟩.f := e` writes a field
+    39    (the store library only).
+    40  * `⦃x⦄.tier`, `⦃x⦄.idx`, `⦃x⦄.base` are the tier (bit 40), the index (the low 40 bits) and the
+    41    tier's base address (`(x >> 40) << 40`) of a tier-tagged address `x`, and `A⦃x⦄` reads the word
+    42    at the tagged address `x` of the tiered word array `A` (`A⟨⦃x⦄.tier⟩[⦃x⦄.idx]`). The limb
+    43    pool's slices are named by such addresses: the tier is `1` for a slice of the scratch tier (open
+    44    while the arena's scratch flag is set) and `0` otherwise (lane tierpool). A
+    45    store's tier must be simple, so a writer decodes the tier and base of its top once into locals
+    46    and indexes relative to the base: `t := ⦃top⦄.tier; b := ⦃top⦄.base; … A⟨t⟩[top + j - b] := e`
+    47    (for a tier-0 top this is exactly `A[top + j]`, out-of-bounds aborts included). This macro is
+    48    the one place that fixes the encoding.
+    49  * `D.c8[i]` reads byte `i` of the constant byte string `D : List UInt8` (a Lean constant);
+    50    `len(D.c8)` is its length (a constant).
+    51  * Literals: numbers, characters (`'{'` is `123`), and `⟪t⟫` for any Lean term of type `Word`.
+    52  * An identifier that is not a local names a global variable: a Lean constant `g : L.GVar`
+    53    (`abbrev HTOP : L.GVar := ⟨3⟩`). `g` reads it, `g := e`, `g += e`, `g -= e` write it.
+    54  * Operators `+ - * & | ^ << >>` (wrapping, as in Rust's `wrapping_*`), `mulhi(a, b)` (the high
+    55    word of the 128-bit product), `u64(a < b)` (a comparison as `1`/`0`, Rust's `(a < b) as u64`),
+    56    comparisons
+    57    `== != < <= > >=` (unsigned) and `<ₛ ≤ₛ` (signed), and short-circuit `&& || !`.
+    58  * Statements are separated by `;`: `x := e`, `x += e`, `x -= e`, `x := call f(e, …)`,
+    59    `(x, y, …) := call f(e, …)` (several results), `if c { … } else { … }` (with `else if`),
+    60    `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `abort R`, `fail R`, `skip`, and `⟪t⟫` for a
+    61    named block `t : L.Stmt` (see `lblk`; a block written with other variables than a prefix of
+    62    the enclosing ones is an error).
 
 == ConAgua/L/Semantics.lean#L7-L21
      7  /-!
@@ -999,18 +999,18 @@
     30  `f₀ | f_hi << 32`); `TRec.st` stores a whole word (unpacked fields only).
     31  -/
 
-== ConAgua/L/Notation.lean#L96-L97
-    96  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
-    97  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+== ConAgua/L/Notation.lean#L97-L98
+    97  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+    98  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
 
-== ConAgua/L/Notation.lean#L148-L154
-   148  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
-   149  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
-   150  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
-   151  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
-   152  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
-   153  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
-   154    lexpr ")" : lstmt
+== ConAgua/L/Notation.lean#L149-L155
+   149  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   150  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   151  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   152  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   153  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   154  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   155    lexpr ")" : lstmt
 
 == ConAgua/L/Semantics.lean#L145-L164
    145  /-- The little-endian word of the bytes `k, …, k + 7` of `b` (as the machine's 8-byte load
@@ -1034,29 +1034,29 @@
    163  termination_by e - i
    164  
 
-== ConAgua/Compiler/Compile.lean#L637-L648
-   637  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
-   638  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
-   639  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
-   640    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
-   641    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
-   642    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
-   643    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
-   644    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
-   645     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-   646     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
-   647     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
-   648    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
+== ConAgua/Compiler/Compile.lean#L636-L647
+   636  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
+   637  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
+   638  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
+   639    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+   640    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
+   641    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+   642    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+   643    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
+   644     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   645     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+   646     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+   647    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
 
-== ConAgua/Compiler/Compile.lean#L670-L677
-   670  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
-   671  tests, 7 instructions. -/
-   672  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
-   673    [.label Lb,
-   674     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
-   675     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
-   676     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
-   677     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
+== ConAgua/Compiler/Compile.lean#L669-L676
+   669  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
+   670  tests, 7 instructions. -/
+   671  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
+   672    [.label Lb,
+   673     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
+   674     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+   675     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
+   676     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
 
 == ConAgua/L/TRec.lean#L93-L97
     93  /-- The tier of a handle word: bit 27. -/
@@ -1065,139 +1065,139 @@
     96  /-- The node index of a handle word: the low 27 bits. -/
     97  @[expose] def idxE (h : Expr) : Expr := .bin .and h (.const 134217727)
 
-== ConAgua/Arena/StoreFields.lean#L9-L31
-     9  # The store records: one accessor per field, one evaluation lemma per accessor (lane tieracc)
-    10  
-    11  Every node store of the arena keeps its records in a word array and its node counts in `CTL`
-    12  (`L/TRec.lean`). This file is the **only** place outside the store library that knows the
-    13  layout:
-    14  
-    15  * **The stores** (`LIT`, `APP`, …, `LVLS`) and their one-word columns (`APP_DER`, …, `FVAR_LP`), as
-    16    `L.TRec` values, with a constant per field (`APP.f`, `APP.a`, …). L code reads them as
-    17    `APP⟨t, i⟩.f`, `APP⟦h⟧.a`, `APP⟨t⟩.count` (`L/Notation.lean`).
-    18  * **The proof accessors** `tfld m R t i f` (field `f` of node `i` of tier `t`) and `tcnt m R t`
-    19    (the node count of tier `t`), and the handle decoders `tierW`, `idxW`.
-    20  * **One evaluation lemma per accessor**: `evalE_tld` / `tld_eq` (pass both to `vcgen`, as
-    21    `ld64`), `evalE_cnt` / `tcntM_eq`, `evalE_tierE`, `evalE_idxE`, and the pure forms
-    22    `Expr.pval_tld`, `Expr.pval_cntE`, … (`lang_grind`); the frame lemmas `tfld_set64_ne`,
-    23    `tcnt_set64_ne`, `tfld_setG`, ….
-    24  
-    25  Proofs outside the store library state models and relations with `tfld` and `tcnt` and never
-    26  unfold them (`TRec.ad` stays folded). The layout (one tiered array per store, lane
-    27  `tierswitch`: tier `t` of array `a` is `tierA a t`) lives in `L/TRec.lean`, the definitions and
-    28  lemma proofs here, and the store library.
-    29  
-    30  The array and control-word ids below are the memory map's (`AREC` = `APP.arr`, …): each store
-    31  file's `abbrev` must agree, `StoreFieldsCheck.lean` checks it.
-
-== ConAgua/Arena/ConsLib.lean#L207-L216
-   207  /-! ## The slot layout (KSTP)
-   208  
-   209  Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
-   210  `0` and `1` hold `n - SN0` (`n` the slot count, a multiple of 8) and `o`, the table's offset (`0`:
-   211  nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is the two words `r + 2 j` (the
-   212  value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). The table grows at load
-   213  3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is (`kgrowB`), so no
-   214  old copy of it stays resident, and the growth aborts if the array cannot hold the doubled table.
-   215  A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
-   216  array's first words.
-
-== ConAgua/Arena/ConsLib.lean#L487-L492
-   487  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
-   488  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
-   489  def cpGrowIf (C : ConsSch) : Stmt :=
-   490    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
-   491        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
-   492      (kgrowBlk C) .skip
-
-== ConAgua/Arena/ConsLib.lean#L464-L470
-   464  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
-   465  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
-   466  the slot count doubles, the new upper half is zeroed, every live slot of the old half is marked,
-   467  then each marked entry is re-inserted from its home in the doubled table (linear probing past
-   468  the live unmarked slots; a marked slot met on the way is swapped and re-inserted next: absl's
-   469  in-place rehash). Aborts if the array cannot hold the doubled table. Template variables
-   470  `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
-
-== ConAgua/Arena/SlotGrow.lean#L40-L43
-    40  /-- The home slot of hash `h` among `n`: con-ron's multiply-xor finaliser, then the high word
-    41  of the product with `n` (Lemire's range reduction) in place of the power-of-two mask. -/
-    42  def homeW (h n : Word) : Word :=
-    43    UInt64.ofNat (((h * golden) ^^^ ((h * golden) >>> 32)).toNat * n.toNat / 2 ^ 64)
-
-== ConAgua/Arena/Scratch.lean#L10-L29
-    10  /-!
-    11  # The scratch tier's lifecycle in L: open and drop without zeroing a slot
+== ConAgua/Arena/StoreFields.lean#L11-L33
+    11  # The store records: one accessor per field, one evaluation lemma per accessor (lane tieracc)
     12  
-    13  con-ron's arena brackets every declaration check with `enterScratch` (open the scratch tier of all
-    14  four stores, clear the walk memos) and `dropScratch` (`flushCaches`, then close the scratch tier
-    15  and truncate it). In L the 19 tables keep their scratch tier as tier 1 of their slot and record
-    16  arrays (`StoreLib.lean`); a slot of tier 1 holds `B + i + 1` for node `i`, with the **slot base**
-    17  `B = CTL[62]` (`SCB`), and reads free at or below `B` (`slotV`). So emptying the scratch tier of
-    18  every table is O(1) per table:
-    19  
-    20  * `scratch_reset(f)`: `B += 2^32`, the scratch flag `CTL[1] := f`, and the 19 tier-1 node
-    21    counts `CTL[ca + 1] := 0`. Every old scratch slot holds at most `B + 2^27` and reads free
-    22    against the new base; no slot is written. Once every `2^30` resets (`B ≥ 2^62`) the base wraps:
-    23    the 19 scratch slot tables are zeroed and `B` restarts at `0` (con-ron's `clear` at
-    24    `EPOCH_MAX`), so `B < 2^62 + 2^32` always holds.
-    25  * `scratch_enter()`: `scratch_reset(1)` and the four walk memos' `clear` (epoch bumps).
-    26  * `scratch_drop()`: `flush_caches()` (`CoreCaches.lean`, the per-declaration caches), then
-    27    `scratch_reset(0)`.
-    28  
-    29  The refinement (`enterScratch`/`dropScratch` under `ArenaD`) is `ScratchRefine.lean`.
-
-== ConAgua/Arena/MemoLib.lean#L9-L36
-     9  /-!
-    10  # The memo library: per-call memo tables with two-word keys and epoch stamps
-    11  
-    12  con-ron's arena keeps six per-call memos keyed `(EIdx × Nat)` (`inst1C`, `instLC`, `liftC`,
-    13  `abs1C`, `inst1LC`, `instLPC`), two keyed `EIdx` (`bvarBC`, `fvarBC`) and two level ones
-    14  (`Arena/Monad.lean`'s `Memos`); con-ron's Rust keeps them in `HashMap2` (`ron/hashmap2.rs`): open
-    15  addressing, linear probing, an **epoch stamp** per slot so that `clear` is `epoch += 1`.
+    13  Every node store of the arena keeps its records in a word array and its node counts in `CTL`
+    14  (`L/TRec.lean`). This file is the **only** place outside the store library that knows the
+    15  layout:
     16  
-    17  A memo here is a **schema** `MemoSch`: a word array `arr` and a `CTL` index `cs` (`CTL[cs]` is the
-    18  live stamp minus one, `CTL[cs + 1]` the live count). Four words per slot: the stamp, the key's two
-    19  words, the value. A one-word key (`bvarBC`) is the two-word key with second word `0`. Slot `j` is
-    20  **live** iff its stamp is `CTL[cs] + 1`; anything else is free space, so all-zero memory is an
-    21  empty memo.
-    22  
-    23  The L code is **generic in the schema**: `memoFindG S`, `memoPutG S`, `memoClearG S` are Lean
-    24  functions producing L functions with the schema's array and `CTL` words spliced in (`S.arr.u64[…]`,
-    25  `CTL.u64[⟪S.cs⟫]`), and their `vcgen` specs are proved once, for a variable schema. An instance is
-    26  three entries of the program (`("bm_find", memoFindG bmSch)`, …) and no proof.
-    27  
-    28  * `X_find(k1, k2)`: the probe from `homeW (k1 ^ (k2 << 32) ^ (k2 >> 32) * golden)`, returning
-    29    `(found, slot, steps)`. Both halves of `k2` enter the hash: banked memos (`MemoBank.genW`), the
-    30    eager bit and `rrSch` keep a second component in `k2`'s high half (lane `rfhash`: with only
-    31    `k2 << 32` it was shifted out, and all banks' entries for one `k1` shared one probe cluster).
-    32  * `X_put(k1, k2, v, fd, j)`: given the probe's `fd`, `j` **on the current memory**, write the
-    33    value (and on a miss, the stamp and the key, growing the table past 3/4 load, con-ron's `HashMap2` load factor). Callers probe right
-    34    before (`set` = `find; put`); a walk that recursed since its first probe probes again.
-    35  * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
-    36  -/
+    17  * **The stores** (`LIT`, `APP`, …, `LVLS`) and their one-word columns (`APP_DER`, …, `FVAR_LP`), as
+    18    `L.TRec` values, with a constant per field (`APP.f`, `APP.a`, …). L code reads them as
+    19    `APP⟨t, i⟩.f`, `APP⟦h⟧.a`, `APP⟨t⟩.count` (`L/Notation.lean`).
+    20  * **The proof accessors** `tfld m R t i f` (field `f` of node `i` of tier `t`) and `tcnt m R t`
+    21    (the node count of tier `t`), and the handle decoders `tierW`, `idxW`.
+    22  * **One evaluation lemma per accessor**: `evalE_tld` / `tld_eq` (pass both to `vcgen`, as
+    23    `ld64`), `evalE_cnt` / `tcntM_eq`, `evalE_tierE`, `evalE_idxE`, and the pure forms
+    24    `Expr.pval_tld`, `Expr.pval_cntE`, … (`lang_grind`); the frame lemmas `tfld_set64_ne`,
+    25    `tcnt_set64_ne`, `tfld_setG`, ….
+    26  
+    27  Proofs outside the store library state models and relations with `tfld` and `tcnt` and never
+    28  unfold them (`TRec.ad` stays folded). The layout (one tiered array per store, lane
+    29  `tierswitch`: tier `t` of array `a` is `tierA a t`) lives in `L/TRec.lean`, the definitions and
+    30  lemma proofs here, and the store library.
+    31  
+    32  The array and control-word ids below are the memory map's (`AREC` = `APP.arr`, …): each store
+    33  file's `abbrev` must agree, `StoreFieldsCheck.lean` checks it.
 
-== ConAgua/Arena/Pool.lean#L8-L27
-     8  /-!
-     9  # The limb pool: layout, abstraction, invariant
-    10  
-    11  con-ron's `ron::Nat` (`crates/con-ron-core/src/ron/nat.rs`) is a `Vec<u64>` of little-endian
-    12  limbs with no trailing zero limb. In L there are no vectors: every number lives in ONE word array,
-    13  the limb pool `POOL`, as a slice `(o, l)` (offset, length). The pool grows at the top: word 0 of
-    14  the control array `CTL` holds the top `T`; `[0, T)` is in use, `[T, len(POOL))` is free. A
-    15  function that makes a number appends its limbs at `T` and moves `T` up; nothing below `T` is
-    16  ever written again, so every slice handed out stays valid (the frame is `Agree`).
-    17  
-    18  * abstraction: `pv p o l` is the number the slice `(o, l)` of the pool array `p` denotes,
-    19    `Σ_{i<l} p[o+i] * 2^(64 i)`;
-    20  * normal form: `Norm p o l`: the slice has no trailing zero limb (con-ron's `Nat.WF`), so equal
-    21    numbers have equal slices up to position;
-    22  * invariant of the pool (`PoolOK`): `T ≤ len(POOL) < 2^64` and `CTL` has its word.
-    23  
-    24  All of this is stated over the pool *array* `p : Array Word` and Lean `Nat` positions, and the
-    25  lemmas are guarded equations about the named functions `pv`, `xv`, `lv`, registered for
-    26  `grind` with multi-patterns that bind every variable (DESIGN.md, "Proof recipe").
-    27  -/
+== ConAgua/Arena/ConsLib.lean#L206-L215
+   206  /-! ## The slot layout (KSTP)
+   207  
+   208  Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
+   209  `0` and `1` hold `n - SN0` (`n` the slot count, a multiple of 8) and `o`, the table's offset (`0`:
+   210  nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is the two words `r + 2 j` (the
+   211  value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). The table grows at load
+   212  3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is (`kgrowB`), so no
+   213  old copy of it stays resident, and the growth aborts if the array cannot hold the doubled table.
+   214  A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
+   215  array's first words.
+
+== ConAgua/Arena/ConsLib.lean#L486-L491
+   486  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
+   487  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
+   488  def cpGrowIf (C : ConsSch) : Stmt :=
+   489    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
+   490        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
+   491      (kgrowBlk C) .skip
+
+== ConAgua/Arena/ConsLib.lean#L463-L469
+   463  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
+   464  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
+   465  the slot count doubles, the new upper half is zeroed, every live slot of the old half is marked,
+   466  then each marked entry is re-inserted from its home in the doubled table (linear probing past
+   467  the live unmarked slots; a marked slot met on the way is swapped and re-inserted next: absl's
+   468  in-place rehash). Aborts if the array cannot hold the doubled table. Template variables
+   469  `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
+
+== ConAgua/Arena/SlotGrow.lean#L41-L44
+    41  /-- The home slot of hash `h` among `n`: con-ron's multiply-xor finaliser, then the high word
+    42  of the product with `n` (Lemire's range reduction) in place of the power-of-two mask. -/
+    43  def homeW (h n : Word) : Word :=
+    44    UInt64.ofNat (((h * golden) ^^^ ((h * golden) >>> 32)).toNat * n.toNat / 2 ^ 64)
+
+== ConAgua/Arena/Scratch.lean#L18-L37
+    18  /-!
+    19  # The scratch tier's lifecycle in L: open and drop without zeroing a slot
+    20  
+    21  con-ron's arena brackets every declaration check with `enterScratch` (open the scratch tier of all
+    22  four stores, clear the walk memos) and `dropScratch` (`flushCaches`, then close the scratch tier
+    23  and truncate it). In L the 19 tables keep their scratch tier as tier 1 of their slot and record
+    24  arrays (`StoreLib.lean`); a slot of tier 1 holds `B + i + 1` for node `i`, with the **slot base**
+    25  `B = CTL[62]` (`SCB`), and reads free at or below `B` (`slotV`). So emptying the scratch tier of
+    26  every table is O(1) per table:
+    27  
+    28  * `scratch_reset(f)`: `B += 2^32`, the scratch flag `CTL[1] := f`, and the 19 tier-1 node
+    29    counts `CTL[ca + 1] := 0`. Every old scratch slot holds at most `B + 2^27` and reads free
+    30    against the new base; no slot is written. Once every `2^30` resets (`B ≥ 2^62`) the base wraps:
+    31    the 19 scratch slot tables are zeroed and `B` restarts at `0` (con-ron's `clear` at
+    32    `EPOCH_MAX`), so `B < 2^62 + 2^32` always holds.
+    33  * `scratch_enter()`: `scratch_reset(1)` and the four walk memos' `clear` (epoch bumps).
+    34  * `scratch_drop()`: `flush_caches()` (`CoreCaches.lean`, the per-declaration caches), then
+    35    `scratch_reset(0)`.
+    36  
+    37  The refinement (`enterScratch`/`dropScratch` under `ArenaD`) is `ScratchRefine.lean`.
+
+== ConAgua/Arena/MemoLib.lean#L18-L45
+    18  /-!
+    19  # The memo library: per-call memo tables with two-word keys and epoch stamps
+    20  
+    21  con-ron's arena keeps six per-call memos keyed `(EIdx × Nat)` (`inst1C`, `instLC`, `liftC`,
+    22  `abs1C`, `inst1LC`, `instLPC`), two keyed `EIdx` (`bvarBC`, `fvarBC`) and two level ones
+    23  (`Arena/Monad.lean`'s `Memos`); con-ron's Rust keeps them in `HashMap2` (`ron/hashmap2.rs`): open
+    24  addressing, linear probing, an **epoch stamp** per slot so that `clear` is `epoch += 1`.
+    25  
+    26  A memo here is a **schema** `MemoSch`: a word array `arr` and a `CTL` index `cs` (`CTL[cs]` is the
+    27  live stamp minus one, `CTL[cs + 1]` the live count). Four words per slot: the stamp, the key's two
+    28  words, the value. A one-word key (`bvarBC`) is the two-word key with second word `0`. Slot `j` is
+    29  **live** iff its stamp is `CTL[cs] + 1`; anything else is free space, so all-zero memory is an
+    30  empty memo.
+    31  
+    32  The L code is **generic in the schema**: `memoFindG S`, `memoPutG S`, `memoClearG S` are Lean
+    33  functions producing L functions with the schema's array and `CTL` words spliced in (`S.arr.u64[…]`,
+    34  `CTL.u64[⟪S.cs⟫]`), and their `vcgen` specs are proved once, for a variable schema. An instance is
+    35  three entries of the program (`("bm_find", memoFindG bmSch)`, …) and no proof.
+    36  
+    37  * `X_find(k1, k2)`: the probe from `homeW (k1 ^ (k2 << 32) ^ (k2 >> 32) * golden)`, returning
+    38    `(found, slot, steps)`. Both halves of `k2` enter the hash: banked memos (`MemoBank.genW`), the
+    39    eager bit and `rrSch` keep a second component in `k2`'s high half (lane `rfhash`: with only
+    40    `k2 << 32` it was shifted out, and all banks' entries for one `k1` shared one probe cluster).
+    41  * `X_put(k1, k2, v, fd, j)`: given the probe's `fd`, `j` **on the current memory**, write the
+    42    value (and on a miss, the stamp and the key, growing the table past 3/4 load, con-ron's `HashMap2` load factor). Callers probe right
+    43    before (`set` = `find; put`); a walk that recursed since its first probe probes again.
+    44  * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
+    45  -/
+
+== ConAgua/Arena/Pool.lean#L9-L28
+     9  /-!
+    10  # The limb pool: layout, abstraction, invariant
+    11  
+    12  con-ron's `ron::Nat` (`crates/con-ron-core/src/ron/nat.rs`) is a `Vec<u64>` of little-endian
+    13  limbs with no trailing zero limb. In L there are no vectors: every number lives in ONE word array,
+    14  the limb pool `POOL`, as a slice `(o, l)` (offset, length). The pool grows at the top: word 0 of
+    15  the control array `CTL` holds the top `T`; `[0, T)` is in use, `[T, len(POOL))` is free. A
+    16  function that makes a number appends its limbs at `T` and moves `T` up; nothing below `T` is
+    17  ever written again, so every slice handed out stays valid (the frame is `Agree`).
+    18  
+    19  * abstraction: `pv p o l` is the number the slice `(o, l)` of the pool array `p` denotes,
+    20    `Σ_{i<l} p[o+i] * 2^(64 i)`;
+    21  * normal form: `Norm p o l`: the slice has no trailing zero limb (con-ron's `Nat.WF`), so equal
+    22    numbers have equal slices up to position;
+    23  * invariant of the pool (`PoolOK`): `T ≤ len(POOL) < 2^64` and `CTL` has its word.
+    24  
+    25  All of this is stated over the pool *array* `p : Array Word` and Lean `Nat` positions, and the
+    26  lemmas are guarded equations about the named functions `pv`, `xv`, `lv`, registered for
+    27  `grind` with multi-patterns that bind every variable (DESIGN.md, "Proof recipe").
+    28  -/
 
 == ConAgua/Compiler/Abi.lean#L8-L35
      8  # The entry stubs (lane `abi`)
@@ -1229,48 +1229,48 @@
     34  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
     35  the trampoline. -/
 
-== ConAgua/Arena/LevelEquiv.lean#L248-L258
-   248  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
-   249  fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
-   250  function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
-   251  `lvlEq_refines`). -/
-   252  -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
-   253  @[l_impl ConRon.Arena.lvlEq?]
-   254  def lvlEqL : FunDecl := lfn (u, v) locals (z) {
-   255    CTL.u64[192] := 0;
-   256    z := call lv_equiv(u, v);
-   257    return z
-   258  }
+== ConAgua/Arena/LevelEquiv.lean#L255-L265
+   255  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
+   256  fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
+   257  function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
+   258  `lvlEq_refines`). -/
+   259  -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
+   260  @[l_impl ConRon.Arena.lvlEq?]
+   261  def lvlEqL : FunDecl := lfn (u, v) locals (z) {
+   262    CTL.u64[192] := 0;
+   263    z := call lv_equiv(u, v);
+   264    return z
+   265  }
 
-== ConAgua/Arena/LevelEquiv.lean#L243-L246
-   243  /-- **The model of `lvl_eq`**: reset the heap, then `lv_equiv`. -/
-   244  def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
-   245    | 0, _, _, _ => none
-   246    | n + 1, m, u, v => equivW n (m.set64 CTL 192 0) u v
+== ConAgua/Arena/LevelEquiv.lean#L250-L253
+   250  /-- **The model of `lvl_eq`**: reset the heap, then `lv_equiv`. -/
+   251  def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
+   252    | 0, _, _, _ => none
+   253    | n + 1, m, u, v => equivW n (m.set64 CTL 192 0) u v
 
-== ConAgua/Arena/LevelEquiv.lean#L260-L272
-   260  include hp in
-   261  theorem lvlEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (hpl : p.lookup "lvl_eq" = some lvlEqL)
-   262      (n : Nat) (s₀ : St) (u v : Word) :
-   263      ⦃fun s => s = s₀⦄ invoke p (exec p n) "lvl_eq" [u, v]
-   264      ⦃fun res s' => LocEq s' s₀ ∧ lvlEqW n s₀.mem u v = some (res.headD 0, s'.mem); ⊤⦄ := by
-   265    rw [invoke_eq _ hpl]
-   266    simp only [callFn, lvlEqL]
-   267    cases n with
-   268    | zero => vcgen [exec] <;> grind
-   269    | succ n =>
-   270      sym only [lang_grind, arena_grind, level_grind] =>
-   271        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
-   272        finish (gen := 20) [lvlEqW]
+== ConAgua/Arena/LevelEquiv.lean#L267-L279
+   267  include hp in
+   268  theorem lvlEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (hpl : p.lookup "lvl_eq" = some lvlEqL)
+   269      (n : Nat) (s₀ : St) (u v : Word) :
+   270      ⦃fun s => s = s₀⦄ invoke p (exec p n) "lvl_eq" [u, v]
+   271      ⦃fun res s' => LocEq s' s₀ ∧ lvlEqW n s₀.mem u v = some (res.headD 0, s'.mem); ⊤⦄ := by
+   272    rw [invoke_eq _ hpl]
+   273    simp only [callFn, lvlEqL]
+   274    cases n with
+   275    | zero => vcgen [exec] <;> grind
+   276    | succ n =>
+   277      sym only [lang_grind, arena_grind, level_grind] =>
+   278        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
+   279        finish (gen := 20) [lvlEqW]
 
-== ConAgua/Arena/LevelArena.lean#L291-L297
-   291  @[refines ConRon.Arena.lvlEq?]
-   292  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
-   293      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
-   294      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
-   295      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
-   296      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
-   297      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
+== ConAgua/Arena/LevelArena.lean#L290-L296
+   290  @[refines ConRon.Arena.lvlEq?]
+   291  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
+   292      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
+   293      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
+   294      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
+   295      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
+   296      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
 
 == vendor/con-ron/ConRon/Arena/Core.lean#L132-L149
    132  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`
@@ -1292,128 +1292,128 @@
    148        pure (some r)
    149      | none => pure none
 
-== ConAgua/L/ModelGen.lean#L10-L61
-    10  /-!
-    11  # Generated word models and specs (`l_model`)
-    12  
-    13  `l_model` reads the `lfn` text of a group of L functions and generates, for each function `f`,
-    14  
-    15  * its **word model** `fW : Nat → Mem → Word → … → Option (Word × Mem)` (`Option Word` for a
-    16    read-only function, `ro`; no fuel argument for a single function that needs none): the L code
-    17    with every local inlined, `abort` as `none`, a load as `rdW`, a store as `Mem.set64`, a call to a
-    18    group member as that member's model at fuel `n`, a call to another function as the model its
-    19    spec states (`specs`), and the code after an effectful call as a first-order continuation
-    20    `fW.k_g` (`| none => none | some (x, m₁) => …`) over the locals it reads, named after the
-    21    callee `g` (`fW.k_g_2`, … for its later calls, in source order; after a loop `fW.k_loopᵢ`), so
-    22    that a change elsewhere in the code does not rename it. The code after an `if`
-    23    whose branches both fall through is a join point `fW.jᵢ` over the locals and the memory (no
-    24    copy of it). Equal continuations of the group are shared;
-    25  * a function with **several results** (`return (a, b, …)`) gets a list model
-    26    `Option (List Word × Mem)` (`return e` is `some ([e], m)`, the end of the body `some ([], m)`;
-    27    `↦ fW list` forces it), or with `↦ fW tuple` a tuple model `Option (Word × … × Mem)` (the
-    28    longest `return`'s arity, shorter ones padded with `0`);
-    29  * a **loop** (`while c { … }` in the `lfn`, or a spliced named block `⟪X⟫` that is one `while`)
-    30    is a model of its own, `fW.loopᵢ n m x₁ …` (`exec p n` on the loop: `| 0 => none | n + 1 =>
-    31    if c then … fW.loopᵢ n … else exit`; the enclosing code applies it at `n + 1`), over the locals
-    32    live at its head. Its result is `(signal, outs…, memory)`: the signal (`Sig.normal`,
-    33    `Sig.ret vs`) if the body has a `return`, the locals it assigns that the code after it reads,
-    34    the memory unless read-only; the code after it is a continuation of that result. A loop with a
-    35    `return` followed by the function's last statement (`return …`, `abort`) is **fused**: its model
-    36    returns the function's result. Its spec `fW.loopᵢ.spec` (`⦃s = s₀⦄ exec p n X ⦃…⦄`, by
-    37    induction, the model is the loop's meaning) is generated, and a `while` written in the `lfn`
-    38    becomes the named block `fW.loopᵢ.stmt` (with `fW.lfn_eq : F = lfn … ⟪fW.loopᵢ.stmt⟫ …`).
-    39    Named blocks without a loop are inlined;
-    40  * one **guarded equation** `fW.armᵢ` per non-`none` leaf of the `if` tree of each model, loop and
-    41    continuation (the path's conditions as hypotheses, in order; on the negative side in their
-    42    natural form: `a = b` for `¬ a ≠ b`, `a ≠ b` for `¬ a = b`, `p` for `¬ ¬ p`), each with a `grind_pattern` in the
-    43    `grind` attributes; `fW.abortᵢ` for each `none` leaf, `fW.k_g.none` for each continuation (no
-    44    patterns);
-    45  * the **spec** `⦃s = s₀⦄ invoke p (exec p n) "f" args ⦃LocEq s' s₀ ∧
-    46    fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member (`some (r, s'.mem)` for a list
-    47    model, `some (r.headD 0, r.tail.headD 0, …, s'.mem)` for a tuple model), as one conjunction
-    48    over the group (`name`), a step theorem per member (`name.stepᵢ`: `vcgen` with the specs of the
-    49    callees and loops that member calls, then `finish`) and the induction on the fuel.
-    50  
-    51  The definitions come in dependency order: each strongly connected component of the reference
-    52  graph is one definition or one `mutual` block, well-founded on `(fuel, depth)` if it has a
-    53  continuation or a loop (models `(n, D)`, continuations `(n + 1, d)`, loops `(n, d)`; `LevelLeq.lean`
-    54  does this by hand), structural on the fuel if it has only models.
-    55  
-    56  ```
-    57  l_model liftGo_spec (p : Prog) (hp : LiftProg p)
-    58    fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW]
-    59    specs [derB_spec p (hp.get "der_b") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
-    60    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
-    61  ```
+== ConAgua/L/ModelGen.lean#L11-L62
+    11  /-!
+    12  # Generated word models and specs (`l_model`)
+    13  
+    14  `l_model` reads the `lfn` text of a group of L functions and generates, for each function `f`,
+    15  
+    16  * its **word model** `fW : Nat → Mem → Word → … → Option (Word × Mem)` (`Option Word` for a
+    17    read-only function, `ro`; no fuel argument for a single function that needs none): the L code
+    18    with every local inlined, `abort` as `none`, a load as `rdW`, a store as `Mem.set64`, a call to a
+    19    group member as that member's model at fuel `n`, a call to another function as the model its
+    20    spec states (`specs`), and the code after an effectful call as a first-order continuation
+    21    `fW.k_g` (`| none => none | some (x, m₁) => …`) over the locals it reads, named after the
+    22    callee `g` (`fW.k_g_2`, … for its later calls, in source order; after a loop `fW.k_loopᵢ`), so
+    23    that a change elsewhere in the code does not rename it. The code after an `if`
+    24    whose branches both fall through is a join point `fW.jᵢ` over the locals and the memory (no
+    25    copy of it). Equal continuations of the group are shared;
+    26  * a function with **several results** (`return (a, b, …)`) gets a list model
+    27    `Option (List Word × Mem)` (`return e` is `some ([e], m)`, the end of the body `some ([], m)`;
+    28    `↦ fW list` forces it), or with `↦ fW tuple` a tuple model `Option (Word × … × Mem)` (the
+    29    longest `return`'s arity, shorter ones padded with `0`);
+    30  * a **loop** (`while c { … }` in the `lfn`, or a spliced named block `⟪X⟫` that is one `while`)
+    31    is a model of its own, `fW.loopᵢ n m x₁ …` (`exec p n` on the loop: `| 0 => none | n + 1 =>
+    32    if c then … fW.loopᵢ n … else exit`; the enclosing code applies it at `n + 1`), over the locals
+    33    live at its head. Its result is `(signal, outs…, memory)`: the signal (`Sig.normal`,
+    34    `Sig.ret vs`) if the body has a `return`, the locals it assigns that the code after it reads,
+    35    the memory unless read-only; the code after it is a continuation of that result. A loop with a
+    36    `return` followed by the function's last statement (`return …`, `abort`) is **fused**: its model
+    37    returns the function's result. Its spec `fW.loopᵢ.spec` (`⦃s = s₀⦄ exec p n X ⦃…⦄`, by
+    38    induction, the model is the loop's meaning) is generated, and a `while` written in the `lfn`
+    39    becomes the named block `fW.loopᵢ.stmt` (with `fW.lfn_eq : F = lfn … ⟪fW.loopᵢ.stmt⟫ …`).
+    40    Named blocks without a loop are inlined;
+    41  * one **guarded equation** `fW.armᵢ` per non-`none` leaf of the `if` tree of each model, loop and
+    42    continuation (the path's conditions as hypotheses, in order; on the negative side in their
+    43    natural form: `a = b` for `¬ a ≠ b`, `a ≠ b` for `¬ a = b`, `p` for `¬ ¬ p`), each with a `grind_pattern` in the
+    44    `grind` attributes; `fW.abortᵢ` for each `none` leaf, `fW.k_g.none` for each continuation (no
+    45    patterns);
+    46  * the **spec** `⦃s = s₀⦄ invoke p (exec p n) "f" args ⦃LocEq s' s₀ ∧
+    47    fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member (`some (r, s'.mem)` for a list
+    48    model, `some (r.headD 0, r.tail.headD 0, …, s'.mem)` for a tuple model), as one conjunction
+    49    over the group (`name`), a step theorem per member (`name.stepᵢ`: `vcgen` with the specs of the
+    50    callees and loops that member calls, then `finish`) and the induction on the fuel.
+    51  
+    52  The definitions come in dependency order: each strongly connected component of the reference
+    53  graph is one definition or one `mutual` block, well-founded on `(fuel, depth)` if it has a
+    54  continuation or a loop (models `(n, D)`, continuations `(n + 1, d)`, loops `(n, d)`; `LevelLeq.lean`
+    55  does this by hand), structural on the fuel if it has only models.
+    56  
+    57  ```
+    58  l_model liftGo_spec (p : Prog) (hp : LiftProg p)
+    59    fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW]
+    60    specs [derB_spec p (hp.get "der_b") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
+    61    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
+    62  ```
 
-== ConAgua/Arena/ArenaRel.lean#L272-L295
-   272  /-- **The arena relation**: every represented table and the pool (the store tier, over
-   273  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
-   274  opaque to `grind` (DESIGN.md, "Does the relation scale?"): proofs name its fields. -/
-   275  structure ArenaR (m : Mem) (a : AState) : Prop where
-   276    lit : LitR m a
-   277    app : AppR m a
-   278    sort : SortR m a
-   279    const : ConstR m a
-   280    letE : LetR m a
-   281    bvar : BVarR m a
-   282    fvar : FVarR m a
-   283    lam : LamR m a
-   284    forallE : ForallR m a
-   285    proj : ProjR m a
-   286    zero : ZeroR m a
-   287    succ : SuccR m a
-   288    max : MaxR m a
-   289    imax : ImaxR m a
-   290    param : ParamR m a
-   291    ls : LsR m a
-   292    nanon : NAnonR m a
-   293    nstr : NStrR m a
-   294    nnum : NNumR m a
-   295    memos : MemosR m a.memos
+== ConAgua/Arena/ArenaRel.lean#L273-L296
+   273  /-- **The arena relation**: every represented table and the pool (the store tier, over
+   274  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
+   275  opaque to `grind` (DESIGN.md, "Does the relation scale?"): proofs name its fields. -/
+   276  structure ArenaR (m : Mem) (a : AState) : Prop where
+   277    lit : LitR m a
+   278    app : AppR m a
+   279    sort : SortR m a
+   280    const : ConstR m a
+   281    letE : LetR m a
+   282    bvar : BVarR m a
+   283    fvar : FVarR m a
+   284    lam : LamR m a
+   285    forallE : ForallR m a
+   286    proj : ProjR m a
+   287    zero : ZeroR m a
+   288    succ : SuccR m a
+   289    max : MaxR m a
+   290    imax : ImaxR m a
+   291    param : ParamR m a
+   292    ls : LsR m a
+   293    nanon : NAnonR m a
+   294    nstr : NStrR m a
+   295    nnum : NNumR m a
+   296    memos : MemosR m a.memos
 
-== ConAgua/Arena/ConsLibRel.lean#L7-L27
-     7  /-!
-     8  # The cons-table library: the relation and the user API (lane conslib)
-     9  
-    10  A cons table `C` (`ConsLib.lean`) represents the arena's two `Tbl`s of one constructor (the twin's
-    11  `HashMap2`s: persistent and scratch) by **`ConsR C R m on P Q`**: both tiers hold the same nodes
-    12  in the same order (node `i` of tier `t` related to `nodes[i]` by the instance's record relation
-    13  `R`), the same key → handle map, the node counts at `CTL[ca + t]`, the scratch flag `CTL[1]` is
-    14  `on`; and the slots index the nodes (the slot layout, the probing and the growth state, which no
-    15  user sees). The L model of every `intern_X` is `consInternM C m ks` (`ConsLibSpec.lean`).
-    16  
-    17  Both are irreducible outside this file: the lemmas below are the whole interface.
-    18  
-    19  * **Reading the relation**: `ConsR.flag`, `ConsR.ctl`, `ConsR.cnt`, `ConsR.cap`, `ConsR.rec`,
-    20    `ConsR.cons`, `ConsR.back`, `ConsR.recSize`, `ConsR.node`, `ConsR.cons_hit`.
-    21  * **Keeping it**: `ConsR.frame` (a writer apart from the table), `ConsR.setFlag` (`CTL[1]`),
-    22    `ConsR.reset` (the scratch reset), `consR_init` (the all-zero memory), `ConsR.congr`.
-    23  * **An interning**: `consIntern_correct` (it refines the arena's hash-consing, from the
-    24    instance's obligations `ConsKeyOK`), `consInternM_frame` (what it writes), `consInternM_word`,
-    25    `consInternM_lt`, `consInternM_pw` (the handle word), `consInternM_out` (a hit, or the append
-    26    of node `cntC`: the memory outside the slot array is `pushRec`).
-    27  
+== ConAgua/Arena/ConsLibRel.lean#L8-L28
+     8  /-!
+     9  # The cons-table library: the relation and the user API (lane conslib)
+    10  
+    11  A cons table `C` (`ConsLib.lean`) represents the arena's two `Tbl`s of one constructor (the twin's
+    12  `HashMap2`s: persistent and scratch) by **`ConsR C R m on P Q`**: both tiers hold the same nodes
+    13  in the same order (node `i` of tier `t` related to `nodes[i]` by the instance's record relation
+    14  `R`), the same key → handle map, the node counts at `CTL[ca + t]`, the scratch flag `CTL[1]` is
+    15  `on`; and the slots index the nodes (the slot layout, the probing and the growth state, which no
+    16  user sees). The L model of every `intern_X` is `consInternM C m ks` (`ConsLibSpec.lean`).
+    17  
+    18  Both are irreducible outside this file: the lemmas below are the whole interface.
+    19  
+    20  * **Reading the relation**: `ConsR.flag`, `ConsR.ctl`, `ConsR.cnt`, `ConsR.cap`, `ConsR.rec`,
+    21    `ConsR.cons`, `ConsR.back`, `ConsR.recSize`, `ConsR.node`, `ConsR.cons_hit`.
+    22  * **Keeping it**: `ConsR.frame` (a writer apart from the table), `ConsR.setFlag` (`CTL[1]`),
+    23    `ConsR.reset` (the scratch reset), `consR_init` (the all-zero memory), `ConsR.congr`.
+    24  * **An interning**: `consIntern_correct` (it refines the arena's hash-consing, from the
+    25    instance's obligations `ConsKeyOK`), `consInternM_frame` (what it writes), `consInternM_word`,
+    26    `consInternM_lt`, `consInternM_pw` (the handle word), `consInternM_out` (a hit, or the append
+    27    of node `cntC`: the memory outside the slot array is `pushRec`).
+    28  
 
-== ConAgua/L/WriteSet.lean#L7-L24
-     7  /-!
-     8  # Write sets from the program text
-     9  
-    10  `Preserve.lean` proves once that a program without `st8` keeps the byte arrays and the sizes.
-    11  The same induction gives a frame for every function of a *call-closed* set `fs` whose bodies
-    12  store only into word arrays of `A` and into words of the control array `ctl` listed in `C`. A
-    13  `ctl` index must be a literal `k`, or `k + (e &&& 1)`, which can only be `k` or `k + 1` (the
-    14  tier-indexed counts of the stores, `CTL[k + (t & 1)]`). The check `closedW` is a `Bool` function
-    15  of the text, so a concrete program's write set is `by decide +kernel`.
-    16  
-    17  The frame itself is abstract here (`WFrame`): any reflexive relation on memories closed under
-    18  the allowed stores. `Arena/Frame.lean` instantiates it with `MemFrame` (the arena's layout:
-    19  `CTL` is array 1). Lane `scale`'s spike, made layout-agnostic (DESIGN.md, "The relation's architecture").
-    20  
-    21  Global variables (`GVar`) are not restricted by `closedW` (a `WFrame` is closed under every global
-    22  write). Their write sets are lists of names, `closedG p G fs` (section "Global variables" below):
-    23  every run of `f ∈ fs` keeps the globals outside `G` (`GFrame`), and `Triple.gframe` adds that to a
-    24  callee's spec for its caller's `vcgen`.
+== ConAgua/L/WriteSet.lean#L13-L30
+    13  /-!
+    14  # Write sets from the program text
+    15  
+    16  `Preserve.lean` proves once that a program without `st8` keeps the byte arrays and the sizes.
+    17  The same induction gives a frame for every function of a *call-closed* set `fs` whose bodies
+    18  store only into word arrays of `A` and into words of the control array `ctl` listed in `C`. A
+    19  `ctl` index must be a literal `k`, or `k + (e &&& 1)`, which can only be `k` or `k + 1` (the
+    20  tier-indexed counts of the stores, `CTL[k + (t & 1)]`). The check `closedW` is a `Bool` function
+    21  of the text, so a concrete program's write set is `by decide +kernel`.
+    22  
+    23  The frame itself is abstract here (`WFrame`): any reflexive relation on memories closed under
+    24  the allowed stores. `Arena/Frame.lean` instantiates it with `MemFrame` (the arena's layout:
+    25  `CTL` is array 1). Lane `scale`'s spike, made layout-agnostic (DESIGN.md, "The relation's architecture").
+    26  
+    27  Global variables (`GVar`) are not restricted by `closedW` (a `WFrame` is closed under every global
+    28  write). Their write sets are lists of names, `closedG p G fs` (section "Global variables" below):
+    29  every run of `f ∈ fs` keeps the globals outside `G` (`GFrame`), and `Triple.gframe` adds that to a
+    30  callee's spec for its caller's `vcgen`.
 
 == ConAgua/L/Agree.lean#L572-L576
    572  /-- **Non-interference for `L.run`.** -/
@@ -1449,165 +1449,165 @@
     30  the worker's run is the sequential one, which the sequential proof covers.
     31  -/
 
-== ConAgua/Checker/Pipeline.lean#L42-L46
-    42  /-- **A relational stage spec**: from memory satisfying `Pre`, a returning call of `f` keeps the
-    43  caller's locals and ends in memory satisfying `Post r`. -/
-    44  def RelSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
-    45    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
-    46      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
+== ConAgua/Checker/Pipeline.lean#L44-L48
+    44  /-- **A relational stage spec**: from memory satisfying `Pre`, a returning call of `f` keeps the
+    45  caller's locals and ends in memory satisfying `Post r`. -/
+    46  def RelSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
+    47    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
+    48      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
 
-== ConAgua/Checker/CheckARun.lean#L132-L141
-   132  theorem foldStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
-   133      {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
-   134      {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
-   135      {ipins : List INatOpPinSet} {sE : AState} (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
-   136      (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word)
-   137      (h7 : R7 (loadMem b pb s8 s64) s₀.mem pb ds ipins sE)
-   138      (hcnt : ∀ h : 0 < (s₀.mem.arr64 DECL).size, cnt = (s₀.mem.arr64 DECL)[0]) :
-   139      ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
-   140      ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (sF : AState),
-   141        installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList sE = .ok (.ok (ds.size, fe, pend), sF) ∧
+== ConAgua/Checker/CheckARun.lean#L135-L144
+   135  theorem foldStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+   136      {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
+   137      {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
+   138      {ipins : List INatOpPinSet} {sE : AState} (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
+   139      (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word)
+   140      (h7 : R7 (loadMem b pb s8 s64) s₀.mem pb ds ipins sE)
+   141      (hcnt : ∀ h : 0 < (s₀.mem.arr64 DECL).size, cnt = (s₀.mem.arr64 DECL)[0]) :
+   142      ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
+   143      ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (sF : AState),
+   144        installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList sE = .ok (.ok (ds.size, fe, pend), sF) ∧
 
-== ConAgua/Checker/Pipeline.lean#L67-L70
-    67  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
-    68  bytes, every word array below `2^64` words. -/
-    69  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
-    70    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
+== ConAgua/Checker/Pipeline.lean#L69-L72
+    69  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
+    70  bytes, every word array below `2^64` words. -/
+    71  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
+    72    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
 
-== ConAgua/Compiler/Compile.lean#L9-L34
-     9  /-!
-    10  # The compiler from L to Kraken x64
-    11  
-    12  See DESIGN.md, "The compiler". One pass: an expression is evaluated straight into its target
-    13  register by `gen`, with scratch registers; where `gen` does not apply, into `rax` with
-    14  intermediate values in fixed per-frame temporary slots (`compileE`).
-    15  
-    16  **Machine state during L code.**
-    17  * `r15` = `T`, the address of the run's descriptor table (`Tab`); pinned.
-    18  * `r14` = the fuel counter; decremented at every loop back-edge and every call.
-    19  * `rsp` = the current frame; constant while a body runs. Local `x` is the word at `rsp + 8x`,
-    20    temporary `t` is at `rsp + 8(nlocals + t)`. The frame has `frameWords` words.
-    21  * `rbp` = the trampoline's saved stack pointer; never written by L code.
-    22  * `rbx`, `r12`, `r13`: free; the trampoline saves and restores them for its caller.
-    23  * `rax` = expression result, `rcx`/`rdx` = scratch, `rsi` = argument pointer at a call.
-    24  
-    25  **Exits.** `ca_error`, `ca_abort` and `ca_exhausted` are global; they restore the caller's `rsp`
-    26  from `rbp` and return to the harness with `rdx` = 2, 2 resp. 1. `ca_abort` is an error whose code
-    27  (`Err.code`) is in `rbx` (`abort e`, `if c abort k`: `if c abort k` sets `rbx` before the test
-    28  and keeps its one conditional jump; the test itself keeps `rbx`), `ca_error` one with code `0` (a
-    29  bounds check, a bare `abort`); both return the code in `rax`. `abort e` may overwrite any
-    30  register, a leaf's locals in `rbx` included (nothing after an abort reads a local), but `if c abort
-    31  k` writes `rbx` also when it does not abort: it does so only where no local lives in `rbx`
-    32  (`Ctx.rbxFree`, `sim_ifAbortK`); in a leaf that keeps a local there it is the general `if`. A
-    33  normal return has `rdx` = 0 and the result in `rax`.
-    34  -/
+== ConAgua/Compiler/Compile.lean#L8-L33
+     8  /-!
+     9  # The compiler from L to Kraken x64
+    10  
+    11  See DESIGN.md, "The compiler". One pass: an expression is evaluated straight into its target
+    12  register by `gen`, with scratch registers; where `gen` does not apply, into `rax` with
+    13  intermediate values in fixed per-frame temporary slots (`compileE`).
+    14  
+    15  **Machine state during L code.**
+    16  * `r15` = `T`, the address of the run's descriptor table (`Tab`); pinned.
+    17  * `r14` = the fuel counter; decremented at every loop back-edge and every call.
+    18  * `rsp` = the current frame; constant while a body runs. Local `x` is the word at `rsp + 8x`,
+    19    temporary `t` is at `rsp + 8(nlocals + t)`. The frame has `frameWords` words.
+    20  * `rbp` = the trampoline's saved stack pointer; never written by L code.
+    21  * `rbx`, `r12`, `r13`: free; the trampoline saves and restores them for its caller.
+    22  * `rax` = expression result, `rcx`/`rdx` = scratch, `rsi` = argument pointer at a call.
+    23  
+    24  **Exits.** `ca_error`, `ca_abort` and `ca_exhausted` are global; they restore the caller's `rsp`
+    25  from `rbp` and return to the harness with `rdx` = 2, 2 resp. 1. `ca_abort` is an error whose code
+    26  (`Err.code`) is in `rbx` (`abort e`, `if c abort k`: `if c abort k` sets `rbx` before the test
+    27  and keeps its one conditional jump; the test itself keeps `rbx`), `ca_error` one with code `0` (a
+    28  bounds check, a bare `abort`); both return the code in `rax`. `abort e` may overwrite any
+    29  register, a leaf's locals in `rbx` included (nothing after an abort reads a local), but `if c abort
+    30  k` writes `rbx` also when it does not abort: it does so only where no local lives in `rbx`
+    31  (`Ctx.rbxFree`, `sim_ifAbortK`); in a leaf that keeps a local there it is the general `if`. A
+    32  normal return has `rdx` = 0 and the result in `rax`.
+    33  -/
 
-== ConAgua/Compiler/Compile.lean#L1551-L1572
-  1551  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
-  1552    [.label enterL,
-  1553     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
-  1554     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
-  1555     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
-  1556     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
-  1557     movRM .rsp (mb .r15 Tab.stackTop),
-  1558     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
-  1559    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
-  1560    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
-  1561     jmpL okL,
-  1562     .label exhaustedL, movRI .rdx 1, jmpL finishL,
-  1563     .label errorL, movRI .rbx 0,
-  1564     .label abortL, movRR .rax .rbx, movRI .rdx 2,
-  1565     .label finishL, movRR .rsp .rbp,
-  1566     i64 (.pop (.reg (rr .r15))),
-  1567     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
-  1568     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
-  1569     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
-  1570     i64 .ret,
-  1571     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
-  1572    [movRI .rdx 0, jmpL finishL]
+== ConAgua/Compiler/Compile.lean#L1550-L1571
+  1550  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
+  1551    [.label enterL,
+  1552     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
+  1553     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
+  1554     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
+  1555     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
+  1556     movRM .rsp (mb .r15 Tab.stackTop),
+  1557     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
+  1558    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
+  1559    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
+  1560     jmpL okL,
+  1561     .label exhaustedL, movRI .rdx 1, jmpL finishL,
+  1562     .label errorL, movRI .rbx 0,
+  1563     .label abortL, movRR .rax .rbx, movRI .rdx 2,
+  1564     .label finishL, movRR .rsp .rbp,
+  1565     i64 (.pop (.reg (rr .r15))),
+  1566     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
+  1567     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
+  1568     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+  1569     i64 .ret,
+  1570     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
+  1571    [movRI .rdx 0, jmpL finishL]
 
-== ConAgua/Compiler/Compile.lean#L426
-   426  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+== ConAgua/Compiler/Compile.lean#L425
+   425  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
 
-== ConAgua/Compiler/Compile.lean#L1522-L1534
-  1522  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
-  1523    let ctx := fnCtx tab t sk f fd
-  1524    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
-  1525    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
-  1526    else if ctx.leaf && sk.find (nameCode f) == some F then
-  1527    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  1528    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
-  1529    else
-  1530    [.label (fnL f),
-  1531     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
-  1532     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
-  1533     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  1534    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+== ConAgua/Compiler/Compile.lean#L1521-L1533
+  1521  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
+  1522    let ctx := fnCtx tab t sk f fd
+  1523    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
+  1524    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
+  1525    else if ctx.leaf && sk.find (nameCode f) == some F then
+  1526    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  1527    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+  1528    else
+  1529    [.label (fnL f),
+  1530     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
+  1531     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
+  1532     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  1533    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
-== ConAgua/Compiler/Compile.lean#L75-L89
-    75  /-- The number of word arrays with both tiers in the table (`a` and `a + tierOff` below `nw`). -/
-    76  def Tab.wK (t : Tab) : Nat := min (t.nw - tierOff) tierOff
-    77  /-- The position of word array `a`'s descriptor words (lane tiercost): a permutation of
-    78  `[0, nw)` that puts tier `1` of a tiered array right after tier `0` (`wpos (a + tierOff) =
-    79  wpos a + 1` for `a < wK`), so that a tiered access addresses `[r15 + 8 (t & 1) + d]`. -/
-    80  def Tab.wpos (t : Tab) (a : ArrId) : Nat :=
-    81    if a < t.wK then 2 * a
-    82    else if a < tierOff then a + t.wK
-    83    else if a < tierOff + t.wK then 2 * (a - tierOff) + 1
-    84    else a
-    85  /-- The array whose descriptor words are at position `p` (`wpos`'s inverse). -/
-    86  def Tab.wposInv (t : Tab) (p : Nat) : ArrId :=
-    87    if p < 2 * t.wK then (if p % 2 = 0 then p / 2 else tierOff + p / 2)
-    88    else if p < tierOff + t.wK then p - t.wK
-    89    else p
+== ConAgua/Compiler/Compile.lean#L74-L88
+    74  /-- The number of word arrays with both tiers in the table (`a` and `a + tierOff` below `nw`). -/
+    75  def Tab.wK (t : Tab) : Nat := min (t.nw - tierOff) tierOff
+    76  /-- The position of word array `a`'s descriptor words (lane tiercost): a permutation of
+    77  `[0, nw)` that puts tier `1` of a tiered array right after tier `0` (`wpos (a + tierOff) =
+    78  wpos a + 1` for `a < wK`), so that a tiered access addresses `[r15 + 8 (t & 1) + d]`. -/
+    79  def Tab.wpos (t : Tab) (a : ArrId) : Nat :=
+    80    if a < t.wK then 2 * a
+    81    else if a < tierOff then a + t.wK
+    82    else if a < tierOff + t.wK then 2 * (a - tierOff) + 1
+    83    else a
+    84  /-- The array whose descriptor words are at position `p` (`wpos`'s inverse). -/
+    85  def Tab.wposInv (t : Tab) (p : Nat) : ArrId :=
+    86    if p < 2 * t.wK then (if p % 2 = 0 then p / 2 else tierOff + p / 2)
+    87    else if p < tierOff + t.wK then p - t.wK
+    88    else p
 
-== ConAgua/Compiler/Step.lean#L10-L18
-    10  /-!
-    11  # One instruction at a time
-    12  
-    13  The compiler proof is a forward simulation on Kraken's own judgment
-    14  `Eventually (step1 Host.exe) Q ⟨d, pc⟩` ("every run from `d` at `pc` reaches `Q`"), for an
-    15  arbitrary `Host` program that contains the compiled code. Each lemma here steps over one
-    16  instruction form the compiler emits, in continuation-passing style: the hypothesis is the
-    17  `Eventually` at the next state, the conclusion the `Eventually` at this one.
-    18  -/
+== ConAgua/Compiler/Step.lean#L11-L19
+    11  /-!
+    12  # One instruction at a time
+    13  
+    14  The compiler proof is a forward simulation on Kraken's own judgment
+    15  `Eventually (step1 Host.exe) Q ⟨d, pc⟩` ("every run from `d` at `pc` reaches `Q`"), for an
+    16  arbitrary `Host` program that contains the compiled code. Each lemma here steps over one
+    17  instruction form the compiler emits, in continuation-passing style: the hypothesis is the
+    18  `Eventually` at the next state, the conclusion the `Eventually` at this one.
+    19  -/
 
-== ConAgua/Compiler/Rel.lean#L103-L122
-   103  /-- L's memory `m` in the machine's data memory `d`. -/
-   104  structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
-   105    nb : m.bytes.size = G.tab.nb
-   106    nw : m.words.size = G.tab.nw
-   107    size8 : ∀ a < G.tab.nb, (m.arr8 a).size = G.s8 a
-   108    size64 : ∀ a < G.tab.nw, (m.arr64 a).size = G.s64 a
-   109    get8 : ∀ a < G.tab.nb, ∀ (i : Nat) (h : i < (m.arr8 a).size), d.get? (A (G.b8 a + i)) = some (m.arr8 a)[i]
-   110    get64 : ∀ a < G.tab.nw, ∀ (i : Nat) (h : i < (m.arr64 a).size),
-   111      rdW d (A (G.b64 a + 8 * i)) = some (m.arr64 a)[i]
-   112    limit : rdW d (A (G.T + 8)) = some (UInt64.ofNat G.lo)
-   113    base8 : ∀ a < G.tab.nb, rdW d (A (G.T + (G.tab.base8 a).toNat)) = some (UInt64.ofNat (G.b8 a))
-   114    len8 : ∀ a < G.tab.nb, rdW d (A (G.T + (G.tab.len8 a).toNat)) = some (UInt64.ofNat (G.s8 a))
-   115    base64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.base64 a).toNat)) = some (UInt64.ofNat (G.b64 a))
-   116    len64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.len64 a).toNat)) = some (UInt64.ofNat (G.s64 a))
-   117    rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
-   118      d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
-   119    stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
-   120    res : ∀ x, G.InRes x → (d.get? (A x)).isSome
-   121    /-- The global variables. -/
-   122    glob : ∀ g : GVar, g.id < G.tab.ng → rdW d (A (G.globAddr g)) = some (m.glob g)
+== ConAgua/Compiler/Rel.lean#L104-L123
+   104  /-- L's memory `m` in the machine's data memory `d`. -/
+   105  structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
+   106    nb : m.bytes.size = G.tab.nb
+   107    nw : m.words.size = G.tab.nw
+   108    size8 : ∀ a < G.tab.nb, (m.arr8 a).size = G.s8 a
+   109    size64 : ∀ a < G.tab.nw, (m.arr64 a).size = G.s64 a
+   110    get8 : ∀ a < G.tab.nb, ∀ (i : Nat) (h : i < (m.arr8 a).size), d.get? (A (G.b8 a + i)) = some (m.arr8 a)[i]
+   111    get64 : ∀ a < G.tab.nw, ∀ (i : Nat) (h : i < (m.arr64 a).size),
+   112      rdW d (A (G.b64 a + 8 * i)) = some (m.arr64 a)[i]
+   113    limit : rdW d (A (G.T + 8)) = some (UInt64.ofNat G.lo)
+   114    base8 : ∀ a < G.tab.nb, rdW d (A (G.T + (G.tab.base8 a).toNat)) = some (UInt64.ofNat (G.b8 a))
+   115    len8 : ∀ a < G.tab.nb, rdW d (A (G.T + (G.tab.len8 a).toNat)) = some (UInt64.ofNat (G.s8 a))
+   116    base64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.base64 a).toNat)) = some (UInt64.ofNat (G.b64 a))
+   117    len64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.len64 a).toNat)) = some (UInt64.ofNat (G.s64 a))
+   118    rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
+   119      d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
+   120    stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
+   121    res : ∀ x, G.InRes x → (d.get? (A x)).isSome
+   122    /-- The global variables. -/
+   123    glob : ∀ g : GVar, g.id < G.tab.ng → rdW d (A (G.globAddr g)) = some (m.glob g)
 
-== ConAgua/Compiler/Rel.lean#L66-L78
-    66  /-- The regions are inside the address space and pairwise disjoint. -/
-    67  structure Ok : Prop where
-    68    tab_end : G.tabEnd < 2 ^ 64
-    69    hi_le : G.hi < 2 ^ 64
-    70    lo_le : G.lo ≤ G.hi
-    71    end8 : ∀ a < G.tab.nb, G.b8 a + G.s8 a < 2 ^ 64
-    72    end64 : ∀ a < G.tab.nw, G.b64 a + 8 * G.s64 a < 2 ^ 64
-    73    tab_stack : ∀ x, G.InTab x → ¬ G.InStack x
-    74    tab_arr : ∀ x, G.InTab x → ¬ G.InArr x
-    75    stack_arr : ∀ x, G.InStack x → ¬ G.InArr x
-    76    arr8_disj : ∀ a < G.tab.nb, ∀ b < G.tab.nb, a ≠ b → ∀ x, G.In8 a x → ¬ G.In8 b x
-    77    arr64_disj : ∀ a < G.tab.nw, ∀ b < G.tab.nw, a ≠ b → ∀ x, G.In64 a x → ¬ G.In64 b x
-    78    arr8_64 : ∀ a < G.tab.nb, ∀ b < G.tab.nw, ∀ x, G.In8 a x → ¬ G.In64 b x
+== ConAgua/Compiler/Rel.lean#L67-L79
+    67  /-- The regions are inside the address space and pairwise disjoint. -/
+    68  structure Ok : Prop where
+    69    tab_end : G.tabEnd < 2 ^ 64
+    70    hi_le : G.hi < 2 ^ 64
+    71    lo_le : G.lo ≤ G.hi
+    72    end8 : ∀ a < G.tab.nb, G.b8 a + G.s8 a < 2 ^ 64
+    73    end64 : ∀ a < G.tab.nw, G.b64 a + 8 * G.s64 a < 2 ^ 64
+    74    tab_stack : ∀ x, G.InTab x → ¬ G.InStack x
+    75    tab_arr : ∀ x, G.InTab x → ¬ G.InArr x
+    76    stack_arr : ∀ x, G.InStack x → ¬ G.InArr x
+    77    arr8_disj : ∀ a < G.tab.nb, ∀ b < G.tab.nb, a ≠ b → ∀ x, G.In8 a x → ¬ G.In8 b x
+    78    arr64_disj : ∀ a < G.tab.nw, ∀ b < G.tab.nw, a ≠ b → ∀ x, G.In64 a x → ¬ G.In64 b x
+    79    arr8_64 : ∀ a < G.tab.nb, ∀ b < G.tab.nw, ∀ x, G.In8 a x → ¬ G.In64 b x
 
 == ConAgua/Compiler/Abi.lean#L8-L35
      8  # The entry stubs (lane `abi`)
@@ -1659,27 +1659,27 @@
     20  `checker.s` (`scripts/asm_file.py`). DESIGN.md, "Kernel-checked compiler output".
     21  -/
 
-== ConAgua/AsmFile/Include.lean#L6-L25
-     6  # `include_asm "path"`: an assembler file as a `Program` (TRUSTED)
-     7  
-     8  `include_asm "path"` is a term of type `Program`: the `.text` section of the assembler file at
-     9  `path` (relative to the directory of the current Lean file, as `include_str`), read by
-    10  `parseAsmFile` (`ConAgua/AsmFile/Parse.lean`) when the term is elaborated, and turned into a term by
-    11  `programTerm` (`ConAgua/AsmFile/Term.lean`). A file it cannot parse is an error.
-    12  
-    13  The term is cut into segments for the kernel's sake, without changing its value: a new segment
-    14  starts at the label `ca_enter` (the trampoline) and at each function entry `ca_f_g`; the labels of
-    15  segment `ca_f_g` are written as `lbl "g" n m` where that is their value. So the term is
-    16  `stub ++ (trampoline ++ (f₀ ++ (… ++ (fₖ ++ []))))`, the shape `asm_lit`'s `checkerAsm` has.
-    17  
-    18  The trusted base is this parser (`parseAsmFile`): the term comes from it alone. Two independent
-    19  cross-checks, not needed for soundness: Kraken's own parser must read the file's code the same way
-    20  (`ConAgua/AsmFile/CrossCheck.lean`, run by `scripts/asm_file.py`: ~13 s, too slow to
-    21  run here), and the assembler must encode what the file says (`scripts/check-asm.sh`). And here,
-    22  the code is printed again with Kraken's printer (`toATT`) and compared with the file's `.text`
-    23  lines: parse ∘ print is the identity on the file, so the parser reads every instruction the way
-    24  the printer (which wrote the file) meant it.
-    25  
+== ConAgua/AsmFile/Include.lean#L8-L27
+     8  # `include_asm "path"`: an assembler file as a `Program` (TRUSTED)
+     9  
+    10  `include_asm "path"` is a term of type `Program`: the `.text` section of the assembler file at
+    11  `path` (relative to the directory of the current Lean file, as `include_str`), read by
+    12  `parseAsmFile` (`ConAgua/AsmFile/Parse.lean`) when the term is elaborated, and turned into a term by
+    13  `programTerm` (`ConAgua/AsmFile/Term.lean`). A file it cannot parse is an error.
+    14  
+    15  The term is cut into segments for the kernel's sake, without changing its value: a new segment
+    16  starts at the label `ca_enter` (the trampoline) and at each function entry `ca_f_g`; the labels of
+    17  segment `ca_f_g` are written as `lbl "g" n m` where that is their value. So the term is
+    18  `stub ++ (trampoline ++ (f₀ ++ (… ++ (fₖ ++ []))))`, the shape `asm_lit`'s `checkerAsm` has.
+    19  
+    20  The trusted base is this parser (`parseAsmFile`): the term comes from it alone. Two independent
+    21  cross-checks, not needed for soundness: Kraken's own parser must read the file's code the same way
+    22  (`ConAgua/AsmFile/CrossCheck.lean`, run by `scripts/asm_file.py`: ~13 s, too slow to
+    23  run here), and the assembler must encode what the file says (`scripts/check-asm.sh`). And here,
+    24  the code is printed again with Kraken's printer (`toATT`) and compared with the file's `.text`
+    25  lines: parse ∘ print is the identity on the file, so the parser reads every instruction the way
+    26  the printer (which wrote the file) meant it.
+    27  
 
 == ConAgua/AsmFile/CrossCheck.lean#L5-L11
      5  /-! `lake env lean --run ConAgua/AsmFile/CrossCheck.lean FILE.s`: reads the file's code with both
@@ -1737,50 +1737,50 @@
     12  (`Arena.pooledAccepts_bridge`), which is what `twinAccepts_pure` already uses.
     13  (Lane parallel's `Twin.lean` changes, as a separate file.)
 
-== ConAgua/Checker/Entry.lean#L83-L88
-    83  
-    84  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
-    85  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
-    86  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
-    87  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
-    88  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
+== ConAgua/Checker/Entry.lean#L77-L82
+    77  
+    78  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
+    79  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
+    80  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
+    81  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
+    82  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
 
-== ConAgua/Checker/Entry.lean#L91-L107
-    91  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-    92  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-    93  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-    94  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
-    95    z := call cap_check();
-    96    z := call pb_check();
-    97    z := call intern_reserved_pins();
-    98    z := call builtin_prelude();
-    99    r := call front_run();
-   100    if r != 0 { return 1 };
-   101    z := call prepare_prelude();
-   102    z := call intern_all_pins();
-   103    cnt := L.Front.DECL.u64[0];
-   104    v := call install_fold_go(0, cnt, 0);
-   105    z := call par_compact(v, c);
-   106    return 9223372036854775808 + CTL.u64[130]
-   107  }
+== ConAgua/Checker/Entry.lean#L85-L101
+    85  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+    86  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+    87  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+    88  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+    89    z := call cap_check();
+    90    z := call pb_check();
+    91    z := call intern_reserved_pins();
+    92    z := call builtin_prelude();
+    93    r := call front_run();
+    94    if r != 0 { return 1 };
+    95    z := call prepare_prelude();
+    96    z := call intern_all_pins();
+    97    cnt := L.Front.DECL.u64[0];
+    98    v := call install_fold_go(0, cnt, 0);
+    99    z := call par_compact(v, c);
+   100    return 9223372036854775808 + CTL.u64[130]
+   101  }
 
-== ConAgua/Checker/Entry.lean#L109-L124
-   109  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
-   110  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
-   111  B's loop (`check_pending_go`); returns `ACCEPT`. -/
-   112  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
-   113  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
-   114  def checkBL : FunDecl := lfn () locals (z, n) {
-   115    if INIT == 0 {
-   116      n := len(CTLF.u64);
-   117      copy!(CTL.u64, 0, CTLF.u64, 0, n);
-   118      INIT := 1
-   119    };
-   120    if CTL.u64[130] < PHI { abort };
-   121    if PHI < PLO { abort };
-   122    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
-   123    return 71757147230292
-   124  }
+== ConAgua/Checker/Entry.lean#L103-L118
+   103  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
+   104  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
+   105  B's loop (`check_pending_go`); returns `ACCEPT`. -/
+   106  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
+   107  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
+   108  def checkBL : FunDecl := lfn () locals (z, n) {
+   109    if INIT == 0 {
+   110      n := len(CTLF.u64);
+   111      copy!(CTL.u64, 0, CTLF.u64, 0, n);
+   112      INIT := 1
+   113    };
+   114    if CTL.u64[130] < PHI { abort };
+   115    if PHI < PLO { abort };
+   116    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
+   117    return 71757147230292
+   118  }
 
 == ConAgua/Compiler/Abi.lean#L162-L171
    162  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
@@ -1794,30 +1794,30 @@
    170    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
    171    the driver touches no callee-saved register but `r15`. -/
 
-== ConAgua/Final/DrvAbi.lean#L176-L186
-   176  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-   177      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
-   178      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
-   179      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   180      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
-   181      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   182      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   183      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   184          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
-   185          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
-   186        dm (label abiStartL) := by
+== ConAgua/Final/DrvAbi.lean#L178-L188
+   178  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+   179      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   180      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
+   181      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+   182      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   183      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+   184      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   185      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   186          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
+   187          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+   188        dm (label abiStartL) := by
 
-== ConAgua/Checker/ParDriverTwin.lean#L25-L34
-    25  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
-    26      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-    27      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 3) = .ok (rs₁, m₁))
-    28      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
-    29      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
-    30      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
-    31      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
-    32      (hctlf : (w.arr64 CTLF).size = 0) (hv : rd64 w HDRF 3 = rd64 m₁ OUT 3)
-    33      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
-    34      TwinAccepts [b] := by
+== ConAgua/Checker/ParDriverTwin.lean#L23-L32
+    23  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+    24      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
+    25      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 3) = .ok (rs₁, m₁))
+    26      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
+    27      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
+    28      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
+    29      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
+    30      (hctlf : (w.arr64 CTLF).size = 0) (hv : rd64 w HDRF 3 = rd64 m₁ OUT 3)
+    31      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
+    32      TwinAccepts [b] := by
 
 == main.c#L168-L186
    168  /* `--jobs=N` (N > 1), the threaded mode.
@@ -1840,12 +1840,12 @@
    185     claimed in order and a thread finishes the group it holds, so every lower group has been
    186     checked, and accepted, when the threads are joined. */
 
-== ConAgua/Final/EndToEnd.lean#L144-L148
-   144  theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-   145      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-   146      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-   147      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
-   148    threadsRun_twinAcceptsPooled k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR
+== ConAgua/Final/EndToEnd.lean#L141-L145
+   141  theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   142      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   143      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+   144      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
+   145    threadsRun_twinAcceptsPooled k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR
 
 == ConAgua/Final/TwinPooled.lean#L23-L32
     23  /-- **The twin accepts `chunks` with phase B as con-ron's pool.** -/
@@ -1859,19 +1859,19 @@
     31      internAllPins pins sD = .ok (ipins, sE) ∧
     32      ConRon.Arena.PooledAccepts .verified ipins ds sE fe sF
 
-== ConAgua/Final/EndToEnd.lean#L152-L157
-   152  theorem checkerFile_threads_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-   153      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-   154      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-   155      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
-   156      RegsRestored dm₀.regs st₀.data.regs ∧ ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs :=
-   157    (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).2
+== ConAgua/Final/EndToEnd.lean#L149-L154
+   149  theorem checkerFile_threads_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   150      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   151      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+   152      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
+   153      RegsRestored dm₀.regs st₀.data.regs ∧ ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs :=
+   154    (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).2
 
-== ConAgua/Final/EndToEnd.lean#L164-L167
-   164  theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-   165      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-   166      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
-   167      (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) : TwinVerdictPooled [b] (k &&& 3) :=
+== ConAgua/Final/EndToEnd.lean#L161-L164
+   161  theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   162      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   163      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
+   164      (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) : TwinVerdictPooled [b] (k &&& 3) :=
 
 == ConAgua/Final/TwinVerdict.lean#L173-L185
    173  def TwinVerdictPooled (chunks : List ByteArray) (c : L.Word) : Prop :=
@@ -2029,7 +2029,7 @@
     43  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
     44  """
 
-== scripts/gates.sh#L11-L19
+== scripts/gates.sh#L11-L20
     11  # Steps, in order (stops at the first failure):
     12  #   links       scripts/overview-links.sh            OVERVIEW.md/README.md line anchors
     13  #   vendor      scripts/bump-con-ron.sh --check      vendor/ = upstream + patches
@@ -2037,10 +2037,11 @@
     15  #   provenance  scripts/provenance.py check          every FunDecl's twin citation is exact
     16  #   reasons     scripts/reasons.py --check           (when the script exists)
     17  #   build       scripts/lake build ConAgua           (timeout 90 min)
-    18  #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
-    19  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
+    18  #   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
+    19  #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
+    20  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 
-== scripts/gate_select.py#L17-L41
+== scripts/gate_select.py#L17-L42
     17  The table (first match per path; "cheap" = links, vendor, modules, provenance, reasons, always run):
     18  
     19    path                                                        steps
@@ -2053,21 +2054,22 @@
     26                                                                of ConAguaAsm; both go into ./checker)
     27    main.c, Makefile, reasons.h, scripts/{diff-e2e,e2e}.py      e2e
     28    scripts/{core,loop,leaf}_fns.{py,lean}, preloop_ws.py       build + that closure check
-    29    ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build; + the four closure checks if
-    30                                                                the module is in the import closure of
-    31                                                                ConAgua.Checker.Prog or of a closure's
-    32                                                                generated file (CoreErec, LoopFns,
-    33                                                                LeafFns, PreLoopWS, PreLoopWSStages)
-    34    other scripts/** (not run by a gate)                        cheap
-    35    anything else                                               ALL (when unsure, everything)
-    36  
-    37  The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py --check`) run
-    38  `lake env lean` against ConAgua.Checker.Prog, so they imply `build`. `e2e` is `make checker` and
-    39  `scripts/diff-e2e.py`: the binary is exactly main.c + checker.s + pins.bin (a change to L code, the
-    40  compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
-    41  fails), so these files (and reasons.h, the abort messages) decide whether the verdicts can change.
+    29    scripts/shake{.py,-setup.sh,-allowlist.txt,-keep.txt}       build, shake
+    30    ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the four closure checks if
+    31                                                                the module is in the import closure of
+    32                                                                ConAgua.Checker.Prog or of a closure's
+    33                                                                generated file (CoreErec, LoopFns,
+    34                                                                LeafFns, PreLoopWS, PreLoopWSStages)
+    35    other scripts/** (not run by a gate)                        cheap
+    36    anything else                                               ALL (when unsure, everything)
+    37  
+    38  The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py --check`) run
+    39  `lake env lean` against ConAgua.Checker.Prog, so they imply `build`. `e2e` is `make checker` and
+    40  `scripts/diff-e2e.py`: the binary is exactly main.c + checker.s + pins.bin (a change to L code, the
+    41  compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
+    42  fails), so these files (and reasons.h, the abort messages) decide whether the verdicts can change.
 
-== .github/workflows/ci.yml#L4-L73
+== .github/workflows/ci.yml#L4-L76
      4  # WHAT THE JOBS COVER
      5  #
      6  #   checker  The shipped binary, with no Lean anywhere (a few minutes):
@@ -2116,28 +2118,31 @@
     49  #                                 call closures;
     50  #              check-no-warnings.sh  the build's log holds no warning
     51  #                                 outside Kraken (a Lake dependency);
-    52  #              the `--check` modes of the generators: asm_file.py
-    53  #                                 (`checker.s` and `pins.bin` are what the
-    54  #                                 generators print now, plus Kraken's own
-    55  #                                 parser reading `checker.s` as the
-    56  #                                 trusted parser does), core_fns.py,
-    57  #                                 loop_fns.py, leaf_fns.py, preloop_ws.py.
-    58  #
-    59  # WHAT IT DELIBERATELY DOES **NOT** COVER
-    60  #
-    61  #   * the differential against the two reference checkers
-    62  #     (`scripts/e2e.py`: con-ron's arena checker compiled by Lean, and
-    63  #     con-ron's Rust binary), and its interpreter and per-function
-    64  #     sweeps: they need a Rust build of con-ron and Lean executables
-    65  #     on top of the proof build, and take far longer than the verdict
-    66  #     sweep above, which already compares every fixture with the
-    67  #     pinned expectation.
-    68  #   * `scripts/bench.py` and the `Init` benchmark: an export of `Init`
-    69  #     is not in the repository, and a shared runner measures noise.
-    70  #     Timings are measured with `perf stat` on a quiet machine.
-    71  #   * the progress census (`scripts/census.py`) and the build
-    72  #     statistics: reports, not gates.
-    73  #
+    52  #              shake.py           every import Lean's import minimizer
+    53  #                                 (`lake shake`) finds unused is on
+    54  #                                 `scripts/shake-allowlist.txt`;
+    55  #              the `--check` modes of the generators: asm_file.py
+    56  #                                 (`checker.s` and `pins.bin` are what the
+    57  #                                 generators print now, plus Kraken's own
+    58  #                                 parser reading `checker.s` as the
+    59  #                                 trusted parser does), core_fns.py,
+    60  #                                 loop_fns.py, leaf_fns.py, preloop_ws.py.
+    61  #
+    62  # WHAT IT DELIBERATELY DOES **NOT** COVER
+    63  #
+    64  #   * the differential against the two reference checkers
+    65  #     (`scripts/e2e.py`: con-ron's arena checker compiled by Lean, and
+    66  #     con-ron's Rust binary), and its interpreter and per-function
+    67  #     sweeps: they need a Rust build of con-ron and Lean executables
+    68  #     on top of the proof build, and take far longer than the verdict
+    69  #     sweep above, which already compares every fixture with the
+    70  #     pinned expectation.
+    71  #   * `scripts/bench.py` and the `Init` benchmark: an export of `Init`
+    72  #     is not in the repository, and a shared runner measures noise.
+    73  #     Timings are measured with `perf stat` on a quiet machine.
+    74  #   * the progress census (`scripts/census.py`) and the build
+    75  #     statistics: reports, not gates.
+    76  #
 
 >>> README.md
 
