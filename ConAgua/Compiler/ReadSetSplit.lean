@@ -20,12 +20,12 @@ open L
 
 /-- One function's read-set check: not in the set `t`, or its body names only word arrays of `S`
 and byte arrays of `S8` and calls only functions of `t`. -/
-def rdChk (S S8 : ArrId → Bool) (t : NTree) (x : FnName × FunDecl) : Bool :=
+def rdChk (S : TieredArray → Bool) (S8 : ArrId → Bool) (t : NTree) (x : FnName × FunDecl) : Bool :=
   !(t.find (nameCode x.1)).isSome || x.2.body.rdOk S S8 fun g => (t.find (nameCode g)).isSome
 
 /-- **A program's read set from per-function checks** (`rdChk` for every function of `p`, by
 `prog_all`). -/
-theorem readsIn_of_all {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName} {t : NTree}
+theorem readsIn_of_all {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName} {t : NTree}
     (ht : namesTree fs = some t) (h : ∀ x ∈ p, rdChk S S8 t x = true) :
     readsIn p S S8 fs = true := by
   simp only [readsIn, List.all_eq_true]
