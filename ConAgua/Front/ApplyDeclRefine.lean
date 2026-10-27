@@ -383,9 +383,9 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
     have hP0 : (m'.arr64 DLP)[0]?.getD 0 = rdW (m.arr64 DLP) 0 + lsCntN b.data (f.lps + 1) 0 := by
       rw [hm'P, F7]; rfl
     have hD0 : (m'.arr64 DECL)[0]?.getD 0 = rdW (m.arr64 DECL) 0 + 1 := by rw [G4]; rfl
-    refine ⟨hD.names.frame hf (.inl rfl) (by simp [DLP, DECL, idArrs]) (by simp),
-      hD.levels.frame hf (.inr (.inl rfl)) (by simp [DLP, DECL, idArrs]) (by simp),
-      hD.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, DECL, idArrs]) (by simp), ?_,
+    refine ⟨hD.names.frame hf (.inl rfl) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
+      hD.levels.frame hf (.inr (.inl rfl)) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
+      hD.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp), ?_,
       by rw [hf.2.2.1, hf.2.2.1]; exact hD.ifs⟩
     rw [hcn'] at G3
     refine DeclsF.push _ _ _ _ _ _ hDR (by rw [G1.2.2.1, hm'D]) (by rw [hm'P, F2.2.2.1])

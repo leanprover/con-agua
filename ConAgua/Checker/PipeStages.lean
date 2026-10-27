@@ -134,7 +134,7 @@ theorem storeC_idCtl : ∀ x ∈ StoreC, x ∉ idCtl := by
 
 theorem pinA_idArrs : ∀ x ∈ PinA, x ∉ idArrs := by
   intro x hx hm
-  simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at hm
+  simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false, NID, LID, EID, NIDS, LIDS, EIDS] at hm
   rcases hm with rfl | rfl | rfl | rfl | rfl | rfl <;> revert hx <;> decide
 
 theorem pinA_not {x : ArrId} (h : 64 ≤ x ∧ x < 256) (h' : x ≠ PINS) : x ∉ PinA := by

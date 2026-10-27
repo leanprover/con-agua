@@ -36,26 +36,26 @@ opaque stubM (f : FnName) : Mem → List Word → Option (List Word × Mem)
 `abstract1_fast` clears it on entry and exit, so it needs this of the memory it starts from and
 leaves it so (`IndRealAbs.lean`); `StageR` says nothing about array 49, so callers thread it. -/
 def AbMemo (m : Mem) : Prop :=
-  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨49, 48⟩ : MemoSch) lfKey decE m mp
+  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨ABMEMO, 48⟩ : MemoSch) lfKey decE m mp
 
 /-- **The `instantiate1Lift` walk's memo is well formed** (helper `indproofs4-memo`): array 51
 (`ILFM`) with epoch word `CTL[52]` (`WalkLift.lean`'s `i1lSch`), what `instantiate1_lift_fast`
 needs (`IndRealMemo.lean`). -/
 def I1Memo (m : Mem) : Prop :=
-  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨51, 52⟩ : MemoSch) lfKey decE m mp
+  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨ILFM, 52⟩ : MemoSch) lfKey decE m mp
 
 /-- **The `constsResolveF` walk's memo table is related to some memo** (helper `indproofs4-memo`):
 array 155 (`CRM`) with epoch word `CTL[158]` (`ConstsResolveF.lean`'s `crSch`; lane `tails`'
 `CrOK`, `ConstsResolveFRefine2.lean`), what `consts_resolve_ffast` needs. -/
 def CrMemo (m : Mem) : Prop :=
   ∃ mp : Std.HashMap EIdx Bool,
-    MemoRV (⟨155, 158⟩ : MemoSch) bmKey (fun _ w b => w = if b then 1 else 0) m mp
+    MemoRV (⟨L.Stubs.CRM, 158⟩ : MemoSch) bmKey (fun _ w b => w = if b then 1 else 0) m mp
 
 /-- **The `instantiateList` walk's memo is well formed** (helper `indproofs4-memo`): array 50
 with epoch word `CTL[50]` (`InstList.lean`'s `ilSch`, the core's `coreIlSch`), what `inst_list`
 (under `open_pis_at_fvars_f`) needs. -/
 def IlMemo (m : Mem) : Prop :=
-  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨50, 50⟩ : MemoSch) lfKey decE m mp
+  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨ILMEMO, 50⟩ : MemoSch) lfKey decE m mp
 
 /-- **The rest of the memory's half of `TwinOK`** (lane `indstaget`): the core's other walk memos
 (`WalkMemos`: arrays 151‥153, 52‥54), the three arrays whose sizes `TwinOK` bounds, the pin flag.

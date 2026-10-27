@@ -147,3 +147,16 @@ bring notation, stores or pool lemmas the build needs) and the three `#guard`-on
 * 128 files, +864/−864 lines (a line-for-line rewrite). `checker.s`, `pins.bin` unchanged; gate
   build after merging master: 762 s for 1150 modules at `LEAN_NUM_THREADS=12` (no per-module
   baseline was measured).
+
+### Batch 3 (landed, master 2e34a73a)
+
+### Batch 4: names in schemas and short lists
+* `CoreCaches`' eleven `MemoSch` literals, `IndStubs`' four, `memoArrs`, `fzCols`' arrays, `idArrs`
+  and `CapsOK`/`CapsW`/`cap_check`'s `67`, `68`, `0`, `256` now name their arrays (`DECL`, `DLP`,
+  `POOL`, `POOL1`, the new `INM`…`RRM`, `NIDS`…`EIDS`). Same values, so `checker.s` is unchanged.
+* `simp` compares numerals, not names: the 33 `simp [… memoArrs …]`/`[… idArrs …]` calls list
+  the arrays' names too.
+* Left as numerals: the `TRec` rows of `StoreFields.lean` (every store proof unfolds them),
+  `storeArrs`, `slotArrs`, `parOwnedL`, `frozenIdsL` (literal on purpose: the stub and the
+  kernel checks read them; `Checker/ArrCheck.lean` checks them against the table), `tblArr`/
+  `rowArr`/`IdTable`'s `b + 8` (computed numbers).

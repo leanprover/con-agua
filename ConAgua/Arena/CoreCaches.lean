@@ -55,17 +55,17 @@ namespace L.Arena
 
 /-! ## The schemas -/
 
-abbrev wcSch : MemoSch := ⟨96, 96⟩
-abbrev wkSch : MemoSch := ⟨97, 98⟩
-abbrev whSch : MemoSch := ⟨98, 100⟩
-abbrev inSch : MemoSch := ⟨99, 102⟩
-abbrev ioSch : MemoSch := ⟨100, 104⟩
-abbrev deSch : MemoSch := ⟨101, 106⟩
-abbrev ctSch : MemoSch := ⟨102, 108⟩
-abbrev cvSch : MemoSch := ⟨103, 110⟩
-abbrev rrSch : MemoSch := ⟨104, 112⟩
-abbrev lqSch : MemoSch := ⟨105, 116⟩
-abbrev lsqSch : MemoSch := ⟨106, 118⟩
+abbrev wcSch : MemoSch := ⟨WCM, 96⟩
+abbrev wkSch : MemoSch := ⟨WKM, 98⟩
+abbrev whSch : MemoSch := ⟨WH, 100⟩
+abbrev inSch : MemoSch := ⟨INM, 102⟩
+abbrev ioSch : MemoSch := ⟨IOM, 104⟩
+abbrev deSch : MemoSch := ⟨DEM, 106⟩
+abbrev ctSch : MemoSch := ⟨CTM, 108⟩
+abbrev cvSch : MemoSch := ⟨CV, 110⟩
+abbrev rrSch : MemoSch := ⟨RRM, 112⟩
+abbrev lqSch : MemoSch := ⟨LQ, 116⟩
+abbrev lsqSch : MemoSch := ⟨LSQ, 118⟩
 
 /-! ## `flush_caches()` -/
 
