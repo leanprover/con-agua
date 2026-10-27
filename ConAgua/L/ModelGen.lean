@@ -109,7 +109,8 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   loop's body; a `return` in it passes the signal on to the enclosing loop (or is the function's
   result if that loop is fused); the enclosing loop's spec uses the inner loop's spec. A `while`
   written in the `lfn` inside another becomes the named block `fW.loopᵢ.stmt` in the outer one's;
-  a loop nested in a named block must be a named block itself. Loops are numbered in source
+  a loop nested in a named block must be a named block itself. The named blocks spliced in a
+  loop's body count for its analysis (the locals they assign, their `return`s). Loops are numbered in source
   order (`loop1` the outermost first). A loop followed by `abort` is fused only if it never exits
   normally (`while 0 == 0`).
 
@@ -1025,6 +1026,15 @@ meta partial def splices (s : Syntax) (acc : Array Ident := #[]) : Array Ident :
     | _ => acc
   s.getArgs.foldl (fun acc a => splices a acc) acc
 
+/-- The named blocks spliced as statements (`⟪X⟫`, those in `E.blocks`) replaced by their
+statements, at any depth. -/
+meta partial def expandBlocks (E : Env) (s : Syntax) : Syntax :=
+  replaceStx s fun t => match (⟨t⟩ : TSyntax `lstmt) with
+    | `(lstmt| ⟪$x⟫) => match E.blocks.find? (·.1 == key x) with
+      | some (_, _, ss, _) => some (expandBlocks E (mkNullNode (ss.toArray.map (·.raw))))
+      | none => none
+    | _ => none
+
 /-- Does a statement list contain `return`? -/
 meta partial def hasReturn (s : Syntax) : Bool :=
   let here : Bool := match (⟨s⟩ : TSyntax `lstmt) with
@@ -1446,7 +1456,8 @@ code after the loop is a continuation of that result. -/
 meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : Option Syntax)
     (c : TSyntax `lcond) (body : List (TSyntax `lstmt)) (rest : List (TSyntax `lstmt)) :
     GenM MR := do
-  let bodyNode := mkNullNode (body.toArray.map (·.raw))
+  -- the named blocks spliced in it expanded: their assignments and `return`s are the loop's
+  let bodyNode := expandBlocks E (mkNullNode (body.toArray.map (·.raw)))
   let A := (assignedIn ctx bodyNode).qsort (· < ·)
   let sig := hasReturn bodyNode
   let st0 ← get
@@ -1769,9 +1780,12 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     fis := fis.push { lname, decl, model, ro, multi, tup, lookup, params, lcls := locals', body, lfnStx := s, vars }
   let grp := fis.map fun fi => (fi.lname, fi.model, fi.ro, fi.multi, fi.tup)
   -- the named blocks spliced into the bodies
+  -- (and into the named blocks: a loop block may splice its inner loop's block)
   let mut blocks : Array (String × Name × List (TSyntax `lstmt) × Bool) := #[]
-  for fi in fis do
-    for t in splices fi.body do
+  let mut todo : Array Ident := fis.foldl (fun acc fi => acc ++ splices fi.body) #[]
+  while !todo.isEmpty do
+      let t := todo.back!
+      todo := todo.pop
       if blocks.any (·.1 == key t) then continue
       let c ← liftTermElabM (realizeGlobalConstNoOverload t)
       let bs ← liftTermElabM (declSyntax c "lblk")
@@ -1783,6 +1797,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
           | _ => false
         | _ => false
       blocks := blocks.push (key t, c, ss, isLoop)
+      for x in ss do todo := todo ++ splices x
   let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks, bind := bindC, exc }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do

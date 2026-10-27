@@ -213,6 +213,28 @@ l_model tMem_spec (p : Prog) (hp : p.lookup "t_mem" = some tMem)
   fns [hp ↦ tMemW]
   grind [arena_grind] simp []
 
+/-- Nested loops as named blocks (the outer block splices the inner one). -/
+-- con-ron: none — an `l_model` test block
+def tInLoop : Stmt := lblk (n, i, j, s) {
+  while j < i { s += TW.u64[j]; j += 1 }
+}
+
+-- con-ron: none — an `l_model` test block
+def tOutLoop : Stmt := lblk (n, i, j, s) {
+  while i < n { j := 0; ⟪tInLoop⟫; i += 1 }
+}
+
+-- con-ron: none — an `l_model` test function
+def tBlk : FunDecl := lfn (n) locals (i, j, s) {
+  i := 0;
+  ⟪tOutLoop⟫;
+  return s
+}
+
+l_model tBlk_spec (p : Prog) (hp : p.lookup "t_blk" = some tBlk)
+  fns [hp ↦ tBlkW ro]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
+
 l_model tNestR2_spec (p : Prog) (hp : p.lookup "t_nest_r2" = some tNestR2)
   fns [hp ↦ tNestR2W]
   grind [arena_grind] extra [ld64_rd_spec] simp []
