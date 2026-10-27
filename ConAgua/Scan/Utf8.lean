@@ -226,7 +226,7 @@ def utf8Prog : Prog := [("utf8_char", utf8Char), ("utf8_decode", utf8Decode)]
 /-- Decode `s` with the L program: `some` code points, or `none`. -/
 def runDecode (bs : List UInt8) : Option (List Word) :=
   match run utf8Prog 1000 "utf8_decode" [0, UInt64.ofNat bs.length]
-      { bytes := #[bs.toArray], words := #[Array.replicate 64 0] } with
+      ((Mem.ofWords [(OUT, Array.replicate 64 0)]).putBytes IN bs.toArray) with
   | .ok ([1, c], m) => some ((m.arr64 OUT).toList.take c.toNat)
   | _ => none
 

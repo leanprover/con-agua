@@ -115,15 +115,15 @@ def natMulProg : Prog := natProg ++ [("mac_hi", macHi), ("nat_mul", natMul)]
 
 /- `(2^64 - 1)^2 = 2^128 - 2^65 + 1`: limbs `[1, 2^64 - 2]`. -/
 #guard (run natMulProg 1000 "nat_mul" [0, 1, 0, 1]
-  { words := #[#[0xFFFFFFFFFFFFFFFF, 0, 0, 0], #[1]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([2], #[#[0xFFFFFFFFFFFFFFFF, 1, 0xFFFFFFFFFFFFFFFE, 0], #[3]])
+  (Mem.ofWords [(POOL, #[0xFFFFFFFFFFFFFFFF, 0, 0, 0]), (CTL, #[1])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([2], #[0xFFFFFFFFFFFFFFFF, 1, 0xFFFFFFFFFFFFFFFE, 0], #[3])
 
 /- `(2^64 + 3) * 5 = 5 * 2^64 + 15`, and `0 * a = 0` (length 0). -/
 #guard (run natMulProg 1000 "nat_mul" [0, 2, 2, 1]
-  { words := #[#[3, 1, 5, 0, 0, 0], #[3]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([2], #[#[3, 1, 5, 15, 5, 0], #[5]])
+  (Mem.ofWords [(POOL, #[3, 1, 5, 0, 0, 0]), (CTL, #[3])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([2], #[3, 1, 5, 15, 5, 0], #[5])
 #guard (run natMulProg 1000 "nat_mul" [0, 2, 2, 0]
-  { words := #[#[3, 1, 0, 0], #[2]] }).toOption.map (·.1) == some [0]
+  (Mem.ofWords [(POOL, #[3, 1, 0, 0]), (CTL, #[2])])).toOption.map (·.1) == some [0]
 
 section mul
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)

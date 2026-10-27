@@ -369,7 +369,7 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
 
 /-- A memory with 224 word arrays of 4096 words and the input `s` (the inductive lines' scratch
 arrays `IFR`/`IFL` are 70, 71, the level heap 192). -/
-def frontMemOf (s : String) : Mem := { initMem (List.replicate 224 4096) with bytes := #[s.toUTF8.data] }
+def frontMemOf (s : String) : Mem := (initMem (List.replicate 224 4096)).putBytes IN s.toUTF8.data
 
 /- A header, a name, a level, and expression lines of six kinds (a 30-digit literal among them):
 accepted. -/

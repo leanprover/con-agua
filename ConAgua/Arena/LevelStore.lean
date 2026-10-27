@@ -129,8 +129,10 @@ def succProg : Prog :=
 
 /-- A memory with 8 `succ` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def succMem (scratch : Word) : Mem :=
-  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], Array.replicate 16 0,
-      Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
+  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+    withTiers [(SREC, Array.replicate 16 0),
+      (SSLOT, Array.replicate consTestWords 0),
+      (SHP, Array.replicate consTestWords 0)]
 
 /-- Intern each word in turn; the handles. -/
 def internSuccs (m : Mem) : List Word → Option (List Word)

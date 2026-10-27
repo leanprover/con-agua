@@ -916,8 +916,7 @@ def indPos2Foreign : Prog :=
 
 /-- `testMem` with `EREC[0..4) = [3, 5, 3, 7]` (`nestFrameMates.go`'s input is `IndCaps.all`, an
 `EREC` slice). -/
-def fmTestMem : Mem := { testMem with
-  words := testMem.words.set! EREC (#[(3 : Word), 5, 3, 7] ++ Array.replicate 60 0) }
+def fmTestMem : Mem := testMem.putWords EREC (#[(3 : Word), 5, 3, 7] ++ Array.replicate 60 0)
 
 -- `nestFrameMates.go` over the `EREC` block `[3, 5, 3, 7]` at `c = 5`: `[3, 7]` (5 filtered, the
 -- repeated 3 deduped), built into `IW`.

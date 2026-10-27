@@ -396,8 +396,9 @@ def litProg : Prog :=
 /-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and `SN0` slots per
 tier, the scratch tier closed or open. -/
 def litMem (scratch : Word) : Mem :=
-  { words := withTiers <| #[#[5, 7, 5, 1, 2, 0, 0, 0], #[5, scratch] ++ Array.replicate 62 0, Array.replicate 64 0,
-      Array.replicate consTestWords 0] }
+  Mem.ofWords <| [(CTL, #[5, scratch] ++ Array.replicate 62 0)] ++
+    withTiers [(POOL, #[5, 7, 5, 1, 2, 0, 0, 0]), (REC, Array.replicate 64 0),
+      (SLOT, Array.replicate consTestWords 0)]
 
 /-- Intern each slice in turn; the handles. -/
 def internAll (m : Mem) : List (Word × Word) → Option (List Word)
@@ -413,16 +414,19 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 /- With the scratch tier open the nodes go there (the persistent tier is empty). -/
 #guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
 
+/-- 13 limbs in the pool, the slot array `slots`. -/
+def litGrowMem (slots : Array Word) : Mem :=
+  Mem.ofWords <| [(CTL, #[13] ++ Array.replicate 63 0)] ++
+    withTiers [(POOL, (Array.range 13).map (UInt64.ofNat · + 1)), (REC, Array.replicate 256 0),
+      (SLOT, slots)]
+
 /- Growth: 8 slots per tier at the start; the seventh node (past 3/4 load) doubles them in place
 (16 slots, words `2‥33`), which a `consTestWords` slot array holds; the thirteenth doubles them
 again (32 slots), which it cannot (abort); a `consGrowWords` one holds both doublings (then all 13
 nodes are found again). -/
-#guard (internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 13).map fun i => (UInt64.ofNat i, 1))).isNone
-#guard (internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 12).map fun i => (UInt64.ofNat i, 1))).isSome
-#guard internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate consGrowWords 0] }
+#guard (internAll (litGrowMem (Array.replicate consTestWords 0)) ((List.range 13).map fun i => (UInt64.ofNat i, 1))).isNone
+#guard (internAll (litGrowMem (Array.replicate consTestWords 0)) ((List.range 12).map fun i => (UInt64.ofNat i, 1))).isSome
+#guard internAll (litGrowMem (Array.replicate consGrowWords 0))
     ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
   some ((List.range 13 ++ List.range 13).map fun i => 0x80000000 + UInt64.ofNat i)
 

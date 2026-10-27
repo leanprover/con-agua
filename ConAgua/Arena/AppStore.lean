@@ -129,8 +129,9 @@ def appProg : Prog :=
 
 /-- A memory with 8 `app` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def appMem (scratch : Word) : Mem :=
-  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate consTestWords 0,
-      Array.replicate consTestWords 0] }
+  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+    withTiers [(AREC, Array.replicate consTestWords 0),
+      (ASLOT, Array.replicate consTestWords 0)]
 
 /-- Intern each pair in turn; the handles. -/
 def internApps (m : Mem) : List (Word × Word) → Option (List Word)

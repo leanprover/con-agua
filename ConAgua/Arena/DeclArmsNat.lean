@@ -1324,7 +1324,7 @@ def romStubs : Prog :=
 def pinsTestMem : Mem :=
   let p := (List.range 71).foldl (fun a i => a.set! (1 + i) (UInt64.ofNat (100 + i)))
     ((Array.replicate 72 (0 : Word)).set! 0 1)
-  { armsTestMem with words := armsTestMem.words.set! PINS p }
+  armsTestMem.putWords PINS p
 
 /-- The real pin readers in place of `masterFns`' stubs (for the runs below). -/
 def withPins (p : Prog) : Prog :=

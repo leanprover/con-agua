@@ -84,17 +84,17 @@ def natShlProg : Prog := natProg ++ [("nat_shl", natShl)]
 
 /- `[3, 1] <<< 65 = [0, 6, 2]`: `a` at 0 (2 limbs), `b = [65]` at 2, top 3. -/
 #guard (run natShlProg 100 "nat_shl" [0, 2, 2, 1]
-  { words := #[#[3, 1, 65, 0, 0, 0, 0], #[3]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([3], #[#[3, 1, 65, 0, 6, 2, 0], #[6]])
+  (Mem.ofWords [(POOL, #[3, 1, 65, 0, 0, 0, 0]), (CTL, #[3])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([3], #[3, 1, 65, 0, 6, 2, 0], #[6])
 /- `2^63 <<< 1 = 2^64`; `a <<< 0 = a`; `0 <<< 2^64 = 0` (no abort). -/
 #guard (run natShlProg 100 "nat_shl" [0, 1, 1, 1]
-  { words := #[#[0x8000000000000000, 1, 0, 0, 0], #[2]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([2], #[#[0x8000000000000000, 1, 0, 1, 0], #[4]])
+  (Mem.ofWords [(POOL, #[0x8000000000000000, 1, 0, 0, 0]), (CTL, #[2])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([2], #[0x8000000000000000, 1, 0, 1, 0], #[4])
 #guard (run natShlProg 100 "nat_shl" [0, 1, 1, 0]
-  { words := #[#[7, 0, 0], #[1]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([1], #[#[7, 7, 0], #[2]])
+  (Mem.ofWords [(POOL, #[7, 0, 0]), (CTL, #[1])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([1], #[7, 7, 0], #[2])
 #guard (run natShlProg 100 "nat_shl" [0, 0, 0, 2]
-  { words := #[#[0, 1, 0], #[2]] }).toOption.map (·.1) == some [0]
+  (Mem.ofWords [(POOL, #[0, 1, 0]), (CTL, #[2])])).toOption.map (·.1) == some [0]
 
 section shl
 variable (p : Prog) (Pg : Array Word) (C : Nat)

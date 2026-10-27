@@ -151,15 +151,15 @@ def natBitsProg : Prog :=
   natProg ++ [("nat_land", natLand), ("nat_lor", natLor), ("nat_xor", natXor)]
 
 /- `0xF0 land 0x0F = 0` (operands at 0, 1; top at 2, after both). -/
-#guard (run natBitsProg 100 "nat_land" [0, 1, 1, 1] { words := #[#[0xF0, 0x0F, 0, 0], #[2]] }).toOption.map (·.1)
+#guard (run natBitsProg 100 "nat_land" [0, 1, 1, 1] (Mem.ofWords [(POOL, #[0xF0, 0x0F, 0, 0]), (CTL, #[2])])).toOption.map (·.1)
   == some [0]
 /- `0xF0 lor 0x0F = 0xFF` (same layout). -/
-#guard (run natBitsProg 100 "nat_lor" [0, 1, 1, 1] { words := #[#[0xF0, 0x0F, 0, 0], #[2]] }).toOption.map (fun (r, m) => (r, m.words))
-  == some ([1], #[#[0xF0, 0x0F, 0xFF, 0], #[3]])
+#guard (run natBitsProg 100 "nat_lor" [0, 1, 1, 1] (Mem.ofWords [(POOL, #[0xF0, 0x0F, 0, 0]), (CTL, #[2])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL))
+  == some ([1], #[0xF0, 0x0F, 0xFF, 0], #[3])
 /- `[1, 1] xor [1] = [0, 1]` (top limb survives, bottom cancels; length 2 after trim; operands at
 0 (len 2) and 2 (len 1), top at 3). -/
-#guard (run natBitsProg 100 "nat_xor" [0, 2, 2, 1] { words := #[#[1, 1, 1, 0, 0], #[3]] }).toOption.map
-  (fun (r, m) => (r, m.words)) == some ([2], #[#[1, 1, 1, 0, 1], #[5]])
+#guard (run natBitsProg 100 "nat_xor" [0, 2, 2, 1] (Mem.ofWords [(POOL, #[1, 1, 1, 0, 0]), (CTL, #[3])])).toOption.map
+  (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) == some ([2], #[1, 1, 1, 0, 1], #[5])
 
 section bits
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb) (Pg : Array Word) (C : Nat)

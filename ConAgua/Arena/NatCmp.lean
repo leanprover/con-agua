@@ -64,11 +64,11 @@ def natCmpProg : Prog := natProg ++ [("nat_cmp", natCmp)]
 
 /- `[1, 2]` vs `[3, 1]`: the top limb decides (`Gt`); `[5]` vs `[5]` is `Eq`; `[]` vs `[1]`
 is `Lt` by length. -/
-#guard (run natCmpProg 100 "nat_cmp" [0, 2, 2, 2] { words := #[#[1, 2, 3, 1], #[4]] }).toOption.map
+#guard (run natCmpProg 100 "nat_cmp" [0, 2, 2, 2] (Mem.ofWords [(POOL, #[1, 2, 3, 1]), (CTL, #[4])])).toOption.map
   (·.1) == some [2]
-#guard (run natCmpProg 100 "nat_cmp" [0, 1, 1, 1] { words := #[#[5, 5], #[2]] }).toOption.map
+#guard (run natCmpProg 100 "nat_cmp" [0, 1, 1, 1] (Mem.ofWords [(POOL, #[5, 5]), (CTL, #[2])])).toOption.map
   (·.1) == some [1]
-#guard (run natCmpProg 100 "nat_cmp" [0, 0, 0, 1] { words := #[#[1], #[1]] }).toOption.map
+#guard (run natCmpProg 100 "nat_cmp" [0, 0, 0, 1] (Mem.ofWords [(POOL, #[1]), (CTL, #[1])])).toOption.map
   (·.1) == some [0]
 
 /-- The invariant of the comparison loop over the pool `P` (unchanged): both slices have `la`

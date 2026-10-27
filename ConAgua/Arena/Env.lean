@@ -1365,9 +1365,10 @@ def envProg : Prog :=
 /- Push the axiom record at `EREC[0]` (name `0x10000005`, a `str` name) at counter 0, then find
 it in view 1 and miss it in view 0. -/
 #guard
-  let m : Mem := { words := (Array.replicate 132 (Array.replicate 140 0)) ++
-    #[Array.replicate 8 0, Array.replicate 32 0, Array.replicate 8 0, Array.replicate 4 0,
-      #[0, 0x10000005, 0, 0, 0, 0, 0, 0]] }
+  let m : Mem := Mem.ofWords
+    ((ArrTable.zeroWords (checkerArrays.filter (·.id < EIXA)) fun _ => 140) ++
+      [(EIXA, Array.replicate 8 0), (EIXS, Array.replicate 32 0), (EIXN, Array.replicate 8 0),
+       (ECON, Array.replicate 4 0), (EREC, #[0, 0x10000005, 0, 0, 0, 0, 0, 0])])
   match run envProg 100 "env_push" [0, 0] m with
   | .ok (r, m) =>
     r == [1] &&

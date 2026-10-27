@@ -1,6 +1,7 @@
 module
 
 meta import ConAgua.L.Semantics
+meta import ConAgua.Layout
 public import ConAgua.Scan.Leaves
 public import ConAgua.Scan.Utf8
 import ConAgua.Census.Attr
@@ -871,11 +872,11 @@ def keyProg : Prog :=
   [("key_at_g1", keyAtG1), ("key_at_g2", keyAtG2), ("key_at_g3", keyAtG3),
    ("key_at_g4", keyAtG4), ("key_at_g5", keyAtG5), ("key_at_g6", keyAtG6), ("key_at", keyAt)]
 
-#guard (run keyProg 100 "key_at" [0, 3] { bytes := #["\"app\"".toUTF8.data] }).toOption.map (·.1)
+#guard (run keyProg 100 "key_at" [0, 3] (Mem.ofBytes [(IN, "\"app\"".toUTF8.data)])).toOption.map (·.1)
   == some [2]
-#guard (run keyProg 100 "key_at" [0, 10] { bytes := #["\"binderInfo\"".toUTF8.data] }).toOption.map (·.1)
+#guard (run keyProg 100 "key_at" [0, 10] (Mem.ofBytes [(IN, "\"binderInfo\"".toUTF8.data)])).toOption.map (·.1)
   == some [5]
-#guard (run keyProg 100 "key_at" [0, 3] { bytes := #["\"xyz\"".toUTF8.data] }).toOption.map (·.1)
+#guard (run keyProg 100 "key_at" [0, 3] (Mem.ofBytes [(IN, "\"xyz\"".toUTF8.data)])).toOption.map (·.1)
   == some [0]
 
 end L.Scan.Key

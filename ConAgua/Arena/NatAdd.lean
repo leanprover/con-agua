@@ -1,6 +1,7 @@
 module
 
 meta import ConAgua.L.Semantics
+meta import ConAgua.Layout
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
 import ConAgua.Census.Attr
@@ -145,16 +146,16 @@ def natProg : Prog :=
 /- `(2^128 - 1) + 1 = 2^128`: limbs `[max, max]` at 0 and `[1]` at 2, top 3; the sum is
 `[0, 0, 1]` at 3 and the top moves to 6. -/
 #guard (run natProg 100 "nat_add" [0, 2, 2, 1]
-  { words := #[#[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 0, 0, 0], #[3]] }).toOption.map
-  (fun (r, m) => (r, m.words)) ==
-  some ([3], #[#[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 1, 0, 0], #[6]])
+  (Mem.ofWords [(POOL, #[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 0, 0, 0]), (CTL, #[3])])).toOption.map
+  (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([3], #[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 1, 0, 0], #[6])
 
 /- Normalisation: `0 + 0` has length 0 (the carry limb `0` is trimmed); the top stays. -/
-#guard (run natProg 100 "nat_add" [0, 0, 0, 0] { words := #[#[0, 0], #[0]] }).toOption.map (·.1)
+#guard (run natProg 100 "nat_add" [0, 0, 0, 0] (Mem.ofWords [(POOL, #[0, 0]), (CTL, #[0])])).toOption.map (·.1)
   == some [0]
 
 /- No room: `abort`. -/
-#guard (run natProg 100 "nat_add" [0, 1, 0, 1] { words := #[#[5, 0], #[1]] }).toOption.isNone
+#guard (run natProg 100 "nat_add" [0, 1, 0, 1] (Mem.ofWords [(POOL, #[5, 0]), (CTL, #[1])])).toOption.isNone
 
 section add
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)

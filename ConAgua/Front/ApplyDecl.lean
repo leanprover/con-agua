@@ -275,9 +275,9 @@ def declProg : Prog := exprProg ++
   [("lp_put", lpPut), ("decl_kind", declKind), ("decl_push", declPush), ("decl_cv", declCv),
    ("apply_decl", applyDecl)]
 
-/-- Every word array 128 words (all zero), the input `[0, 1]`. -/
+/-- Every word array of the front end's layout (`POOL`‥`Front.EIDS`) 128 words (all zero), the input `[0, 1]`. -/
 def declMem : Mem :=
-  { bytes := #["[0, 1]".toUTF8.data], words := Array.replicate 75 (Array.replicate 128 0) }
+  (Mem.ofWords (ArrTable.zeroWords (checkerArrays.filter (·.id ≤ Front.EIDS)) fun _ => 128)).putBytes IN "[0, 1]".toUTF8.data
 
 /-- Run the calls in turn; the results. -/
 def declRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word))
