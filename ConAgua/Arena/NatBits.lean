@@ -285,11 +285,12 @@ theorem natLand_spec (hpa : p.lookup "nat_land" = some natLand) (n : Nat) (s₀ 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        andLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
-        natTrim_spec p hpt n] <;>
-      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [BitInv, BitPost]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      andLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals grind (gen := 40) (ematch := 20) (splits := 30) (instances := 5000)
+      [arena_grind, lang_grind, BitInv, BitPost]
 
 set_option maxHeartbeats 2000000 in
 include hpl hpt in
@@ -319,11 +320,12 @@ theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : S
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        orLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
-        natTrim_spec p hpt n] <;>
-      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [BitInv, BitPost]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      orLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals grind (gen := 40) (ematch := 20) (splits := 30) (instances := 5000)
+      [arena_grind, lang_grind, BitInv, BitPost]
 
 set_option maxHeartbeats 2000000 in
 include hpl hpt in
@@ -353,11 +355,12 @@ theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : S
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        xorLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
-        natTrim_spec p hpt n] <;>
-      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [BitInv, BitPost]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      xorLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals grind (gen := 40) (ematch := 20) (splits := 30) (instances := 5000)
+      [arena_grind, lang_grind, BitInv, BitPost]
 
 end bitFn
 
