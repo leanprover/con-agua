@@ -121,7 +121,7 @@ macro "blk_list " kn:term "," s:term "," _s1:term "," sub:term "," lnk:term "," 
     stb:term : tactic =>
     `(tactic| (
   ikey_res
-  obtain ⟨o, c, mL, hl, rfl⟩ := list_arm b h64 hsize m m' 4 p $kn $s $sub i v e' rfl hiv hmem
+  obtain ⟨o, c, mL, hl, rfl⟩ := list_arm b m m' 4 p $kn $s $sub i v e' rfl hiv hmem
   obtain ⟨l1, l2, l3, l4, l5, l6, -⟩ := $lnk b h64 hsize v m xv ev (o, c, e') mL hx hI.2.1 hl
   simp only at l1 l2 l3 l6
   subst l1

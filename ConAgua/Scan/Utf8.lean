@@ -3,6 +3,7 @@ module
 meta import ConAgua.L.Semantics
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
+import ConAgua.L.PureEval
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -131,7 +132,15 @@ theorem utf8Char_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : W
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc]
+    all_goals simp only [Cond.pval, Expr.pval, show ∀ m a k, L.rd8 m a k = byteW (m.arr8 a) k from
+      fun _ _ _ => rfl, hm, Locals.init, St.setLoc_loc, St.setLoc_mem, List.getD_cons_zero,
+      List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true, Bool.or_eq_true] at *
+    all_goals clear hp
+    all_goals subst_vars
+    all_goals first
+      | (simp only [utf8CharN, Sig.retVal, Sig.retOr, *, reduceIte]; done)
+      | grind (splits := 40) [lang_grind, utf8CharN]
 
 end utf8Char
 

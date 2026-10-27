@@ -10,7 +10,6 @@ import ConAgua.L.GrindAttr
 `maClrK`, `maConstW`, `maConstW_eq`, `maClrK_some`, `noGoW`, `noG1` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 
@@ -161,14 +160,14 @@ theorem noGo_step (n : Nat) (ih : NoNodeSpec p n) : NoGoSpec p (n + 1) := by
       eView_spec p hv n, slContains_spec p hc n, memoFindG_spec noSch p _ hf n,
       memoPutG_spec noSch p _ hput n, ih] <;> finish (gen := 20)
 
-include hc hgo hnode in
+include hnode in
 theorem noNode_step (n : Nat) (ih : NoGoSpec p n) : NoNodeSpec p (n + 1) := by
   unfold NoGoSpec at ih
   intro s₀ no nl lo hi f1 g x y z
   simp only [invoke_eq _ hnode, callFn, nestOccNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      slContains_spec p hc n, ih] <;> finish (gen := 20)
+      ih] <;> finish (gen := 20)
 
 include hv hc hf hput hgo hnode in
 theorem noGo_spec (n : Nat) : NoGoSpec p n ∧ NoNodeSpec p n := by
@@ -177,7 +176,7 @@ theorem noGo_spec (n : Nat) : NoGoSpec p n ∧ NoNodeSpec p n := by
     constructor
     · intro s₀ no nl lo hi f h; rw [invoke_eq _ hgo]; simp only [callFn, nestOccGo]; vcgen [exec] <;> grind
     · intro s₀ no nl lo hi f1 g x y z; rw [invoke_eq _ hnode]; simp only [callFn, nestOccNode]; vcgen [exec] <;> grind
-  | succ n ih => exact ⟨noGo_step p hv hc hf hput hgo n ih.2, noNode_step p hc hgo hnode n ih.1⟩
+  | succ n ih => exact ⟨noGo_step p hv hc hf hput hgo n ih.2, noNode_step p hnode n ih.1⟩
 
 end spec
 

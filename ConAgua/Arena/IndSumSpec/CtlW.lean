@@ -1,3 +1,4 @@
+import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndSumSpec.CheckSumCtor
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -140,16 +141,19 @@ theorem ctlW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR)
       ctlW cR n s₀.mem vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL cqB = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.htail]
   simp only [callFn, checkSumCtorTailL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs,
     hcR (n + 1) "open_pis_at_fvars_f",
     plW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil (n + 1),
     internConst_spec p hP.hcf hP.hcp hP.hic (n + 1),
     gafF_spec p hP.ad (n + 1), gaaF_spec p hP.ad (n + 1),
     slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr hP.ad.ftd hP.hcr (n + 1), iarW_spec p hP.hiar hP.hcr (n + 1),
     fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd cR hcR n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
-    decide_eq_true_eq] at *)
+  all_goals subst_vars
+  -- the callee posts' `LocEq`s, unfolded, rewrite the locals before `grind` (as `tka_spec`)
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
+    beq_iff_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true] at *)
   all_goals grind (gen := 30) (instances := 5000) [lang_grind, arena_grind, ind_grind, ctlW]
 
 section arms
@@ -197,14 +201,17 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR
       ctorW cR n s₀.mem vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.hctor]
   simp only [callFn, checkSumCtorL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
     hcR (n + 2) "check_constant_val", stripPis_specF p hP.strip (n + 2),
     srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
       hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad (n + 2),
     hcR (n + 2) "open_pis_at_fvars_f", ftdsF_spec p hP.ad (n + 2),
     sdomsW_spec p hP.hg hP.hsd hP.ad.ftd cR hcR (n + 2), ctlW_spec p hP cR hcR n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
+  all_goals subst_vars
+  -- the callee posts' `LocEq`s, unfolded, rewrite the locals before `grind` (as `tka_spec`)
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init,
+    List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
   all_goals grind (gen := 30) (instances := 5000) [lang_grind, arena_grind, ind_grind, ctorW, rdW_eq]
 
 end L.Ind

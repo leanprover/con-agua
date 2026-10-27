@@ -13,12 +13,21 @@ ConAgua.Arena.LeafFns
 ConAgua.Checker.PreLoopWS
 ConAgua.Checker.PreLoopWSStages
 ConAgua.Checker.Prog
+ConAgua.Checker.ProgTab
+ConAgua.Checker.ProgNrt
+ConAgua.Checker.ProgSkt
 ConAgua.Checker.ProgWf
 ConAgua.Checker.Asm
 ConAgua.Checker.AsmPart0
 ConAgua.Checker.AsmPart1
 ConAgua.Checker.AsmPart2
 ConAgua.Checker.AsmPart3
+ConAgua.Checker.AsmPart4
+ConAgua.Checker.AsmPart5
+ConAgua.Checker.AsmPart6
+ConAgua.Checker.AsmPart7
+ConAgua.Checker.AsmPart8
+ConAgua.Checker.AsmPart9
 # macros, notations, syntax used by other modules: a name in a quotation must resolve in the macro's module
 ConAgua.Arena.AndPinScratch
 ConAgua.Arena.ArenaRel

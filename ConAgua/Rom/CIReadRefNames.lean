@@ -163,7 +163,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
     have hIW2 : (m1.set64 EREC o (r1.headD 0)).arr64 IW = m1.arr64 IW :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have hd1 : rom.drop (r1.tail.headD 0).toNat = encNames xs ++ rest :=
-      drop_shift rom hr q (encName x) (encNames xs) rest (by rw [hd0, List.append_assoc]) _ hq1
+      drop_shift rom q (encName x) (encNames xs) rest (by rw [hd0, List.append_assoc]) _ hq1
     have ho1 : (o + 1).toNat = o.toNat + 1 := by
       have := hI.er_lt; simp at hot; rw [UInt64.toNat_add]; simp; omega
     have hk1' : (kw - 1).toNat = xs.length := by

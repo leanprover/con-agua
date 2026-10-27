@@ -2,7 +2,6 @@ import ConAgua.Front.LineRefine
 import ConAgua.Front.DriverRefine
 import ConAgua.Scan.Validator
 import ConRon.Bridge.Frontend.Chunks
-set_option linter.unusedSectionVars false
 
 /-!
 # Bytes → stores: `front_run()` refines con-ron's `parseBytes`
@@ -132,6 +131,7 @@ theorem frontInitW_mode (m m' : Mem) (hW : frontInitW m = some m') (hmo : ModeOK
     exact MemFrame.modeOK (tblPutW_frame (.inr (.inl rfl)) hp')
       (h := MemFrame.modeOK (consInternM_frame zeroCS_wf hI') (by decide) (by decide) e1)
 
+omit h64 hsize in
 /-- `front_init`'s model, from a memory related to `a` and the blank parse state, establishes the
 driver's invariant. -/
 theorem initKW_inv : ∀ (m m₁ : Mem) (a : AState),
@@ -165,7 +165,7 @@ theorem frontRunW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
   runI_refines (FrontInv b) b h64 hsize (lineKW p b.data)
     (lineKW_step b h64 hsize p hFI hAI hII hXI)
     (fun m a => m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m StateD.blank ∧ ConRon.Bridge.StateOK a ∧
-      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧ ModeOK m) initKW (initKW_inv b h64 hsize)
+      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧ ModeOK m) initKW (initKW_inv b)
     m m' a₀ ⟨hm, hA, hD, hok, hoff, hpins, hmo⟩ h
 
 end refine
@@ -206,7 +206,7 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hFI : L.Front.Ind.IndFieldLookups p) (hAI : L.Front.Ind.IndApplyLookups p)
   (hII : L.Front.Ind.IndInstallLookups p) (hXI : L.Front.Ind.IndLineLookups p)
 
-include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz in
+include hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz in
 /-- `front_line` under a run invariant `Inv` that bounds the pool's top (`hInv`) and that every
 line applied keeps (`hpres`, a fact of the model). -/
 theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Inv : Mem → Prop)
@@ -221,7 +221,7 @@ theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Inv : Mem → 
   have hi' : i.toNat ≤ b.size := by have := L.Scan.lt_of_lt_ofNat hi; omega
   obtain ⟨h1, h2⟩ := hInv _ hI
   have h := Triple.keep hE.no_st8
-    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n s₀ hm i hi' h1 h2)
+    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n s₀ hm i hi' h1 h2)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hW, hk, hl⟩ := M.of_run (P := fun s => s = s₀) hs hrun h
@@ -262,7 +262,7 @@ theorem initK_inv (Inv : Mem → AState → StateD → Prop) (Inv₀ : Mem → A
   obtain ⟨st₀, a₁, -, hI⟩ := hinit _ _ _ h₀ hi
   exact ⟨a₁, st₀, hI⟩
 
-include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz hpi hpd hFI hAI hII hXI in
+include hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz hpi hpd hFI hAI hII hXI in
 /-- **Bytes → stores, in one theorem**: when `front_run()` returns `0` on a memory holding the
 input `b` and related to the arena state `a₀` (by `ArenaD`) and to the blank parse state, con-ron's
 `parseBytes b` accepts from `a₀`, and the memory after is related to its final arena state by
@@ -282,12 +282,12 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   intro s r s' hs hrun h0
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
     (frontRun_specI p (lineKW p b.data) b.data (fun m => ∃ a st, FrontInv b m a st)
-      (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data
+      (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data
         hsize _ (fun m ⟨_, _, hI⟩ => ⟨hI.2.1.1.lit.1.2.2.1, hI.2.1.1.lit.1.2.2.2.1⟩)
         (inv_step p (FrontInv b) b h64 hsize
           (fun m m' i ok nx st a hI hi h hok => lineKW_step b h64 hsize p hFI hAI hII hXI m m' i ok nx
             st a hI hi h hok)) n s₁ i hm hI hi)
-      initKW s₀.mem (fun n s₁ hs₁ => initK_inv p hL hE hpi (FrontInv b) _ (initKW_inv b h64 hsize)
+      initKW s₀.mem (fun n s₁ hs₁ => initK_inv p hL hE hpi (FrontInv b) _ (initKW_inv b)
         s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins, hmode⟩ n s₁ hs₁)
       hpd n s₀ hm rfl)
   rw [h0] at hW
@@ -362,7 +362,7 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     invoke frontAllProg (exec frontAllProg n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
       ArenaD s'.mem a' ∧ StateDR s'.mem st'; ⊤⦄ :=
-  frontRun_refines frontAllProg frontAllProg_scan frontAllProg_front rfl rfl rfl rfl rfl rfl rfl
+  frontRun_refines frontAllProg frontAllProg_scan frontAllProg_front rfl rfl rfl rfl rfl rfl
     frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl rfl rfl frontAllProg_indFields
     frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine b h64 hsize n s₀ hm hpool a₀ hA hD
     hok hoff hpins hmode

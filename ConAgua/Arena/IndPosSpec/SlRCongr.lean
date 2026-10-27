@@ -6,7 +6,6 @@ import ConAgua.Arena.IndLibSpec
 `slR_congr`.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

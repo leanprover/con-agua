@@ -12,7 +12,6 @@ import ConAgua.L.ModelGen
 `appHole_spec`, `ahWf`, `ahW_ok`, `LowFr.refl`, `LowFr.trans`, `sointernW_low` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 
@@ -265,7 +264,7 @@ theorem rpGo_step (n : Nat) (ih : RpNodeSpec p n) : RpGoSpec p (n + 1) := by
       eView_spec p hl.hv n, appHole_spec' p hl n, memoFindG_spec raSch p _ hf n,
       memoPutG_spec raSch p _ hput n, ih] <;> finish (gen := 20) [St.setLocs_mem']
 
-include hl hk hgo hnode in
+include hl hk hnode in
 theorem rpNode_step (n : Nat) (ih : RpGoSpec p n) : RpNodeSpec p (n + 1) := by
   unfold RpGoSpec at ih
   intro s₀ no nl us b nn f1 h g x y z
@@ -286,7 +285,7 @@ theorem rpGo_spec (n : Nat) : RpGoSpec p n ∧ RpNodeSpec p n := by
     constructor
     · intro s₀ no nl us b nn f h; rw [invoke_eq _ hgo]; simp only [callFn, replaceAppsGo]; vcgen [exec] <;> grind
     · intro s₀ no nl us b nn f1 h g x y z; rw [invoke_eq _ hnode]; simp only [callFn, replaceAppsNode]; vcgen [exec] <;> grind
-  | succ n ih => exact ⟨rpGo_step p hl hf hput hgo n ih.2, rpNode_step p hl hk hgo hnode n ih.1⟩
+  | succ n ih => exact ⟨rpGo_step p hl hf hput hgo n ih.2, rpNode_step p hl hk hnode n ih.1⟩
 
 end spec
 

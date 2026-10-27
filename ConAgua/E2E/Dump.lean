@@ -88,6 +88,45 @@ unsafe def evalProgConst (n : Name) : MetaM L.Prog := do
   | .ok p => pure p
   | .error e => throwError "eval {n}: {e}"
 
+/-- The bindings one constant contributes (its own `Prog` value, the lookups its type states,
+those parametric in the ROM), and the errors evaluating them. -/
+unsafe def bindingsOf (n : Name) (ci : ConstantInfo) :
+    MetaM (Array (String × String × L.FunDecl) × Array String) := do
+  let env ← getEnv
+  let mut binds : Array (String × String × L.FunDecl) := #[]
+  let mut errs : Array String := #[]
+  -- a `Prog` without code (`noncomputable`, e.g. `checkerProg.chunk<j>`) is a view of another
+  if ci.type == mkConst ``L.Prog && ci matches .defnInfo _ && !isNoncomputable env n then
+    try
+      let p ← evalProgConst n
+      let mut names : Std.HashSet String := {}
+      for (f, d) in p do
+        unless names.contains f do
+          names := names.insert f
+          binds := binds.push (s!"{n}", f, d)
+    catch e => errs := errs.push s!"{n}: {← e.toMessageData.toString}"
+  for (f, de) in lookupsIn ci.type do
+    try
+      let d ← evalFunDecl de
+      binds := binds.push (s!"{n}", f, d)
+    catch e => errs := errs.push s!"{n} {f}: {← e.toMessageData.toString}"
+  -- lookups parametric in the ROM (`NameProg rom p`, …): instantiated at the program's ROM
+  if env.contains romName then
+    let found ← Meta.forallTelescope ci.type fun xs body => do
+      let mut out := #[]
+      let roms ← xs.filterM fun x => do return (← Meta.inferType x) == romTy
+      if roms.isEmpty then return out
+      for (f, de) in lookupsInF body do
+        let de' := de.replaceFVars roms (roms.map fun _ => mkConst romName)
+        if !de'.hasFVar then out := out.push (f, de')
+      return out
+    for (f, de) in found do
+      try
+        let d ← evalFunDecl de
+        binds := binds.push (s!"{n}@rom", f, d)
+      catch e => errs := errs.push s!"{n} {f}: {← e.toMessageData.toString}"
+  return (binds, errs)
+
 unsafe def dumpBindingsImpl (out : System.FilePath) : CommandElabM Unit := liftTermElabM do
   let env ← getEnv
   let mut binds : Array (String × String × L.FunDecl) := #[]
@@ -97,35 +136,10 @@ unsafe def dumpBindingsImpl (out : System.FilePath) : CommandElabM Unit := liftT
     let some mi := env.getModuleIdxFor? n | continue
     let mod := env.header.moduleNames[mi.toNat]!
     unless (`ConAgua).isPrefixOf mod do continue
-    if ci.type == mkConst ``L.Prog && ci matches .defnInfo _ then
-      try
-        let p ← evalProgConst n
-        let mut names : Std.HashSet String := {}
-        for (f, d) in p do
-          unless names.contains f do
-            names := names.insert f
-            binds := binds.push (s!"{n}", f, d)
-      catch e => errs := errs.push s!"{n}: {← e.toMessageData.toString}"
-    for (f, de) in lookupsIn ci.type do
-      try
-        let d ← evalFunDecl de
-        binds := binds.push (s!"{n}", f, d)
-      catch e => errs := errs.push s!"{n} {f}: {← e.toMessageData.toString}"
-    -- lookups parametric in the ROM (`NameProg rom p`, …): instantiated at the program's ROM
-    if env.contains romName then
-      let found ← Meta.forallTelescope ci.type fun xs body => do
-        let mut out := #[]
-        let roms ← xs.filterM fun x => do return (← Meta.inferType x) == romTy
-        if roms.isEmpty then return out
-        for (f, de) in lookupsInF body do
-          let de' := de.replaceFVars roms (roms.map fun _ => mkConst romName)
-          if !de'.hasFVar then out := out.push (f, de')
-        return out
-      for (f, de) in found do
-        try
-          let d ← evalFunDecl de
-          binds := binds.push (s!"{n}@rom", f, d)
-        catch e => errs := errs.push s!"{n} {f}: {← e.toMessageData.toString}"
+    -- each constant has its own heartbeat budget (one command reads every constant of the closure)
+    let (bs, es) ← withCurrHeartbeats (bindingsOf n ci)
+    binds := binds ++ bs
+    errs := errs ++ es
   -- distinct bodies by their text
   let mut bodies : Std.HashMap String Nat := {}
   let mut fnLines : Array String := #[]

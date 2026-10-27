@@ -3,7 +3,6 @@ import ConAgua.Arena.DerRel
 import ConAgua.Front.FieldsLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # `str_put_esc` against con-leche's `scanString`
@@ -390,6 +389,7 @@ theorem poolInv_wrs (bs : List UInt8) : ∀ (m : Mem) (k : Word) (L : List UInt8
         rw [UInt64.ofNat_add]; simp; ac_rfl]
     simpa using this
 
+omit hs ht in
 /-- What `utf8_put` did, when it returned. -/
 theorem u8PutW_eq (m : Mem) (k cp k' : Word) (m' : Mem) (h : u8PutW m top k cp = some (k', m')) :
     k' = k + UInt64.ofNat (encW cp).length ∧
@@ -437,7 +437,7 @@ theorem poolInv_u8 (m : Mem) (k : Word) (L : List UInt8) (v : UInt32) (k' : Word
     (h : PoolInv m₀ m top k L) (hv : v.toNat.isValidChar)
     (hu : u8PutW m top k v.toUInt64 = some (k', m')) :
     PoolInv m₀ m' top k' (L ++ (utf8Of v).data.toList) := by
-  obtain ⟨rfl, rfl, hl, h4⟩ := u8PutW_eq m₀ hs top ht m k _ k' m' hu
+  obtain ⟨rfl, rfl, hl, h4⟩ := u8PutW_eq top m k _ k' m' hu
   have hw := utf8Of_words v hv
   have hlen' : (encW v.toUInt64).length = (utf8Of v).data.toList.length := by
     rw [← hw, List.length_map]
@@ -626,7 +626,7 @@ theorem strR_body (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
     rw [h0] at hq; exact hq (by decide)
   have hv1 : (v + 1).toNat = v.toNat + 1 := usizeStep b v hv
   have hcU : (v + 1).toUInt64 = c := by
-    rw [ConAgua.Scan.RecordsLink.succ_toUInt64 b h64 hsize, hc]
+    rw [ConAgua.Scan.RecordsLink.succ_toUInt64 h64, hc]
   have hsc := strClose_toNat_eq b h64 (by omega) (v + 1)
   dsimp only at h
   split at h
@@ -640,7 +640,7 @@ theorem strR_body (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
   have hcN : c.toNat = (v + 1).toNat := by rw [← hcU, USize.toNat_toUInt64]
   have hE : e = strClose b (v + 1) + 1 → d.toNat = (strClose b (v + 1)).toNat := by
     intro he'
-    rw [← hd, he', ConAgua.Scan.RecordsLink.succ_toUInt64 b h64 hsize, UInt64.add_sub_cancel,
+    rw [← hd, he', ConAgua.Scan.RecordsLink.succ_toUInt64 h64, UInt64.add_sub_cancel,
       USize.toNat_toUInt64]
   split at h
   · rename_i hesc
@@ -728,7 +728,7 @@ theorem strPutEsc_spec (p : Prog) (hpb : p.lookup "byte_in" = some L.Scan.Str.by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hr, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (strPutEsc_specW p b.data hsize hpb hph hp4 hp3 hps hpo hpu hpe n s₀ hm c d)
+    (strPutEsc_specW p b.data hpb hph hp4 hp3 hps hpo hpu hpe n s₀ hm c d)
   subst hs
   obtain ⟨hg, hsl, hk⟩ := strPutEsc_link h64 b hsize s.mem s'.mem hR.lit.1 c d str hS _ hW
   exact ⟨hloc, hr, hg, hsl, hk, ArenaR.grow _ _ hg _ hR, DerR.grow _ _ hg _⟩

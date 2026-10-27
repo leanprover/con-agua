@@ -200,7 +200,7 @@ theorem romNamesToW_ok (ns : List ConLeche.Name) (hns : ns.all nameFits = true) 
     have hR2 : ArenaD (m₁.set64 PINS d h₁) (AM.st (internName x) a) :=
       ArenaD.frameHi (MemFrame.set64 m₁ PINS (by decide) d h₁) (by simp [PINS]) (by simp) hR1
     have hdq : rom.drop q₁.toNat = encNames xs ++ rest :=
-      drop_shift rom hr q (encName x) (encNames xs) rest (by rw [hd', List.append_assoc]) q₁ hq1
+      drop_shift rom q (encName x) (encNames xs) rest (by rw [hd', List.append_assoc]) q₁ hq1
     have hk1 : (k - 1).toNat = xs.length := by
       have : 1 ≤ k.toNat := by simp at hk; omega
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using this))]
@@ -472,7 +472,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   obtain ⟨ok1, hR1, hq, hf1', hl1, hj1, hk1⟩ := romNamesToW_ok rom hr pinNames hf1 n m a off _ 51 1 q m₁ hA hmo
     hd (by simp [pinNames_length]) (by simp [pinNames_length]) h1
   have hd2 : rom.drop q.toNat = encNames reservedBasisNameValues ++ rest :=
-    drop_shift rom hr off (encNames pinNames) (encNames reservedBasisNameValues) rest
+    drop_shift rom off (encNames pinNames) (encNames reservedBasisNameValues) rest
       (by rw [hd, List.append_assoc]) q hq
   cases h2 : romNamesToW rom n m₁ q 16 55 with
   | none => rw [h2] at hW; simp [irp2K] at hW

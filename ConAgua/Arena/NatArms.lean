@@ -4,6 +4,7 @@ import ConAgua.Arena.NatCmp
 import ConAgua.Arena.NatBitsNat
 import ConAgua.Arena.NatPow
 import ConAgua.Arena.NatShr
+import ConAgua.Arena.NatShl
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatGrindAttr
 import ConAgua.L.GrindAttr

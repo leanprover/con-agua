@@ -342,13 +342,13 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   | succ k =>
   obtain ⟨r2, m10, h2, hw⟩ := ntBW_inv hw
   have hd2 : rom.drop (r1.tail.headD 0).toNat = encNameL caps.all ++ (encNameL caps.ctors ++
-      (encNameL (pwNames caps.sortZ) ++ rest)) := drop_shift rom hr _ (encName caps.etaCtor) _ _ (by rw [hdn, List.append_assoc]) _ hq1
+      (encNameL (pwNames caps.sortZ) ++ rest)) := drop_shift rom _ (encName caps.etaCtor) _ _ (by rw [hdn, List.append_assoc]) _ hq1
   obtain ⟨wsA, a2, hrun2, hltA, hI10, hM10, hs10, hq2, hek10, ht10, hIW10, hH10⟩ :=
     nameSl_rel hL hr seen memo caps.all hfa k _ a1 _ (c + 10) _ _ m10 hI9 hM9 hd2
       (by comega) (by comega) h2
   obtain ⟨r3, m11, h3, hw⟩ := ntBW_inv hw
   have hd3 : rom.drop (r2.headD 0).toNat = encNameL caps.ctors ++ (encNameL (pwNames caps.sortZ) ++ rest) :=
-    drop_shift rom hr _ (encNameL caps.all) _ _ (by rw [hd2, List.append_assoc]) _ hq2
+    drop_shift rom _ (encNameL caps.all) _ _ (by rw [hd2, List.append_assoc]) _ hq2
   obtain ⟨wsC, a3, hrun3, hltC, hI11, hM11, hs11, hq3, hek11, ht11, hIW11, hH11⟩ :=
     nameSl_rel hL hr seen memo caps.ctors hfc k _ a2 _ (c + 13) _ _ m11 hI10 hM10 hd3
       (by comega) (by comega) h3
@@ -356,7 +356,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hd4 : rom.drop (r3.headD 0).toNat = encNameL (pwNames caps.sortZ) ++ rest :=
-    drop_shift rom hr _ (encNameL caps.ctors) _ _ (by rw [hd3, List.append_assoc]) _ hq3
+    drop_shift rom _ (encNameL caps.ctors) _ _ (by rw [hd3, List.append_assoc]) _ hq3
   obtain ⟨wsZ, a4, hrun4, -, hI12, hM12, hs12, hq4, hek12, ht12, hIW12, hH12⟩ :=
     nameSl_rel hL hr seen memo (pwNames caps.sortZ) hfz k _ a3 _ (c + 8) _ _ m12 hI11 hM11 hd4
       (by comega) (by comega) h4

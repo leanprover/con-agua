@@ -761,7 +761,7 @@ theorem lsLoop_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : S
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ld64, st64, ih,
         L.Scan.Leaves.numEnd_spec p hE.skip_digits hE.num_end b hb64 n,
-        L.Front.Fields.readNat_spec p b hb hE.read_nat n,
+        L.Front.Fields.readNat_spec p b hE.read_nat n,
         levelGet_spec p hE.front n] <;> finish [NONE]
 
 theorem lsLoop_step_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St) :
@@ -852,7 +852,7 @@ theorem nodeLit_spec (b : Array UInt8) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8
           hE.intern_lit n] <;>
       finish [litW, Keep.size]
 
-theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
+theorem nodeLitStr_spec (b : Array UInt8)
     (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
     (hph : p.lookup "hex_val" = some L.Scan.Str.hexVal)
     (hp4 : p.lookup "hex4" = some L.Scan.Str.hex4) (hp3 : p.lookup "hex3" = some L.Scan.Str.hex3)
@@ -874,7 +874,7 @@ theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
         ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
           strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
           Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
-      Triple.keep hE.no_st8 (strPutEsc_specW p b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n s₁ hm₁ c d)
+      Triple.keep hE.no_st8 (strPutEsc_specW p b hpb hph hp4 hp3 hpsu hpo hpu hpe n s₁ hm₁ c d)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
         internLitStr_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match_str hE.lit_find_str
@@ -923,7 +923,7 @@ theorem exprNode_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
         internSort_spec p hE.sort_find hE.sort_push hE.intern_sort n,
         nodeBin_spec p hE n, nodeLet_spec p hE n, nodeProj_spec p hE n,
         nodeConst_spec p hE b hb n, nodeLit_spec p hE b n,
-        nodeLitStr_spec p hE b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
+        nodeLitStr_spec p hE b hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
       finish [nodeW, NONE]
 
 theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)

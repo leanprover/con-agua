@@ -307,7 +307,7 @@ theorem frontLineE_claim (p : Prog) (hS : ScanLookups p) (hFI : L.Front.Ind.IndF
   | ok q1 =>
   obtain ⟨r1, m₁⟩ := q1
   rw [h1] at he
-  obtain ⟨s1, hs1, hsm, hr1⟩ := triple_of_callE (L.Scan.Line.scanLine_spec p b.data hsize (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "hints_num") (hS.get "hints_obj") (hS.get "scan_hints") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "scan_str_name") (hS.get "scan_num_name") (hS.get "scan_app") (hS.get "scan_binder") (hS.get "scan_let") (hS.get "scan_const") (hS.get "scan_proj") (hS.get "scan_rule") (hS.get "scan_rules") (hS.get "scan_ind_rec") (hS.get "scan_ind_recs") (hS.get "scan_ind_type") (hS.get "scan_ind_types") (hS.get "scan_ind_ctor") (hS.get "scan_ind_ctors") (hS.get "scan_axiom") (hS.get "scan_def") (hS.get "scan_thm") (hS.get "scan_opaque") (hS.get "scan_quot") (hS.get "scan_ind_decl") (hS.get "skip_braced") (hS.get "scan_quoted_nat") (hS.get "scan_line_loop") (hS.get "scan_line") (hS.get "validate") n ⟨m, Locals.init []⟩ hm i.toUInt64 hi') h1
+  obtain ⟨s1, hs1, hsm, hr1⟩ := triple_of_callE (L.Scan.Line.scanLine_spec p b.data hsize (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "hints_num") (hS.get "hints_obj") (hS.get "scan_hints") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "scan_str_name") (hS.get "scan_num_name") (hS.get "scan_app") (hS.get "scan_binder") (hS.get "scan_let") (hS.get "scan_const") (hS.get "scan_proj") (hS.get "scan_rule") (hS.get "scan_rules") (hS.get "scan_ind_rec") (hS.get "scan_ind_recs") (hS.get "scan_ind_type") (hS.get "scan_ind_types") (hS.get "scan_ind_ctor") (hS.get "scan_ind_ctors") (hS.get "scan_axiom") (hS.get "scan_def") (hS.get "scan_thm") (hS.get "scan_opaque") (hS.get "scan_quot") (hS.get "scan_ind_decl") (hS.get "skip_braced") (hS.get "scan_quoted_nat") (hS.get "scan_line_loop") (hS.get "scan_line") n ⟨m, Locals.init []⟩ hm i.toUInt64 hi') h1
   have hm1 : m₁ = m := by rw [← hs1, hsm]
   rw [hm1] at he
   subst hr1
@@ -371,7 +371,7 @@ theorem frontLineE_claim (p : Prog) (hS : ScanLookups p) (hFI : L.Front.Ind.IndF
       · cases hsc'; rfl
       · cases hsc'
   subst hrr
-  rw [← succ_toUInt64 b h64 hsize] at h3
+  rw [← succ_toUInt64 h64] at h3
   exact applyAnyE_claim p hS hFI hDL hF hXI hpz hV
     (fun g hg => hnv g (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hg ⊢; rcases hg with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp))
     hnvD h64 hsize hSL hm hA hD hok hX (s + 1) r' j hloop n e
@@ -546,7 +546,7 @@ theorem loop1_claim : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : Stat
   obtain ⟨r1, m₁⟩ := q1
   rw [h1] at he
   have hK := triple_of_callE (frontLineK_spec frontAllProg frontAllProg_scan frontAllProg_front rfl
-      rfl rfl rfl rfl rfl rfl frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl
+      rfl rfl rfl rfl rfl frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl
       b.data hsize (fun m => ∃ a st, FrontInvOK D b m a st)
       (fun m ⟨_, _, hI⟩ => ⟨hI.1.2.1.1.lit.1.2.2.1, hI.1.2.1.1.lit.1.2.2.2.1⟩)
       (inv_step frontAllProg (FrontInvOK D b) b h64 hsize
@@ -599,7 +599,7 @@ theorem frontRunE_claim (n : Nat) (m : Mem) (a₀ : AState) (hm : m.arr8 IN = b.
   obtain ⟨s1, hs1, hK1, -, -⟩ := triple_of_callE
     (frontInitK_spec frontAllProg frontAllProg_front frontAllProg_expr rfl n ⟨m, Locals.init []⟩) h1
   rw [hs1] at hK1
-  obtain ⟨st₀, a₁, hrun, hI⟩ := initKW_inv_ok D b h64 hsize m m₁ a₀
+  obtain ⟨st₀, a₁, hrun, hI⟩ := initKW_inv_ok D b m m₁ a₀
     ⟨hm, hA, hD, hok, hoff, hpins, hR, hmode⟩ hK1
   have hz : (0 : USize).toUInt64 = 0 := rfl
   rw [← hz] at he

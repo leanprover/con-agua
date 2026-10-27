@@ -2,12 +2,12 @@ module
 
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
-public import ConAgua.Arena.NatShl
+public import ConAgua.Arena.NatAdd
+public import ConAgua.Arena.NatShiftFacts
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.NatCmp
+import ConAgua.Arena.NatCmpFacts
 import ConAgua.Arena.NatGrindAttr
-import ConAgua.Arena.NatSub
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -79,27 +79,6 @@ theorem shr_split (x y b : Word) (hb : b.toNat < 64) :
 grind_pattern [arena_grind] shr_split => (x >>> b) ||| ((y <<< 1) <<< (63 - b))
 
 /-! ## The division at the end -/
-
-theorem pv_append (p : Array Word) (o w k : Nat) :
-    pv p o (w + k) = pv p o w + wt w * pv p (o + w) k := by
-  induction k with
-  | zero => simp [pv]
-  | succ k ih =>
-    rw [← Nat.add_assoc, pv, ih, pv, wt_add w k (w + k) rfl,
-      show o + (w + k) = o + w + k by omega]
-    grind
-
-theorem pv_ge_wt (p : Array Word) (o l : Nat) (hl : 0 < l) (hn : Norm p o l) :
-    wt (l - 1) ≤ pv p o l := by
-  obtain ⟨j, rfl⟩ : ∃ j, l = j + 1 := ⟨l - 1, by omega⟩
-  simp only [Nat.add_sub_cancel, pv]
-  have : (p[o + j]?.getD 0) ≠ 0 := hn (by omega)
-  have : 1 ≤ (p[o + j]?.getD 0).toNat := by
-    rcases Nat.eq_zero_or_pos (p[o + j]?.getD 0).toNat with h | h
-    · exact absurd (UInt64.toNat_inj.mp (h.trans UInt64.toNat_zero.symm)) this
-    · exact h
-  have := Nat.mul_le_mul_right (wt j) this
-  omega
 
 /-- The shift that skips `w < la` limbs: the quotient is what the loop computed. -/
 theorem shr_val (P : Array Word) (oa la w o l S R : Nat) (ho : o = oa + w) (hl : l = la - w)

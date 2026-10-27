@@ -1,6 +1,7 @@
 import ConAgua.Arena.NatArms
 import ConAgua.Arena.Pins
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LdRd
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -184,7 +185,13 @@ theorem natArmsR_arena : NatArmsR ArenaR :=
     natLorLit_refinesA, natXorLit_refinesA, natShlLit_refinesA, natShrLit_refinesA,
     natBeqLit_refinesA, natBleLit_refinesA⟩
 
--- the sixteen arms in one `vcgen`, about 17 s
+/-- A pin read by `ld64_rd_spec`, at a literal index, is `pinW`. -/
+theorem rdW_PINS_ofNat (m : Mem) (k : Nat) :
+    rdW (m.arr64 PINS) (no_index (OfNat.ofNat k : Word)) = pinW m (k % 2 ^ 64) := by
+  simp only [rdW, pinW]
+  rfl
+
+-- the sixteen arms in one `vcgen`, then plain `grind` per goal (about 15 s)
 set_option maxHeartbeats 2000000 in
 /-- **`nat_op_result` refines `natOpResult`** under any relation `R` its arms keep (`NatArmsR`),
 and `PinsR`: the pin reads, the dispatch and every arm. The operands are normalised slices (every
@@ -231,14 +238,21 @@ theorem natOpResultL_refinesR (R : Mem → AState → Prop) (harms : NatArmsR R)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        (harms.pred n · a₀), (harms.add n · a₀), (harms.sub n · a₀),
-        (harms.mul n · a₀), (harms.pow n · a₀), (harms.div n · a₀),
-        (harms.mod n · a₀), (harms.gcd n · a₀), (harms.land n · a₀),
-        (harms.lor n · a₀), (harms.xor n · a₀), (harms.shl n · a₀),
-        (harms.shr n · a₀), (harms.beq n · a₀), (harms.ble n · a₀)] <;>
-      finish [natOpSel, pinW_eq, PinsFull.size, PinsFull.names_lt, PinsFull.lv_lt]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+      (harms.pred n · a₀), (harms.add n · a₀), (harms.sub n · a₀),
+      (harms.mul n · a₀), (harms.pow n · a₀), (harms.div n · a₀),
+      (harms.mod n · a₀), (harms.gcd n · a₀), (harms.land n · a₀),
+      (harms.lor n · a₀), (harms.xor n · a₀), (harms.shl n · a₀),
+      (harms.shr n · a₀), (harms.beq n · a₀), (harms.ble n · a₀)]
+    -- `harms` is spent: every goal would carry its fifteen triples into `grind`
+    all_goals clear harms
+    all_goals subst_vars
+    all_goals (try exact LocEq.restore _ _)
+    all_goals (try assumption)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff, reduceIte,
+      beq_iff_eq, rdW_PINS_ofNat, Nat.reduceMod, Nat.reducePow] at *)
+    all_goals grind [lang_grind, arena_grind, natOpSel, PinsFull.size, PinsFull.names_lt, PinsFull.lv_lt]
 
 
 /-- **`nat_op_result` refines `natOpResult`** under `ArenaR` and `PinsR`. -/

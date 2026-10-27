@@ -6,7 +6,6 @@ import ConAgua.Arena.IndPosSpec.RpGoStep
 The refinement theorems `appHole_refines`, `replaceAppsGo_refines`, `replaceApps_refines` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

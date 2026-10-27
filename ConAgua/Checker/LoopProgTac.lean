@@ -47,11 +47,14 @@ elab "chunk_checker_prog" : command => liftTermElabM <|
     let n := ``checkerProg ++ Name.mkSimple s!"chunk{cs.size}"
     let lit ← mkListLit elemTy (elems.extract i (i + chkChunk)).toList
     addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit (.regular 0) .safe []))
+    -- no code: a view of `checkerProg` for the kernel (the program dump skips it)
+    modifyEnv (addNoncomputable · n)
     cs := cs.push (mkConst n)
     i := i + chkChunk
   let csLit ← mkListLit progTy cs.toList
   addDecl (.defnDecl (mkDefinitionValEx `L.Checker.checkerChunks [] (mkApp (mkConst ``List [0]) progTy) csLit
     (.regular 0) .safe []))
+  modifyEnv (addNoncomputable · `L.Checker.checkerChunks)
   let rhs := mkApp2 (mkConst ``List.flatten [0]) elemTy (mkConst `L.Checker.checkerChunks)
   addDecl (L.Compiler.thm `L.Checker.checkerProg_chunks (mkApp3 (mkConst ``Eq [1]) progTy (mkConst ``checkerProg) rhs)
     (mkApp2 (mkConst ``Eq.refl [1]) progTy (mkConst ``checkerProg)) [])

@@ -8,7 +8,6 @@ import ConAgua.Arena.IndGrindAttr
 `LowFr`, `mkAppW_low`, `mkLamW_low`, `mkForallW_low`, `mkLetW_low`, `mkProjW_low` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

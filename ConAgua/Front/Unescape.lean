@@ -453,6 +453,7 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
   (hpe : p.lookup "str_put_esc" = some strPutEsc)
 include hb
 
+omit hb in
 include hpb hph hp3 hps in
 attribute [local lang_grind] escSurN pairCp in
 theorem escSur_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : Word) :
@@ -466,8 +467,9 @@ theorem escSur_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : W
   | succ n =>
     sym (gen := 24) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Scan.Str.byteIn_spec p b hb hpb n, L.Scan.Str.hex3_spec p b hb hpb hph hp3 n] <;> finish
+        L.Scan.Str.byteIn_spec p b hpb n, L.Scan.Str.hex3_spec p b hpb hph hp3 n] <;> finish
 
+omit hb in
 include hpb hph hp4 hp3 hps hpo in
 attribute [local lang_grind] escOneN in
 theorem escOne_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
@@ -482,8 +484,8 @@ theorem escOne_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Wor
   | succ n =>
     sym (gen := 24) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Scan.Str.byteIn_spec p b hb hpb n, L.Scan.Str.hex4_spec p b hb hpb hph hp4 n,
-        escSur_spec p b hb hpb hph hp3 hps n] <;> finish
+        L.Scan.Str.byteIn_spec p b hpb n, L.Scan.Str.hex4_spec p b hpb hph hp4 n,
+        escSur_spec p b hpb hph hp3 hps n] <;> finish
 
 end specs
 
@@ -539,6 +541,7 @@ theorem escRun_spec (n : Nat) (s₀ : St) :
   rw [UInt64.toNat_sub_of_le _ _ h1] at h2'
   exact escLoopW_run b _ _ _ _ _ hp.2.2.2 h0.2 (by omega)
 
+omit hb in
 theorem escLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
       s.loc 10 = s.loc 2 &&& 1099511627775⦄
@@ -551,16 +554,18 @@ theorem escLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := escLoop) rfl]
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, escRun_spec p b n,
-        escOne_spec p b hb hpb hph hp4 hp3 hps hpo n, utf8Put_spec p hpu n] <;> finish [Mem.src8]
+        escOne_spec p b hpb hph hp4 hp3 hps hpo n, utf8Put_spec p hpu n] <;> finish [Mem.src8]
 
+omit hb in
 theorem escLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
       s.loc 10 = s.loc 2 &&& 1099511627775⦄
     step p (exec p n) escLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧
       escLoopW b s₀.mem (s₀.loc 2) (s₀.loc 1) (s₀.loc 4) (s₀.loc 3) = some (s'.loc 3, s'.mem); ⊤⦄ :=
-  Triple.step_exec (escLoop_spec p b hb hpb hph hp4 hp3 hps hpo hpu (n + 1) s₀)
+  Triple.step_exec (escLoop_spec p b hpb hph hp4 hp3 hps hpo hpu (n + 1) s₀)
 
+omit hb in
 theorem strPutEsc_specW (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
     (hm : s₀.mem.arr8 IN = b) (vs ve : Word) :
     ⦃fun s => s = s₀⦄
@@ -574,7 +579,7 @@ theorem strPutEsc_specW (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        escLoop_step_spec p b hb hpb hph hp4 hp3 hps hpo hpu n] <;>
+        escLoop_step_spec p b hpb hph hp4 hp3 hps hpo hpu n] <;>
       finish [strPutEscW]
 
 end loop

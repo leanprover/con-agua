@@ -1,5 +1,4 @@
 import ConAgua.Arena.FreezeTruncBase
-set_option linter.unusedSectionVars false
 
 /-!
 # The truncation theorem, part 3: a store under truncation of its tier 0 (lane parmode)
@@ -63,13 +62,15 @@ section slots
 variable {m m' : Mem} (hT : StoreTr S m m') (hG : GrowR S m) (hko : koW S.sa m 0 = 0)
 include hT hG hko
 
+omit hT hko in
 theorem ext_slot_toNat : (2 + 2 * knW S.sa m 0).toNat = 2 + 2 * (knW S.sa m 0).toNat := by
   have := (knW_toNat S m hG 0 (by decide)).1
   rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
 
+omit hko in
 theorem knW_trunc0 : knW S.sa m' 0 = knW S.sa m 0 ∧ koW S.sa m' 0 = koW S.sa m 0 := by
   have e : (2 + 2 * (rdW (m.arr64 S.sa) 0 + SN0)).toNat = 2 + 2 * (knW S.sa m 0).toNat :=
-    ext_slot_toNat S hT hG hko
+    ext_slot_toNat S hG
   simp only [knW, koW, tierA_zero', hT.sa0]
   constructor
   · rw [rdW_extract]; rw [e]; simp only [UInt64.toNat_zero]; omega
@@ -77,8 +78,8 @@ theorem knW_trunc0 : knW S.sa m' 0 = knW S.sa m 0 ∧ koW S.sa m' 0 = koW S.sa m
 
 theorem slots_trunc0 (j : Word) (hj : j < nSl S m 0) :
     slotW S m' 0 j = slotW S m 0 j ∧ slotK S m' 0 j = slotK S m 0 j := by
-  have e := ext_slot_toNat S hT hG hko
-  obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG hko
+  have e := ext_slot_toNat S hG
+  obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG
   have hkr : krW S.sa m' 0 = krW S.sa m 0 := by simp only [krW, ho]
   have hkr2 : (krW S.sa m 0).toNat = 2 := by simp only [krW, hko]; rfl
   obtain ⟨k1, k2⟩ := kslot_toNat S m hG 0 (by decide) j hj
@@ -106,7 +107,7 @@ theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreT
     have hfl0 : ∀ i : Word, i.toNat < tbP.nodes.size → ∀ f, f < S.w →
         fld S m' 0 i f = fld S m 0 i f := fun i hi f hf =>
       fld_trunc0 S hS hT hc27 (by rw [hc]; exact hi) hf
-    have hn : nSl S m' 0 = nSl S m 0 := (knW_trunc0 S hT hG hko).1
+    have hn : nSl S m' 0 = nSl S m 0 := (knW_trunc0 S hT hG).1
     have hsl0 := slots_trunc0 S hT hG hko
     have hpos : 0 < nSl S m 0 := by
       have := (lay S m hG 0 (by decide)).1
@@ -140,8 +141,8 @@ theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreT
       (fun i a h => (hR 1 i (fun f _ => hfl1 i f)).1 a h) (fun i => (hR 1 i (fun f _ => hfl1 i f)).2)
       (fun i K h => hK m m' 1 i (fun f _ => hfl1 i f) (hR 1 i (fun f _ => hfl1 i f)).2 K h) hT1
   · -- layout
-    obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG hko
-    have e := ext_slot_toNat S hT hG hko
+    obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG
+    have e := ext_slot_toNat S hG
     obtain ⟨⟨a0, a1, a2, a3, -⟩, h1⟩ := hG
     refine ⟨⟨?_, by rw [hn]; exact a1, by rw [hn]; exact a2, ?_, fun _ => by rw [ho, hko]⟩, ?_⟩
     · rw [tierA_zero', hT.sa0, size_extract0]; rw [tierA_zero'] at a0; omega

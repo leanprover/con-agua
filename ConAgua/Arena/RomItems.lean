@@ -296,7 +296,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
   | nil =>
     intro n mem a pos rest seen m q mem' hA hmo hM hd hst hc hW
     simp only [encItems] at hd ⊢
-    have h0 : romB rom pos = 5 := romB_head rom hr pos 5 [] rest hd
+    have h0 : romB rom pos = 5 := romB_head rom pos 5 [] rest hd
     cases n with
     | zero => simp [romItemsW] at hW
     | succ n =>
@@ -313,7 +313,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
     cases it with
     | reset =>
       simp only [encItems] at hd ⊢
-      have h0 : romB rom pos = 4 := romB_head rom hr pos 4 _ rest hd
+      have h0 : romB rom pos = 4 := romB_head rom pos 4 _ rest hd
       cases n with
       | zero => simp [romItemsW] at hW
       | succ n =>
@@ -321,7 +321,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       split at hW
       case isFalse => simp at hW
       have hd1 : rom.drop (pos + 1).toNat = encItems [] is ++ rest := by
-        have := drop_shift rom hr pos [4] (encItems [] is) rest (by simpa using hd)
+        have := drop_shift rom pos [4] (encItems [] is) rest (by simpa using hd)
           (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
         simpa using this
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n (resetMem mem) a (pos + 1) rest [] ∅ q mem'
@@ -336,13 +336,13 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       rw [hq, hp1]; simp; omega
     | nm nme =>
       simp only [encItems, itemFits] at hd hfit ⊢
-      have h0 : romB rom pos = 0 := romB_head rom hr pos 0 _ rest hd
+      have h0 : romB rom pos = 0 := romB_head rom pos 0 _ rest hd
       cases n with
       | zero => simp [romItemsW] at hW
       | succ n =>
       rw [romItemsW_nm rom n mem pos (by simp [h0]) (by simp [h0]) h0] at hW
       have hd1 : rom.drop (pos + 1).toNat = encName nme ++ (encItems seen is ++ rest) := by
-        have := drop_shift rom hr pos [0] (encName nme ++ encItems seen is) rest (by simpa using hd)
+        have := drop_shift rom pos [0] (encName nme ++ encItems seen is) rest (by simpa using hd)
           (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
         simpa using this
       cases hN : romNameW rom n mem (pos + 1) with
@@ -352,7 +352,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       rw [hN, itK_some] at hW
       obtain ⟨ok1, hR1, -, -, hq1, hf1⟩ := romNameW_ok rom hr nme hfit.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1 hN
       have hd2 : rom.drop q₁.toNat = encItems seen is ++ rest :=
-        drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
+        drop_shift rom (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
         ((romNameW_topK hN).mode hA.1.lit.1 hmo) (hM.frame (frame_romA hf1)) hd2 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
       refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_storeE hf1).trans hf, by rw [hs, frame_exprA_stk hf1],
@@ -364,13 +364,13 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
         rw [hq, hq1, hp1]; simp; omega
     | lv u =>
       simp only [encItems, itemFits] at hd hfit ⊢
-      have h0 : romB rom pos = 1 := romB_head rom hr pos 1 _ rest hd
+      have h0 : romB rom pos = 1 := romB_head rom pos 1 _ rest hd
       cases n with
       | zero => simp [romItemsW] at hW
       | succ n =>
       rw [romItemsW_lv rom n mem pos (by simp [h0]) (by simp [h0]) (by simp [h0]) h0] at hW
       have hd1 : rom.drop (pos + 1).toNat = encLevel u ++ (encItems seen is ++ rest) := by
-        have := drop_shift rom hr pos [1] (encLevel u ++ encItems seen is) rest (by simpa using hd)
+        have := drop_shift rom pos [1] (encLevel u ++ encItems seen is) rest (by simpa using hd)
           (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
         simpa using this
       cases hN : romLevelW rom n mem (pos + 1) with
@@ -380,7 +380,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       rw [hN, itK_some] at hW
       obtain ⟨ok1, hR1, -, -, hq1, hf1⟩ := romLevelW_ok rom hr u hfit.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1 hN
       have hd2 : rom.drop q₁.toNat = encItems seen is ++ rest :=
-        drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
+        drop_shift rom (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
         ((romLevelW_topK hN).mode hA.1.lit.1 hmo) (hM.frame (frame_romA hf1)) hd2 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
       refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_storeE hf1).trans hf, by rw [hs, frame_exprA_stk hf1],
@@ -392,13 +392,13 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
         rw [hq, hq1, hp1]; simp; omega
     | lvs us =>
       simp only [encItems, itemFits, Bool.and_eq_true, decide_eq_true_eq] at hd hfit ⊢
-      have h0 : romB rom pos = 2 := romB_head rom hr pos 2 _ rest hd
+      have h0 : romB rom pos = 2 := romB_head rom pos 2 _ rest hd
       cases n with
       | zero => simp [romItemsW] at hW
       | succ n =>
       rw [romItemsW_lvs rom n mem pos (by simp [h0]) (by simp [h0]) (by simp [h0]) (by simp [h0]) h0] at hW
       have hd1 : rom.drop (pos + 1).toNat = encLevels us ++ (encItems seen is ++ rest) := by
-        have := drop_shift rom hr pos [2] (encLevels us ++ encItems seen is) rest (by simpa using hd)
+        have := drop_shift rom pos [2] (encLevels us ++ encItems seen is) rest (by simpa using hd)
           (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
         simpa using this
       cases hN : romLevelsW rom n mem (pos + 1) with
@@ -409,7 +409,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       obtain ⟨ok1, hR1, -, -, hq1, hf1, hs1⟩ := romLevelsW_ok rom hr us hfit.1.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1
         (by omega) hc hN
       have hd2 : rom.drop q₁.toNat = encItems seen is ++ rest :=
-        drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
+        drop_shift rom (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
         ((romLevelsW_topK hN).mode hA.1.lit.1 hmo) (hM.frame hf1) hd2 (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
       refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_exprA hf1).trans hf, by rw [hs, hs1],
@@ -421,14 +421,14 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
         rw [hq, hq1, hp1]; simp; omega
     | ex e =>
       simp only [encItems, itemFits] at hd hfit ⊢
-      have h0 : romB rom pos = 3 := romB_head rom hr pos 3 _ rest hd
+      have h0 : romB rom pos = 3 := romB_head rom pos 3 _ rest hd
       cases n with
       | zero => simp [romItemsW] at hW
       | succ n =>
       rw [romItemsW_ex rom n mem pos (by simp [h0]) (by simp [h0]) (by simp [h0]) (by simp [h0])
         (by simp [h0]) h0] at hW
       have hd1 : rom.drop (pos + 1).toNat = (encExprM seen e).1 ++ (encItems (encExprM seen e).2 is ++ rest) := by
-        have := drop_shift rom hr pos [3] ((encExprM seen e).1 ++ encItems (encExprM seen e).2 is) rest
+        have := drop_shift rom pos [3] ((encExprM seen e).1 ++ encItems (encExprM seen e).2 is) rest
           (by simpa using hd) (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
         simpa using this
       cases hN : romExprW rom n mem (pos + 1) with
@@ -439,7 +439,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       obtain ⟨me, a₁, r1, hR1, hM1, -, hq1, hf1, hs1, hz1⟩ := romExprW_ok rom hr e hfit.1 n mem a (pos + 1) _ seen m
         h₁ q₁ m₁ hA hmo hM hd1 hst hc hN
       have hd2 : rom.drop q₁.toNat = encItems (encExprM seen e).2 is ++ rest :=
-        drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
+        drop_shift rom (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ a₁ q₁ rest _ me q mem' hR1
         (((romExprW_topK rom n).1 _ _ _ _ _ hN).mode hA.1.lit.1 hmo) hM1 hd2
         (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW

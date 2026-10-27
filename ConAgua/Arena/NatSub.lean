@@ -5,7 +5,7 @@ meta import ConAgua.Arena.NatAdd
 import ConAgua.Census.Attr
 public import ConAgua.Arena.NatAdd
 import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.NatCmp
+public import ConAgua.Arena.NatCmpFacts
 import ConAgua.Arena.NatGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop

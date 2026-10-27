@@ -1,7 +1,6 @@
 import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.LpCol
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The level-parameter columns: the relation, generically (helper `whnf4-d23`)
@@ -247,6 +246,7 @@ theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List
     (hA' : tier1 A ∉ Ar) (hc : A ≠ CTL) : ColT2 L A f m' a :=
   h.frame (hf.1 A hA hc) (hf.1 _ hA' (tier1_ne (by decide)))
 
+omit [Inhabited δ] in
 theorem tbl_push_size (tb : Tbl α (Idx k) δ) (key : α) (d : δ) (y : Idx k) :
     (tb.push key d y).nodes.size = tb.nodes.size + 1 ∧ (tb.push key d y).der.size = tb.der.size + 1 := by
   cases tb; simp [Tbl.push]

@@ -1,3 +1,4 @@
+import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndSumSpec.DecHLTake
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecClassSpec.IhW
@@ -1642,16 +1643,26 @@ theorem classReadSlots_specs (p : Prog) (hP : SlotsProg p) (cR : CallM) (hcR : C
     obtain ⟨ih1, ih2⟩ := ih
     refine ⟨fun s₀ q vis np n mo ml d e => ?_, fun s₀ q vis np n mo ml d dom body slot => ?_⟩
     · rw [invoke_eq _ hP.slots]; simp only [callFn, classReadSlots]
-      sym only [lang_grind, arena_grind, ind_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-          eView_spec p hP.v N, classReadSlot_spec p hP.toSlotProg cR hcR N, ih2] <;>
-        finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, eView_spec p hP.v N,
+        classReadSlot_spec p hP.toSlotProg cR hcR N, ih2]
+      all_goals subst_vars
+      all_goals (try simp only [LocEq] at *)
+      all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
+      all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6,
+        loc_init7]
     · rw [invoke_eq _ hP.next]; simp only [callFn, classReadSlotsNext]
-      sym only [lang_grind, arena_grind, ind_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-          classReadSlotsSnoc_spec p hP.a hP.c hP.sn hP.msn N, internFVar_spec p hP.ff hP.fp hP.ifv N,
-          i1F_spec p hP.hi1 N, slCons_specW p hP.a hP.c hP.sc N, ih1] <;>
-        finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+        classReadSlotsSnoc_spec p hP.a hP.c hP.sn hP.msn N, internFVar_spec p hP.ff hP.fp hP.ifv N,
+        i1F_spec p hP.hi1 N, slCons_specW p hP.a hP.c hP.sc N, ih1]
+      all_goals subst_vars
+      all_goals (try simp only [LocEq] at *)
+      all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+      all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6,
+        loc_init7, loc_init8, loc_init9]
 
 end L.Ind
 
