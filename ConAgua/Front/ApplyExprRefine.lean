@@ -87,7 +87,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litCS, litCSk, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, tierOff, ConsSch.wset, litCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -112,7 +112,7 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, tierOff, ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -198,27 +198,27 @@ theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m
 theorem mkAppW_above {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m')) : Above64 m m' := by
   unfold mkAppW at h; split at h; · cases h
   exact mkK_above ADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame appCS_wf hx) (by simp [ConsSch.wset, appCS, AREC, ASLOT])) h
+    exact MemFrame.above (consInternM_frame appCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, appCS, AREC, ASLOT])) h
 theorem mkLamW_above {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) : Above64 m m' := by
   unfold mkLamW at h; split at h; · cases h
   exact mkK_above LADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame lamCS_wf hx) (by simp [ConsSch.wset, lamCS, LAREC, LASLOT])) h
+    exact MemFrame.above (consInternM_frame lamCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, lamCS, LAREC, LASLOT])) h
 theorem mkForallW_above {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m')) :
     Above64 m m' := by
   unfold mkForallW at h; split at h; · cases h
   exact mkK_above FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact MemFrame.above (consInternM_frame forallCS_wf hx)
-      (by simp [ConsSch.wset, forallCS, FAREC, FASLOT])) h
+      (by simp [tier1, tierOff, ConsSch.wset, forallCS, FAREC, FASLOT])) h
 theorem mkLetW_above {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     Above64 m m' := by
   unfold mkLetW at h; split at h; · cases h
   exact mkK_above LEDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame letCS_wf hx) (by simp [ConsSch.wset, letCS, LEREC, LESLOT])) h
+    exact MemFrame.above (consInternM_frame letCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, letCS, LEREC, LESLOT])) h
 theorem mkProjW_above {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) :
     Above64 m m' := by
   unfold mkProjW at h; split at h; · cases h
   exact mkK_above PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [ConsSch.wset, projCS, PJREC, PJSLOT])) h
+    exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, projCS, PJREC, PJSLOT])) h
 
 theorem mkK_mode (A : ArrId) (hC : A ≠ CTL) (c s d r : Word) (m m' : Mem)
     (x : Option (Word × Mem)) (hx : ∀ r₁ m₁, x = some (r₁, m₁) → ModeOK m → ModeOK m₁)
@@ -309,7 +309,7 @@ theorem node_bvar (k : Nat) (x y z : Word) (hx : ItemR x k) (hI : nodeW b.data m
   rename_i hn
   rw [itemR_eq hx hn]
   obtain ⟨h1, h2, h3, hf⟩ := internBVar_DF m a hA w m₁ x hI
-  exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [bvarSch, BREC, BSLOT])),
+  exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [tier1, tierOff, bvarSch, BREC, BSLOT])),
     MemFrame.modeOK hf (by decide) (by decide) hmode⟩
 
 theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m 9 x y z = some (w, m₁)) :
@@ -323,7 +323,7 @@ theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m
       simp [exprOp, StateD.level, hg]
     obtain ⟨h1, h2, h3, hf⟩ := internSort_D m a hA w m₁ _ hw hI
     unfold NodeOK; rw [hop]
-    exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [sortSch, SOREC, SOSLOT, SOLP])),
+    exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [tier1, tierOff, sortSch, SOREC, SOSLOT, SOLP])),
       MemFrame.modeOK hf (by decide) (by decide) hmode⟩
   · cases hI
 
@@ -420,7 +420,7 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
   obtain ⟨h1, h2, h3, hf⟩ := internLit_D m₂ a hA' w m₁ m.top l hsl hnm (ModeOK.slice0 hmo₂ hsl) hI
   rw [hpv, ← hn] at h1 h2 h3
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
-    (MemFrame.above hf (by simp [litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
+    (MemFrame.above hf (by simp [tier1, tierOff, litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
 
 theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (x y z : Word)
     (s : String) (hv : StrR b y z s) (hI : nodeW b.data m 17 x y z = some (w, m₁)) :
@@ -446,7 +446,7 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
   have hmo₂ := ModeOK.growsF hmode hg
   obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk (ModeOK.slice0 hmo₂ hsl) hI
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
-    (MemFrame.above hf (by simp [litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
+    (MemFrame.above hf (by simp [tier1, tierOff, litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
 
 omit hA hD hmode in
 /-- A universe list whose items are bound level ids: `mapM st.level` is pure. -/
@@ -546,8 +546,8 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     (MemFrame.modeOK lf (by decide) (by decide) hmo₂)⟩
   · rw [hop] at hok' ⊢; rw [AM.st_bind _ _ _ hok', l3]; exact c2
   · rw [hop, AM.res_bind _ _ _ l1, l3]; exact c3
-  · exact ((hD.above hab).above (MemFrame.above lf (by simp [lsSch, LSREC, LSSLOT, LSHP]))).above
-      (MemFrame.above cf (by simp [constSch, CREC, CSLOT, CLP]))
+  · exact ((hD.above hab).above (MemFrame.above lf (by simp [tier1, tierOff, lsSch, LSREC, LSSLOT, LSHP]))).above
+      (MemFrame.above cf (by simp [tier1, tierOff, constSch, CREC, CSLOT, CLP]))
 
 /-- **Every expression kind**: the node the fields `f` describe is interned. -/
 theorem node_ok (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (f : Fld)

@@ -417,7 +417,7 @@ theorem CoreS.of_bvar {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl <;> decide)
-    (by simp [BREC, BSLOT])
+    (by simp [tier1, tierOff, BREC, BSLOT])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl <;> decide)
@@ -431,7 +431,7 @@ theorem CoreS.of_bvar {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
 theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT, tier1 BREC, tier1 BSLOT] [22, 23] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
+    hf.1 SPN (by simp [tier1, tierOff, BREC, BSLOT, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact StackKept.of_frame hf
 
@@ -522,7 +522,7 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
   have hX : (internE (.bvar 0)).run a₀ = .ok (decE (r₁.headD 0), a₁) := by
     have := AM.run_of_ok _ _ hok1
     rw [hres1, ← ha₁] at this; exact this
-  have hspn : m₁.arr64 SPN = s.mem.arr64 SPN := hfr1.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
+  have hspn : m₁.arr64 SPN = s.mem.arr64 SPN := hfr1.1 SPN (by simp [tier1, tierOff, BREC, BSLOT, SPN]) (by decide)
   have har₁ : SpineR m₁ ao an args := har.of_spn_core hspn
   have hSt₁ : StackKept s.mem m₁ := StackKept.of_bvar_frame hfr1
   have hMD := decMode_verified mode hs.mode4
