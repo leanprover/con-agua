@@ -285,11 +285,11 @@
     25  denotes, and con-leche's `preparePrelude` puts its records into the checked stream, so soundness
     26  holds whatever the prelude bytes are. The pins are free for the same reason as in con-leche.
 
-== ConAgua/Checker/Pipeline.lean#L66-L69
-    66  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
-    67  bytes, every word array below `2^64` words. -/
-    68  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
-    69    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
+== ConAgua/Checker/Pipeline.lean#L67-L70
+    67  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
+    68  bytes, every word array below `2^64` words. -/
+    69  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
+    70    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
 
 == scripts/check-asm.sh#L1-L12
      1  #!/usr/bin/env bash
@@ -511,41 +511,41 @@
    321        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
    322  
 
-== ConAgua/Checker/Pipeline.lean#L89-L122
-    89  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
-    90  def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-    91    RelSpec p "cap_check" (· = loadMem b pb s8 s64) fun _ => (ρ b pb s8 s64).R1
-    92  
-    93  /-- **Stage `pb_check`**: `R1` to `R2`. -/
-    94  def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-    95    RelSpec p "pb_check" (ρ b pb s8 s64).R1 fun _ => (ρ b pb s8 s64).R2
-    96  
-    97  /-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
-    98  def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-    99    RelSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 fun _ m =>
-   100      ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb s8 s64).R3 m a'
-   101  
-   102  /-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
-   103  def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb s64 →
-   104    RelSpec p "builtin_prelude" ((ρ b pb s8 s64).R3 · a) fun _ m =>
-   105      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb s8 s64).R4 m pre a'
-   106  
-   107  /-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
-   108  def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb s64 →
-   109    RelSpec p "front_run" ((ρ b pb s8 s64).R4 · pre a) fun r m => r.headD 0 = 0 →
-   110      ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb s8 s64).R5 m pre rc a'
-   111  
-   112  /-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
-   113  def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb s64 →
-   114    RelSpec p "prepare_prelude" ((ρ b pb s8 s64).R5 · pre rc a) fun _ m =>
-   115      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb s8 s64).R6 m ds a'
-   116  
-   117  /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
-   118  to). -/
-   119  def PinsStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds a, InputsOK b pb s64 →
-   120    TwinPrefix4 b sA pre sB rc sC ds a →
-   121    RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
-   122      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
+== ConAgua/Checker/Pipeline.lean#L90-L123
+    90  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
+    91  def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
+    92    RelSpec p "cap_check" (· = loadMem b pb s8 s64) fun _ => (ρ b pb s8 s64).R1
+    93  
+    94  /-- **Stage `pb_check`**: `R1` to `R2`. -/
+    95  def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
+    96    RelSpec p "pb_check" (ρ b pb s8 s64).R1 fun _ => (ρ b pb s8 s64).R2
+    97  
+    98  /-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
+    99  def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
+   100    RelSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 fun _ m =>
+   101      ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb s8 s64).R3 m a'
+   102  
+   103  /-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
+   104  def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb s64 →
+   105    RelSpec p "builtin_prelude" ((ρ b pb s8 s64).R3 · a) fun _ m =>
+   106      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb s8 s64).R4 m pre a'
+   107  
+   108  /-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
+   109  def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb s64 →
+   110    RelSpec p "front_run" ((ρ b pb s8 s64).R4 · pre a) fun r m => r.headD 0 = 0 →
+   111      ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb s8 s64).R5 m pre rc a'
+   112  
+   113  /-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
+   114  def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb s64 →
+   115    RelSpec p "prepare_prelude" ((ρ b pb s8 s64).R5 · pre rc a) fun _ m =>
+   116      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb s8 s64).R6 m ds a'
+   117  
+   118  /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
+   119  to). -/
+   120  def PinsStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds a, InputsOK b pb s64 →
+   121    TwinPrefix4 b sA pre sB rc sC ds a →
+   122    RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
+   123      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
 
 == ConAgua/Checker/CheckARun.lean#L278-L286
    278  theorem checkA_run (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64) (w : Word)
@@ -600,34 +600,34 @@
    106          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
    107        dm (label abiStartL) :=
 
-== ConAgua/Checker/Entry.lean#L127-L134
-   127  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
-   128  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
-   129  def checkL : FunDecl := lfn () locals (r) {
-   130    if MODE == 1 { r := call check_a(1); return r };
-   131    if MODE == 3 { r := call check_a(0); return r };
-   132    if MODE == 2 { r := call check_b(); return r };
-   133    abort
-   134  }
+== ConAgua/Checker/Entry.lean#L126-L133
+   126  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
+   127  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
+   128  def checkL : FunDecl := lfn () locals (r) {
+   129    if MODE == 1 { r := call check_a(1); return r };
+   130    if MODE == 3 { r := call check_a(0); return r };
+   131    if MODE == 2 { r := call check_b(); return r };
+   132    abort
+   133  }
 
-== ConAgua/Checker/Entry.lean#L92-L108
-    92  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-    93  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-    94  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-    95  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
-    96    z := call cap_check();
-    97    z := call pb_check();
-    98    z := call intern_reserved_pins();
-    99    z := call builtin_prelude();
-   100    r := call front_run();
-   101    if r != 0 { return 1 };
-   102    z := call prepare_prelude();
-   103    z := call intern_all_pins();
-   104    cnt := L.Front.DECL.u64[0];
-   105    v := call install_fold_go(0, cnt, 0);
-   106    z := call par_compact(v, c);
-   107    return 9223372036854775808 + CTL.u64[130]
-   108  }
+== ConAgua/Checker/Entry.lean#L91-L107
+    91  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+    92  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+    93  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+    94  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+    95    z := call cap_check();
+    96    z := call pb_check();
+    97    z := call intern_reserved_pins();
+    98    z := call builtin_prelude();
+    99    r := call front_run();
+   100    if r != 0 { return 1 };
+   101    z := call prepare_prelude();
+   102    z := call intern_all_pins();
+   103    cnt := L.Front.DECL.u64[0];
+   104    v := call install_fold_go(0, cnt, 0);
+   105    z := call par_compact(v, c);
+   106    return 9223372036854775808 + CTL.u64[130]
+   107  }
 
 == vendor/con-ron/ConRon/Arena/Main.lean#L154-L190
    154  def runPipelineHead :
@@ -1449,12 +1449,12 @@
     30  the worker's run is the sequential one, which the sequential proof covers.
     31  -/
 
-== ConAgua/Checker/Pipeline.lean#L41-L45
-    41  /-- **A relational stage spec**: from memory satisfying `Pre`, a returning call of `f` keeps the
-    42  caller's locals and ends in memory satisfying `Post r`. -/
-    43  def RelSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
-    44    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
-    45      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
+== ConAgua/Checker/Pipeline.lean#L42-L46
+    42  /-- **A relational stage spec**: from memory satisfying `Pre`, a returning call of `f` keeps the
+    43  caller's locals and ends in memory satisfying `Post r`. -/
+    44  def RelSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
+    45    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
+    46      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
 
 == ConAgua/Checker/CheckARun.lean#L132-L141
    132  theorem foldStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
@@ -1468,11 +1468,11 @@
    140      ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (sF : AState),
    141        installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList sE = .ok (.ok (ds.size, fe, pend), sF) ∧
 
-== ConAgua/Checker/Pipeline.lean#L66-L69
-    66  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
-    67  bytes, every word array below `2^64` words. -/
-    68  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
-    69    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
+== ConAgua/Checker/Pipeline.lean#L67-L70
+    67  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
+    68  bytes, every word array below `2^64` words. -/
+    69  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
+    70    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
 
 == ConAgua/Compiler/Compile.lean#L9-L34
      9  /-!
@@ -1737,50 +1737,50 @@
     12  (`Arena.pooledAccepts_bridge`), which is what `twinAccepts_pure` already uses.
     13  (Lane parallel's `Twin.lean` changes, as a separate file.)
 
-== ConAgua/Checker/Entry.lean#L84-L89
-    84  
-    85  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
-    86  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
-    87  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
-    88  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
-    89  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
+== ConAgua/Checker/Entry.lean#L83-L88
+    83  
+    84  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
+    85  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
+    86  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
+    87  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
+    88  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
 
-== ConAgua/Checker/Entry.lean#L92-L108
-    92  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-    93  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-    94  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-    95  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
-    96    z := call cap_check();
-    97    z := call pb_check();
-    98    z := call intern_reserved_pins();
-    99    z := call builtin_prelude();
-   100    r := call front_run();
-   101    if r != 0 { return 1 };
-   102    z := call prepare_prelude();
-   103    z := call intern_all_pins();
-   104    cnt := L.Front.DECL.u64[0];
-   105    v := call install_fold_go(0, cnt, 0);
-   106    z := call par_compact(v, c);
-   107    return 9223372036854775808 + CTL.u64[130]
-   108  }
+== ConAgua/Checker/Entry.lean#L91-L107
+    91  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+    92  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+    93  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+    94  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+    95    z := call cap_check();
+    96    z := call pb_check();
+    97    z := call intern_reserved_pins();
+    98    z := call builtin_prelude();
+    99    r := call front_run();
+   100    if r != 0 { return 1 };
+   101    z := call prepare_prelude();
+   102    z := call intern_all_pins();
+   103    cnt := L.Front.DECL.u64[0];
+   104    v := call install_fold_go(0, cnt, 0);
+   105    z := call par_compact(v, c);
+   106    return 9223372036854775808 + CTL.u64[130]
+   107  }
 
-== ConAgua/Checker/Entry.lean#L110-L125
-   110  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
-   111  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
-   112  B's loop (`check_pending_go`); returns `ACCEPT`. -/
-   113  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
-   114  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
-   115  def checkBL : FunDecl := lfn () locals (z, n) {
-   116    if INIT == 0 {
-   117      n := len(CTLF.u64);
-   118      copy!(CTL.u64, 0, CTLF.u64, 0, n);
-   119      INIT := 1
-   120    };
-   121    if CTL.u64[130] < PHI { abort };
-   122    if PHI < PLO { abort };
-   123    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
-   124    return 71757147230292
-   125  }
+== ConAgua/Checker/Entry.lean#L109-L124
+   109  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
+   110  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
+   111  B's loop (`check_pending_go`); returns `ACCEPT`. -/
+   112  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
+   113  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
+   114  def checkBL : FunDecl := lfn () locals (z, n) {
+   115    if INIT == 0 {
+   116      n := len(CTLF.u64);
+   117      copy!(CTL.u64, 0, CTLF.u64, 0, n);
+   118      INIT := 1
+   119    };
+   120    if CTL.u64[130] < PHI { abort };
+   121    if PHI < PLO { abort };
+   122    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
+   123    return 71757147230292
+   124  }
 
 == ConAgua/Compiler/Abi.lean#L162-L171
    162  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
