@@ -53,14 +53,15 @@ theorem PendR.ext {m m' : Mem} {pend : Array PendingCheck} (hP : m'.arr64 PEND =
 /-- **The loop's relation after a step's callee**: the stage relation after it (at any view and
 environment), a frame of the step's write set (`stepA`, `stepC`: nothing of `PEND`, `DECL`,
 `DLP`, `CTL[130]`), and the records only extended. -/
-theorem step_keeps : PEND ∉ stepA ∧ DECL ∉ stepA ∧ DLP ∉ stepA ∧ (130 : Word) ∉ stepC := by
+theorem step_keeps : (PEND : TieredArray) ∉ stepA ∧ (DECL : TieredArray) ∉ stepA ∧
+    (DLP : TieredArray) ∉ stepA ∧ (130 : Word) ∉ stepC := by
   decide +kernel
 
 /-- The step's write set misses the pin variant list's header. -/
 theorem step_pins : (150 : Word) ∉ stepC ∧ (151 : Word) ∉ stepC := by decide +kernel
 
 /-- The step's write set misses the promotion memo (arrays 146‥149, `CTL` 140‥147). -/
-theorem step_pmemo : (∀ b ∈ stepA, b < 146 ∨ 149 < b) ∧
+theorem step_pmemo : (∀ b ∈ stepA, b.arr < 146 ∨ 149 < b.arr) ∧
     (∀ x ∈ stepC, x.toNat < 140 ∨ 147 < x.toNat) := by
   refine ⟨fun b hb => ?_, fun x hx => ?_⟩
   · simp only [stepA, List.mem_filter, decide_eq_true_eq] at hb; exact hb.2.2.2.2

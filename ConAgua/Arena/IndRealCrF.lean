@@ -32,7 +32,7 @@ def crfPFns : List FnName :=
   ["consts_resolve_ffast", "crf_go", "cr_leaf", "cr_lit_pins", "pin_found", "crm_find", "crm_put",
     "crm_clear", "e_view", "is_str_lit", "env_find", "env_row_get", "env_ix", "pin_at"]
 
-theorem crfP_closed : closedA crfP [155] [158, 159] crfPFns = true := by decide +kernel
+theorem crfP_closed : closedA crfP [L.Stubs.CRM] [158, 159] crfPFns = true := by decide +kernel
 
 /-- The program bundle. -/
 abbrev CrfF (p : Prog) : Prop := ProgHas p crfP
@@ -48,7 +48,7 @@ theorem crfF_spec (p : Prog) (hp : CrfF p) (n : Nat) (s₀ : St) (args : List Wo
 
 /-- `consts_resolve_ffast` writes only its memo table. -/
 theorem crfF_frame {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m')) :
-    MemFrame [155] [158, 159] m m' := by
+    MemFrame [L.Stubs.CRM] [158, 159] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame crfP_closed (by decide) (run_of_callW hc)).1
 
