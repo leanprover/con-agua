@@ -68,7 +68,7 @@ theorem pval_fz : ∀ (e : Expr), e.fzOk = true → ∀ s : St, Expr.pval s e = 
     by simp [Expr.fzOk] at h
 
 /-- Memories that agree on every array but `OUT` give extents the same values. -/
-theorem fzEv_congr {m m' : Mem} (h : ∀ a, a ≠ OUT → m'.arr64 a = m.arr64 a) :
+theorem fzEv_congr {m m' : Mem} (h : ∀ a : TieredArray, a ≠ OUT → m'.arr64 a = m.arr64 a) :
     ∀ (e : Expr), e.fzOk = true → fzEv m' e = fzEv m e ∧ e.ldOk m' = e.ldOk m
   | .const _, _ => ⟨rfl, rfl⟩
   | .bin op a b, he => by
@@ -79,7 +79,7 @@ theorem fzEv_congr {m m' : Mem} (h : ∀ a, a ≠ OUT → m'.arr64 a = m.arr64 a
   | .ld64 a i, he => by
     simp only [Expr.fzOk, Bool.and_eq_true, bne_iff_ne, ne_eq] at he
     obtain ⟨h1, h2⟩ := fzEv_congr h i he.2
-    simp [fzEv_ld64, Expr.ldOk, rd64, h1, h2, h a he.1]
+    simp [fzEv_ld64, Expr.ldOk, rd64, h1, h2, h a (TieredArray.t0_ne he.1)]
   | .var _, h | .ld8 _ _, h | .len8 _, h | .len64 _, h | .cmpw _ _ _, h
   | .ldc _ _, h | .glob _, h | .ld64t _ _ _, h | .len64t _ _, h | .ld8x8 _ _, h =>
     by simp [Expr.fzOk] at h
@@ -117,14 +117,14 @@ theorem evalE_fz : ∀ (e : Expr), e.fzOk = true → ∀ s : St,
 
 attribute [local simp] size_set64 L.St.setLoc_mem L.St.setLoc_loc
 
-@[simp] theorem size_copy64 (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) (n : Nat)
-    (b : ArrId) : ((m.copy64 d di s si n).arr64 b).size = (m.arr64 b).size := by
+@[simp] theorem size_copy64 (m : Mem) (d : TieredArray) (di : Word) (s : TieredArray) (si : Word) (n : Nat)
+    (b : TieredArray) : ((m.copy64 d di s si n).arr64 b).size = (m.arr64 b).size := by
   induction n generalizing m di si with
   | zero => rfl
   | succ n ih => simp only [Mem.copy64]; rw [ih, size_set64]
 
-theorem arr64_copy64_ne (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) (n : Nat)
-    {b : ArrId} (h : b ≠ d) : (m.copy64 d di s si n).arr64 b = m.arr64 b := by
+theorem arr64_copy64_ne (m : Mem) (d : TieredArray) (di : Word) (s : TieredArray) (si : Word) (n : Nat)
+    {b : TieredArray} (h : b ≠ d) : (m.copy64 d di s si n).arr64 b = m.arr64 b := by
   induction n generalizing m di si with
   | zero => rfl
   | succ n ih => simp only [Mem.copy64]; rw [ih, Mem.arr64_set64_ne _ _ _ _ _ h]
@@ -245,8 +245,8 @@ theorem fzCalls_run {p : Prog} (n : Nat) (rest : Stmt) :
 
 /-- What a memory step that writes only `OUT` keeps. -/
 structure OutFrame (m m' : Mem) : Prop where
-  arr : ∀ a, a ≠ OUT → m'.arr64 a = m.arr64 a
-  size : ∀ a, (m'.arr64 a).size = (m.arr64 a).size
+  arr : ∀ a : TieredArray, a ≠ OUT → m'.arr64 a = m.arr64 a
+  size : ∀ a : TieredArray, (m'.arr64 a).size = (m.arr64 a).size
   words : m.SameShape m'
   bytes : m'.bytes = m.bytes
   glob : m'.glob = m.glob
@@ -283,7 +283,7 @@ theorem OutFrame.pcGo (c : Word) : ∀ (is : List Nat) (m : Mem) (o : Word),
 
 /-! ## `par_compact` -/
 
-theorem getElem_set64_out (M : Mem) (a : ArrId) (ha : a ≠ OUT) (i v : Word) (k : Nat)
+theorem getElem_set64_out (M : Mem) (a : TieredArray) (ha : a ≠ OUT) (i v : Word) (k : Nat)
     (h : k < ((M.set64 OUT i v).arr64 a).size) :
     ((M.set64 OUT i v).arr64 a)[k]'h = (M.arr64 a)[k]'(by rwa [size_set64] at h) := by
   simp only [Mem.arr64_set64_ne _ _ _ _ _ ha]
@@ -413,7 +413,7 @@ theorem getD_copy64 {d s : ArrId} (hds : d ≠ s) : ∀ (n : Nat) (m : Mem) (di 
       have hd1 : (di + 1).toNat = di.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hs1 : (si + 1).toNat = si.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       rw [getD_copy64 hds (n + 1) _ (di + 1) (si + 1) (by omega) (by omega) k, hd1, hs1,
-        Mem.arr64_set64_ne _ _ _ _ _ hsd, size_set64, getD_set64_same]
+        Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hsd), size_set64, getD_set64_same]
       by_cases h1 : k = di.toNat
       · subst h1
         have : ¬ (di.toNat + 1 ≤ di.toNat) := by omega
@@ -562,7 +562,7 @@ theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
                 have := (fzEv m (fzAt n).e).toNat_lt
                 have := hlt hc
                 rw [← hM1, fzCopy, ite_eq_left hc, he.1, getD_copy64 (Ne.symm hz.2) _ _ _ _ (by omega) (by simp; omega),
-                  hF.arr _ hz.2]
+                  hF.arr _ (TieredArray.t0_ne hz.2)]
                 simp
     all_goals have hM1h : ∀ k, k < hdrW → (M1.arr64 OUT).getD k 0 = (M.arr64 OUT).getD k 0 := by
                 intro k hk
