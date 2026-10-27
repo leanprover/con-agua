@@ -1,6 +1,5 @@
 import ConAgua.Checker.IndArmTests
 import ConAgua.Checker.IndArmFns
-import ConAgua.Layout
 
 /-! The function sets of the inductive arm's write-set checks (`Checker/IndArmClosed.lean`) as
 name trees, with their array and `CTL` tests, part 1: `posFree`, `hbFree`, `rcFree`,
