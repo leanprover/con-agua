@@ -1,6 +1,5 @@
 import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Scan.Common
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec

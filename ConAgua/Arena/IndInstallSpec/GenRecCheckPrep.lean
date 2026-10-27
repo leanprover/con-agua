@@ -1,7 +1,6 @@
 import ConAgua.Arena.RecGen
 import ConAgua.Arena.WhnfBase
 import ConAgua.L.Records
-import ConAgua.Scan.Common
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

@@ -403,17 +403,6 @@ theorem canonLevelEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
 
 /-! ## `canon_level_list_eq` -/
 
-theorem init11_0 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 0 = a0 := rfl
-theorem init11_1 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 1 = a1 := rfl
-theorem init11_2 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 2 = a2 := rfl
-theorem init11_3 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 3 = a3 := rfl
-theorem init11_4 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 4 = a4 := rfl
-theorem init11_5 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 5 = a5 := rfl
-theorem init11_6 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 6 = a6 := rfl
-theorem init11_7 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 7 = a7 := rfl
-theorem init11_8 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 8 = a8 := rfl
-theorem init11_9 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 9 = a9 := rfl
-theorem init11_10 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] 10 = a10 := rfl
 
 
 mutual
@@ -472,7 +461,7 @@ theorem canonLevelListEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fue
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         canonLevelEq_spec p hp n, ih] <;>
-      finish (gen := 20) [rdW_eq, init11_0, init11_1, init11_2, init11_3, init11_4, init11_5, init11_6, init11_7, init11_8, init11_9, init11_10]
+      finish (gen := 20) [rdW_eq]
 
 end specs3
 
@@ -546,15 +535,6 @@ theorem canonLevelListEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Op
 
 /-! ## `canon_levels_eq` -/
 
-theorem init9_0 (a0 a1 a2 a3 a4 a5 a6 a7 a8 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8] 0 = a0 := rfl
-theorem init9_1 (a0 a1 a2 a3 a4 a5 a6 a7 a8 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8] 1 = a1 := rfl
-theorem init9_2 (a0 a1 a2 a3 a4 a5 a6 a7 a8 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8] 2 = a2 := rfl
-theorem init9_3 (a0 a1 a2 a3 a4 a5 a6 a7 a8 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8] 3 = a3 := rfl
-theorem init9_4 (a0 a1 a2 a3 a4 a5 a6 a7 a8 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8] 4 = a4 := rfl
-theorem init9_5 (a0 a1 a2 a3 a4 a5 a6 a7 a8 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8] 5 = a5 := rfl
-theorem init9_6 (a0 a1 a2 a3 a4 a5 a6 a7 a8 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8] 6 = a6 := rfl
-theorem init9_7 (a0 a1 a2 a3 a4 a5 a6 a7 a8 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8] 7 = a7 := rfl
-theorem init9_8 (a0 a1 a2 a3 a4 a5 a6 a7 a8 : Word) : Locals.init [a0, a1, a2, a3, a4, a5, a6, a7, a8] 8 = a8 := rfl
 
 /-- **The model of `canon_levels_eq`**: two `view_ls`, then the list comparison. -/
 def lsEqW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
@@ -588,9 +568,7 @@ theorem canonLevelsEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         viewLs_specW p (hp.get "ls_node") (hp.get "iw_alloc") (hp.get "pool_copy") (hp.get "view_ls") n,
         canonLevelListEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, lsEqW, init11_0, init11_1, init11_2, init11_3, init11_4, init11_5,
-        init11_6, init11_7, init11_8, init11_9, init11_10, init9_0, init9_1, init9_2, init9_3,
-        init9_4, init9_5, init9_6, init9_7, init9_8]
+      finish (gen := 20) [rdW_eq, lsEqW]
 
 
 theorem getD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
