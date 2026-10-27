@@ -301,3 +301,37 @@ lemmas for the preconditions at each call); `Front/IndFieldsSpec`, `ApplyDecl` (
 `fun_induction`; callee posts carry `Keep s₀.mem s'.mem`, which `l_model` rejects). So `pre`
 unblocked little in `Front/` too: what blocks there is `Keep` in callee posts and refinements
 that unfold the hand models structurally.
+
+## 7. Where the roll-out stands (master d23b4b5d)
+
+`l_model` names **627** of the 1 526 plain functions (537 on 386bf921); 840 are hand-specified
+(930). Five landings of conversions (#60 pilots, #64, #65, #68, #70), about 115 functions, ≈ −4 100
+lines net in `ConAgua/` with their refinements. The 50 hand-specified functions that still use a
+construct the generator lacked before this lane are all pool-slice, block-operation or
+nested-loop functions whose models are blocked by something else (bounds checks, reach, shape).
+
+What keeps the remaining 840 hand-written, in the order the helpers met it:
+
+1. **Reach.** The model's continuations and arms are named in refinements across many files
+   (`IndApplySpec` 92, `PromoteCI` 77, `InferLeavesE` 431, the ROM readers 5–6). A conversion
+   there is a rewrite of those refinements, not a rename.
+2. **Shape.** Hand models written as an inline `match` per call, `Option.bind` chains, a
+   continuation passed as a function argument (`PinReadSpec`), one model for several functions
+   with a Lean parameter (`ilwBinW R mk`), fuel-free well-founded recursion proved by
+   `fun_induction` (`NatDec`), or a model with a `CallM` parameter (`DeclCvg`). The refinement
+   then needs re-threading against the generated continuations.
+3. **Bounds.** Hand models that check `(m.arr64 X).size` / `136 < size` / `ldE` and return
+   `none`, where the refinement uses the bound (`struct_unit_head`, `iota_rec_fire`,
+   `eta_projs`, `lp_put`, the store pushes, `cnsW`).
+4. **Callee posts the generator does not read**: `Keep s₀.mem s'.mem` (preservation of `pcap`,
+   `arr8 IN`; `Triple.keep`), an existential fuel (`internAllPins_specW`), a result besides the
+   model (`r.headD 0 = top ∧ …`).
+5. **Time.** Small flat functions whose hand spec is already fast: the generated arms cost more
+   than the hand proof (the rule since batch 3; `IndApplySpec2` 7.4 → 14.5 s when converted).
+6. **Templates** (`FunDecl`s with parameters): 311 instances plus `pb_check`,
+   `internReservedPinsAt off`.
+
+Generator features that would open more, by expected yield: reading `Keep`-style conjuncts as
+facts (4; small change, opens parts of `Front/` and the ROM readers together with `pre`); a
+model shape for continuations passed as arguments (2); bounds as modelled aborts (3, larger:
+`rdW`/`set64` would need a checked variant, and the existing models would change).
