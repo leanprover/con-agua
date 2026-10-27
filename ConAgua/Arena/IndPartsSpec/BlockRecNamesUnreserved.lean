@@ -306,9 +306,7 @@ theorem blockShapeWithSort_specC (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s
       pinWord_specV p hpw n, hcR n "lvl_eq_c", iwAlloc_specW p ha n]
     all_goals subst_vars
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
-      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+      BinOp.eval, Nat.reduceEqDiff, reduceIte] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, wsWrites, cpyIW]
 
 end spec

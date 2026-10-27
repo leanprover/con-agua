@@ -474,9 +474,8 @@ theorem classRecsRulesOkGo_spec (p : Prog) (h : CrrProg p) (cR : CallM) (hcR : C
       rec4_specW p h.crs.alloc n h.rec4, slCons_specW p h.crs.alloc h.crs.copy h.crs.cons n, ih]
     all_goals subst_vars
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
-      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4,
       loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10]
 
