@@ -57,32 +57,31 @@ stores' arrays (below 42) and counts (`CTL` below 42). -/
 theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LsStep a a') (hR : ArenaR m' a')
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ Tier1In 0 42 b ∨ Tier1In 55 64 b) (hC : ∀ x ∈ C, x.toNat < 42)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b.arr < 42 ∨ (54 < b.arr ∧ b.arr < 64)) (hC : ∀ x ∈ C, x.toNat < 42)
     (hlsa : LsAll a') (hlc : LvlCnt m m')
-    (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) (hP1 : POOL1 ∉ A := by decide)
-    (hPT : PT0 ∉ A := by decide) :
+    (hP : (POOL : TieredArray) ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) (hP1 : POOL1 ∉ A := by decide)
+    (hPT : (PT0 : TieredArray) ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   have hmode : ModeOK m' := by
     have hfl : m'.flag = m.flag := hlc.flag
     unfold ModeOK; rw [hf.top_eq hP0, hfl]; exact hS.mode
   have hD : DerR m' a' := DerR.of_tiers m' a a'
-    (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a
+    (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega) a
       hS.arena.2) hL.pers hL.scr
-  refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
-      (fun x hx => .inl (by have := hC x hx; omega)) hf
-      (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega), ?_, ?_, ?_,
+  refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; omega)
+      (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
-      hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp)⟩
+      hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
-        ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp),
-          fun h => absurd (hA _ h) (by simp)⟩
+        ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
+          fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩
-        ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp),
-          fun h => absurd (hA _ h) (by simp)⟩
+        ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
+          fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩,
-      hf.2.2.1 145 ▸ hS.bstk,
+      hf.2.2.1 BSTK ▸ hS.bstk,
       hS.den.mono ⟨by rw [hL.ls]; exact LExt.refl _, fun i us h => by
           unfold denoteLs at h ⊢
           revert h
@@ -94,14 +93,14 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
         (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv))
         (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa, hmode⟩,
     StackKept.of_frameL hf
-      ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
-       fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
+      ⟨fun h => absurd (hA _ h) (by decide),
+       fun h => absurd (hA _ h) (by decide), hP⟩
       ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc hP1 hPT⟩
   · rw [hL.caches]
-    exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+    exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
   · rw [hL.pins]
-    exact hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp only [PINS, ArrId] at this; omega)
+    exact hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide))
       (by decide))
   · intro h l e
     rw [hL.caches] at e
