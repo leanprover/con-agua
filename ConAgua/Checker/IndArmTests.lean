@@ -1,4 +1,3 @@
-import ConAgua.L.Syntax
 import ConAgua.Compiler.WriteSetSplit
 
 /-! The tests behind `Checker/IndArmClosed.lean`'s per-function checks: an arm's array and `CTL`

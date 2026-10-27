@@ -1,6 +1,5 @@
 import ConAgua.Checker.IndArmTests
 import ConAgua.Checker.IndArmFns
-import ConAgua.Layout
 import ConAgua.Arena.IndRealAbs
 
 /-! The function sets of the inductive arm's write-set checks (`Checker/IndArmClosed.lean`) as
