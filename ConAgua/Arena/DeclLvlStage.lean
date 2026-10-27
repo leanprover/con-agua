@@ -57,7 +57,7 @@ theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 /-! ## `lvl_eq_c`'s write set -/
 
 /-- The arrays `lvl_eq_c` may write: all a step may, but the pools. -/
-def lvlA : List ArrId := stepA.filter fun b => b ≠ IW ∧ b ≠ EREC
+def lvlA : List TieredArray := stepA.filter fun b => b ≠ IW ∧ b ≠ EREC
 
 /-- The `CTL` words `lvl_eq_c` may write: all a step may, but the pools' tops. -/
 def lvlC : List Word := stepC.filter fun x => x ≠ 129 ∧ x ≠ 200

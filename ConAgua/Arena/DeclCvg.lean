@@ -34,8 +34,8 @@ namespace L.Arena
 open L.Front (DECL DLP)
 
 /-- The arrays a step may write: all but the pending checks and the declaration records. -/
-def stepA : List ArrId :=
-  (List.range 388).filter fun b => b ≠ PEND ∧ b ≠ DECL ∧ b ≠ DLP ∧ (b < 146 ∨ 149 < b)
+def stepA : List TieredArray :=
+  checkerWordArrays.filter fun b => b ≠ PEND ∧ b ≠ DECL ∧ b ≠ DLP ∧ (b.arr < 146 ∨ 149 < b.arr)
 
 /-- The `CTL` words a step may write: all but the pending checks' count, the promotion memos'
 words and the pin variant list's header (`CTL[150]`, `CTL[151]`, lane `romload`). -/

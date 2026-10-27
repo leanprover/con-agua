@@ -73,7 +73,7 @@ def FireR (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjL
       ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L)
 
 /-- What `rec_fire_levels` writes. -/
-abbrev rflArrs : List ArrId :=
+abbrev rflArrs : List TieredArray :=
   LH :: SPN :: POOL :: POOL1 :: LSREC :: LSSLOT :: LSHP :: (tier1 LSREC) :: (tier1 LSSLOT) :: (tier1 LSHP) :: lvArrs
 abbrev rflCtl : List Word := 136 :: 192 :: 0 :: 40 :: 41 :: lvCtl
 

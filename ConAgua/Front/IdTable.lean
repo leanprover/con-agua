@@ -216,7 +216,7 @@ end specs
 def TblIx (b : ArrId) : Prop := b = 64 ∨ b = 65 ∨ b = 66
 
 /-- The tables' arrays: dense `64‥66`, sparse `72‥74`. -/
-def idArrs : List ArrId := [NID, LID, EID, NIDS, LIDS, EIDS]
+def idArrs : List TieredArray := [NID, LID, EID, NIDS, LIDS, EIDS]
 
 /-- The tables' `CTL` words: sparse stamps and counts `64‥69`, dense sizes `70‥72`. -/
 def idCtl : List Word := [64, 65, 66, 67, 68, 69, 70, 71, 72]
@@ -418,7 +418,7 @@ structure TblSame (m m' : Mem) (b : ArrId) : Prop where
   e : rdW (m'.arr64 CTL) (spS b).cs = rdW (m.arr64 CTL) (spS b).cs
 
 theorem TblSame.of_frameD {A : List TieredArray} {C : List Word} {m m' : Mem} {b : ArrId}
-    (hf : MemFrame A C m m') (hb : TblIx b) (hbA : b ∉ A) (hb8 : spArr b ∉ A) (hzC : szC b ∉ C)
+    (hf : MemFrame A C m m') (hb : TblIx b) (hbA : (b : TieredArray) ∉ A) (hb8 : (spArr b : TieredArray) ∉ A) (hzC : szC b ∉ C)
     (heC : (spS b).cs ∉ C) : TblSame m m' b :=
   ⟨hf.1 b hbA (by rcases hb with rfl | rfl | rfl <;> decide),
     hf.1 _ hb8 (by rcases hb with rfl | rfl | rfl <;> decide), hf.2.1 _ hzC, hf.2.1 _ heC⟩
@@ -432,7 +432,7 @@ theorem TblSame.of_eq {m m' : Mem} {b : ArrId} (h : m'.arr64 b = m.arr64 b)
 words outside `idCtl`. -/
 theorem tbl_apart {A : List TieredArray} {C : List Word} {b : ArrId} (hb : TblIx b)
     (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x ∉ idCtl) :
-    b ∉ A ∧ spArr b ∉ A ∧ szC b ∉ C ∧ (spS b).cs ∉ C :=
+    (b : TieredArray) ∉ A ∧ (spArr b : TieredArray) ∉ A ∧ szC b ∉ C ∧ (spS b).cs ∉ C :=
   ⟨fun h => by have := hA b h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, NID, LID, EID, NIDS, LIDS, EIDS],
     fun h => by have := hA _ h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, spArr, NID, LID, EID, NIDS, LIDS, EIDS],
     fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [szC, idCtl] at this,
@@ -462,7 +462,7 @@ theorem tblW_congr {m m' : Mem} {b : ArrId} (h : TblSame m m' b) (i : Word) :
 /-- **The relation survives a writer of other arrays and `CTL` words.** -/
 theorem TblR.frameD {A : List TieredArray} {C : List Word} {m m' : Mem} {b : ArrId}
     {t : ConLeche.Frontend.IdTable (Idx k)} (h : TblR m b t) (hf : MemFrame A C m m')
-    (hb : TblIx b) (hbA : b ∉ A) (hb8 : spArr b ∉ A) (hzC : szC b ∉ C) (heC : (spS b).cs ∉ C) :
+    (hb : TblIx b) (hbA : (b : TieredArray) ∉ A) (hb8 : (spArr b : TieredArray) ∉ A) (hzC : szC b ∉ C) (heC : (spS b).cs ∉ C) :
     TblR m' b t := by
   have hS := TblSame.of_frameD hf hb hbA hb8 hzC heC
   have hz : szW m' b = szW m b := szW_congr hS
@@ -494,7 +494,7 @@ theorem TblR.zero (m : Mem) (b : ArrId) (hb : TblIx b) (hz : ∀ b x, rdW (m.arr
 /-- The arrays and `CTL` words `tbl_put` writes. -/
 theorem tblPutW_frame {m m' : Mem} {b : ArrId} (hb : TblIx b) {i w : Word}
     (h : tblPutW m b i w = some m') : MemFrame [b, spArr b] [szC b, (spS b).cs + 1] m m' := by
-  have hbC : b ≠ CTL := by rcases hb with rfl | rfl | rfl <;> decide
+  have hbC : (b : TieredArray) ≠ CTL := by rcases hb with rfl | rfl | rfl <;> decide
   unfold tblPutW at h
   split at h
   · cases h
@@ -514,15 +514,15 @@ theorem TblR.put {m m' : Mem} {b : ArrId} {t t' : ConLeche.Frontend.IdTable (Idx
     (hp : tblPutW m b i w = some m')
     (ht' : ∀ j, t'.get? j = if j = i.toNat then some (decI w) else t.get? j) :
     TblR m' b t' := by
-  have hbC : b ≠ CTL := by rcases hb with rfl | rfl | rfl <;> decide
+  have hbC : (b : TieredArray) ≠ CTL := by rcases hb with rfl | rfl | rfl <;> decide
   have hzs : szC b ≠ (spS b).cs := by rcases hb with rfl | rfl | rfl <;> decide
   have hS := spS_wf b hb
-  have hsA : (spS b).arr ∉ [b] := by rcases hb with rfl | rfl | rfl <;> decide
+  have hsA : ((spS b).arr : TieredArray) ∉ ([b] : List TieredArray) := by rcases hb with rfl | rfl | rfl <;> decide
   obtain ⟨sp, hR, hg⟩ := h.sparse
   have hsize := h.size
   have hsz := h.sz
   have hctl := h.ctl
-  have hsA' : (spS b).arr ∉ ([b] : List ArrId) := hsA
+  have hsA' : ((spS b).arr : TieredArray) ∉ ([b] : List TieredArray) := hsA
   have hcs : (spS b).cs ∉ ([szC b] : List Word) := by simpa using hzs.symm
   have hcs0 : (spS b).cs ∉ ([] : List Word) := by simp
   unfold tblPutW at hp

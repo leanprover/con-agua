@@ -77,6 +77,12 @@ theorem IsTier1.tier1 (a : Nat) : IsTier1 (tier1 a) := rfl
 theorem Tier1In.tier1 {lo hi a : Nat} (h1 : lo ≤ a) (h2 : a < hi) : Tier1In lo hi (tier1 a) :=
   ⟨rfl, h1, h2⟩
 
+/-- Tier 0 of each array of `l`, and tier 1 of each: lists of word arrays written by their
+names. (A long list literal mixing `ArrId`s and `TieredArray`s does not elaborate: Lean
+elaborates it in pieces, without the expected element type.) -/
+abbrev tier0s (l : List ArrId) : List TieredArray := l.map TieredArray.t0
+@[inherit_doc tier0s] abbrev tier1s (l : List ArrId) : List TieredArray := l.map tier1
+
 /-! ## Tables -/
 
 /-- The kind of an array: bytes or words (two separate number spaces). -/

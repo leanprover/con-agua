@@ -143,7 +143,7 @@ theorem pinW_set (m : Mem) (d h : Word) (i : Nat) (hd : d.toNat < (m.arr64 PINS)
   · simp [hi, Ne.symm hi]
 
 /-- The pin store's frame: `PINS` and the store tier. -/
-def PinA : List ArrId := PINS :: StoreA
+def PinA : List TieredArray := PINS :: StoreA
 
 theorem frame_pinA {m m' : Mem} (h : MemFrame StoreA StoreC m m') : MemFrame PinA StoreC m m' :=
   h.mono (fun _b hb => List.mem_cons_of_mem _ hb) (fun _ hx => hx)

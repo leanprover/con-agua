@@ -56,7 +56,7 @@ def benchProg : Prog :=
 /-- A memory with room for `c` nodes per table the walk reads: the word arrays of the arena
 layout (`ArenaRel.lean`) the walk reads and the level-parameter columns, all zero; the others are empty. -/
 def walkMem (c : Nat) : Mem :=
-  Mem.ofWords <| [(CTL, Array.replicate 64 0)] ++ withTiers
+  Mem.ofWords <| [((CTL : TieredArray), Array.replicate 64 0)] ++ withTiers
     [(AREC, Array.replicate (4 * c) 0), (ASLOT, Array.replicate (4 * c) 0),
      (SOREC, Array.replicate (2 * c) 0), (SOSLOT, Array.replicate (4 * c) 0),
      (LEREC, Array.replicate (6 * c) 0), (LESLOT, Array.replicate (4 * c) 0),

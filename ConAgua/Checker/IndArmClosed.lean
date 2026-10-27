@@ -21,7 +21,7 @@ def tA (f : Nat → Bool) (a : ArrId) : Bool := decide (a < 388) && f a
 /-- A `CTL` word test: below 256 and `g`. -/
 def tC (g : Nat → Bool) (w : Word) : Bool := decide (w.toNat < 256) && g w.toNat
 
-theorem tA_mem {f : Nat → Bool} {a : ArrId} (h : tA f a = true) : a ∈ (List.range 388).filter f := by
+theorem tA_mem {f : Nat → Bool} {a : ArrId} (h : tA f a = true) : a ∈ checkerWordArrays.filter f := by
   simp only [tA, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [List.mem_filter, List.mem_range]
   exact ⟨h.1, h.2⟩

@@ -100,20 +100,19 @@ def preLoopFns : List FnName := [
   "vi_rec_idx", "vi_recs", "vi_recs_go", "vi_tail", "vi_unsafe", "zero_find", "zero_push"]
 
 /-- The word arrays (other than `CTL`) the functions of `preLoopFns` store into. -/
-def preLoopA : List ArrId := [
-  POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
-  SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
-  FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
-  FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, Front.NID, Front.LID, Front.EID,
-  Front.DECL, Front.DLP, Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, HSEEN,
-  HNIX, PINS, EREC, Rom.RSTK, Rom.RMEMO, Rom.RSET, LH, Ind.IW, tier1 POOL, tier1 REC, tier1 SLOT,
-  tier1 AREC, tier1 ASLOT, tier1 SREC, tier1 SSLOT, tier1 ZREC, tier1 ZSLOT, tier1 MREC,
-  tier1 MSLOT, tier1 IREC, tier1 ISLOT, tier1 PREC, tier1 PSLOT, tier1 SOREC, tier1 SOSLOT,
-  tier1 CREC, tier1 CSLOT, tier1 LEREC, tier1 LESLOT, tier1 BREC, tier1 BSLOT, tier1 FVREC,
-  tier1 FVSLOT, tier1 LAREC, tier1 LASLOT, tier1 FAREC, tier1 FASLOT, tier1 PJREC, tier1 PJSLOT,
-  tier1 NAREC, tier1 NASLOT, tier1 NSREC, tier1 NSSLOT, tier1 NNREC, tier1 NNSLOT, tier1 LSREC,
-  tier1 LSSLOT, tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER, tier1 PJDER, tier1 SHP,
-  tier1 MHP, tier1 IHP, tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP]
+def preLoopA : List TieredArray :=
+  tier0s [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT,
+    PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT,
+    LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC,
+    NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP,
+    CLP, FVLP, Front.NID, Front.LID, Front.EID, Front.DECL, Front.DLP, Front.Ind.IFR,
+    Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, HSEEN, HNIX, PINS, EREC, Rom.RSTK,
+    Rom.RMEMO, Rom.RSET, LH, Ind.IW] ++
+  tier1s [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT,
+    PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT,
+    LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC,
+    NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP,
+    CLP, FVLP]
 
 /-- The `CTL` words the functions of `preLoopFns` store into. -/
 def preLoopC : List Word := [

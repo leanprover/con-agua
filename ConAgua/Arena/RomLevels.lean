@@ -518,7 +518,7 @@ open L.Arena
 /-! ## The pure side -/
 
 /-- The ROM interner's frame: the store tier and the stack. -/
-def RomA : List ArrId := RSTK :: StoreA
+def RomA : List TieredArray := RSTK :: StoreA
 def RomC : List Word := 131 :: StoreC
 
 theorem frame_romA {m m' : Mem} (h : MemFrame StoreA StoreC m m') : MemFrame RomA RomC m m' :=

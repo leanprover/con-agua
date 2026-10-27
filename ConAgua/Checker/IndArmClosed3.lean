@@ -26,7 +26,7 @@ prog_all checkerProg_armMcChk : checkerProg (wsChk CTL
 /-! ## The walk memos: the `AbsKeep` callees that reach no walk -/
 
 /-- The arrays below 256 apart from the walk memos'. -/
-def armAbsA : List ArrId := (List.range 388).filter fun b => memoFreeA [b]
+def armAbsA : List TieredArray := checkerWordArrays.filter fun b => memoFreeA [b]
 /-- The `CTL` words below 256 apart from the walk memos' epoch words. -/
 def armAbsC : List Word := ((List.range 256).filter fun c => memoFreeC [c.toUInt64]).map Nat.toUInt64
 

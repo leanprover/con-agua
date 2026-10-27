@@ -16,8 +16,8 @@ what carries `StageC` across it.
 namespace L.Arena
 
 /-- The arrays a leaf may write (both tiers): all but the pin table and the core's memos. -/
-def leafA : List ArrId :=
-  (List.range 388).filter fun b => b ≠ PINS ∧ b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ LPMEMO ∧
+def leafA : List TieredArray :=
+  checkerWordArrays.filter fun b => b ≠ PINS ∧ b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ LPMEMO ∧
     b ≠ LPLMEMO ∧ b ≠ LPLSMEMO ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM
 
 /-- The `CTL` words a leaf may write: all but the core memos' stamps. -/

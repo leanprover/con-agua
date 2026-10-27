@@ -35,7 +35,7 @@ end model
 
 /-- The arrays they may write: all below 320 (both tiers) but the stage memos' (`201..208`) and `abstract1`'s
 memo (`49`), and since lane `indstaget` the pins and the core's walk memos. -/
-def cidFreeA : List ArrId := (List.range 388).filter (fun b => (b < 201 ∨ 208 < b) ∧
+def cidFreeA : List TieredArray := checkerWordArrays.filter (fun b => (b.arr < 201 ∨ 208 < b.arr) ∧
   b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ b ≠ PINS ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM ∧
   b ≠ LPMEMO ∧ b ≠ LPLMEMO ∧ b ≠ LPLSMEMO)
 

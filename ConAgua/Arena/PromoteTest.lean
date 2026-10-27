@@ -16,7 +16,7 @@ namespace L.Arena
 /-- A memory with every word array of 256 zeros (the pool holds `"ab"` at 0, top 2), `CTL` 256
 words, the scratch flag `sc`. -/
 def promoteMem (sc : Word) : Mem :=
-  Mem.ofWords <| ArrTable.zeroBoth checkerArrays (fun _ => 256) ++ [(CTL, ((Array.replicate 256 0).set! 1 sc).set! 0 2)] ++
+  Mem.ofWords <| ArrTable.zeroBoth checkerArrays (fun _ => 256) ++ [((CTL : TieredArray), ((Array.replicate 256 0).set! 1 sc).set! 0 2)] ++
     withTiers [(POOL, ((Array.replicate 256 0).set! 0 97).set! 1 98)]
 
 /-- Run `f`; the first result and the memory. -/

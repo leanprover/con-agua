@@ -446,7 +446,7 @@ the pin variants' header `CTL[150]`, `CTL[151]`). Decided for the checker's prog
 `TwinOK` (the projection clause included) comes back with it. -/
 
 /-- The arrays a core function may write, at the loop's granularity. -/
-def coreLoopA : List ArrId :=
+def coreLoopA : List TieredArray :=
   stepA.filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧ (b < 201 ∨ 208 < b) ∧ b ≠ L.Stubs.CRM
 
 /-- The `CTL` words a core function may write, at the loop's granularity. -/

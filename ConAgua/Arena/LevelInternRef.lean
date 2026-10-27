@@ -121,9 +121,9 @@ theorem internLNode_keep (w : LNodeView) (a a' : AState) (i : LIdx)
 /-! ## Level pointers keep their views across the store's interning -/
 
 /-- The level store's arrays: every level interning writes only there. -/
-abbrev lvArrs : List ArrId := [ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, SHP, MHP, IHP,
-  tier1 ZREC, tier1 ZSLOT, tier1 SREC, tier1 SSLOT, tier1 MREC, tier1 MSLOT, tier1 IREC, tier1 ISLOT,
-  tier1 PREC, tier1 PSLOT, tier1 SHP, tier1 MHP, tier1 IHP]
+abbrev lvArrs : List TieredArray :=
+  tier0s [ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, SHP, MHP, IHP] ++
+  tier1s [ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, SHP, MHP, IHP]
 /-- The level store's counts. -/
 abbrev lvCtl : List Word := [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 

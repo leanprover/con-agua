@@ -136,7 +136,7 @@ theorem promote_lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
 /-! ## The relation for expressions -/
 
 /-- The arrays and `CTL` words an expression promotion writes. -/
-abbrev eArrs : List ArrId :=
+abbrev eArrs : List TieredArray :=
   lsArrs ++ [REC, tier1 REC, SLOT, tier1 SLOT, AREC, tier1 AREC, ASLOT, tier1 ASLOT, SOREC, tier1 SOREC,
     SOSLOT, tier1 SOSLOT, CREC, tier1 CREC, CSLOT, tier1 CSLOT, LEREC, tier1 LEREC, LESLOT,
     tier1 LESLOT, BREC, tier1 BREC, BSLOT, tier1 BSLOT, FVREC, tier1 FVREC, FVSLOT, tier1 FVSLOT,

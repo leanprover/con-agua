@@ -906,7 +906,7 @@ end nameSpec
 
 /-- The store tier's arrays (below 64, and their tier-1 twins `256‥319`) and `CTL` words (below
 64): every intern writes only there. -/
-def StoreA : List ArrId := lowTierArrs
+def StoreA : List TieredArray := lowTierArrs
 def StoreC : List Word := (List.range 64).map UInt64.ofNat
 
 theorem frame_store {A : List TieredArray} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
