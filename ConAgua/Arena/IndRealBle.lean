@@ -145,7 +145,7 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
     {r : List Word} {bs : BlockShape} (h : bleW p n m pp nb = some (r, m'))
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hrl : ReadLCOK a) {lv : ConLeche.Level} (hd : denoteL a.store.ls bs.resSort = some lv) :
-    ∃ x a', (ConRon.Arena.blockLargeElimAllowed bs (nb != 0)).run a = .ok (x, a') ∧
+    ∃ x a', (ConRon.Arena.blockLargeElimAllowed bs (nb != ↑(0 : ArrId))).run a = .ok (x, a') ∧
       StageR dn vis fe m' a' ∧ m' = m ∧ decW0B m' r x ∧ a'.store = a.store ∧ ReadLCOK a' := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hdec, hq9, -⟩ := partsShapeFacts hq hsrc
@@ -164,10 +164,10 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
   have hSX := hS.withReadLC X
   have htw : ∀ (y : Bool) (aY : AState),
       ((if ConLeche.Level.isNeverZero lv then pure true
-        else if (nb != 0) then pure false
+        else if (nb != ↑(0 : ArrId)) then pure false
         else pure (bs.large && bs.k == 1 && (bs.numCtors == 0 || bs.numCtors == 1)) : AM Bool).run
           { a with caches := { a.caches with readLC := X } } = .ok (y, aY)) →
-      (ConRon.Arena.blockLargeElimAllowed bs (nb != 0)).run a = .ok (y, aY) := by
+      (ConRon.Arena.blockLargeElimAllowed bs (nb != ↑(0 : ArrId))).run a = .ok (y, aY) := by
     intro y aY e
     simp only [ConRon.Arena.blockLargeElimAllowed, StateT.run_bind, hrun, except_ok_bind]
     exact e
@@ -195,7 +195,7 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
         obtain ⟨-, hlb⟩ := iwN_rdW hl (by omega)
         rw [BlockShape.k, decPL_length _ hg]; exact hlb
       refine ⟨_, _, htw _ _ (by
-        simp only [hnv, Bool.false_eq_true, ite_false, show (nb != 0) = false by simpa using hnb]; rfl),
+        simp only [hnv, Bool.false_eq_true, ite_false, show (nb != ↑(0 : ArrId)) = false by simpa using hnb]; rfl),
         hSX, rfl, ?_, rfl, hcX⟩
       simp only [show pp + UInt64.ofNat 7 = pp + 7 from rfl] at hL
       simp only [hK, hnc']
@@ -203,7 +203,7 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
     · rw [bleK1_nb (h1 := hx) (h2 := hnb)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, _, htw _ _ (by
-        simp only [hnv, Bool.false_eq_true, ite_false, show (nb != 0) = true by simpa using hnb, ite_true]; rfl),
+        simp only [hnv, Bool.false_eq_true, ite_false, show (nb != ↑(0 : ArrId)) = true by simpa using hnb, ite_true]; rfl),
         hSX, rfl, ⟨rfl, by decide⟩, rfl, hcX⟩
   · rw [hnv] at hx
     simp only [ite_true] at hx
@@ -218,7 +218,7 @@ theorem blockLargeElimAllowed_sim {p : Prog} (P : BleProg p) (n : Nat) {m : Mem}
     (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp) (hrl : ReadLCOK a)
     {lv : ConLeche.Level} (hd : denoteL a.store.ls bs.resSort = some lv) :
     Sim (callW p n "block_large_elim_allowed" [pp, nb] m)
-      (ConRon.Arena.blockLargeElimAllowed bs (nb != 0)) a
+      (ConRon.Arena.blockLargeElimAllowed bs (nb != ↑(0 : ArrId))) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ m' = m ∧ decW0B m' r x ∧ a'.store = a.store ∧
         ReadLCOK a') := by
   intro r m' e
@@ -237,15 +237,15 @@ theorem blockLargeElimAllowed_simC {p : Prog} (P : BleProg p) (n : Nat) {env : C
     (hA : AbsOK m) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     {pP : ConLeche.BlockShape} (hsh : ConRon.Bridge.Inductives.dShape a.store bs = some pP) :
     Sim (callW p n "block_large_elim_allowed" [pp, nb] m)
-      (ConRon.Arena.blockLargeElimAllowed bs (nb != 0)) a
+      (ConRon.Arena.blockLargeElimAllowed bs (nb != ↑(0 : ArrId))) a
       (fun r x m' a' => StageC dn vis fe env m' a' ∧ m' = m ∧ decW0B m' r x ∧
-        ConRon.Bridge.Inductives.PStep a a' ∧ x = ConLeche.blockLargeElimAllowed pP (nb != 0)) := by
+        ConRon.Bridge.Inductives.PStep a a' ∧ x = ConLeche.blockLargeElimAllowed pP (nb != ↑(0 : ArrId))) := by
   intro r m' e
   obtain ⟨hrl, -, -⟩ := hC.lzFacts
   obtain ⟨-, -, -, -, hsP, -, -⟩ := ConRon.Bridge.Inductives.dShape_inv hsh
   obtain ⟨x, a', hrun, hS', rfl, hd, -, -⟩ :=
     blockLargeElimAllowed_sim P n hC.stage hq hsrc hrl hsP r m' e
-  obtain ⟨hs, hx⟩ := ConRon.Bridge.Inductives.blockLargeElimAllowed_spec bs pP (nb != 0) a a' x
+  obtain ⟨hs, hx⟩ := ConRon.Bridge.Inductives.blockLargeElimAllowed_spec bs pP (nb != ↑(0 : ArrId)) a a' x
     hC.check.state hC.check.caches.readL hsh hrun
   exact ⟨x, a', hrun, hC.of_pstep hS' hA hs, rfl, hd, hs, hx⟩
 

@@ -15,17 +15,16 @@ namespace L.Arena
 open L.Front (DECL DLP DeclsF)
 
 /-- **The loop's relation across a promotion-like step**: the writes land in the arrays below 50,
-`132‥136` and `146‥149`, the table arrays (`129‥131`, `143`, `385‥387`), and in the `CTL` words
+`132‥136` and `146‥149`, the table arrays (`129‥131` in both tiers, `143`), and in the `CTL` words
 below 64, `129`, `133`, `140‥147`; the arena side is given, the environment is given; the rest is a
 frame. -/
 theorem LoopR.of_frame {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe fe' : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     {A : List TieredArray} {C : List Word} {pm' : PMemo}
     (hR : LoopR pins dn m a vis fe pend ds) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, ((b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
-      (146 ≤ b ∧ b ≤ 149) ∨
-      Tier1In 0 50 b ∨ Tier1In 55 64 b) ∨
-      ((129 ≤ b ∧ b ≤ 131) ∨ b = 143 ∨ Tier1In 129 132 b))
+    (hA : ∀ b ∈ A, ((b.arr < 50 ∨ (54 < b.arr ∧ b.arr < 64)) ∨
+      ((132 ≤ b.arr ∧ b.arr ≤ 136) ∨ (140 ≤ b.arr ∧ b.arr ≤ 142)) ∨ (146 ≤ b.arr ∧ b.arr ≤ 149)) ∨
+      ((129 ≤ b.arr ∧ b.arr ≤ 131) ∨ b.arr = 143))
     (hC : ∀ x ∈ C, (x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147)) ∨ x.toNat = 133)
     (hcp : cp a' = cp a) (hg : ErecGrow m m') (hts : erecTop m' ≤ (m'.arr64 EREC).size)
     (hP : PMemoR m' pm') (hE : EnvR dn m' vis fe') (hmode : ModeOK m') :
@@ -37,10 +36,10 @@ theorem LoopR.of_frame {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide)
   refine ⟨⟨hD, ?_, ?_, hE, hmode⟩, ?_, ?_, ?_, ⟨pm', hP⟩, ?_⟩
   · rw [hcA]
-    exact hR.check.core.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+    exact hR.check.core.frame (fun b hb => by have := hA b hb; omega)
       (fun x hx => by have := hC x hx; omega) hf
   · rw [hpA]
-    exact hR.check.pins.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) hf
+    exact hR.check.pins.frame (fun b hb => by have := hA b hb; omega) hf
   · exact hR.pend.ext (hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide))
       (hf.2.1 130 (fun h => by have := hC _ h; simp at this)) hg.ext
   · rw [hf.1 DECL (fun h => by have := hA _ h; revert this; decide) (by decide),
