@@ -58,8 +58,7 @@ l_model ctsE_spec (p : Prog) (hf : p.lookup "check_sum_tele_slow" = some checkSu
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p)
-  (hApd : ApdF p) (hCrk : CrKeep p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true)
   (hW : WtE p) (hCcv : CcvE p)
 
 section census
