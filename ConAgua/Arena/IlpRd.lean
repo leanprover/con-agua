@@ -23,7 +23,7 @@ open L.Arena
 /-- A frame away from the stage memos (arrays 201‥208, `CTL` words 202‥219): `stubM_memoFrame`'s
 shape. -/
 def StageMemoFr (m m' : Mem) : Prop :=
-  ∃ (A : List TieredArray) (C : List Word), (∀ b ∈ A, b < 201 ∨ 208 < b) ∧
+  ∃ (A : List TieredArray) (C : List Word), (∀ b ∈ A, b.arr < 201 ∨ 208 < b.arr) ∧
     (∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) ∧ MemFrame A C m m'
 
 /-- **The contract of a reading of `inst_lp_fast`** at every exec fuel, at call points satisfying

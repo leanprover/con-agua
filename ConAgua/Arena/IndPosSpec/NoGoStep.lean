@@ -311,7 +311,7 @@ of the positivity check read only their own array and stamp word, so each surviv
 that leaves those out (`noMR_mfr`, `rpMR_mfr`, …). -/
 
 def MFr (S : List TieredArray) (T : List Word) (m m' : Mem) : Prop :=
-  ∃ (A : List TieredArray) (C : List Word), MemFrame A C m m' ∧ (∀ b ∈ A, b < 201 ∨ 208 < b ∨ b ∈ S) ∧
+  ∃ (A : List TieredArray) (C : List Word), MemFrame A C m m' ∧ (∀ b ∈ A, b.arr < 201 ∨ 208 < b.arr ∨ b ∈ S) ∧
     (∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat ∨ x ∈ T)
 
 theorem MFr.refl (S : List TieredArray) (T : List Word) (m : Mem) : MFr S T m m :=
@@ -326,7 +326,7 @@ theorem MFr.trans {S : List TieredArray} {T : List Word} {m₁ m₂ m₃ : Mem} 
   · intro b hb; rcases List.mem_append.mp hb with h | h; exact a₁ b h; exact a₂ b h
   · intro x hx; rcases List.mem_append.mp hx with h | h; exact c₁ x h; exact c₂ x h
 
-theorem MFr.mono {S S' : List ArrId} {T T' : List Word} {m m' : Mem} (h : MFr S T m m')
+theorem MFr.mono {S S' : List TieredArray} {T T' : List Word} {m m' : Mem} (h : MFr S T m m')
     (hS : ∀ b ∈ S, b ∈ S') (hT : ∀ x ∈ T, x ∈ T') : MFr S' T' m m' := by
   obtain ⟨A, C, f, a, c⟩ := h
   refine ⟨A, C, f, fun b hb => ?_, fun x hx => ?_⟩
@@ -351,7 +351,8 @@ macro_rules
       | split at $h:ident))
 
 theorem MFr.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 201 ∨ 208 < b) (hC : ∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) : MFr [] [] m m' :=
+    (hA : ∀ b ∈ A, b.arr < 201 ∨ 208 < b.arr) (hC : ∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) :
+    MFr [] [] m m' :=
   ⟨A, C, hf, fun b hb => by rcases hA b hb with h | h; exact .inl h; exact .inr (.inl h),
     fun x hx => by rcases hC x hx with h | h; exact .inl h; exact .inr (.inl h)⟩
 
@@ -364,7 +365,7 @@ theorem MFr.set_iw (m : Mem) (x v : Word) : MFr [] [] m (m.set64 IW x v) := MFr.
 theorem MFr.ofI1F {m m' : Mem} {args r : List Word} (h : i1F m args = some (r, m')) : MFr [] [] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact MFr.of_frame (run_memFrame i1Prog_closed (List.mem_cons_self ..) (run_of_callW hc)).1
-    (fun b hb => by have := instA_lt b hb; simp only [ArrId] at this ⊢; omega)
+    (fun b hb => by have := instA_lt b hb; simp only [InStoreTier] at this; omega)
     (fun x hx => .inl (Nat.lt_trans (instC_lt x hx) (by decide)))
 
 /-- `mk_app_n_f` writes the stack, its top and the app tables (`mknF_frame`). -/
@@ -373,8 +374,9 @@ theorem MFr.ofMknF {m m' : Mem} {args r : List Word} (h : mknF m args = some (r,
 
 /-- The memo array `S.arr` and its stamp word survive an `MFr` that leaves them out. -/
 theorem MFr.memo {S0 : List TieredArray} {T0 : List Word} {m m' : Mem} (h : MFr S0 T0 m m') (b : ArrId) (x : Word)
-    (hb : 201 ≤ b ∧ b ≤ 208) (hx : 202 ≤ x.toNat ∧ x.toNat ≤ 219) (hbS : b ∉ S0) (hxT : x ∉ T0) :
-    ∃ (A : List TieredArray) (C : List Word), MemFrame A C m m' ∧ b ∉ A ∧ x ∉ C := by
+    (hb : 201 ≤ b ∧ b ≤ 208) (hx : 202 ≤ x.toNat ∧ x.toNat ≤ 219) (hbS : (b : TieredArray) ∉ S0)
+    (hxT : x ∉ T0) :
+    ∃ (A : List TieredArray) (C : List Word), MemFrame A C m m' ∧ (b : TieredArray) ∉ A ∧ x ∉ C := by
   obtain ⟨A, C, f, a, c⟩ := h
   refine ⟨A, C, f, fun hm => ?_, fun hm => ?_⟩
   · rcases a b hm with h | h | h
