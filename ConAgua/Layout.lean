@@ -23,6 +23,15 @@ a region. The harness (`main.c`) reads the layout only through the symbols the s
 Kept apart from the rows: the aliases (one array under a second name, for a second, time-disjoint
 use) and the stand-alone example programs' arrays (`L.Examples.HIST`, `L.Scan.Utf8.OUT`,
 `L.Compiler.Tests`), which are not part of the checker.
+
+**Minimum lengths.** A row's `min k` (`ArrDecl.min`) promises at least `k` words of both tiers
+of the array in every layout the checker runs in; the compiler then drops the bounds check of a
+constant index below `k`. The entry stubs establish it and their proofs prove it: `ca_setup` and
+`ca_check_seq` give every array a whole slot (except `OUT`, `CTLF`, which have no minimum, and
+`HDRF`'s 132 words), and `ca_check_b` gives the owned arrays a slot and tests every frozen array's
+length in the buffer, declining below the minimum; an array that is neither frozen nor owned gets no
+memory there, so it has no minimum. The minima are the largest constant index the program uses,
+plus one (`CTL`: 256, `L.Checker.ctlMin`).
 -/
 
 namespace L
@@ -36,46 +45,46 @@ declare_arrays checkerArrays
   -- the stores (`Arena/StoreFields.lean`): the pool, then per table its records and cons slots
   | /-- The limb pool: limbs, level lists' handles, names' bytes (`Arena/Pool.lean`). -/
     Arena.POOL : word tiered := 0
-  | /-- The control words; word 0 is the pool top. -/ Arena.CTL : word := 1
+  | /-- The control words; word 0 is the pool top. -/ Arena.CTL : word min 256 := 1
   | /-- The `lit` records (four words per node). -/ Arena.REC : word tiered := 2
-  | /-- The `lit` cons-table slots. -/ Arena.SLOT : word tiered := 3
+  | /-- The `lit` cons-table slots. -/ Arena.SLOT : word tiered min 2 := 3
   | /-- The `app` records (one packed word per node). -/ Arena.AREC : word tiered := 4
-  | /-- The `app` cons-table slots. -/ Arena.ASLOT : word tiered := 5
+  | /-- The `app` cons-table slots. -/ Arena.ASLOT : word tiered min 2 := 5
   | /-- The `succ` records (one word per node). -/ Arena.SREC : word tiered := 6
-  | /-- The `succ` cons-table slots. -/ Arena.SSLOT : word tiered := 7
+  | /-- The `succ` cons-table slots. -/ Arena.SSLOT : word tiered min 2 := 7
   | /-- The `zero` records (one dummy word per node). -/ Arena.ZREC : word tiered := 8
-  | /-- The `zero` cons-table slots. -/ Arena.ZSLOT : word tiered := 9
+  | /-- The `zero` cons-table slots. -/ Arena.ZSLOT : word tiered min 2 := 9
   | /-- The `max` records (one packed word per node). -/ Arena.MREC : word tiered := 10
-  | /-- The `max` cons-table slots. -/ Arena.MSLOT : word tiered := 11
+  | /-- The `max` cons-table slots. -/ Arena.MSLOT : word tiered min 2 := 11
   | /-- The `imax` records (one packed word per node). -/ Arena.IREC : word tiered := 12
-  | /-- The `imax` cons-table slots. -/ Arena.ISLOT : word tiered := 13
+  | /-- The `imax` cons-table slots. -/ Arena.ISLOT : word tiered min 2 := 13
   | /-- The `param` records (one word per node). -/ Arena.PREC : word tiered := 14
-  | /-- The `param` cons-table slots. -/ Arena.PSLOT : word tiered := 15
+  | /-- The `param` cons-table slots. -/ Arena.PSLOT : word tiered min 2 := 15
   | /-- The `sort` records (one word per node). -/ Arena.SOREC : word tiered := 16
-  | /-- The `sort` cons-table slots. -/ Arena.SOSLOT : word tiered := 17
+  | /-- The `sort` cons-table slots. -/ Arena.SOSLOT : word tiered min 2 := 17
   | /-- The `const` records (one packed word per node). -/ Arena.CREC : word tiered := 18
-  | /-- The `const` cons-table slots. -/ Arena.CSLOT : word tiered := 19
+  | /-- The `const` cons-table slots. -/ Arena.CSLOT : word tiered min 2 := 19
   | /-- The `letE` records (two words per node). -/ Arena.LEREC : word tiered := 20
-  | /-- The `letE` cons-table slots. -/ Arena.LESLOT : word tiered := 21
+  | /-- The `letE` cons-table slots. -/ Arena.LESLOT : word tiered min 2 := 21
   | /-- The `bvar` records (one word per node). -/ Arena.BREC : word tiered := 22
-  | /-- The `bvar` cons-table slots. -/ Arena.BSLOT : word tiered := 23
-  | /-- The slots of `bvarBound`'s memo (`bvarBC`, one-word keys). -/ Arena.BMEMO : word := 24
+  | /-- The `bvar` cons-table slots. -/ Arena.BSLOT : word tiered min 2 := 23
+  | /-- The slots of `bvarBound`'s memo (`bvarBC`, one-word keys). -/ Arena.BMEMO : word min 3 := 24
   | /-- The `fvar` records (two words per node). -/ Arena.FVREC : word tiered := 25
-  | /-- The `fvar` cons-table slots. -/ Arena.FVSLOT : word tiered := 26
+  | /-- The `fvar` cons-table slots. -/ Arena.FVSLOT : word tiered min 2 := 26
   | /-- The `lam` records (one packed word per node). -/ Arena.LAREC : word tiered := 27
-  | /-- The `lam` cons-table slots. -/ Arena.LASLOT : word tiered := 28
+  | /-- The `lam` cons-table slots. -/ Arena.LASLOT : word tiered min 2 := 28
   | /-- The `forallE` records (one packed word per node). -/ Arena.FAREC : word tiered := 29
-  | /-- The `forallE` cons-table slots. -/ Arena.FASLOT : word tiered := 30
+  | /-- The `forallE` cons-table slots. -/ Arena.FASLOT : word tiered min 2 := 30
   | /-- The `proj` records (two words per node). -/ Arena.PJREC : word tiered := 31
-  | /-- The `proj` cons-table slots. -/ Arena.PJSLOT : word tiered := 32
+  | /-- The `proj` cons-table slots. -/ Arena.PJSLOT : word tiered min 2 := 32
   | /-- The name `anonymous` records (one dummy word per node). -/ Arena.NAREC : word tiered := 33
-  | /-- The name `anonymous` cons-table slots. -/ Arena.NASLOT : word tiered := 34
+  | /-- The name `anonymous` cons-table slots. -/ Arena.NASLOT : word tiered min 2 := 34
   | /-- The name `str` records (four words per node). -/ Arena.NSREC : word tiered := 35
-  | /-- The name `str` cons-table slots. -/ Arena.NSSLOT : word tiered := 36
+  | /-- The name `str` cons-table slots. -/ Arena.NSSLOT : word tiered min 2 := 36
   | /-- The name `num` records (two words per node). -/ Arena.NNREC : word tiered := 37
-  | /-- The name `num` cons-table slots. -/ Arena.NNSLOT : word tiered := 38
+  | /-- The name `num` cons-table slots. -/ Arena.NNSLOT : word tiered min 2 := 38
   | /-- The level-list records (three words per node). -/ Arena.LSREC : word tiered := 39
-  | /-- The level-list cons-table slots. -/ Arena.LSSLOT : word tiered := 40
+  | /-- The level-list cons-table slots. -/ Arena.LSSLOT : word tiered min 2 := 40
   | /-- The slots of `liftLooseBVars`' memo (`liftC`, keys `(handle, cutoff)`). -/
     Arena.LMEMO : word := 41
   -- the derived columns (`Arena/LpCol.lean`, `Arena/DerRel.lean`): one word per node
@@ -85,15 +94,15 @@ declare_arrays checkerArrays
   | /-- The derived word of the `letE` nodes. -/ Arena.LEDER : word tiered := 45
   | /-- The derived word of the `proj` nodes. -/ Arena.PJDER : word tiered := 46
   | /-- The slots of `instantiate1`'s memo (`inst1C`, keys `(handle, depth)`). -/
-    Arena.IMEMO : word := 47
-  | /-- The slots of `fvarRange`'s memo (`fvarBC`, one-word keys). -/ Arena.FRMEMO : word := 48
-  | /-- The slots of `abstract1`'s memo (`abs1C`, keys `(handle, k)`). -/ Arena.ABMEMO : word := 49
+    Arena.IMEMO : word min 3 := 47
+  | /-- The slots of `fvarRange`'s memo (`fvarBC`, one-word keys). -/ Arena.FRMEMO : word min 3 := 48
+  | /-- The slots of `abstract1`'s memo (`abs1C`, keys `(handle, k)`). -/ Arena.ABMEMO : word min 3 := 49
   | /-- The slots of `instantiateList`'s memo (`instLC`, keys `(handle, depth)`). -/
-    Arena.ILMEMO : word := 50
+    Arena.ILMEMO : word min 3 := 50
   | /-- `instantiate1LiftGo`'s memo (`inst1LC`). -/ Arena.ILFM : word := 51
-  | /-- `instLPC`'s memo (level-parameter instantiation of an expression). -/ Arena.LPMEMO : word := 52
-  | /-- `instLPLC`'s memo (of a level). -/ Arena.LPLMEMO : word := 53
-  | /-- `instLPLsC`'s memo (of a level list). -/ Arena.LPLSMEMO : word := 54
+  | /-- `instLPC`'s memo (level-parameter instantiation of an expression). -/ Arena.LPMEMO : word min 3 := 52
+  | /-- `instLPLC`'s memo (of a level). -/ Arena.LPLMEMO : word min 3 := 53
+  | /-- `instLPLsC`'s memo (of a level list). -/ Arena.LPLSMEMO : word min 3 := 54
   | /-- The `hasParam` column of the `succ` nodes. -/ Arena.SHP : word tiered := 55
   | /-- The `hasParam` column of the `max` nodes. -/ Arena.MHP : word tiered := 56
   | /-- The `hasParam` column of the `imax` nodes. -/ Arena.IHP : word tiered := 57
@@ -104,7 +113,7 @@ declare_arrays checkerArrays
   | /-- Word 0 is the tier-0 pool top while the scratch tier is open (`CTL[0]` then holds the
     tier-1 top): saved by `scratch_reset` when it leaves tier 0, restored when it drops the scratch
     tier. An array, not a global: every memory frame (`MemFrame`, the stores' `OutEq`) keeps it. -/
-    Arena.PT0 : word := 62
+    Arena.PT0 : word min 1 := 62
   -- the front end (`Front/`)
   | /-- Export name id ↦ name handle word `+ 1` (dense part). -/ Front.NID : word := 64
   | /-- Export level id ↦ level handle word `+ 1` (dense part). -/ Front.LID : word := 65
@@ -122,19 +131,19 @@ declare_arrays checkerArrays
   | /-- The ground hoist's name index: name handle ↦ the first position declaring it. -/
     Checker.HNIX : word := 76
   -- the per-declaration caches (`Arena/CoreCaches.lean`)
-  | /-- The `whnfCore` memo (`wcSch`). -/ Arena.WCM : word := 96
-  | /-- The cheap-mode `whnfCore` memo (`wkSch`). -/ Arena.WKM : word := 97
-  | /-- The `whnf` memo (`whSch`). -/ Arena.WH : word := 98
-  | /-- The `infer` memo (`inSch`). -/ Arena.INM : word := 99
-  | /-- The `inferOnly` memo (`ioSch`). -/ Arena.IOM : word := 100
-  | /-- The `isDefEq` memo (`deSch`). -/ Arena.DEM : word := 101
-  | /-- The `constType` memo (`ctSch`). -/ Arena.CTM : word := 102
-  | /-- The `constValue` memo (`cvSch`). -/ Arena.CV : word := 103
-  | /-- The `ruleRhs` memo (`rrSch`). -/ Arena.RRM : word := 104
-  | /-- The level-equality memo (`lqSch`). -/ Arena.LQ : word := 105
-  | /-- The level-list-equality memo (`lsqSch`). -/ Arena.LSQ : word := 106
+  | /-- The `whnfCore` memo (`wcSch`). -/ Arena.WCM : word min 3 := 96
+  | /-- The cheap-mode `whnfCore` memo (`wkSch`). -/ Arena.WKM : word min 3 := 97
+  | /-- The `whnf` memo (`whSch`). -/ Arena.WH : word min 3 := 98
+  | /-- The `infer` memo (`inSch`). -/ Arena.INM : word min 3 := 99
+  | /-- The `inferOnly` memo (`ioSch`). -/ Arena.IOM : word min 3 := 100
+  | /-- The `isDefEq` memo (`deSch`). -/ Arena.DEM : word min 3 := 101
+  | /-- The `constType` memo (`ctSch`). -/ Arena.CTM : word min 3 := 102
+  | /-- The `constValue` memo (`cvSch`). -/ Arena.CV : word min 3 := 103
+  | /-- The `ruleRhs` memo (`rrSch`). -/ Arena.RRM : word min 3 := 104
+  | /-- The level-equality memo (`lqSch`). -/ Arena.LQ : word min 3 := 105
+  | /-- The level-list-equality memo (`lsqSch`). -/ Arena.LSQ : word min 3 := 106
   -- the environment (`Arena/Tiers.lean`)
-  | /-- The pin table. -/ Arena.PINS : word := 128
+  | /-- The pin table. -/ Arena.PINS : word min 55 := 128
   | /-- The projection-table rows of `anonymous` names (`tblArr`). -/ Arena.TIXA : word tiered := 129
   | /-- The projection-table rows of `str` names. -/ Arena.TIXS : word tiered := 130
   | /-- The projection-table rows of `num` names. -/ Arena.TIXN : word tiered := 131
@@ -162,11 +171,11 @@ declare_arrays checkerArrays
   | /-- The promotion's expression memo. -/ Arena.PEM : word := 149
   | /-- The handles of the ROM interner memo's entries, as a set. -/ Rom.RSET : word := 150
   | /-- The scope walk's memo (`wscopedBGo`), also the `apd` walk's (`APDM`). -/
-    Arena.WSM : word := 151
-  | /-- `fvarLeavesGo`'s `seen` set. -/ Arena.FLM : word := 152
-  | /-- `leavesSubGo`'s memo. -/ Arena.LSM : word := 153
+    Arena.WSM : word min 3 := 151
+  | /-- `fvarLeavesGo`'s `seen` set. -/ Arena.FLM : word min 3 := 152
+  | /-- `leavesSubGo`'s memo. -/ Arena.LSM : word min 3 := 153
   | /-- The leaf list (`fvarLeavesGo`'s accumulator). -/ Arena.LVS : word := 154
-  | /-- The constants-resolution walk's memo. -/ Stubs.CRM : word := 155
+  | /-- The constants-resolution walk's memo. -/ Stubs.CRM : word min 3 := 155
   | /-- The level scratch heap: three words per node. -/ Arena.LH : word := 192
   -- the inductive checks (`Arena/IndIface.lean`)
   | /-- The work pool (handle slices). -/ Ind.IW : word := 200
@@ -181,7 +190,7 @@ declare_arrays checkerArrays
   -- the phase boundary (`Arena/Freeze.lean`)
   | /-- The frozen buffer (written by entry 1; the harness and entry 2 read it). -/
     Arena.OUT : word := 240
-  | /-- The frozen buffer's header, as entry 2 sees it. -/ Arena.HDRF : word := 241
+  | /-- The frozen buffer's header, as entry 2 sees it. -/ Arena.HDRF : word min 4 := 241
   | /-- The seed of `CTL`, as entry 2 sees it. -/ Arena.CTLF : word := 242
 
 /-- **The checker's word arrays**: tier 0 of every word array of the table and tier 1 of every

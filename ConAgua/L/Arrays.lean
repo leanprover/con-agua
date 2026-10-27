@@ -126,9 +126,11 @@ def nodupB (l : List Nat) : Bool :=
   let s := l.mergeSort
   (s.zip s.tail).all fun (x, y) => x != y
 
-/-- The word arrays with a minimum length (`ArrDecl.min`), as `(number, minimum)`. -/
-def mins (T : ArrTable) : List (ArrId × Nat) :=
-  (T.filter fun d => d.kind == .word && d.min != 0).map fun d => (d.id, d.min)
+/-- The word arrays with a minimum length (`ArrDecl.min`), as `(code, minimum)`
+(`TieredArray.code`): tier 0 of the array, and tier 1 of a tiered one. -/
+def mins (T : ArrTable) : List (Nat × Nat) :=
+  (T.filter fun d => d.kind == .word && d.min != 0).flatMap fun d =>
+    ((TieredArray.t0 d.id).code :: if d.tiered then [(tier1 d.id).code] else []).map fun c => (c, d.min)
 
 /-- **Well-formed**: the numbers of each kind distinct, only word arrays tiered or with a
 minimum length. -/

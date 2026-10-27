@@ -1051,7 +1051,8 @@ theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
       simp [Reg64s.get64, hI.tr x hx]
     refine genLdW_spec hF hi hg hc (hok.sub hok.nd (fun r h => h) hri) hwi hI
       (arr := σ.mem.arr64 (tierA a (σ.loc x)))
-      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]; exact hG.min64 _ (G.tab.dom64_tierA ha _))
+      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]
+          exact Nat.le_trans (G.tab.min64t_le a _) (hG.min64 _ (G.tab.dom64_tierA ha _)))
       (fun s' hX => by have := arrW_tier hG hT hTab ha (hI.ghost hX hok.dr) (hrsi s' hX); exact this) ?_ ?_
     · intro j hj s' hji hd hX
       exact hv _ s' (by simp [evalP, hji, hj, bind, Except.bind]) hd hX
@@ -1091,7 +1092,8 @@ theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
         Expr.readsReg ctx.alloc r e' = false) → evalP (σ.ghost ctx.alloc (s0 :: fr') R) e' = evalP σ e' :=
       fun R e' h => evalP_ghost e' fun r hr => h r (hok.rd r (hW1 r hr))
     refine genLdW_spec hF hi hcg hcc hoki hwi hI2 (arr := σ.mem.arr64 (tierA a u))
-      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]; exact hG.min64 _ (G.tab.dom64_tierA ha _)) ?_ ?_ ?_
+      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]
+          exact Nat.le_trans (G.tab.min64t_le a _) (hG.min64 _ (G.tab.dom64_tierA ha _))) ?_ ?_ ?_
     · intro s' hX
       have hs0' : s'.regs.get64 s0 = (u &&& 1).toBitVec := by
         rw [hX.keep s0 (fun h => by

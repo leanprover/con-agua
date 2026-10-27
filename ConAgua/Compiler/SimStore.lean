@@ -953,7 +953,7 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
   simp only [tempsS] at htmp
   simp only [compileS] at hc hK
   cases hgs : (if ctx.isT t then
-      genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64 a) i e ctx.pool
+      genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64t a) i e ctx.pool
       else none)
   case some code =>
     simp only [hgs] at hc hK
@@ -967,7 +967,8 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
       rw [hX.keep .rsi fun h => (pool_dreg h).rsi (by simp [hx]) rfl]
       simp [Reg64s.get64, hI.tr x hx]
     refine sim_genStW hG hTab hT hF (G.tab.dom64_tierA ha _) hgs hc hwi hwe hI
-      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]; exact hG.min64 _ (G.tab.dom64_tierA ha _))
+      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]
+          exact Nat.le_trans (G.tab.min64t_le a _) (hG.min64 _ (G.tab.dom64_tierA ha _)))
       (fun s' hX => descW_tier hTab hT ha (CPost.ofX hI hX (fun r h => h)).1 (hrsi s' hX)) ?_ ?_
     · intro j vb s' hj hvb hjs hI' hS'
       exact hK.normal _ s' (by rw [step_st64t_run]; simp only [evalP, hj, hvb]; rw [ite_eq_left hjs]) hI' hS'

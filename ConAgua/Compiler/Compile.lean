@@ -60,10 +60,10 @@ structure Tab where
   nres : Nat := 1
   /-- The number of global variables: global `g` (with `g.id < ng`) is the word at `globOff g`. -/
   ng : Nat := 0
-  /-- Minimum lengths (`L.ArrDecl.min`): `(a, k)` says that both tiers of word array `a` have at
+  /-- Minimum lengths (`L.ArrDecl.min`): `(s.code, k)` says that word array `s` has at
   least `k` words in every layout the code runs in (`Layout.Ok.min64`; the entry stubs establish
   it), so a constant index below `k` needs no bounds check (`Tab.min64`). -/
-  mins : List (ArrId × Nat) := []
+  mins : List (Nat × Nat) := []
   /-- `rom.length`, stored: the offsets past the constant data (`resOff`, `globOff`, `args`) are
   then arithmetic on the table's fields, and the kernel does not count the bytes of a large ROM
   each time it evaluates the code generator (DESIGN.md, "Kernel-checked compiler output"). -/
@@ -260,11 +260,17 @@ def Tab.len8 (t : Tab) (a : ArrId) : Int := t.dlen8 (t.pos8 a)
 def Tab.base64 (t : Tab) (s : TieredArray) : Int := t.dbase64 (t.pos64 s)
 def Tab.len64 (t : Tab) (s : TieredArray) : Int := t.dlen64 (t.pos64 s)
 
-/-- The minimum length of word array `s` (`Tab.mins`; the same for both tiers), `0` if it has
-none. -/
-def Tab.min64 (t : Tab) (s : TieredArray) : Nat := (t.mins.lookup s.arr).getD 0
+/-- The minimum length of word array `s` (`Tab.mins`), `0` if it has none. -/
+def Tab.min64 (t : Tab) (s : TieredArray) : Nat := (t.mins.lookup s.code).getD 0
 
-theorem lookup_getD_lt : ∀ (l : List (ArrId × Nat)) (a c : Nat), 0 < c →
+/-- The minimum length both tiers of the tiered array `a` have (a tiered access, either tier). -/
+def Tab.min64t (t : Tab) (a : ArrId) : Nat := min (t.min64 (TieredArray.t0 a)) (t.min64 (tier1 a))
+
+theorem Tab.min64t_le (t : Tab) (a : ArrId) (u : Word) : t.min64t a ≤ t.min64 (tierA a u) := by
+  unfold Tab.min64t
+  rcases tierA_eq_or a u with e | e <;> rw [e] <;> omega
+
+theorem lookup_getD_lt : ∀ (l : List (Nat × Nat)) (a c : Nat), 0 < c →
     l.all (fun x => decide (x.2 < c)) = true → (l.lookup a).getD 0 < c
   | [], _, _, hc, _ => by simpa using hc
   | (b, k) :: l, a, c, hc, h => by
@@ -277,7 +283,7 @@ theorem lookup_getD_lt : ∀ (l : List (ArrId × Nat)) (a c : Nat), 0 < c →
 /-- Every minimum length is below `c`. -/
 theorem Tab.min64_lt {t : Tab} {c : Nat} (hc : 0 < c) (h : t.mins.all (fun x => decide (x.2 < c)) = true)
     (s : TieredArray) : t.min64 s < c :=
-  lookup_getD_lt t.mins s.arr c hc h
+  lookup_getD_lt t.mins s.code c hc h
 
 /-- The words the constant data takes. -/
 def Tab.romWords (t : Tab) : Nat := (t.romLen + 7) / 8
@@ -1004,12 +1010,12 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
     genLd ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) false (ctx.tab.min64 a) i (gen ctx i) d fr
   | .ld64t a t i, d, fr =>
     if ctx.isT t then
-      genLd ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) false (ctx.tab.min64 a) i
+      genLd ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) false (ctx.tab.min64t a) i
         (gen ctx i) d fr
     else
       match fr with
       | s :: fr' => (gen ctx t s fr').bind fun ct =>
-          (genLd ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) false (ctx.tab.min64 a) i
+          (genLd ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) false (ctx.tab.min64t a) i
             (gen ctx i) d fr').map
             fun c => ct ++ tierDesc s ++ c
       | [] => none
@@ -1444,7 +1450,7 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
   | .st64t a t i e =>
     match (if ctx.isT t then
-        genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64 a) i e ctx.pool
+        genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64t a) i e ctx.pool
       else none) with
     | some code => code
     | none =>

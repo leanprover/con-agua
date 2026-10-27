@@ -167,10 +167,12 @@ theorem idxOf?_inj {l : List TieredArray} {a b : TieredArray} {i : Nat} (ha : l.
 
 /-- **The minimum lengths in `ca_check_b`'s layout, statically**: an array with a minimum length
 (`Tab.min64`) is frozen (its length is the buffer's, which the stub tests: `bufMinChk`) or owned
-(a slot of `abiWords` words); every other array gets no memory. -/
+(a slot of `abiWords` words); every other array gets no memory. Positions the layout gives no
+array (`dom64`) are skipped. -/
 def bufMinOk (tab : Tab) (fz own : List TieredArray) : Bool :=
   (List.range tab.nw).all fun p =>
-    tab.min64 (tab.wAt p) == 0 || fz.contains (tab.wAt p) || own.contains (tab.wAt p)
+    !tab.dom64 (tab.wAt p) || tab.min64 (tab.wAt p) == 0 || fz.contains (tab.wAt p) ||
+      own.contains (tab.wAt p)
 
 theorem idxOf?_of_contains {l : List TieredArray} {a : TieredArray} (h : l.contains a = true) :
     ∃ k, l.idxOf? a = some k := by
@@ -345,8 +347,9 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
       split
       · exact abiTabOk_min hok s
       · rename_i hn'
-        simp only [Bool.or_eq_true, beq_iff_eq] at hp
-        rcases hp with (hp | hp) | hp
+        simp only [Bool.or_eq_true, beq_iff_eq, Bool.not_eq_true'] at hp
+        rcases hp with ((hp | hp) | hp) | hp
+        · rw [hs] at hp; cases hp
         · exact Nat.le_of_eq hp
         · obtain ⟨k, hk⟩ := idxOf?_of_contains hp; rw [hn] at hk; cases hk
         · obtain ⟨k, hk⟩ := idxOf?_of_contains hp; rw [hn'] at hk; cases hk
