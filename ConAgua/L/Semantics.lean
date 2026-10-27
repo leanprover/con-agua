@@ -169,8 +169,13 @@ theorem Mem.SameShape.set8 {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : 
 theorem Mem.SameShape.setG {m m' : Mem} (h : m.SameShape m') (g : GVar) (v : Word) :
     m.SameShape (m'.setG g v) := h
 
-theorem Mem.sameShape_set64 (m : Mem) (a : ArrId) (i v : Word) : m.SameShape (m.set64 a i v) :=
-  (Mem.SameShape.refl m).set64 a i v
+theorem Mem.sameShape_set64 (m : Mem) (a : ArrId) (i v : Word) : m.SameShape (m.set64 a i v) := by
+  simp only [Mem.SameShape, Mem.set64, Array.size_set!]
+
+theorem Mem.SameShape.set64_both {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
+    (m.set64 a i v).SameShape (m'.set64 a i v) :=
+  ((Mem.sameShape_set64 m a i v).symm.trans h).set64 a i v
+
 
 theorem Mem.HasW.of_sameShape {m m' : Mem} {a : ArrId} (h : m.SameShape m') (ha : m.HasW a) :
     m'.HasW a := by
