@@ -1,5 +1,4 @@
 import ConAgua.Arena.InstLPWalkRef
-set_option linter.unusedSectionVars false
 
 /-!
 # The `instLP` walk refines `instLPGo`: the arms `fvar`, `proj`, `letE`
@@ -190,6 +189,7 @@ theorem ilw_letArm (hil : ILWProg p) (ih' : ∀ k, n = k + 1 → ILWGoOK p k) {m
     hW5
     (fun _ ws h6 hw => ilw_mkLet p hp j _ _ _ ws hS₃ hM₃ h6 hw)
 
+omit hp in
 /-- **A two-child arm** (`lp_app`, `lp_lam`, `lp_forall`: record array `R`, node maker `mk`, node
 constructor `C`) refines the twin's. -/
 theorem ilw_binArm (R : TRec) (mk : FnName) (C : EIdx → EIdx → ENodeView)

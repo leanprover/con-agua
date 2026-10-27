@@ -689,7 +689,7 @@ theorem romLvlsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true) :
     have hc1 : 131 < (m₁.arr64 CTL).size := by rw [hf1.2.2.1]; exact hc
     have hS1 : m₁.arr64 RSTK = m.arr64 RSTK := hf1.1 RSTK (by decide) (by decide)
     have hdq : rom.drop q₁.toNat = encLevelList xs ++ rest :=
-      drop_shift rom hr q (encLevel x) (encLevelList xs) rest (by rw [hd', List.append_assoc]) q₁ hq1
+      drop_shift rom q (encLevel x) (encLevelList xs) rest (by rw [hd', List.append_assoc]) q₁ hq1
     have hk1 : (k - 1).toNat = xs.length := by
       have : 1 ≤ k.toNat := by simp at hk; omega
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using this))]

@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels6E
 import ConAgua.Verdict.WhnfPrepE
-set_option linter.unusedSectionVars false
 
 /-!
 # `major_to_ctor`'s verdict claims (lane `verdicts-b`, helper `k2`)
@@ -243,6 +242,7 @@ variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM 
   (hE : ErecKeptKnot p) (hnv : closedNV p L.Checker.nvFns = true) (hPI : ProofIrrelWE p)
 include hp hc hpi hnv hPI
 
+omit hpi in
 /-- **`m2c_k2`'s verdicts** are `m2c_check`'s. -/
 theorem m2cK2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -316,6 +316,7 @@ theorem m2cK2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N
     (m2cCheckE_ok p hp hc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega)
       (by omega) dn vis fe eb mode d tmaj (r3.headD 0) major hm4 hebm htm hh3 hmaj m3 _ M hS3 er hW')
 
+omit hpi in
 include hE in
 /-- **`m2c_k`'s verdicts** are `m2c_pre`'s and `m2c_k2`'s. -/
 theorem m2cKE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
@@ -366,7 +367,7 @@ theorem m2cKE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N 
   have hW' := err_of_k (by intro q e; simp [m2cKE.k_m2c_k2]) (fun _ => rfl) hW
   have hc' : ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=
     ⟨by rw [g2'], by rw [hll, g3']⟩
-  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cK2E_ok p hp hc hpi hnv hPI N' F (hk.mono (Nat.le_succ _))
+  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cK2E_ok p hp hc hnv hPI N' F (hk.mono (Nat.le_succ _))
     (hkE.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ctor cnP _ _ major hm4 hebm hctor
     htm hus hmaj m1 a1 M1 hS1
     (by obtain ⟨_, _, _, _, _, _, _, _, hp5⟩ := hpre
@@ -499,6 +500,7 @@ variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM 
   (hPI : ProofIrrelWE p)
 include hp hc hpi hnv hPI
 
+omit hpi in
 /-- **`m2c_and2`'s verdicts** are `m2c_check`'s. -/
 theorem m2cAnd2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -602,6 +604,7 @@ theorem m2cAnd2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
     (m2cCheckE_ok p hp hc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega)
       (by omega) dn vis fe eb mode d tmaj (r5.headD 0) major hm4 hebm htm hh5 hmaj m5 _ M hS5 er hW')
 
+omit hpi in
 include hE hcc in
 /-- **`m2c_and`'s verdicts** are `m2c_pre`'s and `m2c_and2`'s. -/
 theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
@@ -734,7 +737,7 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
       rw [htop3', ← htop3, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
       exact Nat.le_refl _) hspn3
   refine ErrClaim.of_run_eqW (hstep.trans (by rw [ite_eq_left hcond])) ?_
-  exact m2cAnd2E_ok p hp hc hpi hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+  exact m2cAnd2E_ok p hp hc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d ctor T _ _ _ _ major hm4 hebm hctor hT htm hus hmaj xs m4 _ M4
     hS4 hsp4 htop4
     (by obtain ⟨_, _, _, _, _, _, _, _, hp5⟩ := hpre
@@ -750,6 +753,7 @@ variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM 
   (hPI : ProofIrrelWE p)
 include hp hc hpi hE hcc hnv hPI
 
+omit hpi in
 /-- **`m2c_arms`'s verdicts** are the arm's. -/
 theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -797,7 +801,7 @@ theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
           (decI w0) w3.toNat w5.toNat (decI T) (decE major) := by
       simp only [m2cArmsT, hk', ↓reduceIte, hctor, hlp, hnp]
     rw [this]
-    exact m2cKE_ok p hp hc hpi hE hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+    exact m2cKE_ok p hp hc hE hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
       (by omega) (by omega) dn vis fe eb mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS er (hk1 _ _ hW)
   rw [ite_eq_right g9] at hW
   have hk' : rl.k = false := by rw [hkk]; simpa using g9
@@ -818,9 +822,10 @@ theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
         (decI w0) w3.toNat w5.toNat (decI T) (decE major) := by
     simp only [m2cArmsT, hk', he', Bool.false_eq_true, ↓reduceIte, hctor, hlp, hnp]
   rw [this]
-  exact m2cAndE_ok p hp hc hpi hE hcc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+  exact m2cAndE_ok p hp hc hE hcc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS er (hk1 _ _ hW)
 
+omit hpi in
 /-- **`m2c_ctor`'s verdicts** are `m2c_arms`'s. -/
 theorem m2cCtorE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -923,12 +928,13 @@ theorem m2cCtorE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
   cases N with
   | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N' =>
-  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cArmsE_ok p hp hc hpi hE hcc hnv hPI N' F
+  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cArmsE_ok p hp hc hE hcc hnv hPI N' F
     (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ro cvjP _
     _ major hm4 hebm hn32 hmaj rl cvj cnP cnF cvT caps m a M hS hrl hcj er hW')
   simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind']
   exact h'
 
+omit hpi in
 /-- **`m2c_head`'s verdicts** are `m2c_ctor`'s. -/
 theorem m2cHeadE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -1015,11 +1021,12 @@ theorem m2cHeadE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
   rw [ite_eq_right g4] at hW
   obtain ⟨cvj, cnP, cnF, rfl⟩ := hctr.mpr (by simpa using g4)
   have hW' := err_of_k (by intro q e; simp [m2cHeadE.k_m2c_ctor]) (fun _ => rfl) hW
-  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cCtorE_ok p hp hc hpi hE hcc hnv hPI N' F
+  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cCtorE_ok p hp hc hE hcc hnv hPI N' F
     (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ro _
     major hm4 hebm hmaj rl cvj cnP cnF m1 _ M1 hS1 (by rw [e1]; exact hrl) hciE er hW')
   rw [hstep]; simp only [hfind']; exact h'
 
+omit hpi in
 /-- **`MajorToCtorE`**: `major_to_ctor`'s verdicts are `m2c_head`'s. -/
 theorem majorToCtorE_of : MajorToCtorE p := by
   intro n hk hkE F hnF s₀ a₀ dn vis fe MM eb mode d rec ro rc major rules hn62 hS hm4 hebm hmaj hr
@@ -1034,7 +1041,7 @@ theorem majorToCtorE_of : MajorToCtorE p := by
   | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   rw [majorToCtor_eq]
-  exact m2cHeadE_ok p hp hc hpi hE hcc hnv hPI N F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+  exact m2cHeadE_ok p hp hc hE hcc hnv hPI N F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d ro rc major hm4 hebm hmaj rules s₀.mem a₀ MM hS hr er hW'
 
 end top

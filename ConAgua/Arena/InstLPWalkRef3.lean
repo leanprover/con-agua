@@ -262,7 +262,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpApp_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
     rw [hs2] at hW2
-    refine hrun _ hv _ (by dsimp only; rw [instLPArmApp_eq]) (ilw_binArm hp.mkp (ih k (by omega)) APP "mk_app" ENodeView.app ?_ hS hM hE hh hf ha hW2)
+    refine hrun _ hv _ (by dsimp only; rw [instLPArmApp_eq]) (ilw_binArm (ih k (by omega)) APP "mk_app" ENodeView.app ?_ hS hM hE hh hf ha hW2)
     intro m m' a M x y rs hS hM hx hy hc hw
     exact ilw_mkApp p hp.mkp k x y rs hS hM hc
   by_cases g5 : h >>> 28 = 5
@@ -271,7 +271,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpLam_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
     rw [hs2] at hW2
-    refine hrun _ hv _ (by dsimp only; rw [instLPArmLam_eq]) (ilw_binArm hp.mkp (ih k (by omega)) LAM "mk_lam" ENodeView.lam ?_ hS hM hE hh hf ha hW2)
+    refine hrun _ hv _ (by dsimp only; rw [instLPArmLam_eq]) (ilw_binArm (ih k (by omega)) LAM "mk_lam" ENodeView.lam ?_ hS hM hE hh hf ha hW2)
     intro m m' a M x y rs hS hM hx hy hc hw
     exact ilw_mkLam p hp.mkp k x y rs hS hM hc hw
   by_cases g6 : h >>> 28 = 6
@@ -280,7 +280,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpForall_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
     rw [hs2] at hW2
-    refine hrun _ hv _ (by dsimp only; rw [instLPArmForallE_eq]) (ilw_binArm hp.mkp (ih k (by omega)) FORALL "mk_forall" ENodeView.forallE ?_ hS hM hE hh hf ha hW2)
+    refine hrun _ hv _ (by dsimp only; rw [instLPArmForallE_eq]) (ilw_binArm (ih k (by omega)) FORALL "mk_forall" ENodeView.forallE ?_ hS hM hE hh hf ha hW2)
     intro m m' a M x y rs hS hM hx hy hc hw
     exact ilw_mkForall p hp.mkp k x y rs hS hM hc hw
   by_cases g7 : h >>> 28 = 7

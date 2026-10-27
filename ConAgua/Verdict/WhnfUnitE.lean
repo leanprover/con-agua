@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfSlotE
-set_option linter.unusedSectionVars false
 
 /-!
 # `struct_unit_cert`, `struct_unit_head`, `struct_unit_tail`: error claims (lane `verdicts-b`, helper `k2`)
@@ -113,7 +112,7 @@ end sucErr
 section su
 variable (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hnv : closedNV p L.Checker.nvFns = true)
 
-include hq hnv in
+include hq in
 /-- **`struct_unit_tail`'s verdicts** are the `infer_io`, `whnf` and `defeq` slots'. -/
 theorem suTail_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -300,7 +299,7 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
       | zero => exact ErrClaim.of_callE_zeroW c6
       | succ N =>
       exact ErrClaim.of_run_err (fun ce h' => by rw [hrunH]; exact h')
-        (CoreSpecE.of_callE (suTail_refinesE p hq hnv N (hk.mono (Nat.le_succ N)) (hkE.mono (Nat.le_succ N))
+        (CoreSpecE.of_callE (suTail_refinesE p hq N (hk.mono (Nat.le_succ N)) (hkE.mono (Nat.le_succ N))
           F ⟨m₅, Locals.init []⟩ a₀ dn vis fe M₅ eb mode d b wta (by omega) (by omega)
           ⟨hS₅, hs.mode4, hs.eb_mode⟩ hb hwta) c6)
     | ok q => rw [c6] at hW; cases hW

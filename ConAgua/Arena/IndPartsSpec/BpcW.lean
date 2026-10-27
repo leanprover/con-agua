@@ -8,7 +8,6 @@ import ConAgua.Arena.IndGrindAttr
 `pinK4`, `bpfW`, `bpfK1`, `bpfK2`, `bpfK3`, `bprW` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 /-!
 # Refinements of `IndParts`, part 13 (lane `indproofs2`, helper `parts`): `blockShape?`'s pins

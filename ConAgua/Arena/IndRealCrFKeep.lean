@@ -51,7 +51,7 @@ theorem envFind_01 {n : Nat} {m m' : Mem} {w vis : Word} {r : List Word}
     (h : callW crfP n "env_find" [w, vis] m = some (r, m')) : r.headD 0 = 0 ∨ r.headD 0 = 1 := by
   obtain ⟨s', -, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envFind_specW crfP crfP_prog.eix crfP_prog.erg crfP_prog.ef n _ w vis) h
-  exact envFindW_01 crfP_prog hW
+  exact envFindW_01 hW
 
 theorem clpL_01 {k : Nat} {vis : Word} (ks : List Word) :
     ∀ (z : Bool) (o : Option (List Word × Mem)) (r : List Word) (m' : Mem),

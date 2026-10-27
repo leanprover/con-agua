@@ -9,7 +9,6 @@ import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 
 /-!
@@ -126,12 +125,13 @@ theorem skip_link (v : USize) :
     have hcw : byteW b.data v.toUInt64 = 123 ↔ byteAt b v = 123 := by
       rw [byteW_eq b h64 hsize]; exact u8_toUInt64_eq _ 123 (by decide)
     by_cases hc : byteAt b v = 123
-    · rw [ite_eq_left ⟨hlt, hcw.mpr hc⟩, ite_eq_left hc, ← succ_toUInt64 b h64 hsize, USize.toNat_toUInt64,
+    · rw [ite_eq_left ⟨hlt, hcw.mpr hc⟩, ite_eq_left hc, ← succ_toUInt64 h64, USize.toNat_toUInt64,
         ← skipBraced_toNat_eq b h64 (by omega), ← toUInt64_eq_ofNat]
     · rw [ite_eq_right (fun h' => hc (hcw.mp h'.2)), ite_eq_right hc]
   · have h0 : byteAt b v = 0 := by unfold byteAt; rw [dite_eq_right h]
     rw [ite_eq_right (fun h' => h ((lt_usize_iff b h64 hsize v).mpr h'.1)), ite_eq_right (by rw [h0]; decide)]
 
+omit h64 hsize in
 theorem natListLoop_len (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (p : USize)
     (hacc : acc.length ≤ i.toNat) (h : scanNatListLoop b i acc w = .ok us p) : us.length ≤ p.toNat := by
   fun_induction scanNatListLoop b i acc w with
@@ -148,11 +148,12 @@ theorem natListLoop_len (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) 
       | (rename_i hj ih
          exact ih (by simp only [List.length_cons]; have := USize.lt_iff_toNat_lt.mp hj; omega) h)
 
+omit h64 hsize in
 theorem scanNatList_len (v : USize) (us : List Nat) (p : USize) (h : scanNatList b v = .ok us p) :
     us.length ≤ p.toNat := by
   unfold scanNatList at h
   split at h
-  · exact natListLoop_len b h64 hsize _ _ _ _ _ (by simp) h
+  · exact natListLoop_len b _ _ _ _ _ (by simp) h
   · simp at h
 
 end steps
@@ -168,7 +169,7 @@ theorem lineLoop_link (i : USize) (w : Bool) (idxKind : UInt8) (idx : Nat) (pl :
   by_cases h : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i h
     have hin := usizeInBounds b i h
     rw [dite_eq_left h]
@@ -263,7 +264,7 @@ theorem lineLoop_link (i : USize) (w : Bool) (idxKind : UInt8) (idx : Nat) (pl :
                 split
                 · rename_i heq; rw [heq]; simp [encNL, okW]
                 · rename_i us e heq
-                  have hlen := scanNatList_len b h64 hsize v us e heq
+                  have hlen := scanNatList_len b v us e heq
                   rw [heq]; simp only [encNL]
                   split
                   · by_cases he0 : e.toUInt64 = 0
@@ -369,7 +370,7 @@ theorem lineEnd_link {r : LineRec} {z : ScanErr} (p : USize) :
     lineFwdN.lineEndN b.data p.toUInt64 := by
   unfold lineFwdN.lineEndN
   by_cases h1 : (byteAt b p == 10) = true
-  · rw [ite_eq_left h1, ite_eq_left ((nl_iff b h64 hsize p).mp h1), ← succ_toUInt64 b h64 hsize]; rfl
+  · rw [ite_eq_left h1, ite_eq_left ((nl_iff b h64 hsize p).mp h1), ← succ_toUInt64 h64]; rfl
   · rw [ite_eq_right h1, ite_eq_right (fun h => h1 ((nl_iff b h64 hsize p).mpr h))]
     by_cases h2 : b.usize ≤ p
     · rw [ite_eq_left h2, ite_eq_left ((usize_le_iff b h64 hsize p).mp h2)]; rfl
@@ -384,7 +385,7 @@ theorem lineFwd_link (i : USize) : encLine (scanLineFwd b i) = lineFwdN b.data i
   unfold lineFwdN.lineFwd2N
   simp only []
   by_cases h1 : (byteAt b s == 10) = true
-  · rw [ite_eq_left h1, ite_eq_left ((nl_iff b h64 hsize s).mp h1), ← succ_toUInt64 b h64 hsize]; rfl
+  · rw [ite_eq_left h1, ite_eq_left ((nl_iff b h64 hsize s).mp h1), ← succ_toUInt64 h64]; rfl
   rw [ite_eq_right h1, ite_eq_right (fun h => h1 ((nl_iff b h64 hsize s).mpr h))]
   by_cases h2 : b.usize ≤ s
   · rw [ite_eq_left h2, ite_eq_left ((usize_le_iff b h64 hsize s).mp h2)]; rfl
@@ -396,7 +397,7 @@ theorem lineFwd_link (i : USize) : encLine (scanLineFwd b i) = lineFwdN b.data i
   · rw [ite_eq_left h3, ite_eq_left (hc.mp h3)]; rfl
   rw [ite_eq_right h3, ite_eq_right (fun h => h3 (hc.mpr h))]
   have hl := lineLoop_link b h64 hsize (s + 1) true 0 0 .absent
-  rw [succ_toUInt64 b h64 hsize] at hl
+  rw [succ_toUInt64 h64] at hl
   have hl' : lineLoopN b.data (s.toUInt64 + 1) = okW (scanLineLoop b (s + 1) true 0 0 .absent) := by
     rw [hl]; rfl
   rw [hl']

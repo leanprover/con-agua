@@ -8,7 +8,6 @@ import ConAgua.Arena.IndGrindAttr
 `erCopyW_zero`, `partsErLt`, `partsHslice_last`, `partsErToIw_zero`, `partsSliceCopy`, `partsLpsCopy` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 /-!
 # Refinements of `IndParts`, part 13 (lane `indproofs2`, helper `parts`): `blockShape?`'s pins

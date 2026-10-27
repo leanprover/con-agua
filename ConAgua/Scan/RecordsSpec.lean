@@ -21,7 +21,6 @@ Each record scanner of `ConAgua.Scan.Records` against the generic model `objN` o
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order
@@ -91,11 +90,11 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hp_opaqueD : p.lookup "scan_opaque" = some scanOpaqueD)
     (hp_quotD : p.lookup "scan_quot" = some scanQuotD)
     (hp_indD : p.lookup "scan_ind_decl" = some scanIndD)
-include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD
 
 
 attribute [local lang_grind] strNameBit strNameVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt in
 theorem strNameLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n strNameLoop
@@ -112,6 +111,7 @@ theorem strNameLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName in
 @[refines_part ConLeche.Frontend.scanStrName "validity"]
 theorem scanStrName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -123,13 +123,14 @@ theorem scanStrName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, strNameN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (strNameLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (strNameLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] numNameBit numNameVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps in
 theorem numNameLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n numNameLoop
@@ -145,6 +146,7 @@ theorem numNameLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_numName in
 @[refines_part ConLeche.Frontend.scanNumName "validity"]
 theorem scanNumName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -156,13 +158,14 @@ theorem scanNumName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, numNameN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (numNameLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (numNameLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] appBit appVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps in
 theorem appLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n appLoop
@@ -178,6 +181,7 @@ theorem appLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_app in
 @[refines_part ConLeche.Frontend.scanAppExpr "validity"]
 theorem scanApp_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -189,13 +193,14 @@ theorem scanApp_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, appN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (appLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (appLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] binderBit binderVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi in
 theorem binderLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n binderLoop
@@ -212,6 +217,7 @@ theorem binderLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hp_binder in
 @[refines_part ConLeche.Frontend.scanLamExpr "validity", refines_part ConLeche.Frontend.scanForallExpr "validity"]
 theorem scanBinder_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -223,13 +229,14 @@ theorem scanBinder_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, binderN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (binderLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (binderLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] letEBit letEVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpml hpb in
 theorem letELoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n letELoop
@@ -247,6 +254,7 @@ theorem letELoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpml hpb hp_letE in
 @[refines_part ConLeche.Frontend.scanLetExpr "validity"]
 theorem scanLetE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -258,13 +266,14 @@ theorem scanLetE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, letEN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (letELoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (letELoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpml hpb (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] constEBit constEVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl in
 theorem constELoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n constELoop
@@ -281,6 +290,7 @@ theorem constELoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hp_constE in
 @[refines_part ConLeche.Frontend.scanConstExpr "validity"]
 theorem scanConstE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -292,13 +302,14 @@ theorem scanConstE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, constEN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (constELoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (constELoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] projBit projVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps in
 theorem projLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n projLoop
@@ -314,6 +325,7 @@ theorem projLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_proj in
 @[refines_part ConLeche.Frontend.scanProjExpr "validity"]
 theorem scanProj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -325,13 +337,14 @@ theorem scanProj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, projN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (projLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (projLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] ruleBit ruleVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps in
 theorem ruleLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n ruleLoop
@@ -347,6 +360,7 @@ theorem ruleLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_rule in
 @[refines_part ConLeche.Frontend.scanRule "validity"]
 theorem scanRule_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -358,13 +372,14 @@ theorem scanRule_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, ruleN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (ruleLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (ruleLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_rule in
 theorem rulesLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n rulesLoop
@@ -376,9 +391,10 @@ theorem rulesLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := rulesLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanRule_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanRule_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_rule n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_rule hp_rules in
 @[refines_part ConLeche.Frontend.scanRules "validity"]
 theorem scanRules_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -390,7 +406,7 @@ theorem scanRules_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, rulesN, objListEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (rulesLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (rulesLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_rule (n + 1) s₀)] <;> finish
 
 
 
@@ -398,6 +414,7 @@ theorem scanRules_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
 attribute [local lang_grind] indRecBit indRecVal Mbr.err
 
 -- eleven keys: all `finish` calls of the theorem share one heartbeat budget
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules in
 set_option maxHeartbeats 800000 in
 theorem indRecLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
@@ -414,10 +431,11 @@ theorem indRecLoop_spec (n : Nat) (s₀ : St) :
         nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
-        scanRules_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+        scanRules_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_rule hp_rules n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec in
 @[refines_part ConLeche.Frontend.scanIndRec "validity"]
 theorem scanIndRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -429,13 +447,14 @@ theorem scanIndRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indRecN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indRecLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indRecLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec in
 theorem indRecsLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n indRecsLoop
@@ -447,9 +466,10 @@ theorem indRecsLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := indRecsLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanIndRec_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanIndRec_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec hp_indRecs in
 @[refines_part ConLeche.Frontend.scanIndRecs "validity"]
 theorem scanIndRecs_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -461,7 +481,7 @@ theorem scanIndRecs_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indRecsN, objListEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indRecsLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indRecsLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec (n + 1) s₀)] <;> finish
 
 
 
@@ -469,6 +489,7 @@ theorem scanIndRecs_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
 attribute [local lang_grind] indTypeBit indTypeVal Mbr.err
 
 -- eleven keys: all `finish` calls of the theorem share one heartbeat budget
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb in
 set_option maxHeartbeats 800000 in
 theorem indTypeLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
@@ -488,6 +509,7 @@ theorem indTypeLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indType in
 @[refines_part ConLeche.Frontend.scanIndType "validity"]
 theorem scanIndType_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -499,13 +521,14 @@ theorem scanIndType_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indTypeN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indTypeLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indTypeLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indType in
 theorem indTypesLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n indTypesLoop
@@ -517,9 +540,10 @@ theorem indTypesLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := indTypesLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanIndType_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanIndType_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indType n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indType hp_indTypes in
 @[refines_part ConLeche.Frontend.scanIndTypes "validity"]
 theorem scanIndTypes_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -531,13 +555,14 @@ theorem scanIndTypes_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indTypesN, objListEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indTypesLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indTypesLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indType (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] indCtorBit indCtorVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb in
 theorem indCtorLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n indCtorLoop
@@ -556,6 +581,7 @@ theorem indCtorLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indCtor in
 @[refines_part ConLeche.Frontend.scanIndCtor "validity"]
 theorem scanIndCtor_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -567,13 +593,14 @@ theorem scanIndCtor_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indCtorN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indCtorLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indCtorLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indCtor in
 theorem indCtorsLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n indCtorsLoop
@@ -585,9 +612,10 @@ theorem indCtorsLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := indCtorsLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanIndCtor_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanIndCtor_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indCtor n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indCtor hp_indCtors in
 @[refines_part ConLeche.Frontend.scanIndCtors "validity"]
 theorem scanIndCtors_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -599,13 +627,14 @@ theorem scanIndCtors_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indCtorsN, objListEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indCtorsLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indCtorsLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indCtor (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] axiomDBit axiomDVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb in
 theorem axiomDLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n axiomDLoop
@@ -624,6 +653,7 @@ theorem axiomDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_axiomD in
 @[refines_part ConLeche.Frontend.scanAxiomDecl "validity"]
 theorem scanAxiomD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -635,13 +665,14 @@ theorem scanAxiomD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, axiomDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (axiomDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (axiomDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] defDBit defDVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hphn hpho hph hpl hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt in
 theorem defDLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n defDLoop
@@ -660,6 +691,7 @@ theorem defDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hphn hpho hph hpl hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_defD in
 @[refines_part ConLeche.Frontend.scanDefDecl "validity"]
 theorem scanDefD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -671,13 +703,14 @@ theorem scanDefD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, defDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (defDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (defDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hphn hpho hph hpl hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] thmDBit thmDVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl in
 theorem thmDLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n thmDLoop
@@ -694,6 +727,7 @@ theorem thmDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hp_thmD in
 @[refines_part ConLeche.Frontend.scanThmDecl "validity"]
 theorem scanThmD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -705,13 +739,14 @@ theorem scanThmD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, thmDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (thmDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (thmDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] opaqueDBit opaqueDVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb in
 theorem opaqueDLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n opaqueDLoop
@@ -730,6 +765,7 @@ theorem opaqueDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_opaqueD in
 @[refines_part ConLeche.Frontend.scanOpaqueDecl "validity"]
 theorem scanOpaqueD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -741,13 +777,14 @@ theorem scanOpaqueD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, opaqueDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (opaqueDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (opaqueDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] quotDBit quotDVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt in
 theorem quotDLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n quotDLoop
@@ -765,6 +802,7 @@ theorem quotDLoop_spec (n : Nat) (s₀ : St) :
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_quotD in
 @[refines_part ConLeche.Frontend.scanQuotDecl "validity"]
 theorem scanQuotD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -776,13 +814,14 @@ theorem scanQuotD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, quotDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (quotDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (quotDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt (n + 1) s₀)] <;> finish
 
 
 
 
 attribute [local lang_grind] indDBit indDVal Mbr.err
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors in
 theorem indDLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n indDLoop
@@ -797,12 +836,13 @@ theorem indDLoop_spec (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
         nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
-        scanIndCtors_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        scanIndRecs_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        scanIndTypes_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+        scanIndCtors_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indCtor hp_indCtors n,
+        scanIndRecs_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec hp_indRecs n,
+        scanIndTypes_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_indType hp_indTypes n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_indD in
 @[refines_part ConLeche.Frontend.scanIndDecl "validity"]
 theorem scanIndD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -814,7 +854,7 @@ theorem scanIndD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, fun s₀ => Triple.step_exec (indDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors (n + 1) s₀)] <;> finish
 
 
 end specs

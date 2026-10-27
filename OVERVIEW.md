@@ -743,7 +743,7 @@ relation that suffices and lifted.
 Data structures are abstract. The cons tables are one library, generic in a
 schema, whose relation `ConsR` is `irreducible` outside its file; users see
 lemmas for reading, keeping and interning, never the slots
-([`ConsLibRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLibRel.lean#L8-L28)).
+([`ConsLibRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLibRel.lean#L7-L27)).
 Likewise the records are read through `tfld`/`tcnt`, and the layout
 (`TRec.ad`) stays folded.
 

@@ -1,7 +1,6 @@
 import ConAgua.Verdict.DeclStepE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-set_option linter.unusedSectionVars false
 
 /-!
 # Phase A's fold fails only where the twin does (lane `verdicts-b`, helper `d`)
@@ -96,6 +95,7 @@ variable (hpp : p.lookup "pend_push" = some pendPushL)
     (hSt : InstallDeclStepSpecE pins dn ds p)
 include hpp hpn hps hpi hpd hpg hpx hsz hb hdc hFD hLD hSt
 
+omit hpp hpn hps hpi hpd hpx hsz hb hdc hFD hLD hSt in
 theorem foldGoE_step (n : Nat) (ih : FoldNextSpecE pins dn ds p n) :
     FoldGoSpecE pins dn ds p (n + 1) := by
   intro m a₀ i cnt vis fe pend hi hc hT hR hM hcm him e he hk0
@@ -115,6 +115,7 @@ theorem foldGoE_step (n : Nat) (ih : FoldNextSpecE pins dn ds p n) :
     obtain ⟨r, m₁⟩ := q
     rw [h1, installFoldGoE.k_install_fold_next.arm1] at hW; cases hW
 
+omit hpg in
 theorem foldNextE_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : FoldGoSpecE pins dn ds p n) :
     FoldNextSpecE pins dn ds p (n + 1) := by
   intro m a₀ i cnt vis fe pend hi hc hT hR hM hcm him e he hk0
@@ -172,8 +173,8 @@ theorem installFoldGo_refinesE (n : Nat) (hn : n ≤ 2 ^ 62) :
       exact ErrClaimV.of_cls0 h0
   | succ n ih =>
     have ih := ih (by omega)
-    exact ⟨foldGoE_step pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hFD hLD hSt n ih.2,
-      foldNextE_step pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hFD hLD hSt n hn ih.1⟩
+    exact ⟨foldGoE_step pins dn ds p hpg n ih.2,
+      foldNextE_step pins dn ds p hpp hpn hps hpi hpd hpx hsz hb hdc hFD hLD hSt n hn ih.1⟩
 
 end fold
 

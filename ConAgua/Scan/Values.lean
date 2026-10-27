@@ -567,7 +567,7 @@ theorem hintsObj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (q : Wor
     have hval := L.Scan.Key.valueAtN_le b
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
       L.Scan.Leaves.keyEnd_spec p hpk b hb64 n,
-      L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b hb n,
+      L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b n,
       L.Scan.Key.valueAt_spec p hpw hpv b hb n,
       hintsNum_spec p b hb hpw hpd hpn hphn n]
     all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hphn hpho

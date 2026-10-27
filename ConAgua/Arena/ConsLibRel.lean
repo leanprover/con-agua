@@ -3,7 +3,6 @@ import ConAgua.Arena.Frame
 import ConAgua.Arena.StoreGrow
 import ConAgua.Arena.StoreFields
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The cons-table library: the relation and the user API (lane conslib)
@@ -958,6 +957,7 @@ section word
 variable (hW : C.WF) (hR : ConsR C R m on P Q)
 include hW hR
 
+omit hW in
 /-- A hit's index is below the tier's node count, so below `2^27`. -/
 theorem probeC_hit_lt (ks : List Word) (h t : Word) (ht : t ≤ 1) (hr : probeC C m ks h t ≠ [])
     (hh : (probeC C m ks h t).headD 0 ≠ 0) : ((probeC C m ks h t).tail.headD 0).toNat < 2 ^ 27 := by
@@ -994,7 +994,7 @@ theorem consInternM_word {ks : List Word} {w : Word} {m' : Mem}
   · rename_i hn hh
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, -⟩ := h
-    exact ⟨0, _, by decide, probeC_hit_lt hW hR ks (C.qhM m ks) 0 (by decide)
+    exact ⟨0, _, by decide, probeC_hit_lt hR ks (C.qhM m ks) 0 (by decide)
       (fun e => hn ⟨hh.1, e⟩) hh.2, b0 _, fun _ => rfl⟩
   split at h
   · rename_i hfl
@@ -1004,7 +1004,7 @@ theorem consInternM_word {ks : List Word} {w : Word} {m' : Mem}
     · rename_i hz hhit
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, -⟩ := h
-      exact ⟨1, _, by decide, probeC_hit_lt hW hR ks (C.qhM m ks) 1 (by decide) hz hhit, b1 _,
+      exact ⟨1, _, by decide, probeC_hit_lt hR ks (C.qhM m ks) 1 (by decide) hz hhit, b1 _,
         fun h0 => absurd h0 hfl⟩
     split at h
     · rename_i hp

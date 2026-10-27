@@ -6,7 +6,6 @@ import ConAgua.Arena.IndPosSpec.CanonW
 `snocW_decK`.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

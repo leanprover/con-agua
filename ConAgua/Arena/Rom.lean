@@ -5,7 +5,6 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-set_option linter.unusedSectionVars false
 
 /-!
 # The ROM: constant con-leche data as bytes, and the L readers
@@ -923,6 +922,7 @@ section nameRef
 variable (rom : List UInt8) (hr : RomOK rom)
 include hr
 
+omit hr in
 theorem romB_head (pos : Word) (b : UInt8) (bs rest : List UInt8) (h : rom.drop pos.toNat = (b :: bs) ++ rest) :
     romB rom pos = b.toUInt64 :=
   romB_of_drop rom pos (b :: bs) rest h 0 (by simp) pos (by simp)
@@ -936,6 +936,7 @@ theorem drop_pos (pos : Word) (bs rest : List UInt8) (h : rom.drop pos.toNat = b
   simp only [RomOK] at hr
   rw [UInt64.toNat_add, UInt64.toNat_ofNat']; simp; omega
 
+omit hr in
 theorem drop_shift (pos : Word) (bs cs rest : List UInt8) (h : rom.drop pos.toNat = bs ++ cs ++ rest)
     (q : Word) (hq : q.toNat = pos.toNat + bs.length) : rom.drop q.toNat = cs ++ rest := by
   rw [hq, ← List.drop_drop, h, List.append_assoc, List.drop_left]
@@ -949,7 +950,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
   induction x with
   | anonymous =>
     intro n m a pos rest h q m' hA hmo hd hW
-    have h0 : romB rom pos = 0 := romB_head rom hr pos 0 [] rest hd
+    have h0 : romB rom pos = 0 := romB_head rom pos 0 [] rest hd
     cases n with
     | zero => simp [romNameW] at hW
     | succ n =>
@@ -972,13 +973,13 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
   | str pre str ih =>
     intro n m a pos rest h q m' hA hmo hd hW
     simp only [nameFits, Bool.and_eq_true, decide_eq_true_eq] at hx
-    have h0 : romB rom pos = 1 := romB_head rom hr pos 1 _ rest hd
+    have h0 : romB rom pos = 1 := romB_head rom pos 1 _ rest hd
     cases n with
     | zero => simp [romNameW] at hW
     | succ n =>
     rw [romNameW_rec rom n m pos (by simp [h0])] at hW
     have hd1 : rom.drop (pos + 1).toNat = encName pre ++ (strB str ++ rest) := by
-      have := drop_shift rom hr pos [1] (encName pre ++ strB str) rest (by simpa [encName] using hd)
+      have := drop_shift rom pos [1] (encName pre ++ strB str) rest (by simpa [encName] using hd)
         (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp [encName]))
       simpa using this
     cases hP : romNameW rom n m (pos + 1) with
@@ -990,7 +991,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp [encName])
     simp only [UInt64.ofNat_one] at hp1
     have hdq : rom.drop q₁.toNat = u64B str.toByteArray.size ++ (str.toByteArray.data.toList ++ rest) := by
-      have := drop_shift rom hr (pos + 1) (encName pre) (strB str) rest (by rw [hd1, List.append_assoc])
+      have := drop_shift rom (pos + 1) (encName pre) (strB str) rest (by rw [hd1, List.append_assoc])
         q₁ hq1
       rw [this, strB, List.append_assoc]
     rw [nmRecK_str rom _ _ _ _ rfl (u64OK_of_drop rom _ _ _ hdq hr)] at hW
@@ -1044,13 +1045,13 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
   | num pre k ih =>
     intro n m a pos rest h q m' hA hmo hd hW
     simp only [nameFits, Bool.and_eq_true, decide_eq_true_eq] at hx
-    have h0 : romB rom pos = 2 := romB_head rom hr pos 2 _ rest hd
+    have h0 : romB rom pos = 2 := romB_head rom pos 2 _ rest hd
     cases n with
     | zero => simp [romNameW] at hW
     | succ n =>
     rw [romNameW_rec rom n m pos (by simp [h0])] at hW
     have hd1 : rom.drop (pos + 1).toNat = encName pre ++ (u64B k ++ rest) := by
-      have := drop_shift rom hr pos [2] (encName pre ++ u64B k) rest (by simpa [encName] using hd)
+      have := drop_shift rom pos [2] (encName pre ++ u64B k) rest (by simpa [encName] using hd)
         (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp [encName]))
       simpa using this
     cases hP : romNameW rom n m (pos + 1) with
@@ -1060,7 +1061,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     rw [hP, h0] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1 hP
     have hdq : rom.drop q₁.toNat = u64B k ++ rest :=
-      drop_shift rom hr (pos + 1) (encName pre) (u64B k) rest (by rw [hd1, List.append_assoc]) q₁ hq1
+      drop_shift rom (pos + 1) (encName pre) (u64B k) rest (by rw [hd1, List.append_assoc]) q₁ hq1
     rw [nmRecK_num rom _ _ _ _ rfl (u64OK_of_drop rom _ _ _ hdq hr)] at hW
     have hl := u64W_of_drop rom q₁ _ _ hdq hx.2 hr
     have hlen := drop_len rom _ _ _ hd (by simp [encName])

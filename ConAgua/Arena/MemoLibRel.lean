@@ -1,7 +1,6 @@
 import ConAgua.Arena.Frame
 import ConAgua.Arena.MemoLib
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The memo library's relation: an L memo represents a `Std.HashMap κ ν`
@@ -1037,6 +1036,7 @@ theorem mrehash_inv (hVS : VStable S VR) (m₀ : Mem) (mp : Std.HashMap κ ν)
       refine ih (i + 1) c m m' c' (by omega) (by omega) (by omega) ⟨hIf, hIo, hIs, ?_⟩ h
       rw [← hfe]; exact hIA
 
+omit [LawfulHashable κ] in
 include hS in
 /-- **The growth keeps the map**: the new region, twice the size, right above the old one, named
 by the header, represents the same map. -/
