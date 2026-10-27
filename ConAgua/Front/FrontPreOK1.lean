@@ -56,7 +56,7 @@ theorem DK.ofFrame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : Mem
 
 theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v : Word) :
     DK m (m.set64 b i v) :=
-  ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hd), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hq)⟩
+  ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (TieredArray.t0_ne hd)), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (TieredArray.t0_ne hq))⟩
 
 theorem DK.tset64 (m : Mem) (t i v : Word) : DK m (m.set64 (tierA POOL t) i v) :=
   ⟨arr64_set64_tier_ne _ _ _ _ _ (by decide), arr64_set64_tier_ne _ _ _ _ _ (by decide)⟩
