@@ -11,7 +11,6 @@ import ConAgua.Census.Attr
 import ConAgua.Front.Preserve
 import ConAgua.L.Blocks
 import ConAgua.L.GrindAttr
-import ConAgua.L.PureEval
 public import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
