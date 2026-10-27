@@ -153,7 +153,7 @@ theorem threadGo_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
   rintro s e ⟨hx, hy, hz, ⟨m', hS, hPB, hw⟩⟩ hrun
   rw [hx, hy, hz] at hrun
   let m₂ : Mem := { m' with glob := s.mem.glob }
-  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
+  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
   have h₂ := PhaseBStart.frame0 hf hS
   have hrun₀ : (invoke checkerProg (exec checkerProg n) "check_pending_go" [j, j + 1, v]).run
       ⟨s.mem, Locals.init []⟩ = .error e := by
