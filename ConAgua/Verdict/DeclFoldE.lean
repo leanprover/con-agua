@@ -173,8 +173,8 @@ theorem installFoldGo_refinesE (n : Nat) (hn : n ≤ 2 ^ 62) :
       exact ErrClaimV.of_cls0 h0
   | succ n ih =>
     have ih := ih (by omega)
-    exact ⟨foldGoE_step pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hFD hLD hSt n ih.2,
-      foldNextE_step pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hFD hLD hSt n hn ih.1⟩
+    exact ⟨foldGoE_step pins dn ds p hpg n ih.2,
+      foldNextE_step pins dn ds p hpp hpn hps hpi hpd hpx hsz hb hdc hFD hLD hSt n hn ih.1⟩
 
 end fold
 

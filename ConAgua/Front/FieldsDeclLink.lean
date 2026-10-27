@@ -115,7 +115,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
   unfold scanHints at h
   by_cases h34 : byteAt b v = 34
   · rw [ite_eq_left (by simp [h34])] at h
-    have hv := lt_of_byteAt_ne b h64 hsize v (by rw [h34]; decide)
+    have hv := lt_of_byteAt_ne b v (by rw [h34]; decide)
     have hvW := (lt_usize_iff b h64 hsize v).mp hv
     have hv1 : (v.toUInt64 + 1).toNat = v.toNat + 1 := by
       have := L.Scan.toNat_add_one_of_lt_ofNat hvW; simpa using this
@@ -152,7 +152,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
     split at h
     · rename_i h123
       have h123' : byteAt b v = 123 := by simpa using h123
-      have hv := lt_of_byteAt_ne b h64 hsize v (by rw [h123']; decide)
+      have hv := lt_of_byteAt_ne b v (by rw [h123']; decide)
       have hvW := (lt_usize_iff b h64 hsize v).mp hv
       have hv1' : (v + 1).toNat = v.toNat + 1 := usizeStep b v hv
       have hb123 : byteW b.data v.toUInt64 = 123 := by rw [byteW_of_byteAt b h64 hsize v 123 h123']; rfl
@@ -160,7 +160,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       split at h; cases h; rename_i hp34
       have hp34' : byteAt b (skipWs b (v + 1)) = 34 := by simpa using hp34
       generalize hp : skipWs b (v + 1) = p at h hp34'
-      have hpU := lt_of_byteAt_ne b h64 hsize p (by rw [hp34']; decide)
+      have hpU := lt_of_byteAt_ne b p (by rw [hp34']; decide)
       have hpW := (lt_usize_iff b h64 hsize p).mp hpU
       have hpN := usizeInBounds b p hpU
       have hpEq : UInt64.ofNat (L.Scan.Leaves.skipWsN b.data (v.toUInt64 + 1).toNat) = p.toUInt64 := by

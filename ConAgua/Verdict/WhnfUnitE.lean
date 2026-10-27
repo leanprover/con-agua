@@ -299,7 +299,7 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
       | zero => exact ErrClaim.of_callE_zeroW c6
       | succ N =>
       exact ErrClaim.of_run_err (fun ce h' => by rw [hrunH]; exact h')
-        (CoreSpecE.of_callE (suTail_refinesE p hq hnv N (hk.mono (Nat.le_succ N)) (hkE.mono (Nat.le_succ N))
+        (CoreSpecE.of_callE (suTail_refinesE p hq N (hk.mono (Nat.le_succ N)) (hkE.mono (Nat.le_succ N))
           F ⟨m₅, Locals.init []⟩ a₀ dn vis fe M₅ eb mode d b wta (by omega) (by omega)
           ⟨hS₅, hs.mode4, hs.eb_mode⟩ hb hwta) c6)
     | ok q => rw [c6] at hW; cases hW

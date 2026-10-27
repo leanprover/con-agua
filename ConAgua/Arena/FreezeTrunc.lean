@@ -188,7 +188,7 @@ theorem tblRow_trunc (w : Word) :
     rcases ht with ht | ht
     · have ha : tblArr w = 129 + rowTag w := by
         unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 0 : Nat) = 129 + rowTag w; omega
-      rw [ha, tix_trunc hcnt _ hg, getD_extract']
+      rw [ha, tix_trunc _ hg, getD_extract']
       refine ⟨by split <;> simp, fun _ _ hr => ?_⟩
       rw [ite_eq_left hr]
     · have ha : tblArr w ∉ fzSrcs := by

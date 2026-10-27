@@ -592,6 +592,7 @@ callees' models (`byteE`, `hexValN`) stay folded. -/
 
 attribute [local lang_grind] hex4N hex3N
 
+omit hb in
 include hpb hph hp4 in
 theorem hex4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
     ⦃fun s => s = s₀⦄
@@ -606,6 +607,7 @@ theorem hex4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         byteIn_spec p b hpb n, hexVal_spec p hph n] <;> finish
 
+omit hb in
 include hpb hph hp3 in
 theorem hex3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
     ⦃fun s => s = s₀⦄
@@ -635,7 +637,7 @@ theorem uNext_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : Wo
   | succ n =>
     sym (gen := 24) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        byteIn_spec p b hpb n, hex3_spec p b hb hpb hph hp3 n] <;> finish
+        byteIn_spec p b hpb n, hex3_spec p b hpb hph hp3 n] <;> finish
 
 /- `unescapeLoop_spec`: as for `hex4`, the calls of one `\u` iteration need a generation
 limit above `grind`'s default. -/
@@ -655,7 +657,7 @@ theorem unescapeLoop_spec (n : Nat) (s₀ : St) :
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
         utf8Valid_spec p b hb hpc hpv n, byteIn_spec p b hpb n,
-        hex4_spec p b hb hpb hph hp4 n, uNext_spec p b hb hpb hph hp3 hpx n] <;> finish
+        hex4_spec p b hpb hph hp4 n, uNext_spec p b hb hpb hph hp3 hpx n] <;> finish
 
 
 include hpc hpv hpb hph hp4 hp3 hpx hpu in

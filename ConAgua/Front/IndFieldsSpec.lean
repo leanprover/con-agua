@@ -701,8 +701,8 @@ theorem mutual_specs (n : Nat) :
   | succ n ih =>
     obtain ⟨h1, h2, h3, h4, h5⟩ := ih
     have l1 := objLoop_succ p hL b hb n h3 h1
-    have l5 := listLoop_succ p hL b hb n h2 h5
-    exact ⟨l1, obj_succ p hL b hb n l1, member_succ p hL b hb n h4, list_succ p hL b hb n l5, l5⟩
+    have l5 := listLoop_succ p hL b n h2 h5
+    exact ⟨l1, obj_succ p hL b n l1, member_succ p hL b hb n h4, list_succ p hL b n l5, l5⟩
 
 end mspecs
 

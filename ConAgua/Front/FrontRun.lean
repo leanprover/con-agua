@@ -165,7 +165,7 @@ theorem frontRunW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
   runI_refines (FrontInv b) b h64 hsize (lineKW p b.data)
     (lineKW_step b h64 hsize p hFI hAI hII hXI)
     (fun m a => m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m StateD.blank ∧ ConRon.Bridge.StateOK a ∧
-      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧ ModeOK m) initKW (initKW_inv b h64 hsize)
+      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧ ModeOK m) initKW (initKW_inv b)
     m m' a₀ ⟨hm, hA, hD, hok, hoff, hpins, hmo⟩ h
 
 end refine
@@ -287,7 +287,7 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
         (inv_step p (FrontInv b) b h64 hsize
           (fun m m' i ok nx st a hI hi h hok => lineKW_step b h64 hsize p hFI hAI hII hXI m m' i ok nx
             st a hI hi h hok)) n s₁ i hm hI hi)
-      initKW s₀.mem (fun n s₁ hs₁ => initK_inv p hL hE hpi (FrontInv b) _ (initKW_inv b h64 hsize)
+      initKW s₀.mem (fun n s₁ hs₁ => initK_inv p hL hE hpi (FrontInv b) _ (initKW_inv b)
         s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins, hmode⟩ n s₁ hs₁)
       hpd n s₀ hm rfl)
   rw [h0] at hW

@@ -176,7 +176,7 @@ theorem noGo_spec (n : Nat) : NoGoSpec p n ∧ NoNodeSpec p n := by
     constructor
     · intro s₀ no nl lo hi f h; rw [invoke_eq _ hgo]; simp only [callFn, nestOccGo]; vcgen [exec] <;> grind
     · intro s₀ no nl lo hi f1 g x y z; rw [invoke_eq _ hnode]; simp only [callFn, nestOccNode]; vcgen [exec] <;> grind
-  | succ n ih => exact ⟨noGo_step p hv hc hf hput hgo n ih.2, noNode_step p hc hgo hnode n ih.1⟩
+  | succ n ih => exact ⟨noGo_step p hv hc hf hput hgo n ih.2, noNode_step p hnode n ih.1⟩
 
 end spec
 

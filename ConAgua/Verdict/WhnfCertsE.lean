@@ -381,11 +381,11 @@ theorem icf_allE (N : Nat) :
     ICFSpecE p "iota_certs_full_flush" (fun h an i => h >>> 28 = 0 ∧ i < an) N := by
   induction N with
   | zero =>
-    exact ⟨icfAuxE_ok p hp hil hnv 0 (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
+    exact ⟨icfAuxE_ok p hp hnv 0 (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
       icfForallE_ok p hp hil hnv 0 (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
       icfFlushE_ok p hp hil hnv 0 (fun _ h => absurd h (by simp))⟩
   | succ N ih =>
-    exact ⟨icfAuxE_ok p hp hil hnv (N + 1) (fun N' h => by cases Nat.succ.inj h; exact ih.2.1)
+    exact ⟨icfAuxE_ok p hp hnv (N + 1) (fun N' h => by cases Nat.succ.inj h; exact ih.2.1)
         (fun N' h => by cases Nat.succ.inj h; exact ih.2.2),
       icfForallE_ok p hp hil hnv (N + 1)
         (fun N' h => by cases Nat.succ.inj h; exact iotaCertsFullAux_refines' p hp hil N)

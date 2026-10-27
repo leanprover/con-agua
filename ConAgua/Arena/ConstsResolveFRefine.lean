@@ -266,7 +266,7 @@ theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
   refine ⟨hm, ?_⟩
   rw [hf]
   simp only at hci
-  rcases envFindW_01 hp hW with h0 | h1
+  rcases envFindW_01 hW with h0 | h1
   · rw [h0]; simp [decFound]
   · obtain ⟨ci, hci⟩ := hci (by rw [h1]; decide)
     rw [h1]
@@ -307,7 +307,7 @@ theorem pf_callW {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {a : AState}
   obtain ⟨rfl, hv⟩ := envFind_callW hp hS.1.env hlt h2
   refine ⟨rfl, h0, hi, hv, ?_⟩
   show (r2.headD 0 == 0) = _
-  rw [hv]; exact ite_beq0 hp _
+  rw [hv]; exact ite_beq0 _
 
 /-- Whether every pin of `ks` has a row (the twin's `&&` of `isSome`s). -/
 def pinsFound (fe : IFEnv) (m : Mem) (ks : List Word) : Bool :=

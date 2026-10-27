@@ -599,7 +599,7 @@ theorem frontRunE_claim (n : Nat) (m : Mem) (a₀ : AState) (hm : m.arr8 IN = b.
   obtain ⟨s1, hs1, hK1, -, -⟩ := triple_of_callE
     (frontInitK_spec frontAllProg frontAllProg_front frontAllProg_expr rfl n ⟨m, Locals.init []⟩) h1
   rw [hs1] at hK1
-  obtain ⟨st₀, a₁, hrun, hI⟩ := initKW_inv_ok D b h64 hsize m m₁ a₀
+  obtain ⟨st₀, a₁, hrun, hI⟩ := initKW_inv_ok D b m m₁ a₀
     ⟨hm, hA, hD, hok, hoff, hpins, hR, hmode⟩ hK1
   have hz : (0 : USize).toUInt64 = 0 := rfl
   rw [← hz] at he

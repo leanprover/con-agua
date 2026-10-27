@@ -366,7 +366,7 @@ theorem m2cKE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N 
   have hW' := err_of_k (by intro q e; simp [m2cKE.k_m2c_k2]) (fun _ => rfl) hW
   have hc' : ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=
     ⟨by rw [g2'], by rw [hll, g3']⟩
-  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cK2E_ok p hp hc hpi hnv hPI N' F (hk.mono (Nat.le_succ _))
+  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cK2E_ok p hp hc hnv hPI N' F (hk.mono (Nat.le_succ _))
     (hkE.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ctor cnP _ _ major hm4 hebm hctor
     htm hus hmaj m1 a1 M1 hS1
     (by obtain ⟨_, _, _, _, _, _, _, _, hp5⟩ := hpre
@@ -735,7 +735,7 @@ theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : 
       rw [htop3', ← htop3, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
       exact Nat.le_refl _) hspn3
   refine ErrClaim.of_run_eqW (hstep.trans (by rw [ite_eq_left hcond])) ?_
-  exact m2cAnd2E_ok p hp hc hpi hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+  exact m2cAnd2E_ok p hp hc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d ctor T _ _ _ _ major hm4 hebm hctor hT htm hus hmaj xs m4 _ M4
     hS4 hsp4 htop4
     (by obtain ⟨_, _, _, _, _, _, _, _, hp5⟩ := hpre

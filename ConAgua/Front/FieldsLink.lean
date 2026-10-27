@@ -312,7 +312,7 @@ theorem scanString_strOK (v : USize) (x : String) (e' : USize)
     · obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
       intro hn
       rw [hv1, he1] at hn
-      exact absurd hn (hasEscape_noEsc b h64 hsize _ _ hesc)
+      exact absurd hn (hasEscape_noEsc b _ _ hesc)
     · cases h
   · split at h
     · rename_i s hs

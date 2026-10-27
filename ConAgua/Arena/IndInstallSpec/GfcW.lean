@@ -418,7 +418,7 @@ theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
   obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.alloc n _ mL) c0
   simp only at hs0 hw0; subst hs0
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hS
-  obtain ⟨rest, a', run, hSF, hgF, htF, hdF, hJF⟩ := gfcW_ok P dn vis fe s₀.mem cO cL mO mL (r0.headD 0) cvTas ms
+  obtain ⟨rest, a', run, hSF, hgF, htF, hdF, hJF⟩ := gfcW_ok dn vis fe s₀.mem cO cL mO mL (r0.headD 0) cvTas ms
     hcv hms hq0 J hJiw hcft (n + 1) s0.mem mF a₀ 0 [] c1 hS0 (hJiw _ _ _ hJ (allocW_iwFrame hw0) hS0) hg0 (by omega)
     UInt64.zero_le (by simp [decHL, hslice?])
   simp only [UInt64.toNat_zero, List.drop_zero, List.nil_append] at run hdF

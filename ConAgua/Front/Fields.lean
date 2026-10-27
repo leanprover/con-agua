@@ -568,6 +568,7 @@ theorem readNatLoop_spec (n : Nat) (s₀ : St) :
     sym only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih] <;> finish
 
+omit hb in
 theorem readNatLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     step p (exec p n) readNatLoop
@@ -587,7 +588,7 @@ theorem readNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v e : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, readNatLoop_step_spec p b hb n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, readNatLoop_step_spec p b n] <;> finish
 
 include hpd hpn hprn in
 theorem pairLoop_spec (n : Nat) (s₀ : St) :

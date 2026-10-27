@@ -564,7 +564,7 @@ theorem drop_tag {pos : Word} {t : UInt8} {bs rest : List UInt8}
     rom.drop (pos + 1).toNat = bs ++ rest ∧ (pos + 1).toNat = pos.toNat + 1 := by
   have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
   simp only [UInt64.ofNat_one] at hp1
-  exact ⟨by simpa using drop_shift rom hr pos [t] bs rest (by simpa using hd) (pos + 1) hp1, hp1⟩
+  exact ⟨by simpa using drop_shift rom pos [t] bs rest (by simpa using hd) (pos + 1) hp1, hp1⟩
 
 /-- A compound subterm the memo already holds: a back reference. -/
 theorem ref_case (e : ConLeche.Expr)
@@ -577,7 +577,7 @@ theorem ref_case (e : ConLeche.Expr)
     ExprPost e seen mem a m pos h q mem' := by
   unfold ExprPost
   rw [henc seen hin] at hd ⊢
-  have h0 : romB rom pos = 9 := romB_head rom hr pos 9 _ rest hd
+  have h0 : romB rom pos = 9 := romB_head rom pos 9 _ rest hd
   cases n with
   | zero => simp [romExprW] at hW
   | succ n =>
@@ -633,7 +633,7 @@ theorem two_case (C : ConLeche.Expr → ConLeche.Expr → ConLeche.Expr) (CI : E
   · exact ref_case rom hr _ hc (hin9) n mem a pos rest seen m h q mem' hA hM hin hd hW
   unfold ExprPost
   rw [henc seen hin] at hd ⊢
-  have h0 : romB rom pos = b.toUInt64 := romB_head rom hr pos b _ rest hd
+  have h0 : romB rom pos = b.toUInt64 := romB_head rom pos b _ rest hd
   cases n with
   | zero => simp [romExprW] at hW
   | succ n =>
@@ -652,7 +652,7 @@ theorem two_case (C : ConLeche.Expr → ConLeche.Expr → ConLeche.Expr) (CI : E
   obtain ⟨mf, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1, hz1⟩ :=
     ihf he.1 n mem a (pos + 1) ((encExprM (encExprM seen f).2 x).1 ++ rest) seen m hf q₁ m₁ hA hmo hM
       hd1 hst hcs hF
-  have hd2 := drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
+  have hd2 := drop_shift rom (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
   cases hX : romExprW rom n m₁ q₁ with
   | none => rw [hX] at hW; simp [exTwoK] at hW
   | some r =>
@@ -694,7 +694,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     simp only [exprFits, decide_eq_true_eq] at he
     unfold ExprPost
     simp only [encExprM] at hd ⊢
-    have h0 : romB rom pos = 0 := romB_head rom hr pos 0 _ rest hd
+    have h0 : romB rom pos = 0 := romB_head rom pos 0 _ rest hd
     cases n with
     | zero => simp [romExprW] at hW
     | succ n =>
@@ -721,7 +721,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     simp only [exprFits] at he
     unfold ExprPost
     simp only [encExprM] at hd ⊢
-    have h0 : romB rom pos = 1 := romB_head rom hr pos 1 _ rest hd
+    have h0 : romB rom pos = 1 := romB_head rom pos 1 _ rest hd
     cases n with
     | zero => simp [romExprW] at hW
     | succ n =>
@@ -756,7 +756,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     obtain ⟨⟨hn, hus⟩, hlen⟩ := he
     unfold ExprPost
     simp only [encExprM] at hd ⊢
-    have h0 : romB rom pos = 2 := romB_head rom hr pos 2 _ rest hd
+    have h0 : romB rom pos = 2 := romB_head rom pos 2 _ rest hd
     cases n with
     | zero => simp [romExprW] at hW
     | succ n =>
@@ -774,7 +774,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     rw [hN, exConst2KN_some] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr nm hn n mem a (pos + 1) _ hnm q₁ m₁ hA hmo hd1 hN
     have hd2 : rom.drop q₁.toNat = encLevels us ++ rest :=
-      drop_shift rom hr (pos + 1) (encName nm) (encLevels us) rest (by rw [hd1, List.append_assoc]) q₁ hq1
+      drop_shift rom (pos + 1) (encName nm) (encLevels us) rest (by rw [hd1, List.append_assoc]) q₁ hq1
     have hst1 : stkTop m₁ = stkTop mem := frame_exprA_stk hf1
     cases hL : romLevelsW rom n m₁ q₁ with
     | none => rw [hL] at hW; simp [exConst2K] at hW
@@ -803,7 +803,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     simp only [exprFits, decide_eq_true_eq] at he
     unfold ExprPost
     simp only [encExprM] at hd ⊢
-    have h0 : romB rom pos = 3 := romB_head rom hr pos 3 _ rest hd
+    have h0 : romB rom pos = 3 := romB_head rom pos 3 _ rest hd
     cases n with
     | zero => simp [romExprW] at hW
     | succ n =>
@@ -877,7 +877,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
         (encExprM (encExprM (encExprM seen t).2 v).2 x).1),
         (encExprM (encExprM (encExprM seen t).2 v).2 x).2 ++ [.letE t v x]) := by simp [encExprM, hin]
     rw [henc] at hd ⊢
-    have h0 : romB rom pos = 8 := romB_head rom hr pos 8 _ rest hd
+    have h0 : romB rom pos = 8 := romB_head rom pos 8 _ rest hd
     cases n with
     | zero => simp [romExprW] at hW
     | succ n =>
@@ -898,7 +898,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     obtain ⟨mt, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1, hz1⟩ := iht he.1.1 n mem a (pos + 1) _ seen m ht q₁ m₁ hA hmo hM hd1 hst hc hT
     have hd2 : rom.drop q₁.toNat = (encExprM (encExprM seen t).2 v).1 ++
         ((encExprM (encExprM (encExprM seen t).2 v).2 x).1 ++ rest) :=
-      drop_shift rom hr (pos + 1) _ _ _ (by rw [hd1, List.append_assoc]) q₁ hq1
+      drop_shift rom (pos + 1) _ _ _ (by rw [hd1, List.append_assoc]) q₁ hq1
     cases hV : romExprW rom n m₁ q₁ with
     | none => rw [hV] at hW; simp [exLet2K] at hW
     | some r =>
@@ -908,7 +908,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
       (((romExprW_topK rom n).1 _ _ _ _ _ hT).mode hA.1.lit.1 hmo) hM1 hd2
       (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hV
     have hd3 : rom.drop q₂.toNat = (encExprM (encExprM (encExprM seen t).2 v).2 x).1 ++ rest :=
-      drop_shift rom hr q₁ _ _ rest (by rw [hd2, List.append_assoc]) q₂ hq2
+      drop_shift rom q₁ _ _ rest (by rw [hd2, List.append_assoc]) q₂ hq2
     cases hX : romExprW rom n m₂ q₂ with
     | none => rw [hX] at hW; simp [exLet3K] at hW
     | some r =>
@@ -948,7 +948,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have henc : encExprM seen (.fvar i ty) = (4 :: (u64B i ++ (encExprM seen ty).1),
         (encExprM seen ty).2 ++ [.fvar i ty]) := by simp [encExprM, hin]
     rw [henc] at hd ⊢
-    have h0 : romB rom pos = 4 := romB_head rom hr pos 4 _ rest hd
+    have h0 : romB rom pos = 4 := romB_head rom pos 4 _ rest hd
     cases n with
     | zero => simp [romExprW] at hW
     | succ n =>
@@ -998,7 +998,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have henc : encExprM seen (.proj nm i sub) = (10 :: (encName nm ++ u64B i ++ (encExprM seen sub).1),
         (encExprM seen sub).2 ++ [.proj nm i sub]) := by simp [encExprM, hin]
     rw [henc] at hd ⊢
-    have h0 : romB rom pos = 10 := romB_head rom hr pos 10 _ rest hd
+    have h0 : romB rom pos = 10 := romB_head rom pos 10 _ rest hd
     cases n with
     | zero => simp [romExprW] at hW
     | succ n =>
@@ -1016,7 +1016,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     rw [hN] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr nm he.1.1 n mem a (pos + 1) _ hn q₁ m₁ hA hmo hd1 hN
     have hdq : rom.drop q₁.toNat = u64B i ++ ((encExprM seen sub).1 ++ rest) :=
-      drop_shift rom hr (pos + 1) (encName nm) _ _ (by rw [hd1, List.append_assoc]) q₁ hq1
+      drop_shift rom (pos + 1) (encName nm) _ _ (by rw [hd1, List.append_assoc]) q₁ hq1
     rw [exProjK_some (hu := u64OK_of_drop rom _ _ _ hdq hr)] at hW
     rw [u64W_of_drop rom q₁ _ _ hdq he.1.2 hr] at hW
     have hlenq := drop_len rom _ _ _ hdq (by simp [u64B])

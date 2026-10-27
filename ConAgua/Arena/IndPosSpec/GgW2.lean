@@ -939,9 +939,9 @@ theorem nbSpec_all {p : Prog} (L : NbLook p) (cR : CallM) (hcR : CallSpec p cR) 
   induction n with
   | zero => exact nbSpec_zero p cR
   | succ n ih =>
-    exact ⟨nbPos_step L cR hcR n ih, nbBind_step L cR hcR n ih, nbApp_step L cR hcR n ih, nbCont_step L cR hcR n ih, nbKey_step L cR hcR n ih,
-      nbNew_step L cR hcR n ih, nbFrame_step L cR hcR n ih, nbCtors_step L cR hcR n ih, nbOne_step L cR hcR n ih, nbWalk_step L cR hcR n ih,
-      nbFields_step L cR hcR n ih⟩
+    exact ⟨nbPos_step L cR hcR n ih, nbBind_step L cR n ih, nbApp_step L cR n ih, nbCont_step L cR hcR n ih, nbKey_step L cR n ih,
+      nbNew_step L cR hcR n ih, nbFrame_step L cR hcR n ih, nbCtors_step L cR n ih, nbOne_step L cR hcR n ih, nbWalk_step L cR n ih,
+      nbFields_step L cR n ih⟩
 
 end L.Ind
 

@@ -433,7 +433,7 @@ theorem iobj_link {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanR
   · have hin := usizeInBounds b i hi
     by_cases hws : isWs (byteAt b i) = true
     · rw [H.ws i w seen st hi hws] at h
-      rw [objLoopW_congr b h64 hsize _ _ _ _ _ _ _ (nm_ws b h64 hsize i _ hi hws)] at hm
+      rw [objLoopW_congr b _ _ _ _ _ _ _ (nm_ws b h64 hsize i _ hi hws)] at hm
       exact iobj_link F kind p R Fin H (i + 1) w seen st m d e e' m' h hR hm
     by_cases h125 : byteAt b i = 125
     · obtain ⟨rfl, hF⟩ := H.close i w seen st m d e hi h125 h hR
@@ -444,7 +444,7 @@ theorem iobj_link {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanR
     by_cases h44 : byteAt b i = 44
     · obtain ⟨rfl, h'⟩ := H.comma i w seen st d e hi h44 h
       simp only [bw, Bool.false_eq_true, ite_false] at hm
-      rw [objLoopW_congr b h64 hsize _ _ _ _ _ _ _ (nm_comma b h64 hsize i hi hws h44)] at hm
+      rw [objLoopW_congr b _ _ _ _ _ _ _ (nm_comma b h64 hsize i hi hws h44)] at hm
       exact iobj_link F kind p R Fin H (i + 1) true seen st m d e e' m' h' hR
         (by simpa [bw] using hm)
     by_cases h34 : byteAt b i = 34
@@ -651,7 +651,7 @@ theorem ilistW_link {α : Type} (G : USize → List α → Bool → ScanRes (Lis
     r.2.2 = e.toUInt64 ∧ r.2.1.toNat = l.length ∧ RunR Rec A sz m' r.1.toNat l ∧ Grow m m' ∧
       Room m' ∧ r.1.toNat = topN m A + 1 ∧ r.1.toNat + sz * l.length = topN m' A + 1 ∧ Q m m' := by
   obtain ⟨h91, hG⟩ := hW v l e h
-  have hv : v < b.usize := lt_of_byteAt_ne b h64 hsize v (by rw [h91]; decide)
+  have hv : v < b.usize := lt_of_byteAt_ne b v (by rw [h91]; decide)
   have hvW := (lt_usize_iff b h64 hsize v).mp hv
   rw [listW_eq, ite_eq_left hvW, ite_eq_right (by rw [byteW_eq b h64 hsize, h91]; decide), hfa] at hm
   cases hal : allocW m A 0 with
@@ -699,7 +699,7 @@ theorem valueAt_gt (i : USize) (hi : i < b.usize) (hk : keyEnd b (i + 1) ≠ 0)
     have hk1 := usizeStep b ke hke'
     have hp := skipWs_toNat_eq b h64 hb64 (ke + 1)
     have hpU : skipWs b (ke + 1) < b.usize :=
-      lt_of_byteAt_ne b h64 hsize _ (by simp at h58; rw [h58]; decide)
+      lt_of_byteAt_ne b _ (by simp at h58; rw [h58]; decide)
     have hp1 := usizeStep b _ hpU
     have hq := skipWs_toNat_eq b h64 hb64 (skipWs b (ke + 1) + 1)
     have g1 := skipWsN_ge b.data (ke + 1).toNat

@@ -348,7 +348,7 @@ theorem prepareMajorE_of : PrepareMajorE p := by
     · rw [ite_eq_left hs2] at hW
       rw [decBool_t_m2c hs2] at hrun2
       exact ErrClaim.of_run_err (fun ce h' => pm_err_nk_str _ _ _ _ _ _ _ hK0 a₀ _ hrun2 ce h')
-        (pmTailE p hp hc hw hsup hmtc hE hnv hM N hk hkE F hnF hn62 dn vis fe eb mode d rec ro rc major
+        (pmTailE p hp hc hw hsup hE hnv hM N hk hkE F hnF hn62 dn vis fe eb mode d rec ro rc major
           rules hm4 hebm hmaj m2 _ M2 hS2 hrules2 er hW)
     rw [ite_eq_right hs2] at hW
     rw [decBool_f_m2c (Classical.not_not.mp hs2)] at hrun2
@@ -368,7 +368,7 @@ theorem prepareMajorE_of : PrepareMajorE p := by
     have hrules3 : decRules (m3.arr64 EREC) ro.toNat rc.toNat = some rules := by
       rw [hE _ _ _ _ _ _ (by simp) (callW_of_callE c3)]; exact hrules2
     exact ErrClaim.of_run_err (fun ce h' => pm_err_nk_not _ _ _ _ _ _ _ hK0 a₀ _ _ _ hrun2 hrun3 ce h')
-      (pmTailE p hp hc hw hsup hmtc hE hnv hM N hk hkE F hnF hn62 dn vis fe eb mode d rec ro rc
+      (pmTailE p hp hc hw hsup hE hnv hM N hk hkE F hnF hn62 dn vis fe eb mode d rec ro rc
         (r3.headD 0) rules hm4 hebm hr3 m3 _ M3 hS3 hrules3 er hW)
 
 end prep

@@ -723,7 +723,7 @@ theorem natVal_link (v : USize) (n : Nat) (e : USize) (h : scanQuotedNat b v = .
     rw [h0] at hq34; exact absurd hq34 (by decide)
   have hv1 := succ_toUInt64 h64 v
   have hd1 := succ_toUInt64 h64 (skipDigits b (v + 1))
-  have hge := skipDigits_ge b h64 hsize (v + 1)
+  have hge := skipDigits_ge b (v + 1)
   have hlt : v + 1 < skipDigits b (v + 1) := by
     rw [USize.lt_iff_toNat_lt]
     have : (v + 1).toNat ≠ (skipDigits b (v + 1)).toNat := fun h' => hne1 (USize.toNat_inj.mp h').symm

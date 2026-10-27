@@ -437,7 +437,7 @@ theorem poolInv_u8 (m : Mem) (k : Word) (L : List UInt8) (v : UInt32) (k' : Word
     (h : PoolInv m₀ m top k L) (hv : v.toNat.isValidChar)
     (hu : u8PutW m top k v.toUInt64 = some (k', m')) :
     PoolInv m₀ m' top k' (L ++ (utf8Of v).data.toList) := by
-  obtain ⟨rfl, rfl, hl, h4⟩ := u8PutW_eq m₀ hs top ht m k _ k' m' hu
+  obtain ⟨rfl, rfl, hl, h4⟩ := u8PutW_eq m₀ top m k _ k' m' hu
   have hw := utf8Of_words v hv
   have hlen' : (encW v.toUInt64).length = (utf8Of v).data.toList.length := by
     rw [← hw, List.length_map]

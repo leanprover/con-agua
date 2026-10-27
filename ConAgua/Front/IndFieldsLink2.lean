@@ -192,7 +192,7 @@ theorem rules_link (v : USize) (m : Mem) (l : List RuleRec) (e : USize) (r : Wor
       RunR (fun t x m => RuleF m t x) IFL 3 m' r.1.toNat l ∧ Grow m m' ∧ Room m' ∧
       r.1.toNat = topN m IFL + 1 ∧ r.1.toNat + 3 * l.length = topN m' IFL + 1 ∧
       m'.arr64 IFR = m.arr64 IFR := by
-  refine ilistW_link b h64 hsize (scanRuleListLoop b) (scanRule b) (ruleList_shape b h64 hsize)
+  refine ilistW_link b h64 hsize (scanRuleListLoop b) (scanRule b) (ruleList_shape b)
     (scanRules b) (fun v l e h => ?_) 3 IFL (.inr rfl) 3 (by decide) rfl
     (fun m n => by simp [fldAllocW]) (fun t x m => RuleF m t x) ruleF_stab
     (fun m m' => m'.arr64 IFR = m.arr64 IFR) (fun _ => rfl) (fun _ _ _ h1 h2 => h2.trans h1)
@@ -384,7 +384,7 @@ theorem rec_loop (m₁ : Mem) (q : Word) :
     case kRules =>
       rw [show UInt64.ofNat Key.kRules.ctorIdx = (53 : Word) from rfl] at hmem
       ikey_res
-      obtain ⟨o, c, mL, hl, rfl⟩ := list_arm b h64 hsize m m' 2 q 53 9 3 i v e' rfl hiv hmem
+      obtain ⟨o, c, mL, hl, rfl⟩ := list_arm b m m' 2 q 53 9 3 i v e' rfl hiv hmem
       obtain ⟨l1, l2, l3, l4, l5, -, -, l8⟩ :=
         rules_link b h64 hsize v m xv ev (o, c, e') mL hx hI.2.1 hl
       simp only at l1 l2 l3
@@ -468,7 +468,7 @@ theorem recs_link (v : USize) (m : Mem) (l : List IndRecRec) (e : USize) (r : Wo
       r.1.toNat = topN m IFR + 1 ∧ r.1.toNat + 11 * l.length = topN m' IFR + 1 := by
   refine (fun H => ⟨H.1, H.2.1, H.2.2.1, H.2.2.2.1, H.2.2.2.2.1, H.2.2.2.2.2.1,
     H.2.2.2.2.2.2.1⟩) (ilistW_link b h64 hsize (scanIndRecListLoop b)
-    (scanIndRec b) (recList_shape b h64 hsize) (scanIndRecs b) (fun v l e h => by
+    (scanIndRec b) (recList_shape b) (scanIndRecs b) (fun v l e h => by
       unfold scanIndRecs at h; split at h
       · rename_i h91; exact ⟨by simpa using h91, h⟩
       · cases h) 2 IFR (.inl rfl) 11 (by decide) rfl
@@ -624,7 +624,7 @@ theorem cts_link (v : USize) (m : Mem) (l : List IndCtorRec) (e : USize) (r : Wo
       r.1.toNat = topN m IFR + 1 ∧ r.1.toNat + 10 * l.length = topN m' IFR + 1 := by
   refine (fun H => ⟨H.1, H.2.1, H.2.2.1, H.2.2.2.1, H.2.2.2.2.1, H.2.2.2.2.2.1,
     H.2.2.2.2.2.2.1⟩) (ilistW_link b h64 hsize (scanIndCtorListLoop b)
-    (scanIndCtor b) (ctList_shape b h64 hsize) (scanIndCtors b) (fun v l e h => by
+    (scanIndCtor b) (ctList_shape b) (scanIndCtors b) (fun v l e h => by
       unfold scanIndCtors at h; split at h
       · rename_i h91; exact ⟨by simpa using h91, h⟩
       · cases h) 1 IFR (.inl rfl) 10 (by decide) rfl
@@ -850,7 +850,7 @@ theorem tys_link (v : USize) (m : Mem) (l : List IndTypeRec) (e : USize) (r : Wo
       r.1.toNat = topN m IFR + 1 ∧ r.1.toNat + 11 * l.length = topN m' IFR + 1 := by
   refine (fun H => ⟨H.1, H.2.1, H.2.2.1, H.2.2.2.1, H.2.2.2.2.1, H.2.2.2.2.2.1,
     H.2.2.2.2.2.2.1⟩) (ilistW_link b h64 hsize (scanIndTypeListLoop b)
-    (scanIndType b) (tyList_shape b h64 hsize) (scanIndTypes b) (fun v l e h => by
+    (scanIndType b) (tyList_shape b) (scanIndTypes b) (fun v l e h => by
       unfold scanIndTypes at h; split at h
       · rename_i h91; exact ⟨by simpa using h91, h⟩
       · cases h) 0 IFR (.inl rfl) 11 (by decide) rfl

@@ -285,7 +285,7 @@ theorem rpGo_spec (n : Nat) : RpGoSpec p n ∧ RpNodeSpec p n := by
     constructor
     · intro s₀ no nl us b nn f h; rw [invoke_eq _ hgo]; simp only [callFn, replaceAppsGo]; vcgen [exec] <;> grind
     · intro s₀ no nl us b nn f1 h g x y z; rw [invoke_eq _ hnode]; simp only [callFn, replaceAppsNode]; vcgen [exec] <;> grind
-  | succ n ih => exact ⟨rpGo_step p hl hf hput hgo n ih.2, rpNode_step p hl hk hgo hnode n ih.1⟩
+  | succ n ih => exact ⟨rpGo_step p hl hf hput hgo n ih.2, rpNode_step p hl hk hnode n ih.1⟩
 
 end spec
 

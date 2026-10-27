@@ -1347,8 +1347,8 @@ theorem installFoldGo_refines (n : Nat) (hn : n ≤ 2 ^ 62) :
       vcgen [exec] <;> grind
   | succ n ih =>
     have ih := ih (by omega)
-    exact ⟨foldGo_step mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm hFD hLD n ih.2,
-      foldNext_step mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm hFD hLD n hn ih.1⟩
+    exact ⟨foldGo_step mode pins dn ds p hpg n ih.2,
+      foldNext_step mode pins dn ds p hpp hpn hps hpi hpd hpx hsz hb hdc hm hFD hLD n hn ih.1⟩
 
 end fold
 

@@ -107,7 +107,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   have hp3 : (pp + 3).toNat = pp.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   have hdl : rom.drop (r1.tail.headD 0).toNat =
       encNameL cv.levelParams ++ ((encExprM seen cv.type).1 ++ rest) :=
-    drop_shift rom hr q (encName cv.name) _ _ (by rw [hd0, List.append_assoc]) _ hq1
+    drop_shift rom q (encName cv.name) _ _ (by rw [hd0, List.append_assoc]) _ hq1
   obtain ⟨ws, a3, hrun3, hwlt, hI3, hM3, hs3, hq3, hek3, ht3, hiw3, hH3⟩ :=
     nameSl_rel hL hr seen memo cv.levelParams hfl k _ a1 _ (pp + 1) _ _ m3 hI2 hM2 hdl
       (by omega) (by rw [ht2, ht1]; omega) h2
@@ -116,7 +116,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hdt : rom.drop (r2.headD 0).toNat = (encExprM seen cv.type).1 ++ rest :=
-    drop_shift rom hr _ (encNameL cv.levelParams) _ _ (by rw [hdl, List.append_assoc]) _ (by rw [hq3, hq1])
+    drop_shift rom _ (encNameL cv.levelParams) _ _ (by rw [hdl, List.append_assoc]) _ (by rw [hq3, hq1])
   obtain ⟨memo', a4, hrun4, hA4, hk4, hM4, hlt4, hq4, hf4, hs4, hmo4⟩ :=
     exprCall hL hr cv.type hfe hI3.arena hI3.mode hM3 hdt (by rw [hs3, hs2, hs1, hst]; decide)
       (by have := hI3.ok.2.2.2.2; omega) h4

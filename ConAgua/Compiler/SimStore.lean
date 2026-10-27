@@ -711,7 +711,7 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a
   case some code =>
     simp only [hgs] at hc hK
     refine sim_genStW hG hTab hT hF ha hgs hc hwi hwe hI
-      (fun s' hX => descW_plain hG hTab hT ha (CPost.ofX hI hX (fun r h => h)).1) ?_ ?_
+      (fun s' hX => descW_plain hTab hT ha (CPost.ofX hI hX (fun r h => h)).1) ?_ ?_
     · intro j vb s' hj hvb hjs hI' hS'
       exact hK.normal _ s' (by rw [step_st64_run, hj]; simp only [hvb]; rw [ite_eq_left hjs]) hI' hS'
     · intro s' he hG'
@@ -913,7 +913,7 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
       rw [hX.keep .rsi fun h => (pool_dreg h).rsi (by simp [hx]) rfl]
       simp [Reg64s.get64, hI.tr x hx]
     refine sim_genStW hG hTab hT hF (Nat.lt_of_le_of_lt (tierA_le a _) (G.tab.wK_spec ha).2) hgs hc hwi hwe hI
-      (fun s' hX => descW_tier hG hTab hT ha (CPost.ofX hI hX (fun r h => h)).1 (hrsi s' hX)) ?_ ?_
+      (fun s' hX => descW_tier hTab hT ha (CPost.ofX hI hX (fun r h => h)).1 (hrsi s' hX)) ?_ ?_
     · intro j vb s' hj hvb hjs hI' hS'
       exact hK.normal _ s' (by rw [step_st64t_run]; simp only [evalP, hj, hvb]; rw [ite_eq_left hjs]) hI' hS'
     · intro s' he hG'
