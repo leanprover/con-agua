@@ -62,8 +62,9 @@ def prog : Prog × List String :=
 
 /-- The memory after the startup stages (`PB` holding `pinBuffer []`). -/
 def startMem : Except String Mem := do
-  let sizes := (List.range 210).map fun i =>
-    if i == CTL then 256 else if i == L.Ind.IW then 1 <<< 16 else 1 <<< 17
+  let sizes : TieredArray → Nat := fun b =>
+    if b.hi || 210 ≤ b.arr then 0
+    else if b.arr == CTL then 256 else if b.arr == L.Ind.IW then 1 <<< 16 else 1 <<< 17
   let m0 : Mem := (initMem sizes).putBytes Rom.PB (pinBuffer []).toArray
   let step (m : Mem) (f : String) : Except String Mem :=
     match L.run prog.1 100000 f [] m with
