@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndInstallSpec.PapW
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 
 /-!
 # The inductive arm's block: the front's decoding is the stage's (lane `indproofs4`)

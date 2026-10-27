@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Census.Attr
 
 /-!
 # `stripPis`, `stripLams` in L (lane `whnf3`)

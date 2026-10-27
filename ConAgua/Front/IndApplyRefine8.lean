@@ -1,4 +1,5 @@
-import ConAgua.Front.IndApplyRefine7
+import ConAgua.Front.IndApplyRefine5
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The apply step of an `inductive` line against the twin, VIII: `vi_order`

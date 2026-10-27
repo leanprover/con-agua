@@ -1,7 +1,6 @@
 import ConAgua.Arena.InstLPWalkStep
-import ConAgua.Arena.InstLPLevel2
-import ConAgua.Arena.InstLPWalkGo
-import ConAgua.Arena.InstLPWalkArms
+import ConAgua.Arena.InstLPLevel
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 /-!
 # The `instLP` walk refines `instLPGo`: the arms

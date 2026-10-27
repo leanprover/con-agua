@@ -1,6 +1,5 @@
-import ConAgua.Arena.PromoteProg
-import ConAgua.Arena.MemoLibRel
 import ConRon.Arena.Promote
+import ConAgua.Arena.Promote
 
 /-!
 # The promotion memo's relation `PMemoR`

@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclCanonSpec
-import ConAgua.Arena.PinsNatOp
 
 /-!
 # Record equalities in L, the relational lemmas (lane `decls3`, helper `decls3-canon`)

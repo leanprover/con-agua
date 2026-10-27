@@ -1,5 +1,4 @@
-import ConAgua.Compiler.Main
-import ConAgua.Final.Twin
+import ConAgua.Compiler.Rel
 
 /-!
 # The final theorem's vocabulary: the verdict, the loaded memory, the calls

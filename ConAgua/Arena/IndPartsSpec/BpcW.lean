@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.IndPartsSpec.EqW
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # BpcW

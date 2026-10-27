@@ -1,8 +1,5 @@
-import ConAgua.Rom.PinRead
-import ConAgua.Arena.PromoteProg
-import ConAgua.Arena.LiftSpec
-import ConAgua.Arena.DeclRomStubs
-import ConAgua.Census.Attr
+import ConAgua.Arena.IndIface
+import ConAgua.Arena.Prelude
 
 /-!
 # The ROM stubs' readers (lane `integrate`)

@@ -1,5 +1,10 @@
 import ConAgua.Arena.WhnfProjRefine
-import ConAgua.L.ModelGen
+import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.WhnfDelta
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `find_proj` refines `IFEnv.findProj?` under `CoreS` (lane `whnf3`, helper `whnf3-proj`)

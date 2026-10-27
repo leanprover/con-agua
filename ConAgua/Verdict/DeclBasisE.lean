@@ -1,5 +1,7 @@
 import ConAgua.Verdict.DeclHdrE
-import ConAgua.Arena.Checker
+import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claims of `install_basis_decl`, `install_basis_decls`, `check_basis_decl`

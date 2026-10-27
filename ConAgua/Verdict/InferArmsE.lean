@@ -1,5 +1,9 @@
 import ConAgua.Verdict.InferLeavesE
-import ConAgua.Arena.Checker
+import ConAgua.Arena.IndTwin
+import ConAgua.Arena.InferBodySpineF
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinements of the inference arms (lane `verdicts-b`, helper `k1`)

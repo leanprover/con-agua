@@ -1,7 +1,7 @@
 import ConAgua.Checker.Prog
-import ConAgua.Arena.Freeze
 import ConAgua.Compiler.ReadSetSplit
-import ConAgua.Arena.Globals
+import ConAgua.Arena.LevelIntern
+import ConAgua.Arena.LevelSubstLP
 
 /-!
 # Phase B's read set in the checker's program (lane parmode)

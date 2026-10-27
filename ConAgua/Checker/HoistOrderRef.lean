@@ -1,4 +1,5 @@
 import ConAgua.Checker.HoistOrderRef3
+import ConAgua.Arena.DeclNatBase
 
 /-!
 # The hoist's reorder refines `applyHoist`'s sort (lane `front4`)

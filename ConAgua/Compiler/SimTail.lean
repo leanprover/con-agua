@@ -1,6 +1,9 @@
 module
 
+public import ConAgua.Compiler.SimCall
 public import ConAgua.Compiler.SimFun
+import ConAgua.L.Logic
+import Kraken.X64.Registers
 
 @[expose] public section
 

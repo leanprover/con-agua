@@ -1,6 +1,9 @@
 import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.IndReal
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # BlockRecNamesUnreserved: `ConRon.Arena.blockRecNamesUnreserved`

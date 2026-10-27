@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndT.PosCrest
+import ConAgua.Arena.IndPosSpec.Snoc
 
 /-!
 # `nest_ctors_one` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

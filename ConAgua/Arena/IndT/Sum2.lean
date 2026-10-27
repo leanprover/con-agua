@@ -2,6 +2,7 @@ import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.IndT.Sum1
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+import ConRon.Bridge.Inductives.SumInstall
 
 /-!
 # `checkSumTele.checkSumTeleSlow`, `checkSumTele` under `StageC` (lane `indstaget`)

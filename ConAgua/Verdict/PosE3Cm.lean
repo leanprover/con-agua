@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndPos2
 import ConAgua.Arena.Verdict
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
+import Std.WP.Tactic
 
 /-!
 # `nest_ctors`' error model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)

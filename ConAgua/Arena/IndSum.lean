@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.Reasons
 
 /-!
 # `IndSum`: the direct-sum install's L translation (lane `induct`, worker C)

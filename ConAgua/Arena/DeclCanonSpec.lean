@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.DeclMasterStage
-import ConAgua.L.ProgHas
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Record equalities in L, word models and specs (lane `decls3`, helper `decls3-canon`)

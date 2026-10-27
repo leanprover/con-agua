@@ -2,6 +2,11 @@ module
 
 public import ConAgua.Scan.RecordsLink
 public import ConAgua.Scan.Line
+import ConAgua.Scan.LeafLink
+import ConAgua.Scan.Link
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Bool
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 set_option linter.unusedSectionVars false

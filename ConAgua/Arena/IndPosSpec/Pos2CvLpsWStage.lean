@@ -2,6 +2,8 @@ import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.MkLook
 import ConAgua.Arena.IndPosSpec.PiBWStage
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # Pos2CvLpsWStage

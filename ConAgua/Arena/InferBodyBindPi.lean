@@ -1,6 +1,5 @@
 import ConAgua.Arena.InferBodyBind
 import ConAgua.Arena.IndSumSpec.DecCVpGrow
-import ConAgua.Arena.RecGenSpec.Set64
 
 /-!
 # The ∀ telescope: `infer_pis_leaf`, `infer_pis`, `infer_forall` (lane `defeq`)

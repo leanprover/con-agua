@@ -1,11 +1,4 @@
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.MemoLib
-import ConAgua.Arena.ExprMk
-import ConAgua.Arena.LsStore
-import ConAgua.Arena.SortStore
-import ConAgua.Arena.ConstStore
-import ConAgua.Arena.FVarStore
-import ConAgua.Census.Attr
+import ConAgua.Arena.WhnfBase
 
 /-!
 # `instantiateLevelParams` in L: `inst_lp`, its walk, its three memos

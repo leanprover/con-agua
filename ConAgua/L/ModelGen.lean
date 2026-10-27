@@ -4,6 +4,7 @@ public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 public import ConAgua.L.ErrSpec
 public meta import Lean
+public import Lean.Elab.Term.TermElabM
 
 public section
 

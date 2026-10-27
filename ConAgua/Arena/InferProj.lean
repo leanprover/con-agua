@@ -1,8 +1,7 @@
-import ConAgua.Arena.InferBodyDisp
-import ConAgua.Arena.DefEqMidQuick
 import ConAgua.Arena.InferFieldSort
-import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.DefEqLeaves2
+import ConAgua.Arena.CoreDen
+import ConAgua.Arena.InferBodySpine
 import ConAgua.Arena.WhnfCoreProj
 
 /-!

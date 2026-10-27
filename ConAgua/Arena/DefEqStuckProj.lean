@@ -1,4 +1,6 @@
-import ConAgua.Arena.DefEqStuckDisp
+import ConAgua.Arena.DefEqStuckIrrel
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `ldpr_exit`, `lazy_delta_proj_reduction`, `defeq_proj_pair` (lane `defeq`, helper `defeq-top`)

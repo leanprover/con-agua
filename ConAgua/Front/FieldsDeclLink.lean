@@ -2,6 +2,12 @@ module
 
 public import ConAgua.Front.FieldsDecl
 public import ConAgua.Front.FieldsExprLink
+import ConAgua.Scan.Common
+import ConAgua.Scan.LeafLink
+import ConAgua.Scan.LineLink
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Bool
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 set_option linter.unusedSectionVars false

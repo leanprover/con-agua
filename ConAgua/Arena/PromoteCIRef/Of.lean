@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndIface
+import ConAgua.Arena.Tiers
 
 /-!
 # Of

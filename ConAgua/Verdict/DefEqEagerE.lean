@@ -1,4 +1,7 @@
 import ConAgua.Verdict.DefEqBaseE
+import ConAgua.Arena.KnotE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The eager slot `defeq_e` and `defeq_arg`: error claims (lane `verdicts-b`, helper `k3`)

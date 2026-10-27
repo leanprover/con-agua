@@ -1,4 +1,7 @@
 import ConAgua.Verdict.IndA4
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Verdict.IndAGen
 
 /-!
 # `check_block_rec`'s error refinement (lane `verdicts-b`, helper `ia`)

@@ -1,6 +1,8 @@
 import ConAgua.Arena.IndT.RecGen4
 import ConAgua.Verdict.UnresolvedE
 import ConAgua.Verdict.DeclValE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `class_rule_ok` (lane `verdicts-b`, helper `ib`)

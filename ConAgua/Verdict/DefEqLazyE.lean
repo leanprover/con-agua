@@ -1,4 +1,7 @@
 import ConAgua.Verdict.DefEqTailE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The lazy-delta step's error claims (lane `verdicts-b`, helper `k3`)

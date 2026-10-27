@@ -1,4 +1,4 @@
-import ConAgua.Arena.PromoteCIExt
+import ConAgua.Arena.PromoteCIRef.DecRuleMk
 
 /-!
 # Hslice

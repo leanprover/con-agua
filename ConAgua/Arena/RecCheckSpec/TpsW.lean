@@ -1,6 +1,8 @@
 import ConAgua.Arena.RecCheckSpec.RpLook
 import ConAgua.Arena.IndPartsSpec.AllCtors
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # TpsW

@@ -1,4 +1,7 @@
 import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # ClassConstOk

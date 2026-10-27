@@ -1,5 +1,10 @@
 import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.RecStab
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.RecSim
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # ClassNPcOf: `ConRon.Arena.classNPcOf`

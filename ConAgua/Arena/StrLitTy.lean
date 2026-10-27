@@ -1,5 +1,7 @@
 import ConAgua.Arena.StrLitCv
 import ConAgua.Arena.DefEqMidQuick
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The string-support declaration tests under `CoreS` (helper `defeq2-str`)

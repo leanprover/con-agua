@@ -2,6 +2,9 @@ import ConAgua.Arena.IndSumSpec.Bnums
 import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # StructUsedLater: `ConRon.Arena.structUsedLaterGo`, `ConRon.Arena.structUsedLaterList`, `ConRon.Arena.structUsedLater`

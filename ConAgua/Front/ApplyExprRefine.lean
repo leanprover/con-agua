@@ -1,8 +1,7 @@
-import ConAgua.Front.ApplyExpr
 import ConAgua.Front.NatDecLink
 import ConAgua.Front.UnescapeLink
 import ConAgua.Front.StateDR
-import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `apply_expr` refines con-ron's `parseExprEntryD`

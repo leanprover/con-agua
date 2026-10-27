@@ -1,6 +1,8 @@
 import ConAgua.Checker.Prog
 import ConAgua.Arena.CoreErec
 import ConAgua.Compiler.WriteSetSplit
+import ConAgua.Arena.LevelIntern
+import ConAgua.Arena.LevelSubstLP
 
 /-!
 # The checker's core leaves `EREC` alone (lane `whnf3`)

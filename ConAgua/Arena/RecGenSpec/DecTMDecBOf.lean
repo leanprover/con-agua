@@ -1,5 +1,8 @@
-import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndParts
+import ConAgua.Arena.IndSum
+import ConAgua.Arena.RecCheck
 
 /-!
 # DecTMDecBOf

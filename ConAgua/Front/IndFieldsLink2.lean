@@ -1,4 +1,6 @@
 import ConAgua.Front.IndFieldsLink
+import Std.Tactic.BVDecide.Normalize.Bool
+import Std.Tactic.BVDecide.Normalize.Prop
 set_option linter.unusedSectionVars false
 
 /-!

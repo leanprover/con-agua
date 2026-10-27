@@ -1,4 +1,8 @@
 import ConAgua.Arena.RecCheckSpec.TruncSl
+import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Tmn

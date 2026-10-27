@@ -1,7 +1,7 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
 import ConAgua.Arena.FVarStore
 import ConAgua.Arena.LpColRel
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The `fvar` store refines the arena's `fvar` tables

@@ -1,8 +1,9 @@
 import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.Rom
 import ConAgua.Arena.PromoteLRef
 import ConAgua.Arena.MemoTree
-import ConAgua.Census.Attr
+import ConAgua.Front.StateDR
+import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.Rom
 
 /-!
 # `lv_intern` refines `internLevel` of the level its pointer denotes

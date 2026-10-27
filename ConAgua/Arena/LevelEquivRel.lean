@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.LevelEquiv
 public import ConAgua.Arena.LevelLeqRel
 import ConAgua.Census.Attr
+import ConAgua.Arena.LevelSimpRel
 
 @[expose] public section
 

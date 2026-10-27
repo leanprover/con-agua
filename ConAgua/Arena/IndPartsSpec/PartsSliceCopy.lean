@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPartsSpec.BpcW
 import ConAgua.Arena.IndPartsSpec.BsW
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # PartsSliceCopy

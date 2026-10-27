@@ -1,6 +1,9 @@
 import ConAgua.Verdict.IndBTmf
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Verdict.IndBPins
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `class_majors` (lane `verdicts-b`, helper `ib`)

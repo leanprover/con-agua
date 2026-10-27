@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPosSpec.NestOccAny
 import ConAgua.Arena.IndPosSpec.SnocWStage
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # GgW

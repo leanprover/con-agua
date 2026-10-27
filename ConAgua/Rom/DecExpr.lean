@@ -1,6 +1,6 @@
-import ConAgua.Rom.PinRead
 import ConAgua.Rom.Dec
 import ConRon.Bridge.Frontend.Shared
+import ConAgua.Arena.RomExprRef
 
 /-!
 # The expression reader in the decoder direction (lane `romload`)

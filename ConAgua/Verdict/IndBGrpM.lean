@@ -1,5 +1,8 @@
 import ConAgua.Arena.RecGen
 import ConAgua.Arena.Verdict
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The error model of `gen_rec_check_prep` (lane `verdicts-b`, helper `ib`)

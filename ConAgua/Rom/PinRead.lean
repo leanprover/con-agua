@@ -1,4 +1,3 @@
-import ConAgua.Rom.PinStream
 import ConAgua.Rom.DataLit
 import ConAgua.Rom.Subst
 import ConAgua.Arena.IndIface

@@ -1,4 +1,5 @@
 import ConAgua.Arena.MemoLibRel
+import Std.Tactic.BVDecide.Normalize.Prop
 set_option linter.unusedSectionVars false
 
 /-!

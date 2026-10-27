@@ -1,12 +1,6 @@
-import ConAgua.L.Notation
-import ConAgua.Arena.Prelude
-import ConAgua.Arena.NNumStore
-import ConAgua.Arena.NStrStore
-import ConAgua.Arena.IndIface
-import ConAgua.Rom.PinRead
-import ConAgua.Census.Attr
-import ConAgua.Arena.Reasons
 import ConAgua.Arena.Freeze
+import ConAgua.Arena.Globals
+import ConAgua.Arena.RomPins
 
 /-!
 # The checker's entry `check()` and the integration glue (lane `integrate`)

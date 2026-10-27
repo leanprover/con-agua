@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.Reasons
 
 /-!
 # The uniform inductive install, at k members (lane `induct`, module `IndInstall`)

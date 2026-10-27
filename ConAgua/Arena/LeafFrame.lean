@@ -1,5 +1,6 @@
-import ConAgua.Arena.Frame
 import ConAgua.Compiler.WriteSetSplit
+import ConAgua.Arena.Pool
+import ConAgua.Front.Preserve
 
 /-!
 # Write sets with trusted leaves (lane `indproofs4`, helper `lm`)

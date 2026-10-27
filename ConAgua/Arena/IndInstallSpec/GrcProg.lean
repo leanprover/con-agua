@@ -7,6 +7,7 @@ import ConAgua.Arena.RecGenSpec.DecB
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.RecGenSpec.DecCNWords
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+import ConAgua.Arena.IndInstallSpec.SelProg
 
 /-!
 # GrcProg

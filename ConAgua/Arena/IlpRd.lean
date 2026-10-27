@@ -1,6 +1,4 @@
 import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.IndCallM
-import ConAgua.Arena.IndCopy2
 
 /-!
 # How a model's `inst_lp_fast` call is read (lane `indstaget`, helper `rcC`)

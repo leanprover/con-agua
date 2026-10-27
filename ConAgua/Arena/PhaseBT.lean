@@ -1,8 +1,9 @@
 import ConAgua.Arena.LoopT
-import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.LeafFns
 import ConAgua.Arena.PhaseWorker
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Phase B under `StageT` (lane `loopt3`, items 12 and 12a)

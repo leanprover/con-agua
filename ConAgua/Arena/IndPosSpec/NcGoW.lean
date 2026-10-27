@@ -1,6 +1,10 @@
 import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NcGoW

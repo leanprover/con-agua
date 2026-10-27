@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndInstallSpec.PapW
 import ConAgua.Arena.PromoteCIRef.HlistUnfold
 import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
 

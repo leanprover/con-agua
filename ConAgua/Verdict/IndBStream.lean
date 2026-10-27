@@ -1,5 +1,8 @@
-import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Verdict.IndBSum2
+import ConAgua.Arena.DeclArmT
+import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `class_stream_recs` (lane `verdicts-b`, helper `ib`)

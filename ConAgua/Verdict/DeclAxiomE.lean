@@ -1,4 +1,8 @@
 import ConAgua.Verdict.DeclArmsE
+import ConAgua.Arena.DeclAxQuotT
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claim of the axiom arm `check_decl_axiom` (lane `verdicts-b`, helper `d`)

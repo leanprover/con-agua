@@ -1,8 +1,7 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
-import ConAgua.Arena.PoolSlice
 import ConAgua.Arena.LsStore
 import ConAgua.Arena.LpColRel
+import ConAgua.Arena.LitRefine
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The level-list store refines the arena's level-list tables
@@ -13,7 +12,7 @@ element (`lsWords`), and the record points at the slice. The schema `lsSch` (`LS
 three words per node, counts at `CTL[40 + t]`, tag `0`), the record relation `LsRecRel` (a slice
 below the pool top holding the list's words, and its hash), the node hash `lshash` (word 2), the
 lens `lsLens` on `a.store.lss`'s two tables. Matching is equality of lists by `slice_key`
-(`PoolSlice.lean`) and the injectivity of `lsWords`; there is no scratch skip.
+(`LitRefine.lean`) and the injectivity of `lsWords`; there is no scratch skip.
 
 `LsR m a` is the library's `ConsR`; `internLs_refines`: `intern_ls(o, l)` refines
 `internLsNode us` for the list `us` whose words the slice holds, under `LsR` and `PoolOK`.

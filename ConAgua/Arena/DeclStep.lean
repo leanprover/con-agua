@@ -1,8 +1,5 @@
-import ConAgua.Arena.DeclBase
-import ConAgua.Arena.IndProg
 import ConAgua.Arena.DeclArms
 import ConAgua.Front.IndApply
-import ConAgua.Census.Attr
 
 /-!
 # Phase A's step body in L: `install_step_go`, `check_decl`, the header and value guards

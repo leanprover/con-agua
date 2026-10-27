@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPartsSpec.Bs
-import ConAgua.Arena.IndPosSpec.RootHoles
 import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.RecClassSpec.Classes
 

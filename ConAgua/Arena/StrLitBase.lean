@@ -1,8 +1,9 @@
 import ConAgua.Arena.StrLit
 import ConAgua.Arena.DefEqStuckEta
-import ConAgua.Arena.InferBodyIntern
-import ConAgua.Arena.InferFieldSortNat
-import ConAgua.Arena.RomExpr
+import ConAgua.Arena.DefEqLeaves2
+import ConAgua.Arena.WhnfDeltaRefine3
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The string-literal functions' leaves under `CoreS` (helper `defeq2-str`)

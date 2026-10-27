@@ -1,5 +1,12 @@
-import ConAgua.Arena.Knot
 import ConAgua.Arena.LevelSubstL
+import ConAgua.Arena.Knot
+import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LevelGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import ConAgua.Arena.Env
 
 /-!
 # `field_sort_zero`: `inferProj`'s propositional-structure test (lane `defeq2`)

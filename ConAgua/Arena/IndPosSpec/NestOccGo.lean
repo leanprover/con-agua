@@ -1,5 +1,9 @@
 import ConAgua.Arena.IndPosSpec.MentionsAnyGo
 import ConAgua.Arena.IndPosSpec.NoGoStep
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # NestOccGo: `ConRon.Arena.memberIdxAt`, `ConRon.Arena.mentionsAnyConst`, `ConRon.Arena.nestOccGo`, `ConRon.Arena.nestOcc`, `ConRon.Arena.phApp`

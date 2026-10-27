@@ -1,7 +1,6 @@
 import ConAgua.Arena.Inst1Spec
 import ConAgua.Arena.LiftRefine
-import ConAgua.Arena.FVarRangeRefine
-import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `inst_go` refines the arena's `instantiate1Go`

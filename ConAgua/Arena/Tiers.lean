@@ -1,9 +1,9 @@
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.Keeps
-import ConRon.Arena.Env
 import ConAgua.Arena.EnvRec
 import ConAgua.Arena.MemoBank
 import ConAgua.Arena.CoreCaches
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The relation by tier, over projections of the state

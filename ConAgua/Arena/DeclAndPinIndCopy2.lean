@@ -1,4 +1,7 @@
 import ConAgua.Arena.DeclAndPinIndCopy
+import ConAgua.Arena.DeclAndPinInd
+import ConAgua.Arena.DeclAndPinIndDec
+import ConAgua.Arena.SimLib
 
 /-!
 # The `And` pin's inductive arm, part 2c: what the copy's pieces leave

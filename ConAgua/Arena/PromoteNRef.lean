@@ -1,5 +1,8 @@
 import ConAgua.Arena.PromoteN
-import ConAgua.Census.Attr
+import ConAgua.Arena.PromoteMemo
+import ConAgua.Arena.PromotePi
+import ConAgua.Arena.SimLib
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `promote_n` refines `promoteN`

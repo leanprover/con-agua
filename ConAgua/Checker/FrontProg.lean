@@ -1,7 +1,7 @@
 import ConAgua.Checker.FrontProgAgree
-import ConAgua.Checker.RomProg0
 import ConAgua.Front.ChunkBridge
-import ConAgua.Compiler.WriteSetSplit
+import ConAgua.Arena.LevelIntern
+import ConAgua.Arena.LevelSubstLP
 
 /-!
 # The frontend's refinement at the checker's program (lane `pipeline`)

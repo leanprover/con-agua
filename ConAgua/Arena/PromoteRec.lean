@@ -1,4 +1,8 @@
-import ConAgua.Arena.PromoteE
+import ConAgua.Arena.PromoteL
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The record side of the promotion: models and specs

@@ -1,6 +1,8 @@
 import ConAgua.Arena.DeclReduceSpec
-import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `matchesPin`, `reduceStoredOk`, `reduceElemOk` (lane `decls3`)

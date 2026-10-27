@@ -2,7 +2,7 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.MapOKStep
 import ConAgua.Arena.IndPosSpec.SgF
 import ConAgua.Arena.IndPosSpec.SgGoW2
-import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # SgGoW

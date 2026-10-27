@@ -1,9 +1,12 @@
 import ConAgua.Arena.IndPos
-import ConAgua.Arena.IndStubs
-import ConAgua.Arena.IndView
-import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Scan.Common
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # NestKeyMap: `ConRon.Arena.NestCtx.hiAt`, `ConRon.Arena.NestFieldKind.flat`, `ConRon.Arena.nestKeyMap`, `ConRon.Arena.nestKindsFlat`

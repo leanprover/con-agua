@@ -1,5 +1,8 @@
 import ConAgua.Verdict.IndBHdr
 import ConAgua.Verdict.IndBRec1
+import ConAgua.Arena.IndT.RecGen7
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `class_rec_ty_ok` (lane `verdicts-b`, helper `ib`)

@@ -1,6 +1,8 @@
 import ConAgua.Front.IndInstallRefine5
 import ConAgua.Front.IndApplySpec3
 import ConAgua.Front.IndFieldsLink3
+import ConAgua.Front.IndApplyRefine9
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `apply_ind` refines `processLineCoreD`'s `.ind` arm

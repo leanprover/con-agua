@@ -1,5 +1,7 @@
 import ConAgua.Arena.StrLitChar
 import ConAgua.Arena.StrLitList
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `str_lit_supported` under `CoreS` (helper `defeq2-str-sup`)

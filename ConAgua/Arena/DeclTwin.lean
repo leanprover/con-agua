@@ -1,7 +1,5 @@
-import ConRon.Bridge.Checker.Split
 import ConAgua.Arena.Refine
 import ConRon.Bridge.Inductives.Decl
-import ConRon.Bridge.Frontend.Shared
 import ConRon.Bridge.Frontend.Capstone
 
 /-!

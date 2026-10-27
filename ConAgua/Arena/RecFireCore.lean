@@ -1,6 +1,4 @@
 import ConAgua.Arena.InstLPLevel2
-import ConAgua.Arena.RecFireEnv
-import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.CapsNeverZeroCore
 
 /-!

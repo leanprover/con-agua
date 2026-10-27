@@ -1,6 +1,9 @@
 import ConAgua.Verdict.IndBSum2
 import ConAgua.Verdict.PosKnotE
 import ConAgua.Verdict.KnotAllE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `whnf_telescope`'s error claim (lane `verdicts-b`, helper `fin`, fork `wt`)

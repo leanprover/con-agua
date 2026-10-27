@@ -1,10 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.MemoLib
-import ConAgua.Arena.Env
-import ConAgua.Arena.Pins
-import ConAgua.Arena.WhnfIota
-import ConAgua.Arena.Reasons
-import ConAgua.Census.Attr
 
 /-!
 # `consts_resolve_ffast(vis, e)`: the twin's memoized `constsResolve` (lane `stubs`)

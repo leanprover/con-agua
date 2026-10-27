@@ -1,13 +1,4 @@
-import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.WhnfSpine
 import ConAgua.Arena.WhnfCore
-import ConAgua.Arena.Env
-import ConAgua.Arena.EnvRec
-import ConAgua.Arena.CoreCaches
-import ConAgua.Arena.CoreRefine
-import ConAgua.Arena.Pins
-import ConAgua.Arena.LevelEquiv
-import ConAgua.Census.Attr
 
 /-!
 # ι-reduction: `ConRon.Arena.Core.lean`, the recursor rule fire

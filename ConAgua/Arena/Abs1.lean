@@ -1,11 +1,16 @@
 module
 
-public import ConAgua.Arena.Inst1Spec
-public import ConAgua.Arena.FVarRange
-public import ConAgua.L.ProgHas
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+public import ConAgua.Arena.FVarRange
 import ConAgua.Census.Attr
+public import ConAgua.Arena.LiftSpec
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

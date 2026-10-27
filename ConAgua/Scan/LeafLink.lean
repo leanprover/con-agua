@@ -1,8 +1,11 @@
 module
 
-public import ConAgua.Scan.WordLink
 public import ConAgua.Scan.Leaves
 import ConAgua.Census.Attr
+public import ConLeche.Frontend.Scan.Fast
+import ConAgua.Scan.Link
+public import ConAgua.Scan.WordLink
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 
 /-!
 # RootOutsB

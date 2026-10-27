@@ -1,9 +1,7 @@
-import ConAgua.Arena.InstLPWalk
-import ConAgua.Arena.InstLPRef2
-import ConAgua.Arena.InferBodyIntern
-import ConAgua.Arena.StrLitBase
-import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.InstLP
+import ConAgua.Arena.LevelInternRef
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The `instLP` walk under `CoreS`: the invariants and the steps

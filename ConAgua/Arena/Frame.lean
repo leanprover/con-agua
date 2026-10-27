@@ -1,5 +1,5 @@
 import ConAgua.Arena.StoreLib
-import ConAgua.L.WriteSet
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Frames between tables

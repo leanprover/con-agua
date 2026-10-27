@@ -1,6 +1,11 @@
 import ConAgua.Arena.IndCopy
-import ConAgua.Arena.IndStubs
 import ConAgua.Arena.IndSum
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # StructElimLevel: `ConRon.Arena.structElimLevel`, `ConRon.Arena.structPsAt.go`

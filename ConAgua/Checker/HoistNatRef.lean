@@ -1,4 +1,5 @@
 import ConAgua.Checker.HoistClosureL
+import ConAgua.Arena.DeclNatDeps
 
 
 /-!

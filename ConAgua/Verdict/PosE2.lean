@@ -1,6 +1,8 @@
 import ConAgua.Verdict.PosE2M
 import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.PosE
+import ConAgua.Arena.IndT.PosCrest
+import ConAgua.Arena.IndT.PosNew
 
 /-!
 # The positivity walk's error claims: `nest_cont_new`, `nest_frame` and their leaves

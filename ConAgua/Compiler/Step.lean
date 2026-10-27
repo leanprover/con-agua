@@ -2,9 +2,10 @@ module
 
 public import ConAgua.Compiler.Compile
 public import ConAgua.Compiler.Mem
-public import Kraken.X64.WP.Basic
+public import ConAgua.L.Semantics
+public import Kraken.X64.WP.Host
 public import Kraken.X64.Registers
-
+public import Kraken.X64.WP.Basic
 @[expose] public section
 
 /-!

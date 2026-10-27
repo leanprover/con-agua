@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPosSpec.NbKeyK2
-import ConAgua.Arena.IndRealAbsPos
 
 /-!
 # Pos2WfWfSome

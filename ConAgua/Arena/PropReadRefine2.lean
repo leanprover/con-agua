@@ -1,5 +1,4 @@
 import ConAgua.Arena.PropReadRefine
-import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.DefEqStuckShape
 
 /-!

@@ -6,6 +6,10 @@ public import ConAgua.Scan.StrLink
 public import ConAgua.Scan.LitLink
 public import ConAgua.Scan.Records
 import ConAgua.Census.Attr
+import ConAgua.Scan.LeafLink
+import ConAgua.Scan.Link
+import Std.Tactic.BVDecide.Normalize.Bool
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 set_option linter.unusedSectionVars false

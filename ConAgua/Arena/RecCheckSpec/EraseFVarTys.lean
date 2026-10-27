@@ -1,4 +1,10 @@
 import ConAgua.Arena.RecCheckSpec.RcLook
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndPosSpec.SgGoW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # EraseFVarTys: `ConRon.Arena.eraseFVarTys`, `ConRon.Arena.targetCanonParams`, `ConRon.Arena.targetCtorsOf`

@@ -1,5 +1,17 @@
 import ConAgua.Front.IdTable
+import ConAgua.Arena.ImaxStore
+import ConAgua.Arena.LevelStore
+import ConAgua.Arena.MaxStore
+import ConAgua.Arena.NAnonStore
+import ConAgua.Arena.NNumStore
+import ConAgua.Arena.NStrStore
+import ConAgua.Arena.ParamStore
+import ConAgua.Arena.ZeroStore
+import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The parse state's id tables in L: `front_init`, `apply_nstr`, `apply_nnum`, `apply_level`

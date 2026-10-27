@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.Reasons
 
 /-!
 # The block recogniser in L (lane `induct`, module `IndParts`)

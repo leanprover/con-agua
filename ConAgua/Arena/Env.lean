@@ -1,5 +1,9 @@
-import ConAgua.Arena.Pins
-import ConAgua.Census.Attr
+import ConAgua.Arena.Tiers
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The environment index in L: rows, `find?`, `push`, `popTemp`, `erase`

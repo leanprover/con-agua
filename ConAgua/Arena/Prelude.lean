@@ -1,7 +1,5 @@
 import ConAgua.Arena.RomCI
-import ConAgua.Arena.RomPins
 import ConAgua.Rom.CIEnc
-import ConAgua.Census.Attr
 
 /-!
 # The program's ROM: the pinned names, then the startup walk's item stream

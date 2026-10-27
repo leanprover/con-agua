@@ -1,5 +1,11 @@
 import ConAgua.Arena.WhnfCoreStep
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreSlot
 
 /-!
 # The `whnf_core` loop and slot (phase 5, lane `whnf`)

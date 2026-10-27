@@ -1,4 +1,5 @@
 import ConAgua.Front.IndApplyRefine2
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The apply step of an `inductive` line against the twin, III: `listed`, `Nodup`, `ctorIx`

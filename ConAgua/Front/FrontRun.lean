@@ -1,7 +1,6 @@
 import ConAgua.Front.LineRefine
 import ConAgua.Front.DriverRefine
 import ConAgua.Scan.Validator
-import ConAgua.Census.Attr
 import ConRon.Bridge.Frontend.Chunks
 set_option linter.unusedSectionVars false
 

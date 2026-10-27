@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndPosSpec.Pos2RdGrow
-import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndPosSpec.NkcW
 
 /-!
 # Pos2DecHLSplit

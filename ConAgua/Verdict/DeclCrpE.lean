@@ -1,5 +1,8 @@
 import ConAgua.Arena.DeclCrpT
 import ConAgua.Verdict.DeclHdrE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claim of `check_reduce_pin` (lane `verdicts-b`, helper `d`)

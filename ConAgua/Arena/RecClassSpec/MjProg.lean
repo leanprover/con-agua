@@ -1,9 +1,7 @@
-import ConAgua.Arena.IndPosSpec.InstW
-import ConAgua.Arena.IndPosSpec.RootHoles
 import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.IndRealOpf
-import ConAgua.Arena.IndSim
 import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.IndDecStab
 
 /-!
 # MjProg

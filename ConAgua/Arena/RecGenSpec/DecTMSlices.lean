@@ -1,5 +1,9 @@
 import ConAgua.Arena.RecCheckSpec.TruncSl
 import ConAgua.Arena.RecGenSpec.CtorLp
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # DecTMSlices

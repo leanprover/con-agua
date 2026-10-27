@@ -1,7 +1,10 @@
 import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.RpGoStep
 import ConAgua.Arena.IndSim
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
+import ConAgua.Arena.RecSim
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # TaCW

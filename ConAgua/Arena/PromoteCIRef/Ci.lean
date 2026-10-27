@@ -1,6 +1,7 @@
 import ConAgua.Arena.PromoteCIRef.Caps
 import ConAgua.Arena.PromoteCIRef.PreESizeLe
 import ConAgua.Arena.PromoteCIRef.Rules
+import ConAgua.Arena.PromoteCIRef.Of
 
 /-!
 # Ci

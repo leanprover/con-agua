@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndRealCrF
 import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
 
 /-!

@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndPosSpec.Nb
 import ConAgua.Arena.IndPosSpec.RsLook
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # P2rtW

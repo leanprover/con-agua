@@ -1,5 +1,4 @@
 import ConAgua.Arena.InstLPRef
-import ConAgua.Census.Attr
 
 /-!
 # `rec_fire_levels` refines `recFireLevels`

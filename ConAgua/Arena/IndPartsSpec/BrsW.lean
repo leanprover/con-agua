@@ -1,6 +1,8 @@
 import ConAgua.Arena.IndPartsSpec.IndPartsProg5
 import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
 import ConAgua.Arena.IndPartsSpec.PlW
+import ConAgua.Arena.IndRealPartsC1
+import ConAgua.Arena.IndSim
 
 /-!
 # BrsW

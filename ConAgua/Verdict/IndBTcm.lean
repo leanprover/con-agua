@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndT.RecCheckTcm
 import ConAgua.Verdict.IndBTpd
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `target_class_match` (lane `verdicts-b`, helper `ib`)

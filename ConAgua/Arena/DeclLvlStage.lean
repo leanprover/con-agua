@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclCvg
-import ConAgua.Arena.WhnfIotaRefine4
 
 /-!
 # `lvl_eq_c` under the stage relation, given the core's twin invariants (lane `decls3`)

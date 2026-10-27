@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndRealPartsC1
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPartsSpec.BsoK2
+import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.IndSumSpec.Row
 
 /-!
 # PlW

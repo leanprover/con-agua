@@ -1,6 +1,6 @@
-import ConAgua.Arena.InstLPRef2
 import ConAgua.Arena.PropReadRefine
-import ConAgua.Arena.WhnfIota
+import ConAgua.Arena.LevelIntern
+import ConAgua.Arena.LevelInternRef
 
 /-!
 # `caps_never_zero` under `CoreS` (lane `defeq2`)

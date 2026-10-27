@@ -1,6 +1,4 @@
-import ConAgua.Arena.IndInstallSpec.Cons
-import ConAgua.Arena.IndPosSpec.KlB
-import ConAgua.Arena.IndPosSpec.UnW2
+import ConAgua.Arena.IndInstall
 
 /-!
 # NfsProg

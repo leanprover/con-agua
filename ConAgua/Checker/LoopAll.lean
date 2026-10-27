@@ -1,6 +1,8 @@
 import ConAgua.Checker.Prog
 import ConAgua.Arena.LoopFns
 import ConAgua.Compiler.WriteSetSplit
+import ConAgua.Arena.LevelIntern
+import ConAgua.Arena.LevelSubstLP
 
 /-!
 # The loop's write set in the checker's program (lane `loopt2`)

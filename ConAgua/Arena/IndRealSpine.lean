@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndRealFvt
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The spine adapters' stub contracts discharged (lane `indproofs4`, helper `spine`)

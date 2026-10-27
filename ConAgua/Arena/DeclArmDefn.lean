@@ -1,5 +1,8 @@
-import ConAgua.Arena.DeclArmOpaque
-import ConAgua.Arena.DeclPins
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.DeclValSpec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The definition arm `check_decl_defn(i, vis)` (lane `decls3`)

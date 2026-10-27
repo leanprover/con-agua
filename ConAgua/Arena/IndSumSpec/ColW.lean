@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndSum
 
 /-!

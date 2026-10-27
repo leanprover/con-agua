@@ -1,7 +1,10 @@
-import ConAgua.Arena.RecCheckSpec.EeW2
 import ConAgua.Arena.RecClassSpec.ClassGenRecTy
 import ConAgua.Arena.RecClassSpec.MnProg
 import ConAgua.Arena.RecClassSpec.PdWAfr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # MnW

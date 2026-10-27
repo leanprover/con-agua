@@ -1,7 +1,10 @@
 import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.ExprMk
-import ConAgua.Arena.DerRel
-import ConAgua.Census.Attr
+import ConAgua.Front.Preserve
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `WhnfSpine`'s L code and the proofs behind its refinements

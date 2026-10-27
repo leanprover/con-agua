@@ -1,6 +1,11 @@
 import ConAgua.Arena.IndInstallSpec.CbProg
 import ConAgua.Arena.IndInstallSpec.Frame
 import ConAgua.Arena.IndPartsSpec.IndPartsProg5
+import ConAgua.Arena.IndRealBph2
+import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # ShapeCVOfDecB

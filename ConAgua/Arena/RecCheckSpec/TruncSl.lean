@@ -2,6 +2,10 @@ import ConAgua.Arena.RecCheckSpec.TcmF
 import ConAgua.Arena.RecCheckSpec.Tpd
 import ConAgua.Arena.RecGenSpec.Rec3IwSlice
 import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # TruncSl

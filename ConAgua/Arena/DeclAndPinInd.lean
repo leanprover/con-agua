@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclAndPin
-import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The `And` pin's inductive arm, part 1: `and_block_named(bo, bl)` refines `blockAndNamed`

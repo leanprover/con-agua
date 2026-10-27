@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndIface
+import ConAgua.L.Semantics
+import ConLeche.Kernel.Env
+import ConRon.Arena.Handle
+import Std.WP.Assertion
+import ConAgua.Arena.Reasons
 
 /-!
 # TcmK6

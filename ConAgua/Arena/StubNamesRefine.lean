@@ -1,7 +1,7 @@
-import ConAgua.Arena.StubNames
-import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.DeclNatSpec
-import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `reserved_rec_name` refines `reservedRecName`; `lit_guard_has` is `litGuardNames.contains`

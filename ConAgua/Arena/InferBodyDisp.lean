@@ -1,4 +1,5 @@
 import ConAgua.Arena.InferBodyBindPi
+import ConAgua.Arena.InferBodySpineF
 
 /-!
 # The bodies' dispatchers: `infer_body`, `infer_body_io` (lane `defeq`)

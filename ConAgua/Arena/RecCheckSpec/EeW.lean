@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecCheckSpec.EeK2
 import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # EeW

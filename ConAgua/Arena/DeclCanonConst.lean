@@ -1,4 +1,8 @@
 import ConAgua.Arena.DeclCanonNames
+import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Constants: `cv_lps`, the renaming context, `cv_canon_eq` (lane `decls3`, helper `decls3-canon`)

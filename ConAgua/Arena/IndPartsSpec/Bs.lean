@@ -1,6 +1,11 @@
 import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndPosSpec.CtxFields
-import ConAgua.Arena.IndSim
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # Bs

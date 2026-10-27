@@ -1,5 +1,9 @@
 import ConAgua.Arena.IndInstallSpec.DecCNS
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # ConsBlockCtors: `ConRon.Arena.consBlockCtors`

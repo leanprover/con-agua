@@ -1,4 +1,3 @@
-import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.WhnfSpineArgs
 
 /-!

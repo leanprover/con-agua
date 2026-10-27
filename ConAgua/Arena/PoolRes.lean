@@ -1,9 +1,12 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.L.Logic
 public import ConAgua.Arena.Pool
 public import ConAgua.Arena.Reasons
-meta import ConAgua.L.Semantics
+import ConAgua.Arena.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

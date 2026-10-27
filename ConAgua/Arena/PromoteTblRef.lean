@@ -3,7 +3,8 @@ import ConAgua.Arena.PromoteCIRef.PmDecTblBound
 import ConAgua.Arena.PromoteCIRef.PreESizeLe
 import ConAgua.Arena.PromoteCIRef.Proj
 import ConAgua.Arena.PromoteCIRef.TdecJoin
-import ConAgua.Arena.PromoteCIRef.OfFrame
+import ConAgua.Arena.PromoteCIRef.Of
+import ConRon.Bridge.Grind
 
 /-!
 # The table side of the promotion: `erase_installed_tables`, `promote_proj_tables`,

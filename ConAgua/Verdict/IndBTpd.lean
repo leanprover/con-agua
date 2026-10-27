@@ -1,6 +1,9 @@
 import ConAgua.Arena.IndT.RecCheckTpd
 import ConAgua.Checker.NoVerdictFns
 import ConAgua.Verdict.DeclValE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `target_params_def_eq_step` (lane `verdicts-b`, helper `ib`)

@@ -6,6 +6,7 @@ import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.IndInstallSpec.GpbWSimF
 import ConAgua.Arena.IndInstallSpec.Icvg
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+import ConRon.Bridge.Inductives.GenRec
 
 /-!
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)

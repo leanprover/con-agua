@@ -1,4 +1,9 @@
 import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `whnf_app` refines `whnfApp` (split from `WhnfCoreApp.lean`)

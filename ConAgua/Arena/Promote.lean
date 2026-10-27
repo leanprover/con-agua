@@ -1,6 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Census.Attr
-import ConRon.Arena.Promote
 
 /-!
 # Promotion in L: the scratch → persistent copy (`Arena/Promote.lean` of the twin)

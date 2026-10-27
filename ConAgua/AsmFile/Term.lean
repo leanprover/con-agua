@@ -1,5 +1,5 @@
-import Lean
 import ConAgua.Compiler.Compile
+import Lean.Util.ReplaceExpr
 
 /-!
 # Programs as terms (TRUSTED: `include_asm` builds its term with these)

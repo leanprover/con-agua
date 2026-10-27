@@ -1,7 +1,5 @@
-import ConAgua.Arena.EnvRec
 import ConAgua.Arena.Tiers
-import ConAgua.Arena.ArenaRel
-import ConRon.Arena.Core
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Stored levels read back: the invariant the knot's level readers need (lane `defeq2`)

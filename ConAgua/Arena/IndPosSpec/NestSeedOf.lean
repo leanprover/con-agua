@@ -1,4 +1,7 @@
 import ConAgua.Arena.IndPosSpec.SgGoW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NestSeedOf: `ConRon.Arena.nestSeedOf`

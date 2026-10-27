@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndInstallSpec.Icvg
 import ConAgua.Arena.RecCheckSpec.RcLook
+import ConAgua.Arena.RecStab
 
 /-!
 # OfClosed

@@ -1,7 +1,5 @@
 import ConAgua.Arena.WhnfBase
 import ConAgua.L.FuelMono
-import ConAgua.L.WriteSet
-import ConAgua.L.ProgHas
 import ConAgua.Arena.Env
 
 /-!

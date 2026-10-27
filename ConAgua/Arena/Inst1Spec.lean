@@ -1,11 +1,15 @@
 module
 
-public import ConAgua.Arena.Inst1
-public import ConAgua.Arena.LiftSpec
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+public import ConAgua.Arena.Inst1
+public import ConAgua.Arena.LiftSpec
 import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 public import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

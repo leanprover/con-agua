@@ -1,4 +1,7 @@
 import ConAgua.Verdict.IndBCos
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `classes_ctors` (lane `verdicts-b`, helper `ib`)

@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # BmoW

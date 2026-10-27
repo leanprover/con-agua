@@ -1,6 +1,8 @@
-import ConAgua.Arena.InferBodyDisp
-import ConAgua.Arena.DefEqLeaves2
 import ConAgua.Arena.CoreDen
+import ConAgua.Arena.DefEqLeaves
+import ConAgua.Arena.InferBodyLet
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The stuck and irrelevance side of `DefEq.lean`: `prop_irrel` (lane `defeq`, helper `defeq-top`)

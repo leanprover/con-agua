@@ -1,6 +1,9 @@
 import ConAgua.Verdict.PosE1M
 import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.PosE
+import ConAgua.Arena.IlpRdReal
+import ConAgua.Arena.IndPosSpec.NitW
+import ConAgua.Arena.IndT.Install2
 
 /-!
 # `nest_inst_type_ty`, `nest_inst_type`: error claims (lane `verdicts-b`, helper `ia2`, fork `kn1`)

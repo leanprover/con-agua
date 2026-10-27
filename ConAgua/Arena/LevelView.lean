@@ -1,6 +1,4 @@
 import ConAgua.Arena.LevelArena
-import ConAgua.Arena.LevelHeap
-import ConAgua.Arena.View
 
 /-!
 # `lv_node` against the twin's level view, converse direction (lane `decls3`)

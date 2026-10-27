@@ -1,9 +1,8 @@
 import ConAgua.Front.Unescape
-import ConAgua.Front.ExprIface
-import ConAgua.Scan.StrLink
-import ConAgua.Arena.ArenaRel
 import ConAgua.Arena.DerRel
-import ConAgua.Census.Attr
+import ConAgua.Front.FieldsLink
+import ConAgua.Scan.Link
+import Std.Tactic.BVDecide.Normalize.Prop
 set_option linter.unusedSectionVars false
 
 /-!

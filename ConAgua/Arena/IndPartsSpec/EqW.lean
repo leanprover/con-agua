@@ -1,6 +1,12 @@
 import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.PinsNatOp
 import ConAgua.Scan.Common
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # EqW

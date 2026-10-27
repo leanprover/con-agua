@@ -6,6 +6,10 @@ import ConAgua.Arena.RecGenSpec.KeysProg
 import ConAgua.Arena.RecGenSpec.StabDecCRDecB
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # OcW

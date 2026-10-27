@@ -1,4 +1,4 @@
-import ConAgua.Arena.Infer
+import ConAgua.Arena.WhnfBase
 
 /-!
 # The knot's `infer`, `infer_io`, `defeq` and eager slots, and the fueled entry points (lane `defeq`)

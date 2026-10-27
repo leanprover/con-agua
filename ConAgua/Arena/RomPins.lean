@@ -1,6 +1,10 @@
 import ConAgua.Arena.Rom
-import ConAgua.Arena.Pins
-import ConAgua.Census.Attr
+import ConAgua.Arena.Tiers
+import ConAgua.Front.ApplyExprRefine
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `internReservedPins` in L: the pin table filled from the ROM

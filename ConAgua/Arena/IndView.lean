@@ -1,7 +1,10 @@
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.View
-import ConAgua.Arena.SortRefine
-import ConAgua.Arena.ConstRefine
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndIface
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `e_view` refines the twin's `view` (lane `induct`)

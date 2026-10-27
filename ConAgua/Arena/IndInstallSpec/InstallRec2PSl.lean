@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndInstallSpec.DecCNS
 import ConAgua.Arena.IndInstallSpec.DecISS
 import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
-import ConAgua.Arena.IndPartsSpec.PlW
 
 /-!
 # InstallRec2PSl

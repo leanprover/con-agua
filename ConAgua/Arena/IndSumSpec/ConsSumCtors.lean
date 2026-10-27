@@ -1,6 +1,9 @@
-import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # ConsSumCtors: `ConRon.Arena.consSumCtors`

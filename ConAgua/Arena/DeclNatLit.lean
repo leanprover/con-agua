@@ -1,4 +1,6 @@
 import ConAgua.Arena.DeclNatGate
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `nat_lit_supported` under the stage relation (lane `decls3`, helper `decls3-nat`)

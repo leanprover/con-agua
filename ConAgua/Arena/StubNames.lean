@@ -1,9 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Arena.Abs1
-import ConAgua.Arena.LsStore
-import ConAgua.Arena.NStrStore
-import ConAgua.Arena.Pins
-import ConAgua.Census.Attr
 
 /-!
 # Former stubs: names, level lists, the fvar-range read (lane `stubs`)

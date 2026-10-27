@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndRealMemoCr
 import ConAgua.Arena.StageTLift
+import ConAgua.Arena.DeclNatCv
 
 /-!
 # `consts_resolve_ffast` under `StageT` (lane `indproofs4`, helper `wkt`)

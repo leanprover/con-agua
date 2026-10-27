@@ -1,10 +1,10 @@
 module
 
 public import ConAgua.L.Semantics
+public import Std.Do.Triple.SpecLemmas
+public import Std.WP.Monad.Instances
+public import Std.WP.Triple.Basic
 public import ConAgua.L.GrindAttr
-public import Std.WP
-public import Std.Tactic.Do
-
 @[expose] public section
 
 /-!

@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndPartsSpec.PartsConsPL
 import ConAgua.Arena.IndPosSpec.NestOccGo
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # IndPartsProg2

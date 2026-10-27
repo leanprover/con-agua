@@ -1,5 +1,4 @@
 import ConAgua.Arena.PhaseBT
-import ConAgua.Arena.Freeze
 
 /-!
 # What phase B starts from, and the frozen arrays cut to their extents (lane parmode)

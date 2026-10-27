@@ -1,8 +1,10 @@
 import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.DpGoW
-import ConAgua.Arena.IndPosSpec.NoGoStep
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # RootHoles: `ConRon.Arena.NestCtx.rootHoles`, `ConRon.Arena.nestHoleAt`

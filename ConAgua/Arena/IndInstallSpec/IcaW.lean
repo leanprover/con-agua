@@ -3,6 +3,10 @@ import ConAgua.Arena.IndInstallSpec.IcbiW
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # IcaW

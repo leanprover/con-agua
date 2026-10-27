@@ -1,4 +1,7 @@
-import ConAgua.Arena.DeclAxiomSpec
+import ConAgua.Arena.DeclReduceSpec2
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `Lean.trustCompiler`: `find_pinned_cv`, `trust_compiler_ok` (lane `decls3`)

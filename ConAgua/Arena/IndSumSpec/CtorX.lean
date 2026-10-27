@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndSumSpec.CtlW
 import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # CtorX

@@ -1,6 +1,6 @@
-import ConAgua.Rom.PinReadSpec
 import ConAgua.Rom.PinSets
 import ConRon.Bridge.Checker.Pins
+import ConAgua.Arena.RomPins
 
 open ConRon.Arena
 open Std.WP

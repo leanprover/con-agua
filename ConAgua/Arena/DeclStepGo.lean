@@ -1,8 +1,9 @@
 import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.DeclRec
 import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.PinsNatOp
-import ConAgua.Arena.WhnfBase
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 noncomputable section
 

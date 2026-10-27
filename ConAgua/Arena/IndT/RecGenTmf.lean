@@ -8,7 +8,7 @@ import ConAgua.Arena.RecGenSpec.OcW
 import ConAgua.Arena.RecGenSpec.Tmc
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.PromoteCIRef.OfFrame
+import ConAgua.Arena.DeclBasisSpec
 
 /-!
 # `target_major_of` under `StageC` with the real `inst_lp_fast` (lane `indstaget`, helper `rcC`)

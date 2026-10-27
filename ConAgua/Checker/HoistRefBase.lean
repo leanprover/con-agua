@@ -1,9 +1,5 @@
 import ConAgua.Checker.Hoist
-import ConAgua.Arena.MemoLibRel
-import ConAgua.Arena.View
-import ConAgua.Arena.IndView
 import ConAgua.Front.StateDR
-import ConRon.Arena.Frontend.NatOpGround
 
 /-!
 # The ground hoist's refinement: shared relations (lane `front4`)

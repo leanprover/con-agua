@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclAxiomSpec4
-import ConAgua.Arena.DeclArmOpaque
-import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclTwin
+import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Arena.DeclCanonConst
+import ConAgua.Arena.DeclCanonSpec2
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The quotient pin: `quot_pin_hit(k, q)` (lane `decls3`)

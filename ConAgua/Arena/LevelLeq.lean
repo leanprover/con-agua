@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Arena.LevelSubst
 meta import ConAgua.L.Semantics
+public import ConAgua.Arena.LevelSubst
 import ConAgua.Census.Attr
+import ConAgua.Arena.LevelGrindAttr
 
 @[expose] public section
 

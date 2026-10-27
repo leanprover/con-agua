@@ -1,11 +1,10 @@
 import ConAgua.Arena.StubInd
-import ConAgua.Arena.WhnfIotaRefine6
-import ConAgua.Arena.DeclCanonSpec
 import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.DeclNatBase
 import ConAgua.Arena.DeclNatDeps
 import ConAgua.Arena.WhnfM2CRefine5
-import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `rec_rule_bits` refines `recRuleBits` (lane `tails`)

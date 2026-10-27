@@ -1,7 +1,9 @@
 module
 
+public import ConAgua.Compiler.SimStmt
 public import ConAgua.Compiler.SimStore
 public import ConAgua.L.Blocks
+import Kraken.X64.Registers
 
 @[expose] public section
 set_option linter.unusedSectionVars false

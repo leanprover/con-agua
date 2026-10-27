@@ -1,5 +1,5 @@
-import ConAgua.Arena.MemoBank
 import ConAgua.Arena.LevelHeapRel
+import ConRon.Arena.Handle
 
 /-!
 # Tree-valued memo entries: `MemoRV` with a decoder that reads memory

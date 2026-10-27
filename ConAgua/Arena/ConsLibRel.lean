@@ -1,7 +1,8 @@
 import ConAgua.Arena.ConsLibSpec
-import ConAgua.Arena.ViewL
 import ConAgua.Arena.Frame
 import ConAgua.Arena.StoreGrow
+import ConAgua.Arena.StoreFields
+import Std.Tactic.BVDecide.Normalize.Prop
 set_option linter.unusedSectionVars false
 
 /-!

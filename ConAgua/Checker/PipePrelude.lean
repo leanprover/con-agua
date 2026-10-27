@@ -1,10 +1,10 @@
 import ConAgua.Checker.PipeStages
 import ConAgua.Checker.PrepProgChecker
 import ConAgua.Checker.FrontReset
-import ConAgua.Checker.PreLoopWSStages
 import ConAgua.Front.FrontPreOK
-import ConAgua.Arena.RecGenSpec.Set64
-import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+import ConRon.Bridge.Frontend.Prepare
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The stage `builtin_prelude` at `checkerProg` (lane `pipeline`)

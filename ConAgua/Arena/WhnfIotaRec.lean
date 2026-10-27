@@ -1,4 +1,4 @@
-import ConAgua.Arena.WhnfIota
+import ConAgua.Arena.WhnfBase
 
 /-!
 # ι-reduction: `iota_rec_at` split into small functions

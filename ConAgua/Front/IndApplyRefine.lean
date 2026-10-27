@@ -1,5 +1,6 @@
-import ConAgua.Front.IndApplySpec2
-import ConAgua.Front.StateDR
+import ConAgua.Front.IndApplySpec
+import ConRon.Arena.Frontend.ExportC
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The apply step of an `inductive` line against the twin, I: the leaves

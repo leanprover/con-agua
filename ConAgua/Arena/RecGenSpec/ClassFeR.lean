@@ -3,6 +3,10 @@ import ConAgua.Arena.RecClassSpec.ClassGenRecTy
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecGenSpec.Rec3CVX
 import ConAgua.Arena.RecGenSpec.RgW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # ClassFeR: `ConRon.Arena.classFeR`

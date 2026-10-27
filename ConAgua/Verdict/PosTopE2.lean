@@ -1,5 +1,6 @@
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Checker.NoVerdictFns
+import ConAgua.Arena.IndPosSpec.UnW2
 
 /-!
 # `nest_uniform`'s error claim (lane `verdicts-b`, helper `ia2`, fork `top`)

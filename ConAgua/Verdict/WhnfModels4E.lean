@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfIotaRecRefine2
+import ConAgua.L.ErrSpec
 
 /-!
 # Error models of `iota_rec_vck` and `iota_rec_fire2`, by hand (lane `verdicts-b`, helper `k2`)

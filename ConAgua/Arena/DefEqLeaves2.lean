@@ -1,4 +1,8 @@
 import ConAgua.Arena.DefEqLeaves
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.NatGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.WhnfCoreProj
 
 /-!
 # Refinements of `DefEq.lean`'s small leaves, continued

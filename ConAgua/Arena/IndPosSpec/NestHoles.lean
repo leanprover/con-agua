@@ -2,6 +2,9 @@ import ConAgua.Arena.IndPosSpec.DepthGo
 import ConAgua.Arena.IndPosSpec.NcGoW
 import ConAgua.Arena.IndPosSpec.NoConstWf
 import ConAgua.Arena.IndPosSpec.SnocWStage
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NestHoles: `ConRon.Arena.nestHoles.go`, `ConRon.Arena.nestHoles`

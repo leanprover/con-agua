@@ -3,6 +3,7 @@ import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
+import ConAgua.Arena.RecGenSpec.ClassFeR
 
 /-!
 # `checkSumCtor` under `StageC` (lane `indstaget`)

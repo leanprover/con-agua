@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndPosSpec.RpGoStep
 import ConAgua.Arena.IndPosSpec.RxMapW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Rx

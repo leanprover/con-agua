@@ -1,6 +1,7 @@
 import ConAgua.Arena.RomExpr
 import ConAgua.Arena.NatArms
-import ConAgua.Census.Attr
+import ConLeche.Verify.Cached.Erase
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `rom_expr` refines `internExprGo`, the memo mirrored

@@ -1,10 +1,16 @@
 module
 
-public import ConAgua.Arena.NatMul
-public import ConAgua.Arena.NatGrindAttr
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatMul
+public import ConAgua.Arena.NatMul
 import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.NatGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

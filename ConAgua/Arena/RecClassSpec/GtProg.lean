@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndPosSpec.SnocWStage
 import ConAgua.Arena.RecClassSpec.MjProg
 
 /-!

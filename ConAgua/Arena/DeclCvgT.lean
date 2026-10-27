@@ -1,11 +1,9 @@
-import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.KnotEntry
-import ConAgua.Arena.StageTLift
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.CrOKFrame
-import ConAgua.Final.Twin
+import ConRon.Bridge.Checker.Hyp
 
 /-!
 # `check_value_group` under `StageT` (lane `loopt2`)

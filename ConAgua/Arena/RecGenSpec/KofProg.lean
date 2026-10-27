@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndPosSpec.GgW2
-import ConAgua.Arena.IndPosSpec.SgGoW
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPosSpec.RxMapW
 
 /-!
 # KofProg

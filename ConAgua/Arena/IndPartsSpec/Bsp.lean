@@ -3,6 +3,11 @@ import ConAgua.Arena.IndPartsSpec.BmgW
 import ConAgua.Arena.IndPartsSpec.BmoW
 import ConAgua.Arena.IndPartsSpec.BpcW
 import ConAgua.Arena.IndPartsSpec.BsoK2
+import ConAgua.Arena.IndSumSpec.ColW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Bsp

@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndPosSpec.PiBWStage
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NtyLook

@@ -1,4 +1,6 @@
 import ConAgua.Arena.DefEqMid
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 
 /-!

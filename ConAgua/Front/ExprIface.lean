@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Front.FieldsLink
+import ConAgua.Scan.Common
 
 @[expose] public section
 

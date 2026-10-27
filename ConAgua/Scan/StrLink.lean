@@ -1,9 +1,11 @@
 module
 
 public import ConAgua.Scan.Str
-public import ConAgua.Scan.Utf8Link
-public import ConAgua.Scan.Link
 import ConAgua.Census.Attr
+public import ConLeche.Frontend.Scan.Fast
+public import ConAgua.Scan.Link
+public import ConAgua.Scan.Utf8Link
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

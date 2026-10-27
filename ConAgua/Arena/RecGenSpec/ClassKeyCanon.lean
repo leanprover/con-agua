@@ -1,4 +1,7 @@
 import ConAgua.Arena.RecGenSpec.KcW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # ClassKeyCanon: `ConRon.Arena.classKeyCanon`, `ConRon.Arena.classKeyOf`, `ConRon.Arena.targetCanonParams`

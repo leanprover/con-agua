@@ -1,8 +1,12 @@
-import ConAgua.Arena.DeclCrpT
 import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
 import ConAgua.Arena.DeclDivModSpec.CertDivModEqs
 import ConAgua.Arena.DeclDivModSpec.CertTwoEqs
 import ConAgua.Arena.DeclDivModSpec.SubstConst0List
+import ConAgua.Arena.CrOKFrame
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.IndRealWalkT
+import ConAgua.Arena.StageC
+import ConRon.Bridge.Checker.DivMod
 
 /-!
 # The `Nat.div`-family pin gate under `StageC`, part 1: the guards (lane `loopt3`, `loopt3-div`)

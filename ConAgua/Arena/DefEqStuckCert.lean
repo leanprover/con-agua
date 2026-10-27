@@ -1,4 +1,5 @@
 import ConAgua.Arena.DefEqStuckGo
+import ConAgua.Arena.DefEqStuckShape
 
 /-!
 # `struct_eta_cert_wtb`, `struct_eta_cert_with`, `struct_eta_cert` (lane `defeq`, helper `defeq-top`)

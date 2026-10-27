@@ -1,4 +1,3 @@
-import ConAgua.L.FuelMono
 import ConAgua.L.ErrSpec
 
 /-!

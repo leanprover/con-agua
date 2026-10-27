@@ -1,7 +1,6 @@
 import ConAgua.Arena.WalkLeaves
 import ConAgua.Arena.WalkScopeRefine
-import ConRon.Arena.ExprOps
-import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `leaf_guard` refines `leafGuard` (lane `whnf3`)

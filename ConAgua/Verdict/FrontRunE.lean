@@ -2,7 +2,9 @@ import ConAgua.Verdict.FrontE
 import ConAgua.Front.FrontPreOK
 import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Final.TwinVerdict
-import ConAgua.Compiler.RunEq
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinements of the frontend's driver: `apply_ind`, `apply_dline`, `apply_any`,

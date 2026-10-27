@@ -1,5 +1,4 @@
-import ConAgua.Arena.DeclNatSub
-import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.IndSum
 
 /-!
 # SelProg

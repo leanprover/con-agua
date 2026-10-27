@@ -1,5 +1,7 @@
 import ConAgua.Verdict.DefEqSlotE
-import ConAgua.Compiler.RunEq
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `defeq_tail`'s error claim and the stuck side's (lane `verdicts-b`, helper `k3`)

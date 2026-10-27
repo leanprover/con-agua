@@ -1,4 +1,7 @@
 import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Icvg

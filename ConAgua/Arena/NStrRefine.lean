@@ -1,9 +1,7 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
-import ConAgua.Arena.PoolSlice
-import ConAgua.Arena.LsStore
 
 import ConAgua.Arena.NStrStore
+import ConAgua.Arena.LitRefine
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The name store's `str` table refines the arena's `str` tables
@@ -14,7 +12,7 @@ schema `nstrSch` (`NSREC`, `NSSLOT`, four words per node, counts at `CTL[36 + t]
 record relation `NsRecRel` (the prefix word; a slice below the pool top holding the string's
 bytes; the hash), the node hash `nshash` (word 3), the lens `nstrLens` on the name store's two
 `str` tables (`a.store.lss.ls.ns`). Matching is equality of names by the prefix word and
-`slice_key` (`PoolSlice.lean`) with the injectivity of `strWords`; there is no scratch skip.
+`slice_key` (`LitRefine.lean`) with the injectivity of `strWords`; there is no scratch skip.
 
 `NStrR m a` is the library's `ConsR`; `internNStr_refines`: `intern_nstr(q, o, l)` refines
 `internNNode (.str (decI q) s)` for the string `s` whose bytes the slice holds, under `NStrR` and

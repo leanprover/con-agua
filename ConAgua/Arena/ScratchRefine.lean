@@ -1,7 +1,6 @@
 import ConAgua.Arena.Scratch
 import ConAgua.Arena.Tiers
-import ConRon.Arena.Core
-import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The scratch lifecycle refines `enterScratch` / `dropScratch` under `ArenaD`

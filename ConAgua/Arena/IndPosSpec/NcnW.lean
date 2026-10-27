@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPosSpec.RxMapW
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # NcnW

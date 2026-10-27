@@ -1,11 +1,10 @@
 module
 
-public import ConAgua.Arena.SlotGrow
-public import ConAgua.Arena.Pool
-public import ConAgua.Arena.Reasons
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
-import ConAgua.Census.Attr
+public import ConAgua.Arena.SlotGrow
+public import ConAgua.Arena.Reasons
+public import ConAgua.L.Notation
 
 @[expose] public section
 

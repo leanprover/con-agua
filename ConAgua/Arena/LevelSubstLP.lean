@@ -1,7 +1,11 @@
 import ConAgua.Arena.LevelSubstL
 import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.Tiers
-import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LevelGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The `instLP` family's own instances of lane `levels`' substitution functions

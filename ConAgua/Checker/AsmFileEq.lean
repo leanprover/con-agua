@@ -1,6 +1,6 @@
-import ConAgua.AsmFile.Eq
 import ConAgua.Checker.Asm
 import ConAguaAsm.Checker
+import ConAgua.AsmFile.Eq
 
 /-!
 # The committed file is the compiler's output

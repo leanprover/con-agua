@@ -1,6 +1,11 @@
 import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.CoreDen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 4 (`proof_irrel`, `prepare_major`, …)

@@ -1,8 +1,17 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Front.FieldsDecl
 public import ConAgua.L.ProgHas
-meta import ConAgua.L.Semantics
+import ConAgua.Front.Preserve
+import ConAgua.L.GrindAttr
+import ConAgua.Scan.Common
+import ConAgua.Scan.RecordsSpec
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

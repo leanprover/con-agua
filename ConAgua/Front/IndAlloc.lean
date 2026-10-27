@@ -1,5 +1,10 @@
 import ConAgua.Front.IndFields
-import ConAgua.Front.IndRel
+import ConAgua.Scan.Common
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import ConAgua.L.Examples
 
 /-!
 # The scratch arrays' allocators: models and specs

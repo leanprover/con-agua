@@ -1,5 +1,4 @@
 import ConAgua.Checker.ParThreadCall
-import ConAgua.Checker.ParDriverTwin
 import ConAgua.Final.TwinPooled
 
 /-!

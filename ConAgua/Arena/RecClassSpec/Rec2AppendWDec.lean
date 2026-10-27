@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
+import ConAgua.Arena.IndPosSpec.RootHoles
 
 /-!
 # Rec2AppendWDec

@@ -1,5 +1,6 @@
 import ConAgua.Verdict.DeclHdrE
-import ConAgua.Arena.DeclArmT
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claims of `check_constant_val`, `check_defn_val`, `check_opaque_val` (lane

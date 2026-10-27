@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Syntax
 public import ConAgua.L.TRec
 public meta import Lean
+import Lean.Exception
 
 public section
 

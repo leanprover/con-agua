@@ -1,4 +1,6 @@
-import ConAgua.Arena.IndPosSpec.CanonW
+import ConRon.Arena.Store
+import Std.WP.Assertion
+import ConAgua.Arena.Reasons
 
 /-!
 # NodeV

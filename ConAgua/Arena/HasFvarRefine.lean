@@ -1,7 +1,5 @@
 import ConAgua.Arena.HasFvar
 import ConAgua.Arena.Abs1Refine
-import ConAgua.Arena.SimLib
-import ConAgua.Census.Attr
 
 /-!
 # `has_fvar_fast`/`has_fvar` refine `hasFvarFast`

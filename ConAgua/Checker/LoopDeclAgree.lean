@@ -1,7 +1,5 @@
-import ConAgua.Checker.LoopDecl
 import ConAgua.Checker.Prog
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Checker.IndRealNames
+import ConAgua.Arena.DeclStepGo
 
 /-!
 # The declaration texts' agreement halves for the checker's program (lane `loopt2`)

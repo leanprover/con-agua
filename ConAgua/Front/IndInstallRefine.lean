@@ -1,4 +1,6 @@
-import ConAgua.Front.IndApplyRefine9
+import ConAgua.Front.IndApplyRefine2
+import ConAgua.Front.IndApplySpec2
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `install_ind_d` refines `installIndD`, I: the constant records in `DLP`

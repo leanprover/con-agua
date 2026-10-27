@@ -1,6 +1,10 @@
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.RecGenSpec.FlushStage
+import ConAgua.Arena.RecSim
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # CfhW

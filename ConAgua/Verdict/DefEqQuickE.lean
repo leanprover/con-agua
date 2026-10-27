@@ -1,4 +1,6 @@
 import ConAgua.Verdict.DefEqSlotE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `quick_defeq`'s error claim and its arms (lane `verdicts-b`, helper `k3`)

@@ -1,17 +1,12 @@
 module
 
-public import ConAgua.Compiler.Run
-public import ConAgua.Compiler.WF
 meta import ConAgua.Compiler.WF
-public import ConAgua.L.Notation
-public import ConAgua.L.Examples
-public import ConAgua.Scan.Lit
-public import ConAgua.Scan.Utf8
 meta import ConAgua.Compiler.Run
 meta import ConAgua.L.Examples
 meta import ConAgua.Scan.Lit
 meta import ConAgua.Scan.Utf8
-
+public import ConAgua.Compiler.Run
+public import ConAgua.L.Notation
 /-!
 # Differential tests: compiled code on Kraken's semantics against `L.run`
 

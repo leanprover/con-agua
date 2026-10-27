@@ -1,7 +1,11 @@
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.WhnfCoreSlot
 import ConAgua.Arena.WhnfDelta
-import ConAgua.Compiler.RunEq
+import ConAgua.Arena.WhnfCore
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Error models of the `whnf` family's slot bodies (lane `verdicts-b`, helper `k2`)

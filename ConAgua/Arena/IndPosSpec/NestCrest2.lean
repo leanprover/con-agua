@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndPosSpec.PcrW
 import ConAgua.Arena.IndPosSpec.Rx
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NestCrest2

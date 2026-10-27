@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPos
 import ConAgua.Arena.StageInst1
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # MkLook

@@ -1,13 +1,19 @@
 module
 
-public import ConAgua.Arena.Store
-public import ConAgua.Arena.LpCol
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
 meta import ConAgua.Arena.Store
 meta import ConAgua.Arena.ConsLib
+public import ConAgua.Arena.Store
+public import ConAgua.Arena.LpCol
 import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

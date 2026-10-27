@@ -1,4 +1,8 @@
 import ConAgua.Arena.RecClassSpec.IhW
+import ConAgua.Arena.IlpRd
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # TargetMajorAt: `ConRon.Arena.abstractPrefixList`, `ConRon.Arena.abstractPrefix`, `ConRon.Arena.targetHoles`, `ConRon.Arena.targetMajorAt` (hit), `ConRon.Arena.targetPiDomsWith`

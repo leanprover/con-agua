@@ -1,5 +1,9 @@
 import ConAgua.Verdict.FrontE
 import ConRon.Bridge.Frontend.Lines
+import ConAgua.Front.IndValidTwin
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinements of `vi_rec_idx`, `vi_rec`, `vi_recs_go`, `vi_recs` (lane `verdicts-b`, helper `f2`)

@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndStubs
 import ConAgua.Arena.WhnfBase
+import ConAgua.Arena.IndIface
 
 /-!
 # How a model reads a call of the core (lane `loopt2`'s `CallM`, moved here by lane `indstaget`)

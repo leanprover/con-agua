@@ -2,6 +2,8 @@ import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.IndT.WalkC
 import ConAgua.Arena.IndT.Base
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.DeclValSpec
 
 /-!
 # The value checks under `StageT` (lane `loopt2`)

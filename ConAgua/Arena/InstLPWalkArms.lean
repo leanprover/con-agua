@@ -1,4 +1,9 @@
 import ConAgua.Arena.InstLPWalk
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The `instLP` walk: the spec of the arms `lp_app`, `lp_lam`, `lp_forall`

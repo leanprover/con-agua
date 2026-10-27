@@ -1,8 +1,10 @@
 module
 
 public import ConAgua.Compiler.SimCall
-public import ConAgua.L.Logic
+public import Std.Do.Triple.SpecLemmas
 public import ConAgua.L.DefAssignSim
+public import ConAgua.L.Logic
+import Kraken.X64.Registers
 
 @[expose] public section
 

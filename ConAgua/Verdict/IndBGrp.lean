@@ -3,6 +3,7 @@ import ConAgua.Verdict.IndBGck
 import ConAgua.Verdict.IndBRec3
 import ConAgua.Verdict.IndBRecPins
 import ConAgua.Verdict.IndBCcs
+import ConAgua.Verdict.IndBStream
 set_option linter.unusedSectionVars false
 
 /-!

@@ -1,5 +1,8 @@
 import ConAgua.Arena.DeclNatEq
 import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The structural-`Nat` gate: constant substitution (lane `decls3`, helper `decls3-nat`)

@@ -1,6 +1,11 @@
 import ConAgua.Arena.IndRealCapsC
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndInstallSpec.InstallIwB
+import ConAgua.Arena.LevelSimpRel
+import ConRon.Bridge.Inductives.BlockRec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `block_large_elim_allowed` refines `blockLargeElimAllowed` (lane `indproofs4`, helper `lz`)

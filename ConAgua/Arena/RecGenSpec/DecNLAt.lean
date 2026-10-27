@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndPosSpec.NestSeedOf
 import ConAgua.Arena.IndPosSpec.NestSeeds
 
 /-!

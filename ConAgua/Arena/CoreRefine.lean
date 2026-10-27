@@ -1,7 +1,5 @@
-import ConAgua.Arena.Tiers
 import ConAgua.Arena.ScratchRefine
-import ConRon.Arena.Core
-import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The core tier's primitives under `CoreR`

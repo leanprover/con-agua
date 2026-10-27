@@ -1,6 +1,9 @@
 import ConAgua.Arena.WhnfEntry
 import ConAgua.Arena.DeclNatSpec
 import ConAgua.Arena.IndRealFvtD
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `fvar_type_ds`, `get_app_args_f`: stub contracts discharged (lane `indproofs4`, helper `fvt`)

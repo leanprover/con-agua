@@ -1,5 +1,4 @@
 import ConAgua.Checker.RomProgB
-import ConAgua.Checker.RomProgInit
 
 /-!
 # The ROM stages of `check` for the checker's program (lane `pipeline`)

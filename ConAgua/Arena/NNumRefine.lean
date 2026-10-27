@@ -1,6 +1,6 @@
 import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
 import ConAgua.Arena.NNumStore
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The name store's `num` store refines the arena's `num` tables

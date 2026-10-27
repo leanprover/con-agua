@@ -2,6 +2,9 @@ module
 
 public import ConAgua.Compiler.Correct
 public import ConAgua.Compiler.WFFast
+public import Std.Do.Triple.SpecLemmas
+import ConAgua.Compiler.SimFun
+import Kraken.X64.Registers
 
 @[expose] public section
 

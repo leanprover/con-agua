@@ -1,4 +1,6 @@
 import ConAgua.Verdict.IndBTmc
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinement of `target_major_of` (lane `verdicts-b`, helper `ib`)

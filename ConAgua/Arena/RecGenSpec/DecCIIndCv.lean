@@ -1,4 +1,8 @@
-import ConAgua.Arena.IlpRd
+import ConAgua.Arena.IndCallM
+import ConAgua.Arena.IndCopy2
+import ConAgua.Arena.RecGen
+import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # DecCIIndCv

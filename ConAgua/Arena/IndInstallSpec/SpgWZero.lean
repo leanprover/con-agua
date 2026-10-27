@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndSumSpec.StructProjGuards
-import ConAgua.Arena.RecStab
 
 /-!
 # SpgWZero

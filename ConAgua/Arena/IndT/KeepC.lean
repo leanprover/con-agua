@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndCallM
+import ConAgua.L.Syntax
+import ConAgua.Arena.Reasons
 
 /-!
 # The `AbsKeep` callees of the inductive stage under `StageC` (lane `indstaget`)

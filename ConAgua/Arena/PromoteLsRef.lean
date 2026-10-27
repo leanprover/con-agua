@@ -1,5 +1,5 @@
 import ConAgua.Arena.PromoteLRef
-import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `promote_ls` refines `promoteLs`

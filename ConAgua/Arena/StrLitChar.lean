@@ -1,4 +1,6 @@
 import ConAgua.Arena.StrLitTy
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `char_of_nat_ty_ok`, `string_of_list_ty_ok` under `CoreS` (helper `defeq2-str-sup`)

@@ -1,9 +1,6 @@
 import ConAgua.Arena.WalkScope
 import ConAgua.Arena.LiftRefine
-import ConAgua.Arena.FVarRangeRefine
-import ConAgua.Arena.View
-import ConRon.Arena.ExprOps
-import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `ws_go` refines `wscopedBGo`, `wscoped_bfast` refines `wscopedBFast` (lane `whnf3`)

@@ -1,4 +1,6 @@
 import ConAgua.Arena.StrLitTy
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The `List` declaration tests under `CoreS` (helper `defeq2-str-list`)

@@ -1,5 +1,4 @@
 import ConRon.Bridge.Checker.Pins
-import ConAgua.Arena.Refine
 
 /-!
 # `internAllPins` leaves the pin table (lane `pipeline`)

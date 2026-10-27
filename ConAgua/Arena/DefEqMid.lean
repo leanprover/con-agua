@@ -1,5 +1,10 @@
 import ConAgua.Arena.DefEqLeaves2
 import ConAgua.Arena.InferLeaves
+import ConAgua.Arena.DefEqLeaves
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Arena.WhnfCoreProj
 
 /-!
 # Refinements of `DefEq.lean`'s middle layer (lane `defeq`, helper `defeq-mid`)

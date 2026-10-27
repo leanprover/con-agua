@@ -1,7 +1,5 @@
 import ConAgua.Arena.InstLPWalkRef3
 import ConAgua.Arena.InstLPKeys
-import ConAgua.Arena.PropReadRefine
-import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.RecFireCore
 
 /-!

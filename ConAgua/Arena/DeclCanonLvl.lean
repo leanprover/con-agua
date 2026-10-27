@@ -1,5 +1,10 @@
 import ConAgua.Arena.DeclCanonView2
 import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.DeclCanonSpec
+import ConAgua.Arena.LevelView
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The canonical level comparison in L (lane `decls3`, helper `decls3-canon`)

@@ -1,7 +1,8 @@
-import ConAgua.Arena.DeclRomStubs
 import ConAgua.Rom.CIReadSpec
-import ConAgua.Arena.DeclCanonEq
 import ConRon.Bridge.Checker.Basis
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `check_basis_decl(vis, kind)` refines `checkBasisDecl` (lane `decls3`)

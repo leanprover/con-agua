@@ -1,8 +1,9 @@
-import ConAgua.Arena.IndInstallSpec.PapW
-import ConAgua.Arena.IndPartsSpec.PlW
 import ConAgua.Arena.RecGenSpec.DecB
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.RecGenSpec.DecCNWords
+import ConAgua.Arena.IndPartsSpec.PartsConsPL
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # GfcW

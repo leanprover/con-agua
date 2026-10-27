@@ -1,5 +1,7 @@
 module
 
+meta import ConAgua.Arena.BVarStore
+meta import ConAgua.Arena.AppStore
 public import ConAgua.Arena.Walk
 public import ConAgua.Arena.SortStore
 meta import ConAgua.L.Semantics
@@ -10,6 +12,13 @@ meta import ConAgua.Arena.FVarStore
 meta import ConAgua.Arena.LamStore
 meta import ConAgua.Arena.ForallStore
 meta import ConAgua.Arena.ProjStore
+public import ConAgua.Arena.AppStore
+public import ConAgua.Arena.BVarStore
+public import ConAgua.Arena.FVarStore
+public import ConAgua.Arena.ForallStore
+public import ConAgua.Arena.LamStore
+public import ConAgua.Arena.LetStore
+public import ConAgua.Arena.ProjStore
 
 @[expose] public section
 

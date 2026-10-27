@@ -1,7 +1,4 @@
-import ConAgua.Arena.WhnfIota
-import ConAgua.Arena.WhnfDelta
-import ConAgua.Arena.CoreLevels
-import ConAgua.Census.Attr
+import ConAgua.Arena.WhnfBase
 
 /-!
 # Definitional equality: `defeqBody` and everything below it (phase 6, lane `defeq`)

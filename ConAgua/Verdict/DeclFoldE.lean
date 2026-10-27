@@ -1,4 +1,6 @@
 import ConAgua.Verdict.DeclStepE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 set_option linter.unusedSectionVars false
 
 /-!

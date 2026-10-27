@@ -1,6 +1,6 @@
 import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.SimLib
 import ConAgua.Arena.BVarStore
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The `bvar` store refines the arena's `bvar` tables

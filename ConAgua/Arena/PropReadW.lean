@@ -1,7 +1,6 @@
 import ConAgua.Arena.PropReadLoops
-import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.InferBodySpine
-import ConAgua.L.ProgHas
+import ConAgua.Arena.LevelSubstL
 
 /-!
 # The prop-ness readers: word-level models of the functions with calls (helper `defeq2-prop`)

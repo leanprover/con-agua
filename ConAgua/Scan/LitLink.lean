@@ -1,10 +1,11 @@
 module
 
 public import ConAgua.Scan.Lit
-public import ConAgua.Scan.Link
-public import ConLeche.Frontend.Scan.Fast
-public import ConLeche.Frontend.Scan.Equiv.Scalars
 import ConAgua.Census.Attr
+public import ConLeche.Frontend.Scan.Naive
+public import ConAgua.Scan.Link
+public import ConLeche.Frontend.Scan.Equiv.Scalars
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

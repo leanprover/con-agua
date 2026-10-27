@@ -1,4 +1,7 @@
 import ConAgua.Front.IndInstallRefine4
+import ConAgua.Front.IndApplyRefine5
+import ConAgua.Front.IndInstallRefine3
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `install_ind_d` refines `installIndD`, V: the block

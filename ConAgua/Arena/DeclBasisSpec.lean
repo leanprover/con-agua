@@ -1,5 +1,9 @@
 import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Pin reads, `of_reduce_op`, `install_basis_decl(s)` (lane `decls3`)

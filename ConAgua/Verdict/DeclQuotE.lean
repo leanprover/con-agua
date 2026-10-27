@@ -1,5 +1,8 @@
 import ConAgua.Verdict.DeclBasisE
 import ConAgua.Verdict.DeclArmsE
+import ConAgua.Arena.DeclAxQuotT
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claim of the quotient arm `check_decl_quot` (lane `verdicts-b`, helper `d`)

@@ -1,5 +1,7 @@
-import ConAgua.Rom.CIReadRefW
-import ConAgua.Arena.RomCI
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndMaster
+import ConAgua.Arena.RomExprRef
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The ROM constant readers' refinements: the invariant and the decoding frame (helper `decls4-rom`)

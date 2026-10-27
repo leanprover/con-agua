@@ -5,6 +5,9 @@ import ConAgua.Arena.IndT.Install6
 import ConAgua.Arena.IndInstallSpec.Pos3Init
 import ConAgua.Arena.IndInstallSpec.Pos3NhGoWMfr
 import ConAgua.Arena.IndPartsSpec.BrsW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `check_block_positivity` under `StageC` (lane `indstaget`, helper `indstaget-cbpos`)

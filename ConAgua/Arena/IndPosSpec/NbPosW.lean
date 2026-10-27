@@ -1,5 +1,7 @@
 import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.IndPosSpec.NbKeyK2
+import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # NbPosW

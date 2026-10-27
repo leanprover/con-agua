@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.RecCheckSpec.TpnB
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
 
 /-!
 # SoaW

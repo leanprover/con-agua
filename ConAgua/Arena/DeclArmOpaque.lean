@@ -1,5 +1,7 @@
-import ConAgua.Arena.DeclReducePin
-import ConAgua.Arena.DeclArmLoop
+import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The opaque arm `check_decl_opaque(i, vis)` (lane `decls3`)

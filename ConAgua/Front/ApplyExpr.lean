@@ -1,11 +1,18 @@
-import ConAgua.Arena.Reasons
 import ConAgua.Front.Apply
 import ConAgua.Front.ExprIface
 import ConAgua.Arena.ExprMk
 import ConAgua.Front.NatDec
 import ConAgua.Front.Preserve
 import ConAgua.Front.Unescape
+import ConAgua.Arena.BVarStore
+import ConAgua.Arena.ConstStore
+import ConAgua.Arena.LsStore
+import ConAgua.Arena.SortStore
+import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # Expression lines into the stores: `apply_expr`

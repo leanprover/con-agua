@@ -1,4 +1,9 @@
 import ConAgua.Arena.WhnfCore
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The knot's `whnfCore` slot: stuck tags, the memo, the body

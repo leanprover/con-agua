@@ -1,6 +1,7 @@
 import ConAgua.Verdict.DeclValE
-import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Verdict.UnresolvedE
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claims of `install_value_guards` and `install_header` (lane `verdicts-b`, helper `d`)

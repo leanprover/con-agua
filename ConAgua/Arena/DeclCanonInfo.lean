@@ -1,4 +1,9 @@
 import ConAgua.Arena.DeclCanonRules
+import ConAgua.Arena.DeclCanonConst
+import ConAgua.Arena.DeclCanonSpec2
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `ci_canon_defn`, `ci_canon_rec`, `ci_canon_eq`, `canon_eq_list` (lane `decls3`, helper `decls3-canon`)

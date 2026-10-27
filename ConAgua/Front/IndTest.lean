@@ -1,4 +1,3 @@
-import ConAgua.Front.IndApply
 import ConAgua.Front.FrontRun
 
 /-!

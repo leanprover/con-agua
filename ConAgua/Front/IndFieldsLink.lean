@@ -1,5 +1,9 @@
 import ConAgua.Front.IndFieldsSpec
 import ConAgua.Front.FieldsDeclLink
+import ConAgua.Front.IndRel
+import ConAgua.Scan.LeafLink
+import ConAgua.Scan.Link
+import Std.Tactic.BVDecide.Normalize.Prop
 set_option linter.unusedSectionVars false
 
 /-!

@@ -1,4 +1,5 @@
 import ConAgua.Arena.PromoteCIRef.PnewMain
+import ConAgua.Arena.PromoteTblRef2
 
 /-!
 # PromoteNew

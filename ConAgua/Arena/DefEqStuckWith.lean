@@ -1,5 +1,5 @@
-import ConAgua.Arena.DefEqStuckShape
 import ConAgua.Arena.WhnfIotaRefine3
+import ConAgua.Arena.DefEqStuckEta
 
 /-!
 # The structure-η certificate's tail: `struct_eta_cert_tail` (lane `defeq`, helper `defeq-top`)

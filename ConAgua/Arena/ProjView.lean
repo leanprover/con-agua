@@ -1,4 +1,5 @@
-import ConAgua.Arena.WhnfCoreApp
+import ConRon.Arena.Core
+import Std.Do.Triple.SpecLemmas
 
 /-!
 # What the twin's `findProj?` and `IProjEntry.fireOk` leave alone (helper `whnf4-leaves`)

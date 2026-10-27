@@ -1,5 +1,6 @@
 import ConAgua.Checker.PipeRest
 import ConAgua.Checker.TwinPins
+import ConRon.Bridge.Inductives.Rel
 
 /-!
 # The twin's prefix leaves the caches and the pin table (lane `pipeline`)

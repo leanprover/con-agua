@@ -1,5 +1,8 @@
 import ConAgua.Verdict.InferArmsE
 import ConAgua.Arena.RecFireCore
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Error refinements of the application spines (lane `verdicts-b`, helper `k1`)

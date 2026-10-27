@@ -3,6 +3,7 @@ module
 public import ConAgua.Compiler.Compile
 public import Kraken.X64.Semantics
 public import Kraken.X64.PrintATT
+public import ConAgua.L.Semantics
 
 @[expose] public section
 

@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndSumSpec.ConsSumCtors
+import ConAgua.Arena.DeclRec
 
 /-!
 # CapsProg

@@ -1,5 +1,7 @@
-import ConAgua.Arena.WhnfDeltaRefine3
 import ConAgua.Arena.CoreNatOp
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # δ and `Nat` literals: proofs of `WhnfDelta.lean`'s specs, part 4 (`reduce_nat`'s dispatch, `whnf_step`)

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Compiler.Rel
+import Kraken.X64.Registers
 
 @[expose] public section
 set_option linter.unusedSectionVars false

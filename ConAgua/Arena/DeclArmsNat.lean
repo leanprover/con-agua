@@ -1,6 +1,5 @@
-import ConAgua.Arena.Reasons
 import ConAgua.Arena.DeclArmsCanon
-import ConAgua.Arena.Globals
+import ConAgua.Arena.Pins
 
 /-!
 # `checkDecl`'s one-constant arms in L, part 2: the certified `Nat` operations (lane `decls2`)

@@ -1,4 +1,7 @@
-import ConAgua.Arena.IndRealNames
+import ConAgua.L.Semantics
+import ConRon.Arena.Handle
+import Std.WP.Assertion
+import ConAgua.Arena.Reasons
 
 /-!
 # MW9

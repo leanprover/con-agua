@@ -1,6 +1,6 @@
 import ConAgua.Arena.DeclValT
 import ConAgua.Arena.DeclArmLoop
-import ConAgua.Arena.DeclStepGo
+import ConRon.Bridge.Checker.Split
 
 /-!
 # The declaration arms under `StageT` (lane `loopt2`)

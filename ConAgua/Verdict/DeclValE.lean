@@ -1,6 +1,9 @@
 import ConAgua.Arena.DeclValT
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndRealLvlT
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The verdict claims of `check_thm_val` and `check_value_group` (lane `verdicts-b`)

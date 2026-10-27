@@ -1,7 +1,8 @@
 import ConAgua.Arena.IndPosSpec.BvbWMfr
 import ConAgua.Arena.IndPosSpec.NbPosW
 import ConAgua.Arena.IndPosSpec.PosBindT
-import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndPosSpec.KlB
+import ConAgua.Arena.IndPosSpec.WCtx
 
 /-!
 # WalkOK

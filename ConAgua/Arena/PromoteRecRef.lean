@@ -1,5 +1,7 @@
 import ConAgua.Arena.PromoteRec
 import ConAgua.Arena.PromoteERef
+import ConAgua.Arena.IndLibSpec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The record side of the promotion refines the twin's

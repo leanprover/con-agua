@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndMaster
-import ConAgua.Arena.ArenaRel
-import ConAgua.Arena.LevelRefine
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Name and `succ` interning under the stage relation (lane `decls3`, helper `decls3-canon`)

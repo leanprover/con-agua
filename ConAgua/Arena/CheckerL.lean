@@ -1,6 +1,4 @@
 import ConAgua.Arena.DeclBase
-import ConAgua.Arena.Reasons
-import ConAgua.Census.Attr
 
 /-!
 # The declaration loop's L functions: `install_fold_go`, `check_pending_go` and their steps

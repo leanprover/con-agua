@@ -1,5 +1,4 @@
 import ConAgua.Checker.LoopDecl
-import ConAgua.Arena.LoopFns
 import ConAgua.Arena.CheckerT
 
 /-!

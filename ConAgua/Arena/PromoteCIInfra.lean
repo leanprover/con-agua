@@ -1,4 +1,6 @@
 import ConAgua.Arena.PromoteCI
+import ConAgua.Arena.PromoteLsRef
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Facts about the record pool's reads, writes and copies

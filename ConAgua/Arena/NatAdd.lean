@@ -1,9 +1,16 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
-meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
+public import ConAgua.L.Logic
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

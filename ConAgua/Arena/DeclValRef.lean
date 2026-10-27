@@ -1,4 +1,6 @@
-import ConAgua.Arena.DeclValSpec
+import ConAgua.Arena.IndIface
+import ConRon.Arena.DeclCheck
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `checkDecl`'s value checks: the relational lemmas (lane `decls3`)

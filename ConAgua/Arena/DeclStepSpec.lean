@@ -1,6 +1,5 @@
-import ConAgua.Arena.DeclBase
-import ConAgua.Arena.DeclStep
 import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.DeclPins
 
 /-!
 # The specs of phase A's step and phase B's check (`install_step_go`, `check_value_group`)

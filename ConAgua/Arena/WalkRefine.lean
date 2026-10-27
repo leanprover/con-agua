@@ -1,8 +1,6 @@
 import ConAgua.Arena.Walk
 import ConAgua.Arena.FVarRangeRefine
-import ConAgua.Arena.View
-import ConRon.Arena.ExprOps
-import ConAgua.Census.Attr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # `bb_go` refines the arena's `bvarBoundGo`

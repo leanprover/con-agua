@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndRealBph
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+import ConAgua.Arena.DeclAndPinIndRef
 
 /-!
 # `basis_pin_hit(off, len)` refines `basisPinHit` (lane `indproofs4`, helper `bph`)

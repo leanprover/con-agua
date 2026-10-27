@@ -1,6 +1,11 @@
 import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.WhnfCoreSlot
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The knot's `whnf` slot and the `whnf` loop

@@ -1,8 +1,5 @@
-import ConAgua.Arena.Env
-import ConRon.Arena.CheckDecl
-import ConAgua.Census.Attr
-import ConAgua.Compiler.WF
-import ConAgua.Compiler.WFFast
+import ConAgua.Arena.Tiers
+import ConRon.Arena.Inductives.GenRec
 
 /-!
 # The inductive stage in L: the interface (lane `induct`)

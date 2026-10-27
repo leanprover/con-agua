@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndRealSpine
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # ClassMinorSlotHit

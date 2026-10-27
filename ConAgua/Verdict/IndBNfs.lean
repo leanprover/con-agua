@@ -1,6 +1,8 @@
 import ConAgua.Verdict.IndBGrp
 import ConAgua.Verdict.IndBTmn
-import ConAgua.Compiler.RunEq
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `classes_nfs`' error claim (lane `verdicts-b`, helper `verdicts-b-fin`, fork `nfs`)

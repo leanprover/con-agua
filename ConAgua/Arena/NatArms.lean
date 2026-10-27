@@ -1,11 +1,15 @@
-import ConAgua.Arena.ArenaRel
 import ConAgua.Arena.Tiers
-import ConRon.Arena.Core
-import ConAgua.Arena.NatDiv
 import ConAgua.Arena.NatGcd
 import ConAgua.Arena.NatCmp
 import ConAgua.Arena.NatBitsNat
-import ConAgua.Census.Attr
+import ConAgua.Arena.NatPow
+import ConAgua.Arena.NatShr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.NatGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # The `Nat` arms of `natOpResult`, refined under `ArenaR`

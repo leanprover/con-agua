@@ -1,8 +1,4 @@
-import ConAgua.Arena.LevelSubstL
-import ConAgua.Arena.WhnfSpineRefine
-import ConAgua.Arena.IndView
-import ConAgua.Arena.Env
-import ConAgua.Census.Attr
+import ConAgua.Arena.WhnfBase
 
 /-!
 # The prop-ness readers `notProofFast` / `isProofFast` in L (lane `defeq2`, helper `defeq2-prop`)

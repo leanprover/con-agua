@@ -3,6 +3,10 @@ import ConAgua.Arena.IndInstallSpec.NfsProg
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.IndPosSpec.RsLook
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Pos3Init

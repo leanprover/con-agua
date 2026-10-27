@@ -1,6 +1,6 @@
-import ConAgua.Checker.CheckARun
 import ConAgua.Checker.VerdictTop
 import ConAgua.Checker.NoVerdictClosed
+import ConAgua.L.GrindAttr
 
 /-!
 # Entry 1's verdict claim from its stages

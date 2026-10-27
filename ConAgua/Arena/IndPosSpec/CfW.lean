@@ -4,6 +4,9 @@ import ConAgua.Arena.IndPosSpec.NestGroupCtors
 import ConAgua.Arena.IndPosSpec.P2ctK1
 import ConAgua.Arena.IndPosSpec.UCtx
 import ConAgua.Arena.IndPosSpec.UnW
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # CfW

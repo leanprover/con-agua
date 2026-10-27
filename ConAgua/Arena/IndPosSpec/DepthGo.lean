@@ -1,6 +1,9 @@
 import ConAgua.Arena.IndPosSpec.InstW
 import ConAgua.Arena.IndPosSpec.PcrK3
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # DepthGo: `ConRon.Arena.depthGo`, `ConRon.Arena.depth`, `ConRon.Arena.nestPhs`, `ConRon.Arena.whnfWalkFuel`

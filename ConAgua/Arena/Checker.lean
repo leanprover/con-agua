@@ -1,6 +1,9 @@
 import ConAgua.Arena.DeclCheckLoop
 import ConAgua.Arena.CheckerL
 import ConAgua.Arena.PromoteCIRef.PromoteNew
+import ConAgua.Arena.DeclAndPin
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`

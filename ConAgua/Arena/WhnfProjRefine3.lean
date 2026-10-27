@@ -1,7 +1,9 @@
 import ConAgua.Arena.WhnfProjRefine2
 import ConAgua.Arena.DeclLvlStage
-import ConAgua.Arena.Knot
 import ConAgua.Arena.InferProj
+import ConAgua.Arena.WhnfIotaRefine4
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `fire_ok` refines `IProjEntry.fireOk` under `CoreS` (lane `whnf3`, helper `whnf3-proj`)

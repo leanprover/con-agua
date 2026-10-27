@@ -1,6 +1,9 @@
 import ConAgua.Arena.DeclDivModSpec.DivModTypePins
 import ConAgua.Arena.DeclDivModSpec.PureRun
 import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # EqAt1: `ConRon.Arena.certCtx`, `ConRon.Arena.eqAt1`, `ConRon.Arena.natOne`, `ConRon.Arena.natVar`

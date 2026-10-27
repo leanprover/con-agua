@@ -1,4 +1,3 @@
-import ConAgua.Arena.StoreDen
 import ConAgua.Arena.WhnfBase
 
 /-!

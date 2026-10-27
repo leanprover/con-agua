@@ -1,8 +1,5 @@
-import ConRon.Arena.Frontend.ExportC
-import ConLeche.Frontend.Scan.Equiv
 import ConLeche.Verify.Frontend.Chunks
 import ConAgua.Front.FrontRun
-import ConAgua.Census.Attr
 
 /-!
 # One chunk is the wholesale parse (lane `front3`)

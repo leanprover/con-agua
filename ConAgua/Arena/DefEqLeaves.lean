@@ -1,5 +1,10 @@
+import ConAgua.Arena.DefEq
+import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.DefEqGrindAttr
-import ConAgua.Arena.IndInstallSpec.PapW
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfIotaRefine
 
 /-!
 # Refinements of `DefEq.lean`'s small leaves

@@ -1,6 +1,5 @@
-import ConAgua.Arena.WhnfDeltaSlot
-import ConAgua.Arena.WhnfSpine
 import ConAgua.Arena.IndIface
+import ConAgua.Arena.WhnfBase
 
 /-!
 # Lane `induct`'s conventions for this phase's functions (adapters)

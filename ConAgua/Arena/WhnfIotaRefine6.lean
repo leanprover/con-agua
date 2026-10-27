@@ -1,5 +1,7 @@
 import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 6 (`iota_ctor_never_prop`, `iota_case3`)

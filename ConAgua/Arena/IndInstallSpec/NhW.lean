@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPosSpec.NestHoles
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # NhW

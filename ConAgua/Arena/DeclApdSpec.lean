@@ -1,7 +1,13 @@
 import ConAgua.Arena.DeclApd
-import ConAgua.Arena.IndStubs
 import ConAgua.Arena.IndView
 import ConAgua.Scan.Common
+import ConAgua.Arena.LevelEquiv
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 /-!
 # `all_level_params_defined`: the word models and the `vcgen` specs (lane `decls3`)

@@ -1,10 +1,16 @@
 module
 
-public import ConAgua.Arena.MemoLib
-public import ConAgua.Arena.ExprMk
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+public import ConAgua.Arena.MemoLib
+public import ConAgua.Arena.ExprMk
 import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

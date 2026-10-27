@@ -1,6 +1,10 @@
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
 import ConAgua.Arena.IndPartsSpec.PlW
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # NestCtx: `ConRon.Arena.BlockShape.nestCtx`

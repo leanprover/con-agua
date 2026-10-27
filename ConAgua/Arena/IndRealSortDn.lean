@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndRealCapsC
+import ConLeche.Verify.Inductives.BlockInv
+import ConLeche.Verify.PropWhen
 
 /-!
 # `SortDn` of member 0's former sort (lane `indproofs4`, helper `sdn`)

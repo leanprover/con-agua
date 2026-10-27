@@ -2,6 +2,8 @@ import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.DepthGo
 import ConAgua.Arena.IndPosSpec.RootHoles
 import ConAgua.Arena.IndPosSpec.Rx
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndGrindAttr
 
 /-!
 # MapOKStep

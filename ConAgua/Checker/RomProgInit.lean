@@ -1,5 +1,4 @@
 import ConAgua.Final.Statement
-import ConAgua.Front.StateDR
 import ConAgua.Rom.Stage
 import ConAgua.Checker.CapCheck
 

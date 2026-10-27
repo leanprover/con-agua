@@ -1,4 +1,4 @@
-import ConAgua.Arena.FreezeTruncKeep
+import ConAgua.Arena.FreezeTruncBase
 set_option linter.unusedSectionVars false
 
 /-!

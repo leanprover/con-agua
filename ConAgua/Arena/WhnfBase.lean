@@ -6,6 +6,7 @@ import ConAgua.Arena.LevelArena
 import ConRon.Arena.Core
 import ConAgua.Census.Attr
 import ConAgua.Arena.StoreDen
+import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The whnf family's shared statements: arguments, the spine stack, the relation, the knot

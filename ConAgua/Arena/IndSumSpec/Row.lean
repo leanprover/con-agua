@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndSumSpec.ColW
 import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # Row: `ConRon.Arena.paramLevels.go`, `ConRon.Arena.structProjGuards.col`, `ConRon.Arena.structProjGuards.row`

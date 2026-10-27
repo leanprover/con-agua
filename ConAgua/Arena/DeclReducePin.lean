@@ -1,5 +1,8 @@
 import ConAgua.Arena.DeclReduceSpec2
 import ConAgua.Arena.IndRealApdT
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
 # `check_reduce_pin(vis, vis2, c, v)` refines `checkReducePin` (lane `decls3`)
