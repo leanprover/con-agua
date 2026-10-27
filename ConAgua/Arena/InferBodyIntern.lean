@@ -86,8 +86,8 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LvlStep a a') (hR : ArenaR m' a')
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ Tier1In 0 42 b ∨ Tier1In 55 64 b) (hC : ∀ x ∈ C, x.toNat < 42)
-    (hlv : LvlAll a') (hlc : LvlCnt m m') (hP : POOL ∉ A := by decide)
-    (hP0 : (0 : Word) ∉ C := by decide) (hP1 : POOL1 ∉ A := by decide) (hPT : PT0 ∉ A := by decide) :
+    (hlv : LvlAll a') (hlc : LvlCnt m m') (hP : (POOL : TieredArray) ∉ A := by decide)
+    (hP0 : (0 : Word) ∉ C := by decide) (hP1 : (POOL1 : TieredArray) ∉ A := by decide) (hPT : (PT0 : TieredArray) ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   have hmode : ModeOK m' := by
     have hfl : m'.flag = m.flag := hlc.flag
