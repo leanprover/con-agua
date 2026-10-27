@@ -134,7 +134,7 @@ theorem threads_pool (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = 
     exact List.mem_map_of_mem hc
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw
     obtain ⟨c, hc, rfl⟩ := List.mem_map.mp hpc
-    have hj := (hth t ht).2.2.2.2 c hc
+    have hj := (hth t ht).2.2.2 c hc
     simp only [pdAt, Array.getD, hj, dite_true]
     exact Array.getElem_mem_toList _
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw
@@ -146,9 +146,9 @@ end chain
 /-! ## With entry 1 -/
 
 /-- The word arrays after a run from the loaded memory are below `2^64` words. -/
-theorem run_load_size {b pb : ByteArray} {sz : TieredArray → Nat} (hs : ∀ n ∈ s64, n < 2 ^ 64) {w : Word}
+theorem run_load_size {b pb : ByteArray} {sz : TieredArray → Nat} (hs : ∀ s, sz s < 2 ^ 64) {w : Word}
     {N : Nat} {rs : List Word} {m' : Mem}
-    (h : L.run checkerProg N "check" [] (loadMemM b pb sz w) = .ok (rs, m')) (a : ArrId) :
+    (h : L.run checkerProg N "check" [] (loadMemM b pb sz w) = .ok (rs, m')) (a : TieredArray) :
     (m'.arr64 a).size < 2 ^ 64 := by
   have t := Triple.keep checkerProg_noSt8 (n := N) (f := "check") (vs := [])
     (s₀ := ⟨loadMemM b pb sz w, Locals.init []⟩) (Q := fun _ _ => True)
@@ -158,11 +158,8 @@ theorem run_load_size {b pb : ByteArray} {sz : TieredArray → Nat} (hs : ∀ n 
     intro s r s' hs' hrun
     exact (M.of_run (P := fun x => x = _) hs' hrun t).2.1)
   rw [hk.size]
-  simp only [loadMemM, Mem.setG, loadMem, Mem.arr64, Array.getD_eq_getD_getElem?, List.getElem?_toArray,
-    List.getElem?_map]
-  cases e : s64[a]? with
-  | none => simp
-  | some n => simpa using hs n (List.mem_of_getElem? e)
+  simp only [loadMemM, Mem.setG, loadMem, Mem.arr64, Array.size_replicate]
+  exact hs a
 
 /-- **The threads' runs accept ⇒ the twin's pool accepts.** Entry 1 (`check` with the mode word
 `1`, from the loaded memory) returning `2^63 + k`; the buffer `B`, the first `len` words of `OUT`
