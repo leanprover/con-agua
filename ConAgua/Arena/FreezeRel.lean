@@ -41,7 +41,8 @@ original memory). -/
 def truncList (m₀ : Mem) : Mem → List (ArrId × Fz) → Mem
   | m, [] => m
   | m, (_, z) :: zs =>
-    truncList m₀ { m with words := m.words.set! z.src ((m₀.arr64 z.src).extract 0 (fzExt m₀ z)) } zs
+    truncList m₀ { m with words := fun s =>
+      if s = ↑z.src then (m₀.arr64 z.src).extract 0 (fzExt m₀ z) else m.words s } zs
 
 /-- **`m` with every frozen array cut to its extent** (the header's and `CTL`'s seed entries cut
 `OUT` and `CTL`; entry 2 reads `CTL` whole from its own copy, so the seed's cut is not applied to
@@ -69,8 +70,8 @@ size in `m`), and `CTL` its first 256 words followed by zeros. Arrays neither fr
 which `L/Agree.lean` bridges), except `LMEMO`, which is zero as well (`freshZ`). -/
 def freshMem (m : Mem) : Mem :=
   let t := truncFrozen m
-  { t with words := (Array.range t.words.size).map fun a =>
-      if a = CTL then freshCtl (t.arr64 CTL)
+  { t with words := fun a =>
+      if a = ↑CTL then freshCtl (t.arr64 CTL)
       else if a ∈ freshZ then zeros (t.arr64 a).size
       else t.arr64 a }
 
@@ -91,12 +92,10 @@ first call): frozen array `frozenIdsL[i]` is `bufImg B i`; the owned arrays (`pa
 `r`'s; every other word array and both byte arrays are empty; the globals are `r`'s with
 `PLO := j`, `PHI := j + 1`, `MODE := 2`. -/
 def bufMem (B : Array Word) (r : Mem) (j : Word) : Mem :=
-  { bytes := #[#[], #[]]
-    words := (Array.range r.words.size).map fun a =>
-      match frozenIdsL.idxOf? a with
+  { bytes := fun _ => #[]
+    words := fun s => match frozenIdsL.idxOf? s with
       | some i => bufImg B i
-      | none => if parOwnedL.contains a then r.arr64 a else #[]
-    glob := fun g =>
-      if g = PLO then j else if g = PHI then j + 1 else if g = MODE then 2 else r.glob g }
+      | none => if parOwnedL.contains s then r.arr64 s else #[]
+    glob := fun g => if g = PLO then j else if g = PHI then j + 1 else if g = MODE then 2 else r.glob g }
 
 end L.Arena
