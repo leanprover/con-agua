@@ -40,7 +40,7 @@ and the scanner's `safety` converse (`SafeLink`). -/
 theorem frontStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.ValidateClaim frontAllProg X)
     (hXT : XOfTwin X)
     (hSL : System.Platform.numBits = 64 → ∀ b : ByteArray, b.size < 2 ^ 63 → SafeLink b) :
-    ∀ b pb sz, InputsOK b pb s64 →
+    ∀ b pb sz, InputsOK b pb sz →
       StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb sz)) (TwinVerdict [b]) := by
   intro b pb sz hin n _hn s₀
   refine M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr hQ hk => ?_
@@ -86,7 +86,7 @@ the prelude's bytes (`preFrontRun_errSim`), so the twin's `parseBytes preludeTex
 theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.ValidateClaim frontAllProg X)
     (hXT : XOfTwin X)
     (hSL : System.Platform.numBits = 64 → ∀ b : ByteArray, b.size < 2 ^ 63 → SafeLink b) :
-    ∀ b pb sz, InputsOK b pb s64 →
+    ∀ b pb sz, InputsOK b pb sz →
       StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb sz)) (TwinVerdict [b]) := by
   intro b pb sz hin n _hn s₀
   refine M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr hQ hk => ?_
@@ -138,13 +138,13 @@ theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.Validat
 /-! ## The two stages, discharged -/
 
 /-- **`Entry1StagesE.prelude`'s statement.** -/
-theorem checker_preludeStageE : ∀ b pb sz, InputsOK b pb s64 →
+theorem checker_preludeStageE : ∀ b pb sz, InputsOK b pb sz →
     StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb sz)) (TwinVerdict [b]) :=
   preludeStageE L.Front.Ind.validateClaim_frontAll L.Front.Ind.xOfTwin
     (fun h64 b hs => L.Front.safeLink h64 b hs)
 
 /-- **`Entry1StagesE.front`'s statement.** -/
-theorem checker_frontStageE : ∀ b pb sz, InputsOK b pb s64 →
+theorem checker_frontStageE : ∀ b pb sz, InputsOK b pb sz →
     StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb sz)) (TwinVerdict [b]) :=
   frontStageE L.Front.Ind.validateClaim_frontAll L.Front.Ind.xOfTwin
     (fun h64 b hs => L.Front.safeLink h64 b hs)

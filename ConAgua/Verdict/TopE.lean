@@ -45,7 +45,7 @@ theorem checkerProg_uceLookupsPB (bs : List UInt8) : UceLookups (Prog.subPB bs c
 /-- **Phase A's fold from `R7`, error half** (`foldStage_checker`'s): a failing
 `install_fold_go(0, cnt, 0)` with class `≠ 0` is the twin pipeline's failure. -/
 theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (sz : TieredArray → Nat)
-    (hin : InputsOK b pb s64) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word) :
+    (hin : InputsOK b pb sz) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
     ⦃fun _ s' => LocEq s' s₀; fun e => Q7 b (checkerRels b pb sz) s₀.mem →
       (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →

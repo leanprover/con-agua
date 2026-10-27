@@ -170,7 +170,7 @@ theorem run_load_size {b pb : ByteArray} {sz : TieredArray → Nat} (hs : ∀ n 
 array zero at its size in entry 1's memory, at least `388` arrays (`checkerTab.nw`)) with its calls (`ThreadRuns`:
 each call's run of `check` on `bufMem B r j` returns, and the buffer is unchanged after it), every
 claimed index below `k`, and every index below `k` claimed by some thread. -/
-theorem threads_twinAcceptsPooled (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64)
+theorem threads_twinAcceptsPooled (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)

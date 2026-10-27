@@ -68,8 +68,8 @@ structure PipeRels (b pb : ByteArray) (sz : TieredArray → Nat) where
 
 /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
 bytes, every word array below `2^64` words. -/
-def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
-  System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
+def InputsOK (b pb : ByteArray) (sz : TieredArray → Nat) : Prop :=
+  System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ s, sz s < 2 ^ 64
 
 /-- The twin's stages before the fold ran, from `AState.init EStore.empty`. -/
 def TwinPrefix (b : ByteArray) (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD)
@@ -90,36 +90,36 @@ section stages
 variable (p : Prog) (ρ : ∀ b pb sz, PipeRels b pb sz)
 
 /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
-def CapStage : Prop := ∀ b pb sz, InputsOK b pb s64 →
+def CapStage : Prop := ∀ b pb sz, InputsOK b pb sz →
   RelSpec p "cap_check" (· = loadMem b pb sz) fun _ => (ρ b pb sz).R1
 
 /-- **Stage `pb_check`**: `R1` to `R2`. -/
-def PbStage : Prop := ∀ b pb sz, InputsOK b pb s64 →
+def PbStage : Prop := ∀ b pb sz, InputsOK b pb sz →
   RelSpec p "pb_check" (ρ b pb sz).R1 fun _ => (ρ b pb sz).R2
 
 /-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
-def IrpStage : Prop := ∀ b pb sz, InputsOK b pb s64 →
+def IrpStage : Prop := ∀ b pb sz, InputsOK b pb sz →
   RelSpec p "intern_reserved_pins" (ρ b pb sz).R2 fun _ m =>
     ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb sz).R3 m a'
 
 /-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
-def PreludeStage : Prop := ∀ b pb sz a, InputsOK b pb s64 →
+def PreludeStage : Prop := ∀ b pb sz a, InputsOK b pb sz →
   RelSpec p "builtin_prelude" ((ρ b pb sz).R3 · a) fun _ m =>
     ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb sz).R4 m pre a'
 
 /-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
-def FrontStage : Prop := ∀ b pb sz pre a, InputsOK b pb s64 →
+def FrontStage : Prop := ∀ b pb sz pre a, InputsOK b pb sz →
   RelSpec p "front_run" ((ρ b pb sz).R4 · pre a) fun r m => r.headD 0 = 0 →
     ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb sz).R5 m pre rc a'
 
 /-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
-def PrepareStage : Prop := ∀ b pb sz pre rc a, InputsOK b pb s64 →
+def PrepareStage : Prop := ∀ b pb sz pre rc a, InputsOK b pb sz →
   RelSpec p "prepare_prelude" ((ρ b pb sz).R5 · pre rc a) fun _ m =>
     ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb sz).R6 m ds a'
 
 /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
 to). -/
-def PinsStage : Prop := ∀ b pb sz sA pre sB rc sC ds a, InputsOK b pb s64 →
+def PinsStage : Prop := ∀ b pb sz sA pre sB rc sC ds a, InputsOK b pb sz →
   TwinPrefix4 b sA pre sB rc sC ds a →
   RelSpec p "intern_all_pins" ((ρ b pb sz).R6 · ds a) fun _ m =>
     ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb sz).R7 m ds ipins a'
@@ -177,7 +177,7 @@ theorem StageSpec.of_rel {p : Prog} {f : FnName} {X : Type} {Pre : Mem → Prop}
 theorem stageSpecs_of_rels {p : Prog} (ρ : ∀ b pb sz, PipeRels b pb sz)
     (h1 : CapStage p ρ) (h2 : PbStage p ρ) (h3 : IrpStage p ρ) (h4 : PreludeStage p ρ)
     (h5 : FrontStage p ρ) (h6 : PrepareStage p ρ) (h7 : PinsStage p ρ)
-    (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64) :
+    (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) :
     StageSpec p "cap_check" (· = loadMem b pb sz) (fun _ => (ρ b pb sz).R1) ∧
     StageSpec p "pb_check" (ρ b pb sz).R1 (fun _ => (ρ b pb sz).R2) ∧
     StageSpec p "intern_reserved_pins" (ρ b pb sz).R2 (fun _ => Q3 b (ρ b pb sz)) ∧
