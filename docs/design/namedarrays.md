@@ -139,7 +139,7 @@ bring notation, stores or pool lemmas the build needs) and the three `#guard`-on
   `42 + 256`), and a simproc evaluating `tier1 n` broke the `simp [hB, hB']` proofs whose
   hypotheses mention `tier1 X` (the goal's `tier1 X` became a numeral first). So `tier1` is the
   name in statements; proofs that decide membership or bounds by `simp` unfold it with
-  `simp [tier1, tierOff, …]` (about 150 sites, inserted where the build failed, and in the
+  `simp [tier1, tierOff, …]` (226 sites, inserted where the build failed, and in the
   `apart`/`lo_apart`/`own`/`tapart` macros); proofs that need disequality use `tier1_ne`;
   `simp only [tierA_one, h]` with `h` about `tier1` became `tierA_one_eq`.
 * `omega` does not see through `tier1` (nor `ArrId`): region facts (`256 ≤ b ∧ b < 320`) keep
