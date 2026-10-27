@@ -13,7 +13,6 @@ open L.Arena
 open ConRon.Arena
 open ConRon.Arena.Frontend
 
-
 namespace L.Front.Ind
 
 /-! ## Slices -/
@@ -222,16 +221,6 @@ theorem nodupW_facts : ∀ (n : Nat) (m : Mem) (o l j u : Word), nodupW n m o l 
       exact fun e => this e.symm
     · exact ih' i i' (by omega) h2 h3
 
-theorem decI_inj' {k : IdxKind} (x y : Word) (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32)
-    (h : (decI x : Idx k) = decI y) : x = y := by
-  simp only [decI] at h
-  have h' := congrArg (fun z : Idx k => z.word) h
-  simp only at h'
-  have := congrArg UInt32.toNat h'
-  simp [UInt64.toNat_toUInt32] at this
-  apply UInt64.toNat_inj.mp
-  omega
-
 /-- The decoded handles of a slice whose words are distinct and below `2^32` have no duplicate. -/
 theorem islice_nodup {m : Mem} {o l : Nat} (hw : ∀ c, c < l → (wd m IFL (o + c)).toNat < 2 ^ 32)
     (hd : ∀ i i', i < i' → i' < l → wd m IFL (o + i) ≠ wd m IFL (o + i')) :
@@ -240,7 +229,7 @@ theorem islice_nodup {m : Mem} {o l : Nat} (hw : ∀ c, c < l → (wd m IFL (o +
   intro i i' hi hi' e
   simp only [islice_length] at hi hi'
   rw [islice_get, islice_get] at e
-  have e' := decI_inj' _ _ (hw i hi) (hw i' hi') e
+  have e' := decI_inj (hw i hi) (hw i' hi') e
   apply Classical.byContradiction
   intro hne
   rcases Nat.lt_or_gt_of_ne hne with h | h

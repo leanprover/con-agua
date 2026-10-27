@@ -127,7 +127,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
         hA2 hc (dCtx_ext _ hx01 _ _ hctx) (dProg_ext hx01 _ _ hprog) hwP' (dState_ext hx01 _ _ hnsP) hww
     refine ⟨x, a4, ?_, hC4, hg12.trans hg4, by simpa using hk4, by simpa using hxH, by simpa using hxd,
       by simpa using hns4, hP4, hA4, c1.trans c4⟩
-    have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forall _ hwH).mpr h6
+    have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forallE _ hwH).mpr h6
     rw [hwd] at hrun4
     simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
     simpa using hrun4
@@ -142,7 +142,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
         (dState_ext hx01 _ _ hnsP) hww
     refine ⟨x, a4, ?_, hC4, hg12.trans hg4, by simpa using hk4, by simpa using hwH,
       by simpa [hwd] using hx1.symm, by simpa using hns4, hP4, hA4, c1.trans c4⟩
-    have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forall _ hwH).mp e')
+    have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forallE _ hwH).mp e')
     rw [hwd, hhi1] at hrun4
     simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
     simpa using hrun4

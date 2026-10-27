@@ -281,7 +281,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
     cases hW
   rw [h8, pdsE.k_target_abs_2.arm2 p n vis d (r6.headD 0) r8 s8.mem hb8 he] at hW
   have hne : (decE (r6.headD 0) == decE (r8.headD 0)) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => he (decE_inj _ _ hav hbv e)
+    simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => he (decI_inj hav hbv e)
   simp only [hne, Bool.false_eq_true, ite_false]
   -- the knot: `infer_type_core` twice, then `is_def_eq_core`
   have hg58 : IWGrow s₀.mem s8.mem := hg47.trans hg8

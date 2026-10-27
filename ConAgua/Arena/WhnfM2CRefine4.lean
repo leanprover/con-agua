@@ -274,7 +274,7 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   by_cases g2 : L.tail.tail.headD 0 ≠ T
   · rw [ite_eq_left g2] at hW
     obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => g2 ((decI_inj_m2c hT2 hT).mp e.1)) hr hm
+    exact hmaj' (fun e => g2 ((decI_inj_iff hT2 hT).mp e.1)) hr hm
   rw [ite_eq_right g2] at hW
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
   by_cases g3 : r2'.tail.headD 0 ≠ w7

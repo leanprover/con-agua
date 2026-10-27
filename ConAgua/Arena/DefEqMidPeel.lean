@@ -853,9 +853,6 @@ theorem defeqPeel_leaf_run (r : CoreFnsA) (d peel : Nat) (a b : EIdx) (k : Nat) 
   | zero => rw [defeqPeel_zero_eq]; exact peelLvl_leaf_run _ _ _ _ _ _ _ _ _ h hl
   | succ p => rw [defeqPeel_succ_eq]; exact peelLvl_leaf_run _ _ _ _ _ _ _ _ _ h hl
 
-theorem tag_forall_beq (h : Word) (hh : HW h) : ((decE h).tag == ETag.forallE) = decide (h >>> 28 = 6) :=
-  tag_beq_w h hh 6 (by decide) _ rfl 6 rfl
-
 theorem word_toNat_zero_iff (w : Word) : w.toNat = 0 ↔ w = 0 :=
   ⟨fun h => UInt64.toNat_inj.mp (by simpa using h), fun h => by rw [h]; rfl⟩
 
@@ -888,7 +885,7 @@ theorem peelW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     have hab' : (decE a == decE b) = false := by rw [hab]; simp [he]
     have hlw : (decide (peel.toNat = 0) || (decE a).tag != ETag.forallE ||
         (decE b).tag != ETag.forallE) = decide (peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6) := by
-      simp only [bne, tag_forall_beq a ha, tag_forall_beq b hb, word_toNat_zero_iff]
+      simp only [bne, decE_tag_forallE_beq a ha, decE_tag_forallE_beq b hb, word_toNat_zero_iff]
       by_cases h1 : peel = 0 <;> by_cases h2 : a >>> 28 = 6 <;> by_cases h3 : b >>> 28 = 6 <;>
         simp [h1, h2, h3]
     by_cases hl : peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6

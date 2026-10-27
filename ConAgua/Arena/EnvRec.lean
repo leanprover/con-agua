@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreRel
+import ConAgua.Arena.Handle
 import ConRon.Arena.CheckerSplit
 
 /-!

@@ -216,7 +216,7 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     rfl
   rw [pdsK8_ne (h := hb8) (he := he)] at h
   have hne : (decE av == decE bv) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => he (decE_inj av bv hav hbv e)
+    simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => he (decI_inj hav hbv e)
   -- the knot
   rcases h9 : realCall p n "infer_type_core" [vis, d, av] m8 with _ | ⟨r9, m9⟩ <;> simp only [h9, pdsK9, reduceCtorEq] at h
   obtain ⟨t9, a9, run9, hC9, hg9, -, hA9, c9, -⟩ :=

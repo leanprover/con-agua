@@ -318,7 +318,7 @@ theorem lamsFullE_ref (p : Prog) (_hp : InferLeafProg p) (hq : BindProg p) (hb :
         ⟨peel.toNat - 1, by
           have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega⟩
       have hlam : ((decE t).tag != ETag.lam) = false := by
-        rw [bne_eq_false_iff_eq, ← beq_iff_eq, decE_tag_lam t ht]; simp [ht5]
+        rw [bne_eq_false_iff_eq, ← beq_iff_eq, decE_tag_lam_beq t ht]; simp [ht5]
       rw [hp', inferLams]
       simp only [hlam, Bool.false_eq_true, ↓reduceIte]
       refine ErrClaim.bind_right (by rw [viewBind_run', hvb]) ?_
@@ -451,7 +451,7 @@ theorem lamsFullE_ref (p : Prog) (_hp : InferLeafProg p) (hq : BindProg p) (hb :
             ⟨peel.toNat - 1, by
               have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega⟩
           have hlam : ((decE t).tag != ETag.lam) = true := by
-            rw [bne_iff_ne, ne_eq, ← beq_iff_eq, decE_tag_lam t ht]; simp [ht5]
+            rw [bne_iff_ne, ne_eq, ← beq_iff_eq, decE_tag_lam_beq t ht]; simp [ht5]
           rw [hp', inferLams]
           simp only [hlam, ↓reduceIte]
           exact h
@@ -565,7 +565,7 @@ theorem pisFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
         ⟨peel.toNat - 1, by
           have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega⟩
       have hlam : ((decE t).tag != ETag.forallE) = false := by
-        rw [bne_eq_false_iff_eq, ← beq_iff_eq, tag_fa_beq t ht]; simp [ht6]
+        rw [bne_eq_false_iff_eq, ← beq_iff_eq, decE_tag_forallE_beq t ht]; simp [ht6]
       rw [hp', inferPis]
       simp only [hlam, Bool.false_eq_true, ↓reduceIte]
       refine ErrClaim.bind_right (by rw [viewBind_run', hvb]) ?_
@@ -704,7 +704,7 @@ theorem pisFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
             ⟨peel.toNat - 1, by
               have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega⟩
           have hlam : ((decE t).tag != ETag.forallE) = true := by
-            rw [bne_iff_ne, ne_eq, ← beq_iff_eq, tag_fa_beq t ht]; simp [ht6]
+            rw [bne_iff_ne, ne_eq, ← beq_iff_eq, decE_tag_forallE_beq t ht]; simp [ht6]
           rw [hp', inferPis]
           simp only [hlam, ↓reduceIte]
           exact h

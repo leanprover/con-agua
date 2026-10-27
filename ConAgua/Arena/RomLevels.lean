@@ -1,5 +1,4 @@
 import ConAgua.Arena.RomLevel
-import ConAgua.Arena.Env
 import ConAgua.Front.ApplyExprRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

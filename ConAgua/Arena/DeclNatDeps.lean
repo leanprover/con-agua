@@ -74,7 +74,6 @@ def depsArmW (p : Prog) (n : Nat) (m1 : Mem) (pi c : Word) : Option (List Word �
   if c = pw m1 pi 14 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 6)).set64 IW (rq.headD 0 + 2) (pw m1 pi 7)).set64 IW (rq.headD 0 + 3) (pw m1 pi 14))) else
   some ([0, 0], m1)
 
-
 def natOpDepsW (p : Prog) (n : Nat) (m : Mem) (c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "nat_op_pins" [] m) fun rp m1 => depsArmW p n m1 (rp.headD 0) c
 
@@ -190,10 +189,6 @@ theorem pw_rec {m m1 : Mem} {pi : Word} {ws : List Word} (hI : IWOK m)
   have h2 := hget j hj
   rw [h2]
   simp [List.getElem?_eq_getElem hj]
-
-theorem decI_inj_iff {κ : IdxKind} {x y : Word} (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) :
-    ((decI x : Idx κ) = decI y) ↔ x = y :=
-  ⟨fun e => (decI_eq_iff x hx _).mp e ▸ decI_word_self y hy, fun e => e ▸ rfl⟩
 
 theorem pin_lt {m : Mem} {ps : Pins} (hF : PinsFull m ps) (i : Nat) (h1 : 1 ≤ i) (h2 : i ≤ 51) :
     (pinW m i).toNat < 2 ^ 32 := by
@@ -314,8 +309,6 @@ theorem natOpDeps_ref (hN : NatGateProg p) (c : Word) :
     rw [this, pinRecW_get m _ _ hj]] at hw
   exact ⟨_, a, natOpDeps_run (hS.1.pins.full ‹_›) hc,
     armsW_keep hN (hrec.2.1.stage hS) hrec.2.1.1 (hS.1.pins.full ‹_›) depsTab depsTab_ok hw⟩
-
-
 
 @[refines ConRon.Arena.natOpDeps]
 theorem natOpDeps_refines (hN : NatGateProg p) (c : Word) :

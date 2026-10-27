@@ -228,7 +228,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a hS1.1.arena.1 _ hne
     have h2 := eViewW_head2 m1 _ hf.2 hne
     have htag : (decE (r1.tail.tail.tail.headD 0)).tag = ETag.sort :=
-      (tag_sort_iff _ (by simpa using hb32)).mpr hf.2
+      (decE_tag_sort _ (by simpa using hb32)).mpr hf.2
     cases vv with
     | sort u =>
       obtain ⟨-, hu32, hu⟩ := hVR
@@ -276,7 +276,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
       have hnt : ¬ (e.tag == ETag.sort) = true := by
         rw [← hbe, ← decE_eq]
         intro ht
-        exact hf ⟨h1', (tag_sort_iff _ (by simpa using hb32)).mp (by simpa using ht)⟩
+        exact hf ⟨h1', (decE_tag_sort _ (by simpa using hb32)).mp (by simpa using ht)⟩
       simp only [hnt]
       simp only [Bool.false_eq_true, ite_false]
       exact hrun2

@@ -278,8 +278,8 @@ theorem Sim.iteH {β α : Type} {c q : Word} {e1 e2 : Option (β × Mem)} {o1 o2
     (h1 : c = q → Sim e1 o1 a R) (h2 : c ≠ q → Sim e2 o2 a R) :
     Sim (if c = q then e1 else e2) (if (decI c : NIdx) == decI q then o1 else o2) a R := by
   by_cases hd : c = q
-  · rw [ite_eq_left hd, decI_beq_word hc hq, decide_eq_true hd, ite_eq_left rfl]; exact h1 hd
-  · rw [ite_eq_right hd, decI_beq_word hc hq, decide_eq_false hd]; exact h2 hd
+  · rw [ite_eq_left hd, decI_beq _ _ hc hq, decide_eq_true hd, ite_eq_left rfl]; exact h1 hd
+  · rw [ite_eq_right hd, decI_beq _ _ hc hq, decide_eq_false hd]; exact h2 hd
 
 /-- A last callee returning an equation list, as the pair `(o, l)`. -/
 theorem CallRef.simPairE {f : FnName} {args : List Word} {pre : Mem → AState → Prop}

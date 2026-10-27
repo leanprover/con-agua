@@ -142,7 +142,7 @@ theorem p2ccW_okW (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   have hpq : pinQuot = pinAt 47 := rfl
   refine ⟨a, decI (rq.headD 0), a3, hrunoa, by rw [hpq]; simpa using hqrun, ?_, hrun3, rfl, hS3, hg1.trans hg3,
     hP1.fr (cpW_mfr _ _ _ _ _ _ _ hcp)⟩
-  rw [decI_beq' _ _ hnH hqH]; simpa using hnq
+  rw [decI_beq _ _ hnH hqH]; simpa using hnq
 
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}

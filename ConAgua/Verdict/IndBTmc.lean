@@ -102,7 +102,7 @@ theorem tmcE_claim (n : Nat) {m : Mem} {a : AState}
   have hm5' : m5 = s4.mem := hs5.symm.trans hm5
   subst hm5'
   rw [h5] at he
-  rw [hws, findIdx_decIP ws x hwlt hx]
+  rw [hws, findIdx_map_decI x hx ws hwlt]
   have hT4' : (rdW (m.arr64 CTL) 200).toNat + bs.k = iwTop s4.mem := ht4
   cases hfi : ws.findIdx? (· == x) with
   | some i =>

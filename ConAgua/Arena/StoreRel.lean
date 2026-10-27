@@ -1,4 +1,5 @@
 import ConAgua.Arena.Refine
+import ConAgua.Arena.Handle
 import ConAgua.Arena.SlotGrow
 import ConAgua.Arena.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -8,7 +9,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 
 The facts the `lit` and `app` store relations (`LitRefine.lean`, `AppRefine.lean`) both use,
 none of them about a particular record: reads after a write, the probe run of the open-addressing
-tables, handle words, the arena's `Tbl.push`.
+tables, the arena's `Tbl.push`.
 -/
 
 open ConRon.Arena
@@ -68,81 +69,6 @@ theorem homeW_lt (h n : Word) (hn : 0 < n) : homeW h n < n := by
     Nat.div_lt_of_lt_mul (Nat.mul_lt_mul_of_pos_right hx (by grind))
   rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]; exact this
 grind_pattern [store_grind] homeW_lt => homeW h n
-
-
-/-! ## Handles -/
-
-/-- The handle word of node `i` of tier `t` of the constructor with tag `g`. -/
-def hdW (g t i : Word) : Word := g * 0x10000000 + t * 0x8000000 + i
-
-/-- The handle of any kind a word encodes (`decE` at expressions). -/
-def decI {k : IdxKind} (w : Word) : Idx k := Idx.ofWord w.toUInt32
-
-theorem decE_eq (w : Word) : decE w = decI w := rfl
-
-/-- The index of a handle, as a word. -/
-def hix {k : IdxKind} (x : Idx k) : Word := UInt64.ofNat x.idxNat
-
-theorem hix_hdW {k : IdxKind} (g t i : Word) (hi : i.toNat < 2 ^ 27) :
-    hix (decI (hdW g t i) : Idx k) = i := by
-  simp only [hix, decI, hdW, Idx.idxNat, Idx.index]
-  apply UInt64.toNat_inj.mp
-  simp only [UInt64.toNat_ofNat', UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_add,
-    UInt64.toNat_mul]
-  grind
-grind_pattern [store_grind] hix_hdW => hix (decI (hdW g t i) : Idx k)
-
-/-- The arena's handle of node `n` of tier `b` is the L handle word. -/
-theorem mk_eq {k : IdxKind} (g : UInt32) (b n : Nat) :
-    (Idx.mk g (UInt32.ofNat b) (UInt32.ofNat n) : Idx k) =
-      decI (hdW g.toUInt64 (UInt64.ofNat b) (UInt64.ofNat n)) := by
-  simp only [decI, hdW, Idx.mk]
-  congr 1
-  apply UInt32.toNat_inj.mp
-  simp only [UInt64.toNat_toUInt32, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat',
-    UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat', UInt32.toNat_toUInt64]
-  simp only [show (268435456 : UInt32).toNat = 268435456 from rfl,
-    show (134217728 : UInt32).toNat = 134217728 from rfl,
-    show (0x10000000 : UInt64).toNat = 268435456 from rfl,
-    show (0x8000000 : UInt64).toNat = 134217728 from rfl]
-  omega
-
-/-- Bit 27 of a word (the tier bit of a handle word). -/
-theorem bit27_toNat (w : Word) : ((w >>> 27) &&& 1).toNat = w.toNat / 2 ^ 27 % 2 := by
-  simp [UInt64.toNat_and, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow, Nat.and_one_is_mod]
-
-theorem bit27_or (f a : Word) :
-    (((f ||| a) >>> 27) &&& 1 = 0) ↔ ((f >>> 27) &&& 1 = 0 ∧ (a >>> 27) &&& 1 = 0) := by
-  have h : ∀ x : Word, ((x >>> 27) &&& 1 = 0) ↔ x.toNat.testBit 27 = false := by
-    intro x
-    rw [← UInt64.toNat_inj, bit27_toNat, Nat.testBit_eq_decide_div_mod_eq]
-    simp
-  rw [h, h, h, UInt64.toNat_or, Nat.testBit_or]; simp
-
-/-- The tier bit of a handle word, at any handle kind (a `sort`/`const`/`letE` child may be a
-level, name or level-list handle, not only an expression one). -/
-theorem isPersistent_decI {k : IdxKind} (w : Word) (hw : w.toNat < 2 ^ 32) :
-    (decI w : Idx k).isPersistent = ((w >>> 27) &&& 1 == 0) := by
-  simp only [decI, Idx.isPersistent, Idx.tier]
-  have := bit27_toNat w
-  have : (w.toUInt32 / 134217728 % 2).toNat = w.toNat / 2 ^ 27 % 2 := by
-    simp [UInt32.toNat_mod, UInt32.toNat_div, UInt64.toNat_toUInt32]; omega
-  grind
-
-/-- The tier bit of a handle word, at expression handles (`isPersistent_decI` specialised, as
-`app`'s skip test uses it). -/
-theorem isPersistent_decE (w : Word) (hw : w.toNat < 2 ^ 32) :
-    (decE w).isPersistent = ((w >>> 27) &&& 1 == 0) := by
-  rw [decE_eq]; exact isPersistent_decI w hw
-
-/-- A handle is the decoding of a word below `2^32` iff that word is the handle's. -/
-theorem word_decI {k : IdxKind} (x : Idx k) (w : Word) (hw : w.toNat < 2 ^ 32) :
-    (x.word.toUInt64 = w) = (x = decI w) := by
-  cases x with | ofWord u =>
-  simp only [decI, Idx.ofWord.injEq, eq_iff_iff]
-  constructor
-  · intro h; subst h; apply UInt32.toNat_inj.mp; simp
-  · intro h; subst h; apply UInt64.toNat_inj.mp; simp; omega
 
 /-! ## The arena side -/
 

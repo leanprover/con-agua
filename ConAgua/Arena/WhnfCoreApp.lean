@@ -280,16 +280,6 @@ theorem SpineR.keepT {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR
   · rw [hk _ (hlt i hi)]; exact h.lt i hi
   · rw [hk _ (hlt i (h.size ▸ hi))]; exact h.get i hi
 
-theorem decE_tag_lam (e : Word) (hh : e.toNat < 2 ^ 32) :
-    ((decE e).tag == ETag.lam) = decide (e >>> 28 = 5) := by
-  have := decE_tag_eq e hh 5 (by decide)
-  by_cases h : e >>> 28 = 5
-  · have h2 : (decE e).tag = UInt32.ofNat 5 := this.mpr h
-    simp [h, ETag.lam, h2]
-  · have h2 : ¬ (decE e).tag = UInt32.ofNat 5 := fun h' => h (this.mp h')
-    simp only [h, decide_false, beq_eq_false_iff_ne, ne_eq, ETag.lam]
-    exact h2
-
 /-! ## Pushing one word onto the spine stack -/
 
 theorem spW_set64_eq (m : Mem) (p v : Word) (hb : p.toNat < (m.arr64 SPN).size) :
@@ -635,7 +625,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
           (by simp only [size_set64]; exact h136m)
           st r mF hF h136
         have hlam : ((decE t).tag == ETag.lam) = true := by
-          rw [decE_tag_lam t ht]; simp [ht5]
+          rw [decE_tag_lam_beq t ht]; simp [ht5]
         refine ⟨x, a', ?_, hx, hrw, M', hS'', hK, hSt⟩
         rw [← hrun', betaPeel]
         simp only [hlt', dite_true, hlam, ite_true, StateT.run_bind, viewBind_run', hvb,
@@ -670,7 +660,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
         have hS2 := hS'.of_app hD2 hcpl hfr2
         have hSt2 : StackKept m m₂ := hSt'.trans (StackKept.of_app_frame hfr2)
         have hnlam : ((decE t).tag == ETag.lam) = false := by
-          rw [decE_tag_lam t ht]; simp [ht5]
+          rw [decE_tag_lam_beq t ht]; simp [ht5]
         have hlt' : i.toNat < args.size := by
           rw [har₀.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
         have hrun : (betaPeel (decE t) acc args i.toNat).run a =

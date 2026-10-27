@@ -633,7 +633,7 @@ theorem noGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) : NoGoOK
       have hcv := containsW_ok j _ _ _ _ _ _ hws hc
       refine ⟨(ws.map (fun w => (decI w : NIdx))).contains nn, mp, ?_, ?_, hM, MemFrame.refl _ _ _⟩
       · rfl
-      · rw [hcv, ← hdx, contains_decI ws _ hwlt hx]
+      · rw [hcv, ← hdx, contains_map_decI _ hx ws hwlt]
         generalize ws.contains _ = bc
         cases bc <;> simp
     | fvar i ty =>

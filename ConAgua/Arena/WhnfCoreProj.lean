@@ -62,7 +62,7 @@ theorem projLitToCtor_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St
 theorem decE_lit_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.lit) = (h >>> 28 == 8) := by
   rw [decE_tag h hh, ETag.lit]
   rw [show (8 : UInt32) = (8 : Word).toUInt32 from rfl]
-  exact toUInt32_beq _ _ (shr28_lt h hh) (by decide)
+  exact toUInt32_beq _ _ (Nat.lt_trans (shr28_lt h hh) (by decide)) (by decide)
 
 /-- **Under `ArenaR`, on a `lit` node past the view checks, the kind word says whether the
 literal is a `strVal`** (the converse direction of `view_lit`, exposing the kind word). -/
@@ -358,7 +358,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
     rw [sliceL_length] at hlen
     simp only [lsWords, List.length_map] at hlen
     simp only [h0, beq_self_eq_true, ↓reduceIte, LsStore.persGetLen, LsTables.getLen, htag,
-      Tbl.node?, decLs_idx h, hx, Option.map_some]
+      Tbl.node?, decI_idx h, hx, Option.map_some]
     simp only [h0] at hlen
     rw [hlen]
   · have hsc' : rdW (m.arr64 CTL) 1 ≠ 0 := fun e => hsc ⟨by rw [h1]; decide, e⟩
@@ -376,7 +376,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
     have hlen := congrArg List.length hr.2.1
     rw [sliceL_length] at hlen
     simp only [lsWords, List.length_map] at hlen
-    simp only [h1, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decLs_idx h, hx,
+    simp only [h1, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decI_idx h, hx,
       Option.map_some]
     simp only [h1] at hlen
     rw [hlen]; simp
@@ -908,7 +908,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
 theorem decE_const_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.const) = (h >>> 28 == 3) := by
   rw [decE_tag h hh, ETag.const]
   rw [show (3 : UInt32) = (3 : Word).toUInt32 from rfl]
-  exact toUInt32_beq _ _ (shr28_lt h hh) (by decide)
+  exact toUInt32_beq _ _ (Nat.lt_trans (shr28_lt h hh) (by decide)) (by decide)
 
 /-- **A `const` node past the view checks**: its name and level-list handles are the record's
 words. -/

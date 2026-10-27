@@ -19,7 +19,6 @@ open ConRon.Arena ConLeche
 open Std.WP
 open scoped Lean.Order
 
-
 namespace L.Arena
 
 /-! ## The relation -/
@@ -131,13 +130,6 @@ theorem derT_fvar_b {tb : Tbl FVarNode EIdx UInt64} {t : Word}
   · rw [derT_out hD i (by omega)]; rfl
 
 /-! ## `derived` under `ArenaR` -/
-
-theorem decE_tierW (h : Word) : (decE h).isPersistent = (tierW h == 0) := by
-  simp only [decE, Idx.isPersistent, Idx.tier, tierW]
-  have := bit27_toNat h
-  have : (h.toUInt32 / 134217728 % 2).toNat = h.toNat / 2 ^ 27 % 2 := by
-    simp [UInt32.toNat_mod, UInt32.toNat_div, UInt64.toNat_toUInt32]; omega
-  grind
 
 section derived
 variable (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word)

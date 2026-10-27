@@ -87,7 +87,7 @@ theorem ensureSort_spec (n : Nat) (s₀ : St) (mode vis d e : Word) :
 end es
 
 theorem tag_sort_beq (h : Word) (hh : HW h) (hg : h >>> 28 = 2) : ((decE h).tag == ETag.sort) = true := by
-  rw [decE_tag h hh, hg]; decide
+  rw [decE_tag_sort_beq h hh, hg]; rfl
 
 theorem ensureSort_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e x : EIdx) (u : LIdx) (a a₁ : AState)
     (hw : (r.whnf d e).run a = .ok (x, a₁)) (ht : (x.tag == ETag.sort) = true)

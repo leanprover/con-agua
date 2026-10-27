@@ -3,7 +3,6 @@ import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.EqW
 import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -189,18 +188,6 @@ theorem pos2_nk_beq (K1 K2 : NestKey) :
     (K1 == K2) = (K1.cname == K2.cname && K1.lvls == K2.lvls && K1.ds == K2.ds) := by
   cases K1; cases K2; simp only [BEq.beq, instBEqNestKey.beq, Bool.and_assoc]
 
-theorem pos2_map_decI_inj {k : IdxKind} : ∀ (ws1 ws2 : List Word), (∀ w ∈ ws1, H w) → (∀ w ∈ ws2, H w) →
-    ((ws1.map (decI : Word → Idx k)) = ws2.map decI ↔ ws1 = ws2)
-  | [], [], _, _ => by simp
-  | [], _ :: _, _, _ => by simp
-  | _ :: _, [], _, _ => by simp
-  | w1 :: ws1, w2 :: ws2, h1, h2 => by
-    simp only [List.map_cons, List.cons.injEq]
-    rw [pos2_map_decI_inj ws1 ws2 (fun w hw => h1 w (by simp [hw])) (fun w hw => h2 w (by simp [hw]))]
-    constructor
-    · rintro ⟨e, rfl⟩; exact ⟨decI_inj (h1 w1 (by simp)) (h2 w2 (by simp)) e, rfl⟩
-    · rintro ⟨rfl, rfl⟩; exact ⟨rfl, rfl⟩
-
 theorem pos2_nk_beq_comm (K1 K2 : NestKey) : (K1 == K2) = (K2 == K1) := by
   rw [pos2_nk_beq, pos2_nk_beq, BEq.comm (a := K1.cname), BEq.comm (a := K1.lvls), BEq.comm (a := K1.ds)]
 
@@ -215,7 +202,7 @@ theorem nkeWf_ok {n : Nat} {m : Mem} {k1 k2 r : Word} {K1 K2 : NestKey}
   obtain ⟨a0, a1, a2, a3, a4, a5, -⟩ := pos2_nk_fields h1 htop
   obtain ⟨b0, b1, b2, b3, b4, b5, -⟩ := pos2_nk_fields h2 htop
   simp only [nkeWf, nkeW] at h
-  rw [pos2_nk_beq, ← a1, ← b1, ← a3, ← b3, decI_beq' _ _ a0 b0, decI_beq' _ _ a2 b2]
+  rw [pos2_nk_beq, ← a1, ← b1, ← a3, ← b3, decI_beq _ _ a0 b0, decI_beq _ _ a2 b2]
   by_cases e0 : rdW (m.arr64 IW) k1 ≠ rdW (m.arr64 IW) k2
   · rw [ite_eq_left e0] at h; cases h; simp [e0]
   rw [ite_eq_right e0] at h
@@ -239,7 +226,7 @@ theorem nkeWf_ok {n : Nat} {m : Mem} {k1 k2 r : Word} {K1 K2 : NestKey}
   by_cases e : ws1 = ws2
   · subst e; simp
   · have : ¬ (ws1.map (decI : Word → EIdx)) = ws2.map decI :=
-      fun hh => e ((pos2_map_decI_inj ws1 ws2 hw1 hw2).mp hh)
+      fun hh => e ((map_decI_inj ws1 ws2 hw1 hw2).mp hh)
     simp [e, this]
 
 /-- A key slice decoded below the tops. -/

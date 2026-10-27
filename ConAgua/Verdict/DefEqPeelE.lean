@@ -270,7 +270,7 @@ theorem peelE_ok (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
     have hab' : (decE a == decE b) = false := by rw [hab]; simp [he]
     have hlw : (decide (peel.toNat = 0) || (decE a).tag != ETag.forallE ||
         (decE b).tag != ETag.forallE) = decide (peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6) := by
-      simp only [bne, tag_forall_beq a ha, tag_forall_beq b hb, word_toNat_zero_iff]
+      simp only [bne, decE_tag_forallE_beq a ha, decE_tag_forallE_beq b hb, word_toNat_zero_iff]
       by_cases h1 : peel = 0 <;> by_cases h2 : a >>> 28 = 6 <;> by_cases h3 : b >>> 28 = 6 <;>
         simp [h1, h2, h3]
     by_cases hl : peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6

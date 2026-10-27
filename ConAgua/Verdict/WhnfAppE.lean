@@ -198,7 +198,7 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
         (vo + vn + 1)).arr64 SPN).size = (m₀.arr64 SPN).size := by
       simp only [size_set64]; exact hSt₁.size.trans hsz
     have hnotlam : ((decE v).tag == ETag.lam) = false := by
-      rw [decE_tag_lam v hv]; simp [hlam]
+      rw [decE_tag_lam_beq v hv]; simp [hlam]
     have hunf := whnfApp_nolam (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
       (decE v) (decE hd) va (same != 0) args nodes i.toNat hlt' hnotlam
     have hxi' : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := hxi
@@ -215,7 +215,7 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
       generalize hm₂ : ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
         (vo + vn + 1)) = m₂ at hS₂ hva₂ htop₂ hb₂ hsz₂ hF
       have hctag : ((decE hd).tag == ETag.const) = true := by
-        rw [decE_tag_const hd hhd]; simp [hconst]
+        rw [decE_tag_const_beq hd hhd]; simp [hconst]
       cases hcI : callE p k "iota_rec_at" [mode, vis, d, hd, vo, vn + 1] m₂ with
       | error e2 =>
         rw [hcI, whnfAppE.k_iota_rec_at.none] at hF; cases hF
@@ -266,7 +266,7 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     · rw [ite_eq_right hconst] at hF
       simp only [whnfAppE.j2] at hF
       have hctag : ((decE hd).tag == ETag.const) = false := by
-        rw [decE_tag_const hd hhd]; simp [hconst]
+        rw [decE_tag_const_beq hd hhd]; simp [hconst]
       have := ih hkn' a₁ _ ap (vn + 1) _ (i + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) MM hS₂
         hapW hva₂ htop₂ htv₂ hb₂ hsz₂ er hF
       rw [hi1, evalW_eq_ne ap _ hapW hnW] at this

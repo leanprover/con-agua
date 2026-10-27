@@ -127,35 +127,8 @@ theorem getAppFnL_spec (p : Prog) (hp : p.lookup "get_app_fn" = some getAppFnL) 
 
 /-! ## `get_app_fn` refines `getAppFn` -/
 
-/-- A handle word's tag, compared with a small numeral: `decE_tag` plus the numeral's own bound. -/
-theorem decE_tag_eq (e : Word) (hh : e.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
-    ((decE e).tag = UInt32.ofNat k) ↔ e >>> 28 = UInt64.ofNat k := by
-  rw [decE_tag e hh]
-  have e1 : (e >>> 28).toNat < 2 ^ 32 := by
-    have := e.toNat_lt
-    simp [UInt64.toNat_shiftRight]
-    omega
-  constructor
-  · intro h
-    have h1 := congrArg UInt32.toNat h
-    rw [UInt64.toNat_toUInt32, Nat.mod_eq_of_lt e1,
-      UInt32.toNat_ofNat_of_lt' (by omega : k < 2 ^ 32)] at h1
-    apply UInt64.toNat_inj.mp
-    rw [h1, UInt64.toNat_ofNat_of_lt' (by omega : k < 2 ^ 64)]
-  · intro h
-    rw [h]
-    apply UInt32.toNat_inj.mp
-    rw [UInt64.toNat_toUInt32, UInt64.toNat_ofNat_of_lt' (by omega : k < 2 ^ 64),
-      Nat.mod_eq_of_lt (by omega : k < 2 ^ 32), UInt32.toNat_ofNat_of_lt' (by omega : k < 2 ^ 32)]
-
 theorem viewApp_run' (h : EIdx) (a : AState) :
     (viewApp h).run a = .ok (a.store.viewApp h, a) := rfl
-
-theorem decE_tag_app (e : Word) (hh : e.toNat < 2 ^ 32) : ((decE e).tag = ETag.app) ↔ e >>> 28 = 4 :=
-  decE_tag_eq e hh 4 (by decide)
-
-theorem decE_tag_forall (e : Word) (hh : e.toNat < 2 ^ 32) :
-    ((decE e).tag = ETag.forallE) ↔ e >>> 28 = 6 := decE_tag_eq e hh 6 (by decide)
 
 /-- **The loop's model refines `getAppFn`**: whenever `gafLoopW` from `(e, f)` succeeds with
 `(e', f')` and `f'` is nonzero (the surrounding function's own post-loop check), the twin's
@@ -394,7 +367,7 @@ theorem priLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       have heq : piResult f.toNat (decE e) = piResult ((f.toNat - 1) + 1) (decE e) := by
         congr 1; omega
       refine ⟨?_, ihb⟩
-      rw [heq, piResult, (decE_tag_forall e he).mpr hc]
+      rw [heq, piResult, (decE_tag_forallE e he).mpr hc]
       rw [show (f.toNat - 1) = (f - 1).toNat from hfm1.symm]
       simp [viewBind_run' _ a, hvb, except_ok_bind]
       exact ihr
@@ -403,7 +376,7 @@ theorem priLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       obtain ⟨k, hk⟩ := Nat.exists_eq_succ_of_ne_zero (fun h => hf' (UInt64.toNat_inj.mp (by simpa using h)))
       refine ⟨?_, he⟩
       rw [hk, piResult]
-      have htag : (decE e).tag ≠ ETag.forallE := fun h => hc ((decE_tag_forall e he).mp h)
+      have htag : (decE e).tag ≠ ETag.forallE := fun h => hc ((decE_tag_forallE e he).mp h)
       simp [htag]
       rfl
 
@@ -590,7 +563,7 @@ theorem peelPisW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
           (view_forall m a hR e he ⟨hv1, hcnt⟩ hc).2.2
         obtain ⟨ihr, ihb, ih0⟩ := ih _ _ flag val hkm1N h1 hL'
         refine ⟨?_, ihb, ih0⟩
-        rw [hj, peelPis, (decE_tag_forall e he).mpr hc]
+        rw [hj, peelPis, (decE_tag_forallE e he).mpr hc]
         rw [show j = (k - 1).toNat from by rw [hkm1]; omega]
         simp [viewBind_run' _ a, hvb, except_ok_bind]
         exact ihr
@@ -598,7 +571,7 @@ theorem peelPisW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
         refine ⟨?_, fun h => absurd rfl h, fun _ => rfl⟩
         rw [hj, peelPis]
-        have htag : (decE e).tag ≠ ETag.forallE := fun h => hc ((decE_tag_forall e he).mp h)
+        have htag : (decE e).tag ≠ ETag.forallE := fun h => hc ((decE_tag_forallE e he).mp h)
         simp [htag, decOpt]
         rfl
 

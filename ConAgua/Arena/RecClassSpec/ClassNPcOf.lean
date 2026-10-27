@@ -135,16 +135,6 @@ theorem envFindW_found {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
       (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simpa using e
   simp [key, hc, this, decFound]
 
-theorem contains_map_decI {k : IdxKind} (x : Word) (hx : H x) : ∀ (ws : List Word),
-    (∀ w ∈ ws, H w) → (ws.map (decI : Word → Idx k)).contains (decI x) = ws.contains x
-  | [], _ => rfl
-  | w :: ws, h => by
-    simp only [List.map_cons, List.contains_cons]
-    rw [decI_beq x w hx (h w (by simp)), contains_map_decI x hx ws (fun v hv => h v (by simp [hv]))]
-    by_cases e : w = x
-    · subst e; simp
-    · simp [Ne.symm e]
-
 /-- An `indInfo` record's `nparams` word, and no other kind is one. -/
 theorem decCI_ind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {ci : IConstantInfo} (h : decCI a dn p = some ci) :

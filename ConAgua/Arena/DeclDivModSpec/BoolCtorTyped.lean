@@ -81,7 +81,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
     obtain ⟨wt, -, hrd, hwt, hty, hst⟩ := cvWordsAt hS2.2.2.2.2.1 hcv2
     have hrd4 := (hst m4 (hg3.trans hg4)).2
     refine ⟨decide (wt = r4.headD 0), a4, ?_, hS4, hg2.trans (hg3.trans hg4), ?_⟩
-    · have hb := decI_beq_word (κ := IdxKind.expr) hwt hl4
+    · have hb := decI_beq (k := IdxKind.expr) _ _ hwt hl4
       simp only [boolCtorTyped, hf, StateT.run_bind, boolName, hrun3]
       have hrun4' : (constE (decI (r3.headD 0))).run a3 = .ok (decI (r4.headD 0), a4) := hrun4
       simp only [hrun4', exc_ok_bind', hty]

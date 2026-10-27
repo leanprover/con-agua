@@ -169,7 +169,7 @@ theorem cfbE_claim {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
       · rfl
       · rw [hcw, hg.2] at hct; exact absurd hct (by decide)
     have hcond : (x == some true || idxArgs.contains (decI fv)) = false := by
-      rw [hwsd, sumContains_decI fv hfv ws hwlt, hnin]
+      rw [hwsd, contains_map_decI fv hfv ws hwlt, hnin]
       cases x with
       | none => rfl
       | some b => cases b <;> simp_all

@@ -1,11 +1,10 @@
 import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.PinsNatOp
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # DecHLTake
 
-`decHL_take`, `map_decI_inj`.
+`decHL_take`.
 -/
 
 noncomputable section
@@ -38,19 +37,6 @@ theorem decHL_take {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
   have hy := mapM_opt_length _ _ _ e1
   simp at hy
   rw [← h]; simp [hy]
-
-theorem map_decI_inj {k : IdxKind} : ∀ (ws vs : List Word), (∀ w ∈ ws, w.toNat < 2 ^ 32) →
-    (∀ w ∈ vs, w.toNat < 2 ^ 32) → (ws.map (decI (k := k)) = vs.map decI ↔ ws = vs)
-  | [], [], _, _ => by simp
-  | [], _ :: _, _, _ => by simp
-  | _ :: _, [], _, _ => by simp
-  | w :: ws, v :: vs, hw, hv => by
-    simp only [List.map_cons, List.cons.injEq]
-    rw [map_decI_inj ws vs (fun x hx => hw x (by simp [hx])) (fun x hx => hv x (by simp [hx]))]
-    constructor
-    · rintro ⟨h1, h2⟩
-      exact ⟨decI_inj (hw w (by simp)) (hv v (by simp)) h1, h2⟩
-    · rintro ⟨rfl, rfl⟩; exact ⟨rfl, rfl⟩
 
 end L.Ind
 

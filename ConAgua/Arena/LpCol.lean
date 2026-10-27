@@ -50,9 +50,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem tierW_le (h : Word) : tierW h ≤ 1 := by
-  simp only [tierW]; exact UInt64.and_le_right
-
 /-- A boolean as the word `1`/`0`. -/
 def b2w (b : Bool) : Word := if b then 1 else 0
 

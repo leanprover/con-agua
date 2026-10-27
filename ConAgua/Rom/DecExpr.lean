@@ -205,13 +205,6 @@ structure DecInv (mem : Mem) (a : AState) (seen : List ConLeche.Expr) (m : EMemo
   /-- The pool's mode (lane tierpool). -/
   mode : ModeOK mem
 
-theorem decI_word_inj {v w : Word} (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32)
-    (h : (decI v : EIdx) = decI w) : v = w := by
-  have e1 := word_decE v hv
-  have e2 := word_decE w hw
-  rw [decE_eq] at e1 e2
-  rw [← e1, ← e2, h]
-
 /-- **The canonicity argument**: L interned a compound node to `h` and found `h` in no memo entry
 (`rsetOK`, under `RsetR`); the node denotes `e`; so `e` is no key of the memo, and in particular not
 in any prefix `seen` of the memo's list. -/
@@ -225,7 +218,7 @@ theorem canon_miss {mem : Mem} {a₂ a₃ : AState} {seen seen2 : List ConLeche.
   obtain ⟨hlt, hm⟩ := hM.hit he2
   have hd := denote_ext (hE _ _ hm) hx
   have heq := denoteE_inj hok.wf hden hd
-  have hw := decI_word_inj hh hlt heq
+  have hw := decI_inj hh hlt heq
   exact RsetR.miss hR hh hc (seen2.idxOf e)
     (by rw [hM.cnt]; exact List.idxOf_lt_length_iff.mpr he2) hw.symm
 

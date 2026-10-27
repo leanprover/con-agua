@@ -564,24 +564,6 @@ theorem motVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   simp only [ConRon.Arena.ClassGen.motVar, hmot, ← hsv1]
   exact hrun
 
-theorem ctag_iff (w : Word) (hw : w.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
-    (decE w).tag = UInt32.ofNat k ↔ w >>> 28 = UInt64.ofNat k := by
-  rw [decE_tag w hw]
-  have h28 : (w >>> 28).toNat < 16 := by
-    rw [UInt64.toNat_shiftRight]; simp; omega
-  constructor
-  · intro h
-    have := congrArg UInt32.toNat h
-    simp [UInt64.toNat_toUInt32] at this
-    apply UInt64.toNat_inj.mp
-    simp [UInt64.toNat_ofNat_of_lt' (by omega : k < 2 ^ 64)]
-    rw [UInt64.toNat_shiftRight] at *
-    simp at *
-    omega
-  · intro h
-    rw [h]; apply UInt32.toNat_inj.mp
-    simp
-
 theorem ETables.getConst_of_get_r (t : ETables) (i : EIdx) (n : NIdx) (us : LsIdx)
     (h : t.get i = some (.const n us)) : t.getConst i = some (n, us) := by
   unfold ETables.get at h
@@ -950,7 +932,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       refine ⟨some [], a, rfl, hS, IWGrow.refl m, ?_⟩
       simp [PdRes, decHL, hslice?]
     · obtain ⟨x, xs', w, rfl, hxs', hw1, hw2, hw3, hxo1, hxl1⟩ := rcSl_step hxs hxl hb
-      have hftag : (decE e).tag = ETag.forallE ↔ e >>> 28 = 6 := ctag_iff e he 6 (by decide)
+      have hftag : (decE e).tag = ETag.forallE ↔ e >>> 28 = 6 := decE_tag_eq e he 6 (by decide)
       by_cases hf : e >>> 28 ≠ 6
       · rw [pdW_nf n m xo xl e hxl hf] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

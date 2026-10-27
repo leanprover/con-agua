@@ -202,7 +202,7 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
   rw [ite_eq_right hcc] at hW
   have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
-  have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3']
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3']
   generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hv
   generalize tfld s₀.mem CONST (tierW h) (idxW h) 1 = us2 at huw hW hv
   cases c2 : callE p n "env_find" [k, vis] s₀.mem with

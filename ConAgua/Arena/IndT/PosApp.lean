@@ -145,7 +145,7 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
   · rw [ite_eq_left hon] at h; cases h
   rw [ite_eq_right hon] at h
   have hnotin : c.names.contains nn = false := by
-    rw [hwsd, ← hnd, pos2_contains_map ws hwsH _ hnH]
+    rw [hwsd, ← hnd, contains_map_decI _ hnH ws hwsH]
     cases e : ws.contains ((eViewW m2 (rh.headD 0)).tail.headD 0) with
     | false => rfl
     | true => rw [e] at ho; simp at hon; rw [hon] at ho; exact absurd ho (by decide)

@@ -212,7 +212,7 @@ theorem nccE_claim {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker.
   · rw [nccE.k_pin_at.abort1 _ _ _ _ _ _ _ _ hnq] at h; cases h
     exact ErrClaim.ite_pos (by rw [hnq]; simp) (ErrClaim.fail _ _ (by decide))
   rw [nccE.k_pin_at.arm1 _ _ _ _ _ _ _ _ hnq] at h
-  refine ErrClaim.ite_neg (by rw [decI_beq' _ _ hnH hqH]; simpa using hnq) ?_
+  refine ErrClaim.ite_neg (by rw [decI_beq _ _ hnH hqH]; simpa using hnq) ?_
   cases h3 : callE p k "nest_cont_params_closed" [hp, dO, dL] m1 with
   | error e3 =>
     rw [h3, nccE.k_nest_cont_params_closed.eq_1] at h; cases h

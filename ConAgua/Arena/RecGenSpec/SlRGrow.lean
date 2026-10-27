@@ -4,7 +4,7 @@ import ConAgua.Arena.IndPos
 /-!
 # SlRGrow
 
-`ocK2`, `NoProg`, `slR_grow`, `clsDecI_inj`.
+`ocK2`, `NoProg`, `slR_grow`.
 -/
 
 set_option experimental.vcgen true
@@ -53,9 +53,5 @@ theorem slR_grow {m m' : Mem} (hg : IWGrow m m') (hT : iwTop m < 2 ^ 64) :
     have hlm : (l - 1).toNat = l.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hl1))]; simp
     rw [ho1]; rw [hlm] at hi; have := hb (i + 1) (by omega); omega
-
-theorem clsDecI_inj {κ : IdxKind} {x y : Word} (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) :
-    ((decI x : Idx κ) = decI y) ↔ x = y :=
-  ⟨fun e => (decI_eq_iff x hx _).mp e ▸ decI_word_self y hy, fun e => e ▸ rfl⟩
 
 end L.Ind

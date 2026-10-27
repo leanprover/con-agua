@@ -45,18 +45,6 @@ theorem iwTop_lt (m : Mem) : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
 
 /-! ## `canon_name_map` -/
 
-theorem findIdx_map_decI {k : IdxKind} (x : Word) (hx : x.toNat < 2 ^ 32) :
-    ∀ ws : List Word, (∀ w ∈ ws, w.toNat < 2 ^ 32) →
-    (ws.map (decI : Word → Idx k)).findIdx? (fun p => p == decI x) = ws.findIdx? (· == x)
-  | [], _ => rfl
-  | w :: ws, h => by
-    have hw : w.toNat < 2 ^ 32 := h w (by simp)
-    have e : ((decI w : Idx k) == decI x) = (w == x) := by
-      rw [decI_beq w x hw hx]; rfl
-    have ih := findIdx_map_decI (k := k) x hx ws (fun v hv => h v (by simp [hv]))
-    simp [List.findIdx?_cons, e, ih]
-
-
 /-- `sl_getd(o, l, j, z)` of a handle slice is the twin's `getD j z`. -/
 theorem getDW_handle' {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
     (h : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat < 2 ^ 64) (j z : Word)
@@ -90,7 +78,6 @@ theorem findW_handle {k : IdxKind} {n : Nat} {m : Mem} {o l x : Word} {r : List 
     simp only [List.length_map] at this; omega)
   rw [findIdx_map_decI x hx ws hlt]
   cases hf : ws.findIdx? (· == x) <;> rw [hf] at this <;> exact this
-
 
 /-- **The model of `canon_name_map`** at the caller's fuel. -/
 def nmW : Nat → Mem → Word → Word → Word → Word → Word → Option Word
@@ -152,7 +139,6 @@ theorem nmW_ok {n : Nat} {m : Mem} {po pl co cl x y : Word} {ps cs : List NIdx}
       have := getDW_handle' hcs hcb (UInt64.ofNat i) x hx
       simp only [List.tail_cons, List.headD_cons, hi64] at this ⊢
       exact this
-
 
 /-- **`canon_name_map` refines `canonNameMap`**: pure, memory untouched. -/
 @[refines ConRon.Arena.canonNameMap]
@@ -241,7 +227,6 @@ grind_pattern [ind_grind] cnClK1_some => cnClK1 n m po pl qo ql co cl fuel a2 b2
 grind_pattern [ind_grind] cnClK2_some => cnClK2 n m qo ql co cl b1 (some x)
 grind_pattern [ind_grind] cnClK3_some => cnClK3 x (some y)
 
-
 section specs2
 variable (p : Prog) (hp : CanonProg p)
 include hp
@@ -267,7 +252,6 @@ theorem canonLevelEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel u 
       finish (gen := 20)
 
 end specs2
-
 
 theorem viewL_run' {a : AState} {h : LIdx} {v : LNodeView} (hv : a.store.lss.ls.view h = some v) :
     (viewL h).run a = .ok (v, a) := by
@@ -362,7 +346,6 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          · have : decI x ≠ (decI y : NIdx) := fun e => hxy (decI_inj hx32 hy32 e)
            simp [hxy, this])
 
-
 /-- The shape of a comparison that leaves memory and twin state alone. -/
 theorem refAM_same {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
     (pre : Mem → AState → Prop) (op : AM α) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -400,10 +383,7 @@ theorem canonLevelEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
   obtain ⟨b, hb, hrb⟩ := clW_ok n _ a₀ _ _ _ _ _ _ fuel u v _ ps qs cs hr hS.1.arena.1 hC hu hv
   exact ⟨hl, hm, b, hb, decW0B_of' hrb⟩
 
-
 /-! ## `canon_level_list_eq` -/
-
-
 
 mutual
 /-- **The model of `canon_level_list_eq`**. -/
@@ -508,7 +488,6 @@ theorem llW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel ao
             (fun w hw => hw1 w (by simp [hw])) (fun w hw => hw2 w (by simp [hw]))
         · rw [ite_eq_left h0] at h; simp at h; simp [← h]
 
-
 /-- **`canon_level_list_eq` refines `canonLevelListEq`.** -/
 @[refines ConRon.Arena.canonLevelListEq]
 theorem canonLevelListEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)
@@ -532,9 +511,7 @@ theorem canonLevelListEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Op
     hS.1.arena.1 hC hs1 hs2 hw1 hw2
   exact ⟨hl, hm, b, hb, decW0B_of' hrb⟩
 
-
 /-! ## `canon_levels_eq` -/
-
 
 /-- **The model of `canon_levels_eq`**: two `view_ls`, then the list comparison. -/
 def lsEqW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
@@ -569,7 +546,6 @@ theorem canonLevelsEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St)
         viewLs_specW p (hp.get "ls_node") (hp.get "iw_alloc") (hp.get "pool_copy") (hp.get "view_ls") n,
         canonLevelListEq_spec p hp n] <;>
       finish (gen := 20) [rdW_eq, lsEqW]
-
 
 theorem getD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
 theorem cnGetD1 (r : List Word) : r.getD (0 + 1) 0 = r.tail.headD 0 := by
@@ -628,7 +604,6 @@ theorem lsEqW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   unfold ConRon.Arena.canonLevelsEq
   rw [StateT.run_bind, hrun1, exc_ok_bind', StateT.run_bind, hrun2, exc_ok_bind']
   exact hb
-
 
 /-- The post of a comparison that may grow the pool: the usual one, and the pool array stays
 addressable by a word (`PoolSmall`). -/

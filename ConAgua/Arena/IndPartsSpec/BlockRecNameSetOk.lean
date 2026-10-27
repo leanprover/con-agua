@@ -643,7 +643,7 @@ theorem partsAll_decI (ws vs : List Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32)
   | cons w ws ih =>
     simp only [List.map_cons, List.all_cons]
     rw [ih (fun w' h' => hws w' (List.mem_cons_of_mem _ h')),
-      partsContains_decI vs w hvs (hws w (List.mem_cons_self ..))]
+      contains_map_decI w (hws w (List.mem_cons_self ..)) vs hvs]
 
 /-- **The model of `block_rec_name_set_ok`** (at exec fuel `n + 2`). -/
 def brnW (n : Nat) (m : Mem) (mo ml ro rl : Word) : Option (List Word × Mem) :=

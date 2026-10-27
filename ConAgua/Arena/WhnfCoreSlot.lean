@@ -42,14 +42,11 @@ theorem toUInt32_beq (a b : Word) (ha : a.toNat < 2 ^ 32) (hb : b.toNat < 2 ^ 32
     rw [UInt64.toNat_toUInt32, UInt64.toNat_toUInt32, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at this
     exact UInt64.toNat_inj.mp this
 
-theorem shr28_lt (e : Word) (he : HW e) : (e >>> 28).toNat < 2 ^ 32 := by
-  rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]; unfold HW at he; omega
-
 /-- `whnfCoreStuckTag` off the handle word. -/
 theorem stuck_iff (e : Word) (he : HW e) :
     whnfCoreStuckTag (decE e) =
       decide (e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0) := by
-  have h := shr28_lt e he
+  have h : (e >>> 28).toNat < 2 ^ 32 := Nat.lt_trans (shr28_lt e he) (by decide)
   simp only [whnfCoreStuckTag, decE_tag e he, ETag.app, ETag.proj, ETag.letE, ETag.bvar]
   rw [show (4 : UInt32) = (4 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
   rw [show (9 : UInt32) = (9 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]

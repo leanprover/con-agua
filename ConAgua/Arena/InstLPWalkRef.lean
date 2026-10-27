@@ -27,7 +27,7 @@ structure ILWAllProg (p : Prog) : Prop where
 theorem ilw_beq {x y : Word} (hx : HW x) (hy : HW y) : (decE x == decE y) = decide (x = y) := by
   by_cases h : x = y
   · subst h; simp
-  · have : decE x ≠ decE y := fun e => h (decE_inj x y hx hy e)
+  · have : decE x ≠ decE y := fun e => h (decI_inj hx hy e)
     simp [h, this]
 
 /-- **`lp_go` at L fuel `n` refines `instLPGo`** at the counter's fuel, under the walk's

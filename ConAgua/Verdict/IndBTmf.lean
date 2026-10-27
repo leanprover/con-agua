@@ -93,14 +93,14 @@ theorem tmfE_claim (n : Nat) {m : Mem} {a : AState}
   by_cases hng : r2.headD 0 >>> 28 ≠ 3
   · rw [h2, tmfE.k_get_app_fn_f.abort1 p n vis pp cao cal pfo pfl fvo fvl _ _ r2 _ hng] at he
     cases he
-    have hct := ctag_iff (r2.headD 0) hw32 3 (by decide)
+    have hct := decE_tag_eq (r2.headD 0) hw32 3 (by decide)
     refine ErrClaim.ite_neg ?_ (ErrClaim.fail _ _ (by decide))
     rw [← hwd, show (decI (r2.headD 0) : EIdx) = decE (r2.headD 0) from rfl]
     intro hc
     exact hng (hct.mp (beq_iff_eq.mp hc))
   have hg : r2.headD 0 >>> 28 = 3 := by simpa using hng
   rw [h2, tmfE.k_get_app_fn_f.arm1 p n vis pp cao cal pfo pfl fvo fvl _ _ r2 _ hg] at he
-  have hct := ctag_iff (r2.headD 0) hw32 3 (by decide)
+  have hct := decE_tag_eq (r2.headD 0) hw32 3 (by decide)
   have htag0 : (decE (r2.headD 0)).tag = ETag.const := hct.mpr hg
   have htag : ((decE (r2.headD 0)).tag == ETag.const) = true := by simpa using htag0
   refine ErrClaim.ite_pos (by rw [← hwd, show (decI (r2.headD 0) : EIdx) = decE (r2.headD 0) from rfl]; exact htag) ?_

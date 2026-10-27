@@ -1,7 +1,6 @@
 import ConAgua.Checker.HoistClosureL
 import ConAgua.Arena.DeclNatDeps
 
-
 /-!
 # The hoist's `Nat` operation tests refine the twin's name lists (lane `front4`)
 
@@ -97,17 +96,6 @@ theorem sliceHas_ok (m : Mem) (o w : Word) : ∀ (ws : List Word) (n : Nat) (l j
         · exact Or.inr
         · rintro (rfl | h); · exact absurd h0 hx
           exact h
-
-/-- Membership of a decoded name in decoded words. -/
-theorem contains_decI {w : Word} (hw : w.toNat < 2 ^ 32) :
-    ∀ (ws : List Word), (∀ x ∈ ws, x.toNat < 2 ^ 32) →
-      ((ws.map (decI : Word → NIdx)).contains (decI w) = true ↔ w ∈ ws)
-  | [], _ => by simp
-  | x :: xs, hl => by
-    have ih := contains_decI hw xs (fun y hy => hl y (by simp [hy]))
-    simp only [List.map_cons, List.contains_cons, Bool.or_eq_true, ih, List.mem_cons]
-    rw [decI_beq_word hw (hl x (by simp))]
-    simp
 
 /-- What a name-list call leaves: a fresh slice `[o, |ws|]` of the words `ws`. -/
 def NSl (m m' : Mem) (r ws : List Word) : Prop :=
@@ -227,13 +215,13 @@ theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : A
   have ha' := hS1.has hS2.1.2.1 ha
   have hb' := hS2.has (IWGrow.refl mb) hb
   simp only [hS1.1.pinW_eq] at hb'
-  have hc1 := contains_decI hw [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27,
-    pinW m 28, pinW m 29] (by
+  have hc1 := contains_map_decI_iff (k := .name) (hx := hw) (ws := [pinW m 22, pinW m 23, pinW m 24, pinW m 25,
+    pinW m 26, pinW m 27, pinW m 28, pinW m 29]) (by
       simp only [List.forall_mem_cons]
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, by simp⟩ <;>
         exact pin_lt hF _ (by decide) (by decide))
-  have hc2 := contains_decI hw [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20,
-    pinW m 21] (by
+  have hc2 := contains_map_decI_iff (k := .name) (hx := hw) (ws := [pinW m 15, pinW m 16, pinW m 17, pinW m 18,
+    pinW m 19, pinW m 20, pinW m 21]) (by
       simp only [List.forall_mem_cons]
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, by simp⟩ <;>
         exact pin_lt hF _ (by decide) (by decide))
@@ -250,7 +238,6 @@ theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : A
       · rw [hNatOpRecW.k_slice_has_2.arm2 _ _ _ _ hc] at h; cases h; rfl
     subst hm
     exact hS1.1.trans hS2.1
-
 
 /-! ## `nat_op_deps` -/
 

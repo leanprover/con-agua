@@ -433,7 +433,7 @@ theorem bslW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   · cases h
   simp only at h
   have hcv2 := containsW_ok n m1 lo ll w hsv ws2 hs2 hc
-  have hcont : lps.contains e = ws2.contains w := by rw [hn2, hwe]; exact partsContains_decI ws2 w hl2 hwl
+  have hcont : lps.contains e = ws2.contains w := by rw [hn2, hwe]; exact contains_map_decI w hwl ws2 hl2
   by_cases hh : hsv ≠ 0
   · rw [ite_eq_left hh] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

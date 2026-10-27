@@ -40,10 +40,6 @@ l_model natOpCod_specW (p : Prog) (hp : p.lookup "nat_op_cod" = some natOpCodL)
   specs [callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "env_find", callW_spec p n "ci_to_cv", callW_spec p n "pin_word"]
   grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
 
-theorem decI_bne_word {κ : IdxKind} {x y : Word} (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) :
-    ((decI x : Idx κ) != decI y) = decide (x ≠ y) := by
-  rw [bne, decI_beq_word hx hy]; simp
-
 theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
     CallRef p "nat_op_cod" [vis, c, e] (fun m a => StageR dn vis fe m a ∧ H c ∧ H e)
       (natOpCod fe (decI c) (decI e)) (KeepPost dn vis fe decW0B) := by
@@ -73,7 +69,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
     have := pinAt_run hF 20 (by decide); rw [hr2]; exact this
   have hcond : ((decI c : NIdx) == decI (r1.headD 0) || (decI c : NIdx) == decI (r2.headD 0)) =
       decide (c = r1.headD 0 ∨ c = r2.headD 0) := by
-    rw [decI_beq_word hc hp1, decI_beq_word hc hp2]; simp
+    rw [decI_beq _ _ hc hp1, decI_beq _ _ hc hp2]; simp
   by_cases hP : c = r1.headD 0 ∨ c = r2.headD 0
   · rw [ite_eq_left hP] at hw
     cases h3 : callW p k "pin_at" [29] m with
@@ -94,7 +90,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
     obtain ⟨x4, a4, hrun4, hS4, hg4, hx4l, hx4⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
       hN.toMasterProg (r3.headD 0) k m a r4 m4 ⟨hS, hp3⟩ h4
     have hne : (decI e != x4) = decide (e ≠ r4.headD 0) := by
-      rw [← hx4]; exact decI_bne_word he hx4l
+      rw [← hx4]; rw [decI_bne _ _ he hx4l]; simp
     by_cases hee : e ≠ r4.headD 0
     · rw [ite_eq_left hee] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -156,7 +152,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
           refine ⟨decide (wt = pinW m6 54), a4, ?_, hS6, hg4.trans hg6, ?_⟩
           · simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
               hcond, decide_eq_true hP, ite_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, Bool.false_eq_true, ite_false, hf,
-              sortOne, pinSortOne_run hF6, hisE, hty, decI_beq_word hlt hp54]
+              sortOne, pinSortOne_run hF6, hisE, hty, decI_beq _ _ hlt hp54]
             rfl
           · simp only [decW0B, List.headD_cons]
             by_cases he' : wt = pinW m6 54
@@ -195,7 +191,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
     obtain ⟨x4, a4, hrun4, hS4, hg4, hx4l, hx4⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
       hN.toMasterProg (r3.headD 0) k m a r4 m4 ⟨hS, hp3⟩ h4
     have hbeq : ((decI e : EIdx) == x4) = decide (e = r4.headD 0) := by
-      rw [← hx4]; exact decI_beq_word he hx4l
+      rw [← hx4]; exact decI_beq _ _ he hx4l
     refine ⟨decide (e = r4.headD 0), a4, ?_, hS4, hg4, ?_⟩
     · simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
         hcond, decide_eq_false hP, Bool.false_eq_true, ite_false, pinNat_eq, e3, hrun4, hbeq]
@@ -271,8 +267,8 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
   have hp3 : H (pr.headD 0) := by rw [hr3]; exact hF2.names_lt 14 (by decide)
   have e3 : (pinAt 14).run a2 = .ok (decI (pr.headD 0), a2) := by
     have := pinAt_run hF2 14 (by decide); rw [hr3]; exact this
-  have htag : ((decI ty : EIdx).tag == ETag.forallE) = decide (ty >>> 28 = 6) := tagForallIff ty hty
-  have hbeqc : ((decI c : NIdx) == decI (pr.headD 0)) = decide (c = pr.headD 0) := decI_beq_word hc hp3
+  have htag : ((decI ty : EIdx).tag == ETag.forallE) = decide (ty >>> 28 = 6) := decI_tag_forallE_beq ty hty
+  have hbeqc : ((decI c : NIdx) == decI (pr.headD 0)) = decide (c = pr.headD 0) := decI_beq _ _ hc hp3
   have hshort : ¬ ty >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
     intro h6
     rw [ite_eq_left (by simpa using h6)] at hw
@@ -316,7 +312,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
   by_cases hcp : c = pr.headD 0
   · rw [ite_eq_left hcp] at hw
     have hdn : ((decE (rv.tail.headD 0) : EIdx) == x2) = decide (rv.tail.headD 0 = nc.headD 0) := by
-      rw [← hx2]; exact decI_beq_word hd0 hx2l
+      rw [← hx2]; exact decI_beq _ _ hd0 hx2l
     by_cases hdc : rv.tail.headD 0 = nc.headD 0
     · rw [ite_eq_right (by simpa using hdc)] at hw
       cases h5 : callW p k "nat_op_cod" [vis, c, rv.tail.tail.headD 0] m4 with
@@ -341,9 +337,9 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
       rfl
   · rw [ite_eq_right hcp] at hw
     have hdn : ((decE (rv.tail.headD 0) : EIdx) == x2) = decide (rv.tail.headD 0 = nc.headD 0) := by
-      rw [← hx2]; exact decI_beq_word hd0 hx2l
+      rw [← hx2]; exact decI_beq _ _ hd0 hx2l
     have htagb : ((decE (rv.tail.tail.headD 0) : EIdx).tag == ETag.forallE) =
-        decide (rv.tail.tail.headD 0 >>> 28 = 6) := tagForallIff _ hb0
+        decide (rv.tail.tail.headD 0 >>> 28 = 6) := decI_tag_forallE_beq _ hb0
     have hshortb : ¬ rv.tail.tail.headD 0 >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
         KeepPost dn vis fe decW0B m m' a' r x := by
       intro hb6
@@ -381,7 +377,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     rw [ite_eq_right (by simpa using hrv26)] at hw
     subst hvv2
     have hdn2 : ((decE (rv2.tail.headD 0) : EIdx) == x2) = decide (rv2.tail.headD 0 = nc.headD 0) := by
-      rw [← hx2]; exact decI_beq_word hd02 hx2l
+      rw [← hx2]; exact decI_beq _ _ hd02 hx2l
     by_cases hdd : rv.tail.headD 0 = nc.headD 0 ∧ rv2.tail.headD 0 = nc.headD 0
     · rw [ite_eq_right (fun h => h.elim (fun x => x hdd.1) (fun x => x hdd.2))] at hw
       cases h6' : callW p k "nat_op_cod" [vis, c, rv2.tail.tail.headD 0] m5 with
