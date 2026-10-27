@@ -207,7 +207,9 @@ theorem whnfAppRestW_spec (p : Prog) (n : Nat) (s₀ : St) :
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "mk_app", fun s => Triple.step_exec (whnfAppIotaW_spec p n s)] <;>
-    finish [appRestW, apW]
+    -- `(splits := 12)`: the fourteen locals' frame equations of `whnf_app_iota`'s post need one
+    -- more split than the default nine once each read resolves in one step (`L/LocNF.lean`)
+    finish (splits := 12) [appRestW, apW]
 
 theorem getElem_toNat_rdW (a : Array Word) (x : Word) (h : x.toNat < a.size) :
     a[x.toNat]'h = rdW a x := by simp [rdW, h]

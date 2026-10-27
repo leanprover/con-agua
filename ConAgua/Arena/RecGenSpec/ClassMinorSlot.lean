@@ -77,6 +77,9 @@ theorem classMinorSlotGo_spec (p : Prog) (hp : p.lookup "class_minor_slot_go" = 
     intro s₀ off rem j c cc cnt rS rOff rLen
     rw [invoke_eq _ hp]
     simp only [callFn, classMinorSlotGo]
+    -- the model's arm at `rem = 0` as a fact: the model's term occurs only under the `∃` of the
+    -- post, where E-matching does not find it
+    have hb := classMinorSlotGoW_base n s₀.mem off rem j c cc cnt rS rOff rLen
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20)
