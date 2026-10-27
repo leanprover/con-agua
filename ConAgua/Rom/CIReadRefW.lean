@@ -296,10 +296,8 @@ theorem rule_specW (q rr : Word) :
     callW_spec p n "rom_name", callW_spec p n "erec_alloc", callW_spec p n "rci_lvls_to",
     callW_spec p n "rom_exprs_to", callW_spec p n "rom_expr"]
   all_goals subst_vars
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
-    List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_cons_zero, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
   all_goals grind (gen := 30) (instances := 10000) [lang_grind, arena_grind, ruleW, ruleW.ruleTailW, ruleNestW,
     ntBW]
 
@@ -321,10 +319,8 @@ theorem ci_specW (q : Word) :
     callW_spec p n "erec_alloc", callW_spec p n "rci_cv", callW_spec p n "rom_expr", callW_spec p n "rci_caps",
     callW_spec p n "rci_rules_to"]
   all_goals subst_vars
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
-    List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_cons_zero, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
   all_goals grind (gen := 30) (instances := 10000) [lang_grind, arena_grind, ciW, ciTailW, ciDefnW, ciCtorW,
     ciRecW, ciSize, ntBW]
 

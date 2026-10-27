@@ -230,10 +230,9 @@ theorem stringOfListTyOk_spec (p : Prog)
     callW_spec p n "pin_word", callW_spec p n "str_ls1", callW_spec p n "pin_at",
     callW_spec p n "intern_const", callW_spec p n "const_e", callW_spec p n "mk_app", callW_spec p n "e_view"]
   all_goals subst_vars
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
-    List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
+    beq_iff_eq, bne_iff_ne, ne_eq] at *)
   -- depth: `ty` (local 4) reaches the tail through ten frames
   all_goals grind (gen := 20) [lang_grind, arena_grind, solW, slK0, slTailW, slK1, slK2, slK3, slK4, slK5,
     slK6, slK7, slK8, slK9, faEqW_eq, faE]

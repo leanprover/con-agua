@@ -75,9 +75,9 @@ theorem ee_spec (p : Prog) (L : K53Look p) (n : Nat) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
       eftF_spec p L.tmn.tcm.tp.rc n, slCons_specW p L.tmn.tcm.ha L.tmn.tcm.ic L.tmn.tcm.sc n]
     all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
-        Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-        reduceIte, beq_iff_eq] at *)
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq] at *)
     all_goals grind (gen := 10) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 section arms
@@ -99,9 +99,8 @@ theorem tte_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (bso bsl teo t
     simp only [callFn, targetK53Tele]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ee_spec p L n, slEq_spec p L.eq n]
     all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
-        Locals.init_cons_zero, Locals.init_cons_succ, Nat.reduceEqDiff,
-        reduceIte] at *)
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Nat.reduceEqDiff, reduceIte] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 section arms
@@ -160,9 +159,9 @@ theorem tka_spec (p : Prog) (L : K53Look p) (cR : CallM) (hcR : CallSpec p cR) (
     -- `LocEq` unfolded, the callee posts' `s'.loc = …` serve `simp` as rewrites (`*`): the
     -- locals are resolved before `grind`, not by its E-matching through the chain (78 s -> ~5 s).
     all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
-        Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-        reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals grind (gen := 40) (instances := 20000) [lang_grind, arena_grind, ind_grind]
 
 end L.Ind
@@ -241,10 +240,9 @@ theorem tkh_spec (p : Prog) (L : K53Look p) (cR : CallM) (hcR : CallSpec p cR) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, gafF_spec p L.ad n,
       gaaF_spec p L.ad n, eView_spec p L.hv n, tka_spec p L cR hcR n]
     all_goals subst_vars
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
-      List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
-      Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
+      bne_iff_ne, ne_eq] at *)
     all_goals grind (gen := 40) (instances := 20000) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5,
       loc_init6]
 

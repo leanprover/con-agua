@@ -1646,10 +1646,9 @@ theorem classReadSlots_specs (p : Prog) (hP : SlotsProg p) (cR : CallM) (hcR : C
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, eView_spec p hP.v N,
         classReadSlot_spec p hP.toSlotProg cR hcR N, ih2]
       all_goals subst_vars
-      all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
-        List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
-        Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne,
-        ne_eq, decide_eq_true_eq] at *)
+      all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
       all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6,
         loc_init7]
     · rw [invoke_eq _ hP.next]; simp only [callFn, classReadSlotsNext]
@@ -1657,10 +1656,9 @@ theorem classReadSlots_specs (p : Prog) (hP : SlotsProg p) (cR : CallM) (hcR : C
         classReadSlotsSnoc_spec p hP.a hP.c hP.sn hP.msn N, internFVar_spec p hP.ff hP.fp hP.ifv N,
         i1F_spec p hP.hi1 N, slCons_specW p hP.a hP.c hP.sc N, ih1]
       all_goals subst_vars
-      all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
-        List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
-        Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne,
-        ne_eq, decide_eq_true_eq] at *)
+      all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
       all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6,
         loc_init7, loc_init8, loc_init9]
 

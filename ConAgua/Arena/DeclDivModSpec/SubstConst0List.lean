@@ -76,10 +76,9 @@ theorem cg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mo
     hcl n "all_level_params_defined", hcl n "consts_resolve_ffast", callW_spec p n "subst_const_all",
     callW_spec p n "subst_const0_list", callW_spec p n "consts_resolve_all", callW_spec p n "subst_const0"]
   all_goals subst_vars
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
-    List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
+    bne_iff_ne, ne_eq] at *)
   all_goals grind (gen := 30) (instances := 10000) [lang_grind, arena_grind, dmCgW, ntBW]
 
 theorem fuelW_eq : (4000000000 : Word).toNat = coreWalkFuel := rfl
