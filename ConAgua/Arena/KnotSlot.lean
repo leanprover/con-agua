@@ -187,7 +187,7 @@ theorem CoreS.set_in {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         inferC := a.caches.inferC.insert (decE e) (decE x) } } vis fe
       { M with inf := M.inf.insert (decE e, eb) (decE x) } eb ∧ StackKept m m' := by
-  have hf : MemFrame [((99 : ArrId) : TieredArray)] [103] m m' := msetG_frame inSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
+  have hf : MemFrame [(INM : TieredArray)] [103] m m' := msetG_frame inSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   have c := hS.core
   exact hS.set_core hf ⟨c.wc.frame1 hf, c.wk.frame1 hf, c.wh.frame1 hf, c.inf.setE
     (coreSch_wf _ _ (by decide) (by decide)) c.eb1 e x he hx m' hs, c.io.frame1 hf, c.de.frame1 hf,
@@ -201,7 +201,7 @@ theorem CoreS.set_io {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         inferIOC := a.caches.inferIOC.insert (decE e) (decE x) } } vis fe
       { M with io := M.io.insert (decE e, eb) (decE x) } eb ∧ StackKept m m' := by
-  have hf : MemFrame [((100 : ArrId) : TieredArray)] [105] m m' := msetG_frame ioSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
+  have hf : MemFrame [(IOM : TieredArray)] [105] m m' := msetG_frame ioSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   have c := hS.core
   exact hS.set_core hf ⟨c.wc.frame1 hf, c.wk.frame1 hf, c.wh.frame1 hf,
     c.inf.frame1 hf, c.io.setE (coreSch_wf _ _ (by decide) (by decide)) c.eb1 e x he hx m' hs,
@@ -216,7 +216,7 @@ theorem CoreS.set_de {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         defeqC := a.caches.defeqC.insert (decE x, decE y) (decB r) } } vis fe
       { M with de := M.de.insert ((decE x, decE y), eb) (decB r) } eb ∧ StackKept m m' := by
-  have hf : MemFrame [((101 : ArrId) : TieredArray)] [107] m m' := msetG_frame deSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ r hs
+  have hf : MemFrame [(DEM : TieredArray)] [107] m m' := msetG_frame deSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ r hs
   have c := hS.core
   exact hS.set_core hf ⟨c.wc.frame1 hf, c.wk.frame1 hf, c.wh.frame1 hf,
     c.inf.frame1 hf, c.io.frame1 hf, c.de.setD (coreSch_wf _ _ (by decide) (by decide)) c.eb1 x y r
