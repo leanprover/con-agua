@@ -17,6 +17,7 @@ x64 layout can hold meets): then `CapsOK`. The proof is by induction over the li
 namespace L.Checker
 
 open L L.Arena
+open L.Front (DECL DLP)
 open Std.WP
 open scoped Lean.Order
 
