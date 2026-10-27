@@ -157,19 +157,17 @@ theorem MemFrame.above {A : List TieredArray} {C : List Word} {m m' : Mem} (hf :
       simp only [List.mem_map, List.mem_range]
       exact ⟨x.toNat, this, by simp⟩)
 
-theorem not_low_tier (b : Nat) (h : InHigh b) : b ∉ lowTierArrs := by
-  simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map, not_or, not_exists, not_and]
-  exact ⟨by omega, fun y _ e => tier1_ne h.2 e⟩
+theorem not_low_tier (b : TieredArray) (h : InHigh b) : b ∉ lowTierArrs := fun hm =>
+  h.not_storeTier (storeTier_of_mem hm)
 
 theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above64 m m') :
     StateDR m' st :=
-  h.frame hf (not_low_tier _ (by simp [NID])) (not_low_tier _ (by simp [LID]))
-    (not_low_tier _ (by simp [EID])) (not_low_tier _ (by simp [DECL])) (not_low_tier _ (by simp [DLP]))
+  h.frame hf (not_low_tier _ (by decide)) (not_low_tier _ (by decide))
+    (not_low_tier _ (by decide)) (not_low_tier _ (by decide)) (not_low_tier _ (by decide))
     (fun x hx h => by
-      simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false, NID, LID, EID, NIDS, LIDS, EIDS] at h
-      simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at hx
-      rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> rcases hx with hx | ⟨y, hy, hy'⟩ <;>
-        first | (revert hx; decide) | exact absurd hy' ((tier1_ne_t0 _ _))) (fun x hx => by
+      simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at h
+      refine InHigh.not_storeTier ?_ (storeTier_of_mem hx)
+      rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> decide) (fun x hx => by
       simp only [List.mem_map, List.mem_range] at hx
       obtain ⟨n, hn, rfl⟩ := hx
       intro h
@@ -192,8 +190,8 @@ theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m
         (fun b hb => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
           rcases hb with rfl | rfl
-          · exact .inl hA
-          · exact .inr ⟨Nat.le_add_left _ _, Nat.add_lt_add_right hA 256⟩))
+          · exact InStoreTier.of_lt hA
+          · exact InStoreTier.of_tier1 hA))
 
 theorem mkAppW_above {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m')) : Above64 m m' := by
   unfold mkAppW at h; split at h; · cases h
