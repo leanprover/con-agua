@@ -36,6 +36,9 @@ open scoped Lean.Order
 
 namespace L.Arena
 
+-- `grind` sees `(tierA a t).arr` only with this pattern, and needs it for `tierA POOL t ≠ CTL`.
+local grind_pattern tierA_arr => tierA a t
+
 /-! ## Frames and the exponent -/
 
 theorem Agree.trans (p q r : Array Word) (t t' : Nat) (h : Agree p q t') (h' : Agree q r t)

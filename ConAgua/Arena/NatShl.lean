@@ -239,7 +239,7 @@ theorem shl_result_goal (m m0 : Mem) (T11 T12 w L c r top v oa la ob lb : Word)
       pv (vpool (m.set64 (tierA POOL T11) (T12 + (w + L)) c)) top.toNat (w + L + 1).toNat)
     (ih : pv (vpool m) top.toNat (w.toNat + L.toNat) + c.toNat * (wt w.toNat * wt L.toNat) =
       pv (vpool m0) oa.toNat la.toNat * 2 ^ pv (vpool m0) ob.toNat lb.toNat) :
-    pv (vpool ((m.set64 (tierA POOL T11) (T12 + (w + L)) c).set64 1 0 v)) top.toNat r.toNat =
+    pv (vpool ((m.set64 (tierA POOL T11) (T12 + (w + L)) c).set64 CTL 0 v)) top.toNat r.toNat =
       pv (vpool m0) oa.toNat la.toNat * 2 ^ pv (vpool m0) ob.toNat lb.toNat := by
   subst h11 h12 hL
   have hwl' : (w + L).toNat = w.toNat + L.toNat := by
@@ -249,7 +249,7 @@ theorem shl_result_goal (m m0 : Mem) (T11 T12 w L c r top v oa la ob lb : Word)
   have hTwl : (top + (w + L)).toNat = top.toNat + (w.toNat + L.toNat) := by
     rw [UInt64.toNat_add, hwl']; exact Nat.mod_eq_of_lt (by omega)
   have hvs := vpool_size m
-  rw [vpool_set64_ne _ 1 0 v (by decide), htrim, hwl1,
+  rw [vpool_set64_ne _ CTL 0 v (by decide), htrim, hwl1,
     vpool_stidx m top (w + L) c hT hst hs (by omega), hTwl,
     pv_set_succ (vpool m) top.toNat (w.toNat + L.toNat) (w.toNat + L.toNat + 1) _ _ rfl rfl (by omega),
     wt_add w.toNat L.toNat (w.toNat + L.toNat) rfl]

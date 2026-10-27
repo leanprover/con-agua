@@ -36,6 +36,9 @@ open scoped Lean.Order
 
 namespace L.Arena
 
+-- `grind` sees `(tierA a t).arr` only with this pattern, and needs it for `tierA POOL t ≠ CTL`.
+local grind_pattern tierA_arr => tierA a t
+
 /-- Limb `i` of the slice `(o, l)` as a WORD, `0` past its end (`lv`, but not converted to
 `Nat`: `bv` needs to feed it to a word operator `f`). -/
 def lvW (p : Array Word) (o l i : Nat) : Word := if i < l then p[o + i]?.getD 0 else 0
