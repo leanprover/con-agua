@@ -874,7 +874,7 @@ theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
         ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
           strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
           Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
-      Triple.keep hE.no_st8 (strPutEsc_specW p b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n s₁ hm₁ c d)
+      Triple.keep hE.no_st8 (strPutEsc_specW p b hpb hph hp4 hp3 hpsu hpo hpu hpe n s₁ hm₁ c d)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
         internLitStr_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match_str hE.lit_find_str

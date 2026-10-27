@@ -565,6 +565,7 @@ theorem escLoop_step_spec (n : Nat) (s₀ : St) :
       escLoopW b s₀.mem (s₀.loc 2) (s₀.loc 1) (s₀.loc 4) (s₀.loc 3) = some (s'.loc 3, s'.mem); ⊤⦄ :=
   Triple.step_exec (escLoop_spec p b hpb hph hp4 hp3 hps hpo hpu (n + 1) s₀)
 
+omit hb in
 theorem strPutEsc_specW (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
     (hm : s₀.mem.arr8 IN = b) (vs ve : Word) :
     ⦃fun s => s = s₀⦄

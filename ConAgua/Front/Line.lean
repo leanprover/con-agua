@@ -254,7 +254,7 @@ theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
         ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
           strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
           Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
-      Triple.keep hE.no_st8 (strPutEsc_specW p b hb (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3")
+      Triple.keep hE.no_st8 (strPutEsc_specW p b (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3")
         (hS.get "esc_sur") (hS.get "esc_one") (hS.get "utf8_put") (hS.get "str_put_esc") n s₁ hm₁ c d)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
@@ -314,6 +314,7 @@ theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
         applyDLine_spec p hF hDL hpz b hb n] <;>
         finish [applyAnyW, Fld.enc]
 
+omit hps in
 theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
     (hi : i.toNat ≤ b.size) (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) :

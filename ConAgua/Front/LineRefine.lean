@@ -370,7 +370,7 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   apply M.triple_of_run
   intro s r s' hs hrun
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
-    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data hsize n s₀ hm i.toUInt64
+    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data hsize n s₀ hm i.toUInt64
       (by rw [USize.toNat_toUInt64]; exact hi) hR.1.lit.1.2.2.1 hR.1.lit.1.2.2.2.1)
   intro nx hr
   subst hr

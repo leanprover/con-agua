@@ -221,7 +221,7 @@ theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Inv : Mem → 
   have hi' : i.toNat ≤ b.size := by have := L.Scan.lt_of_lt_ofNat hi; omega
   obtain ⟨h1, h2⟩ := hInv _ hI
   have h := Triple.keep hE.no_st8
-    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n s₀ hm i hi' h1 h2)
+    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n s₀ hm i hi' h1 h2)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hW, hk, hl⟩ := M.of_run (P := fun s => s = s₀) hs hrun h

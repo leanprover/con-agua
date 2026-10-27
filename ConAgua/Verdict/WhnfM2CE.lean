@@ -753,6 +753,7 @@ variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM 
   (hPI : ProofIrrelWE p)
 include hp hc hpi hE hcc hnv hPI
 
+omit hpi in
 /-- **`m2c_arms`'s verdicts** are the arm's. -/
 theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -926,7 +927,7 @@ theorem m2cCtorE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
   cases N with
   | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N' =>
-  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cArmsE_ok p hp hc hpi hE hcc hnv hPI N' F
+  refine ErrClaim.of_run_err (fun ce h' => ?_) (m2cArmsE_ok p hp hc hE hcc hnv hPI N' F
     (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ro cvjP _
     _ major hm4 hebm hn32 hmaj rl cvj cnP cnF cvT caps m a M hS hrl hcj er hW')
   simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind']
