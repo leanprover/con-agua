@@ -707,8 +707,8 @@ theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     (hA : ∀ b ∈ A, InStoreTier b)
     (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
     CheckR dn m' a' vis fe :=
-  ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf,
-    hR.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf (.of_lowT hA), hmode⟩
+  ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide)) hf,
+    hR.env.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf, hmode⟩
 
 /-- `scratch_enter()` refines `enterScratch` under `CheckR`. -/
 @[refines ConRon.Arena.enterScratch]
@@ -734,7 +734,7 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
   rw [hst, hm]
   exact hC.of_bracket (C := (0 :: resetCtl) ++ memoCtl)
     (ArenaD.enter _ _ hC.arena hlo h62 c1 c2 c3 c4 hpt)
-    (hC.core.frame (.of_low scrArrs_low (by decide) (by decide))
+    (hC.core.frame (.of_low scrArrs_low (by decide))
       (.of_lt (fun x h => resetCtl_lt x h) (by decide)) (enterMem_frame _))
     (enterMem_frame _) scrArrs_low (fun x h => Nat.lt_trans (resetCtl_lt x h) (by decide)) rfl
     (modeOK_enterMem _ h62)
@@ -760,7 +760,7 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
   have hrf : MemFrame scrArrs (0 :: resetCtl) (flushMem s.mem) (resetMem (preMem (flushMem s.mem)) 0) :=
     resetMemP_frame _ 0
   have hcore : CoreR (resetMem (preMem (flushMem s.mem)) 0) Caches.empty :=
-    (hC.core.flush hfok).frame (.of_low scrArrs_low (by decide) (by decide))
+    (hC.core.flush hfok).frame (.of_low scrArrs_low (by decide))
       (.of_lt (fun x h => resetCtl_lt x (List.mem_append_left _ h)) (by decide)) hrf
   refine ⟨hloc, hok, hC.of_bracket (A := scrArrs) (C := flushCtl ++ (0 :: resetCtl)) hD
     (by rw [hst, hm]; exact hcore) ?_ scrArrs_low ?_ (by rw [hst]) ?_⟩

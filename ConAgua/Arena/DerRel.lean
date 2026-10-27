@@ -150,7 +150,7 @@ theorem DerR.frame (m m' : Mem) (a : AState) (hD : DerR m a)
     f _ (by simp) _ hD.proj⟩
 
 theorem DerR.frameM (A : List TieredArray) (C : List Word) (m m' : Mem) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, (b < 42 ∨ 46 < b) ∧ (b < 298 ∨ 302 < b)) (a : AState) (hD : DerR m a) :
+    (hA : ∀ b ∈ A, b.arr < 42 ∨ 46 < b.arr) (a : AState) (hD : DerR m a) :
     DerR m' a :=
   DerR.frame m m' a hD fun B hB t => by
     rcases tierA_eq_or B t with e | e <;> rw [e] <;>
@@ -480,7 +480,7 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
     (by rw [maxW_eq, maxW_eq, derBW_ok m a hR hD f hf, derBW_ok m a hR hD x hx,
       derFW_ok m a hR hD f hf, derFW_ok m a hR hD x hx, bvar_derApp, fvar_derApp,
       derLW_ok m a hR hD f hf, derLW_ok m a hR hD x hx]; simp only [lpW, lp_derApp, b2w_or]) hP
-  have o := fun B (hB : B ≠ ADER) (hB' : B ≠ tier1 ADER) (hC : B ≠ CTL) =>
+  have o := fun (B : TieredArray) (hB : B ≠ ADER) (hB' : B ≠ tier1 ADER) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, ADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -522,7 +522,7 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
     hres.symm (by rw [maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht, derBW_ok m a hR hD b hb,
       derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
       simp only [lpW, lp_derBind, b2w_or]) hP
-  have o := fun B (hB : B ≠ LADER) (hB' : B ≠ tier1 LADER) (hC : B ≠ CTL) =>
+  have o := fun (B : TieredArray) (hB : B ≠ LADER) (hB' : B ≠ tier1 LADER) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, LADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -566,7 +566,7 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
     hres.symm (by rw [maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht, derBW_ok m a hR hD b hb,
       derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
       simp only [lpW, lp_derBind, b2w_or]) hP
-  have o := fun B (hB : B ≠ FADER) (hB' : B ≠ tier1 FADER) (hC : B ≠ CTL) =>
+  have o := fun (B : TieredArray) (hB : B ≠ FADER) (hB' : B ≠ tier1 FADER) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, FADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -615,7 +615,7 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
       derFW_ok m a hR hD v hv, derFW_ok m a hR hD b hb, bvar_derLet, fvar_derLet,
       derLW_ok m a hR hD t ht, derLW_ok m a hR hD v hv, derLW_ok m a hR hD b hb] <;>
       simp only [lpW, lp_derLet, b2w_or]) hP
-  have o := fun B (hB : B ≠ LEDER) (hB' : B ≠ tier1 LEDER) (hC : B ≠ CTL) =>
+  have o := fun (B : TieredArray) (hB : B ≠ LEDER) (hB' : B ≠ tier1 LEDER) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, LEDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -657,7 +657,7 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
     (hfr.tier PJDER (by simp [tier1, ConsSch.wset, projCS, PJDER, PJREC, PJSLOT]) (by simp [tier1, ConsSch.wset, projCS, PJDER, PJREC, PJSLOT]) (by decide)) hcs
     hres.symm (by rw [derBW_ok m a hR hD e he, derFW_ok m a hR hD e he, bvar_derProj,
       fvar_derProj, derLW_ok m a hR hD e he]; simp only [lpW, lp_derProj]) hP
-  have o := fun B (hB : B ≠ PJDER) (hB' : B ≠ tier1 PJDER) (hC : B ≠ CTL) =>
+  have o := fun (B : TieredArray) (hB : B ≠ PJDER) (hB' : B ≠ tier1 PJDER) (hC : B ≠ CTL) =>
     hfr₂.1 B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -807,12 +807,11 @@ theorem derR_init (m : Mem) : DerR m (AState.init EStore.empty) := by
   exact ⟨e _, e _, e _, e _, e _, e _, e _, e _, e _, e _⟩
 
 /-- **`ArenaD` holds initially.** -/
-theorem arenaD_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[CTL]?.getD 0)
-    (hpool : sizes[POOL]?.getD 0 < 2 ^ 40) (hpool1 : sizes[POOL1]?.getD 0 < 2 ^ 40)
-    (hsz : ∀ b, InStoreTier b →
-      consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 61) :
-    ArenaD (initMem sizes) (AState.init EStore.empty) :=
-  ⟨arenaR_init sizes hlen hctl hpool hpool1 hsz, derR_init _⟩
+theorem arenaD_init (sz : TieredArray → Nat) (hctl : 64 ≤ sz CTL)
+    (hpool : sz POOL < 2 ^ 40) (hpool1 : sz POOL1 < 2 ^ 40)
+    (hsz : ∀ b, InStoreTier b → consMinWords ≤ sz b ∧ sz b < 2 ^ 61) :
+    ArenaD (initMem sz) (AState.init EStore.empty) :=
+  ⟨arenaR_init sz hctl hpool hpool1 hsz, derR_init _⟩
 
 /-! ## Appending to the pool keeps `ArenaD`, and `natAddLit_refinesD` -/
 
