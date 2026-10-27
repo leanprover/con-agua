@@ -49,13 +49,13 @@ theorem Mem.setA_arr (m : Mem) (b c : ArrId) (v : Array Word) :
   by_cases h1 : c = b
   · subst h1
     by_cases h2 : c < m.words.size
-    · simp [h2]
-    · simp [h2]
+    · simp [h2, Mem.HasW]
+    · simp [h2, Mem.HasW]
   · simp [Ne.symm h1, h1]
 
 theorem Mem.setA_words (m : Mem) (b : ArrId) (v : Array Word) :
-    m.SameShape (m.setA b v) := by
-  simp [Mem.setA]
+    m.SameShape (m.setA b v) :=
+  ⟨rfl, by simp [Mem.setA]⟩
 
 theorem Mem.arr64_oob (m : Mem) (b : ArrId) (h : ¬ m.HasW b) : m.arr64 b = #[] := by
   simp [Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_eq_none (Nat.le_of_not_lt h)]
@@ -65,18 +65,18 @@ memory's (out of range both are empty). -/
 theorem Mem.setA_self (m m' : Mem) (b : ArrId) (hw : m.SameShape m') :
     (m.setA b (m'.arr64 b)).arr64 b = m'.arr64 b := by
   rw [Mem.setA_arr]
-  by_cases h : b < m.words.size
+  by_cases h : m.HasW b
   · simp [h]
   · simp only [h, and_false, ↓reduceIte]
-    rw [Mem.arr64_oob m b h, Mem.arr64_oob m' b (hw ▸ h)]
+    rw [Mem.arr64_oob m b h, Mem.arr64_oob m' b (fun h' => h (h'.of_sameShape hw.symm))]
 
 /-! ## `truncList` -/
 
 theorem truncList_words (m₀ : Mem) :
     ∀ (zs : List (ArrId × Fz)) (m : Mem), m.SameShape (truncList m₀ m zs)
-  | [], _ => rfl
+  | [], m => .refl m
   | (_, z) :: zs, m => by
-    rw [truncList, truncList_words m₀ zs]; simp
+    rw [truncList]; exact (Mem.setA_words m z.src _).trans (truncList_words m₀ zs _)
 
 theorem truncList_other (m₀ : Mem) (b : ArrId) :
     ∀ (zs : List (ArrId × Fz)) (m : Mem), (∀ e ∈ zs, e.2.src ≠ b) →
@@ -103,14 +103,14 @@ theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
       have := Mem.setA_arr m z.src z.src ((m₀.arr64 z.src).extract 0 (fzExt m₀ z))
       simp only [Mem.setA] at this
       rw [this]
-      by_cases hz : z.src < m.words.size
+      by_cases hz : m.HasW z.src
       · simp [hz]
       · simp only [hz, and_false, ↓reduceIte]
-        rw [ho _ hz, Mem.arr64_oob m₀ _ (hw ▸ hz)]; simp
-    · refine truncList_mem m₀ x z zs _ e hp.2 (by simp [hw]) (fun b hb => ?_)
+        rw [ho _ hz, Mem.arr64_oob m₀ _ (fun h' => hz (h'.of_sameShape hw))]; simp
+    · refine truncList_mem m₀ x z zs _ e hp.2 (hw.trans (Mem.setA_words m z'.src _)) (fun b hb => ?_)
+      have hb' : ¬ m.HasW b := fun h' => hb (h'.of_sameShape (Mem.setA_words m z'.src _))
       have := Mem.setA_arr m z'.src b ((m₀.arr64 z'.src).extract 0 (fzExt m₀ z'))
-      simp only [Mem.setA] at this hb
-      have hb' : ¬ m.HasW b := by simpa using hb
+      simp only [Mem.setA] at this
       rw [this, ite_eq_right (fun (hc : b = z'.src ∧ m.HasW z'.src) => hb' (hc.1 ▸ hc.2))]
       exact ho b hb'
 
@@ -146,7 +146,7 @@ theorem truncFrozen_ctl (m : Mem) : (truncFrozen m).arr64 CTL = m.arr64 CTL :=
 /-- **A frozen array is its prefix up to its extent.** -/
 theorem truncFrozen_mem (m : Mem) {x : ArrId} {z : Fz} (h : (x, z) ∈ frozen.drop 1) :
     (truncFrozen m).arr64 z.src = (m.arr64 z.src).extract 0 (fzExt m z) :=
-  truncList_mem m x z _ m h frozen_pairwise rfl (fun _ _ => rfl)
+  truncList_mem m x z _ m h frozen_pairwise (.refl m) (fun _ _ => rfl)
 
 theorem frozen_drop1 : frozen.drop 1 =
     [(POOL, ⟨POOL, fzCtl 0⟩)] ++

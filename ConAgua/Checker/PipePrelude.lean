@@ -92,10 +92,10 @@ theorem setIn_arr8_zero (m : Mem) (x : Array UInt8) (h : m.HasB IN) : (m.setIn x
   simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, show 0 < m.bytes.size from h]
 
 theorem setIn_frame (m : Mem) (x : Array UInt8) : MemFrame [] [] m (m.setIn x) :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, Mem.setIn_size m x, rfl⟩
 
 theorem setIn_frame' (m : Mem) (x : Array UInt8) : MemFrame [] [] (m.setIn x) m :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, (Mem.setIn_size m x).symm, rfl⟩
 
 theorem preIn_eq : preIn = preludeText.data := by
   simp only [preIn, preludeBytes_eq, Array.toArray_toList]
