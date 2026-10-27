@@ -203,7 +203,7 @@ theorem rule_spec (n : Nat) (s₀ : St) (q rp : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         nameGet_spec p hL.decl.expr.front n, exprGet_spec p hL.decl.expr n] <;>
-        finish [ruleW, ruleM, lkW, = TieredArray.mk.injEq]
+        finish [ruleW, ruleM, lkW]
 
 theorem rulesGo_spec (n : Nat) : ∀ (s₀ : St) (lo o l j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_rules_go" [lo, o, l, j]
@@ -245,7 +245,7 @@ theorem type_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (t : Word) :
       fun s₁ k => Triple.keep hL.decl.expr.no_st8 (dindAlloc_spec p hI n s₁ k)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        ha, cv_spec p hL hI b hb n, caps_spec p hI n] <;> finish [typeW, = TieredArray.mk.injEq]
+        ha, cv_spec p hL hI b hb n, caps_spec p hI n] <;> finish [typeW]
 
 include hb in
 theorem ctorR_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (c : Word) :
@@ -262,7 +262,7 @@ theorem ctorR_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (c : Word) 
       fun s₁ k => Triple.keep hL.decl.expr.no_st8 (dindAlloc_spec p hI n s₁ k)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        ha, cv_spec p hL hI b hb n] <;> finish [ctorRW, = TieredArray.mk.injEq]
+        ha, cv_spec p hL hI b hb n] <;> finish [ctorRW]
 
 include hb in
 theorem recR_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (r : Word) :
@@ -284,7 +284,7 @@ theorem recR_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (r : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         ha, hr, cv_spec p hL hI b hb n] <;>
-        finish [recRW, recTailM, = TieredArray.mk.injEq]
+        finish [recRW, recTailM]
 
 include hb in
 theorem instTypes_spec (n : Nat) : ∀ (s₀ : St), s₀.mem.arr8 IN = b → ∀ (bo to tn j : Word),

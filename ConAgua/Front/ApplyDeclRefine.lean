@@ -28,7 +28,7 @@ namespace L.Front
 
 /-! ## Array writes -/
 
-theorem arr_set64 (m : Mem) (a : ArrId) (i v : Word) (j : Nat) :
+theorem arr_set64 (m : Mem) (a : TieredArray) (i v : Word) (j : Nat) :
     ((m.set64 a i v).arr64 a)[j]? =
       if i.toNat = j ∧ j < (m.arr64 a).size then some v else (m.arr64 a)[j]? := by
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
@@ -40,7 +40,7 @@ theorem arr_set64 (m : Mem) (a : ArrId) (i v : Word) (j : Nat) :
   · simp [h]
 
 theorem MemFrame.set64' {A : List TieredArray} {C : List Word} {m m₁ : Mem} (h : MemFrame A C m m₁)
-    (a : ArrId) (ha : a ≠ CTL) (hA : a ∈ A) (i v : Word) : MemFrame A C m (m₁.set64 a i v) :=
+    (a : TieredArray) (ha : a ≠ CTL) (hA : a ∈ A) (i v : Word) : MemFrame A C m (m₁.set64 a i v) :=
   h.trans ((MemFrame.set64 m₁ a ha i v).mono (by simpa using hA) (by simp))
 
 /-! ## `lp_put`'s copy loop -/
@@ -84,7 +84,7 @@ theorem lpLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
     have hlt' := UInt64.lt_iff_toNat_lt.mp hlt
     rw [hlen, htc] at hlt'
     have hc1 : (cnt + 1).toNat = cnt.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hP : ∀ B, B ≠ DLP →
+    have hP : ∀ B : TieredArray, B ≠ DLP →
         (m.set64 DLP (1 + top + cnt) (tblW m NID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))).arr64 B =
           m.arr64 B := fun B hB => Mem.arr64_set64_ne _ _ _ _ _ hB
     obtain ⟨i1, i2, i3, i4, i5, i6, i7⟩ := ih m' h
@@ -330,7 +330,7 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
   have hxs : itemsN b.data (f.lps + 1) = listN b.data f.lps := rfl
   rw [hxs] at F1 F5 F6
   have hmap := mapM_name m st hD.names _ _ hcl F6
-  have hP1 : ∀ B, B ≠ DLP → B ≠ CTL → m₁.arr64 B = m.arr64 B := fun B hB hC =>
+  have hP1 : ∀ B : TieredArray, B ≠ DLP → B ≠ CTL → m₁.arr64 B = m.arr64 B := fun B hB hC =>
     F2.1 B (by simpa using hB) hC
   -- the value
   let e : EIdx := decI (tblW m EID f.value)
@@ -373,7 +373,7 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
   · -- `StateDR`
     have hf : MemFrame [DLP, DECL] [] m m' :=
       (F2.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))
-    have hfr : ∀ B, B ≠ DLP → B ≠ DECL → B ≠ CTL → m'.arr64 B = m.arr64 B :=
+    have hfr : ∀ B : TieredArray, B ≠ DLP → B ≠ DECL → B ≠ CTL → m'.arr64 B = m.arr64 B :=
       fun B h1 h2 h3 => hf.1 B (by simp [h1, h2]) h3
     have htc : (rdW (m.arr64 DLP) 0 + lsCntN b.data (f.lps + 1) 0).toNat =
         (rdW (m.arr64 DLP) 0).toNat + (lsCntN b.data (f.lps + 1) 0).toNat := by
