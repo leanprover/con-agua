@@ -524,3 +524,28 @@ tree.
   `tier1_ne_t0`/`t0_ne_tier1`. The `x < 256` arguments are gone.
 
 ### 9.2 Journal
+
+* **Day 1.** I merged master into P and renamed `TArr` to `TieredArray`. L core, `Layout`, and the
+  compiler up to `compile_correct` built within the first hour. The fallout came in layers: first
+  the Arena core (Pool, SlotGrow, the store library, ConsLibSpec), which blocked about 1 190
+  modules, then the store instances, ArenaRel and Tiers, then the walks. Helpers worked by module
+  group (Final/ABI; Nat ops; the cons-table library and store instances; later Promote/Level/Rom,
+  Ind/Rec, Front/Whnf/DefEq). They merged nothing but the lane branch; the lane merged theirs.
+* **What the fallout was made of**, in decreasing frequency:
+  * binders `(a : ArrId)` of set64/arr64 lemmas that must be `TieredArray`;
+  * range hypotheses (`< 256`, `Tier1In`, `AvoidA 385 388`) that separated tiers by number, now
+    dropped, or stated on `b.arr`;
+  * `x ∈ A` with `x : ArrId`, which needs `(x : TieredArray) ∈ A`;
+  * long list literals mixing names and `tier1 X`. Lean elaborates long list literals in pieces,
+    without the element type, so these are written as `tier0s […] ++ tier1s […]`;
+  * `(List.range 388).filter p` write sets, now filters of `checkerWordArrays`;
+  * `grind` failing on array disequalities (see 9.1).
+  Some proofs got faster after a rewrite to the `vcgen` + `simp only … at *` + `grind` recipe:
+  NatArms 231 s (failing) → 6 s, NatBits ≈ 270 s (failing) → 10 s, ConsLibSpec ≈ 5 min (failing)
+  → 13 s.
+* `thrS` (the thread's read set) was a 388-bit mask over array numbers. It is now
+  `a != HDRF && a != CTLF && (frozenIdsL.contains a || parOwnedL.contains a)`. `phaseBPa` and the
+  store predicates (`loopPa`, `leafPa`, `stepPa`, `coreErecPa`) read the table
+  (`checkerWordArrays.contains a`) instead of `a < 388`. `wordArrays` (388) is gone, and
+  `ArrCheck` checks the table against the compiler's layout (`checkerTab.dom64`/`dom8`) instead of
+  an extent.

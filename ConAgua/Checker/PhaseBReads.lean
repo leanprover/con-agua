@@ -115,9 +115,7 @@ def phaseBFns : List FnName :=
    "ws_find", "ws_go", "ws_node", "ws_put", "wscoped_bfast", "zero_find", "zero_push"]
 
 /-- The word arrays phase B may name: all but the frozen buffer's (`OUT`, `HDRF`, `CTLF`). -/
-def phaseBPa (a : ArrId) : Bool := a != 240 && a != 241 && a != 242
-
-theorem phaseBPa_frozen : OUT = 240 ∧ HDRF = 241 ∧ CTLF = 242 := ⟨rfl, rfl, rfl⟩
+def phaseBPa (a : TieredArray) : Bool := a != OUT && a != HDRF && a != CTLF
 
 /-- `phaseBFns` as a tree of name codes. -/
 names_tree phaseBTree : phaseBFns
@@ -128,8 +126,7 @@ prog_all checkerProg_phaseBReadsChk : checkerProg (rdChk phaseBPa (fun _ => fals
 /-- **Phase B's read set**: the call closure of `check_pending_go` names only word arrays other
 than `OUT`, `HDRF`, `CTLF`, no byte array, and calls only into itself. -/
 theorem checkerProg_phaseBReads :
-    readsIn checkerProg (fun a => a != 240 && a != 241 && a != 242) (fun _ => false) phaseBFns =
-      true :=
+    readsIn checkerProg phaseBPa (fun _ => false) phaseBFns = true :=
   readsIn_of_all phaseBTree.eq checkerProg_phaseBReadsChk
 
 theorem check_pending_go_mem_phaseBFns : "check_pending_go" ∈ phaseBFns :=

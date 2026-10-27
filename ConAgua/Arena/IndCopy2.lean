@@ -36,7 +36,7 @@ theorem wrIW_frame : ∀ (ws : List Word) (m : Mem) (q : Word), MemFrame [IW] [2
     (MemFrame.mono (MemFrame.set64 m IW (by decide) q x) (by simp) (by simp)).trans
       (wrIW_frame ws _ _)
 
-theorem wrIW_arr_ne : ∀ (ws : List Word) (m : Mem) (q : Word) (b : ArrId), b ≠ IW →
+theorem wrIW_arr_ne : ∀ (ws : List Word) (m : Mem) (q : Word) (b : TieredArray), b ≠ ↑IW →
     (wrIW m q ws).arr64 b = m.arr64 b
   | [], m, q, b, hb => rfl
   | x :: ws, m, q, b, hb => by
@@ -84,7 +84,7 @@ theorem iwGrow_of_frame {m m' : Mem} {N : Word} (hf : MemFrame [IW] [200] m m')
   · intro i _; rw [hf.1 EREC (by decide) (by decide)]
 
 /-- A copy that touches only `IW` is a frame. -/
-theorem memFrame_of_copy {m m' : Mem} (hA : ∀ b, b ≠ IW → m'.arr64 b = m.arr64 b)
+theorem memFrame_of_copy {m m' : Mem} (hA : ∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b)
     (hS : (m'.arr64 IW).size = (m.arr64 IW).size) (hW : m.SameShape m') :
     MemFrame [IW] [] m m' := by
   refine ⟨fun b hb hc => hA b (by simpa using hb), fun x _ => ?_, fun b => ?_, hW⟩
@@ -221,7 +221,7 @@ theorem set64IW_get (m : Mem) (p x : Word) (i : Nat) :
   · simp [hi, Ne.symm hi]
 
 /-- A copy into `IW` (touching nothing else) is a frame. -/
-theorem copy_frame {m m' : Mem} (hA : ∀ b, b ≠ IW → m'.arr64 b = m.arr64 b)
+theorem copy_frame {m m' : Mem} (hA : ∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b)
     (hS : (m'.arr64 IW).size = (m.arr64 IW).size) (hW : m.SameShape m') :
     MemFrame [IW] [200] m m' :=
   MemFrame.mono (memFrame_of_copy hA hS hW) (by simp) (by simp)
@@ -523,7 +523,7 @@ destination holding the `EREC` source, the rest of `IW` unchanged. -/
 theorem erCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d s l = some m' →
     s.toNat + l.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
     d.toNat + l.toNat ≤ (m.arr64 IW).size → (m.arr64 IW).size < 2 ^ 64 →
-    (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
+    (∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
     m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat then (m.arr64 EREC)[s.toNat + (i - d.toNat)]?

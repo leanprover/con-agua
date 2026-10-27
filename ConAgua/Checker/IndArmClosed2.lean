@@ -29,7 +29,7 @@ prog_all checkerProg_armCidChk : checkerProg (wsChk CTL
 
 names_tree armRcHbTree : armRcHbFns
 prog_all checkerProg_armRcHbChk : checkerProg (wsChk CTL
-  (tA fun b => decide (b ∉ [NOM, DPM, RAM, RFM, TAM]))
+  (tA fun b => decide (b ∉ ([NOM, DPM, RAM, RFM, TAM] : List TieredArray)))
   (tC fun c => decide (c ∉ [204, 206, 208, 210, 212, 213, 218, 219])) armRcHbTree)
 
 end L.Checker

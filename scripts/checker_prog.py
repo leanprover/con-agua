@@ -223,9 +223,6 @@ def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1
 
 #guard checkerTab == Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
 
--- the word arrays are the ones `cap_check` checks
-#guard (Prog.arrs checkerProg).2 == wordArrays
-
 end L.Checker
 '''
 
