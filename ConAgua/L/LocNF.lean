@@ -26,9 +26,12 @@ The two simprocs here resolve such a read in one step, by walking the chain in `
 * `L.reduceLocMem`: `St.mem s` skips the `setLoc`/`setLocs` layers of `s` (a literal state gives
   its memory).
 
-Both are `dsimproc`s (the result is definitionally equal: no proof term, the kernel unfolds the
-chain once) and run before the subterms are simplified (`↓`), so a read is resolved before the
-chain's values are visited. They are registered for `seval`, the simproc set of `grind`'s
+Each step of the walk is one of the lemmas below, instantiated by hand, and the proof is their
+chain of `Eq.trans`; the literal comparisons are `Nat.beq` facts proved by `rfl`. (A `dsimproc`,
+whose result the kernel has to see as definitionally equal on its own, sends the kernel unfolding
+the values instead of the chain: deep recursion in `FVarRange`, `Walk`, `RomExpr`.) The simprocs
+run before the subterms are simplified (`↓`), so a read is resolved before the chain's values are
+visited. They are registered for `seval`, the simproc set of `grind`'s
 normalizer, so `grind`, `finish` and `sym … => vcgen … <;> finish` resolve every read when they
 internalize it, instead of instantiating `St.setLoc_loc` once per layer. `simp`, `simp_all` and
 `simp only` use them when they are listed (`simp only [L.reduceLoc, L.reduceLocMem, …]`); they
@@ -43,88 +46,196 @@ literal locals, and the left sides of the general equations (`St.setLoc_mem`, `S
 
 namespace L.LocNF
 
+/-! ## The steps of the walk -/
+
+theorem loc_setLoc_eq (s : St) (x y : Var) (v : Word) (h : Nat.beq y x = true) :
+    (s.setLoc x v).loc y = v := by
+  simp [St.setLoc, Nat.eq_of_beq_eq_true h]
+
+theorem loc_setLoc_ne (s : St) (x y : Var) (v : Word) (h : Nat.beq y x = false) :
+    (s.setLoc x v).loc y = s.loc y := by
+  simp [St.setLoc, Nat.ne_of_beq_eq_false h]
+
+theorem loc_setLocs_nil (s : St) (vs : List Word) (y : Var) : (s.setLocs [] vs).loc y = s.loc y :=
+  rfl
+
+theorem loc_setLocs_cons_cons (s : St) (x : Var) (xs : List Var) (v : Word) (vs : List Word)
+    (y : Var) : (s.setLocs (x :: xs) (v :: vs)).loc y = ((s.setLoc x v).setLocs xs vs).loc y :=
+  rfl
+
+theorem loc_setLocs_cons_nil (s : St) (x : Var) (xs : List Var) (y : Var) :
+    (s.setLocs (x :: xs) []).loc y = ((s.setLoc x 0).setLocs xs []).loc y :=
+  rfl
+
+theorem loc_setLocs_cons (s : St) (x : Var) (xs : List Var) (vs : List Word) (y : Var) :
+    (s.setLocs (x :: xs) vs).loc y = ((s.setLoc x (vs.headD 0)).setLocs xs vs.tail).loc y :=
+  rfl
+
+theorem loc_setG (s : St) (g : GVar) (v : Word) (y : Var) : (s.setG g v).loc y = s.loc y := rfl
+
+theorem loc_mk (m : Mem) (l : Locals) (y : Var) : (St.mk m l).loc y = l y := rfl
+
+theorem init_nil (y : Var) : Locals.init [] y = 0 := by simp [Locals.init]
+
+theorem init_cons_zero (v : Word) (vs : List Word) (y : Var) (h : y = 0) :
+    Locals.init (v :: vs) y = v := by
+  subst h; rfl
+
+theorem init_cons_succ (v : Word) (vs : List Word) (y z : Var) (h : y = z + 1) :
+    Locals.init (v :: vs) y = Locals.init vs z := by
+  subst h; rfl
+
+theorem mem_setLoc (s : St) (x : Var) (v : Word) : (s.setLoc x v).mem = s.mem := rfl
+
+theorem mem_setLocs (s : St) (xs : List Var) (vs : List Word) : (s.setLocs xs vs).mem = s.mem := by
+  induction xs generalizing s vs with
+  | nil => rfl
+  | cons x xs ih => exact (ih _ _).trans (mem_setLoc _ _ _)
+
+theorem mem_mk (m : Mem) (l : Locals) : (St.mk m l).mem = m := rfl
+
+/-! ## The walks -/
+
 open Lean Meta
 
-/-- `xs[i]` of a literal list, `0 : Word` past its end. -/
-meta def entryOr0 (vs : Array Lean.Expr) (i : Nat) : Lean.Expr :=
-  vs[i]?.getD (toExpr (0 : Word))
-
-/-- `(vs.tail^i).headD 0`: entry `i` of a list of words `vs`, `0` past its end. -/
-meta def entryOf (vs : Lean.Expr) (i : Nat) : MetaM Lean.Expr := do
-  if let some l ← getListLit? vs then return entryOr0 l i
-  let mut l := vs
-  for _ in [0:i] do l := mkApp2 (mkConst ``List.tail [.zero]) (mkConst ``Word) l
-  return mkApp3 (mkConst ``List.headD [.zero]) (mkConst ``Word) l (toExpr (0 : Word))
-
-/-- `Locals.init vs y` for a literal list `vs`: its entry, `0` past the end. -/
-meta def initRead (l : Lean.Expr) (y : Nat) : MetaM (Option Lean.Expr) := do
-  let_expr Locals.init vs := l | return none
-  let some vs ← getListLit? vs | return none
-  return some (entryOr0 vs y)
-
-/-- The value of local `y` in state `s`, read through the writes at the top of `s`: `none` if
-there is no write to skip and nothing to resolve. -/
-meta partial def locRead (s : Lean.Expr) (y : Nat) : MetaM (Option Lean.Expr) := do
-  let below (s' : Lean.Expr) : MetaM (Option Lean.Expr) := do
-    return some ((← locRead s' y).getD (mkApp2 (mkConst ``St.loc) s' (mkNatLit y)))
-  match_expr s with
-  | St.setLoc s' x v =>
-    let some xv ← getNatValue? x | return none
-    if xv == y then return some v else below s'
-  | St.setLocs s' xs vs =>
-    let some xs ← getListLit? xs | return none
-    let mut last : Option Nat := none
-    for i in [0:xs.size] do
-      let some xv ← getNatValue? xs[i]! | return none
-      if xv == y then last := some i
-    match last with
-    | some i => return some (← entryOf vs i)
-    | none => below s'
-  | St.setG s' _ _ => below s'
-  | St.mk _ l => return some ((← initRead l y).getD (mkApp l (mkNatLit y)))
-  | _ => return none
+/-- `p₁ : a = b` then `p₂ : b = c` (either may be missing: `b` and `c` are then the same). -/
+meta def trans? (p₁ : Lean.Expr) (p₂? : Option Lean.Expr) : MetaM Lean.Expr := do
+  match p₂? with
+  | some p₂ => mkEqTrans p₁ p₂
+  | none => return p₁
 
 /-- Whether `xs` is a literal list of literal locals. -/
 meta def litVars (xs : Lean.Expr) : MetaM Bool := do
   let some xs ← getListLit? xs | return false
   xs.allM fun x => return (← getNatValue? x).isSome
 
-/-- The state below the writes to literal locals at the top of `s`. -/
-meta partial def memBase (s : Lean.Expr) : MetaM Lean.Expr := do
+/-- `Locals.init vs y` for a literal `y` and a literal list `vs`: the entry and a proof. -/
+meta partial def initRead (vs yE : Lean.Expr) (y : Nat) : MetaM (Option (Lean.Expr × Lean.Expr)) := do
+  match_expr vs with
+  | List.nil _ => return some (toExpr (0 : Word), mkApp (mkConst ``init_nil) yE)
+  | List.cons _ v vs' =>
+    if y == 0 then
+      return some (v, mkApp4 (mkConst ``init_cons_zero) v vs' yE (← mkEqRefl yE))
+    else
+      let zE := mkNatLit (y - 1)
+      let p := mkApp5 (mkConst ``init_cons_succ) v vs' yE zE (← mkEqRefl yE)
+      match ← initRead vs' zE (y - 1) with
+      | some (r, q) => return some (r, ← mkEqTrans p q)
+      | none => return some (mkApp2 (mkConst ``Locals.init) vs' zE, p)
+  | _ => return none
+
+/-- The value of local `y` (the literal `yE`) in state `s`, read through the writes at the top of
+`s`, with a proof of `s.loc yE = value`; `none` if there is no write to step through. -/
+meta partial def locRead (s yE : Lean.Expr) (y : Nat) : MetaM (Option (Lean.Expr × Lean.Expr)) := do
+  -- one step `p : s.loc yE = s'.loc yE`, then on through `s'`
+  let next (p s' : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.Expr)) := do
+    match ← locRead s' yE y with
+    | some (r, q) => return some (r, ← mkEqTrans p q)
+    | none => return some (mkApp2 (mkConst ``St.loc) s' yE, p)
   match_expr s with
-  | St.setLoc s' x _ => if (← getNatValue? x).isSome then memBase s' else return s
-  | St.setLocs s' xs _ => if ← litVars xs then memBase s' else return s
-  | _ => return s
+  | St.setLoc s' x v =>
+    let some xv ← getNatValue? x | return none
+    if xv == y then
+      return some (v, mkApp5 (mkConst ``loc_setLoc_eq) s' x yE v (mkApp2 (mkConst ``Eq.refl [1])
+        (mkConst ``Bool) (mkConst ``Bool.true)))
+    else
+      next (mkApp5 (mkConst ``loc_setLoc_ne) s' x yE v (mkApp2 (mkConst ``Eq.refl [1])
+        (mkConst ``Bool) (mkConst ``Bool.false))) s'
+  | St.setLocs s' xs vs =>
+    unless ← litVars xs do return none
+    match_expr xs with
+    | List.nil _ => next (mkApp3 (mkConst ``loc_setLocs_nil) s' vs yE) s'
+    | List.cons _ x xs' =>
+      match_expr vs with
+      | List.cons _ v vs' =>
+        next (mkApp6 (mkConst ``loc_setLocs_cons_cons) s' x xs' v vs' yE)
+          (mkApp3 (mkConst ``St.setLocs) (mkApp3 (mkConst ``St.setLoc) s' x v) xs' vs')
+      | List.nil _ =>
+        next (mkApp4 (mkConst ``loc_setLocs_cons_nil) s' x xs' yE)
+          (mkApp3 (mkConst ``St.setLocs) (mkApp3 (mkConst ``St.setLoc) s' x (toExpr (0 : Word))) xs' vs)
+      | _ =>
+        let hd := mkApp3 (mkConst ``List.headD [.zero]) (mkConst ``Word) vs (toExpr (0 : Word))
+        let tl := mkApp2 (mkConst ``List.tail [.zero]) (mkConst ``Word) vs
+        next (mkApp5 (mkConst ``loc_setLocs_cons) s' x xs' vs yE)
+          (mkApp3 (mkConst ``St.setLocs) (mkApp3 (mkConst ``St.setLoc) s' x hd) xs' tl)
+    | _ => return none
+  | St.setG s' g v => next (mkApp4 (mkConst ``loc_setG) s' g v yE) s'
+  | St.mk m l =>
+    let p := mkApp3 (mkConst ``loc_mk) m l yE
+    match_expr l with
+    | Locals.init vs =>
+      if (← getListLit? vs).isNone then return some (mkApp l yE, p)
+      match ← initRead vs yE y with
+      | some (r, q) => return some (r, ← mkEqTrans p q)
+      | none => return some (mkApp l yE, p)
+    | _ => return some ((mkApp l yE).headBeta, p)
+  | _ => return none
+
+/-- `s.mem` through the writes to literal locals at the top of `s`: the state below them, with a
+proof of `s.mem = base.mem` (`none`: no such write). -/
+meta partial def memRead (s : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.Expr)) := do
+  let next (p s' : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.Expr)) := do
+    match ← memRead s' with
+    | some (r, q) => return some (r, ← mkEqTrans p q)
+    | none => return some (mkApp (mkConst ``St.mem) s', p)
+  match_expr s with
+  | St.setLoc s' x v =>
+    if (← getNatValue? x).isSome then next (mkApp3 (mkConst ``mem_setLoc) s' x v) s' else return none
+  | St.setLocs s' xs vs =>
+    if ← litVars xs then next (mkApp3 (mkConst ``mem_setLocs) s' xs vs) s' else return none
+  | St.mk m l => return some (m, mkApp2 (mkConst ``mem_mk) m l)
+  | _ => return none
 
 end L.LocNF
 
-open Lean Meta in
+namespace L.LocNF
+open Lean Meta Simp
+
+/-- `s.loc y` for a literal `y`, through the writes at the top of `s`. -/
+meta def locProc : Simproc := fun e => do
+  let_expr St.loc s y ← e | return .continue
+  let some yv ← getNatValue? y | return .continue
+  match ← locRead s y yv with
+  | some (r, p) => return .visit { expr := r, proof? := some p }
+  | none => return .continue
+
+/-- `Locals.init vs y` for a literal `y` and a literal list `vs`. A literal list only: the general
+equations (`Locals.init_cons_zero`, a `grind` pattern) keep their left sides. -/
+meta def initProc : Simproc := fun e => do
+  let_expr Locals.init vs y ← e | return .continue
+  let some yv ← getNatValue? y | return .continue
+  if (← getListLit? vs).isNone then return .continue
+  match ← initRead vs y yv with
+  | some (r, p) => return .visit { expr := r, proof? := some p }
+  | none => return .continue
+
+/-- `s.mem` through the writes to literal locals at the top of `s`. -/
+meta def memProc : Simproc := fun e => do
+  let_expr St.mem s ← e | return .continue
+  match ← memRead s with
+  | some (r, p) => return .visit { expr := r, proof? := some p }
+  | none => return .continue
+
+end L.LocNF
+
+/-! Each runs before the subterms are simplified (a read is resolved before the chain's values are
+visited) and again after (a read that appears only once a subterm is simplified, such as
+`(x, s).snd.loc 5`). -/
+
 /-- A read of a local through a chain of writes, in one step (see the module doc). -/
-dsimproc ↓ [seval] L.reduceLoc (L.St.loc _ _) := fun e => do
-  let_expr L.St.loc s y ← e | return .continue
-  let some yv ← getNatValue? y | return .continue
-  match ← L.LocNF.locRead s yv with
-  | some r => return .visit r
-  | none => return .continue
+simproc ↓ [seval] L.reduceLoc (L.St.loc _ _) := L.LocNF.locProc
+/-- `L.reduceLoc`, after the subterms. -/
+simproc [seval] L.reduceLocPost (L.St.loc _ _) := L.LocNF.locProc
 
-open Lean Meta in
 /-- A read of a local of a literal frame, `Locals.init [a, b, …] k`. -/
-dsimproc ↓ [seval] L.reduceLocalsInit (L.Locals.init _ _) := fun e => do
-  let_expr L.Locals.init vs y ← e | return .continue
-  let some yv ← getNatValue? y | return .continue
-  match ← L.LocNF.initRead (mkApp (mkConst ``L.Locals.init) vs) yv with
-  | some r => return .visit r
-  | none => return .continue
+simproc ↓ [seval] L.reduceLocalsInit (L.Locals.init _ _) := L.LocNF.initProc
+/-- `L.reduceLocalsInit`, after the subterms. -/
+simproc [seval] L.reduceLocalsInitPost (L.Locals.init _ _) := L.LocNF.initProc
 
-open Lean Meta in
 /-- The memory of a state behind writes to locals, in one step. -/
-dsimproc ↓ [seval] L.reduceLocMem (L.St.mem _) := fun e => do
-  let_expr L.St.mem s ← e | return .continue
-  let b ← L.LocNF.memBase s
-  if b == s then return .continue
-  match_expr b with
-  | L.St.mk m _ => return .visit m
-  | _ => return .visit (mkApp (mkConst ``L.St.mem) b)
+simproc ↓ [seval] L.reduceLocMem (L.St.mem _) := L.LocNF.memProc
+/-- `L.reduceLocMem`, after the subterms. -/
+simproc [seval] L.reduceLocMemPost (L.St.mem _) := L.LocNF.memProc
 
 /-! Checks. -/
 
