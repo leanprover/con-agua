@@ -71,7 +71,7 @@ theorem installFoldGo_start {p : Prog} {pins : List INatOpPinSet} {ds : Array ID
     (hD : DeclsF (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) ds) (hPS : L.Rom.PinSetsR s₀.mem pins)
     (hiw : L.Ind.IWOK s₀.mem) (hz : LoopZero s₀.mem) (hpin : pinW s₀.mem 0 ≠ 0)
     (hE : (s₀.mem.arr64 EREC).size < 2 ^ 63) (hS : (s₀.mem.arr64 SPN).size < 2 ^ 63)
-    (hB : (s₀.mem.arr64 145).size < 2 ^ 63) (hmode : ModeOK s₀.mem) :
+    (hB : (s₀.mem.arr64 BSTK).size < 2 ^ 63) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_fold_go" [0, cnt, 0]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (a' : AState),
       installFold .verified pins (0, mkIFEnv IEnv.empty, #[]) ds.toList a = .ok (.ok (ds.size, fe, pend), a') ∧

@@ -34,7 +34,7 @@ structure TwinOK (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (fe
   erec : (m.arr64 EREC).size < 2 ^ 63
   spn : (m.arr64 SPN).size < 2 ^ 63
   memos : CoreMemos m
-  bstk : (m.arr64 145).size < 2 ^ 63
+  bstk : (m.arr64 BSTK).size < 2 ^ 63
   /-- Stored levels read back (`StoreDen.lean`). -/
   den : StoreDen dn m a fe
 
