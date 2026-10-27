@@ -737,8 +737,9 @@ theorem callsGo_spec (n : Nat) : ∀ (s₀ : St) (g x wso wsl fvso fvsl pvo pvl 
     intro s₀ g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i
     rw [invoke_eq _ h.cg]
     simp only [callFn, classGenRuleCallsGo]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
       call1_spec p h n, slCons_specW p h.alloc h.copy h.cons n, ih]
+    all_goals subst_vars
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
       BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
       decide_eq_true_eq] at *)

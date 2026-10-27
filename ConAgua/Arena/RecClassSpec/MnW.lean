@@ -2,6 +2,7 @@ import ConAgua.Arena.RecClassSpec.ClassGenRecTy
 import ConAgua.Arena.RecClassSpec.MnProg
 import ConAgua.Arena.RecClassSpec.PdWAfr
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -159,8 +160,9 @@ theorem classGenMinorTyIhsGo_spec (n : Nat) : ∀ (s₀ : St) (g x d nF wso wsl 
     intro s₀ g x d nF wso wsl fvso fvsl i l
     rw [invoke_eq _ h.isg]
     simp only [callFn, classGenMinorTyIhsGo]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
       classGenMinorTyIh1_spec p h n, slCons_specW p h.alloc h.copy h.cons n, ih]
+    all_goals subst_vars
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
       BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
       decide_eq_true_eq] at *)
