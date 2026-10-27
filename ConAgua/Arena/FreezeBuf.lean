@@ -238,6 +238,7 @@ theorem bufMem_arr (B : Array Word) (r : Mem) (j : Word) (b : ArrId) :
       (match frozenIdsL.idxOf? b with
        | some i => bufImg B i
        | none => if parOwnedL.contains b then r.arr64 b else #[]) else #[] := by
+  unfold Mem.HasW
   by_cases h : b < r.words.size
   · simp only [bufMem, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map,
       Array.getElem?_range, h, ↓reduceIte, Option.map_some, Option.getD_some]
@@ -287,7 +288,7 @@ theorem owned_facts {b : ArrId} (hb : b ∈ parOwnedL) :
 /-- **A frozen array (not the header or the seed) of the thread's memory** is the buffer's image. -/
 theorem bufMem_frozen (B : Array Word) (r : Mem) (j : Word) {k : Nat} (hk : k < frozen.length)
     (h1 : 1 ≤ k) : (bufMem B r j).arr64 frozen[k].1 =
-      if frozen[k].1 < r.words.size then bufImg B (k + 1) else #[] := by
+      if r.HasW frozen[k].1 then bufImg B (k + 1) else #[] := by
   rw [bufMem_arr, (frozen_facts hk h1).1]
 
 /-- **An owned array of the thread's memory** is the region's. -/
@@ -312,7 +313,7 @@ theorem bufMem_ctl (B : Array Word) (r : Mem) (j : Word) :
   bufMem_owned B r j (by decide)
 
 theorem bufMem_words (B : Array Word) (r : Mem) (j : Word) :
-    r.SameShape (bufMem B r j) := by simp [bufMem]
+    r.SameShape (bufMem B r j) := by simp [Mem.SameShape, bufMem]
 
 /-- `freshCtl` word by word. -/
 theorem getD_freshCtl (c : Array Word) (k : Nat) :

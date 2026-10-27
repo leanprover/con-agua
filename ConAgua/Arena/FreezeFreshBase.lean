@@ -75,7 +75,7 @@ theorem ctlCut_arr (t : Mem) (b : ArrId) :
   rw [ctlCut, Mem.setA_arr]
   by_cases hb : b = CTL
   · subst hb
-    by_cases hs : CTL < t.words.size
+    by_cases hs : t.HasW CTL
     · simp [hs]
     · simp only [hs, and_false, ↓reduceIte]
       rw [Mem.arr64_oob t CTL hs, freshCtl_empty]
@@ -100,7 +100,7 @@ theorem ctlCut_frame (t : Mem) : MemFrame [] (hiC (t.arr64 CTL).size) t (ctlCut 
 /-! ## The fresh memory -/
 
 theorem freshMem_words (m : Mem) : (truncFrozen m).SameShape (freshMem m) := by
-  simp [freshMem]
+  simp [Mem.SameShape, freshMem]
 
 theorem freshMem_arr (m : Mem) (b : ArrId) : (freshMem m).arr64 b =
     if b = CTL then freshCtl ((truncFrozen m).arr64 CTL)
@@ -115,7 +115,7 @@ theorem freshMem_arr (m : Mem) (b : ArrId) : (freshMem m).arr64 b =
     rw [e]
   · have ho : ∀ c, ¬ (truncFrozen m).HasW c → (truncFrozen m).arr64 c = #[] :=
       fun c hc => Mem.arr64_oob _ c hc
-    rw [Mem.arr64_oob _ b (by rw [freshMem_words]; exact h)]
+    rw [Mem.arr64_oob _ b (fun h' => h (h'.of_sameShape (freshMem_words m).symm))]
     split
     · rename_i hb; subst hb; rw [ho _ h, freshCtl_empty]
     · split
@@ -263,7 +263,7 @@ theorem rTrans_pool0 (hF : RFrame S R hs)
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]
     exact Mem.setA_self m m' _ hw
-  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
+  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _ (hw1.symm.trans hw)
   have eo : ∀ b, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => h2 h.1), Mem.setA_arr, ite_eq_right (fun h => h1 h.1)]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by

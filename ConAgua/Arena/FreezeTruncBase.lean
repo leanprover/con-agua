@@ -54,8 +54,8 @@ theorem Mem.setA_arr (m : Mem) (b c : ArrId) (v : Array Word) :
   · simp [Ne.symm h1, h1]
 
 theorem Mem.setA_words (m : Mem) (b : ArrId) (v : Array Word) :
-    m.SameShape (m.setA b v) :=
-  ⟨rfl, by simp [Mem.setA]⟩
+    m.SameShape (m.setA b v) := by
+  simp [Mem.SameShape, Mem.setA]
 
 theorem Mem.arr64_oob (m : Mem) (b : ArrId) (h : ¬ m.HasW b) : m.arr64 b = #[] := by
   simp [Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_eq_none (Nat.le_of_not_lt h)]
