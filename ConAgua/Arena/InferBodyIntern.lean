@@ -99,8 +99,7 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
     hf.2.1 136 (fun h => by have := hC _ h; simp at this)
   refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; omega)
-      (fun x hx => .inl (by have := hC x hx; omega)) hf
-      (fun b hb => by have := hA b hb; omega), ?_, ?_, ?_,
+      (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
       hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
