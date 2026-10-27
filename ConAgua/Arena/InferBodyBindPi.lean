@@ -16,81 +16,13 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-/-! ## `infer_pis_leaf`: the outward fold as a named block -/
-
-/-- The outward loop of `inferPisLeafL` (Infer.lean), named for its spec. -/
-def pisOutW : Stmt := lblk (mode, vis, d, t, k, fo, lo, ob, bt, v, n, r) {
-  while n != 0 {
-    n -= 1;
-    v := call intern_imax(BSTK.u64[lo + n], v)
-  }
-}
-
-/-- `inferPisLeafL`, with its outward loop spliced from `pisOutW`. -/
--- con-ron: none — `inferPisLeafL` itself (`rfl`), its loop a named block for the proof
-def inferPisLeafL' : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, v, n, r) {
-  ob := call inst_list(t, fo, k, 0);
-  bt := call infer(mode, vis, d + k, ob);
-  v := call ensure_sort(mode, vis, d + k, bt);
-  n := k;
-  ⟪pisOutW⟫;
-  r := call intern_sort(v);
-  return r
-}
-
-theorem inferPisLeafL_eq : inferPisLeafL = inferPisLeafL' := rfl
-
-/-- **The model of the outward `imax` fold** at L fuel `k`. -/
-def pisOut (p : Prog) : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | k + 1, m, lo, n, v =>
-    if n ≠ 0 then
-      match callW p k "intern_imax" [rdW (m.arr64 BSTK) (lo + (n - 1)), v] m with
-      | none => none
-      | some (r₁, m₁) => pisOut p k m₁ lo (n - 1) (r₁.headD 0)
-    else some (v, m)
-
-theorem pisOutW_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n pisOutW
-    ⦃fun r s' => r = .normal ∧
-      pisOut p n s₀.mem (s₀.loc 6) (s₀.loc 10) (s₀.loc 9) = some (s'.loc 9, s'.mem); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := pisOutW) rfl]
-    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ih,
-      callW_spec p n "intern_imax"] <;>
-    simp_all [pisOut, Cmp.eval, LocEq, BinOp.eval, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-      St.setLocs_nil]
-
-/-- **The model of `infer_pis_leaf`.** -/
-def pisLeafK (p : Prog) (n : Nat) (m : Mem) (mode vis d t k fo lo : Word) : Option (Word × Mem) :=
-  match callW p n "inst_list" [t, fo, k, 0] m with
-  | none => none
-  | some (r₁, m₁) =>
-    match callW p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with
-    | none => none
-    | some (r₂, m₂) =>
-      match callW p n "ensure_sort" [mode, vis, d + k, r₂.headD 0] m₂ with
-      | none => none
-      | some (r₃, m₃) =>
-        match pisOut p (n + 1) m₃ lo k (r₃.headD 0) with
-        | none => none
-        | some (v, m₄) => call1W p n "intern_sort" [v] m₄
-
-theorem inferPisLeaf_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St)
-    (mode vis d t k fo lo : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_pis_leaf" [mode, vis, d, t, k, fo, lo]
-    ⦃fun r s' => LocEq s' s₀ ∧ pisLeafK p n s₀.mem mode vis d t k fo lo = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.pisLeaf, inferPisLeafL_eq]
-  simp only [callFn, inferPisLeafL']
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (pisOutW_spec p (n + 1) s), callW_spec p n "inst_list",
-      callW_spec p n "infer", callW_spec p n "ensure_sort", callW_spec p n "intern_sort"] <;>
-  simp_all [pisLeafK, call1W, LocEq, BinOp.eval, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
+/-- **`infer_pis_leaf` is its model `inferPisLeafW`** (generated), its outward fold the loop
+`inferPisLeafW.loop1`. -/
+l_model inferPisLeaf_spec (p : Prog) (hq : BindProg p)
+  fns [hq.pisLeaf ↦ inferPisLeafW]
+  specs [callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "ensure_sort",
+    callW_spec p n "intern_imax", callW_spec p n "intern_sort"]
+  grind [arena_grind] simp []
 
 /-! ## `infer_pis_leaf` refines `inferPisLeaf` -/
 
@@ -107,25 +39,26 @@ theorem pisOut_ref (p : Prog) (hb : InferBodyProg p) (hcap : BStkCap) (dn : NIdx
       (∀ (i : Nat) (h : i < ws.size), lvNodeW m ws[i] ≠ []) →
       BStkR m lo K ws → n.toNat ≤ K.toNat →
       lo.toNat + K.toNat ≤ (bTop m).toNat →
-      ∀ w mF, pisOut p k m lo n v = some (w, mF) →
+      ∀ w mF, inferPisLeafW.loop1 p k m lo v n = some (w, mF) →
       CoreRef (inferPisOut (ws.map decI) n.toNat (decI v)) a decLv dn m vis fe M eb [w] mF ∧
         BKept m mF ∧
         ∃ l, denoteL (AM.st (inferPisOut (ws.map decI) n.toNat (decI v)) a).store.ls (decI w) = some l := by
   intro k
   induction k with
-  | zero => intro m a M n v _ _ _ _ _ _ _ w mF h; simp [pisOut] at h
+  | zero => intro m a M n v _ _ _ _ _ _ _ w mF h; simp [inferPisLeafW.loop1] at h
   | succ k ih =>
     intro m a M n v hS hv hdv hwl hB hnK htop w mF h
     by_cases hn : n = 0
     · subst hn
-      simp only [pisOut, ne_eq, not_true_eq_false, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at h
+      rw [inferPisLeafW.loop1.arm2 _ _ _ _ _ _ rfl] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hrun : (inferPisOut (ws.map decI) (0 : Word).toNat (decI v)).run a = .ok (decI v, a) := by
         rw [inferPisOut]; rfl
       obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
       exact ⟨⟨hok, by rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, by rw [hres]; rfl,
         hv⟩, BKept.refl _, by rw [hst]; exact hdv⟩
-    simp only [pisOut, hn, ne_eq, not_false_eq_true, ↓reduceIte] at h
+    rw [inferPisLeafW.loop1.arm1 _ _ _ _ _ _ hn] at h
     have hn1 := sub1_toNat hn
     have hn0' : n.toNat ≠ 0 := fun h' => hn (UInt64.toNat_inj.mp (by simpa using h'))
     have hjK : (n - 1).toNat < ws.size := by rw [hB.size, hn1]; omega
@@ -136,10 +69,10 @@ theorem pisOut_ref (p : Prog) (hb : InferBodyProg p) (hcap : BStkCap) (dn : NIdx
       obtain ⟨vv, hvv⟩ := L.Ind.lview_of_lvNodeW hS.arena.1 hwj (hwsj ▸ hwl _ hjK)
       exact hS.den.lvlAll _ (by show (a.store.lss.ls.view _).isSome = true; rw [hvv]; rfl)
     cases h1 : callW p k "intern_imax" [rdW (m.arr64 BSTK) (lo + (n - 1)), v] m with
-    | none => rw [h1] at h; cases h
+    | none => rw [h1, inferPisLeafW.k_intern_imax.none] at h; cases h
     | some q =>
     obtain ⟨r₁, m₁⟩ := q
-    rw [h1] at h; dsimp only at h
+    rw [h1, inferPisLeafW.k_intern_imax.arm1] at h
     obtain ⟨s₁, hs₁, -, him⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (internImax_spec p hb.imf hb.imp hb.imi k _ _ v) h1
     rw [hs₁] at him
@@ -198,31 +131,31 @@ theorem inferPisLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferPisLeaf_spec p hq n s₀ mode vis d t k fo lo)
+    (inferPisLeaf_spec p hq (n + 1) s₀ mode vis d t k fo lo)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
-  unfold pisLeafK at hW
+  rw [inferPisLeafW.arm1] at hW
   cases h1 : callW p n "inst_list" [t, fo, k, 0] s.mem with
-  | none => rw [h1] at hW; cases hW
+  | none => rw [h1, inferPisLeafW.k_inst_list.none] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  rw [h1] at hW; dsimp only at hW
+  rw [h1, inferPisLeafW.k_inst_list.arm1] at hW
   cases h2 : callW p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with
-  | none => rw [h2] at hW; cases hW
+  | none => rw [h2, inferPisLeafW.k_infer.none] at hW; cases hW
   | some q =>
   obtain ⟨r₂, m₂⟩ := q
-  rw [h2] at hW; dsimp only at hW
+  rw [h2, inferPisLeafW.k_infer.arm1] at hW
   cases h3 : callW p n "ensure_sort" [mode, vis, d + k, r₂.headD 0] m₂ with
-  | none => rw [h3] at hW; cases hW
+  | none => rw [h3, inferPisLeafW.k_ensure_sort.none] at hW; cases hW
   | some q =>
   obtain ⟨r₃, m₃⟩ := q
-  rw [h3] at hW; dsimp only at hW
-  cases h4 : pisOut p (n + 1) m₃ lo k (r₃.headD 0) with
-  | none => rw [h4] at hW; cases hW
+  rw [h3, inferPisLeafW.k_ensure_sort.arm1] at hW
+  cases h4 : inferPisLeafW.loop1 p (n + 1) m₃ lo (r₃.headD 0) k with
+  | none => rw [h4, inferPisLeafW.k_loop1.none] at hW; cases hW
   | some q =>
   obtain ⟨v, m₄⟩ := q
-  rw [h4] at hW; dsimp only at hW
+  rw [h4, inferPisLeafW.k_loop1.arm1] at hW
   have hsz := hcap _ _ _ _ _ _ _ hS
   have h₁ := CoreSpec.of_callW (hil n s a₀ dn vis fe M eb t fo k 0 fvs hS ht hf hftop) h1
   have hK₁ := h₁.2.1.bkept
@@ -264,117 +197,12 @@ theorem inferPisLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
     (fun s₀ => internSort_spec p hb.sof hb.sop hb.soi n s₀ v) hW
   exact internSort_core hS₄ v h₄.2.2.2 r hso h₄'.2.2
 
-/-! ## `infer_pis`: the peel loop as a named block -/
-
-/-- The peel loop of `inferPisL` (Infer.lean), named for its spec. -/
-def pisW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, tty, w, u, fv, r) {
-  while peel != 0 && t >> 28 == 6 {
-    s := ⟦t⟧.tier;
-    i := ⟦t⟧.idx;
-    if s != 0 && CTL.u64[1] == 0 { abort };
-    if FORALL⟨s⟩.count <= i { abort };
-    ty := FORALL⟨s, i⟩.ty;
-    body := FORALL⟨s, i⟩.b;
-    tyo := call inst_list(ty, fo, k, 0);
-    tty := call infer(mode, vis, d + k, tyo);
-    w := call whnf(mode, vis, d + k, tty);
-    if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
-    s := ⟦w⟧.tier;
-    i := ⟦w⟧.idx;
-    if s != 0 && CTL.u64[1] == 0 { abort };
-    if SORT⟨s⟩.count <= i { abort };
-    u := SORT⟨s, i⟩.u;
-    fv := call intern_fvar(d + k, tyo);
-    if len(SPN.u64) <= fo + k { abort };
-    if len(BSTK.u64) <= lo + k { abort };
-    SPN.u64[fo + k] := fv;
-    BSTK.u64[lo + k] := u;
-    k += 1;
-    CTL.u64[136] := fo + k;
-    CTL.u64[137] := lo + k;
-    peel -= 1;
-    t := body
-  }
-}
-
-/-- `inferPisL`, with its loop spliced from `pisW`. -/
--- con-ron: none — `inferPisL` itself (`rfl`), its loop a named block for the proof
-def inferPisL' : FunDecl :=
-    lfn (mode, vis, d, peel, t, k, fo, lo) locals (s, i, ty, body, tyo, tty, w, u, fv, r) {
-  ⟪pisW⟫;
-  r := call infer_pis_leaf(mode, vis, d, t, k, fo, lo);
-  return r
-}
-
-theorem inferPisL_eq : inferPisL = inferPisL' := rfl
-
-/-- **The model of the ∀ peel loop** at L fuel `n`: the exit's `(t, k, memory)`. -/
-def pisLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (Word × Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, mode, vis, d, peel, t, k, fo, lo =>
-    if peel ≠ 0 ∧ t >>> 28 = 6 then
-      if tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if tcnt m FORALL (tierW t) ≤ idxW t then none
-      else
-        match callW p n "inst_list" [tfld m FORALL (tierW t) (idxW t) 0, fo, k, 0] m with
-        | none => none
-        | some (r₁, m₁) =>
-          match callW p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with
-          | none => none
-          | some (r₂, m₂) =>
-            match callW p n "whnf" [mode, vis, d + k, r₂.headD 0] m₂ with
-            | none => none
-            | some (r₃, m₃) =>
-              if r₃.headD 0 >>> 28 ≠ 2 then none
-              else if tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0 then none
-              else if tcnt m₃ SORT (tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0) then none
-              else
-                match callW p n "intern_fvar" [d + k, r₁.headD 0] m₃ with
-                | none => none
-                | some (r₄, m₄) =>
-                  if tPushOK m₄ fo lo k then
-                    pisLoop p n (tPush m₄ fo lo k (r₄.headD 0)
-                        (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0)) mode vis d
-                      (peel - 1) (tfld m FORALL (tierW t) (idxW t) 1) (k + 1) fo lo
-                  else none
-    else some (t, k, m)
-
-theorem pisW_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n pisW
-    ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
-      s'.loc 6 = s₀.loc 6 ∧ s'.loc 7 = s₀.loc 7 ∧
-      pisLoop p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
-        (s₀.loc 6) (s₀.loc 7) = some (s'.loc 4, s'.loc 5, s'.mem); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := pisW) rfl]
-    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec, ih,
-      callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "whnf",
-      callW_spec p n "intern_fvar", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-    simp_all [pisLoop, tPush, tPushOK, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, Mem.arr64_set64_ne]
-
-/-- **The model of `infer_pis`.** -/
-def pisFull (p : Prog) (n k : Nat) (m : Mem) (mode vis d peel t kk fo lo : Word) : Option (Word × Mem) :=
-  match pisLoop p k m mode vis d peel t kk fo lo with
-  | none => none
-  | some (t', k', m') => call1W p n "infer_pis_leaf" [mode, vis, d, t', k', fo, lo] m'
-
-theorem inferPis_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St)
-    (mode vis d peel t k fo lo : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_pis" [mode, vis, d, peel, t, k, fo, lo]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      pisFull p n (n + 1) s₀.mem mode vis d peel t k fo lo = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.pis, inferPisL_eq]
-  simp only [callFn, inferPisL']
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (pisW_spec p (n + 1) s), callW_spec p n "infer_pis_leaf"] <;>
-  simp_all [pisFull, call1W, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
+/-- **`infer_pis` is its model `inferPisW`** (generated), its peel loop `inferPisW.loop1`. -/
+l_model inferPis_spec (p : Prog) (hq : BindProg p)
+  fns [hq.pis ↦ inferPisW]
+  specs [callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "whnf",
+    callW_spec p n "intern_fvar", callW_spec p n "infer_pis_leaf"]
+  grind [arena_grind] extra [ld64_rdW_spec, st64_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [tierW, idxW, tfld]
 
 /-- `infer_pis_leaf` at every L fuel up to `n + 1`. -/
 theorem inferPisLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
@@ -397,14 +225,38 @@ theorem inferPisLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb
       inferPisLeaf_refines p hp hq hb hil hcap n (hk.mono (by omega)) F (by omega) (by omega)
         s₀ a₀ dn vis fe M eb mode d t k fo lo fvs ws hs ht hf hftop hB hbtop hws hwl hdk
 
+/-- A store bound from the L code's length check. -/
+theorem pis_lt_of_not_len64_le {m : Mem} {a : ArrId} {x : Word} (hsz : (m.arr64 a).size < 2 ^ 63)
+    (h : ¬ m.len64 a ≤ x) : x.toNat < (m.arr64 a).size := by
+  have h' := UInt64.not_le.mp h
+  rw [UInt64.lt_iff_toNat_lt, Mem.len64, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at h'
+  exact h'
+
+/-- `CTL[137]` (the binder top) is a word of the control array. -/
+theorem pis_ctl137 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {m : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb) :
+    137 < (m.arr64 CTL).size := by
+  obtain ⟨mp, h⟩ := hS.memos.2.2.2.2.1
+  unfold MemoRG MemoRV at h
+  have := h.1
+  simp only at this
+  have e : (156 : Word).toNat = 156 := rfl
+  omega
+
+/-- The guards of a telescope step's pushes from the L code's length checks and `CoreS`. -/
+theorem pis_tPushOK_of {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {m : Mem} {a : AState} {fo lo k : Word} (hS : CoreS dn m a vis fe M eb)
+    (h1 : ¬ m.len64 SPN ≤ fo + k) (h2 : ¬ m.len64 BSTK ≤ lo + k) : tPushOK m fo lo k := by
+  exact ⟨h1, h2, pis_lt_of_not_len64_le hS.spn h1, pis_lt_of_not_len64_le hS.bstk h2, pis_ctl137 hS⟩
+
 /-- **The ∀ peel loop with its leaf refines `inferPis`** by induction on the loop fuel. -/
 theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
     (hil : InstListOK p) (hcap : BStkCap)
     (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hFN : N ≤ F) (hN : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode d fo lo eb : Word)
     (hmode : mode < 4) (heb : eb = (mode >>> 1) &&& 1) (m₀ : Mem) :
-    ∀ j, j ≤ N + 1 → ∀ (m : Mem) (a : AState) (M : ModeMaps) (peel t k : Word) (fvs : Array EIdx)
-      (ws : Array Word),
+    ∀ j, j ≤ N + 1 → ∀ (m : Mem) (a : AState) (M : ModeMaps) (peel t k ty0 u0 : Word)
+      (fvs : Array EIdx) (ws : Array Word),
       CoreS dn m a vis fe M eb → HW t → SpineR m fo k fvs → spTop m = fo + k →
       BStkR m lo k ws → bTop m = lo + k → (∀ (i : Nat) (h : i < ws.size), HW ws[i]) →
       (∀ (i : Nat) (h : i < ws.size), lvNodeW m ws[i] ≠ []) →
@@ -412,15 +264,18 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       (∀ j, j < fo → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
       (∀ j, j < lo → rdW (m.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j) →
       (m.arr64 BSTK).size = (m₀.arr64 BSTK).size → PoolGrew m₀ m →
-      ∀ w mF, pisFull p N j m mode vis d peel t k fo lo = some (w, mF) →
+      ∀ w mF, inferPisW.k_loop1 p N mode vis d fo lo
+        (inferPisW.loop1 p j m mode vis d peel t k fo lo ty0 u0) = some (w, mF) →
       TelPost dn vis fe M eb m₀ fo lo a
         (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
           (ws.map decI)) w mF := by
   intro j
   induction j with
-  | zero => intro _ m a M peel t k fvs ws _ _ _ _ _ _ _ _ _ _ _ _ _ _ w mF hF; simp [pisFull, pisLoop] at hF
+  | zero =>
+    intro _ m a M peel t k ty0 u0 fvs ws _ _ _ _ _ _ _ _ _ _ _ _ _ _ w mF hF
+    rw [inferPisW.loop1.eq_1, inferPisW.k_loop1.none] at hF; cases hF
   | succ j ih =>
-    intro hjN m a M peel t k fvs ws hS ht hf htop hB hbt hws hwl hdk hb0 hsz hbb0 hbsz0 hpg0 w mF hF
+    intro hjN m a M peel t k ty0 u0 fvs ws hS ht hf htop hB hbt hws hwl hdk hb0 hsz hbb0 hbsz0 hpg0 w mF hF
     have hspn := hS.spn
     have hcp := hcap _ _ _ _ _ _ _ hS
     have hfb := hf.bound
@@ -455,40 +310,50 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
     by_cases hc : peel ≠ 0 ∧ t >>> 28 = 6
     · obtain ⟨hp0, ht6⟩ := hc
       have hc1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun g => by
-        simp only [pisFull, pisLoop, hp0, ht6, g, ↓reduceIte, ne_eq, not_false_eq_true, reduceCtorEq, and_self] at hF
+        rw [inferPisW.loop1.abort1 (hc1 := ⟨hp0, ht6⟩) (hc2 := g), inferPisW.k_loop1.none] at hF
+        cases hF
       have hc2 : ¬ tcnt m FORALL (tierW t) ≤ idxW t := fun g => by
-        simp only [pisFull, pisLoop, hp0, ht6, hc1, g, ↓reduceIte, ne_eq, not_false_eq_true, reduceCtorEq, and_self] at hF
+        rw [inferPisW.loop1.abort2 (hc1 := ⟨hp0, ht6⟩) (hc2 := hc1) (hc3 := g),
+          inferPisW.k_loop1.none] at hF
+        cases hF
       have hv : viewOK m t FORALL := ⟨hc1, UInt64.not_le.mp hc2⟩
       obtain ⟨-, hty, hbody⟩ := view_forall m a hS.arena.1 t ht hv ht6
       have hvb := viewBind_forall m a hS.arena.1 t ht hv ht6
+      rw [inferPisW.loop1.arm1 (hc1 := ⟨hp0, ht6⟩) (hc2 := hc1) (hc3 := hc2)] at hF
       cases h1 : callW p j "inst_list" [tfld m FORALL (tierW t) (idxW t) 0, fo, k, 0] m with
-      | none => simp only [pisFull, pisLoop, hp0, ht6, hc1, hc2, h1, ↓reduceIte, ne_eq, not_false_eq_true, reduceCtorEq, and_self] at hF
+      | none => rw [h1, inferPisW.k_inst_list.none, inferPisW.k_loop1.none] at hF; cases hF
       | some q =>
       obtain ⟨r₁, m₁⟩ := q
+      rw [h1, inferPisW.k_inst_list.arm1] at hF
       cases h2 : callW p j "infer" [mode, vis, d + k, r₁.headD 0] m₁ with
-      | none => simp only [pisFull, pisLoop, hp0, ht6, hc1, hc2, h1, h2, ↓reduceIte, ne_eq, not_false_eq_true, reduceCtorEq, and_self] at hF
+      | none => rw [h2, inferPisW.k_infer.none, inferPisW.k_loop1.none] at hF; cases hF
       | some q =>
       obtain ⟨r₂, m₂⟩ := q
+      rw [h2, inferPisW.k_infer.arm1] at hF
       cases h3 : callW p j "whnf" [mode, vis, d + k, r₂.headD 0] m₂ with
-      | none => simp only [pisFull, pisLoop, hp0, ht6, hc1, hc2, h1, h2, h3, ↓reduceIte, ne_eq, not_false_eq_true, reduceCtorEq, and_self] at hF
+      | none => rw [h3, inferPisW.k_whnf.none, inferPisW.k_loop1.none] at hF; cases hF
       | some q =>
       obtain ⟨r₃, m₃⟩ := q
+      rw [h3] at hF
       have g1 : r₃.headD 0 >>> 28 = 2 := Classical.byContradiction fun g => by
-        simp only [pisFull, pisLoop, hp0, ht6, hc1, hc2, h1, h2, h3, g, ↓reduceIte, ne_eq, not_false_eq_true, reduceCtorEq, and_self] at hF
+        rw [inferPisW.k_whnf.abort1 (hc1 := g), inferPisW.k_loop1.none] at hF; cases hF
       have gs1 : ¬ (tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0) := fun g => by
-        simp only [pisFull, pisLoop, hp0, ht6, hc1, hc2, h1, h2, h3, g1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, and_self] at hF
+        rw [inferPisW.k_whnf.abort2 (hc1 := g1) (hc2 := g), inferPisW.k_loop1.none] at hF; cases hF
       have gs2 : ¬ tcnt m₃ SORT (tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0) := fun g => by
-        simp only [pisFull, pisLoop, hp0, ht6, hc1, hc2, h1, h2, h3, g1, gs1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, and_self] at hF
+        rw [inferPisW.k_whnf.abort3 (hc1 := g1) (hc2 := gs1) (hc3 := g), inferPisW.k_loop1.none] at hF
+        cases hF
+      rw [inferPisW.k_whnf.arm1 (hc1 := g1) (hc2 := gs1) (hc3 := gs2)] at hF
       cases h4 : callW p j "intern_fvar" [d + k, r₁.headD 0] m₃ with
-      | none => simp only [pisFull, pisLoop, hp0, ht6, hc1, hc2, h1, h2, h3, g1, gs1, gs2, h4, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, and_self] at hF
+      | none => rw [h4, inferPisW.k_intern_fvar.none, inferPisW.k_loop1.none] at hF; cases hF
       | some q =>
       obtain ⟨r₄, m₄⟩ := q
-      have g2 : tPushOK m₄ fo lo k := Classical.byContradiction fun g => by
-        simp only [pisFull, pisLoop, hp0, ht6, hc1, hc2, h1, h2, h3, g1, gs1, gs2, h4, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, and_self] at hF
-      have hF' : pisFull p N j (tPush m₄ fo lo k (r₄.headD 0)
-          (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0)) mode vis d (peel - 1)
-          (tfld m FORALL (tierW t) (idxW t) 1) (k + 1) fo lo = some (w, mF) := by
-        simpa only [pisFull, pisLoop, hp0, ht6, hc1, hc2, h1, h2, h3, g1, gs1, gs2, h4, g2, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] using hF
+      rw [h4] at hF
+      have e1 : ¬ m₄.len64 SPN ≤ fo + k := fun g => by
+        rw [inferPisW.k_intern_fvar.abort1 (hc1 := g), inferPisW.k_loop1.none] at hF; cases hF
+      have e2 : ¬ m₄.len64 BSTK ≤ lo + k := fun g => by
+        rw [inferPisW.k_intern_fvar.abort2 (hc1 := e1) (hc2 := g), inferPisW.k_loop1.none] at hF
+        cases hF
+      rw [inferPisW.k_intern_fvar.arm1 (hc1 := e1) (hc2 := e2)] at hF
       have h0 : (0 : Word).toNat = 0 := rfl
       -- the domain opened
       have hinst := hil j ⟨m, Locals.init []⟩ a dn vis fe M eb _ fo k 0 fvs hS hty hf hftop
@@ -527,6 +392,13 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
         have hi' : i < bTop m := by
           rw [hbt, UInt64.lt_iff_toNat_lt, haddl]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
         exact (hBK.2.2 i hi').trans (hbb0 i hi)
+      have g2 : tPushOK m₄ fo lo k := pis_tPushOK_of hS₄ e1 e2
+      have hF' : inferPisW.k_loop1 p N mode vis d fo lo
+          (inferPisW.loop1 p j (tPush m₄ fo lo k (r₄.headD 0)
+            (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0)) mode vis d (peel - 1)
+            (tfld m FORALL (tierW t) (idxW t) 1) (k + 1) fo lo
+            (tfld m FORALL (tierW t) (idxW t) 0)
+            (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0)) = some (w, mF) := hF
       obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', hbszT, hbbT, hpgT⟩ := tPush_step (m₀ := m₀) hS₄
         (by rw [hBK.2.1]; exact hcp) hf₄ hB4 hb₄ (hSt14.size.trans hsz) g2 hrw4
       obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₃ _ hS₃.arena.1 (r₃.headD 0) hrw3 ⟨gs1, UInt64.not_le.mp gs2⟩ g1
@@ -552,7 +424,7 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       have hk1 : (k + 1).toNat = k.toNat + 1 := addW _ _ (by simp; omega)
       have hp0' : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h'))
       obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hb'', hsz'', hbb'', hbsz'', hpg''⟩ := ih (by omega)
-        _ _ M₄ (peel - 1) _ (k + 1) _ _ hS' hbody hf' htop' hB' hbt' hws' hwl' (by rw [hk1, hpeel1]; omega)
+        _ _ M₄ (peel - 1) _ (k + 1) _ _ _ _ hS' hbody hf' htop' hB' hbt' hws' hwl' (by rw [hk1, hpeel1]; omega)
         hb' hsz' (fun i hi => (hbbT i hi).trans (hbb₄ i hi)) (hbszT.trans (hBK.2.1.trans hbsz0))
         ((hpg0.trans hSt14.pool).trans hpgT) w mF hF'
       refine ⟨x, a', ?_, hx, hrw, M', hS'', hK₁.trans (hK₂.trans (hK₃.trans (hK₄.trans hK))), hb'',
@@ -576,9 +448,7 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       rw [AM.run_of_ok _ _ hok4, except_ok_bind, hres4, hk1, hpeel1, hp', Nat.add_sub_cancel,
         Array.map_push]
     · -- the exit
-      have hL : pisLoop p (j + 1) m mode vis d peel t k fo lo = some (t, k, m) := by
-        simp only [pisLoop, hc, ↓reduceIte]
-      simp only [pisFull, hL] at hF
+      rw [inferPisW.loop1.arm2 (hc1 := hc), inferPisW.k_loop1.arm1] at hF
       refine hexit ?_ hF
       by_cases hp0 : peel = 0
       · subst hp0; rfl
@@ -614,56 +484,22 @@ theorem inferPis_tel (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferPis_spec p hq n s₀ mode vis d peel t k fo lo)
+    (inferPis_spec p hq (n + 1) s₀ mode vis d peel t k fo lo)
   subst hs0
   exact ⟨hloc, pisFull_ref p hp hq hb hil hcap n hk F hF hn dn vis fe mode d fo lo eb hs.mode4
-    hs.eb_mode m₀ (n + 1) (Nat.le_refl _) s.mem a₀ M peel t k fvs ws hs.rel ht hf htop hB hbt hws hwl hdk
-    hb0 hsz hbb0 hbsz0 hpg0 _ _ hW⟩
+    hs.eb_mode m₀ (n + 1) (Nat.le_refl _) s.mem a₀ M peel t k 0 0 fvs ws hs.rel ht hf htop hB hbt hws hwl hdk
+    hb0 hsz hbb0 hbsz0 hpg0 _ _ (by rw [inferPisW.arm1] at hW; exact hW)⟩
 
 
 /-! ## `infer_forall` -/
 
-/-- **The model of `infer_forall`.** -/
-def faTK (p : Prog) (n : Nat) (m : Mem) (mode vis d ty body : Word) : Option (Word × Mem) :=
-  if d >>> 63 ≠ 0 then none
-  else match callW p n "infer" [mode, vis, d, ty] m with
-  | none => none
-  | some (r₁, m₁) =>
-    match callW p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with
-    | none => none
-    | some (r₂, m₂) =>
-      if r₂.headD 0 >>> 28 ≠ 2 then none
-      else if tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0 then none
-      else if tcnt m₂ SORT (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) then none
-      else match callW p n "intern_fvar" [d, ty] m₂ with
-      | none => none
-      | some (r₃, m₃) =>
-        if tPushOK m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 then
-          match callW p n "infer_pis" [mode, vis, d, 16777216, body, 1, rdW (m₃.arr64 CTL) 136,
-              rdW (m₃.arr64 CTL) 137]
-              (tPush m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 (r₃.headD 0)
-                (tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0)) with
-          | none => none
-          | some (r₄, m₄) =>
-            if 137 < (m₄.arr64 CTL).size then
-              some (r₄.headD 0, (m₄.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)).set64 CTL 137
-                (rdW (m₃.arr64 CTL) 137))
-            else none
-        else none
+/-- **`infer_forall` is its model `inferForallW`** (generated). -/
+l_model inferForall_spec (p : Prog) (hq : BindProg p)
+  fns [hq.fa ↦ inferForallW]
+  specs [callW_spec p n "infer", callW_spec p n "whnf", callW_spec p n "intern_fvar",
+    callW_spec p n "infer_pis"]
+  grind [arena_grind] extra [ld64_rdW_spec, st64_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [tierW, idxW, tfld]
 
-theorem inferForall_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St) (mode vis d ty body : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_forall" [mode, vis, d, ty, body]
-    ⦃fun r s' => LocEq s' s₀ ∧ faTK p n s₀.mem mode vis d ty body = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.fa]
-  simp only [callFn, inferForallL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
-      callW_spec p n "infer", callW_spec p n "whnf", callW_spec p n "intern_fvar",
-      callW_spec p n "infer_pis", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-  simp_all [faTK, tPush, tPushOK, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, Cmp.eval,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ, size_set64]
-
-/-- **`infer_forall` refines `inferForall`** at the knot (the `.forallE` clause of `inferBody`). -/
 @[refines ConRon.Arena.inferForall]
 theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
     (hil : InstListOK p) (hcap : BStkCap)
@@ -675,15 +511,15 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
         M eb := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (inferForall_spec p hq n s₀ mode vis d ty body)
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (inferForall_spec p hq (n + 1) s₀ mode vis d ty body)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
   have hK := hk n (Nat.le_refl _)
-  unfold faTK at hW
   by_cases hd : d >>> 63 ≠ 0
-  · rw [ite_eq_left hd] at hW; cases hW
-  rw [ite_eq_right hd] at hW
+  · rw [inferForallW.abort1 (hc1 := hd)] at hW; cases hW
+  have hd0 : d >>> 63 = 0 := by simpa using hd
+  rw [inferForallW.arm1 (hc1 := hd0)] at hW
   have hd63 : d.toNat < 2 ^ 63 := by
     have : d >>> 63 = 0 := by simpa using hd
     have h2 := congrArg UInt64.toNat this
@@ -692,42 +528,46 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
     have := d.toNat_lt
     omega
   cases h1 : callW p n "infer" [mode, vis, d, ty] s.mem with
-  | none => rw [h1] at hW; cases hW
+  | none => rw [h1, inferForallW.k_infer.none] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  rw [h1] at hW; dsimp only at hW
+  rw [h1, inferForallW.k_infer.arm1] at hW
   cases h2 : callW p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with
-  | none => rw [h2] at hW; cases hW
+  | none => rw [h2, inferForallW.k_whnf.none] at hW; cases hW
   | some q =>
   obtain ⟨r₂, m₂⟩ := q
-  rw [h2] at hW; dsimp only at hW
+  rw [h2] at hW
   by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
-  · rw [ite_eq_left g1] at hW; cases hW
-  rw [ite_eq_right g1] at hW
+  · rw [inferForallW.k_whnf.abort1 (hc1 := g1)] at hW; cases hW
+  have hg2 : r₂.headD 0 >>> 28 = 2 := by simpa using g1
   by_cases gs1 : tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
-  · rw [ite_eq_left gs1] at hW; cases hW
-  rw [ite_eq_right gs1] at hW
+  · rw [inferForallW.k_whnf.abort2 (hc1 := hg2) (hc2 := gs1)] at hW; cases hW
   by_cases gs2 : tcnt m₂ SORT (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0)
-  · rw [ite_eq_left gs2] at hW; cases hW
-  rw [ite_eq_right gs2] at hW
+  · rw [inferForallW.k_whnf.abort3 (hc1 := hg2) (hc2 := gs1) (hc3 := gs2)] at hW; cases hW
+  rw [inferForallW.k_whnf.arm1 (hc1 := hg2) (hc2 := gs1) (hc3 := gs2)] at hW
   cases h3 : callW p n "intern_fvar" [d, ty] m₂ with
-  | none => rw [h3] at hW; cases hW
+  | none => rw [h3, inferForallW.k_intern_fvar.none] at hW; cases hW
   | some q =>
   obtain ⟨r₃, m₃⟩ := q
-  rw [h3] at hW; dsimp only at hW
-  have g2 : tPushOK m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 := by
-    refine Classical.byContradiction fun g => ?_; rw [ite_eq_right g] at hW; cases hW
-  rw [ite_eq_left g2] at hW
+  rw [h3] at hW
+  have e1 : ¬ m₃.len64 SPN ≤ rdW (m₃.arr64 CTL) 136 := fun g => by
+    rw [inferForallW.k_intern_fvar.abort1 (hc1 := g)] at hW; cases hW
+  have e2 : ¬ m₃.len64 BSTK ≤ rdW (m₃.arr64 CTL) 137 := fun g => by
+    rw [inferForallW.k_intern_fvar.abort2 (hc1 := e1) (hc2 := g)] at hW; cases hW
+  rw [inferForallW.k_intern_fvar.arm1 (hc1 := e1) (hc2 := e2)] at hW
+  rw [← show tPush m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 (r₃.headD 0)
+      (tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0) =
+      ((((m₃.set64 SPN (rdW (m₃.arr64 CTL) 136) (r₃.headD 0)).set64 BSTK (rdW (m₃.arr64 CTL) 137)
+        (tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0)).set64 CTL 136
+          (rdW (m₃.arr64 CTL) 136 + 1)).set64 CTL 137 (rdW (m₃.arr64 CTL) 137 + 1)) by
+    simp [tPush]] at hW
   cases h4 : callW p n "infer_pis" [mode, vis, d, 16777216, body, 1, rdW (m₃.arr64 CTL) 136,
       rdW (m₃.arr64 CTL) 137] (tPush m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 (r₃.headD 0)
         (tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0)) with
-  | none => rw [h4] at hW; cases hW
+  | none => rw [h4, inferForallW.k_infer_pis.none] at hW; cases hW
   | some q =>
   obtain ⟨r₄, m₄⟩ := q
-  rw [h4] at hW; dsimp only at hW
-  have g3 : 137 < (m₄.arr64 CTL).size := by
-    refine Classical.byContradiction fun g => ?_; rw [ite_eq_right g] at hW; cases hW
-  rw [ite_eq_left g3] at hW
+  rw [h4, inferForallW.k_infer_pis.arm1] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   -- the domain's type, a sort
@@ -738,7 +578,6 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
     ⟨hS₁, hs.mode4, hs.eb_mode⟩ hrw1) h2
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := h₂
   have hB₂ := hSt₂.bstk
-  have hg2 : r₂.headD 0 >>> 28 = 2 := by simpa using g1
   obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 ⟨gs1, by simpa using gs2⟩ hg2
   obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     (internFVar_spec p hb.fvf hb.fvp hb.fvi n _ d ty) h3
@@ -748,6 +587,8 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
   have hSt13 := hSt₁.trans (hSt₂.trans hSt₃)
   obtain ⟨so, hso⟩ : ∃ so, so = rdW (m₃.arr64 CTL) 136 := ⟨_, rfl⟩
   obtain ⟨lo, hlo⟩ : ∃ lo, lo = rdW (m₃.arr64 CTL) 137 := ⟨_, rfl⟩
+  have g2 : tPushOK m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 :=
+    pis_tPushOK_of hS₃ (by simpa using e1) (by simpa using e2)
   rw [← hso, ← hlo] at g2 h4 hm
   have hcp := hcap _ _ _ _ _ _ _ hS₃
   have hsoS : so.toNat ≤ (m₃.arr64 SPN).size := by
@@ -797,7 +638,7 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
   rw [hst, ← hm, hso, hlo]
   have htop3 : spTop m₃ = so := hso.symm
   obtain ⟨hSF, hkF⟩ := tops_restore (m₀ := s.mem) hS₄ hSt13
-    (fun j hj => hb₄ j (htop3 ▸ hj)) hsz₄ (fun j hj => hbb₄ j (by rw [hlo]; exact hj)) hbsz₄ hpg₄ g3
+    (fun j hj => hb₄ j (htop3 ▸ hj)) hsz₄ (fun j hj => hbb₄ j (by rw [hlo]; exact hj)) hbsz₄ hpg₄ (pis_ctl137 hS₄)
   exact ⟨M', hSF, hK₁.trans (hK₂.trans (hK₃.trans hK₄)), hkF⟩
 
 

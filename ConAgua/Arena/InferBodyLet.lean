@@ -98,70 +98,12 @@ theorem inferBody_let (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : ASta
   simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   rfl
 
-section letK
-variable (p : Prog) (n : Nat) (mode vis d ty v b : Word)
-
-/-- After `defeq`'s run: the verdict, `inst1`, the body's `infer`. -/
-def letK5 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => call1W p n "infer" [mode, vis, d, r.headD 0] m
-
-def letK4 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => if r.headD 0 = 0 then none else letK5 p n mode vis d (callW p n "inst1" [b, v, 0] m)
-
-def letK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => letK4 p n mode vis d v b (callW p n "defeq" [mode, vis, d, r.headD 0, ty] m)
-
-def letK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (_, m) => letK3 p n mode vis d ty v b (callW p n "infer" [mode, vis, d, v] m)
-
-/-- **The model of `infer_let`** past the type's `infer` run `res`. -/
-def letK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => letK2 p n mode vis d ty v b (callW p n "ensure_sort" [mode, vis, d, r.headD 0] m)
-
-variable (r : List Word) (m : Mem)
-
-theorem letK5_some : letK5 p n mode vis d (some (r, m)) = call1W p n "infer" [mode, vis, d, r.headD 0] m := rfl
-theorem letK4_ok (h : r.headD 0 ≠ 0) :
-    letK4 p n mode vis d v b (some (r, m)) = letK5 p n mode vis d (callW p n "inst1" [b, v, 0] m) := by
-  simp only [letK4, h, ↓reduceIte]
-theorem letK3_some :
-    letK3 p n mode vis d ty v b (some (r, m)) =
-      letK4 p n mode vis d v b (callW p n "defeq" [mode, vis, d, r.headD 0, ty] m) := rfl
-theorem letK2_some :
-    letK2 p n mode vis d ty v b (some (r, m)) = letK3 p n mode vis d ty v b (callW p n "infer" [mode, vis, d, v] m) := rfl
-theorem letK1_some :
-    letK1 p n mode vis d ty v b (some (r, m)) =
-      letK2 p n mode vis d ty v b (callW p n "ensure_sort" [mode, vis, d, r.headD 0] m) := rfl
-
-end letK
-
-section ilet
-variable (p : Prog) (hb : InferBodyProg p)
-
-include hb in
-theorem inferLet_spec (n : Nat) (s₀ : St) (mode vis d ty v b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_let" [mode, vis, d, ty, v, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ letK1 p n mode vis d ty v b
-      (callW p n "infer" [mode, vis, d, ty] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hb.inferLet]
-  simp only [callFn, inferLetL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "infer",
-      callW_spec p n "ensure_sort", callW_spec p n "defeq", callW_spec p n "inst1"] <;>
-  simp_all [letK1_some, letK2_some, letK3_some, letK4, letK5_some, call1W, Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
-end ilet
+/-- **`infer_let` is its model `inferLetW`** (generated). -/
+l_model inferLet_spec (p : Prog) (hb : InferBodyProg p)
+  fns [hb.inferLet ↦ inferLetW]
+  specs [callW_spec p n "infer", callW_spec p n "ensure_sort", callW_spec p n "defeq",
+    callW_spec p n "inst1"]
+  grind [arena_grind] simp []
 
 /-- Peel one call off a model: the run exists, and the model is the continuation's. -/
 theorem callW_cases {f : FnName} {p : Prog} {n : Nat} {vs : List Word} {m : Mem}
@@ -186,22 +128,25 @@ theorem inferLet_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferLet_spec p hb n s₀ mode vis d ty v b)
+    (inferLet_spec p hb (n + 1) s₀ mode vis d ty v b)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
   have hes := ensureSortSpec_of_knot p hp n hk
+  rw [inferLetW.arm1] at hW
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  rw [letK1_some] at hW
+  rw [inferLetW.k_infer.arm1] at hW
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  rw [letK2_some] at hW
+  rw [inferLetW.k_ensure_sort.arm1] at hW
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  rw [letK3_some] at hW
+  rw [inferLetW.k_infer_2.arm1] at hW
   obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases rfl hW
-  have h0 : ¬ r₄.headD 0 = 0 := fun h0 => by simp only [letK4, h0, ↓reduceIte] at hW; cases hW
-  rw [letK4_ok (h := h0)] at hW
+  have h0 : ¬ r₄.headD 0 = 0 := fun h0 => by
+    rw [inferLetW.k_defeq.abort1 _ _ _ _ _ _ _ _ _ h0] at hW; cases hW
+  rw [inferLetW.k_defeq.arm1 (hc1 := h0)] at hW
   obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
-  rw [letK5_some] at hW
+  rw [inferLetW.k_inst1.arm1] at hW
+  have hW : call1W p n "infer" [mode, vis, d, r₅.headD 0] m₅ = some _ := hW
   have h₁ := CoreSpec.of_callW (hK.infer F s a₀ dn vis fe M eb mode d ty hF hn hs hty) hc1
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   have h₂ := CoreSpec.of_callW (hes F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn
@@ -247,58 +192,12 @@ theorem inferBodyIO_lam (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
   simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   rfl
 
-section lamK
-variable (p : Prog) (n : Nat) (mode vis d ty body : Word)
-
-def lamIOK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => call1W p n "infer_lam_result" [ty, r.headD 0, d] m
-
-def lamIOK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => lamIOK3 p n d ty (callW p n "infer_io" [mode, vis, d + 1, r.headD 0] m)
-
-def lamIOK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => lamIOK2 p n mode vis d ty (callW p n "inst1" [body, r.headD 0, 0] m)
-
-/-- **The model of `infer_lam_io`.** -/
-def lamIOK (m : Mem) : Option (Word × Mem) :=
-  if d + 1 = 0 then none else lamIOK1 p n mode vis d ty body (callW p n "intern_fvar" [d, ty] m)
-
-variable (r : List Word) (m : Mem)
-
-theorem lamIOK3_some : lamIOK3 p n d ty (some (r, m)) =
-    call1W p n "infer_lam_result" [ty, r.headD 0, d] m := rfl
-theorem lamIOK2_some : lamIOK2 p n mode vis d ty (some (r, m)) =
-    lamIOK3 p n d ty (callW p n "infer_io" [mode, vis, d + 1, r.headD 0] m) := rfl
-theorem lamIOK1_some : lamIOK1 p n mode vis d ty body (some (r, m)) =
-    lamIOK2 p n mode vis d ty (callW p n "inst1" [body, r.headD 0, 0] m) := rfl
-theorem lamIOK_ok (h : ¬ d + 1 = 0) :
-    lamIOK p n mode vis d ty body m = lamIOK1 p n mode vis d ty body (callW p n "intern_fvar" [d, ty] m) := by
-  simp only [lamIOK, h, ↓reduceIte]
-
-end lamK
-
-section ilam
-variable (p : Prog) (hb : InferBodyProg p)
-
-include hb in
-theorem inferLamIO_spec (n : Nat) (s₀ : St) (mode vis d ty body : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_lam_io" [mode, vis, d, ty, body]
-    ⦃fun r s' => LocEq s' s₀ ∧ lamIOK p n mode vis d ty body s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hb.inferLamIO]
-  simp only [callFn, inferLamIOL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "intern_fvar",
-      callW_spec p n "inst1", callW_spec p n "infer_io", callW_spec p n "infer_lam_result"] <;>
-  simp_all [lamIOK, lamIOK1_some, lamIOK2_some, lamIOK3_some, call1W, Cmp.eval, LocEq, BinOp.eval,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
-end ilam
+/-- **`infer_lam_io` is its model `inferLamIOW`** (generated). -/
+l_model inferLamIO_spec (p : Prog) (hb : InferBodyProg p)
+  fns [hb.inferLamIO ↦ inferLamIOW]
+  specs [callW_spec p n "intern_fvar", callW_spec p n "inst1", callW_spec p n "infer_io",
+    callW_spec p n "infer_lam_result"]
+  grind [arena_grind] simp []
 
 /-- `infer_lam_result` at every L fuel. -/
 theorem inferLamResult_any (p : Prog) (hp : InferLeafProg p) (ha : Abstract1OK p) (n : Nat)
@@ -334,19 +233,20 @@ theorem inferLamIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferLamIO_spec p hb n s₀ mode vis d ty body)
+    (inferLamIO_spec p hb (n + 1) s₀ mode vis d ty body)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
-  have hd : ¬ d + 1 = 0 := fun hd => by simp only [lamIOK, hd, ↓reduceIte] at hW; cases hW
-  rw [lamIOK_ok (h := hd)] at hW
+  have hd : ¬ d + 1 = 0 := fun hd => by rw [inferLamIOW.abort1 _ _ _ _ _ _ _ _ hd] at hW; cases hW
+  rw [inferLamIOW.arm1 (hc1 := hd)] at hW
   have hd1 := toNat_succ_of_ne hd
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  rw [lamIOK1_some] at hW
+  rw [inferLamIOW.k_intern_fvar.arm1] at hW
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  rw [lamIOK2_some] at hW
+  rw [inferLamIOW.k_inst1.arm1] at hW
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  rw [lamIOK3_some] at hW
+  rw [inferLamIOW.k_infer_io.arm1] at hW
+  have hW : call1W p n "infer_lam_result" [ty, r₃.headD 0, d] m₃ = some _ := hW
   obtain ⟨s₁, hs₁, -, hfv⟩ := triple_of_callW (internFVar_spec p hb.fvf hb.fvp hb.fvi n s d ty) hc1
   rw [hs₁] at hfv
   have h₁ := internFVar_core hs.rel d ty hty r₁ hfv
@@ -386,87 +286,13 @@ theorem inferBodyIO_forall (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a :
   simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   rfl
 
-section faK
-variable (p : Prog) (n : Nat) (mode vis d ty body u : Word)
-
-def faK8 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => call1W p n "intern_sort" [r.headD 0] m
-
-def faK7 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => faK8 p n (callW p n "intern_imax" [u, r.headD 0] m)
-
-def faK6 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => faK7 p n u (callW p n "ensure_sort" [mode, vis, d + 1, r.headD 0] m)
-
-def faK5 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => faK6 p n mode vis d u (callW p n "infer_io" [mode, vis, d + 1, r.headD 0] m)
-
-def faK4 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => faK5 p n mode vis d u (callW p n "inst1" [body, r.headD 0, 0] m)
-
-/-- After `whnf`'s run: the sort's level read off its record, then the binder's `fvar`. -/
-def faK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 >>> 28 ≠ 2 then none
-    else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m SORT (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
-    else faK4 p n mode vis d body (tfld m SORT (tierW (r.headD 0)) (idxW (r.headD 0)) 0)
-      (callW p n "intern_fvar" [d, ty] m)
-
-def faK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => faK3 p n mode vis d ty body (callW p n "whnf" [mode, vis, d, r.headD 0] m)
-
-/-- **The model of `infer_forall_io`.** -/
-def faK (m : Mem) : Option (Word × Mem) :=
-  if d + 1 = 0 then none else faK2 p n mode vis d ty body (callW p n "infer_io" [mode, vis, d, ty] m)
-
-variable (r : List Word) (m : Mem)
-
-theorem faK8_some : faK8 p n (some (r, m)) = call1W p n "intern_sort" [r.headD 0] m := rfl
-theorem faK7_some : faK7 p n u (some (r, m)) = faK8 p n (callW p n "intern_imax" [u, r.headD 0] m) := rfl
-theorem faK6_some : faK6 p n mode vis d u (some (r, m)) =
-    faK7 p n u (callW p n "ensure_sort" [mode, vis, d + 1, r.headD 0] m) := rfl
-theorem faK5_some : faK5 p n mode vis d u (some (r, m)) =
-    faK6 p n mode vis d u (callW p n "infer_io" [mode, vis, d + 1, r.headD 0] m) := rfl
-theorem faK4_some : faK4 p n mode vis d body u (some (r, m)) =
-    faK5 p n mode vis d u (callW p n "inst1" [body, r.headD 0, 0] m) := rfl
-theorem faK2_some : faK2 p n mode vis d ty body (some (r, m)) =
-    faK3 p n mode vis d ty body (callW p n "whnf" [mode, vis, d, r.headD 0] m) := rfl
-
-end faK
-
-section ifa
-variable (p : Prog) (hb : InferBodyProg p)
-
-include hb in
-theorem inferForallIO_spec (n : Nat) (s₀ : St) (mode vis d ty body : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_forall_io" [mode, vis, d, ty, body]
-    ⦃fun r s' => LocEq s' s₀ ∧ faK p n mode vis d ty body s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hb.inferForallIO]
-  simp only [callFn, inferForallIOL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, callW_spec p n "infer_io",
-      callW_spec p n "whnf", callW_spec p n "intern_fvar", callW_spec p n "inst1",
-      callW_spec p n "ensure_sort", callW_spec p n "intern_imax", callW_spec p n "intern_sort",
-        evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-  simp_all [faK, faK2_some, faK3, faK4_some, faK5_some, faK6_some, faK7_some, faK8_some, call1W,
-    Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, tfld]
-
-end ifa
+/-- **`infer_forall_io` is its model `inferForallIOW`** (generated). -/
+l_model inferForallIO_spec (p : Prog) (hb : InferBodyProg p)
+  fns [hb.inferForallIO ↦ inferForallIOW]
+  specs [callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "intern_fvar",
+    callW_spec p n "inst1", callW_spec p n "ensure_sort", callW_spec p n "intern_imax",
+    callW_spec p n "intern_sort"]
+  grind [arena_grind] extra [ld64_rdW_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [tierW, idxW, tfld]
 
 /-- **A forwarded run meets its callee's spec.** -/
 theorem of_call1W {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : Mem} {w : Word}
@@ -493,23 +319,23 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferForallIO_spec p hb n s₀ mode vis d ty body)
+    (inferForallIO_spec p hb (n + 1) s₀ mode vis d ty body)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
   have hes := ensureSortSpec_of_knot p hp n hk
-  have hd : ¬ d + 1 = 0 := fun hd => by simp only [faK, hd, ↓reduceIte] at hW; cases hW
-  simp only [faK, hd, ↓reduceIte] at hW
+  have hd : ¬ d + 1 = 0 := fun hd => by rw [inferForallIOW.abort1 _ _ _ _ _ _ _ _ hd] at hW; cases hW
+  rw [inferForallIOW.arm1 (hc1 := hd)] at hW
   have hd1 := toNat_succ_of_ne hd
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  rw [faK2_some] at hW
+  rw [inferForallIOW.k_infer_io.arm1] at hW
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
   have h₁ := CoreSpec.of_callW (hK.inferIO F s a₀ dn vis fe M eb mode d ty hF hn hs hty) hc1
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0)
     hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) hc2
   refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
-  simp only [faK3] at hW
+  simp only [inferForallIOW.k_whnf] at hW
   obtain ⟨g1, hW⟩ := of_ite_none hW
   obtain ⟨g2, hW⟩ := of_ite_none hW
   obtain ⟨g3, hW⟩ := of_ite_none hW
@@ -519,15 +345,15 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
   simp only [htag, ↓reduceIte]
   refine coreRef_view hv ?_
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  rw [faK4_some] at hW
+  rw [inferForallIOW.k_intern_fvar.arm1] at hW
   obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases rfl hW
-  rw [faK5_some] at hW
+  rw [inferForallIOW.k_inst1.arm1] at hW
   obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
-  rw [faK6_some] at hW
+  rw [inferForallIOW.k_infer_io_2.arm1] at hW
   obtain ⟨r₆, m₆, hc6, hW⟩ := callW_cases rfl hW
-  rw [faK7_some] at hW
+  rw [inferForallIOW.k_ensure_sort.arm1] at hW
   obtain ⟨r₇, m₇, hc7, hW⟩ := callW_cases rfl hW
-  rw [faK8_some] at hW
+  rw [inferForallIOW.k_intern_imax.arm1] at hW
   obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW
     (internFVar_spec p hb.fvf hb.fvp hb.fvi n ⟨m₂, Locals.init []⟩ d ty) hc3
   rw [hs₃] at hfv
@@ -559,7 +385,7 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
   have h₇ := internImax_core hS₆ _ _ hu h₆.2.2.2 r₇ him hdu hdv
   refine coreRef_bind h₇ (fun M₇ hS₇ => ?_)
   have hso := of_call1W (X := fun m w m' => sointernW m (r₇.headD 0) = some (w, m'))
-    (fun s₀ => internSort_spec p hb.sof hb.sop hb.soi n s₀ (r₇.headD 0)) hW
+    (fun s₀ => internSort_spec p hb.sof hb.sop hb.soi n s₀ (r₇.headD 0)) (hW : call1W p n "intern_sort" [r₇.headD 0] m₇ = _)
   exact internSort_core hS₇ (r₇.headD 0) h₇.2.2.2 r hso (by
     have hd := internLNode_res_den hS₆
       (fun c hc => by
