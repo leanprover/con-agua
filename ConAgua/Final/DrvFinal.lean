@@ -33,21 +33,10 @@ theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 132 = true :=
 theorem getD_zero_headD (rs : List Word) : rs.getD 0 0 = rs.headD 0 := by cases rs <;> rfl
 
 /-- `seqMem`'s word arrays (the globals' writes keep them). -/
-theorem seqMem_arr64 (m : Mem) (lo hi : Word) (hsz : 242 < m.words.size) (a : Nat) :
-    (seqMem m MODE PLO PHI OUT HDRF CTLF 132 lo hi).arr64 a =
-      if a = OUT ∨ a = CTLF then #[] else if a = HDRF then (m.arr64 OUT).extract 0 132 else m.arr64 a := by
-  show (seqMem0 m OUT HDRF CTLF 132).arr64 a = _
-  by_cases ha : a < m.words.size
-  · exact seqMem0_arr64 m OUT HDRF CTLF 132 ha
-  · have h1 : (seqMem0 m OUT HDRF CTLF 132).arr64 a = #[] := by
-      simp only [seqMem0, seqWords, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_mapIdx,
-        Array.getElem?_eq_none (Nat.le_of_not_lt ha), Option.map_none, Option.getD_none]
-    have h2 : m.arr64 a = #[] := by
-      simp only [Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_eq_none (Nat.le_of_not_lt ha),
-        Option.getD_none]
-    have h3 : ¬ (a = OUT ∨ a = CTLF) ∧ a ≠ HDRF := by
-      simp only [OUT, CTLF, HDRF]; omega
-    rw [h1, ite_eq_right h3.1, ite_eq_right h3.2, h2]
+theorem seqMem_arr64 (m : Mem) (lo hi : Word) (s : TieredArray) :
+    (seqMem m MODE PLO PHI OUT HDRF CTLF 132 lo hi).arr64 s =
+      if s = ↑OUT ∨ s = ↑CTLF then #[] else if s = ↑HDRF then (m.arr64 OUT).extract 0 132 else m.arr64 s :=
+  seqMem0_arr64 m OUT HDRF CTLF 132 s
 
 /-- **The driver's accept is the twin's**: `DrvAccepts` at the checker's program gives
 `TwinAccepts [b]`. -/
@@ -55,17 +44,15 @@ theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (h : DrvAccepts checkerProg MODE PLO PHI OUT HDRF CTLF 132 b pb) :
     TwinAccepts [b] := by
   obtain ⟨hb, hpb, h⟩ := h
-  have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
-    ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
-  obtain ⟨rs₁, m₁, h₁, hnw, hcase⟩ := h
-  have hsz : 242 < m₁.words.size := by rw [hnw]; decide
+  have hin : InputsOK b pb (fun _ => abiWords) := ⟨h64, hb, hpb, fun _ => by simp [abiWords]⟩
+  obtain ⟨rs₁, m₁, h₁, hcase⟩ := h
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   rcases hcase with hacc | ⟨hge, rs₂, m₂, h₂, hacc₂⟩
   · -- entry 1 never returns `ACCEPT`: its result is `2^63 + |pend|`
     rw [getD_zero_headD] at hacc
     have hr : rs₁.headD 0 ≠ 1 := by rw [hacc]; decide
     obtain ⟨PA, m, v, hS, -, -, -, -, hres⟩ :=
-      checkA_run b pb [] _ hin 3 (Or.inr rfl) abiFuel hN rs₁ m₁ h₁ hr
+      checkA_run b pb _ hin 3 (Or.inr rfl) abiFuel hN rs₁ m₁ h₁ hr
     have hn : PA.pend.size ≤ 2 ^ 62 := hS.loop.pend.count ▸ hS.loop.pend.bound
     have e2 : (9223372036854775808 + UInt64.ofNat PA.pend.size : Word).toNat = 2 ^ 63 + PA.pend.size := by
       rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
@@ -76,21 +63,21 @@ theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     simp only [ACCEPT, UInt64.reduceToNat] at e
     omega
   · rw [getD_zero_headD] at hge h₂ hacc₂
-    refine drv_twinAccepts b pb [] _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
+    refine drv_twinAccepts b pb _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
       (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 132 0 (rs₁.headD 0 - 9223372036854775808)) rs₂ m₂
       ?_ ?_ ?_ ?_ ?_ ?_ h₂ hacc₂
     · intro a ha
-      rw [seqMem_arr64 _ _ _ hsz]
-      have h1 : ¬ (a = OUT ∨ a = CTLF) := by
+      rw [seqMem_arr64]
+      have h1 : ¬ (a = ↑OUT ∨ a = ↑CTLF) := by
         rintro (rfl | rfl) <;> revert ha <;> decide
-      have h2 : a ≠ HDRF := by rintro rfl; revert ha; decide
+      have h2 : a ≠ ↑HDRF := by rintro rfl; revert ha; decide
       simp only [h1, h2, ite_false]
     · rfl
     · rfl
     · rfl
-    · rw [seqMem_arr64 _ _ _ hsz]; simp
-    · simp only [rd64, seqMem_arr64 _ _ _ hsz]
-      simp only [show ¬ (HDRF = OUT ∨ HDRF = CTLF) by decide, ite_false, ite_true]
+    · rw [seqMem_arr64]; simp
+    · simp only [rd64, seqMem_arr64]
+      rw [if_neg (by decide), if_pos rfl]
       simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
       by_cases h3 : 3 < (m₁.arr64 OUT).size
       · have h4 : 3 < min 132 (m₁.arr64 OUT).size := by omega

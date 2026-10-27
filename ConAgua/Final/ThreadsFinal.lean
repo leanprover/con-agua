@@ -44,7 +44,7 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 /-- **Entry 1's buffer** (the first `len` words of `OUT`, `len` its word `1`, after a run of
 `check` in mode `1` that returned `2^63 + k`): inside `OUT`, at least the header long, its header
 entries inside it and in increasing order. -/
-theorem entry1_buf (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb s64)
+theorem entry1_buf (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     (N : Nat) (hN : N < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
@@ -156,19 +156,19 @@ theorem bufKept_of_memRel {B : Array Word} {buf base : Nat} {r : Mem} {d : DataM
     (hent : ∀ i < frozenIdsL.length, (bufEntry B i).1 + (bufEntry B i).2 ≤ B.size)
     (hkept : ∀ q (h : q < B.size), rdW d (A (buf + 8 * q)) = some B[q]) : BufKept B r := by
   intro k hk h1
-  obtain ⟨hidx, -, -, hlt⟩ := frozen_facts hk h1
-  have hnw : frozen[k].1 < checkerTab.nw := by
-    have : checkerTab.nw = 388 := by decide
-    rw [this]; exact hlt
+  obtain ⟨hidx, -, -, -⟩ := frozen_facts hk h1
+  have hnw : checkerTab.dom64 ↑frozen[k].1 = true := by
+    obtain ⟨hl, e, -⟩ := List.idxOf?_eq_some_iff.mp hidx
+    rw [← e]; exact List.all_eq_true.mp frozenIdsL_dom _ (List.getElem_mem _)
   have h59 : k + 1 < frozenIdsL.length := by rw [frozenIdsL_eq]; simp; omega
   have he := hent (k + 1) h59
   have hs := hm.size64 _ hnw
-  simp only [bufLayout_s64, bufL, hidx] at hs
+  simp only [bufLayout_s64, bufLayout_tab, checkerTab.wAt_pos64 hnw, bufL, hidx] at hs
   apply Array.ext
   · rw [hs]; simp only [bufImg, Array.size_extract]; omega
   · intro i h₁ h₂
     have hg := hm.get64 _ hnw i h₁
-    simp only [bufLayout_b64, bufB, hidx] at hg
+    simp only [bufLayout_b64, bufLayout_tab, checkerTab.wAt_pos64 hnw, bufB, hidx] at hg
     rw [show buf + 8 * (bufEntry B (k + 1)).1 + 8 * i = buf + 8 * ((bufEntry B (k + 1)).1 + i) by omega,
       hkept _ (by rw [hs] at h₁; omega)] at hg
     simp only [bufImg, Array.getElem_extract]
@@ -187,10 +187,13 @@ theorem threadRuns_range (B : Array Word) (t : ThreadM) (rm : Nat → Mem)
     obtain ⟨h1, h2⟩ := h s (by omega)
     exact ⟨by simp [abiFuel], h1, h2, threadRuns_range B t rm h c (s + 1) (by omega)⟩
 
-theorem parOwnedL_lt : ∀ a ∈ parOwnedL, a < checkerTab.nw := by
-  have h1 : parOwnedL.all (· < 388) = true := by decide
-  have h2 : checkerTab.nw = 388 := by decide
-  intro a ha; rw [h2]; simpa using List.all_eq_true.mp h1 a ha
+/-- The frozen arrays are in the checker's layout (the kernel evaluates the layout map). -/
+theorem frozenIdsL_dom : frozenIdsL.all (checkerTab.dom64 ·) = true := by decide +kernel
+
+/-- The owned arrays are in the checker's layout. -/
+theorem parOwnedL_dom : ∀ a ∈ parOwnedL, checkerTab.dom64 a = true := by
+  have h : parOwnedL.all (checkerTab.dom64 ·) = true := by decide +kernel
+  exact List.all_eq_true.mp h
 
 /-! ## The theorem -/
 
@@ -213,8 +216,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   obtain ⟨⟨-, hRR₀, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
   obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
-  have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
-    ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
+  have hin : InputsOK b pb (fun _ => abiWords) := ⟨h64, hb, hpb, fun _ => by simp [abiWords]⟩
   rcases hout₀ with h1 | hout₀'
   · exact absurd h1 hne
   rcases hres₁ : L.run checkerProg abiFuel "check" []
@@ -230,12 +232,13 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   have hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat := by rw [← hrax₁]; exact hR.rax₀
   -- the buffer is `OUT`'s prefix
-  obtain ⟨hlen, h126, hent', hinc'⟩ := entry1_buf b pb [] _ hin abiFuel hN rs₁ m₁ h₁ hge _ rfl
-  have hOUT : OUT < checkerTab.nw := by decide
-  have hsz := hMem₁.size64 OUT hOUT
+  obtain ⟨hlen, h126, hent', hinc'⟩ := entry1_buf b pb _ hin abiFuel hN rs₁ m₁ h₁ hge _ rfl
+  have hOUT : checkerTab.dom64 ↑OUT = true := (checkerTab.dom64_t0_iff OUT).2 ⟨by decide, by decide⟩
+  have hsz := hMem₁.size64 _ hOUT
   have hget : ∀ i (h : i < (m₁.arr64 OUT).size),
-      rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some (m₁.arr64 OUT)[i] := fun i h =>
-    hMem₁.get64 OUT hOUT i h
+      rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some (m₁.arr64 OUT)[i] := fun i h => by
+    have := hMem₁.get64 _ hOUT i h
+    simpa only [abiLayout_b64, abiLayout_tab, checkerTab.wposInv_pos64 hOUT, curNum_t0] using this
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
@@ -262,7 +265,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
     · exact Or.inl (hinc' i hi i' hi' h)
     · exact Or.inr (Or.inl (hinc' i' hi' i hi h))
   -- each thread: its chain of L runs
-  have hthr : ∀ t, ∃ cs : List (Word × Nat × Mem), t ∈ ths → ThreadRuns B (zeroMem checkerTab) cs ∧
+  have hthr : ∀ t, ∃ cs : List (Word × Nat × Mem), t ∈ ths → ThreadRuns B (zeroMem) cs ∧
       (∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808) ∧
       (∀ i < t.n, ∃ c ∈ cs, c.1 = (t.dm i).regs.rdx) ∧
       (∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) := by
@@ -303,14 +306,14 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
     · exact ⟨[], fun h => absurd h ht⟩
   obtain ⟨f, hf⟩ := Classical.axiomOfChoice hthr
   refine ⟨?_, hRR₀, fun t ht i hi => (hf t ht).2.2.2 i hi⟩
-  refine threads_twinAcceptsPooled b pb [] _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq
-    (ths.map fun t => (zeroMem checkerTab, f t)) (fun t' ht' => ?_) (fun j hj => ?_)
+  refine threads_twinAcceptsPooled b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq
+    (ths.map fun t => (zeroMem, f t)) (fun t' ht' => ?_) (fun j hj => ?_)
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
     obtain ⟨h1, h2, -, -⟩ := hf t ht
-    refine ⟨by simp [zeroMem, Mem.HasWs]; decide, fun a ha => ?_, rfl, h1, h2⟩
-    have hl := parOwnedL_lt a ha
+    refine ⟨trivial, fun a ha => ?_, rfl, h1, h2⟩
+    have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
-    simp [zeroMem, Mem.arr64, hl, zeros]
+    simp [zeroMem, Mem.arr64, zeros]
   · rw [← hrax₁] at hj
     obtain ⟨t, ht, i, hi, hj'⟩ := hR.cover j hj
     obtain ⟨-, -, h3, -⟩ := hf t ht
