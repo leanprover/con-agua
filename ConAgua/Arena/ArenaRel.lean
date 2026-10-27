@@ -85,7 +85,7 @@ def arenaCtl : List Word := storeCtl ++ memoCtl
 
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
-immediate (`tier1`, `tierOff` turn a tier-1 array into its number). -/
+immediate (`tier1` unfolds a tier-1 array to its structure). -/
 macro "apart" : tactic => `(tactic| simp [tier1, Apart, ConsSch.wset, memoArrs, memoCtl, storeArrs, storeCtl, POOL, POOL1, PT0, CTL, SCB, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
 
 /-- The side condition of `apart_hi` for a concrete schema. -/
