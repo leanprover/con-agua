@@ -389,7 +389,7 @@ theorem tTwoW_z (n : Nat) : ∀ (m : Mem) (i r : Word) (m' : Mem), rdW (m.arr64 
     intro m i r m' h0 h
     by_cases hi : i = 0
     · rw [tTwoW.arm1 n m i hi] at h; cases h; exact h0
-    rw [tTwoW.eq_2, if_neg hi] at h
+    rw [tTwoW.eq_2, ite_eq_right hi] at h
     cases h1 : tTwoW n m (i - 1) with
     | none => rw [h1, tTwoW.k_t_two.none] at h; cases h
     | some x =>
