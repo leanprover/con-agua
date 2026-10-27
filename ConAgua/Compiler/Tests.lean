@@ -1,12 +1,14 @@
 module
 
 meta import ConAgua.Compiler.WF
+meta import ConAgua.L.Arrays
 meta import ConAgua.Compiler.Run
 meta import ConAgua.L.Examples
 meta import ConAgua.Scan.Lit
 meta import ConAgua.Scan.Utf8
 public import ConAgua.Compiler.Run
 public import ConAgua.L.Notation
+public import ConAgua.L.Arrays
 /-!
 # Differential tests: compiled code on Kraken's semantics against `L.run`
 
@@ -297,5 +299,24 @@ def tierMem : Mem :=
 #guard agrees tierProg "tiers" [0, 5] tierMem
 #guard (run tierProg 1000 "tiers" [0, 5] tierMem).toOption.isNone
 #guard (run tierProg 1000 "tiers" [0x08000000, 5] tierMem).toOption.isSome
+
+/-! The array table's surface check (`ArrTable.progOK`, `L/Arrays.lean`) on `tierProg`: with `W`
+declared tiered it accepts; a plain load of `W`'s tier-1 number is rejected unless its function
+is exempt; with `W` not tiered the tiered accesses are rejected; a number at or above `tierOff`
+is not a well-formed table. -/
+
+def tierTab : ArrTable := [{ name := "W", id := W, kind := .word, tiered := true }]
+
+/-- A plain load of tier 1 of `W`. -/
+def tier1Prog : Prog := [("bad", { nparams := 0, nlocals := 0, body := .ret [.ld64 (tier1 W) (.const 0)] })]
+
+#guard tierTab.wf
+#guard tierTab.extent == (0, 257)
+#guard tierTab.progOK [] tierProg
+#guard !tierTab.progOK [] tier1Prog
+#guard tierTab.progOK ["bad"] tier1Prog
+#guard !ArrTable.progOK [{ name := "W", id := W, kind := .word, tiered := false }] [] tierProg
+#guard !ArrTable.wf [{ name := "W", id := tierOff, kind := .word, tiered := false }]
+#guard !ArrTable.wf (tierTab ++ [{ name := "V", id := W, kind := .word, tiered := false }])
 
 end L.Compiler.Tests
