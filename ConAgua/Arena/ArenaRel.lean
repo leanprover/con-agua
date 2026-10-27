@@ -62,16 +62,16 @@ namespace L.Arena
 level-parameter columns 55‥61 (`LpCol.lean`, helper `whnf4-d23`), each table array and column in
 both tiers (tier 1 of array `a` is `tier1 a`, lane tierswitch). -/
 def storeArrs : List TieredArray :=
-  [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+  ([POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
    SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
    FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, SHP, MHP,
-   IHP, LSHP, SOLP, CLP, FVLP, tier1 REC, tier1 SLOT, tier1 AREC, tier1 ASLOT, tier1 SREC,
+   IHP, LSHP, SOLP, CLP, FVLP] : List ArrId).map TieredArray.t0 ++ [tier1 REC, tier1 SLOT, tier1 AREC, tier1 ASLOT, tier1 SREC,
    tier1 SSLOT, tier1 ZREC, tier1 ZSLOT, tier1 MREC, tier1 MSLOT, tier1 IREC, tier1 ISLOT,
    tier1 PREC, tier1 PSLOT, tier1 SOREC, tier1 SOSLOT, tier1 CREC, tier1 CSLOT, tier1 LEREC,
    tier1 LESLOT, tier1 BREC, tier1 BSLOT, tier1 FVREC, tier1 FVSLOT, tier1 LAREC, tier1 LASLOT,
    tier1 FAREC, tier1 FASLOT, tier1 PJREC, tier1 PJSLOT, tier1 NAREC, tier1 NASLOT, tier1 NSREC,
    tier1 NSSLOT, tier1 NNREC, tier1 NNSLOT, tier1 LSREC, tier1 LSSLOT, tier1 SHP, tier1 MHP,
-   tier1 IHP, tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP, PT0, tier1 POOL]
+   tier1 IHP, tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP, (PT0 : TieredArray), tier1 POOL]
 /-- The store tier's `CTL` words: the pool top, the scratch flag, the tables' counts. -/
 def storeCtl : List Word :=
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 62]
