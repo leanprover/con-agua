@@ -794,21 +794,11 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
 
 
 /-- The model of `const_val_at`. -/
-def constValAtW (p : Prog) (n : Nat) (m : Mem) (nm po pl value us : Word) : Option (Word × Mem) :=
-  memoSlotW cvSch m nm us (callW p n "inst_lp" [po, pl, us, value] m)
-
-theorem constValAt_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
-    (nm po pl value us : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "const_val_at" [nm, po, pl, value, us]
-    ⦃fun r s' => LocEq s' s₀ ∧ constValAtW p n s₀.mem nm po pl value us = some (r.headD 0, s'.mem);
-      ⊤⦄ := by
-  rw [invoke_eq _ hp.constValAt]
-  simp only [callFn, constValAtL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec cvSch p _ hp.cvFind n, memoPutG_spec cvSch p _ hp.cvPut n,
-      callW_spec p n "inst_lp"] <;>
-    finish [constValAtW, memoSlotW_hit, memoSlotW_miss, mvG]
+l_model constValAt_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.constValAt ↦ constValAtW]
+  specs [memoFindG_spec cvSch p _ hp.cvFind n, memoPutG_spec cvSch p _ hp.cvPut n,
+    callW_spec p n "inst_lp"]
+  grind [arena_grind]
 
 
 theorem constValAt_run_hit (a : AState) (n : NIdx) (lps : List NIdx) (value : EIdx) (us : LsIdx)
@@ -837,8 +827,8 @@ theorem callW_constValAt (hp : WhnfDeltaProg p) (hlp : InstLPOK p) (n : Nat) (s�
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (constValAt_spec p hp n s₀ nm po pl value us) h
-  unfold constValAtW memoSlotW at hW
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (constValAt_spec p hp (n + 1) s₀ nm po pl value us) h
+  rw [constValAtW.eq_2] at hW
   by_cases h0 : mfindG cvSch s₀.mem nm us = []
   · rw [ite_eq_left h0] at hW; cases hW
   rw [ite_eq_right h0] at hW
@@ -850,23 +840,28 @@ theorem callW_constValAt (hp : WhnfDeltaProg p) (hlp : InstLPOK p) (n : Nat) (s�
     rw [← hm]
     obtain ⟨hhit, hbd⟩ := hf.1 h1
     refine (CRef.pure hC _ (constValAt_run_hit a₀ _ _ _ _ _ hhit) ?_ ?_).core
-    · simp only [decH, ← hr]
+    · simp only [decH, ← hr]; rfl
     · unfold ResH; rw [← hr]; exact hbd
   rw [ite_eq_right h1] at hW
   have hmiss := hf.2 (by simpa using h1)
   cases hcall : callW p n "inst_lp" [po, pl, us, value] s₀.mem with
-  | none => rw [hcall] at hW; cases hW
+  | none => rw [hcall, constValAtW.k_inst_lp.none] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₁, m₁⟩ := q₁
-  rw [hcall] at hW
-  dsimp only at hW
+  rw [hcall, constValAtW.k_inst_lp.eq_2] at hW
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ :=
     CoreSpec.of_callW (hlp n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pl us value lps hC hv
       hu hlps) hcall
-  cases hset : msetG cvSch m₁ nm us (r₁.headD 0) with
-  | none => rw [hset] at hW; cases hW
+  by_cases hf1 : mfindG cvSch m₁ nm us = []
+  · rw [ite_eq_left hf1] at hW; cases hW
+  rw [ite_eq_right hf1] at hW
+  cases hput : mputG cvSch m₁ nm us (r₁.headD 0) ((mfindG cvSch m₁ nm us).headD 0)
+      ((mfindG cvSch m₁ nm us).tail.headD 0) with
+  | none => rw [hput, constValAtW.k_cv_put.none] at hW; cases hW
   | some m₂ =>
-  rw [hset] at hW
+  rw [hput, constValAtW.k_cv_put.arm1] at hW
+  have hset : msetG cvSch m₁ nm us (r₁.headD 0) = some m₂ := by
+    unfold msetG; rw [ite_eq_right hf1]; exact hput
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   have hrun := AM.run_of_ok _ _ hok
