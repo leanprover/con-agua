@@ -207,10 +207,12 @@ theorem rdW_set64E (m : Mem) (a b : TieredArray) (k v x : Word) :
 
 theorem Mem.set64_set64_same (m : Mem) (a : TieredArray) (i v w : Word) :
     (m.set64 a i v).set64 a i w = m.set64 a i w := by
-  have := Mem.arr64_set64_same m a i v
-  simp only [Mem.set64] at this ⊢
-  rw [this]
-  simp only [Array.set!_eq_setIfInBounds, Array.setIfInBounds_setIfInBounds]
+  simp only [Mem.set64, Mem.mk.injEq, true_and, and_true]
+  funext s'
+  by_cases h : s' = a
+  · subst h
+    simp [Mem.arr64, Array.set!_eq_setIfInBounds, Array.setIfInBounds_setIfInBounds]
+  · simp [h]
 
 theorem slot_eq_iff {i c t u : Word} (hi : i < 134217728) (hc : c < 134217728) (ht : t ≤ 1)
     (hu : u ≤ 1) : i * 2 + t = c * 2 + u ↔ i = c ∧ t = u := by
@@ -293,8 +295,7 @@ theorem tfld_pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (X : TRec) (hX : X.a
     simp only [true_and, apply_ite (X.ex 0), TRec.ex_zero]
   · have hDc : D ≠ CTL := by
       rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
-    have hDc' : tierA D u ≠ CTL := by
-      (ne_tierA (Ne.symm hDc) u).symm
+    have hDc' : tierA D u ≠ CTL := (ne_tierA (Ne.symm hDc) u).symm
     rw [pushZ_arr m t f a _ hDc' (tierA_ne (Ne.symm hRD) u t) (tierA_ne_tier _ hu ht hut)]
     simp [hut]
 

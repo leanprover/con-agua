@@ -403,7 +403,7 @@ theorem mputMemE_reads (S : MemoSch) (hS : S.WF) (m : Mem) (fd s k1 k2 w e c : W
       rw [slotsG_set64]; exact hj1
     have h3 := slot_set S _ s 2 k2 hs2 (by decide) j hj2
     have h4 := slot_other S (((m.set64 S.arr (s * 4) e).set64 S.arr (s * 4 + 1) k1).set64 S.arr
-      (s * 4 + 2) k2) CTL (Ne.symm hac) (S.cs + 1) (c + 1) j
+      (s * 4 + 2) k2) CTL (TieredArray.t0_ne (Ne.symm hac)) (S.cs + 1) (c + 1) j
     have hs4 : s.toNat < slotsG S ((((m.set64 S.arr (s * 4) e).set64 S.arr (s * 4 + 1) k1).set64
         S.arr (s * 4 + 2) k2).set64 CTL (S.cs + 1) (c + 1)) := by
       simp only [slotsG_set64]; exact hs
@@ -1163,7 +1163,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     have a3 := hdr_slot S ((m'.set64 S.arr 0 (epG S m)).set64 S.arr 1 (mbG S m + nG S m)) 2
       (nG S m * 2) (by decide) j (by simp only [slotsG_set64]; exact hjs) hj1
     have a4 := slot_other S (((m'.set64 S.arr 0 (epG S m)).set64 S.arr 1 (mbG S m + nG S m)).set64
-      S.arr 2 (nG S m * 2)) CTL (Ne.symm hac) (S.cs + 1) c' j
+      S.arr 2 (nG S m * 2)) CTL (TieredArray.t0_ne (Ne.symm hac)) (S.cs + 1) c' j
     rw [hM] at a4
     rw [a4.1, a4.2.1, a4.2.2.1, a4.2.2.2, a3.1, a3.2.1, a3.2.2.1, a3.2.2.2, a2.1, a2.2.1, a2.2.2.1,
       a2.2.2.2, a1.1, a1.2.1, a1.2.2.1, a1.2.2.2]
@@ -1259,7 +1259,7 @@ stamp**, when the values' denotations do (a heap that only grows, say). -/
 theorem memoRV_frame (A : List TieredArray) (C : List Word) (hA : (S.arr : TieredArray) ∉ A) (hC : S.cs ∉ C)
     (m m' : Mem) (hf : MemFrame A C m m') (hV : ∀ w v, VR m w v → VR m' w v)
     (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp) : MemoRV S K VR m' mp := by
-  have hb : m'.arr64 S.arr = m.arr64 S.arr := hf.1 S.arr hA hS.arr_ctl
+  have hb : m'.arr64 S.arr = m.arr64 S.arr := hf.1 S.arr hA (TieredArray.t0_ne hS.arr_ctl)
   obtain ⟨g1, g2, g3, g4, -⟩ := reg_congr S m m' (fun f _ => by rw [hb]) (hf.2.1 S.cs hC)
     (by rw [hb])
   have hs : ∀ j, mstG S m' j = mstG S m j := fun j => by simp only [mstG, hb]
