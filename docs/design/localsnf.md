@@ -45,7 +45,7 @@ representation of the locals (in the frame or in `vcgen`'s output), and fixed `s
 sets. The representation change touches `L/Semantics.lean` and with it the compiler proofs and
 every spec; the lemma sets exist already (299 hand-written copies) and are what costs the time. The
 simproc needs no change to any statement and reaches `grind` as well as `simp`, so it came first,
-and the prototype (§2.1) left no reason to try the others.
+and the prototype (§3.1) left no reason to try the others.
 
 **`ConAgua/L/LocNF.lean`** has three simprocs, imported by `L/Logic.lean`, so every L proof has
 them:
@@ -79,3 +79,79 @@ Decisions, each forced by a failure of the simpler version:
   sides of the general equations themselves when they are registered as `grind` patterns
   (`St.setLoc_mem`, `Scan.St.setLocs_mem`, `Locals.init_cons_zero`: "invalid pattern"). The
   verification conditions only have literal locals.
+
+## 3. Measurements
+
+### 3.1 Prototype
+
+The simprocs pasted into copies of the ten modules (`_tmp/localsnf/mkvar.py`; also added to the
+hand-written `simp only [St.setLoc_loc, …]` lists): 307 → 184 CPU s over the nine modules that
+elaborated (`LevelLeqSpec` is a `module` file and the pasted code was not `meta`). Every proof
+went through unchanged. The gain was almost all in `grind`.
+
+### 3.2 The ten modules, alone, interleaved
+
+Master e2f3ea22 (A) and this branch (B), each module elaborated alone, A then B, CPU seconds
+(`_tmp/localsnf/inter.sh`, load about 20):
+
+| module | A | B |
+|---|---:|---:|
+| `Verdict.IndBGrpM` | 81.5 | 81.2 |
+| `Arena.IndInstallSpec.GenRecCheckPrep` | 88.3 | 19.7 |
+| `Arena.RecGenSpec.Tmc` | 52.0 | 4.1 |
+| `Arena.DeclApdSpec` | 47.9 | 9.7 |
+| `Verdict.DefEqTailE` | 42.6 | 41.8 |
+| `Arena.LevelLeqSpec` | 34.5 | 6.5 |
+| `Arena.IndInstallSpec.Pos3Init` | 34.2 | 4.4 |
+| `Arena.RecGenSpec.OcW` | 31.5 | 9.9 |
+| `Arena.DeclCanonExpr` | 30.8 | 27.8 |
+| `Verdict.IndBTmm` | 25.0 | 22.6 |
+| **total** | **468** | **228** (−51 %) |
+
+The four modules that did not move (`IndBGrpM`, `DefEqTailE`, `IndBTmm`, `DeclCanonExpr`) spend
+their time in `simp`/`simp_all` (`l_model`'s recipe, a hand `simp only`), which does not use the
+simprocs unless they are listed (§4).
+
+### 3.3 The whole build
+
+Two cold builds one after the other (`LAKE_COLD=1`, empty `.lake/build`, 16 jobs, load 20–45;
+logs `_tmp/localsnf/cold-{base,nf}.log`):
+
+| | master e2f3ea22 | this branch |
+|---|---:|---:|
+| wall | 561 s | 447 s |
+| CPU (user) | 11 103 s | 8 477 s |
+| sum of `ConAgua` module times | 6 963 s | 5 219 s (−25 %) |
+
+The largest drops: `Arena.DeclApdSpec` 80 → 11 s, `Arena.IndInstallSpec.GenRecCheckPrep` 74 →
+9 s, `Front.FieldsExpr` 53 → 6 s, `Checker.Hoist` 59 → 19 s, `Arena.LevelLeqSpec` 45 → 6 s,
+`Arena.RecGenSpec.OcW` 45 → 8 s, `Arena.RecGenSpec.Tmc` 37 → 3 s, `Arena.NatDiv` 58 → 31 s,
+`Verdict.InferBindE` 54 → 29 s. The modules that got slower are kernel and program checks the
+change cannot reach (`Checker.NoVerdictTree`, `IndArmTrees*`, `AsmPart*`): load noise of a
+single pair of runs. No new warning (the same 21, all in Kraken and `vendor/`).
+
+### 3.4 Fallout
+
+Eight proof files changed, 33 lines:
+
+* `DeclCanonLvl`, `DeclCanonRules`, `DeclCanonExpr`: the hand-written `init9_*`/`init11_*`
+  lemmas (`Locals.init [a0, …, a10] k = ak`), passed to `finish`, had no pattern any more (the
+  normalizer reduces their left sides). They are deleted; `DeclCanonExpr`'s `simp only` names
+  `L.reduceLocalsInit` instead.
+* `PromoteCI` (`erec_wr4`, `erec_wr5`, `proj_wr`), `IndInstallSpec.IcaW` (`er_put5`): runs of
+  four to six stores need more than `finish`'s default five E-matching rounds (`ematch := 8`,
+  commented as a depth).
+* `WhnfCoreAppLoop` (`whnfAppRestW_spec`): one more case split than the default nine
+  (`splits := 12`).
+* `RecGenSpec.ClassMinorSlot`: the model's base arm as a `have` (the model's term occurs only
+  under the post's `∃`).
+* `NatArms` (`natPowLit_refines`): two small lemmas for `finish`, `pv_of_lt_one` and
+  `pow_of_eq_zero` (the exponent's slice is empty).
+
+Each of these modules is faster than before.
+
+## 4. Next: the `simp` side
+
+`l_model`'s steps and the hand-written `simp only [St.setLoc_loc, …]` sets do not use the
+simprocs unless they name them. Pilot (worktree only, not landed): the five simprocs added to
+`l_model`'s `simpBase` list (`ModelGen.lean`); measurement below.
