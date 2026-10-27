@@ -5,7 +5,6 @@ import ConAgua.Arena.IndT.RecGen27
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
-set_option linter.unusedSectionVars false
 
 /-!
 # Error refinement of `class_ctor_of` (lane `verdicts-b`, helper `ib`)
@@ -39,6 +38,7 @@ variable {p : Prog} (hq : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche
   (hnv : closedNV p _root_.L.Checker.nvFns = true) {vis : Word} (hTka : TkaE p dn vis fe env)
 include hq henv P hIlpf hOpf hnv hTka
 
+omit hIlpf in
 /-- **`class_ctor_of`'s model error claim** (`cxoW_okC`'s hypotheses; the model at fuel `n + 1`). -/
 theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl rd mo ml c cA : Word}
     {bs : BlockShape} {formerTys : List EIdx} {R : ClassRead} {ms : List TargetMajor}
@@ -326,6 +326,7 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
   rw [h9, cxoE.k_rec6.arm1] at he
   cases he
 
+omit hIlpf in
 /-- **`class_ctor_of`'s error claim** (every fuel; `classCtorOf_refinesC`'s hypotheses). -/
 theorem classCtorOf_claim (N : Nat) (hN : N ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (q fto ftl rd mo ml c cA : Word) (bs : BlockShape)
@@ -352,7 +353,7 @@ theorem classCtorOf_claim (N : Nat) (hN : N ≤ 2 ^ 62) (s₀ : St) (a₀ : ASta
     refine CoreSpecE.of_runs fun e hc => ?_
     by_cases hk0 : e.cls = 0
     · exact ErrClaim.of_cls0 hk0
-    exact cxoE_claim hq henv P hIlpf hOpf dn fe hnv hTka n hN hC hA hbs hft hftb hR hms hmsb hcA hlp hnpk
+    exact cxoE_claim hq henv P hOpf dn fe hnv hTka n hN hC hA hbs hft hftb hR hms hmsb hcA hlp hnpk
       hsz5 hP hsh hftP hmsP hcAP hformer hMs e
       (triple_of_callE_err (cxoE_spec p P.cxo (n + 1) s₀ vis q fto ftl rd mo ml c cA) hc (Err.code_ne_of_cls hk0))
 
