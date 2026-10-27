@@ -159,7 +159,7 @@ theorem spnPoolW_arr (n : Nat) : ∀ (m m' : Mem) (b d l : Word), spnPoolW n m b
     by_cases hl : l = 0
     · rw [spnPoolW_nil n m b d l hl] at h; cases h; rfl
     · rw [spnPoolW_cons n m b d l hl] at h
-      rw [ih _ _ _ _ _ h A h0 h1, Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne _ A h0 h1)]
+      rw [ih _ _ _ _ _ h A h0 h1, Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne _ A (TieredArray.t0_ne h0) h1)]
 
 theorem spnPoolW_top (n : Nat) (m m' : Mem) (b d l : Word) (h : spnPoolW n m b d l = some m') :
     m'.top = m.top := by

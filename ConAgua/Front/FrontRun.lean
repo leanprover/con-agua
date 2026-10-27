@@ -367,9 +367,12 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine b h64 hsize n s₀ hm hpool a₀ hA hD
     hok hoff hpins hmode
 
-/-- A memory with 224 word arrays of 4096 words and the input `s` (the inductive lines' scratch
-arrays `IFR`/`IFL` are 70, 71, the level heap 192). -/
-def frontMemOf (s : String) : Mem := (initMem (List.replicate 224 4096)).putBytes IN s.toUTF8.data
+/-- A memory with the tier-0 word arrays `0‥223` of 4096 words (as `initMem`, but one shared zero
+array), every other word array empty, and the input `s` (the inductive lines' scratch arrays
+`IFR`/`IFL` are 70, 71, the level heap 192). -/
+def frontMemOf (s : String) : Mem :=
+  let z : Array Word := Array.replicate 4096 0
+  ({ words := fun b => if !b.hi && b.arr < 224 then z else #[] } : Mem).putBytes IN s.toUTF8.data
 
 /- A header, a name, a level, and expression lines of six kinds (a 30-digit literal among them):
 accepted. -/

@@ -191,7 +191,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
       (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf
       (fun b hb => by have := henv b hb; simp only [ArrId] at this ⊢; omega), ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
-      hf.2.2.1 145 ▸ hS.bstk,
+      hf.2.2.1 BSTK ▸ hS.bstk,
       hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hmode⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
