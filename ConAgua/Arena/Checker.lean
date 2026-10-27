@@ -110,7 +110,7 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
   · rw [hpA]
     exact hR.check.pins.frame (fun b hb => by have := hA' b hb; omega) hf
   · exact hR.check.env.grow (fun b h1 h2 h3 => hf.1 b (fun h => by
-        have := hA' _ h; simp only [TieredArray.t0] at this; omega)
+        have := hA' _ h; simp only at this; omega)
       (TieredArray.t0_ne (show b ≠ (1 : Nat) by omega))) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
       hg (TblSame.of_frame (fun b hb => by have := hA' b hb; omega)
         (fun h => by have := hA' _ h; revert this; decide)
@@ -335,11 +335,11 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     rw [UInt64.toNat_add, h30]; simp; omega
   have hP : (pendPushMem m g i v).arr64 PEND =
       (((m.arr64 PEND).set! (3 * c.toNat) g).set! (3 * c.toNat + 1) i).set! (3 * c.toNat + 2) v := by
-    simp only [pendPushMem, hcw, Mem.arr64_set64_ne _ _ _ _ _ (show PEND ≠ CTL by decide),
+    simp only [pendPushMem, hcw, Mem.arr64_set64_ne _ _ _ _ _ (show (PEND : TieredArray) ≠ CTL by decide),
       Mem.arr64_set64_same, h30, h31, h32]
   have hC : (pendPushMem m g i v).arr64 CTL = (m.arr64 CTL).set! 130 (c + 1) := by
     simp only [pendPushMem, hcw, Mem.arr64_set64_same,
-      Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PEND by decide)]
+      Mem.arr64_set64_ne _ _ _ _ _ (show (CTL : TieredArray) ≠ PEND by decide)]
     rfl
   have hcnt : pendCount (pendPushMem m g i v) = c.toNat + 1 := by
     simp only [pendCount, hC, rdW_set!]
