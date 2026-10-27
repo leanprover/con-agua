@@ -7,6 +7,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of the recursor generation's leaves (lane `verdicts-b`, helper `ib`)
@@ -53,7 +54,7 @@ theorem classKeyOf_claim (hnv : closedNV p _root_.L.Checker.nvFns = true) (k : N
   | error e1 =>
     rw [h1, classKeyOfE.k_class_key_canon.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q =>
   obtain ⟨r1, m1⟩ := q
   obtain ⟨s1, hs1, -, hm1⟩ := triple_of_callW (kc_spec L k ⟨s₀.mem, Locals.init []⟩ po pl key)
@@ -71,7 +72,7 @@ theorem classKeyOf_claim (hnv : closedNV p _root_.L.Checker.nvFns = true) (k : N
   | error e2 =>
     rw [h2, classKeyOfE.k_class_key_of_closed.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hm2⟩ := triple_of_callW (ckc2_spec L (k + 1) ⟨s1.mem, Locals.init []⟩ nP _ _)
@@ -117,7 +118,7 @@ theorem classMinorSlot_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns
   | error e1 =>
     rw [h1, classMinorSlotE.k_class_minor_slot_go.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q =>
   obtain ⟨r, m1⟩ := q
   by_cases hx : r.headD 0 ≠ 1
@@ -335,7 +336,7 @@ theorem rgE_claim {γ : Type} {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFn
   | error e1 =>
     rw [h1, classRecTyOkGuardsE.k_target_major_at.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q =>
   obtain ⟨r1, m1⟩ := q
   obtain ⟨s1, hs1, -, hmod⟩ := triple_of_callW

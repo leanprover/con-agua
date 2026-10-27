@@ -1,6 +1,7 @@
 import ConAgua.Verdict.IndBTmc
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_major_of` (lane `verdicts-b`, helper `ib`)
@@ -55,7 +56,7 @@ theorem tmfE_claim (n : Nat) {m : Mem} {a : AState}
   | error e1 =>
     rw [h1, tmfE.k_get_app_args_f.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, hs1'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -76,7 +77,7 @@ theorem tmfE_claim (n : Nat) {m : Mem} {a : AState}
   | error e2 =>
     rw [h2, tmfE.k_get_app_fn_f.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hs2'⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
@@ -109,7 +110,7 @@ theorem tmfE_claim (n : Nat) {m : Mem} {a : AState}
   | error e3 =>
     rw [h3, tmfE.k_e_view.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, hs3'⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)

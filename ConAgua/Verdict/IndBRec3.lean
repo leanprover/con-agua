@@ -1,6 +1,7 @@
 import ConAgua.Verdict.IndBRec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `class_rec_tys_ok` (lane `verdicts-b`, helper `ib`)
@@ -162,7 +163,7 @@ theorem rtsE_claim (hp : RtsProg p) (g k : Word) (G : ClassGen) (hns : G.nP + G.
   | error e3 =>
     rw [h3, classRecTysOkE.k_sl_cons.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, classRecTysOkE.k_sl_cons.arm1] at he

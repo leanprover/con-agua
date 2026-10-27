@@ -1,6 +1,7 @@
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.IndPosSpec.UnW2
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `nest_uniform`'s error claim (lane `verdicts-b`, helper `ia2`, fork `top`)
@@ -61,7 +62,7 @@ theorem nuE_claim {p : Prog} (hlk : NuLook p) (hc : p.lookup "nest_uniform_cs" =
     cases h1 : callE p k "nest_uniform_cs" [ctx, o, ll] m with
     | error e1 =>
       rw [h1, nuE.k_nest_uniform_cs.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
     | ok q =>
     obtain ⟨r, m1⟩ := q
     obtain ⟨s1, hs1, -, huc⟩ := triple_of_callW

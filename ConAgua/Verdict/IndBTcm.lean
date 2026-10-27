@@ -3,6 +3,7 @@ import ConAgua.Verdict.IndBTpd
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_class_match` (lane `verdicts-b`, helper `ib`)
@@ -67,7 +68,7 @@ theorem tcm_claim (L : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
   | error e1 =>
     rw [h1, tcmE.k_lvls_eq_c.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨o1, a1, run1, hC1, hg1, hd1, hA1, c1, -⟩ :=
@@ -96,7 +97,7 @@ theorem tcm_claim (L : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
   | error e2 =>
     rw [h2, tcmE.k_block_shape_member_names.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rn, m2⟩ := q2
   rw [h2, tcmE.k_block_shape_member_names.arm1] at hW
@@ -115,7 +116,7 @@ theorem tcm_claim (L : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
   | error e3 =>
     rw [h3, tcmE.k_block_shape_lps.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨rl, m3⟩ := q3
   rw [h3, tcmE.k_block_shape_lps.arm1] at hW
@@ -132,7 +133,7 @@ theorem tcm_claim (L : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
   | error e4 =>
     rw [h4, tcmE.k_param_levels.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h4)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4)
   | ok q4 =>
   obtain ⟨rb, m4⟩ := q4
   obtain ⟨s4, hs4, -, h4m⟩ := triple_of_callW (plW_spec p L.ha L.ic L.sc L.sg L.pf L.pp L.ip L.plg L.pl L.il n
@@ -160,7 +161,7 @@ theorem tcm_claim (L : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
   | error e5 =>
     rw [h5, tcmE.k_target_holes.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h5)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5)
   | ok q5 =>
   obtain ⟨rh, m5⟩ := q5
   rw [h5, tcmE.k_target_holes.arm1] at hW

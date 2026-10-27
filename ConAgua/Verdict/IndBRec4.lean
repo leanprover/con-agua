@@ -3,6 +3,7 @@ import ConAgua.Verdict.UnresolvedE
 import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `class_rule_ok` (lane `verdicts-b`, helper `ib`)
@@ -64,7 +65,7 @@ theorem crgE_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) {visT vis
   cases h1 : callE p N "loose_bvars_bounded_fast" [CWF, 0, gen] m with
   | error e1 =>
     rw [h1, crgE.k_loose_bvars_bounded_fast.none] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, h1'⟩ := triple_of_callE (lbbF_spec p hp.bvb N ⟨m, Locals.init []⟩ _) h1
@@ -78,7 +79,7 @@ theorem crgE_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) {visT vis
   cases h2 : callE p N "has_fvar_fast" [CWF, gen] m1 with
   | error e2 =>
     rw [h2, crgE.k_has_fvar_fast.none] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, h2'⟩ := triple_of_callE (hffF_spec p hp.hf N ⟨m1, Locals.init []⟩ _) h2
@@ -102,7 +103,7 @@ theorem crgE_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) {visT vis
   cases h3 : callE p N "cv_lps" [cvR] m2 with
   | error e3 =>
     rw [h3, crgE.k_cv_lps.none] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, h3', -⟩ := triple_of_callE
@@ -120,7 +121,7 @@ theorem crgE_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) {visT vis
   cases h4 : callE p N "all_level_params_defined" [r3.headD 0, r3.tail.headD 0, gen] m3 with
   | error e4 =>
     rw [h4, crgE.k_all_level_params_defined.none] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   have h4' := apdF_of_callW hApd (callW_of_callE h4)
@@ -144,7 +145,7 @@ theorem crgE_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) {visT vis
   cases h5 : callE p N "consts_resolve_ffast" [visR, gen] m4 with
   | error e5 =>
     rw [h5, crgE.k_consts_resolve_ffast.none] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   obtain ⟨x5, a5, hrun5, ⟨hT5, hg5, hx5, -⟩, hCr5⟩ :=
@@ -236,7 +237,7 @@ theorem classRuleOk_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) (N
   | error e3 =>
     rw [h3, cruleE.k_flush_caches.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, cruleE.k_flush_caches.arm1] at hW
@@ -258,7 +259,7 @@ theorem classRuleOk_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) (N
   | error e4 =>
     rw [h4, cruleE.k_strip_lams.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   obtain ⟨s4, hs4, -, h4'⟩ := triple_of_callE
@@ -284,7 +285,7 @@ theorem classRuleOk_claim (hp : CruleProg p) (hApd : ApdF p) (hU : UceProg p) (N
   | error e5 =>
     rw [h5, cruleE.k_class_rule_ok_domains.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   obtain ⟨s5, hs5, -, h5'⟩ := triple_of_callE

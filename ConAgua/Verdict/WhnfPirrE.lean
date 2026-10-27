@@ -1,4 +1,5 @@
 import ConAgua.Verdict.WhnfM2CE
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `proof_irrel`'s verdict claims (lane `verdicts-b`, helper `k2`)
@@ -15,8 +16,8 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem whnfPirrE_nv : ∀ f ∈ ["pin_word", "lvl_eq_c"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem whnfPirrE_nv : ∀ f ∈ ["pin_word", "lvl_eq_c"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- One half of the twin's `proofIrrel`, in continuation style. -/
 def piHalfT (r : CoreFnsA) (depth : Nat) (x : EIdx) (k : Bool → AM Bool) : AM Bool := do

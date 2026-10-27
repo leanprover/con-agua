@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndT.PosCont
 import ConAgua.Checker.NoVerdictFns
 import ConAgua.Verdict.PosE1M
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `nest_pos_fvar`, `nest_cont_checks`: error claims (lane `verdicts-b`, helper `ia2`, fork `kn1`)
@@ -38,7 +39,7 @@ theorem pfvE_claim {p : Prog} (L : PfLook p) (hnv : closedNV p _root_.L.Checker.
   cases h1 : callE p k "nest_hole_at" [ctx, po, pl, i] m with
   | error e1 =>
     rw [h1, pfvE.k_nest_hole_at.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, hha⟩ := triple_of_callW (nestHoleAt_spec' p L k ⟨m, Locals.init []⟩ ctx po pl i)
@@ -70,7 +71,7 @@ theorem pfvE_claim {p : Prog} (L : PfLook p) (hnv : closedNV p _root_.L.Checker.
       rdW (m1.arr64 IW) (ctx + 4), hi, aO, aL] m1 with
   | error e2 =>
     rw [h2, pfvE.k_nest_occ_any.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hoa⟩ := triple_of_callW (nestOccAny_spec p L.no L.hoa (k + 1) ⟨m1, Locals.init []⟩ _ _ _ _ _ _)
@@ -98,7 +99,7 @@ theorem pfvE_claim {p : Prog} (L : PfLook p) (hnv : closedNV p _root_.L.Checker.
   cases h3 : callE p (k + 1) "nest_arity" [vis, rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0))] m2 with
   | error e3 =>
     rw [h3, pfvE.k_nest_arity.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, hna⟩ := triple_of_callW (nestArity_spec' p L.na (k + 1) ⟨m2, Locals.init []⟩ _ _)
@@ -131,7 +132,7 @@ theorem pfvE_claim {p : Prog} (L : PfLook p) (hnv : closedNV p _root_.L.Checker.
     cases h4 : callE p (k + 1) "nest_pos_hole_kind" [ctx, kb, i] m3 with
     | error e4 =>
       rw [h4, pfvE.k_nest_pos_hole_kind.eq_1] at h; cases h
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
     | ok q4 =>
       obtain ⟨r4, m4⟩ := q4
       rw [h4, pfvE.k_nest_pos_hole_kind.arm1] at h; cases h
@@ -173,7 +174,7 @@ theorem nccE_claim {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker.
       rdW (m.arr64 IW) (ctx + 4), hp, iO, iL] m with
   | error e1 =>
     rw [h1, nccE.k_nest_occ_any.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, hoa⟩ := triple_of_callW (nestOccAny_spec p L.nit.no L.nit.hoa k ⟨m, Locals.init []⟩ _ _ _ _ _ _)
@@ -197,7 +198,7 @@ theorem nccE_claim {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker.
   cases h2 : callE p k "pin_at" [47] m1 with
   | error e2 =>
     rw [h2, nccE.k_pin_at.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rq, m2⟩ := q2
   obtain ⟨s2, hs2, -, hq⟩ := triple_of_callW (pos2Pin_spec p L.hpa k ⟨m1, Locals.init []⟩ 47) (callW_of_callE h2)
@@ -216,7 +217,7 @@ theorem nccE_claim {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker.
   cases h3 : callE p k "nest_cont_params_closed" [hp, dO, dL] m1 with
   | error e3 =>
     rw [h3, nccE.k_nest_cont_params_closed.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, hcp⟩ := triple_of_callW

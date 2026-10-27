@@ -3,6 +3,7 @@ import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.RecGenSpec.ClassFieldsOf
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `class_fields_of(_go)` (lane `verdicts-b`, helper `ib`)
@@ -76,7 +77,7 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
   | error e1 =>
     rw [h1, cfgE.k_fvar_type_d.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, cfgE.k_fvar_type_d.arm1] at he
@@ -94,7 +95,7 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
   | error e2 =>
     rw [h2, cfgE.k_nest_occ.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, cfgE.k_nest_occ.arm1] at he
@@ -116,7 +117,7 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
   | error e3 =>
     rw [h3, cfgE.k_class_fields_of_hits.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, hm3, hw3⟩ := triple_of_callW (classFieldsOfHits_spec p P.hits n ⟨s2.mem, Locals.init []⟩
@@ -151,7 +152,7 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
       | error e7 =>
         rw [h7, cfgE.k_sl_cons.none] at hj
         cases hj
-        exact ErrClaim.of_callE_nv hnv (by decide +kernel) h7
+        exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h7
       | ok q7 =>
         rw [h7, cfgE.k_sl_cons.arm1] at hj
         cases hj
@@ -164,7 +165,7 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     | error e4 =>
       rw [h4, cfgE.k_iw_alloc.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
     | ok q4 =>
       obtain ⟨r4, m4⟩ := q4
       rw [h4, cfgE.k_iw_alloc.arm1] at he
@@ -188,7 +189,7 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     | error e4 =>
       rw [h4, cfgE.k_pi_binders.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
     | ok q4 =>
       obtain ⟨r4, m4⟩ := q4
       rw [h4, cfgE.k_pi_binders.arm1] at he
@@ -203,7 +204,7 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
       | error e5 =>
         rw [h5, cfgE.k_rec3.none] at he
         cases he
-        exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+        exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
       | ok q5 =>
         obtain ⟨r5, m5⟩ := q5
         rw [h5, cfgE.k_rec3.arm1] at he
@@ -275,7 +276,7 @@ theorem classFieldsOf_claim (n : Nat) (s₀ : St) (a₀ : AState) (q io il i fo 
   | error e1 =>
     rw [h1, cfoE.k_block_shape_member_names.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, cfoE.k_block_shape_member_names.arm1] at he

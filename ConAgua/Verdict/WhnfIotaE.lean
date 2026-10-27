@@ -1,5 +1,6 @@
 import ConAgua.Verdict.WhnfModels3E
 import ConAgua.Verdict.WhnfAppE
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `iota_rec_at`'s verdict claims, the top (lane `verdicts-b`, helper `k2`)
@@ -18,8 +19,8 @@ namespace L.Arena
 theorem whnfIotaE_nv : ∀ f ∈ ["iota_rec_head", "env_find", "ls_node", "peel_pis", "intern_bvar",
     "get_app_fn", "find_rule", "get_app_args", "rule_rhs_at", "mk_app_n", "mk_app_n_from",
     "rec_fire_levels", "iota_case3", "lvls_eq_c", "const_ty_at", "rec_rule_k", "is_ctor_app",
-    "is_str_lit", "erec_push", "rec_fire_args", "stack_cover"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "is_str_lit", "erec_push", "rec_fire_args", "stack_cover"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- `iota_rec_major`'s error claim at fuel `N + 1` (the premises of `iotaRecMajor_refines'`). -/
 def IotaRecMajorE (p : Prog) : Prop :=

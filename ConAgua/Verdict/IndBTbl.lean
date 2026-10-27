@@ -3,6 +3,7 @@ import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `check_struct_proj_table` (lane `verdicts-b`, helper `ib`)
@@ -63,7 +64,7 @@ theorem tblE_claim (n : Nat) {m : Mem} {a : AState} {T C lo ll nP nF rs go gl cv
   | error e1 =>
     rw [h1, tblE.k_struct_proj_bodies.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨rb, m1⟩ := q1
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -93,7 +94,7 @@ theorem tblE_claim (n : Nat) {m : Mem} {a : AState} {T C lo ll nP nF rs go gl cv
   | error e2 =>
     rw [h2, tblE.k_check_struct_proj_table_scoped.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rs', m2⟩ := q2
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
@@ -125,7 +126,7 @@ theorem tblE_claim (n : Nat) {m : Mem} {a : AState} {T C lo ll nP nF rs go gl cv
   | error e3 =>
     rw [h3, tblE.k_env_find.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨rf, m3⟩ := q3
   obtain ⟨s3, hs3, -, hf⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
@@ -146,7 +147,7 @@ theorem tblE_claim (n : Nat) {m : Mem} {a : AState} {T C lo ll nP nF rs go gl cv
   | error e4 =>
     rw [h4, tblE.k_find_table.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨rt, m4⟩ := q4
   obtain ⟨s4, hs4, hm42, -, hfind, hsome4⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)

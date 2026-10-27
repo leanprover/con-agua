@@ -3,6 +3,7 @@ import ConAgua.Verdict.FrontRecsE
 import ConAgua.Verdict.FrontRunE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `validate_ind_d`'s error refinement (lane `verdicts-b`, helper `f2`)
@@ -579,7 +580,8 @@ end L.Front.Ind
 
 namespace L.Front.Ind
 
-theorem validNV_nv : ∀ f ∈ validNV, f ∈ L.Checker.nvFns := by decide +kernel
+theorem validNV_nv : ∀ f ∈ validNV, f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 theorem validNV_front : ∀ f ∈ validNV, L.Checker.inFront f = true := by decide
 

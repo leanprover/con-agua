@@ -3,6 +3,7 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of the direct sums' field sorts (lane `verdicts-b`, helper `ib`)
@@ -88,7 +89,7 @@ theorem csfE_claimB (hg : p.lookup "sl_get" = some slGet)
   | error e1 =>
     rw [h1, csfGoE.k_sl_get.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, csfGoE.k_sl_get.arm1] at he
@@ -121,7 +122,7 @@ theorem csfE_claimB (hg : p.lookup "sl_get" = some slGet)
   | error e2 =>
     rw [h2, csfGoE.k_fvar_type_d.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h2)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2)
   | ok q2 =>
   obtain ⟨rt, m1⟩ := q2
   rw [h2, csfGoE.k_fvar_type_d.arm1] at he
@@ -260,7 +261,7 @@ theorem checkStructFieldSortsI_claim (hg : p.lookup "sl_get" = some slGet)
   | error e1 =>
     rw [h1, fsortsE.k_iw_alloc.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, fsortsE.k_iw_alloc.arm1] at hW
@@ -328,7 +329,7 @@ theorem sdomsE_claim (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : 
   | error e1 =>
     rw [h1, sdomsE.k_sl_get.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, sdomsE.k_sl_get.arm1] at he
@@ -342,7 +343,7 @@ theorem sdomsE_claim (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : 
   | error e2 =>
     rw [h2, sdomsE.k_sl_get_2.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, sdomsE.k_sl_get_2.arm1] at he
@@ -388,7 +389,7 @@ theorem sdomsE_claim (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : 
   | error e3 =>
     rw [h3, sdomsE.k_fvar_type_d.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h3)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3)
   | ok q3 =>
   obtain ⟨ra, m3⟩ := q3
   rw [h3, sdomsE.k_fvar_type_d.arm1] at he

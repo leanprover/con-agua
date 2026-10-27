@@ -2,6 +2,7 @@ import ConAgua.Verdict.IndA2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Verdict.IndAGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `check_block_pass`'s error refinement (lane `verdicts-b`, helper `ia`)
@@ -105,7 +106,7 @@ theorem checkBlockPassE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e2 =>
     rw [c2, icpE.k_flush_caches.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [c2, icpE.k_flush_caches.eq_2] at he
@@ -190,7 +191,7 @@ theorem checkBlockPassE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e4 =>
     rw [c4, icpE.k_block_nest_ctx.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [c4, icpE.k_block_nest_ctx.eq_2] at he
@@ -368,7 +369,7 @@ theorem checkBlockPassE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e7 =>
     rw [c7, icpE.k_class_seeds.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c7
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c7
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [c7, icpE.k_class_seeds.eq_2] at he
@@ -450,7 +451,7 @@ theorem checkBlockPassE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e9 =>
     rw [c9, icpE.k_check_block_pass_rec.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c9
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c9
   | ok q9 =>
     rw [c9] at he
     cases he

@@ -1,6 +1,7 @@
 import ConAgua.Verdict.DeclDefnE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The verdict claims of the definition arm's gates (lane `verdicts-b`, helper `d`)
@@ -51,8 +52,8 @@ def gateNvList : List FnName :=
    "nat_op_stored_ok_all", "nat_op_names", "sl_contains", "env_find", "rom_pin_sets",
    "nat_div_mod_names", "env_push", "pin_word", "pin_at"]
 
-theorem gateNv_mem : ∀ f ∈ gateNvList, f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem gateNv_mem : ∀ f ∈ gateNvList, f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- A failing callee of the gates' list claims nothing. -/
 theorem nvlG {p : Prog} (hnv : closedNV p L.Checker.nvFns = true) {α : Type} {T : AM α}

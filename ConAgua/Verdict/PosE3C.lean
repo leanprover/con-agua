@@ -1,5 +1,6 @@
 import ConAgua.Verdict.PosE3O
 import ConAgua.Arena.IndT.PosCtors
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `nest_ctors`' error claim step (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
@@ -94,7 +95,7 @@ theorem ctorsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p d
   cases c2 : callE p n "rec3" [r1'.headD 0, r1'.tail.headD 0, r1'.tail.tail.headD 0] m1 with
   | error e2 =>
     rw [c2, nctE.k_rec3.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c2
   | ok q2 =>
   obtain ⟨rr, m2⟩ := q2
   obtain ⟨s2, hs2, -, hr3⟩ := triple_of_callW (posRec3_specW p R.ha L.h3 n ⟨m1, Locals.init []⟩ _ _ _)
@@ -108,7 +109,7 @@ theorem ctorsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p d
   cases c3 : callE p n "sl_snoc" [oO, oL, rr.headD 0] m2 with
   | error e3 =>
     rw [c3, nctE.k_sl_snoc.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c3
   | ok q3 =>
   obtain ⟨ro, m3⟩ := q3
   obtain ⟨s3, hs3, -, hsn⟩ := triple_of_callW (slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n ⟨m2, Locals.init []⟩ _ _ _)

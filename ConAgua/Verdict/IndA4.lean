@@ -2,6 +2,7 @@ import ConAgua.Verdict.IndA2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Verdict.IndAGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `check_block_tail`'s error refinement (lane `verdicts-b`, helper `ia`)
@@ -163,7 +164,7 @@ theorem checkBlockTailE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e2 =>
     rw [c2, ictlE.k_cons_block_ctors.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [c2, ictlE.k_cons_block_ctors.eq_2] at he
@@ -183,7 +184,7 @@ theorem checkBlockTailE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e3 =>
     rw [c3, ictlE.k_flush_caches.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [c3, ictlE.k_flush_caches.eq_2] at he
@@ -209,7 +210,7 @@ theorem checkBlockTailE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e4 =>
     rw [c4, ictlE.k_block_nested_bit.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [c4, ictlE.k_block_nested_bit.eq_2] at he
@@ -350,7 +351,7 @@ theorem checkBlockTailE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e7 =>
     rw [c7, ictrE.k_cons_block_recs_tf.none] at h5
     cases h5
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c7
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c7
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [c7, ictrE.k_cons_block_recs_tf.eq_2] at h5

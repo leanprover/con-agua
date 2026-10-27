@@ -2,6 +2,7 @@ import ConAgua.Verdict.IndBToi
 import ConAgua.Arena.IndT.RecGenTmf
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_major_of_outside_tail` (lane `verdicts-b`, helper `ib`)
@@ -83,7 +84,7 @@ theorem tmtE_claim (n : Nat) {m : Mem} {a : AState} {pp pfo pfl I us dso dsl cso
   | error e2 =>
     rw [h2, tmtE.k_lvl_eq_c.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h2)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨xl, al, hrunl, hC2, hg2, hx, hA2, -⟩ := lvlEqC_simC p hcore hLC n hC1 hA1 _ _ hsH hrsH v.2 lr hdu hdv r2 m2
@@ -105,7 +106,7 @@ theorem tmtE_claim (n : Nat) {m : Mem} {a : AState} {pp pfo pfl I us dso dsl cso
     | error e3 =>
       rw [h3, tmtE.k_mk_target_major.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
     | ok q3 =>
       rw [h3, tmtE.k_mk_target_major.arm1] at he
       cases he

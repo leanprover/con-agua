@@ -2,6 +2,7 @@ import ConAgua.Verdict.IndBTmm
 import ConAgua.Verdict.IndBTmo
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_major_of_const` (lane `verdicts-b`, helper `ib`)
@@ -61,7 +62,7 @@ theorem tmcE_claim (n : Nat) {m : Mem} {a : AState}
   | error e4 =>
     rw [h4, tmcE.k_block_shape_member_names.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   obtain ⟨s4, hs4, hr4, hdn, hg4, hf4, ht4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -92,7 +93,7 @@ theorem tmcE_claim (n : Nat) {m : Mem} {a : AState}
   | error e5 =>
     rw [h5, tmcE.k_sl_find.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   obtain ⟨s5, hs5, -, hm5, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)

@@ -1,5 +1,6 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfM2CE
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The `whnf` family's stuck-side helpers: `prop_irrel` (lane `verdicts-b`, helper `k2`)
@@ -14,8 +15,8 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem whnfStuckE_nv : ∀ f ∈ ["not_proof_fast", "is_proof_fast"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem whnfStuckE_nv : ∀ f ∈ ["not_proof_fast", "is_proof_fast"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- Error model of `prop_irrel`, by hand (the ok model `piK1`). -/
 def piHE (p : Prog) (n : Nat) (m : Mem) (mode vis d a b : Word) : Except Err (List Word × Mem) :=
@@ -148,8 +149,8 @@ end pi
 
 /-! ## `eta_cert`, `eta_cert_body`, `eta_cert_ty` -/
 
-theorem whnfEtaE_nv : ∀ f ∈ ["inst1", "intern_fvar", "mk_app", "io_neutral"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem whnfEtaE_nv : ∀ f ∈ ["inst1", "intern_fvar", "mk_app", "io_neutral"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 section etaErr
 variable (r : CoreFnsA) (depth : Nat)

@@ -1,5 +1,6 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfSlotE
+import ConAgua.Checker.NoVerdictTree
 set_option linter.unusedSectionVars false
 
 /-!
@@ -67,8 +68,8 @@ theorem suhH_spec (p : Prog) (hp : p.lookup "struct_unit_head" = some structUnit
     CTL, EREC, CONST]
 
 theorem whnfUnitE_nv : ∀ f ∈ ["get_app_fn", "env_find", "get_app_args", "ls_node", "reserved_contains_w"],
-    f ∈ L.Checker.nvFns := by
-  decide +kernel
+    f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 section suErr
 variable (r : CoreFnsA) (depth : Nat) (b wta : EIdx)

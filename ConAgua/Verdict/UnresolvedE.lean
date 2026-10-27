@@ -8,6 +8,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The verdict at a term whose constants do not resolve (lane `verdicts-b`, helper `ue`)
@@ -769,8 +770,8 @@ structure UceProg (p : Prog) : Prop extends UceLookups p where
 /-- The callees of `unresolved_consts_error` outside the verdict closure. -/
 def ueNvList : List FnName := ["pin_at", "ue_mentions_go", "has_str_lit_go", "str_lit_supported"]
 
-theorem ueNv_mem : ∀ f ∈ ueNvList, f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem ueNv_mem : ∀ f ∈ ueNvList, f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 theorem uceE_kum_cls {p : Prog} {w : Word} {r : List Word} {m : Mem} {er : Err}
     (h : uceE.k_ue_mentions_go p w (.ok (r, m)) = .error er) :

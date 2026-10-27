@@ -3,6 +3,7 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndT.PosCrest
 import ConAgua.Arena.IndT.PosNew
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The positivity walk's error claims: `nest_cont_new`, `nest_frame` and their leaves
@@ -60,7 +61,7 @@ theorem ngcE_claim {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker.
     cases h1 : callE p k "nest_container" [vis, rdW (m.arr64 IW) off] m with
     | error e1 =>
       rw [h1, ngcE.k_nest_container.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
     | ok q1 =>
     obtain ⟨r1, m1⟩ := q1
     obtain ⟨s1, hs1, -, hnt⟩ := triple_of_callW (nt_spec' p L.nt k ⟨m, Locals.init []⟩ vis _)
@@ -111,7 +112,7 @@ theorem ngcE_claim {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker.
     cases h2 : callE p (k + 1) "sl_append" [oo, ol, r1.tail.tail.headD 0, r1.tail.tail.tail.headD 0] m1 with
     | error e2 =>
       rw [h2, ngcE.k_sl_append.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
     | ok q2 =>
     obtain ⟨r2, m2⟩ := q2
     obtain ⟨s2, hs2, -, hap⟩ := triple_of_callW (slAppend_specW p L.nt.ha L.nit.hc2 L.hap (k + 1)
@@ -196,7 +197,7 @@ theorem nggE_claim {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageC
     cases h1 : callE p k "rec4" [cw, us, dO, dL] m with
     | error e1 =>
       rw [h1, nggE.k_rec4.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
     | ok q1 =>
     obtain ⟨rk, m1⟩ := q1
     obtain ⟨s1, hs1, -, hk⟩ := triple_of_callW (posRec4_specW p R.ha R.h4 k ⟨m, Locals.init []⟩ cw us dO dL)
@@ -276,7 +277,7 @@ theorem nggE_claim {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageC
     cases h3 : callE p (k + 1) "rec2" [cw, r2.tail.headD 0] m2 with
     | error e3 =>
       rw [h3, nggE.k_rec2.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
     | ok q3 =>
     obtain ⟨rp, m3⟩ := q3
     obtain ⟨s3, hs3, -, hpr⟩ := triple_of_callW (posRec2_specW p R.ha R.h2 (k + 1) ⟨m2, Locals.init []⟩ _ _)
@@ -292,7 +293,7 @@ theorem nggE_claim {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageC
     cases h4 : callE p (k + 1) "sl_snoc" [gO, gL, pw] m3 with
     | error e4 =>
       rw [h4, nggE.k_sl_snoc.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
     | ok q4 =>
     obtain ⟨r4, m4⟩ := q4
     obtain ⟨s4, hs4, -, hsn⟩ := triple_of_callW (slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn (k + 1)
@@ -490,7 +491,7 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
   cases h2 : callE p n "intern_const" [rn.headD 0, us] m1 with
   | error e2 =>
     rw [h2, nfrE.k_intern_const.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rc2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hic⟩ := triple_of_callW (internConst_spec p R.cf R.cp R.ci n ⟨m1, Locals.init []⟩ _ _)
@@ -516,7 +517,7 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
   cases h3 : callE p n "mk_app_n_f" [hc', dO, dL] m2 with
   | error e3 =>
     rw [h3, nfrE.k_mk_app_n_f.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨ra, m3⟩ := q3
   obtain ⟨s3, hs3, -, hma⟩ := triple_of_callW (mknF_spec p LK.nt.ad n ⟨m2, Locals.init []⟩ _) (callW_of_callE h3)
@@ -556,7 +557,7 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
   cases h5 : callE p n "nest_frame_grp" [hi, us, dO, dL, gO, gL, po, pl, 0, 0] m4 with
   | error e5 =>
     rw [h5, nfrE.k_nest_frame_grp.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   obtain ⟨s5, hs5, -, hfg⟩ := triple_of_callW (nestFrameGrp_spec p R.ha LK.nit.hc2 R.h2 R.h4 LK.nag.hsn LK.hfg n
@@ -608,7 +609,7 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
   cases h7 : callE p n "nest_frame_holes" [hi, gO, gL, 0, 0] m6 with
   | error e7 =>
     rw [h7, nfrE.k_nest_frame_holes.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h7
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h7
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   obtain ⟨s7, hs7, -, hfh⟩ := triple_of_callW (nestFrameHoles_spec p R.ha LK.nit.hc2 LK.nag.hsn R.hl.hff R.hl.hfp
@@ -723,7 +724,7 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
   cases h1 : callE p n "nest_walk_stack" [ctx, dO, dL, po, pl] m with
   | error e1 =>
     rw [h1, nnewE.k_nest_walk_stack.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨rw, m1⟩ := q1
   obtain ⟨s1, hs1, -, hws⟩ := triple_of_callW (nestWalkStack_spec' p LK n ⟨m, Locals.init []⟩ ctx dO dL po pl)
@@ -765,7 +766,7 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
   cases h2 : callE p (n' + 1) "nest_frame_mates" [vis, nn] m1 with
   | error e2 =>
     rw [h2, nnewE.k_nest_frame_mates.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rm, m2⟩ := q2
   obtain ⟨s2, hs2, -, hfm⟩ := triple_of_callW (nestFrameMates_specW p LK.fm (n' + 1) ⟨m1, Locals.init []⟩ vis nn)
@@ -781,7 +782,7 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
   cases h2b : callE p (n' + 1) "nest_ctx_hi_at" [ctx, rw.tail.headD 0] m2 with
   | error e2 =>
     rw [h2b, nnewE.k_nest_ctx_hi_at.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2b
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2b
   | ok q2b =>
   obtain ⟨rh, m2b⟩ := q2b
   obtain ⟨s2b, hs2b, -, hm2b, hrh⟩ := triple_of_callW (nestCtxHiAt_specE p R.hi (n' + 1) ⟨m2, Locals.init []⟩ ctx
@@ -794,7 +795,7 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
   cases h3 : callE p (n' + 1) "rec2" [nn, cty] m2b with
   | error e3 =>
     rw [h3, nnewE.k_rec2.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨rp3, m3⟩ := q3
   obtain ⟨s3, hs3, -, hpr⟩ := triple_of_callW (posRec2_specW p R.ha R.h2 (n' + 1) ⟨m2b, Locals.init []⟩ nn cty)
@@ -808,7 +809,7 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
   cases h4 : callE p (n' + 1) "sl_new1" [pw] m3 with
   | error e4 =>
     rw [h4, nnewE.k_sl_new1.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨g0, m4⟩ := q4
   obtain ⟨s4, hs4, -, hn1⟩ := triple_of_callW (slNew1_specW p R.ha LK.hn1 (n' + 1) ⟨m3, Locals.init []⟩ pw)
@@ -914,7 +915,7 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
   cases h6 : callE p (n' + 1) "nest_cont_new_active" [us, dO, dL, rg.headD 0, rg.tail.headD 0, 0, 0] m5 with
   | error e6 =>
     rw [h6, nnewE.k_nest_cont_new_active.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
   | ok q6 =>
   obtain ⟨ra6, m6⟩ := q6
   obtain ⟨s6, hs6, -, hca⟩ := triple_of_callW (nestContNewActive_spec p R.ha LK.nit.hc2 R.h4 LK.nag.hsn LK.hca (n' + 1)
@@ -936,7 +937,7 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
       rdW (m.arr64 IW) (ns + 3)] m6 with
   | error e7 =>
     rw [h7, nnewE.k_sl_append.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h7
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h7
   | ok q7 =>
   obtain ⟨rap7, m7⟩ := q7
   obtain ⟨s7, hs7, -, hap⟩ := triple_of_callW (slAppend_specW p R.ha LK.nit.hc2 LK.hap (n' + 1) ⟨m6, Locals.init []⟩
@@ -958,7 +959,7 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
       rdW (m.arr64 IW) (ns + 4), rdW (m.arr64 IW) (ns + 5)] m7 with
   | error e8 =>
     rw [h8, nnewE.k_rec6.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h8
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h8
   | ok q8 =>
   obtain ⟨rq8, m8⟩ := q8
   obtain ⟨s8, hs8, -, hq1⟩ := triple_of_callW (rec6_specW p R.ha LK.h6 (n' + 1) ⟨m7, Locals.init []⟩ _ _ _ _ _ _)
@@ -1006,7 +1007,7 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
       rdW (m9.arr64 IW) (ns + 2), rdW (m9.arr64 IW) (ns + 3), kb] m9 with
   | error e10 =>
     rw [h10, nnewE.k_nest_cont_new_finish.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h10
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h10
   | ok q10 =>
     obtain ⟨r10, m10⟩ := q10
     rw [h10, nnewE.k_nest_cont_new_finish.arm1] at he; cases he

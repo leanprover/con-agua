@@ -2,6 +2,7 @@ import ConAgua.Verdict.IndsE3
 import ConAgua.Verdict.IndsE2
 import ConAgua.Arena.IndT.Install2
 import ConAgua.Arena.Checker
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `check_block_agree_one`'s error refinement (lane `verdicts-b`, helper `ia2-inds`)
@@ -47,7 +48,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
   cases h1 : callE p n "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m with
   | error e1 =>
     rw [h1, cbaoE.k_open_pis_at_fvars_f.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨ra, m1⟩ := q1
   rw [h1] at he
@@ -92,7 +93,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
   cases h2 : callE p n "fvar_type_ds" [fvs0O, fvs0L] m1 with
   | error e2 =>
     rw [h2, cbaoE.k_fvar_type_ds.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rd, m2⟩ := q2
   rw [h2, cbaoE.k_fvar_type_ds.arm1] at he

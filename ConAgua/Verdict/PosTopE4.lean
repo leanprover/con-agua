@@ -2,6 +2,7 @@ import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Arena.IndPosSpec.UnW2
 import ConAgua.Arena.IndT.PosAll
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The error claims of `nest_root` and `nest_seeds` (lane `verdicts-b`, helper `ia2`, fork `top`)
@@ -104,7 +105,7 @@ theorem nrtE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
     cases h1 : callE p n "nest_ctx_hi_at" [ctx, 0] m with
     | error e1 =>
       rw [h1, nrtE.k_nest_ctx_hi_at.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
     | ok q1 =>
     obtain ⟨rh, mh⟩ := q1
     obtain ⟨sh, hsh, -, hmh, hrh⟩ := triple_of_callW (nestCtxHiAt_specE p R.hi n ⟨m, Locals.init []⟩ ctx 0)
@@ -158,7 +159,7 @@ theorem nrtE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
     cases h3 : callE p n "rec2" [r1'.headD 0, r1'.tail.headD 0] m1 with
     | error e3 =>
       rw [h3, nrtE.k_rec2.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
     | ok q3 =>
     obtain ⟨rq, m2⟩ := q3
     obtain ⟨s3, hs3, -, hr2⟩ := triple_of_callW (posRec2_specW p R.ha R.h2 n ⟨m1, Locals.init []⟩ _ _) (callW_of_callE h3)
@@ -172,7 +173,7 @@ theorem nrtE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
     cases h4 : callE p n "sl_snoc" [oO, oL, rq.headD 0] m2 with
     | error e4 =>
       rw [h4, nrtE.k_sl_snoc.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
     | ok q4 =>
     obtain ⟨ro, m3⟩ := q4
     obtain ⟨s4, hs4, -, hsn⟩ := triple_of_callW (slSnoc_specW p R.ha L.nb.nit.hc2 L.nb.nag.hsn n
@@ -271,7 +272,7 @@ theorem nsdE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
     cases h1 : callE p n "nest_ctx_hi_at" [ctx, 0] m with
     | error e1 =>
       rw [h1, nsdE.k_nest_ctx_hi_at.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
     | ok q1 =>
     obtain ⟨rh, mh⟩ := q1
     obtain ⟨sh, hsh, -, hmh, hrh⟩ := triple_of_callW (nestCtxHiAt_specE p R.hi n ⟨m, Locals.init []⟩ ctx 0)
@@ -283,7 +284,7 @@ theorem nsdE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
     cases h2 : callE p n "nest_seeds_fuel" [rdW (mh.arr64 IW) (key + 2), rdW (mh.arr64 IW) (key + 3), 0, SLACK] mh with
     | error e2 =>
       rw [h2, nsdE.k_nest_seeds_fuel.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
     | ok q2 =>
     obtain ⟨rf', m1⟩ := q2
     obtain ⟨s2, hs2, -, hf⟩ := triple_of_callW (nestSeedsFuel_spec L n ⟨mh, Locals.init []⟩ _ _ _ _)

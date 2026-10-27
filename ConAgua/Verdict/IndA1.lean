@@ -3,6 +3,7 @@ import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `check_ind_decl`'s error refinement (lane `verdicts-b`, helper `ia`)
@@ -146,7 +147,7 @@ theorem cidE_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   | error e1 =>
     rw [c1, cidE.k_basis_pin_hit.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [c1] at he
@@ -182,7 +183,7 @@ theorem cidE_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   | error e3 =>
     rw [c3, cidE.k_ind_params_ok.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [c3] at he
@@ -212,7 +213,7 @@ theorem cidE_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   | error e4 =>
     rw [c4, cidE.k_block_parts.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [c4] at he

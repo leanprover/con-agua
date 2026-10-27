@@ -1,6 +1,7 @@
 import ConAgua.Verdict.IndsE6
 import ConAgua.Verdict.IndA3
 import ConAgua.Verdict.IndsE5
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `check_block_inds`' error refinement (lane `verdicts-b`, helper `ia2-inds`)
@@ -153,21 +154,21 @@ theorem checkBlockIndsE_claim : CheckBlockIndsE p := by
   cases h4 : callE p (k + 1) "block_shape_with_sort" [pp, r1.tail.headD 0] m3 with
   | error e4 =>
     rw [h4, cbiE.k_block_shape_with_sort.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4, cbiE.k_block_shape_with_sort.arm1] at he
   cases h5 : callE p (k + 1) "check_block_inds_cv_tas" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m4 with
   | error e5 =>
     rw [h5, cbiE.k_check_block_inds_cv_tas.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5, cbiE.k_check_block_inds_cv_tas.arm1] at he
   cases h6 : callE p (k + 1) "cons_block_inds" [r4.headD 0, isRec, r5.headD 0, r5.tail.headD 0, vis, 0] m5 with
   | error e6 =>
     rw [h6, cbiE.k_cons_block_inds.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
   | ok q6 =>
     obtain ⟨r6, m6⟩ := q6
     rw [h6, cbiE.k_cons_block_inds.arm1] at he; cases he

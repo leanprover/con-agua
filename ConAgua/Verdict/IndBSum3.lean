@@ -4,6 +4,7 @@ import ConAgua.Arena.IndT.Sum4
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of `check_sum_ctor_tail`, `check_sum_ctor`, `check_sum_ctors`
@@ -76,7 +77,7 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
   | error e1 =>
     rw [h1, ctlE.k_open_pis_at_fvars_f.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨rx, m1⟩ := q1
   obtain ⟨ox, a1, hrun1, ⟨⟨hS1, hg1, hdec1⟩, hr1⟩, hA1⟩ :=
@@ -107,7 +108,7 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
   | error e2 =>
     rw [h2, ctlE.k_param_levels.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨ru, m2⟩ := q2
   rw [h2, ctlE.k_param_levels.arm1] at hW
@@ -131,7 +132,7 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
   | error e3 =>
     rw [h3, ctlE.k_intern_const.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨rh, m3⟩ := q3
   by_cases hbig : 4294967296 ≤ rh.headD 0
@@ -163,7 +164,7 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
   | error e4 =>
     rw [h4c, ctlE.k_get_app_fn_f.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h4c)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4c)
   | ok q4 =>
   obtain ⟨rf, m4⟩ := q4
   rw [h4c, ctlE.k_get_app_fn_f.arm1] at hW
@@ -185,7 +186,7 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
   | error e5 =>
     rw [h5c, ctlE.k_get_app_args_f.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h5c)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5c)
   | ok q5 =>
   obtain ⟨ra, m5⟩ := q5
   obtain ⟨s5, hs5, -, h5m⟩ := triple_of_callW (gaaF_spec p hP.ad m ⟨s4.mem, Locals.init []⟩ [CWF, xbw])
@@ -219,7 +220,7 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
     | error e6 =>
       rw [h6, ctlE.k_sl_eq.none] at hW
       cases hW
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
     | ok q6 =>
     obtain ⟨re, m6⟩ := q6
     rw [h6, ctlE.k_sl_eq.arm1] at hW
@@ -292,7 +293,7 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
       | error e7 =>
         rw [h7, ctlE.k_field_doms_resolve.none] at hW
         cases hW
-        exact ErrClaim.of_callE_nv hnv (by decide +kernel) h7
+        exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h7
       | ok q7 =>
       obtain ⟨r7, m7⟩ := q7
       obtain ⟨s7, hs7, -, h7m⟩ := triple_of_callW (fdrW_spec p hP.hfdr hP.ad.ftd hP.hcr m
@@ -331,7 +332,7 @@ theorem ctl_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St)
       | error e8 =>
         rw [h8, ctlE.k_idx_args_resolve.none] at hW
         cases hW
-        exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h8)
+        exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h8)
       | ok q8 =>
       obtain ⟨r8, m8⟩ := q8
       obtain ⟨s8, hs8, -, h8m⟩ := triple_of_callW (iarW_spec p hP.hiar hP.hcr m
@@ -481,7 +482,7 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
   | error e2 =>
     rw [h2c, ctorE.k_strip_pis.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h2c)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2c)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (stripPis_specF p hP.strip m ⟨s1.mem, Locals.init []⟩
@@ -520,7 +521,7 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
   | error e3 =>
     rw [h3, ctorE.k_struct_ctor_resid_ok.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h3)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3)
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, h3m⟩ := triple_of_callW (srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg
@@ -560,7 +561,7 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
   | error e4 =>
     rw [h4c, ctorE.k_open_pis_at_fvars_f.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h4c)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4c)
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   obtain ⟨o4, a4, hr4, ⟨⟨hS4, hg4, hdec4⟩, -⟩, hA4⟩ := h4 r4 m4 (callW_of_callE h4c)
@@ -601,7 +602,7 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
   | error e5 =>
     rw [h5c, ctorE.k_open_pis_at_fvars_f_2.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h5c)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5c)
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   obtain ⟨o5, a5, hr5, ⟨⟨hS5, hg5, hdec5⟩, -⟩, hA5⟩ := h5 r5 m5 (callW_of_callE h5c)
@@ -634,7 +635,7 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
   | error e6 =>
     rw [h6, ctorE.k_fvar_type_ds.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h6)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6)
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   rw [h6, ctorE.k_fvar_type_ds.arm1] at hW

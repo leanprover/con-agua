@@ -2,6 +2,7 @@ import ConAgua.Verdict.IndA5
 import ConAgua.Verdict.IndBE
 import ConAgua.Verdict.IndsE1
 import ConAgua.Verdict.IndsE2
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `check_block_tele`'s, `check_block_teles`' error refinements (lane `verdicts-b`, helper `ia2-inds`)
@@ -104,7 +105,7 @@ theorem cbtE_claim : CheckBlockTeleE p := by
   cases h3 : callE p n "strip_pis" [nP + UInt64.ofNat msh.nIdx, rdW (m2.arr64 EREC) (r2.headD 0 + 3)] m2 with
   | error e3 =>
     rw [h3, cbtE.k_strip_pis.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3] at he
@@ -114,7 +115,7 @@ theorem cbtE_claim : CheckBlockTeleE p := by
   cases h4 : callE p n "intern_sort" [r2.tail.headD 0] m3 with
   | error e4 =>
     rw [h4, cbtE.k_intern_sort.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4] at he
@@ -171,7 +172,7 @@ theorem cbtsE_claim (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) 
   cases h2 : callE p (k + 1) "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with
   | error e2 =>
     rw [h2, cbtsE.k_rec2.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, cbtsE.k_rec2.arm1] at he
@@ -193,7 +194,7 @@ theorem cbtsE_claim (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) 
   cases h4 : callE p (k + 1) "sl_cons" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3 with
   | error e4 =>
     rw [h4, cbtsE.k_sl_cons.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
     obtain ⟨r4, m4⟩ := q4
     rw [h4, cbtsE.k_sl_cons.arm1] at he; cases he

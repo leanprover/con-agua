@@ -6,6 +6,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.WhnfIotaRefine6
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of `infer_const`, `infer_proj`, `infer_proj_at` (lane `verdicts-b`, helper `c1`)
@@ -46,8 +47,8 @@ l_model inferConst_specE (p : Prog) (hf : p.lookup "infer_const" = some inferCon
 
 /-- The callees of `infer_const`, `infer_proj` outside the verdict closure. -/
 theorem inferLeavesE_nv : ∀ f ∈ ["env_find", "pin_at", "ls_node", "const_ty_at", "find_table",
-    "find_proj", "get_app_fn", "get_app_args"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "find_proj", "get_app_fn", "get_app_args"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- **`infer_const(vis, n, us)`'s verdicts**: an unknown name rejects, `sorryAx` declines
 (`unknownConstError`), a level count mismatch rejects; every callee claims nothing (`nvFns`). -/
@@ -883,8 +884,8 @@ theorem inferProjAt_specE (p : Prog) (hf : p.lookup "infer_proj_at" = some infer
 /-! ## `infer_proj_at` refines `projAtT`'s failures -/
 
 theorem inferProjAtE_nv : ∀ f ∈ ["get_app_args", "ls_node", "pin_word", "lvl_eq_c",
-    "field_sort_zero", "proj_type_at"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "field_sort_zero", "proj_type_at"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 theorem projAtT_errT (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) (a : AState)
     (xs : List EIdx) (hxs : (getAppArgs coreWalkFuel te).run a = .ok (xs, a)) (hT : (T != sn) = true) :

@@ -5,6 +5,7 @@ import ConAgua.Final.TwinVerdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of the frontend's driver: `apply_ind`, `apply_dline`, `apply_any`,
@@ -461,7 +462,8 @@ def frontNV : List FnName := ["ind_fields", "install_ind_d", "rec_decl_line", "a
   "apply_expr", "rec_line_loop", "rec_expr_loop", "scan_line", "skip_ws", "front_init", "decl_cv",
   "expr_get", "decl_push"]
 
-theorem frontNV_nv : ∀ f ∈ frontNV, f ∈ L.Checker.nvFns := by decide +kernel
+theorem frontNV_nv : ∀ f ∈ frontNV, f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 theorem frontNV_front : ∀ f ∈ frontNV, L.Checker.inFront f = true := by decide
 

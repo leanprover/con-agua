@@ -1,4 +1,5 @@
 import ConAgua.Verdict.WhnfIotaE
+import ConAgua.Checker.NoVerdictTree
 set_option linter.unusedSectionVars false
 
 /-!
@@ -17,8 +18,8 @@ open scoped Lean.Order
 namespace L.Arena
 
 theorem whnfPrepE_nv : ∀ f ∈ ["lit_to_ctor_if_nat", "str_lit_supported", "str_lit_ctor",
-    "rec_rule_k", "is_ctor_app", "is_str_lit"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "rec_rule_k", "is_ctor_app", "is_str_lit"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-! ## `lit_major_to_ctor` -/
 

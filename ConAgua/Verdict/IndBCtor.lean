@@ -4,6 +4,7 @@ import ConAgua.Verdict.IndBFields
 import ConAgua.Arena.IndT.RecGen27
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 set_option linter.unusedSectionVars false
 
 /-!
@@ -75,7 +76,7 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
   | error e1 =>
     rw [h1, cxoE.k_target_major_at.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, cxoE.k_target_major_at.arm1] at he
@@ -102,7 +103,7 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
   | error e2 =>
     rw [h2, cxoE.k_class_ctor_of_nfs.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨n, rfl⟩ : ∃ n', n = n' + 1 := by
@@ -206,7 +207,7 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
   | error e4 =>
     rw [h4, cxoE.k_open_pis_at_fvars_f.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h4)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4)
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   obtain ⟨s4, rfl, -, hw4⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
@@ -298,7 +299,7 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
   | error e7 =>
     rw [h7, cxoE.k_target_ctor_at.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h7
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h7
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [h7, cxoE.k_target_ctor_at.arm1] at he
@@ -307,7 +308,7 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
   | error e8 =>
     rw [h8, cxoE.k_inst_pis_with.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h8
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h8
   | ok q8 =>
   obtain ⟨r8, m8⟩ := q8
   by_cases hz8 : r8.headD 0 = 0
@@ -320,7 +321,7 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
   | error e9 =>
     rw [h9, cxoE.k_rec6.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h9
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h9
   | ok q9 =>
   rw [h9, cxoE.k_rec6.arm1] at he
   cases he

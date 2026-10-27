@@ -11,6 +11,7 @@ import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of `check_field_sort_bound`, `nest_cont_key` (lane `verdicts-b`, helper `c6`)
@@ -58,7 +59,7 @@ theorem cfbE_claim {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
     | error e1 =>
       rw [h1, cfbE.k_lv_leq_top.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
     | ok q =>
       obtain ⟨r, m1⟩ := q
       rw [h1] at he
@@ -97,7 +98,7 @@ theorem cfbE_claim {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   | error e1 =>
     rw [h1, cfbE.k_pin_word.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q =>
   obtain ⟨rz, m1⟩ := q
   obtain ⟨s', hs', -, hmm, hz'⟩ := triple_of_callW (pinWord_specV p hpw n ⟨m, Locals.init []⟩ 53)
@@ -120,7 +121,7 @@ theorem cfbE_claim {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   | error e2 =>
     rw [h2, cfbE.k_lvl_eq_true.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rq, mq⟩ := q2
   rw [h2, cfbE.k_lvl_eq_true.eq_2] at he
@@ -148,7 +149,7 @@ theorem cfbE_claim {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   | error e3 =>
     rw [h3, cfbE.k_sl_contains.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   by_cases hg : (rq.headD 0) = 0 ∧ r3.headD 0 = 0
@@ -262,7 +263,7 @@ theorem keyOKE_step (n : Nat) (hNewE : NewOKE p dn vis fe env n) : KeyOKE p dn v
   | error e1 =>
     rw [h1, nckE.k_rec4.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q =>
   obtain ⟨rk, m1⟩ := q
   obtain ⟨s1, hs1, -, hk⟩ := triple_of_callW (posRec4_specW p R.ha R.h4 n ⟨m, Locals.init []⟩ nn us dO dL)
@@ -280,7 +281,7 @@ theorem keyOKE_step (n : Nat) (hNewE : NewOKE p dn vis fe env n) : KeyOKE p dn v
   | error e2 =>
     rw [h2, nckE.k_nest_keys_contains.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hm2, hW2⟩ := triple_of_callW (nestKeysContains_spec p L.nag.hq L.nag.he L.nag.hkc n
@@ -311,7 +312,7 @@ theorem keyOKE_step (n : Nat) (hNewE : NewOKE p dn vis fe env n) : KeyOKE p dn v
   | error e3 =>
     rw [h3, nckE.k_nest_ds_closed.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (dc_spec' p L.dc.hf L.dc.hh L.dc.hg L.dc.hp n
@@ -361,7 +362,7 @@ theorem keyOKE_step (n : Nat) (hNewE : NewOKE p dn vis fe env n) : KeyOKE p dn v
     | error e4 =>
       rw [h4, nckE.k_nest_keys_contains_2.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
     | ok q4 =>
     obtain ⟨r4, m4⟩ := q4
     obtain ⟨s4, hs4, -, hm4, hW4⟩ := triple_of_callW (nestKeysContains_spec p L.nag.hq L.nag.he L.nag.hkc (n' + 1)

@@ -2,6 +2,7 @@ import ConAgua.Verdict.DefEqSlotE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `defeq_tail`'s error claim and the stuck side's (lane `verdicts-b`, helper `k3`)
@@ -45,7 +46,8 @@ l_model defeqTail_specE (p : Prog) (hf : p.lookup "defeq_tail" = some defeqTailL
   fns [hf ↦ defeqTailE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
-theorem defeqTailE_nv : "head_is_proj" ∈ L.Checker.nvFns := by decide +kernel
+theorem defeqTailE_nv : "head_is_proj" ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_mem (by decide +kernel)
 
 /-- **`defeq_tail`'s error claim** (`DefeqTailE`), from `defeq_proj_pair`'s and `defeq_stuck`'s and
 the two slots'. -/
@@ -599,7 +601,8 @@ l_model stuckRest_specE (p : Prog) (hf : p.lookup "stuck_rest" = some stuckRestL
   fns [hf ↦ stuckRestE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
-theorem stuckRestE_nv : "lvls_eq_c" ∈ L.Checker.nvFns := by decide +kernel
+theorem stuckRestE_nv : "lvls_eq_c" ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_mem (by decide +kernel)
 
 /-- **`stuck_rest`'s error claim** (the error half of `stuckRest_refines`): the level comparison of
 two constants of the same name declines when `lvls_eq_c` runs out of fuel (`none`, the twin's

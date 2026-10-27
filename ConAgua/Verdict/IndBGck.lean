@@ -2,6 +2,7 @@ import ConAgua.Arena.IndT.GenRec3
 import ConAgua.Verdict.IndBRec6
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `gen_rec_check` (lane `verdicts-b`, helper `ib`)
@@ -114,7 +115,7 @@ theorem gckE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
   | error e2 =>
     rw [h2, gckE.k_class_fe_r.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, gckE.k_class_fe_r.arm1] at he
@@ -154,7 +155,7 @@ theorem gckE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
   | error e3 =>
     rw [h3, gckE.k_flush_caches.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, gckE.k_flush_caches.arm1] at he
@@ -198,7 +199,7 @@ theorem gckE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
   | error e5 =>
     rw [h5, gckE.k_gen_rec_check_pop_all.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5, gckE.k_gen_rec_check_pop_all.arm1] at he
@@ -206,7 +207,7 @@ theorem gckE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
   | error e6 =>
     rw [h6, gckE.k_flush_caches_2.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
   | ok q6 =>
   rw [h6, gckE.k_flush_caches_2.arm1] at he
   cases he

@@ -1,5 +1,6 @@
 import ConAgua.Verdict.WhnfModels2E
 import ConAgua.Verdict.WhnfSlotE
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The `app` arm's verdict claims (lane `verdicts-b`, helper `k2`)
@@ -19,8 +20,8 @@ open scoped Lean.Order
 namespace L.Arena
 
 theorem whnfAppE_nv : ∀ f ∈ ["beta_peel", "mk_app", "mk_app_n_from", "get_app_spine",
-    "head_and_args"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "head_and_args"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- `iota_rec_at`'s error claim at fuel `N + 1` (the shape of `IotaRecAtOK`). -/
 def IotaRecAtE (p : Prog) : Prop :=

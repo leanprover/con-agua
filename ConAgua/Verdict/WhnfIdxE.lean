@@ -1,4 +1,5 @@
 import ConAgua.Verdict.WhnfIotaRecE
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `iota_index_ok`'s and `iota_rec_cmp`'s verdict claims (lane `verdicts-b`, helper `k2`)
@@ -16,8 +17,8 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 theorem whnfIdxE_nv : ∀ f ∈ ["pi_residual", "get_app_args", "erec_push", "rec_fire_args",
-    "stack_cover"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "stack_cover"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- `defeq_list`'s error claim at fuel `N + 1` (the premises of `defeqList_refines`). -/
 def DefeqListE (p : Prog) : Prop :=

@@ -2,6 +2,7 @@ import ConAgua.Verdict.IndBCtor
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `class_ctors_of` (lane `verdicts-b`, helper `ib`)
@@ -181,7 +182,7 @@ theorem classCtorsOf_claim (N : Nat) (hN : N ≤ 2 ^ 62) (s₀ : St) (a₀ : ASt
     | error e1 =>
       rw [h1, cosE.k_iw_alloc.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
     | ok q1 =>
       obtain ⟨r1, m1⟩ := q1
       rw [h1, cosE.k_iw_alloc.arm1] at he

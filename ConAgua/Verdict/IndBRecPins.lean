@@ -4,6 +4,7 @@ import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.Checker
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_rec_pins` (lane `verdicts-b`, helper `ib`)
@@ -244,7 +245,7 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   | error e1 =>
     rw [h1, trpE.k_block_rec_lps_ok.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (blockRecLpsOk_spec p L.alloc L.erCopy L.erToIw L.slEq L.copy L.cons
@@ -266,7 +267,7 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   | error e2 =>
     rw [h2, trpE.k_block_rec_names_unreserved.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hok2, hr2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
@@ -297,7 +298,7 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   | error e3 =>
     rw [h3, trpE.k_block_rec_split_own_aux.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
@@ -317,7 +318,7 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   | error e4 =>
     rw [h4, trpE.k_block_rec_name_set_ok.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   have hms3 := hms.grow (fun q => decMS_mono q) (hg12.trans hg3)
@@ -350,7 +351,7 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   | error e5 =>
     rw [h5, trpE.k_target_rec_pins_names.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
@@ -380,7 +381,7 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   | error e6 =>
     rw [h6, trpE.k_target_rec_pins_split.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   obtain ⟨s6, hs6, -, hW6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)

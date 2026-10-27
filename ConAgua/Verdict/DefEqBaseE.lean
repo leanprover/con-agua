@@ -1,6 +1,7 @@
 import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.DefEqMid
 import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The defeq family's error claims: the kit (lane `verdicts-b`, helper `k3`)
@@ -90,7 +91,8 @@ def defeqNVList : List FnName :=
    "unfoldable_head", "lazy_fold_ok", "is_eager_reduce", "unfold_definition", "lit_eq", "e_view",
    "is_nat_zero", "nat_pred", "lam_pair", "intern_fvar", "inst1", "inst_list"]
 
-theorem defeqNV : ∀ f ∈ defeqNVList, f ∈ L.Checker.nvFns := by decide +kernel
+theorem defeqNV : ∀ f ∈ defeqNVList, f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- A callee of the list fails with class `0`: its failure claims nothing. -/
 theorem ErrClaim.of_nv {α : Type} {T : AM α} {a : AState} {p : Prog}

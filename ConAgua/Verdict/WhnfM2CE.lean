@@ -1,5 +1,6 @@
 import ConAgua.Verdict.WhnfModels6E
 import ConAgua.Verdict.WhnfPrepE
+import ConAgua.Checker.NoVerdictTree
 set_option linter.unusedSectionVars false
 
 /-!
@@ -19,8 +20,8 @@ namespace L.Arena
 
 theorem whnfM2CE_nv : ∀ f ∈ ["get_app_fn", "m2c_const_view", "ls_node", "fab_scope_ok",
     "get_app_args", "intern_const", "mk_app_n", "caps_never_zero", "m2c_eta2", "pin_at", "mk_proj",
-    "and_rescue_slots", "pi_result", "env_find", "is_ctor_app"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "and_rescue_slots", "pi_result", "env_find", "is_ctor_app"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- `proof_irrel`'s error claim at fuel `N + 1` (the premises of `ProofIrrelOKM`). -/
 def ProofIrrelWE (p : Prog) : Prop :=
