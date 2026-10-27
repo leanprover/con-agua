@@ -150,6 +150,14 @@ structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Wo
 
 /-! ## Pieces -/
 
+/-- The frozen arrays are in the checker's layout (the kernel evaluates the layout map). -/
+theorem frozenIdsL_dom : frozenIdsL.all (checkerTab.dom64 ·) = true := by decide +kernel
+
+/-- The owned arrays are in the checker's layout. -/
+theorem parOwnedL_dom : ∀ a ∈ parOwnedL, checkerTab.dom64 a = true := by
+  have h : parOwnedL.all (checkerTab.dom64 ·) = true := by decide +kernel
+  exact List.all_eq_true.mp h
+
 /-- The final memory's frozen arrays are the buffer's images, when the buffer is unchanged. -/
 theorem bufKept_of_memRel {B : Array Word} {buf base : Nat} {r : Mem} {d : DataMem}
     (hm : MemRel (bufLayout checkerTab buf B base frozenIdsL parOwnedL) r d)
@@ -186,14 +194,6 @@ theorem threadRuns_range (B : Array Word) (t : ThreadM) (rm : Nat → Mem)
   | c + 1, s, hs => by
     obtain ⟨h1, h2⟩ := h s (by omega)
     exact ⟨by simp [abiFuel], h1, h2, threadRuns_range B t rm h c (s + 1) (by omega)⟩
-
-/-- The frozen arrays are in the checker's layout (the kernel evaluates the layout map). -/
-theorem frozenIdsL_dom : frozenIdsL.all (checkerTab.dom64 ·) = true := by decide +kernel
-
-/-- The owned arrays are in the checker's layout. -/
-theorem parOwnedL_dom : ∀ a ∈ parOwnedL, checkerTab.dom64 a = true := by
-  have h : parOwnedL.all (checkerTab.dom64 ·) = true := by decide +kernel
-  exact List.all_eq_true.mp h
 
 /-! ## The theorem -/
 
@@ -238,7 +238,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hget : ∀ i (h : i < (m₁.arr64 OUT).size),
       rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some (m₁.arr64 OUT)[i] := fun i h => by
     have := hMem₁.get64 _ hOUT i h
-    simpa only [abiLayout_b64, abiLayout_tab, checkerTab.wposInv_pos64 hOUT, curNum_t0] using this
+    simpa only [abiLayout_b64, abiLayout_tab, checkerTab.wposInv_pos64 hOUT, curNum_t0, outAddr] using this
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)

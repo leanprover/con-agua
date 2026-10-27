@@ -44,12 +44,11 @@ def ThreadRel (v : Word) (w : Mem) (a : AState) : Prop :=
     ∀ b, thrS b = true → w.arr64 b = m'.arr64 b
 
 /-- `thrS` lies inside `phaseBS`. -/
-theorem phaseBS_of_thrS {a : ArrId} (h : thrS a = true) : phaseBS a = true := by
+theorem phaseBS_of_thrS {a : TieredArray} (h : thrS a = true) : phaseBS a = true := by
   obtain ⟨h1, h2, h3⟩ := (thrS_iff a).mp h
   have : a ≠ OUT := by
     rintro rfl; exact absurd h3 (by decide)
-  simp only [phaseBS, bne_iff_ne, ne_eq, Bool.and_eq_true]
-  exact ⟨⟨this, h1⟩, h2⟩
+  simp [phaseBS, phaseBPa, this, h1, h2]
 
 /-- `WorkerRel` gives `ThreadRel` (`thrS` lies in `phaseBS`). -/
 theorem ThreadRel.of_worker {v : Word} {w : Mem} {a : AState}
@@ -205,11 +204,12 @@ end thread
 /-! ## The thread's memory at a call -/
 
 /-- **An array of `thrS`** is a frozen one (not the header or the seed) or an owned one. -/
-theorem thrS_cases {b : ArrId} (h : thrS b = true) :
+theorem thrS_cases {b : TieredArray} (h : thrS b = true) :
     (∃ k, ∃ hk : k < frozen.length, 1 ≤ k ∧ b = frozen[k].1) ∨ b ∈ parOwnedL := by
   obtain ⟨h1, h2, h3 | h3⟩ := (thrS_iff b).mp h
   · left
-    obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem h3
+    obtain ⟨i, hi, e⟩ := List.getElem_of_mem h3
+    subst e
     have hL : frozenIdsL.length = 62 := rfl
     have hF : frozen.length = 61 := frozen_length
     rcases i with _ | _ | k
@@ -227,7 +227,7 @@ theorem truncList_bytes (m₀ : Mem) : ∀ (zs : List (ArrId × Fz)) (m : Mem),
   | (_, _) :: zs, m => by rw [truncList, truncList_bytes m₀ zs]
 
 theorem freshMem_arr8 (m : Mem) (b : ArrId) : (freshMem m).arr8 b = m.arr8 b := by
-  show (truncFrozen m).bytes.getD b #[] = m.bytes.getD b #[]
+  show (truncFrozen m).bytes b = m.bytes b
   rw [truncFrozen, truncList_bytes]
 
 section start
@@ -293,7 +293,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
       rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
       · obtain ⟨-, hz', hc⟩ := frozen_facts hk h1
         rw [bufMem_frozen _ r j hk h1, bufImg_trunc hok hlt hk h1, freshMem_arr,
-          ite_eq_right hc, ite_eq_right hz']
+          ite_eq_right (TieredArray.t0_ne hc), ite_eq_right hz']
       · obtain ⟨-, hsrc⟩ := owned_facts ho
         rw [bufMem_owned _ r j ho, hz b ho, freshMem_arr, ite_eq_right hbc,
           ite_eq_left (show b ∈ freshZ from List.mem_cons_of_mem _ ho), truncFrozen_other m b hsrc]
