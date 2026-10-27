@@ -291,6 +291,32 @@ l_model tVGrp_spec (p : Prog) (hp : p.lookup "t_v_grp" = some tVGrp)
   fns [hp ↦ tVGrpW, hs ↦ tVStGW void]
   grind [arena_grind] simp []
 
+/-- Preconditions (`pre [...]`): the spec takes the hypothesis, and a call to a callee whose
+spec has one leaves it as a side goal of the step. -/
+-- con-ron: none — an `l_model` test function
+def tPreC : FunDecl := lfn (i) {
+  return TW.u64[i] + i
+}
+
+-- con-ron: none — an `l_model` test function
+def tPre : FunDecl := lfn (i) locals (x) {
+  x := call t_pre_c(i);
+  TW.u64[i] := x;
+  return x
+}
+
+l_model tPreC_spec (p : Prog) (hp : p.lookup "t_pre_c" = some tPreC)
+  fns [hp ↦ tPreCW ro]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
+  pre [i < 5]
+
+l_model tPre_spec (p : Prog) (hp : p.lookup "t_pre" = some tPre)
+    (hc : p.lookup "t_pre_c" = some tPreC)
+  fns [hp ↦ tPreW]
+  specs [tPreC_spec p hc n]
+  grind [arena_grind] simp []
+  pre [i < 4]
+
 l_model tNestR2_spec (p : Prog) (hp : p.lookup "t_nest_r2" = some tNestR2)
   fns [hp ↦ tNestR2W]
   grind [arena_grind] extra [ld64_rd_spec] simp []
