@@ -350,15 +350,16 @@ end redruns
 /-- The model of `reduce_nat_succ`: `(flag, result, memory)`. -/
 l_model reduceNatSucc_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.reduceNatSucc ↦ reduceNatSuccW tuple]
-  specs [callW_spec p n "nat_lit_supported", callW_spec p n "pin_at", callW_spec p n "whnf",
-    callW_spec p n "raw_nat_lit", callW_spec p n "nat_succ_lit"]
-  grind [arena_grind] finish [tierW, idxW] gen 30
+  specs [callW_spec p n "nat_lit_supported", callW_spec p n "pin_at", callW_spec p n "whnf", callW_spec p n "raw_nat_lit", callW_spec p n "nat_succ_lit"]
+  grind [arena_grind]
+  simp [] locals
 
 /-- The model of `reduce_nat_op`: `(flag, result, memory)`. -/
 l_model reduceNatOp_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.reduceNatOp ↦ reduceNatOpW tuple]
   specs [callW_spec p n "whnf", callW_spec p n "raw_nat_lit", callW_spec p n "nat_op_result"]
-  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 30
+  grind [arena_grind] fold [tierW, idxW]
+  simp [] locals
 
 /-- `natOpWfNames` with its pins read: pin word `k` is `w k`. -/
 def natOpWfSel (w : Nat → Word) (c : Word) : Bool :=
@@ -422,14 +423,16 @@ theorem wfContains {m : Mem} {a : AState} (h : PinsFull m a.pins) (c : Word) (hc
 l_model reduceNatWf_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.reduceNatWf ↦ reduceNatWfW tuple]
   specs [callW_spec p n "nat_op_is_wf", callW_spec p n "nat_lit_supported", callW_spec p n "whnf", callW_spec p n "raw_nat_lit"]
-  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 30
+  grind [arena_grind] fold [tierW, idxW]
+  simp [] locals
+
 /-- The model of `reduce_nat_k`: `(flag, result, memory)`. -/
 l_model reduceNatK_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.reduceNatK ↦ reduceNatKW tuple]
   specs [callW_spec p n "pin_word", callW_spec p n "reduce_nat_succ"]
   grind [arena_grind] fold [tierW, idxW]
   extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  finish [tierW, idxW] gen 30
+  simp [] locals
 
 /-- The model of `reduce_nat_ap`: `(flag, result, memory)`. -/
 l_model reduceNatAp_spec (p : Prog) (hp : WhnfDeltaProg p)
