@@ -113,7 +113,7 @@ theorem core_of_R7 {b pb : ByteArray} {s8 s64 : List Nat} {sA : AState} {pre : P
     · rw [loadMem_arr, initMem_arr]
     · rw [loadMem_arr, initMem_arr]
     · rw [loadMem_arr, initMem_arr]
-    · simp [ConAgua.Final.loadMem, initMem]
+    · simp [Mem.SameShape, ConAgua.Final.loadMem, initMem]
   exact ⟨M, (hM.frame (fun _ h => by simp at h) (fun _ h => by simp at h) hf0).frame
     preLoopA_avoidCore preLoopC_avoidCore h7.since.frame⟩
 

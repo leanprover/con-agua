@@ -21,7 +21,7 @@ on, every array's size. -/
 def HighFr (m m' : Mem) : Prop :=
   (∀ b : ArrId, b ∉ lowTierArrs → m'.arr64 b = m.arr64 b) ∧
     (∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
-    (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size
+    (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m'
 
 
 /-! ## Helpers -/
@@ -128,7 +128,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
   have e2 := hix_rd_dw (m.arr64 DECL) i 2 hi (by decide)
   have e3 := hix_rd_dw (m.arr64 DECL) i 3 hi (by decide)
   simp only [UInt64.reduceToNat] at e1 e2 e3
-  have hHF : HighFr m m := ⟨fun _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
+  have hHF : HighFr m m := ⟨fun _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl m⟩
   by_cases hind : ∃ b nP, d = .indDecl b nP
   · obtain ⟨b, nP, rfl⟩ := hind
     obtain ⟨h6, -, t, ht, hb⟩ := hD

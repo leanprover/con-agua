@@ -69,7 +69,7 @@ theorem checkPendingGo_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs c
   subst hx hy hz
   -- phase A's memory with the worker's globals and byte arrays
   let m₂ : Mem := { m with glob := s.mem.glob }
-  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
+  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
   have h₂ := PhaseBStart.frame0 hf h
   let s₂ : St := ⟨m₂, s.loc⟩
   have hAg : Agree phaseBS (fun _ => false) s.mem s₂.mem :=

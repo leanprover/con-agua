@@ -86,7 +86,7 @@ theorem thread_accepts (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode 
     {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
     (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
     (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r₀ : Mem) (hr : 388 ≤ r₀.words.size)
+    (r₀ : Mem) (hr : r₀.HasWs 388)
     (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m.arr64 b).size) (hI : r₀.glob INIT = 0)
     (cs : List (Word × Nat × Mem)) (hruns : ThreadRuns (bufOf m v) r₀ cs)
     (hj : ∀ c ∈ cs, c.1.toNat < pend.size) :
@@ -107,7 +107,7 @@ theorem thread_accepts (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode 
 /-- What a thread's harness supplies: a fresh region memory and the calls on it. -/
 def ThreadOK (m : Mem) (B : Array Word) (pend : Array PendingCheck)
     (t : Mem × List (Word × Nat × Mem)) : Prop :=
-  388 ≤ t.1.words.size ∧ (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m.arr64 b).size) ∧
+  t.1.HasWs 388 ∧ (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m.arr64 b).size) ∧
     t.1.glob INIT = 0 ∧ ThreadRuns B t.1 t.2 ∧ ∀ c ∈ t.2, c.1.toNat < pend.size
 
 /-- **The threads give con-ron's pool**: threads whose calls together claim every group index
@@ -176,7 +176,7 @@ theorem threads_twinAcceptsPooled (b pb : ByteArray) (s8 s64 : List Nat) (hin : 
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     (B : Array Word) (hB : B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat)
     (ths : List (Mem × List (Word × Nat × Mem)))
-    (hth : ∀ t ∈ ths, 388 ≤ t.1.words.size ∧ (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m₁.arr64 b).size) ∧
+    (hth : ∀ t ∈ ths, t.1.HasWs 388 ∧ (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m₁.arr64 b).size) ∧
       t.1.glob INIT = 0 ∧ ThreadRuns B t.1 t.2 ∧ ∀ c ∈ t.2, c.1 < rs₁.headD 0 - 9223372036854775808)
     (hcov : ∀ j : Word, j < rs₁.headD 0 - 9223372036854775808 → ∃ t ∈ ths, ∃ c ∈ t.2, c.1 = j) :
     TwinAcceptsPooled [b] := by

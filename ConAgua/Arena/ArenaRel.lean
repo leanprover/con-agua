@@ -429,7 +429,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     rw [initMem_arr]; simp [CTL]
   have hp : ((initMem sizes).arr64 POOL).size = sizes[0]?.getD 0 := by
     rw [initMem_arr]; simp [POOL]
-  have hw : CTL < (initMem sizes).words.size := by
+  have hw : (initMem sizes).HasW CTL := by
     show 1 < (sizes.map _).toArray.size; simp only [List.size_toArray, List.length_map]; omega
   refine ⟨⟨?_, consR_init hz (by rw [hc]; simp [litCS, litCSk]; omega) (hs _ (by decide))⟩,
     consR_init hz (by rw [hc]; simp [appCS]; omega) (hs _ (by decide)),
@@ -1155,7 +1155,7 @@ theorem grows_frame (m m' : Mem) (hg : Grows m m') : MemFrame [POOL, POOL1] [0] 
     · by_cases h1 : b = POOL1
       · subst h1; rw [hf.size1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       · rw [hf.arr b h h1, size_set64]
-  · rw [hf.size, Mem.words_size_set64]
+  · exact (Mem.sameShape_set64 _ _ _ _).trans hf.size
 
 /-- **Appending to the pool keeps `ArenaR`**: the tables whose records point into the pool by
 their own `grow` lemmas, the others by the frame. -/

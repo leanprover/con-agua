@@ -68,7 +68,7 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
     s.toNat + l.toNat ≤ 2 ^ 41 → d.toNat + l.toNat ≤ (m.arr64 IW).size →
     (m.arr64 IW).size < 2 ^ 64 →
     (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-    m'.words.size = m.words.size ∧
+    m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat then (vpool m)[s.toNat + (i - d.toNat)]?
       else (m.arr64 IW)[i]? := by
@@ -80,7 +80,7 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
     · rw [poolCopyW_nil n m d s l hl] at h
       cases h
       subst hl
-      refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
+      refine ⟨fun _ _ => rfl, rfl, .refl _, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
@@ -112,9 +112,9 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
       obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
         (by rw [hs1, hl1]; omega) (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
       rw [hE1v] at hG
-      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, Mem.SameShape.trans ?_ hW, fun i => ?_⟩
       · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
-      · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
+      · rw [hm1]; exact Mem.sameShape_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
         · rw [ite_eq_left hi]

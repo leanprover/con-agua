@@ -60,17 +60,17 @@ def Agree (p q : Array Word) (t : Nat) : Prop := ∀ j, j < t → p[j]? = q[j]?
 
 /-- `m'` is `m` with at most word array `a` changed: the frame of a function that writes only
 `a`. A named predicate with its own `grind` lemmas, rather than an equation
-`m' = m.setArr64 a (m'.arr64 a)`, whose read-back needs `a < m.words.size` at every use. -/
+`m' = m.setArr64 a (m'.arr64 a)`, whose read-back needs `m.HasW a` at every use. -/
 def Frame (a : ArrId) (m m' : Mem) : Prop :=
-  m'.bytes = m.bytes ∧ m'.words.size = m.words.size ∧ ∀ b, b ≠ a → m'.arr64 b = m.arr64 b
+  m'.bytes = m.bytes ∧ m.SameShape m' ∧ ∀ b, b ≠ a → m'.arr64 b = m.arr64 b
 
-theorem Frame.refl (a : ArrId) (m : Mem) : Frame a m m := ⟨rfl, rfl, fun _ _ => rfl⟩
+theorem Frame.refl (a : ArrId) (m : Mem) : Frame a m m := ⟨rfl, .refl m, fun _ _ => rfl⟩
 grind_pattern [arena_grind] Frame.refl => Frame a m m
 
 theorem Frame.set64 (a : ArrId) (m m' : Mem) (i v : Word) (h : Frame a m m') :
     Frame a m (m'.set64 a i v) := by
   obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨h1, by simp [Mem.set64, h2], fun b hb => ?_⟩
+  refine ⟨h1, h2.set64 a i v, fun b hb => ?_⟩
   rw [← h3 b hb]
   simp only [Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?]; grind
 grind_pattern [arena_grind] Frame.set64 => Frame a m (m'.set64 a i v)
@@ -78,16 +78,16 @@ grind_pattern [arena_grind] Frame.set64 => Frame a m (m'.set64 a i v)
 theorem Frame.trans (a : ArrId) (m m' m'' : Mem) (h : Frame a m m') (h' : Frame a m' m'') :
     Frame a m m'' := by
   obtain ⟨h1, h2, h3⟩ := h; obtain ⟨h1', h2', h3'⟩ := h'
-  exact ⟨h1'.trans h1, h2'.trans h2, fun b hb => (h3' b hb).trans (h3 b hb)⟩
+  exact ⟨h1'.trans h1, h2.trans h2', fun b hb => (h3' b hb).trans (h3 b hb)⟩
 grind_pattern [arena_grind] Frame.trans => Frame a m m'', Frame a m' m''
 
 theorem Frame.arr64 (a b : ArrId) (m m' : Mem) (h : Frame a m m') (hb : b ≠ a) :
     m'.arr64 b = m.arr64 b := h.2.2 b hb
 grind_pattern [arena_grind] Frame.arr64 => Frame a m m', m'.arr64 b
 
-theorem Frame.size (a : ArrId) (m m' : Mem) (h : Frame a m m') : m'.words.size = m.words.size :=
+theorem Frame.size (a : ArrId) (m m' : Mem) (h : Frame a m m') : m.SameShape m' :=
   h.2.1
-grind_pattern [arena_grind] Frame.size => Frame a m m', m'.words.size
+grind_pattern [arena_grind] Frame.size => Frame a m m'
 
 theorem Frame.bytes (a : ArrId) (m m' : Mem) (h : Frame a m m') : m'.bytes = m.bytes := h.1
 grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
@@ -106,8 +106,9 @@ grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
     ((m.set64 a i v).arr64 a).size = (m.arr64 a).size := by
   rw [Mem.arr64_set64_same]; simp
 
-@[arena_grind =] theorem Mem.words_size_set64 (m : Mem) (a : ArrId) (i v : Word) :
-    (m.set64 a i v).words.size = m.words.size := by simp [Mem.set64]
+attribute [arena_grind =] Mem.hasW_set64 Mem.hasW_setG
+grind_pattern [arena_grind] Mem.HasW.of_sameShape => m.SameShape m', m'.HasW a
+grind_pattern [arena_grind] Mem.SameShape.trans => m₁.SameShape m₂, m₂.SameShape m₃
 
 @[arena_grind =] theorem Mem.bytes_set64 (m : Mem) (a : ArrId) (i v : Word) :
     (m.set64 a i v).bytes = m.bytes := rfl
@@ -115,7 +116,7 @@ grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
 theorem Frame.set64_both (a b : ArrId) (m m' : Mem) (i v : Word) (h : Frame a m m') (hb : b ≠ a) :
     Frame a (m.set64 b i v) (m'.set64 b i v) := by
   obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨h1, by simp [Mem.set64, h2], fun c hc => ?_⟩
+  refine ⟨h1, h2.set64_both b i v, fun c hc => ?_⟩
   by_cases hcb : c = b
   · subst hcb; rw [Mem.arr64_set64_same, Mem.arr64_set64_same, h3 c hc]
   · rw [Mem.arr64_set64_ne _ _ _ _ _ hcb, Mem.arr64_set64_ne _ _ _ _ _ hcb, h3 c hc]
@@ -654,29 +655,29 @@ theorem pcap_congr' {m m' : Mem} (h0 : m'.arr64 POOL = m.arr64 POOL)
 the globals unchanged: the frame of a pool writer. -/
 structure PFrame (m m' : Mem) : Prop where
   bytes : m'.bytes = m.bytes
-  size : m'.words.size = m.words.size
+  size : m.SameShape m'
   arr : ∀ b, b ≠ POOL → b ≠ POOL1 → m'.arr64 b = m.arr64 b
   size0 : (m'.arr64 POOL).size = (m.arr64 POOL).size
   size1 : (m'.arr64 POOL1).size = (m.arr64 POOL1).size
   glob : m'.glob = m.glob
 
-grind_pattern [arena_grind] PFrame.size => PFrame m m', m'.words.size
+grind_pattern [arena_grind] PFrame.size => PFrame m m'
 grind_pattern [arena_grind] PFrame.bytes => PFrame m m', m'.bytes
 grind_pattern [arena_grind] PFrame.glob => PFrame m m', m'.glob
 grind_pattern [arena_grind] PFrame.size0 => PFrame m m', (m'.arr64 POOL).size
 grind_pattern [arena_grind] PFrame.size1 => PFrame m m', (m'.arr64 POOL1).size
 
-theorem PFrame.refl (m : Mem) : PFrame m m := ⟨rfl, rfl, fun _ _ _ => rfl, rfl, rfl, rfl⟩
+theorem PFrame.refl (m : Mem) : PFrame m m := ⟨rfl, .refl m, fun _ _ _ => rfl, rfl, rfl, rfl⟩
 grind_pattern [arena_grind] PFrame.refl => PFrame m m
 
 theorem PFrame.trans {m m' m'' : Mem} (h : PFrame m m') (h' : PFrame m' m'') : PFrame m m'' :=
-  ⟨h'.bytes.trans h.bytes, h'.size.trans h.size, fun b h0 h1 => (h'.arr b h0 h1).trans (h.arr b h0 h1),
+  ⟨h'.bytes.trans h.bytes, h.size.trans h'.size, fun b h0 h1 => (h'.arr b h0 h1).trans (h.arr b h0 h1),
     h'.size0.trans h.size0, h'.size1.trans h.size1, h'.glob.trans h.glob⟩
 grind_pattern [arena_grind] PFrame.trans => PFrame m m'', PFrame m' m''
 
 theorem PFrame.set64 {m m' : Mem} (t i v : Word) (h : PFrame m m') :
     PFrame m (m'.set64 (tierA POOL t) i v) := by
-  refine ⟨h.bytes, by simp [Mem.set64, h.size], fun b h0 h1 => ?_, ?_, ?_, h.glob⟩
+  refine ⟨h.bytes, h.size.set64 _ _ _, fun b h0 h1 => ?_, ?_, ?_, h.glob⟩
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne t b h0 h1), h.arr b h0 h1]
   · rcases tierA_pool t with e | e <;> rw [e]
     · rw [Mem.size_arr64_set64, h.size0]
@@ -688,7 +689,7 @@ grind_pattern [arena_grind] PFrame.set64 => PFrame m (m'.set64 (tierA POOL t) i 
 
 theorem PFrame.set64_both {m m' : Mem} (b : ArrId) (i v : Word) (h : PFrame m m')
     (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : PFrame (m.set64 b i v) (m'.set64 b i v) := by
-  refine ⟨h.bytes, by simp [Mem.set64, h.size], fun c c0 c1 => ?_, ?_, ?_, h.glob⟩
+  refine ⟨h.bytes, h.size.set64_both b i v, fun c c0 c1 => ?_, ?_, ?_, h.glob⟩
   · by_cases hcb : c = b
     · subst hcb; rw [Mem.arr64_set64_same, Mem.arr64_set64_same, h.arr c c0 c1]
     · rw [Mem.arr64_set64_ne _ _ _ _ _ hcb, Mem.arr64_set64_ne _ _ _ _ _ hcb, h.arr c c0 c1]
@@ -770,7 +771,7 @@ while the top is in tier 1, the saved tier-0 top `PT0[0]` is inside tier 0's arr
 in tier 0, `PT0[0]` is dead: `scratch_reset` overwrites it before reading it, `pool_alloc0`
 reads it only in tier 1; so the truncation, which cuts `POOL` to the top, keeps the invariant). -/
 def PoolOK (m : Mem) : Prop :=
-  CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m ∧
+  m.HasW CTL ∧ 0 < (m.arr64 CTL).size ∧ pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m ∧
   (m.top.toNat < 2 ^ 40 ∨ m.ptop0.toNat ≤ (m.arr64 POOL).size) ∧
   (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size
 
@@ -866,10 +867,10 @@ theorem ptop0_congr {m m' : Mem} (h : m'.arr64 PT0 = m.arr64 PT0) : m'.ptop0 = m
 theorem PoolOK.frame {m m' : Mem} (h : PoolOK m) (h0 : m'.arr64 POOL = m.arr64 POOL)
     (h1 : m'.arr64 POOL1 = m.arr64 POOL1) (ht : m'.arr64 PT0 = m.arr64 PT0)
     (hc : (m'.arr64 CTL).size = (m.arr64 CTL).size) (htop : m'.top = m.top)
-    (hw : m'.words.size = m.words.size) : PoolOK m' := by
+    (hw : m.SameShape m') : PoolOK m' := by
   obtain ⟨a1, a2, a3, a4, a5, a6⟩ := h
   have hp : pcap m' = pcap m := pcap_congr' h0 h1
-  refine ⟨by rw [hw]; exact a1, by rw [hc]; exact a2, by rw [hp]; exact a3, by rw [hp, htop]; exact a4,
+  refine ⟨a1.of_sameShape hw, by rw [hc]; exact a2, by rw [hp]; exact a3, by rw [hp, htop]; exact a4,
     by rw [ptop0_congr ht, h0, htop]; exact a5, ?_⟩
   rw [htop]
   rcases tierA_pool (m.top >>> 40) with e | e <;> rw [e] <;> rw [e] at a6
@@ -882,7 +883,7 @@ theorem PoolOK.grows {m m' : Mem} (h : PoolOK m) (hg : Grows m m') : PoolOK m' :
   obtain ⟨h1, h2, h3, h4, h5, h6⟩ := h
   have hc : m'.arr64 CTL = (m.set64 CTL 0 m'.top).arr64 CTL := hf.ctl
   refine ⟨?_, ?_, by omega, htp, ?_, hin⟩
-  · rw [hf.size, Mem.words_size_set64]; exact h1
+  · exact h1.of_sameShape ((Mem.sameShape_set64 _ _ _ _).trans hf.size)
   · rw [hc, Mem.size_arr64_set64]; exact h2
   · rw [Mem.ptop0, hf.arr PT0 (by decide) (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide),
       hf.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
@@ -932,7 +933,8 @@ theorem Grows.trans (m m' m'' : Mem) (h : Grows m m') (h' : Grows m' m'') : Grow
     rw [h.frame.ctl, Mem.size_arr64_set64]
   have hf : PFrame (m.set64 CTL 0 m''.top) m'' := by
     refine ⟨by rw [h'.frame.bytes, Mem.bytes_set64, h.frame.bytes, Mem.bytes_set64, Mem.bytes_set64],
-      by rw [h'.frame.size, Mem.words_size_set64, h.frame.size, Mem.words_size_set64, Mem.words_size_set64],
+      (Mem.sameShape_set64 _ _ _ _).symm.trans ((Mem.sameShape_set64 _ _ _ _).trans
+        (h.frame.size.trans ((Mem.sameShape_set64 _ _ _ _).trans h'.frame.size))),
       fun b h0 h1 => ?_, ?_, ?_, by show m''.glob = m.glob; rw [h'.frame.glob]; exact h.frame.glob⟩
     · rw [h'.frame.arr b h0 h1]
       by_cases hbc : b = CTL

@@ -1857,7 +1857,7 @@ theorem consInternM_cases {C : ConsSch} {m m₁ : Mem} {ks : List Word} {r : Wor
 theorem kgrowIf_frame (C : ConsSch) (t : Word) (m₀ m m' : Mem) (c : Word)
     (h : kgrowIf C t m₀ m c = some m') :
     (∀ b, b ≠ tierA C.sa t → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
-      m'.words.size = m.words.size := by
+      m.SameShape m' := by
   change GFr (tierA C.sa t) m m'
   unfold kgrowIf at h
   split at h
@@ -1878,11 +1878,11 @@ theorem wrRecK_size (ra : ArrId) (k : Word) (b : ArrId) :
   | cons v vs ih => intro m f; rw [wrRecK, ih, arr64_size_set64]
 
 theorem wrRecK_words (ra : ArrId) (k : Word) :
-    ∀ (vs : List Word) (m : Mem) (f : Word), (wrRecK ra k m f vs).words.size = m.words.size := by
+    ∀ (vs : List Word) (m : Mem) (f : Word), m.SameShape (wrRecK ra k m f vs) := by
   intro vs
   induction vs with
-  | nil => intro m f; rfl
-  | cons v vs ih => intro m f; rw [wrRecK, ih, Mem.words_size_set64]
+  | nil => intro m f; exact .refl m
+  | cons v vs ih => intro m f; rw [wrRecK]; exact (Mem.sameShape_set64 _ _ _ _).trans (ih _ _)
 
 
 /-- The memory after the append of the key's node to tier `t`, outside the slot array: the
@@ -1906,10 +1906,10 @@ theorem colW_size (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId) :
   · exact arr64_size_set64 _ _ _ _ _
 
 theorem colW_words (C : ConsSch) (t c x : Word) (m : Mem) :
-    (colW C t c x m).words.size = m.words.size := by
+    m.SameShape (colW C t c x m) := by
   unfold colW; split
-  · rfl
-  · exact Mem.words_size_set64 _ _ _ _
+  · exact .refl m
+  · exact Mem.sameShape_set64 _ _ _ _
 
 theorem arr64_set64_congr {M₁ M₂ : Mem} {a b : ArrId} (h : M₁.arr64 a = M₂.arr64 a)
     (hb : M₁.arr64 b = M₂.arr64 b) (i v : Word) :
@@ -1944,7 +1944,7 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
     (h : consInternM C m ks = some (w, m')) :
     m' = m ∨ ∃ t, t ≤ 1 ∧ pushOKC C m t = true ∧ w = (if t = 0 then C.P else C.S) + cntC C m t ∧
       (∀ b, b ≠ tierA C.sa t → m'.arr64 b = (pushRec C m t ks).arr64 b) ∧
-      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size := by
+      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m' := by
   rcases consInternM_cases h with e | ⟨t, j, ht, hok, hg, hr⟩
   · exact .inl e
   refine .inr ⟨t, ht, hok, hr, ?_⟩
@@ -1959,8 +1959,9 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
     exact OutSa.set64_sa (OutSa.set64_sa (fun _ _ => rfl) _ _) _ _ b hb
   · rw [g2 b]
     simp only [pushMX, pushMC, tailM, colW_size, arr64_size_set64, wrRecK_size]
-  · rw [g3]
-    simp only [pushMX, pushMC, tailM, colW_words, Mem.words_size_set64, wrRecK_words]
+  · refine Mem.SameShape.trans ?_ g3
+    simp only [pushMX, pushMC, tailM]
+    exact ((((wrRecK_words _ _ _ m 0).set64 _ _ _).set64 _ _ _).set64 _ _ _).trans (colW_words _ _ _ _ _)
 
 
 

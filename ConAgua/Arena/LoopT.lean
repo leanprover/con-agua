@@ -169,7 +169,7 @@ theorem indMemos_wframe : WFrame CTL imA imC (fun m₀ m => IndMemos m₀ → In
     · exact (h h0).frame (MemFrame.setCtl m i v) (by simp)
         (fun x hx => by simp at hx; subst hx; exact imC_spec x hi)
   setG _ _ _ _ h h0 := (h h0).frame (A := []) (C := [])
-    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩ (by simp) (by simp)
+    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩ (by simp) (by simp)
 
 /-- `consts_resolve_ffast` keeps `IndMemos`: it writes only its memo (`crfF_frame`). -/
 theorem IndMemos.crfF {m m' : Mem} {args r : List Word} (h : L.Ind.crfF m args = some (r, m'))
