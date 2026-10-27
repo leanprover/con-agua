@@ -79,19 +79,19 @@ def frozen : List (ArrId × Fz) :=
    (PEND, ⟨PEND, .bin .mul (fzC 3) (fzCtl 130)⟩)]
 
 /-- The ids entry 2 maps into the buffer: the header, then the frozen arrays. -/
-def frozenIds : List ArrId := HDRF :: frozen.map (·.1)
+def frozenIds : List TieredArray := ↑HDRF :: frozen.map (fun x => ↑x.1)
 
 /-- **The worker's own arrays**: every word array phase B (`check_b`'s call closure) touches that
 is not frozen: `CTL`, the pool's tier 1 and `PT0`, the memos and caches, the env index's tier 1, the walk stacks and
 scratch heaps, the stores' tier-1 arrays. Entry 2 gives them slots in the worker region; any
 other array gets no memory (an access is out of bounds, an error). `Checker/ParOwned.lean` checks
 the list against the program. -/
-def parOwned : List ArrId :=
+def parOwned : List TieredArray :=
   [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH, INM,
    IOM, DEM, CTM, CV, RRM, LQ, LSQ, EIXA1, EIXS1, EIXN1, SPN, BSTK, WSM, FLM, LSM, LVS, Stubs.CRM,
    LH, Ind.IW, tier1 POOL, tier1 TIXA, tier1 TIXS, tier1 TIXN] ++
   ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [tier1 x.1, tier1 x.2.1]) ++
-    fzCols.map (fun (x : ArrId × Nat) => tier1 x.1)).mergeSort : List ArrId)
+    fzCols.map (fun (x : ArrId × Nat) => tier1 x.1)).mergeSort (fun a b => a.code ≤ b.code))
 
 /-- The header's length. -/
 def hdrW : Nat := 10 + 2 * frozen.length
@@ -142,7 +142,7 @@ def parCompactL : FunDecl :=
 
 /-- `frozenIds` as a literal (what the entry stub is built from: the kernel checks the committed
 file's stub against it, and a computed list would be re-evaluated in every piece). -/
-def frozenIdsL : List ArrId :=
+def frozenIdsL : List TieredArray :=
   [HDRF, CTLF, POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT,
    PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC,
    LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC,
@@ -150,7 +150,7 @@ def frozenIdsL : List ArrId :=
    EIXS, EIXN, TIXA, TIXS, TIXN, EREC, PEND]
 
 /-- `parOwned` as a literal (as `frozenIdsL`). -/
-def parOwnedL : List ArrId :=
+def parOwnedL : List TieredArray :=
   [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH, INM,
    IOM, DEM, CTM, CV, RRM, LQ, LSQ, EIXA1, EIXS1, EIXN1, SPN, BSTK, WSM, FLM, LSM, LVS, Stubs.CRM,
    LH, Ind.IW, tier1 POOL, tier1 TIXA, tier1 TIXS, tier1 TIXN, tier1 REC, tier1 SLOT, tier1 AREC,
