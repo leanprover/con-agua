@@ -59,11 +59,11 @@ theorem storeR_frame (hS : S.WF) (hkm : KMono S hs KP) (A₀ : List TieredArray)
   have eb : ∀ t, baseW m' t = baseW m t := fun t => by simp only [baseW, hfc SCB hscb]
   have era : ∀ t, m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t) := fun t => by
     rcases tierA_eq_or S.ra t with e | e <;> rw [e]
-    · exact hfa _ hra hS.ra_ctl
+    · exact hfa _ hra (TieredArray.t0_ne hS.ra_ctl)
     · exact hfa _ hra' ((tier1_ne_t0 _ _))
   have esa : ∀ t, m'.arr64 (tierA S.sa t) = m.arr64 (tierA S.sa t) := fun t => by
     rcases tierA_eq_or S.sa t with e | e <;> rw [e]
-    · exact hfa _ hsa hS.sa_ctl
+    · exact hfa _ hsa (TieredArray.t0_ne hS.sa_ctl)
     · exact hfa _ hsa' ((tier1_ne_t0 _ _))
   have hloc := hl m m' era (fun b hb => hfa b (hA₀ b hb).1 (hA₀ b hb).2) (fun x hx => hfc x (h0 x hx))
   have ec : ∀ t : Word, t ≤ 1 → cntW S m' t = cntW S m t := by
@@ -898,8 +898,8 @@ theorem pushRec_col (C : ConsSch) (hW : C.WF) {A : ArrId} (hA : C.col = some A) 
 theorem pushRec_cnt (C : ConsSch) (hW : C.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (ks : List Word)
     (hctl : C.ca.toNat + 2 ≤ (m.arr64 CTL).size) (t' : Word) (ht' : t' ≤ 1) :
     cntC C (pushRec C m t ks) t' = if t' = t then cntC C m t + 1 else cntC C m t' := by
-  have hcol : ∀ A, C.col = some A → A ≠ CTL ∧ tier1 A ≠ CTL := fun A hA =>
-    ⟨(hW.col A hA).2.2.1, (tier1_ne_t0 _ _)⟩
+  have hcol : ∀ A, C.col = some A → (A : TieredArray) ≠ CTL ∧ tier1 A ≠ CTL := fun A hA =>
+    ⟨TieredArray.t0_ne (hW.col A hA).2.2.1, (tier1_ne_t0 _ _)⟩
   have hca := hW.sch.ca
   simp only [ConsSch.sch] at hca
   simp only [cntC, pushRec, colW_arr C _ _ _ _ CTL (col_tier_ne hcol t), rdW_set64, wrRecK_eq,
@@ -938,8 +938,8 @@ theorem consInternM_frame (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}
     refine pushRec_arr C m t ks b hb.1 hb.2.1 hc (fun A hA => ⟨fun e => ?_, fun e => ?_⟩)
     · exact hb.2.2.2.2.1 (by simp [hA, e])
     · exact hb.2.2.2.2.2 ⟨A, by simp [hA], e⟩
-  · have hcol : ∀ A, C.col = some A → A ≠ CTL ∧ tier1 A ≠ CTL := fun A hA =>
-      ⟨(hW.col A hA).2.2.1, (tier1_ne_t0 _ _)⟩
+  · have hcol : ∀ A, C.col = some A → (A : TieredArray) ≠ CTL ∧ tier1 A ≠ CTL := fun A hA =>
+      ⟨TieredArray.t0_ne (hW.col A hA).2.2.1, (tier1_ne_t0 _ _)⟩
     rw [he CTL (hW.sch.sa_ctl' t).symm, pushRec, colW_arr C _ _ _ _ CTL (col_tier_ne hcol t), rdW_set64,
       wrRecK_eq, wrRec_arr_ne C.sch _ _ CTL (hW.sch.ra_ctl' t).symm]
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hx
