@@ -134,7 +134,7 @@ theorem fzExt_le_src (hok : parCompactOK m 1 = true) {i : Nat} (hi : i < frozen.
   have hF := OutFrame.pcGo 1 (List.range i) m (UInt64.ofNat hdrW)
   have hz := fzAt_ok hi
   have he := fzEv_congr hF.arr _ hz.1
-  simp only [fzOK, he.1, hF.size, hF.arr _ hz.2, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq,
+  simp only [fzOK, he.1, hF.size, hF.arr _ (TieredArray.t0_ne hz.2), Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq,
     decide_eq_true_eq] at h2
   rcases h2.1.1.2 with h | h
   · exact absurd h one_ne_zero'
@@ -179,7 +179,7 @@ theorem bufImg_succ (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 
       bufOf_getD hok hlt (by simp only at hin; rw [← hs.1]; omega), Nat.zero_add, himg k hk']
 
 /-- The frozen list's ids are the buffer ids after the header. -/
-theorem frozenIdsL_eq : frozenIdsL = HDRF :: frozen.map (·.1) := by decide +kernel
+theorem frozenIdsL_eq : frozenIdsL = ↑HDRF :: frozen.map (fun e => ↑e.1) := by decide +kernel
 
 /-- Every frozen entry but the seed is its own source. -/
 theorem frozen_src_self : (frozen.drop 1).all (fun e => e.2.src == e.1) = true := by decide +kernel
