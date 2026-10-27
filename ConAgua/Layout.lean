@@ -45,7 +45,7 @@ declare_arrays checkerArrays
   -- the stores (`Arena/StoreFields.lean`): the pool, then per table its records and cons slots
   | /-- The limb pool: limbs, level lists' handles, names' bytes (`Arena/Pool.lean`). -/
     Arena.POOL : word tiered := 0
-  | /-- The control words; word 0 is the pool top. -/ Arena.CTL : word min 256 := 1
+  | /-- The control words; word 0 is the pool top. -/ Arena.CTL : word min 256 at table := 1
   | /-- The `lit` records (four words per node). -/ Arena.REC : word tiered := 2
   | /-- The `lit` cons-table slots. -/ Arena.SLOT : word tiered min 2 := 3
   | /-- The `app` records (one packed word per node). -/ Arena.AREC : word tiered := 4

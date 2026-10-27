@@ -565,6 +565,13 @@ structure ArrB (s : MachineData) (ln bs : AddrExpr) (arr : Array UInt8) : Prop w
   base : ∃ B : Nat, MemW s bs (UInt64.ofNat B) ∧ B + arr.size < 2 ^ 64 ∧
     ∀ j (h : j < arr.size), s.dmem.get? (A (B + j)) = some arr[j]
 
+/-- The table-relative word array `arr` at `T + c`: `[ln]` holds its length, and its words lie from
+`r15 + c`. -/
+structure ArrT (s : MachineData) (ln : AddrExpr) (c : Nat) (arr : Array Word) : Prop where
+  len : MemW s ln (UInt64.ofNat arr.size)
+  fits : s.regs.r15.toNat + c + 8 * arr.size < 2 ^ 64
+  get : ∀ j (h : j < arr.size), rdW s.dmem (A (s.regs.r15.toNat + c + 8 * j)) = some arr[j]
+
 theorem interp_be (a b : UInt64) : CondCode.be.interp (cmpFlags a.toBitVec b.toBitVec) = decide (a ≤ b) := by
   have := cmpCC_interp .ule a b; simpa [cmpCC, Cmp.eval] using this
 
@@ -700,6 +707,113 @@ theorem genLdW_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {mn : Nat} {i 
         · refine ev_congr (hv _ hjs _ hj (by simp [rget_set]) ?_) (by simp; omega)
           exact ((hX1.flags _).set ht _ _).set hd _ _
 
+/-- `d := A[i]` for the table-relative word array `A` at `T + c` (`genLdT`), `mn` a minimum length of
+`A`. -/
+theorem genLdTW_spec (_hF : 8 * F + 8 < maxOff) {ln : AddrExpr} {c mn : Nat} {i : Expr} {gi : GenF}
+    (hi : GenSpec G ctx F i gi) {d : Reg64} {fr : List Reg64} {code : Program} {k : Nat}
+    (hg : genLdT ctx ln c mn i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
+    (hwf : Expr.wf ctx.nl G.tab i = true) {arr : Array Word}
+    {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s) (hmn : mn ≤ arr.size)
+    (hA : ∀ s', XPost (d :: fr) s s' → ArrT s' ln c arr)
+    (hv : ∀ j (h : j.toNat < arr.size) s', evalP σ i = .ok j → s'.regs.get64 d = arr[j.toNat].toBitVec →
+      XPost (d :: fr) s s' → Ev Q s' (at_ (k + code.length)))
+    (herr : ∀ s', ((∃ x, evalP σ i = .error x) ∨ ∃ j, evalP σ i = .ok j ∧ ¬ j.toNat < arr.size) →
+      XPost (d :: fr) s s' → Ev Q s' (label errorL)) : Ev Q s (at_ k) := by
+  have hd : d ∈ d :: fr := List.mem_cons_self
+  unfold genLdT at hg
+  split at hg
+  · -- a constant index, folded into the displacement
+    rename_i kk
+    split at hg
+    case isFalse => cases hg
+    rename_i hk
+    have hk28 : kk.toNat < 2 ^ 28 := by omega
+    split at hg
+    · -- below the minimum length: no bounds check
+      rename_i hkm
+      cases hg
+      have hj : kk.toNat < arr.size := Nat.lt_of_lt_of_le hkm hmn
+      have hT0 := hA s (XPost.refl _ s)
+      refine ev_movRM hc.head ⟨by omega, by omega⟩ (v := arr[kk.toNat]) ?_ ?_
+      · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, Int.toNat_natCast, ← Nat.add_assoc]
+        exact hT0.get _ hj
+      · refine ev_congr (hv kk hj _ rfl (by simp [rget_set]) ?_) (by simp)
+        exact (XPost.refl _ s).set hd _ _
+    cases hg
+    have hT0 := hA s (XPost.refl _ s)
+    have hsz : arr.size < 2 ^ 64 := by have := hT0.fits; omega
+    refine ev_cmpAI hc.head hT0.len ?_
+    rw [ofInt_small hk28]
+    refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+    · refine herr _ (.inr ⟨kk, rfl, ?_⟩) ((XPost.refl _ s).flags _)
+      rw [interp_be] at hcc
+      simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+      omega
+    · rw [interp_be] at hcc
+      simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+      have hj : kk.toNat < arr.size := by omega
+      have hT1 := hA _ ((XPost.refl _ s).flags (cmpFlags (UInt64.ofNat arr.size).toBitVec kk.toBitVec))
+      refine ev_movRM hc.tail.tail.head ⟨by omega, by omega⟩ (v := arr[kk.toNat]) ?_ ?_
+      · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, Int.toNat_natCast, ← Nat.add_assoc]
+        exact hT1.get _ hj
+      · refine ev_congr (hv kk hj _ rfl (by simp [rget_set]) ?_) (by simp)
+        exact ((XPost.refl _ s).flags _).set hd _ _
+  · split at hg
+    case isFalse => cases hg
+    rename_i hc31
+    split at hg
+    · -- the index in a local's register
+      rename_i r hr
+      cases hg
+      obtain ⟨x, rfl, hx⟩ : ∃ x, i = .var x ∧ ctx.alloc.lookup x = some r := by
+        cases i <;> simp_all [regOf]
+      have hxl : x < ctx.nl := by simpa [Expr.wf] using hwf
+      have hT0 := hA s (XPost.refl _ s)
+      have hsz : arr.size < 2 ^ 64 := by have := hT0.fits; omega
+      refine ev_cmpRA hc.head hT0.len ?_
+      rw [hI.reg x hxl r hx]
+      refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+      · refine herr _ (.inr ⟨σ.loc x, rfl, ?_⟩) ((XPost.refl _ s).flags _)
+        rw [interp_nc] at hcc
+        simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+        omega
+      · rw [interp_nc] at hcc
+        simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+        have hj : (σ.loc x).toNat < arr.size := by omega
+        have hT1 := hA _ ((XPost.refl _ s).flags (cmpFlags (σ.loc x).toBitVec (UInt64.ofNat arr.size).toBitVec))
+        refine ev_movRMt hc.tail.tail.head ⟨by omega, by omega⟩ (v := arr[(σ.loc x).toNat]) ?_ ?_
+        · show rdW s.dmem (A (s.regs.r15.toNat + 8 * (s.regs.get64 r).toNat + (c : Int).toNat)) = _
+          rw [hI.reg x hxl r hx, UInt64.toNat_toBitVec, Int.toNat_natCast,
+            show s.regs.r15.toNat + 8 * (σ.loc x).toNat + c = s.regs.r15.toNat + c + 8 * (σ.loc x).toNat by omega]
+          exact hT1.get _ hj
+        · refine ev_congr (hv _ hj _ rfl (by simp [rget_set]) ?_) (by simp)
+          exact ((XPost.refl _ s).flags _).set hd _ _
+    · -- the index into `d`
+      obtain ⟨ci, hci, rfl⟩ := Option.map_eq_some_iff.mp hg
+      refine hi d fr ci k hci hc.left hok hwf σ s Q hI ?_ (fun s1 he hX => herr s1 (.inl he) hX)
+      intro j s1 hj hd1 hX1
+      have hT0 := hA s1 hX1
+      have hsz : arr.size < 2 ^ 64 := by have := hT0.fits; omega
+      have hcR := hc.right
+      refine ev_cmpRA hcR.head hT0.len ?_
+      rw [hd1]
+      refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
+      · refine herr _ (.inr ⟨j, hj, ?_⟩) (hX1.flags _)
+        rw [interp_nc] at hcc
+        simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+        omega
+      · rw [interp_nc] at hcc
+        simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+        have hjs : j.toNat < arr.size := by omega
+        have hT1 := hA _ (hX1.flags (cmpFlags j.toBitVec (UInt64.ofNat arr.size).toBitVec))
+        refine ev_movRMt hcR.tail.tail.head ⟨by omega, by omega⟩ (v := arr[j.toNat]) ?_ ?_
+        · show rdW s1.dmem (A (s1.regs.r15.toNat + 8 * (s1.regs.get64 d).toNat + (c : Int).toNat)) = _
+          rw [hd1, UInt64.toNat_toBitVec, Int.toNat_natCast,
+            show s1.regs.r15.toNat + 8 * j.toNat + c = s1.regs.r15.toNat + c + 8 * j.toNat by omega]
+          exact hT1.get _ hjs
+        · refine ev_congr (hv _ hjs _ hj (by simp [rget_set]) ?_) (by simp; omega)
+          exact (hX1.flags _).set hd _ _
+
 /-- `d := A[i]` for a byte array (`genLd`). -/
 theorem genLdB_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi : GenF}
     (hi : GenSpec G ctx F i gi) {d : Reg64} {fr : List Reg64} {code : Program} {k : Nat}
@@ -826,6 +940,18 @@ theorem arrW_plain {a : ArrId} (ha : G.tab.dom64 a = true) {σ : St} {s : Machin
     by rw [hsz]; exact hend, fun j hj => hI.mem.get64 a ha j hj⟩
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len64A ha
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base64A ha
+
+omit [Host] in
+/-- The table-relative word array at `T + c` (`Layout.Ok.tbl64`), its length in the table. -/
+theorem arrT_plain {a : ArrId} (ha : G.tab.dom64 a = true) {c : Nat} (hc : G.tab.tbl64 a = some c) {σ : St}
+    {s : MachineData} (hI : Inv G ctx F σ s) :
+    ArrT s (mb .r15 (ctx.tab.len64 a)) c (σ.mem.arr64 a) := by
+  have hb := hG.tbl64 _ c ha hc
+  have hsz := hI.mem.size64 a ha
+  have hend := hG.end64 _ (G.tab.pos64_lt ha)
+  refine ⟨(arrW_plain hG hT hTab ha hI).len, ?_, fun j hj => ?_⟩
+  · rw [hI.r15, hsz, ← hb]; exact hend
+  · rw [hI.r15, ← hb]; exact hI.mem.get64 a ha j hj
 
 omit [Host] in
 /-- A byte array's descriptor in the table. -/
@@ -1002,16 +1128,26 @@ theorem gen_ld64 (a : ArrId) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
   simp only [gen] at hg
   simp only [Expr.wf, Bool.and_eq_true] at hwf
   have hoki : GOk ctx i d fr := hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h
-  refine genLdW_spec hF hi hg hc hoki hwf.2 hI (arr := σ.mem.arr64 a)
-    (by rw [hT, hI.mem.size64 _ hwf.1]; exact hG.min64 _ hwf.1)
-    (fun s' hX => by have := arrW_plain hG hT hTab hwf.1 (hI.ghost hX hok.dr); exact this) ?_ ?_
-  · intro j hj s' hji hd hX
-    exact hv _ s' (by simp [evalP, hji, hj, bind, Except.bind]) hd hX
-  · intro s' he hX
+  have hmn : ctx.tab.min64 a ≤ (σ.mem.arr64 a).size := by
+    rw [hT, hI.mem.size64 _ hwf.1]; exact hG.min64 _ hwf.1
+  have hv' : ∀ j (h : j.toNat < (σ.mem.arr64 a).size) s', evalP σ i = .ok j →
+      s'.regs.get64 d = (σ.mem.arr64 a)[j.toNat].toBitVec → XPost (d :: fr) s s' → Ev Q s' (at_ (k + code.length)) :=
+    fun j hj s' hji hd hX => hv _ s' (by simp [evalP, hji, hj, bind, Except.bind]) hd hX
+  have herr' : ∀ s', ((∃ x, evalP σ i = .error x) ∨ ∃ j, evalP σ i = .ok j ∧ ¬ j.toNat < (σ.mem.arr64 a).size) →
+      XPost (d :: fr) s s' → Ev Q s' (label errorL) := by
+    intro s' he hX
     refine herr s' ?_ hX
     rcases he with ⟨x, hx⟩ | ⟨j, hj, hn⟩
     · exact ⟨x, by simp [evalP, hx]; rfl⟩
     · exact ⟨.oob, by simp [evalP, hj, hn, bind, Except.bind]⟩
+  split at hg
+  · -- the table-relative array
+    rename_i c hcT
+    exact genLdTW_spec hF hi hg hc hoki hwf.2 hI hmn
+      (fun s' hX => by
+        have := arrT_plain hG hT hTab hwf.1 (by rw [← hT]; exact hcT) (hI.ghost hX hok.dr); exact this) hv' herr'
+  · exact genLdW_spec hF hi hg hc hoki hwf.2 hI hmn
+      (fun s' hX => by have := arrW_plain hG hT hTab hwf.1 (hI.ghost hX hok.dr); exact this) hv' herr'
 
 theorem gen_ld8 (a : ArrId) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
     GenSpec G ctx F (.ld8 a i) (gen ctx (.ld8 a i)) := by

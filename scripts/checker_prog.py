@@ -217,14 +217,19 @@ namespace L.Checker
 
 open L L.Compiler
 
-set_option maxRecDepth 100000 in
-/-- The table for the arrays the program names (`Prog.wfAuto`'s), with the minimum lengths of
-`checkerArrays`, as a literal (`tab_lit%`: every per-chunk check of `checkerProg_wf` unfolds it). -/
-def checkerTab : Tab := tab_lit% ({ Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2 with
-  mins := checkerArrays.mins })
+/-- The checker's table from the program's: `checkerArrays`' minimum lengths and table-relative
+array (`Tab.tblBase`). -/
+def checkerTabOf (t : Tab) : Tab :=
+  { t with mins := checkerArrays.mins, tbl := checkerArrays.tblArr.map fun x => (x.1, t.tblBase) }
 
-#guard checkerTab == { Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2 with
-  mins := checkerArrays.mins }
+set_option maxRecDepth 100000 in
+/-- The table for the arrays the program names (`Prog.wfAuto`'s), with the minimum lengths and the
+table-relative array of `checkerArrays`, as a literal (`tab_lit%`: every per-chunk check of
+`checkerProg_wf` unfolds it). -/
+def checkerTab : Tab :=
+  tab_lit% (checkerTabOf (Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2))
+
+#guard checkerTab == checkerTabOf (Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2)
 
 end L.Checker
 '''

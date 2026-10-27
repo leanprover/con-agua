@@ -69,9 +69,15 @@ def natPairsToExpr (l : List (Nat × Nat)) : Lean.Expr :=
     (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``Nat) (mkConst ``Nat) (mkNatLit a) (mkNatLit b)) acc)
     (mkApp (mkConst ``List.nil [0]) ty)
 
+/-- `Tab.tbl` as a term. -/
+def tblToExpr : Option (Nat × Nat) → Lean.Expr
+  | none => mkApp (mkConst ``Option.none [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat))
+  | some (a, c) => mkApp2 (mkConst ``Option.some [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat))
+      (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``Nat) (mkConst ``Nat) (mkNatLit a) (mkNatLit c))
+
 def tabToExpr (t : Tab) : Lean.Expr :=
   mkAppN (mkConst ``Tab.mk) #[mkNatLit t.nb, mkNatLit t.nw, bytesToExpr t.rom.toArray, mkNatLit t.nres,
-    mkNatLit t.ng, natPairsToExpr t.mins, mkNatLit t.rom.length,
+    mkNatLit t.ng, natPairsToExpr t.mins, tblToExpr t.tbl, mkNatLit t.rom.length,
     mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Nat) (mkNatLit t.rom.length)]
 
 unsafe def evalNats (e : Lean.Expr) : MetaM (List Nat) :=

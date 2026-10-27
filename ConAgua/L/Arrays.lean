@@ -102,6 +102,10 @@ structure ArrDecl where
   gives the array at least this many words (both tiers), so a constant index below it needs no
   bounds check in the machine code. L's semantics still checks every access. -/
   min : Nat := 0
+  /-- Table-relative (a hint for the compiler, `at table`): the array lives at a fixed offset inside
+  the descriptor table's region, with exactly `min` words, and the code addresses it from the
+  table's register without loading its base. A word array, not tiered, with a minimum length. -/
+  atTable : Bool := false
   deriving Repr, DecidableEq, Inhabited
 
 /-- A program's arrays. -/
@@ -132,10 +136,17 @@ def mins (T : ArrTable) : List (Nat × Nat) :=
   (T.filter fun d => d.kind == .word && d.min != 0).flatMap fun d =>
     ((TieredArray.t0 d.id).code :: if d.tiered then [(tier1 d.id).code] else []).map fun c => (c, d.min)
 
+/-- The table-relative array (`ArrDecl.atTable`), if there is one, with its length. -/
+def tblArr (T : ArrTable) : Option (ArrId × Nat) :=
+  (T.find? (·.atTable)).map fun d => (d.id, d.min)
+
 /-- **Well-formed**: the numbers of each kind distinct, only word arrays tiered or with a
-minimum length. -/
+minimum length; at most one table-relative array, a word array with a minimum length (its
+length), not tiered. -/
 def wf (T : ArrTable) : Bool :=
   T.all (fun d => d.tiered → d.kind == .word) && T.all (fun d => d.min != 0 → d.kind == .word) &&
+    T.all (fun d => d.atTable → d.kind == .word && !d.tiered && d.min != 0) &&
+    decide ((T.filter (·.atTable)).length ≤ 1) &&
     nodupB (T.ids .byte) && nodupB (T.ids .word)
 
 /-! ### The surface check -/
@@ -220,8 +231,10 @@ def ArrTable.progOK (T : ArrTable) (p : Prog) : Bool :=
 
 /-- One row of `declare_arrays`: `| /-- doc -/ NAME : byte := n`, `| … NAME : word := n`, or
 `| … NAME : word tiered := n`; a word array may carry a minimum length, `… : word min k := n`
-(`ArrDecl.min`). -/
-syntax arrRow := "| " docComment ident " : " ident (&" tiered")? (&" min" num)? " := " num
+(`ArrDecl.min`), and such an array may be table-relative, `… : word min k at table := n`
+(`ArrDecl.atTable`). -/
+syntax arrRow := "| " docComment ident " : " ident (&" tiered")? (&" min" num)? (&" at" &" table")?
+  " := " num
 
 /-- `declare_arrays T` followed by rows declares each row's array as `abbrev NAME : L.ArrId := n`
 (with the row's doc comment) and `T : L.ArrTable` listing them all, so each number is written
@@ -234,7 +247,7 @@ macro_rules
     let mut rowsT : Array Lean.Term := #[]
     for r in rows do
       match r with
-      | `(arrRow| | $doc:docComment $n:ident : $k:ident $[tiered%$t]? $[min $mn:num]? := $v:num) =>
+      | `(arrRow| | $doc:docComment $n:ident : $k:ident $[tiered%$t]? $[min $mn:num]? $[at%$at table]? := $v:num) =>
         cmds := cmds.push (← `($doc:docComment abbrev $n : L.ArrId := $v))
         let nm := Lean.Syntax.mkStrLit n.getId.getString!
         let kind ← match k.getId with
@@ -245,8 +258,10 @@ macro_rules
         let mn : Lean.Term := match mn with
           | some m => m
           | none => Lean.Syntax.mkNumLit "0"
+        let atT ← if at.isSome then `(true) else `(false)
         rowsT := rowsT.push
-          (← `(({ name := $nm, id := $n, kind := $kind, tiered := $tiered, min := $mn } : L.ArrDecl)))
+          (← `(({ name := $nm, id := $n, kind := $kind, tiered := $tiered, min := $mn,
+            atTable := $atT } : L.ArrDecl)))
       | _ => Lean.Macro.throwUnsupported
     let tdef ← match tdoc with
       | some d => `($d:docComment def $tbl : L.ArrTable := [$rowsT,*])

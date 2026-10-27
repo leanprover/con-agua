@@ -64,6 +64,11 @@ structure Tab where
   least `k` words in every layout the code runs in (`Layout.Ok.min64`; the entry stubs establish
   it), so a constant index below `k` needs no bounds check (`Tab.min64`). -/
   mins : List (Nat × Nat) := []
+  /-- The table-relative array (`L.ArrDecl.atTable`): `(a, c)` says that tier 0 of word array `a`
+  starts at `T + c`, past the table and the trampoline's save area, in every layout the code runs in
+  (`Layout.Ok.tbl64`; the entry stubs place it there), so the code addresses it from `r15` without
+  loading its base. -/
+  tbl : Option (ArrId × Nat) := none
   /-- `rom.length`, stored: the offsets past the constant data (`resOff`, `globOff`, `args`) are
   then arithmetic on the table's fields, and the kernel does not count the bytes of a large ROM
   each time it evaluates the code generator (DESIGN.md, "Kernel-checked compiler output"). -/
@@ -263,6 +268,12 @@ def Tab.len64 (t : Tab) (s : TieredArray) : Int := t.dlen64 (t.pos64 s)
 /-- The minimum length of word array `s` (`Tab.mins`), `0` if it has none. -/
 def Tab.min64 (t : Tab) (s : TieredArray) : Nat := (t.mins.lookup s.code).getD 0
 
+/-- The offset from the table of word array `s`, if it is the table-relative one (`Tab.tbl`). -/
+def Tab.tbl64 (t : Tab) (s : TieredArray) : Option Nat :=
+  match t.tbl with
+  | some (a, c) => if !s.hi && s.arr == a then some c else none
+  | none => none
+
 /-- The minimum length both tiers of the tiered array `a` have (a tiered access, either tier). -/
 def Tab.min64t (t : Tab) (a : ArrId) : Nat := min (t.min64 (TieredArray.t0 a)) (t.min64 (tier1 a))
 
@@ -296,6 +307,12 @@ def Tab.nxres (t : Tab) : Nat := t.nres - maxRes
 /-- The result area: result `i ≥ maxRes` is the word at `resOff i`. -/
 def Tab.resBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords
 def Tab.resOff (t : Tab) (i : Nat) : Int := t.resBase + 8 * ((i - maxRes : Nat) : Int)
+/-- Where the table-relative array starts (`Tab.tbl`): past the table's descriptors, constant
+data, result area and globals (an entry without arguments) and the trampoline's 32-byte save area,
+rounded up to 64 bytes. -/
+def Tab.tblBase (t : Tab) : Nat :=
+  64 * ((16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres + 8 * t.ng + 32 + 63) / 64)
+
 /-- The global variables: global `g` is the word at `globOff g`. -/
 def Tab.globBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres
 def Tab.globOff (t : Tab) (g : GVar) : Int := t.globBase + 8 * (g.id : Int)
@@ -974,6 +991,25 @@ def genLd (ctx : Ctx) (ln bs : AddrExpr) (byte : Bool) (mn : Nat) (i : Expr) (gi
           ci ++ [i64 (.cmp (.reg (rr d)) (oM ln)), jccL .nc errorL, movRM t bs, ldA byte d (mbx t d byte)]
       | [] => none
 
+/-- `d := A[i]` for the table-relative array `A` at `T + c` (`Tab.tbl64`), `[ln]` its length: the
+bounds check (none for a constant index below the minimum length `mn`), then one load addressed
+from `r15`, `[r15 + c + 8k]` or `[r15 + 8 i + c]`. -/
+def genLdT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (i : Expr) (gi : GenF) (d : Reg64) (fr : List Reg64) :
+    Option Program :=
+  match i with
+  | .const k =>
+    if c + 8 * k.toNat < 2 ^ 31 then
+      if k.toNat < mn then some [movRM d (mb .r15 (c + 8 * k.toNat : Nat))]
+      else some [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL, movRM d (mb .r15 (c + 8 * k.toNat : Nat))]
+    else none
+  | i =>
+    if c < 2 ^ 31 then
+      match regOf ctx i with
+      | some r => some [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL, movRM d (tdesc r c)]
+      | none => (gi d fr).map fun ci =>
+          ci ++ [i64 (.cmp (.reg (rr d)) (oM ln)), jccL .nc errorL, movRM d (tdesc d c)]
+    else none
+
 /-- Flags for `a op b` and the condition code under which it holds: in place (`cmpIn`), else
 the operand that is not simple into a scratch register, else both. -/
 def genCmp (ctx : Ctx) (op : Cmp) (a b : Expr) (ga gb : GenF) (fr : List Reg64) :
@@ -1007,6 +1043,9 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
   | .bin op a b, d, fr => genBin ctx op a b (gen ctx a) (gen ctx b) d fr
   | .ld8 a i, d, fr => genLd ctx (mb .r15 (ctx.tab.len8 a)) (mb .r15 (ctx.tab.base8 a)) true 0 i (gen ctx i) d fr
   | .ld64 a i, d, fr =>
+    match ctx.tab.tbl64 a with
+    | some c => genLdT ctx (mb .r15 (ctx.tab.len64 a)) c (ctx.tab.min64 a) i (gen ctx i) d fr
+    | none =>
     genLd ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) false (ctx.tab.min64 a) i (gen ctx i) d fr
   | .ld64t a t i, d, fr =>
     if ctx.isT t then
@@ -1297,6 +1336,40 @@ def genSt (ctx : Ctx) (ln bs : AddrExpr) (mn : Nat) (i e : Expr) (fr : List Reg6
               i64 (.mov (.mem (mbi t x .W64)) src)]
         | _ => none
 
+/-- `A.u64[i] := e` for the table-relative array `A` at `T + c` (`Tab.tbl64`), `[ln]` its length:
+the value (`genStV`), the index (a constant folded into the displacement, a local's register, or
+evaluated into a scratch register), the bounds check (none for a constant index below `mn`), one
+store addressed from `r15`. -/
+def genStT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (i e : Expr) (fr : List Reg64) : Option Program :=
+  match genStV ctx e fr with
+  | none => none
+  | some (cv, src, fr1) =>
+    match i with
+    | .const k =>
+      if c + 8 * k.toNat < 2 ^ 31 then
+        if k.toNat < mn then some (cv ++ [i64 (.mov (.mem (mb .r15 (c + 8 * k.toNat : Nat))) src)])
+        else some (cv ++ [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL,
+          i64 (.mov (.mem (mb .r15 (c + 8 * k.toNat : Nat))) src)])
+      else none
+    | i =>
+      if c < 2 ^ 31 then
+        match regOf ctx i with
+        | some r => some (cv ++ [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL,
+            i64 (.mov (.mem (tdesc r c)) src)])
+        | none =>
+          match fr1 with
+          | x :: fr2 => (gen ctx i x fr2).map fun ci =>
+              cv ++ ci ++ [i64 (.cmp (.reg (rr x)) (oM ln)), jccL .nc errorL, i64 (.mov (.mem (tdesc x c)) src)]
+          | [] => none
+      else none
+
+/-- `A.u64[i] := e` through the register stack for a plain word array: `genStT` for the
+table-relative array, else `genSt`. -/
+def genSt64 (ctx : Ctx) (a : ArrId) (i e : Expr) : Option Program :=
+  match ctx.tab.tbl64 a with
+  | some c => genStT ctx (mb .r15 (ctx.tab.len64 a)) c (ctx.tab.min64 a) i e ctx.pool
+  | none => genSt ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) (ctx.tab.min64 a) i e ctx.pool
+
 /-- `x := x op b` in place (lane leafgen, step G2): `op r, b` on the local's register `r` (`b` an
 operand in place or evaluated into a scratch register; shifts by a constant), or `op [slot], b`
 (`b` an immediate or a register) on its frame slot. -/
@@ -1402,7 +1475,7 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
        movRM .rcx (mb .r15 (ctx.tab.base8 a)),
        i8 (.mov (.mem (mbi .rcx .rax .W8)) (.regOrMem (.reg (.low .rdx .W8))))]
   | .st64 a i e =>
-    match genSt ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) (ctx.tab.min64 a) i e ctx.pool with
+    match genSt64 ctx a i e with
     | some code => code
     | none =>
     (match loadInto ctx .rdx e with
