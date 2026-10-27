@@ -53,18 +53,23 @@ def benchProg : Prog :=
   walkProg ++ appProg ++ bvarProg ++ sortProg ++ letProg ++ fvarProg ++ lamProg ++ forallProg ++
     projProg ++ [("bb_bench", bbBench)]
 
-/-- A memory with room for `c` nodes per table the walk reads: the 62 word arrays of the arena
-layout (`ArenaRel.lean`) and the level-parameter columns 55‥61, all zero; the tables the walk does not read are empty. -/
+/-- A memory with room for `c` nodes per table the walk reads: the word arrays of the arena
+layout (`ArenaRel.lean`) the walk reads and the level-parameter columns, all zero; the others are empty. -/
 def walkMem (c : Nat) : Mem :=
-  { words := withTiers <| #[#[], Array.replicate 64 0, #[], #[], Array.replicate (4 * c) 0,
-      Array.replicate (4 * c) 0] ++ Array.replicate 10 #[] ++
-      #[Array.replicate (2 * c) 0, Array.replicate (4 * c) 0] ++ Array.replicate 2 #[] ++
-      #[Array.replicate (6 * c) 0, Array.replicate (4 * c) 0, Array.replicate (2 * c) 0,
-        Array.replicate (4 * c) 0, Array.replicate (8 * c) 0] ++
-      #[Array.replicate (4 * c) 0, Array.replicate (4 * c) 0, Array.replicate (4 * c) 0,
-        Array.replicate (4 * c) 0, Array.replicate (4 * c) 0, Array.replicate (4 * c) 0,
-        Array.replicate (6 * c) 0, Array.replicate (4 * c) 0] ++ Array.replicate 22 #[] ++
-      Array.replicate 7 (Array.replicate (2 * c) 0) }
+  Mem.ofWords <| [(CTL, Array.replicate 64 0)] ++ withTiers
+    [(AREC, Array.replicate (4 * c) 0), (ASLOT, Array.replicate (4 * c) 0),
+     (SOREC, Array.replicate (2 * c) 0), (SOSLOT, Array.replicate (4 * c) 0),
+     (LEREC, Array.replicate (6 * c) 0), (LESLOT, Array.replicate (4 * c) 0),
+     (BREC, Array.replicate (2 * c) 0), (BSLOT, Array.replicate (4 * c) 0),
+     (BMEMO, Array.replicate (8 * c) 0),
+     (FVREC, Array.replicate (4 * c) 0), (FVSLOT, Array.replicate (4 * c) 0),
+     (LAREC, Array.replicate (4 * c) 0), (LASLOT, Array.replicate (4 * c) 0),
+     (FAREC, Array.replicate (4 * c) 0), (FASLOT, Array.replicate (4 * c) 0),
+     (PJREC, Array.replicate (6 * c) 0), (PJSLOT, Array.replicate (4 * c) 0),
+     (SHP, Array.replicate (2 * c) 0), (MHP, Array.replicate (2 * c) 0),
+     (IHP, Array.replicate (2 * c) 0), (LSHP, Array.replicate (2 * c) 0),
+     (SOLP, Array.replicate (2 * c) 0), (CLP, Array.replicate (2 * c) 0),
+     (FVLP, Array.replicate (2 * c) 0)]
 
 /-- Run `f` from the memory `m`; the first result. -/
 def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Word × Mem) :=

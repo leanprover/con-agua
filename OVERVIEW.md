@@ -448,7 +448,7 @@ composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
 The runs of `check` are the twin's binary in miniature: `check` dispatches on
-the mode word ([`checkL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L120-L127)),
+the mode word ([`checkL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L146-L153)),
 entry 1 runs the stages and phase A (quoted in §5.1), entry 2 phase B.
 
 ## 5. L in detail
@@ -456,7 +456,7 @@ entry 1 runs the stages and phase A (quoted in §5.1), entry 2 phase B.
 ### 5.1 An example
 
 Entry 1's function, beside the twin function it cites
-([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L85-L101),
+([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L111-L127),
 [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Main.lean#L154-L190)):
 
 ```
@@ -689,12 +689,12 @@ and its number, which is its slot. The table is the memory layout of record.
 `Checker/ArrCheck.lean` checks it against the program
 ([the checks](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ArrCheck.lean#L24-L33)):
 the numbers are distinct and below `256`, so no array is another's tier 1
-([`wf`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L134-L138)).
+([`wf`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L153-L157)).
 A byte access names a byte array of the table, a tiered access a tiered array,
 and a plain word access a word array of the table, so never a tier-1 number
-([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L225-L230)).
-The one exception is `cap_check`, which checks the length of every slot by
-number. The program's extent is the table's, and the parallel mode's frozen and
+([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L244-L249)).
+There is no exception: `cap_check` reads every slot's length by name, a tier 1
+through a tiered access. The program's extent is the table's, and the parallel mode's frozen and
 owned arrays are slots of the table. The harness and the entry stub lay out the
 slots by number and do not use the names.
 
@@ -735,7 +735,7 @@ function with many paths is proved by plain `vcgen` followed by `simp_all` or
 
 The relations nest by scope: one per store (`LitR`, `AppR`, …), the arena
 relation over all stores, the pool and the memos
-([`ArenaR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ArenaRel.lean#L273-L296)),
+([`ArenaR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ArenaRel.lean#L281-L304)),
 the core relation with the caches, the stage relation of the declaration
 checks, the loop relation of the fold. A refinement is stated at the smallest
 relation that suffices and lifted.
@@ -884,7 +884,7 @@ share the persistent tier read-only
 ([con-ron's pool, as the twin states it](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L3-L13)).
 con-agua does the same with two entry points and a frozen buffer; the
 sequential driver `ca_start` runs the same two entries one after the other
-([`check` and its entries](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L77-L82)).
+([`check` and its entries](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L103-L108)).
 
 ### 9.1 The two entries
 
@@ -893,12 +893,12 @@ sequential driver `ca_start` runs the same two entries one after the other
   and a prefix image of every array phase B reads (the stores' persistent
   tiers, their slot tables and columns, the environment index, the pins, the
   pending records); it returns `2^63 + k` for `k` pending groups
-  ([`check_a`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L85-L101)).
+  ([`check_a`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L111-L127)).
 * **Entry 2** (`ca_check_b(buf, len, j, region, region_len)`, mode 2): a stub
   gives each frozen array a descriptor into the buffer, each array phase B
   writes a slot of the worker's own region, and every other array length 0;
   then `check_b` checks group `j`
-  ([`check_b`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L103-L118)).
+  ([`check_b`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L129-L144)).
   Later calls on the same region continue from the state the previous call
   left, as con-ron's worker state is threaded through its claims.
 

@@ -1,6 +1,7 @@
 module
 
 meta import ConAgua.L.Semantics
+meta import ConAgua.Layout
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
 import ConAgua.Census.Attr
@@ -145,16 +146,16 @@ def natProg : Prog :=
 /- `(2^128 - 1) + 1 = 2^128`: limbs `[max, max]` at 0 and `[1]` at 2, top 3; the sum is
 `[0, 0, 1]` at 3 and the top moves to 6. -/
 #guard (run natProg 100 "nat_add" [0, 2, 2, 1]
-  { words := #[#[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 0, 0, 0], #[3]] }).toOption.map
-  (fun (r, m) => (r, m.words)) ==
-  some ([3], #[#[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 1, 0, 0], #[6]])
+  (Mem.ofWords [(POOL, #[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 0, 0, 0]), (CTL, #[3])])).toOption.map
+  (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([3], #[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 1, 0, 0], #[6])
 
 /- Normalisation: `0 + 0` has length 0 (the carry limb `0` is trimmed); the top stays. -/
-#guard (run natProg 100 "nat_add" [0, 0, 0, 0] { words := #[#[0, 0], #[0]] }).toOption.map (·.1)
+#guard (run natProg 100 "nat_add" [0, 0, 0, 0] (Mem.ofWords [(POOL, #[0, 0]), (CTL, #[0])])).toOption.map (·.1)
   == some [0]
 
 /- No room: `abort`. -/
-#guard (run natProg 100 "nat_add" [0, 1, 0, 1] { words := #[#[5, 0], #[1]] }).toOption.isNone
+#guard (run natProg 100 "nat_add" [0, 1, 0, 1] (Mem.ofWords [(POOL, #[5, 0]), (CTL, #[1])])).toOption.isNone
 
 section add
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
@@ -190,7 +191,7 @@ theorem natLimb_spec (n : Nat) (s₀ : St) (o l i : Word)
 `top` (so the operands, which lie below `top`, read the same), and the first `i` limbs of the
 result plus the carry denote the first `i` limbs of `a + b`. -/
 def AddInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧
+  s.mem.HasW POOL ∧ C < 2 ^ 64 ∧
   pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat < C ∧
   s.loc 10 = s.loc 4 >>> 40 ∧ s.loc 11 = s.loc 4 &&& 1099511627775 ∧
@@ -272,6 +273,7 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
   obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpa]

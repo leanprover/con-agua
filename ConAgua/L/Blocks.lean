@@ -36,6 +36,18 @@ theorem Mem.copy8w_glob (m : Mem) (d : TArr) (di : Word) (b : Array UInt8) (si :
   | zero => rfl
   | succ n ih => simp only [Mem.copy8w, ih]; rfl
 
+theorem Mem.SameShape.copy64 {m m' : Mem} (h : m.SameShape m') (d : TArr) (di : Word) (s : TArr)
+    (si : Word) (n : Nat) : m.SameShape (m'.copy64 d di s si n) := by
+  induction n generalizing m' di si with
+  | zero => exact h
+  | succ n ih => exact ih (h.set64 _ _ _) _ _
+
+theorem Mem.SameShape.copy8w {m m' : Mem} (h : m.SameShape m') (d : TArr) (di : Word)
+    (b : Array UInt8) (si : Word) (n : Nat) : m.SameShape (m'.copy8w d di b si n) := by
+  induction n generalizing m' di si with
+  | zero => exact h
+  | succ n ih => exact ih (h.set64 _ _ _) _ _
+
 theorem Mem.copy64_arr8 (m : Mem) (d : TArr) (di : Word) (s : TArr) (si : Word) (n : Nat) (a : ArrId) :
     (m.copy64 d di s si n).arr8 a = m.arr8 a := by
   simp only [Mem.arr8, Mem.copy64_bytes]

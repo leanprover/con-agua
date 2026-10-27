@@ -222,9 +222,9 @@ def frontProg : Prog :=
    ("front_init", frontInit), ("apply_nstr", applyNStr),
    ("apply_nnum", applyNNum), ("apply_level", applyLevel), ("str_put", strPut)]
 
-/-- A memory with 75 word arrays of 128 words (all zero) and the input `"abcab"`. -/
+/-- A memory with every word array of the front end's layout (`POOL`‥`Front.EIDS`) of 128 words (all zero) and the input `"abcab"`. -/
 def frontMem : Mem :=
-  { bytes := #["abcab".toUTF8.data], words := Array.replicate 75 (Array.replicate 128 0) }
+  (Mem.ofWords (ArrTable.zeroWords (checkerArrays.filter (·.id ≤ Front.EIDS)) fun _ => 128)).putBytes IN "abcab".toUTF8.data
 
 /-- Run the calls in turn; the results. -/
 def frontRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word))

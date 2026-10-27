@@ -243,38 +243,29 @@ theorem fzCalls_run {p : Prog} (n : Nat) (rest : Stmt) :
 
 /-! ## What the images and stores leave alone -/
 
-theorem words_size_set64 (m : Mem) (a : ArrId) (i v : Word) :
-    (m.set64 a i v).words.size = m.words.size := by simp [Mem.set64]
-
-theorem words_size_copy64 (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
-    (m.copy64 d di s si n).words.size = m.words.size := by
-  induction n generalizing m di si with
-  | zero => rfl
-  | succ n ih => simp only [Mem.copy64]; rw [ih, words_size_set64]
-
 /-- What a memory step that writes only `OUT` keeps. -/
 structure OutFrame (m m' : Mem) : Prop where
   arr : ∀ a, a ≠ OUT → m'.arr64 a = m.arr64 a
   size : ∀ a, (m'.arr64 a).size = (m.arr64 a).size
-  words : m'.words.size = m.words.size
+  words : m.SameShape m'
   bytes : m'.bytes = m.bytes
   glob : m'.glob = m.glob
 
-theorem OutFrame.refl (m : Mem) : OutFrame m m := ⟨fun _ _ => rfl, fun _ => rfl, rfl, rfl, rfl⟩
+theorem OutFrame.refl (m : Mem) : OutFrame m m := ⟨fun _ _ => rfl, fun _ => rfl, .refl m, rfl, rfl⟩
 
 theorem OutFrame.trans {m₁ m₂ m₃ : Mem} (h₁ : OutFrame m₁ m₂) (h₂ : OutFrame m₂ m₃) :
     OutFrame m₁ m₃ :=
   ⟨fun a ha => (h₂.arr a ha).trans (h₁.arr a ha), fun a => (h₂.size a).trans (h₁.size a),
-    h₂.words.trans h₁.words, h₂.bytes.trans h₁.bytes, h₂.glob.trans h₁.glob⟩
+    h₁.words.trans h₂.words, h₂.bytes.trans h₁.bytes, h₂.glob.trans h₁.glob⟩
 
 theorem OutFrame.set64 (m : Mem) (i v : Word) : OutFrame m (m.set64 OUT i v) :=
   ⟨fun _ ha => Mem.arr64_set64_ne _ _ _ _ _ ha, fun _ => size_set64 _ _ _ _ _,
-    words_size_set64 _ _ _ _, rfl, rfl⟩
+    Mem.sameShape_set64 _ _ _ _, rfl, rfl⟩
 
 theorem OutFrame.copy64 (m : Mem) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
     OutFrame m (m.copy64 OUT di s si n) :=
   ⟨fun _ ha => arr64_copy64_ne _ _ _ _ _ _ ha, fun _ => size_copy64 _ _ _ _ _ _ _,
-    words_size_copy64 _ _ _ _ _ _, Mem.copy64_bytes _ _ _ _ _ _, Mem.copy64_glob _ _ _ _ _ _⟩
+    (Mem.SameShape.refl m).copy64 _ _ _ _ _, Mem.copy64_bytes _ _ _ _ _ _, Mem.copy64_glob _ _ _ _ _ _⟩
 
 theorem OutFrame.fzStep (m : Mem) (c : Word) (i : Nat) (z : Fz) (o : Word) :
     OutFrame m (fzStep m c i z o) := by

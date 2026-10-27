@@ -40,17 +40,12 @@ theorem envPushW_frame {m m' : Mem} {vis q : Word} {r : List Word}
   rename_i hc
   obtain ⟨ht, -⟩ := hc
   have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON, 140, 141, 142] := by
-    have htr : rowTier (rdW (m.arr64 EREC) (q + 1)) < 2 := Nat.mod_lt _ (by decide)
-    rcases (by omega : rowTag (rdW (m.arr64 EREC) (q + 1)) = 0 ∨ rowTag (rdW (m.arr64 EREC) (q + 1)) = 1 ∨
-      rowTag (rdW (m.arr64 EREC) (q + 1)) = 2) with h1 | h1 | h1 <;>
-    rcases (by omega : rowTier (rdW (m.arr64 EREC) (q + 1)) = 0 ∨
-      rowTier (rdW (m.arr64 EREC) (q + 1)) = 1) with h2 | h2 <;>
-    simp [rowArr, h1, h2]
+    rcases rowArr_names (rdW (m.arr64 EREC) (q + 1)) with h | h | h | h | h | h <;> rw [h] <;> decide
   have hf1 : MemFrame [132, 133, 134, ECON, 140, 141, 142] [128] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
     unfold rowSet
-    exact ((MemFrame.set64 m _ (by simp only [rowArr, CTL, ArrId]; omega) _ _).mono
+    exact ((MemFrame.set64 m _ (rowArr_ne _ (by decide)) _ _).mono
       (by intro b hb; simp at hb; subst hb; exact hrow) (by simp)).trans
-      ((MemFrame.set64 _ _ (by simp only [rowArr, CTL, ArrId]; omega) _ _).mono
+      ((MemFrame.set64 _ _ (rowArr_ne _ (by decide)) _ _).mono
         (by intro b hb; simp at hb; subst hb; exact hrow) (by simp))
   simp only [envPushK] at h
   split at h

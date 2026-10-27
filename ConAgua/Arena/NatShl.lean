@@ -84,17 +84,17 @@ def natShlProg : Prog := natProg ++ [("nat_shl", natShl)]
 
 /- `[3, 1] <<< 65 = [0, 6, 2]`: `a` at 0 (2 limbs), `b = [65]` at 2, top 3. -/
 #guard (run natShlProg 100 "nat_shl" [0, 2, 2, 1]
-  { words := #[#[3, 1, 65, 0, 0, 0, 0], #[3]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([3], #[#[3, 1, 65, 0, 6, 2, 0], #[6]])
+  (Mem.ofWords [(POOL, #[3, 1, 65, 0, 0, 0, 0]), (CTL, #[3])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([3], #[3, 1, 65, 0, 6, 2, 0], #[6])
 /- `2^63 <<< 1 = 2^64`; `a <<< 0 = a`; `0 <<< 2^64 = 0` (no abort). -/
 #guard (run natShlProg 100 "nat_shl" [0, 1, 1, 1]
-  { words := #[#[0x8000000000000000, 1, 0, 0, 0], #[2]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([2], #[#[0x8000000000000000, 1, 0, 1, 0], #[4]])
+  (Mem.ofWords [(POOL, #[0x8000000000000000, 1, 0, 0, 0]), (CTL, #[2])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([2], #[0x8000000000000000, 1, 0, 1, 0], #[4])
 #guard (run natShlProg 100 "nat_shl" [0, 1, 1, 0]
-  { words := #[#[7, 0, 0], #[1]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([1], #[#[7, 7, 0], #[2]])
+  (Mem.ofWords [(POOL, #[7, 0, 0]), (CTL, #[1])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([1], #[7, 7, 0], #[2])
 #guard (run natShlProg 100 "nat_shl" [0, 0, 0, 2]
-  { words := #[#[0, 1, 0], #[2]] }).toOption.map (·.1) == some [0]
+  (Mem.ofWords [(POOL, #[0, 1, 0]), (CTL, #[2])])).toOption.map (·.1) == some [0]
 
 section shl
 variable (p : Prog) (Pg : Array Word) (C : Nat)
@@ -102,7 +102,7 @@ variable (p : Prog) (Pg : Array Word) (C : Nat)
 /-- What both loops of `nat_shl` keep: the pool agrees with the entry pool below `top`, `a` lies
 below `top`, the `w + la + 1` result limbs fit above it, and the bit shift is below `64`. -/
 def ShlBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  s.mem.HasW POOL ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 6).toNat + (s.loc 1).toNat + 1 ≤ C ∧
   s.loc 11 = s.loc 4 >>> 40 ∧ s.loc 12 = s.loc 4 &&& 1099511627775 ∧
@@ -287,6 +287,7 @@ theorem natShl_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
   obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpn]

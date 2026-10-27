@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Regenerate `preLoopFns`, `preLoopA` and `preLoopC` in ConAgua/Checker/PreLoopWS.lean: the call
 closure of the stages `check` runs before the declaration loop in `checkerProg`, and the word
-arrays and `CTL` words their bodies store into. Also generate ConAgua/Checker/PreLoopWSStages.lean,
+arrays (by name, `tier1 X` for a tier-1 array: `scripts/arr_names.py`) and `CTL` words their bodies store into. Also generate ConAgua/Checker/PreLoopWSStages.lean,
 the same per stage (`stageFns_f`, `stageA_f`, `stageC_f`, `stageFrame_f`). Fails if a `CTL` index is not a literal or
 `k + (e &&& 1)`, or a function stores bytes. Needs ConAgua.Checker.Prog built.
 Usage: scripts/preloop_ws.py [--check]"""
 import os, re, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+from arr_names import arr_term
 STAGES = ["cap_check", "pb_check", "intern_reserved_pins", "builtin_prelude", "front_run",
           "prepare_prelude", "intern_all_pins"]
 LEAN = r'''import ConAgua.Checker.Prog
@@ -23,11 +25,11 @@ partial def L.Stmt.storesW : Stmt → List (Bool × ArrId × Expr)
   | .while _ s => s.storesW
   | .st64 a i _ => [(true, a, i)]
   | .st8 a i _ => [(false, a, i)]
-  | .st64t a _ i _ => [(true, a, i), (true, a + 256, i)]
+  | .st64t a _ i _ => [(true, a, i), (true, tier1 a, i)]
   | .copy64 d _ _ _ _ | .copy8w d _ _ _ _ =>
     match d with
     | .plain a => [(true, a, .const 0)]
-    | .tier a _ => [(true, a, .const 0), (true, a + 256, .const 0)]
+    | .tier a _ => [(true, a, .const 0), (true, tier1 a, .const 0)]
   | _ => []
 partial def cloW (p : Prog) (todo seen : List FnName) : List FnName :=
   match todo with
@@ -85,7 +87,7 @@ p = os.path.join(ROOT, "ConAgua", "Checker", "PreLoopWS.lean")
 s = open(p).read()
 new = s
 for name, ty, items in [("preLoopFns", "List FnName", ['"%s"' % f for f in fns]),
-                        ("preLoopA", "List ArrId", [str(a) for a in A]),
+                        ("preLoopA", "List ArrId", [arr_term(a, ["Arena", "Checker"]) for a in A]),
                         ("preLoopC", "List Word", [str(c) for c in C])]:
     new = re.sub(r"(def %s : %s := \[\n).*?(\])" % (name, ty),
                  lambda m: m.group(1) + wrap(items) + m.group(2), new, flags=re.S)
@@ -121,7 +123,7 @@ def stageFns_{g} : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_{g}` store
 into. -/
-def stageA_{g} : List ArrId := {lit([str(a) for a in gA])}
+def stageA_{g} : List ArrId := {lit([arr_term(a, ["Arena", "Checker"]) for a in gA])}
 
 /-- The `CTL` words the functions of `stageFns_{g}` store into. -/
 def stageC_{g} : List Word := {lit([str(c) for c in gC])}

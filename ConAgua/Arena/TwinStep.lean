@@ -48,7 +48,7 @@ theorem TwinOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
 /-- `TwinOK` across a writer of `PT0`, arrays from 256 on and `CTL` words below 48 or in 60‥127
 only (the bracket's). -/
 theorem TwinOK.frameLo {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b = 62 ∨ 256 ≤ b)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b = 62 ∨ IsTier1 b)
     (hC : ∀ x ∈ C, x.toNat < 48 ∨ (60 ≤ x.toNat ∧ x.toNat < 128))
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
   have n : ∀ k : Word, 48 ≤ k.toNat → k.toNat < 60 ∨ 128 ≤ k.toNat → k ∉ C := fun k h1 h2 hk => by

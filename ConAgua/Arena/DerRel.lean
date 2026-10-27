@@ -807,9 +807,9 @@ theorem derR_init (m : Mem) : DerR m (AState.init EStore.empty) := by
   exact ⟨e _, e _, e _, e _, e _, e _, e _, e _, e _, e _⟩
 
 /-- **`ArenaD` holds initially.** -/
-theorem arenaD_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
-    (hpool : sizes[0]?.getD 0 < 2 ^ 40) (hpool1 : sizes[256]?.getD 0 < 2 ^ 40)
-    (hsz : ∀ b, b < 64 ∨ (256 ≤ b ∧ b < 320) →
+theorem arenaD_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[CTL]?.getD 0)
+    (hpool : sizes[POOL]?.getD 0 < 2 ^ 40) (hpool1 : sizes[POOL1]?.getD 0 < 2 ^ 40)
+    (hsz : ∀ b, InStoreTier b →
       consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 61) :
     ArenaD (initMem sizes) (AState.init EStore.empty) :=
   ⟨arenaR_init sizes hlen hctl hpool hpool1 hsz, derR_init _⟩

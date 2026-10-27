@@ -918,7 +918,7 @@ theorem consInternM_out (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}
     (h : consInternM C m ks = some (w, m')) :
     m' = m ∨ ∃ t, t ≤ 1 ∧ pushOKC C m t = true ∧ w = (if t = 0 then C.P else C.S) + cntC C m t ∧
       (∀ b, b ≠ tierA C.sa t → m'.arr64 b = (pushRec C m t ks).arr64 b) ∧
-      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size :=
+      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m' :=
   consInternM_outA hW.sch.sa_ctl (fun A hA => (hW.col A hA).2.1) ⟨hW.sch.sa_lt, hW.colLt⟩ h
 
 /-- The arrays an interning of `C` writes: both tiers of its record and slot arrays and of its

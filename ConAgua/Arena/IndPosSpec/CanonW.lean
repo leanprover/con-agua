@@ -238,7 +238,7 @@ theorem snocW_core {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
     (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
   rw [hIW] at hS hG
   have hfr : MemFrame [IW] [200] m (m2.set64 IW (q + l) x) :=
-    ((allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | (rw [hW]) | (rw [hW]; simp [allocMem])))).trans
+    ((allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | exact hW | exact Mem.SameShape.trans (by simp [allocMem]) hW))).trans
       (set64IW_frame m2 (q + l) x)
   have hget : ∀ i, ((m2.set64 IW (q + l) x).arr64 IW)[i]? =
       if i = q.toNat + l.toNat then some x
@@ -447,7 +447,7 @@ def maArm (names : List NIdx) (memo : Std.HashMap EIdx Bool) (fuel : Nat) :
 
 theorem maFrame_arena {m m' : Mem} {a : AState} (hf : MemFrame [MAM] [203] m m') (hR : ArenaR m a) :
     ArenaR m' a :=
-  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, MAM, BMEMO, LMEMO, IMEMO, FRMEMO])
+  ArenaR.frame (fun b hb => by simp at hb; subst hb; decide)
     (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR
 
 theorem maFrame_iw {m m' : Mem} (hf : MemFrame [MAM] [203] m m') : m'.arr64 IW = m.arr64 IW :=

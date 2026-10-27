@@ -10,10 +10,10 @@ import ConAgua.L.ModelGen
 
 **`builtin_prelude()`** is the twin's `builtinPreludeE`: `parseBytes preludeText` with a fresh
 parse state, into the same stores. In L it runs **the frontend itself on the prelude bytes**: the
-functions reachable from `front_run` that read the input (byte array `0`), or call one that does,
+functions reachable from `front_run` that read the input (byte array `IN`), or call one that does,
 are copied with `preFn` (`pre_<name>`; `scripts/checker_prog.py` lists them in
 `ConAgua/Checker/Prog.lean`), reading the program's constant `preludeBytes` instead of the input
-(`ld8 0 i` becomes `ldc preludeBytes i`, `len8 0` the constant `preludeLenW`). Everything else is
+(`ld8 IN i` becomes `ldc preludeBytes i`, `len8 IN` the constant `preludeLenW`). Everything else is
 shared, the parse state included: `builtin_prelude` runs `pre_front_run` on the stream's own id
 tables and declaration arrays (empty at that point), aborts if a line did not apply (the twin's
 `.error`), records the number of prelude records in `CTL[240]`, and resets the id tables
@@ -86,13 +86,13 @@ def preludeLenW : Word := UInt64.ofNat preludeBytes.length
 
 /-- A block's byte source, renamed: the input's bytes are the prelude's. -/
 def preB : BSrc → BSrc
-  | .arr a => if a = 0 then .rom preludeBytes else .arr a
+  | .arr a => if a = IN then .rom preludeBytes else .arr a
   | .rom d => .rom d
 
 /-- An expression of the frontend, renamed: the input's bytes are the prelude's. -/
 def preE : Expr → Expr
-  | .ld8 a i => if a = 0 then .ldc preludeBytes (preE i) else .ld8 a (preE i)
-  | .len8 a => if a = 0 then .const preludeLenW else .len8 a
+  | .ld8 a i => if a = IN then .ldc preludeBytes (preE i) else .ld8 a (preE i)
+  | .len8 a => if a = IN then .const preludeLenW else .len8 a
   | .ld64 a i => .ld64 a (preE i)
   | .bin op a b => .bin op (preE a) (preE b)
   | .cmpw c a b => .cmpw c (preE a) (preE b)

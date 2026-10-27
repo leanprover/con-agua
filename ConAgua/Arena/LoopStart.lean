@@ -27,7 +27,7 @@ environment's index rows (132‥134), the promotion memo (146‥149), `consts_re
 def loopZeroArr (b : Nat) : Prop :=
   b = 49 ∨ b = 50 ∨ b = 52 ∨ b = 53 ∨ b = 54 ∨ b = 151 ∨ b = 152 ∨ b = 153 ∨
     (132 ≤ b ∧ b ≤ 134) ∨ (146 ≤ b ∧ b ≤ 149) ∨ b = 155 ∨ (201 ≤ b ∧ b ≤ 208) ∨ b = 51 ∨
-    (140 ≤ b ∧ b ≤ 142) ∨ (129 ≤ b ∧ b ≤ 131) ∨ (385 ≤ b ∧ b ≤ 387)
+    (140 ≤ b ∧ b ≤ 142) ∨ (129 ≤ b ∧ b ≤ 131) ∨ Tier1In 129 132 b
 
 /-- The `CTL` words the loop needs zero at its start: the core's memo stamps, the number of
 constants (128), of pending checks (130), the promotion memo's words (140‥147),
@@ -95,10 +95,9 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
   have hrow : ∀ w : Word, rowTag w ≤ 2 → rowC m w = 0 := by
     intro w hw
     simp only [rowC, ite_eq_left hw]
-    have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
     have hl : loopZeroArr (rowArr w) := by
-      simp only [loopZeroArr, rowArr]
-      rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h0 | h0 <;> simp only [h0] <;> omega
+      unfold loopZeroArr
+      rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
     have hz := h.arr (rowArr w) hl (UInt64.ofNat (rowIx w))
     have hlt : rowIx w < 2 ^ 64 := by unfold rowIx; omega
     simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
@@ -107,10 +106,9 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
     unfold tblRow
     split
     · rename_i hw
-      have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
       have hl : loopZeroArr (tblArr w) := by
-        simp only [loopZeroArr, tblArr]
-        rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h0 | h0 <;> simp only [h0] <;> omega
+        unfold loopZeroArr
+        rcases tblArr_cases w hw with e | e | e | e | e | e <;> rw [e] <;> decide
       have hz := h.arr (tblArr w) hl (UInt64.ofNat (tblIx w))
       have hlt : tblIx w < 2 ^ 64 := by unfold tblIx; omega
       simpa [rdW, Nat.mod_eq_of_lt hlt] using hz

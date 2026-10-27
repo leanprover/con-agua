@@ -150,14 +150,14 @@ theorem Above64.trans {m₁ m₂ m₃ : Mem} (h₁ : Above64 m₁ m₂) (h₂ : 
   MemFrame.trans h₁ h₂
 
 theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64 := by tctl) : Above64 m m' :=
+    (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64 := by tctl) : Above64 m m' :=
   hf.mono (fun b hb => low_tier_mem b (hA b hb))
     (fun x hx => by
       have := hC x hx
       simp only [List.mem_map, List.mem_range]
       exact ⟨x.toNat, this, by simp⟩)
 
-theorem not_low_tier (b : Nat) (h : 64 ≤ b ∧ b < 256) : b ∉ lowTierArrs := by
+theorem not_low_tier (b : Nat) (h : InHigh b) : b ∉ lowTierArrs := by
   simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map, not_or, not_exists, not_and]
   exact ⟨by omega, fun y _ e => tier1_ne h.2 e⟩
 

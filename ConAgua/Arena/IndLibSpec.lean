@@ -407,7 +407,7 @@ open L.Arena
 /-- **A writer of `IW` and `CTL[200]` keeps `CheckR`.** -/
 theorem CheckR.frame_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} (hf : MemFrame [IW] [200] m m') (h : CheckR dn m a vis fe) : CheckR dn m' a vis fe :=
-  ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW, BMEMO, LMEMO, IMEMO, FRMEMO])
+  ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; decide)
       (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf h.arena.1,
     DerR.frameM _ _ m m' hf (by decide) a h.arena.2⟩,
    h.core.frame (fun b hb => by simp at hb; subst hb; decide)
@@ -652,7 +652,7 @@ untouched, so it only grew. -/
 theorem StageR.of_walkM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {m m' : Mem} {a a' : AState} {A : List ArrId} {C : List Word}
     (hS : StageR dn vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
+    (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (hmode : ModeOK m') :
     StageR dn vis fe m' a' ∧ IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (fun h => by have := hA _ h; simp [IW] at this)
@@ -673,7 +673,7 @@ theorem StageR.of_walkM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
 theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {m m' : Mem} {a a' : AState} {A : List ArrId} {C : List Word}
     (hS : StageR dn vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
+    (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :
     StageR dn vis fe m' a' ∧ IWGrow m m' :=
   StageR.of_walkM hS hD hf hA hC hk (hS.1.mode.frame hf h01.1 h01.2)

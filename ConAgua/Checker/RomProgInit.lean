@@ -37,10 +37,10 @@ theorem loadMem_pb : (loadMem b pb s8 s64).arr8 PB = pb.data.toList.toArray := b
   simp [Mem.arr8, loadMem, PB]
 
 /-- `CTL` exists: it has at least `ctlMin` words. -/
-theorem loadMem_ctl_lt (hc : CapsOK (loadMem b pb s8 s64)) : CTL < (loadMem b pb s8 s64).words.size := by
+theorem loadMem_ctl_lt (hc : CapsOK (loadMem b pb s8 s64)) : (loadMem b pb s8 s64).HasW CTL := by
   have h := hc.2.1
   rw [loadMem_arr] at h
-  rw [loadMem_words_size]
+  unfold Mem.HasW; rw [loadMem_words_size]
   simp only [Array.size_replicate] at h
   cases hs : s64[CTL]? with
   | none => rw [hs] at h; simp [ctlMin] at h
@@ -58,7 +58,7 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
   have hpt0 : (loadMem b pb s8 s64).ptop0 = 0 := by
     simp only [Mem.ptop0]; rw [loadMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
   have hw := loadMem_ctl_lt b pb s8 s64 hc
-  have hsl : ∀ a ∈ slotArrs, a < wordArrays := by decide
+  have hsl : ∀ a ∈ slotArrs, a ∈ checkerArrays.wordSlots := by decide
   have hs : ∀ a, a ∈ slotArrs → tier1 a ∈ slotArrs → ∀ t,
       consMinWords ≤ ((loadMem b pb s8 s64).arr64 (tierA a t)).size ∧
       ((loadMem b pb s8 s64).arr64 (tierA a t)).size < 2 ^ 61 := fun a h0 h1 t => by
@@ -114,9 +114,9 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
     StateDR (loadMem b pb s8 s64) StateD.blank := by
   have hctl : 73 ≤ ((loadMem b pb s8 s64).arr64 CTL).size := by
     have := hc.2.1; simp [ctlMin] at this; omega
-  have h63 : ∀ a < wordArrays, ((loadMem b pb s8 s64).arr64 a).size < 2 ^ 63 := fun a ha => by
+  have h63 : ∀ a ∈ checkerArrays.wordSlots, ((loadMem b pb s8 s64).arr64 a).size < 2 ^ 63 := fun a ha => by
     have := hc.1 a ha; omega
-  have hT : ∀ (a : ArrId) {k : IdxKind}, TblIx a → a < wordArrays →
+  have hT : ∀ (a : ArrId) {k : IdxKind}, TblIx a → a ∈ checkerArrays.wordSlots →
       TblR (loadMem b pb s8 s64) a ({} : ConLeche.Frontend.IdTable (Idx k)) := fun a _ ha hs =>
     TblR.zero _ a ha (loadMem_rd b pb s8 s64) (h63 a hs) hctl
   have hf : ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧

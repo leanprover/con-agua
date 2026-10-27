@@ -173,7 +173,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cplL a' = cplL a)
     (hf : MemFrame A C m m')
     (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b) (hpins : (128 : ArrId) ∉ A)
-    (henv : ∀ b ∈ A, b < 129 ∨ (144 ≤ b ∧ (b < 385 ∨ 388 ≤ b)))
+    (henv : ∀ b ∈ A, b < 129 ∨ (144 ≤ b ∧ ¬ Tier1In 129 132 b))
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
     (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)

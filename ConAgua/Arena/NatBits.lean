@@ -151,15 +151,15 @@ def natBitsProg : Prog :=
   natProg ++ [("nat_land", natLand), ("nat_lor", natLor), ("nat_xor", natXor)]
 
 /- `0xF0 land 0x0F = 0` (operands at 0, 1; top at 2, after both). -/
-#guard (run natBitsProg 100 "nat_land" [0, 1, 1, 1] { words := #[#[0xF0, 0x0F, 0, 0], #[2]] }).toOption.map (·.1)
+#guard (run natBitsProg 100 "nat_land" [0, 1, 1, 1] (Mem.ofWords [(POOL, #[0xF0, 0x0F, 0, 0]), (CTL, #[2])])).toOption.map (·.1)
   == some [0]
 /- `0xF0 lor 0x0F = 0xFF` (same layout). -/
-#guard (run natBitsProg 100 "nat_lor" [0, 1, 1, 1] { words := #[#[0xF0, 0x0F, 0, 0], #[2]] }).toOption.map (fun (r, m) => (r, m.words))
-  == some ([1], #[#[0xF0, 0x0F, 0xFF, 0], #[3]])
+#guard (run natBitsProg 100 "nat_lor" [0, 1, 1, 1] (Mem.ofWords [(POOL, #[0xF0, 0x0F, 0, 0]), (CTL, #[2])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL))
+  == some ([1], #[0xF0, 0x0F, 0xFF, 0], #[3])
 /- `[1, 1] xor [1] = [0, 1]` (top limb survives, bottom cancels; length 2 after trim; operands at
 0 (len 2) and 2 (len 1), top at 3). -/
-#guard (run natBitsProg 100 "nat_xor" [0, 2, 2, 1] { words := #[#[1, 1, 1, 0, 0], #[3]] }).toOption.map
-  (fun (r, m) => (r, m.words)) == some ([2], #[#[1, 1, 1, 0, 1], #[5]])
+#guard (run natBitsProg 100 "nat_xor" [0, 2, 2, 1] (Mem.ofWords [(POOL, #[1, 1, 1, 0, 0]), (CTL, #[3])])).toOption.map
+  (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) == some ([2], #[1, 1, 1, 0, 1], #[5])
 
 section bits
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb) (Pg : Array Word) (C : Nat)
@@ -169,7 +169,7 @@ operands lie below `top`, the result fits above it, and the first `i` limbs of t
 `f`-combined from the (zero-extended) operand limbs — the house shape of `AddInv`, without a
 carry. -/
 def BitInv (f : Word → Word → Word) (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 41 ∧
+  s.mem.HasW POOL ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 41 ∧
   pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
   s.loc 9 = s.loc 4 >>> 40 ∧ s.loc 10 = s.loc 4 &&& 1099511627775 ∧
@@ -274,6 +274,7 @@ theorem natLand_spec (hpa : p.lookup "nat_land" = some natLand) (n : Nat) (s₀ 
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
   obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpa]
@@ -307,6 +308,7 @@ theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : S
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
   obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpo]
@@ -340,6 +342,7 @@ theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : S
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
   obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpx]

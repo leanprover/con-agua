@@ -32,7 +32,7 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     {A : List ArrId} {C : List Word}
     (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 42 ∨ (256 ≤ b ∧ b < 298)) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hA : ∀ b ∈ A, b < 42 ∨ Tier1In 0 42 b) (hC : ∀ x ∈ C, x.toNat < 64)
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
     (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a)
     (hv : ∀ t, (L.setP a t).store.view = a.store.view ∧ (L.setS a t).store.view = a.store.view)

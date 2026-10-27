@@ -24,15 +24,15 @@ size. -/
 def MemFrame (A : List ArrId) (C : List Word) (m m' : Mem) : Prop :=
   (∀ b, b ∉ A → b ≠ CTL → m'.arr64 b = m.arr64 b) ∧
   (∀ x, x ∉ C → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
-  (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size
+  (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m'
 
 theorem MemFrame.refl (A : List ArrId) (C : List Word) (m : Mem) : MemFrame A C m m :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl m⟩
 
 theorem MemFrame.trans {A : List ArrId} {C : List Word} {m₁ m₂ m₃ : Mem} (h₁ : MemFrame A C m₁ m₂)
     (h₂ : MemFrame A C m₂ m₃) : MemFrame A C m₁ m₃ :=
   ⟨fun b hb hc => (h₂.1 b hb hc).trans (h₁.1 b hb hc), fun x hx => (h₂.2.1 x hx).trans (h₁.2.1 x hx),
-    fun b => (h₂.2.2.1 b).trans (h₁.2.2.1 b), h₂.2.2.2.trans h₁.2.2.2⟩
+    fun b => (h₂.2.2.1 b).trans (h₁.2.2.1 b), h₁.2.2.2.trans h₂.2.2.2⟩
 
 /-- A frame for fewer arrays and words is one for more. -/
 theorem MemFrame.mono {A A' : List ArrId} {C C' : List Word} {m m' : Mem} (h : MemFrame A C m m')
@@ -48,26 +48,32 @@ theorem MemFrame.tier {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFram
   · exact h.1 B hB hc
   · exact h.1 _ hB' (tier1_ne (by decide))
 
-/-- The arrays below `64` and their tier-1 twins `256‥319` (the store tier's), as a list. -/
+/-- The store tier (`InStoreTier`: the arrays below `64` and their tier-1 arrays), as a list. -/
 def lowTierArrs : List ArrId := List.range 64 ++ (List.range 64).map tier1
 
-theorem low_tier_mem (b : Nat) (h : b < 64 ∨ (256 ≤ b ∧ b < 320)) : b ∈ lowTierArrs := by
+theorem low_tier_mem (b : Nat) (h : InStoreTier b) : b ∈ lowTierArrs := by
   rcases h with h | ⟨h1, h2⟩
   · exact List.mem_append_left _ (List.mem_range.mpr h)
   · exact List.mem_append_right _ (List.mem_map.mpr ⟨b - 256, List.mem_range.mpr (by omega),
       by simp only [tier1, tierOff]; omega⟩)
 
+theorem storeTier_of_mem {b : Nat} (h : b ∈ lowTierArrs) : InStoreTier b := by
+  rcases List.mem_append.mp h with h | h
+  · exact .of_lt (List.mem_range.mp h)
+  · obtain ⟨a, ha, rfl⟩ := List.mem_map.mp h
+    exact .of_tier1 (List.mem_range.mp ha)
+
 /-- A word write to array `a ≠ CTL` is a frame of `[a]`. -/
 theorem MemFrame.set64 (m : Mem) (a : ArrId) (ha : a ≠ CTL) (k v : Word) :
     MemFrame [a] [] m (m.set64 a k v) := by
   refine ⟨fun b hb _ => Mem.arr64_set64_ne _ _ _ _ _ (by simpa using hb), fun x _ => ?_,
-    fun b => size_set64 _ _ _ _ _, Mem.words_size_set64 _ _ _ _⟩
+    fun b => size_set64 _ _ _ _ _, Mem.sameShape_set64 _ _ _ _⟩
   rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm ha)]
 
 /-- A write to `CTL[c]` is a frame of `[c]`. -/
 theorem MemFrame.setCtl (m : Mem) (c v : Word) : MemFrame [] [c] m (m.set64 CTL c v) := by
   refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_,
-    fun b => size_set64 _ _ _ _ _, Mem.words_size_set64 _ _ _ _⟩
+    fun b => size_set64 _ _ _ _ _, Mem.sameShape_set64 _ _ _ _⟩
   rw [rdW_set64]
   simp only [List.mem_singleton] at hx
   simp [Ne.symm hx]

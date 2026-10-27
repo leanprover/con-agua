@@ -393,7 +393,7 @@ theorem triple_subPB {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {P : St 
 def testProg : Prog := [("f", { nparams := 0, nlocals := 0, body := .ret [.ld8 PB (.const 0), .len8 PB] })]
 
 #guard Prog.noSt8PB testProg
-#guard match L.run testProg 4 "f" [] { bytes := #[#[], #[7, 8, 9]] } with
+#guard match L.run testProg 4 "f" [] (Mem.ofBytes [(PB, #[7, 8, 9])]) with
   | .ok (r, _) => r == [7, 3] | _ => false
 #guard match L.run (Prog.subPB [7, 8, 9] testProg) 4 "f" [] {} with
   | .ok (r, _) => r == [7, 3] | _ => false

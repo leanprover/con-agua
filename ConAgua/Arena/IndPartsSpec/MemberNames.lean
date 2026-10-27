@@ -83,7 +83,7 @@ theorem nameCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nameCopyW n m
     (m.arr64 IW).size < 2 ^ 64 →
     (∀ j < l.toNat, (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))).toNat < d.toNat) →
     (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-    m'.words.size = m.words.size ∧
+    m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat
       then some (rdW (m.arr64 EREC)

@@ -1,6 +1,7 @@
 module
 
 meta import ConAgua.L.Semantics
+meta import ConAgua.Layout
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 import ConAgua.Census.Attr
@@ -185,11 +186,11 @@ end scanBool
 /-- The program, as `#eval`-able code. -/
 def litProg : Prog := [("match_lit", matchLit), ("scan_bool", scanBool)]
 
-#guard (run litProg 100 "scan_bool" [1] { bytes := #[" true".toUTF8.data] }).toOption.map (·.1)
+#guard (run litProg 100 "scan_bool" [1] (Mem.ofBytes [(IN, " true".toUTF8.data)])).toOption.map (·.1)
   == some [1, 1, 5]
-#guard (run litProg 100 "scan_bool" [0] { bytes := #["false".toUTF8.data] }).toOption.map (·.1)
+#guard (run litProg 100 "scan_bool" [0] (Mem.ofBytes [(IN, "false".toUTF8.data)])).toOption.map (·.1)
   == some [1, 0, 5]
-#guard (run litProg 100 "scan_bool" [0] { bytes := #["fals".toUTF8.data] }).toOption.map (·.1)
+#guard (run litProg 100 "scan_bool" [0] (Mem.ofBytes [(IN, "fals".toUTF8.data)])).toOption.map (·.1)
   == some [0, 0, 0]
 
 end L.Scan.Lit

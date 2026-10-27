@@ -79,7 +79,7 @@ theorem arenaD_rows {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP
 
 theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs,
     (b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
-      (146 ≤ b ∧ b ≤ 149) ∨ (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
+      (146 ≤ b ∧ b ≤ 149) ∨ Tier1In 0 50 b ∨ Tier1In 55 64 b := by
   intro b hb
   simp only [List.mem_cons] at hb
   rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | hb
@@ -97,7 +97,7 @@ theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 ::
 
 theorem pnew_arrs' : ∀ b ∈ ECON :: EREC :: eArrs,
     (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 135 ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) ∨
-      (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
+      Tier1In 0 50 b ∨ Tier1In 55 64 b := by
   intro b hb
   simp only [List.mem_cons] at hb
   rcases hb with rfl | rfl | hb

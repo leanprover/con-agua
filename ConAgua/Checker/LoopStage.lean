@@ -33,8 +33,9 @@ theorem twinFold_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB :
 
 /-- The arrays `LoopZero` asks zero, as a list. -/
 def loopZeroArrs : List Nat :=
-  [49, 50, 52, 53, 54, 151, 152, 153, 132, 133, 134, 146, 147, 148, 149, 155, 201, 202, 203, 204,
-    205, 206, 207, 208, 51, 140, 141, 142, 129, 130, 131, 385, 386, 387]
+  [ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, EIXA, EIXS, EIXN, PNM, PLM, PLSM, PEM,
+   Stubs.CRM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, ILFM, EIXA1,
+   EIXS1, EIXN1, TIXA, TIXS, TIXN, tier1 TIXA, tier1 TIXS, tier1 TIXN]
 
 /-- The `CTL` words `LoopZero` asks zero, as a list. -/
 def loopZeroCtls : List Nat :=
@@ -43,7 +44,10 @@ def loopZeroCtls : List Nat :=
 
 theorem loopZeroArr_mem {b : Nat} (h : loopZeroArr b) : b ∈ loopZeroArrs := by
   simp only [loopZeroArr] at h
-  simp only [loopZeroArrs, List.mem_cons, List.not_mem_nil, or_false]
+  simp only [loopZeroArrs, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, EIXA, EIXS,
+    EIXN, PNM, PLM, PLSM, PEM, Stubs.CRM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM,
+    Ind.HBM, Ind.MCM, ILFM, EIXA1, EIXS1, EIXN1, TIXA, TIXS, TIXN, tier1, tierOff, List.mem_cons,
+    List.not_mem_nil, or_false]
   omega
 
 theorem loopZeroCtl_mem {x : Nat} (h : loopZeroCtl x) : x ∈ loopZeroCtls := by
@@ -71,7 +75,7 @@ theorem loopZero_of_since {b pb : ByteArray} {s8 s64 : List Nat} {m : Mem}
       have := List.all_eq_true.mp preLoopA_loopZeroArrs a hm
       simp [hc] at this
     have hc : a ≠ CTL := by
-      intro e; subst e; simp [loopZeroArrs, CTL] at hm
+      intro e; subst e; exact absurd hm (by decide)
     rw [hf.1 a hn hc]; exact loadMem_rd (b := b) (pb := pb) (s8 := s8) (s64 := s64) a j
   · rw [hf.2.1 x (not_mem_of_toNat preLoopC_loopZeroCtls x (loopZeroCtl_mem hx))]
     exact loadMem_rd (b := b) (pb := pb) (s8 := s8) (s64 := s64) _ x
@@ -113,7 +117,7 @@ theorem core_of_R7 {b pb : ByteArray} {s8 s64 : List Nat} {sA : AState} {pre : P
     · rw [loadMem_arr, initMem_arr]
     · rw [loadMem_arr, initMem_arr]
     · rw [loadMem_arr, initMem_arr]
-    · simp [ConAgua.Final.loadMem, initMem]
+    · simp [Mem.SameShape, ConAgua.Final.loadMem, initMem]
   exact ⟨M, (hM.frame (fun _ h => by simp at h) (fun _ h => by simp at h) hf0).frame
     preLoopA_avoidCore preLoopC_avoidCore h7.since.frame⟩
 

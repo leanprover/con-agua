@@ -62,8 +62,16 @@ namespace L.Arena
 level-parameter columns 55‥61 (`LpCol.lean`, helper `whnf4-d23`), each table array and column in
 both tiers (tier 1 of array `a` is `tier1 a`, lane tierswitch). -/
 def storeArrs : List ArrId :=
-  [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 55, 56, 57, 58, 59, 60, 61,
-   258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 311, 312, 313, 314, 315, 316, 317, 62, 256]
+  [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
+   FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, SHP, MHP,
+   IHP, LSHP, SOLP, CLP, FVLP, tier1 REC, tier1 SLOT, tier1 AREC, tier1 ASLOT, tier1 SREC,
+   tier1 SSLOT, tier1 ZREC, tier1 ZSLOT, tier1 MREC, tier1 MSLOT, tier1 IREC, tier1 ISLOT,
+   tier1 PREC, tier1 PSLOT, tier1 SOREC, tier1 SOSLOT, tier1 CREC, tier1 CSLOT, tier1 LEREC,
+   tier1 LESLOT, tier1 BREC, tier1 BSLOT, tier1 FVREC, tier1 FVSLOT, tier1 LAREC, tier1 LASLOT,
+   tier1 FAREC, tier1 FASLOT, tier1 PJREC, tier1 PJSLOT, tier1 NAREC, tier1 NASLOT, tier1 NSREC,
+   tier1 NSSLOT, tier1 NNREC, tier1 NNSLOT, tier1 LSREC, tier1 LSSLOT, tier1 SHP, tier1 MHP,
+   tier1 IHP, tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP, PT0, tier1 POOL]
 /-- The store tier's `CTL` words: the pool top, the scratch flag, the tables' counts. -/
 def storeCtl : List Word :=
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 62]
@@ -372,20 +380,20 @@ theorem not_mem_arenaCtl (x : Word) (hx : 64 ≤ x.toNat) : x ∉ arenaCtl := by
 /-- **A writer of the derived-range arrays 42‥46 (and `CTL` words `≥ 64`) keeps `ArenaR`**: nothing
 in it reads them (they are `DerR`'s, `ExprMk.lean`). -/
 theorem ArenaR.frame_above (A : List ArrId) (C : List Word)
-    (hA : ∀ b ∈ A, (42 ≤ b ∧ b < 47) ∨ (298 ≤ b ∧ b < 303))
+    (hA : ∀ b ∈ A, (42 ≤ b ∧ b < 47) ∨ Tier1In 42 47 b)
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
     (hR : ArenaR m a) : ArenaR m' a :=
-  have hlt : ∀ y ∈ arenaArrs, ¬ ((42 ≤ y ∧ y < 47) ∨ (298 ≤ y ∧ y < 303)) := by decide
+  have hlt : ∀ y ∈ arenaArrs, ¬ ((42 ≤ y ∧ y < 47) ∨ Tier1In 42 47 y) := by decide
   hR.frame (fun b hb h => hlt b h (hA b hb))
     (fun x hx => not_mem_arenaCtl x (hC x hx)) hf
 
 /-- **The extension point for other lanes**: arrays in `[64, 256)` and `CTL` words `≥ 64` are
 outside every relation of `ArenaR` (ids from `256` on are tier-1 arrays). A writer of only such
 arrays and words keeps `ArenaR`. -/
-theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 64 ≤ b ∧ b < 256)
+theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, InHigh b)
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
     (hR : ArenaR m a) : ArenaR m' a :=
-  have hlt : ∀ y ∈ arenaArrs, ¬ (64 ≤ y ∧ y < 256) := by decide
+  have hlt : ∀ y ∈ arenaArrs, ¬ InHigh y := by decide
   hR.frame (fun b hb h => hlt b h (hA b hb))
     (fun x hx => not_mem_arenaCtl x (hC x hx)) hf
 
@@ -404,10 +412,10 @@ theorem initMem_rd (sizes : List Nat) (b : ArrId) (x : Word) : rdW ((initMem siz
   rw [initMem_arr]; simp only [rdW, Array.getElem?_replicate]; split <;> rfl
 
 /-- The walk memos in the all-zero memory are empty. -/
-theorem memosR_init (sizes : List Nat) (hctl : 64 ≤ sizes[1]?.getD 0) :
+theorem memosR_init (sizes : List Nat) (hctl : 64 ≤ sizes[CTL]?.getD 0) :
     MemosR (initMem sizes) (AState.init EStore.empty).memos := by
   have hz := initMem_rd sizes
-  have hc : ((initMem sizes).arr64 CTL).size = sizes[1]?.getD 0 := by
+  have hc : ((initMem sizes).arr64 CTL).size = sizes[CTL]?.getD 0 := by
     rw [initMem_arr]; simp [CTL]
   exact ⟨memoRG_zero bmSch bmKey _ _ hz (by rw [hc]; simp; omega),
     memoRG_zero lfSch lfKey _ _ hz (by rw [hc]; simp; omega),
@@ -415,9 +423,9 @@ theorem memosR_init (sizes : List Nat) (hctl : 64 ≤ sizes[1]?.getD 0) :
     memoRG_zero frSch bmKey _ _ hz (by rw [hc]; simp; omega)⟩
 
 /-- **The relation holds initially**: the all-zero memory and the arena's initial state. -/
-theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
-    (hpool : sizes[0]?.getD 0 < 2 ^ 40) (hpool1 : sizes[256]?.getD 0 < 2 ^ 40)
-    (hsz : ∀ b, b < 64 ∨ (256 ≤ b ∧ b < 320) →
+theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[CTL]?.getD 0)
+    (hpool : sizes[POOL]?.getD 0 < 2 ^ 40) (hpool1 : sizes[POOL1]?.getD 0 < 2 ^ 40)
+    (hsz : ∀ b, InStoreTier b →
       consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 61) :
     ArenaR (initMem sizes) (AState.init EStore.empty) := by
   have hz := initMem_rd sizes
@@ -425,11 +433,11 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
       ((initMem sizes).arr64 (tierA a t)).size < 2 ^ 61 := fun a ha t => by
     rw [initMem_arr]
     rcases tierA_cases' a t with e | e <;> rw [e] <;> simpa using hsz _ (by omega)
-  have hc : ((initMem sizes).arr64 CTL).size = sizes[1]?.getD 0 := by
+  have hc : ((initMem sizes).arr64 CTL).size = sizes[CTL]?.getD 0 := by
     rw [initMem_arr]; simp [CTL]
-  have hp : ((initMem sizes).arr64 POOL).size = sizes[0]?.getD 0 := by
+  have hp : ((initMem sizes).arr64 POOL).size = sizes[POOL]?.getD 0 := by
     rw [initMem_arr]; simp [POOL]
-  have hw : CTL < (initMem sizes).words.size := by
+  have hw : (initMem sizes).HasW CTL := by
     show 1 < (sizes.map _).toArray.size; simp only [List.size_toArray, List.length_map]; omega
   refine ⟨⟨?_, consR_init hz (by rw [hc]; simp [litCS, litCSk]; omega) (hs _ (by decide))⟩,
     consR_init hz (by rw [hc]; simp [appCS]; omega) (hs _ (by decide)),
@@ -455,7 +463,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩⟩
-  · have hp1 : ((initMem sizes).arr64 POOL1).size = sizes[256]?.getD 0 := by
+  · have hp1 : ((initMem sizes).arr64 POOL1).size = sizes[POOL1]?.getD 0 := by
       rw [initMem_arr]; simp [POOL1]
     have hpc : pcap (initMem sizes) = 2 ^ 41 - 1 := pcap_of_small _ ⟨by rw [hp]; exact hpool, by rw [hp1]; exact hpool1⟩
     have ht : (initMem sizes).top = 0 := by simp only [top_rdW, hz]
@@ -1155,7 +1163,7 @@ theorem grows_frame (m m' : Mem) (hg : Grows m m') : MemFrame [POOL, POOL1] [0] 
     · by_cases h1 : b = POOL1
       · subst h1; rw [hf.size1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       · rw [hf.arr b h h1, size_set64]
-  · rw [hf.size, Mem.words_size_set64]
+  · exact (Mem.sameShape_set64 _ _ _ _).trans hf.size
 
 /-- **Appending to the pool keeps `ArenaR`**: the tables whose records point into the pool by
 their own `grow` lemmas, the others by the frame. -/

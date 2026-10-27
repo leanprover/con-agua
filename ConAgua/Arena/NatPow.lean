@@ -130,15 +130,15 @@ def natPowProg : Prog := natMulProg ++ [("nat_pow", natPow)]
 
 /- `3 ^ 5 = 243`; `(2^64 - 1) ^ 2 = [1, 2^64 - 2]`; `a ^ 0 = 1`. -/
 #guard (run natPowProg 10000 "nat_pow" [0, 1, 5]
-  { words := #[(List.replicate 200 (3 : Word)).toArray, #[1]] }).toOption.map
-  (fun (r, m) => (r, m.words[0]![r[0]!.toNat]!)) == some ([28, 1], 243)
+  (Mem.ofWords [(POOL, (List.replicate 200 (3 : Word)).toArray), (CTL, #[1])])).toOption.map
+  (fun (r, m) => (r, (m.arr64 POOL)[r[0]!.toNat]!)) == some ([28, 1], 243)
 #guard (run natPowProg 10000 "nat_pow" [0, 1, 2]
-  { words := #[(List.replicate 200 (0xFFFFFFFFFFFFFFFF : Word)).toArray, #[1]] }).toOption.map
-  (fun (r, m) => (r[1]!, m.words[0]![r[0]!.toNat]!, m.words[0]![r[0]!.toNat + 1]!)) ==
+  (Mem.ofWords [(POOL, (List.replicate 200 (0xFFFFFFFFFFFFFFFF : Word)).toArray), (CTL, #[1])])).toOption.map
+  (fun (r, m) => (r[1]!, (m.arr64 POOL)[r[0]!.toNat]!, (m.arr64 POOL)[r[0]!.toNat + 1]!)) ==
   some (2, 1, 0xFFFFFFFFFFFFFFFE)
 #guard (run natPowProg 10000 "nat_pow" [0, 1, 0]
-  { words := #[(List.replicate 200 (7 : Word)).toArray, #[1]] }).toOption.map
-  (fun (r, m) => (r, m.words[0]![r[0]!.toNat]!, m.words[1]!)) == some ([26, 1], 1, #[27])
+  (Mem.ofWords [(POOL, (List.replicate 200 (7 : Word)).toArray), (CTL, #[1])])).toOption.map
+  (fun (r, m) => (r, (m.arr64 POOL)[r[0]!.toNat]!, m.arr64 CTL)) == some ([26, 1], 1, #[27])
 
 section pow
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)

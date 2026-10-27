@@ -93,14 +93,14 @@ def natSubProg : Prog := natProg ++ [("sub_borrow", subBorrow), ("nat_sub", natS
 
 /- `2^64 - 1 = [max]`: operands `[0, 1]` at 0 and `[1]` at 2, top 3. -/
 #guard (run natSubProg 100 "nat_sub" [0, 2, 2, 1]
-  { words := #[#[0, 1, 1, 0, 0], #[3]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some ([1], #[#[0, 1, 1, 0xFFFFFFFFFFFFFFFF, 0], #[4]])
+  (Mem.ofWords [(POOL, #[0, 1, 1, 0, 0]), (CTL, #[3])])).toOption.map (fun (r, m) => (r, m.arr64 POOL, m.arr64 CTL)) ==
+  some ([1], #[0, 1, 1, 0xFFFFFFFFFFFFFFFF, 0], #[4])
 /- `1 - 2^64 = 0`, and `5 - 5 = 0`; the top stays. -/
 #guard (run natSubProg 100 "nat_sub" [2, 1, 0, 2]
-  { words := #[#[0, 1, 1, 0, 0], #[3]] }).toOption.map (fun (r, m) => (r, m.words.back!)) ==
+  (Mem.ofWords [(POOL, #[0, 1, 1, 0, 0]), (CTL, #[3])])).toOption.map (fun (r, m) => (r, m.arr64 CTL)) ==
   some ([0], #[3])
 #guard (run natSubProg 100 "nat_sub" [0, 1, 1, 1]
-  { words := #[#[5, 5, 0], #[2]] }).toOption.map (fun (r, m) => (r, m.words.back!)) ==
+  (Mem.ofWords [(POOL, #[5, 5, 0]), (CTL, #[2])])).toOption.map (fun (r, m) => (r, m.arr64 CTL)) ==
   some ([0], #[2])
 
 section sub
@@ -122,7 +122,7 @@ theorem subBorrow_spec (n : Nat) (s₀ : St) (x y c : Word) (hc : c.toNat ≤ 1)
 
 /-- The invariant of the subtract loop: `AddInv`'s, with the borrow on the other side. -/
 def SubInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 41 ∧
+  s.mem.HasW POOL ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 41 ∧
   pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
   s.loc 10 = s.loc 4 >>> 40 ∧ s.loc 11 = s.loc 4 &&& 1099511627775 ∧
@@ -202,6 +202,7 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
   obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpn]

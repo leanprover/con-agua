@@ -117,7 +117,7 @@ theorem preMem_pt0 (m : Mem) : (preMem m).arr64 PT0 = m.arr64 PT0 := by
 theorem preMem_eq_of_lt (m : Mem) (h : ¬ SCBLIM ≤ rdW (m.arr64 CTL) SCB) : preMem m = m :=
   ite_eq_right h
 
-theorem slot1Arrs_ge : ∀ b ∈ slot1Arrs, 256 ≤ b := by decide
+theorem slot1Arrs_ge : ∀ b ∈ slot1Arrs, IsTier1 b := by decide
 
 theorem not_mem_slot1 {b : ArrId} (h : b < 256) : b ∉ slot1Arrs := fun hb => by
   have := slot1Arrs_ge b hb; simp only [ArrId] at *; omega
@@ -308,7 +308,7 @@ theorem poolOK_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
       rcases a5 with a5 | a5
       · exact absurd ((tier0_iff _).mpr a5) ht
       · exact a5
-  refine ⟨by rw [hf.2.2.2]; exact a1, by rw [hf.2.2.1]; exact a2, by rw [hpc]; exact a3, ?_, ?_, ?_⟩
+  refine ⟨a1.of_sameShape hf.2.2.2, by rw [hf.2.2.1]; exact a2, by rw [hpc]; exact a3, ?_, ?_, ?_⟩
   · rw [hpt0, hpc, hpcv]
     by_cases hf' : f ≠ 0
     · rw [ite_eq_left hf', e40]; omega
@@ -702,14 +702,14 @@ theorem enterMem_frame (m : Mem) : MemFrame scrArrs ((0 :: resetCtl) ++ memoCtl)
 theorem resetCtl_lt : ∀ x ∈ (0 :: resetCtl) ++ memoCtl, x.toNat < 64 := by
   simp [resetCtl, scratchCnts, memoCtl, SCB]
 
-theorem scrArrs_low : ∀ b ∈ scrArrs, b < 64 ∨ (256 ≤ b ∧ b < 320) := by decide
+theorem scrArrs_low : ∀ b ∈ scrArrs, InStoreTier b := by decide
 
 /-- The bracket keeps the pins and the environment: it writes arrays below 64 and `CTL` words
 below 128 only. -/
 theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe)
     (hD : ArenaD m' a') (hc : CoreR m' a'.caches) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320))
+    (hA : ∀ b ∈ A, InStoreTier b)
     (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
     CheckR dn m' a' vis fe :=
   ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf,
@@ -787,12 +787,11 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
 
 /- Two scratch rounds: the base rises by `2^32` each time, the flag follows. -/
 #guard
-  let m : Mem := { words := #[#[], Array.replicate 120 0] ++ Array.replicate 60 #[] ++ #[#[0]] ++
-    Array.replicate 47 #[] }
+  let m : Mem := Mem.ofWords [(CTL, Array.replicate 120 0), (PT0, #[0])]
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
-    | .ok (_, m2) => (m1.arr64 1)[62]! == 4294967296 && (m1.arr64 1)[1]! == 1 &&
-        (m2.arr64 1)[62]! == 8589934592 && (m2.arr64 1)[1]! == 0
+    | .ok (_, m2) => (m1.arr64 CTL)[62]! == 4294967296 && (m1.arr64 CTL)[1]! == 1 &&
+        (m2.arr64 CTL)[62]! == 8589934592 && (m2.arr64 CTL)[1]! == 0
     | .error _ => false
   | .error _ => false
 
@@ -802,16 +801,15 @@ of `ASLOT`: 16 slots at offset 2) and restarts the base: `2^32`. -/
 #guard
   let ctl : Array Word := (Array.replicate 120 0).set! 62 (4611686018427387904 - 4294967296)
   let slot (a : Nat) : Array Word :=
-    if a = 261 then #[8, 2, 5, 5] ++ Array.replicate 32 7
+    if a = tier1 ASLOT then #[8, 2, 5, 5] ++ Array.replicate 32 7
     else if a ∈ slot1Arrs then #[0, 0] ++ Array.replicate 16 7 else #[]
-  let m : Mem := { words := (List.range 320).toArray.map fun a =>
-    if a = 1 then ctl else if a = 62 then #[0] else slot a }
+  let m : Mem := Mem.ofWords ([(CTL, ctl), (PT0, #[0])] ++ slot1Arrs.map fun a => (a, slot a))
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
-    | .ok (_, m2) => (m1.arr64 1)[62]! == 4611686018427387904 && (m1.arr64 259)[2]! == 7 &&
-        (m2.arr64 1)[62]! == 4294967296 && (m2.arr64 1)[1]! == 0 &&
-        m2.arr64 261 == #[8, 2, 5, 5] ++ Array.replicate 32 0 &&
-        slot1Arrs.all (fun a => a == 261 || m2.arr64 a == #[0, 0] ++ Array.replicate 16 0)
+    | .ok (_, m2) => (m1.arr64 CTL)[62]! == 4611686018427387904 && (m1.arr64 (tier1 SLOT))[2]! == 7 &&
+        (m2.arr64 CTL)[62]! == 4294967296 && (m2.arr64 CTL)[1]! == 0 &&
+        m2.arr64 (tier1 ASLOT) == #[8, 2, 5, 5] ++ Array.replicate 32 0 &&
+        slot1Arrs.all (fun a => a == tier1 ASLOT || m2.arr64 a == #[0, 0] ++ Array.replicate 16 0)
     | .error _ => false
   | .error _ => false
 

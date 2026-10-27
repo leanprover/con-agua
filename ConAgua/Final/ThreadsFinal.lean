@@ -307,7 +307,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
     (ths.map fun t => (zeroMem checkerTab, f t)) (fun t' ht' => ?_) (fun j hj => ?_)
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
     obtain ⟨h1, h2, -, -⟩ := hf t ht
-    refine ⟨by simp [zeroMem]; decide, fun a ha => ?_, rfl, h1, h2⟩
+    refine ⟨by simp [zeroMem, Mem.HasWs]; decide, fun a ha => ?_, rfl, h1, h2⟩
     have hl := parOwnedL_lt a ha
     rw [hMem₁.size64 a hl]
     simp [zeroMem, Mem.arr64, hl, zeros]

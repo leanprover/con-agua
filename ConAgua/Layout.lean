@@ -114,7 +114,7 @@ declare_arrays checkerArrays
     blocks' constant records (`DIND`). -/ Front.DLP : word := 68
   | /-- The fixed-size field records of the current inductive line. -/ Front.Ind.IFR : word := 70
   | /-- The word lists and rule records of the current inductive line. -/ Front.Ind.IFL : word := 71
-  | /-- `NID`'s sparse overflow (a memo-library table, `Front/IdTable.lean`: `NID + 8`). -/
+  | /-- `NID`'s sparse overflow (a memo-library table, `Front/IdTable.lean`: `spArr NID`). -/
     Front.NIDS : word := 72
   | /-- `LID`'s sparse overflow. -/ Front.LIDS : word := 73
   | /-- `EID`'s sparse overflow. -/ Front.EIDS : word := 74
@@ -202,5 +202,32 @@ abbrev Ind.APDM : ArrId := Arena.WSM
 /-- The constant records of the installed inductive blocks: they share `DLP`'s pool (word `0` its
 top), so that the declarations relation reads one pool (`DeclAtF`, `StateDR.lean`). -/
 abbrev Front.Ind.DIND : ArrId := Front.DLP
+
+/-! ## Groups of arrays by number
+
+Frame lemmas quantify over two groups of word arrays. They are named here so that the lemmas
+and their callers do not spell out the numbering (tier 1 of `a` is `tier1 a`, `a + 256` today):
+when the tiers become abstract, these definitions change and the lemmas below keep their
+statements. Both are `@[simp] abbrev`s, so `decide`, `omega` and `simp` read them as the numeric
+ranges today. Tier-1 ranges in general: `IsTier1`, `Tier1In` (`L/Arrays.lean`). -/
+
+/-- **The store tier**: the arrays below `64` (the pool, the stores' record and slot arrays, their
+derived columns, the walk memos, `PT0`) and the tier-1 arrays of the tiered ones. A walk writes
+only these (`WriteSets.lean`), and `ArenaR` reads only these (`arenaArrs`). -/
+@[simp] abbrev InStoreTier (b : Nat) : Prop := b < 64 ∨ Tier1In 0 64 b
+
+/-- **The high arrays**: the tier-0 arrays from `64` on (the front end, the per-declaration caches,
+the environment, the walk stacks, the inductive checks, the phase boundary). None is in the store
+tier (`InHigh.not_storeTier`), and none is a tier-1 array (`InHigh.ne_tier1`). -/
+@[simp] abbrev InHigh (b : Nat) : Prop := 64 ≤ b ∧ b < 256
+
+theorem InStoreTier.of_lt {b : Nat} (h : b < 64) : InStoreTier b := .inl h
+
+theorem InStoreTier.of_tier1 {a : Nat} (h : a < 64) : InStoreTier (tier1 a) :=
+  .inr (Tier1In.tier1 (Nat.zero_le a) h)
+
+theorem InHigh.not_storeTier {b : Nat} (h : InHigh b) : ¬ InStoreTier b := by omega
+
+theorem InHigh.ne_tier1 {b : Nat} (h : InHigh b) (a : Nat) : b ≠ tier1 a := L.ne_tier1 h.2
 
 end L

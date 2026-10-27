@@ -87,7 +87,7 @@ variable (m : Mem)
 theorem fresh_keep {b : ArrId} (hb : b ∉ freshZ) : (freshMem m).arr64 b = (cutT m).arr64 b :=
   (fresh_frame m).1 b hb (fun h => hb (h ▸ ctl_mem_freshZ))
 
-theorem fresh_words : (freshMem m).words.size = (cutT m).words.size := (fresh_frame m).2.2.2
+theorem fresh_words : (cutT m).SameShape (freshMem m) := (fresh_frame m).2.2.2
 
 theorem fresh_size (b : ArrId) : ((freshMem m).arr64 b).size = ((cutT m).arr64 b).size :=
   (fresh_frame m).2.2.1 b
@@ -146,7 +146,7 @@ theorem PoolOK.fresh (h : PoolOK (cutT m)) (htop : (cutT m).top.toNat < 2 ^ 40) 
   obtain ⟨a1, a2, a3, a4, -, a6⟩ := h
   have ht : (freshMem m).top = (cutT m).top := by simp only [Mem.top, fresh_ctl]
   have hpc : pcap (freshMem m) = pcap (cutT m) := by simp only [pcap, PSmall, fresh_size]
-  refine ⟨by rw [fresh_words]; exact a1, by rw [fresh_ctl]; exact a2, by rw [hpc]; exact a3,
+  refine ⟨a1.of_sameShape (fresh_words m), by rw [fresh_ctl]; exact a2, by rw [hpc]; exact a3,
     by rw [hpc, ht]; exact a4, .inl (by rw [ht]; exact htop), ?_⟩
   rw [ht, fresh_size]; exact a6
 
@@ -285,13 +285,13 @@ theorem row_fresh (w : Word) (hg : rowTag w ≤ 2) :
   simp only [hg, ↓reduceIte]
   rcases ht with ht | ht
   · have ha : rowArr w = 132 + rowTag w := by
-      unfold rowArr; rw [ht]; show (132 + rowTag w + 8 * 0 : Nat) = 132 + rowTag w; omega
+      exact rowArr_tier0 hg ht
     have hn : rowArr w ∉ freshZ := by
       rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
     rw [fresh_keep m hn]
     exact ⟨fun _ => ⟨rfl, rfl⟩, fun h => absurd ht h⟩
   · have ha : rowArr w = 140 + rowTag w := by
-      unfold rowArr; rw [ht]; show (132 + rowTag w + 8 * 1 : Nat) = 140 + rowTag w; omega
+      exact rowArr_tier1 hg ht
     have hn : rowArr w ∈ freshZ := by
       rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
     refine ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; show 140 + rowTag w ≠ (1 : Nat); omega) _⟩
@@ -306,13 +306,13 @@ theorem tblRow_fresh (w : Word) :
     simp only [hg, ↓reduceIte]
     rcases ht with ht | ht
     · have ha : tblArr w = 129 + rowTag w := by
-        unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 0 : Nat) = 129 + rowTag w; omega
+        exact tblArr_tier0 hg ht
       have hn : tblArr w ∉ freshZ := by
         rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
       rw [fresh_keep m hn]
       exact ⟨fun _ => rfl, fun h => absurd ht h⟩
     · have ha : tblArr w = 385 + rowTag w := by
-        unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 1 : Nat) = 385 + rowTag w; omega
+        exact tblArr_tier1 hg ht
       have hn : tblArr w ∈ freshZ := by
         rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
       exact ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; show 385 + rowTag w ≠ (1 : Nat); omega) _⟩

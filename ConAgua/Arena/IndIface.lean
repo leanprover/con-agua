@@ -787,10 +787,9 @@ namespace L.Ind
 
 open L.Arena
 
-/-- A test memory: every word array up to 223, `CTL` 256 words, `IW` and `EREC` 64 words. -/
+/-- A test memory: `CTL` of 256 words, `IW` and `EREC` of 64 words, every other word array empty. -/
 def testMem : Mem :=
-  { words := (Array.replicate 224 (#[] : Array Word)) |>.set! CTL (Array.replicate 256 0)
-      |>.set! IW (Array.replicate 64 0) |>.set! EREC (Array.replicate 64 0) }
+  Mem.ofWords [(CTL, Array.replicate 256 0), (IW, Array.replicate 64 0), (EREC, Array.replicate 64 0)]
 
 -- `[1, 2] ++ [3]`, then the slice read back; `nameNodup` of it and of `[1, 2, 3, 1]`.
 #guard

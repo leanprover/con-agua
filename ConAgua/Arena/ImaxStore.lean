@@ -130,9 +130,10 @@ def imaxProg : Prog :=
 
 /-- A memory with 8 `imax` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def imaxMem (scratch : Word) : Mem :=
-  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[],
-      #[], #[], #[], #[], #[], Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++
-      Array.replicate 62 (Array.replicate consTestWords 0) }
+  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+    withTiers [(IREC, Array.replicate consTestWords 0),
+      (ISLOT, Array.replicate consTestWords 0),
+      (IHP, Array.replicate consTestWords 0)]
 
 /-- Intern each pair in turn; the handles. -/
 def internImaxs (m : Mem) : List (Word × Word) → Option (List Word)

@@ -217,7 +217,10 @@ A mode memo of the shape of `whnfCoreC` (`EIdx → EIdx`, one-word keys): schema
 under key `7` at generation `0`, enters a bank (generation `1`), misses `7` there and stores `71`,
 leaves, and finds `70` again: `putModeMemos` restored the caller's table. -/
 
-abbrev tbSch : MemoSch := ⟨2, 2⟩
+/-- The test memo's table array. -/
+abbrev tbArr : ArrId := 2
+
+abbrev tbSch : MemoSch := ⟨tbArr, 2⟩
 
 /-- The test program. -/
 def tbProg : Prog :=
@@ -235,11 +238,11 @@ def tbSet (m : Mem) (k g v : Word) : Option Mem :=
 /-- `find` of `(k, g)`: the value, `none` on a miss. -/
 def tbGet (m : Mem) (k g : Word) : Option Word :=
   match run tbProg 100 "t_find" [k, genW 0 g] m with
-  | .ok (r, _) => if r.headD 0 ≠ 0 then some (rdW (m.arr64 2) (r.tail.headD 0 * 4 + 3)) else none
+  | .ok (r, _) => if r.headD 0 ≠ 0 then some (rdW (m.arr64 tbArr) (r.tail.headD 0 * 4 + 3)) else none
   | .error _ => none
 
 #guard
-  let m : Mem := { words := #[#[], Array.replicate 8 0, Array.replicate 64 0] }
+  let m : Mem := Mem.ofWords [(CTL, Array.replicate 8 0), (tbArr, Array.replicate 64 0)]
   match tbSet m 7 0 70 with
   | some m1 => match run tbProg 100 "t_enter" [] m1 with
     | .ok (s, m2) => tbGet m2 7 1 == none && s == [0] &&
