@@ -407,7 +407,7 @@ open L.Arena
 /-- **A writer of `IW` and `CTL[200]` keeps `CheckR`.** -/
 theorem CheckR.frame_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} (hf : MemFrame [IW] [200] m m') (h : CheckR dn m a vis fe) : CheckR dn m' a vis fe :=
-  ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW])
+  ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW, BMEMO, LMEMO, IMEMO, FRMEMO])
       (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf h.arena.1,
     DerR.frameM _ _ m m' hf (by decide) a h.arena.2⟩,
    h.core.frame (fun b hb => by simp at hb; subst hb; decide)

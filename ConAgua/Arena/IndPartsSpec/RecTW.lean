@@ -591,7 +591,7 @@ grind_pattern [ind_grind] bcW_def => bcW (n + 1) m nPd k nC nR cvT rOk rMI rRP
 
 theorem arenaR_frame_iw {m m' : Mem} {a : AState} (hf : MemFrame [IW] [200] m m')
     (h : ArenaR m a) : ArenaR m' a :=
-  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW])
+  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW, BMEMO, LMEMO, IMEMO, FRMEMO])
     (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf h
 
 theorem sort_head_iff (m1 : Mem) (res : Word) (v : ENodeView) (hv : ViewR (eViewW m1 res) v) :

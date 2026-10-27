@@ -80,8 +80,8 @@ theorem StateDR.lkR {m : Mem} {st : StateD} (h : StateDR m st) : LkR m st :=
 
 theorem LkR.frame {m m' : Mem} {st : StateD} (h : LkR m st) (hf : MemFrame [DLP] [] m m')
     (ht : topN m' DLP + 1 ≤ (m'.arr64 DLP).size) : LkR m' st :=
-  ⟨h.names.frame hf (.inl rfl) (by simp [DLP, idArrs]) (by simp),
-    h.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, idArrs]) (by simp), by rw [hf.2.2.1]; exact h.psize,
+  ⟨h.names.frame hf (.inl rfl) (by simp [DLP, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
+    h.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp), by rw [hf.2.2.1]; exact h.psize,
     ht⟩
 
 theorem lkR_name {m : Mem} {st : StateD} (hD : LkR m st) {x w : Word} (a : AState)

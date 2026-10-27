@@ -430,8 +430,8 @@ words outside `idCtl`. -/
 theorem tbl_apart {A : List ArrId} {C : List Word} {b : ArrId} (hb : TblIx b)
     (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x ∉ idCtl) :
     b ∉ A ∧ b + 8 ∉ A ∧ szC b ∉ C ∧ (spS b).cs ∉ C :=
-  ⟨fun h => by have := hA b h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs],
-    fun h => by have := hA _ h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs],
+  ⟨fun h => by have := hA b h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, NID, LID, EID, NIDS, LIDS, EIDS],
+    fun h => by have := hA _ h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, NID, LID, EID, NIDS, LIDS, EIDS],
     fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [szC, idCtl] at this,
     fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [spS, idCtl] at this⟩
 

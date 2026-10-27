@@ -251,13 +251,13 @@ structure MemosR (m : Mem) (ms : Memos) : Prop where
 theorem MemosR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {ms : Memos}
     (hA : ∀ b ∈ A, b ∉ memoArrs) (hC : ∀ x ∈ C, x ∉ memoCtl) (hf : MemFrame A C m m')
     (h : MemosR m ms) : MemosR m' ms :=
-  ⟨memoRG_frame bmSch bmSch_wf bmKey _ A C (fun h => hA _ h (by simp [memoArrs]))
+  ⟨memoRG_frame bmSch bmSch_wf bmKey _ A C (fun h => hA _ h (by simp [memoArrs, BMEMO, LMEMO, IMEMO, FRMEMO]))
       (fun h => hC _ h (by simp [memoCtl])) m m' hf _ h.bvar,
-    memoRG_frame lfSch lfSch_wf lfKey _ A C (fun h => hA _ h (by simp [memoArrs]))
+    memoRG_frame lfSch lfSch_wf lfKey _ A C (fun h => hA _ h (by simp [memoArrs, BMEMO, LMEMO, IMEMO, FRMEMO]))
       (fun h => hC _ h (by simp [memoCtl])) m m' hf _ h.lift,
-    memoRG_frame imSch imSch_wf lfKey _ A C (fun h => hA _ h (by simp [memoArrs]))
+    memoRG_frame imSch imSch_wf lfKey _ A C (fun h => hA _ h (by simp [memoArrs, BMEMO, LMEMO, IMEMO, FRMEMO]))
       (fun h => hC _ h (by simp [memoCtl])) m m' hf _ h.inst1,
-    memoRG_frame frSch frSch_wf bmKey _ A C (fun h => hA _ h (by simp [memoArrs]))
+    memoRG_frame frSch frSch_wf bmKey _ A C (fun h => hA _ h (by simp [memoArrs, BMEMO, LMEMO, IMEMO, FRMEMO]))
       (fun h => hC _ h (by simp [memoCtl])) m m' hf _ h.fvar⟩
 
 /-- **Build a `MemosR m' ms'`** across a memo writer `hf`: the written memo by `t`, the others

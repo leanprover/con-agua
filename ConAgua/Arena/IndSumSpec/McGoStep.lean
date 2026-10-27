@@ -161,7 +161,7 @@ abbrev mcMR (m : Mem) (mp : Std.HashMap EIdx Bool) : Prop :=
 
 theorem mcFrame_arena {m m' : Mem} {a : AState} (hf : MemFrame [MCM] [217] m m') (hR : ArenaR m a) :
     ArenaR m' a :=
-  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, MCM])
+  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, MCM, BMEMO, LMEMO, IMEMO, FRMEMO])
     (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR
 
 /-- The twin's arms of a node view. -/
