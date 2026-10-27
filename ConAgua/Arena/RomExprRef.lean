@@ -152,7 +152,7 @@ theorem MemoR.push0 {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : Mem
   have hR : ∀ k : Word, rdW ((mpushOld mem x).arr64 RMEMO) k =
       if k = memoCnt mem then x else rdW (mem.arr64 RMEMO) k := by
     intro k
-    simp only [mpushOld, Mem.arr64_set64_ne _ _ _ _ _ (show RMEMO ≠ CTL by decide), Mem.arr64_set64_same,
+    simp only [mpushOld, Mem.arr64_set64_ne _ _ _ _ _ (show (RMEMO : TieredArray) ≠ CTL by decide), Mem.arr64_set64_same,
       rdW_set!]
     by_cases e' : k = memoCnt mem
     · subst e'; simp [hsz]
@@ -190,7 +190,7 @@ theorem MemoR.push0 {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : Mem
     split at he'
     · rename_i heq; right; exact (by simpa using heq : e = e').symm
     · left; exact h.keys e' he'
-  · simp only [mpushOld, Mem.size_arr64_set64, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RMEMO by decide)]
+  · simp only [mpushOld, Mem.size_arr64_set64, Mem.arr64_set64_ne _ _ _ _ _ (show (CTL : TieredArray) ≠ RMEMO by decide)]
     exact h.csz
 
 theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
@@ -214,7 +214,7 @@ def RsetR (mem : Mem) : Prop :=
 theorem rsetSch_wf : rsetSch.WF := ⟨by decide, by decide⟩
 
 theorem RsetR.frame {A : List TieredArray} {C : List Word} {mem mem' : Mem} (h : RsetR mem)
-    (hf : MemFrame A C mem mem') (hA1 : RSET ∉ A) (hA2 : RMEMO ∉ A) (hC1 : (148 : Word) ∉ C)
+    (hf : MemFrame A C mem mem') (hA1 : (RSET : TieredArray) ∉ A) (hA2 : (RMEMO : TieredArray) ∉ A) (hC1 : (148 : Word) ∉ C)
     (hC2 : (132 : Word) ∉ C) : RsetR mem' := by
   obtain ⟨mp, hR, hc⟩ := h
   have hR' := memoRG_frame rsetSch rsetSch_wf bmKey (fun _ => ()) A C hA1 hC1 mem mem' hf mp hR
@@ -291,7 +291,7 @@ theorem RsetR.push {mem mem' : Mem} {h : Word} (hR : RsetR mem) (hh : h.toNat < 
     simp [hcs]
   rw [hcnt, UInt64.toNat_add] at hk
   simp at hk
-  simp only [Mem.arr64_set64_ne _ _ _ _ _ (show RMEMO ≠ CTL by decide), Mem.arr64_set64_same, rdW_set!]
+  simp only [Mem.arr64_set64_ne _ _ _ _ _ (show (RMEMO : TieredArray) ≠ CTL by decide), Mem.arr64_set64_same, rdW_set!]
   by_cases hkc : k = (memoCnt m₁).toNat
   · subst hkc
     simp [hsz', Std.HashMap.mem_insert, bmKey]
