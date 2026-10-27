@@ -17,9 +17,8 @@ def armOwn6 : List FnName :=
    "const_find", "const_push", "intern_fvar", "fvar_find", "fvar_push", "mk_app", "der_b"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn6 : ∀ f ∈ armOwn6, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 7. -/
 def armOwn7 : List FnName :=
@@ -27,9 +26,8 @@ def armOwn7 : List FnName :=
    "intern_zero", "zero_find", "zero_push", "intern_succ", "succ_find", "succ_push"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn7 : ∀ f ∈ armOwn7, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 8. -/
 def armOwn8 : List FnName :=
@@ -37,9 +35,8 @@ def armOwn8 : List FnName :=
    "canon_names_go", "intern_nanon", "nanon_find", "nanon_push", "intern_nnum"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn8 : ∀ f ∈ armOwn8, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 9. -/
 def armOwn9 : List FnName :=
@@ -47,9 +44,8 @@ def armOwn9 : List FnName :=
    "canon_name_map", "sl_find", "sl_getd", "canon_levels_eq", "view_ls"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn9 : ∀ f ∈ armOwn9, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 10. -/
 def armOwn10 : List FnName :=
@@ -58,9 +54,8 @@ def armOwn10 : List FnName :=
    "ci_canon_rec", "canon_rules_eq"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn10 : ∀ f ∈ armOwn10, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 11. -/
 def armOwn11 : List FnName :=
@@ -68,9 +63,8 @@ def armOwn11 : List FnName :=
    "of_reduce_ax_ok", "of_reduce_op", "of_reduce_pin_a", "check_defn_val"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn11 : ∀ f ∈ armOwn11, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 set_option maxRecDepth 100000 in
 theorem armOwn_of : ∀ f ∈ armFns, f ∉ openFns →

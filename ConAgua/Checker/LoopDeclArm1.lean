@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclArmLoop
 import ConAgua.Checker.Prog
+import ConAgua.Checker.LoopProgTac
 
 /-!
 # The arms' text agreement for the checker's program, parts 0‥5 (lane `loopt2`)
@@ -11,15 +12,19 @@ namespace L.Checker
 
 open L.Arena L.Ind L.Compiler
 
+/-- A lookup agreement from the two lookups: `checkerProg`'s by `chk_lk` (its chunk position, no
+`String` comparison; `rfl` compared the name with every one before it, ~0.5 s each). -/
+theorem lk_agree {p q : Prog} {f : FnName} {fd : FunDecl} (hq : q.lookup f = some fd)
+    (hp : p.lookup f = some fd) : p.lookup f = q.lookup f := hp.trans hq.symm
+
 /-- `armFns` but `openFns`, part 0. -/
 def armOwn0 : List FnName :=
   ["check_decl_thm", "erec_ci", "erec_alloc", "dlp_copy", "check_constant_val", "install_header",
    "env_find", "env_row_get", "env_ix", "reserved_contains", "reserved_from", "cv_lps"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn0 : ∀ f ∈ armOwn0, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 1. -/
 def armOwn1 : List FnName :=
@@ -27,9 +32,8 @@ def armOwn1 : List FnName :=
    "lvl_eq_fueled", "lvl_eq_c", "lq_find", "lvl_eq_rec"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn1 : ∀ f ∈ armOwn1, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 2. -/
 def armOwn2 : List FnName :=
@@ -37,9 +41,8 @@ def armOwn2 : List FnName :=
    "lv_imax", "lv_cases", "lv_cases_at"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn2 : ∀ f ∈ armOwn2, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 3. -/
 def armOwn3 : List FnName :=
@@ -47,9 +50,8 @@ def armOwn3 : List FnName :=
    "install_value_guards", "env_push", "env_row_set", "check_decl_opaque", "check_opaque_val"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn3 : ∀ f ∈ armOwn3, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 4. -/
 def armOwn4 : List FnName :=
@@ -57,9 +59,8 @@ def armOwn4 : List FnName :=
    "er_sl_eq", "reduce_elem_ok", "ci_eq", "er_sl_at"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn4 : ∀ f ∈ armOwn4, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 5. -/
 def armOwn5 : List FnName :=
@@ -67,8 +68,7 @@ def armOwn5 : List FnName :=
    "rules_eq", "rule_eq_but_rhs", "rule_eq_a", "rule_eq_b"]
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn5 : ∀ f ∈ armOwn5, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 end L.Checker
