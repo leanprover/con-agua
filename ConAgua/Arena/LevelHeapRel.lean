@@ -77,11 +77,11 @@ theorem LvR.view {p : Word} {l : Level} (h : LvR N m p l) : lvNodeW m p ≠ [] :
 structure HeapExt (m m' : Mem) : Prop where
   view : ∀ p, lvNodeW m p ≠ [] → lvNodeW m' p = lvNodeW m p
   /-- The word arrays other than the heap and `CTL` are untouched. -/
-  arr : ∀ A : ArrId, A ≠ LH → A ≠ CTL → m'.arr64 A = m.arr64 A
+  arr : ∀ A : TieredArray, A ≠ LH → A ≠ CTL → m'.arr64 A = m.arr64 A
   /-- The `CTL` words other than the heap top are untouched. -/
   ctl : ∀ k : Word, k ≠ 192 → rdW (m'.arr64 CTL) k = rdW (m.arr64 CTL) k
   /-- No array changes its size. -/
-  size : ∀ b : ArrId, (m'.arr64 b).size = (m.arr64 b).size
+  size : ∀ b : TieredArray, (m'.arr64 b).size = (m.arr64 b).size
   wsize : m.SameShape m'
   /-- The heap top does not move down, and the heap below it stays. -/
   top : (htop m).toNat ≤ (htop m').toNat
@@ -106,7 +106,7 @@ theorem LvR.mono (he : HeapExt m m') {p : Word} {l : Level} (h : LvR N m p l) : 
   | imax hv _ _ ih1 ih2 => exact .imax (by rw [he.view _ (by simp [hv])]; exact hv) ih1 ih2
   | param hv hn => exact .param (by rw [he.view _ (by simp [hv])]; exact hv) hn
 
-theorem rdW_set64L (m : Mem) (a b : ArrId) (k v x : Word) :
+theorem rdW_set64L (m : Mem) (a b : TieredArray) (k v x : Word) :
     rdW ((m.set64 a k v).arr64 b) x =
       if b = a ∧ k = x ∧ k.toNat < (m.arr64 a).size then v else rdW (m.arr64 b) x := by
   by_cases h : b = a
@@ -119,7 +119,7 @@ theorem rdW_set64L (m : Mem) (a b : ArrId) (k v x : Word) :
       simp [this, hk]
   · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
 
-theorem size_set64L (m : Mem) (a b : ArrId) (k v : Word) :
+theorem size_set64L (m : Mem) (a b : TieredArray) (k v : Word) :
     ((m.set64 a k v).arr64 b).size = (m.arr64 b).size := by
   by_cases h : b = a
   · subst h; rw [Mem.arr64_set64_same]; simp
@@ -128,11 +128,11 @@ theorem size_set64L (m : Mem) (a b : ArrId) (k v : Word) :
 /-- What `lvNodeW` reads stays put: the store's level arrays, the `CTL` words other than the
 heap top, and the heap below the top, which does not move down. -/
 structure HeapFrame (m m' : Mem) : Prop where
-  arr : ∀ A : ArrId, A ≠ CTL → A ≠ LH → m'.arr64 A = m.arr64 A
+  arr : ∀ A : TieredArray, A ≠ CTL → A ≠ LH → m'.arr64 A = m.arr64 A
   ctl : ∀ k : Word, k ≠ 192 → rdW (m'.arr64 CTL) k = rdW (m.arr64 CTL) k
   top : (htop m).toNat ≤ (htop m').toNat
   lh : ∀ k : Word, k.toNat < (htop m).toNat → rdW (m'.arr64 LH) k = rdW (m.arr64 LH) k
-  size : ∀ b : ArrId, (m'.arr64 b).size = (m.arr64 b).size
+  size : ∀ b : TieredArray, (m'.arr64 b).size = (m.arr64 b).size
   wsize : m.SameShape m'
 
 theorem tierW_lt (p : Word) : (tierW p).toNat ≤ 1 := by
@@ -237,7 +237,7 @@ section lhMem
 variable (m : Mem) (o g a b : Word) (hl : o.toNat + 2 < (m.arr64 LH).size)
   (hc : 192 < (m.arr64 CTL).size) (ho : o.toNat < 2 ^ 40)
 
-theorem lhMem_arr (A : ArrId) (h1 : A ≠ CTL) (h2 : A ≠ LH) : (lhMem m o g a b).arr64 A = m.arr64 A := by
+theorem lhMem_arr (A : TieredArray) (h1 : A ≠ CTL) (h2 : A ≠ LH) : (lhMem m o g a b).arr64 A = m.arr64 A := by
   simp only [lhMem]
   rw [Mem.arr64_set64_ne _ _ _ _ _ h1, Mem.arr64_set64_ne _ _ _ _ _ h2,
     Mem.arr64_set64_ne _ _ _ _ _ h2, Mem.arr64_set64_ne _ _ _ _ _ h2]
@@ -246,7 +246,7 @@ include hc in
 theorem lhMem_ctl (k : Word) :
     rdW ((lhMem m o g a b).arr64 CTL) k = if k = 192 then o + 3 else rdW (m.arr64 CTL) k := by
   simp only [lhMem, rdW_set64L, size_set64L]
-  have h1 : (CTL : ArrId) ≠ LH := by decide
+  have h1 : (CTL : TieredArray) ≠ LH := by decide
   by_cases hk : k = 192
   · subst hk; simp [hc]
   · simp [hk, Ne.symm hk, h1]
@@ -255,7 +255,7 @@ include hl ho in
 theorem lhMem_lh (k : Word) :
     rdW ((lhMem m o g a b).arr64 LH) k =
       if k = o + 2 then b else if k = o + 1 then a else if k = o then g else rdW (m.arr64 LH) k := by
-  have h1 : (LH : ArrId) ≠ CTL := by decide
+  have h1 : (LH : TieredArray) ≠ CTL := by decide
   have e1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (o + 2).toNat = o.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have s2 : (o + 2).toNat < (m.arr64 LH).size := by omega
