@@ -108,7 +108,7 @@ theorem opfFv_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
   rw [hs'] at hI
   have hfr := fvinternW_frame m u ty _ _ hI
   obtain ⟨a', hrun, hS', hg⟩ := internFVar_stage hS u ty hty hI
-  obtain ⟨h1, h2⟩ := spn_of_lt64 hfr (by simp [FVREC, FVSLOT, FVLP]) (by simp)
+  obtain ⟨h1, h2⟩ := spn_of_lt64 hfr (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP]) (by simp)
   exact ⟨a', hrun, hS', hg, hAb.frameD hfr (by decide) (by decide), h1, h2,
     fvinternW_hw m a hS.1.arena.1.fvar u ty _ _ hI⟩
 

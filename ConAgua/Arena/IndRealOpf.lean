@@ -38,7 +38,7 @@ def opfPFns : List FnName :=
     "fvar_find", "fvar_push", "intern_fvar"] ++ instListFns ++ instFns
 
 /-- What it writes: the stack, the pool, the `fvar` store, both walks' memos and stores. -/
-def opfA : List ArrId := [SPN, IW, FVREC, FVSLOT, FVLP, FVREC + 256, FVSLOT + 256, FVLP + 256] ++ instListA ++ instA
+def opfA : List ArrId := [SPN, IW, FVREC, FVSLOT, FVLP, tier1 FVREC, tier1 FVSLOT, tier1 FVLP] ++ instListA ++ instA
 /-- The stack's and the pool's tops, the `fvar` counts, both walks' words. -/
 def opfC : List Word := [136, 200, 26, 27] ++ instListC ++ instC
 

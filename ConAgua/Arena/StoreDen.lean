@@ -182,8 +182,8 @@ states, equal `SOREC`/`CREC`, equal counts `CTL[16‥19]` and scratch flag `CTL[
 tables. -/
 theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m' a')
     (hs : m'.arr64 SOREC = m.arr64 SOREC) (hc : m'.arr64 CREC = m.arr64 CREC)
-    (hs' : m'.arr64 (SOREC + 256) = m.arr64 (SOREC + 256))
-    (hc' : m'.arr64 (CREC + 256) = m.arr64 (CREC + 256))
+    (hs' : m'.arr64 (tier1 SOREC) = m.arr64 (tier1 SOREC))
+    (hc' : m'.arr64 (tier1 CREC) = m.arr64 (tier1 CREC))
     (hctl : ∀ x : Word, x = 1 ∨ x = 16 ∨ x = 17 ∨ x = 18 ∨ x = 19 →
       rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) :
     scTabs a' = scTabs a := by
@@ -279,7 +279,7 @@ theorem StoreDen.mono {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
 theorem StoreDen.of_arena {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} {A : List ArrId} {C : List Word}
     (h : StoreDen dn m a fe) (hR : ArenaR m a) (hR' : ArenaR m' a') (hc : a'.caches = a.caches)
     (hp : a'.pins = a.pins) (hl : a'.store.lss = a.store.lss) (hf : MemFrame A C m m')
-    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ SOREC + 256 ∉ A ∧ CREC + 256 ∉ A)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C) :
     StoreDen dn m' a' fe := by
   have hsc : scTabs a' = scTabs a := scTabs_eq hR hR' (hf.1 SOREC hscA.1 (by decide))

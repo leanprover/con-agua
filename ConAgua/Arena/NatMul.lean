@@ -137,8 +137,8 @@ def MulBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   (s.loc 5).toNat = (s.loc 1).toNat + (s.loc 3).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
   s.loc 12 = s.loc 4 >>> 40 ∧ s.loc 13 = s.loc 4 - ((s.loc 4 >>> 40) <<< 40) ∧
-  (s.loc 13).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA 0 (s.loc 12))).size ∧
-  (s.mem.arr64 (tierA 0 (s.loc 12))).size ≤ 2 ^ 40 ∧ (s.loc 12).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
+  (s.loc 13).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA POOL (s.loc 12))).size ∧
+  (s.mem.arr64 (tierA POOL (s.loc 12))).size ≤ 2 ^ 40 ∧ (s.loc 12).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat
 
@@ -183,20 +183,20 @@ theorem zeroLoop_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg C s₀) :
 goal (applied, not E-matched: `grind` alone takes minutes here). -/
 theorem mul_step_goal (m : Mem) (Pg : Array Word) (T T12 T13 o L ob i j y c r : Word)
     (h12 : T12 = T >>> 40) (h13 : T13 = T - ((T >>> 40) <<< 40))
-    (hT : T.toNat < 2 ^ 41) (hs : (m.arr64 (tierA 0 T12)).size ≤ 2 ^ 40)
-    (hst : (T13 + (i + j)).toNat < (m.arr64 (tierA 0 T12)).size)
+    (hT : T.toNat < 2 ^ 41) (hs : (m.arr64 (tierA POOL T12)).size ≤ 2 ^ 40)
+    (hst : (T13 + (i + j)).toNat < (m.arr64 (tierA POOL T12)).size)
     (hk : T13.toNat + i.toNat + j.toNat < 2 ^ 40)
     (hag : Agree (vpool m) Pg T.toNat) (hoi : o.toNat + i.toNat < T.toNat)
     (hil : i.toNat < L.toNat) (hwi : T.toNat + i.toNat + j.toNat < 2 ^ 41)
     (hPg : Pg.size = 2 ^ 41)
-    (hld : ((o + i) &&& 1099511627775).toNat < (m.arr64 (tierA 0 ((o + i) >>> 40))).size)
-    (hr : r.toNat = macHiN (m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat]
-      y (m.arr64 (tierA 0 T12))[(T13 + (i + j)).toNat] c)
+    (hld : ((o + i) &&& 1099511627775).toNat < (m.arr64 (tierA POOL ((o + i) >>> 40))).size)
+    (hr : r.toNat = macHiN (m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat]
+      y (m.arr64 (tierA POOL T12))[(T13 + (i + j)).toNat] c)
     (ih : pv (vpool m) T.toNat (L.toNat + j.toNat) + c.toNat * (wt i.toNat * wt j.toNat) =
       pv Pg o.toNat L.toNat * pv Pg ob.toNat j.toNat + pv Pg o.toNat i.toNat * y.toNat * wt j.toNat) :
-    pv (vpool (m.set64 (tierA 0 T12) (T13 + (i + j))
-        ((m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] * y +
-          (m.arr64 (tierA 0 T12))[(T13 + (i + j)).toNat] + c)))
+    pv (vpool (m.set64 (tierA POOL T12) (T13 + (i + j))
+        ((m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] * y +
+          (m.arr64 (tierA POOL T12))[(T13 + (i + j)).toNat] + c)))
         T.toNat (L.toNat + j.toNat) +
       r.toNat * (wt (i + 1).toNat * wt j.toNat) =
     pv Pg o.toNat L.toNat * pv Pg ob.toNat j.toNat + pv Pg o.toNat (i + 1).toNat * y.toNat * wt j.toNat := by
@@ -211,12 +211,12 @@ theorem mul_step_goal (m : Mem) (Pg : Array Word) (T T12 T13 o L ob i j y c r : 
     rw [UInt64.toNat_add, hij]; exact Nat.mod_eq_of_lt (by omega)
   have hvs := vpool_size m
   have hk' : (T - ((T >>> 40) <<< 40)).toNat + (i + j).toNat < 2 ^ 40 := by rw [hij]; omega
-  have ex : (m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] =
+  have ex : (m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] =
       Pg[o.toNat + i.toNat] := by
     rw [vpool_ld m (o + i) hld (by omega)]
     simp only [hoi']
     exact Agree.get _ _ _ _ hag hoi (by omega) (by omega)
-  have et : (m.arr64 (tierA 0 (T >>> 40)))[(T - ((T >>> 40) <<< 40) + (i + j)).toNat] =
+  have et : (m.arr64 (tierA POOL (T >>> 40)))[(T - ((T >>> 40) <<< 40) + (i + j)).toNat] =
       (vpool m)[T.toNat + (i.toNat + j.toNat)] := by
     rw [vpool_ldrel m T (i + j) hT hst hs hk' (by omega)]
     simp only [hTij]

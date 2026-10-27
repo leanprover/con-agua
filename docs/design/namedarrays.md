@@ -120,3 +120,30 @@ in `Compiler/Tests.lean`. `omega` does not read a comparison at type `ArrId` (th
 * Fallout: three references to a scanner's own `IN` (`open L.Front.Fields (IN)`,
   `L.Front.Unescape.IN`), one `simp [APDM]` that now needs `WSM`. `checker.s`, `pins.bin`
   unchanged (`asm_file.py --check`).
+
+### Batch 2 (landed, master e874d398)
+As above; shake fallout: 51 direct `ConAgua.Layout` imports that another import already gives
+were dropped; 27 imports the tool now reports as unused (they used to bring an array name, and still
+bring notation, stores or pool lemmas the build needs) and the three `#guard`-only imports of
+`Checker/ArrCheck.lean` are in the allowlist. OVERVIEW §6.4's slot count was stale (320); it is
+390 (`ca_region_size`).
+
+### Batch 3: `+ 256` out of the proofs
+* Mechanical: `X + 256` → `tier1 X` (array names, schema fields `S.ra`/`S.sa`, array variables),
+  `(· + 256)` → `tier1`, `tierA 0` → `tierA POOL`. 639 occurrences of `+ 256` → 32 (the encoding
+  lemmas in `SlotGrow.lean`, `Pool.lean`, `L/Arrays.lean`; `tblArr`'s `256 * rowTier` and its
+  three proofs; region arithmetic in `RomExprRef`, `CIReadRefBase`; docs). `tierA 0`: 410 → 19
+  (`Front/Unescape.lean` keeps the numeral: a `simp_all` there fails with `POOL`).
+* The simp normal form stays numeric: `SlotGrow.tierA_one`/`tierA_cases'` still give `a + 256`.
+  With `tier1 a` as the normal form `simp` no longer decided `1 = tier1 42` (it evaluated
+  `42 + 256`), and a simproc evaluating `tier1 n` broke the `simp [hB, hB']` proofs whose
+  hypotheses mention `tier1 X` (the goal's `tier1 X` became a numeral first). So `tier1` is the
+  name in statements; proofs that decide membership or bounds by `simp` unfold it with
+  `simp [tier1, tierOff, …]` (226 sites, inserted where the build failed, and in the
+  `apart`/`lo_apart`/`own`/`tapart` macros); proofs that need disequality use `tier1_ne`;
+  `simp only [tierA_one, h]` with `h` about `tier1` became `tierA_one_eq`.
+* `omega` does not see through `tier1` (nor `ArrId`): region facts (`256 ≤ b ∧ b < 320`) keep
+  unfolding `tier1, tierOff` before `omega`.
+* 128 files, +864/−864 lines (a line-for-line rewrite). `checker.s`, `pins.bin` unchanged; gate
+  build after merging master: 762 s for 1150 modules at `LEAN_NUM_THREADS=12` (no per-module
+  baseline was measured).

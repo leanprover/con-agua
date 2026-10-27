@@ -20,9 +20,9 @@ namespace L.Ind
 open L.Arena
 
 theorem binternW_mfr {m m' : Mem} {u r : Word} (h : binternW m u = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (binternW_frame m u r m' h) (by simp [BREC, BSLOT]) (by simp)
+  MFr.of_frame (binternW_frame m u r m' h) (by simp [tier1, tierOff, BREC, BSLOT]) (by simp)
 theorem minternW_mfr {m m' : Mem} {u v r : Word} (h : minternW m u v = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (minternW_frame m u v r m' h) (by simp [MREC, MSLOT, MHP]) (by simp)
+  MFr.of_frame (minternW_frame m u v r m' h) (by simp [tier1, tierOff, MREC, MSLOT, MHP]) (by simp)
 theorem mkProjW_mfr {m m' : Mem} {a b c r : Word} (h : mkProjW m a b c = some (r, m')) : MFr [] [] m m' :=
   MFr.of_low (mkProjW_low h)
 theorem erAllocW_mfr {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m')) : MFr [] [] m m' := by

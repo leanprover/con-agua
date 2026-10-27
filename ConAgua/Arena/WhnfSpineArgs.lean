@@ -655,7 +655,7 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
 /-! ## `get_app_spine(e)`: count (and head), check room, two fills, push -/
 
 theorem nodesW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC)
-    (h' : m'.arr64 (AREC + 256) = m.arr64 (AREC + 256)) :
+    (h' : m'.arr64 (tier1 AREC) = m.arr64 (tier1 AREC)) :
     ∀ (c : Nat) (e : Word), nodesW m' e c = nodesW m e c
   | 0, _ => rfl
   | c + 1, e => by simp only [nodesW, fnW, nodesW_congr h h' c, tfld_arr_eq (R := APP) h h']
@@ -800,8 +800,8 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   rw [hf''] at hfill3
   cases hfill3
   have harec : m₂.arr64 AREC = s.mem.arr64 AREC := hfr.1 AREC (by decide) (by decide)
-  have harec' : m₂.arr64 (AREC + 256) = s.mem.arr64 (AREC + 256) :=
-    hfr.1 (AREC + 256) (by decide) (by decide)
+  have harec' : m₂.arr64 (tier1 AREC) = s.mem.arr64 (tier1 AREC) :=
+    hfr.1 (tier1 AREC) (by decide) (by decide)
   -- the post
   have hsp : ∀ w : Word, spW s'.mem w = spW m₃ w := by
     intro w; rw [← hm]; simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]

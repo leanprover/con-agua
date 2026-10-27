@@ -116,14 +116,14 @@ def spnPoolW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, b, d, l =>
     if l = 0 then some m
-    else spnPoolW n (m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 SPN) b))
+    else spnPoolW n (m.set64 (tierA POOL (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 SPN) b))
       (b + 1) (d + 1) (l - 1)
 
 theorem spnPoolW_nil (n : Nat) (m : Mem) (b d l : Word) (h : l = 0) :
     spnPoolW (n + 1) m b d l = some m := by simp [spnPoolW, h]
 theorem spnPoolW_cons (n : Nat) (m : Mem) (b d l : Word) (h : l ≠ 0) :
     spnPoolW (n + 1) m b d l =
-      spnPoolW n (m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 SPN) b))
+      spnPoolW n (m.set64 (tierA POOL (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 SPN) b))
         (b + 1) (d + 1) (l - 1) := by
   simp [spnPoolW, h]
 grind_pattern [arena_grind] spnPoolW_nil => spnPoolW (n + 1) m b d l
@@ -139,7 +139,7 @@ theorem spnPoolW_size (n : Nat) : ∀ (m m' : Mem) (b d l : Word), spnPoolW n m 
     · rw [spnPoolW_nil n m b d l hl] at h; cases h; rfl
     · rw [spnPoolW_cons n m b d l hl] at h
       rw [ih _ _ _ _ _ h A]
-      by_cases hA : A = tierA 0 (d >>> 40)
+      by_cases hA : A = tierA POOL (d >>> 40)
       · subst hA; exact Mem.size_arr64_set64 _ _ _ _
       · rw [Mem.arr64_set64_ne _ _ _ _ _ hA]
 grind_pattern [arena_grind] spnPoolW_size => spnPoolW n m b d l, (m'.arr64 A).size
@@ -171,8 +171,8 @@ tier array): it writes only the pool's tiers, nothing below `d`, and the slice a
 stack's. -/
 theorem spnPoolW_ok : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b d l = some m' →
     d.toNat < 2 ^ 41 →
-    (d &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (d >>> 40))).size →
-    (m.arr64 (tierA 0 (d >>> 40))).size < 2 ^ 40 →
+    (d &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA POOL (d >>> 40))).size →
+    (m.arr64 (tierA POOL (d >>> 40))).size < 2 ^ 40 →
     b.toNat + l.toNat < 2 ^ 64 →
     PFrame m m' ∧ MemFrame [POOL, POOL1] [] m m' ∧ Agree (vpool m') (vpool m) d.toNat ∧
       sliceL (vpool m') d.toNat l.toNat = sliceL (m.arr64 SPN) b.toNat l.toNat := by
@@ -201,8 +201,8 @@ theorem spnPoolW_ok : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b 
     have hid : ((d + 1) &&& 1099511627775).toNat = (d &&& 1099511627775).toNat + 1 := by
       rw [tag_idx_toNat, hd1]; omega
     generalize hv : rdW (m.arr64 SPN) b = v at h
-    generalize hm₁ : m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) v = m₁ at h
-    have hsz₁ : (m₁.arr64 (tierA 0 (d >>> 40))).size = (m.arr64 (tierA 0 (d >>> 40))).size := by
+    generalize hm₁ : m.set64 (tierA POOL (d >>> 40)) (d &&& 1099511627775) v = m₁ at h
+    have hsz₁ : (m₁.arr64 (tierA POOL (d >>> 40))).size = (m.arr64 (tierA POOL (d >>> 40))).size := by
       rw [← hm₁, Mem.size_arr64_set64]
     have hvp : vpool m₁ = (vpool m).set! d.toNat v := by
       rw [← hm₁]; exact vpool_stidx0 m d v hd (by omega) (by omega)
@@ -232,7 +232,7 @@ theorem spnPoolW_ok : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b 
 /-- `spn_pool` writes the pool's tiers only above the old top, so the pool grew (the top kept). -/
 theorem spnPoolW_grows (n : Nat) (m m' : Mem) (b l : Word) (h : spnPoolW n m b m.top l = some m')
     (hp : PoolOK m)
-    (hk : (m.top &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size)
+    (hk : (m.top &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size)
     (hb : b.toNat + l.toNat < 2 ^ 64) :
     PFrame m m' ∧ MemFrame [POOL, POOL1] [] m m' ∧ Agree (vpool m') (vpool m) m.top.toNat ∧
       sliceL (vpool m') m.top.toNat l.toNat = sliceL (m.arr64 SPN) b.toNat l.toNat :=
@@ -255,8 +255,8 @@ def spnLsK (l : Word) (top : Word) : Option Mem → Option (Word × Mem)
 def spnLsW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, b, l =>
-    if m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) then none
-    else if m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) < l then none
+    if m.len64 (tierA POOL (m.top >>> 40)) < (m.top &&& 1099511627775) then none
+    else if m.len64 (tierA POOL (m.top >>> 40)) - (m.top &&& 1099511627775) < l then none
     else spnLsK l m.top (spnPoolW n m b m.top l)
 
 /-- **The pool stage of `spn_ls`**: the copy at the top and the raised top grow the pool, the new
@@ -274,16 +274,16 @@ theorem spnLsW_pool (n : Nat) (m m' : Mem) (b l r : Word) (hp : PoolOK m)
   have hsz := hp.small.tier (m.top >>> 40)
   have h41 := hp.top41
   have hin := hp.2.2.2.2.2
-  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size :=
+  have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size :=
     UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
-  have t1 : ¬ m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) := fun t1 => by
+  have t1 : ¬ m.len64 (tierA POOL (m.top >>> 40)) < (m.top &&& 1099511627775) := fun t1 => by
     simp [t1] at hW
-  have t2 : ¬ m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) < l := fun t2 => by
+  have t2 : ¬ m.len64 (tierA POOL (m.top >>> 40)) - (m.top &&& 1099511627775) < l := fun t2 => by
     simp [t1, t2] at hW
   simp only [t1, t2, ↓reduceIte] at hW
   have t2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t2)
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
-  have hk : (m.top &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hk : (m.top &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     omega
   cases hc : spnPoolW n m b m.top l with
   | none => rw [hc] at hW; simp [spnLsK] at hW

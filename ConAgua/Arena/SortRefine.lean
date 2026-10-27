@@ -192,7 +192,7 @@ theorem sortColFree : ColFree sortCS SoRecRel := by
 
 /-- **What `intern_sort` changes**: the table's arrays, the `lp` column, the counts. -/
 theorem sointernW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
-    MemFrame [SOREC, SOREC + 256, SOSLOT, SOSLOT + 256, SOLP, SOLP + 256] [16, 17] m m' :=
+    MemFrame [SOREC, tier1 SOREC, SOSLOT, tier1 SOSLOT, SOLP, tier1 SOLP] [16, 17] m m' :=
   consInternM_frame sortCS_wf hI
 
 theorem sortLocal : RLocal sortSch SoRecRel sohash [] [] := by

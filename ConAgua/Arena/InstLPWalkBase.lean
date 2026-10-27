@@ -147,7 +147,7 @@ theorem CoreS.frameLP (S : MemoSch) (h3 : S = lpSch ∨ S = lplSch ∨ S = lplsS
     (by simp) hmem
     (by simp [LPMEMO, LPLMEMO, LPLSMEMO, POOL])
     (by simp)
-    (by simp [LPMEMO, LPLMEMO, LPLSMEMO, SOREC, CREC])
+    (by simp [tier1, tierOff, LPMEMO, LPLMEMO, LPLSMEMO, SOREC, CREC])
     (by simp)
 
 end steps

@@ -265,7 +265,7 @@ theorem lsColFree : ColFree lsCS LsRecRel := by
 
 /-- **What `intern_ls` changes**: the table's arrays, the column, the counts. -/
 theorem lsinternW_frame (m : Mem) (o l : Word) (w : Word) (m' : Mem) (hI : lsinternW m o l = some (w, m')) :
-    MemFrame [LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [40, 41] m m' :=
+    MemFrame [LSREC, tier1 LSREC, LSSLOT, tier1 LSSLOT, LSHP, tier1 LSHP] [40, 41] m m' :=
   consInternM_frame lsCS_wf hI
 
 theorem lsLocal : RLocal lsSch LsRecRel lshash [POOL, POOL1, PT0] [0] := by

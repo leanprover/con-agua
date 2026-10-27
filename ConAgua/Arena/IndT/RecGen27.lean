@@ -33,7 +33,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- Across the real `open_pis_at_fvars_f` (its write set, `opfF_frame`). -/
 theorem MFr.ofOpfF {m m' : Mem} {args r : List Word} (h : opfF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (opfF_frame h)
-    (by simp [opfA, instListA, mkA, instA, liftA, SPN, IW, FVREC, FVSLOT, FVLP])
+    (by simp [tier1, tierOff, opfA, instListA, mkA, instA, liftA, SPN, IW, FVREC, FVSLOT, FVLP])
     (by simp [opfC, instListC, mkC, instC, liftC])
 
 theorem cnfW_afr : ∀ (k : Nat) (m m' : Mem) (nfo nfl nm q j rp r : Word),

@@ -295,7 +295,7 @@ theorem m2cK2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N
   have hS2 := hS1.of_const' hD2 (Keeps.run (keeps_cpl_internConst' _ _) hrun2) hfr2 hrun2 hdus
   have hsp2 : SpineR m2 (r1.headD 0) cnP (xs.take cnP.toNat).toArray :=
     (hsp1.take' (by rw [← hlen]; exact hle)).of_spn_core
-      (hfr2.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide))
+      (hfr2.1 SPN (by simp [tier1, tierOff, CREC, CSLOT, CLP, SPN]) (by decide))
   cases c3 : callE p (N' + 1) "mk_app_n" [r2.headD 0, r1.headD 0, cnP] m2 with
   | error e3 =>
     rw [c3, m2cK2E.k_mk_app_n.none] at hW; cases hW

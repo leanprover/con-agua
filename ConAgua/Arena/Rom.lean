@@ -226,7 +226,7 @@ variable (rom : List UInt8)
 
 /-- The model of the copy loop: ROM bytes `i + j ‥ i + l` to `POOL⟨pt⟩[pb + j ‥ pb + l]`. -/
 def rputW (m : Mem) (pt pb i l j : Word) : Mem :=
-  if j < l then rputW (m.set64 (tierA 0 pt) (pb + j) (romB rom (i + j))) pt pb i l (j + 1) else m
+  if j < l then rputW (m.set64 (tierA POOL pt) (pb + j) (romB rom (i + j))) pt pb i l (j + 1) else m
 termination_by l.toNat - j.toNat
 decreasing_by
   have : j.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹j < l›
@@ -239,7 +239,7 @@ theorem rputW_end (m : Mem) (pt pb i l j : Word) (hj : ¬ j < l) : rputW rom m p
   rw [rputW]; simp only [hj, ↓reduceIte]
 
 theorem rputW_step (m m' : Mem) (pt pb i l j j' : Word) (hj : j < l) (hj' : j' = j + 1)
-    (hm' : m' = m.set64 (tierA 0 pt) (pb + j) (romB rom (i + j))) :
+    (hm' : m' = m.set64 (tierA POOL pt) (pb + j) (romB rom (i + j))) :
     rputW rom m pt pb i l j = rputW rom m' pt pb i l j' := by
   subst hj' hm'
   rw [rputW]; simp only [hj, ↓reduceIte]
@@ -332,7 +332,7 @@ theorem asciiW_scan (i l : Word) (hv : i.toNat + l.toNat < 2 ^ 64) (hr : i.toNat
 theorem rputW_copy (pt pb i l : Word) (hv : i.toNat + l.toNat < 2 ^ 64)
     (hr : i.toNat + l.toNat ≤ rom.length) :
     ∀ (d : Nat) (m : Mem) (j : Word), l.toNat - j.toNat = d → j ≤ l →
-      rputW rom m pt pb i l j = m.copy8w (tierA 0 pt) (pb + j) rom.toArray (i + j) d := by
+      rputW rom m pt pb i l j = m.copy8w (tierA POOL pt) (pb + j) rom.toArray (i + j) d := by
   intro d
   induction d with
   | zero =>
@@ -353,8 +353,8 @@ theorem rputW_copy (pt pb i l : Word) (hv : i.toNat + l.toNat < 2 ^ 64)
 /-- `rom_put`'s checks: an ASCII range of the ROM that fits above the pool top. -/
 def romPutOK (m : Mem) (i l : Word) : Prop :=
   i + l ≤ UInt64.ofNat rom.length ∧ i ≤ i + l ∧
-    (m.top &&& (1099511627775 : Word)) ≤ m.len64 (tierA 0 (m.top >>> 40)) ∧
-    l ≤ m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) ∧
+    (m.top &&& (1099511627775 : Word)) ≤ m.len64 (tierA POOL (m.top >>> 40)) ∧
+    l ≤ m.len64 (tierA POOL (m.top >>> 40)) - (m.top &&& 1099511627775) ∧
     asciiW rom i l 0 = true
 
 instance (m : Mem) (i l : Word) : Decidable (romPutOK rom m i l) := by
@@ -383,10 +383,10 @@ theorem rputW_size (pt pb i l : Word) (b : ArrId) :
   pcap_congr (rputW_size rom pt pb i l POOL _ m j rfl) (rputW_size rom pt pb i l POOL1 _ m j rfl)
 
 theorem romPutOK_room (m : Mem) (i l : Word) (h : romPutOK rom m i l)
-    (hs : (m.arr64 (tierA 0 (m.top >>> 40))).size < 2 ^ 63) :
-    (m.top &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    (hs : (m.arr64 (tierA POOL (m.top >>> 40))).size < 2 ^ 63) :
+    (m.top &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size := by
   obtain ⟨-, -, h3, h4, -⟩ := h
-  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ hs
   have := UInt64.le_iff_toNat_le.mp h4
   have := UInt64.le_iff_toNat_le.mp h3
@@ -461,7 +461,7 @@ def romN (k : Nat) : Word := (rom[k]?.getD 255).toUInt64
 
 theorem rputW_facts (pt pb i n : Word) (hv : i.toNat + n.toNat < 2 ^ 64) (ht : pt.toNat ≤ 1) :
     ∀ (d : Nat) (m : Mem) (j : Word), n.toNat - j.toNat = d → j ≤ n →
-      pb.toNat + n.toNat ≤ (m.arr64 (tierA 0 pt)).size → (m.arr64 (tierA 0 pt)).size ≤ 2 ^ 40 →
+      pb.toNat + n.toNat ≤ (m.arr64 (tierA POOL pt)).size → (m.arr64 (tierA POOL pt)).size ≤ 2 ^ 40 →
       PFrame m (rputW rom m pt pb i n j) ∧
       ∀ x, (vpool (rputW rom m pt pb i n j))[x]? =
         if pt.toNat * 2 ^ 40 + pb.toNat + j.toNat ≤ x ∧ x < pt.toNat * 2 ^ 40 + pb.toNat + n.toNat then
@@ -486,10 +486,10 @@ theorem rputW_facts (pt pb i n : Word) (hv : i.toNat + n.toNat < 2 ^ 64) (ht : p
     have hpj : (pb + j).toNat = pb.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
     have hvj : (i + j).toNat = i.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
     rw [rputW]; simp only [hjn, ↓reduceIte]
-    have hsz : ((m.set64 (tierA 0 pt) (pb + j) (romB rom (i + j))).arr64 (tierA 0 pt)).size =
-        (m.arr64 (tierA 0 pt)).size :=
+    have hsz : ((m.set64 (tierA POOL pt) (pb + j) (romB rom (i + j))).arr64 (tierA POOL pt)).size =
+        (m.arr64 (tierA POOL pt)).size :=
       size_set64 _ _ _ _ _
-    obtain ⟨hf, hx⟩ := ih (m.set64 (tierA 0 pt) (pb + j) (romB rom (i + j))) (j + 1) (by omega)
+    obtain ⟨hf, hx⟩ := ih (m.set64 (tierA POOL pt) (pb + j) (romB rom (i + j))) (j + 1) (by omega)
       (UInt64.le_iff_toNat_le.mpr (by omega)) (by omega) (by omega)
     refine ⟨PFrame.trans (PFrame.set64 _ _ _ (PFrame.refl _)) hf, fun x => ?_⟩
     rw [hx, vpool_set64t m pt (pb + j) _ ht (by omega) hs, Array.set!_eq_setIfInBounds,
@@ -537,9 +537,9 @@ theorem romPutW_facts (m : Mem) (i l : Word) (hpool : PoolOK m) (hok : romPutOK 
     have := UInt64.le_iff_toNat_le.mp h1
     rw [hil, UInt64.toNat_ofNat'] at this
     rwa [Nat.mod_eq_of_lt (by omega)] at this
-  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ (by omega)
-  have hroom : l.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size - (m.top &&& 1099511627775).toNat := by
+  have hroom : l.toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size - (m.top &&& 1099511627775).toNat := by
     have := UInt64.le_iff_toNat_le.mp h4
     rwa [UInt64.toNat_sub_of_le _ _ h3, hlen] at this
   have h3' := UInt64.le_iff_toNat_le.mp h3
@@ -658,7 +658,7 @@ end nameArms
 
 attribute [arena_grind =] nmAnonK_some nmNumK_some nmRecK_str nmRecK_num romPutW_ok nmStrK_some
   nmStr2K_some
-grind_pattern [arena_grind] romPutOK_room => romPutOK rom m i l, (m.arr64 (tierA 0 (m.top >>> 40))).size
+grind_pattern [arena_grind] romPutOK_room => romPutOK rom m i l, (m.arr64 (tierA POOL (m.top >>> 40))).size
 grind_pattern [arena_grind] romNameW_anon => romNameW rom (n + 1) m pos
 grind_pattern [arena_grind] romNameW_rec => romNameW rom (n + 1) m pos
 
@@ -968,7 +968,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     obtain ⟨rfl, rfl, rfl⟩ := hW
     obtain ⟨hok, hR, hres, hf⟩ := L.Front.nanon_A m a hA w m₁ hI
     refine ⟨hok, hR, hres, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, ?_,
-      frame_store hf (by simp [nanonSch, NAREC, NASLOT]) (by simp [nanonSch])⟩
+      frame_store hf (by simp [tier1, tierOff, nanonSch, NAREC, NASLOT]) (by simp [nanonSch])⟩
     exact drop_pos rom hr pos (encName .anonymous) rest hd 1 (by simp [encName])
   | str pre str ih =>
     intro n m a pos rest h q m' hA hmo hd hW
@@ -1041,7 +1041,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     · simp only [encName, strB, List.length_cons, List.length_append, hsz]
       rw [UInt64.toNat_add, hq8, hlN]; simp [u64B] at hlen ⊢; omega
     · exact (hf1.trans (frame_grows hg)).trans
-        (frame_store hf2 (by simp [nstrSch, NSREC, NSSLOT]) (by simp [nstrSch]))
+        (frame_store hf2 (by simp [tier1, tierOff, nstrSch, NSREC, NSSLOT]) (by simp [nstrSch]))
   | num pre k ih =>
     intro n m a pos rest h q m' hA hmo hd hW
     simp only [nameFits, Bool.and_eq_true, decide_eq_true_eq] at hx
@@ -1094,7 +1094,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     · rw [hX, AM.res_bind _ _ _ ok1, res1]; exact res2
     · simp only [encName, List.length_cons, List.length_append]
       rw [UInt64.toNat_add]; simp [u64B] at hlen ⊢; omega
-    · exact hf1.trans (frame_store hf2 (by simp [nnumSch, NNREC, NNSLOT]) (by simp [nnumSch]))
+    · exact hf1.trans (frame_store hf2 (by simp [tier1, tierOff, nnumSch, NNREC, NNSLOT]) (by simp [nnumSch]))
 
 end nameRef
 

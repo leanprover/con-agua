@@ -32,9 +32,9 @@ open L.Arena
 /-! ## A pool write at a tagged address plus an offset -/
 
 theorem vpool_st_k (X : Mem) (T k v : Word) (h41 : T.toNat < 2 ^ 41)
-    (hsz : (X.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40)
-    (hk : (T &&& 1099511627775).toNat + k.toNat < (X.arr64 (tierA 0 (T >>> 40))).size) :
-    vpool (X.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) v) = (vpool X).set! (T + k).toNat v :=
+    (hsz : (X.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
+    (hk : (T &&& 1099511627775).toNat + k.toNat < (X.arr64 (tierA POOL (T >>> 40))).size) :
+    vpool (X.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + k) v) = (vpool X).set! (T + k).toNat v :=
   vpool_stidx X T k v h41 (by rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; omega) hsz (by omega)
 
 /-! ## `intern_nanon` (master's `internNAnon_spec`, `internNAnon_stage`) -/
@@ -46,7 +46,7 @@ def naProg : Prog :=
 def naFns : List FnName := naProg.map (·.1)
 
 /-- `intern_nanon` writes the `anonymous` table and its counts. -/
-theorem naProg_closed : closedA naProg [NAREC, NAREC + 256, NASLOT, NASLOT + 256] [34, 35] naFns = true := by decide +kernel
+theorem naProg_closed : closedA naProg [NAREC, tier1 NAREC, NASLOT, tier1 NASLOT] [34, 35] naFns = true := by decide +kernel
 
 /-- The program bundle. -/
 abbrev NaF (p : Prog) : Prop := ProgHas p naProg
@@ -84,7 +84,7 @@ theorem naF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
 
 /-- `intern_nanon` writes the `anonymous` table only. -/
 theorem naF_frame {m m' : Mem} {args r : List Word} (h : naF m args = some (r, m')) :
-    MemFrame [NAREC, NAREC + 256, NASLOT, NASLOT + 256] [34, 35] m m' := by
+    MemFrame [NAREC, tier1 NAREC, NASLOT, tier1 NASLOT] [34, 35] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame naProg_closed (by decide) (run_of_callW hc)).1
 
@@ -93,7 +93,7 @@ theorem naF_frame {m m' : Mem} {args r : List Word} (h : naF m args = some (r, m
 /-- **The model of `pool_room(k)`**: `k` words reserved at the pool top (inside the top's tier). -/
 def prW (m : Mem) (k : Word) : Option (Word × Mem) :=
   if rdW (m.arr64 CTL) 0 + k < rdW (m.arr64 CTL) 0 then none
-  else if m.len64 (tierA 0 (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) + k then none
+  else if m.len64 (tierA POOL (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) + k then none
   else some (rdW (m.arr64 CTL) 0, m.set64 CTL 0 (rdW (m.arr64 CTL) 0 + k))
 
 theorem poolRoom_specW (p : Prog) (hp : p.lookup "pool_room" = some L.Stubs.poolRoom) (n : Nat)
@@ -125,7 +125,7 @@ theorem callW_pr {p : Prog} (hp : p.lookup "pool_room" = some L.Stubs.poolRoom) 
 /-- `prW`, unfolded: the old top, the top raised, the room inside the top's tier array. -/
 theorem prW_some {m m' : Mem} {k o : Word} (h : prW m k = some (o, m')) (hp : pcap m < 2 ^ 64) :
     o = m.top ∧ m' = m.set64 CTL 0 (m.top + k) ∧ m.top.toNat + k.toNat < 2 ^ 64 ∧
-      (m.top &&& 1099511627775).toNat + k.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+      (m.top &&& 1099511627775).toNat + k.toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size := by
   simp only [prW] at h
   obtain ⟨c1, h⟩ := of_ite_none h
   obtain ⟨c2, h⟩ := of_ite_none h
@@ -136,7 +136,7 @@ theorem prW_some {m m' : Mem} {k o : Word} (h : prW m k = some (o, m')) (hp : pc
   simp only [← top_rdW] at c2 hno ⊢
   have hsz := pcap_tier m (m.top >>> 40) hp
   have hsplit := tag_split m.top
-  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+  have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
   have hik : ((m.top &&& 1099511627775) + k).toNat = (m.top &&& 1099511627775).toNat + k.toNat := by
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
@@ -148,13 +148,13 @@ theorem prW_some {m m' : Mem} {k o : Word} (h : prW m k = some (o, m')) (hp : pc
 array, keeps a growth a growth. -/
 theorem grows_pset_k {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {T k x : Word}
     (hT : T.toNat < 2 ^ 41) (hq : m₀.top.toNat ≤ (T + k).toNat)
-    (hi : (T &&& 1099511627775).toNat + k.toNat < (m.arr64 (tierA 0 (T >>> 40))).size) :
-    Grows m₀ (m.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) x) := by
+    (hi : (T &&& 1099511627775).toNat + k.toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
+    Grows m₀ (m.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + k) x) := by
   have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.2.2.1; omega
   have hsz := pcap_tier m (T >>> 40) hpc
   have hv := vpool_st_k m T k x hT (by omega) hi
-  have hne : tierA 0 (T >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
-  have htop : (m.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) x).top = m.top := L.Rom.top_set64_arr _ _ _ _ hne
+  have hne : tierA POOL (T >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+  have htop : (m.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + k) x).top = m.top := L.Rom.top_set64_arr _ _ _ _ hne
   obtain ⟨hf, ha, hle, hcap, hpe, ht, hin⟩ := hg
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [htop]; exact PFrame.set64 _ _ _ hf
@@ -168,14 +168,14 @@ theorem grows_pset_k {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {T k
 /-- `grows_pset_k` at `k = 0` (the store `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx] := x`). -/
 theorem grows_pset0 {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {T x : Word}
     (hT : T.toNat < 2 ^ 41) (hq : m₀.top.toNat ≤ T.toNat)
-    (hi : (T &&& 1099511627775).toNat < (m.arr64 (tierA 0 (T >>> 40))).size) :
-    Grows m₀ (m.set64 (tierA 0 (T >>> 40)) (T &&& 1099511627775) x) := by
+    (hi : (T &&& 1099511627775).toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
+    Grows m₀ (m.set64 (tierA POOL (T >>> 40)) (T &&& 1099511627775) x) := by
   have h := grows_pset_k hg hok (T := T) (k := 0) (x := x) hT (by simpa using hq) (by simpa using hi)
   simpa using h
 
 /-- Raising the top by `k` words inside the top's tier array grows the pool. -/
 theorem grows_raise (m : Mem) (k : Word) (hok : PoolOK m)
-    (hk : (m.top &&& 1099511627775).toNat + k.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+    (hk : (m.top &&& 1099511627775).toNat + k.toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size) :
     Grows m (m.set64 CTL 0 (m.top + k)) :=
   Grows.write m m k hok (PFrame.refl _) (Agree.refl _ _) hk
 
@@ -184,13 +184,13 @@ def iwpW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, s, d, l =>
     if l = 0 then some m
-    else iwpW n (m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1)
+    else iwpW n (m.set64 (tierA POOL (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1)
 
 theorem iwpW_nil (n : Nat) (m : Mem) (s d l : Word) (h : l = 0) :
     iwpW (n + 1) m s d l = some m := by simp [iwpW, h]
 theorem iwpW_cons (n : Nat) (m : Mem) (s d l : Word) (h : l ≠ 0) :
     iwpW (n + 1) m s d l =
-      iwpW n (m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1) := by
+      iwpW n (m.set64 (tierA POOL (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1) := by
   simp [iwpW, h]
 grind_pattern [arena_grind] iwpW_nil => iwpW (n + 1) m s d l
 grind_pattern [arena_grind] iwpW_cons => iwpW (n + 1) m s d l
@@ -232,7 +232,7 @@ theorem tag_succ (d : Word) (hd : d.toNat < 2 ^ 41) (hi : (d &&& 1099511627775).
 (given one), the slice, nothing below `d` changed, and only the pool's arrays written. -/
 theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s d l : Word), iwpW n m s d l = some m' →
     Grows m₀ m → m₀.top.toNat ≤ d.toNat → d.toNat < 2 ^ 41 →
-    (d &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (d >>> 40))).size → s.toNat + l.toNat < 2 ^ 64 →
+    (d &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA POOL (d >>> 40))).size → s.toNat + l.toNat < 2 ^ 64 →
     Grows m₀ m' ∧ MemFrame [POOL, POOL1] [] m m' ∧
       (∀ i, i < d.toNat → (vpool m')[i]? = (vpool m)[i]?) ∧
       sliceL (vpool m') d.toNat l.toNat = sliceL (m.arr64 IW) s.toNat l.toNat := by
@@ -254,12 +254,12 @@ theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s
     have hs1 : (s + 1).toNat = s.toNat + 1 := toNat_succ_lt (by omega)
     have hlm : (l - 1).toNat = l.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-    have hne : tierA 0 (d >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+    have hne : tierA POOL (d >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
     have hg₁ := grows_pset0 hg hok (x := rdW (m.arr64 IW) s) hd41 hd (by omega)
     have hv₁ := vpool_stidx0 m d (rdW (m.arr64 IW) s) hd41 (by omega) (by omega)
     obtain ⟨hg', hf, hbl, hsl⟩ := ih _ _ _ _ _ h hg₁ (by omega) (by omega)
       (by rw [et, ei, hlm, size_set64]; omega) (by rw [hs1, hlm]; omega)
-    have hmem : tierA 0 (d >>> 40) ∈ [POOL, POOL1] := by
+    have hmem : tierA POOL (d >>> 40) ∈ [POOL, POOL1] := by
       rcases tierA_pool (d >>> 40) with e | e <;> simp [e]
     refine ⟨hg', ((MemFrame.set64 _ _ hne _ _).mono (by simpa using hmem) (by simp)).trans hf,
       fun i hi => ?_, ?_⟩
@@ -268,7 +268,7 @@ theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s
       simp [this]
     · obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := ⟨l.toNat - 1, by omega⟩
       rw [hk, sliceL_succ, sliceL_succ]
-      have hiw : (m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s)).arr64 IW = m.arr64 IW :=
+      have hiw : (m.set64 (tierA POOL (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s)).arr64 IW = m.arr64 IW :=
         arr64_set64_tier_ne _ _ _ _ _ ⟨by decide, by decide⟩
       rw [ed, hs1, hlm, hk, hiw] at hsl
       simp only [Nat.add_sub_cancel] at hsl
@@ -289,7 +289,7 @@ def nrProg : Prog :=
 def nrFns : List FnName := nrProg.map (·.1)
 
 /-- `name_rec` writes the pool (and its top) and the `str` table. -/
-theorem nrProg_closed : closedA nrProg [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] nrFns = true := by
+theorem nrProg_closed : closedA nrProg [POOL, POOL1, NSREC, tier1 NSREC, NSSLOT, tier1 NSSLOT] [0, 36, 37] nrFns = true := by
   decide +kernel
 
 abbrev NrF (p : Prog) : Prop := ProgHas p nrProg
@@ -305,8 +305,8 @@ theorem nrF_spec (p : Prog) (hp : NrF p) (n : Nat) (s₀ : St) (args : List Word
 
 /-- The three bytes `rec` at `o`. -/
 def recBytes (m : Mem) (o : Word) : Mem :=
-  ((m.set64 (tierA 0 (o >>> 40)) (o &&& 1099511627775) 114).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 1) 101).set64
-    (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 2) 99
+  ((m.set64 (tierA POOL (o >>> 40)) (o &&& 1099511627775) 114).set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 1) 101).set64
+    (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 2) 99
 
 /-- `name_rec`'s body over its callees' runs. -/
 def nrW (p : Prog) (n : Nat) (m : Mem) (x : Word) : Option (Word × Mem) :=
@@ -332,7 +332,7 @@ theorem strWords_recB : strWords "rec" = [114, 101, 99] := by decide
 
 /-- **The bytes after the reserved room grow the pool and hold `rec`.** -/
 theorem recBytes_ok (m : Mem) (hpool : PoolOK m)
-    (hroom : (m.top &&& 1099511627775).toNat + 3 ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+    (hroom : (m.top &&& 1099511627775).toNat + 3 ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size) :
     Grows m (recBytes (m.set64 CTL 0 (m.top + 3)) m.top) ∧
       SliceOK (recBytes (m.set64 CTL 0 (m.top + 3)) m.top) m.top 3 ∧
       sliceL (vpool (recBytes (m.set64 CTL 0 (m.top + 3)) m.top)) m.top.toNat 3 = strWords "rec" := by
@@ -341,8 +341,8 @@ theorem recBytes_ok (m : Mem) (hpool : PoolOK m)
   have hsz := hpool.small.tier (m.top >>> 40)
   have hsplit := tag_split m.top
   have htier := tag_tier_le m.top h41
-  have hne : tierA 0 (m.top >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
-  have hX : (m.set64 CTL 0 (m.top + 3)).arr64 (tierA 0 (m.top >>> 40)) = m.arr64 (tierA 0 (m.top >>> 40)) :=
+  have hne : tierA POOL (m.top >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+  have hX : (m.set64 CTL 0 (m.top + 3)).arr64 (tierA POOL (m.top >>> 40)) = m.arr64 (tierA POOL (m.top >>> 40)) :=
     Mem.arr64_set64_ne _ _ _ _ _ hne
   have e1 : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (m.top + 2).toNat = m.top.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
@@ -415,12 +415,12 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   simp only at hs₃ hR₃ hs₃' hI
   rw [hs₃] at hR₃
   rw [hs₃'] at hI
-  have hfr : MemFrame [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] m m₃ :=
+  have hfr : MemFrame [POOL, POOL1, NSREC, tier1 NSREC, NSSLOT, tier1 NSSLOT] [0, 36, 37] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
       ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [nstrCS]))
   have hmo₃ : ModeOK m₃ := hmo₂.frame (consInternM_frame nstrCS_wf hI) (by simp [nstrCS]) (by simp [nstrCS])
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS (internNNode_str_run (decI x) "rec" a) hok hR₃
-    hres hfr (by simp [POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [tier1, tierOff, POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩) hmo₃
   rw [hr] at hrun c
   refine ⟨decI (r.headD 0), a', hrun, hS', hg', ?_, rfl⟩
@@ -439,7 +439,7 @@ def ilProg : Prog :=
 def ilFns : List FnName := ilProg.map (·.1)
 
 /-- `intern_ls_iw` writes the pool (and its top) and the list table with its column. -/
-theorem ilProg_closed : closedA ilProg [POOL, POOL1, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] ilFns = true := by
+theorem ilProg_closed : closedA ilProg [POOL, POOL1, LSREC, tier1 LSREC, LSSLOT, tier1 LSSLOT, LSHP, tier1 LSHP] [0, 40, 41] ilFns = true := by
   decide +kernel
 
 abbrev IlF (p : Prog) : Prop := ProgHas p ilProg
@@ -454,7 +454,7 @@ theorem ilF_spec (p : Prog) (hp : IlF p) (n : Nat) (s₀ : St) (args : List Word
   callF_spec ilProg_closed (hp.agree ilFns) (by decide) n s₀ args
 
 theorem ilF_frame {m m' : Mem} {args r : List Word} (h : ilF m args = some (r, m')) :
-    MemFrame [POOL, POOL1, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] m m' := by
+    MemFrame [POOL, POOL1, LSREC, tier1 LSREC, LSSLOT, tier1 LSSLOT, LSHP, tier1 LSHP] [0, 40, 41] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame ilProg_closed (by decide) (run_of_callW hc)).1
 
@@ -546,12 +546,12 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have hsz := hpool.small.tier (m.top >>> 40)
   have hsplit := tag_split m.top
   have htier := tag_tier_le m.top h41
-  have hne : tierA 0 (m.top >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+  have hne : tierA POOL (m.top >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
   have htl : (m.top + l).toNat = m.top.toNat + l.toNat := by
     rw [UInt64.toNat_add]; simp; omega
   have g0 : Grows m m₁ := by rw [hm₁]; exact grows_raise m l hpool hroom
   have hiw₁ : m₁.arr64 IW = m.arr64 IW := by rw [hm₁, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have htier₁ : m₁.arr64 (tierA 0 (m.top >>> 40)) = m.arr64 (tierA 0 (m.top >>> 40)) := by
+  have htier₁ : m₁.arr64 (tierA POOL (m.top >>> 40)) = m.arr64 (tierA POOL (m.top >>> 40)) := by
     rw [hm₁, Mem.arr64_set64_ne _ _ _ _ _ hne]
   obtain ⟨hsl, hb⟩ := hslice_lsWords l.toNat o.toNat us hd
   have hIW := hS.2.2.2.1
@@ -580,10 +580,10 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
   obtain ⟨hca, hpi, -⟩ := internLsNode_keep _ _ _ _ hrun
-  have hfr : MemFrame [POOL, POOL1, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] m m₃ :=
+  have hfr : MemFrame [POOL, POOL1, LSREC, tier1 LSREC, LSSLOT, tier1 LSSLOT, LSHP, tier1 LSHP] [0, 40, 41] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
       (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
-  obtain ⟨hS', hg'⟩ := StageR.of_walkM hS hA₃ hfr (by simp [POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
+  obtain ⟨hS', hg'⟩ := StageR.of_walkM hS hA₃ hfr (by simp [tier1, tierOff, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
     (by simp only [cp, hca, hpi]) (hmo₂.frame hf₃ (by simp [lsSch]) (by simp [lsSch]))
   rw [hr] at hrun c
   refine ⟨_, _, hrun, hS', hg', ?_, rfl⟩

@@ -33,7 +33,7 @@ def liftFns : List FnName :=
 
 /-- What they write: the lift memo `LMEMO` (41), the derived ranges 42‥46, and the tables `bvar`
 (22, 23), `app` (4, 5), `lam` (27, 28), `forallE` (29, 30), `letE` (20, 21), `proj` (31, 32), the
-tables and ranges in both tiers (tier 1 of array `a` is `a + 256`). -/
+tables and ranges in both tiers (tier 1 of array `a` is `tier1 a`). -/
 def liftA : List ArrId := [41, 42, 43, 44, 45, 46, 22, 23, 4, 5, 27, 28, 29, 30, 20, 21, 31, 32,
   298, 299, 300, 301, 302, 278, 279, 260, 261, 283, 284, 285, 286, 276, 277, 287, 288]
 /-- The `CTL` words: the lift memo's stamp and count (42, 43) and the six tables' counts. -/

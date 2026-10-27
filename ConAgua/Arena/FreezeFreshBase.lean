@@ -179,8 +179,8 @@ variable (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → 
 `CTL` and the tier-0 arrays kept (and the node relation transferred, `RTrans`). -/
 theorem storeR_fresh (hK : KFrame S hs KP) {m m' : Mem} (hc : m'.arr64 CTL = m.arr64 CTL)
     (hra : m'.arr64 S.ra = m.arr64 S.ra) (hsa : m'.arr64 S.sa = m.arr64 S.sa)
-    (hsa1 : ∀ x, rdW (m'.arr64 (S.sa + 256)) x = 0)
-    (hsz : (m'.arr64 (S.sa + 256)).size = (m.arr64 (S.sa + 256)).size)
+    (hsa1 : ∀ x, rdW (m'.arr64 (tier1 S.sa)) x = 0)
+    (hsz : (m'.arr64 (tier1 S.sa)).size = (m.arr64 (tier1 S.sa)).size)
     (hR : RTrans S R hs m m') {on : Bool} {tbP tbS : Tbl α (Idx k) δ} (h0 : tbS.nodes.size = 0)
     (h : StoreR S R hs KP m on tbP tbS) : StoreR S R hs KP m' on tbP tbS := by
   obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1, hG⟩ := h
@@ -254,17 +254,17 @@ to a memory with the pool kept (`PoolTr0`). -/
 theorem rTrans_pool0 (hF : RFrame S R hs)
     (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA S.ra t) = m₁.arr64 (tierA S.ra t)) → PoolTr0 m₁ m₂ →
       (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, hs m₂ t i = hs m₁ t i)
-    (hx : ∀ b ∈ [POOL, POOL1, CTL], b ≠ S.ra ∧ b ≠ S.ra + 256)
+    (hx : ∀ b ∈ [POOL, POOL1, CTL], b ≠ S.ra ∧ b ≠ tier1 S.ra)
     {m m' : Mem} (hw : m'.words.size = m.words.size) (hp : PoolTr0 m m') : RTrans S R hs m m' := by
   intro t i hf
-  let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (S.ra + 256) (m'.arr64 (S.ra + 256))
+  let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
   have hw1 : (m.setA S.ra (m'.arr64 S.ra)).words.size = m.words.size := Mem.setA_words ..
-  have hne : S.ra ≠ S.ra + 256 := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
+  have hne : S.ra ≠ tier1 S.ra := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]
     exact Mem.setA_self m m' _ hw
-  have e1 : m₁.arr64 (S.ra + 256) = m'.arr64 (S.ra + 256) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
-  have eo : ∀ b, b ≠ S.ra → b ≠ S.ra + 256 → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
+  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
+  have eo : ∀ b, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => h2 h.1), Mem.setA_arr, ite_eq_right (fun h => h1 h.1)]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
     rcases tierA_cases' S.ra t with e | e <;> rw [e]

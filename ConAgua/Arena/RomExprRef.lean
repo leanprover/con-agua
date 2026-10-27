@@ -58,39 +58,39 @@ theorem mkAppW_store {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m'
     MemFrame StoreA StoreC m m' := by
   unfold mkAppW at h; split at h; · cases h
   exact mkK_store ADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact frame_store (consInternM_frame appCS_wf hx) (by simp [ConsSch.wset, appCS, AREC, ASLOT])
+    exact frame_store (consInternM_frame appCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, appCS, AREC, ASLOT])
       (by simp [appCS])) h
 theorem mkLamW_store {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkLamW at h; split at h; · cases h
   exact mkK_store LADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact frame_store (consInternM_frame lamCS_wf hx) (by simp [ConsSch.wset, lamCS, LAREC, LASLOT])
+    exact frame_store (consInternM_frame lamCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, lamCS, LAREC, LASLOT])
       (by simp [lamCS])) h
 theorem mkForallW_store {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkForallW at h; split at h; · cases h
   exact mkK_store FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact frame_store (consInternM_frame forallCS_wf hx)
-      (by simp [ConsSch.wset, forallCS, FAREC, FASLOT]) (by simp [forallCS])) h
+      (by simp [tier1, tierOff, ConsSch.wset, forallCS, FAREC, FASLOT]) (by simp [forallCS])) h
 theorem mkLetW_store {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkLetW at h; split at h; · cases h
   exact mkK_store LEDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact frame_store (consInternM_frame letCS_wf hx) (by simp [ConsSch.wset, letCS, LEREC, LESLOT])
+    exact frame_store (consInternM_frame letCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, letCS, LEREC, LESLOT])
       (by simp [letCS])) h
 theorem mkProjW_store {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkProjW at h; split at h; · cases h
   exact mkK_store PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact frame_store (consInternM_frame projCS_wf hx) (by simp [ConsSch.wset, projCS, PJREC, PJSLOT])
+    exact frame_store (consInternM_frame projCS_wf hx) (by simp [tier1, tierOff, ConsSch.wset, projCS, PJREC, PJSLOT])
       (by simp [projCS])) h
 theorem binternW_store {m m' : Mem} {u r : Word} (h : binternW m u = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
-  exact frame_store (consInternM_frame bvarCS_wf h) (by simp [ConsSch.wset, bvarCS, BREC, BSLOT])
+  exact frame_store (consInternM_frame bvarCS_wf h) (by simp [tier1, tierOff, ConsSch.wset, bvarCS, BREC, BSLOT])
     (by simp [bvarCS])
 theorem fvinternW_store {m m' : Mem} {u t r : Word} (h : fvinternW m u t = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
-  exact frame_store (fvinternW_frame (hI := h)) (by simp [FVREC, FVSLOT, FVLP])
+  exact frame_store (fvinternW_frame (hI := h)) (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP])
     (by simp)
 
 /-! ## The memo relation -/
@@ -744,12 +744,12 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     refine ⟨m, _, iEG_sort m a _ _ (decI h) u _ (AM.run_of_ok _ _ ok1)
       (by rw [show (decI h : EIdx) = AM.res (internE (.sort (AM.res (internLevel u) a))) (AM.st (internLevel u) a)
             from res2.symm]; exact AM.run_of_ok _ _ ok2), hR2,
-      (hM.frame (frame_romA hf1)).frame (frame_romA (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT, SOLP])
+      (hM.frame (frame_romA hf1)).frame (frame_romA (frame_store hf2 (by simp [tier1, tierOff, sortSch, SOREC, SOSLOT, SOLP])
         (by simp [sortSch]))), hlt, ?_, ?_, ?_, ?_⟩
     · rw [hq1, (drop_tag rom hr hd).2]; simp; omega
-    · exact frame_storeE (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
-    · exact frame_exprA_stk (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
-    · exact fun hz => hz.frameS (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
+    · exact frame_storeE (hf1.trans (frame_store hf2 (by simp [tier1, tierOff, sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
+    · exact frame_exprA_stk (hf1.trans (frame_store hf2 (by simp [tier1, tierOff, sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
+    · exact fun hz => hz.frameS (hf1.trans (frame_store hf2 (by simp [tier1, tierOff, sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
   | const nm us =>
     intro n mem a pos rest seen m h q mem' hA hmo hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true, decide_eq_true_eq] at he
@@ -787,7 +787,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
     obtain ⟨ok3, hR3, res3, hf3⟩ := L.Front.internConst_D m₂ _ hR2 h mem' hnm hl hlt1 hlt2 hI
     rw [← res1, ← res2] at ok3 hR3 res3
-    have hf3' := frame_store hf3 (by simp [constSch, CREC, CSLOT, CLP]) (by simp [constSch])
+    have hf3' := frame_store hf3 (by simp [tier1, tierOff, constSch, CREC, CSLOT, CLP]) (by simp [constSch])
     refine ⟨m, _, iEG_const m a _ _ _ (decI h) nm us _ _ (AM.run_of_ok _ _ ok1) (AM.run_of_ok _ _ ok2)
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3), hR3,
       ((hM.frame (frame_romA hf1)).frame hf2).frame (frame_romA hf3'), hlt, ?_, ?_, ?_, ?_⟩
@@ -834,7 +834,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
       obtain ⟨ok, hR, res, hf⟩ := L.Front.internLit_D mem a hA h mem' mem.top 0
         hsl0 (by simp [Norm]) (ModeOK.slice0 hmo hsl0) hI
       simp only [UInt64.toNat_zero, pv] at ok hR res
-      have hf' := frame_store hf (by simp [litSch, REC, SLOT]) (by simp [litSch])
+      have hf' := frame_store hf (by simp [tier1, tierOff, litSch, REC, SLOT]) (by simp [litSch])
       refine ⟨m, _, iEG_lit m a _ (decE h) _ (by rw [← res]; exact AM.run_of_ok _ _ ok), hR,
         hM.frame (frame_romA hf'), hlt, hq9, frame_storeE hf', frame_exprA_stk hf', fun hz => hz.frameS hf'⟩
     · rename_i hk0
@@ -845,7 +845,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
       have hpv : pv (vpool (litWordMem mem (UInt64.ofNat k))) mem.top.toNat (UInt64.toNat 1) = k := by
         simp [pv, hP1v, wt, hkN]
       rw [hpv] at ok hR res
-      have hf' := frame_store hf (by simp [litSch, REC, SLOT]) (by simp [litSch])
+      have hf' := frame_store hf (by simp [tier1, tierOff, litSch, REC, SLOT]) (by simp [litSch])
       have hg' := frame_grows hg
       refine ⟨m, _, iEG_lit m a _ (decE h) _ (by rw [← res]; exact AM.run_of_ok _ _ ok), hR,
         (hM.frame (frame_romA hg')).frame (frame_romA hf'), hlt, hq9,

@@ -79,10 +79,10 @@ tables' tier-1 table (the growth's zero loop `kzeroLs`), and restarts `B` at `0`
 `clear` vacates its slots and restarts the epoch at `1` when the epoch reaches `EPOCH_MAX`. Only
 the slot tables carry `B`: the memos have their own stamps. -/
 
-/-- The 19 tables' slot arrays (tier 0's ids; the wrap vacates tier 1, `sa + 256`). -/
+/-- The 19 tables' slot arrays (tier 0's ids; the wrap vacates tier 1, `tier1 sa`). -/
 def scrSlots : List ArrId := [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 26, 28, 30, 32, 34, 36, 38, 40]
 
-/-- The scratch tables' slot arrays (tier 1, `sa + 256`), which the wrap writes. -/
+/-- The scratch tables' slot arrays (tier 1, `tier1 sa`), which the wrap writes. -/
 def slot1Arrs : List ArrId :=
   [259, 261, 263, 265, 267, 269, 271, 273, 275, 277, 279, 282, 284, 286, 288, 290, 292, 294, 296]
 

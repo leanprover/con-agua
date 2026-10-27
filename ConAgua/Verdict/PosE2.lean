@@ -440,7 +440,7 @@ theorem frameOKE_step (n : Nat) (hn : n ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe env
       subst this
       rcases hst : naF m [] with _ | ⟨rn, m1⟩; · exact Or.inl rfl
       obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := naF_ok dn vis fe m m1 a rn hst hS
-      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.of_frame (naF_frame hst) (by simp [NAREC, NASLOT]) (by simp),
+      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.of_frame (naF_frame hst) (by simp [tier1, tierOff, NAREC, NASLOT]) (by simp),
         naF_afr hst, hxH, by rw [hxd]; exact hrun⟩
     · rw [ite_eq_right h0]
       obtain ⟨⟨cg, tg⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
