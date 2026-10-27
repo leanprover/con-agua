@@ -683,7 +683,6 @@ end
 
 section
 
-set_option linter.unusedSectionVars false
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the L side — every
 function of the block refines its word model, by one induction on the exec fuel. -/
@@ -749,6 +748,7 @@ variable (p : Prog)
 variable {p} (L : NbLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (ih : NbSpec p cR n)
 include L hcR ih
 
+omit hcR in
 theorem nbFields_step (s₀ : St) (vis ctx fu po pl base nF j cur ns kO kL dO dL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_fields" [vis, ctx, fu, po, pl, base, nF, j, cur, ns, kO,
       kL, dO, dL]
@@ -765,6 +765,7 @@ theorem nbFields_step (s₀ : St) (vis ctx fu po pl base nF j cur ns kO kL dO dL
       nbFieldsK5_some, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
 
+omit hcR in
 theorem nbWalk_step (s₀ : St) (vis ctx root fu po pl hi nF crest ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_ctors_walk" [vis, ctx, root, fu, po, pl, hi, nF, crest, ns]
     ⦃fun r s' => LocEq s' s₀ ∧ nbWalkW cR (n + 1) s₀.mem vis ctx root fu po pl hi nF crest ns =
@@ -796,6 +797,7 @@ theorem nbOne_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cv
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 
+omit hcR in
 theorem nbCtors_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_ctors" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cO, cL, ns, oO, oL]
     ⦃fun r s' => LocEq s' s₀ ∧ nbCtorsW cR (n + 1) s₀.mem vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL =
@@ -845,6 +847,7 @@ theorem nbNew_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Wor
       LocEq, BinOp.eval, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 
+omit hcR in
 theorem nbKey_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_cont_key" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns]
     ⦃fun r s' => LocEq s' s₀ ∧ nbKeyW cR (n + 1) s₀.mem vis ctx fu po pl kb nn us dO dL nPc cty ns =
@@ -874,6 +877,7 @@ theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
 
+omit hcR in
 theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_pos_app" [vis, ctx, fu, po, pl, kb, hi, w, ns]
     ⦃fun r s' => LocEq s' s₀ ∧ nbAppW cR (n + 1) s₀.mem vis ctx fu po pl kb hi w ns =
@@ -888,6 +892,7 @@ theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 
+omit hcR in
 theorem nbBind_step (s₀ : St) (vis ctx fu po pl dep kb w ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_pos_bind" [vis, ctx, fu, po, pl, dep, kb, w, ns]
     ⦃fun r s' => LocEq s' s₀ ∧ nbBindW cR (n + 1) s₀.mem vis ctx fu po pl dep kb w ns =
@@ -934,9 +939,9 @@ theorem nbSpec_all {p : Prog} (L : NbLook p) (cR : CallM) (hcR : CallSpec p cR) 
   induction n with
   | zero => exact nbSpec_zero p cR
   | succ n ih =>
-    exact ⟨nbPos_step L cR hcR n ih, nbBind_step L cR hcR n ih, nbApp_step L cR hcR n ih, nbCont_step L cR hcR n ih, nbKey_step L cR hcR n ih,
-      nbNew_step L cR hcR n ih, nbFrame_step L cR hcR n ih, nbCtors_step L cR hcR n ih, nbOne_step L cR hcR n ih, nbWalk_step L cR hcR n ih,
-      nbFields_step L cR hcR n ih⟩
+    exact ⟨nbPos_step L cR hcR n ih, nbBind_step L cR n ih, nbApp_step L cR n ih, nbCont_step L cR hcR n ih, nbKey_step L cR n ih,
+      nbNew_step L cR hcR n ih, nbFrame_step L cR hcR n ih, nbCtors_step L cR n ih, nbOne_step L cR hcR n ih, nbWalk_step L cR n ih,
+      nbFields_step L cR n ih⟩
 
 end L.Ind
 

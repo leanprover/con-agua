@@ -58,7 +58,7 @@ theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v :
     DK m (m.set64 b i v) :=
   ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hd), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hq)⟩
 
-theorem DK.tset64 (m : Mem) (t i v : Word) : DK m (m.set64 (tierA 0 t) i v) :=
+theorem DK.tset64 (m : Mem) (t i v : Word) : DK m (m.set64 (tierA POOL t) i v) :=
   ⟨arr64_set64_tier_ne _ _ _ _ _ (by decide), arr64_set64_tier_ne _ _ _ _ _ (by decide)⟩
 
 theorem DK.ofAbove {m m' : Mem} (h : Above64 m m') : DK m m' :=
@@ -246,7 +246,7 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
     rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₂⟩ <;> simp only [hP, litStrK, reduceCtorEq] at h
     split at h; cases h
     split at h; cases h
-    exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] _ _))
+    exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, tier1 litSch.ra, litSch.sa, tier1 litSch.sa] [litSch.ca, litSch.ca + 1] _ _))
 
 /-- **An expression line leaves `DECL`, `DLP` alone.** -/
 theorem applyExprW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)
@@ -283,7 +283,7 @@ theorem applyDeclW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : State
     hP (by rw [hrd]; simp; omega) hps
   have hm'D : m₁.arr64 DECL = m.arr64 DECL := F2.1 DECL (by decide) (by decide)
   have hE₁ : TblR m₁ EID st.exprs :=
-    hD.exprs.frame F2 (.inr (.inr rfl)) (by simp [DLP, idArrs]) (by simp)
+    hD.exprs.frame F2 (.inr (.inr rfl)) (by simp [DLP, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp)
   -- the push, with its value word
   have hpush : ∃ v, pushW m₁ k (tblW m NID name) (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0)
       (tblW m EID type) v q hn = some m' ∧ v.toNat < 2 ^ 32 := by

@@ -9,7 +9,6 @@ import ConAgua.Arena.IndGrindAttr
 The refinement theorems `nestCanonSub_refines`, `mentionsAnyGo_refines` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

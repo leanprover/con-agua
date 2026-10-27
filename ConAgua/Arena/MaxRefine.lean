@@ -189,7 +189,7 @@ theorem maxColFree : ColFree maxCS MRecRel := by
 
 /-- **What `intern_max` changes**: the table's arrays, the column, the counts. -/
 theorem minternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : minternW m u v = some (w, m')) :
-    MemFrame [MREC, MREC + 256, MSLOT, MSLOT + 256, MHP, MHP + 256] [10, 11] m m' :=
+    MemFrame [MREC, tier1 MREC, MSLOT, tier1 MSLOT, MHP, tier1 MHP] [10, 11] m m' :=
   consInternM_frame maxCS_wf hI
 
 theorem maxLocal : RLocal maxSch MRecRel mhash [] [] := by

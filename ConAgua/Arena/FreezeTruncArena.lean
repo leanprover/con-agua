@@ -26,8 +26,8 @@ def fzCS : List ConsSch :=
 theorem fzCS_mem {C : ConsSch} (h : C ∈ fzCS) : (C.ra, C.sa, C.w.toNat, C.ca.toNat) ∈ fzStores :=
   List.mem_map_of_mem (f := fun C : ConsSch => (C.ra, C.sa, C.w.toNat, C.ca.toNat)) h
 
-theorem storeTr_trunc (m : Mem) {C : ConsSch} (hC : C ∈ fzCS) (h1 : C.ra + 256 ∉ fzSrcs)
-    (h2 : C.sa + 256 ∉ fzSrcs) : StoreTr C.sch m (truncFrozen m) := by
+theorem storeTr_trunc (m : Mem) {C : ConsSch} (hC : C ∈ fzCS) (h1 : tier1 C.ra ∉ fzSrcs)
+    (h2 : tier1 C.sa ∉ fzSrcs) : StoreTr C.sch m (truncFrozen m) := by
   have hm := fzCS_mem hC
   refine ⟨truncFrozen_ctl m, truncFrozen_other m _ h1, truncFrozen_other m _ h2, ?_, ?_⟩
   · rw [show C.sch.ra = C.ra from rfl, truncFrozen_ra m hm]
@@ -40,7 +40,7 @@ theorem storeTr_trunc (m : Mem) {C : ConsSch} (hC : C ∈ fzCS) (h1 : C.ra + 256
 theorem consR_truncL {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {C : ConsSch}
     {R : Mem → Word → Word → α → Prop} {m : Mem} {on : Bool} {P Q : Tbl α (Idx k) δ}
     (hW : C.WF) (hF : RFrame C.sch R C.hsM) (hL : RLocal C.sch R C.hsM [] [])
-    (hC : C ∈ fzCS) (h1 : C.ra + 256 ∉ fzSrcs) (h2 : C.sa + 256 ∉ fzSrcs)
+    (hC : C ∈ fzCS) (h1 : tier1 C.ra ∉ fzSrcs) (h2 : tier1 C.sa ∉ fzSrcs)
     (h : ConsR C R m on P Q) : ConsR C R (truncFrozen m) on P Q :=
   consR_iff.mpr (storeR_trunc C.sch R C.hsM C.KP hW.sch hW.kframe (storeTr_trunc m hC h1 h2)
     (rTrans_local hW.sch hF hL (truncFrozen_words m)) (consR_iff.mp h))
@@ -149,17 +149,17 @@ to a memory with the pool kept (`PoolTr`). -/
 theorem rTrans_pool (hF : RFrame S R hs)
     (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA S.ra t) = m₁.arr64 (tierA S.ra t)) → PoolTr m₁ m₂ →
       (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, hs m₂ t i = hs m₁ t i)
-    (hx : ∀ b ∈ [POOL, POOL1, PT0, CTL], b ≠ S.ra ∧ b ≠ S.ra + 256)
+    (hx : ∀ b ∈ [POOL, POOL1, PT0, CTL], b ≠ S.ra ∧ b ≠ tier1 S.ra)
     {m m' : Mem} (hw : m'.words.size = m.words.size) (hp : PoolTr m m') : RTrans S R hs m m' := by
   intro t i hf
-  let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (S.ra + 256) (m'.arr64 (S.ra + 256))
+  let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
   have hw1 : (m.setA S.ra (m'.arr64 S.ra)).words.size = m.words.size := Mem.setA_words ..
-  have hne : S.ra ≠ S.ra + 256 := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
+  have hne : S.ra ≠ tier1 S.ra := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]
     exact Mem.setA_self m m' _ hw
-  have e1 : m₁.arr64 (S.ra + 256) = m'.arr64 (S.ra + 256) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
-  have eo : ∀ b, b ≠ S.ra → b ≠ S.ra + 256 → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
+  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
+  have eo : ∀ b, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => h2 h.1), Mem.setA_arr, ite_eq_right (fun h => h1 h.1)]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
     rcases tierA_cases' S.ra t with e | e <;> rw [e]
@@ -256,7 +256,7 @@ theorem ConsR.cnt0 {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {C : Cons
 
 theorem ColT2.trunc {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ]
     {L : Lens α δ k} {c : ArrId} {ca : Nat} {f : δ → Word} {m : Mem} {a : AState}
-    (hB : (c, ca) ∈ fzCols) (h1 : c + 256 ∉ fzSrcs)
+    (hB : (c, ca) ∈ fzCols) (h1 : tier1 c ∉ fzSrcs)
     (hc : (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat = (L.getP a).nodes.size)
     (h : ColT2 L c f m a) : ColT2 L c f (truncFrozen m) a :=
   ⟨colT_mono h.1 (fun i hi => by
@@ -264,7 +264,7 @@ theorem ColT2.trunc {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabit
     colT_mono h.2 (fun _ _ => by simp only [tierA_one', truncFrozen_other m _ h1])⟩
 
 theorem DerT2.trunc {α : Type} [BEq α] [Hashable α] {g : ETables → Tbl α EIdx UInt64}
-    {c : ArrId} {ca : Nat} {m : Mem} {a : AState} (hB : (c, ca) ∈ fzCols) (h1 : c + 256 ∉ fzSrcs)
+    {c : ArrId} {ca : Nat} {m : Mem} {a : AState} (hB : (c, ca) ∈ fzCols) (h1 : tier1 c ∉ fzSrcs)
     (hc : (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat = (g a.store.pers).nodes.size)
     (h : DerT2 a g (cP c m)) : DerT2 a g (cP c (truncFrozen m)) := by
   obtain ⟨⟨s0, h0⟩, ⟨s1, h1'⟩⟩ := h

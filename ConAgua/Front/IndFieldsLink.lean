@@ -4,7 +4,6 @@ import ConAgua.Front.IndRel
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The fields pass of an `inductive` line, linked to con-leche
@@ -414,6 +413,7 @@ section generic
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
+omit h64 hsize in
 theorem objLoopW_congr (m : Mem) (kind p i w j w' : Word)
     (h : nextMemberN b.data i w = nextMemberN b.data j w') :
     objLoopW b.data m kind p i w = objLoopW b.data m kind p j w' := by
@@ -433,18 +433,18 @@ theorem iobj_link {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanR
   · have hin := usizeInBounds b i hi
     by_cases hws : isWs (byteAt b i) = true
     · rw [H.ws i w seen st hi hws] at h
-      rw [objLoopW_congr b h64 hsize _ _ _ _ _ _ _ (nm_ws b h64 hsize i _ hi hws)] at hm
+      rw [objLoopW_congr b _ _ _ _ _ _ _ (nm_ws b h64 hsize i _ hi hws)] at hm
       exact iobj_link F kind p R Fin H (i + 1) w seen st m d e e' m' h hR hm
     by_cases h125 : byteAt b i = 125
     · obtain ⟨rfl, hF⟩ := H.close i w seen st m d e hi h125 h hR
       rw [objLoopW_close _ _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
         nm_close b h64 hsize i _ hi hws h125] at hm
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
-      exact ⟨(succ_toUInt64 b h64 hsize i).symm, hF⟩
+      exact ⟨(succ_toUInt64 h64 i).symm, hF⟩
     by_cases h44 : byteAt b i = 44
     · obtain ⟨rfl, h'⟩ := H.comma i w seen st d e hi h44 h
       simp only [bw, Bool.false_eq_true, ite_false] at hm
-      rw [objLoopW_congr b h64 hsize _ _ _ _ _ _ _ (nm_comma b h64 hsize i hi hws h44)] at hm
+      rw [objLoopW_congr b _ _ _ _ _ _ _ (nm_comma b h64 hsize i hi hws h44)] at hm
       exact iobj_link F kind p R Fin H (i + 1) true seen st m d e e' m' h' hR
         (by simpa [bw] using hm)
     by_cases h34 : byteAt b i = 34
@@ -558,19 +558,19 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
         rw [h'] at this
         rcases hk with rfl | rfl <;> revert this <;> decide
       rw [listLoopW_other _ _ _ _ _ _ _ hiW (hne 93 (.inl rfl)) (hne 123 (.inr rfl)),
-        ← succ_toUInt64 b h64 hsize] at hm
+        ← succ_toUInt64 h64] at hm
       exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab Q hQr hQt hQa item (i + 1) acc w m o cnt l e r m' h hR hc
         ho hrun hm
     by_cases h93 : byteAt b i = 93
     · obtain ⟨rfl, rfl⟩ := HG.close i acc w l e hi h93 h
       rw [listLoopW_close _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h93]; rfl)] at hm
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
-      refine ⟨rfl, by simp [hc], (succ_toUInt64 b h64 hsize i).symm, hrun, IGrow.refl _ _ _ _, hR,
+      refine ⟨rfl, by simp [hc], (succ_toUInt64 h64 i).symm, hrun, IGrow.refl _ _ _ _, hR,
         by simpa using ho, hQr _⟩
     by_cases h44 : byteAt b i = 44
     · have h' := HG.comma i acc w l e hi h44 h
       rw [listLoopW_other _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h44]; decide)
-        (by rw [byteW_eq b h64 hsize, h44]; decide), ← succ_toUInt64 b h64 hsize] at hm
+        (by rw [byteW_eq b h64 hsize, h44]; decide), ← succ_toUInt64 h64] at hm
       exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab Q hQr hQt hQa item (i + 1) acc true m o cnt l e r m' h'
         hR hc ho hrun hm
     by_cases h123 : byteAt b i = 123
@@ -651,14 +651,14 @@ theorem ilistW_link {α : Type} (G : USize → List α → Bool → ScanRes (Lis
     r.2.2 = e.toUInt64 ∧ r.2.1.toNat = l.length ∧ RunR Rec A sz m' r.1.toNat l ∧ Grow m m' ∧
       Room m' ∧ r.1.toNat = topN m A + 1 ∧ r.1.toNat + sz * l.length = topN m' A + 1 ∧ Q m m' := by
   obtain ⟨h91, hG⟩ := hW v l e h
-  have hv : v < b.usize := lt_of_byteAt_ne b h64 hsize v (by rw [h91]; decide)
+  have hv : v < b.usize := lt_of_byteAt_ne b v (by rw [h91]; decide)
   have hvW := (lt_usize_iff b h64 hsize v).mp hv
   rw [listW_eq, ite_eq_left hvW, ite_eq_right (by rw [byteW_eq b h64 hsize, h91]; decide), hfa] at hm
   cases hal : allocW m A 0 with
   | none => rw [hal, listK0_none] at hm; cases hm
   | some om =>
   obtain ⟨o, m₁⟩ := om
-  rw [hal, listK0_some, ← succ_toUInt64 b h64 hsize] at hm
+  rw [hal, listK0_some, ← succ_toUInt64 h64] at hm
   obtain ⟨a1, a2, a3, a4, -, -, -⟩ := allocW_facts m m₁ A hA _ o hR hal
   have a2' : topN m₁ A = topN m A := by rw [a2]; rfl
   obtain ⟨c1, c2, c3, c4, c5, c6, c7, c8⟩ := ilist_link b h64 hsize G S HG sub A hA sz hsz1 hsz hfa Rec
@@ -699,7 +699,7 @@ theorem valueAt_gt (i : USize) (hi : i < b.usize) (hk : keyEnd b (i + 1) ≠ 0)
     have hk1 := usizeStep b ke hke'
     have hp := skipWs_toNat_eq b h64 hb64 (ke + 1)
     have hpU : skipWs b (ke + 1) < b.usize :=
-      lt_of_byteAt_ne b h64 hsize _ (by simp at h58; rw [h58]; decide)
+      lt_of_byteAt_ne b _ (by simp at h58; rw [h58]; decide)
     have hp1 := usizeStep b _ hpU
     have hq := skipWs_toNat_eq b h64 hb64 (skipWs b (ke + 1) + 1)
     have g1 := skipWsN_ge b.data (ke + 1).toNat
@@ -842,6 +842,7 @@ theorem ids_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨hend.symm, m₁, rfl, rfl, list_link b h64 hsize v xs e hx⟩
 
+omit h64 hsize in
 /-- A list of records (slot `(7, s, sub)`). -/
 theorem list_arm (m m' : Mem) (kind q K s sub : Word) (i v : USize) (e' : Word)
     (hk : indSlotN kind K = (7, s, sub)) (hiv : i < v)

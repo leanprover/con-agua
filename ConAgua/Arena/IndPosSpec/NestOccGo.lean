@@ -11,7 +11,6 @@ import ConAgua.L.ModelGen
 The refinement theorems `mentionsAnyConst_refines`, `nestOccGo_refines`, `nestOcc_refines`, `memberIdxAt_refines`, `phApp_refines` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

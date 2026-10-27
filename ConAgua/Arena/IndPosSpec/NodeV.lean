@@ -8,7 +8,6 @@ import ConAgua.Arena.Reasons
 `NodeV`.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

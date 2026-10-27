@@ -48,7 +48,7 @@ private theorem pos_mapM_mem {α β : Type} {f : α → Option β} :
 /-! ## `block_nest_ctx` with the real `open_pis_at_fvars_f` -/
 
 theorem opfA_stage : ∀ b ∈ opfA, b < 201 ∨ 208 < b := by
-  simp [opfA, instListA, mkA, instA, liftA, SPN, IW, FVREC, FVSLOT, FVLP]
+  simp [tier1, tierOff, opfA, instListA, mkA, instA, liftA, SPN, IW, FVREC, FVSLOT, FVLP]
 theorem opfC_stage : ∀ x ∈ opfC, x.toNat < 202 ∨ 219 < x.toNat := by
   simp [opfC, instListC, mkC, instC, liftC]
 

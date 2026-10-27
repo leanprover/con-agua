@@ -45,7 +45,6 @@ guard (`e ≤ ks` stops it), which is also what makes its model terminate.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order
@@ -553,6 +552,7 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hprl : p.lookup "rec_line_loop" = some recLineLoop)
 include hb
 
+omit hb in
 theorem readNatLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n readNatLoop
@@ -565,13 +565,15 @@ theorem readNatLoop_spec (n : Nat) (s₀ : St) :
     sym only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih] <;> finish
 
+omit hb in
 theorem readNatLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     step p (exec p n) readNatLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [rdLoopN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (readNatLoop_spec p b hb (n + 1) s₀)
+  Triple.step_exec (readNatLoop_spec p b (n + 1) s₀)
 
+omit hb in
 include hprn in
 attribute [local lang_grind] rdNatN NONE in
 theorem readNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v e : Word) :
@@ -584,7 +586,7 @@ theorem readNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v e : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, readNatLoop_step_spec p b hb n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, readNatLoop_step_spec p b n] <;> finish
 
 include hpd hpn hprn in
 theorem pairLoop_spec (n : Nat) (s₀ : St) :
@@ -601,7 +603,7 @@ theorem pairLoop_spec (n : Nat) (s₀ : St) :
     have hb64 : b.size < 2 ^ 64 := by omega
     sym only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        L.Scan.Leaves.numEnd_spec p hpd hpn b hb64 n, readNat_spec p b hb hprn n] <;> finish
+        L.Scan.Leaves.numEnd_spec p hpd hpn b hb64 n, readNat_spec p b hprn n] <;> finish
 
 include hpd hpn hprn in
 theorem pairLoop_step_spec (n : Nat) (s₀ : St) :
@@ -647,7 +649,7 @@ theorem strRecLoop_spec (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
         nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
-        slotNat_spec p b hb ‹_› ‹_› ‹_› n, readNat_spec p b hb hprn n] <;> finish
+        slotNat_spec p b hb ‹_› ‹_› ‹_› n, readNat_spec p b hprn n] <;> finish
 
 include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn in
 theorem strRecLoop_step_spec (n : Nat) (s₀ : St) :
@@ -694,7 +696,7 @@ theorem numRecLoop_spec (n : Nat) (s₀ : St) :
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
         nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
-        slotNat_spec p b hb ‹_› ‹_› ‹_› n, readNat_spec p b hb hprn n] <;> finish
+        slotNat_spec p b hb ‹_› ‹_› ‹_› n, readNat_spec p b hprn n] <;> finish
 
 include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hprn in
 theorem numRecLoop_step_spec (n : Nat) (s₀ : St) :
@@ -742,7 +744,7 @@ theorem recLoop_spec (n : Nat) (s₀ : St) :
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
         nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
-        slotNat_spec p b hb ‹_› ‹_› ‹_› n, readNat_spec p b hb hprn n,
+        slotNat_spec p b hb ‹_› ‹_› ‹_› n, readNat_spec p b hprn n,
         recNatList_spec p b hb hpd hpn hprn hprp n,
         recStrName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hprs n,
         recNumName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hprn hprm n,

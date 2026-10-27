@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndsE4
-
 /-!
 # `check_block_agree`'s error refinement (lane `verdicts-b`, helper `ia2-inds`)
 
@@ -60,7 +59,7 @@ theorem cbagE_claim (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {c
   cases h1 : callE p n "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (c0 + 3), 0] m with
   | error e1 =>
     rw [h1, cbagE.k_open_pis_at_fvars_f.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1] at he

@@ -1,7 +1,6 @@
 import ConAgua.Final.BufLayout
 import ConAgua.Final.ParAbi
 import Kraken.X64.Registers
-set_option linter.unusedSectionVars false
 
 /-!
 # `ca_check_b` on the machine (lane parmode)
@@ -72,6 +71,7 @@ theorem ev_storeQ {Q : MachineState → Prop} {k : Nat} {s : MachineData} {r : R
   simp only [Int.toNat_natCast, hv, ← hmem] at h ⊢
   exact h
 
+omit [Host] in
 /-- The memory facts the stub's stores keep: the buffer's words, and the table's cells mapped. -/
 theorem qwrs_facts (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base blen)
     (val : Nat → BitVec 64) (d0 : DataMem)

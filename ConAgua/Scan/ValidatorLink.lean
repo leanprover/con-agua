@@ -39,7 +39,7 @@ theorem scanLine_run (fuel : Nat) (i : USize) (hi : i.toNat ≤ b.size) (r : Lis
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj h
     have hi' : i.toUInt64.toNat ≤ b.data.size := by simpa using hi
     have := M.of_run (P := fun s => s = { mem := { bytes := #[b.data] }, loc := Locals.init [] }) rfl hr
-      (scanLine_spec valProg b.data hsize rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl fuel _ rfl i.toUInt64 hi')
+      (scanLine_spec valProg b.data hsize rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl fuel _ rfl i.toUInt64 hi')
     exact this.2
 
 end ConAgua.Scan.ValidatorLink

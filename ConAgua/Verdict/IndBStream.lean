@@ -3,7 +3,6 @@ import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # Error refinement of `class_stream_recs` (lane `verdicts-b`, helper `ib`)
 
@@ -131,7 +130,7 @@ theorem csrE_claim (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
   | error e3 =>
     rw [h3, csrE.k_sl_cons.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   rw [h3, csrE.k_sl_cons.arm1] at he
   cases he

@@ -111,7 +111,7 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr)
   have hE1' : ∀ i : Nat, (erA m1)[i]? = (erA m)[i]? := fun i => by unfold erA; rw [hE1]
   refine ⟨r1.headD 0, memo1, icv, a2, m2, r2.headD 0, k, rfl, ho1, by omega, hrun2, hI3, hM3, hs3,
     ?_, ?_, ⟨by omega, fun i hi _ => ?_⟩, by rw [hIW3, hIW2, hIW1], ?_, ?_, hw⟩
-  · exact drop_shift rom hr _ _ _ _ (by rw [hd8, List.append_assoc]) _ hq3
+  · exact drop_shift rom _ _ _ _ (by rw [hd8, List.append_assoc]) _ hq3
   · rw [hq3, hq8]
   · rw [hek3.2 i (by omega) (by omega), er_set_ne _ _ _ _ (by omega), hE1']
   · rw [hek3.2 _ (by omega) (by omega)]

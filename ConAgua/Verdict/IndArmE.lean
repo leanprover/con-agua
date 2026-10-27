@@ -52,10 +52,10 @@ theorem checkStructProjTableRE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.
 
 theorem checkSumTeleE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) (hW : WtE p)
     (hCcv : CcvE p) : CheckSumTeleE p :=
-  fun hkp {_dn _vis _fe _env} henv hV hApd hCrk h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18 h19 h20
+  fun hkp {_dn _vis _fe _env} henv _hV _hApd _hCrk h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18 h19 h20
       hI1 hAb hcst hst s₀ a₀ cv n cvTa0 cvv cvTa hC hcv hcvb hcvs hta htab htas hA {_cvP _cvTaP} hcvP hcvTaP hws hfe
       F hF _e hc =>
-    CoreSpecE.of_callE (checkSumTele_claim hkp henv hV hApd hCrk hnv hW hCcv h1 h2 h3 h4 h5 h6 h7 h8 h9
+    CoreSpecE.of_callE (checkSumTele_claim hkp henv hnv hW hCcv h1 h2 h3 h4 h5 h6 h7 h8 h9
       h10 h11 h12 h13 h14 h15 h16 h17 h18 h19 h20 hI1 hAb hcst hst F hF s₀ a₀ cv n cvTa0 cvv cvTa hC
       hcv hcvb hcvs hta htab htas hA hcvP hcvTaP hws hfe) hc
 

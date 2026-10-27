@@ -775,7 +775,7 @@ theorem callW_mkProj (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (a₀ :
     AM.ok (internE (.proj (decI nm) i.toNat (decE e))) a₀ ∧
     ArenaD m' (AM.st (internE (.proj (decI nm) i.toNat (decE e))) a₀) ∧
     AM.res (internE (.proj (decI nm) i.toNat (decE e))) a₀ = decE (r.headD 0) ∧
-    MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256] [32, 33] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [PJREC, PJSLOT, PJDER, tier1 PJREC, tier1 PJSLOT, tier1 PJDER] [32, 33] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (mkProj_spec p hp.spine.derb hp.projf hp.projp hp.proji
     hp.mkproj n s₀ nm i e) h
   obtain ⟨-, hm⟩ := hm
@@ -783,7 +783,7 @@ theorem callW_mkProj (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (a₀ :
   exact ⟨h1, h2, h3, mkProjW_frameA _ _ _ _ _ _ hm, mkProjW_hw _ a₀ hD nm i e _ _ hm⟩
 
 /-- `mk_proj`'s fine frame is within the store's. -/
-theorem MemFrame.pjStore {m m' : Mem} (h : MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256] [32, 33] m m') :
+theorem MemFrame.pjStore {m m' : Mem} (h : MemFrame [PJREC, PJSLOT, PJDER, tier1 PJREC, tier1 PJSLOT, tier1 PJDER] [32, 33] m m') :
     MemFrame L.Rom.StoreA L.Rom.StoreC m m' := h.mono
   (fun b hb => by
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
@@ -798,19 +798,19 @@ theorem MemFrame.pjStore {m m' : Mem} (h : MemFrame [PJREC, PJSLOT, PJDER, PJREC
 /-- **`CoreS` across a `proj` interning step.** -/
 theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
-    (hcpl : cpl a' = cpl a) (hf : MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256] [32, 33] m m') :
+    (hcpl : cpl a' = cpl a) (hf : MemFrame [PJREC, PJSLOT, PJDER, tier1 PJREC, tier1 PJSLOT, tier1 PJDER] [32, 33] m m') :
     CoreS dn m' a' vis fe M eb :=
   hS.arena_frame hD hcpl hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [PJREC, PJSLOT, PJDER])
+    (by simp [tier1, tierOff, PJREC, PJSLOT, PJDER])
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (by simp [PJREC, PJSLOT, PJDER]) (by simp)
+    (by simp [tier1, tierOff, PJREC, PJSLOT, PJDER]) (by simp)
 
 /-! ## `eta_projs(T, b, nF)` -/
 
@@ -952,7 +952,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     have hrun1 := AM.run_of_ok _ _ hok1
     have hspn1 : m₁.arr64 SPN = m.arr64 SPN :=
       hfr1c.1 SPN (fun h => by
-        unfold L.Rom.StoreA at h; simp [lowTierArrs, SPN] at h) (by decide)
+        unfold L.Rom.StoreA at h; simp [tier1, tierOff, lowTierArrs, SPN] at h) (by decide)
     have hcpl := Keeps.run (keeps_cpl_internProj (decI T) j.toNat (decE b)) hrun1
     have hS1 : CoreS dn m₁ (AM.st (internE (.proj (decI T) j.toNat (decE b))) a) vis fe M eb :=
       hS.of_proj hD1 hcpl hfr1
@@ -986,7 +986,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
         exact absurd (UInt64.lt_iff_toNat_lt.mp hi) (Nat.lt_irrefl _)
       rw [spW_set64_ne _ _ _ _ hne]
       simp only [spW, hspn1]
-    have hfr12 : MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256, SPN] [32, 33] m (m₁.set64 SPN (o + j) (r₁.headD 0)) :=
+    have hfr12 : MemFrame [PJREC, PJSLOT, PJDER, tier1 PJREC, tier1 PJSLOT, tier1 PJDER, SPN] [32, 33] m (m₁.set64 SPN (o + j) (r₁.headD 0)) :=
       (hfr1.mono (by simp) (by simp)).trans (hfrS.mono (by simp) (by simp))
     refine ⟨decE (r₁.headD 0) :: ys, hokF, ?_, ?_, hbelow', ?_, ?_, ?_,
       (BKept.of_frame hfr12 (by decide) (by decide)).trans hbk3,

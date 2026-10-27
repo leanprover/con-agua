@@ -75,7 +75,7 @@ theorem RfFr.of_low {m m' : Mem} (h : LowFr m m') : RfFr m m' := by
 theorem RfFr.set_iw (m : Mem) (x v : Word) : RfFr m (m.set64 IW x v) := RfFr.of_iw (set64IW_frame m x v)
 
 theorem RfFr.ofMknF {m m' : Mem} {args r : List Word} (h : mknF m args = some (r, m')) : RfFr m m' :=
-  ⟨_, _, mknF_frame h, by simp [RFM, SPN, AREC, ASLOT, ADER], by simp, by simp, by simp⟩
+  ⟨_, _, mknF_frame h, by simp [tier1, tierOff, RFM, SPN, AREC, ASLOT, ADER], by simp, by simp, by simp⟩
 
 theorem GKeep.refl (M : Std.HashMap (EIdx × Word) EIdx) (G : Word) : GKeep M M G := fun _ _ _ => rfl
 

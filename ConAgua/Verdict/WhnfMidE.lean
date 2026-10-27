@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfNatE
-
 /-!
 # The `whnf` family's `defeq` helpers: `whnf_top`, `bool_true_shortcut`, `try_unfold_proj_app`,
 `delta_quick`, `lazy_nat` (lane `verdicts-b`, helper `k2`)
@@ -16,8 +15,8 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem whnfMidE_nv : ∀ f ∈ ["is_bool_true", "head_is_proj"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem whnfMidE_nv : ∀ f ∈ ["is_bool_true", "head_is_proj"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-! ## `whnf_top` -/
 

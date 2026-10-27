@@ -4,8 +4,6 @@ import ConAgua.Verdict.IndBRec3
 import ConAgua.Verdict.IndBRecPins
 import ConAgua.Verdict.IndBCcs
 import ConAgua.Verdict.IndBStream
-set_option linter.unusedSectionVars false
-
 /-!
 # Error refinement of `gen_rec_check_prep` (lane `verdicts-b`, helper `ib`)
 
@@ -63,7 +61,7 @@ variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLech
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
   (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p) (hCcv : CcvE p)
 
-include hkp henv hApd hCrk hIlpf hnv hcE hU in
+include hkp henv hApd hCrk hnv hcE hU in
 /-- **`gen_rec_check_prep`'s third part, error claim** (`grpCW_okC`'s hypotheses): the generator
 record, its prefix, the recursor types. -/
 theorem grpCE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Option ConLeche.Name}
@@ -104,7 +102,7 @@ theorem grpCE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
   | error e1 =>
     rw [h1, grpE.k_iw_alloc.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, grpE.k_iw_alloc.arm1] at he
@@ -167,7 +165,7 @@ theorem grpCE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
   | error e2 =>
     rw [h2, grpE.k_class_gen_prefix_binders.none] at he'
     cases he'
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hgp⟩ := triple_of_callW (s₀ := ⟨mG, Locals.init []⟩) (prefixBinders_spec p P.pb n _ g)
@@ -329,7 +327,7 @@ theorem grpBE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
   | error e1 =>
     rw [h1, grpE.k_gen_rec_check_former_tys.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, grpE.k_gen_rec_check_former_tys.arm1] at he
@@ -414,7 +412,7 @@ theorem grpBE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
   | error e4 =>
     rw [h4, grpE.k_gen_rec_check_minor_ok.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   obtain ⟨s4, rfl, -, hm4, hmo⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
@@ -439,7 +437,7 @@ theorem grpBE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
   | error e5 =>
     rw [h5, grpE.k_gen_rec_check_former_tys_c.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5, grpE.k_gen_rec_check_former_tys_c.arm1] at he
@@ -496,7 +494,7 @@ theorem grpBE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
   | error e6 =>
     rw [h6, grpE.k_struct_elim_level.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h6)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6)
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   rw [h6, grpE.k_struct_elim_level.arm1] at he
@@ -528,7 +526,7 @@ theorem grpBE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
     have e5 := ConRon.Bridge.Inductives.dClassCtors_ext (c6.ext.trans p7.ext) _ _ hctors
     simp only [dClassGen, e1, e2, e3, e4, e5, helim, Frontend.denoteEList, hnPe, Option.bind_eq_bind,
       Option.bind_some, Option.pure_def]
-  exact grpCE_claim hkp henv hApd hCrk hIlpf hnv hcE hU P n hn hC6 (hbs.grow hg16)
+  exact grpCE_claim hkp henv hApd hCrk hnv hcE hU P n hn hC6 (hbs.grow hg16)
     (hrb.grow hg16 (by omega)) (decHL_grow' hg16 hparb hpar) (Nat.le_trans hparb hg16.1)
     (hrd.grow (decCR_mono _) hg16) (hms2.grow (fun q => decTM_mono q) (hg3.trans (hg5.trans hg6)))
     (hctD.grow (OMono.decPL decCC_lh_mono _ _) (hg5.trans hg6))
@@ -750,7 +748,7 @@ theorem grpE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
     | error e4 =>
       rw [h4, grpE.k_block_large_elim_allowed.none] at hj2
       cases hj2
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
     | ok q4 =>
     obtain ⟨r4, m4⟩ := q4
     obtain ⟨al, a4, hr4, hC4, hm4, hd4, p4, -⟩ := blockLargeElimAllowed_simC P.ble n hC2 hA2
@@ -779,7 +777,7 @@ theorem grpE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
     | error e3 =>
       rw [h3, grpE.k_gen_rec_check_any_no_member.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
     | ok q3 =>
     obtain ⟨r3, m3⟩ := q3
     rw [h3, grpE.k_gen_rec_check_any_no_member.arm1] at he

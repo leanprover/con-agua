@@ -10,7 +10,6 @@ import ConAgua.L.GrindAttr
 `maClrK`, `maConstW`, `maConstW_eq`, `maClrK_some`, `noGoW`, `noG1` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 
@@ -156,19 +155,29 @@ theorem noGo_step (n : Nat) (ih : NoNodeSpec p n) : NoGoSpec p (n + 1) := by
   unfold NoNodeSpec at ih
   intro s₀ no nl lo hi f h
   simp only [invoke_eq _ hgo, callFn, nestOccGo]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      eView_spec p hv n, slContains_spec p hc n, memoFindG_spec noSch p _ hf n,
-      memoPutG_spec noSch p _ hput n, ih] <;> finish (gen := 20)
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+    eView_spec p hv n, slContains_spec p hc n, memoFindG_spec noSch p _ hf n,
+    memoPutG_spec noSch p _ hput n, ih]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
-include hc hgo hnode in
+include hnode in
 theorem noNode_step (n : Nat) (ih : NoGoSpec p n) : NoNodeSpec p (n + 1) := by
   unfold NoGoSpec at ih
   intro s₀ no nl lo hi f1 g x y z
   simp only [invoke_eq _ hnode, callFn, nestOccNode]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      slContains_spec p hc n, ih] <;> finish (gen := 20)
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+    ih]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 include hv hc hf hput hgo hnode in
 theorem noGo_spec (n : Nat) : NoGoSpec p n ∧ NoNodeSpec p n := by
@@ -177,7 +186,7 @@ theorem noGo_spec (n : Nat) : NoGoSpec p n ∧ NoNodeSpec p n := by
     constructor
     · intro s₀ no nl lo hi f h; rw [invoke_eq _ hgo]; simp only [callFn, nestOccGo]; vcgen [exec] <;> grind
     · intro s₀ no nl lo hi f1 g x y z; rw [invoke_eq _ hnode]; simp only [callFn, nestOccNode]; vcgen [exec] <;> grind
-  | succ n ih => exact ⟨noGo_step p hv hc hf hput hgo n ih.2, noNode_step p hc hgo hnode n ih.1⟩
+  | succ n ih => exact ⟨noGo_step p hv hc hf hput hgo n ih.2, noNode_step p hnode n ih.1⟩
 
 end spec
 
@@ -360,7 +369,7 @@ theorem MFr.ofI1F {m m' : Mem} {args r : List Word} (h : i1F m args = some (r, m
 
 /-- `mk_app_n_f` writes the stack, its top and the app tables (`mknF_frame`). -/
 theorem MFr.ofMknF {m m' : Mem} {args r : List Word} (h : mknF m args = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (mknF_frame h) (by simp [SPN, AREC, ASLOT, ADER]) (by simp)
+  MFr.of_frame (mknF_frame h) (by simp [tier1, tierOff, SPN, AREC, ASLOT, ADER]) (by simp)
 
 /-- The memo array `S.arr` and its stamp word survive an `MFr` that leaves them out. -/
 theorem MFr.memo {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (h : MFr S0 T0 m m') (b : ArrId) (x : Word)
@@ -379,7 +388,7 @@ theorem MFr.memo {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (h : MFr S0 T0 
 
 theorem noFrame_arena {m m' : Mem} {a : AState} (hf : MemFrame [NOM] [205] m m') (hR : ArenaR m a) :
     ArenaR m' a :=
-  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, NOM])
+  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, NOM, BMEMO, LMEMO, IMEMO, FRMEMO])
     (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR
 
 theorem noFrame_iw {m m' : Mem} (hf : MemFrame [NOM] [205] m m') : m'.arr64 IW = m.arr64 IW :=

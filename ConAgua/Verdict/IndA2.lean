@@ -2,7 +2,6 @@ import ConAgua.Verdict.IndA1
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Verdict.IndAGen
-
 /-!
 # `check_block`'s error refinement (lane `verdicts-b`, helper `ia`)
 
@@ -61,7 +60,7 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e1 =>
     rw [c1, icbE.k_block_shape_all_ctors.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [c1, icbE.k_block_shape_all_ctors.eq_2] at he
@@ -88,7 +87,7 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e2 =>
     rw [c2, icbE.k_block_caps_ctor_names.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [c2, icbE.k_block_caps_ctor_names.eq_2] at he
@@ -130,7 +129,7 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e3 =>
     rw [c3, icbE.k_block_shape_member_names.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [c3, icbE.k_block_shape_member_names.eq_2] at he
@@ -171,7 +170,7 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e4 =>
     rw [c4, icbE.k_sl_nodup.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [c4, icbE.k_sl_nodup.eq_2] at he
@@ -185,7 +184,7 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e5 =>
     rw [c5, icbE.k_sl_nodup_2.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [c5] at he
@@ -225,7 +224,7 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e6 =>
     rw [c6, icbE.k_flush_caches.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c6
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   rw [c6, icbE.k_flush_caches.eq_2] at he
@@ -254,7 +253,7 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | error e7 =>
     rw [c7, icbE.k_block_raw_rec.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c7
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c7
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [c7, icbE.k_block_raw_rec.eq_2] at he

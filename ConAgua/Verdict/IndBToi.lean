@@ -1,9 +1,9 @@
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.RecCheckSpec.ToiW
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_outside_inst` (lane `verdicts-b`, helper `ib`)
@@ -51,7 +51,7 @@ theorem toiE_claim (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : 
   | error e1 =>
     rw [h1, toiE.k_env_find.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r2, m2⟩ := q1
   obtain ⟨s2, hs2, -, h2⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -111,7 +111,7 @@ theorem toiE_claim (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : 
   | error e3 =>
     rw [h3, toiE.k_er_to_iw.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, toiE.k_er_to_iw.arm1] at he
@@ -134,7 +134,7 @@ theorem toiE_claim (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : 
   | error e4 =>
     rw [h4, toiE.k_inst_lp_fast.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4, toiE.k_inst_lp_fast.arm1] at he
@@ -147,7 +147,7 @@ theorem toiE_claim (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : 
   | error e5 =>
     rw [h5, toiE.k_inst_pis_with.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   obtain ⟨s5, hs5, -, h5m⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
@@ -174,7 +174,7 @@ theorem toiE_claim (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : 
   | error e6 =>
     rw [h6, toiE.k_pi_binders.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h6)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6)
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   rw [h6, toiE.k_pi_binders.arm1] at he
@@ -190,7 +190,7 @@ theorem toiE_claim (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : 
   | error e7 =>
     rw [h7, toiE.k_e_view.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h7)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h7)
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   by_cases h2 : r7.headD 0 = 2

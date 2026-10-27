@@ -10,7 +10,6 @@ import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 
 /-!
@@ -98,6 +97,7 @@ section kitH
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
+omit h64 hsize in
 theorem lt_of_byteAt_ne (i : USize) (h : byteAt b i ≠ 0) : i < b.usize := by
   refine Classical.byContradiction fun hn => ?_
   apply h; unfold byteAt; rw [dite_eq_right hn]
@@ -115,7 +115,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
   unfold scanHints at h
   by_cases h34 : byteAt b v = 34
   · rw [ite_eq_left (by simp [h34])] at h
-    have hv := lt_of_byteAt_ne b h64 hsize v (by rw [h34]; decide)
+    have hv := lt_of_byteAt_ne b v (by rw [h34]; decide)
     have hvW := (lt_usize_iff b h64 hsize v).mp hv
     have hv1 : (v.toUInt64 + 1).toNat = v.toNat + 1 := by
       have := L.Scan.toNat_add_one_of_lt_ofNat hvW; simpa using this
@@ -152,7 +152,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
     split at h
     · rename_i h123
       have h123' : byteAt b v = 123 := by simpa using h123
-      have hv := lt_of_byteAt_ne b h64 hsize v (by rw [h123']; decide)
+      have hv := lt_of_byteAt_ne b v (by rw [h123']; decide)
       have hvW := (lt_usize_iff b h64 hsize v).mp hv
       have hv1' : (v + 1).toNat = v.toNat + 1 := usizeStep b v hv
       have hb123 : byteW b.data v.toUInt64 = 123 := by rw [byteW_of_byteAt b h64 hsize v 123 h123']; rfl
@@ -160,11 +160,11 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       split at h; cases h; rename_i hp34
       have hp34' : byteAt b (skipWs b (v + 1)) = 34 := by simpa using hp34
       generalize hp : skipWs b (v + 1) = p at h hp34'
-      have hpU := lt_of_byteAt_ne b h64 hsize p (by rw [hp34']; decide)
+      have hpU := lt_of_byteAt_ne b p (by rw [hp34']; decide)
       have hpW := (lt_usize_iff b h64 hsize p).mp hpU
       have hpN := usizeInBounds b p hpU
       have hpEq : UInt64.ofNat (L.Scan.Leaves.skipWsN b.data (v.toUInt64 + 1).toNat) = p.toUInt64 := by
-        rw [← hp, skipWs_toUInt64_eq b h64 hb64, ← succ_toUInt64 b h64 hsize, USize.toNat_toUInt64]
+        rw [← hp, skipWs_toUInt64_eq b h64 hb64, ← succ_toUInt64 h64, USize.toNat_toUInt64]
       split at h; cases h; rename_i hke
       have hke' : keyEnd b (p + 1) ≠ 0 := by simpa using hke
       generalize hk : keyEnd b (p + 1) = ke at h hke'
@@ -175,7 +175,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       have hkb := keyEndN_bounds b.data _ hkn0
       have hp1 : (p + 1).toNat = p.toNat + 1 := usizeStep b p hpU
       have hkeEq : UInt64.ofNat (L.Scan.Leaves.keyEndN b.data (p.toUInt64 + 1).toNat) = ke.toUInt64 := by
-        rw [← succ_toUInt64 b h64 hsize p, USize.toNat_toUInt64, ← keyEnd_toUInt64_eq b h64 hb64, hk]
+        rw [← succ_toUInt64 h64 p, USize.toNat_toUInt64, ← keyEnd_toUInt64_eq b h64 hb64, hk]
       have hkeU : ke.toNat < b.size := by rw [hkeN]; exact hkb.2
       unfold hkvN
       rw [ite_eq_right (by intro h'; exact absurd hvW (UInt64.not_lt.mpr h')),
@@ -386,7 +386,7 @@ theorem dobj_link {σ : Type} (F : USize → Bool → UInt32 → σ → ScanRes 
     by_cases h125 : byteAt b i = 125
     · obtain ⟨rfl, hF⟩ := H.close i w seen st f d e hi h125 h hR
       rw [dobjN_close _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
-        nm_close b h64 hsize i _ hi hws h125, ← succ_toUInt64 b h64 hsize]
+        nm_close b h64 hsize i _ hi hws h125, ← succ_toUInt64 h64]
       exact ⟨rfl, hF⟩
     by_cases h44 : byteAt b i = 44
     · obtain ⟨rfl, h'⟩ := H.comma i w seen st d e hi h44 h
@@ -830,7 +830,7 @@ theorem axEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanAxiomDecl b 
   unfold scanAxiomDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (axiom_loop b h64 hsize) (v + 1) true 0 (false, [], 0, 0)
       DFld.init d e h ⟨rfl, .inr rfl, itemR_zero, itemR_zero⟩
   · cases h
@@ -841,7 +841,7 @@ theorem defEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanDefDecl b v
   unfold scanDefDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (def_loop b h64 hsize) (v + 1) true 0
       (.regular 0, [], 0, "", 0, 0) DFld.init d e h
       ⟨⟨rfl, itemR_zero⟩, .inr rfl, itemR_zero, fun h => absurd h (by decide), itemR_zero, itemR_zero⟩
@@ -853,7 +853,7 @@ theorem thmEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanThmDecl b v
   unfold scanThmDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (thm_loop b h64 hsize) (v + 1) true 0 ([], 0, 0, 0)
       DFld.init d e h ⟨.inr rfl, itemR_zero, itemR_zero, itemR_zero⟩
   · cases h
@@ -864,7 +864,7 @@ theorem opaqueEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanOpaqueDe
   unfold scanOpaqueDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (opaque_loop b h64 hsize) (v + 1) true 0 (false, [], 0, 0, 0)
       DFld.init d e h ⟨rfl, .inr rfl, itemR_zero, itemR_zero, itemR_zero⟩
   · cases h
@@ -875,7 +875,7 @@ theorem quotEntry_link (v : USize) (d : DeclRec) (e : USize) (h : scanQuotDecl b
   unfold scanQuotDecl at h
   split at h
   · rename_i hc
-    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    unfold dobjEntryN; rw [← (obj_open b h64 v hc).2]
     exact dobj_link b h64 hsize _ _ _ (quot_loop b h64 hsize) (v + 1) true 0 ("", [], 0, 0)
       DFld.init d e h ⟨⟨fun h => absurd h (by decide), fun h => absurd h (by decide),
         fun h => absurd h (by decide), fun h => absurd h (by decide)⟩, .inr rfl, itemR_zero, itemR_zero⟩

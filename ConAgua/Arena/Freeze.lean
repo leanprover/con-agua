@@ -46,8 +46,8 @@ def fzStores : List (ArrId × ArrId × Nat × Nat) :=
 /-- The one-word columns (derived columns `ADER`‥`PJDER`, hash/level columns `SHP`‥`FVLP`) and the
 count slot of their store. -/
 def fzCols : List (ArrId × Nat) :=
-  [(42, 4), (43, 28), (44, 30), (45, 20), (46, 32),
-   (55, 6), (56, 10), (57, 12), (58, 40), (59, 16), (60, 18), (61, 26)]
+  [(ADER, 4), (LADER, 28), (FADER, 30), (LEDER, 20), (PJDER, 32),
+   (SHP, 6), (MHP, 10), (IHP, 12), (LSHP, 40), (SOLP, 16), (CLP, 18), (FVLP, 26)]
 
 /-- A frozen array's image: the prefix of `src` with extent `e`. -/
 structure Fz where
@@ -89,8 +89,8 @@ the list against the program. -/
 def parOwned : List ArrId :=
   [1, 24, 47, 48, 49, 50, 52, 53, 54, 62, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106,
    140, 141, 142, 144, 145, 151, 152, 153, 154, 155, 192, 200, 256, 385, 386, 387] ++
-  ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [x.1 + 256, x.2.1 + 256]) ++
-    fzCols.map (fun (x : ArrId × Nat) => x.1 + 256)).mergeSort : List ArrId)
+  ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [tier1 x.1, tier1 x.2.1]) ++
+    fzCols.map (fun (x : ArrId × Nat) => tier1 x.1)).mergeSort : List ArrId)
 
 /-- The header's length. -/
 def hdrW : Nat := 10 + 2 * frozen.length

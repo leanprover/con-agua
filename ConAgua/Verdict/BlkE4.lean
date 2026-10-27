@@ -2,7 +2,6 @@ import ConAgua.Verdict.IndA3
 import ConAgua.Verdict.IndBE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # `check_block_classes`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)
 
@@ -33,8 +32,8 @@ l_model cbcE_spec (p : Prog) (hf : p.lookup "check_block_classes" = some checkBl
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 1000000 simp [rdW] errors
 
 theorem blkE4_nv : ∀ f ∈ ["sl_cons", "class_read", "class_read_classes", "check_block_classes_one_per_member"],
-    f ∈ _root_.L.Checker.nvFns := by
-  decide +kernel
+    f ∈ _root_.L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- **`check_block_classes_keys`' error claim** (the model at fuel `n`; `ckkW_sim`'s hypotheses),
 from `class_key_of`'s. -/

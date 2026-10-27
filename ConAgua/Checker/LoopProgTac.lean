@@ -68,6 +68,11 @@ theorem lk_of_chunk {j i : Nat} {c : Prog} {f : FnName} {fd : FunDecl}
   rw [checkerProg_chunks]
   exact List.mem_flatten.mpr ⟨c, List.mem_of_getElem? hc, List.mem_of_getElem? h⟩
 
+/-- A lookup agreement from two lookups: `checkerProg`'s by `chk_lk` (its chunk position, no `String`
+comparison; `rfl` compared the name with every one before it, ~0.5 s each). -/
+theorem lk_agree {p q : Prog} {f : FnName} {fd : FunDecl} (hq : q.lookup f = some fd)
+    (hp : p.lookup f = some fd) : p.lookup f = q.lookup f := hp.trans hq.symm
+
 /-- **`p` agrees with `fs` on `fs`'s names** (`ProgHas.agree` without the decided side condition). -/
 theorem ProgHas.agreeNames {p fs : Prog} (h : ProgHas p fs) :
     ∀ f ∈ fs.map (·.1), p.lookup f = fs.lookup f := by

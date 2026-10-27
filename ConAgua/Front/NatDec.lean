@@ -111,7 +111,7 @@ def madHi (x w y : Word) : Word :=
 (limb `i` read at the tagged address `o + i`, written at index `⦃o⦄.idx + i` of `o`'s tier). -/
 def madW (m : Mem) (o n w y i : Word) : Mem × Word :=
   if i < n then
-    madW (m.set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + i) (prd m (o + i) * w + y)) o n w
+    madW (m.set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + i) (prd m (o + i) * w + y)) o n w
       (madHi (prd m (o + i)) w y) (i + 1)
   else (m, y)
 termination_by n.toNat - i.toNat
@@ -126,15 +126,15 @@ variable (m m' : Mem) (o n w y y' i i' : Word)
 theorem madW_stop (h : ¬ i < n) : madW m o n w y i = (m, y) := by
   rw [madW, ite_eq_right h]
 theorem madW_step (k : Nat) (h : i < n) (hk : k = ((o + i) &&& 1099511627775).toNat)
-    (hks : k < (m.arr64 (tierA 0 ((o + i) >>> 40))).size)
+    (hks : k < (m.arr64 (tierA POOL ((o + i) >>> 40))).size)
     (hi' : i' = i + 1)
-    (hm' : m' = m.set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + i)
-      ((m.arr64 (tierA 0 ((o + i) >>> 40)))[k] * w + y))
-    (hy' : y' = UInt64.ofNat ((m.arr64 (tierA 0 ((o + i) >>> 40)))[k].toNat * w.toNat / 2 ^ 64) +
-      (if (m.arr64 (tierA 0 ((o + i) >>> 40)))[k] * w + y < y then 1 else 0)) :
+    (hm' : m' = m.set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + i)
+      ((m.arr64 (tierA POOL ((o + i) >>> 40)))[k] * w + y))
+    (hy' : y' = UInt64.ofNat ((m.arr64 (tierA POOL ((o + i) >>> 40)))[k].toNat * w.toNat / 2 ^ 64) +
+      (if (m.arr64 (tierA POOL ((o + i) >>> 40)))[k] * w + y < y then 1 else 0)) :
     madW m o n w y i = madW m' o n w y' i' := by
   subst hi' hm' hk
-  have e : (m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] = prd m (o + i) :=
+  have e : (m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] = prd m (o + i) :=
     prd_ld m (o + i) hks
   rw [e] at hy' ⊢
   subst hy'
@@ -142,7 +142,7 @@ theorem madW_step (k : Nat) (h : i < n) (hk : k = ((o + i) &&& 1099511627775).to
   simp only [madHi]
 end
 grind_pattern [arena_grind] madW_stop => madW m o n w y i
-grind_pattern [arena_grind] madW_step => madW m o n w y i, (m.arr64 (tierA 0 ((o + i) >>> 40)))[k],
+grind_pattern [arena_grind] madW_step => madW m o n w y i, (m.arr64 (tierA POOL ((o + i) >>> 40)))[k],
   madW m' o n w y' i'
 
 theorem madW_bytes (m : Mem) (o n w y i : Word) : (madW m o n w y i).1.bytes = m.bytes := by
@@ -216,9 +216,9 @@ def decW (b : Array UInt8) (m : Mem) (top n i d : Word) : Option (Mem × Word) :
   if _h : i < d then
     if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2 ≠ 0 then
       if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.len64
-          (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + n then none
+          (tierA POOL (top >>> 40)) ≤ (top &&& 1099511627775) + n then none
       else decW b ((madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.set64
-        (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + n) (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2)
+        (tierA POOL (top >>> 40)) ((top &&& 1099511627775) + n) (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2)
         top (n + 1) (i + decK i d) d
     else decW b (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1
       top n (i + decK i d) d
@@ -234,9 +234,9 @@ theorem decW_stop (h : ¬ i < d) : decW b m top n i d = some (m, n) := by
 theorem decW_step (h : i < d) : decW b m top n i d =
     if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2 ≠ 0 then
       if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.len64
-          (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + n then none
+          (tierA POOL (top >>> 40)) ≤ (top &&& 1099511627775) + n then none
       else decW b ((madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.set64
-        (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + n) (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2)
+        (tierA POOL (top >>> 40)) ((top &&& 1099511627775) + n) (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2)
         top (n + 1) (i + decK i d) d
     else decW b (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1
       top n (i + decK i d) d := by
@@ -256,7 +256,7 @@ def finK (top : Word) : Option (Mem × Word) → Option (List Word × Mem)
 
 /-- **The model of `nat_dec(c, d)`**: the result and the memory, `none` where it aborts. -/
 def natDecW (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
-  if m.len64 (tierA 0 (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) then none
+  if m.len64 (tierA POOL (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) then none
   else finK (rdW (m.arr64 CTL) 0) (decW b m (rdW (m.arr64 CTL) 0) 0 c d)
 
 /-- The three functions, as one `#eval`-able program. -/

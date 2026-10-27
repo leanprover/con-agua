@@ -59,7 +59,7 @@ theorem sliceRes_spec (p : Prog) (k : Stmt â†’ M Sig) (o l t x : Var) (hto : t â
 /-- **The resolved read**: limb `i` of a slice in one tier is the tier's word at `x + i`. -/
 theorem prd_res (m : Mem) (o i : Word) (h : (o &&& 1099511627775).toNat + i.toNat < 2 ^ 40) :
     prd m (o + i) =
-      (m.arr64 (tierA 0 (o >>> 40)))[((o &&& 1099511627775) + i).toNat]?.getD 0 := by
+      (m.arr64 (tierA POOL (o >>> 40)))[((o &&& 1099511627775) + i).toNat]?.getD 0 := by
   have ho := o.toNat_lt
   have h' := h; rw [tag_idx_toNat] at h'
   have hoi : (o + i).toNat = o.toNat + i.toNat := by
@@ -74,12 +74,12 @@ theorem prd_res (m : Mem) (o i : Word) (h : (o &&& 1099511627775).toNat + i.toNa
 
 /-- `prd_res` for an in-bounds load. -/
 theorem prd_res_get (m : Mem) (o i : Word) (h : (o &&& 1099511627775).toNat + i.toNat < 2 ^ 40)
-    (hb : ((o &&& 1099511627775) + i).toNat < (m.arr64 (tierA 0 (o >>> 40))).size) :
-    (m.arr64 (tierA 0 (o >>> 40)))[((o &&& 1099511627775) + i).toNat] = prd m (o + i) := by
+    (hb : ((o &&& 1099511627775) + i).toNat < (m.arr64 (tierA POOL (o >>> 40))).size) :
+    (m.arr64 (tierA POOL (o >>> 40)))[((o &&& 1099511627775) + i).toNat] = prd m (o + i) := by
   rw [prd_res m o i h, Array.getElem?_eq_getElem hb]; rfl
 
 grind_pattern [arena_grind] prd_res_get =>
-  (m.arr64 (tierA 0 (o >>> 40)))[((o &&& 1099511627775) + i).toNat]
+  (m.arr64 (tierA POOL (o >>> 40)))[((o &&& 1099511627775) + i).toNat]
 
 /-- The bound-free pool `tpool` at a limb of a slice in one tier. -/
 theorem tpool_res (m : Mem) (o i : Word) (h : (o &&& 1099511627775).toNat + i.toNat < 2 ^ 40) :

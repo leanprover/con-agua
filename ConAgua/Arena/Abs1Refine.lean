@@ -91,37 +91,37 @@ theorem AbsR.across {A : List ArrId} {C : List Word} {m m' : Mem} {a a' : AState
 /-! ## The frames of the stores (L side) -/
 
 theorem mkAppW_frameA (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m')) :
-    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m' := by
+    MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m m' := by
   unfold mkAppW at hI; split at hI
   · cases hI
   exact (mkK_frame appCS_wf (by decide) hI).mono (by simp [ConsSch.wset, appCS, AREC, ASLOT, ADER]) (by simp [appCS])
 
 theorem mkLamW_frameA (m m' : Mem) (f a r : Word) (hI : mkLamW m f a = some (r, m')) :
-    MemFrame [LAREC, LASLOT, LADER, LAREC + 256, LASLOT + 256, LADER + 256] [28, 29] m m' := by
+    MemFrame [LAREC, LASLOT, LADER, tier1 LAREC, tier1 LASLOT, tier1 LADER] [28, 29] m m' := by
   unfold mkLamW at hI; split at hI
   · cases hI
   exact (mkK_frame lamCS_wf (by decide) hI).mono (by simp [ConsSch.wset, lamCS, LAREC, LASLOT, LADER]) (by simp [lamCS])
 
 theorem mkForallW_frameA (m m' : Mem) (f a r : Word) (hI : mkForallW m f a = some (r, m')) :
-    MemFrame [FAREC, FASLOT, FADER, FAREC + 256, FASLOT + 256, FADER + 256] [30, 31] m m' := by
+    MemFrame [FAREC, FASLOT, FADER, tier1 FAREC, tier1 FASLOT, tier1 FADER] [30, 31] m m' := by
   unfold mkForallW at hI; split at hI
   · cases hI
   exact (mkK_frame forallCS_wf (by decide) hI).mono (by simp [ConsSch.wset, forallCS, FAREC, FASLOT, FADER]) (by simp [forallCS])
 
 theorem mkLetW_frameA (m m' : Mem) (t v b r : Word) (hI : mkLetW m t v b = some (r, m')) :
-    MemFrame [LEREC, LESLOT, LEDER, LEREC + 256, LESLOT + 256, LEDER + 256] [20, 21] m m' := by
+    MemFrame [LEREC, LESLOT, LEDER, tier1 LEREC, tier1 LESLOT, tier1 LEDER] [20, 21] m m' := by
   unfold mkLetW at hI; split at hI
   · cases hI
   exact (mkK_frame letCS_wf (by decide) hI).mono (by simp [ConsSch.wset, letCS, LEREC, LESLOT, LEDER]) (by simp [letCS])
 
 theorem mkProjW_frameA (m m' : Mem) (n i e r : Word) (hI : mkProjW m n i e = some (r, m')) :
-    MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256] [32, 33] m m' := by
+    MemFrame [PJREC, PJSLOT, PJDER, tier1 PJREC, tier1 PJSLOT, tier1 PJDER] [32, 33] m m' := by
   unfold mkProjW at hI; split at hI
   · cases hI
   exact (mkK_frame projCS_wf (by decide) hI).mono (by simp [ConsSch.wset, projCS, PJREC, PJSLOT, PJDER]) (by simp [projCS])
 
 theorem binternW_frameA (m m' : Mem) (u r : Word) (hI : binternW m u = some (r, m')) :
-    MemFrame [BREC, BSLOT, BREC + 256, BSLOT + 256] [22, 23] m m' := by
+    MemFrame [BREC, BSLOT, tier1 BREC, tier1 BSLOT] [22, 23] m m' := by
   exact (consInternM_frame bvarCS_wf hI).mono (by simp [ConsSch.wset, bvarCS])
     (by simp [bvarCS])
 

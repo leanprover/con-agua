@@ -234,9 +234,9 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     have hkeep : ∀ j, 1 ≤ j → j ≤ topN m DLP → wd m₄ DLP j = wd m DLP j := fun j h1 h2 => by
       rw [R4 j h1 (by omega) (.inl (by omega)), C4 j h1 (by omega) (.inl (by omega)),
         T4 j h1 (by omega) (.inl (by omega)), P1.keep j h1 h2]
-    refine ⟨hD.names.frame hf (.inl rfl) (by simp [DLP, DECL, idArrs]) (by simp),
-      hD.levels.frame hf (.inr (.inl rfl)) (by simp [DLP, DECL, idArrs]) (by simp),
-      hD.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, DECL, idArrs]) (by simp), ?_,
+    refine ⟨hD.names.frame hf (.inl rfl) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
+      hD.levels.frame hf (.inr (.inl rfl)) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
+      hD.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp), ?_,
       by rw [hf.2.2.1, hf.2.2.1]; exact hD.ifs⟩
     rw [hcn'] at G3 G5
     refine DeclsF.push _ _ _ _ _ _ hD.decls (by rw [G1.2.2.1, hdecl4]) (by rw [hm'P, hs4])

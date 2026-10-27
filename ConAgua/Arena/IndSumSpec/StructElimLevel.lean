@@ -197,7 +197,7 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
         have : ¬ (m.len64 IW).toNat < (rdW (m.arr64 CTL) 200).toNat := h1
         simp only [iwTop]; omega
       refine ⟨[], a, by simp [structPsAt.go]; rfl, ArenaR.frame
-        (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW])
+        (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW, BMEMO, LMEMO, IMEMO, FRMEMO])
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR,
         allocMem_grow m 0 (by simp; omega) hc, hf.2.2.1, by simp [decHL, hslice?], ?_⟩
       simp [iwTop, allocMem, rdW_set64, hc]
@@ -242,7 +242,7 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
         (by rw [hs2, hs1]; exact hc) (by omega) hb32 hd2
       subst hr3
       refine ⟨decE b :: xs, a2, ?_, ArenaR.frame
-        (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW])
+        (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW, BMEMO, LMEMO, IMEMO, FRMEMO])
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf3 hR2,
         (hg1.trans hg2).trans hg3, fun b => by rw [hf3.2.2.1, hs2, hs1], ?_, by simpa using ht3⟩
       · have hu : (o + nP - 1 - k).toNat = o.toNat + nP.toNat - 1 - k.toNat := by

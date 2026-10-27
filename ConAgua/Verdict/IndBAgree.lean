@@ -3,7 +3,6 @@ import ConAgua.Verdict.IndBNodes
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # Error refinement of `class_fields_agree` (lane `verdicts-b`, helper `ib`)
 
@@ -124,7 +123,7 @@ theorem cfaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
     | error e1 =>
       rw [h1', cfaE.k_fvar_type_d.none] at he
       cases he
-      exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h1')
+      exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1')
     | ok q1 =>
     obtain ⟨r1, m1⟩ := q1
     rw [h1', cfaE.k_fvar_type_d.arm1] at he
@@ -142,7 +141,7 @@ theorem cfaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
     | error e2 =>
       rw [h2, cfaE.k_strip_pis.none] at he
       cases he
-      exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h2)
+      exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2)
     | ok q2 =>
     obtain ⟨r2, m2⟩ := q2
     obtain ⟨s2, rfl, -, hok2, hS2, hg2, hd2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
@@ -178,7 +177,7 @@ theorem cfaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
     | error e3 =>
       rw [h3, cfaE.k_target_major_at.none] at he
       cases he
-      exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h3)
+      exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3)
     | ok q3 =>
     obtain ⟨r3, m3⟩ := q3
     rw [h3, cfaE.k_target_major_at.arm1] at he
@@ -198,7 +197,7 @@ theorem cfaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
     | error e4 =>
       rw [h4, cfaE.k_class_leaf_at.none] at he
       cases he
-      exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h4)
+      exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4)
     | ok q4 =>
     obtain ⟨r4, m4⟩ := q4
     obtain ⟨k', rfl⟩ : ∃ k', k = k' + 1 := by
@@ -315,7 +314,7 @@ theorem cfaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
     | error e0 =>
       rw [h0, cfaE.k_intern_bvar.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h0
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h0
     | ok q0 =>
     obtain ⟨r0, m0⟩ := q0
     rw [h0, cfaE.k_intern_bvar.arm1] at he

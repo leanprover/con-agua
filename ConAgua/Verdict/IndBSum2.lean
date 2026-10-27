@@ -1,17 +1,13 @@
-import ConAgua.Arena.CrOKFrame
-import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndT.Sum1
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConRon.Bridge.Inductives.SumInstall
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-set_option linter.unusedSectionVars false
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of `check_sum_tele_slow`, `check_sum_tele` (lane `verdicts-b`, helper `ib`)
@@ -62,8 +58,7 @@ l_model ctsE_spec (p : Prog) (hf : p.lookup "check_sum_tele_slow" = some checkSu
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p)
-  (hApd : ApdF p) (hCrk : CrKeep p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true)
   (hW : WtE p) (hCcv : CcvE p)
 
 section census
@@ -84,7 +79,7 @@ variable (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL) (hi1 : I1Prog p) (hab : AbF p)
 include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab
 
-include hq henv hV hApd hCrk hnv hW hCcv in
+include hq henv hnv hW hCcv in
 /-- **`check_sum_tele_slow`'s error claim** (the hypotheses of `checkSumTeleSlow_refinesC`, and the
 callees' error claims `WtE`, `CcvE`). -/
 theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
@@ -146,7 +141,7 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   | error e2 =>
     rw [h2, ctsE.k_intern_sort.none] at hW'
     cases hW'
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨ri, m2⟩ := q2
   by_cases hss : 4294967296 ≤ ri.headD 0
@@ -169,7 +164,7 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   | error e3 =>
     rw [h3, ctsE.k_close_telescope.none] at hW'
     cases hW'
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨rt, m3⟩ := q3
   rw [h3, ctsE.k_close_telescope.arm1] at hW'
@@ -192,7 +187,7 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   | error e4 =>
     rw [h4, ctsE.k_cv_new.none] at hW'
     cases hW'
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨rq, m4⟩ := q4
   rw [h4, ctsE.k_cv_new.arm1] at hW'
@@ -235,7 +230,7 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   rw [h5, ctsE.k_check_constant_val.arm1] at hW'
   cases hW'
 
-include hq henv hV hApd hCrk hnv hW hCcv in
+include hq henv hnv hW hCcv in
 /-- **`check_sum_tele`'s error claim** (the hypotheses of `checkSumTele_refinesC`, and the
 callees' error claims): only the slow arm can fail with a verdict. -/
 theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p)
@@ -271,7 +266,7 @@ theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
   | error e1 =>
     rw [h1, ctE.k_strip_pis.none] at hW'
     cases hW'
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (stripPis_specF p hst k ⟨s₀.mem, Locals.init []⟩ n w)
@@ -298,7 +293,7 @@ theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
     | error e2 =>
       rw [h2, ctE.k_e_view.none] at hW'
       cases hW'
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
     | ok q2 =>
       rw [h2, ctE.k_e_view.arm1] at hW'
       cases hW'
@@ -307,7 +302,7 @@ theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
     | error e2 =>
       rw [h2, ctE.k_check_sum_tele_slow.none] at hW'
       cases hW'
-      have hcl := CoreSpecE.of_callE (checkSumTeleSlow_claim hq henv hV hApd hCrk hnv hW hCcv ha hc hsc hv hff
+      have hcl := CoreSpecE.of_callE (checkSumTeleSlow_claim hq henv hnv hW hCcv ha hc hsc hv hff
         hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab k (by omega) s1 a₀ cv n cvTa0 cvv cvTa
         hC1 hcv1 (by have := hg1.2.1; omega)
         (fun lo ll e1 e2 => by

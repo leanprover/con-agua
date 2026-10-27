@@ -2,7 +2,6 @@ import ConAgua.Verdict.IndBK53
 import ConAgua.Verdict.IndBTmn
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-
 /-!
 # `target_k53_args`' error claim (lane `verdicts-b`, helper `fin`, fork `tka`)
 
@@ -153,7 +152,7 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
       s₀.mem with
   | error e1 =>
     rw [h1] at hW; simp only [tkaE.k1] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1] at hW; simp only [tkaE.k1] at hW
@@ -167,7 +166,7 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
       m1 with
   | error e2 =>
     rw [h2] at hW; simp only [tkaE.k2] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2] at hW; simp only [tkaE.k2] at hW
@@ -180,7 +179,7 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
   cases h3 : callE p n "sl_eq" [r1.headD 0, r1.tail.headD 0, r2.headD 0, r2.tail.headD 0] m2 with
   | error e3 =>
     rw [h3] at hW; simp only [tkaE.k3] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3'⟩ := q3
   rw [h3] at hW; simp only [tkaE.k3] at hW
@@ -212,7 +211,7 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
   cases h4 : callE p n "intern_const" [ip, usp] m2 with
   | error e4 =>
     rw [h4] at hW; simp only [tkaE.k4] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m3⟩ := q4
   rw [h4] at hW; simp only [tkaE.k4] at hW
@@ -240,7 +239,7 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
   cases h5 : callE p n "mk_app_n_f" [hd, lao, lpl] m3 with
   | error e5 =>
     rw [h5] at hW; simp only [tkaE.k5] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨ra, m4⟩ := q5
   rw [h5] at hW; simp only [tkaE.k5] at hW
@@ -261,7 +260,7 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
   cases h6 : callE p n "block_shape_member_names" [q] m4 with
   | error e6 =>
     rw [h6] at hW; simp only [tkaE.k6] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
   | ok q6 =>
   obtain ⟨rn, m5⟩ := q6
   rw [h6] at hW; simp only [tkaE.k6] at hW
@@ -280,7 +279,7 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
   cases h7 : callE p n "nest_occ" [rn.headD 0, rn.tail.headD 0, 0, 0, ra.headD 0] m5 with
   | error e7 =>
     rw [h7] at hW; simp only [tkaE.k7] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h7
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h7
   | ok q7 =>
   obtain ⟨r7, m6⟩ := q7
   rw [h7] at hW; simp only [tkaE.k7] at hW

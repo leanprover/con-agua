@@ -59,7 +59,7 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
     simp only [Mem.ptop0]; rw [loadMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
   have hw := loadMem_ctl_lt b pb s8 s64 hc
   have hsl : ∀ a ∈ slotArrs, a < wordArrays := by decide
-  have hs : ∀ a, a ∈ slotArrs → a + 256 ∈ slotArrs → ∀ t,
+  have hs : ∀ a, a ∈ slotArrs → tier1 a ∈ slotArrs → ∀ t,
       consMinWords ≤ ((loadMem b pb s8 s64).arr64 (tierA a t)).size ∧
       ((loadMem b pb s8 s64).arr64 (tierA a t)).size < 2 ^ 61 := fun a h0 h1 t => by
     rcases tierA_cases' a t with e | e <;> rw [e]

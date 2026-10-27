@@ -268,7 +268,7 @@ def mknProg : Prog :=
 def mknFns : List FnName := mknProg.map (·.1)
 
 /-- `mk_app_n_f` writes the stack, its top, and the app tables (`mk_app`). -/
-theorem mknProg_closed : closedA mknProg [SPN, AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [136, 4, 5] mknFns = true := by
+theorem mknProg_closed : closedA mknProg [SPN, AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [136, 4, 5] mknFns = true := by
   decide +kernel
 
 abbrev MknF (p : Prog) : Prop := ProgHas p mknProg
@@ -283,7 +283,7 @@ theorem mknF_spec0 (p : Prog) (hp : MknF p) (n : Nat) (s₀ : St) (args : List W
   callF_spec mknProg_closed (hp.agree mknFns) (by decide) n s₀ args
 
 theorem mknF_frame {m m' : Mem} {args r : List Word} (h : mknF m args = some (r, m')) :
-    MemFrame [SPN, AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [136, 4, 5] m m' := by
+    MemFrame [SPN, AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [136, 4, 5] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame mknProg_closed (by decide) (run_of_callW hc)).1
 
@@ -364,7 +364,7 @@ theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hcp : cp (AM.st (mkAppN (decE f) xs) a) = cp a :=
     congrArg (fun x => (x.1, x.2.1)) (hkeep.run hrun)
   obtain ⟨hS2, hg2⟩ := StageR.of_walk hS1 hD2 hfr2
-    (fun b hb => by simp only [List.mem_cons, List.not_mem_nil] at hb; rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | h <;> simp_all [AREC, ASLOT, ADER])
+    (fun b hb => by simp only [tier1, tierOff, List.mem_cons, List.not_mem_nil] at hb; rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | h <;> simp_all [AREC, ASLOT, ADER])
     (fun x hx => by simp only [List.mem_cons, List.not_mem_nil] at hx; rcases hx with rfl | rfl | h <;> simp_all) hcp
   -- the top put back
   obtain ⟨hS3, hg3⟩ := stageR_hi hS2 (MemFrame.setCtl m2 136 top) (by simp) (by simp) (by decide) (by decide)

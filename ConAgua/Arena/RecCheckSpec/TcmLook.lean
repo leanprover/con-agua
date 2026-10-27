@@ -43,7 +43,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem pinternW_mfr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
   have h₂ := h
-  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h₂, by simp [ConsSch.wset, paramCS, PREC, PSLOT],
+  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h₂, by simp [tier1, tierOff, ConsSch.wset, paramCS, PREC, PSLOT],
     by simp [paramCS]⟩
 
 theorem plgW_mfr : ∀ (k : Nat) {m m' : Mem} {o l : Word} {r : List Word}, plgW k m o l = some (r, m') →
@@ -74,7 +74,7 @@ theorem plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m
   rcases hg : plgW k m o l with _ | ⟨r1, m1⟩ <;> simp only [hg, plW.plK4, reduceCtorEq] at h
   rcases hs : ilF m1 [r1.headD 0, r1.tail.headD 0] with _ | ⟨r2, m2⟩ <;> simp only [hs, plW.plK5, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  exact (plgW_mfr k hg).trans (MFr.of_frame (ilF_frame hs) (by simp [POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp))
+  exact (plgW_mfr k hg).trans (MFr.of_frame (ilF_frame hs) (by simp [tier1, tierOff, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp))
 
 theorem thW_mfr : ∀ (n : Nat) {m m' : Mem} {tyo tyl base : Word} {r : List Word},
     thW n m tyo tyl base = some (r, m') → MFr [] [] m m'

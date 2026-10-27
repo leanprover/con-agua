@@ -2,7 +2,6 @@ import ConAgua.Verdict.IndsE3
 import ConAgua.Verdict.IndsE2
 import ConAgua.Arena.IndT.Install2
 import ConAgua.Arena.Checker
-
 /-!
 # `check_block_agree_one`'s error refinement (lane `verdicts-b`, helper `ia2-inds`)
 
@@ -47,7 +46,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
   cases h1 : callE p n "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m with
   | error e1 =>
     rw [h1, cbaoE.k_open_pis_at_fvars_f.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨ra, m1⟩ := q1
   rw [h1] at he
@@ -92,7 +91,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
   cases h2 : callE p n "fvar_type_ds" [fvs0O, fvs0L] m1 with
   | error e2 =>
     rw [h2, cbaoE.k_fvar_type_ds.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rd, m2⟩ := q2
   rw [h2, cbaoE.k_fvar_type_ds.arm1] at he
@@ -167,7 +166,7 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
     have hx03 := p1.ext.trans (p2.ext.trans c3.ext)
     obtain ⟨lu, hlu⟩ : ∃ l, denoteL a3.store.ls (decI s) = some l := ⟨_, ConRon.Bridge.denoteL_ext hsP hx03⟩
     obtain ⟨lv, hlv⟩ : ∃ l, denoteL a3.store.ls (decI s0) = some l := ⟨_, ConRon.Bridge.denoteL_ext hs0P hx03⟩
-    have hcl := lvlEqFueled_errT hq hLC hl (fun n args m e h => callE_nv hnv (by decide +kernel) n args m h)
+    have hcl := lvlEqFueled_errT hq hLC hl (fun n args m e h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) n args m h)
       (fun c : Bool => if c = true then (pure () : AM Unit) else
         ConRon.Arena.fail (.invalid "mutually inductive types must live in the same universe"))
       hC3.stageT hs hs0 lu lv hlu hlv h4

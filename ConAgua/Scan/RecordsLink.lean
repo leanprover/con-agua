@@ -12,7 +12,6 @@ import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 /-!
 # The record loops, linked to con-leche
@@ -74,6 +73,7 @@ theorem lt_usize_iff (i : USize) : i < b.usize ↔ i.toUInt64 < UInt64.ofNat b.d
 theorem byteW_eq (i : USize) : byteW b.data i.toUInt64 = (byteAt b i).toUInt64 :=
   (byteAt_toUInt64_eq b i h64 (by omega)).symm
 
+omit hsize in
 theorem succ_toUInt64 (i : USize) : (i + 1).toUInt64 = i.toUInt64 + 1 := by
   rw [add_toUInt64 h64, ofNat_toUInt64 h64 1]
 
@@ -147,7 +147,7 @@ theorem nextMemberN_quote_link (i : USize) (w : Word) (h : i < b.usize) (hc : by
     rw [byteW_eq b h64 hsize, hc]; rfl
   rw [nextMemberN_quote b.data i.toUInt64 w hlt (by rw [hcw]; decide) (by rw [hcw]; decide)
     (by rw [hcw]; decide) hcw]
-  have hs := succ_toUInt64 b h64 hsize i
+  have hs := succ_toUInt64 h64 i
   have hke : UInt64.ofNat (keyEndN b.data (i.toUInt64 + 1).toNat) = (keyEnd b (i + 1)).toUInt64 := by
     rw [← hs, USize.toNat_toUInt64, keyEnd_toUInt64_eq b h64 (by omega)]
   simp only [hke]
@@ -185,7 +185,7 @@ theorem objN_link (F : USize → Bool → UInt32 → σ → ScanRes α) (mask : 
   by_cases h : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i h
     have hin := usizeInBounds b i h
     by_cases hws : isWs (byteAt b i) = true
@@ -338,6 +338,7 @@ theorem keyStep_num {sb : UInt32} (hbit : bit kc = sb.toUInt64) (hsb : sb ≠ 0)
       · exact h'
       · rw [ite_eq_right h'] at h; exact absurd h UInt64.not_lt_zero
 
+omit h64 hsize in
 /-- A value read by a scanner that returns its end or `0` (`scanBinderInfo`). -/
 theorem keyStep_usz {sb : UInt32} (hbit : bit kc = sb.toUInt64) (hsb : sb ≠ 0)
     (hseen : seen &&& sb = 0) (u : USize)
@@ -378,6 +379,7 @@ section values
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
+omit h64 hsize in
 theorem scanBoolN_le (i : Nat) (v : Bool) (p : Nat) (h : L.Scan.Lit.scanBoolN b.data i = some (v, p)) :
     p ≤ b.data.size ∧ p = i + (if v then 4 else 5) := by
   unfold L.Scan.Lit.scanBoolN at h
@@ -410,7 +412,7 @@ theorem scanBool_link (v : USize) : okW (scanBool b v) = boolEndN b.data v.toUIn
   | none => simp [okW, L.Scan.Lit.encBool]
   | some vp =>
     obtain ⟨x, p⟩ := vp
-    have hp := scanBoolN_le b h64 hsize _ _ _ hs
+    have hp := scanBoolN_le b _ _ _ hs
     have hbs : b.data.size = b.size := rfl
     simp only [okW, L.Scan.Lit.encBool, List.headD_cons, List.tail_cons]
     simp only [show ((1 : Word) = 0) = False from by decide, ite_false]
@@ -460,7 +462,7 @@ theorem natListLoop_link (i : USize) (acc : List Nat) (w : Bool) (hacc : acc.len
   by_cases h : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i h
     have hin := usizeInBounds b i h
     rw [dite_eq_left h, dite_eq_left hlt]
@@ -535,7 +537,7 @@ theorem natList_link (i : USize) :
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     by_cases hc : byteAt b i = 91
     · rw [ite_eq_left (by simp [hc]), ite_eq_left ⟨hlt, by rw [byteW_eq b h64 hsize, hc]; rfl⟩,
-        natListLoop_link b h64 hsize (i + 1) [] true (by simp), succ_toUInt64 b h64 hsize]; rfl
+        natListLoop_link b h64 hsize (i + 1) [] true (by simp), succ_toUInt64 h64]; rfl
     · rw [ite_eq_right (by simp [hc]), ite_eq_right (fun h' => hc ((u8_toUInt64_eq _ 91 (by decide)).mp
         (by rw [← byteW_eq b h64 hsize]; exact h'.2)))]; rfl
   · have h0 : byteAt b i = 0 := by unfold byteAt; rw [dite_eq_right h]
@@ -636,7 +638,7 @@ theorem objListN_link (F : USize → List β → Bool → ScanRes (List β)) (it
   by_cases h : i < b.usize
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
+    have hs := succ_toUInt64 h64 i
     have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i h
     have hin := usizeInBounds b i h
     by_cases hws : isWs (byteAt b i) = true
@@ -743,7 +745,7 @@ syntax "key_value " ident : tactic
 macro_rules
   | `(tactic| key_value $hs) => `(tactic| first
       | (apply keyStep_num _ ‹_› ‹_› (by decide) (by decide) $hs rfl; tuple_ex)
-      | (apply keyStep_usz _ ‹_› ‹_› (by decide) (by decide) $hs _ (by link_val); tuple_ex)
+      | (apply keyStep_usz (by decide) (by decide) $hs _ (by link_val); tuple_ex)
       | (split
          all_goals first
            | (rename_i heq; exact keyStep_res_err _ (by link_val) _ heq _)
@@ -819,7 +821,7 @@ theorem strName_link (i : USize) : okW (ConLeche.Frontend.scanStrName b i) = str
   unfold ConLeche.Frontend.scanStrName strNameN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (strNameLoop_link b h64 hsize (i + 1) true 0 0 "")]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanNumNameLoop`. -/
 theorem numNameLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Nat) (a1 : Nat) :
@@ -834,7 +836,7 @@ theorem numName_link (i : USize) : okW (ConLeche.Frontend.scanNumName b i) = num
   unfold ConLeche.Frontend.scanNumName numNameN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (numNameLoop_link b h64 hsize (i + 1) true 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanAppExprLoop`. -/
 theorem appLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Nat) (a1 : Nat) :
@@ -849,7 +851,7 @@ theorem app_link (i : USize) : okW (ConLeche.Frontend.scanAppExpr b i) = appN b.
   unfold ConLeche.Frontend.scanAppExpr appN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (appLoop_link b h64 hsize (i + 1) true 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanLamExprLoop`. -/
 theorem lamLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Nat) (a1 : Nat) :
@@ -864,7 +866,7 @@ theorem lam_link (i : USize) : okW (ConLeche.Frontend.scanLamExpr b i) = binderN
   unfold ConLeche.Frontend.scanLamExpr binderN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (lamLoop_link b h64 hsize (i + 1) true 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanForallExprLoop`. -/
 theorem forallLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Nat) (a1 : Nat) :
@@ -879,7 +881,7 @@ theorem forall_link (i : USize) : okW (ConLeche.Frontend.scanForallExpr b i) = b
   unfold ConLeche.Frontend.scanForallExpr binderN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (forallLoop_link b h64 hsize (i + 1) true 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanLetExprLoop`. -/
 theorem letELoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Nat) (a1 : Nat) (a2 : Nat) :
@@ -894,7 +896,7 @@ theorem letE_link (i : USize) : okW (ConLeche.Frontend.scanLetExpr b i) = letEN 
   unfold ConLeche.Frontend.scanLetExpr letEN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (letELoop_link b h64 hsize (i + 1) true 0 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanConstExprLoop`. -/
 theorem constELoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Nat) (a1 : List Nat) :
@@ -909,7 +911,7 @@ theorem constE_link (i : USize) : okW (ConLeche.Frontend.scanConstExpr b i) = co
   unfold ConLeche.Frontend.scanConstExpr constEN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (constELoop_link b h64 hsize (i + 1) true 0 0 [])]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanProjExprLoop`. -/
 theorem projLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Nat) (a1 : Nat) (a2 : Nat) :
@@ -924,7 +926,7 @@ theorem proj_link (i : USize) : okW (ConLeche.Frontend.scanProjExpr b i) = projN
   unfold ConLeche.Frontend.scanProjExpr projN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (projLoop_link b h64 hsize (i + 1) true 0 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanRuleLoop`. -/
 theorem ruleLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Nat) (a1 : Nat) (a2 : Nat) :
@@ -939,7 +941,7 @@ theorem rule_link (i : USize) : okW (ConLeche.Frontend.scanRule b i) = ruleN b.d
   unfold ConLeche.Frontend.scanRule ruleN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (ruleLoop_link b h64 hsize (i + 1) true 0 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanRuleListLoop`. -/
 theorem rulesLoop_link (i : USize) (acc : List RuleRec) (w : Bool) (hacc : acc.length ≤ i.toNat) :
@@ -952,7 +954,7 @@ theorem rulesLoop_link (i : USize) (acc : List RuleRec) (w : Bool) (hacc : acc.l
 theorem rules_link (i : USize) : okW (ConLeche.Frontend.scanRules b i) = rulesN b.data i.toUInt64 := by
   unfold ConLeche.Frontend.scanRules rulesN objListEntryN
   rw [entry_link b h64 hsize i 91 91 (by decide) rfl (by decide)
-    (rulesLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 b h64 hsize]; rfl
+    (rulesLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanIndRecLoop`. -/
 theorem indRecLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Bool) (a1 : Bool) (a2 : List Nat) (a3 : Nat) (a4 : Nat) (a5 : Nat) (a6 : Nat) (a7 : Nat) (a8 : List RuleRec) (a9 : Nat) :
@@ -967,7 +969,7 @@ theorem indRec_link (i : USize) : okW (ConLeche.Frontend.scanIndRec b i) = indRe
   unfold ConLeche.Frontend.scanIndRec indRecN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (indRecLoop_link b h64 hsize (i + 1) true 0 false false _ 0 0 0 0 0 _ 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanIndRecListLoop`. -/
 theorem indRecsLoop_link (i : USize) (acc : List IndRecRec) (w : Bool) (hacc : acc.length ≤ i.toNat) :
@@ -980,7 +982,7 @@ theorem indRecsLoop_link (i : USize) (acc : List IndRecRec) (w : Bool) (hacc : a
 theorem indRecs_link (i : USize) : okW (ConLeche.Frontend.scanIndRecs b i) = indRecsN b.data i.toUInt64 := by
   unfold ConLeche.Frontend.scanIndRecs indRecsN objListEntryN
   rw [entry_link b h64 hsize i 91 91 (by decide) rfl (by decide)
-    (indRecsLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 b h64 hsize]; rfl
+    (indRecsLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanIndTypeLoop`. -/
 theorem indTypeLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : List Nat) (a1 : Bool) (a2 : Bool) (a3 : Bool) (a4 : List Nat) (a5 : Nat) (a6 : Nat) (a7 : Nat) (a8 : Nat) (a9 : Nat) :
@@ -995,7 +997,7 @@ theorem indType_link (i : USize) : okW (ConLeche.Frontend.scanIndType b i) = ind
   unfold ConLeche.Frontend.scanIndType indTypeN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (indTypeLoop_link b h64 hsize (i + 1) true 0 _ false false false _ 0 0 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanIndTypeListLoop`. -/
 theorem indTypesLoop_link (i : USize) (acc : List IndTypeRec) (w : Bool) (hacc : acc.length ≤ i.toNat) :
@@ -1008,7 +1010,7 @@ theorem indTypesLoop_link (i : USize) (acc : List IndTypeRec) (w : Bool) (hacc :
 theorem indTypes_link (i : USize) : okW (ConLeche.Frontend.scanIndTypes b i) = indTypesN b.data i.toUInt64 := by
   unfold ConLeche.Frontend.scanIndTypes indTypesN objListEntryN
   rw [entry_link b h64 hsize i 91 91 (by decide) rfl (by decide)
-    (indTypesLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 b h64 hsize]; rfl
+    (indTypesLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanIndCtorLoop`. -/
 theorem indCtorLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Bool) (a1 : List Nat) (a2 : Nat) (a3 : Nat) (a4 : Nat) (a5 : Nat) (a6 : Option Nat) (a7 : Option Nat) :
@@ -1023,7 +1025,7 @@ theorem indCtor_link (i : USize) : okW (ConLeche.Frontend.scanIndCtor b i) = ind
   unfold ConLeche.Frontend.scanIndCtor indCtorN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (indCtorLoop_link b h64 hsize (i + 1) true 0 false _ 0 0 0 0 _ _)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanIndCtorListLoop`. -/
 theorem indCtorsLoop_link (i : USize) (acc : List IndCtorRec) (w : Bool) (hacc : acc.length ≤ i.toNat) :
@@ -1036,7 +1038,7 @@ theorem indCtorsLoop_link (i : USize) (acc : List IndCtorRec) (w : Bool) (hacc :
 theorem indCtors_link (i : USize) : okW (ConLeche.Frontend.scanIndCtors b i) = indCtorsN b.data i.toUInt64 := by
   unfold ConLeche.Frontend.scanIndCtors indCtorsN objListEntryN
   rw [entry_link b h64 hsize i 91 91 (by decide) rfl (by decide)
-    (indCtorsLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 b h64 hsize]; rfl
+    (indCtorsLoop_link b h64 hsize (i + 1) [] true (by simp)), succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanAxiomDeclLoop`. -/
 theorem axiomDLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Bool) (a1 : List Nat) (a2 : Nat) (a3 : Nat) :
@@ -1051,7 +1053,7 @@ theorem axiomD_link (i : USize) : okW (ConLeche.Frontend.scanAxiomDecl b i) = ax
   unfold ConLeche.Frontend.scanAxiomDecl axiomDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (axiomDLoop_link b h64 hsize (i + 1) true 0 false _ 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanDefDeclLoop`. -/
 theorem defDLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : HintsRec) (a1 : List Nat) (a2 : Nat) (a3 : String) (a4 : Nat) (a5 : Nat) :
@@ -1066,7 +1068,7 @@ theorem defD_link (i : USize) : okW (ConLeche.Frontend.scanDefDecl b i) = defDN 
   unfold ConLeche.Frontend.scanDefDecl defDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (defDLoop_link b h64 hsize (i + 1) true 0 _ _ 0 "" 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanThmDeclLoop`. -/
 theorem thmDLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : List Nat) (a1 : Nat) (a2 : Nat) (a3 : Nat) :
@@ -1081,7 +1083,7 @@ theorem thmD_link (i : USize) : okW (ConLeche.Frontend.scanThmDecl b i) = thmDN 
   unfold ConLeche.Frontend.scanThmDecl thmDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (thmDLoop_link b h64 hsize (i + 1) true 0 _ 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanOpaqueDeclLoop`. -/
 theorem opaqueDLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : Bool) (a1 : List Nat) (a2 : Nat) (a3 : Nat) (a4 : Nat) :
@@ -1096,7 +1098,7 @@ theorem opaqueD_link (i : USize) : okW (ConLeche.Frontend.scanOpaqueDecl b i) = 
   unfold ConLeche.Frontend.scanOpaqueDecl opaqueDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (opaqueDLoop_link b h64 hsize (i + 1) true 0 false _ 0 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanQuotDeclLoop`. -/
 theorem quotDLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : String) (a1 : List Nat) (a2 : Nat) (a3 : Nat) :
@@ -1111,7 +1113,7 @@ theorem quotD_link (i : USize) : okW (ConLeche.Frontend.scanQuotDecl b i) = quot
   unfold ConLeche.Frontend.scanQuotDecl quotDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (quotDLoop_link b h64 hsize (i + 1) true 0 "" _ 0 0)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 /-- con-leche's `scanIndDeclLoop`. -/
 theorem indDLoop_link (i : USize) (w : Bool) (seen : UInt32) (a0 : List IndCtorRec) (a1 : List IndRecRec) (a2 : List IndTypeRec) :
@@ -1126,7 +1128,7 @@ theorem indD_link (i : USize) : okW (ConLeche.Frontend.scanIndDecl b i) = indDN 
   unfold ConLeche.Frontend.scanIndDecl indDN objEntryN
   rw [entry_link b h64 hsize i 123 123 (by decide) rfl (by decide)
     (indDLoop_link b h64 hsize (i + 1) true 0 _ _ _)]
-  rw [succ_toUInt64 b h64 hsize]; rfl
+  rw [succ_toUInt64 h64]; rfl
 
 end records
 

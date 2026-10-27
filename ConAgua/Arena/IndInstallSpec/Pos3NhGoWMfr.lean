@@ -70,7 +70,7 @@ theorem pos3_lpsW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
 
 theorem pos3_pinternW_mfr {m m' : Mem} {u w : Word} (h : pinternW m u = some (w, m')) : MFr [] [] m m' := by
   exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h,
-    by simp [ConsSch.wset, paramCS, PREC, PSLOT], by simp [paramCS]⟩
+    by simp [tier1, tierOff, ConsSch.wset, paramCS, PREC, PSLOT], by simp [paramCS]⟩
 
 theorem pos3_plgW_mfr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
     MFr [] [] m m'
@@ -127,7 +127,7 @@ theorem pos3_plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : pl
         rw [hs, plK5_some] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         rw [← h.2]
-        exact (pos3_plgW_mfr k _ _ _ _ _ hg).trans (MFr.of_frame (ilF_frame hs) (by simp [POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp))
+        exact (pos3_plgW_mfr k _ _ _ _ _ hg).trans (MFr.of_frame (ilF_frame hs) (by simp [tier1, tierOff, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp))
 
 theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h : nckW n m p fo fl = some (r, m')) :
     MFr [] [] m m' := by

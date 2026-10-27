@@ -7,7 +7,6 @@ import ConAgua.Arena.IndView
 `dpFin`, `dpGoW`, `dpG1`, `dpG3`, `dpG4`, `dpG5` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

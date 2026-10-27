@@ -274,7 +274,7 @@ structure ConsOK : Prop where
   skips : SkipOK C
   push_np : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk
   arrs : C.ra ≠ CTL ∧ C.sa ≠ CTL ∧ C.ra ≠ C.sa
-  /-- The arrays are tier-0 ids (tier 1 is `+ 256`). -/
+  /-- The arrays are tier-0 ids (tier 1 is `tier1`). -/
   lt : C.ra < 256 ∧ C.sa < 256 ∧ ∀ A, C.col = some A → A < 256
   /-- The match's prelude has a local of its own (the find's key word follows it). -/
   mloc : C.mpre ≠ none → 1 ≤ C.mloc

@@ -3,7 +3,6 @@ import ConAgua.Verdict.IndBE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # `check_block_idx_sorts`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)
 
@@ -33,8 +32,8 @@ l_model iisE_spec (p : Prog) (hf : p.lookup "check_block_idx_sorts_one" = some c
   fns [hf ↦ iisE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
 
-theorem blkE2_nv : ∀ f ∈ ["sl_cons", "rec2", "open_pis_at_fvars_f"], f ∈ _root_.L.Checker.nvFns := by
-  decide +kernel
+theorem blkE2_nv : ∀ f ∈ ["sl_cons", "rec2", "open_pis_at_fvars_f"], f ∈ _root_.L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 theorem iisE_k_opf_eq (p : Prog) (n : Nat) (vis nP ni srt : Word) (r : List Word) (m₁ : Mem)
     (h : r.headD 0 ≠ 0) :

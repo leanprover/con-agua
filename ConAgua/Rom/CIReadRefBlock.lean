@@ -114,7 +114,7 @@ theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hd1 : rom.drop (r1.tail.headD 0).toNat = (encCIsM (encCI seen c).2 cs).1 ++ rest :=
-      drop_shift rom hr q _ _ _ (by rw [hd0, List.append_assoc]) _ hq1
+      drop_shift rom q _ _ _ (by rw [hd0, List.append_assoc]) _ hq1
     obtain ⟨memo2, ics, a2, hrun2, hlen2, hI3, hM3, hs3, hq3, hek3, ht3, hik3, hB3⟩ :=
       ih hfit.2 _ memo1 (k + 1) _ a1 _ (o + 1) (kw - 1) rest r2 m3 (by
         rcases hz with h | ⟨hok, hmo, hn⟩

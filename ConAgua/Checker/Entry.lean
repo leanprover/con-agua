@@ -34,7 +34,7 @@ def wordArrays : Nat := 388
 def ctlMin : Nat := 256
 
 /-- The slot arrays of the 19 cons tables (`ConsLib.lean`), both tiers (tier 1 of array `a` is
-`a + 256`): at least `consMinWords` words each (the initial table, `consR_init`) and below `2^61`
+`tier1 a`): at least `consMinWords` words each (the initial table, `consR_init`) and below `2^61`
 (the growth's offsets, `TierLay`). -/
 def slotArrs : List Nat := [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 26, 28, 30, 32, 34, 36, 38, 40,
   259, 261, 263, 265, 267, 269, 271, 273, 275, 277, 279, 282, 284, 286, 288, 290, 292, 294, 296]

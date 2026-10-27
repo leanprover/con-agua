@@ -138,10 +138,10 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
 
 /-- The arrays and `CTL` words a level promotion writes (the names' and the level tables'). -/
 abbrev lArrs : List ArrId :=
-  [POOL, PT0, NAREC, NAREC + 256, NASLOT, NASLOT + 256, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC,
-    NNREC + 256, NNSLOT, NNSLOT + 256, PNM, ZREC, ZREC + 256, ZSLOT, ZSLOT + 256, SREC, SREC + 256,
-    SSLOT, SSLOT + 256, MREC, MREC + 256, MSLOT, MSLOT + 256, IREC, IREC + 256, ISLOT, ISLOT + 256,
-    PREC, PREC + 256, PSLOT, PSLOT + 256, PLM, SHP, SHP + 256, MHP, MHP + 256, IHP, IHP + 256]
+  [POOL, PT0, NAREC, tier1 NAREC, NASLOT, tier1 NASLOT, NSREC, tier1 NSREC, NSSLOT, tier1 NSSLOT, NNREC,
+    tier1 NNREC, NNSLOT, tier1 NNSLOT, PNM, ZREC, tier1 ZREC, ZSLOT, tier1 ZSLOT, SREC, tier1 SREC,
+    SSLOT, tier1 SSLOT, MREC, tier1 MREC, MSLOT, tier1 MSLOT, IREC, tier1 IREC, ISLOT, tier1 ISLOT,
+    PREC, tier1 PREC, PSLOT, tier1 PSLOT, PLM, SHP, tier1 SHP, MHP, tier1 MHP, IHP, tier1 IHP]
 abbrev lCtl : List Word := [34, 35, 36, 37, 38, 39, 141, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 143]
 
 /-- **What a successful run of a level promotion gives** (`PNOk` at the level frame). -/
@@ -273,7 +273,7 @@ theorem pl_rel : ∀ n : Nat,
       refine (Sim.hd1 (sim_pi (fun n s₀ => piZero_spec p hp n s₀) fun n _ _ h =>
         piZero_rel p hp n m a hD _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr⟩
-      exact ⟨rfl, hD₁, hP.frameLo (by simp [ZREC, ZSLOT]) (by simp) hfr, hpw, hcp,
+      exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, tierOff, ZREC, ZSLOT]) (by simp) hfr, hpw, hcp,
         hfr.mono (by simp) (by simp), rfl, rfl, SlKeep.of_frame hfr (by decide) (by decide)⟩
     | succ u =>
       simp (config := { decide := true }) only [plK, lvEnc, List.headD_cons, List.tail_cons,
@@ -286,7 +286,7 @@ theorem pl_rel : ∀ n : Nat,
       refine (Sim.hd1 (sim_pi (fun n s₀ => piSucc_spec p hp n s₀ _) fun n _ _ h =>
         piSucc_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
-      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [SREC, SSLOT, SHP]) (by simp) hfr₂, hpw₂,
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, tierOff, SREC, SSLOT, SHP]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hls₁,
         hsk₁.trans (SlKeep.of_frame hfr₂ (by decide) (by decide))⟩
     | max u w =>
@@ -304,7 +304,7 @@ theorem pl_rel : ∀ n : Nat,
       refine (Sim.hd1 (sim_pi (fun n s₀ => piMax_spec p hp n s₀ _ _) fun n _ _ h =>
         piMax_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₃, hpw₃, hcp₃, hfr₃⟩
-      exact ⟨rfl, hD₃, hP₂.frameLo (by simp [MREC, MSLOT, MHP]) (by simp) hfr₃, hpw₃,
+      exact ⟨rfl, hD₃, hP₂.frameLo (by simp [tier1, tierOff, MREC, MSLOT, MHP]) (by simp) hfr₃, hpw₃,
         hcp₃.trans (hcp₂.trans hcp₁), (hfr₁.trans hfr₂).trans (hfr₃.mono (by simp) (by simp)),
         he₂.trans he₁, hls₂.trans hls₁,
         (hsk₁.trans hsk₂).trans (SlKeep.of_frame hfr₃ (by decide) (by decide))⟩
@@ -323,7 +323,7 @@ theorem pl_rel : ∀ n : Nat,
       refine (Sim.hd1 (sim_pi (fun n s₀ => piImax_spec p hp n s₀ _ _) fun n _ _ h =>
         piImax_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₃, hpw₃, hcp₃, hfr₃⟩
-      exact ⟨rfl, hD₃, hP₂.frameLo (by simp [IREC, ISLOT, IHP]) (by simp) hfr₃, hpw₃,
+      exact ⟨rfl, hD₃, hP₂.frameLo (by simp [tier1, tierOff, IREC, ISLOT, IHP]) (by simp) hfr₃, hpw₃,
         hcp₃.trans (hcp₂.trans hcp₁), (hfr₁.trans hfr₂).trans (hfr₃.mono (by simp) (by simp)),
         he₂.trans he₁, hls₂.trans hls₁,
         (hsk₁.trans hsk₂).trans (SlKeep.of_frame hfr₃ (by decide) (by decide))⟩
@@ -338,7 +338,7 @@ theorem pl_rel : ∀ n : Nat,
       refine (Sim.hd1 (sim_pi (fun n s₀ => piParam_spec p hp n s₀ _) fun n _ _ h =>
         piParam_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
-      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [PREC, PSLOT]) (by simp) hfr₂, hpw₂,
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, tierOff, PREC, PSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, (nFrame_l hfr₁).trans (hfr₂.mono (by simp) (by simp)), he₁, hls₁,
         hsk₁.trans (SlKeep.of_frame hfr₂ (by decide) (by decide))⟩
 

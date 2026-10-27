@@ -2,7 +2,6 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosE3Cm
 import ConAgua.Arena.IndT.PosOne
-
 /-!
 # `nest_ctors_crest`'s and `nest_ctors_one`'s error claims (lane `verdicts-b`, helper `ia2`,
 fork `kn2b`)
@@ -65,7 +64,7 @@ theorem crestE_claim {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   cases c1 : callE p k "cv_lps" [cv] m with
   | error e1 =>
     rw [c1, ncrE.k_cv_lps.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, hlp⟩ := triple_of_callW (cvLps_spec p L.ct.ha L.ct.hc L.ct.he L.ct.hcv k ⟨m, Locals.init []⟩ cv)
@@ -82,7 +81,7 @@ theorem crestE_claim {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   cases c2 : callE p k "sl_nodup" [r1.headD 0, r1.tail.headD 0] m1 with
   | error e2 =>
     rw [c2, ncrE.k_sl_nodup.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c2
   | ok q2 =>
   obtain ⟨r2, m2'⟩ := q2
   obtain ⟨s2, hs2, -, hm2, hnd⟩ := triple_of_callW (slNodup_spec p L.ct.hsc L.ct.hnd k ⟨m1, Locals.init []⟩ _ _)
@@ -118,7 +117,7 @@ theorem crestE_claim {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   cases c3 : callE p k "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, us, wt] m1 with
   | error e3 =>
     rw [c3, ncrE.k_inst_lp_fast.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c3
   | ok q3 =>
   obtain ⟨r2, m2⟩ := q3
   rw [c3, ncrE.k_inst_lp_fast.arm1] at he
@@ -136,7 +135,7 @@ theorem crestE_claim {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   cases c4 : callE p k "nest_crest" [no, nl, us, dO, dL, hO, hL, r2.headD 0] m2 with
   | error e4 =>
     rw [c4, ncrE.k_nest_crest.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c4
   | ok q4 =>
   obtain ⟨r3, m3⟩ := q4
   obtain ⟨s4, hs4, -, hpc0⟩ := triple_of_callW (nestCrest_spec' p L.ct.cr k ⟨m2, Locals.init []⟩ no nl us dO dL hO hL
@@ -296,7 +295,7 @@ theorem oneOKE_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe e
   cases c3 : callE p n "nest_ctors_u4" [rw.headD 0, nF, rw.tail.tail.tail.headD 0, 0] m2 with
   | error e3 =>
     rw [c3, noE.k_nest_ctors_u4.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c3
   | ok q3 =>
   obtain ⟨ru0, m3⟩ := q3
   obtain ⟨s3, hs3, -, hu⟩ := triple_of_callW (nestCtorsU4_spec p L.usl L.hu4 n ⟨m2, Locals.init []⟩ _ _ _ _)
@@ -325,7 +324,7 @@ theorem oneOKE_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe e
   cases c4 : callE p n "nest_ctors_res_ok" [ctx, hi, rw.tail.tail.headD 0] m3 with
   | error e4 =>
     rw [c4, noE.k_nest_ctors_res_ok.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c4
   | ok q4 =>
   obtain ⟨rr0, m4⟩ := q4
   obtain ⟨s4, hs4, -, hro⟩ := triple_of_callW (nestCtorsResOk_spec p L.nit.no L.nit.hoa L.hrh L.nt.ad L.hro n
@@ -348,7 +347,7 @@ theorem oneOKE_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe e
   cases c5 : callE p n "nest_ctor_nf" [ctx, po, pl, us, dO, dL, cv, rw.tail.tail.tail.headD 0] m4 with
   | error e5 =>
     rw [c5, noE.k_nest_ctor_nf.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [c5, noE.k_nest_ctor_nf.arm1] at he
@@ -356,7 +355,7 @@ theorem oneOKE_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe e
       rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 5), r5.headD 0] m5 with
   | error e6 =>
     rw [c6, noE.k_sl_snoc.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c6
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   rw [c6, noE.k_sl_snoc.arm1] at he
@@ -365,7 +364,7 @@ theorem oneOKE_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ihC : NbOKC p dn vis fe e
       rdW (m6.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 3), r6.headD 0, r6.tail.headD 0] m6 with
   | error e7 =>
     rw [c7, noE.k_rec6.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c7
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c7
   | ok q7 =>
     obtain ⟨r7, m7⟩ := q7
     rw [c7, noE.k_rec6.arm1] at he; cases he

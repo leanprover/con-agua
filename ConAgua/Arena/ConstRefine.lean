@@ -200,7 +200,7 @@ theorem constColFree : ColFree constCS CeRecRel := by
 
 /-- **What `intern_const` changes**: the table's arrays, the column, the counts. -/
 theorem ceinternW_frame (m : Mem) (f a : Word) (w : Word) (m' : Mem) (hI : ceinternW m f a = some (w, m')) :
-    MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m' :=
+    MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m' :=
   consInternM_frame constCS_wf hI
 
 theorem constLocal : RLocal constSch CeRecRel cehash [] [] := by

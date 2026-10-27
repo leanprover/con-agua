@@ -375,7 +375,7 @@ theorem RfInv.frame {m m' : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Wo
       hgG, hGl, by rw [hfr.2.2.1]; exact hsz⟩, hF⟩
 
 theorem ceinternW_low {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r, m')) : LowFr m m' := by
-  exact ⟨_, _, (ceinternW_frame (hI := h)), by simp [CREC, CSLOT, CLP], by simp⟩
+  exact ⟨_, _, (ceinternW_frame (hI := h)), by simp [tier1, tierOff, CREC, CSLOT, CLP], by simp⟩
 
 /-- The map at the generations up to `G` is unchanged. -/
 def GKeep (M M' : Std.HashMap (EIdx × Word) EIdx) (G : Word) : Prop :=

@@ -36,7 +36,7 @@ theorem rciA_mem {b : Nat} (h : b ∈ RciA) :
   simp only [RciA, ExprA, RomA, StoreA, EREC, IW, RMEMO, RSET, RSTK, List.mem_cons] at h
   rcases h with h | h | h | h | h | h
   any_goals (subst h; simp)
-  simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at h
+  simp only [tier1, tierOff, lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at h
   rcases h with h | ⟨y, hy, e⟩
   · omega
   · have e' : (y : Nat) + 256 = b := e

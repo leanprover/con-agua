@@ -4,7 +4,6 @@ import ConAgua.Verdict.KnotAllE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # `whnf_telescope`'s error claim (lane `verdicts-b`, helper `fin`, fork `wt`)
 
@@ -96,7 +95,7 @@ theorem wtE_claim (k : Nat) (hk : k ≤ 2 ^ 62) :
   cases h2 : callE p k "e_view" [w] m1 with
   | error e2 =>
     rw [h2, wtE.k_e_view.none] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, hl2, hne2, hr2⟩ := triple_of_callE (eView_spec p hv k ⟨m1, Locals.init []⟩ w) h2
@@ -149,7 +148,7 @@ theorem wtE_claim (k : Nat) (hk : k ≤ 2 ^ 62) :
     cases h3 : callE p k "intern_fvar" [i, x] m2 with
     | error e3 =>
       rw [h3, wtE.k_intern_fvar.none] at h; cases h
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
     | ok q3 =>
     obtain ⟨r3, m3⟩ := q3
     obtain ⟨s3, hs3, -, h3'⟩ := triple_of_callE
@@ -176,7 +175,7 @@ theorem wtE_claim (k : Nat) (hk : k ≤ 2 ^ 62) :
     cases h4 : callE p k "instantiate1_fast" [CWF, y, fv, 0] m3 with
     | error e4 =>
       rw [h4, wtE.k_instantiate1_fast.none] at h; cases h
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
     | ok q4 =>
     obtain ⟨rb, m4⟩ := q4
     obtain ⟨s4, hs4, -, h4'⟩ := triple_of_callE (i1F_spec p hi1 k ⟨m3, Locals.init []⟩ _) h4
@@ -209,7 +208,7 @@ theorem wtE_claim (k : Nat) (hk : k ≤ 2 ^ 62) :
     cases h6 : callE p k "sl_cons" [x, rr.headD 0, rr.tail.headD 0] m5 with
     | error e6 =>
       rw [h6, wtE.k_sl_cons.none] at h; cases h
-      exact absurd (callE_nv hnv (by decide +kernel) _ _ _ h6) hk0
+      exact absurd (callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h6) hk0
     | ok q6 =>
     obtain ⟨ro, m6⟩ := q6
     rw [h6, wtE.k_sl_cons.arm1] at h; cases h

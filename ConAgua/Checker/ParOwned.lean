@@ -18,8 +18,8 @@ partial def parArrsE : Expr → List ArrId
   | .ld8 _ i | .ldc _ i | .ld8x8 _ i => parArrsE i
   | .ld64 a i => a :: parArrsE i
   | .len64 a => [a]
-  | .ld64t a t i => a :: (a + 256) :: parArrsE t ++ parArrsE i
-  | .len64t a t => a :: (a + 256) :: parArrsE t
+  | .ld64t a t i => a :: (tier1 a) :: parArrsE t ++ parArrsE i
+  | .len64t a t => a :: (tier1 a) :: parArrsE t
   | _ => []
 
 partial def parArrsC : Cond → List ArrId
@@ -29,7 +29,7 @@ partial def parArrsC : Cond → List ArrId
 
 def parWArr : WArr → List ArrId
   | .plain a => [a]
-  | .tier a _ => [a, a + 256]
+  | .tier a _ => [a, tier1 a]
 
 partial def parArrsS : Stmt → List ArrId
   | .seq s t => parArrsS s ++ parArrsS t
@@ -38,7 +38,7 @@ partial def parArrsS : Stmt → List ArrId
   | .set _ e | .gset _ e => parArrsE e
   | .st8 _ i e => parArrsE i ++ parArrsE e
   | .st64 a i e => a :: parArrsE i ++ parArrsE e
-  | .st64t a t i e => a :: (a + 256) :: parArrsE t ++ parArrsE i ++ parArrsE e
+  | .st64t a t i e => a :: (tier1 a) :: parArrsE t ++ parArrsE i ++ parArrsE e
   | .ret es | .call _ _ es => es.flatMap parArrsE
   | .copy64 d di s si n => parWArr d ++ parWArr s ++ parArrsE di ++ parArrsE si ++ parArrsE n
   | .copy8w d di _ si n => parWArr d ++ parArrsE di ++ parArrsE si ++ parArrsE n

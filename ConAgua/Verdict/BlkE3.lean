@@ -2,7 +2,6 @@ import ConAgua.Verdict.IndA4
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # `check_block_tables`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)
 
@@ -32,8 +31,8 @@ l_model ctbE_spec (p : Prog) (hf : p.lookup "check_block_tables" = some checkBlo
   fns [hf ↦ ctbE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 1000000 simp [rdW] errors
 
-theorem blkE3_nv : ∀ f ∈ ["struct_proj_guards", "block_shape_lps"], f ∈ _root_.L.Checker.nvFns := by
-  decide +kernel
+theorem blkE3_nv : ∀ f ∈ ["struct_proj_guards", "block_shape_lps"], f ∈ _root_.L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- **`check_struct_proj_table`'s error claim in the shape of `tblW_okR`** (under `StageR` and
 the twin's `StateOK`, as `check_block_tables` runs it; `CheckStructProjTableE` is the `StageC`

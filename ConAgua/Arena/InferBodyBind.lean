@@ -181,7 +181,7 @@ theorem inferLamsLeaf_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St)
 
 theorem BKept.of_mkForall {m m' : Mem} {t b r : Word} (h : mkForallW m t b = some (r, m')) :
     BKept m m' :=
-  BKept.of_frame (mkForallW_frame h) (by simp [FADER, FAREC, FASLOT, BSTK]) (by simp)
+  BKept.of_frame (mkForallW_frame h) (by simp [tier1, tierOff, FADER, FAREC, FASLOT, BSTK]) (by simp)
 
 theorem sub1_toNat {n : Word} (h : n ≠ 0) : (n - 1).toNat = n.toNat - 1 := by
   have : n.toNat ≠ 0 := fun h' => h (UInt64.toNat_inj.mp (by simpa using h'))
@@ -648,7 +648,7 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       obtain ⟨hok4, ⟨M₄, hS₄, hK₄, hSt₄⟩, hres4, hrw4⟩ := h₄
       have hB₄ : BKept m₃ m₄ := by
         exact BKept.of_frame ((fvinternW_frame (hI := hfv)))
-          (by simp [FVREC, FVSLOT, FVLP, BSTK]) (by simp)
+          (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP, BSTK]) (by simp)
       -- the stacks kept across the four calls
       have hSt14 := hSt₁.trans (hSt₂.trans (hSt₃.trans hSt₄))
       have hBK := hB₁.trans (hB₂.trans (hB₃.trans hB₄))

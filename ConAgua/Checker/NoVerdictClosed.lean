@@ -1,7 +1,6 @@
 import ConAgua.Checker.Prog
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.L.ErrSpec
-import ConAgua.Compiler.WriteSetSplit
+import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.LevelIntern
 import ConAgua.Arena.LevelSubstLP
 
@@ -66,7 +65,6 @@ namespace L.Checker
 
 open L.Compiler
 
-names_tree nvTree : nvFns
 prog_all checkerProg_nvChk : checkerProg (nvChk nvTree)
 
 /-- **The functions outside the verdict closure claim nothing.** -/

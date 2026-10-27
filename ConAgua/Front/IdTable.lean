@@ -213,7 +213,7 @@ end specs
 def TblIx (b : ArrId) : Prop := b = 64 ∨ b = 65 ∨ b = 66
 
 /-- The tables' arrays: dense `64‥66`, sparse `72‥74`. -/
-def idArrs : List ArrId := [64, 65, 66, 72, 73, 74]
+def idArrs : List ArrId := [NID, LID, EID, NIDS, LIDS, EIDS]
 
 /-- The tables' `CTL` words: sparse stamps and counts `64‥69`, dense sizes `70‥72`. -/
 def idCtl : List Word := [64, 65, 66, 67, 68, 69, 70, 71, 72]
@@ -430,8 +430,8 @@ words outside `idCtl`. -/
 theorem tbl_apart {A : List ArrId} {C : List Word} {b : ArrId} (hb : TblIx b)
     (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x ∉ idCtl) :
     b ∉ A ∧ b + 8 ∉ A ∧ szC b ∉ C ∧ (spS b).cs ∉ C :=
-  ⟨fun h => by have := hA b h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs],
-    fun h => by have := hA _ h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs],
+  ⟨fun h => by have := hA b h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, NID, LID, EID, NIDS, LIDS, EIDS],
+    fun h => by have := hA _ h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, NID, LID, EID, NIDS, LIDS, EIDS],
     fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [szC, idCtl] at this,
     fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [spS, idCtl] at this⟩
 

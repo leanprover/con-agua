@@ -1,7 +1,7 @@
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.IndsE1
 import ConAgua.Arena.IndT.Lift
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `check_block_doms_at`'s error refinement (lane `verdicts-b`, helper `ia2-inds`)
@@ -95,7 +95,7 @@ theorem cbdaE_claim (hftd : FtdF p) (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem
     cases h1 : callE p n "fvar_type_d" [wa] m with
     | error e1 =>
       rw [h1, cbdaE.k_fvar_type_d.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
     | ok q1 =>
     obtain ⟨ra, m1⟩ := q1
     rw [h1, cbdaE.k_fvar_type_d.arm1] at he

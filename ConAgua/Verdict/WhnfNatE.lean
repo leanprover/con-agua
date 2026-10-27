@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels2E
 import ConAgua.Verdict.WhnfSlotE
-
 /-!
 # `reduce_nat`'s family's verdict claims (lane `verdicts-b`, helper `k2`)
 
@@ -19,8 +18,8 @@ namespace L.Arena
 
 theorem whnfNatE_nv : ∀ f ∈ ["nat_op_is_wf", "nat_lit_supported", "raw_nat_lit", "pin_at",
     "nat_succ_lit", "nat_op_result", "pin_word", "nat_bin_op_name", "nat_op_stored"],
-    f ∈ L.Checker.nvFns := by
-  decide +kernel
+    f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-! ## The twin's failing runs of the arms -/
 

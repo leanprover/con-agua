@@ -50,7 +50,7 @@ arena (arrays below 64 and `CTL` words below 64) and from `CheckR`'s upper tiers
 abbrev ApdFr (m m' : Mem) : Prop := MemFrame [APDM] [152, 153] m m'
 
 theorem apdFrame_arena {m m' : Mem} {a : AState} (hf : ApdFr m m') (hR : ArenaR m a) : ArenaR m' a :=
-  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, APDM, WSM])
+  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, APDM, WSM, BMEMO, LMEMO, IMEMO, FRMEMO])
     (fun x hx => by simp at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide))
     hf hR
 

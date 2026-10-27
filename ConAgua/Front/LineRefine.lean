@@ -314,7 +314,7 @@ theorem frontLineW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
         · cases hsc'
     subst hrr
     obtain ⟨m₁, hW, hm₁⟩ := Option.map_eq_some_iff.mp h
-    rw [← succ_toUInt64 b h64 hsize] at hW
+    rw [← succ_toUInt64 h64] at hW
     simp only [okRes, Prod.mk.injEq] at hm₁
     obtain ⟨hnx, rfl⟩ := hm₁
     have hnx' : nx = (lineFwdN b.data i.toUInt64).2 := by
@@ -353,7 +353,7 @@ scanner reads a record at `i` whose next position is `nx`, and con-ron's `applyL
 with `ArenaD` and `StateDR` holding of the memory after. -/
 @[refines ConRon.Arena.Frontend.applyLine]
 theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
-    (hpf : p.lookup "front_line" = some frontLine) (hps : p.lookup "str_put" = some strPut)
+    (hpf : p.lookup "front_line" = some frontLine)
     (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
     (hpl : p.lookup "apply_level" = some applyLevel) (hpr : p.lookup "apply_rec" = some applyRec)
     (hpt : p.lookup "apply_str" = some applyStr) (hE : ExprLookups p)
@@ -370,7 +370,7 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   apply M.triple_of_run
   intro s r s' hs hrun
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
-    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data hsize n s₀ hm i.toUInt64
+    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data hsize n s₀ hm i.toUInt64
       (by rw [USize.toNat_toUInt64]; exact hi) hR.1.lit.1.2.2.1 hR.1.lit.1.2.2.2.1)
   intro nx hr
   subst hr

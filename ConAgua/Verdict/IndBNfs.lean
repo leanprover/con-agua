@@ -3,7 +3,6 @@ import ConAgua.Verdict.IndBTmn
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-
 /-!
 # `classes_nfs`' error claim (lane `verdicts-b`, helper `verdicts-b-fin`, fork `nfs`)
 
@@ -131,7 +130,7 @@ theorem tmnE_claimP (L : TmnLook p) (mb : Mem) (n : Nat) (hn : n ≤ 2 ^ 62) : �
   | error e2 =>
     rw [h2, tmnE.k_ctors_have_name.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (ctorsHaveName_spec p L.chn n ⟨s1.mem, Locals.init []⟩ cto ctl
@@ -175,7 +174,7 @@ theorem tmnE_claimP (L : TmnLook p) (mb : Mem) (n : Nat) (hn : n ≤ 2 ^ 62) : �
   | error e4 =>
     rw [h4, tmnE.k_sl_cons.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h4)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4)
   | ok q4 =>
     rw [h4, tmnE.k_sl_cons.arm1] at he
     cases he
@@ -271,7 +270,7 @@ theorem iwAlloc_specNV {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = tru
   Triple.and_err (callW_spec p k "iw_alloc" vs s₀)
     (M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ hr =>
       M.of_run_err (P := fun _ => True) trivial hr
-        (invoke_nv p hnv k "iw_alloc" (by decide +kernel) vs))
+        (invoke_nv p hnv k "iw_alloc" (_root_.L.Checker.nv_mem (by decide +kernel)) vs))
 
 /-- The copy loop's ok model and its failures' class `0`. -/
 theorem ncpLoop_specNV {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) (f : Nat) (s₀ : St) :

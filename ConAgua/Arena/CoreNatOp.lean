@@ -208,12 +208,12 @@ theorem arenaP_grow (m₀ : Mem) : ∀ m m' a, ArenaP m₀ m a → Grows m m' �
 
 /-- `intern_lit`'s functions in `natArmProg`: the `lit` table only. -/
 def natLitFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
-theorem natLitFns_closed : closedA natArmProg [REC, REC + 256, SLOT, SLOT + 256] [2, 3] natLitFns = true := by decide +kernel
+theorem natLitFns_closed : closedA natArmProg [REC, tier1 REC, SLOT, tier1 SLOT] [2, 3] natLitFns = true := by decide +kernel
 
 /-- `nat_beq_lit`/`nat_ble_lit` and their callees: the `const` table only. -/
 def natCmpFns : List FnName :=
   ["nat_beq_lit", "nat_ble_lit", "nat_cmp", "intern_const", "const_find", "const_push"]
-theorem natCmpFns_closed : closedA natArmProg [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] natCmpFns = true := by
+theorem natCmpFns_closed : closedA natArmProg [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] natCmpFns = true := by
   decide +kernel
 
 theorem internLit_armsP (m₀ : Mem) : InternSpec natArmProg (ArenaP m₀) := by
