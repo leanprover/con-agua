@@ -1,4 +1,4 @@
-import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.WhnfBase
 import ConAgua.Checker.Entry
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
