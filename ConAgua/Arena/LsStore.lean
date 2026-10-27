@@ -45,11 +45,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The level-list records, both tiers interleaved (three words per node). -/
-abbrev LSREC : ArrId := 39
-/-- The level-list cons-table slots, both tiers interleaved. -/
-abbrev LSSLOT : ArrId := 40
-
 /-! ## `ls_match(t, i, o, l, h)` -/
 
 /-- The model of `ls_match`: node `i` of tier `t` has hash `h`, length `l` and the words of the

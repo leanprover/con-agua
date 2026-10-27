@@ -1,5 +1,6 @@
 import ConAgua.L.Logic
 import ConAgua.L.Blocks
+import ConAgua.Layout
 
 /-!
 # The pin-data substitution lemma (lane `romload`)
@@ -11,9 +12,6 @@ pin readers' proofs can be about ROM readers over `bs` (DESIGN.md, "The pin data
 -/
 
 namespace L.Rom
-
-/-- The pin-data byte array. -/
-abbrev PB : ArrId := 1
 
 end L.Rom
 

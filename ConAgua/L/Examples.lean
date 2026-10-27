@@ -13,6 +13,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -38,9 +39,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Examples
-
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
 
 /-! ## `find_byte` -/
 

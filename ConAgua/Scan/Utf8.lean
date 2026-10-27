@@ -8,6 +8,7 @@ import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -33,8 +34,6 @@ open scoped Lean.Order
 
 namespace L.Scan.Utf8
 
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
 /-- The output: one code point per word. -/
 abbrev OUT : ArrId := 0
 

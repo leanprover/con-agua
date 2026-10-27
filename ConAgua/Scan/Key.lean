@@ -56,9 +56,6 @@ namespace L.Scan.Key
 open L.Scan.Utf8 (byteW)
 open L.Scan.Leaves (skipWsN)
 
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
-
 /-! ## `key_at` -/
 
 /-- con-leche's `keyAt`, on words: the key's code (`Key.ctorIdx`), `0` for `kUnknown`.

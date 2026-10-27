@@ -101,3 +101,22 @@ memory map in `DESIGN.md` is history; the table replaces it as the current map.
    table where they must stay literals (`frozenIdsL`, `parOwnedL`: the stub is built from them).
 
 ## Journal
+
+### Batch 1 (landed, master 5f27024c)
+`ConAgua/L/Arrays.lean` (tables, `declare_arrays`, the surface check, the tier lemmas) and its tests
+in `Compiler/Tests.lean`. `omega` does not read a comparison at type `ArrId` (the type argument of
+`<`/`=` is `ArrId`, not `Nat`): the tier lemmas take `Nat` binders and `show` the `Nat` statement.
+
+### Batch 2: the table
+* `ConAgua/Layout.lean`: 117 rows (2 byte, 115 word, 54 tiered) and six aliases (`IN0`,
+  `POOL1`, `ILSPN`, `LPIW`, `APDM`, `DIND`). The 141 local declarations are gone from 61 modules,
+  which now import `ConAgua.Layout`; the 13 per-scanner `IN`s are one `L.IN`. New names:
+  `NIDS`/`LIDS`/`EIDS` (72‥74), `INM`, `IOM`, `DEM`, `CTM`, `RRM` (99‥102, 104).
+* `POOL1` stays the numeral `256` (`POOL1_eq : POOL1 = tier1 POOL`): as `tier1 POOL`, `NatAdd`'s
+  `grind` could no longer decide `1 ≠ POOL1` (it does not unfold `tierOff`). The same holds for
+  `tier1 X` in general: `decide` evaluates it, `grind`/`simp` do not.
+* The surface check exempts `cap_check`, which reads the length of every slot below `388` by
+  number, unused ones included; every other function passes it as is (`Checker/ArrCheck.lean`).
+* Fallout: three references to a scanner's own `IN` (`open L.Front.Fields (IN)`,
+  `L.Front.Unescape.IN`), one `simp [APDM]` that now needs `WSM`. `checker.s`, `pins.bin`
+  unchanged (`asm_file.py --check`).

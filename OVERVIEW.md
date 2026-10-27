@@ -408,7 +408,7 @@ The checker mirrors the twin function for function. Each L function has a
 twin function it stands for (a citation line names it, §10.1), and a
 refinement theorem: if the L function returns, the twin function succeeds on a
 related state with a related result
-([`RefAM`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/IndIface.lean#L308-L319),
+([`RefAM`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/IndIface.lean#L296-L307),
 the shape most refinements have). The relations say how L's arrays represent
 the twin's state (§6, §7). The refinements compose along entry 1's stages
 ([the stage specs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L92-L125)) and phase A into
@@ -579,7 +579,10 @@ con-ron keeps a persistent and a scratch tier of every table (§6.2). L names
 tier `1` of word array `a` as array `a + 256`, and an access with a run-time
 tier word `t` uses `tierA a t`, the tier masked with `1`
 ([`tierA`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L28-L35)):
-`A⟨t⟩[i]` in the surface syntax. The compiler puts tier 1's descriptor right
+`A⟨t⟩[i]` in the surface syntax. The encoding stays in the core. Proofs name
+tier `1` of `a` as `tier1 a` and both tiers as `tiers a`. They reason with
+lemmas such as "the arrays `tierA a t` can be are `tiers a`"
+([`tier1`, `tiers`, the lemmas](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L34-L56)). The compiler puts tier 1's descriptor right
 after tier 0's, so a tiered access costs one indexed load more than a plain one
 (§8.1). The node stores are accessed through
 [record accessors](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L7-L31)
@@ -661,7 +664,7 @@ con-ron's `Nat` is a `Vec<u64>` of limbs. In L every number, every name's bytes
 and every level list's handles live in one tiered word array, the **pool**, as
 a slice `(offset, length)`; the pool grows at its top, and nothing below the top
 is written again, so every slice stays valid
-([the pool](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Pool.lean#L9-L28)).
+([the pool](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Pool.lean#L10-L29)).
 A slice address carries its tier in bit 40. The scratch tier's slices are
 dropped with the scratch tier; within one declaration the pool only grows
 (deviation D10).
@@ -675,8 +678,25 @@ descriptor table (a base and a length per array, the constant data, the
 globals), slot 1 the L stack (1 GiB at its bottom), then one slot per array,
 each array getting its whole slot (`2^32` words). There is no allocator: the
 pages a run never touches never become real (`MAP_NORESERVE`), so the
-capacities cost address space, not memory. The checker has 320 slots, about
-10 TiB of address space.
+capacities cost address space, not memory. The checker has 390 slots (two,
+then one per word array: `388`, below), about 12 TiB of address space
+(`ca_region_size` in `checker.s`).
+
+**The arrays.** Every array of the checker is declared once, in one table
+([`checkerArrays`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Layout.lean#L28-L34)): its
+name, its kind (byte or word: two separate number spaces), whether it is tiered,
+and its number, which is its slot. The table is the memory layout of record.
+`Checker/ArrCheck.lean` checks it against the program
+([the checks](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ArrCheck.lean#L24-L33)):
+the numbers are distinct and below `256`, so no array is another's tier 1
+([`wf`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L134-L138)).
+A byte access names a byte array of the table, a tiered access a tiered array,
+and a plain word access a word array of the table, so never a tier-1 number
+([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L225-L230)).
+The one exception is `cap_check`, which checks the length of every slot by
+number. The program's extent is the table's, and the parallel mode's frozen and
+owned arrays are slots of the table. The harness and the entry stub lay out the
+slots by number and do not use the names.
 
 Where L's representation differs from con-ron's beyond layout, it is listed in
 [`docs/deviations.md`](docs/deviations.md) (§10.2).

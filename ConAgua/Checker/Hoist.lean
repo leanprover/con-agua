@@ -64,10 +64,6 @@ namespace L.Checker
 
 open L L.Arena L.Ind L.Front L.Front.Ind
 
-/-- The hoist's expression visited set (one record's, or one block's). -/
-abbrev HSEEN : ArrId := 75
-/-- The hoist's name index: name handle ↦ the first position declaring it. -/
-abbrev HNIX : ArrId := 76
 abbrev hsSch : MemoSch := ⟨HSEEN, 73⟩
 abbrev hnSch : MemoSch := ⟨HNIX, 75⟩
 

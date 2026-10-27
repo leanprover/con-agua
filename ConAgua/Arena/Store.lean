@@ -57,12 +57,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `lit` records, both tiers interleaved (four words per node). -/
-abbrev REC : ArrId := 2
-/-- The `lit` cons-table slots, both tiers interleaved. -/
-abbrev SLOT : ArrId := 3
-
-
 /-! ## `lit_hash(o, l)`: FNV-1a over the limbs of a slice -/
 
 /-- The model: the hash of the first `k` limbs of the slice at `o`. -/
@@ -520,7 +514,6 @@ theorem dec_lt_not_le' (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
     simp [h, this]
   · have : x < y := UInt64.not_le.mp h
     simp [h, this]
-
 
 section specs
 variable (p : Prog)

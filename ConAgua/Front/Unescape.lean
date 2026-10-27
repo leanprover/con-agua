@@ -52,9 +52,6 @@ open L.Arena (POOL CTL)
 open L.Scan.Utf8 (byteW)
 open L.Scan.Str (byteE hex4N hex3N)
 
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
-
 /-! ## `esc_one`, `esc_sur` -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
@@ -349,7 +346,6 @@ theorem escLoopW_skip (b : Array UInt8) : ∀ d (m : Mem) (top e j j' k : Word),
     congr 2
     rw [UInt64.add_assoc]; congr 1
     rw [Nat.add_comm d 1, UInt64.ofNat_add]; rfl
-
 
 /-- One iteration's run: the plain bytes from `j` to the next backslash (`scan!`), copied as one
 block (`copy!`). -/

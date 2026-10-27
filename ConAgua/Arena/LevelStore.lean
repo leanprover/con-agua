@@ -41,11 +41,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `succ` records, both tiers interleaved (one word per node). -/
-abbrev SREC : ArrId := 6
-/-- The `succ` cons-table slots, both tiers interleaved. -/
-abbrev SSLOT : ArrId := 7
-
 /-- The hash of a `succ` record (FNV-1a over its word). -/
 def succHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 

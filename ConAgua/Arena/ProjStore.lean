@@ -44,11 +44,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `proj` records, both tiers interleaved (two words per node). -/
-abbrev PJREC : ArrId := 31
-/-- The `proj` cons-table slots, both tiers interleaved. -/
-abbrev PJSLOT : ArrId := 32
-
 /-- The hash of a `proj` record (FNV-1a over its three fields). -/
 def projHashW (n u e : Word) : Word :=
   (((fnvBasis ^^^ n) * fnvPrime ^^^ u) * fnvPrime ^^^ e) * fnvPrime

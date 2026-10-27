@@ -44,9 +44,6 @@ open L.Scan.Leaves (skipWsN keyEndN numEndN)
 open L.Scan.Lit (matchLitN)
 open L.Scan.Key (keyAtN valueAtN)
 
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
-
 /-! ## `slot_nat` -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
@@ -428,7 +425,6 @@ theorem natListLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
         L.Scan.Leaves.numEnd_spec p hpd hpn b hb n, ih] <;> finish
 
-
 end natListLoop
 
 /-! ## Specs -/
@@ -505,7 +501,6 @@ theorem matchWordLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     rw [exec, step_while (w := matchWordLoop) rfl]
     sym only [lang_grind, WORDS_length] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ldc, ih] <;> finish
-
 
 include hpm in
 theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l : Word)

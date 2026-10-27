@@ -1,5 +1,5 @@
 import ConAgua.Compiler.WriteSetSplit
-import ConAgua.Arena.Pool
+import ConAgua.Layout
 import ConAgua.Front.Preserve
 
 /-!

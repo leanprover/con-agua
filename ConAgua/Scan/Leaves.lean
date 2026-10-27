@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Layout
 
 @[expose] public section
 
@@ -35,9 +36,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Scan.Leaves
-
-/-- The input buffer. -/
-abbrev IN : ArrId := 0
 
 /-! ## `is_ws` / `skip_ws` (`scan_fast.rs:96,107`) -/
 
@@ -257,7 +255,6 @@ theorem newlineFromLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   | succ n ih =>
     rw [exec, step_while (w := newlineFromLoop) rfl]
     sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
-
 
 include hp in
 @[refines ConLeche.Frontend.newlineFrom]
@@ -520,4 +517,3 @@ theorem numEnd_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
 end numEnd
 
 end L.Scan.Leaves
-
