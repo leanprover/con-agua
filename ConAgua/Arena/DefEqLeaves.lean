@@ -3,6 +3,8 @@ import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.DefEqGrindAttr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfIotaRefine
 
@@ -118,25 +120,11 @@ theorem resH_of {c : Prop} [Decidable c] {r : List Word} {x y : Word} (hx : HW x
 
 /-! ## `is_bool_true` -/
 
-/-- The model of `is_bool_true` (`none` where it aborts). -/
-def isBoolTrueW (m : Mem) (h : Word) : Option Word :=
-  if h >>> 28 ≠ 3 then some 0
-  else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m CONST (tierW h) ≤ idxW h then none
-  else if tfld m CONST (tierW h) (idxW h) 1 ≠ rdW (m.arr64 PINS) 52 then some 0
-  else some (if tfld m CONST (tierW h) (idxW h) 0 = rdW (m.arr64 PINS) (1 + 30) then 1
-    else 0)
-
-theorem isBoolTrue_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (h : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_bool_true" [h]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ isBoolTrueW s₀.mem h = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp.bt]
-  simp only [callFn, isBoolTrueL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n] <;>
-    finish [isBoolTrueW, tierW, idxW, rdW]
+l_model isBoolTrue_spec (p : Prog) (hp : DefEqLeafProg p)
+  fns [hp.bt ↦ isBoolTrueW ro]
+  specs [pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp []
 
 theorem decI_bne {k : IdxKind} (v w : Word) (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32) :
     ((decI v : Idx k) != decI w) = !decide (v = w) := by
@@ -191,7 +179,7 @@ theorem isBoolTrue_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb h : Word)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
     CoreSpec p (n + 1) "is_bool_true" [h] (isBoolTrue (decE h)) decBool s₀ a₀ dn vis fe MM eb := by
-  refine triple_post (isBoolTrue_spec p hp n s₀ h) fun r s' ⟨hm, hloc, hW⟩ => ⟨hloc, ?_⟩
+  refine triple_post (isBoolTrue_spec p hp (n + 1) s₀ h) fun r s' ⟨hloc, hm, hW⟩ => ⟨hloc, ?_⟩
   rw [hm]
   have hrun' := isBoolTrue_run _ _ hS.arena.1 hS.pins h hh _ hW
   refine coreRef_pure hS hrun' rfl ?_
@@ -219,24 +207,15 @@ theorem tag_beq_w (h : Word) (hh : HW h) (k : Nat) (hk : k < 16) (t : UInt32) (h
 
 /-! ## `head_is_proj` -/
 
-def headIsProjW (p : Prog) (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
-  match callW p n "get_app_fn" [e] m with
-  | none => none
-  | some (r, m₁) => some (if r.headD 0 >>> 28 = 9 then 1 else 0, m₁)
+l_model headIsProj_spec (p : Prog) (hp : DefEqLeafProg p)
+  fns [hp.hproj ↦ headIsProjW]
+  specs [callW_spec p n "get_app_fn"]
+  grind [arena_grind] simp []
 
 theorem headIsProjW_eq (p : Prog) (n : Nat) (m m₁ : Mem) (e : Word) (r : List Word)
     (h : callW p n "get_app_fn" [e] m = some (r, m₁)) :
-    headIsProjW p n m e = some (if r.headD 0 >>> 28 = 9 then 1 else 0, m₁) := by
-  simp only [headIsProjW, h]
-
-theorem headIsProj_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "head_is_proj" [e]
-    ⦃fun r s' => LocEq s' s₀ ∧ headIsProjW p n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.hproj]
-  simp only [callFn, headIsProjL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "get_app_fn"] <;>
-    finish [headIsProjW_eq]
+    headIsProjW p (n + 1) m e = some (if r.headD 0 >>> 28 = 9 then 1 else 0, m₁) := by
+  rw [headIsProjW.arm1, h, headIsProjW.k_get_app_fn.arm1]
 
 /-- **`head_is_proj` refines `headIsProj`.** -/
 @[refines ConRon.Arena.headIsProj]
@@ -244,9 +223,9 @@ theorem headIsProj_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "head_is_proj" [e] (headIsProj (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
-  refine triple_post (headIsProj_spec p hp n s₀ e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  refine triple_post (headIsProj_spec p hp (n + 1) s₀ e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩
-  · simp [headIsProjW, hc] at hW
+  · rw [headIsProjW.arm1, hc, headIsProjW.k_get_app_fn.none] at hW; cases hW
   rw [headIsProjW_eq p n _ _ e r₁ hc, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
@@ -259,26 +238,19 @@ theorem headIsProj_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
 
 /-! ## `io_neutral` -/
 
-def ioNeutralW (p : Prog) (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
-  match callW p n "get_app_fn" [e] m with
-  | none => none
-  | some (r, m₁) =>
-    some (if r.headD 0 >>> 28 = 5 ∨ r.headD 0 >>> 28 = 7 ∨ r.headD 0 >>> 28 = 0 then 0 else 1, m₁)
+l_model ioNeutral_spec (p : Prog) (hp : DefEqLeafProg p)
+  fns [hp.ion ↦ ioNeutralW]
+  specs [callW_spec p n "get_app_fn"]
+  grind [arena_grind] simp []
 
 theorem ioNeutralW_eq (p : Prog) (n : Nat) (m m₁ : Mem) (e : Word) (r : List Word)
     (h : callW p n "get_app_fn" [e] m = some (r, m₁)) :
-    ioNeutralW p n m e = some (if r.headD 0 >>> 28 = 5 ∨ r.headD 0 >>> 28 = 7 ∨ r.headD 0 >>> 28 = 0
+    ioNeutralW p (n + 1) m e = some (if r.headD 0 >>> 28 = 5 ∨ r.headD 0 >>> 28 = 7 ∨ r.headD 0 >>> 28 = 0
       then 0 else 1, m₁) := by
-  simp only [ioNeutralW, h]
-
-theorem ioNeutral_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "io_neutral" [e]
-    ⦃fun r s' => LocEq s' s₀ ∧ ioNeutralW p n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ion]
-  simp only [callFn, ioNeutralL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "get_app_fn"] <;>
-    finish [ioNeutralW_eq]
+  rw [ioNeutralW.arm1, h]
+  by_cases hc : r.headD 0 >>> 28 = 5 ∨ r.headD 0 >>> 28 = 7 ∨ r.headD 0 >>> 28 = 0
+  · rw [ioNeutralW.k_get_app_fn.arm1 (hc1 := hc), ite_eq_left hc]
+  · rw [ioNeutralW.k_get_app_fn.arm2 (hc1 := hc), ite_eq_right hc]
 
 /-- **`io_neutral` refines `ioNeutral`.** -/
 @[refines ConRon.Arena.ioNeutral]
@@ -286,9 +258,9 @@ theorem ioNeutral_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "io_neutral" [e] (ioNeutral (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
-  refine triple_post (ioNeutral_spec p hp n s₀ e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  refine triple_post (ioNeutral_spec p hp (n + 1) s₀ e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩
-  · simp [ioNeutralW, hc] at hW
+  · rw [ioNeutralW.arm1, hc, ioNeutralW.k_get_app_fn.none] at hW; cases hW
   rw [ioNeutralW_eq p n _ _ e r₁ hc, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
@@ -307,68 +279,14 @@ theorem ioNeutral_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
 
 /-! ## `is_eager_reduce` -/
 
-/-- `is_eager_reduce`'s last stage: the head `g` of `eagerReduce _ _`. -/
-def eagerG (m : Mem) (g : Word) : Option Word :=
-  if g >>> 28 ≠ 3 then some 0
-  else if tierW g ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m CONST (tierW g) ≤ idxW g then none
-  else some (if tfld m CONST (tierW g) (idxW g) 0 = rdW (m.arr64 PINS) (1 + 50) then 1
-    else 0)
-
-def eagerF (m : Mem) (f : Word) : Option Word :=
-  if f >>> 28 ≠ 4 then some 0
-  else if tierW f ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m APP (tierW f) ≤ idxW f then none
-  else eagerG m (tfld m APP (tierW f) (idxW f) 0)
-
-/-- The model of `is_eager_reduce`. -/
-def isEagerReduceW (m : Mem) (h : Word) : Option Word :=
-  if h >>> 28 ≠ 4 then some 0
-  else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m APP (tierW h) ≤ idxW h then none
-  else eagerF m (tfld m APP (tierW h) (idxW h) 0)
-
-section eagerArms
-variable (m : Mem) (h : Word)
-
-theorem eagerG_tag (h3 : ¬ h >>> 28 = 3) : eagerG m h = some 0 := by simp [eagerG, h3]
-theorem eagerG_go (h3 : h >>> 28 = 3) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hc : ¬ tcnt m CONST (tierW h) ≤ idxW h) :
-    eagerG m h = some (if tfld m CONST (tierW h) (idxW h) 0 = rdW (m.arr64 PINS) (1 + 50)
-      then 1 else 0) := by
-  simp only [eagerG, h3, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte]
-theorem eagerF_tag (h4 : ¬ h >>> 28 = 4) : eagerF m h = some 0 := by simp [eagerF, h4]
-theorem eagerF_go (h4 : h >>> 28 = 4) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hc : ¬ tcnt m APP (tierW h) ≤ idxW h) :
-    eagerF m h = eagerG m (tfld m APP (tierW h) (idxW h) 0) := by
-  simp only [eagerF, h4, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte]
-theorem eagerW_tag (h4 : ¬ h >>> 28 = 4) : isEagerReduceW m h = some 0 := by
-  simp [isEagerReduceW, h4]
-theorem eagerW_go (h4 : h >>> 28 = 4) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hc : ¬ tcnt m APP (tierW h) ≤ idxW h) :
-    isEagerReduceW m h = eagerF m (tfld m APP (tierW h) (idxW h) 0) := by
-  simp only [isEagerReduceW, h4, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte]
-
-end eagerArms
-
 theorem del_rd64 (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
   simp [L.rd64, rdW, Array.getD_eq_getD_getElem?]
 
--- Three views: the `&&` conditions through `L.evalC_spec` (one path per `if`), then `grind`.
-set_option maxHeartbeats 2000000 in
-theorem isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (h : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_eager_reduce" [h]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ isEagerReduceW s₀.mem h = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp.eager]
-  simp only [callFn, isEagerReduceL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
-    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, pinAt_rd p hp.pinat n]
-  all_goals (try simp only [Cond.pval, Expr.pval, Expr.pval_cntE, del_rd64, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true] at *)
-  all_goals grind [lang_grind, arena_grind, eagerW_tag, eagerW_go, eagerF_tag, eagerF_go,
-    eagerG_tag, eagerG_go, tierW, idxW]
+l_model isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p)
+  fns [hp.eager ↦ isEagerReduceW ro]
+  specs [pinAt_rd p hp.pinat n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp []
 
 theorem tag_beq_app (h : Word) (hh : HW h) :
     ((decE h).tag == ETag.app) = decide (h >>> 28 = 4) := tag_beq_w h hh 4 (by decide) _ rfl 4 rfl
@@ -392,9 +310,8 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   simp only [isEagerReduce, tag_beq_app h hh, h4, decide_true, ↓reduceIte, StateT.run_bind,
     viewApp_run', viewApp_ok m a hR h hh hvo, except_ok_bind]
   generalize tfld m APP (tierW h) (idxW h) 0 = f at hf hW ⊢
-  unfold eagerF at hW
   rcases (Classical.em (f >>> 28 = 4)).symm with f4 | f4
-  · simp only [ne_eq, f4, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
+  · simp only [f4, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
     simp only [tag_beq_app f hf, f4, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
@@ -402,15 +319,14 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   · simp [f4, fs] at hW
   by_cases fc : tcnt m APP (tierW f) ≤ idxW f
   · simp [f4, fs, fc] at hW
-  simp only [f4, fs, fc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  simp only [f4, fs, fc, not_true_eq_false, ↓reduceIte] at hW
   have fvo : viewOK m f APP := ⟨fs, by simpa using fc⟩
   obtain ⟨-, hg, -⟩ := view_app m a hR f hf fvo f4
   simp only [tag_beq_app f hf, f4, decide_true, ↓reduceIte, StateT.run_bind,
     viewApp_run', viewApp_ok m a hR f hf fvo, except_ok_bind]
   generalize tfld m APP (tierW f) (idxW f) 0 = g at hg hW ⊢
-  unfold eagerG at hW
   rcases (Classical.em (g >>> 28 = 3)).symm with g3 | g3
-  · simp only [ne_eq, g3, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
+  · simp only [g3, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
     simp only [tag_beq_const g hg, g3, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
@@ -418,7 +334,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   · simp [g3, gs] at hW
   by_cases gc : tcnt m CONST (tierW g) ≤ idxW g
   · simp [g3, gs, gc] at hW
-  simp only [g3, gs, gc, ne_eq, not_true_eq_false, ↓reduceIte, Option.some.injEq] at hW
+  simp only [g3, gs, gc, not_true_eq_false, ↓reduceIte, Option.some.injEq] at hW
   have gvo : viewOK m g CONST := ⟨gs, by simpa using gc⟩
   obtain ⟨-, hn, -⟩ := L.Ind.view_const_f m a hR g hg gvo g3
   have her := hP.names_lt 50 (by decide)
@@ -437,11 +353,11 @@ theorem isEagerReduce_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ 
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb h : Word)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
     CoreSpec p (n + 1) "is_eager_reduce" [h] (isEagerReduce (decE h)) decBool s₀ a₀ dn vis fe MM eb := by
-  refine triple_post (isEagerReduce_spec p hp n s₀ h) fun r s' ⟨hm, hloc, hW⟩ => ⟨hloc, ?_⟩
+  refine triple_post (isEagerReduce_spec p hp (n + 1) s₀ h) fun r s' ⟨hloc, hm, hW⟩ => ⟨hloc, ?_⟩
   rw [hm]
   have hrun' := isEagerReduce_run _ _ hS.arena.1 hS.pins h hh _ hW
   refine coreRef_pure hS hrun' rfl ?_
-  unfold isEagerReduceW eagerF eagerG at hW
+  unfold isEagerReduceW at hW
   unfold ResH HW
   repeat' split at hW
   all_goals simp only [reduceCtorEq, Option.some.injEq] at hW
@@ -489,30 +405,11 @@ theorem tag_beq_lit (h : Word) (hh : HW h) :
 
 /-! ## `is_nat_zero` -/
 
-/-- The model of `is_nat_zero`. -/
-def isNatZeroW (m : Mem) (e : Word) : Option Word :=
-  if e >>> 28 = 8 then
-    if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m LIT (tierW e) ≤ idxW e then none
-    else if tfld m LIT (tierW e) (idxW e) 0 ≠ 0 then some 0
-    else some (if tfld m LIT (tierW e) (idxW e) 2 = 0 then 1 else 0)
-  else if e >>> 28 = 3 then
-    if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m CONST (tierW e) ≤ idxW e then none
-    else some (if tfld m CONST (tierW e) (idxW e) 0 = rdW (m.arr64 PINS) (1 + 2) ∧
-      tfld m CONST (tierW e) (idxW e) 1 = rdW (m.arr64 PINS) 52 then 1 else 0)
-  else some 0
-
-theorem isNatZero_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_nat_zero" [e]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ isNatZeroW s₀.mem e = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp.natzero]
-  simp only [callFn, isNatZeroL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n] <;>
-    finish [isNatZeroW, tierW, idxW]
+l_model isNatZero_spec (p : Prog) (hp : DefEqLeafProg p)
+  fns [hp.natzero ↦ isNatZeroW ro]
+  specs [pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp []
 
 theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
     (e : Word) (he : HW e) (w : Word) (hW : isNatZeroW m e = some w) :
@@ -557,7 +454,8 @@ theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m 
   · simp [hs] at hW
   by_cases hc : tcnt m CONST (tierW e) ≤ idxW e
   · simp [hs, hc] at hW
-  simp only [hs, hc, ↓reduceIte, Option.some.injEq] at hW
+  simp only [hs, hc, ↓reduceIte] at hW
+  rw [← apply_ite some, Option.some.injEq] at hW
   subst hW
   have hvo : viewOK m e CONST := ⟨hs, by simpa using hc⟩
   obtain ⟨hv, hn, hu⟩ := L.Ind.view_const_f m a hR e he hvo h3
@@ -581,7 +479,7 @@ theorem isNatZero_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "is_nat_zero" [e] (isNatZero (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
-  refine triple_post (isNatZero_spec p hp n s₀ e) fun r s' ⟨hm, hloc, hW⟩ => ⟨hloc, ?_⟩
+  refine triple_post (isNatZero_spec p hp (n + 1) s₀ e) fun r s' ⟨hloc, hm, hW⟩ => ⟨hloc, ?_⟩
   rw [hm]
   have hrun' := isNatZero_run _ _ hS.arena.1 hS.pins e he _ hW
   refine coreRef_pure hS hrun' rfl ?_

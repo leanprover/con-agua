@@ -66,7 +66,7 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   the name of the model; `ro`, `list`, `tuple` after the name (above).
 * `specs`: the callees' specs, as terms over the binders and the fuel `n`. A callee's model is read
   off its post: `F = some (r.headD 0, s'.mem)` (effectful), `r.headD 0 = F₀ ∧ r.tail.headD 0 = F₁ …`
-  with the memory unchanged (pure), `r ≠ [] ∧ r = F` (a list of results; `F = []` becomes `none`
+  with the memory unchanged (pure; other conjuncts over the arguments, `i < 51`, are ignored), `r ≠ [] ∧ r = F` (a list of results; `F = []` becomes `none`
   unless the callee is listed in `noguard`), `F = some s'.mem` (memory only),
   `G ∧ s'.mem = F` (memory only, total; `¬ G` becomes `none`), `F = some (r.headD 0)` with the
   memory unchanged (read-only), `F = some (r, s'.mem)` (several results and the memory: the
@@ -561,10 +561,9 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
           | none => ts := ts.push (← `(0))
         pure (CKind.pure ts)
       | _, _, _, _, _ => throwError "l_model: callee {fname}: ambiguous post"
-    if !guards.isEmpty then
-      match kind with
-      | .memTot .. => pure ()
-      | _ => throwError "l_model: callee {fname}: unsupported side conditions {guards}"
+    -- other conjuncts over the arguments and the initial state (`i < 51`) are facts the callee's
+    -- post states besides its model: the model does not need them (only a total memory model
+    -- turns them into guards, above)
     return (fname, { kind })
 
 /-! ## The L text -/
