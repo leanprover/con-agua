@@ -245,7 +245,7 @@ theorem ColT2.frame {L : Lens α δ k} {A : ArrId} {f : δ → Word} {m m' : Mem
 theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List ArrId} {C : List Word}
     {m m' : Mem} {a : AState} (h : ColT2 L A f m a) (hf : MemFrame Ar C m m') (hA : A ∉ Ar)
     (hA' : tier1 A ∉ Ar) (hc : A ≠ CTL) : ColT2 L A f m' a :=
-  h.frame (hf.1 A hA hc) (hf.1 _ hA' (by simp [CTL]))
+  h.frame (hf.1 A hA hc) (hf.1 _ hA' (tier1_ne (by decide)))
 
 theorem tbl_push_size (tb : Tbl α (Idx k) δ) (key : α) (d : δ) (y : Idx k) :
     (tb.push key d y).nodes.size = tb.nodes.size + 1 ∧ (tb.push key d y).der.size = tb.der.size + 1 := by

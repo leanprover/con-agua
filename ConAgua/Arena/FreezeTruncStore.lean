@@ -174,7 +174,7 @@ theorem rTrans_local (hS : S.WF) (hF : RFrame S R hs) (hL : RLocal S R hs [] [])
     rcases tierA_cases' S.ra t with e | e <;> rw [e]
     · exact e0
     · exact e1
-  have hctl : m₁.arr64 CTL = m.arr64 CTL := eo CTL hS.ra_ctl.symm (by simp [CTL])
+  have hctl : m₁.arr64 CTL = m.arr64 CTL := eo CTL hS.ra_ctl.symm (ne_tier1 (by decide))
   have hout : OutEq S m m₁ := ⟨fun b h1 h1' _ _ _ => eo b h1 h1', by rw [hctl]⟩
   have hf1 : ∀ f, f < S.w → fld S m₁ t i f = fld S m t i f := fun f hf' => by
     simp only [fld, et]; exact hf f hf'
