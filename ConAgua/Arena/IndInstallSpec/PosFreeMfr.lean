@@ -39,17 +39,9 @@ open L.Arena
 
 theorem posFree_mfr {m m' : Mem} (h : MemFrame posFreeA posFreeC m m') :
     MFr [MAM, TAM, MCM] [202, 203, 205, 207, 209, 211, 212, 213, 215, 216, 217] m m' := by
-  refine ⟨posFreeA, posFreeC, h, fun b hb => ?_, fun x hx => ?_⟩
-  · simp only [posFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
-    obtain ⟨c, hc⟩ : ∃ c : Nat, c = b := ⟨b, rfl⟩
-    have h1 : c < 388 := hc ▸ hb.1
-    have h2 : c ∉ [202, 203, 205, 207, 204] := hc ▸ hb.2
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at h2
-    subst hc
-    by_cases a1 : c < 201; · exact .inl a1
-    by_cases a2 : 208 < c; · exact .inr (.inl a2)
-    right; right
-    rcases (show c = 201 ∨ c = 206 ∨ c = 208 by omega) with h | h | h <;> subst h <;> decide
+  have hA : ∀ b ∈ posFreeA, b.arr < 201 ∨ 208 < b.arr ∨
+      b ∈ ([MAM, TAM, MCM] : List TieredArray) := by decide +kernel
+  refine ⟨posFreeA, posFreeC, h, hA, fun x hx => ?_⟩
   · simp only [posFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq, List.mem_cons,
       List.not_mem_nil, or_false] at hx
     obtain ⟨c, ⟨hc, hne⟩, rfl⟩ := hx
