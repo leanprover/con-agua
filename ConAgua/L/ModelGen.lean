@@ -75,7 +75,9 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   code after the call is a continuation over `some (r, m₁)`, its results `r.headD 0`,
   `r.tail.headD 0`, …), `F = some r` (several results, read-only), `F = some (r.headD 0,
   r.tail.headD 0, …[, s'.mem])` (a tuple: a continuation over `some (r₀, r₁, …, m₁)`), `F = some ()`
-  with the memory unchanged (no results: `F = none` becomes `none`). A spec for
+  with the memory unchanged (no results: `F = none` becomes `none`). Conjuncts over the final
+  memory but not the results (`Keep s₀.mem s'.mem`, `s'.mem.arr8 IN = b`) are facts, not the
+  model: the steps get them from the callee's spec, the model ignores them. A spec for
   any argument list (`invoke p (exec p n) "f" vs`, `callW_spec p n "f"`) applies to every call.
   A member of the group listed here is called through its spec, not as its model (a recursive
   call stays `callW p n "f" …`; also lets a loop call its own function). A conjunct
@@ -98,6 +100,17 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   `∀ s₀ args, P → ⦃…⦄`; a callee spec with a hypothesis (or the induction hypothesis) leaves it
   as a side goal of the step, for its `finish`/`grind`. Loop specs take no precondition, so a
   loop cannot call such a callee.
+* `keep [h]` (`h : p.noSt8 = true`): every callee spec and induction hypothesis `S` goes to
+  `vcgen` as `fun x₁ … => L.Triple.keep h (S x₁ …)` (`Front/Preserve.lean`), whose post adds
+  `Keep s₀.mem s'.mem` (the byte arrays and the word arrays' sizes kept): a precondition over
+  them (`pcap`, the input buffer `arr8 IN`) holds again after each call, for the next call's
+  side goal (the `grind` patterns `Keep.size`, `Keep.arr8`, `Keep.pcap`). The specs' binders
+  must all be explicit.
+* `defs` / `nodefs`: the same command twice, first with `defs` (only the models, the
+  continuations and their arms, with the `grind` patterns), then with `nodefs` (only the specs):
+  facts about the models proved in between (a recursive reader keeps the pool top in a tier,
+  `romNameW_top'`) can serve the steps, e.g. for a precondition after a recursive call. Both
+  runs need the same `fns`, `specs`, `grind` and `fold`.
 * `errors`: (pass `L.Arena.ld64_rdW_specE` in `extra`: word loads are not unfolded) the models keep the errors (the verdict proofs, `Arena/Verdict.lean`). A model is
   `Except L.Err …` (`.ok` for `some`); an `abort R` is `.error (.abort R)` (`abort` is code `0`);
   a continuation passes a callee's error on (`| .error ε => .error ε`, its equation `k.none`); a
@@ -422,7 +435,9 @@ meta def strLit? (e : Lean.Expr) : Option String :=
 
 /-- The conjuncts of a `Prop`. -/
 meta partial def conjuncts (e : Lean.Expr) : Array Lean.Expr :=
-  match e.consumeMData.getAppFnArgs with
+  -- `Q r s` with `Q` a `fun` (the post of `Triple.keep`) reduced
+  let e := e.consumeMData.headBeta
+  match e.getAppFnArgs with
   | (``And, #[a, b]) => conjuncts a ++ conjuncts b
   | _ => #[e]
 
@@ -510,6 +525,9 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
     let mut unitF : Option Lean.Expr := none
     let mut tupF : Option (Lean.Expr × Nat × Bool) := none
     let mut guards : Array Lean.Expr := #[]
+    -- a conjunct over the states' memories (and the arguments), not over the results: a fact the
+    -- callee's spec states besides its model (`Keep s₀.mem s'.mem`, from `Triple.keep`)
+    let isFact (c : Lean.Expr) : Bool := !c.containsFVar r.fvarId!
     for c in cs do
       let c := c.consumeMData
       match c.getAppFnArgs with
@@ -554,7 +572,8 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
               else if resIdx r v == some 0 then ro := some a
               else if v == r then roL := some a
               else throwError "l_model: unsupported post conjunct {c}"
-          | _ => throwError "l_model: unsupported post conjunct {c}"
+          -- a fact about the final memory (`s'.mem.arr8 IN = b`): not the model
+          | _ => unless isFact c do throwError "l_model: unsupported post conjunct {c}"
       | (``Ne, #[_, l, nil]) =>
         if l == r && nil.isAppOf ``List.nil then nonempty := true
         else guards := guards.push c
@@ -565,9 +584,9 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
           else guards := guards.push c
         | _ => guards := guards.push c
       | _ =>
-        if c.containsFVar s'.fvarId! || c.containsFVar r.fvarId! then
-          throwError "l_model: unsupported post conjunct {c}"
-        guards := guards.push c
+        if c.containsFVar r.fvarId! then throwError "l_model: unsupported post conjunct {c}"
+        -- a fact about the final memory (`Keep s₀.mem s'.mem`, `Inv s'.mem`): not the model
+        unless c.containsFVar s'.fvarId! do guards := guards.push c
     let kind ← if let some e := unitF then do
         unless eff.isNone && memOpt.isNone && memTot.isNone && ro.isNone && listF.isNone && effL.isNone && roL.isNone && tupF.isNone do
           throwError "l_model: callee {fname}: ambiguous post"
@@ -1726,6 +1745,7 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   &" fns " "[" lmodelFn,* "]"
   (&" specs " "[" term,* "]")?
   (&" pre " "[" term "]")?
+  (&" keep " "[" term "]")?
   (&" grind " "[" ident,* "]")?
   (&" fold " "[" ident,* "]")?
   (&" extra " "[" term,* "]")?
@@ -1739,7 +1759,9 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" simp " "[" term,* "]")?
   (&" errors")?
   (&" trace")?
-  (&" locals")? : command
+  (&" locals")?
+  (&" defs")?
+  (&" nodefs")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1787,23 +1809,28 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let fnStx : Array (TSyntax `L.ModelGen.lmodelFn) := stx[5].getSepArgs.map (⟨·⟩)
   let optList (k : Nat) : Array Syntax := if stx[k].getNumArgs == 0 then #[] else stx[k][2].getSepArgs
   let specTs : Array Term := (optList 7).map (⟨·⟩)
-  let attrIds : Array Ident := (optList 9).map (⟨·⟩)
-  let foldIds : Array Ident := (optList 10).map (⟨·⟩)
-  let extraTs : Array Term := (optList 11).map (⟨·⟩)
-  let hintTs : Array Term := (optList 12).map (⟨·⟩)
-  let genN : Option Nat := if stx[13].getNumArgs == 0 then none else stx[13][1].isNatLit?
-  let hbN : Option Nat := if stx[14].getNumArgs == 0 then none else stx[14][1].isNatLit?
-  let noguard : Array String := (optList 15).filterMap (·.isStrLit?)
-  let symCfg : String := if stx[16].getNumArgs == 0 then "" else (stx[16][1].isStrLit?.getD "") ++ " "
-  let bindC : Option Name := if stx[17].getNumArgs == 0 then none else some stx[17][1].getId
-  let instN : Option Nat := if stx[18].getNumArgs == 0 then none else stx[18][1].isNatLit?
-  let simpTs? : Option (Array Term) := if stx[19].getNumArgs == 0 then none else some ((optList 19).map (⟨·⟩))
-  let exc := stx[20].getNumArgs != 0
-  let doTrace := stx[21].getNumArgs != 0
-  let preLocals := stx[22].getNumArgs != 0
+  let attrIds : Array Ident := (optList 10).map (⟨·⟩)
+  let foldIds : Array Ident := (optList 11).map (⟨·⟩)
+  let extraTs : Array Term := (optList 12).map (⟨·⟩)
+  let hintTs : Array Term := (optList 13).map (⟨·⟩)
+  let genN : Option Nat := if stx[14].getNumArgs == 0 then none else stx[14][1].isNatLit?
+  let hbN : Option Nat := if stx[15].getNumArgs == 0 then none else stx[15][1].isNatLit?
+  let noguard : Array String := (optList 16).filterMap (·.isStrLit?)
+  let symCfg : String := if stx[17].getNumArgs == 0 then "" else (stx[17][1].isStrLit?.getD "") ++ " "
+  let bindC : Option Name := if stx[18].getNumArgs == 0 then none else some stx[18][1].getId
+  let instN : Option Nat := if stx[19].getNumArgs == 0 then none else stx[19][1].isNatLit?
+  let simpTs? : Option (Array Term) := if stx[20].getNumArgs == 0 then none else some ((optList 20).map (⟨·⟩))
+  let exc := stx[21].getNumArgs != 0
+  let doTrace := stx[22].getNumArgs != 0
+  let preLocals := stx[23].getNumArgs != 0
+  -- `defs`: only the models, continuations and arms; `nodefs`: only the specs (the same command
+  -- run before with `defs`), so that facts about the models can be proved in between
+  let defsOnly := stx[24].getNumArgs != 0
+  let noDefs := stx[25].getNumArgs != 0
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
+  let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
-  let (infos, callees, foldRules) ← runTermElabM fun _ => do
+  let (infos, callees, foldRules, specAr) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
     withLocalDeclD `n (mkConst ``Nat) fun _ => do
       let mut infos : Array (String × Name × Name × Bool × Bool × Bool × Bool × Term) := #[]
@@ -1819,13 +1846,22 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
           | throwErrorAt lk "l_model: the function is not a constant"
         infos := infos.push (fname, c, w.getId, r.isSome, l.isSome, tu.isSome, vd.isSome, lk)
       let mut callees : Array (String × Callee) := #[]
+      let mut specAr : Array Nat := #[]
       for s in specTs do
         let e ← elabTerm s none
         Term.synthesizeSyntheticMVarsNoPostponing
         let e ← instantiateMVars e
         callees := callees.push (← analyseSpec e)
+        -- `keep`: the spec's binders (all explicit), for `fun x₁ … => Triple.keep h (spec x₁ …)`
+        if keepT?.isSome then
+          let ar ← forallTelescopeReducing (← inferType e) fun xs _ => do
+            for x in xs do
+              unless (← x.fvarId!.getBinderInfo).isExplicit do
+                throwErrorAt s "l_model: `keep` needs a callee spec with explicit binders only"
+            pure xs.size
+          specAr := specAr.push ar
       let foldRules ← foldIds.mapM fun f => do mkFold (← realizeGlobalConstNoOverloadWithInfo f)
-      return (infos, callees, foldRules)
+      return (infos, callees, foldRules, specAr)
   -- the models' Lean parameters: explicit binders the callee models mention
   let mut allBs : Array (Name × Term) := #[]
   for b in bs do
@@ -2049,6 +2085,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
           def $(mkIdent kd.name):ident $binders* : $argT → $rT
             | $(← failPat) => $(← failRhs)
             | $pat => $body)
+  let emitD (cmd : Syntax) : CommandElabM Unit := unless noDefs do emit doTrace cmd
   -- emit the components, each after the ones it refers to
   let mut emitted := Array.replicate nodes.size false
   let mut left := nodes.size
@@ -2064,8 +2101,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       let recursive := comp.size > 1 || reach[i]![i]!
       let wf := recursive && comp.any (· ≥ fis.size)
       let defs ← comp.mapM (defOf · wf)
-      if defs.size == 1 then emit doTrace defs[0]!
-      else emit doTrace (← `(command| mutual $defs* end))
+      if defs.size == 1 then emitD defs[0]!
+      else emitD (← `(command| mutual $defs* end))
       for c in comp do emitted := emitted.set! c true
       left := left - comp.size
       progress := true
@@ -2087,7 +2124,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     | _ => return (← `(¬ $(← c.render)), ← `(Lean.Parser.Tactic.rwRule| ite_eq_right $h:ident))
   let attrsOf (thm : Ident) (lhs : Term) : CommandElabM Unit := do
     for a in attrIds do
-      emit doTrace (← `(command| grind_pattern [$a:ident] $thm:ident => $lhs))
+      emitD (← `(command| grind_pattern [$a:ident] $thm:ident => $lhs))
   let eqns (name : Name) (binders : Array (TSyntax ``Lean.Parser.Term.bracketedBinder)) (lhs : Term)
       (body : MR) (eqLemma : Name := `eq_2) : CommandElabM Nat := do
     let ls := leaves body
@@ -2106,7 +2143,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         rules := rules.push rule
       let rhs ← liftTermElabM (leaf.render exc)
       let thm := mkIdent (name ++ Name.mkSimple s!"arm{k}")
-      emit doTrace (← `(command|
+      emitD (← `(command|
         theorem $thm:ident $binders* $hyps* : $lhs = $rhs := by rw [$rules,*]))
       attrsOf thm lhs
     -- the aborts: `name.abortᵢ`, without patterns
@@ -2124,7 +2161,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         rules := rules.push rule
       let thm := mkIdent (name ++ Name.mkSimple s!"abort{a}")
       let rhs ← liftTermElabM (leaf.render exc)
-      emit doTrace (← `(command|
+      emitD (← `(command|
         theorem $thm:ident $binders* $hyps* : $lhs = $rhs := by rw [$rules,*]))
       -- `errors` mode: an abort is an error the spec states, so its equation gets patterns
       if exc then attrsOf thm lhs
@@ -2174,15 +2211,16 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       -- the failed call
       let thm := mkIdent (kd.name ++ `none)
       if exc then
-        emit doTrace (← `(command|
+        emitD (← `(command|
           theorem $thm:ident $binders* ($(mkIdent `ε) : L.Err) :
               $(mkIdent kd.name) $args* (Except.error $(mkIdent `ε)) = Except.error $(mkIdent `ε) := by
             rw [$(mkIdent (kd.name ++ `eq_1)):ident]))
         attrsOf thm (← `($(mkIdent kd.name) $args* (Except.error $(mkIdent `ε))))
       else
-        emit doTrace (← `(command|
+        emitD (← `(command|
           theorem $thm:ident $binders* : $(mkIdent kd.name) $args* Option.none = Option.none := by
             rw [$(mkIdent (kd.name ++ `eq_1)):ident]))
+  if defsOnly then return
   -- the proofs, as text
   -- on one line: a term wrapped onto a new line at a lower column than the tactic it sits in
   -- does not parse back (an application's arguments must lie right of the tactic's column; long
@@ -2244,8 +2282,18 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     if let `(Lean.Parser.Term.bracketedBinderF| ($xs* : $_)) := b then
       for x in xs do explicitArgs := explicitArgs.push (toString x.raw.getId)
   let argsTxt := String.intercalate " " explicitArgs.toList
+  -- `keep [h]`: a spec `S` with `k` binders as `fun x₁ … xₖ => L.Triple.keep h (S x₁ … xₖ)`, whose
+  -- post adds `Keep s₀.mem s'.mem` (the byte arrays and the arrays' sizes kept: `pcap`, the input)
+  let keepTxt ← keepT?.mapM (pp ·.raw)
+  let keepWrap (t : String) (k : Nat) : String := match keepTxt with
+    | none => t
+    | some h =>
+      let xs := String.intercalate " " ((List.range k).map (s!"κ{·}"))
+      s!"(fun {xs} => L.Triple.keep ({h}) (({t}) {xs}))"
+  let specsW := if keepTxt.isNone then specsTxt else
+    (specsTxt.zip specAr.toList).map fun (t, k) => keepWrap t k
   let calleeSpecs (called : Array String) : List String :=
-    ((specsTxt.zip callees.toList).filter (called.contains ·.2.1)).map (·.1) ++
+    ((specsW.zip callees.toList).filter (called.contains ·.2.1)).map (·.1) ++
       ((st.autoE.filter called.contains).toList.map fun f => s!"L.callE_spec p n \"{f}\"")
   let stepExec := if exc then "L.Triple.step_exec'" else "L.Triple.step_exec"
   -- the loads: unfolded, or in `errors` mode by their error-precise specs (a byte load's here; a
@@ -2384,7 +2432,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let vcgOf (called : Array String) (loops : Array Name) : String := String.intercalate ", "
     ((["L.exec", "L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs"] ++ loadTxt ++ ["L.st64", "L.setG"] ++
       extraTxt ++ st.vcgX.toList).eraseDups ++ calleeSpecs called ++ (loops.toList.map loopSpecTxt) ++
-      ((List.range k).filter (called.contains fis[·]!.lname)).map fun i => s!"ih{i+1}")
+      ((List.range k).filter (called.contains fis[·]!.lname)).map fun i =>
+        keepWrap s!"ih{i+1}" (1 + fis[i]!.params.size + (if preT?.isSome then 1 else 0)))
   let nB ← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat))
   let ihB ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent `ih) : $stmt))
   let conjS ← mkConj (← `($nI + 1))

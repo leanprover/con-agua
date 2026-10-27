@@ -335,3 +335,57 @@ Generator features that would open more, by expected yield: reading `Keep`-style
 facts (4; small change, opens parts of `Front/` and the ROM readers together with `pre`); a
 model shape for continuations passed as arguments (2); bounds as modelled aborts (3, larger:
 `rdW`/`set64` would need a checked variant, and the existing models would change).
+
+## 8. Lane mgen2: facts in callee posts, `keep`, `defs`/`nodefs`
+
+Three generator changes (`ConAgua/L/ModelGen.lean`, tests in `ModelGenTest.lean`):
+
+* **Facts in callee posts.** A conjunct of a callee's post that mentions the final memory but not
+  the results (`Keep s₀.mem s'.mem`, `s'.mem.arr8 IN = b`, `Inv s'.mem`) is a fact: the model
+  ignores it, the step proofs get it from the spec as before. `conjuncts` beta-reduces, so the
+  post of `Triple.keep` (`Q r s ∧ Keep … ∧ LocEq …`) is read. Before, any such conjunct was
+  "unsupported post conjunct".
+* **`keep [h]`** (`h : p.noSt8 = true`): every callee spec and induction hypothesis `S` goes to
+  `vcgen` as `fun κ₀ … => L.Triple.keep h (S κ₀ …)` (arity from the spec's type; explicit
+  binders only). This is what the hand ROM specs do by `have ih' := fun s₁ pos₁ h₁ =>
+  Triple.keep hL.no_st8 (ih s₁ pos₁ h₁)`: a `pre` over what `Keep` preserves (array sizes, so
+  `pcap`; the byte arrays, so `arr8 IN`) holds again after each call. The induction hypothesis
+  is the part a user could not wrap by hand in `specs`. Tests `tKeep` (two calls, the second's
+  precondition from the first's `Keep`) and `tKeepR` (two recursive calls); both fail without
+  `keep`.
+* **`defs` / `nodefs`**: the same `l_model` twice, first emitting only the models, continuations
+  and arms (with their patterns), then only the specs. In between, facts about the generated
+  models can be proved and given patterns, and the steps use them. Test `tTwo`: the second
+  recursive call's precondition `rdW (m.arr64 TW) 0 = 0` from `tTwoW_z'`, a lemma about
+  `tTwoW` proved by induction over its generated arms. This is needed by every recursive ROM
+  reader (below).
+
+No existing `l_model` changes its output (the new branches only replace errors, and the new
+options are off by default).
+
+### What the features unblock, and why nothing was converted
+
+The functions whose hand specs wrap callees in `Triple.keep` (19 files) were checked one family
+at a time. With `pre`, facts, `keep` and `defs`/`nodefs` none of them is blocked by `Keep` any
+more. Each is still blocked, or not worth converting, for one of the other reasons of §7:
+
+| family | files | what still stands in the way |
+|---|---|---|
+| ROM readers: `rom_name`, `rom_level`, `rom_lvls_go`, `rom_levels`, `rom_items`, `rom_names_to`, the `rom_expr` group | `Arena/Rom`, `RomLevel`, `RomLevels`, `RomItems`, `RomPins`, `RomExpr` | **Time and size**: the modules take 2.2–3.5 s each and no declaration in them reaches 1 s (buildstats of 2026-10-22; `RomLevel` 2.7 s user measured now), and the hand models are already in generator shape (named continuations `lvNodeK`, `nmRecK`, arm lemmas), about 30–50 lines per function. **Reach**: their structural proofs, the `…W_top` / `TopK` lemmas (needed in between, hence `defs`/`nodefs`), the `…W_ok` refinements and `Rom/Dec.lean`'s `…W_dec` take the hand arms apart by name (`romLevelW` in 7 files, `romNameW` in 10). **Shape**: `rom.c8[pos]` is generated as `(rom[pos]?.getD 0).toUInt64` while the models and refinements use `romB` (`getD 255`); `rom_u64`'s post `u64OK rom i ∧ r = [u64W rom i]` gives no `¬ u64OK → none` arm that the hand models have; `rom_put`/`stk_pool` posts (`…OK ∧ r = [top] ∧ s'.mem = …`) are not model shapes; `rom_names_to` checks the `PINS` store in bounds. |
+| pin-data readers (`rom_exprs_to` … `intern_all_pins`) | `Rom/PinReadSpec` (9.0 s user), `Rom/PinSets` | continuations passed as arguments (`pinsK (romPinsToW n)`), used 48 times in `PinSets`; the same `u64OK` and `rclearOK` guards; the `TopK` proofs |
+| front, input buffer (`apply_str`, `apply_ind`, `node_*`, `ind_*`, `nat_dec`, `str_put_esc`) | `Front/Line`, `IndApplySpec3`, `ApplyExpr`, `IndFieldsSpec`, `NatDec`, `Unescape` | fuel-free well-founded models over `b` (`objW b m …`, `applyStrW b m …`) that the refinements use as total functions; the generated models are fuel-indexed and read `m.arr8 IN`. Small flat models (`ApplyExpr`: 5–15 lines each, module 4.6 s). `validate_ind_d`'s nested result `((a, b), m)` is not a model shape. `IndApplySpec2` was converted once (batch 4) and was 2× slower. |
+
+So §7's expectation (`Keep` plus `pre` opens `Front/` and the ROM readers) does not
+hold: `Keep` was one blocker among several in each family, and in the ROM family, where it was
+the most visible one, the hand specs are fast and the models small, so by the roll-out rules a
+conversion would not pay for its re-threaded refinements.
+
+What would open them, by yield: in `Front/`, generating fuel-free models (a `while`-free,
+non-recursive function needs no fuel today; a recursive one would need a measure) with the input
+buffer as a parameter `b` (`IN.u8[i]` as `byteW b i`, `pre [s₀.mem.arr8 IN = b]` implied); for
+the ROM readers, a `c8` default chosen to match `romB` and guard facts of chosen callees as model
+guards (`u64OK`). Neither is small, and the ROM files are fast already.
+
+The gate build after the change (every `l_model` module rebuilt) took 299 s and passed with no
+existing module changed: as intended, the new branches only replace errors and the options are
+off by default. `ModelGenTest` 9.2 → 10.5 s user (the four new tests).
