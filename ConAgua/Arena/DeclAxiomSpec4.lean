@@ -3,6 +3,8 @@ import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 
 /-!
 # `std_axiom_ok(vis, q)` refines `stdAxiomOk` (lane `decls3`)
@@ -22,185 +24,22 @@ namespace L.Arena
 
 open L.Ind
 
-section model
-variable (p : Prog) (n : Nat) (vis q : Word)
-
-/-- The family's end: the axiom's own pin. -/
-def famK7 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => mpW m q (r.headD 0)
-
-/-- After the third clause. -/
-def famK6 (cvid : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => if r.headD 0 = 0 then some ([0], m) else famK7 q (callW p n "rom_cv" [cvid] m)
-
-/-- After the third pin. -/
-def famK5 (i3 c3 cvid : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => famK6 p n q cvid (callW p n "find_pinned" [vis, r.headD 0, 5, c3, c3, i3] m)
-
-/-- After the second clause. -/
-def famK4 (s3 i3 c3 cvid : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => if r.headD 0 = 0 then some ([0], m) else famK5 p n vis q i3 c3 cvid (pinAtW m s3)
-
-/-- After the second pin. -/
-def famK3 (s3 i2 i3 c2 c3 cvid : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    famK4 p n vis q s3 i3 c3 cvid (callW p n "find_pinned" [vis, r.headD 0, 4, c2, c2, i2] m)
-
-/-- After the first clause. -/
-def famK2 (s2 s3 i2 i3 c2 c3 cvid : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some ([0], m) else famK3 p n vis q s3 i2 i3 c2 c3 cvid (pinAtW m s2)
-
-/-- After the first pin. -/
-def famK1 (s2 s3 i1 i2 i3 c2 c3 cvid : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    famK2 p n vis q s2 s3 i2 i3 c2 c3 cvid (callW p n "find_pinned" [vis, r.headD 0, 3, 0, 0, i1] m)
-
-/-- After a family. -/
-def stdRet : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-/-- `propext`: after `find_is`. -/
-def stdP3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some ([0], m)
-    else stdRet (callW p n "std_ax_family" [vis, q, 34, 35, 36, 2, 3, 4, 2, 4, 0] m)
-
-/-- `propext`: after `rom_ci(0)`. -/
-def stdP2 (en : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => stdP3 p n vis q (callW p n "find_is" [vis, en, r.headD 0] m)
-
-/-- `propext`: after the `Eq` pin. -/
-def stdP1 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => stdP2 p n vis q (r.headD 0) (callW p n "rom_ci" [0] m)
-
-/-- `choice`: after its pin. -/
-def stdC1 (nm : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if nm = r.headD 0 then stdRet (callW p n "std_ax_family" [vis, q, 37, 38, 39, 5, 6, 7, 1, 3, 1] m)
-    else some ([0], m)
-
-/-- After the `propext` pin. -/
-def stdK1 (nm : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if nm = r.headD 0 then stdP1 p n vis q (pinAtW m 0) else stdC1 p n vis q nm (pinAtW m 33)
-
-end model
-
-/-- **The model of `std_ax_family(vis, q, s1, …)`.** -/
-def famW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid =>
-    famK1 p n vis q s2 s3 i1 i2 i3 c2 c3 cvid (pinAtW m s1)
-
-/-- **The model of `std_axiom_ok(vis, q)`.** -/
-def stdW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, vis, q => stdK1 p n vis q (rdW (m.arr64 EREC) q) (pinAtW m 32)
-
-section arms
-variable (p : Prog) (n : Nat) (vis q nm en s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word) (r : List Word)
-  (m : Mem)
-theorem famW_step : famW p (n + 1) m vis q s1 s2 s3 i1 i2 i3 c2 c3 cvid =
-    famK1 p n vis q s2 s3 i1 i2 i3 c2 c3 cvid (pinAtW m s1) := rfl
-theorem stdW_step : stdW p (n + 1) m vis q = stdK1 p n vis q (rdW (m.arr64 EREC) q) (pinAtW m 32) :=
-  rfl
-theorem stdK1_some : stdK1 p n vis q nm (some (r, m)) =
-    if nm = r.headD 0 then stdP1 p n vis q (pinAtW m 0) else stdC1 p n vis q nm (pinAtW m 33) := rfl
-theorem stdC1_some : stdC1 p n vis q nm (some (r, m)) =
-    if nm = r.headD 0 then stdRet (callW p n "std_ax_family" [vis, q, 37, 38, 39, 5, 6, 7, 1, 3, 1] m)
-    else some ([0], m) := rfl
-theorem stdP1_some : stdP1 p n vis q (some (r, m)) =
-    stdP2 p n vis q (r.headD 0) (callW p n "rom_ci" [0] m) := rfl
-theorem stdP2_some : stdP2 p n vis q en (some (r, m)) =
-    stdP3 p n vis q (callW p n "find_is" [vis, en, r.headD 0] m) := rfl
-theorem stdP3_some : stdP3 p n vis q (some (r, m)) =
-    if r.headD 0 = 0 then some ([0], m)
-    else stdRet (callW p n "std_ax_family" [vis, q, 34, 35, 36, 2, 3, 4, 2, 4, 0] m) := rfl
-theorem stdRet_some : stdRet (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem famK1_some : famK1 p n vis q s2 s3 i1 i2 i3 c2 c3 cvid (some (r, m)) =
-    famK2 p n vis q s2 s3 i2 i3 c2 c3 cvid
-      (callW p n "find_pinned" [vis, r.headD 0, 3, 0, 0, i1] m) := rfl
-theorem famK2_some : famK2 p n vis q s2 s3 i2 i3 c2 c3 cvid (some (r, m)) =
-    if r.headD 0 = 0 then some ([0], m) else famK3 p n vis q s3 i2 i3 c2 c3 cvid (pinAtW m s2) :=
-  rfl
-theorem famK3_some : famK3 p n vis q s3 i2 i3 c2 c3 cvid (some (r, m)) =
-    famK4 p n vis q s3 i3 c3 cvid (callW p n "find_pinned" [vis, r.headD 0, 4, c2, c2, i2] m) := rfl
-theorem famK4_some : famK4 p n vis q s3 i3 c3 cvid (some (r, m)) =
-    if r.headD 0 = 0 then some ([0], m) else famK5 p n vis q i3 c3 cvid (pinAtW m s3) := rfl
-theorem famK5_some : famK5 p n vis q i3 c3 cvid (some (r, m)) =
-    famK6 p n q cvid (callW p n "find_pinned" [vis, r.headD 0, 5, c3, c3, i3] m) := rfl
-theorem famK6_some : famK6 p n q cvid (some (r, m)) =
-    if r.headD 0 = 0 then some ([0], m) else famK7 q (callW p n "rom_cv" [cvid] m) := rfl
-theorem famK7_some : famK7 q (some (r, m)) = mpW m q (r.headD 0) := rfl
-end arms
-
-grind_pattern [ind_grind] famW_step => famW p (n + 1) m vis q s1 s2 s3 i1 i2 i3 c2 c3 cvid
-grind_pattern [ind_grind] stdW_step => stdW p (n + 1) m vis q
-grind_pattern [ind_grind] stdK1_some => stdK1 p n vis q nm (some (r, m))
-grind_pattern [ind_grind] stdC1_some => stdC1 p n vis q nm (some (r, m))
-grind_pattern [ind_grind] stdP1_some => stdP1 p n vis q (some (r, m))
-grind_pattern [ind_grind] stdP2_some => stdP2 p n vis q en (some (r, m))
-grind_pattern [ind_grind] stdP3_some => stdP3 p n vis q (some (r, m))
-grind_pattern [ind_grind] stdRet_some => stdRet (some (r, m))
-grind_pattern [ind_grind] famK1_some => famK1 p n vis q s2 s3 i1 i2 i3 c2 c3 cvid (some (r, m))
-grind_pattern [ind_grind] famK2_some => famK2 p n vis q s2 s3 i2 i3 c2 c3 cvid (some (r, m))
-grind_pattern [ind_grind] famK3_some => famK3 p n vis q s3 i2 i3 c2 c3 cvid (some (r, m))
-grind_pattern [ind_grind] famK4_some => famK4 p n vis q s3 i3 c3 cvid (some (r, m))
-grind_pattern [ind_grind] famK5_some => famK5 p n vis q i3 c3 cvid (some (r, m))
-grind_pattern [ind_grind] famK6_some => famK6 p n q cvid (some (r, m))
-grind_pattern [ind_grind] famK7_some => famK7 q (some (r, m))
-
 /-- The lookups of `std_axiom_ok`. -/
 structure StdProg2 (p : Prog) : Prop where
   std : StdProg p
   fam : p.lookup "std_ax_family" = some stdAxFamily
 
-set_option maxHeartbeats 1600000 in
-theorem fam_specW (p : Prog) (h : StdProg2 p) (n : Nat) (s₀ : St)
-    (vis q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "std_ax_family" [vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid]
-    ⦃fun r s' => LocEq s' s₀ ∧ famW p n s₀.mem vis q s1 s2 s3 i1 i2 i3 c2 c3 cvid = some (r, s'.mem);
-      ⊤⦄ := by
-  rw [invoke_eq _ h.fam]
-  simp only [callFn, stdAxFamily]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p h.std.red.pa n,
-        callW_spec p n "find_pinned", callW_spec p n "rom_cv",
-        mp_specW p h.std.red.canon h.std.red.mp n] <;>
-      finish (gen := 20) (instances := 5000) [mpW]
+l_model fam_specW (p : Prog) (h : StdProg2 p)
+  fns [h.fam ↦ famW list]
+  specs [pinAt_specW p h.std.red.pa n, callW_spec p n "find_pinned", callW_spec p n "rom_cv",
+    mp_specW p h.std.red.canon h.std.red.mp n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-set_option maxHeartbeats 1600000 in
-theorem std_specW (p : Prog) (h : StdProg2 p) (n : Nat) (s₀ : St) (vis q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "std_axiom_ok" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ stdW p n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.std.std]
-  simp only [callFn, stdAxiomOkL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        pinAt_specW p h.std.red.pa n, callW_spec p n "rom_ci", callW_spec p n "find_is",
-        callW_spec p n "std_ax_family"] <;>
-      finish (gen := 20) [rdW_eq, pinAtW]
+l_model std_specW (p : Prog) (h : StdProg2 p)
+  fns [h.std.std ↦ stdW list]
+  specs [pinAt_specW p h.std.red.pa n, callW_spec p n "rom_ci", callW_spec p n "find_is",
+    callW_spec p n "std_ax_family"]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 local notation "V" => ConLeche.CheckMode.verified
 
@@ -242,15 +81,15 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   cases n with
   | zero => simp [famW] at hW
   | succ n =>
-  rw [famW_step] at hW
+  rw [famW.arm1] at hW
   unfold famT
   -- the first clause
-  rcases e1 : pinAtW m s1 with _ | ⟨r1, m1⟩ <;> simp only [e1, famK1, reduceCtorEq] at hW
+  rcases e1 : pinAtW m s1 with _ | ⟨r1, m1⟩ <;> simp only [e1, famW.k_pin_at, reduceCtorEq] at hW
   obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.1.pins
   rw [hm1, hr1] at hW
   simp only [List.headD_cons] at hW
   simp only [StateT.run_bind, hrun1, exc_ok_bind']
-  rcases e2 : callW p n "find_pinned" [vis, pinW m (1 + s1.toNat), 3, 0, 0, i1] m with _ | ⟨r2, m2⟩ <;> simp only [e2, famK2, reduceCtorEq] at hW
+  rcases e2 : callW p n "find_pinned" [vis, pinW m (1 + s1.toNat), 3, 0, 0, i1] m with _ | ⟨r2, m2⟩ <;> simp only [e2, famW.k_find_pinned, reduceCtorEq] at hW
   obtain ⟨b2, a2, hrun2, hS2, hg2, hd2⟩ := fp_call h e2 hS hl1 (.inl rfl) h1
   simp only [hrun2, exc_ok_bind']
   by_cases z2 : r2.headD 0 = 0
@@ -262,12 +101,12 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   have hb2 : b2 = true := by rw [← hd2.1]; simpa using z2
   simp only [hb2, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the second clause
-  rcases e3 : pinAtW m2 s2 with _ | ⟨r3, m3⟩ <;> simp only [e3, famK3, reduceCtorEq] at hW
+  rcases e3 : pinAtW m2 s2 with _ | ⟨r3, m3⟩ <;> simp only [e3, famW.k_pin_at_2, reduceCtorEq] at hW
   obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok e3 hS2.1.pins
   rw [hm3, hr3] at hW
   simp only [List.headD_cons] at hW
   simp only [StateT.run_bind, hrun3, exc_ok_bind']
-  rcases e4 : callW p n "find_pinned" [vis, pinW m2 (1 + s2.toNat), 4, c2, c2, i2] m2 with _ | ⟨r4, m4⟩ <;> simp only [e4, famK4, reduceCtorEq] at hW
+  rcases e4 : callW p n "find_pinned" [vis, pinW m2 (1 + s2.toNat), 4, c2, c2, i2] m2 with _ | ⟨r4, m4⟩ <;> simp only [e4, famW.k_find_pinned_2, reduceCtorEq] at hW
   obtain ⟨b4, a4, hrun4, hS4, hg4, hd4⟩ := fp_call h e4 hS2 hl3 (.inr (.inl rfl)) h2
   simp only [hrun4, exc_ok_bind']
   by_cases z4 : r4.headD 0 = 0
@@ -279,12 +118,12 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   have hb4 : b4 = true := by rw [← hd4.1]; simpa using z4
   simp only [hb4, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the third clause
-  rcases e5 : pinAtW m4 s3 with _ | ⟨r5, m5⟩ <;> simp only [e5, famK5, reduceCtorEq] at hW
+  rcases e5 : pinAtW m4 s3 with _ | ⟨r5, m5⟩ <;> simp only [e5, famW.k_pin_at_3, reduceCtorEq] at hW
   obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok e5 hS4.1.pins
   rw [hm5, hr5] at hW
   simp only [List.headD_cons] at hW
   simp only [StateT.run_bind, hrun5, exc_ok_bind']
-  rcases e6 : callW p n "find_pinned" [vis, pinW m4 (1 + s3.toNat), 5, c3, c3, i3] m4 with _ | ⟨r6, m6⟩ <;> simp only [e6, famK6, reduceCtorEq] at hW
+  rcases e6 : callW p n "find_pinned" [vis, pinW m4 (1 + s3.toNat), 5, c3, c3, i3] m4 with _ | ⟨r6, m6⟩ <;> simp only [e6, famW.k_find_pinned_3, reduceCtorEq] at hW
   obtain ⟨b6, a6, hrun6, hS6, hg6, hd6⟩ := fp_call h e6 hS4 hl5 (.inr (.inr rfl)) h3
   simp only [hrun6, exc_ok_bind']
   by_cases z6 : r6.headD 0 = 0
@@ -296,11 +135,13 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   have hb6 : b6 = true := by rw [← hd6.1]; simpa using z6
   simp only [hb6, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the axiom's own pin
-  rcases e7 : callW p n "rom_cv" [cvid] m6 with _ | ⟨r7, m7⟩ <;> simp only [e7, famK7, reduceCtorEq] at hW
+  rcases e7 : callW p n "rom_cv" [cvid] m6 with _ | ⟨r7, m7⟩ <;> simp only [e7, famW.k_rom_cv, reduceCtorEq] at hW
   obtain ⟨pin, a7, hrun7, hS7, hg7, hpin⟩ := h.red.rom.cv dn vis fe cvid hcv n m6 a6 r7 m7 hS6 e7
   have hg := hg2.trans (hg4.trans (hg6.trans hg7))
   have hq7 : decCV (erA m7) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg) hq
-  obtain ⟨hm8, hrun8, hd8⟩ := mpW_ok (a := a7) hW hS7.2.2.2.2.1 hq7
+  have hW' : mpW m7 q (r7.headD 0) = some (r, m') := by
+    unfold mpW at hW ⊢; simpa [famW.k_matches_pin] using hW
+  obtain ⟨hm8, hrun8, hd8⟩ := mpW_ok (a := a7) hW' hS7.2.2.2.2.1 hq7
     (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
   subst hm8
   refine ⟨_, a7, ?_, hS7, hg, hd8⟩
@@ -345,11 +186,11 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
   cases n with
   | zero => simp [stdW] at hW
   | succ n =>
-  rw [stdW_step, ewn] at hW
+  rw [stdW.arm1] at hW
   rw [stdAxiomOk_fam, hname]
-  rcases e1 : pinAtW m 32 with _ | ⟨r1, m1⟩ <;> simp only [e1, stdK1, reduceCtorEq] at hW
+  rcases e1 : pinAtW m 32 with _ | ⟨r1, m1⟩ <;> simp only [e1, stdW.k_pin_at, reduceCtorEq] at hW
   obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.1.pins
-  rw [hm1] at hW
+  rw [hm1, ewn] at hW
   have ep : r1.headD 0 = pinW m (1 + (32 : Word).toNat) := by rw [hr1]; rfl
   have hbeq : ((decI wn : NIdx) == decI (pinW m (1 + (32 : Word).toNat))) =
       decide (wn = pinW m (1 + (32 : Word).toNat)) := decI_beq wn _ hwnl hl1
@@ -359,16 +200,16 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
     rw [ep] at ep1
     simp only [ep1, decide_true, ite_true]
     -- `propext`: the pinned `Eq`
-    rcases e2 : pinAtW m 0 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdP1, reduceCtorEq] at hW
+    rcases e2 : pinAtW m 0 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdW.k_pin_at_2, reduceCtorEq] at hW
     obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.1.pins
     rw [hm2, hr2] at hW
     simp only [List.headD_cons] at hW
     simp only [StateT.run_bind, hrun2, exc_ok_bind']
-    rcases e3 : callW p n "rom_ci" [0] m with _ | ⟨r3, m3⟩ <;> simp only [e3, stdP2, reduceCtorEq] at hW
+    rcases e3 : callW p n "rom_ci" [0] m with _ | ⟨r3, m3⟩ <;> simp only [e3, stdW.k_rom_ci, reduceCtorEq] at hW
     obtain ⟨ea, a3, hrun3, hS3, hg3, hea⟩ := h.std.red.rom.ci dn vis fe 0 (by decide) n m a r3 m3 hS e3
     have hrun3' : eqA.run a = .ok (ea, a3) := hrun3
     simp only [hrun3', exc_ok_bind']
-    rcases e4 : callW p n "find_is" [vis, pinW m (1 + (0 : Word).toNat), r3.headD 0] m3 with _ | ⟨r4, m4⟩ <;> simp only [e4, stdP3, reduceCtorEq] at hW
+    rcases e4 : callW p n "find_is" [vis, pinW m (1 + (0 : Word).toNat), r3.headD 0] m3 with _ | ⟨r4, m4⟩ <;> simp only [e4, stdW.k_find_is, reduceCtorEq] at hW
     obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
       (findIs_spec p h.std.red.canon dn vis fe hdn _ _ ea n ⟨m3, Locals.init []⟩ a3
         ⟨hS3, hl2, decRCI_get hea⟩) e4
@@ -387,7 +228,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
       rw [← hb4]; simpa using z4
     simp only [bne, ht, Bool.not_true, Bool.false_eq_true, ite_false]
     -- the `Iff` family
-    rcases e5 : callW p n "std_ax_family" [vis, q, 34, 35, 36, 2, 3, 4, 2, 4, 0] s4.mem with _ | ⟨r5, m5⟩ <;> simp only [e5, stdRet, reduceCtorEq] at hW
+    rcases e5 : callW p n "std_ax_family" [vis, q, 34, 35, 36, 2, 3, 4, 2, 4, 0] s4.mem with _ | ⟨r5, m5⟩ <;> simp only [e5, stdW.k_std_ax_family, reduceCtorEq] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨b, a5, hrun5, hS5, hg5, hd5⟩ := fam_call h e5 hS4
       (ArrExt.decCV (IWGrow.erecPExt (hg3.trans hg4)) hq) (by decide) (by decide) (by decide)
@@ -397,7 +238,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
     rw [ep] at ep1
     simp only [ep1, decide_false, Bool.false_eq_true, ite_false]
     -- `choice`
-    rcases e2 : pinAtW m 33 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdC1, reduceCtorEq] at hW
+    rcases e2 : pinAtW m 33 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdW.k_pin_at_3, reduceCtorEq] at hW
     obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.1.pins
     rw [hm2] at hW
     have ec : r2.headD 0 = pinW m (1 + (33 : Word).toNat) := by rw [hr2]; rfl
@@ -408,7 +249,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
     · rw [ite_eq_left ec1] at hW
       rw [ec] at ec1
       simp only [ec1, decide_true, ite_true]
-      rcases e3 : callW p n "std_ax_family" [vis, q, 37, 38, 39, 5, 6, 7, 1, 3, 1] m with _ | ⟨r3, m3⟩ <;> simp only [e3, stdRet, reduceCtorEq] at hW
+      rcases e3 : callW p n "std_ax_family" [vis, q, 37, 38, 39, 5, 6, 7, 1, 3, 1] m with _ | ⟨r3, m3⟩ <;> simp only [e3, stdW.k_std_ax_family, reduceCtorEq] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨b, a3, hrun3, hS3, hg3, hd3⟩ := fam_call h e3 hS hq (by decide) (by decide)
         (by decide) (by decide)
