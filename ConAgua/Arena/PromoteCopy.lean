@@ -257,15 +257,15 @@ theorem ArenaD.grow0 {m m' : Mem} {a : AState} (h : Grow0 m m') (hD : ArenaD m a
     | exact ⟨h.poolOK hp, ConsR.mono hR.lit.2 (hra (by decide) (by decide) (by decide))
         (hra (by decide) (by decide) (by decide)) (hf.2.2.1 CTL) (fun x _ => hc x)
         (fun t i k => h.recRel hp t i k)
-        (fun t i => by simp only [litCS, litCSk, litH, hra (b := REC) (by decide) (by decide) (by decide) (by decide)])⟩
+        (fun t i => by simp only [litCS, litCSk, litH, hra (b := REC) (by decide) (by decide) (by decide)])⟩
     | exact ConsR.mono hR.ls (hra (by decide) (by decide) (by decide))
         (hra (by decide) (by decide) (by decide)) (hf.2.2.1 CTL) (fun x _ => hc x)
         (fun t i k => h.lsRecRel hp t i k)
-        (fun t i => by simp only [lsCS, lshash, hra (b := LSREC) (by decide) (by decide) (by decide) (by decide)])
+        (fun t i => by simp only [lsCS, lshash, hra (b := LSREC) (by decide) (by decide) (by decide)])
     | exact ConsR.mono hR.nstr (hra (by decide) (by decide) (by decide))
         (hra (by decide) (by decide) (by decide)) (hf.2.2.1 CTL) (fun x _ => hc x)
         (fun t i k => h.nsRecRel hp t i k)
-        (fun t i => by simp only [nstrCS, nshash, hra (b := NSREC) (by decide) (by decide) (by decide) (by decide)])
+        (fun t i => by simp only [nstrCS, nshash, hra (b := NSREC) (by decide) (by decide) (by decide)])
 
 /-! ## `pool_copy0`'s memory -/
 
