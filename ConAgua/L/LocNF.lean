@@ -28,10 +28,17 @@ The two simprocs here resolve such a read in one step, by walking the chain in `
 
 Both are `dsimproc`s (the result is definitionally equal: no proof term, the kernel unfolds the
 chain once) and run before the subterms are simplified (`↓`), so a read is resolved before the
-chain's values are visited. They are registered for `simp` (so `simp`, `simp_all` and `l_model`'s
-recipe use them; `simp only` needs them listed) and for `seval`, the simproc set `grind`'s
-normalizer uses (so `grind`, `finish` and `sym … => vcgen … <;> finish` resolve every read when
-they internalize it, instead of instantiating `St.setLoc_loc` per layer).
+chain's values are visited. They are registered for `seval`, the simproc set of `grind`'s
+normalizer, so `grind`, `finish` and `sym … => vcgen … <;> finish` resolve every read when they
+internalize it, instead of instantiating `St.setLoc_loc` once per layer. `simp`, `simp_all` and
+`simp only` use them when they are listed (`simp only [L.reduceLoc, L.reduceLocMem, …]`); they
+are not in the default `simp` set, where every `simp [St.setLoc_loc, …]` list would turn into
+unused arguments.
+
+Both walks stop at a write to a local that is not a literal (`setLoc x v` for a variable `x`, a
+`setLocs` whose list is not a literal list of literals). The verification conditions only have
+literal locals, and the left sides of the general equations (`St.setLoc_mem`, `St.setLocs_mem`, as
+`grind` patterns) stay as they are.
 -/
 
 namespace L.LocNF
@@ -77,18 +84,23 @@ meta partial def locRead (s : Lean.Expr) (y : Nat) : MetaM (Option Lean.Expr) :=
   | St.mk _ l => return some ((← initRead l y).getD (mkApp l (mkNatLit y)))
   | _ => return none
 
-/-- The state below the `setLoc`/`setLocs` layers at the top of `s`. -/
-meta partial def memBase (s : Lean.Expr) : Lean.Expr :=
+/-- Whether `xs` is a literal list of literal locals. -/
+meta def litVars (xs : Lean.Expr) : MetaM Bool := do
+  let some xs ← getListLit? xs | return false
+  xs.allM fun x => return (← getNatValue? x).isSome
+
+/-- The state below the writes to literal locals at the top of `s`. -/
+meta partial def memBase (s : Lean.Expr) : MetaM Lean.Expr := do
   match_expr s with
-  | St.setLoc s' _ _ => memBase s'
-  | St.setLocs s' _ _ => memBase s'
-  | _ => s
+  | St.setLoc s' x _ => if (← getNatValue? x).isSome then memBase s' else return s
+  | St.setLocs s' xs _ => if ← litVars xs then memBase s' else return s
+  | _ => return s
 
 end L.LocNF
 
 open Lean Meta in
 /-- A read of a local through a chain of writes, in one step (see the module doc). -/
-dsimproc ↓ [simp, seval] L.reduceLoc (L.St.loc _ _) := fun e => do
+dsimproc ↓ [seval] L.reduceLoc (L.St.loc _ _) := fun e => do
   let_expr L.St.loc s y ← e | return .continue
   let some yv ← getNatValue? y | return .continue
   match ← L.LocNF.locRead s yv with
@@ -97,7 +109,7 @@ dsimproc ↓ [simp, seval] L.reduceLoc (L.St.loc _ _) := fun e => do
 
 open Lean Meta in
 /-- A read of a local of a literal frame, `Locals.init [a, b, …] k`. -/
-dsimproc ↓ [simp, seval] L.reduceLocalsInit (L.Locals.init _ _) := fun e => do
+dsimproc ↓ [seval] L.reduceLocalsInit (L.Locals.init _ _) := fun e => do
   let_expr L.Locals.init vs y ← e | return .continue
   let some yv ← getNatValue? y | return .continue
   match ← L.LocNF.initRead (mkApp (mkConst ``L.Locals.init) vs) yv with
@@ -106,9 +118,9 @@ dsimproc ↓ [simp, seval] L.reduceLocalsInit (L.Locals.init _ _) := fun e => do
 
 open Lean Meta in
 /-- The memory of a state behind writes to locals, in one step. -/
-dsimproc ↓ [simp, seval] L.reduceLocMem (L.St.mem _) := fun e => do
+dsimproc ↓ [seval] L.reduceLocMem (L.St.mem _) := fun e => do
   let_expr L.St.mem s ← e | return .continue
-  let b := L.LocNF.memBase s
+  let b ← L.LocNF.memBase s
   if b == s then return .continue
   match_expr b with
   | L.St.mk m _ => return .visit m
