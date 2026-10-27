@@ -122,3 +122,20 @@ directly now.
 
 `Checker.Prog` can start at 410 s instead of 721 s. On its own this does not shorten the critical
 path (other paths reach 1353 s), together with batch 3 it does (below).
+
+## Batch 3: the `Arena` proof families import what they use
+
+Same tool as batch 2 (`shake_fam.py`), over the 277 modules of the numbered and lettered
+inductive-proof families (`IndInstallSpec*`, `RecGenSpec*`, `RecCheckSpec*`, `IndSumSpec*`,
+`IndPartsSpec*`, `IndPosSpec*`, `IndPos2Spec*`, `RecClassSpec*`, `DeclDivMod*`, `IndReal*`,
+`IndT/*`): each imports the family modules whose constants it uses instead of the previous link
+of its chain; imports of other modules stay. 242 of the 277 changed. Every other module is then
+checked to still reach every module it used before (a module two links down a chain may have
+been reached only through the link that went away); 9 got direct imports back. Two lessons for
+the tool: only add a module that the importer reached before (constants re-attributed by the
+environment otherwise create cycles), and repeat the reachability check to a fixpoint (the
+modules were processed in an order where a later change could cut an earlier module's path).
+
+Estimated critical path (same module times) 1353 s → 1160 s, with batch 4 1118 s; it now runs
+`IndPos2SpecA…M` (a chain of real uses between the files) → `DeclDivMod5…9` → `Arena.Checker` →
+`Checker.LoopDecl*` → `Checker.IndArm` → `Verdict.TopE`.
