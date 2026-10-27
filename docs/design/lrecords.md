@@ -561,3 +561,56 @@ form back, so the per-store `_raw` lemmas stay unless the models move to `tfld` 
 several hours; not done. The comparators and room checks through accessors (`APP⟨t, v - 1⟩.f`
 instead of `AREC⟨t⟩[v - 1] & 4294967295`) are an L-text change that expands to the same `Expr`,
 with no proof saving on its own; left for the rank-5 template work, where the models change anyway.
+
+### 7.5 Scoping: the hot non-count `CTL` slots as named globals (not implemented)
+
+**Counts.** Master 5f775d94, proof files (generated program files excluded): numeric references
+`set64 CTL k` / `arr64 CTL k`, files, L accesses `CTL.u64[k]`, and `MemFrame _ [… k …]` lists
+naming the slot.
+
+| slot | what it is (from the code's comments) | twin | proof refs | files | L | frames |
+|---:|---|---|---:|---:|---:|---:|
+| 200 | top of the work pool `IW` of the inductive stage | L-specific (con-ron builds Lean values) | 572 | 125 | 7 | 114 |
+| 136 | top of the spine stack `SPN` | L-specific (con-ron recurses, lists) | 461 | 61 | 123 | 56 |
+| 1 | the scratch flag | con-ron `scratchOn` | 438 | 126 | 196 | 68 |
+| 129 | top of the environment record pool `EREC` | the size of con-ron's constant-info array | 139 | 41 | 2 | 41 |
+| 0 | the pool top | con-ron's pool size | 139 | 35 | 60 | 11 |
+| 192 | top of the level heap `LH` | L-specific | 66 | 18 | 21 | 21 |
+| 128 | number of `ECON` entries (`env_push`) | the size of con-ron's env array | 58 | 6 | 5 | 5 |
+| 137 | top of the binder stack `BSTK` | L-specific | 31 | 4 | 9 | 2 |
+| 133 | number of `ETAB` entries | the length of con-ron's `env.tables` | 30 | 8 | 3 | 0 |
+| 130 | number of pending checks `PEND` | con-ron's pending list | 20 | 6 | 5 | 6 |
+
+These ten slots carry 1 954 of the 2 141 numeric `CTL` references (91 %).
+
+**What a named global changes.** L already has globals (`L.GVar`, `Arena/Globals.lean`: `MODE`,
+`PLO`, `PHI`, `INIT`). In the proofs:
+
+* *Frames.* A global lives outside the arrays. Every array write leaves it (`Mem.setG`, the
+  `*_setG` lemmas are `rfl`) and a global write leaves every array, so the `x ∉ arenaCtl` side
+  conditions and the slot entries of `MemFrame` lists go. Which functions may write a global is
+  a syntactic check of the program text (`closedG`, `globsIn`, `L/GKeep.lean`), proved once per
+  call-closed set by `decide +kernel`, instead of a semantic frame per function.
+* *Reads.* `rdW (m.arr64 CTL) 136` becomes a global read: no bounds, no `oob` branch in `vcgen`.
+* *Cost.* The references above are renamed (mechanical: about 1 950 lines in about 200 files),
+  each `MemFrame` list loses the slot and the writers' frame statements gain a global-write
+  clause (about 330 frame lists). Slots whose value crosses the two entries of parallel mode
+  (`0`, `1`, `128`, `129`, `130`, `133`: the seed `CTLF` carries them to entry 2) need entry 2 to
+  seed the globals from the frozen header, a change to the stub and to the `Final/Buf*` proofs.
+  The slots that only live inside one call tree (`136`, `137`, `192`, `200`) do not.
+
+**`checker.s`.** A constant-index `CTL[k]` read compiles to four instructions (`genLd`: compare
+with `CTL`'s length word, branch, load the base, load), a global to one (`mov r, [r15 + off]`);
+writes likewise. `CTL[1]` (196 L accesses) and `CTL[136]` (123, the spine stack in the whnf and
+walk loops) are on hot paths, so a small speedup is expected; to be measured.
+
+**Named length-1 arrays instead** (`SPTOP⟨⟩[0]`, absarrays-style) give the frame separation from
+`CTL` but keep the bounds check and the base load, add an array to every writer's `MemFrame` list,
+and still need seeding for the cross-entry slots. Globals are the better fit.
+
+**Estimate.** The four per-call slots (`200`, `136`, `192`, `137`: 1 130 proof references, 193
+frame lists, no seeding): 8–14 h, net proof lines −200 to −500 (side conditions and frame entries
+go; the renames are line-neutral), wide, colliding with any lane in the inductive stage, spine or
+level-heap proofs. The cross-entry slots add the seeding (4–8 h, `Final` proofs, statements
+unchanged). A pilot on `CTL[136]` alone (61 files) would measure lines, elaboration time and the
+`checker.s` instruction count before a decision.
