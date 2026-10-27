@@ -16,10 +16,10 @@ set_option experimental.vcgen true
 
 theorem rowSet_frame (m : Mem) (w c q : Word) (_ht : rowTag w ≤ 2) :
     MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m (rowSet m w c q) := by
-  have hne : rowArr w ≠ CTL := rowArr_ne _ (by decide)
+  have hne : (rowArr w : TieredArray) ≠ CTL := TieredArray.t0_ne (rowArr_ne _ (by decide))
   have h1 := MemFrame.set64 m (rowArr w) hne (ixW w) c
   have h2 := MemFrame.set64 (m.set64 (rowArr w) (ixW w) c) (rowArr w) hne (ixW w + 1) q
-  have hmem : rowArr w ∈ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] := by
+  have hmem : (rowArr w : TieredArray) ∈ ([EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] : List TieredArray) := by
     rcases rowArr_names w with h | h | h | h | h | h <;> rw [h] <;> simp
   exact (h1.trans h2).mono (by simpa using hmem) (by simp)
 
