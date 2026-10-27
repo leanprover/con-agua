@@ -497,19 +497,19 @@
     30    | .error .outOfFuel, _ => False
     31    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
 
-== ConAgua/Arena/IndIface.lean#L297-L308
-   297  /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
-   298  against `a₀`, a returning run keeps the caller's locals, the twin's run succeeds, and `post`
-   299  relates the memories before and after, the twin's state after, the L results and the twin's
-   300  result. Every stub spec and every refinement of the stage has this shape. -/
-   301  def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
-   302      (pre : Mem → AState → Prop) (op : AM α)
-   303      (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
-   304    ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
-   305      ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
-   306      ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧
-   307        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
-   308  
+== ConAgua/Arena/IndIface.lean#L296-L307
+   296  /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
+   297  against `a₀`, a returning run keeps the caller's locals, the twin's run succeeds, and `post`
+   298  relates the memories before and after, the twin's state after, the L results and the twin's
+   299  result. Every stub spec and every refinement of the stage has this shape. -/
+   300  def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
+   301      (pre : Mem → AState → Prop) (op : AM α)
+   302      (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
+   303    ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
+   304      ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+   305      ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧
+   306        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
+   307  
 
 == ConAgua/Checker/Pipeline.lean#L92-L125
     92  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
@@ -1172,35 +1172,35 @@
     36  
     37  The refinement (`enterScratch`/`dropScratch` under `ArenaD`) is `ScratchRefine.lean`.
 
-== ConAgua/Arena/MemoLib.lean#L19-L46
-    19  /-!
-    20  # The memo library: per-call memo tables with two-word keys and epoch stamps
-    21  
-    22  con-ron's arena keeps six per-call memos keyed `(EIdx × Nat)` (`inst1C`, `instLC`, `liftC`,
-    23  `abs1C`, `inst1LC`, `instLPC`), two keyed `EIdx` (`bvarBC`, `fvarBC`) and two level ones
-    24  (`Arena/Monad.lean`'s `Memos`); con-ron's Rust keeps them in `HashMap2` (`ron/hashmap2.rs`): open
-    25  addressing, linear probing, an **epoch stamp** per slot so that `clear` is `epoch += 1`.
-    26  
-    27  A memo here is a **schema** `MemoSch`: a word array `arr` and a `CTL` index `cs` (`CTL[cs]` is the
-    28  live stamp minus one, `CTL[cs + 1]` the live count). Four words per slot: the stamp, the key's two
-    29  words, the value. A one-word key (`bvarBC`) is the two-word key with second word `0`. Slot `j` is
-    30  **live** iff its stamp is `CTL[cs] + 1`; anything else is free space, so all-zero memory is an
-    31  empty memo.
-    32  
-    33  The L code is **generic in the schema**: `memoFindG S`, `memoPutG S`, `memoClearG S` are Lean
-    34  functions producing L functions with the schema's array and `CTL` words spliced in (`S.arr.u64[…]`,
-    35  `CTL.u64[⟪S.cs⟫]`), and their `vcgen` specs are proved once, for a variable schema. An instance is
-    36  three entries of the program (`("bm_find", memoFindG bmSch)`, …) and no proof.
-    37  
-    38  * `X_find(k1, k2)`: the probe from `homeW (k1 ^ (k2 << 32) ^ (k2 >> 32) * golden)`, returning
-    39    `(found, slot, steps)`. Both halves of `k2` enter the hash: banked memos (`MemoBank.genW`), the
-    40    eager bit and `rrSch` keep a second component in `k2`'s high half (lane `rfhash`: with only
-    41    `k2 << 32` it was shifted out, and all banks' entries for one `k1` shared one probe cluster).
-    42  * `X_put(k1, k2, v, fd, j)`: given the probe's `fd`, `j` **on the current memory**, write the
-    43    value (and on a miss, the stamp and the key, growing the table past 3/4 load, con-ron's `HashMap2` load factor). Callers probe right
-    44    before (`set` = `find; put`); a walk that recursed since its first probe probes again.
-    45  * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
-    46  -/
+== ConAgua/Arena/MemoLib.lean#L18-L45
+    18  /-!
+    19  # The memo library: per-call memo tables with two-word keys and epoch stamps
+    20  
+    21  con-ron's arena keeps six per-call memos keyed `(EIdx × Nat)` (`inst1C`, `instLC`, `liftC`,
+    22  `abs1C`, `inst1LC`, `instLPC`), two keyed `EIdx` (`bvarBC`, `fvarBC`) and two level ones
+    23  (`Arena/Monad.lean`'s `Memos`); con-ron's Rust keeps them in `HashMap2` (`ron/hashmap2.rs`): open
+    24  addressing, linear probing, an **epoch stamp** per slot so that `clear` is `epoch += 1`.
+    25  
+    26  A memo here is a **schema** `MemoSch`: a word array `arr` and a `CTL` index `cs` (`CTL[cs]` is the
+    27  live stamp minus one, `CTL[cs + 1]` the live count). Four words per slot: the stamp, the key's two
+    28  words, the value. A one-word key (`bvarBC`) is the two-word key with second word `0`. Slot `j` is
+    29  **live** iff its stamp is `CTL[cs] + 1`; anything else is free space, so all-zero memory is an
+    30  empty memo.
+    31  
+    32  The L code is **generic in the schema**: `memoFindG S`, `memoPutG S`, `memoClearG S` are Lean
+    33  functions producing L functions with the schema's array and `CTL` words spliced in (`S.arr.u64[…]`,
+    34  `CTL.u64[⟪S.cs⟫]`), and their `vcgen` specs are proved once, for a variable schema. An instance is
+    35  three entries of the program (`("bm_find", memoFindG bmSch)`, …) and no proof.
+    36  
+    37  * `X_find(k1, k2)`: the probe from `homeW (k1 ^ (k2 << 32) ^ (k2 >> 32) * golden)`, returning
+    38    `(found, slot, steps)`. Both halves of `k2` enter the hash: banked memos (`MemoBank.genW`), the
+    39    eager bit and `rrSch` keep a second component in `k2`'s high half (lane `rfhash`: with only
+    40    `k2 << 32` it was shifted out, and all banks' entries for one `k1` shared one probe cluster).
+    41  * `X_put(k1, k2, v, fd, j)`: given the probe's `fd`, `j` **on the current memory**, write the
+    42    value (and on a miss, the stamp and the key, growing the table past 3/4 load, con-ron's `HashMap2` load factor). Callers probe right
+    43    before (`set` = `find; put`); a walk that recursed since its first probe probes again.
+    44  * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
+    45  -/
 
 == ConAgua/Arena/Pool.lean#L10-L29
     10  /-!
