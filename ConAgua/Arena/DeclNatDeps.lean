@@ -1,15 +1,16 @@
 import ConAgua.Arena.DeclNatSpec
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LdRd
 import ConAgua.L.GrindAttr
 
 /-!
 # `nat_op_deps` refines `natOpDeps` (lane `decls3`, helper `decls3-nat`)
 
 Split from `DeclNatSpec.lean` for its `vcgen` spec's cost (fifteen branches). The loads go through
-`nd_ld64_spec` (reads as `rdW`, no bound proofs inside terms), the state equations are substituted,
-the locals normalized (`simp only`, `decide` for the `Var` literals), and `grind` closes the goals
-with one guarded equation per arm of the dispatch (`depsArmW_k`); ten minutes with
-`sym … <;> finish`, about 30 s now.
+`ld64_rd_spec` (reads as `rdW`, no bound proofs inside terms); the body is cut after the reads
+(`seqTake`/`seqDrop`), and the dispatch gets its own spec over the named locals (`DepsLocs`), whose
+goals `grind` closes with one guarded equation per arm (`depsArmW_k`). Ten minutes with
+`sym … <;> finish`, 26 s with one `vcgen` over the whole body, about 10 s now.
 -/
 
 set_option experimental.vcgen true
@@ -132,39 +133,64 @@ theorem depsArmW_15 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw
 theorem nd_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
   simp [rdW, h]
 
-/-- `ld64` answering `rdW` (a copy of `L.Arena.ld64_rdW_spec`, `InferBodyIntern.lean`, which this
-module does not import): the read carries no bound proof, so the fifteen loads leave no dependent
-hypotheses behind. -/
-private theorem nd_ld64_spec (a : ArrId) (i : Word) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ ld64 a i
-    ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size; ⊤⦄ := by
-  apply L.M.triple_of_run
-  intro s r s' hs hrun
-  subst hs
-  simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
-  split at hrun
-  · rename_i h
-    simp only [pure] at hrun
-    obtain ⟨rfl, rfl⟩ := hrun
-    exact ⟨rfl, by simp [rdW, h], h⟩
-  · simp [throw, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hrun
-    cases hrun
+/-- The statement after the first `k` of a right-nested `seq` chain. -/
+def seqDrop : Nat → Stmt → Stmt
+  | k + 1, .seq _ t => seqDrop k t
+  | _, s => s
+
+/-- The first `k` statements of a `seq` chain, followed by `r`. -/
+def seqTake : Nat → Stmt → Stmt → Stmt
+  | k + 1, .seq a t, r => .seq a (seqTake k t r)
+  | _, _, r => r
+
+theorem seqTake_drop : ∀ (k : Nat) (s : Stmt), seqTake k s (seqDrop k s) = s
+  | 0, s => by cases s <;> rfl
+  | k + 1, s => by
+    cases s with
+    | seq a t => simp only [seqTake, seqDrop, seqTake_drop k t]
+    | _ => rfl
+
+/-- `nat_op_deps` after the pin reads: the dispatch. -/
+def depsTailS : Stmt := seqDrop 16 natOpDepsL.body
+
+/-- The locals after the pin reads. -/
+def DepsLocs (s : St) : Prop :=
+  s.loc 2 = pw s.mem (s.loc 1) 0 ∧ s.loc 3 = pw s.mem (s.loc 1) 1 ∧ s.loc 4 = pw s.mem (s.loc 1) 2 ∧
+  s.loc 5 = pw s.mem (s.loc 1) 3 ∧ s.loc 6 = pw s.mem (s.loc 1) 4 ∧ s.loc 7 = pw s.mem (s.loc 1) 5 ∧
+  s.loc 8 = pw s.mem (s.loc 1) 6 ∧ s.loc 9 = pw s.mem (s.loc 1) 7 ∧ s.loc 10 = pw s.mem (s.loc 1) 8 ∧
+  s.loc 11 = pw s.mem (s.loc 1) 9 ∧ s.loc 12 = pw s.mem (s.loc 1) 10 ∧ s.loc 13 = pw s.mem (s.loc 1) 11 ∧
+  s.loc 14 = pw s.mem (s.loc 1) 12 ∧ s.loc 15 = pw s.mem (s.loc 1) 13 ∧ s.loc 16 = pw s.mem (s.loc 1) 14
 
 set_option maxHeartbeats 8000000 in
+theorem depsTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DepsLocs s₁) :
+    ⦃fun s => s = s₁⦄ step p (exec p n) depsTailS
+    ⦃fun r s' => depsArmW p n s₁.mem (s₁.loc 1) (s₁.loc 0) = some (r.retVal, s'.mem); ⊤⦄ := by
+  obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14⟩ := hL
+  simp only [depsTailS, natOpDepsL, seqDrop]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, callW_spec p n "iw_alloc"]
+  all_goals subst_vars
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    St.setLocs_cons, Cmp.eval, BinOp.eval, reduceIte, Nat.reduceEqDiff, beq_iff_eq] at *)
+  all_goals grind -lia -ring -linarith (gen := 20) [lang_grind, arena_grind, ntBW, depsArmW_0, depsArmW_1, depsArmW_2, depsArmW_3, depsArmW_4, depsArmW_5, depsArmW_6, depsArmW_7, depsArmW_8, depsArmW_9, depsArmW_10, depsArmW_11, depsArmW_12, depsArmW_13, depsArmW_14, depsArmW_15]
+
+/-- **`nat_op_deps`**: the pin reads (one path, `vcgen`), then the dispatch as its own spec
+(`depsTail_spec`), so that the fifteen arms see the locals as `DepsLocs` and not as the reads'
+`setLoc` chain (26 s -> 10 s). -/
 theorem natOpDeps_specW (p : Prog) (hp : p.lookup "nat_op_deps" = some natOpDepsL) (n : Nat)
     (s₀ : St) (c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_deps" [c]
     ⦃fun r s' => LocEq s' s₀ ∧ natOpDepsW p n s₀.mem c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
-  simp only [callFn, natOpDepsL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nd_ld64_spec, st64,
-    callW_spec p n "nat_op_pins", callW_spec p n "iw_alloc"]
+  simp only [callFn]
+  rw [← seqTake_drop 16 natOpDepsL.body, show seqDrop 16 natOpDepsL.body = depsTailS from rfl]
+  simp only [natOpDepsL, seqTake]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+    callW_spec p n "nat_op_pins", depsTail_spec p n]
   all_goals (try exact LocEq.restore _ _)
   all_goals subst_vars
-  all_goals (try simp (config := {decide := true}) only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
-    St.setLocs_cons, Cmp.eval, BinOp.eval, reduceIte,
-    beq_iff_eq] at *)
-  all_goals grind -lia -ring -linarith (gen := 20) [lang_grind, arena_grind, natOpDepsW_eq, ntBW, pw, depsArmW_0, depsArmW_1, depsArmW_2, depsArmW_3, depsArmW_4, depsArmW_5, depsArmW_6, depsArmW_7, depsArmW_8, depsArmW_9, depsArmW_10, depsArmW_11, depsArmW_12, depsArmW_13, depsArmW_14, depsArmW_15]
+  all_goals (try simp only [DepsLocs, pw, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    St.setLocs_cons, BinOp.eval, reduceIte, Nat.reduceEqDiff] at *)
+  all_goals grind -lia -ring -linarith [lang_grind, arena_grind, natOpDepsW_eq, ntBW, pw]
 
 theorem pw_rec {m m1 : Mem} {pi : Word} {ws : List Word} (hI : IWOK m)
     (hrec : RecPost m m1 [pi] ws) (j : Nat) (hj : j < ws.length) :
