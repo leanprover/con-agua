@@ -314,32 +314,7 @@ theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
     rw [hw]; exact denoteL_lvR hR u l hl
 
 theorem decLs_tag0 (h : Word) (hh : h.toNat < 2 ^ 32) :
-    ((decI h : LsIdx).tag == LsTag.list) = (h >>> 28 == 0) := by
-  have this : ((decI h : LsIdx).tag = 0 ↔ h >>> 28 = 0) := decI_tag_eq h hh 0 (by decide)
-  rw [Bool.eq_iff_iff]; simp only [beq_iff_eq, LsTag.list]; exact this
-where
-  decI_tag_eq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (hg : g < 16) :
-      ((decI h : Idx k).tag = UInt32.ofNat g) ↔ (h >>> 28 = UInt64.ofNat g) := by
-    have e : (decI h : Idx k).tag = (h >>> 28).toUInt32 := by
-      simp only [decI, Idx.tag]
-      apply UInt32.toNat_inj.mp
-      simp [UInt32.toNat_div, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight,
-        Nat.shiftRight_eq_div_pow]
-      omega
-    rw [e]
-    have hgt : (h >>> 28).toNat < 16 := by
-      simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; omega
-    constructor
-    · intro e; apply UInt64.toNat_inj.mp
-      have := congrArg UInt32.toNat e
-      simp [UInt64.toNat_toUInt32] at this ⊢; omega
-    · intro e; rw [e]; apply UInt32.toNat_inj.mp; simp
-
-theorem decLs_idx (h : Word) : (decI h : LsIdx).idxNat = (idxW h).toNat := by
-  simp only [decI, Idx.idxNat, Idx.index, idxW]
-  simp [UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_and]
-  have : (134217727 : Nat) = 2 ^ 27 - 1 := rfl
-  rw [this, Nat.and_two_pow_sub_one_eq_mod]
+    ((decI h : LsIdx).tag == LsTag.list) = (h >>> 28 == 0) := decI_tag_beq h hh 0 (by decide)
 
 /-- **Under `ArenaR`, L's view of a level-list handle is the arena's**: the record's slice holds
 the list's handle words, a slice in use. -/
@@ -370,7 +345,7 @@ theorem lsNodeW_store' {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh :
   by_cases g0 : h >>> 28 = 0
   · simp only [g0, beq_self_eq_true, ↓reduceIte, Option.map_eq_some_iff] at hg
     obtain ⟨z, hz, rfl⟩ := hg
-    rw [Tbl.node?, decLs_idx h, apply_ite LsTables.lists] at hz
+    rw [Tbl.node?, decI_idx h, apply_ite LsTables.lists] at hz
     obtain ⟨hc, hr⟩ := tier_node lsCS LsRecRel m _ _ _ hR.ls (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := hc
     simp only [LsRecRel] at hr
@@ -410,7 +385,7 @@ theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
     have hget : ∀ T : LsTables, T.lists.nodes[(idxW h).toNat]? = some x →
         T.get (decI h) = some x.us := fun T hT => by
       simp only [LsTables.get, decLs_tag0 h hh, hg, beq_self_eq_true, ↓reduceIte, Tbl.node?,
-        decLs_idx h, hT, Option.map_some]
+        decI_idx h, hT, Option.map_some]
     unfold LsStore.view
     rw [hpers]
     by_cases ht : tierW h = 0

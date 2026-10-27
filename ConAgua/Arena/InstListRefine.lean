@@ -908,8 +908,8 @@ theorem instListW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
     obtain ⟨a₁, ha₁, hA₁, hs₁⟩ :=
       (ilgOK n).1 _ _ _ e d o l 4000000000 r₁ vs hA₀ (hsl.of_spn hs₀) hbd he hw
     rw [coreWalkFuel_toNat] at ha₁
-    exact ⟨_, by rw [instListFast_run, ha₁, decE_and32]; rfl, ArenaL.lmemo_clear m₁ a₁ hA₁ h1,
-      (spn_of_frame (mclearG_frame ilSch m₁) (by decide)).trans (hs₁.trans hs₀), and32_lt r₁⟩
+    exact ⟨_, by rw [instListFast_run, ha₁, decE_mask]; rfl, ArenaL.lmemo_clear m₁ a₁ hA₁ h1,
+      (spn_of_frame (mclearG_frame ilSch m₁) (by decide)).trans (hs₁.trans hs₀), mask_lt r₁⟩
 
 /-- **`inst_list(e, o, l, d)` refines the arena's `instantiateListFast coreWalkFuel` under
 `ArenaL`**, at every L fuel (the walk's counter starts at `coreWalkFuel`), the substitution `vs`

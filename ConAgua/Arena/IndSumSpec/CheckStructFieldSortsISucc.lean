@@ -273,16 +273,6 @@ theorem sfb_leq_eq (u s : LIdx) (k : Bool → AM Unit) :
         fun o => liftFueled "level comparison" o >>= k) := by
   simp only [bind_assoc, pure_bind]
 
-theorem sumContains_decI {k : IdxKind} (x : Word) (hx : H x) : ∀ (ws : List Word),
-    (∀ w ∈ ws, H w) → (ws.map (decI : Word → Idx k)).contains (decI x) = ws.contains x
-  | [], _ => rfl
-  | w :: ws, h => by
-    simp only [List.map_cons, List.contains_cons]
-    rw [decI_beq x w hx (h w (by simp)), sumContains_decI x hx ws (fun v hv => h v (by simp [hv]))]
-    by_cases e : w = x
-    · subst e; simp
-    · simp [Ne.symm e]
-
 /-- **A handle written right before a decoded slice** extends it at the front. -/
 theorem sumDecHL_write_front {k : IdxKind} (m : Mem) (o kk : Nat) (w v : Word) (acc : List (Idx k))
     (hw : w.toNat = o) (hsz : o < (m.arr64 IW).size) (hv : H v)

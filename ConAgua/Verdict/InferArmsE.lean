@@ -36,16 +36,7 @@ theorem ErrClaim.bind_ref {α β : Type} [Inhabited α] {T₁ : AM α} {T₂ : �
 
 theorem tag_sort_ne (h : Word) (hh : HW h) (hg : h >>> 28 ≠ 2) :
     ((decE h).tag == ETag.sort) = false := by
-  rw [decE_tag h hh]
-  have h16 : (h >>> 28).toNat < 16 := by
-    rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]; unfold HW at hh; omega
-  simp only [beq_eq_false_iff_ne, ne_eq]
-  intro heq
-  apply hg
-  have := congrArg UInt32.toNat heq
-  simp [ETag.sort, Nat.shiftRight_eq_div_pow] at this
-  apply UInt64.toNat_inj.mp
-  rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]; unfold HW at hh; omega
+  rw [decE_tag_sort_beq h hh]; simpa using hg
 
 /-! ## `ensure_sort` -/
 

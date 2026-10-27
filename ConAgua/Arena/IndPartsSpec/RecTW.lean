@@ -353,20 +353,6 @@ theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
 
 end spec
 
-theorem findIdx_decI_parts (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32)
-    (hx : x.toNat < 2 ^ 32) :
-    ((ws.map (decI : Word → NIdx)).findIdx? (· == (decI x : NIdx))) = ws.findIdx? (· == x) := by
-  induction ws with
-  | nil => rfl
-  | cons w ws ih =>
-    simp only [List.map_cons, List.findIdx?_cons]
-    have hw := hws w (List.mem_cons_self ..)
-    rw [L.Arena.decI_beq w x hw hx]
-    by_cases h : w = x
-    · simp [h]
-    · simp only [h, decide_false, Bool.false_eq_true, ite_false, beq_iff_eq]
-      rw [ih (fun w' hw' => hws w' (List.mem_cons_of_mem _ hw'))]
-
 theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl mI ty : Word) (r : List Word) (names : List NIdx),
     recTW n m no nl mI ty = some (r, m') → StageR dn vis fe m a → ty.toNat < 2 ^ 32 →
@@ -470,7 +456,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rcases hf : findW n m3 no nl ((eViewW m3 (r3.headD 0)).getD 1 0) with _ | rf
         · rw [hf] at hrt; simp [recTK5] at hrt
         have hfk := findW_ok n m3 no nl _ rf ws hws hf hlen
-        have hfi := findIdx_decI_parts ws _ hwlt hxlt
+        have hfi := findIdx_map_decI _ hxlt ws hwlt
         rw [← hnm] at hfi
         have hctag : (x3.tag == ETag.const) = true := by
           simp only [beq_iff_eq]; rw [← hdI3]; exact (decE_tag_const _ hdl3).mpr hc3

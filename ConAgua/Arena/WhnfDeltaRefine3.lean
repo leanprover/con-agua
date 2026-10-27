@@ -867,17 +867,15 @@ def NatOpResultOK (p : Prog) : Prop :=
       (natOpResult (decI c) (pv (vpool s₀.mem) oa.toNat la.toNat)
         (pv (vpool s₀.mem) ob.toNat lb.toNat)) decOptR s₀ a₀ dn vis fe MM eb (fun _ => True)
 
-theorem hw_mask32 (y : Word) : HW (y &&& 4294967295) := and32_lt y
-
 /-- `reduce_nat_op`'s normalised result reads as `nat_op_result`'s. -/
 theorem decOpt_norm (x y : Word) :
     decOpt (Cmp.evalW .ne x 0) (BinOp.eval .and y 4294967295) = decOpt x y := by
   by_cases hx : x = 0
   · subst hx; simp [decOpt, Cmp.evalW, Cmp.eval]
-  · simp [decOpt, Cmp.evalW, Cmp.eval, hx, BinOp.eval, decE_and32]
+  · simp [decOpt, Cmp.evalW, Cmp.eval, hx, BinOp.eval, decE_mask]
 
 theorem resW_norm (x y : Word) : ResW [Cmp.evalW .ne x 0, BinOp.eval .and y 4294967295] := by
-  refine ⟨?_, hw_mask32 y⟩
+  refine ⟨?_, mask_lt y⟩
   unfold HW; simp only [List.headD_cons, Cmp.evalW]; split <;> decide
 
 section refs19

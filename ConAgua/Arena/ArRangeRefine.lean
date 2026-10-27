@@ -388,7 +388,7 @@ theorem arEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
   by_cases hk : k = 0
   · simp only [hk, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    exact ⟨a, by simp [abstractRangeFast, hk, decE_and32]; rfl, hA, and32_lt e⟩
+    exact ⟨a, by simp [abstractRangeFast, hk, decE_mask]; rfl, hA, mask_lt e⟩
   have hk' : k.toNat ≠ 0 := fun e => hk (UInt64.toNat_inj.mp e)
   simp only [hk, ↓reduceIte] at hb
   have h0 : ¬ rdW (m.arr64 CTL) 48 + 2 = 0 := fun h0 => by simp [h0] at hb
@@ -403,8 +403,8 @@ theorem arEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (arOK n).1 _ _ _ e c d k 4000000000 r₁ hA₀ he hw
     rw [coreWalkFuel_toNat] at ha₁
-    exact ⟨_, by rw [arFast_run _ _ _ _ _ hk', ha₁, decE_and32]; rfl,
-      ArenaA.amemo_clear m₁ a₁ hA₁ h1, and32_lt r₁⟩
+    exact ⟨_, by rw [arFast_run _ _ _ _ _ hk', ha₁, decE_mask]; rfl,
+      ArenaA.amemo_clear m₁ a₁ hA₁ h1, mask_lt r₁⟩
 
 /-- **`ar_entry(e, d, k, c)` refines the arena's `abstractRangeFast coreWalkFuel` under `ArenaA`**,
 at every L fuel (the walk's counter starts at `coreWalkFuel`). -/

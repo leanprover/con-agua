@@ -93,7 +93,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
       have hl1' : (l - 1).toNat = l.toNat - 1 := toNat_sub_one' hl
       have hcond : ((decI w0 : NIdx) == decI c || (ws.map (fun w => (decI w : NIdx))).contains (decI w0)) =
           decide (w0 = c ∨ b ≠ 0) := by
-        rw [decI_beq w0 c hw0lt hc, contains_decI ws w0 hwlt hw0lt, hbv]
+        rw [decI_beq w0 c hw0lt hc, contains_map_decI w0 hw0lt, ws hwlt hbv]
         by_cases h1 : w0 = c <;> by_cases h2 : ws.contains w0 = true <;> simp [h1]
       have hblock' : hslice? (erA m) (off + 1).toNat (l - 1).toNat = some rest := by
         rw [hoff1, hl1']; exact hrest
@@ -233,7 +233,7 @@ theorem maNodeProj_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl
   · simp only [StateT.run_bind]
     simp only [hr1, except_ok_bind]
     rfl
-  · rw [← hb1, contains_decI ws x hwlt hx, hcont]
+  · rw [← hb1, contains_map_decI x hx, ws hwlt hcont]
     generalize ws.contains x = bc
     by_cases e1 : b1w = 0 <;> cases bc <;> simp [e1]
 
@@ -405,7 +405,7 @@ theorem maGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → MaGoOK k) : MaGoOK
       have hcv := containsW_ok j _ _ _ _ _ _ hws hc
       refine ⟨(ws.map (fun w => (decI w : NIdx))).contains nn, mp, ?_, ?_, hM, MemFrame.refl _ _ _⟩
       · rfl
-      · rw [hcv, ← hdx, contains_decI ws _ hwlt hx]
+      · rw [hcv, ← hdx, contains_map_decI _ hx] ws hwlt
         generalize ws.contains _ = bc
         cases bc <;> simp
     | fvar i ty => rw [hF]; exact maGo_nodeCase j ih m m' a no nl f h r ws mp F hF hf0 _ _ hvr trivial hv (by simp) (Or.inl hvr.1) hb hA hh hws hwlt hM

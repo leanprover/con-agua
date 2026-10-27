@@ -318,18 +318,6 @@ theorem litGuardNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
     PIN_STRING_OF_LIST, PIN_LIST, PIN_LIST_NIL, PIN_LIST_CONS, PIN_CHAR, PIN_CHAR_OF_NAT,
     StateT.run_bind, pinAt_run hF, except_ok_bind] <;> rfl
 
-/-- Membership of handles decoded from words below `2^32` is membership of the words. -/
-theorem contains_decI {ws : List Word} (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32) {x : Word}
-    (hx : x.toNat < 2 ^ 32) :
-    (ws.map (fun w => (decI w : NIdx))).contains (decI x) = true ↔ x ∈ ws := by
-  simp only [List.contains_iff_mem, List.mem_map]
-  constructor
-  · rintro ⟨w, hw, e⟩
-    have := (decI_eq_iff w (hws w hw) _).mp e
-    rw [decI_word_self x hx] at this
-    exact this ▸ hw
-  · intro h; exact ⟨x, h, rfl⟩
-
 /-- **The twin's `reservedRecName` on a filled table**: a pure read, `true` iff `x` is one of the
 four lists' words. -/
 theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x : Word)
@@ -341,11 +329,11 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
     rw [show ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)) =
       ((List.range 16).map fun i => pinW m (55 + i)).map (fun w => (decI w : NIdx)) by
         simp [List.map_map]]
-    rw [contains_decI (by
+    rw [contains_map_decI_iff (by
       intro w hw; simp only [List.mem_map, List.mem_range] at hw
       obtain ⟨i, hi, rfl⟩ := hw; exact hF.reserved_lt i hi) hx]
     simp [List.mem_map, List.mem_range]
-  have c2 := contains_decI (ws := [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8,
+  have c2 := contains_map_decI_iff (ws := [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8,
       pinW m 9, pinW m 10, pinW m 11, pinW m 13]) (by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
@@ -360,7 +348,7 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
     · exact lt 9 (by decide)
     · exact lt 10 (by decide)
     · exact lt 12 (by decide)) hx
-  have c3 := contains_decI (ws := [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20,
+  have c3 := contains_map_decI_iff (ws := [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20,
       pinW m 21]) (by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
@@ -372,7 +360,7 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
     · exact lt 18 (by decide)
     · exact lt 19 (by decide)
     · exact lt 20 (by decide)) hx
-  have c4 := contains_decI (ws := [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27,
+  have c4 := contains_map_decI_iff (ws := [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27,
       pinW m 28, pinW m 29]) (by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw

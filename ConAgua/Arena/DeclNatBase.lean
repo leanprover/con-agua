@@ -656,22 +656,6 @@ theorem decHL_bnd {k : IdxKind} (m : Mem) (o l : Word) {xs : List (Idx k)}
     simp only [iwA] at this
     omega
 
-theorem containsDecI {k : IdxKind} (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32)
-    (hx : x.toNat < 2 ^ 32) :
-    (ws.map (fun w => (decI w : Idx k))).contains (decI x) = ws.contains x := by
-  induction ws with
-  | nil => rfl
-  | cons w ws ih =>
-    simp only [List.map_cons, List.contains_cons]
-    have hw : w.toNat < 2 ^ 32 := hws w (by simp)
-    have hb : ((decI x : Idx k) == decI w) = (x == w) := by
-      by_cases h : x = w
-      · subst h; rw [beq_self_eq_true, beq_self_eq_true]
-      · have : (decI x : Idx k) ≠ decI w := fun e => h (by
-          rw [(decI_eq_iff x hx _).mp e]; exact decI_word_self w hw)
-        rw [beq_false_of_ne this, beq_false_of_ne h]
-    rw [hb, ih (fun y hy => hws y (by simp [hy]))]
-
 section slc
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
@@ -687,7 +671,7 @@ theorem slContains_ref {k : IdxKind} (hp : p.lookup "sl_contains" = some slConta
     (decHL_bnd _ o l hd hS.2.2.2.1)
   rw [UInt64.ofNat_toNat, UInt64.ofNat_toNat] at hws
   have hr := containsW_ok n _ _ _ _ _ _ hws hcw
-  rw [containsDecI ws x hlt hx]
+  rw [contains_map_decI x hx] ws hlt
   refine ⟨hl, _, a₀, rfl, hm ▸ hS, hm ▸ IWGrow.refl _, ?_⟩
   by_cases hc : ws.contains x = true
   · simp only [hc, ite_true] at hr ⊢

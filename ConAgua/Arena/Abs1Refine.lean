@@ -861,8 +861,8 @@ theorem absEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (absOK n).1 _ _ _ e k d 4000000000 r₁ hA₀ he hw
     rw [coreWalkFuel_toNat] at ha₁
-    exact ⟨_, by rw [absFast_run, ha₁, decE_and32]; rfl, ArenaA.amemo_clear m₁ a₁ hA₁ h1,
-      and32_lt r₁⟩
+    exact ⟨_, by rw [absFast_run, ha₁, decE_mask]; rfl, ArenaA.amemo_clear m₁ a₁ hA₁ h1,
+      mask_lt r₁⟩
 
 /-- **`abs_entry` refines the arena's `abstract1Fast coreWalkFuel` under `ArenaA`**, at every L
 fuel (the walk's counter starts at `coreWalkFuel`). -/

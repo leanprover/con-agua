@@ -93,7 +93,7 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
     obtain ⟨hr, rfl⟩ := hW
     rw [hd, lpW_zero_iff] at h0
     refine ilw_coreRef (v := decE e) (a' := a) ?_ ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
-      (by simp only [decH, ← hr, decE_and32]) (by unfold ResH HW; rw [← hr]; exact and32_lt e)
+      (by simp only [decH, ← hr, decE_mask]) (by unfold ResH HW; rw [← hr]; exact mask_lt e)
     unfold instLPFast
     rw [StateT.run_bind, derivedE_run]
     simp only [except_ok_bind, h0, Bool.not_false, ↓reduceIte]; rfl
@@ -195,7 +195,7 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
   obtain ⟨hS₉, hSt₉⟩ := ilw_clears_core hS₄ hM₉.lpMemos
   refine ilw_coreRef (v := decE (r6.headD 0)) ?_
     ⟨M₄, hS₉.lpMemos ∅ ∅ ∅, hK₄, hSt₃.trans (hSt₄.trans hSt₉)⟩
-    (by simp only [decH, ← hr, decE_and32]) (by unfold ResH HW; rw [← hr]; exact and32_lt _)
+    (by simp only [decH, ← hr, decE_mask]) (by unfold ResH HW; rw [← hr]; exact mask_lt _)
   have hfu : (4000000000 : Word).toNat = coreWalkFuel := rfl
   rw [hfu] at r4
   unfold instLPFast

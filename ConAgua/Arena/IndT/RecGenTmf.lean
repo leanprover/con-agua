@@ -452,7 +452,7 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
   have hlen : ws.length < 2 ^ 64 := by rw [slR_length hsl]; exact UInt64.toNat_lt _
   have hr5 := findW_ok n s4.mem _ _ x r5 ws hsl hW5 hlen
   rw [hm5] at *
-  rw [hws, findIdx_decIP ws x hwlt hx, tmcK2_some]
+  rw [hws, findIdx_map_decI x hx, ws hwlt tmcK2_some]
   have hT4' : (rdW (m.arr64 CTL) 200).toNat + bs.k = iwTop s4.mem := ht4
   cases hfi : ws.findIdx? (· == x) with
   | some i =>

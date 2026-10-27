@@ -884,12 +884,12 @@ theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word
   rw [hpers]
   by_cases ht : tierW h = 0
   · simp only [ht, ↓reduceIte] at hx
-    simp only [ht, beq_self_eq_true, ↓reduceIte, LsTables.getLen, htag, Tbl.node?, decLs_idx, hx,
+    simp only [ht, beq_self_eq_true, ↓reduceIte, LsTables.getLen, htag, Tbl.node?, decI_idx, hx,
       Option.map_some, hlen]
   · simp only [ht, ↓reduceIte] at hx
     have hon : a.store.lss.scratchOn = true := by
       rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨ht, h1⟩
-    simp only [ht, beq_iff_eq, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decLs_idx, hx,
+    simp only [ht, beq_iff_eq, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decI_idx, hx,
       Option.map_some, hlen]
 
 /-! ## `unfoldable_head`

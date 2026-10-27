@@ -82,15 +82,6 @@ theorem pos2_len_eq {aL nPc nI : Word} (h : nPc.toNat ≤ aL.toNat) :
   · intro e
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, ← e]; exact (Nat.mod_eq_of_lt aL.toNat_lt).symm
 
-theorem pos2_contains_map (ws : List Word) (hw : ∀ w ∈ ws, H w) (x : Word) (hx : H x) :
-    (ws.map (decI : Word → NIdx)).contains (decI x) = ws.contains x := by
-  rw [Bool.eq_iff_iff]
-  simp only [List.contains_iff_mem, List.mem_map]
-  constructor
-  · rintro ⟨v, hv, e⟩
-    rw [decI_inj (hw v hv) hx e] at hv; exact hv
-  · intro h; exact ⟨x, h, rfl⟩
-
 theorem pos2_getD2 (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
   rcases vl with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl
 

@@ -25,13 +25,6 @@ namespace L.Arena
 
 /-! ## Tag tests and views -/
 
-theorem slTagB (e : Word) (hh : HW e) (t : UInt32) (k : Nat) (hk : k < 16) (ht : t = UInt32.ofNat k) :
-    ((decE e).tag == t) = decide (e >>> 28 = UInt64.ofNat k) := by
-  subst ht
-  by_cases h : (decE e).tag = UInt32.ofNat k
-  · rw [beq_iff_eq.mpr h, decide_eq_true ((decE_tag_eq e hh k hk).mp h)]
-  · rw [beq_false_of_ne h, decide_eq_false (fun h' => h ((decE_tag_eq e hh k hk).mpr h'))]
-
 theorem slViewR_app {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h4 : r.headD 0 = 4) :
     v = .app (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)) ∧ HW (r.tail.headD 0) ∧
       HW (r.tail.tail.headD 0) := by
@@ -90,7 +83,7 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ht : ((decE ty).tag == ETag.forallE) = false := by
-      rw [slTagB ty hty ETag.forallE 6 (by decide) rfl]; exact decide_eq_false g6
+      rw [tag_beq_w ty hty 6 (by decide) ETag.forallE rfl _ rfl]; exact decide_eq_false g6
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [faGuardT, ht]; rfl
   rw [ite_eq_right g6] at h
@@ -99,7 +92,7 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
   obtain ⟨rfl, h1, h2⟩ := viewR_forall hvr (by rw [hg, g6'])
   have ht : ((decE ty).tag == ETag.forallE) = true := by
-    rw [slTagB ty hty ETag.forallE 6 (by decide) rfl]; exact decide_eq_true g6'
+    rw [tag_beq_w ty hty 6 (by decide) ETag.forallE rfl _ rfl]; exact decide_eq_true g6'
   have hd : (decE (g.tail.headD 0) != decE X) = decide (g.tail.headD 0 ≠ X) := by
     rw [decE_eq, decE_eq, bne, decI_beq _ _ h1 hX]; simp
   by_cases c : g.tail.headD 0 ≠ X
@@ -357,8 +350,6 @@ theorem faEqA_f (h : ty >>> 28 ≠ 6) : faEqA p n m ty X Y = some (0, m) := by
 theorem faEqA_t (h : ty >>> 28 = 6) : faEqA p n m ty X Y = faEqK X Y (callW p n "e_view" [ty] m) := by
   simp only [faEqA, h, ne_eq, not_true_eq_false, ↓reduceIte]
 
-
-
 theorem listK2_s : listK2 p n ty (some (g, m)) = faEqA p n m ty (g.tail.headD 0) (g.tail.headD 0) := rfl
 theorem listK1_f (h : g.tail.headD 0 ≠ 1) : listK1 p n (some (g, m)) = some (0, m) := by
   simp only [listK1, h, ne_eq, not_false_eq_true, ↓reduceIte]
@@ -443,7 +434,6 @@ theorem listCons_spec (p : Prog) (hp : p.lookup "list_cons_ty_ok" = some listCon
       St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
       Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
-
 /-! ## The tails' refinements -/
 
 /-- `List.nil`'s argument: the bound variable `#0`, then the head comparison `c`. -/
@@ -489,7 +479,7 @@ theorem nilD_ok {x l1 u1 li ps w : Word} (hx : HW x) (hl1 : HW l1) (hu1 : HW u1)
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ht : ((decE x).tag == ETag.bvar) = false := by
-      rw [slTagB x hx ETag.bvar 0 (by decide) rfl]; exact decide_eq_false g0
+      rw [tag_beq_w x hx 0 (by decide) ETag.bvar rfl _ rfl]; exact decide_eq_false g0
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [nilDT, ht]; rfl
   rw [ite_eq_right g0] at h
@@ -502,7 +492,7 @@ theorem nilD_ok {x l1 u1 li ps w : Word} (hx : HW x) (hl1 : HW l1) (hu1 : HW u1)
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
   have hv0 := slViewR_bvar hvr (by rw [hg, g0'])
   have ht : ((decE x).tag == ETag.bvar) = true := by
-    rw [slTagB x hx ETag.bvar 0 (by decide) rfl]; exact decide_eq_true g0'
+    rw [tag_beq_w x hx 0 (by decide) ETag.bvar rfl _ rfl]; exact decide_eq_true g0'
   rw [hv0] at hv
   by_cases ci : g.tail.headD 0 = 0
   · rw [ite_eq_right (fun h => h ci)] at h
@@ -533,7 +523,7 @@ theorem nilC_ok {f x li ps w : Word} (hf : HW f) (hx : HW x) (hli : HW li) (hps 
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ht : ((decE f).tag == ETag.const) = false := by
-      rw [slTagB f hf ETag.const 3 (by decide) rfl]; exact decide_eq_false g3
+      rw [tag_beq_w f hf 3 (by decide) ETag.const rfl _ rfl]; exact decide_eq_false g3
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [nilCT, ht]; rfl
   rw [ite_eq_right g3] at h
@@ -546,7 +536,7 @@ theorem nilC_ok {f x li ps w : Word} (hf : HW f) (hx : HW x) (hli : HW li) (hps 
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
   obtain ⟨rfl, h1, h2⟩ := slViewR_const hvr (by rw [hg, g3'])
   have ht : ((decE f).tag == ETag.const) = true := by
-    rw [slTagB f hf ETag.const 3 (by decide) rfl]; exact decide_eq_true g3'
+    rw [tag_beq_w f hf 3 (by decide) ETag.const rfl _ rfl]; exact decide_eq_true g3'
   obtain ⟨hr, hm, hres⟩ := nilD_ok hp hR hx h1 h2 hli hps h
   refine ⟨?_, hm, hres⟩
   simp only [nilCT, ht, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
@@ -561,7 +551,7 @@ theorem nilB_ok {b li ps w : Word} (hb : HW b) (hli : HW li) (hps : HW ps)
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ht : ((decE b).tag == ETag.app) = false := by
-      rw [slTagB b hb ETag.app 4 (by decide) rfl]; exact decide_eq_false g4
+      rw [tag_beq_w b hb 4 (by decide) ETag.app rfl _ rfl]; exact decide_eq_false g4
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [nilBT, ht]; rfl
   rw [ite_eq_right g4] at h
@@ -574,7 +564,7 @@ theorem nilB_ok {b li ps w : Word} (hb : HW b) (hli : HW li) (hps : HW ps)
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
   obtain ⟨rfl, h1, h2⟩ := slViewR_app hvr (by rw [hg, g4'])
   have ht : ((decE b).tag == ETag.app) = true := by
-    rw [slTagB b hb ETag.app 4 (by decide) rfl]; exact decide_eq_true g4'
+    rw [tag_beq_w b hb 4 (by decide) ETag.app rfl _ rfl]; exact decide_eq_true g4'
   obtain ⟨hr, hm, hres⟩ := nilC_ok hp hR h1 h2 hli hps h
   refine ⟨?_, hm, hres⟩
   simp only [nilBT, ht, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]

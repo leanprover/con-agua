@@ -456,13 +456,13 @@ theorem appOKE_step {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker
     by_cases hon : ro.headD 0 ≠ 0
     · rw [npaE.k_sl_contains.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hon] at hce; cases hce
       have hin : c.names.contains nn = true := by
-        rw [hwsd, ← hnd, pos2_contains_map ws hwsH _ hnH]
+        rw [hwsd, ← hnd, contains_map_decI _ hnH] ws hwsH
         cases e : ws.contains ((eViewW m2 (rh.headD 0)).tail.headD 0) with
         | true => rfl
         | false => rw [e] at ho; simp only [Bool.false_eq_true, ite_false] at ho; exact absurd ho hon
       exact ErrClaim.ite_pos hin (ErrClaim.fail _ _ (by decide))
     have hnotin : c.names.contains nn = false := by
-      rw [hwsd, ← hnd, pos2_contains_map ws hwsH _ hnH]
+      rw [hwsd, ← hnd, contains_map_decI _ hnH] ws hwsH
       cases e : ws.contains ((eViewW m2 (rh.headD 0)).tail.headD 0) with
       | false => rfl
       | true =>

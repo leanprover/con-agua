@@ -800,7 +800,7 @@ theorem i1lFastW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaI m a)
       Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (i1lOK n).1 _ _ _ e d v f r₁ hA₀ he hv hw
-    exact ⟨_, by rw [i1lFast_run, ha₁, decE_and32]; rfl, ArenaI.imemo_clear m₁ a₁ hA₁ h1, and32_lt r₁⟩
+    exact ⟨_, by rw [i1lFast_run, ha₁, decE_mask]; rfl, ArenaI.imemo_clear m₁ a₁ hA₁ h1, mask_lt r₁⟩
 
 /-- **`instantiate1_lift_fast(f, e, v, d)` refines the arena's `instantiate1LiftFast f e v d`**
 under `ArenaI` (`ArenaD` and the walk's memo), at the counter's fuel `f.toNat` and every L fuel:

@@ -112,6 +112,8 @@ theorem decI_mask {k : IdxKind} (w : Word) : (decI (w &&& 4294967295) : Idx k) =
   apply UInt32.toNat_inj.mp
   simp only [UInt64.toNat_toUInt32, mask32_toNat]; omega
 
+theorem decE_mask (y : Word) : decE (y &&& 4294967295) = decE y := decI_mask y
+
 theorem decI_tag {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) :
     (decI h : Idx k).tag = (h >>> 28).toUInt32 := by
   simp only [decI, Idx.tag]
@@ -241,6 +243,12 @@ theorem contains_map_decI {k : IdxKind} (x : Word) (hx : x.toNat < 2 ^ 32) : ∀
     by_cases e : w = x
     · subst e; simp
     · simp [Ne.symm e]
+
+/-- Membership, as a proposition. -/
+theorem contains_map_decI_iff {ws : List Word} (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32) {x : Word}
+    (hx : x.toNat < 2 ^ 32) :
+    (ws.map (fun w => (decI w : Idx k))).contains (decI x) = true ↔ x ∈ ws := by
+  rw [contains_map_decI x hx ws hws]; simp
 
 theorem findIdx_map_decI {k : IdxKind} (x : Word) (hx : x.toNat < 2 ^ 32) :
     ∀ ws : List Word, (∀ w ∈ ws, w.toNat < 2 ^ 32) →
