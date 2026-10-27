@@ -1,6 +1,5 @@
 import ConAgua.Arena.RecCheckSpec.K53Look
 import ConAgua.Arena.RecCheckSpec.TruncSl
-import ConAgua.Arena.RecClassSpec.MnW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

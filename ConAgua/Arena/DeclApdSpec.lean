@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclApd
 import ConAgua.Arena.IndView
-import ConAgua.Scan.Common
 import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

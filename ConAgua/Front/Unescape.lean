@@ -11,7 +11,6 @@ import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.Blocks
 import ConAgua.L.GrindAttr
-import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

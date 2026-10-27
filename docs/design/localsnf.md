@@ -132,7 +132,7 @@ single pair of runs. No new warning (the same 21, all in Kraken and `vendor/`).
 
 ### 3.4 Fallout
 
-Eight proof files changed, 33 lines:
+Ten proof files changed (plus import lines):
 
 * `DeclCanonLvl`, `DeclCanonRules`, `DeclCanonExpr`: the hand-written `init9_*`/`init11_*`
   lemmas (`Locals.init [a0, …, a10] k = ak`), passed to `finish`, had no pattern any more (the
@@ -148,7 +148,15 @@ Eight proof files changed, 33 lines:
 * `NatArms` (`natPowLit_refines`): two small lemmas for `finish`, `pv_of_lt_one` and
   `pow_of_eq_zero` (the exponent's slice is empty).
 
-Each of these modules is faster than before.
+* `RecGenSpec.CfhW`, `RecCheckSpec.TaCW`: their `finish` lists lose `loc_init4`…`loc_init9`
+  (`RecSim.lean`'s hand lemmas for reads of the frame's arguments; the reads resolve before
+  E-matching sees them).
+* Imports: 26 modules imported `Scan.Common` only for its `lang_grind` equation `St.setLocs_mem`,
+  and `CfhW`/`TaCW` imported `RecSim` only for `loc_init*`. `grind` no longer uses them, the import
+  gate (`shake`) proposes the removals, and they are removed (`RcLook` now imports `RecSim`
+  itself). `Logic`'s import of `LocNF` is allowlisted: an attribute's use is not recorded.
+
+Each of the changed modules is faster than before.
 
 ## 4. Next: the `simp` side
 

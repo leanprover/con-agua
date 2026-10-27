@@ -1,7 +1,6 @@
 import ConAgua.Arena.PromoteCIInfra
 import ConAgua.Arena.PromoteCIRef.ConstsAt
 import ConAgua.Arena.PromoteCIRef.Promoted
-import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
