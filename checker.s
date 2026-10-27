@@ -47630,10 +47630,6 @@ cmpq 4144(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 4160(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
 cmpq 4176(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
@@ -47651,10 +47647,6 @@ jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
 cmpq 4240(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4256(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
@@ -47683,82 +47675,6 @@ jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
 cmpq 4368(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4384(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4400(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4416(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4432(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4448(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4464(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4480(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4496(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4512(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4528(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4544(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4560(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4576(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4592(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4608(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4624(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4640(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4656(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4672(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
@@ -47803,90 +47719,6 @@ jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
 cmpq 4848(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4864(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4880(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4896(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4912(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4928(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4944(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4960(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4976(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4992(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5008(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5024(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5040(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5056(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5072(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5088(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5104(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5120(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5136(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5152(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5168(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5184(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
@@ -48002,179 +47834,7 @@ cmpq 5448(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 5456(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5464(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5472(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5480(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5488(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5496(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5504(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5512(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5520(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5528(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5536(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5544(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5552(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5560(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5568(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5576(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5584(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5592(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5600(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5608(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5616(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5624(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5632(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5640(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5648(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5656(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5664(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5672(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5680(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5688(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5696(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5704(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5712(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5720(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5728(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5736(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
 cmpq 5744(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5752(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5760(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5768(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5776(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5784(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5792(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5800(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
@@ -48214,130 +47874,6 @@ cmpq 5872(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 5880(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5888(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5896(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5904(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5912(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5920(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5928(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5936(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5944(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5952(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5960(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5968(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5976(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5984(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5992(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6000(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6008(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6016(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6024(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6032(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6040(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6048(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6056(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6064(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6072(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6080(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6088(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6096(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6104(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6112(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6120(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
 cmpq 6128(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
@@ -48350,621 +47886,400 @@ cmpq 6144(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 6152(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3152(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 6160(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6168(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6176(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6184(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6192(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6200(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6208(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6216(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6224(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6232(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6240(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 6248(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 3160(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 3176(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 3192(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3184(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3208(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3200(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3224(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3216(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3240(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3232(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3256(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3248(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3272(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3264(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3288(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3280(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3304(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3296(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3320(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3312(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3336(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3328(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3352(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3344(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3368(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3360(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3384(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3376(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3400(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3392(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3416(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3408(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3432(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3424(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3448(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3440(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3464(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3456(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3480(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3472(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3496(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3488(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3512(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3504(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3528(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3520(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3544(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 3560(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3552(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3576(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3568(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3592(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3584(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3608(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3600(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3624(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3616(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3640(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3632(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3656(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3648(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3672(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3664(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3688(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3680(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3704(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3696(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3720(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3712(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3736(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3728(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3752(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3744(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3768(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3760(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3784(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3776(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $2305843009213693934, %rax
-movq 3800(%r15), %rcx
+movq $1, %rcx
+andq $1, %rcx
+movq 3792(%r15,%rcx,8), %rcx
 subq $18, %rcx
 cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3816(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3824(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3832(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3840(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3848(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3856(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3864(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3872(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3880(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3888(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3896(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 4032(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3912(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 4048(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3928(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 4064(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3944(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 4080(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3960(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 4096(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3976(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 4112(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 3992(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 4128(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 4008(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 5216(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 4024(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 5232(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 movq $4611686018427387904, %rax
-cmpq 4040(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4056(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4072(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4088(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4104(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4120(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4136(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4152(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4168(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4184(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4200(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4216(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4232(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4248(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4264(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4280(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4296(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4312(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4328(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4344(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4360(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4376(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4392(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4408(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4424(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4440(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4456(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4472(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4488(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4504(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4520(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4536(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4552(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4568(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4584(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4600(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4616(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4632(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4648(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4664(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4680(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4696(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4712(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4728(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4744(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4760(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4776(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4792(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4808(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4824(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4840(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4856(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4872(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4888(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4904(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4920(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4936(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4952(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4968(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 4984(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5000(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5016(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5032(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5048(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5064(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5080(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5096(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5112(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5128(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5144(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5160(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5176(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5192(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5208(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5224(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5240(%r15), %rax
-jbe ca_abort
-movq $576, %rbx
-movq $4611686018427387904, %rax
-cmpq 5256(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 5248(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $576, %rbx
 cmpq $256, 3168(%r15)
@@ -48981,7 +48296,10 @@ cmpq 3152(%r15), %rax
 jbe ca_abort
 movq $576, %rbx
 movq $1099511627776, %rax
-cmpq 3160(%r15), %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 3152(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
 jbe ca_abort
 movq $0, %rax
 jmp .Lca_cap_check_0R
