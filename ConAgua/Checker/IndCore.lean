@@ -21,16 +21,19 @@ open L.Arena L.Ind L.Compiler
 names_tree stageCoreTree : stageCoreFns
 
 /-- The arrays of `coreStageA`, as a test. -/
-def coreStagePa (a : ArrId) : Bool := decide (a < 388) && a != EREC && a != IW && a != PINS &&
-  a != 51 && a != 155 && (decide (a < 201) || decide (208 < a))
+def coreStagePa (a : TieredArray) : Bool := checkerWordArrays.contains a && a != ↑EREC &&
+  a != ↑IW && a != ↑PINS && a != ↑ILFM && a != ↑Stubs.CRM &&
+  (decide (a.arr < 201) || decide (208 < a.arr))
 
 /-- The `CTL` words of `coreStageC`, as a test. -/
 def coreStagePc (w : Word) : Bool := decide (w.toNat < 256) && w.toNat != 129 && w.toNat != 200 &&
   w.toNat != 52 && w.toNat != 158 && (decide (w.toNat < 202) || decide (219 < w.toNat))
 
-theorem coreStagePa_mem (a : ArrId) (h : coreStagePa a = true) : a ∈ coreStageA := by
-  simp only [coreStagePa, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at h
-  simp [coreStageA, List.mem_filter, List.mem_range, h]
+theorem coreStagePa_mem (a : TieredArray) (h : coreStagePa a = true) : a ∈ coreStageA := by
+  simp only [coreStagePa, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq, Bool.or_eq_true,
+    List.contains_iff_mem] at h
+  simp only [coreStageA, List.mem_filter, decide_eq_true_eq]
+  exact ⟨h.1.1.1.1.1.1, h.1.1.1.1.1.2, h.1.1.1.1.2, h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
 
 theorem coreStagePc_mem (w : Word) (h : coreStagePc w = true) : w ∈ coreStageC := by
   simp only [coreStagePc, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at h
