@@ -186,7 +186,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
         refine ⟨none, a, ?_, ⟨hS, IWGrow.refl _, rfl⟩, hA⟩
         have ht : ¬ ((decI h : EIdx).tag == ETag.forallE) = true := by
-          rw [tag_forall_iff h hh]; simpa using h6
+          rw [decI_tag_forallE_beq h hh]; simpa using h6
         rw [hdrop]
         simp only [ConRon.Arena.instPisAtLift, ht, ite_false, Bool.false_eq_true]; rfl
       by_cases hv : eViewW m h = []
@@ -195,7 +195,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       obtain ⟨v, hvw, hvr⟩ := eViewW_ok m a hS.1.arena.1 h hv
       have ht : (decE h).tag = ETag.forallE := by
         have h1 : ((decI h : EIdx).tag == ETag.forallE) = true := by
-          rw [tag_forall_iff h hh, he6]; decide
+          rw [decI_tag_forallE_beq h hh, he6]; decide
         exact beq_iff_eq.mp h1
       obtain ⟨ty, bd, rfl⟩ := EStore.view_forall a.store (decE h) ht v hvw
       obtain ⟨g, vt, hvl⟩ : ∃ g vt, eViewW m h = g :: vt := by
@@ -225,7 +225,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         ih m1 m' a1 (rb.headD 0) (k + 1) r hW hS1 hA1 hlt1 (by omega) hdec'
       refine ⟨x3, a3, ?_, ⟨hS3, hg1.trans hg3, hout3⟩, hA3⟩
       have htag : ((decI h : EIdx).tag == ETag.forallE) = true := by
-        rw [tag_forall_iff h hh, he6]; decide
+        rw [decI_tag_forallE_beq h hh, he6]; decide
       rw [hdrop, hxk]
       simp only [ConRon.Arena.instPisAtLift, htag, ite_true, StateT.run_bind]
       rw [show (decI h : EIdx) = decE h from rfl, viewBind_run, except_ok_bind, hbind]

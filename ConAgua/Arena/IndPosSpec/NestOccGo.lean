@@ -11,7 +11,6 @@ import ConAgua.L.ModelGen
 The refinement theorems `mentionsAnyConst_refines`, `nestOccGo_refines`, `nestOcc_refines`, `memberIdxAt_refines`, `phApp_refines` and the lemmas only they use.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -250,7 +249,7 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
     (hlen : ws.length < 2 ^ 64) (h : memW n m no nl lvls e = some (r, m')) :
     m' = m ∧ ∃ o, (ConRon.Arena.memberIdxAt? (ws.map (fun w => (decI w : NIdx))) (decI lvls)
       (decI e)).run a = .ok (o, a) ∧ MemIdxOut r o := by
-  have htag := tag_const_iff e he
+  have htag := decI_tag_const_beq e he
   by_cases hd : e >>> 28 ≠ 3
   · rw [memW_not n m no nl lvls e hd] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -410,22 +409,6 @@ l_model phApp_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   specs [eView_spec p hv n]
   grind [ind_grind] simp [St.setLocs_mem']
 
-theorem tag_app_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
-    ((decI w : EIdx).tag == ETag.app) = decide (w >>> 28 = 4) := by
-  have := decE_tag_eq w hw 4 (by decide)
-  have e1 : (ETag.app : UInt32) = UInt32.ofNat 4 := rfl
-  show ((decE w).tag == ETag.app) = _
-  rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, e1, this]
-  exact Iff.rfl
-
-theorem tag_fvar_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
-    ((decI w : EIdx).tag == ETag.fvar) = decide (w >>> 28 = 1) := by
-  have := decE_tag_eq w hw 1 (by decide)
-  have e1 : (ETag.fvar : UInt32) = UInt32.ofNat 1 := rfl
-  show ((decE w).tag == ETag.fvar) = _
-  rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, e1, this]
-  exact Iff.rfl
-
 def PhOut (r : List Word) : Option (NIdx × LsIdx) → Prop
   | none => r.headD 0 = 0
   | some (c, us) => ∃ w1 w2, r = [1, w1, w2] ∧ w1.toNat < 2 ^ 32 ∧ decI w1 = c ∧
@@ -446,7 +429,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
         simp only [Option.some.injEq] at h
         subst h
         refine ⟨none, ?_, rfl⟩
-        have : ¬ ((decI e : EIdx).tag == ETag.const) = true := by rw [tag_const_iff e he]; simpa using hd
+        have : ¬ ((decI e : EIdx).tag == ETag.const) = true := by rw [decI_tag_const_beq e he]; simpa using hd
         simp only [ConRon.Arena.phApp?, this]; rfl
       · have he3 : e >>> 28 = 3 := by simpa using hd
         cases hvl : eViewW m e with
@@ -459,14 +442,14 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
           simp only [Option.some.injEq] at h
           subst h
           have ht : (decE e).tag = ETag.const := by
-            have h1 : ((decI e : EIdx).tag == ETag.const) = true := by rw [tag_const_iff e he, he3]; decide
+            have h1 : ((decI e : EIdx).tag == ETag.const) = true := by rw [decI_tag_const_beq e he, he3]; decide
             exact beq_iff_eq.mp h1
           obtain ⟨nn, us0, rfl⟩ := EStore.view_const a.store (decE e) ht v hv
           simp only [ViewR, getD1_eq', getD2_eq] at hvr
           obtain ⟨-, hx, hdx, hy, hdy⟩ := hvr
           have hview : a.store.viewConst (decE e) = some (nn, us0) :=
             EStore.viewConst_of_view _ _ ht nn us0 hv
-          have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [tag_const_iff e he, he3]; decide
+          have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [decI_tag_const_beq e he, he3]; decide
           refine ⟨some (nn, us0), ?_, ?_⟩
           · simp only [ConRon.Arena.phApp?, htg, ite_true, StateT.run_bind]
             rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
@@ -478,7 +461,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
         simp only [Option.some.injEq] at h
         subst h
         refine ⟨none, ?_, rfl⟩
-        have : ¬ ((decI e : EIdx).tag == ETag.app) = true := by rw [tag_app_iff e he]; simpa using hd
+        have : ¬ ((decI e : EIdx).tag == ETag.app) = true := by rw [decI_tag_app_beq e he]; simpa using hd
         simp only [ConRon.Arena.phApp?, this]; rfl
       · have he4 : e >>> 28 = 4 := by simpa using hd
         cases hvl : eViewW m e with
@@ -488,14 +471,14 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
           obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hA e hne
           rw [hvl] at hvr
           have ht : (decE e).tag = ETag.app := by
-            have h1 : ((decI e : EIdx).tag == ETag.app) = true := by rw [tag_app_iff e he, he4]; decide
+            have h1 : ((decI e : EIdx).tag == ETag.app) = true := by rw [decI_tag_app_beq e he, he4]; decide
             exact beq_iff_eq.mp h1
           obtain ⟨f', a', rfl⟩ := EStore.view_app a.store (decE e) ht v hv
           simp only [ViewR, getD1_eq', getD2_eq] at hvr
           obtain ⟨-, hx, hdx, hy, hdy⟩ := hvr
           have hview : a.store.viewApp (decE e) = some (f', a') :=
             EStore.viewApp_of_view _ _ ht f' a' hv
-          have htg : ((decI e : EIdx).tag == ETag.app) = true := by rw [tag_app_iff e he, he4]; decide
+          have htg : ((decI e : EIdx).tag == ETag.app) = true := by rw [decI_tag_app_beq e he, he4]; decide
           by_cases hy1 : (g :: vt).tail.tail.headD 0 >>> 28 ≠ 1
           · rw [phW.arm4 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1)] at h
             simp only [Option.some.injEq] at h
@@ -504,7 +487,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
             have : ¬ (a'.tag == ETag.fvar) = true := by
               rw [← hdy]
               show ¬ ((decI ((g :: vt).tail.tail.headD 0) : EIdx).tag == ETag.fvar) = true
-              rw [tag_fvar_iff _ hy]; simpa using hy1
+              rw [decI_tag_fvar_beq _ hy]; simpa using hy1
             simp only [ConRon.Arena.phApp?, htg, ite_true, StateT.run_bind]
             rw [show (decI e : EIdx) = decE e from rfl, viewApp_run', except_ok_bind, hview]
             simp only [this]; rfl
@@ -519,7 +502,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
               rw [hyd] at hv2
               have ht2 : a'.tag = ETag.fvar := by
                 have h1 : ((decI ((g :: vt).tail.tail.headD 0) : EIdx).tag == ETag.fvar) = true := by
-                  rw [tag_fvar_iff _ hy, hy1']; decide
+                  rw [decI_tag_fvar_beq _ hy, hy1']; decide
                 rw [← hyd]; exact beq_iff_eq.mp h1
               obtain ⟨j, ty, rfl⟩ := EStore.view_fvar a.store a' ht2 v2 hv2
               simp only [ViewR, getD1_eq'] at hvr2
@@ -537,7 +520,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
                 have htfv : (a'.tag == ETag.fvar) = true := by
                   rw [← hyd]
                   show ((decI ((g :: vt).tail.tail.headD 0) : EIdx).tag == ETag.fvar) = true
-                  rw [tag_fvar_iff _ hy, hy1']; decide
+                  rw [decI_tag_fvar_beq _ hy, hy1']; decide
                 have hjne : ¬ (j == b.toNat + N') = true := by
                   intro hc
                   have : j = b.toNat + N' := beq_iff_eq.mp hc
@@ -563,7 +546,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
                   have htfv : (a'.tag == ETag.fvar) = true := by
                     rw [← hyd]
                     show ((decI ((g :: vt).tail.tail.headD 0) : EIdx).tag == ETag.fvar) = true
-                    rw [tag_fvar_iff _ hy, hy1']; decide
+                    rw [decI_tag_fvar_beq _ hy, hy1']; decide
                   refine ⟨o, ?_, ?_⟩
                   · simp only [ConRon.Arena.phApp?, htg, ite_true, StateT.run_bind]
                     rw [show (decI e : EIdx) = decE e from rfl, viewApp_run', except_ok_bind, hview]

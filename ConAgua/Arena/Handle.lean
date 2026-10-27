@@ -152,6 +152,81 @@ theorem isPersistent_decE (w : Word) (hw : w.toNat < 2 ^ 32) :
     (decE w).isPersistent = ((w >>> 27) &&& 1 == 0) := by
   rw [decE_eq]; exact isPersistent_decI w hw
 
+/-- The tier bit, at any handle kind, as `tierW`. -/
+theorem decI_pers {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) :
+    (decI h : Idx k).isPersistent = (tierW h == 0) := by
+  rw [isPersistent_decI h hh]; rfl
+
+theorem decE_pers (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).isPersistent = (tierW h == 0) :=
+  decI_pers h hh
+
+theorem decE_tierW (h : Word) : (decE h).isPersistent = (tierW h == 0) := by
+  simp only [decE, Idx.isPersistent, Idx.tier, tierW]
+  have := bit27_toNat h
+  have : (h.toUInt32 / 134217728 % 2).toNat = h.toNat / 2 ^ 27 % 2 := by
+    simp [UInt32.toNat_mod, UInt32.toNat_div, UInt64.toNat_toUInt32]; omega
+  grind
+
+/-! ## Tags of expression handles (`decE`, the `ETag` constants) -/
+
+theorem decE_tag (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).tag = (h >>> 28).toUInt32 :=
+  decI_tag h hh
+
+theorem decE_idx (h : Word) : (decE h).idxNat = (idxW h).toNat := decI_idx h
+
+theorem decE_tag_eq (e : Word) (hh : e.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
+    ((decE e).tag = UInt32.ofNat k) ↔ e >>> 28 = UInt64.ofNat k := decI_tag_eq e hh k hk
+
+theorem decE_tag_beq (e : Word) (hh : e.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
+    ((decE e).tag == UInt32.ofNat k) = decide (e >>> 28 = UInt64.ofNat k) := decI_tag_beq e hh k hk
+
+/-- The tag compared with a tag word `t`. -/
+theorem decI_tag_eqW {k : IdxKind} (b : Word) (hb : b.toNat < 2 ^ 32) (t : Word) (ht : t.toNat < 16) :
+    (decI b : Idx k).tag = t.toUInt32 ↔ b >>> 28 = t := by
+  have e := decI_tag_eq (k := k) b hb t.toNat ht
+  rw [UInt64.ofNat_toNat] at e
+  rw [← e]; constructor <;> intro h <;> rw [h] <;> apply UInt32.toNat_inj.mp <;> simp <;> omega
+
+theorem decE_tag_eqW (b : Word) (hb : b.toNat < 2 ^ 32) (t : Word) (ht : t.toNat < 16) :
+    (decE b).tag = t.toUInt32 ↔ b >>> 28 = t := decI_tag_eqW b hb t ht
+
+/-- The tag compared with any spelling `t` of a small numeral `k` (an `ETag` constant). -/
+theorem tag_beq_w (h : Word) (hh : h.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) (t : UInt32)
+    (ht : t = UInt32.ofNat k) (w : Word) (hw : UInt64.ofNat k = w) :
+    ((decE h).tag == t) = decide (h >>> 28 = w) := by
+  rw [ht, decE_tag_beq h hh k hk, hw]
+
+section etags
+variable (e : Word) (hh : e.toNat < 2 ^ 32)
+include hh
+theorem decE_tag_sort : (decE e).tag = ETag.sort ↔ e >>> 28 = 2 := decE_tag_eq e hh 2 (by decide)
+theorem decE_tag_const : (decE e).tag = ETag.const ↔ e >>> 28 = 3 := decE_tag_eq e hh 3 (by decide)
+theorem decE_tag_app : (decE e).tag = ETag.app ↔ e >>> 28 = 4 := decE_tag_eq e hh 4 (by decide)
+theorem decE_tag_forallE : (decE e).tag = ETag.forallE ↔ e >>> 28 = 6 :=
+  decE_tag_eq e hh 6 (by decide)
+theorem decE_tag_lit : (decE e).tag = ETag.lit ↔ e >>> 28 = 8 := decE_tag_eq e hh 8 (by decide)
+theorem decE_tag_sort_beq : ((decE e).tag == ETag.sort) = decide (e >>> 28 = 2) :=
+  decE_tag_beq e hh 2 (by decide)
+theorem decE_tag_const_beq : ((decE e).tag == ETag.const) = decide (e >>> 28 = 3) :=
+  decE_tag_beq e hh 3 (by decide)
+theorem decE_tag_app_beq : ((decE e).tag == ETag.app) = decide (e >>> 28 = 4) :=
+  decE_tag_beq e hh 4 (by decide)
+theorem decE_tag_lam_beq : ((decE e).tag == ETag.lam) = decide (e >>> 28 = 5) :=
+  decE_tag_beq e hh 5 (by decide)
+theorem decE_tag_forallE_beq : ((decE e).tag == ETag.forallE) = decide (e >>> 28 = 6) :=
+  decE_tag_beq e hh 6 (by decide)
+theorem decE_tag_lit_beq : ((decE e).tag == ETag.lit) = decide (e >>> 28 = 8) :=
+  decE_tag_beq e hh 8 (by decide)
+theorem decI_tag_fvar_beq : ((decI e : EIdx).tag == ETag.fvar) = decide (e >>> 28 = 1) :=
+  decI_tag_beq e hh 1 (by decide)
+theorem decI_tag_const_beq : ((decI e : EIdx).tag == ETag.const) = decide (e >>> 28 = 3) :=
+  decI_tag_beq e hh 3 (by decide)
+theorem decI_tag_app_beq : ((decI e : EIdx).tag == ETag.app) = decide (e >>> 28 = 4) :=
+  decI_tag_beq e hh 4 (by decide)
+theorem decI_tag_forallE_beq : ((decI e : EIdx).tag == ETag.forallE) = decide (e >>> 28 = 6) :=
+  decI_tag_beq e hh 6 (by decide)
+end etags
+
 /-! ## Lists of handle words -/
 
 section lists

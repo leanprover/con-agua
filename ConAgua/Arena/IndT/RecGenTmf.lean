@@ -547,7 +547,7 @@ theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
   · rw [ite_eq_left hng]; exact Sim.of_none
   have hg : w >>> 28 = 3 := by simpa using hng
   rw [ite_eq_right hng]
-  have hct := ctag_iff w hw32 3 (by decide)
+  have hct := decE_tag_eq w hw32 3 (by decide)
   have htag0 : (decE w).tag = ETag.const := hct.mpr hg
   have htag : ((decE w).tag == ETag.const) = true := by simpa using htag0
   rw [← hwd, show (decI w : EIdx) = decE w from rfl]

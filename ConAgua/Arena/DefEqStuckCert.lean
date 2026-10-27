@@ -205,13 +205,13 @@ theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : St
   rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3
   · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte] at hW1
     exact hres 0 hW1 hw0 _
-      (setWtbT_nonconst _ fe _ _ _ _ _ _ _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
+      (setWtbT_nonconst _ fe _ _ _ _ _ _ _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simp [h3])) rfl
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
   have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
   simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
   have hvo : viewOK s.mem h CONST := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
-  have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3]
   generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW1 hv
   generalize tfld s.mem CONST (tierW h) (idxW h) 1 = us2 at huw hW1 hv
   obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
@@ -419,13 +419,13 @@ theorem setWith_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3
   · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte] at hW1
     exact hres 0 hW1 hw0 _
-      (setWith_nonconst _ fe _ _ _ _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
+      (setWith_nonconst _ fe _ _ _ _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simp [h3])) rfl
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
   have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
   simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
   have hvo : viewOK s.mem h CONST := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
-  have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3]
   generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW1 hv
   generalize tfld s.mem CONST (tierW h) (idxW h) 1 = us at huw hW1 hv
   obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1

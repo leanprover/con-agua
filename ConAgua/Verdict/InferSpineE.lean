@@ -117,10 +117,10 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
         rw [hi1] at hih
         refine ErrClaim.of_run_eq' (fun ce h => ?_) hih
         rw [← h, inferSpineIO]
-        simp only [hlt', dite_true, tag_fa_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
+        simp only [hlt', dite_true, decE_tag_forallE_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
           viewBind_run', hvb, except_ok_bind, hxi]
       · rw [ite_eq_right ht6] at hF
-        have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [tag_fa_beq ty ht]; simp [ht6]
+        have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [decE_tag_forallE_beq ty ht]; simp [ht6]
         cases h1 : callE p k "inst_list" [ty, co, cn, 0] m with
         | error e1 =>
           rw [h1, inferSpineIOE.k_inst_list_2.none] at hF; cases hF
@@ -176,7 +176,7 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
         · rw [inferSpineIOE.k_whnf.eq_def] at hF
           simp only [ite_eq_left g1] at hF; cases hF
           have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = false := by
-            rw [tag_fa_beq _ hrw2]; simpa using g1
+            rw [decE_tag_forallE_beq _ hrw2]; simpa using g1
           refine ErrClaim.of_error (ce := .invalid "function expected") (hpre2.trans ?_) rfl
           rw [hfa]; rfl
         have g1' : r₂.headD 0 >>> 28 = 6 := by simpa using g1
@@ -217,7 +217,7 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
         rw [hi1] at hih
         refine ErrClaim.of_run_eq' (fun ce h => hpre2.trans ?_) hih
         have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = true := by
-          rw [tag_fa_beq _ hrw2]; exact decide_eq_true g1'
+          rw [decE_tag_forallE_beq _ hrw2]; exact decide_eq_true g1'
         rw [← h]
         simp only [hfa, ite_true, StateT.run_bind, viewBind_run', hvb, except_ok_bind, hxi]
         rfl
@@ -491,7 +491,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
               (AM.st (instantiateListFast coreWalkFuel (decE (tfld m FORALL (tierW ty) (idxW ty) 0))
                 acc 0) a) := by
           rw [inferSpine]
-          simp only [hlt', dite_true, tag_fa_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
+          simp only [hlt', dite_true, decE_tag_forallE_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
             viewBind_run', hvb, except_ok_bind, hxi]
           rw [AM.run_of_ok _ _ hok1, except_ok_bind, hres1]; rfl
         cases h2 : callE p k "infer_spine_arg" [mode, vis, d, rdW (m.arr64 SPN) (ao + i), r₁.headD 0]
@@ -528,7 +528,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         rw [← h]
         exact spineArg_run _ _ _ _ _ _ _ (by rw [AM.run_of_ok _ _ hok2])
       · rw [ite_eq_right ht6] at hF
-        have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [tag_fa_beq ty ht]; simp [ht6]
+        have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [decE_tag_forallE_beq ty ht]; simp [ht6]
         cases h1 : callE p k "inst_list" [ty, co, cn, 0] m with
         | error e1 =>
           rw [h1, inferSpineE.k_inst_list_3.none] at hF; cases hF
@@ -589,7 +589,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         by_cases g1 : r₂.headD 0 >>> 28 ≠ 6
         · rw [inferSpineE.k_whnf.abort1 _ _ _ _ _ _ _ _ _ _ _ _ g1] at hF; cases hF
           have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = false := by
-            rw [tag_fa_beq _ hrw2]; simpa using g1
+            rw [decE_tag_forallE_beq _ hrw2]; simpa using g1
           refine ErrClaim.of_error (ce := .invalid "function expected") (hpre2.trans ?_) rfl
           rw [hfa]; rfl
         have g1' : r₂.headD 0 >>> 28 = 6 := by simpa using g1
@@ -605,7 +605,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         obtain ⟨-, hdom, hbody⟩ := view_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1'
         have hvb := viewBind_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1'
         have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = true := by
-          rw [tag_fa_beq _ hrw2]; exact decide_eq_true g1'
+          rw [decE_tag_forallE_beq _ hrw2]; exact decide_eq_true g1'
         have hpre3 : (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) acc args
             i.toNat).run a =
             ((coreKnot (decMode mode) fe id F).infer d.toNat (decE (spW m (ao + i))) >>= fun ta =>

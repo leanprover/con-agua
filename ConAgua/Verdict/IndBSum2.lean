@@ -322,7 +322,7 @@ theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
         have hnt : ¬ (e.tag == ETag.sort) = true := by
           rw [← hbe, ← decE_eq]
           intro ht
-          exact hf ⟨h1', (tag_sort_iff _ (by simpa using hb32)).mp (by simpa using ht)⟩
+          exact hf ⟨h1', (decE_tag_sort _ (by simpa using hb32)).mp (by simpa using ht)⟩
         simp only [hnt, ite_false, Bool.false_eq_true]
         exact hcl
     | ok q2 =>

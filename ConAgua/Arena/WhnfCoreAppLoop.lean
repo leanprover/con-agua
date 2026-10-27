@@ -92,8 +92,6 @@ def whnfAppL' : FunDecl :=
 
 theorem whnfAppL_eq : whnfAppL = whnfAppL' := rfl
 
-
-
 /-! ## The models of the arms -/
 
 /-- How an arm ends: by a `return` (`st`, `r`, the memory), or by falling through with the memory. -/
@@ -379,16 +377,6 @@ theorem callW_zero_app (p : Prog) (f : FnName) (vs : List Word) (m : Mem) :
   cases p.lookup f with
   | none | some fd => rfl
 
-theorem decE_tag_const (e : Word) (hh : e.toNat < 2 ^ 32) :
-    ((decE e).tag == ETag.const) = decide (e >>> 28 = 3) := by
-  have := decE_tag_eq e hh 3 (by decide)
-  by_cases h : e >>> 28 = 3
-  · have h2 : (decE e).tag = UInt32.ofNat 3 := this.mpr h
-    simp [h, ETag.const, h2]
-  · have h2 : ¬ (decE e).tag = UInt32.ofNat 3 := fun h' => h (this.mp h')
-    simp only [h, decide_false, beq_eq_false_iff_ne, ne_eq, ETag.const]
-    exact h2
-
 /-- The twin's `whnfApp` after the ι step's answer. -/
 def appStepT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (hd ap : EIdx)
     (va : Array EIdx) (same2 : Bool) (args nodes : Array EIdx) (i : Nat) (step : Option EIdx) :
@@ -546,7 +534,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hbeta hcall
         rw [hi1] at hok hS' hres
         have hlamtag : ((decE v).tag == ETag.lam) = true := by
-          rw [decE_tag_lam v hv]; simp [hlam]
+          rw [decE_tag_lam_beq v hv]; simp [hlam]
         have hrun : (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v)
             (decE hd) va (same != 0) args nodes i.toNat).run a =
             .ok (AM.res (betaPeel (decE (tfld m LAM (tierW v) (idxW v) 1))
@@ -634,7 +622,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
           hpg.trans (hSt₁.pool.trans (PoolGrew.of_frame (spnCtl_frame m₁ (vo + vn)
             (rdW (m.arr64 SPN) (ao + i)) (vo + vn + 1)) (by decide) (by decide)))
         have hnotlam : ((decE v).tag == ETag.lam) = false := by
-          rw [decE_tag_lam v hv]; simp [hlam]
+          rw [decE_tag_lam_beq v hv]; simp [hlam]
         have hunf := whnfApp_nolam (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
           (decE v) (decE hd) va (same != 0) args nodes i.toNat hlt' hnotlam
         have hxi' : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := hxi
@@ -666,7 +654,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
             exact hb₂ j hj
           have hsz₃ : (m₃.arr64 SPN).size = (m₀.arr64 SPN).size := hSt₃.size.trans hsz₂
           have hctag : ((decE hd).tag == ETag.const) = true := by
-            rw [decE_tag_const hd hhd]; simp [hconst]
+            rw [decE_tag_const_beq hd hhd]; simp [hconst]
           by_cases hz : rr.headD 0 ≠ 0
           · rw [ite_eq_left hz] at hF
             cases hcM : callW p (k' + 1) "mk_app_n_from" [rr.tail.headD 0, ao, an, i + 1] m₃ with
@@ -726,7 +714,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
             (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) MM hS₂ hapW hva₂ htop₂ htv₂ hb₂ hsz₂ hbk₂ hpg₂
             st r mF hF h136
           have hctag : ((decE hd).tag == ETag.const) = false := by
-            rw [decE_tag_const hd hhd]; simp [hconst]
+            rw [decE_tag_const_beq hd hhd]; simp [hconst]
           rw [hi1, evalW_eq_ne ap _ hapW hnW] at hrun'
           refine ⟨x, a', ?_, hx, hrw, M'', hS'', hK, hSt⟩
           rw [hunf]

@@ -685,7 +685,7 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       rw [← hrun']
       obtain ⟨p', hp'⟩ : ∃ p', peel.toNat = p' + 1 := ⟨peel.toNat - 1, by omega⟩
       have hlam : ((decE t).tag != ETag.lam) = false := by
-        rw [bne_eq_false_iff_eq, ← beq_iff_eq, decE_tag_lam t ht]; simp [ht5]
+        rw [bne_eq_false_iff_eq, ← beq_iff_eq, decE_tag_lam_beq t ht]; simp [ht5]
       have hsort : ((decE (r₃.headD 0)).tag == ETag.sort) = true := tag_sort_beq _ hrw3 g1
       rw [hp', inferLams]
       simp only [hlam, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, viewBind_run', hvb,
@@ -709,7 +709,7 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
           ⟨peel.toNat - 1, by
             have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega⟩
         have hlam : ((decE t).tag != ETag.lam) = true := by
-          rw [bne_iff_ne, ne_eq, ← beq_iff_eq, decE_tag_lam t ht]; simp [ht5]
+          rw [bne_iff_ne, ne_eq, ← beq_iff_eq, decE_tag_lam_beq t ht]; simp [ht5]
         rw [hp', inferLams]
         simp only [hlam, ↓reduceIte]
 

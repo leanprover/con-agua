@@ -73,7 +73,7 @@ views. -/
 theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view (decI h) = some v := by
   have hfl := ConsR.flag hR.zero
-  have hidx := decL_idx h
+  have hidx := decI_idx h
   have ht1 := tierW_le h
   unfold lvNodeW at hne
   simp only [h32 hh, ne_eq, not_true_eq_false, ↓reduceIte] at hne
@@ -83,18 +83,18 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
   have hview : a.store.lss.ls.view (decI h) =
       (if tierW h = 0 then a.store.lss.ls.pers else a.store.lss.ls.scr).get (decI h) := by
     unfold LStore.view
-    rw [decL_pers h hh]
+    rw [decI_pers h hh]
     by_cases ht : tierW h = 0
     · simp [ht]
     · have hon : a.store.lss.ls.scratchOn = true := by
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun e => hsc ⟨ht, e⟩
       simp [ht, hon]
   rw [hview]
-  have e0 : ((decI h : LIdx).tag = 0 ↔ h >>> 28 = 0) := decL_tag_eq h hh 0 (by decide)
-  have e1 : ((decI h : LIdx).tag = 1 ↔ h >>> 28 = 1) := decL_tag_eq h hh 1 (by decide)
-  have e2 : ((decI h : LIdx).tag = 2 ↔ h >>> 28 = 2) := decL_tag_eq h hh 2 (by decide)
-  have e3 : ((decI h : LIdx).tag = 3 ↔ h >>> 28 = 3) := decL_tag_eq h hh 3 (by decide)
-  have e4 : ((decI h : LIdx).tag = 4 ↔ h >>> 28 = 4) := decL_tag_eq h hh 4 (by decide)
+  have e0 : ((decI h : LIdx).tag = 0 ↔ h >>> 28 = 0) := decI_tag_eq h hh 0 (by decide)
+  have e1 : ((decI h : LIdx).tag = 1 ↔ h >>> 28 = 1) := decI_tag_eq h hh 1 (by decide)
+  have e2 : ((decI h : LIdx).tag = 2 ↔ h >>> 28 = 2) := decI_tag_eq h hh 2 (by decide)
+  have e3 : ((decI h : LIdx).tag = 3 ↔ h >>> 28 = 3) := decI_tag_eq h hh 3 (by decide)
+  have e4 : ((decI h : LIdx).tag = 4 ↔ h >>> 28 = 4) := decI_tag_eq h hh 4 (by decide)
   simp only [LTables.get, LTag.zero, LTag.succ, LTag.max, LTag.imax, LTag.param, beq_iff_eq,
     e0, e1, e2, e3, e4]
   by_cases g0 : h >>> 28 = 0

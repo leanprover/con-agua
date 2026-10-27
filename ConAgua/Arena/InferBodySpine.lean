@@ -235,13 +235,6 @@ def SpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : M
   ∃ x a', T.run a = .ok (x, a') ∧ x = decE w ∧ HW w ∧
     ∃ M', CoreS dn mF a' vis fe M' eb ∧ KeptAll M M' eb ∧ StackKept m₀ mF
 
-theorem tag_fa_beq (e : Word) (he : HW e) :
-    ((decE e).tag == ETag.forallE) = decide (e >>> 28 = 6) := by
-  by_cases h : e >>> 28 = 6
-  · simp [h, (decE_tag_forall e he).mpr h]
-  · simp only [h, decide_false, beq_eq_false_iff_ne, ne_eq]
-    exact fun h' => h ((decE_tag_forall e he).mp h')
-
 theorem succ_toNat_of_lt {i an : Word} (h : i < an) : (i + 1).toNat = i.toNat + 1 := by
   rw [UInt64.toNat_add]; simp
   have := UInt64.lt_iff_toNat_lt.mp h
@@ -349,7 +342,7 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
           _ hS' hbody hacc' htop' hb' hsz' hbk' hpg' h136' w mF hF
         refine ⟨x, a', ?_, hx, hrw, M', hS'', hK, hSt⟩
         rw [← hrun', inferSpineIO]
-        simp only [hlt', dite_true, tag_fa_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
+        simp only [hlt', dite_true, decE_tag_forallE_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
           viewBind_run', hvb, except_ok_bind, hxi, hi1]
       · -- the `whnf` re-entry: the accumulator restarts at `#[a]`
         cases h1 : callW p k "inst_list" [ty, co, cn, 0] m with
@@ -405,9 +398,9 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
           _ hS' hbody hacc' htop' hb' hsz' hbk' hpg' h136' w mF hF'
         refine ⟨x, a', ?_, hx, hrw, M', hS'', hK₁.trans (hK₂.trans hK), hSt⟩
         rw [← hrun', inferSpineIO]
-        have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [tag_fa_beq ty ht]; simp [ht6]
+        have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [decE_tag_forallE_beq ty ht]; simp [ht6]
         have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = true := by
-          rw [tag_fa_beq _ hrw2]; exact decide_eq_true g1
+          rw [decE_tag_forallE_beq _ hrw2]; exact decide_eq_true g1
         simp only [hlt', dite_true, hnfa, Bool.false_eq_true, ite_false, StateT.run_bind,
           AM.run_of_ok _ _ hok1, except_ok_bind, hxi, hi1]
         rw [hres1]

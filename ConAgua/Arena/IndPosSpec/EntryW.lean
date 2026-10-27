@@ -245,7 +245,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
       obtain ⟨x2, a2, hrun2, hS2, hg2, hlt2, hdec2⟩ :=
         gafF_ok dn vis fe CWF w hwlt m0 m2 a1 r2 hg hS1
       rw [CWF_eq, hwd] at hrun2
-      have htagiff := tag_const_iff (r2.headD 0) hlt2
+      have htagiff := decI_tag_const_beq (r2.headD 0) hlt2
       rw [hdec2] at htagiff
       by_cases hk : r2.headD 0 >>> 28 ≠ 3
       · rw [entryK2_notconst _ _ _ _ hk] at h

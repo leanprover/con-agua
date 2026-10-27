@@ -119,14 +119,6 @@ theorem callW_pinWord' {p : Prog} (hp : p.lookup "pin_word" = some pinWordL) {n 
 theorem natIndOk_nonind {ci : IConstantInfo} (h : ciTag ci ≠ 3) : natIndOk (some ci) = pure false := by
   cases ci <;> simp_all [natIndOk, ciTag]
 
-theorem tagForallIff (w : Word) (hw : w.toNat < 2 ^ 32) :
-    ((decI w : EIdx).tag == ETag.forallE) = decide (w >>> 28 = 6) := by
-  have := decE_tag_eq w hw 6 (by decide)
-  have e1 : (ETag.forallE : UInt32) = UInt32.ofNat 6 := rfl
-  show ((decE w).tag == ETag.forallE) = _
-  rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, e1, this]
-  exact Iff.rfl
-
 section lit
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
@@ -329,7 +321,6 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
       have hne : ciTag ci ≠ 4 := fun e => h4 (UInt64.toNat_inj.mp (by rw [htag, e]; rfl))
       exact ⟨false, a, by rw [natZeroOk_nonctor hne]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
 
-
 /-! ### `nat_succ_ok` -/
 
 def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Word × Mem) :=
@@ -356,7 +347,6 @@ theorem natSuccOk_specW (p : Prog) (hp : p.lookup "nat_succ_ok" = some natSuccOk
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
     finish (gen := 20) [natSuccOkW, ntBW, tierW, idxW]
-
 
 theorem natSuccOk_nonctor {ci : IConstantInfo} (h : ciTag ci ≠ 4) : natSuccOk (some ci) = pure false := by
   cases ci <;> simp_all [natSuccOk, ciTag]
@@ -423,7 +413,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
                   tfld m2 FORALL (tierW wt) (idxW wt) 1 = r2.headD 0), a2) := by
               simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
                 Bool.not_true, Bool.false_eq_true, ite_false, hty]
-              rw [tagForallIff wt hlt]
+              rw [decI_tag_forallE_beq wt hlt]
               simp only [h6, decide_true, ite_true, ← decE_eq]
               simp only [StateT.run_bind, view_run (decE wt) a2 _ hview]
               simp only [exc_ok_bind', decE_eq, decI_beq _ _ hdlt hx2l, decI_beq _ _ hblt hx2l,
@@ -441,7 +431,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a = .ok (false, a2) := by
               simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
                 Bool.not_true, Bool.false_eq_true, ite_false, hty]
-              rw [tagForallIff wt hlt]
+              rw [decI_tag_forallE_beq wt hlt]
               simp only [h6, decide_false, Bool.false_eq_true, ite_false, StateT.run_pure]
               rfl
             exact ⟨false, a2, hrun, hS2, hg2, by simp [decW0B]⟩
@@ -461,7 +451,6 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
       obtain ⟨rfl, rfl⟩ := hw
       have hne : ciTag ci ≠ 4 := fun e => h4 (UInt64.toNat_inj.mp (by rw [htag, e]; rfl))
       exact ⟨false, a, by rw [natSuccOk_nonctor hne]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-
 
 /-! ### `nat_lit_supported` -/
 
@@ -490,7 +479,6 @@ theorem natLitSupported_specW (p : Prog) (hp : p.lookup "nat_lit_supported" = so
       callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "nat_ind_ok",
       callW_spec p n "nat_zero_ok", callW_spec p n "nat_succ_ok"] <;>
     finish (gen := 20) [natLitSupportedW, ntBW]
-
 
 /-- A pin read at slot `1 + j`, as a run. -/
 theorem pinAt_call {p : Prog} (hp : p.lookup "pin_at" = some pinAtL) {k : Nat} {m m1 : Mem}

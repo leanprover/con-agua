@@ -160,9 +160,6 @@ theorem opa_run_step (n : Nat) (h : EIdx) (i : Nat) (a a2 a3 a5 : AState)
 
 /-! ## `opf_go` -/
 
-theorem decE_tag_fa (e : Word) (he : e.toNat < 2 ^ 32) :
-    ((decE e).tag == ETag.forallE) = decide (e >>> 28 = 6) := tagForallIff e he
-
 theorem push_of_callW {k : Nat} {m m' : Mem} {x : Word} {r : List Word}
     (h : callW opfP k "spn_push" [x] m = some (r, m')) : spnPushW m x = some (r, m') := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -208,7 +205,7 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
   by_cases hg : e >>> 28 ≠ 6
   · rw [ite_eq_left hg] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-    refine ⟨none, a, by rw [← hn1]; exact opfGo_run_nf acc _ _ _ a (by rw [decE_tag_fa e he]; simpa using hg),
+    refine ⟨none, a, by rw [← hn1]; exact opfGo_run_nf acc _ _ _ a (by rw [decE_tag_forallE_beq e he]; simpa using hg),
       hS, IWGrow.refl _, hAb, rfl, rfl⟩
   rw [ite_eq_right hg] at c'
   have hg6 : e >>> 28 = 6 := Decidable.not_not.mp hg
@@ -234,7 +231,7 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
   obtain ⟨x5, a5, hrun5, hS5, hg5, hAb5, hsz5, hO⟩ := ih m4 m5 a3 (n - 1) _ (i + 1) co (cn + 1) _ rb h5
     hS4 hAb4 hy hsl4 (by rw [htop4]; grind) (by rw [hsz4, hs3, hi1, hcn1]; omega)
   have hrun := opfGo_run_step acc (n - 1).toNat (decE e) i.toNat a a2 a3 a5 _ _ _ _ x5
-    (by rw [decE_tag_fa e he]; simpa using hg6) hview hrun2 hrun3 (by rw [← hi1]; exact hrun5)
+    (by rw [decE_tag_forallE_beq e he]; simpa using hg6) hview hrun2 hrun3 (by rw [← hi1]; exact hrun5)
   rw [hn1] at hrun
   have hsz : (m5.arr64 SPN).size = (m.arr64 SPN).size := by rw [hsz5, hsz4, hs3]
   refine ⟨_, _, hrun, hS5, hg2.trans (hg3.trans (hg4.trans hg5)), hAb5, hsz, ?_⟩
@@ -275,7 +272,7 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
   by_cases hg : e >>> 28 ≠ 6
   · rw [ite_eq_left hg] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-    refine ⟨none, a, by rw [← hn1]; exact opa_run_nf _ _ _ a (by rw [decE_tag_fa e he]; simpa using hg),
+    refine ⟨none, a, by rw [← hn1]; exact opa_run_nf _ _ _ a (by rw [decE_tag_forallE_beq e he]; simpa using hg),
       hS, IWGrow.refl _, hAb, rfl, rfl⟩
   rw [ite_eq_right hg] at c'
   have hg6 : e >>> 28 = 6 := Decidable.not_not.mp hg
@@ -300,7 +297,7 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
   obtain ⟨x5, a5, hrun5, hS5, hg5, hAb5, hsz5, hO⟩ := ih m4 m5 a3 (n - 1) _ (i + 1) ro h5
     hS4 hAb4 hlt3 (by rw [htop4, hsz4, hs3, ht1]; omega) (by rw [htop4, hsz4, hs3, hi1, ht1]; omega)
   have hrun := opa_run_step (n - 1).toNat (decE e) i.toNat a a2 a3 a5 _ _ _ _ x5
-    (by rw [decE_tag_fa e he]; simpa using hg6) hview hrun2 hrun3 (by rw [← hi1]; exact hrun5)
+    (by rw [decE_tag_forallE_beq e he]; simpa using hg6) hview hrun2 hrun3 (by rw [← hi1]; exact hrun5)
   rw [hn1] at hrun
   have hsz : (m5.arr64 SPN).size = (m.arr64 SPN).size := by rw [hsz5, hsz4, hs3]
   refine ⟨_, _, hrun, hS5, hg2.trans (hg3.trans (hg4.trans hg5)), hAb5, hsz, ?_⟩

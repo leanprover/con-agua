@@ -396,7 +396,7 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
           _ hS' hbody hacc' htop' hb' hsz' hbk' hpg' h136' w mF hF'
         refine ⟨x, a', ?_, hx, hrw, M', hS'', hK₁.trans (hK₂.trans hK), hSt⟩
         rw [← hrun', inferSpine]
-        simp only [hlt', dite_true, tag_fa_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
+        simp only [hlt', dite_true, decE_tag_forallE_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
           viewBind_run', hvb, except_ok_bind, hxi, hi1]
         rw [AM.run_of_ok _ _ hok1, except_ok_bind, hres1]
         exact spineArg_run _ _ _ _ _ _ _ (by dsimp only; simp only [decH]; rw [AM.run_of_ok _ _ hok2])
@@ -454,9 +454,9 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
           _ hS' hbody hacc' htop' hb' hsz' hbk' hpg' h136' w mF hF'
         refine ⟨x, a', ?_, hx, hrw, M', hS'', hK₁.trans (hK₂.trans (hK₃.trans hK)), hSt⟩
         rw [← hrun', inferSpine]
-        have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [tag_fa_beq ty ht]; simp [ht6]
+        have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [decE_tag_forallE_beq ty ht]; simp [ht6]
         have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = true := by
-          rw [tag_fa_beq _ hrw2]; exact decide_eq_true g1
+          rw [decE_tag_forallE_beq _ hrw2]; exact decide_eq_true g1
         simp only [hlt', dite_true, hnfa, Bool.false_eq_true, ite_false, StateT.run_bind,
           AM.run_of_ok _ _ hok1, except_ok_bind, hxi, hi1]
         rw [hres1]

@@ -222,9 +222,6 @@ def Res5 (r : List Word) : Prop :=
   HW (r.headD 0) ∧ HW (r.tail.headD 0) ∧ HW (r.tail.tail.headD 0) ∧ HW (r.tail.tail.tail.headD 0) ∧
     HW (r.tail.tail.tail.tail.headD 0)
 
-theorem tag_lam_beq (h : Word) (hh : HW h) : ((decE h).tag == ETag.lam) = decide (h >>> 28 = 5) :=
-  tag_beq_w h hh 5 (by decide) _ rfl 5 rfl
-
 /-- **`lam_pair` refines `lamPair?`.** -/
 @[refines ConRon.Arena.lamPair?]
 theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -238,7 +235,7 @@ theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀
   subst hs0
   refine ⟨hloc, ?_⟩
   unfold lamPair?
-  simp only [tag_lam_beq a ha, tag_lam_beq b hb, Bool.and_eq_true, decide_eq_true_eq]
+  simp only [decE_tag_lam_beq a ha, decE_tag_lam_beq b hb, Bool.and_eq_true, decide_eq_true_eq]
   by_cases hno : a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5
   · rw [lpeelW.arm1 (hc1 := hno), Option.some.injEq] at hW
     simp only [Prod.mk.injEq] at hW

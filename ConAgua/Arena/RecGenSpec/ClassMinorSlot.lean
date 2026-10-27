@@ -172,7 +172,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   · rw [ite_eq_left hf] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a1, ?_, hS1, hg1, by simp, by simp⟩
-    have hct := ctag_iff w hd1 3 (by decide)
+    have hct := decE_tag_eq w hd1 3 (by decide)
     have : ¬ (decE w).tag = ETag.const := fun hc => hf (by simpa using hct.mp hc)
     have htag' : ((decE w).tag == ETag.const) = false := by simpa using this
     simp only [ConRon.Arena.classLeafAt, StateT.run_bind]
@@ -208,7 +208,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     rw [ht1, hwi1']
     generalize hnI : (eViewW m1 w).getD 1 0 = nI at hnlt hnd ⊢
     have hvc := EStore.viewConst_of_view_r _ _ _ _ hv
-    have hct := ctag_iff w hd1 3 (by decide)
+    have hct := decE_tag_eq w hd1 3 (by decide)
     have htag0 : (decE w).tag = ETag.const := hct.mpr hf3
     have htag : ((decE w).tag == ETag.const) = true := by simpa using htag0
     have hiff : (nI = wi) ↔ (decI nI : NIdx) = decI wi := ⟨fun hh => by rw [hh], fun hh => by

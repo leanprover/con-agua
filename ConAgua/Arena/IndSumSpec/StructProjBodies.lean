@@ -66,20 +66,6 @@ theorem spaW_afr {m m' : Mem} {T j : Word} {r : List Word} (h : spaW m T j = som
   simp only [spaW, spaK.eq_def, spaK2.eq_def] at h
   afr_auto h [binternW_afr, mkProjW_afr]
 
-theorem tag_iff (b : Word) (hb : b.toNat < 2 ^ 32) (t : Word) (ht : t.toNat < 16) :
-    (decE b).tag = t.toUInt32 ↔ b >>> 28 = t := by
-  rw [decE_tag b hb]
-  have key : (b >>> 28).toNat = b.toNat / 268435456 := by
-    rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]
-  constructor
-  · intro h
-    apply UInt64.toNat_inj.mp
-    have := congrArg UInt32.toNat h
-    rw [UInt64.toNat_toUInt32, UInt64.toNat_toUInt32, key] at this
-    rw [key]
-    omega
-  · intro h; rw [h]
-
 theorem eViewW_head6S (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h ≠ []) :
     (eViewW m h).headD 0 = 6 := by
   revert hne; unfold eViewW
@@ -119,7 +105,7 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     have hks : k.toNat = (k.toNat - 1) + 1 := by omega
     have htf : ((decE h).tag == ETag.forallE) = true ↔ h >>> 28 = 6 := by
       rw [beq_iff_eq, show ETag.forallE = (6 : Word).toUInt32 from rfl]
-      exact tag_iff h hh 6 (by decide)
+      exact decE_tag_eqW h hh 6 (by decide)
     by_cases ht : h >>> 28 = 6
     case neg =>
       rw [pbW.arm2 n m T k i h hk ht, hks, structProjBodiesGo, ← decE_eq, ite_eq_right (fun e => ht (htf.mp e))]

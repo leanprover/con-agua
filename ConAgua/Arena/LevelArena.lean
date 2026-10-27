@@ -17,7 +17,6 @@ No readback is involved: the level algorithms run on `h` itself.
 
 open ConRon.Arena
 
-
 namespace L.Arena
 
 open ConLeche
@@ -39,23 +38,6 @@ theorem nameN_rel (ns : NStore) (hwf : NStoreWF ns) : NameRel (nameN ns) := by
     omega
 
 /-! ## Handle words of level handles -/
-
-theorem decL_tag (h : Word) (hh : h.toNat < 2 ^ 32) :
-    (decI h : LIdx).tag = (h >>> 28).toUInt32 := by
-  simp only [decI, Idx.tag]
-  apply UInt32.toNat_inj.mp
-  simp [UInt32.toNat_div, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
-  omega
-
-theorem decL_idx (h : Word) : (decI h : LIdx).idxNat = (idxW h).toNat := by
-  simp only [decI, Idx.idxNat, Idx.index, idxW]
-  simp [UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_and]
-  have : (134217727 : Nat) = 2 ^ 27 - 1 := rfl
-  rw [this, Nat.and_two_pow_sub_one_eq_mod]
-
-theorem decL_pers (h : Word) (hh : h.toNat < 2 ^ 32) :
-    (decI h : LIdx).isPersistent = (tierW h == 0) := by
-  rw [isPersistent_decI h hh]; rfl
 
 /-- A node of a table relation's tier: the count is past its index, and the record relation
 holds. -/
@@ -84,18 +66,6 @@ theorem h32 {h : Word} (hh : h.toNat < 2 ^ 32) : h >>> 32 = 0 := by
   apply UInt64.toNat_inj.mp
   simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; omega
 
-/-- The tag of a level handle word, as the arena reads it. -/
-theorem decL_tag_eq (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (hg : g < 16) :
-    ((decI h : LIdx).tag = UInt32.ofNat g) ↔ (h >>> 28 = UInt64.ofNat g) := by
-  rw [decL_tag h hh]
-  have hgt : (h >>> 28).toNat < 16 := by
-    simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; omega
-  constructor
-  · intro e; apply UInt64.toNat_inj.mp
-    have := congrArg UInt32.toNat e
-    simp [UInt64.toNat_toUInt32] at this ⊢; omega
-  · intro e; rw [e]; apply UInt32.toNat_inj.mp; simp
-
 section view
 variable {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
 include hR hh
@@ -106,7 +76,7 @@ theorem lview_tier {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some v) 
       (if tierW h = 0 then a.store.lss.ls.pers else a.store.lss.ls.scr).get (decI h) = some v := by
   have hfl := ConsR.flag hR.zero
   unfold LStore.view at hv
-  rw [decL_pers h hh] at hv
+  rw [decI_pers h hh] at hv
   by_cases ht : tierW h = 0
   · simp only [ht, beq_self_eq_true, ↓reduceIte] at hv
     exact ⟨fun e => e.1 ht, by simpa [ht] using hv⟩
@@ -122,15 +92,15 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
     lvNodeW m h = lvEnc v := by
   obtain ⟨hsc, hg⟩ := lview_tier hR hh hv
   have ht1 := tierW_le h
-  have hidx := decL_idx h
-  simp only [LTables.get, decL_tag h hh] at hg
+  have hidx := decI_idx h
+  simp only [LTables.get, decI_tag h hh] at hg
   simp only [lvNodeW, h32 hh, ne_eq, not_true_eq_false, ↓reduceIte, hsc]
-  have e0 : ((decI h : LIdx).tag = 0 ↔ h >>> 28 = 0) := decL_tag_eq h hh 0 (by decide)
-  have e1 : ((decI h : LIdx).tag = 1 ↔ h >>> 28 = 1) := decL_tag_eq h hh 1 (by decide)
-  have e2 : ((decI h : LIdx).tag = 2 ↔ h >>> 28 = 2) := decL_tag_eq h hh 2 (by decide)
-  have e3 : ((decI h : LIdx).tag = 3 ↔ h >>> 28 = 3) := decL_tag_eq h hh 3 (by decide)
-  have e4 : ((decI h : LIdx).tag = 4 ↔ h >>> 28 = 4) := decL_tag_eq h hh 4 (by decide)
-  rw [← decL_tag h hh] at hg
+  have e0 : ((decI h : LIdx).tag = 0 ↔ h >>> 28 = 0) := decI_tag_eq h hh 0 (by decide)
+  have e1 : ((decI h : LIdx).tag = 1 ↔ h >>> 28 = 1) := decI_tag_eq h hh 1 (by decide)
+  have e2 : ((decI h : LIdx).tag = 2 ↔ h >>> 28 = 2) := decI_tag_eq h hh 2 (by decide)
+  have e3 : ((decI h : LIdx).tag = 3 ↔ h >>> 28 = 3) := decI_tag_eq h hh 3 (by decide)
+  have e4 : ((decI h : LIdx).tag = 4 ↔ h >>> 28 = 4) := decI_tag_eq h hh 4 (by decide)
+  rw [← decI_tag h hh] at hg
   simp only [LTag.zero, LTag.succ, LTag.max, LTag.max, LTag.imax, LTag.param, beq_iff_eq] at hg
   simp only [e0, e1, e2, e3, e4] at hg
   by_cases g0 : h >>> 28 = 0
@@ -345,10 +315,10 @@ theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
 
 theorem decLs_tag0 (h : Word) (hh : h.toNat < 2 ^ 32) :
     ((decI h : LsIdx).tag == LsTag.list) = (h >>> 28 == 0) := by
-  have this : ((decI h : LsIdx).tag = 0 ↔ h >>> 28 = 0) := decL_tag_eq h hh 0 (by decide)
+  have this : ((decI h : LsIdx).tag = 0 ↔ h >>> 28 = 0) := decI_tag_eq h hh 0 (by decide)
   rw [Bool.eq_iff_iff]; simp only [beq_iff_eq, LsTag.list]; exact this
 where
-  decL_tag_eq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (hg : g < 16) :
+  decI_tag_eq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (hg : g < 16) :
       ((decI h : Idx k).tag = UInt32.ofNat g) ↔ (h >>> 28 = UInt64.ofNat g) := by
     have e : (decI h : Idx k).tag = (h >>> 28).toUInt32 := by
       simp only [decI, Idx.tag]

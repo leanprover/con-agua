@@ -23,21 +23,6 @@ namespace L.Arena
 
 /-! ## Handle words -/
 
-theorem decE_tag (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).tag = (h >>> 28).toUInt32 := by
-  simp only [decE, Idx.tag]
-  apply UInt32.toNat_inj.mp
-  simp [UInt32.toNat_div, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
-  omega
-
-theorem decE_idx (h : Word) : (decE h).idxNat = (idxW h).toNat := by
-  simp only [decE, Idx.idxNat, Idx.index, idxW]
-  simp [UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_and]
-  have : (134217727 : Nat) = 2 ^ 27 - 1 := rfl
-  rw [this, Nat.and_two_pow_sub_one_eq_mod]
-
-theorem decE_pers (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).isPersistent = (tierW h == 0) := by
-  rw [decE_eq, isPersistent_decI h hh]; rfl
-
 /-! ## Nodes of a table -/
 
 /-! ## The view -/

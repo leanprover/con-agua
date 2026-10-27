@@ -29,7 +29,7 @@ theorem pos2_forall_view {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe :
   obtain ⟨-, hty, hb⟩ := view_forall m a hS.1.arena.1 w hw hvok h6
   have hvb := viewBind_forall m a hS.1.arena.1 w hw hvok h6
   exact ⟨_, _, hew, hty, hb, by rw [viewBind_run']; simp only [← decE_eq]; rw [hvb],
-    (decE_tag_forall w hw).mpr h6⟩
+    (decE_tag_forallE w hw).mpr h6⟩
 
 theorem pos2_word_add {x y : Word} (h : ¬ x + y < x) : (x + y).toNat = x.toNat + y.toNat := by
   rcases Nat.lt_or_ge (x.toNat + y.toNat) (2 ^ 64) with hl | hl

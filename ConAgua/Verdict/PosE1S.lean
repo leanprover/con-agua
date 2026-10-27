@@ -306,7 +306,7 @@ theorem posOKE_step {p : Prog} (L : NbLook p) (hq : KnotStageProg p)
   simp only [Bool.not_true, Bool.false_eq_true, ite_false]
   by_cases h6 : rw.headD 0 >>> 28 = 6
   · rw [ite_eq_left h6] at hce
-    have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forall _ hwH).mpr h6
+    have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forallE _ hwH).mpr h6
     rw [ite_eq_left (by simpa using htag)]
     cases h5 : callE p n "nest_pos_bind" [vis, ctx, fu - 1, po, pl, dep, kb, rw.headD 0, ns] m2 with
     | error e5 =>
@@ -319,7 +319,7 @@ theorem posOKE_step {p : Prog} (L : NbLook p) (hq : KnotStageProg p)
       obtain ⟨r5, m5⟩ := q5
       rw [h5, npE.k_nest_pos_bind.eq_2] at hce; cases hce
   · rw [ite_eq_right h6] at hce
-    have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forall _ hwH).mp e')
+    have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forallE _ hwH).mp e')
     rw [ite_eq_right (by simpa using htag)]
     cases h5 : callE p n "nest_pos_app" [vis, ctx, fu - 1, po, pl, kb, nhiW m ctx pl, rw.headD 0, ns] m2 with
     | error e5 =>

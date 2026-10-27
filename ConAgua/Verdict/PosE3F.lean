@@ -63,7 +63,7 @@ theorem fieldsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p 
   · rw [nfE.abort1 p n m vis ctx fu po pl base nF j cur ns kO kL dO dL h0 h6] at he
     cases he
     have htag : ¬ (decI cur : EIdx).tag = ETag.forallE := by
-      rw [← decE_eq]; exact fun e' => h6 ((decE_tag_forall _ hcur).mp e')
+      rw [← decE_eq]; exact fun e' => h6 ((decE_tag_forallE _ hcur).mp e')
     rw [hnF', ConRon.Arena.nestFields.eq_def]
     simp only [htag, beq_iff_eq, ite_false]
     exact ErrClaim.fail _ _ (by decide)

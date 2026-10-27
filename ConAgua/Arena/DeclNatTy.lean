@@ -267,7 +267,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
   have hp3 : H (pr.headD 0) := by rw [hr3]; exact hF2.names_lt 14 (by decide)
   have e3 : (pinAt 14).run a2 = .ok (decI (pr.headD 0), a2) := by
     have := pinAt_run hF2 14 (by decide); rw [hr3]; exact this
-  have htag : ((decI ty : EIdx).tag == ETag.forallE) = decide (ty >>> 28 = 6) := tagForallIff ty hty
+  have htag : ((decI ty : EIdx).tag == ETag.forallE) = decide (ty >>> 28 = 6) := decI_tag_forallE_beq ty hty
   have hbeqc : ((decI c : NIdx) == decI (pr.headD 0)) = decide (c = pr.headD 0) := decI_beq _ _ hc hp3
   have hshort : ¬ ty >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
     intro h6
@@ -339,7 +339,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     have hdn : ((decE (rv.tail.headD 0) : EIdx) == x2) = decide (rv.tail.headD 0 = nc.headD 0) := by
       rw [← hx2]; exact decI_beq _ _ hd0 hx2l
     have htagb : ((decE (rv.tail.tail.headD 0) : EIdx).tag == ETag.forallE) =
-        decide (rv.tail.tail.headD 0 >>> 28 = 6) := tagForallIff _ hb0
+        decide (rv.tail.tail.headD 0 >>> 28 = 6) := decI_tag_forallE_beq _ hb0
     have hshortb : ¬ rv.tail.tail.headD 0 >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
         KeepPost dn vis fe decW0B m m' a' r x := by
       intro hb6

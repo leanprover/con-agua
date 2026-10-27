@@ -47,14 +47,6 @@ structure DefEqLeafProg (p : Prog) : Prop where
 
 /-! ## Shared lemmas -/
 
-theorem decE_tag_beq (e : Word) (hh : e.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
-    ((decE e).tag == UInt32.ofNat k) = decide (e >>> 28 = UInt64.ofNat k) := by
-  have := decE_tag_eq e hh k hk
-  by_cases h : e >>> 28 = UInt64.ofNat k
-  · simp [h, this.mpr h]
-  · have h2 : ¬ (decE e).tag = UInt32.ofNat k := fun h' => h (this.mp h')
-    simp [h, h2]
-
 /-- `pin_at(i)` reads `PINS[1 + i]` and changes nothing. -/
 theorem pinAt_rd (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
@@ -138,12 +130,6 @@ theorem isBoolTrue_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) 
       pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n] <;>
     finish [isBoolTrueW, tierW, idxW, rdW]
 
-theorem tag_const : ETag.const = UInt32.ofNat 3 := rfl
-
-theorem tag_beq_const (h : Word) (hh : HW h) :
-    ((decE h).tag == ETag.const) = decide (h >>> 28 = 3) := by
-  rw [tag_const, decE_tag_beq h hh 3 (by decide)]; rfl
-
 theorem isBoolTrue_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
     (h : Word) (hh : HW h) (w : Word) (hW : isBoolTrueW m h = some w) :
     (isBoolTrue (decE h)).run a = .ok (w != 0, a) := by
@@ -151,7 +137,7 @@ theorem isBoolTrue_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m
   rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3
   · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
-    simp only [isBoolTrue, tag_beq_const h hh, h3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [isBoolTrue, decE_tag_const_beq h hh, h3, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [h3, hs] at hW
@@ -163,7 +149,7 @@ theorem isBoolTrue_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m
   have hbt := hP.names_lt 30 (by decide)
   rw [pinW_rdW m (1 + 30) (1 + 30) rfl] at hbt
   simp only [h3, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  simp only [isBoolTrue, tag_beq_const h hh, h3, decide_true, ↓reduceIte,
+  simp only [isBoolTrue, decE_tag_const_beq h hh, h3, decide_true, ↓reduceIte,
     StateT.run_bind, view_run _ _ _ hv, except_ok_bind, emptyLevels, pinEmptyLevels_run hP,
     pinW_rdW m 52 52 rfl, boolTrueName, pinBoolTrue, PIN_BOOL_TRUE]
   by_cases hus : tfld m CONST (tierW h) (idxW h) 1 = rdW (m.arr64 PINS) 52
@@ -208,10 +194,6 @@ theorem getAppFn_callW {p : Prog} (hp : DefEqLeafProg p) {n : Nat} {m m' : Mem} 
   obtain ⟨t, ht, hm, -, hh, hrun⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (getAppFn_refines p hp.core.spine n ⟨m, Locals.init []⟩ a hR e he) hc
   exact ⟨ht ▸ hm, hh, hrun⟩
-
-theorem tag_beq_w (h : Word) (hh : HW h) (k : Nat) (hk : k < 16) (t : UInt32) (ht : t = UInt32.ofNat k)
-    (w : Word) (hw : UInt64.ofNat k = w) : ((decE h).tag == t) = decide (h >>> 28 = w) := by
-  rw [ht, decE_tag_beq h hh k hk, hw]
 
 /-! ## `head_is_proj` -/
 
@@ -366,9 +348,6 @@ theorem isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
   all_goals grind [lang_grind, arena_grind, eagerW_tag, eagerW_go, eagerF_tag, eagerF_go,
     eagerG_tag, eagerG_go, tierW, idxW]
 
-theorem tag_beq_app (h : Word) (hh : HW h) :
-    ((decE h).tag == ETag.app) = decide (h >>> 28 = 4) := tag_beq_w h hh 4 (by decide) _ rfl 4 rfl
-
 theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
     (h : Word) (hh : HW h) (w : Word) (hW : isEagerReduceW m h = some w) :
     (isEagerReduce (decE h)).run a = .ok (w != 0, a) := by
@@ -376,7 +355,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   rcases (Classical.em (h >>> 28 = 4)).symm with h4 | h4
   · simp only [ne_eq, h4, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
-    simp only [isEagerReduce, tag_beq_app h hh, h4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [isEagerReduce, decE_tag_app_beq h hh, h4, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [h4, hs] at hW
@@ -385,14 +364,14 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   simp only [h4, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   have hvo : viewOK m h APP := ⟨hs, by simpa using hc⟩
   obtain ⟨-, hf, -⟩ := view_app m a hR h hh hvo h4
-  simp only [isEagerReduce, tag_beq_app h hh, h4, decide_true, ↓reduceIte, StateT.run_bind,
+  simp only [isEagerReduce, decE_tag_app_beq h hh, h4, decide_true, ↓reduceIte, StateT.run_bind,
     viewApp_run', viewApp_ok m a hR h hh hvo, except_ok_bind]
   generalize tfld m APP (tierW h) (idxW h) 0 = f at hf hW ⊢
   unfold eagerF at hW
   rcases (Classical.em (f >>> 28 = 4)).symm with f4 | f4
   · simp only [ne_eq, f4, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
-    simp only [tag_beq_app f hf, f4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [decE_tag_app_beq f hf, f4, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   by_cases fs : tierW f ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [f4, fs] at hW
@@ -401,14 +380,14 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   simp only [f4, fs, fc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   have fvo : viewOK m f APP := ⟨fs, by simpa using fc⟩
   obtain ⟨-, hg, -⟩ := view_app m a hR f hf fvo f4
-  simp only [tag_beq_app f hf, f4, decide_true, ↓reduceIte, StateT.run_bind,
+  simp only [decE_tag_app_beq f hf, f4, decide_true, ↓reduceIte, StateT.run_bind,
     viewApp_run', viewApp_ok m a hR f hf fvo, except_ok_bind]
   generalize tfld m APP (tierW f) (idxW f) 0 = g at hg hW ⊢
   unfold eagerG at hW
   rcases (Classical.em (g >>> 28 = 3)).symm with g3 | g3
   · simp only [ne_eq, g3, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
-    simp only [tag_beq_const g hg, g3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [decE_tag_const_beq g hg, g3, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   by_cases gs : tierW g ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [g3, gs] at hW
@@ -420,7 +399,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   have her := hP.names_lt 50 (by decide)
   rw [pinW_rdW m (1 + 50) (1 + 50) rfl] at her
   subst hW
-  simp only [tag_beq_const g hg, g3, decide_true, ↓reduceIte, StateT.run_bind, L.Ind.viewConst_run',
+  simp only [decE_tag_const_beq g hg, g3, decide_true, ↓reduceIte, StateT.run_bind, L.Ind.viewConst_run',
     L.Ind.viewConst_ok m a hR g hg gvo, except_ok_bind, eagerReduceName, pinEagerReduce,
     PIN_EAGER_REDUCE, pinAt_run hP 50 (by decide), pinW_rdW m (1 + 50) (1 + 50) rfl,
     StateT.run_pure]
@@ -480,9 +459,6 @@ theorem defeq_view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (
   · simp only [RecRel_strVal, StrRec] at hkr
     exact ⟨fun hc => absurd (hkr.1.symm.trans hc) (by decide), fun _ => ⟨s, hview _ rfl⟩⟩
 
-theorem tag_beq_lit (h : Word) (hh : HW h) :
-    ((decE h).tag == ETag.lit) = decide (h >>> 28 = 8) := tag_beq_w h hh 8 (by decide) _ rfl 8 rfl
-
 /-! ## `is_nat_zero` -/
 
 /-- The model of `is_nat_zero`. -/
@@ -523,7 +499,7 @@ theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m 
     simp only [hs, hc, ↓reduceIte] at hW
     have hvo : viewOK m e LIT := ⟨hs, by simpa using hc⟩
     obtain ⟨hnat, hstr⟩ := defeq_view_lit_nat m a hR e he hvo h8
-    simp only [isNatZero, tag_beq_lit e he, h8, decide_true, ↓reduceIte, StateT.run_bind]
+    simp only [isNatZero, decE_tag_lit_beq e he, h8, decide_true, ↓reduceIte, StateT.run_bind]
     by_cases hk : tfld m LIT (tierW e) (idxW e) 0 = 0
     · obtain ⟨N, hv, hN⟩ := hnat hk
       simp only [hk, ne_eq, not_true_eq_false, ↓reduceIte, Option.some.injEq] at hW
@@ -540,12 +516,12 @@ theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m 
       subst hW
       simp only [view_run _ _ _ hv, except_ok_bind]
       rfl
-  have ht8 : ((decE e).tag == ETag.lit) = false := by rw [tag_beq_lit e he]; simp [h8]
+  have ht8 : ((decE e).tag == ETag.lit) = false := by rw [decE_tag_lit_beq e he]; simp [h8]
   rcases (Classical.em (e >>> 28 = 3)).symm with h3 | h3
   · simp only [h8, ↓reduceIte] at hW
     simp only [h3, ↓reduceIte, Option.some.injEq] at hW
     subst hW
-    simp only [isNatZero, ht8, tag_beq_const e he, h3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [isNatZero, ht8, decE_tag_const_beq e he, h3, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   simp only [h8, ↓reduceIte] at hW
   simp only [h3, ↓reduceIte] at hW
@@ -561,7 +537,7 @@ theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m 
   rw [pinW_rdW m 52 52 rfl] at hel
   have hnz := hP.names_lt 2 (by decide)
   rw [pinW_rdW m (1 + 2) (1 + 2) rfl] at hnz
-  simp only [isNatZero, ht8, tag_beq_const e he, h3, decide_true, Bool.false_eq_true, ↓reduceIte,
+  simp only [isNatZero, ht8, decE_tag_const_beq e he, h3, decide_true, Bool.false_eq_true, ↓reduceIte,
     StateT.run_bind, view_run _ _ _ hv, except_ok_bind, emptyLevels, pinEmptyLevels_run hP,
     pinNatZero, PIN_NAT_ZERO, pinAt_run hP 2 (by decide), StateT.run_pure,
     pinW_rdW m 52 52 rfl, pinW_rdW m (1 + 2) (1 + 2) rfl]
@@ -797,7 +773,7 @@ theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St)
   rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3
   · rw [hhHead_tag p n _ vis h h3] at hW
     exact hres 0 0 hW hw0 _
-      (headHint_run_nonconst fe _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
+      (headHint_run_nonconst fe _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simp [h3])) rfl
   by_cases hs : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [hhHead, h3, hs] at hW
   by_cases hcc : tcnt s₀.mem CONST (tierW h) ≤ idxW h
@@ -805,7 +781,7 @@ theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St)
   rw [hhHead_go p n _ vis h h3 hs hcc] at hW
   have hvo : viewOK s₀.mem h CONST := ⟨hs, by simpa using hcc⟩
   obtain ⟨hv, hnw, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3
-  have hrun1 := headHint_run_const fe _ a₀ _ _ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3]) hv
+  have hrun1 := headHint_run_const fe _ a₀ _ _ _ hgaf (by rw [decE_tag_const_beq _ hh]; simp [h3]) hv
   generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hrun1
   rcases hc2 : callW p n "env_find" [k, vis] s₀.mem with _ | ⟨r₂, m₂⟩
   · simp [hhEnv, hc2] at hW
@@ -1019,7 +995,7 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3
   · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte] at hW
     exact hres 0 hW hw0 _
-      (unfoldableHead_run_nonconst fe _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
+      (unfoldableHead_run_nonconst fe _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simp [h3])) rfl
   by_cases hs : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [h3, hs] at hW
   by_cases hcc : tcnt s₀.mem CONST (tierW h) ≤ idxW h
@@ -1027,7 +1003,7 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   simp only [h3, hs, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   have hvo : viewOK s₀.mem h CONST := ⟨hs, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3
-  have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3]
   generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hv
   rcases hc2 : callW p n "env_find" [k, vis] s₀.mem with _ | ⟨r₂, m₂⟩
   · simp [hc2] at hW
@@ -1178,7 +1154,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   rcases (Classical.em (a >>> 28 = 4)).symm with a4 | a4
   · simp only [ne_eq, a4, not_false_eq_true, ↓reduceIte] at hW
     refine hres 0 hW hw0 ?_
-    simp only [sameConstHeads, tag_beq_app a ha, a4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [sameConstHeads, decE_tag_app_beq a ha, a4, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   by_cases as : tierW a ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [a4, as] at hW
@@ -1206,14 +1182,14 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
         | _ => pure false
       else pure false : AM Bool).run a₀ := by
     intro _
-    simp only [sameConstHeads, tag_beq_app a ha, a4, decide_true, ↓reduceIte, StateT.run_bind,
+    simp only [sameConstHeads, decE_tag_app_beq a ha, a4, decide_true, ↓reduceIte, StateT.run_bind,
       view_run _ _ _ hva, except_ok_bind]
     rfl
   rw [hpre (pure false)] at hres
   rcases (Classical.em (b >>> 28 = 4)).symm with b4 | b4
   · simp only [b4, not_false_eq_true, ↓reduceIte] at hW
     refine hres 0 hW hw0 ?_
-    simp only [tag_beq_app b hb, b4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [decE_tag_app_beq b hb, b4, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   by_cases bs : tierW b ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [b4, bs] at hW
@@ -1222,7 +1198,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   simp only [b4, bs, bc, not_true_eq_false, ↓reduceIte] at hW
   have bvo : viewOK s₀.mem b APP := ⟨bs, by simpa using bc⟩
   obtain ⟨hvb, hf2, -⟩ := view_app s₀.mem a₀ hR b hb bvo b4
-  simp only [tag_beq_app b hb, b4, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvb,
+  simp only [decE_tag_app_beq b hb, b4, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvb,
     except_ok_bind] at hres
   generalize tfld s₀.mem APP (tierW a) (idxW a) 0 = f1 at hf1 hW hres
   generalize tfld s₀.mem APP (tierW b) (idxW b) 0 = f2 at hf2 hW hres
@@ -1237,7 +1213,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   rcases (Classical.em (g1 >>> 28 = 3)).symm with g3 | g3
   · simp only [ne_eq, g3, not_false_eq_true, ↓reduceIte] at hW
     refine hres 0 hW hw0 ?_
-    simp only [tag_beq_const g1 hh1, g3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [decE_tag_const_beq g1 hh1, g3, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   by_cases gs : tierW g1 ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [g3, gs] at hW
@@ -1246,7 +1222,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   simp only [g3, gs, gc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   have gvo : viewOK s₀.mem g1 CONST := ⟨gs, by simpa using gc⟩
   obtain ⟨hvg, hn1, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR g1 hh1 gvo g3
-  simp only [tag_beq_const g1 hh1, g3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvg,
+  simp only [decE_tag_const_beq g1 hh1, g3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvg,
     except_ok_bind] at hres
   generalize tfld s₀.mem CONST (tierW g1) (idxW g1) 0 = n1 at hn1 hW hres
   rcases hc2 : callW p n "get_app_fn" [f2] s₀.mem with _ | ⟨r₂, m₂⟩
@@ -1260,7 +1236,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   rcases (Classical.em (g2 >>> 28 = 3)).symm with k3 | k3
   · simp only [ne_eq, k3, not_false_eq_true, ↓reduceIte] at hW
     refine hres 0 hW hw0 ?_
-    simp only [tag_beq_const g2 hh2, k3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [decE_tag_const_beq g2 hh2, k3, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   by_cases ks : tierW g2 ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [k3, ks] at hW
@@ -1270,7 +1246,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   have kvo : viewOK s₀.mem g2 CONST := ⟨ks, by simpa using kc⟩
   obtain ⟨hvk, hn2, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR g2 hh2 kvo k3
   refine hres _ hW (by split <;> first | exact hw0 | exact hw1) ?_
-  simp only [tag_beq_const g2 hh2, k3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvk,
+  simp only [decE_tag_const_beq g2 hh2, k3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvk,
     except_ok_bind, StateT.run_pure]
   rw [decI_beq _ _ hn1 hn2, ite_bne]
   rfl

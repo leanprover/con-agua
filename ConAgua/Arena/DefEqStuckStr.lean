@@ -173,14 +173,14 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     rcases (Classical.em (fo >>> 28 = 3)).symm with h3 | h3
     · simp only [h3, not_false_eq_true, ↓reduceIte] at hW
       unfold stuckStrT
-      rw [tag_beq_const _ hfo]
+      rw [decE_tag_const_beq _ hfo]
       simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte]
       exact hirr a₀ s.mem M hS hW
     simp only [h3, not_true_eq_false, ↓reduceIte] at hW
     obtain ⟨h4, hW⟩ := of_ite_none hW
     obtain ⟨h5, hW⟩ := of_ite_none hW
     obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR fo hfo ⟨h4, by simpa using h5⟩ h3
-    have hct : ((decE fo).tag == ETag.const) = true := by rw [tag_beq_const _ hfo]; simp [h3]
+    have hct : ((decE fo).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hfo]; simp [h3]
     generalize tfld s.mem CONST (tierW fo) (idxW fo) 0 = co at hnw hW hv
     generalize tfld s.mem CONST (tierW fo) (idxW fo) 1 = uo at huw hW hv
     -- the pins

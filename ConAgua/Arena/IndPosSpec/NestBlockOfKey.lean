@@ -343,14 +343,6 @@ grind_pattern [ind_grind] entryK1_ok => entryK1 C (some (r, m1))
 theorem viewConst_run (h : EIdx) (a : AState) :
     (viewConst h).run a = .ok (a.store.viewConst h, a) := rfl
 
-theorem tag_const_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
-    ((decI w : EIdx).tag == ETag.const) = decide (w >>> 28 = 3) := by
-  have := decE_tag_eq w hw 3 (by decide)
-  have e1 : (ETag.const : UInt32) = UInt32.ofNat 3 := rfl
-  show ((decE w).tag == ETag.const) = _
-  rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, e1, this]
-  exact Iff.rfl
-
 theorem getD1_eq (vl : List Word) : vl.getD 1 0 = vl.tail.headD 0 := by
   rcases vl with _ | ⟨a, _ | ⟨b, t⟩⟩ <;> rfl
 
@@ -471,14 +463,6 @@ theorem EStore.viewBind_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.fora
     split at h
     · rename_i hs; rw [ite_eq_left hs]; exact ETables.getBind_of_get _ _ ht ty b h
     · simp at h
-
-theorem tag_forall_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
-    ((decI w : EIdx).tag == ETag.forallE) = decide (w >>> 28 = 6) := by
-  have := decE_tag_eq w hw 6 (by decide)
-  have e1 : (ETag.forallE : UInt32) = UInt32.ofNat 6 := rfl
-  show ((decE w).tag == ETag.forallE) = _
-  rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, e1, this]
-  exact Iff.rfl
 
 theorem viewBind_run (h : EIdx) (a : AState) :
     (viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
