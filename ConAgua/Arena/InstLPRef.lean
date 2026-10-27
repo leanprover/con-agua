@@ -94,7 +94,7 @@ theorem NmsR.set_past {N : Word → Name → Prop} {m : Mem} {A : ArrId} {d v : 
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
     refine .cons hk0 ?_ (ih (by rw [ho1, hkm]; omega))
     rw [rdW_set64]
-    have : ¬ (A = A ∧ d = o ∧ d.toNat < (m.arr64 A).size) := fun ⟨_, e, _⟩ => by subst e; omega
+    have : ¬ ((A : TieredArray) = A ∧ d = o ∧ d.toNat < (m.arr64 A).size) := fun ⟨_, e, _⟩ => by subst e; omega
     rw [ite_eq_right this]; exact hx
 
 theorem ReadLCOK.ext {a a' : AState} (hc : ReadLCOK a) (hx : Ext a.store a'.store)
