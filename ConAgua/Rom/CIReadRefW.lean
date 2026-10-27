@@ -1,3 +1,4 @@
+import ConAgua.Arena.LdRd
 import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -291,10 +292,16 @@ theorem rule_specW (q rr : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_rule" [q, rr]
     ⦃fun r s' => LocEq s' s₀ ∧ ruleW p n s₀.mem q rr = some (r, s'.mem); ⊤⦄ := by
   rci_pre hL.rci_rule
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rom_name", callW_spec p n "erec_alloc", callW_spec p n "rci_lvls_to", callW_spec p n "rom_exprs_to", callW_spec p n "rom_expr"] <;>
-    finish (gen := 30) (instances := 10000) [ruleW, ruleW.ruleTailW, ruleNestW, ntBW]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64, callW_spec p n "rom_u64",
+    callW_spec p n "rom_name", callW_spec p n "erec_alloc", callW_spec p n "rci_lvls_to",
+    callW_spec p n "rom_exprs_to", callW_spec p n "rom_expr"]
+  all_goals subst_vars
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
+    List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
+    Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 30) (instances := 10000) [lang_grind, arena_grind, ruleW, ruleW.ruleTailW, ruleNestW,
+    ntBW]
 
 theorem rulesTo_specW (q o k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_rules_to" [q, o, k]
@@ -310,10 +317,16 @@ theorem ci_specW (q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_ci" [q]
     ⦃fun r s' => LocEq s' s₀ ∧ ciW p n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
   rci_pre hL.rci_ci
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "erec_alloc", callW_spec p n "rci_cv", callW_spec p n "rom_expr", callW_spec p n "rci_caps", callW_spec p n "rci_rules_to"] <;>
-    finish (gen := 30) (instances := 10000) [ciW, ciTailW, ciDefnW, ciCtorW, ciRecW, ciSize, ntBW]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64, callW_spec p n "rom_u64",
+    callW_spec p n "erec_alloc", callW_spec p n "rci_cv", callW_spec p n "rom_expr", callW_spec p n "rci_caps",
+    callW_spec p n "rci_rules_to"]
+  all_goals subst_vars
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
+    List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
+    Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 30) (instances := 10000) [lang_grind, arena_grind, ciW, ciTailW, ciDefnW, ciCtorW,
+    ciRecW, ciSize, ntBW]
 
 theorem blockTo_specW (q o k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_block_to" [q, o, k]

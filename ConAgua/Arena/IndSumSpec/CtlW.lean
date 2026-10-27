@@ -1,3 +1,4 @@
+import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndSumSpec.CheckSumCtor
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -197,12 +198,13 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR
       ctorW cR n s₀.mem vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.hctor]
   simp only [callFn, checkSumCtorL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
     hcR (n + 2) "check_constant_val", stripPis_specF p hP.strip (n + 2),
     srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
       hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad (n + 2),
     hcR (n + 2) "open_pis_at_fvars_f", ftdsF_spec p hP.ad (n + 2),
     sdomsW_spec p hP.hg hP.hsd hP.ad.ftd cR hcR (n + 2), ctlW_spec p hP cR hcR n]
+  all_goals subst_vars
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
     BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
   all_goals grind (gen := 30) (instances := 5000) [lang_grind, arena_grind, ind_grind, ctorW, rdW_eq]

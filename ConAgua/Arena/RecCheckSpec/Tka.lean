@@ -1,3 +1,4 @@
+import ConAgua.Arena.LdRd
 import ConAgua.Arena.RecCheckSpec.TkhK2
 import ConAgua.Arena.RecCheckSpec.TruncSl
 import ConAgua.Arena.InferBodyIntern
@@ -237,10 +238,15 @@ theorem tkh_spec (p : Prog) (L : K53Look p) (cR : CallM) (hcR : CallSpec p cR) (
   | succ n =>
     rw [invoke_eq _ L.tkh]
     simp only [callFn, targetK53Heads]
-    sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, gafF_spec p L.ad n,
-        gaaF_spec p L.ad n, eView_spec p L.hv n, tka_spec p L cR hcR n] <;>
-      finish (gen := 40) (instances := 20000) [loc_init4, loc_init5, loc_init6]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, gafF_spec p L.ad n,
+      gaaF_spec p L.ad n, eView_spec p L.hv n, tka_spec p L cR hcR n]
+    all_goals subst_vars
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons,
+      List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil, Locals.init_cons_zero,
+      Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 40) (instances := 20000) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5,
+      loc_init6]
 
 /-! ## `target_k53` -/
 
