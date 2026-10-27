@@ -353,7 +353,7 @@ scanner reads a record at `i` whose next position is `nx`, and con-ron's `applyL
 with `ArenaD` and `StateDR` holding of the memory after. -/
 @[refines ConRon.Arena.Frontend.applyLine]
 theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
-    (hpf : p.lookup "front_line" = some frontLine) (hps : p.lookup "str_put" = some strPut)
+    (hpf : p.lookup "front_line" = some frontLine)
     (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
     (hpl : p.lookup "apply_level" = some applyLevel) (hpr : p.lookup "apply_rec" = some applyRec)
     (hpt : p.lookup "apply_str" = some applyStr) (hE : ExprLookups p)

@@ -268,6 +268,7 @@ input `b` and related to the arena state `a₀` (by `ArenaD`) and to the blank p
 `parseBytes b` accepts from `a₀`, and the memory after is related to its final arena state by
 `ArenaD` and to its final parse state by `StateDR`. -/
 
+omit hps in
 @[refines ConRon.Arena.Frontend.parseBytes]
 theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
@@ -362,7 +363,7 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     invoke frontAllProg (exec frontAllProg n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
       ArenaD s'.mem a' ∧ StateDR s'.mem st'; ⊤⦄ :=
-  frontRun_refines frontAllProg frontAllProg_scan frontAllProg_front rfl rfl rfl rfl rfl rfl rfl
+  frontRun_refines frontAllProg frontAllProg_scan frontAllProg_front rfl rfl rfl rfl rfl rfl
     frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl rfl rfl frontAllProg_indFields
     frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine b h64 hsize n s₀ hm hpool a₀ hA hD
     hok hoff hpins hmode

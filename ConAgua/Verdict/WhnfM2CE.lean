@@ -934,6 +934,7 @@ theorem m2cCtorE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
   simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind']
   exact h'
 
+omit hpi in
 /-- **`m2c_head`'s verdicts** are `m2c_ctor`'s. -/
 theorem m2cHeadE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -1039,7 +1040,7 @@ theorem majorToCtorE_of : MajorToCtorE p := by
   | zero => exact ErrClaim.of_callE_zeroW hW'
   | succ N =>
   rw [majorToCtor_eq]
-  exact m2cHeadE_ok p hp hc hpi hE hcc hnv hPI N F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+  exact m2cHeadE_ok p hp hc hE hcc hnv hPI N F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d ro rc major hm4 hebm hmaj rules s₀.mem a₀ MM hS hr er hW'
 
 end top
