@@ -55,12 +55,12 @@ theorem memoRV_congr (S : MemoSch) (K : MemoKey κ) (VR : Mem → Word → ν �
 
 /-- A memo whose value relation reads no memory, over an array that is not frozen. -/
 theorem KeepNF.memoRV {S : MemoSch} {K : MemoKey κ} {VR : Mem → Word → ν → Prop} {m m' : Mem}
-    (hk : KeepNF m m') (hS : S.arr ∉ fzSrcs) (hV : ∀ w v, VR m w v → VR m' w v)
+    (hk : KeepNF m m') (hS : (S.arr : TieredArray) ∉ fzSrcs) (hV : ∀ w v, VR m w v → VR m' w v)
     {mp : Std.HashMap κ ν} (hR : MemoRV S K VR m mp) : MemoRV S K VR m' mp :=
   memoRV_congr S K VR (hk.arr _ hS) hk.ctl hV hR
 
 theorem KeepNF.memoRG {S : MemoSch} {K : MemoKey κ} {dv : Word → ν} {m m' : Mem}
-    (hk : KeepNF m m') (hS : S.arr ∉ fzSrcs) {mp : Std.HashMap κ ν} (hR : MemoRG S K dv m mp) :
+    (hk : KeepNF m m') (hS : (S.arr : TieredArray) ∉ fzSrcs) {mp : Std.HashMap κ ν} (hR : MemoRG S K dv m mp) :
     MemoRG S K dv m' mp :=
   hk.memoRV hS (fun _ _ h => h) hR
 
@@ -78,7 +78,7 @@ theorem KeepNF.memosR {ms : Memos} (h : MemosR m ms) : MemosR m' ms :=
 
 theorem KeepNF.modeR {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
     {VR : Mem → Word → ν → Prop} {M : Std.HashMap (κ × Word) ν} {eb : Word}
-    {t te : Std.HashMap κ ν} (hS : S.arr ∉ fzSrcs) (hV : VConst VR) (h : ModeR S K VR m M eb t te) :
+    {t te : Std.HashMap κ ν} (hS : (S.arr : TieredArray) ∉ fzSrcs) (hV : VConst VR) (h : ModeR S K VR m M eb t te) :
     ModeR S K VR m' M eb t te :=
   ⟨hk.memoRV hS (hV m m') h.memo, h.cur, h.stored, h.empty⟩
 

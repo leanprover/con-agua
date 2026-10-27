@@ -149,7 +149,7 @@ to a memory with the pool kept (`PoolTr`). -/
 theorem rTrans_pool (hF : RFrame S R hs)
     (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA S.ra t) = m₁.arr64 (tierA S.ra t)) → PoolTr m₁ m₂ →
       (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, hs m₂ t i = hs m₁ t i)
-    (hx : ∀ b ∈ [POOL, POOL1, PT0, CTL], b ≠ S.ra ∧ b ≠ tier1 S.ra)
+    (hx : ∀ b ∈ ([POOL, POOL1, PT0, CTL] : List TieredArray), b ≠ S.ra ∧ b ≠ tier1 S.ra)
     {m m' : Mem} (_hw : m.SameShape m') (hp : PoolTr m m') : RTrans S R hs m m' := by
   intro t i hf
   let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
@@ -158,13 +158,13 @@ theorem rTrans_pool (hF : RFrame S R hs)
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right hne]
     exact Mem.setA_self m m' _
   have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _
-  have eo : ∀ b, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
+  have eo : ∀ b : TieredArray, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right h2, Mem.setA_arr, ite_eq_right h1]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
     rcases tierA_eq_or S.ra t with e | e <;> rw [e]
     · exact e0
     · exact e1
-  have hb : ∀ b ∈ [POOL, POOL1, PT0, CTL], m₁.arr64 b = m.arr64 b := fun b hb' =>
+  have hb : ∀ b ∈ ([POOL, POOL1, PT0, CTL] : List TieredArray), m₁.arr64 b = m.arr64 b := fun b hb' =>
     eo b (hx b hb').1 (hx b hb').2
   have hctl : m₁.arr64 CTL = m.arr64 CTL := hb CTL (by simp)
   have hout : OutEq S m m₁ := ⟨fun b h1 h1' _ _ _ => eo b h1 h1', by rw [hctl]⟩

@@ -53,15 +53,13 @@ theorem Mem.setA_self (m m' : Mem) (b : TieredArray) :
 
 /-! ## `truncList` -/
 
-theorem truncList_other (m₀ : Mem) (b : ArrId) :
-    ∀ (zs : List (ArrId × Fz)) (m : Mem), (∀ e ∈ zs, e.2.src ≠ b) →
+theorem truncList_other (m₀ : Mem) (b : TieredArray) :
+    ∀ (zs : List (ArrId × Fz)) (m : Mem), (∀ e ∈ zs, (e.2.src : TieredArray) ≠ b) →
       (truncList m₀ m zs).arr64 b = m.arr64 b
   | [], _, _ => rfl
   | (x, z) :: zs, m, h => by
     rw [truncList, truncList_other m₀ b zs _ (fun e he => h e (List.mem_cons_of_mem _ he))]
-    have hne : (b : TieredArray) ≠ z.src :=
-      TieredArray.t0_ne (fun e => h (x, z) List.mem_cons_self e.symm)
-    exact ite_eq_right hne
+    exact ite_eq_right (h (x, z) List.mem_cons_self).symm
 
 theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
     ∀ (zs : List (ArrId × Fz)) (m : Mem), (x, z) ∈ zs →
@@ -73,21 +71,21 @@ theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
     rw [truncList]
     rcases List.mem_cons.mp h with e | e
     · cases e
-      rw [truncList_other m₀ z.src zs _ (fun e he => (hp.1 e he).symm)]
+      rw [truncList_other m₀ z.src zs _ (fun e he => TieredArray.t0_ne (hp.1 e he).symm)]
       exact ite_eq_left rfl
     · exact truncList_mem m₀ x z zs _ e hp.2
 
 /-! ## `truncFrozen` -/
 
 /-- The frozen arrays (sources), as a literal. -/
-def fzSrcs : List ArrId :=
+def fzSrcs : List TieredArray := tier0s
   [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
    SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
    FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
    FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA, EIXS, EIXN, TIXA, TIXS,
    TIXN, EREC, PEND]
 
-theorem frozen_srcs : (frozen.drop 1).map (·.2.src) = fzSrcs := by decide
+theorem frozen_srcs : (frozen.drop 1).map (fun e => (e.2.src : TieredArray)) = fzSrcs := by decide
 
 theorem fzSrcs_nodup : fzSrcs.Nodup := by decide
 
@@ -96,10 +94,10 @@ theorem truncFrozen_words (m : Mem) : m.SameShape (truncFrozen m) := trivial
 theorem frozen_pairwise : (frozen.drop 1).Pairwise (fun e e' => e.2.src ≠ e'.2.src) := by
   have := fzSrcs_nodup
   rw [← frozen_srcs, List.Nodup, List.pairwise_map] at this
-  exact this
+  exact this.imp fun h e => h (congrArg TieredArray.t0 e)
 
 /-- **An array that is not frozen is unchanged.** -/
-theorem truncFrozen_other (m : Mem) (b : ArrId) (hb : b ∉ fzSrcs) :
+theorem truncFrozen_other (m : Mem) (b : TieredArray) (hb : b ∉ fzSrcs) :
     (truncFrozen m).arr64 b = m.arr64 b :=
   truncList_other m b _ m (fun e he hs => hb (by
     rw [← frozen_srcs, List.mem_map]; exact ⟨e, he, hs⟩))
