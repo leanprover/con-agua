@@ -67,8 +67,8 @@ def stepPc (w : Word) : Bool :=
 
 theorem stepPa_mem (a : TieredArray) (h : stepPa a = true) : a ∈ stepA := by
   simp only [stepPa, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,
-    ne_eq] at h
-  simp [stepA, List.mem_filter, List.mem_range, h]
+    ne_eq, List.contains_iff_mem] at h
+  simp [stepA, List.mem_filter, h]
 
 theorem stepPc_mem (w : Word) (h : stepPc w = true) : w ∈ stepC := by
   simp only [stepPc, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,
