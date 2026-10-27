@@ -266,6 +266,14 @@ theorem Tab.wposInv_pos64 (t : Tab) {s : TieredArray} (h : t.dom64 s = true) :
   unfold Tab.pos64; exact t.wposInv_wpos (t.curNum_lt h)
 theorem Tab.pos64_t0 (t : Tab) (a : ArrId) : t.pos64 (TieredArray.t0 a) = t.wpos a := by
   unfold Tab.pos64; simp
+/-- A tier-0 number of today's layout is the number of exactly one word array. -/
+theorem curNum_eq_iff {s : TieredArray} {a : ArrId} (ha : a < tierOff) :
+    curNum s = a ↔ s = TieredArray.t0 a := by
+  rcases s with ⟨x, _ | _⟩
+  · simp [curNum, TieredArray.t0]
+  · have ha' : @LT.lt Nat _ a tierOff := ha
+    simp only [curNum, TieredArray.t0, TieredArray.mk.injEq, ite_true]; simp; omega
+
 /-- `wposInv_lt` at type `Nat` (`omega` does not read a comparison at type `ArrId`). -/
 theorem Tab.wposInv_ltN (t : Tab) {p : Nat} (h : p < t.nw) : @LT.lt Nat _ (t.wposInv p) t.nw :=
   t.wposInv_lt h
