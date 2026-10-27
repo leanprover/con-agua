@@ -668,7 +668,15 @@ theorem keyAtG1_spec (hp : p.lookup "key_at_g1" = some keyAtG1) (n : Nat) (s₀ 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc]
+    all_goals simp only [Cond.pval, Expr.pval, rd8_byteW, hm, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true,
+      beq_iff_eq] at *
+    all_goals clear hp
+    all_goals subst_vars
+    all_goals first
+      | (simp only [keyAtG1N, Sig.retVal, Sig.retOr, *, reduceIte]; done)
+      | grind (splits := 40) [lang_grind, keyAtG1N]
 
 attribute [local lang_grind] keyAtG2N in
 theorem keyAtG2_spec (hp : p.lookup "key_at_g2" = some keyAtG2) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
@@ -686,7 +694,14 @@ theorem keyAtG2_spec (hp : p.lookup "key_at_g2" = some keyAtG2) (n : Nat) (s₀ 
     all_goals simp only [Cond.pval, Expr.pval, rd8_byteW, hm, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true,
       beq_iff_eq] at *
-    all_goals grind (splits := 40) [lang_grind, keyAtG2N]
+    -- `subst_vars` drops the `Bool` copies of the conditions (`a = (x == k && …)`), on which
+    -- `grind` split (12 s for the fall-through of the `kl = 9` names). With the path decided by
+    -- the hypotheses, `simp` evaluates the model; `grind` only for what is left.
+    all_goals clear hp
+    all_goals subst_vars
+    all_goals first
+      | (simp only [keyAtG2N, Sig.retVal, Sig.retOr, *, reduceIte]; done)
+      | grind (splits := 40) [lang_grind, keyAtG2N]
 
 attribute [local lang_grind] keyAtG3N in
 theorem keyAtG3_spec (hp : p.lookup "key_at_g3" = some keyAtG3) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
@@ -698,7 +713,15 @@ theorem keyAtG3_spec (hp : p.lookup "key_at_g3" = some keyAtG3) (n : Nat) (s₀ 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc]
+    all_goals simp only [Cond.pval, Expr.pval, rd8_byteW, hm, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true,
+      beq_iff_eq] at *
+    all_goals clear hp
+    all_goals subst_vars
+    all_goals first
+      | (simp only [keyAtG3N, Sig.retVal, Sig.retOr, *, reduceIte]; done)
+      | grind (splits := 40) [lang_grind, keyAtG3N]
 
 attribute [local lang_grind] keyAtG4N in
 theorem keyAtG4_spec (hp : p.lookup "key_at_g4" = some keyAtG4) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
@@ -710,7 +733,15 @@ theorem keyAtG4_spec (hp : p.lookup "key_at_g4" = some keyAtG4) (n : Nat) (s₀ 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc]
+    all_goals simp only [Cond.pval, Expr.pval, rd8_byteW, hm, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true,
+      beq_iff_eq] at *
+    all_goals clear hp
+    all_goals subst_vars
+    all_goals first
+      | (simp only [keyAtG4N, Sig.retVal, Sig.retOr, *, reduceIte]; done)
+      | grind (splits := 40) [lang_grind, keyAtG4N]
 
 attribute [local lang_grind] keyAtG5N in
 theorem keyAtG5_spec (hp : p.lookup "key_at_g5" = some keyAtG5) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
@@ -722,7 +753,15 @@ theorem keyAtG5_spec (hp : p.lookup "key_at_g5" = some keyAtG5) (n : Nat) (s₀ 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc]
+    all_goals simp only [Cond.pval, Expr.pval, rd8_byteW, hm, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true,
+      beq_iff_eq] at *
+    all_goals clear hp
+    all_goals subst_vars
+    all_goals first
+      | (simp only [keyAtG5N, Sig.retVal, Sig.retOr, *, reduceIte]; done)
+      | grind (splits := 40) [lang_grind, keyAtG5N]
 
 attribute [local lang_grind] keyAtG6N in
 theorem keyAtG6_spec (hp : p.lookup "key_at_g6" = some keyAtG6) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
@@ -734,7 +773,15 @@ theorem keyAtG6_spec (hp : p.lookup "key_at_g6" = some keyAtG6) (n : Nat) (s₀ 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc]
+    all_goals simp only [Cond.pval, Expr.pval, rd8_byteW, hm, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true,
+      beq_iff_eq] at *
+    all_goals clear hp
+    all_goals subst_vars
+    all_goals first
+      | (simp only [keyAtG6N, Sig.retVal, Sig.retOr, *, reduceIte]; done)
+      | grind (splits := 40) [lang_grind, keyAtG6N]
 
 end keyAtGroups
 
