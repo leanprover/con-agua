@@ -6,7 +6,7 @@ import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 /-!
 # `nest_cont_key` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`keyOK_step`'s proof (`IndPos2SpecS`) with the twin side of con-ron's `nestContKey_spec`: the
+`keyOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestContKey_spec`: the
 parameters' closedness (`closedAll_spec`), then a cache hit or a new frame (the block's `NewOKC`
 at `n`).
 -/

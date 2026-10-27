@@ -12,8 +12,6 @@ section
 
 set_option linter.unusedSectionVars false
 
-/-! Continued from `IndPos2SpecD.lean` (split by size; lane `indproofs`). -/
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -917,7 +915,7 @@ open L.Arena
 
 /-! ## Memo frames of the pieces (lane `indproofs2`, helper `posmemo`)
 
-`MFr S T` (`IndPos2SpecD`): the writers below leave every per-call memo outside `S` alone; the
+`MFr S T` (`IndPosSpec/RpGoStep`): the writers below leave every per-call memo outside `S` alone; the
 banked memo's `RfFr` is a corollary (`RfFr.of_mfr`). -/
 
 theorem RfFr.of_mfr {S : List ArrId} {T : List Word} {m m' : Mem} (h : MFr S T m m') (hS : RFM ∉ S)

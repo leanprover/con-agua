@@ -7,7 +7,7 @@ import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 /-!
 # `nest_pos_app` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`appOK_step`'s proof (`IndPos2SpecS`) with the twin side of con-ron's `nestPos_succ` (its head
+`appOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestPos_succ` (its head
 case): the reduct's arguments and head (no state change), a hole (`pfK`: `nestOcc_spec`,
 `nestArity_spec`) or a container (the block's `ContOKC` at `n`).
 -/

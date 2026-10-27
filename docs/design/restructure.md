@@ -139,3 +139,51 @@ modules were processed in an order where a later change could cut an earlier mod
 Estimated critical path (same module times) 1353 s → 1160 s, with batch 4 1118 s; it now runs
 `IndPos2SpecA…M` (a chain of real uses between the files) → `DeclDivMod5…9` → `Arena.Checker` →
 `Checker.LoopDecl*` → `Checker.IndArm` → `Verdict.TopE`.
+
+## Batch 5: `IndPosSpec*`, `IndPos2Spec*`, `IndPosMemo`, `DeclDivMod*` regrouped by function
+
+After batch 3 the critical path still ran through `IndPos2SpecA → … → M` and `DeclDivMod5 → … → 9`:
+real uses between the files, but at the level of declarations the 42 modules (13 000 lines, 409
+module-seconds) are shallow: the longest chain of declarations that use each other, with each
+module's time spread over its declarations by lines, is about 15 s. So the declarations were
+regrouped into new modules, `ConAgua/Arena/IndPosSpec/` (96) and `ConAgua/Arena/DeclDivModSpec/`
+(13), and the 42 old modules deleted.
+
+The tool (`regroup.py`, with `lsplit.py` splitting a file into its top-level commands):
+
+* **Items.** Each top-level command with its doc comment and attributes; scope commands
+  (`namespace`, `section`, `variable`, `open`, `set_option`, `include … in` prefixes) are the
+  skeleton every new file repeats around its items, with sections, namespaces and `variable`s
+  that hold no item of the new file dropped. `attribute [ind_grind] a b c` is split over the new
+  files of `a`, `b`, `c`; `grind_pattern`, `#guard_msgs` follow their declaration.
+* **Uses.** From the elaborated environment (`Deps.lean`: the constants each declaration's type and
+  value mention), plus identifiers in the text that name exactly one earlier declaration of the
+  family (a `simp` that uses an `rfl`-lemma leaves no trace in the proof term), plus the keyword of
+  a family `syntax`/`macro` (`mfr_auto`), plus the models an `l_model` command defines (`fns [h ↦ m]`).
+* **Groups.** Every declaration used outside the family, tagged `@[refines]`, or unused starts a
+  group; a declaration all of whose users are in one group joins it; the rest are merged where
+  this creates no cycle, also through the outside modules that sit between family modules (a
+  module the family imports that imports the family itself). Then groups are coarsened: a group
+  with a single user that nothing outside uses goes into it, the leaves and the sinks of one old
+  file merge, groups under 40 lines with one user go into it, and groups of one old file that
+  become ready within 15 s of each other (estimated with the old module times) merge. Named after
+  the `@[refines]` target or the largest theorem.
+* **Imports.** A new module imports the groups its items use, the outside modules its items'
+  constants come from and the old files' outside imports, then transitively reduced. Every other
+  module that imported an old module imports the groups whose constants it uses; then every
+  module is checked (to a fixpoint) to still reach what it used and reached before.
+* **Prose.** Mentions of the old files in comments name the new module holding the declaration the
+  sentence names, else the one holding most of the old file; "continued from …, split by size"
+  notes are dropped.
+
+What the build found and the tool learned (each a rule above, or a forced choice): `include h in`
+prefixes taken as scope commands; a namespace whose `namespace` line carries a section comment;
+`l_model` defining models; the `mfr_auto` macro; equation lemmas of the `nb*W` mutual block that
+`rw [nbPosW]` could only generate next to the definitions (forced into one module with them,
+`together` in the batch's configuration); one `rw … ; rfl` whose `rw` now closes the goal itself
+(`MapOKStep`, `try rfl`). All 109 new modules compiled from scratch (`LAKE_COLD=1`) with no
+warning; theorem statements are untouched (each declaration's text moved verbatim).
+
+Estimated critical path (old module times, the new modules' times from their cold compile)
+1118 s → 979 s. It now runs `IndSumSpec5`, `RecCheckSpec10…15` (83 s for `RecCheckSpec15`),
+`Checker.IndArmClosed` (162 s) and the inductive arm's top.

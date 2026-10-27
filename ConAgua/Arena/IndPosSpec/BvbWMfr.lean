@@ -55,7 +55,7 @@ theorem erToIwW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erT
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_mfr hal).trans (MFr.of_iw (posmemo_erCopyW_iw _ _ _ _ _ _ hc))
 
-/-! ## Frames of the models, by `mfr_auto` (`IndPos2SpecC`) -/
+/-! ## Frames of the models, by `mfr_auto` (`IndPosSpec/NoGoStep`) -/
 
 /-- Across `fvar_b` (its write set, the `fvarRange` memo). -/
 theorem MFr.ofFvbF {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r, m')) : MFr [] [] m m' :=

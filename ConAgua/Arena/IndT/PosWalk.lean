@@ -5,7 +5,7 @@ import ConAgua.Arena.IndPosSpec.P2sfW
 /-!
 # `nest_ctors_walk` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`walkOK_step`'s proof (`IndPos2SpecS`) with the twin side of con-ron's `nestCtors_spec` (its field
+`walkOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestCtors_spec` (its field
 walk): the root frame's fuel (`whnfWalkFuel`, the state unchanged), the fields (the block's
 `FieldsOKC` at `n`, con-ron's `nestFields_spec` on the run for the walked telescope's
 denotations), the telescope closed (`closeTelescope_spec`).

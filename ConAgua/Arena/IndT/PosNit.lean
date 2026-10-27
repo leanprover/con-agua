@@ -4,7 +4,7 @@ import ConAgua.Arena.IndPosSpec.NitLe
 /-!
 # `nest_inst_type`'s level comparison under `StageC` (lane `indstaget`, helper `rcF`)
 
-`NitLe` (`IndPos2SpecI.lean`) at `realCall p`: `lvl_eq_fueled` with the real `lvl_eq_c`
+`NitLe` (`IndPosSpec/NitLe.lean`) at `realCall p`: `lvl_eq_fueled` with the real `lvl_eq_c`
 (`lveC_okC`), from `StageC` at `nest_inst_type`'s start and the context's and key's denotations.
 The twin's steps before the comparison are con-ron's `nestInstType_spec`'s: `stripPis`
 (`stripPis_pstep`), `instLPFast` (`instLPFast_cstep`), `instPisWith` (`instPisWith_spec`),

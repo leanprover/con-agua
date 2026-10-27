@@ -6,7 +6,7 @@ import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 /-!
 # `nest_ctors` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`ctorsOK_step`'s proof (`IndPos2SpecS`) with the twin side of con-ron's `nestCtors_spec`: one
+`ctorsOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestCtors_spec`: one
 constructor (the block's `OneOKC` at `n`, its out record and state denoting), the record appended
 (L only), the rest (the block's `CtorsOKC` at `n`).
 -/

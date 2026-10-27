@@ -4,7 +4,7 @@ import ConAgua.Arena.IndPosSpec.NestCrest
 /-!
 # `nest_pos_bind` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`bindOK_step`'s proof (`IndPos2SpecS`) with the twin side of con-ron's `nestPos_succ` (its `Π`
+`bindOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestPos_succ` (its `Π`
 case): the domain's occurrence check (no state change), its variable (`internFVarE_run`), the body
 opened (`instantiate1Fast_run`), walked (the block's `PosOKC` at `n`, `nestPos_spec` on the run
 for the walked body's denotation), abstracted (`abstract1Fast_spec`) and rebuilt

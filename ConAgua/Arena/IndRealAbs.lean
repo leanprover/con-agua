@@ -114,7 +114,7 @@ theorem AbsOK.frameD {A : List ArrId} {C : List Word} {m m' : Mem} (h : AbsOK m)
 /-! ## Steps that keep it
 
 `AFr m m'`: a step from `m` to `m'` keeps the memo well formed. Model frames are proved by
-`afr_auto h [f₁, …]` from the callees' (the counterpart of `mfr_auto`, `IndPosMemo.lean`). -/
+`afr_auto h [f₁, …]` from the callees' (the counterpart of `mfr_auto`, `IndPosSpec/NestCrest.lean`). -/
 
 /-- The step from `m` to `m'` keeps `AbsOK`. -/
 def AFr (m m' : Mem) : Prop := AbsOK m → AbsOK m'

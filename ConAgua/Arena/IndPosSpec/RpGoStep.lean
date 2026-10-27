@@ -9,8 +9,6 @@ import ConAgua.Arena.IndPosSpec.NestOccGo
 
 set_option linter.unusedSectionVars false
 
-/-! Continued from `IndPos2SpecC.lean` (split by size; lane `indproofs`). -/
-
 noncomputable section
 
 set_option experimental.vcgen true

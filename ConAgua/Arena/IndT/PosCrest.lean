@@ -4,7 +4,7 @@ import ConAgua.Arena.IndT.RecGen19
 /-!
 # `nest_ctors_crest` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
-`p2ctW_ok`'s proof (`IndPos2SpecM`) at `realCall p`, its twin side transcribed from con-ron's
+`p2ctW_ok`'s proof (`IndPosSpec/NestCrest`) at `realCall p`, its twin side transcribed from con-ron's
 `nestCtors_spec` (the cons case's head): the level instantiation (`instLPFast_cstep`), the crest
 (`nestCrest_spec`, well scoped by `WScoped_nestCrest`), its type (`inferC_rsim`) and that type's
 sort (`ensureSortC_rsim`).
