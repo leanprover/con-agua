@@ -46,8 +46,8 @@ def fzStores : List (ArrId × ArrId × Nat × Nat) :=
 /-- The one-word columns (derived columns `ADER`‥`PJDER`, hash/level columns `SHP`‥`FVLP`) and the
 count slot of their store. -/
 def fzCols : List (ArrId × Nat) :=
-  [(42, 4), (43, 28), (44, 30), (45, 20), (46, 32),
-   (55, 6), (56, 10), (57, 12), (58, 40), (59, 16), (60, 18), (61, 26)]
+  [(ADER, 4), (LADER, 28), (FADER, 30), (LEDER, 20), (PJDER, 32),
+   (SHP, 6), (MHP, 10), (IHP, 12), (LSHP, 40), (SOLP, 16), (CLP, 18), (FVLP, 26)]
 
 /-- A frozen array's image: the prefix of `src` with extent `e`. -/
 structure Fz where

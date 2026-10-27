@@ -283,7 +283,7 @@ theorem applyDeclW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : State
     hP (by rw [hrd]; simp; omega) hps
   have hm'D : m₁.arr64 DECL = m.arr64 DECL := F2.1 DECL (by decide) (by decide)
   have hE₁ : TblR m₁ EID st.exprs :=
-    hD.exprs.frame F2 (.inr (.inr rfl)) (by simp [DLP, idArrs]) (by simp)
+    hD.exprs.frame F2 (.inr (.inr rfl)) (by simp [DLP, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp)
   -- the push, with its value word
   have hpush : ∃ v, pushW m₁ k (tblW m NID name) (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0)
       (tblW m EID type) v q hn = some m' ∧ v.toNat < 2 ^ 32 := by

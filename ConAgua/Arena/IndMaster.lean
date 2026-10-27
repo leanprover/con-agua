@@ -367,7 +367,7 @@ theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 200 (by simp)
   have hg : ErecGrow m m' := ⟨htop, hlow, hf.2.2.1 EREC⟩
   have hC : CheckR dn m' a vis fe :=
-    ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, EREC])
+    ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, EREC, BMEMO, LMEMO, IMEMO, FRMEMO])
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hS.1.arena.1,
       DerR.frameM _ _ m m' hf (by decide) a hS.1.arena.2⟩,
      hS.1.core.frame (fun b hb => by simp at hb; subst hb; decide)

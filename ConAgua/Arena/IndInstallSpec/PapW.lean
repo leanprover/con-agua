@@ -105,7 +105,7 @@ theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word
   have hC : CheckR dn m' a vis' fe' :=
     ⟨⟨ArenaR.frame (fun b hb => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-          rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [arenaArrs, storeArrs, memoArrs, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON])
+          rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [arenaArrs, storeArrs, memoArrs, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON, BMEMO, LMEMO, IMEMO, FRMEMO])
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
         hS.1.arena.1,
       DerR.frameM _ _ m _ hfr (by decide) a hS.1.arena.2⟩,

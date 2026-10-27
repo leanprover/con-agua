@@ -166,7 +166,7 @@ theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above6
   h.frame hf (not_low_tier _ (by simp [NID])) (not_low_tier _ (by simp [LID]))
     (not_low_tier _ (by simp [EID])) (not_low_tier _ (by simp [DECL])) (not_low_tier _ (by simp [DLP]))
     (fun x hx h => by
-      simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at h
+      simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false, NID, LID, EID, NIDS, LIDS, EIDS] at h
       simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at hx
       rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> rcases hx with hx | ⟨y, hy, hy'⟩ <;>
         first | (revert hx; decide) | exact absurd hy' (tier1_ne (by decide))) (fun x hx => by
