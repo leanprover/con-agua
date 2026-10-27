@@ -40,7 +40,7 @@ theorem mkApp_core {p : Prog} (hp : SpineProg p) {n : Nat} {dn : NIdx → Option
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [AREC, ASLOT, ADER])
+    (by simp [tier1, tierOff, AREC, ASLOT, ADER])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)

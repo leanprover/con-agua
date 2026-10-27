@@ -360,7 +360,7 @@ theorem MFr.ofI1F {m m' : Mem} {args r : List Word} (h : i1F m args = some (r, m
 
 /-- `mk_app_n_f` writes the stack, its top and the app tables (`mknF_frame`). -/
 theorem MFr.ofMknF {m m' : Mem} {args r : List Word} (h : mknF m args = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (mknF_frame h) (by simp [SPN, AREC, ASLOT, ADER]) (by simp)
+  MFr.of_frame (mknF_frame h) (by simp [tier1, tierOff, SPN, AREC, ASLOT, ADER]) (by simp)
 
 /-- The memo array `S.arr` and its stamp word survive an `MFr` that leaves them out. -/
 theorem MFr.memo {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (h : MFr S0 T0 m m') (b : ArrId) (x : Word)

@@ -258,7 +258,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       cplL a₀ := by
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
-  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [ConsSch.wset, REC, SLOT]) (by simp [ConsSch.wset, REC, SLOT]) (by simp [ConsSch.wset, REC, SLOT])
+  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [tier1, tierOff, ConsSch.wset, REC, SLOT]) (by simp [tier1, tierOff, ConsSch.wset, REC, SLOT]) (by simp [tier1, tierOff, ConsSch.wset, REC, SLOT])
     (by simp) (by simp)
     (hmode := hK.1.mode.frame hfr (by simp) (by simp)), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 
