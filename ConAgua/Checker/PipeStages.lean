@@ -107,7 +107,7 @@ theorem Since.step {l m m' : Mem} {pb : ByteArray} (h : Since l m pb) (hk : L.Ke
 
 /-! ## `cap_check`, `pb_check` -/
 
-theorem capStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hs : ∀ n ∈ s64, n < 2 ^ 64) :
+theorem capStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hs : ∀ s, sz s < 2 ^ 64) :
     RelSpec checkerProg "cap_check" (· = loadMem b pb sz)
       fun _ m => R1 (loadMem b pb sz) m := by
   intro n _hn s₀ hm
