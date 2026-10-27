@@ -258,7 +258,9 @@ theorem frozen_facts {k : Nat} (hk : k < frozen.length) (h1 : 1 ≤ k) :
     frozenIdsL.idxOf? ↑frozen[k].1 = some (k + 1) ∧ (frozen[k].1 : TieredArray) ∉ freshZ ∧
       frozen[k].1 ≠ CTL := by
   have := List.all_eq_true.mp frozen_facts_all k (List.mem_range.mpr (by rwa [frozen_length] at hk))
-  rw [getElem!_pos (frozen.map (·.1)) k (by simpa using hk), List.getElem_map] at this
+  rw [getElem!_pos (frozen.map (·.1)) k (by simpa using hk),
+    getElem!_pos (frozen.map fun x => (↑x.1 : TieredArray)) k (by simpa using hk),
+    List.getElem_map, List.getElem_map] at this
   simp only [Bool.or_eq_true, beq_iff_eq, Bool.and_eq_true, Bool.not_eq_true', bne_iff_ne, ne_eq] at this
   rcases this with h | ⟨⟨h2, h3⟩, h4⟩
   · omega
