@@ -8,7 +8,6 @@ meta import ConAgua.Scan.Lit
 meta import ConAgua.Scan.Utf8
 public import ConAgua.Compiler.Run
 public import ConAgua.L.Notation
-public import ConAgua.L.Arrays
 public import ConAgua.Layout
 /-!
 # Differential tests: compiled code on Kraken's semantics against `L.run`
