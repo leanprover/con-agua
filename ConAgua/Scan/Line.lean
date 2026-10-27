@@ -620,6 +620,7 @@ include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hp
 
 attribute [local lang_grind] Mbr.err idxCode
 
+omit hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd in
 theorem lineArmIdx_spec (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 21 ∨ s.loc 6 = 19 ∨ s.loc 6 = 18)⦄
     step p (exec p n) lineArmIdx
@@ -628,7 +629,7 @@ theorem lineArmIdx_spec (n : Nat) (s₁ : St) :
   dsimp only [lineArmIdx, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
   vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
       slotNat_spec p b hb ‹_› ‹_› ‹_› n]
-  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals clear hpd hpn hps
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
@@ -636,6 +637,7 @@ theorem lineArmIdx_spec (n : Nat) (s₁ : St) :
       reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
 
+omit hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd in
 theorem lineArmNat_spec (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 7 ∨ s.loc 6 = 55 ∨ s.loc 6 = 59 ∨ s.loc 6 = 46)⦄
     step p (exec p n) lineArmNat
@@ -644,7 +646,7 @@ theorem lineArmNat_spec (n : Nat) (s₁ : St) :
   dsimp only [lineArmNat, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
   vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
       slotNat_spec p b hb ‹_› ‹_› ‹_› n]
-  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals clear hpd hpn hps
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
@@ -652,6 +654,7 @@ theorem lineArmNat_spec (n : Nat) (s₁ : St) :
       Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
 
+omit hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd in
 theorem lineArmList_spec (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 32 ∨ s.loc 6 = 20)⦄
     step p (exec p n) lineArmList
@@ -660,7 +663,7 @@ theorem lineArmList_spec (n : Nat) (s₁ : St) :
   dsimp only [lineArmList, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
   vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
       scanNatList_spec p b hb ‹_› ‹_› ‹_› n]
-  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals clear hpd hpn hpl
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
@@ -668,6 +671,7 @@ theorem lineArmList_spec (n : Nat) (s₁ : St) :
       Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
 
+omit hpmw hpi hphn hpho hph hpl hpml hpb hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd in
 theorem lineArmName_spec (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 56 ∨ s.loc 6 = 38)⦄
     step p (exec p n) lineArmName
@@ -677,7 +681,7 @@ theorem lineArmName_spec (n : Nat) (s₁ : St) :
   vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
       L.Scan.Records.scanStrName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName n,
       L.Scan.Records.scanNumName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_numName n]
-  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
@@ -685,6 +689,7 @@ theorem lineArmName_spec (n : Nat) (s₁ : St) :
       Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
 
+omit hphn hpho hph hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd in
 theorem lineArmExpr_spec (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 2 ∨ s.loc 6 = 29 ∨ s.loc 6 = 14 ∨ s.loc 6 = 30 ∨ s.loc 6 = 9 ∨ s.loc 6 = 48)⦄
     step p (exec p n) lineArmExpr
@@ -697,7 +702,7 @@ theorem lineArmExpr_spec (n : Nat) (s₁ : St) :
       L.Scan.Records.scanLetE_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpml hpb hp_letE n,
       L.Scan.Records.scanConstE_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hp_constE n,
       L.Scan.Records.scanProj_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hp_proj n]
-  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpb hp_app hp_binder hp_letE hp_constE hp_proj
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
@@ -705,6 +710,7 @@ theorem lineArmExpr_spec (n : Nat) (s₁ : St) :
       decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
 
+omit hpw hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpll hpln hpvd in
 theorem lineArmLit_spec (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 35 ∨ s.loc 6 = 57)⦄
     step p (exec p n) lineArmLit
@@ -714,7 +720,7 @@ theorem lineArmLit_spec (n : Nat) (s₁ : St) :
   vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
       scanQuotedNat_spec p b hb ‹_› ‹_› n,
       L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n]
-  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals clear hpd hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hpq
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
@@ -722,6 +728,7 @@ theorem lineArmLit_spec (n : Nat) (s₁ : St) :
       Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
 
+omit hpi hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hpbr hpq hpll hpln hpvd in
 theorem lineArmDecl_spec (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 4 ∨ s.loc 6 = 12 ∨ s.loc 6 = 60 ∨ s.loc 6 = 45 ∨ s.loc 6 = 49 ∨ s.loc 6 = 23)⦄
     step p (exec p n) lineArmDecl
@@ -735,7 +742,7 @@ theorem lineArmDecl_spec (n : Nat) (s₁ : St) :
       L.Scan.Records.scanOpaqueD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_opaqueD n,
       L.Scan.Records.scanQuotD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_quotD n,
       L.Scan.Records.scanIndD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpb hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_indD n]
-  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
@@ -743,6 +750,7 @@ theorem lineArmDecl_spec (n : Nat) (s₁ : St) :
       Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, byteW, LineArmPost]
 
+omit hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpq hpll hpln hpvd in
 theorem lineArmMeta_spec (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 7).toNat ≤ b.size ∧ (s.loc 6 = 33)⦄
     step p (exec p n) lineArmMeta
@@ -751,7 +759,7 @@ theorem lineArmMeta_spec (n : Nat) (s₁ : St) :
   dsimp only [lineArmMeta, lineDisp, sThen, sElse, sFst, sSnd, sBody, lineLoop]
   vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
       L.Examples.skipBraced_spec p ‹_› ‹_› b hb64 n]
-  all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
+  all_goals clear hpsc hpbr
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
@@ -777,21 +785,20 @@ theorem lineDisp_spec (n : Nat) (s₁ : St) :
   dsimp only [lineDisp, sFst, sSnd, sBody, lineLoop]
   rw [← eIdx, ← eNat, ← eList, ← eName, ← eExpr, ← eLit, ← eDecl, ← eMeta]
   vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs,
-      lineArmIdx_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
-      lineArmNat_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
-      lineArmList_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
-      lineArmName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
-      lineArmExpr_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
-      lineArmLit_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
-      lineArmDecl_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n,
-      lineArmMeta_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd n]
+      lineArmIdx_spec p b hb hpd hpn hps n,
+      lineArmNat_spec p b hb hpd hpn hps n,
+      lineArmList_spec p b hb hpd hpn hpl n,
+      lineArmName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName n,
+      lineArmExpr_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpb hp_app hp_binder hp_letE hp_constE hp_proj n,
+      lineArmLit_spec p b hb hpd hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hpq n,
+      lineArmDecl_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      lineArmMeta_spec p b hb hpsc hpbr n]
   all_goals clear eIdx eNat eList eName eExpr eLit eDecl eMeta hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hpbr hpq hpll hpln hpvd
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, beq_iff_eq] at *
   all_goals grind (splits := 40) [lang_grind, LineArmPost, lineKind]
 
-omit hpll hpln hpvd in
 theorem lineLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n lineLoop
