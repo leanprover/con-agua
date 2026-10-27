@@ -6,6 +6,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.WhnfIotaRefine6
+import ConAgua.Arena.LdRd
 
 /-!
 # Error refinements of `infer_const`, `infer_proj`, `infer_proj_at` (lane `verdicts-b`, helper `c1`)
@@ -158,7 +159,11 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p)
 
 /-! ## `infer_proj`'s error model (by hand: `l_model … errors` times out on it)
 
-The generated text (`trace`), its spec proved by the ok spec's recipe (`inferProj_spec`). -/
+The generated text (`trace`), its spec proved by the ok spec's recipe (`inferProj_spec`), in three
+pieces cut by `seqTake`/`seqDrop` (`LdRd.lean`): the subject's type (`inferProj_specE`), the head
+and the record (`inferProjMid_specE`), the `find_proj` call on (`inferProjTail_specE`). Each piece
+sees the locals before it by name, not as a `setLoc` chain (one proof over the 262 goals: 104 s;
+the pieces: ~20 s, in parallel). -/
 
 theorem ld64_rdW_specOob (a : ArrId) (i : Word) (s₀ : St) :
     ⦃fun s => s = s₀⦄ ld64 a i
@@ -263,25 +268,57 @@ def inferProjE (p : Prog) (n : Nat) (m : Mem) (mode io vis d sn i pe : Word) :
     Except Err (Word × Mem) :=
   inferProjE.k_infer p n mode vis d sn i pe (inferProjE.first p n m mode io vis d pe)
 
+/-- `infer_proj` from the `find_proj` call on: the miss's `projMissError` and the hit. -/
+def inferProjTailS : Stmt := seqDrop 10 inferProjL.body
+
 set_option maxHeartbeats 2000000 in
+theorem inferProjTail_specE (p : Prog) (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁⦄ step p (exec p n) inferProjTailS
+    ⦃fun _ _ => True; fun ε => ε.code ≠ 0 → inferProjE.k_find_proj p n (s₁.loc 2) (s₁.loc 4)
+      (s₁.loc 5) (s₁.loc 6) (s₁.loc 8) (s₁.loc 15) (s₁.loc 16)
+      (callE p n "find_proj" [s₁.loc 2, s₁.loc 15, s₁.loc 5] s₁.mem) = .error ε⦄ := by
+  simp only [inferProjTailS, inferProjL, seqDrop]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specOob,
+      callE_spec p n "find_proj", callE_spec p n "infer_proj_at",
+      callE_spec p n "find_table", callE_spec p n "get_app_args", callE_spec p n "env_find"]
+  all_goals (try (with_reducible exact absurd ‹false = true› Bool.false_ne_true))
+  all_goals
+  simp_all [inferProjE.k_find_proj, inferProjE.k_infer_proj_at,
+    inferProjE.k_find_table, inferProjE.k_get_app_args, inferProjE.k_env_find,
+    inferProjE.k_env_find_2, inferProjE.j2, Cmp.eval, LocEq, BinOp.eval,
+    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, w_lt_false]
+
+/-- `infer_proj` after the subject's type: `whnf`, the head, the record, then the tail. -/
+def inferProjMidS : Stmt := seqDrop 1 inferProjL.body
+
+theorem inferProjMid_specE (p : Prog) (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁⦄ step p (exec p n) inferProjMidS
+    ⦃fun _ _ => True; fun ε => ε.code ≠ 0 → inferProjE.k_infer p n (s₁.loc 0) (s₁.loc 2) (s₁.loc 3)
+      (s₁.loc 4) (s₁.loc 5) (s₁.loc 6) (.ok ([s₁.loc 7], s₁.mem)) = .error ε⦄ := by
+  rw [← seqTake_drop 9 inferProjMidS, show seqDrop 9 inferProjMidS = inferProjTailS from rfl]
+  simp only [inferProjMidS, inferProjL, seqDrop, seqTake]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specOob,
+      callE_spec p n "whnf", callE_spec p n "get_app_fn", inferProjTail_specE p n,
+        evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+  simp_all [inferProjE.k_infer, inferProjE.k_whnf,
+    inferProjE.k_get_app_fn, inferProjE.k_find_proj, inferProjE.k_infer_proj_at,
+    inferProjE.k_find_table, inferProjE.k_get_app_args, inferProjE.k_env_find,
+    inferProjE.k_env_find_2, inferProjE.j2,
+    tierW, idxW, Cmp.eval, LocEq, BinOp.eval,
+    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, CTL, w_le_false, tfld, tcnt]
+
 theorem inferProj_specE (p : Prog) (hf : p.lookup "infer_proj" = some inferProjL) (n : Nat)
     (s₀ : St) (mode io vis d sn i pe : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_proj" [mode, io, vis, d, sn, i, pe]
     ⦃fun _ _ => True; fun ε => ε.code ≠ 0 → inferProjE p n s₀.mem mode io vis d sn i pe = .error ε⦄ := by
   rw [invoke_eq _ hf]
-  simp only [callFn, inferProjL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specOob,
-      callE_spec p n "infer_io", callE_spec p n "infer", callE_spec p n "whnf",
-      callE_spec p n "get_app_fn", callE_spec p n "find_proj", callE_spec p n "infer_proj_at",
-      callE_spec p n "find_table", callE_spec p n "get_app_args", callE_spec p n "env_find",
-        evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-  simp_all [inferProjE, inferProjE.first, inferProjE.k_infer, inferProjE.k_whnf,
-    inferProjE.k_get_app_fn, inferProjE.k_find_proj, inferProjE.k_infer_proj_at,
-    inferProjE.k_find_table, inferProjE.k_get_app_args, inferProjE.k_env_find,
-    inferProjE.k_env_find_2, inferProjE.j2,
-    tierW, idxW, Cmp.eval, LocEq, BinOp.eval,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
-    Locals.init_cons_zero, Locals.init_cons_succ, CTL, w_lt_false, w_le_false, tfld, tcnt]
+  simp only [callFn]
+  rw [← seqTake_drop 1 inferProjL.body, show seqDrop 1 inferProjL.body = inferProjMidS from rfl]
+  simp only [inferProjL, seqTake]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callE_spec p n "infer_io", callE_spec p n "infer", inferProjMid_specE p n] <;>
+  simp_all [inferProjE, inferProjE.first, inferProjE.k_infer, LocEq, St.setLocs_cons, St.setLocs_nil,
+    St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval]
 
 /-! ## `infer_proj`: the twin's failures, the records' words -/
 
