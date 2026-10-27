@@ -3,15 +3,16 @@ import ConAgua.Checker.Entry
 /-!
 # `cap_check()` checks the capacities (lane `pipeline`)
 
-`cap_check()`'s body is a `foldr` over the word arrays `0‥wordArrays - 1` of
-`if capCond b { abort }` (`2^62 ≤ len(b.u64)`; for a slot array, wrapping,
-`2^61 - consMinWords ≤ len - consMinWords`: below `consMinWords` words or from `2^61` on), then `if len(CTL.u64) < ctlMin { abort }`, the same for
-`len(DECL.u64) == 0`, `len(DLP.u64) == 0`, and `return 0`
-(`capCheckBody`, `Checker/Entry.lean`). A run that returns leaves the state alone, and every
-word array's length *as a word* is below `2^62` (`CapsW`). `len64` is the size modulo `2^64`, so
-the actual sizes are below `2^62` only for sizes below `2^64` (`WordsFit`, which every memory the
-x64 layout can hold meets): then `CapsOK`. The proof is by induction over the list, on runs
-(`capFold_run`), not by unrolling the 388 branches.
+`cap_check()`'s body is a `foldr` over the table's word slots (`capSlots`: every word array `a`
+of `checkerArrays`, then the tier 1 of every tiered one, read as `len(a⟨1⟩.u64)`) of
+`if capCond p { abort }` (`2^62 ≤ len`; for a slot array, wrapping,
+`2^61 - consMinWords ≤ len - consMinWords`: below `consMinWords` words or from `2^61` on), then
+`if len(CTL.u64) < ctlMin { abort }`, the same for `len(DECL.u64) == 0`, `len(DLP.u64) == 0`,
+the pool's two tiers, and `return 0` (`capCheckBody`, `Checker/Entry.lean`). A run that returns
+leaves the state alone, and every word slot's length *as a word* is below `2^62` (`CapsW`).
+`len64` is the size modulo `2^64`, so the actual sizes are below `2^62` only for sizes below
+`2^64` (`WordsFit`, which every memory the x64 layout can hold meets): then `CapsOK`. The proof
+is by induction over the list, on runs (`capFold_run`), not by unrolling the branches.
 -/
 
 namespace L.Checker
@@ -21,12 +22,12 @@ open L.Front (DECL DLP)
 open Std.WP
 open scoped Lean.Order
 
-/-- **The capacities `check` needs**: every word array the checker names is shorter than `2^62`
-words (a slot array at least `consMinWords` and shorter than `2^61`), `CTL` has at least `ctlMin`
+/-- **The capacities `check` needs**: every word slot of the table (`checkerArrays.wordSlots`) is
+shorter than `2^62` words (a slot array at least `consMinWords` and shorter than `2^61`), `CTL` has at least `ctlMin`
 words, `DECL` and `DLP` are not empty, and the pool's tier arrays `POOL`, `POOL1` have fewer
 than `2^40` words. -/
 def CapsOK (m : Mem) : Prop :=
-  (∀ a < wordArrays, (m.arr64 a).size < 2 ^ 62 ∧
+  (∀ a ∈ checkerArrays.wordSlots, (m.arr64 a).size < 2 ^ 62 ∧
     (a ∈ slotArrs → consMinWords ≤ (m.arr64 a).size ∧ (m.arr64 a).size < 2 ^ 61)) ∧
     ctlMin ≤ (m.arr64 CTL).size ∧
     1 ≤ (m.arr64 DECL).size ∧ 1 ≤ (m.arr64 DLP).size ∧ (m.arr64 POOL).size < 2 ^ 40 ∧
@@ -34,18 +35,18 @@ def CapsOK (m : Mem) : Prop :=
 
 /-- What `cap_check` observes: the lengths as words (`len64`, the size modulo `2^64`). -/
 def CapsW (m : Mem) : Prop :=
-  (∀ a < wordArrays, (m.len64 a).toNat < 2 ^ 62 ∧
+  (∀ a ∈ checkerArrays.wordSlots, (m.len64 a).toNat < 2 ^ 62 ∧
     (a ∈ slotArrs → consMinWords ≤ (m.len64 a).toNat ∧ (m.len64 a).toNat < 2 ^ 61)) ∧
     ctlMin ≤ (m.arr64 CTL).size ∧
     m.len64 DECL ≠ 0 ∧ m.len64 DLP ≠ 0 ∧ (m.len64 POOL).toNat < 2 ^ 40 ∧ (m.len64 POOL1).toNat < 2 ^ 40
 
-/-- Every word array the checker names has a size that is a word. -/
-def WordsFit (m : Mem) : Prop := ∀ a < wordArrays, (m.arr64 a).size < 2 ^ 64
+/-- Every word slot of the table has a size that is a word. -/
+def WordsFit (m : Mem) : Prop := ∀ a ∈ checkerArrays.wordSlots, (m.arr64 a).size < 2 ^ 64
 
 theorem CapsW.capsOK {m : Mem} (h : CapsW m) (hf : WordsFit m) : CapsOK m := by
-  have hsz : ∀ a < wordArrays, (m.len64 a).toNat = (m.arr64 a).size := fun a ha => by
+  have hsz : ∀ a ∈ checkerArrays.wordSlots, (m.len64 a).toNat = (m.arr64 a).size := fun a ha => by
     simp only [Mem.len64, UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (hf a ha)
-  have hne : ∀ a < wordArrays, m.len64 a ≠ 0 → 1 ≤ (m.arr64 a).size := fun a ha h => by
+  have hne : ∀ a ∈ checkerArrays.wordSlots, m.len64 a ≠ 0 → 1 ≤ (m.arr64 a).size := fun a ha h => by
     rw [← hsz a ha]
     exact Nat.one_le_iff_ne_zero.2 (fun h0 => h (UInt64.toNat_inj.1 (by simpa using h0)))
   refine ⟨fun a ha => ?_, h.2.1, hne DECL (by decide) h.2.2.1, hne DLP (by decide) h.2.2.2.1, ?_, ?_⟩
@@ -60,56 +61,51 @@ theorem error_bind' {α β : Type} (e : Err) (f : α → Except Err β) :
 
 theorem error_map' {α β : Type} (e : Err) (f : α → β) : (f <$> (Except.error e : Except Err α)) = .error e := rfl
 
-/-- One array's check (the `foldr`'s step). -/
-def capStep (b : Nat) (s : Stmt) : Stmt :=
-  .seq (.ite (capCond b) (.abort (.const R_CAP_REGION)) .skip) s
+/-- A slot's length expression evaluates to its array's length. -/
+theorem evalE_capSlotE (p : ArrId × Bool) :
+    evalE (capSlotE p) = (do return (← get).mem.len64 (capSlotA p) : M Word) := by
+  obtain ⟨a, _ | _⟩ := p <;> rfl
 
-/-- The `CTL`, `DECL`, `DLP` checks and the return. -/
-def capTail : Stmt :=
-  .seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const R_CAP_REGION)) .skip)
-    (.seq (.ite (.cmp .eq (.len64 DECL) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
-      (.seq (.ite (.cmp .eq (.len64 DLP) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
-        (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 POOL)) (.abort (.const R_CAP_REGION)) .skip)
-          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 POOL1)) (.abort (.const R_CAP_REGION)) .skip)
-            (.ret [.const 0])))))
-
-/-- A run of the checks of the arrays `l`, then `t`, that returns: every array of `l` has a
+/-- A run of the checks of the slots `l`, then `t`, that returns: every slot of `l` has a
 length below `2^62` as a word, and the run is `t`'s. -/
 theorem capFold_run {p : Prog} {k : Stmt → M Sig} (t : Stmt) :
-    ∀ (l : List Nat) (s : St) (r : Sig) (s' : St), (step p k (l.foldr capStep t)).run s = .ok (r, s') →
-      (∀ b ∈ l, (s.mem.len64 b).toNat < 2 ^ 62 ∧
+    ∀ (l : List (ArrId × Bool)) (s : St) (r : Sig) (s' : St),
+      (step p k (l.foldr capStep t)).run s = .ok (r, s') →
+      (∀ b ∈ l.map capSlotA, (s.mem.len64 b).toNat < 2 ^ 62 ∧
         (b ∈ slotArrs → consMinWords ≤ (s.mem.len64 b).toNat ∧ (s.mem.len64 b).toNat < 2 ^ 61)) ∧
         (step p k t).run s = .ok (r, s') := by
   intro l
   induction l with
-  | nil => intro s r s' h; exact ⟨fun _ h => absurd h List.not_mem_nil, h⟩
+  | nil => intro s r s' h; exact ⟨fun _ h => absurd h (by simp), h⟩
   | cons b l ih =>
     intro s r s' h
-    by_cases hsl : b ∈ slotArrs
-    · simp [List.foldr_cons, capStep, capCond, hsl, step, evalC, evalE, Cmp.eval, BinOp.eval] at h
-      by_cases hb : capLo ≤ s.mem.len64 b - capMin
+    by_cases hsl : capSlotA b ∈ slotArrs
+    · simp [List.foldr_cons, capStep, capCond, hsl, step, evalC, evalE_capSlotE, evalE, Cmp.eval, BinOp.eval] at h
+      by_cases hb : capLo ≤ s.mem.len64 (capSlotA b) - capMin
       · simp [hb, run_throw', error_bind'] at h
       · simp [hb] at h
         obtain ⟨h1, h2⟩ := ih s r s' h
         refine ⟨fun c hc => ?_, h2⟩
+        rw [List.map_cons] at hc
         rcases List.mem_cons.1 hc with rfl | hc
         · simp only [UInt64.not_le, UInt64.lt_iff_toNat_lt] at hb
-          have := (s.mem.len64 c).toNat_lt
+          have := (s.mem.len64 (capSlotA b)).toNat_lt
           have em : capMin.toNat = consMinWords := rfl
           have el : capLo.toNat = 2 ^ 61 - consMinWords := rfl
           have ec : consMinWords = 18 := rfl
           rw [el] at hb
-          by_cases h17 : consMinWords ≤ (s.mem.len64 c).toNat
+          by_cases h17 : consMinWords ≤ (s.mem.len64 (capSlotA b)).toNat
           · rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, em]; exact h17), em] at hb
             exact ⟨by omega, fun _ => ⟨h17, by omega⟩⟩
           · rw [UInt64.toNat_sub, em] at hb; omega
         · exact h1 c hc
-    · simp [List.foldr_cons, capStep, capCond, hsl, step, evalC, evalE, Cmp.eval] at h
-      by_cases hb : (4611686018427387904 : Word) ≤ s.mem.len64 b
+    · simp [List.foldr_cons, capStep, capCond, hsl, step, evalC, evalE_capSlotE, evalE, Cmp.eval] at h
+      by_cases hb : (4611686018427387904 : Word) ≤ s.mem.len64 (capSlotA b)
       · simp [hb, run_throw', error_bind'] at h
       · simp [hb] at h
         obtain ⟨h1, h2⟩ := ih s r s' h
         refine ⟨fun c hc => ?_, h2⟩
+        rw [List.map_cons] at hc
         rcases List.mem_cons.1 hc with rfl | hc
         · simp only [UInt64.not_le, UInt64.lt_iff_toNat_lt] at hb
           exact ⟨by simpa using hb, fun h => absurd h hsl⟩
@@ -164,11 +160,11 @@ theorem capCheck_specW (p : Prog) (hp : p.lookup "cap_check" = some capCheckL) (
       rw [hb] at hrun
       simp at hrun
       obtain ⟨-, rfl⟩ := hrun
-      have hb' : (step p (exec p n) ((List.range wordArrays).foldr capStep capTail)).run
+      have hb' : (step p (exec p n) (capSlots.foldr capStep capTail)).run
           { s with loc := Locals.init [] } = .ok (r₁, s₁) := hb
       obtain ⟨h1, h2⟩ := capFold_run capTail _ _ _ _ hb'
       obtain ⟨h3, h4, h5, h6, h7, -, rfl⟩ := capTail_run _ _ _ h2
-      exact ⟨rfl, rfl, fun a ha => h1 a (List.mem_range.2 ha), h3, h4, h5, h6, h7⟩
+      exact ⟨rfl, rfl, fun a ha => h1 a (capSlots_arrs ▸ ha), h3, h4, h5, h6, h7⟩
 
 /-- **`cap_check()` checks the capacities**: a run that returns leaves the state alone, and on a
 memory whose word arrays' sizes are words (`WordsFit`) the capacities are `CapsOK`. -/
