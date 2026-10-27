@@ -292,6 +292,7 @@ theorem applyDLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : W
         recDeclLine_spec p hF b hb n, applyDecl_spec p hDL b hb n, runF_spec p "apply_ind" _ n] <;>
         finish [applyDLineW, DFld.enc]
 
+omit hpf hps in
 theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (j : Word) :
@@ -327,9 +328,9 @@ theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
-        L.Scan.Line.scanLine_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "hints_num") (hS.get "hints_obj") (hS.get "scan_hints") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "scan_str_name") (hS.get "scan_num_name") (hS.get "scan_app") (hS.get "scan_binder") (hS.get "scan_let") (hS.get "scan_const") (hS.get "scan_proj") (hS.get "scan_rule") (hS.get "scan_rules") (hS.get "scan_ind_rec") (hS.get "scan_ind_recs") (hS.get "scan_ind_type") (hS.get "scan_ind_types") (hS.get "scan_ind_ctor") (hS.get "scan_ind_ctors") (hS.get "scan_axiom") (hS.get "scan_def") (hS.get "scan_thm") (hS.get "scan_opaque") (hS.get "scan_quot") (hS.get "scan_ind_decl") (hS.get "skip_braced") (hS.get "scan_quoted_nat") (hS.get "scan_line_loop") (hS.get "scan_line") (hS.get "validate") n,
+        L.Scan.Line.scanLine_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "hints_num") (hS.get "hints_obj") (hS.get "scan_hints") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "scan_str_name") (hS.get "scan_num_name") (hS.get "scan_app") (hS.get "scan_binder") (hS.get "scan_let") (hS.get "scan_const") (hS.get "scan_proj") (hS.get "scan_rule") (hS.get "scan_rules") (hS.get "scan_ind_rec") (hS.get "scan_ind_recs") (hS.get "scan_ind_type") (hS.get "scan_ind_types") (hS.get "scan_ind_ctor") (hS.get "scan_ind_ctors") (hS.get "scan_axiom") (hS.get "scan_def") (hS.get "scan_thm") (hS.get "scan_opaque") (hS.get "scan_quot") (hS.get "scan_ind_decl") (hS.get "skip_braced") (hS.get "scan_quoted_nat") (hS.get "scan_line_loop") (hS.get "scan_line") n,
         L.Scan.Leaves.skipWs_spec p (hS.get "skip_ws") b hb64 n,
-        applyAny_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;> finish [frontLineW]
+        applyAny_spec p hS hL hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;> finish [frontLineW]
 
 end spec
 

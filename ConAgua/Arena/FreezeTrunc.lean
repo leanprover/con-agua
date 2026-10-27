@@ -177,6 +177,7 @@ theorem tix_trunc (g : Nat) (hg : g ≤ 2) :
   · rw [show 129 + 1 = TIXS from rfl, truncFrozen_tixs]; rfl
   · rw [show 129 + 2 = TIXN from rfl, truncFrozen_tixn]; rfl
 
+omit hcnt in
 theorem tblRow_trunc (w : Word) :
     (tblRow (truncFrozen m) w = tblRow m w ∨ tblRow (truncFrozen m) w = 0) ∧
     (rowTier w = 0 → rowTag w ≤ 2 → tblIx w < nmCnt m (rowTag w) →
@@ -223,13 +224,13 @@ theorem EnvR.trunc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have tin : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → (fe.tbls[n]?).isSome →
       tblRow (truncFrozen m) n.word.toUInt64 = tblRow m n.word.toUInt64 := fun n hn hs => by
     obtain ⟨ht, hr⟩ := hk.tbls n hs hn
-    exact (tblRow_trunc hcnt _).2 ht hn hr
+    exact (tblRow_trunc _).2 ht hn hr
   have tout : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → fe.tbls[n]? = none →
       tblRow (truncFrozen m) n.word.toUInt64 = 0 := fun n hn hs => by
     have := h.tkeys n hn
     rw [hs] at this
     have h0 : tblRow m n.word.toUInt64 = 0 := by simpa using this.symm
-    rcases (tblRow_trunc hcnt n.word.toUInt64).1 with e' | e'
+    rcases (tblRow_trunc n.word.toUInt64).1 with e' | e'
     · rw [e']; exact h0
     · exact e'
   have hET : (truncFrozen m).arr64 ETAB = m.arr64 ETAB := truncFrozen_other m _ (by decide)

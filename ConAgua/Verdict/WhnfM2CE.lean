@@ -316,6 +316,7 @@ theorem m2cK2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N
     (m2cCheckE_ok p hp hc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega)
       (by omega) dn vis fe eb mode d tmaj (r3.headD 0) major hm4 hebm htm hh3 hmaj m3 _ M hS3 er hW')
 
+omit hpi in
 include hE in
 /-- **`m2c_k`'s verdicts** are `m2c_pre`'s and `m2c_k2`'s. -/
 theorem m2cKE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
@@ -603,6 +604,7 @@ theorem m2cAnd2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
     (m2cCheckE_ok p hp hc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _)) (by omega)
       (by omega) dn vis fe eb mode d tmaj (r5.headD 0) major hm4 hebm htm hh5 hmaj m5 _ M hS5 er hW')
 
+omit hpi in
 include hE hcc in
 /-- **`m2c_and`'s verdicts** are `m2c_pre`'s and `m2c_and2`'s. -/
 theorem m2cAndE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
@@ -798,7 +800,7 @@ theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
           (decI w0) w3.toNat w5.toNat (decI T) (decE major) := by
       simp only [m2cArmsT, hk', ↓reduceIte, hctor, hlp, hnp]
     rw [this]
-    exact m2cKE_ok p hp hc hpi hE hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+    exact m2cKE_ok p hp hc hE hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
       (by omega) (by omega) dn vis fe eb mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS er (hk1 _ _ hW)
   rw [ite_eq_right g9] at hW
   have hk' : rl.k = false := by rw [hkk]; simpa using g9
@@ -819,7 +821,7 @@ theorem m2cArmsE_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF :
         (decI w0) w3.toNat w5.toNat (decI T) (decE major) := by
     simp only [m2cArmsT, hk', he', Bool.false_eq_true, ↓reduceIte, hctor, hlp, hnp]
   rw [this]
-  exact m2cAndE_ok p hp hc hpi hE hcc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
+  exact m2cAndE_ok p hp hc hE hcc hnv hPI N' F (hk.mono (Nat.le_succ _)) (hkE.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS er (hk1 _ _ hW)
 
 /-- **`m2c_ctor`'s verdicts** are `m2c_arms`'s. -/

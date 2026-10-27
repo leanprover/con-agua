@@ -560,6 +560,7 @@ theorem escLoop_spec (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, escRun_spec p b n,
         escOne_spec p b hpb hph hp4 hp3 hps hpo n, utf8Put_spec p hpu n] <;> finish [Mem.src8]
 
+omit hb in
 theorem escLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
       s.loc 10 = s.loc 2 &&& 1099511627775⦄
@@ -581,7 +582,7 @@ theorem strPutEsc_specW (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        escLoop_step_spec p b hb hpb hph hp4 hp3 hps hpo hpu n] <;>
+        escLoop_step_spec p b hpb hph hp4 hp3 hps hpo hpu n] <;>
       finish [strPutEscW]
 
 end loop
