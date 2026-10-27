@@ -36,7 +36,7 @@ theorem _root_.L.Arena.MemFrame.set64_bothH {A : List TieredArray} {C : List Wor
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb)]
     exact h.2.1 x hx
   · rw [size_set64, size_set64]; exact h.2.2.1 b'
-  · simpa using h.2.2.2
+  · simp
 
 theorem mfindG_congr (S : MemoSch) {m₁ m₂ : Mem} (ha : m₂.arr64 S.arr = m₁.arr64 S.arr)
     (hc : rdW (m₂.arr64 CTL) S.cs = rdW (m₁.arr64 CTL) S.cs) (k1 k2 : Word) :
