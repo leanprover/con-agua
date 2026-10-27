@@ -246,10 +246,7 @@ theorem ThreadRel.next {v : Word} {r : Mem} {a : AState} (B : Array Word) (j : W
   refine ⟨m', hS, hPB, fun b hb => ?_⟩
   rw [← hw b hb]
   rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
-  · rw [bufMem_frozen B r j hk h1]
-    split
-    · rw [hfz k hk h1]
-    · rename_i hs; rw [Mem.arr64_oob _ _ hs]
+  · rw [bufMem_frozen B r j hk h1, hfz k hk h1]
   · exact bufMem_owned B r j ho
 
 /-- **The first call**: from entry 1's `PhaseBStart m a v` (with a pending group) and a region
@@ -268,7 +265,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
   generalize hW : bufMem (bufOf m v) r j = W
   obtain ⟨hseed, h256⟩ := bufImg_seed (v := v) hok hlt
   have hctlf : W.arr64 CTLF = (m.arr64 CTL).extract 0 256 := by
-    rw [← hW, bufMem_ctlf, ite_eq_left trivial, hseed]
+    rw [← hW, bufMem_ctlf, hseed]
   have hlen : (W.len64 CTLF).toNat = 256 := by
     simp only [Mem.len64, hctlf, size_extract0, Nat.min_eq_left h256]; rfl
   have hctl : W.arr64 CTL = zeros (m.arr64 CTL).size := by
@@ -294,8 +291,8 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
           simp [Array.getD_eq_getD_getElem?, hk]
     · rw [arr64_copy64_ne _ _ _ _ _ _ hbc, ← hW]
       rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
-      · obtain ⟨-, hz', hc, -⟩ := frozen_facts hk h1
-        rw [bufMem_frozen _ r j hk h1, ite_eq_left trivial, bufImg_trunc hok hlt hk h1, freshMem_arr,
+      · obtain ⟨-, hz', hc⟩ := frozen_facts hk h1
+        rw [bufMem_frozen _ r j hk h1, bufImg_trunc hok hlt hk h1, freshMem_arr,
           ite_eq_right hc, ite_eq_right hz']
       · obtain ⟨-, hsrc⟩ := owned_facts ho
         rw [bufMem_owned _ r j ho, hz b ho, freshMem_arr, ite_eq_right hbc,
@@ -314,10 +311,8 @@ theorem bufMem_view {B : Array Word} {v : Word} (hB : (bufImg B 0).getD 3 0 = v)
     (j : Word) : ∀ hb : 3 < ((bufMem B r j).arr64 HDRF).size, ((bufMem B r j).arr64 HDRF)[3] = v := by
   intro hb
   have e := bufMem_hdr B r j
-  split at e
-  · simp only [e] at hb ⊢
-    rw [← hB, Array.getD, dite_eq_left hb]; rfl
-  · rw [e] at hb; simp at hb
+  simp only [e] at hb ⊢
+  rw [← hB, Array.getD, dite_eq_left hb]; rfl
 
 /-- **A thread's first call** (`ca_check_b(buf, len, j, region, …)` on a fresh region): from
 entry 1's `PhaseBStart m a v` (with the pin data, in bounds), the buffer `bufOf m v`, a region

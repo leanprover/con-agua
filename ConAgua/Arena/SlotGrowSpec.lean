@@ -212,7 +212,7 @@ theorem kgrowM_fr (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m m' : Me
 /-- Word stores to two different arrays commute. -/
 theorem Mem.set64_comm (m : Mem) (a b : TieredArray) (i j v w : Word) (h : a ≠ b) :
     (m.set64 a i v).set64 b j w = (m.set64 b j w).set64 a i v := by
-  simp only [Mem.set64, Mem.arr64, h, Ne.symm h, ite_false, ite_true, Mem.mk.injEq, and_true,
+  simp only [Mem.set64, Mem.arr64, h, Ne.symm h, ite_false, Mem.mk.injEq, and_true,
     true_and]
   funext s
   by_cases ha : s = a <;> by_cases hb : s = b <;> simp_all
