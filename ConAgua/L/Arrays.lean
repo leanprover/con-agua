@@ -36,11 +36,6 @@ namespace L
 /-- The two tiers of the tiered array `a`. -/
 @[expose, reducible] def tiers (a : ArrId) : List ArrId := [a, tier1 a]
 
-/-- Test memories: each entry `(a, xs)` of a list of named arrays (`Mem.ofWords`) also as the
-entry for its tier-1 array, `[(a, xs), (tier1 a, xs)]`. Only the tiered arrays go through it. -/
-def withTiers {α : Type} (l : List (ArrId × α)) : List (ArrId × α) :=
-  l.flatMap fun p => [p, (tier1 p.1, p.2)]
-
 theorem and_one_cases' (t : Word) : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
   rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
 
@@ -146,20 +141,6 @@ def wf (T : ArrTable) : Bool :=
 compiler's `Prog.arrs` of a program that names them all). -/
 def extent (T : ArrTable) : Nat × Nat :=
   ((T.ids .byte).foldl (fun m a => max m (a + 1)) 0, T.wordSlots.foldl (fun m a => max m (a + 1)) 0)
-
-/-- Test memories: every word array of `T` as a zero array of `size a` words, entries for
-`Mem.ofWords` (a test overrides some by later entries). Tier 0 only; `zeroTiers` has the tier-1
-arrays. -/
-def zeroWords (T : ArrTable) (size : ArrId → Nat) : List (ArrId × Array Word) :=
-  (T.ids .word).map fun a => (a, Array.replicate (size a) 0)
-
-/-- The tier-1 array `tier1 a` of every tiered array `a` of `T` as a zero array of `size a` words. -/
-def zeroTiers (T : ArrTable) (size : ArrId → Nat) : List (ArrId × Array Word) :=
-  T.tieredIds.map fun a => (tier1 a, Array.replicate (size a) 0)
-
-/-- `zeroWords` and `zeroTiers`: both tiers of every array. -/
-def zeroBoth (T : ArrTable) (size : ArrId → Nat) : List (ArrId × Array Word) :=
-  T.zeroWords size ++ T.zeroTiers size
 
 /-! ### The surface check -/
 
@@ -280,5 +261,26 @@ macro_rules
       | none => `(def $tbl : L.ArrTable := [$rowsT,*])
     cmds := cmds.push tdef
     return Lean.mkNullNode (cmds.map (·.raw))
+
+/-! ## Test memories -/
+
+/-- Test memories: each entry `(a, xs)` of a list of named arrays (`Mem.ofWords`) also as the
+entry for its tier-1 array, `[(a, xs), (tier1 a, xs)]`. Only the tiered arrays go through it. -/
+def withTiers {α : Type} (l : List (ArrId × α)) : List (ArrId × α) :=
+  l.flatMap fun p => [p, (tier1 p.1, p.2)]
+
+/-- Test memories: every word array of `T` as a zero array of `size a` words, entries for
+`Mem.ofWords` (a test overrides some by later entries). Tier 0 only; `zeroTiers` has the tier-1
+arrays. -/
+def ArrTable.zeroWords (T : ArrTable) (size : ArrId → Nat) : List (ArrId × Array Word) :=
+  (T.ids .word).map fun a => (a, Array.replicate (size a) 0)
+
+/-- The tier-1 array `tier1 a` of every tiered array `a` of `T` as a zero array of `size a` words. -/
+def ArrTable.zeroTiers (T : ArrTable) (size : ArrId → Nat) : List (ArrId × Array Word) :=
+  T.tieredIds.map fun a => (tier1 a, Array.replicate (size a) 0)
+
+/-- `zeroWords` and `zeroTiers`: both tiers of every array. -/
+def ArrTable.zeroBoth (T : ArrTable) (size : ArrId → Nat) : List (ArrId × Array Word) :=
+  T.zeroWords size ++ T.zeroTiers size
 
 end L
