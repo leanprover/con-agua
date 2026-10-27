@@ -12,11 +12,6 @@ namespace L.Checker
 
 open L.Arena L.Ind L.Compiler
 
-/-- A lookup agreement from the two lookups: `checkerProg`'s by `chk_lk` (its chunk position, no
-`String` comparison; `rfl` compared the name with every one before it, ~0.5 s each). -/
-theorem lk_agree {p q : Prog} {f : FnName} {fd : FunDecl} (hq : q.lookup f = some fd)
-    (hp : p.lookup f = some fd) : p.lookup f = q.lookup f := hp.trans hq.symm
-
 /-- `armFns` but `openFns`, part 0. -/
 def armOwn0 : List FnName :=
   ["check_decl_thm", "erec_ci", "erec_alloc", "dlp_copy", "check_constant_val", "install_header",
