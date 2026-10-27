@@ -14,35 +14,17 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem ptnew_arrs : ∀ b ∈ tblArrs ++ ETAB :: EREC :: eArrs,
-    ((b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
-      (146 ≤ b ∧ b ≤ 149) ∨ Tier1In 0 50 b ∨ Tier1In 55 64 b) ∨
-      ((129 ≤ b ∧ b ≤ 131) ∨ b = 143 ∨ Tier1In 129 132 b) := by
-  intro b hb
-  rcases List.mem_append.mp hb with hb | hb
-  · simp only [tblArrs, List.mem_cons, List.not_mem_nil, or_false] at hb
-    right
-    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide
-  rcases List.mem_cons.mp hb with rfl | hb
-  · right; right; left; rfl
-  · rcases vg_arrs b hb with h | h | h
-    · exact .inl (.inl h)
-    · exact .inl (.inr (.inl (.inl (by subst h; exact ⟨by decide, by decide⟩))))
-    · exact .inl (.inr (.inr h))
+theorem ptnew_arrs : ∀ b ∈ tblArrs ++ (ETAB : TieredArray) :: (EREC : TieredArray) :: eArrs,
+    ((b.arr < 50 ∨ (54 < b.arr ∧ b.arr < 64)) ∨
+      ((132 ≤ b.arr ∧ b.arr ≤ 136) ∨ (140 ≤ b.arr ∧ b.arr ≤ 142)) ∨ (146 ≤ b.arr ∧ b.arr ≤ 149)) ∨
+      ((129 ≤ b.arr ∧ b.arr ≤ 131) ∨ b.arr = 143) := by
+  decide
 
 /-- The arrays `promote_proj_tables` writes avoid the constant rows, `ECON` and the table rows. -/
-theorem pts_arrs : ∀ b ∈ ETAB :: EREC :: eArrs,
-    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 136 ∨ b = 143 ∨ (146 ≤ b ∧ b ≤ 149) ∨
-      Tier1In 0 50 b ∨ Tier1In 55 64 b := by
-  intro b hb
-  simp only [List.mem_cons] at hb
-  rcases hb with rfl | rfl | hb
-  · right; right; left; rfl
-  · right; left; simp [EREC]
-  · rcases vg_arrs b (List.mem_cons.mpr (Or.inr hb)) with h | h | h
-    · exact .inl h
-    · exact .inr (.inl h)
-    · exact .inr (.inr (.inr h))
+theorem pts_arrs : ∀ b ∈ (ETAB : TieredArray) :: (EREC : TieredArray) :: eArrs,
+    (b.arr < 50 ∨ (54 < b.arr ∧ b.arr < 64)) ∨ b.arr = 136 ∨ b.arr = 143 ∨
+      (146 ≤ b.arr ∧ b.arr ≤ 149) := by
+  decide
 
 section rel
 variable (p : Prog) (hp : PromoteProg p)
@@ -130,7 +112,8 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
     ptables_rel p hp n m₂ a pm L.Ind.CWF (n0 - 1) c (erecTop m₂) Lc r₂ m₃ hD₂ hP₂ hsz₂ hts₂ hLl.symm
       hj1 (by rw [← erecP_eq_preE, hP₂e, hET₂]; exact hCA') (Nat.le_refl _) hcb
   have hg₁₃ : ErecGrow m₁ m₃ := hg₁₂.trans hg₂₃
-  have hX₃ : ∀ b : Nat, b ∉ ETAB :: EREC :: eArrs → b ≠ CTL → m₃.arr64 b = m₂.arr64 b :=
+  have hX₃ : ∀ b : TieredArray, b ∉ (ETAB : TieredArray) :: (EREC : TieredArray) :: eArrs → b ≠ CTL →
+      m₃.arr64 b = m₂.arr64 b :=
     fun b h1 h2 => hfr₃.1 b h1 h2
   have h133₃ : rdW (m₃.arr64 CTL) 133 = rdW (m₁.arr64 CTL) 133 := by
     rw [hfr₃.2.1 133 (fun h => by have := pnew_ctl _ h; simp at this), h133₂]
@@ -138,14 +121,14 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
     hfr₃.2.1 128 (fun h => by have := pnew_ctl _ h; simp at this)
   have hrows₃ : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 135 ∨ 140 ≤ b) → m₃.arr64 b = m₂.arr64 b := by
     intro b h1 h2 h3
-    apply hX₃ b _ (fun h => by rw [h] at h1; simp [CTL] at h1)
+    apply hX₃ b _ (fun h => by rw [TieredArray.t0_inj] at h; rw [h] at h1; simp [CTL] at h1)
     intro hb
-    rcases pts_arrs b hb with h | h | h | h <;> (simp only [ArrId] at h; omega)
+    have := pts_arrs _ hb; simp only at this; omega
   have htr₃ : ∀ w, rowTag w ≤ 2 → m₃.arr64 (tblArr w) = m₂.arr64 (tblArr w) := fun w hw =>
     hX₃ _ (fun h => by
-        have := tblArr_cases w hw
-        rcases pts_arrs _ h with h' | h' | h' | h' <;> (simp only [ArrId] at h' this; omega))
-      (by rcases tblArr_cases w hw with h | h | h | h | h | h <;> rw [h] <;> decide)
+        have h' := pts_arrs _ h; rw [tblArr_arr] at h'
+        rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] at h' <;> revert h' <;> decide)
+      (tblArr_ne_t0 w (by decide) (by decide) (by decide))
   -- the lists after the promotion
   have hBdec : tdec (erecP m₃) (m₃.arr64 ETAB) (n0.toNat - c.toNat) = some B := by
     refine tdec_mono hg₁₃.ext (n0.toNat - c.toNat) B (fun i hi => ?_) hB
@@ -173,7 +156,7 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
     have hl : envLen m₃ = envLen m₂ := by simp only [envLen, h128₃]
     rw [hl]
     exact cdec_mono hg₂₃.ext _ _ (fun i _ => by
-      rw [hX₃ ECON (fun h => by rcases pts_arrs _ h with h' | h' | h' | h' <;> (simp only [ECON, ArrId] at h'; omega))
+      rw [hX₃ ECON (fun h => absurd (pts_arrs _ h) (by decide))
         (by decide)]) h0
   have hE₃ : EnvR dn m₃ vis ⟨⟨consts, Lt' ++ B⟩, idx, vb, eraseInstalledTables tbls Lc⟩ :=
     (show EnvR dn m₂ vis ⟨⟨consts, tables⟩, idx, vb, eraseInstalledTables tbls Lc⟩ from hE₂).promoted
@@ -197,7 +180,7 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
   have hT₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [hfr₄.2.1 129 (by simp)]
   have hg₁₄ : ErecGrow m₁ m₄ := hg₁₃.trans (ErecGrow.of_eq hEE₄ hT₄)
   have hts₄ : erecTop m₄ ≤ (m₄.arr64 EREC).size := by rw [hEE₄, hT₄]; exact hts₃
-  have hfA : MemFrame (tblArrs ++ ETAB :: EREC :: eArrs) (129 :: eCtl) m₁ m₄ :=
+  have hfA : MemFrame (tblArrs ++ (ETAB : TieredArray) :: (EREC : TieredArray) :: eArrs) (129 :: eCtl) m₁ m₄ :=
     ((hfr₂.mono (fun b hb => List.mem_append_left _ hb) (by simp)).trans
       (hfr₃.mono (fun b hb => List.mem_append_right _ hb) (fun x hx => hx))).trans
       (hfr₄.mono (fun b hb => List.mem_append_left _ hb) (by simp))
