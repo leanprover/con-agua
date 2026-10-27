@@ -21,7 +21,7 @@ include hR hh
 
 theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view (decI h) = some v := by
   have ht1 := tierW_le h
-  have hidx := decI_idx h
+  have hidx := decI_idx (k := .level) h
   have hfl := ConsR.flag hR.zero
   unfold lvNodeW at hne
   simp only [h32 hh, ne_eq, not_true_eq_false, ↓reduceIte] at hne

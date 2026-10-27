@@ -92,7 +92,7 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
     lvNodeW m h = lvEnc v := by
   obtain ⟨hsc, hg⟩ := lview_tier hR hh hv
   have ht1 := tierW_le h
-  have hidx := decI_idx h
+  have hidx := decI_idx (k := .level) h
   simp only [LTables.get, decI_tag h hh] at hg
   simp only [lvNodeW, h32 hh, ne_eq, not_true_eq_false, ↓reduceIte, hsc]
   have e0 : ((decI h : LIdx).tag = 0 ↔ h >>> 28 = 0) := decI_tag_eq h hh 0 (by decide)
@@ -100,7 +100,7 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
   have e2 : ((decI h : LIdx).tag = 2 ↔ h >>> 28 = 2) := decI_tag_eq h hh 2 (by decide)
   have e3 : ((decI h : LIdx).tag = 3 ↔ h >>> 28 = 3) := decI_tag_eq h hh 3 (by decide)
   have e4 : ((decI h : LIdx).tag = 4 ↔ h >>> 28 = 4) := decI_tag_eq h hh 4 (by decide)
-  rw [← decI_tag h hh] at hg
+  rw [← decI_tag (k := .level) h hh] at hg
   simp only [LTag.zero, LTag.succ, LTag.max, LTag.max, LTag.imax, LTag.param, beq_iff_eq] at hg
   simp only [e0, e1, e2, e3, e4] at hg
   by_cases g0 : h >>> 28 = 0

@@ -73,7 +73,7 @@ views. -/
 theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view (decI h) = some v := by
   have hfl := ConsR.flag hR.zero
-  have hidx := decI_idx h
+  have hidx := decI_idx (k := .level) h
   have ht1 := tierW_le h
   unfold lvNodeW at hne
   simp only [h32 hh, ne_eq, not_true_eq_false, ↓reduceIte] at hne
