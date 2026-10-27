@@ -63,3 +63,29 @@ the `l_model` nor a constant in scope is an error at the `l_model` (it would mak
 Without `heartbeats` (the existing value, not raised) the `simp` variants run out of heartbeats
 in `step1` (`lift_go`'s dispatch: `simp_all` 10.8 s of the module). The `finish` time was
 `grind` (20.6 s); with `simp` it is `simp` (10.8 s) and `grind` (1.9 s).
+
+## The inductive arm's write-set checks in one walk (`IndArmClosed`)
+
+`IndArmClosed1`…`3` ran nine `prog_all` checks (`wsChk` per arm) over the whole `checkerProg`,
+three per module: each arm's chunk checks reduced every function's `nameCode` (its UTF-8 bytes,
+in the kernel) and the bodies of the functions in its set again. Now `wsChkM` checks all nine
+arms on one function (`List.all` over the arms' tests), one `prog_all`
+(`checkerProg_armChk`); the per-arm facts `checkerProg_arm*Chk` keep their names and follow from
+it by `wsChk_of_all` (no evaluation), so `Checker.IndArm` is unchanged apart from its imports.
+The name trees (their own kernel checks, ~11 s per four or five) moved to `IndArmTrees1`/`2`,
+built in parallel before the check; `IndArmTests` holds `tA`/`tC`/`wsChkM`.
+
+Experiments first (the check alone over the built trees): `List.all` over the arms 25.7 CPU-s;
+a variant passing the name code once (`wsChkC … (nameCode x.1)`) 25.5 s, the same (the kernel
+caches the shared reductions within one check); `nameCode` of every function alone ~4 s.
+
+Each module alone (`lake env lean`, otherwise idle machine):
+
+| | before | after |
+|---|---:|---:|
+| modules | `IndArmClosed1`/`2`/`3`: 32.4 / 22.7 / 34.4 CPU-s | `IndArmTrees1`/`2`: 11.5 / 10.9, `IndArmClosed`: 25.4 CPU-s |
+| CPU | 89.5 s | 47.8 s |
+| longest chain (wall) | 35 s | 11.9 + 26.0 = 38 s |
+
+The modules are off the critical path (buildtime.md, "Left"), so the 3 s longer chain costs
+nothing; the build saves ~42 CPU-s.
