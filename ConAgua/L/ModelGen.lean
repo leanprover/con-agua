@@ -1999,23 +1999,20 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       "L.St.setLocs_cons", "L.Locals.init_nil", "L.Locals.init_cons_zero", "L.Locals.init_cons_succ",
       "L.Sig.retVal", "L.Sig.retOr", "L.BinOp.eval", "L.Cmp.eval", "List.headD_cons", "List.headD_nil",
       "List.tail_cons", "List.tail_nil"]
-  -- (the locals' lemmas and the user's, for `simp only … at *`; the same with the models' equations,
-  -- for `simp_all`)
   let simpTxt? ← simpTs?.mapM fun ts => do
     let user ← ts.toList.mapM (pp ·.raw)
     let models := (fis.toList.map (s!"{·.model}")) ++ (st.ks.toList.map (s!"{·.name}"))
-    pure (String.intercalate ", " (simpBase ++ user), String.intercalate ", " (simpBase ++ models ++ user))
+    pure (String.intercalate ", " (simpBase ++ models ++ user))
   -- Before `simp_all`: the induction hypotheses `ihs` are cleared (`vcgen` has used them;
   -- `simp_all` would simplify them again and again, against every other hypothesis: IndBTmn
   -- 60 s -> 3 s), and the locals are evaluated by one `simp only … at *` (`vcgen` leaves each local
   -- as a chain of `setLoc`s through the states of all statements before it, in every hypothesis,
-  -- and `simp_all` evaluated them again in each round: IndBGrpM 270 s -> 85 s). The user's lemmas
-  -- go into that `simp only` too: a load's bound proof inside a term (`getElem_rdW'`) must be gone
-  -- before the hypothesis it proves is rewritten, or `simp_all` fails.
+  -- and `simp_all` evaluated them again in each round: IndBGrpM 270 s -> 85 s).
   let stepTac (attrs vcg : String) (ihs : List String) : String := match simpTxt? with
-    | some (l₀, l) =>
+    | some l =>
       let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
-      s!"(vcgen [{vcg}]{clr} <;> (try simp only [{l₀}] at *) <;> (try simp_all [{l}]) <;> grind [{attrs}])"
+      s!"(vcgen [{vcg}]{clr} <;> (try simp only [{String.intercalate ", " simpBase}] at *) <;> " ++
+        s!"(try simp_all [{l}]) <;> grind [{attrs}])"
     | none => s!"sym {symCfg}only [{attrs}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
   let parseTac (txt : String) : CommandElabM Syntax := do
     -- the library's names root-qualified, so that a binder `L` does not capture them
