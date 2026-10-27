@@ -2,7 +2,11 @@
 # Format: <file> TAB <import line> TAB # <reason>
 ConAgua/Arena/CapsNeverZeroCore.lean	public import ConAgua.Arena.LevelIntern	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/CapsNeverZeroCore.lean	public import ConAgua.Arena.LevelInternRef	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/CheckerL.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/DeclApd.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/DeclAxiomSpec3.lean	public import ConAgua.Arena.DeclAxiomSpec2	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/DeclStep.lean	public import ConAgua.Front.IndApply	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the inductive lines through it
+ConAgua/Arena/DefEq.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqLeaves2.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -12,7 +16,9 @@ ConAgua/Arena/DefEqMid.lean	public import ConAgua.Arena.WhnfCoreProj	# a constan
 ConAgua/Arena/DefEqMidSpine.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqStuckEta.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqStuckShape.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/Freeze.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/IndCallM.lean	public import ConAgua.Arena.IndIface	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/IndInstallSpec/GrcTwinA.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/IndInstallSpec/IcbiW.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndInstallSpec/LvlEqFueledSpecC.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndInstallSpec/Pos3MapMProj.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -24,6 +30,7 @@ ConAgua/Arena/IndPosSpec/SgF.lean	public import ConAgua.Arena.Reasons	# a consta
 ConAgua/Arena/IndSumSpec/Bnums.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndSumSpec/ColW.lean	public import ConAgua.Arena.IndSum	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/IndT/KeepC.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/Infer.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/InferBodyBind.lean	public import ConAgua.Arena.WhnfCoreApp	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferBodyBind.lean	public import ConAgua.Arena.WhnfCoreRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferBodyIntern.lean	public import ConAgua.Arena.WhnfCoreApp	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
@@ -38,27 +45,44 @@ ConAgua/Arena/InferLeaves.lean	public import ConAgua.Arena.WhnfCoreRefine	# the 
 ConAgua/Arena/InferProj.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferProj2.lean	public import ConAgua.Arena.ProjView	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferProj2.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/InstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/LevelInternRef.lean	public import ConAgua.Arena.Rom	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/LevelSubstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/NatArms.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/PropRead.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/PropReadRefine.lean	public import ConAgua.Arena.LevelInternRef	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/PropReadRefine3.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/RecCheckSpec/TcmK6.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/RecCheckSpec/TkhK5.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/RecCheckSpec/Tpd.lean	public import ConAgua.Arena.RecClassSpec.MnW	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Arena/SlotGrow.lean	public import ConAgua.Arena.Pool	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the pool lemmas through it
 ConAgua/Arena/Store.lean	public import ConAgua.Arena.Pool	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
 ConAgua/Arena/Store.lean	public import ConAgua.Arena.SlotGrowSpec	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
 ConAgua/Arena/Store.lean	public import ConAgua.L.Notation	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
+ConAgua/Arena/StoreDen.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/StrLit.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/StripTele.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/StubNames.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/TeleLift.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/WalkLeaves.lean	public import ConAgua.L.PureEval	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Arena/WhnfCoreAppLoop.lean	public import ConAgua.Arena.WhnfCoreApp	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Arena/WhnfCoreLoop.lean	public import ConAgua.Arena.WhnfCoreProj	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/WhnfCoreLoop.lean	public import ConAgua.Arena.WhnfCoreSlot	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Arena/WhnfIotaRec.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/WhnfIotaRefine.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/WhnfIotaRefine.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/WhnfIotaRefine2.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/WhnfM2C.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/WhnfM2CRefine.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/WhnfProj.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Checker/ArrCheck.lean	public import ConAgua.Arena.ArenaRel	# `#guard`s read it (they leave no constant the tool sees)
+ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.CapCheck	# `#guard`s read it (they leave no constant the tool sees)
+ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.ParOwned	# `#guard`s read it (they leave no constant the tool sees)
 ConAgua/Checker/CoreErec.lean	public import ConAgua.Arena.LevelIntern	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Checker/CoreErec.lean	public import ConAgua.Arena.LevelSubstLP	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Checker/FrontProg.lean	public import ConAgua.Arena.LevelIntern	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Checker/FrontProg.lean	public import ConAgua.Arena.LevelSubstLP	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Checker/Hoist.lean	public import ConAgua.Front.IndApply	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Checker/IndMemoClosed.lean	public import ConAgua.Arena.LevelIntern	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Checker/IndMemoClosed.lean	public import ConAgua.Arena.LevelSubstLP	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Checker/LeafAll.lean	public import ConAgua.Arena.LevelIntern	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -75,7 +99,12 @@ ConAgua/Checker/Pipeline.lean	public import ConAgua.Arena.Reasons	# a constant t
 ConAgua/Checker/RomProg0.lean	public import ConAgua.Arena.LevelIntern	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Checker/RomProg0.lean	public import ConAgua.Arena.LevelSubstLP	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Checker/RomProg0.lean	public import ConAgua.Compiler.WFFast	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
+ConAgua/Front/Driver.lean	public import ConAgua.Arena.Pool	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Front/IndAlloc.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Front/IndApply.lean	public import ConAgua.Front.ApplyDecl	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Front/IndApply.lean	public import ConAgua.Front.IndFields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Front/IndFields.lean	public import ConAgua.Front.Apply	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Front/NatDec.lean	public import ConAgua.Front.Fields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Rom/PinRead.lean	public import ConAgua.Arena.IndIface	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Scan/Member.lean	public import ConAgua.L.Logic	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Scan/Member.lean	public import ConAgua.L.Notation	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
@@ -98,32 +127,3 @@ ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install2	# the buil
 ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/InferLeavesE.lean	public import ConAgua.Arena.WhnfIotaRefine6	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
-
-ConAgua/Checker/ArrCheck.lean	public import ConAgua.Arena.ArenaRel	# `#guard`s read it (they leave no constant the tool sees)
-ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.CapCheck	# `#guard`s read it (they leave no constant the tool sees)
-ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.ParOwned	# `#guard`s read it (they leave no constant the tool sees)
-ConAgua/Arena/CheckerL.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/DeclApd.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/DefEq.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/Freeze.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/IndInstallSpec/GrcTwinA.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/Infer.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/InstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/LevelSubstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/NatArms.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/PropRead.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/StoreDen.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/StrLit.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/StripTele.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/StubNames.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/TeleLift.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/WhnfIotaRec.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/WhnfM2C.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/WhnfProj.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Checker/Hoist.lean	public import ConAgua.Front.IndApply	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Front/Driver.lean	public import ConAgua.Arena.Pool	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Front/IndApply.lean	public import ConAgua.Front.ApplyDecl	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Front/IndApply.lean	public import ConAgua.Front.IndFields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Front/IndFields.lean	public import ConAgua.Front.Apply	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Front/NatDec.lean	public import ConAgua.Front.Fields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/DeclStep.lean	public import ConAgua.Front.IndApply	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the inductive lines through it
