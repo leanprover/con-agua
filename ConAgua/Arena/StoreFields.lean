@@ -182,7 +182,7 @@ theorem evalE_adE (R : TRec) (i : Expr) (f : Word) :
     evalE (R.adE i f) = (do let j ← evalE i; pure (R.ad j f)) := by
   simp only [TRec.adE, TRec.ad]
   split <;> split <;>
-    simp_all [evalE, BinOp.eval, bind_pure_comp, map_bind, Functor.map_map]
+    simp_all [evalE, BinOp.eval, bind_pure_comp, Functor.map_map]
 
 theorem tld_eq (R : TRec) (t i f : Word) :
     (do let x ← ld64 (tierA R.arr t) (R.ad i f); pure (R.ex f x)) = tld R t i f := by

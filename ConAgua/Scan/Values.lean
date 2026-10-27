@@ -277,25 +277,25 @@ theorem natListN_ws (k : Word) (hk : k = i + 1) (h : i < UInt64.ofNat b.size)
   subst hk; rw [natListN]; simp [h, hc]
 
 theorem natListN_close_ok (h : i < UInt64.ofNat b.size)
-    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (hc : byteW b i = 93)
+    (_h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (hc : byteW b i = 93)
     (hw : ¬ (w ≠ 0 ∧ cnt ≠ 0)) : natListN b i cnt w = (i + 1, cnt) := by
-  rw [natListN]; simp [h, h1, hc, hw]
+  rw [natListN]; simp [h, hc, hw]
 
 theorem natListN_close_fail (h : i < UInt64.ofNat b.size)
-    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (hc : byteW b i = 93)
+    (_h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (hc : byteW b i = 93)
     (hw : w ≠ 0 ∧ cnt ≠ 0) : natListN b i cnt w = (0, 0) := by
-  rw [natListN]; simp [h, h1, hc, hw]
+  rw [natListN]; simp [h, hc, hw]
 
 theorem natListN_comma (k : Word) (hk : k = i + 1)
-    (h : i < UInt64.ofNat b.size) (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13))
-    (h2 : byteW b i ≠ 93) (hc : byteW b i = 44) (hw : w = 0) :
+    (h : i < UInt64.ofNat b.size) (_h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13))
+    (_h2 : byteW b i ≠ 93) (hc : byteW b i = 44) (hw : w = 0) :
     natListN b i cnt w = natListN b k cnt 1 := by
-  subst hk; rw [natListN]; simp [h, h1, h2, hc, hw]
+  subst hk; rw [natListN]; simp [h, hc, hw]
 
 theorem natListN_comma_fail (h : i < UInt64.ofNat b.size)
-    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)
+    (_h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (_h2 : byteW b i ≠ 93)
     (hc : byteW b i = 44) (hw : w ≠ 0) : natListN b i cnt w = (0, 0) := by
-  rw [natListN]; simp [h, h1, h2, hc, hw]
+  rw [natListN]; simp [h, hc, hw]
 
 theorem natListN_digit_w0 (h : i < UInt64.ofNat b.size)
     (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)

@@ -91,8 +91,7 @@ theorem fld_set64 (m : Mem) (R : Record) (a : ArrId) (i j : Word) (f g : Field) 
   subst ha
   simp only [Mem.fld, Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?]
   by_cases ha : R.arr < m.words.size
-  · simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, ha, ↓reduceDIte,
-      Array.getElem_setIfInBounds, ite_true]
+  · simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, ha, ite_true]
     by_cases e : i = j ∧ f.off = g.off
     · obtain ⟨rfl, hfg⟩ := e
       have : R.ad i f = R.ad i g := by simp [Record.ad, hfg]
@@ -101,7 +100,7 @@ theorem fld_set64 (m : Mem) (R : Record) (a : ArrId) (i j : Word) (f g : Field) 
         simp [hb, hfg, Array.getElem?_eq_getElem ha]
     · have hne : (R.ad i f).toNat ≠ (R.ad j g).toNat := fun h' =>
         e (R.ad_inj hi hj hf hg (UInt64.toNat_inj.mp h'))
-      rw [if_neg (fun h' => e ⟨h'.1, h'.2.1⟩)]
+      rw [ite_eq_right (fun h' => e ⟨h'.1, h'.2.1⟩)]
       simp [hne]
   · simp [Array.set!_eq_setIfInBounds, ha]
 
@@ -112,7 +111,7 @@ theorem fld_set64_ne (m : Mem) (R : Record) (a : ArrId) (k v j : Word) (g : Fiel
     (m.set64 a k v).fld R j g = m.fld R j g := by
   simp only [Mem.fld, Mem.set64, Mem.arr64, Array.getD_eq_getD_getElem?]
   by_cases ha : a < m.words.size <;>
-    simp [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, ha, h]
+    simp [Array.set!_eq_setIfInBounds, ha, h]
 
 grind_pattern [lang_grind] fld_set64_ne => (m.set64 a k v).fld R j g
 

@@ -79,3 +79,26 @@ proof in progress, a `sorry` stub would be an error although PLAN.md allows it o
 module's cache key would change). Consequence for lanes: a `sorry` or any warning in new code now
 turns CI red; the merge queue's `build` gate does not check the log (the coordinator can add
 `scripts/check-no-warnings.sh` to `gates.sh`).
+
+## Batch 3: the log was not a valid input
+
+A cold build of master 5b9bde54 (no shared-cache hits, 29 min) had 711 unique warnings outside
+Kraken; my incremental logs had shown none of them. Cause, confirmed: a module restored from the
+shared artifact cache gets a *synthetic* trace with `"log": []`
+(`.lake/build/lib/lean/ConAgua/Compiler/SimCall.trace`), so its warnings are neither stored in the
+cache nor replayed. Only modules Lake compiled itself in that worktree print them; batch 1's
+census therefore covered the 619 files I had changed (their suppression lines) plus whatever
+else was rebuilt, and missed the modules that never had a suppression (Compiler, Scan/Member, ...).
+
+Consequences: `scripts/check-no-warnings.sh` is sound only on a log of a build that compiled the
+modules itself. In CI that holds (the cache is actions/cache's `.lake/build`, with Lake's own traces,
+whose logs are replayed, and `scripts/lake` finds no shared cache there). Locally,
+`LAKE_COLD=1 scripts/lake build` (new) keeps the shared cache out in both directions, in a worktree
+without `.lake/build`. The script now says so, and allows `vendor/` warnings (con-leche's
+Challenge.lean has two `sorry`s by design; con-ron has an unused simp argument).
+
+The cold log was fixed with the tool (347 simp args, 267 deprecated, 37 variables), plus: 12 unused
+`show ... by decide` simp arguments the argument matcher cannot find (pretty-printed text differs from
+the source; removed by position), 62 redundant `grind` lemmas, 2 `simpa`, 4 `vcgen` acknowledgements,
+and `unusedSectionVars` off again in 14 more files (same reason as before). A second cold build
+(`_tmp/nowarn/cold3.log`) has no warning outside Kraken and `vendor/`.

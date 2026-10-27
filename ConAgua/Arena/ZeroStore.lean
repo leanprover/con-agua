@@ -161,14 +161,14 @@ theorem zeroOK : ConsOK p zeroCS where
       subst he; simp [Expr.pval],
     fun s => by simp [zeroCS, Expr.pval]⟩
   room := fun s => by
-    simp only [zeroCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+    simp only [zeroCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval]; rfl
   skips := by intro e he; simp [zeroCS] at he
   pre := rfl
   colA := by simp [zeroCS]
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [zeroCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+    simp only [zeroCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [zeroCS] at h
   mloc := fun h => by simp [zeroCS] at h
   exnk := fun _ => by decide

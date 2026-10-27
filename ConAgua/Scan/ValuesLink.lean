@@ -154,31 +154,31 @@ theorem scanQuotedNat_eq_quotedNatN (i : USize) :
   by_cases h1 : byteAt b i = 34
   · obtain ⟨h1A, h1B⟩ := hcond.mp h1
     have h1b : (byteAt b i != 34) = false := by simpa using h1
-    simp only [h1b, ite_true, ite_false]
-    rw [if_pos (⟨h1A, h1B⟩ : i.toUInt64 < UInt64.ofNat b.data.size ∧ byteW b.data i.toUInt64 = 34)]
+    simp only [h1b]
+    rw [ite_eq_left (⟨h1A, h1B⟩ : i.toUInt64 < UInt64.ofNat b.data.size ∧ byteW b.data i.toUInt64 = 34)]
     by_cases h2 : skipDigits b (i + 1) = i + 1
     · have h2b : (skipDigits b (i + 1) == i + 1) = true := by simpa using h2
       simp only [h2b, Bool.true_or, ite_true]
-      rw [if_pos (heqcond.mp h2)]
+      rw [ite_eq_left (heqcond.mp h2)]
       simp
     · have h2b : (skipDigits b (i + 1) == i + 1) = false := by simpa using h2
       simp only [h2b, Bool.false_or]
-      rw [if_neg (fun hx => h2 (heqcond.mpr hx))]
+      rw [ite_eq_right (fun hx => h2 (heqcond.mpr hx))]
       by_cases h3 : byteAt b (skipDigits b (i + 1)) = 34
       · obtain ⟨h3A, h3B⟩ := hcond2.mp h3
         have h3b : (byteAt b (skipDigits b (i + 1)) != 34) = false := by simpa using h3
-        simp only [h3b, ite_true, ite_false]
-        rw [if_pos (⟨h3A, h3B⟩ :
+        simp only [h3b]
+        rw [ite_eq_left (⟨h3A, h3B⟩ :
           UInt64.ofNat (skipDigitsN b.data (i.toUInt64 + 1).toNat) < UInt64.ofNat b.data.size ∧
             byteW b.data (UInt64.ofNat (skipDigitsN b.data (i.toUInt64 + 1).toNat)) = 34)]
         simp [hlast]
       · have h3b : (byteAt b (skipDigits b (i + 1)) != 34) = true := by simpa using h3
         simp only [h3b, ite_true]
-        rw [if_neg (fun hx => h3 (hcond2.mpr hx))]
+        rw [ite_eq_right (fun hx => h3 (hcond2.mpr hx))]
         simp
   · have h1b : (byteAt b i != 34) = true := by simpa using h1
     simp only [h1b, ite_true]
-    rw [if_neg (fun hx => h1 (hcond.mpr hx))]
+    rw [ite_eq_right (fun hx => h1 (hcond.mpr hx))]
 
 /-! ## `scan_binder_info` -/
 
@@ -206,26 +206,26 @@ theorem scanBinderInfo_eq_binderInfoN (i : USize) :
   by_cases h1 : byteAt b i = 34
   · obtain ⟨h1A, h1B⟩ := hcond.mp h1
     have h1b' : ¬ (byteAt b i != 34) = true := by simpa using h1
-    rw [if_neg h1b', if_pos (⟨h1A, h1B⟩ : i.toUInt64 < UInt64.ofNat b.data.size ∧ byteW b.data i.toUInt64 = 34)]
+    rw [ite_eq_right h1b', ite_eq_left (⟨h1A, h1B⟩ : i.toUInt64 < UInt64.ofNat b.data.size ∧ byteW b.data i.toUInt64 = 34)]
     by_cases h2 : matchLitN b.data (i.toUInt64 + 1).toNat WORDS 0 8 0
-    · simp only [h2, if_true]
+    · simp only [h2, ite_true]
       rw [add_toUInt64 h64, ofNat_toUInt64 h64]
-    · simp only [h2, Bool.false_eq_true, if_false]
+    · simp only [h2, Bool.false_eq_true, ite_false]
       by_cases h3 : matchLitN b.data (i.toUInt64 + 1).toNat WORDS 8 9 0
-      · simp only [h3, if_true]
+      · simp only [h3, ite_true]
         rw [add_toUInt64 h64, ofNat_toUInt64 h64]
-      · simp only [h3, Bool.false_eq_true, if_false]
+      · simp only [h3, Bool.false_eq_true, ite_false]
         by_cases h4 : matchLitN b.data (i.toUInt64 + 1).toNat WORDS 17 15 0
-        · simp only [h4, if_true]
+        · simp only [h4, ite_true]
           rw [add_toUInt64 h64, ofNat_toUInt64 h64]
-        · simp only [h4, Bool.false_eq_true, if_false]
+        · simp only [h4, Bool.false_eq_true, ite_false]
           by_cases h5 : matchLitN b.data (i.toUInt64 + 1).toNat WORDS 32 13 0
-          · simp only [h5, if_true]
+          · simp only [h5, ite_true]
             rw [add_toUInt64 h64, ofNat_toUInt64 h64]
-          · simp only [h5, Bool.false_eq_true, if_false]
+          · simp only [h5, Bool.false_eq_true, ite_false]
             decide
   · have h1b' : (byteAt b i != 34) = true := by simpa using h1
-    rw [if_pos h1b', if_neg (fun hx => h1 (hcond.mpr hx))]
+    rw [ite_eq_left h1b', ite_eq_right (fun hx => h1 (hcond.mpr hx))]
     decide
 
 /-! ## `scan_hints` -/
@@ -254,20 +254,20 @@ theorem scanHints_eq_hintsN (i : USize) :
       hi1]
   by_cases h1 : byteAt b i = 34
   · have h1' : (byteAt b i == 34) = true := by simpa using h1
-    rw [if_pos h1', if_pos (hcond34.mp h1)]
+    rw [ite_eq_left h1', ite_eq_left (hcond34.mp h1)]
     by_cases h2 : matchLitN b.data (i.toUInt64 + 1).toNat WORDS 45 7 0
-    · simp only [h2, if_true]
+    · simp only [h2, ite_true]
       rw [add_toUInt64 h64, ofNat_toUInt64 h64]
-    · simp only [h2, Bool.false_eq_true, if_false]
+    · simp only [h2, Bool.false_eq_true, ite_false]
       by_cases h3 : matchLitN b.data (i.toUInt64 + 1).toNat WORDS 52 7 0
-      · simp only [h3, if_true]
+      · simp only [h3, ite_true]
         rw [add_toUInt64 h64, ofNat_toUInt64 h64]
-      · simp only [h3, Bool.false_eq_true, if_false]
+      · simp only [h3, Bool.false_eq_true, ite_false]
   · have h1' : ¬ (byteAt b i == 34) = true := by simpa using h1
-    rw [if_neg h1', if_neg (fun hx => h1 (hcond34.mpr hx))]
+    rw [ite_eq_right h1', ite_eq_right (fun hx => h1 (hcond34.mpr hx))]
     by_cases h4 : byteAt b i = 123
     · have h4' : (byteAt b i == 123) = true := by simpa using h4
-      rw [if_pos h4', if_pos (hcond123.mp h4)]
+      rw [ite_eq_left h4', ite_eq_left (hcond123.mp h4)]
       have hp_eq : (skipWs b (i + 1)).toUInt64 =
           UInt64.ofNat (skipWsN b.data (i.toUInt64 + 1).toNat) := by
         rw [skipWs_toUInt64_eq b h64 hsize64, hi1]
@@ -279,7 +279,7 @@ theorem scanHints_eq_hintsN (i : USize) :
       by_cases h5 : byteAt b p = 34
       · have h5' : ¬ (byteAt b p != 34) = true := by simpa using h5
         obtain ⟨h5A, h5B⟩ := hcondP.mp h5
-        rw [if_neg h5', if_neg (show ¬ ¬ (p.toUInt64 < UInt64.ofNat b.data.size ∧
+        rw [ite_eq_right h5', ite_eq_right (show ¬ ¬ (p.toUInt64 < UInt64.ofNat b.data.size ∧
           byteW b.data p.toUInt64 = 34) from fun hx => hx ⟨h5A, h5B⟩)]
         have hp1 : (p + 1).toNat = (p.toUInt64 + 1).toNat := by
           simp only [USize.toNat_add, UInt64.toNat_add, USize.toNat_ofNat, UInt64.toNat_ofNat,
@@ -298,12 +298,12 @@ theorem scanHints_eq_hintsN (i : USize) :
         · have h6' : UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat) = 0 := by
             rw [← hke_eq, h6]; rfl
           have h6b : (keyEnd b (p + 1) == 0) = true := by simpa using h6
-          rw [if_pos h6b, if_pos h6']
+          rw [ite_eq_left h6b, ite_eq_left h6']
         · have h6' : ¬ UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat) = 0 := by
             rw [← hke_eq]
             exact fun hx => h6 ((eq_toUInt64_iff _ _).mpr (by rw [hx]; rfl))
           have h6b : ¬ (keyEnd b (p + 1) == 0) = true := by simpa using h6
-          rw [if_neg h6b, if_neg h6']
+          rw [ite_eq_right h6b, ite_eq_right h6']
           have hge := keyEnd_ne_zero_ge b (p + 1) h6
           have hlt := keyEnd_ne_zero_lt b (p + 1) h6
           rw [USize.le_iff_toNat_le] at hge
@@ -320,7 +320,7 @@ theorem scanHints_eq_hintsN (i : USize) :
           · have h7' : keyAtN b.data p.toUInt64
                 (UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat) - (p.toUInt64 + 1)) = 51 := by
               rw [← hkeyAt, h7]; rfl
-            rw [if_neg (show ¬ keyAtN b.data p.toUInt64
+            rw [ite_eq_right (show ¬ keyAtN b.data p.toUInt64
                 (UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat) - (p.toUInt64 + 1)) ≠ 51
               from fun hx => hx h7')]
             simp only [h7]
@@ -332,14 +332,14 @@ theorem scanHints_eq_hintsN (i : USize) :
                 rw [← hv_eq, h8]
               have h8b : (valueAt b p (keyEnd b (p + 1)) == p) = true := by simpa using h8
               rw [h8b]
-              simp only [h8', if_true, ite_true]
+              simp only [h8', ite_true]
             · have h8' : ¬ valueAtN b.data p.toUInt64
                   (UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat)) = p.toUInt64 := by
                 rw [← hv_eq]
                 intro hx; exact h8 ((eq_toUInt64_iff _ _).mpr hx)
               have h8b : (valueAt b p (keyEnd b (p + 1)) == p) = false := by simpa using h8
               rw [h8b]
-              simp only [h8', if_false]
+              simp only [h8', ite_false]
               unfold hintsNumN
               have he_eq : (numEnd b (valueAt b p (keyEnd b (p + 1)))).toUInt64 =
                   UInt64.ofNat (numEndN b.data
@@ -354,7 +354,7 @@ theorem scanHints_eq_hintsN (i : USize) :
                 have h9b : (numEnd b (valueAt b p (keyEnd b (p + 1))) ==
                     valueAt b p (keyEnd b (p + 1))) = true := by simpa using h9
                 rw [h9b]
-                simp only [h9', if_true, ite_true]
+                simp only [h9', ite_true]
                 rfl
               · have h9' : ¬ UInt64.ofNat (numEndN b.data
                     (valueAtN b.data p.toUInt64 (UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat))).toNat) =
@@ -364,7 +364,7 @@ theorem scanHints_eq_hintsN (i : USize) :
                 have h9b : (numEnd b (valueAt b p (keyEnd b (p + 1))) ==
                     valueAt b p (keyEnd b (p + 1))) = false := by simpa using h9
                 rw [h9b]
-                simp only [h9', if_false]
+                simp only [h9', ite_false]
                 have hq_eq : (skipWs b (numEnd b (valueAt b p (keyEnd b (p + 1))))).toUInt64 =
                     UInt64.ofNat (skipWsN b.data
                       (numEnd b (valueAt b p (keyEnd b (p + 1)))).toUInt64.toNat) :=
@@ -379,7 +379,7 @@ theorem scanHints_eq_hintsN (i : USize) :
                   have h10b : (byteAt b (skipWs b (numEnd b (valueAt b p (keyEnd b (p + 1))))) == 125)
                       = true := by simpa using h10
                   rw [hq_eq] at h10'
-                  rw [if_pos h10b, if_pos h10']
+                  rw [ite_eq_left h10b, ite_eq_left h10']
                   show (skipWs b (numEnd b (valueAt b p (keyEnd b (p + 1)))) + 1).toUInt64 = _
                   rw [add_toUInt64 h64, hq_eq, ofNat_toUInt64 h64]
                 · have h10' : ¬ ((skipWs b (numEnd b (valueAt b p (keyEnd b (p + 1))))).toUInt64 <
@@ -389,21 +389,21 @@ theorem scanHints_eq_hintsN (i : USize) :
                   rw [hq_eq] at h10'
                   have h10b : ¬ (byteAt b (skipWs b (numEnd b (valueAt b p (keyEnd b (p + 1))))) == 125)
                       = true := by simpa using h10
-                  rw [if_neg h10b, if_neg h10']
+                  rw [ite_eq_right h10b, ite_eq_right h10']
                   rfl
           · have h7' : ¬ keyAtN b.data p.toUInt64
                 (UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat) - (p.toUInt64 + 1)) = 51 := by
               rw [← hkeyAt]
               exact fun hx => h7 ((key_ctorIdx_word_eq_regular_iff _).mp hx)
-            rw [if_pos (show keyAtN b.data p.toUInt64
+            rw [ite_eq_left (show keyAtN b.data p.toUInt64
                 (UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat) - (p.toUInt64 + 1)) ≠ 51
               from h7')]
             cases hkc : keyAt b p (keyEnd b (p + 1) - (p + 1)) <;> simp_all
       · have h5' : (byteAt b p != 34) = true := by simpa using h5
         have h5'' : ¬ (p.toUInt64 < UInt64.ofNat b.data.size ∧ byteW b.data p.toUInt64 = 34) :=
           fun hx => h5 (hcondP.mpr hx)
-        rw [if_pos h5', if_pos h5'']
+        rw [ite_eq_left h5', ite_eq_left h5'']
     · have h4' : ¬ (byteAt b i == 123) = true := by simpa using h4
-      rw [if_neg h4', if_neg (fun hx => h4 (hcond123.mpr hx))]
+      rw [ite_eq_right h4', ite_eq_right (fun hx => h4 (hcond123.mpr hx))]
 
 end ConAgua.Scan

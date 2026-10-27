@@ -75,9 +75,9 @@ theorem skipWsN_scan : ∀ k i, b.size - i = k → i ≤ b.size → skipWsN b i 
     have h : i < b.size := by omega
     have hg : b[i]! = b[i] := getElem!_pos b i h
     by_cases hc : b[i] = 32 ∨ b[i] = 9 ∨ b[i] = 13
-    · rw [skipWsN, dif_pos h, if_pos hc, ih (i + 1) (by omega) (by omega), scanN_miss b _ _ _ h]
+    · rw [skipWsN, dite_eq_left h, ite_eq_left hc, ih (i + 1) (by omega) (by omega), scanN_miss b _ _ _ h]
       rw [hg]; exact Classical.byContradiction fun hn => (notWsC_mem _).mp hn hc
-    · rw [skipWsN, dif_pos h, if_neg hc, scanN_hit b _ _ _ h]
+    · rw [skipWsN, dite_eq_left h, ite_eq_right hc, scanN_hit b _ _ _ h]
       rw [hg]; exact (notWsC_mem _).mpr hc
 
 section skipWs
@@ -151,9 +151,9 @@ theorem skipDigitsN_scan : ∀ k i, b.size - i = k → i ≤ b.size →
     have h : i < b.size := by omega
     have hg : b[i]! = b[i] := getElem!_pos b i h
     by_cases hc : 48 ≤ b[i] ∧ b[i] ≤ 57
-    · rw [skipDigitsN, dif_pos h, if_pos hc, ih (i + 1) (by omega) (by omega), scanN_miss b _ _ _ h]
+    · rw [skipDigitsN, dite_eq_left h, ite_eq_left hc, ih (i + 1) (by omega) (by omega), scanN_miss b _ _ _ h]
       rw [hg]; exact Classical.byContradiction fun hn => (notDigitC_mem _).mp hn hc
-    · rw [skipDigitsN, dif_pos h, if_neg hc, scanN_hit b _ _ _ h]
+    · rw [skipDigitsN, dite_eq_left h, ite_eq_right hc, scanN_hit b _ _ _ h]
       rw [hg]; exact (notDigitC_mem _).mpr hc
 
 /-- A nonzero advance means `i` was in bounds (used by `num_end`, which reads `b[i]` once it
@@ -315,7 +315,7 @@ theorem keyEndN_scan : ∀ k j, b.size - j = k → j ≤ b.size →
   | zero =>
     intro j hk hj
     have h1 : ¬ j < b.size := by omega
-    rw [keyEndN, scanN_end b _ _ _ (by omega), dif_neg h1, if_neg (by omega)]
+    rw [keyEndN, scanN_end b _ _ _ (by omega), dite_eq_right h1, ite_eq_right (by omega)]
   | succ k ih =>
     intro j hk hj
     have h : j < b.size := by omega
@@ -323,13 +323,13 @@ theorem keyEndN_scan : ∀ k j, b.size - j = k → j ≤ b.size →
     have hcls : strStopC[(b[j]!).toNat]! ≠ 0 ↔ (b[j] = 34 ∨ b[j] = 92 ∨ b[j] < 32) := by
       rw [hg]; exact strStopC_mem _
     by_cases hq : b[j] = 34
-    · rw [keyEndN, dif_pos h, if_pos hq, scanN_hit b _ _ _ h (hcls.mpr (.inl hq))]
+    · rw [keyEndN, dite_eq_left h, ite_eq_left hq, scanN_hit b _ _ _ h (hcls.mpr (.inl hq))]
       simp [h, hq]
     · by_cases hc : b[j] < 32 ∨ b[j] = 92
-      · rw [keyEndN, dif_pos h, if_neg hq, if_pos hc,
+      · rw [keyEndN, dite_eq_left h, ite_eq_right hq, ite_eq_left hc,
           scanN_hit b _ _ _ h (hcls.mpr (by rcases hc with hc | hc <;> simp [hc]))]
         simp [h, hq]
-      · rw [keyEndN, dif_pos h, if_neg hq, if_neg hc, ih (j + 1) (by omega) (by omega),
+      · rw [keyEndN, dite_eq_left h, ite_eq_right hq, ite_eq_right hc, ih (j + 1) (by omega) (by omega),
           scanN_miss b _ _ _ h (by
             have : ¬ (b[j] = 34 ∨ b[j] = 92 ∨ b[j] < 32) := by
               simp only [not_or] at hc ⊢; exact ⟨hq, hc.2, hc.1⟩
@@ -356,11 +356,10 @@ theorem keyEnd_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8]
-    all_goals (simp_all [Mem.src8, Mem.len8, St.setLoc, Cmp.eval, Locals.init, Sig.retVal, Sig.retOr,
-      Nat.mod_eq_of_lt hb, Nat.mod_eq_of_lt hs1, UInt64.le_iff_toNat_le, UInt64.lt_iff_toNat_lt,
+    all_goals (simp_all [Mem.src8, Mem.len8, St.setLoc, Cmp.eval, Locals.init, Sig.retVal, Sig.retOr, Nat.mod_eq_of_lt hs1, UInt64.le_iff_toNat_le, UInt64.lt_iff_toNat_lt,
       UInt64.toNat_ofNat_of_lt' hb])
-    · rw [scanN_end _ _ _ _ (by omega), if_neg (by omega)]; rfl
-    · rw [if_neg (by omega)]; rfl
+    · rw [scanN_end _ _ _ _ (by omega), ite_eq_right (by omega)]; rfl
+    · rw [ite_eq_right (by omega)]; rfl
 
 end keyEnd
 
@@ -405,10 +404,10 @@ theorem hasEscapeN_scan : ∀ k j, min e b.size - j = k → j ≤ min e b.size �
   induction k with
   | zero =>
     intro j hk hj
-    rw [scanN_end b _ _ _ (by omega), if_neg (by omega)]
+    rw [scanN_end b _ _ _ (by omega), ite_eq_right (by omega)]
     by_cases h1 : j < b.size
-    · rw [hasEscapeN, dif_pos h1, if_neg (by omega)]
-    · rw [hasEscapeN, dif_neg h1]
+    · rw [hasEscapeN, dite_eq_left h1, ite_eq_right (by omega)]
+    · rw [hasEscapeN, dite_eq_right h1]
   | succ k ih =>
     intro j hk hj
     have h : j < b.size := by omega
@@ -417,9 +416,9 @@ theorem hasEscapeN_scan : ∀ k j, min e b.size - j = k → j ≤ min e b.size �
     have hcls : bslashC[(b[j]!).toNat]! ≠ 0 ↔ b[j] = 92 := by
       rw [hg]; exact bslashC_mem _
     by_cases hq : b[j] = 92
-    · rw [hasEscapeN, dif_pos h, if_pos hje, if_pos hq, scanN_hit b _ _ _ (by omega) (hcls.mpr hq)]
+    · rw [hasEscapeN, dite_eq_left h, ite_eq_left hje, ite_eq_left hq, scanN_hit b _ _ _ (by omega) (hcls.mpr hq)]
       simp; omega
-    · rw [hasEscapeN, dif_pos h, if_pos hje, if_neg hq, ih (j + 1) (by omega) (by omega),
+    · rw [hasEscapeN, dite_eq_left h, ite_eq_left hje, ite_eq_right hq, ih (j + 1) (by omega) (by omega),
         scanN_miss b _ _ _ (by omega) (Classical.byContradiction fun hn => hq (hcls.mp hn))]
 
 /-- `hasEscapeN` for every `j`: nothing past `min e b.size`. -/
@@ -428,11 +427,11 @@ theorem hasEscapeN_eq (j e : Nat) : hasEscapeN b j e =
   by_cases h : j ≤ min e b.size
   · rw [hasEscapeN_scan b e _ j rfl h]
     by_cases h' : j < min e b.size
-    · rw [if_pos h']
-    · rw [if_neg h', scanN_end _ _ _ _ h', if_neg h']
-  · rw [if_neg (by omega), hasEscapeN]
+    · rw [ite_eq_left h']
+    · rw [ite_eq_right h', scanN_end _ _ _ _ h', ite_eq_right h']
+  · rw [ite_eq_right (by omega), hasEscapeN]
     split
-    · rw [if_neg (by omega)]
+    · rw [ite_eq_right (by omega)]
     · rfl
 
 section hasEscape
@@ -456,8 +455,7 @@ theorem hasEscape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : 
     have hs2 := scanN_le_end b bslashC j.toNat e.toNat
     have he := e.toNat_lt
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc]
-    all_goals (simp_all [Mem.src8, Mem.len8, St.setLoc, Cmp.eval, Locals.init, Sig.retVal, Sig.retOr,
-      Nat.mod_eq_of_lt hb, UInt64.le_iff_toNat_le, UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' hb])
+    all_goals (simp_all [Mem.src8, Mem.len8, St.setLoc, Cmp.eval, Locals.init, Sig.retVal, Sig.retOr, UInt64.le_iff_toNat_le, UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' hb])
     all_goals (first
       | (have := hs1 (by omega); rw [Nat.mod_eq_of_lt (by omega)] at *; (try simp only [Nat.min_def] at *);
          split <;> (try split) <;> (try split) <;> (try simp_all) <;> omega)

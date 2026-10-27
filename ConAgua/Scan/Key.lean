@@ -10,6 +10,7 @@ import ConAgua.Census.Attr
 public import ConAgua.L.PureEval
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # `key_at` and `value_at` (`scan_fast.rs:183,704`)

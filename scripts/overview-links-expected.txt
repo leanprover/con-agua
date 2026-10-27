@@ -464,31 +464,31 @@
     14  so that a guard such as `i < len && b[i] == c` cannot read out of bounds.
     15  -/
 
-== ConAgua/Compiler/Main.lean#L773-L796
-   773  /-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
-   774  caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
-   775  registers the compiled functions use. -/
-   776  theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
-   777      (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
-   778      (fd : FunDecl) (hentry : p.lookup entry = some fd)
-   779      (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
-   780      (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
-   781      (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
-   782      (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
-   783      (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
-   784      (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
-   785      (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
-   786      (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
-   787        (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
-   788      (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
-   789      (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
-   790        ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
-   791      (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
-   792      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-   793          st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-   794          CalleeKept d.regs st.data.regs ∧
-   795          (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
-   796        d (label enterL) :=
+== ConAgua/Compiler/Main.lean#L771-L794
+   771  /-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
+   772  caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
+   773  registers the compiled functions use. -/
+   774  theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
+   775      (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
+   776      (fd : FunDecl) (hentry : p.lookup entry = some fd)
+   777      (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
+   778      (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
+   779      (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
+   780      (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
+   781      (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
+   782      (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
+   783      (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
+   784      (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
+   785        (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+   786      (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
+   787      (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
+   788        ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
+   789      (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
+   790      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
+   791          st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
+   792          CalleeKept d.regs st.data.regs ∧
+   793          (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
+   794        d (label enterL) :=
 
 == ConAgua/Compiler/Main.lean#L24-L28
     24  /-- What the harness sees after `ca_enter` returns, against L's result. -/
@@ -1372,28 +1372,28 @@
    294    nnum : NNumR m a
    295    memos : MemosR m a.memos
 
-== ConAgua/Arena/ConsLibRel.lean#L6-L26
-     6  /-!
-     7  # The cons-table library: the relation and the user API (lane conslib)
-     8  
-     9  A cons table `C` (`ConsLib.lean`) represents the arena's two `Tbl`s of one constructor (the twin's
-    10  `HashMap2`s: persistent and scratch) by **`ConsR C R m on P Q`**: both tiers hold the same nodes
-    11  in the same order (node `i` of tier `t` related to `nodes[i]` by the instance's record relation
-    12  `R`), the same key → handle map, the node counts at `CTL[ca + t]`, the scratch flag `CTL[1]` is
-    13  `on`; and the slots index the nodes (the slot layout, the probing and the growth state, which no
-    14  user sees). The L model of every `intern_X` is `consInternM C m ks` (`ConsLibSpec.lean`).
-    15  
-    16  Both are irreducible outside this file: the lemmas below are the whole interface.
-    17  
-    18  * **Reading the relation**: `ConsR.flag`, `ConsR.ctl`, `ConsR.cnt`, `ConsR.cap`, `ConsR.rec`,
-    19    `ConsR.cons`, `ConsR.back`, `ConsR.recSize`, `ConsR.node`, `ConsR.cons_hit`.
-    20  * **Keeping it**: `ConsR.frame` (a writer apart from the table), `ConsR.setFlag` (`CTL[1]`),
-    21    `ConsR.reset` (the scratch reset), `consR_init` (the all-zero memory), `ConsR.congr`.
-    22  * **An interning**: `consIntern_correct` (it refines the arena's hash-consing, from the
-    23    instance's obligations `ConsKeyOK`), `consInternM_frame` (what it writes), `consInternM_word`,
-    24    `consInternM_lt`, `consInternM_pw` (the handle word), `consInternM_out` (a hit, or the append
-    25    of node `cntC`: the memory outside the slot array is `pushRec`).
-    26  
+== ConAgua/Arena/ConsLibRel.lean#L7-L27
+     7  /-!
+     8  # The cons-table library: the relation and the user API (lane conslib)
+     9  
+    10  A cons table `C` (`ConsLib.lean`) represents the arena's two `Tbl`s of one constructor (the twin's
+    11  `HashMap2`s: persistent and scratch) by **`ConsR C R m on P Q`**: both tiers hold the same nodes
+    12  in the same order (node `i` of tier `t` related to `nodes[i]` by the instance's record relation
+    13  `R`), the same key → handle map, the node counts at `CTL[ca + t]`, the scratch flag `CTL[1]` is
+    14  `on`; and the slots index the nodes (the slot layout, the probing and the growth state, which no
+    15  user sees). The L model of every `intern_X` is `consInternM C m ks` (`ConsLibSpec.lean`).
+    16  
+    17  Both are irreducible outside this file: the lemmas below are the whole interface.
+    18  
+    19  * **Reading the relation**: `ConsR.flag`, `ConsR.ctl`, `ConsR.cnt`, `ConsR.cap`, `ConsR.rec`,
+    20    `ConsR.cons`, `ConsR.back`, `ConsR.recSize`, `ConsR.node`, `ConsR.cons_hit`.
+    21  * **Keeping it**: `ConsR.frame` (a writer apart from the table), `ConsR.setFlag` (`CTL[1]`),
+    22    `ConsR.reset` (the scratch reset), `consR_init` (the all-zero memory), `ConsR.congr`.
+    23  * **An interning**: `consIntern_correct` (it refines the arena's hash-consing, from the
+    24    instance's obligations `ConsKeyOK`), `consInternM_frame` (what it writes), `consInternM_word`,
+    25    `consInternM_lt`, `consInternM_pw` (the handle word), `consInternM_out` (a hit, or the append
+    26    of node `cntC`: the memory outside the slot array is `pushRec`).
+    27  
 
 == ConAgua/L/WriteSet.lean#L7-L24
      7  /-!

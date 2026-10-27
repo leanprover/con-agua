@@ -61,11 +61,11 @@ theorem scanN_end (b : Array UInt8) (c : List UInt8) (i e : Nat) (h : ¬ i < e) 
 
 theorem scanN_hit (b : Array UInt8) (c : List UInt8) (i e : Nat) (h : i < e) (hc : c[(b[i]!).toNat]! ≠ 0) :
     scanN b c i e = i := by
-  rw [scanN]; rw [if_pos h, if_pos hc]
+  rw [scanN]; rw [ite_eq_left h, ite_eq_left hc]
 
 theorem scanN_miss (b : Array UInt8) (c : List UInt8) (i e : Nat) (h : i < e) (hc : c[(b[i]!).toNat]! = 0) :
     scanN b c i e = scanN b c (i + 1) e := by
-  rw [scanN, if_pos h]; simp [hc]
+  rw [scanN, ite_eq_left h]; simp [hc]
 
 theorem scanN_le_end (b : Array UInt8) (c : List UInt8) : ∀ i e, i ≤ e → scanN b c i e ≤ e := by
   intro i e h

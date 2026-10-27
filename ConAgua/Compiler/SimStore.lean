@@ -3,6 +3,7 @@ module
 public import ConAgua.Compiler.SimStmt
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # Array stores
@@ -322,7 +323,7 @@ theorem genSt_tailWX {ctx : Ctx} {F : Nat} {a' : ArrId} (ha : a' < G.tab.nw)
       (cmpFlags j.toBitVec (UInt64.ofNat (σ.mem.arr64 a').size).toBitVec)
     have haddr : (s2.regs.set64 t (UInt64.ofNat (G.b64 a')).toBitVec).get64 t +
         (s2.regs.set64 t (UInt64.ofNat (G.b64 a')).toBitVec).get64 X * 8 = A (G.b64 a' + 8 * j.toNat) := by
-      rw [rget_set, rget_set, if_pos rfl, if_neg (Ne.symm htX), hX]
+      rw [rget_set, rget_set, ite_eq_left rfl, ite_eq_right (Ne.symm htX), hX]
       apply BitVec.eq_of_toNat_eq
       simp [A, BitVec.toNat_add, BitVec.toNat_mul, UInt64.toNat_ofNat_of_lt' (show G.b64 a' < 2 ^ 64 by omega)]
       omega
@@ -340,7 +341,7 @@ theorem genSt_tailWX {ctx : Ctx} {F : Nat} {a' : ArrId} (ha : a' < G.tab.nw)
         exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
     · refine ev_stX hcR.tail.tail.tail.head ?_ ?_
       · simp only; rw [haddr]; exact hmap
-      · simp only; rw [haddr, rget_set, if_neg hrt, hr]
+      · simp only; rw [haddr, rget_set, ite_eq_right hrt, hr]
         exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
 
 
@@ -379,7 +380,7 @@ theorem genSt_tailWK {ctx : Ctx} {F : Nat} {a' : ArrId} (ha : a' < G.tab.nw)
     have hoff : SmallOff (8 * (kk.toNat : Int)) := ⟨by omega, by omega⟩
     have haddr : A (((s2.regs.set64 t (UInt64.ofNat (G.b64 a')).toBitVec).get64 t).toNat + (8 * (kk.toNat : Int)).toNat) =
         A (G.b64 a' + 8 * kk.toNat) := by
-      rw [rget_set, if_pos rfl, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' (show G.b64 a' < 2 ^ 64 by omega)]
+      rw [rget_set, ite_eq_left rfl, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' (show G.b64 a' < 2 ^ 64 by omega)]
       congr 1 <;> omega
     have hmap : (rdW s2.dmem (A (G.b64 a' + 8 * kk.toNat))).isSome := by
       rw [hI2.mem.get64 a' ha kk.toNat hj]; rfl
@@ -395,7 +396,7 @@ theorem genSt_tailWK {ctx : Ctx} {F : Nat} {a' : ArrId} (ha : a' < G.tab.nw)
         exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
     · refine ev_movMR hcR.tail.tail.tail.head hoff ?_ ?_
       · simp only; rw [haddr]; exact hmap
-      · simp only; rw [haddr, rget_set, if_neg hrt, hr]
+      · simp only; rw [haddr, rget_set, ite_eq_right hrt, hr]
         exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
 
 /-- A plain word array's descriptor words. -/
@@ -662,7 +663,7 @@ theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F +
       decide_eq_false_iff_not, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' hlt, hrax] at hcc
     refine hK.err _ ⟨.oob, ?_, by simp⟩ ⟨by simp [hE13.rbp], ?_⟩
     · rw [step_st64_run, hvi]; simp only [hve]
-      rw [if_neg (by rw [hsz]; simpa using hcc)]
+      rw [ite_eq_right (by rw [hsz]; simpa using hcc)]
     · exact Pres.of_only hE13.mem (by have := hI.lo; omega) (by simp only [top]; omega)
   · simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_false',
       decide_eq_true_eq, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' hlt, hrax] at hcc
@@ -687,7 +688,7 @@ theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F +
     refine ev_congr (hK.normal { σ with mem := σ.mem.set64 a vi ve } _ ?_ (hIs.of_regs rfl (by simp) (by simp) (by alloc_keep))
       ⟨by simp [hE13.rsp], by simp [hE13.rbp], by simp [hE13.r15], by simp [hE13.r14], ?_⟩) ?_
     · rw [step_st64_run, hvi]; simp only [hve]
-      rw [if_pos hvb]
+      rw [ite_eq_left hvb]
     · exact (Pres.of_only hE13.mem (by have := hI.lo; omega) (by simp only [top]; omega)).trans
         (Pres.store64 hG ha hvi' _)
     · omega
@@ -697,7 +698,7 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
   simp only [tempsS] at htmp
-  simp only [compileS, List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] at hc hK
+  simp only [compileS, List.append_assoc, List.cons_append, List.nil_append] at hc hK
   have hF' := hF; simp only [maxOff] at hF'
   have hTab' := hTab; simp only [maxOff] at hTab'
   have hsp := hI.hi
@@ -708,7 +709,7 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a
     refine sim_genStW hG hTab hT hF ha hgs hc hwi hwe hI
       (fun s' hX => descW_plain hG hTab hT ha (CPost.ofX hI hX (fun r h => h)).1) ?_ ?_
     · intro j vb s' hj hvb hjs hI' hS'
-      exact hK.normal _ s' (by rw [step_st64_run, hj]; simp only [hvb]; rw [if_pos hjs]) hI' hS'
+      exact hK.normal _ s' (by rw [step_st64_run, hj]; simp only [hvb]; rw [ite_eq_left hjs]) hI' hS'
     · intro s' he hG'
       refine hK.err s' ?_ hG'
       rcases he with ⟨x, hx⟩ | ⟨x, hx⟩ | ⟨j, hj, hn⟩
@@ -718,7 +719,7 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a
         | ok j => exact ⟨x, by rw [step_st64_run, hi]; simp only [hx], by rw [evalP_error hx]; simp⟩
       · cases he : evalP σ e with
         | error y => exact ⟨y, by rw [step_st64_run, hj]; simp only [he], by rw [evalP_error he]; simp⟩
-        | ok v => exact ⟨.oob, by rw [step_st64_run, hj]; simp only [he]; rw [if_neg hn], by simp⟩
+        | ok v => exact ⟨.oob, by rw [step_st64_run, hj]; simp only [he]; rw [ite_eq_right hn], by simp⟩
   simp only [hgs] at hc hK
   cases hl : loadInto ctx .rdx e
   case some code =>
@@ -738,7 +739,7 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a
       obtain ⟨x, hx⟩ := herr1
       refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
       rw [step_st64_run]; simp only [hx]
-  simp only [hl, List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] at hc hK
+  simp only [hl, List.append_assoc, List.cons_append, List.nil_append] at hc hK
   have hc1 := hc.right
   have hns : Expr.isSimple e = false := by
     cases hs : Expr.isSimple e
@@ -789,7 +790,7 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a
 theorem sim_st64t_core {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
     {a : ArrId} (ha : a < G.tab.wK) {t i e : Expr} {σ : St} {d s4 : MachineData}
     {u vi ve : Word} {kT kend : Nat} {Q : MachineState → Prop}
-    {R : Reg64} (hRa : R ≠ .rax) (hRd : R ≠ .rdx)
+    {R : Reg64} (_hRa : R ≠ .rax) (_hRd : R ≠ .rdx)
     (hcT : Code [i64 (.cmp (.reg (rr .rax)) (oM (tdesc R (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (tdesc R (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx] kT)
     (hkend : kend = kT + 4) (hvt : evalP σ t = .ok u) (hvi : evalP σ i = .ok vi) (hve : evalP σ e = .ok ve)
@@ -829,7 +830,7 @@ theorem sim_st64t_core {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
     have hE5 := hE.trans (EPost.flags (s := s4) (cmpFlags s4.regs.rax.toBitVec (UInt64.ofNat (G.s64 (tierA a u))).toBitVec)) (Nat.le_refl _)
     refine hK.err _ ⟨.oob, ?_, by simp⟩ ⟨by simp; exact hE.rbp, ?_⟩
     · rw [step_st64t_run, hvt]; simp only [hvi, hve]
-      rw [if_neg (by rw [hsz]; simpa using hcc)]
+      rw [ite_eq_right (by rw [hsz]; simpa using hcc)]
     · exact Pres.of_only hE5.mem (by have := hI.lo; omega) (by simp only [top]; omega)
   · simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_false',
       decide_eq_true_eq, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' hlt, hrax] at hcc
@@ -846,11 +847,11 @@ theorem sim_st64t_core {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
       simp [A, BitVec.toNat_add, BitVec.toNat_mul]
       omega
     refine ev_st64 hcT.tail.tail.tail.head ?_ ?_
-    · simp only [Reg64s.set64_rcx, UInt64.toBitVec_ofBitVec, hraxD, hrax]
+    · simp only [Reg64s.set64_rcx, UInt64.toBitVec_ofBitVec, hrax]
       rw [haddr]
       have := hI4.mem.get64 _ hta vi.toNat (by omega)
       simp [this]
-    simp only [Reg64s.set64_rcx, UInt64.toBitVec_ofBitVec, hraxD, hrdxD, hrax, hrdx]
+    simp only [Reg64s.set64_rcx, UInt64.toBitVec_ofBitVec, hrax, hrdx]
     rw [haddr]
     have hvb : vi.toNat < (σ.mem.arr64 (tierA a u)).size := by rw [hsz]; exact hvi'
     have hIs := hI4.store64 hG hta hvb ve
@@ -858,7 +859,7 @@ theorem sim_st64t_core {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
       (hIs.of_regs rfl (by simp) (by simp) (by alloc_keep))
       ⟨by simp [hE.rsp], by simp [hE.rbp], by simp [hE.r15], by simp [hE.r14], ?_⟩) ?_
     · rw [step_st64t_run, hvt]; simp only [hvi, hve]
-      rw [if_pos hvb]
+      rw [ite_eq_left hvb]
     · exact (Pres.of_only hE.mem (by have := hI.lo; omega) (by simp only [top]; omega)).trans
         (Pres.store64 hG hta hvi' _)
     · omega
@@ -878,7 +879,7 @@ theorem sim_st64t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
   refine sim_tierDesc (r := .rcx) hcR.left hrcx fun st => ?_
   exact sim_st64t_core hG hTab p K hT hF ha (R := .rcx) (by decide) (by decide) hcR.right
     (by omega) hvt hvi hve hI
-    (hE.trans (EPost.regs (by simp) _ _) (Nat.le_refl _)) (by rw [rget_set, if_pos rfl])
+    (hE.trans (EPost.regs (by simp) _ _) (Nat.le_refl _)) (by rw [rget_set, ite_eq_left rfl])
     (by rw [← hrax]; rfl) (by rw [← hrdx]; rfl) hK
 
 theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st64t a t i e) := by
@@ -910,7 +911,7 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
     refine sim_genStW hG hTab hT hF (Nat.lt_of_le_of_lt (tierA_le a _) (G.tab.wK_spec ha).2) hgs hc hwi hwe hI
       (fun s' hX => descW_tier hG hTab hT ha (CPost.ofX hI hX (fun r h => h)).1 (hrsi s' hX)) ?_ ?_
     · intro j vb s' hj hvb hjs hI' hS'
-      exact hK.normal _ s' (by rw [step_st64t_run]; simp only [evalP, hj, hvb]; rw [if_pos hjs]) hI' hS'
+      exact hK.normal _ s' (by rw [step_st64t_run]; simp only [evalP, hj, hvb]; rw [ite_eq_left hjs]) hI' hS'
     · intro s' he hG'
       refine hK.err s' ?_ hG'
       rcases he with ⟨x, hx⟩ | ⟨x, hx⟩ | ⟨j, hj, hn⟩
@@ -920,9 +921,9 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
         | ok j => exact ⟨x, by rw [step_st64t_run]; simp only [evalP, hi]; simp only [hx], by rw [evalP_error hx]; simp⟩
       · cases he : evalP σ e with
         | error y => exact ⟨y, by rw [step_st64t_run]; simp only [evalP, hj]; simp only [he], by rw [evalP_error he]; simp⟩
-        | ok v => exact ⟨.oob, by rw [step_st64t_run]; simp only [evalP, hj]; simp only [he]; rw [if_neg hn], by simp⟩
+        | ok v => exact ⟨.oob, by rw [step_st64t_run]; simp only [evalP, hj]; simp only [he]; rw [ite_eq_right hn], by simp⟩
   simp only [hgs] at hc hK
-  simp only [hld, Option.getD_some, List.append_assoc, List.singleton_append, List.cons_append,
+  simp only [hld, Option.getD_some, List.append_assoc, List.cons_append,
     List.nil_append] at hc hK
   have hF' := hF; simp only [maxOff] at hF'
   have hTab' := hTab; simp only [maxOff] at hTab'
@@ -955,11 +956,11 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
     have hcT2 := hcT.right
     rw [hlen] at hcT2
     exact sim_st64t_tail hG hTab p K hT hF ha hcT2 (by omega) hu hvi hve hI
-      (hE3.trans (EPost.regs' (r := .rcx) (by simp) _) (Nat.le_refl _)) (by rw [rget_set, if_pos rfl])
+      (hE3.trans (EPost.regs' (r := .rcx) (by simp) _) (Nat.le_refl _)) (by rw [rget_set, ite_eq_left rfl])
       (by rw [← hrax3]; rfl) (by rw [← hrdx3]; rfl) hKk
   cases hl : loadInto ctx .rdx e
   case some code =>
-    simp only [hl, List.append_assoc, List.length_append, List.length_cons, List.length_nil] at hc hK
+    simp only [hl, List.append_assoc, List.length_append] at hc hK
     refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (htmp.mono (tempsE_bin_left .add i e)) σ d Q hI ?_ ?_
     · intro vi s1 hvi hrax1 hE1
       have hI1 : Inv G ctx F σ s1 :=
@@ -975,7 +976,7 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
       obtain ⟨x, hx⟩ := herr1
       refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
       rw [step_st64t_run, hu0]; simp only [hx]
-  simp only [hl, List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] at hc hK
+  simp only [hl, List.append_assoc, List.cons_append, List.nil_append] at hc hK
   have hc1 := hc.right
   have hns : Expr.isSimple e = false := by
     cases hs : Expr.isSimple e
@@ -1041,7 +1042,7 @@ theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 
   have hsz := hI3.mem.size8 a ha
   have hend := hG.end8 a ha
   have hlt : G.s8 a < UInt64.size := by simp [UInt64.size]; omega
-  refine ev_cmpRM hcR.head ⟨by simp [Tab.len8]; lomega, by simp [hT, Tab.len8]; lomega⟩
+  refine ev_cmpRM hcR.head ⟨by simp [Tab.len8]; lomega, by simp [Tab.len8]; lomega⟩
     (v := UInt64.ofNat (G.s8 a)) ?_ ?_
   · rw [hI3.r15, hT]; exact hI3.mem.len8 a ha
   refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
@@ -1049,13 +1050,13 @@ theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 
       decide_eq_false_iff_not, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' hlt, hrax] at hcc
     refine hK.err _ ⟨.oob, ?_, by simp⟩ ⟨by simp [hE13.rbp], ?_⟩
     · rw [step_st8_run, hvi]; simp only [hve]
-      rw [if_neg (by rw [hsz]; simpa using hcc)]
+      rw [ite_eq_right (by rw [hsz]; simpa using hcc)]
     · exact Pres.of_only hE13.mem (by have := hI.lo; omega) (by simp only [top]; omega)
   · simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_false',
       decide_eq_true_eq, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' hlt, hrax] at hcc
     have hvi' : vi.toNat < G.s8 a := by simpa using hcc
     refine ev_movRM hcR.tail.tail.head ⟨by simp [Tab.base8]; lomega,
-      by simp [hT, Tab.base8]; lomega⟩ (v := UInt64.ofNat (G.b8 a)) ?_ ?_
+      by simp [Tab.base8]; lomega⟩ (v := UInt64.ofNat (G.b8 a)) ?_ ?_
     · simp only [Reg64s.get64_r15, UInt64.toNat_toBitVec]
       rw [hI3.r15, hT]; exact hI3.mem.base8 a ha
     have haddr : (UInt64.ofNat (G.b8 a)).toBitVec + vi.toBitVec = A (G.b8 a + vi.toNat) := by
@@ -1074,7 +1075,7 @@ theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 
       ((hI3.store8 hG ha hvb ve _ ?_).of_regs rfl (by simp) (by simp) ?_)
       ⟨by simp [hE13.rsp], by simp [hE13.rbp], by simp [hE13.r15], by simp [hE13.r14], ?_⟩) ?_
     · rw [step_st8_run, hvi]; simp only [hve]
-      rw [if_pos hvb]
+      rw [ite_eq_left hvb]
     · rw [byte_val, ← hrdx]
     · alloc_keep
     · exact (Pres.of_only hE13.mem (by have := hI.lo; omega) (by simp only [top]; omega)).trans
@@ -1086,7 +1087,7 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st8 a i
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
   simp only [tempsS] at htmp
-  simp only [compileS, List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] at hc hK
+  simp only [compileS, List.append_assoc, List.cons_append, List.nil_append] at hc hK
   have hF' := hF; simp only [maxOff] at hF'
   have hTab' := hTab; simp only [maxOff] at hTab'
   have hsp := hI.hi
@@ -1109,7 +1110,7 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st8 a i
       obtain ⟨x, hx⟩ := herr1
       refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
       rw [step_st8_run]; simp only [hx]
-  simp only [hl, List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] at hc hK
+  simp only [hl, List.append_assoc, List.cons_append, List.nil_append] at hc hK
   have hc1 := hc.right
   have hns : Expr.isSimple e = false := by
     cases hs : Expr.isSimple e

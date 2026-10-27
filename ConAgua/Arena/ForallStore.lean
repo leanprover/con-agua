@@ -194,7 +194,7 @@ theorem forallOK : ConsOK p forallCS where
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
     fun s => by simp [forallCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
-    simp only [forallCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+    simp only [forallCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval]; rfl
   skips := by
     intro e he s
     simp only [forallCS, Option.some.injEq] at he
@@ -205,7 +205,7 @@ theorem forallOK : ConsOK p forallCS where
   push_np := by decide
   arrs := by decide
   lt := ⟨by decide, by decide, fun A h => by
-    simp only [forallCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+    simp only [forallCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [forallCS] at h
   mloc := fun h => by simp [forallCS] at h
   exnk := fun _ => by decide

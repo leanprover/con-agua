@@ -50,6 +50,7 @@ open scoped Lean.Order
 
 
 namespace L.Arena
+set_option experimental.vcgen true
 
 /-! ## Two more cache arrays, read directly on a memo hit -/
 

@@ -4,6 +4,7 @@ public import ConAgua.Compiler.SimStore
 public import ConAgua.L.Blocks
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 /-!
 # Blocks: `copy64`, `copy8w`, `scan8` (lane blkcopy)
@@ -83,7 +84,7 @@ theorem Inv.keepR {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s0 : MachineDa
 @[simp] theorem copy64Loop_length (L : Label) (e : AddrExpr) : (copy64Loop L e).length = 7 := rfl
 @[simp] theorem copy8wLoop_length (L : Label) (e : AddrExpr) : (copy8wLoop L e).length = 7 := rfl
 
-theorem warrDesc_reg {ctx : Ctx} {r : Reg64} (hr : r = .rcx ∨ r = .rdx) (w : WArr) :
+theorem warrDesc_reg {ctx : Ctx} {r : Reg64} (_hr : r = .rcx ∨ r = .rdx) (w : WArr) :
     (warrDesc ctx r w).2 = .r15 ∨ (warrDesc ctx r w).2 = r := by
   cases w <;> simp [warrDesc]
 
@@ -105,7 +106,7 @@ theorem scan_loop {G : Layout} {b : Array UInt8} {c : List UInt8} {B TT : Nat} {
     (hL : label Lb = at_ kL) (hX : label Xb = at_ (kL + 8))
     (hsrc : SrcAt G b D B) (hve : ve.toNat ≤ b.size)
     (hTT : s0.regs.get64 .r15 + BitVec.ofInt 64 (Int64.ofInt off).toInt = A TT)
-    (htbl : ∀ y < 256, D.get? (A (TT + y)) = some c[y]!) (hTT2 : TT + 256 < 2 ^ 64)
+    (htbl : ∀ y < 256, D.get? (A (TT + y)) = some c[y]!) (_hTT2 : TT + 256 < 2 ^ 64)
     (he : ∀ s, s.dmem = D → KeepR s s0 → OpReads s eo ve) :
     ∀ n (jj : Word) (s : MachineData), s.dmem = D → KeepR s s0 → s.regs.get64 .rcx = A B →
       s.regs.get64 .rax = jj.toBitVec → jj < ve → ve.toNat - jj.toNat = n →
@@ -134,7 +135,7 @@ theorem scan_loop {G : Layout} {b : Array UInt8} {c : List UInt8} {B TT : Nat} {
     · rw [hD]
       have h15 : (s.regs.set64 .rdx (b[jj.toNat]!).toUInt64.toBitVec).get64 .r15 = s0.regs.get64 .r15 := by
         rw [rget_set]; simp only [reduceCtorEq, ↓reduceIte]; exact hK .r15 (by decide) (by decide) (by decide)
-      rw [h15, rget_set, if_pos rfl, add_swap, hTT]
+      rw [h15, rget_set, ite_eq_left rfl, add_swap, hTT]
       rw [show A TT + (b[jj.toNat]!).toUInt64.toBitVec = A (TT + (b[jj.toNat]!).toNat) by
         apply BitVec.eq_of_toNat_eq; simp [A, BitVec.toNat_add]]
       exact htbl _ hy
@@ -232,7 +233,7 @@ theorem sim_storeRax {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {x : Var} (
     have hS0 : SPost G F d { s with regs := s.regs.set64 .rsi (v &&& 1).toBitVec, status := st } :=
       ⟨hKR.rsp, hKR.rbp, hKR.r15, h14, hd ▸ Pres.refl _ _⟩
     have hrax' : (s.regs.set64 .rsi (v &&& 1).toBitVec).get64 .rax = v.toBitVec := by
-      rw [rget_set, if_neg (by decide)]; exact hrax
+      rw [rget_set, ite_eq_right (by decide)]; exact hrax
     cases hl : ctx.alloc.lookup x with
     | some r => exact absurd (hI.al.talloc x htx) (by simp [hl])
     | none =>
@@ -295,7 +296,7 @@ theorem sim_lenChk {ctx : Ctx} {o n : Expr} {k : Nat} (hc : Code (lenChk ctx o n
   rw [interp_c] at hcc
   have h1 : vn.toNat ≤ L.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hcc
   refine ev_binO (op := .sub) rfl hc.tail.tail.head (hrn _ rfl ((KeepR.refl s).ofEq (by keep_tac))) fun st => ?_
-  simp only [hrax, hrax', UInt64.ofBitVec_toBitVec, BinOp.eval]
+  simp only [hrax', BinOp.eval]
   refine ev_cmpRO (v := vo) hc.tail.tail.tail.head (hro _ rfl ((KeepR.refl s).ofEq (by keep_tac))) ?_
   simp only [rget_set, ↓reduceIte]
   refine ev_jcc hc.tail.tail.tail.tail.head (fun hcc2 => ?_) (fun hcc2 => ?_)
@@ -402,10 +403,10 @@ theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 
     · simp [tierBlk]
 
 /-- `r := base + 8 o` for the block operand whose descriptor block is at `R`. -/
-theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (hR : R ≠ .rax) {a aw : ArrId}
+theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (_hR : R ≠ .rax) {a aw : ArrId}
     {o : Expr} {k : Nat} (hc : Code (wordPtr ctx r R a o) k) {s : MachineData} {RV : Nat} {D : DataMem}
     {Q : MachineState → Prop} {vo : Word} (hd : s.dmem = D) (hRV : s.regs.get64 R = A RV)
-    (hdesc : DescAt G ctx D RV a aw) (hvo : vo.toNat ≤ G.s64 aw)
+    (hdesc : DescAt G ctx D RV a aw) (_hvo : vo.toNat ≤ G.s64 aw)
     (hro : ∀ s', s'.dmem = D → KeepR s' s → OpReads s' (opnd ctx o) vo)
     (h : ∀ s', s'.dmem = D → KeepR s' s → (∀ r', r' ≠ r → r' ≠ .rax → s'.regs.get64 r' = s.regs.get64 r') →
       s'.regs.get64 r = A (G.b64 aw + 8 * vo.toNat) → Ev Q s' (at_ (k + 5))) :
@@ -419,14 +420,14 @@ theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (hR :
   refine ev_movRO hc.tail.head (hro _ hd ((KeepR.refl s).ofEq (by rcases hr with rfl | rfl <;> keep_tac))) ?_
   refine ev_shlRI (n := 3) (by decide) hc.tail.tail.head fun st => ?_
   refine ev_binO (op := .add) rfl hc.tail.tail.tail.head (v := UInt64.ofNat (G.b64 aw))
-    (.inr (.inr ⟨r, rfl, by rcases hr with rfl | rfl <;> simp [rget_set]⟩)) fun st2 => ?_
+    (.inr (.inr ⟨r, rfl, by rcases hr with rfl | rfl <;> simp⟩)) fun st2 => ?_
   refine ev_movRR hc.tail.tail.tail.tail.head ?_
   refine h _ hd ((KeepR.refl s).ofEq (by rcases hr with rfl | rfl <;> keep_tac))
     (fun r' h1 h2 => by simp only [rget_set, h1, h2, ↓reduceIte]) ?_
   rcases hr with rfl | rfl <;>
-  · simp only [rget_set, ↓reduceIte, reduceCtorEq, UInt64.ofBitVec_toBitVec, BinOp.eval]
+  · simp only [rget_set, ↓reduceIte, UInt64.ofBitVec_toBitVec, BinOp.eval]
     apply BitVec.eq_of_toNat_eq
-    simp [UInt64.toNat_add, UInt64.toNat_shiftLeft, A, Nat.shiftLeft_eq]
+    simp [A, Nat.shiftLeft_eq]
     congr 1; omega
 
 omit hG hTab in
@@ -508,7 +509,7 @@ theorem copy64_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {
     have hrc : (A (G.b64 sa + 8 * u.toNat) + (Int64.ofInt 8).toBitVec) =
         (UInt64.ofNat (G.b64 sa + 8 * (u.toNat + 1))).toBitVec := by
       apply BitVec.eq_of_toNat_eq
-      simp [A, BitVec.toNat_add, eight_toBitVec]; omega
+      simp [A, BitVec.toNat_add]; omega
     simp only [rget_set, reduceCtorEq, ↓reduceIte, hrcx, hrc]
     refine ev_jcc hcode.tail.tail.tail.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
     · rw [interp_c] at hcc
@@ -519,7 +520,7 @@ theorem copy64_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {
       have hdw : G.b64 da + 8 * (w.toNat + 1) < 2 ^ 64 := by omega
       have hrd : A (G.b64 da + 8 * w.toNat) + (Int64.ofInt 8).toBitVec = A (G.b64 da + 8 * (w.toNat + 1)) := by
         apply BitVec.eq_of_toNat_eq
-        simp [A, BitVec.toNat_add, eight_toBitVec]; omega
+        simp [A, BitVec.toNat_add]; omega
       refine ih (m.set64 da w ((m.arr64 sa)[u.toNat]!)) (w + 1) (u + 1) _
         (hIs.keepR rfl ((KeepR.refl _).ofEq (by keep_tac))) (by exact hK.ofEq (by keep_tac))
         (by simp only [rget_set, reduceCtorEq, ↓reduceIte, hu1]; apply BitVec.eq_of_toNat_eq; simp [A])
@@ -565,7 +566,7 @@ theorem SrcAt.only {b : Array UInt8} {D D' : DataMem} {B : Nat} (h : SrcAt G b D
 theorem sim_endPtr8 {ctx : Ctx} {n : Expr} {k : Nat}
     (hc : Code [i64 (.mov (.reg (rr .rax)) (opnd ctx n)), i64 (.add (.reg (rr .rax)) (oR .rcx))] k)
     {s : MachineData} {vk : Word} {B : Nat} {Q : MachineState → Prop} (hn : OpReads s (opnd ctx n) vk)
-    (hrcx : s.regs.get64 .rcx = A B) (hfit : B + vk.toNat < 2 ^ 64)
+    (hrcx : s.regs.get64 .rcx = A B) (_hfit : B + vk.toNat < 2 ^ 64)
     (h : ∀ s', s'.dmem = s.dmem → (∀ r, r ≠ .rax → s'.regs.get64 r = s.regs.get64 r) →
       s'.regs.get64 .rax = A (B + vk.toNat) → Ev Q s' (at_ (k + 2))) :
     Ev Q s (at_ k) := by
@@ -577,7 +578,7 @@ theorem sim_endPtr8 {ctx : Ctx} {n : Expr} {k : Nat}
   refine h _ rfl (fun r hr => by simp only [rget_set, hr, ↓reduceIte]) ?_
   simp only [rget_set, ↓reduceIte, BinOp.eval]
   apply BitVec.eq_of_toNat_eq
-  simp [UInt64.toNat_add, A]
+  simp [A]
   omega
 
 /-- **The copy loop of `copy8w`**: as `copy64_loop`, from `rcx` = the address of byte `u` of the
@@ -633,7 +634,7 @@ theorem copy8w_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {
       (.inr (.inl ⟨.rsp, eoff, rfl, hEoff, by simpa [hrsp] using hE'⟩)) ?_
     have hrc : (A (B + u.toNat) + (Int64.ofInt 1).toBitVec) = (UInt64.ofNat (B + (u.toNat + 1))).toBitVec := by
       apply BitVec.eq_of_toNat_eq
-      simp [A, BitVec.toNat_add, one_toBitVec]; omega
+      simp [A, BitVec.toNat_add]; omega
     simp only [rget_set, reduceCtorEq, ↓reduceIte, hrcx, hrc]
     refine ev_jcc hcode.tail.tail.tail.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
     · rw [interp_c] at hcc
@@ -644,7 +645,7 @@ theorem copy8w_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {
       have hdw : G.b64 da + 8 * (w.toNat + 1) < 2 ^ 64 := by omega
       have hrd : A (G.b64 da + 8 * w.toNat) + (Int64.ofInt 8).toBitVec = A (G.b64 da + 8 * (w.toNat + 1)) := by
         apply BitVec.eq_of_toNat_eq
-        simp [A, BitVec.toNat_add, eight_toBitVec]; omega
+        simp [A, BitVec.toNat_add]; omega
       refine ih (m.set64 da w (b[u.toNat]!).toUInt64) (w + 1) (u + 1) _
         (hIs.keepR rfl ((KeepR.refl _).ofEq (by keep_tac))) (by exact hK.ofEq (by keep_tac)) hS'
         (by simp only [rget_set, reduceCtorEq, ↓reduceIte, hu1]; apply BitVec.eq_of_toNat_eq; simp [A])
@@ -700,12 +701,12 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
   have hInv : ∀ s', s'.dmem = d.dmem → KeepR s' d → Inv G ctx F σ s' := fun s' hd hk => hI.keepR hd hk
   have herr : ∀ s', s'.dmem = d.dmem → KeepR s' d → ¬ (vi ≤ ve ∧ ve.toNat ≤ (σ.mem.src8 s).size) →
       Ev Q s' (label errorL) := fun s' hd hk hn =>
-    hK.err s' ⟨.oob, by rw [hrun, if_neg hn], by simp⟩ (gpost_mem hG hTab hd hk.rbp)
+    hK.err s' ⟨.oob, by rw [hrun, ite_eq_right hn], by simp⟩ (gpost_mem hG hTab hd hk.rbp)
   refine sim_srcLen hG hT hTab hI hws (r := .rdx) hpre.head ?_
   refine ev_movRO hpre.tail.head (opnd_reads hG hTab hT hF (hInv _ (by rfl) ((KeepR.refl d).ofEq (by keep_tac))) hwe hve) ?_
   refine ev_cmpRO (v := UInt64.ofNat (σ.mem.src8 s).size) hpre.tail.tail.head
-    (.inr (.inr ⟨.rdx, rfl, by simp [rget_set]⟩)) ?_
-  simp only [rget_set, reduceCtorEq, ↓reduceIte]
+    (.inr (.inr ⟨.rdx, rfl, by simp⟩)) ?_
+  simp only [rget_set, ↓reduceIte]
   refine ev_jcc hpre.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
   · rw [interp_a] at hcc
     refine herr _ (by rfl) ((KeepR.refl d).ofEq (by keep_tac)) fun ⟨_, h⟩ => ?_
@@ -719,7 +720,7 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
     (opnd_reads hG hTab hT hF (hInv _ (by rfl) ((KeepR.refl d).ofEq (by keep_tac))) hwi hvi) ?_
   refine ev_cmpRO (v := ve) hpre.tail.tail.tail.tail.tail.head
     (opnd_reads hG hTab hT hF (hInv _ (by rfl) ((KeepR.refl d).ofEq (by keep_tac))) hwe hve) ?_
-  simp only [rget_set, reduceCtorEq, ↓reduceIte]
+  simp only [rget_set, ↓reduceIte]
   refine ev_jcc hpre.tail.tail.tail.tail.tail.tail.head (fun hcc2 => ?_) (fun hcc2 => ?_)
   · rw [interp_a] at hcc2
     refine herr _ (by rfl) ((KeepR.refl d).ofEq (by keep_tac)) fun ⟨h, _⟩ => ?_
@@ -729,7 +730,7 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
   have hij : vi ≤ ve := by simpa using hcc2
   have hok : stepRun p K (.scan8 x s i e c) σ =
       .ok (.normal, σ.setLoc x (UInt64.ofNat (scanN (σ.mem.src8 s) c vi.toNat ve.toNat))) := by
-    rw [hrun, if_pos ⟨hij, hveL⟩]
+    rw [hrun, ite_eq_left ⟨hij, hveL⟩]
   refine sim_srcBase (σ := σ) (F := F) hG hT hTab ?_ hws hpre.tail.tail.tail.tail.tail.tail.tail.head fun B hB => ?_
   · exact hInv _ (by rfl) ((KeepR.refl d).ofEq (by keep_tac))
   refine ev_cmpRO (v := ve) hpre.tail.tail.tail.tail.tail.tail.tail.tail.head
@@ -739,7 +740,7 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
   · rw [interp_nc] at hcc3
     have heq : vi = ve := UInt64.le_antisymm hij (by simpa using hcc3)
     rw [hXl]
-    refine fin _ vi (by rfl) ((KeepR.refl d).ofEq (by keep_tac)) (by simp [rget_set]) ?_
+    refine fin _ vi (by rfl) ((KeepR.refl d).ofEq (by keep_tac)) (by simp) ?_
     rw [hok, scanN_end _ _ _ _ (by rw [heq]; omega), UInt64.ofNat_toNat]
   rw [interp_nc] at hcc3
   have hlt : vi < ve := by simpa using hcc3
@@ -775,14 +776,14 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
       (opnd ctx e)) (k + 10) := by simpa using hloop
   refine ev_congr (scan_loop hloop' hLl (by rw [hXl]) hB hveL hTT htbl (by omega)
     (fun s' hd hk => opnd_reads hG hTab hT hF (hInv s' hd hk) hwe hve) _ vi _ (by rfl)
-    ((KeepR.refl d).ofEq (by keep_tac)) (by simp [rget_set]) (by simp [rget_set]) hlt rfl
+    ((KeepR.refl d).ofEq (by keep_tac)) (by simp) (by simp) hlt rfl
     fun s' hd hk hr => ev_congr (fin s' _ hd hk hr hok) (by omega)) (by simp)
 /-- `rax := (n << 3) + rcx`: the end of a word slice. -/
 theorem sim_endPtr64 {ctx : Ctx} {n : Expr} {k : Nat}
     (hc : Code [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
       i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))), i64 (.add (.reg (rr .rax)) (oR .rcx))] k)
     {s : MachineData} {vk : Word} {B : Nat} {Q : MachineState → Prop} (hn : OpReads s (opnd ctx n) vk)
-    (hrcx : s.regs.get64 .rcx = A B) (hfit : B + 8 * vk.toNat < 2 ^ 64)
+    (hrcx : s.regs.get64 .rcx = A B) (_hfit : B + 8 * vk.toNat < 2 ^ 64)
     (h : ∀ s', s'.dmem = s.dmem → (∀ r, r ≠ .rax → s'.regs.get64 r = s.regs.get64 r) →
       s'.regs.get64 .rax = A (B + 8 * vk.toNat) → Ev Q s' (at_ (k + 3))) :
     Ev Q s (at_ k) := by
@@ -795,7 +796,7 @@ theorem sim_endPtr64 {ctx : Ctx} {n : Expr} {k : Nat}
   refine h _ rfl (fun r hr => by simp only [rget_set, hr, ↓reduceIte]) ?_
   simp only [rget_set, ↓reduceIte, BinOp.eval]
   apply BitVec.eq_of_toNat_eq
-  simp [UInt64.toNat_add, UInt64.toNat_shiftLeft, Nat.shiftLeft_eq, A]
+  simp [Nat.shiftLeft_eq, A]
   omega
 
 /-- `[rsp + 8 nl] := rax`: temporary `0`. -/
@@ -817,7 +818,7 @@ theorem sim_storeTmp {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {
   have hE := EPost.store (nl := ctx.nl) (F := F) (t := 0) (j := ctx.nl) (s := s)
     (v := s.regs.get64 .rax) (by omega) (by omega) (by omega)
   refine h _ rfl (hI.ofE hG hE) ?_ ?_ ?_
-  · simp only [rdW_wrW_same, UInt64.ofBitVec_toBitVec]
+  · simp only [rdW_wrW_same]
   · exact Pres.of_only (Only.wrW (by omega)) (by omega) (by simp only [top]; omega)
   · exact Only.wrW (by omega)
 
@@ -864,7 +865,7 @@ theorem sim_copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr) :
   have herr : ∀ s', s'.dmem = d0.dmem → KeepR s' d0 →
       ¬ (vi.toNat + vk.toNat ≤ (σ.mem.arr64 da).size ∧ vj.toNat + vk.toNat ≤ (σ.mem.arr64 sa).size) →
       Ev Q s' (label errorL) := fun s' hd hk hn =>
-    hK.err s' ⟨.oob, by rw [hrun, if_neg hn], by simp⟩ (gpost_mem hG hTab hd hk.rbp)
+    hK.err s' ⟨.oob, by rw [hrun, ite_eq_right hn], by simp⟩ (gpost_mem hG hTab hd hk.rbp)
   -- the source
   refine sim_warrDesc hG hTab hT hF hI hws (r := .rcx) (by simp) hcs hsa fun s1 R1 hd1 hk1 ho1 hR1 hD1 => ?_
   have hszs := hI.mem.size64 sa hD1.arr
@@ -876,7 +877,7 @@ theorem sim_copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr) :
   · rw [hR1, hd1]; simpa [A, Nat.mod_eq_of_lt hD1.rlt] using hD1.len
   have hk1' : KeepR { s1 with regs := s1.regs.set64 .rax (UInt64.ofNat (G.s64 sa)).toBitVec } d0 :=
     hk1.ofEq (by keep_tac)
-  refine sim_lenChk hG hTab (L := UInt64.ofNat (G.s64 sa)) (vo := vj) (vn := vk) hlenS (by simp [rget_set])
+  refine sim_lenChk hG hTab (L := UInt64.ofNat (G.s64 sa)) (vo := vj) (vn := vk) hlenS (by simp)
     (fun s' hd hk => hop _ hwsi _ hvj s' (hd.trans hd1) (hk.trans hk1'))
     (fun s' hd hk => hop _ hwn _ hvk s' (hd.trans hd1) (hk.trans hk1'))
     (fun s' hd hk hn => herr s' (hd.trans hd1) (hk.trans hk1') fun ⟨_, h⟩ => hn (by
@@ -906,7 +907,7 @@ theorem sim_copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr) :
   · rw [hR4, hd4]; simpa [A, Nat.mod_eq_of_lt hD4.rlt] using hD4.len
   have hk4'' : KeepR { s4 with regs := s4.regs.set64 .rax (UInt64.ofNat (G.s64 da)).toBitVec } d0 :=
     hk4'.ofEq (by keep_tac)
-  refine sim_lenChk hG hTab (L := UInt64.ofNat (G.s64 da)) (vo := vi) (vn := vk) hlenD (by simp [rget_set])
+  refine sim_lenChk hG hTab (L := UInt64.ofNat (G.s64 da)) (vo := vi) (vn := vk) hlenD (by simp)
     (fun s' hd hk => hop _ hwdi _ hvi s' (hd.trans hd4') (hk.trans hk4''))
     (fun s' hd hk => hop _ hwn _ hvk s' (hd.trans hd4') (hk.trans hk4''))
     (fun s' hd hk hn => herr s' (hd.trans hd4') (hk.trans hk4'') fun ⟨h, _⟩ => hn (by
@@ -964,7 +965,7 @@ theorem sim_copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr) :
     intro s' hI' hK' hP'
     rw [hXl]
     refine ev_label hX.head ?_
-    refine ev_congr (hK.normal _ s' (by rw [hrun, if_pos hbnd]) hI'
+    refine ev_congr (hK.normal _ s' (by rw [hrun, ite_eq_left hbnd]) hI'
       ⟨hK'.rsp, hK'.rbp, hK'.r15, by rw [hK'.r14]; exact Nat.le_refl _, hP'⟩) (by omega)
   refine ev_jcc hend.tail.tail.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
   · -- nothing to copy
@@ -1025,14 +1026,14 @@ theorem sim_copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) :
   have herr : ∀ s', s'.dmem = d0.dmem → KeepR s' d0 →
       ¬ (vi.toNat + vk.toNat ≤ (σ.mem.arr64 da).size ∧ vj.toNat + vk.toNat ≤ (σ.mem.src8 s).size) →
       Ev Q s' (label errorL) := fun s' hd hk hn =>
-    hK.err s' ⟨.oob, by rw [hrun, if_neg hn], by simp⟩ (gpost_mem hG hTab hd hk.rbp)
+    hK.err s' ⟨.oob, by rw [hrun, ite_eq_right hn], by simp⟩ (gpost_mem hG hTab hd hk.rbp)
   have hLlt := src8_size_lt hG hI.mem hws
   have hsl : (UInt64.ofNat (σ.mem.src8 s).size).toNat = (σ.mem.src8 s).size := UInt64.toNat_ofNat_of_lt' hLlt
   -- the source
   refine sim_srcLen hG hT hTab hI hws (r := .rax) h1.head ?_
   have hk1 : KeepR { d0 with regs := d0.regs.set64 .rax (UInt64.ofNat (σ.mem.src8 s).size).toBitVec } d0 :=
     (KeepR.refl d0).ofEq (by keep_tac)
-  refine sim_lenChk hG hTab (L := UInt64.ofNat (σ.mem.src8 s).size) (vo := vj) (vn := vk) hlenS (by simp [rget_set])
+  refine sim_lenChk hG hTab (L := UInt64.ofNat (σ.mem.src8 s).size) (vo := vj) (vn := vk) hlenS (by simp)
     (fun s' hd hk => hop _ hwsi _ hvj s' hd (hk.trans hk1))
     (fun s' hd hk => hop _ hwn _ hvk s' hd (hk.trans hk1))
     (fun s' hd hk hn => herr s' hd (hk.trans hk1) fun ⟨_, h⟩ => hn (by rw [hsl]; exact h))
@@ -1058,8 +1059,8 @@ theorem sim_copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) :
   have hd4' : s4.dmem = d0.dmem := hd4.trans hd2
   have hrcx4 : s4.regs.get64 .rcx = A (B + vj.toNat) := by
     rw [ho4 .rcx (by decide)]
-    simp only [rget_set, reduceCtorEq, ↓reduceIte, BinOp.eval]
-    apply BitVec.eq_of_toNat_eq; simp [A, UInt64.toNat_add]; omega
+    simp only [rget_set, ↓reduceIte, BinOp.eval]
+    apply BitVec.eq_of_toNat_eq; simp [A]; omega
   have hdl : (UInt64.ofNat (G.s64 da)).toNat = G.s64 da :=
     UInt64.toNat_ofNat_of_lt' (show G.s64 da < 2 ^ 64 by omega)
   refine ev_congr (j := k + (0 + 1 + 5 + (0 + 1 + 1 + 1 + 1) + List.length (warrDesc ctx .rdx d).fst)) ?_ (by omega)
@@ -1067,7 +1068,7 @@ theorem sim_copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) :
   · rw [hR4, hd4]; simpa [A, Nat.mod_eq_of_lt hD4.rlt] using hD4.len
   have hk4'' : KeepR { s4 with regs := s4.regs.set64 .rax (UInt64.ofNat (G.s64 da)).toBitVec } d0 :=
     hk4'.ofEq (by keep_tac)
-  refine sim_lenChk hG hTab (L := UInt64.ofNat (G.s64 da)) (vo := vi) (vn := vk) hlenD (by simp [rget_set])
+  refine sim_lenChk hG hTab (L := UInt64.ofNat (G.s64 da)) (vo := vi) (vn := vk) hlenD (by simp)
     (fun s' hd hk => hop _ hwdi _ hvi s' (hd.trans hd4') (hk.trans hk4''))
     (fun s' hd hk => hop _ hwn _ hvk s' (hd.trans hd4') (hk.trans hk4''))
     (fun s' hd hk hn => herr s' (hd.trans hd4') (hk.trans hk4'') fun ⟨h, _⟩ => hn (by
@@ -1126,7 +1127,7 @@ theorem sim_copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) :
     intro s' hI' hK' hP'
     rw [hXl]
     refine ev_label hX.head ?_
-    refine ev_congr (hK.normal _ s' (by rw [hrun, if_pos hbnd]) hI'
+    refine ev_congr (hK.normal _ s' (by rw [hrun, ite_eq_left hbnd]) hI'
       ⟨hK'.rsp, hK'.rbp, hK'.r15, by rw [hK'.r14]; exact Nat.le_refl _, hP'⟩) (by omega)
   refine ev_jcc hend.tail.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
   · rw [interp_nc] at hcc

@@ -243,9 +243,8 @@ theorem shrLoop_spec (n : Nat) (s₀ : St) (h : ShrInv Pg C s₀) :
     rw [exec, step_while (w := shrLoop) rfl]
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n]
     all_goals clear ih
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
-      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
     all_goals grind (splits := 20) [arena_grind, lang_grind, ShrInv, ShrPost]
 
 include hpl in
@@ -293,8 +292,7 @@ theorem natShr_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     all_goals (try simp only [ShrInv, ShrPost] at *)
     all_goals (try subst_vars)
     -- `setLoc` lemmas, not unfolding; no `and_intros` (one `grind` per goal)
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
       Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals grind (splits := 40) [arena_grind, lang_grind, natop_grind]

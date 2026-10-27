@@ -58,7 +58,7 @@ theorem cdec_join {dn : NIdx → Option ConLeche.Name} {A E : Array Word} :
 theorem cdec_split {dn : NIdx → Option ConLeche.Name} {A E : Array Word} :
     ∀ (c j : Nat) (cs : List IConstantInfo), cdec dn A E (j + c) = some cs →
     ∃ L B, cs = L ++ B ∧ L.length = c ∧ ConstsAt dn A E (j + c - 1) L ∧ cdec dn A E j = some B
-  | 0, j, cs, h => ⟨[], cs, by simpa using h.symm ▸ rfl, rfl, trivial, by simpa using h⟩
+  | 0, j, cs, h => ⟨[], cs, by simp, rfl, trivial, by simpa using h⟩
   | c + 1, j, cs, h => by
     have e : j + (c + 1) = (j + c) + 1 := by omega
     rw [e] at h
@@ -144,7 +144,7 @@ theorem tdec_join {A E : Array Word} :
 theorem tdec_split {A E : Array Word} :
     ∀ (c j : Nat) (ts : List IProjTable), tdec A E (j + c) = some ts →
     ∃ L B, ts = L ++ B ∧ L.length = c ∧ TablesAt A E (j + c - 1) L ∧ tdec A E j = some B
-  | 0, j, ts, h => ⟨[], ts, by simpa using h.symm ▸ rfl, rfl, trivial, by simpa using h⟩
+  | 0, j, ts, h => ⟨[], ts, by simp, rfl, trivial, by simpa using h⟩
   | c + 1, j, ts, h => by
     have e : j + (c + 1) = (j + c) + 1 := by omega
     rw [e] at h

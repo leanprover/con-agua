@@ -71,7 +71,7 @@ not touch each other. With these, `vcgen` + `finish` treat globals as they treat
   simp only [Mem.setG]
   by_cases e : h = g
   · subst e; simp
-  · rw [if_neg e, if_neg (fun e' => e (by cases h; cases g; simp_all))]
+  · rw [ite_eq_right e, ite_eq_right (fun e' => e (by cases h; cases g; simp_all))]
 
 @[lang_grind =] theorem Mem.setG_arr8 (m : Mem) (g : GVar) (v : Word) (a : ArrId) :
     (m.setG g v).arr8 a = m.arr8 a := rfl
