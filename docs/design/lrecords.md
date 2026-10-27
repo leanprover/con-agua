@@ -573,13 +573,13 @@ naming the slot.
 | 200 | top of the work pool `IW` of the inductive stage | L-specific (con-ron builds Lean values) | 572 | 125 | 7 | 114 |
 | 136 | top of the spine stack `SPN` | L-specific (con-ron recurses, lists) | 461 | 61 | 123 | 56 |
 | 1 | the scratch flag | con-ron `scratchOn` | 438 | 126 | 196 | 68 |
-| 129 | top of the environment record pool `EREC` | the size of con-ron's constant-info array | 139 | 41 | 2 | 41 |
+| 129 | top of the environment record pool `EREC` | L-specific layout (con-ron keeps the constant infos as nested values) | 139 | 41 | 2 | 41 |
 | 0 | the pool top | con-ron's pool size | 139 | 35 | 60 | 11 |
 | 192 | top of the level heap `LH` | L-specific | 66 | 18 | 21 | 21 |
-| 128 | number of `ECON` entries (`env_push`) | the size of con-ron's env array | 58 | 6 | 5 | 5 |
+| 128 | number of `ECON` entries (`env_push`) | the length of con-ron's `IFEnv` constants | 58 | 6 | 5 | 5 |
 | 137 | top of the binder stack `BSTK` | L-specific | 31 | 4 | 9 | 2 |
 | 133 | number of `ETAB` entries | the length of con-ron's `env.tables` | 30 | 8 | 3 | 0 |
-| 130 | number of pending checks `PEND` | con-ron's pending list | 20 | 6 | 5 | 6 |
+| 130 | number of pending checks `PEND` | con-ron's pending records | 20 | 6 | 5 | 6 |
 
 These ten slots carry 1 954 of the 2 141 numeric `CTL` references (91 %).
 
