@@ -5,6 +5,7 @@ import ConAgua.Arena.StageTLift
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.CrOKFrame
+import ConAgua.Final.Twin
 
 /-!
 # `check_value_group` under `StageT` (lane `loopt2`)
