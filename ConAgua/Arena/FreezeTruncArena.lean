@@ -137,7 +137,7 @@ theorem PoolOK.trunc {m : Mem} (h : PoolOK m) (htop : m.top.toNat < 2 ^ 40) :
     rw [truncFrozen_pool, size_extract0]; omega
   have hsm' : PSmall (truncFrozen m) := ⟨by rw [hsz]; omega, by rw [hp1]; exact hsm.2⟩
   have hpc : pcap (truncFrozen m) = pcap m := by rw [pcap_of_small _ hsm, pcap_of_small _ hsm']
-  refine ⟨by rw [truncFrozen_words]; exact a1, by rw [hc]; exact a2, by rw [hpc]; exact a3,
+  refine ⟨a1.of_sameShape (truncFrozen_words m), by rw [hc]; exact a2, by rw [hpc]; exact a3,
     by rw [hpc, hP.top]; exact a4, by rw [hP.top]; exact .inl htop, ?_⟩
   rw [hP.top, e1, tierA_pool0, e2, hsz]; exact Nat.le_refl _
 

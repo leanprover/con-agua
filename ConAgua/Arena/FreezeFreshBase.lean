@@ -133,7 +133,7 @@ theorem fresh_frame (m : Mem) : MemFrame freshZ [] (ctlCut (truncFrozen m)) (fre
     · split
       · simp [zeros]
       · rfl
-  · rw [freshMem_words, ctlCut_words]
+  · exact (ctlCut_words _).symm.trans (freshMem_words m)
 
 theorem fresh_ctl (m : Mem) : (freshMem m).arr64 CTL = (ctlCut (truncFrozen m)).arr64 CTL := by
   rw [freshMem_arr, ctlCut_arr, ite_eq_left rfl, ite_eq_left rfl]
