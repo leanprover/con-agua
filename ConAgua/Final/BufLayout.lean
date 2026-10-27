@@ -93,7 +93,7 @@ end
 /-! ## The layout -/
 
 /-- Word array `a`'s base in `ca_check_b`'s layout. -/
-def bufB (B : Array Word) (buf base : Nat) (fz own : List ArrId) (a : ArrId) : Nat :=
+def bufB (B : Array Word) (buf base : Nat) (fz own : List TieredArray) (a : TieredArray) : Nat :=
   match fz.idxOf? a with
   | some i => buf + 8 * (bufEntry B i).1
   | none =>
@@ -102,7 +102,7 @@ def bufB (B : Array Word) (buf base : Nat) (fz own : List ArrId) (a : ArrId) : N
     | none => 0
 
 /-- Word array `a`'s length in `ca_check_b`'s layout. -/
-def bufL (B : Array Word) (fz own : List ArrId) (a : ArrId) : Nat :=
+def bufL (B : Array Word) (fz own : List TieredArray) (a : TieredArray) : Nat :=
   match fz.idxOf? a with
   | some i => (bufEntry B i).2
   | none =>
@@ -111,27 +111,29 @@ def bufL (B : Array Word) (fz own : List ArrId) (a : ArrId) : Nat :=
     | none => 0
 
 /-- **`ca_check_b`'s layout**: the table at `base`, the stack in slot `1`, frozen array `fz[i]` at
-the buffer's entry `i`, owned array `own[k]` in slot `2 + k`. -/
-def bufLayout (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List ArrId) :
+the buffer's entry `i`, owned array `own[k]` in slot `2 + k`; descriptor position `p` holds the
+word array `tab.wAt p`. -/
+def bufLayout (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List TieredArray) :
     L.Compiler.Layout where
   tab
   T := base
   b8 _ := 0
   s8 _ := 0
-  b64 := bufB B buf base fz own
-  s64 := bufL B fz own
+  b64 p := bufB B buf base fz own (tab.wAt p)
+  s64 p := bufL B fz own (tab.wAt p)
   lo := base + abiSlot
   hi := base + abiSlot + abiStack
   nargs := 0
 
 section
-variable (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List ArrId)
+variable (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List TieredArray)
 @[simp] theorem bufLayout_tab : (bufLayout tab buf B base fz own).tab = tab := rfl
 @[simp] theorem bufLayout_T : (bufLayout tab buf B base fz own).T = base := rfl
 @[simp] theorem bufLayout_b8 (a : Nat) : (bufLayout tab buf B base fz own).b8 a = 0 := rfl
 @[simp] theorem bufLayout_s8 (a : Nat) : (bufLayout tab buf B base fz own).s8 a = 0 := rfl
-@[simp] theorem bufLayout_b64 (a : Nat) : (bufLayout tab buf B base fz own).b64 a = bufB B buf base fz own a := rfl
-@[simp] theorem bufLayout_s64 (a : Nat) : (bufLayout tab buf B base fz own).s64 a = bufL B fz own a := rfl
+@[simp] theorem bufLayout_b64 (p : Nat) :
+    (bufLayout tab buf B base fz own).b64 p = bufB B buf base fz own (tab.wAt p) := rfl
+@[simp] theorem bufLayout_s64 (p : Nat) : (bufLayout tab buf B base fz own).s64 p = bufL B fz own (tab.wAt p) := rfl
 @[simp] theorem bufLayout_lo : (bufLayout tab buf B base fz own).lo = base + abiSlot := rfl
 @[simp] theorem bufLayout_hi : (bufLayout tab buf B base fz own).hi = base + abiSlot + abiStack := rfl
 @[simp] theorem bufLayout_nargs : (bufLayout tab buf B base fz own).nargs = 0 := rfl
@@ -141,7 +143,7 @@ end
 the stack and the owned arrays and is in the address space; the buffer `[buf, buf + 8·|B|)` is
 in the address space and apart from the region; its header (words `8 + 2i`, `9 + 2i`) is inside
 it, and its entries are inside it and pairwise apart (or empty). -/
-structure BufGeom (tab : Tab) (fz own : List ArrId) (B : Array Word) (buf base blen : Nat) : Prop where
+structure BufGeom (tab : Tab) (fz own : List TieredArray) (B : Array Word) (buf base blen : Nat) : Prop where
   need : workerNeed own ≤ blen
   fits : base + blen < 2 ^ 64
   bend : buf + 8 * B.size < 2 ^ 64
@@ -152,27 +154,31 @@ structure BufGeom (tab : Tab) (fz own : List ArrId) (B : Array Word) (buf base b
     (bufEntry B i').1 + (bufEntry B i').2 ≤ (bufEntry B i).1 ∨ (bufEntry B i).2 = 0 ∨ (bufEntry B i').2 = 0
   apart : ∀ x, buf ≤ x → x < buf + 8 * B.size → x < base ∨ base + blen ≤ x
 
-theorem idxOf?_lt {l : List ArrId} {a i : Nat} (h : l.idxOf? a = some i) : i < l.length := by
+theorem idxOf?_lt {l : List TieredArray} {a : TieredArray} {i : Nat} (h : l.idxOf? a = some i) :
+    i < l.length := by
   have := List.idxOf?_eq_some_iff.mp h
   exact this.1
 
-theorem idxOf?_inj {l : List ArrId} {a b i : Nat} (ha : l.idxOf? a = some i) (hb : l.idxOf? b = some i) :
+theorem idxOf?_inj {l : List TieredArray} {a b : TieredArray} {i : Nat} (ha : l.idxOf? a = some i) (hb : l.idxOf? b = some i) :
     a = b := by
   obtain ⟨hl, e1, -⟩ := List.idxOf?_eq_some_iff.mp ha
   obtain ⟨hl', e2, -⟩ := List.idxOf?_eq_some_iff.mp hb
   exact e1.symm.trans e2
 
 section
-variable {tab : Tab} {fz own : List ArrId} {B : Array Word} {buf base blen : Nat}
+variable {tab : Tab} {fz own : List TieredArray} {B : Array Word} {buf base blen : Nat}
 
-/-- A byte of word array `a` is in the buffer (frozen) or in the region's slot `2 + k` (owned). -/
-theorem buf_in64 (_hg : BufGeom tab fz own B buf base blen) {a x : Nat}
-    (h : (bufLayout tab buf B base fz own).In64 a x) :
-    (∃ i, fz.idxOf? a = some i ∧ buf + 8 * (bufEntry B i).1 ≤ x ∧
+/-- A byte of the word array at position `p` is in the buffer (frozen) or in the region's slot
+`2 + k` (owned). -/
+theorem buf_in64 (_hg : BufGeom tab fz own B buf base blen) {p x : Nat}
+    (h : (bufLayout tab buf B base fz own).In64 p x) :
+    (∃ i, fz.idxOf? (tab.wAt p) = some i ∧ buf + 8 * (bufEntry B i).1 ≤ x ∧
         x < buf + 8 * ((bufEntry B i).1 + (bufEntry B i).2)) ∨
-      (fz.idxOf? a = none ∧ ∃ k, own.idxOf? a = some k ∧ InSlot base (2 + k) x) := by
+      (fz.idxOf? (tab.wAt p) = none ∧ ∃ k, own.idxOf? (tab.wAt p) = some k ∧ InSlot base (2 + k) x) := by
   unfold Layout.In64 at h
-  simp only [bufLayout_b64, bufLayout_s64, bufB, bufL] at h
+  simp only [bufLayout_b64, bufLayout_s64] at h
+  generalize tab.wAt p = a at h ⊢
+  simp only [bufB, bufL] at h
   split at h
   · rename_i i hi
     exact Or.inl ⟨i, hi, by omega, by omega⟩
@@ -258,7 +264,9 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
   · simp only [bufLayout_lo, bufLayout_hi]; omega
   · intro a _; simp
   · intro a ha
-    simp only [bufLayout_b64, bufLayout_s64, bufB, bufL]
+    simp only [bufLayout_b64, bufLayout_s64]
+    generalize tab.wAt a = s
+    simp only [bufB, bufL]
     split
     · rename_i i hi
       have := hg.ent i (idxOf?_lt hi); omega
@@ -288,7 +296,9 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
         rcases hg.apart x (by omega) (by omega) with h' | h' <;> omega
       · exact absurd (InSlot.eq (buf_inStack h1) hs) (by omega)
   · intro a _ b _ _ x h; exact absurd h buf_notIn8
-  · intro a _ b _ hab x h1 h2
+  · intro a ha b hb hab' x h1 h2
+    simp only [bufLayout_tab] at ha hb
+    have hab : tab.wAt a ≠ tab.wAt b := fun e => hab' (tab.wAt_inj ha hb e)
     rcases buf_in64 hg h1 with ⟨i, hi, p1, p2⟩ | ⟨hn1, k, hk, hs⟩ <;>
       rcases buf_in64 hg h2 with ⟨i', hi', p3, p4⟩ | ⟨hn2, k', hk', hs'⟩
     · have hii : i ≠ i' := fun e => hab (idxOf?_inj hi (e ▸ hi'))
@@ -310,25 +320,23 @@ end
 /-- **What a call needs of the region's memory `d`**: the owned arrays and the globals of the L
 memory `r` in place (`own[k]` in slot `2 + k`, the globals in the table at `base`). -/
 structure RegionRel (tab : Tab) (base : Nat) (own : List TieredArray) (r : Mem) (d : DataMem) : Prop where
-  nw : r.words.size = tab.nw
-  size : ∀ a < tab.nw, ∀ k, own.idxOf? a = some k → (r.arr64 a).size = abiWords
-  get : ∀ a < tab.nw, ∀ k, own.idxOf? a = some k → ∀ i (h : i < (r.arr64 a).size),
-    rdW d (A (base + abiSlot * (2 + k) + 8 * i)) = some (r.arr64 a)[i]
+  size : ∀ s, tab.dom64 s = true → ∀ k, own.idxOf? s = some k → (r.arr64 s).size = abiWords
+  get : ∀ s, tab.dom64 s = true → ∀ k, own.idxOf? s = some k → ∀ i (h : i < (r.arr64 s).size),
+    rdW d (A (base + abiSlot * (2 + k) + 8 * i)) = some (r.arr64 s)[i]
   glob : ∀ g : GVar, g.id < tab.ng → rdW d (A (base + (tab.globOff g).toNat)) = some (r.glob g)
 
 /-- `ca_check_b`'s memory before the globals: frozen array `fz[i]` is the buffer's entry `i`, the
 owned arrays are `r`'s, every other array is empty; `r`'s globals. -/
-def bufMem0 (fz own : List ArrId) (B : Array Word) (r : Mem) : Mem where
-  bytes := #[#[], #[]]
-  words := (Array.range r.words.size).map fun a =>
-    match fz.idxOf? a with
+def bufMem0 (fz own : List TieredArray) (B : Array Word) (r : Mem) : Mem where
+  bytes _ := #[]
+  words s := match fz.idxOf? s with
     | some i => bufImg B i
-    | none => if own.contains a then r.arr64 a else #[]
+    | none => if own.contains s then r.arr64 s else #[]
   glob := r.glob
 
 /-- **The L memory of one `ca_check_b` call** (generic `bufMem`): `bufMem0` with `plo := j`,
 `phi := j + 1`, `mode := 2`. -/
-def bufMemG (fz own : List ArrId) (plo phi mode : GVar) (B : Array Word) (r : Mem) (j : Word) : Mem :=
+def bufMemG (fz own : List TieredArray) (plo phi mode : GVar) (B : Array Word) (r : Mem) (j : Word) : Mem :=
   { bufMem0 fz own B r with
     glob := fun g => if g = plo then j else if g = phi then j + 1 else if g = mode then 2 else r.glob g }
 
@@ -336,7 +344,7 @@ theorem bufMem_eq (B : Array Word) (r : Mem) (j : Word) :
     bufMem B r j = bufMemG frozenIdsL parOwnedL PLO PHI MODE B r j := rfl
 
 /-- `bufMemG` is the stub's three global stores on `bufMem0`, for distinct globals. -/
-theorem bufMemG_eq_setG {fz own : List ArrId} {plo phi mode : GVar} (h1 : plo ≠ phi) (h2 : plo ≠ mode)
+theorem bufMemG_eq_setG {fz own : List TieredArray} {plo phi mode : GVar} (h1 : plo ≠ phi) (h2 : plo ≠ mode)
     (h3 : phi ≠ mode) (B : Array Word) (r : Mem) (j : Word) :
     bufMemG fz own plo phi mode B r j = (((bufMem0 fz own B r).setG plo j).setG phi (j + 1)).setG mode 2 := by
   simp only [bufMemG, Mem.setG, bufMem0, Mem.mk.injEq, true_and]
@@ -359,38 +367,35 @@ def romBits (rom : List UInt8) (i : Nat) : BitVec 64 :=
 def bufN (tab : Tab) : Nat := 6 + 2 * tab.nw + tab.romWords
 
 /-- **Table word `q` as `ca_check_b` writes it.** -/
-def bufVal (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List ArrId) (q : Nat) :
+def bufVal (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List TieredArray) (q : Nat) :
     BitVec 64 :=
   if q = 0 then (UInt64.ofNat (base + abiSlot + abiStack)).toBitVec
   else if q = 1 then (UInt64.ofNat (base + abiSlot)).toBitVec
   else if q < 6 then 0
-  else if q < 6 + tab.nw then (UInt64.ofNat (bufB B buf base fz own (tab.wposInv (q - 6)))).toBitVec
-  else if q < 6 + 2 * tab.nw then (UInt64.ofNat (bufL B fz own (tab.wposInv (q - 6 - tab.nw)))).toBitVec
+  else if q < 6 + tab.nw then (UInt64.ofNat (bufB B buf base fz own (tab.wAt (q - 6)))).toBitVec
+  else if q < 6 + 2 * tab.nw then (UInt64.ofNat (bufL B fz own (tab.wAt (q - 6 - tab.nw)))).toBitVec
   else romBits tab.rom (q - 6 - 2 * tab.nw)
 
-theorem bufMem0_arr8 (fz own : List ArrId) (B : Array Word) (r : Mem) (a : Nat) :
-    (bufMem0 fz own B r).arr8 a = #[] := by
-  simp only [bufMem0, Mem.arr8]
-  match a with
-  | 0 | 1 | _ + 2 => rfl
+theorem bufMem0_arr8 (fz own : List TieredArray) (B : Array Word) (r : Mem) (a : Nat) :
+    (bufMem0 fz own B r).arr8 a = #[] := rfl
 
-theorem bufMem0_arr64 (fz own : List ArrId) (B : Array Word) (r : Mem) {a : Nat} (ha : a < r.words.size) :
-    (bufMem0 fz own B r).arr64 a = match fz.idxOf? a with
+theorem bufMem0_arr64 (fz own : List TieredArray) (B : Array Word) (r : Mem) (s : TieredArray) :
+    (bufMem0 fz own B r).arr64 s = match fz.idxOf? s with
       | some i => bufImg B i
-      | none => if own.contains a then r.arr64 a else #[] := by
-  simp only [bufMem0, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map, Array.getElem?_range, ha,
-    ite_true, Option.map_some, Option.getD_some]
+      | none => if own.contains s then r.arr64 s else #[] := rfl
 
-theorem idxOf?_of_contains {l : List ArrId} {a : Nat} (h : l.contains a = true) : ∃ k, l.idxOf? a = some k := by
+theorem idxOf?_of_contains {l : List TieredArray} {a : TieredArray} (h : l.contains a = true) :
+    ∃ k, l.idxOf? a = some k := by
   have hm : a ∈ l := by simpa using h
   exact Option.isSome_iff_exists.mp (by simpa [List.isSome_idxOf?] using hm)
 
-theorem idxOf?_of_not_contains {l : List ArrId} {a : Nat} (h : ¬ l.contains a = true) : l.idxOf? a = none := by
+theorem idxOf?_of_not_contains {l : List TieredArray} {a : TieredArray} (h : ¬ l.contains a = true) :
+    l.idxOf? a = none := by
   have hm : a ∉ l := by simpa using h
   simpa [List.idxOf?_eq_none_iff] using hm
 
 section
-variable {tab : Tab} {fz own : List ArrId} {B : Array Word} {buf base blen : Nat}
+variable {tab : Tab} {fz own : List TieredArray} {B : Array Word} {buf base blen : Nat}
 
 /-- **The stub's table stores, on a region that holds `r` and beside the buffer holding `B`,
 relate the memory to `bufMem0`** in `ca_check_b`'s layout (`qs`: the table words, in any
@@ -411,17 +416,14 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   have hNr : base + 2 ^ 31 ≤ base + blen := by simp only [abiSlot] at hn; omega
   have hfit : ∀ q ∈ qs, base + 8 * q + 8 ≤ 2 ^ 64 := fun q h => by have := hq' q h; omega
   have hO := qwrs_only (T := base) (val := bufVal tab buf B base fz own) qs d (bufN tab) (by omega) hq'
-  have hsz := hr.nw
   -- word `q` of the stores
   have hW : ∀ q, q < bufN tab → rdW (qwrs base (bufVal tab buf B base fz own) d qs) (A (base + 8 * q)) =
       some (UInt64.ofBitVec (bufVal tab buf B base fz own q)) := fun q h => qwrs_rdW qs d q (hq q h) hfit
   constructor
-  · simp [bufMem0, hnb]
-  · simp [bufMem0, hsz]
   · intro a _; simp [bufMem0_arr8]
   · intro a ha
     simp only [bufLayout_tab] at ha
-    rw [bufMem0_arr64 fz own B r (by omega), bufLayout_s64]
+    rw [bufMem0_arr64 fz own B r, bufLayout_s64, bufLayout_tab, tab.wAt_pos64 ha]
     rcases hfz : fz.idxOf? a with _ | i
     · simp only [bufL, hfz]
       by_cases hc : own.contains a = true
@@ -434,8 +436,8 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   · intro a _ i hi; simp [bufMem0_arr8] at hi
   · intro a ha i hi
     simp only [bufLayout_tab] at ha
-    have e := bufMem0_arr64 fz own B r (a := a) (by omega)
-    simp only [bufLayout_b64]
+    have e := bufMem0_arr64 fz own B r a
+    simp only [bufLayout_b64, bufLayout_tab, tab.wAt_pos64 ha]
     rcases hfz : fz.idxOf? a with _ | i'
     · simp only [e, hfz] at hi ⊢
       simp only [bufB, hfz]
@@ -468,7 +470,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   · intro a ha
     simp only [bufLayout_tab, hnb] at ha
     have := hW (2 + 2 * a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_b8, Tab.base8]
+    simp only [bufLayout_T, bufLayout_b8, Tab.dbase8]
     rw [show (16 + 16 * (a : Int)).toNat = 8 * (2 + 2 * a) by omega, this]
     simp only [bufVal, show 2 + 2 * a ≠ 0 by omega, show 2 + 2 * a ≠ 1 by omega,
       show 2 + 2 * a < 6 by omega, ite_false, ite_true]
@@ -476,31 +478,29 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   · intro a ha
     simp only [bufLayout_tab, hnb] at ha
     have := hW (3 + 2 * a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_s8, Tab.len8]
+    simp only [bufLayout_T, bufLayout_s8, Tab.dlen8]
     rw [show (24 + 16 * (a : Int)).toNat = 8 * (3 + 2 * a) by omega, this]
     simp only [bufVal, show 3 + 2 * a ≠ 0 by omega, show 3 + 2 * a ≠ 1 by omega,
       show 3 + 2 * a < 6 by omega, ite_false, ite_true]
     rfl
-  · intro a ha
-    simp only [bufLayout_tab] at ha
-    have hw := tab.wpos_lt ha
-    have := hW (6 + tab.wpos a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_tab, bufLayout_b64, Tab.base64, hnb]
-    rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.wpos a : Int)).toNat = 8 * (6 + tab.wpos a) by omega, this]
-    simp only [bufVal, show 6 + tab.wpos a ≠ 0 by omega, show 6 + tab.wpos a ≠ 1 by omega,
-      show ¬ 6 + tab.wpos a < 6 by omega, show 6 + tab.wpos a < 6 + tab.nw by omega, ite_false, ite_true,
-      show 6 + tab.wpos a - 6 = tab.wpos a by omega, tab.wposInv_wpos ha, UInt64.ofBitVec_toBitVec]
-  · intro a ha
-    simp only [bufLayout_tab] at ha
-    have hw := tab.wpos_lt ha
-    have := hW (6 + tab.nw + tab.wpos a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_tab, bufLayout_s64, Tab.len64, hnb]
-    rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.nw : Int) + 8 * (tab.wpos a : Int)).toNat =
-      8 * (6 + tab.nw + tab.wpos a) by omega, this]
-    simp only [bufVal, show 6 + tab.nw + tab.wpos a ≠ 0 by omega, show 6 + tab.nw + tab.wpos a ≠ 1 by omega,
-      show ¬ 6 + tab.nw + tab.wpos a < 6 by omega, show ¬ 6 + tab.nw + tab.wpos a < 6 + tab.nw by omega,
-      show 6 + tab.nw + tab.wpos a < 6 + 2 * tab.nw by omega, ite_false, ite_true,
-      show 6 + tab.nw + tab.wpos a - 6 - tab.nw = tab.wpos a by omega, tab.wposInv_wpos ha, UInt64.ofBitVec_toBitVec]
+  · intro p hp
+    simp only [bufLayout_tab] at hp
+    have := hW (6 + p) (by simp only [bufN]; omega)
+    simp only [bufLayout_T, bufLayout_tab, bufLayout_b64, Tab.dbase64, hnb]
+    rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (p : Int)).toNat = 8 * (6 + p) by omega, this]
+    simp only [bufVal, show 6 + p ≠ 0 by omega, show 6 + p ≠ 1 by omega,
+      show ¬ 6 + p < 6 by omega, show 6 + p < 6 + tab.nw by omega, ite_false, ite_true,
+      show 6 + p - 6 = p by omega, UInt64.ofBitVec_toBitVec]
+  · intro p hp
+    simp only [bufLayout_tab] at hp
+    have := hW (6 + tab.nw + p) (by simp only [bufN]; omega)
+    simp only [bufLayout_T, bufLayout_tab, bufLayout_s64, Tab.dlen64, hnb]
+    rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.nw : Int) + 8 * (p : Int)).toNat =
+      8 * (6 + tab.nw + p) by omega, this]
+    simp only [bufVal, show 6 + tab.nw + p ≠ 0 by omega, show 6 + tab.nw + p ≠ 1 by omega,
+      show ¬ 6 + tab.nw + p < 6 by omega, show ¬ 6 + tab.nw + p < 6 + tab.nw by omega,
+      show 6 + tab.nw + p < 6 + 2 * tab.nw by omega, ite_false, ite_true,
+      show 6 + tab.nw + p - 6 - tab.nw = p by omega, UInt64.ofBitVec_toBitVec]
   · intro i hi
     simp only [bufLayout_tab] at hi
     simp only [bufLayout_T, bufLayout_tab, hnb]

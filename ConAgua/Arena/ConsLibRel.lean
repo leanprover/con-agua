@@ -129,8 +129,6 @@ structure ConsSch.WF (C : ConsSch) : Prop where
     C.w.toNat * ((cntC C m t).toNat + 1) ≤ (m.arr64 (tierA C.ra t)).size
   colRoom : ∀ A, C.col = some A → ∀ (m : Mem) (t : Word), t ≤ 1 → pushOKC C m t = true →
     (cntC C m t).toNat < (m.arr64 (tierA A t)).size
-  /-- The column is a tier-0 id (tier 1 is `tier1`). -/
-  colLt : ∀ A, C.col = some A → A < 256
   vs : ∀ (ks : List Word) (h : Word), ks.length = C.nk →
     (C.vsM (pushArgs C ks h)).length = C.w.toNat
   /-- An exact table's facts (`ExactOK`). -/
@@ -558,13 +556,12 @@ theorem storeR_set64col (hW : C.WF) (hcR : ColFree C R) {A : ArrId} (hA : C.col 
     StoreR C.sch R C.hsM C.KP (m.set64 (tierA A u) kk x) on P Q := by
   obtain ⟨hra, hsa, hctl, hH⟩ := hW.col A hA
   have hS := hW.sch
-  have hAl := hW.colLt A hA
   have ec : (m.set64 (tierA A u) kk x).arr64 CTL = m.arr64 CTL :=
-    Mem.arr64_set64_ne _ _ _ _ _ (by simpa using tierA_ne (show CTL < 256 by decide) hAl (Ne.symm hctl) 0 u)
+    Mem.arr64_set64_ne _ _ _ _ _ (ne_tierA (Ne.symm hctl) u)
   have er : ∀ t, (m.set64 (tierA A u) kk x).arr64 (tierA C.sch.ra t) = m.arr64 (tierA C.sch.ra t) :=
-    fun t => Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne hS.ra_lt hAl (Ne.symm hra) t u)
+    fun t => Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (Ne.symm hra) t u)
   have es : ∀ t, (m.set64 (tierA A u) kk x).arr64 (tierA C.sch.sa t) = m.arr64 (tierA C.sch.sa t) :=
-    fun t => Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne hS.sa_lt hAl (Ne.symm hsa) t u)
+    fun t => Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (Ne.symm hsa) t u)
   obtain ⟨⟨h1, h2⟩, hfl, hT0, hT1, hG⟩ := h
   have tier : ∀ t (tb : Tbl α (Idx k) δ), TierR C.sch R C.hsM C.KP m t tb →
       TierR C.sch R C.hsM C.KP (m.set64 (tierA A u) kk x) t tb := fun t tb hT =>
@@ -870,7 +867,7 @@ theorem ghC_kp {C : ConsSch} (hW : C.WF) (m mi : Mem) (t i K : Word) (hK : C.KP 
 /-! ## An interning -/
 
 /-- A column's tier arrays are not `b` when neither of the column's ids is. -/
-theorem col_tier_ne {C : ConsSch} {b : ArrId}
+theorem col_tier_ne {C : ConsSch} {b : TieredArray}
     (hcol : ∀ A, C.col = some A → A ≠ b ∧ tier1 A ≠ b) (t : Word) :
     ∀ A, C.col = some A → tierA A t ≠ b := fun A hA e => by
   rcases tierA_eq_or A t with e' | e' <;> rw [e'] at e
@@ -878,7 +875,7 @@ theorem col_tier_ne {C : ConsSch} {b : ArrId}
   · exact (hcol A hA).2 e
 
 /-- Outside the table's records (both tiers), counts and column, `pushRec` is the old memory. -/
-theorem pushRec_arr (C : ConsSch) (m : Mem) (t : Word) (ks : List Word) (b : ArrId)
+theorem pushRec_arr (C : ConsSch) (m : Mem) (t : Word) (ks : List Word) (b : TieredArray)
     (hb : b ≠ C.ra) (hb' : b ≠ tier1 C.ra) (hc : b ≠ CTL)
     (hcol : ∀ A, C.col = some A → A ≠ b ∧ tier1 A ≠ b) :
     (pushRec C m t ks).arr64 b = m.arr64 b := by
@@ -893,10 +890,9 @@ theorem pushRec_col (C : ConsSch) (hW : C.WF) {A : ArrId} (hA : C.col = some A) 
     (pushRec C m t ks).arr64 (tierA A t) = (m.arr64 (tierA A t)).set! (cntC C m t).toNat
       (C.colM m (pushArgs C ks (C.qhM m ks))) := by
   obtain ⟨hra, -, hc, -⟩ := hW.col A hA
-  have hAl := hW.colLt A hA
   simp only [pushRec, colW, hA, Mem.arr64_set64_same]
-  rw [Mem.arr64_set64_ne _ _ _ _ _ (by simpa using tierA_ne hAl (show CTL < 256 by decide) hc t 0),
-    wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (tierA_ne hAl hW.sch.ra_lt hra t t)]
+  rw [Mem.arr64_set64_ne _ _ _ _ _ (ne_tierA (Ne.symm hc) t).symm,
+    wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (tierA_ne hra t t)]
 
 /-- **The counts after the append**: tier `t`'s up by one. -/
 theorem pushRec_cnt (C : ConsSch) (hW : C.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (ks : List Word)
@@ -919,12 +915,12 @@ theorem consInternM_out (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}
     m' = m ∨ ∃ t, t ≤ 1 ∧ pushOKC C m t = true ∧ w = (if t = 0 then C.P else C.S) + cntC C m t ∧
       (∀ b, b ≠ tierA C.sa t → m'.arr64 b = (pushRec C m t ks).arr64 b) ∧
       (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m' :=
-  consInternM_outA hW.sch.sa_ctl (fun A hA => (hW.col A hA).2.1) ⟨hW.sch.sa_lt, hW.colLt⟩ h
+  consInternM_outA hW.sch.sa_ctl (fun A hA => (hW.col A hA).2.1) h
 
 /-- The arrays an interning of `C` writes: both tiers of its record and slot arrays and of its
 column. -/
-def ConsSch.wset (C : ConsSch) : List ArrId :=
-  C.ra :: (tier1 C.ra) :: C.sa :: (tier1 C.sa) :: (C.col.toList ++ C.col.toList.map tier1)
+def ConsSch.wset (C : ConsSch) : List TieredArray :=
+  ↑C.ra :: (tier1 C.ra) :: ↑C.sa :: (tier1 C.sa) :: (C.col.toList.map TieredArray.t0 ++ C.col.toList.map tier1)
 
 /-- **What an interning writes**: the table's arrays and column (both tiers), its two counts. -/
 theorem consInternM_frame (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}

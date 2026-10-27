@@ -134,18 +134,17 @@ theorem entry1Fail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   obtain ⟨⟨-, -, -, hout₀⟩, hsz⟩ := hF.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hF.rdx₀]; decide
   obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
-  have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
-    ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
+  have hin : InputsOK b pb (fun _ => abiWords) := ⟨h64, hb, hpb, fun _ => by simp [abiWords]⟩
   rcases hout₀ with h1 | hout₀'
   · exact absurd h1 hne
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   rcases hres₁ : L.run checkerProg abiFuel "check" []
-      ((loadMem b pb [] (List.replicate checkerTab.nw abiWords)).setG MODE 1) with e | ⟨rs₁, m₁⟩
+      ((loadMem b pb fun _ => abiWords).setG MODE 1) with e | ⟨rs₁, m₁⟩
   · rw [hres₁] at hout₀'
     have hrax : st₀.data.regs.rax = e.code := by
       cases e <;> simp only [OutcomeRel] at hout₀' <;> first | exact hout₀'.elim | exact hout₀'.2
     rw [hrax] at hk ⊢
-    exact hV b pb [] _ hin 1 (Or.inl rfl) abiFuel hN e hres₁ hk
+    exact hV b pb _ hin 1 (Or.inl rfl) abiFuel hN e hres₁ hk
   · rw [hres₁] at hout₀'
     simp only [OutcomeRel] at hout₀'
     rw [hF.rdx₀] at hout₀'
@@ -168,29 +167,29 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   obtain ⟨⟨-, -, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
   obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
-  have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
-    ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
+  have hin : InputsOK b pb (fun _ => abiWords) := ⟨h64, hb, hpb, fun _ => by simp [abiWords]⟩
   rcases hout₀ with h1 | hout₀'
   · exact absurd h1 hne
   rcases hres₁ : L.run checkerProg abiFuel "check" []
-      ((loadMem b pb [] (List.replicate checkerTab.nw abiWords)).setG MODE 1) with e | ⟨rs₁, m₁⟩
+      ((loadMem b pb fun _ => abiWords).setG MODE 1) with e | ⟨rs₁, m₁⟩
   · rw [hres₁] at hout₀'
     cases e <;> simp only [OutcomeRel] at hout₀' <;> (rw [hR.rdx₀] at hout₀'; exact absurd hout₀'.1 (by decide))
   rw [hres₁] at hout₀'
   obtain ⟨-, hRes₁, hMem₁⟩ := hout₀'
   have hrax₁ : st₀.data.regs.rax = rs₁.headD 0 := by
     rw [← getD_zero_headD]; exact hRes₁.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
-  have h₁ : L.run checkerProg abiFuel "check" [] (loadMemM b pb [] (List.replicate checkerTab.nw abiWords) 1) =
+  have h₁ : L.run checkerProg abiFuel "check" [] (loadMemM b pb (fun _ => abiWords) 1) =
       .ok (rs₁, m₁) := hres₁
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   have hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat := by rw [← hrax₁]; exact hR.rax₀
   -- the buffer is `OUT`'s prefix
-  obtain ⟨hlen, h126, hent', hinc'⟩ := entry1_buf b pb [] _ hin abiFuel hN rs₁ m₁ h₁ hge _ rfl
-  have hOUT : OUT < checkerTab.nw := by decide
-  have hsz := hMem₁.size64 OUT hOUT
+  obtain ⟨hlen, h126, hent', hinc'⟩ := entry1_buf b pb _ hin abiFuel hN rs₁ m₁ h₁ hge _ rfl
+  have hOUT : checkerTab.dom64 ↑OUT = true := (checkerTab.dom64_t0_iff OUT).2 ⟨by decide, by decide⟩
+  have hsz := hMem₁.size64 _ hOUT
   have hget : ∀ i (h : i < (m₁.arr64 OUT).size),
-      rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some (m₁.arr64 OUT)[i] := fun i h =>
-    hMem₁.get64 OUT hOUT i h
+      rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some (m₁.arr64 OUT)[i] := fun i h => by
+    have := hMem₁.get64 _ hOUT i h
+    simpa only [abiLayout_b64, abiLayout_tab, checkerTab.wposInv_pos64 hOUT, curNum_t0] using this
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
@@ -253,12 +252,12 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     obtain ⟨rs, h1, -, h3, -⟩ := hrun i' hi
     exact ⟨⟨rs, h1⟩, bufKept_of_memRel h3 hent' (hR.kept i' hi)⟩) he i 0 (by omega)
   rw [h0] at hruns
-  refine threads_twinVerdictPooled hV b pb [] _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab)
-    (by simp [zeroMem, Mem.HasWs]; decide) (fun a ha => ?_) rfl _ _ abiFuel e hruns (fun c hc => ?_)
+  refine threads_twinVerdictPooled hV b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem)
+    trivial (fun a ha => ?_) rfl _ _ abiFuel e hruns (fun c hc => ?_)
     (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk
-  · have hl := parOwnedL_lt a ha
+  · have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
-    simp [zeroMem, Mem.arr64, hl, zeros]
+    simp [zeroMem, Mem.arr64, zeros]
   · obtain ⟨i', hi', rfl⟩ := List.mem_map.mp hc
     rw [List.mem_range'] at hi'
     rw [← hrax₁]; exact hR.claimed i' (by omega)

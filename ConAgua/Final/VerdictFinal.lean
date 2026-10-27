@@ -22,30 +22,28 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 the entries' verdict claims, gives `TwinVerdict [b]` at that class. -/
 theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k : Word)
     (hV : SeqVerdicts checkerProg)
-    (h : DrvErr checkerProg checkerTab MODE PLO PHI OUT HDRF CTLF 132 b pb k) (hk : k &&& 3 ≠ 0) :
+    (h : DrvErr checkerProg MODE PLO PHI OUT HDRF CTLF 132 b pb k) (hk : k &&& 3 ≠ 0) :
     TwinVerdict [b] (k &&& 3) := by
   obtain ⟨hb, hpb, h⟩ := h
-  have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
-    ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
+  have hin : InputsOK b pb (fun _ => abiWords) := ⟨h64, hb, hpb, fun _ => by simp [abiWords]⟩
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
-  rcases h with ⟨e, he, hc⟩ | ⟨rs₁, m₁, h₁, hnw, hge, e, he, hc⟩
+  rcases h with ⟨e, he, hc⟩ | ⟨rs₁, m₁, h₁, hge, e, he, hc⟩
   · subst hc
-    exact hV.entry1 b pb [] _ hin 3 (Or.inr rfl) abiFuel hN e he hk
+    exact hV.entry1 b pb _ hin 3 (Or.inr rfl) abiFuel hN e he hk
   · subst hc
-    have hsz : 242 < m₁.words.size := by rw [hnw]; decide
     rw [getD_zero_headD] at hge he
-    refine hV.entry2 b pb [] _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
+    refine hV.entry2 b pb _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
       (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 132 0 (rs₁.headD 0 - 9223372036854775808))
       ?_ rfl rfl rfl ?_ ?_ e he hk
     · intro a ha
-      rw [seqMem_arr64 _ _ _ hsz]
-      have h1 : ¬ (a = OUT ∨ a = CTLF) := by
+      rw [seqMem_arr64]
+      have h1 : ¬ (a = ↑OUT ∨ a = ↑CTLF) := by
         rintro (rfl | rfl) <;> revert ha <;> decide
-      have h2 : a ≠ HDRF := by rintro rfl; revert ha; decide
+      have h2 : a ≠ ↑HDRF := by rintro rfl; revert ha; decide
       simp only [h1, h2, ite_false]
-    · rw [seqMem_arr64 _ _ _ hsz]; simp
-    · simp only [rd64, seqMem_arr64 _ _ _ hsz]
-      simp only [show ¬ (HDRF = OUT ∨ HDRF = CTLF) by decide, ite_false, ite_true]
+    · rw [seqMem_arr64]; simp
+    · simp only [rd64, seqMem_arr64]
+      rw [if_neg (by decide), if_pos rfl]
       simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
       by_cases h3 : 3 < (m₁.arr64 OUT).size
       · have h4 : 3 < min 132 (m₁.arr64 OUT).size := by omega
