@@ -41,10 +41,10 @@ theorem StageT.lift_keep {β α : Type} {mo : Option (β × Mem)} {op : AM α} {
     (h : Sim mo op a (fun r x m' a' => StageR dn vis fe m' a' ∧ Q r x m' a'))
     (hkeep : ∀ x a', op.run a = .ok (x, a') → ∃ X, a' = { a with memos := X })
     (hfr : ∀ r m', mo = some (r, m') → MemFrame A C m m')
-    (hP : PINS ∉ A) (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
-    (hWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
+    (hP : (PINS : TieredArray) ∉ A) (hA : ((50 : ArrId) : TieredArray) ∉ A ∧ ((49 : ArrId) : TieredArray) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
+    (hWA : ((151 : ArrId) : TieredArray) ∉ A ∧ ((152 : ArrId) : TieredArray) ∉ A ∧ ((153 : ArrId) : TieredArray) ∉ A)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
-    (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A)
+    (hLA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) :
     Sim mo op a (fun r x m' a' => StageT dn vis fe m' a' ∧ Q r x m' a') := by
   intro r m' e
