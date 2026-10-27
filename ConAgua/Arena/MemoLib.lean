@@ -6,6 +6,7 @@ public import ConAgua.Arena.SlotGrow
 public import ConAgua.L.Logic
 public import ConAgua.L.Notation
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LdRd
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -224,9 +225,11 @@ theorem memoFindG_spec (f : FnName) (hp : p.lookup f = some (memoFindG S)) (n : 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, mfindLoopG_step_spec S p n] <;>
-      finish [mfindG, nG, mbG, hdG, epG, dfltN, homeW, kh]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64_rd_spec, mfindLoopG_step_spec S p n]
+    all_goals subst_vars
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
+      Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+    all_goals grind [lang_grind, arena_grind, mfindG, nG, mbG, hdG, epG, dfltN, homeW, kh, Mem.len64]
 
 end find
 
