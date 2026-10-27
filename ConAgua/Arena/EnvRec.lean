@@ -11,7 +11,7 @@ run of words at a pointer `p`, every list is a slice `(off, cnt)` of the same po
 the record), and a list of records is a slice of fixed-size records (recursor rules, 11 words). The
 decoders below are the value relations (`decE`'s analogue): `decCI dn a p = some ci` says that
 the record at `p` in the pool `a` denotes `ci`. They read only the pool, so a pool that only grows
-above a top keeps every decoding below it (`PoolSlice`'s `Agree`).
+above a top keeps every decoding below it (`LitRefine`'s `Agree`).
 
 Handle words must be below `2^32` (`hd?` refuses others), so a decoded handle is the word itself
 and L may compare words where the twin compares handles. `PropWhen`'s names are con-leche `Name`

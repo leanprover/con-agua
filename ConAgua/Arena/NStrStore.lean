@@ -32,7 +32,7 @@ record points at the slice, as the level-list store (`LsStore.lean`) does with h
   hash, the length, then `limbs_eq`. The name store has no scratch skip.
 
 One byte per word keeps the comparison and the hash `lit`'s (`limbs_eq`, `lit_hash`) and the key
-a list of words (`PoolSlice.lean`); packing eight bytes per word is a later optimisation.
+a list of words (`LitRefine.lean`); packing eight bytes per word is a later optimisation.
 
 The functions: `nstr_match(t, i, q, o, l, h)`, `nstr_find(t, q, o, l, h)`,
 `nstr_push(t, q, o, l, h, j)` and `intern_nstr(q, o, l)` (`internNNode (.str pre s)` for the

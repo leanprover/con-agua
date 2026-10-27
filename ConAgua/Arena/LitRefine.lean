@@ -28,9 +28,8 @@ an instance of the store library (`StoreLib.lean`):
 
 The pool facts (normalised slices are unique) are by hand; the `strVal` arm's slices-as-keys
 facts (`sliceL`, `slice_key`, `strWords`) live here too (below `eqW_iff`/`hashN_congr`, which they
-share with the normalised-slice argument), since the name `str` table (`NStrRefine.lean`, via
-`PoolSlice.lean`) and the level-list store (`LsRefine.lean`, via `PoolSlice.lean`) both import
-this file already and reuse them from here.
+share with the normalised-slice argument), since the name `str` table (`NStrRefine.lean`) and
+the level-list store (`LsRefine.lean`) both import this file already and reuse them from here.
 
 Not represented: the arena's derived column for `lit` nodes (`derOfLit`, through Lean's opaque
 `mixHash`), and every other table of `AState`.
@@ -226,7 +225,7 @@ record by a list of words held as a slice `(o, l)` below the pool top, compared 
 `lit` store's own `strVal` arm is the same: a slice holding the string's UTF-8 bytes, one byte
 per word. So the "slice as a list of words" layer (`sliceL`, `slice_key`, `slice_key_hash`) and
 the `strVal` encoding (`strWords`, `strWords_inj`) live here, once, next to `eqW_iff`/
-`hashN_congr`; `PoolSlice.lean` and `NStrRefine.lean` import this file and reuse them from here.
+`hashN_congr`; `LsRefine.lean` and `NStrRefine.lean` import this file and reuse them from here.
 `lit`'s own `natVal` key is not a list (a natural number is a *normalised* slice, unique by
 `pv_len`/`pv_limbs` above, not by `sliceL`), so it shares `eqW_iff`/`hashN_congr` with this layer,
 not the statement. -/
