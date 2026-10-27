@@ -23,7 +23,7 @@ every slot `0‥387` by number):
 
 **Where the numbers are assigned.**
 
-* 135 `abbrev X : ArrId := n` in 63 modules (`Arena/*Store.lean` two each, `Arena/Tiers.lean` 15,
+* 141 `abbrev X : ArrId := n` in 61 modules (two of them test programs) (`Arena/*Store.lean` two each, `Arena/Tiers.lean` 15,
   `Arena/LpCol.lean` 12, `Arena/IndIface.lean` 9, `Front/*`, `Scan/*`, `Rom/*`, `Checker/Hoist.lean`),
   in the namespaces `L.Arena`, `L.Ind`, `L.Front`, `L.Front.Ind`, `L.Rom`, `L.Stubs`, `L.Checker` and
   one per scanner module (`L.Scan.Key.IN`, …: 13 declarations of byte array `0`).
