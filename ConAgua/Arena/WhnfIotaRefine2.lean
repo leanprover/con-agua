@@ -840,7 +840,7 @@ theorem instSpinePins_spec (p : Prog) (hp : p.lookup "inst_spine_pins" = some in
   simp_all [ispTop, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLoc_loc,
     St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr, rdW, CTL] <;>
-  (have h136 : 136 < (s₀.mem.arr64 1).size := by assumption
+  (have h136 : 136 < (s₀.mem.arr64 CTL).size := by assumption
    refine ⟨h136, ?_⟩
    first
    | (rw [show ispLen an rP = rP from ite_eq_left (of_decide_eq_true (by assumption))]; simp_all [SPN])

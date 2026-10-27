@@ -167,7 +167,7 @@ theorem PMemoR.setL {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h r : Word) (h
       (fun _ _ h => h) _ hP.e⟩
 
 theorem nFrame_l {m m' : Mem} (h : MemFrame nArrs nCtl m m') : MemFrame lArrs lCtl m m' :=
-  h.mono (by simp) (by simp)
+  h.mono (by decide) (by simp)
 
 /-- **The end of a chain into `PLOk`.** -/
 theorem PLOk.of_sim {α : Type} {op : AM (PMemo × α)} {dec : Word → α} {m : Mem} {a : AState}
