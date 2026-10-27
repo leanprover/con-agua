@@ -101,18 +101,18 @@ def preLoopFns : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `preLoopFns` store into. -/
 def preLoopA : List TieredArray :=
-  tier0s [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT,
-    PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT,
-    LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC,
-    NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP,
-    CLP, FVLP, Front.NID, Front.LID, Front.EID, Front.DECL, Front.DLP, Front.Ind.IFR,
-    Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, HSEEN, HNIX, PINS, EREC, Rom.RSTK,
-    Rom.RMEMO, Rom.RSET, LH, Ind.IW] ++
-  tier1s [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT,
-    PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT,
-    LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC,
-    NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP,
-    CLP, FVLP]
+  tier0s [
+  POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+  SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
+  FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
+  FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, Front.NID, Front.LID, Front.EID,
+  Front.DECL, Front.DLP, Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, HSEEN,
+  HNIX, PINS, EREC, Rom.RSTK, Rom.RMEMO, Rom.RSET, LH, Ind.IW] ++
+  tier1s [
+  POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+  SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
+  FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
+  FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP]
 
 /-- The `CTL` words the functions of `preLoopFns` store into. -/
 def preLoopC : List Word := [
@@ -182,8 +182,8 @@ theorem preLoopFrame_intern_all_pins (n : Nat) (s₀ : St) :
 
 /-- The arrays the declaration loop needs zero at its start are not written before it. -/
 theorem preLoopA_loopZero :
-    ∀ b ∈ ([ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, Stubs.CRM,
-      Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM] : List ArrId),
+    ∀ b ∈ tier0s [ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, Stubs.CRM,
+      Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM],
       b ∉ preLoopA := by
   decide +kernel
 

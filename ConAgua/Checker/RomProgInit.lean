@@ -43,7 +43,7 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb sz)) :
     simp only [Mem.ptop0]; rw [loadMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
   have hw : (loadMem b pb sz).HasW CTL := trivial
   have hsl : ∀ a ∈ slotArrs, a ∈ checkerArrays.wordSlots := by decide
-  have hs : ∀ a, a ∈ slotArrs → tier1 a ∈ slotArrs → ∀ t,
+  have hs : ∀ a : ArrId, (a : TieredArray) ∈ slotArrs → tier1 a ∈ slotArrs → ∀ t,
       consMinWords ≤ ((loadMem b pb sz).arr64 (tierA a t)).size ∧
       ((loadMem b pb sz).arr64 (tierA a t)).size < 2 ^ 61 := fun a h0 h1 t => by
     rcases tierA_eq_or a t with e | e <;> rw [e]
@@ -100,7 +100,7 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb sz)) :
     have := hc.2.1; simp [ctlMin] at this; omega
   have h63 : ∀ a ∈ checkerArrays.wordSlots, ((loadMem b pb sz).arr64 a).size < 2 ^ 63 := fun a ha => by
     have := hc.1 a ha; omega
-  have hT : ∀ (a : ArrId) {k : IdxKind}, TblIx a → a ∈ checkerArrays.wordSlots →
+  have hT : ∀ (a : ArrId) {k : IdxKind}, TblIx a → (a : TieredArray) ∈ checkerArrays.wordSlots →
       TblR (loadMem b pb sz) a ({} : ConLeche.Frontend.IdTable (Idx k)) := fun a _ ha hs =>
     TblR.zero _ a ha (loadMem_rd b pb sz) (h63 a hs) hctl
   have hf : ((loadMem b pb sz).arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧
