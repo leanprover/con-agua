@@ -335,3 +335,30 @@ Generator features that would open more, by expected yield: reading `Keep`-style
 facts (4; small change, opens parts of `Front/` and the ROM readers together with `pre`); a
 model shape for continuations passed as arguments (2); bounds as modelled aborts (3, larger:
 `rdW`/`set64` would need a checked variant, and the existing models would change).
+
+## 8. Lane mgen2: facts in callee posts, `keep`, `defs`/`nodefs`
+
+Three generator changes (`ConAgua/L/ModelGen.lean`, tests in `ModelGenTest.lean`):
+
+* **Facts in callee posts.** A conjunct of a callee's post that mentions the final memory but not
+  the results (`Keep s₀.mem s'.mem`, `s'.mem.arr8 IN = b`, `Inv s'.mem`) is a fact: the model
+  ignores it, the step proofs get it from the spec as before. `conjuncts` beta-reduces, so the
+  post of `Triple.keep` (`Q r s ∧ Keep … ∧ LocEq …`) is read. Before, any such conjunct was
+  "unsupported post conjunct".
+* **`keep [h]`** (`h : p.noSt8 = true`): every callee spec and induction hypothesis `S` goes to
+  `vcgen` as `fun κ₀ … => L.Triple.keep h (S κ₀ …)` (arity from the spec's type; explicit
+  binders only). This is what the hand ROM specs do by `have ih' := fun s₁ pos₁ h₁ =>
+  Triple.keep hL.no_st8 (ih s₁ pos₁ h₁)`: a `pre` over what `Keep` preserves (array sizes, so
+  `pcap`; the byte arrays, so `arr8 IN`) holds again after each call. The induction hypothesis
+  is the part a user could not wrap by hand in `specs`. Tests `tKeep` (two calls, the second's
+  precondition from the first's `Keep`) and `tKeepR` (two recursive calls); both fail without
+  `keep`.
+* **`defs` / `nodefs`**: the same `l_model` twice, first emitting only the models, continuations
+  and arms (with their patterns), then only the specs. In between, facts about the generated
+  models can be proved and given patterns, and the steps use them. Test `tTwo`: the second
+  recursive call's precondition `rdW (m.arr64 TW) 0 = 0` from `tTwoW_z'`, a lemma about
+  `tTwoW` proved by induction over its generated arms. This is needed by every recursive ROM
+  reader (below).
+
+No existing `l_model` changes its output (the new branches only replace errors, and the new
+options are off by default).
