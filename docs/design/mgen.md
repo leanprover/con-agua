@@ -252,3 +252,86 @@ Some conversions cost time (`WhnfIotaRecRefine2`, `WhnfDeltaRefine*`): the gener
 inline `max`/`min` as arithmetic (`x + (y - x) * (if x < y then 1 else 0)`) and lift an `if` out
 of a result tuple (`if c then some (1, m) else some (0, m)` for `some (if c then 1 else 0, m)`),
 which the refinements bridge with small lemmas; and `fold` takes no `if` patterns (`ispLen`).
+
+### The generator's fixed cost (master 821c7d28, all 197 `l_model` modules)
+
+Each module alone (`lake env lean`, `trace.profiler` at 1 ms plus the profiler's cumulative
+categories, `_tmp/mgen/cost/`), summed, CPU seconds:
+
+| | s | share |
+|---|---:|---:|
+| generated step proofs (`….stepᵢ`) | 1 032 | the work the hand specs did before |
+| generated loop specs | 85 | likewise |
+| `l_model` commands, synchronous part (the elaborator, the models' definitions with their equation lemmas, the arms' statements, `grind_pattern`s) | 166 | ≈ 7 % of these modules |
+| of which the interpreted elaborator (`interpretation`) | 59 | ≈ 2.5 % (0.3 s per module) |
+| the arms' proofs (`….armᵢ`, `abortᵢ`, `none`) | 22 | ≈ 1 % |
+| equation lemmas (`Elab.definition.eqns`, `matchEqs`, top level) | < 1 | |
+| all categories | ≈ 2 400 | |
+
+**Precompiling the elaborator** would save at most the 59 s of interpretation, ≈ 1 % of the
+build's 5 200 s of module time, spread over 197 modules that build in parallel. It needs the
+elaborator's imports (`L/Notation`, `L/Logic`, `L/ErrSpec` and theirs) compiled to a shared
+library as well and loaded by every importer, and the artifact cache would have to carry the
+library. Not done: the saving is below the noise of a cold build.
+
+**Fewer arms**: the arms' proofs cost 22 s in all; their statements and patterns are part of the
+166 s. The refinements use the arms by name, and the `finish` recipe needs their patterns, so
+dropping them would trade a few percent of the generated modules' time for hand lemmas in the
+refinements. Not done. What does show, per module, is the cost against a *small fast* hand spec:
+there the hand proof was cheaper than the arms that replace it, hence the roll-out rule since
+batch 3 (convert where the hand spec was slow or long).
+
+### Batch 4
+
+Generator: `u64(a ⋈ b)` is a comparison word that `fold` patterns match (`if a < b then 1 else 0`,
+`Cmp.ult.evalW a b`): `iota_rec_fire2` with `fold [rpLen]` 2.48 → 1.27 s (hand 0.70 s), its
+bridge lemma gone; `pre [P]` moved right after `specs` (written after the recipe, it did not
+parse as part of the command).
+
+| file(s) | functions | lines | module time |
+|---|---|---:|---|
+| `Front/IndApplySpec` (+ `IndApplyRefine2/3/5/7`) | `unsafe`, `np_go`, `ids_go`, `listed_go`, `order_go`, `rec_idx` (`void`) | −122 | 16.8 → 16.7 |
+| `WhnfIotaRecRefine2` (`fold [rpLen]`) | | −5 | −1.2 s |
+
+Tried and not converted (the rule: no slower modules): `Front/IndApplySpec2` (every function
+generated, but the module went 7.4 → 14.5 s: the steps 1.5–2× the hand ones, plus `arr8 IN`
+lemmas for the preconditions at each call); `Front/IndFieldsSpec`, `ApplyDecl` (`decl_kind`
++4 % for −19 lines; the rest checks input bounds or is used as total functions);
+`Front/NatDec`, `Unescape`, `Line` (fuel-free well-founded hand models proved by
+`fun_induction`; callee posts carry `Keep s₀.mem s'.mem`, which `l_model` rejects). So `pre`
+unblocked little in `Front/` too: what blocks there is `Keep` in callee posts and refinements
+that unfold the hand models structurally.
+
+## 7. Where the roll-out stands (master d23b4b5d)
+
+`l_model` names **627** of the 1 526 plain functions (537 on 386bf921); 840 are hand-specified
+(930). Five landings of conversions (#60 pilots, #64, #65, #68, #70), about 115 functions, ≈ −4 250
+lines net in `ConAgua/` with their refinements. The 50 hand-specified functions that still use a
+construct the generator lacked before this lane are all pool-slice, block-operation or
+nested-loop functions whose models are blocked by something else (bounds checks, reach, shape).
+
+What keeps the remaining 840 hand-written, in the order the helpers met it:
+
+1. **Reach.** The model's continuations and arms are named in refinements across many files
+   (`IndApplySpec` 92, `PromoteCI` 77, `InferLeavesE` 431, the ROM readers 5–6). A conversion
+   there is a rewrite of those refinements, not a rename.
+2. **Shape.** Hand models written as an inline `match` per call, `Option.bind` chains, a
+   continuation passed as a function argument (`PinReadSpec`), one model for several functions
+   with a Lean parameter (`ilwBinW R mk`), fuel-free well-founded recursion proved by
+   `fun_induction` (`NatDec`), or a model with a `CallM` parameter (`DeclCvg`). The refinement
+   then needs re-threading against the generated continuations.
+3. **Bounds.** Hand models that check `(m.arr64 X).size` / `136 < size` / `ldE` and return
+   `none`, where the refinement uses the bound (`struct_unit_head`, `iota_rec_fire`,
+   `eta_projs`, `lp_put`, the store pushes, `cnsW`).
+4. **Callee posts the generator does not read**: `Keep s₀.mem s'.mem` (preservation of `pcap`,
+   `arr8 IN`; `Triple.keep`), an existential fuel (`internAllPins_specW`), a result besides the
+   model (`r.headD 0 = top ∧ …`).
+5. **Time.** Small flat functions whose hand spec is already fast: the generated arms cost more
+   than the hand proof (the rule since batch 3; `IndApplySpec2` 7.4 → 14.5 s when converted).
+6. **Templates** (`FunDecl`s with parameters): 311 instances plus `pb_check`,
+   `internReservedPinsAt off`.
+
+Generator features that would open more, by expected yield: reading `Keep`-style conjuncts as
+facts (4; small change, opens parts of `Front/` and the ROM readers together with `pre`); a
+model shape for continuations passed as arguments (2); bounds as modelled aborts (3, larger:
+`rdW`/`set64` would need a checked variant, and the existing models would change).

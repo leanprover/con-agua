@@ -264,8 +264,8 @@ l_model romLit_spec (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpi : p.lookup "intern_lit" = some internLit) (hp : p.lookup "rom_lit" = some romLit)
   fns [hp ↦ romLitW]
   specs [internLit_spec p hph hpe hpm hpf hpp hpi n]
-  grind [arena_grind] finish [litWordMem]
   pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
+  grind [arena_grind] finish [litWordMem]
 
 /-- The generated `romLitW`, with the pool top as `m.top` and the limb write as `litWordMem`. -/
 theorem romLitW_eq (m : Mem) (k : Word) : romLitW m k =

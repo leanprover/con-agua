@@ -293,16 +293,12 @@ theorem rpLen_toNat (mI rP : Word) : (rpLen mI rP).toNat = min rP.toNat (mI.toNa
     have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h)
     omega
 
-theorem rpLen_eq (mI rP : Word) :
-    rP - (rP - mI - 1) * (if mI < rP then (1 : Word) else 0) = rpLen mI rP := by
-  simp [rpLen, Cmp.evalW, Cmp.eval]
-
 /-- **`iota_rec_fire2` is its model `irFire2W`** (generated). -/
 l_model iotaRecFire2_spec (p : Prog) (hp : p.lookup "iota_rec_fire2" = some iotaRecFire2L)
   fns [hp ↦ irFire2W tuple]
   specs [callW_spec p n "iota_rec_fam", callW_spec p n "rule_rhs_at", callW_spec p n "mk_app_n",
     callW_spec p n "mk_app_n_from"]
-  grind [arena_grind] extra [ld64_rd_spec] simp [] locals
+  grind [arena_grind] fold [rpLen] extra [ld64_rd_spec] simp [rpLen, Cmp.evalW] locals
 
 section fire2Run
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx)
@@ -370,7 +366,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   refine triple_post (iotaRecFire2_spec p hp.fire2 (n + 1) s₀ mode vis d c us recP so usj ctorP rl mo mn)
     fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [irFire2W, irFire2W.k_iota_rec_fam, irFire2W.k_rule_rhs_at, irFire2W.k_mk_app_n,
-    irFire2W.k_mk_app_n_from, rpLen_eq] at hW
+    irFire2W.k_mk_app_n_from] at hW
   have hspn := hS.spn
   have herec := hS.erec
   obtain ⟨hctw, hctor, hnfw, hcpw, -, -, hrhsw, hrhs, -⟩ := decRule_rd herec hrule

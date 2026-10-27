@@ -43,39 +43,50 @@ theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn ty
   | zero => intro j h; simp [recIdxW] at h
   | succ n ih =>
     intro j h k h1 h2 hT
-    simp only [recIdxW] at h
-    split at h
-    · rename_i hle; have := UInt64.le_iff_toNat_le.mp hle; omega
-    rename_i hlt
-    have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
-    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
+    by_cases hle : tn ≤ j
+    · have := UInt64.le_iff_toNat_le.mp hle; omega
+    have hj1 := wsucc j tn (UInt64.not_le.mp hle)
+    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
     have ex1 : rdW (m.arr64 IFL) (tyn + j) = wd m IFL (tyn.toNat + j.toNat) := by
       rw [wd_eq, widx2 _ _ (by omega)]
     have ex2 : rdW (m.arr64 IFL) (tyt + j) = wd m IFL (tyt.toNat + j.toNat) := by
       rw [wd_eq, widx2 _ _ (by omega)]
-    rw [ex1, ex2] at h
+    have hjj : recIdxW.j1 n T ni np tn tyn tyt fuel j m = some () →
+        recIdxW n m T ni np tn tyn tyt fuel (j + 1) = some () := by
+      intro hh
+      rcases hq : recIdxW n m T ni np tn tyn tyt fuel (j + 1) with _ | u
+      · rw [recIdxW.j1.abort1 _ _ _ _ _ _ _ _ _ _ hq] at hh; cases hh
+      · rfl
     by_cases hk : k = j.toNat
     · subst hk
-      rw [ite_eq_left hT] at h
-      rcases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with _ | ⟨ok, kk⟩ <;> simp only [hs, pK, reduceCtorEq] at h
+      have hT' : rdW (m.arr64 IFL) (tyn + j) = T := by rw [ex1]; exact hT
+      rw [recIdxW.arm2 _ _ _ _ _ _ _ _ _ _ hle hT', ex2] at h
+      rcases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with _ | ⟨ok, kk⟩ <;> rw [hs] at h
+      · rw [recIdxW.k_pi_sort_tele_len.none] at h; cases h
       obtain ⟨s1, -⟩ := sortTeleW_ok m a hR n fuel _ ok kk hs
       refine ⟨_, s1, fun x hx => ?_⟩
-      split at h; cases h; rename_i hc
       by_cases hok : ok = 0
       · simp [hok] at hx
       · simp only [hok, ite_false, Option.some.injEq] at hx
-        have : np + ni = kk := Classical.byContradiction fun hne => hc ⟨hok, hne⟩
+        have : np + ni = kk := Classical.byContradiction fun hne => by
+          rw [recIdxW.k_pi_sort_tele_len.abort1 _ _ _ _ _ _ _ _ _ _ _ _ hok hne] at h; cases h
         rw [← hx, ← this, widx2 _ _ (by omega)]
     · have hrest : recIdxW n m T ni np tn tyn tyt fuel (j + 1) = some () := by
-        split at h
-        · cases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with
-          | none => rw [hs, pK_none] at h; cases h
-          | some q =>
-          obtain ⟨ok, kk⟩ := q
-          rw [hs, pK_some] at h
-          split at h; cases h
-          · exact h
-        · exact h
+        by_cases hT2 : rdW (m.arr64 IFL) (tyn + j) = T
+        · rw [recIdxW.arm2 _ _ _ _ _ _ _ _ _ _ hle hT2] at h
+          rcases hs : sortTeleW n m fuel (rdW (m.arr64 IFL) (tyt + j)) with _ | ⟨ok, kk⟩ <;>
+            rw [hs] at h
+          · rw [recIdxW.k_pi_sort_tele_len.none] at h; cases h
+          by_cases hok : ok = 0
+          · rw [recIdxW.k_pi_sort_tele_len.arm2 _ _ _ _ _ _ _ _ _ _ _ _ hok] at h
+            exact hjj h
+          · by_cases hnk : np + ni = kk
+            · rw [recIdxW.k_pi_sort_tele_len.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hok hnk] at h
+              exact hjj h
+            · rw [recIdxW.k_pi_sort_tele_len.abort1 _ _ _ _ _ _ _ _ _ _ _ _ hok hnk] at h
+              cases h
+        · rw [recIdxW.arm3 _ _ _ _ _ _ _ _ _ _ hle hT2] at h
+          exact hjj h
       exact ih (j + 1) hrest k (by rw [hj1]; omega) h2 hT
 
 
@@ -247,7 +258,7 @@ theorem unsafeW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : 
       cases hu : tys[j.toNat].isUnsafe
       · rfl
       · rw [hu] at h7; simp [BoolW] at h7
-    · exact ih (j + 1) h k hk (by rw [hj1]; omega)
+    · exact ih (j + 1) (by revert h; cases hh : unsafeW n m to tn (j + 1) <;> simp) k hk (by rw [hj1]; omega)
 
 theorem npGoW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn d : Word}
     (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
@@ -273,7 +284,7 @@ theorem npGoW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn d : 
       rw [wd_eq, hix] at this
       obtain ⟨-, -, -, -, -, h10⟩ := hL.2.2 j.toNat hk
       rw [← h10.1, this]
-    · exact ih (j + 1) h k hk (by rw [hj1]; omega)
+    · exact ih (j + 1) (by revert h; cases hh : npGoW n m to tn d (j + 1) <;> simp) k hk (by rw [hj1]; omega)
 
 /-- **`vi_nparams` is `nPd`, and every type agrees.** -/
 theorem nparamsW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn np : Word} {n : Nat}
