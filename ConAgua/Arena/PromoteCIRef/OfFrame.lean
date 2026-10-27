@@ -24,8 +24,8 @@ theorem LoopR.of_frame {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     (hR : LoopR pins dn m a vis fe pend ds) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, ((b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
       (146 ≤ b ∧ b ≤ 149) ∨
-      (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320)) ∨
-      ((129 ≤ b ∧ b ≤ 131) ∨ b = 143 ∨ (385 ≤ b ∧ b ≤ 387)))
+      Tier1In 0 50 b ∨ Tier1In 55 64 b) ∨
+      ((129 ≤ b ∧ b ≤ 131) ∨ b = 143 ∨ Tier1In 129 132 b))
     (hC : ∀ x ∈ C, (x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147)) ∨ x.toNat = 133)
     (hcp : cp a' = cp a) (hg : ErecGrow m m') (hts : erecTop m' ≤ (m'.arr64 EREC).size)
     (hP : PMemoR m' pm') (hE : EnvR dn m' vis fe') (hmode : ModeOK m') :

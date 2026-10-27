@@ -93,6 +93,25 @@ theorem tierA_lt {a n : Nat} (h : a < n) (t : Word) : tierA a t < tierOff + n :=
   · show a < 256 + n; omega
   · show a + 256 < 256 + n; omega
 
+/-! ### Tier-1 arrays by range
+
+Frame lemmas name sets of tier-1 arrays by these predicates, not by the encoding. They are
+`@[simp] abbrev`s over the numbers today (tier 1 of `a` is `a + 256`), so `decide`, `omega` and
+`simp` read them as ranges; when the tiers become abstract only these definitions change. -/
+
+/-- `b` is a tier-1 array: `tier1 a` for some `a` (`IsTier1.tier1`). -/
+@[simp] abbrev IsTier1 (b : Nat) : Prop := 256 ≤ b
+
+/-- `b` is the tier-1 array of an array numbered in `[lo, hi)`: `tier1 a` with `lo ≤ a < hi`
+(`Tier1In.tier1`). -/
+@[simp] abbrev Tier1In (lo hi b : Nat) : Prop := lo + 256 ≤ b ∧ b < hi + 256
+
+theorem IsTier1.tier1 (a : Nat) : IsTier1 (tier1 a) := by
+  show 256 ≤ a + 256; omega
+
+theorem Tier1In.tier1 {lo hi a : Nat} (h1 : lo ≤ a) (h2 : a < hi) : Tier1In lo hi (tier1 a) := by
+  show lo + 256 ≤ a + 256 ∧ a + 256 < hi + 256; omega
+
 /-! ## Tables -/
 
 /-- The kind of an array: bytes or words (two separate number spaces). -/

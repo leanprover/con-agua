@@ -380,10 +380,10 @@ theorem not_mem_arenaCtl (x : Word) (hx : 64 ≤ x.toNat) : x ∉ arenaCtl := by
 /-- **A writer of the derived-range arrays 42‥46 (and `CTL` words `≥ 64`) keeps `ArenaR`**: nothing
 in it reads them (they are `DerR`'s, `ExprMk.lean`). -/
 theorem ArenaR.frame_above (A : List ArrId) (C : List Word)
-    (hA : ∀ b ∈ A, (42 ≤ b ∧ b < 47) ∨ (298 ≤ b ∧ b < 303))
+    (hA : ∀ b ∈ A, (42 ≤ b ∧ b < 47) ∨ Tier1In 42 47 b)
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
     (hR : ArenaR m a) : ArenaR m' a :=
-  have hlt : ∀ y ∈ arenaArrs, ¬ ((42 ≤ y ∧ y < 47) ∨ (298 ≤ y ∧ y < 303)) := by decide
+  have hlt : ∀ y ∈ arenaArrs, ¬ ((42 ≤ y ∧ y < 47) ∨ Tier1In 42 47 y) := by decide
   hR.frame (fun b hb h => hlt b h (hA b hb))
     (fun x hx => not_mem_arenaCtl x (hC x hx)) hf
 

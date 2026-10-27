@@ -117,7 +117,7 @@ theorem preMem_pt0 (m : Mem) : (preMem m).arr64 PT0 = m.arr64 PT0 := by
 theorem preMem_eq_of_lt (m : Mem) (h : ¬ SCBLIM ≤ rdW (m.arr64 CTL) SCB) : preMem m = m :=
   ite_eq_right h
 
-theorem slot1Arrs_ge : ∀ b ∈ slot1Arrs, 256 ≤ b := by decide
+theorem slot1Arrs_ge : ∀ b ∈ slot1Arrs, IsTier1 b := by decide
 
 theorem not_mem_slot1 {b : ArrId} (h : b < 256) : b ∉ slot1Arrs := fun hb => by
   have := slot1Arrs_ge b hb; simp only [ArrId] at *; omega

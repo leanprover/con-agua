@@ -16,8 +16,8 @@ namespace L.Arena
 
 theorem ptnew_arrs : ∀ b ∈ tblArrs ++ ETAB :: EREC :: eArrs,
     ((b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
-      (146 ≤ b ∧ b ≤ 149) ∨ (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320)) ∨
-      ((129 ≤ b ∧ b ≤ 131) ∨ b = 143 ∨ (385 ≤ b ∧ b ≤ 387)) := by
+      (146 ≤ b ∧ b ≤ 149) ∨ Tier1In 0 50 b ∨ Tier1In 55 64 b) ∨
+      ((129 ≤ b ∧ b ≤ 131) ∨ b = 143 ∨ Tier1In 129 132 b) := by
   intro b hb
   rcases List.mem_append.mp hb with hb | hb
   · simp only [tblArrs, List.mem_cons, List.not_mem_nil, or_false] at hb
@@ -33,7 +33,7 @@ theorem ptnew_arrs : ∀ b ∈ tblArrs ++ ETAB :: EREC :: eArrs,
 /-- The arrays `promote_proj_tables` writes avoid the constant rows, `ECON` and the table rows. -/
 theorem pts_arrs : ∀ b ∈ ETAB :: EREC :: eArrs,
     (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 136 ∨ b = 143 ∨ (146 ≤ b ∧ b ≤ 149) ∨
-      (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
+      Tier1In 0 50 b ∨ Tier1In 55 64 b := by
   intro b hb
   simp only [List.mem_cons] at hb
   rcases hb with rfl | rfl | hb

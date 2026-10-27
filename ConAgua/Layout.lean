@@ -209,12 +209,12 @@ Frame lemmas quantify over two groups of word arrays. They are named here so tha
 and their callers do not spell out the numbering (tier 1 of `a` is `tier1 a`, `a + 256` today):
 when the tiers become abstract, these definitions change and the lemmas below keep their
 statements. Both are `@[simp] abbrev`s, so `decide`, `omega` and `simp` read them as the numeric
-ranges today. -/
+ranges today. Tier-1 ranges in general: `IsTier1`, `Tier1In` (`L/Arrays.lean`). -/
 
 /-- **The store tier**: the arrays below `64` (the pool, the stores' record and slot arrays, their
 derived columns, the walk memos, `PT0`) and the tier-1 arrays of the tiered ones. A walk writes
 only these (`WriteSets.lean`), and `ArenaR` reads only these (`arenaArrs`). -/
-@[simp] abbrev InStoreTier (b : Nat) : Prop := b < 64 ∨ (256 ≤ b ∧ b < 320)
+@[simp] abbrev InStoreTier (b : Nat) : Prop := b < 64 ∨ Tier1In 0 64 b
 
 /-- **The high arrays**: the tier-0 arrays from `64` on (the front end, the per-declaration caches,
 the environment, the walk stacks, the inductive checks, the phase boundary). None is in the store
@@ -223,8 +223,8 @@ tier (`InHigh.not_storeTier`), and none is a tier-1 array (`InHigh.ne_tier1`). -
 
 theorem InStoreTier.of_lt {b : Nat} (h : b < 64) : InStoreTier b := .inl h
 
-theorem InStoreTier.of_tier1 {a : Nat} (h : a < 64) : InStoreTier (tier1 a) := by
-  show _ ∨ (256 ≤ a + 256 ∧ a + 256 < 320); omega
+theorem InStoreTier.of_tier1 {a : Nat} (h : a < 64) : InStoreTier (tier1 a) :=
+  .inr (Tier1In.tier1 (Nat.zero_le a) h)
 
 theorem InHigh.not_storeTier {b : Nat} (h : InHigh b) : ¬ InStoreTier b := by omega
 
