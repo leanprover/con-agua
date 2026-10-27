@@ -575,6 +575,19 @@ tree.
   unchanged within the noise: IndMemoClosed 28 s (master CI 32 s), IndArmClosed2 51 s (65 s),
   IndCore 13 s (40 s), on a loaded machine.
 
+* **Build time** (2026-10-27, machine otherwise quiet: merge queue held, no other `lean`
+  process, load 16–33 from other users; `LAKE_COLD=1` from an empty `.lake/build`,
+  `LEAN_NUM_THREADS=96`, ConAgua + ConAguaAsm, back to back, master first; wall and CPU from
+  the build's rusage):
+
+  | | master 1d08f395 | switch 8b9c3df5 |
+  |---|---:|---:|
+  | wall | 312 s | 313 s |
+  | CPU | 10 103 s | 9 876 s |
+
+  No measurable effect. A cold build of the branch with the wrapper's 16 threads (load 20–28)
+  took 454 s and showed no warning in ConAgua.
+
 ### 9.3 Left for batches 7 and 8
 
 * **Batch 7 (dense layout):** the compiler still uses today's numbering (`curNum`: tier 1 at
