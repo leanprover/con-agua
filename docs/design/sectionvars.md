@@ -57,7 +57,7 @@ all 60 lookup hypotheses and lost most of them in three more rounds.
 ## Batch 2: `Verdict/IndBGrp`, `IndBSum2`
 
 Held back while buildtime reworked them. `grpCE_claim` loses `hIlpf`; `checkSumTeleSlow_claim` and,
-one level up, `checkSumTele_claim` lose `hV hApd hCrk`. Their one caller outside, `checkSumTeleE_of`
+one level up, `checkSumTele_claim` lose `hV hApd hCrk`; the section no longer declares them, and three imports (`CrOKFrame`, `DeclValSpec`, `IndRealApdT`) that only their types needed are gone. Their one caller outside, `checkSumTeleE_of`
 (`Verdict/IndArmE`), no longer passes them; the three are still binders there because
 `CheckSumTeleE` is generated (`err_stmt`) from the refinement theorem's statement, so they are named
 `_hV _hApd _hCrk`.
