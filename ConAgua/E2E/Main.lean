@@ -15,7 +15,7 @@ import ConAgua.Final.Statement
   checker's own `check` is not compiled here: `scripts/e2e.py` runs `checker.s`'s generator,
   `ConAgua/Checker/AsmEmit.lean`, so the e2e runs test the shipped code.)
 * `e2e-l run PROG ENTRY FILE [WORDS] [FUEL]` — `L.run` (the reference semantics) on
-  `loadMem FILE PINS [WORDS] (replicate nw WORDS)` (`PINS`: the file `$CA_PINS`, else empty); the stubs become a call of the undefined function
+  `loadMem FILE PINS (fun _ => WORDS)` (every word array `WORDS` zeros; `PINS`: the file `$CA_PINS`, else empty); the stubs become a call of the undefined function
   `__missing_<name>`, so the error names the function. Prints `ok R`, `abort`, `oob`,
   `missing NAME` or `exhausted`.
 -/
@@ -66,14 +66,19 @@ def asmMain (prog entry out : String) : IO UInt32 := do
   IO.println s!"nw {nw + 1} nb {nb} diag {diag} fns {p.length}"
   return 0
 
+/-- `loadMem b pb (fun _ => words)` with one shared zero array: `loadMem`'s `Array.replicate` in
+the map would be rebuilt at every read of an array not yet written. -/
+def zeroLoad (b pb : ByteArray) (words : Nat) : Mem :=
+  let z : Array Word := Array.replicate words 0
+  { ConAgua.Final.loadMem b pb (fun _ => words) with words := fun _ => z }
+
 def runMain (prog entry file : String) (words fuel : Nat) : IO UInt32 := do
   let pf ← loadPF prog
   let p0 : Prog := pf.fns.toList
-  let nw := (Prog.arrs p0).2
   let p : Prog := p0 ++ pf.stubs.toList.map fun (n, np, _) => (n, { nparams := np, nlocals := np, body := stubBodyRun n })
   let b ← IO.FS.readBinFile file
   let pb ← pinBytes
-  let m := ConAgua.Final.loadMem b pb [words] (List.replicate (nw + 1) words)
+  let m := zeroLoad b pb words
   match L.run p fuel entry [] m with
   | .ok (rs, _) => IO.println s!"ok {rs.headD 0}"
   | .error (.abort _) => IO.println "abort"
@@ -88,11 +93,10 @@ def runMain (prog entry file : String) (words fuel : Nat) : IO UInt32 := do
 def traceMain (prog entry file : String) (words : Nat) : IO UInt32 := do
   let pf ← loadPF prog
   let p0 : Prog := pf.fns.toList
-  let nw := (Prog.arrs p0).2
   let p : Prog := p0 ++ pf.stubs.toList.map fun (n, np, _) => (n, { nparams := np, nlocals := np, body := stubBodyRun n })
   let b ← IO.FS.readBinFile file
   let pb ← pinBytes
-  let m := ConAgua.Final.loadMem b pb [words] (List.replicate (nw + 1) words)
+  let m := zeroLoad b pb words
   let (msg, stack, calls) := Trace.run p entry m
   IO.println msg
   IO.println s!"stack {" > ".intercalate stack.toList}"

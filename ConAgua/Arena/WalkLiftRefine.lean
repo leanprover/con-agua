@@ -91,7 +91,7 @@ theorem ArenaI.imemo_clear (m : Mem) (a : AState) (hA : ArenaI m a)
 
 /-- **`I1R` survives a writer apart from it, if the twin's memo did not move.** -/
 theorem I1R.across {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : AState}
-    (hR : I1R m a) (hf : MemFrame A C m m') (hA : ILFM ∉ A) (hC : (52 : Word) ∉ C)
+    (hR : I1R m a) (hf : MemFrame A C m m') (hA : (ILFM : TieredArray) ∉ A) (hC : (52 : Word) ∉ C)
     (he : a'.memos.inst1LC = a.memos.inst1LC) : I1R m' a' := by
   unfold I1R; rw [he]
   exact memoRG_frame i1lSch i1lSch_wf lfKey decE A C hA hC m m' hf _ hR

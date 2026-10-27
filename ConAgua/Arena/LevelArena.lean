@@ -279,7 +279,7 @@ theorem reset_frame (m : Mem) : MemFrame [] [192] m (m.set64 CTL 192 0) := by
     Mem.sameShape_set64 _ _ _ _⟩
   rw [rdW_set64L]; simp only [List.mem_singleton] at hx; simp [Ne.symm hx]
 
-theorem lh_not_arena : ∀ b ∈ [LH], b ∉ arenaArrs := by decide
+theorem lh_not_arena : ∀ b ∈ ([LH] : List TieredArray), b ∉ arenaArrs := by decide
 theorem c192_not_arena : ∀ x ∈ [(192 : Word)], x ∉ arenaCtl := by
   intro x hx; simp only [List.mem_singleton] at hx; subst hx; exact not_mem_arenaCtl _ (by decide)
 

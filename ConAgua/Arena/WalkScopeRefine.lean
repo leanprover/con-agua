@@ -28,7 +28,7 @@ theorem ArenaD.frame64 {A : List TieredArray} {C : List Word} {m m' : Mem} {a : 
     (h : ArenaD m a) : ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
    DerR.frameM A C m m' hf (fun b hb => by
-     have := hA b hb; simp only [ArrId] at this ⊢; omega) a h.2⟩
+     have := (hA b hb).2; omega) a h.2⟩
 
 theorem wsSch_wf : wsSch.WF := ⟨by decide, by decide⟩
 

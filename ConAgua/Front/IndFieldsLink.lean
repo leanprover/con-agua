@@ -46,7 +46,7 @@ theorem wd_set64 (m : Mem) (a c : ArrId) (i x : Word) (j : Nat) :
       · simp [h2]
       · simp [h2]
     · simp [h]
-  · simp [wd, Mem.arr64_set64_ne _ _ _ _ _ hc, hc]
+  · simp [wd, Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hc), hc]
 
 theorem wd_set64_ne (m : Mem) (a c : ArrId) (i x : Word) (j : Nat) (h : c ≠ a) :
     wd (m.set64 a i x) c j = wd m c j := by
@@ -64,7 +64,7 @@ theorem size_set64' (m : Mem) (a c : ArrId) (i x : Word) :
     ((m.set64 a i x).arr64 c).size = (m.arr64 c).size := by
   by_cases hc : c = a
   · subst hc; simp [Mem.arr64_set64_same]
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ hc]
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hc)]
 
 theorem rdW_wd (m : Mem) (a : ArrId) (i : Word) : rdW (m.arr64 a) i = wd m a i.toNat := rfl
 
@@ -193,7 +193,7 @@ theorem grow_set (m : Mem) (A : ArrId) (hA : A = IFR ∨ A = IFL) (i x : Word) (
   have ht : ∀ c, topN (m.set64 A i x) c = topN m c := by
     intro c; simp only [topN, wd_set64]; rw [ite_eq_right (by omega)]
   have hfr : MemFrame [IFR, IFL] [] m (m.set64 A i x) :=
-    (MemFrame.set64 m A hCTL i x).mono (by rcases hA with rfl | rfl <;> simp) (by simp)
+    (MemFrame.set64 m A (TieredArray.t0_ne hCTL) i x).mono (by rcases hA with rfl | rfl <;> simp) (by simp)
   refine ⟨⟨hfr, fun a _ => by rw [ht]; exact Nat.le_refl _, fun a ha j hj1 hj2 hj3 => ?_⟩, fun hR => ?_, ht⟩
   · rw [wd_set64]
     rw [ite_eq_right]
@@ -246,10 +246,10 @@ theorem allocW_facts (m m' : Mem) (a : ArrId) (ha : a = IFR ∨ a = IFL) (n o : 
     · subst hc; rw [ite_eq_left ⟨rfl, rfl, hs0⟩, ite_eq_left rfl, hnew]; rfl
     · rw [ite_eq_right (by simp [hc]), ite_eq_right hc]
   have hfr : MemFrame [IFR, IFL] [] m (m.set64 a 0 (rdW (m.arr64 a) 0 + 1 - 1 + n)) :=
-    (MemFrame.set64 m a hCTL _ _).mono (by rcases ha with rfl | rfl <;> simp) (by simp)
+    (MemFrame.set64 m a (TieredArray.t0_ne hCTL) _ _).mono (by rcases ha with rfl | rfl <;> simp) (by simp)
   refine ⟨ho, by rw [htop', ite_eq_left rfl], ?_, ⟨hfr, fun c hc => ?_, fun c hc j hj1 hj2 hj3 => ?_⟩,
     fun c hc => by rw [htop', ite_eq_right hc], by omega,
-    fun c hc => Mem.arr64_set64_ne _ _ _ _ _ hc⟩
+    fun c hc => Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hc)⟩
   · refine ⟨by rw [size_set64']; exact r1, by rw [size_set64']; exact r2, ?_, ?_⟩
     · rw [htop', size_set64']; split
       · rename_i hc; subst hc; omega
@@ -276,7 +276,7 @@ theorem allocW_facts' (m m' : Mem) (a : ArrId) (n o : Word) (h : allocW m a n = 
   · rw [ite_eq_left h2] at h; cases h
   rw [ite_eq_right h2] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  exact fun c hc => Mem.arr64_set64_ne _ _ _ _ _ hc
+  exact fun c hc => Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hc)
 
 theorem pushLW_facts (m m' : Mem) (x o : Word) (hR : Room m) (h : pushLW m x = some (o, m')) :
     o.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + 1 ∧ Room m' ∧ Grow m m' ∧
