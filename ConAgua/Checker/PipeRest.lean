@@ -48,11 +48,11 @@ structure R4 (l m : Mem) (pb : ByteArray) (pre : PreludeIx) (a : AState) : Prop 
   rok : RecsOK m pre.decls
   mode : ModeOK m
 
-theorem bytes_pos {l m : Mem} {pb : ByteArray} (h : Since l m pb) (hl : 0 < l.bytes.size) :
-    0 < m.bytes.size := by rw [h.keep.1]; exact hl
+theorem bytes_pos {l m : Mem} {pb : ByteArray} (h : Since l m pb) (hl : l.HasB IN) :
+    m.HasB IN := by unfold Mem.HasB at *; rw [h.keep.1]; exact hl
 
-theorem loadMem_bytes (b pb : ByteArray) (s8 s64 : List Nat) : 0 < (loadMem b pb s8 s64).bytes.size := by
-  simp [loadMem]
+theorem loadMem_bytes (b pb : ByteArray) (s8 s64 : List Nat) : (loadMem b pb s8 s64).HasB IN := by
+  simp [loadMem, Mem.HasB]
 
 theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArray)
     (s8 s64 : List Nat) (a : AState) :

@@ -129,7 +129,7 @@ macro "noabS" : tactic => `(tactic| repeat (first
 
 /-- `k` fails on the copy `c` with a nonzero code only as on the original `o`. -/
 def KRelE (k : Stmt → M Sig) (c o : Stmt) : Prop := ∀ (s : St) (e : Err),
-  0 < s.mem.bytes.size → (k c).run s = .error e → e.code ≠ 0 → (k o).run (s.setIn preIn) = .error e
+  s.mem.HasB IN → (k c).run s = .error e → e.code ≠ 0 → (k o).run (s.setIn preIn) = .error e
 
 theorem run_bind_error {α β : Type} {x : M α} {g : α → M β} {s : St} {e : Err}
     (h : (x >>= g).run s = .error e) :
@@ -156,7 +156,7 @@ theorem bind_noAb {α β : Type} {x : M α} {g : α → M β} {s : St} {e : Err}
   · exact h1
 
 theorem callFn_simE {k : Stmt → M Sig} {dc dd : FunDecl} (hk : KRelE k dc.body dd.body)
-    (vs : List Word) (s : St) (e : Err) (h0 : 0 < s.mem.bytes.size)
+    (vs : List Word) (s : St) (e : Err) (h0 : s.mem.HasB IN)
     (h : (callFn k dc vs).run s = .error e) (hc : e.code ≠ 0) :
     (callFn k dd vs).run (s.setIn preIn) = .error e := by
   unfold callFn at h ⊢
@@ -212,7 +212,7 @@ theorem noAb_lookupFn (p : Prog) (f : FnName) : NoAb (lookupFn p f) :=
 
 theorem invoke_simE_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (hA : AbNoIn p) (n : Nat) (ih : KSimE p t S n) (g : FnName) (hg : isCopied t g = true)
-    (vs : List Word) (s : St) (e : Err) (h0 : 0 < s.mem.bytes.size)
+    (vs : List Word) (s : St) (e : Err) (h0 : s.mem.HasB IN)
     (h : (invoke p (exec p n) ("pre_" ++ g) vs).run s = .error e) (hc : e.code ≠ 0) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .error e := by
   unfold invoke at h ⊢
@@ -228,7 +228,7 @@ theorem invoke_simE_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreS
 
 theorem invoke_simE_shared {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (hA : AbNoIn p) (n : Nat) (ih : KSimE p t S n) (g : FnName) (hg : S g = true) (vs : List Word)
-    (s : St) (e : Err) (h0 : 0 < s.mem.bytes.size)
+    (s : St) (e : Err) (h0 : s.mem.HasB IN)
     (h : (invoke p (exec p n) g vs).run s = .error e) (hc : e.code ≠ 0) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .error e := by
   unfold invoke at h ⊢
@@ -339,7 +339,7 @@ theorem ksimE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t 
 fails the same way as `f` on the state whose input is the prelude's bytes. -/
 theorem preSimE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S) (hA : AbNoIn p)
     (n : Nat) (f : FnName) (hf : isCopied t f = true) (vs : List Word) (s : St) (e : Err)
-    (h0 : 0 < s.mem.bytes.size)
+    (h0 : s.mem.HasB IN)
     (h : (invoke p (exec p n) ("pre_" ++ f) vs).run s = .error e) (hk : e.code ≠ 0) :
     (invoke p (exec p n) f vs).run (s.setIn preIn) = .error e :=
   invoke_simE_copy hP hA n (ksimE hP hA n) f hf vs s e h0 h hk
@@ -353,7 +353,7 @@ theorem checkerProg_abNoIn : AbNoIn checkerProg :=
   fun _ _ hl => checkerProg_abNoInAll _ (mem_of_lookup hl)
 
 /-- **`pre_front_run` fails as `front_run` on the prelude's bytes** (errors of nonzero code). -/
-theorem preFrontRun_errSim (n : Nat) (s : St) (e : Err) (h0 : 0 < s.mem.bytes.size)
+theorem preFrontRun_errSim (n : Nat) (s : St) (e : Err) (h0 : s.mem.HasB IN)
     (h : (invoke checkerProg (exec checkerProg n) "pre_front_run" []).run s = .error e)
     (hk : e.code ≠ 0) :
     (invoke checkerProg (exec checkerProg n) "front_run" []).run (s.setIn preIn) = .error e :=

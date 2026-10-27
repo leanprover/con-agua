@@ -42,7 +42,7 @@ theorem top_rdW (m : Mem) : m.top = rdW (m.arr64 CTL) 0 := rfl
 
 theorem len64_eq (m : Mem) (a : ArrId) : m.len64 a = UInt64.ofNat (m.arr64 a).size := rfl
 
-attribute [store_grind =] rdW_set64 size_set64 top_rdW Mem.words_size_set64 len64_eq
+attribute [store_grind =] rdW_set64 size_set64 top_rdW len64_eq
 
 /-! ## The probe run -/
 

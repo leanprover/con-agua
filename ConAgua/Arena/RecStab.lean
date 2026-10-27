@@ -152,7 +152,7 @@ theorem snocW_decN {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : L
     (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
   rw [hIW] at hS hG
   have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | (rw [hW]) | (rw [hW]; simp [allocMem])))
+    (allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | exact hW | exact Mem.SameShape.trans (by simp [allocMem]) hW))
   have hfr' := hfr.trans (set64IW_frame m2 (q + l) x)
   have hget : ∀ i, ((m2.set64 IW (q + l) x).arr64 IW)[i]? =
       if i = q.toNat + l.toNat then some x

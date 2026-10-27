@@ -73,7 +73,7 @@ theorem threadGo_thr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = 
   rw [hx, hy, hz] at hrun
   have hI' : s'.mem.glob INIT = 1 := (check_pending_go_keepsG hrun).1.trans hI
   let m₂ : Mem := { m' with glob := s.mem.glob }
-  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
+  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
   have h₂ := PhaseBStart.frame0 hf hS
   let s₂ : St := ⟨m₂, s.loc⟩
   have hAg : Agree thrS (fun _ => false) s.mem s₂.mem :=
@@ -259,7 +259,7 @@ memory `r` with `INIT = 0` and every owned array zero (at its size in `m`), the 
 theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
     (hS : PhaseBStart pins dn ds fe pend m a v) (hPB : m.arr8 PB = bs.toArray)
     (hne : pend.size ≠ 0) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r : Mem) (j : Word) (hr : 388 ≤ r.words.size)
+    (r : Mem) (j : Word) (hr : r.HasWs 388)
     (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size) (hI : r.glob INIT = 0) :
     ThreadRel pins dn ds fe pend bs v (seedMem (bufMem (bufOf m v) r j)) a.worker ∧
       (seedMem (bufMem (bufOf m v) r j)).glob INIT = 1 := by
@@ -268,7 +268,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
   generalize hW : bufMem (bufOf m v) r j = W
   obtain ⟨hseed, h256⟩ := bufImg_seed (v := v) hok hlt
   have hctlf : W.arr64 CTLF = (m.arr64 CTL).extract 0 256 := by
-    rw [← hW, bufMem_ctlf, ite_eq_left (show 242 < r.words.size by omega), hseed]
+    rw [← hW, bufMem_ctlf, ite_eq_left (hr.hasW (by decide)), hseed]
   have hlen : (W.len64 CTLF).toNat = 256 := by
     simp only [Mem.len64, hctlf, size_extract0, Nat.min_eq_left h256]; rfl
   have hctl : W.arr64 CTL = zeros (m.arr64 CTL).size := by
@@ -295,7 +295,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
     · rw [arr64_copy64_ne _ _ _ _ _ _ hbc, ← hW]
       rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
       · obtain ⟨-, hz', hc, h388⟩ := frozen_facts hk h1
-        rw [bufMem_frozen _ r j hk h1, ite_eq_left (Nat.lt_of_lt_of_le h388 hr), bufImg_trunc hok hlt hk h1, freshMem_arr,
+        rw [bufMem_frozen _ r j hk h1, ite_eq_left (hr.hasW h388), bufImg_trunc hok hlt hk h1, freshMem_arr,
           ite_eq_right hc, ite_eq_right hz']
       · obtain ⟨-, hsrc⟩ := owned_facts ho
         rw [bufMem_owned _ r j ho, hz b ho, freshMem_arr, ite_eq_right hbc,
@@ -328,7 +328,7 @@ theorem thrCall_first (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode =
     {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
     (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
     (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r : Mem) (hr : 388 ≤ r.words.size) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
+    (r : Mem) (hr : r.HasWs 388) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
     (hI : r.glob INIT = 0) (j : Word) (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62)
     (n : Nat) (hn : n ≤ 2 ^ 62) {rs : List Word} {r' : Mem}
     (hrun : L.run checkerProg n "check" [] (bufMem (bufOf m v) r j) = .ok (rs, r')) :

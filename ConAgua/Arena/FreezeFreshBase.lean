@@ -75,13 +75,13 @@ theorem ctlCut_arr (t : Mem) (b : ArrId) :
   rw [ctlCut, Mem.setA_arr]
   by_cases hb : b = CTL
   · subst hb
-    by_cases hs : CTL < t.words.size
+    by_cases hs : t.HasW CTL
     · simp [hs]
     · simp only [hs, and_false, ↓reduceIte]
       rw [Mem.arr64_oob t CTL hs, freshCtl_empty]
   · simp [hb]
 
-theorem ctlCut_words (t : Mem) : (ctlCut t).words.size = t.words.size := Mem.setA_words ..
+theorem ctlCut_words (t : Mem) : t.SameShape (ctlCut t) := Mem.setA_words ..
 
 /-- **Cutting `CTL` is a frame of the `CTL` words from 256 on.** -/
 theorem ctlCut_frame (t : Mem) : MemFrame [] (hiC (t.arr64 CTL).size) t (ctlCut t) := by
@@ -99,8 +99,8 @@ theorem ctlCut_frame (t : Mem) : MemFrame [] (hiC (t.arr64 CTL).size) t (ctlCut 
 
 /-! ## The fresh memory -/
 
-theorem freshMem_words (m : Mem) : (freshMem m).words.size = (truncFrozen m).words.size := by
-  simp [freshMem]
+theorem freshMem_words (m : Mem) : (truncFrozen m).SameShape (freshMem m) := by
+  simp [Mem.SameShape, freshMem]
 
 theorem freshMem_arr (m : Mem) (b : ArrId) : (freshMem m).arr64 b =
     if b = CTL then freshCtl ((truncFrozen m).arr64 CTL)
@@ -113,9 +113,9 @@ theorem freshMem_arr (m : Mem) (b : ArrId) : (freshMem m).arr64 b =
       simp only [freshMem, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map,
         Array.getElem?_range, h, ↓reduceIte, Option.map_some, Option.getD_some]
     rw [e]
-  · have ho : ∀ c, ¬ c < (truncFrozen m).words.size → (truncFrozen m).arr64 c = #[] :=
+  · have ho : ∀ c, ¬ (truncFrozen m).HasW c → (truncFrozen m).arr64 c = #[] :=
       fun c hc => Mem.arr64_oob _ c hc
-    rw [Mem.arr64_oob _ b (by rw [freshMem_words]; exact h)]
+    rw [Mem.arr64_oob _ b (fun h' => h (h'.of_sameShape (freshMem_words m).symm))]
     split
     · rename_i hb; subst hb; rw [ho _ h, freshCtl_empty]
     · split
@@ -133,7 +133,7 @@ theorem fresh_frame (m : Mem) : MemFrame freshZ [] (ctlCut (truncFrozen m)) (fre
     · split
       · simp [zeros]
       · rfl
-  · rw [freshMem_words, ctlCut_words]
+  · exact (ctlCut_words _).symm.trans (freshMem_words m)
 
 theorem fresh_ctl (m : Mem) : (freshMem m).arr64 CTL = (ctlCut (truncFrozen m)).arr64 CTL := by
   rw [freshMem_arr, ctlCut_arr, ite_eq_left rfl, ite_eq_left rfl]
@@ -255,15 +255,15 @@ theorem rTrans_pool0 (hF : RFrame S R hs)
     (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA S.ra t) = m₁.arr64 (tierA S.ra t)) → PoolTr0 m₁ m₂ →
       (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, hs m₂ t i = hs m₁ t i)
     (hx : ∀ b ∈ [POOL, POOL1, CTL], b ≠ S.ra ∧ b ≠ tier1 S.ra)
-    {m m' : Mem} (hw : m'.words.size = m.words.size) (hp : PoolTr0 m m') : RTrans S R hs m m' := by
+    {m m' : Mem} (hw : m.SameShape m') (hp : PoolTr0 m m') : RTrans S R hs m m' := by
   intro t i hf
   let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
-  have hw1 : (m.setA S.ra (m'.arr64 S.ra)).words.size = m.words.size := Mem.setA_words ..
+  have hw1 : m.SameShape (m.setA S.ra (m'.arr64 S.ra)) := Mem.setA_words ..
   have hne : S.ra ≠ tier1 S.ra := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]
     exact Mem.setA_self m m' _ hw
-  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
+  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _ (hw1.symm.trans hw)
   have eo : ∀ b, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
     simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => h2 h.1), Mem.setA_arr, ite_eq_right (fun h => h1 h.1)]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by

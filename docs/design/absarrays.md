@@ -58,6 +58,8 @@ def Mem.set64 (m : Mem) (s : TArr) (i v : Word) : Mem :=
   those arrays, and the others are never read.
 * **Bounds** are unchanged: `ld64`/`st64` check `i < (m.arr64 s).size`. Block operations check
   once, before writing. Lengths are fixed for a run.
+* *(Superseded by the user's decision of 2026-10-27, §8.3: byte arrays become a map keyed by
+  name too, with their own layout map in the compiler.)*
 * **Byte arrays** stay indexed by `ArrId`. They have no tiers, and the ABI fixes the input as byte
   array `0` and the pin data as `1` (the stub fills positions `0` and `1`). A layout map for them is
   possible but worth nothing today.
@@ -383,4 +385,95 @@ as a plain access to `pos ⟨a, k &&& 1⟩`) is an independent compiler optimiza
 4. **Pre-batches or one big switch.** Recommendation: the pre-batches (1–5), since each is small
    and can land today.
 5. **Byte arrays** stay positional (the ABI fixes `IN = 0`, `PB = 1`). Is that fine?
+   *Answered (2026-10-27): no.* Byte arrays become abstract as well: registered names, layout
+   chosen by the compiler, the ABI positions a constraint on the compiler's layout map (§8.3).
 6. **The type's name** (`TArr` here).
+
+## 8. Prototype P (2026-10-27)
+
+Branch `absarrays-proto` (not landed), on master b39ae8e6: the semantics and the compiler changed
+up to `compile_correct`, 15 files, +704 / −484. **Result: go.** `compile_correct` builds with no
+`sorry`, its statement unchanged, axioms `propext`, `Classical.choice`, `Quot.sound`.
+
+### 8.1 What was built
+
+* `L/Syntax.lean`: `TArr` (`arr : Nat`, `hi : Bool`; the only place the name occurs), equality
+  through `TArr.code`, the coercion `TArr.t0`, `tier1`, `tierA a u = ⟨a, u &&& 1 != 0⟩`, `tiers`, and
+  the simp lemmas of §1.4.
+* `L/Semantics.lean`: `Mem.bytes : ArrId → Array UInt8`, `Mem.words : TArr → Array Word` (functions).
+  `ld64`, `st64`, `arr64`, `set64`, `copy64`, `copy8w`, `warr` at `TArr`.
+* `Compiler/Compile.lean`: `WLay nw` (`dom`, `pos`, `pos_lt`, `pos_inj`, `adj`) and `BLay nb` (`dom`,
+  `pos`, `pos_lt`, `pos_inj`). Today's layout is `Tab.wl`/`Tab.bl`, functions of the table, so `Tab`
+  gets no new field. The descriptor offsets are positional (`dbase64 p`, …), and
+  `base64 s := dbase64 (pos64 s)`. `pos64`, `dom64`, `pos8` and `dom8` are `@[irreducible]` after
+  their lemmas (`pos64_lt`, `pos64_ne`, `pos64_tierA`, `dom64_tierA`, `pos8_lt`, `pos8_ne`). Every
+  simulation proof still checks, so none of them reads a position, `wpos` or `256`.
+* **The machine layout is indexed by descriptor position** (`G.b8 s8 b64 s64 : Nat → Nat`). This
+  differs from §2.2's assumption (today they are indexed by array number, with `wpos` hidden in
+  `Tab.base64`). `Layout` and `Layout.Ok` are unchanged. Batch 7 only replaces `Tab.wl`/`Tab.bl`.
+* `MemRel`: `size8/get8 : ∀ a, dom8 a → … pos8 a …`, `size64/get64 : ∀ s, dom64 s → … pos64 s …`;
+  `base*`/`len*` positional (`∀ p < nw`). **The fields `nb`/`nw` (`m.bytes.size`, `m.words.size`) are
+  gone**: nothing in `compile_correct` needed them. `MemRel.store64` is today's proof plus
+  `pos64_ne`.
+* `Prog.wf`: `ld64 a` needs `dom64 ↑a`, a tiered operation `dom64 (tier1 a)`, a byte operation
+  `dom8 a`.
+* Unchanged: `SimCall`, `SimStmt`, `SimFun`, `SimTail`, `Correct`, `Main`, `Step`. Mechanical (a
+  regex pass and about 30 hand edits): `SimGen`, `RunEq`, `WFFast`, `SimExpr`. By hand, about 20
+  lines each: `SimStore`'s store lemmas, `SimBlock`'s `DescAt`.
+
+### 8.2 Measurements (load average 20–80, noise about ±10%)
+
+| what | master | prototype |
+|---|---|---|
+| elaboration of the 22 changed or affected L/Compiler modules (`lake env lean`, interleaved, median of 3) | 49.0 s | 51.1 s |
+| compiler output for `checkerProg` (1838 functions) | sha256 `f2fd547d…` | identical |
+| kernel code generation, functions 0–287 (an `AsmPart`, quiet rounds) | 17.8–18.2 s | 17.6–19.3 s |
+| `decide +kernel`, 3000 membership queries, 128-element list | `Nat` 12.4 s | `TArr` 13.2 s |
+| interpreter, WalkBench `bb_bench`, n = 50 / 200 / 500 | 0.27 / 3.2 / 12.6 s | function 0.46 / 4.6 / 18.2 s; `Std.TreeMap` 0.29 / 3.4 / 14.0 s |
+
+The function representation costs a constant 1.4–1.7× on interpreter runs, with no extra quadratic
+growth in this range. The tree map behind the same API (`arr64`, `set64`) matches today's speed.
+The `#guard` fuels go up to 100 000 (natDiv, natGcd, frontAll). The choice stays behind the API
+(decision point 1). Measurement files: `_tmp/absarrays/proto-meas/` (outside the repository).
+
+### 8.3 Byte arrays (the user's decision of 2026-10-27)
+
+Byte arrays get the same treatment as word arrays. The prototype keys `Mem.bytes` by name and gives
+the compiler a `BLay`. Today `pos8 a = a`, hidden behind `@[irreducible]` like `pos64`. The ABI's
+fixed positions (the input and the pin data at the stub's descriptors 0 and 1) become a field of the
+layout, e.g. `abi : dom IN ∧ pos IN = 0 ∧ dom PB ∧ pos PB = 1`. Only `AbiSim` and `Final` use it,
+and `compile_correct` does not. Neither L nor any per-function proof sees 0 or 1.
+
+**Two families or one array space with an element kind.**
+* *Two families (implemented):* `bytes : ArrId → Array UInt8` and `words : TArr → Array Word`, one
+  layout map each. The code stays the same, byte for byte.
+* *One space with a kind:* one registry (`Layout.lean` already tags `IN : byte`), one layout map
+  with a kind, `Prog.wf` checking `dom a ∧ kind a = byte` for `ld8`, one disjointness family in
+  `Layout.Ok` instead of `arr8_disj`, `arr64_disj`, `arr8_64`. Today byte descriptors are
+  `[base, len]` pairs while word descriptors are split columns (needed for the tier trick), so one
+  position space changes the byte displacements in the code and the stub. That cannot be byte for
+  byte, so it belongs with batch 7. In L, two maps over one key type look like the two families. One
+  map over a sum type would turn every `arr8`/`arr64` read into a case analysis.
+* *Cost above L, counted on master:* 259 `arr8 IN` reads, 56 `ld8` and 26 `st8` lines need no
+  change (`arr8_set8` keeps its shape). Churn: 41 `{ bytes := #[…] }` test literals (batch 2's
+  `Mem.ofBytes` takes them) and 38 positional or size sites (`bytes.size`, `bytes.set! 0`, `arr8 0`;
+  22 in `Checker/PreludeSim.lean`'s `setIn`/`Keep`).
+
+**Recommendation:** two families in the switch (batch 6). The single space with a kind can be
+revisited in batch 7, where the displacements change anyway.
+
+### 8.4 Consequences for the batches
+
+* Batch 5 is a prerequisite of the switch: under the prototype's `Prog.wf` exactly one function is
+  rejected, `cap_check` (`len64 300` names `⟨300, false⟩`, outside `dom`).
+* Batch 1's `Mem.HasW`, `HasWs`, `HasB`, `SameShape` become `True` or are deleted at the switch.
+  `MemRel.onlyG`'s `m'.words = m.words` works unchanged on functions.
+* `omega` does not read hypotheses at type `ArrId`: keep `Nat` binders where `omega` must read them.
+* Unifying the packaged layout (`(Tab.wl t).pos s`) with the concrete position function made `whnf`
+  evaluate `Nat` arithmetic and hit the recursion limit. The fix is to prove the lemmas on the
+  concrete function, package them, and then mark it irreducible. Batch 7's literal map should follow
+  the same pattern. The kernel still evaluates it, so code generation and `decide +kernel` are
+  unaffected, but a non-kernel `decide` on `dom64` is blocked.
+* No step of the plan hard-codes byte arrays as positional any more. Batch 1 names
+  `0 < m.bytes.size` as `m.HasB IN`, batch 2 builds byte test memories with `Mem.ofBytes`, and
+  batches 3–5 write byte arrays by name.
