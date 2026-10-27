@@ -234,7 +234,7 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   rw [h5, ctsE.k_check_constant_val.arm1] at hW'
   cases hW'
 
-include hq henv hV hApd hCrk hnv hW hCcv in
+include hq henv hnv hW hCcv in
 /-- **`check_sum_tele`'s error claim** (the hypotheses of `checkSumTele_refinesC`, and the
 callees' error claims): only the slow arm can fail with a verdict. -/
 theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p)
