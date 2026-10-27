@@ -1,6 +1,5 @@
 import ConAgua.Arena.StubInd
 import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.DeclNatDeps
 import ConAgua.Arena.WhnfM2CRefine5
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

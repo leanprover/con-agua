@@ -158,9 +158,9 @@ theorem abnW_eq {m : Mem} {t : Nat} {dn' : NIdx → Option ConLeche.Name}
     have ebo : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have ih' := ih (bo + 1) cs (by rw [ebo]; exact hcs) (Or.inl (by omega))
     have hx32 := lo32_of_lt hxl
-    have k1 := decI_iff (k := .name) _ _ hxl h12
-    have k2 := decI_iff (k := .name) _ _ hxl h49
-    have k3 := decI_iff (k := .name) _ _ hxl h50
+    have k1 := decI_inj_iff (k := .name) hxl h12
+    have k2 := decI_inj_iff (k := .name) hxl h49
+    have k3 := decI_inj_iff (k := .name) hxl h50
     have hcon : (andHs m).contains c.name = decide (x = rdW (m.arr64 PINS) 12 ∨
         x = rdW (m.arr64 PINS) 49 ∨ x = rdW (m.arr64 PINS) 50) := by
       simp only [hname, ← k1, ← k2, ← k3]

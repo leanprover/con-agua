@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndPosSpec.FindIdxDecIP
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -9,7 +9,6 @@ import ConAgua.L.GrindAttr
 
 `canonW_ne`, `canonW_eq`, `canonK0_miss`, `canonK0_hit`, `canonK1_ok`, `canonK2_big` and the lemmas only they use.
 -/
-
 
 noncomputable section
 
@@ -97,7 +96,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     have : ¬ ((decI v : LsIdx) == decI us) = true := by
-      rw [decI_beq' v us hv hus]; simpa using hvu
+      rw [decI_beq v us hv hus]; simpa using hvu
     simp only [ConRon.Arena.nestCanonSub, this]; rfl
   · rw [canonW_eq n m no nl us nn c v hvu] at h
     have hvu' : v = us := by simpa using hvu
@@ -109,7 +108,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
       have := decHL_length m hdec; simp at this; omega
     rcases hfw : findW n m no nl c with _ | fr <;> rw [hfw] at h; · simp [canonK0] at h
     have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
-    have hfi := findIdx_decIP ws c hwlt hc
+    have hfi := findIdx_map_decI (k := .name) c hc ws hwlt
     cases hwi : ws.findIdx? (· == c) with
     | none =>
       rw [hwi] at hfr
@@ -262,16 +261,6 @@ theorem snocW_core {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
   · intro i hi
     simp only [iwTop, hqq] at hi
     rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
-
-theorem contains_decI (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 32) :
-    (ws.map (fun w => (decI w : NIdx))).contains (decI x) = ws.contains x := by
-  induction ws with
-  | nil => rfl
-  | cons w ws ih =>
-    simp only [List.map_cons, List.contains_cons, decI_beq' x w hx (hws w (by simp))]
-    have := ih (fun y hy => hws y (by simp [hy]))
-    rw [this]
-    by_cases h : x = w <;> simp [h]
 
 /-! ## `mentions_any_go`, `mentions_any_node`: word models -/
 

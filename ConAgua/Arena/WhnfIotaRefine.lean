@@ -123,7 +123,6 @@ theorem findRuleLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish [frW_done, frW_step]
 
-
 theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k : Nat)
     (s₀ : St) (ro rc c : Word) :
     ⦃fun s => s = s₀⦄
@@ -369,9 +368,6 @@ theorem viewLit_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.t
   rw [proj_tier m a hR h hh (fun t i => t.getLit i) hv.1]
   simp only [ETables.getLit, Tbl.node?, decE_idx]
   rw [hk]; rfl
-
-theorem decE_tag_lit (e : Word) (hh : e.toNat < 2 ^ 32) : ((decE e).tag = ETag.lit) ↔ e >>> 28 = 8 :=
-  decE_tag_eq e hh 8 (by decide)
 
 theorem isStrLit_run_not (a : AState) (e : EIdx) (h : e.tag ≠ ETag.lit) :
     (isStrLit e).run a = .ok (false, a) := by
@@ -940,7 +936,6 @@ theorem piResidualLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
         callW_spec p k "inst_entry", ih] <;>
       finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW]
 
-
 theorem piResidual_spec (p : Prog) (hp : p.lookup "pi_residual" = some piResidualL) (k : Nat)
     (s₀ : St) (e ao an : Word) :
     ⦃fun s => s = s₀⦄
@@ -1017,7 +1012,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
     · rw [pirW_exit p k m e ao an i hlt h6] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       rw [hdrop]
-      have htag : (decE e).tag ≠ ETag.forallE := fun h => h6 ((decE_tag_forall e he).mp h)
+      have htag : (decE e).tag ≠ ETag.forallE := fun h => h6 ((decE_tag_forallE e he).mp h)
       obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (piResidual_not_run (decE e) _ _ a htag)
       refine ⟨hok, ?_, ?_, by simp [HW], by simp [HW]⟩
       · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
@@ -1050,7 +1045,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
     have hrunR := AM.run_of_ok _ _ hok2
     rw [h1] at hrunR
     have hrun := piResidual_cons_run (decE e) args[i.toNat] (decE (tfld m FORALL (tierW e) (idxW e) 1))
-      (decH r₁) (args.toList.drop (i.toNat + 1)) a _ _ _ ((decE_tag_forall e he).mpr h6') _ hvb'
+      (decH r₁) (args.toList.drop (i.toNat + 1)) a _ _ _ ((decE_tag_forallE e he).mpr h6') _ hvb'
       (by rw [hget]; exact hrunT) hrunR
     rw [h1] at hS₂ hres2
     rw [hdrop]

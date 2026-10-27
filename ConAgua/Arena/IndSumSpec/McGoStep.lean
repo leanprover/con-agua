@@ -1,7 +1,10 @@
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndPosSpec.NodeV
 import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.BvarBRefine
+import ConAgua.Arena.IndStubs
+import ConAgua.Arena.IndView
+import ConAgua.Arena.IndSum
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -281,7 +284,7 @@ theorem mcNode_arm (k : Nat) (ih : McGoOK k) (vl : List Word) (v : ENodeView) (h
     simp only [mcArm, ← hdx, ← hdz]
     refine Sim.bindK (by rw [mcP1]) (fun _ _ => by rw [mcP1]) (ih m a _ T _ mp hA hz hT hM)
       fun r1 ⟨c1, mp1⟩ m1 _ ⟨rfl, hb1, hM1, hf1⟩ => Sim.ret ⟨rfl, ?_, hM1, hf1⟩
-    rw [word_or_ne, hb1, decI_beq' _ T hx hT]
+    rw [word_or_ne, hb1, decI_beq _ T hx hT]
     generalize vl.tail.headD 0 = xx
     by_cases e2 : xx = T <;> simp [e2]
   | bvar _ | sort _ | const _ _ | lit _ => exact False.elim hnv
@@ -328,7 +331,7 @@ theorem mcGo_step_ok (j : Nat) (ih : ∀ k, k < j + 1 → McGoOK k) : McGoOK (j 
       rw [mcG1_const j m f T h _ (by simp) (by rw [hg3]; decide) hg3]
       refine Sim.ret ⟨rfl, ?_, hM, MemFrame.refl _ _ _⟩
       show _ = (nn == decI T)
-      rw [← hdx, decI_beq' _ T hx hT]
+      rw [← hdx, decI_beq _ T hx hT]
       generalize (g :: vt).tail.headD 0 = xx
       by_cases e : xx = T <;> simp [e]
     | fvar _ _ | app _ _ | lam _ _ | forallE _ _ | letE _ _ _ | proj _ _ _ =>

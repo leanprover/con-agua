@@ -17,7 +17,6 @@ open L.Ind (eViewW eViewW_ok ViewR)
 open ConRon.Arena
 open ConRon.Arena.Frontend
 
-
 namespace L.Front.Ind
 
 /-! ## Runs -/
@@ -205,7 +204,6 @@ theorem sortTeleW_ok : ∀ (n : Nat) (f h ok r : Word), sortTeleW n m f h = some
 
 end tele
 
-
 /-! ## The store's fuel -/
 
 /-- The sum of `c` words of `CTL` from `k`. -/
@@ -269,21 +267,7 @@ theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Wo
   simp only [UInt64.toNat_add, UInt64.toNat_zero, UInt64.toNat_one] at *
   omega
 
-
 /-! ## Names: `name_rec_pre` against `viewN` -/
-
-theorem decN_tag (h : Word) (hh : h.toNat < 2 ^ 32) :
-    (decI h : NIdx).tag = (h >>> 28).toUInt32 := by
-  simp only [decI, Idx.tag]
-  apply UInt32.toNat_inj.mp
-  simp [UInt32.toNat_div, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
-  omega
-
-theorem decN_idx (h : Word) : (decI h : NIdx).idxNat = (idxW h).toNat := by
-  simp only [decI, Idx.idxNat, Idx.index, idxW]
-  simp [UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_and]
-  have : (134217727 : Nat) = 2 ^ 27 - 1 := rfl
-  rw [this, Nat.and_two_pow_sub_one_eq_mod]
 
 /-- Under the scratch check, the name store's view reads the tier the handle's bit names. -/
 theorem nview_tier {m : Mem} {a : AState} (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
@@ -299,9 +283,6 @@ theorem nview_tier {m : Mem} {a : AState} (hR : ArenaR m a) (h : Word) (hh : h.t
       rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hv ⟨ht, h1⟩
     simp only [tierW] at ht
     simp [ht, hon, tierW]
-
-theorem shr28_lt (h : Word) (hh : h.toNat < 2 ^ 32) : (h >>> 28).toNat < 16 := by
-  simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; omega
 
 theorem viewN_run {a : AState} {h : NIdx} {v : NNodeView} (hv : a.store.ns.view h = some v) :
     (viewN h).run a = .ok (v, a) := by
@@ -343,8 +324,8 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nanon (tierW w) ht1 (idxW w)
       (UInt64.not_le.mp hc)
     refine ⟨.anonymous, viewN_run ?_, by simp, by simp⟩
-    rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
-    simp only [NTag.anonymous, decN_idx, Tbl.node?]
+    rw [EStore.ns, hv, NTables.get, decI_tag w hw, hg]
+    simp only [NTag.anonymous, decI_idx, Tbl.node?]
     by_cases ht : tierW w = 0
     · rw [ite_eq_left ht] at hx; simp [ht, hx]
     · rw [ite_eq_right ht] at hx; simp [ht, hx]
@@ -356,8 +337,8 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nnum (tierW w) ht1 (idxW w)
       (UInt64.not_le.mp hc)
     refine ⟨.num x.pre x.n, viewN_run ?_, by simp, by simp⟩
-    rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
-    simp only [NTag.anonymous, NTag.str, NTag.num, decN_idx, Tbl.node?]
+    rw [EStore.ns, hv, NTables.get, decI_tag w hw, hg]
+    simp only [NTag.anonymous, NTag.str, NTag.num, decI_idx, Tbl.node?]
     by_cases ht : tierW w = 0
     · rw [ite_eq_left ht] at hx; simp [ht, hx]
     · rw [ite_eq_right ht] at hx; simp [ht, hx]
@@ -368,8 +349,8 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     (UInt64.not_le.mp hc)
   have hview : (viewN (decI w)).run a = .ok (.str x.pre x.s, a) := by
     apply viewN_run
-    rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
-    simp only [NTag.anonymous, NTag.str, decN_idx, Tbl.node?]
+    rw [EStore.ns, hv, NTables.get, decI_tag w hw, hg]
+    simp only [NTag.anonymous, NTag.str, decI_idx, Tbl.node?]
     by_cases ht : tierW w = 0
     · rw [ite_eq_left ht] at hx; simp [ht, hx]
     · rw [ite_eq_right ht] at hx; simp [ht, hx]

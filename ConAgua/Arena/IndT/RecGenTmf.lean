@@ -266,7 +266,7 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   · simp only [hIq, ite_true]; exact Sim.of_none
   simp only [hIq, ite_false]
   have hne : ((decI I : NIdx) == decI (pinW m (1 + (47 : Word).toNat))) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq]; rw [clsDecI_inj hI hqH]; exact hIq
+    simp only [beq_eq_false_iff_ne, ne_eq]; rw [decI_inj_iff hI hqH]; exact hIq
   simp only [hne, Bool.false_eq_true, ite_false]
   -- `target_ctors_of`
   refine Sim.bindK (K := tmoK2 p n vis pp I us ao al pfo pfl mno mnl) rfl (fun _ _ => rfl)
@@ -452,7 +452,7 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
   have hlen : ws.length < 2 ^ 64 := by rw [slR_length hsl]; exact UInt64.toNat_lt _
   have hr5 := findW_ok n s4.mem _ _ x r5 ws hsl hW5 hlen
   rw [hm5] at *
-  rw [hws, findIdx_decIP ws x hwlt hx, tmcK2_some]
+  rw [hws, findIdx_map_decI x hx ws hwlt, tmcK2_some]
   have hT4' : (rdW (m.arr64 CTL) 200).toNat + bs.k = iwTop s4.mem := ht4
   cases hfi : ws.findIdx? (· == x) with
   | some i =>
@@ -547,7 +547,7 @@ theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
   · rw [ite_eq_left hng]; exact Sim.of_none
   have hg : w >>> 28 = 3 := by simpa using hng
   rw [ite_eq_right hng]
-  have hct := ctag_iff w hw32 3 (by decide)
+  have hct := decE_tag_eq w hw32 3 (by decide)
   have htag0 : (decE w).tag = ETag.const := hct.mpr hg
   have htag : ((decE w).tag == ETag.const) = true := by simpa using htag0
   rw [← hwd, show (decI w : EIdx) = decE w from rfl]

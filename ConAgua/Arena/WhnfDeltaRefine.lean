@@ -782,7 +782,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       rw [hty]
       cases hb : ((decI (rdW (s₀.mem.arr64 EREC) (q + 4)) : EIdx).tag == ETag.forallE)
       · rfl
-      · exfalso; exact hg ((decE_tag_forall _ htyl).mp (beq_iff_eq.mp hb)))
+      · exfalso; exact hg ((decE_tag_forallE _ htyl).mp (beq_iff_eq.mp hb)))
     obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
     refine ⟨hok', by rw [hst']; exact hS, ?_, hfr, ?_⟩
     · rw [hres']; simp only [decBool, ← hr]; rfl
@@ -803,7 +803,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hvOK : viewOK m₂ (rdW (s₀.mem.arr64 EREC) (q + 4)) FORALL := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hview, hd, hb⟩ := view_forall m₂ _ hS.arena.1 _ htyl hvOK hg'
   have hz := natSuccOk_run_forall hC.pins cv np nf _ _ _ hl0 hrun' (by
-      rw [hty]; exact beq_iff_eq.mpr ((decE_tag_forall _ htyl).mpr hg')) (by rw [hty]; exact hview)
+      rw [hty]; exact beq_iff_eq.mpr ((decE_tag_forallE _ htyl).mpr hg')) (by rw [hty]; exact hview)
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   refine ⟨hok', by rw [hst']; exact hS, ?_, hfr, ?_⟩
   · rw [hres']

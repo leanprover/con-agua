@@ -37,7 +37,7 @@ namespace L.Arena
 theorem whnfStuck_iff (e : Word) (he : HW e) :
     whnfStuckTag (decE e) =
       decide (e >>> 28 = 2 ∨ e >>> 28 = 1 ∨ e >>> 28 = 5 ∨ e >>> 28 = 6 ∨ e >>> 28 = 8) := by
-  have h := shr28_lt e he
+  have h : (e >>> 28).toNat < 2 ^ 32 := Nat.lt_trans (shr28_lt e he) (by decide)
   simp only [whnfStuckTag, decE_tag e he, ETag.sort, ETag.fvar, ETag.lam, ETag.forallE, ETag.lit]
   rw [show (2 : UInt32) = (2 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
   rw [show (1 : UInt32) = (1 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]

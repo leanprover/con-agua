@@ -59,7 +59,7 @@ theorem ctorW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD
       (by rw [islice_length]; exact f1) (by rw [islice_get, f2]) (fun k' h1 h2 => by
         rw [islice_get]; intro e
         rw [islice_length] at h2
-        exact f3 k' h1 h2 (decI_inj' _ _ (hCN k' h2) hnn e))
+        exact f3 k' h1 h2 (decI_inj (hCN k' h2) hnn e))
     simpa using this
   unfold ctorAt at h
   split at h; cases h; rename_i hcidx

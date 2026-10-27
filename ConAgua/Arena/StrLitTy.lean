@@ -64,7 +64,7 @@ theorem faEqW_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat
     have ht : ((decI ty : EIdx).tag == ETag.forallE) = false := by
       cases hb : ((decI ty : EIdx).tag == ETag.forallE)
       · rfl
-      · exact absurd ((decE_tag_forall ty hty).mp (beq_iff_eq.mp hb)) g6
+      · exact absurd ((decE_tag_forallE ty hty).mp (beq_iff_eq.mp hb)) g6
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [faEqT, ht]; rfl
   rw [ite_eq_right g6] at h
@@ -79,7 +79,7 @@ theorem faEqW_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
   obtain ⟨rfl, h1, h2⟩ := viewR_forall hvr (by rw [hg, g6'])
   have ht : ((decI ty : EIdx).tag == ETag.forallE) = true :=
-    beq_iff_eq.mpr ((decE_tag_forall ty hty).mpr g6')
+    beq_iff_eq.mpr ((decE_tag_forallE ty hty).mpr g6')
   refine ⟨?_, rfl, resH_ite01 _⟩
   rw [decE_eq] at hv
   simp only [faEqT, ht, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]

@@ -47,7 +47,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
         have ht : ¬ ((decI e : EIdx).tag == ETag.forallE) = true := by
-          rw [tag_forall_iff e he]; simpa using hpi
+          rw [decI_tag_forallE_beq e he]; simpa using hpi
         simp only [ConRon.Arena.instPisWith, ht]; rfl
       · rw [instW_pi n m ao al e hal hpi] at h
         have he6 : e >>> 28 = 6 := by simpa using hpi
@@ -61,7 +61,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           rw [hvl] at hvr
           have ht : (decE e).tag = ETag.forallE := by
             have h1 : ((decI e : EIdx).tag == ETag.forallE) = true := by
-              rw [tag_forall_iff e he, he6]; decide
+              rw [decI_tag_forallE_beq e he, he6]; decide
             exact beq_iff_eq.mp h1
           obtain ⟨ty, bd, rfl⟩ := EStore.view_forall a.store (decE e) ht v hv
           simp only [ViewR, getD1_eq] at hvr
@@ -91,7 +91,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
               (by rw [hao1, hal1]; omega) (by rw [hao1, hal1]; have := hg1.1; omega)
           refine ⟨x3, a3, ?_, hS3, hg1.trans hg3, ?_⟩
           · have htag : ((decI e : EIdx).tag == ETag.forallE) = true := by
-              rw [tag_forall_iff e he, he6]; decide
+              rw [decI_tag_forallE_beq e he, he6]; decide
             simp only [ConRon.Arena.instPisWith, htag, ite_true, StateT.run_bind]
             rw [show (decI e : EIdx) = decE e from rfl, viewBind_run, except_ok_bind, hbind]
             simp only [StateT.run_bind]

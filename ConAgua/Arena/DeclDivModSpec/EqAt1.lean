@@ -1017,7 +1017,7 @@ theorem Sim.iteW {β α : Type} {N : NIdx} {c w : Word} {e1 e2 : Option (β × M
     (h1 : c = w → Sim e1 o1 a R) (h2 : c ≠ w → Sim e2 o2 a R) :
     Sim (if c = w then e1 else e2) (if decI c == N then o1 else o2) a R := by
   subst hw
-  have hb := decI_beq_word (κ := IdxKind.name) hc (dmWord_lt32 N)
+  have hb := decI_beq (k := IdxKind.name) _ _ hc (dmWord_lt32 N)
   rw [decI_word] at hb
   by_cases hd : c = N.word.toUInt64
   · rw [ite_eq_left hd, hb, decide_eq_true hd, ite_eq_left rfl]; exact h1 hd
@@ -1330,7 +1330,7 @@ theorem certDivMod_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   refine Sim.ntB ((certRecRhs_ref hD cx c cc).simG ⟨hS, hC, hc⟩ (.refl m))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1, rfl⟩ => ?_
   have hC1 := hC.grow hG1
-  have hb := decI_beq_word (κ := IdxKind.name) hc (dmWord_lt32 cc.divN)
+  have hb := decI_beq (k := IdxKind.name) _ _ hc (dmWord_lt32 cc.divN)
   rw [decI_word] at hb
   rw [hC1.f11, hC1.f8, hC1.f1, hb]
   by_cases hd : c = cc.divN.word.toUInt64

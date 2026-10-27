@@ -194,7 +194,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     · rw [pdmK_nf (h := hv) (h6 := h6)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have htag : ¬ ((decE e).tag == ETag.forallE) = true := by
-        simp only [beq_iff_eq]; rw [decE_tag_forall _ he]; rw [← hhd]; exact h6
+        simp only [beq_iff_eq]; rw [decE_tag_forallE _ he]; rw [← hhd]; exact h6
       refine ⟨false, a, ?_, rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
       simp only [ConRon.Arena.piDomsMentionAny, htag]; rfl
     have hg6 : e >>> 28 = 6 := by rw [← hhd]; simpa using h6
@@ -204,7 +204,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     obtain ⟨-, hty, hb⟩ := view_forall m a hR e he hvok hg6
     have hvb := viewBind_forall m a hR e he hvok hg6
     have htag : ((decE e).tag == ETag.forallE) = true := by
-      simp only [beq_iff_eq]; exact (decE_tag_forall _ he).mpr hg6
+      simp only [beq_iff_eq]; exact (decE_tag_forallE _ he).mpr hg6
     rw [hew] at h
     simp only [List.getD_cons_succ, List.getD_cons_zero] at h
     have hns' := hns.get (OMono.decHL _ _)

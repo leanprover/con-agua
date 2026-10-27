@@ -388,7 +388,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
     · simp [hs, hc] at hW
     simp only [hs, hc, ↓reduceIte] at hW
     have hvo : viewOK s₀.mem e LIT := ⟨hs, by simpa using hc⟩
-    have htl : ((decE e).tag == ETag.lit) = true := by rw [tag_beq_lit e he]; simp [h8]
+    have htl : ((decE e).tag == ETag.lit) = true := by rw [decE_tag_lit_beq e he]; simp [h8]
     obtain ⟨k, hk, hkr⟩ := node_of s₀.mem a₀ e litCS RecRel (·.lits) _ hR.lit.2 hvo.2
     have hview : ∀ l, k = ⟨l⟩ → a₀.store.view (decE e) = some (.lit l) := by
       intro l hl
@@ -443,12 +443,12 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
       · rw [est]; exact ⟨MM, hK.1, KeptAll.refl _ _, hK.2⟩
       · rw [eres, hres', decOptR, ← hr0, ← hr1, decOpt_ne _ _ (by decide)]
   -- the `app` arm
-  have htl : ((decE e).tag == ETag.lit) = false := by rw [tag_beq_lit e he]; simp [h8]
+  have htl : ((decE e).tag == ETag.lit) = false := by rw [decE_tag_lit_beq e he]; simp [h8]
   simp only [h8, ↓reduceIte] at hW
   rcases (Classical.em (e >>> 28 = 4)).symm with h4 | h4
   · simp only [h4, ↓reduceIte] at hW
     refine hres 0 0 hW hw0 hw0 ?_
-    simp only [natPred?, htl, tag_beq_app e he, h4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [natPred?, htl, decE_tag_app_beq e he, h4, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   simp only [h4, ↓reduceIte] at hW
   by_cases hs : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
@@ -470,7 +470,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
           else pure none
         | _ => pure none
       else pure none : AM (Option EIdx)).run a₀ := by
-    simp only [natPred?, htl, tag_beq_app e he, h4, decide_true, Bool.false_eq_true, ↓reduceIte,
+    simp only [natPred?, htl, decE_tag_app_beq e he, h4, decide_true, Bool.false_eq_true, ↓reduceIte,
       StateT.run_bind, viewApp_run', viewApp_ok s₀.mem a₀ hR e he hvo, except_ok_bind]
     rfl
   generalize tfld s₀.mem APP (tierW e) (idxW e) 0 = f at hf hW hpre
@@ -479,7 +479,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
   · simp only [ne_eq, f3, not_false_eq_true, ↓reduceIte] at hW
     refine hres 0 0 hW hw0 hw0 ?_
     rw [hpre]
-    simp only [tag_beq_const f hf, f3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [decE_tag_const_beq f hf, f3, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   by_cases fs : tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [f3, fs] at hW
@@ -497,7 +497,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
         tfld s₀.mem CONST (tierW f) (idxW f) 1 = rdW (s₀.mem.arr64 PINS) 52
       then some (decE x) else none, a₀) := by
     rw [hpre]
-    simp only [tag_beq_const f hf, f3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv,
+    simp only [decE_tag_const_beq f hf, f3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv,
       except_ok_bind, emptyLevels, pinEmptyLevels_run hP, pinNatSucc, PIN_NAT_SUCC,
       pinAt_run hP 3 (by decide), pinW_rdW s₀.mem 52 52 rfl, pinW_rdW s₀.mem (1 + 3) (1 + 3) rfl]
     rw [decI_beq _ _ hn hns, decI_beq _ _ hu hel]

@@ -29,7 +29,7 @@ theorem pos2_forall_view {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe :
   obtain ⟨-, hty, hb⟩ := view_forall m a hS.1.arena.1 w hw hvok h6
   have hvb := viewBind_forall m a hS.1.arena.1 w hw hvok h6
   exact ⟨_, _, hew, hty, hb, by rw [viewBind_run']; simp only [← decE_eq]; rw [hvb],
-    (decE_tag_forall w hw).mpr h6⟩
+    (decE_tag_forallE w hw).mpr h6⟩
 
 theorem pos2_word_add {x y : Word} (h : ¬ x + y < x) : (x + y).toNat = x.toNat + y.toNat := by
   rcases Nat.lt_or_ge (x.toNat + y.toNat) (2 ^ 64) with hl | hl
@@ -81,15 +81,6 @@ theorem pos2_len_eq {aL nPc nI : Word} (h : nPc.toNat ≤ aL.toNat) :
       omega
   · intro e
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, ← e]; exact (Nat.mod_eq_of_lt aL.toNat_lt).symm
-
-theorem pos2_contains_map (ws : List Word) (hw : ∀ w ∈ ws, H w) (x : Word) (hx : H x) :
-    (ws.map (decI : Word → NIdx)).contains (decI x) = ws.contains x := by
-  rw [Bool.eq_iff_iff]
-  simp only [List.contains_iff_mem, List.mem_map]
-  constructor
-  · rintro ⟨v, hv, e⟩
-    rw [decI_inj (hw v hv) hx e] at hv; exact hv
-  · intro h; exact ⟨x, h, rfl⟩
 
 theorem pos2_getD2 (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
   rcases vl with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl

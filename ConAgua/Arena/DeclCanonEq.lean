@@ -10,7 +10,6 @@ answers `decide (x = y)`. Handles compare as words because `decI` is injective b
 decode through `dn`, which must be injective (`DnInj dn`: the store's `denoteN`).
 -/
 
-
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
@@ -84,10 +83,6 @@ end rd
 theorem fld_nat {w w' : Word} : (w.toNat = w'.toNat) ↔ w = w' :=
   ⟨fun h => UInt64.toNat_inj.mp h, fun h => by rw [h]⟩
 
-theorem fld_hd {kk : IdxKind} {w w' : Word} (hw : w.toNat < 2 ^ 32) (hw' : w'.toNat < 2 ^ 32) :
-    ((decI w : Idx kk) = decI w') ↔ w = w' :=
-  ⟨decI_inj hw hw', fun h => by rw [h]⟩
-
 theorem fld_bool {w w' : Word} : ((w != 0) = (w' != 0)) ↔ bEqB w w' = true := by
   simp [bEqB]
 
@@ -115,7 +110,7 @@ theorem slEqN_ok {kk : IdxKind} {a : Array Word} (hsz : a.size < 2 ^ 64) :
     have e2 := toNat_succ_lt hsz hw2
     have ih := slEqN_ok hsz c (o1 + 1) (o2 + 1) xs' ys' (by rw [e1]; exact hxs) (by rw [e2]; exact hys)
     rw [slEqN_succ, ih, rdW_zero' hw1, rdW_zero' hw2]
-    have hi : ((decI w1 : Idx kk) = decI w2) ↔ w1 = w2 := fld_hd hl1 hl2
+    have hi : ((decI w1 : Idx kk) = decI w2) ↔ w1 = w2 := decI_inj_iff hl1 hl2
     by_cases e : w1 = w2
     · subst e; simp
     · have : ¬ ((decI w1 : Idx kk) = decI w2) := fun h => e (hi.mp h)
@@ -173,7 +168,7 @@ theorem cvEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {q r : Word} {cv cv' :
   simp only at hcn hct hs hcn' hct' hs'
   subst hcn hct hcn' hct'
   simp only [cvEqB, e0, e0', e1, e1', e2, e2', e3, e3', hl]
-  simp only [IConstantVal.mk.injEq, fld_hd hn hn', fld_hd ht ht']
+  simp only [IConstantVal.mk.injEq, decI_inj_iff hn hn', decI_inj_iff ht ht']
   by_cases h1 : wn = wn' <;> by_cases h2 : cl = cl' <;>
     by_cases h3 : wt = wt' <;> simp [h1, h2, h3]
 
@@ -364,7 +359,7 @@ theorem capsEqAll_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn 
   apply bool_of_iff
   simp only [capsEqAll, capsEqAB, capsEqBB, capsEqCB, f0, f0', f1, f1', f2, f2', f3, f3', f4, f4', f5,
     f5', f6, f6', f12, f12', hpw, hal, hct, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq,
-    IIndCaps.mk.injEq, fld_nat, fld_hd l1 l1', fld_bool]
+    IIndCaps.mk.injEq, fld_nat, decI_inj_iff l1 l1', fld_bool]
   simp only [and_assoc]
 
 /-! ## Recursor rules -/
@@ -433,7 +428,7 @@ theorem ruleEqButRhsB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {q r : Word} {
     subst a3 a3'
     apply bool_of_iff
     simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e2, e3, f0, f1, f2, f3, e9, e10, f9, f10,
-      Bool.and_eq_true, beq_iff_eq, IRecRule.mk.injEq, fld_nat, fld_hd h0 g0, fld_bool]
+      Bool.and_eq_true, beq_iff_eq, IRecRule.mk.injEq, fld_nat, decI_inj_iff h0 g0, fld_bool]
     simp [and_assoc]
   · have a3 := w0' _ k0
     have a3' := w1' _ k1
@@ -451,7 +446,7 @@ theorem ruleEqButRhsB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {q r : Word} {
     apply bool_of_iff
     simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e2, e3, f0, f1, f2, f3, e9, e10, f9, f10,
       s1, s2, ite_true, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat,
-      fld_hd h0 g0, fld_bool, IRecRuleFire.nested.injEq]
+      decI_inj_iff h0 g0, fld_bool, IRecRuleFire.nested.injEq]
     simp [and_assoc]
 
 theorem decRules_succ (a : Array Word) (o n : Nat) :
@@ -495,7 +490,7 @@ theorem rulesEqN_ok {a : Array Word} (hsz : a.size < 2 ^ 64) :
     rw [rulesEqN_succ, ih, ruleEqButRhsB_ok hsz hx hy, e8, f8]
     apply bool_of_iff
     simp only [Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, List.cons.injEq]
-    rw [← rule_eq_iff x y, c8, d8, fld_hd h8 g8]
+    rw [← rule_eq_iff x y, c8, d8, decI_inj_iff h8 g8]
 
 theorem rulesEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {o1 l1 o2 l2 : Word}
     {xs ys : List IRecRule} (h1 : decRules a o1.toNat l1.toNat = some xs)
@@ -639,7 +634,7 @@ theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : Dn
     have c2 := hintEqB_ok' hsz (p := p) (q := q) (k := 6) (kn := 6) rfl hhi hhi'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, c1, c2]
-    simp [fld_hd u5 t5]
+    simp [decI_inj_iff u5 t5]
   · -- thm
     have a1 : wk = 2 := wl wk 2 (by decide) k0
     have a2 : wk' = 2 := wl wk' 2 (by decide) k1

@@ -14,7 +14,6 @@ open ConRon.Arena ConLeche
 open Std.WP
 open scoped Lean.Order
 
-
 namespace L.Arena
 
 /-! ## The `instantiate1` memo under `ArenaD` -/
@@ -436,21 +435,6 @@ theorem instFast_run (F : Nat) (e v : EIdx) (d : Nat) (a : AState) :
   simp only [instantiate1Fast, StateT.run_bind, inst1Clear_run, except_ok_bind]
   cases (instantiate1Go v F e d).run (withIC a ∅) <;> rfl
 
-/-- The entries' 32-bit mask keeps the handle (`WhnfDeltaRefine3.lean`'s `decE_mask32`). -/
-theorem decE_and32 (y : Word) : decE (y &&& 4294967295) = decE y := by
-  have h : (y &&& 4294967295).toUInt32 = y.toUInt32 := by
-    apply UInt32.toNat_inj.mp
-    simp only [UInt64.toNat_toUInt32, UInt64.toNat_and]
-    rw [show (4294967295 : UInt64).toNat = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod,
-      Nat.mod_mod]
-  simp only [decE, h]
-
-/-- The masked word is below `2^32` (`WhnfDeltaRefine3.lean`'s `hw_mask32`). -/
-theorem and32_lt (y : Word) : (y &&& 4294967295).toNat < 2 ^ 32 := by
-  rw [UInt64.toNat_and, show (4294967295 : UInt64).toNat = 2 ^ 32 - 1 from rfl,
-    Nat.and_two_pow_sub_one_eq_mod]
-  exact Nat.mod_lt _ (by decide)
-
 theorem instEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     (e v d r : Word) (he : e.toNat < 2 ^ 32) (hb : instEntryW (n + 1) m e v d = some (r, m')) :
     ∃ a', (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat).run a = .ok (decE r, a') ∧
@@ -471,8 +455,8 @@ theorem instEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (instOK n).1 _ _ _ e d v 4000000000 r₁ hA₀ he hw
     rw [coreWalkFuel_toNat] at ha₁
-    exact ⟨_, by rw [instFast_run, ha₁, decE_and32]; rfl, ArenaD.imemo_clear m₁ a₁ hA₁ h1,
-      and32_lt r₁⟩
+    exact ⟨_, by rw [instFast_run, ha₁, decE_mask]; rfl, ArenaD.imemo_clear m₁ a₁ hA₁ h1,
+      mask_lt r₁⟩
 
 /-- **`inst_entry` refines the arena's `instantiate1Fast coreWalkFuel` under `ArenaD`**, at every
 L fuel (the walk's counter starts at `coreWalkFuel`). -/

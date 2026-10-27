@@ -125,10 +125,6 @@ theorem stuckStr_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     CTL, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
-theorem decI_eq_iff' {k : IdxKind} {v w : Word} (hv : HW v) (hw : HW w) :
-    (decI v : Idx k) = decI w ↔ v = w :=
-  ⟨fun h => decI_inj hv hw h, fun h => by rw [h]⟩
-
 /-- **`stuck_str` refines `stuckStrT`** at the knot (`lt` a literal handle, `side` the literal's
 side). -/
 @[refines_part ConRon.Arena.defeqStuck "the string-literal arms (stuckStrT)"]
@@ -177,14 +173,14 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     rcases (Classical.em (fo >>> 28 = 3)).symm with h3 | h3
     · simp only [h3, not_false_eq_true, ↓reduceIte] at hW
       unfold stuckStrT
-      rw [tag_beq_const _ hfo]
+      rw [decE_tag_const_beq _ hfo]
       simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte]
       exact hirr a₀ s.mem M hS hW
     simp only [h3, not_true_eq_false, ↓reduceIte] at hW
     obtain ⟨h4, hW⟩ := of_ite_none hW
     obtain ⟨h5, hW⟩ := of_ite_none hW
     obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR fo hfo ⟨h4, by simpa using h5⟩ h3
-    have hct : ((decE fo).tag == ETag.const) = true := by rw [tag_beq_const _ hfo]; simp [h3]
+    have hct : ((decE fo).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hfo]; simp [h3]
     generalize tfld s.mem CONST (tierW fo) (idxW fo) 0 = co at hnw hW hv
     generalize tfld s.mem CONST (tierW fo) (idxW fo) 1 = uo at huw hW hv
     -- the pins
@@ -209,8 +205,8 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
       have := hS.pins.names_lt 6 (by decide); rwa [pinW_rdW s.mem (1 + 6) (1 + 6) rfl] at this
     have hel : HW (rdW (s.mem.arr64 PINS) 52) := by
       have := hS.pins.lv_lt.1; rwa [pinW_rdW s.mem 52 52 rfl] at this
-    simp only [pinW_rdW s.mem (1 + 6) (1 + 6) rfl, pinW_rdW s.mem 52 52 rfl, decI_eq_iff' hnw hsl,
-      decI_eq_iff' huw hel]
+    simp only [pinW_rdW s.mem (1 + 6) (1 + 6) rfl, pinW_rdW s.mem 52 52 rfl, decI_inj_iff hnw hsl,
+      decI_inj_iff huw hel]
     simp only [strK3, hr₁, hr₂] at hW3
     by_cases hcond : co = rdW (s.mem.arr64 PINS) (1 + 6) ∧ uo = rdW (s.mem.arr64 PINS) 52 ∧
         r₃.headD 0 ≠ 0

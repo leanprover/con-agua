@@ -838,7 +838,7 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     rcases (Classical.em (fo >>> 28 = 3)).symm with h3 | h3
     · rw [ite_eq_right (fun h => h3 h.2)] at hW
       unfold stuckStrT
-      rw [tag_beq_const _ hfo]
+      rw [decE_tag_const_beq _ hfo]
       simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte]
       exact hirr a₀ s₀.mem M hS hW
     rw [ite_eq_left ⟨h0, h3⟩] at hW
@@ -849,7 +849,7 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
     · rw [ite_eq_left h5] at hW; cases hW; exact ErrClaim.of_cls0 rfl
     rw [ite_eq_right h5] at hW
     obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR fo hfo ⟨h4, by simpa using h5⟩ h3
-    have hct : ((decE fo).tag == ETag.const) = true := by rw [tag_beq_const _ hfo]; simp [h3]
+    have hct : ((decE fo).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hfo]; simp [h3]
     generalize tfld s₀.mem CONST (tierW fo) (idxW fo) 0 = co at hnw hW hv
     generalize tfld s₀.mem CONST (tierW fo) (idxW fo) 1 = uo at huw hW hv
     -- the pins
@@ -890,8 +890,8 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
       have := hS.pins.names_lt 6 (by decide); rwa [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl] at this
     have hel : HW (rdW (s₀.mem.arr64 PINS) 52) := by
       have := hS.pins.lv_lt.1; rwa [pinW_rdW s₀.mem 52 52 rfl] at this
-    simp only [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl, pinW_rdW s₀.mem 52 52 rfl, decI_eq_iff' hnw hsl,
-      decI_eq_iff' huw hel]
+    simp only [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl, pinW_rdW s₀.mem 52 52 rfl, decI_inj_iff hnw hsl,
+      decI_inj_iff huw hel]
     rw [hr₁, hr₂] at hW
     by_cases hcond : co = rdW (s₀.mem.arr64 PINS) (1 + 6) ∧ uo = rdW (s₀.mem.arr64 PINS) 52 ∧
         r₃.headD 0 ≠ 0

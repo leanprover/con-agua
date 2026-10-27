@@ -24,7 +24,6 @@ functional and injective (`NameRel`): under `ArenaR`, the store's name readback
 * `lvEqW_ok`: `lv_eq` is `decide (l = r)` (`Level.beq`).
 -/
 
-
 namespace L.Arena
 
 open ConLeche
@@ -134,10 +133,6 @@ structure HeapFrame (m m' : Mem) : Prop where
   lh : ∀ k : Word, k.toNat < (htop m).toNat → rdW (m'.arr64 LH) k = rdW (m.arr64 LH) k
   size : ∀ b : TieredArray, (m'.arr64 b).size = (m.arr64 b).size
   wsize : m.SameShape m'
-
-theorem tierW_lt (p : Word) : (tierW p).toNat ≤ 1 := by
-  have h : tierW p ≤ 1 := UInt64.and_le_right
-  rw [UInt64.le_iff_toNat_le] at h; simpa using h
 
 theorem ctl_ne (c : Word) (hc : c.toNat ≤ 14) (p : Word) : c + tierW p ≠ 192 := by
   intro h

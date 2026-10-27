@@ -90,16 +90,6 @@ theorem partsPSl_nil {α : Type} {f : Mem → Nat → Option α} {xs : List α} 
 
 /-! ## `block_rec_name_set_ok` -/
 
-theorem partsContains_decI (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32)
-    (hx : x.toNat < 2 ^ 32) : (ws.map (decI : Word → NIdx)).contains (decI x) = ws.contains x := by
-  induction ws with
-  | nil => rfl
-  | cons w ws ih =>
-    simp only [List.map_cons, List.contains_cons]
-    rw [ih (fun w' h' => hws w' (List.mem_cons_of_mem _ h')),
-      L.Arena.decI_beq x w hx (hws w (List.mem_cons_self ..))]
-    by_cases h : x = w <;> simp [h]
-
 /-- The program bundle of the name set. -/
 structure IndPartsProg3 (p : Prog) : Prop extends IndPartsProg2 p where
   want : p.lookup "block_rec_want" = some blockRecWant

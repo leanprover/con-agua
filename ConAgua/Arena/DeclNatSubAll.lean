@@ -219,7 +219,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p dn vis fe 
       subst hcd hud
       have hbeq : ((decI (rv.tail.headD 0) : NIdx) == decI nm && (decI (rv.tail.tail.headD 0) : LsIdx) == x2) =
           decide (rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0) := by
-        rw [← hx2, decI_beq_word hc0 hn, decI_beq_word hu0 hx2l]; simp
+        rw [← hx2, decI_beq _ _ hc0 hn, decI_beq _ _ hu0 hx2l]; simp
       by_cases hcond : rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0
       · rw [ite_eq_left hcond] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw

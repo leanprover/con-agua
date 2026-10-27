@@ -177,7 +177,7 @@ theorem cfbW_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
         cases hcw : ws.contains fv
         · rw [hcw] at hct1; exact absurd rfl hct1
         · rfl
-      rw [hwsd, sumContains_decI fv hfv ws hwlt, hin, Bool.or_true]
+      rw [hwsd, contains_map_decI fv hfv ws hwlt, hin, Bool.or_true]
   exact Sim.congr (Sim.ret (x := ()) ⟨⟨hS1, hg1⟩, hA1⟩) (by simp only [hcond]; rfl)
 
 section sims

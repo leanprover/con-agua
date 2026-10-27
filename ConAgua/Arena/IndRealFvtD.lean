@@ -1,6 +1,5 @@
 import ConAgua.Arena.TeleLift
 import ConAgua.Arena.StageInst1
-import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 

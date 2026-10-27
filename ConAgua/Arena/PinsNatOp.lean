@@ -26,20 +26,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-theorem decI_inj {k : IdxKind} {v w : Word} (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32)
-    (h : (decI v : Idx k) = decI w) : v = w := by
-  have := (word_decI (decI v : Idx k) w hw).mpr h
-  rw [← this]
-  apply UInt64.toNat_inj.mp
-  simp [decI]; omega
-
-theorem decI_beq {k : IdxKind} (v w : Word) (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32) :
-    ((decI v : Idx k) == decI w) = decide (v = w) := by
-  by_cases h : v = w
-  · subst h; simp
-  · have : (decI v : Idx k) ≠ decI w := fun e => h (decI_inj hv hw e)
-    simp [h, this]
-
 theorem pinAt_bind_run {m : Mem} {a : AState} {β : Type} (h : PinsFull m a.pins) (i : Nat)
     (hi : i < 51) (k : NIdx → AM β) :
     (pinAt i >>= k).run a = (k (decI (pinW m (1 + i)))).run a := by
@@ -252,7 +238,6 @@ theorem natOpResultL_refinesR (R : Mem → AState → Prop) (harms : NatArmsR R)
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff, reduceIte,
       beq_iff_eq, rdW_PINS_ofNat, Nat.reduceMod, Nat.reducePow] at *)
     all_goals grind [lang_grind, arena_grind, natOpSel, PinsFull.size, PinsFull.names_lt, PinsFull.lv_lt]
-
 
 /-- **`nat_op_result` refines `natOpResult`** under `ArenaR` and `PinsR`. -/
 @[refines ConRon.Arena.natOpResult]

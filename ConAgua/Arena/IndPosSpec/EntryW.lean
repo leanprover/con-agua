@@ -245,7 +245,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
       obtain ⟨x2, a2, hrun2, hS2, hg2, hlt2, hdec2⟩ :=
         gafF_ok dn vis fe CWF w hwlt m0 m2 a1 r2 hg hS1
       rw [CWF_eq, hwd] at hrun2
-      have htagiff := tag_const_iff (r2.headD 0) hlt2
+      have htagiff := decI_tag_const_beq (r2.headD 0) hlt2
       rw [hdec2] at htagiff
       by_cases hk : r2.headD 0 >>> 28 ≠ 3
       · rw [entryK2_notconst _ _ _ _ hk] at h
@@ -275,7 +275,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
           have hview : a2.store.viewConst x2 = some (n0, us0) :=
             EStore.viewConst_of_view _ _ ht n0 us0 (hdE ▸ hv)
           have hbeq : (n0 == decI C) = decide (vt.headD 0 = C) := by
-            rw [← hn2]; exact decI_beq' _ _ hn1 hC
+            rw [← hn2]; exact decI_beq _ _ hn1 hC
           have htwin : (ConRon.Arena.nestCtorEntry (decI C) (.ctorInfo cv nPc nF)).run a =
               .ok (if vt.headD 0 = C then some (cv, nPc, nF) else none, a2) := by
             simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2, ht, beq_self_eq_true, ite_true, viewConst_run, hview, hbeq]

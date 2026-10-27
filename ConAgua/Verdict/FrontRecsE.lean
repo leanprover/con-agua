@@ -519,7 +519,7 @@ theorem recE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b
       fun j' hj' hT' => ?_, by rw [islice_get, k3], x, by rw [islice_get]; exact k5, k6⟩
     rw [islice_get] at hT' ⊢
     have hw : wd m₂ IFL (tyn.toNat + j') = r2.tail.headD 0 :=
-      decI_inj' _ _ (hTN j' (by omega)) htt hT'
+      decI_inj (hTN j' (by omega)) htt hT'
     exact k4 j' (Nat.zero_le _) hj' hw
   have hcls : ∀ R : Word, R &&& 3 = 1 → e = .abort R → e.cls = 1 := by
     intro R hR' he; subst he; simpa [Err.cls] using hR'

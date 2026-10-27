@@ -127,14 +127,14 @@ theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       have hvb := viewBind_forall m a hR e he ⟨hv1, hcnt⟩ hc
       have h1 := (view_forall m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       refine ⟨?_, fun _ => h1⟩
-      simp only [UInt64.toNat_zero, binderDom, (decE_tag_forall e he).mpr hc, beq_self_eq_true,
+      simp only [UInt64.toNat_zero, binderDom, (decE_tag_forallE e he).mpr hc, beq_self_eq_true,
         ↓reduceIte]
       simp [viewBind_run' _ a, hvb, except_ok_bind, decOpt]
       rfl
     · rw [bdW_miss m 0 e hc] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine ⟨?_, fun h => absurd rfl h⟩
-      have htag : (decE e).tag ≠ ETag.forallE := fun h => hc ((decE_tag_forall e he).mp h)
+      have htag : (decE e).tag ≠ ETag.forallE := fun h => hc ((decE_tag_forallE e he).mp h)
       simp [binderDom, htag, decOpt]
       rfl
   | succ N ih =>
@@ -154,14 +154,14 @@ theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       have h1 := (view_forall m a hR e he ⟨hv1, hcnt⟩ hc).2.2
       obtain ⟨ihr, ihb⟩ := ih _ _ fl v (by rw [hkm1]; omega) h1 hL
       refine ⟨?_, ihb⟩
-      rw [hj, binderDom, (decE_tag_forall e he).mpr hc]
+      rw [hj, binderDom, (decE_tag_forallE e he).mpr hc]
       rw [show j = (k - 1).toNat by rw [hkm1]; omega]
       simp [viewBind_run' _ a, hvb, except_ok_bind]
       exact ihr
     · rw [bdW_miss m k e hc] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine ⟨?_, fun h => absurd rfl h⟩
-      have htag : (decE e).tag ≠ ETag.forallE := fun h => hc ((decE_tag_forall e he).mp h)
+      have htag : (decE e).tag ≠ ETag.forallE := fun h => hc ((decE_tag_forallE e he).mp h)
       rw [hj]
       simp [binderDom, htag, decOpt]
       rfl

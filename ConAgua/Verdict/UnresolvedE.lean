@@ -622,7 +622,7 @@ theorem hslW_pure (a : AState) : ∀ (n : Nat) (m : Mem) (f h r : Word), ArenaR 
 
 theorem ue_beq_ite (x T : Word) (hx : H x) (hT : H T) :
     ((if x = T then (1 : Word) else 0) != 0) = ((decI x : NIdx) == decI T) := by
-  rw [decI_beq' x T hx hT]
+  rw [decI_beq x T hx hT]
   by_cases e : x = T <;> simp [e]
 
 /-- **`ue_mentions_go`'s model is the pure walk** at the twin fuel `f.toNat`. -/

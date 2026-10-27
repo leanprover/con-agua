@@ -314,19 +314,6 @@ end model
 
 /-! ## The loop's relation around the body -/
 
-theorem decI_mask {k : IdxKind} (w : Word) : (decI (w &&& 4294967295) : Idx k) = decI w := by
-  have : (w &&& 4294967295).toUInt32 = w.toUInt32 := by
-    apply UInt32.toNat_inj.mp
-    simp only [UInt64.toNat_toUInt32, UInt64.toNat_and]
-    have : (4294967295 : Word).toNat = 2 ^ 32 - 1 := rfl
-    rw [this, Nat.and_two_pow_sub_one_eq_mod, Nat.mod_mod]
-  simp [decI, this]
-
-theorem mask_lt (w : Word) : (w &&& 4294967295).toNat < 2 ^ 32 := by
-  simp only [UInt64.toNat_and]
-  have : (4294967295 : Word).toNat = 2 ^ 32 - 1 := rfl
-  rw [this, Nat.and_two_pow_sub_one_eq_mod]; exact Nat.mod_lt _ (by decide)
-
 theorem stepC_200 : (200 : Word) ∈ stepC := by decide +kernel
 
 /-- **`iw_reset` keeps the loop's relation.** -/

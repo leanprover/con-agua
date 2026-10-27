@@ -188,20 +188,6 @@ theorem ctW_spec (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St) (vis c
 
 end spec
 
-theorem tag_sort_iff (b : Word) (hb : b.toNat < 2 ^ 32) :
-    (decE b).tag = ETag.sort ↔ b >>> 28 = 2 := by
-  rw [decE_tag b hb]
-  have hlt : (b >>> 28).toNat < 16 := by
-    rw [UInt64.toNat_shiftRight]; simp; omega
-  constructor
-  · intro h
-    apply UInt64.toNat_inj.mp
-    have := congrArg UInt32.toNat h
-    simp [ETag.sort] at this
-    simp only [UInt64.toNat_shiftRight] at hlt ⊢
-    simp; omega
-  · intro h; rw [h]; rfl
-
 end L.Ind
 
 end

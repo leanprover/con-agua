@@ -410,7 +410,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     · rw [pdoW_notpi (h := h0) (h6 := h6)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a, mp, ?_, hS, IWGrow.refl _, rfl, hM, MFr.refl _ _ _⟩
-      have htag : ¬ (decE e).tag = ETag.forallE := fun h' => h6 ((decE_tag_forall e he).mp h')
+      have htag : ¬ (decE e).tag = ETag.forallE := fun h' => h6 ((decE_tag_forallE e he).mp h')
       rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
       simp [htag]; rfl
     have hg6 : e >>> 28 = 6 := by simpa using h6
@@ -436,7 +436,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
             if x = true then pure true
             else ConRon.Arena.piDomsOcc names lo.toNat hi.toNat (n.toNat - 1) (decE b)).run a := by
       rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
-      have htag : (decE e).tag = ETag.forallE := (decE_tag_forall e he).mpr hg6
+      have htag : (decE e).tag = ETag.forallE := (decE_tag_forallE e he).mpr hg6
       simp only [htag, beq_self_eq_true, ite_true, StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
       rfl
     by_cases hr1 : r1 ≠ 0

@@ -1,4 +1,3 @@
-import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfCore
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

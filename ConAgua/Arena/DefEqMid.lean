@@ -495,7 +495,7 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
     · rw [decBool_f h]; rfl
     · have h' : r₂.headD 0 = 0 := Classical.byContradiction fun h' => hzz ⟨h, h'⟩
       rw [decBool_f h']; simp
-  simp only [hzb, Bool.false_eq_true, ↓reduceIte, tag_beq_lit a ha, tag_beq_lit b hb,
+  simp only [hzb, Bool.false_eq_true, ↓reduceIte, decE_tag_lit_beq a ha, decE_tag_lit_beq b hb,
     Bool.and_eq_true, decide_eq_true_eq]
   by_cases hll : a >>> 28 = 8 ∧ b >>> 28 = 8
   · rw [offW.k_is_nat_zero_2.arm2 (hc1 := hzz) (hc2 := hll)] at hW
