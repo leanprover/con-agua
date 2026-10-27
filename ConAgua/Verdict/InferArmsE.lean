@@ -4,7 +4,6 @@ import ConAgua.Arena.InferBodySpineF
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # Error refinements of the inference arms (lane `verdicts-b`, helper `k1`)
 
@@ -188,8 +187,8 @@ theorem ensureSortCore_refinesE (p : Prog) (hp : KnotEntryProg p) (hl : InferLea
 theorem inferArmsE_nv : ∀ f ∈ ["nat_lit_supported", "str_lit_supported", "pin_at", "const_e",
     "intern_fvar", "inst1", "inst_list", "infer_lam_result", "intern_imax", "intern_sort",
     "intern_succ", "e_view", "head_and_args", "ar_entry", "mk_forall", "in_find", "in_put",
-    "io_find", "io_put"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "io_find", "io_put"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- **`defeq_arg`'s error claim** at the knot (the error half of `defeqArg_any`; it reads the
 `defeq` and `defeq_e` slots). -/

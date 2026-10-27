@@ -1,13 +1,13 @@
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndT.Sum1
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConRon.Bridge.Inductives.SumInstall
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of `check_sum_tele_slow`, `check_sum_tele` (lane `verdicts-b`, helper `ib`)
@@ -141,7 +141,7 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   | error e2 =>
     rw [h2, ctsE.k_intern_sort.none] at hW'
     cases hW'
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨ri, m2⟩ := q2
   by_cases hss : 4294967296 ≤ ri.headD 0
@@ -164,7 +164,7 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   | error e3 =>
     rw [h3, ctsE.k_close_telescope.none] at hW'
     cases hW'
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨rt, m3⟩ := q3
   rw [h3, ctsE.k_close_telescope.arm1] at hW'
@@ -187,7 +187,7 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   | error e4 =>
     rw [h4, ctsE.k_cv_new.none] at hW'
     cases hW'
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨rq, m4⟩ := q4
   rw [h4, ctsE.k_cv_new.arm1] at hW'
@@ -266,7 +266,7 @@ theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
   | error e1 =>
     rw [h1, ctE.k_strip_pis.none] at hW'
     cases hW'
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (stripPis_specF p hst k ⟨s₀.mem, Locals.init []⟩ n w)
@@ -293,7 +293,7 @@ theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
     | error e2 =>
       rw [h2, ctE.k_e_view.none] at hW'
       cases hW'
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
     | ok q2 =>
       rw [h2, ctE.k_e_view.arm1] at hW'
       cases hW'

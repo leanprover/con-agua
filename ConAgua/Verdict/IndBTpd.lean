@@ -1,9 +1,9 @@
 import ConAgua.Arena.IndT.RecCheckTpd
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_params_def_eq_step` (lane `verdicts-b`, helper `ib`)
@@ -79,7 +79,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
   | error e1 =>
     rw [h1, pdsE.k_bvar_b.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (bvarBL_spec p L.bvb n ⟨s₀.mem, Locals.init []⟩ CWF x)
@@ -98,7 +98,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
   | error e2 =>
     rw [h2, pdsE.k_bvar_b_2.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (bvarBL_spec p L.bvb n ⟨s1.mem, Locals.init []⟩ CWF y)
@@ -117,7 +117,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
   | error e3 =>
     rw [h3, pdsE.k_fvar_b.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, h3m⟩ := triple_of_callW (fvbF_spec p L.hf n ⟨s2.mem, Locals.init []⟩ [CWF, x])
@@ -136,7 +136,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
   | error e4 =>
     rw [h4, pdsE.k_fvar_b_2.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   obtain ⟨s4, hs4, -, h4m⟩ := triple_of_callW (fvbF_spec p L.hf n ⟨s3.mem, Locals.init []⟩ [CWF, y])
@@ -181,7 +181,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
   | error e5 =>
     rw [h5, pdsE.k_target_canon_params.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h5)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5)
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   obtain ⟨s5, hs5, -, h5m⟩ := triple_of_callW (tcp_specF p L.rc n ⟨s4.mem, Locals.init []⟩ pfo pfl x)
@@ -200,7 +200,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
   | error e6 =>
     rw [h6, pdsE.k_target_abs.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h6)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6)
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   by_cases hb6 : 4294967296 ≤ r6.headD 0
@@ -231,7 +231,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
   | error e7 =>
     rw [h7, pdsE.k_target_canon_params_2.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h7)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h7)
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   obtain ⟨s7, hs7, -, h7m⟩ := triple_of_callW (tcp_specF p L.rc n ⟨s6.mem, Locals.init []⟩ pfo pfl y)
@@ -251,7 +251,7 @@ theorem pdsStep_claim (L : TpLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (
   | error e8 =>
     rw [h8, pdsE.k_target_abs_2.none] at hW
     cases hW
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h8)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h8)
   | ok q8 =>
   obtain ⟨r8, m8⟩ := q8
   by_cases hb8 : 4294967296 ≤ r8.headD 0

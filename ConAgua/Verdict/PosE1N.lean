@@ -4,7 +4,6 @@ import ConAgua.Verdict.PosE
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndPosSpec.NitW
 import ConAgua.Arena.IndT.Install2
-
 /-!
 # `nest_inst_type_ty`, `nest_inst_type`: error claims (lane `verdicts-b`, helper `ia2`, fork `kn1`)
 
@@ -42,7 +41,7 @@ theorem ntyE_claim {p : Prog} (hl : NtyLook p) (hIlpf : IlpfF p)
   cases h1 : callE p k "env_find" [rdW (m.arr64 IW) key, vis] m with
   | error e1 =>
     rw [h1, ntyE.k_env_find.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, hef⟩ := triple_of_callW (envFind_specW p hl.hx hl.hg hl.hf k ⟨m, Locals.init []⟩ _ vis)
@@ -96,7 +95,7 @@ theorem ntyE_claim {p : Prog} (hl : NtyLook p) (hIlpf : IlpfF p)
   cases h2 : callE p k "view_ls_len" [rdW (m1.arr64 IW) (key + 1)] m1 with
   | error e2 =>
     rw [h2, ntyE.k_view_ls_len.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hm2, hln0, hr2⟩ := triple_of_callW (viewLsLen_specE p hl.hls hl.hvl k ⟨m1, Locals.init []⟩ _)
@@ -127,7 +126,7 @@ theorem ntyE_claim {p : Prog} (hl : NtyLook p) (hIlpf : IlpfF p)
   cases h3c : callE p k "strip_pis" [rdW (m1.arr64 IW) (key + 3), wt] m1 with
   | error e3 =>
     rw [h3c, ntyE.k_strip_pis.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3c
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3c
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, hst⟩ := triple_of_callW (stripPis_specF p hl.hst k ⟨m1, Locals.init []⟩ _ _)
@@ -154,7 +153,7 @@ theorem ntyE_claim {p : Prog} (hl : NtyLook p) (hIlpf : IlpfF p)
   cases h4c : callE p k "cv_lps" [q + 1] m3 with
   | error e4 =>
     rw [h4c, ntyE.k_cv_lps.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4c
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4c
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   obtain ⟨s4, hs4, -, hlp⟩ := triple_of_callW (cvLps_spec p hl.ha hl.hc hl.he hl.hcv k ⟨m3, Locals.init []⟩ _)
@@ -177,7 +176,7 @@ theorem ntyE_claim {p : Prog} (hl : NtyLook p) (hIlpf : IlpfF p)
   cases h5c : callE p k "inst_lp_fast" [CWF, r4.headD 0, r4.tail.headD 0, rdW (m1.arr64 IW) (key + 1), wt] m4 with
   | error e5 =>
     rw [h5c, ntyE.k_inst_lp_fast.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5c
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5c
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5c, ntyE.k_inst_lp_fast.arm1] at he
@@ -198,7 +197,7 @@ theorem ntyE_claim {p : Prog} (hl : NtyLook p) (hIlpf : IlpfF p)
   cases h6c : callE p k "inst_pis_with" [rdW (m1.arr64 IW) (key + 2), rdW (m1.arr64 IW) (key + 3), r5.headD 0] m5 with
   | error e6 =>
     rw [h6c, ntyE.k_inst_pis_with.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6c
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6c
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   obtain ⟨s6, hs6, -, hiw⟩ := triple_of_callW (instPisWith_spec p hl.hv hl.hip hl.hi1 k ⟨m5, Locals.init []⟩ _ _ _)
@@ -281,7 +280,7 @@ theorem nitE_all {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF
   cases h2 : callE p (k + 1) "pi_binders" [CWF, r1.headD 0] m1 with
   | error e2 =>
     rw [h2, nitE.k_pi_binders.eq_1] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rs, m2⟩ := q2
   rw [h2, nitE.k_pi_binders.arm1] at he
@@ -300,7 +299,7 @@ theorem nitE_all {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF
   cases h3 : callE p (k + 1) "e_view" [rs.getD 2 0] m2 with
   | error e3 =>
     rw [h3, nitE.k_e_view.eq_1] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨rv, m2'⟩ := q3
   obtain ⟨s3, hs3, hm3, hv0, hrv⟩ := triple_of_callW (eView_spec p hl.ty.hv (k + 1) ⟨m2, Locals.init []⟩ _)
@@ -334,7 +333,7 @@ theorem nitE_all {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF
       rdW (m2'.arr64 IW) (ctx + 4), hi, rs.headD 0, rs.getD 1 0] m2' with
   | error e4 =>
     rw [h4, nitE.k_nest_occ_any.eq_1] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r3, m3⟩ := q4
   obtain ⟨s4, hs4, -, hoa⟩ := triple_of_callW (nestOccAny_spec p hl.no hl.hoa (k + 1) ⟨m2', Locals.init []⟩ _ _ _ _ _ _)
@@ -387,7 +386,7 @@ theorem nitE_all {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF
   cases h5 : callE p (k + 1) "lvl_eq_fueled" [(eViewW m2' (rs.getD 2 0)).tail.headD 0, rdW (m3.arr64 IW) (ctx + 9)] m3 with
   | error e5 =>
     rw [h5, nitE.k_lvl_eq_fueled.eq_1] at he; cases he
-    exact lvlEqFueled_errT hq hLC hl.hlf (nvAt_of hnv (by decide +kernel)) _ hC3.stageT huH' hsH _ _ hsL hdv h5
+    exact lvlEqFueled_errT hq hLC hl.hlf (nvAt_of hnv (_root_.L.Checker.nv_mem (by decide +kernel))) _ hC3.stageT huH' hsH _ _ hsL hdv h5
   | ok q5 =>
   obtain ⟨r4, m4⟩ := q5
   rw [h5] at he

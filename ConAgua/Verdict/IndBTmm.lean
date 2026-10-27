@@ -1,5 +1,4 @@
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.IndSumSpec.ParamLevels
 import ConAgua.Arena.RecGenSpec.SlRGrow
 import ConAgua.Arena.GrindAttr
@@ -8,6 +7,7 @@ import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.Records
 import ConRon.Bridge.Inductives.Run
 import ConRon.Bridge.Inductives.RecCheck
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_major_of_member` (lane `verdicts-b`, helper `ib`)
@@ -94,7 +94,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
   | error e3 =>
     rw [h3, tmmE.k_block_shape_lps.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r1, m1⟩ := q3
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -108,7 +108,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
   | error e4 =>
     rw [h4, tmmE.k_param_levels.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r2, m2⟩ := q4
   obtain ⟨s2', hs2', -, hok, hS2, hg2, hH2, hd2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
@@ -156,7 +156,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
   | error e5 =>
     rw [h5, tmmE.k_sl_eq.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r3, m3⟩ := q5
   rw [h5] at he
@@ -201,7 +201,7 @@ theorem tmmE_claim (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl 
   unfold tmmE.k_mk_target_major at he
   split at he
   · cases he
-    exact ErrClaim.of_callE_nv (f := "mk_target_major") hnv (by decide +kernel) ‹callE _ _ _ _ _ = Except.error _›
+    exact ErrClaim.of_callE_nv (f := "mk_target_major") hnv (_root_.L.Checker.nv_mem (by decide +kernel)) ‹callE _ _ _ _ _ = Except.error _›
   · cases he
 
 include hP hnv in

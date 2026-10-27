@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfSlotE
-
 /-!
 # `struct_unit_cert`, `struct_unit_head`, `struct_unit_tail`: error claims (lane `verdicts-b`, helper `k2`)
 
@@ -66,8 +65,8 @@ theorem suhH_spec (p : Prog) (hp : p.lookup "struct_unit_head" = some structUnit
     CTL, EREC, CONST]
 
 theorem whnfUnitE_nv : ∀ f ∈ ["get_app_fn", "env_find", "get_app_args", "ls_node", "reserved_contains_w"],
-    f ∈ L.Checker.nvFns := by
-  decide +kernel
+    f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 section suErr
 variable (r : CoreFnsA) (depth : Nat) (b wta : EIdx)

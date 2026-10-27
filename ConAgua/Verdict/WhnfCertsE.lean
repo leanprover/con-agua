@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels5E
 import ConAgua.Verdict.WhnfIotaRecE
-
 /-!
 # `iota_certs_full`'s verdict claims (lane `verdicts-b`, helper `k2`)
 
@@ -17,8 +16,8 @@ open scoped Lean.Order
 namespace L.Arena
 
 theorem whnfCertsE_nv : ∀ f ∈ ["inst_list", "iota_certs_full_parts", "spn_get", "expr_view_ok",
-    "ctl_get"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "ctl_get"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- The three functions' common error statement (the premises of `ICFSpec`). -/
 def ICFSpecE (p : Prog) (f : FnName) (cond : Word → Word → Word → Prop) (N : Nat) : Prop :=

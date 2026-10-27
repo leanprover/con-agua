@@ -35,8 +35,8 @@ l_model icboE_spec (p : Prog) (hf : p.lookup "check_block_ctors_one" = some chec
   fns [hf ↦ icboE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
 
-theorem blkE1_nv : ∀ f ∈ ["sl_cons", "rec2", "block_shape_lps"], f ∈ _root_.L.Checker.nvFns := by
-  decide +kernel
+theorem blkE1_nv : ∀ f ∈ ["sl_cons", "rec2", "block_shape_lps"], f ∈ _root_.L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}

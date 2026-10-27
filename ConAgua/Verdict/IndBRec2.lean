@@ -3,7 +3,6 @@ import ConAgua.Verdict.IndBRec1
 import ConAgua.Arena.IndT.RecGen7
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # Error refinement of `class_rec_ty_ok` (lane `verdicts-b`, helper `ib`)
 -/
@@ -89,7 +88,7 @@ theorem classRecTyOk_claim (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ 
   | error e2 =>
     rw [h2, classRecTyOkE.k_class_gen_rec_ty.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   by_cases h20 : r2.headD 0 = 0
@@ -127,7 +126,7 @@ theorem classRecTyOk_claim (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ 
   | error e3 =>
     rw [h3, classRecTyOkE.k_cv_new.none] at hW
     cases hW
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, classRecTyOkE.k_cv_new.arm1] at hW

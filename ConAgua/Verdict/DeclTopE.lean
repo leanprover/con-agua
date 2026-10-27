@@ -2,7 +2,6 @@ import ConAgua.Verdict.DeclDefnE
 import ConAgua.Verdict.DeclAxiomE
 import ConAgua.Verdict.DeclFoldE
 import ConAgua.Verdict.DeclQuotE
-
 /-!
 # Phase A's fold: the error claim from the leaves' (lane `verdicts-b`, helper `d`)
 
@@ -50,7 +49,7 @@ theorem checkDeclSpecE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : I
   have hnvP : NVAt p "pin_word" := nvAt_of_closed hnv (by decide +kernel)
   have hnvE : NVAt p "env_push" := nvAt_of_closed hnv (by decide +kernel)
   have hnvL : NVAt p "lvl_eq_c" := fun _ _ _ _ h =>
-    callE_nv hnv (by decide +kernel) _ _ _ h
+    callE_nv hnv (_root_.L.Checker.nv_mem (f := "lvl_eq_c") (by decide +kernel)) _ _ _ h
   refine checkDecl_errT pins dn ds hdc.cd.cd hdc.andInd.toIbeProg hnv ⟨?_, ?_, ?_, ?_, ?_⟩ hia hFD hLD
   · exact fun cv => checkDeclAxiom_errT pins dn ds hdc.cd.axp hdc.knot hap hkp hnv hcE hUL hdc.dninj hdc.quotDn cv
   · exact fun cv v hh => checkDeclDefn_errT pins dn ds hdc.cd.arm hdc.cd.val

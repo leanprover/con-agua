@@ -3,7 +3,6 @@ import ConAgua.Verdict.IndBRec5
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # Error refinements of `class_recs_rules_ok_go`, `class_recs_rules_ok` (lane `verdicts-b`, helper `ib`)
 -/
@@ -151,7 +150,7 @@ theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
   | error e2 =>
     rw [h2, crrE.k_target_major_at.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h2)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, crrE.k_target_major_at.arm1] at he
@@ -176,7 +175,7 @@ theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
   | error e3' =>
     rw [h3', crrE.k_rec4.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h3')
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3')
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3', crrE.k_rec4.arm1] at he
@@ -212,7 +211,7 @@ theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
   | error e5 =>
     rw [h5, crrE.k_sl_cons.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   rw [h5, crrE.k_sl_cons.arm1] at he
   cases he

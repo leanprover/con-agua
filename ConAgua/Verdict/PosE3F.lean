@@ -1,7 +1,6 @@
 import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosE3Fm
 import ConAgua.Arena.IndT.PosFields
-
 /-!
 # `nest_fields`' error claim step (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
 
@@ -80,7 +79,7 @@ theorem fieldsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p 
   cases c1 : callE p n "e_view" [cur] m with
   | error e1 =>
     rw [c1, nfE.k_e_view.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c1
   | ok q1 =>
   obtain ⟨rv, mv⟩ := q1
   obtain ⟨sv, hsv, hsv', hrne, hrv⟩ := triple_of_callW (eView_spec p R.hl.hv n ⟨m, Locals.init []⟩ cur)
@@ -137,7 +136,7 @@ theorem fieldsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p 
   cases c3 : callE p n "intern_fvar" [base + j, d] m1 with
   | error e3 =>
     rw [c3, nfE.k_intern_fvar.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c3
   | ok q3 =>
   obtain ⟨r3, m2⟩ := q3
   obtain ⟨s3, hs3, -, hfv⟩ := triple_of_callW (internFVar_spec p R.hl.hff R.hl.hfp R.hl.hif n ⟨m1, Locals.init []⟩
@@ -162,7 +161,7 @@ theorem fieldsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p 
   cases c4 : callE p n "instantiate1_fast" [CWF, b, r3.headD 0, 0] m2 with
   | error e4 =>
     rw [c4, nfE.k_instantiate1_fast.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c4
   | ok q4 =>
   obtain ⟨rb, m3⟩ := q4
   obtain ⟨s4, hs4, -, hin⟩ := triple_of_callW (i1F_spec p L.hi1 n ⟨m2, Locals.init []⟩ [CWF, b, r3.headD 0, 0])
@@ -185,7 +184,7 @@ theorem fieldsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p 
   cases c5 : callE p n "sl_snoc" [kO, kL, r2.headD 0] m3 with
   | error e5 =>
     rw [c5, nfE.k_sl_snoc.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c5
   | ok q5 =>
   obtain ⟨rk, m4⟩ := q5
   obtain ⟨s5, hs5, -, hs1⟩ := triple_of_callW (slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n ⟨m3, Locals.init []⟩
@@ -200,7 +199,7 @@ theorem fieldsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p 
   cases c6 : callE p n "sl_snoc" [dO, dL, r2.tail.headD 0] m4 with
   | error e6 =>
     rw [c6, nfE.k_sl_snoc_2.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) c6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c6
   | ok q6 =>
   obtain ⟨rd, m5⟩ := q6
   obtain ⟨s6, hs6, -, hs2'⟩ := triple_of_callW (slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n ⟨m4, Locals.init []⟩

@@ -1,7 +1,7 @@
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Verdict.IndBE
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Arena.IndT.Install6
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The error claims of `check_abs_ctor_sorts_one`, `check_abs_ctor_sorts`,
@@ -52,7 +52,7 @@ theorem iaoE_claim (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a
   cases h1 : callE p n "open_pis_at_fvars_f" [nF, tyN, hi] m with
   | error e1 =>
     rw [h1, iaoE.k_open_pis_at_fvars_f.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q =>
   obtain ⟨r1, m1⟩ := q
   have hsim := opfSimRA (p := p) (n := n) (k := nF) (i := hi) hOpf hty hS hA
@@ -157,7 +157,7 @@ theorem iacE_claim (hApd : ApdF p) (hP : AbsProg p) (ctx isP : Word) (c : NestCt
   cases h1 : callE p n "all_level_params_defined" [UInt64.ofNat lo, UInt64.ofNat ll, ew] m with
   | error e1 =>
     rw [h1, iacE.k_all_level_params_defined.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   have h := apdCall_simR hApd n (UInt64.ofNat lo) (UInt64.ofNat ll) ew hew32 c.lps hS hA
@@ -179,7 +179,7 @@ theorem iacE_claim (hApd : ApdF p) (hP : AbsProg p) (ctx isP : Word) (c : NestCt
   cases h2 : callE p n "nest_ctx_hi_at" [ctx, 0] m1 with
   | error e2 =>
     rw [h2, iacE.k_nest_ctx_hi_at.none] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, hpost2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)

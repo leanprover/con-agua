@@ -4,7 +4,6 @@ import ConAgua.Verdict.IndBPins
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # Error refinement of `class_majors` (lane `verdicts-b`, helper `ib`)
 
@@ -86,7 +85,7 @@ theorem clmE_claim (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape
   | error e1 =>
     rw [h1, clmE.k_intern_const.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -124,7 +123,7 @@ theorem clmE_claim (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape
   | error e2' =>
     rw [h2, clmE.k_mk_app_n_f.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hs2'⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
@@ -245,7 +244,7 @@ theorem clmE_claim (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape
     | error e6 =>
       rw [h6, clmE.k_sl_cons.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
     | ok q6 =>
       rw [h6, clmE.k_sl_cons.arm1] at he
       cases he

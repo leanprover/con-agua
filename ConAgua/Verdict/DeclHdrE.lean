@@ -2,7 +2,6 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.UnresolvedE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # The verdict claims of `install_value_guards` and `install_header` (lane `verdicts-b`, helper `d`)
 
@@ -51,8 +50,8 @@ def declNvList : List FnName :=
    "rom_basis_decls_a", "quot_pin_hit", "pin_word", "iw_reset", "promote_new", "promote_vg",
    "pend_push"]
 
-theorem declNv_mem : ∀ f ∈ declNvList, f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem declNv_mem : ∀ f ∈ declNvList, f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- A failing callee of the list claims nothing. -/
 theorem nvl {p : Prog} (hnv : closedNV p L.Checker.nvFns = true) {α : Type} {T : AM α} {a : AState}

@@ -259,24 +259,34 @@ theorem rpGo_step (n : Nat) (ih : RpNodeSpec p n) : RpGoSpec p (n + 1) := by
   unfold RpNodeSpec at ih
   intro s₀ no nl us b nn f h
   simp only [invoke_eq _ hgo, callFn, replaceAppsGo]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      eView_spec p hl.hv n, appHole_spec' p hl n, memoFindG_spec raSch p _ hf n,
-      memoPutG_spec raSch p _ hput n, ih] <;> finish (gen := 20) [St.setLocs_mem']
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+    eView_spec p hl.hv n, appHole_spec' p hl n, memoFindG_spec raSch p _ hf n,
+    memoPutG_spec raSch p _ hput n, ih]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, St.setLocs_mem']
 
 include hl hk hnode in
 theorem rpNode_step (n : Nat) (ih : RpGoSpec p n) : RpNodeSpec p (n + 1) := by
   unfold RpGoSpec at ih
   intro s₀ no nl us b nn f1 h g x y z
   simp only [invoke_eq _ hnode, callFn, replaceAppsNode]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      appHole_spec' p hl n, ih,
-      mkApp_spec p hk.hd hk.appF hk.appP hk.appI hk.appM n,
-      mkLam_spec p hk.hd hk.lamF hk.lamP hk.lamI hk.lamM n,
-      mkForall_spec p hk.hd hk.forF hk.forP hk.forI hk.forM n,
-      mkLet_spec p hk.hd hk.ltF hk.ltP hk.ltI hk.ltM n,
-      mkProj_spec p hk.hd hk.prjF hk.prjP hk.prjI hk.prjM n] <;> finish (gen := 20) [St.setLocs_mem']
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+    appHole_spec' p hl n, ih,
+    mkApp_spec p hk.hd hk.appF hk.appP hk.appI hk.appM n,
+    mkLam_spec p hk.hd hk.lamF hk.lamP hk.lamI hk.lamM n,
+    mkForall_spec p hk.hd hk.forF hk.forP hk.forI hk.forM n,
+    mkLet_spec p hk.hd hk.ltF hk.ltP hk.ltI hk.ltM n,
+    mkProj_spec p hk.hd hk.prjF hk.prjP hk.prjI hk.prjM n]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, St.setLocs_mem']
 
 include hl hk hf hput hgo hnode in
 theorem rpGo_spec (n : Nat) : RpGoSpec p n ∧ RpNodeSpec p n := by

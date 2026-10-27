@@ -1,9 +1,9 @@
 import ConAgua.Arena.IndT.RecCheckPins
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_pin_tys`, `target_major_pins` (lane `verdicts-b`, helper `ib`)
@@ -229,7 +229,7 @@ theorem tmpE_claim (hp : TmpProg p) (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a :
   | error e2 =>
     rw [h2, tmpE.k_intern_const.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h2)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (internConst_spec p hp.cf hp.cp hp.ic N ⟨s1.mem, Locals.init []⟩ wi wu)
@@ -266,7 +266,7 @@ theorem tmpE_claim (hp : TmpProg p) (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a :
   | error e3' =>
     rw [h3, tmpE.k_mk_app_n_f.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, tmpE.k_mk_app_n_f.arm1] at he

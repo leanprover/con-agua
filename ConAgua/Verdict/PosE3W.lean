@@ -1,7 +1,6 @@
 import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosE3Cm
 import ConAgua.Arena.IndPosSpec.P2sfW
-
 /-!
 # `nest_ctors_walk`'s error claim step (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
 
@@ -62,7 +61,7 @@ theorem walkOKE_step (n : Nat) (ihE : NbOKE p dn vis fe env n) : WalkOKE p dn vi
           rf.tail.tail.tail.tail.headD 0] mf with
       | error e2 =>
         rw [c2, nwE.k_close_telescope.none] at h; cases h
-        exact ErrClaim.of_callE_nv hnv (by decide +kernel) c2
+        exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c2
       | ok q2 => obtain ⟨rc, mc⟩ := q2; rw [c2, nwE.k_close_telescope.arm1] at h; cases h
   by_cases hr : root ≠ 0
   · rw [nwE.arm1 p n m vis ctx root fu po pl hi nF crest ns hr] at he
@@ -70,7 +69,7 @@ theorem walkOKE_step (n : Nat) (ihE : NbOKE p dn vis fe env n) : WalkOKE p dn vi
     cases c1 : callE p n "whnf_walk_fuel" [crest] m with
     | error e1 =>
       rw [c1, nwE.k_whnf_walk_fuel.none] at he; cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) c1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) c1
     | ok q1 =>
     obtain ⟨rw, m1⟩ := q1
     rw [c1, nwE.k_whnf_walk_fuel.arm1] at he

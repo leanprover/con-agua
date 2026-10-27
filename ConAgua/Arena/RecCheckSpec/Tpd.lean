@@ -57,18 +57,23 @@ theorem pdsK5_some : pdsK5 cR n vis d no nl lvls ho hl pfo pfl b (some (r, m)) =
 end arms
 attribute [ind_grind] pdsK11_some pdsK10_some pdsK9_some pdsK8_eq pdsK8_ne pdsK7_some pdsK6_ok pdsK5_some
 
-set_option maxHeartbeats 2000000 in
 theorem tpdStep_spec (p : Prog) (L : TpLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis d no nl lvls ho hl pfo pfl a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_params_def_eq_step"
       [vis, d, no, nl, lvls, ho, hl, pfo, pfl, a, b]
     ⦃fun r s' => LocEq s' s₀ ∧ pdsW cR n s₀.mem vis d no nl lvls ho hl pfo pfl a b = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ L.step]
   simp only [callFn, targetParamsDefEqStep]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bvarBL_spec p L.bvb n, fvbF_spec p L.hf n, tcp_specF p L.rc n, ta_specF p L.ta n,
-      hcR n "infer_type_core", hcR n "is_def_eq_core"] <;>
-    finish (gen := 40) (instances := 20000) [pdsW, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    bvarBL_spec p L.bvb n, fvbF_spec p L.hf n, tcp_specF p L.rc n, ta_specF p L.ta n,
+    hcR n "infer_type_core", hcR n "is_def_eq_core"]
+  all_goals (try clear hcR)
+  all_goals subst_vars
+  -- locals resolved by `simp` before `grind` (the `sym … finish` form: 23 s)
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+  all_goals grind (gen := 40) (instances := 20000) [lang_grind, arena_grind, ind_grind, pdsW]
 
 section arms
 variable (cR : CallM) (n : Nat) (m m1 : Mem) (vis d no nl lvls ho hl pfo pfl ao al bo bl : Word) (r : List Word)

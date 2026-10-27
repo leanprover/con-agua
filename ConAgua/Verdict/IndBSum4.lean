@@ -3,7 +3,6 @@ import ConAgua.Arena.IndSumSpec.CtorX
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # Error refinement of `check_sum_ctors` (lane `verdicts-b`, helper `ib`)
 -/
@@ -156,7 +155,7 @@ theorem sctsE_claim (hP : SumProg p)
   | error e2 =>
     rw [h2, sctsE.k_rec2.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h2)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2)
   | ok q2 =>
   obtain ⟨rn, m2⟩ := q2
   rw [h2, sctsE.k_rec2.arm1] at he
@@ -170,7 +169,7 @@ theorem sctsE_claim (hP : SumProg p)
   | error e3 =>
     rw [h3, sctsE.k_rec2_2.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h3)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3)
   | ok q3 =>
   obtain ⟨rh, m3⟩ := q3
   rw [h3, sctsE.k_rec2_2.arm1] at he
@@ -203,7 +202,7 @@ theorem sctsE_claim (hP : SumProg p)
   | error e5 =>
     rw [h5, sctsE.k_sl_cons.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5, sctsE.k_sl_cons.arm1] at he
@@ -211,7 +210,7 @@ theorem sctsE_claim (hP : SumProg p)
   | error e6 =>
     rw [h6, sctsE.k_sl_cons_2.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
   | ok q6 =>
   rw [h6, sctsE.k_sl_cons_2.arm1] at he
   cases he

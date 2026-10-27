@@ -5,7 +5,6 @@ import ConAgua.Arena.KnotE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # The knot's `defeq` slot: its error claim one level up (lane `verdicts-b`, helper `k3`)
 
@@ -48,8 +47,8 @@ theorem knot_defeq_missE (mode : ConLeche.CheckMode) (fe : IFEnv) (F d : Nat) (x
   rfl
 
 /-- The memo's calls are outside the verdict closure. -/
-theorem defeqSlotE_nv : ∀ f ∈ ["de_find", "de_put"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem defeqSlotE_nv : ∀ f ∈ ["de_find", "de_put"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- **The knot's `defeq` slot's error claim one level up**, from `defeq_body`'s. -/
 theorem defeqSlotE_of (p : Prog) (hp : KnotProg p) (hnv : closedNV p L.Checker.nvFns = true)
@@ -173,8 +172,8 @@ structure DefeqBodyCalleesE (p : Prog) : Prop where
   lazyDeltaReduction : LazyDeltaReductionE p
   defeqTail : DefeqTailE p
 
-theorem defeqBodyE_nv : ∀ f ∈ ["is_bool_true", "has_fvar"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem defeqBodyE_nv : ∀ f ∈ ["is_bool_true", "has_fvar"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- **`defeq_body`'s error claim**: `DefeqBodySpecE p n`, from the ok refinements of its callees
 (`DefeqBodyCallees`), their error claims (`DefeqBodyCalleesE`) and the knots up to `n`. -/

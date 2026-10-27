@@ -3,7 +3,6 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.UnresolvedE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # `class_const_ok_header`'s error claim (lane `verdicts-b`, helper `ib`)
 
@@ -41,8 +40,8 @@ def ibNvList : List FnName :=
    "rom_basis_decls_a", "quot_pin_hit", "pin_word", "iw_reset", "promote_new", "promote_vg",
    "pend_push"]
 
-theorem ibNv_mem : ∀ f ∈ ibNvList, f ∈ L.Checker.nvFns := by
-  decide +kernel
+theorem ibNv_mem : ∀ f ∈ ibNvList, f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- A failing callee of the list claims nothing. -/
 theorem ibNvl {p : Prog} (hnv : closedNV p L.Checker.nvFns = true) {α : Type} {T : AM α} {a : AState}

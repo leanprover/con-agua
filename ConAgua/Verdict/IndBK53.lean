@@ -1,8 +1,8 @@
 import ConAgua.Arena.IndT.RecCheckK53
 import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_k53`, `target_k53_heads` (lane `verdicts-b`, helper `ib`)
@@ -90,7 +90,7 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   | error e1 =>
     rw [h1, tkhE.k_get_app_fn_f.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨rl, m1⟩ := q1
   rw [h1, tkhE.k_get_app_fn_f.arm1] at he
@@ -112,7 +112,7 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   | error e2 =>
     rw [h2, tkhE.k_get_app_fn_f_2.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rm, m2⟩ := q2
   obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (gafF_spec p L.ad n ⟨s1.mem, Locals.init []⟩ [CWF, majDom])
@@ -143,7 +143,7 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   | error e3 =>
     rw [h3, tkhE.k_e_view.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, hs3x, hne3, hr3⟩ := triple_of_callW (eView_spec p L.hv n ⟨s2.mem, Locals.init []⟩ (rl.headD 0))
@@ -156,7 +156,7 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   | error e4 =>
     rw [h4, tkhE.k_e_view_2.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h4
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   obtain ⟨s4, hs4, hs4x, hne4, hr4⟩ := triple_of_callW (eView_spec p L.hv n ⟨s2.mem, Locals.init []⟩ (rm.headD 0))
@@ -186,7 +186,7 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   | error e5 =>
     rw [h5, tkhE.k_get_app_args_f.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨ra, m5⟩ := q5
   rw [h5, tkhE.k_get_app_args_f.arm1] at he
@@ -205,7 +205,7 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   | error e6 =>
     rw [h6, tkhE.k_get_app_args_f_2.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
   | ok q6 =>
   obtain ⟨rb, m6⟩ := q6
   obtain ⟨s6, hs6, -, h6m⟩ := triple_of_callW (gaaF_spec p L.ad n ⟨s5.mem, Locals.init []⟩ [CWF, majDom])
@@ -310,7 +310,7 @@ theorem tkE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   | error e1 =>
     rw [h1, tkE.k_strip_pis.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h1)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1)
   | ok q1 =>
   obtain ⟨rs, m1⟩ := q1
   obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (stripPis_specF p L.strip n ⟨m, Locals.init []⟩ tel f)
@@ -341,7 +341,7 @@ theorem tkE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   | error e2 =>
     rw [h2, tkE.k_target_k53_tele.none] at he
     cases he
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h2
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨rt, m2⟩ := q2
   obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (tte_spec p L n ⟨s1.mem, Locals.init []⟩ (rs.tail.headD 0)

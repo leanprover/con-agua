@@ -1,7 +1,7 @@
 import ConAgua.Verdict.WhnfModelsE
 import ConAgua.Arena.KnotE
 import ConAgua.Arena.DefEqKnot
-import ConAgua.Checker.NoVerdictFns
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The knot's `whnf_core` and `whnf` slots' verdict claims (lane `verdicts-b`, helper `k2`)
@@ -44,8 +44,8 @@ theorem ErrClaim.of_callE_zeroW {α : Type} {T : AM α} {a : AState} {p : Prog} 
 
 /-- The callees of the whnf slots' bodies outside the verdict closure. -/
 theorem whnfSlotE_nv : ∀ f ∈ ["inst1", "wk_find", "wk_put", "wc_find", "wc_put", "wh_find",
-    "wh_put", "unfold_definition"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "wh_put", "unfold_definition"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-! ## `whnf_core_step` -/
 

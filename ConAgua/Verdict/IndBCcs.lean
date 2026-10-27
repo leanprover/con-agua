@@ -2,7 +2,6 @@ import ConAgua.Verdict.IndBCos
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-
 /-!
 # Error refinement of `classes_ctors` (lane `verdicts-b`, helper `ib`)
 
@@ -144,7 +143,7 @@ theorem ccsE_claim (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNa
   | error e2 =>
     rw [h2, ccsE.k_rec2.none] at he
     cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (by decide +kernel) h2)
+    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, ccsE.k_rec2.arm1] at he
@@ -212,7 +211,7 @@ theorem classesCtors_claim (N : Nat) (hN : N ≤ 2 ^ 62) (s₀ : St) (a₀ : ASt
     | error e1 =>
       rw [h1, ccsE.k_iw_alloc.none] at he
       cases he
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
     | ok q1 =>
       obtain ⟨r1, m1⟩ := q1
       rw [h1, ccsE.k_iw_alloc.arm1] at he

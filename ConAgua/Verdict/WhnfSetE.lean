@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfSlotE
-
 /-!
 # `struct_eta_cert` and its pieces: error claims (lane `verdicts-b`, helper `k2`)
 
@@ -26,8 +25,8 @@ def DefeqLstWE (p : Prog) : Prop :=
       (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) s₀ a₀
 
 theorem whnfSetE_nv : ∀ f ∈ ["get_app_fn", "env_find", "get_app_args", "ls_node", "reserved_contains_w",
-    "lvls_eq_c", "eta_projs", "eta_ctor_shape", "ind_caps", "er_slice_eq", "tower_slots_all"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "lvls_eq_c", "eta_projs", "eta_ctor_shape", "ind_caps", "er_slice_eq", "tower_slots_all"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-! ## `struct_eta_cert_tail` -/
 

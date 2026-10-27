@@ -44,11 +44,16 @@ theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
   | succ k ih =>
     intro s₀ vis ctx mm off l oo ol
     simp only [invoke_eq _ hl.hgo, callFn, nestHolesGoL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p hl.hx hl.hg hl.hf k, instPisWith_spec p hl.hv hl.hip hl.hi1 k,
-        internFVar_spec p hl.hff hl.hfp hl.hif k, slSnoc_specW p hl.ha hl.hc hl.hsn k, ih] <;>
-      finish (gen := 20) [rdW_eq]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+      envFind_specW p hl.hx hl.hg hl.hf k, instPisWith_spec p hl.hv hl.hip hl.hi1 k,
+      internFVar_spec p hl.hff hl.hfp hl.hif k, slSnoc_specW p hl.ha hl.hc hl.hsn k, ih]
+    all_goals subst_vars
+    -- locals resolved by `simp` before `grind` (the `sym … finish` form: 6.5 s)
+    all_goals (try simp only [LocEq] at *)
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 theorem nestHoles_spec (p : Prog) (hl : NhLook p) (k : Nat) (s₀ : St) (vis ctx : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_holes" [vis, ctx]

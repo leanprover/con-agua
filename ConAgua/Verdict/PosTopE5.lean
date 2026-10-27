@@ -3,7 +3,6 @@ import ConAgua.Verdict.PosTopEMono
 import ConAgua.Verdict.IndA3
 import ConAgua.Verdict.PosTopE2
 import ConAgua.Verdict.PosTopE3
-
 /-!
 # `check_block_positivity`'s and `nest_seeds`' error claims, discharged (lane `verdicts-b`,
 helper `ia2`, fork `top`)
@@ -77,7 +76,7 @@ theorem cbpE_claim (hP : PosBlkProg p) {fs : List FnName} (_hclP : closedA p pos
   cases h1 : callE p (n + 2) "block_nest_ctx" [vis, q, cvO, cvL] m with
   | error e1 =>
     rw [h1, cbpE.k_block_nest_ctx.none] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h1
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, cbpE.k_block_nest_ctx.arm1] at h
@@ -169,7 +168,7 @@ theorem cbpE_claim (hP : PosBlkProg p) {fs : List FnName} (_hclP : closedA p pos
   cases h3 : callE p (n + 2) "check_block_positivity_init" [] s2.mem with
   | error e3 =>
     rw [h3, cbpE.k_check_block_positivity_init.none] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h3
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, cbpE.k_check_block_positivity_init.arm1] at h
@@ -224,7 +223,7 @@ theorem cbpE_claim (hP : PosBlkProg p) {fs : List FnName} (_hclP : closedA p pos
   cases h5 : callE p (n + 2) "pin_word" [53] s4.mem with
   | error e5 =>
     rw [h5, cbpE.k_pin_word.none] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h5
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5, cbpE.k_pin_word.arm1] at h
@@ -241,7 +240,7 @@ theorem cbpE_claim (hP : PosBlkProg p) {fs : List FnName} (_hclP : closedA p pos
   cases h6 : callE p (n + 2) "lvl_eq_true" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with
   | error e6 =>
     rw [h6, cbpE.k_lvl_eq_true.none] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (by decide +kernel) h6
+    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   rw [h6, cbpE.k_lvl_eq_true.arm1] at h
@@ -285,7 +284,7 @@ theorem cbpE_claim (hP : PosBlkProg p) {fs : List FnName} (_hclP : closedA p pos
     cases h8 : callE p (n + 2) "check_block_positivity_nfs" [r4.headD 0, r4.tail.headD 0] m7 with
     | error e8 =>
       rw [h8, cbpE.k_check_block_positivity_nfs.none] at h; cases h
-      exact ErrClaim.of_callE_nv hnv (by decide +kernel) h8
+      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h8
     | ok q8 => obtain ⟨r8, m8⟩ := q8; rw [h8, cbpE.k_check_block_positivity_nfs.arm1] at h; cases h
   | error e7 =>
   rw [h7, cbpE.k_check_abs_ctor_sorts_all.none] at h; cases h

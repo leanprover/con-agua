@@ -1,7 +1,6 @@
 import ConAgua.Verdict.WhnfModels2E
 import ConAgua.Verdict.WhnfSlotE
 import ConAgua.Arena.Checker
-
 /-!
 # The `proj` arm's verdict claims (lane `verdicts-b`, helper `k2`)
 
@@ -17,8 +16,8 @@ open scoped Lean.Order
 namespace L.Arena
 
 theorem whnfProjE_nv : ∀ f ∈ ["str_lit_supported", "str_lit_ctor", "find_proj",
-    "reduce_proj_head"], f ∈ L.Checker.nvFns := by
-  decide +kernel
+    "reduce_proj_head"], f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 theorem projLitToCtor_err_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word) (hh : HW h)
     (hg : h >>> 28 = 8) (a a' a₁ : AState) (s : String)
