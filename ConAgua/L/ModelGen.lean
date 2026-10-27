@@ -2009,11 +2009,12 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     pure (String.intercalate ", " (simpBase ++ models ++ user))
   -- Before `simp_all`, the induction hypotheses `ihs` are cleared: `vcgen` has used them, and
   -- `simp_all` would simplify them again and again, against every other hypothesis (IndBTmn
-  -- 60 s -> 3 s). With `locals`, the locals are first evaluated by one `simp only … at *`: `vcgen`
+  -- 106 s -> 9 s). With `locals`, the locals are first evaluated by one `simp only … at *`: `vcgen`
   -- leaves each local as a chain of `setLoc`s through the states of all statements before it, in
-  -- every hypothesis, and `simp_all` evaluates them again in each round (IndBGrpM 270 s -> 85 s).
-  -- Not the default: on small functions the extra pass costs more than it saves (WhnfModels7E), and
-  -- where `simp_all` does not apply, `grind` needs the `LocEq`s folded (CkcW).
+  -- every hypothesis, and `simp_all` evaluates them again in each round (IndBGrpM 335 s -> 93 s).
+  -- Not the default: on small functions the extra pass costs more than it saves (WhnfModels7E runs
+  -- out of heartbeats, ClassFeR 35 s -> 48 s), and where `simp_all` fails, `grind` needs the
+  -- `LocEq`s folded (CkcW).
   let stepTac (attrs vcg : String) (ihs : List String) : String := match simpTxt? with
     | some l =>
       let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
