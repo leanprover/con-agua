@@ -49,12 +49,6 @@ structure R4 (l m : Mem) (pb : ByteArray) (pre : PreludeIx) (a : AState) : Prop 
   rok : RecsOK m pre.decls
   mode : ModeOK m
 
-theorem bytes_pos {l m : Mem} {pb : ByteArray} (_ : Since l m pb) (_ : l.HasB IN) :
-    m.HasB IN := trivial
-
-theorem loadMem_bytes (b pb : ByteArray) (sz : TieredArray → Nat) : (loadMem b pb sz).HasB IN :=
-  trivial
-
 theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArray)
     (sz : TieredArray → Nat) (a : AState) :
     RelSpec checkerProg "builtin_prelude" (fun m => R3 (loadMem b pb sz) m pb a) fun _ m =>
@@ -65,7 +59,7 @@ theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteAr
     (stageFrame_builtin_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hbp⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   have hc := CapsOK.keep h3.since.keep h3.since.caps
   obtain ⟨st, a', hb, hA, hD, ht, h240, hrk, hmo⟩ := hbp ⟨h3.arena, h3.sdr, h3.twin, by have := hc.pool; omega,
-    bytes_pos h3.since (loadMem_bytes b pb sz), h3.mode⟩
+    trivial, h3.mode⟩
   obtain ⟨hstep, -, -, -⟩ := ConRon.Bridge.Frontend.builtinPreludeE_run h3.twin.ok h3.twin.off
     h3.twin.pins hb
   have hpf0 : PinFacts s₀.mem a.pins := ⟨h3.rset, h3.stk, h3.pinsFull, h3.pin0⟩

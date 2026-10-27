@@ -111,17 +111,17 @@ theorem checkB_thr0 (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
   have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 HDRF).size), (s₀.mem.arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb; exact hv hb
   have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v
-      { bytes := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).bytes,
-        words := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).words,
+      { bytes := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).bytes,
+        words := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).words,
         glob := fun h => if h = ⟨10⟩ then 1
-          else (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).glob h } a := by
+          else (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).glob h } a := by
     intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
   have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v s₀.mem a := by
     intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
   have hI1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → s₀.mem.glob ⟨10⟩ = 1 := by
     intro h0; have := hI; simp only [seedMem, ite_eq_right h0] at this; exact this
-  have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 HDRF).size),
-      ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 HDRF)[(3 : Word).toNat] = v := by
+  have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).arr64 HDRF).size),
+      ((s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb
     simp only [arr64_copy64_ne _ _ _ _ _ _ (show (HDRF : TieredArray) ≠ CTL by decide)] at hb ⊢
     exact hv' hb

@@ -164,7 +164,7 @@ theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : I
     (installFoldGo_start (checkerProg_loopTopPB _) hLC (frontDecls_of_prefix hpx)
     n hn s₀ cnt hcnt' hT h7.arena hcore h7.pinsFull h7.decls h7.pinSets h7.iw (loopZero_of_since h7.since)
     h7.pin0 (by have := hcaps.1 EREC (by decide); omega) (by have := hcaps.1 SPN (by decide); omega)
-    (by have := hcaps.1 145 (by decide); omega) h7.mode))) ?_
+    (by have := hcaps.1 BSTK (by decide); omega) h7.mode))) ?_
   rintro r s' ⟨⟨hl, fe, pend, a', h1, h2⟩, hk, -⟩
   exact ⟨hl, fe, pend, a', h1, h2, by rw [hk.arr8]; exact hpb⟩
 
