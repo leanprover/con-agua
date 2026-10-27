@@ -27,10 +27,11 @@ structure PinFacts (m : Mem) (p : Pins) : Prop where
   pin0 : pinW m 0 ≠ 0
 
 theorem PinFacts.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {p : Pins} (h : PinFacts m p)
-    (hf : MemFrame A C m m') (hP : PINS ∉ A) (hR1 : RSET ∉ A) (hR2 : RMEMO ∉ A)
+    (hf : MemFrame A C m m') (hP : (PINS : TieredArray) ∉ A) (hR1 : (RSET : TieredArray) ∉ A)
+    (hR2 : (RMEMO : TieredArray) ∉ A)
     (h131 : (131 : Word) ∉ C) (h132 : (132 : Word) ∉ C) (h148 : (148 : Word) ∉ C) :
     PinFacts m' p := by
-  have he : m'.arr64 PINS = m.arr64 PINS := hf.1 PINS hP (by decide)
+  have he : m'.arr64 PINS = m.arr64 PINS := hf.1 _ hP (by decide)
   refine ⟨h.rset.frame hf hR1 hR2 h148 h132, ?_, h.full.congr he, ?_⟩
   · simp only [stkTop] at h ⊢; rw [hf.2.1 131 h131]; exact h.stk
   · simp only [pinW, he]; exact h.pin0
@@ -48,11 +49,11 @@ structure R4 (l m : Mem) (pb : ByteArray) (pre : PreludeIx) (a : AState) : Prop 
   rok : RecsOK m pre.decls
   mode : ModeOK m
 
-theorem bytes_pos {l m : Mem} {pb : ByteArray} (h : Since l m pb) (hl : l.HasB IN) :
-    m.HasB IN := by unfold Mem.HasB at *; rw [h.keep.1]; exact hl
+theorem bytes_pos {l m : Mem} {pb : ByteArray} (_ : Since l m pb) (_ : l.HasB IN) :
+    m.HasB IN := trivial
 
-theorem loadMem_bytes (b pb : ByteArray) (sz : TieredArray → Nat) : (loadMem b pb sz).HasB IN := by
-  simp [loadMem, Mem.HasB]
+theorem loadMem_bytes (b pb : ByteArray) (sz : TieredArray → Nat) : (loadMem b pb sz).HasB IN :=
+  trivial
 
 theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArray)
     (sz : TieredArray → Nat) (a : AState) :
