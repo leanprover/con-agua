@@ -399,7 +399,7 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP])
+    (by decide)
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
