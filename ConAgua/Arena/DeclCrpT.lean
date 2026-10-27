@@ -40,7 +40,8 @@ open ConRon.Bridge (CheckOK StepOK FoldOK CoreSpec)
 
 local notation "V" => ConLeche.CheckMode.verified
 
-theorem leafA_app : ∀ b ∈ [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER], b ∈ leafA := by
+theorem leafA_app :
+    ∀ b ∈ ([AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] : List TieredArray), b ∈ leafA := by
   decide +kernel
 theorem leafC_app₀ : (4 : Word) ∈ leafC ∧ (5 : Word) ∈ leafC := by decide +kernel
 /-- By cases: `decide +kernel` on the bounded form over `Word` takes >16 GB. -/
