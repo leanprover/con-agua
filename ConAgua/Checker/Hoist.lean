@@ -1,3 +1,4 @@
+import ConAgua.Front.IndApply
 import ConAgua.Arena.DeclArmsNat
 import ConAgua.L.ProgHas
 import ConAgua.Arena.IndCopy

@@ -1,3 +1,4 @@
+import ConAgua.Arena.WhnfBase
 
 /-!
 # Type inference: `inferBody`, `inferBodyIO` and their clauses (phase 7, lane `defeq`)

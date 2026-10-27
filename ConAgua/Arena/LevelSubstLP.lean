@@ -1,4 +1,5 @@
 import ConAgua.Arena.LevelSubstL
+import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LevelGrindAttr
 import ConAgua.L.GrindAttr

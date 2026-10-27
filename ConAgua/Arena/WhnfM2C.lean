@@ -1,3 +1,4 @@
+import ConAgua.Arena.WhnfBase
 
 /-!
 # `major_to_ctor` split into small functions

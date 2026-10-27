@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndIface
 
 /-!
 # GrcTwinA

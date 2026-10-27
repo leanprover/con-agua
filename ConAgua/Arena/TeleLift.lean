@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndIface
 
 /-!
 # `instPisAtLift`, `fvarTypeD`, `fvarTypeDs` in L (lane `whnf3`)

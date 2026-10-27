@@ -1,3 +1,5 @@
+import ConAgua.Front.IndFields
+import ConAgua.Front.ApplyDecl
 import ConAgua.Census.Attr
 
 /-!

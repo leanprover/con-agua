@@ -1,3 +1,4 @@
+import ConAgua.Arena.WhnfBase
 
 /-!
 # `instantiateLevelParams` in L: `inst_lp`, its walk, its three memos

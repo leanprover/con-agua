@@ -1,3 +1,4 @@
+import ConAgua.Arena.Tiers
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

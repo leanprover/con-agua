@@ -1,3 +1,4 @@
+import ConAgua.Arena.Tiers
 
 /-!
 # String literals in L: `str_lit_supported`, `str_lit_ctor` (lane `defeq2`, helper `defeq2-str`)

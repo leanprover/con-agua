@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.LevelHeap
 import ConAgua.Census.Attr
 public import ConLeche.Kernel.Expr
+import ConAgua.Arena.Pool
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
