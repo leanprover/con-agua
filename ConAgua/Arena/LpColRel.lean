@@ -53,7 +53,7 @@ theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s
 /-- **The frame of a `mk_*`**: the interning's arrays and counts, then the derived column `A`. -/
 theorem mkK_frame {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : A ≠ CTL) {c s d r : Word}
     {m m' : Mem} {ks : List Word} (h : mkK A c s d (consInternM C m ks) = some (r, m')) :
-    MemFrame (C.wset ++ [A, tier1 A]) [C.ca, C.ca + 1] m m' := by
+    MemFrame (C.wset ++ [(A : TieredArray), tier1 A]) [C.ca, C.ca + 1] m m' := by
   rcases hI : consInternM C m ks with _ | ⟨r₁, m₁⟩ <;> rw [hI] at h
   · cases h
   rcases hP : derPutW A c m₁ s r₁ d with _ | m₂ <;> simp only [mkK_some, hP, reduceCtorEq] at h

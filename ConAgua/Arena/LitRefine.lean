@@ -664,7 +664,7 @@ section grow
 variable (m m' : Mem) (hg : Grows m m')
 
 include hg in
-theorem grow_arr (b : ArrId) (hb : b ≠ POOL ∧ b ≠ POOL1) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := by
+theorem grow_arr (b : TieredArray) (hb : b ≠ POOL ∧ b ≠ POOL1) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := by
   rw [hg.frame.arr b hb.1 hb.2, Mem.arr64_set64_ne _ _ _ _ _ hc]
 
 include hg in
@@ -738,7 +738,7 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
 
 /- `5 + 7` twice and `12` (`7 + 5`): one node, handle `0x80000000`; `5 + 5` is the second. -/
 #guard
-  let m : Mem := Mem.ofWords <| [(CTL, #[2] ++ Array.replicate 63 0)] ++
+  let m : Mem := Mem.ofWords <| [((CTL : TieredArray), #[2] ++ Array.replicate 63 0)] ++
     withTiers [(POOL, #[5, 7, 0, 0, 0, 0, 0, 0, 0, 0]), (REC, Array.replicate 64 0),
       (SLOT, Array.replicate consTestWords 0)]
   let go (m : Mem) (a b : Word) : Option (Word × Mem) :=

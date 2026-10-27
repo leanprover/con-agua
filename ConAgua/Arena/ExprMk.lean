@@ -197,7 +197,7 @@ AFTER the append. Before reading, they zero the new node's range slot: then ever
 the same range, fvar range and level-parameter bit as before the append, the new node itself
 included (before: past the count, `0`; after: the zeroed slot, `0`). -/
 
-theorem rdW_set64E (m : Mem) (a b : ArrId) (k v x : Word) :
+theorem rdW_set64E (m : Mem) (a b : TieredArray) (k v x : Word) :
     rdW ((m.set64 a k v).arr64 b) x =
       if b = a ∧ k = x ∧ k.toNat < (m.arr64 a).size then v else rdW (m.arr64 b) x := by
   by_cases h : b = a
@@ -205,7 +205,7 @@ theorem rdW_set64E (m : Mem) (a b : ArrId) (k v x : Word) :
     simp only [rdW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; grind
   · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
 
-theorem Mem.set64_set64_same (m : Mem) (a : ArrId) (i v w : Word) :
+theorem Mem.set64_set64_same (m : Mem) (a : TieredArray) (i v w : Word) :
     (m.set64 a i v).set64 a i w = m.set64 a i w := by
   have := Mem.arr64_set64_same m a i v
   simp only [Mem.set64] at this ⊢
@@ -246,7 +246,7 @@ def BinTbl (R S D : ArrId) (k : Word) : Prop :=
 section pushZ
 variable {R S D : ArrId} {k : Word} (m : Mem) (t f a : Word)
 
-theorem pushZ_arr (b : ArrId) (h1 : b ≠ CTL) (h2 : b ≠ tierA R t) (h4 : b ≠ tierA D t) :
+theorem pushZ_arr (b : TieredArray) (h1 : b ≠ CTL) (h2 : b ≠ tierA R t) (h4 : b ≠ tierA D t) :
     (pushZ R S D k m t f a).arr64 b = m.arr64 b := by
   simp [pushZ, Mem.arr64_set64_ne, *]
 
@@ -270,12 +270,11 @@ theorem pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
     FADER, FAREC] <;> rfl
 
 /-- A field of a store other than the pushed table's records and range column is unchanged. -/
-theorem tfld_pushZ_other (X : TRec) (hX : X.arr < 256) (hc : X.arr ≠ CTL) (hR : X.arr ≠ R)
-    (hD : X.arr ≠ D) (hRl : R < 256) (hDl : D < 256) (u i g : Word) :
+theorem tfld_pushZ_other (X : TRec) (hc : X.arr ≠ CTL) (hR : X.arr ≠ R)
+    (hD : X.arr ≠ D) (u i g : Word) :
     tfld (pushZ R S D k m t f a) X u i g = tfld m X u i g := by
   simp only [tfld]
-  rw [pushZ_arr m t f a _ (by simpa using tierA_ne hX (show CTL < 256 by decide) hc u 0)
-    (tierA_ne hX hRl hR u t) (tierA_ne hX hDl hD u t)]
+  rw [pushZ_arr m t f a _ (ne_tierA (Ne.symm hc) u).symm (tierA_ne hR u t) (tierA_ne hD u t)]
 
 /-- A word of the pushed table's range column (`w = 1`): the new node's is `0`, the others as
 before. -/
@@ -285,10 +284,6 @@ theorem tfld_pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (X : TRec) (hX : X.a
       if u = t ∧ rdW (m.arr64 CTL) (k + t) = i ∧
           (rdW (m.arr64 CTL) (k + t)).toNat < (m.arr64 (tierA D t)).size then 0
       else tfld m X u i 0 := by
-  have hDl : D < 256 := by
-    rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
-  have hRl : R < 256 := by
-    rcases hT with ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ <;> decide
   have hRD : R ≠ D := by
     rcases hT with ⟨rfl, -, rfl, -⟩ | ⟨rfl, -, rfl, -⟩ | ⟨rfl, -, rfl, -⟩ <;> decide
   have had : X.ad i 0 = i := by simp [TRec.ad, hw]
@@ -299,8 +294,8 @@ theorem tfld_pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (X : TRec) (hX : X.a
   · have hDc : D ≠ CTL := by
       rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
     have hDc' : tierA D u ≠ CTL := by
-      simpa using (tierA_ne hDl (show CTL < 256 by decide) hDc u 0)
-    rw [pushZ_arr m t f a _ hDc' (tierA_ne hDl hRl (Ne.symm hRD) u t) (tierA_ne_tier _ hu ht hut)]
+      (ne_tierA (Ne.symm hDc) u).symm
+    rw [pushZ_arr m t f a _ hDc' (tierA_ne (Ne.symm hRD) u t) (tierA_ne_tier _ hu ht hut)]
     simp [hut]
 
 /-! The three tables, one theorem each (elaborated in parallel). -/
@@ -333,15 +328,11 @@ theorem der_pushZ_A (hT : BinTbl R S D k) (hsel : R = AREC ∧ S = ASLOT ∧ D =
       UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
       show (134217728 : Word).toNat = 134217728 from rfl] at *
     omega
-  have oob : ∀ (b : ArrId) x, ¬x.toNat < (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+  have oob : ∀ (b : TieredArray) x, ¬x.toNat < (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
     intro b x hx; simp only [rdW]; grind
-  have hRl : R < 256 := by
-    rcases hT with ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ <;> decide
-  have hDl : D < 256 := by
-    rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
-  have ho : ∀ X : TRec, X.arr < 256 → X.arr ≠ CTL → X.arr ≠ R → X.arr ≠ D → ∀ u i g,
+  have ho : ∀ X : TRec, X.arr ≠ CTL → X.arr ≠ R → X.arr ≠ D → ∀ u i g,
       tfld (pushZ R S D k m t f a) X u i g = tfld m X u i g :=
-    fun X h1 h2 h3 h4 => tfld_pushZ_other m t f a X h1 h2 h3 h4 hRl hDl
+    fun X h2 h3 h4 => tfld_pushZ_other m t f a X h2 h3 h4
   have hd : ∀ X : TRec, X.arr = D → X.w = 1 → ∀ i, tfld (pushZ R S D k m t f a) X (tierW h) i 0 =
       if tierW h = t ∧ rdW (m.arr64 CTL) (k + t) = i ∧
           (rdW (m.arr64 CTL) (k + t)).toNat < (m.arr64 (tierA D t)).size then 0
@@ -350,11 +341,11 @@ theorem der_pushZ_A (hT : BinTbl R S D k) (hsel : R = AREC ∧ S = ASLOT ∧ D =
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hsel
   rcases h01 t ht with rfl | rfl
   all_goals simp (config := {decide := true}) only [derBW, derFW, exprLPW, h1, hcnt]
-  all_goals simp only [ho BVAR (by decide) (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide) (by decide),
-    ho CONST_LP (by decide) (by decide) (by decide) (by decide), ho LET_DER (by decide) (by decide) (by decide) (by decide), ho PROJ_DER (by decide) (by decide) (by decide) (by decide)]
-  all_goals try simp only [ho APP_DER (by decide) (by decide) (by decide) (by decide)]
-  all_goals try simp only [ho LAM_DER (by decide) (by decide) (by decide) (by decide)]
-  all_goals try simp only [ho FORALL_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals simp only [ho BVAR (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide),
+    ho CONST_LP (by decide) (by decide) (by decide), ho LET_DER (by decide) (by decide) (by decide), ho PROJ_DER (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho APP_DER (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho LAM_DER (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho FORALL_DER (by decide) (by decide) (by decide)]
   all_goals try simp only [hd APP_DER rfl rfl]
   all_goals try simp only [hd LAM_DER rfl rfl]
   all_goals try simp only [hd FORALL_DER rfl rfl]
@@ -393,15 +384,11 @@ theorem der_pushZ_LA (hT : BinTbl R S D k) (hsel : R = LAREC ∧ S = LASLOT ∧ 
       UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
       show (134217728 : Word).toNat = 134217728 from rfl] at *
     omega
-  have oob : ∀ (b : ArrId) x, ¬x.toNat < (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+  have oob : ∀ (b : TieredArray) x, ¬x.toNat < (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
     intro b x hx; simp only [rdW]; grind
-  have hRl : R < 256 := by
-    rcases hT with ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ <;> decide
-  have hDl : D < 256 := by
-    rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
-  have ho : ∀ X : TRec, X.arr < 256 → X.arr ≠ CTL → X.arr ≠ R → X.arr ≠ D → ∀ u i g,
+  have ho : ∀ X : TRec, X.arr ≠ CTL → X.arr ≠ R → X.arr ≠ D → ∀ u i g,
       tfld (pushZ R S D k m t f a) X u i g = tfld m X u i g :=
-    fun X h1 h2 h3 h4 => tfld_pushZ_other m t f a X h1 h2 h3 h4 hRl hDl
+    fun X h2 h3 h4 => tfld_pushZ_other m t f a X h2 h3 h4
   have hd : ∀ X : TRec, X.arr = D → X.w = 1 → ∀ i, tfld (pushZ R S D k m t f a) X (tierW h) i 0 =
       if tierW h = t ∧ rdW (m.arr64 CTL) (k + t) = i ∧
           (rdW (m.arr64 CTL) (k + t)).toNat < (m.arr64 (tierA D t)).size then 0
@@ -410,11 +397,11 @@ theorem der_pushZ_LA (hT : BinTbl R S D k) (hsel : R = LAREC ∧ S = LASLOT ∧ 
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hsel
   rcases h01 t ht with rfl | rfl
   all_goals simp (config := {decide := true}) only [derBW, derFW, exprLPW, h1, hcnt]
-  all_goals simp only [ho BVAR (by decide) (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide) (by decide),
-    ho CONST_LP (by decide) (by decide) (by decide) (by decide), ho LET_DER (by decide) (by decide) (by decide) (by decide), ho PROJ_DER (by decide) (by decide) (by decide) (by decide)]
-  all_goals try simp only [ho APP_DER (by decide) (by decide) (by decide) (by decide)]
-  all_goals try simp only [ho LAM_DER (by decide) (by decide) (by decide) (by decide)]
-  all_goals try simp only [ho FORALL_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals simp only [ho BVAR (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide),
+    ho CONST_LP (by decide) (by decide) (by decide), ho LET_DER (by decide) (by decide) (by decide), ho PROJ_DER (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho APP_DER (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho LAM_DER (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho FORALL_DER (by decide) (by decide) (by decide)]
   all_goals try simp only [hd APP_DER rfl rfl]
   all_goals try simp only [hd LAM_DER rfl rfl]
   all_goals try simp only [hd FORALL_DER rfl rfl]
@@ -453,15 +440,11 @@ theorem der_pushZ_FA (hT : BinTbl R S D k) (hsel : R = FAREC ∧ S = FASLOT ∧ 
       UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
       show (134217728 : Word).toNat = 134217728 from rfl] at *
     omega
-  have oob : ∀ (b : ArrId) x, ¬x.toNat < (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+  have oob : ∀ (b : TieredArray) x, ¬x.toNat < (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
     intro b x hx; simp only [rdW]; grind
-  have hRl : R < 256 := by
-    rcases hT with ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ | ⟨rfl, -, -, -⟩ <;> decide
-  have hDl : D < 256 := by
-    rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
-  have ho : ∀ X : TRec, X.arr < 256 → X.arr ≠ CTL → X.arr ≠ R → X.arr ≠ D → ∀ u i g,
+  have ho : ∀ X : TRec, X.arr ≠ CTL → X.arr ≠ R → X.arr ≠ D → ∀ u i g,
       tfld (pushZ R S D k m t f a) X u i g = tfld m X u i g :=
-    fun X h1 h2 h3 h4 => tfld_pushZ_other m t f a X h1 h2 h3 h4 hRl hDl
+    fun X h2 h3 h4 => tfld_pushZ_other m t f a X h2 h3 h4
   have hd : ∀ X : TRec, X.arr = D → X.w = 1 → ∀ i, tfld (pushZ R S D k m t f a) X (tierW h) i 0 =
       if tierW h = t ∧ rdW (m.arr64 CTL) (k + t) = i ∧
           (rdW (m.arr64 CTL) (k + t)).toNat < (m.arr64 (tierA D t)).size then 0
@@ -470,11 +453,11 @@ theorem der_pushZ_FA (hT : BinTbl R S D k) (hsel : R = FAREC ∧ S = FASLOT ∧ 
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hsel
   rcases h01 t ht with rfl | rfl
   all_goals simp (config := {decide := true}) only [derBW, derFW, exprLPW, h1, hcnt]
-  all_goals simp only [ho BVAR (by decide) (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide) (by decide),
-    ho CONST_LP (by decide) (by decide) (by decide) (by decide), ho LET_DER (by decide) (by decide) (by decide) (by decide), ho PROJ_DER (by decide) (by decide) (by decide) (by decide)]
-  all_goals try simp only [ho APP_DER (by decide) (by decide) (by decide) (by decide)]
-  all_goals try simp only [ho LAM_DER (by decide) (by decide) (by decide) (by decide)]
-  all_goals try simp only [ho FORALL_DER (by decide) (by decide) (by decide) (by decide)]
+  all_goals simp only [ho BVAR (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide),
+    ho CONST_LP (by decide) (by decide) (by decide), ho LET_DER (by decide) (by decide) (by decide), ho PROJ_DER (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho APP_DER (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho LAM_DER (by decide) (by decide) (by decide)]
+  all_goals try simp only [ho FORALL_DER (by decide) (by decide) (by decide)]
   all_goals try simp only [hd APP_DER rfl rfl]
   all_goals try simp only [hd LAM_DER rfl rfl]
   all_goals try simp only [hd FORALL_DER rfl rfl]
@@ -522,24 +505,22 @@ those, lane slotgrow). -/
 theorem der_congr {S : ArrId} (hS : S = ASLOT ∨ S = LASLOT ∨ S = FASLOT) (t : Word) {m₂ m₃ : Mem}
     (hf : ∀ b, b ≠ tierA S t → m₂.arr64 b = m₃.arr64 b) (h : Word) :
     derBW m₂ h = derBW m₃ h ∧ derFW m₂ h = derFW m₃ h ∧ exprLPW m₂ h = exprLPW m₃ h := by
-  have hS' : S < 256 := by rcases hS with rfl | rfl | rfl <;> decide
-  have hf' : ∀ b : ArrId, b < 256 → b ≠ S → m₂.arr64 b = m₃.arr64 b ∧
-      m₂.arr64 (tier1 b) = m₃.arr64 (tier1 b) := fun b hb hbS =>
-    ⟨hf _ (by simpa using tierA_ne hb hS' hbS 0 t), hf _ (tierA_ne hb hS' hbS 1 t)⟩
-  have e := fun (b : ArrId) (hb : b < 256) (hbS : b ≠ S) => hf' b hb hbS
+  have e : ∀ b : ArrId, b ≠ S → m₂.arr64 b = m₃.arr64 b ∧
+      m₂.arr64 (tier1 b) = m₃.arr64 (tier1 b) := fun b hbS =>
+    ⟨hf _ (ne_tierA hbS t), hf _ (by simpa using tierA_ne hbS 1 t)⟩
   rcases hS with rfl | rfl | rfl <;>
-  simp only [derBW, derFW, exprLPW, (e CTL (by decide) (by decide)).1,
-    tcnt_arr_eq _ (e CTL (by decide) (by decide)).1,
-    tfld_arr_eq (R := BVAR) (e BREC (by decide) (by decide)).1 (e BREC (by decide) (by decide)).2,
-    tfld_arr_eq (R := APP_DER) (e ADER (by decide) (by decide)).1 (e ADER (by decide) (by decide)).2,
-    tfld_arr_eq (R := LAM_DER) (e LADER (by decide) (by decide)).1 (e LADER (by decide) (by decide)).2,
-    tfld_arr_eq (R := FORALL_DER) (e FADER (by decide) (by decide)).1 (e FADER (by decide) (by decide)).2,
-    tfld_arr_eq (R := LET_DER) (e LEDER (by decide) (by decide)).1 (e LEDER (by decide) (by decide)).2,
-    tfld_arr_eq (R := PROJ_DER) (e PJDER (by decide) (by decide)).1 (e PJDER (by decide) (by decide)).2,
-    tfld_arr_eq (R := FVAR) (e FVREC (by decide) (by decide)).1 (e FVREC (by decide) (by decide)).2,
-    tfld_arr_eq (R := FVAR_LP) (e FVLP (by decide) (by decide)).1 (e FVLP (by decide) (by decide)).2,
-    tfld_arr_eq (R := SORT_LP) (e SOLP (by decide) (by decide)).1 (e SOLP (by decide) (by decide)).2,
-    tfld_arr_eq (R := CONST_LP) (e CLP (by decide) (by decide)).1 (e CLP (by decide) (by decide)).2,
+  simp only [derBW, derFW, exprLPW, (e CTL (by decide)).1,
+    tcnt_arr_eq _ (e CTL (by decide)).1,
+    tfld_arr_eq (R := BVAR) (e BREC (by decide)).1 (e BREC (by decide)).2,
+    tfld_arr_eq (R := APP_DER) (e ADER (by decide)).1 (e ADER (by decide)).2,
+    tfld_arr_eq (R := LAM_DER) (e LADER (by decide)).1 (e LADER (by decide)).2,
+    tfld_arr_eq (R := FORALL_DER) (e FADER (by decide)).1 (e FADER (by decide)).2,
+    tfld_arr_eq (R := LET_DER) (e LEDER (by decide)).1 (e LEDER (by decide)).2,
+    tfld_arr_eq (R := PROJ_DER) (e PJDER (by decide)).1 (e PJDER (by decide)).2,
+    tfld_arr_eq (R := FVAR) (e FVREC (by decide)).1 (e FVREC (by decide)).2,
+    tfld_arr_eq (R := FVAR_LP) (e FVLP (by decide)).1 (e FVLP (by decide)).2,
+    tfld_arr_eq (R := SORT_LP) (e SOLP (by decide)).1 (e SOLP (by decide)).2,
+    tfld_arr_eq (R := CONST_LP) (e CLP (by decide)).1 (e CLP (by decide)).2,
     and_self]
 
 theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some (r, m₁))

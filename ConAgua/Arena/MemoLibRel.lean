@@ -310,7 +310,7 @@ theorem adS_eq (S : MemoSch) (m : Mem) (x y : Word) (hx : x.toNat < slotsG S m)
     exact ⟨UInt64.toNat_inj.mp (by omega), UInt64.toNat_inj.mp (by omega)⟩
   · rintro ⟨rfl, rfl⟩; rfl
 
-theorem slotsG_set64 (S : MemoSch) (m : Mem) (a : ArrId) (k v : Word) :
+theorem slotsG_set64 (S : MemoSch) (m : Mem) (a : TieredArray) (k v : Word) :
     slotsG S (m.set64 a k v) = slotsG S m := by
   simp only [slotsG, len64_eq, size_set64]
 
@@ -348,7 +348,7 @@ theorem slot_set0 (S : MemoSch) (m : Mem) (s v : Word) (hs : s.toNat < slotsG S 
   simpa using this
 
 /-- Slot reads through a write to another array. -/
-theorem slot_other (S : MemoSch) (m : Mem) (a : ArrId) (ha : a ≠ S.arr) (k v j : Word) :
+theorem slot_other (S : MemoSch) (m : Mem) (a : TieredArray) (ha : a ≠ S.arr) (k v j : Word) :
     mstG S (m.set64 a k v) j = mstG S m j ∧ mk1G S (m.set64 a k v) j = mk1G S m j ∧
     mk2G S (m.set64 a k v) j = mk2G S m j ∧ mvG S (m.set64 a k v) j = mvG S m j := by
   simp only [mstG, mk1G, mk2G, mvG, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm ha), and_self]
@@ -429,7 +429,7 @@ theorem mputMemE_frame (S : MemoSch) (hS : S.WF) (m : Mem) (fd j k1 k2 v e c : W
     MemFrame [S.arr] [S.cs + 1] m (mputMemE S m fd j k1 k2 v e c) := by
   have hac := hS.arr_ctl
   have fa : ∀ (m : Mem) k v, MemFrame [S.arr] [S.cs + 1] m (m.set64 S.arr k v) :=
-    fun m k v => (MemFrame.set64 m S.arr hac k v).mono (by simp) (by simp)
+    fun m k v => (MemFrame.set64 m S.arr (TieredArray.t0_ne hac) k v).mono (by simp) (by simp)
   have fc : ∀ (m : Mem) v, MemFrame [S.arr] [S.cs + 1] m (m.set64 CTL (S.cs + 1) v) :=
     fun m v => (MemFrame.setCtl m (S.cs + 1) v).mono (by simp) (by simp)
   unfold mputMemE
@@ -458,7 +458,7 @@ theorem mputMemE_reg (S : MemoSch) (hS : S.WF) (m : Mem) (fd s k1 k2 w e c : Wor
       rw [show rdW ((((((m.set64 S.arr (s * 4) e).set64 S.arr (s * 4 + 1) k1).set64 S.arr
           (s * 4 + 2) k2).set64 CTL (S.cs + 1) (c + 1))).arr64 S.arr) f =
           rdW ((((m.set64 S.arr (s * 4) e).set64 S.arr (s * 4 + 1) k1).set64 S.arr
-          (s * 4 + 2) k2).arr64 S.arr) f by rw [Mem.arr64_set64_ne _ _ _ _ _ hac]]
+          (s * 4 + 2) k2).arr64 S.arr) f by rw [Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hac)]]
       rw [hz _ 2 _ (by simp only [slotsG_set64]; exact hs) (by decide),
         hz _ 1 _ (by simp only [slotsG_set64]; exact hs) (by decide)]
       have := hz m 0 e hs (by decide)
@@ -494,7 +494,7 @@ theorem mrehashG_frame (S : MemoSch) (hS : S.WF) (e nb nn : Word) :
       · split at h
         · have := ih _ _ _ _ _ (by omega) h
           refine (MemFrame.trans ?_ this)
-          have fa := fun (m : Mem) k v => MemFrame.set64 m S.arr hS.arr_ctl k v
+          have fa := fun (m : Mem) k v => MemFrame.set64 m S.arr (TieredArray.t0_ne hS.arr_ctl) k v
           exact ((fa _ _ _).trans (fa _ _ _)).trans (fa _ _ _) |>.trans (fa _ _ _)
         · simp at h
       · exact ih _ _ _ _ _ (by omega) h
@@ -516,7 +516,7 @@ theorem mgrowAt_frame (S : MemoSch) (hS : S.WF) (e b n : Word) (m m₁ : Mem) (c
   have f0 : MemFrame [S.arr] [S.cs + 1] m m' :=
     (mrehashG_frame S hS e _ _ _ _ _ _ _ _ rfl hr).mono (by simp) (by simp)
   have fa : ∀ (m : Mem) k v, MemFrame [S.arr] [S.cs + 1] m (m.set64 S.arr k v) :=
-    fun m k v => (MemFrame.set64 m S.arr hS.arr_ctl k v).mono (by simp) (by simp)
+    fun m k v => (MemFrame.set64 m S.arr (TieredArray.t0_ne hS.arr_ctl) k v).mono (by simp) (by simp)
   have fc : ∀ (m : Mem) v, MemFrame [S.arr] [S.cs + 1] m (m.set64 CTL (S.cs + 1) v) :=
     fun m v => (MemFrame.setCtl m (S.cs + 1) v).mono (by simp) (by simp)
   exact (((f0.trans (fa _ _ _)).trans (fa _ _ _)).trans (fa _ _ _)).trans (fc _ _)
@@ -956,7 +956,7 @@ theorem mrehash_inv (hVS : VStable S VR) (m₀ : Mem) (mp : Std.HashMap κ ν)
           mput4_reads S m (rs.tail.headD 0) (epG S m₀) (mk1G S m i) (mk2G S m i) (mvG S m i) hss j hj
         have hf4 : MemFrame [S.arr] [] m (mput4 S m (rs.tail.headD 0) (epG S m₀) (mk1G S m i)
             (mk2G S m i) (mvG S m i)) := by
-          have fa := fun (m : Mem) k v => MemFrame.set64 m S.arr hS.arr_ctl k v
+          have fa := fun (m : Mem) k v => MemFrame.set64 m S.arr (TieredArray.t0_ne hS.arr_ctl) k v
           unfold mput4
           exact ((fa _ _ _).trans (fa _ _ _)).trans (fa _ _ _) |>.trans (fa _ _ _)
         have hV₁ : ∀ w v, VR m w v → VR (mput4 S m (rs.tail.headD 0) (epG S m₀) (mk1G S m i)
@@ -1124,7 +1124,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
   generalize hM : (((m'.set64 S.arr 0 (epG S m)).set64 S.arr 1 (mbG S m + nG S m)).set64 S.arr 2
     (nG S m * 2)).set64 CTL (S.cs + 1) c' = m₁ at hf₁ ⊢
   have harr : m₁.arr64 S.arr = (((m'.set64 S.arr 0 (epG S m)).set64 S.arr 1 (mbG S m + nG S m)).set64
-      S.arr 2 (nG S m * 2)).arr64 S.arr := by rw [← hM, Mem.arr64_set64_ne _ _ _ _ _ hac]
+      S.arr 2 (nG S m * 2)).arr64 S.arr := by rw [← hM, Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hac)]
   have hh : ∀ f : Word, rdW (m₁.arr64 S.arr) f =
       if f = 2 then nG S m * 2 else if f = 1 then mbG S m + nG S m else if f = 0 then epG S m
       else rdW (m'.arr64 S.arr) f := by
@@ -1140,7 +1140,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     simp [Ne.symm f2, Ne.symm f1, Ne.symm f0, f2, f1, f0]
   have hep₁ : epG S m₁ = epG S m := by
     simp only [epG]; rw [← hM, rdW_set64]; simp only [Ne.symm hcs, false_and, and_false, ↓reduceIte]
-    simp only [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hac)]
+    simp only [Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne (Ne.symm hac))]
     rw [hIf.2.1 S.cs (by simp)]
   have hd₁ : rdW (m₁.arr64 S.arr) 0 = epG S m₁ := by simp only [hep₁, hh]; simp
   have hb₁ : mbG S m₁ = mbG S m + nG S m := by simp only [mbG, hd₁, ↓reduceIte, hh]; simp
@@ -1149,7 +1149,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     rw [← hm's, ← hM]; simp only [slotsG_set64]
   have hc₁ : cntG S m₁ = c' := by
     simp only [cntG]; rw [← hM, rdW_set64]
-    simp only [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hac)]; simp
+    simp only [Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne (Ne.symm hac))]; simp
     intro h; have := hS.cs; omega
   -- slots `j ≥ 1` of `m₁` are those of `m'`
   have hsj : ∀ j : Word, j.toNat < slotsG S m → 1 ≤ j.toNat →
@@ -1171,7 +1171,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
   have hf' : MemFrame [S.arr] [S.cs + 1] m' m₁ := by
     rw [← hM]
     have fa : ∀ (m : Mem) k v, MemFrame [S.arr] [S.cs + 1] m (m.set64 S.arr k v) :=
-      fun m k v => (MemFrame.set64 m S.arr hac k v).mono (by simp) (by simp)
+      fun m k v => (MemFrame.set64 m S.arr (TieredArray.t0_ne hac) k v).mono (by simp) (by simp)
     exact (((fa _ _ _).trans (fa _ _ _)).trans (fa _ _ _)).trans
       ((MemFrame.setCtl _ (S.cs + 1) c').mono (by simp) (by simp))
   have hV' : ∀ w v, VR m' w v → VR m₁ w v := hVS m' m₁ (hf'.mono (by simp) (by simp))
@@ -1238,7 +1238,7 @@ theorem memoRV_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp
   obtain ⟨hctl, hep, hreg, -⟩ := hR
   have hf := mclearG_frame S m
   have hsz := hf.2.2.1
-  have hb : (mclearG S m).arr64 S.arr = m.arr64 S.arr := hf.1 S.arr (by simp) hS.arr_ctl
+  have hb : (mclearG S m).arr64 S.arr = m.arr64 S.arr := hf.1 S.arr (by simp) (TieredArray.t0_ne hS.arr_ctl)
   have hsl : slotsG S (mclearG S m) = slotsG S m := slotsG_frame S hf
   have hs : ∀ j, mstG S (mclearG S m) j = mstG S m j := fun j => by simp only [mstG, hb]
   have hcs : S.cs + 1 ≠ S.cs := by
@@ -1256,7 +1256,7 @@ include hS in
 omit [LawfulBEq κ] [LawfulHashable κ] in
 /-- **The memo relation survives a writer of other arrays and of `CTL` words other than the
 stamp**, when the values' denotations do (a heap that only grows, say). -/
-theorem memoRV_frame (A : List TieredArray) (C : List Word) (hA : S.arr ∉ A) (hC : S.cs ∉ C)
+theorem memoRV_frame (A : List TieredArray) (C : List Word) (hA : (S.arr : TieredArray) ∉ A) (hC : S.cs ∉ C)
     (m m' : Mem) (hf : MemFrame A C m m') (hV : ∀ w v, VR m w v → VR m' w v)
     (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp) : MemoRV S K VR m' mp := by
   have hb : m'.arr64 S.arr = m.arr64 S.arr := hf.1 S.arr hA hS.arr_ctl
@@ -1316,7 +1316,7 @@ theorem memoRG_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRG S K dv m mp
 
 include hS in
 omit [LawfulBEq κ] [LawfulHashable κ] in
-theorem memoRG_frame (A : List TieredArray) (C : List Word) (hA : S.arr ∉ A) (hC : S.cs ∉ C)
+theorem memoRG_frame (A : List TieredArray) (C : List Word) (hA : (S.arr : TieredArray) ∉ A) (hC : S.cs ∉ C)
     (m m' : Mem) (hf : MemFrame A C m m') (mp : Std.HashMap κ ν) (hR : MemoRG S K dv m mp) :
     MemoRG S K dv m' mp :=
   memoRV_frame S hS K _ A C hA hC m m' hf (fun _ _ h => h) mp hR
