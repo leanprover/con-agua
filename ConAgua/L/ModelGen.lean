@@ -1725,6 +1725,7 @@ syntax lmodelFn := term " ↦ " ident (&" ro")? (&" list")? (&" tuple")? (&" voi
 syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   &" fns " "[" lmodelFn,* "]"
   (&" specs " "[" term,* "]")?
+  (&" pre " "[" term "]")?
   (&" grind " "[" ident,* "]")?
   (&" fold " "[" ident,* "]")?
   (&" extra " "[" term,* "]")?
@@ -1738,8 +1739,7 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" simp " "[" term,* "]")?
   (&" errors")?
   (&" trace")?
-  (&" locals")?
-  (&" pre " "[" term "]")? : command
+  (&" locals")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1787,21 +1787,21 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let fnStx : Array (TSyntax `L.ModelGen.lmodelFn) := stx[5].getSepArgs.map (⟨·⟩)
   let optList (k : Nat) : Array Syntax := if stx[k].getNumArgs == 0 then #[] else stx[k][2].getSepArgs
   let specTs : Array Term := (optList 7).map (⟨·⟩)
-  let attrIds : Array Ident := (optList 8).map (⟨·⟩)
-  let foldIds : Array Ident := (optList 9).map (⟨·⟩)
-  let extraTs : Array Term := (optList 10).map (⟨·⟩)
-  let hintTs : Array Term := (optList 11).map (⟨·⟩)
-  let genN : Option Nat := if stx[12].getNumArgs == 0 then none else stx[12][1].isNatLit?
-  let hbN : Option Nat := if stx[13].getNumArgs == 0 then none else stx[13][1].isNatLit?
-  let noguard : Array String := (optList 14).filterMap (·.isStrLit?)
-  let symCfg : String := if stx[15].getNumArgs == 0 then "" else (stx[15][1].isStrLit?.getD "") ++ " "
-  let bindC : Option Name := if stx[16].getNumArgs == 0 then none else some stx[16][1].getId
-  let instN : Option Nat := if stx[17].getNumArgs == 0 then none else stx[17][1].isNatLit?
-  let simpTs? : Option (Array Term) := if stx[18].getNumArgs == 0 then none else some ((optList 18).map (⟨·⟩))
-  let exc := stx[19].getNumArgs != 0
-  let doTrace := stx[20].getNumArgs != 0
-  let preLocals := stx[21].getNumArgs != 0
-  let preT? : Option Term := if stx[22].getNumArgs == 0 then none else some ⟨stx[22][2]⟩
+  let attrIds : Array Ident := (optList 9).map (⟨·⟩)
+  let foldIds : Array Ident := (optList 10).map (⟨·⟩)
+  let extraTs : Array Term := (optList 11).map (⟨·⟩)
+  let hintTs : Array Term := (optList 12).map (⟨·⟩)
+  let genN : Option Nat := if stx[13].getNumArgs == 0 then none else stx[13][1].isNatLit?
+  let hbN : Option Nat := if stx[14].getNumArgs == 0 then none else stx[14][1].isNatLit?
+  let noguard : Array String := (optList 15).filterMap (·.isStrLit?)
+  let symCfg : String := if stx[16].getNumArgs == 0 then "" else (stx[16][1].isStrLit?.getD "") ++ " "
+  let bindC : Option Name := if stx[17].getNumArgs == 0 then none else some stx[17][1].getId
+  let instN : Option Nat := if stx[18].getNumArgs == 0 then none else stx[18][1].isNatLit?
+  let simpTs? : Option (Array Term) := if stx[19].getNumArgs == 0 then none else some ((optList 19).map (⟨·⟩))
+  let exc := stx[20].getNumArgs != 0
+  let doTrace := stx[21].getNumArgs != 0
+  let preLocals := stx[22].getNumArgs != 0
+  let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
