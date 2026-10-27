@@ -151,11 +151,12 @@ theorem tka_spec (p : Prog) (L : K53Look p) (cR : CallM) (hcR : CallSpec p cR) (
   | succ n =>
     rw [invoke_eq _ L.tka]
     simp only [callFn, targetK53Args]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ee_spec p L n, slEq_spec p L.eq n,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ee_spec p L n, slEq_spec p L.eq n,
       internConst_spec p L.cf L.cp L.ic n, mknF_spec p L.ad n,
       blockShapeMemberNames_spec p L.tmn.tcm.ha L.tmn.tcm.mnc L.tmn.tcm.mn n, noF_spec p L n,
       tcmF_spec p L.tmn.tcm cR hcR n]
     all_goals (try clear hcR)
+    all_goals subst_vars
     -- `LocEq` unfolded, the callee posts' `s'.loc = …` serve `simp` as rewrites (`*`): the
     -- locals are resolved before `grind`, not by its E-matching through the chain (78 s -> ~5 s).
     all_goals (try simp only [LocEq] at *)
