@@ -698,9 +698,9 @@ theorem irCallW_internBVar (p : Prog) (hp : IotaRecProg' p) (n : Nat)
     have := keeps_cpl_internBVar u.toNat
     unfold Keeps at this
     exact this a _ _ hrun
-  refine ⟨hrun, hS.of_bvar h2 hcpl hfr, ?_, hfr.1 EREC (by simp [BREC, BSLOT, EREC]) (by decide),
-    hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)⟩
-  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
+  refine ⟨hrun, hS.of_bvar h2 hcpl hfr, ?_, hfr.1 EREC (by simp [tier1, tierOff, BREC, BSLOT, EREC]) (by decide),
+    hfr.1 SPN (by simp [tier1, tierOff, BREC, BSLOT, SPN]) (by decide)⟩
+  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hfr.1 SPN (by simp [tier1, tierOff, BREC, BSLOT, SPN]) (by decide)
   have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hfr.2.1 136 (by simp)
   exact StackKept.of_frame hfr
 
