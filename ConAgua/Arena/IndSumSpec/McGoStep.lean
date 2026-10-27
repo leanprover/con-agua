@@ -137,7 +137,8 @@ theorem mcGo_step (n : Nat) (ih : McGoSpec p n) : McGoSpec p (n + 1) := by
     eView_spec p hv n, memoFindG_spec mcSch p _ hf n,
     memoPutG_spec mcSch p _ hput n, ih]
   all_goals subst_vars
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
     beq_iff_eq, bne_iff_ne, ne_eq, Cond.pval, Expr.pval, Bool.or_eq_true] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
@@ -558,7 +559,8 @@ theorem hbGo_step (n : Nat) (ih : HbGoSpec p n) : HbGoSpec p (n + 1) := by
     bvarBL_spec p hbp n, eView_spec p hv n, memoFindG_spec hbSch p _ hf n,
     hbIns_spec p hf hput hins n, ih]
   all_goals subst_vars
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
     beq_iff_eq, bne_iff_ne, ne_eq, Cond.pval, Expr.pval, Bool.or_eq_true, decide_eq_true_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]

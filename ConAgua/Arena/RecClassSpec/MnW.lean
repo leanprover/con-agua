@@ -163,9 +163,9 @@ theorem classGenMinorTyIhsGo_spec (n : Nat) : ∀ (s₀ : St) (g x d nF wso wsl 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
       classGenMinorTyIh1_spec p h n, slCons_specW p h.alloc h.copy h.cons n, ih]
     all_goals subst_vars
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
-      decide_eq_true_eq] at *)
+    all_goals (try simp only [LocEq] at *)
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, isTag, isKp, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9]
 
 end specs
@@ -238,8 +238,7 @@ theorem classGenMinorCi_spec (n : Nat) (s₀ : St) (ci : Word) :
   rcases n with _ | n
   · vcgen [exec] <;> grind
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64]
-  all_goals (try simp only [Locals.init, List.getD_cons_zero,
-    BinOp.eval] at *)
+  all_goals (try simp only [Locals.init, List.getD_cons_zero, BinOp.eval] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 theorem classGenMinorTy_spec (n : Nat) (s₀ : St) (g c x d : Word) :
@@ -252,8 +251,8 @@ theorem classGenMinorTy_spec (n : Nat) (s₀ : St) (g c x d : Word) :
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n, classGenMinorCi_spec p h n,
     classGenMinorTyBody_spec p h n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init,
+    List.getD_cons_zero, List.getD_cons_succ, BinOp.eval, Nat.reduceEqDiff, reduceIte] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 end specs

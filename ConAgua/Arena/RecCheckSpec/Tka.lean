@@ -240,7 +240,8 @@ theorem tkh_spec (p : Prog) (L : K53Look p) (cR : CallM) (hcR : CallSpec p cR) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, gafF_spec p L.ad n,
       gaaF_spec p L.ad n, eView_spec p L.hv n, tka_spec p L cR hcR n]
     all_goals subst_vars
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    all_goals (try simp only [LocEq] at *)
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
       bne_iff_ne, ne_eq] at *)
     all_goals grind (gen := 40) (instances := 20000) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5,
