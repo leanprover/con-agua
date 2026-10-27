@@ -3,6 +3,7 @@ module
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 public import ConAgua.Arena.ArRange
+import ConAgua.Arena.LdRd
 import ConAgua.Census.Attr
 public import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.GrindAttr
@@ -31,7 +32,6 @@ namespace L.Arena
 section specs
 variable (p : Prog) (hp : ArProg p)
 
-set_option maxHeartbeats 1000000 in
 include hp in
 theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_app" [h, c, d, k, fu]
@@ -39,16 +39,19 @@ theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
   unfold ArGoSpec at ih
   rw [invoke_eq _ (hp.get "ar_app")]
   simp only [callFn, arApp]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-          ih,
-      mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
-          (hp.get "mk_app") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
+    tcntM, evalE_tierE, evalE_idxE,
+    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+        ih,
+    mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
+        (hp.get "mk_app") n]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+  all_goals grind [lang_grind, arena_grind, asetK, arAppW, rbAppW, viewOK, tierW, idxW]
 
-set_option maxHeartbeats 1000000 in
 include hp in
 theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_lam" [h, c, d, k, fu]
@@ -56,16 +59,19 @@ theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
   unfold ArGoSpec at ih
   rw [invoke_eq _ (hp.get "ar_lam")]
   simp only [callFn, arLam]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-          ih,
-      mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
-          (hp.get "mk_lam") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
+    tcntM, evalE_tierE, evalE_idxE,
+    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+        ih,
+    mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
+        (hp.get "mk_lam") n]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+  all_goals grind [lang_grind, arena_grind, asetK, arLamW, rbLamW, viewOK, tierW, idxW]
 
-set_option maxHeartbeats 1000000 in
 include hp in
 theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_forall" [h, c, d, k, fu]
@@ -73,16 +79,19 @@ theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Wo
   unfold ArGoSpec at ih
   rw [invoke_eq _ (hp.get "ar_forall")]
   simp only [callFn, arForall]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-          ih,
-      mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
-          (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
+    tcntM, evalE_tierE, evalE_idxE,
+    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+        ih,
+    mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
+        (hp.get "intern_forall") (hp.get "mk_forall") n]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+  all_goals grind [lang_grind, arena_grind, asetK, arForallW, rbForallW, viewOK, tierW, idxW]
 
-set_option maxHeartbeats 1000000 in
 include hp in
 theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_let" [h, c, d, k, fu]
@@ -90,16 +99,19 @@ theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
   unfold ArGoSpec at ih
   rw [invoke_eq _ (hp.get "ar_let")]
   simp only [callFn, arLet]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-          ih,
-      mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
-          (hp.get "intern_letE") (hp.get "mk_let") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
+    tcntM, evalE_tierE, evalE_idxE,
+    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+        ih,
+    mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
+        (hp.get "intern_letE") (hp.get "mk_let") n]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+  all_goals grind [lang_grind, arena_grind, asetK, arLetW, rbLetW, viewOK, tierW, idxW]
 
-set_option maxHeartbeats 1000000 in
 include hp in
 theorem arProj_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_proj" [h, c, d, k, fu]
@@ -107,14 +119,18 @@ theorem arProj_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word
   unfold ArGoSpec at ih
   rw [invoke_eq _ (hp.get "ar_proj")]
   simp only [callFn, arProj]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-          ih,
-      mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
-          (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
+    tcntM, evalE_tierE, evalE_idxE,
+    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+        ih,
+    mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
+        (hp.get "intern_proj") (hp.get "mk_proj") n]
+  all_goals subst_vars
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+  all_goals grind [lang_grind, arena_grind, asetK, arProjW, rbProjW, viewOK, tierW, idxW]
 
 include hp in
 /-- **`abs_go`, `ab_node` and the arms are their models**, at every fuel. -/
