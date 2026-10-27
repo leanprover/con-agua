@@ -62,7 +62,7 @@ theorem StageT.core {m : Mem} {a : AState} (h : StageT dn vis fe m a) : ∃ M, C
 /-- The arrays a core function may write: every array but the pools, the pins, the walk memos `AbsOK`
 holds beyond `CoreMemos` (51, 155) and the stage memos (201‥208). -/
 def coreStageA : List TieredArray := checkerWordArrays.filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧
-  b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ (b < 201 ∨ 208 < b)
+  b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr)
 
 /-- The `CTL` words a core function may write: all but the pools' tops, the epochs of the walk memos
 `AbsOK` holds beyond `CoreMemos` (52, 158) and the stage memos' control words (202‥219). -/
@@ -77,14 +77,14 @@ def stageCoreFns : List FnName :=
 their tops or the pins (decided for the checker's program, `ConAgua/Checker/IndCore.lean`). -/
 def CoreStageClosed (p : Prog) : Prop := closedA p coreStageA coreStageC stageCoreFns = true
 
-theorem coreStageA_iw : IW ∉ coreStageA := by simp [coreStageA]
-theorem coreStageA_erec : EREC ∉ coreStageA := by simp [coreStageA]
-theorem coreStageA_pins : PINS ∉ coreStageA := by simp [coreStageA]
-theorem coreStageA_51 : (51 : ArrId) ∉ coreStageA := by simp [coreStageA]
-theorem coreStageA_155 : (155 : ArrId) ∉ coreStageA := by simp [coreStageA]
+theorem coreStageA_iw : (IW : TieredArray) ∉ coreStageA := by simp [coreStageA]
+theorem coreStageA_erec : (EREC : TieredArray) ∉ coreStageA := by simp [coreStageA]
+theorem coreStageA_pins : (PINS : TieredArray) ∉ coreStageA := by simp [coreStageA]
+theorem coreStageA_51 : ((51 : ArrId) : TieredArray) ∉ coreStageA := by simp [coreStageA]
+theorem coreStageA_155 : ((155 : ArrId) : TieredArray) ∉ coreStageA := by simp [coreStageA]
 /-- The core leaves the stage memos alone. -/
-theorem coreStageA_stage : ∀ b ∈ coreStageA, b < 201 ∨ 208 < b := by
-  intro b hb; simp only [coreStageA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
+theorem coreStageA_stage : ∀ b ∈ coreStageA, b.arr < 201 ∨ 208 < b.arr := by
+  intro b hb; simp only [coreStageA, List.mem_filter, decide_eq_true_eq] at hb
   exact hb.2.2.2.2.2.2
 theorem coreStageC_52 : (52 : Word) ∉ coreStageC := by decide
 theorem coreStageC_158 : (158 : Word) ∉ coreStageC := by decide
@@ -146,7 +146,7 @@ theorem _root_.L.Arena.TwinOK.frame_iw {m m' : Mem} {a : AState} (hf : MemFrame 
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
   have hSp : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [SPN, IW]) (by decide)
-  have hB : m'.arr64 BSTK = m.arr64 BSTK := hf.1 145 (by simp [IW]) (by decide)
+  have hB : m'.arr64 BSTK = m.arr64 BSTK := hf.1 BSTK (by simp [BSTK, IW]) (by decide)
   exact ⟨h.readL, h.readLs, h.nwf, by rw [hE]; exact h.erec, by rw [hSp]; exact h.spn,
     h.memos.frame hf (by simp [IW]) (by simp) (by simp [IW]) (by simp), by rw [hB]; exact h.bstk,
     h.den.frameE hE⟩
