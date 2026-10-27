@@ -51,7 +51,7 @@ theorem DK.grow {m m' : Mem} (h : DK m m') : DGrow m m' :=
     fun x h1 h2 => by simp only [dcnt, h.1] at h1 h2; omega⟩
 
 theorem DK.ofFrame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart) : DK m m' :=
+    (hd : (DECL : TieredArray) ∉ A := by tapart) (hq : (DLP : TieredArray) ∉ A := by tapart) : DK m m' :=
   ⟨hf.1 DECL hd (by decide), hf.1 DLP hq (by decide)⟩
 
 theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v : Word) :
