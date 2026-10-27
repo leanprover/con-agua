@@ -64,6 +64,6 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
     mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push") (hp.get "intern_proj") (hp.get "mk_proj") n]
   grind [arena_grind] fold [tierW, idxW]
   extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  finish [tierW, idxW] gen 20 heartbeats 1000000
+  heartbeats 1000000 simp [tierW, idxW] locals
 
 end L.Arena

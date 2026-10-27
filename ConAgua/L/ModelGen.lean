@@ -1988,8 +1988,11 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
           theorem $thm:ident $binders* : $(mkIdent kd.name) $args* Option.none = Option.none := by
             rw [$(mkIdent (kd.name ++ `eq_1)):ident]))
   -- the proofs, as text
+  -- on one line: a term wrapped onto a new line at a lower column than the tactic it sits in
+  -- does not parse back (an application's arguments must lie right of the tactic's column; long
+  -- `specs` under `simp`, Lift)
   let pp (t : Syntax) : CommandElabM String := do
-    return toString (← liftCoreM (PrettyPrinter.ppTerm ⟨t⟩))
+    return (← liftCoreM (PrettyPrinter.ppTerm ⟨t⟩)).pretty 100000
   let attrsTxt := String.intercalate ", " ("lang_grind" :: (attrIds.toList.map (·.getId.toString)))
   let specsTxt ← specTs.toList.mapM (pp ·.raw)
   let extraTxt ← extraTs.toList.mapM (pp ·.raw)
@@ -2004,6 +2007,13 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       "L.Sig.retVal", "L.Sig.retOr", "L.BinOp.eval", "L.Cmp.eval", "List.headD_cons", "List.headD_nil",
       "List.tail_cons", "List.tail_nil"]
   let simpTxt? ← simpTs?.mapM fun ts => do
+    -- a lemma that is not in scope would make `simp_all` fail on every step, silently under the
+    -- recipe's `try`, so it is an error here (CkcW, ErToIwWStage named an unimported lemma)
+    let binderNames : NameSet := bs.foldl (fun acc b => idents b.raw acc) {}
+    for (t : Term) in ts do
+      let hd := if t.raw.isOfKind ``Lean.Parser.Term.app then t.raw[0] else t.raw
+      if hd.isIdent && !binderNames.contains hd.getId && (← resolveGlobalName hd.getId).isEmpty then
+        throwErrorAt t "l_model: the simp lemma `{hd.getId}` is not in scope (an import missing?)"
     let user ← ts.toList.mapM (pp ·.raw)
     let models := (fis.toList.map (s!"{·.model}")) ++ (st.ks.toList.map (s!"{·.name}"))
     pure (String.intercalate ", " (simpBase ++ models ++ user))
