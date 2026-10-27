@@ -87,8 +87,7 @@ theorem canonRulesEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel o1
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         ruleEqButRhs_spec p hp n, canonExprEq_spec p hp n, ih] <;>
-      finish (gen := 20) [rdW_eq, init11_0, init11_1, init11_2, init11_3, init11_4, init11_5,
-        init11_6, init11_7, init11_8, init11_9, init11_10]
+      finish (gen := 20) [rdW_eq]
 
 end specs6
 
