@@ -83,7 +83,7 @@ variable (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL) (hi1 : I1Prog p) (hab : AbF p)
 include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab
 
-include hq henv hV hApd hCrk hnv hW hCcv in
+include hq henv hnv hW hCcv in
 /-- **`check_sum_tele_slow`'s error claim** (the hypotheses of `checkSumTeleSlow_refinesC`, and the
 callees' error claims `WtE`, `CcvE`). -/
 theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
@@ -306,7 +306,7 @@ theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
     | error e2 =>
       rw [h2, ctE.k_check_sum_tele_slow.none] at hW'
       cases hW'
-      have hcl := CoreSpecE.of_callE (checkSumTeleSlow_claim hq henv hV hApd hCrk hnv hW hCcv ha hc hsc hv hff
+      have hcl := CoreSpecE.of_callE (checkSumTeleSlow_claim hq henv hnv hW hCcv ha hc hsc hv hff
         hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab k (by omega) s1 a₀ cv n cvTa0 cvv cvTa
         hC1 hcv1 (by have := hg1.2.1; omega)
         (fun lo ll e1 e2 => by
