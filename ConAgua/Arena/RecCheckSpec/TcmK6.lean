@@ -15,7 +15,7 @@ Levels by `lvls_eq_c` (the cached `lvlsEq?`; a master callee without a stage-lev
 through the stub contract `lvlsEqStub_spec` below, as `lvl_eq_c` is through `lvlEqStub_spec`), then
 `block_shape_member_names`, `block_shape_lps` (L: called instead of the inlined copy of member 0's
 level parameters, which it is), `param_levels`, `target_holes` and `target_params_def_eq`
-(`RecCheckSpec11`). L: the depth `pfl + ftl` aborts on a wrap before `target_holes` (a capacity
+(`RecCheckSpec/PdsC`). L: the depth `pfl + ftl` aborts on a wrap before `target_holes` (a capacity
 abort; the twin's `Nat` sum cannot wrap). Write sets of the callees (`MFr`), so the walk memos
 (`RcMR`) are carried.
 -/

@@ -13,7 +13,7 @@ import ConAgua.Arena.IndSumSpec.CheckSumCtor
 /-!
 # `check_struct_proj_table_scoped` through the real `all_level_params_defined` (lane `indproofs4`, helper `sct`)
 
-`sctW` reads `all_level_params_defined` through a `CallM` (`IndSumSpec14.lean`); `sctW_ok` is the
+`sctW` reads `all_level_params_defined` through a `CallM` (`IndSumSpec/ConsBlockRecsTF.lean`); `sctW_ok` is the
 `stubCall` reading (the stub contract `allLevelParamsDefined_spec`). Here the `realCall p` reading,
 by the real refinement (lane `decls3`'s `apdEntry_ok`, the core of `apdF_okT`):
 

@@ -7,7 +7,7 @@ import ConAgua.Arena.RecGenSpec.SlRGrow
 /-!
 # Error refinement of `target_major_of_member` (lane `verdicts-b`, helper `ib`)
 
-Mirrors `tmmW_sim` (`RecGenSpec16`): the aborts are the twin's `unwrapOr` internals, the two
+Mirrors `tmmW_sim` (`IndSumSpec/ParamLevels`): the aborts are the twin's `unwrapOr` internals, the two
 rejects the twin's final `fail`; `block_shape_lps`, `param_levels`, `sl_eq`, `mk_target_major`
 are `closedNV`.
 -/

@@ -5,7 +5,7 @@ import ConAgua.Checker.NoVerdictFns
 /-!
 # Error refinement of `target_outside_inst` (lane `verdicts-b`, helper `ib`)
 
-Mirrors `toiW_ok` (`RecCheckSpec6`): the four rejects are the twin's `fail`s (the structure is not
+Mirrors `toiW_ok` (`RecCheckSpec/ToiW`): the four rejects are the twin's `fail`s (the structure is not
 stored or not an inductive; `inst_pis_with` does not bind the parameters; the type former does not
 end in a sort); every callee is `closedNV`.
 -/

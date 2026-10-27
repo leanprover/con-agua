@@ -7,7 +7,7 @@ import ConAgua.Scan.Common
 # `all_level_params_defined`: the word models and the `vcgen` specs (lane `decls3`)
 
 `DeclApd.lean` has the L code. Here: the word models of `alpd_ls`, `alpd_go` and the entry, written
-as mutual continuations (the template of `IndSumSpec5.lean`'s `mentions_const_go`), with the arm
+as mutual continuations (the template of `IndSumSpec/McGoStep.lean`'s `mentions_const_go`), with the arm
 lemmas as `ind_grind` patterns, and the specs by induction on the exec fuel.
 
 The level checks are lane `levels`' `lv_apd` at `A = IW` (`apdW`, `lvApd_spec`); `e_view` and

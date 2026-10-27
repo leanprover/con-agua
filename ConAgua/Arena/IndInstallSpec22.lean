@@ -7,7 +7,7 @@ import ConAgua.Scan.Common
 # Refinements of `IndInstall`, part 22 (lane `indproofs2`, helper `install`): `checkBlockCtors`,
 the word models
 
-Per member: `check_sum_ctors` (`IndSumSpec13`'s refinement, `installSimSumCtors` below), the
+Per member: `check_sum_ctors` (`IndSumSpec/CtorX`'s refinement, `installSimSumCtors` below), the
 two results wrapped (`rec2`), recursion as the twin's with both pointers consed (D18).
 -/
 
@@ -25,7 +25,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-! ## `check_sum_ctors` as a callee (lane `indproofs2`'s `IndSumSpec13`) -/
+/-! ## `check_sum_ctors` as a callee (lane `indproofs2`'s `IndSumSpec/CtorX`) -/
 
 /-! ## `check_block_ctors_one` -/
 

@@ -4,7 +4,7 @@ import ConAgua.Arena.IndInstallSpec31
 # Refinements of `IndInstall`, part 35 (lane `indproofs4`): `checkBlockTail`
 
 `ictlW_sim` (part 31) took `cons_block_recs_tf` as the hypothesis `ConsRecsTFSim p`; helper
-`indproofs3-rec`'s `consBlockRecsTF_refines` (`RecCheckSpec20`) discharges it (`consRecsTFSim_of`;
+`indproofs3-rec`'s `consBlockRecsTF_refines` (`IndSumSpec/ConsBlockRecsTF`) discharges it (`consRecsTFSim_of`;
 the `hb` memo after from the write set, `HbMemo.ofClosed`). With it the tail's triple.
 -/
 

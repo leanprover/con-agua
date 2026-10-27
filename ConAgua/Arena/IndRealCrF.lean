@@ -7,7 +7,7 @@ import ConAgua.Arena.StageInst1
 The program- and fuel-free model `crfF := callF crfP "consts_resolve_ffast"` (the recipe of
 `IndReal.lean`) over the walk's program `crfP` (lane `tails`' `crfProg` with the environment and
 pin reads it calls); it writes only its memo table `CRM` (155) and the memo's epoch and count
-(`CTL[158]`, `CTL[159]`). Kept low (below `IndSumSpec2A`, whose models call it); the refinement
+(`CTL[158]`, `CTL[159]`). Kept low (below `IndSumSpec/StructProjArgP`, whose models call it); the refinement
 `crfF_ok` is in `IndRealMemoCr.lean`, above lane `tails`' `ConstsResolveFRefine2`.
 -/
 

@@ -19,7 +19,7 @@ Levels by `lvls_eq_c` (the cached `lvlsEq?`; a master callee without a stage-lev
 through the stub contract `lvlsEqStub_spec` below, as `lvl_eq_c` is through `lvlEqStub_spec`), then
 `block_shape_member_names`, `block_shape_lps` (L: called instead of the inlined copy of member 0's
 level parameters, which it is), `param_levels`, `target_holes` and `target_params_def_eq`
-(`RecCheckSpec11`). L: the depth `pfl + ftl` aborts on a wrap before `target_holes` (a capacity
+(`RecCheckSpec/PdsC`). L: the depth `pfl + ftl` aborts on a wrap before `target_holes` (a capacity
 abort; the twin's `Nat` sum cannot wrap). Write sets of the callees (`MFr`), so the walk memos
 (`RcMR`) are carried.
 -/
@@ -94,7 +94,7 @@ The walk's recorded constructor normal forms of a class. L (D18): the loop becam
 recursion (the tail first, so the class-match calls fire from the last entry to the first), each
 kept entry `sl_cons`ed onto the kept tail (a copy, so the result is a pointer slice decoded below
 the tops). Callees: `ctors_have_name` (helper `recb`'s `chnW`), `target_class_match`
-(`RecCheckSpec12`), `sl_cons`.
+(`RecCheckSpec/TcmLook`), `sl_cons`.
 -/
 
 noncomputable section

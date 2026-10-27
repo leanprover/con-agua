@@ -169,7 +169,7 @@ theorem idxArgsResolve_refines (p : Prog)
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost, hA'⟩
 
-/-! ## `class_rule_ok_domains` (moved from `RecGenSpec2.lean`) -/
+/-! ## `class_rule_ok_domains` (moved from `RecGenSpec/CfhW.lean`) -/
 
 end L.Ind
 

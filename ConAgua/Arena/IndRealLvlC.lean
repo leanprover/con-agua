@@ -41,7 +41,7 @@ theorem lvlEqC_simC (n : Nat) {m : Mem} {a : AState} (hC : StageC dn vis fe env 
   exact ⟨x, a', hrun, StageC.of_pstep hC hT'.stage hA' hs, hg, hd, hA', hs⟩
 
 include hcl hL in
-/-- **`lvls_eq_c` under `StageC`** (replaces `RecCheckSpec12.lvlsEqStub_spec` for a caller
+/-- **`lvls_eq_c` under `StageC`** (replaces `RecCheckSpec/TcmLook.lvlsEqStub_spec` for a caller
 carrying `StageC`, `AbsOK` and the two lists' readbacks): the verdict con-leche's
 `isEquivList`. -/
 theorem lvlsEqC_simC (n : Nat) {m : Mem} {a : AState} (hC : StageC dn vis fe env m a)

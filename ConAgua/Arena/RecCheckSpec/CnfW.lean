@@ -19,7 +19,7 @@ The walk's recorded constructor normal forms of a class. L (D18): the loop becam
 recursion (the tail first, so the class-match calls fire from the last entry to the first), each
 kept entry `sl_cons`ed onto the kept tail (a copy, so the result is a pointer slice decoded below
 the tops). Callees: `ctors_have_name` (helper `recb`'s `chnW`), `target_class_match`
-(`RecCheckSpec12`), `sl_cons`.
+(`RecCheckSpec/TcmLook`), `sl_cons`.
 -/
 
 noncomputable section

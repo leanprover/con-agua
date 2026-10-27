@@ -4,7 +4,7 @@ import ConAgua.Arena.IndPosSpec.MatesW
 /-!
 # `all_level_params_defined` refines `allLevelParamsDefined` (lane `decls3`)
 
-The shape of `IndSumSpec5.lean`'s `mentions_const_go` refinement (`mcGoOK`), with three
+The shape of `IndSumSpec/McGoStep.lean`'s `mentions_const_go` refinement (`mcGoOK`), with three
 differences:
 
 * the memo's values are the words `0`/`1` (`apdVR`, `MemoRV`), so the answers stay `0`/`1`;

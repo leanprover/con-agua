@@ -9,7 +9,7 @@ import ConAgua.Arena.RecGenSpec.OcW
 # Refinements of `IndInstall`, part 36 (lane `indproofs4`): `checkBlockPass`
 
 `check_block_pass(vis, p0, isRec)` (`icpW`, `IndInstallSpec28`): the formers (`checkBlockInds`),
-the flush, the constructors, the positivity context, the classes (`RecGenSpec21`), the positivity
+the flush, the constructors, the positivity context, the classes (`RecGenSpec/OcW`), the positivity
 check, the classes' seeds and the nested seeds, then the 19-word `BlockPass` record
 (`check_block_pass_rec`), decoded below the tops (`BPassR`, what `checkBlockTail` takes), with what
 the recursor stage takes of it: its shape's recursor slice below the top (`RecsB`, the shape a copy
