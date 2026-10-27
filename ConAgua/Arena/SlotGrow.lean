@@ -93,7 +93,7 @@ theorem tierA_of_le (a : Nat) (t : Word) (ht : t ≤ 1) : tierA a t = a + 256 * 
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_one.symm)]; rfl
 
 @[simp] theorem tierA_zero (a : Nat) : tierA a 0 = a := rfl
-@[simp] theorem tierA_one (a : Nat) : tierA a 1 = tier1 a := rfl
+@[simp] theorem tierA_one (a : Nat) : tierA a 1 = a + 256 := rfl
 
 theorem tierA_and_one (a : Nat) (t : Word) : tierA a (t &&& 1) = tierA a t := by
   simp only [tierA, UInt64.and_assoc, UInt64.and_self]
