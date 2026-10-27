@@ -25,8 +25,8 @@ def loopPa (a : TieredArray) : Bool := checkerWordArrays.contains a && a != PINS
 def loopPc (w : Word) : Bool := decide (w.toNat < 1024)
 
 theorem loopPa_mem (a : TieredArray) (h : loopPa a = true) : a ∈ loopA := by
-  simp only [loopPa, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
-  simp [loopA, List.mem_filter, List.mem_range, h]
+  simp only [loopPa, Bool.and_eq_true, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
+  simp [loopA, List.mem_filter, h]
 
 theorem loopPc_mem (w : Word) (h : loopPc w = true) : w ∈ loopC := by
   simp only [loopPc, decide_eq_true_eq] at h

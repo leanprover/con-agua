@@ -1,6 +1,7 @@
 import ConAgua.Checker.ParOwned
 import ConAgua.Checker.CapCheck
 import ConAgua.Arena.ArenaRel
+import ConAgua.Checker.ProgTab
 
 /-!
 # The checker's arrays, checked against the program
