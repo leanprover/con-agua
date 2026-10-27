@@ -158,8 +158,44 @@ Ten proof files changed (plus import lines):
 
 Each of the changed modules is faster than before.
 
-## 4. Next: the `simp` side
+## 4. The `simp` side: piloted, not rolled out
 
 `l_model`'s steps and the hand-written `simp only [St.setLoc_loc, …]` sets do not use the
-simprocs unless they name them. Pilot (worktree only, not landed): the five simprocs added to
-`l_model`'s `simpBase` list (`ModelGen.lean`); measurement below.
+simprocs unless they name them. Two pilots, in a worktree only (master 1d08f395, each module
+alone, original then pilot, CPU seconds):
+
+* **`l_model`**: the five simprocs added to `simpBase` in `ModelGen.lean` (the list of
+  `simp_all` and of the `locals` pre-pass), on the ten slowest `l_model` modules (`IndBGrpM`,
+  `DefEqTailE`, `InferBindE`, `UnresolvedE`, `IndBTmm`, `IndBSum3`, `TsrW`, `BlkE3`, `CmW`,
+  `IcvgW`): 272.9 → 276.5 s, no module faster than noise. The diagnostics of `IndBGrpM` say why:
+  its 2 000 `St.setLoc_loc` rewrites per goal are reads `s'.loc y` under the callees' frame
+  conditions `∀ y, y ≠ 15 → … → s'.loc y = (…).loc y`, with a variable `y`, which no walk can
+  resolve; its `simp_all` time is the rounds over large contexts, not the chains.
+* **Hand-written lists**: the simprocs named first in every `simp`/`simp_all` list that names
+  `St.setLoc_loc`, in the eight slowest of the 113 modules that have one (`NatShl`, `NatMul`,
+  `NatDiv`, `NatShr`, `DeclCanonExpr`, `DeclNatDeps`, `ConsLibSpec`, `InferLeavesE`): 383 →
+  389 s, and unused-argument warnings in every module (CI fails on them). Where `simp only` runs,
+  `St.setLoc_loc` with `Nat.reduceEqDiff`/`reduceIte` already resolves literal reads in one
+  pass; the cost of these modules is elsewhere (the Nat ops' arithmetic `grind`s).
+
+Both are below the 3 % bar of the brief, so the rollout stops here: the gain is the `grind` side,
+which landed with the infrastructure and needs no per-module change.
+
+## 5. Result
+
+* **Landed** (#61, master 1d08f395, `--wide`): `L/LocNF.lean` (254 lines with its checks),
+  imported by `L/Logic.lean`; fallout in ten proof files; 28 imports removed.
+* **Time**: the whole cold build's module time 6 963 → 5 219 s (−25 %), CPU 11 103 → 8 477 s,
+  wall 561 → 447 s (§3.3); the ten measured spec modules 468 → 228 s (§3.2).
+* **Lines**: net +224 in `ConAgua/` (the new file, 254; −30 in the other 38 files: 20 hand
+  lemmas and 28 imports deleted, the fallout's comments added). The
+  remaining hand workarounds for reads of the frame (`loc_init4`…`loc_init15` in `RecSim`, used
+  in `finish`/`grind` lists of five modules, and the `simp only [St.setLoc_loc, …]` sets) are
+  redundant for `grind` now and could go when those modules are next touched; removing them saves
+  lines, not time.
+* **Lesson** for the proof-style notes: `grind` (and so `sym … => vcgen … <;> finish`) no
+  longer pays per write of the chain for a read of a literal local; the PLAN's recipe of plain
+  `vcgen` + `simp only [St.setLoc_loc, …]` + `grind` was mostly a workaround for that. Not
+  measured here: whether the `sym … finish` form is now as fast as that recipe on the functions
+  with many paths that prompted it (DeclCanonExpr); a read under a callee's `∀ y` frame
+  condition is still resolved per layer.
