@@ -146,11 +146,6 @@ theorem tierA_ne_tier (a : Nat) {t u : Word} (ht : t ≤ 1) (hu : u ≤ 1) (h : 
     (tierA_of_le a t ht).symm.trans (e.trans (tierA_of_le a u hu))
   exact h (UInt64.toNat_inj.mp (by omega))
 
-/-- A test memory's word arrays with each array `a` also as its tier-1 array `tier1 a` (the
-tiered stores: `L.tierA`). -/
-def withTiers (ws : Array (Array Word)) : Array (Array Word) :=
-  ws ++ Array.replicate (256 - ws.size) #[] ++ ws
-
 /-! ## Shifting local variables
 
 A block written once with its variables first (a table's key hash, `ConsSch.ihash`) is spliced

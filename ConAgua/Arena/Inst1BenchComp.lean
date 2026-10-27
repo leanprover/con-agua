@@ -40,8 +40,8 @@ def inst1BenchProg : Prog := instProg ++ [("inst1_bench", inst1Bench)]
 
 /-- `liftBenchMem`'s sizing, one array wider: `IMEMO` (`47`) as well as `LMEMO` (`41`). -/
 def inst1BenchMem (c : Nat) : Mem :=
-  { words := withTiers <| ((List.range 48).map
-      (fun i => Array.replicate (if i = 0 then 0 else if i = 1 then 64 else 8 * c) 0)).toArray }
+  Mem.ofWords <| ArrTable.zeroBoth (checkerArrays.filter (·.id ≤ IMEMO)) fun a =>
+    if a = POOL then 0 else if a = CTL then 64 else 8 * c
 
 /-- Run `f` from the memory `m`; the first result. -/
 def inst1BenchRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Word × Mem) :=

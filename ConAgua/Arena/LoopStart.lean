@@ -95,10 +95,9 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
   have hrow : ∀ w : Word, rowTag w ≤ 2 → rowC m w = 0 := by
     intro w hw
     simp only [rowC, ite_eq_left hw]
-    have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
     have hl : loopZeroArr (rowArr w) := by
-      simp only [loopZeroArr, rowArr]
-      rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h0 | h0 <;> simp only [h0] <;> omega
+      unfold loopZeroArr
+      rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
     have hz := h.arr (rowArr w) hl (UInt64.ofNat (rowIx w))
     have hlt : rowIx w < 2 ^ 64 := by unfold rowIx; omega
     simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
@@ -107,10 +106,9 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
     unfold tblRow
     split
     · rename_i hw
-      have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
       have hl : loopZeroArr (tblArr w) := by
-        simp only [loopZeroArr, tblArr]
-        rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h0 | h0 <;> simp only [h0] <;> omega
+        unfold loopZeroArr
+        rcases tblArr_cases w hw with e | e | e | e | e | e <;> rw [e] <;> decide
       have hz := h.arr (tblArr w) hl (UInt64.ofNat (tblIx w))
       have hlt : tblIx w < 2 ^ 64 := by unfold tblIx; omega
       simpa [rdW, Nat.mod_eq_of_lt hlt] using hz

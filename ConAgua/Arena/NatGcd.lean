@@ -75,10 +75,10 @@ def natGcdProg : Prog := natDivProg ++ [("gcd_step", gcdStep), ("nat_gcd", natGc
 
 /- `gcd 12 18 = 6`; `gcd 0 5 = 5`. -/
 #guard (run natGcdProg 100000 "nat_gcd" [0, 1, 1, 1]
-  { words := #[(#[12, 18] ++ Array.replicate 40 0), #[2]] }).toOption.map
-  (fun (r, m) => (r[1]!, m.words[0]![r[0]!.toNat]!)) == some (1, 6)
+  (Mem.ofWords [(POOL, (#[12, 18] ++ Array.replicate 40 0)), (CTL, #[2])])).toOption.map
+  (fun (r, m) => (r[1]!, (m.arr64 POOL)[r[0]!.toNat]!)) == some (1, 6)
 #guard (run natGcdProg 100000 "nat_gcd" [0, 0, 0, 1]
-  { words := #[(#[5] ++ Array.replicate 40 0), #[1]] }).toOption.map (·.1) == some [0, 1]
+  (Mem.ofWords [(POOL, (#[5] ++ Array.replicate 40 0)), (CTL, #[1])])).toOption.map (·.1) == some [0, 1]
 
 section gcd
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)

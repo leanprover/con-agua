@@ -54,7 +54,7 @@ def main (args : List String) : IO UInt32 := do
   unless miss.isEmpty do return 1
   let sizes := (List.range 210).map fun i =>
     if i == CTL then 256 else if i == L.Ind.IW then 1 <<< 16 else 1 <<< 19
-  let m0 : Mem := { initMem sizes with bytes := #[#[], buf.data] }
+  let m0 : Mem := (initMem sizes).putBytes Rom.PB buf.data
   let fuel := 100000
   let t0 ← IO.monoMsNow
   let step (m : Mem) (f : String) : IO Mem := do

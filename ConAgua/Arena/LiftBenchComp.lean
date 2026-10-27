@@ -39,8 +39,8 @@ def liftBenchProg : Prog := liftProg ++ [("lift_bench", liftBench)]
 /-- A memory with room for `c` nodes per table (the full layout through the derived-range
 arrays, `42`‥`46`, and the lift memo, `41`): every content array `8 c` words, `CTL` of `64`. -/
 def liftBenchMem (c : Nat) : Mem :=
-  { words := withTiers <| ((List.range 47).map
-      (fun i => Array.replicate (if i = 0 then 0 else if i = 1 then 64 else 8 * c) 0)).toArray }
+  Mem.ofWords <| ArrTable.zeroBoth (checkerArrays.filter (·.id ≤ PJDER)) fun a =>
+    if a = POOL then 0 else if a = CTL then 64 else 8 * c
 
 /-- Run `f` from the memory `m`; the first result. -/
 def liftBenchRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Word × Mem) :=

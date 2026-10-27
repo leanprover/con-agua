@@ -741,8 +741,9 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
 
 /- `5 + 7` twice and `12` (`7 + 5`): one node, handle `0x80000000`; `5 + 5` is the second. -/
 #guard
-  let m : Mem := { words := withTiers <| #[#[5, 7, 0, 0, 0, 0, 0, 0, 0, 0], #[2] ++ Array.replicate 63 0,
-    Array.replicate 64 0, Array.replicate consTestWords 0] }
+  let m : Mem := Mem.ofWords <| [(CTL, #[2] ++ Array.replicate 63 0)] ++
+    withTiers [(POOL, #[5, 7, 0, 0, 0, 0, 0, 0, 0, 0]), (REC, Array.replicate 64 0),
+      (SLOT, Array.replicate consTestWords 0)]
   let go (m : Mem) (a b : Word) : Option (Word × Mem) :=
     match run storeProg 100 "nat_add_lit" [a, 1, b, 1] m with
     | .ok (r, m') => some (r.headD 0, m')

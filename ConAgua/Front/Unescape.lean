@@ -416,7 +416,7 @@ def escProg : Prog :=
 
 /-- Run `str_put_esc` over the whole input `s` with a 16-word pool; the pool words written. -/
 def runEsc (s : String) : Option (List Word) :=
-  let m : Mem := { bytes := #[s.toUTF8.data], words := #[Array.replicate 16 0, Array.replicate 4 0] }
+  let m : Mem := (Mem.ofWords [(POOL, Array.replicate 16 0), (CTL, Array.replicate 4 0)]).putBytes IN s.toUTF8.data
   match run escProg 400 "str_put_esc" [0, UInt64.ofNat s.toUTF8.size] m with
   | .ok ([o, l], m') => some (((m'.arr64 POOL).extract o.toNat (o + l).toNat).toList)
   | _ => none

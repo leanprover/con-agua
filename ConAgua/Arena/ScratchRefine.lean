@@ -787,12 +787,11 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
 
 /- Two scratch rounds: the base rises by `2^32` each time, the flag follows. -/
 #guard
-  let m : Mem := { words := #[#[], Array.replicate 120 0] ++ Array.replicate 60 #[] ++ #[#[0]] ++
-    Array.replicate 47 #[] }
+  let m : Mem := Mem.ofWords [(CTL, Array.replicate 120 0), (PT0, #[0])]
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
-    | .ok (_, m2) => (m1.arr64 1)[62]! == 4294967296 && (m1.arr64 1)[1]! == 1 &&
-        (m2.arr64 1)[62]! == 8589934592 && (m2.arr64 1)[1]! == 0
+    | .ok (_, m2) => (m1.arr64 CTL)[62]! == 4294967296 && (m1.arr64 CTL)[1]! == 1 &&
+        (m2.arr64 CTL)[62]! == 8589934592 && (m2.arr64 CTL)[1]! == 0
     | .error _ => false
   | .error _ => false
 
@@ -802,16 +801,15 @@ of `ASLOT`: 16 slots at offset 2) and restarts the base: `2^32`. -/
 #guard
   let ctl : Array Word := (Array.replicate 120 0).set! 62 (4611686018427387904 - 4294967296)
   let slot (a : Nat) : Array Word :=
-    if a = 261 then #[8, 2, 5, 5] ++ Array.replicate 32 7
+    if a = tier1 ASLOT then #[8, 2, 5, 5] ++ Array.replicate 32 7
     else if a ∈ slot1Arrs then #[0, 0] ++ Array.replicate 16 7 else #[]
-  let m : Mem := { words := (List.range 320).toArray.map fun a =>
-    if a = 1 then ctl else if a = 62 then #[0] else slot a }
+  let m : Mem := Mem.ofWords ([(CTL, ctl), (PT0, #[0])] ++ slot1Arrs.map fun a => (a, slot a))
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
-    | .ok (_, m2) => (m1.arr64 1)[62]! == 4611686018427387904 && (m1.arr64 259)[2]! == 7 &&
-        (m2.arr64 1)[62]! == 4294967296 && (m2.arr64 1)[1]! == 0 &&
-        m2.arr64 261 == #[8, 2, 5, 5] ++ Array.replicate 32 0 &&
-        slot1Arrs.all (fun a => a == 261 || m2.arr64 a == #[0, 0] ++ Array.replicate 16 0)
+    | .ok (_, m2) => (m1.arr64 CTL)[62]! == 4611686018427387904 && (m1.arr64 (tier1 SLOT))[2]! == 7 &&
+        (m2.arr64 CTL)[62]! == 4294967296 && (m2.arr64 CTL)[1]! == 0 &&
+        m2.arr64 (tier1 ASLOT) == #[8, 2, 5, 5] ++ Array.replicate 32 0 &&
+        slot1Arrs.all (fun a => a == tier1 ASLOT || m2.arr64 a == #[0, 0] ++ Array.replicate 16 0)
     | .error _ => false
   | .error _ => false
 

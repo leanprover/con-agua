@@ -348,7 +348,7 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
       split at h
       · rename_i hv
         have hT : TblSame m m₁ EID := TblSame.of_frameD F2 (.inr (.inr rfl)) (by simp [DLP, EID])
-          (by simp [DLP, EID]) (by simp) (by simp)
+          (by simp [DLP, EID, spArr, NID, LID, EIDS]) (by simp) (by simp)
         rw [tblOK_congr hT] at hv
         exact ⟨_, by rw [tblW_congr hT] at h; exact h, fun _ => ⟨rfl, hv⟩⟩
       · cases h

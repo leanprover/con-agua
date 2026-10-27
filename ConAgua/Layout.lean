@@ -114,7 +114,7 @@ declare_arrays checkerArrays
     blocks' constant records (`DIND`). -/ Front.DLP : word := 68
   | /-- The fixed-size field records of the current inductive line. -/ Front.Ind.IFR : word := 70
   | /-- The word lists and rule records of the current inductive line. -/ Front.Ind.IFL : word := 71
-  | /-- `NID`'s sparse overflow (a memo-library table, `Front/IdTable.lean`: `NID + 8`). -/
+  | /-- `NID`'s sparse overflow (a memo-library table, `Front/IdTable.lean`: `spArr NID`). -/
     Front.NIDS : word := 72
   | /-- `LID`'s sparse overflow. -/ Front.LIDS : word := 73
   | /-- `EID`'s sparse overflow. -/ Front.EIDS : word := 74

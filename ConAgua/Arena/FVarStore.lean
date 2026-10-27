@@ -137,11 +137,13 @@ def internFVar : FunDecl := consInternG fvarCS
 def fvarProg : Prog :=
   [("fvar_find", fvarFind), ("fvar_push", fvarPush), ("intern_fvar", internFVar)]
 
-/-- A memory with 8 `fvar` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
-0‥24 (the other tables') are unused here and left empty. -/
+/-- A memory with 8 `fvar` nodes and `SN0` slots per tier, the scratch tier closed or open. The other
+tables' arrays are unused here and left empty. -/
 def fvarMem (scratch : Word) : Mem :=
-  { words := withTiers <| (Array.replicate 25 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
-      #[Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
+  Mem.ofWords <| [(CTL, (Array.replicate 64 0).set! 1 scratch)] ++
+    withTiers [(FVREC, Array.replicate consTestWords 0),
+      (FVSLOT, Array.replicate consTestWords 0),
+      (FVLP, Array.replicate consTestWords 0)]
 
 /-- Intern each `(index, ty)` pair in turn; the handles. -/
 def internFVars (m : Mem) : List (Word × Word) → Option (List Word)

@@ -19,7 +19,7 @@ out-of-order id. Here, for table `b` (`NID` 64, `LID` 65, `EID` 66):
   half `i & 1` of word `i >> 1` (bits `32 * (i & 1)` … `+ 31`; con-ron's handles are `u32`), so
   the capacity in entries is twice the array's length; a write is a read-modify-write of the word;
 * the sparse part is a memo-library table (`MemoLib.lean`, open addressing, one-word keys) at array
-  `b + 8` (`72`, `73`, `74`), stamp and count `CTL[2b - 64]`, `CTL[2b - 63]` (`64‥69`).
+  `spArr b` (`NIDS`, `LIDS`, `EIDS`), stamp and count `CTL[2b - 64]`, `CTL[2b - 63]` (`64‥69`).
 
 The L functions, generic in the table (the memo's `find`/`put` named by the instance):
 * `tbl_get(i)` (`StateD.name`/`level`/`expr`, through `IdTable.get?`): the dense entry below the
@@ -52,8 +52,11 @@ namespace L.Front
 /-- The `CTL` word holding table `b`'s dense size. -/
 def szC (b : ArrId) : Word := UInt64.ofNat (b + 6)
 
-/-- Table `b`'s sparse overflow: array `b + 8`, stamp `CTL[2b - 64]`, count `CTL[2b - 63]`. -/
-def spS (b : ArrId) : MemoSch := ⟨b + 8, UInt64.ofNat (2 * b - 64)⟩
+/-- Table `b`'s sparse overflow array: `NIDS`, `LIDS`, `EIDS` for `NID`, `LID`, `EID`. -/
+def spArr (b : ArrId) : ArrId := if b = NID then NIDS else if b = LID then LIDS else EIDS
+
+/-- Table `b`'s sparse overflow: array `spArr b`, stamp `CTL[2b - 64]`, count `CTL[2b - 63]`. -/
+def spS (b : ArrId) : MemoSch := ⟨spArr b, UInt64.ofNat (2 * b - 64)⟩
 
 /-! ## Models -/
 
@@ -112,7 +115,7 @@ def putK (b : ArrId) (i : Word) : Option (Word × Mem) → Option Mem
 /-- `tbl_get(i)` of table `b`, the sparse probe `fnd`.
 con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
 def tblGetG (b : ArrId) (fnd : FnName) : FunDecl :=
-  let _sa : ArrId := b + 8
+  let _sa : ArrId := spArr b
   lfn (i) locals (fd, j, d) {
     if i < CTL.u64[⟪szC b⟫] { return (b.u64[i >> 1] >> ((i & 1) << 5)) & 0xFFFFFFFF };
     if i == ⟪TOMB⟫ { abort };
@@ -410,28 +413,28 @@ theorem tblFresh_ne_tomb {m : Mem} {b : ArrId} (i : Word) (hf : tblFresh m b i =
 /-- What `tblOK`, `tblW`, `tblFresh` read of table `b`. -/
 structure TblSame (m m' : Mem) (b : ArrId) : Prop where
   d : m'.arr64 b = m.arr64 b
-  s : m'.arr64 (b + 8) = m.arr64 (b + 8)
+  s : m'.arr64 (spArr b) = m.arr64 (spArr b)
   z : rdW (m'.arr64 CTL) (szC b) = rdW (m.arr64 CTL) (szC b)
   e : rdW (m'.arr64 CTL) (spS b).cs = rdW (m.arr64 CTL) (spS b).cs
 
 theorem TblSame.of_frameD {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
-    (hf : MemFrame A C m m') (hb : TblIx b) (hbA : b ∉ A) (hb8 : b + 8 ∉ A) (hzC : szC b ∉ C)
+    (hf : MemFrame A C m m') (hb : TblIx b) (hbA : b ∉ A) (hb8 : spArr b ∉ A) (hzC : szC b ∉ C)
     (heC : (spS b).cs ∉ C) : TblSame m m' b :=
   ⟨hf.1 b hbA (by rcases hb with rfl | rfl | rfl <;> decide),
     hf.1 _ hb8 (by rcases hb with rfl | rfl | rfl <;> decide), hf.2.1 _ hzC, hf.2.1 _ heC⟩
 
 /-- Table `b`'s arrays and all of `CTL` unchanged. -/
 theorem TblSame.of_eq {m m' : Mem} {b : ArrId} (h : m'.arr64 b = m.arr64 b)
-    (h8 : m'.arr64 (b + 8) = m.arr64 (b + 8)) (hc : m'.arr64 CTL = m.arr64 CTL) :
+    (h8 : m'.arr64 (spArr b) = m.arr64 (spArr b)) (hc : m'.arr64 CTL = m.arr64 CTL) :
     TblSame m m' b := ⟨h, h8, by rw [hc], by rw [hc]⟩
 
 /-- Table `b`'s arrays and `CTL` words are outside a frame of arrays outside `idArrs` and `CTL`
 words outside `idCtl`. -/
 theorem tbl_apart {A : List ArrId} {C : List Word} {b : ArrId} (hb : TblIx b)
     (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x ∉ idCtl) :
-    b ∉ A ∧ b + 8 ∉ A ∧ szC b ∉ C ∧ (spS b).cs ∉ C :=
+    b ∉ A ∧ spArr b ∉ A ∧ szC b ∉ C ∧ (spS b).cs ∉ C :=
   ⟨fun h => by have := hA b h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, NID, LID, EID, NIDS, LIDS, EIDS],
-    fun h => by have := hA _ h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, NID, LID, EID, NIDS, LIDS, EIDS],
+    fun h => by have := hA _ h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs, spArr, NID, LID, EID, NIDS, LIDS, EIDS],
     fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [szC, idCtl] at this,
     fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [spS, idCtl] at this⟩
 
@@ -459,7 +462,7 @@ theorem tblW_congr {m m' : Mem} {b : ArrId} (h : TblSame m m' b) (i : Word) :
 /-- **The relation survives a writer of other arrays and `CTL` words.** -/
 theorem TblR.frameD {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
     {t : ConLeche.Frontend.IdTable (Idx k)} (h : TblR m b t) (hf : MemFrame A C m m')
-    (hb : TblIx b) (hbA : b ∉ A) (hb8 : b + 8 ∉ A) (hzC : szC b ∉ C) (heC : (spS b).cs ∉ C) :
+    (hb : TblIx b) (hbA : b ∉ A) (hb8 : spArr b ∉ A) (hzC : szC b ∉ C) (heC : (spS b).cs ∉ C) :
     TblR m' b t := by
   have hS := TblSame.of_frameD hf hb hbA hb8 hzC heC
   have hz : szW m' b = szW m b := szW_congr hS
@@ -490,7 +493,7 @@ theorem TblR.zero (m : Mem) (b : ArrId) (hb : TblIx b) (hz : ∀ b x, rdW (m.arr
 
 /-- The arrays and `CTL` words `tbl_put` writes. -/
 theorem tblPutW_frame {m m' : Mem} {b : ArrId} (hb : TblIx b) {i w : Word}
-    (h : tblPutW m b i w = some m') : MemFrame [b, b + 8] [szC b, (spS b).cs + 1] m m' := by
+    (h : tblPutW m b i w = some m') : MemFrame [b, spArr b] [szC b, (spS b).cs + 1] m m' := by
   have hbC : b ≠ CTL := by rcases hb with rfl | rfl | rfl <;> decide
   unfold tblPutW at h
   split at h
