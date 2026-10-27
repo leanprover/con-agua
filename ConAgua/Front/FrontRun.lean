@@ -206,7 +206,7 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hFI : L.Front.Ind.IndFieldLookups p) (hAI : L.Front.Ind.IndApplyLookups p)
   (hII : L.Front.Ind.IndInstallLookups p) (hXI : L.Front.Ind.IndLineLookups p)
 
-include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz in
+include hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz in
 /-- `front_line` under a run invariant `Inv` that bounds the pool's top (`hInv`) and that every
 line applied keeps (`hpres`, a fact of the model). -/
 theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Inv : Mem → Prop)
@@ -282,7 +282,7 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   intro s r s' hs hrun h0
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
     (frontRun_specI p (lineKW p b.data) b.data (fun m => ∃ a st, FrontInv b m a st)
-      (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data
+      (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data
         hsize _ (fun m ⟨_, _, hI⟩ => ⟨hI.2.1.1.lit.1.2.2.1, hI.2.1.1.lit.1.2.2.2.1⟩)
         (inv_step p (FrontInv b) b h64 hsize
           (fun m m' i ok nx st a hI hi h hok => lineKW_step b h64 hsize p hFI hAI hII hXI m m' i ok nx

@@ -261,6 +261,7 @@ theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
         applyNStr_spec p hL hpn n] <;> finish [applyStrW, Keep.size]
 
+omit hb in
 omit hpf hps hpy hF hDL hpz in
 theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
@@ -309,7 +310,7 @@ theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         L.Front.Fields.recLineLoop_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "skip_braced") (hS.get "read_nat") (hS.get "rec_nat_list") (hS.get "rec_str_name") (hS.get "rec_num_name") (hS.get "rec_line_loop") n,
         L.Front.Fields.recExprLoop_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "scan_quoted_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "read_nat") (hS.get "obj_val") (hS.get "rec_obj") (hS.get "expr_val") (hS.get "rec_expr_loop") n,
-        applyRec_spec p hS hL hpn hpu hpl hpr hpt hE b hb n,
+        applyRec_spec p hS hL hpn hpu hpl hpr hpt hE b n,
         applyExpr_spec p hE b hb (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "esc_sur") (hS.get "esc_one")
           (hS.get "utf8_put") (hS.get "str_put_esc") n,
         applyDLine_spec p hF hDL hpz b hb n] <;>
