@@ -412,6 +412,7 @@ theorem declCv_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : S
         exprGet_spec p hE.expr n, lpPut_spec p hE b hb n] <;>
       finish [cvW]
 
+omit hE in
 /-- `apply_decl`'s order (`decl_cv`, then `decl_kind`) gives `applyDeclW`. -/
 theorem applyDeclW_cv (b : Array UInt8) (m m₁ : Mem) (pl name lps type value hk hn flag : Word)
     (h : cvW b m name lps type = some m₁) :

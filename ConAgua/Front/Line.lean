@@ -237,6 +237,7 @@ include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz hb
 
 attribute [local lang_grind =] map_okRes
 
+omit hpf hps hpu hpl hpr hpy hF hDL hpz in
 theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
     (idx a c d : Word) :
@@ -275,6 +276,7 @@ theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
         applyStr_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n,
         applyNNum_spec p hL hpu n, applyLevel_spec p hL hpl n] <;> finish [lineRecW, NONE]
 
+omit hS hL hpf hps hpn hpu hpl hpr hpt hE hpy in
 theorem applyDLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_dline" [j]

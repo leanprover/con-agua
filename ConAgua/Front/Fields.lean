@@ -555,6 +555,7 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hprl : p.lookup "rec_line_loop" = some recLineLoop)
 include hb
 
+omit hb in
 theorem readNatLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n readNatLoop

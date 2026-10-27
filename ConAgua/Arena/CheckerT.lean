@@ -1251,6 +1251,7 @@ variable (hpp : p.lookup "pend_push" = some pendPushL)
     (hb : BracketProg p) (hdc : LoopCallees dn p) (hm : mode = .verified) (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds)
 include hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm hFD hLD
 
+omit hpp hpn hps hpi hpd hpx hsz hb hdc hm hFD hLD in
 theorem foldGo_step (n : Nat) (ih : FoldNextSpec mode pins dn ds p n) :
     FoldGoSpec mode pins dn ds p (n + 1) := by
   unfold FoldNextSpec at ih
@@ -1274,6 +1275,7 @@ theorem foldGo_step (n : Nat) (ih : FoldNextSpec mode pins dn ds p n) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (ih · a₀ · · · fe pend)] <;>
     finish
 
+omit hpg in
 theorem foldNext_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : FoldGoSpec mode pins dn ds p n) :
     FoldNextSpec mode pins dn ds p (n + 1) := by
   unfold FoldGoSpec at ih

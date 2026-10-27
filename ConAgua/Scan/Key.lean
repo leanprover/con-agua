@@ -749,6 +749,7 @@ include hp hp1 hp2 hp3 hp4 hp5 hp6 hb
 -- `keyAt`/`keyAtN` are split this way): composed from `keyAtG1_spec`…`keyAtG6_spec` exactly as
 -- `scan_bool` composes from two `match_lit` calls (`ConAgua.Scan.Lit`). No bounds precondition: an
 -- out-of-bounds read throws, and the exception post is `⊤`.
+omit hb in
 attribute [local lang_grind] keyAtN in
 @[refines ConLeche.Frontend.keyAt]
 theorem keyAt_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl : Word) :

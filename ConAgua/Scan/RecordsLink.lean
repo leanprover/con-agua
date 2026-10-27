@@ -74,6 +74,7 @@ theorem lt_usize_iff (i : USize) : i < b.usize ↔ i.toUInt64 < UInt64.ofNat b.d
 theorem byteW_eq (i : USize) : byteW b.data i.toUInt64 = (byteAt b i).toUInt64 :=
   (byteAt_toUInt64_eq b i h64 (by omega)).symm
 
+omit hsize in
 theorem succ_toUInt64 (i : USize) : (i + 1).toUInt64 = i.toUInt64 + 1 := by
   rw [add_toUInt64 h64, ofNat_toUInt64 h64 1]
 
@@ -338,6 +339,7 @@ theorem keyStep_num {sb : UInt32} (hbit : bit kc = sb.toUInt64) (hsb : sb ≠ 0)
       · exact h'
       · rw [ite_eq_right h'] at h; exact absurd h UInt64.not_lt_zero
 
+omit h64 hsize in
 /-- A value read by a scanner that returns its end or `0` (`scanBinderInfo`). -/
 theorem keyStep_usz {sb : UInt32} (hbit : bit kc = sb.toUInt64) (hsb : sb ≠ 0)
     (hseen : seen &&& sb = 0) (u : USize)
@@ -379,6 +381,7 @@ section values
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
+omit h64 hsize in
 theorem scanBoolN_le (i : Nat) (v : Bool) (p : Nat) (h : L.Scan.Lit.scanBoolN b.data i = some (v, p)) :
     p ≤ b.data.size ∧ p = i + (if v then 4 else 5) := by
   unfold L.Scan.Lit.scanBoolN at h

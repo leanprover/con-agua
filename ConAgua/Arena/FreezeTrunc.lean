@@ -168,6 +168,7 @@ theorem row_trunc (w : Word) :
       exact ⟨.inl rfl, fun h => by omega, fun _ => ⟨rfl, rfl⟩⟩
   · simp [hg]
 
+omit hcnt in
 /-- A tier-0 table-row array under the truncation. -/
 theorem tix_trunc (g : Nat) (hg : g ≤ 2) :
     (truncFrozen m).arr64 (129 + g) = (m.arr64 (129 + g)).extract 0 (nmCnt m g) := by

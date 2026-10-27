@@ -169,6 +169,7 @@ macro "ilist_shape " G:ident : tactic => `(tactic| (
     rw [$G:ident, dite_eq_left h] at hok
     simp [uget_byteAt _ i h, hws, h1, h2, h3] at hok))
 
+omit h64 hsize in
 theorem ruleList_shape : IListLoop b (scanRuleListLoop b) (scanRule b) := by
   ilist_shape scanRuleListLoop
 
@@ -454,6 +455,7 @@ theorem recF_stab (t : Nat) (x : IndRecRec) (m m' : Mem) (x0 x1 : Nat) (h : RecF
   · rw [hw 10 (by decide)]; exact r10
   · rw [hw 9 (by decide)]; exact r9
 
+omit h64 hsize in
 theorem recList_shape : IListLoop b (scanIndRecListLoop b) (scanIndRec b) := by
   ilist_shape scanIndRecListLoop
 
@@ -609,6 +611,7 @@ theorem ctF_stab (t : Nat) (x : IndCtorRec) (m m' : Mem) (x0 x1 : Nat) (h : CtF 
   · rw [hw 4 (by decide)]; exact f4
   · rw [hw 5 (by decide)]; exact f5
 
+omit h64 hsize in
 theorem ctList_shape : IListLoop b (scanIndCtorListLoop b) (scanIndCtor b) := by
   ilist_shape scanIndCtorListLoop
 
@@ -834,6 +837,7 @@ theorem tyF_stab (t : Nat) (x : IndTypeRec) (m m' : Mem) (x0 x1 : Nat) (h : TyF 
   · rw [hw 9 (by decide)]; exact n9
   · rw [hw 10 (by decide)]; exact n10
 
+omit h64 hsize in
 theorem tyList_shape : IListLoop b (scanIndTypeListLoop b) (scanIndType b) := by
   ilist_shape scanIndTypeListLoop
 

@@ -325,6 +325,7 @@ end
 section
 variable [Host] {G : Layout} {ctx : Ctx} {F : Nat}
 
+omit [Host] in
 theorem mem_app_cons {W W' : List Reg64} {d : Reg64} (h1 : ∀ r ∈ W, r ∈ d :: W') :
     ∀ r ∈ W ++ W', r ∈ d :: W' := fun r h =>
   (List.mem_append.mp h).elim (h1 r) (fun h => List.mem_cons_of_mem _ h)
@@ -795,6 +796,7 @@ variable [Host] {G : Layout} (hG : G.Ok) {ctx : Ctx} {F : Nat} (hT : ctx.tab = G
   (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
 include hG hT hTab
 
+omit [Host] in
 /-- A word array's descriptor in the table. -/
 theorem arrW_plain {a : ArrId} (ha : a < G.tab.nw) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) :
     ArrW s (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) (σ.mem.arr64 a) := by
@@ -808,6 +810,7 @@ theorem arrW_plain {a : ArrId} (ha : a < G.tab.nw) {σ : St} {s : MachineData} (
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len64 a ha
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base64 a ha
 
+omit [Host] in
 /-- A byte array's descriptor in the table. -/
 theorem arrB_plain {a : ArrId} (ha : a < G.tab.nb) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) :
     ArrB s (mb .r15 (ctx.tab.len8 a)) (mb .r15 (ctx.tab.base8 a)) (σ.mem.arr8 a) := by
@@ -820,6 +823,7 @@ theorem arrB_plain {a : ArrId} (ha : a < G.tab.nb) {σ : St} {s : MachineData} (
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len8 a ha
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base8 a ha
 
+omit [Host] in
 /-- A tiered word array's descriptor, the tier `u & 1` in register `R`. -/
 theorem arrW_tier {a : ArrId} (ha : a < G.tab.wK) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
     {R : Reg64} {u : Word} (hR : s.regs.get64 R = (u &&& 1).toBitVec) :
@@ -969,6 +973,7 @@ variable [Host] {G : Layout} (hG : G.Ok) {ctx : Ctx} {F : Nat} (hT : ctx.tab = G
   (hF : 8 * F + 8 < maxOff)
 include hG hT hTab hF
 
+omit [Host] hG hT hTab hF in
 theorem readsReg_sub1 {al : List (Var × Reg64)} {r : Reg64} {e i : Expr}
     (h : ∀ r, Expr.readsReg al r e = false → Expr.readsReg al r i = false) (hr : Expr.readsReg al r e = false) :
     Expr.readsReg al r i = false := h r hr
@@ -1097,6 +1102,7 @@ theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
       · exact ⟨.oob, by simp [evalP, hu, hj, hn, bind, Except.bind]⟩
 
 
+omit hF in
 theorem gen_len64t (a : ArrId) {t : Expr} (ht : GenSpec G ctx F t (gen ctx t)) :
     GenSpec G ctx F (.len64t a t) (gen ctx (.len64t a t)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
@@ -1129,6 +1135,7 @@ theorem gen_len64t (a : ArrId) {t : Expr} (ht : GenSpec G ctx F t (gen ctx t)) :
       (hX2.set hd _ _)) (by simp [tierDesc]; omega)
     simp [evalP, hu, Mem.len64, bind, Except.bind]
 
+omit hF in
 theorem gen_ldc (dd : List UInt8) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
     GenSpec G ctx F (.ldc dd i) (gen ctx (.ldc dd i)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
@@ -1187,6 +1194,7 @@ theorem gen_ldc (dd : List UInt8) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)
       simp only [evalP, hj, bind, Except.bind]
       rw [dite_eq_left hcc]
 
+omit hG in
 theorem gen_cmpw (op : Cmp) {a b : Expr} (ha : GenSpec G ctx F a (gen ctx a)) (hb : GenSpec G ctx F b (gen ctx b)) :
     GenSpec G ctx F (.cmpw op a b) (gen ctx (.cmpw op a b)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr

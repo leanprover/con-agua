@@ -131,6 +131,7 @@ theorem skip_link (v : USize) :
   · have h0 : byteAt b v = 0 := by unfold byteAt; rw [dite_eq_right h]
     rw [ite_eq_right (fun h' => h ((lt_usize_iff b h64 hsize v).mpr h'.1)), ite_eq_right (by rw [h0]; decide)]
 
+omit h64 hsize in
 theorem natListLoop_len (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (p : USize)
     (hacc : acc.length ≤ i.toNat) (h : scanNatListLoop b i acc w = .ok us p) : us.length ≤ p.toNat := by
   fun_induction scanNatListLoop b i acc w with

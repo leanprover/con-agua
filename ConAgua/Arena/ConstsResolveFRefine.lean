@@ -246,6 +246,7 @@ section rel
 variable {p : Prog} (hp : CrfProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 include hp
 
+omit hp in
 theorem envFindW_01 {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) :
     r.headD 0 = 0 ∨ r.headD 0 = 1 := by
   unfold envFindW at h
@@ -272,6 +273,7 @@ theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
     simp only [decFound, ite_eq_right (show (1 : Word) ≠ 0 by decide), hci, Option.isSome_some,
       ↓reduceIte]
 
+omit hp in
 theorem ite_beq0 (c : Bool) : ((if c = true then (1 : Word) else 0) == 0) = !c := by
   cases c <;> rfl
 

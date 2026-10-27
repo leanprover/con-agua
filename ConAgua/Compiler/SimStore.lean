@@ -281,6 +281,7 @@ include hG hTab
 
 /-! ## Stores through the register stack (lane leafgen, step G2) -/
 
+omit [Host] in
 omit hG hTab in
 /-- A write of a pool register (the base register of a store) keeps the invariant and the post. -/
 theorem CPost.setPool {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) {t : Reg64}
@@ -399,6 +400,7 @@ theorem genSt_tailWK {ctx : Ctx} {F : Nat} {a' : ArrId} (ha : a' < G.tab.nw)
       · simp only; rw [haddr, rget_set, ite_eq_right hrt, hr]
         exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
 
+omit [Host] hG in
 /-- A plain word array's descriptor words. -/
 theorem descW_plain {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
     {a : ArrId} (ha : a < G.tab.nw) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) :
@@ -413,6 +415,7 @@ theorem descW_plain {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len64 a ha
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base64 a ha
 
+omit [Host] hG in
 /-- A tiered word array's descriptor words, the tier `u & 1` in register `R`. -/
 theorem descW_tier {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
     {a : ArrId} (ha : a < G.tab.wK) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
@@ -439,6 +442,7 @@ theorem descW_tier {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
       G.T + (G.tab.base64 (tierA a u)).toNat by rw [hT]; omega]
     exact hI.mem.base64 _ hta
 
+omit [Host] in
 omit hG hTab in
 theorem simpleOp_reg {ctx : Ctx} {e : Expr} {r : Reg .W64} (h : simpleOp ctx e = some (.regOrMem (.reg r))) :
     ∃ x r', ctx.alloc.lookup x = some r' ∧ r = rr r' := by

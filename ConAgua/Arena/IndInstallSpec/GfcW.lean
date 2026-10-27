@@ -307,6 +307,7 @@ section rel
 variable {p : Prog} (P : CftProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 include P
 
+omit P in
 /-- **The loop refines `ms.mapM (classFormerTy fe cvTas)`** from cursor `j`. -/
 theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (ms : List TargetMajor)
     (hcv : PSlR decCVp cvTas co cl s0) (hms : PSlR decTM ms mo ml s0) (hq : q.toNat = iwTop s0)

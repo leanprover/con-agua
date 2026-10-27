@@ -246,6 +246,7 @@ theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List
     (hA' : A + 256 ∉ Ar) (hc : A ≠ CTL) : ColT2 L A f m' a :=
   h.frame (hf.1 A hA hc) (hf.1 _ hA' (by simp [CTL]))
 
+omit [Inhabited δ] in
 theorem tbl_push_size (tb : Tbl α (Idx k) δ) (key : α) (d : δ) (y : Idx k) :
     (tb.push key d y).nodes.size = tb.nodes.size + 1 ∧ (tb.push key d y).der.size = tb.der.size + 1 := by
   cases tb; simp [Tbl.push]

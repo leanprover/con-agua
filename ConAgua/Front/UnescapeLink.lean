@@ -389,6 +389,7 @@ theorem poolInv_wrs (bs : List UInt8) : ∀ (m : Mem) (k : Word) (L : List UInt8
         rw [UInt64.ofNat_add]; simp; ac_rfl]
     simpa using this
 
+omit hs ht in
 /-- What `utf8_put` did, when it returned. -/
 theorem u8PutW_eq (m : Mem) (k cp k' : Word) (m' : Mem) (h : u8PutW m top k cp = some (k', m')) :
     k' = k + UInt64.ofNat (encW cp).length ∧

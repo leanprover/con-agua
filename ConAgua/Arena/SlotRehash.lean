@@ -220,6 +220,7 @@ theorem kprobeW_res (mi : Mem) (i h0 : Word) :
 variable (hbt : bt.toNat + c.toNat + 1 < 2 ^ 63) (hnN : n ≤ N)
 include hbt hnN
 
+omit hob hNL hL hnN in
 /-- A node found stays found when the live unmarked slots keep their value words. -/
 theorem foundU_keep (mi mf : Mem) (x : Word) (hx : x.toNat < c.toNat)
     (hk : ∀ j', j' < N → LiveU bt (VW sa ob mi j') → VW sa ob mf j' = VW sa ob mi j')
@@ -448,6 +449,7 @@ theorem kinnerW_inv (i : Word) (hi : i < n) (e v : Word) (mi mf : Mem) (e' : Wor
     simp at h; obtain ⟨rfl, rfl⟩ := h
     exact ⟨hI, hv2 hv⟩
 
+omit hob hNL hL hbt hnN hGh hN0 in
 /-- Past an unmarked slot `i`, the invariant holds at `i + 1`. -/
 theorem rinv_succ (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt c KPm hsm m0 mi i)
     (hm : ¬ MARK ≤ VW sa ob mi i) : ReinsInv sa ob N n bt c KPm hsm m0 mi (i + 1) := by

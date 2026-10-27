@@ -429,6 +429,7 @@ theorem sim_stores (Q : MachineState → Prop) (R : Reg64s) (base : Nat) (hb : R
       simp only [Reg64s.get64_r8] at h8
       rw [hr8]; simp [BinOp.eval, h8]
 
+omit [Host] in
 /-- A word whose signed value is not negative is below `2^63`. -/
 theorem toNat_lt_of_not_toInt_neg (x : UInt64) (h : ¬ x.toBitVec.toInt < (0 : UInt64).toBitVec.toInt) :
     x.toNat < 2 ^ 63 := by
@@ -523,6 +524,7 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
     cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl
 
 
+omit [Host] in
 /-- **A word written before the stores reads as written after them**, when it is outside the
 stores' range: the stores and the write commute, byte by byte. -/
 theorem stores_wrW_get (R : Reg64s) (base : Nat) (vs : List SVal) (m : DataMem) (g : Nat)

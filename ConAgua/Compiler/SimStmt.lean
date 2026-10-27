@@ -891,6 +891,7 @@ theorem sim_valInto (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
       (((hE1.rpost (· = r)).trans (RPost.set hr _)).mono fun _ h => .inl (h.elim id id)) (hI1.setReg hr v hrs)) ?_
     simp only [List.length_append, List.length_cons, List.length_nil]; omega
 
+omit [Host] in
 omit hG hTab in
 theorem St.setReg_setLoc {ctx : Ctx} (hal : AllocOk ctx) {x : Var} {r : Reg64} (hr : ctx.alloc.lookup x = some r)
     (v : Word) (σ : St) : σ.setReg ctx.alloc r v = σ.setLoc x v := by
@@ -902,6 +903,7 @@ theorem St.setReg_setLoc {ctx : Ctx} (hal : AllocOk ctx) {x : Var} {r : Reg64} (
   · have : ctx.alloc.lookup y ≠ some r := fun h => hy (hal.inj y x r h hr)
     simp [hy, this]
 
+omit [Host] in
 omit hG hTab in
 /-- The pool's registers fit `gen`'s target and scratch for any expression. -/
 theorem pool_gok {ctx : Ctx} (hal : AllocOk ctx) (e : Expr) {t : Reg64} {fr : List Reg64}
@@ -1286,6 +1288,7 @@ theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
   · exact fun d1 hG1 => hK.exh d1 hG1
   · exact hK.tail_fwd rfl rfl (SPost.refl d) fun vs σ' hr1 => by rw [step_seq_run, hr1]
 
+omit [Host] in
 omit hG hTab in
 /-- `compileS` of an `if` other than `if c abort`. -/
 theorem compileS_ite {ctx : Ctx} {path : Path} {c : Cond} {s t : Stmt}

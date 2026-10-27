@@ -268,6 +268,7 @@ theorem pairEntry_link (v : USize) (x y : Nat) (e : USize) (h : scanNatList b v 
 
 /-! ## A string's body -/
 
+omit h64 hsize in
 theorem hasEscape_noEsc (j e : USize) : hasEscape b j e = true → ¬ NoEsc b j.toNat e.toNat := by
   fun_induction hasEscape b j e with
   | case1 j h hlt hc =>

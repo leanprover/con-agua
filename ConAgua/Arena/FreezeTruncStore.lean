@@ -62,6 +62,7 @@ section slots
 variable {m m' : Mem} (hT : StoreTr S m m') (hG : GrowR S m) (hko : koW S.sa m 0 = 0)
 include hT hG hko
 
+omit hT hko in
 theorem ext_slot_toNat : (2 + 2 * knW S.sa m 0).toNat = 2 + 2 * (knW S.sa m 0).toNat := by
   have := (knW_toNat S m hG 0 (by decide)).1
   rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega

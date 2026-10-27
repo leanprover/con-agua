@@ -638,6 +638,7 @@ theorem objLoop_succ (n : Nat) (hmem : MemberS p b n) (hloop : ObjLoopS p b n) :
       nextMember_spec p b hb hL.skip_ws hL.key_end hL.key_at_g1 hL.key_at_g2 hL.key_at_g3
         hL.key_at_g4 hL.key_at_g5 hL.key_at_g6 hL.key_at hL.value_at hL.next_member n] <;> finish
 
+omit hb in
 theorem obj_succ (n : Nat) (hloop : ObjLoopS p b (n + 1)) : ObjS p b (n + 1) := by
   intro s₀ i kind q hm
   rw [invoke_eq _ hL.ind_obj]
@@ -658,6 +659,7 @@ theorem member_succ (n : Nat) (hlist : ListS p b n) : MemberS p b (n + 1) := by
       indSlot_spec p hL n, indNum_spec p hL b hb n, indBool_spec p hL b hb n,
       indNList_spec p hL b hb n, fldPut_spec p hL n] <;> finish
 
+omit hb in
 theorem listLoop_succ (n : Nat) (hobj : ObjS p b n) (hloop : ListLoopS p b n) :
     ListLoopS p b (n + 1) := by
   intro s₀
@@ -670,6 +672,7 @@ theorem listLoop_succ (n : Nat) (hobj : ObjS p b n) (hloop : ListLoopS p b n) :
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, st64, ih, ho', ha'] <;>
     finish [flagsW]
 
+omit hb in
 theorem list_succ (n : Nat) (hloop : ListLoopS p b (n + 1)) : ListS p b (n + 1) := by
   intro s₀ v sub hm
   rw [invoke_eq _ hL.ind_list]

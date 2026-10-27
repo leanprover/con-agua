@@ -4,6 +4,7 @@ import ConAgua.Verdict.IndBRec3
 import ConAgua.Verdict.IndBRecPins
 import ConAgua.Verdict.IndBCcs
 import ConAgua.Verdict.IndBStream
+set_option linter.unusedSectionVars false
 
 /-!
 # Error refinement of `gen_rec_check_prep` (lane `verdicts-b`, helper `ib`)

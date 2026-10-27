@@ -413,6 +413,7 @@ section generic
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
+omit h64 hsize in
 theorem objLoopW_congr (m : Mem) (kind p i w j w' : Word)
     (h : nextMemberN b.data i w = nextMemberN b.data j w') :
     objLoopW b.data m kind p i w = objLoopW b.data m kind p j w' := by
@@ -841,6 +842,7 @@ theorem ids_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨hend.symm, m₁, rfl, rfl, list_link b h64 hsize v xs e hx⟩
 
+omit h64 hsize in
 /-- A list of records (slot `(7, s, sub)`). -/
 theorem list_arm (m m' : Mem) (kind q K s sub : Word) (i v : USize) (e' : Word)
     (hk : indSlotN kind K = (7, s, sub)) (hiv : i < v)

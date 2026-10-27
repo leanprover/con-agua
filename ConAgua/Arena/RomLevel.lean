@@ -274,6 +274,7 @@ section ref
 variable (rom : List UInt8) (hr : RomOK rom)
 include hr
 
+omit hr in
 /-- One node interned by a store function, under `ArenaD`: the twin's step, the frame. -/
 theorem lvNode_ok (op : AM LIdx) (W : Mem → Option (Word × Mem))
     (hop : ∀ m a w m', ArenaD m a → W m = some (w, m') →

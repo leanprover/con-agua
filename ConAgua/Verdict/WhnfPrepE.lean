@@ -193,7 +193,7 @@ variable (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p) (hw : WhnfCallees p)
   (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p) (hE : ErecKeptKnot p)
   (hnv : closedNV p L.Checker.nvFns = true) (hM : MajorToCtorE p)
 
-include hp hc hw hsup hmtc hE hnv hM in
+include hp hc hw hsup hE hnv hM in
 /-- **The tail of `prepare_major`'s non-K arm fails only where `pmTailT` does.** -/
 theorem pmTailE (N : Nat) (hk : KnotUpTo p (N + 1)) (hkE : KnotUpToE p (N + 1)) (F : Nat)
     (hnF : N + 1 ≤ F) (hn62 : N + 1 ≤ 2 ^ 62)

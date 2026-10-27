@@ -691,6 +691,7 @@ theorem obj_link (k : Word) (v : USize) (r : ExprRec) (e : USize)
         ⟨itemR_zero, itemR_zero, itemR_zero⟩ v ‹_› r e h
     · cases h
 
+omit h64 hsize in
 theorem skipDigits_ge (i : USize) : i.toNat ≤ (skipDigits b i).toNat := by
   fun_induction skipDigits b i with
   | case1 i h _ ih => have := usizeStep b i h; omega

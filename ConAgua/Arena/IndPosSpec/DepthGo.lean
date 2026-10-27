@@ -92,7 +92,7 @@ theorem dpGo_step (n : Nat) (ih : DpNodeSpec p n) : DpGoSpec p (n + 1) := by
       eView_spec p hv n, memoFindG_spec dpSch p _ hf n, memoPutG_spec dpSch p _ hput n, ih] <;>
     finish (gen := 20)
 
-include hgo hnode in
+include hnode in
 theorem dpNode_step (n : Nat) (ih : DpGoSpec p n) : DpNodeSpec p (n + 1) := by
   unfold DpGoSpec at ih
   intro s₀ f1 g x y z

@@ -400,7 +400,7 @@ theorem maGo_step (n : Nat) (ih : MaNodeSpec p n) : MaGoSpec p (n + 1) := by
       eView_spec p hv n, slContains_spec p hc n, memoFindG_spec maSch p _ hf n,
       memoPutG_spec maSch p _ hput n, ih] <;> finish (gen := 20)
 
-include hc hgo hnode in
+include hc hnode in
 theorem maNode_step (n : Nat) (ih : MaGoSpec p n) : MaNodeSpec p (n + 1) := by
   unfold MaGoSpec at ih
   intro s₀ no nl f1 g x y z

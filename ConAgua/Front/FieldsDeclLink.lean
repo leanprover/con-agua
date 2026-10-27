@@ -97,6 +97,7 @@ section kitH
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
+omit h64 hsize in
 theorem lt_of_byteAt_ne (i : USize) (h : byteAt b i ≠ 0) : i < b.usize := by
   refine Classical.byContradiction fun hn => ?_
   apply h; unfold byteAt; rw [dite_eq_right hn]

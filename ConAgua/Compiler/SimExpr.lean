@@ -255,6 +255,7 @@ section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
 
+omit hG in
 /-- `r := len(s)`. -/
 theorem sim_srcLen {ctx : Ctx} (hT : ctx.tab = G.tab)
     (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) {F : Nat} {σ : St} {s : MachineData}
@@ -354,6 +355,7 @@ theorem src8_size_lt {G : Layout} (hG : G.Ok) {σ : St} {d : DataMem} (hm : MemR
 section
 variable [Host] {G : Layout}
 
+omit [Host] in
 /-- A simple operand reads the value of its expression. -/
 theorem simpleOp_reads {ctx : Ctx} (hT : ctx.tab = G.tab)
     (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
@@ -671,6 +673,7 @@ section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
 
+omit [Host] in
 /-- The descriptor block's address does not wrap: the table has `a + tierOff + 1` word arrays. -/
 theorem tier_T {a : ArrId} (ha : a + tierOff < G.tab.nw) : G.T + 4096 + 16 + 16 * G.tab.nb < 2 ^ 64 := by
   have := hG.tab_end

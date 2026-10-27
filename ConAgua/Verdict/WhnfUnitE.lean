@@ -112,7 +112,7 @@ end sucErr
 section su
 variable (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hnv : closedNV p L.Checker.nvFns = true)
 
-include hq hnv in
+include hq in
 /-- **`struct_unit_tail`'s verdicts** are the `infer_io`, `whnf` and `defeq` slots'. -/
 theorem suTail_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)

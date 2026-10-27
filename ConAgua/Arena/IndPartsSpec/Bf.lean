@@ -57,6 +57,7 @@ theorem bpf_spec (hp : p.lookup "block_shape_pins_formers" = some blockShapePins
         erToIw_specW p hP.alloc hec het n, slEq_spec p hseq n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
+omit hP in
 theorem bpr_spec (hp : p.lookup "block_shape_pins_recs" = some blockShapePinsRecs) (n : Nat) :
     ∀ (s₀ : St) (ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_pins_recs" [ro, rl]

@@ -219,6 +219,7 @@ theorem recDeclObj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc,
         dobjLoop_step_spec p hL b hb n] <;> finish [DFld.enc]
 
+omit hb in
 attribute [local lang_grind] declCode in
 theorem declCode_spec (n : Nat) (s₀ : St) (k : Word) :
     ⦃fun s => s = s₀⦄

@@ -242,6 +242,7 @@ variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM 
   (hE : ErecKeptKnot p) (hnv : closedNV p L.Checker.nvFns = true) (hPI : ProofIrrelWE p)
 include hp hc hpi hnv hPI
 
+omit hpi in
 /-- **`m2c_k2`'s verdicts** are `m2c_check`'s. -/
 theorem m2cK2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -498,6 +499,7 @@ variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM 
   (hPI : ProofIrrelWE p)
 include hp hc hpi hnv hPI
 
+omit hpi in
 /-- **`m2c_and2`'s verdicts** are `m2c_check`'s. -/
 theorem m2cAnd2E_ok (N F : Nat) (hk : KnotUpTo p N) (hkE : KnotUpToE p N) (hnF : N ≤ F)
     (hn62 : N ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)

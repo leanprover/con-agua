@@ -365,11 +365,13 @@ theorem sim_zeroVars {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = [])
       Pres.of_only (Only.wrW (by lomega)) (by omega) (by simp only [top]; lomega)
     exact hw.trans (by simpa [top] using hP)
 
+omit [Host] in
 theorem zeroVars_length (xs : List Var) : (zeroVars xs).length = xs.length := by
   induction xs with
   | nil => rfl
   | cons x xs ih => simp [zeroVars, ih]
 
+omit [Host] in
 /-- A call's results: the callee's `c` of them, then zeroes. -/
 theorem St.setLocs_take_drop (xs : List Var) (σ : St) (r : List Word) (c : Nat) (h : r.length ≤ c) :
     σ.setLocs xs r = (σ.setLocs (xs.take c) r).setLocs (xs.drop c) [] := by
@@ -684,6 +686,7 @@ theorem sim_args (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < 
       · exact fun s3 ⟨x, hx⟩ hE3 => herr s3 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩ (hE2.trans hE3 (by omega))
     · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalArgsP, hx]; rfl⟩ hE1
 
+omit [Host] in
 omit hTab in
 theorem rdW_of_pres {t x : Nat} {d d' : DataMem} (hP : Pres G t d d') (hlo : G.lo ≤ t) (hx : t ≤ x)
     (hxs : x + 8 ≤ G.hi) : rdW d' (A x) = rdW d (A x) :=

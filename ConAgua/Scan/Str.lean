@@ -557,6 +557,7 @@ theorem utf8Valid_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : 
 
 section hex4Hex3
 
+omit hb in
 include hpb in
 attribute [local lang_grind] byteE in
 theorem byteIn_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
@@ -570,6 +571,7 @@ theorem byteIn_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Wor
   | succ n =>
     sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, ld8] <;> finish
 
+omit hb in
 include hph in
 attribute [local lang_grind] hexValN in
 @[refines ConLeche.Frontend.hexVal]

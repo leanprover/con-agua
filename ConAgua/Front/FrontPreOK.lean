@@ -345,6 +345,7 @@ theorem lineKW_step_ok (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     · exact hI.2.2 d' h'
     · rw [h']; exact hgd
 
+omit h64 hsize in
 /-- `front_init`'s model, after the prelude, establishes the driver's invariant. -/
 theorem initKW_inv_ok : ∀ (m m₁ : Mem) (a : AState),
     (m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m (StateD.blank.pre D) ∧

@@ -264,7 +264,7 @@ theorem rpGo_step (n : Nat) (ih : RpNodeSpec p n) : RpGoSpec p (n + 1) := by
       eView_spec p hl.hv n, appHole_spec' p hl n, memoFindG_spec raSch p _ hf n,
       memoPutG_spec raSch p _ hput n, ih] <;> finish (gen := 20) [St.setLocs_mem']
 
-include hl hk hgo hnode in
+include hl hk hnode in
 theorem rpNode_step (n : Nat) (ih : RpGoSpec p n) : RpNodeSpec p (n + 1) := by
   unfold RpGoSpec at ih
   intro s₀ no nl us b nn f1 h g x y z

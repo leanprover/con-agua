@@ -131,6 +131,7 @@ theorem frontInitW_mode (m m' : Mem) (hW : frontInitW m = some m') (hmo : ModeOK
     exact MemFrame.modeOK (tblPutW_frame (.inr (.inl rfl)) hp')
       (h := MemFrame.modeOK (consInternM_frame zeroCS_wf hI') (by decide) (by decide) e1)
 
+omit h64 hsize in
 /-- `front_init`'s model, from a memory related to `a` and the blank parse state, establishes the
 driver's invariant. -/
 theorem initKW_inv : ∀ (m m₁ : Mem) (a : AState),

@@ -160,7 +160,7 @@ theorem noGo_step (n : Nat) (ih : NoNodeSpec p n) : NoGoSpec p (n + 1) := by
       eView_spec p hv n, slContains_spec p hc n, memoFindG_spec noSch p _ hf n,
       memoPutG_spec noSch p _ hput n, ih] <;> finish (gen := 20)
 
-include hc hgo hnode in
+include hnode in
 theorem noNode_step (n : Nat) (ih : NoGoSpec p n) : NoNodeSpec p (n + 1) := by
   unfold NoGoSpec at ih
   intro s₀ no nl lo hi f1 g x y z

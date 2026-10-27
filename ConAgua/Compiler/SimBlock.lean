@@ -188,6 +188,7 @@ variable [Host] {G : Layout} (hG : G.Ok)
   (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop) {sk : NTree}
 include hG hTab
 
+omit hG in
 /-- A block operand reads its value. -/
 theorem opnd_reads {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St}
     {s : MachineData} (hI : Inv G ctx F σ s) {e : Expr} (hw : Expr.opndWf ctx.nl G.tab e = true) {v : Word}
@@ -200,16 +201,19 @@ theorem opnd_reads {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 8 
   obtain ⟨v', hv', hr⟩ := simpleOp_reads hT hTab hF hI hw.2 hs
   rw [hv] at hv'; cases hv'; exact hr
 
+omit [Host] in
 omit hG hTab in
 theorem opnd_ok {σ : St} {nl : Nat} {e : Expr} (hw : Expr.opndWf nl G.tab e = true) :
     ∃ v, evalP σ e = .ok v := by
   simp only [Expr.opndWf, Bool.and_eq_true] at hw
   cases e <;> simp_all [Expr.isOpnd, evalP]
 
+omit [Host] hG hTab in
 /-- An exit through `ca_error` with the memory unchanged. -/
 theorem gpost_mem {top : Nat} {d s : MachineData} (hd : s.dmem = d.dmem) (hr : s.regs.rbp = d.regs.rbp) :
     GPost G top d s := ⟨hr, hd ▸ Pres.refl _ _⟩
 
+omit hTab in
 /-- `x := rax`, the end of a scan (for the tier local, its tier into `rsi` first). -/
 theorem sim_storeRax {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {x : Var} (hx : x < ctx.nl) {σ : St}
     {s d : MachineData} {k : Nat} {Q : MachineState → Prop} (hId : Inv G ctx F σ d) (hKR : KeepR s d)
@@ -276,6 +280,7 @@ theorem sim_storeRax {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {x : Var} (
     · have := hI.lo; omega
     · have := hI.hi; simp only [top, hKR.rsp]; lomega
 
+omit hG hTab in
 /-- From `rax = L`: `n ≤ L` and `o ≤ L - n`, else `ca_error`. -/
 theorem sim_lenChk {ctx : Ctx} {o n : Expr} {k : Nat} (hc : Code (lenChk ctx o n) k) {s : MachineData}
     {L vo vn : Word} {Q : MachineState → Prop} (hrax : s.regs.get64 .rax = L.toBitVec)
@@ -403,6 +408,7 @@ theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 
     · rw [hT]; simp [Tab.base64, WArr.arr]; lomega
     · simp [tierBlk]
 
+omit hTab in
 /-- `r := base + 8 o` for the block operand whose descriptor block is at `R`. -/
 theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (_hR : R ≠ .rax) {a aw : ArrId}
     {o : Expr} {k : Nat} (hc : Code (wordPtr ctx r R a o) k) {s : MachineData} {RV : Nat} {D : DataMem}
@@ -431,6 +437,7 @@ theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (_hR 
     simp [A, Nat.shiftLeft_eq]
     congr 1; omega
 
+omit [Host] in
 omit hG hTab in
 theorem arr64_size_set64 (m : Mem) (a : ArrId) (i v : Word) (b : ArrId) :
     ((m.set64 a i v).arr64 b).size = (m.arr64 b).size := by
@@ -442,6 +449,7 @@ theorem arr64_size_set64 (m : Mem) (a : ArrId) (i v : Word) (b : ArrId) :
     by_cases ha : a < m.words.size <;> simp [ha]
   · simp [hb]
 
+omit [Host] hTab in
 /-- An 8-byte stack cell survives a store into a word array. -/
 theorem rdW_slot_store64 {d : DataMem} {X : Nat} (hX1 : G.lo ≤ X) (hX2 : X + 8 ≤ G.hi) {a : ArrId}
     (ha : a < G.tab.nw) {j : Nat} (hj : j < G.s64 a) (v : BitVec 64) :
@@ -539,6 +547,7 @@ theorem copy64_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {
       refine ev_congr (hexit _ (hIs.keepR rfl ((KeepR.refl _).ofEq (by keep_tac))) (by exact hK.ofEq (by keep_tac))
         (Pres.store64 hG hda (j := w.toNat) (by omega) _)) (by omega)
 
+omit [Host] hTab in
 /-- The source bytes survive a store into a word array. -/
 theorem SrcAt.store64 {b : Array UInt8} {D : DataMem} {B : Nat} (h : SrcAt G b D B) {a : ArrId}
     (ha : a < G.tab.nw) {j : Nat} (hj : j < G.s64 a) (v : BitVec 64) :
@@ -553,6 +562,7 @@ theorem SrcAt.store64 {b : Array UInt8} {D : DataMem} {B : Nat} (h : SrcAt G b D
     · have := this h1; omega
     · omega
 
+omit [Host] hG hTab in
 /-- The source bytes survive a change only inside the stack. -/
 theorem SrcAt.only {b : Array UInt8} {D D' : DataMem} {B : Nat} (h : SrcAt G b D B) {lo hi : Nat}
     (hO : Only lo hi D D') (hlo : G.lo ≤ lo) (hhi : hi ≤ G.hi) : SrcAt G b D' B := by
@@ -563,6 +573,7 @@ theorem SrcAt.only {b : Array UInt8} {D D' : DataMem} {B : Nat} (h : SrcAt G b D
     · exact .inl h1
     · refine .inr (Classical.byContradiction fun h2 => h.outSt x hx ⟨by omega, by omega⟩)
 
+omit hG hTab in
 /-- `rax := n + rcx`: the end of a byte slice. -/
 theorem sim_endPtr8 {ctx : Ctx} {n : Expr} {k : Nat}
     (hc : Code [i64 (.mov (.reg (rr .rax)) (opnd ctx n)), i64 (.add (.reg (rr .rax)) (oR .rcx))] k)
@@ -779,6 +790,7 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
     (fun s' hd hk => opnd_reads hG hTab hT hF (hInv s' hd hk) hwe hve) _ vi _ (by rfl)
     ((KeepR.refl d).ofEq (by keep_tac)) (by simp) (by simp) hlt rfl
     fun s' hd hk hr => ev_congr (fin s' _ hd hk hr hok) (by omega)) (by simp)
+omit hG hTab in
 /-- `rax := (n << 3) + rcx`: the end of a word slice. -/
 theorem sim_endPtr64 {ctx : Ctx} {n : Expr} {k : Nat}
     (hc : Code [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
@@ -800,6 +812,7 @@ theorem sim_endPtr64 {ctx : Ctx} {n : Expr} {k : Nat}
   simp [Nat.shiftLeft_eq, A]
   omega
 
+omit hTab in
 /-- `[rsp + 8 nl] := rax`: temporary `0`. -/
 theorem sim_storeTmp {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) (hnl : ctx.nl + 1 ≤ F) {k : Nat}
@@ -823,6 +836,7 @@ theorem sim_storeTmp {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {
   · exact Pres.of_only (Only.wrW (by omega)) (by omega) (by simp only [top]; omega)
   · exact Only.wrW (by omega)
 
+omit [Host] in
 omit hG hTab in
 theorem warrP_ok {σ : St} {nl : Nat} {tab : Tab} {w : WArr} (hw : WArr.wf nl tab w = true) :
     ∃ a, warrP σ w = .ok a := by

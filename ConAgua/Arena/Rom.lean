@@ -922,6 +922,7 @@ section nameRef
 variable (rom : List UInt8) (hr : RomOK rom)
 include hr
 
+omit hr in
 theorem romB_head (pos : Word) (b : UInt8) (bs rest : List UInt8) (h : rom.drop pos.toNat = (b :: bs) ++ rest) :
     romB rom pos = b.toUInt64 :=
   romB_of_drop rom pos (b :: bs) rest h 0 (by simp) pos (by simp)
@@ -935,6 +936,7 @@ theorem drop_pos (pos : Word) (bs rest : List UInt8) (h : rom.drop pos.toNat = b
   simp only [RomOK] at hr
   rw [UInt64.toNat_add, UInt64.toNat_ofNat']; simp; omega
 
+omit hr in
 theorem drop_shift (pos : Word) (bs cs rest : List UInt8) (h : rom.drop pos.toNat = bs ++ cs ++ rest)
     (q : Word) (hq : q.toNat = pos.toNat + bs.length) : rom.drop q.toNat = cs ++ rest := by
   rw [hq, ← List.drop_drop, h, List.append_assoc, List.drop_left]

@@ -412,6 +412,7 @@ include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hp
 
 attribute [local lang_grind] Mbr.err idxCode lineKind lineVal
 
+omit hpll hpln hpvd in
 set_option maxHeartbeats 4000000 in
 theorem lineLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄

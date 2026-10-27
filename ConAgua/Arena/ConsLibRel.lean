@@ -957,6 +957,7 @@ section word
 variable (hW : C.WF) (hR : ConsR C R m on P Q)
 include hW hR
 
+omit hW in
 /-- A hit's index is below the tier's node count, so below `2^27`. -/
 theorem probeC_hit_lt (ks : List Word) (h t : Word) (ht : t ≤ 1) (hr : probeC C m ks h t ≠ [])
     (hh : (probeC C m ks h t).headD 0 ≠ 0) : ((probeC C m ks h t).tail.headD 0).toNat < 2 ^ 27 := by
