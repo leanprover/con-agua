@@ -498,10 +498,10 @@ would have touched every one of those lines for no proof saving.
 
 **What the measurement found.** The inventory's I7–I10 lines are mostly *uses* of the encoding
 (`h >>> 28 = 4` as a hypothesis, `decI` in a relation), which stay. The unfolding was in
-**duplicated lemmas**: 72 local copies of a dozen facts, each proved again by unfolding
+**duplicated lemmas**: about 75 local copies of a dozen facts, each proved again by unfolding
 `>>> 28`, `% 2 ^ 27` or `toUInt32` (twelve copies of decI injectivity, six of `decI_beq`, about
 thirty tag lemmas, six `contains`/`findIdx` list lemmas, four `mask` lemmas). They are deleted
-and their call sites point at the API (about 300 call sites, mostly mechanical renames; a few
+and their call sites point at the API (about 360 changed lines, mostly mechanical renames; a few
 needed the handle kind pinned, `(k := .level)`, where a local copy had fixed it).
 
 | | lines |
