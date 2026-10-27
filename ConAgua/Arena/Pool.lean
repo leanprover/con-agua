@@ -219,7 +219,7 @@ theorem tierA_word (t : Word) (ht : t.toNat ≤ 1) :
   by_cases h : t.toNat = 0
   · simp [h]
   · have : t.toNat = 1 := by omega
-    simp [this]
+    simp [this]; rfl
 
 theorem tierA_tag (x : Word) (hx : x.toNat < 2 ^ 41) :
     tierA 0 (x >>> 40) = if x.toNat < 2 ^ 40 then POOL else POOL1 := by
