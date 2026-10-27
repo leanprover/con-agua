@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.RecCheckK53
-import ConAgua.Verdict.IndBStream
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictFns
 
 /-!
 # Error refinement of `target_k53`, `target_k53_heads` (lane `verdicts-b`, helper `ib`)

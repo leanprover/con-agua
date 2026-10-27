@@ -1,6 +1,6 @@
 import ConAgua.Verdict.PosE
 import ConAgua.Verdict.WhnfMidE
-import ConAgua.Verdict.DefEqSlotE
+import ConAgua.Verdict.DefEqBaseE
 
 /-!
 # The positivity walk's error claims at every fuel (lane `verdicts-b`, helper `ia2`)

@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclDivGateT
 import ConAgua.Arena.KnotE
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.Checker.NoVerdictClosed
 
 /-!

@@ -1,5 +1,4 @@
-import ConAgua.Verdict.DeclAxiomE
-import ConAgua.Arena.DeclDefnT
+import ConAgua.Verdict.DeclArmsE
 
 /-!
 # The verdict claim of the definition arm `check_decl_defn` (lane `verdicts-b`, helper `d`)

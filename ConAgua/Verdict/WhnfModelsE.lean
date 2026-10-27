@@ -1,7 +1,7 @@
-import ConAgua.L.ModelGen
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.WhnfCoreSlot
 import ConAgua.Arena.WhnfDelta
+import ConAgua.Compiler.RunEq
 
 /-!
 # Error models of the `whnf` family's slot bodies (lane `verdicts-b`, helper `k2`)

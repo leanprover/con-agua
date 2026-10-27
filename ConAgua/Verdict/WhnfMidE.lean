@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfNatE
-import ConAgua.Arena.DefEqMidLazy2
-import ConAgua.Arena.IndTwin
 
 /-!
 # The `whnf` family's `defeq` helpers: `whnf_top`, `bool_true_shortcut`, `try_unfold_proj_app`,

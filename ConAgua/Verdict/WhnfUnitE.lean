@@ -1,5 +1,5 @@
-import ConAgua.Verdict.WhnfStuckE
-import ConAgua.Arena.DefEqStuckUnit
+import ConAgua.Verdict.WhnfModels7E
+import ConAgua.Verdict.WhnfSlotE
 set_option linter.unusedSectionVars false
 
 /-!

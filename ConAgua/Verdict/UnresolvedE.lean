@@ -1,10 +1,8 @@
-import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.StrLitSup
-import ConAgua.Arena.DefEqLeaves
-import ConAgua.Arena.ConstsResolveF
 import ConAgua.Arena.IndSumSpec5
 import ConAgua.Arena.DeclBasisSpec
 import ConAgua.Checker.NoVerdictFns
+import ConAgua.Arena.Verdict
 
 /-!
 # The verdict at a term whose constants do not resolve (lane `verdicts-b`, helper `ue`)

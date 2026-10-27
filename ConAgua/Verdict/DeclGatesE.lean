@@ -1,6 +1,4 @@
 import ConAgua.Verdict.DeclDefnE
-import ConAgua.Arena.DeclDivGateT
-import ConAgua.Arena.DeclNatGateT
 
 /-!
 # The verdict claims of the definition arm's gates (lane `verdicts-b`, helper `d`)

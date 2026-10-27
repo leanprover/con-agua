@@ -1,9 +1,7 @@
 import ConAgua.Verdict.IndAGen
 import ConAgua.Arena.IndT.Sum2
-import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.IndT.Sum5
 import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.RecGenSpec13
 import ConAgua.Arena.IndT.RecGen19
 
 /-!

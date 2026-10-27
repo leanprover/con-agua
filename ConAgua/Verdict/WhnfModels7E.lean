@@ -1,4 +1,3 @@
-import ConAgua.L.ModelGen
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.DefEq
 import ConAgua.Arena.WhnfEntry

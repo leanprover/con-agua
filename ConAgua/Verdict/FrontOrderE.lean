@@ -1,4 +1,5 @@
 import ConAgua.Verdict.FrontE
+import ConRon.Bridge.Frontend.Lines
 
 /-!
 # Error refinements of `vi_ctor`, `vi_order*`, `vi_np_go`, `vi_nparams` (lane `verdicts-b`, helper `f2`)

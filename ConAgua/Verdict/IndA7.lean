@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndA4
-import ConAgua.Arena.IndT.GenRec3
 
 /-!
 # `check_block_rec`'s error refinement (lane `verdicts-b`, helper `ia`)

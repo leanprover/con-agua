@@ -1,9 +1,5 @@
 import ConAgua.Arena.IndT.RecGen3
 import ConAgua.Verdict.DeclValE
-import ConAgua.Arena.DeclStep
-import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.DeclCvgT
-import ConAgua.Arena.DeclValT
 import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Verdict.UnresolvedE
 

@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels3E
 import ConAgua.Verdict.WhnfAppE
-import ConAgua.Arena.DefEqKnot
 
 /-!
 # `iota_rec_at`'s verdict claims, the top (lane `verdicts-b`, helper `k2`)

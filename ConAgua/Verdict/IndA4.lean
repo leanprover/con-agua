@@ -1,5 +1,4 @@
-import ConAgua.Verdict.IndA3
-import ConAgua.Arena.IndT.Tail
+import ConAgua.Verdict.IndA2
 
 /-!
 # `check_block_tail`'s error refinement (lane `verdicts-b`, helper `ia`)

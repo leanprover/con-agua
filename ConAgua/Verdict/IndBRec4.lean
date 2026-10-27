@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndT.RecGen4
-import ConAgua.Verdict.IndBSum4
 import ConAgua.Verdict.UnresolvedE
+import ConAgua.Verdict.DeclValE
 
 /-!
 # Error refinement of `class_rule_ok` (lane `verdicts-b`, helper `ib`)

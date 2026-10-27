@@ -1,3 +1,5 @@
+import ConAgua.Arena.IndPos2
+import ConAgua.L.ErrSpec
 import ConAgua.Verdict.PosE
 import ConAgua.Verdict.DeclValE
 

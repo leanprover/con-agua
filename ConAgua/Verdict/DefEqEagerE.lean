@@ -1,5 +1,4 @@
-import ConAgua.Verdict.DefEqSlotE
-import ConAgua.Arena.InferLeaves
+import ConAgua.Verdict.DefEqBaseE
 
 /-!
 # The eager slot `defeq_e` and `defeq_arg`: error claims (lane `verdicts-b`, helper `k3`)

@@ -1,4 +1,6 @@
-import ConAgua.Verdict.IndsE2
+import ConAgua.Checker.NoVerdictFns
+import ConAgua.Verdict.DeclValE
+import ConAgua.Verdict.IndsE1
 
 /-!
 # `check_block_doms_at`'s error refinement (lane `verdicts-b`, helper `ia2-inds`)

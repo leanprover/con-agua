@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels6E
 import ConAgua.Verdict.WhnfPrepE
-import ConAgua.Arena.WhnfM2CRefine5
 set_option linter.unusedSectionVars false
 
 /-!

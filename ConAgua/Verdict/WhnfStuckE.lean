@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfModels7E
-import ConAgua.Verdict.WhnfPirrE
-import ConAgua.Arena.DefEqStuck
-import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Verdict.WhnfM2CE
 
 /-!
 # The `whnf` family's stuck-side helpers: `prop_irrel` (lane `verdicts-b`, helper `k2`)

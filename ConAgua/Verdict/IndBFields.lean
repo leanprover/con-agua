@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecGenSpec6
-import ConAgua.Verdict.IndBStream
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictFns
 
 /-!
 # Error refinement of `class_fields_of(_go)` (lane `verdicts-b`, helper `ib`)

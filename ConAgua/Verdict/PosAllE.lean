@@ -3,6 +3,8 @@ import ConAgua.Verdict.PosE1S
 import ConAgua.Verdict.PosE1N
 import ConAgua.Verdict.PosE2
 import ConAgua.Verdict.PosE3C
+import ConAgua.Verdict.PosE3F
+import ConAgua.Verdict.PosE3W
 
 /-!
 # The positivity walk's error claims at every fuel, assembled (lane `verdicts-b`, helper `ia2`)

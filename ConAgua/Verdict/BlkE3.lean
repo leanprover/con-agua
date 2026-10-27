@@ -1,6 +1,4 @@
 import ConAgua.Verdict.IndA4
-import ConAgua.Verdict.IndBE
-import ConAgua.Arena.IndRealSctC
 
 /-!
 # `check_block_tables`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)

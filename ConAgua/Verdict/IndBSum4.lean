@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndBSum3
-import ConAgua.Arena.IndT.Sum5
 
 /-!
 # Error refinement of `check_sum_ctors` (lane `verdicts-b`, helper `ib`)
