@@ -207,12 +207,12 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     {A : List TieredArray} {C : List Word}
     (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ Tier1In 0 42 b ∨ Tier1In 55 64 b) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hA : ∀ b ∈ A, b.arr < 42 ∨ (54 < b.arr ∧ b.arr < 64)) (hC : ∀ x ∈ C, x.toNat < 64)
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
     (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a)
     (hmode : ModeOK m') :
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; omega) a
     hS.1.arena.2
   have hcs := AM.st_proto L op key tag pf d err a hrun hok
   have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
@@ -222,7 +222,7 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     · exact ⟨(hsetS t).1 hD₁, (hsetS t).2⟩
   have hrun' := AM.run_of_ok op a hok
   rw [hres] at hrun'
-  obtain ⟨h1, h2⟩ := StageR.of_walkM hS ⟨hR, hDk.1⟩ hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+  obtain ⟨h1, h2⟩ := StageR.of_walkM hS ⟨hR, hDk.1⟩ hf (fun b hb => by have := hA b hb; simp only [InStoreTier]; omega)
     hC hDk.2 hmode
   exact ⟨_, hrun', h1, h2⟩
 
@@ -374,10 +374,9 @@ theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
        (fun x hx => by simp at hx; subst hx; decide) hf,
      hS.1.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
      EnvR.grow (fun b h1 h2 h3 => hf.1 b (fun hm => by simp at hm; subst hm; simp [EREC] at h3)
-         (fun hm => by subst hm; simp [CTL] at h1))
+         (fun hm => by simp at hm; subst hm; simp [CTL] at h1))
        (hf.2.1 128 (by simp)) hg
-       (TblSame.of_frame (fun b hb => by simp at hb; subst hb; decide)
-         (fun b hb => by simp at hb; subst hb; decide) (by decide) (by decide) hf) hS.1.env,
+       (TblSame.of_frame (by decide) (by decide) (by decide) hf) hS.1.env,
      hS.1.mode.frame hf (by simp) (by simp)⟩
   refine ⟨⟨hC, ?_, hroom, ?_, ?_, ?_⟩, ?_⟩
   · simp only [iwTop, h200, hI]; exact hI1
