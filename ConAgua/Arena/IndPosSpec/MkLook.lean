@@ -31,35 +31,35 @@ theorem mkAppW_low {m m' : Mem} {f x r : Word} (hI : mkAppW m f x = some (r, m')
     unfold mkAppW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame appCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, appCS, ADER, AREC, ASLOT], by simp [appCS]⟩
+  exact ⟨_, _, hf, by simp [tier1, tierOff, ConsSch.wset, appCS, ADER, AREC, ASLOT], by simp [appCS]⟩
 
 theorem mkLamW_low {m m' : Mem} {t b r : Word} (hI : mkLamW m t b = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (LADER :: (tier1 LADER) :: lamCS.wset) [lamCS.ca, lamCS.ca + 1] m m' := by
     unfold mkLamW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame lamCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, lamCS, LADER, LAREC, LASLOT], by simp [lamCS]⟩
+  exact ⟨_, _, hf, by simp [tier1, tierOff, ConsSch.wset, lamCS, LADER, LAREC, LASLOT], by simp [lamCS]⟩
 
 theorem mkForallW_low {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (FADER :: (tier1 FADER) :: forallCS.wset) [forallCS.ca, forallCS.ca + 1] m m' := by
     unfold mkForallW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame forallCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, forallCS, FADER, FAREC, FASLOT], by simp [forallCS]⟩
+  exact ⟨_, _, hf, by simp [tier1, tierOff, ConsSch.wset, forallCS, FADER, FAREC, FASLOT], by simp [forallCS]⟩
 
 theorem mkLetW_low {m m' : Mem} {t v b r : Word} (hI : mkLetW m t v b = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (LEDER :: (tier1 LEDER) :: letCS.wset) [letCS.ca, letCS.ca + 1] m m' := by
     unfold mkLetW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame letCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, letCS, LEDER, LEREC, LESLOT], by simp [letCS]⟩
+  exact ⟨_, _, hf, by simp [tier1, tierOff, ConsSch.wset, letCS, LEDER, LEREC, LESLOT], by simp [letCS]⟩
 
 theorem mkProjW_low {m m' : Mem} {n i e r : Word} (hI : mkProjW m n i e = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (PJDER :: (tier1 PJDER) :: projCS.wset) [projCS.ca, projCS.ca + 1] m m' := by
     unfold mkProjW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame projCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, projCS, PJDER, PJREC, PJSLOT], by simp [projCS]⟩
+  exact ⟨_, _, hf, by simp [tier1, tierOff, ConsSch.wset, projCS, PJDER, PJREC, PJSLOT], by simp [projCS]⟩
 
 /-! ## `replace_apps_go` / `replace_apps_node` -/
 

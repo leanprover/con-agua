@@ -126,14 +126,14 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     rw [Mem.size_arr64_set64] at this; rw [this]; simpa using hctl
   have hspn₃ : (m₃.set64 CTL 136 b).arr64 SPN = m₂.arr64 SPN := by
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    exact hf₃.1 SPN (by simp [SPN, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by decide)
+    exact hf₃.1 SPN (by simp [tier1, tierOff, SPN, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by decide)
   have hpool₁ : m₁.arr64 POOL = m.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
   have hpool₁' : m₁.arr64 POOL1 = m.arr64 POOL1 := hf₁.1 POOL1 (by simp [SPN, POOL1]) (by decide)
   have hpool₁v := vpool_congr hpool₁ hpool₁'
   have hpool₁c := pcap_congr' hpool₁ hpool₁'
-  have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := hf₂.1 POOL (by simp [lvArrs, LH, SPN, POOL, ZREC, ZSLOT,
+  have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := hf₂.1 POOL (by simp [tier1, tierOff, lvArrs, LH, SPN, POOL, ZREC, ZSLOT,
     SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
-  have hpool₂' : m₂.arr64 POOL1 = m₁.arr64 POOL1 := hf₂.1 POOL1 (by simp [lvArrs, LH, SPN, POOL1, ZREC, ZSLOT,
+  have hpool₂' : m₂.arr64 POOL1 = m₁.arr64 POOL1 := hf₂.1 POOL1 (by simp [tier1, tierOff, lvArrs, LH, SPN, POOL1, ZREC, ZSLOT,
     SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
   have hpool₂v := vpool_congr hpool₂ hpool₂'
   have hpool₂c := pcap_congr' hpool₂ hpool₂'
