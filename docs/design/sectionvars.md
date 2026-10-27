@@ -50,5 +50,17 @@ theorem `include`s what it uses (6 to 30 names).
 * No statement under `ConAgua/Final/` changed (one helper there, `qwrs_facts`, lost an unused
   `[Host]`); no L program text, `checker.s`, `pins.bin` or `main.c` change; axiom guards unchanged.
 
-Not done in this batch: `Verdict/IndBCtor`, `IndBGrp`, `IndBSum2` (one theorem each), modules the
-buildtime lane is reworking; they keep their suppression for now.
+Batch 1 landed as master b640df6e. Before it landed, a merge brought in buildtime's faster `Scan`
+proofs; its new lemmas (`lineDisp_spec`, the eight `lineArm*_spec` of `Scan/Line`) again included
+all 60 lookup hypotheses and lost most of them in three more rounds.
+
+## Batch 2: `Verdict/IndBGrp`, `IndBSum2`
+
+Held back while buildtime reworked them. `grpCE_claim` loses `hIlpf`; `checkSumTeleSlow_claim` and,
+one level up, `checkSumTele_claim` lose `hV hApd hCrk`; the section no longer declares them, and three imports (`CrOKFrame`, `DeclValSpec`, `IndRealApdT`) that only their types needed are gone. Their one caller outside, `checkSumTeleE_of`
+(`Verdict/IndArmE`), no longer passes them; the three are still binders there because
+`CheckSumTeleE` is generated (`err_stmt`) from the refinement theorem's statement, so they are named
+`_hV _hApd _hCrk`.
+
+Left: `Verdict/IndBCtor` (one theorem, `cxoE_claim`, loses `hIlpf`), still being reworked by
+buildtime; it keeps its suppression until then.
