@@ -1,3 +1,4 @@
+import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.RecClassSpec.ClassGenRecTy
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
@@ -237,11 +238,16 @@ theorem classFeRGo_spec (p : Prog) (h : CfrProg p) (n : Nat) :
     intro s₀ cvo cvl rcl ro rl vis M
     rw [invoke_eq _ h.go]
     simp only [callFn, classFeRGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        rowGet_specW p h.ix h.rg n, cfrRec_specW p h.rp.alloc h.frec n, callW_spec p n "env_push",
-        rec3_specW p h.ia n h.rec3, slCons_specW p h.ia h.copy h.cons n, ih] <;>
-      finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, rowGet_specW p h.ix h.rg n,
+      cfrRec_specW p h.rp.alloc h.frec n, callW_spec p n "env_push", rec3_specW p h.ia n h.rec3,
+      slCons_specW p h.ia h.copy h.cons n, ih]
+    all_goals subst_vars
+    all_goals (try simp only [LocEq] at *)
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4,
+      loc_init5, loc_init6]
 
 l_model classFeR_spec (p : Prog) (h : CfrProg p)
   fns [h.top ↦ ferAW]
