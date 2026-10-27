@@ -93,6 +93,7 @@ ConAgua/Arena/WhnfCoreAppLoop.lean	public import ConAgua.Arena.WhnfCoreApp	# kep
 ConAgua/Arena/WhnfCoreLoop.lean	public import ConAgua.Arena.WhnfCoreProj	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/WhnfCoreLoop.lean	public import ConAgua.Arena.WhnfCoreSlot	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/WhnfIotaRec.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/WhnfIotaRecRefine2.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/WhnfIotaRefine.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/WhnfIotaRefine.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/WhnfIotaRefine2.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)

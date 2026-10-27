@@ -211,123 +211,112 @@ theorem viewFVarIdx_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh :
 /-- The write set of `fr_go`/`fr_node`/`fr_memo`'s models. -/
 abbrev FrFrame (m m' : Mem) : Prop := MemFrame [FRMEMO] [46, 47] m m'
 
-theorem frSet_frame (m m' : Mem) (h r r' : Word) (hb : frSet m h r = some (r', m')) :
-    FrFrame m m' := by
-  unfold frSet at hb
-  split at hb
-  · cases hb
-  rename_i m₁ hs
-  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-  exact (msetG_frame frSch frSch_wf _ _ _ _ _ hs).mono (by simp) (by simp)
+theorem frSet_frame (m m' : Mem) (h r : Word) (hs : msetG frSch m h 0 r = some m') :
+    FrFrame m m' :=
+  (msetG_frame frSch frSch_wf _ _ _ _ _ hs).mono (by simp) (by simp)
 
 /-- A model result whose memory, if any, is a `FrFrame` of `m`. -/
 def FrOK (m : Mem) (o : Option (Word × Mem)) : Prop := ∀ r m', o = some (r, m') → FrFrame m m'
 
 theorem FrOK.app {n : Nat} {m : Mem} {c y : Word} {o : Option (Word × Mem)} (ho : FrOK m o)
-    (hw : ∀ m₁, FrOK m₁ (frW n m₁ y c)) : FrOK m (frAppK₁ n c y o) :=
-  MPost.bindK rfl (fun _ _ => rfl) ho fun _ m₁ h1 =>
-    MPost.bindK (K := frAppK₁.frAppK₂ _) rfl (fun _ _ => rfl) (hw m₁)
-      fun _ _ h2 => MPost.ret (h1.trans h2)
-
-theorem FrOK.bind {n : Nat} {m : Mem} {c y : Word} {o : Option (Word × Mem)} (ho : FrOK m o)
-    (hw : ∀ m₁, FrOK m₁ (frW n m₁ y c)) : FrOK m (frBindK₁ n c y o) :=
-  MPost.bindK rfl (fun _ _ => rfl) ho fun _ m₁ h1 =>
-    MPost.bindK (K := frBindK₁.frBindK₂ _) rfl (fun _ _ => rfl) (hw m₁)
-      fun _ _ h2 => MPost.ret (h1.trans h2)
+    (hw : ∀ m₁, FrOK m₁ (frW n m₁ y c)) : FrOK m (frNodeW.k_fr_go n c y o) :=
+  MPost.bindK (K := frNodeW.k_fr_go n c y) (frNodeW.k_fr_go.none n c y)
+    (fun r m₁ => frNodeW.k_fr_go.arm1 n c y r m₁) ho fun _ m₁ h1 =>
+    MPost.bindK (K := frNodeW.k_fr_go_2 _) (frNodeW.k_fr_go_2.none _)
+      (fun r m₁ => frNodeW.k_fr_go_2.arm1 _ r m₁) (hw m₁) fun _ _ h2 => MPost.ret (h1.trans h2)
 
 theorem FrOK.letE {n : Nat} {m : Mem} {c y z : Word} {o : Option (Word × Mem)} (ho : FrOK m o)
-    (hw : ∀ m₁ w, FrOK m₁ (frW n m₁ w c)) : FrOK m (frLetK₁ n c y z o) :=
-  MPost.bindK rfl (fun _ _ => rfl) ho fun _ m₁ h1 =>
-    MPost.bindK (K := frLetK₁.frLetK₂ _ _ _ _) rfl (fun _ _ => rfl) (hw m₁ _) fun _ m₂ h2 =>
-    MPost.bindK (K := frLetK₁.frLetK₃ _ _) rfl (fun _ _ => rfl) (hw m₂ _) fun _ _ h3 =>
+    (hw : ∀ m₁ w, FrOK m₁ (frW n m₁ w c)) : FrOK m (frNodeW.k_fr_go_3 n c y z o) :=
+  MPost.bindK (K := frNodeW.k_fr_go_3 n c y z) (frNodeW.k_fr_go_3.none n c y z)
+    (fun r m₁ => frNodeW.k_fr_go_3.arm1 n c y z r m₁) ho fun _ m₁ h1 =>
+    MPost.bindK (K := frNodeW.k_fr_go_4 n c z _) (frNodeW.k_fr_go_4.none n c z _)
+      (fun r m₂ => frNodeW.k_fr_go_4.arm1 n c z _ r m₂) (hw m₁ _) fun _ m₂ h2 =>
+    MPost.bindK (K := frNodeW.k_fr_go_5 _ _) (frNodeW.k_fr_go_5.none _ _)
+      (fun r m₃ => frNodeW.k_fr_go_5.arm1 _ _ r m₃) (hw m₂ _) fun _ _ h3 =>
     MPost.ret ((h1.trans h2).trans h3)
 
 theorem frW_frame (n : Nat) :
     (∀ m h c, FrOK m (frW n m h c)) ∧ (∀ m h c, FrOK m (frNodeW n m h c)) := by
   induction n with
   | zero =>
-    exact ⟨fun _ _ _ _ _ hb => by simp [frW] at hb, fun _ _ _ _ _ hb => by simp [frNodeW] at hb⟩
+    refine ⟨fun _ _ _ _ _ hb => ?_, fun _ _ _ _ _ hb => ?_⟩
+    · rw [frW.eq_1] at hb; cases hb
+    · rw [frNodeW.eq_1] at hb; cases hb
   | succ n ih =>
     refine ⟨fun m h c r m' hb => ?_, fun m h c r m' hb => ?_⟩
-    · rw [frW] at hb
-      split at hb
-      · cases hb
-      split at hb
-      · cases hb
-      split at hb
-      · simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨-, rfl⟩ := hb
+    · by_cases hc : c = 0
+      · rw [frW.abort1 n m h c hc] at hb; cases hb
+      by_cases hr : mfindG frSch m h 0 = []
+      · rw [frW.abort2 n m h c hc hr] at hb; cases hb
+      by_cases hh0 : (mfindG frSch m h 0).headD 0 ≠ 0
+      · rw [frW.arm1 n m h c hc hr hh0] at hb
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact MemFrame.refl _ _ _
-      split at hb
-      · cases hb
-      rename_i r₁ m₁ hn
-      exact (ih.2 _ _ _ _ _ hn).trans (frSet_frame _ _ _ _ _ hb)
-    · have dead : ∀ S : TRec, ¬ viewOK m h S → tcnt m S (tierW h) ≤ idxW h ∨
-          (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
-        intro S hv
-        by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-        · exact .inr hs
-        · exact .inl (UInt64.not_lt.mp fun hl => hv ⟨hs, hl⟩)
-      have leaf : ∀ S, viewOK m h S → frNodeW (n + 1) m h c = some (0, m) → FrFrame m m' →
-          FrFrame m m' := fun _ _ _ h => h
-      clear leaf
-      have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [frNodeW, ite_eq_left hs] at hb; cases hb
-      have tagCase : ∀ (S : TRec), (viewOK m h S → FrFrame m m') →
-          (tcnt m S (tierW h) ≤ idxW h → FrFrame m m') → FrFrame m m' := by
-        intro S h1 h2
-        by_cases hc : tcnt m S (tierW h) ≤ idxW h
-        · exact h2 hc
-        · exact h1 ⟨hs, UInt64.not_le.mp hc⟩
-      have none_of : ∀ (hn : frNodeW (n + 1) m h c = none), False := fun hn => by
-        rw [hn] at hb; cases hb
-      have done0 : frNodeW (n + 1) m h c = some (0, m) → FrFrame m m' := fun e => by
-        rw [e] at hb; simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨-, rfl⟩ := hb; exact MemFrame.refl _ _ _
+      rw [frW.arm2 n m h c hc hr (Decidable.not_not.mp hh0)] at hb
+      rcases hn : frNodeW n m h (c - 1) with _ | ⟨r₁, m₁⟩
+      · rw [hn, frW.k_fr_node.none] at hb; cases hb
+      rw [hn] at hb
+      by_cases hr₁ : mfindG frSch m₁ h 0 = []
+      · rw [frW.k_fr_node.abort1 h r₁ m₁ hr₁] at hb; cases hb
+      rw [frW.k_fr_node.arm1 h r₁ m₁ hr₁, ← msetG_eq frSch m₁ h 0 r₁ hr₁] at hb
+      rcases hs : msetG frSch m₁ h 0 r₁ with _ | m₂
+      · rw [hs, frW.k_fm_put.none] at hb; cases hb
+      rw [hs, frW.k_fm_put.arm1] at hb
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+      exact (ih.2 _ _ _ _ _ hn).trans (frSet_frame _ _ _ _ hs)
+    · by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+      · rw [frNodeW.abort1 n m h c hs] at hb; cases hb
+      have done0 : (some (0, m) : Option (Word × Mem)) = some (r, m') → FrFrame m m' := fun e => by
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj e); exact MemFrame.refl _ _ _
       by_cases g0 : h >>> 28 = 0
-      · refine tagCase BVAR (fun hv => done0 (frNodeW_bvar n m h c g0 hv)) (fun hc => (none_of ?_).elim)
-        rw [frNodeW]; simp [hs, g0, hc]
+      · by_cases hc : tcnt m BVAR (tierW h) ≤ idxW h
+        · rw [frNodeW.abort2 n m h c hs g0 hc] at hb; cases hb
+        · rw [frNodeW.arm1 n m h c hs g0 hc] at hb; exact done0 hb
       by_cases g1 : h >>> 28 = 1
-      · refine tagCase FVAR (fun hv => ?_) (fun hc => (none_of ?_).elim)
-        · by_cases h1 : tfld m FVAR (tierW h) (idxW h) 0 + 1 = 0
-          · exact (none_of (by rw [frNodeW]; simp [hs, g1, h1, UInt64.not_le.mpr hv.2])).elim
-          · rw [frNodeW_fvar n m h c hv g1 h1] at hb; simp only [Option.some.injEq, Prod.mk.injEq] at hb
-            obtain ⟨-, rfl⟩ := hb; exact MemFrame.refl _ _ _
-        · rw [frNodeW]; simp [hs, g1, hc]
+      · by_cases hc : tcnt m FVAR (tierW h) ≤ idxW h
+        · rw [frNodeW.abort3 n m h c hs g0 g1 hc] at hb; cases hb
+        by_cases h1 : tfld m FVAR (tierW h) (idxW h) 0 + 1 = 0
+        · rw [frNodeW.abort4 n m h c hs g0 g1 hc h1] at hb; cases hb
+        · rw [frNodeW.arm2 n m h c hs g0 g1 hc h1] at hb
+          obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb); exact MemFrame.refl _ _ _
       by_cases g4 : h >>> 28 = 4
-      · refine tagCase APP (fun hv => ?_) (fun hc => (none_of ?_).elim)
-        · rw [frNodeW_app n m h c hv g4] at hb
+      · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
+        · rw [frNodeW.abort5 n m h c hs g0 g1 g4 hc] at hb; cases hb
+        · rw [frNodeW.arm3 n m h c hs g0 g1 g4 hc] at hb
           exact FrOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
-        · rw [frNodeW]; simp [hs, g4, hc]
       by_cases g5 : h >>> 28 = 5
-      · refine tagCase LAM (fun hv => ?_) (fun hc => (none_of ?_).elim)
-        · rw [frNodeW_lam n m h c hv g5] at hb
-          exact FrOK.bind (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
-        · rw [frNodeW]; simp [hs, g5, hc]
+      · by_cases hc : tcnt m LAM (tierW h) ≤ idxW h
+        · rw [frNodeW.abort6 n m h c hs g0 g1 g4 g5 hc] at hb; cases hb
+        · rw [frNodeW.arm4 n m h c hs g0 g1 g4 g5 hc] at hb
+          exact FrOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
       by_cases g6 : h >>> 28 = 6
-      · refine tagCase FORALL (fun hv => ?_) (fun hc => (none_of ?_).elim)
-        · rw [frNodeW_forall n m h c hv g6] at hb
-          exact FrOK.bind (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
-        · rw [frNodeW]; simp [hs, g6, hc]
+      · by_cases hc : tcnt m FORALL (tierW h) ≤ idxW h
+        · rw [frNodeW.abort7 n m h c hs g0 g1 g4 g5 g6 hc] at hb; cases hb
+        · rw [frNodeW.arm5 n m h c hs g0 g1 g4 g5 g6 hc] at hb
+          exact FrOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
       by_cases g9 : h >>> 28 = 9
-      · refine tagCase PROJ (fun hv => ?_) (fun hc => (none_of ?_).elim)
-        · rw [frNodeW_proj n m h c hv g9] at hb
+      · by_cases hc : tcnt m PROJ (tierW h) ≤ idxW h
+        · rw [frNodeW.abort8 n m h c hs g0 g1 g4 g5 g6 g9 hc] at hb; cases hb
+        · rw [frNodeW.arm6 n m h c hs g0 g1 g4 g5 g6 g9 hc] at hb
           exact ih.1 _ _ _ _ _ hb
-        · rw [frNodeW]; simp [hs, g9, hc]
       by_cases g7 : h >>> 28 = 7
-      · refine tagCase LET (fun hv => ?_) (fun hc => (none_of ?_).elim)
-        · rw [frNodeW_let n m h c hv g7] at hb
+      · by_cases hc : tcnt m LET (tierW h) ≤ idxW h
+        · rw [frNodeW.abort9 n m h c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb; cases hb
+        · rw [frNodeW.arm7 n m h c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb
           exact FrOK.letE (ih.1 _ _ _) (fun m₁ w => ih.1 m₁ w _) _ _ hb
-        · rw [frNodeW]; simp [hs, g7, hc]
       by_cases g2 : h >>> 28 = 2
-      · refine tagCase SORT (fun hv => done0 (frNodeW_sort n m h c g2 hv)) (fun hc => (none_of ?_).elim)
-        rw [frNodeW]; simp [hs, g2, hc]
+      · by_cases hc : tcnt m SORT (tierW h) ≤ idxW h
+        · rw [frNodeW.abort10 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb; cases hb
+        · rw [frNodeW.arm8 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb; exact done0 hb
       by_cases g3 : h >>> 28 = 3
-      · refine tagCase CONST (fun hv => done0 (frNodeW_const n m h c g3 hv)) (fun hc => (none_of ?_).elim)
-        rw [frNodeW]; simp [hs, g3, hc]
+      · by_cases hc : tcnt m CONST (tierW h) ≤ idxW h
+        · rw [frNodeW.abort11 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb; cases hb
+        · rw [frNodeW.arm9 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb; exact done0 hb
       by_cases g8 : h >>> 28 = 8
-      · refine tagCase LIT (fun hv => done0 (frNodeW_lit n m h c g8 hv)) (fun hc => (none_of ?_).elim)
-        rw [frNodeW]; simp [hs, g8, hc]
-      exact (none_of (by rw [frNodeW]; simp [hs, g0, g1, g4, g5, g6, g9, g7, g2, g3, g8])).elim
+      · by_cases hc : tcnt m LIT (tierW h) ≤ idxW h
+        · rw [frNodeW.abort12 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb; cases hb
+        · rw [frNodeW.arm10 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb; exact done0 hb
+      rw [frNodeW.abort13 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8] at hb; cases hb
 
 theorem frMemoW_frame (n : Nat) (m m' : Mem) (h c r : Word) (hb : frMemoW n m h c = some (r, m')) :
     FrFrame m m' := by

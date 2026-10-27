@@ -222,3 +222,33 @@ precondition `pcap s₀.mem < 2^63 ∧ s₀.mem.top.toNat < 2^41`, and so do its
 `memo_clear`'s `… ≠ 0 ∧ s'.mem = mclearG …` are not model shapes; `pb_check` is a template).
 Two hand models checked bounds the generated ones do not (`infer_pis`, `infer_forall`): the
 guards were derived instead from the generated `len64` aborts and `CoreS` (three lemmas).
+
+### Batch 3
+
+Generator: **`pre [P]`**, a precondition over `s₀` and the arguments; every member's spec becomes
+`∀ s₀ args, P → ⦃…⦄` (the shape of a hand spec with `(hs : P)` after the arguments), and a
+callee spec with such a hypothesis leaves it as a side goal of the step. Counted first (on
+master 79af6d68): 62 hand specs with a model post have a hypothesis about `s₀.mem`; most are
+refinements under relations (`ArenaR`, `R`, `StageR`), not word-model specs. The word-model specs
+are three families: `s₀.mem.arr8 IN = b` (the input buffer, about 20 specs in `Front/`),
+`pcap s₀.mem < 2^63 ∧ s₀.mem.top.toNat < 2^41` (the ROM readers, about 15 with
+`PinReadSpec`), `pcap s₀.mem < 2^64` (the store interns, 5). With `pre`, the first ROM one
+converted (`rom_lit`, the generated model equal to the hand one by `rfl`); the rest of the ROM
+family stays: its models reach many files (`romExprW` six, `romLevelsW` five), its callee posts
+carry `Keep s₁.mem s'.mem` (preservation of `pcap`, not a model shape), `internReservedPinsAt
+off` is a template, and `PinReadSpec`'s models pass continuations as function arguments. The
+input-buffer family was not tried yet.
+
+| file(s) | functions | lines (net, with users) | module time | notes |
+|---|---|---:|---|---|
+| `FVarRange`, `WalkScope`, `IndPartsSpec/Bs` (+ 5 refinements) | `fr_go`/`fr_node`, `ws_go`/`ws_node`, `block_split(_recs/_ctors)` | −668 | neutral; `IndRealPartsC1` +0.6 s | `finish` matched the hand times |
+| `DefEqStuckUnit` | `struct_unit_tail`, `struct_unit_cert` | −54 | neutral | `struct_unit_head` (6.5 s of the module) checks `136 < size` |
+| `WhnfIotaRecRefine2` | `iota_rec_fam`, `iota_rec_fire2`, `iota_rec_head`, `iota_rec_major` | −112 | 5.9 → 7.7 | `fire2`'s step 0.81 → 2.48 s (the `rpLen` arithmetic) |
+| `WhnfIotaRefine3` | `rec_fire_args`, `fab_scope_ok`, `eta_fab_args` | −52 | +0.4 s | three functions read through `ldE` (bounds) |
+| `WhnfDeltaRefine`, `2`, `3` (+ `4`, `DeclReduceSpec`) | 18 (`reduce_nat*`, `raw_nat_lit`, `unfold_definition`, `const_val_at`, `nat_*_ok`, …) | −476 | 10–17 % slower per module | steps at or below the hand specs; the rest not located |
+| `RomExpr` (+ `RomExprRef`, `StrLitBase`) | `rom_lit` (`pre`), `memo_push` (`void`) | −16 | +0.4 s | |
+
+Some conversions cost time (`WhnfIotaRecRefine2`, `WhnfDeltaRefine*`): the generated models
+inline `max`/`min` as arithmetic (`x + (y - x) * (if x < y then 1 else 0)`) and lift an `if` out
+of a result tuple (`if c then some (1, m) else some (0, m)` for `some (if c then 1 else 0, m)`),
+which the refinements bridge with small lemmas; and `fold` takes no `if` patterns (`ispLen`).

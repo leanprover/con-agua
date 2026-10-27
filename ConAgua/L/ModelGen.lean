@@ -92,6 +92,11 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   locals by `simp only` before `simp_all` (cheaper for long functions with many calls and stores,
   IndBGrpM); `heartbeats`: per step theorem; `trace`: log the
   generated commands.
+* `pre [P]`: a precondition over the initial state `s₀` and the arguments (by their L names),
+  e.g. `pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]`: every member's spec becomes
+  `∀ s₀ args, P → ⦃…⦄`; a callee spec with a hypothesis (or the induction hypothesis) leaves it
+  as a side goal of the step, for its `finish`/`grind`. Loop specs take no precondition, so a
+  loop cannot call such a callee.
 * `errors`: (pass `L.Arena.ld64_rdW_specE` in `extra`: word loads are not unfolded) the models keep the errors (the verdict proofs, `Arena/Verdict.lean`). A model is
   `Except L.Err …` (`.ok` for `some`); an `abort R` is `.error (.abort R)` (`abort` is code `0`);
   a continuation passes a callee's error on (`| .error ε => .error ε`, its equation `k.none`); a
@@ -1700,7 +1705,8 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" simp " "[" term,* "]")?
   (&" errors")?
   (&" trace")?
-  (&" locals")? : command
+  (&" locals")?
+  (&" pre " "[" term "]")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1762,6 +1768,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let exc := stx[19].getNumArgs != 0
   let doTrace := stx[20].getNumArgs != 0
   let preLocals := stx[21].getNumArgs != 0
+  let preT? : Option Term := if stx[22].getNumArgs == 0 then none else some ⟨stx[22][2]⟩
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
@@ -2328,8 +2335,13 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let epost ← if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $Wapp = Except.error $(mkIdent `ε))
       else `(Lean.Order.top)
     let fstr := Syntax.mkStrLit fi.lname
-    `(∀ ($s0 : L.St) $pbs*, Std.WP.Triple (L.invoke $pName (L.exec $pName $fuel) $fstr [$ps,*])
-        (fun s => s = $s0) $post $epost)
+    match preT? with
+    | some pre =>
+      `(∀ ($s0 : L.St) $pbs*, $pre → Std.WP.Triple (L.invoke $pName (L.exec $pName $fuel) $fstr [$ps,*])
+          (fun s => s = $s0) $post $epost)
+    | none =>
+      `(∀ ($s0 : L.St) $pbs*, Std.WP.Triple (L.invoke $pName (L.exec $pName $fuel) $fstr [$ps,*])
+          (fun s => s = $s0) $post $epost)
   let conj ← mkConj nI
   let stmt ← conj.pop.foldrM (init := conj.back!) fun c acc => `($c ∧ $acc)
   -- one step theorem per member, then the induction
