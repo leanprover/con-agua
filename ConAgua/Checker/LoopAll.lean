@@ -19,13 +19,13 @@ open L.Arena L.Compiler
 names_tree loopAllTree : loopFns
 
 /-- The arrays of `loopA`, as a test. -/
-def loopPa (a : ArrId) : Bool := decide (a < 388) && a != PINS
+def loopPa (a : TieredArray) : Bool := checkerWordArrays.contains a && a != PINS
 
 /-- The `CTL` words of `loopC`, as a test. -/
 def loopPc (w : Word) : Bool := decide (w.toNat < 1024)
 
-theorem loopPa_mem (a : ArrId) (h : loopPa a = true) : a ∈ loopA := by
-  simp only [loopPa, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at h
+theorem loopPa_mem (a : TieredArray) (h : loopPa a = true) : a ∈ loopA := by
+  simp only [loopPa, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
   simp [loopA, List.mem_filter, List.mem_range, h]
 
 theorem loopPc_mem (w : Word) (h : loopPc w = true) : w ∈ loopC := by

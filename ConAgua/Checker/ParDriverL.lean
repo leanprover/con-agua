@@ -47,7 +47,7 @@ theorem PhaseBStart.frame0 (hf : MemFrame [] [] m m') (h : PhaseBStart pins dn d
 end frame0
 
 /-- The arrays phase B's loop may name: every word array but `OUT`, `HDRF`, `CTLF`. -/
-abbrev phaseBS : ArrId → Bool := fun a => a != 240 && a != 241 && a != 242
+abbrev phaseBS : TieredArray → Bool := phaseBPa
 
 section agree
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
