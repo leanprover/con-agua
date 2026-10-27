@@ -39,7 +39,7 @@ theorem checkPendingGo_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs 
   rintro s e ⟨hx, hy, hz, hw⟩ hrun
   rw [hx, hy, hz] at hrun
   let m₂ : Mem := { m with glob := s.mem.glob }
-  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
   have h₂ := PhaseBStart.frame0 hf h
   -- the run from the call's own locals
   have hrun₀ : (invoke checkerProg (exec checkerProg n) "check_pending_go" [0, k, v]).run
