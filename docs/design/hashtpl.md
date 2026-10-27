@@ -6,15 +6,17 @@ lines, 30–50 h) and its §7.4 (the raw bridges stay while the stores' match an
 words), and lever (b) of `perfgap.md` §4 (one bounds check per slot, key words through one record
 load, region and stamp reads hoisted; estimated 3–5 % speed).
 
-**Answer: no-go.** Both estimates were made before the library and the compiler changed under them,
-and both are now too high:
+**Answer: no-go.** Both estimates are too high. The speed estimate predates leafgen, calleesave
+and the ABI work (Init went from 359 G to 273 G instructions since, and the template with it). The
+proof estimate counted the library and instance lines in total, not the declarations a new
+template would remove:
 
 * **Speed.** The template is already tight. The probes are short (1.0–1.3 slots per call), so the
   per-call header dominates, and everything L can still change in it is worth **0.34 % of the
   instructions** (measured with a prototype, §3). "One bounds check per slot" cannot be written in
   L: every `ld64`/`ld64t` is checked by the compiler, and L has no multi-word load. Even removing
-  *every* bounds check in the 170 template functions would save 4.0 % of the instructions and
-  HASHWALL of the wall time (upper bound, §3.3). That lever belongs to the compiler (§5).
+  *every* bounds check in the template functions would save 4.0 % of the instructions but only
+  about 1 % of the cycles and wall time (upper bound, §3.3). That lever belongs to the compiler (§5).
 * **Proofs.** The raw bridges are 145 lines in all, not thousands. The library already states the
   exact tables' facts at the field level (`ExactOK` over `fieldsL`/`kfld`, `ConsLibRel.lean`).
   An "exact kit" that also derives the remaining per-store obligations would save about
@@ -109,7 +111,7 @@ Downstream proofs use the per-store relations by name (`ARecRel` in `ArenaRel`, 
 
 ### 3.1 Profile (exact counts, `scripts/asmprof.py`, Init `init435.ndjson`)
 
-273.4 G instructions in all (perfgap measured 359 G on 1134dff6; tierswitch, memlay and leafgen
+273.4 G instructions in all (perfgap measured 359 G on 1134dff6; leafgen, calleesave and abisize
 landed since). The template functions:
 
 | | instructions | share | calls | per call |
@@ -175,7 +177,17 @@ the template functions from `checker.s` (`_tmp/hashtpl/scripts/nobounds.py`, uns
 
 Wall time (`scripts/bench.py --set init --reps 5`, interleaved, `taskset` on two cores):
 
-HASHBENCH
+| system (Init, 5 interleaved rounds) | instructions | cycles, min (median) | wall, min (median) |
+|---|---:|---:|---:|
+| master | 273.416 G | 88.6 G (89.1 G) | 19.97 s (20.09 s) |
+| G + W + M (§3.2) | 272.489 G (−0.34 %) | 88.2 G (90.8 G) | 19.90 s (20.50 s) |
+| no template bounds checks | 262.588 G (−3.96 %) | 87.6 G (88.1 G), −1.1 % | 19.76 s (19.87 s), −1.1 % |
+
+Load 11 at the start. One round of master and of G + W + M was disturbed (31.7 s, 30.4 s), so the
+minimum is the measure here (perfgap's convention). The prototype is within the noise. Deleting
+every template bounds check saves 1.1 % of the cycles: the checks are predicted, fused branches on
+Zen 5, as perfgap found for the program as a whole (7.4 % of the instructions, 3.6 % of the
+cycles). A sound "one check per slot" would get less than half of that.
 
 ## 4. Decision
 
