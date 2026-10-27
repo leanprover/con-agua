@@ -52,8 +52,9 @@ def main (args : List String) : IO UInt32 := do
     "rom_pin_sets"] [] []
   IO.println s!"program: {prog.length} functions; unbound: {miss}"
   unless miss.isEmpty do return 1
-  let sizes := (List.range 210).map fun i =>
-    if i == CTL then 256 else if i == L.Ind.IW then 1 <<< 16 else 1 <<< 19
+  let sizes : TieredArray → Nat := fun b =>
+    if b.hi || 210 ≤ b.arr then 0
+    else if b.arr == CTL then 256 else if b.arr == L.Ind.IW then 1 <<< 16 else 1 <<< 19
   let m0 : Mem := (initMem sizes).putBytes Rom.PB buf.data
   let fuel := 100000
   let t0 ← IO.monoMsNow
