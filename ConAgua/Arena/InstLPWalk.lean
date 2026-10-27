@@ -348,7 +348,7 @@ l_model slMemo_spec (p : Prog) (hp : ILWProg p)
   specs [memoFindG_spec lplSch p _ hp.ilplf n, memoPutG_spec lplSch p _ hp.ilplp n, callW_spec p n "lv_sub_int"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 1000000 simp [tierW, idxW] locals
+  finish [tierW, idxW]
 
 /-- The continuation after `lv_sub_int`, with the memo write as `msetG`. -/
 theorem ilwSlW.k_lv_sub_int_some (p : Prog) (u : Word) (r : List Word) (m₁ : Mem) :
@@ -364,7 +364,7 @@ l_model slsMemo_spec (p : Prog) (hp : ILWProg p)
     lsNode_spec p hp.lsn n, callW_spec p n "sls_go", callW_spec p n "spn_ls"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 1000000 simp [tierW, idxW] locals
+  finish [tierW, idxW]
 
 /-- The continuation after `spn_ls`, with the memo write as `msetG`. -/
 theorem ilwSlsW.k_spn_ls_some (p : Prog) (vs : Word) (r : List Word) (m₁ : Mem) :
@@ -379,7 +379,7 @@ l_model lpFVar_spec (p : Prog) (hp : ILWProg p)
     callW_spec p n "lp_go", callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 1000000 simp [tierW, idxW] locals
+  finish [tierW, idxW]
 
 l_model lpProj_spec (p : Prog) (hp : ILWProg p)
   fns [hp.pj ↦ ilwProjW]
@@ -387,7 +387,7 @@ l_model lpProj_spec (p : Prog) (hp : ILWProg p)
     callW_spec p n "lp_go", callW_spec p n "mk_proj"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 1000000 simp [tierW, idxW] locals
+  finish [tierW, idxW]
 
 l_model instLPCore_spec (p : Prog) (hp : ILWProg p)
   fns [hp.core ↦ ilwCoreW]

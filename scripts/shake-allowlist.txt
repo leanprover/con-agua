@@ -5,10 +5,12 @@ ConAgua/Arena/CapsNeverZeroCore.lean	public import ConAgua.Arena.LevelInternRef	
 ConAgua/Arena/CheckerL.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/DeclApd.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/DeclAxiomSpec3.lean	public import ConAgua.Arena.DeclAxiomSpec2	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/DeclAxiomSpec4.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/DeclDivModSpec/SubstConst0List.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/DeclNatDeps.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/DeclStep.lean	public import ConAgua.Front.IndApply	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the inductive lines through it
 ConAgua/Arena/DefEq.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/DefEqBody.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -17,10 +19,12 @@ ConAgua/Arena/DefEqMid.lean	public import ConAgua.Arena.DefEqLeaves2	# kept from
 ConAgua/Arena/DefEqMid.lean	public import ConAgua.Arena.InferLeaves	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Arena/DefEqMid.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqMidSpine.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/DefEqStuckEta.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/DefEqStuckEta.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqStuckShape.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/Freeze.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/IndCallM.lean	public import ConAgua.Arena.IndIface	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/IndInstallSpec/GfcW.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/IndInstallSpec/GrcTwinA.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/IndInstallSpec/IcbiW.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndInstallSpec/LvlEqFueledSpecC.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)

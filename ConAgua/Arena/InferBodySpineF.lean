@@ -67,32 +67,11 @@ theorem spineArg_run {β : Type} (r : CoreFnsA) (depth : Nat) (a dom : EIdx) (K 
     simp only [pure, StateT.pure, StateT.run] at h
     cases h; rfl
 
-section argK
-variable (p : Prog) (n : Nat) (mode vis d a dom : Word)
-
-def argK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => if r.headD 0 = 0 then none else some (0, m)
-
-/-- **The model of `infer_spine_arg`** past the argument's `infer` run. -/
-def argK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => argK2 (callW p n "defeq_arg" [mode, vis, d, a, r.headD 0, dom] m)
-
-end argK
-
-theorem inferSpineArg_spec (p : Prog) (hq : SpineFProg p) (n : Nat) (s₀ : St) (mode vis d a dom : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_spine_arg" [mode, vis, d, a, dom]
-    ⦃fun r s' => LocEq s' s₀ ∧ argK1 p n mode vis d a dom
-      (callW p n "infer" [mode, vis, d, a] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.arg]
-  simp only [callFn, inferSpineArgL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "infer",
-      callW_spec p n "defeq_arg"] <;>
-  simp_all [argK1, argK2, LocEq, Cmp.eval, St.setLocs_cons, St.setLoc_loc,
-    St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
+/-- **`infer_spine_arg` is its model `inferSpineArgW`** (generated). -/
+l_model inferSpineArg_spec (p : Prog) (hq : SpineFProg p)
+  fns [hq.arg ↦ inferSpineArgW]
+  specs [callW_spec p n "infer", callW_spec p n "defeq_arg"]
+  grind [arena_grind] simp []
 
 /-- `defeq_arg` at every L fuel up to `n + 1`. -/
 theorem defeqArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : IsEagerReduceH p) :
@@ -126,15 +105,15 @@ theorem inferSpineArg_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg 
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferSpineArg_spec p hq n s₀ mode vis d a dom)
+    (inferSpineArg_spec p hq (n + 1) s₀ mode vis d a dom)
   subst hs0
   refine ⟨hloc, ?_⟩
+  rw [inferSpineArgW.arm1] at hW
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  dsimp only [argK1] at hW
+  rw [inferSpineArgW.k_infer.arm1] at hW
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  dsimp only [argK2] at hW
-  have h0 : r₂.headD 0 ≠ 0 := fun h => by rw [ite_eq_left h] at hW; cases hW
-  rw [ite_eq_right h0] at hW
+  have h0 : r₂.headD 0 ≠ 0 := fun h => by rw [inferSpineArgW.k_defeq_arg.abort1 (hc1 := h)] at hW; cases hW
+  rw [inferSpineArgW.k_defeq_arg.arm1 (hc1 := h0)] at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have h₁ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F s a₀ dn vis fe M eb mode d a hF hn hs ha) hc1
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
@@ -524,34 +503,12 @@ theorem inferSpine_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq 
 
 /-! ## `infer_app` -/
 
-section appK
-variable (p : Prog) (n : Nat) (mode vis d top : Word)
+/-- **`infer_app` is its model `inferAppW`** (generated). -/
+l_model inferApp_spec (p : Prog) (hq : SpineFProg p)
+  fns [hq.app ↦ inferAppW]
+  specs [callW_spec p n "head_and_args", callW_spec p n "infer", callW_spec p n "infer_spine"]
+  grind [arena_grind] extra [ld64_rdW_spec, st64_spec] simp []
 
-def appK3 (ao an : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => appIOK4 top (callW p n "infer_spine" [mode, vis, d, r.headD 0, ao, an] m)
-
-/-- **The model of `infer_app`** past `head_and_args`' run. -/
-def appK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => appK3 p n mode vis d top (r.tail.headD 0) (r.tail.tail.headD 0)
-      (callW p n "infer" [mode, vis, d, r.headD 0] m)
-
-end appK
-
-theorem inferApp_spec (p : Prog) (hq : SpineFProg p) (n : Nat) (s₀ : St) (mode vis d e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_app" [mode, vis, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ appK2 p n mode vis d (rdW (s₀.mem.arr64 CTL) 136)
-      (callW p n "head_and_args" [e] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.app]
-  simp only [callFn, inferAppL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
-      callW_spec p n "head_and_args", callW_spec p n "infer", callW_spec p n "infer_spine"] <;>
-  simp_all [appK2, appK3, appIOK4, LocEq, St.setLocs_cons, CTL,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
 
 /-- `inferBody`'s `.app` arm is `inferApp`. -/
 @[refines_part ConRon.Arena.inferBody "app"]
@@ -573,20 +530,18 @@ theorem inferApp_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (h
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferApp_spec p hq n s₀ mode vis d e)
+    (inferApp_spec p hq (n + 1) s₀ mode vis d e)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
   have hK := hk n (Nat.le_refl _)
+  rw [inferAppW.arm1] at hW
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  dsimp only [appK2] at hW
+  rw [inferAppW.k_head_and_args.arm1] at hW
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  dsimp only [appK3] at hW
+  rw [inferAppW.k_infer.arm1] at hW
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  dsimp only [appIOK4] at hW
-  have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
-    refine Classical.byContradiction fun h => ?_; rw [ite_eq_right h] at hW; cases hW
-  rw [ite_eq_left h136] at hW
+  rw [inferAppW.k_infer_spine.arm1] at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, hha, hxs⟩ := triple_of_callW
     (headAndArgs_app p hsp n s a₀ hS.arena.1 e hHe h4 hS.spn) hc1
@@ -607,6 +562,14 @@ theorem inferApp_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (h
     dn vis fe M₂ eb mode d (r₂.headD 0) _ _ xs ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw2 hxs₂
     (by rw [hSt₂.1, htopN]; exact Nat.le_refl _)) hc3
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := h₃
+  have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
+    obtain ⟨mp, h⟩ := hS₃.memos.2.2.2.2.1
+    unfold MemoRG MemoRV at h
+    have := h.1
+    simp only at this
+    have e : (156 : Word).toNat = 156 := rfl
+    have e' : (136 : Word).toNat = 136 := rfl
+    omega
   have hrun : (inferApp (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)).run a₀ =
       .ok (decE (r₃.headD 0), AM.st (inferSpine (coreKnot (decMode mode) fe id F) fe
         d.toNat (decE (r₂.headD 0)) #[] xs 0)
