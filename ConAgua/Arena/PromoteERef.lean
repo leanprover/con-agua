@@ -420,7 +420,7 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
         piSort_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
       exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, tierOff, SOREC, SOSLOT, SOLP]) (by simp) hfr₂, hpw₂,
-        hcp₂.trans hcp₁, (hfr₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp) (by simp)),
+        hcp₂.trans hcp₁, (hfr₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp [tier1, tierOff]) (by simp)),
         (TierKeep.of_frame hfr₁ (by decide)).trans (TierKeep.of_frame hfr₂ (by decide))⟩
     | const x us =>
       obtain ⟨hg, hx, hx', hus, hus'⟩ := hvr
@@ -526,7 +526,7 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₃, hpw₃, hcp₃, hfr₃⟩
     exact ⟨rfl, hD₃, hP₂.frameLo (by simp [tier1, tierOff, PJDER, PJREC, PJSLOT]) (by simp) hfr₃, hpw₃,
       hcp₃.trans (hcp₂.trans hcp₁),
-      ((hfr₁.mono (by simp) (by simp)).trans hfr₂).trans (hfr₃.mono (by simp) (by simp)),
+      ((hfr₁.mono (by simp) (by simp)).trans hfr₂).trans (hfr₃.mono (by simp [tier1, tierOff]) (by simp)),
       ((TierKeep.of_frame hfr₁ (by decide)).trans tk₂).trans (TierKeep.of_frame hfr₃ (by decide))⟩
 
 /-- **`promote_e` refines `promoteE`** (`PEOk`). -/

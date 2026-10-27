@@ -68,7 +68,7 @@ theorem and2Push_ok {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} 
 theorem store_spn {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') :
     m'.arr64 SPN = m.arr64 SPN ∧ spTop m' = spTop m := by
   refine ⟨hf.1 SPN (fun h => by
-      unfold L.Rom.StoreA at h; simp [lowTierArrs, SPN] at h) (by decide), ?_⟩
+      unfold L.Rom.StoreA at h; simp [tier1, tierOff, lowTierArrs, SPN] at h) (by decide), ?_⟩
   unfold spTop
   exact hf.2.1 136 (fun h => by
     obtain ⟨k, hk, hkk⟩ := List.mem_map.mp
