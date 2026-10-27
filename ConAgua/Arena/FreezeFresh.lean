@@ -146,7 +146,7 @@ theorem PoolOK.fresh (h : PoolOK (cutT m)) (htop : (cutT m).top.toNat < 2 ^ 40) 
   obtain ⟨a1, a2, a3, a4, -, a6⟩ := h
   have ht : (freshMem m).top = (cutT m).top := by simp only [Mem.top, fresh_ctl]
   have hpc : pcap (freshMem m) = pcap (cutT m) := by simp only [pcap, PSmall, fresh_size]
-  refine ⟨by rw [fresh_words]; exact a1, by rw [fresh_ctl]; exact a2, by rw [hpc]; exact a3,
+  refine ⟨a1.of_sameShape (fresh_words m), by rw [fresh_ctl]; exact a2, by rw [hpc]; exact a3,
     by rw [hpc, ht]; exact a4, .inl (by rw [ht]; exact htop), ?_⟩
   rw [ht, fresh_size]; exact a6
 
