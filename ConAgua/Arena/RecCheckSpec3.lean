@@ -1,5 +1,4 @@
 import ConAgua.Arena.RecCheckSpec2
-import ConAgua.Arena.RecSim
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`)

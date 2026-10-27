@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclDivMod8
 import ConAgua.Arena.DeclReducePin
-import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the variant loop and the gate (lane `decls3`, `decls3-divmod`)

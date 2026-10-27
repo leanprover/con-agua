@@ -1,6 +1,8 @@
 import ConAgua.Arena.RecCheckSpec5
 import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Inductives.RecCheck
+import ConAgua.Arena.RecClassSpecH
+import ConAgua.Arena.RecGenSpec5
 
 /-!
 # `targetPinTys`, `targetMajorPins` under `StageC` (lane `indstaget`, helper `indstaget-tpt`)

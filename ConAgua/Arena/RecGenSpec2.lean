@@ -1,7 +1,5 @@
-import ConAgua.Arena.RecGen
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.RecGenSpec
-import ConAgua.Arena.IndSumSpec2
+import ConAgua.Arena.IndSumSpec2A
+import ConAgua.Arena.RecClassSpecA
 
 /-!
 # More refinements of `RecGen` (lane `indproofs`, helper `recb`)

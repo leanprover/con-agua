@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec17
+import ConAgua.Arena.RecGenSpec16
 
 /-!
 # `targetMajorOf` (lane `indproofs3`, helper `indproofs3-pos-cls`)

@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndT.PosApp
+import ConAgua.Arena.IndT.PosFields
 
 /-!
 # `nest_pos_bind` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

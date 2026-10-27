@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclDivMod2
-import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: statement builders, part 3 (lane `decls3`, `decls3-divmod`)

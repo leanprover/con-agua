@@ -1,6 +1,5 @@
-import ConAgua.Arena.RecGenSpec11
 import ConAgua.Arena.IndSumSpec9
-import ConAgua.Arena.DeclHeader
+import ConAgua.Arena.RecGenSpec10
 
 /-!
 # `RecGen`: `classFeR` (lane `indproofs2`, helper `rec3`)

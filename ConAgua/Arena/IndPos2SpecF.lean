@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndPosMemo
 import ConAgua.Arena.RecCheckSpec
-import ConAgua.Arena.StageInst1
 
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestHoles`,
 `nestRootCanon`, … -/

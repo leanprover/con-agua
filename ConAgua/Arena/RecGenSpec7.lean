@@ -1,6 +1,6 @@
 import ConAgua.Arena.RecClassSpecJ
 import ConAgua.Arena.RecGenSpec3
-import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.RecGenSpec2
 
 /-!
 # `RecGen`: `classRecTyOk` (lane `indproofs2`, helper `rec2`)

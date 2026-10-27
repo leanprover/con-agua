@@ -1,7 +1,7 @@
-import ConAgua.Arena.RecGenSpec6
-import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.RecCheckSpec3
-import ConAgua.Arena.StageInst1
+import ConAgua.Arena.IndPosSpec2A
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecClassSpecD
 
 /-!
 # `RecClass`: `ClassGen.major` (lane `indproofs2`, helper `rec2`)

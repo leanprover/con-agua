@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndSumSpec2
-import ConAgua.Arena.IndPos2Spec
+import ConAgua.Arena.IndPos2SpecA
+import ConAgua.Arena.IndSumSpec2A
 
 /-!
 # Refinements of `IndSum`, third file (lane `indproofs`)

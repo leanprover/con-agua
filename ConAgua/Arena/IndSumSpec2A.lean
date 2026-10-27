@@ -1,8 +1,6 @@
 import ConAgua.Arena.IndInstallSpec
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndView
-import ConAgua.Arena.StageInst1
 import ConAgua.Arena.IndRealCrF
+import ConAgua.Arena.IndSumSpec
 
 /-!
 # Refinements of `IndSum`, second file (lane `indproofs`)

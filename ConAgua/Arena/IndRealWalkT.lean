@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.StageTLift
 
 /-!

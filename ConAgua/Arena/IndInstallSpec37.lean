@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndInstallSpec36
+import ConAgua.Arena.IndInstallSpec15
+import ConAgua.Arena.RecCheckSpec18
 
 /-!
 # Refinements of `IndInstall`, part 37 (lane `indproofs4`): `checkBlock`

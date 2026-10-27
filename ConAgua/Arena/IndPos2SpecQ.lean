@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndPos2SpecP
+import ConAgua.Arena.IndPos2SpecM
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the representation of the
 walk's data below the tops (field-kind slices, the constructors' `(kinds, closed)` records, the

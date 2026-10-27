@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndRealLvlT
-import ConAgua.Arena.IndRealLvlZT
 import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Inductives.RecCheck
 

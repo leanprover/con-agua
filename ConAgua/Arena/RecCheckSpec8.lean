@@ -1,4 +1,3 @@
-import ConAgua.Arena.RecCheckSpec7
 import ConAgua.Arena.RecGenSpec11
 import ConAgua.Arena.DeclCanonView2
 

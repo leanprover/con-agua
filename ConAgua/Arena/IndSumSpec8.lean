@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec7
+import ConAgua.Arena.IndSumSpec2
 
 /-!
 # `struct_proj_guards` refines `structProjGuards` (lane `indproofs2`)

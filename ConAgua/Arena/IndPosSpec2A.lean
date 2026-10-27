@@ -1,7 +1,5 @@
 import ConAgua.Arena.IndPos2Spec
 import ConAgua.Arena.IndInstallSpec2
-import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.DeclRec
 
 /-! # `IndPos`'s remaining functions (lane `indproofs2`, helper `pos`)
 

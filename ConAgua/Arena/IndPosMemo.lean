@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndPosSpec6
 import ConAgua.Arena.IndSumSpec5
 import ConAgua.Arena.IndPos2SpecE
+import ConAgua.Arena.IndPosSpec5
 
 /-! # The positivity check's walk memos in the memory at hand (lane `indproofs2`, helper `posmemo`)
 

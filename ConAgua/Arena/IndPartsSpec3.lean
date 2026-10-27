@@ -1,9 +1,3 @@
-import ConAgua.Arena.IndPartsSpec2
-import ConAgua.Arena.IndView
-import ConAgua.Arena.WhnfSpineRefine
-import ConAgua.Arena.IndStubs
-import ConAgua.Arena.StripTeleSpec
-import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.IndRealSpine
 
 /-!

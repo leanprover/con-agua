@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndInstallSpec11
+import ConAgua.Arena.IndInstall
+import ConAgua.Arena.RecSim
 
 /-!
 # Refinements of `IndInstall`, part 12 (lane `indproofs2`, helper `install`): `blockCapsAt`

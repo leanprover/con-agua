@@ -1,7 +1,8 @@
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecGenSpec9
-import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.RecGenSpec
+import ConAgua.Arena.RecGenSpec7
 
 /-!
 # `classStreamRecs` under `StageC` (lane `indstaget`)

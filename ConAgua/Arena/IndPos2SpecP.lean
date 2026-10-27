@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndPos2SpecO
+import ConAgua.Arena.IndPos2SpecM
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the twin's block in pieces,
 one per L function, each taking the rest of the twin's code as a continuation (so that every

@@ -1,13 +1,5 @@
-import ConAgua.Arena.RecCheck
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.IndPartsSpec
-import ConAgua.Arena.RecClassSpec
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndCopy2
-import ConAgua.Arena.IndPartsSpec2
-import ConAgua.Arena.StageInst1
-import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.IlpRd
+import ConAgua.Arena.RecClassSpecB
 
 /-!
 # Refinements of `RecCheck` (lane `induct`, round 2)

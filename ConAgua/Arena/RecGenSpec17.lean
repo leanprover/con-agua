@@ -1,8 +1,7 @@
-import ConAgua.Arena.RecGenSpec16
-import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.RecCheckSpec6
-import ConAgua.Arena.RecCheckSpec5
 import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Arena.IndInstallSpec9
+import ConAgua.Arena.RecGenSpec13
 
 /-!
 # `targetMajorOf`'s outside branch (lane `indproofs3`, helper `indproofs3-pos-cls`)

@@ -1,7 +1,6 @@
-import ConAgua.Arena.IndPos2SpecT
-import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.IndT.RecGen19
 import ConRon.Bridge.Inductives.Positivity
+import ConAgua.Arena.IndPos2SpecR
+import ConAgua.Arena.TwinStep
 
 /-!
 # The positivity walk under `StageC`: the statements (lane `indstaget`, helper `indstaget-pos`)

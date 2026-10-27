@@ -1,8 +1,6 @@
-import ConAgua.Arena.RecGenSpec3
-import ConAgua.Arena.IndSumSpec2C
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.CoreRefine
-import ConAgua.Arena.ScratchRefine
+import ConAgua.Arena.RecGenSpec2
+import ConAgua.Arena.RecSim
+import ConAgua.Arena.StubIndRefine
 
 /-!
 # `RecGen`: `classRuleOk` (lane `indproofs2`, helper `rec`)

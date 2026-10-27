@@ -1,7 +1,7 @@
-import ConAgua.Arena.IndInstallSpec29
-import ConAgua.Arena.CoreErec
 import ConAgua.Arena.RecGenSpec4
-import ConAgua.Arena.RecCheckSpec4
+import ConAgua.Arena.IndInstallSpec26
+import ConAgua.Arena.IndInstallSpec5
+import ConAgua.Arena.RecClassSpecH
 
 /-!
 # Refinements of `IndInstall`, part 30 (lane `indproofs3`, helper `tail`): the walk memos from the

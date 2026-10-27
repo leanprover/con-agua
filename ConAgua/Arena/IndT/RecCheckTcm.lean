@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndT.RecCheckTpd
 import ConAgua.Arena.RecCheckSpec12
-import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndInstallSpec23
 import ConAgua.Arena.IndRealLvlC
 

@@ -1,12 +1,7 @@
-import ConAgua.Arena.RecCheck
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.RecCheckSpec
-import ConAgua.Arena.IndSumSpec2
-import ConAgua.Arena.RecGenSpec2
-import ConAgua.Arena.IndPartsSpec2
-import ConAgua.Arena.IndPos2Spec
 import ConAgua.Arena.IndPartsSpec4
 import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.IndSumSpec2A
+import ConAgua.Arena.RecClassSpecA
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs`, helper `recb`)

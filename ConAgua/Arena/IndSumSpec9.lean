@@ -1,6 +1,4 @@
 import ConAgua.Arena.IndSim
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.DeclRec
 import ConAgua.Arena.IndPartsSpec4
 import ConAgua.Arena.IndInstallSpec2
 

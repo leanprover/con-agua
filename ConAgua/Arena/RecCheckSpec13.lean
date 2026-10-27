@@ -1,5 +1,7 @@
 import ConAgua.Arena.RecCheckSpec12
 import ConAgua.Arena.IndSumSpec13
+import ConAgua.Arena.IndPartsSpec8
+import ConAgua.Arena.RecGenSpec11
 
 noncomputable section
 

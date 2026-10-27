@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndSumSpec5
 import ConAgua.Arena.RecClassSpec
+import ConAgua.Arena.IndSumSpec2A
 
 /-!
 # Refinements of `IndSum`, seventh file (lane `indproofs`, helper `memo`)

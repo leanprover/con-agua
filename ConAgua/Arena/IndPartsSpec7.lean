@@ -1,8 +1,6 @@
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPartsSpec6
 import ConAgua.Arena.IndPosSpec2A
-import ConAgua.Arena.RecClassSpecA
 
 /-!
 # Refinements of `IndParts`, part 7 (lane `indproofs2`, helper `parts`): the block split

@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndPosSpec5
-import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPosSpec2
+import ConAgua.Arena.IndPosSpec4
 
 /-! # `nestCtorNf` (lane `indproofs2`, helper `pos`): a frame constructor's record, read back through
 `FvMap.holeImg ctx prog prog.length` (`nest_hole_img_ds` for the parameters). -/

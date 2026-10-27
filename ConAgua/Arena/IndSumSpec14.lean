@@ -1,9 +1,6 @@
-import ConAgua.Arena.IndSumSpec12
-import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndSumSpec6
-import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.IndSumSpec2C
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecStab
 
 /-!
 # `check_struct_proj_table` refines `checkStructProjTable` (lane `indproofs2`)

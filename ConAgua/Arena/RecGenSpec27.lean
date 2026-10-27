@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec26
+import ConAgua.Arena.RecGenSpec25
 
 /-!
 # `classCtorsOf`, `classesCtors` (lane `indproofs4`, helper `cls`)

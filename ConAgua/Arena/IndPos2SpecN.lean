@@ -1,7 +1,5 @@
 import ConAgua.Arena.IndPos2SpecM
-import ConAgua.Arena.StageInst1
 import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.IndRealAbs
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the word models of the
 mutual block (`nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`, `nest_cont_key`,

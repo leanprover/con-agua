@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndInstallSpec5
-import ConAgua.Arena.IndPos2SpecF
+import ConAgua.Arena.IndPartsSpec15
 
 /-!
 # Refinements of `IndInstall`, part 6 (lane `indproofs2`, helper `parts`): `BlockShape.nestCtx`

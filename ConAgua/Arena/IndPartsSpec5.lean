@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPartsSpec4
+import ConAgua.Arena.IndPartsSpec3
 
 /-!
 # Refinements of `IndParts`, part 5 (lane `indproofs`, helper `parts`)

@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndT.RecGen9
 import ConAgua.Arena.RecGenSpec10
-import ConRon.Bridge.Inductives.PosWalks
 
 /-!
 # `classRecsRulesOk` under `StageC` (lane `indstaget`)

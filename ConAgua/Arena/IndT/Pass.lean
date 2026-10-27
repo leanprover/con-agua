@@ -1,11 +1,8 @@
-import ConAgua.Arena.IndInstallSpec36
-import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Tail
 import ConAgua.Arena.IndT.Positivity
 import ConAgua.Arena.IndT.RecGen21
-import ConAgua.Arena.IndT.Install4
 import ConAgua.Arena.IndT.Install7
-import ConAgua.Arena.IndT.PosRoot
+import ConAgua.Front.IndApplyRefine
 
 /-!
 # `checkBlockPass` under `StageC` (lane `indstaget`)

@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndT.GenRec2
-import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.RecGen10
+import ConAgua.Arena.IndInstallSpec21
 
 /-!
 # `genRecCheck`, `checkBlockRec` under `StageC` (lane `indstaget`, helper `grc`)

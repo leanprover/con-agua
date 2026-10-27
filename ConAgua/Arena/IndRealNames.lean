@@ -1,11 +1,7 @@
-import ConAgua.Arena.CallF
 import ConAgua.Arena.StubNames
 import ConAgua.Arena.RecSim
-import ConAgua.Front.ApplyExprRefine
 import ConAgua.Arena.DeclMasterStage
 import ConAgua.Arena.StageInst1
-import ConAgua.Arena.LevelInternRef
-import ConAgua.Arena.PromoteLsRef
 import ConAgua.Arena.InstLPRef
 import ConAgua.Arena.WhnfProjRefine
 

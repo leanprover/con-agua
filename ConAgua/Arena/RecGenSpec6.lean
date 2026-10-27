@@ -1,8 +1,7 @@
-import ConAgua.Arena.RecGenSpec5
 import ConAgua.Arena.RecGenSpec2
 import ConAgua.Arena.RecClassSpecE
-import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndPos2SpecE
+import ConAgua.Arena.RecClassSpecD
 
 /-!
 # `RecGen`: `classFieldsOf` (lane `indproofs2`, helper `rec2`)

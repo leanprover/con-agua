@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclDivMod3
-import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the certificate builders, part 4 (lane `decls3`, `decls3-divmod`)

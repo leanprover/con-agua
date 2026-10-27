@@ -1,4 +1,4 @@
-import ConAgua.Arena.RecCheckSpec15
+import ConAgua.Arena.RecCheckSpec14
 
 noncomputable section
 

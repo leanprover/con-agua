@@ -1,9 +1,8 @@
 import ConAgua.Arena.IndSumSpec11
 import ConAgua.Arena.IndSumSpec4
-import ConAgua.Arena.IndSumSpec2A
 import ConAgua.Arena.RecGenSpec4
-import ConAgua.Arena.RecClassSpecB
 import ConAgua.Arena.IndSumSpec2C
+import ConAgua.Arena.IndSim
 
 /-!
 # `check_sum_ctor` refines `checkSumCtor` (lane `indproofs2`)

@@ -1,8 +1,5 @@
 import ConAgua.Arena.IndInstallSpec7
-import ConAgua.Arena.RecClassSpecI
-import ConAgua.Arena.IndSumSpec9
-import ConAgua.Arena.IndSumSpec3
-import ConAgua.Arena.RecClassSpec
+import ConAgua.Arena.RecStab
 
 /-!
 # Refinements of `IndInstall`, part 8 (lane `indproofs2`, helper `install`): `checkBlockTele`

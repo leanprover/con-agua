@@ -1,5 +1,5 @@
 import ConAgua.Arena.RecCheckSpec9
-import ConAgua.Arena.IndRealWalk
+import ConAgua.Arena.RecClassSpecK
 
 /-!
 # `RecCheck`: `targetParamsDefEq` (lane `indproofs3`, helper `rec`)

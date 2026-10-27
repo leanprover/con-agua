@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndSumSpec
 import ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndRealFvtD
 import ConAgua.Arena.IndCallM

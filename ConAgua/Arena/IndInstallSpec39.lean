@@ -1,12 +1,5 @@
-import ConAgua.Arena.IndInstallSpec38
 import ConAgua.Arena.RecGenSpec12
-import ConAgua.Arena.IndSumSpec
-import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.WhnfCoreApp
-import ConAgua.Arena.CoreErec
-import ConAgua.Arena.CallF
 import ConAgua.Arena.DeclNatSub
-import ConAgua.Arena.IndDecStab
 
 /-!
 # Refinements of `IndInstall`, part 39 (lane `indproofs4`, helper `grc`): the pop, the elimination level, the large-eliminator contract

@@ -1,6 +1,6 @@
-import ConAgua.Arena.IndPosSpec2
-import ConAgua.Arena.MemoBank
 import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPosSpec2A
 
 /-! # `replaceFVars` and its maps (lane `indproofs2`, helper `pos`)
 

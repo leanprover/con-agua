@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndSumSpec9
-import ConAgua.Arena.IndReal
 
 /-!
 # `sum_rules` refines `sumRules` (lane `indproofs2`)

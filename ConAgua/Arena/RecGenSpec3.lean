@@ -1,5 +1,3 @@
-import ConAgua.Arena.RecClassSpecH
-import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.DeclHeader
 
 /-!

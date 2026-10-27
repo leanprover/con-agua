@@ -1,5 +1,5 @@
 import ConAgua.Arena.RecGenSpec9
-import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.RecGenSpec8
 
 /-!
 # `RecGen`: `classRecsRulesOk` (lane `indproofs2`, helper `rec3`)

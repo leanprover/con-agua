@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndInstallSpec32
+import ConAgua.Arena.IndInstallSpec6
 
 /-!
 # Refinements of `IndInstall`, part 33 (lane `indproofs3`, helper `pos`): the walk memos across

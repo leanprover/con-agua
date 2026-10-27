@@ -1,7 +1,5 @@
-import ConAgua.Arena.RecGenSpec8
 import ConAgua.Arena.RecGenSpec4
-import ConAgua.Arena.RecClassSpecO
-import ConAgua.Arena.IndPartsSpec15
+import ConAgua.Arena.RecClassSpecN
 
 /-!
 # `RecGen`: `classRulesOk` (lane `indproofs2`, helper `rec3`)

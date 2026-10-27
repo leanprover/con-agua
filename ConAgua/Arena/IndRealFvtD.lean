@@ -1,9 +1,4 @@
-import ConAgua.Arena.CallF
-import ConAgua.Arena.IndStubs
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.IndView
 import ConAgua.Arena.TeleLift
-import ConAgua.Arena.StripTeleSpec
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.WhnfSpineRefine
 

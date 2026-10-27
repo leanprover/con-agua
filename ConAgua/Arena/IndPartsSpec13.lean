@@ -1,5 +1,4 @@
-import ConAgua.Arena.IndPartsSpec12
-import ConAgua.Arena.DeclHeader
+import ConAgua.Arena.IndPartsSpec11
 set_option linter.unusedSectionVars false
 
 /-!

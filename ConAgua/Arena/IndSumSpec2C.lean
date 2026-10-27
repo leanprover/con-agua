@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndSumSpec2A
 import ConAgua.Arena.IndRealMemoCr
-import ConAgua.Arena.RecGenSpec2
 
 /-!
 # `field_doms_resolve`, `idx_args_resolve` under the walk memos (lane `indproofs4`, helper `memo`)

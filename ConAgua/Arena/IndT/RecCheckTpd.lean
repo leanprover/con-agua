@@ -1,7 +1,6 @@
 import ConAgua.Arena.RecCheckSpec11
 import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Inductives.RecCheck
-import ConAgua.Census.Attr
 
 /-!
 # `targetParamsDefEq` under `StageC` (lane `indstaget`, helper `pds`)

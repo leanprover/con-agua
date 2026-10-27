@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.IndT.Lift
 
 /-!
 # `whnfTelescope` under `StageC` (lane `indstaget`)

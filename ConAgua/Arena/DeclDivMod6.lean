@@ -1,7 +1,6 @@
 import ConAgua.Arena.DeclDivMod5
-import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DeclRomStubs
-import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclDivMod3
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the guards (lane `decls3`, `decls3-divmod`)

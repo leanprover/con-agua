@@ -1,7 +1,5 @@
 import ConAgua.Arena.IndRealMemo
-import ConAgua.Arena.IndRealFvt
 import ConAgua.Arena.IndPos2SpecA
-import ConAgua.Arena.TeleLift
 
 /-!
 # `inst_pis_at_lift` under the stage relation and the walk memos (lane `indproofs4`, helper `ilp`)

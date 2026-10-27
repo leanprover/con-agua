@@ -1,5 +1,5 @@
 import ConAgua.Arena.RecGenSpec13
-import ConAgua.Arena.IndInstallSpec23
+import ConAgua.Arena.IndInstallSpec9
 
 /-!
 # `checkBlockClasses`' keys, and one class per member (lane `indproofs3`, helper `indproofs3-pos-cls`)

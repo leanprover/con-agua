@@ -1,13 +1,4 @@
-import ConAgua.Arena.IndPos2
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.Env
 import ConAgua.Arena.IndPosSpec
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndPartsSpec3
-import ConAgua.Arena.Pins
-import ConAgua.Arena.IndCopy2
-import ConAgua.Arena.MemoLibRel
-import ConAgua.Arena.StageInst1
 import ConAgua.Arena.IndRealAbs
 
 /-!

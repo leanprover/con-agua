@@ -1,11 +1,16 @@
-import ConAgua.Arena.IndSumSpec14
 import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndInstallSpec27
 import ConAgua.Arena.TblFrame
 import ConAgua.Final.Twin
+import ConAgua.Arena.DefEqKnot
+import ConAgua.Arena.IndInstallSpec13
+import ConAgua.Arena.IndInstallSpec23
+import ConAgua.Arena.IndInstallSpec24
+import ConAgua.Arena.IndInstallSpec26
+import ConAgua.Arena.IndSumSpec10
+import ConAgua.Arena.RecCheckSpec5
 
 /-!
 # `check_struct_proj_table_scoped` through the real `all_level_params_defined` (lane `indproofs4`, helper `sct`)

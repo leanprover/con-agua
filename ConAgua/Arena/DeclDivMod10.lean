@@ -1,7 +1,5 @@
 import ConAgua.Arena.DeclDivMod9
 import ConAgua.Arena.DeclArmDefn
-import ConAgua.Rom.PinReadSpec
-import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate: `defn_div_gate` (lane `decls3`, `decls3-divmod`)

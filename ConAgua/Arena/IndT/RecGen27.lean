@@ -1,6 +1,5 @@
-import ConAgua.Arena.IndT.RecGen28
 import ConAgua.Arena.RecGenSpec27
-import ConAgua.Arena.IlpRdReal
+import ConAgua.Arena.IndT.RecGen24
 
 /-!
 # `classCtorOf`, `classCtorsOf`, `classesCtors` under `StageC` (lane `indstaget`, helper `pds`)

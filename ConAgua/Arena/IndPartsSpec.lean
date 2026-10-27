@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndParts
-import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndCopy2
 
 /-!

@@ -1,6 +1,4 @@
 import ConAgua.Arena.RecGenSpec23
-import ConAgua.Arena.RecGenSpec10
-import ConAgua.Arena.StripTeleSpec
 
 /-!
 # `classFieldsAgree` (lane `indproofs4`, helper `cls`)

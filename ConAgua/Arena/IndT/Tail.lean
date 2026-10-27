@@ -1,10 +1,11 @@
 import ConAgua.Arena.IndInstallSpec35
-import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Install5
 import ConAgua.Arena.IndT.GenRec3
 import ConAgua.Arena.IndT.ArmMemos
-import ConRon.Bridge.Inductives.BlockTail
 import ConAgua.Arena.IndRealSctC
+import ConAgua.Arena.IndInstallSpec29
+import ConAgua.Arena.IndT.Install4
+import ConAgua.Arena.RecCheckSpec4
 
 /-!
 # `checkBlockTail` under `StageC` (lane `indstaget`)

@@ -1,10 +1,6 @@
 import ConAgua.Arena.IndT.RecGenTmf
 import ConAgua.Arena.IndT.RecCheckPins
-import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.RecClassSpecI
-import ConAgua.Arena.IndSumSpec4
-import ConAgua.Arena.IndInstallSpec23
-import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.RecGenSpec19
 
 /-!
 # `classMajors` under `StageC` (lane `indstaget`, helper `indstaget-tpt`)

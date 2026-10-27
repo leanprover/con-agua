@@ -1,7 +1,7 @@
-import ConAgua.Arena.IndInstallSpec23
-import ConAgua.Arena.IndSumSpec14
-import ConAgua.Arena.IndSumSpec8
-import ConAgua.Arena.IndPos2SpecL
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndInstall
+import ConAgua.Arena.WhnfBase
+import ConAgua.Scan.Common
 
 /-!
 # Refinements of `IndInstall`, part 24 (lane `indproofs3`, helper `tail`): `checkBlockTables`,

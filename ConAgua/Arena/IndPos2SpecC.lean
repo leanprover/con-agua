@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPos2SpecB
-import ConAgua.Arena.StageInst1
 set_option linter.unusedSectionVars false
 
 /-! Continued from `IndPos2SpecB.lean` (split by size; lane `indproofs`). -/

@@ -1,4 +1,4 @@
-import ConAgua.Arena.RecGenSpec27
+import ConAgua.Arena.RecCheckSpec13
 
 /-!
 # `classesNfs` (lane `indproofs4`, helper `cls`)

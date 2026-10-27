@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndPos2SpecN
-import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndPartsSpec3
+import ConAgua.Arena.IndPos2SpecM
 
 /-!
 # The `abstract1` memo across the positivity check's models (lane `indproofs4`, helper `abs`)

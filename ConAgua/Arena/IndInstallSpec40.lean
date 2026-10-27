@@ -1,5 +1,8 @@
-import ConAgua.Arena.IndInstallSpec39
-import ConAgua.Arena.IndInstallSpec21
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.RecGen
+import ConAgua.Arena.WhnfBase
+import ConAgua.L.Records
+import ConAgua.Scan.Common
 
 /-!
 # Refinements of `IndInstall`, part 40 (lane `indproofs4`, helper `grc`): `gen_rec_check_prep`'s model

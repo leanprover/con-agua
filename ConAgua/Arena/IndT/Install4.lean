@@ -3,6 +3,7 @@ import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Install3
 import ConAgua.Arena.IndInstallSpec16
 import ConAgua.Arena.IndRealSortDn
+import ConAgua.Arena.IndInstallSpec15
 
 /-!
 # `checkBlockInds` under `StageC` (lane `indstaget`)

@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclDivMod6
 import ConAgua.Arena.DeclBasisSpec2
-import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the environment guard (lane `decls3`, `decls3-divmod`)

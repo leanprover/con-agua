@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndPos2SpecS
+import ConAgua.Arena.IndPos2SpecO
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the census theorems — each
 function of the block, run by `exec` at any fuel `n`, refines its twin

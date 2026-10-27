@@ -1,7 +1,5 @@
 import ConAgua.Arena.IndRealCrF
-import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.ConstsResolveFRefine2
-import ConAgua.Arena.IndReal
 
 /-!
 # `consts_resolve_ffast` under the stage relation and the walk memos (lane `indproofs4`, helper `memo`)

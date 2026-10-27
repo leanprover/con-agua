@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndInstallSpec33
+import ConAgua.Arena.IndInstallSpec32
+import ConAgua.Arena.IndPos2SpecU
 
 /-!
 # Refinements of `IndInstall`, part 34 (lane `indproofs3`, helper `pos`): `checkBlockPositivity`

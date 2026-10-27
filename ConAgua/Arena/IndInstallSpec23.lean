@@ -1,4 +1,6 @@
-import ConAgua.Arena.IndInstallSpec22
+import ConAgua.Arena.IndInstallSpec11
+import ConAgua.Arena.IndInstallSpec18
+import ConAgua.Arena.RecClassSpecD
 
 /-!
 # Refinements of `IndInstall`, part 23 (lane `indproofs2`, helper `install`): `checkBlockCtors`,

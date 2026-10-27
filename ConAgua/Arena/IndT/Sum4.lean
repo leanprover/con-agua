@@ -2,8 +2,7 @@ import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.RecGenSpec9
 import ConAgua.Arena.RecGenSpec11
 import ConAgua.Arena.IndT.Sum3
-import ConAgua.Arena.IndT.Install2
-import ConRon.Bridge.Inductives.SumInstall
+import ConAgua.Arena.IndSumSpec12
 
 /-!
 # `checkSumCtor` under `StageC` (lane `indstaget`)

@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclReduceSpec2
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.IndRealApdT
+import ConAgua.Arena.RecGenSpec4
 
 /-!
 # `check_reduce_pin(vis, vis2, c, v)` refines `checkReducePin` (lane `decls3`)

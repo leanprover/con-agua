@@ -1,5 +1,5 @@
-import ConAgua.Arena.RecGenSpec5
-import ConAgua.Arena.ConstStore
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.RecCheckSpec
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`): `targetMajorPins`

@@ -1,7 +1,6 @@
-import ConAgua.Arena.IndPartsSpec3
-import ConAgua.Arena.IndPos2Spec
 import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndReal
+import ConAgua.Arena.IndPos2SpecB
 
 /-!
 # Refinements of `IndParts`, part 4 (lane `indproofs`, helper `parts`)

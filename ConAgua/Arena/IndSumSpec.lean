@@ -1,8 +1,6 @@
 import ConAgua.Arena.IndSum
-import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndCopy
 import ConAgua.Arena.IndStubs
-import ConAgua.Arena.ArenaRel
 
 /-!
 # Refinements of `IndSum` (lane `induct`, worker C, round 2)

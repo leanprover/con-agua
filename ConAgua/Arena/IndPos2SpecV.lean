@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndPos2SpecU
+import ConAgua.Arena.IndPos2SpecS
+import ConAgua.Arena.IndRealAbsPos
 
 /-! # `IndPos2`, the root frame and the seeds (lane `indproofs2`, helper `pos2`): the models
 simulated by the twin (`nestRoot`, `nestSeeds`, the seeds' fuel fold), and the census theorems. -/

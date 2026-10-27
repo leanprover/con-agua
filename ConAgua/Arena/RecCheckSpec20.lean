@@ -1,4 +1,6 @@
 import ConAgua.Arena.RecCheckSpec19
+import ConAgua.Arena.RecCheckSpec13
+import ConAgua.Arena.RecGenSpec10
 
 /-!
 # `RecCheck`: `consBlockRecsTF`, the recursion (lane `indproofs3`, helper `rec`)

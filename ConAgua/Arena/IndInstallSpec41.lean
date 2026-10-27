@@ -1,13 +1,10 @@
 import ConAgua.Arena.IndInstallSpec40
 import ConAgua.Arena.IndInstallSpec30
-import ConAgua.Arena.IndInstallSpec38
-import ConAgua.Arena.RecCheckSpec24
-import ConAgua.Arena.RecGenSpec11
-import ConAgua.Arena.RecGenSpec12
-import ConAgua.Arena.RecClassSpecM
-import ConAgua.Arena.IndSumSpec
-import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.IndRealBle
+import ConAgua.Arena.IndInstallSpec39
+import ConAgua.Arena.RecCheckSpec22
+import ConAgua.Arena.RecGenSpec27
+import ConAgua.Arena.RecGenSpec28
 
 /-!
 # Refinements of `IndInstall`, part 41 (lane `indproofs4`, helper `grc`): `genRecCheck`

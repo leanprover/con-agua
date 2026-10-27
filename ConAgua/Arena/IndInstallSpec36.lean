@@ -1,6 +1,7 @@
-import ConAgua.Arena.IndInstallSpec35
 import ConAgua.Arena.RecGenSpec21
 import ConAgua.Arena.IndInstallSpec34
+import ConAgua.Arena.IndInstallSpec16
+import ConAgua.Arena.IndInstallSpec31
 
 /-!
 # Refinements of `IndInstall`, part 36 (lane `indproofs4`): `checkBlockPass`

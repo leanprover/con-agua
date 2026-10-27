@@ -1,8 +1,6 @@
-import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.IndT.Sum2
 import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.IndInstallSpec9
-import ConRon.Bridge.Inductives.BlockInstall
 
 /-!
 # `checkBlockTele`, `checkBlockTeles` under `StageC` (lane `indstaget`)

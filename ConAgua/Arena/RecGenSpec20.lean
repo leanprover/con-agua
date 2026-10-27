@@ -1,4 +1,4 @@
-import ConAgua.Arena.RecGenSpec19
+import ConAgua.Arena.RecGenSpec17
 
 /-!
 # `checkBlockClasses` (lane `indproofs3`, helper `indproofs3-pos-cls`)

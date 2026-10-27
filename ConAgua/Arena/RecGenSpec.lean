@@ -1,8 +1,5 @@
-import ConAgua.Arena.RecGen
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.RecClassSpec
-import ConAgua.Arena.IndRealSpine
+import ConAgua.Arena.RecClassSpecB
 
 /-!
 # Refinements of `RecGen` (lane `induct`, round 2)

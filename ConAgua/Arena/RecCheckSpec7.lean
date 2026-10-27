@@ -1,5 +1,7 @@
-import ConAgua.Arena.RecCheckSpec6
-import ConAgua.Arena.IndPos2SpecD
+import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPosSpec2A
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecStab
 
 /-!
 # `RecCheck`: `targetAbsGo`, `targetAbs` (lane `indproofs2`, helper `rec3`)
