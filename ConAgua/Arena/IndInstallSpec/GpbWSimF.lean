@@ -109,13 +109,14 @@ theorem classesLp_of_cnsRec {mb mF : Mem} {mo ml qr : Word} {hi : Nat} {ws : Lis
   rw [UInt64.toNat_ofNat_of_lt' hol.1, UInt64.toNat_ofNat_of_lt' hol.2]
   exact hdct
 
-/-- The arrays of `rcFreeA` in `201‥208` are `MAM` and `MCM` (a check over the table). -/
-theorem rcFreeA_mfr : ∀ b ∈ rcFreeA, b.arr < 201 ∨ 208 < b.arr ∨ b ∈ ([MAM, MCM] : List TieredArray) := by
-  decide +kernel
-
 theorem rcFree_mfr {m m' : Mem} (h : MemFrame rcFreeA rcFreeC m m') :
     MFr [MAM, MCM] [202, 203, 205, 207, 209, 211, 215, 216, 217] m m' := by
-  refine ⟨rcFreeA, rcFreeC, h, fun b hb => rcFreeA_mfr b hb, fun x hx => ?_⟩
+  refine ⟨rcFreeA, rcFreeC, h, fun b hb => ?_, fun x hx => ?_⟩
+  · simp only [rcFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq, List.mem_cons,
+      List.not_mem_nil, or_false] at hb
+    simp only [NOM, DPM, RAM, HBM, RFM, TAM, MAM, MCM, ArrId] at hb ⊢
+    simp only [List.mem_cons, List.not_mem_nil, or_false]
+    omega
   · simp only [rcFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq, List.mem_cons,
       List.not_mem_nil, or_false] at hx
     obtain ⟨c, ⟨hc, h2⟩, rfl⟩ := hx
