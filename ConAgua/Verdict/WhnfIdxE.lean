@@ -60,7 +60,7 @@ theorem ioE_spec (p : Prog) (hp : p.lookup "iota_index_ok" = some iotaIndexOkL) 
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callE_spec p n "pi_residual", callE_spec p n "get_app_args", callE_spec p n "defeq_list"] <;>
   simp_all [ioE, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, CTL] <;>
+    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, CTL, TieredArray.t0] <;>
   (intro hc; exfalso; have h1 := ‹UInt64.toNat 136 < _›; (try simp at h1); (try simp at hc); omega)
 
 theorem iotaIndexOk_err (r : CoreFnsA) (fe : IFEnv) (d mI rP cnP : Nat) (tyCtor : EIdx)
