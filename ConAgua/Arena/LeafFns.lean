@@ -227,11 +227,14 @@ theorem loop_mem (f : FnName) (h : (loopTree.find (L.Compiler.nameCode f)).isSom
   have := L.Compiler.namesTree_spec loopTree.eq f
   rw [h] at this; exact of_decide_eq_true this.symm
 
-theorem leafA_pins : PINS ∉ leafA := by decide +kernel
-theorem leafA_memo : (50 : ArrId) ∉ leafA ∧ (49 : ArrId) ∉ leafA := by decide +kernel
-theorem leafA_walk : (151 : ArrId) ∉ leafA ∧ (152 : ArrId) ∉ leafA ∧ (153 : ArrId) ∉ leafA := by
+theorem leafA_pins : (PINS : TieredArray) ∉ leafA := by decide +kernel
+theorem leafA_memo : ((50 : ArrId) : TieredArray) ∉ leafA ∧ ((49 : ArrId) : TieredArray) ∉ leafA := by
   decide +kernel
-theorem leafA_lp : (52 : ArrId) ∉ leafA ∧ (53 : ArrId) ∉ leafA ∧ (54 : ArrId) ∉ leafA := by
+theorem leafA_walk : ((151 : ArrId) : TieredArray) ∉ leafA ∧ ((152 : ArrId) : TieredArray) ∉ leafA ∧
+    ((153 : ArrId) : TieredArray) ∉ leafA := by
+  decide +kernel
+theorem leafA_lp : ((52 : ArrId) : TieredArray) ∉ leafA ∧ ((53 : ArrId) : TieredArray) ∉ leafA ∧
+    ((54 : ArrId) : TieredArray) ∉ leafA := by
   decide +kernel
 theorem leafC_memo : (50 : Word) ∉ leafC ∧ (48 : Word) ∉ leafC := by decide +kernel
 theorem leafC_walk : (152 : Word) ∉ leafC ∧ (154 : Word) ∉ leafC ∧ (156 : Word) ∉ leafC := by
