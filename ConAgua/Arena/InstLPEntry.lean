@@ -71,16 +71,16 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
     (hc : callW p (k + 1) "inst_lp_core" [ko, kc, us, e] m = some (rs, m')) :
     CoreRef (instLPFast coreWalkFuel lps (decI us) (decE e)) a decH dn m vis fe M eb rs m' := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (instLPCore_spec p hp.all.lev.ilw k _ ko kc us e) hc
+    (instLPCore_spec p hp.all.lev.ilw (k + 1) _ ko kc us e) hc
   rw [hs'] at hW
-  change ilwCoreW p k m ko kc us e = some (rs.headD 0, m') at hW
-  unfold ilwCoreW at hW
+  change ilwCoreW p (k + 1) m ko kc us e = some (rs.headD 0, m') at hW
+  rw [ilwCoreW.eq_2] at hW
   -- `der_b`: the cut-off
   cases h1 : callW p k "der_b" [e] m with
   | none => rw [h1] at hW; cases hW
   | some q =>
   obtain ⟨d, m₁⟩ := q
-  rw [h1, ilwCoreD_some] at hW
+  rw [h1, ilwCoreW.k_der_b.eq_2] at hW
   obtain ⟨s1, hs1, -, hm1, -, -, hlp⟩ :=
     triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (derB_spec p hp.all.mkp.spine.derb k _ e) h1
   have hm₁ : m₁ = m := hs1.symm.trans hm1
@@ -118,7 +118,7 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
   | none => rw [h2] at hW; cases hW
   | some q =>
   obtain ⟨r2, m₂⟩ := q
-  rw [h2, ilwC0_some] at hW
+  rw [h2, ilwCoreW.k_keys_ok.arm1] at hW
   obtain ⟨s2, hs2, -, hm2, hk2⟩ :=
     triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩) (keysOk_spec p hp.keys k _ ko kc) h2
   have hm₂ : m₂ = m₁ := hs2.symm.trans hm2
@@ -130,19 +130,19 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
   | none => rw [h3] at hW; cases hW
   | some q =>
   obtain ⟨r3, m₃⟩ := q
-  rw [h3, ilwC1_some] at hW
+  rw [h3, ilwCoreW.k_ilp_clear.arm1] at hW
   obtain ⟨hw3, rfl⟩ := ilw_clearCall lpSch hp.all.lev.ilw.ilpc h3
   cases h4 : callW p k "ilpl_clear" [] (mclearG lpSch m₂) with
   | none => rw [h4] at hW; cases hW
   | some q =>
   obtain ⟨r4, m₄⟩ := q
-  rw [h4, ilwC2_some] at hW
+  rw [h4, ilwCoreW.k_ilpl_clear.arm1] at hW
   obtain ⟨hw4, rfl⟩ := ilw_clearCall lplSch hp.all.lev.ilw.ilplc h4
   cases h5 : callW p k "ilpls_clear" [] (mclearG lplSch (mclearG lpSch m₂)) with
   | none => rw [h5] at hW; cases hW
   | some q =>
   obtain ⟨r5, m₅⟩ := q
-  rw [h5, ilwC3_some] at hW
+  rw [h5, ilwCoreW.k_ilpls_clear.arm1] at hW
   obtain ⟨hw5, rfl⟩ := ilw_clearCall lplsSch hp.all.lev.ilw.ilplsc h5
   -- the twin's readbacks and clear
   obtain ⟨c1, hrn, hrc1, e1L, e1Ls, e1⟩ := readNamesM_run a hS.den.readN lps ks hksd
@@ -167,7 +167,7 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
   | none => rw [h6] at hW; cases hW
   | some q =>
   obtain ⟨r6, m₆⟩ := q
-  rw [h6, ilwCoreK_some] at hW
+  rw [h6, ilwCoreW.k_lp_go.arm1] at hW
   obtain ⟨a₄, r4, ⟨M₄, hS₄, hK₄, hSt₄⟩, hM₄, -, hr6⟩ :=
     ilwGo_ok hp.all k _ m₆ _ dn vis fe M eb e ko kc vo vc 4000000000 ks ids vs r6 hS₃ hM₃ hE₃ hh h6
   -- the clears after it
@@ -175,19 +175,19 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
   | none => rw [h7] at hW; cases hW
   | some q =>
   obtain ⟨r7, m₇⟩ := q
-  rw [h7, ilwE1_some] at hW
+  rw [h7, ilwCoreW.k_ilp_clear_2.arm1] at hW
   obtain ⟨hw7, rfl⟩ := ilw_clearCall lpSch hp.all.lev.ilw.ilpc h7
   cases h8 : callW p k "ilpl_clear" [] (mclearG lpSch m₆) with
   | none => rw [h8] at hW; cases hW
   | some q =>
   obtain ⟨r8, m₈⟩ := q
-  rw [h8, ilwE2_some] at hW
+  rw [h8, ilwCoreW.k_ilpl_clear_2.arm1] at hW
   obtain ⟨hw8, rfl⟩ := ilw_clearCall lplSch hp.all.lev.ilw.ilplc h8
   cases h9 : callW p k "ilpls_clear" [] (mclearG lplSch (mclearG lpSch m₆)) with
   | none => rw [h9] at hW; cases hW
   | some q =>
   obtain ⟨r9, m₉⟩ := q
-  rw [h9, ilwE3_some] at hW
+  rw [h9, ilwCoreW.k_ilpls_clear_2.arm1] at hW
   obtain ⟨hw9, rfl⟩ := ilw_clearCall lplsSch hp.all.lev.ilw.ilplsc h9
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, rfl⟩ := hW
@@ -297,17 +297,17 @@ theorem instLP_refines (p : Prog) (hp : ILWEntryProg p) : InstLPOK p := by
   | zero => rw [callW_zero] at hc; cases hc
   | succ k =>
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-    (instLP_spec p hp.all.lev.ilw k _ po pl us e) hc
+    (instLP_spec p hp.all.lev.ilw (k + 1) _ po pl us e) hc
   rw [hs'] at hW
-  change ilwLPW p k s₀.mem po pl us e = some (rs.headD 0, m') at hW
-  unfold ilwLPW at hW
+  change ilwLPW p (k + 1) s₀.mem po pl us e = some (rs.headD 0, m') at hW
+  rw [ilwLPW.eq_2] at hW
   generalize s₀.mem = m at hS hlps hW
   -- `keys_push`
   cases h1 : callW p k "keys_push" [po, pl] m with
   | none => rw [h1] at hW; cases hW
   | some q =>
   obtain ⟨bs, m₁⟩ := q
-  rw [h1, ilwLPK₁_some] at hW
+  rw [h1, ilwLPW.k_keys_push.arm1] at hW
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (keysPush_spec p hp.all.lev.ls.toLvSubProg k _ po pl) h1
   rw [hs1] at hW1
@@ -355,7 +355,7 @@ theorem instLP_refines (p : Prog) (hp : ILWEntryProg p) : InstLPOK p := by
   | none => rw [h2] at hW; cases hW
   | some q =>
   obtain ⟨r2, m₂⟩ := q
-  rw [h2, ilwLPK₂_some] at hW
+  rw [h2, ilwLPW.k_inst_lp_core.arm1] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, rfl⟩ := hW
   obtain ⟨hok, ⟨M', hS₂, hK₂, hSt₂⟩, hres, hw⟩ := ilwCore_ok hp k hS₁ he hus (by rw [hspn₁]; exact hsl)

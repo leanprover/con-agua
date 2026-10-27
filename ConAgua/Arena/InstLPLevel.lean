@@ -367,9 +367,9 @@ theorem slMemo_ok (p : Prog) (hp : ILWLevProg p) : SlMemoOK p := by
   | zero => rw [callW_zero] at hc; cases hc
   | succ k =>
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (slMemo_spec p hp.ilw k _ u ko kc vo vc) hc
+    (slMemo_spec p hp.ilw (k + 1) _ u ko kc vo vc) hc
   rw [hs'] at hW
-  change ilwSlW p k m u ko kc vo vc = some (rs.headD 0, m') at hW
+  change ilwSlW p (k + 1) m u ko kc vo vc = some (rs.headD 0, m') at hW
   unfold ilwSlW at hW
   have hr : ¬ mfindG lplSch m u 0 = [] := fun hr => by simp [hr] at hW
   simp only [hr, ↓reduceIte] at hW
@@ -390,10 +390,10 @@ theorem slMemo_ok (p : Prog) (hp : ILWLevProg p) : SlMemoOK p := by
   have hmiss : a.memos.instLPLC[(decI u : LIdx)]? = none :=
     memoRV_miss lplSch ilKey VI m _ hM.lpl u 0 ⟨hu, rfl⟩ hr (by simpa using hh)
   cases h1 : callW p k "lv_sub_int" [u, ko, kc, vo, vc] m with
-  | none => rw [h1] at hW; simp [ilwSlK] at hW
+  | none => rw [h1] at hW; simp [ilwSlW.k_lv_sub_int] at hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  rw [h1, ilwSlK_some] at hW
+  rw [h1, ilwSlW.k_lv_sub_int_some] at hW
   obtain ⟨s₁, hs₁, -, hW₁⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (lvSubInt_spec p hp.ls.toLvSubProg k _ u ko kc vo vc) h1
   rw [hs₁] at hW₁
