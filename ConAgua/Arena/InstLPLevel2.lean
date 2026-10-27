@@ -196,10 +196,11 @@ theorem slsMemo_ok (p : Prog) (hp : ILWLevProg p) : SlsMemoOK p := by
   | zero => rw [callW_zero] at hc; cases hc
   | succ k =>
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (slsMemo_spec p hp.ilw k _ w ko kc vo vc) hc
+    (slsMemo_spec p hp.ilw (k + 1) _ w ko kc vo vc) hc
   rw [hs'] at hW
-  change ilwSlsW p k m w ko kc vo vc = some (rs.headD 0, m') at hW
+  change ilwSlsW p (k + 1) m w ko kc vo vc = some (rs.headD 0, m') at hW
   unfold ilwSlsW at hW
+  rw [show rdW (m.arr64 CTL) 136 = spTop m from rfl] at hW
   have hr : ¬ mfindG lplsSch m w 0 = [] := fun hr => by simp [hr] at hW
   simp only [hr, ↓reduceIte] at hW
   by_cases hh : (mfindG lplsSch m w 0).headD 0 ≠ 0
@@ -238,7 +239,7 @@ theorem slsMemo_ok (p : Prog) (hp : ILWLevProg p) : SlsMemoOK p := by
   | none => rw [h1] at hW; cases hW
   | some q =>
   obtain ⟨x, m₁⟩ := q
-  rw [h1, ilwSlsK₁_some] at hW
+  rw [h1, ilwSlsW.k_sls_go.arm1] at hW
   obtain ⟨s₁', hs₁, -, hW₁⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (slsGo_spec p hp.ls k _ o l (spTop m) ko kc vo vc) h1
   rw [hs₁] at hW₁
@@ -254,8 +255,8 @@ theorem slsMemo_ok (p : Prog) (hp : ILWLevProg p) : SlsMemoOK p := by
   rw [h2] at hW
   obtain ⟨a₂, hrun₂, hS₂, hk₂, hw₂, hden₂, hg₂, hme₂, hf₂⟩ :=
     spnLs_core p hp.ls hS₁ hsl₁ (by omega) hel₁ h2
-  rw [ilwSlsK₂_some] at hW
-  rcases h3 : msetG lplsSch m₂ w 0 (r₂.headD 0) with _ | m₃ <;> simp only [h3, reduceCtorEq] at hW
+  rw [ilwSlsW.k_spn_ls_some] at hW
+  rcases h3 : msetG lplsSch m₂ w 0 (r₂.headD 0) with _ | m₃ <;> simp only [h3, reduceCtorEq, ite_self] at hW
   obtain ⟨hr₂, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   rw [← hr₂]
   have hM₂ : ILWMemo m₂ a₂ := hM₁.frame hf₂ (by decide) (by decide) hme₂ hg₂

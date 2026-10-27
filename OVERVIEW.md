@@ -732,7 +732,7 @@ The split keeps `vcgen` away from the twin's monad and the twin's proofs away
 from L's syntax. Most word models and specs are generated: the `l_model`
 command reads a group of `lfn`s and produces the models, one guarded equation
 per arm for `grind`, and the specs with their proofs
-([`ConAgua/L/ModelGen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/ModelGen.lean#L11-L62);
+([`ConAgua/L/ModelGen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/ModelGen.lean#L11-L64);
 204 uses). Two habits keep the proofs fast: facts are guarded equations about
 named functions (no `∃`, disjunction or `fun` in a postcondition), and a
 function with many paths is proved by plain `vcgen` followed by `simp_all` or

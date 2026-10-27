@@ -235,6 +235,62 @@ l_model tBlk_spec (p : Prog) (hp : p.lookup "t_blk" = some tBlk)
   fns [hp ↦ tBlkW ro]
   grind [arena_grind] extra [ld64_rd_spec] simp []
 
+/-- Models without results (`void`): a store-only function (`Option Mem`), a check
+(`Option Unit`, read-only), a caller of both through their specs, and a group whose member
+calls a `void` member. -/
+-- con-ron: none — an `l_model` test function
+def tVSt : FunDecl := lfn (i, v) {
+  if v == 9 { abort };
+  TW.u64[i] := v;
+  return 0
+}
+
+-- con-ron: none — an `l_model` test function
+def tVChk : FunDecl := lfn (i) {
+  if TW.u64[i] == 7 { abort }
+}
+
+-- con-ron: none — an `l_model` test function
+def tVUse : FunDecl := lfn (i, v) locals (x, y) {
+  x := call t_v_chk(i);
+  y := call t_v_st(i, v + 1);
+  return TW.u64[i]
+}
+
+-- con-ron: none — an `l_model` test function
+def tVGrp : FunDecl := lfn (i, v) locals (x) {
+  x := call t_v_st(i, v);
+  return v
+}
+
+l_model tVSt_spec (p : Prog) (hp : p.lookup "t_v_st" = some tVSt)
+  fns [hp ↦ tVStW void]
+  grind [arena_grind] simp []
+
+l_model tVChk_spec (p : Prog) (hp : p.lookup "t_v_chk" = some tVChk)
+  fns [hp ↦ tVChkW ro void]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
+
+/-- A callee spec with an extra fact over the arguments (ignored by the model). -/
+theorem tVChk_spec' (p : Prog) (hp : p.lookup "t_v_chk" = some tVChk) (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_v_chk" [i]
+    ⦃fun _r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ i = i ∧ tVChkW s₀.mem i = some (); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hr
+  obtain ⟨h1, h2, h3⟩ := M.of_run (P := fun s => s = s₀) hs hr (tVChk_spec p hp n s₀ i)
+  exact ⟨h1, h2, rfl, h3⟩
+
+l_model tVUse_spec (p : Prog) (hp : p.lookup "t_v_use" = some tVUse)
+    (hc : p.lookup "t_v_chk" = some tVChk) (hs : p.lookup "t_v_st" = some tVSt)
+  fns [hp ↦ tVUseW]
+  specs [tVChk_spec' p hc n, tVSt_spec p hs n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
+
+l_model tVGrp_spec (p : Prog) (hp : p.lookup "t_v_grp" = some tVGrp)
+    (hs : p.lookup "t_v_st" = some tVSt)
+  fns [hp ↦ tVGrpW, hs ↦ tVStGW void]
+  grind [arena_grind] simp []
+
 l_model tNestR2_spec (p : Prog) (hp : p.lookup "t_nest_r2" = some tNestR2)
   fns [hp ↦ tNestR2W]
   grind [arena_grind] extra [ld64_rd_spec] simp []

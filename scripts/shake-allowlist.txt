@@ -7,6 +7,7 @@ ConAgua/Arena/DeclApd.lean	public import ConAgua.Arena.IndIface	# the build need
 ConAgua/Arena/DeclAxiomSpec3.lean	public import ConAgua.Arena.DeclAxiomSpec2	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DeclStep.lean	public import ConAgua.Front.IndApply	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the inductive lines through it
 ConAgua/Arena/DefEq.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqLeaves2.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -48,6 +49,7 @@ ConAgua/Arena/InferProj.lean	public import ConAgua.Arena.WhnfCoreProj	# a consta
 ConAgua/Arena/InferProj2.lean	public import ConAgua.Arena.ProjView	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferProj2.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/InstLPWalk.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/LevelInternRef.lean	public import ConAgua.Arena.Rom	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/LevelSubstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/NatArms.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
@@ -106,6 +108,7 @@ ConAgua/Front/Driver.lean	public import ConAgua.Arena.Pool	# the build needs it:
 ConAgua/Front/IndAlloc.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Front/IndApply.lean	public import ConAgua.Front.ApplyDecl	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Front/IndApply.lean	public import ConAgua.Front.IndFields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Front/IndApplySpec.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Front/IndFields.lean	public import ConAgua.Front.Apply	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Front/NatDec.lean	public import ConAgua.Front.Fields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/L/ModelGenTest.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs

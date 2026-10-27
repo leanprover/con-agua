@@ -16,8 +16,8 @@ import Std.WP.Triple.SpecLemmas
 /-!
 # The specs of `abstract1`'s arms, and the entry
 
-As `Inst1Spec.lean`: the five arms' steps, the induction on the fuel (`absGo_spec`), the entry
-`abs_entry` (`abstract1Fast`) and the program `absProg`.
+The entry `abs_entry` (`abstract1Fast`) and the program `absProg`; the walk's models and specs
+(`absGo_spec`) are generated in `Abs1.lean`.
 -/
 
 set_option experimental.vcgen true
@@ -26,132 +26,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-section specs
-variable (p : Prog) (hp : AbsProg p)
-
-include hp in
-theorem absApp_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_app" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absAppW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold AbsGoSpec at ih
-  rw [invoke_eq _ (hp.get "abs_app")]
-  simp only [callFn, absApp]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
-    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
-    mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
-        (hp.get "mk_app") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, absAppW, rbAppW, viewOK, tierW, idxW]
-
-include hp in
-theorem absLam_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_lam" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absLamW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold AbsGoSpec at ih
-  rw [invoke_eq _ (hp.get "abs_lam")]
-  simp only [callFn, absLam]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
-    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
-    mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
-        (hp.get "mk_lam") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, absLamW, rbLamW, viewOK, tierW, idxW]
-
-include hp in
-theorem absForall_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_forall" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absForallW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold AbsGoSpec at ih
-  rw [invoke_eq _ (hp.get "abs_forall")]
-  simp only [callFn, absForall]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
-    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
-    mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
-        (hp.get "intern_forall") (hp.get "mk_forall") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, absForallW, rbForallW, viewOK, tierW, idxW]
-
-include hp in
-theorem absLet_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_let" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absLetW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold AbsGoSpec at ih
-  rw [invoke_eq _ (hp.get "abs_let")]
-  simp only [callFn, absLet]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
-    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
-    mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
-        (hp.get "intern_letE") (hp.get "mk_let") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, absLetW, rbLetW, viewOK, tierW, idxW]
-
-include hp in
-theorem absProj_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_proj" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absProjW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold AbsGoSpec at ih
-  rw [invoke_eq _ (hp.get "abs_proj")]
-  simp only [callFn, absProj]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
-    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
-    mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
-        (hp.get "intern_proj") (hp.get "mk_proj") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, absProjW, rbProjW, viewOK, tierW, idxW]
-
-include hp in
-/-- **`abs_go`, `ab_node` and the arms are their models**, at every fuel. -/
-theorem absGo_spec (n : Nat) : AbsGoSpec p n ∧ AbsNodeSpec p n ∧ AbsArmSpec p n := by
-  induction n with
-  | zero =>
-    refine ⟨fun s₀ h k d fu => ?_, fun s₀ h k d fu => ?_, fun s₀ h k d fu => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
-    first
-    | (rw [invoke_eq _ (hp.get "abs_go")]; simp only [callFn, absGo]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "ab_node")]; simp only [callFn, absNode]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "abs_app")]; simp only [callFn, absApp]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "abs_lam")]; simp only [callFn, absLam]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "abs_forall")]; simp only [callFn,
-        absForall]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "abs_let")]; simp only [callFn, absLet]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "abs_proj")]; simp only [callFn, absProj]; vcgen [exec] <;> grind)
-  | succ n ih =>
-    exact ⟨absGo_step p hp n ih.2.1, absNode_step p hp n ih.2.2, fun s₀ h k d fu =>
-      ⟨absApp_step p hp n ih.1 s₀ h k d fu, absLam_step p hp n ih.1 s₀ h k d fu,
-        absForall_step p hp n ih.1 s₀ h k d fu, absLet_step p hp n ih.1 s₀ h k d fu,
-        absProj_step p hp n ih.1 s₀ h k d fu⟩⟩
-
-end specs
 
 /-! ## `abs_entry(e, d, k)`: `abstract1Fast`, between two clears
 
@@ -174,8 +48,7 @@ theorem absEntry_spec (p : Prog) (hp : AbsProg p) (he : p.lookup "abs_entry" = s
     ⦃fun s => s = s₀⦄
     invoke p (exec p (n + 1)) "abs_entry" [e, d, k]
     ⦃fun r s' => LocEq s' s₀ ∧ absEntryW n s₀.mem e d k = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have ih := (absGo_spec p hp n).1
-  unfold AbsGoSpec at ih
+  have ih := (absGo_spec p hp n).2.1
   rw [invoke_eq _ he]
   simp only [callFn, absEntry]
   sym only [lang_grind, arena_grind] =>

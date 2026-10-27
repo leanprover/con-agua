@@ -6,6 +6,7 @@ public import ConAgua.Arena.FVarRange
 import ConAgua.Census.Attr
 public import ConAgua.Arena.LiftL
 import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -50,18 +51,12 @@ namespace L.Arena
 /-- `abs1C`: array 49, stamp `CTL[48]`, count `CTL[49]`. -/
 abbrev abSch : MemoSch := ⟨ABMEMO, 48⟩
 
-/-! ## The models -/
+/-! ## The L code -/
 
 /-- **The model of `fr_memo` at L fuel `n`** (the call's own fuel; `frMemo_spec` is at `n + 1`). -/
 def fvbN : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, h, fu => frMemoW n m h fu
-
-/-- **The model of `ab_fvb`** (con-ron's `fvarB`): the packed fvar range, or `fr_memo` on the
-saturated branch. -/
-def fvbW : Nat → Mem → Word → Word → Option (Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, h, fu => if derFW m h = 32767 then fvbN n m h fu else some (derFW m h, m)
 
 /-- Record `r` at `(h, k)` in the `abstract1` memo and return it. -/
 def asetK (h k : Word) : Option (Word × Mem) → Option (Word × Mem)
@@ -82,393 +77,6 @@ def rbLetW (m : Mem) (h f a b x y z : Word) : Option (Word × Mem) :=
   if x = f ∧ y = a ∧ z = b then some (h, m) else mkLetW m x y z
 def rbProjW (m : Mem) (h nw iw e x : Word) : Option (Word × Mem) :=
   if x = e then some (h, m) else mkProjW m nw iw x
-
-mutual
-/-- **The model of `abs_go`** at L fuel `n`: the cut-off, then `ab_node`. -/
-def absW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, h, k, d, fu =>
-    if fu = 0 then none
-    else match fvbW n m h (fu - 1) with
-    | none => none
-    | some (x, m₁) => if x ≤ d then some (h, m₁) else absNodeW n m₁ h k d (fu - 1)
-
-/-- **The model of `ab_node`**: the dispatch on the tag (the leaves and unknown tags return `h`
-without reading the store; `fvar` inline). -/
-def absNodeW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, h, k, d, fu =>
-    if h >>> 28 = 4 then absAppW n m h k d fu
-    else if h >>> 28 = 5 then absLamW n m h k d fu
-    else if h >>> 28 = 6 then absForallW n m h k d fu
-    else if h >>> 28 = 1 then
-      if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if tcnt m FVAR (tierW h) ≤ idxW h then none
-      else if tfld m FVAR (tierW h) (idxW h) 0 = d then binternW m k
-      else some (h, m)
-    else if h >>> 28 = 7 then absLetW n m h k d fu
-    else if h >>> 28 = 9 then absProjW n m h k d fu
-    else some (h, m)
-
-/-- **The model of `abs_app`.** -/
-def absAppW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, h, k, d, fu =>
-    if mfindG abSch m h k = [] then none
-    else if (mfindG abSch m h k).headD 0 ≠ 0 then
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
-    else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW h) ≤ idxW h then none
-    else
-      match absW n m (tfld m APP (tierW h) (idxW h) 0) k d fu with
-      | none => none
-      | some (x, m₁) =>
-        match absW n m₁ (tfld m APP (tierW h) (idxW h) 1) k d fu with
-        | none => none
-        | some (y, m₂) =>
-          asetK h k (rbAppW m₂ h (tfld m APP (tierW h) (idxW h) 0)
-            (tfld m APP (tierW h) (idxW h) 1) x y)
-
-/-- **The model of `abs_lam`.** -/
-def absLamW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, h, k, d, fu =>
-    if k + 1 = 0 then none
-    else if mfindG abSch m h k = [] then none
-    else if (mfindG abSch m h k).headD 0 ≠ 0 then
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
-    else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m LAM (tierW h) ≤ idxW h then none
-    else
-      match absW n m (tfld m LAM (tierW h) (idxW h) 0) k d fu with
-      | none => none
-      | some (x, m₁) =>
-        match absW n m₁ (tfld m LAM (tierW h) (idxW h) 1) (k + 1) d fu with
-        | none => none
-        | some (y, m₂) =>
-          asetK h k (rbLamW m₂ h (tfld m LAM (tierW h) (idxW h) 0)
-            (tfld m LAM (tierW h) (idxW h) 1) x y)
-
-/-- **The model of `abs_forall`.** -/
-def absForallW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, h, k, d, fu =>
-    if k + 1 = 0 then none
-    else if mfindG abSch m h k = [] then none
-    else if (mfindG abSch m h k).headD 0 ≠ 0 then
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
-    else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m FORALL (tierW h) ≤ idxW h then none
-    else
-      match absW n m (tfld m FORALL (tierW h) (idxW h) 0) k d fu with
-      | none => none
-      | some (x, m₁) =>
-        match absW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) (k + 1) d fu with
-        | none => none
-        | some (y, m₂) =>
-          asetK h k (rbForallW m₂ h (tfld m FORALL (tierW h) (idxW h) 0)
-            (tfld m FORALL (tierW h) (idxW h) 1) x y)
-
-/-- **The model of `abs_let`.** -/
-def absLetW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, h, k, d, fu =>
-    if k + 1 = 0 then none
-    else if mfindG abSch m h k = [] then none
-    else if (mfindG abSch m h k).headD 0 ≠ 0 then
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
-    else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m LET (tierW h) ≤ idxW h then none
-    else
-      match absW n m (tfld m LET (tierW h) (idxW h) 0) k d fu with
-      | none => none
-      | some (x, m₁) =>
-        match absW n m₁ (tfld m LET (tierW h) (idxW h) 1) k d fu with
-        | none => none
-        | some (y, m₂) =>
-          match absW n m₂ (tfld m LET (tierW h) (idxW h) 2) (k + 1) d fu with
-          | none => none
-          | some (z, m₃) =>
-            asetK h k (rbLetW m₃ h (tfld m LET (tierW h) (idxW h) 0)
-              (tfld m LET (tierW h) (idxW h) 1)
-              (tfld m LET (tierW h) (idxW h) 2) x y z)
-
-/-- **The model of `abs_proj`.** -/
-def absProjW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, h, k, d, fu =>
-    if mfindG abSch m h k = [] then none
-    else if (mfindG abSch m h k).headD 0 ≠ 0 then
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
-    else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m PROJ (tierW h) ≤ idxW h then none
-    else
-      match absW n m (tfld m PROJ (tierW h) (idxW h) 2) k d fu with
-      | none => none
-      | some (x, m₁) =>
-        asetK h k (rbProjW m₁ h (tfld m PROJ (tierW h) (idxW h) 0)
-          (tfld m PROJ (tierW h) (idxW h) 1)
-          (tfld m PROJ (tierW h) (idxW h) 2) x)
-end
-
-/-! ### Continuations and guarded equations -/
-
-/-- After the cut-off. -/
-def acutK (n : Nat) (h k d fu : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => if x ≤ d then some (h, m₁) else absNodeW n m₁ h k d fu
-
-/-- The arms after each child. -/
-def aappK₁ (n : Nat) (h k d fu fw aw : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => aappK₂ h k fw aw x (absW n m₁ aw k d fu)
-where aappK₂ (h k fw aw x : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (y, m₂) => asetK h k (rbAppW m₂ h fw aw x y)
-
-def alamK₁ (n : Nat) (h k d fu fw bw : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => alamK₂ h k fw bw x (absW n m₁ bw (k + 1) d fu)
-where alamK₂ (h k fw bw x : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (y, m₂) => asetK h k (rbLamW m₂ h fw bw x y)
-
-def afaK₁ (n : Nat) (h k d fu fw bw : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => afaK₂ h k fw bw x (absW n m₁ bw (k + 1) d fu)
-where afaK₂ (h k fw bw x : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (y, m₂) => asetK h k (rbForallW m₂ h fw bw x y)
-
-def aleK₁ (n : Nat) (h k d fu fw vw bw : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => aleK₂ n h k d fu fw vw bw x (absW n m₁ vw k d fu)
-where
-  aleK₂ (n : Nat) (h k d fu fw vw bw x : Word) : Option (Word × Mem) → Option (Word × Mem)
-    | none => none
-    | some (y, m₂) => aleK₃ h k fw vw bw x y (absW n m₂ bw (k + 1) d fu)
-  aleK₃ (h k fw vw bw x y : Word) : Option (Word × Mem) → Option (Word × Mem)
-    | none => none
-    | some (z, m₃) => asetK h k (rbLetW m₃ h fw vw bw x y z)
-
-def apjK₁ (h k nw iw ew : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => asetK h k (rbProjW m₁ h nw iw ew x)
-
-section aks
-variable (n : Nat) (h k d fu fw aw bw vw nw iw ew x y z : Word) (m₁ m₂ m₃ : Mem)
-theorem acutK_some : acutK n h k d fu (some (x, m₁)) =
-    if x ≤ d then some (h, m₁) else absNodeW n m₁ h k d fu := rfl
-theorem aappK₁_some : aappK₁ n h k d fu fw aw (some (x, m₁)) =
-    aappK₁.aappK₂ h k fw aw x (absW n m₁ aw k d fu) := rfl
-theorem aappK₂_some : aappK₁.aappK₂ h k fw aw x (some (y, m₂)) = asetK h k (rbAppW m₂ h fw aw x y) :=
-  rfl
-theorem alamK₁_some : alamK₁ n h k d fu fw bw (some (x, m₁)) =
-    alamK₁.alamK₂ h k fw bw x (absW n m₁ bw (k + 1) d fu) := rfl
-theorem alamK₂_some : alamK₁.alamK₂ h k fw bw x (some (y, m₂)) = asetK h k (rbLamW m₂ h fw bw x y) :=
-  rfl
-theorem afaK₁_some : afaK₁ n h k d fu fw bw (some (x, m₁)) =
-    afaK₁.afaK₂ h k fw bw x (absW n m₁ bw (k + 1) d fu) := rfl
-theorem afaK₂_some : afaK₁.afaK₂ h k fw bw x (some (y, m₂)) =
-    asetK h k (rbForallW m₂ h fw bw x y) := rfl
-theorem aleK₁_some : aleK₁ n h k d fu fw vw bw (some (x, m₁)) =
-    aleK₁.aleK₂ n h k d fu fw vw bw x (absW n m₁ vw k d fu) := rfl
-theorem aleK₂_some : aleK₁.aleK₂ n h k d fu fw vw bw x (some (y, m₂)) =
-    aleK₁.aleK₃ h k fw vw bw x y (absW n m₂ bw (k + 1) d fu) := rfl
-theorem aleK₃_some : aleK₁.aleK₃ h k fw vw bw x y (some (z, m₃)) =
-    asetK h k (rbLetW m₃ h fw vw bw x y z) := rfl
-theorem apjK₁_some : apjK₁ h k nw iw ew (some (x, m₁)) = asetK h k (rbProjW m₁ h nw iw ew x) := rfl
-theorem asetK_some (r : Word) :
-    asetK h k (some (r, m₁)) =
-      (match msetG abSch m₁ h k r with | none => none | some m₂ => some (r, m₂)) := rfl
-theorem rbAppW_same (hx : x = fw) (hy : y = aw) : rbAppW m₁ h fw aw x y = some (h, m₁) := by
-  simp [rbAppW, hx, hy]
-theorem rbAppW_new (hn : ¬ (x = fw ∧ y = aw)) : rbAppW m₁ h fw aw x y = mkAppW m₁ x y := by
-  simp only [rbAppW, hn, ↓reduceIte]
-theorem rbLamW_same (hx : x = fw) (hy : y = aw) : rbLamW m₁ h fw aw x y = some (h, m₁) := by
-  simp [rbLamW, hx, hy]
-theorem rbLamW_new (hn : ¬ (x = fw ∧ y = aw)) : rbLamW m₁ h fw aw x y = mkLamW m₁ x y := by
-  simp only [rbLamW, hn, ↓reduceIte]
-theorem rbForallW_same (hx : x = fw) (hy : y = aw) : rbForallW m₁ h fw aw x y = some (h, m₁) := by
-  simp [rbForallW, hx, hy]
-theorem rbForallW_new (hn : ¬ (x = fw ∧ y = aw)) : rbForallW m₁ h fw aw x y = mkForallW m₁ x y := by
-  simp only [rbForallW, hn, ↓reduceIte]
-theorem rbLetW_same (hx : x = fw) (hy : y = vw) (hz : z = bw) :
-    rbLetW m₁ h fw vw bw x y z = some (h, m₁) := by
-  simp [rbLetW, hx, hy, hz]
-theorem rbLetW_new (hn : ¬ (x = fw ∧ y = vw ∧ z = bw)) :
-    rbLetW m₁ h fw vw bw x y z = mkLetW m₁ x y z := by
-  simp only [rbLetW, hn, ↓reduceIte]
-theorem rbProjW_same (hx : x = ew) : rbProjW m₁ h nw iw ew x = some (h, m₁) := by
-  simp [rbProjW, hx]
-theorem rbProjW_new (hn : ¬ x = ew) : rbProjW m₁ h nw iw ew x = mkProjW m₁ nw iw x := by
-  simp only [rbProjW, hn, ↓reduceIte]
-end aks
-
-attribute [arena_grind =] acutK_some aappK₁_some aappK₂_some alamK₁_some alamK₂_some afaK₁_some
-  afaK₂_some aleK₁_some aleK₂_some aleK₃_some apjK₁_some asetK_some
-
-grind_pattern [arena_grind] rbAppW_same => rbAppW m₁ h fw aw x y
-grind_pattern [arena_grind] rbAppW_new => rbAppW m₁ h fw aw x y
-grind_pattern [arena_grind] rbLamW_same => rbLamW m₁ h fw aw x y
-grind_pattern [arena_grind] rbLamW_new => rbLamW m₁ h fw aw x y
-grind_pattern [arena_grind] rbForallW_same => rbForallW m₁ h fw aw x y
-grind_pattern [arena_grind] rbForallW_new => rbForallW m₁ h fw aw x y
-grind_pattern [arena_grind] rbLetW_same => rbLetW m₁ h fw vw bw x y z
-grind_pattern [arena_grind] rbLetW_new => rbLetW m₁ h fw vw bw x y z
-grind_pattern [arena_grind] rbProjW_same => rbProjW m₁ h nw iw ew x
-grind_pattern [arena_grind] rbProjW_new => rbProjW m₁ h nw iw ew x
-
-section arms
-variable (n : Nat) (m : Mem) (h k d fu : Word)
-
-theorem fvbN_succ : fvbN (n + 1) m h fu = frMemoW n m h fu := rfl
-
-theorem fvbW_sat (hs : derFW m h = 32767) : fvbW (n + 1) m h fu = fvbN n m h fu := by
-  simp [fvbW, hs]
-
-theorem fvbW_pk (hs : derFW m h ≠ 32767) : fvbW (n + 1) m h fu = some (derFW m h, m) := by
-  simp [fvbW, hs]
-
-theorem absW_eq (hf : fu ≠ 0) :
-    absW (n + 1) m h k d fu = acutK n h k d (fu - 1) (fvbW n m h (fu - 1)) := by
-  rw [absW]; simp only [hf, ↓reduceIte]; cases fvbW n m h (fu - 1) <;> rfl
-
-theorem absNodeW_app (hg : h >>> 28 = 4) : absNodeW (n + 1) m h k d fu = absAppW n m h k d fu := by
-  rw [absNodeW]; simp [hg]
-
-theorem absNodeW_lam (hg : h >>> 28 = 5) : absNodeW (n + 1) m h k d fu = absLamW n m h k d fu := by
-  rw [absNodeW]; simp [hg]
-
-theorem absNodeW_forall (hg : h >>> 28 = 6) : absNodeW (n + 1) m h k d fu = absForallW n m h k d fu := by
-  rw [absNodeW]; simp [hg]
-
-theorem absNodeW_let (hg : h >>> 28 = 7) : absNodeW (n + 1) m h k d fu = absLetW n m h k d fu := by
-  rw [absNodeW]; simp [hg]
-
-theorem absNodeW_proj (hg : h >>> 28 = 9) : absNodeW (n + 1) m h k d fu = absProjW n m h k d fu := by
-  rw [absNodeW]; simp [hg]
-
-theorem absNodeW_fvar_eq (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
-    (he : tfld m FVAR (tierW h) (idxW h) 0 = d) :
-    absNodeW (n + 1) m h k d fu = binternW m k := by
-  rw [absNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, he]
-
-theorem absNodeW_fvar_ne (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
-    (he : tfld m FVAR (tierW h) (idxW h) 0 ≠ d) :
-    absNodeW (n + 1) m h k d fu = some (h, m) := by
-  rw [absNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, he]
-
-theorem absNodeW_leaf (h1 : h >>> 28 ≠ 1)
-    (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5) (h6 : h >>> 28 ≠ 6) (h7 : h >>> 28 ≠ 7)
-    (h9 : h >>> 28 ≠ 9) : absNodeW (n + 1) m h k d fu = some (h, m) := by
-  rw [absNodeW]; simp [h1, h4, h5, h6, h7, h9]
-
-theorem absAppW_hit (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).headD 0 ≠ 0) :
-    absAppW (n + 1) m h k d fu =
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m) := by
-  rw [absAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem absAppW_miss (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).headD 0 = 0)
-    (hvk : viewOK m h APP) :
-    absAppW (n + 1) m h k d fu =
-      aappK₁ n h k d fu (tfld m APP (tierW h) (idxW h) 0)
-        (tfld m APP (tierW h) (idxW h) 1)
-        (absW n m (tfld m APP (tierW h) (idxW h) 0) k d fu) := by
-  rw [absAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (tfld m APP (tierW h) (idxW h) 0) k d fu <;> rfl
-
-theorem absLamW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 ≠ 0) :
-    absLamW (n + 1) m h k d fu =
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m) := by
-  rw [absLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem absLamW_miss (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h LAM) :
-    absLamW (n + 1) m h k d fu =
-      alamK₁ n h k d fu (tfld m LAM (tierW h) (idxW h) 0)
-        (tfld m LAM (tierW h) (idxW h) 1)
-        (absW n m (tfld m LAM (tierW h) (idxW h) 0) k d fu) := by
-  rw [absLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (tfld m LAM (tierW h) (idxW h) 0) k d fu <;> rfl
-
-theorem absForallW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 ≠ 0) :
-    absForallW (n + 1) m h k d fu =
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m) := by
-  rw [absForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem absForallW_miss (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h FORALL) :
-    absForallW (n + 1) m h k d fu =
-      afaK₁ n h k d fu (tfld m FORALL (tierW h) (idxW h) 0)
-        (tfld m FORALL (tierW h) (idxW h) 1)
-        (absW n m (tfld m FORALL (tierW h) (idxW h) 0) k d fu) := by
-  rw [absForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (tfld m FORALL (tierW h) (idxW h) 0) k d fu <;> rfl
-
-theorem absLetW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 ≠ 0) :
-    absLetW (n + 1) m h k d fu =
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m) := by
-  rw [absLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem absLetW_miss (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h LET) :
-    absLetW (n + 1) m h k d fu =
-      aleK₁ n h k d fu (tfld m LET (tierW h) (idxW h) 0)
-        (tfld m LET (tierW h) (idxW h) 1)
-        (tfld m LET (tierW h) (idxW h) 2)
-        (absW n m (tfld m LET (tierW h) (idxW h) 0) k d fu) := by
-  rw [absLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (tfld m LET (tierW h) (idxW h) 0) k d fu with
-  | none => rfl
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    cases absW n m₁ (tfld m LET (tierW h) (idxW h) 1) k d fu <;> rfl
-
-theorem absProjW_hit (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).headD 0 ≠ 0) :
-    absProjW (n + 1) m h k d fu =
-      some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m) := by
-  rw [absProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem absProjW_miss (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).headD 0 = 0)
-    (hvk : viewOK m h PROJ) :
-    absProjW (n + 1) m h k d fu =
-      apjK₁ h k (tfld m PROJ (tierW h) (idxW h) 0)
-        (tfld m PROJ (tierW h) (idxW h) 1)
-        (tfld m PROJ (tierW h) (idxW h) 2)
-        (absW n m (tfld m PROJ (tierW h) (idxW h) 2) k d fu) := by
-  rw [absProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (tfld m PROJ (tierW h) (idxW h) 2) k d fu <;> rfl
-
-end arms
-
-grind_pattern [arena_grind] fvbN_succ => fvbN (n + 1) m h fu
-grind_pattern [arena_grind] fvbW_sat => fvbW (n + 1) m h fu
-grind_pattern [arena_grind] fvbW_pk => fvbW (n + 1) m h fu
-grind_pattern [arena_grind] absW_eq => absW (n + 1) m h k d fu
-grind_pattern [arena_grind] absNodeW_app => absNodeW (n + 1) m h k d fu
-grind_pattern [arena_grind] absNodeW_lam => absNodeW (n + 1) m h k d fu
-grind_pattern [arena_grind] absNodeW_forall => absNodeW (n + 1) m h k d fu
-grind_pattern [arena_grind] absNodeW_let => absNodeW (n + 1) m h k d fu
-grind_pattern [arena_grind] absNodeW_proj => absNodeW (n + 1) m h k d fu
-grind_pattern [arena_grind] absNodeW_fvar_eq => absNodeW (n + 1) m h k d fu
-grind_pattern [arena_grind] absNodeW_fvar_ne => absNodeW (n + 1) m h k d fu
-grind_pattern [arena_grind] absNodeW_leaf => absNodeW (n + 1) m h k d fu
-grind_pattern [arena_grind] absAppW_hit => absAppW (n + 1) m h k d fu
-grind_pattern [arena_grind] absAppW_miss => absAppW (n + 1) m h k d fu
-grind_pattern [arena_grind] absLamW_hit => absLamW (n + 1) m h k d fu
-grind_pattern [arena_grind] absLamW_miss => absLamW (n + 1) m h k d fu
-grind_pattern [arena_grind] absForallW_hit => absForallW (n + 1) m h k d fu
-grind_pattern [arena_grind] absForallW_miss => absForallW (n + 1) m h k d fu
-grind_pattern [arena_grind] absLetW_hit => absLetW (n + 1) m h k d fu
-grind_pattern [arena_grind] absLetW_miss => absLetW (n + 1) m h k d fu
-grind_pattern [arena_grind] absProjW_hit => absProjW (n + 1) m h k d fu
-grind_pattern [arena_grind] absProjW_miss => absProjW (n + 1) m h k d fu
-
-/-! ## The L code -/
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1574-1580 ConRon.Arena.fvarB -/
 @[l_impl ConRon.Arena.fvarB]
@@ -662,73 +270,87 @@ theorem fvbN_spec (n : Nat) (s₀ : St) (h fu : Word) :
     exact frMemo_spec p (hp.get "fm_find") (hp.get "fm_put") (hp.get "fr_go")
       (hp.get "fr_node") (hp.get "fm_clear") (hp.get "fr_memo") n s₀ h fu
 
-include hp in
-theorem abFvb_spec (n : Nat) (s₀ : St) (h fu : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "ab_fvb" [h, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ fvbW n s₀.mem h fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "ab_fvb")]
-  simp only [callFn, abFvb]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p (hp.get "der_b") n,
-        fvbN_spec p hp n] <;>
-      finish
-
-/-- The spec of `abs_go` at fuel `n`. -/
-def AbsGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (h k d fu : Word),
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "abs_go" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absW n s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄
-
-/-- The spec of `ab_node` at fuel `n`. -/
-def AbsNodeSpec (n : Nat) : Prop := ∀ (s₀ : St) (h k d fu : Word),
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "ab_node" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absNodeW n s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄
-
-/-- The specs of the five arms at fuel `n`. -/
-def AbsArmSpec (n : Nat) : Prop := ∀ (s₀ : St) (h k d fu : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "abs_app" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absAppW n s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ ∧
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "abs_lam" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absLamW n s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ ∧
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "abs_forall" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absForallW n s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ ∧
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "abs_let" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absLetW n s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ ∧
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "abs_proj" [h, k, d, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ absProjW n s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄
-
-include hp in
-theorem absGo_step (n : Nat) (ih : AbsNodeSpec p n) : AbsGoSpec p (n + 1) := by
-  unfold AbsNodeSpec at ih
-  intro s₀ h k d fu
-  rw [invoke_eq _ (hp.get "abs_go")]
-  simp only [callFn, absGo]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp n, ih] <;>
-    finish
-
-include hp in
-theorem absNode_step (n : Nat) (ih : AbsArmSpec p n) : AbsNodeSpec p (n + 1) := by
-  intro s₀ h k d fu
-  have ihA := fun s h k d fu => (ih s h k d fu).1
-  have ihL := fun s h k d fu => (ih s h k d fu).2.1
-  have ihF := fun s h k d fu => (ih s h k d fu).2.2.1
-  have ihE := fun s h k d fu => (ih s h k d fu).2.2.2.1
-  have ihP := fun s h k d fu => (ih s h k d fu).2.2.2.2
-  rw [invoke_eq _ (hp.get "ab_node")]
-  simp only [callFn, absNode]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
-          ihL, ihF, ihE, ihP] <;>
-    finish [viewOK, tierW, idxW]
 
 end specs
+
+/-! ## The models and the specs (generated) -/
+
+l_model absGo_spec (p : Prog) (hp : AbsProg p)
+  fns [(hp.get "ab_fvb") ↦ fvbW, (hp.get "abs_go") ↦ absW, (hp.get "ab_node") ↦ absNodeW,
+    (hp.get "abs_app") ↦ absAppW, (hp.get "abs_lam") ↦ absLamW, (hp.get "abs_forall") ↦ absForallW,
+    (hp.get "abs_let") ↦ absLetW, (hp.get "abs_proj") ↦ absProjW]
+  specs [derB_spec p (hp.get "der_b") n, fvbN_spec p hp n,
+    internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n,
+    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+    mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app") (hp.get "mk_app") n,
+    mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam") (hp.get "mk_lam") n,
+    mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push") (hp.get "intern_forall") (hp.get "mk_forall") n,
+    mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push") (hp.get "intern_letE") (hp.get "mk_let") n,
+    mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push") (hp.get "intern_proj") (hp.get "mk_proj") n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 20 heartbeats 1000000
+
+/-- `ab_fvb` is its model. -/
+theorem abFvb_spec (p : Prog) (hp : AbsProg p) (n : Nat) (s₀ : St) (h fu : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "ab_fvb" [h, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ fvbW n s₀.mem h fu = some (r.headD 0, s'.mem); ⊤⦄ :=
+  (absGo_spec p hp n).1 s₀ h fu
+
+/-! ### The memo write of the generated continuations is `asetK` -/
+
+theorem absAppW.j1_eq (h k r : Word) (m : Mem) :
+    absAppW.j1 h k r m = asetK h k (some (r, m)) := by
+  by_cases hf : mfindG abSch m h k = []
+  · simp [absAppW.j1, asetK, msetG, hf]
+  · rw [absAppW.j1.arm1 _ _ _ _ hf]; simp [asetK, msetG_eq _ _ _ _ _ hf]
+    cases mputG abSch m h k r ((mfindG abSch m h k).headD 0) ((mfindG abSch m h k).tail.headD 0) <;>
+      simp [absAppW.k_ab_put]
+
+theorem absAppW.k_mk_app_eq (h k : Word) (o : Option (Word × Mem)) :
+    absAppW.k_mk_app h k o = asetK h k o := by
+  cases o with
+  | none => rfl
+  | some q => obtain ⟨r, m⟩ := q; simp [absAppW.k_mk_app, absAppW.j1_eq]
+
+theorem absAppW.k_abs_go_2.set (h k f a x y : Word) (m₂ : Mem) :
+    absAppW.k_abs_go_2 h k f a x (some (y, m₂)) = asetK h k (rbAppW m₂ h f a x y) := by
+  by_cases hc : x = f ∧ y = a
+  · rw [absAppW.k_abs_go_2.arm1 _ _ _ _ _ _ _ hc, absAppW.j1_eq]; simp [rbAppW, hc]
+  · rw [absAppW.k_abs_go_2.arm2 _ _ _ _ _ _ _ hc, absAppW.k_mk_app_eq]; simp [rbAppW, hc]
+
+theorem absLamW.k_abs_go_2.set (h k f a x y : Word) (m₂ : Mem) :
+    absLamW.k_abs_go_2 h k f a x (some (y, m₂)) = asetK h k (rbLamW m₂ h f a x y) := by
+  by_cases hc : x = f ∧ y = a
+  · rw [absLamW.k_abs_go_2.arm1 _ _ _ _ _ _ _ hc, absAppW.j1_eq]; simp [rbLamW, hc]
+  · rw [absLamW.k_abs_go_2.arm2 _ _ _ _ _ _ _ hc, absAppW.k_mk_app_eq]; simp [rbLamW, hc]
+
+theorem absForallW.k_abs_go_2.set (h k f a x y : Word) (m₂ : Mem) :
+    absForallW.k_abs_go_2 h k f a x (some (y, m₂)) = asetK h k (rbForallW m₂ h f a x y) := by
+  by_cases hc : x = f ∧ y = a
+  · rw [absForallW.k_abs_go_2.arm1 _ _ _ _ _ _ _ hc, absAppW.j1_eq]; simp [rbForallW, hc]
+  · rw [absForallW.k_abs_go_2.arm2 _ _ _ _ _ _ _ hc, absAppW.k_mk_app_eq]; simp [rbForallW, hc]
+
+theorem absLetW.k_abs_go_3.set (h k f a b x y z : Word) (m₃ : Mem) :
+    absLetW.k_abs_go_3 h k f a b x y (some (z, m₃)) = asetK h k (rbLetW m₃ h f a b x y z) := by
+  by_cases hc : x = f ∧ y = a ∧ z = b
+  · rw [absLetW.k_abs_go_3.arm1 _ _ _ _ _ _ _ _ _ hc, absAppW.j1_eq]; simp [rbLetW, hc]
+  · rw [absLetW.k_abs_go_3.arm2 _ _ _ _ _ _ _ _ _ hc, absAppW.k_mk_app_eq]; simp [rbLetW, hc]
+
+theorem absProjW.k_abs_go.set (h k nm ix e x : Word) (m₁ : Mem) :
+    absProjW.k_abs_go h k nm ix e (some (x, m₁)) = asetK h k (rbProjW m₁ h nm ix e x) := by
+  by_cases hc : x = e
+  · rw [absProjW.k_abs_go.arm1 _ _ _ _ _ _ _ hc, absAppW.j1_eq]; simp [rbProjW, hc]
+  · rw [absProjW.k_abs_go.arm2 _ _ _ _ _ _ _ hc, absAppW.k_mk_app_eq]; simp [rbProjW, hc]
+
+theorem absW.k_ab_fvb.ite (n : Nat) (h k d fu x : Word) (m₁ : Mem) :
+    absW.k_ab_fvb n h k d fu (some (x, m₁)) =
+      if x ≤ d then some (h, m₁) else absNodeW n m₁ h k d (fu - 1) := by
+  by_cases hc : x ≤ d
+  · rw [absW.k_ab_fvb.arm1 _ _ _ _ _ _ _ hc, ite_eq_left hc]
+  · rw [absW.k_ab_fvb.arm2 _ _ _ _ _ _ _ hc, ite_eq_right hc]
+
+theorem fvbN_succ (n : Nat) (m : Mem) (h fu : Word) : fvbN (n + 1) m h fu = frMemoW n m h fu := rfl
 
 end L.Arena
