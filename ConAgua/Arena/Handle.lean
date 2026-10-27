@@ -10,17 +10,23 @@ A handle of con-ron (`ConRon/Arena/Handle.lean`, `Idx`) *is* its 32-bit word
 compares handles with `==`. The relation between an L word `w` and the twin's handle is
 `decI w` (`Idx.ofWord w.toUInt32`).
 
-This file is the one place that knows the encoding. Proofs use the names and laws below instead
-of unfolding the shifts, masks and powers of two:
+This file and the section "Handle words" of `StoreFields.lean` are the one place that knows
+the encoding. Proofs use the names and laws below instead of unfolding the shifts, masks and powers
+of two:
 
-* **Encode and decode**: `hdW g t i` (the handle word of node `i` of tier `t` of tag `g`),
-  `tagW h = h >>> 28`, `tierW h` (bit 27), `idxW h` (the low 27 bits); the laws
-  `hdW_tag`, `hdW_tier`, `hdW_idx`, `hdW_lt`.
+* **Encode and decode** (`StoreFields.lean`, plain words, usable in `module` files): `hdW g t i`
+  (the handle word of node `i` of tier `t` of tag `g`), `tagW h = h >>> 28`, `tierW h` (bit 27),
+  `idxW h` (the low 27 bits); their values as numbers (`shr28_toNat`, `tierW_toNat'`,
+  `idxW_toNat`, `mask32_toNat`), bounds (`shr28_lt`, `tierW_le`, `idxW_lt`, `mask_lt`) and the laws
+  of `hdW` (`hdW_toNat`, `hdW_tag`, `hdW_tier`, `hdW_idx`, `hdW_lt`).
 * **The bridge**: `decI_inj`/`decI_inj_iff`/`decI_beq`/`decI_bne` (two words below `2^32` decode to
   the same handle iff they are equal), `decI_mask` (only the low 32 bits count), `decI_tag`,
   `decI_tag_eq`, `decI_tag_beq`, `decI_idx`, `isPersistent_decI`, `decI_word_self`,
   `decI_eq_iff`, `decI_word`, and the list forms `contains_map_decI`, `findIdx_map_decI`,
   `map_decI_inj`, `map_decI_beq`.
+* **Expression tags**: `decE_tag`, `decE_tag_eq`, `decE_tag_beq`, `tag_beq_w` (any spelling of a
+  small numeral), and one lemma per `ETag` constant a proof needs (`decE_tag_const`,
+  `decE_tag_const_beq`, `decI_tag_const_beq`, …).
 
 The tag lemmas are stated with `h >>> 28`, the term `vcgen` leaves for an L tag test `h >> 28`.
 Every proof goes through `toNat` and `omega`, as con-ron's `Handle.lean` does (no `bv_decide`).

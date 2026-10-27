@@ -18,7 +18,8 @@ layout:
   `L.TRec` values, with a constant per field (`APP.f`, `APP.a`, …). L code reads them as
   `APP⟨t, i⟩.f`, `APP⟦h⟧.a`, `APP⟨t⟩.count` (`L/Notation.lean`).
 * **The proof accessors** `tfld m R t i f` (field `f` of node `i` of tier `t`) and `tcnt m R t`
-  (the node count of tier `t`), and the handle decoders `tierW`, `idxW`.
+  (the node count of tier `t`), and the handle words: `hdW`, `tagW`, `tierW`, `idxW` and their
+  laws, proved once through `toNat` (the bridge to the twin's `Idx` is `Handle.lean`).
 * **One evaluation lemma per accessor**: `evalE_tld` / `tld_eq` (pass both to `vcgen`, as
   `ld64`), `evalE_cnt` / `tcntM_eq`, `evalE_tierE`, `evalE_idxE`, and the pure forms
   `Expr.pval_tld`, `Expr.pval_cntE`, … (`lang_grind`); the frame lemmas `tfld_set64_ne`,
@@ -41,7 +42,7 @@ open L
 
 /-! ## Handle words -/
 
-/-- The tier bit and the index of a handle word. -/
+/-- The tier bit and the index of a handle word (con-ron's `Idx.tier`, `Idx.index`). -/
 def tierW (h : Word) : Word := (h >>> 27) &&& 1
 def idxW (h : Word) : Word := h &&& 134217727
 

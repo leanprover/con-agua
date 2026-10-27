@@ -4,7 +4,7 @@ import ConAgua.Arena.IndPos
 /-!
 # SlRGrow
 
-`ocK2`, `NoProg`, `slR_grow`, `decI_inj_iff`.
+`ocK2`, `NoProg`, `slR_grow`.
 -/
 
 set_option experimental.vcgen true

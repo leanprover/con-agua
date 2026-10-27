@@ -471,3 +471,53 @@ Otherwise the two conflict file by file.
 6. **Ordering against the other candidates.** Recommendation: rank 1 (locals normal form, measured
    first) and rank 2 (generator gaps, then retrofit on touch) before any records work. The records
    pre-batch R0 can run alongside them once absarrays has switched.
+
+## 7. Batches R0–R2 (lane records-api)
+
+The user chose decision point 2(a): R0–R2 only. R3, H2, S and O are deferred.
+
+### 7.1 R0, first landing: the handle API
+
+**What changed.** The handle encoding and its bridge to the twin are now stated and proved once:
+
+* `Arena/StoreFields.lean`, section "Handle words" (a `module`, so `module` files can use it):
+  `hdW`, `tagW`, `tierW`, `idxW`; their values as numbers (`shr28_toNat`, `tierW_toNat'`,
+  `idxW_toNat`, `mask32_toNat`); bounds (`shr28_lt`, `tierW_le`, `tierW_lt`, `idxW_lt`, `mask_lt`);
+  and the laws of `hdW` (`hdW_toNat`, `hdW_lt`, `hdW_tag`, `hdW_tier`, `hdW_idx`).
+* `Arena/Handle.lean` (new; `decE` lives in a non-`module` file, so the bridge cannot sit in
+  `StoreFields`): `decI`, `hix`, `mk_eq`, injectivity (`decI_inj`, `decI_inj_iff`, `decI_beq`,
+  `decI_bne`), `decI_mask`/`decE_mask`, tags (`decI_tag`, `decI_tag_eq`, `decI_tag_beq`,
+  `decI_tag_eqW`, their `decE` forms, `tag_beq_w`, one lemma per `ETag` constant in use), indices
+  and tiers (`decI_idx`, `decI_pers`, `isPersistent_decI`), and the list forms
+  (`contains_map_decI`, `contains_map_decI_iff`, `findIdx_map_decI`, `map_decI_inj`,
+  `map_decI_beq`). All through `toNat` and `omega`; no `bv_decide`.
+
+**Naming decision.** §3.1 proposed `Hdl.mk`/`tag`/`tier`/`idx`. The proofs already used `hdW`,
+`tierW` and `idxW` (about 2 700 lines), so the API keeps those names and adds `tagW`. Renaming
+would have touched every one of those lines for no proof saving.
+
+**What the measurement found.** The inventory's I7–I10 lines are mostly *uses* of the encoding
+(`h >>> 28 = 4` as a hypothesis, `decI` in a relation), which stay. The unfolding was in
+**duplicated lemmas**: 72 local copies of a dozen facts, each proved again by unfolding
+`>>> 28`, `% 2 ^ 27` or `toUInt32` (twelve copies of decI injectivity, six of `decI_beq`, about
+thirty tag lemmas, six `contains`/`findIdx` list lemmas, four `mask` lemmas). They are deleted
+and their call sites point at the API (about 300 call sites, mostly mechanical renames; a few
+needed the handle kind pinned, `(k := .level)`, where a local copy had fixed it).
+
+| | lines |
+|---|---:|
+| deleted local copies and their call-site churn | −1 145 |
+| the API (`Handle.lean` 280 lines with documentation, `StoreFields` +77) | +689 |
+| **net** | **−456** (141 files) |
+
+**Time.** Elaboration of the 139 changed modules that exist on both sides, `lake env lean` per
+file, base and branch back to back per file, 8 files in parallel (load 15–20): 534 s on master
+39fd7338, 527 s on the branch (+1 s for `Handle.lean`). A change of −1 %, within the noise. As
+expected: the deleted lemmas were each cheap; the saving is in lines and in one place to look.
+`checker.s` is unchanged.
+
+**Left for R0.** About 40 proof files still prove handle arithmetic by hand (`Env.ixW_toNat`,
+`DerRel.idxW_tierW_of_decE`, `ExprMk.hw_fields`, `LpColRel.idxW_hdW`, …); with
+`idxW_toNat`/`tierW_toNat'`/`hdW_toNat` most become a line or two. The record side of R0
+(raw record reads I2 through `tfld`, the comparators and room checks of the store instances
+through accessors, `TRec` rows by array name) is next.

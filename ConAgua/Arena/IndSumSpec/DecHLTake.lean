@@ -5,7 +5,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 /-!
 # DecHLTake
 
-`decHL_take`, `map_decI_inj`.
+`decHL_take`.
 -/
 
 noncomputable section
