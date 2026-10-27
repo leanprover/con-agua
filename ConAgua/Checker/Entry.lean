@@ -25,22 +25,39 @@ open L L.Arena L.Ind
 
 /-! ## Capacities at entry (the arrays the driver lays out must be there and in range) -/
 
-/-- The word arrays the checker names (`0‥wordArrays - 1`, the tier-1 arrays `256 + a` included;
-`checkerProg_arrs` checks it). -/
+/-- One more than the largest word slot the checker names (the tier-1 arrays `tier1 a`
+included): the program's word extent (`Prog.arrs`, `ProgTab.lean`) and the table's
+(`ArrCheck.lean`). -/
 def wordArrays : Nat := 388
 
 /-- The least `CTL` length `check` runs with: every fixed `CTL` slot the lanes use is below it
 (the largest is `249`, the prelude parse's id tables), and `arenaR_init`'s `64 ≤ |CTL|`. -/
 def ctlMin : Nat := 256
 
-/-- The slot arrays of the 19 cons tables (`ConsLib.lean`), both tiers (tier 1 of array `a` is
-`tier1 a`): at least `consMinWords` words each (the initial table, `consR_init`) and below `2^61`
-(the growth's offsets, `TierLay`). -/
-def slotArrs : List Nat := [SLOT, ASLOT, SSLOT, ZSLOT, MSLOT, ISLOT, PSLOT, SOSLOT, CSLOT, LESLOT,
-  BSLOT, FVSLOT, LASLOT, FASLOT, PJSLOT, NASLOT, NSSLOT, NNSLOT, LSSLOT, tier1 SLOT, tier1 ASLOT,
-  tier1 SSLOT, tier1 ZSLOT, tier1 MSLOT, tier1 ISLOT, tier1 PSLOT, tier1 SOSLOT, tier1 CSLOT,
-  tier1 LESLOT, tier1 BSLOT, tier1 FVSLOT, tier1 LASLOT, tier1 FASLOT, tier1 PJSLOT, tier1 NASLOT,
-  tier1 NSSLOT, tier1 NNSLOT, tier1 LSSLOT]
+/-- The slot arrays of the 19 cons tables (`ConsLib.lean`), both tiers: at least
+`consMinWords` words each (the initial table, `consR_init`) and below `2^61` (the growth's
+offsets, `TierLay`). -/
+def slotArrs : List ArrId := [SLOT, ASLOT, SSLOT, ZSLOT, MSLOT, ISLOT, PSLOT, SOSLOT, CSLOT,
+  LESLOT, BSLOT, FVSLOT, LASLOT, FASLOT, PJSLOT, NASLOT, NSSLOT, NNSLOT, LSSLOT,
+  tier1 SLOT, tier1 ASLOT, tier1 SSLOT, tier1 ZSLOT, tier1 MSLOT, tier1 ISLOT, tier1 PSLOT,
+  tier1 SOSLOT, tier1 CSLOT, tier1 LESLOT, tier1 BSLOT, tier1 FVSLOT, tier1 LASLOT, tier1 FASLOT,
+  tier1 PJSLOT, tier1 NASLOT, tier1 NSSLOT, tier1 NNSLOT, tier1 LSSLOT]
+
+/-- The word slots `cap_check` tests, as (array, tier 1?) pairs: every word array of the table
+(`(a, false)`), then the tier 1 of every tiered one (`(a, true)`). Their arrays (`capSlotA`) are
+the table's word slots (`capSlots_arrs`). -/
+def capSlots : List (ArrId × Bool) :=
+  (checkerArrays.ids .word).map (·, false) ++ checkerArrays.tieredIds.map (·, true)
+
+/-- A slot's array: `a` or `tier1 a`. -/
+def capSlotA (p : ArrId × Bool) : ArrId := if p.2 then tier1 p.1 else p.1
+
+/-- A slot's length as code: `len(a.u64)`, or for tier 1 the tiered access `len(a⟨1⟩.u64)`,
+so that no tier-1 number appears in the program. -/
+def capSlotE (p : ArrId × Bool) : Expr := if p.2 then .len64t p.1 (.const 1) else .len64 p.1
+
+theorem capSlots_arrs : capSlots.map capSlotA = checkerArrays.wordSlots := by
+  simp [capSlots, capSlotA, ArrTable.wordSlots, Function.comp_def]
 
 /-- The slot arrays' least length, as a word. -/
 def capMin : Word := UInt64.ofNat consMinWords
@@ -48,28 +65,34 @@ def capMin : Word := UInt64.ofNat consMinWords
 /-- `2^61 - consMinWords`, the slot arrays' wrapping bound. -/
 def capLo : Word := UInt64.ofNat (2 ^ 61 - consMinWords)
 
-/-- One array's capacity test: `2^62 ≤ len(b.u64)`, for a slot array
-`len(b.u64) < consMinWords` or `2^61 ≤ len(b.u64)` (as one wrapping comparison,
-`2^61 - consMinWords ≤ len - consMinWords`). -/
-def capCond (b : Nat) : Cond :=
-  if b ∈ slotArrs then .cmp .ule (.const capLo) (.bin .sub (.len64 b) (.const capMin))
-  else .cmp .ule (.const 4611686018427387904) (.len64 b)
+/-- One slot's capacity test: `2^62 ≤ len`, for a slot array `len < consMinWords` or
+`2^61 ≤ len` (as one wrapping comparison, `2^61 - consMinWords ≤ len - consMinWords`). -/
+def capCond (p : ArrId × Bool) : Cond :=
+  if capSlotA p ∈ slotArrs then .cmp .ule (.const capLo) (.bin .sub (capSlotE p) (.const capMin))
+  else .cmp .ule (.const 4611686018427387904) (capSlotE p)
 
-/-- The body of `cap_check()`: every word array shorter than `2^62` words (handles, offsets and
-counts are words; `arenaR_init`'s pool bound, the inductive lines' scratch arrays), the slot
-arrays at least `consMinWords` and below `2^61` words long (`slotArrs`), `CTL` at
-least `ctlMin` words, the declaration arrays `DECL` (67) and `DLP` (68) not empty (their word
-`0` is a count, `StateDR`), and the pool's two tier arrays (0, 256) below `2^40` words (lane
-tierpool: a tagged address's index has 40 bits). -/
-def capCheckBody : Stmt :=
-  (List.range wordArrays).foldr
-    (fun b s => .seq (.ite (capCond b) (.abort (.const R_CAP_REGION)) .skip) s)
-    (.seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const R_CAP_REGION)) .skip)
-      (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
-        (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
-          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) (.abort (.const R_CAP_REGION)) .skip)
-            (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 256)) (.abort (.const R_CAP_REGION)) .skip)
-              (.ret [.const 0]))))))
+/-- One slot's check (the `foldr`'s step). -/
+def capStep (p : ArrId × Bool) (s : Stmt) : Stmt :=
+  .seq (.ite (capCond p) (.abort (.const R_CAP_REGION)) .skip) s
+
+/-- The `CTL`, `DECL`, `DLP` checks, the pool's two tiers (`POOL1` as the tiered access
+`len(POOL⟨1⟩.u64)`), and the return. -/
+def capTail : Stmt :=
+  .seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const R_CAP_REGION)) .skip)
+    (.seq (.ite (.cmp .eq (.len64 L.Front.DECL) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+      (.seq (.ite (.cmp .eq (.len64 L.Front.DLP) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+        (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 POOL)) (.abort (.const R_CAP_REGION)) .skip)
+          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64t POOL (.const 1)))
+              (.abort (.const R_CAP_REGION)) .skip)
+            (.ret [.const 0])))))
+
+/-- The body of `cap_check()`, a fold over the table's word slots (`capSlots`): every word
+array shorter than `2^62` words (handles, offsets and counts are words; `arenaR_init`'s pool
+bound, the inductive lines' scratch arrays), the slot arrays at least `consMinWords` and below
+`2^61` words long (`slotArrs`), `CTL` at least `ctlMin` words, the declaration arrays `DECL` and
+`DLP` not empty (their word `0` is a count, `StateDR`), and the pool's two tiers below `2^40`
+words (lane tierpool: a tagged address's index has 40 bits). -/
+def capCheckBody : Stmt := capSlots.foldr capStep capTail
 
 /-- `cap_check()`: aborts unless the harness's capacities meet `ArenaR`'s minimums (a capacity
 the checker cannot work with declines; any larger one is fine). -/

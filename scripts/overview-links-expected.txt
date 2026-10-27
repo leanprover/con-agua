@@ -600,34 +600,34 @@
    107          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
    108        dm (label abiStartL) :=
 
-== ConAgua/Checker/Entry.lean#L123-L130
-   123  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
-   124  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
-   125  def checkL : FunDecl := lfn () locals (r) {
-   126    if MODE == 1 { r := call check_a(1); return r };
-   127    if MODE == 3 { r := call check_a(0); return r };
-   128    if MODE == 2 { r := call check_b(); return r };
-   129    abort
-   130  }
+== ConAgua/Checker/Entry.lean#L146-L153
+   146  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
+   147  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
+   148  def checkL : FunDecl := lfn () locals (r) {
+   149    if MODE == 1 { r := call check_a(1); return r };
+   150    if MODE == 3 { r := call check_a(0); return r };
+   151    if MODE == 2 { r := call check_b(); return r };
+   152    abort
+   153  }
 
-== ConAgua/Checker/Entry.lean#L88-L104
-    88  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-    89  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-    90  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-    91  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
-    92    z := call cap_check();
-    93    z := call pb_check();
-    94    z := call intern_reserved_pins();
-    95    z := call builtin_prelude();
-    96    r := call front_run();
-    97    if r != 0 { return 1 };
-    98    z := call prepare_prelude();
-    99    z := call intern_all_pins();
-   100    cnt := L.Front.DECL.u64[0];
-   101    v := call install_fold_go(0, cnt, 0);
-   102    z := call par_compact(v, c);
-   103    return 9223372036854775808 + CTL.u64[130]
-   104  }
+== ConAgua/Checker/Entry.lean#L111-L127
+   111  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+   112  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+   113  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+   114  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+   115    z := call cap_check();
+   116    z := call pb_check();
+   117    z := call intern_reserved_pins();
+   118    z := call builtin_prelude();
+   119    r := call front_run();
+   120    if r != 0 { return 1 };
+   121    z := call prepare_prelude();
+   122    z := call intern_all_pins();
+   123    cnt := L.Front.DECL.u64[0];
+   124    v := call install_fold_go(0, cnt, 0);
+   125    z := call par_compact(v, c);
+   126    return 9223372036854775808 + CTL.u64[130]
+   127  }
 
 == vendor/con-ron/ConRon/Arena/Main.lean#L154-L190
    154  def runPipelineHead :
@@ -1266,7 +1266,7 @@
 == ConAgua/Checker/ArrCheck.lean#L24-L33
     24  
     25  #guard checkerArrays.wf
-    26  #guard checkerArrays.progOK ["cap_check"] checkerProg
+    26  #guard checkerArrays.progOK [] checkerProg
     27  #guard Prog.arrs checkerProg == checkerArrays.extent
     28  #guard checkerArrays.extent.2 == wordArrays
     29  #guard frozenIds.all checkerArrays.wordSlots.contains
@@ -1798,50 +1798,50 @@
     12  (`Arena.pooledAccepts_bridge`), which is what `twinAccepts_pure` already uses.
     13  (Lane parallel's `Twin.lean` changes, as a separate file.)
 
-== ConAgua/Checker/Entry.lean#L80-L85
-    80  
-    81  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
-    82  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
-    83  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
-    84  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
-    85  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
+== ConAgua/Checker/Entry.lean#L103-L108
+   103  
+   104  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
+   105  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
+   106  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
+   107  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
+   108  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
 
-== ConAgua/Checker/Entry.lean#L88-L104
-    88  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-    89  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-    90  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-    91  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
-    92    z := call cap_check();
-    93    z := call pb_check();
-    94    z := call intern_reserved_pins();
-    95    z := call builtin_prelude();
-    96    r := call front_run();
-    97    if r != 0 { return 1 };
-    98    z := call prepare_prelude();
-    99    z := call intern_all_pins();
-   100    cnt := L.Front.DECL.u64[0];
-   101    v := call install_fold_go(0, cnt, 0);
-   102    z := call par_compact(v, c);
-   103    return 9223372036854775808 + CTL.u64[130]
-   104  }
+== ConAgua/Checker/Entry.lean#L111-L127
+   111  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+   112  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+   113  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+   114  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+   115    z := call cap_check();
+   116    z := call pb_check();
+   117    z := call intern_reserved_pins();
+   118    z := call builtin_prelude();
+   119    r := call front_run();
+   120    if r != 0 { return 1 };
+   121    z := call prepare_prelude();
+   122    z := call intern_all_pins();
+   123    cnt := L.Front.DECL.u64[0];
+   124    v := call install_fold_go(0, cnt, 0);
+   125    z := call par_compact(v, c);
+   126    return 9223372036854775808 + CTL.u64[130]
+   127  }
 
-== ConAgua/Checker/Entry.lean#L106-L121
-   106  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
-   107  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
-   108  B's loop (`check_pending_go`); returns `ACCEPT`. -/
-   109  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
-   110  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
-   111  def checkBL : FunDecl := lfn () locals (z, n) {
-   112    if INIT == 0 {
-   113      n := len(CTLF.u64);
-   114      copy!(CTL.u64, 0, CTLF.u64, 0, n);
-   115      INIT := 1
-   116    };
-   117    if CTL.u64[130] < PHI { abort };
-   118    if PHI < PLO { abort };
-   119    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
-   120    return 71757147230292
-   121  }
+== ConAgua/Checker/Entry.lean#L129-L144
+   129  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
+   130  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
+   131  B's loop (`check_pending_go`); returns `ACCEPT`. -/
+   132  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
+   133  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
+   134  def checkBL : FunDecl := lfn () locals (z, n) {
+   135    if INIT == 0 {
+   136      n := len(CTLF.u64);
+   137      copy!(CTL.u64, 0, CTLF.u64, 0, n);
+   138      INIT := 1
+   139    };
+   140    if CTL.u64[130] < PHI { abort };
+   141    if PHI < PLO { abort };
+   142    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
+   143    return 71757147230292
+   144  }
 
 == ConAgua/Compiler/Abi.lean#L162-L171
    162  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
