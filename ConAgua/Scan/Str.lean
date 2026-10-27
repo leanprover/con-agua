@@ -11,6 +11,7 @@ import ConAgua.Census.Attr
 import ConAgua.Front.Preserve
 import ConAgua.L.Blocks
 import ConAgua.L.GrindAttr
+import ConAgua.L.PureEval
 public import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -601,9 +602,14 @@ theorem hex4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym (gen := 24) only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        byteIn_spec p b hb hpb n, hexVal_spec p b hb hph n] <;> finish
+    vcgen [exec, step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      byteIn_spec p b hb hpb n, hexVal_spec p b hb hph n]
+    all_goals clear hpb hph hp4
+    all_goals subst_vars
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+        St.setLocs_cons, List.headD_cons, List.tail_cons, Locals.init, List.getD_cons_zero,
+        List.getD_cons_succ, Cmp.eval, BinOp.eval, beq_iff_eq] at *
+    all_goals grind (splits := 40) [lang_grind, hex4N]
 
 include hpb hph hp3 in
 theorem hex3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
@@ -615,9 +621,14 @@ theorem hex3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym (gen := 24) only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        byteIn_spec p b hb hpb n, hexVal_spec p b hb hph n] <;> finish
+    vcgen [exec, step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      byteIn_spec p b hb hpb n, hexVal_spec p b hb hph n]
+    all_goals clear hpb hph hp3
+    all_goals subst_vars
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+        St.setLocs_cons, List.headD_cons, List.tail_cons, Locals.init, List.getD_cons_zero,
+        List.getD_cons_succ, Cmp.eval, BinOp.eval, beq_iff_eq] at *
+    all_goals grind (splits := 40) [lang_grind, hex3N]
 
 end hex4Hex3
 
@@ -632,9 +643,15 @@ theorem uNext_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : Wo
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym (gen := 24) only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        byteIn_spec p b hb hpb n, hex3_spec p b hb hpb hph hp3 n] <;> finish
+    vcgen [exec, step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      byteIn_spec p b hb hpb n, hex3_spec p b hb hpb hph hp3 n]
+    all_goals clear hpb hph hp3 hpx
+    all_goals subst_vars
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+        St.setLocs_cons, List.headD_cons, List.tail_cons, Locals.init, List.getD_cons_zero,
+        List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq,
+        bne_iff_ne, ne_eq] at *
+    all_goals grind (splits := 40) [lang_grind, uNextN]
 
 /- `unescapeLoop_spec`: as for `hex4`, the calls of one `\u` iteration need a generation
 limit above `grind`'s default. -/
@@ -651,8 +668,8 @@ theorem unescapeLoop_spec (n : Nat) (s₀ : St) :
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := unescapeLoop) rfl]
-    sym (gen := 16) only [lang_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
+    sym (gen := 16) only [lang_grind, Cond.pval, Expr.pval, Cmp.eval] =>
+      vcgen [step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld8, ih,
         utf8Valid_spec p b hb hpc hpv n, byteIn_spec p b hb hpb n,
         hex4_spec p b hb hpb hph hp4 n, uNext_spec p b hb hpb hph hp3 hpx n] <;> finish
 
