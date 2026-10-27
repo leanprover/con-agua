@@ -101,20 +101,22 @@ theorem inRes_of {G : Layout} {x : Nat} (h1 : G.resAddr maxRes ≤ x) (h2 : x < 
 
 end Layout
 
-/-- L's memory `m` in the machine's data memory `d`. -/
+/-- L's memory `m` in the machine's data memory `d`. The machine side (`Layout`, the table) is
+positional; L's arrays are names, related to their regions through the compiler's layout map
+(`Tab.wl`, `Tab.bl`): the array a program may name (`dom`) has the region of its position. -/
 structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
-  nb : m.bytes.size = G.tab.nb
-  nw : m.words.size = G.tab.nw
-  size8 : ∀ a < G.tab.nb, (m.arr8 a).size = G.s8 a
-  size64 : ∀ a < G.tab.nw, (m.arr64 a).size = G.s64 a
-  get8 : ∀ a < G.tab.nb, ∀ (i : Nat) (h : i < (m.arr8 a).size), d.get? (A (G.b8 a + i)) = some (m.arr8 a)[i]
-  get64 : ∀ a < G.tab.nw, ∀ (i : Nat) (h : i < (m.arr64 a).size),
-    rdW d (A (G.b64 a + 8 * i)) = some (m.arr64 a)[i]
+  size8 : ∀ a, G.tab.dom8 a → (m.arr8 a).size = G.s8 (G.tab.pos8 a)
+  size64 : ∀ s, G.tab.dom64 s → (m.arr64 s).size = G.s64 (G.tab.pos64 s)
+  get8 : ∀ a, G.tab.dom8 a → ∀ (i : Nat) (h : i < (m.arr8 a).size),
+    d.get? (A (G.b8 (G.tab.pos8 a) + i)) = some (m.arr8 a)[i]
+  get64 : ∀ s, G.tab.dom64 s → ∀ (i : Nat) (h : i < (m.arr64 s).size),
+    rdW d (A (G.b64 (G.tab.pos64 s) + 8 * i)) = some (m.arr64 s)[i]
   limit : rdW d (A (G.T + 8)) = some (UInt64.ofNat G.lo)
-  base8 : ∀ a < G.tab.nb, rdW d (A (G.T + (G.tab.base8 a).toNat)) = some (UInt64.ofNat (G.b8 a))
-  len8 : ∀ a < G.tab.nb, rdW d (A (G.T + (G.tab.len8 a).toNat)) = some (UInt64.ofNat (G.s8 a))
-  base64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.base64 a).toNat)) = some (UInt64.ofNat (G.b64 a))
-  len64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.len64 a).toNat)) = some (UInt64.ofNat (G.s64 a))
+  /-- The descriptors, by position: no L array in them. -/
+  base8 : ∀ p < G.tab.nb, rdW d (A (G.T + (G.tab.dbase8 p).toNat)) = some (UInt64.ofNat (G.b8 p))
+  len8 : ∀ p < G.tab.nb, rdW d (A (G.T + (G.tab.dlen8 p).toNat)) = some (UInt64.ofNat (G.s8 p))
+  base64 : ∀ p < G.tab.nw, rdW d (A (G.T + (G.tab.dbase64 p).toNat)) = some (UInt64.ofNat (G.b64 p))
+  len64 : ∀ p < G.tab.nw, rdW d (A (G.T + (G.tab.dlen64 p).toNat)) = some (UInt64.ofNat (G.s64 p))
   rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
     d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
   stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
@@ -383,43 +385,41 @@ theorem MemRel.onlyG {m m' : Mem} {d d' : DataMem} (hm : MemRel G m d) (hb : m'.
   obtain ⟨b₂, w₂, g₂⟩ := m'
   cases hb; cases hw
   exact {
-    nb := hm.nb
-    nw := hm.nw
     size8 := hm.size8
     size64 := hm.size64
     get8 := fun c hc i hi => by
       replace hi : i < (Mem.arr8 ⟨b₁, w₁, g₁⟩ c).size := hi
       show _ = some ((Mem.arr8 ⟨b₁, w₁, g₁⟩ c)[i]'hi)
       have hs := hm.size8 c hc
-      have he := hG.end8 c hc
+      have hp := G.tab.pos8_lt hc
+      have he := hG.end8 _ hp
       rw [h.same _ (by omega) ?_, hm.get8 c hc i hi]
       refine Classical.byContradiction fun hx => ?_
       simp only [not_or, Nat.not_lt] at hx
-      exact (hab (G.b8 c + i) (by omega) (by omega)).2 (Or.inl ⟨c, hc, by omega, by omega⟩)
+      exact (hab (G.b8 (G.tab.pos8 c) + i) (by omega) (by omega)).2 (Or.inl ⟨_, hp, by omega, by omega⟩)
     get64 := fun c hc i hi => by
       replace hi : i < (Mem.arr64 ⟨b₁, w₁, g₁⟩ c).size := hi
       show _ = some ((Mem.arr64 ⟨b₁, w₁, g₁⟩ c)[i]'hi)
       have hs := hm.size64 c hc
-      have he := hG.end64 c hc
+      have hp := G.tab.pos64_lt hc
+      have he := hG.end64 _ hp
       rw [← hm.get64 c hc i hi]
       refine rdW_congr fun j hj => ?_
       rw [A_add]
       refine h.same _ (by omega) ?_
       refine Classical.byContradiction fun hx => ?_
       simp only [not_or, Nat.not_lt] at hx
-      exact (hab (G.b64 c + 8 * i + j) (by omega) (by omega)).2 (Or.inr ⟨c, hc, by omega, by omega⟩)
+      exact (hab (G.b64 (G.tab.pos64 c) + 8 * i + j) (by omega) (by omega)).2 (Or.inr ⟨_, hp, by omega, by omega⟩)
     limit := by
       rw [h.rdW_tab hG hab (by omega) (by omega)]; exact hm.limit
     base8 := fun c hc => by
-      rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.base8]; omega)]; exact hm.base8 c hc
+      rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.dbase8]; omega)]; exact hm.base8 c hc
     len8 := fun c hc => by
-      rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.len8]; omega)]; exact hm.len8 c hc
+      rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.dlen8]; omega)]; exact hm.len8 c hc
     base64 := fun c hc => by
-      have := G.tab.wpos_lt hc
-      rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.base64]; omega)]; exact hm.base64 c hc
+      rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.dbase64]; omega)]; exact hm.base64 c hc
     len64 := fun c hc => by
-      have := G.tab.wpos_lt hc
-      rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.len64]; omega)]; exact hm.len64 c hc
+      rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.dlen64]; omega)]; exact hm.len64 c hc
     rom := fun i hi => by
       have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
       have := hG.tab_end

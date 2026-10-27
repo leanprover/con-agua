@@ -173,22 +173,31 @@ theorem Tab.curNum_inj (t : Tab) {s s' : TArr} (h : t.dom64 s = true) (h' : t.do
   · have := t.wK_spec h; simp only [tierOff] at *; omega
   · omega
 
+theorem Tab.pos64_lt (t : Tab) {s : TArr} (h : t.dom64 s = true) : t.pos64 s < t.nw := by
+  simp only [Tab.pos64]; exact t.wpos_lt (t.curNum_lt h)
+
+theorem Tab.pos64_inj (t : Tab) {s s' : TArr} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+    (e : t.pos64 s = t.pos64 s') : s = s' := by
+  simp only [Tab.pos64] at e
+  have e2 := congrArg t.wposInv e
+  rw [t.wposInv_wpos (t.curNum_lt h), t.wposInv_wpos (t.curNum_lt h')] at e2
+  exact t.curNum_inj h h' e2
+
+theorem Tab.adj64 (t : Tab) (a : ArrId) (h : t.dom64 (tier1 a) = true) :
+    t.dom64 (TArr.t0 a) = true ∧ t.pos64 (tier1 a) = t.pos64 (TArr.t0 a) + 1 := by
+  simp only [Tab.dom64, ite_true, decide_eq_true_eq] at h
+  obtain ⟨h1, h2⟩ := t.wK_spec h
+  refine ⟨by simp only [Tab.dom64, Bool.false_eq_true, ite_false, Bool.and_eq_true, decide_eq_true_eq]; exact ⟨h1, Nat.lt_of_le_of_lt (Nat.le_add_right _ _) h2⟩, ?_⟩
+  have := t.wpos_tier h 1 (by omega)
+  simpa [Tab.pos64, curNum, tier1, TArr.t0] using this
+
 /-- **Today's layout as a `WLay`**: tier `t` of `a` at `wpos (a + 256 t)`. -/
 def Tab.wl (t : Tab) : WLay t.nw where
   dom := t.dom64
   pos := t.pos64
-  pos_lt _ h := t.wpos_lt (t.curNum_lt h)
-  pos_inj s s' h h' e := by
-    have e2 := congrArg t.wposInv e
-    simp only [Tab.pos64] at e2
-    rw [t.wposInv_wpos (t.curNum_lt h), t.wposInv_wpos (t.curNum_lt h')] at e2
-    exact t.curNum_inj h h' e2
-  adj a h := by
-    simp only [Tab.dom64, ite_true, decide_eq_true_eq] at h
-    obtain ⟨h1, h2⟩ := t.wK_spec h
-    refine ⟨by simp only [Tab.dom64, Bool.false_eq_true, ite_false, Bool.and_eq_true, decide_eq_true_eq]; exact ⟨h1, Nat.lt_of_le_of_lt (Nat.le_add_right _ _) h2⟩, ?_⟩
-    have := t.wpos_tier h 1 (by omega)
-    simpa [Tab.pos64, curNum, tier1, TArr.t0] using this
+  pos_lt _ h := t.pos64_lt h
+  pos_inj _ _ h h' e := t.pos64_inj h h' e
+  adj a h := t.adj64 a h
 
 /-- The byte arrays a program may name, and their positions, under today's layout: `a` at `a`. -/
 def Tab.dom8 (t : Tab) (a : ArrId) : Bool := decide (a < t.nb)
@@ -199,6 +208,31 @@ def Tab.bl (t : Tab) : BLay t.nb where
   pos := t.pos8
   pos_lt _ h := by simpa [Tab.dom8, Tab.pos8] using h
   pos_inj _ _ _ _ e := e
+
+/-! The layout facts the simulation uses, through the maps (`Tab.wl`, `Tab.bl`) only. -/
+
+theorem Tab.pos8_lt (t : Tab) {a : ArrId} (h : t.dom8 a = true) : t.pos8 a < t.nb := t.bl.pos_lt a h
+theorem Tab.pos64_ne (t : Tab) {s s' : TArr} (h : t.dom64 s = true) (h' : t.dom64 s' = true)
+    (e : s ≠ s') : t.pos64 s ≠ t.pos64 s' := fun e' => e (t.pos64_inj h h' e')
+theorem Tab.pos8_ne (t : Tab) {a a' : ArrId} (h : t.dom8 a = true) (h' : t.dom8 a' = true)
+    (e : a ≠ a') : t.pos8 a ≠ t.pos8 a' := fun e' => e (t.bl.pos_inj a a' h h' e')
+theorem Tab.pos64_tierA (t : Tab) {a : ArrId} (h : t.dom64 (tier1 a) = true) (u : Word) :
+    t.pos64 (tierA a u) = t.pos64 (TArr.t0 a) + (u &&& 1).toNat := by
+  have : u &&& 1 = 0 ∨ u &&& 1 = 1 := by
+    have : (u &&& 1).toNat ≤ 1 := by rw [UInt64.toNat_and]; exact Nat.and_le_right
+    rcases (by omega : (u &&& 1).toNat = 0 ∨ (u &&& 1).toNat = 1) with h | h
+    · exact .inl (UInt64.toNat_inj.mp h)
+    · exact .inr (UInt64.toNat_inj.mp h)
+  rcases this with e | e
+  · simp [tierA, e]
+  · simp [tierA, e, (t.adj64 a h).2]
+theorem Tab.dom64_tierA (t : Tab) {a : ArrId} (h : t.dom64 (tier1 a) = true) (u : Word) :
+    t.dom64 (tierA a u) = true := by
+  rcases tierA_eq_or a u with e | e <;> rw [e]
+  · exact (t.adj64 a h).1
+  · exact h
+theorem Tab.dom64_t0 (t : Tab) {a : ArrId} (h : t.dom64 (tier1 a) = true) :
+    t.dom64 (TArr.t0 a) = true := (t.adj64 a h).1
 
 /-- The descriptor words of byte position `p`, and of word position `p`. -/
 def Tab.dbase8 (_ : Tab) (p : Nat) : Int := 16 + 16 * p
