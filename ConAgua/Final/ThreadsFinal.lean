@@ -218,14 +218,14 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   rcases hout₀ with h1 | hout₀'
   · exact absurd h1 hne
   rcases hres₁ : L.run checkerProg abiFuel "check" []
-      ((loadMem b pb [] (List.replicate checkerTab.nw abiWords)).setG MODE 1) with e | ⟨rs₁, m₁⟩
+      ((loadMem b pb fun _ => abiWords).setG MODE 1) with e | ⟨rs₁, m₁⟩
   · rw [hres₁] at hout₀'
     cases e <;> simp only [OutcomeRel] at hout₀' <;> (rw [hR.rdx₀] at hout₀'; exact absurd hout₀'.1 (by decide))
   rw [hres₁] at hout₀'
   obtain ⟨-, hRes₁, hMem₁⟩ := hout₀'
   have hrax₁ : st₀.data.regs.rax = rs₁.headD 0 := by
     rw [← getD_zero_headD]; exact hRes₁.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
-  have h₁ : L.run checkerProg abiFuel "check" [] (loadMemM b pb [] (List.replicate checkerTab.nw abiWords) 1) =
+  have h₁ : L.run checkerProg abiFuel "check" [] (loadMemM b pb (fun _ => abiWords) 1) =
       .ok (rs₁, m₁) := hres₁
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   have hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat := by rw [← hrax₁]; exact hR.rax₀

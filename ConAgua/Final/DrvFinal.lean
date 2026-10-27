@@ -52,7 +52,7 @@ theorem seqMem_arr64 (m : Mem) (lo hi : Word) (hsz : 242 < m.words.size) (a : Na
 /-- **The driver's accept is the twin's**: `DrvAccepts` at the checker's program gives
 `TwinAccepts [b]`. -/
 theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (h : DrvAccepts checkerProg checkerTab MODE PLO PHI OUT HDRF CTLF 132 b pb) :
+    (h : DrvAccepts checkerProg MODE PLO PHI OUT HDRF CTLF 132 b pb) :
     TwinAccepts [b] := by
   obtain ⟨hb, hpb, h⟩ := h
   have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=

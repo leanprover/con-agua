@@ -21,10 +21,10 @@ open L L.Compiler
 checked it), entry 1's run of `check` (mode word `3`) ends with result `r₁`, and either
 `r₁ = ACCEPT` or `r₁ = 2^63 + k` (`9223372036854775808 = 2^63`) and entry 2's run from its memory
 (`seqMem m₁ … 0 k`) ends with `ACCEPT`. -/
-def DrvAccepts (p : Prog) (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+def DrvAccepts (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (b pb : ByteArray) : Prop :=
-  b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3) =
-      .ok (rs1, m1) ∧ m1.words.size = tab.nw ∧
+  b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3) =
+      .ok (rs1, m1) ∧
     (rs1.getD 0 0 = ACCEPT ∨
       (2 ^ 63 ≤ (rs1.getD 0 0).toNat ∧ ∃ rs2 m2,
         L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0 (rs1.getD 0 0 - 9223372036854775808)) =
@@ -33,13 +33,13 @@ def DrvAccepts (p : Prog) (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : Arr
 /-- **What a failing driver run means**: both buffers are below `2^63` bytes, and entry 1's run of
 `check` fails with an error of code `k`, or it returns `2^63 + j` and entry 2's run from its memory
 fails with an error of code `k`. -/
-def DrvErr (p : Prog) (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+def DrvErr (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (b pb : ByteArray) (k : Word) : Prop :=
   b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
-  ((∃ e, L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3) =
+  ((∃ e, L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3) =
       .error e ∧ e.code = k) ∨
-   (∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3) =
-      .ok (rs1, m1) ∧ m1.words.size = tab.nw ∧ 2 ^ 63 ≤ (rs1.getD 0 0).toNat ∧ ∃ e,
+   (∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3) =
+      .ok (rs1, m1) ∧ 2 ^ 63 ≤ (rs1.getD 0 0).toNat ∧ ∃ e,
       L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0 (rs1.getD 0 0 - 9223372036854775808)) =
         .error e ∧ e.code = k))
 
@@ -149,8 +149,9 @@ theorem abiLayout_out {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n p
       · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4; exact hin ⟨h3, h4⟩
       · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hpins ⟨h3, h4⟩
     · simp only [abiLayout_tab] at ha
+      have := tab.wposInv_ltN ha
       simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4
-      have hle : 2 ^ 35 * (2 + (2 - 2) + a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + tab.nw) :=
+      have hle : 2 ^ 35 * (2 + (2 - 2) + tab.wposInv a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + tab.nw) :=
         by rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
       omega
   · intro ⟨h3, h4⟩
@@ -183,8 +184,8 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
-        (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p mode plo phi out hdrf ctlf hw b pb) ∧
+        (st.data.regs.rdx = 2 → DrvErr p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
       dm (label abiStartL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hfits := hc.hfits
@@ -206,11 +207,11 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       base + abiNeed tab + 16 < 2 ^ 64 →
       rdW s.dmem (A (base + abiNeed tab)) = some dm.regs.r15 →
       rdW s.dmem (A (base + abiNeed tab + 8)) = some ra → (rdW s.dmem (A rsp0)).isSome →
-      (s.regs.rdx = 0 → s.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) →
-      (s.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb s.regs.rax) →
+      (s.regs.rdx = 0 → s.regs.rax = ACCEPT → DrvAccepts p mode plo phi out hdrf ctlf hw b pb) →
+      (s.regs.rdx = 2 → DrvErr p mode plo phi out hdrf ctlf hw b pb s.regs.rax) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
-        (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p mode plo phi out hdrf ctlf hw b pb) ∧
+        (st.data.regs.rdx = 2 → DrvErr p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
         s (label abiDrvDoneL) := by
     intro s h15 hsp hbp h14 hbx h12 h13 hfitS hw15 hwra hmsp hacc herr
     rw [Code.label (i := 29) hL3 rfl]
@@ -390,20 +391,19 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     exact UInt64.toBitVec_inj.mp hz0
   have hout' := hout.resolve_left (by rw [hrdx0]; decide)
   obtain ⟨hb, hpb⟩ := hsz.resolve_left (by rw [hrdx0]; decide)
-  rcases hres : L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3)
+  rcases hres : L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3)
     with e | ⟨rs1, m1⟩
   · rw [hres] at hout'
     cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx0] at hout'; exact absurd hout'.1 (by decide))
   rw [hres] at hout'
   obtain ⟨-, hRes, hMem⟩ := hout'
   have hrax : s1.regs.rax = rs1.getD 0 0 := hRes.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
-  have hnw1 : m1.words.size = tab.nw := by simpa only [abiLayout_tab] using hMem.nw
   refine ev_movRI (Code.get (i := 21) hL3 rfl) ?_
   refine ev_cmpRO (r := .rax) (o := oR .rcx) (v := (9223372036854775808 : Word)) (Code.get (i := 22) hL3 rfl)
     (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) ?_
   refine ev_jcc (Code.get (i := 23) hL3 rfl) (fun hlt => ?_) (fun hge3 => ?_)
   · -- entry 1 finished without pending work: its result is the result
-    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp (fun _ hacc => ⟨hb, hpb, rs1, m1, hres, hnw1, Or.inl ?_⟩)
+    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp (fun _ hacc => ⟨hb, hpb, rs1, m1, hres, Or.inl ?_⟩)
       (fun h2 => absurd (hrdx0 ▸ h2) (by decide))
     rw [← hrax]; exact hacc
   simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge3
@@ -474,7 +474,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (fun h2 => ?_)
   rotate_left
   · obtain ⟨e, he, hk⟩ := err_of_entryOut hout2 h2
-    refine ⟨hb, hpb, .inr ⟨rs1, m1, hres, hnw1, ?_, e, ?_, hk.symm⟩⟩
+    refine ⟨hb, hpb, .inr ⟨rs1, m1, hres, ?_, e, ?_, hk.symm⟩⟩
     · rw [← hrax]; simpa using hge3
     · rw [← hrax]; exact he
   have hout2' := hout2.resolve_left (by rw [h0]; decide)
@@ -485,7 +485,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   rw [hres2] at hout2'
   obtain ⟨-, hRes2, -⟩ := hout2'
   have hrax2 : s2.regs.rax = rs2.getD 0 0 := hRes2.1 0 (by simp only [seqLayout_tab]; omega) (by decide)
-  refine ⟨hb, hpb, rs1, m1, hres, hnw1, Or.inr ⟨?_, rs2, m2, ?_, by rw [← hrax2]; exact hax⟩⟩
+  refine ⟨hb, hpb, rs1, m1, hres, Or.inr ⟨?_, rs2, m2, ?_, by rw [← hrax2]; exact hax⟩⟩
   · rw [← hrax]; simpa using hge3
   · rw [← hrax]; exact hres2
 
