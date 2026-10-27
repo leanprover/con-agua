@@ -810,7 +810,7 @@ theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (by simp [tier1, PJREC, PJSLOT, PJDER]) (by simp)
+    (by decide) (by decide)
 
 /-! ## `eta_projs(T, b, nF)` -/
 

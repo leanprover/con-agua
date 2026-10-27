@@ -396,7 +396,7 @@ theorem coreLplsSch_wf : coreLplsSch.WF := ⟨by decide, by decide⟩
 
 /-- **`LPMemos` across a writer** that avoids arrays 52‥54 and `CTL` words 54, 56, 58. -/
 theorem LPMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A)
+    (hA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) (h : LPMemos m) : LPMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1;
     ⟨mp, memoRV_frame coreLpSch coreLpSch_wf lfKey VH A C hA.1 hC.1 m m' hf (fun _ _ h => h) mp hm⟩,
@@ -424,9 +424,9 @@ theorem coreLsbSch_wf : coreLsbSch.WF := ⟨by decide, by decide⟩
 
 /-- **`WalkMemos` across a writer** that avoids arrays 151‥153 and `CTL` words 152, 154, 156. -/
 theorem WalkMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ((151 : ArrId) : TieredArray) ∉ A ∧ ((152 : ArrId) : TieredArray) ∉ A ∧ ((153 : ArrId) : TieredArray) ∉ A)
+    (hA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A)
     (hC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C) (h : WalkMemos m)
-    (hLA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A := by decide)
+    (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) : WalkMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C hA.1 hC.1 m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C hA.2.1 hC.2.1 m m' hf mp hm⟩,
@@ -436,10 +436,10 @@ theorem WalkMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf 
 /-- **`CoreMemos` across a writer** that avoids arrays 49, 50, 151‥153 and `CTL` words 48, 50, 152,
 154, 156 (the last two avoidances are auto-params: `decide` on concrete lists). -/
 theorem CoreMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ((50 : ArrId) : TieredArray) ∉ A ∧ ((49 : ArrId) : TieredArray) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m)
-    (hWA : ((151 : ArrId) : TieredArray) ∉ A ∧ ((152 : ArrId) : TieredArray) ∉ A ∧ ((153 : ArrId) : TieredArray) ∉ A := by decide)
+    (hA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m)
+    (hWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A := by decide)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
-    (hLA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A := by decide)
+    (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) :
     CoreMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA.1 hC.1 m m' hf mp hm⟩,

@@ -83,7 +83,7 @@ theorem checkB_agree0E (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checker
     (hv : rd64 s₀.mem HDRF 3 = v) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
     ⦃fun _ _ => True; ErrClaimV (checkPendingList mode fe pend.toList) a.worker⦄ := by
-  have hl : (UInt64.toNat (s₀.mem.len64 242)) = 0 := by simp [Mem.len64, show (242 : ArrId) = CTLF from rfl, hctlf]
+  have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = k := hhi
   have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 HDRF).size), (s₀.mem.arr64 HDRF)[(3 : Word).toNat] = v := by

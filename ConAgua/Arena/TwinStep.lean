@@ -35,11 +35,11 @@ variable {dn : NIdx → Option ConLeche.Name} {fe : IFEnv}
 48, 50, 54, 56, 58, 152, 154, 156) alone, `EREC` writers included (no part of `TwinOK` reads the
 records: `StoreDen.mem`); the twin state and the environment unchanged. -/
 theorem TwinOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ((50 : ArrId) : TieredArray) ∉ A ∧ ((49 : ArrId) : TieredArray) ∉ A)
+    (hf : MemFrame A C m m') (hA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A)
     (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
-    (hWA : ((151 : ArrId) : TieredArray) ∉ A ∧ ((152 : ArrId) : TieredArray) ∉ A ∧ ((153 : ArrId) : TieredArray) ∉ A)
+    (hWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
-    (hLA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A)
+    (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe :=
   ⟨h.readL, h.readLs, h.nwf, by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn,

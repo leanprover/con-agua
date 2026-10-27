@@ -94,7 +94,7 @@ theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.Validat
   obtain ⟨sA, hA, h3⟩ := hQ
   have h3 : R3 (loadMem b pb sz) s.mem pb sA := h3
   have hcap := CapsOK.keep h3.since.keep h3.since.caps
-  have h0 : s.mem.HasB IN := bytes_pos h3.since (loadMem_bytes b pb sz)
+  have h0 : s.mem.HasB IN := trivial
   have hpool : (s.mem.arr64 POOL).size < 2 ^ 63 := by have := hcap.pool; omega
   have hc := callE_of_run_err hr
   have hE := triple_of_callE_err (builtinPrelude_specE checkerProg checkerProg_builtin n

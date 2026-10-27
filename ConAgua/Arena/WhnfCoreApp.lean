@@ -106,10 +106,10 @@ theorem CoreS.arena_frameD {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     (henv : ∀ b ∈ A, b.arr < 129 ∨ 144 ≤ b.arr)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat) (hden : StoreDen dn m' a' fe)
-    (hmA : ((50 : ArrId) : TieredArray) ∉ A ∧ ((49 : ArrId) : TieredArray) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
-    (hmWA : ((151 : ArrId) : TieredArray) ∉ A ∧ ((152 : ArrId) : TieredArray) ∉ A ∧ ((153 : ArrId) : TieredArray) ∉ A := by decide)
+    (hmA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
+    (hmWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A := by decide)
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
-    (hmLA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A := by decide)
+    (hmLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) (hmode : ModeOK m') :
     CoreS dn m' a' vis fe M eb := by
   simp only [cpl, Prod.mk.injEq] at hcpl
@@ -137,10 +137,10 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     (henv : ∀ b ∈ A, b.arr < 129 ∨ 144 ≤ b.arr)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
-    (hmA : ((50 : ArrId) : TieredArray) ∉ A ∧ ((49 : ArrId) : TieredArray) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
-    (hmWA : ((151 : ArrId) : TieredArray) ∉ A ∧ ((152 : ArrId) : TieredArray) ∉ A ∧ ((153 : ArrId) : TieredArray) ∉ A := by decide)
+    (hmA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
+    (hmWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A := by decide)
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
-    (hmLA : ((52 : ArrId) : TieredArray) ∉ A ∧ ((53 : ArrId) : TieredArray) ∉ A ∧ ((54 : ArrId) : TieredArray) ∉ A := by decide)
+    (hmLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
     (hscA : (SOREC : TieredArray) ∉ A ∧ (CREC : TieredArray) ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
@@ -254,7 +254,7 @@ theorem CoreS.of_app {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, AREC, ASLOT, ADER])
+    (by decide)
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)

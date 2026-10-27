@@ -155,7 +155,7 @@ theorem CoreS.set_wh {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         whnfC := a.caches.whnfC.insert (decE e) (decE x) } } vis fe
       { M with wh := M.wh.insert (decE e, eb) (decE x) } eb ∧ StackKept m m' := by
-  have hf : MemFrame [((98 : ArrId) : TieredArray)] [101] m m' := msetG_frame whSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
+  have hf : MemFrame [(WH : TieredArray)] [101] m m' := msetG_frame whSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   have c := hS.core
   exact hS.set_core hf ⟨c.wc.frame1 hf, c.wk.frame1 hf,
     c.wh.setE (coreSch_wf _ _ (by decide) (by decide)) c.eb1 e x he hx m' hs, c.inf.frame1 hf,

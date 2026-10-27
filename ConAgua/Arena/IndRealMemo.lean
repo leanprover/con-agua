@@ -66,7 +66,7 @@ def i1lPFns : List FnName :=
     "i1l_proj", "instantiate1_lift_fast"] ++ bvbFns ++ liftFns
 
 /-- What it writes: its memo (51), `bvar_b`'s (`walkA`) and `lift_entry`'s with the store's (`liftA`). -/
-def i1lA : List TieredArray := ↑(51 : ArrId) :: walkA ++ liftA
+def i1lA : List TieredArray := ↑ILFM :: walkA ++ liftA
 /-- Its memo's epoch and count (52, 53), `walkC`, `liftC`. -/
 def i1lC : List Word := 52 :: 53 :: walkC ++ liftC
 

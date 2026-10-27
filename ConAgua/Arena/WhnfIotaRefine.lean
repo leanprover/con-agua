@@ -660,7 +660,7 @@ theorem CoreRM.setCt {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : C
     CoreRM m' { c with constTyC := c.constTyC.insert ((decI k1 : NIdx), (decI k2 : LsIdx)) (decE w) } M eb := by
   have hf := msetG_frame ctSch (coreSch_wf _ _ (by decide) (by decide)) m m' k1 k2 w hs
   have wf := coreSch_wf
-  have fr : ∀ (S : MemoSch), S.WF → S.arr ≠ 102 → S.cs ≠ 109 → S.arr ∉ [ctSch.arr] ∧ S.cs ∉ [ctSch.cs + 1] :=
+  have fr : ∀ (S : MemoSch), S.WF → S.arr ≠ CTM → S.cs ≠ 109 → S.arr ∉ [ctSch.arr] ∧ S.cs ∉ [ctSch.cs + 1] :=
     fun S _ h1 h2 => ⟨by simpa using h1, by simpa using h2⟩
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, h.eb1, ?_, ?_, ?_, ?_, ?_⟩
   · exact h.wc.frame (wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hf
