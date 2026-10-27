@@ -74,7 +74,7 @@ theorem copyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), copyW n m d s l =
     · rw [copyW_nil n m d s l hl] at h
       cases h
       subst hl
-      refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
+      refine ⟨fun _ _ => rfl, rfl, .refl _, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
@@ -103,9 +103,9 @@ theorem copyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), copyW n m d s l =
         · simp [hi, Ne.symm hi]
       obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
         (by rw [hs1, hd1, hl1]; omega) (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
-      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, Mem.SameShape.trans ?_ hW, fun i => ?_⟩
       · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
-      · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
+      · rw [hm1]; exact Mem.sameShape_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
         · rw [ite_eq_left hi]
@@ -235,7 +235,7 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
     by_cases hb : b = IW
     · subst hb; rw [hS, hm1sz]
     · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
-  · rw [hW]; simp only [consPre, allocMem, Mem.words_size_set64]
+  · exact Mem.SameShape.trans (by simp [consPre, allocMem]) hW
 
 end L.Ind
 

@@ -564,7 +564,7 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
     · rw [hnil n m d s l hl] at h
       cases h
       subst hl
-      refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
+      refine ⟨fun _ _ => rfl, rfl, .refl _, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
@@ -602,9 +602,9 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
     obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
       (by rw [hs1, hd1, hl1]; omega) (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
       hptr1
-    refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
+    refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, Mem.SameShape.trans ?_ hW, fun i => ?_⟩
     · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
-    · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
+    · rw [hm1]; exact Mem.sameShape_set64 _ _ _ _
     rw [hG i, hd1, hl1, hs1]
     by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
     · rw [ite_eq_left hi]

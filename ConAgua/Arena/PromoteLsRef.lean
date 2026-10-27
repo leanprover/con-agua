@@ -29,7 +29,7 @@ theorem set0_top (a : Array Word) (h : 0 < a.size) : a.set! 0 (rdW a 0) = a := b
 
 /-- Storing the top over itself is a pool frame. -/
 theorem PFrame.self_top (m : Mem) (hc : 0 < (m.arr64 CTL).size) : PFrame (m.set64 CTL 0 m.top) m := by
-  refine ⟨rfl, (Mem.words_size_set64 _ _ _ _).symm, fun b _ _ => ?_, ?_, ?_, rfl⟩
+  refine ⟨rfl, (Mem.sameShape_set64 _ _ _ _).symm, fun b _ _ => ?_, ?_, ?_, rfl⟩
   · by_cases hbc : b = CTL
     · subst hbc; rw [Mem.arr64_set64_same, top_rdW, UInt64.toNat_zero, set0_top _ hc]
     · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]

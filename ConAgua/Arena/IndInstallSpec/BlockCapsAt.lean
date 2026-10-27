@@ -320,7 +320,7 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
     · rw [hF, ite_eq_left hl] at h
       cases h
       subst hl
-      refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
+      refine ⟨fun _ _ => rfl, rfl, .refl _, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
@@ -350,9 +350,9 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
         (by rw [hs1, hl1]; omega)
         (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
       rw [hE1] at hG
-      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, Mem.SameShape.trans ?_ hW, fun i => ?_⟩
       · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
-      · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
+      · rw [hm1]; exact Mem.sameShape_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
         · rw [ite_eq_left hi]
@@ -381,7 +381,7 @@ theorem erAllocCopy_frame {m m2 : Mem} {l : Word}
       by_cases hbc : b = CTL
       · subst hbc; exact size_set64 _ _ _ _ _
       · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
-  · rw [hW]; exact Mem.words_size_set64 _ _ _ _
+  · exact Mem.SameShape.trans (by simp [erAllocMem]) hW
 
 /-- **`block_caps_at_er_copy` is its model `capsErCopyW`** (generated). -/
 l_model blockCapsAtErCopy_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)

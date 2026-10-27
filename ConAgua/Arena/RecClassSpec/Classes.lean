@@ -109,7 +109,7 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
     by_cases hb : b = IW
     · subst hb; rw [hS, hm1sz]
     · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
-  · rw [hW]; simp only [consPre, allocMem, Mem.words_size_set64]
+  · exact Mem.SameShape.trans (by simp [consPre, allocMem]) hW
 
 /-- `consW` is the memory `slCons_dec` speaks about. -/
 theorem consW_decN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}

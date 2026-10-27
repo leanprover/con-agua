@@ -308,7 +308,7 @@ theorem poolOK_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
       rcases a5 with a5 | a5
       · exact absurd ((tier0_iff _).mpr a5) ht
       · exact a5
-  refine ⟨by rw [hf.2.2.2]; exact a1, by rw [hf.2.2.1]; exact a2, by rw [hpc]; exact a3, ?_, ?_, ?_⟩
+  refine ⟨a1.of_sameShape hf.2.2.2, by rw [hf.2.2.1]; exact a2, by rw [hpc]; exact a3, ?_, ?_, ?_⟩
   · rw [hpt0, hpc, hpcv]
     by_cases hf' : f ≠ 0
     · rw [ite_eq_left hf', e40]; omega

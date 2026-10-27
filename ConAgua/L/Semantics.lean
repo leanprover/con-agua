@@ -182,6 +182,24 @@ theorem Mem.SameShape.set8 {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : 
 theorem Mem.SameShape.setG {m m' : Mem} (h : m.SameShape m') (g : GVar) (v : Word) :
     m.SameShape (m'.setG g v) := h.trans (Mem.sameShape_setG m' g v)
 
+@[simp] theorem Mem.sameShape_set64_iff {m m' : Mem} (a : ArrId) (i v : Word) :
+    m.SameShape (m'.set64 a i v) ↔ m.SameShape m' :=
+  ⟨fun h => h.trans (Mem.sameShape_set64 m' a i v).symm, fun h => h.set64 a i v⟩
+
+@[simp] theorem Mem.sameShape_set8_iff {m m' : Mem} (a : ArrId) (i v : Word) :
+    m.SameShape (m'.set8 a i v) ↔ m.SameShape m' :=
+  ⟨fun h => h.trans (Mem.sameShape_set8 m' a i v).symm, fun h => h.set8 a i v⟩
+
+@[simp] theorem Mem.sameShape_setG_iff {m m' : Mem} (g : GVar) (v : Word) :
+    m.SameShape (m'.setG g v) ↔ m.SameShape m' :=
+  ⟨fun h => h.trans (Mem.sameShape_setG m' g v).symm, fun h => h.setG g v⟩
+
+@[simp] theorem Mem.set64_sameShape_iff {m m' : Mem} (a : ArrId) (i v : Word) :
+    (m.set64 a i v).SameShape m' ↔ m.SameShape m' :=
+  ⟨fun h => (Mem.sameShape_set64 m a i v).trans h, fun h => (Mem.sameShape_set64 m a i v).symm.trans h⟩
+
+attribute [simp] Mem.SameShape.refl
+
 theorem Mem.SameShape.set64_both {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
     (m.set64 a i v).SameShape (m'.set64 a i v) :=
   ((Mem.sameShape_set64 m a i v).symm.trans h).set64 a i v
