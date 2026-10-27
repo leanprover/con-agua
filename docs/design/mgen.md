@@ -156,3 +156,44 @@ after callees, arm lemmas used by `rw`) first, since there the refinement only n
   `infer_proj`, `iota_rec_vck`, `iota_rec_fire2`): proof work, not coverage;
 * the scanners (`skip_ws`, `key_end`, …): their specs state pure models (`skipWsN`) the twin
   bridge uses, not word models, so a generated word model would add a layer, not remove one.
+
+## 6. Roll-out (after absarrays-switch, master e46f2b37)
+
+The list recomputed on master (`_tmp/mgen/inventory.py`, `rollout3/4.json`): 923 hand-specified
+functions. Ranking by hand model lines alone favours files whose model names reach many other
+files (`IndApplySpec`'s reach 92, `PromoteCI`'s 77, `InferLeavesE`'s 431); a conversion there
+rewrites refinements across the tree. So the roll-out ranks by size *and* containment (how many
+other files use the model's names), and helpers (Sonnet, one file group each,
+`_tmp/mgen/helper-brief.md`) convert only functions whose names reach at most two other files.
+
+### Batch 1 (#64, master 39fd7338)
+
+Generator: `↦ fW void` (a function without results: `Option Mem`, read-only `Option Unit`);
+callee posts `F = some ()` (a callee without results, `none` where it fails); callee posts with
+facts besides the model (`i < 51`, `tblOK … = true`), ignored by the model. Found by the first
+helper: eight functions of `IndApplySpec` had `Option Unit`/`Option Mem` hand models, and
+`name_get`/`expr_get`'s specs carry a `tblOK` fact.
+
+| file(s) | functions | lines (net, with users) | module time (user s) |
+|---|---|---:|---|
+| `Arena/DefEqLeaves` | `is_bool_true`, `head_is_proj`, `io_neutral`, `is_eager_reduce`, `is_nat_zero`, `head_hint` | −161 | 20.1 → 21.3 with `simp []` steps; specs back to the hand times with `finish` (below) |
+| `Arena/InstLPWalk` (+ `InstLPLevel*`, `InstLPEntry`, `IndRealIlpL`, `InstLPWalkRef2/3`) | 8 (`sl_memo` … `inst_lp`) | −148 | 5.6 → 6.6; 7.4–8.3 → 6.6–7.3 after the recipe change (batch 2) |
+| `Front/IndApplySpec` (+ 2 refinements) | `ctl_sum`, `pi_result_d`, `vi_order_in` | −13 | neutral |
+| `Arena/Abs1`, `Abs1Spec`, `Abs1Refine`, `CoreWalks` | the `abs_go` group (8 models) | −494 | `Abs1`+`Abs1Spec` ≈ 32 → 20 |
+| `Arena/WalkLeaves`, `WalkLeavesRefine`, `WalkCore` | `fl_go`/`fl_node`, `lsb_go`/`lsb_node`, `leaf_guard` | −720 | `WalkLeaves` 16.6 → 15.0, `WalkLeavesRefine` 2.3 → 2.7 |
+| total | 30 | **−1 140** (24 files, +891 −2 031) | |
+
+**Recipes after localsnf.** The locals' simprocs (`L/LocNF.lean`, #61) run inside `grind`, not
+in `simp`. So `l_model`'s default `sym … finish` got cheaper and its `simp []` recipe did not: on
+`DefEqLeaves`' flat `if` cascades `simp []` steps took 1.0 / 6.2 / 2.3 s
+(`is_bool_true`, `is_eager_reduce`, `is_nat_zero`) against 0.75 / 3.8 / 1.1 s for the hand
+`sym … finish` specs; with `finish [tierW, idxW]` the generated steps take 0.75 / 2.8 / 1.2 s.
+On `InstLPWalk`'s memo functions `finish` beat `simp … locals` too (`lp_fvar` 1.11 → 0.84 s,
+`lp_proj` 1.22 → 0.93 s); `inst_lp_core` (seven calls) still needs `simp … locals`. The PLAN's
+"no `finish` on many paths" holds for call-heavy functions, not for `if` cascades any more.
+
+**What blocked conversions** (helpers' reports): model names used by many refinement files
+(the main reason, by far); hand models shaped differently from the generator's (an inline
+`match` per call, `Option.bind` chains, sub-models shared by several functions, a model with a
+Lean parameter shared by three functions such as `ilwBinW R mk`), where the refinement needs
+re-threading rather than renames; group splits across files (`lp_go`'s arms in other modules).
