@@ -3,7 +3,6 @@ import ConAgua.Arena.WalkRefine
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.Keeps
 import ConAgua.Arena.LiftRefine
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 

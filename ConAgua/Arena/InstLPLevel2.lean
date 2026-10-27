@@ -1,7 +1,6 @@
 import ConAgua.Arena.InstLPLevel
 import ConAgua.Arena.InstLPRef2
 import ConAgua.Arena.StrLitBase
-import ConAgua.Census.Attr
 
 /-!
 # `sls_memo` under `CoreS` (helper `whnf4-ilp-lev`)

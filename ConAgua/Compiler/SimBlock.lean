@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Compiler.SimStmt
-import ConAgua.Compiler.SimStore
-import ConAgua.L.Blocks
+public import ConAgua.Compiler.SimStore
+public import ConAgua.L.Blocks
 import Kraken.X64.Registers
 
 @[expose] public section

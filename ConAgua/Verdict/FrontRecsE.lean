@@ -1,7 +1,6 @@
 import ConAgua.Verdict.FrontE
+import ConRon.Bridge.Frontend.Lines
 import ConAgua.Front.IndValidTwin
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

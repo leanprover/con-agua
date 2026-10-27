@@ -3,7 +3,6 @@ import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Census.Attr
 
 /-!
 # `targetClassMatch` under `StageC` (lane `indstaget`, helper `pds`)

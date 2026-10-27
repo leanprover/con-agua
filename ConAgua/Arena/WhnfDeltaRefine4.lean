@@ -1,5 +1,4 @@
 import ConAgua.Arena.CoreNatOp
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

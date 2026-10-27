@@ -5,7 +5,6 @@ import ConAgua.Arena.IndRealSortDn
 import ConAgua.Arena.IndInstallSpec.CbProg
 import ConAgua.Arena.IndInstallSpec.IcvgW
 import ConAgua.Arena.IndInstallSpec.IndsOut
-import ConAgua.Census.Attr
 
 /-!
 # `checkBlockInds` under `StageC` (lane `indstaget`)

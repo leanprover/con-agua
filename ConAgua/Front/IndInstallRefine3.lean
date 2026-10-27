@@ -1,5 +1,4 @@
 import ConAgua.Front.IndInstallRefine2
-import ConAgua.Census.Attr
 
 /-!
 # `install_ind_d` refines `installIndD`, III: the recursor records

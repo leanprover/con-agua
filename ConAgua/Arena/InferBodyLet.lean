@@ -1,6 +1,5 @@
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.InferLeaves
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

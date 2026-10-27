@@ -1,6 +1,5 @@
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 

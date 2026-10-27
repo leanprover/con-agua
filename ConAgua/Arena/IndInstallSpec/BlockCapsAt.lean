@@ -4,7 +4,6 @@ import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Scan.Common
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.Prop

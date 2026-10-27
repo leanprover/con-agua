@@ -6,7 +6,6 @@ import ConAgua.Arena.DeclDefnT
 import ConAgua.Arena.DeclAxQuotT
 import ConAgua.Arena.DeclNatSubAll
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 set_option linter.unusedSectionVars false
 

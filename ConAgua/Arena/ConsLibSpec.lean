@@ -1,10 +1,11 @@
 module
 
+meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 public import ConAgua.Arena.ConsLib
 public import ConAgua.Arena.SlotGrowSpec
 public import ConAgua.L.PureEval
 import ConAgua.Arena.GrindAttr
-import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec

@@ -1,5 +1,7 @@
 module
 
+meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.Store
 public import ConAgua.Arena.MemoLib
 public import ConAgua.Arena.ExprMk
 import ConAgua.Census.Attr
@@ -7,7 +9,7 @@ public import ConAgua.L.ProgHas
 public import ConAgua.Arena.BVarStore
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+public import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Triple.SpecLemmas

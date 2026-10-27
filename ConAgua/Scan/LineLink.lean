@@ -4,7 +4,6 @@ public import ConAgua.Scan.RecordsLink
 public import ConAgua.Scan.Line
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
-import ConAgua.Scan.ValuesLink
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop

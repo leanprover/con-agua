@@ -1,7 +1,6 @@
+import Lean
+import ConAgua.Compiler.Compile
 import ConAgua.AsmFile.Term
-import Lean.Elab.Command
-import Lean.Meta.Eval
-import Std.Do.Triple.SpecLemmas
 
 /-!
 # The compiler's output as a kernel-checked literal

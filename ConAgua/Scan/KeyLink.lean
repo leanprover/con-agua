@@ -3,9 +3,8 @@ module
 public import ConAgua.Scan.Key
 import ConAgua.Census.Attr
 public import ConLeche.Frontend.Scan.Fast
-import ConAgua.Scan.LeafLink
-import ConAgua.Scan.WordLink
-import Std.Data.DTreeMap.Internal.Operations
+public import ConAgua.Scan.LeafLink
+public import ConAgua.Scan.WordLink
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section

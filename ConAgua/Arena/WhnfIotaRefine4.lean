@@ -2,7 +2,6 @@ import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.CoreDen
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop

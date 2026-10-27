@@ -1,7 +1,6 @@
 import ConAgua.Arena.Freeze
 import ConAgua.Arena.Globals
 import ConAgua.Arena.RomPins
-import ConAgua.Census.Attr
 
 /-!
 # The checker's entry `check()` and the integration glue (lane `integrate`)

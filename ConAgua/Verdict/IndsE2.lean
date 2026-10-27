@@ -7,6 +7,9 @@ import ConAgua.Arena.KnotEntry
 import ConAgua.Arena.Verdict
 import ConRon.Bridge.Inductives.BlockInstall
 import ConAgua.Verdict.IndAGen
+import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.IndT.Install2
+import ConAgua.Arena.IndT.Install3
 
 /-!
 # `check_block_inds`' callees: the error-claim statements (lane `verdicts-b`, helper `ia2-inds`)

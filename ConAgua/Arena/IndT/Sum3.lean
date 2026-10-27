@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSumSpec.SumRules
-import ConAgua.Census.Attr
 
 /-!
 # `checkStructFieldSortsI` under `StageC` (lane `indstaget`)

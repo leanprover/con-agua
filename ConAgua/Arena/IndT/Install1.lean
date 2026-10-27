@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndSumSpec.CtlW
 import ConAgua.Arena.IndRealOpf3
-import ConAgua.Census.Attr
 
 /-!
 # `checkBlockDomsAt`, `checkStructDomsAt` under `StageC` (lane `indstaget`)

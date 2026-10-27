@@ -1,7 +1,6 @@
 import ConAgua.Front.NatDecLink
 import ConAgua.Front.UnescapeLink
 import ConAgua.Front.StateDR
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

@@ -1,7 +1,6 @@
 import ConAgua.Front.IndApplyRefine8
 import ConAgua.Front.IndValidTwin
 import ConAgua.Front.IndApplyRefine6
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 

@@ -1,6 +1,5 @@
 import ConAgua.Arena.PromoteL
 import ConAgua.Arena.PromoteNRef
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

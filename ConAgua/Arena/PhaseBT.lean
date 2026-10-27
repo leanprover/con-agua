@@ -3,7 +3,6 @@ import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.LeafFns
 import ConAgua.Arena.PhaseWorker
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

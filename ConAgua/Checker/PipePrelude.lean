@@ -4,7 +4,6 @@ import ConAgua.Checker.FrontReset
 import ConAgua.Front.FrontPreOK
 import ConRon.Bridge.Frontend.Prepare
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

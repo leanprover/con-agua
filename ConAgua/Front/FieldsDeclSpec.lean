@@ -1,5 +1,6 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Front.FieldsDecl
 public import ConAgua.L.ProgHas
 import ConAgua.Front.Preserve

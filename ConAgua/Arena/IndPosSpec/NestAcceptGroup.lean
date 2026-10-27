@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndPosSpec.GgW
 import ConAgua.Arena.IndPosSpec.GrpAt
 import ConAgua.Arena.IndPosSpec.NkcW
-import ConAgua.Census.Attr
 
 /-!
 # NestAcceptGroup: `ConRon.Arena.nestAcceptGroup`

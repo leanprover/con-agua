@@ -3,6 +3,7 @@ import ConAgua.Arena.DeclReduceSpec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclAxiomSpec2
 
 /-!
 # The standard axioms: `find_pinned`, `std_axiom_ok` (lane `decls3`)

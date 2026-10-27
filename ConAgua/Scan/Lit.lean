@@ -1,11 +1,10 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 import ConAgua.Census.Attr
-import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
-import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

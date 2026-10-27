@@ -1,5 +1,6 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Arena.ViewL
 public import ConAgua.L.Notation
 import ConAgua.Arena.GrindAttr

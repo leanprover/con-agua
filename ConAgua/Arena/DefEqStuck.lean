@@ -2,7 +2,6 @@ import ConAgua.Arena.CoreDen
 import ConAgua.Arena.DefEqLeaves
 import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

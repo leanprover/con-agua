@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndRealOpf2
 import ConAgua.Arena.DeclNatLit
-import ConAgua.Census.Attr
 
 /-!
 # `opf_go`, `opa_go` under the stage relation (lane `indproofs4`, helper `opf`)

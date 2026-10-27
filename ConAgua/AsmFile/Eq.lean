@@ -1,4 +1,5 @@
 import ConAgua.AsmFile.Term
+import ConAgua.Compiler.Compile
 import Lean.Elab.Command
 import Std.Do.Triple.SpecLemmas
 

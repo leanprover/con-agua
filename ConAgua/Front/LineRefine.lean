@@ -1,7 +1,6 @@
 import ConAgua.Front.Line
 import ConAgua.Front.IndApplyTwin
 import ConAgua.Scan.LineLink
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

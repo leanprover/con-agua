@@ -1,5 +1,6 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Arena.CoreCaches
 import ConAgua.Census.Attr
 public import ConAgua.Arena.ConsLib
@@ -7,7 +8,6 @@ public import ConAgua.Arena.SlotGrowSpec
 import ConAgua.Arena.ConsLibSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

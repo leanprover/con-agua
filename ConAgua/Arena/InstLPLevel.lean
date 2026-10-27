@@ -3,7 +3,6 @@ import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.InstLPSpec
 import ConAgua.Arena.InstLPWalk
-import ConAgua.Census.Attr
 import ConRon.Bridge.Specs
 
 /-!

@@ -1,6 +1,5 @@
 import ConAgua.Arena.DefEqKnot
 import ConAgua.Arena.IndTwin
-import ConAgua.Census.Attr
 
 /-!
 # The knot's entry points, for callers (lane `knotwire`)

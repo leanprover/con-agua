@@ -1,12 +1,12 @@
 module
 
+meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 public import ConAgua.Arena.LevelLeq
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LevelGrindAttr
-import ConAgua.Arena.LevelLeqSpec
+public import ConAgua.Arena.LevelLeqSpec
 import ConAgua.L.GrindAttr
-import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

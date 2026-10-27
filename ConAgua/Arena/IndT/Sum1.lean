@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.Lift
-import ConAgua.Census.Attr
 
 /-!
 # `whnfTelescope` under `StageC` (lane `indstaget`)

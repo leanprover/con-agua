@@ -5,7 +5,6 @@ import ConAgua.Arena.RecGenSpec.Rec3CVX
 import ConAgua.Arena.RecGenSpec.RgW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 

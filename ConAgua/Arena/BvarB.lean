@@ -1,12 +1,13 @@
 module
 
+meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.Store
 public import ConAgua.Arena.Walk
 public import ConAgua.L.ProgHas
 import ConAgua.Census.Attr
 public import ConAgua.Arena.ExprMk
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

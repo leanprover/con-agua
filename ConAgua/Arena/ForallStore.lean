@@ -1,5 +1,8 @@
 module
 
+meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 public import ConAgua.Arena.ConsLibSpec
 import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.BitVec

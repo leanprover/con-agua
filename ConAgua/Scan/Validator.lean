@@ -1,5 +1,6 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Scan.Line
 
 @[expose] public section

@@ -2,7 +2,6 @@ import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.IlpRd
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

@@ -3,7 +3,6 @@ import ConAgua.Arena.DeclCanonConst
 import ConAgua.Arena.DeclCanonSpec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

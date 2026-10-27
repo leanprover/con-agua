@@ -2,7 +2,6 @@ import ConAgua.Arena.StrLitTy
 import ConAgua.Arena.StrLitUtf8
 import ConAgua.Arena.StrLitKeep
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

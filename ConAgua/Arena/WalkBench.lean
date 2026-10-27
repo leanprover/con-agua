@@ -1,7 +1,17 @@
 module
 
+meta import ConAgua.Arena.BVarStore
+meta import ConAgua.Arena.AppStore
 public import ConAgua.Arena.Walk
 public import ConAgua.Arena.SortStore
+meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.Walk
+meta import ConAgua.Arena.SortStore
+meta import ConAgua.Arena.LetStore
+meta import ConAgua.Arena.FVarStore
+meta import ConAgua.Arena.LamStore
+meta import ConAgua.Arena.ForallStore
+meta import ConAgua.Arena.ProjStore
 public import ConAgua.Arena.AppStore
 public import ConAgua.Arena.BVarStore
 public import ConAgua.Arena.FVarStore

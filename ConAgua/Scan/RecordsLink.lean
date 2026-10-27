@@ -1,15 +1,13 @@
 module
 
+public import ConAgua.Scan.KeyLink
+public import ConAgua.Scan.ValuesLink
 public import ConAgua.Scan.StrLink
+public import ConAgua.Scan.LitLink
 public import ConAgua.Scan.Records
 import ConAgua.Census.Attr
-public import ConAgua.Scan.WordLink
-import ConAgua.Scan.KeyLink
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
-import ConAgua.Scan.LitLink
-import ConAgua.Scan.ValuesLink
-import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
 

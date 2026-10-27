@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclNatTy
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 

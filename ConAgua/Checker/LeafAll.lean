@@ -1,5 +1,7 @@
 import ConAgua.Checker.Prog
 import ConAgua.Arena.LeafFns
+import ConAgua.Arena.LevelIntern
+import ConAgua.Arena.LevelSubstLP
 
 /-!
 # The leaves' write set in the checker's program (lane `loopt2`)

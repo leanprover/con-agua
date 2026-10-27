@@ -1,5 +1,6 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.L.Logic
 public import ConAgua.Arena.Pool
 public import ConAgua.Arena.Reasons

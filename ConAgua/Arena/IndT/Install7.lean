@@ -3,7 +3,6 @@ import ConAgua.Arena.IndT.Install5
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.Icbo
 import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Census.Attr
 
 /-!
 # `checkBlockCtors` under `StageC` (lane `indstaget`)

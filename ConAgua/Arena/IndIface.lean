@@ -1,6 +1,5 @@
 import ConAgua.Arena.Tiers
 import ConRon.Arena.Inductives.GenRec
-import ConAgua.Census.Attr
 
 /-!
 # The inductive stage in L: the interface (lane `induct`)

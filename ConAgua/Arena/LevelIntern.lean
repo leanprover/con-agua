@@ -1,7 +1,6 @@
 import ConAgua.Arena.LevelSubstLP
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LevelGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop

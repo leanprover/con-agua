@@ -1,7 +1,6 @@
 import ConAgua.Arena.LiftSpec
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.FVarRangeRefine
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

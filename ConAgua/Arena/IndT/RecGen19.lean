@@ -3,7 +3,6 @@ import ConAgua.Arena.IndT.RecCheckPins
 import ConAgua.Arena.RecGenSpec.Clm
 import ConAgua.Arena.RecGenSpec.CntW
 import ConRon.Bridge.Inductives.GenRec
-import ConAgua.Census.Attr
 
 /-!
 # `classMajors` under `StageC` (lane `indstaget`, helper `indstaget-tpt`)

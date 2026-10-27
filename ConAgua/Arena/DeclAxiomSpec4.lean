@@ -2,7 +2,6 @@ import ConAgua.Arena.DeclAxiomSpec3
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

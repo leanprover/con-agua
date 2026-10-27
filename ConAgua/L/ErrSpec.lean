@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.L.Logic
-import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

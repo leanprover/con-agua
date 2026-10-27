@@ -5,6 +5,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.L.Examples
 
 /-!
 # Pos3MapMProj

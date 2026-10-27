@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPosSpec.MapOKStep
-import ConAgua.Census.Attr
 
 /-!
 # ReplaceFVarsGo: `ConRon.Arena.fvMapAt`, `ConRon.Arena.nestHoleImg`, `ConRon.Arena.replaceFVarsGo`, `ConRon.Arena.replaceFVars`

@@ -1,5 +1,4 @@
 import ConAgua.Arena.DefEqKnot
-import ConAgua.Census.Attr
 
 /-!
 # The whnf family's census-tagged refinements, through the knot (lane `knotwire`)

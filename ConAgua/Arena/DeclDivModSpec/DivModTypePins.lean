@@ -1,7 +1,6 @@
 import ConAgua.Arena.DeclNatEq
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 

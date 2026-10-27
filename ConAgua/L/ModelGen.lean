@@ -1,10 +1,10 @@
 module
 
-public meta import Lean.Elab.Command
+public import ConAgua.L.Notation
+public import ConAgua.L.Logic
+public import ConAgua.L.ErrSpec
+public meta import Lean
 public import Lean.Elab.Term.TermElabM
-public meta import Std.Do.Triple.SpecLemmas
-import ConAgua.L.Logic
-import ConAgua.L.Notation
 
 public section
 

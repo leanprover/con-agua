@@ -3,7 +3,6 @@ import ConAgua.Scan.Common
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop

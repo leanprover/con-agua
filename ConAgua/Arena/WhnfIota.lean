@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfCore
-import ConAgua.Census.Attr
 
 /-!
 # ι-reduction: `ConRon.Arena.Core.lean`, the recursor rule fire

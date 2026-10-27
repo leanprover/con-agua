@@ -1,5 +1,4 @@
 import ConAgua.Arena.Tiers
-import ConAgua.Census.Attr
 
 /-!
 # String literals in L: `str_lit_supported`, `str_lit_ctor` (lane `defeq2`, helper `defeq2-str`)

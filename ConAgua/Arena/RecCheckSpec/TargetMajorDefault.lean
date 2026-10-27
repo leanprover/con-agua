@@ -1,6 +1,5 @@
 import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
 import ConAgua.Arena.IndSumSpec.StructProjArgP
-import ConAgua.Census.Attr
 
 /-!
 # TargetMajorDefault: `ConRon.Arena.targetMajorDefault`

@@ -1,7 +1,4 @@
-import ConAgua.Compiler.Compile
-import Lean.Elab.Command
-import Lean.Meta.Eval
-import Std.Do.Triple.SpecLemmas
+import Lean
 import ConAgua.Compiler.WFFast
 
 /-!

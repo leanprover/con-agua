@@ -1,7 +1,8 @@
 module
 
-public meta import Lean.EnvExtension
-meta import Lean.Attributes
+public import Lean.Attributes
+public import Lean.Environment
+public meta import Lean.Elab.Term
 
 public section
 

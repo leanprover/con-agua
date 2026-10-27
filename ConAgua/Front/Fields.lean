@@ -1,5 +1,6 @@
 module
 
+meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 public import ConAgua.Scan.Member
 public import ConAgua.Scan.Str
@@ -7,7 +8,6 @@ public import ConAgua.Scan.Values
 import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
 import ConAgua.Scan.Common
-import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

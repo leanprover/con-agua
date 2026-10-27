@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.RecCheckTmn
-import ConAgua.Census.Attr
 
 /-!
 # `classesNfs` under `StageC` (lane `indstaget`, helper `pds`)

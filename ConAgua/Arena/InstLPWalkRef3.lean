@@ -3,7 +3,6 @@ import ConAgua.Arena.InstLPWalkLet
 import ConAgua.Arena.InstLPLevel2
 import ConAgua.Arena.InstLPWalkArms
 import ConAgua.Arena.InstLPWalkGo
-import ConAgua.Census.Attr
 
 /-!
 # The `instLP` walk refines `instLPGo`: the dispatcher, by induction on the L fuel

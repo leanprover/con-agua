@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndPos
 import ConAgua.Arena.StageInst1
-import ConAgua.Arena.Pins
 import ConAgua.Arena.IndGrindAttr
 
 /-!

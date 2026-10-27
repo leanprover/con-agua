@@ -1,10 +1,11 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Arena.LevelHeap
 import ConAgua.Census.Attr
 import ConAgua.Arena.LevelGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+public import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Triple.SpecLemmas

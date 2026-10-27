@@ -3,7 +3,6 @@ import ConAgua.Arena.LevelInternRef
 import ConRon.Bridge.SpecsL
 import ConAgua.Arena.CoreLevels
 import ConAgua.Front.ApplyExprRefine
-import ConAgua.Census.Attr
 
 /-!
 # The level-list functions refine the twin's: `substLevelsAt`, `substParamLevels`, `recFireLevels`

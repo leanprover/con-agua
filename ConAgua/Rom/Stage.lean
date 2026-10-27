@@ -1,7 +1,6 @@
 import ConAgua.Rom.PinSets
 import ConRon.Bridge.Checker.Pins
 import ConAgua.Arena.RomPins
-import ConAgua.Census.Attr
 
 open ConRon.Arena
 open Std.WP

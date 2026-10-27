@@ -1,8 +1,9 @@
 import ConAgua.Arena.InferBodyLet
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.WhnfCoreRefine
 
 /-!
 # The application spines of both bodies (lane `defeq`)

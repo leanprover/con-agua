@@ -1,7 +1,6 @@
 import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfCore
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop

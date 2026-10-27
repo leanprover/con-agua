@@ -1,5 +1,6 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Scan.Values
 public import ConAgua.Scan.Member
 public import ConAgua.Scan.Str

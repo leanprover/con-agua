@@ -1,8 +1,7 @@
 module
 
 public import ConAgua.Arena.NatBits
-import ConAgua.Arena.NatShr
-
+public import ConAgua.Arena.NatShr
 @[expose] public section
 
 /-!

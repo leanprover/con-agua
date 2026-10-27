@@ -1,7 +1,4 @@
-import ConAgua.Final.Twin
-import ConAgua.L.Syntax
-import ConAgua.Compiler.Mem
-import ConAgua.Checker.IndArmFns
+import ConAgua.Final.EndToEnd
 
 /-!
 # Audit (lane `audit`): axiom ledger of the final theorems and the chain

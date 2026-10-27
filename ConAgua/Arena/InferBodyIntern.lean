@@ -2,6 +2,7 @@ import ConAgua.Arena.LvlGrow
 import ConAgua.Arena.KnotSlot
 import ConAgua.Arena.StoreDenIntern
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.WhnfCoreApp
 
 /-!
 # Interning under `CoreS`: the leaves the inference bodies build (lane `defeq`)

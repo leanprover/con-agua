@@ -1,3 +1,4 @@
+import ConAgua.Arena.LitRefine
 import ConAgua.Arena.AppRefine
 import ConAgua.Arena.SortRefine
 import ConAgua.Arena.ConstRefine

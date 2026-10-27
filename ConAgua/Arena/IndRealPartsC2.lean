@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndPartsSpec.BpW
-import ConAgua.Census.Attr
 
 /-!
 # `blockShape?`, `blockParts?` under `StageC`, `lvl_eq_c` the real call (lane `indproofs4`, helper `bp`)

@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndIface
 import ConAgua.Arena.WhnfBase
-import ConAgua.Census.Attr
 
 /-!
 # Lane `induct`'s conventions for this phase's functions (adapters)

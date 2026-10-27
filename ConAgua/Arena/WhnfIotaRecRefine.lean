@@ -5,6 +5,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
+import ConRon.Bridge.Specs
 
 /-!
 # `iota_rec_at`'s pieces: the twin split the same way, and the inner pieces' proofs

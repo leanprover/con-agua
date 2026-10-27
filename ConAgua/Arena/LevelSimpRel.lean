@@ -4,7 +4,6 @@ public import ConAgua.Arena.LevelSimp
 public import ConAgua.Arena.LevelHeapRel
 import ConAgua.Census.Attr
 public import ConLeche.Kernel.Level
-import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 

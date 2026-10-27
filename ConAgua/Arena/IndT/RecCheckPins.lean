@@ -4,7 +4,6 @@ import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.ReadProg
 import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Census.Attr
 
 /-!
 # `targetPinTys`, `targetMajorPins` under `StageC` (lane `indstaget`, helper `indstaget-tpt`)

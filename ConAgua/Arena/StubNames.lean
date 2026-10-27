@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Census.Attr
 
 /-!
 # Former stubs: names, level lists, the fvar-range read (lane `stubs`)

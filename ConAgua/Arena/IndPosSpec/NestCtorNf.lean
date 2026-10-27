@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPosSpec.NcnW2
-import ConAgua.Census.Attr
 
 /-!
 # NestCtorNf: `ConRon.Arena.nestCtorNf`

@@ -1,6 +1,5 @@
 import ConAgua.Front.IndApplySpec
 import ConRon.Arena.Frontend.ExportC
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

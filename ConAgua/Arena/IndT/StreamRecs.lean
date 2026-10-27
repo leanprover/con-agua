@@ -4,7 +4,6 @@ import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConAgua.Census.Attr
 
 /-!
 # `classStreamRecs` under `StageC` (lane `indstaget`)

@@ -1,5 +1,4 @@
 import ConAgua.Arena.PromoteCIRef.PromoteNew
-import ConAgua.Census.Attr
 
 /-!
 # Census tags for the constant side of the promotion

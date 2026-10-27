@@ -1,8 +1,5 @@
-import Lean.Elab.Command
-import Lean.Expr
-import Std.Do.Triple.SpecLemmas
+import Lean
 import ConAgua.Arena.Verdict
-import Lean.Exception
 
 /-!
 # `err_stmt`: the error-claim statement of an ok refinement (lane `verdicts-b`, helper `ia`)

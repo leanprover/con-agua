@@ -1,8 +1,6 @@
 import ConAgua.Compiler.WriteSetSplit
 import ConAgua.Arena.Pool
 import ConAgua.Front.Preserve
-import Std.WP.Triple.SpecLemmas
-import Std.WP.Tactic
 
 /-!
 # Write sets with trusted leaves (lane `indproofs4`, helper `lm`)

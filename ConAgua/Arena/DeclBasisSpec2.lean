@@ -2,7 +2,6 @@ import ConAgua.Rom.CIReadSpec
 import ConRon.Bridge.Checker.Basis
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPartsSpec.BmgW
-import ConAgua.Census.Attr
 
 /-!
 # BlockMemberCounts: `ConRon.Arena.blockMemberCounts`

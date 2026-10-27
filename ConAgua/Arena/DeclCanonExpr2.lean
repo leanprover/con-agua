@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclCanonExpr
-import ConAgua.Census.Attr
 
 /-!
 # The canonical expression comparison, relational lemma (lane `decls3`, helper `decls3-canon`)

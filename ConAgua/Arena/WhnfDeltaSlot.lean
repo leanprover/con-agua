@@ -1,7 +1,6 @@
 import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.WhnfCoreSlot
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec

@@ -1,7 +1,6 @@
 import ConAgua.Arena.View
 import ConAgua.Arena.LevelEquivRel
 import ConRon.Arena.Core
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

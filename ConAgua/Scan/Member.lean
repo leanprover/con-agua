@@ -1,10 +1,14 @@
 module
 
+public import ConAgua.L.Notation
+public import ConAgua.L.Logic
+public import ConAgua.Scan.Leaves
+public import ConAgua.Scan.Utf8
+meta import ConAgua.L.Semantics
 public import ConAgua.Scan.Key
-import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
-import ConAgua.Scan.Common
-import ConAgua.Scan.Values
+public import ConAgua.Scan.Common
+public import ConAgua.Scan.Values
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop

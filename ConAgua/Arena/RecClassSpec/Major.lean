@@ -1,5 +1,4 @@
 import ConAgua.Arena.RecClassSpec.MjW
-import ConAgua.Census.Attr
 
 /-!
 # Major: `ConRon.Arena.ClassGen.major`, `ConRon.Arena.ClassGen.motiveTy`

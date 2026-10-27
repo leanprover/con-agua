@@ -1,6 +1,8 @@
 import ConAgua.Arena.WalkLift
 import ConAgua.Arena.Abs1Refine
 import ConAgua.Arena.BvarBRefine
+import ConAgua.Arena.LiftRefine
+import ConAgua.Arena.Keeps
 import ConAgua.Arena.WriteSets
 import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop

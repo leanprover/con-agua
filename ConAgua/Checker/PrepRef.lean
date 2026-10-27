@@ -1,7 +1,6 @@
 import ConAgua.Checker.PrepLoopRef
 import ConAgua.Checker.PrepCopyRef
 import ConAgua.Checker.HoistRef
-import ConAgua.Census.Attr
 
 /-!
 # `prepare_prelude` refines `preparePrelude` (lane `front4`)

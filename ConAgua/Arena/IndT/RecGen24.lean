@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.RecGen23
-import ConAgua.Census.Attr
 
 /-!
 # `classFieldsAgree` under `StageC` (lane `indstaget`, helper `pds`)

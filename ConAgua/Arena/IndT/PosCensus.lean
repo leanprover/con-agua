@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.PosAll
-import ConAgua.Census.Attr
 
 /-!
 # The positivity walk's census links under `StageC` (lane `indstaget`, helper `indstaget-pos`)

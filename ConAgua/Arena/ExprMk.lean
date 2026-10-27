@@ -1,13 +1,15 @@
 module
 
+meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
 public import ConAgua.Arena.AppStore
 public import ConAgua.Arena.LetStore
 public import ConAgua.Arena.LamStore
 public import ConAgua.Arena.ForallStore
 public import ConAgua.Arena.ProjStore
-import ConAgua.Arena.BVarStore
-import ConAgua.Arena.FVarStore
+public import ConAgua.Arena.BVarStore
+public import ConAgua.Arena.FVarStore
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations

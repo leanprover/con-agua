@@ -1,9 +1,7 @@
 module
 
-public import ConAgua.Compiler.Compile
-public import ConAgua.Compiler.Mem
-public import ConAgua.L.Semantics
-public import Kraken.X64.Semantics
+public import ConAgua.Compiler.Step
+public import ConAgua.Compiler.WF
 import Kraken.X64.Registers
 
 @[expose] public section

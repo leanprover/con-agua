@@ -11,7 +11,6 @@ import ConAgua.Arena.WhnfIotaRecRefine3
 import ConAgua.Arena.WalkCore
 import ConAgua.Arena.InstLPEntry
 import ConAgua.Arena.WhnfM2CRefine5
-import ConAgua.Census.Attr
 
 /-!
 # The knot tied (lane `defeq`)

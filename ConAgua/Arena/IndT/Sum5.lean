@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndT.Sum4
 import ConAgua.Arena.IndSumSpec.CtorX
 import ConAgua.Arena.IndSumSpec.SoaW
-import ConAgua.Census.Attr
 
 /-!
 # `checkSumCtors` under `StageC` (lane `indstaget`)

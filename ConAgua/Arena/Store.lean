@@ -1,12 +1,17 @@
 module
 
+public import ConAgua.L.Notation
+public import ConAgua.Arena.Pool
+public import ConAgua.Arena.SlotGrowSpec
+meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.PoolRes
+meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 public import ConAgua.Arena.PoolRes
 public import ConAgua.Arena.ConsLibSpec
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
-import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
-import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

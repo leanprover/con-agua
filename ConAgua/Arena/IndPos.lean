@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Census.Attr
 
 /-!
 # The positivity walk in L (lane `induct`, module `IndPos`)

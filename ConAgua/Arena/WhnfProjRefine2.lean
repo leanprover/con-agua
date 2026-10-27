@@ -2,7 +2,6 @@ import ConAgua.Arena.WhnfProjRefine
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

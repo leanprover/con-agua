@@ -1,9 +1,9 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Arena.LevelSubst
 import ConAgua.Census.Attr
 import ConAgua.Arena.LevelGrindAttr
-import Std.Data.DTreeMap.Internal.Balancing
 
 @[expose] public section
 

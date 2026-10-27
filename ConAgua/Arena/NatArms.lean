@@ -6,7 +6,6 @@ import ConAgua.Arena.NatPow
 import ConAgua.Arena.NatShr
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop

@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfBase
-import ConAgua.Census.Attr
 
 /-!
 # `instantiateLevelParams` in L: `inst_lp`, its walk, its three memos

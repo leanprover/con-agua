@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Census.Attr
+import ConAgua.Arena.Reasons
 
 /-!
 # `RecGen`: the generated-recursor stage, from `ClassSlot.isMinor` to `genRecCheck`

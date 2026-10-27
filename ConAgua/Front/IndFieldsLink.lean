@@ -1,6 +1,5 @@
 import ConAgua.Front.IndFieldsSpec
 import ConAgua.Front.FieldsDeclLink
-import ConAgua.Front.FieldsExprLink
 import ConAgua.Front.IndRel
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link

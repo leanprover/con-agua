@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Census.Attr
 
 /-!
 # `instPisAtLift`, `fvarTypeD`, `fvarTypeDs` in L (lane `whnf3`)

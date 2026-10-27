@@ -1,5 +1,4 @@
 import ConAgua.Arena.Env
-import ConAgua.Census.Attr
 
 /-!
 # The initial store (lane `front3`)

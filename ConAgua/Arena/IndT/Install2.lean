@@ -5,7 +5,6 @@ import ConAgua.Arena.IndInstallSpec.IagW
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Census.Attr
 
 /-!
 # `checkBlockAgree` under `StageC` (lane `indstaget`)

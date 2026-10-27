@@ -1,14 +1,10 @@
 module
 
 public import ConAgua.Front.FieldsDecl
-public import ConLeche.Frontend.Scan.Equiv.Objects
-import ConAgua.Front.FieldsExprLink
+public import ConAgua.Front.FieldsExprLink
 import ConAgua.Scan.Common
-import ConAgua.Scan.KeyLink
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.LineLink
-import ConAgua.Scan.LitLink
-import ConAgua.Scan.ValuesLink
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop

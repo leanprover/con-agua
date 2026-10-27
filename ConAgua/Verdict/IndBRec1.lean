@@ -6,6 +6,7 @@ import ConAgua.Arena.RecGenSpec.RgW
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConRon.Bridge.Inductives.GenRec
 
 /-!
 # Error refinements of the recursor generation's leaves (lane `verdicts-b`, helper `ib`)

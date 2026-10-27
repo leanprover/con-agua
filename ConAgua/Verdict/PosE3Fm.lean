@@ -3,6 +3,7 @@ import ConAgua.L.ErrSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
+import ConAgua.Arena.Verdict
 
 /-!
 # `nest_fields`' error model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)

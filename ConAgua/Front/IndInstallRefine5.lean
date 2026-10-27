@@ -1,7 +1,6 @@
 import ConAgua.Front.IndInstallRefine4
 import ConAgua.Front.IndApplyRefine5
 import ConAgua.Front.IndInstallRefine3
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

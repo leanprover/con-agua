@@ -7,7 +7,6 @@ import ConAgua.Arena.ImaxStore
 import ConAgua.Arena.LevelStore
 import ConAgua.Arena.MaxStore
 import ConAgua.Arena.ParamStore
-import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section

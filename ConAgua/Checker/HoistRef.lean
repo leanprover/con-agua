@@ -1,6 +1,5 @@
 import ConAgua.Checker.HoistTargetsRef
 import ConAgua.Checker.HoistOrderRef
-import ConAgua.Census.Attr
 
 /-!
 # `hoist_nat_op_ground` refines `hoistNatOpGround` (lane `front4`)

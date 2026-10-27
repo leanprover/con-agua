@@ -1,7 +1,6 @@
 import ConAgua.Checker.PhaseBReads
 import ConAgua.Arena.FreezeRel
 import ConAgua.Checker.LoopProgTac
-import ConAgua.Checker.RomProg0
 import ConAgua.Final.Statement
 
 /-!

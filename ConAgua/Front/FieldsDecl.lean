@@ -1,7 +1,8 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Front.DeclIface
-import ConAgua.Census.Attr
+public import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import ConAgua.Scan.Common
 

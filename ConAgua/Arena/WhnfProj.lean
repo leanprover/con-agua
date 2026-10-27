@@ -1,5 +1,4 @@
 import ConAgua.Arena.Tiers
-import ConAgua.Census.Attr
 
 /-!
 # Projection tables: `find_proj`, `fire_ok` (lane `whnf3`)

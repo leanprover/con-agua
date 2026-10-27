@@ -3,7 +3,6 @@ import ConAgua.Arena.IndPosSpec.PcrK3
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

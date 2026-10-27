@@ -5,7 +5,6 @@ import ConAgua.Arena.KnotEntry
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.StageC
 import ConRon.Bridge.Checker.DeclVal
-import ConAgua.Census.Attr
 
 /-!
 # The structural-`Nat` gate under `StageC` (lane `loopt3`, helper `loopt3-nat`)

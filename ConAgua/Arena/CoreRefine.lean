@@ -1,5 +1,4 @@
 import ConAgua.Arena.ScratchRefine
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

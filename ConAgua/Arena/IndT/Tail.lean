@@ -7,7 +7,6 @@ import ConAgua.Arena.RecCheckSpec.BlockNestedBit
 import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 import ConAgua.Arena.IndInstallSpec.Icb
-import ConAgua.Census.Attr
 
 /-!
 # `checkBlockTail` under `StageC` (lane `indstaget`)

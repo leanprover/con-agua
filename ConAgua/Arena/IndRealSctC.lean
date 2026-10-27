@@ -12,7 +12,6 @@ import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import ConAgua.Arena.IndRealApdT
 import ConRon.Bridge.Inductives.BlockTail
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

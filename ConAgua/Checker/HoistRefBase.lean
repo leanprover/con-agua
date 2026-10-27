@@ -1,6 +1,5 @@
 import ConAgua.Checker.Hoist
 import ConAgua.Front.StateDR
-import Std.Data.HashSet.Basic
 
 /-!
 # The ground hoist's refinement: shared relations (lane `front4`)

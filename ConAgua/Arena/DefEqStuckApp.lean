@@ -1,5 +1,4 @@
 import ConAgua.Arena.DefEqStuckStr
-import ConAgua.Census.Attr
 
 /-!
 # `stuck_app_cong`, `stuck_app` refine `defeqStuck`'s application arm (lane `defeq`, helper `defeq-top`)

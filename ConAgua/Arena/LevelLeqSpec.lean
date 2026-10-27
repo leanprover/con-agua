@@ -1,5 +1,6 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Arena.LevelLeq
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LevelGrindAttr

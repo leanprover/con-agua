@@ -3,7 +3,6 @@ import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

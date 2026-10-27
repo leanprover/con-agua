@@ -1,7 +1,6 @@
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.RecGenSpec.Rec3IwSlice
 import ConAgua.Arena.RecGenSpec.RgW
-import ConAgua.Census.Attr
 
 /-!
 # Classes: `ConRon.Arena.ClassRead.classes`

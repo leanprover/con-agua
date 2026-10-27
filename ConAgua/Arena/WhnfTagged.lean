@@ -1,6 +1,5 @@
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.WhnfIotaRefine5
-import ConAgua.Census.Attr
 
 /-!
 # The census-tagged statements whose stubs the verified walks discharge (lane `whnf2`)

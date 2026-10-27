@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclDivModSpec.EqAt1
-import ConAgua.Census.Attr
 
 /-!
 # CertTwoEqs: `ConRon.Arena.certEq`, `ConRon.Arena.certGuard`, `ConRon.Arena.certHalves`, `ConRon.Arena.certTwoEqs`

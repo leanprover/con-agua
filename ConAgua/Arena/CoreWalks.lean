@@ -3,6 +3,7 @@ import ConAgua.Arena.InstListRefine
 import ConAgua.Arena.ArRangeRefine
 import ConAgua.Arena.HasFvarRefine
 import ConAgua.Arena.BvarBRefine
+import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.WriteSets
 import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.GrindAttr

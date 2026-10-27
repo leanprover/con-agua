@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndIface
-import ConAgua.Census.Attr
 
 /-!
 # The inductive stage in L: nested positivity, part 2 (lane `induct`, worker E)

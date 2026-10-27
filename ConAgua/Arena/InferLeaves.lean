@@ -4,11 +4,12 @@ import ConAgua.Arena.IndMaster
 import ConAgua.Arena.Infer
 import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.WhnfCoreRefine
 
 /-!
 # The leaf inference functions of `Infer.lean` (lane `defeq`)

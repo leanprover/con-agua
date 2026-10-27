@@ -3,9 +3,8 @@ module
 public import ConAgua.Scan.Lit
 import ConAgua.Census.Attr
 public import ConLeche.Frontend.Scan.Naive
-import ConAgua.Scan.Link
-import ConLeche.Frontend.Scan.Equiv.Scalars
-import Std.Data.DTreeMap.Internal.Operations
+public import ConAgua.Scan.Link
+public import ConLeche.Frontend.Scan.Equiv.Scalars
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section

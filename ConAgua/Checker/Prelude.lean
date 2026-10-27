@@ -2,7 +2,6 @@ import ConAgua.Checker.Hoist
 import ConRon.Arena.Frontend.PreludeText
 import ConAgua.Compiler.Compile
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 

@@ -1,6 +1,5 @@
 import ConAgua.Arena.DefEqStuckProj
 import ConAgua.Arena.DefEqStuckDisp
-import ConAgua.Census.Attr
 
 /-!
 # `defeq_tail` refines `defeqBody`'s tail (lane `defeq`, helper `defeq-top`)

@@ -8,7 +8,6 @@ import ConAgua.Arena.IndInstallSpec.NhW
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndSumSpec.DecHLTake
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 
 /-!
 # ParamLevels: `ConRon.Arena.paramLevels`

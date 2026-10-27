@@ -1,5 +1,9 @@
 module
 
+meta import ConAgua.Arena.LpCol
+meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 public import ConAgua.Arena.LpCol
 public import ConAgua.Arena.ConsLibSpec
 import ConAgua.Census.Attr

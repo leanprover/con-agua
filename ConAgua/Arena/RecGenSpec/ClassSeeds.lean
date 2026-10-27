@@ -5,7 +5,6 @@ import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPosSpec.NestSeedOf
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 

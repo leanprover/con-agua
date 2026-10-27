@@ -3,7 +3,6 @@ import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

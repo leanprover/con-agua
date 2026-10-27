@@ -1,8 +1,6 @@
+import Lean
 import ConAgua.L.WriteSet
 import ConAgua.Compiler.WFSplit
-import ConAgua.Compiler.WFFast
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Write sets of a large program, one function at a time (lane `erecfix`)

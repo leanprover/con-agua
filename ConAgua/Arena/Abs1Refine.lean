@@ -1,7 +1,6 @@
 import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.Keeps
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

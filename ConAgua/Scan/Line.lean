@@ -1,12 +1,12 @@
 module
 
+meta import ConAgua.L.Semantics
 public import ConAgua.Scan.Records
 import ConAgua.Census.Attr
 import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
-import ConAgua.Scan.Common
-import ConAgua.Scan.RecordsSpec
-import Std.Data.DTreeMap.Internal.Operations
+public import ConAgua.Scan.Common
+public import ConAgua.Scan.RecordsSpec
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

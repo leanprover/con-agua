@@ -1,6 +1,5 @@
 import ConAgua.Arena.ConstsResolveF
 import ConAgua.Arena.StageInst1
-import ConAgua.Arena.Pins
 import ConAgua.Arena.WhnfIota
 
 /-!

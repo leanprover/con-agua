@@ -1,7 +1,10 @@
+import ConAgua.Checker.Prog
 import ConAgua.Checker.ProgWf
 import ConAgua.Checker.PreludeSim
 import ConAgua.Compiler.WriteSetSplit
 import ConAgua.Compiler.WFSplit
+import ConAgua.Arena.LevelIntern
+import ConAgua.Arena.LevelSubstLP
 
 /-!
 # The checker program has the shape of the prelude simulation (lane `pipeline`)

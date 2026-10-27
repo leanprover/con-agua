@@ -1,6 +1,5 @@
 import ConAgua.Front.IndApplyRefine2
 import ConAgua.Front.IndApplySpec2
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

@@ -9,7 +9,6 @@ import ConAgua.Checker.LoopProg
 import ConAgua.Verdict.WhnfStuckE
 import ConAgua.Verdict.WhnfUnitE
 import ConAgua.Checker.NoVerdictClosed
-import ConAgua.Census.Attr
 
 /-!
 # The error knot, assembled (lane `verdicts-b`, helper `ka`)

@@ -1,5 +1,4 @@
 import ConAgua.Arena.Pins
-import ConAgua.Census.Attr
 
 /-!
 # The twin's fuel constants in L (lane `tails`)

@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfBase
-import ConAgua.Census.Attr
 
 /-!
 # Type inference: `inferBody`, `inferBodyIO` and their clauses (phase 7, lane `defeq`)

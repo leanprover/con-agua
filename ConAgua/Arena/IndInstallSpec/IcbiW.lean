@@ -7,6 +7,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
+import ConAgua.L.Examples
 
 /-!
 # IcbiW

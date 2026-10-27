@@ -1,6 +1,5 @@
 import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.DefEqStuckShape
-import ConAgua.Census.Attr
 
 /-!
 # The prop-ness readers: the identity-like wrappers and `peelPisW` (helper `defeq2-prop`)

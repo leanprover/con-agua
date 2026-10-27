@@ -1,5 +1,4 @@
 import ConAgua.Arena.RecCheckSpec.ArfW
-import ConAgua.Census.Attr
 
 /-!
 # AuxRuleFire: `ConRon.Arena.auxRuleFire`

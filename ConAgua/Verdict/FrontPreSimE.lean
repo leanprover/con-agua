@@ -1,4 +1,6 @@
 import ConAgua.Checker.PipePrelude
+import ConAgua.Arena.LevelIntern
+import ConAgua.Arena.LevelSubstLP
 
 /-!
 # The prelude simulation for errors (lane `verdicts-b`, helper `f2`)

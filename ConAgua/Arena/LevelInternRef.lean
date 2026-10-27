@@ -2,7 +2,6 @@ import ConAgua.Arena.LevelIntern
 import ConAgua.Arena.PromoteLRef
 import ConAgua.Arena.MemoTree
 import ConAgua.Front.StateDR
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.Rom
 

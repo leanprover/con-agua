@@ -3,7 +3,6 @@ import ConAgua.Arena.DeclArmOpaque
 import ConAgua.Arena.StageC
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.DeclReducePin
-import ConAgua.Census.Attr
 
 /-!
 # The reduce-pin gate and the opaque arm under `StageC` (lane `loopt2`)

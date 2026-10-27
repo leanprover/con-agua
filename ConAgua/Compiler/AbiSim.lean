@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Compiler.Abi
-public import ConAgua.Compiler.Step
 public import ConAgua.Compiler.Rel
 import all Kraken.Mem
 import Kraken.X64.Registers

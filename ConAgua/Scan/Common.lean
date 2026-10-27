@@ -2,8 +2,7 @@ module
 
 public import ConAgua.L.Semantics
 import ConAgua.L.GrindAttr
-import ConAgua.L.Logic
-
+public import ConAgua.L.Logic
 @[expose] public section
 
 /-!

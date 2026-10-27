@@ -1,11 +1,10 @@
 module
 
 public import ConAgua.Compiler.SimCall
-import ConAgua.Compiler.SimBlock
-import ConAgua.Compiler.SimFun
-import ConAgua.Compiler.SimStore
-import ConAgua.Compiler.SimTail
-
+public import ConAgua.Compiler.SimBlock
+public import ConAgua.Compiler.SimFun
+public import ConAgua.Compiler.SimStore
+public import ConAgua.Compiler.SimTail
 @[expose] public section
 
 /-!

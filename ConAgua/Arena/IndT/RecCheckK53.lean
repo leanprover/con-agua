@@ -2,7 +2,6 @@ import ConAgua.Arena.IndT.RecCheckTmn
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.RecCheckSpec.Tka
 import ConAgua.Arena.RecCheckSpec.TkhK2V2
-import ConAgua.Census.Attr
 
 /-!
 # `targetK53` under `StageC` (lane `indstaget`, helper `pds`)

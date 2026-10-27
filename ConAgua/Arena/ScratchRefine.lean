@@ -1,6 +1,5 @@
 import ConAgua.Arena.Scratch
 import ConAgua.Arena.Tiers
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

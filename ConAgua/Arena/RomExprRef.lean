@@ -1,7 +1,6 @@
 import ConAgua.Arena.RomExpr
 import ConAgua.Arena.NatArms
 import ConLeche.Verify.Cached.Erase
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

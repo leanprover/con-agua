@@ -1,6 +1,5 @@
 import ConAgua.Arena.DefEqStuckApp
 import ConAgua.Arena.InferBodyDisp
-import ConAgua.Census.Attr
 
 /-!
 # `defeq_stuck` refines `defeqStuck` (lane `defeq`, helper `defeq-top`)

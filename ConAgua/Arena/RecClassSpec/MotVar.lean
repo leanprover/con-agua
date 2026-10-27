@@ -1,5 +1,4 @@
 import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Census.Attr
 
 /-!
 # MotVar: `ConRon.Arena.ClassGen.ihParts`, `ConRon.Arena.ClassGen.motVar`, `ConRon.Arena.ClassGen.slotVar`, `ConRon.Arena.ClassRead.motiveSlot`, `ConRon.Arena.classRecOf`

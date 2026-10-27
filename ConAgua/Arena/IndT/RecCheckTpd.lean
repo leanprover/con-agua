@@ -3,7 +3,6 @@ import ConRon.Bridge.Inductives.RecCheck
 import ConAgua.Arena.RecCheckSpec.PdsC
 import ConAgua.Arena.RecCheckSpec.TmFields
 import ConAgua.Arena.IndRealAbsSim
-import ConAgua.Census.Attr
 
 /-!
 # `targetParamsDefEq` under `StageC` (lane `indstaget`, helper `pds`)

@@ -1,6 +1,5 @@
 import ConAgua.Arena.Walk
 import ConAgua.Arena.FVarRangeRefine
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

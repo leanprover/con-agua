@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPartsSpec.BsW
-import ConAgua.Census.Attr
 
 /-!
 # BlockSplitRecs: `ConRon.Arena.blockSplitCtors`, `ConRon.Arena.blockSplitRecs`, `ConRon.Arena.blockSplit`

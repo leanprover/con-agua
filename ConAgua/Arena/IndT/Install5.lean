@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.IndInstallSpec.IcvgW
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Census.Attr
 
 /-!
 # `checkBlockIdxSorts` under `StageC` (lane `indstaget`)

@@ -3,7 +3,6 @@ import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!

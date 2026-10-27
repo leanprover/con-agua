@@ -2,7 +2,6 @@ import ConAgua.Arena.IndT.RecGen24
 import ConAgua.Arena.RecCheckSpec.TargetMajorAt
 import ConAgua.Arena.RecGenSpec.DecTMSlices
 import ConAgua.Arena.RecGenSpec.ClassFieldsOf
-import ConAgua.Census.Attr
 
 /-!
 # `classCtorOf`, `classCtorsOf`, `classesCtors` under `StageC` (lane `indstaget`, helper `pds`)

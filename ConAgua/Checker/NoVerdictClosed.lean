@@ -2,6 +2,8 @@ import ConAgua.Checker.Prog
 import ConAgua.Checker.NoVerdictFns
 import ConAgua.L.ErrSpec
 import ConAgua.Compiler.WriteSetSplit
+import ConAgua.Arena.LevelIntern
+import ConAgua.Arena.LevelSubstLP
 
 /-!
 # The functions of `checkerProg` that claim no verdict

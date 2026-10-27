@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndIface
 import ConAgua.Arena.Prelude
-import ConAgua.Census.Attr
 
 /-!
 # The ROM stubs' readers (lane `integrate`)

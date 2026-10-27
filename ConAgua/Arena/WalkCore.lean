@@ -1,6 +1,5 @@
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.WalkLeavesRefine
-import ConAgua.Census.Attr
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

@@ -1,7 +1,6 @@
 import ConAgua.Arena.DeclBasisSpec2
 import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
 import ConAgua.Arena.GrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.ModelGen
 
 /-!

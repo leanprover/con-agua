@@ -7,7 +7,6 @@ import ConAgua.Arena.IndInstallSpec.Pos3NhGoWMfr
 import ConAgua.Arena.IndPartsSpec.BrsW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 
 /-!
