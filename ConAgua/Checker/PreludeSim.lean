@@ -164,7 +164,7 @@ theorem Keep.of_mem {s s1 : St} (h : s1.mem = s.mem) : Keep s s1 := by
   unfold Keep; rw [h]
 
 theorem Keep.trans {s s1 s2 : St} (h1 : Keep s s1) (h2 : Keep s1 s2) : Keep s s2 :=
-  h2.trans h1
+  Eq.trans h2 h1
 
 theorem pure_run_ok {α : Type} {a b : α} {s s1 : St} (h : (pure a : M α).run s = .ok (b, s1)) :
     a = b ∧ s = s1 := by
@@ -1006,8 +1006,7 @@ theorem preSim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t
     (h : (invoke p (exec p n) ("pre_" ++ f) vs).run s = .ok (r, s')) :
     (invoke p (exec p n) f vs).run (s.setIn preIn) = .ok (r, s'.setIn preIn) ∧
       s'.mem.arr8 0 = s.mem.arr8 0 := by
-  obtain ⟨h1, h2, -⟩ := invoke_sim_copy hP n (ksim hP n) f hf vs s r s' h0 h
-  exact ⟨h1, h2⟩
+  exact invoke_sim_copy hP n (ksim hP n) f hf vs s r s' h0 h
 
 /-- **A spec of `f` is a spec of its copy**, on the memory with the prelude's bytes as input. -/
 theorem preSim_triple {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)

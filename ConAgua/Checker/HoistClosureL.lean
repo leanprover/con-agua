@@ -87,13 +87,13 @@ theorem hnSch_wf : hnSch.WF := ⟨by decide, by decide⟩
 theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
     {ord tg ws : Word} {c : Nat} (hE : HEnv m a ds idx ord tg ws c) (hf : HFr tg ws c m m')
     (hs : ∃ s, SeenR m' s) : HEnv m' a ds idx ord tg ws c := by
-  have hD : ∀ b, b ∉ [IW, HSEEN] → b ≠ CTL → m'.arr64 b = m.arr64 b := hf.1.1
+  have hD : ∀ b : TieredArray, b ∉ ([IW, HSEEN] : List TieredArray) → b ≠ CTL → m'.arr64 b = m.arr64 b := hf.1.1
   have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
   have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
   have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
   have htop : iwTop m' = iwTop m := by
     simp only [iwTop]; rw [hf.1.2.1 200 (by decide)]
-  have hA : ∀ b ∈ [IW, HSEEN], InHigh b := by decide
+  have hA : ∀ b ∈ ([IW, HSEEN] : List TieredArray), InHigh b := by decide
   have hC : ∀ x ∈ ([73, 74] : List Word), 64 ≤ x.toNat := by simp
   refine ⟨ArenaR.frame_ext [IW, HSEEN] [73, 74] hA hC m m' hf.1 a hE.arena, hs,
     ?_, hE.size, hE.c60, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
@@ -127,11 +127,11 @@ theorem AFr.trans {m₁ m₂ m₃ : Mem} (h₁ : AFr m₁ m₂) (h₂ : AFr m₂
 theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
     {ord tg ws : Word} {c : Nat} (hE : HEnv m a ds idx ord tg ws c) (hf : AFr m m') :
     HEnv m' a ds idx ord tg ws c := by
-  have hD : ∀ b, b ∉ [IW] → b ≠ CTL → m'.arr64 b = m.arr64 b := hf.1.1
+  have hD : ∀ b : TieredArray, b ∉ ([IW] : List TieredArray) → b ≠ CTL → m'.arr64 b = m.arr64 b := hf.1.1
   have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
   have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
   have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
-  have hA : ∀ b ∈ [IW], InHigh b := by decide
+  have hA : ∀ b ∈ ([IW] : List TieredArray), InHigh b := by decide
   have hC : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by simp
   obtain ⟨s, hs⟩ := hE.seen
   refine ⟨ArenaR.frame_ext [IW] [200] hA hC m m' hf.1 a hE.arena,
