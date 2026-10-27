@@ -6,7 +6,6 @@ public import ConAgua.L.Blocks
 import Kraken.X64.Registers
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 /-!
 # Blocks: `copy64`, `copy8w`, `scan8` (lane blkcopy)

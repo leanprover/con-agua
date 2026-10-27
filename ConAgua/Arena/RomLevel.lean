@@ -4,7 +4,6 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-set_option linter.unusedSectionVars false
 
 /-!
 # The ROM's levels: `rom_level(pos)` refines `internLevel`

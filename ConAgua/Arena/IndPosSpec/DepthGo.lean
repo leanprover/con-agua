@@ -13,7 +13,6 @@ The refinement theorems `depthGo_refines`, `depth_refines`, `whnfWalkFuel_refine
 
 section
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

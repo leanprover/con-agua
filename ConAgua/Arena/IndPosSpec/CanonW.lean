@@ -10,7 +10,6 @@ import ConAgua.L.GrindAttr
 `canonW_ne`, `canonW_eq`, `canonK0_miss`, `canonK0_hit`, `canonK1_ok`, `canonK2_big` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

@@ -11,7 +11,6 @@ import ConAgua.L.GrindAttr
 `gftLoop`, `genRecCheckFormerTys'`, `genRecCheckFormerTys_eq`, `gftW`, `gftW_exit`, `gftW_step` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 /-!
 # Refinements of `IndInstall`, part 38 (lane `indproofs4`, helper `grc`): `gen_rec_check`'s loops

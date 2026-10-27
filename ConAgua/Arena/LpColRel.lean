@@ -1,7 +1,6 @@
 import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.LpCol
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The level-parameter columns: the relation, generically (helper `whnf4-d23`)

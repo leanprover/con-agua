@@ -6,7 +6,6 @@ import all Kraken.Mem
 import Kraken.X64.Registers
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 /-!
 # The entry stub's stores, on the machine

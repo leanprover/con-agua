@@ -1,7 +1,6 @@
 import ConAgua.Front.IndFieldsLink
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The fields pass of an `inductive` line, linked to con-leche: the record kinds

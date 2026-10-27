@@ -1,5 +1,4 @@
 import ConAgua.Arena.FreezeTruncBase
-set_option linter.unusedSectionVars false
 
 /-!
 # The truncation theorem, part 3: a store under truncation of its tier 0 (lane parmode)

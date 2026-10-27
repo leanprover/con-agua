@@ -10,7 +10,6 @@ import ConAgua.L.GrindAttr
 `maClrK`, `maConstW`, `maConstW_eq`, `maClrK_some`, `noGoW`, `noG1` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

@@ -7,7 +7,6 @@ import ConAgua.Arena.DeclAxQuotT
 import ConAgua.Arena.DeclNatSubAll
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-set_option linter.unusedSectionVars false
 
 /-!
 # Phase A under `StageT` (lane `loopt2`)

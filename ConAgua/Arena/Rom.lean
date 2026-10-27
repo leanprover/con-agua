@@ -5,7 +5,6 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-set_option linter.unusedSectionVars false
 
 /-!
 # The ROM: constant con-leche data as bytes, and the L readers

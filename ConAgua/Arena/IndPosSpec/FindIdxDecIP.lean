@@ -6,7 +6,6 @@ import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 `findIdx_decIP`.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

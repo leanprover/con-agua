@@ -2,7 +2,6 @@ import ConAgua.Front.LineRefine
 import ConAgua.Front.DriverRefine
 import ConAgua.Scan.Validator
 import ConRon.Bridge.Frontend.Chunks
-set_option linter.unusedSectionVars false
 
 /-!
 # Bytes → stores: `front_run()` refines con-ron's `parseBytes`

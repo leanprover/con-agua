@@ -21,7 +21,6 @@ Each record scanner of `ConAgua.Scan.Records` against the generic model `objN` o
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order

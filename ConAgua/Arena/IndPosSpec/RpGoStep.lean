@@ -12,7 +12,6 @@ import ConAgua.L.ModelGen
 `appHole_spec`, `ahWf`, `ahW_ok`, `LowFr.refl`, `LowFr.trans`, `sointernW_low` and the lemmas only they use.
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

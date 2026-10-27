@@ -1,5 +1,4 @@
 import ConAgua.Arena.InstLPWalkRef
-set_option linter.unusedSectionVars false
 
 /-!
 # The `instLP` walk refines `instLPGo`: the arms `fvar`, `proj`, `letE`

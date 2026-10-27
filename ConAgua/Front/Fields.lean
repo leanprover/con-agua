@@ -45,7 +45,6 @@ guard (`e ≤ ks` stops it), which is also what makes its model terminate.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order

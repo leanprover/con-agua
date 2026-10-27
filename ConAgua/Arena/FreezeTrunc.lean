@@ -1,5 +1,4 @@
 import ConAgua.Arena.FreezeTruncArena
-set_option linter.unusedSectionVars false
 
 /-!
 # The truncation theorem (lane parmode, docs/design/parmode.md, "Redesign", "Step 4")

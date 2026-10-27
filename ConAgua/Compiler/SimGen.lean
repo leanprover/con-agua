@@ -5,7 +5,6 @@ public import ConAgua.Compiler.StepGen
 import Kraken.X64.Registers
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 /-!
 # The register-stack code generator (lane leafgen, step G2)

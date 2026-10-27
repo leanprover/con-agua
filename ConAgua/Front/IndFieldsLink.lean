@@ -4,7 +4,6 @@ import ConAgua.Front.IndRel
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The fields pass of an `inductive` line, linked to con-leche

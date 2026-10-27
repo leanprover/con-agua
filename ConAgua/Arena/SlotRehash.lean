@@ -1,7 +1,6 @@
 import ConAgua.Arena.SlotGrowSpec
 import ConAgua.Arena.StoreRel
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The in-place growth's re-insertion keeps every node findable (lane memlay)

@@ -2,7 +2,6 @@ import ConAgua.Arena.ConstsResolveF
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-set_option linter.unusedSectionVars false
 
 /-!
 # `consts_resolve_ffast` refines `constsResolveFFast` (lane `tails`)

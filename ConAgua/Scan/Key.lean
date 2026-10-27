@@ -12,7 +12,6 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 /-!
 # `key_at` and `value_at` (`scan_fast.rs:183,704`)

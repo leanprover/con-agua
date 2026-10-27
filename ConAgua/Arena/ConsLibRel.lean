@@ -3,7 +3,6 @@ import ConAgua.Arena.Frame
 import ConAgua.Arena.StoreGrow
 import ConAgua.Arena.StoreFields
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # The cons-table library: the relation and the user API (lane conslib)

@@ -18,7 +18,6 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
-set_option linter.unusedSectionVars false
 
 /-!
 # `scan_string` (`scan_fast.rs:1087`), validating only

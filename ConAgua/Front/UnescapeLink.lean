@@ -3,7 +3,6 @@ import ConAgua.Arena.DerRel
 import ConAgua.Front.FieldsLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Prop
-set_option linter.unusedSectionVars false
 
 /-!
 # `str_put_esc` against con-leche's `scanString`

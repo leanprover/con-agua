@@ -1,7 +1,6 @@
 import ConAgua.Verdict.DeclStepE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-set_option linter.unusedSectionVars false
 
 /-!
 # Phase A's fold fails only where the twin does (lane `verdicts-b`, helper `d`)

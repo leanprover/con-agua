@@ -13,7 +13,6 @@ import ConAgua.L.GrindAttr
 
 section
 
-set_option linter.unusedSectionVars false
 
 /-!
 # Refinements of `IndParts`, part 13 (lane `indproofs2`, helper `parts`): `blockShape?`'s pins

@@ -1,7 +1,6 @@
 import ConAgua.Final.BufLayout
 import ConAgua.Final.ParAbi
 import Kraken.X64.Registers
-set_option linter.unusedSectionVars false
 
 /-!
 # `ca_check_b` on the machine (lane parmode)

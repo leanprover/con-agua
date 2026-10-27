@@ -1,6 +1,5 @@
 import ConAgua.Verdict.WhnfModels6E
 import ConAgua.Verdict.WhnfPrepE
-set_option linter.unusedSectionVars false
 
 /-!
 # `major_to_ctor`'s verdict claims (lane `verdicts-b`, helper `k2`)
