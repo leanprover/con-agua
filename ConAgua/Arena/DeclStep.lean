@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclArms
+import ConAgua.Front.IndApply
 
 /-!
 # Phase A's step body in L: `install_step_go`, `check_decl`, the header and value guards

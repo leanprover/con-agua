@@ -126,3 +126,4 @@ ConAgua/Front/IndApply.lean	public import ConAgua.Front.ApplyDecl	# the build ne
 ConAgua/Front/IndApply.lean	public import ConAgua.Front.IndFields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Front/IndFields.lean	public import ConAgua.Front.Apply	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Front/NatDec.lean	public import ConAgua.Front.Fields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/DeclStep.lean	public import ConAgua.Front.IndApply	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the inductive lines through it
