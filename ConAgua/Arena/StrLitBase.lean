@@ -246,7 +246,7 @@ theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : Sli
     hres, internW_hw m a hK.1.arena.1.lit o l w m' hI⟩
   · intro b hb; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
     rcases hb with rfl | rfl | rfl | rfl <;> decide
-  · simp [tier1, REC, SLOT]
+  · decide
   · intro b hb; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
     rcases hb with rfl | rfl | rfl | rfl <;> decide
   · intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
