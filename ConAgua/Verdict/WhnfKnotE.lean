@@ -37,7 +37,7 @@ theorem KnotAllProg.prepareMajorE : PrepareMajorE p :=
     (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
       (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq))
     (ErecKeptKnot.of_closed hq.hcl) hnv
-    (majorToCtorE_of p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
+    (majorToCtorE_of p hq.m2c (KnotAllProg.iotaC hq)
       (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq) hnv
       (proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv))
 

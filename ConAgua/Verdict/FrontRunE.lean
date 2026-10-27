@@ -546,7 +546,7 @@ theorem loop1_claim : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : Stat
   obtain ⟨r1, m₁⟩ := q1
   rw [h1] at he
   have hK := triple_of_callE (frontLineK_spec frontAllProg frontAllProg_scan frontAllProg_front rfl
-      rfl rfl rfl rfl rfl rfl frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl
+      rfl rfl rfl rfl rfl frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl
       b.data hsize (fun m => ∃ a st, FrontInvOK D b m a st)
       (fun m ⟨_, _, hI⟩ => ⟨hI.1.2.1.1.lit.1.2.2.1, hI.1.2.1.1.lit.1.2.2.2.1⟩)
       (inv_step frontAllProg (FrontInvOK D b) b h64 hsize

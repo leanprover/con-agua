@@ -407,7 +407,7 @@ theorem frontAll_refines_pre_ok (b : ByteArray) (h64 : System.Platform.numBits =
     (frontRun_specI frontAllProg (lineKW frontAllProg b.data) b.data
       (fun m => ∃ a st, FrontInvOK D b m a st)
       (fun n s₁ i hm hI hi => frontLineK_spec frontAllProg frontAllProg_scan frontAllProg_front rfl
-        rfl rfl rfl rfl rfl rfl frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl
+        rfl rfl rfl rfl rfl frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl
         b.data hsize _
         (fun m ⟨_, _, hI⟩ => ⟨hI.1.2.1.1.lit.1.2.2.1, hI.1.2.1.1.lit.1.2.2.2.1⟩)
         (inv_step frontAllProg (FrontInvOK D b) b h64 hsize
