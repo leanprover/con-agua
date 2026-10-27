@@ -574,9 +574,9 @@
     50  def ErrClaim {α : Type} (T : AM α) (a : AState) (e : Err) : Prop :=
     51    e.cls ≠ 0 → ∃ ce, T.run a = .error ce ∧ twinCls ce = e.cls
 
-== ConAgua/Checker/NoVerdictClosed.lean#L73-L74
-    73  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
-    74    closedNV_of_all nvTree.eq checkerProg_nvChk
+== ConAgua/Checker/NoVerdictClosed.lean#L71-L72
+    71  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
+    72    closedNV_of_all nvTree.eq checkerProg_nvChk
 
 == ConAgua/Final/DrvAbi.lean#L178-L188
    178  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
