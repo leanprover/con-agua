@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.RecCheckPins
-import ConAgua.Verdict.IndBStream
+import ConAgua.Checker.NoVerdictFns
+import ConAgua.Verdict.DeclValE
 
 /-!
 # Error refinement of `target_pin_tys`, `target_major_pins` (lane `verdicts-b`, helper `ib`)

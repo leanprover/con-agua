@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndT.RecCheckTmn
-import ConAgua.Verdict.IndBStream
+import ConAgua.Verdict.IndBTcm
 
 /-!
 # Error refinement of `target_major_nfs` (lane `verdicts-b`, helper `ib`)

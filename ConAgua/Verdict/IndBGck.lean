@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.GenRec3
-import ConAgua.Verdict.IndBCcs
 import ConAgua.Verdict.IndBRec6
 
 /-!

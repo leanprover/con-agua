@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DefEqQuickE
+import ConAgua.Compiler.RunEq
 
 /-!
 # `defeq_lams`' error claim (lane `verdicts-b`, helper `k3`)

@@ -1,5 +1,6 @@
 import ConAgua.Verdict.IndBGrp
 import ConAgua.Verdict.IndBTmn
+import ConAgua.Compiler.RunEq
 
 /-!
 # `classes_nfs`' error claim (lane `verdicts-b`, helper `verdicts-b-fin`, fork `nfs`)

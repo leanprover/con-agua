@@ -1,5 +1,8 @@
 import ConAgua.Verdict.PosTopE4
 import ConAgua.Verdict.PosTopEMono
+import ConAgua.Verdict.IndA3
+import ConAgua.Verdict.PosTopE2
+import ConAgua.Verdict.PosTopE3
 
 /-!
 # `check_block_positivity`'s and `nest_seeds`' error claims, discharged (lane `verdicts-b`,

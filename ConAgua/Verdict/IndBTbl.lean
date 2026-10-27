@@ -1,5 +1,6 @@
-import ConAgua.Verdict.IndBClm
 import ConAgua.Arena.IndRealSctC
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictFns
 
 /-!
 # Error refinement of `check_struct_proj_table` (lane `verdicts-b`, helper `ib`)

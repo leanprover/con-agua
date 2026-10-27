@@ -1,7 +1,7 @@
-import ConAgua.L.ModelGen
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.WhnfCore
 import ConAgua.Arena.WhnfDelta
+import ConAgua.Compiler.RunEq
 
 /-!
 # Error models of `reduce_nat`'s family and the `whnf_core` arms (lane `verdicts-b`, helper `k2`)

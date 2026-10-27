@@ -1,5 +1,5 @@
-import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.DeclCrpT
+import ConAgua.Verdict.DeclHdrE
 
 /-!
 # The verdict claim of `check_reduce_pin` (lane `verdicts-b`, helper `d`)

@@ -1,4 +1,4 @@
-import ConAgua.Verdict.DefEqLoopsE
+import ConAgua.Verdict.DefEqTailE
 
 /-!
 # The lazy-delta step's error claims (lane `verdicts-b`, helper `k3`)

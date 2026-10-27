@@ -1,7 +1,5 @@
-import ConAgua.Verdict.PosE
-import ConAgua.Verdict.IndA3
-import ConAgua.Verdict.IndBE
 import ConAgua.Arena.IndT.Positivity
+import ConAgua.Arena.Verdict
 
 /-!
 # The positivity pass's entry points: error models (lane `verdicts-b`, helper `ia2`, fork `top`)

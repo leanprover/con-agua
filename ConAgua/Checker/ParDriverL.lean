@@ -3,6 +3,7 @@ import ConAgua.Arena.FreezeRel
 import ConAgua.Arena.CrOKFrame
 import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.RomProg0
+import ConAgua.Final.Statement
 
 /-!
 # Entry 2 of the sequential driver, in L (lane parmode)
@@ -27,6 +28,9 @@ open scoped Lean.Order
 namespace L.Checker
 
 open L L.Arena
+
+-- `check_b` (`checkBL`, `ConAgua/Checker/Entry.lean`) returns the literal `ACCEPT`.
+example : (71757147230292 : Word) = ConAgua.Final.ACCEPT := rfl
 
 section frame0
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}

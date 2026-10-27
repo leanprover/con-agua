@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndA2
-import ConAgua.Arena.IndT.Pass
 
 /-!
 # `check_block_pass`'s error refinement (lane `verdicts-b`, helper `ia`)

@@ -1,5 +1,4 @@
 import ConAgua.Verdict.PhaseBE
-import ConAgua.Checker.ParDriverL
 import ConAgua.Checker.VerdictTop
 
 /-!

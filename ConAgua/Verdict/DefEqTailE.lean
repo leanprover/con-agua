@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DefEqSlotE
+import ConAgua.Compiler.RunEq
 
 /-!
 # `defeq_tail`'s error claim and the stuck side's (lane `verdicts-b`, helper `k3`)

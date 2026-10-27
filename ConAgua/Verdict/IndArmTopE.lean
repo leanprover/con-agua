@@ -3,7 +3,7 @@ import ConAgua.Verdict.IndBWt
 import ConAgua.Verdict.IndBNfs
 import ConAgua.Verdict.IndBTka
 import ConAgua.Verdict.TopE
-import ConAgua.Checker.IndArm
+import ConAgua.Verdict.IndA8
 
 /-!
 # The inductive arm's verdict claim, proved (lane `verdicts-b`, helper `fin`)

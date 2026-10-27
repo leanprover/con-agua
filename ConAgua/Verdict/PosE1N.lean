@@ -1,5 +1,6 @@
 import ConAgua.Verdict.PosE1M
 import ConAgua.Verdict.DeclValE
+import ConAgua.Verdict.PosE
 
 /-!
 # `nest_inst_type_ty`, `nest_inst_type`: error claims (lane `verdicts-b`, helper `ia2`, fork `kn1`)

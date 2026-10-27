@@ -1,6 +1,5 @@
 import ConAgua.Verdict.IndA4
 import ConAgua.Verdict.IndBE
-import ConAgua.Arena.IndT.Install5
 
 /-!
 # `check_block_idx_sorts`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)

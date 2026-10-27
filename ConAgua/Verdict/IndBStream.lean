@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndT.StreamRecs
-import ConAgua.Verdict.IndBTcm
+import ConAgua.Verdict.IndBSum2
 
 /-!
 # Error refinement of `class_stream_recs` (lane `verdicts-b`, helper `ib`)

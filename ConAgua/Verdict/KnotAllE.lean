@@ -6,7 +6,8 @@ import ConAgua.Verdict.DefEqAllE
 import ConAgua.Verdict.DefEqEagerE
 import ConAgua.Verdict.DeclValE
 import ConAgua.Checker.LoopProg
-import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Verdict.WhnfStuckE
+import ConAgua.Verdict.WhnfUnitE
 
 /-!
 # The error knot, assembled (lane `verdicts-b`, helper `ka`)

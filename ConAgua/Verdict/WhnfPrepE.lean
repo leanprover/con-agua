@@ -1,5 +1,4 @@
 import ConAgua.Verdict.WhnfIotaE
-import ConAgua.Arena.WhnfCoreProj
 set_option linter.unusedSectionVars false
 
 /-!
