@@ -124,6 +124,30 @@ structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
   /-- The global variables. -/
   glob : ∀ g : GVar, g.id < G.tab.ng → rdW d (A (G.globAddr g)) = some (m.glob g)
 
+/-! ### The relation per array, through the layout map
+
+The descriptor words of an array the program may name, read at the address the code computes
+(`Tab.base8 a`, …: the position the layout map gives). The simulation proofs use these, never
+positions directly. -/
+
+namespace MemRel
+variable {G : Layout} {m : Mem} {d : DataMem}
+
+theorem base8A (hm : MemRel G m d) {a : ArrId} (h : G.tab.dom8 a = true) :
+    rdW d (A (G.T + (G.tab.base8 a).toNat)) = some (UInt64.ofNat (G.b8 (G.tab.pos8 a))) :=
+  hm.base8 _ (G.tab.pos8_lt h)
+theorem len8A (hm : MemRel G m d) {a : ArrId} (h : G.tab.dom8 a = true) :
+    rdW d (A (G.T + (G.tab.len8 a).toNat)) = some (UInt64.ofNat (G.s8 (G.tab.pos8 a))) :=
+  hm.len8 _ (G.tab.pos8_lt h)
+theorem base64A (hm : MemRel G m d) {s : TArr} (h : G.tab.dom64 s = true) :
+    rdW d (A (G.T + (G.tab.base64 s).toNat)) = some (UInt64.ofNat (G.b64 (G.tab.pos64 s))) :=
+  hm.base64 _ (G.tab.pos64_lt h)
+theorem len64A (hm : MemRel G m d) {s : TArr} (h : G.tab.dom64 s = true) :
+    rdW d (A (G.T + (G.tab.len64 s).toNat)) = some (UInt64.ofNat (G.s64 (G.tab.pos64 s))) :=
+  hm.len64 _ (G.tab.pos64_lt h)
+
+end MemRel
+
 theorem mem_allocRegs {r : Reg64} : r ∈ allocRegs ↔
     r = .rdi ∨ r = .r8 ∨ r = .r9 ∨ r = .r10 ∨ r = .r11 ∨ r = .rsi ∨ r = .rbx ∨ r = .r12 ∨ r = .r13 := by
   simp [allocRegs]

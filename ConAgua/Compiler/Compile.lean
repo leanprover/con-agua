@@ -234,6 +234,11 @@ theorem Tab.dom64_tierA (t : Tab) {a : ArrId} (h : t.dom64 (tier1 a) = true) (u 
 theorem Tab.dom64_t0 (t : Tab) {a : ArrId} (h : t.dom64 (tier1 a) = true) :
     t.dom64 (TArr.t0 a) = true := (t.adj64 a h).1
 
+/- The proofs above the layout use only the lemmas above (`pos64_lt`, `pos64_ne`, `pos64_tierA`,
+…): unfolding today's layout in a goal makes `whnf` run `Nat` arithmetic on `tierOff`. The kernel
+(code generation, `decide +kernel`) still evaluates them. -/
+attribute [irreducible] Tab.pos64 Tab.dom64 Tab.pos8 Tab.dom8
+
 /-- The descriptor words of byte position `p`, and of word position `p`. -/
 def Tab.dbase8 (_ : Tab) (p : Nat) : Int := 16 + 16 * p
 def Tab.dlen8 (_ : Tab) (p : Nat) : Int := 24 + 16 * p
