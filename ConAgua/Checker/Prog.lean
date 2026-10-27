@@ -8,7 +8,7 @@ import ConAgua.Arena.ArRange
 import ConAgua.Arena.ArRangeSpec
 import ConAgua.Arena.BVarStore
 import ConAgua.Arena.BvarB
-import ConAgua.Arena.Checker
+import ConAgua.Arena.CheckerL
 import ConAgua.Arena.ConstStore
 import ConAgua.Arena.ConstsResolveF
 import ConAgua.Arena.CoreCaches
