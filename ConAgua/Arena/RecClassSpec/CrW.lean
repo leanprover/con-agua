@@ -428,163 +428,39 @@ l_model classReadMinorFinish_spec (p : Prog) (hfh : p.lookup "fvar_head" = some 
     rec5_specW p ha n h5]
   grind [arena_grind] simp [rdW_eq]
 
-section models2
-variable (n : Nat) (nP mo ml d : Word)
+l_model classReadMinorTail_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
+    (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
+    (hcm : p.lookup "class_of_motive_var" = some classOfMotiveVar)
+    (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hsc : p.lookup "sl_cons" = some slCons) (h2 : p.lookup "rec2" = some rec2)
+    (h5 : p.lookup "rec5" = some rec5)
+    (hi1 : p.lookup "class_read_minor_ih1" = some classReadMinorIh1)
+    (his : p.lookup "class_read_minor_ihs" = some classReadMinorIhs)
+    (hfin : p.lookup "class_read_minor_finish" = some classReadMinorFinish)
+    (htl : p.lookup "class_read_minor_tail" = some classReadMinorTail) (had : AdF p)
+  fns [htl ↦ tailW list]
+  specs [gaaF_spec p had n, gafF_spec p had n,
+    classReadMinorFinish_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin had n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-def tK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r7, m7) => some ([r7.headD 0, r7.tail.headD 0], m7)
-
-def tK2 (fo fl c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r6, m6) => tK3 (finW n m6 nP mo ml d fo fl (r6.headD 0) c)
-
-def tK1 (fo fl c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) =>
-    if r5.tail.headD 0 = 0 then some ([0, 0], m5)
-    else tK2 n nP mo ml d fo fl c
-      (gafF m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)])
-
-end models2
-
-/-- **The model of `class_read_minor_tail`.** -/
-def tailW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, nP, mo, ml, d, fo, fl, concl, c =>
-    tK1 n nP mo ml d fo fl c (gaaF m [CWF, concl])
-
-section models3
-variable (n : Nat) (nP mo ml d : Word)
-
-def mK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => some ([r5.headD 0, r5.tail.headD 0], m5)
-
-def mK4 (fo fl concl : Word) (m3 : Mem) : Option (List Word) → Option (List Word × Mem)
-  | none => none
-  | some r4 =>
-    if r4.headD 0 = 0 then some ([0, 0], m3)
-    else mK5 (tailW n m3 nP mo ml d fo fl concl (r4.tail.headD 0))
-
-def mK3 (fo fl concl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) =>
-    if r3.headD 0 = 0 then some ([0, 0], m3)
-    else mK4 n nP mo ml d fo fl concl m3 (cmvW (n - 1) m3 nP mo ml (r3.tail.headD 0))
-
-def mK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0, 0], m2)
-    else mK3 n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0)
-      (fvarHeadW m2 (r2.tail.tail.tail.headD 0))
-
-def mK1 (cR : CallM) (dom : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => mK2 n nP mo ml d (cR n "open_pis_at_fvars_f" [r1.tail.headD 0, dom, d] m1)
-
-end models3
-
-/-- **The model of `class_read_minor`.** -/
-def minorW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, nP, mo, ml, d, dom => mK1 n nP mo ml d cR dom (piBW n m CWF dom)
-
-/-! ## Arms (for `finish`) -/
-
-section arms
-variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem) (nP mo ml d x fo fl hd c cn t rr dom concl : Word)
-  (cR : CallM)
-  (r1 r2 r3 r4 r5 r6 r7 : List Word)
-
-theorem minorW_eq : minorW cR (n + 1) m nP mo ml d dom = mK1 n nP mo ml d cR dom (piBW n m CWF dom) := rfl
-theorem mK1_some : mK1 n nP mo ml d cR dom (some (r1, m1)) =
-    mK2 n nP mo ml d (cR n "open_pis_at_fvars_f" [r1.tail.headD 0, dom, d] m1) := rfl
-theorem mK2_fail (h : r2.headD 0 = 0) : mK2 n nP mo ml d (some (r2, m2)) = some ([0, 0], m2) := by
-  rw [mK2, ite_eq_left h]
-theorem mK2_ok (h : r2.headD 0 ≠ 0) : mK2 n nP mo ml d (some (r2, m2)) =
-    mK3 n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0) (fvarHeadW m2 (r2.tail.tail.tail.headD 0)) := by
-  rw [mK2, ite_eq_right h]
-theorem mK3_fail (h : r3.headD 0 = 0) : mK3 n nP mo ml d fo fl concl (some (r3, m3)) = some ([0, 0], m3) := by
-  rw [mK3, ite_eq_left h]
-theorem mK3_ok (h : r3.headD 0 ≠ 0) : mK3 n nP mo ml d fo fl concl (some (r3, m3)) =
-    mK4 n nP mo ml d fo fl concl m3 (cmvW (n - 1) m3 nP mo ml (r3.tail.headD 0)) := by rw [mK3, ite_eq_right h]
-theorem mK4_fail (h : r4.headD 0 = 0) : mK4 n nP mo ml d fo fl concl m3 (some r4) = some ([0, 0], m3) := by
-  rw [mK4, ite_eq_left h]
-theorem mK4_ok (h : r4.headD 0 ≠ 0) : mK4 n nP mo ml d fo fl concl m3 (some r4) =
-    mK5 (tailW n m3 nP mo ml d fo fl concl (r4.tail.headD 0)) := by rw [mK4, ite_eq_right h]
-theorem mK5_some : mK5 (some (r5, m5)) = some ([r5.headD 0, r5.tail.headD 0], m5) := rfl
-theorem tailW_eq : tailW (n + 1) m nP mo ml d fo fl concl c =
-    tK1 n nP mo ml d fo fl c (gaaF m [CWF, concl]) := rfl
-theorem tK1_fail (h : r5.tail.headD 0 = 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) = some ([0, 0], m5) := by
-  rw [tK1, ite_eq_left h]
-theorem tK1_ok (h : r5.tail.headD 0 ≠ 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) =
-    tK2 n nP mo ml d fo fl c (gafF m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)]) := by
-  rw [tK1, ite_eq_right h]
-theorem tK2_some : tK2 n nP mo ml d fo fl c (some (r6, m6)) =
-    tK3 (finW n m6 nP mo ml d fo fl (r6.headD 0) c) := rfl
-theorem tK3_some : tK3 (some (r7, m7)) = some ([r7.headD 0, r7.tail.headD 0], m7) := rfl
-end arms
-
-grind_pattern [ind_grind] minorW_eq => minorW cR (n + 1) m nP mo ml d dom
-grind_pattern [ind_grind] mK1_some => mK1 n nP mo ml d cR dom (some (r1, m1))
-grind_pattern [ind_grind] mK2_fail => mK2 n nP mo ml d (some (r2, m2))
-grind_pattern [ind_grind] mK2_ok => mK2 n nP mo ml d (some (r2, m2))
-grind_pattern [ind_grind] mK3_fail => mK3 n nP mo ml d fo fl concl (some (r3, m3))
-grind_pattern [ind_grind] mK3_ok => mK3 n nP mo ml d fo fl concl (some (r3, m3))
-grind_pattern [ind_grind] mK4_fail => mK4 n nP mo ml d fo fl concl m3 (some r4)
-grind_pattern [ind_grind] mK4_ok => mK4 n nP mo ml d fo fl concl m3 (some r4)
-grind_pattern [ind_grind] mK5_some => mK5 (some (r5, m5))
-grind_pattern [ind_grind] tailW_eq => tailW (n + 1) m nP mo ml d fo fl concl c
-grind_pattern [ind_grind] tK1_fail => tK1 n nP mo ml d fo fl c (some (r5, m5))
-grind_pattern [ind_grind] tK1_ok => tK1 n nP mo ml d fo fl c (some (r5, m5))
-grind_pattern [ind_grind] tK2_some => tK2 n nP mo ml d fo fl c (some (r6, m6))
-grind_pattern [ind_grind] tK3_some => tK3 (some (r7, m7))
-
-/-! ## Specs -/
-
-section specs
-variable (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead) (hv : p.lookup "e_view" = some eView)
-  (hf : p.lookup "sl_find" = some slFind) (hcm : p.lookup "class_of_motive_var" = some classOfMotiveVar)
-  (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hsc : p.lookup "sl_cons" = some slCons) (h2 : p.lookup "rec2" = some rec2)
-  (h5 : p.lookup "rec5" = some rec5)
-  (hi1 : p.lookup "class_read_minor_ih1" = some classReadMinorIh1)
-  (his : p.lookup "class_read_minor_ihs" = some classReadMinorIhs)
-  (hfin : p.lookup "class_read_minor_finish" = some classReadMinorFinish)
-  (hpb : p.lookup "pi_binders" = some piBinders)
-  (hmin : p.lookup "class_read_minor" = some classReadMinor)
-  (htl : p.lookup "class_read_minor_tail" = some classReadMinorTail) (had : AdF p)
-
-include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin htl had in
-theorem classReadMinorTail_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl concl c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor_tail" [nP, mo, ml, d, fo, fl, concl, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ tailW n s₀.mem nP mo ml d fo fl concl c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ htl]; simp only [callFn, classReadMinorTail]
-  rcases n with _ | n
-  · vcgen [exec] <;> grind
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      gaaF_spec p had n, gafF_spec p had n,
-      classReadMinorFinish_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin had n] <;>
-    finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
-
-include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin htl hpb hmin had in
-theorem classReadMinor_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (nP mo ml d dom : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor" [nP, mo, ml, d, dom]
-    ⦃fun r s' => LocEq s' s₀ ∧ minorW cR n s₀.mem nP mo ml d dom = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hmin]; simp only [callFn, classReadMinor]
-  rcases n with _ | n
-  · vcgen [exec] <;> grind
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      piBinders_spec' p ha hc hv hsc hpb n, hcR n "open_pis_at_fvars_f",
-      fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n,
-      classReadMinorTail_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin htl had n] <;>
-    finish (gen := 20) [rdW_eq, loc_init4]
-
-end specs
+l_model classReadMinor_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
+    (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
+    (hcm : p.lookup "class_of_motive_var" = some classOfMotiveVar)
+    (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hsc : p.lookup "sl_cons" = some slCons) (h2 : p.lookup "rec2" = some rec2)
+    (h5 : p.lookup "rec5" = some rec5)
+    (hi1 : p.lookup "class_read_minor_ih1" = some classReadMinorIh1)
+    (his : p.lookup "class_read_minor_ihs" = some classReadMinorIhs)
+    (hfin : p.lookup "class_read_minor_finish" = some classReadMinorFinish)
+    (hpb : p.lookup "pi_binders" = some piBinders)
+    (hmin : p.lookup "class_read_minor" = some classReadMinor)
+    (htl : p.lookup "class_read_minor_tail" = some classReadMinorTail) (had : AdF p)
+    (cR : CallM) (hcR : CallSpec p cR)
+  fns [hmin ↦ minorW list]
+  specs [piBinders_spec' p ha hc hv hsc hpb n, hcR n "open_pis_at_fvars_f",
+    fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n,
+    classReadMinorTail_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin htl had n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 end L.Ind
 
@@ -1013,7 +889,8 @@ theorem tailW_afr {n : Nat} {m m' : Mem} {nP mo ml d fo fl concl c : Word} {r : 
     (h : tailW n m nP mo ml d fo fl concl c = some (r, m')) : AFr m m' := by
   rcases n with _ | n
   · simp [tailW] at h
-  simp only [tailW, tK1.eq_def, tK2.eq_def, tK3.eq_def] at h
+  simp only [tailW, tailW.k_get_app_args_f.eq_def, tailW.k_get_app_fn_f.eq_def,
+    tailW.k_class_read_minor_finish.eq_def] at h
   afr_auto h [gaaF_afr, gafF_afr, finW_afr]
 
 /-! ## `class_read_minor_tail`, `class_read_minor` -/
@@ -1043,8 +920,8 @@ theorem tailW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       (minorTail nP.toNat motPos d.toNat c.toNat fvs (decI concl)) a (KP dn vis fe m decSlot) := by
   rcases n with _ | n
   · exact RSim.none
-  rw [tailW_eq]
-  refine RSim.bind (K := tK1 n nP mo ml d fo fl c) rfl (simGetAppArgs hS hH) ?_
+  rw [tailW.arm1]
+  refine RSim.bind (K := tailW.k_get_app_args_f n nP mo ml d fo fl c) rfl (simGetAppArgs hS hH) ?_
   rintro ⟨r5, m5⟩ rargs a5 - ⟨hS5, hg5, hd5, ht5⟩
   dsimp only at hS5 hg5 hd5 ht5
   simp only [Nat.zero_add, getD_zero, getD_one] at hd5 ht5
@@ -1053,23 +930,23 @@ theorem tailW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.2.2.2.1
     omega
   by_cases hz : r5.tail.headD 0 = 0
-  · rw [tK1_fail (h := hz)]
+  · rw [tailW.k_get_app_args_f.arm1 (hc1 := hz)]
     have hnil : rargs = [] := by
       have := decHL_length m5 hd5; rw [hz] at this; exact List.eq_nil_of_length_eq_zero this
     subst hnil
     exact RSim.pure_some ⟨hS5, hg5, rfl⟩
   obtain ⟨w, hw, hwH, hlast⟩ := decHL_last hd5 hz hb5
-  rw [tK1_ok (h := hz), hw, hlast]
-  refine RSim.bind (K := tK2 n nP mo ml d fo fl c) rfl (simGetAppFn hS5 hwH) ?_
+  rw [tailW.k_get_app_args_f.arm2 (hc1 := hz), hw, hlast]
+  refine RSim.bind (K := tailW.k_get_app_fn_f n nP mo ml d fo fl c) rfl (simGetAppFn hS5 hwH) ?_
   rintro ⟨r6, m6⟩ hd a6 - ⟨hS6, hg6, hb6, rfl⟩
   dsimp only at hS6 hg6 hb6
-  rw [tK2_some]
+  rw [tailW.k_get_app_fn_f.arm1]
   have hg56 := hg5.trans hg6
-  refine RSim.bindPure (K := tK3) rfl (finW_sim dn vis fe n m6 a6 nP mo ml d fo fl (r6.headD 0) c motPos
+  refine RSim.bindPure (K := tailW.k_class_read_minor_finish) rfl (finW_sim dn vis fe n m6 a6 nP mo ml d fo fl (r6.headD 0) c motPos
     fvs hS6 hb6 (by rw [decHL_grow hg56 hft]; exact hfvs) (Nat.le_trans hft hg56.1)
     (by rw [decNL_grow hg56 hmt]; exact hmot) (Nat.le_trans hmt hg56.1)) ?_
   rintro ⟨r7, m7⟩ x a7 - ⟨hS7, hg7, hd7⟩
-  rw [tK3_some]
+  rw [tailW.k_class_read_minor_finish.arm1]
   exact RSim.pure_some ⟨hS7, hg56.trans hg7, decSlot_pair hd7⟩
 
 theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
@@ -1085,27 +962,27 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     have h1 : iwTop m ≤ (m.arr64 IW).size := hS.2.1
     have h2 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
     omega
-  rw [minorW_eq]
-  refine RSim.bind (K := mK1 n nP mo ml d cR dom) rfl
+  rw [minorW.arm1]
+  refine RSim.bind (K := minorW.k_pi_binders cR n nP mo ml d dom) rfl
     (RSim.withJ hO.1 (simPiBinders n hS hH) (fun _ _ hb => piBW_afrR _ _ _ _ _ _ hb) hJ) ?_
   rintro ⟨r1, m1⟩ ⟨bs, e⟩ a1 - ⟨⟨hS1, hg1, hd1, ht1⟩, hJ1⟩
   dsimp only at hS1 hg1 hd1 ht1 hJ1
-  rw [mK1_some]
+  rw [minorW.k_pi_binders.arm1]
   have hlen : bs.length = (r1.tail.headD 0).toNat := decHL_length _ hd1
   simp only []
   rw [hlen]
-  refine RSim.bind (K := mK2 n nP mo ml d) rfl (hO.sim n hS1 hJ1 hH) ?_
+  refine RSim.bind (K := minorW.k_open_pis_at_fvars_f cR n nP mo ml d) rfl (hO.sim n hS1 hJ1 hH) ?_
   rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hJ2⟩
   dsimp only at hS2 hg2 ho hJ2
   have hg12 := hg1.trans hg2
   rcases o with _ | fc
-  · rw [mK2_fail (h := ho)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
+  · rw [minorW.k_open_pis_at_fvars_f.arm1 (hc1 := ho)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
   obtain ⟨fvs, concl⟩ := fc
   obtain ⟨h21, ⟨hfvs, hft⟩, hcH, rfl⟩ := ho
   simp only [getD_one, getD_two, Nat.reduceAdd] at hfvs hft
   rw [drop3_headD] at hcH ⊢
-  rw [mK2_ok (h := by rw [h21]; decide)]
-  refine RSim.bind (K := mK3 n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0)
+  rw [minorW.k_open_pis_at_fvars_f.arm2 (hc1 := by rw [h21]; decide)]
+  refine RSim.bind (K := minorW.k_fvar_head cR n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0)
     (r2.tail.tail.tail.headD 0)) rfl
     (RSim.withJ hO.1 (simFvarHead hS2 hcH) (fun _ _ hb => fvarHeadW_afr hb) hJ2) ?_
   rintro ⟨r3, m3⟩ x3 a3 - ⟨⟨hS3, hg3, hx3⟩, hJ3⟩
@@ -1113,11 +990,11 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   have hg13 := hg12.trans hg3
   rcases x3 with _ | p2
   · simp only [decFH] at hx3; subst hx3
-    rw [mK3_fail (h := rfl)]
+    rw [minorW.k_fvar_head.arm1 (hc1 := rfl)]
     exact RSim.pure_some ⟨⟨hS3, hg13, rfl⟩, hJ3⟩
   obtain ⟨rfl, hp2⟩ := hx3
-  rw [mK3_ok (h := by simp)]
-  refine RSim.lstep (K := mK4 n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0)
+  rw [minorW.k_fvar_head.arm2 (hc1 := by simp)]
+  refine RSim.lstep (K := minorW.k_class_of_motive_var cR n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0)
     (r2.tail.tail.tail.headD 0) m3) rfl fun r4 h4 => ?_
   have hmot3 : decNL m3 mo.toNat ml.toNat = some motPos := by rw [decNL_grow hg13 hmt]; exact hmot
   have hc := cmvW_ok (n - 1) m3 nP mo ml _ r4 motPos hmot3 hmb h4
@@ -1125,21 +1002,21 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   rcases hcm : ConRon.Arena.classOfMotiveVar nP.toNat motPos p2 with _ | c
   · rw [hcm] at hc; subst hc
     simp only [hcm]
-    rw [mK4_fail (h := rfl)]
+    rw [minorW.k_class_of_motive_var.arm1 (hc1 := rfl)]
     exact RSim.pure_some ⟨⟨hS3, hg13, rfl⟩, hJ3⟩
   rw [hcm] at hc; subst hc
   simp only [hcm]
   have hc64 : c < 2 ^ 64 := by
     have := cmv_lt _ _ _ _ hcm; have := decNL_length m3 hmot3; omega
-  rw [mK4_ok (h := by simp)]
+  rw [minorW.k_class_of_motive_var.arm2 (hc1 := by simp)]
   simp only [List.tail_cons, List.headD_cons]
   have ht := tailW_sim dn vis fe n m3 a3 nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0)
     (r2.tail.tail.tail.headD 0) (UInt64.ofNat c) motPos fvs hS3 hcH
     (by rw [decHL_grow hg3 hft]; exact hfvs) (Nat.le_trans hft hg3.1) hmot3 (Nat.le_trans hmt hg13.1)
   rw [UInt64.toNat_ofNat_of_lt' hc64] at ht
-  refine RSim.bindPure (K := mK5) rfl (RSim.withJ hO.1 ht (fun _ _ hb => tailW_afr hb) hJ3) ?_
+  refine RSim.bindPure (K := minorW.k_class_read_minor_tail cR) rfl (RSim.withJ hO.1 ht (fun _ _ hb => tailW_afr hb) hJ3) ?_
   rintro ⟨r5, m5⟩ x a5 - ⟨⟨hS5, hg5, hd5⟩, hJ5⟩
-  rw [mK5_some]
+  rw [minorW.k_class_read_minor_tail.arm1]
   exact RSim.pure_some ⟨⟨hS5, hg13.trans hg5, decSlot_pair hd5⟩, hJ5⟩
 
 end L.Ind
