@@ -20,7 +20,12 @@ Base: master be052799 (`checker.s` byte-identical to hashtpl's base 387d835c). S
 * Two compiler features remove almost all of that cost:
   * (a) a **minimum length** per array, which the stubs establish as a layout fact;
   * (b) a **table-relative** placement of `CTL`, at a fixed offset from `r15`.
-* Measured on Init (§4): @@INSTR@@ and @@WALL@@.
+* Measured (§4), with an unproved rewrite of `checker.s`:
+  * on Init, exact counts: −4.79 % of the instructions for `CTL` alone, −5.77 % with minimum
+    lengths for every array;
+  * on the default set (quiet, interleaved): −3.6 % of the cycles and −2.4 % of the wall time for
+    `CTL` alone;
+  * on Init the wall time moves by −1.3 to −4 %, but those rounds were noisy.
 * Minimum lengths for the other arrays add little. A per-function base register (b, function-wide)
   is worth at most 0.7 % of the instructions, and the hottest functions have no free register for
   it.
@@ -271,9 +276,43 @@ The counts match the static prediction from the profile to within 0.01 G. The re
 
 **Wall time and cycles** (`scripts/bench.py --set init --reps 5`, then `--set default --reps 3`,
 interleaved, `--cpus 40,41`, `--no-conron --no-ref`). The coordinator held the merge queue and the
-other lanes' builds for the run. @@LOAD@@
+other lanes' builds for the run. The load average was 11 at the start, 7 between the two sets and 4 at the end (bench.py reported load 7 and 4 when each set started). Logs and JSON are in `_tmp/dense/bench*`.
 
-@@BENCHTABLE@@
+Init, 5 interleaved rounds. The rounds were noisy (spread 8–13 %; two of master's rounds ran
+at 22.8 s), so the minimum is the measure here, as in perfgap and hashtpl:
+
+| variant | instructions | cycles, min (median) | wall, min (median) |
+|---|---:|---:|---:|
+| master | 273.416 G | 88.0 G (98.6 G) | 19.92 s (22.29 s) |
+| `minctl` | −2.80 % | 86.8 G (91.2 G), −1.4 % | 19.64 s (20.63 s), −1.4 % |
+| `minall` | −3.78 % | 86.8 G (92.5 G), −1.3 % | 19.67 s (20.90 s), −1.3 % |
+| `tbl` | −4.79 % | 86.9 G (91.5 G), −1.3 % | 19.67 s (20.68 s), −1.3 % |
+| `tblall` | −5.77 % | 84.5 G (90.2 G), −4.0 % | 19.14 s (20.37 s), −4.0 % |
+
+The default set (13 fixtures, 3 interleaved rounds, spread ≤ 2 % on the long fixtures). Geometric
+means of the ratio to master:
+
+| variant | instructions | cycles (median) | wall (median) |
+|---|---:|---:|---:|
+| `minctl` | 0.974 | 0.988 | 0.992 |
+| `minall` | 0.964 | 0.974 | 0.980 |
+| `tbl` | 0.959 | 0.964 | 0.976 |
+| `tblall` | 0.948 | 0.959 | 0.975 |
+
+The three longest fixtures, wall median, master → `tbl` → `tblall`:
+* `complete_c04a_restart_70`: 2.415 → 2.334 → 2.323 s (−3.4 %, −3.8 %);
+* `beta-ladder`: 2.460 → 2.427 → 2.421 s (−1.3 %, −1.6 %);
+* `let-ladder`: 1.012 → 0.989 → 0.974 s (−2.3 %, −3.8 %).
+
+**Reading.**
+* Unlike the template's checks in hashtpl (1.1 % of the cycles for 4 % of the instructions), this
+  change converts well. The table-relative `CTL` saves 2.4–3.6 % of the cycles and wall time on
+  the quiet default set, and 1.3–4 % on Init (noisy).
+* Most of it is the `CTL` part (`tbl`). The other arrays' minimum lengths (`tblall` − `tbl`) add
+  about 1 % in instructions and 0–1 % in time.
+* The minimum length alone (`minctl`) gets about a third of `tbl`'s time gain on the default set.
+  The removed base loads (a dependent load before each `CTL` access) matter more for time than
+  the removed checks (predicted, fused branches).
 
 ## 5. Byte and word arrays as one array space
 
@@ -349,8 +388,8 @@ mgen2's files (`L/ModelGen.lean` and the model conversions) do not intersect any
    That is narrower than leafgen G2, and every `checker.s` change is a regeneration.
 
 **Go/no-go.**
-* (a) minimum length: @@GOA@@
-* (b) table-relative `CTL`: @@GOB@@
+* (a) minimum length: **go**, as part of D2 for `CTL`. On its own it gives about 1 % of the time. Minima for the other arrays (memo headers 3, slot tables 2, `PINS` 55) are worth another 1 % of the instructions and 0–1 % of the time. Include them only if `ca_check_b`'s length check is accepted (decision 2).
+* (b) table-relative `CTL`: **go**. It is the largest single compiler lever found since leafgen: −4.8 % of the instructions, about −2.5 % of the wall time. It needs no register, and its proof is local (one `Layout` premise, the stubs' region inside slot 0).
 * (b) function-wide registers: **no-go** for now (at most 0.68 % of the instructions, the hot
   functions have no free register, and it is the largest proof change).
 * (c) never-tiered: **no separate work**. It is the `tiered` column, realized by the dense
