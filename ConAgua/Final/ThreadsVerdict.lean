@@ -253,7 +253,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     exact ⟨⟨rs, h1⟩, bufKept_of_memRel h3 hent' (hR.kept i' hi)⟩) he i 0 (by omega)
   rw [h0] at hruns
   refine threads_twinVerdictPooled hV b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem)
-    trivial (fun a ha => ?_) rfl _ _ abiFuel e hruns (fun c hc => ?_)
+    (fun a ha => ?_) rfl _ _ abiFuel e hruns (fun c hc => ?_)
     (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk
   · have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
