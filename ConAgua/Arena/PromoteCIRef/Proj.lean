@@ -93,7 +93,7 @@ theorem pnAt_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (
     AtOk (promoteN pm f.toNat u) decI m a (r.headD 0) m' :=
   at_gen p hp (pnAt_spec p hp) (fun _ _ _ _ => rfl) (fun n m a pm f w r m' hD hP hw hc => by
     obtain ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr, -⟩ := (pn_rel p hp n).1 m a pm f w r m' hD hP hw hc
-    exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr.mono (by simp) (by simp), TierKeep.of_frame hfr (by decide)⟩) n m a pm f addr u r m' hD hP hsz hu hc
+    exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr.mono (by decide) (by simp), TierKeep.of_frame hfr (by decide)⟩) n m a pm f addr u r m' hD hP hsz hu hc
 
 theorem plAt_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (u : LIdx)
     (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
@@ -102,7 +102,7 @@ theorem plAt_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (
     AtOk (promoteL pm f.toNat u) decI m a (r.headD 0) m' :=
   at_gen p hp (plAt_spec p hp) (fun _ _ _ _ => rfl) (fun n m a pm f w r m' hD hP hw hc => by
     obtain ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr, -⟩ := (pl_rel p hp n).1 m a pm f w r m' hD hP hw hc
-    exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr.mono (by simp) (by simp), TierKeep.of_frame hfr (by decide)⟩) n m a pm f addr u r m' hD hP hsz hu hc
+    exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr.mono (by decide) (by simp), TierKeep.of_frame hfr (by decide)⟩) n m a pm f addr u r m' hD hP hsz hu hc
 
 /-- **`ps_at(k, f, a)`**: the stored slice read (`erec_rd2`), promoted by `promote_slice(k, …)`
 (the kind's list promotion `gl`, its relation `hlist`). -/
