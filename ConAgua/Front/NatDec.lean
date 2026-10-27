@@ -43,7 +43,6 @@ open L.Arena
 namespace L.Front
 
 open L.Scan.Utf8 (byteW)
-open L.Front.Fields (IN)
 
 /-! ## `dec_chunk(i, k)` -/
 

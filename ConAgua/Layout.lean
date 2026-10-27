@@ -188,8 +188,11 @@ declare_arrays checkerArrays
 
 /-- The input buffer (the driver's name). -/
 abbrev Front.IN0 : ArrId := IN
-/-- The pool's tier-1 array. -/
-abbrev Arena.POOL1 : ArrId := tier1 Arena.POOL
+/-- The pool's tier-1 array, `tier1 POOL` (`POOL1_eq`), as a numeral: the pool's proofs decide
+`b ≠ POOL1` by `grind` and `simp`, which do not unfold `tierOff`. -/
+abbrev Arena.POOL1 : ArrId := 256
+
+theorem Arena.POOL1_eq : Arena.POOL1 = tier1 Arena.POOL := rfl
 /-- The spine stack, as `instantiateList`'s substitution slice. -/
 abbrev Arena.ILSPN : ArrId := Arena.SPN
 /-- The work pool, as the level-parameter walks' handle slices. -/
