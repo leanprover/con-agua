@@ -169,3 +169,36 @@ The path began with the chain `NatAdd` → `NatCmp` → `NatSub` → `NatShl` �
 
 (After: single-file times on a loaded machine.) Left: `Scan.RecordsSpec` (28 s; the same arm
 split for its two 11-key loops would gain ~7 s on the path).
+
+### `l_model`'s step proofs (batch 5)
+
+`l_model`'s `simp [lemmas]` recipe proves each step by `vcgen … <;> (try simp_all […]) <;> grind`.
+In `Verdict.IndBGrpM` (one `l_model`, 324 s) `simp_all` took 257 s over 115 goals; in
+`IndBTmn` (`tmnE_spec.step1`) 70 s. Unfolding the models through their `Except` match trees was
+not the cost:
+
+1. **Induction hypotheses left in the context.** A recursive member's step theorem (and a loop's
+   spec) kept `ih` and its copy `ih1` after `vcgen` had used them, and `simp_all` re-simplified
+   these large `∀`-triples (they contain the model) against every hypothesis in every round:
+   57 of `tmnE_spec.step1`'s 60 s. Now the generator clears them right after `vcgen` (the
+   default).
+2. **Locals as long `setLoc` chains.** In a long straight-line function (`gen_rec_check_prep`: 12
+   calls, 14 stores, 144 goals) every local is a `setLoc`/`setLocs` chain through ~30 states in
+   ~70 hypotheses per goal (183 MB printed), and `simp_all` evaluates the chains again in each
+   round; a goal's cost also grows with the goals before it (4 s alone, 18 s in sequence). A new
+   option `locals` puts one `simp only [the locals' lemmas] at *` before `simp_all`. It is not the
+   default: on small functions it costs more than it saves (`ClassFeR` 35 → 48 s), and where
+   `grind` needs the `LocEq`s folded it fails (`CkcW`, `ErToIwWStage`, `UnresolvedE`). Used by
+   `IndBGrpM` and `IndBSum3`.
+
+| module (alone, CPU) | before | after |
+|---|---:|---:|
+| `Verdict.IndBTmn` | 106 s | 9 s |
+| `Verdict.IndBGrpM` | 335 s | 93 s |
+| `Verdict.IndBSum3` | 56 s | 36 s |
+| other `l_model` modules | | unchanged within ±5 % |
+
+Left: the hand-written copies of the recipe (`inferProj_specE` in `Verdict.InferLeavesE`, 118 s:
+the pre-pass gives only 158 → 140 s); `DeclValE`'s `finish` recipe (`checkValueGroup_specE.step1`,
+45 s); `CkcW` and `ErToIwWStage` pass `simp [getElem_rdW']` without importing the lemma, so their
+`simp_all` always fails under `try` and `grind` alone proves the steps.
