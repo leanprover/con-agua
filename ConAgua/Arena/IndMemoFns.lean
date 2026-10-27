@@ -15,14 +15,14 @@ the three memos' words (decided for the checker's program in `Checker/IndMemoClo
 namespace L.Arena
 
 /-- The arrays the loop's non-inductive callees may write: all but the inductive stage's memos. -/
-def imA : List ArrId :=
-  (List.range 388).filter fun b => b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ (b < 201 ∨ 208 < b)
+def imA : List TieredArray :=
+  checkerWordArrays.filter fun b => b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr)
 
 /-- The `CTL` words the loop's non-inductive callees may write: all but the memos' epochs. -/
 def imC : List Word :=
   ((List.range 1024).filter fun x => x ≠ 52 ∧ x ≠ 158 ∧ (x < 202 ∨ 219 < x)).map UInt64.ofNat
 
-theorem imA_spec : ∀ b ∈ imA, b ≠ 51 ∧ b ≠ 155 ∧ (b < 201 ∨ 208 < b) := by
+theorem imA_spec : ∀ b ∈ imA, b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr) := by
   intro b hb; simp only [imA, List.mem_filter, decide_eq_true_eq] at hb; exact hb.2
 
 theorem imC_spec : ∀ x ∈ imC, x.toNat ≠ 52 ∧ x.toNat ≠ 158 ∧ (x.toNat < 202 ∨ 219 < x.toNat) := by

@@ -184,6 +184,10 @@ declare_arrays checkerArrays
   | /-- The frozen buffer's header, as entry 2 sees it. -/ Arena.HDRF : word := 241
   | /-- The seed of `CTL`, as entry 2 sees it. -/ Arena.CTLF : word := 242
 
+/-- **The checker's word arrays**: tier 0 of every word array of the table and tier 1 of every
+tiered one. Write sets "every array but …" are filters of this list. -/
+abbrev checkerWordArrays : List TieredArray := checkerArrays.wordSlots
+
 /-! ## Aliases: one array, a second name -/
 
 /-- The input buffer (the driver's name). -/
