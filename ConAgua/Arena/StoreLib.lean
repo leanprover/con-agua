@@ -60,8 +60,6 @@ structure Schema where
 structure Schema.WF (S : Schema) : Prop where
   w_le : S.w.toNat ≤ 256
   ca : 2 ≤ S.ca.toNat ∧ S.ca.toNat < 2 ^ 32
-  ra_lt : S.ra < 256
-  sa_lt : S.sa < 256
   ra_sa : S.ra ≠ S.sa
   ra_ctl : S.ra ≠ CTL
   sa_ctl : S.sa ≠ CTL
@@ -100,15 +98,13 @@ theorem Schema.WF.ra_ne {S : Schema} (_hS : Schema.WF S) {t t' : Word} (ht : t �
     tierA S.ra t ≠ tierA S.ra t' := tierA_ne_tier _ ht ht' h
 
 theorem Schema.WF.ra_sa' {S : Schema} (hS : Schema.WF S) (t t' : Word) : tierA S.ra t ≠ tierA S.sa t' :=
-  tierA_ne hS.ra_lt hS.sa_lt hS.ra_sa t t'
+  tierA_ne hS.ra_sa t t'
 
-theorem Schema.WF.ra_ctl' {S : Schema} (hS : Schema.WF S) (t : Word) : tierA S.ra t ≠ CTL := by
-  have := tierA_ne hS.ra_lt (show CTL < 256 by decide) hS.ra_ctl t 0
-  simpa using this
+theorem Schema.WF.ra_ctl' {S : Schema} (hS : Schema.WF S) (t : Word) : tierA S.ra t ≠ CTL :=
+  (ne_tierA (Ne.symm hS.ra_ctl) t).symm
 
-theorem Schema.WF.sa_ctl' {S : Schema} (hS : Schema.WF S) (t : Word) : tierA S.sa t ≠ CTL := by
-  have := tierA_ne hS.sa_lt (show CTL < 256 by decide) hS.sa_ctl t 0
-  simpa using this
+theorem Schema.WF.sa_ctl' {S : Schema} (hS : Schema.WF S) (t : Word) : tierA S.sa t ≠ CTL :=
+  (ne_tierA (Ne.symm hS.sa_ctl) t).symm
 
 /-! ## Reads -/
 
@@ -240,14 +236,14 @@ def wrRec (S : Schema) (t c : Word) : Mem → Word → List Word → Mem
   | m, _, [] => m
   | m, f, v :: vs => wrRec S t c (m.set64 (tierA S.ra t) (S.ad c f) v) (f + 1) vs
 
-theorem wrRec_arr_ne (S : Schema) (t c : Word) (b : ArrId) (hb : b ≠ tierA S.ra t) :
+theorem wrRec_arr_ne (S : Schema) (t c : Word) (b : TieredArray) (hb : b ≠ tierA S.ra t) :
     ∀ (vs : List Word) (m : Mem) (f : Word), (wrRec S t c m f vs).arr64 b = m.arr64 b := by
   intro vs
   induction vs with
   | nil => intro m f; rfl
   | cons v vs ih => intro m f; rw [wrRec, ih, Mem.arr64_set64_ne _ _ _ _ _ hb]
 
-theorem wrRec_size (S : Schema) (t c : Word) (b : ArrId) :
+theorem wrRec_size (S : Schema) (t c : Word) (b : TieredArray) :
     ∀ (vs : List Word) (m : Mem) (f : Word),
       ((wrRec S t c m f vs).arr64 b).size = (m.arr64 b).size := by
   intro vs
@@ -299,16 +295,16 @@ def pushG (S : Schema) (m : Mem) (t : Word) (vs : List Word) (j c q : Word) : Me
 section push
 variable (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (vs : List Word) (j c q : Word)
 
-theorem pushG_arr (b : ArrId) (h1 : b ≠ tierA S.ra t) (h2 : b ≠ tierA S.sa t) (h3 : b ≠ CTL) :
+theorem pushG_arr (b : TieredArray) (h1 : b ≠ tierA S.ra t) (h2 : b ≠ tierA S.sa t) (h3 : b ≠ CTL) :
     (pushG S m t vs j c q).arr64 b = m.arr64 b := by
   rw [pushG, Mem.arr64_set64_ne _ _ _ _ _ h3, Mem.arr64_set64_ne _ _ _ _ _ h2,
     Mem.arr64_set64_ne _ _ _ _ _ h2, wrRec_arr_ne _ _ _ _ h1]
 
-@[store_grind =] theorem pushG_size (b : ArrId) :
+@[store_grind =] theorem pushG_size (b : TieredArray) :
     ((pushG S m t vs j c q).arr64 b).size = (m.arr64 b).size := by
   rw [pushG, size_set64, size_set64, size_set64, wrRec_size]
 
-@[store_grind] theorem pushG_words : m.SameShape (pushG S m t vs j c q) := by
+@[store_grind .] theorem pushG_words : m.SameShape (pushG S m t vs j c q) := by
   rw [pushG]; exact (((wrRec_words S t c vs m 0).set64 _ _ _).set64 _ _ _).set64 _ _ _
 
 include hS in
@@ -571,7 +567,7 @@ def StoreR (m : Mem) (on : Bool) (tbP tbS : Tbl α (Idx k) δ) : Prop :=
 /-- `m'` agrees with `m` outside the table's arrays (both tiers) and `CTL`, and at the pool top
 `CTL[0]`. -/
 def OutEq (m m' : Mem) : Prop :=
-  (∀ b, b ≠ S.ra → b ≠ tier1 S.ra → b ≠ S.sa → b ≠ tier1 S.sa → b ≠ CTL → m'.arr64 b = m.arr64 b) ∧
+  (∀ b : TieredArray, b ≠ S.ra → b ≠ tier1 S.ra → b ≠ S.sa → b ≠ tier1 S.sa → b ≠ CTL → m'.arr64 b = m.arr64 b) ∧
   rdW (m'.arr64 CTL) 0 = rdW (m.arr64 CTL) 0
 
 /-- **The instance's frame obligation**: a node's relation and hash depend on its own words and
@@ -610,8 +606,8 @@ theorem outEq_pushG (hS : S.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (vs : List W
     OutEq S m (pushG S m t vs j c q) := by
   have := hS.ca
   refine ⟨fun b h1 h1' h2 h2' h3 => pushG_arr S m t vs j c q b
-    (by rcases tierA_cases' S.ra t with e | e <;> rw [e] <;> assumption)
-    (by rcases tierA_cases' S.sa t with e | e <;> rw [e] <;> assumption) h3, ?_⟩
+    (by rcases tierA_eq_or S.ra t with e | e <;> rw [e] <;> assumption)
+    (by rcases tierA_eq_or S.sa t with e | e <;> rw [e] <;> assumption) h3, ?_⟩
   rw [pushG_ctl S hS _ _ _ _ _ _ ht]
   grind
 

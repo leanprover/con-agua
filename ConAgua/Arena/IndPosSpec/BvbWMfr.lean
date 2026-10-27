@@ -23,7 +23,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem hbMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : HBM ∉ S0)
+theorem hbMR_mfr {S0 : List TieredArray} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : (HBM : TieredArray) ∉ S0)
     (hT : (214 : Word) ∉ T0) {mp : Std.HashMap (EIdx × Nat) Bool} (h : hbMR m mp) : hbMR m' mp := by
   obtain ⟨A, C, f, hA, hC⟩ := hf.memo HBM 214 (by decide) (by decide) hS hT
   exact memoRV_frame hbSch hbSch_wf lfKey hbVR A C hA hC m m' f (fun _ _ h => h) mp h

@@ -57,25 +57,25 @@ variable {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : W
   {M : ModeMaps} {eb : Word}
 
 /-- **An expression interning that creates no `sort`/`const` view**, as a walk step. -/
-theorem ilw_internE {v : ENodeView} {A : List ArrId} {C : List Word} (r : Word)
+theorem ilw_internE {v : ENodeView} {A : List TieredArray} {C : List Word} (r : Word)
     (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a)
     (hok : AM.ok (internE v) a) (hD : ArenaD m' (AM.st (internE v) a))
     (hres : AM.res (internE v) a = decE r) (hr : HW r) (hf : MemFrame A C m m')
-    (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b := by decide) (hpins : (128 : ArrId) ∉ A := by decide)
-    (henv : ∀ b ∈ A, b < 129 ∨ (144 ≤ b ∧ ¬ Tier1In 129 132 b) := by decide)
+    (h128 : ∀ b ∈ A, b.arr < 96 ∨ 128 ≤ b.arr := by decide) (hpins : (PINS : TieredArray) ∉ A := by decide)
+    (henv : AvoidA 129 144 A := by decide)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat := by simp)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat := by simp)
-    (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
-    (hmWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
+    (hmA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
+    (hmWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A := by decide)
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
-    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
+    (hscA : (SOREC : TieredArray) ∉ A ∧ (CREC : TieredArray) ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
       by decide)
-    (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
+    (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
-    (hSA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
+    (hSA : (SPN : TieredArray) ∉ A ∧ (BSTK : TieredArray) ∉ A ∧ (POOL : TieredArray) ∉ A := by decide)
     (hSC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
-    (hL : LvlFree C := by lvl_free) (hP1 : POOL1 ∉ A := by decide) (hPT : PT0 ∉ A := by decide) :
+    (hL : LvlFree C := by lvl_free) (hP1 : (POOL1 : TieredArray) ∉ A := by decide) (hPT : (PT0 : TieredArray) ∉ A := by decide) :
     ILWStep (internE v) a dn m m' vis fe M eb r := by
   have hrun := AM.run_of_ok _ _ hok
   have hk := Keeps.run (keepsW_internE v) hrun

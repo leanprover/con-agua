@@ -75,8 +75,7 @@ theorem internNNode_anon_run (a : AState) :
 def nanonSch : Schema := ⟨NAREC, NASLOT, 1, 34, NTag.anonymous⟩
 
 theorem nanonSch_wf : nanonSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 /-- Node `i` of tier `t` holds the `anonymous` node: trivially (there is only one `AnonNode`). -/
 def NaRecRel (_m : Mem) (_t _i : Word) (_k : AnonNode) : Prop := True
@@ -125,8 +124,6 @@ theorem nanonCS_wf : nanonCS.WF where
   S := by decide
   col A h := by simp [nanonCS] at h
   colRoom A h := by simp [nanonCS] at h
-  colLt A h := by
-    simp only [nanonCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (napushOK_room m t ((napushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nanonCS]
   ex _ := {

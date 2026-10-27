@@ -46,7 +46,7 @@ theorem _root_.L.ctlIdx_subPB (bs : List UInt8) {e : Expr} {ws : List Word} (h :
   · cases h; rfl
   · cases h
 
-theorem _root_.L.Stmt.okW_subPB (bs : List UInt8) {ctl : ArrId} {A : List ArrId} {C : List Word}
+theorem _root_.L.Stmt.okW_subPB (bs : List UInt8) {ctl : ArrId} {A : List TieredArray} {C : List Word}
     {fs : List FnName} : ∀ {s : Stmt}, s.okW ctl A C fs = true → (s.subPB bs).okW ctl A C fs = true
   | .st64 a i e, h => by
     simp only [Stmt.okW, Stmt.subPB] at h ⊢
@@ -69,7 +69,7 @@ theorem _root_.L.Stmt.okW_subPB (bs : List UInt8) {ctl : ArrId} {A : List ArrId}
   | .scan8 .., _ => rfl
   | .skip, _ | .set .., _ | .brk, _ | .ret _, _ | .abort _, _ | .gset .., _ => rfl
 
-theorem closedW_subPB (bs : List UInt8) {ctl : ArrId} {p : Prog} {A : List ArrId} {C : List Word}
+theorem closedW_subPB (bs : List UInt8) {ctl : ArrId} {p : Prog} {A : List TieredArray} {C : List Word}
     {fs : List FnName} (h : closedW ctl p A C fs = true) :
     closedW ctl (Prog.subPB bs p) A C fs = true := by
   simp only [closedW, List.all_eq_true] at h ⊢
@@ -82,7 +82,7 @@ theorem closedW_subPB (bs : List UInt8) {ctl : ArrId} {p : Prog} {A : List ArrId
     simp only [e] at this
     exact Stmt.okW_subPB bs this
 
-theorem closedWL_subPB (bs : List UInt8) {ctl : ArrId} {p : Prog} {A : List ArrId} {C : List Word}
+theorem closedWL_subPB (bs : List UInt8) {ctl : ArrId} {p : Prog} {A : List TieredArray} {C : List Word}
     {fs L : List FnName} (h : closedWL ctl p A C fs L = true) :
     closedWL ctl (Prog.subPB bs p) A C fs L = true := by
   simp only [closedWL, List.all_eq_true] at h ⊢

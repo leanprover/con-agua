@@ -78,73 +78,48 @@ def consTestWords : Nat := 2 * consMinWords
 `8 SN0`, ending at word `4 + 12 SN0` below the middle). -/
 def consGrowWords : Nat := 2 + 12 * 8
 
-/-! ## Tier arrays (lane tierswitch)
+/-! ## Tier arrays
 
-Tier `t` of a store's array `a` is the word array `tierA a t` (`a`, or `tier1 a`). The facts the
-store library needs: for `t ≤ 1` it is `a + tierOff · t`, and on ids below `256` it is injective in
-both. -/
+Tier `t` of a store's array `a` is the word array `tierA a t` (`↑a`, or `tier1 a`): distinct
+source arrays have distinct tiers, and the two tiers of one array differ. -/
 
-theorem tierOff_eq : tierOff = 256 := rfl
-
-theorem tierA_of_le (a : Nat) (t : Word) (ht : t ≤ 1) : tierA a t = a + 256 * t.toNat := by
+/-- For `t ≤ 1`, tier `t` of `a` is `↑a` or `tier1 a` as `t` is `0` or `1`. -/
+theorem tierA_of_le (a : Nat) (t : Word) (ht : t ≤ 1) :
+    tierA a t = if t = 0 then (a : TieredArray) else tier1 a := by
   have : t.toNat ≤ 1 := ht
   rcases (show t.toNat = 0 ∨ t.toNat = 1 by omega) with h | h
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_zero.symm)]; rfl
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_one.symm)]; rfl
 
 @[simp] theorem tierA_zero (a : Nat) : tierA a 0 = a := rfl
-@[simp] theorem tierA_one (a : Nat) : tierA a 1 = a + 256 := rfl
+@[simp] theorem tierA_one (a : Nat) : tierA a 1 = tier1 a := rfl
 
 theorem tierA_and_one (a : Nat) (t : Word) : tierA a (t &&& 1) = tierA a t := by
   simp only [tierA, UInt64.and_assoc, UInt64.and_self]
 
-theorem tierA_val (a : Nat) (t : Word) : (tierA a t : Nat) = a + 256 * (t &&& 1).toNat := rfl
-
 theorem and_one_le (t : Word) : (t &&& 1).toNat ≤ 1 := by
   rw [UInt64.toNat_and]; exact Nat.le_trans Nat.and_le_right (by simp)
 
-theorem tierA_lt (a : Nat) (ha : a < 256) (t : Word) : tierA a t < 512 := by
-  have := and_one_le t
-  show a + tierOff * (t &&& 1).toNat < 512
-  rw [tierOff_eq]; omega
+theorem tierA_inj {a b : Nat} {t u : Word} (ht : t ≤ 1) (hu : u ≤ 1) :
+    tierA a t = tierA b u ↔ a = b ∧ t = u := by
+  have h01 : ∀ x : Word, x ≤ 1 → x = 0 ∨ x = 1 := fun x hx => by
+    have : x.toNat ≤ 1 := hx
+    rcases (show x.toNat = 0 ∨ x.toNat = 1 by omega) with e | e
+    · exact .inl (UInt64.toNat_inj.mp (e.trans UInt64.toNat_zero.symm))
+    · exact .inr (UInt64.toNat_inj.mp (e.trans UInt64.toNat_one.symm))
+  rcases h01 t ht with rfl | rfl <;> rcases h01 u hu with rfl | rfl <;> simp
 
-theorem tierA_cases' (a : Nat) (t : Word) : tierA a t = a ∨ tierA a t = a + 256 := by
-  have := and_one_le t
-  rw [tierA_val]
-  rcases (show (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 by omega) with h | h <;> simp [h]
+/-- Arrays in any tiers differ when the source arrays do. -/
+theorem tierA_ne {a b : Nat} (h : a ≠ b) (t u : Word) : tierA a t ≠ tierA b u :=
+  tierA_ne_tierA h t u
 
-theorem tierA_inj {a b : Nat} (ha : a < 256) (hb : b < 256) {t u : Word} (ht : t ≤ 1)
-    (hu : u ≤ 1) : tierA a t = tierA b u ↔ a = b ∧ t = u := by
-  have e1 := tierA_of_le a t ht
-  have e2 := tierA_of_le b u hu
-  have h1 : t.toNat ≤ 1 := ht
-  have h2 : u.toNat ≤ 1 := hu
-  constructor
-  · intro h
-    have h' : a + 256 * t.toNat = b + 256 * u.toNat := e1.symm.trans (h.trans e2)
-    have : t.toNat = u.toNat := by omega
-    exact ⟨by omega, UInt64.toNat_inj.mp this⟩
-  · rintro ⟨rfl, rfl⟩; rfl
-
-/-- Two arrays below `256` in any tiers differ when the ids do. -/
-theorem tierA_ne {a b : Nat} (ha : a < 256) (hb : b < 256) (h : a ≠ b) (t u : Word) :
-    tierA a t ≠ tierA b u := by
-  intro e
-  rcases tierA_cases' a t with e1 | e1 <;> rcases tierA_cases' b u with e2 | e2 <;>
-    rw [e1, e2] at e <;> (have e' : (_ : Nat) = _ := e; omega)
-
-/-- A plain array below `256` is neither tier of another such array. -/
-theorem ne_tierA {a b : Nat} (ha : a < 256) (hb : b < 256) (h : a ≠ b) (t : Word) :
-    a ≠ tierA b t := by
-  simpa using tierA_ne ha hb h 0 t
+/-- A plain array is neither tier of another array. -/
+theorem ne_tierA {a b : Nat} (h : a ≠ b) (t : Word) : (a : TieredArray) ≠ tierA b t := by
+  simpa using tierA_ne h 0 t
 
 /-- The two tiers of one array differ. -/
 theorem tierA_ne_tier (a : Nat) {t u : Word} (ht : t ≤ 1) (hu : u ≤ 1) (h : t ≠ u) :
-    tierA a t ≠ tierA a u := by
-  intro e
-  have e' : a + 256 * t.toNat = a + 256 * u.toNat :=
-    (tierA_of_le a t ht).symm.trans (e.trans (tierA_of_le a u hu))
-  exact h (UInt64.toNat_inj.mp (by omega))
+    tierA a t ≠ tierA a u := fun e => h ((tierA_inj ht hu).1 e).2
 
 /-! ## Shifting local variables
 

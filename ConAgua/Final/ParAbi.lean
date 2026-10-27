@@ -195,7 +195,7 @@ theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode w)) st ∧
+        dm ra (L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode w)) st ∧
         SizesPost b pb st)
       dm (label lab) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
@@ -266,12 +266,12 @@ theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true
 /-- **From `ca_start_a`** (entry 1, mode word `1`). -/
 theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
-    (fz own : List ArrId) (hng : mode.id < tab.ng) (k0 : Nat)
+    (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 1)) st ∧
+        dm ra (L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 1)) st ∧
         SizesPost b pb st)
       dm (label abiStartAL) := by
   have hcP := hcode.left
@@ -284,12 +284,12 @@ theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
 /-- **From `ca_start_a0`** (the sequential driver's entry 1, mode word `3`). -/
 theorem abiA0_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
-    (fz own : List ArrId) (hng : mode.id < tab.ng) (k0 : Nat)
+    (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3)) st ∧
+        dm ra (L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3)) st ∧
         SizesPost b pb st)
       dm (label abiStartA0L) := by
   have hcP := hcode.left

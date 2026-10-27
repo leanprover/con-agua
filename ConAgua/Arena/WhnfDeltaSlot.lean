@@ -113,18 +113,19 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
     (h3 : c.readNC = a.caches.readNC) (hA : 96 ≤ A ∧ A < 128 := by decide)
     (hC : 96 ≤ C.toNat ∧ C.toNat < 128 := by decide) :
     CoreS dn m' { a with caches := c } vis fe M' eb ∧ StackKept m m' := by
-  have nA : ∀ b : ArrId, (b < 96 ∨ 128 ≤ b) → b ∉ [A] := fun b hb h => by
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA hb; omega
+  have nA : ∀ b : TieredArray, (b.arr < 96 ∨ 128 ≤ b.arr) → b ∉ ([A] : List TieredArray) := fun b hb h => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h
+    change A < 96 ∨ 128 ≤ A at hb; simp only [ArrId] at hA hb; omega
   have nC : ∀ x : Word, (x.toNat < 96 ∨ 128 ≤ x.toNat) → x ∉ [C] := fun x hx h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
-  have gA : ∀ b ∈ [A], InHigh b := fun b h => by
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA ⊢; omega
+  have gA : ∀ b ∈ ([A] : List TieredArray), InHigh b := fun b h => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h
+    refine ⟨rfl, ?_⟩; show 64 ≤ A; simp only [ArrId] at hA ⊢; omega
   have gC : ∀ x ∈ [C], 64 ≤ x.toNat := fun x h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
-  have eA : AvoidA 129 144 [A] := fun b h => .inl (by
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA ⊢; omega)
-  have eA2 : AvoidA 385 388 [A] := fun b h => .inl (by
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA ⊢; omega)
+  have eA : AvoidA 129 144 ([A] : List TieredArray) := fun b h => .inl (by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h
+    show A < 129; simp only [ArrId] at hA ⊢; omega)
   have eC : AvoidC 128 136 [C] := fun x h => .inl (by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega)
   have lf : LvlFree [C] := fun x hx => nC _ (by
@@ -132,16 +133,16 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
     rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [A] [C] gA gC m m' hf a hS.arena.1),
       DerR.of_store _ _ _ (DerR.frameM [A] [C] m m' hf
-        (fun b hb => by have := gA b hb; simp only [ArrId] at this ⊢; omega) a hS.arena.2) rfl⟩,
+        (fun b hb => by have := gA b hb; simp only [InHigh] at this; omega) a hS.arena.2) rfl⟩,
       hcore, hS.pins.congr (hf.1 PINS (nA _ (by decide)) (by decide)),
-      hS.env.frame eA eC hf eA2,
+      hS.env.frame eA eC hf,
       fun h l e => hS.readL h l (h1 ▸ e), fun h l e => hS.readLs h l (h2 ▸ e), hS.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
       hS.memos.frame hf ⟨nA _ (by decide), nA _ (by decide)⟩ ⟨nC _ (by decide), nC _ (by decide)⟩
         ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
         ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩
         ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
-        ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩, hf.2.2.1 145 ▸ hS.bstk,
+        ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩, hf.2.2.1 BSTK ▸ hS.bstk,
       (hS.den.frameE (hf.1 EREC (nA _ (by decide)) (by decide))).caches rfl rfl h3,
       hS.mode.frame hf (nC _ (by decide)) (nC _ (by decide))⟩,
     StackKept.of_frame hf ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
@@ -154,7 +155,7 @@ theorem CoreS.set_wh {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         whnfC := a.caches.whnfC.insert (decE e) (decE x) } } vis fe
       { M with wh := M.wh.insert (decE e, eb) (decE x) } eb ∧ StackKept m m' := by
-  have hf : MemFrame [98] [101] m m' := msetG_frame whSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
+  have hf : MemFrame [(WH : TieredArray)] [101] m m' := msetG_frame whSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   have c := hS.core
   exact hS.set_core hf ⟨c.wc.frame1 hf, c.wk.frame1 hf,
     c.wh.setE (coreSch_wf _ _ (by decide) (by decide)) c.eb1 e x he hx m' hs, c.inf.frame1 hf,

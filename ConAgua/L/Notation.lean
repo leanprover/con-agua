@@ -29,8 +29,8 @@ lfn (b_dummy, j) locals (c) {
 * `R[i].f` reads field `f` of record `i` of the record layout `R : L.Record` (a Lean constant;
   the field is the constant `R.f : L.Field`), `R[i].f := e` writes it: the word
   `i * stride + f.off` of the word array `R.arr` (`L/Records.lean`).
-* `A⟨t⟩[i]` reads word `i` of tier `t` of the tiered word array `A` (`L.tierA A t`: `A`, or
-  `A + tierOff` when `t & 1 = 1`); `len(A⟨t⟩)` is that tier's length, `A⟨t⟩[i] := e` writes it,
+* `A⟨t⟩[i]` reads word `i` of tier `t` of the tiered word array `A` (`L.tierA A t`: `↑A`, or
+  `tier1 A` when `t & 1 = 1`); `len(A⟨t⟩)` is that tier's length, `A⟨t⟩[i] := e` writes it,
   and `R⟨t⟩[i].f` / `R⟨t⟩[i].f := e` are records in a tiered array (lane tierarr).
 * The node stores' records (`L/TRec.lean`, the stores in `Arena/StoreFields.lean`; lane tieracc):
   `R⟨t, i⟩.f` is field `f` of node `i` of tier `t` of the store `R : L.TRec` (`R⟨t, i⟩` a one-word

@@ -43,17 +43,17 @@ def krW (sa : ArrId) (m : Mem) (t : Word) : Word := koW sa m t + 2
 /-! ## The growth's loops -/
 
 /-- Eight zero words of `sa` from `k`. -/
-def zero8 (sa : ArrId) (k : Word) (m : Mem) : Mem :=
+def zero8 (sa : TieredArray) (k : Word) (m : Mem) : Mem :=
   (((((((m.set64 sa k 0).set64 sa (k + 1) 0).set64 sa (k + 2) 0).set64 sa (k + 3) 0).set64 sa
     (k + 4) 0).set64 sa (k + 5) 0).set64 sa (k + 6) 0).set64 sa (k + 7) 0
 
 /-- The zero loop: `e` steps of eight zero words from `x`. -/
-def kzeroW (sa : ArrId) : Word → Nat → Mem → Mem
+def kzeroW (sa : TieredArray) : Word → Nat → Mem → Mem
   | _, 0, m => m
   | x, e + 1, m => kzeroW sa (x + 8) e (zero8 sa x m)
 
 /-- The mark loop: `e` slots from word `x`; a live one (value word above `bt`) gets `MARK`. -/
-def kmarkW (sa : ArrId) (bt : Word) : Nat → Word → Mem → Mem
+def kmarkW (sa : TieredArray) (bt : Word) : Nat → Word → Mem → Mem
   | 0, _, m => m
   | e + 1, x, m => kmarkW sa bt e (x + 2)
       (if bt < rdW (m.arr64 sa) x then m.set64 sa x (rdW (m.arr64 sa) x + MARK) else m)
@@ -76,7 +76,7 @@ decreasing_by
 
 /-- The placement of slot `i`'s entry (value word `v`, key word `q`, unmarked) at slot `j`
 (`kplaceB`): the memory and the next value word to re-insert (`0`: none). -/
-def kplaceW (sa : ArrId) (ob i j v q : Word) (m : Mem) : Mem × Word :=
+def kplaceW (sa : TieredArray) (ob i j v q : Word) (m : Mem) : Mem × Word :=
   if j = i then (m.set64 sa (ob + i * 2) v, 0)
   else if MARK ≤ rdW (m.arr64 sa) (ob + j * 2) then
     ((((m.set64 sa (ob + j * 2) v).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2)
@@ -88,7 +88,7 @@ def kplaceW (sa : ArrId) (ob i j v q : Word) (m : Mem) : Mem × Word :=
 /-- The re-insertions at slot `i` (`kinnerL`): while the value word `v` is marked, spend one of
 the budget `e`, probe from the home of `G` of slot `i`'s key word, place. The memory and the
 budget left; `none` where L aborts. -/
-def kinnerW (sa : ArrId) (G : Mem → Word → Word) (N ob bt i : Word) (e v : Word) (m : Mem) :
+def kinnerW (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i : Word) (e v : Word) (m : Mem) :
     Option (Mem × Word) :=
   if MARK ≤ v then
     if e = 0 then none
@@ -107,7 +107,7 @@ decreasing_by
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
 
 /-- The re-insertion loop (`krehashL`): slots `i ‥ n - 1` of the old half, the budget `e`. -/
-def krehashW (sa : ArrId) (G : Mem → Word → Word) (N n ob bt i e : Word) (m : Mem) : Option Mem :=
+def krehashW (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i e : Word) (m : Mem) : Option Mem :=
   if i < n then
     match kinnerW sa G N ob bt i e (rdW (m.arr64 sa) (ob + i * 2)) m with
     | none => none
@@ -136,34 +136,34 @@ def kgrowM (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem) : Optio
 /-! ## The frame of the growth -/
 
 /-- From `m` to `m'` only array `sa` changes, and no size. -/
-def GFr (sa : ArrId) (m m' : Mem) : Prop :=
+def GFr (sa : TieredArray) (m m' : Mem) : Prop :=
   (∀ b, b ≠ sa → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
     m.SameShape m'
 
-theorem GFr.refl (sa : ArrId) (m : Mem) : GFr sa m m := ⟨fun _ _ => rfl, fun _ => rfl, .refl m⟩
+theorem GFr.refl (sa : TieredArray) (m : Mem) : GFr sa m m := ⟨fun _ _ => rfl, fun _ => rfl, .refl m⟩
 
-theorem GFr.trans {sa : ArrId} {m₁ m₂ m₃ : Mem} (h₁ : GFr sa m₁ m₂) (h₂ : GFr sa m₂ m₃) :
+theorem GFr.trans {sa : TieredArray} {m₁ m₂ m₃ : Mem} (h₁ : GFr sa m₁ m₂) (h₂ : GFr sa m₂ m₃) :
     GFr sa m₁ m₃ :=
   ⟨fun b hb => (h₂.1 b hb).trans (h₁.1 b hb), fun b => (h₂.2.1 b).trans (h₁.2.1 b),
     h₁.2.2.trans h₂.2.2⟩
 
-theorem GFr.set64 (sa : ArrId) (m : Mem) (i v : Word) : GFr sa m (m.set64 sa i v) := by
+theorem GFr.set64 (sa : TieredArray) (m : Mem) (i v : Word) : GFr sa m (m.set64 sa i v) := by
   refine ⟨fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb, fun b => ?_, Mem.sameShape_set64 _ _ _ _⟩
   by_cases h : b = sa
   · subst h; exact Mem.size_arr64_set64 _ _ _ _
   · rw [Mem.arr64_set64_ne _ _ _ _ _ h]
 
-theorem GFr.zero8 (sa : ArrId) (k : Word) (m : Mem) : GFr sa m (zero8 sa k m) := by
+theorem GFr.zero8 (sa : TieredArray) (k : Word) (m : Mem) : GFr sa m (zero8 sa k m) := by
   unfold L.Arena.zero8
   exact ((((((GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)).trans
     (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)).trans
     (GFr.set64 _ _ _ _) |>.trans (GFr.set64 _ _ _ _)
 
-theorem kzeroW_fr (sa : ArrId) : ∀ (e : Nat) (x : Word) (m : Mem), GFr sa m (kzeroW sa x e m)
+theorem kzeroW_fr (sa : TieredArray) : ∀ (e : Nat) (x : Word) (m : Mem), GFr sa m (kzeroW sa x e m)
   | 0, _, m => GFr.refl _ m
   | e + 1, x, m => (GFr.zero8 sa x m).trans (kzeroW_fr sa e (x + 8) _)
 
-theorem kmarkW_fr (sa : ArrId) (bt : Word) :
+theorem kmarkW_fr (sa : TieredArray) (bt : Word) :
     ∀ (e : Nat) (x : Word) (m : Mem), GFr sa m (kmarkW sa bt e x m)
   | 0, _, m => GFr.refl _ m
   | e + 1, x, m => by
@@ -172,7 +172,7 @@ theorem kmarkW_fr (sa : ArrId) (bt : Word) :
     · exact (GFr.set64 _ _ _ _).trans (kmarkW_fr sa bt e _ _)
     · exact kmarkW_fr sa bt e _ _
 
-theorem kplaceW_fr (sa : ArrId) (ob i j v q : Word) (m : Mem) : GFr sa m (kplaceW sa ob i j v q m).1 := by
+theorem kplaceW_fr (sa : TieredArray) (ob i j v q : Word) (m : Mem) : GFr sa m (kplaceW sa ob i j v q m).1 := by
   unfold kplaceW
   split
   · exact GFr.set64 _ _ _ _
@@ -181,7 +181,7 @@ theorem kplaceW_fr (sa : ArrId) (ob i j v q : Word) (m : Mem) : GFr sa m (kplace
       (GFr.set64 _ _ _ _)
   · exact ((GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)
 
-theorem kinnerW_fr (sa : ArrId) (G : Mem → Word → Word) (N ob bt i e v : Word) (m m' : Mem)
+theorem kinnerW_fr (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i e v : Word) (m m' : Mem)
     (e' : Word) (h : kinnerW sa G N ob bt i e v m = some (m', e')) : GFr sa m m' := by
   fun_induction kinnerW sa G N ob bt i e v m generalizing m' e' with
   | case1 => simp_all
@@ -195,7 +195,7 @@ theorem ite_none_some {α : Type} {c : Prop} [Decidable c] {x : Option α} {y : 
     (h : (if c then none else x) = some y) : x = some y := by
   by_cases hc : c <;> simp_all
 
-theorem krehashW_fr (sa : ArrId) (G : Mem → Word → Word) (N n ob bt i e : Word) (m m' : Mem)
+theorem krehashW_fr (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i e : Word) (m m' : Mem)
     (h : krehashW sa G N n ob bt i e m = some m') : GFr sa m m' := by
   fun_induction krehashW sa G N n ob bt i e m generalizing m' with
   | case1 => simp_all
@@ -210,29 +210,20 @@ theorem kgrowM_fr (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m m' : Me
     (krehashW_fr _ _ _ _ _ _ _ _ _ _ (ite_none_some h))
 
 /-- Word stores to two different arrays commute. -/
-theorem Mem.set64_comm (m : Mem) (a b : ArrId) (i j v w : Word) (h : a ≠ b) :
+theorem Mem.set64_comm (m : Mem) (a b : TieredArray) (i j v w : Word) (h : a ≠ b) :
     (m.set64 a i v).set64 b j w = (m.set64 b j w).set64 a i v := by
-  have e1 : (m.set64 a i v).arr64 b = m.arr64 b := Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)
-  have e2 : (m.set64 b j w).arr64 a = m.arr64 a := Mem.arr64_set64_ne _ _ _ _ _ h
-  simp only [Mem.set64] at *
-  rw [e1, e2]
-  congr 1
-  apply Array.ext_getElem?
-  intro n
-  simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-  grind
+  simp only [Mem.set64, Mem.arr64, h, Ne.symm h, ite_false, Mem.mk.injEq, and_true,
+    true_and]
+  funext s
+  by_cases ha : s = a <;> by_cases hb : s = b <;> simp_all
 
 /-- A word array after a store, for any array. -/
-theorem arr64_set64_any (m : Mem) (a a' : ArrId) (i v : Word) :
+theorem arr64_set64_any (m : Mem) (a a' : TieredArray) (i v : Word) :
     (m.set64 a i v).arr64 a' = if a = a' then (m.arr64 a).set! i.toNat v else m.arr64 a' := by
   simp only [Mem.set64, Mem.arr64]
   by_cases h : a = a'
-  · subst h; simp [Array.getD]
-    intro h1 h2; omega
-  · simp [h, Array.getD]
-    split
-    · rw [Array.getElem_setIfInBounds_ne]; omega
-    · rfl
+  · subst h; simp
+  · simp [h, Ne.symm h]
 
 /-- The variables below `o` are kept. -/
 def KeepLo (o : Nat) (s s' : St) : Prop := ∀ x, x < o → s'.loc x = s.loc x

@@ -31,7 +31,7 @@ namespace L.Arena
 theorem CoreS.frame_lhs {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     (hf : MemFrame [LH, SPN] [192, 136] m m') : CoreS dn m' a vis fe M eb := by
-  have hA64 : ∀ b ∈ [LH, SPN], InHigh b := by decide
+  have hA64 : ∀ b ∈ ([LH, SPN] : List TieredArray), InHigh b := by decide
   have hC2 : ∀ x ∈ ([192, 136] : List Word), x = 192 ∨ x = 136 := by simp
   have hC64 : ∀ x ∈ ([192, 136] : List Word), 64 ≤ x.toNat := fun x hx => by
     rcases hC2 x hx with rfl | rfl <;> simp
@@ -47,7 +47,7 @@ theorem CoreS.frame_lhs {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
     hS.memos.frame_hi hf hA64 hC64 (by decide) (fun x hx => by
       rcases hC2 x hx with rfl | rfl <;> simp),
-    hf.2.2.1 145 ▸ hS.bstk,
+    hf.2.2.1 BSTK ▸ hS.bstk,
     hS.den.frameE (hf.1 EREC (by decide) (by decide)), hS.mode.frame hf (by decide) (by decide)⟩
 
 /-- A writer of the level heap and of the spine stack above its top, the top put back, keeps

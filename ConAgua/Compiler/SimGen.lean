@@ -798,56 +798,58 @@ include hG hT hTab
 
 omit [Host] in
 /-- A word array's descriptor in the table. -/
-theorem arrW_plain {a : ArrId} (ha : a < G.tab.nw) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) :
+theorem arrW_plain {a : ArrId} (ha : G.tab.dom64 a = true) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) :
     ArrW s (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) (σ.mem.arr64 a) := by
   simp only [maxOff] at hTab
-  have hw64 := G.tab.wpos_lt ha
+  have hw64 := G.tab.pos64_lt ha
   have hsz := hI.mem.size64 a ha
-  have hend := hG.end64 a ha
-  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [Tab.len64]; lomega, by simp [hT, Tab.len64]; lomega⟩, ?_⟩,
-    G.b64 a, .inl ⟨_, _, rfl, ⟨by simp [Tab.base64]; lomega, by simp [hT, Tab.base64]; lomega⟩, ?_⟩,
+  have hendp := G.tab.pos64_lt ha
+  have hend := hG.end64 _ hendp
+  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [Tab.len64, Tab.dlen64]; lomega, by simp [hT, Tab.len64, Tab.dlen64]; lomega⟩, ?_⟩,
+    G.b64 (G.tab.pos64 a), .inl ⟨_, _, rfl, ⟨by simp [Tab.base64, Tab.dbase64]; lomega, by simp [hT, Tab.base64, Tab.dbase64]; lomega⟩, ?_⟩,
     by rw [hsz]; exact hend, fun j hj => hI.mem.get64 a ha j hj⟩
-  · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len64 a ha
-  · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base64 a ha
+  · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len64A ha
+  · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base64A ha
 
 omit [Host] in
 /-- A byte array's descriptor in the table. -/
-theorem arrB_plain {a : ArrId} (ha : a < G.tab.nb) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) :
+theorem arrB_plain {a : ArrId} (ha : G.tab.dom8 a = true) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) :
     ArrB s (mb .r15 (ctx.tab.len8 a)) (mb .r15 (ctx.tab.base8 a)) (σ.mem.arr8 a) := by
   simp only [maxOff] at hTab
   have hsz := hI.mem.size8 a ha
-  have hend := hG.end8 a ha
-  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [Tab.len8]; lomega, by simp [Tab.len8]; lomega⟩, ?_⟩,
-    G.b8 a, .inl ⟨_, _, rfl, ⟨by simp [Tab.base8]; lomega, by simp [Tab.base8]; lomega⟩, ?_⟩,
+  have hendp := G.tab.pos8_lt ha
+  have hend := hG.end8 _ hendp
+  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [hT, Tab.len8, Tab.dlen8]; lomega, by simp [hT, Tab.len8, Tab.dlen8]; lomega⟩, ?_⟩,
+    G.b8 (G.tab.pos8 a), .inl ⟨_, _, rfl, ⟨by simp [hT, Tab.base8, Tab.dbase8]; lomega, by simp [hT, Tab.base8, Tab.dbase8]; lomega⟩, ?_⟩,
     by rw [hsz]; exact hend, fun j hj => hI.mem.get8 a ha j hj⟩
-  · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len8 a ha
-  · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base8 a ha
+  · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len8A ha
+  · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base8A ha
 
 omit [Host] in
 /-- A tiered word array's descriptor, the tier `u & 1` in register `R`. -/
-theorem arrW_tier {a : ArrId} (ha : a < G.tab.wK) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
+theorem arrW_tier {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
     {R : Reg64} {u : Word} (hR : s.regs.get64 R = (u &&& 1).toBitVec) :
     ArrW s (tdesc R (ctx.tab.len64 a)) (tdesc R (ctx.tab.base64 a)) (σ.mem.arr64 (tierA a u)) := by
   simp only [maxOff] at hTab
-  have ha' := (G.tab.wK_spec ha).2
-  have hta : tierA a u < G.tab.nw := Nat.lt_of_le_of_lt (tierA_le a u) ha'
-  have hw := G.tab.wpos_lt (Nat.lt_of_le_of_lt (Nat.le_add_right a tierOff) ha')
+  have hta := G.tab.dom64_tierA ha u
+  have htap := G.tab.pos64_lt hta
+  have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
   have hb := tier_bit u
   have hoff := tier_off G.tab ha u
   have hD : ∀ d : Int, s.regs.r15.toNat + 8 * (s.regs.get64 R).toNat + d.toNat =
       G.T + 8 * (u &&& 1).toNat + d.toNat := by
     intro d; rw [hR, UInt64.toNat_toBitVec, hI.r15]
   have hsz := hI.mem.size64 _ hta
-  have hend := hG.end64 _ hta
-  refine ⟨.inr ⟨_, _, rfl, ⟨by simp [Tab.len64]; lomega, by simp [hT, Tab.len64]; lomega⟩, ?_⟩,
-    G.b64 (tierA a u), .inr ⟨_, _, rfl, ⟨by simp [Tab.base64]; lomega, by simp [hT, Tab.base64]; lomega⟩, ?_⟩,
+  have hend := hG.end64 _ htap
+  refine ⟨.inr ⟨_, _, rfl, ⟨by simp [Tab.len64, Tab.dlen64]; lomega, by simp [hT, Tab.len64, Tab.dlen64]; lomega⟩, ?_⟩,
+    G.b64 (G.tab.pos64 (tierA a u)), .inr ⟨_, _, rfl, ⟨by simp [Tab.base64, Tab.dbase64]; lomega, by simp [hT, Tab.base64, Tab.dbase64]; lomega⟩, ?_⟩,
     by rw [hsz]; exact hend, fun j hj => hI.mem.get64 _ hta j hj⟩
   · rw [hD, show G.T + 8 * (u &&& 1).toNat + (ctx.tab.len64 a).toNat =
       G.T + (G.tab.len64 (tierA a u)).toNat by rw [hT]; omega, hsz]
-    exact hI.mem.len64 _ hta
+    exact hI.mem.len64A hta
   · rw [hD, show G.T + 8 * (u &&& 1).toNat + (ctx.tab.base64 a).toNat =
       G.T + (G.tab.base64 (tierA a u)).toNat by rw [hT]; omega]
-    exact hI.mem.base64 _ hta
+    exact hI.mem.base64A hta
 
 end
 
@@ -982,7 +984,7 @@ theorem gen_ld64 (a : ArrId) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
     GenSpec G ctx F (.ld64 a i) (gen ctx (.ld64 a i)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
   simp only [gen] at hg
-  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
   have hoki : GOk ctx i d fr := hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h
   refine genLdW_spec hF hi hg hc hoki hwf.2 hI (arr := σ.mem.arr64 a)
     (fun s' hX => by have := arrW_plain hG hT hTab hwf.1 (hI.ghost hX hok.dr); exact this) ?_ ?_
@@ -998,7 +1000,7 @@ theorem gen_ld8 (a : ArrId) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
     GenSpec G ctx F (.ld8 a i) (gen ctx (.ld8 a i)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
   simp only [gen] at hg
-  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
   have hoki : GOk ctx i d fr := hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h
   refine genLdB_spec hF hi hg hc hoki hwf.2 hI (arr := σ.mem.arr8 a)
     (fun s' hX => by have := arrB_plain hG hT hTab hwf.1 (hI.ghost hX hok.dr); exact this) ?_ ?_
@@ -1015,7 +1017,7 @@ theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
     GenSpec G ctx F (.ld64t a t i) (gen ctx (.ld64t a t i)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
   simp only [gen] at hg
-  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨ha, hwt⟩, hwi⟩ := hwf
   have hrt : ∀ r, Expr.readsReg ctx.alloc r (.ld64t a t i) = false → Expr.readsReg ctx.alloc r t = false :=
     fun r h => by simp only [Expr.readsReg, Bool.or_eq_false_iff] at h; exact h.1
@@ -1107,7 +1109,7 @@ theorem gen_len64t (a : ArrId) {t : Expr} (ht : GenSpec G ctx F t (gen ctx t)) :
     GenSpec G ctx F (.len64t a t) (gen ctx (.len64t a t)) := by
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
   simp only [gen] at hg
-  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
   obtain ⟨ha, hwt⟩ := hwf
   have hd : d ∈ d :: fr := List.mem_cons_self
   split at hg

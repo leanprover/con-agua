@@ -136,13 +136,13 @@ theorem promote_lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
 /-! ## The relation for expressions -/
 
 /-- The arrays and `CTL` words an expression promotion writes. -/
-abbrev eArrs : List ArrId :=
-  lsArrs ++ [REC, tier1 REC, SLOT, tier1 SLOT, AREC, tier1 AREC, ASLOT, tier1 ASLOT, SOREC, tier1 SOREC,
-    SOSLOT, tier1 SOSLOT, CREC, tier1 CREC, CSLOT, tier1 CSLOT, LEREC, tier1 LEREC, LESLOT,
-    tier1 LESLOT, BREC, tier1 BREC, BSLOT, tier1 BSLOT, FVREC, tier1 FVREC, FVSLOT, tier1 FVSLOT,
-    LAREC, tier1 LAREC, LASLOT, tier1 LASLOT, FAREC, tier1 FAREC, FASLOT, tier1 FASLOT, PJREC, tier1 PJREC,
-    PJSLOT, tier1 PJSLOT, ADER, tier1 ADER, LADER, tier1 LADER, FADER, tier1 FADER, LEDER,
-    tier1 LEDER, PJDER, tier1 PJDER, PEM, SOLP, tier1 SOLP, CLP, tier1 CLP, FVLP, tier1 FVLP]
+abbrev eArrs : List TieredArray :=
+  lsArrs ++ [(REC : TieredArray), tier1 REC, (SLOT : TieredArray), tier1 SLOT, (AREC : TieredArray), tier1 AREC, (ASLOT : TieredArray), tier1 ASLOT, (SOREC : TieredArray), tier1 SOREC,
+    (SOSLOT : TieredArray), tier1 SOSLOT, (CREC : TieredArray), tier1 CREC, (CSLOT : TieredArray), tier1 CSLOT, (LEREC : TieredArray), tier1 LEREC, (LESLOT : TieredArray),
+    tier1 LESLOT, (BREC : TieredArray), tier1 BREC, (BSLOT : TieredArray), tier1 BSLOT, (FVREC : TieredArray), tier1 FVREC, (FVSLOT : TieredArray), tier1 FVSLOT,
+    (LAREC : TieredArray), tier1 LAREC, (LASLOT : TieredArray), tier1 LASLOT, (FAREC : TieredArray), tier1 FAREC, (FASLOT : TieredArray), tier1 FASLOT, (PJREC : TieredArray), tier1 PJREC,
+    (PJSLOT : TieredArray), tier1 PJSLOT, (ADER : TieredArray), tier1 ADER, (LADER : TieredArray), tier1 LADER, (FADER : TieredArray), tier1 FADER, (LEDER : TieredArray),
+    tier1 LEDER, (PJDER : TieredArray), tier1 PJDER, (PEM : TieredArray), (SOLP : TieredArray), tier1 SOLP, (CLP : TieredArray), tier1 CLP, (FVLP : TieredArray), tier1 FVLP]
 abbrev eCtl : List Word :=
   lsCtl ++ [2, 3, 4, 5, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 147]
 
@@ -213,16 +213,16 @@ theorem peLit_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (h : Word) (r : 
     refine PEOk.of_sim ((Sim.hd1 ((sim_piG _ (fun n s₀ => piLit_spec p hp n s₀ _ _) fun n _ _ h =>
       piLit_rel p hp n m a hD _ _ hsl.1 hn _ _ h).congr (by rw [hpv]))).mono ?_) hW
     rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr, -⟩
-    exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, tierOff, POOL, PT0, REC, SLOT]) (by simp) hfr, hpw, hcp,
-      hfr.mono (by simp) (by simp), TierKeep.of_frame hfr (by decide)⟩
+    exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, POOL, PT0, REC, SLOT]) (by simp) hfr, hpw, hcp,
+      hfr.mono (by decide) (by simp), TierKeep.of_frame hfr (by decide)⟩
   · simp only [RecRel_strVal, StrRec] at hkr
     obtain ⟨hk1, hsl, hks, -⟩ := hkr
     rw [peLitW, ite_eq_left (by rw [ltK, hk1])] at hW
     refine PEOk.of_sim ((Sim.hd1 (sim_piG _ (fun n s₀ => piLitStr_spec p hp n s₀ _ _) fun n _ _ h =>
       piLitStr_rel p hp n m a hD _ _ hsl.1 st hks _ _ h)).mono ?_) hW
     rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr, -⟩
-    exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, tierOff, POOL, PT0, REC, SLOT]) (by simp) hfr, hpw, hcp,
-      hfr.mono (by simp) (by simp), TierKeep.of_frame hfr (by decide)⟩
+    exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, POOL, PT0, REC, SLOT]) (by simp) hfr, hpw, hcp,
+      hfr.mono (by decide) (by simp), TierKeep.of_frame hfr (by decide)⟩
 
 /-- **`pe_const` refines the `const` arm.** -/
 theorem peConst_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f x us : Word) (r : List Word)
@@ -244,9 +244,9 @@ theorem peConst_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f x us : Word
   refine (Sim.hd1 (sim_pi (fun n s₀ => piConst_spec p hp n s₀ _ _) fun n _ _ h =>
     piConst_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ h)).mono ?_
   rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₃, hpw₃, hcp₃, hfr₃⟩
-  exact ⟨rfl, hD₃, hP₂.frameLo (by simp [tier1, tierOff, CREC, CSLOT, CLP]) (by simp) hfr₃, hpw₃,
-    hcp₃.trans (hcp₂.trans hcp₁), ((hfr₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp) (by simp))).trans
-      (hfr₃.mono (by simp) (by simp)),
+  exact ⟨rfl, hD₃, hP₂.frameLo (by simp [tier1, CREC, CSLOT, CLP]) (by simp) hfr₃, hpw₃,
+    hcp₃.trans (hcp₂.trans hcp₁), ((hfr₁.mono (by decide) (by simp)).trans (hfr₂.mono (by decide) (by simp))).trans
+      (hfr₃.mono (by decide) (by simp)),
     ((TierKeep.of_frame hfr₁ (by decide)).trans tk₂).trans (TierKeep.of_frame hfr₃ (by decide))⟩
 
 omit hp in
@@ -255,7 +255,7 @@ the interning `g` (its spec `hs`, its relation `hrel`). -/
 theorem pe_two (n : Nat) (ihE : ∀ (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : List Word) (m' : Mem),
       ArenaD m a → PMemoR m pm → h.toNat < 2 ^ 32 → callW p n "promote_e" [f, h] m = some (r, m') →
       PEOk (promoteE pm f.toNat (decE h)) m a pm (r.headD 0) m')
-    {g mk : FnName} {C : EIdx → EIdx → ENodeView} {A : List ArrId} {Cs : List Word}
+    {g mk : FnName} {C : EIdx → EIdx → ENodeView} {A : List TieredArray} {Cs : List Word}
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ Cs, x.toNat < 64) (hAe : ∀ b ∈ A, b ∈ eArrs)
     (hCe : ∀ x ∈ Cs, x ∈ eCtl) (h0 : (0 : Word) ∉ Cs)
     (hs : ∀ n s₀ x y, ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) g [x, y]
@@ -367,11 +367,11 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, tk⟩ := ihA m a pm (f - 1) h r₁ m₁ hD hP hh hca
     refine ⟨a₁, { pm₁ with eM := pm₁.eM.insert (decE h) (decE (r₁.headD 0)) }, ?_,
-      hD₁.memo peSch peSch_wf (by decide) (by decide) (by decide) h _ hs,
+      hD₁.memo peSch peSch_wf (by decide) (by decide) h _ hs,
       hP₁.setE h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_,
       tk.trans (TierKeep.of_frame (msetG_frame peSch peSch_wf _ _ _ _ _ hs) (by decide))⟩
     · rw [run_bind_ok hrun, ← hr]; rfl
-    · exact hfr.trans ((msetG_frame peSch peSch_wf _ _ _ _ _ hs).mono (by simp) (by simp))
+    · exact hfr.trans ((msetG_frame peSch peSch_wf _ _ _ _ _ hs).mono (by decide) (by simp))
   · -- `pe_arm`
     intro m a pm f h r m' hD hP hh hc
     obtain ⟨s', rfl, -, hW⟩ := callW_triple (peArm_spec p hp n ⟨m, Locals.init []⟩ f h) hc
@@ -389,8 +389,8 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
       refine PEOk.of_sim (Sim.bind_twin hv0 ((Sim.hd1 ((sim_pi (fun n s₀ => piBVar_spec p hp n s₀ _)
         fun n _ _ h => piBVar_rel p hp n m a hD _ _ _ h).congr (by rw [← pmGetD1, hi]))).mono ?_)) hW
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr⟩
-      exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, tierOff, BREC, BSLOT]) (by simp) hfr, hpw, hcp,
-        hfr.mono (by simp) (by simp), TierKeep.of_frame hfr (by decide)⟩
+      exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, BREC, BSLOT]) (by simp) hfr, hpw, hcp,
+        hfr.mono (by decide) (by simp), TierKeep.of_frame hfr (by decide)⟩
     | fvar i ty =>
       obtain ⟨hg, hi, hty, hty'⟩ := hvr
       simp (config := { decide := true }) only [peK, hg, ↓reduceIte] at hW
@@ -404,8 +404,8 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
       refine (Sim.hd1 ((sim_pi (fun n s₀ => piFVar_spec p hp n s₀ _ _) fun n _ _ h =>
         piFVar_rel p hp n m₁ a₁ hD₁ _ _ hpw₁ _ _ h).congr (by rw [hi]))).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
-      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP]) (by simp) hfr₂, hpw₂,
-        hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)),
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, FVREC, FVSLOT, FVLP]) (by simp) hfr₂, hpw₂,
+        hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by decide) (by simp)),
         tk₁.trans (TierKeep.of_frame hfr₂ (by decide))⟩
     | sort u =>
       obtain ⟨hg, hu, hu'⟩ := hvr
@@ -419,8 +419,8 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
       refine (Sim.hd1 (sim_pi (fun n s₀ => piSort_spec p hp n s₀ _) fun n _ _ h =>
         piSort_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
-      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, tierOff, SOREC, SOSLOT, SOLP]) (by simp) hfr₂, hpw₂,
-        hcp₂.trans hcp₁, (hfr₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp [tier1, tierOff]) (by simp)),
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, SOREC, SOSLOT, SOLP]) (by simp) hfr₂, hpw₂,
+        hcp₂.trans hcp₁, (hfr₁.mono (by decide) (by simp)).trans (hfr₂.mono (by decide) (by simp)),
         (TierKeep.of_frame hfr₁ (by decide)).trans (TierKeep.of_frame hfr₂ (by decide))⟩
     | const x us =>
       obtain ⟨hg, hx, hx', hus, hus'⟩ := hvr
@@ -474,19 +474,19 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
   · -- `pe_app`
     intro m a pm f x y r m' hD hP hx hy hc
     obtain ⟨s', rfl, -, hW⟩ := callW_triple (peApp_spec p hp n ⟨m, Locals.init []⟩ f x y) hc
-    exact pe_two p n ihE (C := .app) (by simp [tier1, tierOff, ADER, AREC, ASLOT]) (by simp) (by simp) (by simp) (by decide)
+    exact pe_two p n ihE (C := .app) (by simp [tier1, ADER, AREC, ASLOT]) (by simp) (by simp) (by simp) (by decide)
       (fun n s₀ x y => piApp_spec p hp n s₀ x y) (fun n m a hD x y hx hy => piApp_rel p hp n m a hD x y hx hy)
       m a pm f x y _ _ hD hP hx hy hW
   · -- `pe_lam`
     intro m a pm f x y r m' hD hP hx hy hc
     obtain ⟨s', rfl, -, hW⟩ := callW_triple (peLam_spec p hp n ⟨m, Locals.init []⟩ f x y) hc
-    exact pe_two p n ihE (C := .lam) (by simp [tier1, tierOff, LADER, LAREC, LASLOT]) (by simp) (by simp) (by simp) (by decide)
+    exact pe_two p n ihE (C := .lam) (by simp [tier1, LADER, LAREC, LASLOT]) (by simp) (by simp) (by simp) (by decide)
       (fun n s₀ x y => piLam_spec p hp n s₀ x y) (fun n m a hD x y hx hy => piLam_rel p hp n m a hD x y hx hy)
       m a pm f x y _ _ hD hP hx hy hW
   · -- `pe_forall`
     intro m a pm f x y r m' hD hP hx hy hc
     obtain ⟨s', rfl, -, hW⟩ := callW_triple (peForall_spec p hp n ⟨m, Locals.init []⟩ f x y) hc
-    exact pe_two p n ihE (C := .forallE) (by simp [tier1, tierOff, FADER, FAREC, FASLOT]) (by simp) (by simp) (by simp) (by decide)
+    exact pe_two p n ihE (C := .forallE) (by simp [tier1, FADER, FAREC, FASLOT]) (by simp) (by simp) (by simp) (by decide)
       (fun n s₀ x y => piForall_spec p hp n s₀ x y) (fun n m a hD x y hx hy => piForall_rel p hp n m a hD x y hx hy)
       m a pm f x y _ _ hD hP hx hy hW
   · -- `pe_let`
@@ -506,9 +506,9 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     refine (Sim.hd1 (sim_pi (fun n s₀ => piLet_spec p hp n s₀ _ _ _) fun n _ _ h =>
       piLet_rel p hp n m₃ a₃ hD₃ _ _ _ hpw₁ hpw₂ hpw₃ _ _ h)).mono ?_
     rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₄, hpw₄, hcp₄, hfr₄⟩
-    exact ⟨rfl, hD₄, hP₃.frameLo (by simp [tier1, tierOff, LEDER, LEREC, LESLOT]) (by simp) hfr₄, hpw₄,
+    exact ⟨rfl, hD₄, hP₃.frameLo (by simp [tier1, LEDER, LEREC, LESLOT]) (by simp) hfr₄, hpw₄,
       hcp₄.trans (hcp₃.trans (hcp₂.trans hcp₁)),
-      ((hfr₁.trans hfr₂).trans hfr₃).trans (hfr₄.mono (by simp) (by simp)),
+      ((hfr₁.trans hfr₂).trans hfr₃).trans (hfr₄.mono (by decide) (by simp)),
       ((tk₁.trans tk₂).trans tk₃).trans (TierKeep.of_frame hfr₄ (by decide))⟩
   · -- `pe_proj`
     intro m a pm f nm i e r m' hD hP hnm he hc
@@ -524,9 +524,9 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     refine (Sim.hd1 (sim_pi (fun n s₀ => piProj_spec p hp n s₀ _ _ _) fun n _ _ h =>
       piProj_rel p hp n m₂ a₂ hD₂ _ i _ hpw₁ hpw₂ _ _ h)).mono ?_
     rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₃, hpw₃, hcp₃, hfr₃⟩
-    exact ⟨rfl, hD₃, hP₂.frameLo (by simp [tier1, tierOff, PJDER, PJREC, PJSLOT]) (by simp) hfr₃, hpw₃,
+    exact ⟨rfl, hD₃, hP₂.frameLo (by simp [tier1, PJDER, PJREC, PJSLOT]) (by simp) hfr₃, hpw₃,
       hcp₃.trans (hcp₂.trans hcp₁),
-      ((hfr₁.mono (by simp) (by simp)).trans hfr₂).trans (hfr₃.mono (by simp [tier1, tierOff]) (by simp)),
+      ((hfr₁.mono (by decide) (by simp)).trans hfr₂).trans (hfr₃.mono (by decide) (by simp)),
       ((TierKeep.of_frame hfr₁ (by decide)).trans tk₂).trans (TierKeep.of_frame hfr₃ (by decide))⟩
 
 /-- **`promote_e` refines `promoteE`** (`PEOk`). -/

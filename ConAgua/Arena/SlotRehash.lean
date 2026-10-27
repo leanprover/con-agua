@@ -40,12 +40,12 @@ theorem mark_le_iff (a : Word) : MARK ≤ a ↔ 2 ^ 63 ≤ a.toNat := by
   rw [UInt64.le_iff_toNat_le, MARK_toNat]
 
 /-- A read after an in-bounds write. -/
-theorem rd_set_in (sa : ArrId) (mi : Mem) (ya v y : Word) (h : ya.toNat < (mi.arr64 sa).size) :
+theorem rd_set_in (sa : TieredArray) (mi : Mem) (ya v y : Word) (h : ya.toNat < (mi.arr64 sa).size) :
     rdW ((mi.set64 sa ya v).arr64 sa) y = if ya = y then v else rdW (mi.arr64 sa) y := by
   rw [rdW_set64]; simp [h]
 
 section reins
-variable (sa : ArrId) (ob N n bt c : Word) (KPm : Word → Word → Prop) (hsm : Word → Word)
+variable (sa : TieredArray) (ob N n bt c : Word) (KPm : Word → Word → Prop) (hsm : Word → Word)
 
 /-- The value word of slot `j`. -/
 def VW (mi : Mem) (j : Word) : Word := rdW (mi.arr64 sa) (ob + j * 2)

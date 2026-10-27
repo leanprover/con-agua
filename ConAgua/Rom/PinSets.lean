@@ -85,7 +85,7 @@ def PinSetsR (mem : Mem) (ips : List INatOpPinSet) : Prop :=
 
 /-- The frame of the stage: the record pool, its top, the variant list's header, and the
 expression reader's frame. -/
-def PinsA : List ArrId := EREC :: ExprA
+def PinsA : List TieredArray := (EREC : TieredArray) :: ExprA
 def PinsC : List Word := 129 :: 150 :: 151 :: ExprC
 
 /-! ## Word arithmetic -/
@@ -120,8 +120,8 @@ theorem EW.trans {lo hi lo₂ hi₂ : Nat} {m₁ m₂ m₃ : Mem} (h₁ : EW lo 
    h₂.size.trans h₁.size, h₂.c150.trans h₁.c150, h₂.c151.trans h₁.c151⟩
 
 /-- A frame that keeps `EREC`, its top and the header is an `EW` of any window. -/
-theorem EW.frame {A : List ArrId} {C : List Word} {m m' : Mem} (lo hi : Nat) (hf : MemFrame A C m m')
-    (hA : EREC ∉ A) (h1 : (129 : Word) ∉ C) (h2 : (150 : Word) ∉ C) (h3 : (151 : Word) ∉ C) :
+theorem EW.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (lo hi : Nat) (hf : MemFrame A C m m')
+    (hA : (EREC : TieredArray) ∉ A) (h1 : (129 : Word) ∉ C) (h2 : (150 : Word) ∉ C) (h3 : (151 : Word) ∉ C) :
     EW lo hi m m' := by
   have hE := hf.1 EREC hA (by decide)
   refine ⟨?_, fun i _ _ => by rw [hE], by rw [hE], hf.2.1 150 h2, hf.2.1 151 h3⟩
@@ -211,7 +211,7 @@ structure SInv (mem : Mem) (a : AState) : Prop where
   /-- The pool's mode (lane tierpool). -/
   mode : ModeOK mem
 
-theorem hiA : ∀ b ∈ ([EREC] : List ArrId), InHigh b := by decide
+theorem hiA : ∀ b ∈ ([EREC] : List TieredArray), InHigh b := by decide
 theorem hiC : ∀ x ∈ ([129, 150, 151] : List Word), 64 ≤ x.toNat := by simp
 theorem hiC' : ∀ x ∈ ([132, 148, 149] : List Word), 64 ≤ x.toNat := by simp
 
@@ -268,7 +268,7 @@ theorem frame_pins_expr {m m' : Mem} (h : MemFrame ExprA ExprC m m') : MemFrame 
 theorem frame_pins_reset (m : Mem) : MemFrame PinsA PinsC m (resetMem m) :=
   frame_pins_expr (resetMem_frame m)
 
-theorem erec_notin : EREC ∉ ExprA := by simp [ExprA, RomA, StoreA]; decide
+theorem erec_notin : (EREC : TieredArray) ∉ ExprA := by decide
 
 theorem c_notin (x : Word) (hx : 64 ≤ x.toNat) (h1 : x ≠ 132) (h2 : x ≠ 148) (h3 : x ≠ 149)
     (h4 : x ≠ 131) : x ∉ ExprC := by

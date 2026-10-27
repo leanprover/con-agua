@@ -199,14 +199,14 @@ theorem keepsW_arFast (F : Nat) (e : EIdx) (d k c : Nat) :
 /-- **`CoreS` across a walk**: the walk tier from the walk's own theorem, the walk memos from its
 post and frame (`hmem`), everything else by the frame below 64 and the twin's `cpl`. -/
 theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hk : cpl a' = cpl a)
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64)
-    (hmem : CoreMemos m') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
-    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
+    (hmem : CoreMemos m') (hP : (POOL : TieredArray) ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
+    (hscA : (SOREC : TieredArray) ∉ A ∧ (CREC : TieredArray) ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
-      by decide) (hLv : LvlFree C := by lvl_free) (hP1 : POOL1 ∉ A := by decide)
-    (hPT : PT0 ∉ A := by decide) :
+      by decide) (hLv : LvlFree C := by lvl_free) (hP1 : (POOL1 : TieredArray) ∉ A := by decide)
+    (hPT : (PT0 : TieredArray) ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   simp only [cpl, Prod.mk.injEq] at hk
   obtain ⟨hc, hp, hl⟩ := hk
@@ -214,13 +214,13 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     hf.1 SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
     hf.2.1 136 (fun h => absurd (hC _ h) (by decide))
-  refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf (.of_lowT hA), ?_, ?_, ?_,
-    hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 145 ▸ hS.bstk,
+  refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
+    hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 BSTK ▸ hS.bstk,
     hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hS.mode.frame hf hP0 hscC.1⟩,
     StackKept.of_frame hf
       ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
       ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩ hLv hP1 hPT⟩
-  · rw [hc]; exact hS.core.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf
+  · rw [hc]; exact hS.core.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide)) (by decide))
   · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]
     exact this
@@ -256,13 +256,13 @@ theorem ArenaD.memo_irrel {m : Mem} {a : AState} (h : ArenaD m a) (X Y : Std.Has
     DerR.of_store _ _ _ hD rfl⟩
 
 /-- The abstraction memo's well-formedness across a writer that avoids it. -/
-theorem coreAb_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (49 : ArrId) ∉ A) (hC : (48 : Word) ∉ C) (h : CoreMemos m) :
+theorem coreAb_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (ABMEMO : TieredArray) ∉ A) (hC : (48 : Word) ∉ C) (h : CoreMemos m) :
     ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m' mp :=
   let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
 
-theorem coreIl_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (50 : ArrId) ∉ A) (hC : (50 : Word) ∉ C) (h : CoreMemos m) :
+theorem coreIl_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (ILMEMO : TieredArray) ∉ A) (hC : (50 : Word) ∉ C) (h : CoreMemos m) :
     ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreIlSch lfKey decE m' mp :=
   let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
 
@@ -270,7 +270,7 @@ theorem lt64_of_all {C : List Word} (h : C.all (fun x => decide (x.toNat < 64)) 
     ∀ x ∈ C, x.toNat < 64 := fun x hx => by
   have := List.all_eq_true.mp h x hx; simpa using this
 
-theorem lt64A_of_all {A : List ArrId}
+theorem lt64A_of_all {A : List TieredArray}
     (h : A.all (fun b => decide (InStoreTier b)) = true) :
     ∀ b ∈ A, InStoreTier b := fun b hb => by
   have := List.all_eq_true.mp h b hb; simpa using this

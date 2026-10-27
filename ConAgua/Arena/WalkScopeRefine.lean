@@ -23,12 +23,12 @@ namespace L.Arena
 def decBW (w : Word) : Bool := w != 0
 
 /-- `ArenaD` across a writer at or above array/`CTL` word 64. -/
-theorem ArenaD.frame64 {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+theorem ArenaD.frame64 {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat)
     (h : ArenaD m a) : ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
    DerR.frameM A C m m' hf (fun b hb => by
-     have := hA b hb; simp only [ArrId] at this ⊢; omega) a h.2⟩
+     have := (hA b hb).2; omega) a h.2⟩
 
 theorem wsSch_wf : wsSch.WF := ⟨by decide, by decide⟩
 

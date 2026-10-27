@@ -7,6 +7,7 @@ meta import ConAgua.L.Examples
 meta import ConAgua.Scan.Lit
 meta import ConAgua.Scan.Utf8
 public import ConAgua.Compiler.Run
+public import ConAgua.Compiler.WF
 public import ConAgua.L.Notation
 public import ConAgua.Layout
 /-!
@@ -22,10 +23,15 @@ open L L.Compiler L.Examples
 
 namespace L.Compiler.Tests
 
+/-- `runKraken` on the smallest table that has every array `p` names (`Prog.arrs`). -/
+def rk (p : Prog) (f : FnName) (args : List Word) (m : Mem) (fuel : Word) (stack : Nat := 4096) :
+    Except String Outcome :=
+  runKraken p f args m (Prog.arrs p).1 (Prog.arrs p).2 fuel stack
+
 def agrees (p : Prog) (f : FnName) (args : List Word) (m : Mem) (fuel : Nat := 100000)
     (stack : Nat := 4096) : Bool :=
-  (runKraken p f args m fuel.toUInt64 stack).toOption ==
-    some (Outcome.ofL (Prog.tab p m.bytes.size m.words.size).nres (run p fuel f args m))
+  (rk p f args m fuel.toUInt64 stack).toOption ==
+    some (Outcome.ofL (Prog.tab p (Prog.arrs p).1 (Prog.arrs p).2).nres (run p fuel f args m))
 
 def inp (s : String) : Mem := Mem.ofBytes [(IN, s.toUTF8.data)]
 
@@ -46,7 +52,7 @@ def inp (s : String) : Mem := Mem.ofBytes [(IN, s.toUTF8.data)]
 #guard agrees scanProg "str_close" [1] (inp "\"a\x01\"")
 
 -- Fuel: both run out on a long input with fuel 3.
-#guard (runKraken scanProg "skip_braced" [1, 0] (inp "{aaaaaaaaaa}") 3).toOption == some .exhausted
+#guard (rk scanProg "skip_braced" [1, 0] (inp "{aaaaaaaaaa}") 3).toOption == some .exhausted
 #guard Outcome.ofL 1 (run scanProg 3 "skip_braced" [1, 0] (inp "{aaaaaaaaaa}")) == .exhausted
 
 /-! Word arrays, stores, arithmetic, signed comparisons, recursion, `break`, `abort`. -/
@@ -78,7 +84,7 @@ def mixMem : Mem := (Mem.ofWords [(W, #[5, 0xffffffffffffff00, 7, 0])]).putBytes
 #guard agrees [("mix", mix)] "mix" [3] mixMem
 -- Out of bounds: `W.u64[4]` does not exist.
 #guard agrees [("mix", mix)] "mix" [4] mixMem
-#guard (runKraken [("mix", mix)] "mix" [4] mixMem 100000).toOption == some .error
+#guard (rk [("mix", mix)] "mix" [4] mixMem 100000).toOption == some .error
 
 /-- con-ron: none — a compiler test program -/
 def sumTo : FunDecl := lfn (n) locals (r) {
@@ -104,7 +110,7 @@ def recProg : Prog := [("sum_to", sumTo), ("boom", boom)]
 -- A small stack: a call of `sum_to` takes 24 bytes (a 2-word frame and the return address), and
 -- the stack check also reserves the next return address: 128 bytes hold five calls, not six.
 #guard agrees recProg "sum_to" [4] {} 100000 128
-#guard (runKraken recProg "sum_to" [5] {} 100000 128).toOption == some .exhausted
+#guard (rk recProg "sum_to" [5] {} 100000 128).toOption == some .exhausted
 
 /-! `mulhi`, comparisons as words, constant data. -/
 
@@ -134,7 +140,7 @@ def extProg : Prog := [("ext", ext)]
 -- `LITS.c8[9]` is out of bounds.
 def oobC : FunDecl := lfn (i) { return LITS.c8[i] }
 #guard agrees [("c", oobC)] "c" [8] {}
-#guard (runKraken [("c", oobC)] "c" [9] {} 100000).toOption == some .error
+#guard (rk [("c", oobC)] "c" [9] {} 100000).toOption == some .error
 
 /-! Several results. -/
 
@@ -170,7 +176,7 @@ def wideProg : Prog := [("use", useWide), ("wide", wide), ("one", one), ("none'"
 #guard agrees wideProg "wide" [0xffffffffffffffff, 0xfffffffffffffff0] {}
 #guard agrees wideProg "one" [41] {}
 #guard agrees wideProg "none'" [41] {}
-#guard (runKraken wideProg "wide" [0xffffffffffffffff, 2] {} 1000).toOption == some (.ok [0xfffffffffffffffe, 1, 1])
+#guard (rk wideProg "wide" [0xffffffffffffffff, 2] {} 1000).toOption == some (.ok [0xfffffffffffffffe, 1, 1])
 #guard (run wideProg 100 "wide" [0xffffffffffffffff, 2] {}).toOption.map (·.1) ==
   some [0xfffffffffffffffe, 1, 1]
 
@@ -205,7 +211,7 @@ def nineProg : Prog := [("use", useNine), ("nine", nine), ("seven", seven)]
 #guard agrees nineProg "use" [0xfffffffffffffff0] {}
 #guard agrees nineProg "nine" [7] {}
 #guard agrees nineProg "seven" [7] {}
-#guard (runKraken nineProg "nine" [7] {} 1000).toOption == some (.ok [7, 8, 9, 10, 11, 12, 13, 14, 15, 0])
+#guard (rk nineProg "nine" [7] {} 1000).toOption == some (.ok [7, 8, 9, 10, 11, 12, 13, 14, 15, 0])
 
 /-! `match_lit`/`scan_bool` (`Scan/Lit.lean`): constant data and three results. -/
 
@@ -227,7 +233,7 @@ open L.Scan.Utf8 in
     ((Mem.ofWords [(L.Scan.Utf8.OUT, Array.replicate 16 0)]).putBytes IN bs.toArray)
 -- `OUT` too small: an out-of-bounds store.
 open L.Scan.Utf8 in
-#guard (runKraken utf8Prog "utf8_decode" [0, 5] ((Mem.ofWords [(OUT, #[0, 0])]).putBytes IN "hello".toUTF8.data)
+#guard (rk utf8Prog "utf8_decode" [0, 5] ((Mem.ofWords [(OUT, #[0, 0])]).putBytes IN "hello".toUTF8.data)
   100000).toOption == some .error
 
 /-! Global variables (`GVar`): reads, writes, `+=`, across calls and in conditions, next to
@@ -251,22 +257,22 @@ def globProg : Prog := [("gmain", gmain), ("gbump", gbump)]
 #guard Prog.wf (Prog.tab globProg 0 1) globProg
 #guard agrees globProg "gmain" [5] (Mem.ofWords [(W, #[0])])
 #guard agrees globProg "gmain" [0] (Mem.ofWords [(W, #[0])])
-#guard (runKraken globProg "gmain" [4] (Mem.ofWords [(W, #[0])]) 1000).toOption ==
+#guard (rk globProg "gmain" [4] (Mem.ofWords [(W, #[0])]) 1000).toOption ==
   some (.ok [16, 4, 16, 16, 4, 0, 20, 4, 16])
 -- Initial values of the globals come from the memory.
-#guard (runKraken globProg "gbump" [1] { glob := fun g => if g = GA then 41 else 0 } 1000).toOption ==
+#guard (rk globProg "gbump" [1] { glob := fun g => if g = GA then 41 else 0 } 1000).toOption ==
   some (.ok [42, 0, 0, 0, 0, 0, 0, 0, 0])
 
 /-! Records (`R[i].f`, `L/Records.lean`): field stores and reads compile to word-array accesses. -/
 
 #guard agrees L.Examples.nodeProg "node_mk" [2, 0, 7, 9] (Mem.ofWords [(NODE.arr, Array.replicate 9 5)])
-#guard (runKraken L.Examples.nodeProg "node_mk" [2, 0, 7, 9] (Mem.ofWords [(NODE.arr, Array.replicate 9 5)])
+#guard (rk L.Examples.nodeProg "node_mk" [2, 0, 7, 9] (Mem.ofWords [(NODE.arr, Array.replicate 9 5)])
   1000).toOption == some (.ok [7, 5, 10])
 -- record 3 is past the end: an out-of-bounds store
-#guard (runKraken L.Examples.nodeProg "node_mk" [3, 0, 7, 9] (Mem.ofWords [(NODE.arr, Array.replicate 9 5)])
+#guard (rk L.Examples.nodeProg "node_mk" [3, 0, 7, 9] (Mem.ofWords [(NODE.arr, Array.replicate 9 5)])
   1000).toOption == some .error
 
-/-! Tiered arrays (lane tierarr): tier `t` of word array `W` is `W` or `W + tierOff`. The tier of
+/-! Tiered arrays (lane tierarr): tier `t` of word array `W` is `↑W` or `tier1 W`. The tier of
 a load may be any expression (`W⟨h >> 27⟩`, the handle's tier bit) or a simple one; a store's
 tier is simple. -/
 
@@ -285,7 +291,7 @@ def tiers : FunDecl := lfn (h, n) locals (t, i, s) {
 
 def tierProg : Prog := [("tiers", tiers)]
 
-/-- Array `0` (tier 0 of `W`) has 4 words, array `256` (its tier 1) 6. -/
+/-- Tier 0 of `W` has 4 words, its tier 1 has 6. -/
 def tierMem : Mem :=
   Mem.ofWords [(W, Array.replicate 4 7), (tier1 W, Array.replicate 6 9)]
 
@@ -300,22 +306,14 @@ def tierMem : Mem :=
 #guard (run tierProg 1000 "tiers" [0x08000000, 5] tierMem).toOption.isSome
 
 /-! The array table's surface check (`ArrTable.progOK`, `L/Arrays.lean`) on `tierProg`: with `W`
-declared tiered it accepts; a plain load of `W`'s tier-1 number is rejected unless its function
-is exempt; with `W` not tiered the tiered accesses are rejected; a number at or above `tierOff`
-is not a well-formed table. -/
+declared tiered it accepts; with `W` not tiered the tiered accesses are rejected; two word arrays
+with the same number are not a well-formed table. -/
 
 def tierTab : ArrTable := [{ name := "W", id := W, kind := .word, tiered := true }]
 
-/-- A plain load of tier 1 of `W`. -/
-def tier1Prog : Prog := [("bad", { nparams := 0, nlocals := 0, body := .ret [.ld64 (tier1 W) (.const 0)] })]
-
 #guard tierTab.wf
-#guard tierTab.extent == (0, 257)
-#guard tierTab.progOK [] tierProg
-#guard !tierTab.progOK [] tier1Prog
-#guard tierTab.progOK ["bad"] tier1Prog
-#guard !ArrTable.progOK [{ name := "W", id := W, kind := .word, tiered := false }] [] tierProg
-#guard !ArrTable.wf [{ name := "W", id := tierOff, kind := .word, tiered := false }]
+#guard tierTab.progOK tierProg
+#guard !ArrTable.progOK [{ name := "W", id := W, kind := .word, tiered := false }] tierProg
 #guard !ArrTable.wf (tierTab ++ [{ name := "V", id := W, kind := .word, tiered := false }])
 
 end L.Compiler.Tests

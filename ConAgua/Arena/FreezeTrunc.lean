@@ -136,13 +136,14 @@ include hcnt
 
 /-- A tier-0 row array of the env index under the truncation. -/
 theorem eix_trunc (g : Nat) (hg : g ≤ 2) :
-    (truncFrozen m).arr64 (132 + g) = (m.arr64 (132 + g)).extract 0 (2 * nmCnt m g) := by
+    (truncFrozen m).arr64 ((132 + g : ArrId) : TieredArray) =
+      (m.arr64 ((132 + g : ArrId) : TieredArray)).extract 0 (2 * nmCnt m g) := by
   have h2 : ∀ c : Word, c.toNat ≤ 2 ^ 27 → (2 * c).toNat = 2 * c.toNat := fun c hc => by
     rw [UInt64.toNat_mul]; simp; omega
   rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl
-  · rw [show 132 + 0 = EIXA from rfl, truncFrozen_eixa]; exact congrArg _ (h2 _ (hcnt 0 (by decide)))
-  · rw [show 132 + 1 = EIXS from rfl, truncFrozen_eixs]; exact congrArg _ (h2 _ (hcnt 1 (by decide)))
-  · rw [show 132 + 2 = EIXN from rfl, truncFrozen_eixn]; exact congrArg _ (h2 _ (hcnt 2 (by decide)))
+  · rw [show (132 + 0 : ArrId) = EIXA from rfl, truncFrozen_eixa]; exact congrArg _ (h2 _ (hcnt 0 (by decide)))
+  · rw [show (132 + 1 : ArrId) = EIXS from rfl, truncFrozen_eixs]; exact congrArg _ (h2 _ (hcnt 1 (by decide)))
+  · rw [show (132 + 2 : ArrId) = EIXN from rfl, truncFrozen_eixn]; exact congrArg _ (h2 _ (hcnt 2 (by decide)))
 
 theorem row_trunc (w : Word) :
     (rowC (truncFrozen m) w = rowC m w ∨ rowC (truncFrozen m) w = 0) ∧
@@ -159,7 +160,7 @@ theorem row_trunc (w : Word) :
       rw [ha, eix_trunc hcnt _ hg, getD_extract', getD_extract']
       refine ⟨by split <;> simp, fun _ _ hr => ?_, fun h => absurd ht h⟩
       rw [ite_eq_left (by omega), ite_eq_left (by omega)]; exact ⟨rfl, rfl⟩
-    · have ha : rowArr w ∉ fzSrcs := by
+    · have ha : (rowArr w : TieredArray) ∉ fzSrcs := by
         have : rowArr w = 140 + rowTag w := by
           exact rowArr_tier1 hg ht
         rw [this]; rcases (show rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 by omega) with e | e | e <;>
@@ -171,11 +172,11 @@ theorem row_trunc (w : Word) :
 omit hcnt in
 /-- A tier-0 table-row array under the truncation. -/
 theorem tix_trunc (g : Nat) (hg : g ≤ 2) :
-    (truncFrozen m).arr64 (129 + g) = (m.arr64 (129 + g)).extract 0 (nmCnt m g) := by
+    (truncFrozen m).arr64 (tixArr g) = (m.arr64 (tixArr g)).extract 0 (nmCnt m g) := by
   rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl
-  · rw [show 129 + 0 = TIXA from rfl, truncFrozen_tixa]; rfl
-  · rw [show 129 + 1 = TIXS from rfl, truncFrozen_tixs]; rfl
-  · rw [show 129 + 2 = TIXN from rfl, truncFrozen_tixn]; rfl
+  · rw [show tixArr 0 = TIXA from rfl, truncFrozen_tixa]; rfl
+  · rw [show tixArr 1 = TIXS from rfl, truncFrozen_tixs]; rfl
+  · rw [show tixArr 2 = TIXN from rfl, truncFrozen_tixn]; rfl
 
 omit hcnt in
 theorem tblRow_trunc (w : Word) :
@@ -187,16 +188,11 @@ theorem tblRow_trunc (w : Word) :
   by_cases hg : rowTag w ≤ 2
   · simp only [hg, ↓reduceIte]
     rcases ht with ht | ht
-    · have ha : tblArr w = 129 + rowTag w := by
-        exact tblArr_tier0 hg ht
-      rw [ha, tix_trunc _ hg, getD_extract']
+    · rw [tblArr_tier0 ht, tix_trunc _ hg, getD_extract']
       refine ⟨by split <;> simp, fun _ _ hr => ?_⟩
       rw [ite_eq_left hr]
     · have ha : tblArr w ∉ fzSrcs := by
-        have : tblArr w = 385 + rowTag w := by
-          exact tblArr_tier1 hg ht
-        rw [this]; rcases (show rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 by omega) with e | e | e <;>
-          rw [e] <;> decide
+        rw [tblArr_tier1 ht]; rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] <;> decide
       rw [truncFrozen_other m _ ha]
       exact ⟨.inl rfl, fun h => by omega⟩
   · simp [hg]

@@ -32,7 +32,7 @@ theorem wd_setA (m : Mem) (A B : ArrId) (i v : Word) (j : Nat) :
     rw [arr_set64]
     by_cases hc : i.toNat = j ∧ j < (m.arr64 A).size <;> simp [hc]
   · unfold wd
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hAB)]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (TieredArray.t0_ne hAB))]
     simp [hAB]
 
 /-- A word index `o + c * k + s` without overflow. -/
@@ -77,7 +77,7 @@ theorem IExt.size {m m' : Mem} (h : IExt m m') (A : ArrId) : (m'.arr64 A).size =
 
 theorem IExt.other {m m' : Mem} (h : IExt m m') (A : ArrId) (h1 : A ≠ IFL) (h2 : A ≠ LH) (h3 : A ≠ CTL) :
     m'.arr64 A = m.arr64 A :=
-  h.frame.1 A (by simp [h1, h2]) h3
+  h.frame.1 A (by simp [h1, h2]) (TieredArray.t0_ne h3)
 
 /-- The allocator's facts. -/
 theorem allocW_factsA {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
@@ -103,7 +103,7 @@ theorem allocW_factsA {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
     have : rdW (m.arr64 A) 0 + 1 - 1 = rdW (m.arr64 A) 0 := by simp
     rw [this, widx2 _ _ (by rw [hw0]; simp [topN] at ht ⊢; omega)]
     simp [topN, hw0]
-  refine ⟨e1, ?_, by omega, fun i hi => ?_, MemFrame.set64 _ _ hA _ _⟩
+  refine ⟨e1, ?_, by omega, fun i hi => ?_, MemFrame.set64 _ _ (TieredArray.t0_ne hA) _ _⟩
   · simp only [topN, wd_setA, show (0 : Word).toNat = 0 from rfl, true_and]
     rw [ite_eq_left (by omega)]
     exact e2

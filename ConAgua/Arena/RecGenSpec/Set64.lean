@@ -28,16 +28,14 @@ theorem KeepW.refl (m : Mem) : KeepW m m := fun _ => rfl
 theorem KeepW.trans {m₁ m₂ m₃ : Mem} (h₁ : KeepW m₁ m₂) (h₂ : KeepW m₂ m₃) : KeepW m₁ m₃ :=
   fun a => (h₂ a).trans (h₁ a)
 
-theorem KeepW.set64 {m m' : Mem} (h : KeepW m m') (a : ArrId) (i v : Word) : KeepW m (m'.set64 a i v) := by
+theorem KeepW.set64 {m m' : Mem} (h : KeepW m m') (a : TieredArray) (i v : Word) :
+    KeepW m (m'.set64 a i v) := by
   intro b
   rw [← h b]
   simp only [Mem.set64, Mem.arr64]
-  rw [Array.getD_eq_getD_getElem?, Array.getD_eq_getD_getElem?, Array.set!_eq_setIfInBounds,
-    Array.getElem?_setIfInBounds]
-  by_cases hb : a = b
-  · subst hb
-    by_cases ha : a < m'.words.size <;> simp [ha]
-  · simp [hb]
+  split
+  · subst b; simp
+  · rfl
 
 /-- After the loop. -/
 def cnfK2 (q : Word) : Option (Word × Mem) → Option (List Word × Mem)

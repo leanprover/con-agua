@@ -11,7 +11,7 @@ import ConAgua.Checker.PreLoopWS
 `pb_check`, `intern_reserved_pins` at `checkerProg`.
 
 Every relation after `pb_check` carries the facts that hold since the loaded memory
-`l = loadMem b pb s8 s64` (`Since`): the byte arrays and the sizes are `l`'s (`Keep`, the program
+`l = loadMem b pb sz` (`Since`): the byte arrays and the sizes are `l`'s (`Keep`, the program
 has no byte store), `l`'s capacities are `CapsOK`, the pin data starts with `romData`, and the
 memory differs from `l` only in the arrays and `CTL` words the stages before the loop store into
 (`MemFrame preLoopA preLoopC`, `PreLoopWS.lean`).
@@ -55,16 +55,16 @@ structure HZ (m : Mem) : Prop where
   c75 : rdW (m.arr64 CTL) 75 = 0
   c129 : rdW (m.arr64 CTL) 129 = 0
   c200 : rdW (m.arr64 CTL) 200 = 0
-  seen : ∀ j, rdW (m.arr64 75) j = 0
-  nix : ∀ j, rdW (m.arr64 76) j = 0
+  seen : ∀ j, rdW (m.arr64 HSEEN) j = 0
+  nix : ∀ j, rdW (m.arr64 HNIX) j = 0
 
-theorem HZ.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : HZ m) (hf : MemFrame A C m m')
-    (h75 : 75 ∉ A) (h76 : 76 ∉ A) (c73 : (73 : Word) ∉ C) (c75 : (75 : Word) ∉ C)
+theorem HZ.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : HZ m) (hf : MemFrame A C m m')
+    (h75 : (HSEEN : TieredArray) ∉ A) (h76 : (HNIX : TieredArray) ∉ A) (c73 : (73 : Word) ∉ C) (c75 : (75 : Word) ∉ C)
     (c129 : (129 : Word) ∉ C) (c200 : (200 : Word) ∉ C) : HZ m' :=
   ⟨by rw [hf.2.1 _ c73]; exact h.c73, by rw [hf.2.1 _ c75]; exact h.c75,
     by rw [hf.2.1 _ c129]; exact h.c129, by rw [hf.2.1 _ c200]; exact h.c200,
-    fun j => by rw [hf.1 75 h75 (by decide)]; exact h.seen j,
-    fun j => by rw [hf.1 76 h76 (by decide)]; exact h.nix j⟩
+    fun j => by rw [hf.1 _ h75 (by decide)]; exact h.seen j,
+    fun j => by rw [hf.1 _ h76 (by decide)]; exact h.nix j⟩
 
 /-- **After `intern_reserved_pins`**. -/
 structure R3 (l m : Mem) (pb : ByteArray) (a : AState) : Prop where
@@ -107,21 +107,21 @@ theorem Since.step {l m m' : Mem} {pb : ByteArray} (h : Since l m pb) (hk : L.Ke
 
 /-! ## `cap_check`, `pb_check` -/
 
-theorem capStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hs : ∀ n ∈ s64, n < 2 ^ 64) :
-    RelSpec checkerProg "cap_check" (· = loadMem b pb s8 s64)
-      fun _ m => R1 (loadMem b pb s8 s64) m := by
+theorem capStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hs : ∀ s, sz s < 2 ^ 64) :
+    RelSpec checkerProg "cap_check" (· = loadMem b pb sz)
+      fun _ m => R1 (loadMem b pb sz) m := by
   intro n _hn s₀ hm
   refine triple_post (capCheck_spec checkerProg checkerProg_capCheck n s₀
-    (hm ▸ loadMem_wordsFit b pb s8 s64 hs)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, ?_⟩
+    (hm ▸ loadMem_wordsFit b pb sz hs)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, ?_⟩
   · rw [h2, hm]
   · rw [← hm]; exact h3
 
-theorem pbStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63) :
-    RelSpec checkerProg "pb_check" (R1 (loadMem b pb s8 s64))
-      fun _ m => R2 (loadMem b pb s8 s64) m pb := by
+theorem pbStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63) :
+    RelSpec checkerProg "pb_check" (R1 (loadMem b pb sz))
+      fun _ m => R2 (loadMem b pb sz) m pb := by
   intro n _hn s₀ ⟨hm, hc⟩
   refine triple_post (checkerProg_pbCheck_PB pb.data.toList (by simpa [RomOK] using hpb) n s₀
-    (by rw [hm]; exact loadMem_pb b pb s8 s64)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, hc, h3⟩
+    (by rw [hm]; exact loadMem_pb b pb sz)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, hc, h3⟩
   rw [h2, hm]
 
 /-! ## `intern_reserved_pins` -/
@@ -137,25 +137,21 @@ theorem pinA_idArrs : ∀ x ∈ PinA, x ∉ idArrs := by
   simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false, NID, LID, EID, NIDS, LIDS, EIDS] at hm
   rcases hm with rfl | rfl | rfl | rfl | rfl | rfl <;> revert hx <;> decide
 
-theorem pinA_not {x : ArrId} (h : InHigh x) (h' : x ≠ PINS) : x ∉ PinA := by
-  obtain ⟨n, rfl⟩ : ∃ n : Nat, n = x := ⟨x, rfl⟩
+theorem pinA_not {x : TieredArray} (h : InHigh x) (h' : x ≠ PINS) : x ∉ PinA := by
   intro hx
-  simp only [tier1, tierOff, PinA, StoreA, lowTierArrs, List.mem_cons, List.mem_append, List.mem_range,
-    List.mem_map] at hx
-  rcases hx with hx | hx | ⟨y, -, e⟩
+  rcases List.mem_cons.mp hx with hx | hx
   · exact h' hx
-  · simp only [ArrId] at *; omega
-  · simp only [ArrId] at *; omega
+  · exact h.not_storeTier (storeTier_of_mem hx)
 
-theorem irpStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63) :
-    RelSpec checkerProg "intern_reserved_pins" (fun m => R2 (loadMem b pb s8 s64) m pb)
+theorem irpStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63) :
+    RelSpec checkerProg "intern_reserved_pins" (fun m => R2 (loadMem b pb sz) m pb)
       fun _ m => ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧
-        R3 (loadMem b pb s8 s64) m pb a' := by
+        R3 (loadMem b pb sz) m pb a' := by
   intro n _hn s₀ ⟨hm, hc, hpre⟩
   have hirp := checkerProg_internReservedPins_PB pb.data.toList (by simpa [RomOK] using hpb) hpre n
-    s₀ (AState.init EStore.empty) (by rw [hm]; exact loadMem_pb b pb s8 s64)
-    (by rw [hm]; exact arenaD_loadMem b pb s8 s64 hc)
-    (by rw [hm]; exact Or.inr (by show (rdW ((loadMem b pb s8 s64).arr64 CTL) 0).toNat < 2 ^ 40
+    s₀ (AState.init EStore.empty) (by rw [hm]; exact loadMem_pb b pb sz)
+    (by rw [hm]; exact arenaD_loadMem b pb sz hc)
+    (by rw [hm]; exact Or.inr (by show (rdW ((loadMem b pb sz).arr64 CTL) 0).toNat < 2 ^ 40
                                   rw [loadMem_rd]; decide))
   refine triple_post (triple_and hirp (stage_since n (preLoop_mem "intern_reserved_pins"
     (by decide +kernel)) s₀)) fun _ s' ⟨⟨hl, hok, hA, hfull, hp0, hfr, hmo⟩, _, hk, hpf⟩ => ⟨hl, ?_⟩
@@ -168,15 +164,15 @@ theorem irpStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size <
   rw [hm] at hk hpf hfr
   refine ⟨⟨hk, hc, by simpa [PbPre] using hpre, hpf⟩, hA, ?_, ?_, ?_, hfull, hp0,
     ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_, hmo⟩
-  · exact (stateDR_loadMem b pb s8 s64 hc).frame hfr (pinA_not (by decide) (by decide))
+  · exact (stateDR_loadMem b pb sz hc).frame hfr (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl
-  · exact (rsetR_loadMem b pb s8 s64 hc).frame hfr (pinA_not (by decide) (by decide))
+  · exact (rsetR_loadMem b pb sz hc).frame hfr (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
   · have := hfr.2.1 131 (not_mem_storeC _ (by decide))
     simp only [stkTop] at this ⊢
-    rw [this]; exact stkTop_loadMem b pb s8 s64
-  · have z := loadMem_rd b pb s8 s64
+    rw [this]; exact stkTop_loadMem b pb sz
+  · have z := loadMem_rd b pb sz
     exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
       (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))

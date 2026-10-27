@@ -194,8 +194,8 @@ def Stmt.wfT (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
   | .skip | .brk => true
   | .abort e => Expr.wf nl tab e
   | .set x e => x < nl && Expr.wf nl tab e
-  | .st8 a i e => a < tab.nb && Expr.wf nl tab i && Expr.wf nl tab e
-  | .st64 a i e => a < tab.nw && Expr.wf nl tab i && Expr.wf nl tab e
+  | .st8 a i e => tab.dom8 a && Expr.wf nl tab i && Expr.wf nl tab e
+  | .st64 a i e => tab.dom64 a && Expr.wf nl tab i && Expr.wf nl tab e
   | .seq s u => Stmt.wfT t nl tab s && Stmt.wfT t nl tab u
   | .ite c s u => Cond.wf nl tab c && Stmt.wfT t nl tab s && Stmt.wfT t nl tab u
   | .while c s => Cond.wf nl tab c && Stmt.wfT t nl tab s
@@ -206,7 +206,7 @@ def Stmt.wfT (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
       | some n => args.length == n
       | none => false
   | .gset g e => g.id < tab.ng && Expr.wf nl tab e
-  | .st64t a tt i e => a < tab.wK && Expr.isSimple tt && Expr.wf nl tab tt &&
+  | .st64t a tt i e => tab.dom64 (tier1 a) && Expr.isSimple tt && Expr.wf nl tab tt &&
       Expr.wf nl tab i && Expr.wf nl tab e
   | .copy64 d di s si n => WArr.wf nl tab d && Expr.opndWf nl tab di && WArr.wf nl tab s &&
       Expr.opndWf nl tab si && Expr.opndWf nl tab n
@@ -242,27 +242,27 @@ def romOk (tab : Tab) (d : List UInt8) : Bool := d.isPrefixOf (tab.rom.drop (rom
 
 /-- `BSrc.wf` without the constant data check (the bytes come back through `Stmt.roms`). -/
 def BSrc.wfN (tab : Tab) : BSrc → Bool
-  | .arr a => a < tab.nb
+  | .arr a => tab.dom8 a
   | .rom d => d.length < 2 ^ 31
 
 def Expr.wfN (nl : Nat) (tab : Tab) : Expr → Bool
   | .const _ => true
   | .var x => x < nl
   | .bin _ a b => Expr.wfN nl tab a && Expr.wfN nl tab b
-  | .ld8 a i => a < tab.nb && Expr.wfN nl tab i
-  | .ld64 a i => a < tab.nw && Expr.wfN nl tab i
-  | .len8 a => a < tab.nb
-  | .len64 a => a < tab.nw
+  | .ld8 a i => tab.dom8 a && Expr.wfN nl tab i
+  | .ld64 a i => tab.dom64 a && Expr.wfN nl tab i
+  | .len8 a => tab.dom8 a
+  | .len64 a => tab.dom64 a
   | .cmpw _ a b => Expr.wfN nl tab a && Expr.wfN nl tab b
   | .ldc _ i => Expr.wfN nl tab i
   | .glob g => g.id < tab.ng
-  | .ld64t a t i => a < tab.wK && Expr.wfN nl tab t && Expr.wfN nl tab i
-  | .len64t a t => a < tab.wK && Expr.wfN nl tab t
+  | .ld64t a t i => tab.dom64 (tier1 a) && Expr.wfN nl tab t && Expr.wfN nl tab i
+  | .len64t a t => tab.dom64 (tier1 a) && Expr.wfN nl tab t
   | .ld8x8 s i => BSrc.wfN tab s && Expr.wfN nl tab i
 
 def WArr.wfN (nl : Nat) (tab : Tab) : WArr → Bool
-  | .plain a => a < tab.nw
-  | .tier a t => a < tab.wK && Expr.isOpnd t && Expr.wfN nl tab t
+  | .plain a => tab.dom64 a
+  | .tier a t => tab.dom64 (tier1 a) && Expr.isOpnd t && Expr.wfN nl tab t
 
 def Expr.opndWfN (nl : Nat) (tab : Tab) (e : Expr) : Bool := Expr.isOpnd e && Expr.wfN nl tab e
 
@@ -275,8 +275,8 @@ def Stmt.wfTN (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
   | .skip | .brk => true
   | .abort e => Expr.wfN nl tab e
   | .set x e => x < nl && Expr.wfN nl tab e
-  | .st8 a i e => a < tab.nb && Expr.wfN nl tab i && Expr.wfN nl tab e
-  | .st64 a i e => a < tab.nw && Expr.wfN nl tab i && Expr.wfN nl tab e
+  | .st8 a i e => tab.dom8 a && Expr.wfN nl tab i && Expr.wfN nl tab e
+  | .st64 a i e => tab.dom64 a && Expr.wfN nl tab i && Expr.wfN nl tab e
   | .seq s u => Stmt.wfTN t nl tab s && Stmt.wfTN t nl tab u
   | .ite c s u => Cond.wfN nl tab c && Stmt.wfTN t nl tab s && Stmt.wfTN t nl tab u
   | .while c s => Cond.wfN nl tab c && Stmt.wfTN t nl tab s
@@ -287,7 +287,7 @@ def Stmt.wfTN (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
       | some n => args.length == n
       | none => false
   | .gset g e => g.id < tab.ng && Expr.wfN nl tab e
-  | .st64t a tt i e => a < tab.wK && Expr.isSimple tt && Expr.wfN nl tab tt &&
+  | .st64t a tt i e => tab.dom64 (tier1 a) && Expr.isSimple tt && Expr.wfN nl tab tt &&
       Expr.wfN nl tab i && Expr.wfN nl tab e
   | .copy64 d di s si n => WArr.wfN nl tab d && Expr.opndWfN nl tab di && WArr.wfN nl tab s &&
       Expr.opndWfN nl tab si && Expr.opndWfN nl tab n

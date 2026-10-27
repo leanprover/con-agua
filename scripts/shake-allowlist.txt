@@ -80,6 +80,7 @@ ConAgua/Arena/WhnfProj.lean	public import ConAgua.Arena.Tiers	# the build needs 
 ConAgua/Checker/ArrCheck.lean	public import ConAgua.Arena.ArenaRel	# `#guard`s read it (they leave no constant the tool sees)
 ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.CapCheck	# `#guard`s read it (they leave no constant the tool sees)
 ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.ParOwned	# `#guard`s read it (they leave no constant the tool sees)
+ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.ProgTab	# `#guard`s read it (they leave no constant the tool sees)
 ConAgua/Checker/CoreErec.lean	public import ConAgua.Arena.LevelIntern	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Checker/CoreErec.lean	public import ConAgua.Arena.LevelSubstLP	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Checker/FrontProg.lean	public import ConAgua.Arena.LevelIntern	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)

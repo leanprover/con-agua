@@ -133,8 +133,9 @@ end view
 /-! ## The relation -/
 
 /-- The arrays and `CTL` words a name promotion writes. -/
-abbrev nArrs : List ArrId := [POOL, PT0, NAREC, tier1 NAREC, NASLOT, tier1 NASLOT, NSREC, tier1 NSREC, NSSLOT,
-  tier1 NSSLOT, NNREC, tier1 NNREC, NNSLOT, tier1 NNSLOT, PNM]
+abbrev nArrs : List TieredArray :=
+  tier0s [POOL, PT0, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, PNM] ++
+  tier1s [NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT]
 abbrev nCtl : List Word := [34, 35, 36, 37, 38, 39, 141]
 
 /-- **What a successful run of a name promotion gives**: the twin's run `op` succeeds with the
@@ -165,20 +166,20 @@ theorem PMemoR.setN {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h r : Word) (h
       (fun _ _ h => h) _ hP.e⟩
 
 /-- A writer of the store tier keeps the promotion memo. -/
-theorem PMemoR.frameLo {A : List ArrId} {C : List Word} {m m' : Mem} {pm : PMemo}
+theorem PMemoR.frameLo {A : List TieredArray} {C : List Word} {m m' : Mem} {pm : PMemo}
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hf : MemFrame A C m m')
     (h : PMemoR m pm) : PMemoR m' pm :=
-  h.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+  h.frame (fun b hb => by have := hA b hb; simp only [InStoreTier] at this; omega)
     (fun x hx => .inl (Nat.lt_trans (hC x hx) (by decide))) hf
 
 /-- A memo write keeps the arena relation. -/
 theorem ArenaD.memo {m m' : Mem} {a : AState} (hD : ArenaD m a) (S : MemoSch) (hS : S.WF)
-    (h1 : 64 ≤ S.arr) (h1' : S.arr < 256) (h2 : 64 ≤ (S.cs + 1).toNat) (h r : Word) (hs : msetG S m h 0 r = some m') :
+    (h1 : 64 ≤ S.arr) (h2 : 64 ≤ (S.cs + 1).toNat) (h r : Word) (hs : msetG S m h 0 r = some m') :
     ArenaD m' a := by
   have hf := msetG_frame S hS m m' h 0 r hs
-  exact ⟨ArenaR.frame_ext _ _ (by simpa using ⟨h1, h1'⟩) (by simp; exact h2) m m' hf a hD.1,
+  exact ⟨ArenaR.frame_ext _ _ (by simpa using h1) (by simp; exact h2) m m' hf a hD.1,
     DerR.frameM _ _ m m' hf (fun b hb => by
-      rw [List.mem_singleton.mp hb]; simp only [ArrId] at h1 h1' ⊢; omega) a hD.2⟩
+      rw [List.mem_singleton.mp hb]; simp only [ArrId] at h1 ⊢; omega) a hD.2⟩
 
 theorem run_bind_ok {α β : Type} {x : AM α} {f : α → AM β} {a a₁ : AState} {v : α}
     (h : x.run a = .ok (v, a₁)) : (x >>= f).run a = (f v).run a₁ := by
@@ -313,7 +314,7 @@ theorem pn_rel : ∀ n : Nat,
     obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he, hl, hls, hsk⟩ :=
       ih.2 m a pm (f - 1) h r₁ m₁ hD hP hh ht hca
     refine ⟨a₁, { pm₁ with nM := pm₁.nM.insert (decI h) (decI (r₁.headD 0)) }, ?_,
-      hD₁.memo pnSch pnSch_wf (by decide) (by decide) (by decide) h _ hs,
+      hD₁.memo pnSch pnSch_wf (by decide) (by decide) h _ hs,
       hP₁.setN h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he, hl, hls,
       hsk.trans (SlKeep.of_frame (msetG_frame pnSch pnSch_wf _ _ _ _ _ hs) (by decide) (by decide))⟩
     · rw [run_bind_ok hrun, ← hr]; rfl
@@ -337,7 +338,7 @@ theorem pn_rel : ∀ n : Nat,
       refine PNOk.of_sim (Sim.bind_twin (viewN_anon hD.1 hh hv g0 hcnt) ((Sim.hd1 (sim_pi
         (fun n s₀ => piNAnon_spec p hp n s₀) fun n _ _ h => piNAnon_rel p hp n m a hD _ _ h)).mono ?_)) hW
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr⟩
-      exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, tierOff, NAREC, NASLOT]) (by simp) hfr, hpw, hcp,
+      exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, NAREC, NASLOT]) (by simp) hfr, hpw, hcp,
         hfr.mono (by simp) (by simp), rfl, rfl, rfl, SlKeep.of_frame hfr (by decide) (by decide)⟩
     by_cases g1 : h >>> 28 = 1
     · by_cases hcnt : tcnt m NSTR (tierW h) ≤ idxW h
@@ -353,7 +354,7 @@ theorem pn_rel : ∀ n : Nat,
         piNStr_rel p hp n m₁ a₁ hD₁ _ _ _ hpw₁ hsl₁ st
           (by rw [← hk]; exact (sliceL_eq_iff _ _ _ _ _).mpr hv₁) _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂, hsk₂⟩
-      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, tierOff, POOL, PT0, NSREC, NSSLOT]) (by simp) hfr₂, hpw₂,
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, POOL, PT0, NSREC, NSSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hl₁, hls₁, hsk₁.trans hsk₂⟩
     by_cases g2 : h >>> 28 = 2
     · by_cases hcnt : tcnt m NNUM (tierW h) ≤ idxW h
@@ -367,7 +368,7 @@ theorem pn_rel : ∀ n : Nat,
       refine (Sim.hd1 (sim_pi (fun n s₀ => piNNum_spec p hp n s₀ _ _) fun n _ _ h =>
         piNNum_rel p hp n m₁ a₁ hD₁ _ _ hpw₁ _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
-      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, tierOff, NNREC, NNSLOT]) (by simp) hfr₂, hpw₂,
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, NNREC, NNSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hl₁, hls₁,
         hsk₁.trans (SlKeep.of_frame hfr₂ (by decide) (by decide))⟩
     simp [pnArmW, hh', hv, g0, g1, g2] at hW

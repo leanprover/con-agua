@@ -47,7 +47,7 @@ theorem PhaseBStart.frame0 (hf : MemFrame [] [] m m') (h : PhaseBStart pins dn d
 end frame0
 
 /-- The arrays phase B's loop may name: every word array but `OUT`, `HDRF`, `CTLF`. -/
-abbrev phaseBS : ArrId → Bool := fun a => a != 240 && a != 241 && a != 242
+abbrev phaseBS : TieredArray → Bool := phaseBPa
 
 section agree
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
@@ -69,7 +69,7 @@ theorem checkPendingGo_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs c
   subst hx hy hz
   -- phase A's memory with the worker's globals and byte arrays
   let m₂ : Mem := { m with glob := s.mem.glob }
-  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
   have h₂ := PhaseBStart.frame0 hf h
   let s₂ : St := ⟨m₂, s.loc⟩
   have hAg : Agree phaseBS (fun _ => false) s.mem s₂.mem :=
@@ -99,10 +99,10 @@ theorem checkB_agree0 (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerP
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
     ⦃fun r _ => r.headD 0 = ConAgua.Final.ACCEPT →
       ∃ s'', checkPendingList mode fe pend.toList a.worker = .ok (.ok (), s''); ⊤⦄ := by
-  have hl : (UInt64.toNat (s₀.mem.len64 242)) = 0 := by simp [Mem.len64, show (242 : ArrId) = CTLF from rfl, hctlf]
+  have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = k := hhi
-  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 241).size), (s₀.mem.arr64 241)[(3 : Word).toNat] = v := by
+  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 HDRF).size), (s₀.mem.arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb; rw [← hv]; unfold rd64; rw [Array.getD, dite_eq_left hb]; rfl
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]

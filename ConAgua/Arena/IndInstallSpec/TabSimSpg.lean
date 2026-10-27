@@ -20,9 +20,9 @@ namespace L.Ind
 open L.Arena
 
 theorem binternW_mfr {m m' : Mem} {u r : Word} (h : binternW m u = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (binternW_frame m u r m' h) (by simp [tier1, tierOff, BREC, BSLOT]) (by simp)
+  MFr.of_frame (binternW_frame m u r m' h) (by simp [tier1, BREC, BSLOT]) (by simp)
 theorem minternW_mfr {m m' : Mem} {u v r : Word} (h : minternW m u v = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (minternW_frame m u v r m' h) (by simp [tier1, tierOff, MREC, MSLOT, MHP]) (by simp)
+  MFr.of_frame (minternW_frame m u v r m' h) (by simp [tier1, MREC, MSLOT, MHP]) (by simp)
 theorem mkProjW_mfr {m m' : Mem} {a b c r : Word} (h : mkProjW m a b c = some (r, m')) : MFr [] [] m m' :=
   MFr.of_low (mkProjW_low h)
 theorem erAllocW_mfr {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m')) : MFr [] [] m m' := by
@@ -178,7 +178,8 @@ theorem envPushW_mfr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m
   rotate_left; · cases h
   rename_i hc
   obtain ⟨ht, -⟩ := hc
-  have hra : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := rowArr_ne _ (by decide)
+  have hra : (rowArr (rdW (m.arr64 EREC) (q + 1)) : TieredArray) ≠ ↑CTL :=
+    TieredArray.t0_ne (rowArr_ne _ (by decide))
   have hmem : rowArr (rdW (m.arr64 EREC) (q + 1)) < 201 := by
     exact Nat.lt_trans (rowArr_lt _) (by decide)
   have h1 : MFr [] [] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) :=

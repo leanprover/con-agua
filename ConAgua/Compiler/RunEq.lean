@@ -101,8 +101,8 @@ theorem step_st64t_run (a : ArrId) (t i e : Expr) :
 /-! ## Blocks (lane blkcopy) -/
 
 /-- `warr`, without the state. -/
-def warrP (σ : St) : WArr → Except Err ArrId
-  | .plain a => .ok a
+def warrP (σ : St) : WArr → Except Err TieredArray
+  | .plain a => .ok (TieredArray.t0 a)
   | .tier a t => (evalP σ t).map (tierA a)
 
 theorem warr_run (σ : St) (w : WArr) : (warr w).run σ = (warrP σ w).map (·, σ) := by
@@ -129,7 +129,7 @@ theorem step_scan8_run (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) {vi ve
   · simp only [h, ↓reduceIte]
     simp [StateT.run, throw, throwThe, MonadExceptOf.throw, StateT.lift, bind, Except.bind]
 
-theorem step_copy64_run (d s : WArr) (di si n : Expr) {da sa : ArrId} {i j k : Word}
+theorem step_copy64_run (d s : WArr) (di si n : Expr) {da sa : TieredArray} {i j k : Word}
     (hd : warrP σ d = .ok da) (hs : warrP σ s = .ok sa) (hi : evalP σ di = .ok i) (hj : evalP σ si = .ok j)
     (hk : evalP σ n = .ok k) :
     stepRun p K (.copy64 d di s si n) σ =
@@ -147,7 +147,7 @@ theorem step_copy64_run (d s : WArr) (di si n : Expr) {da sa : ArrId} {i j k : W
   · simp only [h, ↓reduceIte]
     simp [StateT.run, throw, throwThe, MonadExceptOf.throw, StateT.lift, bind, Except.bind]
 
-theorem step_copy8w_run (d : WArr) (s : BSrc) (di si n : Expr) {da : ArrId} {i j k : Word}
+theorem step_copy8w_run (d : WArr) (s : BSrc) (di si n : Expr) {da : TieredArray} {i j k : Word}
     (hd : warrP σ d = .ok da) (hi : evalP σ di = .ok i) (hj : evalP σ si = .ok j)
     (hk : evalP σ n = .ok k) :
     stepRun p K (.copy8w d di s si n) σ =

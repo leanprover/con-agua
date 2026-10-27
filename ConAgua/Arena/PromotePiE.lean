@@ -34,7 +34,7 @@ theorem pi_E {op opP : AM EIdx} {m m₁ : Mem} {a : AState} {r : Word} (hD : Are
 
 /-- A `mk_*`'s result is its interning's, after the derived range: the word and the frame. -/
 theorem mkK_pw {A : ArrId} (hA : A ≠ CTL) {c s d : Word} {x : Option (Word × Mem)} {m m' : Mem}
-    {r : Word} {A₀ : List ArrId} {C₀ : List Word}
+    {r : Word} {A₀ : List TieredArray} {C₀ : List Word}
     (hx : ∀ r₁ m₁, x = some (r₁, m₁) → PW r₁ ∧ MemFrame A₀ C₀ m m₁)
     (h : mkK A c s d x = some (r, m')) : PW r ∧ MemFrame (A :: (tier1 A) :: A₀) C₀ m m' := by
   match x, hx, h with
@@ -62,7 +62,7 @@ theorem internLitStr_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, tierOff, ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -80,7 +80,7 @@ include hp
 omit hp in
 /-- **The common shape of the `pi_*`**: from the callee's run at the cleared flag (`hc`: the
 twin's facts, the persistent result word, the frame) and the twin's equation `heq`. -/
-theorem pi_gen {g : FnName} {args : List Word} {op opP : AM EIdx} {A : List ArrId} {C : List Word}
+theorem pi_gen {g : FnName} {args : List Word} {op opP : AM EIdx} {A : List TieredArray} {C : List Word}
     {m : Mem} {a : AState} (hD : ArenaD m a)
     (hc : ∀ rr m₁, callW p n g args (m.set64 CTL 1 0) = some (rr, m₁) →
       AM.ok op (onA false a) ∧ ArenaD m₁ (AM.st op (onA false a)) ∧

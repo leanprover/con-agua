@@ -8,109 +8,80 @@ public section
 /-!
 # Array tables: names, kinds and tiers of a program's arrays
 
-The core (`Syntax`, the semantics, the compiler) names an array by a number, `ArrId := Nat`, so
-that two arrays are distinct by `decide`. This file is the layer above it that a program's
-arrays are declared in:
+The syntax names an array by a number, `ArrId := Nat`, so that two arrays are distinct by
+`decide`; the semantics names a word array by its number and tier (`TieredArray`). The numbers
+are names, not addresses: where an array lives is the compiler's choice. This file is the layer
+above the syntax that a program's arrays are declared in:
 
 * **A table** (`ArrTable`) lists every array with its name, its number, its kind (byte or word;
   the two kinds are separate number spaces) and whether it is **tiered** (word arrays only: tier
   `t` of array `a` is the array `tierA a t`, §"Tiers" below). `declare_arrays` declares the
   arrays as Lean constants and the table from one list of rows, so each number is written once.
-  `ArrTable.wf` checks that the numbers are distinct within a kind and below `tierOff`, so no
-  array is another one's tier 1.
+  `ArrTable.wf` checks that the numbers are distinct within a kind.
 * **The surface check** (`ArrTable.progOK`) reads a program's text: a byte access names a byte
   array of the table, a tiered access (`A⟨t⟩[i]`) a tiered array, and a plain word access a word
-  array of the table, so never a tier-1 number. A function on the exemption list may name any word
-  slot below the table's extent (a capacity check that walks every slot by number).
+  array of the table.
 * **Tiers.** Proofs name tier 1 of `a` as `tier1 a` and both tiers as `tiers a`, and reason with
-  the lemmas below (`tierA_mem_tiers`, `tierA_ne`, `tier1_ne`, …) instead of the encoding.
+  the lemmas below and in `L/Syntax.lean` (`tierA_mem_tiers`, `tierA_ne`, `tier1_ne_t0`, …).
 -/
 
 namespace L
 
-/-! ## Tiers -/
+/-! ## Tiers
 
-/-- Tier `1` of the tiered array `a`. -/
-@[expose, reducible] def tier1 (a : ArrId) : ArrId := a + tierOff
-
-/-- The two tiers of the tiered array `a`. -/
-@[expose, reducible] def tiers (a : ArrId) : List ArrId := [a, tier1 a]
+`TieredArray`, `tier1`, `tiers` and `tierA` are defined with the syntax (`L/Syntax.lean`). -/
 
 theorem and_one_cases' (t : Word) : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
   rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
 
-@[simp] theorem tierA_zero (a : ArrId) : tierA a 0 = a := rfl
+@[simp] theorem tierA_zero (a : ArrId) : tierA a 0 = ↑a := rfl
 
 theorem tierA_one_eq (a : ArrId) : tierA a 1 = tier1 a := rfl
 
-/-- Tier `t` of `a` is `a` or `tier1 a`. -/
-theorem tierA_eq_or (a : ArrId) (t : Word) : tierA a t = a ∨ tierA a t = tier1 a := by
-  rcases and_one_cases' t with h | h <;> simp [tierA, tier1, h]
-
-/-- **The arrays `tierA a t` can be are `tiers a`.** -/
-theorem tierA_mem_tiers (a : ArrId) (t : Word) : tierA a t ∈ tiers a := by
-  rcases tierA_eq_or a t with h | h <;> simp [tiers, h]
-
 /-- An array that is neither tier of `a` is not `tierA a t`. -/
-theorem tierA_ne {a b : ArrId} (h : b ∉ tiers a) (t : Word) : tierA a t ≠ b := fun e =>
-  h (e ▸ tierA_mem_tiers a t)
+theorem tierA_ne {a : ArrId} {b : TieredArray} (h : b ∉ tiers a) (t : Word) : tierA a t ≠ b :=
+  fun e => h (e ▸ tierA_mem_tiers a t)
 
-theorem ne_tierA {a b : ArrId} (h : b ∉ tiers a) (t : Word) : b ≠ tierA a t := fun e =>
-  tierA_ne h t e.symm
+theorem ne_tierA {a : ArrId} {b : TieredArray} (h : b ∉ tiers a) (t : Word) : b ≠ tierA a t :=
+  fun e => tierA_ne h t e.symm
 
-theorem not_mem_tiers {a b : ArrId} : b ∉ tiers a ↔ b ≠ a ∧ b ≠ tier1 a := by
+theorem not_mem_tiers {a : ArrId} {b : TieredArray} : b ∉ tiers a ↔ b ≠ ↑a ∧ b ≠ tier1 a := by
   simp [tiers]
 
-/-! The proofs below see the encoding (`tier1 a = a + 256`) through `show` with `Nat` binders:
-`omega` does not read a comparison at type `ArrId`. -/
+/-- Distinct arrays have disjoint tiers. -/
+theorem not_mem_tiers_of_ne {a b : ArrId} (h : b ≠ a) :
+    (b : TieredArray) ∉ tiers a ∧ tier1 b ∉ tiers a := by
+  simp [tiers, h]
 
-/-- Tier 1 of an array is no array below `tierOff`. -/
-theorem tier1_ne {a b : Nat} (hb : b < tierOff) : tier1 a ≠ b := by
-  have h1 : b < 256 := hb
-  show ¬ (a + 256 = b); omega
-
-theorem ne_tier1 {a b : Nat} (hb : b < tierOff) : b ≠ tier1 a := fun e => tier1_ne hb e.symm
-
-theorem tier1_inj {a b : Nat} (h : tier1 a = tier1 b) : a = b := by
-  have h2 : a + 256 = b + 256 := h
-  omega
-
-/-- Distinct arrays below `tierOff` have disjoint tiers. -/
-theorem not_mem_tiers_of_lt {a b : ArrId} (ha : a < tierOff) (hb : b < tierOff) (h : b ≠ a) :
-    b ∉ tiers a ∧ tier1 b ∉ tiers a := by
-  refine ⟨not_mem_tiers.2 ⟨h, ne_tier1 hb⟩, not_mem_tiers.2 ⟨tier1_ne ha, fun e => h (tier1_inj e)⟩⟩
-
-/-- On arrays below `tierOff`, the tiers of distinct arrays are distinct. -/
-theorem tierA_ne_tierA {a b : ArrId} (ha : a < tierOff) (hb : b < tierOff) (h : a ≠ b)
-    (t u : Word) : tierA a t ≠ tierA b u := by
-  rcases tierA_eq_or b u with e | e <;> rw [e]
-  · exact tierA_ne (not_mem_tiers_of_lt ha hb (Ne.symm h)).1 t
-  · exact tierA_ne (not_mem_tiers_of_lt ha hb (Ne.symm h)).2 t
-
-/-- The tiers of `a < n` are below `tierOff + n`. -/
-theorem tierA_lt {a n : Nat} (h : a < n) (t : Word) : tierA a t < tierOff + n := by
-  rcases tierA_eq_or a t with e | e <;> rw [e]
-  · show a < 256 + n; omega
-  · show a + 256 < 256 + n; omega
+/-- The tiers of distinct arrays are distinct. -/
+theorem tierA_ne_tierA {a b : ArrId} (h : a ≠ b) (t u : Word) : tierA a t ≠ tierA b u := by
+  intro e; exact h (by simpa using congrArg TieredArray.arr e)
 
 /-! ### Tier-1 arrays by range
 
-Frame lemmas name sets of tier-1 arrays by these predicates, not by the encoding. They are
-`@[simp] abbrev`s over the numbers today (tier 1 of `a` is `a + 256`), so `decide`, `omega` and
-`simp` read them as ranges; when the tiers become abstract only these definitions change. -/
+Frame lemmas name sets of tier-1 arrays by these predicates. They are `@[simp] abbrev`s, so
+`decide` and `simp` read them. -/
 
 /-- `b` is a tier-1 array: `tier1 a` for some `a` (`IsTier1.tier1`). -/
-@[simp] abbrev IsTier1 (b : Nat) : Prop := 256 ≤ b
+@[simp] abbrev IsTier1 (b : TieredArray) : Prop := b.hi = true
 
 /-- `b` is the tier-1 array of an array numbered in `[lo, hi)`: `tier1 a` with `lo ≤ a < hi`
 (`Tier1In.tier1`). -/
-@[simp] abbrev Tier1In (lo hi b : Nat) : Prop := lo + 256 ≤ b ∧ b < hi + 256
+@[simp] abbrev Tier1In (lo hi : Nat) (b : TieredArray) : Prop := b.hi = true ∧ lo ≤ b.arr ∧ b.arr < hi
 
-theorem IsTier1.tier1 (a : Nat) : IsTier1 (tier1 a) := by
-  show 256 ≤ a + 256; omega
+/-- `b` is the tier-0 array of an array numbered in `[lo, hi)`. -/
+@[simp] abbrev Tier0In (lo hi : Nat) (b : TieredArray) : Prop := b.hi = false ∧ lo ≤ b.arr ∧ b.arr < hi
 
-theorem Tier1In.tier1 {lo hi a : Nat} (h1 : lo ≤ a) (h2 : a < hi) : Tier1In lo hi (tier1 a) := by
-  show lo + 256 ≤ a + 256 ∧ a + 256 < hi + 256; omega
+theorem IsTier1.tier1 (a : Nat) : IsTier1 (tier1 a) := rfl
+
+theorem Tier1In.tier1 {lo hi a : Nat} (h1 : lo ≤ a) (h2 : a < hi) : Tier1In lo hi (tier1 a) :=
+  ⟨rfl, h1, h2⟩
+
+/-- Tier 0 of each array of `l`, and tier 1 of each: lists of word arrays written by their
+names. (A long list literal mixing `ArrId`s and `TieredArray`s does not elaborate: Lean
+elaborates it in pieces, without the expected element type.) -/
+abbrev tier0s (l : List ArrId) : List TieredArray := l.map TieredArray.t0
+@[inherit_doc tier0s] abbrev tier1s (l : List ArrId) : List TieredArray := l.map tier1
 
 /-! ## Tables -/
 
@@ -140,9 +111,10 @@ def ids (T : ArrTable) (k : ArrKind) : List ArrId := (T.filter (·.kind == k)).m
 /-- The tiered arrays' numbers. -/
 def tieredIds (T : ArrTable) : List ArrId := (T.filter (·.tiered)).map (·.id)
 
-/-- The word slots the table occupies: every word array and the tier-1 array of every tiered
-one. -/
-def wordSlots (T : ArrTable) : List ArrId := T.ids .word ++ T.tieredIds.map tier1
+/-- The word arrays of the table: every word array (its tier 0) and the tier-1 array of every
+tiered one. -/
+def wordSlots (T : ArrTable) : List TieredArray :=
+  (T.ids .word).map TieredArray.t0 ++ T.tieredIds.map tier1
 
 /-- `l` has no duplicates (a `Bool` check: sorted, then neighbours; `List.Nodup`'s instance is
 slow under `decide`). -/
@@ -150,16 +122,10 @@ def nodupB (l : List Nat) : Bool :=
   let s := l.mergeSort
   (s.zip s.tail).all fun (x, y) => x != y
 
-/-- **Well-formed**: every number below `tierOff`, the numbers of each kind distinct, only word
-arrays tiered. -/
+/-- **Well-formed**: the numbers of each kind distinct, only word arrays tiered. -/
 def wf (T : ArrTable) : Bool :=
-  T.all (fun d => d.id < tierOff && (d.tiered → d.kind == .word)) &&
+  T.all (fun d => d.tiered → d.kind == .word) &&
     nodupB (T.ids .byte) && nodupB (T.ids .word)
-
-/-- The table's extent `(nb, nw)`: one more than the largest byte array and word slot (the
-compiler's `Prog.arrs` of a program that names them all). -/
-def extent (T : ArrTable) : Nat × Nat :=
-  ((T.ids .byte).foldl (fun m a => max m (a + 1)) 0, T.wordSlots.foldl (fun m a => max m (a + 1)) 0)
 
 /-! ### The surface check -/
 
@@ -175,13 +141,6 @@ number); a tiered array of `T`. -/
 def useOK (T : ArrTable) : Use → Bool
   | .byte a => T.ids .byte |>.contains a
   | .word a => T.ids .word |>.contains a
-  | .tier a => T.tieredIds.contains a
-
-/-- Whether an exempt function may use the operand: any word slot below the table's extent
-(the slots between the arrays included), else as `useOK`. -/
-def slotOK (T : ArrTable) : Use → Bool
-  | .byte a => T.ids .byte |>.contains a
-  | .word a => a < T.extent.2
   | .tier a => T.tieredIds.contains a
 
 end ArrTable
@@ -242,11 +201,9 @@ def stmt : Stmt → List Use
 end Uses
 
 /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
-(`useOK`); a function in `exempt` may name any word slot below `T`'s extent (`slotOK`). -/
-def ArrTable.progOK (T : ArrTable) (exempt : List FnName) (p : Prog) : Bool :=
-  p.all fun (f, fd) =>
-    if exempt.contains f then (Uses.stmt fd.body).all T.slotOK
-    else (Uses.stmt fd.body).all T.useOK
+(`useOK`). -/
+def ArrTable.progOK (T : ArrTable) (p : Prog) : Bool :=
+  p.all fun (_, fd) => (Uses.stmt fd.body).all T.useOK
 
 /-! ## `declare_arrays` -/
 
@@ -285,21 +242,21 @@ macro_rules
 
 /-- Test memories: each entry `(a, xs)` of a list of named arrays (`Mem.ofWords`) also as the
 entry for its tier-1 array, `[(a, xs), (tier1 a, xs)]`. Only the tiered arrays go through it. -/
-def withTiers {α : Type} (l : List (ArrId × α)) : List (ArrId × α) :=
-  l.flatMap fun p => [p, (tier1 p.1, p.2)]
+def withTiers {α : Type} (l : List (ArrId × α)) : List (TieredArray × α) :=
+  l.flatMap fun p => [(↑p.1, p.2), (tier1 p.1, p.2)]
 
 /-- Test memories: every word array of `T` as a zero array of `size a` words, entries for
 `Mem.ofWords` (a test overrides some by later entries). Tier 0 only; `zeroTiers` has the tier-1
 arrays. -/
-def ArrTable.zeroWords (T : ArrTable) (size : ArrId → Nat) : List (ArrId × Array Word) :=
-  (T.ids .word).map fun a => (a, Array.replicate (size a) 0)
+def ArrTable.zeroWords (T : ArrTable) (size : ArrId → Nat) : List (TieredArray × Array Word) :=
+  (T.ids .word).map fun (a : ArrId) => (↑a, Array.replicate (size a) 0)
 
 /-- The tier-1 array `tier1 a` of every tiered array `a` of `T` as a zero array of `size a` words. -/
-def ArrTable.zeroTiers (T : ArrTable) (size : ArrId → Nat) : List (ArrId × Array Word) :=
+def ArrTable.zeroTiers (T : ArrTable) (size : ArrId → Nat) : List (TieredArray × Array Word) :=
   T.tieredIds.map fun a => (tier1 a, Array.replicate (size a) 0)
 
 /-- `zeroWords` and `zeroTiers`: both tiers of every array. -/
-def ArrTable.zeroBoth (T : ArrTable) (size : ArrId → Nat) : List (ArrId × Array Word) :=
+def ArrTable.zeroBoth (T : ArrTable) (size : ArrId → Nat) : List (TieredArray × Array Word) :=
   T.zeroWords size ++ T.zeroTiers size
 
 end L

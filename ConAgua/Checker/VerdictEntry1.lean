@@ -111,33 +111,33 @@ theorem run_err {p : Prog} {N : Nat} {f : FnName} {m : Mem} {e : Err}
 /-- The error specs of the three stages that can claim a verdict, at the checker's stage
 relations. -/
 structure Entry1StagesE : Prop where
-  prelude : ∀ b pb s8 s64, InputsOK b pb s64 →
-    StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb s8 s64)) (TwinVerdict [b])
-  front : ∀ b pb s8 s64, InputsOK b pb s64 →
-    StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb s8 s64)) (TwinVerdict [b])
-  fold : ∀ b pb s8 s64, InputsOK b pb s64 → ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+  prelude : ∀ b pb sz, InputsOK b pb sz →
+    StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb sz)) (TwinVerdict [b])
+  front : ∀ b pb sz, InputsOK b pb sz →
+    StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb sz)) (TwinVerdict [b])
+  fold : ∀ b pb sz, InputsOK b pb sz → ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
-    ⦃fun _ s' => LocEq s' s₀; fun e => Q7 b (checkerRels b pb s8 s64) s₀.mem →
+    ⦃fun _ s' => LocEq s' s₀; fun e => Q7 b (checkerRels b pb sz) s₀.mem →
       (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
       e.cls ≠ 0 → TwinVerdict [b] e.cls⦄
 
 /-- **Entry 1's verdict claim from its stages' error specs.** -/
 theorem entry1Verdict_of (h : Entry1StagesE) : Entry1Verdict checkerProg := by
-  intro b pb s8 s64 hin w hw N hN e hrun hk
+  intro b pb sz hin w hw N hN e hrun hk
   obtain ⟨-, -, -, s4, s5, s6, s7⟩ := stageSpecs_of_rels checkerRels checker_capStage
     checker_pbStage checker_irpStage checker_preludeStage checker_frontStage checker_prepareStage
-    checker_pinsStage b pb s8 s64 hin
+    checker_pinsStage b pb sz hin
   have s1 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => capStage_setG b pb s8 s64 hin.2.2.2 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+    (fun _ => capStage_setG b pb sz hin.2.2.2 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have s2 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => pbStage_setG b pb s8 s64 hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+    (fun _ => pbStage_setG b pb sz hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have s3 : StageSpec checkerProg "intern_reserved_pins"
-      (fun m => m = loadMemM b pb s8 s64 w ∧ CapsOK (loadMem b pb s8 s64) ∧ PbPre pb)
-      (fun _ => Q3 b (checkerRels b pb s8 s64)) := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => irpStage_setG b pb s8 s64 hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+      (fun m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz) ∧ PbPre pb)
+      (fun _ => Q3 b (checkerRels b pb sz)) := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
+    (fun _ => irpStage_setG b pb sz hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have hla : checkerProg.lookup "check_a" = some checkAL := by chk_lk
   have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
-  have hmode : (loadMemM b pb s8 s64 w).glob MODE = w := by simp [loadMemM, Mem.setG]
+  have hmode : (loadMemM b pb sz w).glob MODE = w := by simp [loadMemM, Mem.setG]
   have hr := run_err hrun
   cases N with
   | zero =>
@@ -146,16 +146,16 @@ theorem entry1Verdict_of (h : Entry1StagesE) : Entry1Verdict checkerProg := by
     exact absurd this hk
   | succ n =>
     have hn : n ≤ 2 ^ 62 := by omega
-    let s₀ : St := { mem := loadMemM b pb s8 s64 w, loc := Locals.init [] }
+    let s₀ : St := { mem := loadMemM b pb sz w, loc := Locals.init [] }
     have hA : ∀ (s₁ : St) (c : Word), ⦃fun s => s = s₁⦄
         invoke checkerProg (exec checkerProg n) "check_a" [c]
         ⦃fun _ _ => True; fun e => s₁.mem = s₀.mem → e.cls ≠ 0 → TwinVerdict [b] e.cls⦄ := by
       intro s₁ c
-      have := checkA_err_of_stages (Q0 := (· = loadMemM b pb s8 s64 w)) hla checkerProg_nv
+      have := checkA_err_of_stages (Q0 := (· = loadMemM b pb sz w)) hla checkerProg_nv
         (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
         (by decide +kernel) (by decide +kernel)
-        s1 s2 s3 s4 s5 s6 s7 (h.prelude b pb s8 s64 hin) (h.front b pb s8 s64 hin)
-        (h.fold b pb s8 s64 hin) c n hn s₁
+        s1 s2 s3 s4 s5 s6 s7 (h.prelude b pb sz hin) (h.front b pb sz hin)
+        (h.fold b pb sz hin) c n hn s₁
       exact M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr' => by
         subst hs
         exact fun hm => M.of_run_err (P := fun t => t = s) rfl hr' this hm

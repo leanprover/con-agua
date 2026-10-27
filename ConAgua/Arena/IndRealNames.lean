@@ -259,7 +259,7 @@ theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s
     have hv₁ := vpool_stidx0 m d (rdW (m.arr64 IW) s) hd41 (by omega) (by omega)
     obtain ⟨hg', hf, hbl, hsl⟩ := ih _ _ _ _ _ h hg₁ (by omega) (by omega)
       (by rw [et, ei, hlm, size_set64]; omega) (by rw [hs1, hlm]; omega)
-    have hmem : tierA POOL (d >>> 40) ∈ [POOL, POOL1] := by
+    have hmem : tierA POOL (d >>> 40) ∈ ([POOL, POOL1] : List TieredArray) := by
       rcases tierA_pool (d >>> 40) with e | e <;> simp [e]
     refine ⟨hg', ((MemFrame.set64 _ _ hne _ _).mono (by simpa using hmem) (by simp)).trans hf,
       fun i hi => ?_, ?_⟩
@@ -420,7 +420,7 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
       ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [nstrCS]))
   have hmo₃ : ModeOK m₃ := hmo₂.frame (consInternM_frame nstrCS_wf hI) (by simp [nstrCS]) (by simp [nstrCS])
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS (internNNode_str_run (decI x) "rec" a) hok hR₃
-    hres hfr (by simp [tier1, tierOff, POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [tier1, POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩) hmo₃
   rw [hr] at hrun c
   refine ⟨decI (r.headD 0), a', hrun, hS', hg', ?_, rfl⟩
@@ -583,7 +583,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have hfr : MemFrame [POOL, POOL1, LSREC, tier1 LSREC, LSSLOT, tier1 LSSLOT, LSHP, tier1 LSHP] [0, 40, 41] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
       (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
-  obtain ⟨hS', hg'⟩ := StageR.of_walkM hS hA₃ hfr (by simp [tier1, tierOff, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
+  obtain ⟨hS', hg'⟩ := StageR.of_walkM hS hA₃ hfr (by simp [tier1, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
     (by simp only [cp, hca, hpi]) (hmo₂.frame hf₃ (by simp [lsSch]) (by simp [lsSch]))
   rw [hr] at hrun c
   refine ⟨_, _, hrun, hS', hg', ?_, rfl⟩

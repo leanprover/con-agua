@@ -71,8 +71,7 @@ theorem internLNode_max_run (u v : LIdx) (a : AState) :
 def maxSch : Schema := ⟨MREC, MSLOT, 1, 10, LTag.max⟩
 
 theorem maxSch_wf : maxSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_max0 (m : Mem) (t i : Word) : fld maxSch m t i 0 = rdW (m.arr64 (tierA MREC t)) i := by
   simp [fld, Schema.ad, maxSch]
@@ -156,15 +155,13 @@ theorem maxCS_wf : maxCS.WF where
     simp only [maxCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
       simp only [maxCS, mhash, Mem.arr64_set64_ne _ _ _ _ _
-        (tierA_ne (by decide) (by decide) (show MREC ≠ MHP by decide) t u)]⟩
+        (tierA_ne (show MREC ≠ MHP by decide) t u)]⟩
   room m t h := (mpushOK_room m t ((mpushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [maxCS, Option.some.injEq] at h; subst h
     rw [← mpushOK_eqC] at hp
     simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m MHP _ t hp.2
-  colLt A h := by
-    simp only [maxCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, maxCS, hk]
   ex _ := {
     nk := by decide
@@ -185,7 +182,7 @@ theorem maxCS_wf : maxCS.WF where
 theorem maxColFree : ColFree maxCS MRecRel := by
   intro A h m u k x t i a hr
   simp only [maxCS, Option.some.injEq] at h; subst h
-  simpa only [MRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show MREC ≠ MHP by decide) t u)] using hr
+  simpa only [MRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (show MREC ≠ MHP by decide) t u)] using hr
 
 /-- **What `intern_max` changes**: the table's arrays, the column, the counts. -/
 theorem minternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : minternW m u v = some (w, m')) :

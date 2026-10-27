@@ -153,7 +153,7 @@ theorem threadGo_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
   rintro s e ⟨hx, hy, hz, ⟨m', hS, hPB, hw⟩⟩ hrun
   rw [hx, hy, hz] at hrun
   let m₂ : Mem := { m' with glob := s.mem.glob }
-  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
   have h₂ := PhaseBStart.frame0 hf hS
   have hrun₀ : (invoke checkerProg (exec checkerProg n) "check_pending_go" [j, j + 1, v]).run
       ⟨s.mem, Locals.init []⟩ = .error e := by
@@ -194,20 +194,20 @@ theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
     ⦃fun _ _ => True; ErrClaim (checkPending mode fe (pdAt pend j)) a⦄ := by
   have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
-  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 241).size), (s₀.mem.arr64 241)[(3 : Word).toNat] = v := by
+  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 HDRF).size), (s₀.mem.arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb; exact hv hb
   have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v
-      { bytes := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).bytes,
-        words := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).words,
+      { bytes := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).bytes,
+        words := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).words,
         glob := fun h => if h = ⟨10⟩ then 1
-          else (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).glob h } a := by
+          else (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).glob h } a := by
     intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
   have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v s₀.mem a := by
     intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
-  have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241).size),
-      ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241)[(3 : Word).toNat] = v := by
+  have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).arr64 HDRF).size),
+      ((s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb
-    simp only [arr64_copy64_ne _ _ _ _ _ _ (show (241 : ArrId) ≠ 1 by decide)] at hb ⊢
+    simp only [arr64_copy64_ne _ _ _ _ _ _ (show (HDRF : TieredArray) ≠ CTL by decide)] at hb ⊢
     exact hv' hb
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
@@ -291,12 +291,12 @@ theorem thrCall_firstE (hP : PhaseBProg (Prog.subPB bs checkerProg))
     {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
     (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
     (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r : Mem) (hr : r.HasWs 388) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
+    (r : Mem) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
     (hI : r.glob INIT = 0) (j : Word) (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62)
     (n : Nat) (hn : n ≤ 2 ^ 62) {e : Err}
     (hrun : L.run checkerProg n "check" [] (bufMem (bufOf m v) r j) = .error e) :
     ErrClaim (checkPending mode fe (pdAt pend j)) a.worker e := by
-  obtain ⟨hR, -⟩ := ThreadRel.first hS hPB (by omega) hok hlt r j hr hz hI
+  obtain ⟨hR, -⟩ := ThreadRel.first hS hPB (by omega) hok hlt r j hz hI
   exact runThrE mode pins dn ds fe pend bs hP hE n hn a.worker v j hj hj62 _ rfl hR rfl rfl
     (bufMem_view (bufImg_hdr hok hlt) r j) hrun
 
@@ -363,7 +363,7 @@ theorem thread_failsE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode =
     {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
     (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
     (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r₀ : Mem) (hr : r₀.HasWs 388)
+    (r₀ : Mem)
     (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m.arr64 b).size) (hI : r₀.glob INIT = 0)
     (j : Word) (hj : j.toNat < pend.size) (n : Nat) (e : Err) (hk0 : e.cls ≠ 0)
     (cs : List (Word × Nat × Mem)) (hruns : ThreadFails (bufOf m v) j n e r₀ cs)
@@ -374,11 +374,11 @@ theorem thread_failsE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode =
   match cs, hruns, hcs with
   | [], ⟨hn, hrun⟩, _ =>
     exact checkPendingList_fails_head
-      (thrCall_firstE mode pins dn ds fe pend bs hP hE hS hPB hok hlt r₀ hr hz hI j hj (by omega)
+      (thrCall_firstE mode pins dn ds fe pend bs hP hE hS hPB hok hlt r₀ hz hI j hj (by omega)
         n hn hrun hk0)
   | (j', n', r') :: cs, ⟨hn, ⟨rs, hrun⟩, hk', hrest⟩, hcs =>
     have hj' : j'.toNat < pend.size := hcs _ List.mem_cons_self
-    obtain ⟨hok', hR', hI'⟩ := thrCall_first mode pins dn ds fe pend bs hP hm hS hPB hok hlt r₀ hr hz
+    obtain ⟨hok', hR', hI'⟩ := thrCall_first mode pins dn ds fe pend bs hP hm hS hPB hok hlt r₀ hz
       hI j' hj' (by omega) n' hn hrun
     simp only [thrGroups, List.map_cons, List.cons_append]
     exact checkPendingList_fails_tail hok'
@@ -406,12 +406,12 @@ open ConAgua.Final in
 Then the twin's pool fails with that class (`TwinVerdictPooled`, its second disjunct: the worker
 checking the thread's groups up to and including `j`). -/
 theorem threads_twinVerdictPooled (hCP : CPVerdict)
-    (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+    (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-    (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 1) = .ok (rs₁, m₁))
+    (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     (B : Array Word) (hB : B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat)
-    (r₀ : Mem) (hr : r₀.HasWs 388) (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m₁.arr64 b).size)
+    (r₀ : Mem) (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m₁.arr64 b).size)
     (hI : r₀.glob INIT = 0) (cs : List (Word × Nat × Mem)) (j : Word) (n : Nat) (e : Err)
     (hruns : ThreadFails B j n e r₀ cs)
     (hcs : ∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808)
@@ -419,7 +419,7 @@ theorem threads_twinVerdictPooled (hCP : CPVerdict)
     TwinVerdictPooled [b] e.cls := by
   have hr' : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
   obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ :=
-    checkA_run b pb s8 s64 hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr'
+    checkA_run b pb sz hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr'
   have hflag : modeFlag 1 = 1 := rfl
   rw [hflag] at hok hm₁
   have hrom : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1
@@ -452,7 +452,7 @@ theorem threads_twinVerdictPooled (hCP : CPVerdict)
   have hz' : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m.arr64 b).size := fun b hb => by
     rw [hz b hb, hF.size]
   have hfail := thread_failsE .verified PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend pb.data.toList
-    hPB' rfl (hCP _ _ hrom hpre hdn hQd hPB' _ _ _ _) hS hPB hok hlt r₀ hr hz' hI j hj' n e hk0 cs
+    hPB' rfl (hCP _ _ hrom hpre hdn hQd hPB' _ _ _ _) hS hPB hok hlt r₀ hz' hI j hj' n e hk0 cs
     (hBm ▸ hruns) hcs'
   have hsub : ∀ pc ∈ thrGroups PA.pend cs ++ [pdAt PA.pend j], pc ∈ PA.pend.toList := by
     intro pc hpc

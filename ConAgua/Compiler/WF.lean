@@ -24,22 +24,22 @@ def maxOff : Nat := 2 ^ 28
 /-- A byte source exists: a byte array of `tab`, or constant bytes in its constant data (short
 enough to be an immediate). -/
 def BSrc.wf (tab : Tab) : BSrc → Bool
-  | .arr a => a < tab.nb
+  | .arr a => tab.dom8 a
   | .rom d => d.isPrefixOf (tab.rom.drop (romIdx d tab.rom)) && d.length < 2 ^ 31
 
 def Expr.wf (nl : Nat) (tab : Tab) : Expr → Bool
   | .const _ => true
   | .var x => x < nl
   | .bin _ a b => Expr.wf nl tab a && Expr.wf nl tab b
-  | .ld8 a i => a < tab.nb && Expr.wf nl tab i
-  | .ld64 a i => a < tab.nw && Expr.wf nl tab i
-  | .len8 a => a < tab.nb
-  | .len64 a => a < tab.nw
+  | .ld8 a i => tab.dom8 a && Expr.wf nl tab i
+  | .ld64 a i => tab.dom64 a && Expr.wf nl tab i
+  | .len8 a => tab.dom8 a
+  | .len64 a => tab.dom64 a
   | .cmpw _ a b => Expr.wf nl tab a && Expr.wf nl tab b
   | .ldc d i => d.isPrefixOf (tab.rom.drop (romIdx d tab.rom)) && Expr.wf nl tab i
   | .glob g => g.id < tab.ng
-  | .ld64t a t i => a < tab.wK && Expr.wf nl tab t && Expr.wf nl tab i
-  | .len64t a t => a < tab.wK && Expr.wf nl tab t
+  | .ld64t a t i => tab.dom64 (tier1 a) && Expr.wf nl tab t && Expr.wf nl tab i
+  | .len64t a t => tab.dom64 (tier1 a) && Expr.wf nl tab t
   | .ld8x8 s i => BSrc.wf tab s && Expr.wf nl tab i
 
 def Cond.wf (nl : Nat) (tab : Tab) : Cond → Bool
@@ -49,8 +49,8 @@ def Cond.wf (nl : Nat) (tab : Tab) : Cond → Bool
 
 /-- A block operand: an array of `tab`, or a tiered one with an operand tier. -/
 def WArr.wf (nl : Nat) (tab : Tab) : WArr → Bool
-  | .plain a => a < tab.nw
-  | .tier a t => a < tab.wK && Expr.isOpnd t && Expr.wf nl tab t
+  | .plain a => tab.dom64 a
+  | .tier a t => tab.dom64 (tier1 a) && Expr.isOpnd t && Expr.wf nl tab t
 
 /-- A block's operands need no code (`Expr.isOpnd`). -/
 def Expr.opndWf (nl : Nat) (tab : Tab) (e : Expr) : Bool := Expr.isOpnd e && Expr.wf nl tab e
@@ -59,8 +59,8 @@ def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
   | .skip | .brk => true
   | .abort e => Expr.wf nl tab e
   | .set x e => x < nl && Expr.wf nl tab e
-  | .st8 a i e => a < tab.nb && Expr.wf nl tab i && Expr.wf nl tab e
-  | .st64 a i e => a < tab.nw && Expr.wf nl tab i && Expr.wf nl tab e
+  | .st8 a i e => tab.dom8 a && Expr.wf nl tab i && Expr.wf nl tab e
+  | .st64 a i e => tab.dom64 a && Expr.wf nl tab i && Expr.wf nl tab e
   | .seq s t => Stmt.wf p nl tab s && Stmt.wf p nl tab t
   | .ite c s t => Cond.wf nl tab c && Stmt.wf p nl tab s && Stmt.wf p nl tab t
   | .while c s => Cond.wf nl tab c && Stmt.wf p nl tab s
@@ -71,7 +71,7 @@ def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
       | some fd => args.length == fd.nparams
       | none => false
   | .gset g e => g.id < tab.ng && Expr.wf nl tab e
-  | .st64t a t i e => a < tab.wK && Expr.isSimple t && Expr.wf nl tab t &&
+  | .st64t a t i e => tab.dom64 (tier1 a) && Expr.isSimple t && Expr.wf nl tab t &&
       Expr.wf nl tab i && Expr.wf nl tab e
   | .copy64 d di s si n => WArr.wf nl tab d && Expr.opndWf nl tab di && WArr.wf nl tab s &&
       Expr.opndWf nl tab si && Expr.opndWf nl tab n

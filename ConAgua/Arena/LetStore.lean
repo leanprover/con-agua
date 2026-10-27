@@ -134,7 +134,7 @@ def letProg : Prog :=
 /-- A memory with 8 `letE` nodes and `SN0` slots per tier, the scratch tier closed or open. The other
 tables' arrays are unused here and left empty. -/
 def letMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+  Mem.ofWords <| [((CTL : TieredArray), (#[0, scratch] ++ Array.replicate 62 0))] ++
     withTiers [(LEREC, Array.replicate 48 0),
       (LESLOT, Array.replicate consTestWords 0)]
 
@@ -190,8 +190,6 @@ theorem letOK : ConsOK p letCS where
   colA := by simp [letCS]
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [letCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun _ _ _ _ _ => rfl
   mloc := fun h => by simp [letCS] at h
   exnk := fun h => by simp [letCS] at h

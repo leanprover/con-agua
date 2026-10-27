@@ -84,8 +84,7 @@ theorem internE_let_run (ty val body : EIdx) (a : AState) :
 def letSch : Schema := ⟨LEREC, LESLOT, 2, 20, ETag.letE⟩
 
 theorem letSch_wf : letSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_let0 (m : Mem) (t i : Word) :
     fld letSch m t i 0 = rdW (m.arr64 (tierA LEREC t)) (i * 2) := by
@@ -187,8 +186,6 @@ theorem letCS_wf : letCS.WF where
   S := by decide
   col A h := by simp [letCS] at h
   colRoom A h := by simp [letCS] at h
-  colLt A h := by
-    simp only [letCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (lepushOK_room m t ((lepushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, letCS, hk]
   ex h := by simp [letCS] at h

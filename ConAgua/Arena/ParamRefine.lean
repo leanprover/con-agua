@@ -73,8 +73,7 @@ theorem internLNode_param_run (n : NIdx) (a : AState) :
 def paramSch : Schema := ⟨PREC, PSLOT, 1, 14, LTag.param⟩
 
 theorem paramSch_wf : paramSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_param0 (m : Mem) (t i : Word) :
     fld paramSch m t i 0 = rdW (m.arr64 (tierA PREC t)) i := by
@@ -155,8 +154,6 @@ theorem paramCS_wf : paramCS.WF where
   S := by decide
   col A h := by simp [paramCS] at h
   colRoom A h := by simp [paramCS] at h
-  colLt A h := by
-    simp only [paramCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (ppushOK_room m t ((ppushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, paramCS, hk]
   ex _ := {

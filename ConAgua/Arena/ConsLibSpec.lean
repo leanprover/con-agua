@@ -94,7 +94,7 @@ theorem lit_eq_add_false (a b x : Nat) (h : a < b) : (a = b + x) = False := by
 theorem add_eq_lit_false (a b x : Nat) (h : a < b) : (b + x = a) = False := by
   simp only [eq_iff_iff, iff_false]; omega
 
-theorem rd64_rdWC (m : Mem) (a : ArrId) (i : Word) : rd64 m a i = rdW (m.arr64 a) i := by
+theorem rd64_rdWC (m : Mem) (a : TieredArray) (i : Word) : rd64 m a i = rdW (m.arr64 a) i := by
   simp [rd64, rdW, Array.getD_eq_getD_getElem?]
 
 /-- A triple whose precondition adds a pure fact `K` follows from one that may assume `K` (for an
@@ -274,8 +274,6 @@ structure ConsOK : Prop where
   skips : SkipOK C
   push_np : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk
   arrs : C.ra ≠ CTL ∧ C.sa ≠ CTL ∧ C.ra ≠ C.sa
-  /-- The arrays are tier-0 ids (tier 1 is `tier1`). -/
-  lt : C.ra < 256 ∧ C.sa < 256 ∧ ∀ A, C.col = some A → A < 256
   /-- The match's prelude has a local of its own (the find's key word follows it). -/
   mloc : C.mpre ≠ none → 1 ≤ C.mloc
   /-- An exact key has at most two words. -/
@@ -565,7 +563,7 @@ theorem addlit_eq_self (a k : Nat) (h : 0 < k) : (a + k = a) = False := by
   simp only [eq_iff_iff, iff_false]; omega
 
 section zero
-variable (sa : ArrId) (x e : Word) (m : Mem)
+variable (sa : TieredArray) (x e : Word) (m : Mem)
 
 theorem kzeroW_done (h : e = 0) : kzeroW sa x e.toNat m = m := by
   subst h; rfl
@@ -759,7 +757,7 @@ theorem triple_weaken {p : Prog} {k : Stmt → M Sig} {a : Stmt} {s₀ : St} {Q 
 /-! ### The mark loop -/
 
 section mark
-variable (sa : ArrId) (bt x e : Word) (m : Mem)
+variable (sa : TieredArray) (bt x e : Word) (m : Mem)
 
 theorem kmarkW_done (h : e = 0) : kmarkW sa bt e.toNat x m = m := by
   subst h; rfl
@@ -902,11 +900,11 @@ def KeepR (C : ConsSch) (s s' : St) : Prop :=
   KeepLo (gO C) s s' ∧ s'.loc (gO C) = s.loc (gO C) ∧ s'.loc (gO C + 1) = s.loc (gO C + 1) ∧
     s'.loc (gO C + 4) = s.loc (gO C + 4) ∧ s'.loc (gO C + 13) = s.loc (gO C + 13)
 
-theorem kinnerW_done (sa : ArrId) (G : Mem → Word → Word) (N ob bt i e v : Word) (m : Mem)
+theorem kinnerW_done (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i e v : Word) (m : Mem)
     (hv : ¬ MARK ≤ v) : kinnerW sa G N ob bt i e v m = some (m, e) := by
   rw [kinnerW]; simp [hv]
 
-theorem kinnerW_more (sa : ArrId) (G : Mem → Word → Word) (N ob bt i e v : Word) (m : Mem)
+theorem kinnerW_more (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i e v : Word) (m : Mem)
     (hv : MARK ≤ v) (he : ¬ e = 0) (j : Word)
     (hj : kprobeW (m.arr64 sa) ob N i bt (homeW (G m (rdW (m.arr64 sa) (ob + i * 2 + 1))) N) 0 = some j) :
     kinnerW sa G N ob bt i e v m =
@@ -944,11 +942,11 @@ theorem kinnerL_step_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (
         some (s'.mem, s'.loc (gO C + 7)); ⊤⦄ :=
   Triple.step_exec (kinnerL_spec p C hO (n + 1) s₀)
 
-theorem krehashW_done (sa : ArrId) (G : Mem → Word → Word) (N n ob bt i e : Word) (m : Mem)
+theorem krehashW_done (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i e : Word) (m : Mem)
     (hi : ¬ i < n) : krehashW sa G N n ob bt i e m = some m := by
   rw [krehashW]; simp [hi]
 
-theorem krehashW_step (sa : ArrId) (G : Mem → Word → Word) (N n ob bt i e : Word) (m m' : Mem)
+theorem krehashW_step (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i e : Word) (m m' : Mem)
     (e' : Word) (hi : i < n)
     (h : kinnerW sa G N ob bt i e (rdW (m.arr64 sa) (ob + i * 2)) m = some (m', e')) :
     krehashW sa G N n ob bt i e m = krehashW sa G N n ob bt (i + 1) e' m' := by
@@ -1087,7 +1085,7 @@ theorem kgrowH_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   · rw [b6, l2, a4, a1]
   · rw [b7, l2, a1]
 
-theorem kzeroW_arr (sa : ArrId) (x : Word) (e : Nat) (m : Mem) (b : ArrId) (hb : b ≠ sa) :
+theorem kzeroW_arr (sa : TieredArray) (x : Word) (e : Nat) (m : Mem) (b : TieredArray) (hb : b ≠ sa) :
     (kzeroW sa x e m).arr64 b = m.arr64 b := (kzeroW_fr sa e x m).1 b hb
 
 /-- **The growth block** (renamed into the push): it keeps the push's variables (below `gO`) and
@@ -1097,8 +1095,8 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
     step p (exec p n) (kgrowBlk C)
     ⦃fun r s' => r = .normal ∧ KeepLo (gO C) s₀ s' ∧
       kgrowM C.sa (ghC C) (s₀.loc 0) s₀.mem = some s'.mem; ⊤⦄ := by
-  have hsc : ∀ t, tierA C.sa t ≠ CTL := fun t => by
-    simpa using tierA_ne hO.lt.2.1 (show CTL < 256 by decide) hO.arrs.2.1 t 0
+  have hsc : ∀ t, tierA C.sa t ≠ CTL := fun t =>
+    (ne_tierA (Ne.symm hO.arrs.2.1) t).symm
   unfold kgrowBlk kgrowB
   simp only [mapS]
   refine triple_seq _ (kgrowH_spec p C n s₀) (fun s₃ h₃ => ?_)
@@ -1173,7 +1171,7 @@ def pushOKC (C : ConsSch) (m : Mem) (t : Word) : Bool :=
   decide (cntC C m t < (134217728 : Word)) && !C.roomM m t (cntC C m t)
 
 /-- Write the words `vs` into array `ra` from word `k + f`. -/
-def wrRecK (ra : ArrId) (k : Word) : Mem → Word → List Word → Mem
+def wrRecK (ra : TieredArray) (k : Word) : Mem → Word → List Word → Mem
   | m, _, [] => m
   | m, f, v :: vs => wrRecK ra k (m.set64 ra (k + f) v) (f + 1) vs
 
@@ -1404,7 +1402,7 @@ theorem cpWr_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) :
       simp only [pkw, argsOf]; exact kwP_mem p hO _ _ _
     have hsa : ∀ (k v : Word), (s₁.mem.set64 (tierA C.ra (s₁.loc 0)) k v).arr64
         (tierA C.sa (s₁.loc 0)) = s₁.mem.arr64 (tierA C.sa (s₁.loc 0)) :=
-      fun k v => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (tierA_ne hO.lt.1 hO.lt.2.1 hrs _ _))
+      fun k v => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (tierA_ne hrs _ _))
     simp only [cpWr]
     by_cases hf0 : f = 0
     · subst hf0
@@ -1864,20 +1862,20 @@ theorem kgrowIf_frame (C : ConsSch) (t : Word) (m₀ m m' : Mem) (c : Word)
   · exact kgrowM_fr _ _ _ _ _ h
   · cases h; exact GFr.refl _ _
 
-theorem arr64_size_set64 (m : Mem) (a b : ArrId) (i v : Word) :
+theorem arr64_size_set64 (m : Mem) (a b : TieredArray) (i v : Word) :
     ((m.set64 a i v).arr64 b).size = (m.arr64 b).size := by
   by_cases e : b = a
   · subst e; exact Mem.size_arr64_set64 m b i v
   · rw [Mem.arr64_set64_ne _ _ _ _ _ e]
 
-theorem wrRecK_size (ra : ArrId) (k : Word) (b : ArrId) :
+theorem wrRecK_size (ra : TieredArray) (k : Word) (b : TieredArray) :
     ∀ (vs : List Word) (m : Mem) (f : Word), ((wrRecK ra k m f vs).arr64 b).size = (m.arr64 b).size := by
   intro vs
   induction vs with
   | nil => intro m f; rfl
   | cons v vs ih => intro m f; rw [wrRecK, ih, arr64_size_set64]
 
-theorem wrRecK_words (ra : ArrId) (k : Word) :
+theorem wrRecK_words (ra : TieredArray) (k : Word) :
     ∀ (vs : List Word) (m : Mem) (f : Word), m.SameShape (wrRecK ra k m f vs) := by
   intro vs
   induction vs with
@@ -1892,14 +1890,14 @@ def pushRec (C : ConsSch) (m : Mem) (t : Word) (ks : List Word) : Mem :=
     ((wrRecK (tierA C.ra t) (cntC C m t * C.w) m 0 (C.vsM (pushArgs C ks (C.qhM m ks)))).set64
       CTL (C.ca + (t &&& 1)) (cntC C m t + 1))
 
-theorem colW_arr (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId)
+theorem colW_arr (C : ConsSch) (t c x : Word) (m : Mem) (b : TieredArray)
     (hb : ∀ A, C.col = some A → tierA A t ≠ b) :
     (colW C t c x m).arr64 b = m.arr64 b := by
   unfold colW; split
   · rfl
   · rename_i A hA; exact Mem.arr64_set64_ne _ _ _ _ _ (fun e => hb A hA e.symm)
 
-theorem colW_size (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId) :
+theorem colW_size (C : ConsSch) (t c x : Word) (m : Mem) (b : TieredArray) :
     ((colW C t c x m).arr64 b).size = (m.arr64 b).size := by
   unfold colW; split
   · rfl
@@ -1911,7 +1909,7 @@ theorem colW_words (C : ConsSch) (t c x : Word) (m : Mem) :
   · exact .refl m
   · exact Mem.sameShape_set64 _ _ _ _
 
-theorem arr64_set64_congr {M₁ M₂ : Mem} {a b : ArrId} (h : M₁.arr64 a = M₂.arr64 a)
+theorem arr64_set64_congr {M₁ M₂ : Mem} {a b : TieredArray} (h : M₁.arr64 a = M₂.arr64 a)
     (hb : M₁.arr64 b = M₂.arr64 b) (i v : Word) :
     (M₁.set64 a i v).arr64 b = (M₂.set64 a i v).arr64 b := by
   by_cases e : b = a
@@ -1919,13 +1917,13 @@ theorem arr64_set64_congr {M₁ M₂ : Mem} {a b : ArrId} (h : M₁.arr64 a = M�
   · simp only [Mem.arr64_set64_ne _ _ _ _ _ e, hb]
 
 /-- Two memories agree outside array `sa`. -/
-def OutSa (sa : ArrId) (M₁ M₂ : Mem) : Prop := ∀ b, b ≠ sa → M₁.arr64 b = M₂.arr64 b
+def OutSa (sa : TieredArray) (M₁ M₂ : Mem) : Prop := ∀ b, b ≠ sa → M₁.arr64 b = M₂.arr64 b
 
-theorem OutSa.set64 {sa : ArrId} {M₁ M₂ : Mem} (h : OutSa sa M₁ M₂) {a : ArrId} (ha : a ≠ sa)
+theorem OutSa.set64 {sa : TieredArray} {M₁ M₂ : Mem} (h : OutSa sa M₁ M₂) {a : TieredArray} (ha : a ≠ sa)
     (i v : Word) : OutSa sa (M₁.set64 a i v) (M₂.set64 a i v) :=
   fun b hb => arr64_set64_congr (h a ha) (h b hb) i v
 
-theorem OutSa.set64_sa {sa : ArrId} {M₁ M₂ : Mem} (h : OutSa sa M₁ M₂) (i v : Word) :
+theorem OutSa.set64_sa {sa : TieredArray} {M₁ M₂ : Mem} (h : OutSa sa M₁ M₂) (i v : Word) :
     OutSa sa (M₁.set64 sa i v) M₂ :=
   fun b hb => (Mem.arr64_set64_ne _ _ _ _ _ hb).trans (h b hb)
 
@@ -1939,7 +1937,7 @@ theorem OutSa.colW (C : ConsSch) (t : Word) (hcol : ∀ A, C.col = some A → ti
 /-- **An interning hits** (the memory is unchanged) **or appends** node `cntC` to tier `t`: the
 handle is the tier's base plus the count, and outside the slot array the memory is `pushRec`. -/
 theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
-    (hcol : ∀ A, C.col = some A → A ≠ C.sa) (hl : C.sa < 256 ∧ ∀ A, C.col = some A → A < 256)
+    (hcol : ∀ A, C.col = some A → A ≠ C.sa)
     {ks : List Word} {w : Word} {m' : Mem}
     (h : consInternM C m ks = some (w, m')) :
     m' = m ∨ ∃ t, t ≤ 1 ∧ pushOKC C m t = true ∧ w = (if t = 0 then C.P else C.S) + cntC C m t ∧
@@ -1952,10 +1950,10 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
   refine ⟨fun b hb => ?_, fun b => ?_, ?_⟩
   · rw [g1 b hb]
     simp only [pushMX, pushMC, tailM, pushRec]
-    refine OutSa.colW C t (fun A hA => tierA_ne (hl.2 A hA) hl.1 (hcol A hA) t t)
+    refine OutSa.colW C t (fun A hA => tierA_ne (hcol A hA) t t)
       (fun b hb => ?_) _ _ b hb
     refine OutSa.set64 (fun b hb => ?_)
-      (by simpa using (tierA_ne (show CTL < 256 by decide) hl.1 (Ne.symm hsc) 0 t)) _ _ b hb
+      (ne_tierA (Ne.symm hsc) t) _ _ b hb
     exact OutSa.set64_sa (OutSa.set64_sa (fun _ _ => rfl) _ _) _ _ b hb
   · rw [g2 b]
     simp only [pushMX, pushMC, tailM, colW_size, arr64_size_set64, wrRecK_size]

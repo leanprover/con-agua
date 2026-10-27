@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate `preLoopFns`, `preLoopA` and `preLoopC` in ConAgua/Checker/PreLoopWS.lean: the call
 closure of the stages `check` runs before the declaration loop in `checkerProg`, and the word
-arrays (by name, `tier1 X` for a tier-1 array: `scripts/arr_names.py`) and `CTL` words their bodies store into. Also generate ConAgua/Checker/PreLoopWSStages.lean,
+arrays (by name: `tier0s [X, …] ++ tier1s [Y, …]`, `scripts/arr_names.py`) and `CTL` words their bodies store into. Also generate ConAgua/Checker/PreLoopWSStages.lean,
 the same per stage (`stageFns_f`, `stageA_f`, `stageC_f`, `stageFrame_f`). Fails if a `CTL` index is not a literal or
 `k + (e &&& 1)`, or a function stores bytes. Needs ConAgua.Checker.Prog built.
 Usage: scripts/preloop_ws.py [--check]"""
@@ -19,17 +19,17 @@ partial def L.Stmt.callsW : Stmt → List FnName
   | .while _ s => s.callsW
   | .call _ f _ => [f]
   | _ => []
-partial def L.Stmt.storesW : Stmt → List (Bool × ArrId × Expr)
+partial def L.Stmt.storesW : Stmt → List (Bool × TieredArray × Expr)
   | .seq s t => s.storesW ++ t.storesW
   | .ite _ s t => s.storesW ++ t.storesW
   | .while _ s => s.storesW
-  | .st64 a i _ => [(true, a, i)]
-  | .st8 a i _ => [(false, a, i)]
-  | .st64t a _ i _ => [(true, a, i), (true, tier1 a, i)]
+  | .st64 a i _ => [(true, ↑a, i)]
+  | .st8 a i _ => [(false, ↑a, i)]
+  | .st64t a _ i _ => [(true, ↑a, i), (true, tier1 a, i)]
   | .copy64 d _ _ _ _ | .copy8w d _ _ _ _ =>
     match d with
-    | .plain a => [(true, a, .const 0)]
-    | .tier a _ => [(true, a, .const 0), (true, tier1 a, .const 0)]
+    | .plain a => [(true, ↑a, .const 0)]
+    | .tier a _ => [(true, ↑a, .const 0), (true, tier1 a, .const 0)]
   | _ => []
 partial def cloW (p : Prog) (todo seen : List FnName) : List FnName :=
   match todo with
@@ -47,12 +47,12 @@ partial def cloW (p : Prog) (todo seen : List FnName) : List FnName :=
     IO.println s!"FN {f}"
     if let some fd := p.lookup f then
       for (w, a, i) in fd.body.storesW do
-        if !w then IO.println s!"ST8 {f} {a}"
-        else if a = 1 then
+        if !w then IO.println s!"ST8 {f} {a.arr}"
+        else if a = TieredArray.t0 L.Arena.CTL then
           match ctlIdx i with
           | some ws => IO.println s!"CTL {f} {ws.map UInt64.toNat}"
           | none => IO.println s!"CTLDYN {f}"
-        else IO.println s!"ST {f} {a}"
+        else IO.println s!"ST {f} {a.arr} {if a.hi then 1 else 0}"
 '''.replace("STAGES", "[" + ", ".join('"%s"' % s for s in STAGES) + "]")
 tmpdir = os.path.join(ROOT, "_tmp")
 os.makedirs(tmpdir, exist_ok=True)
@@ -70,8 +70,18 @@ if not fns:
 bad = [l for l in ls if l.startswith("CTLDYN ") or l.startswith("ST8 ")]
 if bad:
     sys.exit("stores the check cannot bound:\n" + "\n".join(bad))
-A = sorted({int(l.split()[2]) for l in ls if l.startswith("ST ")})
+A = sorted({(int(l.split()[2]), int(l.split()[3])) for l in ls if l.startswith("ST ")})
 C = sorted({int(x) for l in ls if l.startswith("CTL ") for x in re.findall(r"\d+", l.split(" ", 2)[2])})
+
+def arr_list(pairs, indent="  "):
+    """A list of word arrays `(number, tier)` as `tier0s [X, …] ++ tier1s [Y, …]` (a long list
+    literal mixing `ArrId`s and `tier1 X` does not elaborate as `List TieredArray`)."""
+    t0 = [arr_term(a, ["Arena", "Checker"]) for a, h in pairs if not h]
+    t1 = [arr_term(a, ["Arena", "Checker"]) for a, h in pairs if h]
+    parts = []
+    if t0: parts.append("tier0s [\n" + wrap(t0) + "]")
+    if t1: parts.append("tier1s [\n" + wrap(t1) + "]")
+    return " ++\n  ".join(parts) if parts else "[]"
 
 def wrap(items):
     lines, cur = [], "  "
@@ -87,18 +97,19 @@ p = os.path.join(ROOT, "ConAgua", "Checker", "PreLoopWS.lean")
 s = open(p).read()
 new = s
 for name, ty, items in [("preLoopFns", "List FnName", ['"%s"' % f for f in fns]),
-                        ("preLoopA", "List ArrId", [arr_term(a, ["Arena", "Checker"]) for a in A]),
                         ("preLoopC", "List Word", [str(c) for c in C])]:
     new = re.sub(r"(def %s : %s := \[\n).*?(\])" % (name, ty),
                  lambda m: m.group(1) + wrap(items) + m.group(2), new, flags=re.S)
+new = re.sub(r"(def preLoopA : List TieredArray :=\n  ).*?\](?=\n\n)",
+             lambda m: m.group(1) + arr_list(A), new, flags=re.S)
 new = re.sub(r"in `checkerProg` \(\d+ functions", "in `checkerProg` (%d functions" % len(fns), new)
 
 # Per stage: the closure, its arrays and CTL words.
 stores = {}
 for l in ls:
     if l.startswith("ST "):
-        _, f, a = l.split()
-        stores.setdefault(f, (set(), set()))[0].add(int(a))
+        _, f, a, h = l.split()
+        stores.setdefault(f, (set(), set()))[0].add((int(a), int(h)))
     elif l.startswith("CTL "):
         f, ws = l.split(" ", 2)[1:]
         stores.setdefault(f, (set(), set()))[1].update(int(x) for x in re.findall(r"\d+", ws))
@@ -123,7 +134,8 @@ def stageFns_{g} : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_{g}` store
 into. -/
-def stageA_{g} : List ArrId := {lit([arr_term(a, ["Arena", "Checker"]) for a in gA])}
+def stageA_{g} : List TieredArray :=
+  {arr_list(gA)}
 
 /-- The `CTL` words the functions of `stageFns_{g}` store into. -/
 def stageC_{g} : List Word := {lit([str(c) for c in gC])}
@@ -149,7 +161,7 @@ theorem stageFrame_{g} (n : Nat) (s₀ : St) :
     (mem_of_tree stageTree_{g}.eq {q} (by decide +kernel)) s₀
 """)
     if g in NOPINS:
-        parts.append(f"""theorem stageA_{g}_pins : PINS ∉ stageA_{g} := by decide +kernel
+        parts.append(f"""theorem stageA_{g}_pins : (PINS : TieredArray) ∉ stageA_{g} := by decide +kernel
 """)
     if off:
         parts.append(f"""/-- Of the `CTL` words {", ".join(map(str, WATCH))}, `{g}` writes
@@ -191,7 +203,7 @@ theorem mem_of_tree {fs : List FnName} {t : NTree} (ht : namesTree fs = some t) 
   rw [h] at this; exact of_decide_eq_true this.symm
 
 /-- `invoke_memFrame` without the byte arrays, at no arguments. -/
-theorem memFrame_of_closed {A : List ArrId} {C : List Word} {fs : List FnName}
+theorem memFrame_of_closed {A : List TieredArray} {C : List Word} {fs : List FnName}
     (hp : closedA checkerProg A C fs = true) (n : Nat) {f : FnName} (hf : f ∈ fs) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) f []
     ⦃fun _ s' => MemFrame A C s₀.mem s'.mem; ⊤⦄ := by

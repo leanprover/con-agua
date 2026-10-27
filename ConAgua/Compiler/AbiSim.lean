@@ -208,14 +208,14 @@ theorem flatMap_pair_length {α : Type} (f g : Nat → α) (n : Nat) :
     ((List.range n).flatMap fun a => [f a, g a]).length = 2 * n := by
   simp [List.length_flatMap, List.map_const']; omega
 
-/-- The table words of a two-byte-array table, by position: word array `a`'s base at
-`6 + wpos a`, its length at `6 + nw + wpos a`. -/
+/-- The table words of a two-byte-array table, by descriptor position: position `p`'s base at
+`6 + p` (slot `abiSlot64 tab (wposInv p)`), its length at `6 + nw + p`. -/
 theorem abiVals_getElem? (tab : Tab) (h : tab.nb = 2) :
     (abiVals tab)[0]? = some (.addr (abiSlot + abiStack)) ∧ (abiVals tab)[1]? = some (.addr abiSlot) ∧
     (abiVals tab)[2]? = some (.reg .rdi) ∧ (abiVals tab)[3]? = some (.reg .rsi) ∧
     (abiVals tab)[4]? = some (.reg .rdx) ∧ (abiVals tab)[5]? = some (.reg .rcx) ∧
-    (∀ a < tab.nw, (abiVals tab)[6 + tab.wpos a]? = some (.addr (abiSlot * abiSlot64 tab a)) ∧
-      (abiVals tab)[6 + tab.nw + tab.wpos a]? = some (.imm abiWords.toUInt64)) ∧
+    (∀ p < tab.nw, (abiVals tab)[6 + p]? = some (.addr (abiSlot * abiSlot64 tab (tab.wposInv p))) ∧
+      (abiVals tab)[6 + tab.nw + p]? = some (.imm abiWords.toUInt64)) ∧
     (∀ i, (abiVals tab)[6 + 2 * tab.nw + i]? = (romVals tab.rom)[i]?) := by
   have he : abiVals tab = [.addr (abiSlot + abiStack), .addr abiSlot, .reg .rdi, .reg .rsi, .reg .rdx, .reg .rcx] ++
       (List.range tab.nw).map (fun p => .addr (abiSlot * abiSlot64 tab (tab.wposInv p))) ++
@@ -223,17 +223,16 @@ theorem abiVals_getElem? (tab : Tab) (h : tab.nb = 2) :
       romVals tab.rom := by
     simp [abiVals, h, show (List.range 2).drop 2 = [] from rfl]
   rw [he]
-  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, fun a ha => ?_, fun i => ?_⟩
-  · have hw := tab.wpos_lt ha
-    constructor
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, fun p hp => ?_, fun i => ?_⟩
+  · constructor
     · rw [List.getElem?_append_left (by simp; omega), List.getElem?_append_left (by simp; omega),
         List.getElem?_append_right (by simp)]
-      simp only [List.length_cons, List.length_nil, show 6 + tab.wpos a - (0 + 1 + 1 + 1 + 1 + 1 + 1) = tab.wpos a by omega,
-        List.getElem?_map, List.getElem?_range hw, Option.map_some, tab.wposInv_wpos ha]
+      simp only [List.length_cons, List.length_nil, show 6 + p - (0 + 1 + 1 + 1 + 1 + 1 + 1) = p by omega,
+        List.getElem?_map, List.getElem?_range hp, Option.map_some]
     · rw [List.getElem?_append_left (by simp; omega), List.getElem?_append_right (by simp; omega)]
       simp only [List.length_append, List.length_cons, List.length_nil, List.length_map, List.length_range,
-        show 6 + tab.nw + tab.wpos a - (0 + 1 + 1 + 1 + 1 + 1 + 1 + tab.nw) = tab.wpos a by omega,
-        List.getElem?_map, List.getElem?_range hw, Option.map_some]
+        show 6 + tab.nw + p - (0 + 1 + 1 + 1 + 1 + 1 + 1 + tab.nw) = p by omega,
+        List.getElem?_map, List.getElem?_range hp, Option.map_some]
   · rw [List.getElem?_append_right (by simp; omega)]
     simp only [List.length_append, List.length_cons, List.length_nil, List.length_map, List.length_range]
     congr 1; omega
@@ -253,17 +252,71 @@ theorem stores_rdW? (R : Reg64s) (base : Nat) (vs : List SVal) (m : DataMem) (i 
   obtain ⟨hi, rfl⟩ := List.getElem?_eq_some_iff.mp hv
   simpa using stores_rdW R base vs m 0 i hi (by simpa using h)
 
-/-! ## The layout the stub sets up -/
+/-! ## The layout the stub sets up
+
+The stub's proofs read today's layout map (`Tab.pos64`, `Tab.pos8`): the stub fills descriptor
+position `p` with the slot of word array number `wposInv p`. -/
+
+theorem Tab.pos8_eq (t : Tab) (a : ArrId) : t.pos8 a = a := by unfold Tab.pos8; rfl
+theorem Tab.dom8_iff (t : Tab) (a : ArrId) : t.dom8 a = true ↔ a < t.nb := by unfold Tab.dom8; simp
+@[simp] theorem curNum_t0 (a : ArrId) : curNum (TieredArray.t0 a) = a := by simp [curNum]
+/-- The array number at word array `s`'s position. -/
+theorem Tab.wposInv_pos64 (t : Tab) {s : TieredArray} (h : t.dom64 s = true) :
+    t.wposInv (t.pos64 s) = curNum s := by
+  unfold Tab.pos64; exact t.wposInv_wpos (t.curNum_lt h)
+theorem Tab.pos64_t0 (t : Tab) (a : ArrId) : t.pos64 (TieredArray.t0 a) = t.wpos a := by
+  unfold Tab.pos64; simp
+/-- A tier-0 number of today's layout is the number of exactly one word array. -/
+theorem curNum_eq_iff {s : TieredArray} {a : ArrId} (ha : a < tierOff) :
+    curNum s = a ↔ s = TieredArray.t0 a := by
+  rcases s with ⟨x, _ | _⟩
+  · simp [curNum, TieredArray.t0]
+  · have ha' : @LT.lt Nat _ a tierOff := ha
+    simp only [curNum, TieredArray.t0, TieredArray.mk.injEq, ite_true]; simp; omega
+
+/-- The array at a position has that position's number. -/
+theorem Tab.curNum_wAt (t : Tab) (p : Nat) : curNum (t.wAt p) = t.wposInv p := by
+  simp only [Tab.wAt]
+  split
+  · simp
+  · rename_i h
+    have h' : ¬ @LT.lt Nat _ (t.wposInv p) tierOff := h
+    simp only [curNum, ite_true]; omega
+
+/-- Distinct positions hold distinct arrays. -/
+theorem Tab.wAt_inj (t : Tab) {p q : Nat} (hp : p < t.nw) (hq : q < t.nw) (h : t.wAt p = t.wAt q) :
+    p = q := by
+  have e : t.wposInv p = t.wposInv q := by rw [← t.curNum_wAt, ← t.curNum_wAt, h]
+  rw [← t.wpos_wposInv hp, ← t.wpos_wposInv hq, e]
+
+/-- Word array `s` sits at its position. -/
+theorem Tab.wAt_pos64 (t : Tab) {s : TieredArray} (h : t.dom64 s = true) : t.wAt (t.pos64 s) = s := by
+  have hn := t.wposInv_pos64 h
+  have hd := h
+  unfold Tab.dom64 at hd
+  simp only [Tab.wAt, hn]
+  rcases s with ⟨a, _ | _⟩
+  · simp only [Bool.false_eq_true, ite_false, Bool.and_eq_true, decide_eq_true_eq] at hd
+    simp [curNum, hd.1]
+  · simp [curNum, tierOff]
+
+/-- `wposInv_lt` at type `Nat` (`omega` does not read a comparison at type `ArrId`). -/
+theorem Tab.wposInv_ltN (t : Tab) {p : Nat} (h : p < t.nw) : @LT.lt Nat _ (t.wposInv p) t.nw :=
+  t.wposInv_lt h
+theorem Tab.dom64_t0_iff (t : Tab) (a : ArrId) :
+    t.dom64 (TieredArray.t0 a) = true ↔ a < tierOff ∧ a < t.nw := by
+  unfold Tab.dom64; simp
+
 
 /-- The layout of the stub's partition: the table at `base`, the L stack in slot `1`, byte arrays
-`0`/`1` the caller's buffers `[inp, inp + n)`, `[pins, pins + np)`, word array `a` in slot
-`abiSlot64 tab a` with `abiWords` words. -/
+`0`/`1` the caller's buffers `[inp, inp + n)`, `[pins, pins + np)`, descriptor position `p` in
+slot `abiSlot64 tab (tab.wposInv p)` (as `abiVals` fills it) with `abiWords` words. -/
 def abiLayout (tab : Tab) (base inp n pins np : Nat) : Layout where
   tab
   T := base
   b8 a := if a = 0 then inp else if a = 1 then pins else base + abiSlot * abiSlot8 a
   s8 a := if a = 0 then n else if a = 1 then np else abiSlot
-  b64 a := base + abiSlot * abiSlot64 tab a
+  b64 p := base + abiSlot * abiSlot64 tab (tab.wposInv p)
   s64 _ := abiWords
   lo := base + abiSlot
   hi := base + abiSlot + abiStack
@@ -273,7 +326,8 @@ section
 variable (tab : Tab) (base inp n pins np : Nat)
 @[simp] theorem abiLayout_tab : (abiLayout tab base inp n pins np).tab = tab := rfl
 @[simp] theorem abiLayout_T : (abiLayout tab base inp n pins np).T = base := rfl
-@[simp] theorem abiLayout_b64 (a : Nat) : (abiLayout tab base inp n pins np).b64 a = base + abiSlot * abiSlot64 tab a := rfl
+@[simp] theorem abiLayout_b64 (p : Nat) :
+    (abiLayout tab base inp n pins np).b64 p = base + abiSlot * abiSlot64 tab (tab.wposInv p) := rfl
 @[simp] theorem abiLayout_s64 (a : Nat) : (abiLayout tab base inp n pins np).s64 a = abiWords := rfl
 @[simp] theorem abiLayout_lo : (abiLayout tab base inp n pins np).lo = base + abiSlot := rfl
 @[simp] theorem abiLayout_hi : (abiLayout tab base inp n pins np).hi = base + abiSlot + abiStack := rfl
@@ -319,6 +373,7 @@ theorem abiLayout_ok {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n pi
     · simpa using hg.pinsEnd
   · intro a ha
     simp only [abiLayout_tab] at ha
+    have := tab.wposInv_ltN ha
     simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords]; omega
   · intro x ⟨h1, h2'⟩ ⟨h3, h4⟩
     simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs, abiLayout_lo, abiLayout_hi,
@@ -329,6 +384,7 @@ theorem abiLayout_ok {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n pi
     · simp only [abiLayout_tab, hnb] at ha
       rcases hb8 a ha x hin with h | h <;> omega
     · simp only [abiLayout_tab] at ha
+      have := tab.wposInv_ltN ha
       simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4; omega
   · intro x ⟨h1, h2'⟩ hx
     simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h1 h2'
@@ -336,6 +392,7 @@ theorem abiLayout_ok {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n pi
     · simp only [abiLayout_tab, hnb] at ha
       rcases hb8 a ha x hin with h | h <;> omega
     · simp only [abiLayout_tab] at ha
+      have := tab.wposInv_ltN ha
       simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4; omega
   · intro a ha b hb hab x ⟨h3, h4⟩ ⟨h5, h6⟩
     simp only [abiLayout_tab, hnb] at ha hb
@@ -347,16 +404,20 @@ theorem abiLayout_ok {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n pi
       exact hg.bufDisj x h5 h6 ⟨h3, h4⟩
     · exact hab rfl
   · intro a ha b hb hab x ⟨h3, h4⟩ ⟨h5, h6⟩
+    simp only [abiLayout_tab] at ha hb
+    have hab' : tab.wposInv a ≠ tab.wposInv b := fun e => hab (by
+      rw [← tab.wpos_wposInv ha, ← tab.wpos_wposInv hb, e])
     simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4 h5 h6
-    rcases Nat.lt_or_gt_of_ne hab with h | h
-    · have : 2 ^ 35 * (2 + (2 - 2) + a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + (2 - 2) + b) := by
+    rcases Nat.lt_or_gt_of_ne hab' with h | h
+    · have : 2 ^ 35 * (2 + (2 - 2) + tab.wposInv a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + (2 - 2) + tab.wposInv b) := by
         rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
       omega
-    · have : 2 ^ 35 * (2 + (2 - 2) + b) + 2 ^ 35 ≤ 2 ^ 35 * (2 + (2 - 2) + a) := by
+    · have : 2 ^ 35 * (2 + (2 - 2) + tab.wposInv b) + 2 ^ 35 ≤ 2 ^ 35 * (2 + (2 - 2) + tab.wposInv a) := by
         rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
       omega
   · intro a ha b hb x hin ⟨h5, h6⟩
     simp only [abiLayout_tab, hnb] at ha hb
+    have := tab.wposInv_ltN hb
     simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h5 h6
     rcases hb8 a ha x hin with h | h <;> omega
 

@@ -81,7 +81,7 @@ def evalE (fr : Frame) : Expr → TM Word
     let bs := (← get).mem.src8 b
     if j.toNat + 8 ≤ bs.size then return le64 bs j.toNat else stop .oob
 
-def warrT (fr : Frame) : WArr → TM ArrId
+def warrT (fr : Frame) : WArr → TM TieredArray
   | .plain a => pure a
   | .tier a t => do return tierA a (← evalE fr t)
 

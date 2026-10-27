@@ -27,7 +27,7 @@ theorem mem_of_tree {fs : List FnName} {t : NTree} (ht : namesTree fs = some t) 
   rw [h] at this; exact of_decide_eq_true this.symm
 
 /-- `invoke_memFrame` without the byte arrays, at no arguments. -/
-theorem memFrame_of_closed {A : List ArrId} {C : List Word} {fs : List FnName}
+theorem memFrame_of_closed {A : List TieredArray} {C : List Word} {fs : List FnName}
     (hp : closedA checkerProg A C fs = true) (n : Nat) {f : FnName} (hf : f ∈ fs) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) f []
     ⦃fun _ s' => MemFrame A C s₀.mem s'.mem; ⊤⦄ := by
@@ -52,7 +52,8 @@ def stageFns_cap_check : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_cap_check` store
 into. -/
-def stageA_cap_check : List ArrId := []
+def stageA_cap_check : List TieredArray :=
+  []
 
 /-- The `CTL` words the functions of `stageFns_cap_check` store into. -/
 def stageC_cap_check : List Word := []
@@ -92,7 +93,8 @@ def stageFns_pb_check : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_pb_check` store
 into. -/
-def stageA_pb_check : List ArrId := []
+def stageA_pb_check : List TieredArray :=
+  []
 
 /-- The `CTL` words the functions of `stageFns_pb_check` store into. -/
 def stageC_pb_check : List Word := []
@@ -136,11 +138,13 @@ def stageFns_intern_reserved_pins : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_intern_reserved_pins` store
 into. -/
-def stageA_intern_reserved_pins : List ArrId := [
+def stageA_intern_reserved_pins : List TieredArray :=
+  tier0s [
   POOL, SREC, SSLOT, ZREC, ZSLOT, SOREC, SOSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT,
-  LSREC, LSSLOT, SHP, LSHP, SOLP, PINS, tier1 POOL, tier1 SREC, tier1 SSLOT, tier1 ZREC,
-  tier1 ZSLOT, tier1 SOREC, tier1 SOSLOT, tier1 NAREC, tier1 NASLOT, tier1 NSREC, tier1 NSSLOT,
-  tier1 NNREC, tier1 NNSLOT, tier1 LSREC, tier1 LSSLOT, tier1 SHP, tier1 LSHP, tier1 SOLP]
+  LSREC, LSSLOT, SHP, LSHP, SOLP, PINS] ++
+  tier1s [
+  POOL, SREC, SSLOT, ZREC, ZSLOT, SOREC, SOSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT,
+  LSREC, LSSLOT, SHP, LSHP, SOLP]
 
 /-- The `CTL` words the functions of `stageFns_intern_reserved_pins` store into. -/
 def stageC_intern_reserved_pins : List Word := [
@@ -225,19 +229,18 @@ def stageFns_builtin_prelude : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_builtin_prelude` store
 into. -/
-def stageA_builtin_prelude : List ArrId := [
+def stageA_builtin_prelude : List TieredArray :=
+  tier0s [
   POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
   PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
   PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, Front.NID, Front.LID, Front.EID, Front.DECL, Front.DLP,
-  Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, LH, tier1 POOL, tier1 REC,
-  tier1 SLOT, tier1 AREC, tier1 ASLOT, tier1 SREC, tier1 SSLOT, tier1 ZREC, tier1 ZSLOT,
-  tier1 MREC, tier1 MSLOT, tier1 IREC, tier1 ISLOT, tier1 PREC, tier1 PSLOT, tier1 SOREC,
-  tier1 SOSLOT, tier1 CREC, tier1 CSLOT, tier1 LEREC, tier1 LESLOT, tier1 BREC, tier1 BSLOT,
-  tier1 LAREC, tier1 LASLOT, tier1 FAREC, tier1 FASLOT, tier1 PJREC, tier1 PJSLOT, tier1 NAREC,
-  tier1 NASLOT, tier1 NSREC, tier1 NSSLOT, tier1 NNREC, tier1 NNSLOT, tier1 LSREC, tier1 LSSLOT,
-  tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER, tier1 PJDER, tier1 SHP, tier1 MHP, tier1 IHP,
-  tier1 LSHP, tier1 SOLP, tier1 CLP]
+  Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, LH] ++
+  tier1s [
+  POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+  SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
+  PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
+  PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP]
 
 /-- The `CTL` words the functions of `stageFns_builtin_prelude` store into. -/
 def stageC_builtin_prelude : List Word := [
@@ -264,7 +267,7 @@ theorem stageFrame_builtin_prelude (n : Nat) (s₀ : St) :
   memFrame_of_closed checkerProg_stageClosed_builtin_prelude n
     (mem_of_tree stageTree_builtin_prelude.eq "builtin_prelude" (by decide +kernel)) s₀
 
-theorem stageA_builtin_prelude_pins : PINS ∉ stageA_builtin_prelude := by decide +kernel
+theorem stageA_builtin_prelude_pins : (PINS : TieredArray) ∉ stageA_builtin_prelude := by decide +kernel
 
 /-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `builtin_prelude` writes
 240. -/
@@ -319,19 +322,18 @@ def stageFns_front_run : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_front_run` store
 into. -/
-def stageA_front_run : List ArrId := [
+def stageA_front_run : List TieredArray :=
+  tier0s [
   POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
   PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
   PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, Front.NID, Front.LID, Front.EID, Front.DECL, Front.DLP,
-  Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, LH, tier1 POOL, tier1 REC,
-  tier1 SLOT, tier1 AREC, tier1 ASLOT, tier1 SREC, tier1 SSLOT, tier1 ZREC, tier1 ZSLOT,
-  tier1 MREC, tier1 MSLOT, tier1 IREC, tier1 ISLOT, tier1 PREC, tier1 PSLOT, tier1 SOREC,
-  tier1 SOSLOT, tier1 CREC, tier1 CSLOT, tier1 LEREC, tier1 LESLOT, tier1 BREC, tier1 BSLOT,
-  tier1 LAREC, tier1 LASLOT, tier1 FAREC, tier1 FASLOT, tier1 PJREC, tier1 PJSLOT, tier1 NAREC,
-  tier1 NASLOT, tier1 NSREC, tier1 NSSLOT, tier1 NNREC, tier1 NNSLOT, tier1 LSREC, tier1 LSSLOT,
-  tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER, tier1 PJDER, tier1 SHP, tier1 MHP, tier1 IHP,
-  tier1 LSHP, tier1 SOLP, tier1 CLP]
+  Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, LH] ++
+  tier1s [
+  POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+  SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
+  PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
+  PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP]
 
 /-- The `CTL` words the functions of `stageFns_front_run` store into. -/
 def stageC_front_run : List Word := [
@@ -358,7 +360,7 @@ theorem stageFrame_front_run (n : Nat) (s₀ : St) :
   memFrame_of_closed checkerProg_stageClosed_front_run n
     (mem_of_tree stageTree_front_run.eq "front_run" (by decide +kernel)) s₀
 
-theorem stageA_front_run_pins : PINS ∉ stageA_front_run := by decide +kernel
+theorem stageA_front_run_pins : (PINS : TieredArray) ∉ stageA_front_run := by decide +kernel
 
 /-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `front_run` writes
 none. -/
@@ -384,8 +386,11 @@ def stageFns_prepare_prelude : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_prepare_prelude` store
 into. -/
-def stageA_prepare_prelude : List ArrId := [
-  NAREC, NASLOT, Front.DECL, HSEEN, HNIX, Ind.IW, tier1 NAREC, tier1 NASLOT]
+def stageA_prepare_prelude : List TieredArray :=
+  tier0s [
+  NAREC, NASLOT, Front.DECL, HSEEN, HNIX, Ind.IW] ++
+  tier1s [
+  NAREC, NASLOT]
 
 /-- The `CTL` words the functions of `stageFns_prepare_prelude` store into. -/
 def stageC_prepare_prelude : List Word := [
@@ -411,7 +416,7 @@ theorem stageFrame_prepare_prelude (n : Nat) (s₀ : St) :
   memFrame_of_closed checkerProg_stageClosed_prepare_prelude n
     (mem_of_tree stageTree_prepare_prelude.eq "prepare_prelude" (by decide +kernel)) s₀
 
-theorem stageA_prepare_prelude_pins : PINS ∉ stageA_prepare_prelude := by decide +kernel
+theorem stageA_prepare_prelude_pins : (PINS : TieredArray) ∉ stageA_prepare_prelude := by decide +kernel
 
 /-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `prepare_prelude` writes
 none. -/
@@ -441,18 +446,17 @@ def stageFns_intern_all_pins : List FnName := [
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_intern_all_pins` store
 into. -/
-def stageA_intern_all_pins : List ArrId := [
+def stageA_intern_all_pins : List TieredArray :=
+  tier0s [
   POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
   FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
-  FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, EREC, Rom.RSTK, Rom.RMEMO, Rom.RSET,
-  tier1 POOL, tier1 REC, tier1 SLOT, tier1 AREC, tier1 ASLOT, tier1 SREC, tier1 SSLOT, tier1 ZREC,
-  tier1 ZSLOT, tier1 MREC, tier1 MSLOT, tier1 IREC, tier1 ISLOT, tier1 PREC, tier1 PSLOT,
-  tier1 SOREC, tier1 SOSLOT, tier1 CREC, tier1 CSLOT, tier1 LEREC, tier1 LESLOT, tier1 BREC,
-  tier1 BSLOT, tier1 FVREC, tier1 FVSLOT, tier1 LAREC, tier1 LASLOT, tier1 FAREC, tier1 FASLOT,
-  tier1 PJREC, tier1 PJSLOT, tier1 NAREC, tier1 NASLOT, tier1 NSREC, tier1 NSSLOT, tier1 NNREC,
-  tier1 NNSLOT, tier1 LSREC, tier1 LSSLOT, tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER,
-  tier1 PJDER, tier1 SHP, tier1 MHP, tier1 IHP, tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP]
+  FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, EREC, Rom.RSTK, Rom.RMEMO, Rom.RSET] ++
+  tier1s [
+  POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+  SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
+  FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
+  FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP]
 
 /-- The `CTL` words the functions of `stageFns_intern_all_pins` store into. -/
 def stageC_intern_all_pins : List Word := [

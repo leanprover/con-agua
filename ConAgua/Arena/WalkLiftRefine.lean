@@ -90,8 +90,8 @@ theorem ArenaI.imemo_clear (m : Mem) (a : AState) (hA : ArenaI m a)
     memoRG_clear i1lSch i1lSch_wf lfKey decE m _ hA.2 h0⟩
 
 /-- **`I1R` survives a writer apart from it, if the twin's memo did not move.** -/
-theorem I1R.across {A : List ArrId} {C : List Word} {m m' : Mem} {a a' : AState}
-    (hR : I1R m a) (hf : MemFrame A C m m') (hA : ILFM ∉ A) (hC : (52 : Word) ∉ C)
+theorem I1R.across {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : AState}
+    (hR : I1R m a) (hf : MemFrame A C m m') (hA : (ILFM : TieredArray) ∉ A) (hC : (52 : Word) ∉ C)
     (he : a'.memos.inst1LC = a.memos.inst1LC) : I1R m' a' := by
   unfold I1R; rw [he]
   exact memoRG_frame i1lSch i1lSch_wf lfKey decE A C hA hC m m' hf _ hR
@@ -207,17 +207,17 @@ theorem LfOK.trans {m m₁ : Mem} {o : Option (Word × Mem)} (h1 : LfFrame m m�
     LfOK m o := fun r m' h => h1.trans (ho r m' h)
 
 theorem mkAppW_lf (m : Mem) (x y : Word) : LfOK m (mkAppW m x y) := fun r m' h =>
-  (mkAppW_frameA m m' x y r h).mono (by simp [tier1, tierOff, liftA, AREC, ASLOT, ADER]) (by simp [liftC])
+  (mkAppW_frameA m m' x y r h).mono (by simp [tier1, liftA, AREC, ASLOT, ADER]) (by simp [liftC])
 theorem mkLamW_lf (m : Mem) (x y : Word) : LfOK m (mkLamW m x y) := fun r m' h =>
-  (mkLamW_frameA m m' x y r h).mono (by simp [tier1, tierOff, liftA, LAREC, LASLOT, LADER]) (by simp [liftC])
+  (mkLamW_frameA m m' x y r h).mono (by simp [tier1, liftA, LAREC, LASLOT, LADER]) (by simp [liftC])
 theorem mkForallW_lf (m : Mem) (x y : Word) : LfOK m (mkForallW m x y) := fun r m' h =>
-  (mkForallW_frameA m m' x y r h).mono (by simp [tier1, tierOff, liftA, FAREC, FASLOT, FADER]) (by simp [liftC])
+  (mkForallW_frameA m m' x y r h).mono (by simp [tier1, liftA, FAREC, FASLOT, FADER]) (by simp [liftC])
 theorem mkLetW_lf (m : Mem) (x y z : Word) : LfOK m (mkLetW m x y z) := fun r m' h =>
-  (mkLetW_frameA m m' x y z r h).mono (by simp [tier1, tierOff, liftA, LEREC, LESLOT, LEDER]) (by simp [liftC])
+  (mkLetW_frameA m m' x y z r h).mono (by simp [tier1, liftA, LEREC, LESLOT, LEDER]) (by simp [liftC])
 theorem mkProjW_lf (m : Mem) (a b x : Word) : LfOK m (mkProjW m a b x) := fun r m' h =>
-  (mkProjW_frameA m m' a b x r h).mono (by simp [tier1, tierOff, liftA, PJREC, PJSLOT, PJDER]) (by simp [liftC])
+  (mkProjW_frameA m m' a b x r h).mono (by simp [tier1, liftA, PJREC, PJSLOT, PJDER]) (by simp [liftC])
 theorem binternW_lf (m : Mem) (u : Word) : LfOK m (binternW m u) := fun r m' h =>
-  (binternW_frameA m m' u r h).mono (by simp [tier1, tierOff, liftA, BREC, BSLOT]) (by simp [liftC])
+  (binternW_frameA m m' u r h).mono (by simp [tier1, liftA, BREC, BSLOT]) (by simp [liftC])
 
 theorem lfRet (m : Mem) (h : Word) : LfOK m (some (h, m)) := fun _ _ e => by
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj e); exact MemFrame.refl _ _ _

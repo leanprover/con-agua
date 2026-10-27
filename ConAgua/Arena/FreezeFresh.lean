@@ -76,23 +76,22 @@ end cut
 /-- The memory before the zeroing. -/
 abbrev cutT (m : Mem) : Mem := ctlCut (truncFrozen m)
 
-theorem ctl_mem_freshZ : CTL ∈ freshZ := by decide
+theorem ctl_mem_freshZ : (CTL : TieredArray) ∈ freshZ := by decide
 
-theorem tier1_ne_ctl (b : ArrId) : tier1 b ≠ CTL :=
-  Nat.ne_of_gt (Nat.lt_of_lt_of_le (by decide) (Nat.le_add_left 256 b))
+theorem tier1_ne_ctl (b : ArrId) : tier1 b ≠ CTL := tier1_ne_t0 _ _
 
 section zero
 variable (m : Mem)
 
-theorem fresh_keep {b : ArrId} (hb : b ∉ freshZ) : (freshMem m).arr64 b = (cutT m).arr64 b :=
+theorem fresh_keep {b : TieredArray} (hb : b ∉ freshZ) : (freshMem m).arr64 b = (cutT m).arr64 b :=
   (fresh_frame m).1 b hb (fun h => hb (h ▸ ctl_mem_freshZ))
 
 theorem fresh_words : (cutT m).SameShape (freshMem m) := (fresh_frame m).2.2.2
 
-theorem fresh_size (b : ArrId) : ((freshMem m).arr64 b).size = ((cutT m).arr64 b).size :=
+theorem fresh_size (b : TieredArray) : ((freshMem m).arr64 b).size = ((cutT m).arr64 b).size :=
   (fresh_frame m).2.2.1 b
 
-theorem fresh_getD {b : ArrId} (hb : b ∈ freshZ) (hc : b ≠ CTL) (i : Nat) :
+theorem fresh_getD {b : TieredArray} (hb : b ∈ freshZ) (hc : b ≠ CTL) (i : Nat) :
     ((freshMem m).arr64 b)[i]?.getD 0 = 0 := by
   rw [freshMem_arr, ite_eq_right hc, ite_eq_left hb]
   simp only [zeros, Array.getElem?_replicate]
@@ -111,7 +110,7 @@ variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
 empty. -/
 theorem consR_freshL {C : ConsSch} {R : Mem → Word → Word → α → Prop} {on : Bool}
     {P Q : Tbl α (Idx k) δ} (hW : C.WF) (hF : RFrame C.sch R C.hsM)
-    (hL : RLocal C.sch R C.hsM [] []) (h1 : C.ra ∉ freshZ) (h2 : C.sa ∉ freshZ)
+    (hL : RLocal C.sch R C.hsM [] []) (h1 : (C.ra : TieredArray) ∉ freshZ) (h2 : (C.sa : TieredArray) ∉ freshZ)
     (h3 : tier1 C.sa ∈ freshZ) (h0 : Q.nodes.size = 0) (h : ConsR C R (cutT m) on P Q) :
     ConsR C R (freshMem m) on P Q :=
   consR_iff.mpr (storeR_fresh C.sch R C.hsM C.KP hW.kframe (fresh_ctl m) (fresh_keep m h1)
@@ -123,9 +122,9 @@ theorem consR_freshP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
     {P Q : Tbl α (Idx k) δ} (hW : C.WF) (hF : RFrame C.sch R C.hsM)
     (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA C.sch.ra t) = m₁.arr64 (tierA C.sch.ra t)) →
       PoolTr0 m₁ m₂ → (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, C.hsM m₂ t i = C.hsM m₁ t i)
-    (hx : ∀ b ∈ [POOL, POOL1, CTL], b ≠ C.sch.ra ∧ b ≠ tier1 C.sch.ra)
+    (hx : ∀ b ∈ ([POOL, POOL1, CTL] : List TieredArray), b ≠ C.sch.ra ∧ b ≠ tier1 C.sch.ra)
     (htop : (cutT m).top.toNat < 2 ^ 40)
-    (h1 : C.ra ∉ freshZ) (h2 : C.sa ∉ freshZ)
+    (h1 : (C.ra : TieredArray) ∉ freshZ) (h2 : (C.sa : TieredArray) ∉ freshZ)
     (h3 : tier1 C.sa ∈ freshZ) (h0 : Q.nodes.size = 0) (h : ConsR C R (cutT m) on P Q) :
     ConsR C R (freshMem m) on P Q :=
   consR_iff.mpr (storeR_fresh C.sch R C.hsM C.KP hW.kframe (fresh_ctl m) (fresh_keep m h1)
@@ -161,7 +160,7 @@ theorem ArenaR.fresh (htop : (cutT m).top.toNat < 2 ^ 40) (h : ArenaR (cutT m) a
   have hc := fresh_ctl m
   have hk : ∀ b, b ∉ freshZ → (freshMem m).arr64 b = (cutT m).arr64 b := fun b hb => fresh_keep m hb
   have col : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ] {L : Lens α δ k}
-      {c : ArrId} {f : δ → Word}, c ∉ freshZ → (L.getS a).nodes.size = 0 →
+      {c : ArrId} {f : δ → Word}, (c : TieredArray) ∉ freshZ → (L.getS a).nodes.size = 0 →
       ColT2 L c f (cutT m) a → ColT2 L c f (freshMem m) a := fun hc0 h0 h =>
     ⟨colT_mono h.1 (fun i _ => by rw [tierA_zero', hk _ hc0]),
       colT_mono h.2 (fun i hi => absurd hi (by omega))⟩
@@ -223,7 +222,7 @@ theorem ArenaR.fresh (htop : (cutT m).top.toNat < 2 ^ 40) (h : ArenaR (cutT m) a
 
 omit hd in
 theorem DerT2.fresh {α : Type} [BEq α] [Hashable α] {g : ETables → Tbl α EIdx UInt64} {c : ArrId}
-    (hc : c ∉ freshZ) (h0 : (g a.store.scr).nodes.size = 0) (h : DerT2 a g (cP c (cutT m))) :
+    (hc : (c : TieredArray) ∉ freshZ) (h0 : (g a.store.scr).nodes.size = 0) (h : DerT2 a g (cP c (cutT m))) :
     DerT2 a g (cP c (freshMem m)) := by
   obtain ⟨⟨s0, h0'⟩, ⟨s1, -⟩⟩ := h
   refine ⟨⟨s0, fun i x hx => ?_⟩, ⟨s1, fun i x hx => ?_⟩⟩
@@ -286,15 +285,15 @@ theorem row_fresh (w : Word) (hg : rowTag w ≤ 2) :
   rcases ht with ht | ht
   · have ha : rowArr w = 132 + rowTag w := by
       exact rowArr_tier0 hg ht
-    have hn : rowArr w ∉ freshZ := by
+    have hn : (rowArr w : TieredArray) ∉ freshZ := by
       rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
     rw [fresh_keep m hn]
     exact ⟨fun _ => ⟨rfl, rfl⟩, fun h => absurd ht h⟩
   · have ha : rowArr w = 140 + rowTag w := by
       exact rowArr_tier1 hg ht
-    have hn : rowArr w ∈ freshZ := by
+    have hn : (rowArr w : TieredArray) ∈ freshZ := by
       rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
-    refine ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; show 140 + rowTag w ≠ (1 : Nat); omega) _⟩
+    refine ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; exact TieredArray.t0_ne (show 140 + rowTag w ≠ (1 : Nat) by omega)) _⟩
 
 theorem tblRow_fresh (w : Word) :
     (rowTier w = 0 → tblRow (freshMem m) w = tblRow (cutT m) w) ∧
@@ -305,17 +304,15 @@ theorem tblRow_fresh (w : Word) :
   · have hg3 : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 := by omega
     simp only [hg, ↓reduceIte]
     rcases ht with ht | ht
-    · have ha : tblArr w = 129 + rowTag w := by
-        exact tblArr_tier0 hg ht
+    · have ha : tblArr w = tixArr (rowTag w) := tblArr_tier0 ht
       have hn : tblArr w ∉ freshZ := by
-        rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
+        rw [ha]; rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] <;> decide
       rw [fresh_keep m hn]
       exact ⟨fun _ => rfl, fun h => absurd ht h⟩
-    · have ha : tblArr w = 385 + rowTag w := by
-        exact tblArr_tier1 hg ht
+    · have ha : tblArr w = tier1 (tixArr (rowTag w)) := tblArr_tier1 ht
       have hn : tblArr w ∈ freshZ := by
-        rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
-      exact ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; show 385 + rowTag w ≠ (1 : Nat); omega) _⟩
+        rw [ha]; rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] <;> decide
+      exact ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; exact tier1_ne_t0 _ _) _⟩
   · simp [hg]
 
 theorem EnvR.fresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -339,7 +336,7 @@ theorem EnvR.fresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     rw [this.2, he]
     exact h.vals n hn (by rw [← this.1]; exact h0)
   · rw [← h.consts]
-    simp only [envConsts, envLen, fresh_ctl, he, fresh_keep m (show ECON ∉ freshZ by decide)]
+    simp only [envConsts, envLen, fresh_ctl, he, fresh_keep m (show (ECON : TieredArray) ∉ freshZ by decide)]
   · by_cases ht : rowTier n.word.toUInt64 = 0
     · rw [(tblRow_fresh (m := m) n.word.toUInt64).1 ht]; exact h.tkeys n hn
     · have hnone : fe.tbls[n]? = none := by

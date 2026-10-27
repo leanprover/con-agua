@@ -17,7 +17,7 @@ namespace L.Arena
 open ConRon.Arena
 
 theorem tierA_zero' (a : ArrId) : tierA a 0 = a := by simp [tierA]
-theorem tierA_one' (a : ArrId) : tierA a 1 = tier1 a := by simp [tierA, tierOff]
+theorem tierA_one' (a : ArrId) : tierA a 1 = tier1 a := by simp [tierA]
 
 section store
 variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
@@ -160,22 +160,21 @@ variable {α : Type} {S : Schema} {R : Mem → Word → Word → α → Prop} {h
 
 /-- **A node relation local to its record has the transfer** between memories of one shape. -/
 theorem rTrans_local (hS : S.WF) (hF : RFrame S R hs) (hL : RLocal S R hs [] []) {m m' : Mem}
-    (hw : m.SameShape m') : RTrans S R hs m m' := by
+    (_hw : m.SameShape m') : RTrans S R hs m m' := by
   intro t i hf
   let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
-  have hw1 : m.SameShape (m.setA S.ra (m'.arr64 S.ra)) := Mem.setA_words ..
-  have hne : S.ra ≠ tier1 S.ra := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
+  have hne : (S.ra : TieredArray) ≠ tier1 S.ra := t0_ne_tier1 _ _
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
-    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]
-    exact Mem.setA_self m m' _ hw
-  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _ (hw1.symm.trans hw)
-  have eo : ∀ b, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
-    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => h2 h.1), Mem.setA_arr, ite_eq_right (fun h => h1 h.1)]
+    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right hne]
+    exact Mem.setA_self m m' _
+  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _
+  have eo : ∀ b : TieredArray, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
+    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right h2, Mem.setA_arr, ite_eq_right h1]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
-    rcases tierA_cases' S.ra t with e | e <;> rw [e]
+    rcases tierA_eq_or S.ra t with e | e <;> rw [e]
     · exact e0
     · exact e1
-  have hctl : m₁.arr64 CTL = m.arr64 CTL := eo CTL hS.ra_ctl.symm (ne_tier1 (by decide))
+  have hctl : m₁.arr64 CTL = m.arr64 CTL := eo CTL (TieredArray.t0_ne hS.ra_ctl.symm) ((t0_ne_tier1 _ _))
   have hout : OutEq S m m₁ := ⟨fun b h1 h1' _ _ _ => eo b h1 h1', by rw [hctl]⟩
   have hf1 : ∀ f, f < S.w → fld S m₁ t i f = fld S m t i f := fun f hf' => by
     simp only [fld, et]; exact hf f hf'

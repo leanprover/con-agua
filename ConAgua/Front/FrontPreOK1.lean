@@ -50,13 +50,13 @@ theorem DK.grow {m m' : Mem} (h : DK m m') : DGrow m m' :=
   ⟨fun j _ _ => by rw [h.1], fun j _ _ => by rw [h.2],
     fun x h1 h2 => by simp only [dcnt, h.1] at h1 h2; omega⟩
 
-theorem DK.ofFrame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart) : DK m m' :=
+theorem DK.ofFrame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hd : (DECL : TieredArray) ∉ A := by tapart) (hq : (DLP : TieredArray) ∉ A := by tapart) : DK m m' :=
   ⟨hf.1 DECL hd (by decide), hf.1 DLP hq (by decide)⟩
 
 theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v : Word) :
     DK m (m.set64 b i v) :=
-  ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hd), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hq)⟩
+  ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (TieredArray.t0_ne hd)), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (TieredArray.t0_ne hq))⟩
 
 theorem DK.tset64 (m : Mem) (t i v : Word) : DK m (m.set64 (tierA POOL t) i v) :=
   ⟨arr64_set64_tier_ne _ _ _ _ _ (by decide), arr64_set64_tier_ne _ _ _ _ _ (by decide)⟩

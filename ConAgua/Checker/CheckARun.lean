@@ -9,7 +9,7 @@ import ConAgua.Checker.TwinShapeQuot
 # Entry 1 at the checker's program: `checkA_run` (lane parmode)
 
 docs/design/parmode.md, "Step 4" (a). A run of `check` from the loaded memory with the mode word
-`MODE` set to `1` or `3` (`loadMemM b pb s8 s64 w`, what the stubs `ca_start_a`/`ca_start_a0`
+`MODE` set to `1` or `3` (`loadMemM b pb sz w`, what the stubs `ca_start_a`/`ca_start_a0`
 hand it) that returns anything but `1` (a line that did not scan):
 
 * the twin's stages before the loop ran and its phase A accepted (`PhaseA b`: `TwinPrefix` and
@@ -37,41 +37,41 @@ namespace L.Checker
 open L L.Arena L.Front L.Rom L.Compiler ConAgua.Final
 
 /-- The memory an entry-1 stub hands to `check`: the loaded memory with the mode word `w`. -/
-def loadMemM (b pb : ByteArray) (s8 s64 : List Nat) (w : Word) : Mem := (loadMem b pb s8 s64).setG MODE w
+def loadMemM (b pb : ByteArray) (sz : TieredArray → Nat) (w : Word) : Mem := (loadMem b pb sz).setG MODE w
 
 /-! ## The first three stages from the loaded memory with the mode word set -/
 
 /-- A global write is a frame with no array write. -/
 theorem memFrame_setG (m : Mem) (g : GVar) (w : Word) : MemFrame [] [] m (m.setG g w) :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
 
-theorem capStage_setG (b pb : ByteArray) (s8 s64 : List Nat) (hs : ∀ n ∈ s64, n < 2 ^ 64) (w : Word) :
-    RelSpec checkerProg "cap_check" (· = loadMemM b pb s8 s64 w)
-      fun _ m => m = loadMemM b pb s8 s64 w ∧ CapsOK (loadMem b pb s8 s64) := by
+theorem capStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hs : ∀ s, sz s < 2 ^ 64) (w : Word) :
+    RelSpec checkerProg "cap_check" (· = loadMemM b pb sz w)
+      fun _ m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz) := by
   intro n _hn s₀ hm
   refine triple_post (capCheck_spec checkerProg checkerProg_capCheck n s₀
-    (hm ▸ loadMem_wordsFit b pb s8 s64 hs)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, ?_⟩
+    (hm ▸ loadMem_wordsFit b pb sz hs)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, ?_⟩
   · rw [h2, hm]
   · rw [hm] at h3; exact h3
 
-theorem pbStage_setG (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63) (w : Word) :
-    RelSpec checkerProg "pb_check" (fun m => m = loadMemM b pb s8 s64 w ∧ CapsOK (loadMem b pb s8 s64))
-      fun _ m => m = loadMemM b pb s8 s64 w ∧ CapsOK (loadMem b pb s8 s64) ∧ PbPre pb := by
+theorem pbStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63) (w : Word) :
+    RelSpec checkerProg "pb_check" (fun m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz))
+      fun _ m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz) ∧ PbPre pb := by
   intro n _hn s₀ ⟨hm, hc⟩
   refine triple_post (checkerProg_pbCheck_PB pb.data.toList (by simpa [RomOK] using hpb) n s₀
-    (by rw [hm]; exact loadMem_pb b pb s8 s64)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, hc, h3⟩
+    (by rw [hm]; exact loadMem_pb b pb sz)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, hc, h3⟩
   rw [h2, hm]
 
-theorem irpStage_setG (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63) (w : Word) :
+theorem irpStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63) (w : Word) :
     RelSpec checkerProg "intern_reserved_pins"
-      (fun m => m = loadMemM b pb s8 s64 w ∧ CapsOK (loadMem b pb s8 s64) ∧ PbPre pb)
+      (fun m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz) ∧ PbPre pb)
       fun _ m => ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧
-        R3 (loadMem b pb s8 s64) m pb a' := by
+        R3 (loadMem b pb sz) m pb a' := by
   intro n _hn s₀ ⟨hm, hc, hpre⟩
   have hirp := checkerProg_internReservedPins_PB pb.data.toList (by simpa [RomOK] using hpb) hpre n
-    s₀ (AState.init EStore.empty) (by rw [hm]; exact loadMem_pb b pb s8 s64)
-    (by rw [hm, loadMemM]; exact ArenaD.frameHi (memFrame_setG _ MODE w) (by simp) (by simp) (arenaD_loadMem b pb s8 s64 hc))
-    (by rw [hm]; exact Or.inr (by show (rdW ((loadMem b pb s8 s64).arr64 CTL) 0).toNat < 2 ^ 40
+    s₀ (AState.init EStore.empty) (by rw [hm]; exact loadMem_pb b pb sz)
+    (by rw [hm, loadMemM]; exact ArenaD.frameHi (memFrame_setG _ MODE w) (by simp) (by simp) (arenaD_loadMem b pb sz hc))
+    (by rw [hm]; exact Or.inr (by show (rdW ((loadMem b pb sz).arr64 CTL) 0).toNat < 2 ^ 40
                                   rw [loadMem_rd]; decide))
   refine triple_post (triple_and hirp (stage_since n (preLoop_mem "intern_reserved_pins"
     (by decide +kernel)) s₀)) fun _ s' ⟨⟨hl, hok, hA, hfull, hp0, hfr, hmo⟩, _, hk, hpf⟩ => ⟨hl, ?_⟩
@@ -82,20 +82,20 @@ theorem irpStage_setG (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 
     ConRon.Bridge.internReservedPins_run ⟨EStore.empty_wf⟩ rfl hrun'
   refine ⟨_, hrun', ?_⟩
   rw [hm] at hk hpf hfr
-  have hk' : L.Keep (loadMem b pb s8 s64) s'.mem := hk
-  have hpf' : MemFrame preLoopA preLoopC (loadMem b pb s8 s64) s'.mem := hpf
-  have hfr' : MemFrame PinA StoreC (loadMem b pb s8 s64) s'.mem := hfr
+  have hk' : L.Keep (loadMem b pb sz) s'.mem := hk
+  have hpf' : MemFrame preLoopA preLoopC (loadMem b pb sz) s'.mem := hpf
+  have hfr' : MemFrame PinA StoreC (loadMem b pb sz) s'.mem := hfr
   refine ⟨⟨hk', hc, by simpa [PbPre] using hpre, hpf'⟩, hA, ?_, ?_, ?_, hfull, hp0,
     ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_, hmo⟩
-  · exact (stateDR_loadMem b pb s8 s64 hc).frame hfr' (pinA_not (by decide) (by decide))
+  · exact (stateDR_loadMem b pb sz hc).frame hfr' (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl
-  · exact (rsetR_loadMem b pb s8 s64 hc).frame hfr' (pinA_not (by decide) (by decide))
+  · exact (rsetR_loadMem b pb sz hc).frame hfr' (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
   · have := hfr'.2.1 131 (not_mem_storeC _ (by decide))
     simp only [stkTop] at this ⊢
-    rw [this]; exact stkTop_loadMem b pb s8 s64
-  · have z := loadMem_rd b pb s8 s64
+    rw [this]; exact stkTop_loadMem b pb sz
+  · have z := loadMem_rd b pb sz
     exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr' (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
       (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
@@ -132,12 +132,12 @@ def FoldA (b pb : ByteArray) (v : Word) (m : Mem) : Prop :=
 
 /-- **The fold from `R7`** (and the twin's stages before the loop), with `cnt` the count
 `DECL[0]`: at the substituted program (`installFoldGo_start`). -/
-theorem foldStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
     {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
     {ipins : List INatOpPinSet} {sE : AState} (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
     (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word)
-    (h7 : R7 (loadMem b pb s8 s64) s₀.mem pb ds ipins sE)
+    (h7 : R7 (loadMem b pb sz) s₀.mem pb ds ipins sE)
     (hcnt : ∀ h : 0 < (s₀.mem.arr64 DECL).size, cnt = (s₀.mem.arr64 DECL)[0]) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (sF : AState),
@@ -155,7 +155,7 @@ theorem foldStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK
   have hLC := checkerProg_loopCalleesPB pb.data.toList hr h7.since.pbpre (dnOf sE.store) hdn
     (indArmSpec_checker _ hr h7.since.pbpre _ hdn) hQd
   have hpb : s₀.mem.arr8 PB = pb.data.toList.toArray := by
-    rw [h7.since.keep.arr8]; exact loadMem_pb b pb s8 s64
+    rw [h7.since.keep.arr8]; exact loadMem_pb b pb sz
   have hD0 : 0 < (s₀.mem.arr64 DECL).size := by have := hcaps.2.2.1; simp only [DECL] at this ⊢; omega
   have hcnt' : cnt.toNat = ds.size := by
     rw [hcnt hD0]; have := h7.decls.count; simpa [hD0] using this
@@ -164,15 +164,15 @@ theorem foldStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK
     (installFoldGo_start (checkerProg_loopTopPB _) hLC (frontDecls_of_prefix hpx)
     n hn s₀ cnt hcnt' hT h7.arena hcore h7.pinsFull h7.decls h7.pinSets h7.iw (loopZero_of_since h7.since)
     h7.pin0 (by have := hcaps.1 EREC (by decide); omega) (by have := hcaps.1 SPN (by decide); omega)
-    (by have := hcaps.1 145 (by decide); omega) h7.mode))) ?_
+    (by have := hcaps.1 BSTK (by decide); omega) h7.mode))) ?_
   rintro r s' ⟨⟨hl, fe, pend, a', h1, h2⟩, hk, -⟩
   exact ⟨hl, fe, pend, a', h1, h2, by rw [hk.arr8]; exact hpb⟩
 
 /-- The fold's spec at the stages' end `Q7`, in the form `checkA_of_stages` takes. -/
-theorem foldSpec_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64) :
+theorem foldSpec_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) :
     ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
       ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
-      ⦃fun r s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb s8 s64) s₀.mem →
+      ⦃fun r s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
         (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
         FoldA b pb (r.headD 0) s'.mem); ⊤⦄ := by
   intro n hn s₀ cnt
@@ -183,7 +183,7 @@ theorem foldSpec_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK 
   refine ⟨hl, fun hQ hcnt => ?_⟩
   obtain ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR⟩ := hQ
   obtain ⟨-, fe, pend, sF, h1, h2, h3⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (foldStage_checker b pb s8 s64 hin ⟨hA, hB, hC, hD, hE⟩ n hn s₀ cnt hR hcnt)
+    (foldStage_checker b pb sz hin ⟨hA, hB, hC, hD, hE⟩ n hn s₀ cnt hR hcnt)
   exact ⟨⟨pins, sA, pre, sB, rc, sC, ds, sD, ipins, sE, ds.size, fe, pend, sF, ⟨hA, hB, hC, hD, hE⟩, h1⟩,
     h2, h3, hR.since.pbpre⟩
 
@@ -278,31 +278,31 @@ and header) or `w = 3` (the header only) that returns anything but `1` is an acc
 phase A (`PhaseA b`) whose state the memory `m` after the fold is `PhaseBStart` to, at the fold's
 result `v`; the final memory is the frozen buffer's, `parCompactMem m v (modeFlag w)` (in bounds),
 and the result is `2^63 + |pend|`. -/
-theorem checkA_run (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64) (w : Word)
+theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) (w : Word)
     (hw : w = 1 ∨ w = 3) (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
-    (hrun : L.run checkerProg N "check" [] (loadMemM b pb s8 s64 w) = .ok (rs, m'))
+    (hrun : L.run checkerProg N "check" [] (loadMemM b pb sz w) = .ok (rs, m'))
     (hr : rs.headD 0 ≠ 1) :
     ∃ (PA : PhaseA b) (m : Mem) (v : Word),
       PhaseBStart PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend m PA.sF v ∧
       m.arr8 PB = pb.data.toList.toArray ∧ PbPre pb ∧
       parCompactOK m (modeFlag w) = true ∧ m' = parCompactMem m v (modeFlag w) ∧
       rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.pend.size := by
-  let r := checkerRels b pb s8 s64
+  let r := checkerRels b pb sz
   obtain ⟨-, -, -, s4, s5, s6, s7⟩ := stageSpecs_of_rels checkerRels checker_capStage
     checker_pbStage checker_irpStage checker_preludeStage checker_frontStage checker_prepareStage
-    checker_pinsStage b pb s8 s64 hin
+    checker_pinsStage b pb sz hin
   have s1 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => capStage_setG b pb s8 s64 hin.2.2.2 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+    (fun _ => capStage_setG b pb sz hin.2.2.2 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have s2 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => pbStage_setG b pb s8 s64 hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+    (fun _ => pbStage_setG b pb sz hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have s3 : StageSpec checkerProg "intern_reserved_pins"
-      (fun m => m = loadMemM b pb s8 s64 w ∧ CapsOK (loadMem b pb s8 s64) ∧ PbPre pb)
+      (fun m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz) ∧ PbPre pb)
       (fun _ => Q3 b r) := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => irpStage_setG b pb s8 s64 hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+    (fun _ => irpStage_setG b pb sz hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have hla : checkerProg.lookup "check_a" = some checkAL := by chk_lk
   have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
   have hpc : checkerProg.lookup "par_compact" = some parCompactL := by chk_lk
-  have hmode : (loadMemM b pb s8 s64 w).glob MODE = w := by simp [loadMemM, Mem.setG]
+  have hmode : (loadMemM b pb sz w).glob MODE = w := by simp [loadMemM, Mem.setG]
   let P : Word → Mem → Prop := fun x m'' => x ≠ 1 → PostPC (modeFlag w) (FoldA b pb) m'' ∧
     ∀ h : 130 < (m''.arr64 CTL).size, x = (9223372036854775808 : Word) + (m''.arr64 CTL)[130]
   cases N with
@@ -314,13 +314,13 @@ theorem checkA_run (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s
     vcgen [exec] <;> grind
   | succ n =>
     have hn : n ≤ 2 ^ 62 := by omega
-    let s₀ : St := { mem := loadMemM b pb s8 s64 w, loc := Locals.init [] }
+    let s₀ : St := { mem := loadMemM b pb sz w, loc := Locals.init [] }
     have hA : ∀ (s₁ : St) (c : Word), ⦃fun s => s = s₁⦄
         invoke checkerProg (exec checkerProg n) "check_a" [c]
         ⦃fun r s' => s₁.mem = s₀.mem → c = modeFlag (s₀.mem.glob MODE) → P (r.headD 0) s'.mem; ⊤⦄ := by
       intro s₁ c
-      refine triple_post (checkA_of_stages (Q0 := (· = loadMemM b pb s8 s64 w)) hla hpc checkerProg_fz
-        s1 s2 s3 s4 s5 s6 s7 (foldSpec_checker b pb s8 s64 hin) c n hn s₁) ?_
+      refine triple_post (checkA_of_stages (Q0 := (· = loadMemM b pb sz w)) hla hpc checkerProg_fz
+        s1 s2 s3 s4 s5 s6 s7 (foldSpec_checker b pb sz hin) c n hn s₁) ?_
       intro x s' h e ec
       have ec' : c = modeFlag w := by rw [ec, hmode]
       subst ec'

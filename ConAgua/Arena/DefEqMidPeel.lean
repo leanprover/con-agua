@@ -62,7 +62,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
         rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-      (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP])
+      (by decide)
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
         rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -72,7 +72,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
       (fun x hx => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
         rcases hx with rfl | rfl <;> decide)
-  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [tier1, tierOff, FVREC, FVSLOT, FVLP, SPN]) (by decide)
+  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [tier1, FVREC, FVSLOT, FVLP, SPN]) (by decide)
   have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact ⟨⟨hok, ⟨M, hS', KeptAll.refl _ _,
       StackKept.of_frame hf⟩,
@@ -580,13 +580,13 @@ def peelPushK (fo k : Word) (res : Option (List Word × Mem)) : Option (Word × 
   match res with
   | none => none
   | some (r, m) =>
-    if (fo + k).toNat < (m.arr64 144).size ∧ 136 < (m.arr64 1).size then
-      some (r.headD 0, (m.set64 144 (fo + k) (r.headD 0)).set64 1 136 (fo + k + 1))
+    if (fo + k).toNat < (m.arr64 SPN).size ∧ 136 < (m.arr64 CTL).size then
+      some (r.headD 0, (m.set64 SPN (fo + k) (r.headD 0)).set64 CTL 136 (fo + k + 1))
     else none
 
-theorem pushK_ok (fo k : Word) (r : List Word) (m : Mem) (h1 : (fo + k).toNat < (m.arr64 144).size)
-    (h2 : 136 < (m.arr64 1).size) :
-    peelPushK fo k (some (r, m)) = some (r.headD 0, (m.set64 144 (fo + k) (r.headD 0)).set64 1 136 (fo + k + 1)) := by
+theorem pushK_ok (fo k : Word) (r : List Word) (m : Mem) (h1 : (fo + k).toNat < (m.arr64 SPN).size)
+    (h2 : 136 < (m.arr64 CTL).size) :
+    peelPushK fo k (some (r, m)) = some (r.headD 0, (m.set64 SPN (fo + k) (r.headD 0)).set64 CTL 136 (fo + k + 1)) := by
   simp only [peelPushK, h1, h2, and_self, ↓reduceIte]
 
 theorem peelPush_spec (p : Prog) (hp : PeelProg p) (n : Nat) (s₀ : St) (d k fo t2 : Word) :
@@ -630,16 +630,16 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
     have hfoK : (fo + k).toNat = fo.toNat + k.toNat := by
       rw [UInt64.toNat_add]; have := hx.fit; omega
     have hk1 : fo.toNat + k.toNat + 1 < 2 ^ 63 := by
-      have e : (m₁.arr64 144).size = (m.arr64 SPN).size := hf₁.2.2.1 SPN
+      have e : (m₁.arr64 SPN).size = (m.arr64 SPN).size := hf₁.2.2.1 SPN
       have := hS.spn; omega
     have hpush := hfvs₁.spine.push (hf₁.2.2.1 SPN ▸ hS.spn) (by rw [← hfoK]; exact hb1) _ hw
     -- the two writes
     have hfr : MemFrame [SPN] [136] m₁ s'.mem := by
       rw [← hm]
-      exact (MemFrame.set64 m₁ 144 (by decide) _ _).mono (by simp) (by simp) |>.trans
+      exact (MemFrame.set64 m₁ SPN (by decide) _ _).mono (by simp) (by simp) |>.trans
         ((MemFrame.setCtl _ 136 _).mono (by simp) (by simp))
     have hS₂ := hS₁.frame_stk hfr (by simp) (by simp)
-    have hspn' : s'.mem.arr64 SPN = (m₁.set64 144 (fo + k) (r₁.headD 0)).arr64 SPN := by
+    have hspn' : s'.mem.arr64 SPN = (m₁.set64 SPN (fo + k) (r₁.headD 0)).arr64 SPN := by
       rw [← hm]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have htop : spTop s'.mem = fo + k + 1 := by
       rw [← hm]; unfold spTop
@@ -658,7 +658,7 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
       have := hx.fit; omega
     · have hi' : i ≠ fo + k := fun h => by rw [h, ← hx.top] at hi; exact absurd hi (by simp)
       unfold spW
-      rw [hspn', show (144 : ArrId) = SPN from rfl, rdW_set64L, ite_eq_right (fun h => hi' h.2.1.symm)]
+      rw [hspn', rdW_set64L, ite_eq_right (fun h => hi' h.2.1.symm)]
       exact hst₁.below i hi
   · cases hW
 
@@ -978,12 +978,12 @@ kept-stack refinement. -/
 theorem GrowRefP.reset {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec : List Word → α}
     {dn : NIdx → Option ConLeche.Name} {m₁ m₃ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {r : List Word} {ok : List Word → Prop}
-    (h : GrowRefP T a₀ dec dn m₁ vis fe M eb r m₃ ok) (h136 : 136 < (m₃.arr64 1).size) :
-    CoreRef T a₀ dec dn m₁ vis fe M eb r (m₃.set64 1 136 (spTop m₁)) ok := by
+    (h : GrowRefP T a₀ dec dn m₁ vis fe M eb r m₃ ok) (h136 : 136 < (m₃.arr64 CTL).size) :
+    CoreRef T a₀ dec dn m₁ vis fe M eb r (m₃.set64 CTL 136 (spTop m₁)) ok := by
   obtain ⟨hok, ⟨M', hS, hK, hg⟩, hres, hr⟩ := h
-  have hfr : MemFrame [SPN] [136] m₃ (m₃.set64 1 136 (spTop m₁)) :=
+  have hfr : MemFrame [SPN] [136] m₃ (m₃.set64 CTL 136 (spTop m₁)) :=
     (MemFrame.setCtl _ 136 _).mono (by simp) (by simp)
-  have hspn : (m₃.set64 1 136 (spTop m₁)).arr64 SPN = m₃.arr64 SPN :=
+  have hspn : (m₃.set64 CTL 136 (spTop m₁)).arr64 SPN = m₃.arr64 SPN :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   exact ⟨hok, ⟨M', hS.frame_stk hfr (by simp) (by simp), hK, StackKept.restoreG hg h136⟩, hres, hr⟩
 
@@ -993,7 +993,7 @@ variable (p : Prog) (n : Nat) (mode vis d body1 ty2 body2 : Word)
 def bK3 (so : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   match res with
   | none => none
-  | some (r, m) => if 136 < (m.arr64 1).size then some (r.headD 0, m.set64 1 136 so) else none
+  | some (r, m) => if 136 < (m.arr64 CTL).size then some (r.headD 0, m.set64 CTL 136 so) else none
 
 def bK2 (so : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   match res with
@@ -1005,11 +1005,11 @@ def bK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, m)
-    else bK2 p n mode vis d body1 body2 (rdW (m.arr64 1) 136)
-      (callW p n "peel_push" [d, 0, rdW (m.arr64 1) 136, ty2] m)
+    else bK2 p n mode vis d body1 body2 (rdW (m.arr64 CTL) 136)
+      (callW p n "peel_push" [d, 0, rdW (m.arr64 CTL) 136, ty2] m)
 
 variable (r : List Word) (m : Mem) (so x : Word)
-theorem bK3_ok (h : 136 < (m.arr64 1).size) : bK3 so (some (r, m)) = some (r.headD 0, m.set64 1 136 so) := by
+theorem bK3_ok (h : 136 < (m.arr64 CTL).size) : bK3 so (some (r, m)) = some (r.headD 0, m.set64 CTL 136 so) := by
   simp only [bK3, h, ↓reduceIte]
 theorem bK2_s : bK2 p n mode vis d body1 body2 so (some (r, m)) =
     bK3 so (callW p n "defeq_peel" [mode, vis, d, 16777216, body1, body2, 1, so] m) := rfl
@@ -1017,8 +1017,8 @@ theorem bK1_z (h : r.headD 0 = 0) : bK1 p n mode vis d body1 ty2 body2 (some (r,
   simp only [bK1, h, ↓reduceIte]
 theorem bK1_nz (h : r.headD 0 ≠ 0) :
     bK1 p n mode vis d body1 ty2 body2 (some (r, m)) =
-      bK2 p n mode vis d body1 body2 (rdW (m.arr64 1) 136)
-        (callW p n "peel_push" [d, 0, rdW (m.arr64 1) 136, ty2] m) := by
+      bK2 p n mode vis d body1 body2 (rdW (m.arr64 CTL) 136)
+        (callW p n "peel_push" [d, 0, rdW (m.arr64 CTL) 136, ty2] m) := by
   simp only [bK1, h, ↓reduceIte]
 end bK
 
@@ -1094,7 +1094,7 @@ theorem defeqBinders_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (
   rw [bK1_nz (h := h0)] at hW
   rw [decBool_t h0]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-  have hso : rdW (m₁.arr64 1) 136 = spTop m₁ := rfl
+  have hso : rdW (m₁.arr64 CTL) 136 = spTop m₁ := rfl
   rw [hso] at hW
   cases hc2 : callW p n "peel_push" [d, 0, spTop m₁, ty2] m₁ with
   | none => rw [hc2] at hW; cases hW

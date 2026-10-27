@@ -80,8 +80,8 @@ theorem ArenaL.lmemo_clear (m : Mem) (a : AState) (hA : ArenaL m a)
     memoRG_clear ilSch ilSch_wf lfKey decE m _ hA.2 h0⟩
 
 /-- **`ILR` survives a writer apart from it, if the twin's memo did not move.** -/
-theorem ILR.across {A : List ArrId} {C : List Word} {m m' : Mem} {a a' : AState}
-    (hR : ILR m a) (hf : MemFrame A C m m') (hA : ILMEMO ∉ A) (hC : (50 : Word) ∉ C)
+theorem ILR.across {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : AState}
+    (hR : ILR m a) (hf : MemFrame A C m m') (hA : (ILMEMO : TieredArray) ∉ A) (hC : (50 : Word) ∉ C)
     (he : a'.memos.instLC = a.memos.instLC) : ILR m' a' := by
   unfold ILR; rw [he]
   exact memoRG_frame ilSch ilSch_wf lfKey decE A C hA hC m m' hf _ hR
@@ -101,8 +101,8 @@ theorem internE_instLC (v : ENodeView) (a : AState) (hok : AM.ok (internE v) a) 
   (keeps_internE_il v).run (AM.run_of_ok _ _ hok)
 
 /-- A writer that leaves array 144 alone keeps the stack. -/
-theorem spn_of_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ILSPN ∉ A) : m'.arr64 ILSPN = m.arr64 ILSPN := hf.1 ILSPN hA (by decide)
+theorem spn_of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (ILSPN : TieredArray) ∉ A) : m'.arr64 ILSPN = m.arr64 ILSPN := hf.1 ILSPN hA (by decide)
 
 /-! ## The `mk_*` and `intern_bvar` under `ArenaL` -/
 

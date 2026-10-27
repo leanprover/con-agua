@@ -147,7 +147,7 @@ theorem CoreS.frameLP (S : MemoSch) (h3 : S = lpSch ∨ S = lplSch ∨ S = lplsS
     (by simp) hmem
     (by simp [LPMEMO, LPLMEMO, LPLSMEMO, POOL])
     (by simp)
-    (by simp [tier1, tierOff, LPMEMO, LPLMEMO, LPLSMEMO, SOREC, CREC])
+    (by simp [tier1, LPMEMO, LPLMEMO, LPLSMEMO, SOREC, CREC])
     (by simp)
 
 end steps
@@ -159,9 +159,9 @@ theorem vstable_VI {k : IdxKind} (S : MemoSch) : VStable S (VI (k := k)) := fun 
 
 /-- **The walk memos across a writer of other arrays**, the twin's memos kept and its level stores
 grown. -/
-theorem ILWMemo.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a a' : AState}
+theorem ILWMemo.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : AState}
     (h : ILWMemo m a) (hf : MemFrame A C m m')
-    (hA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A)
+    (hA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
     (hme : a'.memos = a.memos) (hg : ILWGrow a a') : ILWMemo m' a' := by
   refine ⟨?_, ?_, ?_, fun k v hk => ?_, fun k v hk => ?_⟩
@@ -269,9 +269,9 @@ theorem keeps_memP_internE (v : ENodeView) : Keeps memP (internE v) := by
 
 /-- **The walk's invariants across an expression interning** (the twin keeps its memos and level
 stores; the memory write avoids the walk memos). -/
-theorem ILWMemo.of_internE {m m' : Mem} {a : AState} {v : ENodeView} {A : List ArrId} {C : List Word}
+theorem ILWMemo.of_internE {m m' : Mem} {a : AState} {v : ENodeView} {A : List TieredArray} {C : List Word}
     (h : ILWMemo m a) (hok : AM.ok (internE v) a) (hf : MemFrame A C m m')
-    (hA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
+    (hA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
     (hC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) :
     ILWMemo m' (AM.st (internE v) a) ∧ ILWGrow a (AM.st (internE v) a) := by
   have hrun := AM.run_of_ok _ _ hok

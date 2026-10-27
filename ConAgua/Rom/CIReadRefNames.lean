@@ -19,8 +19,8 @@ namespace L.Rom
 open L.Arena L.Ind
 
 /-- `MemoR` across a writer that leaves `RMEMO` and `CTL[132]` alone. -/
-theorem MemoR.frameG {A : List ArrId} {C : List Word} {mem mem' : Mem} {seen : List ConLeche.Expr}
-    {m : EMemo} (h : MemoR mem seen m) (hf : MemFrame A C mem mem') (hA : RMEMO ∉ A)
+theorem MemoR.frameG {A : List TieredArray} {C : List Word} {mem mem' : Mem} {seen : List ConLeche.Expr}
+    {m : EMemo} (h : MemoR mem seen m) (hf : MemFrame A C mem mem') (hA : (RMEMO : TieredArray) ∉ A)
     (hC : (132 : Word) ∉ C) : MemoR mem' seen m := by
   have hR : mem'.arr64 RMEMO = mem.arr64 RMEMO := hf.1 RMEMO hA (by decide)
   have hc : memoCnt mem' = memoCnt mem := hf.2.1 132 hC

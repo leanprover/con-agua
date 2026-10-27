@@ -143,7 +143,7 @@ theorem pinW_set (m : Mem) (d h : Word) (i : Nat) (hd : d.toNat < (m.arr64 PINS)
   · simp [hi, Ne.symm hi]
 
 /-- The pin store's frame: `PINS` and the store tier. -/
-def PinA : List ArrId := PINS :: StoreA
+def PinA : List TieredArray := (PINS : TieredArray) :: StoreA
 
 theorem frame_pinA {m m' : Mem} (h : MemFrame StoreA StoreC m m') : MemFrame PinA StoreC m m' :=
   h.mono (fun _b hb => List.mem_cons_of_mem _ hb) (fun _ hx => hx)
@@ -532,10 +532,10 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   have hrun := internReservedPins_run a ok1 ok2 ok3 _ rfl ok4 ok5 _ rfl ok6
   obtain ⟨okX, stX, -⟩ := AM.of_run_ok _ _ _ _ hrun
   have hfS : MemFrame StoreA StoreC m₂ m₆ :=
-    ((frame_store hf3 (by simp [tier1, tierOff, lsSch, LSREC, LSSLOT, LSHP]) (by simp [lsSch])).trans
-      (frame_store hf4 (by simp [tier1, tierOff, zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]))).trans
-      ((frame_store hf5 (by simp [tier1, tierOff, succSch, SREC, SSLOT, SHP]) (by simp [succSch])).trans
-      (frame_store hf6 (by simp [tier1, tierOff, sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
+    ((frame_store hf3 (by simp [tier1, lsSch, LSREC, LSSLOT, LSHP]) (by simp [lsSch])).trans
+      (frame_store hf4 (by simp [tier1, zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]))).trans
+      ((frame_store hf5 (by simp [tier1, succSch, SREC, SSLOT, SHP]) (by simp [succSch])).trans
+      (frame_store hf6 (by simp [tier1, sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
   have hsz : (m₆.arr64 PINS).size = (m.arr64 PINS).size := by
     rw [hfS.2.2.1, hf2'.2.2.1, hf1'.2.2.1]
   have hsz71 : 71 ≤ (m.arr64 PINS).size := by

@@ -120,7 +120,7 @@ def nnumProg : Prog :=
 /-- A memory with 8 `num` nodes and `SN0` slots per tier, the scratch tier closed or open. The other
 tables' arrays are unused here and left empty. -/
 def nnumMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (Array.replicate 64 0).set! 1 scratch)] ++
+  Mem.ofWords <| [((CTL : TieredArray), (Array.replicate 64 0).set! 1 scratch)] ++
     withTiers [(NNREC, Array.replicate consTestWords 0),
       (NNSLOT, Array.replicate consTestWords 0)]
 
@@ -170,8 +170,6 @@ theorem nnumOK : ConsOK p nnumCS where
   colA := by simp [nnumCS]
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [nnumCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun _ _ _ _ _ => rfl
   mloc := fun h => by simp [nnumCS] at h
   exnk := fun h => by simp [nnumCS] at h

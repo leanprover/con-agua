@@ -71,8 +71,7 @@ theorem internLNode_imax_run (u v : LIdx) (a : AState) :
 def imaxSch : Schema := ⟨IREC, ISLOT, 1, 12, LTag.imax⟩
 
 theorem iimaxSch_wf : imaxSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 (tierA IREC t)) i := by
   simp [fld, Schema.ad, imaxSch]
@@ -156,15 +155,13 @@ theorem imaxCS_wf : imaxCS.WF where
     simp only [imaxCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
       simp only [imaxCS, imhash, Mem.arr64_set64_ne _ _ _ _ _
-        (tierA_ne (by decide) (by decide) (show IREC ≠ IHP by decide) t u)]⟩
+        (tierA_ne (show IREC ≠ IHP by decide) t u)]⟩
   room m t h := (iimpushOK_room m t ((impushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [imaxCS, Option.some.injEq] at h; subst h
     rw [← impushOK_eqC] at hp
     simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m IHP _ t hp.2
-  colLt A h := by
-    simp only [imaxCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, imaxCS, hk]
   ex _ := {
     nk := by decide
@@ -185,7 +182,7 @@ theorem imaxCS_wf : imaxCS.WF where
 theorem imaxColFree : ColFree imaxCS IRecRel := by
   intro A h m u k x t i a hr
   simp only [imaxCS, Option.some.injEq] at h; subst h
-  simpa only [IRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show IREC ≠ IHP by decide) t u)] using hr
+  simpa only [IRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (show IREC ≠ IHP by decide) t u)] using hr
 
 /-- **What `intern_imax` changes**: the table's arrays, the column, the counts. -/
 theorem iminternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : iminternW m u v = some (w, m')) :

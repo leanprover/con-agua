@@ -34,7 +34,7 @@ structure TwinOK (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (fe
   erec : (m.arr64 EREC).size < 2 ^ 63
   spn : (m.arr64 SPN).size < 2 ^ 63
   memos : CoreMemos m
-  bstk : (m.arr64 145).size < 2 ^ 63
+  bstk : (m.arr64 BSTK).size < 2 ^ 63
   /-- Stored levels read back (`StoreDen.lean`). -/
   den : StoreDen dn m a fe
 
@@ -57,7 +57,7 @@ theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 /-! ## `lvl_eq_c`'s write set -/
 
 /-- The arrays `lvl_eq_c` may write: all a step may, but the pools. -/
-def lvlA : List ArrId := stepA.filter fun b => b ≠ IW ∧ b ≠ EREC
+def lvlA : List TieredArray := stepA.filter fun b => b ≠ IW ∧ b ≠ EREC
 
 /-- The `CTL` words `lvl_eq_c` may write: all a step may, but the pools' tops. -/
 def lvlC : List Word := stepC.filter fun x => x ≠ 129 ∧ x ≠ 200
@@ -70,6 +70,6 @@ def lvlFns : List FnName :=
 
 theorem lvlText_closed : closedA cvgProg lvlA lvlC lvlFns = true := by decide +kernel
 
-theorem lvlA_erec : EREC ∉ lvlA := by simp [lvlA]
+theorem lvlA_erec : (EREC : TieredArray) ∉ lvlA := by decide
 
 end L.Arena

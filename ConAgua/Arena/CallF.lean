@@ -24,7 +24,7 @@ namespace L.Arena
 open L
 
 section agree
-variable {ctl : ArrId} {p q : Prog} {A : List ArrId} {C : List Word} {fs : List FnName}
+variable {ctl : ArrId} {p q : Prog} {A : List TieredArray} {C : List Word} {fs : List FnName}
 
 /-- **Programs that agree on a call-closed set execute its statements alike.** -/
 theorem exec_agree (hq : closedW ctl q A C fs = true) (hpq : ∀ f ∈ fs, p.lookup f = q.lookup f) :
@@ -125,7 +125,7 @@ theorem callF_run {P : Prog} {f : FnName} {vs : List Word} {m : Mem} {x : List W
 
 /-- **Every call of `f` returns `callF P f`**, in a program that binds `P`'s functions as `P`
 does, `P` call-closed over `fs ∋ f`. -/
-theorem callF_spec {ctl : ArrId} {p P : Prog} {A : List ArrId} {C : List Word} {fs : List FnName}
+theorem callF_spec {ctl : ArrId} {p P : Prog} {A : List TieredArray} {C : List Word} {fs : List FnName}
     (hq : closedW ctl P A C fs = true) (hp : ∀ g ∈ fs, p.lookup g = P.lookup g) {f : FnName}
     (hf : f ∈ fs) (n : Nat) (s₀ : St) (vs : List Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs

@@ -338,16 +338,15 @@ def ilpfFns : List FnName := ilpfP.map (·.1)
 
 /-- What it writes: the stack, the level heap, the expression, level, level-list and name-lookup
 tables (both tiers), the pool scratch, the three `instLP` memos (52‥54). -/
-def ilpfA : List ArrId :=
-  [POOL, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, SOREC,
-   SOSLOT, CREC, CSLOT, LEREC, LESLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT,
-   LSREC, LSSLOT, ADER, LADER, FADER, LEDER, PJDER, LPMEMO, LPLMEMO, LPLSMEMO, SHP, MHP, IHP, LSHP,
-   SOLP, CLP, FVLP, SPN, LH, tier1 POOL, tier1 AREC, tier1 ASLOT, tier1 SREC, tier1 SSLOT,
-   tier1 ZREC, tier1 ZSLOT, tier1 MREC, tier1 MSLOT, tier1 IREC, tier1 ISLOT, tier1 PREC,
-   tier1 PSLOT, tier1 SOREC, tier1 SOSLOT, tier1 CREC, tier1 CSLOT, tier1 LEREC, tier1 LESLOT,
-   tier1 FVREC, tier1 FVSLOT, tier1 LAREC, tier1 LASLOT, tier1 FAREC, tier1 FASLOT, tier1 PJREC,
-   tier1 PJSLOT, tier1 LSREC, tier1 LSSLOT, tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER,
-   tier1 PJDER, tier1 SHP, tier1 MHP, tier1 IHP, tier1 LSHP, tier1 SOLP, tier1 CLP, tier1 FVLP]
+def ilpfA : List TieredArray :=
+  tier0s [POOL, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+    SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
+    FASLOT, PJREC, PJSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER, PJDER, LPMEMO,
+    LPLMEMO, LPLSMEMO, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, SPN, LH] ++
+  tier1s [POOL, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
+    SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
+    FASLOT, PJREC, PJSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP,
+    LSHP, SOLP, CLP, FVLP]
 /-- The `CTL` words it writes: the stack top (136), the heap top (192), the pool top (0), the
 memos' stamps and counts (54‥59), the tables' counts. -/
 def ilpfC : List Word :=
@@ -384,8 +383,8 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 /-- **`StageT` after a run framed away from the pools and the pins**, from `CoreS` after it
 (`StageT.of_core` at a write set from the callee's own program text). -/
-theorem StageT.of_coreFrame {A : List ArrId} {C : List Word} {m m' : Mem} {a a' : AState}
-    {M : ModeMaps} (hfr : MemFrame A C m m') (hIW : IW ∉ A) (hE : EREC ∉ A) (hP : PINS ∉ A)
+theorem StageT.of_coreFrame {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : AState}
+    {M : ModeMaps} (hfr : MemFrame A C m m') (hIW : (IW : TieredArray) ∉ A) (hE : (EREC : TieredArray) ∉ A) (hP : (PINS : TieredArray) ∉ A)
     (h129 : (129 : Word) ∉ C) (h200 : (200 : Word) ∉ C) (hS : StageT dn vis fe m a)
     (hC : CoreS dn m' a' vis fe M 0) : StageT dn vis fe m' a' ∧ IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hfr.1 _ hIW (by decide)

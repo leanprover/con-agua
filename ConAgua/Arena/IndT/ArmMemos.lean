@@ -21,8 +21,8 @@ open L.Arena
 
 /-! ## `RcMR` across a writer of the `hb` memo alone -/
 
-/-- Every word array below 320 (both tiers) but the recursor check's memos other than `hb`'s. -/
-def rcHbFreeA : List ArrId := (List.range 388).filter (fun b => b ∉ [NOM, DPM, RAM, RFM, TAM])
+/-- Every word array of the checker (`checkerWordArrays`) but the recursor check's memos other than `hb`'s. -/
+def rcHbFreeA : List TieredArray := checkerWordArrays.filter (fun b => b ∉ ([NOM, DPM, RAM, RFM, TAM] : List TieredArray))
 /-- Every `CTL` word below 256 but those memos' control words. -/
 def rcHbFreeC : List Word :=
   ((List.range 256).filter (fun c => c ∉ [204, 206, 208, 210, 212, 213, 218, 219])).map Nat.toUInt64
@@ -30,11 +30,10 @@ def rcHbFreeC : List Word :=
 theorem rcHbFree_mfr {m m' : Mem} (h : MemFrame rcHbFreeA rcHbFreeC m m') :
     MFr [MAM, MCM, HBM] [202, 203, 205, 207, 209, 211, 214, 215, 216, 217] m m' := by
   refine ⟨rcHbFreeA, rcHbFreeC, h, fun b hb => ?_, fun x hx => ?_⟩
-  · simp only [rcHbFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq, List.mem_cons,
-      List.not_mem_nil, or_false] at hb
-    simp only [NOM, DPM, RAM, HBM, RFM, TAM, MAM, MCM, ArrId] at hb ⊢
-    simp only [List.mem_cons, List.not_mem_nil, or_false]
-    omega
+  · have key : ∀ b ∈ rcHbFreeA,
+        b.arr < 201 ∨ 208 < b.arr ∨ b ∈ ([MAM, MCM, HBM] : List TieredArray) := by
+      decide +kernel
+    exact key b hb
   · simp only [rcHbFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq,
       List.mem_cons, List.not_mem_nil, or_false] at hx
     obtain ⟨c, ⟨hc, h2⟩, rfl⟩ := hx
@@ -62,13 +61,13 @@ theorem RcMR.ofClosedHb {p : Prog} {fs : List FnName} (hcl : closedA p rcHbFreeA
 
 /-! ## `maMR`, `mcMR` across writers outside them -/
 
-/-- Every word array below 320 (both tiers) but `mentions_any`'s memo. -/
-def maFreeA : List ArrId := (List.range 388).filter (· ≠ MAM)
+/-- Every word array of the checker (`checkerWordArrays`) but `mentions_any`'s memo. -/
+def maFreeA : List TieredArray := checkerWordArrays.filter (· ≠ MAM)
 /-- Every `CTL` word below 256 but its control words. -/
 def maFreeC : List Word := ((List.range 256).filter (fun c => c ≠ 202 ∧ c ≠ 203)).map Nat.toUInt64
 
-/-- Every word array below 320 (both tiers) but `mentions_const`'s memo. -/
-def mcFreeA : List ArrId := (List.range 388).filter (· ≠ MCM)
+/-- Every word array of the checker (`checkerWordArrays`) but `mentions_const`'s memo. -/
+def mcFreeA : List TieredArray := checkerWordArrays.filter (· ≠ MCM)
 /-- Every `CTL` word below 256 but its control words. -/
 def mcFreeC : List Word := ((List.range 256).filter (fun c => c ≠ 216 ∧ c ≠ 217)).map Nat.toUInt64
 
@@ -95,8 +94,8 @@ theorem armMemos_call {p : Prog} {fs : List FnName} (hcl : closedA p cidFreeA ci
     (h : callW p n f vs m = some (r, m')) (hI : IndMemos m) (hC : CoreMemos m) :
     IndMemos m' ∧ CoreMemos m' := by
   have hfr := (run_memFrame hcl hf (run_of_callW h)).1
-  have hA : ∀ b ∈ cidFreeA, b ≠ 51 ∧ b ≠ 155 ∧ (b < 201 ∨ 208 < b) := fun b hb => by
-    simp only [cidFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
+  have hA : ∀ b ∈ cidFreeA, b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr) := fun b hb => by
+    simp only [cidFreeA, List.mem_filter, decide_eq_true_eq] at hb
     obtain ⟨-, h1, -, -, h51, h155, -⟩ := hb
     exact ⟨h51, h155, h1⟩
   have hC' : ∀ x ∈ cidFreeC, x.toNat ≠ 52 ∧ x.toNat ≠ 158 ∧ (x.toNat < 202 ∨ 219 < x.toNat) :=

@@ -19,12 +19,12 @@ open ConRon.Arena
 namespace L.Arena
 
 /-- The arrays the loop may write: all but the pin table. -/
-def loopA : List ArrId := (List.range 388).filter (· ≠ PINS)
+def loopA : List TieredArray := checkerWordArrays.filter (· ≠ PINS)
 
 /-- The `CTL` words the loop may write. -/
 def loopC : List Word := (List.range 1024).map UInt64.ofNat
 
-theorem loopA_pins : PINS ∉ loopA := by simp [loopA]
+theorem loopA_pins : (PINS : TieredArray) ∉ loopA := by simp [loopA]
 
 /-- The functions `install_fold_go` and `check_pending_go` reach in the checker's program. -/
 def loopFns : List FnName :=
@@ -302,7 +302,7 @@ back the same (at the start `dn` is the startup store's `denoteN`, all of it per
 structure LoopMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : Prop where
   erec : (m.arr64 EREC).size < 2 ^ 63
   spn : (m.arr64 SPN).size < 2 ^ 63
-  bstk : (m.arr64 145).size < 2 ^ 63
+  bstk : (m.arr64 BSTK).size < 2 ^ 63
   flag : pinW m 0 ≠ 0
   dnP : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x →
     k.isPersistent = true ∧ denoteN a.store.ns k = some x
@@ -313,7 +313,7 @@ theorem LoopMem.step {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (h : LoopMem dn m a) (hf : MemFrame loopA loopC m m')
     (hx : ConRon.Bridge.PExt a.store a'.store) : LoopMem dn m' a' :=
   ⟨by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn, by rw [hf.2.2.1]; exact h.bstk,
-    by simp only [pinW, hf.1 PINS loopA_pins (by decide)]; exact h.flag,
+    by simp only [pinW, hf.1 _ loopA_pins (by decide)]; exact h.flag,
     fun k x e => ⟨(h.dnP k x e).1, hx.lss.ls.ns k x (h.dnP k x e).1 (h.dnP k x e).2⟩⟩
 
 end L.Arena

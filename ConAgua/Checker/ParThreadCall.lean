@@ -44,12 +44,11 @@ def ThreadRel (v : Word) (w : Mem) (a : AState) : Prop :=
     ∀ b, thrS b = true → w.arr64 b = m'.arr64 b
 
 /-- `thrS` lies inside `phaseBS`. -/
-theorem phaseBS_of_thrS {a : ArrId} (h : thrS a = true) : phaseBS a = true := by
+theorem phaseBS_of_thrS {a : TieredArray} (h : thrS a = true) : phaseBS a = true := by
   obtain ⟨h1, h2, h3⟩ := (thrS_iff a).mp h
   have : a ≠ OUT := by
     rintro rfl; exact absurd h3 (by decide)
-  simp only [phaseBS, bne_iff_ne, ne_eq, Bool.and_eq_true]
-  exact ⟨⟨this, h1⟩, h2⟩
+  simp [phaseBS, phaseBPa, this, h1, h2]
 
 /-- `WorkerRel` gives `ThreadRel` (`thrS` lies in `phaseBS`). -/
 theorem ThreadRel.of_worker {v : Word} {w : Mem} {a : AState}
@@ -73,7 +72,7 @@ theorem threadGo_thr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = 
   rw [hx, hy, hz] at hrun
   have hI' : s'.mem.glob INIT = 1 := (check_pending_go_keepsG hrun).1.trans hI
   let m₂ : Mem := { m' with glob := s.mem.glob }
-  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
   have h₂ := PhaseBStart.frame0 hf hS
   let s₂ : St := ⟨m₂, s.loc⟩
   have hAg : Agree thrS (fun _ => false) s.mem s₂.mem :=
@@ -108,22 +107,22 @@ theorem checkB_thr0 (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
       s'.mem.glob INIT = 1; ⊤⦄ := by
   have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
-  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 241).size), (s₀.mem.arr64 241)[(3 : Word).toNat] = v := by
+  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 HDRF).size), (s₀.mem.arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb; exact hv hb
   have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v
-      { bytes := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).bytes,
-        words := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).words,
+      { bytes := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).bytes,
+        words := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).words,
         glob := fun h => if h = ⟨10⟩ then 1
-          else (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).glob h } a := by
+          else (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).glob h } a := by
     intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
   have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v s₀.mem a := by
     intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
   have hI1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → s₀.mem.glob ⟨10⟩ = 1 := by
     intro h0; have := hI; simp only [seedMem, ite_eq_right h0] at this; exact this
-  have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241).size),
-      ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241)[(3 : Word).toNat] = v := by
+  have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).arr64 HDRF).size),
+      ((s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).arr64 HDRF)[(3 : Word).toNat] = v := by
     intro hb
-    simp only [arr64_copy64_ne _ _ _ _ _ _ (show (241 : ArrId) ≠ 1 by decide)] at hb ⊢
+    simp only [arr64_copy64_ne _ _ _ _ _ _ (show (HDRF : TieredArray) ≠ CTL by decide)] at hb ⊢
     exact hv' hb
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
@@ -205,11 +204,12 @@ end thread
 /-! ## The thread's memory at a call -/
 
 /-- **An array of `thrS`** is a frozen one (not the header or the seed) or an owned one. -/
-theorem thrS_cases {b : ArrId} (h : thrS b = true) :
+theorem thrS_cases {b : TieredArray} (h : thrS b = true) :
     (∃ k, ∃ hk : k < frozen.length, 1 ≤ k ∧ b = frozen[k].1) ∨ b ∈ parOwnedL := by
   obtain ⟨h1, h2, h3 | h3⟩ := (thrS_iff b).mp h
   · left
-    obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem h3
+    obtain ⟨i, hi, e⟩ := List.getElem_of_mem h3
+    subst e
     have hL : frozenIdsL.length = 62 := rfl
     have hF : frozen.length = 61 := frozen_length
     rcases i with _ | _ | k
@@ -227,7 +227,7 @@ theorem truncList_bytes (m₀ : Mem) : ∀ (zs : List (ArrId × Fz)) (m : Mem),
   | (_, _) :: zs, m => by rw [truncList, truncList_bytes m₀ zs]
 
 theorem freshMem_arr8 (m : Mem) (b : ArrId) : (freshMem m).arr8 b = m.arr8 b := by
-  show (truncFrozen m).bytes.getD b #[] = m.bytes.getD b #[]
+  show (truncFrozen m).bytes b = m.bytes b
   rw [truncFrozen, truncList_bytes]
 
 section start
@@ -246,10 +246,7 @@ theorem ThreadRel.next {v : Word} {r : Mem} {a : AState} (B : Array Word) (j : W
   refine ⟨m', hS, hPB, fun b hb => ?_⟩
   rw [← hw b hb]
   rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
-  · rw [bufMem_frozen B r j hk h1]
-    split
-    · rw [hfz k hk h1]
-    · rename_i hs; rw [Mem.arr64_oob _ _ hs]
+  · rw [bufMem_frozen B r j hk h1, hfz k hk h1]
   · exact bufMem_owned B r j ho
 
 /-- **The first call**: from entry 1's `PhaseBStart m a v` (with a pending group) and a region
@@ -259,7 +256,7 @@ memory `r` with `INIT = 0` and every owned array zero (at its size in `m`), the 
 theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
     (hS : PhaseBStart pins dn ds fe pend m a v) (hPB : m.arr8 PB = bs.toArray)
     (hne : pend.size ≠ 0) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r : Mem) (j : Word) (hr : r.HasWs 388)
+    (r : Mem) (j : Word)
     (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size) (hI : r.glob INIT = 0) :
     ThreadRel pins dn ds fe pend bs v (seedMem (bufMem (bufOf m v) r j)) a.worker ∧
       (seedMem (bufMem (bufOf m v) r j)).glob INIT = 1 := by
@@ -268,7 +265,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
   generalize hW : bufMem (bufOf m v) r j = W
   obtain ⟨hseed, h256⟩ := bufImg_seed (v := v) hok hlt
   have hctlf : W.arr64 CTLF = (m.arr64 CTL).extract 0 256 := by
-    rw [← hW, bufMem_ctlf, ite_eq_left (hr.hasW (by decide)), hseed]
+    rw [← hW, bufMem_ctlf, hseed]
   have hlen : (W.len64 CTLF).toNat = 256 := by
     simp only [Mem.len64, hctlf, size_extract0, Nat.min_eq_left h256]; rfl
   have hctl : W.arr64 CTL = zeros (m.arr64 CTL).size := by
@@ -294,9 +291,9 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
           simp [Array.getD_eq_getD_getElem?, hk]
     · rw [arr64_copy64_ne _ _ _ _ _ _ hbc, ← hW]
       rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
-      · obtain ⟨-, hz', hc, h388⟩ := frozen_facts hk h1
-        rw [bufMem_frozen _ r j hk h1, ite_eq_left (hr.hasW h388), bufImg_trunc hok hlt hk h1, freshMem_arr,
-          ite_eq_right hc, ite_eq_right hz']
+      · obtain ⟨-, hz', hc⟩ := frozen_facts hk h1
+        rw [bufMem_frozen _ r j hk h1, bufImg_trunc hok hlt hk h1, freshMem_arr,
+          ite_eq_right (TieredArray.t0_ne hc), ite_eq_right hz']
       · obtain ⟨-, hsrc⟩ := owned_facts ho
         rw [bufMem_owned _ r j ho, hz b ho, freshMem_arr, ite_eq_right hbc,
           ite_eq_left (show b ∈ freshZ from List.mem_cons_of_mem _ ho), truncFrozen_other m b hsrc]
@@ -314,28 +311,26 @@ theorem bufMem_view {B : Array Word} {v : Word} (hB : (bufImg B 0).getD 3 0 = v)
     (j : Word) : ∀ hb : 3 < ((bufMem B r j).arr64 HDRF).size, ((bufMem B r j).arr64 HDRF)[3] = v := by
   intro hb
   have e := bufMem_hdr B r j
-  split at e
-  · simp only [e] at hb ⊢
-    rw [← hB, Array.getD, dite_eq_left hb]; rfl
-  · rw [e] at hb; simp at hb
+  simp only [e] at hb ⊢
+  rw [← hB, Array.getD, dite_eq_left hb]; rfl
 
 /-- **A thread's first call** (`ca_check_b(buf, len, j, region, …)` on a fresh region): from
 entry 1's `PhaseBStart m a v` (with the pin data, in bounds), the buffer `bufOf m v`, a region
-memory `r` with `INIT = 0`, every owned array zero (at its size in `m`) and at least `388` arrays (`checkerTab.nw`), a
+memory `r` with `INIT = 0`, every owned array zero (at its size in `m`), a
 run of `check` on `bufMem (bufOf m v) r j` that returns accepts group `j` at `a.worker`, and
 leaves `r'` `ThreadRel` to the state after it, with `INIT = 1`. -/
 theorem thrCall_first (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
     {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
     (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
     (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r : Mem) (hr : r.HasWs 388) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
+    (r : Mem) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
     (hI : r.glob INIT = 0) (j : Word) (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62)
     (n : Nat) (hn : n ≤ 2 ^ 62) {rs : List Word} {r' : Mem}
     (hrun : L.run checkerProg n "check" [] (bufMem (bufOf m v) r j) = .ok (rs, r')) :
     AM.ok (checkPending mode fe (pdAt pend j)) a.worker ∧
       ThreadRel pins dn ds fe pend bs v r' (AM.st (checkPending mode fe (pdAt pend j)) a.worker) ∧
       r'.glob INIT = 1 := by
-  obtain ⟨hR, hI'⟩ := ThreadRel.first hS hPB (by omega) hok hlt r j hr hz hI
+  obtain ⟨hR, hI'⟩ := ThreadRel.first hS hPB (by omega) hok hlt r j hz hI
   exact runThr mode pins dn ds fe pend bs hP hm n hn a.worker v j hj hj62 _ rfl hR hI' rfl rfl
     (bufMem_view (bufImg_hdr hok hlt) r j) hrun
 

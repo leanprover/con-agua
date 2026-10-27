@@ -35,10 +35,11 @@ def liftFns : List FnName :=
 /-- What they write: the lift memo `LMEMO` (41), the derived ranges 42‥46, and the tables `bvar`
 (22, 23), `app` (4, 5), `lam` (27, 28), `forallE` (29, 30), `letE` (20, 21), `proj` (31, 32), the
 tables and ranges in both tiers (tier 1 of array `a` is `tier1 a`). -/
-def liftA : List ArrId := [LMEMO, ADER, LADER, FADER, LEDER, PJDER, BREC, BSLOT, AREC, ASLOT,
-  LAREC, LASLOT, FAREC, FASLOT, LEREC, LESLOT, PJREC, PJSLOT, tier1 ADER, tier1 LADER, tier1 FADER,
-  tier1 LEDER, tier1 PJDER, tier1 BREC, tier1 BSLOT, tier1 AREC, tier1 ASLOT, tier1 LAREC,
-  tier1 LASLOT, tier1 FAREC, tier1 FASLOT, tier1 LEREC, tier1 LESLOT, tier1 PJREC, tier1 PJSLOT]
+def liftA : List TieredArray :=
+  tier0s [LMEMO, ADER, LADER, FADER, LEDER, PJDER, BREC, BSLOT, AREC, ASLOT, LAREC, LASLOT,
+    FAREC, FASLOT, LEREC, LESLOT, PJREC, PJSLOT] ++
+  tier1s [ADER, LADER, FADER, LEDER, PJDER, BREC, BSLOT, AREC, ASLOT, LAREC, LASLOT, FAREC,
+    FASLOT, LEREC, LESLOT, PJREC, PJSLOT]
 /-- The `CTL` words: the lift memo's stamp and count (42, 43) and the six tables' counts. -/
 def liftC : List Word := [42, 43, 22, 23, 4, 5, 28, 29, 30, 31, 20, 21, 32, 33]
 
@@ -65,7 +66,7 @@ def instFns : List FnName :=
     "inst_proj", "inst_entry"] ++ liftFns
 
 /-- `liftA` and the `instantiate1` memo `IMEMO` (47). -/
-def instA : List ArrId := IMEMO :: liftA
+def instA : List TieredArray := (IMEMO : TieredArray) :: liftA
 /-- `liftC` and the `instantiate1` memo's stamp and count (44, 45). -/
 def instC : List Word := 44 :: 45 :: liftC
 
@@ -101,7 +102,7 @@ theorem instEntry_frame {p : Prog} (hp : InstProg p) (he : p.lookup "inst_entry"
 def walkFns : List FnName := ["bm_find", "bm_put", "bm_clear", "bb_go", "bb_node", "bb_memo"]
 
 /-- The walk writes only its memo `BMEMO` (24) and the memo's stamp and count (`CTL` 24, 25). -/
-def walkA : List ArrId := [BMEMO]
+def walkA : List TieredArray := [BMEMO]
 def walkC : List Word := [24, 25]
 
 /-! ## `fr_memo` -/
@@ -109,7 +110,7 @@ def walkC : List Word := [24, 25]
 def frFns : List FnName := ["fm_find", "fm_put", "fm_clear", "fr_go", "fr_node", "fr_memo"]
 
 /-- The `fvarRange` walk writes only its memo `FRMEMO` (48) and its stamp and count (`CTL` 46, 47). -/
-def frA : List ArrId := [FRMEMO]
+def frA : List TieredArray := [FRMEMO]
 def frC : List Word := [46, 47]
 
 /-! ## `bvar_b`, `loose_bvars_bounded_fast` -/
@@ -131,10 +132,11 @@ def mkFns : List FnName :=
     "proj_find", "proj_push", "intern_proj"]
 
 /-- What they write: `liftA` without the lift memo `LMEMO` (41). -/
-def mkA : List ArrId := [ADER, LADER, FADER, LEDER, PJDER, BREC, BSLOT, AREC, ASLOT, LAREC, LASLOT,
-  FAREC, FASLOT, LEREC, LESLOT, PJREC, PJSLOT, tier1 ADER, tier1 LADER, tier1 FADER, tier1 LEDER,
-  tier1 PJDER, tier1 BREC, tier1 BSLOT, tier1 AREC, tier1 ASLOT, tier1 LAREC, tier1 LASLOT,
-  tier1 FAREC, tier1 FASLOT, tier1 LEREC, tier1 LESLOT, tier1 PJREC, tier1 PJSLOT]
+def mkA : List TieredArray :=
+  tier0s [ADER, LADER, FADER, LEDER, PJDER, BREC, BSLOT, AREC, ASLOT, LAREC, LASLOT, FAREC,
+    FASLOT, LEREC, LESLOT, PJREC, PJSLOT] ++
+  tier1s [ADER, LADER, FADER, LEDER, PJDER, BREC, BSLOT, AREC, ASLOT, LAREC, LASLOT, FAREC,
+    FASLOT, LEREC, LESLOT, PJREC, PJSLOT]
 /-- `liftC` without the lift memo's stamp and count. -/
 def mkC : List Word := [22, 23, 4, 5, 28, 29, 30, 31, 20, 21, 32, 33]
 
@@ -148,7 +150,7 @@ theorem AbsProg.agree {p : Prog} (hp : AbsProg p) :
   ProgHas.agreeWith hp absProg_ok absWalkFns
 
 /-- The `abstract1` memo `ABMEMO` (49), the `fvarRange` memo, and `mkA`. -/
-def absA : List ArrId := ABMEMO :: frA ++ mkA
+def absA : List TieredArray := (ABMEMO : TieredArray) :: frA ++ mkA
 /-- The `abstract1` memo's stamp and count (48, 49), `frC` and `mkC`. -/
 def absC : List Word := 48 :: 49 :: frC ++ mkC
 
@@ -185,7 +187,7 @@ def instListFns : List FnName :=
 
 /-- The `instantiateList` memo `ILMEMO` (50) and `mkA`; the spine stack `ILSPN` (144) is only
 read. -/
-def instListA : List ArrId := ILMEMO :: mkA
+def instListA : List TieredArray := (ILMEMO : TieredArray) :: mkA
 /-- The memo's stamp and count (50, 51) and `mkC`. -/
 def instListC : List Word := 50 :: 51 :: mkC
 

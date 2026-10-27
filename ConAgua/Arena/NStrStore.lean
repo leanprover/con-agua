@@ -172,7 +172,7 @@ def nstrProg : Prog :=
 /-- A memory with the strings `"a"`, `"b"`, `"a"`, `"ab"` in the pool (top 5), 8 nodes and `SN0`
 slots per tier, the scratch tier closed or open. -/
 def nstrMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, ((Array.replicate 64 0).set! 1 scratch).set! 0 5)] ++
+  Mem.ofWords <| [((CTL : TieredArray), ((Array.replicate 64 0).set! 1 scratch).set! 0 5)] ++
     withTiers [(POOL, #[97, 98, 97, 97, 98, 0, 0, 0]), (NSREC, Array.replicate 64 0),
       (NSSLOT, Array.replicate consTestWords 0)]
 
@@ -237,8 +237,6 @@ theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS wh
   skips := by intro e he; simp [nstrCS] at he
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [nstrCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
 
 theorem nspushOK_eqC (m : Mem) (t : Word) : nspushOK m t = pushOKC nstrCS m t := by
   rw [nspushOK, pushOKC, dec_le_not_lt ((nscnt m t + 1) * 4) (m.len64 (tierA NSREC t))]

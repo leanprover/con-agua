@@ -330,10 +330,10 @@ theorem erAllocW_mem {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1))
   · cases h
   cases h; rfl
 
-theorem erAllocMem_arr (m : Mem) (k : Word) {b : ArrId} (hb : b ≠ CTL) :
+theorem erAllocMem_arr (m : Mem) (k : Word) {b : TieredArray} (hb : b ≠ ↑CTL) :
     (erAllocMem m k).arr64 b = m.arr64 b := Mem.arr64_set64_ne _ _ _ _ _ hb
 
-theorem wrER_arr (m : Mem) (q : Word) (ws : List Word) {b : ArrId} (h1 : b ≠ EREC) (h2 : b ≠ CTL) :
+theorem wrER_arr (m : Mem) (q : Word) (ws : List Word) {b : TieredArray} (h1 : b ≠ ↑EREC) (h2 : b ≠ ↑CTL) :
     (wrER m q ws).arr64 b = m.arr64 b := (wrER_frame ws m q).1 b (by simp [h1]) h2
 
 /-- The words `dlp_copy` writes. -/
@@ -483,8 +483,8 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   · rw [ite_eq_right hc] at h; cases h
   rw [ite_eq_left hc] at h
   obtain ⟨ht, hb⟩ := hc
-  have hra : rowArr w ≠ CTL := rowArr_ne _ (by decide)
-  have hre : rowArr w ≠ ECON := rowArr_ne _ (by decide)
+  have hra : (rowArr w : TieredArray) ≠ ↑CTL := TieredArray.t0_ne (rowArr_ne _ (by decide))
+  have hre : (rowArr w : TieredArray) ≠ ↑ECON := TieredArray.t0_ne (rowArr_ne _ (by decide))
   have hctl : (rowSet m w (vis + 1) q).arr64 CTL = m.arr64 CTL := rowSet_arr _ _ _ _ _ (Ne.symm hra)
   have hecon : (rowSet m w (vis + 1) q).arr64 ECON = m.arr64 ECON :=
     rowSet_arr _ _ _ _ _ (Ne.symm hre)

@@ -59,7 +59,7 @@ theorem NoAb.dite {α : Type} {c : Prop} [Decidable c] {x : c → M α} {y : ¬ 
 theorem NoAb.ld8 (a : ArrId) (j : Word) : NoAb (ld8 a j) := by
   intro s e h; rw [ld8_run] at h; split at h <;> cases h; rfl
 
-theorem NoAb.ld64 (a : ArrId) (j : Word) : NoAb (ld64 a j) := by
+theorem NoAb.ld64 (a : TieredArray) (j : Word) : NoAb (ld64 a j) := by
   intro s e h; rw [ld64_run] at h; split at h <;> cases h; rfl
 
 theorem NoAb.ldc (d : List UInt8) (j : Word) : NoAb (ldc d j) := by
@@ -71,7 +71,7 @@ theorem NoAb.ld8x8 (b : BSrc) (j : Word) : NoAb (ld8x8 b j) := by
 theorem NoAb.st8 (a : ArrId) (j v : Word) : NoAb (st8 a j v) := by
   intro s e h; rw [st8_run] at h; split at h <;> cases h; rfl
 
-theorem NoAb.st64 (a : ArrId) (j v : Word) : NoAb (st64 a j v) := by
+theorem NoAb.st64 (a : TieredArray) (j v : Word) : NoAb (st64 a j v) := by
   intro s e h; rw [st64_run] at h; split at h <;> cases h; rfl
 
 macro "noab" : tactic => `(tactic| repeat (first
@@ -111,7 +111,7 @@ theorem noAb_evalArgs : ∀ es : List Expr, NoAb (evalArgs es)
   | e :: es => by have := noAb_evalE e; have := noAb_evalArgs es; simp only [evalArgs]; noab
 
 theorem noAb_warr : ∀ w : WArr, NoAb (warr w)
-  | .plain a => NoAb.pure a
+  | .plain _ => NoAb.pure _
   | .tier a t => by have := noAb_evalE t; simp only [warr]; noab
 
 macro "noabS" : tactic => `(tactic| repeat (first
@@ -280,7 +280,7 @@ theorem step_simE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg 
     · obtain ⟨h3', hK⟩ := step_sim hP n (ksim hP n) h1 s a s2 h0 h3
       refine run_bind_error_of h3' ?_
       cases a with
-      | normal => exact ih2 ha.2 s2 e (hK.pos h0) h4 hc
+      | normal => exact ih2 ha.2 s2 e trivial h4 hc
       | brk => cases h4
       | ret v => cases h4
   | ite hcc h1 h2 ih1 ih2 =>
@@ -308,7 +308,7 @@ theorem step_simE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg 
       · obtain ⟨h5', hK⟩ := step_sim hP n (ksim hP n) hb s a s3 h0 h5
         refine run_bind_error_of h5' ?_
         cases a with
-        | normal => exact ihn _ _ (.while hcc hb) ha s3 e (hK.pos h0) h6 hc
+        | normal => exact ihn _ _ (.while hcc hb) ha s3 e trivial h6 hc
         | brk => cases h6
         | ret v => cases h6
   | callC xs hg ha =>

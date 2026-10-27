@@ -15,35 +15,35 @@ open L L.Arena L.Front L.Rom ConAgua.Final
 open ConRon.Arena ConRon.Arena.Frontend
 
 /-- **The relations the checker keeps between its stages.** -/
-def checkerRels (b pb : ByteArray) (s8 s64 : List Nat) : PipeRels b pb s8 s64 where
-  R1 := R1 (loadMem b pb s8 s64)
-  R2 m := R2 (loadMem b pb s8 s64) m pb
-  R3 m a := R3 (loadMem b pb s8 s64) m pb a
-  R4 m pre a := R4 (loadMem b pb s8 s64) m pb pre a
-  R5 m pre rc a := R5 (loadMem b pb s8 s64) m pb pre rc a
-  R6 m ds a := R6 (loadMem b pb s8 s64) m pb ds a
-  R7 m ds ipins a := R7 (loadMem b pb s8 s64) m pb ds ipins a
+def checkerRels (b pb : ByteArray) (sz : TieredArray → Nat) : PipeRels b pb sz where
+  R1 := R1 (loadMem b pb sz)
+  R2 m := R2 (loadMem b pb sz) m pb
+  R3 m a := R3 (loadMem b pb sz) m pb a
+  R4 m pre a := R4 (loadMem b pb sz) m pb pre a
+  R5 m pre rc a := R5 (loadMem b pb sz) m pb pre rc a
+  R6 m ds a := R6 (loadMem b pb sz) m pb ds a
+  R7 m ds ipins a := R7 (loadMem b pb sz) m pb ds ipins a
 
 theorem checker_capStage : CapStage checkerProg checkerRels :=
-  fun b pb s8 s64 h => capStage_checker b pb s8 s64 h.2.2.2
+  fun b pb sz h => capStage_checker b pb sz h.2.2.2
 
 theorem checker_pbStage : PbStage checkerProg checkerRels :=
-  fun b pb s8 s64 h => pbStage_checker b pb s8 s64 h.2.2.1
+  fun b pb sz h => pbStage_checker b pb sz h.2.2.1
 
 theorem checker_irpStage : IrpStage checkerProg checkerRels :=
-  fun b pb s8 s64 h => irpStage_checker b pb s8 s64 h.2.2.1
+  fun b pb sz h => irpStage_checker b pb sz h.2.2.1
 
 theorem checker_preludeStage : PreludeStage checkerProg checkerRels :=
-  fun b pb s8 s64 a h => preludeStage_checker h.1 b pb s8 s64 a
+  fun b pb sz a h => preludeStage_checker h.1 b pb sz a
 
 theorem checker_frontStage : FrontStage checkerProg checkerRels :=
-  fun b pb s8 s64 pre a h => frontStage_checker h.1 b pb h.2.1 s8 s64 pre a
+  fun b pb sz pre a h => frontStage_checker h.1 b pb h.2.1 sz pre a
 
 theorem checker_prepareStage : PrepareStage checkerProg checkerRels :=
-  fun b pb s8 s64 pre rc a _ => prepareStage_checker b pb s8 s64 pre rc a
+  fun b pb sz pre rc a _ => prepareStage_checker b pb sz pre rc a
 
 theorem checker_pinsStage : PinsStage checkerProg checkerRels :=
-  fun b pb s8 s64 sA pre sB rc sC ds a h hpx =>
-    pinsStage_checker b pb s8 s64 h.2.2.1 sA pre sB rc sC ds a hpx
+  fun b pb sz sA pre sB rc sC ds a h hpx =>
+    pinsStage_checker b pb sz h.2.2.1 sA pre sB rc sC ds a hpx
 
 end L.Checker

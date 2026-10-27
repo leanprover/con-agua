@@ -23,8 +23,8 @@ namespace L.Arena
 open L.Ind
 
 /-- **`CrOK` across a writer outside `CRM` and `CTL[158]`.** -/
-theorem CrOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : L.Stubs.CrOK m)
-    (hf : MemFrame A C m m') (hA : L.Stubs.CRM ∉ A) (hC : (158 : Word) ∉ C) : L.Stubs.CrOK m' :=
+theorem CrOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : L.Stubs.CrOK m)
+    (hf : MemFrame A C m m') (hA : (L.Stubs.CRM : TieredArray) ∉ A) (hC : (158 : Word) ∉ C) : L.Stubs.CrOK m' :=
   let ⟨mp, hm⟩ := h
   ⟨mp, memoRV_frame (S := L.Stubs.crSch) (hS := L.Stubs.crSch_wf) (K := bmKey) (VR := L.Stubs.CrV)
     A C hA hC m m' hf (fun _ _ h => h) mp hm⟩
@@ -39,7 +39,7 @@ theorem crOK_wframe : WFrame CTL imA imC (fun m₀ m => L.Stubs.CrOK m₀ → L.
     · exact CrOK.frame (h h0) (MemFrame.setCtl m i v) (by simp)
         (fun hx => by simp at hx; subst hx; exact (imC_spec _ hi).2.1 rfl)
   setG _ _ _ _ h h0 := CrOK.frame (h h0) (A := []) (C := [])
-    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩ (by simp) (by simp)
+    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩ (by simp) (by simp)
 
 /-- Every call of a leaf of `imFns` keeps `CrOK`. -/
 theorem crOK_leaf {p : Prog} (hp : L.Ind.CrfF p) :

@@ -38,7 +38,7 @@ theorem IOnly.ifr {B : Nat} {m m' : Mem} (h : IOnly B m m') : m'.arr64 IFR = m.a
   h.1.1 IFR (by decide) (by decide)
 
 theorem IOnly.other {B : Nat} {m m' : Mem} (h : IOnly B m m') (A : ArrId) (h1 : A ≠ IFL) (h2 : A ≠ CTL) :
-    m'.arr64 A = m.arr64 A := h.1.1 A (by simp [h1]) h2
+    m'.arr64 A = m.arr64 A := h.1.1 A (by simp [h1]) (TieredArray.t0_ne h2)
 
 theorem IOnly.arena {B : Nat} {m m' : Mem} {a : AState} (h : IOnly B m m') (hR : ArenaR m a) :
     ArenaR m' a :=

@@ -140,7 +140,7 @@ def constProg : Prog :=
 /-- A memory with 8 `const` nodes and `SN0` slots per tier, the scratch tier closed or open.
 The other tables' arrays are unused here and left empty. -/
 def constMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+  Mem.ofWords <| [((CTL : TieredArray), (#[0, scratch] ++ Array.replicate 62 0))] ++
     withTiers [(CREC, Array.replicate consTestWords 0),
       (CSLOT, Array.replicate consTestWords 0),
       (CLP, Array.replicate consTestWords 0)]
@@ -208,8 +208,6 @@ theorem constOK : ConsOK p constCS where
     simp [constCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [constCS, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [constCS] at h
   mloc := fun h => by simp [constCS] at h
   exnk := fun _ => by decide

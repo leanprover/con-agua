@@ -40,14 +40,14 @@ and the scanner's `safety` converse (`SafeLink`). -/
 theorem frontStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.ValidateClaim frontAllProg X)
     (hXT : XOfTwin X)
     (hSL : System.Platform.numBits = 64 → ∀ b : ByteArray, b.size < 2 ^ 63 → SafeLink b) :
-    ∀ b pb s8 s64, InputsOK b pb s64 →
-      StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb s8 s64)) (TwinVerdict [b]) := by
-  intro b pb s8 s64 hin n _hn s₀
+    ∀ b pb sz, InputsOK b pb sz →
+      StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb sz)) (TwinVerdict [b]) := by
+  intro b pb sz hin n _hn s₀
   refine M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr hQ hk => ?_
   subst hs
   obtain ⟨sA, pre, sB, hA, hB, h4⟩ := hQ
-  have h4 : R4 (loadMem b pb s8 s64) s.mem pb pre sB := h4
-  have hm : s.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb s8 s64
+  have h4 : R4 (loadMem b pb sz) s.mem pb pre sB := h4
+  have hm : s.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb sz
   have hc := callE_of_run_err hr
   rw [← callE_frontAll (by decide) n [] s.mem] at hc
   have hE := triple_of_callE_err (frontRun_specE frontAllProg rfl n ⟨s.mem, Locals.init []⟩) hc
@@ -86,15 +86,15 @@ the prelude's bytes (`preFrontRun_errSim`), so the twin's `parseBytes preludeTex
 theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.ValidateClaim frontAllProg X)
     (hXT : XOfTwin X)
     (hSL : System.Platform.numBits = 64 → ∀ b : ByteArray, b.size < 2 ^ 63 → SafeLink b) :
-    ∀ b pb s8 s64, InputsOK b pb s64 →
-      StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb s8 s64)) (TwinVerdict [b]) := by
-  intro b pb s8 s64 hin n _hn s₀
+    ∀ b pb sz, InputsOK b pb sz →
+      StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb sz)) (TwinVerdict [b]) := by
+  intro b pb sz hin n _hn s₀
   refine M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr hQ hk => ?_
   subst hs
   obtain ⟨sA, hA, h3⟩ := hQ
-  have h3 : R3 (loadMem b pb s8 s64) s.mem pb sA := h3
+  have h3 : R3 (loadMem b pb sz) s.mem pb sA := h3
   have hcap := CapsOK.keep h3.since.keep h3.since.caps
-  have h0 : s.mem.HasB IN := bytes_pos h3.since (loadMem_bytes b pb s8 s64)
+  have h0 : s.mem.HasB IN := trivial
   have hpool : (s.mem.arr64 POOL).size < 2 ^ 63 := by have := hcap.pool; omega
   have hc := callE_of_run_err hr
   have hE := triple_of_callE_err (builtinPrelude_specE checkerProg checkerProg_builtin n
@@ -130,7 +130,7 @@ theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.Validat
   have hD0 : StateDR (s.mem.setIn preIn) (StateD.blank.pre #[]) := by
     rw [blank_pre_empty]; exact h3.sdr.frame (setIn_frame _ _) (by simp) (by simp)
   exact frontRunE_claim #[] preludeText hin.1 preludeText_size hV (hXT #[]) (hSL hin.1 _ preludeText_size) n
-    (s.mem.setIn preIn) sA (by rw [setIn_arr8_zero _ _ h0, preIn_eq])
+    (s.mem.setIn preIn) sA (by rw [Mem.arr8_setIn_zero, preIn_eq])
     (L.Rom.ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) h3.arena) hD0 h3.twin.ok h3.twin.off
     h3.twin.pins (fun x hx => absurd hx (by simp))
     (ModeOK.frame h3.mode (setIn_frame _ _) (by simp) (by simp)) e hE' hk
@@ -138,14 +138,14 @@ theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.Validat
 /-! ## The two stages, discharged -/
 
 /-- **`Entry1StagesE.prelude`'s statement.** -/
-theorem checker_preludeStageE : ∀ b pb s8 s64, InputsOK b pb s64 →
-    StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb s8 s64)) (TwinVerdict [b]) :=
+theorem checker_preludeStageE : ∀ b pb sz, InputsOK b pb sz →
+    StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb sz)) (TwinVerdict [b]) :=
   preludeStageE L.Front.Ind.validateClaim_frontAll L.Front.Ind.xOfTwin
     (fun h64 b hs => L.Front.safeLink h64 b hs)
 
 /-- **`Entry1StagesE.front`'s statement.** -/
-theorem checker_frontStageE : ∀ b pb s8 s64, InputsOK b pb s64 →
-    StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb s8 s64)) (TwinVerdict [b]) :=
+theorem checker_frontStageE : ∀ b pb sz, InputsOK b pb sz →
+    StageSpecE checkerProg "front_run" [] (Q4 b (checkerRels b pb sz)) (TwinVerdict [b]) :=
   frontStageE L.Front.Ind.validateClaim_frontAll L.Front.Ind.xOfTwin
     (fun h64 b hs => L.Front.safeLink h64 b hs)
 

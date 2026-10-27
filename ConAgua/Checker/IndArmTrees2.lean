@@ -14,14 +14,15 @@ open L.Arena L.Ind L.Compiler
 /-- `cidFree`: `cidFrameCallees`, `check_basis_decl`. -/
 names_tree armCidTree : armCidFns
 def armCidT : ArmTest :=
-  (tA fun b => decide ((b < 201 ∨ 208 < b) ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155 ∧
-    b ≠ PINS ∧ b ≠ 151 ∧ b ≠ 152 ∧ b ≠ 153 ∧ b ≠ 52 ∧ b ≠ 53 ∧ b ≠ 54),
+  (tA fun b => decide ((b.arr < 201 ∨ 208 < b.arr) ∧
+    b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ b ≠ PINS ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM ∧
+    b ≠ LPMEMO ∧ b ≠ LPLMEMO ∧ b ≠ LPLSMEMO),
   tC fun c => decide ((c < 202 ∨ 219 < c) ∧ c ≠ 48 ∧ c ≠ 50 ∧ c ≠ 52 ∧ c ≠ 158 ∧
     c ≠ 152 ∧ c ≠ 154 ∧ c ≠ 156 ∧ c ≠ 54 ∧ c ≠ 56 ∧ c ≠ 58), armCidTree)
 
 /-- `rcHbFree`: `check_block_tables`. -/
 names_tree armRcHbTree : armRcHbFns
-def armRcHbT : ArmTest := (tA fun b => decide (b ∉ [NOM, DPM, RAM, RFM, TAM]),
+def armRcHbT : ArmTest := (tA fun b => decide (b ∉ ([NOM, DPM, RAM, RFM, TAM] : List TieredArray)),
   tC fun c => decide (c ∉ [204, 206, 208, 210, 212, 213, 218, 219]), armRcHbTree)
 
 /-- `maFree`: `check_block_pass`, `check_block_tail`. -/
@@ -34,8 +35,8 @@ def armMcT : ArmTest := (tA fun b => decide (b ≠ MCM), tC fun c => decide (c �
 
 /-! The walk memos: the `AbsKeep` callees that reach no walk -/
 
-/-- The arrays below 256 apart from the walk memos'. -/
-def armAbsA : List ArrId := (List.range 388).filter fun b => memoFreeA [b]
+/-- The checker's word arrays apart from the walk memos'. -/
+def armAbsA : List TieredArray := checkerWordArrays.filter fun b => memoFreeA [b]
 
 /-- The `CTL` words below 256 apart from the walk memos' epoch words. -/
 def armAbsC : List Word := ((List.range 256).filter fun c => memoFreeC [c.toUInt64]).map Nat.toUInt64

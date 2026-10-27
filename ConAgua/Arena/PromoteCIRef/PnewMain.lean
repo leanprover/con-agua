@@ -77,36 +77,17 @@ theorem arenaD_rows {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP
     DerR.frameM _ _ m _ hf (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) a hD.2⟩,
     hP.frame (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) (by simp) hf⟩
 
-theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs,
-    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
-      (146 ≤ b ∧ b ≤ 149) ∨ Tier1In 0 50 b ∨ Tier1In 55 64 b := by
-  intro b hb
-  simp only [List.mem_cons] at hb
-  rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | hb
-  · right; left; left; simp [EIXA]
-  · right; left; left; simp [EIXS]
-  · right; left; left; simp [EIXN]
-  · right; left; right; simp [EIXA1]
-  · right; left; right; simp [EIXS1]
-  · right; left; right; simp [EIXN1]
-  · right; left; left; simp [ECON]
-  · rcases vg_arrs b (List.mem_cons.mpr hb) with h | h | h
-    · exact .inl h
-    · right; left; left; subst h; exact ⟨by decide, by decide⟩
-    · exact .inr (.inr h)
+theorem pnew_arrs : ∀ b ∈ ((EIXA : TieredArray) :: (EIXS : TieredArray) :: (EIXN : TieredArray) ::
+    (EIXA1 : TieredArray) :: (EIXS1 : TieredArray) :: (EIXN1 : TieredArray) :: (ECON : TieredArray) ::
+    (EREC : TieredArray) :: eArrs),
+    (b.arr < 50 ∨ (54 < b.arr ∧ b.arr < 64)) ∨
+      ((132 ≤ b.arr ∧ b.arr ≤ 136) ∨ (140 ≤ b.arr ∧ b.arr ≤ 142)) ∨ (146 ≤ b.arr ∧ b.arr ≤ 149) := by
+  decide
 
-theorem pnew_arrs' : ∀ b ∈ ECON :: EREC :: eArrs,
-    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 135 ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) ∨
-      Tier1In 0 50 b ∨ Tier1In 55 64 b := by
-  intro b hb
-  simp only [List.mem_cons] at hb
-  rcases hb with rfl | rfl | hb
-  · right; left; simp [ECON]
-  · right; right; left; simp [EREC]
-  · rcases vg_arrs b (List.mem_cons.mpr (Or.inr hb)) with h | h | h
-    · exact .inl h
-    · exact .inr (.inr (.inl h))
-    · exact .inr (.inr (.inr h))
+theorem pnew_arrs' : ∀ b ∈ (ECON : TieredArray) :: (EREC : TieredArray) :: eArrs,
+    (b.arr < 50 ∨ (54 < b.arr ∧ b.arr < 64)) ∨ b.arr = 135 ∨ b.arr = 136 ∨
+      (146 ≤ b.arr ∧ b.arr ≤ 149) := by
+  decide
 
 section rel
 variable (p : Prog) (hp : PromoteProg p)
@@ -203,9 +184,9 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
     rw [hfr₃.2.1 128 (by decide), h128₂]
   have hEC₃rows : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 135 ∨ 140 ≤ b) → m₃.arr64 b = m₂.arr64 b := by
     intro b h1 h2 h3
-    apply hfr₃.1 b _ (fun h => by rw [h] at h1; simp [CTL] at h1)
+    apply hfr₃.1 b _ (fun h => by rw [TieredArray.t0_inj] at h; rw [h] at h1; simp [CTL] at h1)
     intro hb
-    rcases pnew_arrs' b hb with h | h | h | h <;> (simp only [ArrId] at h; omega)
+    have := pnew_arrs' _ hb; simp only at this; omega
   -- the constants after the promotion
   have hBdec : cdec dn (erecP m₃) (m₃.arr64 ECON) (n0.toNat - c.toNat) = some B := by
     refine cdec_mono hg₁₃.ext (n0.toNat - c.toNat) B (fun i hi => ?_) hB
@@ -234,14 +215,14 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
       simp only [tblCnt]; rw [hfr₃.2.1 133 (fun h => by have := pnew_ctl _ h; simp at this)]
     rw [hc133]
     exact tdec_mono hg₂₃.ext _ _ (fun i _ => by
-      rw [hfr₃.1 ETAB (fun h => by rcases pnew_arrs' _ h with h | h | h | h <;> (simp only [ArrId, ETAB] at h; omega))
+      rw [hfr₃.1 ETAB (fun h => absurd (pnew_arrs' _ h) (by decide))
         (by decide)]) h0
   have hE₃ : EnvR dn m₃ vis ⟨⟨Lc' ++ B, tables⟩, eraseInstalled idx Lc, vis.toNat, tbls⟩ :=
     (show EnvR dn m₂ vis ⟨⟨consts, tables⟩, eraseInstalled idx Lc, vis.toNat, tbls⟩ from hE₂).promoted
       hEC₃rows (fun w hw => hfr₃.1 _ (fun h => by
-        have := tblArr_cases w hw
-        rcases pnew_arrs' _ h with h' | h' | h' | h' <;> (simp only [ArrId] at h' this; omega))
-        (by rcases tblArr_cases w hw with h | h | h | h | h | h <;> rw [h] <;> decide))
+        have h' := pnew_arrs' _ h; rw [tblArr_arr] at h'
+        rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] at h' <;> revert h' <;> decide)
+        (tblArr_ne_t0 w (by decide) (by decide) (by decide)))
       hg₂₃ (Lc' ++ B) tables hEnv₃c hTab₃
   have hsz₃ : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg₂₃.2.2]; exact hsz₂
   -- index
@@ -263,11 +244,11 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hT₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [hfr₄.2.1 129 (by simp)]
   have hg₁₄ : ErecGrow m₁ m₄ := hg₁₃.trans (ErecGrow.of_eq hEE₄ hT₄)
   have hts₄ : erecTop m₄ ≤ (m₄.arr64 EREC).size := by rw [hEE₄, hT₄]; exact hts₃
-  have hrowsub : ∀ b ∈ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1], b ∈ EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs := by
+  have hrowsub : ∀ b ∈ ([EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] : List TieredArray), b ∈ (EIXA : TieredArray) :: (EIXS : TieredArray) :: (EIXN : TieredArray) :: (EIXA1 : TieredArray) :: (EIXS1 : TieredArray) :: (EIXN1 : TieredArray) :: (ECON : TieredArray) :: (EREC : TieredArray) :: eArrs := by
     intro b hb
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> simp
-  have hfA : MemFrame (EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs) (129 :: eCtl) m₁ m₄ :=
+  have hfA : MemFrame ((EIXA : TieredArray) :: (EIXS : TieredArray) :: (EIXN : TieredArray) :: (EIXA1 : TieredArray) :: (EIXS1 : TieredArray) :: (EIXN1 : TieredArray) :: (ECON : TieredArray) :: (EREC : TieredArray) :: eArrs) (129 :: eCtl) m₁ m₄ :=
     ((hfr₂.mono hrowsub (by simp)).trans
       (hfr₃.mono (fun b hb => List.mem_cons_of_mem _ (List.mem_cons_of_mem _
         (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _

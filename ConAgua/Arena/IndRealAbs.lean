@@ -36,38 +36,37 @@ open L.Arena
 
 /-- A list of arrays apart from the walk memos' (49, 50, 51, 155; the core's 151‥153, 52‥54) and
 the pins. -/
-def memoFreeA (A : List ArrId) : Bool := A.all fun b => b != 49 && b != 50 && b != 51 && b != 155 &&
-  b != PINS && b != 151 && b != 152 && b != 153 && b != 52 && b != 53 && b != 54
+def memoFreeA (A : List TieredArray) : Bool := A.all fun b => b != ↑ABMEMO && b != ↑ILMEMO && b != ↑ILFM && b != ↑Stubs.CRM &&
+  b != PINS && b != ↑WSM && b != ↑FLM && b != ↑LSM && b != ↑LPMEMO && b != ↑LPLMEMO && b != ↑LPLSMEMO
 
 /-- A list of `CTL` words apart from the walk memos' epoch words (48, 50, 52, 158; the core's 152,
 154, 156, 54, 56, 58). -/
 def memoFreeC (C : List Word) : Bool := C.all fun x => x != 48 && x != 50 && x != 52 && x != 158 &&
   x != 152 && x != 154 && x != 156 && x != 54 && x != 56 && x != 58
 
-theorem AbMemo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : AbMemo m)
-    (hf : MemFrame A C m m') (hA : (49 : ArrId) ∉ A) (hC : (48 : Word) ∉ C) : AbMemo m' :=
+theorem AbMemo.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : AbMemo m)
+    (hf : MemFrame A C m m') (hA : (ABMEMO : TieredArray) ∉ A) (hC : (48 : Word) ∉ C) : AbMemo m' :=
   let ⟨mp, hm⟩ := h; ⟨mp, memoRG_frame _ ⟨by decide, by decide⟩ lfKey decE A C hA hC m m' hf mp hm⟩
 
-theorem I1Memo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : I1Memo m)
-    (hf : MemFrame A C m m') (hA : (51 : ArrId) ∉ A) (hC : (52 : Word) ∉ C) : I1Memo m' :=
+theorem I1Memo.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : I1Memo m)
+    (hf : MemFrame A C m m') (hA : (ILFM : TieredArray) ∉ A) (hC : (52 : Word) ∉ C) : I1Memo m' :=
   let ⟨mp, hm⟩ := h; ⟨mp, memoRG_frame _ ⟨by decide, by decide⟩ lfKey decE A C hA hC m m' hf mp hm⟩
 
-theorem CrMemo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : CrMemo m)
-    (hf : MemFrame A C m m') (hA : (155 : ArrId) ∉ A) (hC : (158 : Word) ∉ C) : CrMemo m' :=
+theorem CrMemo.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : CrMemo m)
+    (hf : MemFrame A C m m') (hA : (Stubs.CRM : TieredArray) ∉ A) (hC : (158 : Word) ∉ C) : CrMemo m' :=
   let ⟨mp, hm⟩ := h
   ⟨mp, memoRV_frame _ ⟨by decide, by decide⟩ bmKey _ A C hA hC m m' hf (fun _ _ h => h) mp hm⟩
 
-theorem IlMemo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : IlMemo m)
-    (hf : MemFrame A C m m') (hA : (50 : ArrId) ∉ A) (hC : (50 : Word) ∉ C) : IlMemo m' :=
+theorem IlMemo.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : IlMemo m)
+    (hf : MemFrame A C m m') (hA : (ILMEMO : TieredArray) ∉ A) (hC : (50 : Word) ∉ C) : IlMemo m' :=
   let ⟨mp, hm⟩ := h; ⟨mp, memoRG_frame _ ⟨by decide, by decide⟩ lfKey decE A C hA hC m m' hf mp hm⟩
 
 /-- `memoFreeA`, unfolded. -/
-theorem memoFreeA_iff {A : List ArrId} (hA : memoFreeA A = true) :
-    (49 : ArrId) ∉ A ∧ (50 : ArrId) ∉ A ∧ (51 : ArrId) ∉ A ∧ (155 : ArrId) ∉ A ∧ PINS ∉ A ∧
-      ((151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A) ∧
-      ((52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A) := by
-  have h : ∀ b ∈ A, b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155 ∧ b ≠ PINS ∧ b ≠ 151 ∧ b ≠ 152 ∧ b ≠ 153 ∧
-      b ≠ 52 ∧ b ≠ 53 ∧ b ≠ 54 := fun b hb => by
+theorem memoFreeA_iff {A : List TieredArray} (hA : memoFreeA A = true) :
+    (ABMEMO : TieredArray) ∉ A ∧ (ILMEMO : TieredArray) ∉ A ∧ (ILFM : TieredArray) ∉ A ∧ (Stubs.CRM : TieredArray) ∉ A ∧ (PINS : TieredArray) ∉ A ∧
+      ((WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A) ∧
+      ((LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A) := by
+  have h : ∀ b ∈ A, b ≠ ↑ABMEMO ∧ b ≠ ↑ILMEMO ∧ b ≠ ↑ILFM ∧ b ≠ ↑Stubs.CRM ∧ b ≠ ↑PINS ∧ b ≠ ↑WSM ∧ b ≠ ↑FLM ∧ b ≠ ↑LSM ∧ b ≠ ↑LPMEMO ∧ b ≠ ↑LPLMEMO ∧ b ≠ ↑LPLSMEMO := fun b hb => by
     have := List.all_eq_true.mp hA b hb; simp only [Bool.and_eq_true, bne_iff_ne, ne_eq] at this
     obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩ := this
     exact ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11⟩
@@ -96,17 +95,17 @@ theorem memoFreeC_iff {C : List Word} (hC : memoFreeC C = true) :
       fun hm => (h _ hm).2.2.2.2.2.2.2.2.2 rfl⟩⟩
 
 /-- **`WkOK` across a writer apart from the pins and the core's walk memos.** -/
-theorem WkOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : WkOK m)
-    (hf : MemFrame A C m m') (hP : PINS ∉ A)
-    (hW : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
-    (hL : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A)
+theorem WkOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : WkOK m)
+    (hf : MemFrame A C m m') (hP : (PINS : TieredArray) ∉ A)
+    (hW : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A)
+    (hL : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) : WkOK m' :=
   ⟨h.1.frame hf hW hWC hL hLC, by rw [hf.2.2.1]; exact h.2.1, by rw [hf.2.2.1]; exact h.2.2.1,
     by rw [hf.2.2.1]; exact h.2.2.2.1, by simp only [pinW, hf.1 PINS hP (by decide)]; exact h.2.2.2.2⟩
 
 /-- **`AbsOK` across a writer apart from the walk memos' arrays and epoch words.** -/
-theorem AbsOK.frameD {A : List ArrId} {C : List Word} {m m' : Mem} (h : AbsOK m)
+theorem AbsOK.frameD {A : List TieredArray} {C : List Word} {m m' : Mem} (h : AbsOK m)
     (hf : MemFrame A C m m') (hA : memoFreeA A = true) (hC : memoFreeC C = true) : AbsOK m' :=
   let ⟨a1, a2, a3, a4, a5, a6, a7⟩ := memoFreeA_iff hA
   let ⟨c1, c2, c3, c4, c5, c6⟩ := memoFreeC_iff hC
@@ -126,13 +125,13 @@ theorem AFr.refl (m : Mem) : AFr m m := id
 theorem AFr.trans {m₁ m₂ m₃ : Mem} (h₁ : AFr m₁ m₂) (h₂ : AFr m₂ m₃) : AFr m₁ m₃ := h₂ ∘ h₁
 
 /-- A writer apart from the walk memos' arrays and epoch words. -/
-theorem AFr.of_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem AFr.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : memoFreeA A = true := by decide)
     (hC : memoFreeC C = true := by decide) : AFr m m' :=
   fun h => h.frameD hf hA hC
 
 /-- A write of an array other than `CTL` and the walk memos'. -/
-theorem AFr.set64 (m : Mem) (a : ArrId) (ha : a ≠ CTL) (h49 : memoFreeA [a] = true) (k v : Word) :
+theorem AFr.set64 (m : Mem) (a : TieredArray) (ha : a ≠ CTL) (h49 : memoFreeA [a] = true) (k v : Word) :
     AFr m (m.set64 a k v) :=
   fun h => h.frameD (MemFrame.set64 m a ha k v) h49 rfl
 

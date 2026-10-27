@@ -51,7 +51,7 @@ def tables : List (String × Nat × (AState → Nat × Nat)) := [
   ("nnum", 38, fun a => (a.store.lss.ls.ns.pers.nums.size, a.store.lss.ls.ns.scr.nums.size)),
   ("ls", 40, fun a => (a.store.lss.pers.lists.size, a.store.lss.scr.lists.size))]
 
-def ctl (m : Mem) (i : Nat) : Nat := ((m.arr64 1).getD i 0).toNat
+def ctl (m : Mem) (i : Nat) : Nat := ((m.arr64 L.Arena.CTL).getD i 0).toNat
 
 /-- The tables whose counts differ: `name: L (t0, t1) vs twin (t0, t1)`. -/
 def storeDiff (m : Mem) (a : AState) : List String :=
@@ -142,7 +142,6 @@ def main (args : List String) : IO UInt32 := do
     | .ok pf => pure pf
     | .error e => throw (IO.userError e)
   let p0 : Prog := pf.fns.toList
-  let nw := (L.Compiler.Prog.arrs p0).2
   let p : Prog := p0 ++ pf.stubs.toList.map fun (f, np, _) =>
     (f, { nparams := np, nlocals := np, body := .call [] ("__missing_" ++ f) [] })
   let b ← IO.FS.readBinFile file
@@ -151,8 +150,13 @@ def main (args : List String) : IO UInt32 := do
   let (pb, pins) ← match ← IO.getEnv "CA_PINS" with
     | some f => pure (← IO.FS.readBinFile f, ConLeche.natOpPinSets.take 1)
     | none => pure (ByteArray.empty, [])
-  let m₀ := ConAgua.Final.loadMem b pb []
-    ((List.range (nw + 1)).map fun a => if 64 ≤ a && a ≤ 66 then idWords else words)
+  -- every word array `words` words, the id tables (tier 0 of arrays `64‥66`) `idWords`
+  -- (`loadMem … sz` with two shared zero arrays: the map's `Array.replicate` would be rebuilt at
+  -- every read of an array not yet written)
+  let zi : Array Word := Array.replicate idWords 0
+  let zw : Array Word := Array.replicate words 0
+  let m₀ : Mem := { ConAgua.Final.loadMem b pb (fun _ => 0) with
+    words := fun s => if !s.hi && 64 ≤ s.arr && s.arr ≤ 66 then zi else zw }
   let (m₁, front) := match L.run p fuel "e2e_front" [] m₀ with
     | .ok (rs, m) => (m, s!"ok {rs.headD 0}")
     | .error e => (m₀, s!"error {repr e}")

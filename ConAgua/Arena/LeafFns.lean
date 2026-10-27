@@ -16,8 +16,8 @@ what carries `StageC` across it.
 namespace L.Arena
 
 /-- The arrays a leaf may write (both tiers): all but the pin table and the core's memos. -/
-def leafA : List ArrId :=
-  (List.range 388).filter fun b => b ≠ PINS ∧ b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ LPMEMO ∧
+def leafA : List TieredArray :=
+  checkerWordArrays.filter fun b => b ≠ PINS ∧ b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ LPMEMO ∧
     b ≠ LPLMEMO ∧ b ≠ LPLSMEMO ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM
 
 /-- The `CTL` words a leaf may write: all but the core memos' stamps. -/
@@ -227,11 +227,14 @@ theorem loop_mem (f : FnName) (h : (loopTree.find (L.Compiler.nameCode f)).isSom
   have := L.Compiler.namesTree_spec loopTree.eq f
   rw [h] at this; exact of_decide_eq_true this.symm
 
-theorem leafA_pins : PINS ∉ leafA := by decide +kernel
-theorem leafA_memo : (50 : ArrId) ∉ leafA ∧ (49 : ArrId) ∉ leafA := by decide +kernel
-theorem leafA_walk : (151 : ArrId) ∉ leafA ∧ (152 : ArrId) ∉ leafA ∧ (153 : ArrId) ∉ leafA := by
+theorem leafA_pins : (PINS : TieredArray) ∉ leafA := by decide +kernel
+theorem leafA_memo : (ILMEMO : TieredArray) ∉ leafA ∧ (ABMEMO : TieredArray) ∉ leafA := by
   decide +kernel
-theorem leafA_lp : (52 : ArrId) ∉ leafA ∧ (53 : ArrId) ∉ leafA ∧ (54 : ArrId) ∉ leafA := by
+theorem leafA_walk : (WSM : TieredArray) ∉ leafA ∧ (FLM : TieredArray) ∉ leafA ∧
+    (LSM : TieredArray) ∉ leafA := by
+  decide +kernel
+theorem leafA_lp : (LPMEMO : TieredArray) ∉ leafA ∧ (LPLMEMO : TieredArray) ∉ leafA ∧
+    (LPLSMEMO : TieredArray) ∉ leafA := by
   decide +kernel
 theorem leafC_memo : (50 : Word) ∉ leafC ∧ (48 : Word) ∉ leafC := by decide +kernel
 theorem leafC_walk : (152 : Word) ∉ leafC ∧ (154 : Word) ∉ leafC ∧ (156 : Word) ∉ leafC := by

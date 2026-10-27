@@ -33,9 +33,9 @@ end model
 
 /-! ## The write set of `basis_pin_hit` and `block_parts` -/
 
-/-- The arrays they may write: all below 320 (both tiers) but the stage memos' (`201..208`) and `abstract1`'s
+/-- The arrays they may write: every word array of the checker but the stage memos' (`201..208`) and `abstract1`'s
 memo (`49`), and since lane `indstaget` the pins and the core's walk memos. -/
-def cidFreeA : List ArrId := (List.range 388).filter (fun b => (b < 201 ∨ 208 < b) ∧
+def cidFreeA : List TieredArray := checkerWordArrays.filter (fun b => (b.arr < 201 ∨ 208 < b.arr) ∧
   b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ b ≠ PINS ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM ∧
   b ≠ LPMEMO ∧ b ≠ LPLMEMO ∧ b ≠ LPLSMEMO)
 
@@ -53,7 +53,7 @@ theorem CidMemos.frame {m m' : Mem} (h : CidMemos m) (hf : MemFrame cidFreeA cid
     CidMemos m' := by
   have hM : MFr [] [] m m' := MFr.of_frame hf
     (fun b hb => by
-      simp only [cidFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
+      simp only [cidFreeA, List.mem_filter, decide_eq_true_eq] at hb
       exact hb.2.1)
     (fun x hx => by
       simp only [cidFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx

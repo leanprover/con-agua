@@ -221,7 +221,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     have hf : MemFrame [DLP, DECL] [] m m' :=
       (hfr4.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))
     have hfr : ∀ B, B ≠ DLP → B ≠ DECL → B ≠ CTL → m'.arr64 B = m.arr64 B :=
-      fun B h1 h2 h3 => hf.1 B (by simp [h1, h2]) h3
+      fun B h1 h2 h3 => hf.1 B (by simp [h1, h2]) (TieredArray.t0_ne h3)
     have hcn' : (rdW (m.arr64 DECL) 0).toNat = st.decls.size := hD.decls.count
     have hm'P : m'.arr64 DLP = m₄.arr64 DLP := G1.1 DLP (by simp) (by decide)
     have hc1 : (rdW (m.arr64 DECL) 0 + 1).toNat = (rdW (m.arr64 DECL) 0).toNat + 1 := by

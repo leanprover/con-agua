@@ -82,7 +82,7 @@ theorem nameCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nameCopyW n m
     s.toNat + l.toNat ≤ d.toNat → d.toNat + l.toNat ≤ (m.arr64 IW).size →
     (m.arr64 IW).size < 2 ^ 64 →
     (∀ j < l.toNat, (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))).toNat < d.toNat) →
-    (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
+    (∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
     m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat
@@ -313,7 +313,7 @@ theorem IWRoom.trans {m₁ m₂ m₃ : Mem} (h₁ : IWRoom m₁ m₂) (h₂ : IW
   fun h => h₂ (h₁ h)
 
 /-- An allocation ending at the new top, within the old pool, the size kept. -/
-theorem IWRoom.of_alloc {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem IWRoom.of_alloc {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     {t : Nat} (ht : t = iwTop m') (hroom : t ≤ (m.arr64 IW).size) : IWRoom m m' :=
   fun _ => by rw [hf.2.2.1 IW, ← ht]; exact hroom
 

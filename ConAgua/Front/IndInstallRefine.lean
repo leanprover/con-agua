@@ -37,7 +37,7 @@ theorem PExt.trans {m₁ m₂ m₃ : Mem} (h₁ : PExt m₁ m₂) (h₂ : PExt m
     fun i h1 h2 => (h₂.keep i h1 (Nat.le_trans h2 h₁.top)).trans (h₁.keep i h1 h2)⟩
 
 theorem PExt.other {m m' : Mem} (h : PExt m m') (A : ArrId) (h1 : A ≠ DLP) (h2 : A ≠ CTL) :
-    m'.arr64 A = m.arr64 A := h.frame.1 A (by simp [h1]) h2
+    m'.arr64 A = m.arr64 A := h.frame.1 A (by simp [h1]) (TieredArray.t0_ne h2)
 
 theorem PExt.size {m m' : Mem} (h : PExt m m') (A : ArrId) : (m'.arr64 A).size = (m.arr64 A).size :=
   h.frame.2.2.1 A

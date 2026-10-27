@@ -439,8 +439,8 @@ theorem IWGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : IWGrow m₁ m₂) (h₂ : IW
 theorem IWGrow.set_iw {m m' : Mem} (h : IWGrow m m') (k v : Word) (hk : iwTop m ≤ k.toNat) :
     IWGrow m (m'.set64 IW k v) := by
   refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
-  · simp only [iwTop, rdW_set64]; simp [show (CTL : ArrId) ≠ IW by decide]; exact h.1
-  · simp only [erTop, rdW_set64]; simp [show (CTL : ArrId) ≠ IW by decide]; exact h.2.1
+  · simp only [iwTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.1
+  · simp only [erTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.2.1
   · rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     have : ¬ (k.toNat = i) := by omega
     simp only [this, ite_false]; exact h.2.2.1 i hi
@@ -650,7 +650,7 @@ open L.Arena
 relation**, given its `ArenaD` after and the twin keeping caches and pins; the pool is
 untouched, so it only grew. -/
 theorem StageR.of_walkM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {m m' : Mem} {a a' : AState} {A : List ArrId} {C : List Word}
+    {m m' : Mem} {a a' : AState} {A : List TieredArray} {C : List Word}
     (hS : StageR dn vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (hmode : ModeOK m') :
@@ -671,7 +671,7 @@ theorem StageR.of_walkM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
 
 /-- `StageR.of_walkM` for a walk that keeps `CTL[0]` and `CTL[1]`. -/
 theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {m m' : Mem} {a a' : AState} {A : List ArrId} {C : List Word}
+    {m m' : Mem} {a a' : AState} {A : List TieredArray} {C : List Word}
     (hS : StageR dn vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :

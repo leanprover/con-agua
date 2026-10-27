@@ -105,7 +105,7 @@ def PListRel (p : Prog) (gl : FnName) {k : IdxKind}
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
       (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) eCtl m m' ∧ TierKeep m m'
+      MemFrame ((EREC : TieredArray) :: eArrs) eCtl m m' ∧ TierKeep m m'
 
 section lists
 variable (p : Prog) (hp : PromoteProg p)
@@ -214,11 +214,11 @@ theorem nlist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
       (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) eCtl m m' ∧ TierKeep m m' :=
+      MemFrame ((EREC : TieredArray) :: eArrs) eCtl m m' ∧ TierKeep m m' :=
   list_gen p "promote_n" "promote_n_list" promoteN promoteNList promoteNList_nil promoteNList_cons (promoteNList_spec p hp) fun n m a pm f u r m' hD hP hc => by
     obtain ⟨a', pm', h1, h2, h3, h4, h5, h6, -, -, -⟩ := (pn_rel p hp n).1 m a pm f _ r m' hD hP (word_lt u) hc
     rw [decI_word] at h1
-    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by simp) (by simp), TierKeep.of_frame h6 (by decide)⟩
+    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by decide) (by simp), TierKeep.of_frame h6 (by decide)⟩
 
 /-- **`promote_l_list` refines `promoteLList`** over the slice `(o, l)` that `hslice?` decodes, the results
 written at `[q, q + l)` above it. -/
@@ -231,11 +231,11 @@ theorem llist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
       (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) eCtl m m' ∧ TierKeep m m' :=
+      MemFrame ((EREC : TieredArray) :: eArrs) eCtl m m' ∧ TierKeep m m' :=
   list_gen p "promote_l" "promote_l_list" promoteL promoteLList promoteLList_nil promoteLList_cons (promoteLList_spec p hp) fun n m a pm f u r m' hD hP hc => by
     obtain ⟨a', pm', h1, h2, h3, h4, h5, h6, -, -⟩ := (pl_rel p hp n).1 m a pm f _ r m' hD hP (word_lt u) hc
     rw [decI_word] at h1
-    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by simp) (by simp), TierKeep.of_frame h6 (by decide)⟩
+    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by decide) (by simp), TierKeep.of_frame h6 (by decide)⟩
 
 /-- **`promote_e_list` refines `promoteEList`** over the slice `(o, l)` that `hslice?` decodes, the results
 written at `[q, q + l)` above it. -/
@@ -248,7 +248,7 @@ theorem elist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
       (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) eCtl m m' ∧ TierKeep m m' :=
+      MemFrame ((EREC : TieredArray) :: eArrs) eCtl m m' ∧ TierKeep m m' :=
   list_gen p "promote_e" "promote_e_list" promoteE promoteEList promoteEList_nil promoteEList_cons (promoteEList_spec p hp) fun n m a pm f u r m' hD hP hc => by
     obtain ⟨a', pm', h1, h2, h3, h4, h5, h6, h7⟩ := (pe_rel p hp n).1 m a pm f _ r m' hD hP (word_lt u) hc
     rw [decE_word] at h1
@@ -278,7 +278,7 @@ theorem slice_gen {k : IdxKind} (kw : Word) (gl : FnName)
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' := by
+      MemFrame ((EREC : TieredArray) :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -336,7 +336,7 @@ theorem sliceN_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' :=
+      MemFrame ((EREC : TieredArray) :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' :=
   slice_gen p hp 0 "promote_n_list" promoteNList (fun _ _ _ _ _ _ => by simp [sliceK]) (nlist_rel p hp) n m a pm f o l us r m'
     hD hP hsl hot hsz hc
 
@@ -353,7 +353,7 @@ theorem sliceL_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' :=
+      MemFrame ((EREC : TieredArray) :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' :=
   slice_gen p hp 1 "promote_l_list" promoteLList (fun _ _ _ _ _ _ => by simp [sliceK]) (llist_rel p hp) n m a pm f o l us r m'
     hD hP hsl hot hsz hc
 
@@ -370,7 +370,7 @@ theorem sliceE_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' :=
+      MemFrame ((EREC : TieredArray) :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' :=
   slice_gen p hp 2 "promote_e_list" promoteEList (fun _ _ _ _ _ _ => by simp [sliceK]) (elist_rel p hp) n m a pm f o l us r m'
     hD hP hsl hot hsz hc
 
@@ -427,7 +427,7 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
     (hc : callW p n "promote_cv" [f, s] m = some (r, m')) :
     ∃ a' pm' cv', (promoteCV pm f.toNat cv).run a = .ok ((pm', cv'), a') ∧ ArenaD m' a' ∧
       PMemoR m' pm' ∧ CVWords m' r cv' ∧ ErecGrow m m' ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧
-      cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' := by
+      cp a' = cp a ∧ MemFrame ((EREC : TieredArray) :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -508,7 +508,7 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
   · refine ⟨by rw [ht₃, ht₂, ht₁]; omega, fun i hi => ?_, by rw [hE₃, hsz₂, hE₁]⟩
     rw [hE₃, hag₂ i (by rw [ht₁]; exact hi), hE₁]
   · rw [ht₃, hE₃]; exact hts₂
-  · exact ((hfr₁.mono (by simp) (by simp)).trans hfr₂).trans (hfr₃.mono (fun _ h => List.mem_cons_of_mem _ h) (by simp))
+  · exact ((hfr₁.mono (by decide) (by simp)).trans hfr₂).trans (hfr₃.mono (fun _ h => List.mem_cons_of_mem _ h) (by simp))
 
 end cv
 
@@ -602,16 +602,10 @@ theorem vgStore_facts {m m' : Mem} {d k nm q l t x : Word}
   · exact (((((fr _ _ _).trans (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)).trans
       (fr _ _ _)).trans (fr _ _ _)
 
-/-- The arrays a value-group promotion writes. -/
-theorem vg_arrs : ∀ b ∈ EREC :: eArrs, (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) ∨
-    Tier1In 0 50 b ∨ Tier1In 55 64 b := by
-  simp only [tier1, tierOff, eArrs, lsArrs, lArrs, List.cons_append, List.nil_append, List.forall_mem_cons,
-    List.not_mem_nil, false_imp_iff, implies_true, and_true, EREC, POOL, POOL1, PT0, NAREC, NASLOT, NSREC,
-    NSSLOT, NNREC, NNSLOT, PNM, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
-    PLM, LSREC, LSSLOT, PLSM, REC, SLOT, AREC, ASLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT,
-    BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, ADER, LADER, FADER,
-    LEDER, PJDER, PEM, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP]
-  simp
+/-- The arrays a value-group promotion writes (both tiers below 64, `EREC`, the promotion memos). -/
+theorem vg_arrs : ∀ b ∈ (EREC : TieredArray) :: eArrs, (b.arr < 50 ∨ (54 < b.arr ∧ b.arr < 64)) ∨
+    b = EREC ∨ Tier0In 146 150 b := by
+  decide
 /-- The `CTL` words a value-group promotion writes. -/
 theorem vg_ctl : ∀ x ∈ (129 :: 140 :: 142 :: 144 :: 146 :: eCtl : List L.Word),
       x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147) := by
@@ -632,7 +626,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
     ∃ a' pm' vg', (promoteVG PMemo.empty coreWalkFuel vg).run a = .ok ((pm', vg'), a') ∧
       ArenaD m' a' ∧ PMemoR m' pm' ∧ decVG (erecP m') (r.headD 0).toNat = some vg' ∧
       ErecGrow m m' ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: 140 :: 142 :: 144 :: 146 :: eCtl) m m' ∧ TierKeep m m' := by
+      MemFrame ((EREC : TieredArray) :: eArrs) (129 :: 140 :: 142 :: 144 :: 146 :: eCtl) m m' ∧ TierKeep m m' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>

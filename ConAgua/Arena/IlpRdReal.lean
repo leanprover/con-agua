@@ -14,7 +14,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem ilpfA_stage : ∀ b ∈ ilpfA, b < 201 ∨ 208 < b := by
+theorem ilpfA_stage : ∀ b ∈ ilpfA, b.arr < 201 ∨ 208 < b.arr := by
   simp only [ilpfA]; decide
 
 theorem ilpfC_stage : ∀ x ∈ ilpfC, x.toNat < 202 ∨ 219 < x.toNat := by

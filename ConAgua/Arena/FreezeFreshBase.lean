@@ -70,16 +70,8 @@ theorem hiC_mem {n : Nat} {x : Word} (h1 : 256 ≤ x.toNat) (h2 : x.toNat < n) :
 /-- `t` with `CTL` cut to its seed. -/
 def ctlCut (t : Mem) : Mem := t.setA CTL (freshCtl (t.arr64 CTL))
 
-theorem ctlCut_arr (t : Mem) (b : ArrId) :
-    (ctlCut t).arr64 b = if b = CTL then freshCtl (t.arr64 CTL) else t.arr64 b := by
-  rw [ctlCut, Mem.setA_arr]
-  by_cases hb : b = CTL
-  · subst hb
-    by_cases hs : t.HasW CTL
-    · simp [hs]
-    · simp only [hs, and_false, ↓reduceIte]
-      rw [Mem.arr64_oob t CTL hs, freshCtl_empty]
-  · simp [hb]
+theorem ctlCut_arr (t : Mem) (b : TieredArray) :
+    (ctlCut t).arr64 b = if b = CTL then freshCtl (t.arr64 CTL) else t.arr64 b := rfl
 
 theorem ctlCut_words (t : Mem) : t.SameShape (ctlCut t) := Mem.setA_words ..
 
@@ -100,27 +92,11 @@ theorem ctlCut_frame (t : Mem) : MemFrame [] (hiC (t.arr64 CTL).size) t (ctlCut 
 /-! ## The fresh memory -/
 
 theorem freshMem_words (m : Mem) : (truncFrozen m).SameShape (freshMem m) := by
-  simp [Mem.SameShape, freshMem]
+  simp [Mem.SameShape]
 
-theorem freshMem_arr (m : Mem) (b : ArrId) : (freshMem m).arr64 b =
+theorem freshMem_arr (m : Mem) (b : TieredArray) : (freshMem m).arr64 b =
     if b = CTL then freshCtl ((truncFrozen m).arr64 CTL)
-    else if b ∈ freshZ then zeros ((truncFrozen m).arr64 b).size else (truncFrozen m).arr64 b := by
-  by_cases h : b < (truncFrozen m).words.size
-  · have e : (freshMem m).arr64 b = (fun a =>
-        if a = CTL then freshCtl ((truncFrozen m).arr64 CTL)
-        else if a ∈ freshZ then zeros ((truncFrozen m).arr64 a).size
-        else (truncFrozen m).arr64 a) b := by
-      simp only [freshMem, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map,
-        Array.getElem?_range, h, ↓reduceIte, Option.map_some, Option.getD_some]
-    rw [e]
-  · have ho : ∀ c, ¬ (truncFrozen m).HasW c → (truncFrozen m).arr64 c = #[] :=
-      fun c hc => Mem.arr64_oob _ c hc
-    rw [Mem.arr64_oob _ b (fun h' => h (h'.of_sameShape (freshMem_words m).symm))]
-    split
-    · rename_i hb; subst hb; rw [ho _ h, freshCtl_empty]
-    · split
-      · rw [ho _ h]; rfl
-      · rw [ho _ h]
+    else if b ∈ freshZ then zeros ((truncFrozen m).arr64 b).size else (truncFrozen m).arr64 b := rfl
 
 /-- **The fresh memory from the cut one is a frame of `freshZ`.** -/
 theorem fresh_frame (m : Mem) : MemFrame freshZ [] (ctlCut (truncFrozen m)) (freshMem m) := by
@@ -139,7 +115,7 @@ theorem fresh_ctl (m : Mem) : (freshMem m).arr64 CTL = (ctlCut (truncFrozen m)).
   rw [freshMem_arr, ctlCut_arr, ite_eq_left rfl, ite_eq_left rfl]
 
 /-- **An array of `freshZ` other than `CTL` is zero** in the fresh memory. -/
-theorem fresh_zero (m : Mem) {b : ArrId} (hb : b ∈ freshZ) (hc : b ≠ CTL) (x : Word) :
+theorem fresh_zero (m : Mem) {b : TieredArray} (hb : b ∈ freshZ) (hc : b ≠ CTL) (x : Word) :
     rdW ((freshMem m).arr64 b) x = 0 := by
   rw [freshMem_arr, ite_eq_right hc, ite_eq_left hb, rdW_zeros]
 
@@ -254,23 +230,22 @@ to a memory with the pool kept (`PoolTr0`). -/
 theorem rTrans_pool0 (hF : RFrame S R hs)
     (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA S.ra t) = m₁.arr64 (tierA S.ra t)) → PoolTr0 m₁ m₂ →
       (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, hs m₂ t i = hs m₁ t i)
-    (hx : ∀ b ∈ [POOL, POOL1, CTL], b ≠ S.ra ∧ b ≠ tier1 S.ra)
-    {m m' : Mem} (hw : m.SameShape m') (hp : PoolTr0 m m') : RTrans S R hs m m' := by
+    (hx : ∀ b ∈ ([POOL, POOL1, CTL] : List TieredArray), b ≠ S.ra ∧ b ≠ tier1 S.ra)
+    {m m' : Mem} (_hw : m.SameShape m') (hp : PoolTr0 m m') : RTrans S R hs m m' := by
   intro t i hf
   let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
-  have hw1 : m.SameShape (m.setA S.ra (m'.arr64 S.ra)) := Mem.setA_words ..
-  have hne : S.ra ≠ tier1 S.ra := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
+  have hne : (S.ra : TieredArray) ≠ tier1 S.ra := t0_ne_tier1 _ _
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
-    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]
-    exact Mem.setA_self m m' _ hw
-  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _ (hw1.symm.trans hw)
-  have eo : ∀ b, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
-    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => h2 h.1), Mem.setA_arr, ite_eq_right (fun h => h1 h.1)]
+    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right hne]
+    exact Mem.setA_self m m' _
+  have e1 : m₁.arr64 (tier1 S.ra) = m'.arr64 (tier1 S.ra) := Mem.setA_self _ m' _
+  have eo : ∀ b : TieredArray, b ≠ S.ra → b ≠ tier1 S.ra → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
+    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right h2, Mem.setA_arr, ite_eq_right h1]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
-    rcases tierA_cases' S.ra t with e | e <;> rw [e]
+    rcases tierA_eq_or S.ra t with e | e <;> rw [e]
     · exact e0
     · exact e1
-  have hb : ∀ b ∈ [POOL, POOL1, CTL], m₁.arr64 b = m.arr64 b := fun b hb' =>
+  have hb : ∀ b ∈ ([POOL, POOL1, CTL] : List TieredArray), m₁.arr64 b = m.arr64 b := fun b hb' =>
     eo b (hx b hb').1 (hx b hb').2
   have hctl : m₁.arr64 CTL = m.arr64 CTL := hb CTL (by simp)
   have hout : OutEq S m m₁ := ⟨fun b h1 h1' _ _ _ => eo b h1 h1', by rw [hctl]⟩

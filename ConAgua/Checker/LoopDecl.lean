@@ -56,18 +56,19 @@ def declLoopFns : List FnName :=
 names_tree declLoopTree : declLoopFns
 
 /-- The arrays of `stepA`, as a test. -/
-def stepPa (a : ArrId) : Bool :=
-  decide (a < 388) && a != PEND && a != DECL && a != DLP && (decide (a < 146) || decide (149 < a))
+def stepPa (a : TieredArray) : Bool :=
+  checkerWordArrays.contains a && a != PEND && a != DECL && a != DLP &&
+    (decide (a.arr < 146) || decide (149 < a.arr))
 
 /-- The `CTL` words of `stepC`, as a test. -/
 def stepPc (w : Word) : Bool :=
   decide (w.toNat < 1024) && w.toNat != 130 && w.toNat != 150 && w.toNat != 151 &&
     (decide (w.toNat < 140) || decide (147 < w.toNat))
 
-theorem stepPa_mem (a : ArrId) (h : stepPa a = true) : a ∈ stepA := by
+theorem stepPa_mem (a : TieredArray) (h : stepPa a = true) : a ∈ stepA := by
   simp only [stepPa, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,
-    ne_eq] at h
-  simp [stepA, List.mem_filter, List.mem_range, h]
+    ne_eq, List.contains_iff_mem] at h
+  simp [stepA, List.mem_filter, h]
 
 theorem stepPc_mem (w : Word) (h : stepPc w = true) : w ∈ stepC := by
   simp only [stepPc, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,

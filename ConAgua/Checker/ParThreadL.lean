@@ -47,7 +47,7 @@ theorem threadGo_agree (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode 
   rintro s rs s' ⟨hx, hy, hz, m', hS, hPB, hw⟩ hrun
   rw [hx, hy, hz] at hrun
   let m₂ : Mem := { m' with glob := s.mem.glob }
-  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩
+  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
   have h₂ := PhaseBStart.frame0 hf hS
   let s₂ : St := ⟨m₂, s.loc⟩
   have hAg : Agree phaseBS (fun _ => false) s.mem s₂.mem :=

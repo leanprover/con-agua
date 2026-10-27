@@ -61,8 +61,8 @@ theorem memoRG_mfr0 {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} (hS : S.
   exact memoRG_frame S hS K dv A C hA hC m m' f mp h
 
 /-- **`StageMemos` across a writer outside arrays 201‥208 and `CTL` 202‥219.** -/
-theorem StageMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : StageMemos m)
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 201 ∨ 208 < b)
+theorem StageMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : StageMemos m)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b.arr < 201 ∨ 208 < b.arr)
     (hC : ∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) : StageMemos m' := by
   have hM : MFr [] [] m m' := MFr.of_frame hf hA hC
   obtain ⟨hp, ⟨a, ha⟩, ⟨b, hb⟩, ⟨c, hc⟩⟩ := h
@@ -129,7 +129,7 @@ structure IndMemos (m : Mem) : Prop where
   cr : L.Stubs.CrOK m
 
 /-- **The zeroed memory has a well-formed `instantiate1Lift` memo** (empty, epoch `0`). -/
-theorem I1Memo.zero {m : Mem} (hsz : 54 ≤ (m.arr64 CTL).size) (hA : ∀ j, rdW (m.arr64 51) j = 0)
+theorem I1Memo.zero {m : Mem} (hsz : 54 ≤ (m.arr64 CTL).size) (hA : ∀ j, rdW (m.arr64 ILFM) j = 0)
     (hC : rdW (m.arr64 CTL) 52 = 0) : I1Memo m :=
   ⟨_, memoRV_zeroAt ⟨51, 52⟩ lfKey _ m (by simp; omega) hC hA⟩
 
@@ -144,8 +144,9 @@ theorem IndMemos.zero {m : Mem} (hsz : 220 ≤ (m.arr64 CTL).size)
     CrOK.zero (by omega) (hA _ (.inr (.inl rfl))) (hC 158 (.inr (.inl rfl)))⟩
 
 /-- **`IndMemos` across a writer outside its arrays and `CTL` words.** -/
-theorem IndMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : IndMemos m)
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b ≠ 51 ∧ b ≠ 155 ∧ (b < 201 ∨ 208 < b))
+theorem IndMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : IndMemos m)
+    (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr))
     (hC : ∀ x ∈ C, x.toNat ≠ 52 ∧ x.toNat ≠ 158 ∧ (x.toNat < 202 ∨ 219 < x.toNat)) :
     IndMemos m' :=
   ⟨h.stage.frame hf (fun b hb => (hA b hb).2.2) (fun x hx => (hC x hx).2.2),
@@ -169,13 +170,13 @@ theorem indMemos_wframe : WFrame CTL imA imC (fun m₀ m => IndMemos m₀ → In
     · exact (h h0).frame (MemFrame.setCtl m i v) (by simp)
         (fun x hx => by simp at hx; subst hx; exact imC_spec x hi)
   setG _ _ _ _ h h0 := (h h0).frame (A := []) (C := [])
-    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl _⟩ (by simp) (by simp)
+    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩ (by simp) (by simp)
 
 /-- `consts_resolve_ffast` keeps `IndMemos`: it writes only its memo (`crfF_frame`). -/
 theorem IndMemos.crfF {m m' : Mem} {args r : List Word} (h : L.Ind.crfF m args = some (r, m'))
     (hI : IndMemos m) : IndMemos m' :=
   have hf := L.Ind.crfF_frame h
-  ⟨hI.stage.frame hf (by simp) (by simp), I1Memo.frame hI.i1 hf (by simp) (by simp),
+  ⟨hI.stage.frame hf (by decide) (by simp), I1Memo.frame hI.i1 hf (by decide) (by simp),
     L.Ind.crfF_keepsCrOK h hI.cr⟩
 
 /-- Every call of a leaf of `imFns` keeps `IndMemos`. -/
@@ -446,8 +447,9 @@ the pin variants' header `CTL[150]`, `CTL[151]`). Decided for the checker's prog
 `TwinOK` (the projection clause included) comes back with it. -/
 
 /-- The arrays a core function may write, at the loop's granularity. -/
-def coreLoopA : List ArrId :=
-  stepA.filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧ (b < 201 ∨ 208 < b) ∧ b ≠ L.Stubs.CRM
+def coreLoopA : List TieredArray :=
+  stepA.filter fun b =>
+    b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧ (b.arr < 201 ∨ 208 < b.arr) ∧ b ≠ L.Stubs.CRM
 
 /-- The `CTL` words a core function may write, at the loop's granularity. -/
 def coreLoopC : List Word :=
@@ -456,9 +458,9 @@ def coreLoopC : List Word :=
 /-- **The program hypothesis**: the core leaves the loop's state alone. -/
 def CoreLoopClosed (p : Prog) : Prop := closedA p coreLoopA coreLoopC stageCoreFns = true
 
-theorem coreLoopA_erec : EREC ∉ coreLoopA := by simp [coreLoopA]
-theorem coreLoopA_iw : IW ∉ coreLoopA := by simp [coreLoopA]
-theorem coreLoopA_pins : PINS ∉ coreLoopA := by simp [coreLoopA]
+theorem coreLoopA_erec : (EREC : TieredArray) ∉ coreLoopA := by simp [coreLoopA]
+theorem coreLoopA_iw : (IW : TieredArray) ∉ coreLoopA := by simp [coreLoopA]
+theorem coreLoopA_pins : (PINS : TieredArray) ∉ coreLoopA := by simp [coreLoopA]
 theorem coreLoopC_129 : (129 : Word) ∉ coreLoopC := by simp [coreLoopC]
 theorem coreLoopC_200 : (200 : Word) ∉ coreLoopC := by simp [coreLoopC]
 

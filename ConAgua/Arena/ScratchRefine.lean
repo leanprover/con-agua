@@ -119,10 +119,10 @@ theorem preMem_eq_of_lt (m : Mem) (h : ¬ SCBLIM ≤ rdW (m.arr64 CTL) SCB) : pr
 
 theorem slot1Arrs_ge : ∀ b ∈ slot1Arrs, IsTier1 b := by decide
 
-theorem not_mem_slot1 {b : ArrId} (h : b < 256) : b ∉ slot1Arrs := fun hb => by
-  have := slot1Arrs_ge b hb; simp only [ArrId] at *; omega
+theorem not_mem_slot1 {b : ArrId} : (b : TieredArray) ∉ slot1Arrs := fun hb => by
+  have := slot1Arrs_ge _ hb; simp [IsTier1] at this
 
-theorem GFr.memFrame {sa : ArrId} {m m' : Mem} (h : GFr sa m m') (hc : sa ≠ CTL) :
+theorem GFr.memFrame {sa : TieredArray} {m m' : Mem} (h : GFr sa m m') (hc : sa ≠ CTL) :
     MemFrame [sa] [] m m' :=
   ⟨fun b hb _ => h.1 b (by simpa using hb), fun x _ => by rw [h.1 CTL (Ne.symm hc)],
     h.2.1, h.2.2⟩
@@ -132,7 +132,7 @@ theorem vacL_frame : ∀ (l : List ArrId) (m : Mem), MemFrame (l.map (tierA · 1
   | a :: as, m => by
     simp only [vacL]
     have h1 : MemFrame [tierA a 1] [] m (vacW a m) :=
-      GFr.memFrame (kzeroW_fr (tierA a 1) _ _ m) (by rw [tierA_one]; simp only [CTL, ArrId]; omega)
+      GFr.memFrame (kzeroW_fr (tierA a 1) _ _ m) (by rw [tierA_one]; exact tier1_ne_t0 _ _)
     exact (h1.mono (by simp) (by simp)).trans
       ((vacL_frame as _).mono (fun b hb => List.mem_cons_of_mem _ hb) (by simp))
 
@@ -151,31 +151,28 @@ theorem resetMemP_frame (m : Mem) (f : Word) :
 
 /-- **The wrap zeroes a scratch table**: the `8 ⌊n / 4⌋` words of tier 1's table of slot array
 `sa` (from word `2 + o`), and nothing else of its array. -/
-theorem vacL_rd (sa : ArrId) (hsa : sa < 256) : ∀ (l : List ArrId) (m : Mem), l.Nodup →
-    (∀ a ∈ l, a < 256) → sa ∈ l →
+theorem vacL_rd (sa : ArrId) : ∀ (l : List ArrId) (m : Mem), l.Nodup → sa ∈ l →
     (koW sa m 1 + 2).toNat + 8 * (knW sa m 1 >>> 2).toNat < 2 ^ 64 →
     ((vacL l m).arr64 (tierA sa 1)).size = (m.arr64 (tierA sa 1)).size ∧
     ∀ y, rdW ((vacL l m).arr64 (tierA sa 1)) y =
       if (koW sa m 1 + 2).toNat ≤ y.toNat ∧ y.toNat < (koW sa m 1 + 2).toNat + 8 * (knW sa m 1 >>> 2).toNat
       then 0 else rdW (m.arr64 (tierA sa 1)) y
-  | [], _, _, _, h, _ => absurd h (by simp)
-  | a :: as, m, hnd, hlt, hin, hb => by
+  | [], _, _, h, _ => absurd h (by simp)
+  | a :: as, m, hnd, hin, hb => by
     simp only [vacL]
     obtain ⟨hna, hnd'⟩ := List.nodup_cons.mp hnd
     by_cases ha : a = sa
     · subst ha
       have e : (vacL as (vacW a m)).arr64 (tierA a 1) = (vacW a m).arr64 (tierA a 1) :=
-        vacL_arr as _ _ (fun b hb' => tierA_ne hsa (hlt b (List.mem_cons_of_mem _ hb'))
-          (fun h => hna (h ▸ hb')) 1 1)
+        vacL_arr as _ _ (fun b hb' => tierA_ne (fun h : a = b => hna (h ▸ hb')) 1 1)
       rw [e]
       exact ⟨(kzeroW_fr _ _ _ m).2.1 _, kzeroW_rd _ _ _ m hb⟩
     · have hin' : sa ∈ as := by simpa [Ne.symm ha] using hin
       have e : (vacW a m).arr64 (tierA sa 1) = m.arr64 (tierA sa 1) :=
-        vacW_arr a m _ (tierA_ne hsa (hlt a List.mem_cons_self) (Ne.symm ha) 1 1)
+        vacW_arr a m _ (tierA_ne (Ne.symm ha) 1 1)
       have ek : koW sa (vacW a m) 1 = koW sa m 1 := by simp only [koW, e]
       have en : knW sa (vacW a m) 1 = knW sa m 1 := by simp only [knW, e]
-      have := vacL_rd sa hsa as (vacW a m) hnd' (fun b hb' => hlt b (List.mem_cons_of_mem _ hb'))
-        hin' (by rw [ek, en]; exact hb)
+      have := vacL_rd sa as (vacW a m) hnd' hin' (by rw [ek, en]; exact hb)
       rw [ek, en, e] at this
       exact this
 
@@ -232,11 +229,11 @@ theorem rslice_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
     · have : ¬ m.top.toNat < 2 ^ 40 := fun e => ht (htl.mpr e)
       rw [ite_eq_right ht]; omega
 
-/-- An array of id below 256 other than `PT0` and `CTL` stays across the tops' stores. -/
-theorem resetTop_arr (m : Mem) (f : Word) {a : ArrId} (ha : a < 256) (h1 : PT0 ≠ a) (h2 : CTL ≠ a)
+/-- An array other than `PT0` and `CTL` stays across the tops' stores. -/
+theorem resetTop_arr (m : Mem) (f : Word) {a : ArrId} (h1 : PT0 ≠ a) (h2 : CTL ≠ a)
     (t : Word) : (resetTopMem m f).arr64 (tierA a t) = m.arr64 (tierA a t) :=
-  (resetTop_frame m f).1 _ (by simp only [List.mem_singleton]; exact tierA_ne_small _ _ ha (by decide) h1 t)
-    (tierA_ne_small _ _ ha (by decide) h2 t)
+  (resetTop_frame m f).1 _ (by simp only [List.mem_singleton]; exact tierA_ne_small _ _ h1 t)
+    (tierA_ne_small _ _ h2 t)
 
 theorem resetTop_vpool (m : Mem) (f : Word) : vpool (resetTopMem m f) = vpool m :=
   vpool_congr ((resetTop_frame m f).1 POOL (by decide) (by decide))
@@ -253,7 +250,7 @@ include hp hpt in
 theorem recRel_resetTop (i : Word) (k : LitNode) (h : RecRel m 0 i k) :
     RecRel (resetTopMem m f) 0 i k := by
   have htf : ∀ j, tfld (resetTopMem m f) LIT 0 i j = tfld m LIT 0 i j := fun j => by
-    simp only [tfld]; rw [resetTop_arr m f (by decide) (by decide) (by decide)]
+    simp only [tfld]; rw [resetTop_arr m f (by decide) (by decide)]
   have hv := resetTop_vpool m f
   have hq := resetTop_tpool m f
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
@@ -266,7 +263,7 @@ include hp hpt in
 theorem nsRecRel_resetTop (i : Word) (k : StrNode) (h : NsRecRel m 0 i k) :
     NsRecRel (resetTopMem m f) 0 i k := by
   have htf : ∀ j, tfld (resetTopMem m f) NSTR 0 i j = tfld m NSTR 0 i j := fun j => by
-    simp only [tfld]; rw [resetTop_arr m f (by decide) (by decide) (by decide)]
+    simp only [tfld]; rw [resetTop_arr m f (by decide) (by decide)]
   have hv := resetTop_vpool m f
   have hq := resetTop_tpool m f
   simp only [NsRecRel, htf, hv, hq] at h ⊢
@@ -276,7 +273,7 @@ include hp hpt in
 theorem lsRecRel_resetTop (i : Word) (k : ListNode) (h : LsRecRel m 0 i k) :
     LsRecRel (resetTopMem m f) 0 i k := by
   have htf : ∀ j, tfld (resetTopMem m f) LVLS 0 i j = tfld m LVLS 0 i j := fun j => by
-    simp only [tfld]; rw [resetTop_arr m f (by decide) (by decide) (by decide)]
+    simp only [tfld]; rw [resetTop_arr m f (by decide) (by decide)]
   have hv := resetTop_vpool m f
   have hq := resetTop_tpool m f
   simp only [LsRecRel, htf, hv, hq] at h ⊢
@@ -332,7 +329,7 @@ variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
 /-- **A table across `scratch_reset(f)`'s wrap and counts**: tier 0 as before (its records, the
 arrays `A₀` and words `C₀` they refer to are not written), tier 1 empty (its slots read free:
 against the raised base, or zeroed by the wrap), the flag `f ≠ 0`. -/
-theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {A₀ : List ArrId}
+theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {A₀ : List TieredArray}
     {C₀ : List Word} (hW : C.WF) (hl : RLocal C.sch R C.hsM A₀ C₀)
     (hA₀ : ∀ b ∈ A₀, b ∉ slot1Arrs ∧ b ≠ CTL) (hC₀ : ∀ x ∈ C₀, x ∉ resetCtl)
     (hca : C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts) (hsa : C.sa ∈ scrSlots)
@@ -347,10 +344,8 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
   have hfA := resetMemA_frame (preMem m) f
   have hF : MemFrame slot1Arrs resetCtl m (resetMemA (preMem m) f) :=
     ((preMem_frame m).mono (by simp) (by simp [resetCtl])).trans (hfA.mono (by simp) (by simp))
-  have hsalt : C.sa < 256 := hS.sa_lt
-  have hralt : C.ra < 256 := hS.ra_lt
   have hra' : ∀ t, (resetMemA (preMem m) f).arr64 (tierA C.ra t) = m.arr64 (tierA C.ra t) :=
-    fun t => hF.tier C.ra (not_mem_slot1 hralt) hra hS.ra_ctl t
+    fun t => hF.tier C.ra not_mem_slot1 hra hS.ra_ctl t
   have e1 : (resetMemA (preMem m) f).arr64 (tierA C.sa 1) = (preMem m).arr64 (tierA C.sa 1) :=
     hfA.1 _ (by simp) (hS.sa_ctl' 1)
   have hb : rdW ((resetMemA (preMem m) f).arr64 CTL) SCB = rdW ((preMem m).arr64 CTL) SCB + 4294967296 :=
@@ -368,7 +363,7 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
         rw [UInt64.toNat_shiftRight]; simp; omega
       have ho2 : (koW C.sa m 1 + 2).toNat = (koW C.sa m 1).toNat + 2 := by
         rw [UInt64.toNat_add]; simp; omega
-      obtain ⟨hsz', hrd⟩ := vacL_rd C.sa hsalt scrSlots m (by decide) (by decide) hsa
+      obtain ⟨hsz', hrd⟩ := vacL_rd C.sa scrSlots m (by decide) hsa
         (by rw [hn4, ho2]; omega)
       rw [hn4, ho2] at hrd
       refine ⟨by rw [e1, e2, hsz'], by rw [e1, e2, hrd]; simp, by rw [e1, e2, hrd]; simp, ?_⟩
@@ -385,7 +380,7 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
   obtain ⟨t1, t2, t3, t4⟩ := hT1
   have hloc := hl m (resetMemA (preMem m) f) hra' (fun b hb' => hF.1 b (hA₀ b hb').1 (hA₀ b hb').2)
     (fun x hx => hF.2.1 x (hC₀ x hx))
-  refine hR.resetG hra' (hF.1 _ (not_mem_slot1 hsalt) hS.sa_ctl) t1 t2 t3 t4 (hF.2.2.1 CTL) ?_ ?_ ?_
+  refine hR.resetG hra' (hF.1 _ not_mem_slot1 (TieredArray.t0_ne hS.sa_ctl)) t1 t2 t3 t4 (hF.2.2.1 CTL) ?_ ?_ ?_
     (by rw [resetMemA_flag (preMem m) f h62]) (hloc.1 0) (hloc.2 0)
   · simp only [cntC, UInt64.add_zero]
     exact hF.2.1 _ (by simp only [resetCtl, List.mem_cons, not_or]; exact ⟨hsc.1, hsc.2.2.1, hca.1⟩)
@@ -430,7 +425,7 @@ theorem ArenaD.resetA (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
   have hf : MemFrame slot1Arrs resetCtl m (resetMemA (preMem m) f) :=
     ((preMem_frame m).mono (by simp) (by simp [resetCtl])).trans
       ((resetMemA_frame (preMem m) f).mono (by simp) (by simp))
-  have e : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {A₀ : List ArrId} {C₀ : List Word}
+  have e : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {A₀ : List TieredArray} {C₀ : List Word}
       (C : ConsSch) (R : Mem → Word → Word → α → Prop), C.WF →
       RLocal C.sch R C.hsM A₀ C₀ → (∀ b ∈ A₀, b ∉ slot1Arrs ∧ b ≠ CTL) → (∀ x ∈ C₀, x ∉ resetCtl) →
       C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts → C.sa ∈ scrSlots → tier1 C.ra ∉ slot1Arrs →
@@ -444,7 +439,7 @@ theorem ArenaD.resetA (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
       hf.2.2.2
   have hM : MemosR (resetMemA (preMem m) f) a.memos :=
     hR.memos.frame (by decide) (by simp [resetCtl, scratchCnts, memoCtl, SCB]) hf
-  have hcP : ∀ {α : Type} A, A ≠ CTL → A ∉ slot1Arrs → tier1 A ∉ slot1Arrs →
+  have hcP : ∀ {α : Type} (A : ArrId), A ≠ CTL → (A : TieredArray) ∉ slot1Arrs → tier1 A ∉ slot1Arrs →
       cP (α := α) A (resetMemA (preMem m) f) = cP A m := fun A hA h1 h2 => by
     funext t i x d; simp only [cP, hf.tier A h1 h2 hA]
   have hE : ∀ {α : Type} [BEq α] [Hashable α] (P : Nat → α → UInt64 → Prop),
@@ -498,21 +493,21 @@ theorem ArenaD.resetTop (m : Mem) (a : AState) (f : Word) (on : Bool)
   obtain ⟨hR, hDer⟩ := hD
   have hp := hR.lit.1
   refine ⟨?_, DerR.frameM [PT0] [0] m _ hf (by intro b hb; simp at hb; subst hb; decide) _ hDer⟩
-  have hra : ∀ {a : ArrId}, a < 256 → PT0 ≠ a → CTL ≠ a → ∀ t, tierA a t ≠ PT0 ∧ tierA a t ≠ CTL :=
-    fun ha h1 h2 t => ⟨tierA_ne_small _ _ ha (by decide) h1 t, tierA_ne_small _ _ ha (by decide) h2 t⟩
+  have hra : ∀ {a : ArrId}, PT0 ≠ a → CTL ≠ a → ∀ t, tierA a t ≠ PT0 ∧ tierA a t ≠ CTL :=
+    fun h1 h2 t => ⟨tierA_ne_small _ _ h1 t, tierA_ne_small _ _ h2 t⟩
   have hpo := poolOK_resetTop m f hp hpt'
   cases on <;>
   arena_build hR, hf with
     first
-    | exact ⟨hpo, consR_resetTop (C := litCS) (R := RecRel) m f (hra (by decide) (by decide) (by decide))
-        (hra (by decide) (by decide) (by decide)) (by decide) (recRel_resetTop m f hp hpt')
-        (fun t i => by simp only [litCS, litCSk, litH, resetTop_arr m f (a := REC) (by decide) (by decide) (by decide)]) hR.lit.2⟩
-    | exact consR_resetTop (C := lsCS) (R := LsRecRel) m f (hra (by decide) (by decide) (by decide))
-        (hra (by decide) (by decide) (by decide)) (by decide) (lsRecRel_resetTop m f hp hpt')
-        (fun t i => by simp only [lsCS, lshash, resetTop_arr m f (a := LSREC) (by decide) (by decide) (by decide)]) hR.ls
-    | exact consR_resetTop (C := nstrCS) (R := NsRecRel) m f (hra (by decide) (by decide) (by decide))
-        (hra (by decide) (by decide) (by decide)) (by decide) (nsRecRel_resetTop m f hp hpt')
-        (fun t i => by simp only [nstrCS, nshash, resetTop_arr m f (a := NSREC) (by decide) (by decide) (by decide)]) hR.nstr
+    | exact ⟨hpo, consR_resetTop (C := litCS) (R := RecRel) m f (hra (by decide) (by decide))
+        (hra (by decide) (by decide)) (by decide) (recRel_resetTop m f hp hpt')
+        (fun t i => by simp only [litCS, litCSk, litH, resetTop_arr m f (a := REC) (by decide) (by decide)]) hR.lit.2⟩
+    | exact consR_resetTop (C := lsCS) (R := LsRecRel) m f (hra (by decide) (by decide))
+        (hra (by decide) (by decide)) (by decide) (lsRecRel_resetTop m f hp hpt')
+        (fun t i => by simp only [lsCS, lshash, resetTop_arr m f (a := LSREC) (by decide) (by decide)]) hR.ls
+    | exact consR_resetTop (C := nstrCS) (R := NsRecRel) m f (hra (by decide) (by decide))
+        (hra (by decide) (by decide)) (by decide) (nsRecRel_resetTop m f hp hpt')
+        (fun t i => by simp only [nstrCS, nshash, resetTop_arr m f (a := NSREC) (by decide) (by decide)]) hR.nstr
 
 /-- **`scratch_reset(f)` keeps `ArenaD`**, with every scratch table emptied and every flag
 `f ≠ 0`; the memos stay. -/
@@ -707,13 +702,13 @@ theorem scrArrs_low : ∀ b ∈ scrArrs, InStoreTier b := by decide
 /-- The bracket keeps the pins and the environment: it writes arrays below 64 and `CTL` words
 below 128 only. -/
 theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
-    {vis : Word} {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe)
+    {vis : Word} {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR dn m a vis fe)
     (hD : ArenaD m' a') (hc : CoreR m' a'.caches) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b)
     (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
     CheckR dn m' a' vis fe :=
-  ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf,
-    hR.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf (.of_lowT hA), hmode⟩
+  ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide)) hf,
+    hR.env.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf, hmode⟩
 
 /-- `scratch_enter()` refines `enterScratch` under `CheckR`. -/
 @[refines ConRon.Arena.enterScratch]
@@ -739,7 +734,7 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
   rw [hst, hm]
   exact hC.of_bracket (C := (0 :: resetCtl) ++ memoCtl)
     (ArenaD.enter _ _ hC.arena hlo h62 c1 c2 c3 c4 hpt)
-    (hC.core.frame (.of_low scrArrs_low (by decide) (by decide))
+    (hC.core.frame (.of_low scrArrs_low (by decide))
       (.of_lt (fun x h => resetCtl_lt x h) (by decide)) (enterMem_frame _))
     (enterMem_frame _) scrArrs_low (fun x h => Nat.lt_trans (resetCtl_lt x h) (by decide)) rfl
     (modeOK_enterMem _ h62)
@@ -765,7 +760,7 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
   have hrf : MemFrame scrArrs (0 :: resetCtl) (flushMem s.mem) (resetMem (preMem (flushMem s.mem)) 0) :=
     resetMemP_frame _ 0
   have hcore : CoreR (resetMem (preMem (flushMem s.mem)) 0) Caches.empty :=
-    (hC.core.flush hfok).frame (.of_low scrArrs_low (by decide) (by decide))
+    (hC.core.flush hfok).frame (.of_low scrArrs_low (by decide))
       (.of_lt (fun x h => resetCtl_lt x (List.mem_append_left _ h)) (by decide)) hrf
   refine ⟨hloc, hok, hC.of_bracket (A := scrArrs) (C := flushCtl ++ (0 :: resetCtl)) hD
     (by rw [hst, hm]; exact hcore) ?_ scrArrs_low ?_ (by rw [hst]) ?_⟩
@@ -800,10 +795,10 @@ written), and the next reset (`scratch_drop`) vacates every scratch table (a gro
 of `ASLOT`: 16 slots at offset 2) and restarts the base: `2^32`. -/
 #guard
   let ctl : Array Word := (Array.replicate 120 0).set! 62 (4611686018427387904 - 4294967296)
-  let slot (a : Nat) : Array Word :=
+  let slot (a : TieredArray) : Array Word :=
     if a = tier1 ASLOT then #[8, 2, 5, 5] ++ Array.replicate 32 7
     else if a ∈ slot1Arrs then #[0, 0] ++ Array.replicate 16 7 else #[]
-  let m : Mem := Mem.ofWords ([(CTL, ctl), (PT0, #[0])] ++ slot1Arrs.map fun a => (a, slot a))
+  let m : Mem := Mem.ofWords ([((CTL : TieredArray), ctl), ((PT0 : TieredArray), #[0])] ++ slot1Arrs.map fun a => (a, slot a))
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
     | .ok (_, m2) => (m1.arr64 CTL)[62]! == 4611686018427387904 && (m1.arr64 (tier1 SLOT))[2]! == 7 &&

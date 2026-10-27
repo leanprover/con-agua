@@ -70,8 +70,7 @@ theorem internLNode_succ_run (u : LIdx) (a : AState) :
 def succSch : Schema := ⟨SREC, SSLOT, 1, 6, LTag.succ⟩
 
 theorem succSch_wf : succSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 (tierA SREC t)) i := by
   simp [fld, Schema.ad, succSch]
@@ -152,15 +151,13 @@ theorem succCS_wf : succCS.WF where
     simp only [succCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
       simp only [succCS, shash, Mem.arr64_set64_ne _ _ _ _ _
-        (tierA_ne (by decide) (by decide) (show SREC ≠ SHP by decide) t u)]⟩
+        (tierA_ne (show SREC ≠ SHP by decide) t u)]⟩
   room m t h := (spushOK_room m t ((spushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [succCS, Option.some.injEq] at h; subst h
     rw [← spushOK_eqC] at hp
     simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m SHP _ t hp.2
-  colLt A h := by
-    simp only [succCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, succCS, hk]
   ex _ := {
     nk := by decide
@@ -178,7 +175,7 @@ theorem succCS_wf : succCS.WF where
 theorem succColFree : ColFree succCS SRecRel := by
   intro A h m u k x t i a hr
   simp only [succCS, Option.some.injEq] at h; subst h
-  simpa only [SRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show SREC ≠ SHP by decide) t u)] using hr
+  simpa only [SRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (show SREC ≠ SHP by decide) t u)] using hr
 
 /-- **What `intern_succ` changes**: the table's arrays, the column, the counts. -/
 theorem sinternW_frame (m : Mem) (u : Word) (w : Word) (m' : Mem) (hI : sinternW m u = some (w, m')) :

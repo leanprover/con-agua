@@ -22,7 +22,7 @@ namespace L.Arena
 theorem rdW_oob (a : Array Word) (x : Word) (h : a.size ≤ x.toNat) : rdW a x = 0 := by
   simp [rdW, h]
 
-theorem rdW_set64_zero (m : Mem) (a b : ArrId) (k x : Word) :
+theorem rdW_set64_zero (m : Mem) (a b : TieredArray) (k x : Word) :
     rdW ((m.set64 a k 0).arr64 b) x = if b = a ∧ k = x then 0 else rdW (m.arr64 b) x := by
   rw [rdW_set64]
   by_cases h : b = a
@@ -35,7 +35,7 @@ theorem rdW_set64_zero (m : Mem) (a b : ArrId) (k x : Word) :
     · simp [hk]
   · simp [h]
 
-theorem zero8_rd (sa : ArrId) (k : Word) (m : Mem) (x : Word) (hk : k.toNat + 8 < 2 ^ 64) :
+theorem zero8_rd (sa : TieredArray) (k : Word) (m : Mem) (x : Word) (hk : k.toNat + 8 < 2 ^ 64) :
     rdW ((zero8 sa k m).arr64 sa) x =
       if k.toNat ≤ x.toNat ∧ x.toNat < k.toNat + 8 then 0 else rdW (m.arr64 sa) x := by
   simp only [zero8, rdW_set64_zero, true_and]
@@ -54,7 +54,7 @@ theorem zero8_rd (sa : ArrId) (k : Word) (m : Mem) (x : Word) (hk : k.toNat + 8 
   grind (splits := 20)
 
 /-- **The zero loop** zeroes the `8 e` words from `x` (no wrap) and changes no other word. -/
-theorem kzeroW_rd (sa : ArrId) : ∀ (e : Nat) (x : Word) (m : Mem), x.toNat + 8 * e < 2 ^ 64 →
+theorem kzeroW_rd (sa : TieredArray) : ∀ (e : Nat) (x : Word) (m : Mem), x.toNat + 8 * e < 2 ^ 64 →
     ∀ y, rdW ((kzeroW sa x e m).arr64 sa) y =
       if x.toNat ≤ y.toNat ∧ y.toNat < x.toNat + 8 * e then 0 else rdW (m.arr64 sa) y
   | 0, x, m, _, y => by
@@ -76,7 +76,7 @@ theorem kzeroW_rd (sa : ArrId) : ∀ (e : Nat) (x : Word) (m : Mem), x.toNat + 8
 
 /-- **The mark loop** adds `MARK` to the live value words of its `e` slots from `x` (no wrap) and
 changes no other word. -/
-theorem kmarkW_rd (sa : ArrId) (bt : Word) : ∀ (e : Nat) (x : Word) (m : Mem),
+theorem kmarkW_rd (sa : TieredArray) (bt : Word) : ∀ (e : Nat) (x : Word) (m : Mem),
     x.toNat + 2 * e ≤ (m.arr64 sa).size → (m.arr64 sa).size < 2 ^ 61 →
     ∀ y, rdW ((kmarkW sa bt e x m).arr64 sa) y =
       if x.toNat ≤ y.toNat ∧ y.toNat < x.toNat + 2 * e ∧ (y.toNat - x.toNat) % 2 = 0 ∧
@@ -321,9 +321,9 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     simp only [slotW, slotV, kr', baseW, ctl', hsa, hbt, VW]
   have sk' : ∀ j, slotK S m' t j = KW sa ob m' j := fun j => by simp only [slotK, kr', hsa, KW]
   have hn' : nSl S m' t = n * 2 := kn'
-  have hsat : ∀ b, b ≠ S.sa → b ≠ tier1 S.sa → b ≠ sa := fun b h1 h2 e => by
+  have hsat : ∀ b : TieredArray, b ≠ S.sa → b ≠ tier1 S.sa → b ≠ sa := fun b h1 h2 e => by
     rw [← hsa] at e
-    rcases tierA_cases' S.sa t with e' | e' <;> rw [e'] at e <;> contradiction
+    rcases tierA_eq_or S.sa t with e' | e' <;> rw [e'] at e <;> contradiction
   have hout : OutEq S m m' := ⟨fun b _ _ hb hb' _ => arr' b (hsat b hb hb'), by rw [ctl']⟩
   have hra : ∀ t', tierA S.ra t' ≠ sa := fun t' => by rw [← hsa]; exact hS.ra_sa' t' t
   have hfe : ∀ t' i f, f < S.w → fld S m' t' i f = fld S m t' i f := fun t' i f _ => by

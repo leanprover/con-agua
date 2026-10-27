@@ -46,14 +46,14 @@ theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s
   split at h
   · cases h
   · cases h
-    rcases tierA_cases' A (tierW r) with e | e <;> rw [e]
-    · exact (MemFrame.set64 m₁ A hA _ _).mono (by simp) (by simp)
-    · exact (MemFrame.set64 m₁ _ (tier1_ne (by decide)) _ _).mono (by simp) (by simp)
+    rcases tierA_eq_or A (tierW r) with e | e <;> rw [e]
+    · exact (MemFrame.set64 m₁ A (TieredArray.t0_ne hA) _ _).mono (by simp) (by simp)
+    · exact (MemFrame.set64 m₁ _ ((tier1_ne_t0 _ _)) _ _).mono (by simp) (by simp)
 
 /-- **The frame of a `mk_*`**: the interning's arrays and counts, then the derived column `A`. -/
 theorem mkK_frame {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : A ≠ CTL) {c s d r : Word}
     {m m' : Mem} {ks : List Word} (h : mkK A c s d (consInternM C m ks) = some (r, m')) :
-    MemFrame (C.wset ++ [A, tier1 A]) [C.ca, C.ca + 1] m m' := by
+    MemFrame (C.wset ++ [(A : TieredArray), tier1 A]) [C.ca, C.ca + 1] m m' := by
   rcases hI : consInternM C m ks with _ | ⟨r₁, m₁⟩ <;> rw [hI] at h
   · cases h
   rcases hP : derPutW A c m₁ s r₁ d with _ | m₂ <;> simp only [mkK_some, hP, reduceCtorEq] at h
@@ -241,10 +241,10 @@ theorem ColT2.frame {L : Lens α δ k} {A : ArrId} {f : δ → Word} {m m' : Mem
     colT_mono h.2 (fun _ _ => by simp only [tierA_one_eq, he'])⟩
 
 /-- `ColT2.frame` across a `MemFrame` that avoids the column (both tiers). -/
-theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List ArrId} {C : List Word}
-    {m m' : Mem} {a : AState} (h : ColT2 L A f m a) (hf : MemFrame Ar C m m') (hA : A ∉ Ar)
-    (hA' : tier1 A ∉ Ar) (hc : A ≠ CTL) : ColT2 L A f m' a :=
-  h.frame (hf.1 A hA hc) (hf.1 _ hA' (tier1_ne (by decide)))
+theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List TieredArray} {C : List Word}
+    {m m' : Mem} {a : AState} (h : ColT2 L A f m a) (hf : MemFrame Ar C m m') (hA : (A : TieredArray) ∉ Ar)
+    (hA' : tier1 A ∉ Ar) (hc : (A : TieredArray) ≠ CTL) : ColT2 L A f m' a :=
+  h.frame (hf.1 A hA hc) (hf.1 _ hA' ((tier1_ne_t0 _ _)))
 
 omit [Inhabited δ] in
 theorem tbl_push_size (tb : Tbl α (Idx k) δ) (key : α) (d : δ) (y : Idx k) :
@@ -432,9 +432,8 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
     rw [show cntC C m' t' = cntC C (pushRec C m t ks) t' by
       simp only [cntC, he CTL (hW.sch.sa_ctl' t).symm]]
     exact pushRec_cnt C hW m t ht ks hR.ctl t' ht'
-  have hAl := hW.colLt A hA
   have hAm := pushRec_col C hW hA m t ks
-  rw [← he _ (tierA_ne hAl hW.sch.sa_lt hAsa t t)] at hAm
+  rw [← he _ (tierA_ne hAsa t t)] at hAm
   have hq := hW.colRoom A hA m t ht hok
   have hc27 : (cntC C m t).toNat < 2 ^ 27 := by
     simp only [pushOKC, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
@@ -455,12 +454,11 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
     rw [hAm, rdW_set!, ← hct, ite_eq_left ⟨rfl, hq⟩, hdd]
   have rdo : ∀ t', t' ≤ 1 → t' ≠ t → m'.arr64 (tierA A t') = m.arr64 (tierA A t') := by
     intro t' ht' hne
-    rw [he _ (tierA_ne hAl hW.sch.sa_lt hAsa t' t), pushRec,
+    rw [he _ (tierA_ne hAsa t' t), pushRec,
       colW_arr C _ _ _ _ _ (fun A' hA' => by
         rw [hA] at hA'; cases hA'; exact tierA_ne_tier _ ht ht' (Ne.symm hne)),
-      Mem.arr64_set64_ne _ _ _ _ _ (by
-        simpa using (tierA_ne hAl (show CTL < 256 by decide) (hW.col A hA).2.2.1 t' 0)),
-      wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (tierA_ne hAl hW.sch.ra_lt (hW.col A hA).1 t' t)]
+      Mem.arr64_set64_ne _ _ _ _ _ (ne_tierA (Ne.symm (hW.col A hA).2.2.1) t').symm,
+      wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (tierA_ne (hW.col A hA).1 t' t)]
   rcases word_le_one t ht with rfl | rfl
   · have e0 := hcm 0 (by decide)
     have e1 := hcm 1 (by decide)

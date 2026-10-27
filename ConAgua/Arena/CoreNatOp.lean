@@ -299,7 +299,7 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by decide)
   refine ⟨⟨⟨hR, hder m' hD⟩, ?_, ?_, hS.env.frame (by decide) (.of_lt natC_lt (by decide)) hf, ?_, ?_, ?_,
     hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide),
-    hf.2.2.1 145 ▸ hS.bstk,
+    hf.2.2.1 BSTK ▸ hS.bstk,
     hS.den.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp])
       (fun _ _ hk => .inl (hc ▸ hk))
       (fun x u hv => (hview x _ (.inl ⟨_, rfl⟩) hv).resolve_right (by rintro ⟨_, h⟩; cases h))

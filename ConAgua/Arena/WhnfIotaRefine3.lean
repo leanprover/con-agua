@@ -803,14 +803,14 @@ theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
   hS.arena_frame hD hcpl hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, tierOff, PJREC, PJSLOT, PJDER])
+    (by decide)
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (by simp [tier1, tierOff, PJREC, PJSLOT, PJDER]) (by simp)
+    (by decide) (by decide)
 
 /-! ## `eta_projs(T, b, nF)` -/
 
@@ -952,7 +952,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     have hrun1 := AM.run_of_ok _ _ hok1
     have hspn1 : m₁.arr64 SPN = m.arr64 SPN :=
       hfr1c.1 SPN (fun h => by
-        unfold L.Rom.StoreA at h; simp [tier1, tierOff, lowTierArrs, SPN] at h) (by decide)
+        unfold L.Rom.StoreA at h; simp [tier1, lowTierArrs, SPN] at h) (by decide)
     have hcpl := Keeps.run (keeps_cpl_internProj (decI T) j.toNat (decE b)) hrun1
     have hS1 : CoreS dn m₁ (AM.st (internE (.proj (decI T) j.toNat (decE b))) a) vis fe M eb :=
       hS.of_proj hD1 hcpl hfr1
@@ -996,7 +996,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     · rw [hsz3, hsz2]
     · rw [htop3]
       unfold spTop
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SPN by decide)]
+      rw [Mem.arr64_set64_ne _ _ _ _ _ (show (CTL : TieredArray) ≠ SPN by decide)]
       exact hfr1c.2.1 136 (fun h => by
         unfold L.Rom.StoreC at h
         obtain ⟨k', hk', hkk⟩ := List.mem_map.mp h

@@ -248,7 +248,7 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) (ht : top.toNat < 2 ^ 41) :
     have htc : (top + cnt).toNat = top.toNat + cnt.toNat := by
       rw [UInt64.toNat_add]; omega
     have hc1 : (cnt + 1).toNat = cnt.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hP : ∀ B, B ≠ POOL ∧ B ≠ POOL1 →
+    have hP : ∀ B : TieredArray, B ≠ ↑POOL ∧ B ≠ POOL1 →
         (m.set64 (tierA POOL (top >>> 40)) ((top &&& 1099511627775) + cnt)
           (tblW m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))).arr64 B =
           m.arr64 B := fun B hB => arr64_set64_tier_ne _ _ _ _ _ hB

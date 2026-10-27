@@ -22,12 +22,14 @@ It is executable (`#eval`), and it is what `vcgen` steps through in a proof.
 
 namespace L
 
-/-- The memory: a fixed set of byte arrays and word arrays, indexed by `ArrId`, and the global
-variables. The arrays' lengths are fixed for the run (a growable vector is a fixed-capacity array
-plus a length kept in a word). Every global variable has a value (`0` unless written). -/
+/-- The memory: byte arrays by name (`ArrId`), word arrays by (array, tier) (`TieredArray`), and the
+global variables. Every array exists (possibly empty): the memory is a total map, and which arrays
+a program may name is the compiler's business (`Prog.wf` against its layout). The arrays' lengths
+are fixed for the run (a growable vector is a fixed-capacity array plus a length kept in a word).
+Every global variable has a value (`0` unless written). -/
 structure Mem where
-  bytes : Array (Array UInt8) := #[]
-  words : Array (Array Word) := #[]
+  bytes : ArrId → Array UInt8 := fun _ => #[]
+  words : TieredArray → Array Word := fun _ => #[]
   glob : GVar → Word := fun _ => 0
   deriving Inhabited
 
@@ -113,23 +115,25 @@ def Cmp.evalW (c : Cmp) (a b : Word) : Word := if c.eval a b then 1 else 0
 
 /-! ## Memory access -/
 
-/-- Byte array `a`; an array that does not exist reads as empty. -/
-def Mem.arr8 (m : Mem) (a : ArrId) : Array UInt8 := m.bytes.getD a #[]
+/-- Byte array `a`. -/
+def Mem.arr8 (m : Mem) (a : ArrId) : Array UInt8 := m.bytes a
 
-/-- Word array `a`; an array that does not exist reads as empty. -/
-def Mem.arr64 (m : Mem) (a : ArrId) : Array Word := m.words.getD a #[]
+/-- Word array `s`. -/
+def Mem.arr64 (m : Mem) (s : TieredArray) : Array Word := m.words s
 
 def Mem.len8 (m : Mem) (a : ArrId) : Word := UInt64.ofNat (m.arr8 a).size
 
-def Mem.len64 (m : Mem) (a : ArrId) : Word := UInt64.ofNat (m.arr64 a).size
+def Mem.len64 (m : Mem) (s : TieredArray) : Word := UInt64.ofNat (m.arr64 s).size
 
 /-- Byte array `a` with byte `i` set to the low byte of `v` (no change out of bounds). -/
 def Mem.set8 (m : Mem) (a : ArrId) (i v : Word) : Mem :=
-  { m with bytes := m.bytes.set! a ((m.arr8 a).set! i.toNat v.toUInt8) }
+  let b := (m.arr8 a).set! i.toNat v.toUInt8
+  { m with bytes := fun a' => if a' = a then b else m.bytes a' }
 
-/-- Word array `a` with word `i` set to `v` (no change out of bounds). -/
-def Mem.set64 (m : Mem) (a : ArrId) (i v : Word) : Mem :=
-  { m with words := m.words.set! a ((m.arr64 a).set! i.toNat v) }
+/-- Word array `s` with word `i` set to `v` (no change out of bounds). -/
+def Mem.set64 (m : Mem) (s : TieredArray) (i v : Word) : Mem :=
+  let w := (m.arr64 s).set! i.toNat v
+  { m with words := fun s' => if s' = s then w else m.words s' }
 
 /-- Global `g` set to `v`. -/
 def Mem.setG (m : Mem) (g : GVar) (v : Word) : Mem :=
@@ -148,12 +152,12 @@ def le64 (b : Array UInt8) (k : Nat) : Word :=
   UInt64.ofNat (((List.range 8).map fun j => b[k + j]!).foldr (fun x acc => acc * 256 + x.toNat) 0)
 
 /-- `D[di + j] := S[si + j]` for `j < n`, ascending (each word read after the writes before it). -/
-def Mem.copy64 (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) : Nat → Mem
+def Mem.copy64 (m : Mem) (d : TieredArray) (di : Word) (s : TieredArray) (si : Word) : Nat → Mem
   | 0 => m
   | n + 1 => (m.set64 d di ((m.arr64 s)[si.toNat]!)).copy64 d (di + 1) s (si + 1) n
 
 /-- `D[di + j] := b[si + j]` (zero-extended) for `j < n`, ascending. -/
-def Mem.copy8w (m : Mem) (d : ArrId) (di : Word) (b : Array UInt8) (si : Word) : Nat → Mem
+def Mem.copy8w (m : Mem) (d : TieredArray) (di : Word) (b : Array UInt8) (si : Word) : Nat → Mem
   | 0 => m
   | n + 1 => (m.set64 d di (b[si.toNat]!).toUInt64).copy8w d (di + 1) b (si + 1) n
 
@@ -172,7 +176,7 @@ def ld8 (a : ArrId) (i : Word) : M Word := do
   if h : i.toNat < (m.arr8 a).size then return (m.arr8 a)[i.toNat].toUInt64 else throw .oob
 
 /-- Word `i` of word array `a`; `oob` out of bounds. -/
-def ld64 (a : ArrId) (i : Word) : M Word := do
+def ld64 (a : TieredArray) (i : Word) : M Word := do
   let m := (← get).mem
   if h : i.toNat < (m.arr64 a).size then return (m.arr64 a)[i.toNat] else throw .oob
 
@@ -191,7 +195,7 @@ def st8 (a : ArrId) (i v : Word) : M Unit := do
   if i.toNat < (s.mem.arr8 a).size then set { s with mem := s.mem.set8 a i v } else throw .oob
 
 /-- Store `v` at word `i` of word array `a`; `oob` out of bounds. -/
-def st64 (a : ArrId) (i v : Word) : M Unit := do
+def st64 (a : TieredArray) (i v : Word) : M Unit := do
   let s ← get
   if i.toNat < (s.mem.arr64 a).size then set { s with mem := s.mem.set64 a i v } else throw .oob
 
@@ -221,7 +225,7 @@ def evalE : Expr → M Word
   | .ld8x8 s i => do ld8x8 s (← evalE i)
 
 /-- The array a block operand names. -/
-def warr : WArr → M ArrId
+def warr : WArr → M TieredArray
   | .plain a => pure a
   | .tier a t => do return tierA a (← evalE t)
 
@@ -369,113 +373,92 @@ def run (p : Prog) (fuel : Nat) (f : FnName) (vs : List Word) (m : Mem) : Except
 
 /-! ## Test memories -/
 
-/-- Word array `a` of a test memory set to `xs`; the memory grows (with empty arrays) if it has
-no array `a` yet. -/
-def Mem.putWords (m : Mem) (a : ArrId) (xs : Array Word) : Mem :=
-  { m with words := (m.words ++ Array.replicate (a + 1 - m.words.size) #[]).set! a xs }
+/-- Word array `s` of a test memory set to `xs`. -/
+def Mem.putWords (m : Mem) (s : TieredArray) (xs : Array Word) : Mem :=
+  { m with words := fun s' => if s' = s then xs else m.words s' }
 
-/-- Byte array `a` of a test memory set to `xs`; the memory grows (with empty arrays) if it has
-no array `a` yet. -/
+/-- Byte array `a` of a test memory set to `xs`. -/
 def Mem.putBytes (m : Mem) (a : ArrId) (xs : Array UInt8) : Mem :=
-  { m with bytes := (m.bytes ++ Array.replicate (a + 1 - m.bytes.size) #[]).set! a xs }
+  { m with bytes := fun a' => if a' = a then xs else m.bytes a' }
 
 /-- **A test memory built from named byte arrays** (`IN`, `Rom.PB`, …), like `Mem.ofWords`. -/
 def Mem.ofBytes (l : List (ArrId × Array UInt8)) : Mem :=
   l.foldl (fun m p => m.putBytes p.1 p.2) {}
 
 /-- **A test memory built from named word arrays.** The list gives each array's contents by its
-name (`CTL`, `REC`, …), not by its position in `words`; the arrays it does not mention are empty.
-A later entry for the same array wins. The memory has exactly as many word arrays as the largest
-number mentioned, plus one. -/
-def Mem.ofWords (l : List (ArrId × Array Word)) : Mem :=
+name (`CTL`, `tier1 REC`, …); the arrays it does not mention are empty. A later entry for the
+same array wins. -/
+def Mem.ofWords (l : List (TieredArray × Array Word)) : Mem :=
   l.foldl (fun m p => m.putWords p.1 p.2) {}
 
 /-! ## Which arrays exist
 
-Statements say that an array exists, or that a step adds or drops none, through these names
-and the lemmas below, never through `bytes.size` or `words.size`: how the memory holds its arrays
-is the semantics' business. -/
+Every array exists in every memory (`Mem.words` and `Mem.bytes` are total maps), so these
+predicates hold always. They name the facts that statements about memories once needed. -/
 
-/-- Word array `a` exists in `m`. -/
-def Mem.HasW (m : Mem) (a : ArrId) : Prop := a < m.words.size
+/-- Word array `a` exists in `m`: always. -/
+def Mem.HasW (_ : Mem) (_ : TieredArray) : Prop := True
 
-instance (m : Mem) (a : ArrId) : Decidable (m.HasW a) := Nat.decLt _ _
+instance (m : Mem) (a : TieredArray) : Decidable (m.HasW a) := instDecidableTrue
 
-/-- Byte array `a` exists in `m`. -/
-def Mem.HasB (m : Mem) (a : ArrId) : Prop := a < m.bytes.size
+/-- Byte array `a` exists in `m`: always. -/
+def Mem.HasB (_ : Mem) (_ : ArrId) : Prop := True
 
-instance (m : Mem) (a : ArrId) : Decidable (m.HasB a) := Nat.decLt _ _
+instance (m : Mem) (a : ArrId) : Decidable (m.HasB a) := instDecidableTrue
 
-/-- Word arrays `0, …, n - 1` exist in `m`. -/
-def Mem.HasWs (m : Mem) (n : Nat) : Prop := n ≤ m.words.size
+/-- Word arrays `0, …, n - 1` exist in `m`: always. -/
+def Mem.HasWs (_ : Mem) (_ : Nat) : Prop := True
 
-/-- `m'` has the word arrays of `m`: a step from `m` to `m'` added or dropped none. -/
-def Mem.SameShape (m m' : Mem) : Prop := m'.words.size = m.words.size
+/-- `m'` has the word arrays of `m`: always. -/
+def Mem.SameShape (_ _ : Mem) : Prop := True
 
-theorem Mem.SameShape.refl (m : Mem) : m.SameShape m := rfl
+@[simp] theorem Mem.hasW (m : Mem) (a : TieredArray) : m.HasW a := trivial
+@[simp] theorem Mem.hasB (m : Mem) (a : ArrId) : m.HasB a := trivial
+@[simp] theorem Mem.hasWs (m : Mem) (n : Nat) : m.HasWs n := trivial
 
-theorem Mem.SameShape.symm {m m' : Mem} (h : m.SameShape m') : m'.SameShape m := Eq.symm h
+theorem Mem.SameShape.refl (m : Mem) : m.SameShape m := trivial
 
-theorem Mem.SameShape.trans {m₁ m₂ m₃ : Mem} (h₁ : m₁.SameShape m₂) (h₂ : m₂.SameShape m₃) :
-    m₁.SameShape m₃ := Eq.trans h₂ h₁
+theorem Mem.SameShape.symm {m m' : Mem} (_ : m.SameShape m') : m'.SameShape m := trivial
 
-theorem Mem.sameShape_set64 (m : Mem) (a : ArrId) (i v : Word) : m.SameShape (m.set64 a i v) := by
-  simp only [Mem.SameShape, Mem.set64, Array.size_set!]
+theorem Mem.SameShape.trans {m₁ m₂ m₃ : Mem} (_ : m₁.SameShape m₂) (_ : m₂.SameShape m₃) :
+    m₁.SameShape m₃ := trivial
 
-theorem Mem.sameShape_set8 (m : Mem) (a : ArrId) (i v : Word) : m.SameShape (m.set8 a i v) := rfl
+theorem Mem.sameShape_set64 (m : Mem) (a : TieredArray) (i v : Word) : m.SameShape (m.set64 a i v) :=
+  trivial
 
-theorem Mem.sameShape_setG (m : Mem) (g : GVar) (v : Word) : m.SameShape (m.setG g v) := rfl
+theorem Mem.sameShape_set8 (m : Mem) (a : ArrId) (i v : Word) : m.SameShape (m.set8 a i v) := trivial
 
-theorem Mem.SameShape.set64 {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
-    m.SameShape (m'.set64 a i v) := h.trans (Mem.sameShape_set64 m' a i v)
+theorem Mem.sameShape_setG (m : Mem) (g : GVar) (v : Word) : m.SameShape (m.setG g v) := trivial
 
-theorem Mem.SameShape.set8 {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
-    m.SameShape (m'.set8 a i v) := h.trans (Mem.sameShape_set8 m' a i v)
+theorem Mem.SameShape.set64 {m m' : Mem} (_ : m.SameShape m') (a : TieredArray) (i v : Word) :
+    m.SameShape (m'.set64 a i v) := trivial
 
-theorem Mem.SameShape.setG {m m' : Mem} (h : m.SameShape m') (g : GVar) (v : Word) :
-    m.SameShape (m'.setG g v) := h.trans (Mem.sameShape_setG m' g v)
+theorem Mem.SameShape.set8 {m m' : Mem} (_ : m.SameShape m') (a : ArrId) (i v : Word) :
+    m.SameShape (m'.set8 a i v) := trivial
 
-@[simp] theorem Mem.sameShape_set64_iff {m m' : Mem} (a : ArrId) (i v : Word) :
-    m.SameShape (m'.set64 a i v) ↔ m.SameShape m' :=
-  ⟨fun h => h.trans (Mem.sameShape_set64 m' a i v).symm, fun h => h.set64 a i v⟩
+theorem Mem.SameShape.setG {m m' : Mem} (_ : m.SameShape m') (g : GVar) (v : Word) :
+    m.SameShape (m'.setG g v) := trivial
 
-@[simp] theorem Mem.sameShape_set8_iff {m m' : Mem} (a : ArrId) (i v : Word) :
-    m.SameShape (m'.set8 a i v) ↔ m.SameShape m' :=
-  ⟨fun h => h.trans (Mem.sameShape_set8 m' a i v).symm, fun h => h.set8 a i v⟩
+@[simp] theorem Mem.sameShape (m m' : Mem) : m.SameShape m' := trivial
 
-@[simp] theorem Mem.sameShape_setG_iff {m m' : Mem} (g : GVar) (v : Word) :
-    m.SameShape (m'.setG g v) ↔ m.SameShape m' :=
-  ⟨fun h => h.trans (Mem.sameShape_setG m' g v).symm, fun h => h.setG g v⟩
+theorem Mem.SameShape.set64_both {m m' : Mem} (_ : m.SameShape m') (a : TieredArray) (i v : Word) :
+    (m.set64 a i v).SameShape (m'.set64 a i v) := trivial
 
-@[simp] theorem Mem.set64_sameShape_iff {m m' : Mem} (a : ArrId) (i v : Word) :
-    (m.set64 a i v).SameShape m' ↔ m.SameShape m' :=
-  ⟨fun h => (Mem.sameShape_set64 m a i v).trans h, fun h => (Mem.sameShape_set64 m a i v).symm.trans h⟩
+theorem Mem.HasW.of_sameShape {m m' : Mem} {a : TieredArray} (_ : m.SameShape m') (_ : m.HasW a) :
+    m'.HasW a := trivial
 
-attribute [simp] Mem.SameShape.refl
+theorem Mem.HasW.mono {m : Mem} {a b : Nat} (_ : m.HasW b) (_ : a ≤ b) : m.HasW a := trivial
 
-theorem Mem.SameShape.set64_both {m m' : Mem} (h : m.SameShape m') (a : ArrId) (i v : Word) :
-    (m.set64 a i v).SameShape (m'.set64 a i v) :=
-  ((Mem.sameShape_set64 m a i v).symm.trans h).set64 a i v
+theorem Mem.hasW_set64 (m : Mem) (a : TieredArray) (i v : Word) (b : TieredArray) :
+    (m.set64 a i v).HasW b = m.HasW b := rfl
 
-theorem Mem.HasW.of_sameShape {m m' : Mem} {a : ArrId} (h : m.SameShape m') (ha : m.HasW a) :
-    m'.HasW a := by
-  unfold Mem.HasW Mem.SameShape at *; rw [h]; exact ha
-
-theorem Mem.HasW.mono {m : Mem} {a b : Nat} (h : m.HasW b) (hab : a ≤ b) : m.HasW a :=
-  Nat.lt_of_le_of_lt hab h
-
-theorem Mem.hasW_set64 (m : Mem) (a : ArrId) (i v : Word) (b : ArrId) :
-    (m.set64 a i v).HasW b = m.HasW b := by
-  simp only [Mem.HasW, Mem.set64, Array.size_set!]
-
-theorem Mem.hasW_setG (m : Mem) (g : GVar) (v : Word) (b : ArrId) :
+theorem Mem.hasW_setG (m : Mem) (g : GVar) (v : Word) (b : TieredArray) :
     (m.setG g v).HasW b = m.HasW b := rfl
 
-theorem Mem.HasWs.of_sameShape {m m' : Mem} {n : Nat} (h : m.SameShape m') (ha : m.HasWs n) :
-    m'.HasWs n := by
-  unfold Mem.HasWs Mem.SameShape at *; rw [h]; exact ha
+theorem Mem.HasWs.of_sameShape {m m' : Mem} {n : Nat} (_ : m.SameShape m') (_ : m.HasWs n) :
+    m'.HasWs n := trivial
 
-theorem Mem.HasWs.hasW {m : Mem} {n : Nat} (h : m.HasWs n) {a : Nat} (ha : a < n) : m.HasW a :=
-  Nat.lt_of_lt_of_le ha h
+theorem Mem.HasWs.hasW {m : Mem} {n : Nat} (_ : m.HasWs n) {a : Nat} (_ : a < n) : m.HasW a :=
+  trivial
 
 end L

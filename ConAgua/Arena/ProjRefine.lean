@@ -85,8 +85,7 @@ theorem internE_proj_run (n : NIdx) (i : Nat) (e : EIdx) (a : AState) :
 def projSch : Schema := ⟨PJREC, PJSLOT, 2, 32, ETag.proj⟩
 
 theorem projSch_wf : projSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
-    by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_pj0 (m : Mem) (t i : Word) :
     fld projSch m t i 0 = rdW (m.arr64 (tierA PJREC t)) (i * 2) := by
@@ -187,8 +186,6 @@ theorem projCS_wf : projCS.WF where
   S := by decide
   col A h := by simp [projCS] at h
   colRoom A h := by simp [projCS] at h
-  colLt A h := by
-    simp only [projCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (pjpushOK_room m t ((pjpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, projCS, hk]
   ex h := by simp [projCS] at h

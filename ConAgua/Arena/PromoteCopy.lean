@@ -194,14 +194,13 @@ theorem Grow0.poolOK {m m' : Mem} (h : Grow0 m m') (hp : PoolOK m) : PoolOK m' :
     by rw [hpc, h.top]; exact a4, .inr h.cap, ?_⟩
   rw [h.top, hf.2.2.1]; exact a6
 
-theorem Grow0.tfld {m m' : Mem} (h : Grow0 m m') (R : TRec) (hR : R.arr < 256 ∧ R.arr ≠ POOL ∧ R.arr ≠ PT0 ∧ R.arr ≠ CTL)
+theorem Grow0.tfld {m m' : Mem} (h : Grow0 m m') (R : TRec) (hR : R.arr ≠ POOL ∧ R.arr ≠ PT0 ∧ R.arr ≠ CTL)
     (t i j : Word) : L.Arena.tfld m' R t i j = L.Arena.tfld m R t i j := by
   simp only [L.Arena.tfld]
   rw [h.frame.1 _ (by
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or]
-    exact ⟨tierA_ne_small _ _ hR.1 (by decide) (Ne.symm hR.2.1) t,
-      tierA_ne_small _ _ hR.1 (by decide) (Ne.symm hR.2.2.1) t⟩)
-    (tierA_ne_small _ _ hR.1 (by decide) (Ne.symm hR.2.2.2) t)]
+    exact ⟨tierA_ne_small _ _ (Ne.symm hR.1) t, tierA_ne_small _ _ (Ne.symm hR.2.1) t⟩)
+    (tierA_ne_small _ _ (Ne.symm hR.2.2) t)]
 
 section rels
 variable {m m' : Mem} (h : Grow0 m m') (hp : PoolOK m)
@@ -245,28 +244,28 @@ theorem ArenaD.grow0 {m m' : Mem} {a : AState} (h : Grow0 m m') (hD : ArenaD m a
   obtain ⟨hR, hDer⟩ := hD
   have hf := h.frame
   have hp := hR.lit.1
-  have hra : ∀ {b : ArrId}, b < 256 → POOL ≠ b → PT0 ≠ b → CTL ≠ b → ∀ t,
-      m'.arr64 (tierA b t) = m.arr64 (tierA b t) := fun hb h1 h2 h3 t =>
+  have hra : ∀ {b : ArrId}, POOL ≠ b → PT0 ≠ b → CTL ≠ b → ∀ t,
+      m'.arr64 (tierA b t) = m.arr64 (tierA b t) := fun h1 h2 h3 t =>
     hf.1 _ (by
       simp only [List.mem_cons, List.not_mem_nil, or_false, not_or]
-      exact ⟨tierA_ne_small _ _ hb (by decide) h1 t, tierA_ne_small _ _ hb (by decide) h2 t⟩)
-      (tierA_ne_small _ _ hb (by decide) h3 t)
+      exact ⟨tierA_ne_small _ _ h1 t, tierA_ne_small _ _ h2 t⟩)
+      (tierA_ne_small _ _ h3 t)
   have hc : ∀ x, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x := fun x => hf.2.1 x (by simp)
   refine ⟨?_, DerR.frameM _ _ m m' hf (by decide) a hDer⟩
   arena_build hR, hf with
     first
-    | exact ⟨h.poolOK hp, ConsR.mono hR.lit.2 (hra (by decide) (by decide) (by decide) (by decide))
-        (hra (by decide) (by decide) (by decide) (by decide)) (hf.2.2.1 CTL) (fun x _ => hc x)
+    | exact ⟨h.poolOK hp, ConsR.mono hR.lit.2 (hra (by decide) (by decide) (by decide))
+        (hra (by decide) (by decide) (by decide)) (hf.2.2.1 CTL) (fun x _ => hc x)
         (fun t i k => h.recRel hp t i k)
-        (fun t i => by simp only [litCS, litCSk, litH, hra (b := REC) (by decide) (by decide) (by decide) (by decide)])⟩
-    | exact ConsR.mono hR.ls (hra (by decide) (by decide) (by decide) (by decide))
-        (hra (by decide) (by decide) (by decide) (by decide)) (hf.2.2.1 CTL) (fun x _ => hc x)
+        (fun t i => by simp only [litCS, litCSk, litH, hra (b := REC) (by decide) (by decide) (by decide)])⟩
+    | exact ConsR.mono hR.ls (hra (by decide) (by decide) (by decide))
+        (hra (by decide) (by decide) (by decide)) (hf.2.2.1 CTL) (fun x _ => hc x)
         (fun t i k => h.lsRecRel hp t i k)
-        (fun t i => by simp only [lsCS, lshash, hra (b := LSREC) (by decide) (by decide) (by decide) (by decide)])
-    | exact ConsR.mono hR.nstr (hra (by decide) (by decide) (by decide) (by decide))
-        (hra (by decide) (by decide) (by decide) (by decide)) (hf.2.2.1 CTL) (fun x _ => hc x)
+        (fun t i => by simp only [lsCS, lshash, hra (b := LSREC) (by decide) (by decide) (by decide)])
+    | exact ConsR.mono hR.nstr (hra (by decide) (by decide) (by decide))
+        (hra (by decide) (by decide) (by decide)) (hf.2.2.1 CTL) (fun x _ => hc x)
         (fun t i k => h.nsRecRel hp t i k)
-        (fun t i => by simp only [nstrCS, nshash, hra (b := NSREC) (by decide) (by decide) (by decide) (by decide)])
+        (fun t i => by simp only [nstrCS, nshash, hra (b := NSREC) (by decide) (by decide) (by decide)])
 
 /-! ## `pool_copy0`'s memory -/
 
@@ -339,7 +338,7 @@ theorem cp0W_facts (q o l : Word) (ho : 2 ^ 40 ≤ o.toNat) (hol : o.toNat + l.t
       · have : ¬ (q.toNat + j.toNat ≤ k ∧ k < q.toNat + l.toNat) := by omega
         simp only [h2, ↓reduceIte, this]
 
-theorem len64_toNat' (m : Mem) (A : ArrId) (hs : (m.arr64 A).size < 2 ^ 63) :
+theorem len64_toNat' (m : Mem) (A : TieredArray) (hs : (m.arr64 A).size < 2 ^ 63) :
     (m.len64 A).toNat = (m.arr64 A).size := by
   simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
 
@@ -447,8 +446,8 @@ theorem SlKeep.trans {m₁ m₂ m₃ : Mem} (h₁ : SlKeep m₁ m₂) (h₂ : Sl
       ((h₂.2.2 o l (h₁.2.2 o l h).1).2 k hk).trans ((h₁.2.2 o l h).2 k hk)⟩⟩
 
 /-- A frame away from the pool's arrays, the saved tier-0 top and the top keeps the slices. -/
-theorem SlKeep.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
-    (hA : POOL ∉ A ∧ POOL1 ∉ A ∧ PT0 ∉ A) (hC : (0 : Word) ∉ C) : SlKeep m m' := by
+theorem SlKeep.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
+    (hA : (POOL : TieredArray) ∉ A ∧ POOL1 ∉ A ∧ (PT0 : TieredArray) ∉ A) (hC : (0 : Word) ∉ C) : SlKeep m m' := by
   have h0 := hf.1 POOL hA.1 (by decide)
   have h1 := hf.1 POOL1 hA.2.1 (by decide)
   have ht : m'.top = m.top := by
@@ -478,7 +477,7 @@ theorem TierKeep.refl (m : Mem) : TierKeep m m := id
 theorem TierKeep.trans {m₁ m₂ m₃ : Mem} (h₁ : TierKeep m₁ m₂) (h₂ : TierKeep m₂ m₃) : TierKeep m₁ m₃ :=
   fun h => h₂ (h₁ h)
 
-theorem TierKeep.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+theorem TierKeep.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (h0 : (0 : Word) ∉ C) : TierKeep m m' := fun h => by
   have := hf.2.1 0 h0; simp only [rdW] at this
   have ht : m'.top = m.top := by simpa [Mem.top] using this

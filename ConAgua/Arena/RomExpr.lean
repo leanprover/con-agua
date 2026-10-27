@@ -594,7 +594,7 @@ theorem mpushW_topK {m m' : Mem} {h : Word} (hW : mpushW m h = some m') : TopK m
   refine (memFrame_top (mpushPut_frame m h) (by decide)).trans (TopK.of_eq ?_ ?_ ?_)
   · simp only [mpushMem]
     rw [top_set64_ne _ _ _ (by decide)]
-    simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RMEMO by decide)]
+    simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (show (CTL : TieredArray) ≠ RMEMO by decide)]
   · simp only [mpushMem, pcap_set64]
   · simp only [mpushMem]
     rw [flag_set64_ctl _ _ _ (by decide), Mem.flag_set64_ne _ _ _ _ (by decide)]

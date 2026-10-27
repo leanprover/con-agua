@@ -117,7 +117,7 @@ def zeroProg : Prog :=
 
 /-- A memory with 8 `zero` slots per tier, the scratch tier closed or open. -/
 def zeroMem (scratch : Word) : Mem :=
-  Mem.ofWords <| [(CTL, (#[0, scratch] ++ Array.replicate 62 0))] ++
+  Mem.ofWords <| [((CTL : TieredArray), (#[0, scratch] ++ Array.replicate 62 0))] ++
     withTiers [(ZREC, Array.replicate 16 0),
       (ZSLOT, Array.replicate consTestWords 0)]
 
@@ -166,8 +166,6 @@ theorem zeroOK : ConsOK p zeroCS where
   colA := by simp [zeroCS]
   push_np := by decide
   arrs := by decide
-  lt := ⟨by decide, by decide, fun A h => by
-    simp only [zeroCS, reduceCtorEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [zeroCS] at h
   mloc := fun h => by simp [zeroCS] at h
   exnk := fun _ => by decide

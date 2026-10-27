@@ -84,7 +84,7 @@ def scrSlots : List ArrId := [SLOT, ASLOT, SSLOT, ZSLOT, MSLOT, ISLOT, PSLOT, SO
   LESLOT, BSLOT, FVSLOT, LASLOT, FASLOT, PJSLOT, NASLOT, NSSLOT, NNSLOT, LSSLOT]
 
 /-- The scratch tables' slot arrays (tier 1, `tier1 sa`), which the wrap writes. -/
-def slot1Arrs : List ArrId :=
+def slot1Arrs : List TieredArray :=
   [tier1 SLOT, tier1 ASLOT, tier1 SSLOT, tier1 ZSLOT, tier1 MSLOT, tier1 ISLOT, tier1 PSLOT,
    tier1 SOSLOT, tier1 CSLOT, tier1 LESLOT, tier1 BSLOT, tier1 FVSLOT, tier1 LASLOT, tier1 FASLOT,
    tier1 PJSLOT, tier1 NASLOT, tier1 NSSLOT, tier1 NNSLOT, tier1 LSSLOT]
@@ -93,7 +93,7 @@ theorem slot1Arrs_eq : slot1Arrs = scrSlots.map (tierA · 1) := rfl
 
 /-- The arrays `scratch_reset` writes: the saved tier-0 top `PT0` and, at the wrap, the scratch
 tables' slot arrays. -/
-def scrArrs : List ArrId := PT0 :: slot1Arrs
+def scrArrs : List TieredArray := ↑PT0 :: slot1Arrs
 
 /-- The slot base's limit: at `B ≥ 2^62` the scratch tables are vacated and `B` restarts. -/
 def SCBLIM : Word := 4611686018427387904
@@ -129,10 +129,10 @@ and the slot base `0`, else as it is. -/
 def preMem (m : Mem) : Mem :=
   if SCBLIM ≤ rdW (m.arr64 CTL) SCB then (vacL scrSlots m).set64 CTL SCB 0 else m
 
-theorem vacW_arr (sa : ArrId) (m : Mem) (b : ArrId) (hb : b ≠ tierA sa 1) :
+theorem vacW_arr (sa : ArrId) (m : Mem) (b : TieredArray) (hb : b ≠ tierA sa 1) :
     (vacW sa m).arr64 b = m.arr64 b := (kzeroW_fr _ _ _ m).1 b hb
 
-theorem vacL_arr : ∀ (l : List ArrId) (m : Mem) (b : ArrId), (∀ sa ∈ l, b ≠ tierA sa 1) →
+theorem vacL_arr : ∀ (l : List ArrId) (m : Mem) (b : TieredArray), (∀ sa ∈ l, b ≠ tierA sa 1) →
     (vacL l m).arr64 b = m.arr64 b
   | [], _, _, _ => rfl
   | a :: as, m, b, hb => by
@@ -140,7 +140,7 @@ theorem vacL_arr : ∀ (l : List ArrId) (m : Mem) (b : ArrId), (∀ sa ∈ l, b 
     rw [vacL_arr as _ b (fun sa h => hb sa (List.mem_cons_of_mem _ h)),
       vacW_arr a m b (hb a List.mem_cons_self)]
 
-theorem rdW_set64_self (m : Mem) (a : ArrId) (k v : Word) (h : k.toNat < (m.arr64 a).size) :
+theorem rdW_set64_self (m : Mem) (a : TieredArray) (k v : Word) (h : k.toNat < (m.arr64 a).size) :
     rdW ((m.set64 a k v).arr64 a) k = v := by
   simp only [Mem.arr64_set64_same, rdW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [h]

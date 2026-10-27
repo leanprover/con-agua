@@ -73,8 +73,8 @@ def FireR (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjL
       ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L)
 
 /-- What `rec_fire_levels` writes. -/
-abbrev rflArrs : List ArrId :=
-  LH :: SPN :: POOL :: POOL1 :: LSREC :: LSSLOT :: LSHP :: (tier1 LSREC) :: (tier1 LSSLOT) :: (tier1 LSHP) :: lvArrs
+abbrev rflArrs : List TieredArray :=
+  (LH : TieredArray) :: (SPN : TieredArray) :: (POOL : TieredArray) :: (POOL1 : TieredArray) :: (LSREC : TieredArray) :: (LSSLOT : TieredArray) :: (LSHP : TieredArray) :: (tier1 LSREC) :: (tier1 LSSLOT) :: (tier1 LSHP) :: lvArrs
 abbrev rflCtl : List Word := 136 :: 192 :: 0 :: 40 :: 41 :: lvCtl
 
 /-- **What a run of `rec_fire_levels` gives**: the twin's state and the memory facts a core
@@ -119,21 +119,21 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     spnLsW_ok n m₂ m₃ a₂ c l (rs.headD 0) hs hA₂ hmode₂ hsl₂ hcl64 hW₄
   obtain ⟨hls₃, hlsx₃⟩ := internLsNode_ext _ _ _ _ hrun
   have hframe : MemFrame rflArrs rflCtl m (m₃.set64 CTL 136 b) :=
-    (hf₁.mono (by simp) (by simp)).trans ((hf₂.mono (by simp) (by simp)).trans
-      ((hf₃.mono (by simp) (by simp)).trans ((MemFrame.setCtl _ _ _).mono (by simp) (by simp))))
+    (hf₁.mono (by simp; try grind) (by simp)).trans ((hf₂.mono (by simp; try grind) (by simp)).trans
+      ((hf₃.mono (by simp; try grind) (by simp)).trans ((MemFrame.setCtl _ _ _).mono (by simp; try grind) (by simp))))
   have hctl' : (136 : Word).toNat < (m₃.arr64 CTL).size := by
     have := hframe.2.2.1 CTL
     rw [Mem.size_arr64_set64] at this; rw [this]; simpa using hctl
   have hspn₃ : (m₃.set64 CTL 136 b).arr64 SPN = m₂.arr64 SPN := by
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    exact hf₃.1 SPN (by simp [tier1, tierOff, SPN, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by decide)
+    exact hf₃.1 SPN (by simp [tier1, SPN, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by decide)
   have hpool₁ : m₁.arr64 POOL = m.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
   have hpool₁' : m₁.arr64 POOL1 = m.arr64 POOL1 := hf₁.1 POOL1 (by simp [SPN, POOL1]) (by decide)
   have hpool₁v := vpool_congr hpool₁ hpool₁'
   have hpool₁c := pcap_congr' hpool₁ hpool₁'
-  have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := hf₂.1 POOL (by simp [tier1, tierOff, lvArrs, LH, SPN, POOL, ZREC, ZSLOT,
+  have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := hf₂.1 POOL (by simp [tier1, lvArrs, LH, SPN, POOL, ZREC, ZSLOT,
     SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
-  have hpool₂' : m₂.arr64 POOL1 = m₁.arr64 POOL1 := hf₂.1 POOL1 (by simp [tier1, tierOff, lvArrs, LH, SPN, POOL1, ZREC, ZSLOT,
+  have hpool₂' : m₂.arr64 POOL1 = m₁.arr64 POOL1 := hf₂.1 POOL1 (by simp [tier1, lvArrs, LH, SPN, POOL1, ZREC, ZSLOT,
     SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
   have hpool₂v := vpool_congr hpool₂ hpool₂'
   have hpool₂c := pcap_congr' hpool₂ hpool₂'
@@ -248,7 +248,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     obtain ⟨a₃, hrun₃, hok⟩ := rflTail_ok p hL n m₀ m₁ m₂ m₃ a a₂ (bs.headD 0) (spTop m₁) qc hs rs hmode hsz hctl
       hbc (by omega) hb hf₁ hbel₁ hA₂ (StoreWF.nwf hwf₂) hnc₂ (hlcl.ext hx₂ (by rw [hca₂]))
       (hlscl.ext hx₂.lss (by rw [hca₂])) (by rw [hca₂, ← hal]; dsimp only; rw [eq₂]; dsimp only; rw [eq₁])
-      (by rw [hpi₂, ← hal]) (by rw [hme₂, ← hal]) hsl₂ hbl₂ (hf₂.mono (by simp) (by simp)) h4
+      (by rw [hpi₂, ← hal]) (by rw [hme₂, ← hal]) hsl₂ hbl₂ (hf₂.mono (by simp; try grind) (by simp)) h4
     refine ⟨a₃, ?_, hok⟩
     simp only [recFireLevels, hpl, StateT.run_bind, hrn, except_ok_bind, hrl, hrun₂, hrun₃]
   · -- nested

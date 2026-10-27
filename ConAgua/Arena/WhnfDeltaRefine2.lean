@@ -399,7 +399,7 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [tier1, tierOff, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP])
+    (by decide)
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -409,13 +409,13 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
-    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [tier1, tierOff, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, EREC]) (by decide))
+    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [tier1, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, EREC]) (by decide))
       hv) (hmode := hS.mode.poolGrew hP)
 
 theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [tier1, tierOff, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, SPN]) (by decide)
+    hf.1 SPN (by simp [tier1, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp [natC])
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf (by decide) (by decide), hP⟩
@@ -600,11 +600,11 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
     simp only [show (3 : Word).toNat = 3 from rfl] at hr₁; exact hr₁
   rw [hr₁'] at hok hS hres
   have hPool : m₂.arr64 POOL = s₀.mem.arr64 POOL :=
-    hfr.arr_eq POOL (by simp [tier1, tierOff, CREC, CSLOT, CLP, POOL]) (by decide)
+    hfr.arr_eq POOL (by simp [tier1, CREC, CSLOT, CLP, POOL]) (by decide)
   have hPool1 : m₂.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
-    hfr.arr_eq POOL1 (by simp [tier1, tierOff, CREC, CSLOT, CLP, POOL1]) (by decide)
+    hfr.arr_eq POOL1 (by simp [tier1, CREC, CSLOT, CLP, POOL1]) (by decide)
   have hPt : m₂.ptop0 = s₀.mem.ptop0 :=
-    ptop0_congr (hfr.arr_eq PT0 (by simp [tier1, tierOff, CREC, CSLOT, CLP, PT0]) (by decide))
+    ptop0_congr (hfr.arr_eq PT0 (by simp [tier1, CREC, CSLOT, CLP, PT0]) (by decide))
   have hPoolv := vpool_congr hPool hPool1
   have hPoolc := pcap_congr' hPool hPool1
   have hTop : m₂.top = s₀.mem.top := by
@@ -787,15 +787,15 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     have hdb : decBool r₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hs0
     rwa [hdb] at this
   have hE : m₁.arr64 REC = s₀.mem.arr64 REC :=
-    hfr1.arr_eq REC (by simp [tier1, tierOff, CREC, CSLOT, CLP, REC]) (by decide)
+    hfr1.arr_eq REC (by simp [tier1, CREC, CSLOT, CLP, REC]) (by decide)
   have hE' : m₁.arr64 (tier1 REC) = s₀.mem.arr64 (tier1 REC) :=
-    hfr1.arr_eq (tier1 REC) (by simp [tier1, tierOff, CREC, CSLOT, CLP, REC]) (by decide)
+    hfr1.arr_eq (tier1 REC) (by simp [tier1, CREC, CSLOT, CLP, REC]) (by decide)
   have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
-    hfr1.arr_eq POOL (by simp [tier1, tierOff, CREC, CSLOT, CLP, POOL]) (by decide)
+    hfr1.arr_eq POOL (by simp [tier1, CREC, CSLOT, CLP, POOL]) (by decide)
   have hPool1 : m₁.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
-    hfr1.arr_eq POOL1 (by simp [tier1, tierOff, CREC, CSLOT, CLP, POOL1]) (by decide)
+    hfr1.arr_eq POOL1 (by simp [tier1, CREC, CSLOT, CLP, POOL1]) (by decide)
   have hPt : m₁.ptop0 = s₀.mem.ptop0 :=
-    ptop0_congr (hfr1.arr_eq PT0 (by simp [tier1, tierOff, CREC, CSLOT, CLP, PT0]) (by decide))
+    ptop0_congr (hfr1.arr_eq PT0 (by simp [tier1, CREC, CSLOT, CLP, PT0]) (by decide))
   have hPoolv := vpool_congr hPool hPool1
   have hPoolc := pcap_congr' hPool hPool1
   have hTop : m₁.top = s₀.mem.top := by
@@ -842,31 +842,31 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         constValC := a.caches.constValC.insert (decI nm, decI us) (decE x) } } vis fe M eb ∧
       StackKept m m' := by
-  have hf : MemFrame [103] [111] m m' :=
+  have hf : MemFrame [(CV : TieredArray)] [111] m m' :=
     msetG_frame cvSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   have hq := memoRV_set cvSch (coreSch_wf _ _ (by decide) (by decide)) pairKey VH
     (fun _ _ _ _ _ h => h) m a.caches.constValC hS.core.cv nm us x ⟨hn, hu⟩ (decE x) ⟨rfl, hx⟩ m' hs
   have fr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ) (dv : Word → ν)
-      (mp : Std.HashMap κ ν), S.WF → S.arr ≠ 103 → S.cs ≠ 111 → MemoRG S K dv m mp →
+      (mp : Std.HashMap κ ν), S.WF → S.arr ≠ CV → S.cs ≠ 111 → MemoRG S K dv m mp →
       MemoRG S K dv m' mp :=
     fun S K dv mp hS' h1 h2 hR =>
-      memoRV_frame S hS' K _ [103] [111] (by simpa using h1) (by simpa using h2) m m' hf
+      memoRV_frame S hS' K _ [(CV : TieredArray)] [111] (by simpa using h1) (by simpa using h2) m m' hf
         (fun _ _ h => h) mp hR
   have mr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
       {VR : Mem → Word → ν → Prop} {M₀ : Std.HashMap (κ × Word) ν} {t te : Std.HashMap κ ν}, S.WF →
-      VConst VR → S.arr ≠ 103 → S.cs ≠ 111 → ModeR S K VR m M₀ eb t te →
+      VConst VR → S.arr ≠ CV → S.cs ≠ 111 → ModeR S K VR m M₀ eb t te →
       ModeR S K VR m' M₀ eb t te :=
     fun hS' hV h1 h2 h => h.frame hS' hV (by simpa using h1) (by simpa using h2) hf
   have frv : ∀ {κ : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ)
-      (mp : Std.HashMap κ EIdx), S.WF → S.arr ≠ 103 → S.cs ≠ 111 → MemoRV S K VH m mp →
+      (mp : Std.HashMap κ EIdx), S.WF → S.arr ≠ CV → S.cs ≠ 111 → MemoRV S K VH m mp →
       MemoRV S K VH m' mp :=
     fun S K mp hS' h1 h2 hR =>
-      memoRV_frame S hS' K _ [103] [111] (by simpa using h1) (by simpa using h2) m m' hf
+      memoRV_frame S hS' K _ [(CV : TieredArray)] [111] (by simpa using h1) (by simpa using h2) m m' hf
         (vh_const m m') mp hR
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [SPN]) (by decide)
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by decide) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
-  refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [103] [111] (by simp) (by simp) m m' hf a
-        hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [103] [111] m m' hf (by simp) a hS.arena.2) rfl⟩,
+  refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [(CV : TieredArray)] [111] (by decide) (by simp) m m' hf a
+        hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [(CV : TieredArray)] [111] m m' hf (by decide) a hS.arena.2) rfl⟩,
       ⟨mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wc,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wk,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wh,
@@ -879,12 +879,12 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lq,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lsq⟩,
-      hS.pins.congr (hf.1 PINS (by simp [PINS]) (by decide)),
+      hS.pins.congr (hf.1 PINS (by decide) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
-      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 BSTK ▸ hS.bstk,
+      (hS.den.frameE (hf.1 EREC (by decide) (by decide))).caches rfl rfl rfl,
       hS.mode.frame hf (by simp) (by simp)⟩,
     StackKept.of_frame hf⟩
 
@@ -1241,7 +1241,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     simpa using this
   have hS₅ := hS₄.of_app hD3 hcpl hfr3
   have hspn5 : m₅.arr64 SPN = t₂.mem.arr64 SPN :=
-    hfr3.1 SPN (by simp [tier1, tierOff, AREC, ASLOT, ADER, SPN]) (by decide)
+    hfr3.1 SPN (by simp [tier1, AREC, ASLOT, ADER, SPN]) (by decide)
   have hfr6 : MemFrame [SPN] [136] m₅ (m₅.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)) :=
     (MemFrame.setCtl m₅ 136 _).mono (by simp) (by simp)
   have hS₆ : CoreS dn (m₅.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)) _ vis fe M' eb :=
