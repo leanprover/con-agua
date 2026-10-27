@@ -806,7 +806,7 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
   obtain ⟨ok2, hR4, res2, hf4⟩ := L.Front.internLs_D _ _ hR3 w m₄ _ _ hsl3 _ hk3 (ModeOK.slice0 hmo3 hsl3) hI
   obtain ⟨okX, stX, resX⟩ := AM.bind_facts _ internLsNode a ok1 ok2
   have e : internLevels us = internLevelList us >>= internLsNode := rfl
-  have hf4' := frame_store hf4 (by simp [lsSch, LSREC, LSSLOT, LSHP]) (by simp [lsSch])
+  have hf4' := frame_store hf4 (by simp [tier1, tierOff, lsSch, LSREC, LSSLOT, LSHP]) (by simp [lsSch])
   refine ⟨e ▸ okX, by rw [e, stX]; exact hR4, by rw [e, resX]; exact res2,
     by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, ?_, ?_, ?_⟩
   · rw [hq1, hp8]; simp [encLevels, u64B]; omega

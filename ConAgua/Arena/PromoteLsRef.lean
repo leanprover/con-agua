@@ -472,7 +472,7 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
   obtain ⟨a₂, hrun₂, hD₂', hpw₂, hcp₂, hfr₂⟩ := piLs_rel p hp n _ a₁ hD₂ m.top
     (tfld m LVLS (tierW h) (idxW h) 1) hsl₂ us' (by rw [hvp₂]; exact hsl₁) hk₁ _ _ hW₂
   rw [← hm]
-  refine ⟨a₂, pm₁, ?_, hD₂', hP₂.frameLo (by simp [POOL, PT0, LSREC, LSSLOT, LSHP]) (by simp) hfr₂,
+  refine ⟨a₂, pm₁, ?_, hD₂', hP₂.frameLo (by simp [tier1, tierOff, POOL, PT0, LSREC, LSSLOT, LSHP]) (by simp) hfr₂,
     hr ▸ hpw₂, hcp₂.trans hcp₁, ?_, he₁,
     ((TierKeep.of_frame hfr₁ (by decide)).trans (TierKeep.of_grows hg)).trans
       (TierKeep.of_frame hfr₂ (by decide))⟩
