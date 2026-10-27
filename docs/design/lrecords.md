@@ -521,3 +521,43 @@ expected: the deleted lemmas were each cheap; the saving is in lines and in one 
 `idxW_toNat`/`tierW_toNat'`/`hdW_toNat` most become a line or two. The record side of R0
 (raw record reads I2 through `tfld`, the comparators and room checks of the store instances
 through accessors, `TRec` rows by array name) is next.
+
+### 7.2 R2 deferred with S
+
+An exact two-word key already aborts unless both words are below `2^32`
+(`ConAgua/Arena/ConsLib.lean`, the `R_CAP_KEY` guard of the packed tables), so every word a packed
+push writes has a zero high half in its low field: the mask `x & 0xFFFFFFFF` never changes a
+stored word. Its only purpose is the switch's byte identity (`lowerRec`'s `u32` truncation, §3.5).
+On its own it adds one instruction per packed push to `checker.s` and proof work (the record word
+`vsM` and the key word `kwQ` would differ, so `ExactOK.vs` would need a `< 2^32` hypothesis
+threaded through `ConsLibRel` and the 8 packed instances) for no proof saving. Deferred with S
+(coordinator's decision, 2026-10-27).
+
+### 7.3 R1 deferred with S: the count slots are not where the `CTL` cost is
+
+Measured before starting (master 5f775d94; numeric `set64 CTL k` / `arr64 CTL k` in proof files):
+of 2 141 references, **46** name a count slot (`CTL[2]`‥`CTL[41]`). Proofs reach the counts almost
+only through `tcnt`/`cntW`/`cntC`, which R1 would redefine without changing their users;
+count-specific side conditions (`ctl_ne`, `c192_not_arena`) are about 20 lines. The cost of R1 is
+the frames: every `MemFrame` list of an interning writer would gain the count arrays (143 literal
+lists in 136 files, plus `KeepPost`/`Apart` frames and `ArenaRel.storeCtl`), the store library's
+pushes and models, the scratch reset, freeze and promote (19 more frozen images, or one `RCNT`),
+the `Final/Buf*` proofs of the frozen buffer, and a `checker.s` change. Estimated net proof lines
+0 to +200 for 8–15 h, a wide change. §1.6's I5 row counted all numeric `CTL` vocabulary; it is
+dominated by the non-count slots of §7.5. Deferred with S (coordinator's decision): its value is
+the switch's layout, not proof lines.
+
+### 7.4 The record side of R0, measured and not pursued
+
+The raw record reads of §1.6 I2 sit in the store instances: each `*Refine.lean` has a bridge from
+the library's word `fld S` to raw reads (`fld_lit0`, `fld_la0`, …: 25 lemmas, about 70 lines)
+and a raw form of its record relation (`NatRec_raw`, `ARecRel_raw`, …: 18 lemmas, about 95
+lines), because the instances' models (`mtM`, `hsM`: `lamatchW`, `lahash`, …) read raw words. A
+generic bridge (`Schema.Fits S R`, `fld S = tfld R` for unpacked records, the two halves for packed
+ones; about 30 lines) was prototyped on `LitRefine.lean`: the bridge lemmas go, but every proof
+that meets the raw model (`litMatchOK`, `litNewOK` over `matchW`, the pool slices) needs the raw
+form back, so the per-store `_raw` lemmas stay unless the models move to `tfld` too. That is the
+"leaner hash template" (§2, rank 5), not a records API. Net saving about 5 lines per store for
+several hours; not done. The comparators and room checks through accessors (`APP⟨t, v - 1⟩.f`
+instead of `AREC⟨t⟩[v - 1] & 4294967295`) are an L-text change that expands to the same `Expr`,
+with no proof saving on its own; left for the rank-5 template work, where the models change anyway.
