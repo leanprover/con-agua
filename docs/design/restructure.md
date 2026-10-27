@@ -229,3 +229,59 @@ Proof-edit rebuild, median over the family (as above):
 | `PromoteCIRef*` (31 → 28) | 246 modules, 1022 s | 114 modules, 415 s |
 
 Estimated cold critical path, with the new modules' measured times: 930 s.
+
+## Measured before and after
+
+Both on the same machine, back to back, load below 4 (otherwise idle), `LAKE_COLD=1 scripts/lake
+build` (no shared cache in either direction) from an empty `.lake/build`, all cores (Lake's
+default), wall and CPU from the build's resource usage (logs `_tmp/restructure/{old,final}-cold.log`):
+
+| | master 5b9bde54 (before) | master 3a13f3a1 (after batches 1–7) |
+|---|---:|---:|
+| modules compiled | 1950 | 2107 |
+| wall | 1228 s | **736 s** |
+| CPU | 11 341 s | 11 968 s (+5.5 %: 157 more modules, each loads its imports) |
+| sum of module times | 7443 s | 7852 s |
+| critical path (from the module times) | 1207 s | **722 s** |
+
+(The coordinator's cold build of 5b9bde54 on a busier machine: 29 min wall, 224 CPU-min,
+critical path 1710 s from its module times. The estimates in the batch sections above use those
+module times.)
+
+Proof-only edit: one `have _touch : True := trivial` inserted into one proof, then
+`LAKE_COLD=1 scripts/lake build` on a fully built tree (wall, modules compiled):
+
+| edited proof | before | after |
+|---|---|---|
+| `sim_ite` (`Compiler/SimStmt.lean`) | 763 modules, 1130 s | **46 modules, 119 s** |
+| `piDomsMentionAny_refines` (`IndInstallSpec5` → `IndInstallSpec/BlockRawRec`) | 409 modules, 710 s | **48 modules, 199 s** |
+| `caps_rel` (`PromoteCIRef10` → `PromoteCIRef/Caps`) | 252 modules, 661 s | **113 modules, 242 s** |
+| `rec3TmdW_decB` (`RecGenSpec10` → `RecGenSpec/Rec3TmdWDecB`) | 204 modules, 651 s | **141 modules, 247 s** |
+
+The compiler edit shows the module system's early cutoff: `Compiler.SimStmt` is recompiled, its
+`module` importers (`SimCall`, `SimFun`, `Correct`, `Main`) are not (the public `.olean` did not
+change); the rebuild starts again at `Final.Statement`, the first non-`module` importer, and covers
+the 45 final-theorem modules above it.
+
+## Left for the next lanes
+
+* **`lake shake`.** Batches 2, 3 made the proof families import what they use and kept every other
+  import; the rest of `ConAgua` still imports by habit (simulated: precise imports everywhere
+  would shorten the critical path only by about another 20 s, but shrink rebuild sets). The tools
+  here (`_tmp/restructure/bin/`: `DepsAll.lean`, `shake_fam.py`) found what a constant list misses:
+  global `@[simp]`/`@[grind]` lemmas used without appearing in proof terms (`exc_ok_bind` in
+  `Arena/Checker.lean`), `rfl`-lemmas a `simp` uses, `open` of a namespace, names only commands read
+  (`err_stmt`, `l_model … extra`), and equation lemmas that have to be generated next to their
+  definitions. A shake must check each module still reaches what it reached before.
+* **Build time on the critical path** (722 s now). It runs ROM/declaration setup, then
+  `Checker.Prog` and the whole-program proofs after it: `Checker.LoopDecl` → `LoopDeclAgree` →
+  `LoopDeclArm1` → `LoopDeclArm` → `LoopProg` (14–32 s each), `Checker.IndArm` (31 s),
+  `Verdict.TopE`, `Verdict.IndArmTopE` (31 s); `Checker.IndArmClosed` (97 s) is next to it. Large
+  single modules: `Checker.Prog` (69 s, on the path), `Checker.ProgWf` (55 s), `Verdict.IndBGrpM`
+  (one `l_model` command, 284 s; off the path since batch 2). Times from the quiet cold build.
+* **Families not regrouped**: `Arena/IndT/*` (already one function per module, linear `RecGen1…11`,
+  `Install1…7`), `Verdict` (one function per module already; imports fixed in batch 2), the
+  `Front/IndApplyRefine*` and `WhnfIotaRefine*`/`WhnfM2CRefine*` chains (small).
+* **The module system for the proofs** would need con-ron's arena and bridge as `module` files
+  (a vendor patch over 300 files); without it no early cutoff is possible above L, the compiler and
+  Scan.
