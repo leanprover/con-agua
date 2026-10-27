@@ -78,7 +78,7 @@ theorem store_spn {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') :
     simp [UInt64.toNat_ofNat] at h'; omega)
 
 theorem const_spn {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') :
-    m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
+    m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [tier1, tierOff, CREC, CSLOT, CLP, SPN]) (by decide)
 
 /-- A slice below the top survives a run that kept the stack. -/
 theorem SpineR.ofKept {m m' : Mem} {o n : Word} {xs : Array EIdx} (h : SpineR m o n xs)
