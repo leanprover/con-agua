@@ -32,7 +32,7 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     {A : List TieredArray} {C : List Word}
     (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 42 ∨ Tier1In 0 42 b) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hA : ∀ b ∈ A, b.arr < 42) (hC : ∀ x ∈ C, x.toNat < 64)
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
     (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a)
     (hv : ∀ t, (L.setP a t).store.view = a.store.view ∧ (L.setS a t).store.view = a.store.view)
@@ -40,7 +40,7 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       a'.store.view = a.store.view ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf
-    (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a hS.1.arena.2
+    (fun b hb => by have := hA b hb; omega) a hS.1.arena.2
   have hcs := AM.st_proto L op key tag pf d err a hrun hok
   have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
@@ -50,7 +50,7 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
   have hrun' := AM.run_of_ok op a hok
   rw [hres] at hrun'
   obtain ⟨h1, h2⟩ := StageR.of_walkM hS ⟨hR, hDk.1⟩ hf
-    (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) hC hDk.2 hmode
+    (fun b hb => by have := hA b hb; simp only [InStoreTier]; omega) hC hDk.2 hmode
   have hvw : (AM.st op a).store.view = a.store.view := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
     · exact (hv t).1

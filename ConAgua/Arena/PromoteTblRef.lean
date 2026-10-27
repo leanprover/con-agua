@@ -332,8 +332,7 @@ theorem ptables_rel : ∀ (n : Nat) (m : Mem) (a : AState)
       hfr1.1 ETAB (fun h => by
         rcases List.mem_cons.mp h with h | h
         · exact absurd h (by decide)
-        · rcases vg_arrs ETAB (List.mem_cons.mpr (Or.inr h)) with h' | h' | h' <;>
-            (simp only [ETAB, ArrId] at h'; omega)) (by decide)
+        · exact absurd (vg_arrs _ (List.mem_cons.mpr (Or.inr h))) (by decide)) (by decide)
     have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
     obtain ⟨⟨z0, m1'⟩, hpu, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
