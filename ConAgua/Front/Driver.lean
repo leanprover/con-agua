@@ -1,12 +1,10 @@
 module
 
 meta import ConAgua.L.Semantics
-public import ConAgua.Front.Preserve
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
-public import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

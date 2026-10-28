@@ -1,5 +1,6 @@
-import ConAgua.Front.ApplyDLineRef
-import ConAgua.Scan.LineLink
+import ConAgua.Front.Line
+import ConAgua.Front.UnescapeLink
+import ConAgua.Front.StateDR
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!

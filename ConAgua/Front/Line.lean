@@ -1,6 +1,6 @@
 import ConAgua.Front.ApplyExpr
 import ConAgua.L.ProgHas
-import ConAgua.Front.LineRecLink
+import ConAgua.Front.LineRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr

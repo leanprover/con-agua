@@ -1,5 +1,4 @@
 import ConAgua.Checker.VerdictTop
-import ConAgua.Checker.NoVerdictClosed
 import ConAgua.L.GrindAttr
 
 /-!

@@ -1,4 +1,7 @@
 import ConAgua.Front.LineRefine
+import ConAgua.Front.ApplyDLineRef
+import ConAgua.Front.LineRecLink
+import ConAgua.Scan.LineLink
 
 /-!
 # One line, both outcomes: `front_line`
