@@ -63,7 +63,7 @@ l_model pfvE_spec (p : Prog) (hL : PfLook p)
   specs [nestHoleAt_spec' p hL n, nestOccAny_spec1 p hL.no hL.hoa n, nestArity_spec' p hL.na n,
     nestPosHoleKind_spec p hL.hh hL.hk n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `nest_cont_params_closed`'s model with its one result as a word. -/
@@ -89,7 +89,7 @@ l_model nccE_spec (p : Prog) (hL : NbLook p)
   specs [nestOccAny_spec1 p hL.nit.no hL.nit.hoa n, pos2Pin_spec p hL.hpa n,
     nestContParamsClosed_spec1 p hL.usl.hbp hL.dc.hf hL.hpc n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model nitE_spec (p : Prog) (hf : p.lookup "nest_inst_type" = some nestInstTypeL)
@@ -105,7 +105,7 @@ l_model ntyE_spec (p : Prog) (hL : NtyLook p)
     instPisWith_spec p hL.hv hL.hip hL.hi1 n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [rdW] unified
+  heartbeats 4000000 simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end
