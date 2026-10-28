@@ -1,4 +1,5 @@
 import ConAgua.Arena.DefEqMidLazy
+import ConAgua.Verdict.WhnfNatE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -43,12 +44,6 @@ def NatW (r : List Word) : Prop := r.headD 0 = 0 ∨ r.headD 0 = 1 ∨ r.headD 0
 /-- `(k, 0, 0)`: `3` none, else `some (k != 0)`. -/
 def decNat (r : List Word) : Option Bool := if r.headD 0 = 3 then none else some (r.headD 0 != 0)
 
-/-- **`lazy_nat` is its model `lnW`** (generated). -/
-l_model lazyNat_spec (p : Prog) (hp : LazyProg p)
-  fns [hp.nat ↦ lnW tuple]
-  specs [callW_spec p n "reduce_nat", callW_spec p n "defeq"]
-  grind [arena_grind] simp [St.setLocs_mem']
-
 theorem decNat_ite (w : Word) (r : List Word) (h : (if w ≠ 0 then (1 : Word) else 0) = r.headD 0) :
     decNat r = some (w != 0) := by
   unfold decNat; rw [← h]
@@ -57,76 +52,76 @@ theorem decNat_ite (w : Word) (r : List Word) (h : (if w ≠ 0 then (1 : Word) e
   · simp only [ne_eq, hw, not_false_eq_true, ↓reduceIte]
     simp [hw]
 
-/-- **`lazy_nat` refines `natT`** at the knot. -/
+/-- What `lazy_nat`'s errors claim: the knot's slots' and `reduce_nat`'s. -/
+structure LnG (p : Prog) (n : Nat) : Prop where
+  knot : KnotUpToE p n
+  reduceNat : ReduceNatE p
+
+/-- **`lazy_nat` refines `natT`, both outcomes**: the errors are `reduce_nat`'s and the `defeq`
+slot's. -/
+theorem ln_ref (p : Prog) (hc : LazyCallees p) (n : Nat)
+    (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    RefE (LnG p n) (lnE p (n + 1) s₀.mem mode vis d a b)
+      (natT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decNat dn s₀.mem vis fe M eb NatW) := by
+  simp only [lnE]
+  unfold natT
+  -- a `defeq` run, then `pure (some v)`
+  have dq : ∀ (x y : Word) (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState), CoreS dn m₂ a₂ vis fe M₂ eb →
+      HW x → HW y →
+      RefE (LnG p n) (lnE.k_defeq p (callE p n "defeq" [mode, vis, d, x, y] m₂))
+        ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y) >>= fun v =>
+          pure (some v)) a₂ (CorePost decNat dn m₂ vis fe M₂ eb NatW) := by
+    intro x y m₂ M₂ a₂ hS₂ hx hy
+    rcases c2 : callE p n "defeq" [mode, vis, d, x, y] m₂ with e2 | ⟨r₂, m₃⟩
+    · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+        ((hG.knot n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode d x y hF hn
+          ⟨hS₂, hs.mode4, hs.eb_mode⟩ hx hy) c2)
+    have e₂ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+      ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode d x y hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩
+        hx hy) (callW_of_callE c2)
+    refine RefE.bind_core (w := id) e₂ (fun M₃ hS₃ _ => ?_)
+    exact RefE.ret rfl (CorePost.ret hS₃ (decNat_ite _ _ rfl).symm (by
+      unfold NatW; split
+      · exact .inr (.inl rfl)
+      · exact .inl rfl))
+  rcases c1 : callE p n "reduce_nat" [mode, vis, d, a] s₀.mem with e1 | ⟨r₁, m₁⟩
+  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE
+      (hG.reduceNat n hk hG.knot F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha) c1)
+  have e₁ := CoreSpec.of_callW (hc.reduceNat n hn F s₀ a₀ dn vis fe M eb mode d a hF hs ha hk)
+    (callW_of_callE c1)
+  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ _ => ?_)
+  by_cases h1 : r₁.headD 0 ≠ 0
+  · simp only [lnE.k_reduce_nat, decOptR_some h1]; rw [ite_eq_left h1]
+    exact dq _ _ _ _ _ hS₁ e₁.2.2.2.2 hb
+  have h1' : r₁.headD 0 = 0 := by simpa using h1
+  simp only [lnE.k_reduce_nat, h1', ne_eq, not_true_eq_false, ↓reduceIte, decOptR_none h1']
+  rcases c2 : callE p n "reduce_nat" [mode, vis, d, b] m₁ with e2 | ⟨r₂, m₂⟩
+  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+      (hG.reduceNat n hk hG.knot F _ _ dn vis fe M₁ eb mode d b hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb) c2)
+  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+    (hc.reduceNat n hn F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb hk)
+    (callW_of_callE c2)
+  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
+  by_cases h2 : r₂.headD 0 ≠ 0
+  · simp only [lnE.k_reduce_nat_2, decOptR_some h2]; rw [ite_eq_left h2]
+    exact dq _ _ _ _ _ hS₂ ha e₂.2.2.2.2
+  have h2' : r₂.headD 0 = 0 := by simpa using h2
+  simp only [lnE.k_reduce_nat_2, h2', ne_eq, not_true_eq_false, ↓reduceIte, decOptR_none h2']
+  exact RefE.ret rfl (CorePost.ret hS₂ (by simp only [decNat]; rfl) (.inr (.inr rfl)))
+
+/-- **`lazy_nat` refines `natT`** at the knot (`ln_ref`'s ok half). -/
 theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "lazy_nat" [mode, vis, d, a, b]
       (natT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decNat s₀ a₀ dn vis fe
-      M eb NatW := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (lazyNat_spec p hp (n + 1) s₀ mode vis d a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hS := hs.rel
-  unfold natT
-  rw [lnW.arm1] at hW
-  cases hc1 : callW p n "reduce_nat" [mode, vis, d, a] s.mem with
-  | none => rw [hc1] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [hc1] at hW
-  have e₁ := CoreSpec.of_callW (hc.reduceNat n hn F s a₀ dn vis fe M eb mode d a hF hs ha hk) hc1
-  refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
-  -- a `defeq` run, then `pure (some v)`
-  have dq : ∀ (x y : Word) (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState), CoreS dn m₂ a₂ vis fe M₂ eb →
-      HW x → HW y →
-      lnW.k_defeq p (callW p n "defeq" [mode, vis, d, x, y] m₂) =
-        some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
-      CoreRef ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y) >>= fun v =>
-        pure (some v)) a₂ decNat dn m₂ vis fe M₂ eb r s'.mem NatW := by
-    intro x y m₂ M₂ a₂ hS₂ hx hy h
-    cases hc2 : callW p n "defeq" [mode, vis, d, x, y] m₂ with
-    | none => rw [hc2] at h; cases h
-    | some q =>
-    obtain ⟨r₂, m₃⟩ := q
-    rw [hc2, lnW.k_defeq.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
-    obtain ⟨g1, g2, g3, hm⟩ := h
-    have e₂ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-      ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode d x y hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩
-        hx hy) hc2
-    refine coreRef_bind e₂ (fun M₃ hS₃ => ?_)
-    rw [← hm]
-    exact coreRef_ret hS₃ (decNat_ite _ _ g1).symm (by
-      unfold NatW; rw [← g1]; split
-      · exact .inr (.inl rfl)
-      · exact .inl rfl)
-  by_cases h1 : r₁.headD 0 ≠ 0
-  · rw [lnW.k_reduce_nat.arm1 (hc1 := h1)] at hW
-    rw [decOptR_some h1]
-    exact dq _ _ _ _ _ hS₁ e₁.2.2.2.2 hb hW
-  have h1' : r₁.headD 0 = 0 := by simpa using h1
-  rw [lnW.k_reduce_nat.arm2 (hc1 := h1')] at hW
-  rw [decOptR_none h1']
-  cases hc2 : callW p n "reduce_nat" [mode, vis, d, b] m₁ with
-  | none => rw [hc2] at hW; cases hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  rw [hc2] at hW
-  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (hc.reduceNat n hn F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb hk) hc2
-  refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
-  by_cases h2 : r₂.headD 0 ≠ 0
-  · rw [lnW.k_reduce_nat_2.arm1 (hc1 := h2)] at hW
-    rw [decOptR_some h2]
-    exact dq _ _ _ _ _ hS₂ ha e₂.2.2.2.2 hW
-  have h2' : r₂.headD 0 = 0 := by simpa using h2
-  rw [lnW.k_reduce_nat_2.arm2 (hc1 := h2'), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
-  obtain ⟨g1, g2, g3, hm⟩ := hW
-  rw [decOptR_none h2', ← hm]
-  exact coreRef_ret hS₂ (by simp only [decNat, ← g1, ↓reduceIte]) (.inr (.inr g1.symm))
+      M eb NatW :=
+  RefE.coreSpec (lnE_spec p hp.nat (n + 1) s₀ mode vis d a b)
+    (ln_ref p hc n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb)
 
 /-! ## One iteration -/
 

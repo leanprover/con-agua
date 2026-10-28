@@ -1,6 +1,5 @@
 import ConAgua.Verdict.InferKnotE
 import ConAgua.Verdict.WhnfKnotE
-import ConAgua.Verdict.WhnfMidE
 import ConAgua.Verdict.WhnfSetE
 import ConAgua.Verdict.DefEqAllE
 import ConAgua.Verdict.DefEqEagerE
@@ -82,8 +81,9 @@ theorem KnotAllProg.quickDefeqWE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE 
 include hq hnv in
 /-- **The whnf family's ten error claims the `defeq` family takes** (`DefeqWhnfE`). -/
 theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
-  boolTrueShortcut := fun n _ hkE F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha =>
-    boolTrueShortcut_refinesE p hq.body.lazy.mid hnv n hkE F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha
+  boolTrueShortcut := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha =>
+    RefE.coreSpecE (btsE_spec p hq.body.lazy.mid.bts (n + 1) s₀ mode vis d a) hnv hkE
+      (bts_ref p hq.body.lazy.mid n hk F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha)
   propIrrel := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
     propIrrel_refinesE p hq.body.stuck (KnotAllProg.stuck hq) hnv
       (proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv)
@@ -102,13 +102,17 @@ theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
     etaCert_refinesE p hq.body.stuck (KnotAllProg.stuck hq) hnv
       n hk hkE F s₀ a₀ dn vis fe M eb mode d ty1 body1 b hF hn hs hty hbody hb
   deltaQuick := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb hd =>
-    deltaQuick_refinesE p hq.body.lazy.mid n (KnotAllProg.quickDefeqWE hq hnv n hk hkE)
-      F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb hd
-  tryUnfoldProjApp := fun n _ hkE F s₀ a₀ dn vis fe M eb mode d e hF hn hs he =>
-    tryUnfoldProjApp_refinesE p hq.body.lazy.mid hnv n hkE F s₀ a₀ dn vis fe M eb mode d e hF hn hs he
+    RefE.coreSpecE (dqE_spec p hq.body.lazy.mid.dq (n + 1) s₀ mode vis d a b) hnv
+      (KnotAllProg.quickDefeqWE hq hnv n hk hkE)
+      (dq_ref p n (quickUpTo hq.body.lazy (KnotAllProg.lazy hq) hk n (by omega)) F s₀ a₀ dn vis fe M
+        eb mode d a b hF hn hs ha hb hd)
+  tryUnfoldProjApp := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d e hF hn hs he =>
+    RefE.coreSpecE (tupaE_spec p hq.body.lazy.mid.tupa (n + 1) s₀ mode vis d e) hnv hkE
+      (tupa_ref p hq.body.lazy.mid n hk F s₀ a₀ dn vis fe M eb mode d e hF hn hs he)
   lazyNat := fun n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb =>
-    lazyNat_refinesE p hq.body.lazy (KnotAllProg.lazy hq) hq.delta hnv
-      n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb
+    RefE.coreSpecE (lnE_spec p hq.body.lazy.nat (n + 1) s₀ mode vis d a b) hnv
+      ⟨hkE, reduceNatE_of p hq.delta hnv⟩
+      (ln_ref p (KnotAllProg.lazy hq) n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb)
 
 include hq hnv in
 /-- **The error knot's step**: the five slots' error halves one level up from the knot and the
