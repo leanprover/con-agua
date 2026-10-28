@@ -288,7 +288,8 @@ end step
 (`callE`), done on `(0, v)`, continuing on `(1, e')`. -/
 l_model whnfCoreLoop_specE (p : Prog) (hf : p.lookup "whnf_core_loop" = some whnfCoreLoopL)
   fns [hf ↦ whnfCoreLoopE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] unified
 
 /-- **`whnf_core_step`'s error claim** at every L fuel up to `n` (what the loop's errors claim
 from; `whnfCoreStep_refinesE`, `Verdict/WhnfSlotE.lean`). -/
@@ -382,7 +383,8 @@ theorem whnfCoreLoop_refines' (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n 
     CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
       (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
         (decE e)) decH s₀ a₀ dn vis fe MM eb :=
-  CoreSpec.of_refE (w := fun v => ([v.1], v.2)) (whnfCoreLoop_specE p hp.loop (n + 1) s₀ mode cheap vis d e)
+  CoreSpec.of_refE (w := fun v => ([v.1], v.2))
+    (whnfCoreLoop_specE p hp.loop (n + 1) s₀ mode cheap vis d e)
     (whnfCoreLoop_ref p hp hwc hcc hsup n hk F K hF hK hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he)
     fun _ _ => ⟨rfl, rfl, id⟩
 

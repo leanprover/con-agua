@@ -21,7 +21,8 @@ theorem whnfTop_refinesE (p : Prog) (hw : p.lookup "whnf_top" = some whnfTopL) (
     (n : Nat) (hkE : KnotUpToE p n) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (dep e : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
-    CoreSpecE p (n + 1) "whnf_top" [vis, dep, e] (whnf ConLeche.CheckMode.verified fe F dep.toNat (decE e)) s₀ a₀ :=
+    CoreSpecE p (n + 1) "whnf_top" [vis, dep, e]
+      (whnf ConLeche.CheckMode.verified fe F dep.toNat (decE e)) s₀ a₀ :=
   RefE.coreSpecE (wtopE_spec p hw (n + 1) s₀ vis dep e) trivial hkE
     (whnfTop_ref p hK n hn F hF s₀ a₀ M dep e hS he)
 

@@ -35,7 +35,8 @@ theorem proofIrrelE_of (p : Prog) (hp : IotaProg4 p) (hld : LvlDen)
     rw [he', pirrE.k_proof_irrel_half.none] at hW; cases hW; exact absurd h0 hk0
   | succ n' =>
   have hG : ∀ k, k ≤ n' → PihG p k := fun k hkn =>
-    ⟨hkE.mono (by omega), fun j args m _ h => callE_nv hnv (whnfPirrE_nv "pin_word" (by simp)) j args m h,
+    ⟨hkE.mono (by omega),
+      fun j args m _ h => callE_nv hnv (whnfPirrE_nv "pin_word" (by simp)) j args m h,
       fun j args m _ h => callE_nv hnv (whnfPirrE_nv "lvl_eq_c" (by simp)) j args m h⟩
   have hr := pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode d
   cases c1 : callE p (n' + 1) "proof_irrel_half" [mode, vis, d, a] s₀.mem with

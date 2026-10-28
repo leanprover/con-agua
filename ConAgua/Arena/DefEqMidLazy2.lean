@@ -369,7 +369,8 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
 
 /-- **`lazy_delta_reduction`'s model, both outcomes** (the loop `ldrE.loop1`: one `lazy_iter`
 run per iteration, `callE`). -/
-l_model lazyDeltaReduction_specE (p : Prog) (hf : p.lookup "lazy_delta_reduction" = some lazyDeltaReductionL)
+l_model lazyDeltaReduction_specE (p : Prog)
+    (hf : p.lookup "lazy_delta_reduction" = some lazyDeltaReductionL)
   fns [hf ↦ ldrE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 

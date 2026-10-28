@@ -10,9 +10,9 @@ import ConAgua.Arena.KnotE
 Each loop is a named block (`defeqLstLoop`, `defeqListRevLoop`) with a unified model by fuel
 (`lstE`, `lrevE`: one `defeq` run per iteration, `callE`), and the model's refinement for both
 outcomes by induction on the fuel (`lst_ref`, `lrev_ref`, as `coreLoop_ref`): each iteration's
-`defeq` call is the knot's slot at a smaller fuel (`KnotUpTo`, its error claim `KnotUpToE`). The slices are
-`SpineR` at the entry memory `m₀` and below its stack top, so every later memory that keeps the
-stack (`StackKept m₀ m`) holds the same words there.
+`defeq` call is the knot's slot at a smaller fuel (`KnotUpTo`, its error claim `KnotUpToE`). The
+slices are `SpineR` at the entry memory `m₀` and below its stack top, so every later memory that
+keeps the stack (`StackKept m₀ m`) holds the same words there.
 -/
 
 open ConRon.Arena
@@ -197,7 +197,8 @@ theorem defeqLst_refines (hp : p.lookup "defeq_lst" = some defeqLstL) (n : Nat)
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpec p (n + 1) "defeq_lst" [mode, vis, d, ao, an, bo, bn]
       (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs ys) decBool s₀ a₀ dn vis fe M eb :=
-  CoreSpec.of_refE (w := fun (v : Word × Mem) => ([v.1], v.2)) (defeqLst_specE p hp (n + 1) s₀ mode vis d ao an bo bn)
+  CoreSpec.of_refE (w := fun (v : Word × Mem) => ([v.1], v.2))
+    (defeqLst_specE p hp (n + 1) s₀ mode vis d ao an bo bn)
     (defeqLst_ref p n hk F hF hn s₀ a₀ dn vis fe M eb mode d ao an bo bn hs xs ys hx hy hxt hyt)
     fun _ _ => ⟨rfl, by simp [decBool], id⟩
 
