@@ -34,9 +34,6 @@ l_model cslE_spec (p : Prog) (hf : p.lookup "check_shapeless" = some checkShapel
   fns [hf ↦ cslE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
 
--- `check_constant_val`'s error claim, in the shape of `checkConstantVal_refinesT`
-err_stmt CheckConstantValE := checkConstantVal_refinesT fuel n
-
 theorem erA_truncM_a5 (m : Mem) : erA (truncM m) = erecP m := by
   apply Array.ext_getElem?
   intro i

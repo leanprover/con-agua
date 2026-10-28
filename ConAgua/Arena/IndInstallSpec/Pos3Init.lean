@@ -11,7 +11,7 @@ import ConAgua.L.ModelGen
 /-!
 # Pos3Init
 
-`PosBlkProg`, `cbpos_spec`, `cbposW`, `pos3_init`.
+`PosBlkProg`, `pos3_init`.
 -/
 
 set_option experimental.vcgen true
@@ -41,17 +41,6 @@ structure PosBlkProg (p : Prog) : Prop where
   abs : AbsProg p
   nfs : NfsProg p
   cbp : p.lookup "check_block_positivity" = some checkBlockPositivity
-
-/-! ## The model -/
-
-/-- **`check_block_positivity` is its model `cbposW`** (generated). -/
-l_model cbpos_spec (p : Prog) (hp : p.lookup "check_block_positivity" = some checkBlockPositivity)
-  fns [hp ↦ cbposW]
-  specs [callW_spec p n "block_nest_ctx", callW_spec p n "nest_uniform",
-    callW_spec p n "check_block_positivity_init", callW_spec p n "nest_root", callW_spec p n "pin_word",
-    callW_spec p n "lvl_eq_true", callW_spec p n "check_abs_ctor_sorts_all",
-    callW_spec p n "check_block_positivity_nfs"]
-  grind [ind_grind] finish [rdW_eq] gen 40 heartbeats 1600000 instances 20000
 
 /-! ## The fresh `NestState` -/
 
