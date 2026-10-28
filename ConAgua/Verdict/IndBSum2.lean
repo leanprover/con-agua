@@ -121,12 +121,11 @@ theorem checkSumTeleSlow_claim (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a₀ :
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, ctsE.k_whnf_telescope.arm1] at hW'
-  obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW
-    (wtW_spec p ha hc hsc hv hff hfp hif hwt hi1 (realCall p) (realCall_spec p) k ⟨s₀.mem, Locals.init []⟩ vis 0 n w)
-    (callW_of_callE h1)
+  have hP : WtProg p := ⟨ha, hc, hsc, hv, hff, hfp, hif, hwt, hi1⟩
+  obtain ⟨s1, hs1, -, ⟨bs, s⟩, a1, hrun1, hC1, hg1, hd1, ht1, hs32, hs, hA1⟩ :=
+    RefE.run_ok (s₀ := ⟨s₀.mem, Locals.init []⟩) (wtE_spec p hP k _ vis 0 n w)
+      (wt_ref hq hP henv k (by omega) s₀.mem a₀ 0 n w hC hA hw32 (by simpa using n.toNat_lt) hdw hws) h1
   subst hs1
-  obtain ⟨⟨bs, s⟩, a1, hrun1, hC1, hg1, hd1, ht1, hs32, hs, hA1⟩ :=
-    wtW_simC hq henv k (by omega) s₀.mem a₀ 0 n w hC hA hw32 (by simpa using n.toNat_lt) hdw hws _ h1m
   dsimp only at hC1 hg1 hd1 ht1 hs32 hs hA1
   have hS1 := hC1.stage
   rw [show (0 : Word).toNat = 0 from rfl] at hrun1
