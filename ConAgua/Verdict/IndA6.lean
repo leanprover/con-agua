@@ -1,6 +1,5 @@
-import ConAgua.Verdict.IndA3
+import ConAgua.Verdict.IndA2
 import ConAgua.Verdict.IndA5
-import ConAgua.Verdict.IndA4
 
 /-!
 # `check_ind_decl`'s error refinement, assembled (lane `verdicts-b`, helper `ia`)
@@ -68,8 +67,7 @@ theorem cid_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   simp only at he
   exact cidE_claim hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr
     hnv hCBD
-    (checkBlockE_claim hnv (checkBlockPassE_claim hnv ⟨eInds, eCtors, eCls, ePos, eSeeds⟩)
-      (checkBlockTailE_claim hnv hTG))
+    (checkBlockE_claim hnv ⟨⟨eInds, eCtors, eCls, ePos, eSeeds⟩, hTG⟩)
     (checkShapelessE_claim eCcv) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
 
 end sims
