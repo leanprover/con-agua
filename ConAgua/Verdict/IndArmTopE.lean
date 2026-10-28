@@ -52,7 +52,7 @@ theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   exact cid_claim3 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT
     hclC hfC hkP hkt hkr hnv hU hNfs
     (checkSumTeleE_of ⟨⟨⟨hnv, hcE⟩, hU⟩, hWt⟩) (checkSumCtorsE_of hnv hcE hCcv) (checkStructFieldSortsIE_of hnv hcE)
-    (checkStructProjTableRE_of hnv) hn hdn hc hT hfold
+    hn hdn hc hT hfold
     (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
 
 end L.Ind

@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndInstallSpec.TabsProg
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+import ConAgua.Arena.IndSumSpec.StructProjBodies
 import ConAgua.Arena.IndSumSpec.StructProjGuards
 import ConAgua.Arena.IndPosSpec.NestCrest
 

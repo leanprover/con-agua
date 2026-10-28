@@ -48,7 +48,6 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hCBD : CheckBasisDeclE p) (eCcv : CheckConstantValE p) (hU : UceProg p)
     (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env)
     (eSum : CheckSumTeleE p) (eSC : CheckSumCtorsE p) (eSF : CheckStructFieldSortsIE p)
-    (eTbl : CheckStructProjTableRE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {o l w : Word} {block : List IConstantInfo}
@@ -68,7 +67,7 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
   have hG := nbG_prog hkp hnv
   exact cid_claim hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC
-    hkP hkt hkr hnv hCBD eCcv ⟨⟨⟨hnv, hcE⟩, hU⟩, hNfs, eSF, eTbl⟩
+    hkP hkt hkr hnv hCBD ⟨⟨⟨hnv, hcE⟩, hU⟩, hNfs, eSF⟩
     (checkBlockIndsE_claim ⟨hnv, hcE, eCcv, eSum⟩) (checkBlockCtorsE_claim hnv eSC)
     (checkBlockClassesE_claim ⟨hnv, hcE⟩) (checkBlockPositivityE_claim hG eSF)
     (nestSeedsE_claim hG) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd

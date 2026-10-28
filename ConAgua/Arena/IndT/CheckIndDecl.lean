@@ -3,6 +3,7 @@ import ConAgua.Arena.IndT.Block
 import ConAgua.Arena.IndArmLps
 import ConAgua.Arena.IndRealIpo
 import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
+import ConAgua.Arena.IndT.Shapeless
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -35,9 +36,10 @@ set_option experimental.vcgen true in
 /-- **`check_ind_decl`'s unified model**: the basis pin, the parameters' check and the parts
 (outside the verdict closure) lifted; `check_basis_decl`, `check_shapeless` and `check_block`
 through their runs. -/
-l_model cidE_spec (p : Prog) (P : CidProg p)
+l_model cidE_spec (p : Prog) (hV : ValProg p) (P : CidProg p)
   fns [P.cid ↦ cidE]
-  specs [callW_spec p n "basis_pin_hit", callW_spec p n "ind_params_ok", callW_spec p n "block_parts"]
+  specs [callW_spec p n "basis_pin_hit", callW_spec p n "ind_params_ok", callW_spec p n "block_parts",
+    cslE_spec p hV P.csf P.csl n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -151,25 +153,11 @@ def CheckBasisDeclE (p : Prog) : Prop :=
     ∀ e, callE p n "check_basis_decl" [vis, k] m = .error e →
       ErrClaim (checkBasisDecl fe (basisOfW k.toNat)) a e
 
-/-- **`check_shapeless`'s error claim**: the block's formers are checked as constants, then the
-twin declines (`IndA5.lean` proves it from the claim of `check_constant_val`). -/
-def CheckShapelessE (p : Prog) : Prop :=
-  ∀ (_ : KnotStageProg p) (_ : ValProg p) (_ : ApdF p) (_ : CrKeep p)
-    (_ : p.lookup "check_shapeless_formers" = some checkShapelessFormers)
-    (_ : p.lookup "check_shapeless" = some checkShapeless) (n : Nat), n ≤ 2 ^ 62 →
-    ∀ (m : Mem) (a : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {o l : Word} {block : List IConstantInfo},
-    StageT dn vis fe m a → DecB (fun m => decEBlk dn m o.toNat l.toNat) m block →
-    L.Stubs.CrOK m → BlockLpsDn dn block → o.toNat + l.toNat ≤ erTop m →
-    ∀ e, callE p n "check_shapeless" [vis, o, l] m = .error e →
-      ErrClaim (ConRon.Arena.checkShapeless V fe block) a e
-
-/-- What the error arms of `check_ind_decl` assume: the claims of `check_basis_decl`, of
-`check_block`'s callees (`BlockG`) and of `check_shapeless`. -/
+/-- What the error arms of `check_ind_decl` assume: the claims of `check_basis_decl` and of
+`check_block`'s callees (`BlockG`; `check_shapeless`'s, `csl_ref`, need its `VerdictCtxU`). -/
 structure CidG (p : Prog) : Prop where
   basis : CheckBasisDeclE p
   block : BlockG p
-  shapeless : CheckShapelessE p
 
 /-- What `check_ind_decl` gives besides the twin's run, a view `w` and the memory `m'` (from `m`):
 the stage, the core's memos, the growth, the inductive arm's memos. -/
@@ -190,8 +178,8 @@ include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 the twin's fold invariant (`FoldOK`; the inner stages under `StageC`): `basis_pin_hit` (con-ron's
 `basisPinHit_run`: a `PStep`), `check_basis_decl` (its refinement on the run, its claim from
 `CidG`), `ind_params_ok` and `block_parts` (con-ron's `indParamsOk_spec`, `blockParts?_spec`:
-`CheckOK` at `block_parts`' state, the shape's denotation), then `check_shapeless` (never returns;
-its claim from `CidG`) or `check_block` (`block_ref` on the run). -/
+`CheckOK` at `block_parts`' state, the shape's denotation), then `check_shapeless` (`csl_ref`: it
+never returns) or `check_block` (`block_ref` on the run). -/
 theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)
@@ -323,12 +311,12 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   | none =>
     have z4 : r4.headD 0 = 0 := hR4
     rw [cidE.k_block_parts.arm2 _ _ _ _ _ _ _ z4]
-    rcases c5 : callE p n "check_shapeless" [vis, o, l] s4.mem with e5 | ⟨r5, m5⟩
+    have h5 := csl_ref hkp hApd hCrk n (by omega) s4.mem a4 hC4.stageT
+      (hblk1.grow (decEBlk_mono _ _ _) hg4) hIM4.cr hlpd (Nat.le_trans hb (hg1.trans hg4).2.1)
+    rcases c5 : cslE p n s4.mem vis o l with e5 | ⟨r5, m5⟩ <;> rw [c5] at h5
     · rw [cidE.k_check_shapeless.none]
-      exact fun hG => hG.shapeless hkp hV hApd hCrk P.csf P.csl n (by omega) s4.mem a4 hC4.stageT
-        (hblk1.grow (decEBlk_mono _ _ _) hg4) hIM4.cr hlpd (Nat.le_trans hb (hg1.trans hg4).2.1) _ c5
-    obtain ⟨_, -, -, ⟨⟩⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-      (checkShapeless_never p P.csl n _ vis o l) (callW_of_callE c5)
+      exact fun hG => h5 hG.block.tail.u
+    obtain ⟨_, _, _, ⟨⟩⟩ := h5
   | some bp =>
   obtain ⟨hr41, hd4, hsl4⟩ := hR4
   obtain ⟨bs⟩ := bp
@@ -397,7 +385,7 @@ theorem checkIndDecl_refinesC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     ∃ fe' a', (checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m' := by
   obtain ⟨s', rfl, -, x, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
-    (cidE_spec p P n _ vis o l w)
+    (cidE_spec p hV P n _ vis o l w)
     (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt
       hkr (N := n) (by omega) hdn hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd) h
   exact ⟨x, a', hrun, hR.stage, hR.core, hR.grow, hR.ind⟩
