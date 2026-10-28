@@ -49,7 +49,7 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hnv : closedNV p _root_.L.Checker.nvFns = true)
     (hCBD : CheckBasisDeclE p) (eCcv : CheckConstantValE p) (eGrc : GenRecCheckE p)
     (eSum : CheckSumTeleE p) (eSC : CheckSumCtorsE p) (eSF : CheckStructFieldSortsIE p)
-    (eTbl : CheckStructProjTableRE p) (eClm : ClassMajorsE p)
+    (eTbl : CheckStructProjTableRE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {o l w : Word} {block : List IConstantInfo}

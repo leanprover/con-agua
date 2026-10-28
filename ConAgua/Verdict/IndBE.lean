@@ -33,6 +33,5 @@ err_stmt CheckSumTeleE := checkSumTele_refinesC fuel k
 err_stmt CheckConstantValE := checkConstantVal_refinesT fuel n
 err_stmt CheckStructFieldSortsIE := checkStructFieldSortsI_refinesC fuel n
 err_stmt CheckStructProjTableE := checkStructProjTable_refinesC fuel n
-err_stmt ClassMajorsE := classMajors_refinesC fuel n
 
 end L.Ind

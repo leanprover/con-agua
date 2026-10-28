@@ -11,8 +11,7 @@ import ConRon.Bridge.Inductives.GenRec
 `target_major_pins` through `tmp_ref`) refines `classMajors` from `StageC`, `AbsOK` and the inputs'
 denotations con-ron's `classMajors_spec` asks, the twin side transcribed from that spec's proof: the
 key's intern (`internConstE_run`), `mkAppN` (`mkAppN_run`), `targetMajorOf` (`targetMajorOf_spec`,
-a `CoreStep`), `targetMajorPins` (`targetMajorPins_spec`). The `@[refines]` theorem and the error
-claim `classMajors_claim` are its halves.
+a `CoreStep`), `targetMajorPins` (`targetMajorPins_spec`). The `@[refines]` theorem is its ok half.
 -/
 
 
@@ -259,30 +258,6 @@ theorem classMajors_refinesC (hP : ClmProg p) (n : Nat)
   rintro r s' ⟨hl', c, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl', hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.dec, hR.pos, hR.abs⟩
-
-include hq hIlpf hLC henv in
-/-- **`class_majors`' error claim** (every fuel up to `2 ^ 62`). -/
-theorem classMajors_claim (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
-    (hP : ClmProg p) (N : Nat) (hn : N ≤ 2 ^ 62) (s₀ : St) (a : AState)
-    (pp cao cal pfo pfl ko kl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
-    (pfvs : List EIdx) (ks : List ClassKey) (hC : StageC dn vis fe env s₀.mem a) (hA : AbsOK s₀.mem)
-    (hq' : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hsrc : ShapeSrc s₀.mem pp)
-    (hcss : PSlR decCNS css cao cal s₀.mem)
-    (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) s₀.mem pfvs)
-    (hpfb : pfo.toNat + pfl.toNat ≤ iwTop s₀.mem) (hks : PSlR decCK ks ko kl s₀.mem)
-    (hPm : PosMR s₀.mem) {pP : ConLeche.BlockShape} {cssP : List (List (ConLeche.ConstantVal × Nat))}
-    {pfvsP : List ConLeche.Expr} {ksP : List ConLeche.ClassKey}
-    (hpw : ∀ x ∈ pfvsP, ConLeche.Expr.WScoped pP.nP x)
-    (hsc : ∀ key ∈ ksP, ∀ x ∈ key.ds, ∃ D, ConLeche.Expr.WScoped D x)
-    (hsh : ConRon.Bridge.Inductives.dShape a.store bs = some pP)
-    (hcas : css.mapM (ConRon.Bridge.Inductives.dCtors a.store) = some cssP)
-    (hpfP : Frontend.denoteEList a.store pfvs = some pfvsP)
-    (hksP : ks.mapM (ConRon.Bridge.Inductives.dClassKey a.store) = some ksP) :
-    CoreSpecE p N "class_majors" [vis, pp, cao, cal, pfo, pfl, ko, kl]
-      (ConRon.Arena.classMajors V fe bs css pfvs ks) s₀ a :=
-  RefE.coreSpecE (clmE_spec p hP N s₀ vis pp cao cal pfo pfl ko kl) hnv ⟨hnv, hcE⟩
-    (clm_ref hq hIlpf hLC henv hP pp cao cal pfo pfl bs css pfvs pP cssP pfvsP hpw N hn _ a ko kl ks ksP
-      hC hA hq' hsrc hcss hpf hpfb hks hPm hsc hsh hcas hpfP hksP)
 
 end sims
 
