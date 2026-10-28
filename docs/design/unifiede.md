@@ -154,9 +154,12 @@ the `@[refines]` shape; ascribe `(RefC.triple hs h :)` when the goal's post woul
 **Core functions (`Arena/RefECore.lean`)**, the functions the knot's slots call, whose ok halves
 are `CoreRef`s: the post `CorePost` (the relation after the run, the result decoded and valid),
 `RefE.coreSpec` / `CoreSpec.of_refE` (the knot's `CoreSpec` from the refinement), `CoreRef.post`,
-`CorePost.ret`, `RefE.bind_core` (a kept-stack callee, then the rest). For arms that leave a
+`CorePost.ret`, `RefE.bind_core` (a kept-stack callee, then the rest), `RefE.bind_callE` (a knot callee read through
+its run `callE`, both outcomes, then the rest: the ok half from its `CoreSpec`, the error half from its
+claim under `G`, a `CoreSpecE` or a unified callee's `RefE.coreSpecE`). For arms that leave a
 slice on the stack: `CoreAfterG`, `GrowRef`, `GrowPost` with `GrowPost.growRef`, `of_core`,
-`of_tail`, `RefE.growRefW`, `RefE.bind_grow` / `bind_growK`.
+`of_tail`, `GrowPost.restore` (the top put back, its bound not needed), `RefE.growRefW`,
+`RefE.bind_grow` / `bind_growK`.
 
 **`G`, what the error arms assume (`Verdict/VCtx.lean`).** One rule: `G` is the weakest of these
 that the function's error arms need, so that callers with less in their context can use the

@@ -68,16 +68,6 @@ theorem GrowRef.restore {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {
   have hS' := hS.frame_stk (MemFrame.setCtl m 136 (rdW (m₀.arr64 CTL) 136)) (by simp) (by simp)
   exact ⟨hok, ⟨M', hS', hK, StackKept.restoreG hg h136⟩, hres, hr⟩
 
-/-- **The top put back** after a run that grew the stack (`GrowPost` to `CorePost`), the result
-relisted as `r'`. -/
-theorem GrowPost.restore {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name}
-    {m₀ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
-    {r : List Word} {m : Mem} {y : α} {a' : AState} (h : GrowPost dec dn m₀ vis fe M eb ok (r, m) y a')
-    (r' : List Word) (hr : dec r' = dec r) (hok : ok r') :
-    CorePost dec dn m₀ vis fe M eb ok (r', m.set64 CTL 136 (rdW (m₀.arr64 CTL) 136)) y a' := by
-  obtain ⟨M', hS, hK, hg⟩ := h.after
-  exact ⟨⟨M', hS.frame_stk (MemFrame.setCtl _ _ _) (by simp) (by simp), hK, StackKept.restoreG' hg⟩,
-    h.res.trans hr.symm, hok⟩
 /-- A slice below the top survives a run that kept the stack below the top. -/
 theorem SpineR.grew {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
     (hg : StackGrew m m') (htop : off.toNat + cnt.toNat ≤ (spTop m).toNat)
