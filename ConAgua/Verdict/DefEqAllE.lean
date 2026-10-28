@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DefEqLoopsE
+import ConAgua.Verdict.DefEqTailE
 
 /-!
 # The `defeq` slot's error half one level up, assembled (lane `verdicts-b`, helper `k3`)

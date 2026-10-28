@@ -1,4 +1,6 @@
-import ConAgua.Verdict.DefEqTailE
+import ConAgua.Verdict.DefEqBaseE
+import ConAgua.Arena.DefEqMidLoops
+import ConAgua.Arena.DefEqStuckWith
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
