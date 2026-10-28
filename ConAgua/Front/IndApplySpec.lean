@@ -1,7 +1,7 @@
 import ConAgua.Front.IndApply
 import ConAgua.Front.IndAlloc
 import ConAgua.Arena.IndView
-import ConAgua.Arena.LevelEquiv
+import ConAgua.Front.ApplyDecl
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.WhnfBase

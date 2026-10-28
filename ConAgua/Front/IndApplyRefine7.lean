@@ -1,4 +1,3 @@
-import ConAgua.Front.IndApplyRefine2
 import ConAgua.Verdict.FrontViE
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop

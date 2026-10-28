@@ -1,5 +1,5 @@
 import ConAgua.Arena.Verdict
-import ConAgua.Front.IndApplyRefine2
+import ConAgua.Front.ApplyDeclRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
