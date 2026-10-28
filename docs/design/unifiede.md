@@ -544,3 +544,79 @@ Elaboration (as §3.6, `times2.txt`; load 14–25; `IndBRec1` new after the reci
 | `IndBCtor`, `IndBRec2`, `IndBRec3`, `IndArmE`, `IndBE`, `RecGen27`, `RecGen7` | 21.43 | 22.19 | |
 | `CfoProg`, `ClassFeR`, `ClassMinorSlotHit`, `ClassMinorSlotW`, `KcW` | 18.32 | 18.13 | |
 | **sum** | **69.3** | **63.8** | **−8 %** |
+
+### 3.9 Batch 1b, first landing (the positivity leaves)
+
+Batch 1b's 17 depth-0 functions are two groups. Seven are leaves: `nest_pos_fvar`,
+`nest_cont_checks`, `nest_ctors_crest`, `nest_group_ctors` (called only by the `nestPos` block),
+`nest_inst_type_ty` (under `nest_inst_type`), `nest_uniform` and `nest_root` (under
+`check_block_positivity`). The other ten are the `nestPos` mutual block itself (`nest_pos`,
+`_bind`, `_app`, `nest_cont`, `_key`, `_new`, `nest_frame`, `nest_ctors`, `_one`, `_walk`,
+`nest_fields`). The survey put the block at depth 0 because a cycle counts as depth 0. Its two
+halves are one joint induction each, `NbOKC`/`nbOKC_all` and `NbOKE`/`nbOKE_all`. This landing
+migrates the seven leaves. The block is the next landing.
+
+| function | before: ok refinement + error claim | after | change |
+|---|---|---|---:|
+| `nest_pos_fvar` | `pfW_ok` 78 + `pfvE_claim` 116 = 194 | `pfv_ref` 97 + `PfvPost` 7 + `pfK_eq`/`pfK_run` 22 = 126 | −35 % |
+| `nest_cont_checks` | `p2ccW_okW` 48 + `nccE_claim` 86 = 134 | `ncc_ref` 67 + `NccPost` 9 + `nccT_eq` 17 = 93 | −31 % |
+| `nest_ctors_crest` | `p2ctW_okC` 126 + `crestE_claim` 182 = 308 | `crest_ref` 160 + `CrestPost` 13 + `crestT`/`oneRest`/`oneK_eq` 43 = 216 | −30 % |
+| `nest_uniform` | `unW_ok` 59 + `nuE_claim` 71 + spec 16 = 146 | `nu_ref` 66 + `NuPost` 6 = 72 | −51 % |
+| `nest_root` | `p2rtW_okC` 133 + `nrtE_claim` 172 = 305 | `nrt_ref` 151 + `NrtPost` 11 = 162 | −47 % |
+| `nest_inst_type_ty` | `ntyW_ok` 131 + `ntyE_claim` 197 = 328 | `nty_ref` 163 + `NtyPost`/`NtyOk`/`ntyT` 42 + `ntyT_eq` and helpers 38 = 243 | −26 % |
+| `nest_group_ctors` | `gcW_ok` 100 + `ngcE_claim` 121 = 221 | `ngc_ref` 112 + `GcPost` 11 = 123 | −44 % |
+| **sum** | **1 636** | **1 035** | **−37 %** |
+
+The hand ok models are gone too, with their continuations, arms and specs: `pfW`, `p2ccW`,
+`p2ctW`, `unW`, `p2rtW`, `ntyW` and `gcW`, about 370 lines. Generator wrappers were added:
+`noaW1`, `cpW1`, `ucW1` (15 lines each) and `nhiO` (7). The whole diff against master is
++1 379 −2 263.
+
+The rate is lower than the pilot's, for three reasons:
+
+* Four of the leaves are fragments of a twin function: `pfK`, `nccT`, `oneK`'s head and
+  `nestInstType` up to `instPisWith`. Their old claims held "whatever the continuation". The
+  unified refinement takes the fragment at `pure`, so it needs a lemma that splits the
+  continuation off (`pfK_eq`, `nccT_eq`, `oneK_eq`, `ntyT_eq`), and sometimes the fragment
+  restated (`crestT`, `oneRest`, `ntyT`).
+* The old ok refinements of `nest_cont_checks` and `nest_ctors_crest` returned the pieces of the
+  twin run separately, and their callers splice the pieces into the enclosing twin's run.
+  `NccPost` keeps those pieces as fields, so `contOKC_step` did not change.
+* The error halves were already short: their callees are mostly outside the verdict closure.
+
+Choices:
+
+* **`G` per function, as in 1d.** `pfv_ref`, `ncc_ref` and `nu_ref` use
+  `closedNV p nvFns = true`: their callees are lifted, and the block's error steps have only
+  `hnv`. `crest_ref` uses `VerdictCtx p`, because the core stubs type the crest. `nrt_ref` uses
+  `NrtG`, which is `closedNV` plus the block's `CtorsOKE` at every fuel, because `nest_ctors`
+  stays `callE` until the block is migrated.
+* **Generator limits, worked around with wrappers.** `unified` cannot lift a callee spec with
+  a singleton-list post `some ([r.headD 0], m)` (`nest_occ_any`, `nest_cont_params_closed`,
+  `nest_uniform_cs`), or a pure spec `r.headD 0 = F` (`nest_ctx_hi_at`). The wrappers (`noaW1`,
+  `cpW1`, `ucW1`, `nhiO`, each with a one-line spec from the old one) restate them as
+  `some (r.headD 0, m)`. A generator change would remove them.
+* **The block's hand models read the leaves through the run.** `pfvR`, `nccR`, `crestR`,
+  `ngcR` and `ntyR` are `cR n "f" [args] m`. The block's ok steps take `RefE.run_okW`. They now
+  need the leaves' lookups, so `nbOKC_all` takes `L : NbLook p`. The error steps take
+  `RefE.run_err`.
+* **Placement** follows the ok users' imports. `pfv_ref` and `ncc_ref` are in `Verdict/PosE1L`,
+  imported by `PosApp`/`PosCont`; `cpW_okW` moved in with them. `crest_ref` is in
+  `Arena/IndT/PosCrest`. `nty_ref` and `ngc_ref` are in new modules, `Verdict/PosNty` and
+  `Verdict/PosNgc`. `nu_ref` is in `PosTopE2`, `nrt_ref` in `PosTopE4`.
+* **Pitfall.** If the twin's result is `Unit`, destructuring `RefE.run_ok…` with `-` for that
+  value silently clears the run hypothesis that depends on it. Use `_` instead.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+63762a3f + unrelated landings, load 6–56):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/PosE1M` | 29.3 | 32.5 | **+11 %**: the unified `pfvE`, `nccE`, `ntyE`. With `simp [rdW]`, as their `errors` models had, it was 46.0. With `simp []` it is 32.5. `finish` fails. Wall time 8 → 21 s: `ntyE`'s step (`heartbeats 4000000`) is one long serial declaration |
+| `Verdict/PosTopE1` | 12.4 | 16.8 | **+35 %**: the unified `nuE`, `nrtE`. With `simp [rdW]` it was 21.2. `finish` fails |
+| `Arena/IndPosSpec/NestGroupCtors`, `NtyW`, `UnW`, `UnW2`, `P2rtW`, `P2sdW`, `NitW`, `CfW`, `NestContParamsClosed` | 43.6 | 19.0 | hand models and their specs gone |
+| `Arena/IndRealAbsPos` | 23.1 | 15.8 | the hand models' `…_afr` gone |
+| `Arena/IndT/Pos*`, `PosRoot`, `Positivity` | 25.8 | 18.5 | |
+| `Verdict/PosE1N`, `PosE2`, `PosE3O`, `PosTopE4` | 11.1 | 8.1 | claims gone |
+| `GgW2`, `FgW2`, `PosE2M`, `PosE3Cm` and 15 more (incl. the new `PosNty`, `PosNgc`) | 138.2 | 141.4 | |
+| **sum (45 modules)** | **288.9** | **252.1** | **−13 %** (first series, with `simp [rdW]`: 270.2) |
