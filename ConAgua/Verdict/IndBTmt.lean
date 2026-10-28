@@ -1,4 +1,3 @@
-import ConAgua.Verdict.IndBToi
 import ConAgua.Arena.IndT.RecGenTmf
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

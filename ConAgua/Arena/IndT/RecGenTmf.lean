@@ -1,13 +1,8 @@
-import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndRealLvlC
-import ConAgua.Arena.IndSumSpec.ParamLevels
-import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
-import ConAgua.Arena.RecGenSpec.OcW
 import ConAgua.Arena.RecGenSpec.Tmc
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
-import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.DeclBasisSpec
 import ConAgua.Verdict.IndBTmm
 import ConAgua.Verdict.IndBToi

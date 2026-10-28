@@ -1,15 +1,10 @@
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndSumSpec.ParamLevels
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConRon.Bridge.Inductives.Records
-import ConRon.Bridge.Inductives.Run
 import ConRon.Bridge.Inductives.RecCheck
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.RecClassSpec.MkTMWAfr
 
 /-!
 # `target_major_of_member`: one model and one refinement for both outcomes
