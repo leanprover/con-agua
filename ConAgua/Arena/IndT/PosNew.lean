@@ -7,7 +7,7 @@ import ConAgua.Arena.IndPosSpec.Snoc
 # `nest_cont_new` refines `nestContNew`, both outcomes (lane `indstaget`, helper `indstaget-pos`)
 
 `newRef_step`, on the model `nnewE`, with the twin side of con-ron's `nestContNew_spec`: the walk
-stack (`nestWalkStack_spec`), the group grown (`nestGrowGroup_spec`; its error from `nggE_claim`), the
+stack (`nestWalkStack_spec`), the group grown (`ngg_ref`), the
 frame (the block's `FrameRef` at `n`), the cache (`closedAll_spec`).
 -/
 
@@ -38,7 +38,7 @@ variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) 
 
 include hq in
 /-- **`nest_cont_new` refines `nestContNew`, both outcomes**, at L fuel `n + 1`: the walk stack, the
-group grown (`ggW_ok`; its error from `nggE_claim`), the frame (the block's `FrameRef` at `n`), the
+group grown (`ngg_ref`), the frame (the block's `FrameRef` at `n`), the
 cache (`cfW_ok`). -/
 theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n : Nat)
     (ih : NbRef p dn vis fe env n) : NewRef p dn vis fe env (n + 1) := by
@@ -175,62 +175,26 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
     rw [decHL_agree (RdS.of_grow hg24) (fun j hj => by omega)]; exact hmd
   have hdsD4 : decHL m4 dO.toNat dL.toNat = some ds := by
     rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hdsD
+  have hR5 := ngg_ref L hIlpf hcl hLC dn vis fe ctx _ us dO dL (c.hiAt wp.length) hhw c ds hus a1
+    (nestFrameMates fe (decI nn)) hc hctx1 (ConRon.Bridge.denoteLs_ext husP p1.ext)
+    (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hmates (n' + 1) m4 a1 _ _ _ 1
+    (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] hC4 hA4 (ConRon.Arena.Ext.refl _) (fun _ h => h)
+    (hW.u.grow hg14) hdsD4 (by have := hg14.1; omega) hmdD (fun j hj => by have := hg24.1; omega) (by simp)
+    (by simp only [List.length_cons, List.length_nil]; omega) hgrp0 hP4
+  have hsg := nggE_spec p R.ha L.nit.hc2 R.h2 R.h4 L.nag.hsn L.hgg (n' + 1) ⟨m4, Locals.init []⟩ vis ctx
+    (nhiW m2b ctx (rw.tail.headD 0)) us dO dL (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
   cases h5 : callE p (n' + 1) "nest_grow_group" [vis, ctx, nhiW m2b ctx (rw.tail.headD 0), us, dO, dL, rm.headD 0,
       rm.tail.headD 0, g0.headD 0, 1] m4 with
   | error e5 =>
     rw [nnewE.k_nest_grow_group.none]
-    refine RefE.bind_left fun hG => ?_
-    by_cases hk0 : e5.cls = 0
-    · exact ErrClaim.of_cls0 hk0
-    have hE := triple_of_callE_err (nggE_spec p L.hgg (n' + 1) ⟨m4, Locals.init []⟩ vis ctx _ us dO dL _ _ _ 1) h5
-      (Err.code_ne_of_cls hk0)
-    simp only at hE
-    exact nggE_claim L hIlpf hcl hLC hG.nv dn vis fe (nitE_all L hq hIlpf hLC hG.nv dn vis fe env) ctx _ us dO dL
-      (c.hiAt wp.length) hhw c ds hus a1 (nestFrameMates fe (decI nn)) hc hctx1 (ConRon.Bridge.denoteLs_ext husP p1.ext)
-      (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hmates (n' + 1) m4 a1 _ _ _ 1
-      (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] hC4 hA4 (ConRon.Arena.Ext.refl _) (fun _ h => h)
-      (hW.u.grow hg14) hdsD4 (by have := hg14.1; omega) hmdD (fun j hj => by have := hg24.1; omega) (by simp)
-      (by simp only [List.length_cons, List.length_nil]; omega) hgrp0 hP4 _ hE
+    exact RefE.bind_left fun hG => RefE.run_err hsg hG.nv (nitE_all L hq hIlpf hLC hG.nv dn vis fe env) hR5 h5
   | ok q5 =>
-  obtain ⟨rg5, m5⟩ := q5
-  obtain ⟨s5, hs5, -, hgg⟩ := triple_of_callW (nestGrowGroup_spec p L.nit R.h2 R.h4 L.nag.hsn L.hgg (realCall p)
-    (realCall_spec p) (n' + 1) ⟨m4, Locals.init []⟩ vis ctx _ us dO dL _ _ _ 1) (callW_of_callE h5)
-  simp only at hgg
-  rw [hs5] at hgg
+  obtain ⟨rg, m5⟩ := q5
   rw [nnewE.k_nest_grow_group.arm1]
-  generalize hrg : [rg5.headD 0, rg5.tail.headD 0] = rg at hgg
-  have q0 : rg5.headD 0 = rg.headD 0 := by rw [← hrg]; rfl
-  have q1 : rg5.tail.headD 0 = rg.tail.headD 0 := by rw [← hrg]; rfl
-  rw [q0, q1]
-  obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5, hJ5⟩ := ggW_ok dn fe vis ctx (nhiW m2b ctx (rw.tail.headD 0))
-    us dO dL (c.hiAt wp.length) hhw c ds hus (realCall p)
-    (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a1.store a'.store)
-    (nestFrameMates fe (decI nn)) (fun _ _ _ _ hJ => nty_ok L.nit.ty (IlpRd.realC hIlpf hJ.1)) (fun m' _ => AbsOK m')
-    (fun k' _ a' key n0 hJ hn0 => by
-      obtain ⟨hCm, hAm, hxm⟩ := hJ
-      obtain ⟨n0P, hn0P⟩ := denoteNList_memN hmates n0 hn0
-      have hxa := p1.ext.trans hxm
-      exact nitLe_realC hcl hLC k' _ _ key c _ hCm hAm (dCtx_ext _ hxa _ _ hctx)
-        (keyP := ⟨n0P, usP, dsP⟩) (by
-          simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hn0P hxm,
-            ConRon.Bridge.denoteLs_ext husP hxa, ConRon.Bridge.denoteEList_ext hxa _ _ hdsP]))
-    (fun _ _ _ hJ hf hS' => ⟨hJ.1.of_pstep hS' (hJ.2.1.iw hf) (PStep.refl hJ.1.check.state), hJ.2.1.iw hf, hJ.2.2⟩)
-    (fun _ _ _ a' a'' _ n0 x _ hJ hn0 _ hrun hS' _ hAm' => by
-      obtain ⟨hCm, hAm, hxm⟩ := hJ
-      obtain ⟨n0P, hn0P⟩ := denoteNList_memN hmates n0 hn0
-      have hxa := p1.ext.trans hxm
-      obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (c.hiAt wp.length) ⟨n0, decI us, ds⟩
-        ⟨n0P, usP, dsP⟩ a' a'' x hCm.check
-        ⟨dCtx_ext _ hxa _ _ hctx, by
-          simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hn0P hxm,
-            ConRon.Bridge.denoteLs_ext husP hxa, ConRon.Bridge.denoteEList_ext hxa _ _ hdsP]⟩ hrun
-      exact ⟨hCm.of_cstep hS' hAm' c4, hAm', hxm.trans c4.ext⟩)
-    (n' + 1) m4 m5 a1 (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
-    (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] rg hgg hS4 ⟨hC4, hA4, ConRon.Arena.Ext.refl _⟩
-    (fun _ h => h) (hW.u.grow hg14) hdsD4 (by have := hg14.1; omega) hmdD
-    (fun j hj => by have := hg24.1; omega) (by simp) (by simp only [List.length_cons, List.length_nil]; omega) hgrp0
-    hP4
-  have hA5 : AbsOK m5 := hJ5.2.1
+  obtain ⟨s5, hm5, -, grp, a5, hrun5, hR⟩ := RefE.run_ok hsg hR5 h5
+  dsimp only at hR; rw [hm5] at hR
+  obtain ⟨hC5, hg5, hgl5, hgb5, hgrp5, hP5, hA5, -⟩ := hR
+  have hS5 := hC5.stage
   obtain ⟨c2, grpV, ⟨hgrp, hgs⟩, -⟩ := ConRon.Bridge.Inductives.nestGrowGroup_spec hc c (c.hiAt wp.length) (decI us)
     usP ds dsP _ _ [(decI nn, decI cty)] [(nP, ctyP)]
     (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; exact hni)
