@@ -1,4 +1,3 @@
-import ConAgua.Verdict.IndsE3
 import ConAgua.Arena.IndT.Install1
 import ConAgua.Verdict.LefRef
 import ConAgua.Arena.IndInstallSpec.IagW
@@ -10,7 +9,7 @@ import ConAgua.Arena.Checker
 closure) through their `Option` models, `check_block_doms_at` through its run, `lvl_eq_fueled`
 through its unified model `lefE`. `cbao_ref` refines `agreeBodyAM` for both outcomes: the
 unopened member telescope and a length mismatch are the twin's rejects, `check_block_doms_at`'s
-errors by `cbdaE_claim`, `lvl_eq_fueled`'s by `lef_ref`, a `false` universe comparison the twin's
+errors by `cbda_ref`, `lvl_eq_fueled`'s by `lef_ref`, a `false` universe comparison the twin's
 reject.
 -/
 
@@ -161,33 +160,22 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
               ConRon.Arena.fail (.invalid "mutually inductive types must live in the same universe")).run a2 := by
     simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, heq, hrun2]
   -- `check_block_doms_at`
+  have hR3 := cbda_ref hq henv hP.ad.ftd n (by omega) m2 a2 0 (ra.tail.headD 0) (ra.tail.tail.headD 0)
+    (rd.headD 0) (rd.tail.headD 0) nP fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD)
+    hC2 hA2 hfv2 hdm2 (by omega) (by omega) (by have := hg2.1; omega) (by omega)
+    (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact hlt2)
+    hxs1' hdoms (fun i _ x y hx hy => ⟨hc i x hx, ht i y hy⟩)
+  have hs3 := cbdaE_spec p hP.doms n ⟨m2, Locals.init []⟩ vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0)
+    (rd.headD 0) (rd.tail.headD 0) nP
   rcases h3 : callE p n "check_block_doms_at" [vis, 0, ra.tail.headD 0, ra.tail.tail.headD 0, rd.headD 0,
       rd.tail.headD 0, nP] m2 with e3 | ⟨r3, m3⟩
   · rw [cbaoE.k_check_block_doms_at.none, RefE_error]
-    refine fun hG => ErrClaim.of_twin (T' := ConRon.Arena.checkBlockDomsAt V fe 0 fvs x2 nP.toNat) (a' := a2)
-      (fun hk0 => ?_) fun ce hce => by rw [hpre, StateT.run_bind, hce]; rfl
-    have hW3 := triple_of_callE_err (cbdaE_spec p hP.doms n ⟨m2, Locals.init []⟩ vis 0 (ra.tail.headD 0)
-      (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP) h3 (Err.code_ne_of_cls hk0)
-    simp only at hW3
-    have hcl := cbdaE_claim hq henv hG.nv hG.core hP.ad.ftd n (by omega) m2 a2 0 (ra.tail.headD 0)
-      (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD)
-      hC2 hA2 hfv2 hdm2 (by omega) (by omega) (by have := hg2.1; omega) (by omega)
-      (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact hlt2)
-      hxs1' hdoms (fun i _ x y hx hy => ⟨hc i x hx, ht i y hy⟩) e3 hW3
-    rw [hz] at hcl
-    exact hcl hk0
+    refine fun hG => ErrClaim.of_run_err (T' := ConRon.Arena.checkBlockDomsAt V fe 0 fvs x2 nP.toNat)
+      (a' := a2) (fun ce hce => by rw [hpre, StateT.run_bind, hce]; rfl) ?_
+    have hcl := RefE.run_err hs3 hG.nv hG.core hR3 h3
+    rwa [hz] at hcl
   rw [cbaoE.k_check_block_doms_at.arm1]
-  have hw : domsW (realCall p) n m2 vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0) (rd.headD 0)
-      (rd.tail.headD 0) nP = some (r3, m3) := by
-    obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-      (domsW_spec p hP.doms hP.ad.ftd (realCall p) (realCall_spec p) n _ _ _ _ _ _ _ _) (callW_of_callE h3)
-    rw [← hs']; exact hW
-  obtain ⟨hjf, hjd⟩ := domsW_le hw
-  obtain ⟨u3, a3, hrun3, hC3, hg3, hA3⟩ := domsW_simC hq henv n (by omega) m2 a2 0 (ra.tail.headD 0)
-    (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD)
-    hC2 hA2 hfv2 hdm2 (by omega) (by omega)
-    (by have := hg2.1; omega) (by omega) (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact hlt2)
-    hjf hjd hxs1' hdoms (fun i _ x y hx hy => ⟨hc i x hx, ht i y hy⟩) _ hw
+  obtain ⟨s3, rfl, -, u3, a3, hrun3, hC3, hg3, hA3⟩ := RefE.run_ok hs3 hR3 h3
   dsimp only at hC3 hg3 hA3
   rw [hz] at hrun3
   obtain ⟨c3, -⟩ := ConRon.Bridge.Inductives.checkBlockDomsAt_specF fe
@@ -204,7 +192,7 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   rw [lefT_bind]
   have hR4 := lef_ref (p := p) hq.closed hLC n hC3.stageT hs hs0 (ConRon.Bridge.denoteL_ext hsP hx03)
     (ConRon.Bridge.denoteL_ext hs0P hx03)
-  rcases h4 : lefE p n m3 s s0 with e4 | ⟨w, m4⟩
+  rcases h4 : lefE p n s3.mem s s0 with e4 | ⟨w, m4⟩
   · rw [h4] at hR4
     rw [cbaoE.k_lvl_eq_fueled.none]
     exact RefE.bind_left fun hG =>

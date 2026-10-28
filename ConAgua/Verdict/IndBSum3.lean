@@ -664,27 +664,23 @@ theorem ctor_claim (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (s₀ : St
     rw [List.getElem?_map] at hy
     obtain ⟨z, hz, rfl⟩ := Option.map_eq_some_iff.mp hy
     exact ConRon.Bridge.Inductives.openers_typeD_WScoped htq hws i z hz
+  have hR7 := sds_ref hq henv hP.hg hP.ad.ftd m (by omega) s6.mem a6 0 _ _ _ _ nP cl tdoms cfvsP
+    (tfvsP.map ConLeche.Expr.fvarTypeD) hC6 hA6 hcl6 htd (hS6.lt64 hclb6) (hS6.lt64 htdb) hclb6 htdb
+    (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := hC6.stage.lt64 hclb6; omega)
+    hcfvs6 hdoms hws7
+  have hs7 := sdomsE_spec p hP.hsd m ⟨s6.mem, Locals.init []⟩ vis 0 (r4.tail.headD 0) (r4.tail.tail.headD 0)
+    (r6.headD 0) (r6.tail.headD 0) nP
   cases h7 : callE p m "check_struct_doms_at" [vis, 0, r4.tail.headD 0, r4.tail.tail.headD 0,
       r6.headD 0, r6.tail.headD 0, nP] s6.mem with
   | error e7 =>
     rw [h7, ctorE.k_check_struct_doms_at.none] at hW
     cases hW
-    refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (checkStructDomsAt_claim hq henv hnv hcE hP.hg hP.hsd hP.ad.ftd m (by omega) s6 a6
-      0 _ _ _ _ nP cl tdoms hC6 hA6 hcl6 htd (hS6.lt64 hclb6) (hS6.lt64 htdb) hclb6 htdb
-      (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := hC6.stage.lt64 hclb6; omega)
-      hcfvs6 hdoms hws7) h7
+    exact ErrClaim.bind_left (RefE.run_err hs7 hnv hcE hR7 h7)
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [h7, ctorE.k_check_struct_doms_at.arm1] at hW
-  obtain ⟨s7, hs7, -, h7m⟩ := triple_of_callW (sdomsW_spec p hP.hg hP.hsd hP.ad.ftd (realCall p) (realCall_spec p)
-    m ⟨s6.mem, Locals.init []⟩ vis 0 (r4.tail.headD 0) (r4.tail.tail.headD 0) (r6.headD 0)
-    (r6.tail.headD 0) nP) (callW_of_callE h7)
-  subst hs7
-  obtain ⟨u7, a7, hr7, hC7, hg7, hA7⟩ := (sdSimC hq henv m (by omega) s6.mem a6 0 _ _ _ _ nP cl tdoms cfvsP
-    (tfvsP.map ConLeche.Expr.fvarTypeD) hC6 hA6 hcl6 htd hclb6 htdb
-    (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := hC6.stage.lt64 hclb6; omega)
-    hcfvs6 hdoms hws7) r7 s7.mem h7m
+  obtain ⟨s7, rfl, -, u7, a7, hr7, hC7, hg7, hA7⟩ := RefE.run_ok hs7 hR7 h7
+  dsimp only at hC7 hg7 hA7
   have hx06 := hx04.trans hx46
   obtain ⟨c7, -⟩ := ConRon.Bridge.Inductives.checkStructDomsAt_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv 0 cl tdoms cfvsP (tfvsP.map ConLeche.Expr.fvarTypeD) nP.toNat

@@ -256,10 +256,10 @@ theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
     by simpa using hb8, hA8, (hp07.toCore hC.check).trans c8⟩
 
 include hq henv in
-/-- `check_struct_doms_at` under `StageC` as a `Sim` (an out-of-range count aborts in the model). -/
-theorem sdSimC (k : Nat) (hk : k ≤ 2 ^ 62) (m : Mem) (a : AState) (off fo fl dO dl j : Word)
-    (fvs doms : List EIdx) (fvsP domsP : List ConLeche.Expr) (hC : StageC dn vis fe env m a)
-    (hA : AbsOK m)
+/-- `check_struct_doms_at` under `StageC` as a `Sim` of its run (`sds_ref`'s ok half). -/
+theorem sdSimC (hP : SumProg p) (k : Nat) (hk : k ≤ 2 ^ 62) (m : Mem) (a : AState)
+    (off fo fl dO dl j : Word) (fvs doms : List EIdx) (fvsP domsP : List ConLeche.Expr)
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m)
     (hfvs : decHL m fo.toNat fl.toNat = some fvs) (hdoms : decHL m dO.toNat dl.toNat = some doms)
     (hfb : fo.toNat + fl.toNat ≤ iwTop m) (hdb : dO.toNat + dl.toNat ≤ iwTop m)
     (hoob : off.toNat + fl.toNat < 2 ^ 64)
@@ -267,22 +267,20 @@ theorem sdSimC (k : Nat) (hk : k ≤ 2 ^ 62) (m : Mem) (a : AState) (off fo fl d
     (hdP : Frontend.denoteEList a.store doms = some domsP)
     (hws : ∀ i, i < j.toNat → ∀ x y, fvsP[i]? = some x → domsP[i]? = some y →
       ConLeche.Expr.WScoped (off.toNat + i) x.fvarTypeD ∧ ConLeche.Expr.WScoped (off.toNat + i) y) :
-    Sim (sdomsW (realCall p) k m vis off fo fl dO dl j) (checkStructDomsAt V fe off.toNat fvs doms j.toNat) a
+    Sim (realCall p k "check_struct_doms_at" [vis, off, fo, fl, dO, dl, j] m)
+      (checkStructDomsAt V fe off.toNat fvs doms j.toNat) a
       (fun _ _ m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ AbsOK m') := by
   intro r m' e
-  have e' := e
-  rw [sdomsW_eq] at e'
-  cases hd : domsW (realCall p) k m vis off fo fl dO dl j with
-  | none => rw [hd] at e'; cases e'
-  | some x =>
-  obtain ⟨hjf, hjd⟩ := domsW_le hd
   have hS := hC.stage
-  exact sdomsW_simC hq henv k hk m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms
-    (hS.lt64 hfb) (hS.lt64 hdb) hfb hdb hoob hjf hjd hfP hdP hws (r, m') e
+  obtain ⟨s', rfl, -, u, a', hrun, hR⟩ :=
+    RefE.run_okW (sdomsE_spec p hP.hsd k ⟨m, Locals.init []⟩ vis off fo fl dO dl j)
+      (sds_ref hq henv hP.hg hP.ad.ftd k hk m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms
+        (hS.lt64 hfb) (hS.lt64 hdb) hfb hdb hoob hfP hdP hws) e
+  exact ⟨u, a', hrun, hR.stage, hR.grow, hR.abs⟩
 
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` under `StageC`** (twin side: con-ron's `checkSumCtor_spec`'s proof). -/
-theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
+theorem ctorW_okC (hP : SumProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
     (a : AState) (vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
     (cvC cvTa : IConstantVal) (hC : StageC dn vis fe env m a) (hT : H T)
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
@@ -452,7 +450,7 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
     obtain ⟨z, hz, rfl⟩ := Option.map_eq_some_iff.mp hy
     exact ConRon.Bridge.Inductives.openers_typeD_WScoped htq hws i z hz
   refine Sim.bindK (K := ctorK8 (realCall p) n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
-    (fun _ _ => rfl) (Sim.withRunC (sdSimC hq henv (n + 2) hn m6 a6 0 _ _ _ _ nP cl tdoms cfvsP
+    (fun _ _ => rfl) (Sim.withRunC (sdSimC hq henv hP (n + 2) hn m6 a6 0 _ _ _ _ nP cl tdoms cfvsP
       (tfvsP.map ConLeche.Expr.fvarTypeD) hC6 hA6 hcl6 htd hclb6 htdb
       (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := hC6.stage.lt64 hclb6; omega)
       hcfvs6 hdoms hws7))
@@ -523,7 +521,7 @@ theorem checkSumCtor_refinesC (hP : SumProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62)
   refine triple_post (ctorW_spec p hP (realCall p) (realCall_spec p) n s₀ vis0 vis T lo ll nP nIdx rs
     isP lg cvCw nF cvTaw) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hok, hC', hg', h0, h1, hd, -, hA', -⟩ := (ctorW_okC hq henv hV hOpf hLC hLT hApd hCrk n hn _ a₀ vis0 T lo ll nP nIdx rs
+  obtain ⟨hok, hC', hg', h0, h1, hd, -, hA', -⟩ := (ctorW_okC hq henv hV hOpf hLC hLT hApd hCrk hP n hn _ a₀ vis0 T lo ll nP nIdx rs
     isP lg cvCw nF cvTaw lps cvC cvTa hC hT hlps hlb hcv hta hrs hni hnf hA hTP hlpsP hrsP hcvCP hcvTaP
     hws hok₀ hfe).run hm
   exact ⟨hl, hok, hC', hg', h0, h1, hd, hA'⟩

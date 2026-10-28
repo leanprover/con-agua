@@ -143,7 +143,7 @@ theorem sctsE_claim (hP : SumProg p)
     rw [this] at h1m
     cases h1m
   obtain ⟨x, a1, hrun1, hC1, hg1, hr0, hx1, hsorts, hsb, hA1, c1⟩ :=
-    ctorW_okC hq henv hV hOpf hLC hLT hApd hCrk j (by omega) m a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw lps cv cvTa
+    ctorW_okC hq henv hV hOpf hLC hLT hApd hCrk hP j (by omega) m a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw lps cv cvTa
       hC hT hlps hlb hcvB hta hrs hni hnf hA hTP hlpsP hrsP hcvP hcvTaP hws hok₀ hfe r s1.mem h1m
   refine ErrClaim.bind_right hrun1 ?_
   have hS1 := hC1.stage

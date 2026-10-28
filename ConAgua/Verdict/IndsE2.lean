@@ -18,6 +18,5 @@ open L.Arena
 
 err_stmt CheckBlockTeleE := checkBlockTele_refinesC fuel n
 err_stmt CheckBlockTelesE := checkBlockTeles_refinesC fuel n
-err_stmt CheckBlockDomsAtE := checkBlockDomsAt_refinesC fuel n
 
 end L.Ind

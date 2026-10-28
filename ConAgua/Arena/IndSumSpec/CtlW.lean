@@ -7,82 +7,8 @@ import ConAgua.L.GrindAttr
 /-!
 # CtlW
 
-`sdomsW_zero`, `sdomsW_cons`, `sdomsK1_some`, `sdomsK2_ok`, `sdomsK3_some`, `sdomsW_spec` and the lemmas only they use.
+The arms of `check_sum_ctor_tail`'s and `check_sum_ctor`'s models, and `ctorW_spec`.
 -/
-
-section
-
-noncomputable section
-
-set_option experimental.vcgen true
-
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-local notation "V" => ConLeche.CheckMode.verified
-
-section arms
-variable (cR : CallM) (n : Nat) (m m1 m2 : Mem) (vis off fo fl dO dl j b : Word) (ra rb : List Word)
-
-theorem sdomsW_zero (hj : j = 0) : sdomsW cR (n + 1) m vis off fo fl dO dl j = some ([], m) := by
-  simp [sdomsW, hj]
-theorem sdomsW_cons (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : ¬ dl ≤ j - 1) :
-    sdomsW cR (n + 1) m vis off fo fl dO dl j =
-      sdomsK1 cR n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
-        (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))]) := by
-  simp [sdomsW, hj, hfl, hdl]
-theorem sdomsK1_some :
-    sdomsK1 cR n vis off fo fl dO dl j b (some (ra, m1)) =
-      sdomsK2 cR n vis off fo fl dO dl j
-        (cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, b] m1) := by
-  rw [sdomsK1]
-theorem sdomsK2_ok (heq : rb.headD 0 ≠ 0) :
-    sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2)) =
-      sdomsK3 (sdomsW cR n m2 vis off fo fl dO dl (j - 1)) := by
-  rw [sdomsK2, ite_eq_right heq]
-theorem sdomsK3_some (r : List Word) (m : Mem) : sdomsK3 (some (r, m)) = some ([], m) := rfl
-end arms
-
-grind_pattern [ind_grind] sdomsW_zero => sdomsW cR (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] sdomsW_cons => sdomsW cR (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] sdomsK1_some => sdomsK1 cR n vis off fo fl dO dl j b (some (ra, m1))
-grind_pattern [ind_grind] sdomsK2_ok => sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2))
-grind_pattern [ind_grind] sdomsK3_some => sdomsK3 (some (r, m))
-
-section spec
-variable (p : Prog) (hg : p.lookup "sl_get" = some slGet)
-  (hp : p.lookup "check_struct_doms_at" = some checkStructDomsAtL) (hftd : FtdF p)
-include hg hp hftd
-
-theorem sdomsW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_doms_at" [vis, off, fo, fl, dO, dl, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ sdomsW cR n s₀.mem vis off fo fl dO dl j = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis off fo fl dO dl j
-    rw [invoke_eq _ hp]; simp only [callFn, checkStructDomsAtL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis off fo fl dO dl j
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkStructDomsAtL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slGet_specW p hg n, ftdF_spec0 p hftd n, hcR n "is_def_eq_core", ih] <;>
-      finish (gen := 20) [getW]
-
-end spec
-
-end L.Ind
-
-end
-
-end
 
 section
 
@@ -164,7 +90,7 @@ theorem ctorK8_some : ctorK8 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO 
     ctorK9 cvC (ctlW cR n m vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL cqB) := rfl
 theorem ctorK7_some : ctorK7 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) =
     ctorK8 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
-      (sdomsW cR (n + 2) m vis 0 cqO cqL (r.headD 0) (r.tail.headD 0) nP) := rfl
+      (cR (n + 2) "check_struct_doms_at" [vis, 0, cqO, cqL, r.headD 0, r.tail.headD 0, nP] m) := rfl
 theorem ctorK6_yes (h : r.headD 0 ≠ 0) :
     ctorK6 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) =
       ctorK7 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
@@ -206,7 +132,7 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR
     srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
       hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad (n + 2),
     hcR (n + 2) "open_pis_at_fvars_f", ftdsF_spec p hP.ad (n + 2),
-    sdomsW_spec p hP.hg hP.hsd hP.ad.ftd cR hcR (n + 2), ctlW_spec p hP cR hcR n]
+    hcR (n + 2) "check_struct_doms_at", ctlW_spec p hP cR hcR n]
   all_goals subst_vars
   -- the callee posts' `LocEq`s, unfolded, rewrite the locals before `grind` (as `tka_spec`)
   all_goals (try simp only [LocEq] at *)
