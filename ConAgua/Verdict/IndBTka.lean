@@ -1,12 +1,17 @@
-import ConAgua.Verdict.IndBK53
+import ConAgua.Arena.IndT.RecCheckK53
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 /-!
-# `target_k53_args`' error claim (lane `verdicts-b`, helper `fin`, fork `tka`)
+# `target_k53_args`: one model and one refinement for both outcomes
 
-`TkaE` (IndBK53.lean) proved: the error model of `target_k53_args`, its claim along `tkaW_okC`'s case
-chain; the callees outside the verdict closure claim nothing, `target_class_match` is `tcm_claimA`.
+`tkaE` (`l_model … unified`): `target_class_match` through its unified model (`tcmE`), the callees
+outside the verdict closure (`erase_each`, `sl_eq`, `intern_const`, `mk_app_n_f`, the shape's
+member names, `nest_occ`) through their `Option` models. `tka_ref` refines `tkArgs` (the arguments'
+part of `targetK53`) for both outcomes; `target_k53_heads`' refinement reads it through the model.
 -/
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -22,198 +27,94 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-! ## The error model (by hand: the generator's step `grind` fails) -/
+-- `finish (gen := 20)`: the generation depth of the steps through the two index slices' `if`s
+-- (the default 8 leaves the early `return 0` after `sl_eq` open)
+l_model tkaE_spec (p : Prog) (hL : K53Look p)
+  fns [hL.tka ↦ tkaE]
+  specs [ee_spec p hL n, slEq_spec p hL.eq n, internConst_spec p hL.cf hL.cp hL.ic n, mknF_spec p hL.ad n,
+    blockShapeMemberNames_spec p hL.tmn.tcm.ha hL.tmn.tcm.mnc hL.tmn.tcm.mn n, noF_spec p hL n,
+    tcmE_spec p hL.tmn.tcm n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [] gen 20 heartbeats 4000000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-def tkaE.k8 : Except Err (List Word × Mem) → Except Err (List Word × Mem)
-  | .error ε => .error ε
-  | .ok (r, m) => .ok ([r.headD 0], m)
+/-- `tkaE` after the parameter count, the two index slices as `if`s. -/
+theorem tkaE_succ (p : Prog) (n : Nat) (m : Mem) (vis q fto ftl Mc ip usp lao lal mao mal : Word) :
+    tkaE p (n + 1) m vis q fto ftl Mc ip usp lao lal mao mal =
+      tkaE.j2 p n vis q fto ftl Mc ip usp lao lal (rdW (m.arr64 IW) (Mc + 4))
+        (if lal < rdW (m.arr64 IW) (Mc + 4) then lao else lao + rdW (m.arr64 IW) (Mc + 4))
+        (if lal < rdW (m.arr64 IW) (Mc + 4) then 0 else lal - rdW (m.arr64 IW) (Mc + 4))
+        (if mal < rdW (m.arr64 IW) (Mc + 4) then mao else mao + rdW (m.arr64 IW) (Mc + 4))
+        (if mal < rdW (m.arr64 IW) (Mc + 4) then 0 else mal - rdW (m.arr64 IW) (Mc + 4)) m := by
+  by_cases h1 : lal < rdW (m.arr64 IW) (Mc + 4) <;> by_cases h2 : mal < rdW (m.arr64 IW) (Mc + 4)
+  · rw [tkaE.arm1 (hc1 := h1), tkaE.j1.arm1 (hc1 := h2), if_pos h1, if_pos h1, if_pos h2, if_pos h2]
+  · rw [tkaE.arm1 (hc1 := h1), tkaE.j1.arm2 (hc1 := h2), if_pos h1, if_pos h1, if_neg h2, if_neg h2]
+  · rw [tkaE.arm2 (hc1 := h1), tkaE.j1.arm1 (hc1 := h2), if_neg h1, if_neg h1, if_pos h2, if_pos h2]
+  · rw [tkaE.arm2 (hc1 := h1), tkaE.j1.arm2 (hc1 := h2), if_neg h1, if_neg h1, if_neg h2, if_neg h2]
 
-def tkaE.k7 (p : Prog) (n : Nat) (vis q fto ftl Mc usp lao lpl : Word) :
-    Except Err (List Word × Mem) → Except Err (List Word × Mem)
-  | .error ε => .error ε
-  | .ok (r, m) =>
-    if r.headD 0 = 0 then .ok ([0], m)
-    else tkaE.k8 (callE p n "target_class_match" [vis, q, fto, ftl, rdW (m.arr64 IW) (Mc + 11),
-      rdW (m.arr64 IW) (Mc + 12), rdW (m.arr64 IW) (Mc + 1), rdW (m.arr64 IW) (Mc + 2),
-      rdW (m.arr64 IW) (Mc + 3), usp, lao, lpl] m)
-
-def tkaE.k6 (p : Prog) (n : Nat) (vis q fto ftl Mc usp lao lpl app : Word) :
-    Except Err (List Word × Mem) → Except Err (List Word × Mem)
-  | .error ε => .error ε
-  | .ok (rn, m) => tkaE.k7 p n vis q fto ftl Mc usp lao lpl
-      (callE p n "nest_occ" [rn.headD 0, rn.tail.headD 0, 0, 0, app] m)
-
-def tkaE.k5 (p : Prog) (n : Nat) (vis q fto ftl Mc usp lao lpl : Word) :
-    Except Err (List Word × Mem) → Except Err (List Word × Mem)
-  | .error ε => .error ε
-  | .ok (ra, m) => tkaE.k6 p n vis q fto ftl Mc usp lao lpl (ra.headD 0)
-      (callE p n "block_shape_member_names" [q] m)
-
-def tkaE.k4 (p : Prog) (n : Nat) (vis q fto ftl Mc usp lao lpl : Word) :
-    Except Err (List Word × Mem) → Except Err (List Word × Mem)
-  | .error ε => .error ε
-  | .ok (r, m) =>
-    if 4294967296 ≤ r.headD 0 then .error (.abort 0)
-    else tkaE.k5 p n vis q fto ftl Mc usp lao lpl (callE p n "mk_app_n_f" [r.headD 0, lao, lpl] m)
-
-def tkaE.k3 (p : Prog) (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word) :
-    Except Err (List Word × Mem) → Except Err (List Word × Mem)
-  | .error ε => .error ε
-  | .ok (r, m) =>
-    if r.headD 0 = 0 then .ok ([0], m)
-    else tkaE.k4 p n vis q fto ftl Mc usp lao (if lal < K then lal else K)
-      (callE p n "intern_const" [ip, usp] m)
-
-def tkaE.k2 (p : Prog) (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word) (r1 : List Word) :
-    Except Err (List Word × Mem) → Except Err (List Word × Mem)
-  | .error ε => .error ε
-  | .ok (r2, m) => tkaE.k3 p n vis q fto ftl Mc ip usp lao lal K
-      (callE p n "sl_eq" [r1.headD 0, r1.tail.headD 0, r2.headD 0, r2.tail.headD 0] m)
-
-def tkaE.k1 (p : Prog) (n : Nat) (vis q fto ftl Mc ip usp lao lal mao mal K : Word) :
-    Except Err (List Word × Mem) → Except Err (List Word × Mem)
-  | .error ε => .error ε
-  | .ok (r1, m) => tkaE.k2 p n vis q fto ftl Mc ip usp lao lal K r1
-      (callE p n "erase_each" [if mal < K then mao else mao + K, if mal < K then 0 else mal - K] m)
-
-/-- **The error model of `target_k53_args`** (`tkaW`'s shape, every callee through `callE`). -/
-def tkaE (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Word → Except Err (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _ => .error .outOfFuel
-  | n + 1, m, vis, q, fto, ftl, Mc, ip, usp, lao, lal, mao, mal =>
-    tkaE.k1 p n vis q fto ftl Mc ip usp lao lal mao mal (rdW (m.arr64 IW) (Mc + 4))
-      (callE p n "erase_each" [if lal < rdW (m.arr64 IW) (Mc + 4) then lao else lao + rdW (m.arr64 IW) (Mc + 4),
-        if lal < rdW (m.arr64 IW) (Mc + 4) then 0 else lal - rdW (m.arr64 IW) (Mc + 4)] m)
-
-theorem tka_ite_neg {α : Sort _} {x K : Word} {a b : α} (h : K ≤ x) : (if x < K then a else b) = b :=
-  ite_eq_right (UInt64.not_lt.mpr h)
-
-theorem tka_ite_pos {α : Sort _} {x K : Word} {a b : α} (h : x < K) : (if x < K then a else b) = a :=
-  ite_eq_left h
-
-/-- `target_k53_args` after the parameter count and the two index slices: the calls. Its own spec
-(`tkaTail_specE`, over the named locals) is proved once, not once per path through the slices'
-two `if`s (one proof over all 101 goals: 43 s; cut: 5 s). -/
-def tkaTailS : Stmt := seqDrop 3 targetK53Args.body
-
-/-- The index slices of `target_k53_args`'s major, after the parameter count `nPc`. -/
-def TkaLocs (s : St) : Prop :=
-  s.loc 14 = (if s.loc 10 < s.loc 11 then s.loc 9 else s.loc 9 + s.loc 11) ∧
-    s.loc 15 = (if s.loc 10 < s.loc 11 then 0 else s.loc 10 - s.loc 11)
-
-theorem tkaTail_specE (p : Prog) (n : Nat) (s₁ : St) (hL : TkaLocs s₁) :
-    ⦃fun s => s = s₁⦄ step p (exec p n) tkaTailS
-    ⦃fun _ _ => True; fun ε => ε.code ≠ 0 → tkaE.k1 p n (s₁.loc 0) (s₁.loc 1) (s₁.loc 2) (s₁.loc 3)
-      (s₁.loc 4) (s₁.loc 5) (s₁.loc 6) (s₁.loc 7) (s₁.loc 8) (s₁.loc 9) (s₁.loc 10) (s₁.loc 11)
-      (callE p n "erase_each" [s₁.loc 12, s₁.loc 13] s₁.mem) = .error ε⦄ := by
-  obtain ⟨h14, h15⟩ := hL
-  simp only [tkaTailS, targetK53Args, seqDrop]
-  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specE,
-    callE_spec p n "erase_each", callE_spec p n "sl_eq", callE_spec p n "intern_const",
-    callE_spec p n "mk_app_n_f", callE_spec p n "block_shape_member_names", callE_spec p n "nest_occ",
-    callE_spec p n "target_class_match"]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals (try simp_all [tka_ite_neg, tkaE.k1, tkaE.k2, tkaE.k3, tkaE.k4, tkaE.k5, tkaE.k6, tkaE.k7, tkaE.k8])
-  all_goals grind [lang_grind, arena_grind, tkaE.k1, tkaE.k2, tkaE.k3, tkaE.k4, tkaE.k5, tkaE.k6,
-    tkaE.k7, tkaE.k8]
-
-theorem tkaE_spec (p : Prog) (hf : p.lookup "target_k53_args" = some targetK53Args) (n : Nat) (s₀ : St)
-    (vis q fto ftl Mc ip usp lao lal mao mal : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_k53_args" [vis, q, fto, ftl, Mc, ip, usp, lao, lal, mao, mal]
-    ⦃fun _ _ => True; fun ε => ε.code ≠ 0 →
-      tkaE p n s₀.mem vis q fto ftl Mc ip usp lao lal mao mal = .error ε⦄ := by
-  cases n with
-  | zero =>
-    rw [invoke_eq _ hf]; simp only [callFn, targetK53Args]
-    vcgen [exec] <;> grind
-  | succ n =>
-    rw [invoke_eq _ hf]
-    simp only [callFn]
-    rw [← seqTake_drop 3 targetK53Args.body, show seqDrop 3 targetK53Args.body = tkaTailS from rfl]
-    simp only [targetK53Args, seqTake]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_specE, tkaTail_specE p n]
-    all_goals subst_vars
-    all_goals (try simp only [TkaLocs, St.setLoc_loc, St.setLoc_mem,
-      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, decide_eq_true_eq] at *)
-    all_goals (try simp_all [tkaE, tka_ite_neg])
-    all_goals grind [lang_grind, arena_grind, tkaE]
-
-/-! ## The claim -/
+/-- `tkaE` after `sl_eq` found the erased indices equal: the leaf's parameters as an `if`. -/
+theorem tkaE_slEq (p : Prog) (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word) (m : Mem) (e : Word)
+    (he : e ≠ 0) :
+    tkaE.k_sl_eq p n vis q fto ftl Mc ip usp lao lal K m (.ok e) =
+      tkaE.j3 p n vis q fto ftl Mc ip usp lao (if lal < K then lal else K) m := by
+  by_cases h : lal < K
+  · rw [tkaE.k_sl_eq.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ he h, if_pos h]
+  · rw [tkaE.k_sl_eq.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ he h, if_neg h]
 
 section sims
-variable {p : Prog} (hq : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
+variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+  {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-include hq henv hnv hcE in
-/-- **`target_k53_args`' error claim** (`TkaE`, every `dn vis fe`; `tkaW_okC`'s case chain): the
-callees outside the verdict closure claim nothing, the capacity abort is class `0`, a failing
-`target_class_match` is `tcm_claimA`'s. -/
-theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
-    TkaE p dn vis fe env := by
-  intro n hn s₀ a q fto ftl Mc ip usp lao lal mao mal bs formerTys TM la ma pP formerTysP laP maP McP
-    I'P us'P hC hA hbs hft hftb hMc hip hus hla hma hP hsh hftP hMcP hipP husP hlaP hmaP hformer hMs
-  refine CoreSpecE.of_runs fun er hc => ?_
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (tkaE_spec p L.tka n s₀ vis q fto ftl Mc ip usp lao lal mao mal) hc
-    (Err.code_ne_of_cls hk0)
+include hq henv in
+/-- **`target_k53_args` refines `tkArgs`, both outcomes** (twin side: con-ron's `targetK53_spec`,
+the arguments' part): the indices erased (`eraseAll_spec`), compared, the leaf's class
+(`internConstE_run`, `mkAppN_run`; `nestOcc` read-only), then `targetClassMatch` (`tcm_ref`). -/
+theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    {q fto ftl Mc ip usp lao lal mao mal : Word}
+    {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor} {la ma : List EIdx}
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hMc : DecB (fun m => decTM m Mc.toNat) m TM)
+    (hip : H ip) (hus : H usp) (hla : HSl0 m lao lal la) (hma : HSl0 m mao mal ma) (hP : RcMR m)
+    {pP : ConLeche.BlockShape} {formerTysP laP maP : List ConLeche.Expr} {McP : ConLeche.TargetMajor}
+    {I'P : ConLeche.Name} {us'P : List ConLeche.Level}
+    (hsh : dShape a.store bs = some pP)
+    (hftP : Frontend.denoteEList a.store formerTys = some formerTysP)
+    (hMcP : dMajor a.store TM = some McP)
+    (hipP : denoteN a.store.ns (decI ip) = some I'P)
+    (husP : denoteLs a.store.lss (decI usp) = some us'P)
+    (hlaP : Frontend.denoteEList a.store la = some laP)
+    (hmaP : Frontend.denoteEList a.store ma = some maP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hMs : ConLeche.Cached.TargetMajScoped McP) :
+    RefE (VerdictCtx p) (tkaE p n m vis q fto ftl Mc ip usp lao lal mao mal)
+      (tkArgs fe bs formerTys TM (decI ip) (decI usp) la ma) a
+      (fun v c a' => TcmPost dn vis fe env m v.1 v.2 c a') := by
   have hS := hC.stage
   obtain ⟨-, hMlv, hMds, hMnpc, -, -, -, -, hMpf⟩ := ConRon.Bridge.Inductives.dMajor_inv hMcP
   obtain _ | n := n
-  · simp only [tkaE] at hW; cases hW; exact absurd rfl hk0
-  simp only [tkaE] at hW
+  · rw [tkaE.eq_1]; exact RefE.of_cls0 (by simp)
+  rw [tkaE_succ, tkaE.j2.arm1]
   have hsz := hS.2.2.2.1
   obtain ⟨hlvH, hlvD, hdsS, hnP, hpfS, hMt⟩ := tmFields hMc hsz
-  have hMk : ∀ k : Nat, k ≤ 12 → (Mc + UInt64.ofNat k).toNat < iwTop s₀.mem := fun k hk => by
+  have hMk : ∀ k : Nat, k ≤ 12 → (Mc + UInt64.ofNat k).toNat < iwTop m := fun k hk => by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by omega : k < 2 ^ 64), Nat.mod_eq_of_lt (by
-      have := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt; simp only [iwTop] at hMt; omega)]; omega
-  generalize hK : rdW (s₀.mem.arr64 IW) (Mc + 4) = K at hW hnP
+      have := (rdW (m.arr64 CTL) 200).toNat_lt; simp only [iwTop] at hMt; omega)]; omega
+  generalize hK : rdW (m.arr64 IW) (Mc + 4) = K at hnP ⊢
+  unfold tkArgs
   -- `erase_each` of the leaf's indices
-  cases h1 : callE p n "erase_each" [if lal < K then lao else lao + K, if lal < K then 0 else lal - K]
-      s₀.mem with
-  | error e1 =>
-    rw [h1] at hW; simp only [tkaE.k1] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1] at hW; simp only [tkaE.k1] at hW
-  obtain ⟨s1, hs1, -, h1'⟩ := triple_of_callE (ee_spec p L n ⟨s₀.mem, Locals.init []⟩ _ _) h1
-  rw [hs1] at h1'
-  dsimp only at h1'
-  obtain ⟨le, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok dn fe vis n h1' hS hla.drop hP
-  have hA1 := eeW_afr n h1' hA
+  rcases h1 : eeW n m (if lal < K then lao else lao + K) (if lal < K then 0 else lal - K) with _ | ⟨r1, m1⟩
+  · rw [liftE_none, tkaE.k_erase_each.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, tkaE.k_erase_each.arm1]
+  obtain ⟨le, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok dn fe vis n h1 hS hla.drop hP
+  have hA1 := eeW_afr n h1 hA
   -- `erase_each` of the major's indices
-  cases h2 : callE p n "erase_each" [if mal < K then mao else mao + K, if mal < K then 0 else mal - K]
-      m1 with
-  | error e2 =>
-    rw [h2] at hW; simp only [tkaE.k2] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2] at hW; simp only [tkaE.k2] at hW
-  obtain ⟨s2, hs2, -, h2'⟩ := triple_of_callE (ee_spec p L n ⟨m1, Locals.init []⟩ _ _) h2
-  rw [hs2] at h2'
-  dsimp only at h2'
-  obtain ⟨me, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok dn fe vis n h2' hS1 (hma.grow hg1).drop hP1
-  have hA2 := eeW_afr n h2' hA1
-  -- `sl_eq`
-  cases h3 : callE p n "sl_eq" [r1.headD 0, r1.tail.headD 0, r2.headD 0, r2.tail.headD 0] m2 with
-  | error e3 =>
-    rw [h3] at hW; simp only [tkaE.k3] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
-  | ok q3 =>
-  obtain ⟨r3, m3'⟩ := q3
-  rw [h3] at hW; simp only [tkaE.k3] at hW
-  obtain ⟨s3, hs3, -, hm3, h3'⟩ := triple_of_callE (slEq_spec p L.eq n ⟨m2, Locals.init []⟩ _ _ _ _) h3
-  have hm3' : m3' = m2 := by rw [← hs3]; exact hm3
-  rw [hm3'] at hW h3
-  dsimp only at h3'
-  have he := eqW_dec h3' (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.1; omega)) hd2
-    (hS2.lt64 hb2)
+  rcases h2 : eeW n m1 (if mal < K then mao else mao + K) (if mal < K then 0 else mal - K) with _ | ⟨r2, m2⟩
+  · rw [liftE_none, tkaE.k_erase_each_2.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, tkaE.k_erase_each_2.arm1]
+  obtain ⟨me, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok dn fe vis n h2 hS1 (hma.grow hg1).drop hP1
+  have hA2 := eeW_afr n h2 hA1
   have hg12 := hg1.trans hg2
   rw [hnP] at run1 run2
   obtain ⟨q1, -⟩ := eraseAll_spec (la.drop TM.nPc) (laP.drop TM.nPc) a a1 le hC.check.state
@@ -224,139 +125,111 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
       (denoteEList_ext q1.ext _ _ hmaP) TM.nPc⟩ run2
   have hC2 := hC1.of_pstep hS2 hA2 q2
   have q12 := q1.trans q2
-  by_cases he0 : r3.headD 0 = 0
-  · rw [ite_eq_left he0] at hW; cases hW
-  rw [ite_eq_right he0] at hW
+  refine RefE.bind_right run1 (RefE.bind_right run2 ?_)
+  -- `sl_eq`
+  rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e
+  · rw [liftE_none, tkaE.k_sl_eq.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have he := eqW_dec h3 (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.1; omega)) hd2
+    (hS2.lt64 hb2)
+  by_cases he0 : e = 0
+  · rw [tkaE.k_sl_eq.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ he0]
+    have hne : le ≠ me := by intro hq; rw [hq] at he; simp at he; exact absurd he (by rw [he0]; decide)
+    have : (le != me) = true := by simpa using hne
+    rw [if_pos this]
+    exact RefE.ret (y := false) rfl ⟨rfl, hC2, hg12, hP2, hA2⟩
+  rw [tkaE_slEq _ _ _ _ _ _ _ _ _ _ _ _ _ _ he0, tkaE.j3.arm1]
   have heq : le = me := by
     by_cases hq' : le = me
     · exact hq'
     · rw [ite_eq_right hq'] at he; exact absurd he he0
   subst heq
+  refine RefE.ite_neg (by simp) ?_
   -- `intern_const`
-  cases h4 : callE p n "intern_const" [ip, usp] m2 with
-  | error e4 =>
-    rw [h4] at hW; simp only [tkaE.k4] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
-  | ok q4 =>
-  obtain ⟨r4, m3⟩ := q4
-  rw [h4] at hW; simp only [tkaE.k4] at hW
-  obtain ⟨s4, hs4, -, h4'⟩ := triple_of_callE
-    (internConst_spec (p := p) L.cf L.cp L.ic n ⟨m2, Locals.init []⟩ ip usp) h4
-  rw [hs4] at h4'
-  dsimp only at h4'
-  generalize hhd' : r4.headD 0 = hd at hW h4'
-  obtain ⟨a3, run3, hS3, hg3⟩ := internConst_stage hS2 ip usp hip hus h4'
-  have hA3 := ceinternW_afr h4' hA2
+  rcases h4 : ceinternW m2 ip usp with _ | ⟨hd, m3⟩
+  · rw [liftE_none, tkaE.k_intern_const.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨a3, run3, hS3, hg3⟩ := internConst_stage hS2 ip usp hip hus h4
+  have hA3 := ceinternW_afr h4 hA2
   obtain ⟨q3, hhdP⟩ := ConRon.Bridge.Inductives.internConstE_run hC2.check.state
     (ConRon.Bridge.denoteN_ext hipP q12.ext) (ConRon.Bridge.denoteLs_ext husP q12.ext) run3
   have hC3 := hC2.of_pstep hS3 hA3 q3
   have q13 := q12.trans q3
+  refine RefE.bind_right run3 ?_
   by_cases hb4 : 4294967296 ≤ hd
-  · rw [ite_eq_left hb4] at hW; cases hW; exact absurd rfl hk0
-  rw [ite_eq_right hb4] at hW
+  · rw [tkaE.k_intern_const.abort1 _ _ _ _ _ _ _ _ _ _ _ _ hb4]; exact RefE.of_cls0 (by simp)
+  rw [tkaE.k_intern_const.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hb4]
   have hhd : H hd := by simp only [H]; rw [UInt64.le_iff_toNat_le] at hb4; simp at hb4; omega
-  have hP3 : RcMR m3 := hP2.fr (ceinternW_mfr h4')
+  have hP3 : RcMR m3 := hP2.fr (ceinternW_mfr h4)
   have hg03 := hg12.trans hg3
   have hlp := (hla.grow hg03).take (k := K)
   rw [hnP] at hlp
-  generalize hL : (if lal < K then lal else K) = lpl at hW hlp
+  generalize hL : (if lal < K then lal else K) = lpl at hlp ⊢
   -- `mk_app_n_f`
-  cases h5 : callE p n "mk_app_n_f" [hd, lao, lpl] m3 with
-  | error e5 =>
-    rw [h5] at hW; simp only [tkaE.k5] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
-  | ok q5 =>
-  obtain ⟨ra, m4⟩ := q5
-  rw [h5] at hW; simp only [tkaE.k5] at hW
-  obtain ⟨s5, hs5, -, h5'⟩ := triple_of_callE (mknF_spec p L.ad n ⟨m3, Locals.init []⟩ _) h5
-  rw [hs5] at h5'
-  dsimp only at h5'
-  obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mknF_ok dn vis fe hd lao lpl hhd _ m3 m4 a3 ra h5'
+  rcases h5 : mknF m3 [hd, lao, lpl] with _ | ⟨ra, m4⟩
+  · rw [liftE_none, tkaE.k_mk_app_n_f.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, tkaE.k_mk_app_n_f.arm1]
+  obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mknF_ok dn vis fe hd lao lpl hhd _ m3 m4 a3 ra h5
     ⟨hS3, hlp.1⟩
-  have hA4 := mknF_afr h5' hA3
+  have hA4 := mknF_afr h5 hA3
   have hlpP := denoteEList_ext q13.ext _ _ (ConRon.Bridge.Inductives.denoteEList_take hlaP TM.nPc)
   obtain ⟨q4, -⟩ := ConRon.Bridge.Inductives.mkAppN_run (la.take TM.nPc) (laP.take TM.nPc)
     hC3.check.state hhdP hlpP run4
   have hC4 := hC3.of_pstep hS4 hA4 q4
   have q14 := q13.trans q4
-  have hP4 : RcMR m4 := hP3.fr (MFr.ofMknF h5')
+  have hP4 : RcMR m4 := hP3.fr (MFr.ofMknF h5)
   have hg04 := hg03.trans hg4
+  rw [← happD] at run4
+  refine RefE.bind_right run4 ?_
   -- `block_shape_member_names`
-  cases h6 : callE p n "block_shape_member_names" [q] m4 with
-  | error e6 =>
-    rw [h6] at hW; simp only [tkaE.k6] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
-  | ok q6 =>
-  obtain ⟨rn, m5⟩ := q6
-  rw [h6] at hW; simp only [tkaE.k6] at hW
-  obtain ⟨s6, hs6, -, h6'⟩ := triple_of_callE (blockShapeMemberNames_spec p L.tmn.tcm.ha L.tmn.tcm.mnc
-    L.tmn.tcm.mn n ⟨m4, Locals.init []⟩ q) h6
-  rw [hs6] at h6'
-  dsimp only at h6'
+  rcases h6 : memberNamesW n m4 q with _ | ⟨rn, m5⟩
+  · rw [liftE_none, tkaE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, tkaE.k_block_shape_member_names.arm1]
   have hbs4 := hbs.grow hg04
-  obtain ⟨hS5, hg5, -, hdn, htn⟩ := memberNamesW_stage h6' hS4 hbs4
-  have hf5 := (memberNamesW_dec h6' hS4.2.2.2.1 hS4.2.2.2.2.2 hbs4.dec
+  obtain ⟨hS5, hg5, -, hdn, htn⟩ := memberNamesW_stage h6 hS4 hbs4
+  have hf5 := (memberNamesW_dec h6 hS4.2.2.2.1 hS4.2.2.2.2.2 hbs4.dec
     (by have := hbs4.ptop; have := hS4.lt64 (Nat.le_refl _); omega) hbs4.2.1 hbs4.2.2).2.2.2.1
   have hP5 : RcMR m5 := hP4.fr (MFr.of_iw hf5)
   have hA5 := AFr.iw hf5 hA4
   have hC5 := hC4.of_pstep hS5 hA5 (PStep.refl hC4.check.state)
   -- `nest_occ`
-  cases h7 : callE p n "nest_occ" [rn.headD 0, rn.tail.headD 0, 0, 0, ra.headD 0] m5 with
-  | error e7 =>
-    rw [h7] at hW; simp only [tkaE.k7] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h7
-  | ok q7 =>
-  obtain ⟨r7, m6⟩ := q7
-  rw [h7] at hW; simp only [tkaE.k7] at hW
-  obtain ⟨s7, hs7, -, h7'⟩ := triple_of_callE (noF_spec p L n ⟨m5, Locals.init []⟩ _ _ _ _ _) h7
-  rw [hs7] at h7'
-  dsimp only at h7'
-  generalize hocc : r7.headD 0 = occ at hW h7'
-  obtain ⟨b, run6, hb6, hS6, hg6, hP6⟩ := noF_ok dn fe vis n h7' hS5 happH hdn (Nat.le_of_eq htn) hP5
-  have hA6 := noF_afr h7' hA5
+  rcases h7 : noF n m5 (rn.headD 0) (rn.tail.headD 0) 0 0 (ra.headD 0) with _ | ⟨occ, m6⟩
+  · rw [liftE_none, tkaE.k_nest_occ.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨b, run6, hb6, hS6, hg6, hP6⟩ := noF_ok dn fe vis n h7 hS5 happH hdn (Nat.le_of_eq htn) hP5
+  have hA6 := noF_afr h7 hA5
   have hC6 := hC5.of_pstep hS6 hA6 (PStep.refl hC5.check.state)
   have hg06 := (hg04.trans hg5).trans hg6
-  have hdecApp : decE (ra.headD 0) = app := happD
-  have hrun4 : (mkAppN (decE hd) (la.take TM.nPc)).run a3 = .ok (decE (ra.headD 0), a4) := by
-    rw [hdecApp]; exact run4
+  refine RefE.bind_right run6 ?_
   by_cases ho : occ = 0
-  · rw [ite_eq_left ho] at hW; cases hW
-  rw [ite_eq_right ho] at hW
+  · rw [tkaE.k_nest_occ.arm1 _ _ _ _ _ _ _ _ _ _ _ _ ho]
+    have : b = false := by rw [← hb6, ho]; rfl
+    subst this
+    exact RefE.ret (y := false) rfl ⟨rfl, hC6, hg06, hP6, hA6⟩
+  rw [tkaE.k_nest_occ.arm2 _ _ _ _ _ _ _ _ _ _ _ _ ho]
   have hb1 : b = true := by rw [← hb6]; simpa using ho
   subst hb1
+  rw [if_pos rfl]
   have hMk6 : ∀ k : Nat, k ≤ 12 → rdW (m6.arr64 IW) (Mc + UInt64.ofNat k) =
-      rdW (s₀.mem.arr64 IW) (Mc + UInt64.ofNat k) :=
+      rdW (m.arr64 IW) (Mc + UInt64.ofNat k) :=
     fun k hk => rdW_grow hg06 (hMk k hk)
   have e11 := hMk6 11 (by omega); have e12 := hMk6 12 (by omega); have e1 := hMk6 1 (by omega)
   have e2 := hMk6 2 (by omega); have e3 := hMk6 3 (by omega)
   simp only [show UInt64.ofNat 11 = (11 : Word) from rfl, show UInt64.ofNat 12 = (12 : Word) from rfl,
     show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
     show UInt64.ofNat 3 = (3 : Word) from rfl] at e11 e12 e1 e2 e3
-  rw [e11, e12, e1, e2, e3] at hW
-  -- `target_class_match`
-  cases h8 : callE p n "target_class_match" [vis, q, fto, ftl, rdW (s₀.mem.arr64 IW) (Mc + 11),
-      rdW (s₀.mem.arr64 IW) (Mc + 12), rdW (s₀.mem.arr64 IW) (Mc + 1), rdW (s₀.mem.arr64 IW) (Mc + 2),
-      rdW (s₀.mem.arr64 IW) (Mc + 3), usp, lao, lpl] m6 with
-  | ok q8 =>
-    rw [h8] at hW; simp only [tkaE.k8] at hW; cases hW
-  | error e8 =>
-  rw [h8] at hW; simp only [tkaE.k8] at hW; cases hW
-  have hcl := CoreSpecE.of_callE (tcm_claimA hq henv hnv hcE L.tmn.tcm n (by omega) ⟨m6, Locals.init []⟩ a4
-    q fto ftl _ _ _ _ _ usp lao lpl bs formerTys _ _ _ hC6 hA6
+  rw [e11, e12, e1, e2, e3]
+  -- `target_class_match`: the twin's last step
+  have h8 := tcm_ref hq henv n (by omega) hC6 hA6
     (hbs.grow hg06) hlvH hus
-    (by rw [decHL_grow hg06 hftb]; exact hft) (by have := hg06.1; dsimp only; omega) (hpfS.grow hg06) (hdsS.grow hg06)
+    (by rw [decHL_grow hg06 hftb]; exact hft) (by have := hg06.1; omega) (hpfS.grow hg06) (hdsS.grow hg06)
     (hlp.grow ((hg4.trans hg5).trans hg6)) hP6
     (ConRon.Bridge.Inductives.dShape_ext q14.ext _ _ hsh) (denoteEList_ext q14.ext _ _ hftP)
     (denoteEList_ext q14.ext _ _ hMpf) (by rw [hlvD]; exact ConRon.Bridge.denoteLs_ext hMlv q14.ext)
     (denoteEList_ext q14.ext _ _ hMds) (ConRon.Bridge.denoteLs_ext husP q14.ext)
-    (denoteEList_ext q4.ext _ _ hlpP) hformer hMs.1) h8
-  rw [hlvD] at hcl
-  intro hk
-  obtain ⟨ce, hce, hcls⟩ := hcl hk
-  refine ⟨ce, ?_, hcls⟩
-  simp only [tkArgs, StateT.run_bind, run1, except_ok_bind, run2, bne_self_eq_false, Bool.false_eq_true,
-    ite_false, ConRon.Arena.internConstE, run3, hrun4, run6, ite_true]
-  exact hce
+    (denoteEList_ext q4.ext _ _ hlpP) hformer hMs.1
+  rw [hlvD] at h8
+  exact RefE.mono h8 fun v c a' h => ⟨h.res, h.stage, hg06.trans h.grow, h.rc, h.abs⟩
 
 end sims
 
