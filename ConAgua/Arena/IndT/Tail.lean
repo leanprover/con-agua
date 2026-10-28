@@ -67,12 +67,12 @@ l_model ictlE_spec (p : Prog) (hP : TailProg p)
 
 /-- What the error arms of `check_block_tail` assume: the verdict context with
 `unresolved_consts_error`'s program and `classes_nfs`' claim at every stage (the recursor stage,
-`GrpG`), the abstract constructors' sorts' claim (`iisr_ref`) and the projection tables' (`ctb_ref`). -/
+`GrpG`) and the abstract constructors' sorts' claim (`iisr_ref`); the projection tables' errors
+(`ctb_ref`) are their own rejects. -/
 structure TailG (p : Prog) : Prop where
   u : VerdictCtxU p
   nfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env
   csf : CheckStructFieldSortsIE p
-  tab : CheckStructProjTableRE p
 
 /-- What `check_block_tail` gives besides the index `x` it returns, at the view `w` (from `m`): the
 stage, the growth, the `hb` memo, `AbsOK`, the recursor stage's memos. -/
@@ -381,7 +381,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
     partsRdIW_grow hg06 (w := UInt64.ofNat pw + 1) (by rw [UInt64.toNat_add, hpw']; simp; omega),
     r 4 (by decide) (q + 4) rfl, r 5 (by decide) (q + 5) rfl, r 6 (by decide) (q + 6) rfl,
     r 7 (by decide) (q + 7) rfl]
-  have hT8 := ctbE_spec p hP.tabs.one hP.tabs.tabs k ⟨m7, Locals.init []⟩ (UInt64.ofNat pw)
+  have hT8 := ctbE_spec p hP.tabs.tbl hP.tabs.one hP.tabs.tabs k ⟨m7, Locals.init []⟩ (UInt64.ofNat pw)
     (rdW (m.arr64 IW) (UInt64.ofNat pw)) (rdW (m.arr64 IW) (UInt64.ofNat pw + 1)) (rdW (m.arr64 IW) (q + 4))
     (rdW (m.arr64 IW) (q + 5)) (rdW (m.arr64 IW) (q + 6)) (rdW (m.arr64 IW) (q + 7)) (r7.headD 0)
   have hR8 := ctb_ref hP.tabs hApd dn (UInt64.ofNat pw) bs k (by omega) m7 a6 (r7.headD 0) fe3 _ _ _ _ _ _
@@ -397,7 +397,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
       rdW (m.arr64 IW) (UInt64.ofNat pw + 1), rdW (m.arr64 IW) (q + 4), rdW (m.arr64 IW) (q + 5),
       rdW (m.arr64 IW) (q + 6), rdW (m.arr64 IW) (q + 7), r7.headD 0] m7 with e8 | ⟨r8, m8⟩
   · rw [ictrE.k_check_block_tables.none]
-    exact fun hG => RefE.run_err hT8 hG.u.nv hG.tab hR8 c8
+    exact fun hG => RefE.run_err hT8 hG.u.nv trivial hR8 c8
   rw [ictrE.k_check_block_tables.arm1]
   obtain ⟨s8, hs8, -, x, a', h1, h2⟩ := RefE.run_ok hT8 hR8 c8
   subst hs8

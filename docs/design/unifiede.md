@@ -148,7 +148,8 @@ The shapes it covers:
 * a twin that reports failures as values: `C := ErrClaimV T a` or `VerdictClaimL T a`.
 
 Its lemmas: `RefC.mono`, `RefC.run_ok` / `run_okW`, `RefC.run_err` (with `C0`: the claim holds
-for errors of class `0`, as every claim of the verdict closure does).
+for errors of class `0`, as every claim of the verdict closure does), `RefC.triple` (the ok triple,
+the `@[refines]` shape; ascribe `(RefC.triple hs h :)` when the goal's post would fix `Ok` first).
 
 **Core functions (`Arena/RefECore.lean`)**, the functions the knot's slots call, whose ok halves
 are `CoreRef`s: the post `CorePost` (the relation after the run, the result decoded and valid),
@@ -965,7 +966,7 @@ models `icboW`, `icbgW`, `iisrW`, `ckkW` with their specs, `kofCall_sim`, and wh
 (`Sim.tail`, `installCons_afr`, the `callW` forms of the `rec2` header lemmas, now over `recW`). The
 `@[refines]` theorems (`checkBlockIdxSorts_refinesC`, `checkBlockCtors_refinesC`, whose ok model
 `ictW` reads `check_block_ctors_go` through `callW`) keep their statements. Whole diff against
-master: +637 −1 054 in 18 files.
+master: +637 −1 054 in 19 files.
 
 Choices:
 
@@ -2105,19 +2106,19 @@ is one model and one refinement by §3.2 unless it says otherwise.
 
 **A. Outside the knot, with an ok refinement elsewhere** (the recipe as in batches 1–4):
 
-- [ ] `Verdict/IndE`: `check_field_sort_bound` (`cfbE`; ok `cfbW`). Its one other reader,
+- [x] `Verdict/IndE`: `check_field_sort_bound` (`cfbE`; ok `cfbW`). Its one other reader,
   `Arena/IndT/Sum3` (`triple_of_callE_err … Err.code_ne_of_cls` in `csfGo_ref`), then reads its
   refinement by `RefE.run_err`.
 - [ ] `Verdict/IndBSum3`: `check_sum_ctor_tail`, `check_sum_ctor` (`ctlE`, `ctorE`; ok `ctlW_okC`,
   `ctorW_okC`). `sctsE` reads `ctor_claim` through `callE` today; afterwards `SctsG` loses `CcvE`'s
   detour.
-- [ ] `Verdict/IndBTbl`: `check_struct_proj_table` (`tblE`; ok `tblW_okR`). Removes `TailG.tab`
+- [x] `Verdict/IndBTbl`: `check_struct_proj_table` (`tblE`; ok `tblW_okR`). Removes `TailG.tab`
   and the statement `CheckStructProjTableRE` (with `checkStructProjTableRE_of` in `IndArmE`).
-- [ ] `Verdict/IndA5`: `check_shapeless_formers`, `check_shapeless` (`csfE`, `cslE`; no ok
+- [x] `Verdict/IndA5`: `check_shapeless_formers`, `check_shapeless` (`csfE`, `cslE`; no ok
   refinement: `check_shapeless` never returns, `checkShapeless_never`, so the ok case of its `RefE`
   is empty). Then `cidE` lists the unified spec and `CidG.shapeless` (`CheckShapelessE`,
   `checkShapelessE_claim`) goes.
-- [ ] `Verdict/UnresolvedE`: `unresolved_consts_error` (`uceE`, `uce_errClaim_hi`); the `uce`
+- [x] `Verdict/UnresolvedE`: `unresolved_consts_error` (`uceE`, `uce_errClaim_hi`); the `uce`
   field of `VerdictCtxU` stays as its `G`.
 - [x] `Verdict/DeclStepE`: `install_step`, `install_decl_step` (`installStepE`,
   `installDeclStepE`; ok `installStep_refines`/`installStep_pieces`, `installDeclStep_refines` in
@@ -2292,3 +2293,56 @@ Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, b
 
 No module is more than 10 % slower. For the kit (not changed here): `CoreS.restoreTop'` is a
 domain lemma; the `struct_eta_cert*` chain (next landing) will want a `GrowPost` restore.
+
+### 3.33 Retirement, group A: the inductive checker's leaves, first landing (`check_field_sort_bound`, `check_struct_proj_table`, `check_shapeless(_formers)`, `unresolved_consts_error`)
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `check_field_sort_bound` | `cfbW_okC` 93, `cfbE_claim` 144 = 237 | `cfb_ref` 151 + `CfbPost` 5 = 156 | −34 % |
+| `check_struct_proj_table` | `tblW_okR` 137, `checkStructProjTable_refinesC` 32; `tblE_claim` 158, `checkStructProjTable_claim` 29, `CheckStructProjTableRE` 13, `checkStructProjTableRE_of` 6 = 375 | `tbl_ref` 168 + `TblPost` 7 + `checkStructProjTable_refinesC` 31 = 206 | −45 % |
+| `check_shapeless_formers`, `check_shapeless` | `csfE_claim` 148 (both halves), `checkShapelessE_claim` 34, `CheckShapelessE` 10, `checkShapeless_never` 14 = 206 | `csf_ref` 94 + `CsfPost` 5 + `csl_ref` 23 = 122 | −41 % |
+| `unresolved_consts_error` | `uce_rest` 45, `uce_claim_hi` 13, `uce_claim_lo` 56, `uce_errClaim_hi` 9, `uce_errClaim_lo` 12 = 135 | `uce_ref` 60 + `uce_rest` 40 + `uceT`/`UceClaim` 5 + `uce_claim` 8 + `uce_errClaim_hi/lo` 24 = 137 | ±0 |
+| **pairs** | **953** | **621** | **−35 %** |
+
+Also gone: the hand ok models `cfbW`/`cfbK1–4`/`cfbW_spec` and `tblW`/`tblK1–9`/`tblW_spec`, the
+`errors` models `cfbE`, `tblE`, `csfE`, `cslE`, `uceE` (each now the `unified` one of the same name),
+`TailG.tab`, `CidG.shapeless`; the files `Verdict/IndBTbl` and `Verdict/IndA5` (its helpers and the two
+refinements moved to `Arena/IndT/Shapeless`, which `CheckIndDecl` imports). Whole diff: +692 −1 253
+in 19 files.
+
+* **`G`**: `True` for `check_field_sort_bound` and `check_struct_proj_table` (every callee is outside
+  the verdict closure and lifted, so their only errors of class other than `0` are their own
+  rejects); so `cto_ref`/`ctb_ref` are under `True` too and `tail_ref` passes `trivial`.
+  `VerdictCtxU` for the shapeless pair (`ccv_ref`'s; `cid_ref` passes `hG.block.tail.u`).
+  `UceProg` for `unresolved_consts_error`, as the checklist says.
+* **Unified callees**: `csfGoE` lists `cfbE_spec`, `ctoE` lists `tblE_spec` (its tail call: no
+  continuation lemma, the model value is `tblE`'s), `csfE` lists `checkConstantVal_specE`, `cslE` lists
+  `csfE_spec`, `cidE` lists `cslE_spec` (`cidE_spec` takes `ValProg`). `csfGo_ref` and `fsorts_ref`
+  lost their `check_field_sort_bound` lookup.
+* **`check_shapeless` never returns**: `csl_ref`'s post is `False`, its ok case closed by the
+  refinement of the formers' run. **`unresolved_consts_error`** is a `RefC` (its twin reports the
+  verdict as a value: `UceClaim`, over `uceT`, the `w ≤ 1`/`w ≥ 2` sites as one `if`), ok fact `True`;
+  the site claims `uce_errClaim_hi/lo` (same statements, their five callers unchanged) are
+  `RefC.run_err` one-liners through `uce_claim`. Its callers still call it through `callE`.
+* **Recipes**: `simp []` for `cfbE` (3.9 → 3.4 s for `Sum3`) and `tblE` (the default `finish` fails;
+  `simp [Cmp.evalW, Cmp.eval]` as the old model: the same time); `simp [rdW]` for `csfE`/`cslE`, `simp []`
+  for `uceE`, as their `errors` models.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+dfe405f0, `_tmp/retire-a1/times1–3.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndRealSctC` | 9.49 | **18.83** | **slower (+9.3 s)**: `tblE` and `tbl_ref` moved in … |
+| `Verdict/IndBTbl` (deleted) | 18.47 | – | … from here; the two 28.0 → 18.8 |
+| `Arena/IndT/Sum3` | 2.80 | **3.46** | **slower (+0.7 s)**: `cfbE`, `cfb_ref` moved in … |
+| `Verdict/IndE` | 3.84 | 2.15 | … from here; the two 6.6 → 5.6 |
+| `Verdict/IndA5` (deleted), `Arena/IndT/Shapeless` (new) | 2.08 | 1.84 | |
+| `Verdict/UnresolvedE` | 26.00 | 16.34 | the `errors` model's step and the claims |
+| `Arena/IndSumSpec/ConsBlockRecsTF`, `CheckStructFieldSortsISucc` | 23.73 | 18.23 | `tblW`, `cfbW` and their specs gone |
+| the other 5 | 12.96 | 11.35 | |
+| **sum (13 modules)** | **99.4** | **72.2** | **−27 %** |
+
+Both flagged modules are the new homes of a model whose old module got faster by more. No kit or
+generator change was needed.
+

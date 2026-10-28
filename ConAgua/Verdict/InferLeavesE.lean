@@ -1,11 +1,9 @@
-import ConAgua.Arena.KnotE
 import ConAgua.Arena.DefEqStuckCert
 import ConAgua.Arena.InferProj
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.WhnfIotaRefine6
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of `infer_const`, `infer_proj`, `infer_proj_at` (lane `verdicts-b`, helper `c1`)

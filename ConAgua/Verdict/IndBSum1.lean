@@ -49,8 +49,8 @@ theorem checkStructFieldSortsI_claim (hg : p.lookup "sl_get" = some slGet)
     CoreSpecE p (n + 1) "check_struct_field_sorts_i" [vis, isProp, large, s, nP, fo, fl, io, il, nW]
       (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs idxArgs nW.toNat)
       s₀ a₀ :=
-  RefE.coreSpecE (fsortsE_spec p hp hgo hia hftd (n + 1) s₀ vis isProp large s nP fo fl io il nW) hnv ⟨hnv, hcE⟩
-    (fsorts_ref hq henv hLC hLT hg hpw het hc hb n hn _ a₀ isProp large s nP fo fl io il nW fvs idxArgs hC hA
+  RefE.coreSpecE (fsortsE_spec p hp hgo hia hftd hb (n + 1) s₀ vis isProp large s nP fo fl io il nW) hnv ⟨hnv, hcE⟩
+    (fsorts_ref hq henv hLC hLT hg hpw het hc n hn _ a₀ isProp large s nP fo fl io il nW fvs idxArgs hC hA
       hfvs hfb hidx hib hs hsP hnj hfP hws)
 
 end sims

@@ -746,17 +746,11 @@ theorem checkPendingGo_refinesT (n : Nat) (hn : n ≤ 2 ^ 62) :
   have h := cp_ref mode pins dn ds p fe pend hP hm n hn
   constructor
   · intro s₀ a₀ j cnt vis hj hc hT hR hM hcm hCr
-    have hr := h.1 s₀.mem a₀ j cnt vis hj hc hT hR hM hcm hCr
-    exact M.triple_of_run fun _ _ _ hp hrun => by
-      obtain ⟨hl, hx⟩ := M.of_run' (P := fun s => s = s₀) hp hrun
-        (checkPendingGo_specE p hP.cpg n s₀ j cnt vis)
-      rw [hx] at hr; exact ⟨hl, hr⟩
+    exact (RefC.triple (checkPendingGo_specE p hP.cpg n s₀ j cnt vis)
+      (h.1 s₀.mem a₀ j cnt vis hj hc hT hR hM hcm hCr) :)
   · intro s₀ a₀ j cnt vis hj hc hT hR hM hcm hCr
-    have hr := h.2 s₀.mem a₀ j cnt vis hj hc hT hR hM hcm hCr
-    exact M.triple_of_run fun _ _ _ hp hrun => by
-      obtain ⟨hl, hx⟩ := M.of_run' (P := fun s => s = s₀) hp hrun
-        (checkPendingNext_specE p hP.cpx n s₀ j cnt vis)
-      rw [hx] at hr; exact ⟨hl, hr⟩
+    exact (RefC.triple (checkPendingNext_specE p hP.cpx n s₀ j cnt vis)
+      (h.2 s₀.mem a₀ j cnt vis hj hc hT hR hM hcm hCr) :)
 
 /-- **L's phase B under `StageT` refines phase B on the worker** (the second half of
 `SeqAccepts`): a returning `check_pending_go(0, cnt, vis)` from phase A's memory (the twin's

@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfM2CRefine
-import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.WhnfIotaRefine4
 import ConRon.Bridge.Grind
 import ConAgua.Verdict.WhnfModels6E

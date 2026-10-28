@@ -1,7 +1,4 @@
 import ConAgua.Arena.DefEqStuckCert
-import ConAgua.Verdict.WhnfModels7E
-import ConAgua.Arena.RefECore
-import ConAgua.Arena.KnotE
 
 /-!
 # `struct_unit_cert` refines `structUnitCert` (lane `defeq`, helper `defeq-top`)

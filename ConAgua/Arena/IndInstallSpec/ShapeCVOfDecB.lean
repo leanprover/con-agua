@@ -10,7 +10,7 @@ import ConAgua.L.GrindAttr
 /-!
 # ShapeCVOfDecB
 
-`checkShapeless_never`, `cidFrameCallees`, `shapeCV_of_decB` and `CidProg`: what `check_ind_decl`'s
+`cidFrameCallees`, `shapeCV_of_decB` and `CidProg`: what `check_ind_decl`'s
 refinement (`IndT/CheckIndDecl`) reads.
 -/
 
@@ -25,25 +25,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-! ## `check_shapeless` -/
-
-/-- **`check_shapeless` never returns**: it calls `check_shapeless_formers` (whatever that
-does) and then aborts. Unlike `checkShapeless_refines` this needs no contract of the callee. -/
-theorem checkShapeless_never (p : Prog)
-    (hp : p.lookup "check_shapeless" = some checkShapeless) (n : Nat) (s₀ : St)
-    (vis off cnt : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_shapeless" [vis, off, cnt]
-    ⦃fun _ _ => False; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkShapeless]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        callW_spec p n "check_shapeless_formers"] <;>
-      finish
 
 /-- The callees of `check_ind_decl` that cross the walk memos by their write set. -/
 def cidFrameCallees : List FnName := ["basis_pin_hit", "block_parts"]

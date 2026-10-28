@@ -1,14 +1,13 @@
 import ConAgua.Arena.IndT.Sum2
 import ConAgua.Verdict.IndBE
 import ConAgua.Arena.IndT.Install7
-import ConAgua.Verdict.IndBTbl
 
 /-!
 # Part B's claims in the shapes `check_ind_decl`'s claim takes (lane `verdicts-b`, helper `fin`)
 
 `cid_claim3` (IndA8.lean) takes the `indB` callees' claims as the generated statements of
-IndBE.lean (`err_stmt`: every fuel `F ≤ 2 ^ 62`, the error of a `callE`), `CheckStructProjTableRE`
-(Arena/IndRealSctC.lean, under `StageR`); part B proved them as `CoreSpecE`s (`ct_ref`, …). The bridges below restate
+IndBE.lean (`err_stmt`: every fuel `F ≤ 2 ^ 62`, the error of a `callE`); part B proved them as
+`CoreSpecE`s (`ct_ref`, …). The bridges below restate
 them, discharging the fuels part B's statements leave out (`0`, `1`: the calls run out of fuel).
 -/
 
@@ -30,13 +29,6 @@ theorem ccvE_of {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p
     CcvE p :=
   fun _n hn _s₀ _a₀ _q _cv hS hqd hqb hlps hCr =>
     CoreSpecE.of_runs fun _e hc => ccvE_okT hq hp hap hkp hnv hcE hUL hn hc hS hqd hqb hlps hCr
-
-theorem checkStructProjTableRE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) :
-    CheckStructProjTableRE p :=
-  fun hT hApd F _hF {_dn _vis _fe} m a _T _C _lo _ll _nP _nF _rs _go _gl _cvCaw _lps _guards _cvCa hS hTH hCH hrs hnP
-      hlps hlpsb hg hgb hcv hA hst hks _TP hTP _ctyP hcty _e hc =>
-    CoreSpecE.of_callE (checkStructProjTable_claim (s₀ := ⟨m, Locals.init []⟩) hT hApd hnv F a hS hTH
-      hCH hrs hnP hlps hlpsb hg hgb hcv hA hst hks hTP hcty) hc
 
 /-- `check_sum_tele`'s claim in the generated shape (`CheckSumTeleE`): `ct_ref`'s error half. -/
 theorem checkSumTeleE_of {p : Prog} (hG : CtsG p) : CheckSumTeleE p :=

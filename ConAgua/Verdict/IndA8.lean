@@ -44,7 +44,6 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hnv : closedNV p _root_.L.Checker.nvFns = true) (hU : UceProg p)
     (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env)
     (eSum : CheckSumTeleE p) (eSC : CheckSumCtorsE p) (eSF : CheckStructFieldSortsIE p)
-    (eTbl : CheckStructProjTableRE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {o l w : Word} {block : List IConstantInfo}
@@ -63,6 +62,6 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e :=
   cid_claim2 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt
     hkr hnv (checkBasisDeclE_of hnv) (checkConstantValE_of hnv (hkp.toKnotTopProg.coreStubsE hnv) hU.toUceLookups) hU hNfs eSum
-    eSC eSF eTbl hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
+    eSC eSF hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
 
 end L.Ind
