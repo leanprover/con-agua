@@ -120,7 +120,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     have hEE : (m1.set64 ECON j (dl.headD 0)).arr64 EREC = m1.arr64 EREC :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have hT2 : erecTop (m1.set64 ECON j (dl.headD 0)) = erecTop m1 := by
-      simp only [erecTop]; rw [hfs.2.1 129 (by simp)]
+      simp only [erecTop]; rw [hfs.ctl 129 (by simp)]
     have hg12 : ErecGrow m1 (m1.set64 ECON j (dl.headD 0)) := ErecGrow.of_eq hEE hT2
     have hP2e : erecP (m1.set64 ECON j (dl.headD 0)) = erecP m1 := by
       rw [erecP_eq_preE, erecP_eq_preE, hT2]; exact preE_congr hEE _

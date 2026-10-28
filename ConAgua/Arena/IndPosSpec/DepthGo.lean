@@ -676,22 +676,22 @@ theorem KeepIW.trans {q n : Word} {m₁ m₂ m₃ : Mem} (h₁ : KeepIW q n m₁
 
 theorem KeepIW.of_low {q n : Word} {m m' : Mem} (h : LowFr m m') : KeepIW q n m m' := by
   obtain ⟨A, C, hf, hA, hC⟩ := h
-  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (fun hh => by have := hA _ hh; simp [IW] at this) (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (fun hh => by have := hA _ hh; simp [EREC] at this) (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 200 (fun hh => by have := hC _ hh; simp at this)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (fun hh => by have := hC _ hh; simp at this)
+  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (fun hh => by have := hA _ hh; simp [IW] at this) (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (fun hh => by have := hA _ hh; simp [EREC] at this) (by decide)
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (fun hh => by have := hC _ hh; simp at this)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (fun hh => by have := hC _ hh; simp at this)
   exact ⟨fun _ _ => by rw [hI], by simp only [iwTop, h200], by simp only [erTop, h129], by rw [hI], hE⟩
 
 theorem KeepIW.set {q n i v : Word} (m : Mem) (hi : i.toNat < n.toNat) (hqi : (q + i).toNat = q.toNat + i.toNat) :
     KeepIW q n m (m.set64 IW (q + i) v) := by
   have hC : (m.set64 IW (q + i) v).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hE : (m.set64 IW (q + i) v).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨fun idx hidx => ?_, by simp only [iwTop, hC], by simp only [erTop, hC], (set64IW_frame m _ _).2.2.1 IW, hE⟩
+  refine ⟨fun idx hidx => ?_, by simp only [iwTop, hC], by simp only [erTop, hC], (set64IW_frame m _ _).size IW, hE⟩
   rw [set64IW_get, ite_eq_right (by omega)]
 
 theorem lowFr_iw {m m' : Mem} (h : LowFr m m') : m'.arr64 IW = m.arr64 IW := by
   obtain ⟨A, C, hf, hA, hC⟩ := h
-  exact hf.1 IW (fun hh => by have := hA _ hh; simp [IW] at this) (by decide)
+  exact hf.arr IW (fun hh => by have := hA _ hh; simp [IW] at this) (by decide)
 
 def phF (i : Nat) : AM EIdx := do
   let z ← zeroLevel
@@ -769,8 +769,8 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
       have hS3 := hS2.set_iw (q + i) v
       have hi1 : (i + 1).toNat = i.toNat + 1 := toNat_add_one' (by omega)
       obtain ⟨phs, a3, hrun, hS4, hK, hdecF⟩ := ih (m2.set64 IW (q + i) v) m' a2 q n (i + 1) (ws ++ [decI v]) dn fe vis h
-        hS3 (by rw [hi1]; omega) (by rw [(set64IW_frame m2 (q + i) v).2.2.1 IW, hI2]; exact hq)
-        (by rw [(set64IW_frame m2 (q + i) v).2.2.1 IW, hI2]; exact hsz) (by rw [hi1]; exact hdec3)
+        hS3 (by rw [hi1]; omega) (by rw [(set64IW_frame m2 (q + i) v).size IW, hI2]; exact hq)
+        (by rw [(set64IW_frame m2 (q + i) v).size IW, hI2]; exact hsz) (by rw [hi1]; exact hdec3)
       have hn1 : n.toNat - i.toNat = (n.toNat - (i.toNat + 1)) + 1 := by omega
       refine ⟨decE v :: phs, a3, ?_, hS4, ?_, ?_⟩
       · rw [hn1, range'_mapM_succ]

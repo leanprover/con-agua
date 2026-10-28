@@ -63,8 +63,8 @@ theorem opfV_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) 
 theorem spn_of_lt64 {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) :
     m'.arr64 SPN = m.arr64 SPN ∧ rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
-  ⟨hf.1 SPN (fun h => by have := hA _ h; simp [SPN] at this) (by decide),
-    hf.2.1 136 (fun h => by have := hC _ h; simp at this)⟩
+  ⟨hf.arr SPN (fun h => by have := hA _ h; simp [SPN] at this) (by decide),
+    hf.ctl 136 (fun h => by have := hC _ h; simp at this)⟩
 
 /-- **`inst_list` under the stage relation and `AbsOK`.** -/
 theorem opfIl_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb : AbsOK m)
@@ -156,7 +156,7 @@ theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb :
       simp [Nat.toUInt64]
     have h3 : (m.arr64 SPN).size < 2 ^ 64 := by have := hAb.2.2.2.2.2.2.1; omega
     omega
-  refine ⟨hS', hg, hAb.frameD hfr (by decide) (by decide), hsz, ?_, ?_, hfr.2.2.1 SPN⟩
+  refine ⟨hS', hg, hAb.frameD hfr (by decide) (by decide), hsz, ?_, ?_, hfr.size SPN⟩
   · have hc := hS.2.2.2.2.2
     rw [rdW_set64E, Mem.arr64_set64_ne _ _ _ _ _ (by decide),
       ite_eq_left ⟨rfl, rfl, by simp; omega⟩]

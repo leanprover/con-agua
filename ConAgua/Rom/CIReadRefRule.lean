@@ -117,7 +117,7 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
   obtain ⟨hI1, hE1, hIW1, ht1, -⟩ := hI.expr hA1 hmo1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
     (fun x hx => by simp [ExprC, RomC, hx])) hk1
   have hM1 := hM.frameG hf1 (by decide) (by decide)
-  have hs1 : stkTop m1 = stkTop m := hf1.2.1 131 (by decide)
+  have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
   replace hw := rdU_some hL hw; replace hw := rdU_some hL hw; replace hw := rdU_some hL hw
   replace hw := rdU_some hL hw; replace hw := rdU_some hL hw
   have hd1 : rom.drop (r1.tail.headD 0).toNat = u64B rl.nfields ++ (u64B rl.ctorParams ++

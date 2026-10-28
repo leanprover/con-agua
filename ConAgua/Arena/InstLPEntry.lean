@@ -270,7 +270,7 @@ theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
       rw [hb' d (by rw [hd1]; omega), rdW_set64]; simp [hdl]
     refine ⟨?_, (MemFrame.set64 _ _ (by decide) _ _).trans hf', ?_⟩
     · rw [lp_hslice_succ]
-      have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.2.2.1 SPN, hsz₁]; exact hdl
+      have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.size SPN, hsz₁]; exact hdl
       have hd' : (hd? (m'.arr64 SPN) d.toNat : Option NIdx) = some x' := by
         rw [← e]; simp only [hd?]
         have h1 : (m'.arr64 SPN)[d.toNat]? = some (rdW (m'.arr64 SPN) d) := by simp [rdW, hsize]
@@ -346,7 +346,7 @@ theorem instLP_refines (p : Prog) (hp : ILWEntryProg p) : InstLPOK p := by
   have hspn₁ : (mc.set64 CTL 136 (spTop m + pl)).arr64 SPN = mc.arr64 SPN :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop₁ : (spTop (mc.set64 CTL 136 (spTop m + pl))).toNat = (spTop m).toNat + pl.toNat := by
-    have hc' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hfc.2.2.1 CTL]; simpa using hctl
+    have hc' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hfc.size CTL]; simpa using hctl
     simp only [spTop]; rw [rdW_set64]; simp only [hc', and_self, ↓reduceIte]
     rw [UInt64.toNat_add]; simp only [spTop] at t1' t2' ⊢; omega
   -- the core
@@ -372,7 +372,7 @@ theorem instLP_refines (p : Prog) (hp : ILWEntryProg p) : InstLPOK p := by
     (PoolGrew.of_frame hfm (by decide) (by decide)).trans
       (hSt₂.pool.trans (PoolGrew.of_frame hfb (by decide) (by decide)))⟩
   · simp only [spTop]; rw [rdW_set64]; simp only [hc₂, and_self, ↓reduceIte]
-  · rw [hspn₃, hSt₂.size, hspn₁, hfc.2.2.1 SPN]
+  · rw [hspn₃, hSt₂.size, hspn₁, hfc.size SPN]
   · have hi' : i.toNat < (spTop m).toNat := UInt64.lt_iff_toNat_lt.mp hi
     simp only [spW]
     rw [hspn₃]

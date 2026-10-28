@@ -1329,7 +1329,7 @@ theorem snocW_room {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
     (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m) {xs : List Nat}
     (hxs : decNL m o.toNat l.toNat = some xs) : iwTop m' ≤ (m'.arr64 IW).size := by
   obtain ⟨-, -, -, hf, -, htop⟩ := snocW_decN h hsz hc hsrc hxs
-  rw [hf.2.2.1 IW]
+  rw [hf.size IW]
   simp only [snocW] at h
   have h0 : l + 1 ≠ 0 := by intro e0; simp [e0] at h
   simp only [h0, ite_false] at h
@@ -1357,7 +1357,7 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h2)
     obtain ⟨hr, hdn, hg, hf, -, htop⟩ := snocW_decN h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
     have hroom := snocW_room h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
-    refine ⟨stage_frame_iw hS hf (by rw [← hf.2.2.1 IW]; exact hroom), hg, ?_, ?_⟩
+    refine ⟨stage_frame_iw hS hf (by rw [← hf.size IW]; exact hroom), hg, ?_, ?_⟩
     · rw [hr]; simpa [hx] using hdn
     · rw [hr]; simpa using htop
   by_cases hle : np ≤ d

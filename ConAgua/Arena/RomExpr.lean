@@ -126,8 +126,8 @@ theorem mpushPut_memo (m : Mem) (h : Word) :
     memoCnt (mpushPut m h) = memoCnt m ∧ (mpushPut m h).len64 RMEMO = m.len64 RMEMO ∧
       (mpushPut m h).arr64 RMEMO = m.arr64 RMEMO := by
   have hf := mpushPut_frame m h
-  have hR := hf.1 RMEMO (by simp [RSET, RMEMO]) (by decide)
-  refine ⟨hf.2.1 132 (by simp), ?_, hR⟩
+  have hR := hf.arr RMEMO (by simp [RSET, RMEMO]) (by decide)
+  refine ⟨hf.ctl 132 (by simp), ?_, hR⟩
   simp only [Mem.len64, hR]
 
 /-- What `memo_push` checked, and its memory. -/
@@ -240,7 +240,7 @@ theorem litWordMem_facts (m : Mem) (k : Word) (hpool : PoolOK m)
   have hsm := hpool.small
   have h41 := hpool.top41
   have hsz := hsm.tier (m.top >>> 40)
-  have hc : pcap m < 2 ^ 64 := by have := hpool.2.2.1; omega
+  have hc : pcap m < 2 ^ 64 := by have := hpool.cap; omega
   have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ (by omega)
   have hi := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h)
@@ -252,7 +252,7 @@ theorem litWordMem_facts (m : Mem) (k : Word) (hpool : PoolOK m)
       (by rw [hv]; exact Agree.set _ _ _ _ _ (Agree.refl _ _) (Nat.le_refl _))
       (by have : (1 : Word).toNat = 1 := rfl; omega)
   have hctl : 0 < ((m.set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) k).arr64 CTL).size := by
-    rw [arr64_set64_tier_ne _ _ _ _ _ ⟨by decide, by decide⟩]; exact hpool.2.1
+    rw [arr64_set64_tier_ne _ _ _ _ _ ⟨by decide, by decide⟩]; exact hpool.ctl
   refine ⟨hg, SliceOK.fresh hg (Mem.top_set64 _ _ hctl), ?_⟩
   rw [litWordMem, vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, hv, Array.set!_eq_setIfInBounds,
     Array.getElem?_setIfInBounds]

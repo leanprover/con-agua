@@ -169,7 +169,7 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
       rw [hb' d (by rw [hd1]; omega), rdW_set64]; simp [hdl]
     refine ⟨?_, (MemFrame.set64 _ _ (by decide) _ _).trans hf', ?_⟩
     · rw [lp_hslice_succ]
-      have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.2.2.1 SPN, hsz₁]; exact hdl
+      have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.size SPN, hsz₁]; exact hdl
       have hd' : (hd? (m'.arr64 SPN) d.toNat : Option NIdx) = some x' := by
         rw [← e]; simp only [hd?]
         have h1 : (m'.arr64 SPN)[d.toNat]? = some (rdW (m'.arr64 SPN) d) := by simp [rdW, hsize]
@@ -249,7 +249,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
   have hspn₁ : (mc.set64 CTL 136 (spTop m + pl)).arr64 SPN = mc.arr64 SPN :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop₁ : (spTop (mc.set64 CTL 136 (spTop m + pl))).toNat = (spTop m).toNat + pl.toNat := by
-    have hc' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hfc.2.2.1 CTL]; simpa using hctl
+    have hc' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hfc.size CTL]; simpa using hctl
     simp only [spTop]; rw [rdW_set64]; simp only [hc', and_self, ↓reduceIte]
     rw [UInt64.toNat_add]; simp only [spTop] at t1' t2' ⊢; omega
   -- the core
@@ -272,7 +272,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
     (PoolGrew.of_frame hfm (by decide) (by decide)).trans
       (hSt₂.pool.trans (PoolGrew.of_frame hfb (by decide) (by decide)))⟩
   · simp only [spTop]; rw [rdW_set64]; simp only [hc₂, and_self, ↓reduceIte]
-  · rw [hspn₃, hSt₂.size, hspn₁, hfc.2.2.1 SPN]
+  · rw [hspn₃, hSt₂.size, hspn₁, hfc.size SPN]
   · have hi' : i.toNat < (spTop m).toNat := UInt64.lt_iff_toNat_lt.mp hi
     simp only [spW]
     rw [hspn₃]
@@ -387,11 +387,11 @@ theorem StageT.of_coreFrame {A : List TieredArray} {C : List Word} {m m' : Mem} 
     {M : ModeMaps} (hfr : MemFrame A C m m') (hIW : (IW : TieredArray) ∉ A) (hE : (EREC : TieredArray) ∉ A) (hP : (PINS : TieredArray) ∉ A)
     (h129 : (129 : Word) ∉ C) (h200 : (200 : Word) ∉ C) (hS : StageT dn vis fe m a)
     (hC : CoreS dn m' a' vis fe M 0) : StageT dn vis fe m' a' ∧ IWGrow m m' := by
-  have hI : m'.arr64 IW = m.arr64 IW := hfr.1 _ hIW (by decide)
-  have hE' : m'.arr64 EREC = m.arr64 EREC := hfr.1 _ hE (by decide)
-  have hP' : m'.arr64 PINS = m.arr64 PINS := hfr.1 _ hP (by decide)
-  have h129' : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.2.1 _ h129
-  have h200' : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.2.1 _ h200
+  have hI : m'.arr64 IW = m.arr64 IW := hfr.arr _ hIW (by decide)
+  have hE' : m'.arr64 EREC = m.arr64 EREC := hfr.arr _ hE (by decide)
+  have hP' : m'.arr64 PINS = m.arr64 PINS := hfr.arr _ hP (by decide)
+  have h129' : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ h129
+  have h200' : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ h200
   obtain ⟨hCR, hT⟩ := hC.checkR
   refine ⟨⟨⟨hCR, IWOK.frame hfr hIW hE h129 h200 hS.stage.2⟩, hT, by simp only [pinW, hP']; exact hS.flag⟩, ?_⟩
   exact ⟨by simp [iwTop, h200'], by simp [erTop, h129'], fun i _ => by rw [hI], fun i _ => by rw [hE']⟩

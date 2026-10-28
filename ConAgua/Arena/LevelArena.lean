@@ -241,12 +241,10 @@ theorem ArenaR.with_caches {m : Mem} {a : AState} (c : Caches) (hR : ArenaR m a)
     hR.zeroHp, hR.paramHp, hR.succHp, hR.maxHp, hR.imaxHp, hR.lsHp, hR.sortLp, hR.constLp, hR.fvarLp⟩
 
 theorem HeapExt.memFrame {m m' : Mem} (h : HeapExt m m') : MemFrame [LH] [192] m m' :=
-  ⟨fun b hb hc => h.arr b (by simpa using hb) hc, fun x hx => h.ctl x (by simpa using hx), h.size,
-    h.wsize⟩
+  ⟨fun b hb hc => h.arr b (by simpa using hb) hc, fun x hx => h.ctl x (by simpa using hx), h.size⟩
 
 theorem reset_frame (m : Mem) : MemFrame [] [192] m (m.set64 CTL 192 0) := by
-  refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_, fun b => size_set64L _ _ _ _ _,
-    Mem.sameShape_set64 _ _ _ _⟩
+  refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_, fun b => size_set64L _ _ _ _ _⟩
   rw [rdW_set64L]; simp only [List.mem_singleton] at hx; simp [Ne.symm hx]
 
 theorem lh_not_arena : ∀ b ∈ ([LH] : List TieredArray), b ∉ arenaArrs := by decide

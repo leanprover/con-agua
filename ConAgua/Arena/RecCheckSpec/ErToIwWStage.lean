@@ -491,7 +491,7 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     · rw [hm1]; simp only [allocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   obtain ⟨hr, hd, hg, hf, hE, ht⟩ := erToIwW_dec (k := k) h hsz hc hEs hsrc
   have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
-    rw [← ht, hf.2.2.1 IW]
+    rw [← ht, hf.size IW]
     simp only [erToIwW] at h
     cases hal : allocW m l with
     | none => simp [hal] at h
@@ -506,13 +506,13 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
         obtain ⟨rfl, -⟩ := h
         subst hq
         simpa using hr2
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   subst hr
   refine ⟨⟨CheckR.frame_iw hf hS.1, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht, hE⟩
   · simp only [erTop, h129, hE]; exact hE1
-  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs
-  · rw [hf.2.2.1 CTL]; exact hc
+  · rw [hf.size CTL]; exact hc
 
 /-- The model of `cv_lps(q)`. -/
 def cvLpsW (n : Nat) (m : Mem) (q : Word) : Option (List Word × Mem) :=

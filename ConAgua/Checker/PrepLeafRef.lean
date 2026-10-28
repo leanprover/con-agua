@@ -17,10 +17,10 @@ namespace L.Checker
 /-- What the prepare stage's other passes keep: the arrays outside the store tier's
 (`lowTierArrs`: the records, the pool, the pins, the hoist's memos) and the `CTL` words from `64`
 on, every array's size. -/
-def HighFr (m m' : Mem) : Prop :=
-  (∀ b : TieredArray, b ∉ lowTierArrs → m'.arr64 b = m.arr64 b) ∧
-    (∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
-    (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m'
+structure HighFr (m m' : Mem) : Prop where
+  arr : ∀ b : TieredArray, b ∉ lowTierArrs → m'.arr64 b = m.arr64 b
+  ctl : ∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x
+  size : ∀ b, (m'.arr64 b).size = (m.arr64 b).size
 
 
 /-! ## Helpers -/
@@ -127,7 +127,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
   have e2 := hix_rd_dw (m.arr64 DECL) i 2 hi (by decide)
   have e3 := hix_rd_dw (m.arr64 DECL) i 3 hi (by decide)
   simp only [UInt64.reduceToNat] at e1 e2 e3
-  have hHF : HighFr m m := ⟨fun _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl m⟩
+  have hHF : HighFr m m := ⟨fun _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
   by_cases hind : ∃ b nP, d = .indDecl b nP
   · obtain ⟨b, nP, rfl⟩ := hind
     obtain ⟨h6, -, t, ht, hb⟩ := hD
@@ -145,7 +145,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
         rw [hres] at this
         simpa [preludeKey, pl_names_ind] using this
       · exact consInternM_lt nanonCS_wf hA.nanon hI
-      · refine ⟨fun b hb => hF.1 b ?_ ?_, fun x hx => hF.2.1 x ?_, hF.2.2.1, hF.2.2.2⟩
+      · refine ⟨fun b hb => hF.arr b ?_ ?_, fun x hx => hF.ctl x ?_, hF.size⟩
         · intro hm; simp [nanonCS, ConsSch.wset] at hm
           rcases hm with rfl | rfl | rfl | rfl <;> revert hb <;> decide
         · intro e; subst e; revert hb; decide

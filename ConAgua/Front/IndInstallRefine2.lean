@@ -153,7 +153,7 @@ theorem capsM_frame (m : Mem) (q : Word) : MemFrame [DLP] [] m (capsM m q) := by
   exact MemFrame.set64 _ DLP (by decide) _ _
 
 theorem capsM_size (m : Mem) (q : Word) : ((capsM m q).arr64 DLP).size = (m.arr64 DLP).size :=
-  (capsM_frame m q).2.2.1 DLP
+  (capsM_frame m q).size DLP
 
 /-! ## The type and constructor records -/
 
@@ -209,7 +209,7 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
   have hrun : (tyT st ty).run a = .ok (.indInfo cvp {}, a) := by
     unfold tyT; rw [run_bind _ _ a _ C1]; rfl
   rw [resOf_eq hrun]
-  have hs2 : (m₂.arr64 DLP).size = (m.arr64 DLP).size := by rw [C2.2.2.1 DLP, hs1]
+  have hs2 : (m₂.arr64 DLP).size = (m.arr64 DLP).size := by rw [C2.size DLP, hs1]
   have ht2 : topN m₂ DLP = topN m DLP + 20 + ty.cv.levelParams.length := by rw [C3, ht1]
   have hq5 : (q1 + 5).toNat = q1.toNat + 5 := widx2 _ _ (by simp; omega)
   have hc0 : ∀ i, (i < q1.toNat + 5 ∨ q1.toNat + 20 ≤ i) → wd (capsM m₂ (q1 + 5)) DLP i = wd m₂ DLP i :=
@@ -275,7 +275,7 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   have hrun : (ctT st ct).run a = .ok (.ctorInfo cvp ct.numParams ct.numFields, a) := by
     unfold ctT; rw [run_bind _ _ a _ C1]; rfl
   rw [resOf_eq hrun]
-  have hs2 : (m₂.arr64 DLP).size = (m.arr64 DLP).size := by rw [C2.2.2.1 DLP, hs1]
+  have hs2 : (m₂.arr64 DLP).size = (m.arr64 DLP).size := by rw [C2.size DLP, hs1]
   have ht2 : topN m₂ DLP = topN m DLP + 7 + ct.cv.levelParams.length := by rw [C3, ht1]
   have hifr2 : m₂.arr64 IFR = m.arr64 IFR := by rw [C2.1 IFR (by decide) (by decide), Pq.other IFR (by decide) (by decide)]
   have hq5 : (q1 + 5).toNat = q1.toNat + 5 := widx2 _ _ (by simp; omega)

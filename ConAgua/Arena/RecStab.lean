@@ -148,11 +148,11 @@ theorem snocW_decN {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : L
   have hql : (q + l).toNat = q.toNat + l.toNat := by
     rw [UInt64.toNat_add]; simp; omega
   have hIW := allocMem_IW m (l + 1)
-  obtain ⟨hA, hS, hW, hG⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by simp only [iwTop, hqq] at hsrc; omega)
+  obtain ⟨hA, hS, hG⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by simp only [iwTop, hqq] at hsrc; omega)
     (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
   rw [hIW] at hS hG
   have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | exact hW | exact Mem.SameShape.trans (by simp [allocMem]) hW))
+    (allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]))
   have hfr' := hfr.trans (set64IW_frame m2 (q + l) x)
   have hget : ∀ i, ((m2.set64 IW (q + l) x).arr64 IW)[i]? =
       if i = q.toNat + l.toNat then some x

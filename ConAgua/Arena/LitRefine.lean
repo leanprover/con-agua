@@ -410,8 +410,8 @@ theorem litMatchOK :
   · obtain ⟨h0, hsl, hnm, hpv, hh⟩ := (NatRec_raw m t i N).mp (RecRel_natVal m t i N ▸ hr)
     have hle := hsl.le
     have hq1 := hq.le
-    have htop := hpool.2.2.2.1
-    have hpc := pcap_eq m (by have := hpool.2.2.1; omega)
+    have htop := hpool.top
+    have hpc := pcap_eq m (by have := hpool.cap; omega)
     have nr := (Norm_tpool m _ _ (by omega)).mpr hnm
     have nq := (Norm_tpool m _ _ (by omega)).mpr hn
     have pr := pv_tpool m (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
@@ -492,8 +492,8 @@ theorem litMatchStrOK :
   · obtain ⟨h0, hsl, hw, hh⟩ := (StrRec_raw m t i s').mp (RecRel_strVal m t i s' ▸ hr)
     have hle := hsl.le
     have hq1 := hq.le
-    have htop := hpool.2.2.2.1
-    have hpc := pcap_eq m (by have := hpool.2.2.1; omega)
+    have htop := hpool.top
+    have hpc := pcap_eq m (by have := hpool.cap; omega)
     have hw' : sliceL (tpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
         (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = strWords s' := by
       rw [sliceL_tpool m _ _ (by omega)]; exact hw
@@ -625,9 +625,9 @@ theorem intern_correct (w : Word) (m' : Mem) (hI : internW m o l = some (w, m'))
     _ _ _ _ _ (internE_lit_run _ a) false rfl [o, l] (by simp [skipC, litCS, litCSk]) (by simp)
     ⟨rfl, litMatchOK m hpool o l hq hn, litHomeOK m o l _, litNewOK m o l hq hn hq0⟩ w m' hI
   refine ⟨hok, ⟨?_, hst⟩, hres⟩
-  exact hpool.frame (hfr.1 POOL (by decide) (by decide)) (hfr.1 POOL1 (by decide) (by decide))
-    (hfr.1 PT0 (by decide) (by decide)) (hfr.2.2.1 CTL)
-    (by simp only [top_rdW]; exact hfr.2.1 0 (by decide)) hfr.2.2.2
+  exact hpool.frame (hfr.arr POOL (by decide) (by decide)) (hfr.arr POOL1 (by decide) (by decide))
+    (hfr.arr PT0 (by decide) (by decide)) (hfr.size CTL)
+    (by simp only [top_rdW]; exact hfr.ctl 0 (by decide))
 
 end intern
 
@@ -652,9 +652,9 @@ theorem internStr_correct (w : Word) (m' : Mem) (hI : internWStr m o l = some (w
     (by simp [skipC, litStrCS, litCSk]) (by simp)
     ⟨rfl, litMatchStrOK m hpool o l hq s hk, litHomeOKStr m o l _, litNewOKStr m o l hq s hk hq0⟩ w m' hI
   refine ⟨hok, ⟨?_, litR_str.mpr hst⟩, hres⟩
-  exact hpool.frame (hfr.1 POOL (by decide) (by decide)) (hfr.1 POOL1 (by decide) (by decide))
-    (hfr.1 PT0 (by decide) (by decide)) (hfr.2.2.1 CTL)
-    (by simp only [top_rdW]; exact hfr.2.1 0 (by decide)) hfr.2.2.2
+  exact hpool.frame (hfr.arr POOL (by decide) (by decide)) (hfr.arr POOL1 (by decide) (by decide))
+    (hfr.arr PT0 (by decide) (by decide)) (hfr.size CTL)
+    (by simp only [top_rdW]; exact hfr.ctl 0 (by decide))
 
 end internStr
 
@@ -697,7 +697,6 @@ theorem LitR.grow (a : AState) (hR : LitR m a) : LitR m' a := by
   have hr : ∀ t, m'.arr64 (tierA REC t) = m.arr64 (tierA REC t) := fun t =>
     grow_arr m m' hg _ (tierA_ne_pool _ (by decide) t)
       (ne_tierA (by decide) t).symm
-  have := hg.frame.size
   refine ⟨hpool.grows hg, ConsR.mono hS hr (fun t => grow_arr m m' hg _
       (tierA_ne_pool _ (by decide) t)
       (ne_tierA (by decide) t).symm)
@@ -723,8 +722,8 @@ theorem internLit_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       LitR s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
-  have hps := hR.1.2.2.1
-  have htop := hR.1.2.2.2.1
+  have hps := hR.1.cap
+  have htop := hR.1.top
   have hq1 := hq.le
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega) (by omega)
   apply M.triple_of_run

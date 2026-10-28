@@ -743,7 +743,7 @@ Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
 3. **The refinement**: under the arena relation, a model that returns `z`
    gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
    and the relation holds again
-   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L261-L266),
+   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L259-L264),
    against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L132-L149)).
 
 The split keeps `vcgen` away from the twin's monad and the twin's proofs away

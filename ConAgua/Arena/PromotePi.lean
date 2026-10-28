@@ -79,11 +79,11 @@ theorem frame_pi {A : List TieredArray} {C : List Word} {m m₁ : Mem} (hc : 1 <
   have F := (((MemFrame.setCtl m 1 0).mono (A' := A) (C' := 1 :: C) (by simp) (by simp)).trans
     (hf.mono (fun _ hb => hb) (fun _ hx => List.mem_cons_of_mem _ hx))).trans
     ((MemFrame.setCtl m₁ 1 (rdW (m.arr64 CTL) 1)).mono (by simp) (by simp))
-  have hs₁ : 1 < (m₁.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
-  refine ⟨F.1, fun x hx => ?_, F.2.2⟩
+  have hs₁ : 1 < (m₁.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
+  refine ⟨F.arr, fun x hx => ?_, F.size⟩
   by_cases h1 : x = 1
   · subst h1; rw [rdW_set64]; simp [hs₁]
-  · exact F.2.1 x (by simp [h1, hx])
+  · exact F.ctl x (by simp [h1, hx])
 
 /-- **The model of a slice-taking `pi_X(pre, o, l)`** (lane tierpool): a tier-1 slice is first
 copied to tier 0 (`pool_copy0`), then `piW` on the copy. -/
@@ -330,7 +330,7 @@ theorem piNAnon_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Me
   have hR₁ := hR₀.lift_nanon _ _ _ _ hX hf
     (AM.st_proto nanonLens _ _ _ _ _ _ _ (internNNode_anon_run _) hok)
   have hpw := consInternM_pw nanonCS_wf hR₀.nanon (by rw [rdW_set64]; simp [hc]) hI
-  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internNNode_anon_run _) hok hR₁ hres hf
@@ -359,7 +359,7 @@ theorem piNNum_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q u : Word) (hq : P
   have hR₁ := hR₀.lift_nnum _ _ _ _ hX hf
     (AM.st_proto nnumLens _ _ _ _ _ _ _ (internNNode_num_run _ _ _) hok)
   have hpw := consInternM_pw nnumCS_wf hR₀.nnum (by rw [rdW_set64]; simp [hc]) hI
-  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internNNode_num_run _ _ _) hok hR₁ hres hf
@@ -383,7 +383,8 @@ theorem piNStr_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq 
   obtain ⟨rr, m₁⟩ := x
   rw [hcall] at h
   have hR₀ := hD.1.off
-  have ⟨_, _, hps, htop⟩ := hR₀.lit.1
+  have hps := hR₀.lit.1.cap
+  have htop := hR₀.lit.1.top
   have hpool : (m.set64 CTL 1 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hpool1 : (m.set64 CTL 1 0).arr64 POOL1 = m.arr64 POOL1 :=
@@ -401,7 +402,7 @@ theorem piNStr_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq 
   have hR₁ := hR₀.lift_nstr _ _ _ _ hX hf
     (AM.st_proto nstrLens _ _ _ _ _ _ _ (internNNode_str_run _ _ _) hok)
   have hpw := consInternM_pw nstrCS_wf hR₀.nstr (by rw [rdW_set64]; simp [hc]) hI
-  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internNNode_str_run _ _ _) hok hR₁ hres hf
@@ -452,7 +453,7 @@ theorem piZero_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Mem
   have hR₁ := hR₀.lift_zero _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto zeroLens _ _ _ _ _ _ _ (internLNode_zero_run _) hok)
   have hpw := consInternM_pw zeroCS_wf hR₀.zero (by rw [rdW_set64]; simp [hc]) hI
-  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLNode_zero_run _) hok hR₁ hres hf
@@ -482,7 +483,7 @@ theorem piSucc_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
   have hR₁ := hR₀.lift_succ _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto succLens _ _ _ _ _ _ _ (internLNode_succ_run _ _) hok)
   have hpw := consInternM_pw succCS_wf hR₀.succ (by rw [rdW_set64]; simp [hc]) hI
-  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLNode_succ_run _ _) hok hR₁ hres hf
@@ -512,7 +513,7 @@ theorem piMax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : PW
   have hR₁ := hR₀.lift_max _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto maxLens _ _ _ _ _ _ _ (internLNode_max_run _ _ _) hok)
   have hpw := consInternM_pw maxCS_wf hR₀.max (by rw [rdW_set64]; simp [hc]) hI
-  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLNode_max_run _ _ _) hok hR₁ hres hf
@@ -542,7 +543,7 @@ theorem piImax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : P
   have hR₁ := hR₀.lift_imax _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto imaxLens _ _ _ _ _ _ _ (internLNode_imax_run _ _ _) hok)
   have hpw := consInternM_pw imaxCS_wf hR₀.imax (by rw [rdW_set64]; simp [hc]) hI
-  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLNode_imax_run _ _ _) hok hR₁ hres hf
@@ -572,7 +573,7 @@ theorem piParam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW
   have hR₁ := hR₀.lift_param _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto paramLens _ _ _ _ _ _ _ (internLNode_param_run _ _) hok)
   have hpw := consInternM_pw paramCS_wf hR₀.param (by rw [rdW_set64]; simp [hc]) hI
-  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLNode_param_run _ _) hok hR₁ hres hf
@@ -596,7 +597,8 @@ theorem piLs_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : S
   obtain ⟨rr, m₁⟩ := x
   rw [hcall] at h
   have hR₀ := hD.1.off
-  have ⟨_, _, hps, htop⟩ := hR₀.lit.1
+  have hps := hR₀.lit.1.cap
+  have htop := hR₀.lit.1.top
   have hpool : (m.set64 CTL 1 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hpool1 : (m.set64 CTL 1 0).arr64 POOL1 = m.arr64 POOL1 :=
@@ -617,7 +619,7 @@ theorem piLs_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : S
   have hR₁ := hR₀.lift_ls _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto lsLens _ _ _ _ _ _ _ (internLsNode_run _ _) hok)
   have hpw := consInternM_pw lsCS_wf hR₀.ls (by rw [rdW_set64]; simp [hc]) hI
-  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLsNode_run _ _) hok hR₁ hres hf

@@ -33,7 +33,7 @@ theorem ArenaR.flag {m : Mem} {a : AState} (hR : ArenaR m a) (w : Word) :
   have hf : MemFrame [] [1] m (m.set64 CTL 1 w) := MemFrame.setCtl m 1 w
   exact ⟨⟨hR.lit.1.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
         (Mem.arr64_set64_ne _ _ _ _ _ (by decide)) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
-        (size_set64 ..) (by simp only [top_rdW, rdW_set64]; simp) (Mem.sameShape_set64 ..),
+        (size_set64 ..) (by simp only [top_rdW, rdW_set64]; simp),
       ConsR.setFlag litCS_wf litFrame hR.lit.2 w⟩,
     ConsR.setFlag appCS_wf appFrame hR.app w,
     ConsR.setFlag sortCS_wf sortFrame hR.sort w,

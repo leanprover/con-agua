@@ -83,14 +83,14 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hc : a.caches = a₀.caches := congrArg Prod.fst h.hcp
   have hp : a.pins = a₀.pins := congrArg Prod.snd h.hcp
   have hf := h.frame
-  have hg : ErecGrow m₀ m := ⟨h.grow.2.1, h.grow.2.2.2, hf.2.2.1 EREC⟩
+  have hg : ErecGrow m₀ m := ⟨h.grow.2.1, h.grow.2.2.2, hf.size EREC⟩
   refine ⟨⟨h.arena, ?_, ?_, ?_, h.mode⟩, h.ok⟩
   · rw [hc]; exact hS.1.core.frame rciA_core rciC_core hf
   · rw [hp]; exact hS.1.pins.frame rciA_pins hf
-  · exact EnvR.grow (fun b h1 h2 h3 => hf.1 b (fun hm => by
+  · exact EnvR.grow (fun b h1 h2 h3 => hf.arr b (fun hm => by
         have := rciA_arr hm; simp only [EREC, IW, RMEMO, RSET, RSTK] at this; omega)
         (fun hm => by simp only [TieredArray.t0_inj] at hm; subst hm; simp [CTL] at h1))
-      (hf.2.1 128 (by decide)) hg
+      (hf.ctl 128 (by decide)) hg
       (TblSame.of_frame
         (fun b hb => by have := rciA_arr hb; simp only [EREC, IW, RMEMO, RSET, RSTK] at this; omega)
         (fun hm => by
@@ -105,10 +105,10 @@ variable {m₀ m m' : Mem} {a₀ a a' : AState} {T : Nat}
 theorem RInv.expr (h : RInv m₀ a₀ T m a) (hA : ArenaD m' a') (hmo : ModeOK m') (hf : MemFrame ExprA ExprC m m')
     (hk : cp a' = cp a) : RInv m₀ a₀ T m' a' ∧ m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 IW = m.arr64 IW ∧
       erTop m' = erTop m ∧ iwTop m' = iwTop m := by
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by decide) (by decide)
-  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (by decide) (by decide)
-  have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by decide)]
-  have h200 : iwTop m' = iwTop m := by simp only [iwTop]; rw [hf.2.1 200 (by decide)]
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by decide) (by decide)
+  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by decide) (by decide)
+  have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by decide)]
+  have h200 : iwTop m' = iwTop m := by simp only [iwTop]; rw [hf.ctl 200 (by decide)]
   refine ⟨⟨hA, hk.trans h.hcp, h.frame.trans (hf.mono (by intro b hb; simp [RciA, hb])
     (by intro x hx; simp [RciC, hx])), ?_, ?_, h200.trans h.top, hmo⟩, hE, hI, h129, h200⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
@@ -116,7 +116,7 @@ theorem RInv.expr (h : RInv m₀ a₀ T m a) (hA : ArenaD m' a') (hmo : ModeOK m
       fun i hi => by rw [hE]; exact g4 i hi⟩
   · obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
     exact ⟨by rw [h200, hI]; exact o1, by rw [h129, hE]; exact o2, by rw [hI]; exact o3,
-      by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
+      by rw [hE]; exact o4, by rw [hf.size CTL]; exact o5⟩
 
 /-- A word written in `EREC` at an allocated index above the entry's top. -/
 theorem RInv.setER (h : RInv m₀ a₀ T m a) (i w : Word) (hi : erTop m₀ ≤ i.toNat) :
@@ -126,7 +126,7 @@ theorem RInv.setER (h : RInv m₀ a₀ T m a) (i w : Word) (hi : erTop m₀ ≤ 
     intro j hj
     rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     simp [Ne.symm hj]
-  have hI : (m.set64 EREC i w).arr64 IW = m.arr64 IW := hf.1 IW (by decide) (by decide)
+  have hI : (m.set64 EREC i w).arr64 IW = m.arr64 IW := hf.arr IW (by decide) (by decide)
   have hC : (m.set64 EREC i w).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have h129 : erTop (m.set64 EREC i w) = erTop m := by simp only [erTop, hC]
   have h200 : iwTop (m.set64 EREC i w) = iwTop m := by simp only [iwTop, hC]
@@ -137,8 +137,8 @@ theorem RInv.setER (h : RInv m₀ a₀ T m a) (i w : Word) (hi : erTop m₀ ≤ 
     exact ⟨h200 ▸ g1, h129 ▸ g2, fun j hj => by rw [hI]; exact g3 j hj,
       fun j hj => by rw [hE j (by omega)]; exact g4 j hj⟩
   · obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
-    exact ⟨by rw [h200, hI]; exact o1, by rw [h129, hf.2.2.1 EREC]; exact o2, by rw [hI]; exact o3,
-      by rw [hf.2.2.1 EREC]; exact o4, by rw [hC]; exact o5⟩
+    exact ⟨by rw [h200, hI]; exact o1, by rw [h129, hf.size EREC]; exact o2, by rw [hI]; exact o3,
+      by rw [hf.size EREC]; exact o4, by rw [hC]; exact o5⟩
 
 /-- `erec_alloc(k)`: the records' top raised by `k`. -/
 theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k = some (o, m')) :
@@ -161,13 +161,13 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
     omega
   have hf : MemFrame [] [129] m (erAllocMem m k) := MemFrame.setCtl m 129 _
-  have hE : (erAllocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp) (by decide)
-  have hI : (erAllocMem m k).arr64 IW = m.arr64 IW := hf.1 IW (by simp) (by decide)
+  have hE : (erAllocMem m k).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
+  have hI : (erAllocMem m k).arr64 IW = m.arr64 IW := hf.arr IW (by simp) (by decide)
   have htop : erTop (erAllocMem m k) = erTop m + k.toNat := by
     simp only [erTop, erAllocMem, rdW_set64]
     rw [ite_eq_left ⟨trivial, trivial, by simp; omega⟩, UInt64.toNat_add]
     omega
-  have h200 : iwTop (erAllocMem m k) = iwTop m := by simp only [iwTop]; rw [hf.2.1 200 (by decide)]
+  have h200 : iwTop (erAllocMem m k) = iwTop m := by simp only [iwTop]; rw [hf.ctl 200 (by decide)]
   refine ⟨⟨ArenaD.frameHi hf (by simp) (by simp) h.arena, h.hcp,
     h.frame.trans (hf.mono (by simp) (by simp [RciC])), ?_, ?_, h200.trans h.top,
     h.mode.frame hf (by decide) (by decide)⟩, rfl, htop, hE, hI,
@@ -176,7 +176,7 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
     exact ⟨h200 ▸ g1, by rw [htop]; omega, fun j hj => by rw [hI]; exact g3 j hj,
       fun j hj => by rw [hE]; exact g4 j hj⟩
   · exact ⟨by rw [h200, hI]; exact o1, by rw [htop, hE]; simp only [erTop]; omega, by rw [hI]; exact o3,
-      by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
+      by rw [hE]; exact o4, by rw [hf.size CTL]; exact o5⟩
 
 /-- `iw_alloc(k)`: the pool's top raised by `k`. -/
 theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = some (o, m')) :
@@ -185,13 +185,13 @@ theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = 
   obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts hw o3
   have hf := allocMem_frame m k
-  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
   have hI : (allocMem m k).arr64 IW = m.arr64 IW := by
     simp only [allocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop : iwTop (allocMem m k) = iwTop m + k.toNat := by
     simp only [iwTop, allocMem_top m k o5, ← hq]
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  have h129 : erTop (allocMem m k) = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by simp)]
+  have h129 : erTop (allocMem m k) = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
   have hqi : o.toNat = iwTop m := by simp only [iwTop, hq]
   refine ⟨⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
     h.frame.trans (hf.mono (by simp [RciA]) (by simp [RciC])), ?_, ?_, by rw [htop, h.top],
@@ -201,7 +201,7 @@ theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = 
     exact ⟨by rw [htop]; omega, h129 ▸ g2, fun j hj => by rw [hI]; exact g3 j hj,
       fun j hj => by rw [hE]; exact g4 j hj⟩
   · exact ⟨by rw [htop, hI]; omega, by rw [h129, hE]; exact o2, by rw [hI]; exact o3,
-      by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
+      by rw [hE]; exact o4, by rw [hf.size CTL]; exact o5⟩
 
 /-- A word written in `IW` at an allocated index above the entry's pool top. -/
 theorem RInv.setIW (h : RInv m₀ a₀ T m a) (i w : Word) (hi : iwTop m₀ ≤ i.toNat) :
@@ -222,8 +222,8 @@ theorem RInv.setIW (h : RInv m₀ a₀ T m a) (i w : Word) (hi : iwTop m₀ ≤ 
     exact ⟨h200 ▸ g1, h129 ▸ g2, fun j hj => by rw [hI j (by omega)]; exact g3 j hj,
       fun j hj => by rw [hE]; exact g4 j hj⟩
   · obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
-    exact ⟨by rw [h200, hf.2.2.1 IW]; exact o1, by rw [h129, hE]; exact o2,
-      by rw [hf.2.2.1 IW]; exact o3, by rw [hE]; exact o4, by rw [hC]; exact o5⟩
+    exact ⟨by rw [h200, hf.size IW]; exact o1, by rw [h129, hE]; exact o2,
+      by rw [hf.size IW]; exact o3, by rw [hE]; exact o4, by rw [hC]; exact o5⟩
 
 end steps
 

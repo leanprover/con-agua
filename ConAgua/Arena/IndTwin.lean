@@ -115,8 +115,8 @@ theorem StageT.of_core {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f
   have hI : m'.arr64 IW = m.arr64 IW := hfr.1 _ coreStageA_iw (by decide)
   have hE : m'.arr64 EREC = m.arr64 EREC := hfr.1 _ coreStageA_erec (by decide)
   have hP : m'.arr64 PINS = m.arr64 PINS := hfr.1 _ coreStageA_pins (by decide)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.2.1 _ coreStageC_129
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.2.1 _ coreStageC_200
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ coreStageC_129
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ coreStageC_200
   obtain ⟨hCR, hT⟩ := hC.checkR
   refine ⟨⟨⟨hCR, IWOK.frame hfr coreStageA_iw coreStageA_erec coreStageC_129 coreStageC_200
     hS.stage.2⟩, hT, by simp only [pinW, hP]; exact hS.flag⟩, ?_⟩
@@ -144,9 +144,9 @@ theorem StageT.sim_core {α : Type} [Inhabited α] {p : Prog} (hcl : CoreStageCl
 [200]`): none of its parts reads `IW` or `CTL[200]`. -/
 theorem _root_.L.Arena.TwinOK.frame_iw {m m' : Mem} {a : AState} (hf : MemFrame [IW] [200] m m')
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
-  have hSp : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [SPN, IW]) (by decide)
-  have hB : m'.arr64 BSTK = m.arr64 BSTK := hf.1 BSTK (by simp [BSTK, IW]) (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
+  have hSp : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by simp [SPN, IW]) (by decide)
+  have hB : m'.arr64 BSTK = m.arr64 BSTK := hf.arr BSTK (by simp [BSTK, IW]) (by decide)
   exact ⟨h.readL, h.readLs, h.nwf, by rw [hE]; exact h.erec, by rw [hSp]; exact h.spn,
     h.memos.frame hf (by decide) (by simp) (by decide) (by simp), by rw [hB]; exact h.bstk,
     h.den.frameE hE⟩
@@ -156,7 +156,7 @@ theorem _root_.L.Arena.TwinOK.frame_iw {m m' : Mem} {a : AState} (hf : MemFrame 
 theorem StageT.of_iw {m m' : Mem} {a : AState} (hT : StageT dn vis fe m a)
     (hS : StageR dn vis fe m' a) (hf : MemFrame [IW] [200] m m') : StageT dn vis fe m' a :=
   ⟨hS, hT.twin.frame_iw hf, by
-    have hP : m'.arr64 PINS = m.arr64 PINS := hf.1 PINS (by simp [PINS, IW]) (by decide)
+    have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (by simp [PINS, IW]) (by decide)
     simp only [pinW, hP]; exact hT.flag⟩
 
 end
@@ -298,11 +298,11 @@ theorem StageT.of_heap {m m' : Mem} {a a' : AState} {M : ModeMaps} (hT : StageT 
     (by intro b hb; simp only [List.mem_singleton] at hb; subst hb; decide)
     (by intro x hx; simp only [List.mem_singleton] at hx; subst hx; decide)
     (hC.memos.frame hf (by decide) (by decide) (by decide) (by decide))
-  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (by decide) (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by decide) (by decide)
-  have hP : m'.arr64 PINS = m.arr64 PINS := hf.1 PINS (by decide) (by decide)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 200 (by decide)
+  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by decide) (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by decide) (by decide)
+  have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (by decide) (by decide)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by decide)
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (by decide)
   obtain ⟨hCR, hTw⟩ := hC'.checkR
   refine ⟨⟨⟨hCR, IWOK.frame hf (by decide) (by decide) (by decide) (by decide) hT.stage.2⟩, hTw,
     by simp only [pinW, hP]; exact hT.flag⟩, ?_⟩

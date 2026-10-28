@@ -355,7 +355,7 @@ theorem PinsR.congr {m m' : Mem} {p : Pins} (he : m'.arr64 PINS = m.arr64 PINS)
 
 theorem PinsR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {p : Pins}
     (hA : AvoidA 128 129 A) (hf : MemFrame A C m m') (h : PinsR m p) : PinsR m' p :=
-  h.congr (hf.1 PINS (fun hm => by have := hA _ hm; revert this; decide) (by decide))
+  h.congr (hf.arr PINS (fun hm => by have := hA _ hm; revert this; decide) (by decide))
 
 /-- All-zero pins (the flag `0`) are related to every table. -/
 theorem PinsR.of_flag {m : Mem} {p : Pins} (h : pinW m 0 = 0) : PinsR m p :=
@@ -639,7 +639,7 @@ theorem TblSame.refl (m : Mem) : TblSame m m := ⟨fun _ _ => rfl, rfl, rfl⟩
 theorem TblSame.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem}
     (hA : AvoidA 129 132 A) (hE : (ETAB : TieredArray) ∉ A) (hC : (133 : Word) ∉ C)
     (hf : MemFrame A C m m') : TblSame m m' := by
-  refine ⟨fun w _ => hf.1 _ (fun hm => ?_) (fun e => ?_), hf.1 _ hE (by decide), hf.2.1 133 hC⟩
+  refine ⟨fun w _ => hf.arr _ (fun hm => ?_) (fun e => ?_), hf.arr _ hE (by decide), hf.ctl 133 hC⟩
   · have h1 := hA _ hm; rw [tblArr_arr] at h1
     rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] at h1 <;> revert h1 <;> decide
   · have h1 := congrArg TieredArray.arr e; rw [tblArr_arr] at h1
@@ -764,11 +764,11 @@ theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List TieredArray} 
     (hC : AvoidC 128 130 C) (hC3 : AvoidC 133 134 C)
     (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe :=
-  h.congr (fun b h1 h2 h3 => hf.1 b (fun hm => by
+  h.congr (fun b h1 h2 h3 => hf.arr b (fun hm => by
       have := hA _ hm; have := hA1 _ hm; simp only [TieredArray.t0] at *; omega)
     (TieredArray.t0_ne (by simp only [CTL, ArrId]; omega)))
-    (hf.2.1 128 (fun hm => by have := hC _ hm; simp at this))
-    (hf.2.1 129 (fun hm => by have := hC _ hm; simp at this))
+    (hf.ctl 128 (fun hm => by have := hC _ hm; simp at this))
+    (hf.ctl 129 (fun hm => by have := hC _ hm; simp at this))
     (TblSame.of_frame (fun b hb => by have := hA b hb; omega)
       (fun hm => by have := hA1 _ hm; simp [ETAB] at this)
       (fun hm => by have := hC3 _ hm; simp at this) hf)
@@ -785,7 +785,7 @@ theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List TieredArray} {
 
 theorem MemFrame.top_eq {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hC : (0 : Word) ∉ C) : m'.top = m.top := by
-  have := hf.2.1 0 hC
+  have := hf.ctl 0 hC
   simp only [rdW] at this
   simpa [Mem.top] using this
 
@@ -793,7 +793,7 @@ theorem MemFrame.top_eq {m m' : Mem} {A : List TieredArray} {C : List Word} (hf 
 theorem ModeOK.frame {m m' : Mem} {A : List TieredArray} {C : List Word} (h : ModeOK m)
     (hf : MemFrame A C m m') (h0 : (0 : Word) ∉ C) (h1 : (1 : Word) ∉ C) : ModeOK m' := by
   have ht : m'.top = m.top := hf.top_eq h0
-  have hfl : m'.flag = m.flag := hf.2.1 1 h1
+  have hfl : m'.flag = m.flag := hf.ctl 1 h1
   unfold ModeOK; rw [ht, hfl]; exact h
 
 /-- **The relation, by tier.** -/

@@ -354,7 +354,8 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   have h41 := hok.top41
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
-  obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
+  have hok2 := hok.ctl; have hok3 := hok.cap; have hok4 := hok.top; have hok6 := hok.inTier
+  clear hok
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpn]

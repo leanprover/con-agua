@@ -29,7 +29,7 @@ theorem set0_top (a : Array Word) (h : 0 < a.size) : a.set! 0 (rdW a 0) = a := b
 
 /-- Storing the top over itself is a pool frame. -/
 theorem PFrame.self_top (m : Mem) (hc : 0 < (m.arr64 CTL).size) : PFrame (m.set64 CTL 0 m.top) m := by
-  refine ⟨rfl, (Mem.sameShape_set64 _ _ _ _).symm, fun b _ _ => ?_, ?_, ?_, rfl⟩
+  refine ⟨rfl, fun b _ _ => ?_, ?_, ?_, rfl⟩
   · by_cases hbc : b = CTL
     · subst hbc; rw [Mem.arr64_set64_same, top_rdW, UInt64.toNat_zero, set0_top _ hc]
     · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
@@ -58,9 +58,9 @@ theorem poolSetT_facts (m : Mem) (q x : Word) (hp : PoolOK m) (hq : m.top.toNat 
   have ht : (m.set64 (tierA POOL (q >>> 40)) (q &&& 1099511627775) x).top = m.top := by
     simp only [top_rdW]; rw [Mem.arr64_set64_ne _ _ _ _ _ hne]
   refine ⟨Grows.intro m _ hp ?_ ?_ (by rw [ht]; exact Nat.le_refl _) ?_, hv, ht⟩
-  · rw [ht]; exact PFrame.set64 _ _ _ (PFrame.self_top m hp.2.1)
+  · rw [ht]; exact PFrame.set64 _ _ _ (PFrame.self_top m hp.ctl)
   · rw [hv]; exact Agree.set _ _ _ _ _ (Agree.refl _ _) hq
-  · rw [ht]; simp only [Nat.sub_self, Nat.add_zero]; exact hp.2.2.2.2.2
+  · rw [ht]; simp only [Nat.sub_self, Nat.add_zero]; exact hp.inTier
 
 theorem pmemo_grow {m m' : Mem} {pm : PMemo} (hg : Grows m m') (h : PMemoR m pm) : PMemoR m' pm :=
   h.frameLo (by decide) (by simp) (grows_frame m m' hg)
@@ -83,7 +83,9 @@ theorem SliceOK.inb {m : Mem} {o l : Word} (hp : PoolOK m) (h : SliceOK m o l) (
   have h41 := hp.top41
   have hs := hp.small
   obtain ⟨h1, h2⟩ := h
-  obtain ⟨-, -, -, -, a5, a6⟩ := hp
+  have a5 := hp.ptop0
+  have a6 := hp.inTier
+  clear hp
   have ho := tag_split o
   have ht := tag_split m.top
   have := tag_idx_lt o
@@ -218,8 +220,8 @@ theorem pool_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q
   have hpk₁ := hD₁.1.lit.1
   have hsz₁ : (m₁.arr64 (tierA POOL (q >>> 40))).size = (m.arr64 (tierA POOL (q >>> 40))).size := by
     rcases tierA_pool (q >>> 40) with e | e <;> rw [e]
-    · exact hfr₁.2.2.1 POOL
-    · exact hfr₁.2.2.1 POOL1
+    · exact hfr₁.size POOL
+    · exact hfr₁.size POOL1
   have hq₁ : ¬ (m₁.arr64 (tierA POOL (q >>> 40))).size ≤ (q - (q >>> 40 <<< 40)).toNat := by
     rw [idx_eq, hsz₁]; omega
   rw [poolK_some (hq := hq₁)] at hW
@@ -262,7 +264,7 @@ theorem pool_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q
     ih _ a₁ pm₁ f (o + 1) (l - 1) (q + 1) us₀ r₂ _ hD₁' hP₁' hsl₁ hso₂
       (by rw [htop₁', hq1]; omega) (by rw [htop₁']; exact hq40.trans hqt) (by rw [hq1]; omega)
       (by rw [hqt1, hqi1, ← hm₁', size_set64, hsz₁]; omega) hcb
-  have hpc₁ : pcap m₁ = pcap m := pcap_congr (hfr₁.2.2.1 _) (hfr₁.2.2.1 _)
+  have hpc₁ : pcap m₁ = pcap m := pcap_congr (hfr₁.size _) (hfr₁.size _)
   refine ⟨a₂, pm₂, decI (r₁.headD 0) :: us₂, ?_, hD₂, hP₂, ?_, ?_, hcp₂.trans hcp₁,
     by rw [htop₂, htop₁'], by rw [hpc₂, hg.pcapEq, hpc₁], ?_, ?_, ?_, he₂.trans he₁, hls₂.trans hls₁⟩
   · rw [promoteLList_cons, run_bind_ok hrun₁]
@@ -453,8 +455,8 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
   have hsz₁ : (m₁.arr64 (tierA POOL (m₁.top >>> 40))).size = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     rw [htop₁]
     rcases tierA_pool (m.top >>> 40) with e | e <;> rw [e]
-    · exact hfr₁.2.2.1 POOL
-    · exact hfr₁.2.2.1 POOL1
+    · exact hfr₁.size POOL
+    · exact hfr₁.size POOL1
   have hg : Grows m₁ (m₁.set64 CTL 0 (m₁.top + tfld m LVLS (tierW h) (idxW h) 1)) :=
     Grows.write m₁ m₁ _ hpk₁ (PFrame.refl _) (Agree.refl _ _) (by rw [hsz₁, htop₁]; exact hroom)
   rw [htop₁] at hg

@@ -42,8 +42,8 @@ theorem TwinOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AS
     (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe :=
-  ⟨h.readL, h.readLs, h.nwf, by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn,
-    h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.2.2.1]; exact h.bstk, h.den.mem m'⟩
+  ⟨h.readL, h.readLs, h.nwf, by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn,
+    h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.size]; exact h.bstk, h.den.mem m'⟩
 
 /-- `TwinOK` across a writer of `PT0`, tier-1 arrays and `CTL` words below 48 or in 60‥127
 only (the bracket's). -/
@@ -68,7 +68,7 @@ end frames
 
 theorem pinW_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hP : (PINS : TieredArray) ∉ A) : pinW m' 0 = pinW m 0 := by
-  simp only [pinW, hf.1 PINS hP (by decide)]
+  simp only [pinW, hf.arr PINS hP (by decide)]
 
 
 /-! ## The twin's half of `TwinOK` from the fold's invariant

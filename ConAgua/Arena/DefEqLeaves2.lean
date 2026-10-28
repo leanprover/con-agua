@@ -189,14 +189,14 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
   obtain ⟨hc, hp, hl⟩ := hcpl
   refine ⟨hD, ?_, ?_, hS.env.frame henv
       (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
-      hf.2.2.1 BSTK ▸ hS.bstk,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
+      hf.size BSTK ▸ hS.bstk,
       hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hmode⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
       (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
       (fun x hx => (hC128 x hx).elim (fun h => .inl h) (fun h => .inr h)) hf hS.core
-  · rw [hp]; exact hS.pins.congr (hf.1 PINS hpins (by decide))
+  · rw [hp]; exact hS.pins.congr (hf.arr PINS hpins (by decide))
   · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]; exact this
   · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
   · rw [hl]; exact hS.nwf
@@ -242,7 +242,8 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (fe : IFEnv) (M : ModeMaps) (eb : Word) (m₀ : Mem) :
     InternSpecW p (CoreK dn vis fe M eb m₀) := by
   intro a₀ n s₀ o l hK hq hn hq0
-  have ⟨_, _, hps, htop⟩ := hK.1.arena.1.lit.1
+  have hps := hK.1.arena.1.lit.1.cap
+  have htop := hK.1.arena.1.lit.1.top
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
     (by simp only [SliceOK] at hq; omega)
   apply L.M.triple_of_run
@@ -604,7 +605,8 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
   simp only [as, ac, bs, bc, ↓reduceIte] at hW
   obtain ⟨sl₁, hn₁, hs₁⟩ := lit_rec s₀.mem a₀ hR a ha ⟨as, by simpa using ac⟩ ha8 l₁ hv₁
   obtain ⟨sl₂, hn₂, hs₂⟩ := lit_rec s₀.mem a₀ hR b hb ⟨bs, by simpa using bc⟩ hb8 l₂ hv₂
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hps := hR.lit.1.cap
+  have htop := hR.lit.1.top
   generalize tfld s₀.mem LIT (tierW a) (idxW a) 0 = k₁ at hW hn₁ hs₁
   generalize tfld s₀.mem LIT (tierW b) (idxW b) 0 = k₂ at hW hn₂ hs₂
   generalize tfld s₀.mem LIT (tierW a) (idxW a) 1 = o₁ at hW hn₁ hs₁ sl₁

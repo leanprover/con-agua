@@ -46,10 +46,10 @@ theorem ErW.decl {W : Nat → Prop} {m m' : Mem} (h : ErW W m m') : m'.arr64 DEC
   h.1.1 DECL (by decide) (by decide)
 
 theorem ErW.esize {W : Nat → Prop} {m m' : Mem} (h : ErW W m m') :
-    (m'.arr64 EREC).size = (m.arr64 EREC).size := h.1.2.2.1 EREC
+    (m'.arr64 EREC).size = (m.arr64 EREC).size := h.1.size EREC
 
 theorem ErW.csize {W : Nat → Prop} {m m' : Mem} (h : ErW W m m') :
-    (m'.arr64 CTL).size = (m.arr64 CTL).size := h.1.2.2.1 CTL
+    (m'.arr64 CTL).size = (m.arr64 CTL).size := h.1.size CTL
 
 /-- **`erec_alloc(k)`**: the pointer is the old top, the top moves by `k` within the array,
 nothing else changes. -/
@@ -89,8 +89,8 @@ theorem ErW.set {m : Mem} {x v : Word}
   have hf : MemFrame [EREC] [129] m (m.set64 EREC x v) :=
     (MemFrame.set64 m EREC (by decide) x v).mono (by simp) (by simp)
   have ht : erTop (m.set64 EREC x v) = erTop m := by
-    simp only [erTop, (MemFrame.set64 m EREC (by decide) x v).2.1 129 (by simp)]
-  refine ⟨hf, by omega, by rw [ht, hf.2.2.1 EREC]; exact hr, fun i _ hn => ?_⟩
+    simp only [erTop, (MemFrame.set64 m EREC (by decide) x v).ctl 129 (by simp)]
+  refine ⟨hf, by omega, by rw [ht, hf.size EREC]; exact hr, fun i _ hn => ?_⟩
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [Ne.symm hn]
 
@@ -178,8 +178,8 @@ theorem dindCopyW_EW {n : Nat} {m m' : Mem} {d s l : Word} (h : dindCopyW n m d 
     ErW (fun i => d.toNat ≤ i ∧ i < d.toNat + l.toNat) m m' := by
   obtain ⟨hF, -, hG⟩ := dindCopyW_get n m m' d s l h (by omega) hsz
   have hf : MemFrame [EREC] [129] m m' := hF.mono (by simp) (by simp)
-  have ht : erTop m' = erTop m := by simp only [erTop, hF.2.1 129 (by simp)]
-  refine ⟨hf, by omega, by rw [ht, hf.2.2.1 EREC]; exact hr, fun i _ hn => ?_⟩
+  have ht : erTop m' = erTop m := by simp only [erTop, hF.ctl 129 (by simp)]
+  refine ⟨hf, by omega, by rw [ht, hf.size EREC]; exact hr, fun i _ hn => ?_⟩
   rw [hG i, ite_eq_right hn]
 
 /-! ## Reading the front's pool -/
@@ -229,7 +229,7 @@ theorem ircT_ok {n : Nat} {mx m' : Mem} {s q r nn kw p : Word}
   have hW6 := dindCopyW_EW hd (by omega) (by rw [hs5]; omega) (by rw [hs5]; exact hE64)
   have hP5 : m5.arr64 DLP = mx.arr64 DLP := hw5.dlp
   have hs6 : (m6.arr64 EREC).size = (mx.arr64 EREC).size := by rw [hW6.esize, hs5]
-  have ht6 : erTop m6 = erTop m5 := by simp only [erTop, hF6.2.1 129 (by simp)]
+  have ht6 : erTop m6 = erTop m5 := by simp only [erTop, hF6.ctl 129 (by simp)]
   have hp2 : (pp + 2).toNat = pp.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have hp7 : (pp + 7).toNat = pp.toNat + 7 ∨ kw ≠ 5 := by
     by_cases hk : kw = 5
@@ -239,7 +239,7 @@ theorem ircT_ok {n : Nat} {mx m' : Mem} {s q r nn kw p : Word}
   -- the two relocating writes
   have hWa := ErW.set (x := pp + 2) (v := q) (m := m6) (by rw [ht6, hs6]; omega)
   have hta : erTop (m6.set64 EREC (pp + 2) q) = erTop m6 := by
-    simp only [erTop, (MemFrame.set64 m6 EREC (by decide) (pp + 2) q).2.1 129 (by simp)]
+    simp only [erTop, (MemFrame.set64 m6 EREC (by decide) (pp + 2) q).ctl 129 (by simp)]
   have hsa : ((m6.set64 EREC (pp + 2) q).arr64 EREC).size = (mx.arr64 EREC).size := by
     rw [size_set64, hs6]
   have hfin : ErW (fun i => erTop mx ≤ i) mx (if kw = 5 then
@@ -255,10 +255,10 @@ theorem ircT_ok {n : Nat} {mx m' : Mem} {s q r nn kw p : Word}
   refine ⟨hpp, ?_, hfin, hs0, fun k hk => ?_⟩
   · have := hfin.2.1
     split
-    · simp only [erTop, (MemFrame.set64 _ EREC (by decide) (pp + 7) r).2.1 129 (by simp),
-        (MemFrame.set64 m6 EREC (by decide) (pp + 2) q).2.1 129 (by simp)]
+    · simp only [erTop, (MemFrame.set64 _ EREC (by decide) (pp + 7) r).ctl 129 (by simp),
+        (MemFrame.set64 m6 EREC (by decide) (pp + 2) q).ctl 129 (by simp)]
       simp only [erTop] at ht6 ht5; omega
-    · simp only [erTop, (MemFrame.set64 m6 EREC (by decide) (pp + 2) q).2.1 129 (by simp)]
+    · simp only [erTop, (MemFrame.set64 m6 EREC (by decide) (pp + 2) q).ctl 129 (by simp)]
       simp only [erTop] at ht6 ht5; omega
   have hlt : pp.toNat + k < (m6.arr64 EREC).size := by rw [hs6]; omega
   have hcp : (m6.arr64 EREC)[pp.toNat + k]? = some (rdW (mx.arr64 DLP) (s + UInt64.ofNat k)) := by
@@ -586,7 +586,7 @@ theorem icgW_ok {t : Nat} {dn0 dn : NIdx → Option ConLeche.Name} (n : Nat) :
     rw [UInt64.toNat_add]; simp; have := hW1.2.2.1; omega
   have hbo1 : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have ht2 : erTop (m1.set64 EREC o p) = erTop m1 := by
-    simp only [erTop, (MemFrame.set64 m1 EREC (by decide) o p).2.1 129 (by simp)]
+    simp only [erTop, (MemFrame.set64 m1 EREC (by decide) o p).ctl 129 (by simp)]
   have hs2 : ((m1.set64 EREC o p).arr64 EREC).size = (m.arr64 EREC).size := by
     rw [size_set64, hW1.esize]
   have hP2 : (m1.set64 EREC o p).arr64 DLP = m.arr64 DLP := by

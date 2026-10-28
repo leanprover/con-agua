@@ -90,9 +90,9 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
   have hD : ∀ b : TieredArray, b ∉ ([IW, HSEEN] : List TieredArray) → b ≠ CTL → m'.arr64 b = m.arr64 b := hf.1.1
   have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
   have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
-  have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
+  have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.size IW
   have htop : iwTop m' = iwTop m := by
-    simp only [iwTop]; rw [hf.1.2.1 200 (by decide)]
+    simp only [iwTop]; rw [hf.1.ctl 200 (by decide)]
   have hA : ∀ b ∈ ([IW, HSEEN] : List TieredArray), InHigh b := by decide
   have hC : ∀ x ∈ ([73, 74] : List Word), 64 ≤ x.toNat := by simp
   refine ⟨ArenaR.frame_ext [IW, HSEEN] [73, 74] hA hC m m' hf.1 a hE.arena, hs,
@@ -111,9 +111,9 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
       (fun _ _ h => h) idx hE.nix
   · obtain ⟨h1, h2, h3, h4, h5⟩ := hE.iwok
     have hER : m'.arr64 EREC = m.arr64 EREC := hD EREC (by decide) (by decide)
-    have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.1.2.1 129 (by decide)]
+    have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.1.ctl 129 (by decide)]
     refine ⟨by rw [htop, hsz]; exact h1, by rw [h129, hER]; exact h2, by rw [hsz]; exact h3,
-      by rw [hER]; exact h4, by rw [hf.1.2.2.1 CTL]; exact h5⟩
+      by rw [hER]; exact h4, by rw [hf.1.size CTL]; exact h5⟩
 
 /-- **What an allocation keeps**: `IW` and `CTL[200]` only, the pool grown. -/
 def AFr (m m' : Mem) : Prop := MemFrame [IW] [200] m m' ∧ IWGrow m m' ∧ IWOK m'
@@ -130,7 +130,7 @@ theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : S
   have hD : ∀ b : TieredArray, b ∉ ([IW] : List TieredArray) → b ≠ CTL → m'.arr64 b = m.arr64 b := hf.1.1
   have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
   have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
-  have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
+  have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.size IW
   have hA : ∀ b ∈ ([IW] : List TieredArray), InHigh b := by decide
   have hC : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by simp
   obtain ⟨s, hs⟩ := hE.seen

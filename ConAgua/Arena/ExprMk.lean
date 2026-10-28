@@ -522,7 +522,7 @@ theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some 
       (∀ b, b ≠ tierA ASLOT t → m₁.arr64 b = (pushRec appCS m t [f, a]).arr64 b) ∧
       idxW r = acnt m t ∧ tierW r = t := by
   rcases consInternM_outA (C := appCS) (by decide) (fun A h => by simp [appCS] at h) hI with
-    rfl | ⟨t, ht, hok, rfl, he, -, -⟩
+    rfl | ⟨t, ht, hok, rfl, he, -⟩
   · exact absurd rfl hc
   have h : acnt m t < 134217728 := by
     rw [← apushOK_eqC] at hok
@@ -562,7 +562,7 @@ theorem lainternW_grow {m m₁ : Mem} {f a r : Word} (hI : lainternW m f a = som
       (∀ b, b ≠ tierA LASLOT t → m₁.arr64 b = (pushRec lamCS m t [f, a]).arr64 b) ∧
       idxW r = lacnt m t ∧ tierW r = t := by
   rcases consInternM_outA (C := lamCS) (by decide) (fun A h => by simp [lamCS] at h) hI with
-    rfl | ⟨t, ht, hok, rfl, he, -, -⟩
+    rfl | ⟨t, ht, hok, rfl, he, -⟩
   · exact absurd rfl hc
   have h : lacnt m t < 134217728 := by
     rw [← lapushOK_eqC] at hok
@@ -602,7 +602,7 @@ theorem fainternW_grow {m m₁ : Mem} {f a r : Word} (hI : fainternW m f a = som
       (∀ b, b ≠ tierA FASLOT t → m₁.arr64 b = (pushRec forallCS m t [f, a]).arr64 b) ∧
       idxW r = facnt m t ∧ tierW r = t := by
   rcases consInternM_outA (C := forallCS) (by decide) (fun A h => by simp [forallCS] at h) hI with
-    rfl | ⟨t, ht, hok, rfl, he, -, -⟩
+    rfl | ⟨t, ht, hok, rfl, he, -⟩
   · exact absurd rfl hc
   have h : facnt m t < 134217728 := by
     rw [← fapushOK_eqC] at hok

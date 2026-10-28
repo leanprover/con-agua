@@ -38,14 +38,14 @@ theorem allocWr_ok {m : Mem} {ws : List Word} {k : Word} (hI : IWOK m) (hk : k.t
   obtain ⟨hI1, hE1, hsz, hEs, hct⟩ := hI
   refine ⟨⟨hfr, hKeep.1, ?_⟩, htop, fun j hj => ?_⟩
   · have hE : (wrIW (allocMem m k) (rdW (m.arr64 CTL) 200) ws).arr64 EREC = m.arr64 EREC :=
-      hfr.1 EREC (by decide) (by decide)
-    have h129 := hfr.2.1 129 (by decide)
+      hfr.arr EREC (by decide) (by decide)
+    have h129 := hfr.ctl 129 (by decide)
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
-    · rw [htop, hfr.2.2.1 IW]; exact hroom
+    · rw [htop, hfr.size IW]; exact hroom
     · simp only [erTop, h129, hE]; exact hE1
-    · rw [hfr.2.2.1 IW]; exact hsz
+    · rw [hfr.size IW]; exact hsz
     · rw [hE]; exact hEs
-    · rw [hfr.2.2.1 CTL]; exact hct
+    · rw [hfr.size CTL]; exact hct
   · have := pw_rec ⟨hI1, hE1, hsz, hEs, hct⟩ (recPost_wr m ws k hk ⟨hI1, hE1, hsz, hEs, hct⟩ hroom) j hj
     simp only [pw] at this
     rw [this, getElem!_pos ws j hj]

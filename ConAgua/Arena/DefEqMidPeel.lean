@@ -72,8 +72,8 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
       (fun x hx => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
         rcases hx with rfl | rfl <;> decide)
-  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [tier1, FVREC, FVSLOT, FVLP, SPN]) (by decide)
-  have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hf.arr SPN (by simp [tier1, FVREC, FVSLOT, FVLP, SPN]) (by decide)
+  have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   exact ⟨⟨hok, ⟨M, hS', KeptAll.refl _ _,
       StackKept.of_frame hf⟩,
     by rw [hres]; rfl, fvinternW_hw m a hS.arena.1.fvar u ty _ _ hI⟩, hf⟩
@@ -630,9 +630,9 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
     have hfoK : (fo + k).toNat = fo.toNat + k.toNat := by
       rw [UInt64.toNat_add]; have := hx.fit; omega
     have hk1 : fo.toNat + k.toNat + 1 < 2 ^ 63 := by
-      have e : (m₁.arr64 SPN).size = (m.arr64 SPN).size := hf₁.2.2.1 SPN
+      have e : (m₁.arr64 SPN).size = (m.arr64 SPN).size := hf₁.size SPN
       have := hS.spn; omega
-    have hpush := hfvs₁.spine.push (hf₁.2.2.1 SPN ▸ hS.spn) (by rw [← hfoK]; exact hb1) _ hw
+    have hpush := hfvs₁.spine.push (hf₁.size SPN ▸ hS.spn) (by rw [← hfoK]; exact hb1) _ hw
     -- the two writes
     have hfr : MemFrame [SPN] [136] m₁ s'.mem := by
       rw [← hm]
@@ -1045,7 +1045,7 @@ theorem peelPush_bound {p : Prog} (hp : PeelProg p) {n : Nat} {m m' : Mem} (d k 
   obtain ⟨s'', rfl, -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internFVar_spec p hp.fvf hp.fvp hp.fvi n ⟨m, Locals.init []⟩ (d + k) t2) hc1
   have hsz : (s''.mem.arr64 SPN).size = (m.arr64 SPN).size :=
-    (fvinternW_frame _ _ _ _ _ hI).2.2.1 SPN
+    (fvinternW_frame _ _ _ _ _ hI).size SPN
   simp only [peelPushK] at hW
   split at hW
   · rename_i hb; rw [← hsz]; exact hb.1

@@ -75,7 +75,7 @@ theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
     · rw [hal] at h; cases h
     obtain ⟨q, m1⟩ := qm
     obtain ⟨hq, rfl, hroom⟩ := allocW_facts hal hsz
-    rw [hf.2.2.1 IW, ← htop]
+    rw [hf.size IW, ← htop]
     have hl := (decBS_some hb.dec).1
     obtain ⟨o, l, ho, hl', hgl⟩ := decAt_some hl
     have hlen := decPL_length m hgl
@@ -85,7 +85,7 @@ theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
         apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp] at this
     rw [e1, UInt64.toNat_ofNat_of_lt' (by rw [← hlen]; exact hk)] at hroom
     rw [← hq, BlockShape.k, hlen]; exact hroom
-  refine ⟨stage_frame_iw hS hf (by rw [← hf.2.2.1 IW]; exact hroom), hg, hr, ?_, ?_⟩
+  refine ⟨stage_frame_iw hS hf (by rw [← hf.size IW]; exact hroom), hg, hr, ?_, ?_⟩
   · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using hd
   · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using htop
 

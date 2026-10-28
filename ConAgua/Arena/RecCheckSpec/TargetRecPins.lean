@@ -35,7 +35,7 @@ theorem lokW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   obtain ⟨hI1, -, hsz, hEs, hc⟩ := hS.2
   obtain ⟨hr, hg, hf, hw⟩ := lokW_ok n m m' q r bs h (hq.get (decBS_mono _)) (hq.stab (decBS_mono _))
     (rpShape9 hq) hsz hc hEs
-  exact ⟨hr, stage_frame_iw hS hf (by rw [← hf.2.2.1 IW]; exact hw hI1), hg⟩
+  exact ⟨hr, stage_frame_iw hS hf (by rw [← hf.size IW]; exact hw hI1), hg⟩
 
 end L.Ind
 

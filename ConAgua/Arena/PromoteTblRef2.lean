@@ -98,13 +98,13 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
   obtain ⟨hD₂, hP₂⟩ := arenaD_tbl hD₁ hP₁ hfr₂
   have hEE₂ : m₂.arr64 EREC = m₁.arr64 EREC := hfr₂.1 EREC (by decide) (by decide)
   have hET₂ : m₂.arr64 ETAB = m₁.arr64 ETAB := hfr₂.1 ETAB (by decide) (by decide)
-  have hT₂ : erecTop m₂ = erecTop m₁ := by simp only [erecTop]; rw [hfr₂.2.1 129 (by simp)]
+  have hT₂ : erecTop m₂ = erecTop m₁ := by simp only [erecTop]; rw [hfr₂.ctl 129 (by simp)]
   have hsz₂ : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [hEE₂]; exact hsz₁
   have hts₂ : erecTop m₂ ≤ (m₂.arr64 EREC).size := by rw [hEE₂, hT₂]; exact hts₁
   have hP₂e : erecP m₂ = erecP m₁ := by
     rw [erecP_eq_preE, erecP_eq_preE, hT₂]; exact preE_congr hEE₂ _
   have hg₁₂ : ErecGrow m₁ m₂ := ErecGrow.of_eq hEE₂ hT₂
-  have h133₂ : rdW (m₂.arr64 CTL) 133 = rdW (m₁.arr64 CTL) 133 := hfr₂.2.1 133 (by simp)
+  have h133₂ : rdW (m₂.arr64 CTL) 133 = rdW (m₁.arr64 CTL) 133 := hfr₂.ctl 133 (by simp)
   -- promote
   obtain ⟨⟨r₂, m₃⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
@@ -116,9 +116,9 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
       m₃.arr64 b = m₂.arr64 b :=
     fun b h1 h2 => hfr₃.1 b h1 h2
   have h133₃ : rdW (m₃.arr64 CTL) 133 = rdW (m₁.arr64 CTL) 133 := by
-    rw [hfr₃.2.1 133 (fun h => by have := pnew_ctl _ h; simp at this), h133₂]
+    rw [hfr₃.ctl 133 (fun h => by have := pnew_ctl _ h; simp at this), h133₂]
   have h128₃ : rdW (m₃.arr64 CTL) 128 = rdW (m₂.arr64 CTL) 128 :=
-    hfr₃.2.1 128 (fun h => by have := pnew_ctl _ h; simp at this)
+    hfr₃.ctl 128 (fun h => by have := pnew_ctl _ h; simp at this)
   have hrows₃ : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 135 ∨ 140 ≤ b) → m₃.arr64 b = m₂.arr64 b := by
     intro b h1 h2 h3
     apply hX₃ b _ (fun h => by rw [TieredArray.t0_inj] at h; rw [h] at h1; simp [CTL] at h1)
@@ -177,7 +177,7 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
         · rw [h]; omega) hcons₃ hcd
   obtain ⟨hD₄, hP₄⟩ := arenaD_tbl hD₃ hP₃ hfr₄
   have hEE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hfr₄.1 EREC (by decide) (by decide)
-  have hT₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [hfr₄.2.1 129 (by simp)]
+  have hT₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [hfr₄.ctl 129 (by simp)]
   have hg₁₄ : ErecGrow m₁ m₄ := hg₁₃.trans (ErecGrow.of_eq hEE₄ hT₄)
   have hts₄ : erecTop m₄ ≤ (m₄.arr64 EREC).size := by rw [hEE₄, hT₄]; exact hts₃
   have hfA : MemFrame (tblArrs ++ (ETAB : TieredArray) :: (EREC : TieredArray) :: eArrs) (129 :: eCtl) m₁ m₄ :=
@@ -189,7 +189,7 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
     rw [htake, ← L.Ind.CWF_eq]; exact hrun₃
   refine ⟨a₃, pm₃, Lt', hrun₃', ?_⟩
   rw [htake, hdrop]
-  have hfl : m₄.flag = m₁.flag := hfA.2.1 1 (by decide)
+  have hfl : m₄.flag = m₁.flag := hfA.ctl 1 (by decide)
   have htk : TierKeep m₁ m₄ :=
     (TierKeep.of_frame hfr₂ (by simp)).trans (htk₃.trans (TierKeep.of_frame hfr₄ (by simp)))
   exact ⟨LoopR.of_frame hR₁ hD₄ hfA ptnew_arrs (fun x hx => .inl (pnew_ctl x hx)) hcp₃ hg₁₄ hts₄ hP₄

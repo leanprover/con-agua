@@ -273,7 +273,7 @@ theorem spnLsW_pool (n : Nat) (m m' : Mem) (b l r : Word) (hp : PoolOK m)
   simp only [spnLsW] at hW
   have hsz := hp.small.tier (m.top >>> 40)
   have h41 := hp.top41
-  have hin := hp.2.2.2.2.2
+  have hin := hp.inTier
   have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size :=
     UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
   have t1 : ¬ m.len64 (tierA POOL (m.top >>> 40)) < (m.top &&& 1099511627775) := fun t1 => by
@@ -294,7 +294,7 @@ theorem spnLsW_pool (n : Nat) (m m' : Mem) (b l r : Word) (hp : PoolOK m)
   have hi := tag_idx_toNat m.top
   have htl : (m.top + l).toNat = m.top.toNat + l.toNat := by
     rw [UInt64.toNat_add]; simp; omega
-  have hc₁ : 0 < (m₁.arr64 CTL).size := by rw [hf₁.ctl]; exact hp.2.1
+  have hc₁ : 0 < (m₁.arr64 CTL).size := by rw [hf₁.ctl]; exact hp.ctl
   have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := hf₁.arr SPN (by decide) (by decide)
   rcases hI : lsinternW (m₁.set64 CTL 0 (m.top + l)) m.top l with _ | ⟨r', m₃⟩ <;> rw [hI] at hW
   · cases hW

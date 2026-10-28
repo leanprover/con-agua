@@ -65,12 +65,12 @@ def RecsOK (m : Mem) (ds : Array IDeclaration) : Prop :=
 
 theorem RecsOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {ds : Array IDeclaration}
     (h : RecsOK m ds) (hf : MemFrame A C m m') (hD : (DECL : TieredArray) ∉ A) (hP : (DLP : TieredArray) ∉ A) : RecsOK m' ds := by
-  rw [RecsOK, hf.1 _ hD (by decide), hf.1 _ hP (by decide)]; exact h
+  rw [RecsOK, hf.arr _ hD (by decide), hf.arr _ hP (by decide)]; exact h
 
 /-- Before: the arena and the blank parse state. -/
 def BP0 (a : AState) (m : Mem) : Prop :=
   ArenaD m a ∧ StateDR m StateD.blank ∧ TwinFacts a ∧ (m.arr64 POOL).size < 2 ^ 63 ∧
-    m.HasB IN ∧ ModeOK m
+    ModeOK m
 
 /-- After `pre_front_run`. -/
 def BP1 (a : AState) (m : Mem) : Prop :=
@@ -89,10 +89,10 @@ def BP3 (a : AState) (m : Mem) : Prop :=
     RecsOK m st.decls ∧ ModeOK m
 
 theorem setIn_frame (m : Mem) (x : Array UInt8) : MemFrame [] [] m (m.setIn x) :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
 
 theorem setIn_frame' (m : Mem) (x : Array UInt8) : MemFrame [] [] (m.setIn x) m :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
 
 theorem preIn_eq : preIn = preludeText.data := by
   simp only [preIn, preludeBytes_eq, Array.toArray_toList]
@@ -122,7 +122,7 @@ theorem bp_h1 (h64 : System.Platform.numBits = 64) (a : AState) :
   intro n _hn s₀
   apply M.triple_of_run
   intro s r s' hs hrun
-  refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun ⟨hA, hD, ht, hpool, h0, hmo⟩ hr0 => ?_⟩
+  refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun ⟨hA, hD, ht, hpool, hmo⟩ hr0 => ?_⟩
   subst hs
   have hQ := L.Front.frontRunOK_checker #[] preludeText h64 preludeText_size n (s.setIn preIn)
     (by show (s.mem.setIn preIn).arr8 IN = _; rw [Mem.arr8_setIn_zero, preIn_eq]) hpool a
@@ -130,7 +130,7 @@ theorem bp_h1 (h64 : System.Platform.numBits = 64) (a : AState) :
     (by rw [blank_pre_empty]; exact hD.frame (setIn_frame _ _) (by simp) (by simp)) ht.ok ht.off
     ht.pins (fun x hx => absurd hx (by simp)) (ModeOK.frame hmo (setIn_frame _ _) (by simp) (by simp))
   obtain ⟨hpost, -⟩ := M.of_run (P := fun x => x = s) rfl hrun
-    (preSim_triple checkerProg_preSim n "front_run" isCopied_front_run [] s h0 hQ)
+    (preSim_triple checkerProg_preSim n "front_run" isCopied_front_run [] s hQ)
   obtain ⟨st, a', hp, hA', hD', -, hM', hR⟩ := hpost hr0
   rw [pre_empty] at hD'
   have hb := builtinPreludeE_of hp
@@ -158,7 +158,7 @@ theorem bp_h3 (a : AState) : StageSpec checkerProg "front_reset" (BP2 a) fun _ =
     hrk.frame hf (by simp) (by simp), ModeOK.frame hmo hf (by decide) (by decide)⟩
   · intro x hx; simp only [idCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
     rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
-  · rw [hf.2.1 240 (by decide)]; exact h240
+  · rw [hf.ctl 240 (by decide)]; exact h240
 
 /-- **`builtin_prelude` refines `builtinPreludeE`**, on the parse state and the arena. -/
 @[refines ConRon.Arena.Frontend.builtinPreludeE]

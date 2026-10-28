@@ -95,12 +95,12 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   have hD : DerR m' a' := DerR.of_tiers m' a a'
     (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega) a hS.arena.2) hL.pers hL.scr
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
+    hf.arr SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
-    hf.2.1 136 (fun h => by have := hC _ h; simp at this)
+    hf.ctl 136 (fun h => by have := hC _ h; simp at this)
   refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
       hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
         ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
@@ -111,7 +111,7 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
           fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩,
-      hf.2.2.1 BSTK ▸ hS.bstk,
+      hf.size BSTK ▸ hS.bstk,
       hS.den.mono (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext) (by rw [hL.pins])
         (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
@@ -129,7 +129,7 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
   · rw [hL.pins]
-    exact hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide))
+    exact hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide))
       (by decide))
   · intro h l e
     rw [hL.caches] at e
@@ -200,7 +200,7 @@ theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.1 EREC (by simp [tier1, SOREC, SOSLOT, SOLP, EREC]) (by decide)))
+    (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.arr EREC (by simp [tier1, SOREC, SOSLOT, SOLP, EREC]) (by decide)))
     (hmode := hS.mode.frame hf (by simp) (by simp))
   have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
@@ -234,7 +234,7 @@ theorem internSucc_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
       (fun c hc => by simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; subst hc; exact hdu)
       (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
-    (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
+    (lvlCnt_of_arena hS.arena.1 hR' (hf.ctl 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
   have hw := consInternM_lt succCS_wf hS.arena.1.succ hI₂
@@ -263,7 +263,7 @@ theorem internImax_core (hS : CoreS dn m a vis fe M eb) (u v : Word) (hu : HW u)
         · exact hdu
         · exact hdv)
       (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
-    (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
+    (lvlCnt_of_arena hS.arena.1 hR' (hf.ctl 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
   have hw := consInternM_lt imaxCS_wf hS.arena.1.imax hI₂

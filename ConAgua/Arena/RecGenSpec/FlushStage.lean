@@ -35,11 +35,11 @@ theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hIW : (flushMem m).arr64 IW = m.arr64 IW := hf.1 IW (by simp) (by decide)
   have hE : (flushMem m).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp) (by decide)
   have h200 : rdW ((flushMem m).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 :=
-    hf.2.1 200 (by simp [flushCtl])
+    hf.ctl 200 (by simp [flushCtl])
   have h129 : rdW ((flushMem m).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
-    hf.2.1 129 (by simp [flushCtl])
+    hf.ctl 129 (by simp [flushCtl])
   refine ⟨⟨hC, ?_⟩, ?_⟩
-  · simp only [IWOK, iwTop, erTop, hIW, hE, h200, h129, hf.2.2.1 CTL]; exact h.2
+  · simp only [IWOK, iwTop, erTop, hIW, hE, h200, h129, hf.size CTL]; exact h.2
   · refine ⟨?_, ?_, fun i _ => by rw [hIW], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _

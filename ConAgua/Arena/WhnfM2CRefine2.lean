@@ -75,14 +75,14 @@ theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
-    (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)))
+    (hS.den.of_internConst hus hrun (hf.arr EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)))
     (hmode := hS.mode.frame hf (by decide) (by decide))
 
 theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [tier1, CREC, CSLOT, CLP, SPN]) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+    hf.arr SPN (by simp [tier1, CREC, CSLOT, CLP, SPN]) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   exact StackKept.of_frame hf
 
 theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (_hf : f.toNat < 2 ^ 32)

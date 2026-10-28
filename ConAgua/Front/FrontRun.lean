@@ -283,7 +283,7 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
     (frontRun_specI p (lineKW p b.data) b.data (fun m => ∃ a st, FrontInv b m a st)
       (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data
-        hsize _ (fun m ⟨_, _, hI⟩ => ⟨hI.2.1.1.lit.1.2.2.1, hI.2.1.1.lit.1.2.2.2.1⟩)
+        hsize _ (fun m ⟨_, _, hI⟩ => ⟨hI.2.1.1.lit.1.cap, hI.2.1.1.lit.1.top⟩)
         (inv_step p (FrontInv b) b h64 hsize
           (fun m m' i ok nx st a hI hi h hok => lineKW_step b h64 hsize p hFI hAI hII hXI m m' i ok nx
             st a hI hi h hok)) n s₁ i hm hI hi)

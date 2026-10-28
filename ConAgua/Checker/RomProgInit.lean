@@ -41,7 +41,6 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb sz)) :
   have ht0 : (loadMem b pb sz).top = 0 := by simp only [top_rdW, hz]
   have hpt0 : (loadMem b pb sz).ptop0 = 0 := by
     simp only [Mem.ptop0]; rw [loadMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
-  have hw : (loadMem b pb sz).HasW CTL := trivial
   have hsl : ∀ a ∈ slotArrs, a ∈ checkerArrays.wordSlots := by decide
   have hs : ∀ a : ArrId, (a : TieredArray) ∈ slotArrs → tier1 a ∈ slotArrs → ∀ t,
       consMinWords ≤ ((loadMem b pb sz).arr64 (tierA a t)).size ∧
@@ -73,7 +72,7 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb sz)) :
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩⟩
-  · refine ⟨hw, by omega, by rw [hpc]; decide, by rw [ht0, hpc]; decide, by rw [hpt0]; simp,
+  · refine ⟨by omega, by rw [hpc]; decide, by rw [ht0, hpc]; decide, by rw [hpt0]; simp,
       by rw [ht0]; simp⟩
   · exact ⟨memoRG_zero bmSch bmKey _ _ hz (by simp; omega),
       memoRG_zero lfSch lfKey _ _ hz (by simp; omega),

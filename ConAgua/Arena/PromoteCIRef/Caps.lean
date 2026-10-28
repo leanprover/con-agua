@@ -232,9 +232,9 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   subst hm
   obtain ⟨w1, w2, w3, w4, w5, w6⟩ := capsWr_rel' p hp (d := d) (by rw [k1, hsz3]; omega)
     (by rw [k1, hsz3]; exact hsz) hcf
-  have hT4 : erecTop m₄ = erecTop m₃' := by simp only [erecTop]; rw [k2.2.1 129 (by simp)]
+  have hT4 : erecTop m₄ = erecTop m₃' := by simp only [erecTop]; rw [k2.ctl 129 (by simp)]
   have hT5 : erecTop m₅ = erecTop m₃' := by
-    simp only [erecTop]; rw [w2.2.1 129 (by simp), k2.2.1 129 (by simp)]
+    simp only [erecTop]; rw [w2.ctl 129 (by simp), k2.ctl 129 (by simp)]
   have hsz5 : (m₅.arr64 EREC).size = (m₃'.arr64 EREC).size := by rw [w1, k1]
   have hun : ∀ i, (i < d.toNat ∨ d.toNat + 15 ≤ i) → (m₅.arr64 EREC)[i]? = (m₃'.arr64 EREC)[i]? :=
     fun i hi => by rw [w3 i (by omega) (by omega) (by omega), k3 i (by omega)]

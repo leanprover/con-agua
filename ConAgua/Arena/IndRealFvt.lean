@@ -43,14 +43,14 @@ theorem stageR_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR dn vis fe m a) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr)) (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
     StageR dn vis fe m' a ∧ IWGrow m m' := by
-  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW hA2 (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (fun h => by have := hA _ h; simp [EREC] at this)
+  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW hA2 (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (fun h => by have := hA _ h; simp [EREC] at this)
     (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 200 hC2
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 hC2
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
-    hf.2.1 129 (fun h => by have := (hC _ h).1; simp at this)
+    hf.ctl 129 (fun h => by have := (hC _ h).1; simp at this)
   refine ⟨⟨CheckR.frame_hi hA hC hf hS.1, ?_⟩, ?_⟩
-  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.2.2.1 CTL]; exact hS.2
+  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact hS.2
   · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _
@@ -424,7 +424,7 @@ theorem getAppArgs_refinesR (p : Prog) (hg : p.lookup "get_app_args" = some getA
   have hsp : ∀ w : Word, spW s'.mem w = spW m₂ w := by
     intro w; rw [← hm]; simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hszs : (s'.mem.arr64 SPN).size = (s.mem.arr64 SPN).size := by
-    rw [← hm, size_set64]; exact hfr.2.2.1 SPN
+    rw [← hm, size_set64]; exact hfr.size SPN
   have hcN' : (r₁.headD 0).toNat = coreWalkFuel - f'.toNat := hcw
   refine ⟨?_, ?_, _, hrun', ?_, ?_⟩
   · rw [← hm]

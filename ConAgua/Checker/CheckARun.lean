@@ -43,7 +43,7 @@ def loadMemM (b pb : ByteArray) (sz : TieredArray → Nat) (w : Word) : Mem := (
 
 /-- A global write is a frame with no array write. -/
 theorem memFrame_setG (m : Mem) (g : GVar) (w : Word) : MemFrame [] [] m (m.setG g w) :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
 
 theorem capStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hs : ∀ s, sz s < 2 ^ 64) (w : Word) :
     RelSpec checkerProg "cap_check" (· = loadMemM b pb sz w)
@@ -83,8 +83,8 @@ theorem irpStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.si
   refine ⟨_, hrun', ?_⟩
   rw [hm] at hk hpf hfr
   have hk' : L.Keep (loadMem b pb sz) s'.mem := hk
-  have hpf' : MemFrame preLoopA preLoopC (loadMem b pb sz) s'.mem := hpf
-  have hfr' : MemFrame PinA StoreC (loadMem b pb sz) s'.mem := hfr
+  have hpf' : MemFrame preLoopA preLoopC (loadMem b pb sz) s'.mem := ⟨hpf.arr, hpf.ctl, hpf.size⟩
+  have hfr' : MemFrame PinA StoreC (loadMem b pb sz) s'.mem := ⟨hfr.arr, hfr.ctl, hfr.size⟩
   refine ⟨⟨hk', hc, by simpa [PbPre] using hpre, hpf'⟩, hA, ?_, ?_, ?_, hfull, hp0,
     ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_, hmo⟩
   · exact (stateDR_loadMem b pb sz hc).frame hfr' (pinA_not (by decide) (by decide))
@@ -92,7 +92,7 @@ theorem irpStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.si
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl
   · exact (rsetR_loadMem b pb sz hc).frame hfr' (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
-  · have := hfr'.2.1 131 (not_mem_storeC _ (by decide))
+  · have := hfr'.ctl 131 (not_mem_storeC _ (by decide))
     simp only [stkTop] at this ⊢
     rw [this]; exact stkTop_loadMem b pb sz
   · have z := loadMem_rd b pb sz

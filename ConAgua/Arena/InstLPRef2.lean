@@ -110,7 +110,7 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     ∃ a₃, (internLsNode hs).run a₂ = .ok (decI (rs.headD 0), a₃) ∧
       RFLOk m (m₃.set64 CTL 136 b) a a₃ (rs.headD 0) := by
   obtain ⟨s₄, hs₄m, -, hW₄⟩ := triple_of_callW (spnLs_spec p hL n ⟨m₂, Locals.init []⟩ c l
-    (by show pcap m₂ < 2 ^ 64; have := hA₂.1.lit.1.2.2.1; omega) hA₂.1.lit.1.top41) h4
+    (by show pcap m₂ < 2 ^ 64; have := hA₂.1.lit.1.cap; omega) hA₂.1.lit.1.top41) h4
   rw [hs₄m] at hW₄
   have hcl64 : c.toNat + l.toNat < 2 ^ 64 := by omega
   have hmode₂ : ModeOK m₂ :=
@@ -122,23 +122,23 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     (hf₁.mono (by simp; try grind) (by simp)).trans ((hf₂.mono (by simp; try grind) (by simp)).trans
       ((hf₃.mono (by simp; try grind) (by simp)).trans ((MemFrame.setCtl _ _ _).mono (by simp; try grind) (by simp))))
   have hctl' : (136 : Word).toNat < (m₃.arr64 CTL).size := by
-    have := hframe.2.2.1 CTL
+    have := hframe.size CTL
     rw [Mem.size_arr64_set64] at this; rw [this]; simpa using hctl
   have hspn₃ : (m₃.set64 CTL 136 b).arr64 SPN = m₂.arr64 SPN := by
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
     exact hf₃.1 SPN (by simp [tier1, SPN, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by decide)
-  have hpool₁ : m₁.arr64 POOL = m.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
-  have hpool₁' : m₁.arr64 POOL1 = m.arr64 POOL1 := hf₁.1 POOL1 (by simp [SPN, POOL1]) (by decide)
+  have hpool₁ : m₁.arr64 POOL = m.arr64 POOL := hf₁.arr POOL (by simp [SPN, POOL]) (by decide)
+  have hpool₁' : m₁.arr64 POOL1 = m.arr64 POOL1 := hf₁.arr POOL1 (by simp [SPN, POOL1]) (by decide)
   have hpool₁v := vpool_congr hpool₁ hpool₁'
   have hpool₁c := pcap_congr' hpool₁ hpool₁'
-  have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := hf₂.1 POOL (by simp [tier1, lvArrs, LH, SPN, POOL, ZREC, ZSLOT,
+  have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := hf₂.arr POOL (by simp [tier1, lvArrs, LH, SPN, POOL, ZREC, ZSLOT,
     SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
-  have hpool₂' : m₂.arr64 POOL1 = m₁.arr64 POOL1 := hf₂.1 POOL1 (by simp [tier1, lvArrs, LH, SPN, POOL1, ZREC, ZSLOT,
+  have hpool₂' : m₂.arr64 POOL1 = m₁.arr64 POOL1 := hf₂.arr POOL1 (by simp [tier1, lvArrs, LH, SPN, POOL1, ZREC, ZSLOT,
     SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
   have hpool₂v := vpool_congr hpool₂ hpool₂'
   have hpool₂c := pcap_congr' hpool₂ hpool₂'
-  have htop₁ : m₁.top = m.top := by simp only [top_rdW]; exact hf₁.2.1 0 (by simp)
-  have htop₂ : m₂.top = m₁.top := by simp only [top_rdW]; exact hf₂.2.1 0 (by simp [lvCtl])
+  have htop₁ : m₁.top = m.top := by simp only [top_rdW]; exact hf₁.ctl 0 (by simp)
+  have htop₂ : m₂.top = m₁.top := by simp only [top_rdW]; exact hf₂.ctl 0 (by simp [lvCtl])
   have hpool' : (m₃.set64 CTL 136 b).arr64 POOL = m₃.arr64 POOL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop' : (m₃.set64 CTL 136 b).top = m₃.top := by
     simp only [top_rdW]; rw [rdW_set64]; simp
@@ -204,13 +204,13 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     intro h l e; rw [← hal] at e; simp only at e; rw [en₂] at e
     have := hnc₁ h l e; rw [hstl]; exact this
   have hlscl : ReadLsCOK al := hlsc₂
-  have herec₁ : m₁.arr64 EREC = m₀.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
-  have hpool₁ : m₁.arr64 POOL = m₀.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
-  have hpool₁' : m₁.arr64 POOL1 = m₀.arr64 POOL1 := hf₁.1 POOL1 (by simp [SPN, POOL1]) (by decide)
+  have herec₁ : m₁.arr64 EREC = m₀.arr64 EREC := hf₁.arr EREC (by simp [SPN, EREC]) (by decide)
+  have hpool₁ : m₁.arr64 POOL = m₀.arr64 POOL := hf₁.arr POOL (by simp [SPN, POOL]) (by decide)
+  have hpool₁' : m₁.arr64 POOL1 = m₀.arr64 POOL1 := hf₁.arr POOL1 (by simp [SPN, POOL1]) (by decide)
   have hpool₁v := vpool_congr hpool₁ hpool₁'
   have hpool₁c := pcap_congr' hpool₁ hpool₁'
-  have htopm₁ : m₁.top = m₀.top := by simp only [top_rdW]; exact hf₁.2.1 0 (by simp)
-  have hsz₁ : (m₁.arr64 SPN).size = (m₀.arr64 SPN).size := hf₁.2.2.1 SPN
+  have htopm₁ : m₁.top = m₀.top := by simp only [top_rdW]; exact hf₁.ctl 0 (by simp)
+  have hsz₁ : (m₁.arr64 SPN).size = (m₀.arr64 SPN).size := hf₁.size SPN
   have hlen : (m₁.len64 SPN).toNat = (m₀.arr64 SPN).size := by
     rw [← hsz₁]; exact L.Front.toNat_ofNat_size _ (by rw [hsz₁]; exact hsz)
   have hk₁' : NmsR (nameN al.store.lss.ls.ns) m₁ SPN (bs.headD 0) pc ks := by rw [hstl]; exact hk₁

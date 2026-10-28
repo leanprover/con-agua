@@ -46,9 +46,9 @@ theorem allocW_afr {m m₁ : Mem} {k q : Word} (hw : allocW m k = some (q, m₁)
   have hf : MemFrame [IW] [200] m m₁ := by
     rw [hm1]; exact (MemFrame.setCtl m 200 _).mono (by simp) (by simp)
   obtain ⟨h1, h2, h3, h4, h5⟩ := hI
-  have hsz := hf.2.2.1
-  have hER : m₁.arr64 EREC = m.arr64 EREC := hf.1 EREC (by decide) (by decide)
-  have h129 : erTop m₁ = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by decide)]
+  have hsz := hf.size
+  have hER : m₁.arr64 EREC = m.arr64 EREC := hf.arr EREC (by decide) (by decide)
+  have h129 : erTop m₁ = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by decide)]
   refine ⟨⟨hf, hk.1, ?_⟩, by rw [hq]; rfl, htop, hroom⟩
   exact ⟨by rw [htop, hsz IW]; exact hroom, by rw [h129, hER]; exact h2, by rw [hsz IW]; exact h3,
     by rw [hER]; exact h4, by rw [hsz CTL]; exact h5⟩
@@ -77,10 +77,10 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   obtain ⟨idx₀, hR₀⟩ := hnix
   have hfc := mclearG_frame hnSch m
   have hRc : NixR (mclearG hnSch m) ∅ := memoRV_clear hnSch hnSch_wf nmKey _ m idx₀ hR₀ hw
-  have hIWc : (mclearG hnSch m).arr64 IW = m.arr64 IW := hfc.1 IW (by simp) (by decide)
+  have hIWc : (mclearG hnSch m).arr64 IW = m.arr64 IW := hfc.arr IW (by simp) (by decide)
   have hOc : OrdR (mclearG hnSch m) ord ds :=
     ordR_low (iwTop m) hO (by omega) (by omega) (fun x _ => by rw [hIWc])
-      (hfc.1 DECL (by simp) (by decide)) (hfc.1 DLP (by simp) (by decide))
+      (hfc.arr DECL (by simp) (by decide)) (hfc.arr DLP (by simp) (by decide))
   rcases hix : hIndexGoW n (mclearG hnSch m) ord cw 0 with _ | ⟨z₁, m₁⟩ <;> rw [hix] at h
   · simp [hNatOpGroundW.k_hoist_index_go.eq_1] at h
   rw [hNatOpGroundW.k_hoist_index_go.arm1] at h
@@ -88,14 +88,14 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     UInt64.zero_le hRc hix
   simp only [UInt64.toNat_zero] at hR₁
   have hf₀₁ : MemFrame [HNIX] [75, 76] m m₁ := (hfc.mono (by simp) (by simp)).trans hf₁
-  have hIW₁ : m₁.arr64 IW = m.arr64 IW := hf₀₁.1 IW (by decide) (by decide)
-  have htop₁ : iwTop m₁ = iwTop m := by simp only [iwTop]; rw [hf₀₁.2.1 200 (by decide)]
+  have hIW₁ : m₁.arr64 IW = m.arr64 IW := hf₀₁.arr IW (by decide) (by decide)
+  have htop₁ : iwTop m₁ = iwTop m := by simp only [iwTop]; rw [hf₀₁.ctl 200 (by decide)]
   have hI₁ : IWOK m₁ := by
     obtain ⟨h1, h2, h3, h4, h5⟩ := hI
-    have hER : m₁.arr64 EREC = m.arr64 EREC := hf₀₁.1 EREC (by decide) (by decide)
-    have h129 : erTop m₁ = erTop m := by simp only [erTop]; rw [hf₀₁.2.1 129 (by decide)]
+    have hER : m₁.arr64 EREC = m.arr64 EREC := hf₀₁.arr EREC (by decide) (by decide)
+    have h129 : erTop m₁ = erTop m := by simp only [erTop]; rw [hf₀₁.ctl 129 (by decide)]
     exact ⟨by rw [htop₁, hIW₁]; exact h1, by rw [h129, hER]; exact h2, by rw [hIW₁]; exact h3,
-      by rw [hER]; exact h4, by rw [hf₀₁.2.2.1 CTL]; exact h5⟩
+      by rw [hER]; exact h4, by rw [hf₀₁.size CTL]; exact h5⟩
   -- the targets and the stack
   rcases ha₁ : allocW m₁ cw with _ | ⟨tg, m₂⟩ <;> rw [ha₁] at h
   · simp [hNatOpGroundW.k_iw_alloc.eq_1] at h
@@ -105,14 +105,14 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   · simp [hNatOpGroundW.k_iw_alloc_2.eq_1] at h
   rw [hNatOpGroundW.k_iw_alloc_2.arm1] at h
   obtain ⟨hA₃, hws, htop₃, hroom₃⟩ := allocW_afr ha₂ hA₂.2.2
-  have hsz₂ : (m₂.arr64 IW).size = (m.arr64 IW).size := by rw [hA₂.1.2.2.1 IW, hIW₁]
-  have hsz₃ : (m₃.arr64 IW).size = (m.arr64 IW).size := by rw [hA₃.1.2.2.1 IW, hsz₂]
+  have hsz₂ : (m₂.arr64 IW).size = (m.arr64 IW).size := by rw [hA₂.1.size IW, hIW₁]
+  have hsz₃ : (m₃.arr64 IW).size = (m.arr64 IW).size := by rw [hA₃.1.size IW, hsz₂]
   rcases hz : hZeroW n m₃ tg cw 0 with _ | ⟨z₄, m₄⟩ <;> rw [hz] at h
   · simp [hNatOpGroundW.k_hoist_zero.eq_1] at h
   rw [hNatOpGroundW.k_hoist_zero.arm1] at h
   obtain ⟨hf₄, hrd₄⟩ := hZero_ok n m₃ m₄ tg cw 0 z₄ (by rw [hsz₃]; omega) (by rw [hsz₃]; exact hsz) hz
-  have hsz₄ : (m₄.arr64 IW).size = (m.arr64 IW).size := by rw [hf₄.2.2.1 IW, hsz₃]
-  have htop₄ : iwTop m₄ = iwTop m₃ := by simp only [iwTop]; rw [hf₄.2.1 200 (by simp)]
+  have hsz₄ : (m₄.arr64 IW).size = (m.arr64 IW).size := by rw [hf₄.size IW, hsz₃]
+  have htop₄ : iwTop m₄ = iwTop m₃ := by simp only [iwTop]; rw [hf₄.ctl 200 (by simp)]
   -- the cells below the targets are the original ones
   have hlow : ∀ x : Nat, x < tg.toNat → (m₄.arr64 IW)[x]? = (m.arr64 IW)[x]? := by
     intro x hx
@@ -122,14 +122,14 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   have hfA : MemFrame [IW, HNIX] [75, 76, 200] m m₄ :=
     ((hf₀₁.mono (by simp) (by simp)).trans ((hA₂.1.trans hA₃.1).mono (by simp) (by simp))).trans
       (hf₄.mono (by simp) (by simp))
-  have hD₄ : m₄.arr64 DECL = m.arr64 DECL := hfA.1 DECL (by decide) (by decide)
-  have hDLP₄ : m₄.arr64 DLP = m.arr64 DLP := hfA.1 DLP (by decide) (by decide)
+  have hD₄ : m₄.arr64 DECL = m.arr64 DECL := hfA.arr DECL (by decide) (by decide)
+  have hDLP₄ : m₄.arr64 DLP = m.arr64 DLP := hfA.arr DLP (by decide) (by decide)
   have hI₄ : IWOK m₄ := by
     obtain ⟨h1, h2, h3, h4, h5⟩ := hA₃.2.2
     have hER : m₄.arr64 EREC = m₃.arr64 EREC := hf₄.1 EREC (by decide) (by decide)
-    have h129 : erTop m₄ = erTop m₃ := by simp only [erTop]; rw [hf₄.2.1 129 (by simp)]
-    exact ⟨by rw [htop₄, hf₄.2.2.1 IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hf₄.2.2.1 IW]; exact h3, by rw [hER]; exact h4, by rw [hf₄.2.2.1 CTL]; exact h5⟩
+    have h129 : erTop m₄ = erTop m₃ := by simp only [erTop]; rw [hf₄.ctl 129 (by simp)]
+    exact ⟨by rw [htop₄, hf₄.size IW]; exact h1, by rw [h129, hER]; exact h2,
+      by rw [hf₄.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf₄.size CTL]; exact h5⟩
   have hA4 : ∀ b ∈ ([IW, HNIX] : List TieredArray), InHigh b := by decide
   have hC4 : ∀ x ∈ ([75, 76, 200] : List Word), 64 ≤ x.toNat := by simp
   have hE₄ : HEnv m₄ a ds (nameIndex ds ∅ 0) ord tg ws cw.toNat := by
@@ -146,7 +146,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     refine ⟨fun k hk => ?_, fun k _ => by simp⟩
     rw [addrN, ← rd, hrd₄ _ (by omega), ite_eq_left (by simp; omega)]
     simp [tgW]
-  have hP₄ : PinsR m₄ a.pins := hP.congr (hfA.1 PINS (by decide) (by decide))
+  have hP₄ : PinsR m₄ a.pins := hP.congr (hfA.arr PINS (by decide) (by decide))
   -- the targets pass
   rcases ht : hTargetsGoW p n m₄ ord cw tg ws 0 with _ | ⟨z₅, m₅⟩ <;> rw [ht] at h
   · simp [hNatOpGroundW.k_hoist_targets_go.eq_1] at h
@@ -167,9 +167,9 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   -- the pool only grew up to here
   have hgrow₅ : IWGrow m m₅ := by
     have hER : m₅.arr64 EREC = m.arr64 EREC := by
-      rw [hlow₅.1.1 EREC (by decide) (by decide), hfA.1 EREC (by decide) (by decide)]
+      rw [hlow₅.1.1 EREC (by decide) (by decide), hfA.arr EREC (by decide) (by decide)]
     have h129 : erTop m₅ = erTop m := by
-      simp only [erTop]; rw [hlow₅.1.2.1 129 (by decide), hfA.2.1 129 (by decide)]
+      simp only [erTop]; rw [hlow₅.1.ctl 129 (by decide), hfA.ctl 129 (by decide)]
     refine ⟨by have := hlow₅.2.2; omega, by rw [h129]; exact Nat.le_refl _, fun x hx => ?_, fun x _ => by rw [hER]⟩
     rw [hlow₅.2.1 x (by omega), hlow x (by omega)]
   have hrun0 : (hoistNatOpGround ds).run a =

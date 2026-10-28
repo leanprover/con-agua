@@ -34,11 +34,11 @@ theorem StageC.of_leaf {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m 
     (hS : StageR dn vis fe m' a') (hf : MemFrame leafA leafC m m')
     (hs : ConRon.Bridge.Frontend.IStepS a a') : StageC dn vis fe env m' a' :=
   ⟨hS, h.check.mono hs.ok hs.ext hs.caches hs.pins,
-    ⟨by rw [hf.2.2.1]; exact h.mem.erec, by rw [hf.2.2.1]; exact h.mem.spn,
-      by rw [hf.2.2.1]; exact h.mem.bstk,
+    ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
+      by rw [hf.size]; exact h.mem.bstk,
       h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
       fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    by simp only [pinW, hf.1 PINS leafA_pins (by decide)]; exact h.flag⟩
+    by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
 
 /-- **`StageC` after a `StageT`-keeping call**, with con-ron's `CheckOK` after it. -/
 theorem StageC.of_T {m : Mem} {a : AState} (hT : StageT dn vis fe m a)

@@ -193,14 +193,14 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
-    (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)))
+    (hS.den.of_internConst hus hrun (hf.arr EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)))
     (hmode := hS.mode.frame hf (by decide) (by decide))
 
 theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [tier1, CREC, CSLOT, CLP, SPN]) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+    hf.arr SPN (by simp [tier1, CREC, CSLOT, CLP, SPN]) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   exact StackKept.of_frame hf
 
 /-- **An interned `const` handle word is below `2^32`.** -/
@@ -541,7 +541,7 @@ theorem natZeroOk_run_ctor {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins) 
   simp only [natZeroOk, StateT.run_bind, pinNat_run hP, except_ok_bind, h]; rfl
 
 theorem MemFrame.arr_eq {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (b : TieredArray) (hb : b ∉ A) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := hf.1 b hb hc
+    (b : TieredArray) (hb : b ∉ A) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := hf.arr b hb hc
 
 section refs3
 variable (p : Prog)

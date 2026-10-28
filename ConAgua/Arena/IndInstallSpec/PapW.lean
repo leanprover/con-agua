@@ -112,16 +112,16 @@ theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word
      hS.1.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
      hS.1.pins.frame (by decide) hfr, hE, hS.1.mode.frame hfr (by decide) (by decide)⟩
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
-  have hI : m'.arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
-  have hER : m'.arr64 EREC = m.arr64 EREC := hfr.1 EREC (by decide) (by decide)
-  have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.2.1 200 (by decide)]
-  have h129 : erTop m' = erTop m := by simp only [erTop, hfr.2.1 129 (by decide)]
+  have hI : m'.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
+  have hER : m'.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
+  have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
+  have h129 : erTop m' = erTop m := by simp only [erTop, hfr.ctl 129 (by decide)]
   refine ⟨⟨hC, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   · rw [h200, hI]; exact hI1
   · rw [h129, hER]; exact hE1
   · rw [hI]; exact hsz
   · rw [hER]; exact hEs
-  · rw [hfr.2.2.1 CTL]; exact hc
+  · rw [hfr.size CTL]; exact hc
   · exact ⟨by omega, by omega, fun i _ => by rw [hI], fun i _ => by rw [hER]⟩
 
 /-! ## `env_pop_temp`'s write set -/

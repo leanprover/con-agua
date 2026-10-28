@@ -724,9 +724,9 @@ theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m
 theorem SpineR.frame {m m' : Mem} {o n : Word} {xs : Array EIdx} (hx : SpineR m o n xs)
     {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m') (hA : (SPN : TieredArray) ∉ A) : SpineR m' o n xs where
   size := hx.size
-  bound := by rw [hf.2.2.1 SPN]; exact hx.bound
-  lt := fun i hi => by rw [spW, hf.1 SPN hA (by decide)]; exact hx.lt i hi
-  get := fun i hi => by rw [hx.get i hi, spW, spW, hf.1 SPN hA (by decide)]
+  bound := by rw [hf.size SPN]; exact hx.bound
+  lt := fun i hi => by rw [spW, hf.arr SPN hA (by decide)]; exact hx.lt i hi
+  get := fun i hi => by rw [hx.get i hi, spW, spW, hf.arr SPN hA (by decide)]
 
 /-- **`mkAppNFrom` from `0` is `mkAppN`** over the whole array (con-leche's standing
 `List`-as-cursor deviation, §3.4): by induction on a bound on `xs.size - i`. -/

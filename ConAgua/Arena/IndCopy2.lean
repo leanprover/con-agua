@@ -80,14 +80,14 @@ theorem iwGrow_of_frame {m m' : Mem} {N : Word} (hf : MemFrame [IW] [200] m m')
     (hlow : ∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) : IWGrow m m' := by
   refine ⟨?_, ?_, hlow, ?_⟩
   · simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp only [iwTop] at hroom; omega
-  · simp only [erTop]; rw [hf.2.1 129 (by simp)]; exact Nat.le_refl _
-  · intro i _; rw [hf.1 EREC (by decide) (by decide)]
+  · simp only [erTop]; rw [hf.ctl 129 (by simp)]; exact Nat.le_refl _
+  · intro i _; rw [hf.arr EREC (by decide) (by decide)]
 
 /-- A copy that touches only `IW` is a frame. -/
 theorem memFrame_of_copy {m m' : Mem} (hA : ∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b)
-    (hS : (m'.arr64 IW).size = (m.arr64 IW).size) (hW : m.SameShape m') :
+    (hS : (m'.arr64 IW).size = (m.arr64 IW).size) :
     MemFrame [IW] [] m m' := by
-  refine ⟨fun b hb hc => hA b (by simpa using hb), fun x _ => ?_, fun b => ?_, hW⟩
+  refine ⟨fun b hb hc => hA b (by simpa using hb), fun x _ => ?_, fun b => ?_⟩
   · rw [hA CTL (by decide)]
   · by_cases hb : b = IW
     · subst hb; exact hS
@@ -222,9 +222,9 @@ theorem set64IW_get (m : Mem) (p x : Word) (i : Nat) :
 
 /-- A copy into `IW` (touching nothing else) is a frame. -/
 theorem copy_frame {m m' : Mem} (hA : ∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b)
-    (hS : (m'.arr64 IW).size = (m.arr64 IW).size) (hW : m.SameShape m') :
+    (hS : (m'.arr64 IW).size = (m.arr64 IW).size) :
     MemFrame [IW] [200] m m' :=
-  MemFrame.mono (memFrame_of_copy hA hS hW) (by simp) (by simp)
+  MemFrame.mono (memFrame_of_copy hA hS) (by simp) (by simp)
 
 theorem set64IW_frame (m : Mem) (p x : Word) : MemFrame [IW] [200] m (m.set64 IW p x) :=
   MemFrame.mono (MemFrame.set64 m IW (by decide) p x) (by simp) (by simp)
@@ -313,11 +313,11 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
   have hql : (q + l).toNat = q.toNat + l.toNat := by
     rw [UInt64.toNat_add]; simp; omega
   have hIW := allocMem_IW m (l + 1)
-  obtain ⟨hA, hS, hW, hG⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by simp only [iwTop, hqq] at hsrc; omega)
+  obtain ⟨hA, hS, hG⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by simp only [iwTop, hqq] at hsrc; omega)
     (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
   rw [hIW] at hS hG
   have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | exact hW | exact Mem.SameShape.trans (by simp [allocMem]) hW))
+    (allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]))
   have hfr' := hfr.trans (set64IW_frame m2 (q + l) x)
   have hget : ∀ i, ((m2.set64 IW (q + l) x).arr64 IW)[i]? =
       if i = q.toNat + l.toNat then some x
@@ -431,15 +431,15 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
     rw [UInt64.toNat_add]; simp; omega
   have hIW := allocMem_IW m (l1 + l2)
   simp only [iwTop, hqq] at hsrc1 hsrc2
-  obtain ⟨hA1, hS1, hW1, hG1⟩ := copyW_get (n - 1) _ _ _ _ _ hcp1 (by omega)
+  obtain ⟨hA1, hS1, hG1⟩ := copyW_get (n - 1) _ _ _ _ _ hcp1 (by omega)
     (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
-  obtain ⟨hA2, hS2, hW2, hG2⟩ := copyW_get (n - 1) _ _ _ _ _ hcp2 (by rw [hql]; omega)
+  obtain ⟨hA2, hS2, hG2⟩ := copyW_get (n - 1) _ _ _ _ _ hcp2 (by rw [hql]; omega)
     (by rw [hql, hS1, hIW]; omega) (by rw [hS1, hIW]; exact hsz)
   rw [hIW] at hS1 hG1
   have hfr : MemFrame [IW] [200] m m3 :=
     (allocMem_frame m (l1 + l2)).trans
-      ((copy_frame hA1 (by rw [hS1, hIW]) hW1).trans
-       (copy_frame hA2 hS2 hW2))
+      ((copy_frame hA1 (by rw [hS1, hIW])).trans
+       (copy_frame hA2 hS2))
   have hget : ∀ i, (m3.arr64 IW)[i]? =
       if q.toNat ≤ i ∧ i < q.toNat + l1.toNat then (m.arr64 IW)[o1.toNat + (i - q.toNat)]?
       else if q.toNat + l1.toNat ≤ i ∧ i < q.toNat + l1.toNat + l2.toNat then
@@ -524,7 +524,6 @@ theorem erCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d s
     s.toNat + l.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
     d.toNat + l.toNat ≤ (m.arr64 IW).size → (m.arr64 IW).size < 2 ^ 64 →
     (∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-    m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat then (m.arr64 EREC)[s.toNat + (i - d.toNat)]?
       else (m.arr64 IW)[i]? := by
@@ -536,7 +535,7 @@ theorem erCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d s
     · rw [erCopyW_nil n m d s l hl] at h
       cases h
       subst hl
-      refine ⟨fun _ _ => rfl, rfl, .refl _, fun i => ?_⟩
+      refine ⟨fun _ _ => rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
@@ -565,13 +564,12 @@ theorem erCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d s
           simp only [hdlt, ite_true]
           simp [rdW, Array.getElem?_eq_getElem hslt]
         · simp [hi, Ne.symm hi]
-      obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
+      obtain ⟨hA, hS, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
         (by rw [hs1, hl1, hE1]; omega) (by rw [hE1]; exact hE)
         (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
       rw [hE1] at hG
-      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, Mem.SameShape.trans ?_ hW, fun i => ?_⟩
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, fun i => ?_⟩
       · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
-      · rw [hm1]; exact Mem.sameShape_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
         · rw [ite_eq_left hi]
@@ -636,12 +634,12 @@ theorem erToIwW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List 
   have hIW := allocMem_IW m l
   have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
     simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hA, hS, hW, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
+  obtain ⟨hA, hS, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
     (by rw [hEE]; exact hE) (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
   rw [hIW] at hS hG
   rw [hEE] at hG
   have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m l).trans (copy_frame hA (by rw [hS, hIW]) hW)
+    (allocMem_frame m l).trans (copy_frame hA (by rw [hS, hIW]))
   have htop : rdW (m2.arr64 CTL) 200 = q + l := by
     rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + l).toNat = q.toNat + l.toNat := by

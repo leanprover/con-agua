@@ -619,7 +619,7 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
   have hsp : ∀ w : Word, spW s'.mem w = spW m₂ w := by
     intro w; rw [← hm]; simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hszs : (s'.mem.arr64 SPN).size = (s.mem.arr64 SPN).size := by
-    rw [← hm, size_set64]; exact hfr.2.2.1 SPN
+    rw [← hm, size_set64]; exact hfr.size SPN
   have hctl136 : (136 : Word).toNat < (m₂.arr64 CTL).size := by
     rw [← hm, size_set64] at h136; exact h136
   have htop' : spTop s'.mem = rdW (s.mem.arr64 CTL) 136 + r₁.headD 0 := by
@@ -790,7 +790,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   have hadd : (rdW (s.mem.arr64 CTL) 136 + r₁.headD 0).toNat =
       (rdW (s.mem.arr64 CTL) 136).toNat + (r₁.headD 0).toNat := by
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  have hsz2 : (m₂.arr64 SPN).size = (s.mem.arr64 SPN).size := hfr.2.2.1 SPN
+  have hsz2 : (m₂.arr64 SPN).size = (s.mem.arr64 SPN).size := hfr.size SPN
   have hfu3 := fillNW_fuel _ _ _ _ _ _ (by simp [coreWalkFuel]; omega) hfill3
   rw [← hcN] at hfill3
   obtain ⟨m'', hf'', hfr3, hget3, hout3⟩ := fillNW_ok (rdW (s.mem.arr64 CTL) 136 + r₁.headD 0)
@@ -806,7 +806,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   have hsp : ∀ w : Word, spW s'.mem w = spW m₃ w := by
     intro w; rw [← hm]; simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hszs : (s'.mem.arr64 SPN).size = (s.mem.arr64 SPN).size := by
-    rw [← hm, size_set64]; rw [hfr3.2.2.1 SPN]; exact hsz2
+    rw [← hm, size_set64]; rw [hfr3.size SPN]; exact hsz2
   have hctl136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
     rw [← hm, size_set64] at h136; exact h136
   have htop' : spTop s'.mem = rdW (s.mem.arr64 CTL) 136 + r₁.headD 0 + r₁.headD 0 := by

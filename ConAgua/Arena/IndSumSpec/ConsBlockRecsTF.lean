@@ -681,7 +681,7 @@ theorem rteGoW_mem (n : Nat) : ∀ (m m' : Mem) (b ro rl : Word) (r : List Word)
   have hfr := wrER_frame (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro)) m b
   rw [hW] at hfr
   have hI : W.arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
-  have hEsz : (W.arr64 EREC).size = (m.arr64 EREC).size := hfr.2.2.1 EREC
+  have hEsz : (W.arr64 EREC).size = (m.arr64 EREC).size := hfr.size EREC
   have hlow : ∀ i < b.toNat, (W.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := fun i hi => by
     rw [← hW, wrER_get _ m b i (by simp [recWords]; omega) hEs]
     rw [ite_eq_right (by omega)]
@@ -907,7 +907,7 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
     (by rw [ruleWords_length, hk])
   have hroom : b.toNat + 11 * rl.toNat ≤ (m1.arr64 EREC).size := by
     obtain ⟨-, h2, -, h4, -⟩ := hS1.2
-    have hs := (wrER_frame (ruleWords m1 ro rl.toNat) m1 b).2.2.1 EREC
+    have hs := (wrER_frame (ruleWords m1 ro rl.toNat) m1 b).size EREC
     rw [ruleWords_length] at htop1; omega
   have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hold hroom (by rw [hE1]; exact hS.2.2.2.2.1)
   subst hm2

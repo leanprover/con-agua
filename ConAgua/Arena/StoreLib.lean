@@ -279,13 +279,6 @@ theorem wrRec_read (S : Schema) (hS : S.WF) (t c i f : Word) (hc : c.toNat < 2 ^
       simp only [List.length_cons, this, List.getD_cons_succ]
       grind
 
-theorem wrRec_words (S : Schema) (t c : Word) :
-    ∀ (vs : List Word) (m : Mem) (f : Word), m.SameShape (wrRec S t c m f vs) := by
-  intro vs
-  induction vs with
-  | nil => intro m f; exact .refl m
-  | cons v vs ih => intro m f; rw [wrRec]; exact (Mem.sameShape_set64 _ _ _ _).trans (ih _ _)
-
 /-- The memory after appending node `c` (record `vs`) to tier `t`, registered at slot `j` with the
 key word `q`. -/
 def pushG (S : Schema) (m : Mem) (t : Word) (vs : List Word) (j c q : Word) : Mem :=
@@ -303,9 +296,6 @@ theorem pushG_arr (b : TieredArray) (h1 : b ≠ tierA S.ra t) (h2 : b ≠ tierA 
 @[store_grind =] theorem pushG_size (b : TieredArray) :
     ((pushG S m t vs j c q).arr64 b).size = (m.arr64 b).size := by
   rw [pushG, size_set64, size_set64, size_set64, wrRec_size]
-
-@[store_grind .] theorem pushG_words : m.SameShape (pushG S m t vs j c q) := by
-  rw [pushG]; exact (((wrRec_words S t c vs m 0).set64 _ _ _).set64 _ _ _).set64 _ _ _
 
 include hS in
 @[store_grind =] theorem pushG_ctl (ht : t ≤ 1) (x : Word) :

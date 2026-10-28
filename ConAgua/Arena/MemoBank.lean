@@ -180,12 +180,12 @@ theorem bank_put (S : MemoSch) (hS : S.WF) (K : MemoKey κ)
   rw [hdk] at hR'
   have hf := msetG_frame S hS m m' k1 (genW k2 g) w hs
   have hcw : ∀ y, y = c ∨ y = c + 1 → rdW (m'.arr64 CTL) y = rdW (m.arr64 CTL) y := by
-    intro y hy; apply hf.2.1; simp only [List.mem_singleton]; rcases hy with rfl | rfl
+    intro y hy; apply hf.ctl; simp only [List.mem_singleton]; rcases hy with rfl | rfl
     · exact Ne.symm hc.1
     · exact Ne.symm hc.2
   exact ⟨hR', bank_set M g mp hb _ x, fresh_set M G g hF hgG _ x,
     by rw [hcw c (.inl rfl)]; exact hB1, by rw [hcw (c + 1) (.inr rfl)]; exact hB2, hgG, hGl,
-    by rw [hf.2.2.1]; exact hsz⟩
+    by rw [hf.size]; exact hsz⟩
 
 omit [LawfulBEq κ] [LawfulHashable κ] in
 /-- **A probe at the current generation is a lookup in the current bank**: a hit is the bank's

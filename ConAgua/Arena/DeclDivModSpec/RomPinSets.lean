@@ -95,7 +95,7 @@ theorem erToIwW_words {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   have hIW := allocMem_IW m l
   have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
     simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hA, hS, hW, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
+  obtain ⟨hA, hS, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
     (by rw [hEE]; exact hE) (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
   rw [hEE] at hG
   intro i hi
@@ -141,7 +141,7 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
   obtain ⟨-, -, -, hS', hg', htop'⟩ := L.Arena.erToIwW_stage hmod' hS (Or.inr hsrc)
   have hw := erToIwW_words hmod' hsz hct hEs hsrc
   have hP' : PinSetsR s'.mem ips :=
-    PinSetsR.grow ⟨hlen, hbd, hrec⟩ (IWGrow.recGrow hg) (hfr.2.1 150 (by simp)) (hfr.2.1 151 (by simp))
+    PinSetsR.grow ⟨hlen, hbd, hrec⟩ (IWGrow.recGrow hg) (hfr.ctl 150 (by simp)) (hfr.ctl 151 (by simp))
   refine ⟨hS', hg, hP', ?_⟩
   rw [hr]
   simp only [List.headD_cons, List.tail_cons]

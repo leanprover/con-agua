@@ -168,9 +168,9 @@ theorem LitR.frame (hap : Apart litSch [POOL, POOL1, PT0] [0] A C) (h : LitR m a
   refine ⟨?_, ConsR.frame litCS_wf litLocal hap hf hs⟩
   obtain ⟨-, -, -, -, hA₀, -, -, -, -, hC₀⟩ := hap
   have h0 := hC₀ 0 (by simp)
-  exact hp.frame (hf.1 POOL (hA₀ POOL (by simp)).1 (by decide))
-    (hf.1 POOL1 (hA₀ POOL1 (by simp)).1 (by decide)) (hf.1 PT0 (hA₀ PT0 (by simp)).1 (by decide))
-    (hf.2.2.1 CTL) (by simp only [top_rdW]; exact hf.2.1 0 h0) hf.2.2.2
+  exact hp.frame (hf.arr POOL (hA₀ POOL (by simp)).1 (by decide))
+    (hf.arr POOL1 (hA₀ POOL1 (by simp)).1 (by decide)) (hf.arr PT0 (hA₀ PT0 (by simp)).1 (by decide))
+    (hf.size CTL) (by simp only [top_rdW]; exact hf.ctl 0 h0)
 theorem AppR.frame (hap : Apart appSch [] [] A C) (h : AppR m a) : AppR m' a :=
   ConsR.frame appCS_wf appLocal hap hf h
 theorem SortR.frame (hap : Apart sortSch [] [] A C) (h : SortR m a) : SortR m' a :=
@@ -434,7 +434,6 @@ theorem arenaR_init (sz : TieredArray → Nat) (hctl : 64 ≤ sz CTL)
     rw [initMem_arr]; simp
   have hp : ((initMem sz).arr64 POOL).size = sz POOL := by
     rw [initMem_arr]; simp
-  have hw : (initMem sz).HasW CTL := by simp
   refine ⟨⟨?_, consR_init hz (by rw [hc]; simp [litCS, litCSk]; omega) (hs _ (by decide))⟩,
     consR_init hz (by rw [hc]; simp [appCS]; omega) (hs _ (by decide)),
     consR_init hz (by rw [hc]; simp [sortCS]; omega) (hs _ (by decide)),
@@ -464,7 +463,7 @@ theorem arenaR_init (sz : TieredArray → Nat) (hctl : 64 ≤ sz CTL)
     have hpc : pcap (initMem sz) = 2 ^ 41 - 1 := pcap_of_small _ ⟨by rw [hp]; exact hpool, by rw [hp1]; exact hpool1⟩
     have ht : (initMem sz).top = 0 := by simp only [top_rdW, hz]
     have hq : (initMem sz).ptop0 = 0 := by simp only [Mem.ptop0]; exact hz PT0 0
-    refine ⟨hw, by rw [hc]; omega, by rw [hpc]; omega, by rw [hpc, ht]; simp, by rw [hq]; simp, ?_⟩
+    refine ⟨by rw [hc]; omega, by rw [hpc]; omega, by rw [hpc, ht]; simp, by rw [hq]; simp, ?_⟩
     rw [ht]; simp
   · exact memosR_init sz hctl
 
@@ -767,8 +766,8 @@ theorem lsOrW_ok (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
     (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us) :
     lsOrW m o l.toNat = hpW (a.store.lss.derOfView us) := by
   have hle := hq.le
-  have htop := hR.lit.1.2.2.2.1
-  have hpc := pcap_eq m (by have := hR.lit.1.2.2.1; omega)
+  have htop := hR.lit.1.top
+  have hpc := pcap_eq m (by have := hR.lit.1.cap; omega)
   exact lsOrW_slice m a hR l.toNat o us (by omega) hk
 
 end lpok
@@ -982,8 +981,8 @@ theorem internLs_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLsNode us) a₀ ∧
       ArenaR s'.mem (AM.st (internLsNode us) a₀) ∧
       AM.res (internLsNode us) a₀ = decI (r.headD 0); ⊤⦄ := by
-  have hps := hR.lit.1.2.2.1
-  have htop := hR.lit.1.2.2.2.1
+  have hps := hR.lit.1.cap
+  have htop := hR.lit.1.top
   have hq1 := hq.le
   have hspec := internLs_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
     (by omega)
@@ -1010,8 +1009,8 @@ theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode (.str (decI q) s)) a₀ ∧
       ArenaR s'.mem (AM.st (internNNode (.str (decI q) s)) a₀) ∧
       AM.res (internNNode (.str (decI q) s)) a₀ = decI (r.headD 0); ⊤⦄ := by
-  have hps := hR.lit.1.2.2.1
-  have htop := hR.lit.1.2.2.2.1
+  have hps := hR.lit.1.cap
+  have htop := hR.lit.1.top
   have hq1 := hq.le
   have hspec := internNStr_spec p hph hpe hpm hpf hpp hp n s₀ q o l (by omega)
     (by omega)
@@ -1148,7 +1147,7 @@ namespace L.Arena
 /-- Appending to the pool is a frame of the pool and its top. -/
 theorem grows_frame (m m' : Mem) (hg : Grows m m') : MemFrame [POOL, POOL1] [0] m m' := by
   have hf := hg.frame
-  refine ⟨fun b hb' hc => ?_, fun x hx => ?_, fun b => ?_, ?_⟩
+  refine ⟨fun b hb' hc => ?_, fun x hx => ?_, fun b => ?_⟩
   · simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hb'
     rw [hf.arr b hb'.1 hb'.2, Mem.arr64_set64_ne _ _ _ _ _ hc]
   · rw [hf.ctl, rdW_set64]
@@ -1159,7 +1158,6 @@ theorem grows_frame (m m' : Mem) (hg : Grows m m') : MemFrame [POOL, POOL1] [0] 
     · by_cases h1 : b = POOL1
       · subst h1; rw [hf.size1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       · rw [hf.arr b h h1, size_set64]
-  · exact (Mem.sameShape_set64 _ _ _ _).trans hf.size
 
 /-- **Appending to the pool keeps `ArenaR`**: the tables whose records point into the pool by
 their own `grow` lemmas, the others by the frame. -/
@@ -1184,8 +1182,8 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       ArenaR s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
-  have hps := hR.lit.1.2.2.1
-  have htop := hR.lit.1.2.2.2.1
+  have hps := hR.lit.1.cap
+  have htop := hR.lit.1.top
   have hq1 := hq.le
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
     (by omega)
@@ -1212,8 +1210,8 @@ theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHa
       AM.ok (internE (.lit (.strVal s))) a₀ ∧
       ArenaR s'.mem (AM.st (internE (.lit (.strVal s))) a₀) ∧
       AM.res (internE (.lit (.strVal s))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  have hps := hR.lit.1.2.2.1
-  have htop := hR.lit.1.2.2.2.1
+  have hps := hR.lit.1.cap
+  have htop := hR.lit.1.top
   have hq1 := hq.le
   have hspec := internLitStr_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
     (by omega)

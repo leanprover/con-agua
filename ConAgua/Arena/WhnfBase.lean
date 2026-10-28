@@ -105,8 +105,8 @@ theorem BKept.trans {m₁ m₂ m₃ : Mem} (h₁ : BKept m₁ m₂) (h₂ : BKep
 
 theorem BKept.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hA : (BSTK : TieredArray) ∉ A) (hC : (137 : Word) ∉ C) : BKept m m' := by
-  have hb : m'.arr64 BSTK = m.arr64 BSTK := hf.1 BSTK hA (by decide)
-  exact ⟨hf.2.1 137 hC, by rw [hb], fun j _ => by rw [hb]⟩
+  have hb : m'.arr64 BSTK = m.arr64 BSTK := hf.arr BSTK hA (by decide)
+  exact ⟨hf.ctl 137 hC, by rw [hb], fun j _ => by rw [hb]⟩
 
 /-- The `CTL` words of the level tables' counts (`succ` 6/7, `zero` 8/9, `max` 10/11, `imax`
 12/13, `param` 14/15), the level-list table's (40/41) and the scratch flag (1). -/
@@ -150,7 +150,7 @@ theorem LvlCnt.trans {m₁ m₂ m₃ : Mem} (h₁ : LvlCnt m₁ m₂) (h₂ : Lv
 
 theorem LvlCnt.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hL : LvlFree C) : LvlCnt m m' :=
-  ⟨hf.2.1 1 (hL 1 (by decide)), fun x hx => by rw [hf.2.1 x (hL x hx)]; exact Nat.le_refl _⟩
+  ⟨hf.ctl 1 (hL 1 (by decide)), fun x hx => by rw [hf.ctl x (hL x hx)]; exact Nat.le_refl _⟩
 
 /-- **The limb pool only grew**: below the old top unchanged, the top no lower and in its tier
 (lane tierpool: a tier-0 top stays below `2^40`), the capacity and the saved tier-0 top the same;
@@ -183,13 +183,13 @@ theorem PoolGrew.of_eq {m m' : Mem} (hp : m'.arr64 POOL = m.arr64 POOL)
 theorem PoolGrew.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hA : (POOL : TieredArray) ∉ A) (hC : (0 : Word) ∉ C) (hL : LvlFree C := by lvl_free)
     (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) : PoolGrew m m' :=
-  PoolGrew.of_eq (hf.1 POOL hA (by decide)) (hf.1 POOL1 hA1 (by decide)) (hf.1 PT0 hA2 (by decide))
+  PoolGrew.of_eq (hf.arr POOL hA (by decide)) (hf.arr POOL1 hA1 (by decide)) (hf.arr PT0 hA2 (by decide))
     (hf.top_eq hC) (LvlCnt.of_frame hf hL)
 
 theorem PoolGrew.of_grows {m m' : Mem} (h : Grows m m') : PoolGrew m m' :=
   ⟨h.le, h.pcapEq, h.agree, LvlCnt.of_frame (grows_frame m m' h) (by lvl_free), h.tier,
     by have hf := grows_frame m m' h
-       exact ptop0_congr (hf.1 PT0 (by decide) (by decide))⟩
+       exact ptop0_congr (hf.arr PT0 (by decide) (by decide))⟩
 
 /-- **The mode survives the pool's growth**: the flag is kept, a tier-0 top stays in tier 0. -/
 theorem ModeOK.poolGrew {m m' : Mem} (h : ModeOK m) (hg : PoolGrew m m') : ModeOK m' := by
@@ -253,13 +253,13 @@ theorem StackKept.toGrew {m₁ m₂ : Mem} (h : StackKept m₁ m₂) : StackGrew
 /-- **A writer of the spine stack alone** (a slice pushed above the top) grows the stack. -/
 theorem StackGrew.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht : spTop m ≤ spTop m')
     (hb : ∀ i : Word, i < spTop m → spW m' i = spW m i) : StackGrew m m' :=
-  ⟨ht, hf.2.2.1 SPN, hb, BKept.of_frame hf (by decide) (by decide),
+  ⟨ht, hf.size SPN, hb, BKept.of_frame hf (by decide) (by decide),
     PoolGrew.of_frame hf (by decide) (by decide)⟩
 
 /-- **A writer of the spine stack alone** that puts the top back keeps the stack. -/
 theorem StackKept.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht : spTop m' = spTop m)
     (hb : ∀ i : Word, i < spTop m → spW m' i = spW m i) : StackKept m m' :=
-  ⟨ht, hf.2.2.1 SPN, hb, BKept.of_frame hf (by decide) (by decide),
+  ⟨ht, hf.size SPN, hb, BKept.of_frame hf (by decide) (by decide),
     PoolGrew.of_frame hf (by decide) (by decide)⟩
 
 /-- **A frame that avoids both stacks and the pool keeps them.** -/
@@ -268,8 +268,8 @@ theorem StackKept.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
     (hL : LvlFree C := by lvl_free) (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) :
     StackKept m m' := by
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN hA.1 (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 hC.1
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2 hL hA1 hA2⟩
 
@@ -278,12 +278,12 @@ theorem StackKept.of_frameL {m m' : Mem} {A : List TieredArray} {C : List Word} 
     (hA : (SPN : TieredArray) ∉ A ∧ (BSTK : TieredArray) ∉ A ∧ (POOL : TieredArray) ∉ A) (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C)
     (hlc : LvlCnt m m') (hA1 : (POOL1 : TieredArray) ∉ A := by decide) (hA2 : (PT0 : TieredArray) ∉ A := by decide) :
     StackKept m m' := by
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN hA.1 (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 hC.1
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf hA.2.1 hC.2.1,
-    PoolGrew.of_eq (hf.1 POOL hA.2.2 (by decide)) (hf.1 POOL1 hA1 (by decide))
-      (hf.1 PT0 hA2 (by decide)) (hf.top_eq hC.2.2) hlc⟩
+    PoolGrew.of_eq (hf.arr POOL hA.2.2 (by decide)) (hf.arr POOL1 hA1 (by decide))
+      (hf.arr PT0 hA2 (by decide)) (hf.top_eq hC.2.2) hlc⟩
 
 /-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
 theorem StackKept.of_frame_range {m m' : Mem} {A : List TieredArray} {C : List Word}
@@ -301,8 +301,8 @@ theorem StackKept.of_frame_range {m m' : Mem} {A : List TieredArray} {C : List W
 /-- **Appending to the pool** keeps the stacks. -/
 theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
   have hgf : MemFrame [POOL, POOL1] [0] m m' := grows_frame m m' hg
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hgf.1 SPN (by decide) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hgf.2.1 136 (by decide)
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hgf.arr SPN (by decide) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hgf.ctl 136 (by decide)
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hgf (by decide) (by decide), PoolGrew.of_grows hg⟩
 
@@ -527,12 +527,12 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega)
         a hS.arena.2⟩,
     hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
-    hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide))
+    hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide))
       (by decide)),
     hS.env.frame (aA 129 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
-    hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
-    hmem, hf.2.2.1 BSTK ▸ hS.bstk,
-    hS.den.frameE (hf.1 EREC (fun h => absurd (hA _ h) (by decide))
+    hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
+    hmem, hf.size BSTK ▸ hS.bstk,
+    hS.den.frameE (hf.arr EREC (fun h => absurd (hA _ h) (by decide))
       (by decide)),
     hS.mode.frame hf (fun h => by have := hC _ h; simp at this)
       (fun h => by have := hC _ h; simp at this)⟩

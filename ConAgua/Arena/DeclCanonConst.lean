@@ -54,7 +54,7 @@ theorem erToIwW_size {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   intro b
   have hm1 : m1 = allocMem m l := allocW_mem' hal
   rw [erCopyW_size _ _ _ _ _ _ hcp b, hm1]
-  exact (allocMem_frame m l).2.2.1 b
+  exact (allocMem_frame m l).size b
 
 /-- `cv_lps` under the stage relation: the level parameters as a fresh `IW` slice. -/
 theorem cvLpsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}

@@ -471,7 +471,7 @@ theorem rfEnter {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (hR
   · obtain ⟨hB1, hB2, hgG, hGl, hsz⟩ := hB
     have hf := benterG_frame 218 m
     have hne : (218 : Word) ≠ 218 + 1 := by decide
-    refine ⟨?_, ?_, UInt64.le_refl _, hG, by rw [hf.2.2.1]; exact hsz⟩
+    refine ⟨?_, ?_, UInt64.le_refl _, hG, by rw [hf.size]; exact hsz⟩
     · have h218 : (218 : Word).toNat = 218 := rfl
       simp only [benterG, rdW_set64, size_set64, hB1]
       simp; omega
@@ -485,7 +485,7 @@ theorem rfLeave {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g' g : Word} 
   have hf := MemFrame.setCtl m 219 g
   have h218 : (218 : Word).toNat = 218 := rfl
   refine ⟨memoRV_frame rfSch rfSch_wf rfK rfV [] [219] (by simp) (by simp [rfSch]) m _ hf (fun _ _ h => h) M hMR,
-    ⟨by rw [hf.2.1 218 (by simp)]; exact hB1, ?_, hg, hGl, by rw [hf.2.2.1]; exact hsz⟩, hF⟩
+    ⟨by rw [hf.ctl 218 (by simp)]; exact hB1, ?_, hg, hGl, by rw [hf.size]; exact hsz⟩, hF⟩
   rw [show (218 : Word) + 1 = 219 from rfl, rdW_set64]
   have : (219 : Word).toNat < (m.arr64 CTL).size := by
     rw [show (219 : Word).toNat = 219 from rfl]; omega

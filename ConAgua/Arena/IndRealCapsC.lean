@@ -143,13 +143,13 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
     simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hL2 : (erAllocMem m1 kk).arr64 LH = m1.arr64 LH := by
     simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hA3, hS3, hW3, hG3⟩ := lheCopyW_get n _ _ _ _ _ hcp
+  obtain ⟨hA3, hS3, hG3⟩ := lheCopyW_get n _ _ _ _ _ hcp
     (by have := (htop m1).toNat_lt; omega) (by rw [hE2]; exact hroom) (by rw [hE2]; exact hEs)
   rw [hE2, hL2] at hG3
   rw [hE2] at hS3
   have hq1 : q.toNat = erTop m1 := by rw [hq]; rfl
   -- the record pool writer: `m1 → m3`
-  have hf3 := erAllocCopy_frame hA3 hS3 hW3
+  have hf3 := erAllocCopy_frame hA3 hS3
   have htop3 : erTop m3 = q.toNat + kk.toNat := by
     rw [← htop2]; simp only [erTop]; rw [hA3 CTL (by decide)]
   obtain ⟨hS3', hg3⟩ := StageR.erec hS1 hf3
@@ -161,7 +161,7 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
   have hE4 : (m3.set64 CTL 192 (htop m)).arr64 EREC = m3.arr64 EREC :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop4 : erTop (m3.set64 CTL 192 (htop m)) = erTop m3 := by
-    simp only [erTop]; rw [(MemFrame.setCtl m3 192 (htop m)).2.1 129 (by decide)]
+    simp only [erTop]; rw [(MemFrame.setCtl m3 192 (htop m)).ctl 129 (by decide)]
   obtain ⟨lps, hs, hm⟩ := hslice_of_nmsR _ hnm (by have := (htop m1).toNat_lt; omega) arr q.toNat
     (fun j hj => by
       rw [hagr _ (by rw [htop4, htop3]; omega)]

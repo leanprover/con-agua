@@ -438,13 +438,13 @@ theorem stage_frame_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     {a : AState} (hS : StageR dn vis fe m a) (hf : MemFrame [IW] [200] m m')
     (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR dn vis fe m' a := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨CheckR.frame_iw hf hS.1, by rw [hf.2.2.1 IW]; exact htop, ?_, ?_, ?_, ?_⟩
-  · simp only [erTop, h129]; rw [hf.2.2.1 EREC]; exact h2
-  · rw [hf.2.2.1 IW]; exact h3
-  · rw [hf.2.2.1 EREC]; exact h4
-  · rw [hf.2.2.1 CTL]; exact h5
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
+  refine ⟨CheckR.frame_iw hf hS.1, by rw [hf.size IW]; exact htop, ?_, ?_, ?_, ?_⟩
+  · simp only [erTop, h129]; rw [hf.size EREC]; exact h2
+  · rw [hf.size IW]; exact h3
+  · rw [hf.size EREC]; exact h4
+  · rw [hf.size CTL]; exact h5
 
 /-- The flag `withSort` computes from the verdict. -/
 def isPropOf (x : Option Bool) : Bool :=
@@ -518,7 +518,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
     ((allocMem_frame m2 9).trans (hfr.mono (by simp) (by simp)))
   -- the pool grew
   have htop : rdW (m'.arr64 CTL) 200 = rdW (m2.arr64 CTL) 200 + 9 := by
-    rw [hfr.2.1 200 (by simp), allocMem_top m2 9 hCsz2]
+    rw [hfr.ctl 200 (by simp), allocMem_top m2 9 hCsz2]
   have hlow : ∀ i < iwTop m2, (m'.arr64 IW)[i]? = (m2.arr64 IW)[i]? := by
     intro i hi
     rw [hWs.2 i, ite_eq_right (by omega), hIW3]
@@ -553,7 +553,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
     have e : iwTop m' = iwTop m2 + 9 := by
       simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp
       have := hroom; simp at this; simp only [iwTop] at hqtop; omega
-    rw [hfr2.2.2.1 IW, e]; have := hroom; simp at this; omega
+    rw [hfr2.size IW, e]; have := hroom; simp at this; omega
   have htopq : q.toNat + 9 ≤ iwTop m' := by
     simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp
     have := hroom; simp at this; simp only [iwTop] at hqtop; omega
@@ -582,7 +582,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
       (cT 5 (by omega) (by omega) (by omega)) (cT 7 (by omega) (by omega) (by omega)) c6T c8T
     exact this
   refine ⟨{ bs with resSort := decI s, isProp := f != 0 }, a2, q, ?_, rfl, hdecq,
-    stage_frame_iw hS2 hfr2 (by rw [← hfr2.2.2.1 IW]; exact htop'), hgm, htopq, hcell, hDecB⟩
+    stage_frame_iw hS2 hfr2 (by rw [← hfr2.size IW]; exact htop'), hgm, htopq, hcell, hDecB⟩
   unfold BlockShape.withSort
   simp only [StateT.run_bind, hrun1, except_ok_bind]
   simp only [hrun2, except_ok_bind]

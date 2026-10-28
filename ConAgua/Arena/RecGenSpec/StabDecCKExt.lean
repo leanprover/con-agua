@@ -140,7 +140,7 @@ theorem stab_decCS_ext {m : Mem} {sp : Nat} {slot : ClassSlot} (h : StabD (fun m
         rw [e] at hkp'; cases hkp'
         have h1 := decCK_lt_size hk'
         have h2 : ((m.set64 IW (UInt64.ofNat (sp + 1)) (UInt64.ofNat (2 ^ 64 - 1))).arr64 IW).size =
-            (m.arr64 IW).size := (set64IW_frame m _ _).2.2.1 IW
+            (m.arr64 IW).size := (set64IW_frame m _ _).size IW
         omega
       · rw [ht'] at ht''; cases ht''
     · obtain ⟨w, hw, rfl⟩ := iwN_set_word hc

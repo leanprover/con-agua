@@ -72,7 +72,7 @@ theorem threadGo_thr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = 
   rw [hx, hy, hz] at hrun
   have hI' : s'.mem.glob INIT = 1 := (check_pending_go_keepsG hrun).1.trans hI
   let m₂ : Mem := { m' with glob := s.mem.glob }
-  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
+  have hf : MemFrame [] [] m' m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
   have h₂ := PhaseBStart.frame0 hf hS
   let s₂ : St := ⟨m₂, s.loc⟩
   have hAg : Agree thrS (fun _ => false) s.mem s₂.mem :=

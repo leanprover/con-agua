@@ -165,8 +165,8 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   have fr2 : GFr sa m1 m2 := by rw [← hm2]; exact kzeroW_fr _ _ _ _
   have fr3 : GFr sa m2 m3 := by rw [← hm3]; exact kmarkW_fr _ _ _ _ _
   have fr13 := (fr1.trans fr2).trans fr3
-  have hsz3 : (m3.arr64 sa).size = (m.arr64 sa).size := fr13.2.1 sa
-  have hsz2 : (m2.arr64 sa).size = (m.arr64 sa).size := (fr1.trans fr2).2.1 sa
+  have hsz3 : (m3.arr64 sa).size = (m.arr64 sa).size := fr13.size sa
+  have hsz2 : (m2.arr64 sa).size = (m.arr64 sa).size := (fr1.trans fr2).size sa
   have eob2n : (ob + n * 2).toNat = ob.toNat + 2 * n.toNat := by
     rw [UInt64.toNat_add, e2n]; omega
   have eh : (n >>> 2).toNat * 8 = 2 * n.toNat := by rw [UInt64.toNat_shiftRight]; simp; omega
@@ -298,13 +298,13 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
       rw [V3 jo hjoN, ite_eq_left hjo, ite_eq_left hv, hvx]
   -- the invariant at the end
   have hGh' : ∀ mi : Mem, GFr sa m3 mi → ∀ x K, KP m t x K → G mi K = hs m t x :=
-    fun mi hmi x K hK => hGh mi (fun a ha => (hmi.1 a ha).trans (fr13.1 a ha)) x K hK
+    fun mi hmi x K hK => hGh mi (fun a ha => (hmi.1 a ha).trans (fr13.arr a ha)) x K hK
   have hIf := krehashW_inv sa ob (n * 2) n bt (cntW S m t) (KP m t) (hs m t) m3 hob2 hNL hL3 hbt63 hnN G
     hGh' hN0 0 n m3 m' ((by simp [UInt64.le_iff_toNat_le])) hI0 h
   obtain ⟨frf, hw0, hw1, hslf, hnodef⟩ := hIf
   -- the memory after: outside tier `t`'s slot array, its words
-  have arr' : ∀ a, a ≠ sa → m'.arr64 a = m.arr64 a := fun a ha => (frf.1 a ha).trans (fr13.1 a ha)
-  have sz' : (m'.arr64 sa).size = (m.arr64 sa).size := (frf.2.1 sa).trans hsz3
+  have arr' : ∀ a, a ≠ sa → m'.arr64 a = m.arr64 a := fun a ha => (frf.arr a ha).trans (fr13.arr a ha)
+  have sz' : (m'.arr64 sa).size = (m.arr64 sa).size := (frf.size sa).trans hsz3
   have hsaC : sa ≠ CTL := by rw [← hsa]; exact hS.sa_ctl' t
   have ctl' : m'.arr64 CTL = m.arr64 CTL := arr' CTL (Ne.symm hsaC)
   have w0 : rdW (m'.arr64 sa) 0 = n * 2 - SN0 := by

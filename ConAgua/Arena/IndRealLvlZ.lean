@@ -71,7 +71,6 @@ theorem lheCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), lheCopyW n m d
     s.toNat + l.toNat < 2 ^ 64 →
     d.toNat + l.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
     (∀ b : TieredArray, b ≠ ↑EREC → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 EREC).size = (m.arr64 EREC).size ∧
-    m.SameShape m' ∧
     ∀ i, (m'.arr64 EREC)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat then some ((m.arr64 LH)[s.toNat + (i - d.toNat)]?.getD 0)
       else (m.arr64 EREC)[i]? :=

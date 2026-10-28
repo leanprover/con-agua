@@ -150,7 +150,7 @@ theorem consW_room {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
     (hx : x.toNat < 2 ^ 32) {k : IdxKind} {xs : List (Idx k)} (hxs : decHL m o.toNat l.toNat = some xs) :
     iwTop m' ≤ (m'.arr64 IW).size := by
   obtain ⟨-, -, -, hf, -, ht⟩ := consW_dec h hsz hc hsrc hx hxs
-  rw [← ht, hf.2.2.1 IW]
+  rw [← ht, hf.size IW]
   simp only [consW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
@@ -179,14 +179,14 @@ theorem consW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
   obtain ⟨hr, hd, hg, hf, -, ht⟩ := consW_dec h hsz hc hsrc hx hxs
   have hroom := consW_room h hsz hc hsrc hx hxs
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
   subst hr
   refine ⟨⟨CheckR.frame_iw hf hS.1, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht⟩
   · simp only [erTop, h129, hE]; exact hE1
-  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs
-  · rw [hf.2.2.1 CTL]; exact hc
+  · rw [hf.size CTL]; exact hc
 
 /-! ## Level interning under the stage relation -/
 
@@ -284,14 +284,14 @@ theorem allocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using hc
     rw [ite_eq_left ⟨trivial, trivial, h200⟩, UInt64.toNat_add]
     omega
-  have h129 : rdW ((allocMem m k).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
-  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  have h129 : rdW ((allocMem m k).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
+  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
   refine ⟨⟨CheckR.frame_iw hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, ?_, rfl, htop⟩
-  · rw [htop, hf.2.2.1 IW]; simp only [iwTop]; omega
+  · rw [htop, hf.size IW]; simp only [iwTop]; omega
   · simp only [erTop, h129, hE]; exact hE1
-  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs
-  · rw [hf.2.2.1 CTL]; exact hc
+  · rw [hf.size CTL]; exact hc
   · exact allocMem_grow m k (by simp only [iwTop]; omega) hc
 
 /-! ## `erec_alloc` and the constant records, under the stage relation -/
@@ -363,9 +363,9 @@ theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     (htop : erTop m ≤ erTop m') (hroom : erTop m' ≤ (m'.arr64 EREC).size) :
     StageR dn vis fe m' a ∧ IWGrow m m' := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
-  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (by simp [EREC, IW]) (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 200 (by simp)
-  have hg : ErecGrow m m' := ⟨htop, hlow, hf.2.2.1 EREC⟩
+  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by simp [EREC, IW]) (by decide)
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (by simp)
+  have hg : ErecGrow m m' := ⟨htop, hlow, hf.size EREC⟩
   have hC : CheckR dn m' a vis fe :=
     ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hS.1.arena.1,
@@ -373,16 +373,16 @@ theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
      hS.1.core.frame (fun b hb => by simp at hb; subst hb; decide)
        (fun x hx => by simp at hx; subst hx; decide) hf,
      hS.1.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
-     EnvR.grow (fun b h1 h2 h3 => hf.1 b (fun hm => by simp at hm; subst hm; simp [EREC] at h3)
+     EnvR.grow (fun b h1 h2 h3 => hf.arr b (fun hm => by simp at hm; subst hm; simp [EREC] at h3)
          (fun hm => by simp at hm; subst hm; simp [CTL] at h1))
-       (hf.2.1 128 (by simp)) hg
+       (hf.ctl 128 (by simp)) hg
        (TblSame.of_frame (by decide) (by decide) (by decide) hf) hS.1.env,
      hS.1.mode.frame hf (by simp) (by simp)⟩
   refine ⟨⟨hC, ?_, hroom, ?_, ?_, ?_⟩, ?_⟩
   · simp only [iwTop, h200, hI]; exact hI1
   · rw [hI]; exact hsz
-  · rw [hf.2.2.1 EREC]; exact hEs
-  · rw [hf.2.2.1 CTL]; exact hc
+  · rw [hf.size EREC]; exact hEs
+  · rw [hf.size CTL]; exact hc
   · refine ⟨by simp only [iwTop, h200]; exact Nat.le_refl _, htop, fun i _ => by rw [hI], hlow⟩
 
 /-- **A record allocated in `EREC` and written**: `erec_alloc(ws.length)` then `ws` at the
@@ -418,14 +418,14 @@ theorem erRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   have htop : erTop (wrER (erAllocMem m k) (rdW (m.arr64 CTL) 129) ws) = erTop m + ws.length := by
     simp only [erTop]
-    rw [(wrER_frame ws (erAllocMem m k) (rdW (m.arr64 CTL) 129)).2.1 129 (by simp)]
+    rw [(wrER_frame ws (erAllocMem m k) (rdW (m.arr64 CTL) 129)).ctl 129 (by simp)]
     simp only [erAllocMem, rdW_set64]
     rw [ite_eq_left ⟨trivial, trivial, h129⟩, UInt64.toNat_add]
     omega
   have hget := fun i => wrER_get ws (erAllocMem m k) (rdW (m.arr64 CTL) 129) i
     (by rw [hE]; omega) (by rw [hE]; exact hEs)
   have hsize : ((wrER (erAllocMem m k) (rdW (m.arr64 CTL) 129) ws).arr64 EREC).size =
-      (m.arr64 EREC).size := hf.2.2.1 EREC
+      (m.arr64 EREC).size := hf.size EREC
   obtain ⟨hS', hg'⟩ := StageR.erec hS hf
     (fun i hi => by rw [hget, ite_eq_right (by simp only [erTop] at hi; omega), hE])
     (by rw [htop]; omega) (by rw [htop, hsize]; simp only [erTop]; omega)

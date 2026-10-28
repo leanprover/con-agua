@@ -52,7 +52,7 @@ theorem storeR_frame (hS : S.WF) (hkm : KMono S hs KP) (A₀ : List TieredArray)
     (tbP tbS : Tbl α (Idx k) δ) (hR : StoreR S R hs KP m on tbP tbS) :
     StoreR S R hs KP m' on tbP tbS := by
   obtain ⟨hra, hra', hsa, hsa', hA₀, hc0, hc1, h1, hscb, h0⟩ := hap
-  obtain ⟨hfa, hfc, hfs, -⟩ := hf
+  have hfa := hf.arr; have hfc := hf.ctl; have hfs := hf.size
   obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1, hG⟩ := hR
   have eb : ∀ t, baseW m' t = baseW m t := fun t => by simp only [baseW, hfc SCB hscb]
   have era : ∀ t, m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t) := fun t => by
@@ -902,7 +902,7 @@ theorem consInternM_out (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}
     (h : consInternM C m ks = some (w, m')) :
     m' = m ∨ ∃ t, t ≤ 1 ∧ pushOKC C m t = true ∧ w = (if t = 0 then C.P else C.S) + cntC C m t ∧
       (∀ b, b ≠ tierA C.sa t → m'.arr64 b = (pushRec C m t ks).arr64 b) ∧
-      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m' :=
+      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) :=
   consInternM_outA hW.sch.sa_ctl (fun A hA => (hW.col A hA).2.1) h
 
 /-- The arrays an interning of `C` writes: both tiers of its record and slot arrays and of its
@@ -914,9 +914,9 @@ def ConsSch.wset (C : ConsSch) : List TieredArray :=
 theorem consInternM_frame (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}
     (h : consInternM C m ks = some (w, m')) :
     MemFrame C.wset [C.ca, C.ca + 1] m m' := by
-  rcases consInternM_out hW h with rfl | ⟨t, ht, -, -, he, hs, hw⟩
+  rcases consInternM_out hW h with rfl | ⟨t, ht, -, -, he, hs⟩
   · exact MemFrame.refl _ _ _
-  refine ⟨fun b hb hc => ?_, fun x hx => ?_, hs, hw⟩
+  refine ⟨fun b hb hc => ?_, fun x hx => ?_, hs⟩
   · simp only [ConsSch.wset, List.mem_cons, List.mem_append, List.mem_map, not_or] at hb
     have hbs : b ≠ tierA C.sa t := fun e => by
       rcases tierA_eq_or C.sa t with e' | e' <;> rw [e'] at e

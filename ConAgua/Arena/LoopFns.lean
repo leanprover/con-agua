@@ -312,8 +312,8 @@ every size kept) and the twin's persistent tier only growing (`PExt`, `TwinFold.
 theorem LoopMem.step {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     (h : LoopMem dn m a) (hf : MemFrame loopA loopC m m')
     (hx : ConRon.Bridge.PExt a.store a'.store) : LoopMem dn m' a' :=
-  ⟨by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn, by rw [hf.2.2.1]; exact h.bstk,
-    by simp only [pinW, hf.1 _ loopA_pins (by decide)]; exact h.flag,
+  ⟨by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn, by rw [hf.size]; exact h.bstk,
+    by simp only [pinW, hf.arr _ loopA_pins (by decide)]; exact h.flag,
     fun k x e => ⟨(h.dnP k x e).1, hx.lss.ls.ns k x (h.dnP k x e).1 (h.dnP k x e).2⟩⟩
 
 end L.Arena

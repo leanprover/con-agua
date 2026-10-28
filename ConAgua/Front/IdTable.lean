@@ -420,8 +420,8 @@ structure TblSame (m m' : Mem) (b : ArrId) : Prop where
 theorem TblSame.of_frameD {A : List TieredArray} {C : List Word} {m m' : Mem} {b : ArrId}
     (hf : MemFrame A C m m') (hb : TblIx b) (hbA : (b : TieredArray) ∉ A) (hb8 : (spArr b : TieredArray) ∉ A) (hzC : szC b ∉ C)
     (heC : (spS b).cs ∉ C) : TblSame m m' b :=
-  ⟨hf.1 b hbA (by rcases hb with rfl | rfl | rfl <;> decide),
-    hf.1 _ hb8 (by rcases hb with rfl | rfl | rfl <;> decide), hf.2.1 _ hzC, hf.2.1 _ heC⟩
+  ⟨hf.arr b hbA (by rcases hb with rfl | rfl | rfl <;> decide),
+    hf.arr _ hb8 (by rcases hb with rfl | rfl | rfl <;> decide), hf.ctl _ hzC, hf.ctl _ heC⟩
 
 /-- Table `b`'s arrays and all of `CTL` unchanged. -/
 theorem TblSame.of_eq {m m' : Mem} {b : ArrId} (h : m'.arr64 b = m.arr64 b)
@@ -467,7 +467,7 @@ theorem TblR.frameD {A : List TieredArray} {C : List Word} {m m' : Mem} {b : Arr
   have hS := TblSame.of_frameD hf hb hbA hb8 hzC heC
   have hz : szW m' b = szW m b := szW_congr hS
   obtain ⟨sp, hR, hg⟩ := h.sparse
-  refine ⟨by rw [hS.d]; exact h.size, by rw [hf.2.2.1]; exact h.ctl, by rw [hz, hS.d]; exact h.sz,
+  refine ⟨by rw [hS.d]; exact h.size, by rw [hf.size]; exact h.ctl, by rw [hz, hS.d]; exact h.sz,
     fun i hi => ?_, ⟨sp, ?_, ?_⟩⟩
   · rw [hS.d]; exact h.dense i (hz ▸ hi)
   · exact memoRV_frame (spS b) (spS_wf b hb) idKey hVR A C hb8 heC m m' hf (fun _ _ h => h) sp hR
@@ -600,13 +600,13 @@ theorem TblR.put {m m' : Mem} {b : ArrId} {t t' : ConLeche.Frontend.IdTable (Idx
     rename_i _ hs ht
     have hfr := msetG_frame (spS b) hS m m' i 0 w hp
     have hd : m'.arr64 b = m.arr64 b :=
-      hfr.1 b (by rcases hb with rfl | rfl | rfl <;> decide) hbC
+      hfr.arr b (by rcases hb with rfl | rfl | rfl <;> decide) hbC
     have hz' : szW m' b = szW m b := by
       simp only [szW]
-      exact hfr.2.1 _ (by rcases hb with rfl | rfl | rfl <;> decide)
+      exact hfr.ctl _ (by rcases hb with rfl | rfl | rfl <;> decide)
     have hR' := memoRV_set (spS b) hS idKey hVR (hVR_stable _) m sp hR i 0 w ⟨ht, rfl⟩ (decI w)
       ⟨rfl, hw⟩ m' hp
-    refine ⟨by rw [hd]; exact hsize, by rw [hfr.2.2.1]; exact hctl, by rw [hz', hd]; exact hsz,
+    refine ⟨by rw [hd]; exact hsize, by rw [hfr.size]; exact hctl, by rw [hz', hd]; exact hsz,
       fun j hj => ?_, ⟨_, hR', ?_⟩⟩
     · rw [hz'] at hj
       have hji : j.toNat ≠ i.toNat := fun e => by

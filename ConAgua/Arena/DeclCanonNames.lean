@@ -162,7 +162,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     · simpa using hdc
     · show (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop m4; omega
     · refine ⟨by rw [hv3, hv2, hv1], ?_⟩
-      unfold PoolSmall at hP3 ⊢; rw [pcap_congr (hfr.2.2.1 POOL) (hfr.2.2.1 POOL1)]; exact hP3
+      unfold PoolSmall at hP3 ⊢; rw [pcap_congr (hfr.size POOL) (hfr.size POOL1)]; exact hP3
 
 
 /-- **The model of `canon_names(n)`**. -/

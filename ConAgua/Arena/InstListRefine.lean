@@ -102,7 +102,7 @@ theorem internE_instLC (v : ENodeView) (a : AState) (hok : AM.ok (internE v) a) 
 
 /-- A writer that leaves array 144 alone keeps the stack. -/
 theorem spn_of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (ILSPN : TieredArray) ∉ A) : m'.arr64 ILSPN = m.arr64 ILSPN := hf.1 ILSPN hA (by decide)
+    (hA : (ILSPN : TieredArray) ∉ A) : m'.arr64 ILSPN = m.arr64 ILSPN := hf.arr ILSPN hA (by decide)
 
 /-! ## The `mk_*` and `intern_bvar` under `ArenaL` -/
 

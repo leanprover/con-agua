@@ -83,7 +83,6 @@ theorem nameCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nameCopyW n m
     (m.arr64 IW).size < 2 ^ 64 →
     (∀ j < l.toNat, (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))).toNat < d.toNat) →
     (∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-    m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat
       then some (rdW (m.arr64 EREC)
@@ -174,13 +173,13 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
     rw [hIW, hoo, hv']
     simp only [iwTop, hqq] at hvb
     rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hvb
-  obtain ⟨hA, hS, hW, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
     (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
     (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG
   rw [hEE] at hG
   have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]) hW)
+    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
   have htop : rdW (m2.arr64 CTL) 200 = q + UInt64.ofNat l := by
     rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + UInt64.ofNat l).toNat = q.toNat + l := by
@@ -315,7 +314,7 @@ theorem IWRoom.trans {m₁ m₂ m₃ : Mem} (h₁ : IWRoom m₁ m₂) (h₂ : IW
 /-- An allocation ending at the new top, within the old pool, the size kept. -/
 theorem IWRoom.of_alloc {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     {t : Nat} (ht : t = iwTop m') (hroom : t ≤ (m.arr64 IW).size) : IWRoom m m' :=
-  fun _ => by rw [hf.2.2.1 IW, ← ht]; exact hroom
+  fun _ => by rw [hf.size IW, ← ht]; exact hroom
 
 theorem erToIwW_room {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64) :

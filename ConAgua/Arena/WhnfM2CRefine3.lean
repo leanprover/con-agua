@@ -67,10 +67,10 @@ theorem and2Push_ok {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} 
 /-- A `proj` interning writes neither the stack nor its top. -/
 theorem store_spn {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') :
     m'.arr64 SPN = m.arr64 SPN ∧ spTop m' = spTop m := by
-  refine ⟨hf.1 SPN (fun h => by
+  refine ⟨hf.arr SPN (fun h => by
       unfold L.Rom.StoreA at h; simp [tier1, lowTierArrs, SPN] at h) (by decide), ?_⟩
   unfold spTop
-  exact hf.2.1 136 (fun h => by
+  exact hf.ctl 136 (fun h => by
     obtain ⟨k, hk, hkk⟩ := List.mem_map.mp
       (show (136 : Word) ∈ (List.range 64).map UInt64.ofNat by unfold L.Rom.StoreC at h; exact h)
     have := List.mem_range.mp hk
@@ -78,7 +78,7 @@ theorem store_spn {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') :
     simp [UInt64.toNat_ofNat] at h'; omega)
 
 theorem const_spn {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') :
-    m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [tier1, CREC, CSLOT, CLP, SPN]) (by decide)
+    m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by simp [tier1, CREC, CSLOT, CLP, SPN]) (by decide)
 
 /-- A slice below the top survives a run that kept the stack. -/
 theorem SpineR.ofKept {m m' : Mem} {o n : Word} {xs : Array EIdx} (h : SpineR m o n xs)

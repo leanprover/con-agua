@@ -40,7 +40,7 @@ theorem PExt.other {m m' : Mem} (h : PExt m m') (A : ArrId) (h1 : A ≠ DLP) (h2
     m'.arr64 A = m.arr64 A := h.frame.1 A (by simp [h1]) (TieredArray.t0_ne h2)
 
 theorem PExt.size {m m' : Mem} (h : PExt m m') (A : ArrId) : (m'.arr64 A).size = (m.arr64 A).size :=
-  h.frame.2.2.1 A
+  h.frame.size A
 
 /-- A write at an index above the top keeps a `PExt`. -/
 theorem PExt.set {m m' : Mem} (h : PExt m m') (i v : Word) (hi : topN m DLP < i.toNat)
@@ -81,7 +81,7 @@ theorem StateDR.lkR {m : Mem} {st : StateD} (h : StateDR m st) : LkR m st :=
 theorem LkR.frame {m m' : Mem} {st : StateD} (h : LkR m st) (hf : MemFrame [DLP] [] m m')
     (ht : topN m' DLP + 1 ≤ (m'.arr64 DLP).size) : LkR m' st :=
   ⟨h.names.frame hf (.inl rfl) (by simp [DLP, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
-    h.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp), by rw [hf.2.2.1]; exact h.psize,
+    h.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp), by rw [hf.size]; exact h.psize,
     ht⟩
 
 theorem lkR_name {m : Mem} {st : StateD} (hD : LkR m st) {x w : Word} (a : AState)
@@ -208,7 +208,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
   have hpc : (parseCVD st cv).run a = .ok (cvp, a) := by
     unfold parseCVD
     rw [run_bind _ _ a _ n1, run_bind _ _ a _ y1, hmap]; rfl
-  have hs1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := F2.2.2.1 DLP
+  have hs1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := F2.size DLP
   have htop1 : topN m₁ DLP = topN m DLP + (listN b.data lps).length := by
     show ((m₁.arr64 DLP)[0]?.getD 0).toNat = _
     rw [F7]; simp only [Option.getD_some]

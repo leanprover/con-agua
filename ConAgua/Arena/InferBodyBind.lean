@@ -802,8 +802,8 @@ theorem tops_restore {dn : NIdx → Option ConLeche.Name} {m₀ m₃ m₄ : Mem}
       ((m₄.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)).set64 CTL 137 (rdW (m₃.arr64 CTL) 137)) :=
     ((MemFrame.setCtl m₄ 136 _).mono (by simp) (by simp)).trans
       ((MemFrame.setCtl _ 137 _).mono (by simp) (by simp))
-  have eS := hfr.1 SPN (by simp) (by decide)
-  have eB := hfr.1 BSTK (by simp) (by decide)
+  have eS := hfr.arr SPN (by simp) (by decide)
+  have eB := hfr.arr BSTK (by simp) (by decide)
   refine ⟨?_, by rw [eS, hsz], fun j hj => by simp only [spW, eS]; exact hb j hj,
     ⟨?_, by rw [eB, hbsz], fun j hj => by rw [eB]; exact hbb j hj⟩,
     hpg.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩

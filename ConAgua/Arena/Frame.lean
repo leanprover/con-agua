@@ -21,32 +21,31 @@ namespace L.Arena
 
 /-- `m'` is `m` except in the word arrays `A` and in the `CTL` words `C`; every array keeps its
 size. -/
-def MemFrame (A : List TieredArray) (C : List Word) (m m' : Mem) : Prop :=
-  (∀ b, b ∉ A → b ≠ CTL → m'.arr64 b = m.arr64 b) ∧
-  (∀ x, x ∉ C → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
-  (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m'
+structure MemFrame (A : List TieredArray) (C : List Word) (m m' : Mem) : Prop where
+  arr : ∀ b, b ∉ A → b ≠ CTL → m'.arr64 b = m.arr64 b
+  ctl : ∀ x, x ∉ C → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x
+  size : ∀ b, (m'.arr64 b).size = (m.arr64 b).size
 
 theorem MemFrame.refl (A : List TieredArray) (C : List Word) (m : Mem) : MemFrame A C m m :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl m⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
 
 theorem MemFrame.trans {A : List TieredArray} {C : List Word} {m₁ m₂ m₃ : Mem} (h₁ : MemFrame A C m₁ m₂)
     (h₂ : MemFrame A C m₂ m₃) : MemFrame A C m₁ m₃ :=
-  ⟨fun b hb hc => (h₂.1 b hb hc).trans (h₁.1 b hb hc), fun x hx => (h₂.2.1 x hx).trans (h₁.2.1 x hx),
-    fun b => (h₂.2.2.1 b).trans (h₁.2.2.1 b), h₁.2.2.2.trans h₂.2.2.2⟩
+  ⟨fun b hb hc => (h₂.arr b hb hc).trans (h₁.arr b hb hc), fun x hx => (h₂.ctl x hx).trans (h₁.ctl x hx),
+    fun b => (h₂.size b).trans (h₁.size b)⟩
 
 /-- A frame for fewer arrays and words is one for more. -/
 theorem MemFrame.mono {A A' : List TieredArray} {C C' : List Word} {m m' : Mem} (h : MemFrame A C m m')
     (hA : ∀ b ∈ A, b ∈ A') (hC : ∀ x ∈ C, x ∈ C') : MemFrame A' C' m m' :=
-  ⟨fun b hb hc => h.1 b (fun h' => hb (hA b h')) hc, fun x hx => h.2.1 x (fun h' => hx (hC x h')),
-    h.2.2.1, h.2.2.2⟩
+  ⟨fun b hb hc => h.arr b (fun h' => hb (hA b h')) hc, fun x hx => h.ctl x (fun h' => hx (hC x h')), h.size⟩
 
 /-- Both tiers of an array outside a frame's arrays are unchanged. -/
 theorem MemFrame.tier {A : List TieredArray} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
     (B : ArrId) (hB : (B : TieredArray) ∉ A) (hB' : tier1 B ∉ A) (hc : B ≠ CTL) (t : Word) :
     m'.arr64 (tierA B t) = m.arr64 (tierA B t) := by
   rcases tierA_eq_or B t with e | e <;> rw [e]
-  · exact h.1 B hB (TieredArray.t0_ne hc)
-  · exact h.1 _ hB' ((tier1_ne_t0 _ _))
+  · exact h.arr B hB (TieredArray.t0_ne hc)
+  · exact h.arr _ hB' ((tier1_ne_t0 _ _))
 
 /-- The store tier (`InStoreTier`: the arrays below `64`, both tiers), as a list. -/
 def lowTierArrs : List TieredArray := (List.range 64).map TieredArray.t0 ++ (List.range 64).map tier1
@@ -69,13 +68,12 @@ theorem storeTier_of_mem {b : TieredArray} (h : b ∈ lowTierArrs) : InStoreTier
 theorem MemFrame.set64 (m : Mem) (a : TieredArray) (ha : a ≠ CTL) (k v : Word) :
     MemFrame [a] [] m (m.set64 a k v) := by
   refine ⟨fun b hb _ => Mem.arr64_set64_ne _ _ _ _ _ (by simpa using hb), fun x _ => ?_,
-    fun b => size_set64 _ _ _ _ _, Mem.sameShape_set64 _ _ _ _⟩
+    fun b => size_set64 _ _ _ _ _⟩
   rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm ha)]
 
 /-- A write to `CTL[c]` is a frame of `[c]`. -/
 theorem MemFrame.setCtl (m : Mem) (c v : Word) : MemFrame [] [c] m (m.set64 CTL c v) := by
-  refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_,
-    fun b => size_set64 _ _ _ _ _, Mem.sameShape_set64 _ _ _ _⟩
+  refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_, fun b => size_set64 _ _ _ _ _⟩
   rw [rdW_set64]
   simp only [List.mem_singleton] at hx
   simp [Ne.symm hx]
@@ -109,7 +107,7 @@ theorem wFr_wframe (A : List TieredArray) (C : List Word) : WFrame CTL A C (WFr 
     rcases ha with ⟨hc, ha⟩ | ⟨rfl, hi⟩
     · exact MemFrame.trans h.1 (MemFrame.mono (MemFrame.set64 m a hc i v) (by simpa using ha) (by simp))
     · exact MemFrame.trans h.1 (MemFrame.mono (MemFrame.setCtl m i v) (by simp) (by simpa using hi))
-  setG _ _ _ _ h := h
+  setG _ _ _ _ h := ⟨⟨h.1.arr, h.1.ctl, h.1.size⟩, h.2⟩
 
 /-- **Every run of a function of a closed set is a frame of its write set** (and keeps the byte
 arrays). -/

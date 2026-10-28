@@ -325,8 +325,8 @@ theorem mkForall_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [tier1, FADER, FAREC, FASLOT, SPN]) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by simp [tier1, FADER, FAREC, FASLOT, SPN]) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _,
       StackKept.of_frame hf⟩,
     by rw [hres]; rfl, mkForallW_hw m a hS.arena t b _ m' hI⟩

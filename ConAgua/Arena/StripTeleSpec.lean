@@ -210,7 +210,7 @@ theorem StageR.set_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   have hE : (m.set64 IW p x).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   refine ⟨CheckR.frame_iw hf hS.1, ?_⟩
   obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
-  have hI := hf.2.2.1 IW
+  have hI := hf.size IW
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · simp only [iwTop, hC, hI]; exact h1
   · simp only [erTop, hC, hE]; exact h2
@@ -228,14 +228,14 @@ theorem StageR.set_top {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     simp only [iwTop, rdW_set64]
     have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using h5
     rw [ite_eq_left ⟨trivial, trivial, h200⟩]
-  have h129 : rdW ((m.set64 CTL 200 o).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
-  have hE : (m.set64 CTL 200 o).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  have h129 : rdW ((m.set64 CTL 200 o).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
+  have hE : (m.set64 CTL 200 o).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
   refine ⟨⟨CheckR.frame_iw hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, ht⟩
-  · rw [ht, hf.2.2.1 IW]; omega
+  · rw [ht, hf.size IW]; omega
   · simp only [erTop, h129, hE]; exact h2
-  · rw [hf.2.2.1 IW]; exact h3
+  · rw [hf.size IW]; exact h3
   · rw [hE]; exact h4
-  · rw [hf.2.2.1 CTL]; exact h5
+  · rw [hf.size CTL]; exact h5
 
 /-- One step of the twin's strippers (`stripPis`/`stripLams` at `k + 1`, tag `T`, the rest `rec`). -/
 def stripStepT (T : UInt32) (rec : EIdx → AM (Option (List EIdx × EIdx))) (h : EIdx) :
@@ -407,8 +407,8 @@ theorem stripTW_ok (tg : Word) (T : UInt32)
   obtain ⟨x, hrun, hS', hf, hlow, hres⟩ := stripGoW_ok tg T tw h0 hs hT hvb dn vis fe k _ a (f + 1)
     m m' 0 e r hw hS he (UInt64.le_iff_toNat_le.mpr (by simp)) (by simp [iwTop])
   have ht0 : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
-  have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by simp)]
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
   have hgrow : iwTop m ≤ iwTop m' → IWGrow m m' := fun h =>
     ⟨h, by rw [h129]; exact Nat.le_refl _, hlow, fun i _ => by rw [hE]⟩
   simp only [UInt64.toNat_zero, Nat.sub_zero] at hrun

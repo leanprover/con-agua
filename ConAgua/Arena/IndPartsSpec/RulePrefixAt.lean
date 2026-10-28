@@ -551,7 +551,6 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
     (m.arr64 IW).size < 2 ^ 64 →
     (∀ j < l.toNat, P (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))) d.toNat) →
     (∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-    m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat
       then some (g m (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat)))))
@@ -564,7 +563,7 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
     · rw [hnil n m d s l hl] at h
       cases h
       subst hl
-      refine ⟨fun _ _ => rfl, rfl, .refl _, fun i => ?_⟩
+      refine ⟨fun _ _ => rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
@@ -599,12 +598,11 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
       rw [hl1] at hj
       rw [hs1, show s.toNat + 1 + j = s.toNat + (j + 1) by omega, hsrc _ (by omega), hd1]
       exact hP _ _ (hptr (j + 1) (by omega))
-    obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
+    obtain ⟨hA, hS, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
       (by rw [hs1, hd1, hl1]; omega) (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
       hptr1
-    refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, Mem.SameShape.trans ?_ hW, fun i => ?_⟩
+    refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, fun i => ?_⟩
     · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
-    · rw [hm1]; exact Mem.sameShape_set64 _ _ _ _
     rw [hG i, hd1, hl1, hs1]
     by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
     · rw [ite_eq_left hi]
@@ -625,7 +623,6 @@ theorem nIdxsCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nIdxsCopyW n
     (m.arr64 IW).size < 2 ^ 64 →
     (∀ j < l.toNat, (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j)) + 1).toNat < d.toNat) →
     (∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-    m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat
       then some (rdW (m.arr64 IW) (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) + 1))
@@ -729,12 +726,12 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
     have : (UInt64.ofNat v + 1).toNat = v + 1 := by
       rw [UInt64.toNat_add]; simp; omega
     rw [this]; omega
-  obtain ⟨hA, hS, hW, hG⟩ := nIdxsCopyW_get (n - 1) _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := nIdxsCopyW_get (n - 1) _ _ _ _ _ hcp
     (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
     (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG
   have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]) hW)
+    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
   have htop : rdW (m2.arr64 CTL) 200 = q + UInt64.ofNat l := by
     rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + UInt64.ofNat l).toNat = q.toNat + l := by

@@ -73,12 +73,12 @@ theorem LoopR.of_step {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.
     {pend : Array PendingCheck} {ds : Array IDeclaration} (h : LoopR pins dn m a vis fe pend ds)
     (hS : L.Ind.StageR dn vis' fe' m' a') (hf : MemFrame stepA stepC m m')
     (hx : ArrExt (erecP m) (erecP m')) : LoopR pins dn m' a' vis' fe' pend ds := by
-  have hP : m'.arr64 PEND = m.arr64 PEND := hf.1 _ step_keeps.1 (by decide)
-  have hD1 : m'.arr64 DECL = m.arr64 DECL := hf.1 _ step_keeps.2.1 (by decide)
-  have hD2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ step_keeps.2.2.1 (by decide)
-  have hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hf.2.1 _ step_keeps.2.2.2
+  have hP : m'.arr64 PEND = m.arr64 PEND := hf.arr _ step_keeps.1 (by decide)
+  have hD1 : m'.arr64 DECL = m.arr64 DECL := hf.arr _ step_keeps.2.1 (by decide)
+  have hD2 : m'.arr64 DLP = m.arr64 DLP := hf.arr _ step_keeps.2.2.1 (by decide)
+  have hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hf.ctl _ step_keeps.2.2.2
   exact ⟨hS.1, h.pend.ext hP hc hx, by rw [hD1, hD2]; exact h.decls, hS.2,
     h.pmemo.imp fun _ hq => hq.frame step_pmemo.1 step_pmemo.2 hf,
-    PinSetsR.grow h.pinsets (RecGrow.of_ext h.iw hx) (hf.2.1 _ step_pins.1) (hf.2.1 _ step_pins.2)⟩
+    PinSetsR.grow h.pinsets (RecGrow.of_ext h.iw hx) (hf.ctl _ step_pins.1) (hf.ctl _ step_pins.2)⟩
 
 end L.Arena

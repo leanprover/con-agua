@@ -102,32 +102,32 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
       · decide
       · simp only [Tier0In] at h; omega
   have hIW : s'.mem.arr64 L.Ind.IW = s₀.mem.arr64 L.Ind.IW :=
-    hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide)
+    hf.arr _ (fun h => by have := hA _ h; revert this; decide) (by decide)
   refine ⟨hl, hok, ⟨⟨hD, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ⟨pm', hP'⟩, ?_⟩, hP', hdec⟩
   · rw [hcA]
     exact hR.check.core.frame (fun b hb => by have := hA' b hb; omega)
       (fun x hx => by have := hC x hx; omega) hf
   · rw [hpA]
     exact hR.check.pins.frame (fun b hb => by have := hA' b hb; omega) hf
-  · exact hR.check.env.grow (fun b h1 h2 h3 => hf.1 b (fun h => by
+  · exact hR.check.env.grow (fun b h1 h2 h3 => hf.arr b (fun h => by
         have := hA' _ h; simp only at this; omega)
-      (TieredArray.t0_ne (show b ≠ (1 : Nat) by omega))) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
+      (TieredArray.t0_ne (show b ≠ (1 : Nat) by omega))) (hf.ctl 128 (fun h => by have := hC _ h; simp at this))
       hg (TblSame.of_frame (fun b hb => by have := hA' b hb; omega)
         (fun h => by have := hA' _ h; revert this; decide)
         (fun h => by have := hC _ h; simp at this) hf)
-  · exact ModeOK.of_keep hR.check.mode (hf.2.1 1 (by decide)) htk
-  · exact hR.pend.ext (hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide))
-      (hf.2.1 130 (fun h => by have := hC _ h; simp at this)) hg.ext
-  · rw [hf.1 DECL (fun h => by have := hA _ h; revert this; decide) (by decide),
-      hf.1 DLP (fun h => by have := hA _ h; revert this; decide) (by decide)]
+  · exact ModeOK.of_keep hR.check.mode (hf.ctl 1 (by decide)) htk
+  · exact hR.pend.ext (hf.arr _ (fun h => by have := hA _ h; revert this; decide) (by decide))
+      (hf.ctl 130 (fun h => by have := hC _ h; simp at this)) hg.ext
+  · rw [hf.arr DECL (fun h => by have := hA _ h; revert this; decide) (by decide),
+      hf.arr DLP (fun h => by have := hA _ h; revert this; decide) (by decide)]
     exact hR.decls
-  · refine ⟨?_, hts, ?_, by rw [hf.2.2.1]; exact hiw4, by rw [hf.2.2.1]; exact hiw5⟩
+  · refine ⟨?_, hts, ?_, by rw [hf.size]; exact hiw4, by rw [hf.size]; exact hiw5⟩
     · simp only [L.Ind.iwTop, hIW]
-      rw [hf.2.1 200 (fun h => by have := hC _ h; simp at this)]; exact hiw1
+      rw [hf.ctl 200 (fun h => by have := hC _ h; simp at this)]; exact hiw1
     · rw [hIW]; exact hiw3
   · exact PinSetsR.grow hR.pinsets ⟨hg.1, hg.2.1⟩
-      (hf.2.1 150 (fun h => by have := hC _ h; simp at this))
-      (hf.2.1 151 (fun h => by have := hC _ h; simp at this))
+      (hf.ctl 150 (fun h => by have := hC _ h; simp at this))
+      (hf.ctl 151 (fun h => by have := hC _ h; simp at this))
 
 /-- `tbl_grown(nt)` under the loop's relation: the tables list's length minus `nt`. -/
 theorem tblGrown_loop (hpr : PromoteProg p) :
@@ -182,11 +182,11 @@ structure BracketProg (p : Prog) : Prop where
 
 theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
     (hf : MemFrame scrArrs C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
-  have hP : m'.arr64 PEND = m.arr64 PEND := hf.1 _ (by decide) (by decide)
-  have hE : erecP m' = erecP m := erecP_congr (hf.1 _ (by decide) (by decide))
-    (hf.2.1 129 (fun h' => by have := hC _ h'; simp at this))
+  have hP : m'.arr64 PEND = m.arr64 PEND := hf.arr _ (by decide) (by decide)
+  have hE : erecP m' = erecP m := erecP_congr (hf.arr _ (by decide) (by decide))
+    (hf.ctl 129 (fun h' => by have := hC _ h'; simp at this))
   have hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 :=
-    hf.2.1 130 (fun h' => by have := hC _ h'; simp at this)
+    hf.ctl 130 (fun h' => by have := hC _ h'; simp at this)
   refine ⟨by simp only [pendCount, hc]; exact h.count, fun j hj => ?_,
     by simp only [pendCount, hc]; exact h.bound⟩
   rw [← h.recs j hj]; simp only [decPend, hP, hE]
@@ -195,16 +195,16 @@ theorem LoopR.of_lo {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Na
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration} {C : List Word}
     (h : LoopR pins dn m a vis fe pend ds) (hC' : CheckR dn m' a' vis fe) (hf : MemFrame scrArrs C m m')
     (hC : ∀ x ∈ C, x.toNat < 128) : LoopR pins dn m' a' vis fe pend ds := by
-  have h1 : m'.arr64 DECL = m.arr64 DECL := hf.1 _ (by decide) (by decide)
-  have h2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ (by decide) (by decide)
+  have h1 : m'.arr64 DECL = m.arr64 DECL := hf.arr _ (by decide) (by decide)
+  have h2 : m'.arr64 DLP = m.arr64 DLP := hf.arr _ (by decide) (by decide)
   exact ⟨hC', h.pend.frameLo hf hC, by rw [h1, h2]; exact h.decls,
     IWOK.frame hf (by decide) (by decide) (fun h' => by have := hC _ h'; simp at this)
       (fun h' => by have := hC _ h'; simp at this) h.iw,
     h.pmemo.imp fun _ hp => hp.frame (by decide) (fun x hx => .inl (by have := hC x hx; omega)) hf,
-    PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.1 _ (by decide) (by decide))
-        (hf.2.1 129 (fun h' => by have := hC _ h'; simp at this)))
-      (hf.2.1 150 (fun h' => by have := hC _ h'; simp at this))
-      (hf.2.1 151 (fun h' => by have := hC _ h'; simp at this))⟩
+    PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.arr _ (by decide) (by decide))
+        (hf.ctl 129 (fun h' => by have := hC _ h'; simp at this)))
+      (hf.ctl 150 (fun h' => by have := hC _ h'; simp at this))
+      (hf.ctl 151 (fun h' => by have := hC _ h'; simp at this))⟩
 
 section bracket
 variable (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
@@ -322,10 +322,10 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     have fC : ∀ (m₁ : Mem) (x : Word), MemFrame [PEND] [130] m₁ (m₁.set64 CTL 130 x) :=
       fun m₁ x => MemFrame.mono (MemFrame.setCtl m₁ 130 x) (by simp) (by simp)
     exact (((fP _ _ _).trans (fP _ _ _)).trans (fP _ _ _)).trans (fC _ _)
-  have hE : erecP (pendPushMem m g i v) = erecP m := erecP_congr (hf.1 _ (by decide) (by decide))
-    (hf.2.1 129 (by decide))
-  have hD1 : (pendPushMem m g i v).arr64 DECL = m.arr64 DECL := hf.1 _ (by decide) (by decide)
-  have hD2 : (pendPushMem m g i v).arr64 DLP = m.arr64 DLP := hf.1 _ (by decide) (by decide)
+  have hE : erecP (pendPushMem m g i v) = erecP m := erecP_congr (hf.arr _ (by decide) (by decide))
+    (hf.ctl 129 (by decide))
+  have hD1 : (pendPushMem m g i v).arr64 DECL = m.arr64 DECL := hf.arr _ (by decide) (by decide)
+  have hD2 : (pendPushMem m g i v).arr64 DLP = m.arr64 DLP := hf.arr _ (by decide) (by decide)
   have hc1 : (c + 1).toNat = c.toNat + 1 := by
     rw [UInt64.toNat_add]; simp; omega
   have h30 : (3 * c).toNat = 3 * c.toNat := by rw [UInt64.toNat_mul]; simp; omega
@@ -348,8 +348,8 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     by rw [hD1, hD2]; exact h.decls,
     IWOK.frame hf (by decide) (by decide) (by decide) (by decide) h.iw,
     h.pmemo.imp fun _ hp => hp.pendPush g i v,
-    PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.1 _ (by decide) (by decide)) (hf.2.1 129 (by decide)))
-      (hf.2.1 150 (by decide)) (hf.2.1 151 (by decide))⟩
+    PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.arr _ (by decide) (by decide)) (hf.ctl 129 (by decide)))
+      (hf.ctl 150 (by decide)) (hf.ctl 151 (by decide))⟩
   · rw [hcnt, hc']; simp
   · intro j hj
     simp only [Array.size_push] at hj

@@ -421,8 +421,8 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
   have hpool₁' : m₁.arr64 POOL1 = m₀.arr64 POOL1 := hf₁.1 POOL1 (by simp [SPN, POOL1]) (by decide)
   have hpool₁v := vpool_congr hpool₁ hpool₁'
   have hpool₁c := pcap_congr' hpool₁ hpool₁'
-  have htopm₁ : m₁.top = m₀.top := by simp only [top_rdW]; exact hf₁.2.1 0 (by simp)
-  have hsz₁ : (m₁.arr64 SPN).size = (m₀.arr64 SPN).size := hf₁.2.2.1 SPN
+  have htopm₁ : m₁.top = m₀.top := by simp only [top_rdW]; exact hf₁.ctl 0 (by simp)
+  have hsz₁ : (m₁.arr64 SPN).size = (m₀.arr64 SPN).size := hf₁.size SPN
   have hspn := hS.spn
   have hlen : (m₁.len64 SPN).toNat = (m₀.arr64 SPN).size := by
     rw [← hsz₁]; exact L.Front.toNat_ofNat_size _ (by rw [hsz₁]; exact hspn)

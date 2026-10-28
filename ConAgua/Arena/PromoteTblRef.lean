@@ -148,9 +148,9 @@ theorem eraseT_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
       · have : ¬ decI w = nn := fun h => e ((decI_eq_iff w hwl nn).mp h).symm
         simp [e, this]
     have hfr := tblSet_frame m w 0 hrt
-    have hEE : (tblSet m w 0).arr64 EREC = m.arr64 EREC := hfr.1 EREC (by decide) (by decide)
-    have hET : (tblSet m w 0).arr64 ETAB = m.arr64 ETAB := hfr.1 ETAB (by decide) (by decide)
-    have hP1 : erecP (tblSet m w 0) = erecP m := erecP_congr hEE (hfr.2.1 129 (by simp))
+    have hEE : (tblSet m w 0).arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
+    have hET : (tblSet m w 0).arr64 ETAB = m.arr64 ETAB := hfr.arr ETAB (by decide) (by decide)
+    have hP1 : erecP (tblSet m w 0) = erecP m := erecP_congr hEE (hfr.ctl 129 (by simp))
     have hszz : ((tblSet m w 0).arr64 EREC).size < 2 ^ 64 := by rw [hEE]; exact hsz
     have hlenk : (k - 1).toNat = ts.length := by
       rw [toNat_sub1 k hk0]; simp at hk; omega
@@ -234,7 +234,7 @@ theorem indexT_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     obtain ⟨hE1, hfr1⟩ := ih m vis (j - 1) (k - 1) fe ts z0 m1 hE hsz hlenk hj1 hcon' hc0
     have hEE : m1.arr64 EREC = m.arr64 EREC := hfr1.1 EREC (by decide) (by decide)
     have hET : m1.arr64 ETAB = m.arr64 ETAB := hfr1.1 ETAB (by decide) (by decide)
-    have hP1 : erecP m1 = erecP m := erecP_congr hEE (hfr1.2.1 129 (by simp))
+    have hP1 : erecP m1 = erecP m := erecP_congr hEE (hfr1.ctl 129 (by simp))
     have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := by rw [hEE]; exact hsz
     rw [← hP1] at hdec
     rw [← hET] at hptr
@@ -370,7 +370,7 @@ theorem ptables_rel : ∀ (n : Nat) (m : Mem) (a : AState)
     have hEE : (m1.set64 ETAB j (g0 dl)).arr64 EREC = m1.arr64 EREC :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have hT2 : erecTop (m1.set64 ETAB j (g0 dl)) = erecTop m1 := by
-      simp only [erecTop]; rw [hfs.2.1 129 (by simp)]
+      simp only [erecTop]; rw [hfs.ctl 129 (by simp)]
     have hg12 : ErecGrow m1 (m1.set64 ETAB j (g0 dl)) := ErecGrow.of_eq hEE hT2
     have hEtab : ∀ i, i ≠ j.toNat → ((m1.set64 ETAB j (g0 dl)).arr64 ETAB)[i]? = (m.arr64 ETAB)[i]? := by
       intro i hi
