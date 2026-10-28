@@ -8,8 +8,9 @@ helper `ia2`, fork `top`)
 `cbposW_okC`'s proof (`Positivity.lean`) on the model `cbpE`: `nest_uniform` (`nu_ref`),
 `nest_root` (`nrt_ref`), `check_abs_ctor_sorts_all` (`iaaE_claim`); the other callees claim
 nothing (`nvFns`). Then the generated statements `CheckBlockPositivityE` and `NestSeedsE`
-(`IndA3.lean`), from the walk's refinement (`nbRef_all`, under `NbG`), `NitE` and `check_struct_field_sorts_i`'s
-(`CheckStructFieldSortsIE`); the fuels below the ok refinement's by `callE_err_mono`.
+(`IndA3.lean`), from the walk's refinements (`nbRef_all`, `nsd_ref`, under `NbG`) and
+`check_struct_field_sorts_i`'s (`CheckStructFieldSortsIE`); the fuels below the ok refinement's by
+`callE_err_mono`.
 -/
 
 open ConRon.Arena
@@ -310,20 +311,14 @@ theorem checkBlockPositivityE_claim (hG : NbG p)
   exact cbpE_claim hq hIlpf henv hOpf hLC hLT hApd hG.nv eCsf hG hP hclP hfa n (by omega) hW hC hqd hsrc hcv hcss hPM
     hA hk hpP hcvP hcssP hfe hT hct
 
-/-- **`nest_seeds`' error claim, discharged**: the generated statement (`NestSeedsE`), from the
-walk's refinement (`nbRef_all`'s `key`, under `NbG`), `NitE` and the `nvFns` text. -/
-theorem nestSeedsE_claim (hG : NbG p)
-    (hNit : ∀ dn vis fe env, ConLeche.EnvWF env → NitE p dn vis fe env) : NestSeedsE p := by
+/-- **`nest_seeds`' error claim, discharged**: the generated statement (`NestSeedsE`), the error
+half of `nsd_ref` (under `NbG`). -/
+theorem nestSeedsE_claim (hG : NbG p) : NestSeedsE p := by
   intro hL hq hIlpf hLC dn vis fe env henv s₀ a₀ ctx sO sL ns c seeds NS hC hU hhi hsl hsd hns hP hA ctxP seedsP nsP
     hc hctx hseedsP hnsP hw F hF e he
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (nsdE_spec p hL.pseeds F ⟨s₀.mem, Locals.init []⟩ vis ctx sO sL ns) he
-    (Err.code_ne_of_cls hk0)
-  simp only at hW
-  exact nsdE_claim hL hG.nv hq hIlpf hLC dn vis fe henv hG
-    (hNit dn vis fe env henv) ctx c hc F hF s₀.mem a₀ sO sL ns seeds NS seedsP nsP e hW hC hU hhi hsl hsd hns hP hA hctx
-    hseedsP hnsP hw
+  exact RefE.run_err (nsdE_spec p hL F ⟨s₀.mem, Locals.init []⟩ vis ctx sO sL ns) hG.nv hG
+    (nsd_ref hL hq hIlpf hLC dn vis fe henv ctx c hc F hF s₀.mem a₀ sO sL ns seeds NS seedsP nsP hC hU hhi hsl hsd hns
+      hP hA hctx hseedsP hnsP hw) he
 
 end claims
 

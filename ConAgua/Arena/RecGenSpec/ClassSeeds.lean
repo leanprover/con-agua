@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.RecGenSpec.DecNLAt
 import ConAgua.Arena.RecGenSpec.KcW
 import ConAgua.Arena.RecGenSpec.KeysProg

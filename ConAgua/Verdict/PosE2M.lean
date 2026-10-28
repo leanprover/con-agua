@@ -22,9 +22,14 @@ namespace L.Ind
 
 open L.Arena
 
-l_model nggE_spec (p : Prog) (hf : p.lookup "nest_grow_group" = some nestGrowGroupL)
-  fns [hf ↦ nggE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+l_model nggE_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hc : p.lookup "iw_copy" = some iwCopy)
+    (h2 : p.lookup "rec2" = some rec2) (h4 : p.lookup "rec4" = some rec4)
+    (hsn : p.lookup "sl_snoc" = some slSnoc) (hf : p.lookup "nest_grow_group" = some nestGrowGroupL)
+  fns [hf ↦ nggE list]
+  specs [posRec4_specW p ha h4 n, posRec2_specW p ha h2 n, slSnoc_specW p ha hc hsn n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 noncomputable section
 

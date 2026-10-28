@@ -85,7 +85,6 @@ globs = ["ConAgua", "ConAgua.L.ModelGenTest", "ConAgua.Arena.PromoteCIRef.+", "C
   "ConAgua.Rom.CIReadRefs", "ConAgua.Arena.DeclTwin",
   "ConAgua.L.Agree", "ConAgua.Checker.PhaseBReads",
   "ConAgua.Arena.IndT.Base",
-  "ConAgua.Arena.IndT.RecGen3",
   "ConAgua.Arena.IndT.Lift",
   "ConAgua.Arena.IndT.RecGen7",
   "ConAgua.Arena.IndT.RecGen4",

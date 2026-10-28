@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict

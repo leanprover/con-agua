@@ -8,7 +8,7 @@ import ConAgua.L.ModelGen
 
 Mirrors `clmW_simC` (`IndT/RecGen19`), by induction on the fuel: `intern_const`, `mk_app_n_f` and
 `sl_cons` are `closedNV`; `target_major_of` is `tmf_claim`, `target_major_pins`
-`targetMajorPins_claim`, the recursive call the induction hypothesis.
+`tmp_ref` (through the run), the recursive call the induction hypothesis.
 -/
 
 set_option experimental.vcgen true
@@ -200,24 +200,22 @@ theorem clmE_claim (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape
     rw [h4, clmE.k_target_major_pins.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    have := CoreSpecE.of_callE (targetMajorPins_claim hq henv hnv hcE hP.tmp (k + 1) (by omega)
-      ⟨s3.mem, Locals.init []⟩ a3' (rdW (s3.mem.arr64 IW) (pp + 4)) (r3.headD 0) x3 hC3 hA3 hd3 hm
-      (fun _ => by rw [hrP]; exact hdsW)) h4
+    have := RefE.run_err (tmpE_spec p hP.tmp (k + 1) ⟨s3.mem, Locals.init []⟩ vis _ _) hnv ⟨hnv, hcE⟩
+      (tmp_ref hq henv (k + 1) (by omega) hC3 hA3 hd3 hm (fun _ => by rw [hrP]; exact hdsW)) h4
     rw [hrB] at this
     exact this
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
-  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (targetMajorPins_spec p hP.tmp (realCall p) (realCall_spec p) (k + 1) _ vis _ _) (callW_of_callE h4)
-  obtain ⟨a4, hrun4, hC4, hg4, hA4⟩ := tmpW_okC hq henv hP.tmp.tpt
-    (by omega) hW4 hC3 hA3 hd3 hm (fun _ => by rw [hrP]; exact hdsW)
+  obtain ⟨s4, hs4, -, ⟨⟩, a4, hrun4, ⟨hC4, hg4, hA4, hf4⟩⟩ := RefE.run_ok
+    (tmpE_spec p hP.tmp (k + 1) ⟨s3.mem, Locals.init []⟩ vis _ _)
+    (tmp_ref hq henv (k + 1) (by omega) hC3 hA3 hd3 hm (fun _ => by rw [hrP]; exact hdsW)) h4
   have hrun4' := hrun4
   rw [hrP] at hrun4'
   obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.targetMajorPins_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv pP.nP _ MP (fun _ => hdsW) a3' a4 () hC3.check hm hrun4'
   rw [hrB] at hrun4
   refine ErrClaim.bind_right hrun4 ?_
-  have hP4 : PosMR s4.mem := hP3.fr (tmpW_mfrR hq hP.tmp.tpt hW4)
+  have hP4 : PosMR s4.mem := hP3.fr hf4
   subst hs4
   have hg04 := hg03.trans hg4
   have c14 := (c12.trans c3).trans c4
