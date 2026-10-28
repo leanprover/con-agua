@@ -690,4 +690,26 @@ l_model tUseLenP_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f 
 example (p : Prog) (m : Mem) : tUseLenPE p m 1 = .ok (3, m.set64 TW 0 2) := by
   simp [tUseLenPE, tUseLenPE.k_t_len, tLenP]
 
+/-- `cut k`: two `if`s that only set locals, then a call: the code after them (the join point
+`j2`) gets its own step theorem `tCut_spec.tail`, so the step's paths are not four copies of the
+call's. -/
+-- con-ron: none — an `l_model` test function
+def tCut : FunDecl := lfn (x, y) locals (a, b, c) {
+  if x < 5 { a := x } else { a := x + 1 };
+  if y < 5 { b := y } else { b := y - 1 };
+  c := call t_len(a);
+  if c == 0 { return 0 };
+  TW.u64[0] := b;
+  return c + b
+}
+
+l_model tCut_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_len"] → f ∈ fs)
+    (hp : p.lookup "t_cut" = some tCut) (hq : p.lookup "t_len" = some tLen)
+  fns [hp ↦ tCutE]
+  specs [tLen_spec p hq n]
+  grind [arena_grind] unified nv [closedNV p fs = true, hmem] cut 2
+
+example (p : Prog) (m : Mem) : tCutE p m 1 7 = .ok (7, m.set64 TW 0 6) := by
+  simp [tCutE, tCutE.j1, tCutE.j2, tCutE.k_t_len, tLenL]
+
 end L.ModelGenTest

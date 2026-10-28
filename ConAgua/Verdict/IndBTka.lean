@@ -29,8 +29,10 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
--- `finish (gen := 20)`: the generation depth of the steps through the two index slices' `if`s
--- (the default 8 leaves the early `return 0` after `sl_eq` open)
+-- `cut 3`: the code after the parameter count and the two index slices' `if`s has its own step
+-- theorem (`tkaE_spec.tail`), so the step does not run through it once per slice combination
+-- (21.5 s -> 4.9 s); `finish (gen := 20)`: the tail's generation depth (the default 8 leaves the
+-- early `return 0` after `sl_eq` open)
 l_model tkaE_spec (p : Prog) (hL : K53Look p)
   fns [hL.tka ↦ tkaE]
   specs [ee_spec p hL n, slEq_spec p hL.eq n, internConst_spec p hL.cf hL.cp hL.ic n, mknF_spec p hL.ad n,
@@ -39,7 +41,7 @@ l_model tkaE_spec (p : Prog) (hL : K53Look p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   finish [] gen 20 heartbeats 4000000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] cut 3
 
 /-- `tkaE` after the parameter count, the two index slices as `if`s. -/
 theorem tkaE_succ (p : Prog) (n : Nat) (m : Mem) (vis q fto ftl Mc ip usp lao lal mao mal : Word) :
