@@ -549,6 +549,9 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
     let mut roL : Option Lean.Expr := none
     let mut unitF : Option Lean.Expr := none
     let mut tupF : Option (Lean.Expr × Nat × Bool) := none
+    -- `some ((r.headD 0, r.tail.headD 0), s'.mem)`: a pair of results and the memory, read
+    -- through `L.flat3` as a tuple of two
+    let mut pairF : Option Lean.Expr := none
     let mut guards : Array Lean.Expr := #[]
     let mut opt := false
     -- a conjunct over the states' memories (and the arguments), not over the results: a fact the
@@ -593,6 +596,9 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
             | (``Prod.mk, #[_, _, v1, v2]) =>
               if resIdx r v1 == some 0 && v2 == memS' then eff := some a
               else if v1 == r && v2 == memS' then effL := some a
+              else if v2 == memS' && (match tupComps v1 with
+                  | [x, y] => resIdx r x == some 0 && resIdx r y == some 1
+                  | _ => false) then pairF := some a
               -- `some ([r.headD 0], s'.mem)`: a list of one result, read as the list
               else if (match v1.listLit? with
                   | some (_, [e]) => resIdx r e == some 0
@@ -618,7 +624,11 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
         if c.containsFVar r.fvarId! then throwError "l_model: unsupported post conjunct {c}"
         -- a fact about the final memory (`Keep s₀.mem s'.mem`, `Inv s'.mem`): not the model
         unless c.containsFVar s'.fvarId! do guards := guards.push c
-    let kind ← if let some e := unitF then do
+    let kind ← if let some e := pairF then do
+        unless eff.isNone && memOpt.isNone && memTot.isNone && ro.isNone && listF.isNone && effL.isNone && roL.isNone && tupF.isNone && unitF.isNone do
+          throwError "l_model: callee {fname}: ambiguous post"
+        pure (CKind.effT (← `(L.flat3 $(← delabT e))) 2)
+      else if let some e := unitF then do
         unless eff.isNone && memOpt.isNone && memTot.isNone && ro.isNone && listF.isNone && effL.isNone && roL.isNone && tupF.isNone do
           throwError "l_model: callee {fname}: ambiguous post"
         unless memSame do throwError "l_model: callee {fname} without results must keep the memory"

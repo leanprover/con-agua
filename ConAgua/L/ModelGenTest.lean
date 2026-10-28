@@ -665,4 +665,29 @@ l_model tUseLenT_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f 
 example (p : Prog) (m : Mem) : tUseLenE p m 1 = .ok (3, m.set64 TW 0 2) := by
   simp [tUseLenE, tUseLenE.k_t_len, tLenL]
 
+/-- A callee model with a pair of results, `some ((r.headD 0, r.tail.headD 0), s'.mem)`
+(`vi_map`'s): read through `L.flat3` as a tuple of two. -/
+def tLenP (m : Mem) (x : Word) : Option ((Word × Word) × Mem) :=
+  if x = 9 then none else some ((x, x + 1), m)
+
+theorem tLen_specP (p : Prog) (hp : p.lookup "t_len" = some tLen) (n : Nat) (s₀ : St) (x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_len" [x]
+    ⦃fun r s' => LocEq s' s₀ ∧ tLenP s₀.mem x = some ((r.headD 0, r.tail.headD 0), s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, tLen]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+      simp_all [tLenP, Sig.retVal, Sig.retOr, Locals.init, LocEq, BinOp.eval, Cmp.eval, St.setLoc_loc,
+        St.setLoc_mem]
+
+l_model tUseLenP_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_len"] → f ∈ fs)
+    (hp : p.lookup "t_use_len" = some tUseLen) (hq : p.lookup "t_len" = some tLen)
+  fns [hp ↦ tUseLenPE]
+  specs [tLen_specP p hq n]
+  grind [arena_grind] unified nv [closedNV p fs = true, hmem]
+
+example (p : Prog) (m : Mem) : tUseLenPE p m 1 = .ok (3, m.set64 TW 0 2) := by
+  simp [tUseLenPE, tUseLenPE.k_t_len, tLenP]
+
 end L.ModelGenTest
