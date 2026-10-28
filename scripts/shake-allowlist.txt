@@ -153,3 +153,4 @@ ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum2	# the build nee
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/InferLeavesE.lean	public import ConAgua.Arena.WhnfIotaRefine6	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Arena/KnotSlot.lean	public import ConAgua.Arena.SimLib	# needed: the build fails without it (`of_ite_none`, which WhnfDeltaSlot.lean reached through WhnfDelta before); the tool names it unused
