@@ -76137,6 +76137,341 @@ movq $0, %rax
 .Lca_fab_scope_ok_0R:
 addq $32, %rsp
 ret
+ca_f_fast_line:
+subq $80, %rsp
+lea 160(%rdi), %rax
+cmpq 1480(%r15), %rax
+jbe .Lca_fast_line_1E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_1X
+.Lca_fast_line_1E:
+.Lca_fast_line_1X:
+movq %rdi, %rax
+movq 1480(%r15), %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+movq 16(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq %rax, %r8
+movq $8879447481631449723, %rax
+cmpq %r8, %rax
+jne .Lca_fast_line_221E
+lea 8(%rdi), %r13
+movq %r13, %rax
+movq 1480(%r15), %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+movq 16(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq $281474976710655, %rcx
+andq %rcx, %rax
+movq $63919438848290, %rcx
+cmpq %rcx, %rax
+je .Lca_fast_line_2214211E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_2214211X
+.Lca_fast_line_2214211E:
+.Lca_fast_line_2214211X:
+addq $6, %r13
+cmpq 1480(%r15), %r13
+jae ca_error
+movq 16(%r15), %r12
+movzbq (%r12,%r13,1), %r12
+lea -48(%r12), %rbx
+cmpq $9, %rbx
+jbe .Lca_fast_line_2214221221E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_2214221221X
+.Lca_fast_line_2214221221E:
+.Lca_fast_line_2214221221X:
+cmpq $0, %rbx
+jne .Lca_fast_line_22142212221E
+lea 1(%r13), %rsi
+jmp .Lca_fast_line_22142212221X
+.Lca_fast_line_22142212221E:
+lea 18(%r13), %rsi
+.Lca_fast_line_22142212221X:
+addq $1, %r13
+cmpq 1480(%r15), %r13
+jae ca_error
+movq 16(%r15), %r12
+movzbq (%r12,%r13,1), %r12
+.Lca_fast_line_2214221222222H:
+lea -48(%r12), %rax
+cmpq $10, %rax
+jae .Lca_fast_line_2214221222222X
+cmpq %rsi, %r13
+jne .Lca_fast_line_221422122222261E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_221422122222261X
+.Lca_fast_line_221422122222261E:
+.Lca_fast_line_221422122222261X:
+movq %rbx, %rax
+imulq $10, %rax
+lea -48(%r12), %rcx
+addq %rcx, %rax
+movq %rax, %rbx
+addq $1, %r13
+cmpq 1480(%r15), %r13
+jae ca_error
+movq 16(%r15), %r12
+movzbq (%r12,%r13,1), %r12
+subq $1, %r14
+jb ca_exhausted
+jmp .Lca_fast_line_2214221222222H
+.Lca_fast_line_2214221222222X:
+movq %rbx, %r11
+movq %r13, %rax
+movq 1480(%r15), %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+movq 16(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq $281474976710655, %rcx
+andq %rcx, %rax
+movq $63919555486252, %rcx
+cmpq %rcx, %rax
+je .Lca_fast_line_2214222211E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_2214222211X
+.Lca_fast_line_2214222211E:
+.Lca_fast_line_2214222211X:
+addq $6, %r13
+cmpq 1480(%r15), %r13
+jae ca_error
+movq 16(%r15), %r12
+movzbq (%r12,%r13,1), %r12
+lea -48(%r12), %rbx
+cmpq $9, %rbx
+jbe .Lca_fast_line_2214222221221E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_2214222221221X
+.Lca_fast_line_2214222221221E:
+.Lca_fast_line_2214222221221X:
+cmpq $0, %rbx
+jne .Lca_fast_line_22142222212221E
+lea 1(%r13), %rsi
+jmp .Lca_fast_line_22142222212221X
+.Lca_fast_line_22142222212221E:
+lea 18(%r13), %rsi
+.Lca_fast_line_22142222212221X:
+addq $1, %r13
+cmpq 1480(%r15), %r13
+jae ca_error
+movq 16(%r15), %r12
+movzbq (%r12,%r13,1), %r12
+.Lca_fast_line_2214222221222222H:
+lea -48(%r12), %rax
+cmpq $10, %rax
+jae .Lca_fast_line_2214222221222222X
+cmpq %rsi, %r13
+jne .Lca_fast_line_221422222122222261E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_221422222122222261X
+.Lca_fast_line_221422222122222261E:
+.Lca_fast_line_221422222122222261X:
+movq %rbx, %rax
+imulq $10, %rax
+lea -48(%r12), %rcx
+addq %rcx, %rax
+movq %rax, %rbx
+addq $1, %r13
+cmpq 1480(%r15), %r13
+jae ca_error
+movq 16(%r15), %r12
+movzbq (%r12,%r13,1), %r12
+subq $1, %r14
+jb ca_exhausted
+jmp .Lca_fast_line_2214222221222222H
+.Lca_fast_line_2214222221222222X:
+movq %rbx, %r10
+movq %r13, %rax
+movq 1480(%r15), %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+movq 16(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq $72057594037927935, %rcx
+andq %rcx, %rax
+movq $16363367600106621, %rcx
+cmpq %rcx, %rax
+je .Lca_fast_line_2214222222211E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_2214222222211X
+.Lca_fast_line_2214222222211E:
+.Lca_fast_line_2214222222211X:
+addq $7, %r13
+cmpq 1480(%r15), %r13
+jae ca_error
+movq 16(%r15), %r12
+movzbq (%r12,%r13,1), %r12
+lea -48(%r12), %rbx
+cmpq $9, %rbx
+jbe .Lca_fast_line_2214222222221221E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_2214222222221221X
+.Lca_fast_line_2214222222221221E:
+.Lca_fast_line_2214222222221221X:
+cmpq $0, %rbx
+jne .Lca_fast_line_22142222222212221E
+lea 1(%r13), %rsi
+jmp .Lca_fast_line_22142222222212221X
+.Lca_fast_line_22142222222212221E:
+lea 18(%r13), %rsi
+.Lca_fast_line_22142222222212221X:
+addq $1, %r13
+cmpq 1480(%r15), %r13
+jae ca_error
+movq 16(%r15), %r12
+movzbq (%r12,%r13,1), %r12
+.Lca_fast_line_2214222222221222222H:
+lea -48(%r12), %rax
+cmpq $10, %rax
+jae .Lca_fast_line_2214222222221222222X
+cmpq %rsi, %r13
+jne .Lca_fast_line_221422222222122222261E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_221422222222122222261X
+.Lca_fast_line_221422222222122222261E:
+.Lca_fast_line_221422222222122222261X:
+movq %rbx, %rax
+imulq $10, %rax
+lea -48(%r12), %rcx
+addq %rcx, %rax
+movq %rax, %rbx
+addq $1, %r13
+cmpq 1480(%r15), %r13
+jae ca_error
+movq 16(%r15), %r12
+movzbq (%r12,%r13,1), %r12
+subq $1, %r14
+jb ca_exhausted
+jmp .Lca_fast_line_2214222222221222222H
+.Lca_fast_line_2214222222221222222X:
+movq %rbx, %r9
+movq %r13, %rax
+movq 1480(%r15), %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+movq 16(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+andq $65535, %rax
+cmpq $2685, %rax
+je .Lca_fast_line_2214222222222211E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_2214222222222211X
+.Lca_fast_line_2214222222222211E:
+.Lca_fast_line_2214222222222211X:
+addq $2, %r13
+movq $10, %rdi
+movq %r9, %r8
+movq %r10, %r9
+movq %r11, %r10
+movq %r11, %rax
+movq %rax, %r11
+movq %r13, %rax
+jmp .Lca_fast_line_0R
+jmp .Lca_fast_line_221X
+.Lca_fast_line_221E:
+.Lca_fast_line_221X:
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_fast_line_0R
+.Lca_fast_line_0Z:
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+.Lca_fast_line_0R:
+addq $80, %rsp
+ret
 ca_f_field_doms_resolve:
 movq %rsp, %rax
 subq 8(%r15), %rax
@@ -79084,20 +79419,33 @@ ret
 ca_f_front_line:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $80, %rax
+cmpq $160, %rax
 jb ca_exhausted
 subq $72, %rsp
 movq %rdi, (%rsp)
 movq (%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
-call ca_f_scan_line
+call ca_f_fast_line
+movq %rax, 16(%rsp)
+movq %rdi, 32(%rsp)
+movq %r8, 40(%rsp)
+movq %r9, 48(%rsp)
+movq %r10, 56(%rsp)
+movq %r11, 64(%rsp)
+cmpq $0, 16(%rsp)
+je .Lca_front_line_21E
+movq 32(%rsp), %rdi
+movq 40(%rsp), %r8
+movq 48(%rsp), %r9
+movq 56(%rsp), %r10
+movq 64(%rsp), %r11
+subq $1, %r14
+jb ca_exhausted
+call ca_f_apply_expr
 movq %rax, 8(%rsp)
-movq %rdi, 16(%rsp)
-cmpq $0, 8(%rsp)
-jne .Lca_front_line_21E
-movq $0, %rdi
-movq $0, %rax
+movq 16(%rsp), %rdi
+movq $1, %rax
 jmp .Lca_front_line_0R
 jmp .Lca_front_line_21X
 .Lca_front_line_21E:
@@ -79105,25 +79453,39 @@ jmp .Lca_front_line_21X
 movq (%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
+call ca_f_scan_line
+movq %rax, 8(%rsp)
+movq %rdi, 16(%rsp)
+cmpq $0, 8(%rsp)
+jne .Lca_front_line_2221E
+movq $0, %rdi
+movq $0, %rax
+jmp .Lca_front_line_0R
+jmp .Lca_front_line_2221X
+.Lca_front_line_2221E:
+.Lca_front_line_2221X:
+movq (%rsp), %rdi
+subq $1, %r14
+jb ca_exhausted
 call ca_f_skip_ws
 movq %rax, 24(%rsp)
 movq 24(%rsp), %rax
 cmpq 1480(%r15), %rax
-jae .Lca_front_line_222139S
+jae .Lca_front_line_22222139S
 movq 24(%rsp), %rax
 cmpq 1480(%r15), %rax
 jae ca_error
 movq 16(%r15), %rcx
 movzbq (%rcx,%rax,1), %rax
 cmpq $123, %rax
-je .Lca_front_line_2221E
-.Lca_front_line_222139S:
+je .Lca_front_line_222221E
+.Lca_front_line_22222139S:
 movq 16(%rsp), %rdi
 movq $1, %rax
 jmp .Lca_front_line_0R
-jmp .Lca_front_line_2221X
-.Lca_front_line_2221E:
-.Lca_front_line_2221X:
+jmp .Lca_front_line_222221X
+.Lca_front_line_222221E:
+.Lca_front_line_222221X:
 movq 24(%rsp), %rdi
 addq $1, %rdi
 subq $1, %r14
@@ -194354,23 +194716,380 @@ movq $0, %r10
 .Lca_pre_expr_val_0R:
 addq $80, %rsp
 ret
+ca_f_pre_fast_line:
+subq $80, %rsp
+lea 160(%rdi), %rax
+cmpq $15700, %rax
+jbe .Lca_pre_fast_line_1E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_1X
+.Lca_pre_fast_line_1E:
+.Lca_pre_fast_line_1X:
+movq %rdi, %rax
+movq $15700, %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+lea 4311(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq %rax, %r8
+movq $8879447481631449723, %rax
+cmpq %r8, %rax
+jne .Lca_pre_fast_line_221E
+lea 8(%rdi), %r13
+movq %r13, %rax
+movq $15700, %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+lea 4311(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq $281474976710655, %rcx
+andq %rcx, %rax
+movq $63919438848290, %rcx
+cmpq %rcx, %rax
+je .Lca_pre_fast_line_2214211E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_2214211X
+.Lca_pre_fast_line_2214211E:
+.Lca_pre_fast_line_2214211X:
+addq $6, %r13
+movq %r13, %r12
+cmpq $15700, %r12
+jae ca_error
+lea 4311(%r15), %rax
+movzbq (%rax,%r12,1), %r12
+lea -48(%r12), %rbx
+cmpq $9, %rbx
+jbe .Lca_pre_fast_line_2214221221E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_2214221221X
+.Lca_pre_fast_line_2214221221E:
+.Lca_pre_fast_line_2214221221X:
+cmpq $0, %rbx
+jne .Lca_pre_fast_line_22142212221E
+lea 1(%r13), %rsi
+jmp .Lca_pre_fast_line_22142212221X
+.Lca_pre_fast_line_22142212221E:
+lea 18(%r13), %rsi
+.Lca_pre_fast_line_22142212221X:
+addq $1, %r13
+movq %r13, %r12
+cmpq $15700, %r12
+jae ca_error
+lea 4311(%r15), %rax
+movzbq (%rax,%r12,1), %r12
+.Lca_pre_fast_line_2214221222222H:
+lea -48(%r12), %rax
+cmpq $10, %rax
+jae .Lca_pre_fast_line_2214221222222X
+cmpq %rsi, %r13
+jne .Lca_pre_fast_line_221422122222261E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_221422122222261X
+.Lca_pre_fast_line_221422122222261E:
+.Lca_pre_fast_line_221422122222261X:
+movq %rbx, %rax
+imulq $10, %rax
+lea -48(%r12), %rcx
+addq %rcx, %rax
+movq %rax, %rbx
+addq $1, %r13
+movq %r13, %r12
+cmpq $15700, %r12
+jae ca_error
+lea 4311(%r15), %rax
+movzbq (%rax,%r12,1), %r12
+subq $1, %r14
+jb ca_exhausted
+jmp .Lca_pre_fast_line_2214221222222H
+.Lca_pre_fast_line_2214221222222X:
+movq %rbx, %r11
+movq %r13, %rax
+movq $15700, %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+lea 4311(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq $281474976710655, %rcx
+andq %rcx, %rax
+movq $63919555486252, %rcx
+cmpq %rcx, %rax
+je .Lca_pre_fast_line_2214222211E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_2214222211X
+.Lca_pre_fast_line_2214222211E:
+.Lca_pre_fast_line_2214222211X:
+addq $6, %r13
+movq %r13, %r12
+cmpq $15700, %r12
+jae ca_error
+lea 4311(%r15), %rax
+movzbq (%rax,%r12,1), %r12
+lea -48(%r12), %rbx
+cmpq $9, %rbx
+jbe .Lca_pre_fast_line_2214222221221E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_2214222221221X
+.Lca_pre_fast_line_2214222221221E:
+.Lca_pre_fast_line_2214222221221X:
+cmpq $0, %rbx
+jne .Lca_pre_fast_line_22142222212221E
+lea 1(%r13), %rsi
+jmp .Lca_pre_fast_line_22142222212221X
+.Lca_pre_fast_line_22142222212221E:
+lea 18(%r13), %rsi
+.Lca_pre_fast_line_22142222212221X:
+addq $1, %r13
+movq %r13, %r12
+cmpq $15700, %r12
+jae ca_error
+lea 4311(%r15), %rax
+movzbq (%rax,%r12,1), %r12
+.Lca_pre_fast_line_2214222221222222H:
+lea -48(%r12), %rax
+cmpq $10, %rax
+jae .Lca_pre_fast_line_2214222221222222X
+cmpq %rsi, %r13
+jne .Lca_pre_fast_line_221422222122222261E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_221422222122222261X
+.Lca_pre_fast_line_221422222122222261E:
+.Lca_pre_fast_line_221422222122222261X:
+movq %rbx, %rax
+imulq $10, %rax
+lea -48(%r12), %rcx
+addq %rcx, %rax
+movq %rax, %rbx
+addq $1, %r13
+movq %r13, %r12
+cmpq $15700, %r12
+jae ca_error
+lea 4311(%r15), %rax
+movzbq (%rax,%r12,1), %r12
+subq $1, %r14
+jb ca_exhausted
+jmp .Lca_pre_fast_line_2214222221222222H
+.Lca_pre_fast_line_2214222221222222X:
+movq %rbx, %r10
+movq %r13, %rax
+movq $15700, %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+lea 4311(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq $72057594037927935, %rcx
+andq %rcx, %rax
+movq $16363367600106621, %rcx
+cmpq %rcx, %rax
+je .Lca_pre_fast_line_2214222222211E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_2214222222211X
+.Lca_pre_fast_line_2214222222211E:
+.Lca_pre_fast_line_2214222222211X:
+addq $7, %r13
+movq %r13, %r12
+cmpq $15700, %r12
+jae ca_error
+lea 4311(%r15), %rax
+movzbq (%rax,%r12,1), %r12
+lea -48(%r12), %rbx
+cmpq $9, %rbx
+jbe .Lca_pre_fast_line_2214222222221221E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_2214222222221221X
+.Lca_pre_fast_line_2214222222221221E:
+.Lca_pre_fast_line_2214222222221221X:
+cmpq $0, %rbx
+jne .Lca_pre_fast_line_22142222222212221E
+lea 1(%r13), %rsi
+jmp .Lca_pre_fast_line_22142222222212221X
+.Lca_pre_fast_line_22142222222212221E:
+lea 18(%r13), %rsi
+.Lca_pre_fast_line_22142222222212221X:
+addq $1, %r13
+movq %r13, %r12
+cmpq $15700, %r12
+jae ca_error
+lea 4311(%r15), %rax
+movzbq (%rax,%r12,1), %r12
+.Lca_pre_fast_line_2214222222221222222H:
+lea -48(%r12), %rax
+cmpq $10, %rax
+jae .Lca_pre_fast_line_2214222222221222222X
+cmpq %rsi, %r13
+jne .Lca_pre_fast_line_221422222222122222261E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_221422222222122222261X
+.Lca_pre_fast_line_221422222222122222261E:
+.Lca_pre_fast_line_221422222222122222261X:
+movq %rbx, %rax
+imulq $10, %rax
+lea -48(%r12), %rcx
+addq %rcx, %rax
+movq %rax, %rbx
+addq $1, %r13
+movq %r13, %r12
+cmpq $15700, %r12
+jae ca_error
+lea 4311(%r15), %rax
+movzbq (%rax,%r12,1), %r12
+subq $1, %r14
+jb ca_exhausted
+jmp .Lca_pre_fast_line_2214222222221222222H
+.Lca_pre_fast_line_2214222222221222222X:
+movq %rbx, %r9
+movq %r13, %rax
+movq $15700, %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+lea 4311(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+andq $65535, %rax
+cmpq $2685, %rax
+je .Lca_pre_fast_line_2214222222222211E
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_2214222222222211X
+.Lca_pre_fast_line_2214222222222211E:
+.Lca_pre_fast_line_2214222222222211X:
+addq $2, %r13
+movq $10, %rdi
+movq %r9, %r8
+movq %r10, %r9
+movq %r11, %r10
+movq %r11, %rax
+movq %rax, %r11
+movq %r13, %rax
+jmp .Lca_pre_fast_line_0R
+jmp .Lca_pre_fast_line_221X
+.Lca_pre_fast_line_221E:
+.Lca_pre_fast_line_221X:
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+jmp .Lca_pre_fast_line_0R
+.Lca_pre_fast_line_0Z:
+movq $0, %rax
+movq $0, %rdi
+movq $0, %r8
+movq $0, %r9
+movq $0, %r10
+movq $0, %r11
+.Lca_pre_fast_line_0R:
+addq $80, %rsp
+ret
 ca_f_pre_front_line:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $80, %rax
+cmpq $160, %rax
 jb ca_exhausted
 subq $72, %rsp
 movq %rdi, (%rsp)
 movq (%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
-call ca_f_pre_scan_line
+call ca_f_pre_fast_line
+movq %rax, 16(%rsp)
+movq %rdi, 32(%rsp)
+movq %r8, 40(%rsp)
+movq %r9, 48(%rsp)
+movq %r10, 56(%rsp)
+movq %r11, 64(%rsp)
+cmpq $0, 16(%rsp)
+je .Lca_pre_front_line_21E
+movq 32(%rsp), %rdi
+movq 40(%rsp), %r8
+movq 48(%rsp), %r9
+movq 56(%rsp), %r10
+movq 64(%rsp), %r11
+subq $1, %r14
+jb ca_exhausted
+call ca_f_pre_apply_expr
 movq %rax, 8(%rsp)
-movq %rdi, 16(%rsp)
-cmpq $0, 8(%rsp)
-jne .Lca_pre_front_line_21E
-movq $0, %rdi
-movq $0, %rax
+movq 16(%rsp), %rdi
+movq $1, %rax
 jmp .Lca_pre_front_line_0R
 jmp .Lca_pre_front_line_21X
 .Lca_pre_front_line_21E:
@@ -194378,24 +195097,38 @@ jmp .Lca_pre_front_line_21X
 movq (%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
+call ca_f_pre_scan_line
+movq %rax, 8(%rsp)
+movq %rdi, 16(%rsp)
+cmpq $0, 8(%rsp)
+jne .Lca_pre_front_line_2221E
+movq $0, %rdi
+movq $0, %rax
+jmp .Lca_pre_front_line_0R
+jmp .Lca_pre_front_line_2221X
+.Lca_pre_front_line_2221E:
+.Lca_pre_front_line_2221X:
+movq (%rsp), %rdi
+subq $1, %r14
+jb ca_exhausted
 call ca_f_pre_skip_ws
 movq %rax, 24(%rsp)
 cmpq $15700, 24(%rsp)
-jae .Lca_pre_front_line_222139S
+jae .Lca_pre_front_line_22222139S
 movq 24(%rsp), %rax
 cmpq $15700, %rax
 jae ca_error
 lea 4311(%r15), %rcx
 movzbq (%rcx,%rax,1), %rax
 cmpq $123, %rax
-je .Lca_pre_front_line_2221E
-.Lca_pre_front_line_222139S:
+je .Lca_pre_front_line_222221E
+.Lca_pre_front_line_22222139S:
 movq 16(%rsp), %rdi
 movq $1, %rax
 jmp .Lca_pre_front_line_0R
-jmp .Lca_pre_front_line_2221X
-.Lca_pre_front_line_2221E:
-.Lca_pre_front_line_2221X:
+jmp .Lca_pre_front_line_222221X
+.Lca_pre_front_line_222221E:
+.Lca_pre_front_line_222221X:
 movq 24(%rsp), %rdi
 addq $1, %rdi
 subq $1, %r14

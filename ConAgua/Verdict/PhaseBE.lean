@@ -1,5 +1,4 @@
 import ConAgua.Arena.PhaseBT
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

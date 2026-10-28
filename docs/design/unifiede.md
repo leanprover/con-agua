@@ -288,3 +288,137 @@ After batch 4:
 * `ErrClaim`, `CoreSpecE` and `callE_spec` stay (the `RefE` kit is built on them; callees
   without a spec);
 * the hand `Except` models of mgen.md §1.2 go with their functions' batches.
+
+### 3.5 Batch 1d (`Decl*E`, `DefEq*E`, `Front*E`, `WhnfModels3E/E/7E`)
+
+**Landing 1: the definition arm's and phase B's leaves.** Four functions:
+
+| function | before: ok refinement + error claim | after | change |
+|---|---|---:|---:|
+| `install_basis_decl` | `ibdW_ok` 39 + `ibdE_okT` 44 = 83 | `ibd_ref` 36 + `IbdPost` 4 = 40 | −52 % |
+| `check_value_group` | `cvgW_okT` 175 + `cvgE_okT` 245 = 420 | `cvg_ref` 197 + `CvgPost` 5 + `CvgCtx` 3 = 205 | −51 % |
+| `defn_nat_cert` | `defnNatCert_okC` 102 + `defnNatCertE_okC` 136 = 238 | `dnc_ref` 115 + `DncPost` 5 = 120 | −50 % |
+| `defn_nat_gate` | `defnNatGate_okC` 98 + `defnNatGateE_okC` 145 = 243 | `dng_ref` 117 + `DngPost` 6 + `defnNatGate_okC` 15 (from the run) = 138 | −43 % |
+| **sum** | **984** | **503** | **−49 %** |
+
+Also gone: the hand ok models and their specs (`ibdW`/`ibdK*`/`ibd_specW`, the `cvgW` block with
+its arms and `cvg_specW`, the generated `defnNatCertW`/`defnNatGateW`). Whole diff: +487 −1 099.
+
+Choices:
+
+* **`G` is what the error arms assume**, not always `VerdictCtx p`: `True` for
+  `install_basis_decl` (its only failure is its own abort), `CvgCtx p` (the core stubs' and
+  `install_value_guards`' claims) for `check_value_group`, `CoreStubsE p` for the gates. The
+  callees outside the verdict closure need nothing in `G` (their errors are `liftE`'s `.oob`).
+  `VerdictCtx` (`Verdict/VCtx.lean`) imports `DeclValE`, so the `Decl` files cannot use it anyway.
+* **Callers kept their statements where cheap**: `defnNatGate_okC` and `natGateSpecE_of` are now
+  one-liners from the run (`RefE.run_okW`, `RefE.run_err`), so `DeclDefnT`/`DeclDefnE` did not
+  change. `checkValueGroup_specT` (`PhaseBT`) is `RefE.triple`; `checkPending_errT` takes `hnv`
+  instead of three `NVAt` hypotheses.
+* **Placement**: a unified refinement sits where its ok users can import it: `ibd_ref` in
+  `Arena/DeclBasisSpec` (used by `install_basis_decls`' ok refinement), `dnc_ref`/`dng_ref` in
+  `Arena/DeclNatGateT` (with `certify_nat_eqs`' error model and claim, moved there from
+  `DeclGatesE`; that file now imports `DeclValE` for `CoreStubsE`), `cvg_ref` in `DeclValE`
+  (`PhaseBT` imports it).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+63762a3f; load 30–75, so ±15 % is noise; two series for the flagged modules):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/DeclValE` | 7.87 / 5.63 | 12.58 / 10.27 | **slower (+4.6 s)**: `checkValueGroupE`'s generated steps. Measured alone: `errors locals` 3.5 s, `unified locals` with all callees `callE` 9.7 s, with the three no-verdict callees lifted 7.9 s; `unified` without `locals` the same, `finish` fails (26 s). The unified error post (`G → ε.cls ≠ 0 → …`) costs the `simp` steps about twice `errors`' |
+| `Arena/DeclCvg`, `DeclCvgT`, `PhaseBT` | 7.18, 2.53, 3.73 | 3.93, 0.88, 2.69 | `cvgW` and its spec, `cvgW_okT` gone |
+| `Arena/DeclNatGateT` | 1.63 / 1.24 | 4.02 / 3.64 | **slower (+2.4 s)**: the gates' unified models and `certE_okT` moved in |
+| `Verdict/DeclGatesE` | 5.90 | 0.73 | the gates' error models and claims gone |
+| `Arena/DeclNatGateSpec` | 2.72 | 0.89 | the generated `W` models gone |
+| `Arena/DeclBasisSpec` | 3.11 / 2.51 | 3.63 / 2.19 | noise (first series under load) |
+| `Verdict/DeclBasisE` | 5.11 / 4.29 | 5.85 / 3.53 | noise |
+| `DeclHeader`, `DeclHdrE`, `DeclPendE`, `TopE` | 15.72 | 13.39 | |
+| **sum (first series)** | **55.5** | **48.6** | **−12 %** |
+
+Not migrated in this batch, and why:
+
+* **`lvl_eq_fueled`**: its hand models `lfW`/`lveC` are nested in the models of
+  `check_thm_val` (`tvK4`), the agree body (`DomsW`) and the positivity walk (`NestOccAny`, `NitW`,
+  `NtyW`; batch 1b's files); deleting them means switching all of these to the run at once.
+  Better after batch 1b.
+* **`install_header`**: its hand model `ihW` and `ihW_okT` are shared with
+  `class_const_ok_header` (the same body, batch 1c's `IndBHdr`, `RecGen3`); migrating it alone
+  would leave two refinements of one body. Better together with, or after, batch 1c.
+* **`Front*E` (`vi_unsafe`, `vi_np_go`, `vi_ctor`, `vi_rec_idx`)**: their ok halves are facts about
+  the model (`unsafeW_twin`: no record is unsafe), not twin runs, and their error halves are
+  `VerdictClaimL` about the whole `validateIndD` (failures as record verdicts). `RefE` fits
+  neither; it needs a variant over `ErrClaimV`-style twins with a `Prop` ok post (a kit change).
+
+### 3.6 Batch 1c, first landing (`IndBTpd`, `IndBTmm`, `IndBToi`, `IndBPins`, `IndBRecPins`)
+
+Migrated: `target_params_def_eq_step` and `target_params_def_eq` (`pds_ref`, `pde_ref`;
+`target_class_match`'s `tcmE` now calls `pdeE` as a unified callee, and `tcm_ref` takes both halves
+from `pde_ref`), `target_major_of_member` (`tmm_ref`), `target_outside_inst` (`toi_ref`),
+`target_pin_tys` (`tpt_ref`), `target_rec_pins` (`trp_ref`). Posts are named-field structures
+(`TpdPost`, `PdsPost extends TpdPost` with the core step, `TmmPost`, `ToiPost`, `TptPost`, `TrpPost`).
+The `@[refines]` theorems keep their statements (`RefE.triple`); `targetParamsDefEq_claim`,
+`tmm_claim`, `targetOutsideInst_claim`, `targetPinTys_claim`, `targetRecPins_claim` are gone (their
+callers read `RefE.run_err`). Deleted hand models with their arms and specs: `pdsW`/`pdsK1–11`,
+`pdsF`, `pdeW`/`pdeK1`, `tpdStep_spec`, `tpd_spec`, `pdsC_ok`; `tmmW`/`tmmK1–4`, `tmm_spec`;
+`toiW`/`toiK1–5`, the hand `targetOutsideInst_spec`; `tptW`/`tptK*`, `targetPinTys_spec`;
+`trpW`/`trpK1–6`, `trp_spec`.
+
+Findings:
+
+* **A unified model whose refinement does not need its lookups drops them.** `pds_ref`,
+  `pde_ref` and then `tcm_ref` lost their `TpLook`/`TcmLook` argument: the lookups are needed by
+  the spec (`RefE.triple`, `RefE.run_err`), not by the refinement of the model value.
+* **A caller of a unified callee that is not unified itself also needs `nv`**: `pdeE` has no
+  `Option` callee, but `pdsE_spec`'s error post assumes `closedNV`, so `pdeE` takes
+  `nv [closedNV …, nv_mem]` to have it in its own error post.
+* **A unified callee in tail position has no continuation**: `tcmE.k_target_holes.arm1` ends in
+  `pdeE …` directly, so the old `tcmE.k_target_params_def_eq` is gone.
+* **The post of a recursive call is from its own start**: `pde_ref`'s inductive step carries the
+  growth across (`hg1.trans hR2.grow`), 3 lines; a kit lemma `RefE.mono` (weaken `R` under an
+  implication) would make it one.
+* **`G`**: the leaves that call no core stub (`target_major_of_member`, `target_outside_inst`) state
+  their refinement under `G := closedNV p nvFns = true`, not `VerdictCtx p`: their callers'
+  error claims (`tmcE_claim`, `tmtE_claim`, not migrated) have `hnv` only.
+* **Skipped: `class_rule_ok_guards`** (`IndBRec4`). Its error half needs `UceProg p` (with
+  `StrLitSupportedOK`, a semantic fact) for `uce_errClaim_hi`; as a plain hypothesis of the
+  refinement it would reach every ok refinement above (`cruleW_okC`, `RecGen9`), the trap of §1.2.
+  It needs `VerdictCtx` (or a variant) to carry `UceProg`, a kit change; batch 1d's `Decl*E` meet
+  the same. Its twin side also needs a guards-prefix definition (`classRuleOk = guardsT >>= rest`).
+
+Lines (`declen.py`, master 63762a3f against this branch; before = ok refinement(s) + error claim(s)):
+
+| function | before | after | change |
+|---|---|---|---:|
+| `target_params_def_eq(_step)` | `pdsC_ok` 73, `pdsR_okC` 105, `pdsW_okC` 41, `pdeW_okC` 94; `pdsStep_claim` 280, `pdeE_claim` 94, `targetParamsDefEq_claim` 26 = 713 | `pds_ref` 227 + `pde_ref` 88 + posts 12 = 327 | **−54 %** |
+| `target_major_of_member` | `tmmW_sim` 174; `tmmE_claim` 154, `tmm_claim` 20 = 348 | `tmm_ref` 167 + `TmmPost` 7 + `tmmE_kpl` 7 = 181 | **−48 %** |
+| `target_outside_inst` | `toiW_ok` 101; `toiE_claim` 175, `targetOutsideInst_claim` 15 = 291 | `toi_ref` 150 + `ToiPost` 7 = 157 | **−46 %** |
+| `target_pin_tys` | `tptW_okC` 58; `tptE_claim` 67, `targetPinTys_claim` 15 = 140 | `tpt_ref` 60 + `TptPost` 5 = 65 | **−54 %** |
+| `target_rec_pins` | `trpW_ok` 117; `trpE_claim` 203, `targetRecPins_claim` 12 = 332 | `trp_ref` 199 + `TrpPost` 5 = 204 | **−39 %** |
+| `tcm_ref` (caller) | 157 | 144 | |
+| **pairs** | **1 824** | **934** | **−49 %** |
+
+Whole diff of this landing against master 63762a3f (models, specs, refinements, callers, imports):
+**+873 −2 278 = −1 405 lines** in 30 files.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+63762a3f, `_tmp/unify-b1c/time.sh`, `times1.txt`; load 10–30):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBTpd` | 5.51 | 5.01 | |
+| `Arena/IndT/RecCheckTpd`, `RecCheckSpec/Tpd`, `TaGoWMfr`, `PdsC`, `BvbWStageC` | 9.75 | 3.11 | the hand models, `tpdStep_spec`/`tpd_spec` and the ok refinements gone |
+| `Verdict/IndBTcm`, `IndBTmn`, `Arena/IndT/RecCheckK53` | 7.00 | 6.83 | |
+| `Verdict/IndBTmm` | 22.01 | **32.22** | **slower (+10.2 s)**: `tmmE`'s generated `simp` steps (now with the four callees' specs; `finish` fails, `locals` 39 s) |
+| `Arena/IndSumSpec/ParamLevels` | 8.87 | 0.78 | the hand `tmm_spec` gone; with `IndBTmm`: 30.9 → 33.0 (+7 %) |
+| `Verdict/IndBToi` | 2.44 | **3.99** | **slower (+1.6 s)**: `toiE`'s steps (`finish` fails, `locals` 6.0 s) |
+| `Arena/RecCheckSpec/ToiW` | 1.84 | 0.48 | the hand `targetOutsideInst_spec` gone; with `IndBToi`: 4.3 → 4.5 |
+| `Verdict/IndBRecPins` | 4.19 | **6.76** | **slower (+2.6 s)**: `trp_ref` and `targetRecPins_refines` moved in (`finish` 7.5 s, `locals` 10.0 s) |
+| `Arena/RecCheckSpec/TargetRecPins` | 5.31 | 3.49 | the hand model and `trp_spec` gone; with `IndBRecPins`: 9.5 → 10.3 |
+| `Arena/RecCheckSpec/ErToIwWStage` | 11.00 | 8.92 | `targetPinTys_spec` gone, `tptR` in |
+| `IndBPins`, `IndBGrp`, `IndBClm`, `RecCheckPins`, `RecGen19`, `GenRec1` | 11.40 | 11.11 | |
+| `IndBTmc`, `IndBTmt`, `IndBTmo`, `RecGenTmf`, `DecTMDecBOf`, `OcW` | 19.34 | 18.88 | |
+| **sum** | **108.7** | **101.6** | **−7 %** |
+
+Each flagged module is offset by the module that held the deleted hand spec, except `IndBRecPins`
+(+0.8 s over the pair).

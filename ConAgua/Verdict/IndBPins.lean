@@ -1,12 +1,22 @@
-import ConAgua.Arena.IndT.RecCheckPins
-import ConAgua.Verdict.DeclValE
+import ConAgua.Arena.IndT.Lift
+import ConRon.Bridge.Inductives.RecCheck
+import ConAgua.Arena.RecClassSpec.IhW
+import ConAgua.Arena.RecClassSpec.ReadProg
+import ConAgua.Arena.RecGenSpec.CkcW
+import ConAgua.Arena.RecGenSpec.DecCIIndCv
+import ConAgua.Verdict.VCtx
+import ConAgua.Arena.RecCheckSpec.RcLook
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
-# Error refinement of `target_pin_tys`, `target_major_pins` (lane `verdicts-b`, helper `ib`)
+# `target_pin_tys` (one model and one refinement for both outcomes), `target_major_pins`' error claim
+
+`tptE` (`l_model … unified`): `infer_type_core` through its run, the recursion through the model.
+`tpt_ref` refines `targetPinTys` for both outcomes; its ok half is `targetPinTys_refinesC` and
+`target_major_pins`' ok refinement (`tmpW_okC`, through the run), its error half
+`target_major_pins`' error claim (`tmpE_claim`).
 -/
 
 set_option experimental.vcgen true
@@ -25,104 +35,116 @@ local notation "V" => ConLeche.CheckMode.verified
 l_model tptE_spec (p : Prog) (hf : p.lookup "target_pin_tys" = some targetPinTys)
   fns [hf ↦ tptE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
+  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
 
 l_model tmpE_spec (p : Prog) (hf : p.lookup "target_major_pins" = some targetMajorPins)
   fns [hf ↦ tmpE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
 
+/-- What `target_pin_tys` gives besides the twin's run (from `m`): the stage invariant, the growth,
+the abstraction memos. -/
+structure TptPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (m m' : Mem) (a' : AState) : Prop where
+  stage : StageC dn vis fe env m' a'
+  grow : IWGrow m m'
+  abs : AbsOK m'
+
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
 
-include hq henv hcE in
-/-- **`target_pin_tys`' model error claim** (`tptW_okC`'s hypotheses). -/
-theorem tptE_claim (n : Nat) (hn : n ≤ 2 ^ 62) :
-    ∀ (m : Mem) (a : AState) (d xo xl : Word) (xs : List EIdx) (xsP : List ConLeche.Expr),
-    StageC dn vis fe env m a → AbsOK m →
-    decHL m xo.toNat xl.toNat = some xs → xo.toNat + xl.toNat < 2 ^ 64 →
-    xo.toNat + xl.toNat ≤ iwTop m → Frontend.denoteEList a.store xs = some xsP →
-    (∀ x ∈ xsP, ConLeche.Expr.WScoped d.toNat x) →
-    ∀ e, tptE p n m vis d xo xl = .error e →
-      ErrClaim (ConRon.Arena.targetPinTys V fe d.toNat xs) a e := by
+include hq henv in
+/-- **`target_pin_tys` refines `targetPinTys .verified`, both outcomes** (twin side: con-ron's
+`targetPinTys_spec`'s proof): `inferTypeCore` (`inferC_rsim`, the core stubs' claim), then the
+tail. -/
+theorem tpt_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
+    ∀ {m : Mem} {a : AState} {d xo xl : Word} {xs : List EIdx} {xsP : List ConLeche.Expr},
+    StageC dn vis fe env m a → AbsOK m → HSl0 m xo xl xs →
+    Frontend.denoteEList a.store xs = some xsP → (∀ x ∈ xsP, ConLeche.Expr.WScoped d.toNat x) →
+    RefE (VerdictCtx p) (tptE p n m vis d xo xl) (ConRon.Arena.targetPinTys V fe d.toNat xs) a
+      (fun v _ a' => TptPost dn vis fe env m v.2 a') := by
   induction n with
   | zero =>
-    intro m a d xo xl xs xsP hC hA hxs hb hbt hxsP hw e he
-    rw [tptE.eq_def] at he
-    cases he
-    exact ErrClaim.of_cls0 Err.cls_outOfFuel
+    intro m a d xo xl xs xsP hC hA hxs hxsP hw
+    rw [tptE.eq_def]
+    exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
-  intro m a d xo xl xs xsP hC hA hxs hb hbt hxsP hw e he
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
+  intro m a d xo xl xs xsP hC hA hxs hxsP hw
   by_cases hxl : xl = 0
-  · rw [tptE.arm1 p n m vis d xo xl hxl] at he
-    cases he
-  rw [tptE.arm2 p n m vis d xo xl hxl] at he
+  · rw [tptE.arm1 p n m vis d xo xl hxl]
+    have : xs = [] := by have := hxs.len; rw [hxl] at this; simpa using this
+    subst this
+    exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA⟩
+  rw [tptE.arm2 p n m vis d xo xl hxl]
+  have hbt : xo.toNat + xl.toNat ≤ iwTop m := hxs.2.resolve_left hxl
+  have hb : xo.toNat + xl.toNat < 2 ^ 64 := StageR.lt64 hC.stage hbt
   have hpos : 1 ≤ xl.toNat := by
     rcases Nat.eq_zero_or_pos xl.toNat with h0 | h0
     · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hxl
     · omega
   obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
-  rw [hc1] at hxs
-  obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons_r hxs
+  have hxs0 := hxs.1
+  rw [hc1] at hxs0
+  obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons_r hxs0
   obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hx (by omega)
   rw [UInt64.ofNat_toNat] at hw1
   have hxl1 : (xl - 1).toNat = c1 := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
   have hxo1 : (xo + 1).toNat = xo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  rw [hw1] at he
+  rw [hw1]
   obtain ⟨xP, xsP', hxP, hxsP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hxsP
   rw [ConRon.Arena.targetPinTys]
   subst hw3
   cases h1 : callE p n "infer_type_core" [vis, d, w] m with
   | error e1 =>
-    rw [h1, tptE.k_infer_type_core.none] at he
-    cases he
-    refine ErrClaim.bind_left ?_
-    have := hcE.inferTypeCore n (by omega) hC.stageT d w hw2 _ h1
-    exact this
+    rw [tptE.k_infer_type_core.none]
+    exact RefE.bind_left fun hV => hV.core.inferTypeCore n (by omega) hC.stageT d w hw2 _ h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
-  rw [h1, tptE.k_infer_type_core.arm1] at he
+  rw [tptE.k_infer_type_core.arm1]
   obtain ⟨t1, a1, hrun1, hC1, hg1, -, hA1, c1', -⟩ :=
     inferC_rsim hq henv n (by omega) hC hA d w hw2 hxP (hw xP List.mem_cons_self) (r1, m1)
       (callW_of_callE h1)
   dsimp only at hC1 hg1 hA1
-  refine ErrClaim.bind_right hrun1 ?_
-  cases h2 : tptE p n m1 vis d (xo + 1) (xl - 1) with
-  | error e2 =>
-    rw [h2, tptE.k_target_pin_tys.none] at he
-    cases he
-    have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
-      rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
-    exact ih (by omega) m1 a1 d (xo + 1) (xl - 1) xs' xsP' hC1 hA1 hxs1 (by rw [hxo1, hxl1]; omega)
-      (by rw [hxo1, hxl1]; have := hg1.1; omega) (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
-      (fun y hy => hw y (List.mem_cons_of_mem _ hy)) _ h2
-  | ok q2 =>
-    rw [h2, tptE.k_target_pin_tys.arm1] at he
-    cases he
+  refine RefE.bind_right hrun1 ?_
+  have hxs1 : HSl0 m1 (xo + 1) (xl - 1) xs' :=
+    ⟨by rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs',
+      .inr (by rw [hxo1, hxl1]; have := hg1.1; omega)⟩
+  have hr := ih (by omega) hC1 hA1 hxs1 (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
+    (fun y hy => hw y (List.mem_cons_of_mem _ hy))
+  rcases h2 : tptE p n m1 vis d (xo + 1) (xl - 1) with e2 | ⟨v2, m2⟩ <;> rw [h2] at hr
+  · rw [tptE.k_target_pin_tys.none]; exact hr
+  rw [tptE.k_target_pin_tys.arm1]
+  obtain ⟨y, a2, run2, hR⟩ := hr
+  exact RefE.ret run2 ⟨hR.stage, hg1.trans hR.grow, hR.abs⟩
 
-include hq henv hcE in
-/-- **`target_pin_tys`' error claim** (every fuel). -/
-theorem targetPinTys_claim (hp : p.lookup "target_pin_tys" = some targetPinTys) (n : Nat)
+include hq henv in
+/-- **`target_pin_tys` refines `targetPinTys .verified`** under `StageC` (`tpt_ref`'s ok half; the
+knot's `infer_type_core`; the parameters' denotations and scoping as con-ron's `targetPinTys_spec`
+asks). -/
+@[refines ConRon.Arena.targetPinTys]
+theorem targetPinTys_refinesC (hp : p.lookup "target_pin_tys" = some targetPinTys) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (d xo xl : Word) (xs : List EIdx)
     (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
-    (hxs : decHL s₀.mem xo.toNat xl.toNat = some xs) (hb : xo.toNat + xl.toNat < 2 ^ 64)
+    (hxs : decHL s₀.mem xo.toNat xl.toNat = some xs)
     (hbt : xo.toNat + xl.toNat ≤ iwTop s₀.mem) {xsP : List ConLeche.Expr}
     (hxsP : Frontend.denoteEList a₀.store xs = some xsP)
     (hw : ∀ x ∈ xsP, ConLeche.Expr.WScoped d.toNat x) :
-    CoreSpecE p n "target_pin_tys" [vis, d, xo, xl] (ConRon.Arena.targetPinTys V fe d.toNat xs) s₀ a₀ :=
-  CoreSpecE.of_runs fun e hc => by
-    by_cases hk0 : e.cls = 0
-    · exact ErrClaim.of_cls0 hk0
-    exact tptE_claim hq henv hcE n hn s₀.mem a₀ d xo xl xs xsP hC hA hxs hb hbt hxsP hw e
-      (triple_of_callE_err (tptE_spec p hp n s₀ vis d xo xl) hc (Err.code_ne_of_cls hk0))
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pin_tys" [vis, d, xo, xl]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀ ∧
+      StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (RefE.triple (tptE_spec p hp n s₀ vis d xo xl)
+    (tpt_ref hq henv n hn hC hA (HSl0.of hxs hbt) hxsP hw)) ?_
+  rintro r s' ⟨hl, _, a', run, hR⟩
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.abs⟩
 
 include hq henv hnv hcE in
-/-- **`target_major_pins`' model error claim** (`tmpW_okC`'s hypotheses). -/
+/-- **`target_major_pins`' model error claim** (`tmpW_okC`'s hypotheses; `target_pin_tys` through
+`tpt_ref`). -/
 theorem tmpE_claim (hp : TmpProg p) (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a : AState} {rP Mp : Word}
     {M : TargetMajor} (hC : StageC dn vis fe env m a) (hA : AbsOK m)
     (hM : DecB (fun m => decTM m Mp.toNat) m M)
@@ -169,52 +191,27 @@ theorem tmpE_claim (hp : TmpProg p) (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a :
   rw [ConRon.Arena.targetMajorPins]
   simp only [hmem']
   -- the pins of the parameters
+  have hds0 : HSl0 m (UInt64.ofNat o) (UInt64.ofNat l) M.ds := by
+    refine ⟨by rw [hoo, hll]; exact hdsm, ?_⟩
+    by_cases hl0 : l = 0
+    · exact .inl (by rw [hl0]; rfl)
+    · exact .inr (by rw [hoo, hll]; exact decHL_truncM_bound hdT hl0)
+  have hR1 := tpt_ref hq henv N (by omega) hC hA hds0 hdsd hw
   cases h1 : callE p N "target_pin_tys" [vis, rP, UInt64.ofNat o, UInt64.ofNat l] m with
   | error e1 =>
     rw [h1, tmpE.k_target_pin_tys.none] at he
     cases he
-    refine ErrClaim.bind_left ?_
-    by_cases hl0 : l = 0
-    · subst hl0
-      have hnil : M.ds = [] := by simpa [decHL, hslice?] using hdsm.symm
-      have h1' := triple_of_callE_err (tptE_spec p hp.tpt N ⟨m, Locals.init []⟩ vis rP (UInt64.ofNat o)
-        (UInt64.ofNat 0)) h1 (Err.code_ne_of_cls hk0)
-      dsimp only at h1'
-      rw [show (UInt64.ofNat 0 : Word) = 0 from rfl] at h1'
-      exfalso
-      obtain _ | N' := N
-      · rw [tptE.eq_def] at h1'
-        cases h1'
-        exact hk0 Err.cls_outOfFuel
-      · rw [tptE.arm1 p N' m vis rP _ _ rfl] at h1'
-        cases h1'
-    have hbnd := decHL_truncM_bound hdT hl0
-    exact CoreSpecE.of_callE (targetPinTys_claim hq henv hcE hp.tpt N (by omega) ⟨m, Locals.init []⟩ a rP
-      (UInt64.ofNat o) (UInt64.ofNat l) M.ds hC hA (by rw [hoo, hll]; exact hdsm)
-      (by rw [hoo, hll]; have := hS.2.1; omega) (by rw [hoo, hll]; exact hbnd) hdsd hw) h1
+    exact ErrClaim.bind_left (RefE.run_err (tptE_spec p hp.tpt N ⟨m, Locals.init []⟩ vis rP _ _) trivial
+      ⟨hnv, hcE⟩ hR1 h1)
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, tmpE.k_target_pin_tys.arm1] at he
-  obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (targetPinTys_spec p hp.tpt (realCall p) (realCall_spec p) N
-    ⟨m, Locals.init []⟩ vis rP (UInt64.ofNat o) (UInt64.ofNat l)) (callW_of_callE h1)
-  subst hs1
-  dsimp only at h1m
-  obtain ⟨a1, hrun1, hC1, hg1, hA1⟩ : ∃ a1, (ConRon.Arena.targetPinTys V fe rP.toNat M.ds).run a = .ok ((), a1) ∧
-      StageC dn vis fe env s1.mem a1 ∧ IWGrow m s1.mem ∧ AbsOK s1.mem := by
-    by_cases hl0 : l = 0
-    · subst hl0
-      have hnil : M.ds = [] := by simpa [decHL, hslice?] using hdsm.symm
-      obtain _ | N' := N
-      · simp [tptW] at h1m
-      rw [tptW_nil (realCall p) N' m vis rP (UInt64.ofNat o) (UInt64.ofNat 0) rfl] at h1m
-      obtain ⟨-, hmm⟩ := Prod.mk.inj (Option.some.inj h1m)
-      rw [← hmm]
-      exact ⟨a, by rw [hnil]; rfl, hC, IWGrow.refl m, hA⟩
-    have hbnd := decHL_truncM_bound hdT hl0
-    obtain ⟨a1, hrun1, hC1, hg1, hA1⟩ := tptW_okC hq henv N (by omega) m s1.mem a rP _ _ r1 M.ds MP.ds
-      h1m hC hA (by rw [hoo, hll]; exact hdsm) (by rw [hoo, hll]; have := hS.2.1; omega)
-      (by rw [hoo, hll]; exact hbnd) hdsd hw
-    exact ⟨a1, hrun1, hC1, hg1, hA1⟩
+  obtain ⟨s1, rfl, -, ⟨⟩, a1, hrun1, hR⟩ :=
+    RefE.run_ok (tptE_spec p hp.tpt N ⟨m, Locals.init []⟩ vis rP _ _) hR1 h1
+  dsimp only at hR
+  have hC1 := hR.stage
+  have hg1 := hR.grow
+  have hA1 := hR.abs
   obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetPinTys_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv rP.toNat M.ds MP.ds hw a a1 () hC.check hdsd hrun1
   refine ErrClaim.bind_right hrun1 ?_

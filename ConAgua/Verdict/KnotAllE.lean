@@ -4,7 +4,6 @@ import ConAgua.Verdict.WhnfMidE
 import ConAgua.Verdict.WhnfSetE
 import ConAgua.Verdict.DefEqAllE
 import ConAgua.Verdict.DefEqEagerE
-import ConAgua.Verdict.DeclValE
 import ConAgua.Checker.LoopProg
 import ConAgua.Verdict.WhnfStuckE
 import ConAgua.Verdict.WhnfUnitE

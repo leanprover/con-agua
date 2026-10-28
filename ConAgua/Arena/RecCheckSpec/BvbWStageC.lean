@@ -4,7 +4,7 @@ import ConAgua.Arena.RecCheckSpec.TaCW
 /-!
 # BvbWStageC
 
-`taF`, `bvbW_stageC`, `pdsK11`, `pdsK10`, `pdsK9`, `pdsK8`.
+`taF`, `bvbW_stageC`.
 -/
 
 noncomputable section
@@ -57,27 +57,6 @@ theorem bvbW_stageC {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n : N
   exact ⟨a', hrun, hS', hg, bvbW_mfr hb⟩
 
 end rel
-
-/-! ## `target_params_def_eq_step`: the word model -/
-
-def pdsK11 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-def pdsK10 (cR : CallM) (n : Nat) (vis d av bv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => pdsK11 (cR n "is_def_eq_core" [vis, d, av, bv] m)
-
-def pdsK9 (cR : CallM) (n : Nat) (vis d av bv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => pdsK10 cR n vis d av bv (cR n "infer_type_core" [vis, d, bv] m)
-
-def pdsK8 (cR : CallM) (n : Nat) (vis d av : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (bv, m) =>
-    if 4294967296 ≤ bv then none
-    else if av = bv then some ([1], m)
-    else pdsK9 cR n vis d av bv (cR n "infer_type_core" [vis, d, av] m)
 
 end L.Ind
 

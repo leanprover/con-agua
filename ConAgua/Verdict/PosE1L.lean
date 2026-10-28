@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndT.PosCont
 import ConAgua.Verdict.PosE1M
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `nest_pos_fvar`, `nest_cont_checks`: error claims (lane `verdicts-b`, helper `ia2`, fork `kn1`)

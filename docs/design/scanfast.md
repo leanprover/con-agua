@@ -248,3 +248,33 @@ of lines cost 0.32 G.
 
 Expected: `Init` −10 % instructions, −8 % cycles at one thread, 16 threads at con-ron's wall
 (−30 %).
+
+## 6. Landing (lane `scanfast-p3`)
+
+P3 lands shape by shape, proved. Layout:
+* `L/LitWord.lean`: the literal compare (`le64_lit`, L1). No mask bound is needed: a literal has no
+  zero byte, and a read past the end is `0`, so a match lies inside the array.
+* `Scan/Fast.lean`: `fast_line` and its spec. The code is built from three named blocks with one
+  spec each, so every occurrence shares a proof: `litB l` (a literal of up to 8 bytes), `numB`
+  (the number; its digit loop `digB` declines at a 19th digit, and a leading `0` sets the limit
+  to one digit), and one block per shape. Their posts give the state exactly (`numS`, a state
+  transformer whose loc reads are `numS_loc`), so `vcgen` composes them without loop invariants.
+  `fastLine_spec`'s post is `FastOK`: a nonzero answer is a `Canon` line (one constructor per
+  shape, a named-field structure such as `AppLine` holding its literals and numbers). L2 is
+  `numAt_of_ok`: an accepted number is `num_end`'s, at most 18 digits, `read_nat`'s value.
+* `Scan/FastSound.lean`: per shape, the generic models on a `Canon` line (L3 `nextMemberN_key`,
+  the per-key codes `key_*`, L4 `appLine_sound`).
+* `Front/Line.lean`: `front_line` calls `fast_line` first and applies a nonzero answer;
+  `frontLineW_canon` rewrites the unchanged model on that arm, `frontLine_spec` keeps its
+  statement. The error claim gains one arm (`fast_line` and `apply_expr` claim nothing).
+
+Deviation D41 (`docs/deviations.md`).
+
+| landing | shapes | `Init` instructions | new proof lines (LitWord + Fast + FastSound; Line/FrontRunE diff) |
+|---|---|---:|---:|
+| base (master 53ec1c4b) | – | 257.66 G | – |
+| 1 | app | 236.79 G (−8.1 %) | 1148; +68 |
+
+Measured with `bench.py --set init --reps 3 --cpus 46,47 --no-conron --no-ref`, base and candidate
+interleaved, load 38 (walls noisy: 18.3 s against 22.1 s). Verdicts: `diff-e2e --refs --parallel
+16` and `--jobs 4`, 634 of 634 agree.

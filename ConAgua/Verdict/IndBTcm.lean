@@ -3,15 +3,14 @@ import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.NestCtx
 import ConAgua.Verdict.IndBTpd
-import ConAgua.Verdict.VCtx
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 /-!
 # `target_class_match`: one model and one refinement for both outcomes
 
-`tcmE` (`l_model … unified`): `target_params_def_eq` through its run (`callE`), the callees outside
-the verdict closure (`lvls_eq_c`, the shape's member names and parameters, `param_levels`,
+`tcmE` (`l_model … unified`): `target_params_def_eq` through its unified model (`pdeE`), the
+callees outside the verdict closure (`lvls_eq_c`, the shape's member names and parameters, `param_levels`,
 `target_holes`) through their `Option` models. `tcm_ref` refines `targetClassMatch` for both
 outcomes; its ok half is `targetClassMatch_refinesC` and the callers' ok refinements
 (`target_major_nfs`, `target_k53_args` through the run, `RefE.run_okW`), its error half
@@ -39,7 +38,7 @@ l_model tcmE_spec (p : Prog) (hL : TcmLook p)
   specs [callW_spec p n "lvls_eq_c", blockShapeMemberNames_spec p hL.ha hL.mnc hL.mn n,
     blockShapeLps_spec p hL.ha hL.erc hL.eri hL.lps n,
     plW_spec p hL.ha hL.ic hL.sc hL.sg hL.pf hL.pp hL.ip hL.plg hL.pl hL.il n,
-    targetHoles_spec p hL.ff hL.fp hL.iff hL.ic hL.ha hL.sc hL.th n]
+    targetHoles_spec p hL.ff hL.fp hL.iff hL.ic hL.ha hL.sc hL.th n, pdeE_spec p hL.tp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
@@ -83,9 +82,8 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
 include hq henv in
 /-- **`target_class_match` refines `targetClassMatch`, both outcomes** (twin side: con-ron's
 `targetClassMatch_spec`'s proof): `lvlsEq?` (`lvlsEqC_simC`), the shape's member names and
-parameters (L only), `paramLevels`, `targetHoles`, then `targetParamsDefEq` (`pdeW_okC`, its
-error claim). -/
-theorem tcm_ref (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+parameters (L only), `paramLevels`, `targetHoles`, then `targetParamsDefEq` (`pde_ref`). -/
+theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {q fto ftl pfo pfl us dso dsl lvls edso edsl : Word} {bs : BlockShape}
     {formerTys pfvs ds eds : List EIdx} (hC : StageC dn vis fe env m a) (hA : AbsOK m)
     (hbs : BSOK m q.toNat bs) (hus : H us) (hlv : H lvls)
@@ -221,27 +219,14 @@ theorem tcm_ref (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
       pfvs ds eds = ConRon.Arena.targetParamsDefEq V fe (pfl + ftl).toNat bs.memberNames
       (decI (rb.headD 0)) holes pfvs ds eds := by rw [hd, ← hlen, ← hlenf, hdb]
   rw [htw]
-  cases h6 : callE p n "target_params_def_eq" [vis, pfl + ftl, rn.headD 0, rn.tail.headD 0, rb.headD 0,
-      rh.headD 0, rh.tail.headD 0, pfo, pfl, dso, dsl, edso, edsl] m5 with
-  | error e6 =>
-    rw [tcmE.k_target_params_def_eq.none]
-    exact fun hV => CoreSpecE.of_callE (targetParamsDefEq_claim hq henv hV.nv hV.core hL.tp n (by omega)
-      ⟨m5, Locals.init []⟩ a5 (pfl + ftl) (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0)
-      (rh.tail.headD 0) pfo pfl dso dsl edso edsl bs.memberNames holes pfvs ds eds hC5 hA5 hH4 hdn5
-      hnb5 hdh hbh (hpf.grow hg05) (hds.grow hg05) (heds.grow hg05) hP5 hTA
-      (denoteEList_ext c15.ext _ _ hpfP) (denoteEList_ext c15.ext _ _ hdsP)
-      (denoteEList_ext c15.ext _ _ hedsP) habs hpw5) h6
-  | ok q6 =>
-    obtain ⟨r6, m6⟩ := q6
-    rw [tcmE.k_target_params_def_eq.arm1]
-    obtain ⟨s6, hs6, -, h6m⟩ := triple_of_callW (tpd_spec p hL.tp (realCall p) (realCall_spec p) n
-      ⟨m5, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _) (callW_of_callE h6)
-    subst hs6
-    obtain ⟨c, a6, run6, hc, hC6, hg6, hP6, hA6⟩ := pdeW_okC hq henv n (by omega) h6m hC5 hA5 hH4 hdn5
-      hnb5 hdh hbh (hpf.grow hg05) (hds.grow hg05) (heds.grow hg05) hP5 hTA
-      (denoteEList_ext c15.ext _ _ hpfP) (denoteEList_ext c15.ext _ _ hdsP)
-      (denoteEList_ext c15.ext _ _ hedsP) habs hpw5
-    exact RefE.ret run6 ⟨by simpa using hc, hC6, hg05.trans hg6, hP6, hA6⟩
+  have h6 := pde_ref hq henv n (by omega) hC5 hA5 hH4 hdn5 hnb5 hdh hbh (hpf.grow hg05) (hds.grow hg05)
+    (heds.grow hg05) hP5 hTA (denoteEList_ext c15.ext _ _ hpfP) (denoteEList_ext c15.ext _ _ hdsP)
+    (denoteEList_ext c15.ext _ _ hedsP) habs hpw5
+  rcases e6 : pdeE p n m5 vis (pfl + ftl) (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0)
+      (rh.tail.headD 0) pfo pfl dso dsl edso edsl with e6 | ⟨r6, m6⟩ <;> rw [e6] at h6
+  · exact h6
+  obtain ⟨c, a6, run6, hR6⟩ := h6
+  exact RefE.ret run6 ⟨hR6.res, hR6.stage, hg05.trans hR6.grow, hR6.rc, hR6.abs⟩
 
 include hq henv hnv hcE in
 /-- `target_class_match`'s error claim (`tcm_ref`'s error half). -/
@@ -267,7 +252,7 @@ theorem tcm_claimA (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
     CoreSpecE p n "target_class_match" [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl]
       (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) s₀ a₀ :=
   RefE.coreSpecE (tcmE_spec p hL n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl) hnv ⟨hnv, hcE⟩
-    (tcm_ref hq henv hL n hn hC hA hbs hus hlv hft hftb hpf hds heds hP hsh hftP hpfP husP hdsP
+    (tcm_ref hq henv n hn hC hA hbs hus hlv hft hftb hpf hds heds hP hsh hftP hpfP husP hdsP
       hlvP hedsP hformer hpw)
 
 include hq henv in
@@ -302,7 +287,7 @@ theorem targetClassMatch_refinesC (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62)
         (AM.st (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (tcmE_spec p hL n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl)
-    (tcm_ref hq henv hL n hn hC hA hbs hus hlv hft hftb hpf hds heds hP hsh hftP hpfP husP hdsP
+    (tcm_ref hq henv n hn hC hA hbs hus hlv hft hftb hpf hds heds hP hsh hftP hpfP husP hdsP
       hlvP hedsP hformer hpw)) ?_
   rintro r s' ⟨hl', c, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run

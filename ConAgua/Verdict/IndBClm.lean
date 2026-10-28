@@ -1,6 +1,5 @@
 import ConAgua.Verdict.IndBTmf
 import ConAgua.Arena.IndT.RecGen19
-import ConAgua.Verdict.IndBPins
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -210,7 +209,7 @@ theorem clmE_claim (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape
   obtain ⟨r4, m4⟩ := q4
   obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (targetMajorPins_spec p hP.tmp (realCall p) (realCall_spec p) (k + 1) _ vis _ _) (callW_of_callE h4)
-  obtain ⟨a4, hrun4, hC4, hg4, hA4⟩ := tmpW_okC hq henv
+  obtain ⟨a4, hrun4, hC4, hg4, hA4⟩ := tmpW_okC hq henv hP.tmp.tpt
     (by omega) hW4 hC3 hA3 hd3 hm (fun _ => by rw [hrP]; exact hdsW)
   have hrun4' := hrun4
   rw [hrP] at hrun4'
@@ -218,7 +217,7 @@ theorem clmE_claim (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape
     henv pP.nP _ MP (fun _ => hdsW) a3' a4 () hC3.check hm hrun4'
   rw [hrB] at hrun4
   refine ErrClaim.bind_right hrun4 ?_
-  have hP4 : PosMR s4.mem := hP3.fr (tmpW_mfrR hq hW4)
+  have hP4 : PosMR s4.mem := hP3.fr (tmpW_mfrR hq hP.tmp.tpt hW4)
   subst hs4
   have hg04 := hg03.trans hg4
   have c14 := (c12.trans c3).trans c4
