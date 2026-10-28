@@ -59,44 +59,6 @@ theorem nvl {p : Prog} (hnv : closedNV p L.Checker.nvFns = true) {α : Type} {T 
     (h : callE p n f vs m = .error e) : ErrClaim T a e :=
   ErrClaim.of_callE_nv hnv (declNv_mem f hf) h
 
-/-- **A hit of `env_find` is a hit of `find?`**. -/
-theorem envFindW_hitSome {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
-    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR dn m vis fe)
-    (hw : w.toNat < 2 ^ 32) (h0 : r.headD 0 ≠ 0) : (fe.find? (decI w)).isSome = true := by
-  unfold envFindW at h
-  by_cases ht : 2 < tagW w
-  · simp [ht] at h
-  rw [ite_eq_right ht] at h
-  have ht2 : tagW w ≤ 2 := by
-    have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
-    exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
-  by_cases hc : rowCW m w = 0
-  · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.1] at h0; simp at h0
-  rw [ite_eq_right hc] at h
-  have hv : rowCW m w - 1 < vis := by
-    refine Classical.byContradiction fun hv => ?_
-    rw [ite_eq_right hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.1] at h0; simp at h0
-  rw [ite_eq_left hv] at h
-  rw [rowCW_eq m w hw ht2] at hc hv
-  have hk := hE.keys (decI w) (by rwa [decI_word_self w hw])
-  rw [decI_word_self w hw] at hk
-  simp only [rowW, hc, ite_false, Option.map_some] at hk
-  have hv' : (rowC m w).toNat - 1 < vis.toNat := by
-    have hc' : (rowC m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
-    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _
-      (UInt64.le_iff_toNat_le.mpr (by simp; omega))] at hv
-    simpa using hv
-  simp only [IFEnv.find?, hE.vis]
-  cases e : fe.idx[(decI w : NIdx)]? with
-  | none => simp [e] at hk
-  | some r =>
-    obtain ⟨c, ci⟩ := r
-    simp only [e, Option.map_some, Option.some.injEq] at hk
-    simp; omega
-
 /-- A hit of `reserved_from`: one of the reserved words is `x`. -/
 theorem resFromW_hit (n : Nat) : ∀ (m : Mem) (x j c : Word), j.toNat ≤ 16 → c ≠ 0 →
     resFromW n m x j = some c → ∃ i, i < 16 ∧ pinW m (55 + i) = x := by
