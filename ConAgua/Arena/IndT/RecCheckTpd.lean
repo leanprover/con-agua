@@ -1,8 +1,9 @@
-import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Inductives.RecCheck
 import ConAgua.Arena.RecCheckSpec.PdsC
-import ConAgua.Arena.RecCheckSpec.TmFields
+import ConAgua.Arena.RecCheckSpec.TaGoWMfr
+import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndTwin
 
 /-!
 # `targetParamsDefEq` under `StageC`: frames and the closedness reads

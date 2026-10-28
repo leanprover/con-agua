@@ -1,4 +1,7 @@
 import ConAgua.Arena.IndT.RecCheckTpd
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecCheckSpec.Tpd
+import ConAgua.Arena.RecCheckSpec.TmFields
 import ConAgua.Verdict.VCtx
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

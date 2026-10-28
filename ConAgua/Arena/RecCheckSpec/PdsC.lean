@@ -1,5 +1,5 @@
-import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.RecCheckSpec.TaGoWMfr
+import ConRon.Arena.Inductives.RecCheck
+import ConAgua.Arena.Refine
 
 /-!
 # PdsC
