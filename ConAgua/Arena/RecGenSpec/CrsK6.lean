@@ -3,7 +3,7 @@ import ConAgua.Arena.IndCopy
 /-!
 # CrsK6
 
-`crsK6`, `crsK5`, `cr1K`.
+`crsK6`, `crsK5`.
 -/
 
 noncomputable section
@@ -29,10 +29,6 @@ def crsK6 : Option (List Word × Mem) → Option (List Word × Mem)
 def crsK5 (n : Nat) (y : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r5, m5) => crsK6 (consW n m5 y (r5.headD 0) (r5.tail.headD 0))
-
-def cr1K : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m') => some ([r.headD 0], m')
 
 /-! ## The `abstract1` memo across a rule's check -/
 

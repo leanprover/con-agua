@@ -13,7 +13,7 @@ import ConAgua.L.GrindAttr
 /-!
 # Rec3TmdWDecB
 
-`crsW`, `crsK1`, `crsK2`, `crsK3`, `crsK4`, `crsW_nil` and the lemmas only they use.
+`cr1R`, `crsW`, `crsK1`, `crsK2`, `crsK3`, `crsK4`, `crsW_nil` and the lemmas only they use.
 -/
 
 section
@@ -31,6 +31,17 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
+
+/-- `class_rules_ok_one` as `class_rules_ok` reads it: its run (`cR`; its refinement is `cr1_ref`'s
+ok half through the run). -/
+def cr1R (cR : CallM) (n : Nat) (m : Mem) (visT visR g cvR x gen : Word) : Option (List Word × Mem) :=
+  cR n "class_rules_ok_one" [visT, visR, g, cvR, x, gen] m
+
+theorem cr1R_spec (p : Prog) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
+    (visT visR g cvR x gen : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rules_ok_one" [visT, visR, g, cvR, x, gen]
+    ⦃fun r s' => LocEq s' s₀ ∧ cr1R cR n s₀.mem visT visR g cvR x gen = some (r, s'.mem); ⊤⦄ :=
+  hcR n _ _ s₀
 
 mutual
 /-- **The model of `class_rules_ok`.** -/
@@ -53,7 +64,7 @@ noncomputable def crsK3 (cR : CallM) (n : Nat) (visT visR g rco rcl cgo cgl cvR 
   | none => none
   | some (r3, m3) =>
     if r3.headD 0 = 0 then none
-    else crsK4 cR n visT visR g rco rcl cgo cgl cvR c xo xl (cr1W cR n m3 visT visR g cvR x (r3.tail.headD 0))
+    else crsK4 cR n visT visR g rco rcl cgo cgl cvR c xo xl (cr1R cR n m3 visT visR g cvR x (r3.tail.headD 0))
 noncomputable def crsK4 (cR : CallM) (n : Nat) (visT visR g rco rcl cgo cgl cvR c xo xl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -78,14 +89,8 @@ theorem crsK2_some : crsK2 cR n visT visR g rco rcl cgo cgl cvR c xo xl x (some 
 theorem crsK3_fail (h : r3.headD 0 = 0) : crsK3 cR n visT visR g rco rcl cgo cgl cvR c xo xl x (some (r3, m3)) = none := by
   rw [crsK3, ite_eq_left h]
 theorem crsK3_ok (h : ¬ r3.headD 0 = 0) : crsK3 cR n visT visR g rco rcl cgo cgl cvR c xo xl x (some (r3, m3)) =
-    crsK4 cR n visT visR g rco rcl cgo cgl cvR c xo xl (cr1W cR n m3 visT visR g cvR x (r3.tail.headD 0)) := by
+    crsK4 cR n visT visR g rco rcl cgo cgl cvR c xo xl (cr1R cR n m3 visT visR g cvR x (r3.tail.headD 0)) := by
   rw [crsK3, ite_eq_right h]
-theorem cr1W_big (h : (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)) + rdW (m.arr64 IW) (x + 1) < (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8))) : cr1W cR (n + 1) m visT visR g cvR x y = none := by
-  rw [cr1W, ite_eq_left h]
-theorem cr1W_ok (h : ¬ (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)) + rdW (m.arr64 IW) (x + 1) < (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8))) : cr1W cR (n + 1) m visT visR g cvR x y =
-    cr1K (cruleW cR n m visT visR cvR ((rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)) + rdW (m.arr64 IW) (x + 1)) y) := by
-  rw [cr1W, ite_eq_right h]
-theorem cr1K_some : cr1K (some (r1, m1)) = some ([r1.headD 0], m1) := rfl
 theorem crsK4_some : crsK4 cR n visT visR g rco rcl cgo cgl cvR c xo xl (some (r4, m4)) =
     crsK5 n (r4.headD 0) (crsW cR n m4 visT visR g rco rcl cgo cgl cvR c (xo + 1) (xl - 1)) := by
   rw [crsK4]
@@ -102,20 +107,6 @@ grind_pattern [ind_grind] crsK3_ok => crsK3 cR n visT visR g rco rcl cgo cgl cvR
 grind_pattern [ind_grind] crsK4_some => crsK4 cR n visT visR g rco rcl cgo cgl cvR c xo xl (some (r4, m4))
 grind_pattern [ind_grind] crsK5_some => crsK5 n y (some (r5, m5))
 grind_pattern [ind_grind] crsK6_some => crsK6 (some (r6, m6))
-grind_pattern [ind_grind] cr1W_big => cr1W cR (n + 1) m visT visR g cvR x y
-grind_pattern [ind_grind] cr1W_ok => cr1W cR (n + 1) m visT visR g cvR x y
-grind_pattern [ind_grind] cr1K_some => cr1K (some (r1, m1))
-
-theorem classRulesOkOne_spec (p : Prog) (h : CrsProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (visT visR g cvR x gen : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rules_ok_one" [visT, visR, g, cvR, x, gen]
-    ⦃fun r s' => LocEq s' s₀ ∧ cr1W cR n s₀.mem visT visR g cvR x gen = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.one]
-  simp only [callFn, classRulesOkOne]
-  rcases n with _ | n
-  · vcgen [exec] <;> grind
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, classRuleOk_spec p h.cr cR hcR n] <;>
-    finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
 
 theorem classRulesOk_spec (p : Prog) (h : CrsProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) :
     ∀ (s₀ : St) (visT visR g rco rcl cgo cgl cvR c xo xl : Word),
@@ -133,7 +124,7 @@ theorem classRulesOk_spec (p : Prog) (h : CrsProg p) (cR : CallM) (hcR : CallSpe
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         L.Arena.cvLps_specW p h.cr.alloc h.cr.copy h.cr.eti h.cr.lps n,
         plW_spec p h.alloc h.copy h.cons h.slGet h.paramFind h.paramPush h.internParam h.plGo h.pl h.il n,
-        classGenRule_spec p h.ru n, classRulesOkOne_spec p h cR hcR n,
+        classGenRule_spec p h.ru n, cr1R_spec p cR hcR n,
         slCons_specW p h.alloc h.copy h.cons n, ih] <;>
       finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,
         loc_init10]

@@ -41,7 +41,7 @@ theorem ctorsAt_denote {st : EStore} {G : ClassGen} {gP : ConLeche.ClassGen}
 include hq hApd in
 /-- **`class_recs_rules_ok` under `StageC`** (`crrW_sim`'s; twin side con-ron's
 `classRecsRulesOk_spec`). -/
-theorem crrW_simC (hcr : CruleProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv)
+theorem crrW_simC (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv)
     {env₂ : ConLeche.Env} (g rco rcl cgo cgl : Word) (G : ClassGen) (recCls : List Nat)
     (cvGs : List IConstantVal) (hns : G.nP + G.slots.length < 2 ^ 64)
     (hrcb : rco.toNat + rcl.toNat < 2 ^ 64) (hcgb : cgo.toNat + cgl.toNat < 2 ^ 64)
@@ -112,7 +112,7 @@ theorem crrW_simC (hcr : CruleProg p) (henv : ConLeche.EnvWF env) (visT visR : W
   refine RSim.bind (K := crrK1 (realCall p) n visT visR g rco rcl cgo cgl vo vl co cl
     (UInt64.ofNat pp) (UInt64.ofNat c0)) (by rw [crrK1])
     (by
-      have := crsW_simC hq hApd hcr henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl (UInt64.ofNat pp)
+      have := crsW_simC hq hApd hP henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl (UInt64.ofNat pp)
         (UInt64.ofNat c0) G recCls cvGs cv hns hrcb hcgb gP cvGsP cvP n (by omega) m a _ _ _
         (gP.ctors.getD c0 []) hC hG hrc (rec3SPL_decB hcg) (by rw [tp]; exact hcvp)
         (by rw [tp]; exact hcvx) hxs hA hgP hcvGsP hcvP (ctorsAt_denote hgP c0) hie
@@ -217,7 +217,7 @@ theorem classRecsRulesOk_refinesC (hp : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
   rcases n with _ | n
   · simp [crraW] at hw
   rw [crraW_eq] at hw
-  have h := RSim.am (RSim.bindPure (K := crrK5) rfl (crrW_simC hq hApd hp.crs.cr henv visT visR feR (env₂ := env₂)
+  have h := RSim.am (RSim.bindPure (K := crrK5) rfl (crrW_simC hq hApd hp.crs henv visT visR feR (env₂ := env₂)
     g rco rcl cgo cgl G recCls cvGs hns hrcb hcgb gP cvGsP n (by omega) s₀.mem a₀ cgo cgl rco rcl
     cvGs recCls cvGsP hC hG hrc hcg hcg hrc hA hgP hcvGsP hcvGsP hie) (Q := fun b a' x =>
       (StageC dn visR feR env b.2 a' ∧ IWGrow s₀.mem b.2 ∧ decRRS b.2 b.1 x) ∧ AbsOK b.2) ?_) hw
