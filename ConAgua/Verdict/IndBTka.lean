@@ -52,10 +52,10 @@ theorem tkaE_succ (p : Prog) (n : Nat) (m : Mem) (vis q fto ftl Mc ip usp lao la
         (if mal < rdW (m.arr64 IW) (Mc + 4) then mao else mao + rdW (m.arr64 IW) (Mc + 4))
         (if mal < rdW (m.arr64 IW) (Mc + 4) then 0 else mal - rdW (m.arr64 IW) (Mc + 4)) m := by
   by_cases h1 : lal < rdW (m.arr64 IW) (Mc + 4) <;> by_cases h2 : mal < rdW (m.arr64 IW) (Mc + 4)
-  · rw [tkaE.arm1 (hc1 := h1), tkaE.j1.arm1 (hc1 := h2), if_pos h1, if_pos h1, if_pos h2, if_pos h2]
-  · rw [tkaE.arm1 (hc1 := h1), tkaE.j1.arm2 (hc1 := h2), if_pos h1, if_pos h1, if_neg h2, if_neg h2]
-  · rw [tkaE.arm2 (hc1 := h1), tkaE.j1.arm1 (hc1 := h2), if_neg h1, if_neg h1, if_pos h2, if_pos h2]
-  · rw [tkaE.arm2 (hc1 := h1), tkaE.j1.arm2 (hc1 := h2), if_neg h1, if_neg h1, if_neg h2, if_neg h2]
+  · rw [tkaE.arm1 (hc1 := h1), tkaE.j1.arm1 (hc1 := h2), ite_eq_left h1, ite_eq_left h1, ite_eq_left h2, ite_eq_left h2]
+  · rw [tkaE.arm1 (hc1 := h1), tkaE.j1.arm2 (hc1 := h2), ite_eq_left h1, ite_eq_left h1, ite_eq_right h2, ite_eq_right h2]
+  · rw [tkaE.arm2 (hc1 := h1), tkaE.j1.arm1 (hc1 := h2), ite_eq_right h1, ite_eq_right h1, ite_eq_left h2, ite_eq_left h2]
+  · rw [tkaE.arm2 (hc1 := h1), tkaE.j1.arm2 (hc1 := h2), ite_eq_right h1, ite_eq_right h1, ite_eq_right h2, ite_eq_right h2]
 
 /-- `tkaE` after `sl_eq` found the erased indices equal: the leaf's parameters as an `if`. -/
 theorem tkaE_slEq (p : Prog) (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word) (m : Mem) (e : Word)
@@ -63,8 +63,8 @@ theorem tkaE_slEq (p : Prog) (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word
     tkaE.k_sl_eq p n vis q fto ftl Mc ip usp lao lal K m (.ok e) =
       tkaE.j3 p n vis q fto ftl Mc ip usp lao (if lal < K then lal else K) m := by
   by_cases h : lal < K
-  · rw [tkaE.k_sl_eq.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ he h, if_pos h]
-  · rw [tkaE.k_sl_eq.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ he h, if_neg h]
+  · rw [tkaE.k_sl_eq.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ he h, ite_eq_left h]
+  · rw [tkaE.k_sl_eq.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ he h, ite_eq_right h]
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -140,7 +140,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   · rw [tkaE.k_sl_eq.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ he0]
     have hne : le ≠ me := by intro hq; rw [hq] at he; simp at he; exact absurd he (by rw [he0]; decide)
     have : (le != me) = true := by simpa using hne
-    rw [if_pos this]
+    rw [ite_eq_left this]
     exact RefE.ret (y := false) rfl ⟨rfl, hC2, hg12, hP2, hA2⟩
   rw [tkaE_slEq _ _ _ _ _ _ _ _ _ _ _ _ _ _ he0, tkaE.j3.arm1]
   have heq : le = me := by
@@ -213,7 +213,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   rw [tkaE.k_nest_occ.arm2 _ _ _ _ _ _ _ _ _ _ _ _ ho]
   have hb1 : b = true := by rw [← hb6]; simpa using ho
   subst hb1
-  rw [if_pos rfl]
+  rw [ite_eq_left rfl]
   have hMk6 : ∀ k : Nat, k ≤ 12 → rdW (m6.arr64 IW) (Mc + UInt64.ofNat k) =
       rdW (m.arr64 IW) (Mc + UInt64.ofNat k) :=
     fun k hk => rdW_grow hg06 (hMk k hk)
