@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndPosSpec.BvbWMfr
 import ConAgua.Arena.IndPosSpec.NitW
 import ConAgua.Arena.IlpRd
 import ConAgua.Verdict.PosE1M
@@ -7,9 +8,8 @@ import ConAgua.Verdict.PosE1M
 
 `ntyE` (`l_model … unified`, `PosE1M.lean`): its callees outside the verdict closure through their
 `Option` models (`view_ls_len` and `inst_lp_fast` through their runs). `nty_ref` refines `ntyT`,
-the twin's `nestInstType` up to the instantiated type, for both outcomes. Its ok half is
-`nest_inst_type`'s refinement `nitW_ok` (whose hand model reads `nest_inst_type_ty` through its
-run, `ntyR`), its error half `nest_inst_type`'s error claim (`nitE_all`, `PosE1N.lean`).
+the twin's `nestInstType` up to the instantiated type, for both outcomes; `nest_inst_type`'s
+refinement (`nit_ref`, `PosE1N.lean`) applies it to its unified callee.
 -/
 
 noncomputable section
@@ -218,14 +218,6 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
     (((MFr.of_iw (stripF_frame hst)).trans (posmemo_cvLpsW_mfr hlp)).trans (MFr.of_frame hf5 hfA hfC)).trans
       (instW_mfr _ _ _ _ _ _ _ hiw)⟩
 
-/-- `nest_inst_type_ty`'s ok half at the real calls (`nest_inst_type`'s refinement `nitW_ok`). -/
-theorem nty_ok {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {k : Nat} {m : Mem} {a : AState} {key : Word} (hI : IlpRd (realCall p) dn vis fe (IlpBase m a)) :
-    NtyOk (realCall p) dn vis fe k m a key := by
-  intro kk r1 m1 hS hk hkin hksl h
-  obtain ⟨s1, rfl, -, ty, a', -, hpost⟩ :=
-    RefE.run_okW (ntyE_spec p hl k ⟨m, Locals.init []⟩ vis key) (nty_ref hl k hI hS hk hkin hksl) h
-  exact ⟨ty, a', hpost⟩
 
 end L.Ind
 

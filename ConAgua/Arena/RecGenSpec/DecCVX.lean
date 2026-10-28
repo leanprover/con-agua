@@ -3,7 +3,7 @@ import ConAgua.Arena.RecClassSpec.Classes
 /-!
 # DecCVX
 
-`rtsK3`, `decCVX`, `rec2ToNat_succ`, `rec2ToNat_pred`.
+`decCVX`, `rec2ToNat_succ`, `rec2ToNat_pred`.
 -/
 
 noncomputable section
@@ -19,12 +19,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-! ## The model -/
-
-def rtsK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => some ([r3.headD 0, r3.tail.headD 0], m3)
 
 /-! ## Relational lemma -/
 

@@ -1264,3 +1264,224 @@ Each flagged module is offset by the module that held the deleted hand model, ex
 For the generator: nothing was missing in this landing; `nestSeedsFuel_spec` (a singleton-list post)
 and `nckE_spec` (a unified spec with `G = True`) were taken without wrappers, so the wrappers of §3.9
 (`noaW1`, `cpW1`, `ucW1`) may be removable.
+
+### 3.17 Batch 2b, second landing (`class_rule_ok`, `class_rules_ok_one`, `nest_inst_type`)
+
+The three functions that waited for `class_rule_ok_guards` and `lvl_eq_fueled` (§3.11):
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `class_rule_ok` | `cruleW_okC` 84, `classRuleOk_claim` 142 = 226 | `crule_ref` 109 + `CrulePost` 9 = 118 | −48 % |
+| `class_rules_ok_one` | `cr1W_relC` 42, `cr1_claim` 50 = 92 | `cr1_ref` 37 (`CrulePost`) | −60 % |
+| `nest_inst_type` | `nitW_ok` 71, `nitLe_realC` 36, `NitLe` 19, `NtyOk`/`nty_ok` 13; `nitE_all` 163, `NitE` 8 = 310 | `nit_ref` 127 + `NitPost` 9 = 136 | −56 % |
+| **pairs** | **628** | **291** | **−54 %** |
+
+Gone with them: the hand models `cruleW`/`cruK1–4`, `cr1W`/`cr1K`, `nitW`/`nitK1–5`, `ntyR`, their arms
+and specs (`classRuleOk_spec`, `classRulesOkOne_spec`, both `nestInstType_spec`), `nitWf`; the files
+`Arena/IndT/RecGen4`, `Arena/IndPosSpec/NitLe`, `Arena/IndT/PosNit`. Whole diff against master
+62ca90b6: +413 −1 049 in 30 files.
+
+* **`G`**: `VerdictCtxU p` for `class_rule_ok` and `class_rules_ok_one` (the domains' consts-resolve
+  site, `uce_errClaim_hi`, as `class_rule_ok_guards`); `closedNV p nvFns = true` for
+  `nest_inst_type` (`lvl_eq_fueled`'s `NVAt p "lvl_eq_c"` follows from it, `nvAt_of`).
+* **`NitE` is gone.** It was the error claim of `nest_inst_type` that the block's steps and the
+  depth-2 callers assumed; they now read `nit_ref` (`nest_grow_group`'s `nggE` and `nest_seeds`'
+  `nsdE` call `nitE` as a unified callee; `nest_cont`'s `errors` model `ncE` keeps `callE` and reads
+  both halves through the run). `ngg_ref`'s `G` weakened from `NitE …` to `closedNV`. `NbG` did not
+  change (`NitE` was derived inside the block from it, `nitE_all`).
+* **`class_rules_ok_one`** moved to `IndBRec4` next to `class_rule_ok` (its unified model ends in
+  `cruleE`, and `RecGen9` imports it there). `class_rules_ok`' hand model reads it through
+  `cr1R`; `crsW_simC`/`crrW_simC` take `CrsProg` instead of `CruleProg` (the lookup).
+* **Generator observations** (not changed here): `cruleE` needs `open Classical in`: the callee
+  spec of `flush_caches` has an undecidable guard (`FlushOK`), and without it the generated
+  model reads `sorry = true` for that guard and the steps fail, silently. A spec whose post
+  has an extra length conjunct `r = [r.headD 0, r.getD 1 0, r.getD 2 0]` is rejected as an
+  "ambiguous post" in `unified` mode (`piBinders_spec`; `nitE` lists `piBinders_spec'`).
+* **Recipes**: the default `finish` for `nitE`; `simp [Cmp.evalW, Cmp.eval]` for `cruleE`/`cr1E`
+  (`IndBRec4` 1.96 s against 2.30 s with `finish`). With `nitE` lifted, `nggE` stays `simp []`
+  (17.7–19.4 s for `PosE2M`; `simp [rdW]` 18.5–23.2, `finish` fails) and `nsdE` the default
+  (`PosTopE4` 3.9–4.8 s; `simp []` the same, `simp [rdW]` 64–87 s).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+62ca90b6; load 5–100):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/RecGenSpec/Rec3TmdWDecB`, `CfhW`, `CrsK6`, `CrsProg`, `CruleProg`, `FlushStage` | 20.54 | 15.18 | hand models and specs gone |
+| `Verdict/IndBRec4`, `IndBRec5`, `IndBRec6`, `IndBCrg` | 12.08 | 10.75 | |
+| `Arena/IndT/RecGen4`, `IndPosSpec/NitLe`, `IndT/PosNit` (deleted) | 1.88 | — | |
+| `Verdict/PosE1M` | 24.61 | 21.29 | `nitE` unified (noise: load) |
+| `Verdict/PosE2M`, `PosTopE4` | 21.41 | 20.98 | `nitE` lifted in `nggE`, `nsdE` |
+| `IndPosSpec/NitW`, `NtyW`, `NestOccAny`, `GgW` | 6.05 | 4.65 | |
+| the other 9 modules | 10.83 | 9.95 | |
+| **sum (29 modules)** | **97.4** | **82.8** | **−15 %** |
+
+No module is more than 10 % slower.
+
+Batch 2b in all: 14 functions migrated, the pair lines 2 781 + 628 = 3 409 → 1 399 + 291 = 1 690
+(−50 %), plus about 850 lines of hand models and specs and the shared `ihW`/`ihW_okT`.
+
+### 3.18 Batch 3b, first landing (`target_major_of_const`, `target_major_of`, `class_majors`)
+
+Batch 3b's functions (depth 3–5 of §3.1 in the `IndB*` target and class families, callees
+migrated): `target_major_of_const`, `target_major_of`, `class_majors` (this landing);
+`class_rec_tys_ok`, `class_rules_ok`, `class_recs_rules_ok_go`, `class_recs_rules_ok` and
+`target_k53_args`, `target_k53_heads`, `target_k53` in their own landings. Not in 3b:
+`check_abs_ctor_sorts_all` and `check_block_positivity` (block checks, 3c), `check_sum_tele`
+(its callee `check_sum_tele_slow` is 3a's), `classes_nfs` (hand model, §3.3).
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `target_major_of_const` | `tmcW_simC` 95, `tmcE_claim` 117, `tmc_claim` 29 = 241 | `tmc_ref` 86 (`TmoPost`) | −64 % |
+| `target_major_of` | `tmfW_simC` 85, `tmfE_claim` 110, `tmf_claim` 23 = 218 | `tmf_ref` 81 (`TmoPost`) | −63 % |
+| `class_majors` | `clmW_simC` 174, `clmE_claim` 211, `classMajors_claim` 25 = 410 | `clm_ref` 161 + `ClmPost` 7 + `classMajors_claim` 23 = 191 | −53 % |
+| **pairs** | **869** | **358** | **−59 %** |
+
+`classMajors_refinesC` keeps its statement (`RefE.triple`, 27 → 29 lines). Gone with them: the
+hand models `tmcW`/`tmcK1–2`, `tmfW`/`tmfK1–3`/`tmfK6` with their arms and specs `tmc_spec`,
+`tmf_spec` (`Arena/RecGenSpec/Tmc`), the generated ok model `clmW` and `clm_spec`
+(`Arena/RecGenSpec/Clm`), the `errors` models. Whole diff against master d4f85701: +324 −988 in 11
+files.
+
+* **`G`**: `closedNV p nvFns = true` for `target_major_of_const` and `target_major_of` (every callee
+  is lifted or unified under it: `tmmE`, `tmoE`, `tmcE`); `VerdictCtx p` for `class_majors`
+  (`tmp_ref`'s core stubs; `tmf_ref` through `hV.nv`).
+* **Post**: the three `target_major_of*` share `TmoPost` with `tmo_ref`/`tmt_ref` (the member branch
+  `tmm_ref`'s `TmmPost` by `RefE.mono`, its `AFr` to `AbsOK`). `ClmPost` has `class_majors`' five
+  conjuncts as fields.
+* **Callee readings**: `block_shape_member_names`, `sl_find`, `get_app_args_f`, `get_app_fn_f` and
+  `e_view` through `callW_spec` (lifted runs, as `tmoE`); `class_majors`' `intern_const`,
+  `mk_app_n_f` and `sl_cons` through their `Option` models (`internConst_spec`, `mknF_spec`,
+  `slCons_specW`, as `tmpE`), so the stage lemmas (`internConst_stage`, `mknF_ok`, `clsConsW`) take
+  the lifted value directly.
+* **Placement**: the models stay in `Verdict/IndBTmc`, `IndBTmf`, `IndBClm` (now models only, below
+  the refinements); `tmc_ref`/`tmf_ref` next to `tmo_ref` in `Arena/IndT/RecGenTmf`, `clm_ref`,
+  `classMajors_refinesC` and `classMajors_claim` (`RefE.coreSpecE`, for `IndArmE`'s
+  `classMajorsE_of`) in `Arena/IndT/RecGen19`.
+* **Callers** (minimal): `check_block_classes`' ok refinement (`cbcW_simC`, `RecGen21`) and error
+  claim (`BlkE4`) read `clm_ref` through the run (`RefE.run_okW`, `RefE.run_ok`; the post's
+  `(r, s'.mem).snd` needs `dsimp only` before `omega`, §3.2's pitfall).
+* **Recipes**: `simp [Cmp.evalW, Cmp.eval]` for all three models (as the `errors` ones); every
+  proof went through on the first full build.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+d4f85701, load 32–59):
+
+| module | base | new |
+|---|---:|---:|
+| `Verdict/IndBTmc`, `IndBTmf`, `IndBClm` (models) | 5.86 | 4.44 |
+| `Arena/IndT/RecGenTmf`, `RecGen19`, `RecGen21` | 4.82 | 3.96 |
+| `Verdict/BlkE4`, `IndArmE`, `IndBTmm` | 24.01 | 21.29 |
+| `Arena/RecGenSpec/Tmc`, `Clm` (deleted) | 7.56 | — |
+| **sum (11 modules)** | **42.3** | **29.7** |
+
+No module is slower.
+
+### 3.18 Batch 3b, the rules and recursor types (`class_rec_tys_ok`, `class_rules_ok`, `class_recs_rules_ok_go`, `class_recs_rules_ok`)
+
+The depth-3–4 functions of the `IndBRec*` family whose callees are unified (`class_rec_ty_ok`,
+§3.16; `class_rules_ok_one`, §3.17):
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `class_rec_tys_ok` | `rtsW_simC` 115, `rtsE_claim` 132, `classRecTysOk_claim` 21 = 268 | `rts_ref` 115 + `RtsPost` 6 + `classRecTysOk_claim` 18 = 139 | −48 % |
+| `class_rules_ok` | `crsW_simC` 136, `crsE_claim` 178, `classRulesOk_claim` 26 = 340 | `crs_ref` 143 + `CrsPost` 7 = 150 | −56 % |
+| `class_recs_rules_ok_go`, `class_recs_rules_ok` | `crrW_simC` 147, `crrE_claim` 177, `classRecsRulesOk_claim` 33 = 357 | `crr_ref` 161 + `crra_ref` 27 + `CrrPost` 8 + `classRecsRulesOk_claim` 16 = 212 | −41 % |
+| the three `@[refines]` | 25 + 33 + 33 = 91 | 26 + 33 + 26 = 85 | −7 % |
+| **pairs** | **965** | **501** | **−48 %** |
+
+Gone with them: the hand models `rtsW`/`rtsK1–3`/`rtoR`, `crsW`/`crsK1–6`/`cr1R`, `crrW`/`crrK1–5`/`crraW`,
+their arms, grind patterns and specs (`classRecTysOk_spec`, `classRulesOk_spec`,
+`classRecsRulesOkGo_spec`, `classRecsRulesOk_spec`, `rtoR_spec`, `cr1R_spec`); the files
+`Arena/IndT/RecGen7`, `RecGen9`, `RecGen10` and `Arena/RecGenSpec/CrsK6`. `classRulesOk_claim` had no
+user left (its one user was `crrE_claim`). Whole diff against master d4f85701: +487 −1 330 in 15 files.
+
+* **`G`**: `VerdictCtxU p` for all four (the callees' `rto_ref` and `cr1_ref` have it; the
+  functions' own errors are aborts `0` and lifted no-verdict callees).
+* **Models**: `classRecTysOkE` calls `classRecTyOkE`, `crsE` calls `cr1E`, `crrE` calls `crsE`,
+  `crraE` calls `crrE` (unified callees); `sl_cons`, `cv_lps` (`cvLps_specW1`, so `IndBRec5` imports
+  `Verdict/DeclValE`), `param_levels`, `class_gen_rule`, `target_major_at` and `rec4` lifted. The
+  recursion is the model's own; each refinement is one induction over it. The `classGenRule = none`
+  reject is `ErrClaim.fail` in place.
+* **Posts**: `RtsPost` (stage, growth, `decCVS`, memo), `CrsPost` and `CrrPost` (the same with
+  `decEL`/`decRRS` and the core step). `class_recs_rules_ok` repacks `class_recs_rules_ok_go`'s
+  result, so `crra_ref` shares `CrrPost`.
+* **Callers**: the spine (`gen_rec_check_prep`'s `grpE`, `gen_rec_check`'s `gckE`, `GenRec2`,
+  `GenRec3`) already read these through the run; they keep `classRecTysOk_refinesC`,
+  `classRecsRulesOk_refinesC` (`RefE.triple`) and the two claims (`RefE.coreSpecE`) with unchanged
+  statements; only two imports changed.
+* **Placement**: the refinements and the derived theorems in `Verdict/IndBRec3`, `IndBRec5`,
+  `IndBRec6` (`ctorsAt_denote` moved there from `RecGen10`).
+* **Recipes**: the default `finish` for `classRecTysOkE` (it was `simp []` as an `errors` model),
+  `simp [Cmp.evalW, Cmp.eval]` for `crsE`, `crrE`, `crraE` (as before). No generator or kit change
+  was needed.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+d4f85701, load ≈ 28):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/RecGenSpec/Rec3TmdWDecB` | 17.87 | 1.15 | the hand specs `classRecsRulesOkGo_spec` etc. gone |
+| `Arena/RecGenSpec/ClassRecTysOk`, `DecCVX`, `DecRR`, `CrsK6` (deleted) | 5.93 | 1.52 | |
+| `Arena/IndT/RecGen7`, `RecGen9`, `RecGen10` (deleted) | 3.41 | — | |
+| `Verdict/IndBRec3`, `IndBRec4`, `IndBRec5`, `IndBRec6` | 13.52 | 11.67 | |
+| `Arena/IndT/GenRec2`, `GenRec3` | 3.74 | 4.00 | `GenRec2` 2.41 → 2.65 (+0.24 s, import change only: it now imports `IndBRec3`) |
+| **sum (14 modules)** | **44.5** | **18.3** | **−59 %** |
+
+No module of the family is more than 10 % slower (`GenRec2`'s +10 % is 0.24 s and comes from its
+import, not from a proof in it).
+
+### 3.18 Batch 3a, first landing (the `Nat.div` pin gate, `certify_nat_eqs`)
+
+The batch's functions (§3.1's inventory at depth 3–5 in the `Decl*`/`DefEq*`/`Whnf*` families, and
+what batch 2 left): `check_div_mod_pin_loop` (depth 3), `check_div_mod_pin` (depth 4), with them
+the pin gate `defn_div_gate` (no `@[refines]` of its own, so not in the inventory; §3.13 left it
+for depth ≥ 3) and the depth-0 leaf `certify_nat_eqs` (error model and claim beside the ok
+refinement `certW_okT`; `dnc_ref` read it through `callE`). This landing migrates these four;
+`class_stream_recs`, `check_sum_tele_slow` and `check_sum_tele` are the second. The other
+`Decl*`/`DefEq*`/`Whnf*` functions of the inventory are done; the `errors` models left in
+`DefEqLazyE`, `DefEqSpineE`, `DefEqQuickE`, `DefEqEagerE`, `WhnfModels3E` are the knot's own
+functions (their ok halves are the knot's `CoreSpec` slots, not in §3.1's inventory).
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `check_div_mod_pin_loop` | `loopC` 146; `loopCE` 152, `LoopClaimE`/`loopClaimE` 24, `CpaClaimE`/`cpaClaimE_of` 18 = 340 | `loop_ref` 122 + `PinPost` 5 = 127 | −63 % |
+| `check_div_mod_pin` | `cpC` 108; `cpCE` 133 = 241 | `cp_ref` 116 + `CpPost` 4 = 120 | −50 % |
+| `defn_div_gate` | `divGateSpecC` 78; `divGateSpecE_of` 94 = 172 | `dg_ref` 81 + `DgPost` 6 + `divGateSpecC` 13 + `divGateSpecE_of` 9 = 109 | −37 % |
+| `certify_nat_eqs` | `certW_okT` 78; `certE_okT` 60 = 138 | `cert_ref` 61 + `CertPost` 5 + `certW_okT` 13 = 79 | −43 % |
+| **pairs** | **891** | **435** | **−51 %** |
+
+Also gone: the generated `W` models `loopW`, `dmCpW`, `dgW` with their specs, the hand `certW` with
+`certify_specW`, the two unused `errors` models of `check_div_mod_pin(_loop)` in
+`Verdict/DeclGatesE2` (each function had two), and with `divGateSpecE_of` moved out the modules
+`Verdict/DeclGatesE2` and `Verdict/DeclGatesE` (`gateNvList`/`nvlG` had no other user). Whole diff
+against master d4f85701: +353 −951 in 12 files.
+
+* **`G := CoreStubsE p`** for all four: the lifted callees' errors are `.oob`; the attempt
+  (`cpa_ref`) and `is_def_eq_core` need the core stubs' claims.
+* **The callers keep their statements.** `cdf_ref` (`DeclDefnT`) reads the gate through `callE`
+  (it needs the call's write-set frame, as in §3.13), so `DivGateSpecC` (with `PinSetsR` after and
+  the frame) and `DivGateSpecE` stay as statements, now one-liners from `dg_ref` through the run
+  (`RefE.run_okW`, `RefE.run_err`); `DgPost` leaves out what only the run gives. `dnc_ref`'s
+  certificate arm takes `RefE.run_err … cert_ref`; `certW_okT` (`@[refines]`) and `certW_okC`
+  keep their statements.
+* **Placement**: `loop_ref`, `cp_ref` in `Verdict/DivModPinE` (now imported by `Arena/DeclDivGateT`
+  instead of `DeclDivGateT2`), `dg_ref` with `DivGateSpecC/E` in `Arena/DeclDivGateT`, `cert_ref` in
+  `Arena/DeclNatGateT`. Models take the program bundle (`fns [hD.lCheckDivModPinLoop ↦ …]`).
+* **Recipes**: `extra [ld64_rdW_specE] simp []` (the old `errors` recipe) for the three gate models;
+  the full `extra` list and `simp []` for `certifyNatEqsE`. No kit or generator change needed.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+d4f85701, `_tmp/unify-b3a/times1.txt`, load 30–80; `DeclDivGateT`, `DeclDivGateT2`, `TopE` from
+a second series, `times1b.txt`, the first being noisy for `DeclDivGateT2`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/DeclDivGateT` | 1.51 | **1.98** | **slower (+0.5 s)**: `defnDivGateE` and `dg_ref` moved in … |
+| `Verdict/DeclGatesE2`, `DeclGatesE` (deleted) | 4.56 | — | … from here |
+| `Verdict/DivModPinE` | 6.47 | 3.77 | the two unified models and refinements instead of the claims |
+| `Arena/DeclDivGateT2` | 13.30 | 12.57 | `loopC` gone |
+| `Arena/DeclDivModSpec/DecCIDefnValue`, `RomPinSets` | 4.52 | 2.18 | the `W` models gone |
+| `Arena/DeclNatEq`, `DeclNatGateT` | 9.33 | 9.31 | |
+| `Arena/DeclDefnT`, `Verdict/DeclDefnE`, `TopE` | 4.72 | 4.37 | |
+| **sum** | **44.4** | **34.2** | **−23 %** |

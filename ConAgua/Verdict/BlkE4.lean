@@ -159,18 +159,16 @@ theorem checkBlockClassesE_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.n
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [c4, cbcE.k_class_majors.arm1] at he
-  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (clm_spec p hP.clm.cm n _ vis pp co cl po pl (r3.headD 0) (r3.tail.headD 0)) (callW_of_callE c4)
-  simp only at hs4 hW4
-  subst hs4
-  obtain ⟨ms, a4, hrun4, hC4, hg4, hms, hP4, hA4⟩ :=
-    clmW_simC hq hIlpf hLC henv hP.clm pp co cl po pl bs css pfvs pP cssP pfvsP hpw n hn s3.mem a3 _ _ keys
+  obtain ⟨s4, rfl, -, ms, a4, hrun4, ⟨hC4, hg4, hms, hP4, hA4⟩⟩ := RefE.run_ok (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (clmE_spec p hP.clm n _ vis pp co cl po pl (r3.headD 0) (r3.tail.headD 0))
+    (clm_ref hq hIlpf hLC henv hP.clm pp co cl po pl bs css pfvs pP cssP pfvsP hpw n hn s3.mem a3 _ _ keys
       keysP hC3 hA3 (hbsD.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc)
       (hcss.grow decCNS_mono hg03) (hpf.grow (OMono.decHL _ _) hg03) (Nat.le_trans hpfb hg03.1) hks
       hP3 (fun k hk x hx => ⟨pP.nP, hnPP ▸ hwk k hk x hx⟩)
       (ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hshP)
       (ConRon.Bridge.Inductives.dCtors_ext.list c12.ext _ _ hcssP)
-      (ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP) hkeys r4 s4.mem hW4
+      (ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP) hkeys) c4
+  dsimp only at hC4 hg4 hms hP4 hA4
   have hg04 := hg03.trans hg4
   refine ErrClaim.bind_right hrun4 ?_
   -- one class per member (L only)

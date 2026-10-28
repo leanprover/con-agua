@@ -1,6 +1,5 @@
 import ConAgua.Verdict.DeclTopE
 import ConAgua.Verdict.KnotAllE
-import ConAgua.Verdict.DeclGatesE2
 import ConAgua.Verdict.DeclPendE
 import ConAgua.Verdict.CheckBE
 import ConAgua.Verdict.FrontStageE

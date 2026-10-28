@@ -1,12 +1,11 @@
-import ConAgua.Verdict.PosE
-import ConAgua.Arena.IndT.PosNit
-import ConAgua.Verdict.PosNty
+import ConAgua.Verdict.PosE2M
+import ConAgua.Verdict.PosE1N
 import ConAgua.Arena.IndT.RecGen19
 /-!
 # `nest_grow_group`: one refinement for both outcomes
 
 `ngg_ref` on the unified model `nggE` (`PosE2M.lean`; the record and slice writers lifted,
-`nest_inst_type` through its run, its ok half by `nitW_ok`, its error half `NitE`), for
+`nest_inst_type` as its unified model, `nit_ref`), for
 `nest_cont_new`'s refinement (`newRef_step`, `Arena/IndT/PosNew.lean`).
 -/
 
@@ -48,7 +47,7 @@ structure NggPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   ext : ConRon.Arena.Ext a0.store a'.store
 
 /-- **`nest_grow_group` refines `nestGrowGroup`, both outcomes** (under `StageC ∧ AbsOK`, the twin's
-store an extension of `a0`'s): only `nest_inst_type` (`NitE`) claims. -/
+store an extension of `a0`'s): only `nest_inst_type` claims (`nit_ref`). -/
 theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
     (ctx hi us dO dL : Word) (HI : Nat) (hHI : hi.toNat = HI) (c : NestCtx)
@@ -62,7 +61,7 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
     UCtx dn vis fe m ctx c → decHL m dO.toNat dL.toNat = some ds → dO.toNat + dL.toNat ≤ iwTop m →
     decHL m cO.toNat cL.toNat = some cs → (∀ j < cL.toNat, cO.toNat + j < iwTop m) →
     gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp → PosMR m →
-    RefE (NitE p dn vis fe env) (nggE p k m vis ctx hi us dO dL cO cL gO gL)
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (nggE p k m vis ctx hi us dO dL cO cL gO gL)
       (ConRon.Arena.nestGrowGroup fe c HI (decI us) ds cs grp) a
       (fun v res a' => NggPost dn vis fe env a0 m v.1 res v.2 a') := by
   induction k with
@@ -134,24 +133,11 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
     have hctxa : dCtx a.store env.find? c = some ctxP := dCtx_ext _ hx0 _ _ hctx
     rw [ConRon.Arena.nestGrowGroup]
     -- `nest_inst_type`
-    rcases h2 : callE p k "nest_inst_type" [vis, ctx, hi, key] m1 with e2 | ⟨r2, m2⟩
-    · rw [nggE.k_nest_inst_type.none]
-      exact RefE.bind_left fun hNit => hNit k m1 a ctx hi key HI c _ ctxP _ hC1 hA1 hHI (hU.grow hg1) hdk hkin
-        hksl hP1 hctxa hkeyP _ h2
-    obtain ⟨s2, hs2, -, hnit⟩ := triple_of_callW
-      (nestInstType_spec' p L.nit (realCall p) (realCall_spec p) k ⟨m1, Locals.init []⟩ vis ctx hi key)
-      (callW_of_callE h2)
-    simp only at hnit
-    rw [hs2] at hnit
+    have hN := nit_ref L.nit hcl hIlpf hLC k hC1 hA1 hHI (hU.grow hg1) hdk hkin hksl hP1 hctxa hkeyP
+    rcases h2 : nitE p k m1 vis ctx hi key with e2 | ⟨r2, m2⟩ <;> rw [h2] at hN
+    · rw [nggE.k_nest_inst_type.none]; exact RefE.bind_left hN
     rw [nggE.k_nest_inst_type.arm1]
-    cases k with
-    | zero => simp [nitWf] at hnit
-    | succ k =>
-    simp only [nitWf] at hnit
-    obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, -, hA2⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key
-      _ _ (realCall p) (nty_ok L.nit.ty (IlpRd.realC hIlpf hC1)) _
-      (nitLe_realC hcl hLC L.nit.hlf k _ _ key c _ hC1 hA1 hctxa hkeyP) hnit hS1
-      (hU.grow hg1) hdk hkin hksl hP1
+    obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, hA2⟩ := hN
     obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c HI ⟨n0, decI us, ds⟩
       ⟨n0P, usP, dsP⟩ a a2 x hC1.check ⟨hctxa, hkeyP⟩ hrun2
     have hC2 : StageC dn vis fe env m2 a2 := hC1.of_cstep hS2 hA2 c4
@@ -167,7 +153,7 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
     have hA3 : AbsOK m3 := hA2.iw (posRecW_iwFr hpr)
     simp only [List.length_cons, List.length_nil] at ht3
     have hg13 := (hg1.trans hg2).trans hg3
-    rcases hsn : snocW (k + 1) m3 gO gL pw with _ | ⟨r4, m4⟩
+    rcases hsn : snocW k m3 gO gL pw with _ | ⟨r4, m4⟩
     · rw [liftE_none, nggE.k_sl_snoc.none]; exact RefE.of_cls0 rfl
     rw [liftE_some, nggE.k_sl_snoc.arm1]
     obtain ⟨hS4, hg4, hr40, hr41, ht4, hw4, hx4⟩ := snocW_words hsn hS3 (by have := hg13.1; omega)
@@ -201,7 +187,7 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
           simpa [decHL] using hcs')
       (fun j hj => by rw [hcO1, hcL1] at *; have := hcb (j + 1) (by omega); have := hg14.1; omega)
       (by rw [hr41]; simp [hgl]) (by rw [hr40]; simp; omega) hgrp4 ((hP2.fr (posRecW_mfr hpr)).fr (snocW_mfr hsn))
-    rcases h5 : nggE p (k + 1) m4 vis ctx hi us dO dL (cO + 1) (cL - 1) (r4.headD 0) (r4.tail.headD 0) with
+    rcases h5 : nggE p k m4 vis ctx hi us dO dL (cO + 1) (cL - 1) (r4.headD 0) (r4.tail.headD 0) with
       e5 | ⟨r5, m5⟩ <;> rw [h5] at ih'
     · rw [nggE.k_nest_grow_group.none]; exact ih'
     rw [nggE.k_nest_grow_group.arm1]

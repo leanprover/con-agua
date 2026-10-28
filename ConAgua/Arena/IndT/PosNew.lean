@@ -1,5 +1,5 @@
+import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosE2
-import ConAgua.Verdict.PosE1N
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 
@@ -181,13 +181,13 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
     (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] hC4 hA4 (ConRon.Arena.Ext.refl _) (fun _ h => h)
     (hW.u.grow hg14) hdsD4 (by have := hg14.1; omega) hmdD (fun j hj => by have := hg24.1; omega) (by simp)
     (by simp only [List.length_cons, List.length_nil]; omega) hgrp0 hP4
-  have hsg := nggE_spec p R.ha L.nit.hc2 R.h2 R.h4 L.nag.hsn L.hgg (n' + 1) ⟨m4, Locals.init []⟩ vis ctx
+  have hsg := nggE_spec p L.nit R.h2 R.h4 L.nag.hsn L.hgg (n' + 1) ⟨m4, Locals.init []⟩ vis ctx
     (nhiW m2b ctx (rw.tail.headD 0)) us dO dL (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
   cases h5 : callE p (n' + 1) "nest_grow_group" [vis, ctx, nhiW m2b ctx (rw.tail.headD 0), us, dO, dL, rm.headD 0,
       rm.tail.headD 0, g0.headD 0, 1] m4 with
   | error e5 =>
     rw [nnewE.k_nest_grow_group.none]
-    exact RefE.bind_left fun hG => RefE.run_err hsg hG.nv (nitE_all L hq hIlpf hLC hG.nv dn vis fe env) hR5 h5
+    exact RefE.bind_left fun hG => RefE.run_err hsg hG.nv hG.nv hR5 h5
   | ok q5 =>
   obtain ⟨rg, m5⟩ := q5
   rw [nnewE.k_nest_grow_group.arm1]

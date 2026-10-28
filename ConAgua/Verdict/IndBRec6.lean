@@ -1,11 +1,20 @@
-import ConAgua.Arena.IndT.RecGen10
 import ConAgua.Verdict.IndBRec5
+import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 /-!
-# Error refinements of `class_recs_rules_ok_go`, `class_recs_rules_ok` (lane `verdicts-b`, helper `ib`)
+# `class_recs_rules_ok_go`, `class_recs_rules_ok`: one model and one refinement for both outcomes
+
+`crrE` (`l_model … unified`: `class_rules_ok` through its unified model, `target_major_at`, `rec4`
+and `sl_cons` lifted) and `crr_ref` under `StageC`; twin side con-ron's `classRecsRulesOk_spec`'s
+proof: `classRulesOk` (`crs_ref`), `targetMajorAt` (`targetMajorAt_spec`: `RSim.liftPP` of
+`rec3TMA_sim`), the record write (twin side none), the rest by induction. `class_recs_rules_ok`
+(`crra_ref`) is the first call, repacked. Their ok half is `classRecsRulesOk_refinesC`, their error
+half `classRecsRulesOk_claim`.
 -/
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -21,24 +30,55 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model crrE_spec (p : Prog) (hf : p.lookup "class_recs_rules_ok_go" = some classRecsRulesOkGo)
-  fns [hf ↦ crrE] grind [arena_grind] fold [tierW, idxW]
+l_model crrE_spec (p : Prog) (hP : CrrProg p)
+  fns [hP.go ↦ crrE]
+  specs [crsE_spec p hP.crs n, targetMajorAt_spec p hP.crs.alloc hP.pw hP.mtm hP.tmd hP.tma hP.na n,
+    rec4_specW p hP.crs.alloc n hP.rec4, slCons_specW p hP.crs.alloc hP.crs.copy hP.crs.cons n]
+  grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
+  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model crraE_spec (p : Prog) (hf : p.lookup "class_recs_rules_ok" = some classRecsRulesOkL)
-  fns [hf ↦ crraE] grind [arena_grind] fold [tierW, idxW]
+l_model crraE_spec (p : Prog) (hP : CrrProg p)
+  fns [hP.top ↦ crraE] specs [crrE_spec p hP n]
+  grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
+  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- What `class_recs_rules_ok(_go)` gives besides the twin's records `xs` (from `m`, `a`): the stage
+invariant under `StageC`, the growth, the records a slice below the tops, the abstraction memo, the
+core step. -/
+structure CrrPost (dn : NIdx → Option ConLeche.Name) (visR : Word) (feR : IFEnv) (env : ConLeche.Env)
+    (m : Mem) (a : AState) (r : List Word) (m' : Mem)
+    (xs : List (IConstantVal × TargetMajor × List EIdx)) (a' : AState) : Prop where
+  stage : StageC dn visR feR env m' a'
+  grow : IWGrow m m'
+  dec : decRRS m' r xs
+  abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep V env feR a a'
+
+/-- The class's constructors denote (con-ron's `classRecsRulesOk_spec`, its first step). -/
+theorem ctorsAt_denote {st : EStore} {G : ClassGen} {gP : ConLeche.ClassGen}
+    (hg : dClassGen st G = some gP) (c : Nat) :
+    (G.ctors.getD c []).mapM (dClassCtor st) = some (gP.ctors.getD c []) := by
+  obtain ⟨-, -, -, -, -, hctors, -, -⟩ := dClassGen_inv hg
+  have hcj := ConRon.Bridge.Inductives.mapM_option_getElem? (st := st) hctors c
+  rw [List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD]
+  rcases hc : G.ctors[c]? with _ | xs
+  · rw [hc] at hcj; have : gP.ctors[c]? = none := hcj; rw [this]; rfl
+  rw [hc] at hcj
+  obtain ⟨xsP, hxsP, hd⟩ := hcj
+  rw [hxsP]; exact hd
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option ConLeche.Name}
   {env : ConLeche.Env} (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
 
-include hq hApd hnv hcE hU in
-/-- **`class_recs_rules_ok_go`'s model error claim** (`crrW_simC`'s hypotheses; the recursion is the
-model's own). -/
-theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv)
+include hq hApd in
+/-- **`class_recs_rules_ok_go` refines `classRecsRulesOk`, both outcomes** under `StageC` (the
+inputs' denotations as con-ron's `classRecsRulesOk_spec` asks). -/
+theorem crr_ref (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv)
     {env₂ : ConLeche.Env} (g rco rcl cgo cgl : Word) (G : ClassGen) (recCls : List Nat)
     (cvGs : List IConstantVal) (hns : G.nP + G.slots.length < 2 ^ 64)
     (hrcb : rco.toNat + rcl.toNat < 2 ^ 64) (hcgb : cgo.toNat + cgl.toNat < 2 ^ 64)
@@ -51,31 +91,40 @@ theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
     dClassGen a.store G = some gP → cvGs.mapM (Frontend.denoteCV a.store) = some cvGsP →
     cvs.mapM (Frontend.denoteCV a.store) = some cvsP →
     ConRon.Bridge.Inductives.IFEnvOKS env₂ (feR.restrictTo visT.toNat) a.store →
-    ∀ e, crrE p n m visT visR g rco rcl cgo cgl vo vl co cl = .error e →
-      ErrClaim (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvs cs) a e := by
+    RefE (VerdictCtxU p) (crrE p n m visT visR g rco rcl cgo cgl vo vl co cl)
+      (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvs cs) a
+      (fun v xs a' => CrrPost dn visR feR env m a v.1 v.2 xs a') := by
   induction n with
-  | zero =>
-    intro m a vo vl co cl cvs cs cvsP hC hG hrc hcg hcvs hcs hA hgP hcvGsP hcvsP hie e he
-    rw [crrE.eq_def] at he
-    cases he
-    exact ErrClaim.of_cls0 Err.cls_outOfFuel
+  | zero => intros; rw [crrE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
-  intro m a vo vl co cl cvs cs cvsP hC hG hrc hcg hcvs hcs hA hgP hcvGsP hcvsP hie e he
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
+  intro m a vo vl co cl cvs cs cvsP hC hG hrc hcg hcvs hcs hA hgP hcvGsP hcvsP hie
   have hS := hC.stage
   have hsz := hS.2.2.2.1
+  have hnil : RefE (VerdictCtxU p) (.ok ([0, 0], m))
+      (Pure.pure [] : AM (List (IConstantVal × TargetMajor × List EIdx))) a
+      (fun v xs a' => CrrPost dn visR feR env m a v.1 v.2 xs a') :=
+    RefE.ret rfl ⟨hC, IWGrow.refl m, ⟨by show decPL (truncM m) _ _ _ = some []; simp [decPL], by simp⟩,
+      hA, ConRon.Bridge.CoreStep.refl hC.check⟩
   by_cases hvl : vl = 0
-  · rw [crrE.arm1 p n m visT visR g rco rcl cgo cgl vo vl co cl hvl] at he
-    cases he
+  · rw [crrE.arm1 p n m visT visR g rco rcl cgo cgl vo vl co cl hvl]
+    have : cvs = [] := by
+      have := hcvs.length; rw [hvl] at this; exact List.eq_nil_of_length_eq_zero (by simpa using this)
+    subst this
+    unfold ConRon.Arena.classRecsRulesOk
+    exact hnil
   obtain ⟨jv, hjv⟩ : ∃ j, vl.toNat = j + 1 :=
     ⟨vl.toNat - 1, by
       have : vl.toNat ≠ 0 := fun e => hvl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   obtain ⟨pp, cv, cvs', rfl, hp, hpt, hcv, hcvsT⟩ := rec3SPL_uncons (by rw [← hjv]; exact hcvs)
   obtain ⟨cvP, cvsP', rfl, hcvP, hcvsP'⟩ := mapM_option_cons_inv hcvsP
   by_cases hcl : cl = 0
-  · rw [crrE.arm2 p n m visT visR g rco rcl cgo cgl vo vl co cl hvl hcl] at he
-    cases he
+  · rw [crrE.arm2 p n m visT visR g rco rcl cgo cgl vo vl co cl hvl hcl]
+    have : cs = [] := by
+      have := decNL_length _ (hcs.get (OMono.decNL _ _)); rw [hcl] at this
+      exact List.eq_nil_of_length_eq_zero (by simpa using this)
+    subst this
+    unfold ConRon.Arena.classRecsRulesOk
+    exact hnil
   obtain ⟨jc, hjc⟩ : ∃ j, cl.toNat = j + 1 :=
     ⟨cl.toNat - 1, by
       have : cl.toNat ≠ 0 := fun e => hcl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
@@ -91,8 +140,8 @@ theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
   have hj1 : crrE p (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl =
         crrE.k_class_rules_ok p n visT visR g rco rcl cgo cgl vo vl co cl (UInt64.ofNat pp)
           (UInt64.ofNat c0)
-          (callE p n "class_rules_ok" [visT, visR, g, rco, rcl, cgo, cgl, UInt64.ofNat pp,
-            UInt64.ofNat c0, (crrXs m g (UInt64.ofNat c0)).1, (crrXs m g (UInt64.ofNat c0)).2] m) := by
+          (crsE p n m visT visR g rco rcl cgo cgl (UInt64.ofNat pp) (UInt64.ofNat c0)
+            (crrXs m g (UInt64.ofNat c0)).1 (crrXs m g (UInt64.ofNat c0)).2) := by
     by_cases hc : rdW (m.arr64 IW) co < rdW (m.arr64 IW) (g + 10)
     · rw [crrE.arm3 p n m visT visR g rco rcl cgo cgl vo vl co cl hvl hcl hc, crrE.j1.arm1, ep, ec]
       rw [ec] at hc
@@ -100,125 +149,161 @@ theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
     · rw [crrE.arm4 p n m visT visR g rco rcl cgo cgl vo vl co cl hvl hcl hc, crrE.j1.arm1, ep, ec]
       rw [ec] at hc
       rw [crrXs_miss (h := hc)]
-  rw [hj1] at he
+  rw [hj1]
   obtain ⟨hcvp, hcvx⟩ := rec3CVX hcv
   unfold ConRon.Arena.classRecsRulesOk
   dsimp only
+  -- `class_rules_ok`
   have hxs := rec3CtorsAt (c := UInt64.ofNat c0) hS hG
   rw [tc] at hxs
-  -- `class_rules_ok`
-  cases h1 : callE p n "class_rules_ok" [visT, visR, g, rco, rcl, cgo, cgl, UInt64.ofNat pp, UInt64.ofNat c0,
-      (crrXs m g (UInt64.ofNat c0)).1, (crrXs m g (UInt64.ofNat c0)).2] m with
-  | error e1 =>
-    rw [h1, crrE.k_class_rules_ok.none] at he
-    cases he
-    refine ErrClaim.bind_left ?_
-    have := CoreSpecE.of_callE (classRulesOk_claim hq hApd hnv hcE hU hP.crs n (by omega) ⟨m, Locals.init []⟩ a
-      henv visT visR feR g rco rcl cgo cgl (UInt64.ofNat pp) (UInt64.ofNat c0) _ _ G recCls cvGs cv
-      (G.ctors.getD c0 []) hC hG hns hrc hrcb (rec3SPL_decB hcg) hcgb (by rw [tp]; exact hcvp)
-      (by rw [tp]; exact hcvx) hxs hA hgP hcvGsP hcvP (ctorsAt_denote hgP c0) hie) h1
-    rwa [tc] at this
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, crrE.k_class_rules_ok.arm1] at he
-  obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (classRulesOk_spec p hP.crs (realCall p) (realCall_spec p) n
-    ⟨m, Locals.init []⟩ visT visR g rco rcl cgo cgl (UInt64.ofNat pp) (UInt64.ofNat c0)
-    (crrXs m g (UInt64.ofNat c0)).1 (crrXs m g (UInt64.ofNat c0)).2) (callW_of_callE h1)
-  subst hs1
-  have hcsim := crsW_simC hq hApd hP.crs.cr henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl (UInt64.ofNat pp)
+  have hr := crs_ref hq hApd hP.crs henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl (UInt64.ofNat pp)
     (UInt64.ofNat c0) G recCls cvGs cv hns hrcb hcgb gP cvGsP cvP n (by omega) m a _ _ _
     (gP.ctors.getD c0 []) hC hG hrc (rec3SPL_decB hcg) (by rw [tp]; exact hcvp)
     (by rw [tp]; exact hcvx) hxs hA hgP hcvGsP hcvP (ctorsAt_denote hgP c0) hie
-  rw [tc] at hcsim
-  obtain ⟨rhss, a1, hrun1, ⟨hC1, hg1, hr1⟩, hA1, c1⟩ := hcsim (r1, s1.mem) h1m
-  dsimp only at hC1 hg1 hr1 hA1
-  refine ErrClaim.bind_right hrun1 ?_
+  rw [tc] at hr
+  rcases h1 : crsE p n m visT visR g rco rcl cgo cgl (UInt64.ofNat pp) (UInt64.ofNat c0)
+      (crrXs m g (UInt64.ofNat c0)).1 (crrXs m g (UInt64.ofNat c0)).2 with e1 | ⟨r1, m1⟩ <;> rw [h1] at hr
+  · rw [crrE.k_class_rules_ok.none]; exact RefE.bind_left hr
+  rw [crrE.k_class_rules_ok.arm1]
+  obtain ⟨rhss, a1, hrun1, hR1⟩ := hr
+  refine RefE.bind_right hrun1 ?_
   -- `target_major_at`
-  have hS1 := hC1.stage
-  have hG1 := hG.grow (decCG_mono _) hg1
+  have hS1 := hR1.stage.stage
+  have hG1 := hG.grow (decCG_mono _) hR1.grow
   have hsz1 := hS1.2.2.2.1
   obtain ⟨-, -, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG1
   obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz1
   obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz1
   simp only [show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at e3 e4
+  rw [e3, e4]
   have hb3 : o3 + l3 < 2 ^ 64 := by
     by_cases hl : l3 = 0
     · have := iwN_rdW h3 (by have := hS1.2.1; have := (rec2CG_parts hG1).2.1; omega); omega
     · have := rec2DecB_PL_top hcls hl; have := hS1.2.1; omega
-  cases h2 : callE p n "target_major_at" [rdW (s1.mem.arr64 IW) (g + 3), rdW (s1.mem.arr64 IW) (g + 4),
-      UInt64.ofNat c0] s1.mem with
-  | error e2 =>
-    rw [h2, crrE.k_target_major_at.none] at he
-    cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2)
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2, crrE.k_target_major_at.arm1] at he
-  obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (targetMajorAt_spec p hP.crs.alloc hP.pw hP.mtm hP.tmd hP.tma hP.na n
-    ⟨s1.mem, Locals.init []⟩ (rdW (s1.mem.arr64 IW) (g + 3)) (rdW (s1.mem.arr64 IW) (g + 4)) (UInt64.ofNat c0))
-    (callW_of_callE h2)
-  subst hs2
-  have hM := rec3TMA_sim dn visR feR n s1.mem a1 (UInt64.ofNat o3) (UInt64.ofNat l3) (UInt64.ofNat c0)
+  have hM := rec3TMA_sim dn visR feR n m1 a1 (UInt64.ofNat o3) (UInt64.ofNat l3) (UInt64.ofNat c0)
     G.cls hS1 (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3)
   rw [tc] at hM
-  rw [e3, e4] at h2m
   obtain ⟨-, -, hclsP, -, -, -, -, -⟩ := dClassGen_inv hgP
+  rcases h2 : tmaW n m1 (UInt64.ofNat o3) (UInt64.ofNat l3) (UInt64.ofNat c0) with _ | ⟨r2, m2⟩
+  · rw [liftE_none, crrE.k_target_major_at.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, crrE.k_target_major_at.arm1]
   obtain ⟨M, a2, hrun2, hC2, ⟨⟨hS2, hg2, hMd⟩, hf2⟩, -, p2⟩ :=
-    (RSim.liftPP hC1 (RSim.withF hM (fun _ hb => tmaW_afr hb)) (fun _ _ _ h => ⟨h.1.1, h.2 hA1⟩)
+    (RSim.liftPP hR1.stage (RSim.withF hM (fun _ hb => tmaW_afr hb)) (fun _ _ _ h => ⟨h.1.1, h.2 hR1.abs⟩)
       (ConRon.Bridge.Inductives.targetMajorAt_spec G.cls gP.cls c0)
-      (dMajor_ext.list c1.ext _ _ hclsP)) (r2, s2.mem) h2m
+      (dMajor_ext.list hR1.core.ext _ _ hclsP)) (r2, m2) h2
   dsimp only at hS2 hg2 hMd hC2
-  have c12 := c1.trans (p2.toCore c1.ok)
-  refine ErrClaim.bind_right hrun2 ?_
-  -- `rec4`
-  cases h3' : callE p n "rec4" [UInt64.ofNat pp, r2.headD 0, r1.headD 0, r1.tail.headD 0] s2.mem with
-  | error e3' =>
-    rw [h3', crrE.k_rec4.none] at he
-    cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3')
-  | ok q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [h3', crrE.k_rec4.arm1] at he
-  obtain ⟨s3, hs3, -, h3m⟩ := triple_of_callW (rec4_specW p hP.crs.alloc n hP.rec4 ⟨s2.mem, Locals.init []⟩
-    (UInt64.ofNat pp) (r2.headD 0) (r1.headD 0) (r1.tail.headD 0)) (callW_of_callE h3')
-  subst hs3
-  obtain ⟨hS3, hg3, hr3, hget3, htop3⟩ := recW_stage h3m hS2 rfl
-  have hA3 := recW_afr h3m (hf2 hA1)
-  have hC3 : StageC dn visR feR env s3.mem a2 := hC2.of_check hS3 hA3 hC2.check (Ext.refl _)
-  have hg13 := hg2.trans hg3
-  have hg03 : IWGrow m s3.mem := hg1.trans hg13
+  have c12 := hR1.core.trans (p2.toCore hR1.core.ok)
+  refine RefE.bind_right hrun2 ?_
+  -- `rec4`: L only
+  rcases h3' : recW m2 4 [UInt64.ofNat pp, r2.headD 0, r1.headD 0, r1.tail.headD 0] with _ | ⟨r3, m3⟩
+  · rw [liftE_none, crrE.k_rec4.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, crrE.k_rec4.arm1]
+  obtain ⟨hS3, hg3, hr3, hget3, htop3⟩ := recW_stage h3' hS2 rfl
+  have hA3 := recW_afr h3' (hf2 hR1.abs)
+  have hC3 : StageC dn visR feR env m3 a2 := hC2.of_check hS3 hA3 hC2.check (Ext.refl _)
+  have hrec : DecB (fun m => decRR m (r3.headD 0).toNat) m3 (cv, M, rhss) := by
+    rw [hr3]
+    refine rec3Rec4_decB (m := m2) (fun j hj => hget3 j (by simpa using hj))
+      (by simp at htop3; simp [iwTop] at htop3 ⊢; omega) hg3
+      ((rec3CVX_decB hcv).grow (OMono.decCVp _) ((hR1.grow.trans hg2)) |> fun h => by rw [tp]; exact h) hMd
+      ((decRL_decB hR1.dec).grow (OMono.decHL _ _) hg2 |> fun h => by
+        simp only [getD_zero, Nat.zero_add, getD_one] at h; exact h)
+  -- the rest
+  have hg03 := hR1.grow.trans (hg2.trans hg3)
   have hvo1 := rec2ToNat_succ (o := vo) (i := vo.toNat) (Nat.le_refl _) (by have := hS.2.1; omega)
   have hco1 := rec2ToNat_succ (o := co) (i := co.toNat) (Nat.le_refl _)
     (by have := hS.2.1; have := (rec2IwN_trunc hc0).1; omega)
   have hvl1 := rec2ToNat_pred hvl
   have hcl1 := rec2ToNat_pred hcl
-  refine ErrClaim.bind_left ?_
-  cases h4 : crrE p n s3.mem visT visR g rco rcl cgo cgl (vo + 1) (vl - 1) (co + 1) (cl - 1) with
-  | error e4 =>
-    rw [h4, crrE.k_class_recs_rules_ok_go.none] at he
-    cases he
-    exact ih (by omega) s3.mem a2 (vo + 1) (vl - 1) (co + 1) (cl - 1) cvs' cs' cvsP' hC3
-      (hG.grow (decCG_mono _) hg03) (hrc.grow (OMono.decNL _ _) hg03) (hcg.grow hg03)
-      (by rw [hvo1, hvl1, hjv]; exact hcvsT.grow hg03)
-      (by rw [hco1, hcl1, hjc]; exact (show DecB (fun m => decNL m (co.toNat + 1) jc) m cs' from
-        hcsT).grow (OMono.decNL _ _) hg03) hA3
-      (dClassGen_ext c12.ext _ _ hgP) (dExt_denoteCV.list c12.ext _ _ hcvGsP)
-      (dExt_denoteCV.list c12.ext _ _ hcvsP') (hie.mono c12.ext) _ h4
-  | ok q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [h4, crrE.k_class_recs_rules_ok_go.arm1] at he
-  cases h5 : callE p n "sl_cons" [r3.headD 0, r4.headD 0, r4.tail.headD 0] m4 with
-  | error e5 =>
-    rw [h5, crrE.k_sl_cons.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
-  | ok q5 =>
-  rw [h5, crrE.k_sl_cons.arm1] at he
-  cases he
+  have ih' := ih (by omega) m3 a2 (vo + 1) (vl - 1) (co + 1) (cl - 1) cvs' cs' cvsP' hC3
+    (hG.grow (decCG_mono _) hg03) (hrc.grow (OMono.decNL _ _) hg03) (hcg.grow hg03)
+    (by rw [hvo1, hvl1, hjv]; exact hcvsT.grow hg03)
+    (by rw [hco1, hcl1, hjc]; exact (show DecB (fun m => decNL m (co.toNat + 1) jc) m cs' from
+      hcsT).grow (OMono.decNL _ _) hg03) hA3
+    (dClassGen_ext c12.ext _ _ hgP) (dExt_denoteCV.list c12.ext _ _ hcvGsP)
+    (dExt_denoteCV.list c12.ext _ _ hcvsP') (hie.mono c12.ext)
+  rcases h4' : crrE p n m3 visT visR g rco rcl cgo cgl (vo + 1) (vl - 1) (co + 1) (cl - 1) with e4 | ⟨r4, m4⟩ <;>
+    rw [h4'] at ih'
+  · rw [crrE.k_class_recs_rules_ok_go.none]; exact RefE.bind_left ih'
+  rw [crrE.k_class_recs_rules_ok_go.arm1]
+  obtain ⟨rest, a4, hrun4, hR4⟩ := ih'
+  refine RefE.bind_right hrun4 ?_
+  -- `sl_cons`
+  rcases h5 : consW n m4 (r3.headD 0) (r4.headD 0) (r4.tail.headD 0) with _ | ⟨r5, m5⟩
+  · rw [liftE_none, crrE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, crrE.k_sl_cons.arm1]
+  obtain ⟨hrs, hrsb⟩ := hR4.dec
+  obtain ⟨hS5, hg5, hd5, ht5⟩ := partsConsPL decRR_mono h5 hR4.stage.stage hrsb hrs
+    (hrec.grow (decRR_mono _) hR4.grow)
+  have hA5 := consW_afr h5 hR4.abs
+  exact RefE.ret rfl ⟨hR4.stage.of_check hS5 hA5 hR4.stage.check (Ext.refl _),
+    hg03.trans (hR4.grow.trans hg5), ⟨by simpa using hd5, by simp only [List.headD_cons, List.tail_cons]; omega⟩,
+    hA5, c12.trans hR4.core⟩
+
+include hq hApd in
+/-- **`class_recs_rules_ok` refines `classRecsRulesOk`, both outcomes** under `StageC`: the
+first call of `class_recs_rules_ok_go` (`crr_ref`), its result repacked. -/
+theorem crra_ref (hP : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {env₂ : ConLeche.Env}
+    (g rco rcl cgo cgl : Word) (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal)
+    (hC : StageC dn visR feR env m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (hns : G.nP + G.slots.length < 2 ^ 64)
+    (hrc : DecB (fun m => decNL m rco.toNat rcl.toNat) m recCls)
+    (hrcb : rco.toNat + rcl.toNat < 2 ^ 64)
+    (hcg : SPL decCVX m cgo.toNat cgl.toNat cvGs) (hcgb : cgo.toNat + cgl.toNat < 2 ^ 64)
+    (hA : AbsOK m) {gP : ConLeche.ClassGen} {cvGsP : List ConLeche.ConstantVal}
+    (hgP : dClassGen a.store G = some gP) (hcvGsP : cvGs.mapM (Frontend.denoteCV a.store) = some cvGsP)
+    (hie : ConRon.Bridge.Inductives.IFEnvOKS env₂ (feR.restrictTo visT.toNat) a.store) :
+    RefE (VerdictCtxU p) (crraE p n m visT visR g rco rcl cgo cgl)
+      (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a
+      (fun v xs a' => CrrPost dn visR feR env m a v.1 v.2 xs a') := by
+  cases n with
+  | zero => rw [crraE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  | succ n =>
+  rw [crraE.arm1]
+  have h := crr_ref hq hApd hP henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl G recCls cvGs hns hrcb
+    hcgb gP cvGsP n (by omega) m a cgo cgl rco rcl cvGs recCls cvGsP hC hG hrc hcg hcg hrc hA hgP hcvGsP
+    hcvGsP hie
+  rcases h1 : crrE p n m visT visR g rco rcl cgo cgl cgo cgl rco rcl with e1 | ⟨r1, m1⟩ <;> rw [h1] at h
+  · rw [crraE.k_class_recs_rules_ok_go.none]; exact h
+  rw [crraE.k_class_recs_rules_ok_go.arm1]
+  obtain ⟨xs, a1, hrun, hR⟩ := h
+  exact RefE.ret hrun ⟨hR.stage, hR.grow, ⟨by simpa using hR.dec.1, by simpa using hR.dec.2⟩, hR.abs,
+    hR.core⟩
+
+include hq hApd in
+/-- **`class_recs_rules_ok` refines `classRecsRulesOk`** under `StageC` (the inputs' denotations as
+con-ron's `classRecsRulesOk_spec` asks; `crra_ref`'s ok half). -/
+@[refines ConRon.Arena.classRecsRulesOk]
+theorem classRecsRulesOk_refinesC (hp : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
+    (a₀ : AState) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {env₂ : ConLeche.Env}
+    (g rco rcl cgo cgl : Word) (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal)
+    (hC : StageC dn visR feR env s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
+    (hns : G.nP + G.slots.length < 2 ^ 64)
+    (hrc : DecB (fun m => decNL m rco.toNat rcl.toNat) s₀.mem recCls)
+    (hrcb : rco.toNat + rcl.toNat < 2 ^ 64)
+    (hcg : SPL decCVX s₀.mem cgo.toNat cgl.toNat cvGs) (hcgb : cgo.toNat + cgl.toNat < 2 ^ 64)
+    (hA : AbsOK s₀.mem) {gP : ConLeche.ClassGen} {cvGsP : List ConLeche.ConstantVal}
+    (hgP : dClassGen a₀.store G = some gP) (hcvGsP : cvGs.mapM (Frontend.denoteCV a₀.store) = some cvGsP)
+    (hie : ConRon.Bridge.Inductives.IFEnvOKS env₂ (feR.restrictTo visT.toNat) a₀.store) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_recs_rules_ok" [visT, visR, g, rco, rcl, cgo, cgl]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a₀ ∧
+      (StageC dn visR feR env s'.mem
+          (AM.st (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a₀) ∧
+        IWGrow s₀.mem s'.mem ∧ decRRS s'.mem r
+          (AM.res (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a₀)) ∧
+      AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (RefE.triple (crraE_spec p hp n s₀ visT visR g rco rcl cgo cgl)
+    (crra_ref hq hApd hp n hn henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl G recCls cvGs hC hG hns hrc
+      hrcb hcg hcgb hA hgP hcvGsP hie)) ?_
+  rintro r s' ⟨hl, x, a', run, hR⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.dec⟩, hR.abs⟩
 
 include hq hApd hnv hcE hU in
-/-- **`class_recs_rules_ok`'s error claim** (the hypotheses of `classRecsRulesOk_refinesC`): a
-failing call of class `1`/`2` claims that the twin's `classRecsRulesOk` fails. -/
+/-- **`class_recs_rules_ok`'s error claim** (the hypotheses of `classRecsRulesOk_refinesC`; `crra_ref`'s
+error half): a failing call of class `1`/`2` claims that the twin's `classRecsRulesOk` fails. -/
 theorem classRecsRulesOk_claim (hP : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {env₂ : ConLeche.Env}
     (g rco rcl cgo cgl : Word) (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal)
@@ -231,28 +316,13 @@ theorem classRecsRulesOk_claim (hP : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s
     (hgP : dClassGen a₀.store G = some gP) (hcvGsP : cvGs.mapM (Frontend.denoteCV a₀.store) = some cvGsP)
     (hie : ConRon.Bridge.Inductives.IFEnvOKS env₂ (feR.restrictTo visT.toNat) a₀.store) :
     CoreSpecE p n "class_recs_rules_ok" [visT, visR, g, rco, rcl, cgo, cgl]
-      (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) s₀ a₀ := by
-  refine CoreSpecE.of_runs fun er hc' => ?_
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (crraE_spec p hP.top n ⟨s₀.mem, Locals.init []⟩ visT visR g rco rcl cgo cgl) hc'
-    (Err.code_ne_of_cls hk0)
-  cases n with
-  | zero => rw [crraE.eq_def] at hW; cases hW; exact absurd rfl hk0
-  | succ n =>
-  rw [crraE.arm1] at hW
-  cases h1 : callE p n "class_recs_rules_ok_go" [visT, visR, g, rco, rcl, cgo, cgl, cgo, cgl, rco, rcl] s₀.mem with
-  | error e1 =>
-    rw [h1, crraE.k_class_recs_rules_ok_go.none] at hW
-    cases hW
-    exact crrE_claim hq hApd hnv hcE hU hP henv visT visR feR g rco rcl cgo cgl G recCls cvGs hns hrcb hcgb gP
-      cvGsP n (by omega) s₀.mem a₀ cgo cgl rco rcl cvGs recCls cvGsP hC hG hrc hcg hcg hrc hA hgP hcvGsP hcvGsP
-      hie _ (triple_of_callE_err (crrE_spec p hP.go n ⟨s₀.mem, Locals.init []⟩ visT visR g rco rcl cgo cgl cgo cgl
-        rco rcl) h1 (Err.code_ne_of_cls hk0))
-  | ok q1 =>
-  rw [h1, crraE.k_class_recs_rules_ok_go.arm1] at hW
-  cases hW
+      (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) s₀ a₀ :=
+  RefE.coreSpecE (crraE_spec p hP n s₀ visT visR g rco rcl cgo cgl) hnv { nv := hnv, core := hcE, uce := hU }
+    (crra_ref hq hApd hP n hn henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl G recCls cvGs hC hG hns hrc
+      hrcb hcg hcgb hA hgP hcvGsP hie)
 
 end sims
 
 end L.Ind
+
+end

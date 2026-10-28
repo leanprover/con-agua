@@ -22,8 +22,9 @@ at the pre-insertion view `vis`. It runs here from the real program (`realCall p
   refinements, the leaves' write set (`LeafClosed`), and con-ron's run lemmas (`natOpNames_run`,
   `natOpGuard_run`, `natOpDeps_run`, `natOpStoredOkAll_run`, `natOpEquations_run`,
   `substConst0Pairs_run`: `StateOK` after, `Ext`, caches and pins unchanged; `StageC.of_run`);
-* `certify_nat_eqs`'s `is_def_eq_core` calls by the knot's `StageT` sim (`certW_okT`), con-ron's
-  `CheckOK` after from `certifyNatEqs_bridge` (`StageC.of_T`).
+* `certify_nat_eqs` (one model and one refinement for both outcomes, `cert_ref`): its
+  `is_def_eq_core` calls by the knot's `StageT` sim, their failures by `CoreStubsE`; con-ron's
+  `CheckOK` after from `certifyNatEqs_bridge` (`certW_okC`, `StageC.of_T`).
 -/
 
 set_option experimental.vcgen true
@@ -67,39 +68,46 @@ theorem stageR_of_restrict {dn : NIdx → Option ConLeche.Name} {vis w : Word} {
 section cert
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
-/-- **`certify_nat_eqs` under `StageT`** (`certify_ref`'s, the program's own `is_def_eq_core`
-through the knot's `StageT` sim). -/
-@[refines ConRon.Arena.certifyNatEqs]
-theorem certW_okT (hN : NatEqProg p) (hq : KnotStageProg p) (o l : Word)
-    (ps : List (EIdx × EIdx)) :
-    ∀ (k : Nat), k ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (r : List Word) (m' : Mem),
+/-- **The model of `certify_nat_eqs`, both outcomes**: `is_def_eq_core` (a core stub) through its
+run. -/
+l_model certifyNatEqs_specE (p : Prog) (hf : p.lookup "certify_nat_eqs" = some certifyNatEqsL)
+  fns [hf ↦ certifyNatEqsE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 400000 simp [] unified
+
+/-- What `certify_nat_eqs` gives besides the twin's answer `x` (from `m`): `StageT` after, the
+growth, the result word decoding `x`. -/
+structure CertPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
+    (r : Word) (m' : Mem) (x : Bool) (a' : AState) : Prop where
+  stage : StageT dn vis fe m' a'
+  grow : IWGrow m m'
+  res : decW0B m' [r] x
+
+/-- **`certify_nat_eqs` refines `certifyNatEqs` under `StageT`, both outcomes**, by induction on
+the pairs: the program's own `is_def_eq_core` by the knot's `StageT` sim, its failure by
+`CoreStubsE`. -/
+theorem cert_ref (hq : KnotStageProg p) (o l : Word) (ps : List (EIdx × EIdx)) :
+    ∀ (k : Nat), k ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState),
       StageT dn vis fe m a → EqL m o.toNat l.toNat ps → o.toNat + l.toNat < 2 ^ 64 →
-      callW p k "certify_nat_eqs" [vis, o, l] m = some (r, m') →
-      ∃ x a', (certifyNatEqs V fe ps).run a = .ok (x, a') ∧ StageT dn vis fe m' a' ∧
-        IWGrow m m' ∧ decW0B m' r x := by
+      RefE (CoreStubsE p) (certifyNatEqsE p k m vis o l) (certifyNatEqs V fe ps) a
+        (fun v x a' => CertPost dn vis fe m v.1 v.2 x a') := by
   induction ps generalizing o l with
   | nil =>
-    intro k _ m a r m' hS hE _ hc
+    intro k _ m a hS hE _
     have hl0 : l = 0 := UInt64.toNat_inj.mp (by have := hE.2.1; simpa using this)
     cases k with
-    | zero => rw [callW_zero] at hc; cases hc
+    | zero => rw [certifyNatEqsE.eq_1]; exact RefE.of_cls0 (by simp)
     | succ k =>
-    have hw := callW_model (M := fun mm => certW p (realCall p) k mm vis o l)
-      (certify_specW p hN.lNatCertify (realCall p) (realCall_spec p) k · vis o l) hc
-    simp only [certW, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-  | cons e es ih =>
-    intro k hk m a r m' hS hE hb hc
+    rw [certifyNatEqsE.arm1 p k m vis o l hl0]
+    exact RefE.ret rfl ⟨hS, IWGrow.refl _, by simp [decW0B]⟩
+  | cons e0 es ih =>
+    intro k hk m a hS hE hb
     cases k with
-    | zero => rw [callW_zero] at hc; cases hc
+    | zero => rw [certifyNatEqsE.eq_1]; exact RefE.of_cls0 (by simp)
     | succ k =>
     have hk' : k ≤ 2 ^ 62 := by omega
     obtain ⟨pp, ea, eb, hl0, hpp, hrec, hea, heb, he, hrest⟩ := hE.cons
-    have hw := callW_model (M := fun mm => certW p (realCall p) k mm vis o l)
-      (certify_specW p hN.lNatCertify (realCall p) (realCall_spec p) k · vis o l) hc
-    unfold certW at hw
-    rw [ite_eq_right (fun h => hl0 (by simp [h]))] at hw
+    rw [certifyNatEqsE.arm2 p k m vis o l (fun h => hl0 (by simp [h]))]
     have hpp' : rdW (m.arr64 IW) o = pp := by
       simp only [iwA] at hpp; simp [rdW, hpp]
     have hea' : rdW (m.arr64 IW) pp = ea := by
@@ -111,42 +119,48 @@ theorem certW_okT (hN : NatEqProg p) (hq : KnotStageProg p) (o l : Word)
         have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
         rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; exact Nat.mod_eq_of_lt e3
       simp only [iwA] at h3; simp [rdW, hpb, h3]
-    rw [hpp', hea', heb'] at hw
-    cases h1 : callW p k "is_def_eq_core" [vis, 2, ea, eb] m with
-    | none => simp only [realCall] at hw; rw [h1] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    simp only [realCall] at hw
-    rw [h1, bW_some] at hw
-    obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := hq.isDefEqCore_sim k hk' hS 2 ea eb hea heb r1 m1 h1
+    rw [hpp', hea', heb']
+    subst he
+    simp only [certifyNatEqs]
+    rcases h1 : callE p k "is_def_eq_core" [vis, 2, ea, eb] m with e1 | ⟨r1, m1⟩
+    · rw [certifyNatEqsE.k_is_def_eq_core.none]
+      exact RefE.bind_left fun hcE => hcE.isDefEqCore k hk' hS 2 ea eb hea heb _ h1
+    obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := hq.isDefEqCore_sim k hk' hS 2 ea eb hea heb r1 m1
+      (callW_of_callE h1)
     have hrun1' : (isDefEqCore V fe checkFuel 2 (decE ea) (decE eb)).run a = .ok (x1, a1) := hrun1
+    refine RefE.bind_right hrun1' ?_
     by_cases hz : r1.headD 0 = 0
-    · rw [ite_eq_left hz] at hw
-      simp only [Option.some.injEq, Prod.mk.injEq] at hw
-      obtain ⟨rfl, rfl⟩ := hw
+    · rw [certifyNatEqsE.k_is_def_eq_core.arm1 p k vis o l r1 m1 hz]
       have hx : x1 = false := by rw [← hx1]; simp only [decBool, hz]; rfl
-      refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-      subst he
-      simp only [certifyNatEqs, StateT.run_bind, hrun1', exc_ok_bind', hx, Bool.false_eq_true,
-        ite_false]
-      rfl
-    · rw [ite_eq_right hz] at hw
-      have hx : x1 = true := by rw [← hx1]; simpa [decBool] using hz
-      replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
-      simp only [Option.some.injEq, Prod.mk.injEq] at hw
-      obtain ⟨rfl, rfl⟩ := hw
-      have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      have hl1 : (l - 1).toNat = l.toNat - 1 := by
-        have : 0 < l.toNat := Nat.pos_of_ne_zero hl0
-        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-      have hrest1 : EqL m1 (o + 1).toNat (l - 1).toNat es := by
-        rw [ho1, hl1]; exact hrest.grow hg1
-      have hb1 : (o + 1).toNat + (l - 1).toNat < 2 ^ 64 := by omega
-      obtain ⟨x, a2, hrun2, hS2, hg2, hd2⟩ := ih (o + 1) (l - 1) k hk' m1 a1 r2 m2 hS1 hrest1 hb1 h2
-      refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa [decW0B] using hd2⟩
-      subst he
-      simp only [certifyNatEqs, StateT.run_bind, hrun1', exc_ok_bind', hx, ite_true]
-      exact hrun2
+      rw [hx]
+      exact RefE.ite_neg (by decide) (RefE.ret rfl ⟨hS1, hg1, by simp [decW0B]⟩)
+    rw [certifyNatEqsE.k_is_def_eq_core.arm2 p k vis o l r1 m1 hz]
+    have hx : x1 = true := by rw [← hx1]; simpa [decBool] using hz
+    rw [hx]
+    refine RefE.ite_pos rfl ?_
+    have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hl1 : (l - 1).toNat = l.toNat - 1 := by
+      have : 0 < l.toNat := Nat.pos_of_ne_zero (fun h0 => hl0 (by simp [h0]))
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+    have hrest1 : EqL m1 (o + 1).toNat (l - 1).toNat es := by
+      rw [ho1, hl1]; exact hrest.grow hg1
+    have hb1 : (o + 1).toNat + (l - 1).toNat < 2 ^ 64 := by omega
+    exact (ih (o + 1) (l - 1) k hk' m1 a1 hS1 hrest1 hb1).mono
+      fun _ _ _ hR => ⟨hR.stage, hg1.trans hR.grow, hR.res⟩
+
+/-- **`certify_nat_eqs` under `StageT`** from the call's run (`cert_ref`'s ok half). -/
+@[refines ConRon.Arena.certifyNatEqs]
+theorem certW_okT (hN : NatEqProg p) (hq : KnotStageProg p) (o l : Word)
+    (ps : List (EIdx × EIdx)) :
+    ∀ (k : Nat), k ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (r : List Word) (m' : Mem),
+      StageT dn vis fe m a → EqL m o.toNat l.toNat ps → o.toNat + l.toNat < 2 ^ 64 →
+      callW p k "certify_nat_eqs" [vis, o, l] m = some (r, m') →
+      ∃ x a', (certifyNatEqs V fe ps).run a = .ok (x, a') ∧ StageT dn vis fe m' a' ∧
+        IWGrow m m' ∧ decW0B m' r x := by
+  intro k hk m a r m' hS hE hb hc
+  obtain ⟨s', rfl, -, x, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
+    (certifyNatEqs_specE p hN.lNatCertify k _ vis o l) (cert_ref hq o l ps k hk m a hS hE hb) hc
+  exact ⟨x, a', hrun, hR.stage, hR.grow, by simpa [decW0B] using hR.res⟩
 
 /-- **`certify_nat_eqs` under `StageC`**: `certW_okT`, and con-ron's `CheckOK` after from
 `certifyNatEqs_bridge` (the pairs' denotations, scoped at depth 2). -/
@@ -163,74 +177,6 @@ theorem certW_okC (hN : NatEqProg p) (hq : KnotStageProg p) {env : ConLeche.Env}
   obtain ⟨hstep, -⟩ := ConRon.Bridge.certifyNatEqs_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
     hS.check henv hden hws hrun
   exact ⟨x, a', hrun, StageC.of_T hT hstep.ok, hg, hd, hstep.ext⟩
-
-l_model certifyNatEqs_specE (p : Prog) (hf : p.lookup "certify_nat_eqs" = some certifyNatEqsL)
-  fns [hf ↦ certifyNatEqsE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] errors
-
-/-- **`certify_nat_eqs`' error claim under `StageT`**, on the model, by induction on the pairs
-(the error half of `certW_okT`; the recursion is the model's). -/
-theorem certE_okT (hq : KnotStageProg p) (hcE : CoreStubsE p) (o l : Word)
-    (ps : List (EIdx × EIdx)) :
-    ∀ (k : Nat), k ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (e : Err),
-      certifyNatEqsE p k m vis o l = .error e → StageT dn vis fe m a → EqL m o.toNat l.toNat ps →
-      o.toNat + l.toNat < 2 ^ 64 → ErrClaim (certifyNatEqs V fe ps) a e := by
-  induction ps generalizing o l with
-  | nil =>
-    intro k _ m a e h _ hE _
-    have hl0 : l = 0 := UInt64.toNat_inj.mp (by have := hE.2.1; simpa using this)
-    cases k with
-    | zero => rw [certifyNatEqsE.eq_1] at h; cases h; exact fun hk => absurd rfl hk
-    | succ k => rw [certifyNatEqsE.arm1 p k m vis o l hl0] at h; cases h
-  | cons e0 es ih =>
-    intro k hk m a e h hS hE hb
-    cases k with
-    | zero => rw [certifyNatEqsE.eq_1] at h; cases h; exact fun hk => absurd rfl hk
-    | succ k =>
-    have hk' : k ≤ 2 ^ 62 := by omega
-    obtain ⟨pp, ea, eb, hl0, hpp, hrec, hea, heb, he, hrest⟩ := hE.cons
-    rw [certifyNatEqsE.arm2 p k m vis o l (fun h => hl0 (by simp [h]))] at h
-    have hpp' : rdW (m.arr64 IW) o = pp := by
-      simp only [iwA] at hpp; simp [rdW, hpp]
-    have hea' : rdW (m.arr64 IW) pp = ea := by
-      obtain ⟨-, h2, -⟩ := hrec; simp only [iwA] at h2; simp [rdW, h2]
-    have heb' : rdW (m.arr64 IW) (pp + 1) = eb := by
-      obtain ⟨h1, -, h3⟩ := hrec
-      have hpb : (pp + 1).toNat = pp.toNat + 1 := by
-        have e1 := hS.stage.2.1; have e2 := hS.stage.2.2.2.1
-        have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
-        rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; exact Nat.mod_eq_of_lt e3
-      simp only [iwA] at h3; simp [rdW, hpb, h3]
-    rw [hpp', hea', heb'] at h
-    subst he
-    simp only [certifyNatEqs]
-    cases h1 : callE p k "is_def_eq_core" [vis, 2, ea, eb] m with
-    | error e1 =>
-      rw [h1, certifyNatEqsE.k_is_def_eq_core.none] at h; cases h
-      have := hcE.isDefEqCore k hk' hS 2 ea eb hea heb _ h1
-      exact ErrClaim.bind_left this
-    | ok q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1] at h
-    obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := hq.isDefEqCore_sim k hk' hS 2 ea eb hea heb r1 m1
-      (callW_of_callE h1)
-    have hrun1' : (isDefEqCore V fe checkFuel 2 (decE ea) (decE eb)).run a = .ok (x1, a1) := hrun1
-    refine ErrClaim.bind_right hrun1' ?_
-    by_cases hz : r1.headD 0 = 0
-    · rw [certifyNatEqsE.k_is_def_eq_core.arm1 p k vis o l r1 m1 hz] at h; cases h
-    rw [certifyNatEqsE.k_is_def_eq_core.arm2 p k vis o l r1 m1 hz] at h
-    have hx : x1 = true := by rw [← hx1]; simpa [decBool] using hz
-    rw [hx]
-    refine ErrClaim.ite_pos rfl ?_
-    have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hl1 : (l - 1).toNat = l.toNat - 1 := by
-      have : 0 < l.toNat := Nat.pos_of_ne_zero (fun h0 => hl0 (by simp [h0]))
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-    have hrest1 : EqL m1 (o + 1).toNat (l - 1).toNat es := by
-      rw [ho1, hl1]; exact hrest.grow hg1
-    have hb1 : (o + 1).toNat + (l - 1).toNat < 2 ^ 64 := by omega
-    exact ih (o + 1) (l - 1) k hk' m1 a1 e h hS1 hrest1 hb1
 
 end cert
 
@@ -274,7 +220,7 @@ structure DncPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe2 : IFEnv
 /-- **`defn_nat_cert` refines `natCertT` under `StageC`, both outcomes** (con-ron's
 `checkDecl_bridge_defn`, the stored value's branch): `env_find` reads the pushed index (the twin's
 `IFEnvOK.hit` at `env2`), the equations and their substitution are leaves at the pushed view, the
-certificate runs at the pre-insertion view (`certW_okC`, its claim `certE_okT`); its failure is
+certificate runs at the pre-insertion view (`cert_ref`); its failure is
 the twin's `notImplemented`. -/
 theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vis w n : Word}
     {fe2 : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} (k : Nat) (hk : k ≤ 2 ^ 62)
@@ -372,13 +318,9 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   -- the certificate, at the pre-insertion view
   rcases h4 : callE p k "certify_nat_eqs" [vis, r3.headD 0, r3.tail.headD 0] m3 with e4 | ⟨r4, m4⟩
   · rw [defnNatCertE.k_certify_nat_eqs.none]
-    refine RefE.bind_left fun hcE => ?_
-    by_cases hk4 : e4.cls = 0
-    · exact ErrClaim.of_cls0 hk4
-    have hW4 := triple_of_callE_err
-      (certifyNatEqs_specE p hE.lNatCertify k ⟨m3, Locals.init []⟩ vis (r3.headD 0) (r3.tail.headD 0))
-      h4 (Err.code_ne_of_cls hk4)
-    exact certE_okT hq hcE _ _ x3 k hk' m3 a3 e4 hW4 hC3.stageT hE3 (EqL.lt64 hE3 hS3.2)
+    exact RefE.bind_left fun hcE => RefE.run_err (s₀ := ⟨m3, Locals.init []⟩)
+      (certifyNatEqs_specE p hE.lNatCertify k _ vis (r3.headD 0) (r3.tail.headD 0)) trivial hcE
+      (cert_ref hq _ _ x3 k hk' m3 a3 hC3.stageT hE3 (EqL.lt64 hE3 hS3.2)) h4
   obtain ⟨x4, a4, hrun4, hC4, hg4, hd4, hx4⟩ := certW_okC hE hq henv hk' hC3 hE3
     (EqL.lt64 hE3 hS3.2) hdps (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) (callW_of_callE h4)
   refine RefE.bind_right hrun4 ?_
