@@ -316,6 +316,58 @@ theorem lrStepN_line (k ks v ik pk : Word) (f : Fld) :
       simp_all
     simp [hK, LRS.fail]
 
+/-! ## The pair list -/
+
+/-- On a list Stage B accepts, the record pass's pair reader ends where the validator does. -/
+theorem pairN_natListN : ∀ i cnt w x0 x1, (natListN b i cnt w).1 ≠ 0 →
+    (pairN b i cnt x0 x1).1 = (natListN b i cnt w).1 := by
+  intro i cnt w x0 x1
+  induction i, cnt, w using natListN.induct b generalizing x0 x1 with
+  | case1 i cnt w h hc ih =>
+    intro hn
+    rw [natListN_ws b i cnt w _ rfl h hc] at hn ⊢
+    have h93 : byteW b i ≠ 93 := by rcases hc with hc | hc | hc <;> rw [hc] <;> decide
+    have hd : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57) := by
+      rcases hc with hc | hc | hc <;> rw [hc] <;> decide
+    rw [pairN_other b i cnt x0 x1 h h93 hd]; exact ih x0 x1 hn
+  | case2 i cnt w h hc h93 hw =>
+    intro hn; rw [natListN] at hn; simp [h, hc, h93, hw] at hn
+  | case3 i cnt w h hc h93 hw =>
+    intro _
+    rw [natListN_close_ok b i cnt w h hc h93 hw, pairN_close b i cnt x0 x1 h h93]
+  | case4 i cnt w h hc h93 h44 hw =>
+    intro hn; rw [natListN] at hn; simp [h, hc, h93, h44, hw] at hn
+  | case5 i cnt w h hc h93 h44 hw ih =>
+    intro hn
+    rw [natListN_comma b i cnt w _ rfl h hc h93 h44 (by simpa using hw)] at hn ⊢
+    rw [pairN_other b i cnt x0 x1 h h93 (by rw [h44]; decide)]; exact ih x0 x1 hn
+  | case8 i cnt w h hc h93 h44 hd hw he hlt ih =>
+    intro hn
+    rw [natListN_digit b i cnt w _ rfl h hc h93 h44 hd hw he hlt] at hn ⊢
+    rw [pairN_digit b i cnt x0 x1 h h93 hd hlt]; exact ih _ _ hn
+  | case9 i cnt w h hc h93 h44 hd hw he hlt =>
+    intro hn
+    rw [natListN, dite_eq_left h, if_neg (by simpa using hc), if_neg h93, if_neg h44, if_pos hd,
+      if_neg hw, if_neg he, if_neg hlt] at hn
+    exact absurd rfl hn
+  | case10 i cnt w h hc h93 h44 hd =>
+    intro hn
+    rw [natListN_other b i cnt w h (by simpa using hc) h93 h44 (by simpa using hd)] at hn
+    exact absurd rfl hn
+  | _ =>
+    intro hn
+    first
+      | (rw [natListN_end b _ _ _ ‹_›] at hn; exact absurd rfl hn)
+      | (rw [natListN_digit_w0 b _ _ _ ‹_› ‹_› ‹_› ‹_› ‹_› rfl] at hn; exact absurd rfl hn)
+      | (rw [natListN_digit_noprog b _ _ _ ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_›] at hn; exact absurd rfl hn)
+
+theorem pairEntryN_natList (v : Word) (h : (natListEntryN b v).1 ≠ 0) :
+    (pairEntryN b v).1 = (natListEntryN b v).1 := by
+  unfold natListEntryN at h ⊢
+  split at h
+  · rw [ite_eq_left ‹_›]; exact pairN_natListN _ _ _ _ _ h
+  · exact absurd rfl h
+
 /-! ## The line -/
 
 theorem Fld.mk_eta (f : Fld) : (⟨f.pl, f.idx, f.a, f.c, f.d⟩ : Fld) = f := rfl
