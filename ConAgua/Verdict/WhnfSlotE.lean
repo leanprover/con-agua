@@ -149,85 +149,26 @@ end step
 
 /-! ## `whnf_core_loop` -/
 
-theorem whnfCoreLoop_err (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (c : Bool)
-    (d K : Nat) (e : EIdx) (a : AState) (ce : CheckError)
-    (hs : (whnfCoreStep mode r fe c d e).run a = .error ce) :
-    (whnfCoreLoop mode r fe c d (K + 1) e).run a = .error ce := by
-  simp only [whnfCoreLoop, StateT.run_bind, hs]; rfl
-
 section loop
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
   (hsup : ∀ fe : IFEnv, SupKeep fe) (hnv : closedNV p L.Checker.nvFns = true)
   (hA : CoreAppE p) (hP : StepProjE p)
 
 include hp hwc hcc hsup hnv hA hP in
-/-- **The loop's model fails only where `whnfCoreLoop` does**, at every twin loop fuel `K ≥ k`. -/
-theorem coreLoopE_ok (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (mode cheap d : Word) (hmode : mode < 4) :
-    ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (m : Mem) (a : AState) (MM : ModeMaps) (eb e : Word),
-      CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW e →
-      ∀ er, whnfCoreLoopE.loop1 p k m mode cheap vis d e = .error er →
-      ErrClaim (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0)
-        d.toNat K (decE e)) a er := by
-  intro k
-  induction k with
-  | zero =>
-    intro _ _ _ _ _ _ _ _ _ _ _ er h
-    simp only [whnfCoreLoopE.loop1] at h; cases h; exact ErrClaim.of_cls0 rfl
-  | succ k ih =>
-    intro hkn K hK m a MM eb e hS heb he er h
-    simp only [whnfCoreLoopE.loop1] at h
-    cases hc : callE p k "whnf_core_step" [mode, cheap, vis, d, e] m with
-    | error e1 =>
-      rw [hc, whnfCoreLoopE.k_whnf_core_step.none] at h; cases h
-      cases k with
-      | zero => exact ErrClaim.of_callE_zeroW hc
-      | succ j =>
-      obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-      refine ErrClaim.of_run_eq (fun ce h' => whnfCoreLoop_err _ _ _ _ _ K' _ a ce h') ?_
-      exact CoreSpecE.of_callE (whnfCoreStep_refinesE p hnv hp.step hA hP j (hk.mono (by omega))
-        (hkE.mono (by omega)) F (by omega) (by omega) ⟨m, Locals.init []⟩ a dn vis fe MM eb mode
-        cheap d e ⟨hS, hmode, heb⟩ he) hc
-    | ok q =>
-    obtain ⟨r, m₁⟩ := q
-    cases k with
-    | zero =>
-      obtain ⟨e', he', -⟩ := callE_zero p "whnf_core_step" [mode, cheap, vis, d, e] m
-      rw [hc] at he'; cases he'
-    | succ j =>
-    obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    have hstep := whnfCoreStep_refines' p hp hwc hcc hsup j (hk.mono (by omega)) F (by omega)
-      (by omega) ⟨m, Locals.init []⟩ a dn vis fe MM eb mode cheap d e ⟨hS, hmode, heb⟩ he
-    obtain ⟨hok, hA', hres, hrw⟩ := CoreSpec.of_callW hstep (callW_of_callE hc)
-    have hsr := AM.run_of_ok _ _ hok
-    rw [hres] at hsr
-    by_cases h0 : r.headD 0 = 0
-    · rw [hc, whnfCoreLoopE.k_whnf_core_step.arm1 _ _ _ _ _ _ _ _ h0] at h; cases h
-    rw [hc, whnfCoreLoopE.k_whnf_core_step.arm2 _ _ _ _ _ _ _ _ h0] at h
-    simp only [decStep, h0, ↓reduceIte] at hsr
-    have hrun := whnfCoreLoop_cont (decMode mode) (coreKnot (decMode mode) fe id F) fe
-      (cheap != 0) d.toNat K' (decE e) _ a _ hsr
-    obtain ⟨M', hS₁, -, -⟩ := hA'
-    exact ErrClaim.of_run_eqW hrun (ih (by omega) K' (by omega) m₁ _ M' eb _ hS₁ heb hrw.2 er h)
-
-include hp hwc hcc hsup hnv hA hP in
-/-- **`whnf_core_loop`'s verdicts are `whnfCoreLoop`'s** at every twin loop fuel `K ≥ n`. -/
+/-- **`whnf_core_loop`'s verdicts are `whnfCoreLoop`'s** at every twin loop fuel `K ≥ n`
+(`whnfCoreLoop_ref`'s error half). -/
 theorem whnfCoreLoop_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F K : Nat)
     (hF : n ≤ F) (hK : n ≤ K) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     CoreSpecE p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
       (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
-        (decE e)) s₀ a₀ := by
-  refine CoreSpecE.of_runs fun er hc => ?_
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (whnfCoreLoop_specE p hp.loop (n + 1) ⟨s₀.mem, Locals.init []⟩
-    mode cheap vis d e) hc (Err.code_ne_of_cls hk0)
-  rw [whnfCoreLoopE.arm1] at hW
-  exact coreLoopE_ok p hp hwc hcc hsup hnv hA hP n hk hkE F hF hn dn vis fe mode cheap d hs.mode4
-    (n + 1) (Nat.le_refl _) K (by omega) s₀.mem a₀ MM eb e hs.rel hs.eb_mode he er hW
+        (decE e)) s₀ a₀ :=
+  RefE.coreSpecE (whnfCoreLoop_specE p hp.loop (n + 1) s₀ mode cheap vis d e) trivial
+    (fun j hj F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he =>
+      whnfCoreStep_refinesE p hnv hp.step hA hP j (hk.mono hj) (hkE.mono hj) F hF hn s₀ a₀ dn vis fe
+        MM eb mode cheap d e hs he)
+    (whnfCoreLoop_ref p hp hwc hcc hsup n hk F K hF hK hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he)
 
 end loop
 

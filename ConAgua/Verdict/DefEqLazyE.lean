@@ -695,77 +695,15 @@ theorem lazyIter_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hof
   simp only [Bool.false_eq_true, ↓reduceIte, pure_bind]
   exact stepArm _ _ _ hS₂ hW
 
-l_model lazyDeltaReduction_specE (p : Prog) (hf : p.lookup "lazy_delta_reduction" = some lazyDeltaReductionL)
-  fns [hf ↦ ldrE tuple] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
-theorem ldrE_loop1_zero (p : Prog) (m : Mem) (mode vis d a b : Word) :
-    ldrE.loop1 p 0 m mode vis d a b = .error .outOfFuel := by
-  unfold ldrE.loop1; rfl
-
-/-- **The lazy-delta loop's error claim** at every twin fuel `K` with `j ≤ K + 1` (the error half of
-`lazyW_ok`). -/
-theorem lazyLoop_okE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hitE : LazyIterE p)
-    (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode d : Word) (hmode : mode < 4)
-    (hd : d.toNat < 2 ^ 63) :
-    ∀ j, j ≤ n + 1 → ∀ K, j ≤ K + 1 → ∀ (a b : Word) (m : Mem) (s : AState) (M : ModeMaps)
-      (eb : Word) (er : Err), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a → HW b →
-      ldrE.loop1 p j m mode vis d a b = .error er →
-      ErrClaim (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat K
-        (decE a) (decE b)) s er := by
-  intro j
-  induction j with
-  | zero =>
-    intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ h
-    rw [ldrE_loop1_zero] at h; cases h
-    exact ErrClaim.of_cls0 Err.cls_outOfFuel
-  | succ j ih =>
-    intro hjn K hK a b m s M eb er hS heb ha hb h
-    rw [ldrE.loop1.arm1 (hc1 := rfl)] at h
-    cases hc1 : callE p j "lazy_iter" [mode, vis, d, a, b] m with
-    | error e =>
-      rw [hc1, ldrE.k_lazy_iter.none] at h; cases h
-      refine ErrClaim.of_callE_succ hc1 fun j' hj h' => ?_
-      subst hj
-      obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-      rw [lazyDeltaReduction_succ_eq, lazyLvl_eq]
-      refine ErrClaim.bind_left ?_
-      exact CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩) (hitE j' (hk.mono (by omega))
-        (hkE.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb mode d a b ⟨hS, hmode, heb⟩
-        ha hb hd) h'
-    | ok q =>
-    obtain ⟨r, m₁⟩ := q
-    rw [hc1] at h
-    obtain ⟨j', rfl⟩ := callE_succ hc1
-    obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    rw [lazyDeltaReduction_succ_eq, lazyLvl_eq]
-    have e := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (lazyIter_refines p hp hc j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb mode
-        d a b ⟨hS, hmode, heb⟩ ha hb hd) (callW_of_callE hc1)
-    obtain ⟨-, hr1, hr2⟩ := e.2.2.2
-    refine ErrClaim.bind_core e (fun M₁ hS₁ => ?_)
-    by_cases h3 : r.headD 0 ≠ 3
-    · rw [ldrE.k_lazy_iter.arm1 (hc1 := h3)] at h; cases h
-    have h3' : r.headD 0 = 3 := by simpa using h3
-    rw [ldrE.k_lazy_iter.arm2 (hc1 := h3')] at h
-    rw [decIter_cont h3']
-    exact ih (by omega) K' (by omega) _ _ m₁ _ M₁ eb er hS₁ heb hr1 hr2 h
-
-/-- **`lazy_delta_reduction`'s error claim** (`LazyDeltaReductionE`, the error half of
-`lazyDeltaReduction_refines`). -/
+/-- **`lazy_delta_reduction`'s error claim** (`LazyDeltaReductionE`, `lazyDeltaReduction_ref`'s
+error half). -/
 theorem lazyDeltaReduction_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p)
-    (hitE : LazyIterE p) : LazyDeltaReductionE p := by
-  intro n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd
-  refine CoreSpecE.of_runs fun er hc0 => ?_
-  by_cases hkc : er.cls = 0
-  · exact ErrClaim.of_cls0 hkc
-  have hW := triple_of_callE_err (lazyDeltaReduction_specE p hp.red (n + 1) ⟨s₀.mem, Locals.init []⟩
-    mode vis d a b) hc0 (Err.code_ne_of_cls hkc)
-  rw [ldrE.arm1] at hW
-  have hL : (2 : Nat) ^ 62 = defeqLoopFuel := rfl
-  exact lazyLoop_okE p hp hc hitE n hk hkE F hF hn dn vis fe mode d hs.mode4 hd (n + 1)
-    (Nat.le_refl _) defeqLoopFuel (by rw [← hL]; omega) a b _ a₀ M eb er hs.rel hs.eb_mode ha hb hW
+    (hitE : LazyIterE p) : LazyDeltaReductionE p :=
+  fun n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd =>
+    RefE.coreSpecE (lazyDeltaReduction_specE p hp.red (n + 1) s₀ mode vis d a b) trivial
+      (fun j hj F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd =>
+        hitE j (hk.mono hj) (hkE.mono hj) F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd)
+      (lazyDeltaReduction_ref p hp hc n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd)
 
 end L.Arena
 

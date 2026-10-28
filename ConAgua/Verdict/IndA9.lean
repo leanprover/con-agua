@@ -31,7 +31,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- What the positivity walk's error claims assume, from the program. -/
 theorem nbG_prog {p : Prog} (hkp : KnotStageProg p) (hnv : closedNV p _root_.L.Checker.nvFns = true) : NbG p :=
-  ⟨hnv, hkp.toKnotTopProg.coreStubsE hnv, whnfTop_stageE hkp.whnfTop (KnotAllProg.knotE_all hkp.knot hnv)⟩
+  ⟨hnv, hkp.toKnotTopProg.coreStubsE hnv, whnfTop_stageE hkp.whnfTop hkp.knotOK (KnotAllProg.knotE_all hkp.knot hnv)⟩
 
 /-- **`check_ind_decl`'s error refinement**, the pass and the tail discharged. -/
 theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)

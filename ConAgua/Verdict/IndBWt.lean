@@ -228,7 +228,8 @@ theorem wtE_of {p : Prog} (hq : KnotStageProg p) (hnv : closedNV p _root_.L.Chec
   · exact ErrClaim.of_cls0 hk0
   have hM := triple_of_callE_err (wtE_spec p hp k ⟨s₀.mem, Locals.init []⟩ vis i n e) hc
     (Err.code_ne_of_cls hk0)
-  exact wtE_claim hq hnv (whnfTop_stageE hq.whnfTop (fun n => L.Arena.KnotAllProg.knotE_all hq.knot hnv n)) henv hv hff
+  exact wtE_claim hq hnv (whnfTop_stageE hq.whnfTop hq.knotOK
+    (fun n => L.Arena.KnotAllProg.knotE_all hq.knot hnv n)) henv hv hff
     hfp hif hi1 k hk s₀.mem a₀ i n e hC hA he hin hdP hwsP er hM
 
 end L.Ind
