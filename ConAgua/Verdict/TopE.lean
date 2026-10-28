@@ -13,8 +13,9 @@ programs phase A runs (`IndArmVerdict`, the shape `indArmSpec_checker` has on th
 * Entry 1 (`entry1Verdict_of`): the prelude and the frontend by `checker_preludeStageE`,
   `checker_frontStageE`; the fold by `foldStageE_checker`, the error half of
   `foldStage_checker`: the run at `checkerProg` is the run at the substituted program
-  (`invoke_subPB`, errors included), where `installFoldGo_errTop` at the loop's start
-  (`loop_start`) gives phase A's failure, and `TwinVerdict.fold` the pipeline's.
+  (`invoke_subPB`, errors included), where `fold_ref`'s error half at the loop's start
+  (`loop_start`, its `IstgG` by `istgG_of`) gives phase A's failure, and `TwinVerdict.fold` the
+  pipeline's.
 * Entry 2 (`entry2Verdict_of`) and the threads' `CPVerdict`: `check_pending`'s `CpG` at the
   substituted program (`cpG_proved`; no inductive arm in phase B).
 -/
@@ -91,11 +92,13 @@ theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (sz : Tiered
   have hDG := divGateSpecE_of hLC.cd.dm hLC.knot hLC.leaf hLC.cd.dgClosed
     (substC0_of hLC.cd.natSub.toNatSubProg)
     (substCAll_of ⟨hLC.cd.natSub.toNatSubProg, hLC.cd.dm.lSubstConstAll⟩) hkp hcE hnv ipins
-  have hgo := (installFoldGo_errTop ipins (dnOf sE.store) ds _ hLC hcE
-    (hia _ hr h7.since.pbpre _ hdn hQd) hDG hnv (checkerProg_uceLookupsPB _)
-    (frontDecls_of_prefix hpx) (declsLpsDn_dnOf hT.pd hT.den) hP.pp hP.pn hP.ps hP.pi hP.pd hP.pg
-    hP.px hsz hP.bracket n hn).1
-  have hF := hgo s.mem sE 0 cnt 0 (mkIFEnv IEnv.empty) #[] (by simp) hcnt' hT hR hM hc hIM e hcall hk
+  have hG := istgG_of ipins (dnOf sE.store) ds _ hLC hcE (hia _ hr h7.since.pbpre _ hdn hQd) hDG hnv
+    (checkerProg_uceLookupsPB _)
+  have hF := RefC.run_err (installFoldGo_specE _ hP.pg n ⟨s.mem, Locals.init []⟩ 0 cnt 0)
+    (fun _ h0 => ErrClaimV.of_cls0 h0) trivial hG
+    ((fold_ref .verified ipins (dnOf sE.store) ds _ hP.pp hP.pn hP.ps hP.pi hP.pd hP.pg hP.px hsz
+      hP.bracket hLC rfl (frontDecls_of_prefix hpx) (declsLpsDn_dnOf hT.pd hT.den) n hn).1
+      s.mem sE 0 cnt 0 (mkIFEnv IEnv.empty) #[] (by simp) hcnt' hT hR hM hc hIM) hcall hk
   simp only [UInt64.toNat_zero, List.drop_zero] at hF
   exact TwinVerdict.fold hA hB hC hD hE hF
 
