@@ -116,9 +116,7 @@ theorem cpVerdict_proved : CPVerdict := by
     ⟨checkerProg_uceLookupsPB bs, strLitSupported_core _ hP.knot.knot.str⟩
   have hivE : IvgE (Prog.subPB bs checkerProg) := ivgE_okT hP.cvg hP.apd hP.crk hnv hU
   exact checkPending_errT .verified pins dn ds _ fe pend rfl hP (checkerProg_coreStubsEPB bs) hivE
-    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
-    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
-    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
+    hnv
     (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
     (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
 

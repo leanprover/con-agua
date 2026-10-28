@@ -1,11 +1,12 @@
 import ConAgua.Verdict.IndBToi
-import ConAgua.Arena.IndT.RecGenTmf
+import ConAgua.Arena.IndSumSpec.ParamLevels
+import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 /-!
 # Error refinement of `target_major_of_outside_tail` (lane `verdicts-b`, helper `ib`)
 
-Mirrors `tmtW_simC` (`IndT/RecGenTmf`): `target_outside_inst` (`targetOutsideInst_claim`), then the
+Mirrors `tmtW_simC` (`IndT/RecGenTmf`): `target_outside_inst` (`toi_ref`), then the
 level comparison (`lvl_eq_c`, `closedNV`), whose two rejects are the twin's `liftFueled` decline
 (code `0`'s result) and the universe fail.
 -/
@@ -59,16 +60,16 @@ theorem tmtE_claim (n : Nat) {m : Mem} {a : AState} {pp pfo pfl I us dso dsl cso
   | error e1 =>
     rw [h1, tmtE.k_target_outside_inst.none] at he
     cases he
-    exact ErrClaim.bind_left (CoreSpecE.of_callE (targetOutsideInst_claim hP.toi hIlpf hnv n ⟨m, Locals.init []⟩ a I us
-      dso dsl ds hC hI hus hds hdsb) h1)
+    exact ErrClaim.bind_left (RefE.run_err (toiE_spec p hP.toi n ⟨m, Locals.init []⟩ vis I us dso dsl) hnv hnv
+      (toi_ref hP.toi hIlpf n hC hI hus hds hdsb) h1)
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, tmtE.k_target_outside_inst.arm1] at he
-  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (targetOutsideInst_spec p hP.toi (realCall p) (realCall_spec p) n _ vis I us dso dsl) (callW_of_callE h1)
+  obtain ⟨s1, hs1, -, x, a', hrun, hT1, hS1, hg1, -, hAF⟩ := RefE.run_okW
+    (toiE_spec p hP.toi n ⟨m, Locals.init []⟩ vis I us dso dsl) (toi_ref hP.toi hIlpf n hC hI hus hds hdsb)
+    (callW_of_callE h1)
   subst hs1
-  obtain ⟨x, a', hrun, hS1, hg1, hT1, hAF⟩ := toiW_ok (IlpRd.realC hIlpf hC) hW1 hS hI hus hds hdsb
-  have hA1 := hAF toiAfr hA
+  have hA1 := hAF hA
   obtain ⟨c1, v, ⟨-, hlP⟩, -⟩ := ConRon.Bridge.Inductives.targetOutsideInst_spec fe (decI I) IP
     (decI us) usP ds dsP a a' x hC.check ⟨hIP, husP, hdsP⟩ hrun
   obtain ⟨hr1, hn1, hsH, hsd⟩ := hT1

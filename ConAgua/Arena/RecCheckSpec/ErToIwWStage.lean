@@ -314,58 +314,17 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       simp only [hrun1, except_ok_bind, hrun2]
       rfl
 
-/-! ## `target_pin_tys` (loop rewritten as recursion) -/
+/-! ## `target_pin_tys`, as `target_major_pins` reads it -/
 
-mutual
-/-- **The model of `target_pin_tys`.** -/
-def tptW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, vis, d, xo, xl =>
-    if xl = 0 then some ([], m)
-    else tptK cR n vis d xo xl (cR n "infer_type_core" [vis, d, rdW (m.arr64 IW) xo] m)
+/-- `target_pin_tys` as `target_major_pins` reads it: its run (`cR`; its refinement is `tpt_ref`'s
+ok half through the run). -/
+def tptR (cR : CallM) (n : Nat) (m : Mem) (vis d xo xl : Word) : Option (List Word × Mem) :=
+  cR n "target_pin_tys" [vis, d, xo, xl] m
 
-/-- After `infer_type_core`. -/
-def tptK (cR : CallM) (n : Nat) (vis d xo xl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m1) => tptK2 (tptW cR n m1 vis d (xo + 1) (xl - 1))
-
-/-- After the recursive call: the function falls off its end. -/
-def tptK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m2) => some ([], m2)
-end
-
-section arms
-variable (cR : CallM) (n : Nat) (m m1 : Mem) (vis d xo xl : Word) (r : List Word)
-theorem tptW_nil (h : xl = 0) : tptW cR (n + 1) m vis d xo xl = some ([], m) := by simp [tptW, h]
-theorem tptW_cons (h : xl ≠ 0) :
-    tptW cR (n + 1) m vis d xo xl = tptK cR n vis d xo xl (cR n "infer_type_core" [vis, d, rdW (m.arr64 IW) xo] m) := by
-  simp [tptW, h]
-theorem tptK_some : tptK cR n vis d xo xl (some (r, m1)) = tptK2 (tptW cR n m1 vis d (xo + 1) (xl - 1)) := by rw [tptK]
-theorem tptK2_some : tptK2 (some (r, m1)) = some ([], m1) := by rw [tptK2]
-end arms
-
-grind_pattern [ind_grind] tptW_nil => tptW cR (n + 1) m vis d xo xl
-grind_pattern [ind_grind] tptW_cons => tptW cR (n + 1) m vis d xo xl
-grind_pattern [ind_grind] tptK_some => tptK cR n vis d xo xl (some (r, m1))
-grind_pattern [ind_grind] tptK2_some => tptK2 (some (r, m1))
-
-theorem targetPinTys_spec (p : Prog) (hp : p.lookup "target_pin_tys" = some targetPinTys) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) :
-    ∀ (s₀ : St) (vis d xo xl : Word),
+theorem tptR_spec (p : Prog) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis d xo xl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pin_tys" [vis, d, xo, xl]
-    ⦃fun r s' => LocEq s' s₀ ∧ tptW cR n s₀.mem vis d xo xl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis d xo xl; rw [invoke_eq _ hp]; simp only [callFn, targetPinTys]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis d xo xl
-    rw [invoke_eq _ hp]
-    simp only [callFn, targetPinTys]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        hcR n "infer_type_core", ih] <;>
-      finish (gen := 20)
+    ⦃fun r s' => LocEq s' s₀ ∧ tptR cR n s₀.mem vis d xo xl = some (r, s'.mem); ⊤⦄ :=
+  hcR n _ _ s₀
 
 local notation "V" => ConLeche.CheckMode.verified
 
@@ -627,14 +586,14 @@ def tmpW (cR : CallM) : Nat → Mem → Word → Word → Word → Option (List 
   | 0, _, _, _, _ => none
   | N + 1, m, vis, rP, M =>
     if rdW (m.arr64 IW) (M + 8) ≠ 0 then some ([], m)
-    else tmpK1 cR N vis rP M (tptW cR N m vis rP (rdW (m.arr64 IW) (M + 2)) (rdW (m.arr64 IW) (M + 3)))
+    else tmpK1 cR N vis rP M (tptR cR N m vis rP (rdW (m.arr64 IW) (M + 2)) (rdW (m.arr64 IW) (M + 3)))
 
 section arms
 variable (cR : CallM) (N : Nat) (m m1 m2 m3 m4 : Mem) (vis rP M hd : Word) (r1 r3 r4 : List Word)
 theorem tmpW_mem (h : rdW (m.arr64 IW) (M + 8) ≠ 0) : tmpW cR (N + 1) m vis rP M = some ([], m) := by
   simp only [tmpW]; rw [ite_eq_left h]
 theorem tmpW_out (h : ¬ rdW (m.arr64 IW) (M + 8) ≠ 0) : tmpW cR (N + 1) m vis rP M =
-    tmpK1 cR N vis rP M (tptW cR N m vis rP (rdW (m.arr64 IW) (M + 2)) (rdW (m.arr64 IW) (M + 3))) := by
+    tmpK1 cR N vis rP M (tptR cR N m vis rP (rdW (m.arr64 IW) (M + 2)) (rdW (m.arr64 IW) (M + 3))) := by
   simp only [tmpW]; rw [ite_eq_right h]
 theorem tmpK1_some : tmpK1 cR N vis rP M (some (r1, m1)) =
     tmpK2 cR N vis rP M (ceinternW m1 (rdW (m1.arr64 IW) M) (rdW (m1.arr64 IW) (M + 1))) := rfl
@@ -664,7 +623,7 @@ theorem targetMajorPins_spec (p : Prog) (h : TmpProg p) (cR : CallM) (hcR : Call
   | succ N =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetPinTys_spec p h.tpt cR hcR N, internConst_spec p h.cf h.cp h.ic N,
+        tptR_spec p cR hcR N, internConst_spec p h.cf h.cp h.ic N,
         mknF_spec p h.ad N, hcR N "infer_type_core"] <;>
       finish (gen := 20) [rdW_eq]
 

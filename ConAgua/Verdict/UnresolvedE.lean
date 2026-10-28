@@ -1,4 +1,3 @@
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.Arena.ConstsResolveF
 import ConAgua.Arena.DeclBasisSpec
@@ -7,7 +6,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The verdict at a term whose constants do not resolve (lane `verdicts-b`, helper `ue`)
