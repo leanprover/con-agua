@@ -286,7 +286,7 @@ theorem frontLineE_claim (p : Prog) (hS : ScanLookups p) (hFI : L.Front.Ind.IndF
     (hpz : p.lookup "apply_dline" = some applyDLine) (hpy : p.lookup "apply_any" = some applyAny)
     {X : StateD → AState → Prop} (hV : L.Front.Ind.ValidateClaim p X)
     (hnv : NVCls p ["ind_fields", "install_ind_d", "rec_decl_line", "apply_rec", "apply_expr",
-      "rec_line_loop", "rec_expr_loop", "scan_line", "skip_ws"]) (hnvD : ApplyDeclNV p)
+      "rec_line_loop", "rec_expr_loop", "scan_line", "skip_ws", "fast_line"]) (hnvD : ApplyDeclNV p)
     {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (hSL : SafeLink b)
     {m : Mem} {a : AState} {st : StateD} (hm : m.arr8 IN = b.data)
     (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) (hX : X st a)
@@ -299,6 +299,27 @@ theorem frontLineE_claim (p : Prog) (hS : ScanLookups p) (hFI : L.Front.Ind.IndF
   | succ n =>
   simp only [frontLineE] at he
   have hi' : i.toUInt64.toNat ≤ b.data.size := by rw [USize.toNat_toUInt64]; exact hi
+  -- the fast path: it changes nothing, and a line it accepts fails only in `apply_expr`
+  cases h0 : callE p n "fast_line" [i.toUInt64] m with
+  | error e0 =>
+    rw [h0, frontLineE.k_fast_line.none] at he; cases he
+    exact absurd (hnv.cls (by simp) h0) hk
+  | ok q0 =>
+  obtain ⟨r0, m₀⟩ := q0
+  rw [h0] at he
+  by_cases hf : r0.headD 0 = 0
+  rotate_left
+  · rw [frontLineE.k_fast_line.arm1 _ _ _ _ _ hf] at he
+    cases h1 : callE p n "apply_expr" _ m₀ with
+    | error e1 =>
+      rw [h1, frontLineE.k_apply_expr.none] at he; cases he
+      exact absurd (hnv.cls (by simp) h1) hk
+    | ok q1 => obtain ⟨_, _⟩ := q1; rw [h1, frontLineE.k_apply_expr.arm1] at he; cases he
+  rw [frontLineE.k_fast_line.arm2 _ _ _ _ _ hf] at he
+  obtain ⟨s0, hs0, hsm0, -⟩ := triple_of_callE (L.Scan.Fast.fastLine_spec p b.data
+    (hS.get "fast_line") hsize n ⟨m, Locals.init []⟩ hm i.toUInt64) h0
+  have hm0 : m₀ = m := by rw [← hs0, hsm0]
+  rw [hm0] at he
   cases h1 : callE p n "scan_line" [i.toUInt64] m with
   | error e1 =>
     rw [h1, frontLineE.k_scan_line.none] at he; cases he
@@ -333,9 +354,9 @@ theorem frontLineE_claim (p : Prog) (hS : ScanLookups p) (hFI : L.Front.Ind.IndF
   rw [frontLineE.k_skip_ws.arm2 _ _ _ [UInt64.ofNat (skipWsN b.data i.toUInt64.toNat)] m hrec] at he
   simp only [List.headD_cons, List.tail_cons] at he
   cases h3 : callE p n "apply_any" [UInt64.ofNat (skipWsN b.data i.toUInt64.toNat) + 1] m with
-  | ok q3 => obtain ⟨_, _⟩ := q3; rw [h3, frontLineE.k_apply_any.arm1] at he; cases he
+  | ok q3 => obtain ⟨_, _⟩ := q3; rw [h3, frontLineE.k_apply_expr.arm1] at he; cases he
   | error e3 =>
-  rw [h3, frontLineE.k_apply_any.none] at he; cases he
+  rw [h3, frontLineE.k_apply_expr.none] at he; cases he
   -- the twin's scan of the line
   have hL := lineFwd_link b h64 hsize i
   have hs := ConAgua.Scan.skipWs_toUInt64_eq b h64 (by omega) i
@@ -457,8 +478,8 @@ theorem NVCls.mono {p : Prog} {fs gs : List FnName} (h : NVCls p fs) (hs : ∀ g
 
 /-- The frontend's callees outside the verdict closure. -/
 def frontNV : List FnName := ["ind_fields", "install_ind_d", "rec_decl_line", "apply_rec",
-  "apply_expr", "rec_line_loop", "rec_expr_loop", "scan_line", "skip_ws", "front_init", "decl_cv",
-  "expr_get", "decl_push"]
+  "apply_expr", "rec_line_loop", "rec_expr_loop", "scan_line", "skip_ws", "fast_line", "front_init",
+  "decl_cv", "expr_get", "decl_push"]
 
 theorem frontNV_nv : ∀ f ∈ frontNV, f ∈ L.Checker.nvFns :=
   _root_.L.Checker.nv_sub (by decide +kernel)
