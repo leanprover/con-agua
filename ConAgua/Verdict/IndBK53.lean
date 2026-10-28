@@ -1,13 +1,19 @@
-import ConAgua.Arena.IndT.RecCheckK53
+import ConAgua.Verdict.IndBTka
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 
 /-!
-# Error refinement of `target_k53`, `target_k53_heads` (lane `verdicts-b`, helper `ib`)
+# `target_k53_heads`, `target_k53`: one model and one refinement each, for both outcomes
 
-`target_k53_args` (whose model the generator cannot produce: its `grind` fails) is a hypothesis
-(`TkaE`), in `tkaW_okC`'s shape.
+`tkhE`, `tkE` (`l_model … unified`): `target_k53_args` and `target_k53_heads` through their
+unified models (`tkaE`, `tkhE`), the callees outside the verdict closure (`get_app_fn_f`,
+`get_app_args_f`, `e_view`, `strip_pis`, `target_k53_tele`) through their `Option` models.
+`tkh_ref` and `tk_ref` refine `tkHeads` and `targetK53` for both outcomes (`tka_ref` below them);
+`tk_ref`'s ok half is `targetK53_refinesC` and `class_nodes_agree`'s ok refinement (`RecGen23`,
+through the run), its error half `class_nodes_agree`'s error claim (`IndBNodes`).
 -/
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -23,44 +29,31 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- **`target_k53_args`' error claim** (hypothesis; `tkaW_okC`'s hypotheses). -/
-def TkaE (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (env : ConLeche.Env) : Prop :=
-  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a : AState) (q fto ftl Mc ip usp lao lal mao mal : Word)
-    (bs : BlockShape) (formerTys : List EIdx) (TM : TargetMajor) (la ma : List EIdx)
-    {pP : ConLeche.BlockShape} {formerTysP laP maP : List ConLeche.Expr} {McP : ConLeche.TargetMajor}
-    {I'P : ConLeche.Name} {us'P : List ConLeche.Level},
-    StageC dn vis fe env s₀.mem a → AbsOK s₀.mem → BSOK s₀.mem q.toNat bs →
-    decHL s₀.mem fto.toNat ftl.toNat = some formerTys → fto.toNat + ftl.toNat ≤ iwTop s₀.mem →
-    DecB (fun m => decTM m Mc.toNat) s₀.mem TM → H ip → H usp → HSl0 s₀.mem lao lal la →
-    HSl0 s₀.mem mao mal ma → RcMR s₀.mem →
-    dShape a.store bs = some pP → Frontend.denoteEList a.store formerTys = some formerTysP →
-    dMajor a.store TM = some McP → denoteN a.store.ns (decI ip) = some I'P →
-    denoteLs a.store.lss (decI usp) = some us'P → Frontend.denoteEList a.store la = some laP →
-    Frontend.denoteEList a.store ma = some maP → (∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t) →
-    ConLeche.Cached.TargetMajScoped McP →
-    CoreSpecE p n "target_k53_args" [vis, q, fto, ftl, Mc, ip, usp, lao, lal, mao, mal]
-      (tkArgs fe bs formerTys TM (decI ip) (decI usp) la ma) s₀ a
-
-l_model tkhE_spec (p : Prog) (hf : p.lookup "target_k53_heads" = some targetK53Heads)
-  fns [hf ↦ tkhE] grind [arena_grind] fold [tierW, idxW]
+l_model tkhE_spec (p : Prog) (hL : K53Look p)
+  fns [hL.tkh ↦ tkhE]
+  specs [gafF_spec p hL.ad n, gaaF_spec p hL.ad n, eView_spec p hL.hv n, tkaE_spec p hL n]
+  grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
+  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model tkE_spec (p : Prog) (hf : p.lookup "target_k53" = some targetK53)
-  fns [hf ↦ tkE] grind [arena_grind] fold [tierW, idxW]
+l_model tkE_spec (p : Prog) (hL : K53Look p)
+  fns [hL.tk ↦ tkE]
+  specs [stripPis_specF p hL.strip n, tte_spec p hL n, tkhE_spec p hL n]
+  grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
+  heartbeats 4000000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hTka : TkaE p dn vis fe env)
 
-include hnv hTka in
-/-- **`target_k53_heads`' model error claim** (`tkhW_okC`'s hypotheses). -/
-theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
-    {q fto ftl Mc leafW majDom : Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor}
+include hq henv in
+/-- **`target_k53_heads` refines `tkHeads`, both outcomes** (twin side: con-ron's
+`targetK53_spec`, the heads' part: read-only steps, then `tka_ref`). -/
+theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl Mc leafW majDom : Word}
+    {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor}
     (hC : StageC dn vis fe env m a) (hA : AbsOK m)
     (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hMc : DecB (fun m => decTM m Mc.toNat) m TM)
@@ -73,101 +66,67 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
     (hlwP : denoteE a.store (decE leafW) = some lwP) (hmdP : denoteE a.store (decE majDom) = some mdP)
     (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
     (hMs : ConLeche.Cached.TargetMajScoped McP) :
-    ∀ e, tkhE p n m vis q fto ftl Mc leafW majDom = .error e →
-      ErrClaim (tkHeads fe bs formerTys TM (decE leafW) (decE majDom)) a e := by
-  intro e he
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
+    RefE (VerdictCtx p) (tkhE p n m vis q fto ftl Mc leafW majDom)
+      (tkHeads fe bs formerTys TM (decE leafW) (decE majDom)) a
+      (fun v c a' => TcmPost dn vis fe env m v.1 v.2 c a') := by
   have hS := hC.stage
   obtain _ | n := n
-  · simp only [tkhE] at he
-    cases he
-    exact ErrClaim.of_cls0 Err.cls_outOfFuel
-  rw [tkhE.arm1] at he
-  cases h1 : callE p n "get_app_fn_f" [CWF, leafW] m with
-  | error e1 =>
-    rw [h1, tkhE.k_get_app_fn_f.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-  | ok q1 =>
-  obtain ⟨rl, m1⟩ := q1
-  rw [h1, tkhE.k_get_app_fn_f.arm1] at he
-  obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (gafF_spec p L.ad n ⟨m, Locals.init []⟩ [CWF, leafW])
-    (callW_of_callE h1)
-  subst hs1
-  dsimp only at h1m
-  obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := gafF_ok dn vis fe CWF leafW hl m s1.mem a rl h1m hS
+  · rw [tkhE.eq_1]; exact RefE.of_cls0 (by simp)
+  rw [tkhE.arm1]
+  unfold tkHeads
+  -- `get_app_fn_f` of the leaf and of the major's domain
+  rcases h1 : gafF m [CWF, leafW] with _ | ⟨rl, m1⟩
+  · rw [liftE_none, tkhE.k_get_app_fn_f.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, tkhE.k_get_app_fn_f.arm1]
+  obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := gafF_ok dn vis fe CWF leafW hl m m1 a rl h1 hS
   rw [CWF_eq, ← decE_eq] at run1
   rw [← hlhD, ← decE_eq] at run1
-  have hP1 := hP.fr (MFr.ofGafF h1m)
-  have hA1 := gafF_afr h1m hA
+  have hP1 := hP.fr (MFr.ofGafF h1)
+  have hA1 := gafF_afr h1 hA
   obtain ⟨e1, hlh⟩ := ConRon.Bridge.Inductives.getAppFn_run hC.check.state hlwP run1
   subst a1
   have hC1 := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
-  rw [tkHeads]
-  refine ErrClaim.bind_right run1 ?_
-  cases h2 : callE p n "get_app_fn_f" [CWF, majDom] s1.mem with
-  | error e2 =>
-    rw [h2, tkhE.k_get_app_fn_f_2.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
-  | ok q2 =>
-  obtain ⟨rm, m2⟩ := q2
-  obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (gafF_spec p L.ad n ⟨s1.mem, Locals.init []⟩ [CWF, majDom])
-    (callW_of_callE h2)
-  subst hs2
-  dsimp only at h2m
-  obtain ⟨mh, a2, run2, hS2, hg2, hmhH, hmhD⟩ := gafF_ok dn vis fe CWF majDom hmj s1.mem s2.mem a rm h2m hS1
+  refine RefE.bind_right run1 ?_
+  rcases h2 : gafF m1 [CWF, majDom] with _ | ⟨rm, m2⟩
+  · rw [liftE_none, tkhE.k_get_app_fn_f_2.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨mh, a2, run2, hS2, hg2, hmhH, hmhD⟩ := gafF_ok dn vis fe CWF majDom hmj m1 m2 a rm h2 hS1
   rw [CWF_eq, ← decE_eq] at run2
   rw [← hmhD, ← decE_eq] at run2
-  have hP2 := hP1.fr (MFr.ofGafF h2m)
-  have hA2 := gafF_afr h2m hA1
+  have hP2 := hP1.fr (MFr.ofGafF h2)
+  have hA2 := gafF_afr h2 hA1
   obtain ⟨e2, hmh⟩ := ConRon.Bridge.Inductives.getAppFn_run hC.check.state hmdP run2
   subst a2
   have hC2 := hC1.of_pstep hS2 hA2 (PStep.refl hC.check.state)
   have hg12 := hg1.trans hg2
-  refine ErrClaim.bind_right run2 ?_
+  refine RefE.bind_right run2 ?_
+  -- the heads' tags
   by_cases t1 : rl.headD 0 >>> 28 ≠ 3
-  · rw [h2, tkhE.k_get_app_fn_f_2.arm1 p n vis q fto ftl Mc leafW majDom _ _ _ t1] at he
-    cases he
-  by_cases t2 : rm.headD 0 >>> 28 ≠ 3
-  · rw [h2, tkhE.k_get_app_fn_f_2.arm2 p n vis q fto ftl Mc leafW majDom _ _ _ (by simpa using t1) t2] at he
-    cases he
+  · rw [tkhE.k_get_app_fn_f_2.arm1 (hc1 := t1)]
+    have : ¬ (decE (rl.headD 0)).tag = ETag.const := fun e => t1 ((decE_tag_const _ hlhH).mp e)
+    have hb : ((decE (rl.headD 0)).tag == ETag.const) = false := by rw [beq_eq_false_iff_ne]; exact this
+    rw [hb, Bool.false_and]
+    exact RefE.ret (y := false) rfl ⟨rfl, hC2, hg12, hP2, hA2⟩
   have t1' : rl.headD 0 >>> 28 = 3 := by simpa using t1
+  by_cases t2 : rm.headD 0 >>> 28 ≠ 3
+  · rw [tkhE.k_get_app_fn_f_2.arm2 (hc1 := t1') (hc2 := t2)]
+    have : ¬ (decE (rm.headD 0)).tag = ETag.const := fun e => t2 ((decE_tag_const _ hmhH).mp e)
+    have hb : ((decE (rm.headD 0)).tag == ETag.const) = false := by rw [beq_eq_false_iff_ne]; exact this
+    rw [hb, Bool.and_false]
+    exact RefE.ret (y := false) rfl ⟨rfl, hC2, hg12, hP2, hA2⟩
   have t2' : rm.headD 0 >>> 28 = 3 := by simpa using t2
-  rw [h2, tkhE.k_get_app_fn_f_2.arm3 p n vis q fto ftl Mc leafW majDom _ _ _ t1' t2'] at he
-  -- `e_view` of the leaf's head
-  cases h3 : callE p n "e_view" [rl.headD 0] s2.mem with
-  | error e3 =>
-    rw [h3, tkhE.k_e_view.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
-  | ok q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  obtain ⟨s3, hs3, hs3x, hne3, hr3⟩ := triple_of_callW (eView_spec p L.hv n ⟨s2.mem, Locals.init []⟩ (rl.headD 0))
-    (callW_of_callE h3)
-  subst hs3x
-  dsimp only at hr3 hs3
-  subst hr3 hs3
-  rw [h3, tkhE.k_e_view.arm1] at he
-  cases h4 : callE p n "e_view" [rm.headD 0] s2.mem with
-  | error e4 =>
-    rw [h4, tkhE.k_e_view_2.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
-  | ok q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  obtain ⟨s4, hs4, hs4x, hne4, hr4⟩ := triple_of_callW (eView_spec p L.hv n ⟨s2.mem, Locals.init []⟩ (rm.headD 0))
-    (callW_of_callE h4)
-  subst hs4x
-  dsimp only at hr4 hs4
-  subst hr4 hs4
-  rw [h4, tkhE.k_e_view_2.arm1] at he
-  obtain ⟨vr1, hipH, husH⟩ := viewConstW hS2.1.arena.1 hne3 t1'
-  obtain ⟨vr2, hiiH, -⟩ := viewConstW hS2.1.arena.1 hne4 t2'
-  generalize hip : (eViewW s2.mem (rl.headD 0)).tail.headD 0 = ip at he vr1 hipH
-  generalize hus : (eViewW s2.mem (rl.headD 0)).tail.tail.headD 0 = usp at he vr1 husH
-  generalize hii : (eViewW s2.mem (rm.headD 0)).tail.headD 0 = ii at he vr2 hiiH
+  -- `e_view` of both heads
+  by_cases v1 : eViewW m2 (rl.headD 0) = []
+  · rw [tkhE.k_get_app_fn_f_2.arm3 (hc1 := t1') (hc2 := t2') (hc3 := v1)]; exact RefE.of_cls0 (by simp)
+  by_cases v2 : eViewW m2 (rm.headD 0) = []
+  · rw [tkhE.k_get_app_fn_f_2.arm4 (hc1 := t1') (hc2 := t2') (hc3 := v1) (hc4 := v2)]
+    exact RefE.of_cls0 (by simp)
+  rw [tkhE.k_get_app_fn_f_2.arm5 (hc1 := t1') (hc2 := t2') (hc3 := v1) (hc4 := v2)]
+  obtain ⟨vr1, hipH, husH⟩ := viewConstW hS2.1.arena.1 v1 t1'
+  obtain ⟨vr2, hiiH, -⟩ := viewConstW hS2.1.arena.1 v2 t2'
+  generalize hip : (eViewW m2 (rl.headD 0)).tail.headD 0 = ip at vr1 hipH ⊢
+  generalize hus : (eViewW m2 (rl.headD 0)).tail.tail.headD 0 = usp at vr1 husH ⊢
+  generalize hii : (eViewW m2 (rm.headD 0)).tail.headD 0 = ii at vr2 hiiH ⊢
   have c1 : (decE (rl.headD 0)).tag = ETag.const := (decE_tag_const _ hlhH).mpr t1'
   have c2 : (decE (rm.headD 0)).tag = ETag.const := (decE_tag_const _ hmhH).mpr t2'
   have ct1 : ((decE (rl.headD 0)).tag == ETag.const) = true := by rw [beq_iff_eq]; exact c1
@@ -177,108 +136,66 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
     (ConRon.Bridge.view_of_viewConst_tag ct1 hv1.symm) hlh
   rw [ct1, ct2]
   simp only [Bool.and_self, ite_true]
-  refine ErrClaim.bind_right vr1 ?_
-  refine ErrClaim.bind_right vr2 ?_
+  refine RefE.bind_right vr1 (RefE.bind_right vr2 ?_)
   dsimp only
-  cases h5 : callE p n "get_app_args_f" [CWF, leafW] s2.mem with
-  | error e5 =>
-    rw [h5, tkhE.k_get_app_args_f.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
-  | ok q5 =>
-  obtain ⟨ra, m5⟩ := q5
-  rw [h5, tkhE.k_get_app_args_f.arm1] at he
-  obtain ⟨s5, hs5, -, h5m⟩ := triple_of_callW (gaaF_spec p L.ad n ⟨s2.mem, Locals.init []⟩ [CWF, leafW])
-    (callW_of_callE h5)
-  subst hs5
-  dsimp only at h5m
-  obtain ⟨la, a3, run3, hS3, hg3, hla, hlab⟩ := gaaF_ok dn vis fe CWF leafW hl s2.mem s5.mem a ra h5m hS2
+  -- `get_app_args_f` of the leaf and of the major's domain
+  rcases h3 : gaaF m2 [CWF, leafW] with _ | ⟨ra, m3⟩
+  · rw [liftE_none, tkhE.k_get_app_args_f.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, tkhE.k_get_app_args_f.arm1]
+  obtain ⟨la, a3, run3, hS3, hg3, hla, hlab⟩ := gaaF_ok dn vis fe CWF leafW hl m2 m3 a ra h3 hS2
   rw [CWF_eq, ← decE_eq] at run3
-  have hP3 := hP2.fr (MFr.ofGaaF h5m)
-  have hA3 := gaaF_afr h5m hA2
+  have hP3 := hP2.fr (MFr.ofGaaF h3)
+  have hA3 := gaaF_afr h3 hA2
   obtain ⟨e3, hlaP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC.check.state hlwP run3
   subst a3
-  refine ErrClaim.bind_right run3 ?_
-  cases h6 : callE p n "get_app_args_f" [CWF, majDom] s5.mem with
-  | error e6 =>
-    rw [h6, tkhE.k_get_app_args_f_2.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
-  | ok q6 =>
-  obtain ⟨rb, m6⟩ := q6
-  obtain ⟨s6, hs6, -, h6m⟩ := triple_of_callW (gaaF_spec p L.ad n ⟨s5.mem, Locals.init []⟩ [CWF, majDom])
-    (callW_of_callE h6)
-  subst hs6
-  dsimp only at h6m
-  obtain ⟨ma, a4, run4, hS4, hg4, hma, hmab⟩ := gaaF_ok dn vis fe CWF majDom hmj s5.mem s6.mem a rb h6m hS3
+  refine RefE.bind_right run3 ?_
+  rcases h4 : gaaF m3 [CWF, majDom] with _ | ⟨rb, m4⟩
+  · rw [liftE_none, tkhE.k_get_app_args_f_2.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨ma, a4, run4, hS4, hg4, hma, hmab⟩ := gaaF_ok dn vis fe CWF majDom hmj m3 m4 a rb h4 hS3
   rw [CWF_eq, ← decE_eq] at run4
-  have hP4 := hP3.fr (MFr.ofGaaF h6m)
-  have hA4 := gaaF_afr h6m hA3
+  have hP4 := hP3.fr (MFr.ofGaaF h4)
+  have hA4 := gaaF_afr h4 hA3
   obtain ⟨e4, hmaP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC.check.state hmdP run4
   subst a4
-  refine ErrClaim.bind_right run4 ?_
+  refine RefE.bind_right run4 ?_
   have hC4 := hC2.of_pstep hS4 hA4 (PStep.refl hC.check.state)
   have hg14 := (hg12.trans hg3).trans hg4
   simp only [getD_zero, getD_one, Nat.zero_add] at hla hlab hma hmab
-  have hla4 : HSl0 s6.mem (ra.headD 0) (ra.tail.headD 0) la := (HSl0.of hla hlab).grow hg4
-  have hma4 : HSl0 s6.mem (rb.headD 0) (rb.tail.headD 0) ma := HSl0.of hma hmab
+  have hla4 : HSl0 m4 (ra.headD 0) (ra.tail.headD 0) la := (HSl0.of hla hlab).grow hg4
+  have hma4 : HSl0 m4 (rb.headD 0) (rb.tail.headD 0) ma := HSl0.of hma hmab
+  -- the same class, as many arguments
   by_cases hi : ip ≠ ii
-  · rw [h6, tkhE.k_get_app_args_f_2.arm1 p n vis q fto ftl Mc ip usp ii _ _ _ _ hi] at he
-    cases he
+  · rw [tkhE.k_get_app_args_f_2.arm1 (hc1 := hi)]
+    have : (decI ip == (decI ii : NIdx)) = false := by
+      simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => hi (decI_inj hipH hiiH e)
+    exact RefE.ite_pos (by simp [this]) (RefE.ret (y := false) rfl ⟨rfl, hC4, hg14, hP4, hA4⟩)
   have hii' : ip = ii := by simpa using hi
   subst hii'
   have hlen1 : la.length = (ra.tail.headD 0).toNat := hla4.len
   have hlen2 : ma.length = (rb.tail.headD 0).toNat := hma4.len
   by_cases hl2 : ra.tail.headD 0 ≠ rb.tail.headD 0
-  · rw [h6, tkhE.k_get_app_args_f_2.arm2 p n vis q fto ftl Mc ip usp ip _ _ _ _ rfl hl2] at he
-    cases he
+  · rw [tkhE.k_get_app_args_f_2.arm2 (hc1 := rfl) (hc2 := hl2)]
+    have : (la.length == ma.length) = false := by
+      simp only [beq_eq_false_iff_ne, ne_eq, hlen1, hlen2]
+      exact fun e => hl2 (UInt64.toNat_inj.mp e)
+    exact RefE.ite_pos (by simp [this]) (RefE.ret (y := false) rfl ⟨rfl, hC4, hg14, hP4, hA4⟩)
   have hl2' : ra.tail.headD 0 = rb.tail.headD 0 := by simpa using hl2
-  rw [h6, tkhE.k_get_app_args_f_2.arm3 p n vis q fto ftl Mc ip usp ip _ _ _ _ rfl hl2'] at he
+  rw [tkhE.k_get_app_args_f_2.arm3 (hc1 := rfl) (hc2 := hl2')]
   have hll : (la.length == ma.length) = true := by
     simp only [beq_iff_eq, hlen1, hlen2]; exact congrArg UInt64.toNat hl2'
-  simp only [beq_self_eq_true, hll, Bool.and_self, Bool.not_true, Bool.false_eq_true, ite_false]
-  cases h7 : callE p n "target_k53_args" [vis, q, fto, ftl, Mc, ip, usp, ra.headD 0, ra.tail.headD 0, rb.headD 0,
-      rb.tail.headD 0] s6.mem with
-  | error e7 =>
-    rw [h7, tkhE.k_target_k53_args.none] at he
-    cases he
-    exact CoreSpecE.of_callE (hTka n (by omega) ⟨s6.mem, Locals.init []⟩ a q fto ftl Mc ip usp (ra.headD 0)
-      (ra.tail.headD 0) (rb.headD 0) (rb.tail.headD 0) bs formerTys TM la ma hC4 hA4
-      (hbs.grow hg14) (by rw [decHL_grow hg14 hftb]; exact hft) (by dsimp only; have := hg14.1; omega)
-      (hMc.grow (decTM_mono _) hg14) hipH husH hla4 hma4 hP4 hsh hftP hMcP hI' hus' hlaP hmaP hformer hMs) h7
-  | ok q7 =>
-    rw [h7, tkhE.k_target_k53_args.arm1] at he
-    cases he
+  refine RefE.ite_neg (by simp [hll]) ?_
+  -- `target_k53_args`
+  exact RefE.mono (tka_ref hq henv n (by omega) hC4 hA4 (hbs.grow hg14)
+    (by rw [decHL_grow hg14 hftb]; exact hft) (by have := hg14.1; omega)
+    (hMc.grow (decTM_mono _) hg14) hipH husH hla4 hma4 hP4 hsh hftP hMcP hI' hus' hlaP hmaP hformer hMs)
+    fun v c a' h => ⟨h.res, h.stage, hg14.trans h.grow, h.rc, h.abs⟩
 
-include hnv hTka in
-/-- **`target_k53_heads`' error claim** (every fuel; `tkhW_okC`'s hypotheses). -/
-theorem targetK53Heads_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a : AState)
-    (q fto ftl Mc leafW majDom : Word) (bs : BlockShape) (formerTys : List EIdx) (TM : TargetMajor)
-    (hC : StageC dn vis fe env s₀.mem a) (hA : AbsOK s₀.mem)
-    (hbs : BSOK s₀.mem q.toNat bs) (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
-    (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem) (hMc : DecB (fun m => decTM m Mc.toNat) s₀.mem TM)
-    (hl : H leafW) (hmj : H majDom) (hP : RcMR s₀.mem)
-    {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {McP : ConLeche.TargetMajor}
-    {lwP mdP : ConLeche.Expr}
-    (hsh : dShape a.store bs = some pP)
-    (hftP : Frontend.denoteEList a.store formerTys = some formerTysP)
-    (hMcP : dMajor a.store TM = some McP)
-    (hlwP : denoteE a.store (decE leafW) = some lwP) (hmdP : denoteE a.store (decE majDom) = some mdP)
-    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
-    (hMs : ConLeche.Cached.TargetMajScoped McP) :
-    CoreSpecE p n "target_k53_heads" [vis, q, fto, ftl, Mc, leafW, majDom]
-      (tkHeads fe bs formerTys TM (decE leafW) (decE majDom)) s₀ a :=
-  CoreSpecE.of_runs fun e hc => by
-    by_cases hk0 : e.cls = 0
-    · exact ErrClaim.of_cls0 hk0
-    exact tkhE_claim hnv hTka L n hn hC hA hbs hft hftb hMc hl hmj hP hsh hftP hMcP hlwP hmdP hformer hMs e
-      (triple_of_callE_err (tkhE_spec p L.tkh n s₀ vis q fto ftl Mc leafW majDom) hc (Err.code_ne_of_cls hk0))
-
-include hnv hTka in
-/-- **`target_k53`'s model error claim** (`tkW_okC`'s hypotheses). -/
-theorem tkE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
-    {q fto ftl Mc teo tel majDom f : Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor}
-    {tele : List EIdx}
+include hq henv in
+/-- **`target_k53` refines `targetK53`, both outcomes** (twin side: con-ron's `targetK53_spec`'s
+proof): `stripPis`, the telescope check (`tkTele_cstep`), then `tkh_ref`. -/
+theorem tk_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl Mc teo tel majDom f : Word}
+    {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor} {tele : List EIdx}
     (hC : StageC dn vis fe env m a) (hA : AbsOK m)
     (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hMc : DecB (fun m => decTM m Mc.toNat) m TM)
@@ -292,116 +209,101 @@ theorem tkE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
     (hmdP : denoteE a.store (decE majDom) = some mdP) (hfP : denoteE a.store (decE f) = some fP)
     (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
     (hMs : ConLeche.Cached.TargetMajScoped McP) :
-    ∀ e, tkE p n m vis q fto ftl Mc teo tel majDom f = .error e →
-      ErrClaim (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a e := by
-  intro e he
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
+    RefE (VerdictCtx p) (tkE p n m vis q fto ftl Mc teo tel majDom f)
+      (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a
+      (fun v c a' => TcmPost dn vis fe env m v.1 v.2 c a') := by
   have hS := hC.stage
   obtain _ | n := n
-  · simp only [tkE] at he
-    cases he
-    exact ErrClaim.of_cls0 Err.cls_outOfFuel
-  rw [tkE.arm1] at he
-  rw [tk53_eq]
-  cases h1 : callE p n "strip_pis" [tel, f] m with
-  | error e1 =>
-    rw [h1, tkE.k_strip_pis.none] at he
-    cases he
-    exact ErrClaim.bind_left (ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1)
-  | ok q1 =>
-  obtain ⟨rs, m1⟩ := q1
-  obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (stripPis_specF p L.strip n ⟨m, Locals.init []⟩ tel f)
-    (callW_of_callE h1)
-  subst hs1
-  dsimp only at h1m
-  obtain ⟨o, a1, run1, hS1, hg1, hd1⟩ := stripF_pis_ok dn vis fe tel f hf m s1.mem a rs h1m hS
+  · rw [tkE.eq_1]; exact RefE.of_cls0 (by simp)
+  rw [tkE.arm1, tk53_eq]
+  -- `strip_pis`
+  rcases h1 : stripF 6 m [tel, f] with _ | ⟨rs, m1⟩
+  · rw [liftE_none, tkE.k_strip_pis.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨o, a1, run1, hS1, hg1, hd1⟩ := stripF_pis_ok dn vis fe tel f hf m m1 a rs h1 hS
   rw [← decE_eq, ← htl.len] at run1
-  have hP1 := hP.fr (MFr.ofStripF h1m)
-  have hA1 := stripF_afr h1m hA
+  have hP1 := hP.fr (MFr.ofStripF h1)
+  have hA1 := stripF_afr h1 hA
   obtain ⟨e1, hbp⟩ := ConRon.Bridge.Inductives.stripPis_pstep hC.check.state hfP run1
   subst a1
   have hC1 := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
-  refine ErrClaim.bind_right run1 ?_
+  refine RefE.bind_right run1 ?_
   rcases o with _ | ⟨teleW, leafW⟩
   · have h0 : rs.headD 0 = 0 := hd1
-    rw [h1, tkE.k_strip_pis.arm1 p n vis q fto ftl Mc teo tel majDom _ _ h0] at he
-    cases he
+    rw [tkE.k_strip_pis.arm1 (hc1 := h0)]
+    exact RefE.ret (y := false) rfl ⟨rfl, hC1, hg1, hP1, hA1⟩
   obtain ⟨twP, lwP, -, htw, hlw⟩ := ConRon.Bridge.Inductives.denoteBP_some hbp
   obtain ⟨h0, ⟨hdl, hbl⟩, hlwH, hlwD⟩ := hd1
-  rw [h1, tkE.k_strip_pis.arm2 p n vis q fto ftl Mc teo tel majDom _ _ (by rw [h0]; decide)] at he
+  rw [tkE.k_strip_pis.arm2 (hc1 := by rw [h0]; decide)]
   simp only [show (1 + 1 : Nat) = 2 from rfl, getD_one, getD_two] at hdl hbl
   have hl3 : (rs.drop 3).headD 0 = rs.tail.tail.tail.headD 0 := by
     rcases rs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
   rw [hl3] at hlwH hlwD
   dsimp only
-  cases h2 : callE p n "target_k53_tele" [rs.tail.headD 0, rs.tail.tail.headD 0, teo, tel] s1.mem with
-  | error e2 =>
-    rw [h2, tkE.k_target_k53_tele.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
-  | ok q2 =>
-  obtain ⟨rt, m2⟩ := q2
-  obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (tte_spec p L n ⟨s1.mem, Locals.init []⟩ (rs.tail.headD 0)
-    (rs.tail.tail.headD 0) teo tel) (callW_of_callE h2)
-  subst hs2
-  dsimp only at h2m
-  obtain ⟨c1, a2, run2, hc1, hS2, hg2, hP2⟩ := tteW_ok dn fe vis n h2m hS1 (HSl0.of hdl hbl) (htl.grow hg1) hP1
-  have hA2 := tteW_afr h2m hA1
+  -- `target_k53_tele`
+  rcases h2 : tteW n m1 (rs.tail.headD 0) (rs.tail.tail.headD 0) teo tel with _ | ⟨rt, m2⟩
+  · rw [liftE_none, tkE.k_target_k53_tele.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨c1, a2, run2, hc1, hS2, hg2, hP2⟩ := tteW_ok dn fe vis n h2 hS1 (HSl0.of hdl hbl) (htl.grow hg1) hP1
+  have hA2 := tteW_afr h2 hA1
   have q2 := tkTele_cstep hC.check htw htlP run2
   have hC2 := hC1.of_cstep hS2 hA2 q2
   have hg12 := hg1.trans hg2
-  refine ErrClaim.bind_right run2 ?_
+  refine RefE.bind_right run2 ?_
   by_cases hz : rt.headD 0 = 0
-  · rw [h2, tkE.k_target_k53_tele.arm1 p n vis q fto ftl Mc majDom _ _ _ hz] at he
-    cases he
-  rw [h2, tkE.k_target_k53_tele.arm2 p n vis q fto ftl Mc majDom _ _ _ hz] at he
+  · rw [tkE.k_target_k53_tele.arm1 (hc1 := hz)]
+    have : c1 = false := by rw [← hc1, hz]; rfl
+    subst this
+    exact RefE.ite_neg (by simp) (RefE.ret (y := false) rfl ⟨rfl, hC2, hg12, hP2, hA2⟩)
+  rw [tkE.k_target_k53_tele.arm2 (hc1 := hz)]
   have : c1 = true := by rw [← hc1]; simpa using hz
   subst this
-  simp only [ite_true]
+  refine RefE.ite_pos rfl ?_
+  -- `target_k53_heads`
   rw [← decE_eq] at hlwD
-  cases h3 : callE p n "target_k53_heads" [vis, q, fto, ftl, Mc, rs.tail.tail.tail.headD 0, majDom] s2.mem with
-  | error e3 =>
-    rw [h3, tkE.k_target_k53_heads.none] at he
-    cases he
-    have := CoreSpecE.of_callE (targetK53Heads_claim hnv hTka L n (by omega) ⟨s2.mem, Locals.init []⟩ a2 q fto ftl Mc
-      (rs.tail.tail.tail.headD 0) majDom bs formerTys TM hC2 hA2
-      (hbs.grow hg12) (by rw [decHL_grow hg12 hftb]; exact hft) (by dsimp only; have := hg12.1; omega)
-      (hMc.grow (decTM_mono _) hg12) hlwH hmj hP2
-      (ConRon.Bridge.Inductives.dShape_ext q2.ext _ _ hsh) (denoteEList_ext q2.ext _ _ hftP)
-      (ConRon.Bridge.Inductives.dMajor_ext q2.ext _ _ hMcP) (by rw [hlwD]; exact denote_ext hlw q2.ext)
-      (denote_ext hmdP q2.ext) hformer hMs) h3
-    rw [hlwD] at this
-    exact this
-  | ok q3 =>
-    rw [h3, tkE.k_target_k53_heads.arm1] at he
-    cases he
+  have h3 := tkh_ref hq henv n (by omega) hC2 hA2
+    (hbs.grow hg12) (by rw [decHL_grow hg12 hftb]; exact hft) (by have := hg12.1; omega)
+    (hMc.grow (decTM_mono _) hg12) hlwH hmj hP2
+    (ConRon.Bridge.Inductives.dShape_ext q2.ext _ _ hsh) (denoteEList_ext q2.ext _ _ hftP)
+    (ConRon.Bridge.Inductives.dMajor_ext q2.ext _ _ hMcP) (by rw [hlwD]; exact denote_ext hlw q2.ext)
+    (denote_ext hmdP q2.ext) hformer hMs
+  rw [hlwD] at h3
+  exact RefE.mono h3 fun v c a' h => ⟨h.res, h.stage, hg12.trans h.grow, h.rc, h.abs⟩
 
-include hnv hTka in
-/-- **`target_k53`'s error claim** (every fuel; `tkW_okC`'s hypotheses). -/
-theorem targetK53_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a : AState)
-    (q fto ftl Mc teo tel majDom f : Word) (bs : BlockShape) (formerTys : List EIdx) (TM : TargetMajor)
-    (tele : List EIdx) (hC : StageC dn vis fe env s₀.mem a) (hA : AbsOK s₀.mem)
-    (hbs : BSOK s₀.mem q.toNat bs) (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
-    (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem) (hMc : DecB (fun m => decTM m Mc.toNat) s₀.mem TM)
-    (htl : HSl0 s₀.mem teo tel tele) (hmj : H majDom) (hf : H f) (hP : RcMR s₀.mem)
+include hq henv in
+/-- **`target_k53` refines `targetK53`** under `StageC` (`tk_ref`'s ok half; the knot's core calls;
+the inputs' denotations and scoping as con-ron's `targetK53_spec` asks). -/
+@[refines ConRon.Arena.targetK53]
+theorem targetK53_refinesC (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (q fto ftl Mc teo tel majDom f : Word)
+    (bs : BlockShape) (formerTys : List EIdx) (TM : TargetMajor) (tele : List EIdx)
+    (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem) (hbs : BSOK s₀.mem q.toNat bs)
+    (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
+    (hMc : DecB (fun m => decTM m Mc.toNat) s₀.mem TM) (htl : HSl0 s₀.mem teo tel tele)
+    (hmj : H majDom) (hf : H f) (hP : RcMR s₀.mem)
     {pP : ConLeche.BlockShape} {formerTysP teleP : List ConLeche.Expr} {McP : ConLeche.TargetMajor}
     {mdP fP : ConLeche.Expr}
-    (hsh : dShape a.store bs = some pP)
-    (hftP : Frontend.denoteEList a.store formerTys = some formerTysP)
-    (hMcP : dMajor a.store TM = some McP)
-    (htlP : Frontend.denoteEList a.store tele = some teleP)
-    (hmdP : denoteE a.store (decE majDom) = some mdP) (hfP : denoteE a.store (decE f) = some fP)
+    (hsh : dShape a₀.store bs = some pP)
+    (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
+    (hMcP : dMajor a₀.store TM = some McP)
+    (htlP : Frontend.denoteEList a₀.store tele = some teleP)
+    (hmdP : denoteE a₀.store (decE majDom) = some mdP) (hfP : denoteE a₀.store (decE f) = some fP)
     (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
     (hMs : ConLeche.Cached.TargetMajScoped McP) :
-    CoreSpecE p n "target_k53" [vis, q, fto, ftl, Mc, teo, tel, majDom, f]
-      (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) s₀ a :=
-  CoreSpecE.of_runs fun e hc => by
-    by_cases hk0 : e.cls = 0
-    · exact ErrClaim.of_cls0 hk0
-    exact tkE_claim hnv hTka L n hn hC hA hbs hft hftb hMc htl hmj hf hP hsh hftP hMcP htlP hmdP hfP
-      hformer hMs e
-      (triple_of_callE_err (tkE_spec p L.tk n s₀ vis q fto ftl Mc teo tel majDom f) hc (Err.code_ne_of_cls hk0))
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_k53" [vis, q, fto, ftl, Mc, teo, tel, majDom, f]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a₀ ∧
+      (r.headD 0 != 0) =
+        AM.res (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a₀ ∧
+      StageC dn vis fe env s'.mem
+        (AM.st (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (RefE.triple (tkE_spec p L n s₀ vis q fto ftl Mc teo tel majDom f)
+    (tk_ref hq henv n hn hC hA hbs hft hftb hMc htl hmj hf hP hsh hftP hMcP htlP hmdP hfP hformer hMs)) ?_
+  rintro r s' ⟨hl', c, a', run, hR⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl', hok, by rw [hres]; exact hR.res, by rw [hst]; exact hR.stage, hR.grow, hR.rc, hR.abs⟩
 
 end sims
 

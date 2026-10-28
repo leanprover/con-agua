@@ -7,8 +7,8 @@ import ConAgua.L.ModelGen
 # Error refinement of `class_nodes_agree` (lane `verdicts-b`, helper `ib`)
 
 The loop's own aborts are the twin's two `fail`s (entry too short, `target_k53` false);
-`target_pi_doms_with` is `closedNV`; `target_k53`'s claim is `targetK53_claim` (it takes the
-`target_k53_args` hypothesis `TkaE`).
+`target_pi_doms_with` is `closedNV`; `target_k53`'s claim is `tk_ref`'s error half (`RefE.run_err`,
+under the core stubs' claims `CoreStubsE`).
 -/
 
 set_option experimental.vcgen true
@@ -33,13 +33,13 @@ l_model cnaE_spec (p : Prog) (hf : p.lookup "class_nodes_agree" = some classNode
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (P : CnaProg p)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) {vis : Word} (hTka : TkaE p dn vis fe env)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) {vis : Word} (hcE : CoreStubsE p)
   (q fto ftl mc teo tel leaf fvo fvl i eo el : Word) (bs : BlockShape) (formerTys : List EIdx)
   (TM : TargetMajor) (tele fvs : List EIdx)
   {pP : ConLeche.BlockShape} {formerTysP teleP fvsP : List ConLeche.Expr} {McP : ConLeche.TargetMajor}
   {leafP : ConLeche.Expr}
 
-include hq henv P hnv hTka in
+include hq henv P hnv hcE in
 /-- **`class_nodes_agree`' loop error claim** (`cnaW_okC`'s hypotheses). -/
 theorem cnaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j : Word)
     (es : List NestCtorNf) (esP : List ConLeche.NestCtorNf),
@@ -141,30 +141,23 @@ theorem cnaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
   obtain ⟨fP, -, hfd⟩ := (ConRon.Bridge.Inductives.denoteEList_getElem? hdoms i.toNat).2 _ hget
   simp only [Option.getD_some, hget]
   -- `target_k53`
-  cases h2 : callE p k "target_k53" [vis, q, fto, ftl, mc, teo, tel, leaf, w] s1.mem with
-  | error e2 =>
-    rw [h2, cnaE.k_target_k53.none] at he
-    cases he
-    refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (targetK53_claim hnv hTka P.k53 k (by omega) ⟨s1.mem, Locals.init []⟩ a1 q fto ftl mc
-      teo tel leaf w bs formerTys TM tele hC1 hA1 (hbs.grow hg1)
-      (by rw [decHL_grow hg1 hftb]; exact hft) (by dsimp only; have := hg1.1; omega) (hMc.grow (decTM_mono _) hg1)
-      (htl.grow hg1) hl hwH hP1
-      (ConRon.Bridge.Inductives.dShape_ext q1.ext _ _ hsh) (denoteEList_ext q1.ext _ _ hftP)
-      (ConRon.Bridge.Inductives.dMajor_ext q1.ext _ _ hMcP) (denoteEList_ext q1.ext _ _ htlP)
-      (denote_ext hlP q1.ext) hfd hformer hMs) h2
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (tk_spec p P.k53 (realCall p) (realCall_spec p) k _ vis q fto ftl mc teo tel leaf w) (callW_of_callE h2)
-  subst hs2
-  dsimp only at hw2
-  obtain ⟨c, a2, run2, hc, hC2, hg2, hP2, hA2⟩ := tkW_okC hq henv P.k53.tmn.tcm k (by omega) hw2 hC1 hA1 (hbs.grow hg1)
+  have hT := tkE_spec p P.k53 k ⟨s1.mem, Locals.init []⟩ vis q fto ftl mc teo tel leaf w
+  have hR := tk_ref hq henv k (by omega) hC1 hA1 (hbs.grow hg1)
     (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.1; omega) (hMc.grow (decTM_mono _) hg1)
     (htl.grow hg1) hl hwH hP1
     (ConRon.Bridge.Inductives.dShape_ext q1.ext _ _ hsh) (denoteEList_ext q1.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dMajor_ext q1.ext _ _ hMcP) (denoteEList_ext q1.ext _ _ htlP)
     (denote_ext hlP q1.ext) hfd hformer hMs
+  cases h2 : callE p k "target_k53" [vis, q, fto, ftl, mc, teo, tel, leaf, w] s1.mem with
+  | error e2 =>
+    rw [h2, cnaE.k_target_k53.none] at he
+    cases he
+    exact ErrClaim.bind_left (RefE.run_err hT hnv ⟨hnv, hcE⟩ hR h2)
+  | ok q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  obtain ⟨s2, rfl, -, c, a2, run2, hR2⟩ := RefE.run_ok hT hR h2
+  have hc : (r2.headD 0 != 0) = c := hR2.res
+  obtain ⟨-, hC2, hg2, hP2, hA2⟩ := hR2
   have c1' := q1.toCore hC.check
   obtain ⟨c2', -⟩ := ConRon.Bridge.Inductives.targetK53_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv bs pP formerTys formerTysP TM McP tele teleP (decE leaf) (decE w) leafP fP hformer hMs
@@ -201,7 +194,7 @@ theorem cnaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
     (denote_ext hlP c12.ext) (denoteEList_ext c12.ext _ _ hfvP)
     (ConRon.Bridge.Inductives.dCtorNf_ext.list c12.ext _ _ hesP') hformer hMs e he
 
-include hq henv P hnv hTka in
+include hq henv P hnv hcE in
 /-- **`class_nodes_agree`' error claim** (every fuel; `classNodesAgree_refinesC`'s hypotheses). -/
 theorem classNodesAgree_claim (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (es : List NestCtorNf) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
@@ -237,7 +230,7 @@ theorem classNodesAgree_claim (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : 
       | error e' =>
         rw [hloop, cnaE.k_loop1.none] at he
         cases he
-        exact cnaE_claim hq henv P hnv hTka q fto ftl mc teo tel leaf fvo fvl i eo el bs formerTys TM tele fvs
+        exact cnaE_claim hq henv P hnv hcE q fto ftl mc teo tel leaf fvo fvl i eo el bs formerTys TM tele fvs
           (n + 1) hn s₀.mem a₀ 0 es esP hC hA hbs hft hftb hMc htl hl hfv hfvb UInt64.zero_le (by simpa using hes)
           hP hsh hftP hMcP htlP hlP hfvP hesP hformer hMs _ hloop
       | ok m' =>

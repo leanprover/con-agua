@@ -31,12 +31,12 @@ l_model cosE_spec (p : Prog) (hf : p.lookup "class_ctors_of" = some classCtorsOf
 section cos
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (P : CosProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) {vis : Word} (hTka : TkaE p dn vis fe env)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) {vis : Word} (hcE : CoreStubsE p)
   (q fto ftl rd mo ml c ao al qo : Word) (bs : BlockShape) (formerTys : List EIdx) (R : ClassRead)
   (ms : List TargetMajor) (cAs : List (IConstantVal × Nat)) (m0 : Mem)
   {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
   {rdP : ConLeche.ClassRead}
-include hkp henv P hIlpf hOpf hnv hTka
+include hkp henv P hIlpf hOpf hnv hcE
 
 /-- **`class_ctors_of`' loop error claim** (`cosW_okC`'s hypotheses; the invariants about the result
 slice dropped). -/
@@ -105,7 +105,7 @@ theorem cosE_claim (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNa
     rw [h1, cosE.k_class_ctor_of.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (classCtorOf_claim hkp henv P.toCxoProg hOpf dn fe hnv hTka k (by omega)
+    exact CoreSpecE.of_callE (classCtorOf_claim hkp henv P.toCxoProg hOpf dn fe hnv hcE k (by omega)
       ⟨m, Locals.init []⟩ a q fto ftl rd mo ml c (UInt64.ofNat v) bs
       formerTys R ms cAs[j.toNat] hC hA (hbs.grow hg) (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.1)
       (hR.grow (decCR_mono _) hg) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
@@ -193,7 +193,7 @@ theorem classCtorsOf_claim (N : Nat) (hN : N ≤ 2 ^ 62) (s₀ : St) (a₀ : ASt
       | error e' =>
         rw [hl, cosE.k_loop1.none] at he
         cases he
-        refine cosE_claim hkp henv P hIlpf hOpf dn fe hnv hTka q fto ftl rd mo ml c ao al (r1.headD 0) bs formerTys R ms
+        refine cosE_claim hkp henv P hIlpf hOpf dn fe hnv hcE q fto ftl rd mo ml c ao al (r1.headD 0) bs formerTys R ms
           cAs s₀.mem hbs hft hftb hR hms hmsb hcAs hlp hnpk hsz5 hq hformer hMs (n + 1) (by omega) s1.mem a₀ 0 csP
           (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1 (KeepW.of_mfr hf1) (by omega) UInt64.zero_le
           (hP.fr hf1) hsh hftP hrdP hmsP (by simpa using hcsP) _ ?_

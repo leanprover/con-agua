@@ -4,7 +4,7 @@ import ConAgua.Arena.IndPartsSpec.EqW
 /-!
 # EeK2
 
-`noF`, `eeK2`, `eeK1`, `tteK3`, `tteK2`, `tkaK8`.
+`noF`, `eeK2`, `eeK1`, `tteK3`, `tteK2`.
 -/
 
 noncomputable section
@@ -55,12 +55,6 @@ def tteK3 (m : Mem) : Option Word → Option (List Word × Mem)
 def tteK2 (n : Nat) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m) => tteK3 m (eqW n m (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0))
-
-/-! ## `target_k53_args` -/
-
-def tkaK8 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
 
 end L.Ind
 
