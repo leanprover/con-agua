@@ -199,8 +199,7 @@ theorem subRecN_lineVal (k ks v : Word)
   rcases hk with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
   · simp only [L.Scan.Line.lineVal, exprMask, strNameN, numNameN, appN, binderN, letEN, constEN,
       projN]
-    simp only [reduceIte, Nat.reduceEqDiff, or_false, false_or, or_true, true_or,
-      show ∀ a b : Word, a = b ↔ a = b from fun _ _ => Iff.rfl]
+    simp only [reduceIte, or_true, true_or]
     apply subRecN_e
     · funext k; simp [subBit]
     · intro k ks v hk
@@ -222,20 +221,20 @@ theorem std_step {k ks v ik pk E K : Word} {g : Fld} (h1 : k ≠ 21) (h2 : k ≠
         (lineStepN b k ks v ik pk).2.2) := by
   rw [L.Scan.Line.lineStepN_pay b k ks v ik pk h1 h2 h3, hK, hE]
   by_cases h : pk = 0 ∧ E ≠ 0 ∧ ks < E
-  · rw [if_pos h, if_pos ⟨hK0, h.1, h.2.2⟩]; simp
-  · rw [if_neg h]
+  · rw [ite_eq_left h, ite_eq_left ⟨hK0, h.1, h.2.2⟩]; simp
+  · rw [ite_eq_right h]
     by_cases h' : K ≠ 0 ∧ pk = 0 ∧ ks < E
     · exfalso; apply h; refine ⟨h'.2.1, fun h0 => ?_, h'.2.2⟩; rw [h0] at h'
       exact UInt64.not_lt_zero h'.2.2
-    · rw [if_neg h']; simp [LRS.fail]
+    · rw [ite_eq_right h']; simp [LRS.fail]
 
 /-- A successful `slot_nat` passes the key: the nat arms in the standard form. -/
 theorem slot_std (ks v : Word) (P : Prop) [Decidable P] (r : LRS) :
     (if P ∧ slotNatN b ks v ≠ 0 then r else .fail) =
       if P ∧ slotNatN b ks v ≠ 0 ∧ ks < slotNatN b ks v then r else .fail := by
   by_cases h : P ∧ slotNatN b ks v ≠ 0
-  · rw [if_pos h, if_pos ⟨h.1, h.2, slotNatN_pos b ks v h.2⟩]
-  · rw [if_neg h, if_neg (fun h' => h ⟨h'.1, h'.2.1⟩)]
+  · rw [ite_eq_left h, ite_eq_left ⟨h.1, h.2, slotNatN_pos b ks v h.2⟩]
+  · rw [ite_eq_right h, ite_eq_right (fun h' => h ⟨h'.1, h'.2.1⟩)]
 
 open L.Scan.Line (lineStepN lineKind lineVal) in
 /-- **One member: the single pass ends and classifies as Stage B does.** -/
@@ -249,10 +248,10 @@ theorem lrStepN_line (k ks v ik pk : Word) (f : Fld) :
     simp only [lrStepN, hi, reduceIte, lrIdx]
     rw [slot_std]
     by_cases h : ik = 0 ∧ slotNatN b ks v ≠ 0 ∧ ks < slotNatN b ks v
-    · rw [if_pos h, if_pos ⟨h.1, h.2.2⟩]; simp
+    · rw [ite_eq_left h, ite_eq_left ⟨h.1, h.2.2⟩]; simp
     · have hn : ¬ (ik = 0 ∧ ks < slotNatN b ks v) := fun h' => h ⟨h'.1, fun h0 => by
         have := h'.2; rw [h0] at this; exact UInt64.not_lt_zero this, h'.2⟩
-      rw [if_neg h, if_neg hn]; simp [LRS.fail]
+      rw [ite_eq_right h, ite_eq_right hn]; simp [LRS.fail]
   have h1 : k ≠ 21 := fun e => hi (.inl e)
   have h2 : k ≠ 19 := fun e => hi (.inr (.inl e))
   have h3 : k ≠ 18 := fun e => hi (.inr (.inr e))
@@ -283,14 +282,14 @@ theorem lrStepN_line (k ks v ik pk : Word) (f : Fld) :
   by_cases hm : k = 56 ∨ k = 38
   · simp only [lrStepN, hi, hn, hl, hm, reduceIte, lrName]
     have he := subRecN_lineVal (b := b) k ks v (by rcases hm with h | h <;> simp [h])
-    rw [if_pos hm] at he
+    rw [ite_eq_left hm] at he
     rw [he]
     exact std_step h1 h2 h3 (by rcases hm with rfl | rfl <;> decide) (by decide) rfl
   by_cases hx : k = 2 ∨ k = 29 ∨ k = 14 ∨ k = 30 ∨ k = 9 ∨ k = 48
   · simp only [lrStepN, hi, hn, hl, hm, hx, reduceIte, lrExpr]
     have he := subRecN_lineVal (b := b) k ks v (by
       rcases hx with h | h | h | h | h | h <;> simp [h])
-    rw [if_neg hm] at he
+    rw [ite_eq_right hm] at he
     rw [he]
     exact std_step h1 h2 h3 (by rcases hx with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
       (by decide) rfl
@@ -306,7 +305,7 @@ theorem lrStepN_line (k ks v ik pk : Word) (f : Fld) :
       (by decide) rfl
   by_cases hme : k = 33
   · subst hme
-    simp only [lrStepN, reduceIte, lrMeta, Nat.reduceEqDiff, or_self, or_false, false_or]
+    simp only [lrStepN, reduceIte, lrMeta]
     exact std_step h1 h2 h3 (by decide) (by decide) (by simp [lineVal, metaN])
   · simp only [lrStepN, hi, hn, hl, hm, hx, ht, hd, hme, reduceIte]
     rw [L.Scan.Line.lineStepN_pay b k ks v ik pk h1 h2 h3]
@@ -330,12 +329,12 @@ theorem pairN_natListN : ∀ i cnt w x0 x1, (natListN b i cnt w).1 ≠ 0 →
       rcases hc with hc | hc | hc <;> rw [hc] <;> decide
     rw [pairN_other b i cnt x0 x1 h h93 hd]; exact ih x0 x1 hn
   | case2 i cnt w h hc h93 hw =>
-    intro hn; rw [natListN] at hn; simp [h, hc, h93, hw] at hn
+    intro hn; rw [natListN] at hn; simp [h, h93, hw] at hn
   | case3 i cnt w h hc h93 hw =>
     intro _
     rw [natListN_close_ok b i cnt w h hc h93 hw, pairN_close b i cnt x0 x1 h h93]
   | case4 i cnt w h hc h93 h44 hw =>
-    intro hn; rw [natListN] at hn; simp [h, hc, h93, h44, hw] at hn
+    intro hn; rw [natListN] at hn; simp [h, h44, hw] at hn
   | case5 i cnt w h hc h93 h44 hw ih =>
     intro hn
     rw [natListN_comma b i cnt w _ rfl h hc h93 h44 (by simpa using hw)] at hn ⊢
@@ -346,8 +345,8 @@ theorem pairN_natListN : ∀ i cnt w x0 x1, (natListN b i cnt w).1 ≠ 0 →
     rw [pairN_digit b i cnt x0 x1 h h93 hd hlt]; exact ih _ _ hn
   | case9 i cnt w h hc h93 h44 hd hw he hlt =>
     intro hn
-    rw [natListN, dite_eq_left h, if_neg (by simpa using hc), if_neg h93, if_neg h44, if_pos hd,
-      if_neg hw, if_neg he, if_neg hlt] at hn
+    rw [natListN, dite_eq_left h, ite_eq_right (by simpa using hc), ite_eq_right h93, ite_eq_right h44, ite_eq_left hd,
+      ite_eq_right hw, ite_eq_right he, ite_eq_right hlt] at hn
     exact absurd rfl hn
   | case10 i cnt w h hc h93 h44 hd =>
     intro hn
@@ -478,7 +477,7 @@ theorem exprN_lrStep (i w ks w' k v ik pk : Word) (f : Fld)
           | (simp only [natF, exprF, fldPut, litEnd, reduceIte] at hk ⊢; done)
           | (simp only [natF, exprF, fldPut, litEnd, reduceIte] at hk ⊢; simp_all; done)
           | (rw [recObjN_sub (by simp [ExprKind]) h.2.1]
-             simp [objFld, fldPut, exprF, slotNatN_pos, h.2.2])
+             simp [objFld, fldPut, exprF, h.2.2])
           | (simp_all [slotNatN_pos, fldPut, natF, litEnd])
       · exact absurd rfl he
   · exfalso

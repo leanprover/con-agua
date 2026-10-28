@@ -272,21 +272,4 @@ theorem applyDLine_ref {p : Prog} (hF : DeclFieldLookups p) (hDL : DeclLookups p
   rw [h2] at hR
   exact ⟨hR.twin, hR.arena, hR.mode, hR.grow⟩
 
-/-- **A run of `apply_dline` (`runF`, the front's line model's reading of it) is its
-refinement's ok half.** -/
-theorem applyDLine_runF {p : Prog} (hXI : DLineLookups p) (hAL : L.Front.Ind.IndApplyLookups p)
-    (hFI : L.Front.Ind.IndFieldLookups p) (hII : L.Front.Ind.IndInstallLookups p) {b : ByteArray}
-    (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) {m m' : Mem} {a : AState}
-    {st : StateD} (hm : m.arr8 IN = b.data) (hA : ArenaD m a) (hD : StateDR m st)
-    (hok : ConRon.Bridge.StateOK a) {j : USize} {r : LineRec} {e' : USize}
-    (hloop : scanLineLoop b j true 0 0 .absent = .ok r e')
-    (h : runF p "apply_dline" [j.toUInt64] m = some m') : ApplyDLinePost st a r m m' := by
-  obtain ⟨x, hx, hxm⟩ := runF_some h
-  have hW := M.of_run' (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
-    (applyDLine_specE p hXI.apply_dline hXI.apply_ind hAL.decl.apply_decl hAL.decl.decl_kind x.1 _
-      j.toUInt64)
-  have hP := applyDLine_ref hXI.dfields hAL.decl hAL hFI hII h64 hsize x.1 hm hA hD hok hloop
-  rw [hW.2, hxm] at hP
-  exact hP
-
 end L.Front

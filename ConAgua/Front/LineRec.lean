@@ -476,7 +476,7 @@ def lrDecl (b : Array UInt8) (k ks v ik pk : Word) (f : Fld) : LRS :=
   else .fail
 
 /-- The header. -/
-def lrMeta (b : Array UInt8) (k ks v ik pk : Word) (f : Fld) : LRS :=
+def lrMeta (b : Array UInt8) (_k ks v ik pk : Word) (f : Fld) : LRS :=
   if pk = 0 ∧ metaN b v ≠ 0 ∧ ks < metaN b v then ⟨metaN b v, ik, 5, ⟨7, f.idx, f.a, f.c, f.d⟩⟩
   else .fail
 
@@ -530,7 +530,7 @@ variable (b : Array UInt8) (i w ik pk : Word) (f : Fld)
 theorem lrStepN_lt (k ks v : Word) (h : (lrStepN b k ks v ik pk f).e ≠ 0) :
     ks < (lrStepN b k ks v ik pk f).e := by
   unfold lrStepN at h ⊢
-  repeat' split at h <;> rename_i hk <;> simp only [hk, reduceIte, true_or, or_true] at *
+  repeat' split at h <;> rename_i hk <;> simp only [hk, reduceIte] at *
   all_goals first
     | (simp only [LRS.fail] at h; exact absurd rfl h)
     | (simp only [lrIdx, lrNat, lrList, lrName, lrExpr, lrLit, lrDecl, lrMeta] at h ⊢
@@ -653,8 +653,8 @@ theorem subBit_spec (n : Nat) (s₀ : St) (kd k : Word) :
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc]
     all_goals simp only [Cond.pval, Expr.pval, Locals.init, List.getD_cons_zero,
-      List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true, Bool.or_eq_true,
-      beq_iff_eq, decide_eq_true_eq] at *
+      List.getD_cons_succ, Cmp.eval, Bool.or_eq_true,
+      beq_iff_eq] at *
     all_goals subst_vars
     all_goals grind [subBit, appBit, binderBit, letEBit, constEBit, projBit, strNameBit,
       numNameBit, Sig.retVal, Sig.retOr]
@@ -747,7 +747,7 @@ theorem lrArmIdx_spec (n : Nat) (s₁ : St) :
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Cmp.eval, Bool.or_eq_true, beq_iff_eq, bne_iff_ne, ne_eq,
+      List.headD_cons, List.tail_cons, Cmp.eval, beq_iff_eq, bne_iff_ne, ne_eq,
       Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, lrIdx, idxCode,
     Sig.retOr]
@@ -764,9 +764,9 @@ theorem lrArmNat_spec (n : Nat) (s₁ : St) :
       slotNat_spec p b hb hpd hpn hps n, readNat_spec p b hprn n]
   all_goals subst_vars
   all_goals try rfl
-  all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.or_eq_true, Bool.not_eq_true',
-      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval,
+      beq_iff_eq, bne_iff_ne, ne_eq, Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, lrNat, natF,
     Sig.retOr]
 
@@ -782,8 +782,8 @@ theorem lrArmList_spec (n : Nat) (s₁ : St) :
       scanNatList_spec p b hb hpd hpn hpl n, recNatList_spec p b hb hpd hpn hprn hprp n]
   all_goals subst_vars
   all_goals try rfl
-  all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.or_eq_true, Bool.not_eq_true',
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval,
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, lrList, Sig.retOr]
 
@@ -799,8 +799,7 @@ theorem lrArmName_spec (n : Nat) (s₁ : St) :
       subRec_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr n]
   all_goals subst_vars
   all_goals try rfl
-  all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.or_eq_true, Bool.not_eq_true',
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, lrName, nameF,
     Obj.enc, Sig.retOr]
@@ -818,8 +817,7 @@ theorem lrArmExpr_spec (n : Nat) (s₁ : St) :
       subRec_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr n]
   all_goals subst_vars
   all_goals try rfl
-  all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.or_eq_true, Bool.not_eq_true',
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons, Cmp.eval, Bool.or_eq_true,
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, lrExpr, exprF,
     exprMask, objFld, Obj.enc, Sig.retOr]
@@ -838,8 +836,8 @@ theorem lrArmLit_spec (n : Nat) (s₁ : St) :
       readNat_spec p b hprn n]
   all_goals subst_vars
   all_goals try rfl
-  all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.or_eq_true, Bool.not_eq_true',
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval,
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, lrLit, litEnd,
     Sig.retOr]
@@ -862,8 +860,8 @@ theorem lrArmDecl_spec (n : Nat) (s₁ : St) :
       L.Scan.Records.scanIndD_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpl hpml hpbo hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_indD n]
   all_goals subst_vars
   all_goals try rfl
-  all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.or_eq_true, Bool.not_eq_true',
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, Cmp.eval,
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, lrDecl, lineVal,
     Sig.retOr]
@@ -881,7 +879,7 @@ theorem lrArmMeta_spec (n : Nat) (s₁ : St) :
   all_goals subst_vars
   all_goals try rfl
   all_goals simp only [Cond.pval, Expr.pval, L.rd8, St.setLoc_loc, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.or_eq_true, Bool.not_eq_true',
+      List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.not_eq_true',
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, lrMeta, metaN, byteW,
     Sig.retOr]

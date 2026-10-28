@@ -7,9 +7,8 @@ import ConAgua.Front.DeclsPre
 The checker parses the stream with the prelude's records still in `DECL[0‥P)`
 (`Checker/Prelude.lean`): `front_run` starts from a memory related to the blank parse state
 prefixed by them (`StateD.blank.pre D`, `Front/DeclsPre.lean`). The twin's parse only pushes to
-`decls` (`applyLine_pre`), so the frontend's own refinement carries over: the memory after is
-related to the twin's final parse state prefixed by `D` (`frontAll_refines_pre`,
-`frontAll_refines_chunks_pre`).
+`decls` (`applyLine_pre`), so the frontend's own refinement carries over: the memory is related to
+the twin's parse state prefixed by `D` (`FrontInvP`, the driver's invariant, `FrontRunRef.lean`).
 -/
 
 open Std.WP
@@ -41,48 +40,10 @@ theorem applyLine_pre_res {st : StateD} {r : LineRec} {a : AState} (h : AM.ok (a
   | error e => simp
   | ok v => intro _; rfl
 
-/-- The driver's invariant after the prelude: as `FrontInv`, the memory related to the twin's
+/-- The driver's invariant after the prelude: the input is `b`, the memory related to the twin's
 parse state prefixed by `D`, con-ron's bridge invariant of the twin's own. -/
 def FrontInvP (b : ByteArray) (m : Mem) (a : AState) (st : StateD) : Prop :=
   m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m (st.pre D) ∧ TwinOK a st ∧ ModeOK m
-
-section refine
-variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
-include h64 hsize
-
-theorem lineKW_step_pre (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
-    (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : DLineLookups p) (m m' : Mem) (i : USize) (ok nx : Word) (st : StateD)
-    (a : AState) (hI : FrontInvP D b m a st) (_hi : i < b.usize)
-    (h : lineKW p b.data m i.toUInt64 = some (ok, nx, m'))
-    (hok : ok ≠ 0) : LineStepI (FrontInvP D b) b i nx st a m' := by
-  unfold lineKW at h
-  split at h
-  · cases h
-  rename_i r m₁ hW
-  split at h
-  · rename_i hk
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
-    rcases frontLineW_shape _ _ _ _ _ _ hW with hr | hr
-    · rw [hr] at hok; exact absurd rfl hok
-    rw [hr] at hW
-    obtain ⟨⟨r', q, st', h1, h2, h3, h4, h5, h6⟩, hM⟩ :=
-      frontLineW_refines b h64 hsize p hFI hAI hII hXI m m₁ hI.1 i a (st.pre D) hI.2.1 hI.2.2.1
-        hI.2.2.2.2 hI.2.2.2.1.1 _ hW
-    have h3' := (applyLine_pre_ok D).mp h3
-    rw [applyLine_pre_res D h3'] at h4
-    rw [applyLine_pre_st D] at h5
-    cases hres : AM.res (applyLine st r') a with
-    | inr v => rw [hres] at h4; cases h4
-    | inl st₀ =>
-      rw [hres] at h4
-      simp only [preL, Sum.map_inl, Sum.inl.injEq] at h4
-      subst h4
-      exact ⟨r', q, st₀, h1, h2, h3', hres, ⟨hk.trans hI.1, h5, h6, hI.2.2.2.1.line h3' hres, hM⟩⟩
-  · cases h
-
-end refine
 
 section init
 variable (m m' : Mem) (a : AState) (hR : ArenaD m a) (hD : StateDR m (StateD.blank.pre D))
@@ -124,12 +85,6 @@ theorem frontInitW_refines_pre (h : frontInitW m = some m') :
         (by simp [StateD.pre])
 
 end init
-
-section refine2
-variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
-include h64 hsize
-
-end refine2
 
 end pre
 

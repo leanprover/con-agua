@@ -1,15 +1,18 @@
-import ConAgua.Front.ApplyDLineRef
-import ConAgua.Scan.LineLink
+import ConAgua.Front.Line
+import ConAgua.Front.UnescapeLink
+import ConAgua.Front.StateDR
+import ConLeche.Frontend.ExportC
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
-# `front_line` refines con-ron's per-line step
+# The pieces of con-ron's per-line step
 
-`frontLineW_refines`: if `front_line(i)`'s model returns `(1, next)`, con-leche's scanner reads a
-record `r` at `i` with `next` the position after it (`scanLineFwd`), and con-ron's `applyLine st r`
-succeeds from the arena state `a₀` with a parse state `st'` such that the memory after is related
-to its arena state by `ArenaD` and to `st'` by `StateDR`. `frontLine_refines` is the same for the
-L run.
+`LineStep`: con-leche's scanner reads a record `r` at `i` with `next` the position after it
+(`scanLineFwd`), and con-ron's `applyLine st r` succeeds from the arena state `a₀` with a parse
+state `st'` such that the memory after is related to its arena state by `ArenaD` and to `st'` by
+`StateDR`. A name or level line's fields applied are that step (`lineRecW_refines`); the
+expression and declaration lines' are `ApplyExprRefine.lean`'s and `ApplyDLineRef.lean`'s.
+`front_line`'s refinement is `frontLine_ref` (`LineRef.lean`).
 -/
 
 open Std.WP
@@ -174,144 +177,6 @@ theorem applyLine_expr (st : StateD) (a₀ : AState) (i : Nat) (r : ExprRec)
     (Sum.inl : StateD → StateD ⊕ RecordVerdict) a₀ h
   exact ⟨h1, h3, h2⟩
 
-/-- **The fields after a line's `{`, applied**: on the record con-leche's line loop reads there,
-`apply_any`'s model is con-ron's `applyLine`. -/
-theorem applyAnyW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
-    (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : DLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState)
-    (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st) (hmode : ModeOK m)
-    (hok : ConRon.Bridge.StateOK a₀)
-    (j : USize) (r : LineRec) (e : USize)
-    (hloop : scanLineLoop b j true 0 0 .absent = .ok r e)
-    (h : applyAnyW p b.data m j.toUInt64 = some m') :
-    ∃ st', AM.ok (applyLine st r) a₀ ∧ AM.res (applyLine st r) a₀ = .inl st' ∧
-      ArenaD m' (AM.st (applyLine st r) a₀) ∧ StateDR m' st' ∧ ModeOK m' := by
-  unfold applyAnyW at h
-  split at h
-  · rename_i hpl
-    have hRec := recLine_link b h64 hsize j true 0 0 .absent Fld.none r e hloop itemR_zero trivial
-    exact lineRecW_refines b h64 hsize m m' hm a₀ st hR hD hmode _ r hRec h
-  split at h
-  · rename_i _ hpl
-    have hX := exprLineN_link b h64 hsize j r e hloop hpl
-    generalize exprLineN b.data j.toUInt64 = f at hX h
-    rcases r with _ | _ | ⟨i, er⟩ | _ | _ | _ <;> simp only [ERecR] at hX
-    obtain ⟨hI, hE⟩ := hX
-    obtain ⟨hok, hA', hD', hM'⟩ := applyExprW_refines b h64 hsize m m' a₀ st hR hD hmode f i er hI hE h
-    obtain ⟨h1, h2, h3⟩ := applyLine_expr st a₀ i er hok
-    exact ⟨_, h1, h2, by rw [h3]; exact hA', hD', hM'⟩
-  · obtain ⟨⟨st', h1, h3⟩, h2, h4, -⟩ :=
-      applyDLine_runF hXI hAI hFI hII h64 hsize hm hR hD hok hloop h
-    refine ⟨st', by simp [AM.ok, h1], by simp [AM.res, h1], by simp [AM.st, h1]; exact h2, h3,
-      h4 hmode⟩
-
-/-- **`front_line`'s model refines con-ron's per-line step**: a line it accepts (`(1, nx)`) is one
-con-leche's scanner reads and con-ron's `applyLine` applies, with `ArenaD` and `StateDR` after. -/
-theorem frontLineW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
-    (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : DLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (i : USize)
-    (a₀ : AState) (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st) (hmode : ModeOK m)
-    (hsok : ConRon.Bridge.StateOK a₀) (nx : Word)
-    (h : frontLineW p b.data m i.toUInt64 = some ([1, nx], m')) :
-    LineStep b i nx st a₀ m' ∧ ModeOK m' := by
-  have hL := lineFwd_link b h64 hsize i
-  have hs := ConAgua.Scan.skipWs_toUInt64_eq b h64 (by omega) i
-  unfold frontLineW at h
-  split at h
-  · simp at h
-  rename_i hok
-  obtain ⟨r, q, hsc, hq⟩ : ∃ r q, scanLineFwd b i = .ok r q ∧
-      q.toUInt64 = (lineFwdN b.data i.toUInt64).2 := by
-    revert hL hok
-    cases scanLineFwd b i with
-    | ok r q => intro hL _; exact ⟨r, q, rfl, by rw [← hL]; rfl⟩
-    | err e => intro hL hok; rw [← hL] at hok; exact absurd rfl hok
-  rw [USize.toNat_toUInt64, ← hs] at h
-  have hsc' := hsc
-  unfold scanLineFwd at hsc'
-  dsimp only at hsc'
-  generalize hsw : skipWs b i = s at hsc' h
-  have hbs : b.data.size = b.size := rfl
-  split at h
-  · -- a record
-    rename_i hrec
-    obtain ⟨hslt, hs123⟩ := hrec
-    have hsU : s < b.usize := (lt_usize_iff b h64 hsize s).mpr hslt
-    have hb123 : byteAt b s = 123 := by
-      rw [byteW_eq b h64 hsize] at hs123; exact (u8_toUInt64_eq _ 123 (by decide)).mp hs123
-    simp only [hb123, show ((123 : UInt8) == 10) = false by decide, Bool.false_eq_true, ite_false,
-      show (b.usize ≤ s) = False from propext ⟨fun h' => absurd hsU (USize.not_lt.mpr h'), False.elim⟩,
-      show ((123 : UInt8) != 123) = false by decide] at hsc'
-    split at hsc'
-    · cases hsc'
-    rename_i r' j hloop
-    have hrr : r' = r := by
-      split at hsc'
-      · cases hsc'; rfl
-      · split at hsc'
-        · cases hsc'; rfl
-        · cases hsc'
-    subst hrr
-    obtain ⟨m₁, hW, hm₁⟩ := Option.map_eq_some_iff.mp h
-    rw [← succ_toUInt64 h64] at hW
-    simp only [okRes, Prod.mk.injEq] at hm₁
-    obtain ⟨hnx, rfl⟩ := hm₁
-    have hnx' : nx = (lineFwdN b.data i.toUInt64).2 := by
-      have := congrArg (fun l => l.tail.headD 0) hnx; simpa using this.symm
-    obtain ⟨st', h1, h2, h3, h4, h5⟩ :=
-      applyAnyW_refines b h64 hsize p hFI hAI hII hXI m m₁ hm a₀ st hR hD hmode hsok _ r' j hloop hW
-    exact ⟨⟨r', q, st', hsc, by rw [hq, hnx'], h1, h2, h3, h4⟩, h5⟩
-  · -- a blank line
-    rename_i hrec
-    simp only [Option.some.injEq, Prod.mk.injEq, List.cons.injEq, true_and, and_true] at h
-    obtain ⟨hnx, rfl⟩ := h
-    have hr : r = .blank := by
-      split at hsc'
-      · cases hsc'; rfl
-      split at hsc'
-      · cases hsc'; rfl
-      rename_i h10 hle
-      split at hsc'
-      · cases hsc'
-      rename_i h123
-      exfalso; apply hrec
-      have hsU : s < b.usize := by
-        have := USize.not_le.mp hle; exact this
-      refine ⟨(lt_usize_iff b h64 hsize s).mp hsU, ?_⟩
-      rw [byteW_eq b h64 hsize]
-      have : byteAt b s = 123 := by simpa using h123
-      rw [this]; rfl
-    subst hr
-    obtain ⟨h1, h2, h3⟩ := applyLine_pure st a₀ .blank (.inr rfl)
-    exact ⟨⟨.blank, q, st, hsc, by rw [hq, hnx], h1, h2, by rw [h3]; exact hR, hD⟩, hmode⟩
-
 end refine
-
-/-- **`front_line(i)` refines con-ron's per-line step**: when it returns `(1, nx)`, con-leche's
-scanner reads a record at `i` whose next position is `nx`, and con-ron's `applyLine` applies it,
-with `ArenaD` and `StateDR` holding of the memory after. -/
-@[refines ConRon.Arena.Frontend.applyLine]
-theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
-    (hpf : p.lookup "front_line" = some frontLine)
-    (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
-    (hpl : p.lookup "apply_level" = some applyLevel) (hpr : p.lookup "apply_rec" = some applyRec)
-    (hpt : p.lookup "apply_str" = some applyStr) (hE : ExprLookups p)
-    (hFI : L.Front.Ind.IndFieldLookups p)
-    (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : DLineLookups p) (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
-    (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data) (i : USize) (hi : i.toNat ≤ b.size)
-    (a₀ : AState) (st : StateD) (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st)
-    (hmode : ModeOK s₀.mem) (hok : ConRon.Bridge.StateOK a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "front_line" [i.toUInt64]
-    ⦃fun r s' => ∀ nx, r = [1, nx] → LineStep b i nx st a₀ s'.mem; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  have hW := M.of_run (P := fun s => s = s₀) hs hrun
-    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE b.data hsize n s₀ hm i.toUInt64
-      (by rw [USize.toNat_toUInt64]; exact hi) hR.1.lit.1.cap hR.1.lit.1.top)
-  intro nx hr
-  subst hr
-  exact (frontLineW_refines b h64 hsize p hFI hAI hII hXI s₀.mem s'.mem hm i a₀ st hR hD hmode hok nx hW).1
 
 end L.Front

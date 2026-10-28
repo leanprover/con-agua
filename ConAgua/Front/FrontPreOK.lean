@@ -1,15 +1,13 @@
-import ConAgua.Front.FrontPreOK3
 import ConAgua.Front.FrontPre
 import ConAgua.Checker.HoistWalkRef
-import ConAgua.Checker.FrontProg
 
 /-!
 # The frontend after the prelude, with the records' words (lane `pipeline`)
 
-`frontAll_refines_pre_ok`: `frontAll_refines_pre` (`FrontPre.lean`) where, in addition, every record
-of `DECL` before the run is `RecOK` (`Checker/HoistRefBase.lean`); then every record after it is.
-The run is `runI_refines` with the stronger invariant
-`FrontInvOK`. The memory side of a line is `DGrow` (`FrontPreOK1.lean`‥`FrontPreOK3.lean`); the
+`FrontInvOK`, the driver's invariant (`FrontRunRef.lean`): `FrontInvP` (`FrontPre.lean`) and,
+in addition, every record of `DECL` is `RecOK` (`Checker/HoistRefBase.lean`) and the twin's records
+are walkable (`GoodDecl`). `front_init` establishes it (`initKW_inv_ok`) and every line keeps it
+(`recOK_line`). The memory side of a line is `DGrow` (`FrontPreOK1.lean`, `FrontPreOK2.lean`); the
 twin side is that a line pushes at most one record, and an inductive block of `indInfo`, `ctorInfo`
 and `recInfo` constants (`applyLine_decls`). A pointer word of an inductive record decodes to one
 of those, so it is not `0` (the truncated pool's word `0` decodes to an `axiomInfo`): `recOK_new`.
@@ -319,33 +317,26 @@ def FrontInvOK (b : ByteArray) (m : Mem) (a : AState) (st : StateD) : Prop :=
     (∀ x < D.size + st.decls.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) ∧
     ∀ d ∈ st.decls, GoodDecl d
 
+/-- **`front_init` leaves `DECL`, `DLP` alone.** -/
+theorem initKW_dk (m m' : Mem) (h : initKW m = some m') : DK m m' := by
+  unfold initKW at h
+  split at h; cases h; rename_i m₂ hW
+  split at h
+  · cases h
+    simp only [frontInitW] at hW
+    cases h1 : putK NID 0 (nainternW m) with
+    | none => rw [h1] at hW; simp [initK] at hW
+    | some m₁ =>
+      rw [h1, initK_some] at hW
+      refine (DK.putK (.inl rfl) (fun w m₃ hI => ?_) h1).trans
+        (DK.putK (.inr (.inl rfl)) (fun w m₃ hI => ?_) hW)
+      · exact DK.ofFrame (consInternM_frame nanonCS_wf hI)
+      · exact DK.ofFrame (consInternM_frame zeroCS_wf hI)
+  · cases h
+
 section refine
-variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
-include h64 hsize
+variable (b : ByteArray)
 
-theorem lineKW_step_ok (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
-    (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : DLineLookups p) (m m' : Mem) (i : USize) (ok nx : Word) (st : StateD)
-    (a : AState) (hI : FrontInvOK D b m a st) (hi : i < b.usize)
-    (h : lineKW p b.data m i.toUInt64 = some (ok, nx, m'))
-    (hok : ok ≠ 0) : LineStepI (FrontInvOK D b) b i nx st a m' := by
-  obtain ⟨r', q, st₀, h1, h2, h3, h4, hInv⟩ :=
-    lineKW_step_pre D b h64 hsize p hFI hAI hII hXI m m' i ok nx st a hI.1 hi h hok
-  have hg := lineKW_grow b h64 hsize p hFI hAI hII hXI m m' hI.1.1 i a (st.pre D) hI.1.2.1
-    hI.1.2.2.1 hI.1.2.2.2.1.1 ok nx h
-  have hrun := AM.run_of_ok _ _ h3
-  rw [h4] at hrun
-  have hd := applyLine_decls hrun
-  refine ⟨r', q, st₀, h1, h2, h3, h4, hInv, recOK_line hI.1.2.2.1 hInv.2.2.1 hg hI.2.1 hd, ?_⟩
-  rcases hd with e | ⟨d, e, hgd⟩
-  · rw [e]; exact hI.2.2
-  · rw [e]
-    intro d' hd'
-    rcases Array.mem_push.mp hd' with h' | h'
-    · exact hI.2.2 d' h'
-    · rw [h']; exact hgd
-
-omit h64 hsize in
 /-- `front_init`'s model, after the prelude, establishes the driver's invariant. -/
 theorem initKW_inv_ok : ∀ (m m₁ : Mem) (a : AState),
     (m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m (StateD.blank.pre D) ∧
@@ -368,75 +359,7 @@ theorem initKW_inv_ok : ∀ (m m₁ : Mem) (a : AState),
     · rw [he]; simp
   · cases hi
 
-
-/-- **The driver's model refines `parseBytes`, after the prelude, with the records' words.** -/
-theorem frontRunW_refines_pre_ok (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
-    (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : DLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
-    (hA : ArenaD m a₀) (hD : StateDR m (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
-    (hR : ∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) (hmo : ModeOK m)
-    (h : runI (lineKW p b.data) b.size (initKW m) = some (0, m')) :
-    ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧ FrontInvOK D b m' a' st' :=
-  runI_refines (FrontInvOK D b) b h64 hsize (lineKW p b.data)
-    (lineKW_step_ok D b h64 hsize p hFI hAI hII hXI)
-    (fun m a => m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m (StateD.blank.pre D) ∧
-      ConRon.Bridge.StateOK a ∧ a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧
-      (∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) ∧ ModeOK m) initKW
-    (initKW_inv_ok D b) m m' a₀ ⟨hm, hA, hD, hok, hoff, hpins, hR, hmo⟩ h
-
 end refine
-
-/-- **Bytes → stores after the prelude, with the records' words**: `frontAll_refines_pre`, and
-when every record of `DECL` before is `RecOK`, so is every record after; the twin's records are
-walkable. -/
-theorem frontAll_refines_pre_ok (b : ByteArray) (h64 : System.Platform.numBits = 64)
-    (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
-    (_hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
-    (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
-    (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x) (hmode : ModeOK s₀.mem) :
-    ⦃fun s => s = s₀⦄
-    invoke frontAllProg (exec frontAllProg n) "front_run" []
-    ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
-      ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st' ∧ ModeOK s'.mem ∧
-      (∀ x < D.size + st'.decls.size, L.Checker.RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun h0
-  have hW := M.of_run (P := fun s => s = s₀) hs hrun
-    (frontRun_specI frontAllProg (lineKW frontAllProg b.data) b.data
-      (fun m => ∃ a st, FrontInvOK D b m a st)
-      (fun n s₁ i hm hI hi => frontLineK_spec frontAllProg frontAllProg_scan frontAllProg_front rfl
-        rfl rfl rfl rfl rfl frontAllProg_expr
-        b.data hsize _
-        (fun m ⟨_, _, hI⟩ => ⟨hI.1.2.1.1.lit.1.cap, hI.1.2.1.1.lit.1.top⟩)
-        (inv_step frontAllProg (FrontInvOK D b) b h64 hsize
-          (fun m m' i ok nx st a hI hi h hok => lineKW_step_ok D b h64 hsize frontAllProg
-            frontAllProg_indFields frontAllProg_indApply frontAllProg_indInstall frontAllProg_dline
-            m m' i ok nx st a hI hi h hok)) n s₁ i hm hI hi)
-      initKW s₀.mem (fun n s₁ hs₁ => initK_inv frontAllProg frontAllProg_front frontAllProg_expr rfl
-        (FrontInvOK D b) _ (initKW_inv_ok D b) s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins, hR, hmode⟩
-        n s₁ hs₁) rfl n s₀ hm rfl)
-  rw [h0] at hW
-  obtain ⟨st', a', h1, ⟨-, h2, h3, h4, hM⟩, h5, -⟩ :=
-    frontRunW_refines_pre_ok D b h64 hsize frontAllProg frontAllProg_indFields frontAllProg_indApply
-      frontAllProg_indInstall frontAllProg_dline s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hR hmode hW
-  exact ⟨st', a', h1, h2, h3, h4, hM, h5⟩
-
-/-- **The same at the checker's program** (`checkerProg_front_run`). -/
-theorem frontRunOK_checker (b : ByteArray) (h64 : System.Platform.numBits = 64)
-    (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
-    (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
-    (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
-    (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x) (hmode : ModeOK s₀.mem) :
-    ⦃fun s => s = s₀⦄
-    invoke L.Checker.checkerProg (exec L.Checker.checkerProg n) "front_run" []
-    ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
-      ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st' ∧ ModeOK s'.mem ∧
-      (∀ x < D.size + st'.decls.size, L.Checker.RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x); ⊤⦄ := by
-  rw [L.Checker.checkerProg_front_run n]
-  exact frontAll_refines_pre_ok D b h64 hsize n s₀ hm hpool a₀ hA hD hok hoff hpins hR hmode
 
 end pre
 

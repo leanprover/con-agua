@@ -1,7 +1,7 @@
 import ConAgua.Checker.PipeStages
 import ConAgua.Checker.PrepProgChecker
 import ConAgua.Checker.FrontReset
-import ConAgua.Front.FrontPreOK
+import ConAgua.Front.FrontRunRef
 import ConRon.Bridge.Frontend.Prepare
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -122,10 +122,10 @@ theorem bp_h1 (h64 : System.Platform.numBits = 64) (a : AState) :
   intro n _hn s₀
   apply M.triple_of_run
   intro s r s' hs hrun
-  refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun ⟨hA, hD, ht, hpool, hmo⟩ hr0 => ?_⟩
+  refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun ⟨hA, hD, ht, _, hmo⟩ hr0 => ?_⟩
   subst hs
   have hQ := L.Front.frontRunOK_checker #[] preludeText h64 preludeText_size n (s.setIn preIn)
-    (by show (s.mem.setIn preIn).arr8 IN = _; rw [Mem.arr8_setIn_zero, preIn_eq]) hpool a
+    (by show (s.mem.setIn preIn).arr8 IN = _; rw [Mem.arr8_setIn_zero, preIn_eq]) a
     (ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) hA)
     (by rw [blank_pre_empty]; exact hD.frame (setIn_frame _ _) (by simp) (by simp)) ht.ok ht.off
     ht.pins (fun x hx => absurd hx (by simp)) (ModeOK.frame hmo (setIn_frame _ _) (by simp) (by simp))

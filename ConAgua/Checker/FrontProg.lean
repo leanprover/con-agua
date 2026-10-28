@@ -1,16 +1,15 @@
 import ConAgua.Checker.FrontProgAgree
-import ConAgua.Front.ChunkBridge
 import ConAgua.Arena.LevelIntern
 import ConAgua.Arena.LevelSubstLP
 
 /-!
 # The frontend's refinement at the checker's program (lane `pipeline`)
 
-`frontRun_checker`: `L.Front.frontAll_refines` with `frontAllProg` replaced by `checkerProg`, and
-`frontRun_checker_chunks`: `frontAll_refines_chunks`'s statement (`parseChunks [b]`) at
-`checkerProg`.
+`checkerProg_front_run`: `front_run` runs in `checkerProg` as in `L.Front.frontAllProg`, so its
+refinement there (`frontRun_ref`) holds at the checker's program (`frontRunOK_checker`,
+`frontRun_checker_chunks`, `FrontRunRef.lean`).
 
-`checkerProg` does not satisfy `frontRun_refines`'s lookup bundles: it binds no `validate`,
+`checkerProg` does not satisfy `frontRun_ref`'s lookup bundles: it binds no `validate`,
 `str_put` or `apply_ind_line` (nothing reachable from `check` calls them; `FrontLookups`,
 `IndLineLookups` and the single `str_put` lookup name them). So instead of instantiating the
 parametric theorem, the run itself is transferred: the two programs agree on the functions
@@ -112,26 +111,5 @@ theorem checkerProg_front_run (n : Nat) :
   invoke_exec_agree (P := inFront)
     (fun f hf => checkerProg_frontAgree f ((inFront_iff f).1 hf))
     checkerProg_frontClosed n (by decide)
-
-/-! ## The refinements -/
-
-open scoped Lean.Order
-open Std.WP L.Arena L.Front ConRon.Arena ConRon.Arena.Frontend
-
-/-- **`front_run` of the checker's program refines the twin's streaming parse of one chunk**
-(`parseChunks [b]`, the checker statement's form). -/
-@[refines ConRon.Arena.Frontend.parseChunks]
-theorem frontRun_checker_chunks (b : ByteArray) (h64 : System.Platform.numBits = 64)
-    (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
-    (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
-    (hD : StateDR s₀.mem StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hmode : ModeOK s₀.mem) :
-    ⦃fun s => s = s₀⦄
-    invoke checkerProg (exec checkerProg n) "front_run" []
-    ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseChunks [b]).run a₀ = .ok (.ok (.ofState st'), a') ∧
-      ArenaD s'.mem a' ∧ StateDR s'.mem st'; ⊤⦄ := by
-  rw [checkerProg_front_run n]
-  exact ConAgua.Front.ChunkBridge.frontAll_refines_chunks b h64 hsize n s₀ hm hpool a₀ hA hD hok
-    hoff hpins hmode
 
 end L.Checker

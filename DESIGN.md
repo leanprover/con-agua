@@ -3118,6 +3118,9 @@ is related to an arena state `a₀` by `ArenaD` and to the blank parse state by 
 `front_run()` returns `0`, then `(parseBytes b).run a₀ = .ok (.ok (.ofState st'), a')` (con-ron's
 whole-buffer parse accepts) and the final memory is related to `a'` by `ArenaD` and to `st'` by
 `StateDR`. Only `propext`, `Classical.choice`, `Quot.sound`. No `sorry` in `ConAgua/Front`.
+(2026-10-28: the generic loop model `runW`/`runI`, `frontLineW` and `lineKW` are gone; `front_line`
+and `front_run` have generated models and one refinement each for both outcomes, `frontLine_ref`
+(`LineRef.lean`) and `frontRun_ref` (`FrontRunRef.lean`), `docs/design/unifiede.md` §3.38.)
 
 * **Expression lines.** `front_line` reads a line's fields with `rec_line_loop` (names, levels);
   if that finds no name/level payload, with `rec_expr_loop` (`apply_any`). All ten `ExprRec` kinds
@@ -5470,7 +5473,8 @@ hypothesis. Decisions:
   (`exec_mono`, via `step_mono`: `step p k` is monotone in the continuation `k`) and a call's run
   does not depend on the caller's locals (`invoke_loc`); `runF_spec` is the callee spec, and the
   refinement goes back to the fuel-indexed model through `applyInd_spec` (`runF_some`). So the
-  line models gained a `Prog` parameter.
+  line models gained a `Prog` parameter. (2026-10-28: `runF` and the line models are gone; the line reads
+  `apply_dline` and `apply_ind` through their unified models.)
 * **`DIND` is `DLP`** (array 68), not a new array 69: one pool for the declarations' universe
   parameters and the blocks' constant records, so `DeclAt`/`decl_push` stay as they are.
   `DeclAt` is unchanged (lane `decls`' `DeclsR` relies on `indDecl` being `False` there); the
