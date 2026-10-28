@@ -7,14 +7,14 @@ import ConRon.Bridge.Grind
 # The prelude's copies of the frontend are the frontend on the prelude's bytes (lane `pipeline`)
 
 `builtin_prelude` runs `pre_front_run`, the frontend with every function that reads the input
-copied by `preFn` (`Checker/Prelude.lean`): `ld8 0 i` becomes `ldc preludeBytes i`, `len8 0` the
+copied by `preFn` (`Checker/Prelude.lean`): `ld8 IN i` becomes `ldc preludeBytes i`, `len8 IN` the
 constant `preludeLenW`. **The simulation**: a returning run of a copy `pre_f` from state `s` is a
-returning run of the original `f` from `s` with byte array `0` replaced by the prelude's bytes
-(`St.setIn`), with the same results, ending in the copy's final state with byte array `0`
+returning run of the original `f` from `s` with byte array `IN` replaced by the prelude's bytes
+(`St.setIn`), with the same results, ending in the copy's final state with byte array `IN`
 replaced the same way. So every spec of `f` is a spec of `pre_f` (`preSim_triple`).
 
 The program's shape (`PreSimProg p t S`): every copied function `f` (its name in the tree `t`)
-has its copy at `"pre_" ++ f`, stores no byte into array `0`, and calls only copied functions
+has its copy at `"pre_" ++ f`, stores no byte into array `IN`, and calls only copied functions
 (renamed by `preName`) or shared ones (`S`); a shared function reads and writes no byte of array
 `0` and calls only shared functions.
 -/
@@ -25,22 +25,22 @@ open L L.Compiler
 open Std.WP
 open scoped Lean.Order
 
-/-- Byte array `0` replaced by `x`. -/
+/-- Byte array `IN` replaced by `x`. -/
 def _root_.L.Mem.setIn (m : Mem) (x : Array UInt8) : Mem :=
-  { m with bytes := fun a => if a = 0 then x else m.bytes a }
+  { m with bytes := fun a => if a = IN then x else m.bytes a }
 
-/-- Byte array `0` of the state's memory replaced by `x`. -/
+/-- Byte array `IN` of the state's memory replaced by `x`. -/
 def _root_.L.St.setIn (s : St) (x : Array UInt8) : St := { s with mem := s.mem.setIn x }
 
 /-- The prelude's bytes, as the input array. -/
 def preIn : Array UInt8 := preludeBytes.toArray
 
-/-- A byte source other than byte array `0`. -/
+/-- A byte source other than byte array `IN`. -/
 def _root_.L.BSrc.noIn : BSrc → Bool
   | .arr a => a != IN
   | .rom _ => true
 
-/-- No access to byte array `0`. -/
+/-- No access to byte array `IN`. -/
 def _root_.L.Expr.noIn : Expr → Bool
   | .ld8 a i => a != IN && i.noIn
   | .len8 a => a != IN
@@ -60,7 +60,7 @@ def _root_.L.Cond.noIn : Cond → Bool
   | .and p q | .or p q => p.noIn && q.noIn
   | .not p => p.noIn
 
-/-- No access to byte array `0` (no read, no store). -/
+/-- No access to byte array `IN` (no read, no store). -/
 def _root_.L.Stmt.noIn : Stmt → Bool
   | .set _ e | .gset _ e => e.noIn
   | .st8 a i e => a != IN && i.noIn && e.noIn
@@ -75,7 +75,7 @@ def _root_.L.Stmt.noIn : Stmt → Bool
   | .scan8 _ s i e _ => s.noIn && i.noIn && e.noIn
   | _ => true
 
-/-- No store into byte array `0`. -/
+/-- No store into byte array `IN`. -/
 def _root_.L.Stmt.noSt8In : Stmt → Bool
   | .st8 a _ _ => a != IN
   | .seq s t => s.noSt8In && t.noSt8In
@@ -109,14 +109,14 @@ structure PreSimProg (p : Prog) (t : NTree) (S : FnName → Bool) : Prop where
 @[simp] theorem _root_.L.St.setIn_mem (s : St) (x : Array UInt8) : (s.setIn x).mem = s.mem.setIn x := rfl
 @[simp] theorem _root_.L.St.setIn_loc (s : St) (x : Array UInt8) : (s.setIn x).loc = s.loc := rfl
 
-theorem _root_.L.Mem.arr8_setIn_ne {m : Mem} {x : Array UInt8} {a : ArrId} (ha : a ≠ 0) :
+theorem _root_.L.Mem.arr8_setIn_ne {m : Mem} {x : Array UInt8} {a : ArrId} (ha : a ≠ IN) :
     (m.setIn x).arr8 a = m.arr8 a := by
   simp [Mem.setIn, Mem.arr8, ha]
 
-@[simp] theorem _root_.L.Mem.arr8_setIn_zero (m : Mem) (x : Array UInt8) : (m.setIn x).arr8 0 = x := by
+@[simp] theorem _root_.L.Mem.arr8_setIn_zero (m : Mem) (x : Array UInt8) : (m.setIn x).arr8 IN = x := by
   simp [Mem.setIn, Mem.arr8]
 
-theorem _root_.L.Mem.set8_setIn {m : Mem} {x : Array UInt8} {a : ArrId} (ha : a ≠ 0) (i v : Word) :
+theorem _root_.L.Mem.set8_setIn {m : Mem} {x : Array UInt8} {a : ArrId} (ha : a ≠ IN) (i v : Word) :
     (m.set8 a i v).setIn x = (m.setIn x).set8 a i v := by
   unfold Mem.set8
   rw [Mem.arr8_setIn_ne ha]
@@ -156,7 +156,7 @@ theorem _root_.L.St.setLocs_mem (s : St) (xs : List Var) (vs : List Word) :
   | cons y ys ih => exact ih (s.setLoc y (vs.headD 0)) vs.tail
 
 /-- The copy's run keeps the input array. -/
-def Keep (s s1 : St) : Prop := s1.mem.arr8 0 = s.mem.arr8 0
+def Keep (s s1 : St) : Prop := s1.mem.arr8 IN = s.mem.arr8 IN
 
 theorem Keep.refl (s : St) : Keep s s := rfl
 
@@ -246,7 +246,7 @@ theorem ldc_run (d : List UInt8) (j : Word) (s : St) :
   unfold ldc
   split <;> rfl
 
-theorem erel_ld8_ne {a : ArrId} (ha : a ≠ 0) {ci oi : Expr} (hi : ERel ci oi) :
+theorem erel_ld8_ne {a : ArrId} (ha : a ≠ IN) {ci oi : Expr} (hi : ERel ci oi) :
     ERel (.ld8 a ci) (.ld8 a oi) := by
   refine ERel.load hi (fc := ld8 a) (fo := ld8 a) ?_ (fun _ => rfl) (fun _ => rfl)
   intro s j v s1 _ h
@@ -259,8 +259,8 @@ theorem erel_ld8_ne {a : ArrId} (ha : a ≠ 0) {ci oi : Expr} (hi : ERel ci oi) 
   · cases h
 
 theorem erel_ld8_zero {ci oi : Expr} (hi : ERel ci oi) :
-    ERel (.ldc preludeBytes ci) (.ld8 0 oi) := by
-  refine ERel.load hi (fc := ldc preludeBytes) (fo := ld8 0) ?_ (fun _ => rfl) (fun _ => rfl)
+    ERel (.ldc preludeBytes ci) (.ld8 IN oi) := by
+  refine ERel.load hi (fc := ldc preludeBytes) (fo := ld8 IN) ?_ (fun _ => rfl) (fun _ => rfl)
   intro s j v s1 h0 h
   rw [ldc_run] at h; rw [ld8_run]
   simp only [St.setIn_mem, Mem.arr8_setIn_zero, preIn, List.size_toArray, List.getElem_toArray]
@@ -328,7 +328,7 @@ def BRel (cb ob : BSrc) : Prop := ∀ s : St, s.mem.HasB IN → (s.setIn preIn).
 
 theorem brel_preB : ∀ b, BRel (preB b) b
   | .arr a, s, h0 => by
-    by_cases ha : a = 0
+    by_cases ha : a = IN
     · subst ha; simp [preB, Mem.src8, Mem.arr8_setIn_zero, preIn]
     · simp [preB, ha, Mem.src8, Mem.arr8_setIn_ne ha]
   | .rom d, _, _ => rfl
@@ -371,13 +371,13 @@ theorem erel_preE : ∀ e, ERel (preE e) e
   | .len64t a t => erel_len64t (erel_preE t)
   | .ld8x8 b i => erel_ld8x8 (brel_preB b) (erel_preE i)
   | .ld8 a i => by
-    by_cases ha : a = 0
+    by_cases ha : a = IN
     · subst ha; simp only [preE, ite_true]; exact erel_ld8_zero (erel_preE i)
     · simp only [preE, ha, ite_false]; exact erel_ld8_ne ha (erel_preE i)
   | .len8 a => by
-    by_cases ha : a = 0
+    by_cases ha : a = IN
     · subst ha; simp only [preE, ite_true]
-      refine erel_leaf (fun _ => preludeLenW) (fun s => s.mem.len8 0) (fun _ => rfl) (fun _ => rfl)
+      refine erel_leaf (fun _ => preludeLenW) (fun s => s.mem.len8 IN) (fun _ => rfl) (fun _ => rfl)
         (fun s h0 => ?_)
       simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_zero, preIn, List.size_toArray, preludeLenW]
     · simp only [preE, ha, ite_false]
@@ -537,7 +537,7 @@ inductive Sim (t : NTree) (S : FnName → Bool) : Stmt → Stmt → Prop
   | abort (e : Expr) : Sim t S (.abort e) (.abort e)
   | set (x : Var) {ce oe : Expr} : ERel ce oe → Sim t S (.set x ce) (.set x oe)
   | gset (g : GVar) {ce oe : Expr} : ERel ce oe → Sim t S (.gset g ce) (.gset g oe)
-  | st8 {a : ArrId} {ci oi ce oe : Expr} : a ≠ 0 → ERel ci oi → ERel ce oe →
+  | st8 {a : ArrId} {ci oi ce oe : Expr} : a ≠ IN → ERel ci oi → ERel ce oe →
       Sim t S (.st8 a ci ce) (.st8 a oi oe)
   | st64 (a : ArrId) {ci oi ce oe : Expr} : ERel ci oi → ERel ce oe →
       Sim t S (.st64 a ci ce) (.st64 a oi oe)
@@ -1005,7 +1005,7 @@ theorem preSim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t
     (h0 : s.mem.HasB IN)
     (h : (invoke p (exec p n) ("pre_" ++ f) vs).run s = .ok (r, s')) :
     (invoke p (exec p n) f vs).run (s.setIn preIn) = .ok (r, s'.setIn preIn) ∧
-      s'.mem.arr8 0 = s.mem.arr8 0 := by
+      s'.mem.arr8 IN = s.mem.arr8 IN := by
   exact invoke_sim_copy hP n (ksim hP n) f hf vs s r s' h0 h
 
 /-- **A spec of `f` is a spec of its copy**, on the memory with the prelude's bytes as input. -/
@@ -1014,7 +1014,7 @@ theorem preSim_triple {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimP
     (s₀ : St) (h0 : s₀.mem.HasB IN) {Q : List Word → St → Prop}
     (hQ : ⦃fun s => s = s₀.setIn preIn⦄ invoke p (exec p n) f vs ⦃fun r s => Q r s; ⊤⦄) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) ("pre_" ++ f) vs
-    ⦃fun r s => Q r (s.setIn preIn) ∧ s.mem.arr8 0 = s₀.mem.arr8 0; ⊤⦄ := by
+    ⦃fun r s => Q r (s.setIn preIn) ∧ s.mem.arr8 IN = s₀.mem.arr8 IN; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨h1, h2⟩ := preSim hP n f hf vs s r s' (hs ▸ h0) hrun

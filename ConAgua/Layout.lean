@@ -45,8 +45,8 @@ namespace L
 of con-ron's per-tier tables. -/
 declare_arrays checkerArrays
   -- byte arrays
-  | /-- The input buffer. -/ IN : byte := 0
-  | /-- The pin data (`pins.bin`). -/ Rom.PB : byte := 1
+  | /-- The input buffer. -/ IN : byte := 243
+  | /-- The pin data (`pins.bin`). -/ Rom.PB : byte := 244
   -- the stores (`Arena/StoreFields.lean`): the pool, then per table its records and cons slots
   | /-- The limb pool: limbs, level lists' handles, names' bytes (`Arena/Pool.lean`). -/
     Arena.POOL : word tiered := 0

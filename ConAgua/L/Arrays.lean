@@ -140,14 +140,14 @@ def mins (T : ArrTable) : List (Nat × Nat) :=
 def tblArr (T : ArrTable) : Option (ArrId × Nat) :=
   (T.find? (·.atTable)).map fun d => (d.id, d.min)
 
-/-- **Well-formed**: the numbers of each kind distinct, only word arrays tiered or with a
+/-- **Well-formed**: the numbers distinct (one name space for both kinds), only word arrays tiered or with a
 minimum length; at most one table-relative array, a word array with a minimum length (its
 length), not tiered. -/
 def wf (T : ArrTable) : Bool :=
   T.all (fun d => d.tiered → d.kind == .word) && T.all (fun d => d.min != 0 → d.kind == .word) &&
     T.all (fun d => d.atTable → d.kind == .word && !d.tiered && d.min != 0) &&
     decide ((T.filter (·.atTable)).length ≤ 1) &&
-    nodupB (T.ids .byte) && nodupB (T.ids .word)
+    nodupB (T.map (·.id))
 
 /-! ### The surface check -/
 
