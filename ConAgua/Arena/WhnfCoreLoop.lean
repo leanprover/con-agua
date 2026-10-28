@@ -6,7 +6,6 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreSlot
-import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
 
 /-!

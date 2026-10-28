@@ -1,6 +1,7 @@
+import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.RefECore
 import ConAgua.Arena.CoreErec
 import ConAgua.Arena.WhnfIotaRefine
-import ConAgua.Arena.WhnfCoreProj
 import ConAgua.L.Records
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

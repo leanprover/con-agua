@@ -92,7 +92,6 @@ ConAgua/Arena/StubNames.lean	public import ConAgua.Arena.IndIface	# the build ne
 ConAgua/Arena/TeleLift.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/WalkLeaves.lean	public import ConAgua.L.PureEval	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Arena/WhnfCoreAppLoop.lean	public import ConAgua.Arena.WhnfCoreApp	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
-ConAgua/Arena/WhnfCoreLoop.lean	public import ConAgua.Arena.WhnfCoreProj	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/WhnfCoreLoop.lean	public import ConAgua.Arena.WhnfCoreSlot	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/WhnfIotaRec.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/WhnfIotaRecRefine2.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs

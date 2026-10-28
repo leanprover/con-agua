@@ -1,4 +1,4 @@
-import ConAgua.Verdict.DeclValE
+import ConAgua.Verdict.VCtx
 import ConAgua.Verdict.IndsE1
 import ConAgua.Arena.IndT.Lift
 

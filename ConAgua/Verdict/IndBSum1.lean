@@ -1,5 +1,5 @@
+import ConAgua.Verdict.VCtx
 import ConAgua.Verdict.IndE
-import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

@@ -1,6 +1,5 @@
+import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndT.RecGen3
-import ConAgua.Verdict.DeclValE
-import ConAgua.Verdict.UnresolvedE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 /-!

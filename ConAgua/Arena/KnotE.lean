@@ -1,4 +1,4 @@
-import ConAgua.Arena.RefECore
+import ConAgua.Arena.Verdict
 
 /-!
 # The knot's error half: the five slots' verdict claims
