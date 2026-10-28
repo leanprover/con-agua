@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.Tail
 import ConAgua.Arena.IndT.Positivity
+import ConAgua.Arena.IndT.PosRoot
 import ConAgua.Arena.IndT.RecGen21
 import ConAgua.Arena.IndT.Install7
 
