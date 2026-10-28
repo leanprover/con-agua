@@ -1,5 +1,4 @@
 import ConAgua.Arena.DefEqBody
-import ConAgua.Arena.WhnfCoreLoop
 import ConAgua.Arena.InferFieldSortNat
 import ConAgua.Arena.PropReadRefine4
 import ConAgua.Arena.InferProj2
@@ -10,6 +9,7 @@ import ConAgua.Arena.WhnfIotaRecRefine3
 import ConAgua.Arena.WalkCore
 import ConAgua.Arena.InstLPEntry
 import ConAgua.Arena.WhnfM2CRefine5
+import ConAgua.Arena.WhnfSlotRefine
 
 /-!
 # The knot tied (lane `defeq`)
@@ -219,15 +219,10 @@ theorem KnotAllProg.whnfCoreStep (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p 
   whnfCoreSlot_step p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) supKeep_of n hk
 
 include hq in
-/-- The knot's `whnf` slot one level up: lane `whnf`'s `whnf_refines`, `whnfLoop_refines` and
-`whnfStep_refines'` (over `inst_lp`; `reduce_nat` is `reduceNat_refines`). -/
-theorem KnotAllProg.whnfStep (n : Nat) (hk : KnotUpTo p n) : WhnfSlot p (n + 1) := by
-  intro F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hs he
-  have hws : WhnfStepUpTo p n := fun j hj F' s a dn' vis' fe' MM' eb' mode' d' e' hF' hs' he' hk' =>
-    whnfStep_refines' p hq.delta hq.instLP j (fun k _ => reduceNat_refines p hq.delta k) F' s a dn'
-      vis' fe' MM' eb' mode' d' e' hF' (by omega) hs' he' hk'
-  exact whnf_refines p hq.delta.toWhnfDeltaProg n (by omega) hk
-    (whnfLoop_refines p hq.delta.toWhnfDeltaProg n hws) F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hs he
+/-- The knot's `whnf` slot one level up (`whnf_refines`, over `inst_lp`; `reduce_nat` through its
+unified model). -/
+theorem KnotAllProg.whnfStep (n : Nat) (hk : KnotUpTo p n) : WhnfSlot p (n + 1) :=
+  whnf_refines p hq.delta hq.instLP (natOpResultOK_of_agree hq.delta.natAgree) n hk
 
 include hq in
 /-- `DefeqCallees`: the walks from `CoreWalks.lean`, the rest from `KnotCallees`. -/

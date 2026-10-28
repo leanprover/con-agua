@@ -704,17 +704,6 @@ def ReduceNatSpec (p : Prog) (n : Nat) : Prop :=
       (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decOptR s₀ a₀ dn vis fe MM eb
       ResW
 
-/-- `whnf_step(mode, vis, d, e)` refines `whnfStep` at every knot fuel `F ≥ n`, given `KnotUpTo p n`
-(its `r.whnfCore false depth e` is `call whnf_core(mode, 0, vis, d, e)`, its `r.whnf` calls are
-`reduce_nat`'s). -/
-def WhnfStepSpec (p : Prog) (n : Nat) : Prop :=
-  ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
-    KnotUpTo p n →
-    CoreSpec p n "whnf_step" [mode, vis, d, e]
-      (whnfStep (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decStep s₀ a₀ dn vis fe MM eb
-      ResW
-
 /-- `whnf_loop(mode, vis, d, e)` refines `whnfLoop` at every knot fuel `F ≥ n` and every loop fuel
 `K ≥ n` (the lead's shape for the `2 ^ 62` loop fuels: `whnf_loop` refines `whnfLoop` directly,
 generalized over the loop-fuel argument, so that `whnf`'s own theorem can instantiate it at

@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DefEqLoopsE
+import ConAgua.Verdict.DefEqTailE
 
 /-!
 # The `defeq` slot's error half one level up, assembled (lane `verdicts-b`, helper `k3`)
@@ -17,15 +18,12 @@ namespace L.Arena
 
 /-- **The whnf family's error claims this family uses** (hypotheses; each in its ok
 refinement's shape: `boolTrueShortcut_refines`, `propIrrel_refines`, `ReduceProjCoreH`,
-`setCert_refines`, `suCert_refines`, `ProofIrrelOK`, `etaCert_refines`). -/
+`ProofIrrelOK`). -/
 structure DefeqWhnfE (p : Prog) : Prop where
   boolTrueShortcut : BoolTrueShortcutE p
   propIrrel : PropIrrelE p
   reduceProjCore : ReduceProjCoreE p
-  setCert : SetCertE p
-  suCert : SuCertE p
-  proofIrrel : ProofIrrelE p
-  etaCert : EtaCertE p
+  proofIrrel : ProofIrrelWE p
 
 section all
 variable {p : Prog} (hq : KnotAllProg p) (hw : DefeqWhnfE p) (hnv : closedNV p L.Checker.nvFns = true)
@@ -63,15 +61,8 @@ theorem KnotAllProg.lazyDeltaReductionE : LazyDeltaReductionE p :=
 include hq hw hnv in
 /-- `defeq_tail`'s error claim. -/
 theorem KnotAllProg.defeqTailE : DefeqTailE p :=
-  let sp := hq.body.stuck
-  let sc := KnotAllProg.stuck hq
-  let irrE := stuckIrrel_refinesE p sp hq.body.iota sc hw.setCert hw.suCert hw.proofIrrel
-  defeqTail_refinesE p sp sc
-    (projPair_refinesE p sp (ldpr_refinesE p sp sc (KnotAllProg.lazyDeltaStepE hq hnv)
-      hw.reduceProjCore))
-    (defeqStuck_refinesE p sp (stuckStrE_of p sp sc irrE hnv)
-      (stuckAppE_of p sp sc (appCongE_of p sp (defeqLst_refinesE p hq.lst) hnv) irrE)
-      (stuckRestE_of p sp sc irrE hw.etaCert hnv) hnv) hnv
+  defeqTail_refinesE p hq.body.stuck hq.body.iota (KnotAllProg.stuck hq) (KnotAllProg.lazyDeltaStepE hq hnv)
+    hw.reduceProjCore hw.proofIrrel (defeqLst_refinesE p hq.lst) hnv
 
 include hq hw hnv in
 /-- **`defeq_body`'s callees' error claims**, all of this family's proved. -/

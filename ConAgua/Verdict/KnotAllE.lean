@@ -15,10 +15,9 @@ The three families' error halves of the knot's slots one level up, put together:
   (`defeqArg_refinesE` over the `defeq` slot and `defeq_e`'s `defeqE_refinesE`);
 * the `whnf_core`/`whnf` slots (`whnfSlotsE_of`, `WhnfKnotE.lean`), over `defeq_list`'s claim
   (`defeqList_refinesE`, `DefEqLoopsE.lean`);
-* the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's seven
-  claims (`DefeqWhnfE`), each from its `Whnf*E.lean` proof. The whnf family's local copies
-  `ProofIrrelWE`, `DefeqLstWE`, `QuickDefeqWE` of the defeq family's `ProofIrrelE`, `DefeqLstE`,
-  `QuickDefeqSpecE` are the same propositions (bridged by unfolding).
+* the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's four
+  claims (`DefeqWhnfE`), each from its `Whnf*E.lean` proof. The whnf family's `QuickDefeqWE` and
+  the defeq family's `QuickDefeqSpecE` are the same proposition (bridged by unfolding).
 
 `KnotAllProg.knotStepE` is the error knot's step (`KnotStepE`), `KnotAllProg.knotE_all` the error
 knot at every fuel (`knotE_upTo`). `KnotTopProg.coreStubsE`: the three `*_core` stage stubs'
@@ -66,7 +65,7 @@ theorem KnotAllProg.whnfCE : WhnfCalleesE p :=
   ⟨defeqList_refinesE p hq.iotaRec.toIotaProg'⟩
 
 include hq hnv in
-/-- **The whnf family's seven error claims the `defeq` family takes** (`DefeqWhnfE`). -/
+/-- **The whnf family's four error claims the `defeq` family takes** (`DefeqWhnfE`). -/
 theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
   boolTrueShortcut := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha =>
     RefE.coreSpecE (btsE_spec p hq.body.lazy.mid.bts (n + 1) s₀ mode vis d a) hnv hkE
@@ -80,22 +79,7 @@ theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
       hkE (rp_ref p hq.core (strLitSupported_core p hq.str) (strLitCtor_core p hq.str)
         (KnotAllProg.projC hq) (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs
         hsn hc (supKeep_of fe))
-  setCert := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
-    RefE.coreSpecE (secE_spec p hq.body.stuck.setCert hq.body.stuck.setWith hq.body.stuck.setWtb
-      hq.body.stuck.setGo hq.body.stuck.setTail (n + 1) s₀ mode vis d a b) hnv
-      ⟨hkE, defeqLst_refinesE p hq.lst⟩
-      (sec_ref p hq.body.stuck hq.body.iota (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d
-        a b hF hn hs ha hb)
-  suCert := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
-    RefE.coreSpecE (sucE_spec p hq.body.stuck.sunit hq.body.stuck.suHead hq.body.stuck.suTail (n + 1) s₀
-      mode vis d a b) hnv hkE
-      (suc_ref p hq.body.stuck (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
   proofIrrel := proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv
-  etaCert := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d ty1 body1 b hF hn hs hty hbody hb =>
-    RefE.coreSpecE (ecE_spec p hq.body.stuck.etaCert hq.body.stuck.etaCertBody hq.body.stuck.etaCertTy
-      (n + 1) s₀ mode vis d ty1 body1 b) hnv hkE
-      (ec_ref p hq.body.stuck (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d ty1 body1 b hF
-        hn hs hty hbody hb)
 
 include hq hnv in
 /-- **The error knot's step**: the five slots' error halves one level up from the knot and the

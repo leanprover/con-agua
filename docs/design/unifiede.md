@@ -2154,16 +2154,14 @@ the slots, as `m2c_*` in §3.7):
   `irAt`/`irC`/`irMajor`/`irFire`/`irFam`, `pm`, `lmtc`, `pirr`), `WhnfModels6E` (`mtc`); their claims
   in `WhnfMidE`, `WhnfUnitE`, `WhnfIotaE`, `WhnfIotaRecE`, `WhnfPrepE`, `WhnfIdxE`, `WhnfPirrE`,
   `WhnfM2CE`, `WhnfCertsE`, `WhnfSetE`, `WhnfStuckE`;
-- [ ] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
-  `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`; done,
-  §3.42),
-  `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step` (these two done, §3.43), `whnf`,
-  `whnf_loop`, `whnf_step`; claims
-  in `WhnfSlotE`);
+- [x] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
+  `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`),
+  `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step`, `whnf`, `whnf_loop`, `whnf_step`; claims
+  in `WhnfSlotE`). Done (§3.42, §3.43, §3.45);
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
-  `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43);
+  `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE` (§3.45, §3.46);
 - [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.44), `InferBindE` (6: `infer_lams`/`infer_pis` and
   their leaves), `InferSpineE` (4), `InferArmsE` (8), `InferKnotE` (4: `infer_body(_io)`, `infer`,
   `infer_io`).
@@ -2929,4 +2927,105 @@ pieces cut by `seqTake`/`seqDrop` (the head, the record, the `find_proj` call on
 and only after an `if` whose branches both fall through, which `infer_proj`'s miss block (its `then`
 branch fails) is not. **Generator wish**: `cut` at a statement whose `if`'s failing branch ends in
 `fail` (or several cuts), so `ipE`'s step splits as the old hand pieces did.
+
+### 3.45 Retirement, group B, `is_def_eq`, third landing (the stuck side)
+
+Six of `Verdict/DefEqTailE`'s nine: `stuck_irrel` (`si_ref`, `Arena/DefEqStuckIrrel`), `stuck_str`
+(`str_ref`, `DefEqStuckStr`), `stuck_app_cong`, `stuck_app` (`ac_ref`, `sa_ref`, `DefEqStuckApp`),
+`stuck_rest`, `defeq_stuck` (`dr_ref`, `ds_ref`, `DefEqStuckDisp`). The `@[refines]`/`refines_part`
+theorems stay as `RefE.coreSpec` one-liners; `DefeqStuckE`, which `defeq_tail`'s claim reads, is a
+`RefE.coreSpecE` one-liner (`defeqStuck_refinesE`). Gone: the claims `stuckIrrel_refinesE`,
+`stuckRest_refinesE`, `stuckStr_refinesE`, `appCong_refinesE`, `stuckApp_refinesE` with their
+`errors` models and the statements `StuckIrrelE`, `AppCongE`, `StuckStrE`, `StuckAppE`,
+`StuckRestE`, `SetCertE`, `SuCertE`, `EtaCertE`, `ProofIrrelE`, `DefeqLstE` (the last two were the
+whnf family's `ProofIrrelWE`, `DefeqLstWE` again); `DefeqWhnfE`'s fields `setCert`, `suCert`,
+`etaCert` and their builders in `KnotAllE`; the ok models with their specs (`siK*`, `strK*`,
+`apK*`, `sapK1`, `dsLv`, `dsEta`, `drK`, `dsArm`, `dsK`) and the fuel-generic wrappers
+`setCert_at`, `suCert_at`, `stuckIrrel_at`, `etaCert_at`, `stuckApp_at`, `stuckStr_at`,
+`stuckRest_at`, `appCong_at`.
+
+| functions | before: ok refinements, models, specs + claims | after | change |
+|---|---:|---:|---:|
+| the 6 above | 840 + 795 = 1 635 | 741 + 18 = 759 | **−54 %** |
+
+Diff of the landing against master: +639 −1 581 lines in 8 files.
+
+Choices:
+
+* **`G`**: `StuckG p n` (`DefEqStuckIrrel`): the knot's slots, `proof_irrel`'s claim
+  `ProofIrrelWE` (it stays `callE`, its ok half `StuckCallees.proofIrrel`) and `defeq_lst`'s
+  `DefeqLstWE` (`stuck_app_cong` calls it through `callE`, its ok half `StuckCallees.defeqLst`;
+  `struct_eta_cert`'s `SetG` is `StuckG.set`).
+* **Callees**: the whnf family's unified `struct_eta_cert`, `struct_unit_cert`, `eta_cert` and the
+  family's own are listed by their unified specs; tails that re-list the answer word go through
+  `RefE.tail_eq` (`si_tail` for `stuck_irrel`'s five sites, `relist1` for `defeq_stuck`'s arms).
+* **`stuck_app_cong`'s stack top**: its leaves read `GrowPost.restore` over the composed
+  `StackGrew` of the two spines and the kept stacks after `defeq` and `defeq_lst` (`leaf` in
+  `ac_ref`); the old `GrowRef.restore`'s `136 < size` bound is gone.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master f6ca221b,
+`_tmp/retire-defeq/times3.txt`): `Arena/DefEqStuckIrrel` 0.89 → 1.15, `DefEqStuckStr` 10.02 → 22.38
+(+123 %), `DefEqStuckApp` 1.58 → 2.29 (+45 %), `DefEqStuckDisp` 6.18 → 9.00 (+46 %),
+`Verdict/DefEqTailE` 44.23 → 10.74, `DefEqAllE` 0.51 → 0.50, `KnotAllE` 3.15 → 3.21; sum 66.56 →
+49.27 (−26 %). **Three modules are more than 10 % slower**: the unified models moved in with the
+refinements (`strE`'s generation alone is about 20 s, as was the `errors` model's in `DefEqTailE`);
+the default recipe fails on `strE` (88 s). No generator or kit change was needed.
+
+### 3.45 Retirement, group B, `whnf` itself, third landing (`whnf_step`, `whnf_loop`, `whnf`)
+
+`wstep_ref`, `wloop_ref`, `whnf_ref` (new `Arena/WhnfSlotRefine`, after `reduce_nat`'s refinement in
+`Verdict/WhnfNatE`), over unified models that list their callees' unified specs: `whnf_step` lists
+`reduce_nat`'s, `whnf_loop` `whnf_step`'s, `whnf` `whnf_loop`'s (the memo's probes and puts and
+`unfold_definition` lifted, the `whnf_core` slot through its run). So all three have `G` =
+`KnotUpToE p n`, and `whnfSlotsE_step` needs neither `ReduceNatE` nor a loop claim. The knot's
+interfaces stay, as one-liners: `whnfStep_refines'` (now over `NatOpResultOK` instead of
+`reduce_nat`'s spec at every fuel), `whnfLoop_refines` (`@[refines]`, now under `n ≤ 2 ^ 62`),
+`whnf_refines` (no `WhnfLoopSpec` hypothesis), `whnfSlot_stepE`. Gone: the hand models `whnfStepW`,
+`whnfW` and the generated ok model `whnfLoopW` with their specs, `WhnfStepUpTo`, `WhnfStepSpec`,
+`whnfLoopW_ok`, the claims `whnfStep_refinesE`, `whnfLoopE_ok`, `whnfLoop_refinesE` and the old
+`whnfSlot_stepE`.
+
+| functions | before: ok side + claims | after | change |
+|---|---:|---:|---:|
+| `whnf_step`, `whnf_loop`, `whnf` | 475 | 203 | **−57 %** |
+
+With §3.42 and §3.43 the bullet is done: 11 functions, no `errors` model left in `WhnfModels2E`
+and `WhnfModelsE`.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 4f05df22): `Arena/WhnfDeltaSlot`
+3.12 → 1.12, `WhnfDeltaRefine4` 1.21 → 0.77, `WhnfSlotRefine` – → 0.98, `Verdict/WhnfModelsE`
+12.23 → 11.73, `WhnfSlotE` 0.99 → 0.49, `Arena/WhnfDelta`, `DefEqKnot`, `KnotSlot` 8.71 → 8.77;
+sum 26.26 → 23.86 (−9 %).
+
+### 3.46 Retirement, group B, `is_def_eq`, fourth landing (the projection pair and `defeq_tail`)
+
+The last three of `Verdict/DefEqTailE`: `ldpr_exit` (`ex_ref`), `defeq_proj_pair` (`pp_ref`,
+`Arena/DefEqStuckProj`), `defeq_tail` (`dt_ref`, `DefEqStuckTail`). `lazy_delta_proj_reduction`'s
+loop (`ldpr_ref`, unified since batch 2) reads `ex_ref` by `RefE.run_err` and its ok half
+`ldprExit_refines` (a `RefE.coreSpec` one-liner). `DefEqTailE` keeps `LazyDeltaStepE` and the
+one-liner `defeqTail_refinesE` (`DefeqTailE`, read by the `defeq` slot's error half). Gone: the
+claims `ldprExit_refinesE`, `ldpr_refinesE`, `projPair_refinesE`, `defeqTail_refinesE`'s proof with
+their `errors` models, the statements `ProjPairE`, `DefeqStuckE`, `LdprE` (and `ReduceProjCoreE`
+there: it moved to `DefEqStuckProj`), `defeqStuck_refinesE`; the ok models with their specs (`exK*`,
+`ppK`, `dtK*`) and `ldprExit_at`, `ldpr_at`, `projPair_at`, `defeqStuck_at`.
+
+| functions | before: ok refinements, models, specs + claims | after | change |
+|---|---:|---:|---:|
+| the 3 above | 397 + 405 = 802 | 346 + 38 = 384 | **−52 %** |
+
+* **`G`**: `ExitG p n` (the knot, `reduce_proj_core`'s claim `ReduceProjCoreE`: the stuck side
+  reads it through `StuckCallees`, `rp_ref` is not below it) for `ldpr_exit`; `LdprG p n` now holds
+  the step's claims (`lazy_delta_step` is outside the stuck side), the knot and `ReduceProjCoreE`
+  in place of `ldpr_exit`'s claims; `TailG p n` (`LdprG` and `StuckG`'s `ProofIrrelWE`,
+  `DefeqLstWE`) for `defeq_tail`.
+* **Callees**: `defeq_proj_pair` lists the loop's unified spec (its value is the loop's word, the
+  post re-lists it as `ldpr_ref`'s does); `defeq_tail` lists `defeq_proj_pair`'s and
+  `defeq_stuck`'s, the slots through `callE`.
+
+Diff of the landing against master: +312 −737 lines in 4 files (before the imports). Elaboration
+(user seconds, median of 3 interleaved runs, base master 63437296, `_tmp/retire-defeq/times4.txt`):
+`Arena/DefEqStuckProj` 5.77 → 9.29 (+61 %), `DefEqStuckTail` 1.71 → 2.80 (+64 %),
+`Verdict/DefEqTailE` 10.64 → 0.46, `DefEqAllE` 0.50 → 0.50, `KnotAllE` 3.05 → 3.07; sum 21.67 →
+16.12 (−26 %). The two Arena modules are slower for the same reason as in §3.45 (the generated
+models moved in with the refinements). No generator or kit change was needed.
 

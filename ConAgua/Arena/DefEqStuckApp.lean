@@ -53,66 +53,14 @@ theorem stuckAppT_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) :
 
 /-! ## The model of `stuck_app_cong` -/
 
-section apK
-variable (p : Prog) (n : Nat) (mode vis d a b : Word)
-
-def apK4 (ao an bo bn : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then call1W p n "defeq_lst" [mode, vis, d, ao, an, bo, bn] m
-    else some (r.headD 0, m)
-
-def apK3 (ao an bo bn fa : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => apK4 p n mode vis d ao an bo bn (callW p n "defeq" [mode, vis, d, fa, r.headD 0] m)
-
-def apK2' (ao an bo bn : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => apK3 p n mode vis d ao an bo bn (r.headD 0) (callW p n "get_app_fn" [b] m)
-
-def apK2 (ao an : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if an = r.tail.headD 0 then
-      apK2' p n mode vis d b ao an (r.headD 0) (r.tail.headD 0) (callW p n "get_app_fn" [a] m)
-    else some (0, m)
-
-/-- The model of `stuck_app_cong` before the top is put back. -/
-def apK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => apK2 p n mode vis d a b (r.headD 0) (r.tail.headD 0) (callW p n "get_app_args" [b] m)
-
-/-- **The model of `stuck_app_cong`.** -/
-def apK (m : Mem) : Option (Word × Mem) :=
-  (apK1 p n mode vis d a b (callW p n "get_app_args" [a] m)).bind
-    (fun x => swRet (rdW (m.arr64 CTL) 136) x.1 x.2)
-
-variable (r : List Word) (m : Mem) (ao an bo bn fa : Word)
-theorem apK1_some : apK1 p n mode vis d a b (some (r, m)) =
-    apK2 p n mode vis d a b (r.headD 0) (r.tail.headD 0) (callW p n "get_app_args" [b] m) := rfl
-theorem apK2'_some : apK2' p n mode vis d b ao an bo bn (some (r, m)) =
-    apK3 p n mode vis d ao an bo bn (r.headD 0) (callW p n "get_app_fn" [b] m) := rfl
-theorem apK3_some : apK3 p n mode vis d ao an bo bn fa (some (r, m)) =
-    apK4 p n mode vis d ao an bo bn (callW p n "defeq" [mode, vis, d, fa, r.headD 0] m) := rfl
-
-end apK
-
-theorem appCong_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "stuck_app_cong" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ apK p n mode vis d a b s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.stuckAppCong]
-  simp only [callFn, stuckAppCongL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
-      callW_spec p n "get_app_args", callW_spec p n "get_app_fn", callW_spec p n "defeq",
-      callW_spec p n "defeq_lst"] <;>
-  simp_all [apK, apK1, apK2, apK2', apK3, apK4, swRet, call1W, LocEq, St.setLocs_cons,
-    CTL, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ]
+/-- **`stuck_app_cong`'s model, both outcomes** (generated; the spines' callees lifted, the `defeq`
+slot and `defeq_lst` through their runs). -/
+l_model acE_spec (p : Prog) (hf : p.lookup "stuck_app_cong" = some stuckAppCongL)
+  fns [hf ↦ acE list]
+  specs [callW_spec p n "get_app_args", callW_spec p n "get_app_fn"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-! ## The refinements -/
 
@@ -136,86 +84,78 @@ theorem appCongT_eq (h : aa.length = bb.length) (fa fb : EIdx)
 
 end congRuns
 
-/-- **`stuck_app_cong` refines `appCongT`** at the knot (the top put back). -/
-@[refines_part ConRon.Arena.defeqStuck "the application arm's congruence (appCongT)"]
-theorem appCong_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
+/-- **`stuck_app_cong` refines `appCongT`, both outcomes** (the top put back): the errors are the
+`defeq` slot's and `defeq_lst`'s. -/
+theorem ac_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
-    CoreSpec p (n + 1) "stuck_app_cong" [mode, vis, d, a, b]
-      (appCongT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
-      s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (appCong_spec p hq n s₀ mode vis d a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+    RefE (StuckG p n) (acE p (n + 1) s₀.mem mode vis d a b)
+      (appCongT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  have hK := hk n (Nat.le_refl _)
   have hspn := hS.spn
-  simp only [apK] at hW
-  cases hpre : apK1 p n mode vis d a b (callW p n "get_app_args" [a] s.mem) with
-  | none => rw [hpre] at hW; cases hW
-  | some x =>
-  obtain ⟨v, mk⟩ := x
-  rw [hpre] at hW
-  simp only [Option.bind_some, swRet] at hW
-  have h136 : (136 : Word).toNat < (mk.arr64 CTL).size := by
-    by_cases hh' : (136 : Word).toNat < (mk.arr64 CTL).size
-    · exact hh'
-    · simp only [hh', ↓reduceIte] at hW; cases hW
-  simp only [h136, ↓reduceIte] at hW
-  obtain ⟨hv, hm⟩ := some_pair_inj hW
-  rw [← hm]
-  suffices hG : GrowRef (appCongT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
-      decBool dn s.mem vis fe M eb r mk from hG.restore h136
-  -- the two spines
-  obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hpre
-  obtain ⟨hf1, hg1, hr10, htop1, aa, hargs1, hsp1⟩ := getAppArgs_callW hq.leaf.core.spine hS ha hc1
+  -- a leaf: the answer `x` at `m`, after a run that grew the stack; the top put back
+  have leaf : ∀ (x : Word) (m : Mem) (T : AM Bool) (a y a') (M' : ModeMaps), T.run a = .ok (y, a') →
+      CoreS dn m a' vis fe M' eb → KeptAll M M' eb → StackGrew s₀.mem m → y = decBool [x] → HW x →
+      RefE (StuckG p n) (acE.j1 p (rdW (s₀.mem.arr64 CTL) 136) x m) T a
+        (CorePost decBool dn s₀.mem vis fe M eb ResH) :=
+    fun x m T a y a' M' hrun hS' hK hG hy hx =>
+      RefE.ret hrun (GrowPost.restore (r := [x]) ⟨⟨M', hS', hK, hG⟩, hy, hx⟩ [x] rfl hx)
+  simp only [acE]
+  rcases c1 : callW p n "get_app_args" [a] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none, acE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [acE.k_get_app_args]
+  cases n with
+  | zero => rw [callW_zero] at c1; cases c1
+  | succ k =>
+  obtain ⟨hf1, hg1, hr10, htop1, aa, hargs1, hsp1⟩ := getAppArgs_callW hq.leaf.core.spine hS ha c1
   have hS₁ := hS.frame_stk hf1 (by simp) (by simp)
-  rw [apK1_some] at hW1
-  obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
-  obtain ⟨hf2, hg2, hr20, htop2, bb, hargs2, hsp2⟩ := getAppArgs_callW hq.leaf.core.spine hS₁ hb hc2
+  rcases c2 : callW p (k + 1) "get_app_args" [b] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [liftE_none, acE.k_get_app_args_2.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [acE.k_get_app_args_2]
+  obtain ⟨hf2, hg2, hr20, htop2, bb, hargs2, hsp2⟩ := getAppArgs_callW hq.leaf.core.spine hS₁ hb c2
   have hS₂ := hS₁.frame_stk hf2 (by simp) (by simp)
   have hla : aa.length = (r₁.tail.headD 0).toNat := by simpa using hsp1.size
   have hlb : bb.length = (r₂.tail.headD 0).toNat := by simpa using hsp2.size
   have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hg1.size ▸ hspn
   have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := hg2.size ▸ hspn₁
-  refine growRef_preG (hg1.trans hg2) ?_
-  simp only [apK2] at hW2
   rcases (Classical.em (r₁.tail.headD 0 = r₂.tail.headD 0)).symm with heq | heq
-  · simp only [heq, ↓reduceIte] at hW2
-    obtain ⟨hv0, rfl⟩ := some_pair_inj hW2
+  · rw [ite_eq_right heq]
     have hne : ¬ aa.length = bb.length := by
       rw [hla, hlb]; exact fun e => heq (UInt64.toNat_inj.mp e)
-    exact growRef_pure hS₂ (appCongT_ne _ fe _ _ _ a₀ aa bb hargs1 hargs2 hne)
-      (decBool_false_of (by rw [← hv, ← hv0])).symm (by unfold ResH; rw [← hv, ← hv0]; exact hw0)
-  simp only [heq, ↓reduceIte] at hW2
+    exact leaf 0 m₂ _ a₀ false a₀ M (appCongT_ne _ fe _ _ _ a₀ aa bb hargs1 hargs2 hne) hS₂
+      (KeptAll.refl _ _) (hg1.trans hg2) rfl hw0
+  rw [ite_eq_left heq]
   have heq' : aa.length = bb.length := by rw [hla, hlb, heq]
-  obtain ⟨r₃, m₃, hc3, hW3⟩ := callW_cases rfl hW2
-  obtain ⟨rfl, hh3, hgaf3⟩ := getAppFn_callW hq.leaf hS₂.arena.1 ha hc3
-  rw [apK2'_some] at hW3
-  obtain ⟨r₄, m₄, hc4, hW4⟩ := callW_cases rfl hW3
-  obtain ⟨rfl, hh4, hgaf4⟩ := getAppFn_callW hq.leaf hS₂.arena.1 hb hc4
-  rw [apK3_some] at hW4
-  obtain ⟨r₅, m₅, hc5, hW5⟩ := callW_cases rfl hW4
-  refine growRef_congrS (appCongT_eq _ fe _ _ _ a₀ aa bb hargs1 hargs2 heq' _ _ hgaf3 hgaf4) ?_
-  have h₅ := CoreSpec.of_callW (hK.defeq F ⟨m₄, Locals.init []⟩ a₀ dn vis fe M eb mode d (r₃.headD 0)
-    (r₄.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hh3 hh4) hc5
-  obtain ⟨_, _, _, hst₅⟩ := h₅.2.1
-  refine growRef_bindS (GrowRef.of_core h₅) (fun M₅ hS₅ => ?_)
-  simp only [apK4] at hW5
+  rcases c3 : callW p (k + 1) "get_app_fn" [a] m₂ with _ | ⟨r₃, m₃⟩
+  · rw [liftE_none, acE.k_get_app_fn.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [acE.k_get_app_fn]
+  obtain ⟨hm3, hh3, hgaf3⟩ := getAppFn_callW hq.leaf hS₂.arena.1 ha c3
+  subst hm3
+  rcases c4 : callW p (k + 1) "get_app_fn" [b] m₃ with _ | ⟨r₄, m₄⟩
+  · rw [liftE_none, acE.k_get_app_fn_2.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [acE.k_get_app_fn_2]
+  obtain ⟨hm4, hh4, hgaf4⟩ := getAppFn_callW hq.leaf hS₂.arena.1 hb c4
+  subst hm4
+  refine RefE.of_run_eq (appCongT_eq _ fe _ _ _ a₀ aa bb hargs1 hargs2 heq' _ _ hgaf3 hgaf4) ?_
+  rcases c5 : callE p (k + 1) "defeq" [mode, vis, d, r₃.headD 0, r₄.headD 0] m₄ with e | ⟨r₅, m₅⟩
+  · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₄, Locals.init []⟩)
+      ((hG.knot (k + 1) (Nat.le_refl _)).defeq F _ a₀ dn vis fe M eb mode d (r₃.headD 0) (r₄.headD 0)
+        hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hh3 hh4) c5
+  have h₅ := CoreSpec.of_callW (s₀ := ⟨m₄, Locals.init []⟩)
+    ((hk (k + 1) (Nat.le_refl _)).defeq F _ a₀ dn vis fe M eb mode d (r₃.headD 0) (r₄.headD 0) hF hn
+      ⟨hS₂, hs.mode4, hs.eb_mode⟩ hh3 hh4) (callW_of_callE c5)
+  obtain ⟨M₅, hS₅, hK₅, hst₅⟩ := h₅.2.1
+  refine RefE.bind_right (by rw [AM.run_of_ok _ _ h₅.1, h₅.2.2.1]) ?_
+  simp only [acE.k_defeq]
   by_cases h0 : r₅.headD 0 = 0
-  · simp only [h0, ne_eq, not_true_eq_false, ↓reduceIte] at hW5
-    obtain ⟨hv0, rfl⟩ := some_pair_inj hW5
-    rw [decBool_false_of h0]
-    exact growRef_pure hS₅ rfl (decBool_false_of (by rw [← hv, ← hv0])).symm
-      (by unfold ResH; rw [← hv, ← hv0]; exact hw0)
-  simp only [h0, ne_eq, not_false_eq_true, ↓reduceIte] at hW5
-  rw [decBool_true_of h0]
+  · rw [ite_eq_right (fun h => h h0), decBool_false_of h0]
+    simp only [Bool.false_eq_true, ↓reduceIte]
+    exact leaf _ m₅ _ _ false _ M₅ rfl hS₅ hK₅ ((hg1.trans hg2).trans hst₅.toGrew)
+      (decBool_false_of (r := [r₅.headD 0]) h0).symm h₅.2.2.2
+  rw [ite_eq_left h0, decBool_true_of h0]
   simp only [↓reduceIte]
-  rw [hv] at hW5
   -- the spines below the top
   have hb1 := hsp1.bound
   have hb2 := hsp2.bound
@@ -229,53 +169,84 @@ theorem appCong_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
     (hsp1.grew hg2 (by omega) hspn₁).keep hst₅.size hst₅.below (by omega) hspn₂
   have hB : SpineR m₅ (r₂.headD 0) (r₂.tail.headD 0) bb.toArray :=
     hsp2.keep hst₅.size hst₅.below (by omega) hspn₂
-  have h₆ := CoreSpec.of_call1W (s₀ := ⟨m₅, Locals.init []⟩)
-    (defeqLst_at p hc n hk F hF hn ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode d (r₁.headD 0)
-      (r₂.tail.headD 0) (r₂.headD 0) (r₂.tail.headD 0) aa.toArray bb.toArray
-      ⟨hS₅, hs.mode4, hs.eb_mode⟩ (heq ▸ hA) hB (by rw [h5top, ← heq]; omega) (by rw [h5top]; omega))
-    (fun r r' h => by simp only [decBool, h]) hW5
-  simp only at h₆
-  exact GrowRef.of_core h₆
+  rcases c6 : callE p (k + 1) "defeq_lst"
+      [mode, vis, d, r₁.headD 0, r₁.tail.headD 0, r₂.headD 0, r₂.tail.headD 0] m₅ with e | ⟨r₆, m₆⟩
+  · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩)
+      (hG.lst k (hk.mono (by omega)) (hG.knot.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₅
+        eb mode d (r₁.headD 0) (r₁.tail.headD 0) (r₂.headD 0) (r₂.tail.headD 0) aa.toArray bb.toArray
+        ⟨hS₅, hs.mode4, hs.eb_mode⟩ hA hB (by rw [h5top]; omega) (by rw [h5top]; omega)) c6
+  have h₆ := CoreSpec.of_callW (s₀ := ⟨m₅, Locals.init []⟩)
+    (defeqLst_at p hc (k + 1) hk F hF hn ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode d (r₁.headD 0)
+      (r₁.tail.headD 0) (r₂.headD 0) (r₂.tail.headD 0) aa.toArray bb.toArray
+      ⟨hS₅, hs.mode4, hs.eb_mode⟩ hA hB (by rw [h5top]; omega) (by rw [h5top]; omega))
+    (callW_of_callE c6)
+  obtain ⟨M₆, hS₆, hK₆, hst₆⟩ := h₆.2.1
+  simp only [acE.k_defeq_lst]
+  exact leaf _ m₆ _ _ _ _ M₆ (AM.run_of_ok _ _ h₆.1) hS₆ (hK₅.trans hK₆)
+    (((hg1.trans hg2).trans hst₅.toGrew).trans hst₆.toGrew) h₆.2.2.1 h₆.2.2.2
 
-theorem appCong_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
-      (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-      (eb mode d a b : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
-      HW a → HW b →
-      CoreSpec p n "stuck_app_cong" [mode, vis, d, a, b]
-        (appCongT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
-        s₀ a₀ dn vis fe M eb
-  | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-  | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, hF, hn, hs, h1, h2 =>
-      appCong_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
-        (by omega) (by omega) hs h1 h2
+/-- **`stuck_app_cong` refines `appCongT`** at the knot (`ac_ref`'s ok half). -/
+@[refines_part ConRon.Arena.defeqStuck "the application arm's congruence (appCongT)"]
+theorem appCong_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
+    (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    CoreSpec p (n + 1) "stuck_app_cong" [mode, vis, d, a, b]
+      (appCongT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
+      s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (acE_spec p hq.stuckAppCong (n + 1) s₀ mode vis d a b)
+    (ac_ref p hq hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 
-section sapK
-variable (p : Prog) (n : Nat) (mode vis d a b : Word)
+/-- **`stuck_app`'s model, both outcomes** (generated; `stuck_app_cong` and `stuck_irrel` by their
+unified models). -/
+l_model saE_spec (p : Prog) (hf : p.lookup "stuck_app" = some stuckAppL)
+    (hac : p.lookup "stuck_app_cong" = some stuckAppCongL)
+    (hi : p.lookup "stuck_irrel" = some stuckIrrelL)
+    (hc : p.lookup "struct_eta_cert" = some structEtaCertL)
+    (hw : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
+    (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
+    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL)
+    (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
+    (hu : p.lookup "struct_unit_cert" = some structUnitCertL)
+    (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
+    (hut : p.lookup "struct_unit_tail" = some structUnitTailL)
+  fns [hf ↦ saE list]
+  specs [acE_spec p hac n, siE_spec p hi hc hw hb hg ht hu hh hut n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **The model of `stuck_app`** past the congruence's run. -/
-def sapK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then some (1, m) else call1W p n "stuck_irrel" [mode, vis, d, a, b] m
+/-- **`stuck_app` refines `defeqStuck`'s application arm (`stuckAppT`), both outcomes**: the errors
+are the congruence's and `stuck_irrel`'s. -/
+theorem sa_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
+    (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    RefE (StuckG p n) (saE p (n + 1) s₀.mem mode vis d a b)
+      (stuckAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
+  rw [stuckAppT_eq]
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ k =>
+  simp only [saE]
+  have H := ac_ref p hq hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b (by omega)
+    (by omega) hs ha hb
+  rcases h1 : acE p (k + 1) s₀.mem mode vis d a b with e | ⟨r₁, m₁⟩
+  · rw [h1] at H; exact fun hG => ErrClaim.bind_left (H (hG.mono (by omega)))
+  rw [h1] at H
+  obtain ⟨y, a', hrun, hP⟩ := H
+  simp only [saE.k_stuck_app_cong]
+  refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₁ hS₁ _ => ?_)
+  by_cases h0 : r₁.headD 0 ≠ 0
+  · rw [ite_eq_left h0, decBool_true_of h0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
+  rw [ite_eq_right h0, decBool_false_of (by simpa using h0)]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  exact si_tail hq hi hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn m₁ _ dn vis fe M₁ eb mode d
+    a b hS₁ hs.mode4 hs.eb_mode ha hb
 
-end sapK
-
-theorem stuckApp_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "stuck_app" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ sapK1 p n mode vis d a b
-      (callW p n "stuck_app_cong" [mode, vis, d, a, b] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.stuckApp]
-  simp only [callFn, stuckAppL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "stuck_app_cong",
-      callW_spec p n "stuck_irrel"] <;>
-  simp_all [sapK1, call1W, LocEq, St.setLocs_cons, Cmp.eval,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
-
-/-- **`stuck_app` refines `defeqStuck`'s application arm** (`stuckAppT`) at the knot. -/
+/-- **`stuck_app` refines `defeqStuck`'s application arm** at the knot (`sa_ref`'s ok half). -/
 @[refines_part ConRon.Arena.defeqStuck "the application arm (stuckAppT)"]
 theorem stuckApp_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
@@ -284,28 +255,9 @@ theorem stuckApp_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "stuck_app" [mode, vis, d, a, b]
       (stuckAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
-      s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (stuckApp_spec p hq n s₀ mode vis d a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  rw [stuckAppT_eq]
-  obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
-  have h₁ := CoreSpec.of_callW (appCong_at p hq hc n hk F s a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
-    hc1
-  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
-  simp only [sapK1] at hW1
-  by_cases h0 : r₁.headD 0 ≠ 0
-  · simp only [h0, ne_eq, not_false_eq_true, ↓reduceIte] at hW1
-    rw [decBool_true_of h0]; exact coreRef_true hS₁ hW1
-  simp only [h0, ↓reduceIte] at hW1
-  simp only [ne_eq, Decidable.not_not] at h0
-  rw [decBool_false_of h0]
-  simp only [Bool.false_eq_true, ↓reduceIte]
-  exact CoreSpec.of_call1W (s₀ := ⟨m₁, Locals.init []⟩)
-    (stuckIrrel_at p hq hi hc n hk F _ _ dn vis fe M₁ eb mode d a b hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩
-      ha hb) (fun r r' h => by simp only [decBool, h]) hW1
+      s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (saE_spec p hq.stuckApp hq.stuckAppCong hq.stuckIrrel hq.setCert hq.setWith hq.setWtb
+    hq.setGo hq.setTail hq.sunit hq.suHead hq.suTail (n + 1) s₀ mode vis d a b)
+    (sa_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 
 end L.Arena
