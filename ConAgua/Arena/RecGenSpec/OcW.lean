@@ -173,14 +173,6 @@ theorem IlpFr.mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {args r : List Word} {m
   let ⟨_, _, hA, hC, hf⟩ := hF _ _ _ _ _ h
   MFr.of_frame hf hA hC
 
-theorem toiW_mfr {cR : CallM} (hF : IlpFr cR) {N : Nat} {m m' : Mem} {vis I us dso dsl : Word} {r : List Word}
-    (h : toiW cR N m vis I us dso dsl = some (r, m')) : MFr [] [] m m' := by
-  rcases N with _ | N
-  · simp [toiW] at h
-  rw [toiW_eq] at h
-  unfold toiK1 toiK2 toiK3 toiK4 toiK5 at h
-  mfr_auto h [envFindW_mfr, erToIwW_mfr, IlpFr.mfr hF, instW_mfr _ _ _ _ _ _ _, piBW_mfr _ _ _ _ _ _]
-
 /-- **A constructor slice read by `nest_container` is decoded below the tops.** -/
 theorem csAt_decB {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} (h : CsAt m o xs (· < iwTop m))
     (hb : o + xs.length ≤ iwTop m) : DecB (fun m => decPL m (decCN m) o xs.length) m xs := by

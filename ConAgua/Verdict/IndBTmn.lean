@@ -172,7 +172,7 @@ theorem tmn_ref (hL : TmnLook p) (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {
   obtain ⟨-, hlvP, hedP, -⟩ := ConRon.Bridge.Inductives.RC.dCtorNf_inv
     (ConRon.Bridge.Inductives.dCtorNf_ext c1.ext _ _ hnfP1)
   -- `target_class_match`
-  have h3 := tcm_ref hq henv hL.tcm n (by omega) hC1 hR1.abs (hbs.grow hg1) hus hlH
+  have h3 := tcm_ref hq henv n (by omega) hC1 hR1.abs (hbs.grow hg1) hus hlH
     (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.1; omega)
     (hpf.grow hg1) (hds.grow hg1) hdsl hR1.rc
     (ConRon.Bridge.Inductives.dShape_ext c1.ext _ _ hsh) (denoteEList_ext c1.ext _ _ hftP)

@@ -1,18 +1,13 @@
-import ConAgua.Arena.IndT.Lift
-import ConRon.Bridge.Inductives.RecCheck
-import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.RecClassSpec.ReadProg
-import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
+import ConAgua.Verdict.IndBPins
 
 /-!
-# `targetPinTys`, `targetMajorPins` under `StageC` (lane `indstaget`, helper `indstaget-tpt`)
+# `targetMajorPins` under `StageC` (lane `indstaget`, helper `indstaget-tpt`)
 
-`target_pin_tys`' and `target_major_pins`' models at `realCall p`, from `StageC`, `AbsOK` and the
-inputs' denotations con-ron's `targetPinTys_spec`/`targetMajorPins_spec` ask (the parameters'
-denotations and their scoping at the rule prefix), the twin side transcribed from those specs'
-proofs: `inferTypeCore` (`inferC_rsim`), the head's intern (`internConstE_run`), `mkAppN`
-(`mkAppN_run`).
+`target_major_pins`' model at `realCall p`, from `StageC`, `AbsOK` and the inputs' denotations
+con-ron's `targetMajorPins_spec` asks (the parameters' denotations and their scoping at the rule
+prefix), the twin side transcribed from that spec's proof: `targetPinTys` (`tpt_ref`, through the
+run), the head's intern (`internConstE_run`), `mkAppN` (`mkAppN_run`), `inferTypeCore`
+(`inferC_rsim`).
 -/
 
 
@@ -32,91 +27,11 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
 include hq henv in
-/-- **`target_pin_tys` under `StageC`** (twin side: con-ron's `targetPinTys_spec`'s proof). -/
-theorem tptW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
-    ∀ (m m' : Mem) (a : AState) (d xo xl : Word) (r : List Word) (xs : List EIdx)
-      (xsP : List ConLeche.Expr),
-    tptW (realCall p) n m vis d xo xl = some (r, m') → StageC dn vis fe env m a → AbsOK m →
-    decHL m xo.toNat xl.toNat = some xs → xo.toNat + xl.toNat < 2 ^ 64 →
-    xo.toNat + xl.toNat ≤ iwTop m → Frontend.denoteEList a.store xs = some xsP →
-    (∀ x ∈ xsP, ConLeche.Expr.WScoped d.toNat x) →
-    ∃ a', (ConRon.Arena.targetPinTys V fe d.toNat xs).run a = .ok ((), a') ∧
-      StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ AbsOK m' := by
-  induction n with
-  | zero => intro m m' a d xo xl r xs xsP h; simp [tptW] at h
-  | succ n ih =>
-    intro m m' a d xo xl r xs xsP h hC hA hxs hb hbt hxsP hw
-    by_cases hxl : xl = 0
-    · rw [tptW_nil (realCall p) n m vis d xo xl hxl] at h
-      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have hz : xl.toNat = 0 := by rw [hxl]; rfl
-      rw [hz] at hxs
-      simp [decHL, hslice?] at hxs
-      subst hxs
-      exact ⟨a, rfl, hC, IWGrow.refl m, hA⟩
-    · rw [tptW_cons (realCall p) n m vis d xo xl hxl] at h
-      have hpos : 1 ≤ xl.toNat := by
-        rcases Nat.eq_zero_or_pos xl.toNat with h0 | h0
-        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hxl
-        · omega
-      obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
-      rw [hc1] at hxs
-      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons_r hxs
-      obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hx (by omega)
-      rw [UInt64.ofNat_toNat] at hw1
-      have hxl1 : (xl - 1).toNat = c1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
-      have hxo1 : (xo + 1).toNat = xo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      rw [hw1] at h
-      obtain ⟨xP, xsP', hxP, hxsP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hxsP
-      cases hi : realCall p n "infer_type_core" [vis, d, w] m with
-      | none => rw [hi] at h; simp [tptK] at h
-      | some rm =>
-        obtain ⟨ri, m1⟩ := rm
-        rw [hi, tptK_some (realCall p)] at h
-        rw [← hw3] at hxP
-        obtain ⟨t1, a1, hrun1, hC1, hg1, -, hA1, c1', -⟩ :=
-          inferC_rsim hq henv n (by omega) hC hA d w hw2 hxP (hw xP List.mem_cons_self) _ hi
-        dsimp only at hC1 hg1 hA1
-        rcases hr : tptW (realCall p) n m1 vis d (xo + 1) (xl - 1) with _ | ⟨r2, m2⟩ <;> simp only [hr, tptK2, reduceCtorEq] at h
-        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-        have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
-          rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
-        obtain ⟨a2, hrun2, hC2, hg2, hA2⟩ := ih (by omega) m1 m2 a1 d (xo + 1) (xl - 1) r2 xs' xsP'
-          hr hC1 hA1 hxs1 (by rw [hxo1, hxl1]; omega) (by rw [hxo1, hxl1]; have := hg1.1; omega)
-          (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
-          (fun y hy => hw y (List.mem_cons_of_mem _ hy))
-        refine ⟨a2, ?_, hC2, hg1.trans hg2, hA2⟩
-        rw [ConRon.Arena.targetPinTys, StateT.run_bind, ← hw3, hrun1]
-        exact hrun2
-
-include hq henv in
-/-- **`target_pin_tys` refines `targetPinTys .verified`** under `StageC` (the knot's
-`infer_type_core`; the parameters' denotations and scoping as con-ron's `targetPinTys_spec`
-asks). -/
-@[refines ConRon.Arena.targetPinTys]
-theorem targetPinTys_refinesC (hp : p.lookup "target_pin_tys" = some targetPinTys) (n : Nat)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (d xo xl : Word) (xs : List EIdx)
-    (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
-    (hxs : decHL s₀.mem xo.toNat xl.toNat = some xs) (hb : xo.toNat + xl.toNat < 2 ^ 64)
-    (hbt : xo.toNat + xl.toNat ≤ iwTop s₀.mem) {xsP : List ConLeche.Expr}
-    (hxsP : Frontend.denoteEList a₀.store xs = some xsP)
-    (hw : ∀ x ∈ xsP, ConLeche.Expr.WScoped d.toNat x) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pin_tys" [vis, d, xo, xl]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀ ∧
-      StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (targetPinTys_spec p hp (realCall p) (realCall_spec p) n s₀ vis d xo xl) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hC', hg, hA'⟩ :=
-    tptW_okC hq henv n hn _ _ a₀ d xo xl _ xs xsP hm hC hA hxs hb hbt hxsP hw
-  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ a₀ a' () hrun
-  exact ⟨hl, hok, by rw [hst]; exact hC', hg, hA'⟩
-
-include hq henv in
 /-- **`target_major_pins` under `StageC`** (twin side: con-ron's `targetMajorPins_spec`'s proof):
-`tptW_okC`, the head's intern (`internConstE_run`), `mkAppN` (`mkAppN_run`), `inferC_rsim`. -/
-theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp : Word}
+`tpt_ref` (through the run), the head's intern (`internConstE_run`), `mkAppN` (`mkAppN_run`),
+`inferC_rsim`. -/
+theorem tmpW_okC (hp : p.lookup "target_pin_tys" = some targetPinTys) {a : AState} {N : Nat}
+    (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp : Word}
     {r : List Word} {M : TargetMajor} (h : tmpW (realCall p) N m vis rP Mp = some (r, m'))
     (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hM : DecB (fun m => decTM m Mp.toNat) m M)
     {MP : ConLeche.TargetMajor} (hMP : dMajor a.store M = some MP)
@@ -158,27 +73,20 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
   have hoo := UInt64.toNat_ofNat_of_lt' ro.2
   have hll := UInt64.toNat_ofNat_of_lt' rl.2
   -- the pins of the parameters
-  obtain ⟨a1, m1, r1, h1, hrun1, hC1, hg1, hA1⟩ : ∃ a1 m1 r1,
-      tptW (realCall p) N m vis rP (UInt64.ofNat o) (UInt64.ofNat l) = some (r1, m1) ∧
-      (ConRon.Arena.targetPinTys V fe rP.toNat M.ds).run a = .ok ((), a1) ∧
-      StageC dn vis fe env m1 a1 ∧ IWGrow m m1 ∧ AbsOK m1 := by
-    cases h1 : tptW (realCall p) N m vis rP (UInt64.ofNat o) (UInt64.ofNat l) with
-    | none => rw [h1] at h; simp [tmpK1] at h
-    | some rm1 =>
-    obtain ⟨r1, m1⟩ := rm1
+  have hds0 : HSl0 m (UInt64.ofNat o) (UInt64.ofNat l) M.ds := by
+    refine ⟨by rw [hoo, hll]; exact hdsm, ?_⟩
     by_cases hl0 : l = 0
-    · subst hl0
-      have hnil : M.ds = [] := by simpa [decHL, hslice?] using hdsm.symm
-      obtain _ | N := N
-      · simp [tptW] at h1
-      rw [tptW_nil (realCall p) N m vis rP (UInt64.ofNat o) (UInt64.ofNat 0) rfl] at h1
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h1)
-      exact ⟨a, m, [], rfl, by rw [hnil]; rfl, hC, IWGrow.refl m, hA⟩
-    have hbnd := decHL_truncM_bound hdT hl0
-    obtain ⟨a1, hrun1, hC1, hg1, hA1⟩ := tptW_okC hq henv N (by omega) m m1 a rP _ _ r1 M.ds MP.ds
-      h1 hC hA (by rw [hoo, hll]; exact hdsm) (by rw [hoo, hll]; have := hS.2.1; omega)
-      (by rw [hoo, hll]; exact hbnd) hdsd hw
-    exact ⟨a1, m1, r1, rfl, hrun1, hC1, hg1, hA1⟩
+    · exact .inl (by rw [hl0]; rfl)
+    · exact .inr (by rw [hoo, hll]; exact decHL_truncM_bound hdT hl0)
+  rcases h1 : tptR (realCall p) N m vis rP (UInt64.ofNat o) (UInt64.ofNat l) with _ | ⟨r1, m1⟩
+  · rw [h1] at h; simp [tmpK1] at h
+  obtain ⟨s1, hs1, -, ⟨⟩, a1, hrun1, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
+    (tptE_spec p hp N _ vis rP _ _) (tpt_ref hq henv N (by omega) hC hA hds0 hdsd hw) h1
+  dsimp only at hR
+  rw [hs1] at hR
+  have hC1 := hR.stage
+  have hg1 := hR.grow
+  have hA1 := hR.abs
   obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetPinTys_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv rP.toNat M.ds MP.ds hw a a1 () hC.check hdsd hrun1
   rw [h1, tmpK1_some] at h
@@ -251,7 +159,7 @@ theorem targetMajorPins_refinesC (hp : TmpProg p) (N : Nat) (hN : N ≤ 2 ^ 62) 
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (targetMajorPins_spec p hp (realCall p) (realCall_spec p) N s₀ vis rP Mp) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hC', hg, hA'⟩ := tmpW_okC hq henv hN hm hC hA hM hMP hds
+  obtain ⟨a', hrun, hC', hg, hA'⟩ := tmpW_okC hq henv hp.tpt hN hm hC hA hM hMP hds
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, hA'⟩
 
