@@ -4,23 +4,31 @@ Question: can the compiler keep locals of functions that make calls in registers
 the compiler, and how much does it buy (lnext §3.2 estimated −2.1 % instructions on `Init`;
 scanfast saw a 15 % gap between the same code as a leaf and as a non-leaf)?
 
-Base: master b130493e. Nothing landed but this journal. Prototype sources, assembly, binaries,
+Base: master b130493e (§3) and aa459fa6 (§7; same `checker.s`). Nothing landed but this journal. Prototype sources, assembly, binaries,
 profiles and bench logs: `_tmp/nlregs/` (`NL.lean`, `*.s`, `prof/`, `bench-*.{log,json}`).
 Unproved; never to be landed.
 
-**Answer in short.** In this code generator, a frame local costs almost no extra instructions (x64
-operates on `[rsp + 8x]` in place), so registers in non-leaf functions save few instructions,
-while every convention that makes a register survive a call costs instructions somewhere.
-* The classic convention (callee-saved `rbx r12 r13`, saved in the prologue of every function that
-  writes them) costs **+5.8 % instructions** on `Init`.
-* Reserving `r12` for non-leaf functions (leaves give it up) costs +0.9 %.
-* The only variant without a cost, **interprocedural allocation** (a non-leaf function takes a
-  callee-saved register that no function it can reach writes; no saves anywhere), saves **−0.3 %**.
-* In cycles nothing is faster. On `Init`, measured in quiet rounds: IPRA +0.2 %, `r12` reserved
-  +1.0 %, callee-saved +2.3 %. On the default set all are within 0.6 % of master.
+**Answer in short (revised with wall time, §7).** Wall time is the goal; instructions are only a
+deterministic stand-in. §7 measures wall time directly: 15 interleaved rounds, paired by round,
+with a Wilcoxon signed-rank test. On `Init` and the long fixtures, **no variant gains 2 % wall**:
+* **Loop promotion with spills around calls**: −1.0 % on `Init` (p = 0.008). It loads a loop's
+  most used frame locals into `r12 r13 rbx` before a loop of a non-leaf function and stores the
+  changed ones back after it, spilling them around each call in the loop.
+* **IPRA** (§2 D): −0.7 % (p = 0.035).
+* **Full callee-saved convention** (A): +2.2 % slower (p < 0.001).
+* **The same convention aimed only at the hot loops** (`line_rec`, `next_member`, `sub_rec` and
+  others): +1.0 to +2.4 % slower.
+* **The abort stub alone** (−0.09 % instructions): +1.4 % slower.
+* On the long fixtures every difference is within ±2.3 %. The two that reach 2 % are slower: the
+  hot-loop variant on `let-ladder` (+2.3 %) and the callee-saved convention on `Init` (+2.2 %).
 
-None of these reaches lnext's estimate. **Recommendation: no implementation lane now.** §6 says
-what would change that.
+The abort stub's result shows that **effects of 1–2 % here come from code layout as much as
+from the change itself**. The latency effect (store-to-load forwarding on frame slots) is real but
+small: frame locals in hot loops of non-leaf functions are only 11 G of `Init`'s 243 G
+instructions, with 1–3 iterations per call. **Recommendation: no implementation lane** (§6).
+
+The first measurement (§3) leaned on instruction counts and on cycle numbers from very noisy
+runs. It stays below for the analysis of where the instructions go.
 
 ## 1. How the compiler does it now
 
@@ -264,15 +272,114 @@ Risks:
   better done in that order.
 * **Freeing `rbp`** (store the trampoline's stack pointer in the table, `ca_finish` reloads it from
   `r15`) gives a fourth register without any convention.
-* **Not cycles.** The hope was that registers pay in cycles even where they do not save
-  instructions (store forwarding on frame slots). The quiet `Init` rounds and the default set
-  show no such gain (§3). Registers alone do not close the scanfast leaf/non-leaf gap.
+* **Wall time** (§7). Store-to-load forwarding on frame slots is a real latency. Loop promotion
+  removes it in hot loops for −1.0 % on `Init`, but non-leaf loops are too small a share of the
+  run for more. Registers alone do not close the scanfast leaf/non-leaf gap.
 
-## 6. Recommendation
+## 6. Recommendation (revised)
 
-No lane now. The cheapest real gain is the **abort stub** (−0.09 % instructions; ~60 proof lines in
-`sim_ifAbortK`). It is a prerequisite of every option here and could ride along with the next
-compiler lane. **IPRA (D)** is the right design if registers in non-leaf functions are taken up
-again: it costs nothing at run time, and the proof is about 950 lines in the compiler alone. Its
-payoff today (−0.3 %) is too small for the effort. Re-measure it after inlining (lnext §3.1) and
-with a leaf allocation that spares `r13`.
+No lane. No variant reaches the 2 % wall bar on `Init` or on the long fixtures (§7), so this
+journal gives no proof plan for one. The order to try, if non-leaf registers come back:
+1. **Inlining first** (lnext §3.1). It turns the short hot non-leaf functions into longer code with
+   loops.
+2. **Loop promotion** (`promoc`, −1.0 % on `Init`). The most local proof of all the options:
+   * nothing changes in `FunSim` or in any convention;
+   * the `while` simulation runs its body under a context with a larger allocation, between a load
+     prologue and a store epilogue;
+   * a call inside the loop is bracketed by spill and reload;
+   * estimated 300–400 lines in `SimBlock`/`SimCall`.
+3. **IPRA** (§4), about 950 lines.
+
+**Drop the abort stub** as a speed item: it is +1.4 % slower in wall time despite fewer
+instructions. It is only needed by the options that make `rbx` callee-saved.
+
+## 7. Wall time, measured with paired statistics
+
+**Method.** `_tmp/nlregs/wallbench.py` and `wallstats.py`. Each round runs every (fixture,
+binary) pair once, in a fresh random order, pinned to one physical core (`taskset` on both SMT
+threads of a core no other job used). Rounds were never discarded for load: the 1-minute load was
+3.0–26.5 (median 4.8–4.9). Per fixture and variant, the round's ratio variant/master is one paired
+sample, 15 rounds each. Reported:
+* the median paired ratio, with a Wilcoxon signed-rank test (exact, two-sided). It is robust
+  against the slow outlier runs (up to +50 %) that the load causes;
+* the mean of the log ratios, with its 95 % t-interval (in `wall{2,3}.stats`).
+
+**Bold** = Wilcoxon p < 0.05. All binaries were rebuilt from master aa459fa6, whose `checker.s` is
+identical to that of §3's base. Fixtures: `Init` and the long default/full-set inputs.
+
+Bench 1 (`wall2.json`, cores 17/65):
+
+| fixture | master | IPRA | callee-saved (A) | `r12` reserved (B) | loop promotion, call-free loops | loop promotion with spills (`promoc`) |
+|---|---:|---:|---:|---:|---:|---:|
+| `Init` | 18.47 s | **−0.7 %** (p .035) | **+2.2 %** (p < .001) | −0.5 % (.073) | **+1.0 %** (.035) | **−1.0 %** (.008) |
+| `app-lam` | 9.72 s | +0.2 % | **+0.8 %** (.012) | +0.2 % | +0.0 % | +0.4 % |
+| `beta-ladder` | 2.40 s | −0.2 % | **+1.1 %** (.007) | +0.2 % | +0.4 % | +0.2 % |
+| `let-ladder` | 0.97 s | −0.1 % | +0.3 % | +0.0 % | −0.3 % | −0.5 % |
+| `c04a_restart_70` | 2.31 s | +0.2 % | −0.3 % | +0.2 % | −0.1 % | +0.1 % |
+| `c05b_nest30_pi1000` | 1.32 s | −0.1 % | +0.4 % | −1.5 % (.121) | −0.3 % | +0.2 % |
+
+Bench 2 (`wall3.json`, cores 21/69, run at the same time as bench 1):
+
+| fixture | master | abort stubs only | callee-saved for 9 hot loop functions (`targ`) | callee-saved for the scanner loops (`targ4`) |
+|---|---:|---:|---:|---:|
+| `Init` | 18.27 s | **+1.4 %** (p < .001) | **+2.4 %** (< .001) | **+1.0 %** (.003) |
+| `app-lam` | 9.73 s | +0.3 % | **+0.6 %** (.026) | +0.0 % |
+| `beta-ladder` | 2.37 s | **+1.4 %** (.007) | **+1.8 %** (< .001) | +0.4 % |
+| `let-ladder` | 0.95 s | +1.4 % | **+2.3 %** (.008) | +1.2 % |
+| `c04a_restart_70` | 2.30 s | **+1.0 %** (.003) | **+1.7 %** (< .001) | **+0.9 %** (.012) |
+| `c05b_nest30_pi1000` | 1.32 s | +0.1 % | +0.7 % | −0.1 % |
+
+**The targeted variants** (step 2 of the reopened lane). `NL.lean` mode `targ`:
+* the listed functions keep their loop locals (weighted use ≥ 8) in `r12 r13 rbx` and save them
+  at entry;
+* every leaf reachable from them that writes one of those registers saves it too (demand-driven:
+  other leaves do not);
+* the abort stubs are on, so non-leaf functions outside the set write no callee-saved register.
+
+The functions were picked from the exact profile by where non-leaf code loops. On `Init`:
+
+| function | loop instructions |
+|---|---:|
+| `whnf_app` | 3.6 G |
+| `beta_peel` | 1.5 G |
+| `next_member` | 1.0 G |
+| `infer_spine` | 0.9 G |
+| `sub_rec` | 0.9 G |
+| `mk_app_n` | 0.65 G |
+| `line_rec` | 0.5 G |
+| `whnf_core_loop` | 0.5 G |
+| `type_sort_pw` | 0.4 G |
+| all non-leaf loops | 11.0 G of 243 G |
+
+They run 1–5 iterations per call.
+* With all nine, 113 leaves must save (`whnf_app` reaches nearly everything). That is +11 G
+  instructions and +2.4 % wall.
+* With the scanner's three (`targ4`: `line_rec`, `next_member`, `sub_rec`), 5 leaves save: −0.11 G
+  instructions, +1.0 % wall. That is −0.4 % beyond the stub's own +1.4 %, if the two add up.
+
+`promo`/`promoc` (loop promotion, mode argument 8 of `NL.lean`) need no convention at all.
+* A loop of a non-leaf function is promoted if its weighted uses are ≥ 8.
+* `promo`: only loops without calls. They are cold on `Init` (−0.02 G instructions).
+* `promoc`: also loops with calls, spilling the promoted locals before each call and reloading
+  them after. +2.0 G instructions (+0.8 %), but −1.0 % wall on `Init`: the loop-carried values no
+  longer go through memory between the calls.
+
+**Scanner** (`line_rec` inclusive, exact instructions on `Init`; wall is not separable from
+`Init`):
+
+| variant | scanner instructions |
+|---|---:|
+| master | 12.92 G |
+| IPRA | 12.73 G |
+| `targ4` | 13.02 G |
+| `promoc` | 13.93 G |
+
+None helps the scanner toward con-ron's 11.8 G.
+
+**Verdicts** (`diff-e2e.py --refs --parallel 16`, 634 fixtures):
+
+| binary | sequential | `--jobs 4` |
+|---|---|---|
+| `promoc` | 634 agree, 0 REFDIFF | 634 agree |
+| `targ4` | 634 agree, 0 REFDIFF | not run |
+| IPRA | as in §3.2 | as in §3.2 |
