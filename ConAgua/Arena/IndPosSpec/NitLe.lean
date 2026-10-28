@@ -40,7 +40,7 @@ def NitLe (cR : CallM) (k : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Wor
     (view e).run a5 = .ok (.sort (decI uw), a5) →
     StageR dn vis fe m3 a5 → IWGrow m m3 → H uw → H (rdW (m3.arr64 IW) (ctx + 9)) →
     decI (rdW (m3.arr64 IW) (ctx + 9)) = c.sort →
-    lveC cR k m3 uw (rdW (m3.arr64 IW) (ctx + 9)) = some (r4, m4) →
+    cR k "lvl_eq_fueled" [uw, rdW (m3.arr64 IW) (ctx + 9)] m3 = some (r4, m4) →
     ∃ b a6, (lvlEq? (decI uw) c.sort).run a5 = .ok (some b, a6) ∧ StageR dn vis fe m4 a6 ∧
       IWGrow m3 m4 ∧ MFr [] [] m3 m4 ∧ r4.headD 0 = (if b then 1 else 0) ∧ Q m4 a6
 

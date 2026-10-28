@@ -1,4 +1,3 @@
-import ConAgua.Arena.LevelArena
 import ConRon.Bridge.Frontend.Rel
 import ConAgua.Front.IndApplyRefine
 import Std.Tactic.BVDecide.Normalize.Prop
