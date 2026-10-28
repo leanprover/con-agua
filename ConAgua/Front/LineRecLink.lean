@@ -487,4 +487,97 @@ theorem exprN_lrStep (i w ks w' k v ik pk : Word) (f : Fld)
     repeat' (rw [ite_eq_right (by simp_all)] at he)
     exact he rfl
 
+/-- Once a payload key is read, only index keys follow: the payload kind stays. -/
+theorem lrStepN_pk (k ks v ik pk : Word) (f : Fld) (he : (lrStepN b k ks v ik pk f).e ≠ 0)
+    (hp : pk ≠ 0) : (lrStepN b k ks v ik pk f).pk = pk := by
+  by_cases hkey : k = 21 ∨ k = 19 ∨ k = 18 ∨ k = 7 ∨ k = 55 ∨ k = 59 ∨ k = 46 ∨ k = 32 ∨ k = 20 ∨
+      k = 56 ∨ k = 38 ∨ k = 2 ∨ k = 29 ∨ k = 14 ∨ k = 30 ∨ k = 9 ∨ k = 48 ∨ k = 35 ∨ k = 57 ∨
+      k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ k = 49 ∨ k = 23 ∨ k = 33
+  · rcases hkey with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+      rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    · simp (config := { decide := true }) only [lrStepN, lrIdx, lrNat, lrList, lrName, lrExpr,
+        lrLit, lrDecl, lrMeta, reduceIte] at he ⊢
+      split at he
+      · rename_i h; simp_all
+      · exact absurd rfl he
+  · exfalso
+    simp only [lrStepN] at he
+    repeat' (rw [ite_eq_right (by simp_all)] at he)
+    exact he rfl
+
+/-- The payload kinds and the field `pl`: none or a declaration `0`, a name, level or the header
+`1`–`7`, an expression `8` or more. -/
+structure PlOK (pk pl : Word) : Prop where
+  none : pk = 0 ∨ pk = 4 → pl = 0
+  nm : pk = 1 ∨ pk = 2 ∨ pk = 5 → 1 ≤ pl ∧ pl ≤ 7
+  expr : pk = 3 → 8 ≤ pl
+
+theorem plOK_step (k ks v ik pk : Word) (f : Fld) (he : (lrStepN b k ks v ik pk f).e ≠ 0)
+    (hp : PlOK pk f.pl) : PlOK (lrStepN b k ks v ik pk f).pk (lrStepN b k ks v ik pk f).f.pl := by
+  obtain ⟨h1, h2, h3⟩ := hp
+  by_cases hkey : k = 21 ∨ k = 19 ∨ k = 18 ∨ k = 7 ∨ k = 55 ∨ k = 59 ∨ k = 46 ∨ k = 32 ∨ k = 20 ∨
+      k = 56 ∨ k = 38 ∨ k = 2 ∨ k = 29 ∨ k = 14 ∨ k = 30 ∨ k = 9 ∨ k = 48 ∨ k = 35 ∨ k = 57 ∨
+      k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ k = 49 ∨ k = 23 ∨ k = 33
+  · rcases hkey with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+      rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    · simp (config := { decide := true }) only [lrStepN, lrIdx, lrNat, lrList, lrName, lrExpr,
+        lrLit, lrDecl, lrMeta, reduceIte] at he ⊢
+      split at he
+      · rename_i h
+        refine ⟨?_, ?_, ?_⟩ <;> intro hq <;>
+          simp_all (config := { decide := true }) [natF, nameF, exprF, objFld]
+        all_goals (try split) <;> decide
+      · exact absurd rfl he
+  · exfalso
+    simp only [lrStepN] at he
+    repeat' (rw [ite_eq_right (by simp_all)] at he)
+    exact he rfl
+
+/-- On an expression or a declaration key with no payload before, the record pass for names and
+levels stops with `Fld.none`. -/
+theorem recN_none_step (i w ks w' k v ik pk : Word) (f : Fld)
+    (hM : nextMemberN b i w = ⟨2, ks, w', k, v⟩) (he : (lrStepN b k ks v ik pk f).e ≠ 0)
+    (hk : (lrStepN b k ks v ik pk f).pk = 3 ∨ (lrStepN b k ks v ik pk f).pk = 4) (hp : pk = 0) :
+    recN b i w f = .none := by
+  subst hp
+  rw [recN_key b i w f (by rw [hM]; simp) (by rw [hM]; simp), hM]
+  simp only
+  by_cases hkey : k = 21 ∨ k = 19 ∨ k = 18 ∨ k = 7 ∨ k = 55 ∨ k = 59 ∨ k = 46 ∨ k = 32 ∨ k = 20 ∨
+      k = 56 ∨ k = 38 ∨ k = 2 ∨ k = 29 ∨ k = 14 ∨ k = 30 ∨ k = 9 ∨ k = 48 ∨ k = 35 ∨ k = 57 ∨
+      k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ k = 49 ∨ k = 23 ∨ k = 33
+  · rcases hkey with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+      rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    · simp (config := { decide := true }) only [lrStepN, lrIdx, lrNat, lrList, lrName, lrExpr,
+        lrLit, lrDecl, lrMeta, reduceIte] at he hk ⊢
+      all_goals first
+        | done
+        | (split at he <;> first | (exact absurd rfl he) | simp_all)
+  · exfalso
+    simp only [lrStepN] at he
+    repeat' (rw [ite_eq_right (by simp_all)] at he)
+    exact he rfl
+
+/-- On a declaration key, the record pass for expressions stops with `Fld.none`. -/
+theorem exprN_none_step (i w ks w' k v ik pk : Word) (f : Fld)
+    (hM : nextMemberN b i w = ⟨2, ks, w', k, v⟩) (he : (lrStepN b k ks v ik pk f).e ≠ 0)
+    (hk : (lrStepN b k ks v ik pk f).pk = 4) (hp : pk = 0) :
+    exprN b i w f = .none := by
+  subst hp
+  rw [exprN_key b i w f (by rw [hM]; simp) (by rw [hM]; simp), hM]
+  simp only
+  by_cases hkey : k = 21 ∨ k = 19 ∨ k = 18 ∨ k = 7 ∨ k = 55 ∨ k = 59 ∨ k = 46 ∨ k = 32 ∨ k = 20 ∨
+      k = 56 ∨ k = 38 ∨ k = 2 ∨ k = 29 ∨ k = 14 ∨ k = 30 ∨ k = 9 ∨ k = 48 ∨ k = 35 ∨ k = 57 ∨
+      k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ k = 49 ∨ k = 23 ∨ k = 33
+  · rcases hkey with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+      rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    · simp (config := { decide := true }) only [lrStepN, lrIdx, lrNat, lrList, lrName, lrExpr,
+        lrLit, lrDecl, lrMeta, exVN, reduceIte] at he hk ⊢
+      all_goals first
+        | done
+        | (split at he <;> first | (exact absurd rfl he) | simp_all [Obj.none])
+  · exfalso
+    simp only [lrStepN] at he
+    repeat' (rw [ite_eq_right (by simp_all)] at he)
+    exact he rfl
+
 end L.Front.LineRec
