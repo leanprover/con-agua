@@ -9,14 +9,12 @@ noncomputable section
 /-!
 # `checkDecl`'s value checks under the stage relation (lane `decls3`)
 
-`checkConstantVal` is `installHeader`, then the type's sort (`checkConstantVal_eq`; the unified
-model of `check_constant_val` and its refinement are in `Verdict/DeclValsE.lean`).
-`check_defn_val`/`check_thm_val`/`check_opaque_val(vis, c)` refine
-`checkDefnVal`/`checkThmVal`/`checkOpaqueVal` at the arm's constant record `c` (built by `erec_ci`
-with the kind the twin pushes, its value word at `c + 5`). On the template of `DeclCvg.lean`:
-word models with the core's stubs (`stubM`), `install_header`'s and `install_value_guards`' models
-(`ihW`, `ivgW`), `env_push` through `callW`; relational lemmas from `StageR`. Through the stubs of
-the core (`infer_type_core`, `ensure_sort_core`, `is_def_eq_core`), the walks and `lvl_eq_c`.
+`checkConstantVal` is `installHeader`, then the type's sort (`checkConstantVal_eq`).
+`check_thm_val(vis, c)` refines `checkThmVal` at the arm's constant record `c` (built by `erec_ci`
+with the kind the twin pushes, its value word at `c + 5`): a word model with the core's calls read
+through a `CallM`, `install_value_guards`' model `ivgW`, `env_push` through `callW`. The unified
+models of `check_constant_val`, `check_defn_val` and `check_opaque_val` and their refinements are
+in `Verdict/DeclValsE.lean`.
 -/
 
 noncomputable section
@@ -61,7 +59,7 @@ theorem checkConstantVal_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (cv : ICons
 section models
 variable (p : Prog)
 
-/-! ## `check_defn_val(vis, c)` and `check_opaque_val(vis, c)`: one text -/
+/-! ## The value checks' common tail (`check_thm_val`'s, after its guards) -/
 
 /-- After the push: its view word. -/
 def dvK4 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -83,18 +81,8 @@ def dvK1 (cl : CallM) (n : Nat) (vis c v t : Word) : Option (List Word × Mem) �
   | none => none
   | some (_, m1) => dvK2 p cl n vis c t (cl n "infer_type_core" [vis, 0, v] m1)
 
-/-- **The model of `check_defn_val`** (and of `check_opaque_val`). -/
-def dvW (cl : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, vis, c =>
-    dvK1 p cl n vis c (rdW (m.arr64 EREC) (c + 5)) (rdW (m.arr64 EREC) (c + 4))
-      (ivgW cl n m vis (c + 1) (rdW (m.arr64 EREC) (c + 5)))
-
 section arms
 variable (cl : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis c v t : Word) (r1 r2 r3 : List Word)
-theorem dvW_step : dvW p cl (n + 1) m vis c =
-    dvK1 p cl n vis c (rdW (m.arr64 EREC) (c + 5)) (rdW (m.arr64 EREC) (c + 4))
-      (ivgW cl n m vis (c + 1) (rdW (m.arr64 EREC) (c + 5))) := rfl
 theorem dvK1_some : dvK1 p cl n vis c v t (some (r1, m1)) =
     dvK2 p cl n vis c t (cl n "infer_type_core" [vis, 0, v] m1) := rfl
 theorem dvK2_some : dvK2 p cl n vis c t (some (r2, m2)) =
@@ -105,48 +93,10 @@ theorem dvK4_some (r4 : List Word) (m4 : Mem) : dvK4 (some (r4, m4)) = some ([r4
   rfl
 end arms
 
-grind_pattern [ind_grind] dvW_step => dvW p cl (n + 1) m vis c
 grind_pattern [ind_grind] dvK1_some => dvK1 p cl n vis c v t (some (r1, m1))
 grind_pattern [ind_grind] dvK2_some => dvK2 p cl n vis c t (some (r2, m2))
 grind_pattern [ind_grind] dvK3_some => dvK3 p n vis c (some (r3, m3))
 grind_pattern [ind_grind] dvK4_some => dvK4 (some (r4, m4))
-
-theorem dvBody_specW (h : ValProg p) (cl : CallM) (hc : CallSpec p cl) (body : FunDecl)
-    (hb : body = checkDefnValL ∨ body = checkOpaqueValL) (n : Nat)
-    (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ callFn (exec p n) body [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ dvW p cl n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  rcases hb with rfl | rfl
-  · simp only [callFn, checkDefnValL]
-    cases n with
-    | zero => vcgen [exec] <;> grind
-    | succ n =>
-      sym only [lang_grind, arena_grind, ind_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-          ivg_specW p h.cvg cl hc n, hc n "infer_type_core", hc n "is_def_eq_core",
-          callW_spec p n "env_push"] <;>
-        finish (gen := 20) [rdW_eq]
-  · simp only [callFn, checkOpaqueValL]
-    cases n with
-    | zero => vcgen [exec] <;> grind
-    | succ n =>
-      sym only [lang_grind, arena_grind, ind_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-          ivg_specW p h.cvg cl hc n, hc n "infer_type_core", hc n "is_def_eq_core",
-          callW_spec p n "env_push"] <;>
-        finish (gen := 20) [rdW_eq]
-
-theorem dv_specW (h : ValProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_defn_val" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ dvW p cl n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.dv]
-  exact dvBody_specW p h cl hc _ (Or.inl rfl) n s₀ vis c
-
-theorem ov_specW (h : ValProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_opaque_val" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ dvW p cl n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.ov]
-  exact dvBody_specW p h cl hc _ (Or.inr rfl) n s₀ vis c
 
 /-! ## `check_thm_val(vis, c)` -/
 

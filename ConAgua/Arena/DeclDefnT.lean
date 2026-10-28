@@ -123,13 +123,14 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, cdfK3_some] at h
   have hx2 : ArrExt (erecP m1) (erecP s2.mem) := IWGrow.erecPExt hg2
-  obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (dv_specW p hV (realCall p) (realCall_spec p) n ⟨s2.mem, Locals.init []⟩ vis q) h3
-  subst hs3
-  obtain ⟨a3, hrun3, hS3, hM3, hg3⟩ := dvW_okT hq hV.rcp hap hkp hn' "type mismatch in definition"
-    hW3 hS2 (ArrExt.decCI hx2 hci1)
+  obtain ⟨s3, hs3, -, y3, a3, hrun3, hS3, hM3, hg3, rfl⟩ :=
+    RefE.run_okW (s₀ := ⟨s2.mem, Locals.init []⟩)
+    (checkDefnVal_specE p hV n _ vis q)
+    (dv_ref hq hV hap hkp hn' "type mismatch in definition"
+      hS2 (ArrExt.decCI hx2 hci1)
     (ArrExt.decCV hx2 hcv1) (ArrExt.hd? hx2 hval1) (denoteCV_lps hcA)
-    (hkp.call (im_mem _ rfl) h2 (hkp.call (im_mem _ rfl) h1 hCr))
+    (hkp.call (im_mem _ rfl) h2 (hkp.call (im_mem _ rfl) h1 hCr))) h3
+  subst hs3
   have hPS3 := PinSetsR.step hPS2 hg3 (hfr (by decide) h3)
   rw [← checkDefnVal_dvT] at hrun3
   -- the twin's definition check: `CheckOK` at the old index, `StepOK` at the pushed one

@@ -140,7 +140,7 @@ theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) 
   exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
 
 /-- **`check_defn_val` refines `checkDefnVal .verified`** under `StageT`, at the arm's record
-(lane `indstaget`; `dvW_okT`). -/
+(`dv_ref`, `ov_ref`). -/
 @[refines ConRon.Arena.checkDefnVal]
 theorem checkDefnVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
     (hkp : CrKeep p) (n : Nat)
@@ -154,17 +154,16 @@ theorem checkDefnVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDefnVal V fe cv v hh) a₀ ∧
       StageR dn (r.headD 0) (AM.res (checkDefnVal V fe cv v hh) a₀) s'.mem
         (AM.st (checkDefnVal V fe cv v hh) a₀) ∧ CoreMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (dv_specW p hp (realCall p) (realCall_spec p) n s₀ vis c) ?_
-  rintro r s' ⟨hl, hm⟩
   obtain ⟨hcv, hv⟩ := decls_decCI_defn hc
-  obtain ⟨a', hrun, hS', hM', hg⟩ :=
-    dvW_okT hq hp.rcp hap hkp hn "type mismatch in definition" hm hS hc hcv hv hlps hCr
+  refine triple_post (RefE.triple (checkDefnVal_specE p hp n s₀ vis c)
+    (dv_ref hq hp hap hkp hn "type mismatch in definition" hS hc hcv hv hlps hCr)) ?_
+  rintro r s' ⟨hl, y, a', hrun, hP⟩
   rw [← checkDefnVal_dvT] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
+  exact ⟨hl, hok, by rw [hst, hres, hP.res]; exact hP.stage, hP.memos, hP.grow⟩
 
 /-- **`check_opaque_val` refines `checkOpaqueVal .verified`** under `StageT`, at the arm's record
-(lane `indstaget`; `dvW_okT`). -/
+(`dv_ref`, `ov_ref`). -/
 @[refines ConRon.Arena.checkOpaqueVal]
 theorem checkOpaqueVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
     (hkp : CrKeep p) (n : Nat)
@@ -178,14 +177,13 @@ theorem checkOpaqueVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg 
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkOpaqueVal V fe cv v) a₀ ∧
       StageR dn (r.headD 0) (AM.res (checkOpaqueVal V fe cv v) a₀) s'.mem
         (AM.st (checkOpaqueVal V fe cv v) a₀) ∧ CoreMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (ov_specW p hp (realCall p) (realCall_spec p) n s₀ vis c) ?_
-  rintro r s' ⟨hl, hm⟩
   have hcv := decCI_cvTA hc (.inr rfl)
-  obtain ⟨a', hrun, hS', hM', hg⟩ :=
-    dvW_okT hq hp.rcp hap hkp hn "type mismatch in opaque" hm hS hc hcv hv hlps hCr
+  refine triple_post (RefE.triple (checkOpaqueVal_specE p hp n s₀ vis c)
+    (ov_ref hq hp hap hkp hn "type mismatch in opaque" hS hc hcv hv hlps hCr)) ?_
+  rintro r s' ⟨hl, y, a', hrun, hP⟩
   rw [← checkOpaqueVal_dvT] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
+  exact ⟨hl, hok, by rw [hst, hres, hP.res]; exact hP.stage, hP.memos, hP.grow⟩
 
 /-- **The theorem arm under `StageT`** (`cdtW_ok`'s). -/
 theorem cdtW_okT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)

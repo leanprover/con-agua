@@ -331,43 +331,6 @@ theorem dvK1_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
   simp only [StateT.run_bind, hrun2, exc_ok_bind', hrun3, ex3, ite_true, StateT.run_pure]
   rfl
 
-/-- **`check_defn_val`/`check_opaque_val` under `StageT`** (`dvW_ok`'s). -/
-theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hap : ApdF p) (hkp : CrKeep p)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c : Word} {r : List Word}
-    {cv : IConstantVal} {v : EIdx} {ci : IConstantInfo} (msg : String)
-    (h : dvW p (realCall p) n m vis c = some (r, m')) (hS : StageT dn vis fe m a)
-    (hci : decCI (erecP m) dn c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
-    (hv : hd? (erecP m) (c.toNat + 5) = some v)
-    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
-    ∃ a', (dvT fe cv v ci msg).run a = .ok (fe.push ci, a') ∧
-      StageR dn (r.headD 0) (fe.push ci) m' a' ∧ CoreMemos m' ∧ IWGrow m m' := by
-  obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv
-  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
-  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.2
-  have ev : rdW (m.arr64 EREC) (c + 5) = wv :=
-    rdW_of_get? (toNat_add_small c 5 (by omega)).symm (erecP_get hwv)
-  have et : rdW (m.arr64 EREC) (c + 4) = wt :=
-    rdW_of_get? (toNat_add_small c 4 (by omega)).symm (erecP_get (by simpa [Nat.add_assoc] using hwt))
-  cases n with
-  | zero => simp [dvW] at h
-  | succ n =>
-  rw [dvW_step, ev, et] at h
-  have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
-  cases h1 : ivgW (realCall p) n m vis (c + 1) wv with
-  | none => rw [h1] at h; simp [dvK1] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1] at h
-  obtain ⟨a1, hrun1, hS1, hg1, -⟩ :=
-    ivgW_okT hap hkp h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv) (by rw [hc1]; omega)
-      hwvl hlps hCr
-  obtain ⟨a', hrun', hS', hM', hg'⟩ := dvK1_okT hq hRp (by omega) msg h hS1
-    (ArrExt.decCI (IWGrow.erecPExt hg1) hci) hcb hwvl hwtl hty
-  refine ⟨a', ?_, hS', hM', hg1.trans hg'⟩
-  simp only [dvT, StateT.run_bind, hrun1, exc_ok_bind']
-  simpa only [StateT.run_bind] using hrun'
-
 /-- **`check_thm_val` under `StageT`** (`tvW_ok`'s). -/
 theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCacheProg p)
     (hpc : p.lookup "lvl_eq_c" = some lvlEqCL) (hap : ApdF p) (hkp : CrKeep p)
