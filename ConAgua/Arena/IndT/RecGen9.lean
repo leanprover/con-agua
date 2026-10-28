@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndT.RecGen4
+import ConAgua.Verdict.IndBRec4
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecClassSpec.RuW
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
@@ -11,8 +11,8 @@ import ConAgua.Arena.RecGenSpec.ClassFeR
 
 `class_rules_ok`'s model at `realCall p`; twin side con-ron's `classRulesOk_spec`'s proof:
 `paramLevels` (`paramLevels_spec`, a core-free grower: `RSim.liftP` of `plW_sim`), `classGenRule`
-(`classGenRule_spec`: `RSim.liftPP` of `ruW_sim`), `classRuleOk` (`cr1W_relC`, from
-`cruleW_okC`), the rest by induction.
+(`classGenRule_spec`: `RSim.liftPP` of `ruW_sim`), `classRuleOk` (`class_rules_ok_one` read
+through its run, `cr1R`: `cr1_ref`'s ok half), the rest by induction.
 -/
 
 
@@ -32,51 +32,8 @@ section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option ConLeche.Name} {env : ConLeche.Env}
 
 include hq hApd in
-/-- `class_rules_ok_one` under `StageC` (`cr1W_rel`'s, `cruleW_okC`). -/
-theorem cr1W_relC (hcr : CruleProg p) {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
-    (henvR : ConLeche.EnvWF envR) {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem}
-    {g cvR x gen : Word} {r : List Word} {cv : IConstantVal} {G : ClassGen} {X : ClassCtor}
-    (h : cr1W (realCall p) N m visT visR g cvR x gen = some (r, m'))
-    (hC : StageC dn visR feR envR m a) (hgen : H gen) (hcv : decCVp m cvR.toNat = some cv)
-    (hext : CVExt m cvR.toNat) (hG : DecB (fun m => decCG m g.toNat) m G)
-    (hns : G.nP + G.slots.length < 2 ^ 64) (hX : DecB (fun m => decCC m x.toNat) m X)
-    (hA : AbsOK m) {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}
-    (hcvP : Frontend.denoteCV a.store cv = some cvRP)
-    (hgP : denoteE a.store (decI gen) = some genP)
-    (hie : ConRon.Bridge.Inductives.IFEnvOKS env₂ (feR.restrictTo visT.toNat) a.store) :
-    ∃ a', (ConRon.Arena.classRuleOk V visT.toNat feR cv (G.nP + G.slots.length + X.nF)
-        (decI gen)).run a = .ok (decI gen, a') ∧ StageC dn visR feR envR m' a' ∧ IWGrow m m' ∧
-      r = [gen] ∧ AbsOK m' ∧ ConRon.Bridge.CoreStep V envR feR a a' := by
-  rcases N with _ | N
-  · simp [cr1W] at h
-  have hsz := hC.stage.2.2.2.1
-  obtain ⟨hnP, -⟩ := rec2CG_parts hG
-  obtain ⟨hsl, -⟩ := rec3CG_parts hG
-  obtain ⟨hnF, -, -⟩ := rec2CC_parts (hX.get (decCC_mono _))
-  obtain ⟨e0, t0⟩ := rec2RdN (w := g) (k := 0) (by simpa using hnP) hsz
-  obtain ⟨e8, t8⟩ := rec2RdN (w := g) (k := 8) hsl hsz
-  obtain ⟨e1, t1⟩ := rec2RdN (w := x) (k := 1) hnF hsz
-  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero,
-    show UInt64.ofNat 8 = (8 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl] at e0 e8 e1
-  by_cases hb : rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1) <
-      rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)
-  · rw [cr1W_big (h := hb)] at h; cases h
-  rw [cr1W_ok (h := hb)] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
-  rw [cr1K_some] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨a', hrun, hC', hg, rfl, hA', hc'⟩ := cruleW_okC hq hcr hApd henvR (by omega) h1 hC hgen
-    (rec2DecCV_erecP hcv hext) (rec3CVExt_lt hC.stage hext) hA hcvP hgP hie
-  have hn : (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)).toNat =
-      G.nP + G.slots.length + X.nF := by
-    rw [rec3Add_toNat hb, e0, e8, e1, t1]
-    rw [UInt64.toNat_add, t0, t8]; exact congrArg (· + X.nF) (Nat.mod_eq_of_lt hns)
-  rw [hn] at hrun
-  exact ⟨a', hrun, hC', hg, rfl, hA', hc'⟩
-
-include hq hApd in
 /-- **`class_rules_ok` under `StageC`** (`crsW_sim`'s; twin side con-ron's `classRulesOk_spec`). -/
-theorem crsW_simC (hcr : CruleProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {env₂ : ConLeche.Env}
+theorem crsW_simC (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {env₂ : ConLeche.Env}
     (g rco rcl cgo cgl cvR c : Word) (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal)
     (cv : IConstantVal) (hns : G.nP + G.slots.length < 2 ^ 64) (hrcb : rco.toNat + rcl.toNat < 2 ^ 64)
     (hcgb : cgo.toNat + cgl.toNat < 2 ^ 64) (gP : ConLeche.ClassGen)
@@ -170,18 +127,19 @@ theorem crsW_simC (hcr : CruleProg p) (henv : ConLeche.EnvWF env) (visT visR : W
   refine RSim.bind (K := crsK4 (realCall p) n visT visR g rco rcl cgo cgl cvR c xo xl)
     (by rw [crsK4])
     (Q1 := fun b a' y => StageC dn visR feR env b.2 a' ∧ IWGrow m3 b.2 ∧
-      b.1 = [r3.tail.headD 0] ∧ y = decI (r3.tail.headD 0) ∧ AbsOK b.2 ∧
+      b.1.headD 0 = r3.tail.headD 0 ∧ y = decI (r3.tail.headD 0) ∧ AbsOK b.2 ∧
       ConRon.Bridge.CoreStep V env feR a3 a')
     (fun ⟨r4, m4⟩ h4 => by
-      obtain ⟨a', hrun, hC', hg, hr, hA4, hc4⟩ := cr1W_relC hq hApd hcr henv (by omega) h4 hC3 hgH
-        (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
-        (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
-        (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext)
-      exact ⟨_, a', hrun, hC', hg, hr, rfl, hA4, hc4⟩) ?_
+      obtain ⟨s4, rfl, -, y, a', hrun, hR⟩ := RefE.run_okW
+        (cr1E_spec p hP n ⟨m3, Locals.init []⟩ visT visR g cvR _ (r3.tail.headD 0))
+        (cr1_ref hq hP.cr hApd henv n (by omega) hC3 hgH
+          (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
+          (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
+          (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext)) h4
+      exact ⟨y, a', hrun, hR.stage, hR.grow, hR.val, hR.res, hR.abs, hR.core⟩) ?_
   rintro ⟨r4, m4⟩ y a4 - ⟨hC4, hg4, hr4, rfl, hA4, c4⟩
   dsimp only at hC4 hg4 hr4
-  subst hr4
-  rw [crsK4_some]
+  rw [crsK4_some, hr4]
   have hg04 := hg03.trans hg4
   have c14 := (p12.toCore hC.check).trans c4
   -- the rest
@@ -242,7 +200,7 @@ theorem classRulesOk_refinesC (hp : CrsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s�
       AbsOK s'.mem; ⊤⦄ :=
   triple_post (classRulesOk_spec p hp (realCall p) (realCall_spec p) n s₀ visT visR g rco rcl cgo cgl
     cvR c xo xl) fun _ _ ⟨hl, hw⟩ =>
-    let h := (crsW_simC hq hApd hp.cr henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl cvR c G recCls cvGs cv
+    let h := (crsW_simC hq hApd hp henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl cvR c G recCls cvGs cv
       hns hrcb hcgb gP cvGsP cvRP n hn _ a₀ xo xl Xs XsP hC hG hrc hcg hcv hext hXs hA hgP hcvsP
       hcvP hXsP hie).am hw
     ⟨hl, h.1, h.2.1, h.2.2.1⟩

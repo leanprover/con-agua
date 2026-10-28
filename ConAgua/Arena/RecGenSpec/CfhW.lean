@@ -254,40 +254,6 @@ namespace L.Ind
 
 open L.Arena
 
-section arms
-variable (cR : CallM) (N : Nat) (m m0 m1 m2 m3 m4 : Mem) (visT visR cvR n gen : Word) (r0 r1 r2 r3 r4 : List Word)
-theorem cruleW_eq : cruleW cR (N + 1) m visT visR cvR n gen =
-    cruK1 cR N visT visR n gen (cR N "class_rule_ok_guards" [visR, cvR, gen] m) := rfl
-theorem cruK1_some : cruK1 cR N visT visR n gen (some (r1, m1)) =
-    cruK2 N visT n gen (cR N "infer_type_core" [visR, 0, gen] m1) := rfl
-theorem cruK2_some (h : FlushOK m2) : cruK2 N visT n gen (some (r2, m2)) =
-    cruK3 N visT gen (stripF 5 (flushMem m2) [n, gen]) := by simp [cruK2, h]
-theorem cruK3_some : cruK3 N visT gen (some (r3, m3)) =
-    if r3.headD 0 = 0 then none
-    else cruK4 gen (iarW N m3 visT (r3.tail.headD 0) (r3.tail.tail.headD 0)) := rfl
-theorem cruK4_some : cruK4 gen (some (r4, m4)) = if r4.headD 0 = 0 then none else some ([gen], m4) := rfl
-end arms
-
-grind_pattern [ind_grind] cruleW_eq => cruleW cR (N + 1) m visT visR cvR n gen
-grind_pattern [ind_grind] cruK1_some => cruK1 cR N visT visR n gen (some (r1, m1))
-grind_pattern [ind_grind] cruK2_some => cruK2 N visT n gen (some (r2, m2))
-grind_pattern [ind_grind] cruK3_some => cruK3 N visT gen (some (r3, m3))
-grind_pattern [ind_grind] cruK4_some => cruK4 gen (some (r4, m4))
-
-theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St) (visT visR cvR n gen : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_rule_ok" [visT, visR, cvR, n, gen]
-    ⦃fun r s' => LocEq s' s₀ ∧ cruleW cR N s₀.mem visT visR cvR n gen = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.rule]
-  simp only [callFn, classRuleOkL]
-  rcases N with _ | N
-  · vcgen [exec] <;> grind
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      hcR N "class_rule_ok_guards", hcR N "infer_type_core",
-      flushCaches_spec p h.toFlushProg N, stripLams_specF p h.strip N,
-      classRuleOkDomains_spec p h.dom h.hcr N, hcR N "unresolved_consts_error"] <;>
-    finish (gen := 20)
-
 end L.Ind
 
 end

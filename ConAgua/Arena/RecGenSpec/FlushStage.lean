@@ -5,7 +5,7 @@ import ConAgua.Arena.IndGrindAttr
 /-!
 # FlushStage
 
-`flush_stage`, `cvLpsA_stage`, `cruK3`, `cruK2`, `cruK1`, `cruleW` and the lemmas only they use.
+`flush_stage`, `cvLpsA_stage` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -68,34 +68,6 @@ theorem cvLpsA_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   rw [hr4t]
   exact ⟨hS4, hg4, by rw [hdec4]; exact hsl, htop4⟩
 
-def cruK3 (N : Nat) (visT gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) =>
-    if r3.headD 0 = 0 then none
-    else cruK4 gen (iarW N m3 visT (r3.tail.headD 0) (r3.tail.tail.headD 0))
-
-open Classical in
-noncomputable def cruK2 (N : Nat) (visT n gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m2) =>
-    if FlushOK m2 then cruK3 N visT gen (stripF 5 (flushMem m2) [n, gen]) else none
-
-noncomputable def cruK1 (cR : CallM) (N : Nat) (visT visR n gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m1) => cruK2 N visT n gen (cR N "infer_type_core" [visR, 0, gen] m1)
-
-/-- **The model of `class_rule_ok`** (`class_rule_ok_guards` read through `cR`, its run). -/
-noncomputable def cruleW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | N + 1, m, visT, visR, cvR, n, gen => cruK1 cR N visT visR n gen (cR N "class_rule_ok_guards" [visR, cvR, gen] m)
-
-section arms
-variable (cR : CallM) (N : Nat) (m m0 m1 m2 m3 m4 : Mem) (visT visR cvR n gen : Word) (r0 r1 r2 r3 r4 : List Word)
-theorem cruK2_bad (h : ¬ FlushOK m2) : cruK2 N visT n gen (some (r2, m2)) = none := by
-  simp [cruK2, h]
-end arms
-
-grind_pattern [ind_grind] cruK2_bad => cruK2 N visT n gen (some (r2, m2))
 end L.Ind
 
 end

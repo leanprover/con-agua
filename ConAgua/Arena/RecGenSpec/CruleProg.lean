@@ -5,7 +5,7 @@ import ConAgua.Arena.RecGen
 /-!
 # CruleProg
 
-`StageR.restrict`, `StageR.unrestrict`, `cruK4`, `CruleProg`.
+`StageR.restrict`, `StageR.unrestrict`, `CruleProg`.
 -/
 
 noncomputable section
@@ -34,10 +34,6 @@ theorem StageR.unrestrict {dn : NIdx → Option ConLeche.Name} {vis k : Word} {f
   ⟨⟨h.1.arena, h.1.core, h.1.pins, ⟨hv, h.1.env.keys, h.1.env.vals, h.1.env.consts, h.1.env.tkeys, h.1.env.tvals, h.1.env.tables⟩, h.1.mode⟩, h.2⟩
 
 /-! ## `class_rule_ok` -/
-
-def cruK4 (gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) => if r4.headD 0 = 0 then none else some ([gen], m4)
 
 /-- The lookups `class_rule_ok` needs. -/
 structure CruleProg (p : Prog) : Prop extends FlushProg p where

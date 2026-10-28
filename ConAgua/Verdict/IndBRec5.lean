@@ -4,7 +4,9 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 /-!
-# Error refinements of `class_rules_ok_one` and `class_rules_ok` (lane `verdicts-b`, helper `ib`)
+# Error refinement of `class_rules_ok` (lane `verdicts-b`, helper `ib`)
+
+`class_rules_ok_one` is read through `cr1_ref` (`IndBRec4.lean`): `RefE.run_err`, `RefE.run_ok`.
 -/
 
 set_option experimental.vcgen true
@@ -21,11 +23,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model cr1E_spec (p : Prog) (hf : p.lookup "class_rules_ok_one" = some classRulesOkOne)
-  fns [hf ↦ cr1E] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
-
 l_model crsE_spec (p : Prog) (hf : p.lookup "class_rules_ok" = some classRulesOkL)
   fns [hf ↦ crsE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
@@ -34,60 +31,6 @@ l_model crsE_spec (p : Prog) (hf : p.lookup "class_rules_ok" = some classRulesOk
 section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option ConLeche.Name}
   {env : ConLeche.Env} (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
-
-include hq hApd hnv hcE hU in
-/-- **`class_rules_ok_one`'s error claim** (`cr1W_relC`'s hypotheses): the rule check at the
-telescope length `nP + |slots| + nF` is `class_rule_ok`'s. -/
-theorem cr1_claim (hP : CrsProg p) {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
-    (henvR : ConLeche.EnvWF envR) (N : Nat) (hN : N ≤ 2 ^ 62) (s₀ : St) (a : AState)
-    {g cvR x gen : Word} {cv : IConstantVal} {G : ClassGen} {X : ClassCtor}
-    (hC : StageC dn visR feR envR s₀.mem a) (hgen : H gen) (hcv : decCVp s₀.mem cvR.toNat = some cv)
-    (hext : CVExt s₀.mem cvR.toNat) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
-    (hns : G.nP + G.slots.length < 2 ^ 64) (hX : DecB (fun m => decCC m x.toNat) s₀.mem X)
-    (hA : AbsOK s₀.mem) {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}
-    (hcvP : Frontend.denoteCV a.store cv = some cvRP)
-    (hgP : denoteE a.store (decI gen) = some genP)
-    (hie : ConRon.Bridge.Inductives.IFEnvOKS env₂ (feR.restrictTo visT.toNat) a.store) :
-    CoreSpecE p N "class_rules_ok_one" [visT, visR, g, cvR, x, gen]
-      (ConRon.Arena.classRuleOk V visT.toNat feR cv (G.nP + G.slots.length + X.nF) (decI gen)) s₀ a := by
-  refine CoreSpecE.of_runs fun er hc' => ?_
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (cr1E_spec p hP.one N ⟨s₀.mem, Locals.init []⟩ visT visR g cvR x gen) hc'
-    (Err.code_ne_of_cls hk0)
-  cases N with
-  | zero => rw [cr1E.eq_def] at hW; cases hW; exact absurd rfl hk0
-  | succ N =>
-  have hsz := hC.stage.2.2.2.1
-  obtain ⟨hnP, -⟩ := rec2CG_parts hG
-  obtain ⟨hsl, -⟩ := rec3CG_parts hG
-  obtain ⟨hnF, -, -⟩ := rec2CC_parts (hX.get (decCC_mono _))
-  obtain ⟨e0, t0⟩ := rec2RdN (w := g) (k := 0) (by simpa using hnP) hsz
-  obtain ⟨e8, t8⟩ := rec2RdN (w := g) (k := 8) hsl hsz
-  obtain ⟨e1, t1⟩ := rec2RdN (w := x) (k := 1) hnF hsz
-  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero,
-    show UInt64.ofNat 8 = (8 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl] at e0 e8 e1
-  by_cases hb : rdW (s₀.mem.arr64 IW) g + rdW (s₀.mem.arr64 IW) (g + 8) + rdW (s₀.mem.arr64 IW) (x + 1) <
-      rdW (s₀.mem.arr64 IW) g + rdW (s₀.mem.arr64 IW) (g + 8)
-  · rw [cr1E.abort1 p N s₀.mem visT visR g cvR x gen hb] at hW
-    cases hW; exact absurd rfl hk0
-  rw [cr1E.arm1 p N s₀.mem visT visR g cvR x gen hb] at hW
-  have hn : (rdW (s₀.mem.arr64 IW) g + rdW (s₀.mem.arr64 IW) (g + 8) + rdW (s₀.mem.arr64 IW) (x + 1)).toNat =
-      G.nP + G.slots.length + X.nF := by
-    rw [rec3Add_toNat hb, e0, e8, e1, t1]
-    rw [UInt64.toNat_add, t0, t8]; exact congrArg (· + X.nF) (Nat.mod_eq_of_lt hns)
-  cases h1 : callE p N "class_rule_ok" [visT, visR, cvR,
-      rdW (s₀.mem.arr64 IW) g + rdW (s₀.mem.arr64 IW) (g + 8) + rdW (s₀.mem.arr64 IW) (x + 1), gen] s₀.mem with
-  | error e1 =>
-    rw [h1, cr1E.k_class_rule_ok.none] at hW
-    cases hW
-    have := CoreSpecE.of_callE (classRuleOk_claim hq hnv hcE hP.cr hApd hU N (by omega) ⟨s₀.mem, Locals.init []⟩ a
-      visT visR feR henvR cvR _ gen cv hC hgen (rec2DecCV_erecP hcv hext) (rec3CVExt_lt hC.stage hext) hA hcvP hgP
-      hie) h1
-    rwa [hn] at this
-  | ok q1 =>
-  rw [h1, cr1E.k_class_rule_ok.arm1] at hW
-  cases hW
 
 include hq hApd hnv hcE hU in
 /-- **`class_rules_ok`'s model error claim** (`crsW_simC`'s hypotheses; the recursion is the model's
@@ -221,26 +164,28 @@ theorem crsE_claim (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
     rw [h4, crsE.k_class_rules_ok_one.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (cr1_claim hq hApd hnv hcE hU hP henv n (by omega) ⟨s3.mem, Locals.init []⟩ a3
-      hC3 hgH (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
+    exact RefE.run_err (cr1E_spec p hP n ⟨s3.mem, Locals.init []⟩ visT visR g cvR _ _) hnv
+      { nv := hnv, core := hcE, uce := hU }
+      (cr1_ref hq hP.cr hApd henv n (by omega) hC3 hgH (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
       (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
       (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4, crsE.k_class_rules_ok_one.arm1] at he
-  obtain ⟨s4, hs4, -, h4m⟩ := triple_of_callW (classRulesOkOne_spec p hP (realCall p) (realCall_spec p) n
-    ⟨s3.mem, Locals.init []⟩ visT visR g cvR (UInt64.ofNat px) (r3.tail.headD 0)) (callW_of_callE h4)
+  obtain ⟨s4, hs4, -, y, a', hrun, hR⟩ := RefE.run_ok
+    (cr1E_spec p hP n ⟨s3.mem, Locals.init []⟩ visT visR g cvR _ _)
+    (cr1_ref hq hP.cr hApd henv n (by omega) hC3 hgH (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
+      (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
+      (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext)) h4
   subst hs4
-  obtain ⟨a', hrun, hC', hg, hr, hA4, hc4⟩ := cr1W_relC hq hApd hP.cr henv (by omega) h4m hC3 hgH
-    (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
-    (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
-    (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext)
+  obtain ⟨hC', hg, hr, rfl, hA4, hc4⟩ := hR
+  dsimp only at hr
+  rw [hr] at he
   show ErrClaim (do
       let r ← ConRon.Arena.classRuleOk V visT.toNat feR cv (G.nP + G.slots.length + X.nF) (decI (r3.tail.headD 0))
       let rs ← ConRon.Arena.classRulesOk V visT.toNat feR G recCls cvGs cv c.toNat Xs'
       pure (r :: rs)) a3 e
   refine ErrClaim.bind_right hrun ?_
-  subst hr
   have hg04 : IWGrow m s4.mem := hg03.trans hg
   have c14 := ((p12.toCore hC.check)).trans hc4
   have hxo1 := rec2ToNat_succ (o := xo) (i := xo.toNat) (Nat.le_refl _) (by omega)
@@ -261,7 +206,7 @@ theorem crsE_claim (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5, crsE.k_class_rules_ok.arm1] at he
-  cases h6 : callE p n "sl_cons" [[r3.tail.headD 0].headD 0, r5.headD 0, r5.tail.headD 0] m5 with
+  cases h6 : callE p n "sl_cons" [r3.tail.headD 0, r5.headD 0, r5.tail.headD 0] m5 with
   | error e6 =>
     rw [h6, crsE.k_sl_cons.none] at he
     cases he
