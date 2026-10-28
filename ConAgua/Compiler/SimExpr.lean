@@ -165,7 +165,7 @@ theorem rdW_le64 {d : DataMem} {X : Nat} {b : Array UInt8} {k : Nat}
 structure SrcAt (G : Layout) (b : Array UInt8) (d : DataMem) (B : Nat) : Prop where
   fit : B + b.size < 2 ^ 64
   get : ∀ x < b.size, d.get? (A (B + x)) = some b[x]!
-  out64 : ∀ x < b.size, ∀ a < G.tab.nw, ¬ G.In64 a (B + x)
+  out64 : ∀ x < b.size, ∀ a, G.tab.nb ≤ a ∧ a < G.tab.nb + G.tab.nw → ¬ G.In64 a (B + x)
   outSt : ∀ x < b.size, ¬ G.InStack (B + x)
 
 /-! ## Evaluating an expression on the machine -/
@@ -304,7 +304,7 @@ theorem sim_srcBase {ctx : Ctx} (hT : ctx.tab = G.tab)
       simp only [Mem.src8] at hx
       exact hG.arr8_64 _ hp b hb _ ⟨by omega, by omega⟩, fun x hx hst => by
       simp only [Mem.src8] at hx
-      exact hG.stack_arr _ hst (Or.inl ⟨_, hp, by omega, by omega⟩)⟩
+      exact hG.stack_arr _ hst (Layout.InArr.of8 hp ⟨by omega, by omega⟩)⟩
     have e : (UInt64.ofNat (G.b (G.tab.pos8 a))).toBitVec = A (G.b (G.tab.pos8 a)) := by
       apply BitVec.eq_of_toNat_eq; simp [A]
     rw [e]; exact this
@@ -330,7 +330,7 @@ theorem sim_srcBase {ctx : Ctx} (hT : ctx.tab = G.tab)
           G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + (romIdx d G.tab.rom + x) by omega, hb]
         simp [hx], fun x hx b hb h64 => by
         simp only [Mem.src8, List.size_toArray] at hx
-        exact hG.tab_arr _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ (Or.inr ⟨b, hb, h64⟩),
+        exact hG.tab_arr _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ (Layout.InArr.of64 hb (h64)),
         fun x hx hst => by
         simp only [Mem.src8, List.size_toArray] at hx
         exact hG.tab_stack _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ hst⟩
@@ -675,7 +675,7 @@ include hG
 omit [Host] in
 /-- The descriptor block's address does not wrap: tier 1's descriptor is in the table. -/
 theorem tier_T {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) :
-    G.T + 16 + 16 * G.tab.nb + 8 * G.tab.nw + 8 * (G.tab.pos64 (TieredArray.t0 a) + 1) < 2 ^ 64 := by
+    G.T + 16 + 8 * (G.tab.nb + G.tab.nw) + 8 * (G.tab.pos64 (TieredArray.t0 a) + 1) < 2 ^ 64 := by
   have := hG.tab_end
   have := G.tab.pos64_lt ha
   rw [(G.tab.adj64 a ha).2] at this

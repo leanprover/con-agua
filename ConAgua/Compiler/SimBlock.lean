@@ -455,7 +455,7 @@ theorem rdW_slot_store64 {d : DataMem} {X : Nat} (hX1 : G.lo ≤ X) (hX2 : X + 8
   have := hG.hi_le
   rw [rdW_wrW_A (by omega) (by omega) ?_]
   exact cell_disj (P := G.In64 (G.tab.pos64 a)) (Q := G.InStack) (fun k hk => ⟨by omega, by omega⟩)
-    (fun k hk => ⟨by omega, by omega⟩) fun t h1 h2 => hG.stack_arr t h2 (Or.inr ⟨_, hendp, h1⟩)
+    (fun k hk => ⟨by omega, by omega⟩) fun t h1 h2 => hG.stack_arr t h2 (Layout.InArr.of64 hendp (h1))
 
 omit hTab in
 /-- **The copy loop of `copy64`**: from `rcx` = word `u` of `sa`, `rdx` = word `w` of `da`, the end
