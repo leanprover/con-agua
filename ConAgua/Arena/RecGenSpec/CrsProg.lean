@@ -1,11 +1,10 @@
+import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RecClassSpec.RuProg
-import ConAgua.Arena.RecGenSpec.CrsK6
-import ConAgua.Arena.RecGenSpec.FlushStage
 
 /-!
 # CrsProg
 
-`cr1W`, `CrsProg`.
+`CrsProg`.
 -/
 
 noncomputable section
@@ -21,13 +20,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-- **The model of `class_rules_ok_one`.** -/
-noncomputable def cr1W (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, visT, visR, g, cvR, x, gen =>
-    if (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)) + rdW (m.arr64 IW) (x + 1) < (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)) then none
-    else cr1K (cruleW cR n m visT visR cvR ((rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)) + rdW (m.arr64 IW) (x + 1)) gen)
 
 /-- The lookups `class_rules_ok` needs. -/
 structure CrsProg (p : Prog) : Prop where

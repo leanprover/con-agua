@@ -1,7 +1,4 @@
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.NtyLook
-import ConAgua.Arena.IndPosSpec.UnW
-import ConAgua.Arena.IndPartsSpec.BlockCounts
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -9,7 +6,7 @@ import ConAgua.L.GrindAttr
 /-!
 # NtyW
 
-`noaW_ok`, `nestInstType_spec` and the lemmas only they use.
+`noaW_ok` and the lemmas only it uses.
 -/
 
 section
@@ -81,44 +78,6 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       refine ⟨b, ?_, hS', hg1.trans hg', hr, hP'⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, ite_false]
       exact hrun
-
-theorem nestInstType_spec (p : Prog) (hl : NitLook p) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St)
-    (vis ctx hi key : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type" [vis, ctx, hi, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ nitW cR k s₀.mem vis ctx hi key = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hl.hp, callFn, nestInstTypeL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      hcR k "nest_inst_type_ty", piBinders_spec p hl.ty.ha hl.hc2 hl.ty.hv hl.hs hl.hpb k,
-      eView_spec p hl.ty.hv k, nestOccAny_spec p hl.no hl.hoa k, hcR k "lvl_eq_fueled"] <;>
-    finish (gen := 20) [nitW, ntyR, rdW_eq, Locals.init_cons_zero, List.getD_cons_zero, List.getD_cons_succ]
-
-end L.Ind
-
-end
-
-end
-
-section
-
-noncomputable section
-
-set_option experimental.vcgen true
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-theorem nestInstType_spec' (p : Prog) (hl : NitLook p) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St)
-    (vis ctx hi key : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_inst_type" [vis, ctx, hi, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ nitWf cR k s₀.mem vis ctx hi key = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  cases k with
-  | zero => exact triple_post (invoke_exec0 p _ _ s₀) (fun _ _ h => h.elim)
-  | succ k => exact nestInstType_spec p hl cR hcR k s₀ vis ctx hi key
 
 end L.Ind
 

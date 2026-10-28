@@ -1,3 +1,5 @@
+import ConAgua.Arena.RecGenSpec.CruleProg
+import ConAgua.Arena.DeclValSpec
 import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.WalkC
@@ -13,8 +15,8 @@ import ConRon.Bridge.Inductives.GenRec
 `class_rule_ok_guards` stands for the guards of the twin's `classRuleOk` (`crgT`: the closedness
 guards, the level parameters, the resolution). Its unified model `crgE` lifts the walks outside the
 verdict closure; `crg_ref` refines it against `crgT` under `VerdictCtxU p` (the consts-resolve
-site's `uce_errClaim_hi`). Its ok half is `class_rule_ok`'s ok refinement (`cruleW_okC`,
-`RefE.run_okW`), its error half `class_rule_ok`'s error claim (`RefE.run_err`).
+site's `uce_errClaim_hi`). Both halves are read by `class_rule_ok`'s refinement (`crule_ref`), which calls its
+unified model directly.
 -/
 
 open ConRon.Arena

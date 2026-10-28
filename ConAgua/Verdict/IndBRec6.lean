@@ -125,7 +125,7 @@ theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
     ⟨m, Locals.init []⟩ visT visR g rco rcl cgo cgl (UInt64.ofNat pp) (UInt64.ofNat c0)
     (crrXs m g (UInt64.ofNat c0)).1 (crrXs m g (UInt64.ofNat c0)).2) (callW_of_callE h1)
   subst hs1
-  have hcsim := crsW_simC hq hApd hP.crs.cr henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl (UInt64.ofNat pp)
+  have hcsim := crsW_simC hq hApd hP.crs henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl (UInt64.ofNat pp)
     (UInt64.ofNat c0) G recCls cvGs cv hns hrcb hcgb gP cvGsP cvP n (by omega) m a _ _ _
     (gP.ctors.getD c0 []) hC hG hrc (rec3SPL_decB hcg) (by rw [tp]; exact hcvp)
     (by rw [tp]; exact hcvx) hxs hA hgP hcvGsP hcvP (ctorsAt_denote hgP c0) hie

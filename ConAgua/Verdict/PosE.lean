@@ -7,7 +7,6 @@ import ConAgua.Arena.IndPosSpec.OneK
 import ConAgua.Arena.IndPosSpec.WalkOK
 import ConAgua.Verdict.IndE
 import ConAgua.Verdict.VCtx
-import ConAgua.Verdict.PosE1M
 import ConAgua.Verdict.PosE2M
 import ConAgua.Verdict.PosE3Cm
 import ConAgua.Arena.IndT.PosDefs
@@ -23,8 +22,7 @@ walk's state denoting, the inputs well scoped): `NbRef n`. The posts add `StageC
 continuation as `oneT`, `walkT`) and the two arms of `nestPos` (`posBindT`, `posAppT`) they also
 give the denotations the caller's next step needs. The error halves assume `NbG p`.
 
-The leaves' claims shared between the steps: `NitE` (`nest_inst_type`), `WhnfTopE` (`whnf_top`
-under `StageT`, a core stub).
+The leaf claim shared between the steps: `WhnfTopE` (`whnf_top` under `StageT`, a core stub).
 -/
 
 
@@ -37,21 +35,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-section stmts
-variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
-
-/-- **`nest_inst_type`'s error claim** (every fuel), from the facts `nitW_ok` and `nitLe_realC`
-take. -/
-def NitE : Prop :=
-  ∀ (k : Nat) (m : Mem) (a : AState) (ctx hi key : Word) (HI : Nat) (c : NestCtx) (kk : NestKey)
-    (ctxP : ConLeche.NestCtx) (keyP : ConLeche.NestKey),
-    StageC dn vis fe env m a → AbsOK m → hi.toNat = HI → UCtx dn vis fe m ctx c →
-    decNK m key.toNat = some kk → NKIn m key.toNat (· < iwTop m) → NKSl m key → PosMR m →
-    dCtx a.store env.find? c = some ctxP → dKey a.store kk = some keyP →
-    ∀ e, callE p k "nest_inst_type" [vis, ctx, hi, key] m = .error e →
-      ErrClaim (ConRon.Arena.nestInstType fe c HI kk) a e
-
-end stmts
 
 
 /-! ## The block, one refinement per function for both outcomes -/

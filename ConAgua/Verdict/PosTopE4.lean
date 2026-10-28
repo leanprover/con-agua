@@ -8,7 +8,7 @@ import ConAgua.Arena.IndT.PosAll
 One refinement for both outcomes each: `nest_root`'s (`nrt_ref`, on its unified model `nrtE`) and
 `nest_seeds`' (`nsd_ref`, on its unified model `nsdE`, defined here): the walk's
 callees `nest_ctors`, `nest_cont_key` by the block's refinements (`nbRef_all`, both halves through
-the run; the errors under `NbG`), `nest_inst_type` by its claim `NitE`, the others claim nothing
+the run; the errors under `NbG`), `nest_inst_type` by `nit_ref`, the others claim nothing
 (`nvFns`).
 -/
 
@@ -18,6 +18,8 @@ open scoped Lean.Order
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext dCtors dOut dOutss kindOf)
 
 set_option experimental.vcgen true
+
+noncomputable section
 
 namespace L.Ind
 
@@ -205,7 +207,8 @@ end root
 unified model, `nest_inst_type` through its run. -/
 l_model nsdE_spec (p : Prog) (hL : RsLook p)
   fns [hL.pseeds ↦ nsdE list]
-  specs [nestCtxHiAt_specE p hL.nb.ct.cr.rx.hi n, nestSeedsFuel_spec hL n, nckE_spec p hL.nb.pkey n]
+  specs [nestCtxHiAt_specE p hL.nb.ct.cr.rx.hi n, nestSeedsFuel_spec hL n, nitE_spec p hL.nb.nit n,
+    nckE_spec p hL.nb.pkey n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -230,7 +233,7 @@ variable {p : Prog} (L : RsLook p)
 include L hq hIlpf hLC henv hc in
 /-- **`nest_seeds` refines `nestSeeds`, both outcomes** under `StageC` (twin side: con-ron's
 `nestSeeds_spec`; the seed's fuel by `seedFuel_spec`, its former by `nestInstType_spec`, the
-instantiation met by `nestContKey_spec`; the errors under `NbG`: `nest_inst_type`'s `NitE`,
+instantiation met by `nestContKey_spec`; the errors under `NbG`: `nest_inst_type`'s (`nit_ref`),
 `nest_cont_key`'s from `nbRef_all`). -/
 theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO sL ns : Word)
     (seeds : List (NestKey × Nat)) (NS : NestState)
@@ -311,24 +314,12 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
         rw [hg1.2.2.1 _ (by omega), h1w] at h1'; cases h1'
         exact hksl'
     -- the instance's type
-    rcases h3 : callE p n "nest_inst_type" [vis, ctx, nhiW m ctx 0, key] m1 with e3 | ⟨r2, m2⟩
-    · rw [nsdE.k_nest_inst_type.none]
-      exact RefE.bind_left fun hG => nitE_all L.nb hq hIlpf hLC hG.nv dn vis fe env n m1 a1 ctx (nhiW m ctx 0) key
-        (c.hiAt 0) c kk ctxP keyP hC1 hA1 hhi0 (hU.grow hg1) hkd1 hkin1 hksl1 hP1 (dCtx_ext _ p1.ext _ _ hctx)
-        (ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey) _ h3
-    rcases n with _ | n'
-    · obtain ⟨z, hz, -⟩ := callE_zero p "nest_inst_type" [vis, ctx, nhiW m ctx 0, key] m1
-      rw [hz] at h3; cases h3
-    obtain ⟨s3, hs3, -, hni⟩ := triple_of_callW (nestInstType_spec' p L.nb.nit (realCall p) (realCall_spec p) (n' + 1)
-      ⟨m1, Locals.init []⟩ _ _ _ _) (callW_of_callE h3)
-    simp only [nitWf] at hni hs3
-    rw [hs3] at hni
+    have hN := nit_ref L.nb.nit hq.closed hIlpf hLC n hC1 hA1 hhi0 (hU.grow hg1) hkd1 hkin1 hksl1 hP1
+      (dCtx_ext _ p1.ext _ _ hctx) (ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey)
+    rcases h3 : nitE p n m1 vis ctx (nhiW m ctx 0) key with e3 | ⟨r2, m2⟩ <;> rw [h3] at hN
+    · rw [nsdE.k_nest_inst_type.none]; exact RefE.bind_left fun hG => hN hG.nv
     rw [nsdE.k_nest_inst_type.arm1]
-    obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, -, hA2⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2
-      a1 key kk _ (realCall p) (nty_ok L.nb.nit.ty (IlpRd.realC hIlpf hC1)) _
-      (nitLe_realC hq.closed hLC L.nb.nit.hlf n' _ _ key c kk hC1 hA1 (dCtx_ext _ p1.ext _ _ hctx)
-        (ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey)) hni hS1 (hU.grow hg1) hkd1 hkin1 hksl1 hP1
-    simp only [List.headD_cons, List.tail_cons] at hctyH hctyd
+    obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, hA2⟩ := hN
     have c1 := p1.toCore hC.check
     obtain ⟨c2, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (c.hiAt 0) kk keyP
       a1 a2 x2 c1.ok ⟨dCtx_ext _ p1.ext _ _ hctx, ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey⟩ hrun2
@@ -354,7 +345,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
       rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by simpa using hdsb j hj)]; simpa using hdsd
     have hnnd' : decI (rdW (m.arr64 IW) key) = kk.cname := hnnd
     have husd' : decI (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) = kk.lvls := husd
-    have hK := (nbRef_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv (n' + 1) (by omega)).key m2 a2 ctx
+    have hK := (nbRef_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv n (by omega)).key m2 a2 ctx
       (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key) (rdW (m.arr64 IW) (key + UInt64.ofNat 1))
       (rdW (m.arr64 IW) (key + UInt64.ofNat 2)) (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns
       c [] kk.ds NS ctxP [] keyP.cname keyP.lvls keyP.ds niP.2 nsP
@@ -363,7 +354,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
       (by rw [husd']; exact ConRon.Bridge.denoteLs_ext hkl hx02) (ConRon.Bridge.denoteEList_ext hx02 _ _ hkd)
       (by rw [hctyd]; exact hni2) (dState_ext hx02 _ _ hnsP) (by simpa using hw _ List.mem_cons_self) hni3
     rw [hnnd', husd', hctyd, hnpc] at hK
-    rcases h4 : nckE p (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
+    rcases h4 : nckE p n m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
         (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) (rdW (m.arr64 IW) (key + UInt64.ofNat 2))
         (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with e4 | ⟨r3, m3⟩ <;> rw [h4] at hK
     · rw [nsdE.k_nest_cont_key.none]; exact RefE.bind_left hK
@@ -389,7 +380,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
           obtain ⟨x, hx, rfl⟩ := h
           exact ⟨x, ConRon.Bridge.Inductives.dKey_ext hx03 _ _ hx, rfl⟩) _ _ hks1)
       hns1P (fun k hk x hx => hw k (List.mem_cons_of_mem _ hk) x hx)
-    rcases hx : nsdE p (n' + 1) m3 vis ctx (sO + 1) (sL - 1) (r3.tail.headD 0) with ε | ⟨r0, m0⟩ <;> rw [hx] at ih'
+    rcases hx : nsdE p n m3 vis ctx (sO + 1) (sL - 1) (r3.tail.headD 0) with ε | ⟨r0, m0⟩ <;> rw [hx] at ih'
     · rw [nsdE.k_nest_seeds.none]; exact ih'
     rw [nsdE.k_nest_seeds.arm1]
     obtain ⟨x, a', hrun, hR⟩ := ih'
@@ -398,3 +389,5 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
 end seeds
 
 end L.Ind
+
+end
