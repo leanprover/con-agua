@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndT.Sum5
+import ConAgua.Verdict.IndBSum4
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.Icbo
@@ -118,15 +118,14 @@ theorem installSimSumCtorsC (hP : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : 
         PSlR decIS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m' ∧ AbsOK m' ∧
         ConRon.Bridge.CoreStep V env fe a a') := by
   intro r m' e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (sctsW_spec p hP (realCall p) (realCall_spec p) n _ vis vis T lo ll nP nIdx rs isP lg cvTa co cl) e
   have hfev : fe.restrictTo vis.toNat = fe := by rw [← hC.stage.1.env.vis]; rfl
-  have h := sctsW_okC (dn := dn) (vis := vis) (fe := fe) hq henv hV hOpf hLC hLT hApd hCrk vis T lo ll nP nIdx rs isP lg cvTa lps cvv
-    hT hrs hws n hn m a co cl cs csP hC hl hlb hcv hcs hA hTP hlpsP hrsP hcvTaP hcsP
-    (by rw [hfev]; exact hok₀) hfe r s'.mem hW
+  have h := RefE.run_okW (sctsE_spec p hP n ⟨m, Locals.init []⟩ vis vis T lo ll nP nIdx rs isP lg cvTa co cl)
+    (scts_ref (dn := dn) (vis := vis) (fe := fe) hq henv hV hOpf hLC hLT hApd hCrk hP vis T lo ll nP nIdx rs isP
+      lg cvTa lps cvv hT hrs hws n hn m a co cl cs csP hC hl hlb hcv hcs hA hTP hlpsP hrsP hcvTaP hcsP
+      (by rw [hfev]; exact hok₀) hfe) e
   rw [hfev] at h
-  obtain ⟨x, a', h1, hC', hg', hd1, hb1, hd2, hb2, hA', hc⟩ := h
-  exact ⟨x, a', h1, hC', hg', ⟨hd1, hb1⟩, ⟨hd2, hb2⟩, hA', hc⟩
+  obtain ⟨s', rfl, -, x, a', h1, hR⟩ := h
+  exact ⟨x, a', h1, hR.stage, hR.grow, ⟨hR.cns, hR.cnsB⟩, ⟨hR.sorts, hR.sortsB⟩, hR.abs, hR.core⟩
 
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_block_ctors_one` refines `checkSumCtors`, both outcomes** (twin side: one member of
