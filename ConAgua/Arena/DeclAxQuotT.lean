@@ -1,6 +1,6 @@
 import ConAgua.Arena.DeclArmT
+import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclArmAxiom
-import ConAgua.Arena.StageC
 import ConAgua.L.ModelGen
 
 /-!

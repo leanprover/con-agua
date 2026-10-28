@@ -1,7 +1,6 @@
 import ConAgua.Arena.DeclStep
 import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.CoreLevels
-import ConAgua.Arena.IndCallM
 import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

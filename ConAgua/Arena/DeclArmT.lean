@@ -1,5 +1,5 @@
 import ConAgua.Verdict.DeclValsE
-import ConAgua.Arena.DeclArmLoop
+import ConAgua.Arena.DeclStepGo
 import ConRon.Bridge.Checker.Split
 
 /-!

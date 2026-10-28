@@ -1,4 +1,3 @@
-import ConAgua.Arena.DeclValT
 import ConAgua.Verdict.DeclHdrE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

@@ -2,7 +2,6 @@ import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.DeclAxiomSpec
 import ConAgua.Arena.DeclAxiomSpec2
 import ConAgua.Arena.DeclAxiomSpec4
-import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

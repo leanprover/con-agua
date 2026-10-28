@@ -1,9 +1,7 @@
-import ConAgua.Arena.DeclValRef
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.IndT.WalkC
-import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.DeclValSpec
-import ConAgua.Verdict.LefRef
 
 /-!
 # The value checks under `StageT` (lane `loopt2`)

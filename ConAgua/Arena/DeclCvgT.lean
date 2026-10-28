@@ -1,7 +1,4 @@
 import ConAgua.Arena.IndRealWalkT
-import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.CrOKFrame
 import ConRon.Bridge.Checker.Hyp
 
 /-!

@@ -1,6 +1,5 @@
-import ConAgua.Verdict.DeclCrpE
+import ConAgua.Arena.DeclCrpT
 import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # The verdict claims of the `check_decl` arms (lane `verdicts-b`, helper `d`)
