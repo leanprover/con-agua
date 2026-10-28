@@ -1,4 +1,12 @@
-import ConAgua.Arena.IndInstallSpec.Iis
+import ConAgua.Arena.IndInstall
+import ConAgua.Arena.WhnfBase
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 import ConAgua.Arena.IndInstallSpec.TabsProg
 import ConAgua.Arena.IndRealBle
 import ConAgua.Arena.RecCheckSpec.RpLook
@@ -12,7 +20,7 @@ import ConAgua.Arena.IndInstallSpec.SelProg
 /-!
 # GrcProg
 
-`decIS`, `_root_.L.Arena.Sim.tail`, `idxOneAM`, `installIdx_cons`, `installIdxTail`, `IdxProg` and the lemmas only they use.
+`decIS`, `_root_.L.Arena.Sim.tail`, `idxTail`, `idxOneAM`, `installIdx_cons`, `installIdxTail`, `IdxProg` and the lemmas only they use.
 -/
 
 section
@@ -47,6 +55,9 @@ theorem _root_.L.Arena.Sim.tail {β γ α : Type} {K : Option (β × Mem) → Op
     rw [hmo, hs] at e
     obtain ⟨y, a₁, h1, hq⟩ := h r m₁ hmo
     exact ⟨y, a₁, h1, h2 r y m₁ a₁ hq r' m' e⟩
+
+/-- The index binders' slice: the telescope's tail past `nP`, `(0, 0)` when empty. -/
+def idxTail (nP o l : Word) : Word × Word := if nP < l then (o + nP, l - nP) else (0, 0)
 
 /-- One member's index sorts, as the twin computes them. -/
 def idxOneAM (fe : IFEnv) (bs : BlockShape) (ms : MemberShape) (cvTa : IConstantVal) : AM (List LIdx) := do
