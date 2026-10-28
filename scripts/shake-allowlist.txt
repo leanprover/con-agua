@@ -43,7 +43,6 @@ ConAgua/Arena/IndSumSpec/Bnums.lean	public import ConAgua.Arena.Reasons	# a cons
 ConAgua/Arena/IndSumSpec/CheckStructFieldSortsISucc.lean	public import ConAgua.Arena.IndPosSpec.NestBlockOfKey	# the build needs it: its dependents reach the handle lemmas and this module's other names through it
 ConAgua/Arena/IndSumSpec/ColW.lean	public import ConAgua.Arena.IndSum	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/IndSumSpec/CtlW.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
-ConAgua/Arena/IndSumSpec/McGoStep.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/IndT/KeepC.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/Infer.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/InferBodyBind.lean	public import ConAgua.Arena.WhnfCoreApp	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -61,7 +60,6 @@ ConAgua/Arena/InferProj.lean	public import ConAgua.Arena.WhnfCoreProj	# a consta
 ConAgua/Arena/InferProj2.lean	public import ConAgua.Arena.ProjView	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferProj2.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Arena/InstLPWalk.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/LevelInternRef.lean	public import ConAgua.Arena.Rom	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/LevelSubstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/NatArms.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
@@ -132,7 +130,6 @@ ConAgua/Front/Driver.lean	public import ConAgua.Arena.Pool	# the build needs it:
 ConAgua/Front/IndAlloc.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Front/IndApply.lean	public import ConAgua.Front.ApplyDecl	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Front/IndApply.lean	public import ConAgua.Front.IndFields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/Front/IndApplySpec.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Front/IndFields.lean	public import ConAgua.Front.Apply	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Front/NatDec.lean	public import ConAgua.Front.Fields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/L/Logic.lean	public import ConAgua.L.LocNF	# the build needs it: its simprocs act through their `seval` attribute in the `grind` of every L proof, which records no use

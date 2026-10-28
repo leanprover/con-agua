@@ -159,7 +159,7 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p)
 /-! ## `infer_proj`'s error model (by hand: `l_model … errors` times out on it)
 
 The generated text (`trace`), its spec proved by the ok spec's recipe (`inferProj_spec`), in three
-pieces cut by `seqTake`/`seqDrop` (`LdRd.lean`): the subject's type (`inferProj_specE`), the head
+pieces cut by `seqTake`/`seqDrop` (`L/Logic.lean`): the subject's type (`inferProj_specE`), the head
 and the record (`inferProjMid_specE`), the `find_proj` call on (`inferProjTail_specE`). Each piece
 sees the locals before it by name, not as a `setLoc` chain (one proof over the 262 goals: 104 s;
 the pieces: ~20 s, in parallel). -/

@@ -59,38 +59,6 @@ theorem iext_of_heap {m m' : Mem} (h : MemFrame [LH] [192] m m') : IExt m m' := 
 
 /-! ## The unified models -/
 
-/-- A pair-and-memory result flattened to a tuple (the generator's tuple shape for a callee). -/
-def flat3 {α β γ : Type} : Option ((α × β) × γ) → Option (α × β × γ)
-  | none => none
-  | some ((x, y), z) => some (x, y, z)
-
-@[simp] theorem flat3_none {α β γ : Type} : flat3 (none : Option ((α × β) × γ)) = none := rfl
-@[simp] theorem flat3_some {α β γ : Type} (x : α) (y : β) (z : γ) : flat3 (some ((x, y), z)) = some (x, y, z) := rfl
-
-section flat
-variable (p : Prog) (hL : IndApplyLookups p)
-include hL
-
-/-- `map_spec` with the tuple flattened. -/
-theorem map_specT (n : Nat) (s₀ : St) (o l sz w f : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_map" [o, l, sz, w, f]
-    ⦃fun r s' => LocEq s' s₀ ∧ flat3 (mapW n s₀.mem o l sz w f) = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨h1, h2⟩ := M.of_run (P := fun s => s = s₀) hs hrun (map_spec p hL n s₀ o l sz w f)
-  exact ⟨h1, by rw [h2]; rfl⟩
-
-/-- `listed_spec` with the tuple flattened. -/
-theorem listed_specT (n : Nat) (s₀ : St) (to tn : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_listed" [to, tn]
-    ⦃fun r s' => LocEq s' s₀ ∧ flat3 (listedW n s₀.mem to tn) = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨h1, h2⟩ := M.of_run (P := fun s => s = s₀) hs hrun (listed_spec p hL n s₀ to tn)
-  exact ⟨h1, by rw [h2]; rfl⟩
-
-end flat
-
 l_model viTail_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_tail ↦ viTailE]
   specs [storeFuel_spec p hL n, viOrder_specE p hL n, kExp_spec p hL n, recs_specE p hL n]
@@ -99,7 +67,7 @@ l_model viTail_specE (p : Prog) (hL : IndApplyLookups p)
 
 l_model validate_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.validate_ind_d ↦ validateE]
-  specs [viUnsafe_specE p hL.vi_unsafe n, viNparams_specE p hL n, map_specT p hL n, listed_specT p hL n,
+  specs [viUnsafe_specE p hL.vi_unsafe n, viNparams_specE p hL n, map_spec p hL n, listed_spec p hL n,
     nodup_spec p hL n, viTail_specE p hL n]
   grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

@@ -36,21 +36,4 @@ theorem ld64_rd_spec (a : ArrId) (i : Word) (s₀ : St) :
   · simp [throw, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hrun
     cases hrun
 
-/-- The statement after the first `k` of a right-nested `seq` chain. -/
-def seqDrop : Nat → Stmt → Stmt
-  | k + 1, .seq _ t => seqDrop k t
-  | _, s => s
-
-/-- The first `k` statements of a `seq` chain, followed by `r`. -/
-def seqTake : Nat → Stmt → Stmt → Stmt
-  | k + 1, .seq a t, r => .seq a (seqTake k t r)
-  | _, _, r => r
-
-theorem seqTake_drop : ∀ (k : Nat) (s : Stmt), seqTake k s (seqDrop k s) = s
-  | 0, s => by cases s <;> rfl
-  | k + 1, s => by
-    cases s with
-    | seq a t => simp only [seqTake, seqDrop, seqTake_drop k t]
-    | _ => rfl
-
 end L.Arena

@@ -665,4 +665,51 @@ l_model tUseLenT_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f 
 example (p : Prog) (m : Mem) : tUseLenE p m 1 = .ok (3, m.set64 TW 0 2) := by
   simp [tUseLenE, tUseLenE.k_t_len, tLenL]
 
+/-- A callee model with a pair of results, `some ((r.headD 0, r.tail.headD 0), s'.mem)`
+(`vi_map`'s): read through `L.flat3` as a tuple of two. -/
+def tLenP (m : Mem) (x : Word) : Option ((Word × Word) × Mem) :=
+  if x = 9 then none else some ((x, x + 1), m)
+
+theorem tLen_specP (p : Prog) (hp : p.lookup "t_len" = some tLen) (n : Nat) (s₀ : St) (x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_len" [x]
+    ⦃fun r s' => LocEq s' s₀ ∧ tLenP s₀.mem x = some ((r.headD 0, r.tail.headD 0), s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, tLen]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+      simp_all [tLenP, Sig.retVal, Sig.retOr, Locals.init, LocEq, BinOp.eval, Cmp.eval, St.setLoc_loc,
+        St.setLoc_mem]
+
+l_model tUseLenP_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_len"] → f ∈ fs)
+    (hp : p.lookup "t_use_len" = some tUseLen) (hq : p.lookup "t_len" = some tLen)
+  fns [hp ↦ tUseLenPE]
+  specs [tLen_specP p hq n]
+  grind [arena_grind] unified nv [closedNV p fs = true, hmem]
+
+example (p : Prog) (m : Mem) : tUseLenPE p m 1 = .ok (3, m.set64 TW 0 2) := by
+  simp [tUseLenPE, tUseLenPE.k_t_len, tLenP]
+
+/-- `cut k`: two `if`s that only set locals, then a call: the code after them (the join point
+`j2`) gets its own step theorem `tCut_spec.tail`, so the step's paths are not four copies of the
+call's. -/
+-- con-ron: none — an `l_model` test function
+def tCut : FunDecl := lfn (x, y) locals (a, b, c) {
+  if x < 5 { a := x } else { a := x + 1 };
+  if y < 5 { b := y } else { b := y - 1 };
+  c := call t_len(a);
+  if c == 0 { return 0 };
+  TW.u64[0] := b;
+  return c + b
+}
+
+l_model tCut_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_len"] → f ∈ fs)
+    (hp : p.lookup "t_cut" = some tCut) (hq : p.lookup "t_len" = some tLen)
+  fns [hp ↦ tCutE]
+  specs [tLen_spec p hq n]
+  grind [arena_grind] unified nv [closedNV p fs = true, hmem] cut 2
+
+example (p : Prog) (m : Mem) : tCutE p m 1 7 = .ok (7, m.set64 TW 0 6) := by
+  simp [tCutE, tCutE.j1, tCutE.j2, tCutE.k_t_len, tLenL]
+
 end L.ModelGenTest
