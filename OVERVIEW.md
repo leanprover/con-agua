@@ -486,22 +486,22 @@ pending groups. `check` itself only dispatches on the global `MODE`, which the
 entry stubs write (§9); a zero region leaves it `0`, and then `check` aborts.
 
 A function closer to the data, which decodes a level-list handle
-([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L293-L301),
+([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L293-L298),
 [the twin's `viewLs`](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Monad.lean#L491-L497)):
 
 ```
 def lsNode : FunDecl := lfn (h) locals (t, i) {
   if h >> 28 != 0 { abort };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LVLS⟨t⟩.count <= i { abort };
+  (t, i) := node LVLS⟦h⟧;
   return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
 }
 ```
 
-The tag, tier and index of a handle (§6.1), the scratch flag `CTL[1]`, the
-store `LVLS` with its per-tier count, and two fields of node `i` of tier `t`.
+The tag of a handle (§6.1), then its checked node read: `(t, i) := node LVLS⟦h⟧`
+is shorthand for the four statements `t := ⟦h⟧.tier; i := ⟦h⟧.idx;
+if t != 0 && CTL.u64[1] == 0 { abort }; if LVLS⟨t⟩.count <= i { abort }`: the
+tier and index of the handle, checked against the scratch flag `CTL[1]` and the
+store's per-tier node count. Then two fields of node `i` of tier `t`.
 The twin fails on a dangling handle; L aborts at the same point.
 
 ### 5.2 Syntax and semantics
@@ -517,9 +517,9 @@ and can bind several results. Arithmetic wraps; there is no division (Kraken
 has no `div`), only `mulhi`, the high word of the 128-bit product.
 
 The concrete syntax is a set of Lean macros that produce these terms
-([the rules](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L75-L157),
-[`lfn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L398-L399),
-[summary](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L11-L62)).
+([the rules](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L80-L169),
+[`lfn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L466-L467),
+[summary](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L11-L68)).
 Informally (`A` an array, `R` a store, `f` a function, `x` a local or a global,
 all names of Lean constants except the locals):
 
@@ -534,6 +534,8 @@ stmt   ::= x := e  |  x += e  |  x -= e
          | copy!(A[⟨t⟩], e, B[⟨t⟩], e, e)                  -- n words (or bytes), ascending
          | x := scan!(A.u8, e, e, C)                        -- first byte in class C
          | ⟪block⟫                                          -- a named block
+         | (x, x) := node R⟦e⟧                              -- checked node read (sugar)
+         | for x < x { … }                                  -- counted loop (sugar)
 e      ::= n  |  'c'  |  x  |  (e)  |  e op e  |  mulhi(e, e)  |  u64(c)
          | A.u8[e]  |  A.u64[e]  |  A⟨t⟩[e]  |  D.c8[e]        -- loads; D constant bytes
          | len(A.u8)  |  len(A.u64)  |  len(A⟨t⟩)
@@ -544,6 +546,16 @@ op     ::= *  |  +  |  -  |  <<  |  >>  |  &  |  ^  |  |      -- wrapping, on 64
 c      ::= e == e  |  e != e  |  e < e  |  e <= e  |  e > e  |  e >= e  -- unsigned
          | e <ₛ e  |  e ≤ₛ e  |  c && c  |  c || c  |  !c         -- signed; short-circuit
 ```
+
+The two sugar statements stand for plain ones and give the same terms
+([`desugar`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L325-L350)):
+`(t, i) := node R⟦h⟧` is the checked node read of §5.1, and `for j < n { … }`
+is `while j < n { …; j += 1 }`, where the body assigns neither `j` nor `n`. The
+model generator reads L text through the same function. A counted loop has a
+loop rule proved once
+([`Triple.forUp`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/For.lean#L66-L82)):
+an invariant that each iteration keeps gives the loop's spec, without an
+induction on the fuel.
 
 What is absent is absent on purpose: no pointers and no address arithmetic
 across arrays (an array is a static index, an access is bounds-checked), no
@@ -595,8 +607,8 @@ than a plain one (§8.1). The node stores are accessed through
 
 Three primitives do in one statement what a loop would do word by word, with
 the bounds checked once
-([`le64!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L97-L98),
-[`scan!`, `copy!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L149-L155)):
+([`le64!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L102-L103),
+[`scan!`, `copy!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L154-L160)):
 
 * `copy!(D, di, S, si, n)`: copy `n` words (or bytes, zero-extended into
   words) from `S` to `D`, ascending;
@@ -638,11 +650,11 @@ Each store's **cons table**, the hash map from a node's fields to its handle,
 is con-ron's `HashMap2`: open addressing, linear probing, one table per tier in
 its own word array, growth at load 3/4
 ([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L206-L215),
-[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L486-L491)).
+[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L485-L490)).
 Where con-ron allocates a table of twice the size and frees the old one, L
 doubles the table **in place** (absl's in-place rehash: zero the upper half,
 mark the live slots, re-insert each marked entry)
-([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L463-L469)),
+([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L462-L468)),
 since L cannot free memory. The home slot is `mulhi(mix(h), n)` rather than
 con-ron's mask
 ([`homeW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/SlotGrow.lean#L41-L44)).
