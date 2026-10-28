@@ -195,7 +195,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   simp only [nitWf] at hni
   obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, -, hA4⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
     _ rfl c m3 m4 a2 key _ _ (realCall p) (nty_ok L.nit.ty (IlpRd.realC hIlpf hC3)) _
-    (nitLe_realC hcl hLC n' _ _ key c _ hC3 hA3 (dCtx_ext _ hx02 _ _ hctx) hkey2) hni hS3
+    (nitLe_realC hcl hLC L.nit.hlf n' _ _ key c _ hC3 hA3 (dCtx_ext _ hx02 _ _ hctx) hkey2) hni hS3
     ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl hP3
   simp only [List.headD_cons, List.tail_cons] at hni0 hctyH hctyd
   obtain ⟨c4, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (nhiW m1 ctx pl).toNat

@@ -210,7 +210,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
       obtain ⟨hCm, hAm, hxm⟩ := hJ
       obtain ⟨n0P, hn0P⟩ := denoteNList_memN hmates n0 hn0
       have hxa := p1.ext.trans hxm
-      exact nitLe_realC hcl hLC k' _ _ key c _ hCm hAm (dCtx_ext _ hxa _ _ hctx)
+      exact nitLe_realC hcl hLC L.nit.hlf k' _ _ key c _ hCm hAm (dCtx_ext _ hxa _ _ hctx)
         (keyP := ⟨n0P, usP, dsP⟩) (by
           simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hn0P hxm,
             ConRon.Bridge.denoteLs_ext husP hxa, ConRon.Bridge.denoteEList_ext hxa _ _ hdsP]))
