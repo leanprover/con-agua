@@ -338,18 +338,36 @@ theorem frontRun_checker_chunks (b : ByteArray) (h64 : System.Platform.numBits =
     obtain ⟨st', a', h1, h2, h3, -⟩ := h h0
     exact ⟨st', a', h1, h2, by rw [← pre_nil st']; exact h3⟩
 
-/-- **`front_run` at `frontAllProg`, the error half**: a failing call (class `≠ 0`) from the
-driver's start claims that `parseBytes b` fails with that class. -/
+/-- A call into the frontend runs in `frontAllProg` as in `checkerProg`. -/
+theorem callE_frontAll {g : FnName} (hg : L.Checker.inFront g = true) (n : Nat) (args : List Word)
+    (m : Mem) : callE frontAllProg n g args m = callE L.Checker.checkerProg n g args m := by
+  unfold callE
+  rw [L.Checker.invoke_exec_agree (P := L.Checker.inFront)
+    (fun f hf => L.Checker.checkerProg_frontAgree f ((L.Checker.inFront_iff f).1 hf))
+    L.Checker.checkerProg_frontClosed n hg]
+
+/-- A failing run is a failing call (`callE`) from its memory. -/
+theorem callE_of_run_err {p : Prog} {k : Nat} {f : FnName} {vs : List Word} {s : St} {e : Err}
+    (h : (invoke p (exec p k) f vs).run s = .error e) : callE p k f vs s.mem = .error e := by
+  rw [invoke_run_loc'] at h
+  unfold callE
+  cases hr : (invoke p (exec p k) f vs).run ⟨s.mem, Locals.init []⟩ with
+  | error e' => rw [hr] at h; cases h; rfl
+  | ok v => rw [hr] at h; cases h
+
+/-- **`front_run` at the checker's program, the error half**: a failing call (class `≠ 0`) from
+the driver's start claims that `parseBytes b` fails with that class. -/
 theorem frontRun_errClaim (D : Array IDeclaration) (b : ByteArray)
     (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (hSL : SafeLink b) (n : Nat)
     (m : Mem) (a₀ : AState)
     (h₀ : m.arr8 IN = b.data ∧ ArenaD m a₀ ∧ StateDR m (StateD.blank.pre D) ∧
       ConRon.Bridge.StateOK a₀ ∧ a₀.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a₀ ∧
       (∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) ∧ ModeOK m)
-    {e : Err} (he : callE frontAllProg n "front_run" [] m = .error e) :
+    {e : Err} (he : callE L.Checker.checkerProg n "front_run" [] m = .error e) :
     ErrClaimV (parseBytes b) a₀ e :=
   RefC.run_err (frontRun_specE frontAllProg rfl n ⟨m, Locals.init []⟩) (fun _ h0 h => absurd h0 h)
     L.Front.Ind.frontAllProg_nv ⟨L.Front.Ind.frontAllProg_nv, hSL⟩
-    (frontRun_ref frontAllProg_line D b h64 hsize rfl n h₀) he
+    (frontRun_ref frontAllProg_line D b h64 hsize rfl n h₀)
+    (by rw [callE_frontAll (by decide) n [] m]; exact he)
 
 end L.Front

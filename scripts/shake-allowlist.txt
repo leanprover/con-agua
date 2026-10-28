@@ -146,7 +146,6 @@ ConAgua/Scan/Values.lean	public import ConAgua.L.Logic	# kept from before the sh
 ConAgua/Scan/Values.lean	public import ConAgua.L.Notation	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Scan/Values.lean	public import ConAgua.Scan.Leaves	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Scan/Values.lean	public import ConAgua.Scan.Utf8	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
-ConAgua/Verdict/FrontStageE.lean	public import ConAgua.L.ModelGen	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
 ConAgua/Verdict/FrontValidE.lean	public import ConAgua.L.ModelGen	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.DeclArmT	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndRealSctC	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
