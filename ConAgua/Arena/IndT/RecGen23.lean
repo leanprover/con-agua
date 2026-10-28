@@ -1,16 +1,22 @@
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Verdict.IndBK53
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
-# `classNodesAgree` under `StageC` (lane `indstaget`, helper `pds`)
+# `class_nodes_agree`: one model, one refinement
 
-`class_nodes_agree`'s loop (`cnaW`, the callees through the program's `callW`), from `StageC` and
+`class_nodes_agree`'s unified model (`cnaE`) and its refinement for both outcomes (`cna_ref`, the
+loop `cnaLoop_ref`), under `StageC` and
 the inputs' denotations con-ron's `classNodesAgree_spec` asks; its twin side transcribed from that
 spec's proof: `targetPiDomsWith` (`targetPiDomsWith_spec`, a `PSpec`), the field read, then
-`target_k53` (`tk_ref`'s ok half through the run, con-ron's `targetK53_spec` on its run for the
-extension).
+`target_k53` (`tk_ref` on its unified model, con-ron's `targetK53_spec` on its run for the
+extension). `classNodesAgree_refinesC` is its ok half (`RefE.triple`).
 -/
 
+
+noncomputable section
 
 open ConRon.Arena
 open Std.WP
@@ -24,6 +30,16 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+set_option experimental.vcgen true in
+/-- **`class_nodes_agree`'s unified model**: `target_pi_doms_with` (outside the verdict closure)
+lifted, `target_k53` by its unified model. -/
+l_model cnaE_spec (p : Prog) (P : CnaProg p)
+  fns [P.cna ↦ cnaE] specs [callW_spec p n "target_pi_doms_with", tkE_spec p P.k53 n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 4000000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (P : CnaProg p)
@@ -32,12 +48,19 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name}
   {pP : ConLeche.BlockShape} {formerTysP teleP fvsP : List ConLeche.Expr} {McP : ConLeche.TargetMajor}
   {leafP : ConLeche.Expr}
 
+/-- What `class_nodes_agree` gives besides the twin's run (from `m`). -/
+structure CnaPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (m m' : Mem) (a' : AState) : Prop where
+  stage : StageC dn vis fe env m' a'
+  grow : IWGrow m m'
+  rc : RcMR m'
+  abs : AbsOK m'
+
 include hq henv P in
-/-- **`class_nodes_agree`'s loop under `StageC`** (twin side: con-ron's `classNodesAgree_spec`'s
-list induction). -/
-theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (j : Word)
+/-- **`class_nodes_agree`'s loop refines `classNodesAgree`, both outcomes** (twin side: con-ron's
+`classNodesAgree_spec`'s list induction; `target_k53` by `tk_ref`). -/
+theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j : Word)
     (es : List NestCtorNf) (esP : List ConLeche.NestCtorNf),
-    cnaW p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el j = some m' →
     StageC dn vis fe env m a → AbsOK m → BSOK m q.toNat bs →
     decHL m fto.toNat ftl.toNat = some formerTys →
     fto.toNat + ftl.toNat ≤ iwTop m → DecB (fun m => decTM m mc.toNat) m TM → HSl0 m teo tel tele →
@@ -48,18 +71,18 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
     denoteE a.store (decE leaf) = some leafP → Frontend.denoteEList a.store fvs = some fvsP →
     es.mapM (dCtorNf a.store) = some esP →
     (∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t) → ConLeche.Cached.TargetMajScoped McP →
-    ∃ a', (ConRon.Arena.classNodesAgree V fe bs formerTys TM tele (decE leaf) fvs i.toNat es).run a =
-      .ok ((), a') ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ RcMR m' ∧ AbsOK m' := by
+    RefE (VerdictCtx p) (cnaE.loop1 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el j)
+      (ConRon.Arena.classNodesAgree V fe bs formerTys TM tele (decE leaf) fvs i.toNat es) a
+      (fun m' _ a' => CnaPost dn vis fe env m m' a') := by
   induction k with
-  | zero => intro m m' a j es esP h; simp [cnaW] at h
+  | zero => intros; rw [cnaE.loop1.eq_def]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ k ih =>
-  intro m m' a j es esP h hC hA hbs hft hftb hMc htl hl hfv hfvb hje hes hP hsh hftP hMcP htlP hlP
+  intro m a j es esP hC hA hbs hft hftb hMc htl hl hfv hfvb hje hes hP hsh hftP hMcP htlP hlP
     hfvP hesP hformer hMs
   have hS := hC.stage
   by_cases hj : j < el
   rotate_left
-  · rw [cnaW_exit (h := hj)] at h
-    simp only [Option.some.injEq] at h; subst h
+  · rw [cnaE.loop1.arm2 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el j hj]
     have hjl : el - j = 0 := by
       apply UInt64.toNat_inj.mp
       have h1 : el.toNat ≤ j.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hj
@@ -68,8 +91,8 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
     have : es = [] := by
       have := decPL_length _ (hes.1.get (OMono.decPL decNCN_mono _ _)); rw [hjl] at this; simpa using this
     subst this
-    exact ⟨a, rfl, hC, IWGrow.refl _, hP, hA⟩
-  rw [cnaW_step (h := hj)] at h
+    exact RefE.ret rfl ⟨hC, IWGrow.refl _, hP, hA⟩
+  rw [cnaE.loop1.arm1 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el j hj]
   have hsz := hS.2.2.2.1
   have hne : el - j ≠ 0 := by
     intro h0
@@ -79,12 +102,15 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   obtain ⟨nf, es', rfl, hnf0, hes'⟩ := hes.uncons hne hsz
   obtain ⟨nfP, esP', rfl, hnfP, hesP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hesP
   have hety := (ConRon.Bridge.Inductives.RC.dCtorNf_inv hnfP).2.2.2
-  generalize hE : rdW (m.arr64 IW) (eo + j) = ew at h hnf0
+  generalize hE : rdW (m.arr64 IW) (eo + j) = ew at hnf0 ⊢
   obtain ⟨htyH, htyD⟩ := decNCN_ty hnf0 hsz
+  rw [ConRon.Arena.classNodesAgree]
   -- `target_pi_doms_with`
-  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rcases h1 : callW p k "target_pi_doms_with" [fvo, fvl, rdW (m.arr64 IW) (ew + 4)] m with _ | ⟨r1, m1⟩
+  · rw [liftE_none, cnaE.k_target_pi_doms_with.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (targetPiDomsWith_spec p P.hv P.hc P.ha P.hsc P.pd P.hi1 k _ fvo fvl (rdW (m.arr64 IW) (ew + 4))) c1
+    (targetPiDomsWith_spec p P.hv P.hc P.ha P.hsc P.pd P.hi1 k _ fvo fvl (rdW (m.arr64 IW) (ew + 4))) h1
   simp only at hs1 hw1
   subst hs1
   obtain ⟨res, a1, run1, hS1, hg1, hpd⟩ := pdW_ok dn vis fe k _ _ a _ _ _ r1 fvs hw1 hS htyH hfv
@@ -96,35 +122,48 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
     hC.check.state ⟨hfvP, hety⟩ run1
   have hC1 := hC.of_pstep hS1 hA1 q1
   have hdoms := ConRon.Bridge.Inductives.ROp_REL_getD ho
+  refine RefE.bind_right run1 ?_
+  dsimp only
   rcases res with _ | ds
-  · have h0 : r1.headD 0 = 0 := hpd; rw [cnaK1_bad (h := h0)] at h; cases h
-  obtain ⟨h1, hdd, hdb⟩ := hpd
-  have h0 : ¬ r1.headD 0 = 0 := by rw [h1]; decide
+  · have h0 : r1.headD 0 = 0 := hpd
+    rw [cnaE.k_target_pi_doms_with.arm1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j r1 _ h0,
+      cnaE.j1.abort1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j _ 0 _ UInt64.zero_le]
+    simp only [Option.getD_none, List.getElem?_nil]
+    exact fun _ => ErrClaim.fail _ _ (by decide)
+  obtain ⟨h1', hdd, hdb⟩ := hpd
+  have h0 : ¬ r1.headD 0 = 0 := by rw [h1']; decide
+  rw [cnaE.k_target_pi_doms_with.arm2 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j r1 _ h0]
   by_cases hsh' : r1.tail.tail.headD 0 ≤ i
-  · rw [cnaK1_short (h0 := h0) (h := hsh')] at h; cases h
-  rw [cnaK1_ok (h0 := h0) (h := hsh')] at h
+  · rw [cnaE.j1.abort1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j _ _ _ hsh']
+    have hlen := decHL_length _ hdd
+    have hle : ds.length ≤ i.toNat := by rw [hlen]; exact UInt64.le_iff_toNat_le.mp hsh'
+    simp only [Option.getD_some, List.getElem?_eq_none hle]
+    exact fun _ => ErrClaim.fail _ _ (by decide)
+  rw [cnaE.j1.arm1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j _ _ _ hsh']
   have hi : i.toNat < (r1.tail.tail.headD 0).toNat := by
     exact Nat.lt_of_not_le (fun hc => hsh' (UInt64.le_iff_toNat_le.mpr hc))
   have hdb64 := hS1.lt64 hdb
   obtain ⟨w, hw, hwH, hwD⟩ := decHL_get' hdd i.toNat hi (by omega)
   have hadd : r1.tail.headD 0 + i = UInt64.ofNat ((r1.tail.headD 0).toNat + i.toNat) := by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp <;> omega
-  rw [hadd, hw] at h
+  rw [hadd, hw]
   have hget : ds[i.toNat]? = some (decI w) := by
     rw [List.getElem?_eq_getElem (by rw [decHL_length _ hdd]; exact hi)]; rw [hwD]
   rw [← decE_eq] at hget
   obtain ⟨fP, -, hfd⟩ := (ConRon.Bridge.Inductives.denoteEList_getElem? hdoms i.toNat).2 _ hget
+  simp only [Option.getD_some, hget]
   -- `target_k53`
-  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
-  obtain ⟨s2, rfl, -, c, a2, run2, hR2⟩ := RefE.run_okW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (tkE_spec p P.k53 k _ vis q fto ftl mc teo tel leaf w) (tk_ref hq henv k (by omega) hC1 hA1 (hbs.grow hg1)
-    (by rw [decHL_grow hg1 hftb]; exact hft) (by dsimp only; have := hg1.1; omega) (hMc.grow (decTM_mono _) hg1)
+  have hR := tk_ref hq henv k (by omega) hC1 hA1 (hbs.grow hg1)
+    (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.1; omega) (hMc.grow (decTM_mono _) hg1)
     (htl.grow hg1) hl hwH hP1
     (ConRon.Bridge.Inductives.dShape_ext q1.ext _ _ hsh) (denoteEList_ext q1.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dMajor_ext q1.ext _ _ hMcP) (denoteEList_ext q1.ext _ _ htlP)
-    (denote_ext hlP q1.ext) hfd hformer hMs) c2
-  have hc : (r2.headD 0 != 0) = c := hR2.res
-  obtain ⟨-, hC2, hg2, hP2, hA2⟩ := hR2
+    (denote_ext hlP q1.ext) hfd hformer hMs
+  rcases h2 : tkE p k s1.mem vis q fto ftl mc teo tel leaf w with e2 | ⟨b, m2⟩ <;> rw [h2] at hR
+  · rw [cnaE.k_target_k53.none]; exact RefE.bind_left hR
+  obtain ⟨c, a2, run2, hR2⟩ := hR
+  have hc : (b != 0) = c := hR2.res
+  have hC2 := hR2.stage; have hg2 := hR2.grow; have hP2 := hR2.rc; have hA2 := hR2.abs
   dsimp only at hC2 hg2 hP2 hA2
   have c1' := q1.toCore hC.check
   obtain ⟨c2', -⟩ := ConRon.Bridge.Inductives.targetK53_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
@@ -134,30 +173,66 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
       ConRon.Bridge.Inductives.dMajor_ext q1.ext _ _ hMcP, denoteEList_ext q1.ext _ _ htlP,
       denote_ext hlP q1.ext, hfd⟩ run2
   have c12 := c1'.trans c2'
-  by_cases hb : r2.headD 0 = 0
-  · rw [cnaK2_bad (h := hb)] at h; cases h
-  rw [cnaK2_ok (h := hb)] at h
+  refine RefE.bind_right run2 ?_
+  by_cases hb : b = 0
+  · rw [cnaE.k_target_k53.abort1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j b _ hb]
+    have hcf : c = false := by rw [← hc, hb]; rfl
+    subst hcf
+    simp only [Bool.false_eq_true, ite_false]
+    exact fun _ => ErrClaim.fail _ _ (by decide)
+  rw [cnaE.k_target_k53.arm1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j b _ hb]
   have hct : c = true := by rw [← hc]; simpa using hb
   subst hct
+  simp only [ite_true]
   have hg12 := hg1.trans hg2
   have hj1 : j + 1 ≤ el := by
     have h1 : j.toNat < el.toNat := UInt64.lt_iff_toNat_lt.mp hj
     apply UInt64.le_iff_toNat_le.mpr; rw [UInt64.toNat_add]; simp <;> omega
-  have hes2 : PSlR decNCN es' (eo + (j + 1)) (el - (j + 1)) s2.mem := by
+  have hes2 : PSlR decNCN es' (eo + (j + 1)) (el - (j + 1)) m2 := by
     rw [show eo + (j + 1) = eo + j + 1 by grind, show el - (j + 1) = el - j - 1 by grind]
     exact hes'.grow (fun q => decNCN_mono q) hg12
-  obtain ⟨a3, run3, hC3, hg3, hP3, hA3⟩ := ih (by omega) s2.mem m' a2 (j + 1) es' esP' h hC2 hA2
+  exact RefE.mono (ih (by omega) m2 a2 (j + 1) es' esP' hC2 hA2
     (hbs.grow hg12)
     (by rw [decHL_grow hg12 hftb]; exact hft) (by have := hg12.1; omega) (hMc.grow (decTM_mono _) hg12)
     (htl.grow hg12) hl (by rw [decHL_grow hg12 hfvb]; exact hfv) (by have := hg12.1; omega) hj1 hes2 hP2
     (ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh) (denoteEList_ext c12.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dMajor_ext c12.ext _ _ hMcP) (denoteEList_ext c12.ext _ _ htlP)
     (denote_ext hlP c12.ext) (denoteEList_ext c12.ext _ _ hfvP)
-    (ConRon.Bridge.Inductives.dCtorNf_ext.list c12.ext _ _ hesP') hformer hMs
-  refine ⟨a3, ?_, hC3, hg12.trans hg3, hP3, hA3⟩
-  simp only [ConRon.Arena.classNodesAgree, StateT.run_bind, run1, except_ok_bind, Option.getD_some, hget]
-  simp only [run2, except_ok_bind, ite_true]
-  exact run3
+    (ConRon.Bridge.Inductives.dCtorNf_ext.list c12.ext _ _ hesP') hformer hMs)
+    fun _ _ _ h => ⟨h.stage, hg12.trans h.grow, h.rc, h.abs⟩
+
+include hq henv P in
+/-- **`class_nodes_agree` refines `classNodesAgree`, both outcomes** (`cnaLoop_ref` from the first
+entry). -/
+theorem cna_ref (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState)
+    (es : List NestCtorNf) (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (hbs : BSOK m q.toNat bs)
+    (hft : decHL m fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop m)
+    (hMc : DecB (fun m => decTM m mc.toNat) m TM) (htl : HSl0 m teo tel tele) (hl : H leaf)
+    (hfv : decHL m fvo.toNat fvl.toNat = some fvs) (hfvb : fvo.toNat + fvl.toNat ≤ iwTop m)
+    (hes : PSlR decNCN es eo el m) (hP : RcMR m) {esP : List ConLeche.NestCtorNf}
+    (hsh : dShape a.store bs = some pP)
+    (hftP : Frontend.denoteEList a.store formerTys = some formerTysP)
+    (hMcP : dMajor a.store TM = some McP) (htlP : Frontend.denoteEList a.store tele = some teleP)
+    (hlP : denoteE a.store (decE leaf) = some leafP)
+    (hfvP : Frontend.denoteEList a.store fvs = some fvsP)
+    (hesP : es.mapM (dCtorNf a.store) = some esP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hMs : ConLeche.Cached.TargetMajScoped McP) :
+    RefE (VerdictCtx p) (cnaE p n m vis q fto ftl mc teo tel leaf fvo fvl i eo el)
+      (ConRon.Arena.classNodesAgree V fe bs formerTys TM tele (decE leaf) fvs i.toNat es) a
+      (fun v _ a' => CnaPost dn vis fe env m v.2 a') := by
+  rcases n with _ | n
+  · rw [cnaE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  rw [cnaE.arm1]
+  have h := cnaLoop_ref hq henv P vis q fto ftl mc teo tel leaf fvo fvl i eo el bs formerTys TM tele fvs
+    (n + 1) hn m a 0 es esP hC hA hbs hft hftb hMc htl hl hfv hfvb UInt64.zero_le (by simpa using hes)
+    hP hsh hftP hMcP htlP hlP hfvP hesP hformer hMs
+  rcases h1 : cnaE.loop1 p (n + 1) m vis q fto ftl mc teo tel leaf fvo fvl i eo el 0 with e1 | m1 <;>
+    rw [h1] at h
+  · rw [cnaE.k_loop1.none]; exact h
+  · rw [cnaE.k_loop1.arm1]; exact h
 
 include hq henv P in
 /-- **`class_nodes_agree` refines `classNodesAgree`** under `StageC` (the knot's core calls; the
@@ -186,14 +261,15 @@ theorem classNodesAgree_refinesC (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀
       StageC dn vis fe env s'.mem
         (AM.st (ConRon.Arena.classNodesAgree V fe bs formerTys TM tele (decE leaf) fvs i.toNat es) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (cna_spec p P.cna n s₀ vis q fto ftl mc teo tel leaf fvo fvl i eo el) ?_
-  rintro r s' ⟨hl', hm⟩
-  obtain ⟨a', run, hC', hg, hP', hA'⟩ := cnaW_okC hq henv P vis q fto ftl mc teo tel leaf fvo fvl i eo el
-    bs formerTys TM tele fvs n hn _ _ a₀ 0 es esP hm hC hA hbs hft hftb hMc htl hl hfv hfvb
-    UInt64.zero_le (by simpa using hes) hP hsh hftP hMcP htlP hlP hfvP hesP hformer hMs
+  refine triple_post (RefE.triple (cnaE_spec p P n s₀ vis q fto ftl mc teo tel leaf fvo fvl i eo el)
+    (cna_ref hq henv P vis q fto ftl mc teo tel leaf fvo fvl i eo el bs formerTys TM tele fvs n hn s₀.mem a₀
+      es hC hA hbs hft hftb hMc htl hl hfv hfvb hes hP hsh hftP hMcP htlP hlP hfvP hesP hformer hMs)) ?_
+  rintro r s' ⟨hl', u, a', run, hR⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ run
-  exact ⟨hl', hok, by rw [hst]; exact hC', hg, hP', hA'⟩
+  exact ⟨hl', hok, by rw [hst]; exact hR.stage, hR.grow, hR.rc, hR.abs⟩
 
 end sims
 
 end L.Ind
+
+end

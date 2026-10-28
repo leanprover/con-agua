@@ -4,7 +4,7 @@ import ConAgua.Arena.WhnfBase
 /-!
 # IwNLtSize
 
-`cfaK6`, `cfaFv`, `iwN_lt_size`.
+`cfaFv` (`class_fields_agree`'s datum variable), `iwN_lt_size`.
 -/
 
 noncomputable section
@@ -25,11 +25,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 section model
 variable (p : Prog) (k : Nat)
-
-/-- After `class_nodes_agree`: the next field. -/
-def cfaK6 (rest : Mem → Option Mem) : Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (_, m) => rest m
 
 /-- The datum variable `i` (in range), else the interned `.bvar 0`. -/
 def cfaFv (m : Mem) (fvo fvl i : Word) : Option (List Word × Mem) :=
