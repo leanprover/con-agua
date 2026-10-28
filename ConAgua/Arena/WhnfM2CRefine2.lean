@@ -8,9 +8,11 @@ import ConAgua.Arena.KnotE
 /-!
 # `major_to_ctor`: refinements of `m2c_pre`, `m2c_check` and the K arm
 
-The callW pattern (`WhnfBase.lean`): each piece's model (`WhnfM2CRefine.lean`) is taken apart call
-by call, each callee's own spec applied to its run, the relation threaded (`CoreAfter`,
-`CoreAfterG` once a slice is left on the stack).
+One refinement per piece for both outcomes (`RefE`, `Arena/Verdict.lean`): each piece's unified
+model (`Verdict/WhnfModels6E.lean`) is taken apart call by call, each callee's own spec or
+refinement applied to its run, the relation threaded (`CorePost`, `GrowPost` once a slice is left
+on the stack). An error claims the twin's failure under `M2CCtxE` (the knot's slots' claims,
+`proof_irrel`'s); `m2c_pre`, a prefix of the arms, has its own shape (`PreRef`).
 -/
 
 open ConRon.Arena

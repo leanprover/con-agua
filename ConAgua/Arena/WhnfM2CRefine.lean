@@ -14,7 +14,9 @@ import ConAgua.L.Examples
 The twin `majorToCtor` (`Core.lean:1705-1820`) is one function; its pieces are named here
 (`m2cHeadT` … `m2cCheckT`), each the twin's own code with the values decoded so far as
 parameters, and `majorToCtor` unfolds into them by `rfl` (`majorToCtor_eq`). Each L piece of
-`WhnfM2C.lean` gets a word-level model through `callW` and an L spec by `vcgen` + `finish`.
+`WhnfM2C.lean` has a unified model (`Verdict/WhnfModels6E.lean`); `major_to_ctor` itself and the
+leaves outside the verdict closure (`m2c_const_view`, `m2c_eta2`) get a word-level model through
+`callW` and an L spec by `vcgen` + `finish` here.
 -/
 
 open ConRon.Arena

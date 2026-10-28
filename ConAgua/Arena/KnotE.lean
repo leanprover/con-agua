@@ -111,8 +111,8 @@ theorem ErrClaim.of_run_err {α β : Type} {T : AM α} {T' : AM β} {a a' : ASta
 
 A core function's unified refinement (`RefE`, `Verdict.lean`) relates its model's value `(r, m)`
 to the twin's run by `CorePost`: what `CoreRef` says besides the twin's ok run. Its halves come
-from the call's run through the model's spec: the ok spec (`RefE.coreSpec`), the `CoreRef` of a
-callee's run (`RefE.coreRefW`), the error spec (`RefE.coreSpecE`). -/
+from the call's run through the model's spec: the ok spec (`RefE.coreSpec`), the error spec
+(`RefE.coreSpecE`). -/
 
 /-- A tail call whose continuation passes the callee's errors on and maps its value (`f`), against
 a twin that runs as the callee's twin `T'` from `a₁`. -/
@@ -170,16 +170,6 @@ theorem RefE.coreSpec
   L.M.triple_of_run fun _ _ _ hp hr => by
     obtain ⟨hl, _, _, hT, hR⟩ := L.M.of_run' (P := fun s => s = s₀) hp hr (RefE.triple hs h)
     exact ⟨hl, hR.coreRef hT⟩
-
-/-- The ok half at a callee's run (`callW`, the ok models' reading of a call). -/
-theorem RefE.coreRefW
-    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
-      ⦃fun r s' => LocEq s' s₀ ∧ fx = .ok (r, s'.mem); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
-    (h : RefE G fx T a (CorePost dec dn s₀.mem vis fe M eb ok)) {r : List Word} {m' : Mem}
-    (hc : callW p n f args s₀.mem = some (r, m')) :
-    CoreRef T a dec dn s₀.mem vis fe M eb r m' ok := by
-  obtain ⟨s', rfl, -, y, a', hT, hR⟩ := RefE.run_okW hs h hc
-  exact hR.coreRef hT
 
 end corePost
 
