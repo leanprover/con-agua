@@ -419,8 +419,9 @@ meta inductive CKind where
   | list (t : Term) (guard : Bool)
   /-- `F : Option Mem` -/
   | memOpt (t : Term)
-  /-- `F : Mem`, after the guards (`¬ gᵢ` is `none`) -/
-  | memTot (t : Term) (guards : Array Term)
+  /-- `F : Mem`, after the guards (`¬ gᵢ` is `none`); a guard with `true` has no `Decidable`
+  instance where the `l_model` command is elaborated: the model decides it classically -/
+  | memTot (t : Term) (guards : Array (Term × Bool))
   /-- `F : Option Word`, memory unchanged -/
   | ro (t : Term)
   /-- `F : Option (List Word)`, memory unchanged: several results, read-only -/
@@ -640,7 +641,14 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
       else match eff, memOpt, memTot, ro, listF with
       | some e, none, none, none, none => pure (CKind.eff (← delabT e))
       | none, some e, none, none, none => pure (CKind.memOpt (← delabT e))
-      | none, none, some e, none, none => pure (CKind.memTot (← delabT e) (← guards.mapM delabT))
+      | none, none, some e, none, none =>
+        -- a guard without a `Decidable` instance (`FlushOK`) is decided classically (the model
+        -- then is `noncomputable`), never left to fail as `sorry`
+        let gs ← guards.mapM fun g => do
+          let dec ← try pure (← synthInstance? (mkApp (mkConst ``Decidable) g)).isSome
+            catch _ => pure false
+          pure ((← delabT g), !dec)
+        pure (CKind.memTot (← delabT e) gs)
       | none, none, none, some e, none =>
         unless memSame do throwError "l_model: read-only callee {fname} must keep the memory"
         pure (CKind.ro (← delabT e))
@@ -1390,10 +1398,12 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     if xk.size > 1 then throwErrorAt f "l_model: several results of an effectful call"
     mkK E ctx 0 xk[0]? xk callT rest
   -- the abort condition for a guard `g` of a callee's post
-  let negC (g : Term) : GenM MC := do
+  let negC (g : Term) (classical : Bool) : GenM MC := do
     match g with
-    | `($a ≠ $b) => return .cmp "=" (.raw a) (.raw b)
-    | _ => return .not (.cmp "=" (.raw (← `(decide $g))) (.raw (← `(true))))
+    | `($a ≠ $b) => if !classical then return .cmp "=" (.raw a) (.raw b)
+    | _ => pure ()
+    let d ← if classical then `(@decide $g (Classical.propDecidable _)) else `(decide $g)
+    return .not (.cmp "=" (.raw d) (.raw (← `(true))))
   -- a member of the group with a spec in `specs` is called through that spec (`callW_spec p n
   -- "f"`: the self-call stays a `callW` in the model, as in hand models whose refinements do
   -- induction over `callW`)
@@ -1480,9 +1490,9 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     let m' ← substT t memT argsT
     let body ← transS E { (assign ctx #[]) with mem := .raw m' } rest
     let mut r := body
-    for g in guards.reverse do
+    for (g, classical) in guards.reverse do
       let g ← substT g memT argsT
-      r := .ite (← negC g) (← failMR E) r
+      r := .ite (← negC g classical) (← failMR E) r
     return r
   | .ro t =>
     let callT := MT.raw (← substC t)
@@ -1943,7 +1953,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let calleeIds : NameSet := callees.foldl (fun acc (_, c) => match c.kind with
     | .eff t | .effL t | .list t _ | .memOpt t | .ro t | .roL t | .effT t _ | .roT t _ => idents t.raw acc
     | .pure ts => ts.foldl (fun acc t => idents t.raw acc) acc
-    | .memTot t gs => gs.foldl (fun acc t => idents t.raw acc) (idents t.raw acc)
+    | .memTot t gs => gs.foldl (fun acc t => idents t.1.raw acc) (idents t.raw acc)
     | .unitOpt t => idents t.raw acc) {}
   -- `errors` mode: the callees without a spec are called through `callE p n "f"`
   let calleeIds := if exc then calleeIds.insert `p else calleeIds
@@ -2166,6 +2176,11 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
             | $(← failPat) => $(← failRhs)
             | $pat => $body)
   let emitD (cmd : Syntax) : CommandElabM Unit := unless noDefs do emit doTrace cmd
+  -- a callee guard decided classically (`analyseSpec`): the definitions are `noncomputable`
+  let classical := E.callees.any fun (_, c) => match c.kind with
+    | .memTot _ gs => gs.any (·.2)
+    | _ => false
+  if classical then emitD (← `(command| noncomputable section))
   -- emit the components, each after the ones it refers to
   let mut emitted := Array.replicate nodes.size false
   let mut left := nodes.size
@@ -2183,10 +2198,24 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       let defs ← comp.mapM (defOf · wf)
       if defs.size == 1 then emitD defs[0]!
       else emitD (← `(command| mutual $defs* end))
+      -- a definition that did not elaborate (its error is logged above) is `sorry` in every
+      -- later step: stop here, never go on with a model that holds `sorry`
+      unless noDefs do
+        for c in comp do
+          let n := if h : c < fis.size then fis[c].model else kDefs[c - fis.size]!.1.name
+          let ok ← liftTermElabM do
+            try
+              let n ← resolveGlobalConstNoOverload (mkIdent n)
+              pure (((← getEnv).find? n).bind (·.value?) |>.any (!·.hasSorry))
+            catch _ => pure false
+          unless ok do
+            if classical then emitD (← `(command| end))
+            throwError "l_model: the generated definition {n} does not elaborate (errors above); a model never holds `sorry`"
       for c in comp do emitted := emitted.set! c true
       left := left - comp.size
       progress := true
     unless progress do throwError "l_model: cannot order the definitions"
+  if classical then emitD (← `(command| end))
   -- guarded equations, one per leaf that is not `none`
   -- a path condition as a hypothesis, in its natural form on the negative side (`a = b` for
   -- `¬ a ≠ b`, `a ≠ b` for `¬ a = b`, `p` for `¬ ¬ p`), and its rewrite rule

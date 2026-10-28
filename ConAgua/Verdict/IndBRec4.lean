@@ -34,7 +34,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-open Classical in
 l_model cruleE_spec (p : Prog) (hp : CruleProg p)
   fns [hp.rule ↦ cruleE]
   specs [crgE_spec p hp n, flushCaches_spec p hp.toFlushProg n, stripLams_specF p hp.strip n,
