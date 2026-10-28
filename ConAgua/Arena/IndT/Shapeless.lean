@@ -1,9 +1,7 @@
-import ConAgua.Arena.IndRealPartsC2
 import ConAgua.Arena.IndArmLps
-import ConAgua.Arena.IndRealIpo
+import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 import ConAgua.Arena.DeclNatLit
 import ConAgua.Arena.DeclReduceSpec2
-import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
 import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

@@ -1,6 +1,8 @@
 import ConAgua.Arena.IndSumSpec.SumRules
 import ConAgua.Verdict.VCtx
-import ConAgua.Verdict.IndE
+import ConAgua.Arena.IndRealLvlC
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndSumSpec.SumProg
 

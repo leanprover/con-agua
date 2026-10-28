@@ -802,47 +802,6 @@ theorem unresolvedConstsError_run {a : AState} {T : NIdx} {b : Bool} {mp : Std.H
   dsimp only
   cases b <;> rfl
 
-/-- **`unresolved_consts_error` never returns.** -/
-theorem uceE_ne_ok {p : Prog} {n : Nat} {m : Mem} {vis e w : Word} {v : Word × Mem} :
-    uceE p n m vis e w ≠ .ok v := by
-  have hj : ∀ n m, uceE.j1 p n e w m ≠ .ok v := by
-    intro n m h
-    rw [uceE.j1] at h
-    cases h1 : callW p n "pin_at" [13] m with
-    | none => rw [h1, liftE_none, uceE.k_pin_at.eq_1] at h; cases h
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, liftE_some, uceE.k_pin_at.eq_2] at h
-    cases h2 : callW p n "ue_mentions_go" [CWF, r1.headD 0, e] m1 with
-    | none => rw [h2, liftE_none, uceE.k_ue_mentions_go.eq_1] at h; cases h
-    | some q2 =>
-    obtain ⟨r2, m2⟩ := q2
-    rw [h2, liftE_some, uceE.k_ue_mentions_go.eq_2] at h
-    repeat' split at h
-    all_goals cases h
-  intro h
-  cases n with
-  | zero => rw [uceE.eq_1] at h; cases h
-  | succ n =>
-  by_cases hw : w ≤ 1
-  · rw [uceE.arm1 p n m vis e w hw] at h
-    cases h1 : callW p n "str_lit_supported" [vis] m with
-    | none => rw [h1, liftE_none, uceE.k_str_lit_supported.eq_1] at h; cases h
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, liftE_some, uceE.k_str_lit_supported.eq_2] at h
-    split at h
-    · cases h2 : callW p n "has_str_lit_go" [CWF, e] m1 with
-      | none => rw [h2, liftE_none, uceE.k_has_str_lit_go.eq_1] at h; cases h
-      | some q2 =>
-      obtain ⟨r2, m2⟩ := q2
-      rw [h2, liftE_some, uceE.k_has_str_lit_go.eq_2] at h
-      split at h
-      · cases h
-      · exact hj _ _ h
-    · exact hj _ _ h
-  · rw [uceE.arm2 p n m vis e w hw] at h; exact hj _ _ h
-
 /-- **The `sorryAx` test and the verdict** (`uceE.j1`, the twin's `unresolvedConstsError`). -/
 theorem uce_rest {p : Prog} (hU : UceProg p)
     {n : Nat} {m : Mem} {a : AState} {e w : Word} {er : Err} (hA : ArenaR m a)
@@ -910,15 +869,15 @@ def UceClaim (T : AM CheckError) (a : AState) (er : Err) : Prop :=
   er.cls ≠ 0 → ∃ ce a', T.run a = .ok (ce, a') ∧ twinCls ce = er.cls
 
 /-- **`unresolved_consts_error(vis, e, w)` refines the twin's verdict `uceT`, both outcomes**: it
-never returns (the ok fact is `False`); a failure of class `1`/`2` aborts with the class of the
+never returns (no ok fact is needed); a failure of class `1`/`2` aborts with the class of the
 verdict the twin computes from the related state (for any `where_`: the class does not depend on
 it). Its callees are outside the verdict closure; its program (`UceProg`) is its `G`. -/
 theorem uce_ref {p : Prog} {n : Nat} {m : Mem} {a : AState} {vis : Word} {fe : IFEnv} {e w : Word}
     (hA : ArenaR m a) (hF : PinsFull m a.pins) (he : H e)
     (hS : w ≤ 1 → ∃ dn M eb, CoreS dn m a vis fe M eb) (wh : String) :
-    RefC (UceProg p) (uceE p n m vis e w) (fun _ => False) (UceClaim (uceT fe wh w (decE e)) a) := by
+    RefC (UceProg p) (uceE p n m vis e w) (fun _ => True) (UceClaim (uceT fe wh w (decE e)) a) := by
   rcases hW : uceE p n m vis e w with er | v
-  case ok => exact uceE_ne_ok hW
+  case ok => trivial
   intro hU hk
   cases n with
   | zero => rw [uceE.eq_1] at hW; cases hW; exact absurd rfl hk

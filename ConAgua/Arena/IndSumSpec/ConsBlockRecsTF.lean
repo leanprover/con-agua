@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndSumSpec.StructProjBodies
 import ConAgua.Arena.IndSumSpec.TsrW
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RecGenSpec.DecRR
