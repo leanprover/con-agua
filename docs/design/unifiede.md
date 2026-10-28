@@ -2411,3 +2411,56 @@ dfe405f0, load 10–20, `_tmp/retire-a3/times1.txt`):
 | **sum (12 modules)** | **68.33** | **68.06** | **±0 %** |
 
 No module is more than 10 % slower. No generator or kit change was needed.
+
+### 3.34 Retirement, group B, the `whnf` leaves, second landing (`struct_eta_cert*`, `proof_irrel`, `major_to_ctor`)
+
+Seven more of §3.30 B's first bullet: `struct_eta_cert` and its pieces `_with`, `_wtb`, `_go`,
+`_tail`, then `proof_irrel` and `major_to_ctor`. As in §3.32: one `*_ref` per function over its
+unified model, `@[refines]` theorems with users as `RefE.coreSpec` one-liners, the error claims the
+knot reads (`KnotAllE`'s `setCert`, `ProofIrrelWE`, `MajorToCtorE`) as `RefE.coreSpecE`
+one-liners. Gone: `Verdict/WhnfSetE`; the hand ok models `stK1–3`, `sgK1–5`, `wbK1–3`, `swK1–3`,
+`secK1–3`, `pirrW`, `mtcW` with their specs; `GrowSpec.of_call1W`, `growRef_pre`, `setWith_at`.
+
+| functions | before: ok side + claims | after | change |
+|---|---:|---:|---:|
+| the 7 above | ok refinements, models, specs 811 + claims 752 = 1 563 | `*_ref` + one-liners + `G`s 666 | **−57 %** |
+
+Diff of the landing against master: +604 −1 589 lines in 14 files.
+
+Choices:
+
+* **`G`**: `SetG p n` for the `struct_eta_cert` chain (the knot's slots and `defeq_lst`'s claim
+  `DefeqLstWE`, moved from `WhnfSetE` to `DefEqStuckWith`; `SetG.lstE` applies it to a failing
+  call at any fuel); `PihG p n` (`pih_ref`'s) for `proof_irrel`; `M2CCtxE p n` for
+  `major_to_ctor`.
+* **Callees**: `proof_irrel` lists `proof_irrel_half` by its unified spec (`pirrE_spec` moved next
+  to `pihE_spec` in `Arena/WhnfIotaRefine4`); `major_to_ctor` lists `m2c_head`'s; the chain's
+  pieces each list the next (lookup hypotheses as extra parameters). `defeq_lst` stays `callE`
+  (its ok half `StuckCallees.defeqLst`).
+* **The stack top put back without its bound.** As with `struct_unit_head` (§3.32), the unified
+  models of `struct_eta_cert_with` and `major_to_ctor` drop the bound of the top's store, so their
+  ok halves restore it without one: `StackKept.restoreG'` (`WhnfCoreRefine`: out of bounds the top
+  reads `0`, and the grown run's old top was below it) and `GrowPost.restore` (`DefEqStuckWith`).
+* `major_to_ctor`'s unified model by the default recipe (13.0 s, 17.6 s with `simp []`).
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base master
+19299e46; `WhnfModels6E` re-measured alone after the recipe change):
+
+| module | base | new |
+|---|---:|---:|
+| `Arena/DefEqStuckCert` | 6.25 | 1.87 |
+| `Arena/DefEqStuckGo` | 6.01 | 1.78 |
+| `Arena/DefEqStuckWith` | 1.88 | 1.46 |
+| `Arena/WhnfCoreRefine` | 2.37 | 2.62 |
+| `Arena/WhnfIotaRefine4` | 5.92 | 6.89 |
+| `Arena/WhnfM2CRefine`, `WhnfM2CRefine5` | 5.40 | 4.82 |
+| `Verdict/KnotAllE` | 3.99 | 3.67 |
+| `Verdict/WhnfModels3E` | 12.54 | 10.98 |
+| `Verdict/WhnfModels6E` | 15.19 | 13.1 |
+| `Verdict/WhnfModels7E` | 47.46 | 34.05 |
+| `Verdict/WhnfM2CE`, `WhnfPirrE`, `WhnfSetE` | 3.42 | 1.06 |
+| **sum** | **110.4** | **82.3** (−25 %) |
+
+`Arena/WhnfIotaRefine4` is 16 % slower: `pirrE`'s model moved there from `WhnfModels3E` (which got
+1.6 s faster); together −0.6 s. No generator or kit change was needed; `GrowPost.restore` is a
+candidate for `RefECore`.
