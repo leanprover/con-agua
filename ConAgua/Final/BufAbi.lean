@@ -156,17 +156,18 @@ theorem qwrs_facts (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
       rw [A_add]; exact qwrs_grows qs d0 _ (hmap0 _ (by omega) (by simp only [abiSlot] at hn; omega))
 
 /-- **The descriptor stores** (`parDescB` for the positions `ps`): the base of the array at `p`
-and length, table words `6 + p` and `6 + nw + p`. -/
+and length, table words `2 + p` and `2 + (nb + nw) + p`. -/
 theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base blen)
     (hfzl : fz.length < 2 ^ 20) (R : Reg64s) (hrcx : R.rcx.toNat = base) (hrdi : R.rdi.toNat = buf)
     (d0 : DataMem) (hB0 : ∀ i (h : i < B.size), rdW d0 (A (buf + 8 * i)) = some B[i])
     (hmap0 : ∀ x, base ≤ x → x < base + blen → (d0.get? (A x)).isSome) :
     ∀ (ps qs : List Nat) (k : Nat) (s : MachineData),
       Code (ps.flatMap fun p => parDescB tab fz own p) k →
-      (∀ p ∈ ps, p < tab.nw) → (∀ q ∈ qs, q < bufN tab) →
+      (∀ p ∈ ps, p < tab.nb + tab.nw) → (∀ q ∈ qs, q < bufN tab) →
       (∀ r, r ≠ .rax → s.regs.get64 r = R.get64 r) → s.dmem = qwrs base (bufVal tab buf B base fz own) d0 qs →
       (∀ s' : MachineData,
-        s'.dmem = qwrs base (bufVal tab buf B base fz own) d0 (qs ++ ps.flatMap fun p => [6 + p, 6 + tab.nw + p]) →
+        s'.dmem = qwrs base (bufVal tab buf B base fz own) d0
+          (qs ++ ps.flatMap fun p => [2 + p, 2 + (tab.nb + tab.nw) + p]) →
         (∀ r, r ≠ .rax → s'.regs.get64 r = R.get64 r) →
         Ev Q s' (at_ (k + (ps.flatMap fun p => parDescB tab fz own p).length))) →
       Ev Q s (at_ k) := by
@@ -184,30 +185,33 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
     intro qs k s hc hps hqs hR hmem hK
     simp only [List.flatMap_cons] at hc hK
     have hp := hps p List.mem_cons_self
-    have hps' : ∀ p ∈ ps, p < tab.nw := fun p h => hps p (List.mem_cons_of_mem _ h)
-    have hq1 : 6 + p < bufN tab := by simp only [bufN]; omega
-    have hq2 : 6 + tab.nw + p < bufN tab := by simp only [bufN]; omega
+    have hps' : ∀ p ∈ ps, p < tab.nb + tab.nw := fun p h => hps p (List.mem_cons_of_mem _ h)
+    have hq1 : 2 + p < bufN tab := by simp only [bufN]; omega
+    have hq2 : 2 + (tab.nb + tab.nw) + p < bufN tab := by simp only [bufN]; omega
     have hN : 8 * bufN tab ≤ 2 ^ 31 := by simp only [bufN]; omega
-    have hoB : tab.dbase64 p = ((8 * (6 + p) : Nat) : Int) := by
-      simp only [Tab.dbase64, hnb]; omega
-    have hoL : tab.dlen64 p = ((8 * (6 + tab.nw + p) : Nat) : Int) := by
-      simp only [Tab.dlen64, hnb]; omega
+    have hoB : tab.dbase p = ((8 * (2 + p) : Nat) : Int) := by
+      simp only [Tab.dbase]; omega
+    have hoL : tab.dlen p = ((8 * (2 + (tab.nb + tab.nw) + p) : Nat) : Int) := by
+      simp only [Tab.dlen]; omega
     have hrc : ∀ s : MachineData, (∀ r, r ≠ .rax → s.regs.get64 r = R.get64 r) → (s.regs.get64 .rcx).toNat = base :=
       fun s h => by rw [h .rcx (by decide)]; simpa using hrcx
-    have hvB : bufVal tab buf B base fz own (6 + p) = (UInt64.ofNat (bufB tab B buf base fz own (tab.wAt p))).toBitVec := by
-      simp only [bufVal, show 6 + p ≠ 0 by omega, show 6 + p ≠ 1 by omega, show ¬ 6 + p < 6 by omega,
-        show 6 + p < 6 + tab.nw by omega, ite_false, ite_true, show 6 + p - 6 = p by omega]
-    have hvL : bufVal tab buf B base fz own (6 + tab.nw + p) = (UInt64.ofNat (bufL tab B fz own (tab.wAt p))).toBitVec := by
-      simp only [bufVal, show 6 + tab.nw + p ≠ 0 by omega, show 6 + tab.nw + p ≠ 1 by omega,
-        show ¬ 6 + tab.nw + p < 6 by omega, show ¬ 6 + tab.nw + p < 6 + tab.nw by omega,
-        show 6 + tab.nw + p < 6 + 2 * tab.nw by omega, ite_false, ite_true, show 6 + tab.nw + p - 6 - tab.nw = p by omega]
+    have hvB0 : bufVal tab buf B base fz own (2 + p) =
+        (UInt64.ofNat ((bufLayout tab buf B base fz own).b p)).toBitVec := by
+      simp only [bufVal, show 2 + p ≠ 0 by omega, show 2 + p ≠ 1 by omega,
+        show 2 + p < 2 + (tab.nb + tab.nw) by omega, ite_false, ite_true, show 2 + p - 2 = p by omega]
+    have hvL0 : bufVal tab buf B base fz own (2 + (tab.nb + tab.nw) + p) =
+        (UInt64.ofNat ((bufLayout tab buf B base fz own).s p)).toBitVec := by
+      simp only [bufVal, show 2 + (tab.nb + tab.nw) + p ≠ 0 by omega, show 2 + (tab.nb + tab.nw) + p ≠ 1 by omega,
+        show ¬ 2 + (tab.nb + tab.nw) + p < 2 + (tab.nb + tab.nw) by omega,
+        show 2 + (tab.nb + tab.nw) + p < 2 + 2 * (tab.nb + tab.nw) by omega, ite_false, ite_true,
+        show 2 + (tab.nb + tab.nw) + p - 2 - (tab.nb + tab.nw) = p by omega]
     -- after the two stores: the rest
     have hrest : ∀ k' s', k' = k + (parDescB tab fz own p).length →
-        s'.dmem = qwrs base (bufVal tab buf B base fz own) d0 (qs ++ [6 + p] ++ [6 + tab.nw + p]) →
+        s'.dmem = qwrs base (bufVal tab buf B base fz own) d0 (qs ++ [2 + p] ++ [2 + (tab.nb + tab.nw) + p]) →
         (∀ r, r ≠ .rax → s'.regs.get64 r = R.get64 r) → Ev Q s' (at_ k') := by
       intro k' s' hk' hm' hR'
       subst hk'
-      refine ih (qs ++ [6 + p] ++ [6 + tab.nw + p]) _ s' hc.right hps' ?_ hR' hm' ?_
+      refine ih (qs ++ [2 + p] ++ [2 + (tab.nb + tab.nw) + p]) _ s' hc.right hps' ?_ hR' hm' ?_
       · intro q hq; simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hq
         rcases hq with (h | h) | h
         · exact hqs q h
@@ -216,28 +220,45 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
       · intro s'' hm'' hR''
         refine ev_congr (hK s'' (by rw [hm'']; simp) hR'') (by simp; omega)
     obtain ⟨-, hcell, -⟩ := qwrs_facts hok hg (bufVal tab buf B base fz own) d0 hB0 hmap0 qs hqs
-    obtain ⟨-, hcell1, -⟩ := qwrs_facts hok hg (bufVal tab buf B base fz own) d0 hB0 hmap0 (qs ++ [6 + p])
+    obtain ⟨-, hcell1, -⟩ := qwrs_facts hok hg (bufVal tab buf B base fz own) d0 hB0 hmap0 (qs ++ [2 + p])
       (by intro q hq; simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hq
           rcases hq with h | h
           · exact hqs q h
           · omega)
     obtain ⟨hbuf, -, -⟩ := qwrs_facts hok hg (bufVal tab buf B base fz own) d0 hB0 hmap0 qs hqs
     have hc0 := hc.left
+    by_cases hpb : p < tab.nb
+    · -- a byte position: `(0, 0)`
+      simp only [parDescB, hpb, ite_true] at hc0
+      refine ev_movRI (Code.get (i := 0) hc0 rfl) ?_
+      refine ev_storeQ (Code.get (i := 1) hc0 rfl) _ d0 qs (2 + p) hoB (by omega)
+        (by rsimp; exact hrc s hR) (by rsimp; rw [hvB0, bufLayout_b8 _ _ _ _ _ _ hpb]; rfl) hmem
+        (by rw [hmem]; exact hcell _ hq1) ?_
+      refine ev_storeQ (Code.get (i := 2) hc0 rfl) _ d0 (qs ++ [2 + p]) (2 + (tab.nb + tab.nw) + p) hoL (by omega)
+        (by rsimp; exact hrc s hR) (by rsimp; rw [hvL0, bufLayout_s8 _ _ _ _ _ _ hpb]; rfl) rfl
+        (hcell1 _ hq2) ?_
+      refine hrest _ _ (by simp [parDescB, hpb]) rfl ?_
+      intro r hr; rsimp; rw [← hR r hr]; cases r <;> first | exact absurd rfl hr | rfl
+    have hvB : bufVal tab buf B base fz own (2 + p) = (UInt64.ofNat (bufB tab B buf base fz own (tab.wAt p))).toBitVec := by
+      rw [hvB0, bufLayout_b64 _ _ _ _ _ _ (by omega)]
+    have hvL : bufVal tab buf B base fz own (2 + (tab.nb + tab.nw) + p) =
+        (UInt64.ofNat (bufL tab B fz own (tab.wAt p))).toBitVec := by
+      rw [hvL0, bufLayout_s64 _ _ _ _ _ _ (by omega)]
     rcases hfz : fz.idxOf? (tab.wAt p) with _ | i
     · rcases hown : own.idxOf? (tab.wAt p) with _ | k'
       · -- neither frozen nor owned: `(0, 0)`
-        simp only [parDescB, hfz, hown] at hc0
+        simp only [parDescB, hpb, ite_false, hfz, hown] at hc0
         refine ev_movRI (Code.get (i := 0) hc0 rfl) ?_
-        refine ev_storeQ (Code.get (i := 1) hc0 rfl) _ d0 qs (6 + p) hoB (by omega)
+        refine ev_storeQ (Code.get (i := 1) hc0 rfl) _ d0 qs (2 + p) hoB (by omega)
           (by rsimp; exact hrc s hR) (by rsimp; rw [hvB]; simp [bufB, hfz, hown]) hmem
           (by rw [hmem]; exact hcell _ hq1) ?_
-        refine ev_storeQ (Code.get (i := 2) hc0 rfl) _ d0 (qs ++ [6 + p]) (6 + tab.nw + p) hoL (by omega)
+        refine ev_storeQ (Code.get (i := 2) hc0 rfl) _ d0 (qs ++ [2 + p]) (2 + (tab.nb + tab.nw) + p) hoL (by omega)
           (by rsimp; exact hrc s hR) (by rsimp; rw [hvL]; simp [bufL, hfz, hown]) rfl
           (hcell1 _ hq2) ?_
-        refine hrest _ _ (by simp [parDescB, hfz, hown]) rfl ?_
+        refine hrest _ _ (by simp [parDescB, hpb, hfz, hown]) rfl ?_
         intro r hr; rsimp; rw [← hR r hr]; cases r <;> first | exact absurd rfl hr | rfl
       · -- owned: slot `2 + k'`, or the table-relative array inside the table's slot
-        simp only [parDescB, hfz, hown] at hc0
+        simp only [parDescB, hpb, ite_false, hfz, hown] at hc0
         have hk' := idxOf?_lt hown
         have hle : ownOff tab (tab.wAt p) k' + abiSlot ≤ abiSlot * (2 + own.length) := by
           cases hct : tab.tbl64 (tab.wAt p) with
@@ -248,7 +269,7 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
         refine ev_movRI (Code.get (i := 0) hc0 rfl) ?_
         refine ev_binO (op := .add) (o := oR .rcx) rfl (Code.get (i := 1) hc0 rfl)
           (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st => ?_
-        refine ev_storeQ (Code.get (i := 2) hc0 rfl) _ d0 qs (6 + p) hoB (by omega)
+        refine ev_storeQ (Code.get (i := 2) hc0 rfl) _ d0 qs (2 + p) hoB (by omega)
           (by rsimp; exact hrc s hR) ?_ hmem (by rw [hmem]; exact hcell _ hq1) ?_
         · rsimp; rw [hvB]; simp only [bufB, hfz, hown, BinOp.eval]
           have e1 := hR .rcx (by decide)
@@ -262,13 +283,13 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
             simp only [abiSlot] at hle hn ⊢; omega
           rw [heq]
         refine ev_movRI (Code.get (i := 3) hc0 rfl) ?_
-        refine ev_storeQ (Code.get (i := 4) hc0 rfl) _ d0 (qs ++ [6 + p]) (6 + tab.nw + p) hoL (by omega)
+        refine ev_storeQ (Code.get (i := 4) hc0 rfl) _ d0 (qs ++ [2 + p]) (2 + (tab.nb + tab.nw) + p) hoL (by omega)
           (by rsimp; exact hrc s hR) (by rsimp; rw [hvL]; simp [bufL, hfz, hown]) rfl
           (hcell1 _ hq2) ?_
-        refine hrest _ _ (by simp [parDescB, hfz, hown]) rfl ?_
+        refine hrest _ _ (by simp [parDescB, hpb, hfz, hown]) rfl ?_
         intro r hr; rsimp; rw [← hR r hr]; cases r <;> first | exact absurd rfl hr | rfl
     · -- frozen: the buffer's entry `i`
-      simp only [parDescB, hfz] at hc0
+      simp only [parDescB, hpb, ite_false, hfz] at hc0
       have hi := idxOf?_lt hfz
       have hh := hg.hdr i hi
       have hent := hg.ent i hi
@@ -288,7 +309,7 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
       refine ev_shlRI (n := 3) (by decide) (Code.get (i := 1) hc0 rfl) fun st => ?_
       refine ev_binO (op := .add) (o := oR .rdi) rfl (Code.get (i := 2) hc0 rfl)
         (Or.inr (Or.inr ⟨.rdi, rfl, rfl⟩)) fun st' => ?_
-      refine ev_storeQ (Code.get (i := 3) hc0 rfl) _ d0 qs (6 + p) hoB (by omega)
+      refine ev_storeQ (Code.get (i := 3) hc0 rfl) _ d0 qs (2 + p) hoB (by omega)
         (by rsimp; exact hrc s hR) ?_ hmem (by rw [hmem]; exact hcell _ hq1) ?_
       · rsimp; rw [hvB]; simp only [bufB, hfz, BinOp.eval]
         have e1 := hR .rdi (by decide)
@@ -300,17 +321,17 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
       · rsimp
         rw [show s.regs.rdi.toNat = (s.regs.get64 .rdi).toNat from rfl, hrdiR s hR,
           show (8 * (9 + 2 * (i : Int))).toNat = 8 * (9 + 2 * i) by omega]
-        obtain ⟨hbuf1, -, -⟩ := qwrs_facts hok hg (bufVal tab buf B base fz own) d0 hB0 hmap0 (qs ++ [6 + p])
+        obtain ⟨hbuf1, -, -⟩ := qwrs_facts hok hg (bufVal tab buf B base fz own) d0 hB0 hmap0 (qs ++ [2 + p])
           (by intro q hq; simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hq
               rcases hq with h | h
               · exact hqs q h
               · omega)
         exact hbuf1 _ hb9
-      refine ev_storeQ (Code.get (i := 5) hc0 rfl) _ d0 (qs ++ [6 + p]) (6 + tab.nw + p) hoL (by omega)
+      refine ev_storeQ (Code.get (i := 5) hc0 rfl) _ d0 (qs ++ [2 + p]) (2 + (tab.nb + tab.nw) + p) hoL (by omega)
         (by rsimp; exact hrc s hR) ?_ rfl (hcell1 _ hq2) ?_
       · rsimp; rw [hvL]; simp only [bufL, hfz]
         simp [bufEntry, Array.getD_eq_getD_getElem?, Array.getElem?_eq_getElem (show 9 + 2 * i < B.size by omega)]
-      refine hrest _ _ (by simp [parDescB, hfz]) rfl ?_
+      refine hrest _ _ (by simp [parDescB, hpb, hfz]) rfl ?_
       intro r hr; rsimp; rw [← hR r hr]; cases r <;> first | exact absurd rfl hr | rfl
 
 /-- **The constant data's stores** (`immStores` from table word `q0`). -/
@@ -422,8 +443,7 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   simp only [parStub] at hcP
   replace hcP := hcP.left
   simp only [parStub0] at hcP
-  have hL1 := hcP.left.left.left.left.left.left
-  have hF1 := hcP.left.left.left.left.left.right
+  have hL1 := hcP.left.left.left.left.left
   have hF2 := hcP.left.left.left.left.right
   have hI := hcP.left.left.left.right
   have hL2 := hcP.left.left.right
@@ -469,43 +489,23 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   · exact (qwrs_facts hok hg (bufVal tab buf B base fz own) dm.dmem hB0 hmap0 [0]
       (by intro q h; simp only [List.mem_singleton] at h; subst h; simp only [bufN]; omega)).2.1 1
       (by simp only [bufN]; omega)
-  refine ev_movRI (Code.get (i := 26) hL1 rfl) ?_
   have hcell : ∀ qs : List Nat, (∀ q ∈ qs, q < bufN tab) → ∀ q < bufN tab,
       (rdW (qwrs base (bufVal tab buf B base fz own) dm.dmem qs) (A (base + 8 * q))).isSome :=
     fun qs h => (qwrs_facts hok hg (bufVal tab buf B base fz own) dm.dmem hB0 hmap0 qs h).2.1
-  have hv0 : ∀ q, 2 ≤ q → q < 6 → bufVal tab buf B base fz own q = 0 := fun q h1 h2 => by
-    simp only [bufVal, show q ≠ 0 by omega, show q ≠ 1 by omega, h2, ↓reduceIte]
-  have hF1' := Code.right' hcP.left.left.left.left.left (n := 27) (by simp only [List.length_cons, List.length_nil])
-  rw [hnb] at hF1'
-  refine ev_congr (j := k0 + 27) ?_ (by omega)
-  have hqb : ∀ q, q < 6 → q < bufN tab := fun q h => by simp only [bufN]; omega
-  refine ev_storeQ (Code.get (i := 0) hF1' rfl) (bufVal tab buf B base fz own) dm.dmem ([] ++ [0] ++ [1]) 2
-    (by simp [Tab.base8, Tab.pos8_eq, Tab.dbase8]) (by omega) (by rsimp; simpa using hbase) (by rsimp; rw [hv0 2 (by omega) (by omega)]; rfl)
-    rfl (hcell _ (by intro q hq; simp at hq; simp only [bufN]; omega) _ (hqb 2 (by omega))) ?_
-  refine ev_storeQ (Code.get (i := 1) hF1' rfl) (bufVal tab buf B base fz own) dm.dmem ([] ++ [0] ++ [1] ++ [2]) 3
-    (by simp [Tab.len8, Tab.pos8_eq, Tab.dlen8]) (by omega) (by rsimp; simpa using hbase) (by rsimp; rw [hv0 3 (by omega) (by omega)]; rfl)
-    rfl (hcell _ (by intro q hq; simp at hq; simp only [bufN]; omega) _ (hqb 3 (by omega))) ?_
-  refine ev_storeQ (Code.get (i := 2) hF1' rfl) (bufVal tab buf B base fz own) dm.dmem ([] ++ [0] ++ [1] ++ [2] ++ [3]) 4
-    (by simp [Tab.base8, Tab.pos8_eq, Tab.dbase8]) (by omega) (by rsimp; simpa using hbase) (by rsimp; rw [hv0 4 (by omega) (by omega)]; rfl)
-    rfl (hcell _ (by intro q hq; simp at hq; simp only [bufN]; omega) _ (hqb 4 (by omega))) ?_
-  refine ev_storeQ (Code.get (i := 3) hF1' rfl) (bufVal tab buf B base fz own) dm.dmem ([] ++ [0] ++ [1] ++ [2] ++ [3] ++ [4]) 5
-    (by simp [Tab.len8, Tab.pos8_eq, Tab.dlen8]) (by omega) (by rsimp; simpa using hbase) (by rsimp; rw [hv0 5 (by omega) (by omega)]; rfl)
-    rfl (hcell _ (by intro q hq; simp at hq; simp only [bufN]; omega) _ (hqb 5 (by omega))) ?_
-  have hF2' := Code.right' hcP.left.left.left.left (n := 31)
-    (by simp only [List.length_append, List.length_cons, List.length_nil, flatMap_pair_length, hnb])
-  refine ev_congr (j := k0 + 31) ?_ (by omega)
-  have hqs6 : ∀ q ∈ ([] ++ [0] ++ [1] ++ [2] ++ [3] ++ [4] ++ [5] : List Nat), q < bufN tab := by
+  have hF2' := Code.right' hcP.left.left.left.left (n := 26) (by simp only [List.length_cons, List.length_nil])
+  refine ev_congr (j := k0 + 26) ?_ (by omega)
+  have hqs6 : ∀ q ∈ ([] ++ [0] ++ [1] : List Nat), q < bufN tab := by
     intro q hq; simp at hq; simp only [bufN]; omega
   refine sim_desc _ hok hg hfzl _ (by rsimp; simpa using hbase) (by rsimp; simpa using hbuf) dm.dmem hB0 hmap0
-    (List.range tab.nw) _ _ _ hF2' (fun p h => List.mem_range.mp h) hqs6 (fun _ _ => rfl) rfl ?_
+    (List.range (tab.nb + tab.nw)) _ _ _ hF2' (fun p h => List.mem_range.mp h) hqs6 (fun _ _ => rfl) rfl ?_
   intro s1 hm1 hR1
   have hI' := Code.right' hcP.left.left.left
-    (n := 31 + (List.flatMap (fun p => parDescB tab fz own p) (List.range tab.nw)).length)
-    (by simp only [List.length_append, List.length_cons, List.length_nil, flatMap_pair_length, hnb])
-  rw [show tab.romBase.toNat = 8 * (6 + 2 * tab.nw) by simp only [Tab.romBase, hnb]; omega] at hI'
-  refine ev_congr (j := k0 + (31 + (List.flatMap (fun p => parDescB tab fz own p) (List.range tab.nw)).length)) ?_ (by omega)
-  have hqs7 : ∀ q ∈ ([] ++ [0] ++ [1] ++ [2] ++ [3] ++ [4] ++ [5] ++
-      (List.range tab.nw).flatMap fun p => [6 + p, 6 + tab.nw + p] : List Nat), q < bufN tab := by
+    (n := 26 + (List.flatMap (fun p => parDescB tab fz own p) (List.range (tab.nb + tab.nw))).length)
+    (by simp only [List.length_append, List.length_cons, List.length_nil])
+  rw [show tab.romBase.toNat = 8 * (2 + 2 * (tab.nb + tab.nw)) by simp only [Tab.romBase]; omega] at hI'
+  refine ev_congr (j := k0 + (26 + (List.flatMap (fun p => parDescB tab fz own p) (List.range (tab.nb + tab.nw))).length)) ?_ (by omega)
+  have hqs7 : ∀ q ∈ ([] ++ [0] ++ [1] ++
+      (List.range (tab.nb + tab.nw)).flatMap fun p => [2 + p, 2 + (tab.nb + tab.nw) + p] : List Nat), q < bufN tab := by
     intro q hq
     rw [List.mem_append] at hq
     rcases hq with h | h
@@ -515,13 +515,13 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       simp only [bufN]; omega
   have hrl := romVals_length tab.rom
   rw [← tab.romLen_eq] at hrl
-  refine sim_imm _ hok hg _ (by rsimp; simpa using hbase) dm.dmem hB0 hmap0 (romVals tab.rom) (6 + 2 * tab.nw)
+  refine sim_imm _ hok hg _ (by rsimp; simpa using hbase) dm.dmem hB0 hmap0 (romVals tab.rom) (2 + 2 * (tab.nb + tab.nw))
     _ _ s1 hI' (by rw [hrl]; simp only [bufN, Tab.romWords]; omega) ?_ (romVals_imm tab.rom) hqs7 hR1 hm1 ?_
   · intro i w hw
-    simp only [bufVal, show 6 + 2 * tab.nw + i ≠ 0 by omega, show 6 + 2 * tab.nw + i ≠ 1 by omega,
-      show ¬ 6 + 2 * tab.nw + i < 6 by omega, show ¬ 6 + 2 * tab.nw + i < 6 + tab.nw by omega,
-      show ¬ 6 + 2 * tab.nw + i < 6 + 2 * tab.nw by omega, ↓reduceIte,
-      show 6 + 2 * tab.nw + i - 6 - 2 * tab.nw = i by omega, romBits, hw]
+    simp only [bufVal, show 2 + 2 * (tab.nb + tab.nw) + i ≠ 0 by omega, show 2 + 2 * (tab.nb + tab.nw) + i ≠ 1 by omega,
+      show ¬ 2 + 2 * (tab.nb + tab.nw) + i < 2 + (tab.nb + tab.nw) by omega,
+      show ¬ 2 + 2 * (tab.nb + tab.nw) + i < 2 + 2 * (tab.nb + tab.nw) by omega, ↓reduceIte,
+      show 2 + 2 * (tab.nb + tab.nw) + i - 2 - 2 * (tab.nb + tab.nw) = i by omega, romBits, hw]
   intro s2 hm2 hR2
   -- the registers after the table stores
   have hS : ∀ r, r ≠ .rax → r ≠ .r9 → s2.regs.get64 r = dm.regs.get64 r := by
@@ -542,22 +542,22 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     rsimp at this
     exact UInt64.toBitVec_inj.mp (by rw [this]; rfl)
   -- the table words: every one written
-  obtain ⟨qsT, hqsT⟩ : ∃ qsT : List Nat, qsT = [] ++ [0] ++ [1] ++ [2] ++ [3] ++ [4] ++ [5] ++
-      ((List.range tab.nw).flatMap fun p => [6 + p, 6 + tab.nw + p]) ++
-      (List.range (romVals tab.rom).length).map (6 + 2 * tab.nw + ·) := ⟨_, rfl⟩
+  obtain ⟨qsT, hqsT⟩ : ∃ qsT : List Nat, qsT = [] ++ [0] ++ [1] ++
+      ((List.range (tab.nb + tab.nw)).flatMap fun p => [2 + p, 2 + (tab.nb + tab.nw) + p]) ++
+      (List.range (romVals tab.rom).length).map (2 + 2 * (tab.nb + tab.nw) + ·) := ⟨_, rfl⟩
   rw [← hqsT] at hm2
   have hqT : ∀ q < bufN tab, q ∈ qsT := by
     intro q hq
     rw [hqsT]
     simp only [bufN] at hq
-    by_cases h6 : q < 6
+    by_cases h6 : q < 2
     · exact List.mem_append_left _ (List.mem_append_left _ (by simp; omega))
-    · by_cases h7 : q < 6 + 2 * tab.nw
+    · by_cases h7 : q < 2 + 2 * (tab.nb + tab.nw)
       · refine List.mem_append_left _ (List.mem_append_right _ (List.mem_flatMap.mpr ?_))
-        by_cases h8 : q < 6 + tab.nw
-        · exact ⟨q - 6, List.mem_range.mpr (by omega), by simp; omega⟩
-        · exact ⟨q - 6 - tab.nw, List.mem_range.mpr (by omega), by simp; omega⟩
-      · refine List.mem_append_right _ (List.mem_map.mpr ⟨q - 6 - 2 * tab.nw, List.mem_range.mpr ?_, by omega⟩)
+        by_cases h8 : q < 2 + (tab.nb + tab.nw)
+        · exact ⟨q - 2, List.mem_range.mpr (by omega), by simp; omega⟩
+        · exact ⟨q - 2 - (tab.nb + tab.nw), List.mem_range.mpr (by omega), by simp; omega⟩
+      · refine List.mem_append_right _ (List.mem_map.mpr ⟨q - 2 - 2 * (tab.nb + tab.nw), List.mem_range.mpr ?_, by omega⟩)
         rw [hrl]; simp only [Tab.romWords] at hq; omega
   have hqT' : ∀ q ∈ qsT, q < bufN tab := by
     intro q hq
@@ -575,7 +575,7 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     fun g => Layout.globAddr_toNat (bufLayout tab buf B base fz own) g
   have hgS : ∀ g : GVar, g.id < tab.ng → base + 8 * bufN tab ≤ (bufLayout tab buf B base fz own).globAddr g ∧
       (bufLayout tab buf B base fz own).globAddr g + 8 ≤ (bufLayout tab buf B base fz own).tabEnd := fun g hg' => by
-    simp only [Layout.globAddr, Layout.globStart, Layout.tabEnd, bufLayout_T, bufLayout_tab, bufLayout_nargs, bufN, hnb]
+    simp only [Layout.globAddr, Layout.globStart, Layout.tabEnd, bufLayout_T, bufLayout_tab, bufLayout_nargs, bufN]
     omega
   have hoffG : ∀ g : GVar, g.id < tab.ng → SmallOff (tab.globOff g) := fun g hg' => by
     simp only [Tab.globOff, Tab.globBase]; constructor <;> omega
@@ -587,12 +587,12 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       exact hmapT _ (by simp only [Layout.globAddr, Layout.globStart, bufLayout_T] at h1 ⊢; omega)
         (by omega)
   have hL2' := Code.right' hcP.left.left
-    (n := 31 + (List.flatMap (fun p => parDescB tab fz own p) (List.range tab.nw)).length +
-      (immStores .rcx (8 * (6 + 2 * tab.nw)) (romVals tab.rom)).length)
-    (by simp only [List.length_append, List.length_cons, List.length_nil, flatMap_pair_length, hnb,
-          show tab.romBase.toNat = 8 * (6 + 2 * tab.nw) by simp only [Tab.romBase, hnb]; omega] <;> omega)
-  refine ev_congr (j := k0 + (31 + (List.flatMap (fun p => parDescB tab fz own p) (List.range tab.nw)).length +
-      (immStores .rcx (8 * (6 + 2 * tab.nw)) (romVals tab.rom)).length)) ?_ (by omega)
+    (n := 26 + (List.flatMap (fun p => parDescB tab fz own p) (List.range (tab.nb + tab.nw))).length +
+      (immStores .rcx (8 * (2 + 2 * (tab.nb + tab.nw))) (romVals tab.rom)).length)
+    (by simp only [List.length_append, List.length_cons, List.length_nil,
+          show tab.romBase.toNat = 8 * (2 + 2 * (tab.nb + tab.nw)) by simp only [Tab.romBase]; omega] <;> omega)
+  refine ev_congr (j := k0 + (26 + (List.flatMap (fun p => parDescB tab fz own p) (List.range (tab.nb + tab.nw))).length +
+      (immStores .rcx (8 * (2 + 2 * (tab.nb + tab.nw))) (romVals tab.rom)).length)) ?_ (by omega)
   refine ev_movMR (Code.get (i := 0) hL2' rfl) (hoffG plo hngl)
     (isSome_rdW fun j hj => by rw [A_add, hc2]; exact hgb plo hngl j hj) ?_
   refine ev_movMR (Code.get (i := 1) hL2' rfl) (hoffG phi hngh)
@@ -617,7 +617,7 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)).union (hOw _ mode (UInt64.toBitVec 2) hngm)
     (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)
   have hTE : base + 8 * bufN tab ≤ (bufLayout tab buf B base fz own).tabEnd := by
-    simp only [Layout.tabEnd, bufLayout_T, bufLayout_tab, bufLayout_nargs, bufN, hnb]; omega
+    simp only [Layout.tabEnd, bufLayout_T, bufLayout_tab, bufLayout_nargs, bufN]; omega
   have hO1 : Only base (base + 8 * bufN tab) dm.dmem s2.dmem := by
     rw [hm2]; exact qwrs_only qsT dm.dmem (bufN tab) (by simp only [abiSlot] at hn; omega) hqT'
   have hOall := hO1.union (a := base) (b := (bufLayout tab buf B base fz own).tabEnd) hOg

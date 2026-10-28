@@ -13,9 +13,9 @@ accepts with no separate normalisation step; see `DESIGN.md`, lane `walk`/`imul`
 
 open L L.Compiler L.Arena
 
-#guard Prog.wf (Prog.tab benchProg 0 318) benchProg
-#guard Prog.wf (Prog.tab walkProg 0 318) walkProg
+#guard Prog.wf (Prog.tab benchProg) benchProg
+#guard Prog.wf (Prog.tab walkProg) walkProg
 
 def main (args : List String) : IO Unit := do
   let out := args.headD "walk.s"
-  IO.FS.writeFile out (asmText (Prog.tab benchProg 0 318) benchProg "bb_bench")
+  IO.FS.writeFile out (asmText (Prog.tab benchProg) benchProg "bb_bench")

@@ -138,19 +138,17 @@ theorem abiLayout_out {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n p
       ¬ (abiLayout tab base inp n pins np).InTab x := by
   obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
   have hneed' := hneed
-  simp only [abiNeed, hnb, abiSlot] at hneed'
+  have := abiNeed_ge hok
   refine ⟨?_, ?_, ?_⟩
   · intro ⟨h3, h4⟩
     simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h3 h4; omega
-  · rintro (⟨a, ha, h3, h4⟩ | ⟨a, ha, h3, h4⟩)
-    · simp only [abiLayout_tab, hnb] at ha
-      have : a = 0 ∨ a = 1 := by omega
-      rcases this with rfl | rfl
-      · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4; exact hin ⟨h3, h4⟩
-      · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hpins ⟨h3, h4⟩
-    · simp only [abiLayout_tab] at ha
-      have := abiLayout_in64_bounds hok ha ⟨h3, h4⟩
-      simp only [abiNeed, hnb, abiSlot] at this; omega
+  · rintro ⟨p, hp, hx⟩
+    simp only [abiLayout_tab] at hp
+    rcases abiLayout_in hok hp hx with ⟨-, h3, h4⟩ | ⟨-, h3, h4⟩ | ⟨h2, -⟩
+    · exact hin ⟨h3, h4⟩
+    · exact hpins ⟨h3, h4⟩
+    · have := abiLayout_in64_bounds hok h2 hp (Layout.In.to64 (by simp [hnb]; omega) hx)
+      omega
   · intro ⟨h3, h4⟩
     simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4
     omega
@@ -173,7 +171,7 @@ attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s
 /-- **The sequential driver**: from `ca_start`, the machine returns to the caller with the
 callee-saved registers restored, and if it reports `rdx = 0` with `rax = ACCEPT`, the driver's
 two L runs accepted (`DrvAccepts`). -/
-theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
     (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
     (hw : Nat) (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
     (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
@@ -197,8 +195,8 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   obtain ⟨K, hL3⟩ : ∃ K, Code _ K := ⟨_, hcQ.right.right⟩
   obtain ⟨base, hbase⟩ : ∃ base, dm.regs.r8.toNat = base := ⟨_, rfl⟩
   obtain ⟨rsp0, hrsp0⟩ : ∃ rsp0, dm.regs.rsp.toNat = rsp0 := ⟨_, rfl⟩
-  have hn : abiNeed tab = abiSlot * (2 + tab.nw) := by simp [abiNeed, hnb]
-  have hN31 : 2 ^ 31 ≤ abiNeed tab := by rw [hn]; simp only [abiSlot]; omega
+  have hn := abiNeed_ge hok
+  have hN31 : 2 ^ 31 ≤ abiNeed tab := by omega
   -- the common exit: the caller's `r15` and the return address back from the save area
   have hdone : ∀ s : MachineData, s.regs.r15.toNat = base → s.regs.rsp.toNat = rsp0 + 8 →
       s.regs.rbp = dm.regs.rbp → s.regs.r14 = dm.regs.r14 →
@@ -263,7 +261,8 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       UInt64.toNat_toBitVec, show (8 : BitVec 64).toNat = 8 from rfl]
     omega
   -- the region is big enough: save the caller's `r15` and the return address, call entry 1
-  have hdn64 : drvNeed tab < 2 ^ 64 := by simp only [drvNeed, hn, abiSlot] at *; omega
+  have hdn64 : drvNeed tab < 2 ^ 64 := by
+    have e : abiNeed tab = 2 ^ 35 * tab.nslot := rfl; simp only [drvNeed] at *; omega
   simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Reg64s.get64_r9, Reg64s.set64_rax,
     UInt64.toNat_toBitVec, Nat.not_lt] at hge
   have hge' : drvNeed tab ≤ dm.regs.r9.toNat := by
@@ -312,7 +311,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       hra0]; rfl
   rsimp
   rw [e1, hsa0, Int.toNat_zero, Nat.add_zero, show Int.toNat 8 = 8 from rfl]
-  refine ev_seq (abiA0_outcome p tab hok hwf mode plo phi out hdrf ctlf hw fz own hngm k0 hcode fd hentry hnp
+  refine ev_seq (abiA0_outcome p tab hok hio hwf mode plo phi out hdrf ctlf hw fz own hngm k0 hcode fd hentry hnp
     b pb _ (UInt64.ofBitVec (at_ (K + 18 + 1)).toBitVec) ?_) ?_
   · have hneedN : ((abiNeed tab).toUInt64).toNat = abiNeed tab :=
       UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
@@ -425,7 +424,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       show (A rsp0).toNat = rsp0; simp only [A, BitVec.toNat_ofNat]; omega
     refine ⟨Nat.le_refl _, by omega, h15b, fun x h1 h2 => ?_, ?_, fun x h1 h2 => ?_, ?_, ?_⟩
     · exact isSome_get?_storeInt (hfr.grows _ (isSome_get?_storeInt (isSome_get?_storeInt
-        (isSome_get?_storeInt (by rw [hz x h1 (by simp only [hn, abiSlot] at hge2 ⊢; omega)]; rfl)))))
+        (isSome_get?_storeInt (by rw [hz x h1 (by omega)]; rfl)))))
     · show rdW _ (A ({ toBitVec := A rsp0 } : UInt64).toNat) = _
       rw [hA0, rdW_wrW_same]
     · change ({ toBitVec := A rsp0 } : UInt64).toNat - 24 ≤ x at h1

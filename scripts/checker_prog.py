@@ -29,6 +29,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import e2e  # noqa: E402
+import arr_names  # noqa: E402
 
 ROOT = e2e.ROOT
 OUT = os.path.join(ROOT, "ConAgua", "Checker", "Prog.lean")
@@ -48,7 +49,12 @@ PRE_PARTS = 4
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
 PRE = "pre_"
 # the frontend's input (`ConAgua/Checker/Prelude.lean`, `preFn`: byte array 0)
-TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)")
+# a read or write of the input byte array: `IN`'s number in `ConAgua/Layout.lean`, or `0`, its
+# number before byte and word arrays shared one name space (no byte array has number `0` now; a
+# `--no-build` run on oleans older than the table, as the merge queue's when its build step is
+# skipped, still dumps `0`)
+IN_ID = next(n for n, name in arr_names.byte_names().items() if name == "IN")
+TOUCH = re.compile(rf"\((?:l8|s8) (?:{IN_ID}|0) |\(n8 (?:{IN_ID}|0)\)")
 ENTRY = "check"
 # every module that imports the generated file (the asm parts, the write-set decisions, ...): its
 # olean may be stale or missing while the file is regenerated
@@ -217,19 +223,26 @@ namespace L.Checker
 
 open L L.Compiler
 
-/-- The checker's table from the program's: `checkerArrays`' minimum lengths and table-relative
-array (`Tab.tblBase`). -/
+/-- The checker's word arrays in layout order: the table's rows, the table-relative one last (its
+position gets no slot, `L.Compiler.Tab.nslot`). -/
+def checkerWordRows : List ArrDecl :=
+  checkerArrays.filter (fun d => d.kind == .word && !d.atTable) ++ checkerArrays.filter (·.atTable)
+
+/-- The checker's table: the layout of `checkerArrays` (the byte arrays first, in table order: the
+input, the pin data; then the word arrays, `checkerWordRows`), the program's constant data, result
+and global counts (`t`), `checkerArrays`' minimum lengths and table-relative array
+(`Tab.tblBase`). -/
 def checkerTabOf (t : Tab) : Tab :=
-  { t with mins := checkerArrays.mins, tbl := checkerArrays.tblArr.map fun x => (x.1, t.tblBase) }
+  let l := Tab.ofArrs (checkerArrays.ids .byte) (checkerWordRows.map fun d => (d.id, d.tiered)) t.rom t.nres t.ng
+  { l with mins := checkerArrays.mins, tbl := checkerArrays.tblArr.map fun x => (x.1, l.tblBase) }
 
 set_option maxRecDepth 100000 in
-/-- The table for the arrays the program names (`Prog.wfAuto`'s), with the minimum lengths and the
-table-relative array of `checkerArrays`, as a literal (`tab_lit%`: every per-chunk check of
+/-- The checker's table (`checkerTabOf`), as a literal (`tab_lit%`: every per-chunk check of
 `checkerProg_wf` unfolds it). -/
 def checkerTab : Tab :=
-  tab_lit% (checkerTabOf (Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2))
+  tab_lit% (checkerTabOf (Prog.tab checkerProg))
 
-#guard checkerTab == checkerTabOf (Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2)
+#guard checkerTab == checkerTabOf (Prog.tab checkerProg)
 
 end L.Checker
 '''

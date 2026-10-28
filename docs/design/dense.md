@@ -478,3 +478,90 @@ lengths in the stub; D3 and D4 later, as one regeneration; hints `min k` and `at
   rounds ran at load 89 (spread over 80 %) and say nothing.
 * Verdicts: `diff-e2e.py --refs` and `--jobs 4`, 634 fixtures agree, for D1 and D2.
 * Proof lines: about +700 (`git diff --stat` of the lane).
+
+## 9. Journal of D3 and D4 (lane dense-layout): the dense layout and one array space
+
+Landed as one `checker.s` regeneration. Base: master f3a463b8 (lsugar, lsugar-c merged).
+
+### What changed
+
+* **One name space.** `IN` and `Rom.PB` are now 243 and 244 (they were 0 and 1, the numbers of
+  `POOL` and `CTL`). `ArrTable.wf` checks that all numbers are distinct, not per kind. L's `Mem`
+  keeps its two typed maps. Above L, only `PreludeSim`'s positional `0` (22 sites, now `IN`) and
+  the compiler tests' `B` changed.
+* **One layout map with an element kind** (`Compiler/Compile.lean`). `Tab` has `nb` byte positions
+  `[0, nb)`, then `nw` word positions; the map is an `NTree` from `TieredArray.code` (a byte array
+  `a` has the code of `↑a`) to the position (`Tab.lmap`), stored with its inverse (`Tab.arrAt`),
+  and the table carries the proof that they agree (`Tab.layOk : layOkB … = true`: every entry in
+  range and naming the array at its position, every position found, byte positions tier 0, tier 1
+  right after tier 0). Because `Tab` carries the proof, no simulation lemma got a new hypothesis:
+  `Tab.pos64_lt`, `pos64_ne`, `adj64`, `wAt_pos64`, … are proved from `t.layOk`.
+  `dom8 a`/`dom64 s` check the kind (the position's range), `Tab.wd p` is the element width.
+  `tierOff`, `wpos`, `wposInv`, `curNum`, `WLay`, `BLay`, `Tab.wl`/`bl` and `Prog.arrs` are gone.
+* **One descriptor family.** Position `p`'s base is at `T + 16 + 8p`, its length at
+  `T + 16 + 8 (nb + nw) + 8p`, for bytes and words alike (`Tab.dbase`, `Tab.dlen`).
+* **`Layout`** has one `b`, `s : Nat → Nat`; `Layout.Ok` has one end condition `end_` and one
+  disjointness condition `disj` (over `In p x := b p ≤ x < b p + wd p · s p`) instead of
+  `end8`/`end64` and `arr8_disj`/`arr64_disj`/`arr8_64`, which are now theorems. `InArr` lost its
+  case split. `MemRel` has one `base`/`len` family.
+* **The layouts.** `checkerTabOf` builds the checker's table from `checkerArrays`: the byte
+  arrays first (the input, the pin data), then the word rows in table order, the table-relative
+  `CTL` last. `Prog.tab p` (tests, emitters, e2e tools) builds one from the program's text
+  (`Prog.byteArrs`, `Prog.wordArrs`); the e2e tools put `IN`, `Rom.PB` first.
+* **The stubs.** Slot `p` for position `p ≥ 2` (`Tab.slotOf`); the table-relative array has the
+  last position and no slot (`Tab.nslot`, `abiNeed = abiSlot · nslot`). `abiVals`, `seqVals`
+  (`seqBase`, `seqLen`) and `parDescB` iterate all positions; the stubs' byte loops are gone
+  (`ca_check_b` writes `(0, 0)` per byte position inside `parDescB`).
+
+### How the new layout facts are discharged (no new hypothesis of a final theorem)
+
+* `Tab.layOk`: a field of `Tab`. `checkerTab`'s literal (`tab_lit%`) carries `Eq.refl true`, so
+  the kernel evaluates `layOkB` once when it checks `checkerTab`. `Tab.ofArrs` decides it and
+  falls back to the empty table.
+* The ABI's fixed positions: `abiIO tab := dom8 IN ∧ pos8 IN = 0 ∧ dom8 PB ∧ pos8 PB = 1`
+  (`Final/Abi.lean`), a premise of `abi_memRel`, `abiA_outcome` and `drv_outcome` only;
+  `checkerTab_abiIO` by `decide +kernel` (`Checker/AsmFinal.lean`).
+* The slot-free table-relative array: `abiTblOk` also checks that its position is the last one.
+  `slot_lt_nslot`, `two_le_nslot` and `abiNeed_ge` follow.
+* `seqParamsOk` now checks `dom64 ↑out`, `dom64 ↑hdrf` (was `< tierOff`); `checker_seqParamsOk`
+  and `checkerTab.dom64 ↑OUT` by `decide +kernel` (`dom64` is irreducible).
+* `ThreadsRun`'s `outAddr` text is unchanged; `abiSlot64 tab a` now means the slot of `↑a`'s
+  position. The final theorems' statements, `main.c` and `pins.bin` are unchanged.
+
+### Numbers
+
+| | master | dense layout |
+|---|---:|---:|
+| descriptor positions | 2 + 388 | 2 + 181 = 183 |
+| descriptor table (stack words and descriptors) | 6 256 B | 2 944 B |
+| slots | 390 | 182 (`CTL`'s gone) |
+| `ca_region_size` | 13 400 297 963 536 B (12.19 TiB) | 6 253 472 382 992 B (5.69 TiB) |
+| `CTL`'s offset `c` | 44 864 | 41 600 |
+| `checker.s` | | +29 419 / −32 107 lines (every displacement) |
+
+* **Verdicts.** `diff-e2e.py --parallel 16`, `--jobs 4` and `--refs`: 634 fixtures agree (406
+  accepted, 228 not), no UNSOUND, INCOMPLETE, CRASH, TIMEOUT or REFDIFF.
+* **Init instructions** (`bench.py --set init --no-wall`, exact): 257 662 532 076 → 257 663 033 379
+  (+0.0002 %, run-to-run noise is about ±0.5 M); `init-prelude` 1 415 859 681 → 1 415 853 938
+  (the stubs store fewer table words). No instruction shape changed.
+* **Cycles** (`perf stat -e cycles:u`, the coordinator's substitute for the wall-time run; load
+  64–70 from other users throughout, 3 interleaved rounds, then more on `c04a`): medians
+  master → dense: Init 147.3 → 147.1 G; `let-ladder` 5.81 → 5.43 G; `beta-ladder` 12.25 → 12.63 G;
+  `complete_c04a_restart_70` 13.2 → 14.5 G over 17 pairs (dense higher in 14 of them). Spread
+  within one binary is 10–30 %, and `dTLB-load-misses` vary 5× between runs of one binary, so this
+  says nothing reliable; `c04a` is the input to watch in the quiet wall-time run. Moving `CTL`
+  back to its old offset modulo 4096 (an unproved rewrite of `checker.s`) did not change `c04a`'s
+  cycles, so it is not the table-relative array's cache set.
+* **Kernel cost of the map.** The 10 `AsmPart` modules (`lake env lean`, interleaved base/branch,
+  2 rounds, load 64–69): 253.5 s → 245.5 s per round. The search-tree lookups cost nothing
+  measurable, as §2.2 predicted.
+* **Proof lines** (`git diff --shortstat` against master, `.lean`): 43 files, +1 687 / −1 477;
+  compiler and `Final`: 26 files, +1 595 / −1 403.
+
+### Left over
+
+* `ca_check_b`'s worker region still reserves a slot for `CTL` (`workerNeed own = abiSlot ·
+  (2 + |own|)`, `CTL` is owned but lives in slot 0): one unused slot per worker, 32 GiB of
+  address space. Removing it changes `ca_worker_size` and `BufLayout`'s `ownOff`.
+* The wall-time comparison on a quiet machine (`c04a` above).
+* `Mem.HasW`, `HasB`, `SameShape` (absarrays batch 8) are untouched.

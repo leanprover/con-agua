@@ -75,8 +75,16 @@ def tblToExpr : Option (Nat × Nat) → Lean.Expr
   | some (a, c) => mkApp2 (mkConst ``Option.some [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat))
       (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``Nat) (mkConst ``Nat) (mkNatLit a) (mkNatLit c))
 
+/-- A list of arrays (`Tab.arrAt`) as a term. -/
+def arrsToExpr (l : List TieredArray) : Lean.Expr :=
+  let ty := mkConst ``TieredArray
+  l.foldr (fun s acc => mkApp3 (mkConst ``List.cons [0]) ty
+    (mkApp2 (mkConst ``TieredArray.mk) (mkNatLit s.arr) (toExpr s.hi)) acc)
+    (mkApp (mkConst ``List.nil [0]) ty)
+
 def tabToExpr (t : Tab) : Lean.Expr :=
-  mkAppN (mkConst ``Tab.mk) #[mkNatLit t.nb, mkNatLit t.nw, bytesToExpr t.rom.toArray, mkNatLit t.nres,
+  mkAppN (mkConst ``Tab.mk) #[mkNatLit t.nb, mkNatLit t.nw, arrsToExpr t.arrAt, ntreeToExpr t.lmap,
+    mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Bool) (mkConst ``Bool.true), bytesToExpr t.rom.toArray, mkNatLit t.nres,
     mkNatLit t.ng, natPairsToExpr t.mins, tblToExpr t.tbl, mkNatLit t.rom.length,
     mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Nat) (mkNatLit t.rom.length)]
 

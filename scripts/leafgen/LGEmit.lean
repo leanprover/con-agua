@@ -618,8 +618,7 @@ def isBaseLoad (tab : Tab) : Directive → Option (Reg64 × AddrExpr)
     match a with
     | ⟨some (.reg .r15), _, .int64 d⟩ =>
       let d := d.toInt
-      let wb := 16 + 16 * (tab.nb : Int)
-      let isBase := (16 ≤ d && d < wb && (d / 8) % 2 == 0) || (wb ≤ d && d < wb + 8 * tab.nw)
+      let isBase := 16 ≤ d && d < 16 + 8 * ((tab.nb + tab.nw : Nat) : Int)
       if isBase then some (t, a) else none
     | _ => none
   | _ => none
@@ -830,5 +829,5 @@ def main (args : List String) : IO Unit := do
   let code := compileProg2 fl checkerTab checkerProg "check" lo hi
   IO.FS.writeFile out (asmTextAbiPar checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF 126 L.Arena.frozenIdsL
       L.Arena.parOwnedL code ++
-    s!".section .rodata\n.globl ca_nw\n.globl ca_nb\n.globl ca_diag\nca_nw: .quad {checkerTab.nw}\nca_nb: .quad {checkerTab.nb}\nca_diag: .quad -1\n")
+    tabSymbols checkerTab ++ ".globl ca_diag\nca_diag: .quad -1\n")
   IO.println s!"wrote {out}: {code.length} directives"

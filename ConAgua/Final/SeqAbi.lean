@@ -46,10 +46,9 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hneed := hc.need
   have hfits := hc.fits
-  have hn : abiNeed tab = abiSlot * (2 + tab.nw) := by simp [abiNeed, hnb]
+  have hn := abiNeed_ge hok
   have hfit : base + abiNeed tab < 2 ^ 64 := by omega
   have hneed' := hneed
-  simp only [hn, abiSlot] at hneed'
   have hG := seqLayout_ok (base := base) hok hp hfit
   have hcP := hcode.left
   have hcC := hcode.right.right
@@ -61,8 +60,8 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   rw [List.append_assoc] at hcQ
   have hS := hcQ.right.left
   have hL3 := hcQ.right.right
-  have hLen := seqVals_length hnb out hdrf ctlf hw
-  rw [abiVals_length tab hnb] at hLen
+  have hLen := seqVals_length tab out hdrf ctlf hw
+  rw [abiVals_length tab] at hLen
   have hend : base + 8 * (seqVals tab out hdrf ctlf hw).length ≤ 2 ^ 64 := by rw [hLen]; omega
   have hTE : (seqLayout tab base out hdrf ctlf hw).tabEnd ≤ base + 2 ^ 31 := by
     simp only [Layout.tabEnd, seqLayout_T, seqLayout_tab, seqLayout_nargs]; omega
@@ -83,7 +82,7 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   rw [Code.label (i := 7) hL2 rfl]
   refine ev_label (Code.get (i := 7) hL2 rfl) ?_
   refine ev_congr (sim_stores _ dm.regs base hc.hbase (seqVals tab out hdrf ctlf hw) 0 _ dm hS (fun _ _ => rfl)
-    (seqVals_noRax tab out hdrf ctlf hw hnb) (by rw [hLen]; omega) (by simpa using hend)
+    (seqVals_noRax tab out hdrf ctlf hw) (by rw [hLen]; omega) (by simpa using hend)
     (fun j hj => hc.hmap _ (by omega) (by rw [hLen] at hj; omega)) ?_)
     (by simp only [List.length_append, List.length_cons, List.length_nil]; omega)
   intro s1 hs1 hR1
@@ -153,7 +152,7 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   · simp only [seqLayout_lo, seqLayout_hi, abiStack]; omega
   · show rdW (wrW (wrW (wrW s1.dmem _ _) _ _) _ _) _ = _
     rw [hOg.rdW_eq (by simp only [seqLayout_T]; omega) (Or.inl (by simp only [seqLayout_T]; omega))]
-    have := stores_rdW? dm.regs base _ dm.dmem 0 _ (seqVals_getElem? hnb out hdrf ctlf hw).1 hend
+    have := stores_rdW? dm.regs base _ dm.dmem 0 _ (seqVals_getElem? tab out hdrf ctlf hw).1 hend
     rw [addr_val _ _ (by rw [hc.hbase]; simp only [abiSlot, abiStack]; omega), hc.hbase, ← hs1] at this
     simpa only [seqLayout_T, seqLayout_hi, Nat.mul_zero, Nat.add_zero, Nat.add_assoc] using this
   · show rdW (wrW (wrW (wrW s1.dmem _ _) _ _) _ _) (A s1.regs.rsp.toNat) = some ra

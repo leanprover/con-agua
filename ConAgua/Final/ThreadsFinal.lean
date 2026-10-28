@@ -175,12 +175,16 @@ theorem bufKept_of_memRel {B : Array Word} {buf base : Nat} {r : Mem} {d : DataM
   have h59 : k + 1 < frozenIdsL.length := by rw [frozenIdsL_eq]; simp; omega
   have he := hent (k + 1) h59
   have hs := hm.size64 _ hnw
-  simp only [bufLayout_s64, bufLayout_tab, checkerTab.wAt_pos64 hnw, bufL, hidx] at hs
+  simp only [bufLayout_tab] at hs
+  rw [bufLayout_s64 _ _ _ _ _ _ (checkerTab.pos64_lt hnw).1, checkerTab.wAt_pos64 hnw] at hs
+  simp only [bufL, hidx] at hs
   apply Array.ext
   · rw [hs]; simp only [bufImg, Array.size_extract]; omega
   · intro i h₁ h₂
     have hg := hm.get64 _ hnw i h₁
-    simp only [bufLayout_b64, bufLayout_tab, checkerTab.wAt_pos64 hnw, bufB, hidx] at hg
+    simp only [bufLayout_tab] at hg
+    rw [bufLayout_b64 _ _ _ _ _ _ (checkerTab.pos64_lt hnw).1, checkerTab.wAt_pos64 hnw] at hg
+    simp only [bufB, hidx] at hg
     rw [show buf + 8 * (bufEntry B (k + 1)).1 + 8 * i = buf + 8 * ((bufEntry B (k + 1)).1 + i) by omega,
       hkept _ (by rw [hs] at h₁; omega)] at hg
     simp only [bufImg, Array.getElem_extract]
@@ -215,7 +219,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1
-  have hE := abiA_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf MODE PLO PHI OUT HDRF CTLF 132
+  have hE := abiA_outcome checkerProg checkerTab checkerTab_abiOk checkerTab_abiIO checkerProg_wf MODE PLO PHI OUT HDRF CTLF 132
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
   obtain ⟨⟨-, hRR₀, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
@@ -238,14 +242,16 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat := by rw [← hrax₁]; exact hR.rax₀
   -- the buffer is `OUT`'s prefix
   obtain ⟨hlen, h126, hent', hinc'⟩ := entry1_buf b pb _ hin abiFuel hN rs₁ m₁ h₁ hge _ rfl
-  have hOUT : checkerTab.dom64 ↑OUT = true := (checkerTab.dom64_t0_iff OUT).2 ⟨by decide, by decide⟩
+  have hOUT : checkerTab.dom64 ↑OUT = true := by decide +kernel
+  have hOUTp : 2 ≤ checkerTab.pos64 ↑OUT := by
+    have := checkerTab.pos64_lt hOUT; have := (abiTabOk_spec checkerTab_abiOk).1; omega
   have hsz := hMem₁.size64 _ hOUT
   have hget : ∀ i (h : i < (m₁.arr64 OUT).size),
       rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some (m₁.arr64 OUT)[i] := fun i h => by
     have := hMem₁.get64 _ hOUT i h
-    simp only [abiLayout_b64, abiLayout_tab] at this
-    rw [abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
-    simpa only [checkerTab.wposInv_pos64 hOUT, curNum_t0, outAddr] using this
+    simp only [abiLayout_tab] at this
+    rw [abiLayout_b64 _ _ _ _ _ _ hOUTp, abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
+    simpa only [outAddr, abiSlot64] using this
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
@@ -320,7 +326,10 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
     refine ⟨fun a ha => ?_, rfl, h1, h2⟩
     have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
-    simp [zeroMem, Mem.arr64, zeros, checkerTab.wAt_pos64 hl]
+    simp only [abiLayout_tab]
+    rw [abiLayout_s64 _ _ _ _ _ _ (by
+      have := checkerTab.pos64_lt hl; have := (abiTabOk_spec checkerTab_abiOk).1; omega), checkerTab.wAt_pos64 hl]
+    simp [zeroMem, Mem.arr64, zeros]
   · rw [← hrax₁] at hj
     obtain ⟨t, ht, i, hi, hj'⟩ := hR.cover j hj
     obtain ⟨-, -, h3, -⟩ := hf t ht

@@ -129,7 +129,7 @@ theorem entry1Fail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (hF : Entry1Fail b pb dm₀ ra₀ st₀) (hk : st₀.data.regs.rax &&& 3 ≠ 0) :
     TwinVerdict [b] (st₀.data.regs.rax &&& 3) := by
   have hc := code_of_checkerFile_par hcode
-  have hE := abiA_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf MODE PLO PHI OUT HDRF CTLF 132
+  have hE := abiA_outcome checkerProg checkerTab checkerTab_abiOk checkerTab_abiIO checkerProg_wf MODE PLO PHI OUT HDRF CTLF 132
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hF.call₀
   obtain ⟨⟨-, -, -, hout₀⟩, hsz⟩ := hF.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hF.rdx₀]; decide
@@ -163,7 +163,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1 (as `threadsRun_twinAcceptsPooled_regs`)
-  have hE := abiA_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf MODE PLO PHI OUT HDRF CTLF 132
+  have hE := abiA_outcome checkerProg checkerTab checkerTab_abiOk checkerTab_abiIO checkerProg_wf MODE PLO PHI OUT HDRF CTLF 132
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
   obtain ⟨⟨-, -, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
@@ -186,14 +186,16 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   have hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat := by rw [← hrax₁]; exact hR.rax₀
   -- the buffer is `OUT`'s prefix
   obtain ⟨hlen, h126, hent', hinc'⟩ := entry1_buf b pb _ hin abiFuel hN rs₁ m₁ h₁ hge _ rfl
-  have hOUT : checkerTab.dom64 ↑OUT = true := (checkerTab.dom64_t0_iff OUT).2 ⟨by decide, by decide⟩
+  have hOUT : checkerTab.dom64 ↑OUT = true := by decide +kernel
+  have hOUTp : 2 ≤ checkerTab.pos64 ↑OUT := by
+    have := checkerTab.pos64_lt hOUT; have := (abiTabOk_spec checkerTab_abiOk).1; omega
   have hsz := hMem₁.size64 _ hOUT
   have hget : ∀ i (h : i < (m₁.arr64 OUT).size),
       rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some (m₁.arr64 OUT)[i] := fun i h => by
     have := hMem₁.get64 _ hOUT i h
-    simp only [abiLayout_b64, abiLayout_tab] at this
-    rw [abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
-    simpa only [checkerTab.wposInv_pos64 hOUT, curNum_t0, outAddr] using this
+    simp only [abiLayout_tab] at this
+    rw [abiLayout_b64 _ _ _ _ _ _ hOUTp, abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
+    simpa only [outAddr, abiSlot64] using this
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
@@ -261,7 +263,10 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk
   · have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
-    simp [zeroMem, Mem.arr64, zeros, checkerTab.wAt_pos64 hl]
+    simp only [abiLayout_tab]
+    rw [abiLayout_s64 _ _ _ _ _ _ (by
+      have := checkerTab.pos64_lt hl; have := (abiTabOk_spec checkerTab_abiOk).1; omega), checkerTab.wAt_pos64 hl]
+    simp [zeroMem, Mem.arr64, zeros]
   · obtain ⟨i', hi', rfl⟩ := List.mem_map.mp hc
     rw [List.mem_range'] at hi'
     rw [← hrax₁]; exact hR.claimed i' (by omega)

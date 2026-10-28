@@ -14,19 +14,22 @@ setup stub `ca_setup` (`abiStub`, an internal label; the argument registers as `
 emitted before the trampoline, which sets up inside the region everything the harness used to lay
 out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
 
-* System V arguments: `rdi`/`rsi` = the input bytes (byte array `0`), `rdx`/`rcx` = the pin-data
-  bytes (byte array `1`; ignored if the program has one byte array), `r8` = `base`, `r9` =
-  `base_len`. Returns `rax`/`rdx` as `ca_enter` does.
+* System V arguments: `rdi`/`rsi` = the input bytes (the byte array at descriptor position `0`),
+  `rdx`/`rcx` = the pin-data bytes (position `1`; ignored if the program has one byte array), `r8` =
+  `base`, `r9` = `base_len`. Returns `rax`/`rdx` as `ca_enter` does. Which arrays sit at positions
+  `0` and `1` is the layout map's business: the final theorem's proof checks that they are the
+  input's and the pin data's (`ConAgua/Final/Abi.lean`).
 * If `base_len < abiNeed`, or if `in_len` or `pins_len` is `2^63` or more (the top bit of `rsi`
   or `rcx` set: `cmp r, 0; jl`), it returns at once with `rdx = 1` (resources exhausted; never
   accept). So a run that gets past the stub has both buffers below `2^63` bytes, which the
   refinements assume (`InputsOK`).
 * The region is a static partition into `abiSlot`-byte slots (no allocator; the pages that are
   never touched never become real): slot `0` is the table (`T = base`), slot `1` the L stack
-  (`abiStack` bytes at its bottom), then one slot per byte array `2, …, nb - 1` and per word array.
-  Each array starts at its slot's start; its length is `abiSlot` bytes, resp. `abiWords` words. The
-  table-relative array (`Tab.tbl64`) lies instead inside slot `0`, past the table, with its minimum
-  length (`abiOff`, `abiSz`); its own slot stays unused.
+  (`abiStack` bytes at its bottom), then one slot per descriptor position past the two buffers, in
+  position order (`Tab.slotOf`). Each array starts at its slot's start; its length is `abiSlot`
+  bytes, resp. `abiWords` words. The table-relative array (`Tab.tbl64`) lies instead inside slot
+  `0`, past the table, with its minimum length (`abiOff`, `abiSz`); it has the last position, which
+  gets no slot (`Tab.nslot`).
 * The constant data is written into the table by immediate stores (no `.rodata` read); the result
   area and the global variables are the region's zeros.
 * The fuel is `2^62 - 1` (`compile_correct` takes any `N < 2^62`).
@@ -48,15 +51,20 @@ def abiFuel : Nat := 2 ^ 62 - 1
 /-- Every word array gets its whole slot. -/
 def abiWords : Nat := 2 ^ 32
 
-/-- The slot of byte array `a ≥ 2`. -/
-def abiSlot8 (a : Nat) : Nat := a
-/-- The slot of word array `a`. -/
-def abiSlot64 (tab : Tab) (a : Nat) : Nat := 2 + (tab.nb - 2) + a
-/-- The word array whose descriptor words are at position `p` (today's layout: the number
-`wposInv p`, then its tier). -/
-def Tab.wAt (tab : Tab) (p : Nat) : TieredArray :=
-  let n := tab.wposInv p
-  if n < tierOff then TieredArray.t0 n else tier1 (n - tierOff)
+/-- The caller's buffers: the byte positions `0` and `1` (if there are that many), which get the
+input and the pin data and no slot. -/
+def Tab.nbuf (tab : Tab) : Nat := min tab.nb 2
+
+/-- The slot of descriptor position `p` (past the buffers): slot `0` is the table, slot `1` the L
+stack, then one slot per position. -/
+def Tab.slotOf (tab : Tab) (p : Nat) : Nat := p + 2 - tab.nbuf
+
+/-- The number of slots: the table's, the stack's and one per position past the buffers, but none
+for the table-relative array (`Tab.tbl`, at the last position: `abiTabOk`). -/
+def Tab.nslot (tab : Tab) : Nat := tab.slotOf (tab.nb + tab.nw) - (if tab.tbl.isSome then 1 else 0)
+
+/-- The slot of word array `a` (its tier 0). -/
+def abiSlot64 (tab : Tab) (a : Nat) : Nat := tab.slotOf (tab.pos64 (TieredArray.t0 a))
 
 /-- The length the stubs give word array `s` where they give it memory: the table-relative array
 (`Tab.tbl64`) its minimum length, every other a whole slot. -/
@@ -70,10 +78,10 @@ array at its offset inside the table's slot, every other at its own slot. -/
 def abiOff (tab : Tab) (p : Nat) : Nat :=
   match tab.tbl64 (tab.wAt p) with
   | some c => c
-  | none => abiSlot * abiSlot64 tab (tab.wposInv p)
+  | none => abiSlot * tab.slotOf p
 
 /-- The region size the stub needs. -/
-def abiNeed (tab : Tab) : Nat := abiSlot * (2 + (tab.nb - 2) + tab.nw)
+def abiNeed (tab : Tab) : Nat := abiSlot * tab.nslot
 /-- The driver's save area (the caller's `r15` and its return address): the 16 bytes past
 `ca_setup`'s region (`abiNeed`), which the driver needs in addition (`drvNeed`). Entry 1 is called
 on the region without them (`r9 := abiNeed`), so it sees a zero region. -/
@@ -85,9 +93,9 @@ def drvNeed (tab : Tab) : Nat := abiNeed tab + 16
 
 The stub's body writes the table's first words in order, word `i` at `[r8 + 8i]` (`storesCode`):
 a register, an immediate (through `rax`), or `r8 + off` (an address in the region, through
-`rax`). The table's layout (`Tab`) puts the stack top and limit, then the byte arrays' and the
-word arrays' base/length pairs, then the constant data at consecutive words, so the stores are
-one run from `T`. -/
+`rax`). The table's layout (`Tab`) puts the stack top and limit, then the bases and the lengths of
+every position, then the constant data at consecutive words, so the stores are one run from
+`T`. -/
 
 inductive SVal where
   /-- the register `r` -/
@@ -119,14 +127,23 @@ def romVals : List UInt8 → List SVal
   | [] => []
   | bs => [.imm (romWord bs)]
 
-/-- The table's words, in order: the stack top and limit, the input buffers (byte arrays `0`, `1`),
-the other byte arrays, the word arrays, the constant data. -/
+/-- The base `ca_setup` gives position `p`: the input buffer, the pin-data buffer, a slot (bytes),
+or `abiOff` (words). -/
+def abiBase (tab : Tab) (p : Nat) : SVal :=
+  if p < tab.nbuf then (if p = 0 then .reg .rdi else .reg .rdx)
+  else if p < tab.nb then .addr (abiSlot * tab.slotOf p) else .addr (abiOff tab p)
+
+/-- The length `ca_setup` gives position `p`: the buffers', a slot's bytes, `abiSz` words. -/
+def abiLen (tab : Tab) (p : Nat) : SVal :=
+  if p < tab.nbuf then (if p = 0 then .reg .rsi else .reg .rcx)
+  else if p < tab.nb then .imm abiSlot.toUInt64 else .imm (abiSz tab (tab.wAt p)).toUInt64
+
+/-- The table's words, in order: the stack top and limit, the bases of the positions, their
+lengths, the constant data. -/
 def abiVals (tab : Tab) : List SVal :=
-  [.addr (abiSlot + abiStack), .addr abiSlot, .reg .rdi, .reg .rsi] ++
-  (if 2 ≤ tab.nb then [.reg .rdx, .reg .rcx] else []) ++
-  ((List.range tab.nb).drop 2).flatMap (fun a => [.addr (abiSlot * abiSlot8 a), .imm abiSlot.toUInt64]) ++
-  (List.range tab.nw).map (fun p => .addr (abiOff tab p)) ++
-  (List.range tab.nw).map (fun p => .imm (abiSz tab (tab.wAt p)).toUInt64) ++
+  [.addr (abiSlot + abiStack), .addr abiSlot] ++
+  (List.range (tab.nb + tab.nw)).map (abiBase tab) ++
+  (List.range (tab.nb + tab.nw)).map (abiLen tab) ++
   romVals tab.rom
 
 def abiDeclineL : Label := "ca_abi_decline"
@@ -149,10 +166,17 @@ def abiStub (tab : Tab) : Program :=
   abiHead tab ++ storesCode 0 (abiVals tab) ++ abiTail
 
 /-- The stub's symbols for the harness: `ca_region_size` (the least `base_len`), `ca_slot` and
-`ca_w0` (the offset of word array `0`; for diagnostics). `ca_region_size` is the sequential
-driver's need (`drvNeed`, 16 bytes above `ca_setup`'s, which it covers). -/
+`ca_w0` (the offset of the first word position's slot; the harness advises huge pages for the
+slots from there). `ca_region_size` is the sequential driver's need (`drvNeed`, 16 bytes above
+`ca_setup`'s, which it covers). -/
 def abiSymbols (tab : Tab) : String :=
-  s!".section .rodata\n.globl ca_region_size\n.globl ca_slot\n.globl ca_w0\nca_region_size: .quad {drvNeed tab}\nca_slot: .quad {abiSlot}\nca_w0: .quad {abiSlot * abiSlot64 tab 0}\n"
+  s!".section .rodata\n.globl ca_region_size\n.globl ca_slot\n.globl ca_w0\nca_region_size: .quad {drvNeed tab}\nca_slot: .quad {abiSlot}\nca_w0: .quad {abiSlot * tab.slotOf tab.nb}\n"
+
+/-- The table's counts for the harness and the tools: `ca_nw`, the slots from `ca_w0` on (the
+word arrays' slots; `main.c` advises huge pages for them), `ca_nb` and `ca_npos`, the byte
+positions and all positions (the descriptor columns, for the profiler). -/
+def tabSymbols (tab : Tab) : String :=
+  s!".section .rodata\n.globl ca_nw\n.globl ca_nb\n.globl ca_npos\nca_nw: .quad {tab.nslot - tab.slotOf tab.nb}\nca_nb: .quad {tab.nb}\nca_npos: .quad {tab.nb + tab.nw}\n"
 
 /-- The assembler file of a program without the parallel mode's entries (the e2e tools): the
 stub, labelled `ca_start` as well, then `code` (the trampoline and the functions), as
@@ -213,38 +237,46 @@ def ownOff (tab : Tab) (s : TieredArray) (k : Nat) : Nat :=
   | some c => c
   | none => abiSlot * (2 + k)
 
-/-- `ca_check_b`'s descriptor words at position `p`, for the word array `tab.wAt p` there (`rdi` the
-buffer, `rcx` the table). -/
+/-- `ca_check_b`'s descriptor words at position `p`, for the array `tab.wAt p` there (`rdi` the
+buffer, `rcx` the table): a byte position gets no memory. -/
 def parDescB (tab : Tab) (fz own : List TieredArray) (p : Nat) : Program :=
+  if p < tab.nb then [movRI .rax 0, movMR (mb .rcx (tab.dbase p)) .rax, movMR (mb .rcx (tab.dlen p)) .rax] else
   match fz.idxOf? (tab.wAt p) with
   | some i =>
     [movRM .rax (mb .rdi (8 * (8 + 2 * i))), i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-     i64 (.add (.reg (rr .rax)) (oR .rdi)), movMR (mb .rcx (tab.dbase64 p)) .rax,
-     movRM .rax (mb .rdi (8 * (9 + 2 * i))), movMR (mb .rcx (tab.dlen64 p)) .rax]
+     i64 (.add (.reg (rr .rax)) (oR .rdi)), movMR (mb .rcx (tab.dbase p)) .rax,
+     movRM .rax (mb .rdi (8 * (9 + 2 * i))), movMR (mb .rcx (tab.dlen p)) .rax]
   | none =>
     match own.idxOf? (tab.wAt p) with
     | some k =>
       [movRI .rax (ownOff tab (tab.wAt p) k).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
-       movMR (mb .rcx (tab.dbase64 p)) .rax, movRI .rax (abiSz tab (tab.wAt p)).toUInt64,
-       movMR (mb .rcx (tab.dlen64 p)) .rax]
-    | none => [movRI .rax 0, movMR (mb .rcx (tab.dbase64 p)) .rax, movMR (mb .rcx (tab.dlen64 p)) .rax]
+       movMR (mb .rcx (tab.dbase p)) .rax, movRI .rax (abiSz tab (tab.wAt p)).toUInt64,
+       movMR (mb .rcx (tab.dlen p)) .rax]
+    | none => [movRI .rax 0, movMR (mb .rcx (tab.dbase p)) .rax, movMR (mb .rcx (tab.dlen p)) .rax]
+
+/-- `ca_check_seq`'s base at position `p` (`seqVals`). -/
+def seqBase (tab : Tab) (out hdrf ctlf : ArrId) (p : Nat) : SVal :=
+  if p < tab.nb then .imm 0 else
+  let a := tab.wAt p
+  if a = ↑out ∨ a = ↑ctlf then .imm 0
+  else if a = ↑hdrf then .addr (abiSlot * abiSlot64 tab out)
+  else .addr (abiOff tab p)
+
+/-- `ca_check_seq`'s length at position `p` (`seqVals`). -/
+def seqLen (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) (p : Nat) : SVal :=
+  if p < tab.nb then .imm 0 else
+  let a := tab.wAt p
+  if a = ↑out ∨ a = ↑ctlf then .imm 0
+  else if a = ↑hdrf then .imm hw.toUInt64
+  else .imm (abiSz tab (tab.wAt p)).toUInt64
 
 /-- `ca_check_seq`'s table words, in `abiVals`' order: `ca_setup`'s layout of the region, except
 that `out`, the seed `ctlf` and the byte arrays get no memory and the header `hdrf` is the first
 `hw` words of `out`'s slot. Static values only (`storesCode`, as `abiStub`). -/
 def seqVals (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) : List SVal :=
   [.addr (abiSlot + abiStack), .addr abiSlot] ++
-  (List.range tab.nb).flatMap (fun _ => [.imm 0, .imm 0]) ++
-  (List.range tab.nw).map (fun p =>
-    let a := tab.wposInv p
-    if a = out ∨ a = ctlf then .imm 0
-    else if a = hdrf then .addr (abiSlot * abiSlot64 tab out)
-    else .addr (abiOff tab p)) ++
-  (List.range tab.nw).map (fun p =>
-    let a := tab.wposInv p
-    if a = out ∨ a = ctlf then .imm 0
-    else if a = hdrf then .imm hw.toUInt64
-    else .imm (abiSz tab (tab.wAt p)).toUInt64) ++
+  (List.range (tab.nb + tab.nw)).map (seqBase tab out hdrf ctlf) ++
+  (List.range (tab.nb + tab.nw)).map (seqLen tab out hdrf ctlf hw) ++
   romVals tab.rom
 
 /-- `[r + d] := v₀`, `[r + d + 8] := v₁`, … for immediate words. -/
@@ -286,10 +318,8 @@ def parStub0 (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat
    movRI .rax (abiSlot + abiStack).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
    movMR (mb .rcx Tab.stackTop) .rax,
    movRI .rax abiSlot.toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
-   movMR (mb .rcx Tab.stackLimit) .rax,
-   movRI .rax 0] ++
-  ((List.range tab.nb).flatMap fun a => [movMR (mb .rcx (tab.base8 a)) .rax, movMR (mb .rcx (tab.len8 a)) .rax]) ++
-  ((List.range tab.nw).flatMap fun p => parDescB tab fz own p) ++
+   movMR (mb .rcx Tab.stackLimit) .rax] ++
+  ((List.range (tab.nb + tab.nw)).flatMap fun p => parDescB tab fz own p) ++
   immStores .rcx tab.romBase.toNat (romVals tab.rom) ++
   [movMR (mb .rcx (tab.globOff plo)) .rdx, movMR (mb .rcx (tab.globOff phi)) .r9,
    movRI .rax 2, movMR (mb .rcx (tab.globOff mode)) .rax,

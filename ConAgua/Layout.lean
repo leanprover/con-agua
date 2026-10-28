@@ -15,10 +15,13 @@ tiered arrays) and against the lists the entries and the parallel mode use.
 
 **Numbers are names.** A row's number names the array in L's syntax; it is not an address. A word
 array of L's memory is a `TieredArray`: tier 0 of every word array (`↑a`) and tier 1 of every
-tiered one (`tier1 a`). Where each array lives is the compiler's choice: its layout map
-(`L.Compiler.WLay`, `L.Compiler.BLay`) gives every array the program names a descriptor
-position, tier 1 right after tier 0, and the entry stub (`Compiler/Abi.lean`) gives each position
-a region. The harness (`main.c`) reads the layout only through the symbols the stub exports.
+tiered one (`tier1 a`). Byte and word arrays share one name space: no two rows have the same
+number. Where each array lives is the compiler's choice: its layout map (`L.Compiler.Tab.pos8`,
+`L.Compiler.Tab.pos64`, built from this table by `L.Checker.checkerTabOf`) gives every array a
+descriptor position, the byte arrays first (the input and the pin data at positions `0` and `1`,
+where the entry stubs put the caller's buffers), then the word arrays in table order, tier 1
+right after tier 0, the table-relative array last; the entry stub (`Compiler/Abi.lean`) gives
+each position a region. The harness (`main.c`) reads the layout only through the symbols the stub exports.
 
 Kept apart from the rows: the aliases (one array under a second name, for a second, time-disjoint
 use) and the stand-alone example programs' arrays (`L.Examples.HIST`, `L.Scan.Utf8.OUT`,
@@ -45,8 +48,8 @@ namespace L
 of con-ron's per-tier tables. -/
 declare_arrays checkerArrays
   -- byte arrays
-  | /-- The input buffer. -/ IN : byte := 0
-  | /-- The pin data (`pins.bin`). -/ Rom.PB : byte := 1
+  | /-- The input buffer. -/ IN : byte := 243
+  | /-- The pin data (`pins.bin`). -/ Rom.PB : byte := 244
   -- the stores (`Arena/StoreFields.lean`): the pool, then per table its records and cons slots
   | /-- The limb pool: limbs, level lists' handles, names' bytes (`Arena/Pool.lean`). -/
     Arena.POOL : word tiered := 0
