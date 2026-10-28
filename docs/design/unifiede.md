@@ -399,7 +399,7 @@ Lines (`declen.py`, master 63762a3f against this branch; before = ok refinement(
 | **pairs** | **1 824** | **934** | **−49 %** |
 
 Whole diff of this landing against master 63762a3f (models, specs, refinements, callers, imports):
-**+873 −2 279 = −1 406 lines** in 31 files.
+**+873 −2 278 = −1 405 lines** in 30 files.
 
 Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
 63762a3f, `_tmp/unify-b1c/time.sh`, `times1.txt`; load 10–30):
@@ -416,8 +416,8 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 | `Verdict/IndBRecPins` | 4.19 | **6.76** | **slower (+2.6 s)**: `trp_ref` and `targetRecPins_refines` moved in (`finish` 7.5 s, `locals` 10.0 s) |
 | `Arena/RecCheckSpec/TargetRecPins` | 5.31 | 3.49 | the hand model and `trp_spec` gone; with `IndBRecPins`: 9.5 → 10.3 |
 | `Arena/RecCheckSpec/ErToIwWStage` | 11.00 | 8.92 | `targetPinTys_spec` gone, `tptR` in |
-| `IndBPins`, `IndBGrp`, `IndBClm`, `RecCheckPins`, `RecGen19`, `GenRec1` | 11.40 | 11.91 | |
-| `IndBTmc`, `IndBTmt`, `IndBTmo`, `RecGenTmf`, `DecTMDecBOf`, `OcW` | 19.84 | 19.88 | |
+| `IndBPins`, `IndBGrp`, `IndBClm`, `RecCheckPins`, `RecGen19`, `GenRec1` | 11.40 | 11.11 | |
+| `IndBTmc`, `IndBTmt`, `IndBTmo`, `RecGenTmf`, `DecTMDecBOf`, `OcW` | 19.34 | 18.88 | |
 | **sum** | **108.7** | **101.6** | **−7 %** |
 
 Each flagged module is offset by the module that held the deleted hand spec, except `IndBRecPins`
