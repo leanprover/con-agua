@@ -37,7 +37,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 l_model crsE_spec (p : Prog) (hP : CrsProg p)
   fns [hP.crs ↦ crsE]
-  specs [cvLps_specW1 p hP.cr.alloc hP.cr.copy hP.cr.eti hP.cr.lps n,
+  specs [cvLps_specW p hP.cr.alloc hP.cr.copy hP.cr.eti hP.cr.lps n,
     plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl
       hP.il n,
     classGenRule_spec p hP.ru n, cr1E_spec p hP n, slCons_specW p hP.alloc hP.copy hP.cons n]

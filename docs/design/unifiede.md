@@ -128,7 +128,15 @@ missing shape is a kit change, reported, not a local helper).
   half from `callE`/`callW … = ok`), `RefE.run_err` (the `ErrClaim` of a failing run),
   `RefE.coreSpecE` (as `CoreSpecE`), `RefE.triple` (the ok triple, the `@[refines]` shape);
 * `ErrClaim.of_run_eqW`, `ErrClaim.of_run_err` (a claim through equal or failing runs),
-  `callW_of_callE` and `callE_of_callW`.
+  `callW_of_callE` and `callE_of_callW`;
+* a twin's prefix (its guards as a function of their own, `crgT`, `cchT`, `rgT`) split off a
+  `do` block that copies the rest into each guard's branches:
+  `simp only [prefix, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]` (`crgT_bind`).
+
+There is no lemma from a unified model's ok value back to the call's run: the model does not
+model bounds (a load is `rdW`) or fuel failures of class `0`, so an ok model value does not make
+the run ok. An arm that needs the run (a callee's write-set frame, `run_memFrame`) calls the
+callee through `callE` and reads both halves (`RefE.run_ok`, `RefE.run_err`).
 
 **`RefC` (`Arena/Verdict.lean`)**, a model value whose ok half is a fact, not a twin run:
 `RefC G x Ok C` says an ok value satisfies `Ok v` and an error `e` the claim `C e` under `G`.
@@ -301,7 +309,12 @@ The list with depths, files and callees: `_tmp/unifiedE/split.txt`.
    (`some (r.headD 0, m)`, `some (r, m)`, a tuple), a total model (`r.headD 0 = F`,
    `r ≠ [] ∧ r = F` as `e_view`'s, `s'.mem = F`), one result as a list
    (`some ([r.headD 0], m)`). `↦ fW tuple` counts the `return`s of the named blocks spliced into
-   the body (a loop's `return (k, x, y)`).
+   the body (a loop's `return (k, x, y)`). A post's length conjunct
+   (`r = [r.headD 0, r.getD 1 0, …]` or `r.tail.headD 0`) is accepted and, under `simp […]`,
+   taken apart by `L.List.eq_headD_cons` (it no longer loops `simp_all`): list the spec as it
+   is, no primed variant. A guard without a `Decidable` instance (`flush_caches`' `FlushOK`) is
+   decided classically (the definitions `noncomputable`), no `open Classical in`; a generated
+   definition holding `sorry` stops the command with an error.
 
 ### 3.3a Rules for batch lanes
 
