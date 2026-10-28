@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndSumSpec.CheckSumCtor
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

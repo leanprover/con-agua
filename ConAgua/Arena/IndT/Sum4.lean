@@ -1,8 +1,7 @@
-import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.IndT.Sum3
+import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.IndSumSpec.CheckSumCtor

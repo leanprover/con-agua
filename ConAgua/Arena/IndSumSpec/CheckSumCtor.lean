@@ -1,7 +1,4 @@
-import ConAgua.Arena.IndSumSpec.ColW
-import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.IndSumSpec.SumProg
-import ConAgua.Arena.IndPartsSpec.EqW
 import ConAgua.Arena.IndSumSpec.FieldDomsResolve
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecGenSpec.CruleProg
