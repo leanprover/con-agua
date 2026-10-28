@@ -1,4 +1,5 @@
 import ConAgua.Arena.Verdict
+import ConAgua.Verdict.VCtx
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.RecGenSpec.RgW
@@ -14,6 +15,8 @@ import ConAgua.Checker.NoVerdictTree
 `class_key_of`, ... : a failing call of class `1`/`2` claims that the twin fails with that class.
 -/
 
+noncomputable section
+
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
@@ -24,151 +27,197 @@ namespace L.Ind
 
 open L.Arena
 
-l_model classKeyOfE_spec (p : Prog) (hf : p.lookup "class_key_of" = some classKeyOfL)
-  fns [hf ↦ classKeyOfE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] heartbeats 400000 errors
+l_model classKeyOfE_spec (p : Prog) (hL : KofProg p)
+  fns [hL.kof ↦ classKeyOfE]
+  specs [kc_specF hL n, ckc2_spec hL n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW]
+  heartbeats 400000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- What `class_key_of` gives besides the twin's key `x` (from `m`): the canonical key `r`, a
+record below the top with its parameter slice, the stage invariant, the growth. -/
+structure KofPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : Word)
+    (m' : Mem) (x : ClassKey) (a' : AState) : Prop where
+  key : DecB (fun m => decCK m r.toNat) m' x
+  top : r.toNat + 4 ≤ iwTop m'
+  ds : (rdW (m'.arr64 IW) (r + 2)).toNat + (rdW (m'.arr64 IW) (r + 3)).toNat ≤ iwTop m'
+  stage : StageR dn vis fe m' a'
+  grow : IWGrow m m'
+  pos : PosMR m'
 
 section kof
 variable {p : Prog} (L : KofProg p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 include L
 
-/-- **`class_key_of`'s error refinement** (the hypotheses of `classKeyOf_refines`): a failing call of
-class `1`/`2` (the one reject site, the major's parameters mentioning more than the recursor's;
-the callees `class_key_canon`, `class_key_of_closed` are outside the verdict closure) claims the
-twin's `classKeyOf` fails. -/
-theorem classKeyOf_claim (hnv : closedNV p _root_.L.Checker.nvFns = true) (k : Nat) (s₀ : St)
-    (a₀ : AState) (nP po pl key : Word) (pfvs : List EIdx) (ck : ClassKey)
-    (hS : StageR dn vis fe s₀.mem a₀) (hpf : decHL s₀.mem po.toNat pl.toNat = some pfvs)
-    (hpb : po.toNat + pl.toNat ≤ iwTop s₀.mem) (hk : DecB (fun m => decCK m key.toNat) s₀.mem ck)
-    (hP : PosMR s₀.mem) :
-    CoreSpecE p (k + 2) "class_key_of" [nP, po, pl, key] (ConRon.Arena.classKeyOf nP.toNat pfvs ck)
-      s₀ a₀ := by
-  refine CoreSpecE.of_runs fun er hc => ?_
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (classKeyOfE_spec p L.kof (k + 2) ⟨s₀.mem, Locals.init []⟩ nP po pl key)
-    hc (Err.code_ne_of_cls hk0)
-  rw [classKeyOfE.arm1] at hW
-  cases h1 : callE p (k + 1) "class_key_canon" [po, pl, key] s₀.mem with
-  | error e1 =>
-    rw [h1, classKeyOfE.k_class_key_canon.none] at hW
-    cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-  | ok q =>
-  obtain ⟨r1, m1⟩ := q
-  obtain ⟨s1, hs1, -, hm1⟩ := triple_of_callW (kc_spec L k ⟨s₀.mem, Locals.init []⟩ po pl key)
-    (callW_of_callE h1)
-  subst hs1
+omit L in
+/-- **`class_key_of` refines `classKeyOf`, both outcomes**: `class_key_canon` (`kcW_ok`), the
+closedness test `class_key_of_closed` (`ckc2W_ok`, both outside the verdict closure), the one
+reject site (the major's parameters mention more than the recursor's). -/
+theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : List EIdx}
+    {ck : ClassKey} (hS : StageR dn vis fe m a) (hpf : decHL m po.toNat pl.toNat = some pfvs)
+    (hpb : po.toNat + pl.toNat ≤ iwTop m) (hk : DecB (fun m => decCK m key.toNat) m ck)
+    (hP : PosMR m) :
+    RefE (VerdictCtx p) (classKeyOfE p n m nP po pl key) (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a
+      (fun v x a' => KofPost dn vis fe m v.1 v.2 x a') := by
+  cases n with
+  | zero => rw [classKeyOfE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n =>
+  rw [classKeyOfE.arm1]
+  rcases h1 : kcWf n m po pl key with _ | ⟨r1, m1⟩
+  · rw [liftE_none, classKeyOfE.k_class_key_canon.none]; exact RefE.of_cls0 (by simp)
+  obtain _ | k := n
+  · simp [kcWf] at h1
+  rw [liftE_some]
   obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ :=
-    kcW_ok dn fe vis k s₀.mem _ a₀ po pl key r1 pfvs ck hm1 hS hpf hpb hk hP
-  have htop1 : iwTop s1.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+    kcW_ok dn fe vis k m m1 a po pl key r1 pfvs ck h1 hS hpf hpb hk hP
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
   obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
-  rw [h1, classKeyOfE.k_class_key_canon.eq_2] at hW
-  refine ErrClaim.bind_right hrun1 ?_
-  cases h2 : callE p (k + 1) "class_key_of_closed"
-      [nP, rdW (s1.mem.arr64 IW) (r1.headD 0 + 2), rdW (s1.mem.arr64 IW) (r1.headD 0 + 3)] s1.mem with
-  | error e2 =>
-    rw [h2, classKeyOfE.k_class_key_of_closed.none] at hW
-    cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  obtain ⟨s2, hs2, -, hm2⟩ := triple_of_callW (ckc2_spec L (k + 1) ⟨s1.mem, Locals.init []⟩ nP _ _)
-    (callW_of_callE h2)
-  subst hs2
-  obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) s1.mem _ a1 nP _ _ nk.ds r2 hm2 hS1 hds
-    (by omega) hds1
+  unfold ConRon.Arena.classKeyOf
+  refine RefE.bind_right hrun1 ?_
+  rw [classKeyOfE.k_class_key_canon.eq_2]
+  rcases h2 : ckc2W (k + 1) m1 nP (rdW (m1.arr64 IW) (r1.headD 0 + 2))
+      (rdW (m1.arr64 IW) (r1.headD 0 + 3)) with _ | ⟨r2, m2⟩
+  · rw [liftE_none, classKeyOfE.k_class_key_of_closed.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 h2 hS1
+    hds (by omega) hds1
+  refine RefE.bind_right hrun2 ?_
   by_cases h0 : r2.headD 0 = 0
-  · rw [h2, classKeyOfE.k_class_key_of_closed.abort1 p _ r2 _ h0] at hW
-    cases hW
-    have hbf : b = false := by
-      rw [← hb2, h0]; rfl
+  · rw [classKeyOfE.k_class_key_of_closed.abort1 p _ r2 _ h0]
+    have hbf : b = false := by rw [← hb2, h0]; rfl
     subst hbf
-    refine ErrClaim.bind_right hrun2 ?_
-    exact ErrClaim.fail _ _ rfl
-  · rw [h2, classKeyOfE.k_class_key_of_closed.arm1 p _ r2 _ h0] at hW
-    cases hW
+    exact fun _ => ErrClaim.fail _ _ rfl
+  rw [classKeyOfE.k_class_key_of_closed.arm1 p _ r2 _ h0]
+  have hbt : b = true := by rw [← hb2]; exact bne_iff_ne.mpr h0
+  subst hbt
+  have ek (j : Word) (hj : j.toNat < 4) :
+      rdW (m2.arr64 IW) (r1.headD 0 + j) = rdW (m1.arr64 IW) (r1.headD 0 + j) := by
+    simp only [rdW, word_add_toNat (show (r1.headD 0).toNat + j.toNat < 2 ^ 64 by omega)]
+    rw [hg2.2.2.1 _ (by omega)]
+  refine RefE.ret rfl ?_
+  dsimp only
+  exact ⟨hd1.grow (decCK_mono _) hg2, by have := hg2.1; omega,
+    by rw [ek 2 (by decide), ek 3 (by decide)]; have := hg2.1; omega, hS2, hg1.trans hg2,
+    hP1.fr (ckc2W_mfr _ _ _ _ _ _ _ h2)⟩
+
+/-- **`class_key_of` refines `classKeyOf`** (through `replace_fvars`' and `fvar_b`'s stubs;
+`bvar_b` the master's walk, at exec fuel below `coreWalkFuel`; `kof_ref`'s ok half). -/
+@[refines ConRon.Arena.classKeyOf]
+theorem classKeyOf_refines (k : Nat) (s₀ : St) (a₀ : AState)
+    (nP po pl key : Word) (pfvs : List EIdx) (ck : ClassKey) (hS : StageR dn vis fe s₀.mem a₀)
+    (hpf : decHL s₀.mem po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop s₀.mem)
+    (hk : DecB (fun m => decCK m key.toNat) s₀.mem ck) (hP : PosMR s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 2)) "class_key_of" [nP, po, pl, key]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀ ∧
+      DecB (fun m => decCK m (r.headD 0).toNat) s'.mem (AM.res (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀) ∧
+      (r.headD 0).toNat + 4 ≤ iwTop s'.mem ∧
+      (rdW (s'.mem.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (s'.mem.arr64 IW) (r.headD 0 + 3)).toNat ≤
+        iwTop s'.mem ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
+  refine triple_post (RefE.triple (classKeyOfE_spec p L (k + 2) s₀ nP po pl key)
+    (kof_ref dn fe vis (k + 2) hS hpf hpb hk hP)) ?_
+  rintro r s' ⟨hl, x, a', run, hR⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hres]; exact hR.key, hR.top, hR.ds, by rw [hst]; exact hR.stage, hR.grow,
+    hR.pos⟩
+
 end kof
 
 
 l_model classMinorSlotE_spec (p : Prog) (hf : p.lookup "class_minor_slot" = some classMinorSlotL)
   fns [hf ↦ classMinorSlotE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-/-- **`class_minor_slot`'s error refinement** (the hypotheses of `classMinorSlot_refines`): the
-scan `class_minor_slot_go` is outside the verdict closure; the one reject site (not exactly one
-minor premise) means the twin's hit list is not a singleton. -/
-theorem classMinorSlot_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
+/-- What `class_minor_slot` gives besides the twin's hit `y` (from `m`, `a`): the memory and the
+twin's state unchanged, the slot word and the hit's `ihs` slice (decoded below the tops when the
+class reading is). -/
+structure CmsPost (m : Mem) (rd : Word) (R : ClassRead) (r : List Word) (m' : Mem)
+    (y : Nat × List (Nat × Nat)) (a a' : AState) : Prop where
+  mem : m' = m
+  st : a' = a
+  slot : r.headD 0 = UInt64.ofNat y.1
+  ihs : decPL m (decNN m) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some y.2
+  ihsB : DecB (fun m => decCR m rd.toNat) m R →
+    DecB (fun m => decPL m (decNN m) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat) m y.2
+
+/-- **`class_minor_slot` refines `classMinorSlot`, both outcomes**: the scan `class_minor_slot_go`
+(outside the verdict closure) counts the twin's hits (`cmsGo_hits`); the one reject site (not
+exactly one minor premise) means the twin's hit list is not a singleton. -/
+theorem cms_ref {p : Prog} (hgo : p.lookup "class_minor_slot_go" = some classMinorSlotGo) (n : Nat)
+    {m : Mem} {a : AState} {rd c cc : Word} {R : ClassRead} (hR : decCR m rd.toNat = some R)
+    (hcc : cc.toNat < 2 ^ 32) (hsz : (m.arr64 IW).size + 5 < 2 ^ 64) :
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (classMinorSlotE p n m rd c cc)
+      (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a
+      (fun v y a' => CmsPost m rd R v.1 v.2 y a a') := by
+  cases n with
+  | zero => rw [classMinorSlotE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n =>
+  simp only [classMinorSlotE]
+  rcases h1 : callE p n "class_minor_slot_go"
+      [rdW (m.arr64 IW) rd, rdW (m.arr64 IW) (rd + 1), 0, c, cc, 0, 0, 0, 0] m with e1 | ⟨r, m1⟩
+  · rw [classMinorSlotE.k_class_minor_slot_go.none]
+    exact fun hnv => ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
+  obtain ⟨s', rfl, -, hm, x, y, z, w, hg, rfl⟩ := triple_of_callW
+    (classMinorSlotGo_spec p hgo n ⟨m, Locals.init []⟩ _ _ 0 c cc 0 0 0 0) (callW_of_callE h1)
+  simp only at hm hg
+  obtain ⟨hlen, hhit⟩ := cmsGo_hits n m rd c cc R hR hcc hsz hg
+  have hits := hitsFrom_eq c.toNat (decI cc) 0 R.slots
+  simp only [Nat.zero_add] at hits
+  by_cases hx : [x, y, z, w].headD 0 ≠ 1
+  · rw [classMinorSlotE.k_class_minor_slot_go.abort1 p _ _ hx]
+    refine fun _ => ?_
+    simp only [List.headD_cons] at hx
+    have hlen1 : (hitsFrom c.toNat (decI cc) 0 R.slots).length ≠ 1 := by
+      intro h1'
+      apply hx
+      have : x.toNat = (1 : Word).toNat := by rw [hlen, h1']; rfl
+      exact UInt64.toNat_inj.mp this
+    show ErrClaim (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a _
+    simp only [ConRon.Arena.classMinorSlot]
+    erw [hits]
+    match hh : hitsFrom c.toNat (decI cc) 0 R.slots, hlen1 with
+    | [], _ => exact ErrClaim.fail _ _ (by decide)
+    | _ :: _ :: _, _ => exact ErrClaim.fail _ _ (by decide)
+  rw [classMinorSlotE.k_class_minor_slot_go.arm1 p _ _ (by simpa using hx)]
+  simp only [List.headD_cons, ne_eq, Decidable.not_not] at hx
+  have hlen1 : (hitsFrom c.toNat (decI cc) 0 R.slots).length = 1 := by
+    rw [← hlen, hx]; rfl
+  match hh : hitsFrom c.toNat (decI cc) 0 R.slots, hlen1 with
+  | [(s, ihs)], _ =>
+    obtain ⟨e1, e2⟩ := hhit s ihs hh
+    refine RefE.ret (y := (s, ihs)) (a' := a) ?_ ?_
+    · simp only [ConRon.Arena.classMinorSlot]
+      erw [hits, hh]
+      rfl
+    · dsimp only
+      simp only [List.headD_cons, List.tail_cons]
+      exact ⟨hm, rfl, e1, e2, fun hRB => cmsGo_decB n hg hRB hh e1 e2 hsz⟩
+
+/-- **`class_minor_slot` refines `classMinorSlot`**: the twin succeeds (without touching the state)
+with the unique `.minor c cc` slot, and the words are its position and `ihs` slice (`cms_ref`'s
+ok half). -/
+@[refines ConRon.Arena.classMinorSlot]
+theorem classMinorSlot_refines (p : Prog)
     (hgo : p.lookup "class_minor_slot_go" = some classMinorSlotGo)
     (hp : p.lookup "class_minor_slot" = some classMinorSlotL) (n : Nat) (s₀ : St) (a₀ : AState)
     (rd c cc : Word) (R : ClassRead) (hR : decCR s₀.mem rd.toNat = some R) (hcc : cc.toNat < 2 ^ 32)
     (hsz : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) :
-    CoreSpecE p (n + 1) "class_minor_slot" [rd, c, cc]
-      (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) s₀ a₀ := by
-  refine CoreSpecE.of_runs fun er hc => ?_
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (classMinorSlotE_spec p hp (n + 1) ⟨s₀.mem, Locals.init []⟩ rd c cc)
-    hc (Err.code_ne_of_cls hk0)
-  simp only [classMinorSlotE] at hW
-  cases h1 : callE p n "class_minor_slot_go"
-      [rdW (s₀.mem.arr64 IW) rd, rdW (s₀.mem.arr64 IW) (rd + 1), 0, c, cc, 0, 0, 0, 0] s₀.mem with
-  | error e1 =>
-    rw [h1, classMinorSlotE.k_class_minor_slot_go.none] at hW
-    cases hW
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-  | ok q =>
-  obtain ⟨r, m1⟩ := q
-  by_cases hx : r.headD 0 ≠ 1
-  · rw [h1, classMinorSlotE.k_class_minor_slot_go.abort1 p r m1 hx] at hW
-    cases hW
-    obtain ⟨s', -, -, -, x, y, z, w, hg, rfl⟩ := triple_of_callW
-      (classMinorSlotGo_spec p hgo n ⟨s₀.mem, Locals.init []⟩ _ _ 0 c cc 0 0 0 0) (callW_of_callE h1)
-    simp only [List.headD_cons] at hx
-    have hR' := hR
-    simp only [decCR, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hR'
-    obtain ⟨slots, hsl, rcs, -, hRe⟩ := hR'
-    have hRs : R.slots = slots := by rw [← hRe]
-    obtain ⟨o, l, ho, hl, hdec⟩ := decAt_some hsl
-    have hrd64 : rd.toNat < 2 ^ 64 := rd.toNat_lt
-    have ho' := iwN_rdW ho hrd64
-    rw [UInt64.ofNat_toNat] at ho'
-    have hl' := iwN_off (k := 1) hl (by have := iwN_lt hl; omega)
-    rw [show UInt64.ofNat 1 = 1 from rfl, UInt64.ofNat_toNat] at hl'
-    have hl1 : rdW (s₀.mem.arr64 IW) (rd + 1) = UInt64.ofNat l := hl'.2
-    simp only at hg
-    rw [ho'.1, hl1] at hg
-    have hol : o + l < 2 ^ 64 := by
-      rcases decPL_le hdec with h0 | h0
-      · have : o < 2 ^ 64 := ho'.2
-        omega
-      · omega
-    have hlz : l < 2 ^ 64 := (iwN_rdW hl (by have := iwN_lt hl; omega)).2
-    have hos : o < 2 ^ 64 := ho'.2
-    have hg2 := classMinorSlotGoW_ok n s₀.mem (UInt64.ofNat o) (UInt64.ofNat l) 0 c cc 0 0 0 0 x y z w
-      slots hg
-      (by simpa [UInt64.toNat_ofNat_of_lt' hos, UInt64.toNat_ofNat_of_lt' hlz] using hdec) hcc hsz
-      (by simp [UInt64.toNat_ofNat_of_lt' hos, UInt64.toNat_ofNat_of_lt' hlz]; omega)
-      (by simp [UInt64.toNat_ofNat_of_lt' hlz]; omega) (by simp [UInt64.toNat_ofNat_of_lt' hlz]; omega)
-    obtain ⟨g1, -, -⟩ := hg2
-    simp only [UInt64.toNat_zero, Nat.zero_add] at g1
-    rw [← hRs] at g1
-    have hlen : (hitsFrom c.toNat (decI cc) 0 R.slots).length ≠ 1 := by
-      intro h1'
-      apply hx
-      have : x.toNat = (1 : Word).toNat := by rw [g1, h1']; rfl
-      exact UInt64.toNat_inj.mp this
-    have hits := hitsFrom_eq c.toNat (decI cc) 0 R.slots
-    simp only [Nat.zero_add] at hits
-    show ErrClaim (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀ _
-    simp only [ConRon.Arena.classMinorSlot]
-    erw [hits]
-    match hh : hitsFrom c.toNat (decI cc) 0 R.slots, hlen with
-    | [], _ => exact ErrClaim.fail _ _ (by decide)
-    | _ :: _ :: _, _ => exact ErrClaim.fail _ _ (by decide)
-  · rw [h1, classMinorSlotE.k_class_minor_slot_go.arm1 p r m1 (by simpa using hx)] at hW
-    cases hW
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_minor_slot" [rd, c, cc]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
+      AM.ok (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀ ∧
+      AM.st (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀ = a₀ ∧
+      r.headD 0 = UInt64.ofNat (AM.res (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀).1 ∧
+      decPL s₀.mem (decNN s₀.mem) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat =
+        some (AM.res (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀).2; ⊤⦄ := by
+  refine triple_post (RefE.triple (classMinorSlotE_spec p hp (n + 1) s₀ rd c cc)
+    (cms_ref hgo (n + 1) (a := a₀) hR hcc hsz)) ?_
+  rintro r s' ⟨hl, y, a', run, hR'⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hR'.mem, hok, by rw [hst]; exact hR'.st, by rw [hres]; exact hR'.slot,
+    by rw [hres]; exact hR'.ihs⟩
 
 
 l_model classRecTyOkGuardsE_spec (p : Prog) (hf : p.lookup "class_rec_ty_ok_guards" = some classRecTyOkGuards)
@@ -442,3 +491,5 @@ theorem rgE_claim {γ : Type} {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFn
 end rg
 
 end L.Ind
+
+end

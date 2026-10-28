@@ -1,4 +1,4 @@
-import ConAgua.Arena.RecGenSpec.ClassKeyCanon
+import ConAgua.Verdict.IndBRec1
 import ConAgua.Arena.RecGenSpec.KeysProg
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
@@ -10,7 +10,7 @@ import ConAgua.L.ModelGen
 /-!
 # CntW
 
-`kcWf`, `kofG1`, `kofG`, `kofG_succ`, `kofG_zero`, `kc_specF` and the lemmas only they use.
+`clsCons`, `kofCall_sim`, `ckkW` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -25,55 +25,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-! ## `class_key_of` at any exec fuel -/
-
-/-- `class_key_canon` at any exec fuel. -/
-def kcWf : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | k + 1, m, po, pl, key => kcW k m po pl key
-
-/-- After `class_key_canon` (any fuel). -/
-def kofG1 (k : Nat) (nP : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => kofK2 (r.headD 0) (ckc2W k m nP (rdW (m.arr64 IW) (r.headD 0 + 2))
-      (rdW (m.arr64 IW) (r.headD 0 + 3)))
-
-/-- **The model of `class_key_of`** at exec fuel `k + 1`. -/
-def kofG (k : Nat) (m : Mem) (nP po pl key : Word) : Option (List Word × Mem) :=
-  kofG1 k nP (kcWf k m po pl key)
-
-theorem kofG_succ (k : Nat) (m : Mem) (nP po pl key : Word) :
-    kofG (k + 1) m nP po pl key = kofW k m nP po pl key := by
-  simp only [kofG, kcWf, kofW]
-  cases kcW k m po pl key with
-  | none => rfl
-  | some x => rfl
-
-theorem kofG_zero (m : Mem) (nP po pl key : Word) : kofG 0 m nP po pl key = none := rfl
-
-section spec
-variable {p : Prog} (L : KofProg p)
-include L
-
-theorem kc_specF (k : Nat) (s₀ : St) (po pl key : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "class_key_canon" [po, pl, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ kcWf k s₀.mem po pl key = some (r, s'.mem); ⊤⦄ := by
-  cases k with
-  | zero => rw [invoke_eq _ L.kc]; simp only [callFn, classKeyCanonL]; vcgen [exec] <;> grind
-  | succ k => exact kc_spec L k s₀ po pl key
-
-theorem kof_specG (k : Nat) (s₀ : St) (nP po pl key : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "class_key_of" [nP, po, pl, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ kofG k s₀.mem nP po pl key = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.kof]
-  simp only [callFn, classKeyOfL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      kc_specF L k, ckc2_spec L k] <;>
-    finish (gen := 20) [kofG, kofG1, kofK2, rdW_eq]
-
-end spec
-
 /-- **`sl_cons` of a decoded record onto a decoded slice**, with its frame. -/
 theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -87,7 +38,8 @@ theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → 
   obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf hW hS hxs.2 hxs.1 hy
   exact ⟨hS', hg, ⟨hd, Nat.le_of_eq htop⟩, consW_mfr hW⟩
 
-/-- **`class_key_of`'s run simulates `classKeyOf`** at every exec fuel below `coreWalkFuel`. -/
+/-- **`class_key_of`'s run simulates `classKeyOf`** at every exec fuel below `coreWalkFuel`
+(`kof_ref`'s ok half). -/
 theorem kofCall_sim {p : Prog} (L : KofProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     {nP po pl key : Word} {pfvs : List EIdx} {ck : ClassKey} (hS : StageR dn vis fe m a)
@@ -97,15 +49,9 @@ theorem kofCall_sim {p : Prog} (L : KofProg p) {dn : NIdx → Option ConLeche.Na
       (fun r x m' a' => DecB (fun m => decCK m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
         IWGrow m m' ∧ PosMR m') := by
   intro r m' e
-  rcases n with _ | k
-  · rw [callW_zero] at e; cases e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (kof_specG L k _ nP po pl key) e
-  rcases k with _ | k
-  · rw [kofG_zero] at hW; cases hW
-  rw [kofG_succ] at hW
-  obtain ⟨x, a', hrun, h1, -, -, h4, h5, h6⟩ := kofW_ok dn fe vis k m s'.mem a nP po pl key r pfvs ck hW hS hpf hpb hk
-    hP
-  exact ⟨x, a', hrun, h1, h4, h5, h6⟩
+  obtain ⟨s', rfl, -, x, a', run, hR⟩ := RefE.run_okW (classKeyOfE_spec p L n ⟨m, Locals.init []⟩ nP po pl key)
+    (kof_ref dn fe vis n hS hpf hpb hk hP) e
+  exact ⟨x, a', run, hR.key, hR.stage, hR.grow, hR.pos⟩
 
 /-! ## `check_block_classes_keys` -/
 
