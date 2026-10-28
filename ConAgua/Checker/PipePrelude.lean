@@ -1,7 +1,6 @@
 import ConAgua.Checker.PipeStages
-import ConAgua.Checker.PrepProgChecker
-import ConAgua.Checker.FrontReset
-import ConAgua.Front.FrontRunRef
+import ConAgua.Checker.HoistRefBase
+import ConAgua.Front.DeclsPre
 import ConRon.Bridge.Frontend.Prepare
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

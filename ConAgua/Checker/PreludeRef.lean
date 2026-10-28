@@ -1,5 +1,8 @@
 import ConAgua.Verdict.FrontPreSimE
 import ConAgua.Verdict.FrontSafeE
+import ConAgua.Front.FrontRunRef
+import ConAgua.Checker.FrontReset
+import ConAgua.Checker.PrepProgChecker
 
 /-!
 # The prelude, both outcomes: `builtin_prelude`

@@ -1,4 +1,3 @@
-import ConAgua.Verdict.FrontSafeE
 import ConAgua.Checker.VerdictEntry1
 
 /-!
