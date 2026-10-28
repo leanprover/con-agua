@@ -268,26 +268,34 @@ theorem checkDeclAxiom_loopT (hA : ArmProg p) (hX : AxProg p) (hq : KnotStagePro
   rw [hst, hres]
   exact hR.of_step hS' hf (IWGrow.erecPExt hg')
 
-/-- **`check_decl_quot` under `StageT`** (helper `loopt3-axq`'s `cdqW_okT`). -/
+/-- **`check_decl_quot` under `StageT`** (`cdq_ref`'s ok half; the core's memos kept, the arm
+being a leaf). -/
+@[refines_part ConRon.Arena.checkDecl "the quotient arm, under StageT"]
 theorem checkDeclQuot_loopT (hA : ArmProg p) (hQ : QuotProg p) (hRp : RecProg p)
     (hcl : LeafClosed p) (hdn : DnInj dn) (hQd : QuotDn dn) (k : ConLeche.QuotKind)
     (cv : IConstantVal) :
     ArmSpecT pins dn ds p "check_decl_quot" (.quotDecl k cv) := by
   intro n hn s₀ a₀ vis fe pend i hi hd hok hR hS _ hden _ _
+  have hd' : ds[i.toNat] = .quotDecl k cv := by
+    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
+  have hcvD : ∃ c, Frontend.denoteCV a₀.store cv = some c := by
+    obtain ⟨x, hx⟩ := hden
+    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hx
+    obtain ⟨c, hc, -⟩ := hx
+    exact ⟨c, hc⟩
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdq_specW p hQ.cdq hRp n s₀ i vis)
+  obtain ⟨hloc, fe', a', hrun', hR'⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclQuot_specE p hQ hRp n s₀ i vis)
+      (cdq_ref (pins := pins) hQ hdn n hS.stage hR.decls hi hd' hok (hQd.namesDn hS.twin.mem) hcvD))
+  obtain ⟨-, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (callW_spec p n "check_decl_quot" [i, vis] s₀)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (hA.closed.memFrame n (f := "check_decl_quot") (by decide) [i, vis] s₀)
   subst hs
-  have hd' : ds[i.toNat] = .quotDecl k cv := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨fe', a', hrun', hS', hcm, hg'⟩ :=
-    cdqW_okT (pins := pins) hQ hcl hdn hQd hW hS hR.decls hi hd' hok hden
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok', ?_, hcm⟩
+  refine ⟨hloc, hok', ?_, leaf_memos hcl (leaf_mem _ rfl) hW hS.twin.memos⟩
   rw [hst, hres]
-  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
+  exact hR.of_step hR'.stage hf (IWGrow.erecPExt hR'.grow)
 
 end arms
 

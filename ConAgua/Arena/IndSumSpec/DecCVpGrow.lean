@@ -154,12 +154,7 @@ grind_pattern [ind_grind] ctK1_slow => ctK1 cR k vis cv n cvTa0 (some (r1, m1))
 grind_pattern [ind_grind] ctK2_some => ctK2 (some (r, m2))
 
 section spec
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
-  (hv : p.lookup "e_view" = some eView)
-  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
-  (hif : p.lookup "intern_fvar" = some internFVar)
-  (hwt : p.lookup "whnf_telescope" = some whnfTelescopeL)
+variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
   (his : p.lookup "intern_sort" = some internSort)
   (hd : p.lookup "der_b" = some derB)
@@ -169,8 +164,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hct : p.lookup "close_telescope" = some closeTelescope)
   (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
-  (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p) (hi1 : I1Prog p) (hab : AbF p)
-include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst hi1 hab
+  (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p) (hab : AbF p)
+include hv hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst hab
 
 theorem ctW_spec (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele" [vis, cv, n, cvTa0]
@@ -183,7 +178,7 @@ theorem ctW_spec (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St) (vis c
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stripPis_specF p hst k, eView_spec p hv k,
-        ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab cR hcR k] <;>
+        ctsW_spec p hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hab cR hcR k] <;>
       finish (gen := 20)
 
 end spec
