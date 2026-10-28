@@ -123,16 +123,6 @@ def GoRes (m : Mem) (hs : List (Nat × List (Nat × Nat))) (cnt rS rOff rLen x y
   (∀ s ihs, hs.getLast? = some (s, ihs) →
     y = UInt64.ofNat s ∧ decPL m (decNN m) z.toNat w.toNat = some ihs)
 
-/-! ## `class_minor_slot` -/
-
-/-- The model of `class_minor_slot`. -/
-def classMinorSlotW (n : Nat) (m : Mem) (rd c cc : Word) : Option (List Word) :=
-  if rd.toNat < (m.arr64 IW).size ∧ (rd + 1).toNat < (m.arr64 IW).size then
-    match classMinorSlotGoW n m (rdW (m.arr64 IW) rd) (rdW (m.arr64 IW) (rd + 1)) 0 c cc 0 0 0 0 with
-    | none => none
-    | some (x, y, z, w) => if x ≠ 1 then none else some [y, z, w]
-  else none
-
 /-! ## `class_leaf_at` -/
 
 /-- The word model of `class_leaf_at`. -/

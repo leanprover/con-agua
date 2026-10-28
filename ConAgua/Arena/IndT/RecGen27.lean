@@ -1,8 +1,8 @@
+import ConAgua.Verdict.IndBFields
 import ConAgua.Arena.RecCheckSpec.CnfW
 import ConAgua.Arena.IndT.RecGen24
 import ConAgua.Arena.RecCheckSpec.TargetMajorAt
 import ConAgua.Arena.RecGenSpec.DecTMSlices
-import ConAgua.Arena.RecGenSpec.ClassFieldsOf
 
 /-!
 # `classCtorOf`, `classCtorsOf`, `classesCtors` under `StageC` (lane `indstaget`, helper `pds`)
@@ -61,60 +61,6 @@ theorem cnfF_afr {n : Nat} {m m' : Mem} {nfo nfl nm : Word} {r : List Word}
   rw [cnfK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (allocW_afr hal).trans (cnfW_afr _ _ _ _ _ _ _ _ _ _ hl)
-
-theorem cfgW_afr : ∀ (n : Nat) (m m' : Mem) (mo ml io il i fo fl : Word) (r : List Word),
-    cfgW n m mo ml io il i fo fl = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [cfgW] at h
-  | n + 1, m, m', mo, ml, io, il, i, fo, fl, r, h => by
-    by_cases hl : fl = 0
-    · rw [cfgW_nil (h := hl)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    rw [cfgW_cons (h := hl)] at h
-    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
-    rw [cfgK1_some] at h
-    refine (ftdF_afr h1).trans ?_
-    obtain ⟨⟨occ, m2⟩, h2, h⟩ := of_K h rfl
-    rw [cfgK2_some] at h
-    refine (noConstWf_afr h2).trans ?_
-    -- after the kind: the record, the rest, the cons
-    have tail : ∀ (r5 : List Word) (m5 : Mem), recW m2 1 [0] = some (r5, m5) ∨
-        (∃ r4 m4 cls, piBW n m2 CWF (r1.headD 0) = some (r4, m4) ∧ recW m4 3 [1, cls, r4.tail.headD 0] =
-          some (r5, m5)) → AFr m2 m5 := by
-      rintro r5 m5 (h5 | ⟨r4, m4, cls, h4, h5⟩)
-      · exact recW_afr h5
-      · exact (piBW_afr _ _ _ _ _ _ h4).trans (recW_afr h5)
-    obtain ⟨⟨hc, cls⟩, h3, h⟩ := of_K h rfl
-    have fin : ∀ (o5 : Option (List Word × Mem)), (∀ r5 m5, o5 = some (r5, m5) → AFr m2 m5) →
-        cfgK5 n (fun m5 => cfgW n m5 mo ml io il (i + 1) (fo + 1) (fl - 1)) o5 = some (r, m') →
-        AFr m2 m' := by
-      intro o5 hA5 h5
-      obtain ⟨⟨r5, m5⟩, rfl, h5⟩ := of_K h5 (by simp only [cfgK5])
-      rw [cfgK5_some] at h5
-      obtain ⟨⟨r6, m6⟩, h6, h5⟩ := of_K h5 rfl
-      rw [cfgK7_some] at h5
-      obtain ⟨⟨r7, m7⟩, h7, h5⟩ := of_K h5 rfl
-      rw [cfgK6_some] at h5
-      cases h5; exact ((hA5 r5 m5 rfl).trans (cfgW_afr n _ _ _ _ _ _ _ _ _ _ h6)).trans (consW_afr h7)
-    by_cases c0 : occ = 0 ∧ hc = 0
-    · rw [cfgK3_ord (h := c0)] at h
-      exact fin _ (fun r5 m5 e => tail r5 m5 (.inl e)) h
-    by_cases c1 : occ ≠ 0 ∧ hc = 1
-    · rw [cfgK3_rec (h0 := c0) (h := c1)] at h
-      obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
-      rw [cfgK4_some] at h
-      exact fin _ (fun r5 m5 e => tail r5 m5 (.inr ⟨r4, m4, cls, h4, e⟩)) h
-    · rw [cfgK3_bad (h0 := c0) (h := c1)] at h; cases h
-
-theorem cfoW_afr {n : Nat} {m m' : Mem} {q io il i fo fl : Word} {r : List Word}
-    (h : cfoW n m q io il i fo fl = some (r, m')) : AFr m m' := by
-  rcases n with _ | n
-  · simp [cfoW] at h
-  rw [cfoW.arm1] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
-  rw [cfoW.k_block_shape_member_names.arm1] at h
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
-  rw [cfoW.k_class_fields_of_go.arm1] at h
-  cases h; exact (memberNamesW_afr h1).trans (cfgW_afr _ _ _ _ _ _ _ _ _ _ _ h2)
 
 section rel
 variable {p : Prog} (hq : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -218,18 +164,16 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   -- `class_minor_slot`
   obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
   rw [cxoK3_some] at h
-  obtain ⟨s3, rfl, -, hm3, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (classMinorSlot_spec p P.cmsg P.cms n _ rd c (rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca))) c3
-  rw [hm3] at h
   have hsz5' : (s2.mem.arr64 IW).size + 5 < 2 ^ 64 := by rw [hk2 IW, hk1 IW]; exact hsz5
-  obtain ⟨s, ihs, hhits, -, hihs⟩ := cms_decB n hw3 (hR.grow (decCR_mono _) hg12) hnmH hsz5'
-  have hrun3 : (ConRon.Arena.classMinorSlot R c.toNat cA'.1.name).run a1 = .ok ((s, ihs), a1) := by
-    have hits := hitsFrom_eq c.toNat (decI (rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca))) 0 R.slots
-    simp only [Nat.zero_add] at hits
-    rw [← hnmD]
-    simp only [ConRon.Arena.classMinorSlot]
-    erw [hits, hhits]
-    rfl
+  obtain ⟨s3, rfl, -, ⟨s, ihs⟩, a3, hrun3, hm3, ha3, -, -, hihs⟩ := RefE.run_okW
+    (classMinorSlotE_spec p P.cms (n + 1) ⟨s2.mem, Locals.init []⟩ rd c
+      (rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca)))
+    (cms_ref P.cmsg (n + 1) (a := a1) ((hR.grow (decCR_mono _) hg12).get (decCR_mono _)) hnmH hsz5')
+    c3
+  dsimp only at hm3 hihs
+  replace hihs := hihs (hR.grow (decCR_mono _) hg12)
+  rw [hm3] at h
+  rw [hnmD, ha3] at hrun3
   -- `open_pis_at_fvars_f`
   obtain ⟨ca2, hca2, -, -, -, -, hnF2, -, -⟩ := decCN_words (hcA.grow (decCN_mono _) hg12) hsz2
   have hq4 : rdW (s2.mem.arr64 IW) (q + 4) = UInt64.ofNat bs.nP := (partsShapeWords hg12 hbsD hq9).1
@@ -280,7 +224,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
     (classFieldsOf_spec p P.cfo (n + 1) _ q (r3.tail.headD 0) (r3.tail.tail.headD 0) 0
       (r4.tail.headD 0) (r4.tail.tail.headD 0)) c5
   simp only at hs5' hw5; rw [hs5'] at hw5
-  have hA5 := cfoW_afr hw5 hA4
+  have hA5 := cfoW_afr P.cfo hS4 (hbs.grow hg14) (DecB.stab (OMono.decPL (fun q => decNN_mono q) _ _) hihB)
+    hib hdl hbl (by simpa using (r4.tail.tail.headD 0).toNat_lt) hM0 hw5 hA4
   have hP5 := hP4.setNo hf5 ⟨mp5, hM5⟩
   have run5 := AM.run_of_ok _ a4 hok5
   generalize hx5 : AM.res (ConRon.Arena.classFieldsOf bs ihs (0 : Word).toNat fvs) a4 = kinds at run5 hsp5

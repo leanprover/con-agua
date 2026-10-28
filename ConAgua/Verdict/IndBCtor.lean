@@ -1,6 +1,4 @@
 import ConAgua.Verdict.IndBAgree
-import ConAgua.Verdict.IndBRec1
-import ConAgua.Verdict.IndBFields
 import ConAgua.Arena.IndT.RecGen27
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
@@ -160,8 +158,8 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
     cases he
     have hsz5' : (s2.mem.arr64 IW).size + 5 < 2 ^ 64 := by
       have h12 := hk2 IW; have h11 := hk1 IW; rw [h12, h11]; exact hsz5
-    have := CoreSpecE.of_callE (classMinorSlot_claim hnv P.cmsg P.cms n ⟨s2.mem, Locals.init []⟩ a1 rd c _ R
-      (hR.stab (decCR_mono _) s2.mem hg12) hnmH hsz5') h3
+    have := RefE.run_err (classMinorSlotE_spec p P.cms (n + 1) ⟨s2.mem, Locals.init []⟩ rd c _) trivial hnv
+      (cms_ref P.cmsg (n + 1) (a := a1) (hR.stab (decCR_mono _) s2.mem hg12) hnmH hsz5') h3
     rw [hnmD] at this
     dsimp only
     rw [hes_eq]
@@ -170,20 +168,17 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, cxoE.k_class_minor_slot.arm1] at he
-  obtain ⟨s3, rfl, -, hm3, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (classMinorSlot_spec p P.cmsg P.cms n _ rd c (rdW (s1.mem.arr64 EREC) (UInt64.ofNat cam)))
-    (callW_of_callE h3)
-  rw [hm3] at he
   have hsz5' : (s2.mem.arr64 IW).size + 5 < 2 ^ 64 := by
     have h12 := hk2 IW; have h11 := hk1 IW; rw [h12, h11]; exact hsz5
-  obtain ⟨s, ihs, hhits, -, hihs⟩ := cms_decB n hw3 (hR.grow (decCR_mono _) hg12) hnmH hsz5'
-  have hrun3 : (ConRon.Arena.classMinorSlot R c.toNat cA'.1.name).run a1 = .ok ((s, ihs), a1) := by
-    have hits := hitsFrom_eq c.toNat (decI (rdW (s1.mem.arr64 EREC) (UInt64.ofNat cam))) 0 R.slots
-    simp only [Nat.zero_add] at hits
-    rw [← hnmD]
-    simp only [ConRon.Arena.classMinorSlot]
-    erw [hits, hhits]
-    rfl
+  obtain ⟨s3, rfl, -, ⟨s, ihs⟩, a3, hrun3, hm3, ha3, -, -, hihs⟩ := RefE.run_okW
+    (classMinorSlotE_spec p P.cms (n + 1) ⟨s2.mem, Locals.init []⟩ rd c
+      (rdW (s1.mem.arr64 EREC) (UInt64.ofNat cam)))
+    (cms_ref P.cmsg (n + 1) (a := a1) ((hR.grow (decCR_mono _) hg12).get (decCR_mono _)) hnmH hsz5')
+    (callW_of_callE h3)
+  dsimp only at hm3 hihs
+  replace hihs := hihs (hR.grow (decCR_mono _) hg12)
+  rw [hm3] at he
+  rw [hnmD, ha3] at hrun3
   dsimp only
   rw [hes_eq]
   dsimp only
@@ -198,7 +193,6 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
     rw [e]; exact decBS_k ((hbsD.grow (decBS_mono _) hg12).get (decBS_mono _)) (by omega)
   have hsum : (UInt64.ofNat bs.nP + UInt64.ofNat bs.k : Word) = UInt64.ofNat (bs.nP + bs.k) := by
     apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega
-  dsimp only at he
   rw [hnF2, hq4, hq1, hsum] at he
   cases h4 : callE p (n + 1) "open_pis_at_fvars_f" [UInt64.ofNat cA'.snd, rdW (s2.mem.arr64 IW) (e0w + 4),
       UInt64.ofNat (bs.nP + bs.k)] s2.mem with
@@ -261,7 +255,8 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
     (classFieldsOf_spec p P.cfo (n + 1) _ q (r3.tail.headD 0) (r3.tail.tail.headD 0) 0
       (r4.tail.headD 0) (r4.tail.tail.headD 0)) (callW_of_callE h5)
   simp only at hs5' hw5; rw [hs5'] at hw5
-  have hA5 := cfoW_afr hw5 hA4
+  have hA5 := cfoW_afr P.cfo hS4 (hbs.grow hg14) (DecB.stab (OMono.decPL (fun q => decNN_mono q) _ _) hihB)
+    hib hdl hbl (by simpa using (r4.tail.tail.headD 0).toNat_lt) hM0 hw5 hA4
   have hP5 := hP4.setNo hf5 ⟨mp5, hM5⟩
   have run5 := AM.run_of_ok _ a4 hok5
   generalize hx5 : AM.res (ConRon.Arena.classFieldsOf bs ihs (0 : Word).toNat fvs) a4 = kinds at run5 hsp5

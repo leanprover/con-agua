@@ -489,3 +489,58 @@ are the `RefE` form of `CoreRef`/`CoreSpec` for every knot function (batch 1d's 
 will want them; they sit in `Arena/KnotE`); `RefE.tail` (a tail call whose continuation re-lists the
 callee's value) recurs in every nested family and belongs to the kit; a `PreRef`-like shape (an ok
 half that is not a twin run) recurs for prefixes of twin functions.
+
+### 3.8 Batch 1c, second landing (`IndBRec1`, `IndBFields`)
+
+Migrated: `class_key_of` (`kof_ref`, `KofPost`; `classKeyOf_refines` moved to `IndBRec1`, same
+statement), `class_minor_slot` (`cms_ref`, `CmsPost`; the `DecB` slices of the second invariant
+package are a conditional field `ihsB`, §1.4; `class_minor_slot_go` stays a run, its spec's `∃`
+post is no model the generator reads), `class_rec_ty_ok_guards` (`rg_ref`, `RgPost`),
+`class_fields_of_go` (`cfg_ref`, `CfgPost`, by induction; all seven callees lifted). The callers'
+error claims (`IndBCtor`, `IndBRec2`'s `classRecTyOk_claim`, `IndArmE`'s `classKeyOfE_of`) read
+`RefE.run_err`, their ok refinements `RefE.run_okW`; `cfoW` calls `class_fields_of_go` through
+`callW`, and `cfoW_sim`/`classFieldsOf_refines` moved into `IndBFields`.
+
+* **A function that stands for a prefix of a twin function**: `class_rec_ty_ok_guards` has no twin
+  of its own; its old ok proof (`rgW_sim`), its pass lemma (`rgW_pass`) and its claim (`rgE_claim`,
+  over `do …guards…; rest` for any `rest`) were three copies of the guard analysis. Now one twin
+  definition of the prefix, `rgT` (the guards, ending in `pure ci`), with `rgT_bind :
+  classRecTyOk … = rgT … >>= rest`, and `rg_ref` against `rgT`. The hand model `rtoW` reads the
+  guards through `cR` (`rtoW_simC`, `rtsW_simC` gained `hrp : RtoProg p`, three call sites).
+  `class_rule_ok_guards` (skipped in §3.6) has the same shape.
+* **`G := closedNV p nvFns = true`** for all four (no core stub below them), as in §3.6.
+* **Skipped: `class_const_ok_header`** (`IndBHdr`). Its ok half is `install_header`'s model `ihW` and
+  `ihW_okT` (the same body), and batch 1d skipped `install_header` for the same reason (§3.5): each
+  waits for the other. They should be migrated together, by one lane: one unified model of the
+  body, one refinement, used by both.
+* **Recipe**: `classRecTyOkGuardsE` with `simp []` (the old `errors` recipe) took 13.0 s for the
+  module; with the default `finish` 5.0 s. `cfgE`, `classKeyOfE`, `classMinorSlotE` keep theirs
+  (`finish` fails or is slower).
+
+Lines (`declen.py`, master 63762a3f against this branch; before = ok refinement(s) + error claim(s);
+the `rg` row includes `rgT`/`rgT_bind` after, the `cms` row the reworked scan lemmas `cmsGo_hits`,
+`cmsGo_decB`):
+
+| function | before | after | change |
+|---|---:|---:|---:|
+| `class_key_of` | 155 | 93 | **−40 %** |
+| `class_minor_slot` | 212 | 170 | **−20 %** |
+| `class_rec_ty_ok_guards` | 361 | 185 | **−49 %** |
+| `class_fields_of_go` | 374 | 179 | **−52 %** |
+| **pairs** | **1 102** | **627** | **−43 %** |
+
+The hand models, arms and specs deleted on top: about 250 lines. Whole diff of this landing
+against the first one (2853d80e): **+658 −1 317 = −659 lines** in 21 files.
+
+Elaboration (as §3.6, `times2.txt`; load 14–25; `IndBRec1` new after the recipe change, 3 runs
+5.00–5.24):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBRec1` | 5.93 | 5.02 | the three refinements; 13.78 with `simp []` for `classRecTyOkGuardsE` |
+| `Verdict/IndBFields` | 3.98 | **4.45** | **slower (+0.5 s)**: `cfoW`, its spec and `cfoW_sim` moved in |
+| `Arena/RecGenSpec/ClassFieldsOf` | 3.03 | 0.72 | …moved out of here; with `IndBFields`: 7.0 → 5.2 |
+| `RecGenSpec/ClassConstOk`, `ClassKeyCanon`, `ClassMinorSlot`, `RgW`, `CntW` | 16.62 | 13.24 | hand models and specs gone |
+| `IndBCtor`, `IndBRec2`, `IndBRec3`, `IndArmE`, `IndBE`, `RecGen27`, `RecGen7` | 21.43 | 22.19 | |
+| `CfoProg`, `ClassFeR`, `ClassMinorSlotHit`, `ClassMinorSlotW`, `KcW` | 18.32 | 18.13 | |
+| **sum** | **69.3** | **63.8** | **−8 %** |

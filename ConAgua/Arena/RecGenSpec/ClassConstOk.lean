@@ -78,7 +78,8 @@ local notation "V" => ConLeche.CheckMode.verified
 
 section arms
 variable (cR : CallM) (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis g k rc cvRi c gty q : Word) (r1 r2 r4 r5 : List Word)
-theorem rtoW_eq : rtoW cR (n + 1) m vis g k rc cvRi c = rtoK1 cR n vis g rc cvRi c (rgW n m g k rc c) := rfl
+theorem rtoW_eq : rtoW cR (n + 1) m vis g k rc cvRi c = rtoK1 cR n vis g rc cvRi c
+    (cR n "class_rec_ty_ok_guards" [g, k, rc, c] m) := rfl
 theorem rtoK1_some : rtoK1 cR n vis g rc cvRi c (some (r1, m1)) = rtoK2 cR n vis rc cvRi (gtW n m1 g c) := rfl
 theorem rtoK2_ok (h : r2.headD 0 ≠ 0) : rtoK2 cR n vis rc cvRi (some (r2, m2)) =
     rtoK3 cR n vis cvRi (r2.tail.headD 0)
@@ -99,19 +100,6 @@ grind_pattern [ind_grind] rtoK3_some => rtoK3 cR n vis cvRi gty (some (q, m3))
 grind_pattern [ind_grind] rtoK4_some => rtoK4 cR n vis cvRi gty q (some (r4, m4))
 grind_pattern [ind_grind] rtoK5_ok => rtoK5 q (some (r5, m5))
 
-theorem classRecTyOkGuards_spec (p : Prog) (h : RtoProg p) (n : Nat) (s₀ : St) (g k rc c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rec_ty_ok_guards" [g, k, rc, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ rgW n s₀.mem g k rc c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.rg]
-  simp only [callFn, classRecTyOkGuards]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n] <;>
-      finish (gen := 20) [rdW_eq, rgK]
-
 theorem classRecTyOk_spec (p : Prog) (h : RtoProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis g k rc cvRi c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rec_ty_ok" [vis, g, k, rc, cvRi, c]
     ⦃fun r s' => LocEq s' s₀ ∧ rtoW cR n s₀.mem vis g k rc cvRi c = some (r, s'.mem); ⊤⦄ := by
@@ -122,7 +110,7 @@ theorem classRecTyOk_spec (p : Prog) (h : RtoProg p) (cR : CallM) (hcR : CallSpe
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classRecTyOkGuards_spec p h n, classGenRecTy_spec p h.toGtProg n, cvNew_specW p h.era h.cvn n,
+        hcR n "class_rec_ty_ok_guards", classGenRecTy_spec p h.toGtProg n, cvNew_specW p h.era h.cvn n,
         classConstOk_spec p h.ih h.ccoh h.cco cR hcR n, hcR n "is_def_eq_core"] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
 

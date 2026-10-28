@@ -84,23 +84,8 @@ theorem checkStructFieldSortsIE_of {p : Prog} (hnv : closedNV p _root_.L.Checker
 theorem classKeyOfE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) :
     ClassKeyOfE p := by
   intro L dn fe vis s₀ a₀ nP po pl key pfvs ck hS hpf hpfb hk hP F _hF e hc
-  match F with
-  | 0 =>
-    obtain ⟨e', h0, hk0⟩ := callE_zero p _ _ s₀.mem
-    rw [h0] at hc; cases hc
-    exact ErrClaim.of_cls0 hk0
-  | 1 =>
-    refine ErrClaim.of_cls0 (Classical.byContradiction fun hk0 => ?_)
-    have hW := triple_of_callE_err (classKeyOfE_spec p L.kof 1 ⟨s₀.mem, Locals.init []⟩ nP po pl key)
-      hc (Err.code_ne_of_cls hk0)
-    rw [classKeyOfE.arm1] at hW
-    obtain ⟨e', h0, hk1⟩ := callE_zero p "class_key_canon" [po, pl, key] s₀.mem
-    rw [h0, classKeyOfE.k_class_key_canon.none] at hW
-    cases hW
-    exact hk0 hk1
-  | k + 2 =>
-    exact CoreSpecE.of_callE (classKeyOf_claim L dn fe vis hnv k s₀ a₀ nP po pl key pfvs ck hS hpf hpfb
-      hk hP) hc
+  exact RefE.run_err (classKeyOfE_spec p L F s₀ nP po pl key) hnv hnv
+    (kof_ref dn fe vis F hS hpf hpfb hk hP) hc
 
 /-- **`gen_rec_check`'s claim in the generated shape** (`GenRecCheckE`), from `genRecCheck_claim'`
 and the claims of `classes_nfs`, `target_k53_args` at every stage. -/
