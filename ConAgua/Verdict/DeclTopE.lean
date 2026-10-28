@@ -57,7 +57,7 @@ theorem checkDeclSpecE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : I
   · exact fun cv v => checkDeclThm_errT pins dn ds hdc.cd.val hdc.knot hap hkp hnv hcE hUL hivE
       hdc.cd.th cv v
   · exact fun cv v => checkDeclOpaque_errT pins dn ds hdc.cd.val hdc.cd.crp hdc.knot hdc.leaf hdc.loop
-      hap hkp hnv hcE hUL hivE hnvE hdc.dninj hdc.cd.op cv v
+      hap hkp hnv hcE hUL hivE hdc.dninj hdc.cd.op cv v
   · exact fun k cv => checkDeclQuot_errT pins dn ds hdc.cd.quot hdc.cd.val.rcp hdc.dninj hdc.quotDn hnv k cv
 
 /-- **`install_fold_go` fails only where `installFold` does** (and `install_fold_next`), from the

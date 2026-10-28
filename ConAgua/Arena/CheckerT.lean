@@ -184,7 +184,7 @@ theorem checkDeclThm_loopT (hA : ArmProg p) (hV : ValProg p) (hq : KnotStageProg
   rw [hst, hres]
   exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
 
-/-- **`check_decl_opaque` under `StageT`** (helper `loopt2-crp`'s `cdoW_okT`). -/
+/-- **`check_decl_opaque` under `StageT`** (`cdo_ref`). -/
 theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
     (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
     (hdn : DnInj dn) (hp : p.lookup "check_decl_opaque" = some checkDeclOpaque) (cv : IConstantVal) (v : EIdx) :
@@ -192,11 +192,6 @@ theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
   intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden _ hCr
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (cdo_specW p hp hV.rcp hC.red.pa n s₀ i vis)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_opaque") (by decide) [i, vis] s₀)
-  subst hs
   have hd' : ds[i.toNat] = .opaqueDecl cv v := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨env, hF⟩ := hF
@@ -206,12 +201,16 @@ theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
   rotate_left
   · cases hx
   rename_i c e hc he
-  obtain ⟨fe', a', hrun', hS', hcm, hg'⟩ :=
-    cdoW_okT (pins := pins) hV hC hq hcl hlc hap hkp hdn hn hW hS hR.decls hi hd' hF hc he hCr
+  obtain ⟨hloc, fe', a', hrun', hQ⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclOpaque_specE p hp n s₀ i vis)
+      (cdo_ref (pins := pins) hV hC hq hcl hlc hap hkp hdn n hn hS hR.decls hi hd' hF hc he hCr))
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hA.closed.memFrame n (f := "check_decl_opaque") (by decide) [i, vis] s₀)
+  subst hs
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_, hcm⟩
+  refine ⟨hloc, hok, ?_, hQ.memos⟩
   rw [hst, hres]
-  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
+  exact hR.of_step hQ.stage hf (IWGrow.erecPExt hQ.grow)
 
 /-- **`check_decl_defn` under `StageT`** (`cdf_ref`: the structural-`Nat` gate and the
 `Nat.div`-family pin gate under `StageC`). -/
