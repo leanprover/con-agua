@@ -135,7 +135,7 @@ theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) 
   rintro r s' ⟨hl, hm⟩
   have hcv := decCI_cvTA hc (.inl rfl)
   obtain ⟨a', hrun, hS', hM', hg⟩ :=
-    tvW_okT hq hp.rcp hq.knot.lvc hq.lvlEqC hap hkp hn hm hS hc hcv hv hpre hCr
+    tvW_okT hq hp.rcp hq.knot.lvc hp.lef hap hkp hn hm hS hc hcv hv hpre hCr
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
 

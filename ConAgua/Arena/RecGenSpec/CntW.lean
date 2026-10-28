@@ -1,6 +1,5 @@
 import ConAgua.Verdict.IndBRec1
 import ConAgua.Arena.RecGenSpec.KeysProg
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -10,7 +9,8 @@ import ConAgua.L.ModelGen
 /-!
 # CntW
 
-`clsCons`, `kofCall_sim`, `ckkW` and the lemmas only they use.
+`clsCons`, `check_block_classes_keys`' unified model `ckkE` and its refinement `ckk_ref`, and the lemmas
+only they use.
 -/
 
 noncomputable section
@@ -25,6 +25,17 @@ namespace L.Ind
 
 open L.Arena
 
+/-- **`sl_cons` of a decoded record onto a decoded slice** (its model's run), with its frame. -/
+theorem clsConsW {α : Type} {f : Mem → Nat → Option α}
+    (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {a : AState} {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
+    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
+      MFr [] [] m m' := by
+  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf h hS hxs.2 hxs.1 hy
+  exact ⟨hS', hg, ⟨hd, Nat.le_of_eq htop⟩, consW_mfr h⟩
+
 /-- **`sl_cons` of a decoded record onto a decoded slice**, with its frame. -/
 theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -35,69 +46,82 @@ theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → 
       MFr [] [] m m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (slCons_specW p hP.rx.ha hP.copy hP.cons n _ x o l) h
-  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf hW hS hxs.2 hxs.1 hy
-  exact ⟨hS', hg, ⟨hd, Nat.le_of_eq htop⟩, consW_mfr hW⟩
+  exact clsConsW hf hW hS hxs hy
 
-/-- **`class_key_of`'s run simulates `classKeyOf`** at every exec fuel below `coreWalkFuel`
-(`kof_ref`'s ok half). -/
-theorem kofCall_sim {p : Prog} (L : KofProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
-    {nP po pl key : Word} {pfvs : List EIdx} {ck : ClassKey} (hS : StageR dn vis fe m a)
-    (hpf : decHL m po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop m)
-    (hk : DecB (fun m => decCK m key.toNat) m ck) (hP : PosMR m) :
-    Sim (callW p n "class_key_of" [nP, po, pl, key] m) (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a
-      (fun r x m' a' => DecB (fun m => decCK m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
-        IWGrow m m' ∧ PosMR m') := by
-  intro r m' e
-  obtain ⟨s', rfl, -, x, a', run, hR⟩ := RefE.run_okW (classKeyOfE_spec p L n ⟨m, Locals.init []⟩ nP po pl key)
-    (kof_ref dn fe vis n hS hpf hpb hk hP) e
-  exact ⟨x, a', run, hR.key, hR.stage, hR.grow, hR.pos⟩
+/-! ## `check_block_classes_keys`: one model and one refinement for both outcomes -/
 
-/-! ## `check_block_classes_keys` -/
+/-- **`check_block_classes_keys`' unified model**: `class_key_of` through its unified model,
+`sl_cons` (outside the verdict closure) lifted. -/
+l_model ckkE_spec (p : Prog) (hP : KeysProg p)
+  fns [hP.keys ↦ ckkE]
+  specs [classKeyOfE_spec p hP.toKofProg n, slCons_specW p hP.rx.ha hP.copy hP.cons n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model ckk_spec (p : Prog) (hp : p.lookup "check_block_classes_keys" = some checkBlockClassesKeys)
-  fns [hp ↦ ckkW]
-  specs [callW_spec p n "class_key_of", callW_spec p n "sl_cons"]
-  grind [arena_grind] simp [getElem_rdW']
+/-- What `check_block_classes_keys` gives besides the twin's keys `ks` (from `m`): the keys'
+slice `[r₀, r₁]`, the stage invariant, the growth, the frame. -/
+structure CkkPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
+    (m' : Mem) (ks : List ClassKey) (a' : AState) : Prop where
+  stage : StageR dn vis fe m' a'
+  grow : IWGrow m m'
+  keys : PSlR decCK ks (r.headD 0) (r.tail.headD 0) m'
+  pos : PosMR m'
 
-/-- **`check_block_classes_keys`' model simulates `ks.mapM (classKeyOf nP params)`.** -/
-theorem ckkW_sim {p : Prog} (hP : KeysProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+/-- **`check_block_classes_keys` refines `ks.mapM (classKeyOf nP params)`, both outcomes**:
+`class_key_of` by `kof_ref`, `sl_cons` outside the verdict closure. -/
+theorem ckk_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (nP po pl : Word) (pfvs : List EIdx) (n : Nat) :
     ∀ (m : Mem) (a : AState) (ko kl : Word) (ks : List ClassKey),
     StageR dn vis fe m a → DecB (fun m => decHL m po.toNat pl.toNat) m pfvs →
     po.toNat + pl.toNat ≤ iwTop m → PSlR decCK ks ko kl m → PosMR m →
-    Sim (ckkW p n m nP po pl ko kl) (ks.mapM (ConRon.Arena.classKeyOf nP.toNat pfvs)) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-        PSlR decCK x (r.headD 0) (r.tail.headD 0) m' ∧ PosMR m') := by
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (ckkE p n m nP po pl ko kl)
+      (ks.mapM (ConRon.Arena.classKeyOf nP.toNat pfvs)) a
+      (fun v x a' => CkkPost dn vis fe m v.1 v.2 x a') := by
   induction n with
-  | zero => intro m a ko kl ks _ _ _ _ _; rw [ckkW.eq_1]; exact Sim.of_none
+  | zero => intro m a ko kl ks _ _ _ _ _; rw [ckkE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n ih =>
   intro m a ko kl ks hS hpf hpb hks hPm
   by_cases hkl : kl = 0
-  · rw [ckkW.arm1 p n m nP po pl ko kl hkl]
+  · rw [ckkE.arm1 p n m nP po pl ko kl hkl]
     have : ks = [] := by
       have h := hks.1; simp only [DecB, hkl] at h
       simpa [decPL] using h.symm
     subst this
-    exact Sim.ret ⟨hS, IWGrow.refl m, PSlR.nil decCK m, hPm⟩
+    exact RefE.ret rfl ⟨hS, IWGrow.refl m, PSlR.nil decCK m, hPm⟩
   obtain ⟨q, k0, ks', rfl, hw, hqb, hdk, hks'⟩ := partsPSl_cons hks hkl
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  rw [ckkW.arm2 p n m nP po pl ko kl hkl, hw]
+  rw [ckkE.arm2 p n m nP po pl ko kl hkl, hw]
   simp only [List.mapM_cons]
-  refine Sim.bindK (K := ckkW.k_class_key_of p n nP po pl ko kl) (body := fun r1 m1 =>
-      ckkW.k_check_block_classes_keys p n (r1.headD 0) (ckkW p n m1 nP po pl (ko + 1) (kl - 1)))
-    (by simp [ckkW.k_class_key_of]) (fun r m₁ => ckkW.k_class_key_of.arm1 p n nP po pl ko kl r m₁)
-    (kofCall_sim hP.toKofProg n hS (hpf.get (OMono.decHL _ _)) hpb (by rw [hq']; exact hdk) hPm) ?_
-  rintro r1 x1 m1 a1 ⟨hd1, hS1, hg1, hP1⟩
-  refine Sim.bindK (K := ckkW.k_check_block_classes_keys p n (r1.headD 0)) (body := fun r2 m2 =>
-      ckkW.k_sl_cons p (callW p n "sl_cons"
-      [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2)) rfl (fun _ _ => rfl)
-    (ih m1 a1 (ko + 1) (kl - 1) ks' hS1 (hpf.grow (OMono.decHL _ _) hg1) (Nat.le_trans hpb hg1.1)
-      (hks'.grow decCK_mono hg1) hP1) ?_
-  rintro r2 xs m2 a2 ⟨hS2, hg2, hd2, hP2⟩
-  refine Sim.mstep (K := ckkW.k_sl_cons p) rfl (fun _ _ => rfl) fun r3 m3 h3 => ?_
-  obtain ⟨hS3, hg3, hd3, hf3⟩ := clsCons hP decCK_mono h3 hS2 hd2 (hd1.grow (decCK_mono _) hg2)
-  exact Sim.ret ⟨hS3, (hg1.trans hg2).trans hg3, by simpa using hd3, hP2.fr hf3⟩
+  -- `class_key_of`
+  have h1 := kof_ref (p := p) (nP := nP) dn fe vis n hS (hpf.get (OMono.decHL _ _)) hpb (by rw [hq']; exact hdk) hPm
+  rcases h1' : classKeyOfE p n m nP po pl (UInt64.ofNat q) with e1 | ⟨r1, m1⟩
+  · rw [h1'] at h1
+    rw [ckkE.k_class_key_of.none]; exact RefE.bind_left h1
+  rw [h1'] at h1
+  obtain ⟨x1, a1, hrun1, hR1⟩ := h1
+  dsimp only at hR1
+  rw [ckkE.k_class_key_of.arm1]
+  refine RefE.bind_right hrun1 ?_
+  have hg1 := hR1.grow
+  -- the rest
+  have h2 := ih m1 a1 (ko + 1) (kl - 1) ks' hR1.stage (hpf.grow (OMono.decHL _ _) hg1)
+    (Nat.le_trans hpb hg1.1) (hks'.grow decCK_mono hg1) hR1.pos
+  rcases h2' : ckkE p n m1 nP po pl (ko + 1) (kl - 1) with e2 | ⟨r2, m2⟩
+  · rw [h2'] at h2
+    rw [ckkE.k_check_block_classes_keys.none]; exact RefE.bind_left h2
+  rw [h2'] at h2
+  obtain ⟨xs, a2, hrun2, hR2⟩ := h2
+  dsimp only at hR2
+  rw [ckkE.k_check_block_classes_keys.arm1]
+  refine RefE.bind_right hrun2 ?_
+  -- `sl_cons`
+  rcases h3 : consW n m2 r1 (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩
+  · rw [liftE_none, ckkE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, ckkE.k_sl_cons.arm1]
+  obtain ⟨hS3, hg3, hd3, hf3⟩ := clsConsW decCK_mono h3 hR2.stage hR2.keys
+    (hR1.key.grow (decCK_mono _) hR2.grow)
+  exact RefE.ret rfl ⟨hS3, (hg1.trans hR2.grow).trans hg3, by simpa using hd3, hR2.pos.fr hf3⟩
 
 /-! ## One class per member: `check_block_classes_count`, `check_block_classes_one_per_member` -/
 

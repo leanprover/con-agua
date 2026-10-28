@@ -3,7 +3,6 @@ import ConAgua.Verdict.BlkE3
 import ConAgua.Verdict.DeclValsE
 import ConAgua.Verdict.IndA7
 import ConAgua.Verdict.IndBClm
-import ConAgua.Verdict.IndBE
 import ConAgua.Verdict.IndBGrp
 import ConAgua.Verdict.IndBSum4
 
@@ -80,12 +79,6 @@ theorem checkStructFieldSortsIE_of {p : Prog} (hnv : closedNV p _root_.L.Checker
     exact CoreSpecE.of_callE (checkStructFieldSortsI_claim hkp henv hLC hLT hnv hcE hg hpw het hsc hcfs
       hgo hia hcsf hftd F (by omega) s₀ a₀ isProp large s nP fo fl io il nW fvs idxArgs hC hA hfv hfvb
       hix hixb hs hsP hnW hfvsP hws) hc
-
-theorem classKeyOfE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) :
-    ClassKeyOfE p := by
-  intro L dn fe vis s₀ a₀ nP po pl key pfvs ck hS hpf hpfb hk hP F _hF e hc
-  exact RefE.run_err (classKeyOfE_spec p L F s₀ nP po pl key) hnv hnv
-    (kof_ref dn fe vis F hS hpf hpfb hk hP) hc
 
 /-- **`gen_rec_check`'s claim in the generated shape** (`GenRecCheckE`), from `genRecCheck_claim'`
 and the claims of `classes_nfs`, `target_k53_args` at every stage. -/

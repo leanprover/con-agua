@@ -1,6 +1,5 @@
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.DeclArmAxiom
-import ConAgua.Arena.StageC
 
 /-!
 # The axiom arm under `StageT` (lane `loopt3`, helper `loopt3-axq`)

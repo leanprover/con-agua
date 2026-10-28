@@ -146,7 +146,7 @@ theorem nggE_claim {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageC
     simp only [nitWf] at hnit
     obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, -, hA2⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key
       _ _ (realCall p) (nty_ok L.nit.ty (IlpRd.realC hIlpf hC1)) _
-      (nitLe_realC hcl hLC k _ _ key c _ hC1 hA1 hctxa hkeyP) hnit hS1
+      (nitLe_realC hcl hLC L.nit.hlf k _ _ key c _ hC1 hA1 hctxa hkeyP) hnit hS1
       (hU.grow hg1) hdk hkin hksl hP1
     obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c HI ⟨n0, decI us, ds⟩
       ⟨n0P, usP, dsP⟩ a a2 x hC1.check ⟨hctxa, hkeyP⟩ hrun2
