@@ -1,5 +1,4 @@
 import ConAgua.Arena.DefEqBody
-import ConAgua.Verdict.WhnfNatE
 import ConAgua.Arena.WhnfCoreLoop
 import ConAgua.Arena.InferFieldSortNat
 import ConAgua.Arena.PropReadRefine4

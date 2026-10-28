@@ -3,7 +3,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.LdRd
-import ConAgua.L.ModelGen
 
 /-!
 # `eta_cert` refines `etaCert` (lane `defeq`, helper `defeq-top`)
