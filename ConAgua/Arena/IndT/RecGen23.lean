@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.IndT.RecCheckK53
+import ConAgua.Verdict.IndBK53
 
 /-!
 # `classNodesAgree` under `StageC` (lane `indstaget`, helper `pds`)
@@ -7,7 +7,8 @@ import ConAgua.Arena.IndT.RecCheckK53
 `class_nodes_agree`'s loop (`cnaW`, the callees through the program's `callW`), from `StageC` and
 the inputs' denotations con-ron's `classNodesAgree_spec` asks; its twin side transcribed from that
 spec's proof: `targetPiDomsWith` (`targetPiDomsWith_spec`, a `PSpec`), the field read, then
-`target_k53` (`tkW_okC`, con-ron's `targetK53_spec` on its run for the extension).
+`target_k53` (`tk_ref`'s ok half through the run, con-ron's `targetK53_spec` on its run for the
+extension).
 -/
 
 
@@ -115,16 +116,16 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   obtain ⟨fP, -, hfd⟩ := (ConRon.Bridge.Inductives.denoteEList_getElem? hdoms i.toNat).2 _ hget
   -- `target_k53`
   obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
-  obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (tk_spec p P.k53 (realCall p) (realCall_spec p) k _ vis q fto ftl mc teo tel leaf w) c2
-  simp only at hs2 hw2
-  subst hs2
-  obtain ⟨c, a2, run2, hc, hC2, hg2, hP2, hA2⟩ := tkW_okC hq henv P.k53.tmn.tcm k (by omega) hw2 hC1 hA1 (hbs.grow hg1)
-    (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.1; omega) (hMc.grow (decTM_mono _) hg1)
+  obtain ⟨s2, rfl, -, c, a2, run2, hR2⟩ := RefE.run_okW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (tkE_spec p P.k53 k _ vis q fto ftl mc teo tel leaf w) (tk_ref hq henv k (by omega) hC1 hA1 (hbs.grow hg1)
+    (by rw [decHL_grow hg1 hftb]; exact hft) (by dsimp only; have := hg1.1; omega) (hMc.grow (decTM_mono _) hg1)
     (htl.grow hg1) hl hwH hP1
     (ConRon.Bridge.Inductives.dShape_ext q1.ext _ _ hsh) (denoteEList_ext q1.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dMajor_ext q1.ext _ _ hMcP) (denoteEList_ext q1.ext _ _ htlP)
-    (denote_ext hlP q1.ext) hfd hformer hMs
+    (denote_ext hlP q1.ext) hfd hformer hMs) c2
+  have hc : (r2.headD 0 != 0) = c := hR2.res
+  obtain ⟨-, hC2, hg2, hP2, hA2⟩ := hR2
+  dsimp only at hC2 hg2 hP2 hA2
   have c1' := q1.toCore hC.check
   obtain ⟨c2', -⟩ := ConRon.Bridge.Inductives.targetK53_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv bs pP formerTys formerTysP TM McP tele teleP (decE leaf) (decE w) leafP fP hformer hMs
