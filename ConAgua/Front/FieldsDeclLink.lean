@@ -301,7 +301,7 @@ theorem strCode_link (v : USize) (s : String) (e : USize)
     · simp [QuotR]
     rename_i hesc
     have hesc' := hasEscapeN_eq_zero b _ _ hesc
-    try rw [if_neg hk]
+    try rw [ite_eq_right hk]
     split
     · rename_i hcond
       have := lit 4 4 #[116, 121, 112, 101] "type" (by decide) (by decide) (by decide) (by decide)
