@@ -1,5 +1,5 @@
 import ConAgua.Arena.RecCheckSpec.TargetRecPins
-import ConAgua.Arena.Verdict
+import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Verdict.VCtx
 import ConAgua.Arena.Checker
 import ConAgua.Arena.GrindAttr
