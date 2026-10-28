@@ -580,4 +580,5 @@ Landed as one `checker.s` regeneration. Base: master f3a463b8 (lsugar, lsugar-c 
   cycles 0.983, wall 0.993; `complete_c04a_restart_70` 2.302 → 2.309 s (spread 1 %);
   Init 19.02 → 19.17 s (+0.8 %, spread 2 %). Dense is neutral; the +10 % cycles on `c04a`
   under load 64–70 was noise.
-* `Mem.HasW`, `HasB`, `SameShape` (absarrays batch 8) are untouched.
+* ~~`Mem.HasW`, `HasB`, `SameShape` (absarrays batch 8) are untouched.~~ Looked at 2026-10-28
+  (lane layoutleft) and kept: deleting them does not pay off (absarrays.md §9.4).
