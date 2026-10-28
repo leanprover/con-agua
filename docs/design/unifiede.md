@@ -1320,3 +1320,59 @@ No module is more than 10 % slower.
 
 Batch 2b in all: 14 functions migrated, the pair lines 2 781 + 628 = 3 409 → 1 399 + 291 = 1 690
 (−50 %), plus about 850 lines of hand models and specs and the shared `ihW`/`ihW_okT`.
+
+### 3.18 Batch 3b, first landing (`target_major_of_const`, `target_major_of`, `class_majors`)
+
+Batch 3b's functions (depth 3–5 of §3.1 in the `IndB*` target and class families, callees
+migrated): `target_major_of_const`, `target_major_of`, `class_majors` (this landing);
+`class_rec_tys_ok`, `class_rules_ok`, `class_recs_rules_ok_go`, `class_recs_rules_ok` and
+`target_k53_args`, `target_k53_heads`, `target_k53` in their own landings. Not in 3b:
+`check_abs_ctor_sorts_all` and `check_block_positivity` (block checks, 3c), `check_sum_tele`
+(its callee `check_sum_tele_slow` is 3a's), `classes_nfs` (hand model, §3.3).
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `target_major_of_const` | `tmcW_simC` 95, `tmcE_claim` 117, `tmc_claim` 29 = 241 | `tmc_ref` 86 (`TmoPost`) | −64 % |
+| `target_major_of` | `tmfW_simC` 85, `tmfE_claim` 110, `tmf_claim` 23 = 218 | `tmf_ref` 81 (`TmoPost`) | −63 % |
+| `class_majors` | `clmW_simC` 174, `clmE_claim` 211, `classMajors_claim` 25 = 410 | `clm_ref` 161 + `ClmPost` 7 + `classMajors_claim` 23 = 191 | −53 % |
+| **pairs** | **869** | **358** | **−59 %** |
+
+`classMajors_refinesC` keeps its statement (`RefE.triple`, 27 → 29 lines). Gone with them: the
+hand models `tmcW`/`tmcK1–2`, `tmfW`/`tmfK1–3`/`tmfK6` with their arms and specs `tmc_spec`,
+`tmf_spec` (`Arena/RecGenSpec/Tmc`), the generated ok model `clmW` and `clm_spec`
+(`Arena/RecGenSpec/Clm`), the `errors` models. Whole diff against master d4f85701: +324 −988 in 11
+files.
+
+* **`G`**: `closedNV p nvFns = true` for `target_major_of_const` and `target_major_of` (every callee
+  is lifted or unified under it: `tmmE`, `tmoE`, `tmcE`); `VerdictCtx p` for `class_majors`
+  (`tmp_ref`'s core stubs; `tmf_ref` through `hV.nv`).
+* **Post**: the three `target_major_of*` share `TmoPost` with `tmo_ref`/`tmt_ref` (the member branch
+  `tmm_ref`'s `TmmPost` by `RefE.mono`, its `AFr` to `AbsOK`). `ClmPost` has `class_majors`' five
+  conjuncts as fields.
+* **Callee readings**: `block_shape_member_names`, `sl_find`, `get_app_args_f`, `get_app_fn_f` and
+  `e_view` through `callW_spec` (lifted runs, as `tmoE`); `class_majors`' `intern_const`,
+  `mk_app_n_f` and `sl_cons` through their `Option` models (`internConst_spec`, `mknF_spec`,
+  `slCons_specW`, as `tmpE`), so the stage lemmas (`internConst_stage`, `mknF_ok`, `clsConsW`) take
+  the lifted value directly.
+* **Placement**: the models stay in `Verdict/IndBTmc`, `IndBTmf`, `IndBClm` (now models only, below
+  the refinements); `tmc_ref`/`tmf_ref` next to `tmo_ref` in `Arena/IndT/RecGenTmf`, `clm_ref`,
+  `classMajors_refinesC` and `classMajors_claim` (`RefE.coreSpecE`, for `IndArmE`'s
+  `classMajorsE_of`) in `Arena/IndT/RecGen19`.
+* **Callers** (minimal): `check_block_classes`' ok refinement (`cbcW_simC`, `RecGen21`) and error
+  claim (`BlkE4`) read `clm_ref` through the run (`RefE.run_okW`, `RefE.run_ok`; the post's
+  `(r, s'.mem).snd` needs `dsimp only` before `omega`, §3.2's pitfall).
+* **Recipes**: `simp [Cmp.evalW, Cmp.eval]` for all three models (as the `errors` ones); every
+  proof went through on the first full build.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+d4f85701, load 32–59):
+
+| module | base | new |
+|---|---:|---:|
+| `Verdict/IndBTmc`, `IndBTmf`, `IndBClm` (models) | 5.86 | 4.44 |
+| `Arena/IndT/RecGenTmf`, `RecGen19`, `RecGen21` | 4.82 | 3.96 |
+| `Verdict/BlkE4`, `IndArmE`, `IndBTmm` | 24.01 | 21.29 |
+| `Arena/RecGenSpec/Tmc`, `Clm` (deleted) | 7.56 | — |
+| **sum (11 modules)** | **42.3** | **29.7** |
+
+No module is slower.
