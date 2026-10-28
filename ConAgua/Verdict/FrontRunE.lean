@@ -4,8 +4,8 @@ import ConAgua.Final.TwinVerdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 /-!
-# Error refinements of the frontend's driver: `apply_dline`, `front_line`, `front_run` (lane
-`verdicts-b`, helper `f2`; `apply_ind`'s is `applyInd_ref`'s error half, `FrontPreOK2.lean`)
+# Error refinements of the frontend's driver: `front_line`, `front_run` (lane `verdicts-b`, helper
+`f2`; `apply_dline`'s is `applyDLine_ref`'s error half, `Front/ApplyDLineRef.lean`)
 -/
 
 open ConRon.Arena
@@ -18,9 +18,6 @@ open L.Arena
 set_option experimental.vcgen true
 
 namespace L.Front
-
-l_model applyDLine_specE (p : Prog) (hf : p.lookup "apply_dline" = some applyDLine)
-  fns [hf ↦ applyDLineE] grind [arena_grind] simp [] errors
 
 l_model frontLine_specE (p : Prog) (hf : p.lookup "front_line" = some frontLine)
   fns [hf ↦ frontLineE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] errors
@@ -44,77 +41,6 @@ def SafeLink (b : ByteArray) : Prop :=
   ∀ (j : USize) (r : LineRec) (e : USize) (d : DeclRec),
     scanLineLoop b j true 0 0 .absent = .ok r e → (declLineN b.data j.toUInt64).pl ≠ 0 → r = .decl d →
       DeclSafeR d (declLineN b.data j.toUInt64)
-
-/-- **`apply_dline`'s error model claims the line's verdict**: the record is con-leche's
-(`declLine_link`); an inductive block is `apply_ind`'s claim, any other declaration
-`apply_decl`'s (`applyDecl_refinesE`). -/
-theorem applyDLineE_claim (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p) (hDL : DeclLookups p)
-    (hF : DeclFieldLookups p) (hXI : L.Front.Ind.IndLineLookups p) (hAL : L.Front.Ind.IndApplyLookups p)
-    (hII : L.Front.Ind.IndInstallLookups p)
-    (hnv : NVCls p ["ind_fields", "install_ind_d", "rec_decl_line"]) (hnvD : ApplyDeclNV p)
-    {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (hSL : SafeLink b)
-    {m : Mem} {a : AState} {st : StateD} (hm : m.arr8 IN = b.data)
-    (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a)
-    (hG : L.Front.Ind.ApplyIndG p st a) (j : USize) (r : LineRec) (e' : USize) (hloop : scanLineLoop b j true 0 0 .absent = .ok r e') (n : Nat) :
-    ∀ e, applyDLineE p n m j.toUInt64 = .error e → VerdictClaimR (applyLine st r) a e := by
-  intro e he hk
-  cases n with
-  | zero => simp only [applyDLineE] at he; cases he; exact absurd rfl hk
-  | succ n =>
-  simp only [applyDLineE] at he
-  cases h1 : callE p n "rec_decl_line" [j.toUInt64] m with
-  | error e1 =>
-    rw [h1, applyDLineE.k_rec_decl_line.none] at he; cases he
-    exact absurd (hnv.cls (by simp) h1) hk
-  | ok q1 =>
-  obtain ⟨r1, m₁⟩ := q1
-  rw [h1] at he
-  obtain ⟨s1, hs1, hsm, hr1⟩ :=
-    triple_of_callE (recDeclLine_spec p hF b.data hsize n ⟨m, Locals.init []⟩ hm j.toUInt64) h1
-  subst hr1
-  have hm1 : m₁ = m := by rw [← hs1, hsm]
-  rw [hm1] at he h1
-  generalize hf : declLineN b.data j.toUInt64 = f at he
-  by_cases h0 : f.pl = 0
-  · rw [applyDLineE.k_rec_decl_line.abort1 _ _ _ _ (by simpa [DFld.enc] using h0)] at he
-    cases he; exact absurd rfl hk
-  have hX' : DRecR b r f := by
-    rw [← hf]; exact declLine_link b h64 hsize j true 0 0 .absent DFld.none r e' hloop trivial
-      (by show (declLineN b.data j.toUInt64).pl ≠ 0; rw [hf]; exact h0)
-  rcases r with _ | _ | _ | d | _ | _ <;> simp only [DRecR] at hX'
-  by_cases h25 : f.pl = 25
-  · rw [applyDLineE.k_rec_decl_line.arm1 _ _ _ _ (by simpa [DFld.enc] using h0)
-      (by simpa [DFld.enc] using h25)] at he
-    cases h2 : callE p n "apply_ind" [(f.enc).tail.headD 0] m with
-    | error e2 =>
-      rw [h2, applyDLineE.k_apply_ind.none] at he; cases he
-      cases d with
-      | ind tys cts rcs =>
-        obtain ⟨-, v, hv, e'', hscan⟩ := hX'
-        have h2' : callE p n "apply_ind" [v.toUInt64] m = .error e := by
-          rw [← hv]; simpa [DFld.enc] using h2
-        exact RefC.run_err (L.Front.Ind.applyInd_specE p hXI.apply_ind n ⟨m, Locals.init []⟩ _)
-          (fun _ h0 h => absurd h0 h) hG.nv hG
-          (L.Front.Ind.applyInd_ref hAL hFI hII h64 hsize n hm hA hD hok hscan) h2' hk
-      | ax _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
-      | defn _ _ _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
-      | thm _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
-      | opaq _ _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
-      | quot _ _ => exact absurd (hX'.1.symm.trans h25) (by decide)
-    | ok q2 => obtain ⟨_, _⟩ := q2; rw [h2, applyDLineE.k_apply_ind.arm1] at he; cases he
-  · rw [applyDLineE.k_rec_decl_line.arm2 _ _ _ _ (by simpa [DFld.enc] using h0)
-      (by simpa [DFld.enc] using h25)] at he
-    cases h2 : callE p n "apply_decl" [f.pl, f.name, f.lps, f.type, f.value, f.hk, f.hn, f.flag] m with
-    | error e2 =>
-      simp only [DFld.enc, List.headD_cons, List.tail_cons] at he
-      rw [h2, applyDLineE.k_apply_ind.none] at he; cases he
-      have hS := hSL j (.decl d) e' d hloop (by rw [hf]; exact h0) rfl
-      rw [hf] at hS
-      exact applyDecl_refinesE p hDL hnvD b hsize m hm st a hD f d hX' hS n e h2 hk
-    | ok q2 =>
-      obtain ⟨_, _⟩ := q2
-      simp only [DFld.enc, List.headD_cons, List.tail_cons] at he
-      rw [h2, applyDLineE.k_apply_ind.arm1] at he; cases he
 
 open L.Front.LineRec L.Scan.Line in
 /-- A line `front_line` applies scans forward: `lineFwdN`'s verdict is not `0`. -/
@@ -145,11 +71,9 @@ open L.Front.LineRec in
 scans (`scanLineFwd`, else `front_line` returns `(0, 0)`); `skip_ws`, `line_rec`, `apply_rec`
 and `apply_expr` claim nothing, and `apply_dline`'s failure is the record's (`applyDLineE_claim`). -/
 theorem frontLineE_claim (p : Prog) (hS : ScanLookups p) (hFI : L.Front.Ind.IndFieldLookups p)
-    (hDL : DeclLookups p) (hF : DeclFieldLookups p) (hXI : L.Front.Ind.IndLineLookups p)
-    (hAL : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hpz : p.lookup "apply_dline" = some applyDLine)
-    (hnv : NVCls p ["ind_fields", "install_ind_d", "rec_decl_line", "apply_rec", "apply_expr",
-      "line_rec", "skip_ws"]) (hnvD : ApplyDeclNV p)
+    (hXI : DLineLookups p) (hAL : L.Front.Ind.IndApplyLookups p)
+    (hII : L.Front.Ind.IndInstallLookups p)
+    (hnv : NVCls p ["apply_rec", "apply_expr", "line_rec", "skip_ws"])
     {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (hSL : SafeLink b)
     {m : Mem} {a : AState} {st : StateD} (hm : m.arr8 IN = b.data)
     (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a)
@@ -293,10 +217,10 @@ theorem frontLineE_claim (p : Prog) (hS : ScanLookups p) (hFI : L.Front.Ind.IndF
       · cases hsc'
   subst hrr
   rw [← succ_toUInt64 h64] at h5
-  exact applyDLineE_claim p hFI hDL hF hXI hAL hII
-    (fun g hg => hnv g (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hg ⊢; rcases hg with rfl | rfl | rfl <;> simp))
-    hnvD h64 hsize hSL hm hA hD hok hG (s + 1) r' j hloop n e
-    (triple_of_callE_err (applyDLine_specE p hpz n ⟨m, Locals.init []⟩ _) h5 (Err.code_ne_of_cls hk))
+  exact RefC.run_err (applyDLine_specE p hXI.apply_dline hXI.apply_ind hAL.decl.apply_decl
+      hAL.decl.decl_kind n ⟨m, Locals.init []⟩ _) (fun _ h0 h => absurd h0 h) hG.nv
+    ⟨hG, fun h0 d hd => hSL (s + 1) r' j d hloop h0 hd⟩
+    (applyDLine_ref hXI.dfields hAL.decl hAL hFI hII h64 hsize n hm hA hD hok hloop) h5
 
 end L.Front
 
@@ -378,9 +302,7 @@ theorem NVCls.mono {p : Prog} {fs gs : List FnName} (h : NVCls p fs) (hs : ∀ g
     NVCls p gs := fun g hg => h g (hs g hg)
 
 /-- The frontend's callees outside the verdict closure. -/
-def frontNV : List FnName := ["ind_fields", "install_ind_d", "rec_decl_line", "apply_rec",
-  "apply_expr", "line_rec", "skip_ws", "front_init",
-  "decl_cv", "expr_get", "decl_push"]
+def frontNV : List FnName := ["apply_rec", "apply_expr", "line_rec", "skip_ws", "front_init"]
 
 theorem frontNV_nv : ∀ f ∈ frontNV, f ∈ L.Checker.nvFns :=
   _root_.L.Checker.nv_sub (by decide +kernel)
@@ -392,12 +314,6 @@ theorem frontAll_nvcls : NVCls frontAllProg frontNV := by
   intro g hg n args m e h
   rw [callE_frontAll (frontNV_front g hg)] at h
   exact callE_nv L.Checker.checkerProg_nv (frontNV_nv g hg) n args m h
-
-theorem frontAll_nvD : ApplyDeclNV frontAllProg := by
-  intro f hf n args m e h
-  refine frontAll_nvcls f ?_ n args m e h
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
-  rcases hf with rfl | rfl | rfl <;> decide
 
 end L.Front
 
@@ -415,9 +331,8 @@ theorem frontLineE_claim_all (n : Nat) (m : Mem) (a : AState) (st : StateD)
     ∃ r q, scanLineFwd b i = .ok r q ∧ VerdictClaimR (applyLine st r) a e := by
   obtain ⟨⟨hm, hA, hD, hT, -⟩, -, -⟩ := hI
   obtain ⟨r, q, hs, hc⟩ := frontLineE_claim frontAllProg frontAllProg_scan frontAllProg_indFields
-    frontAllProg_decl frontAllProg_dfields frontAllProg_indLine frontAllProg_indApply
-    frontAllProg_indInstall rfl (frontAll_nvcls.mono (by decide))
-    frontAll_nvD h64 hsize hSL hm hA hD hT.1 ⟨L.Front.Ind.frontAllProg_nv, L.Front.Ind.xOfTwin D a st hT⟩
+    frontAllProg_dline frontAllProg_indApply frontAllProg_indInstall (frontAll_nvcls.mono (by decide))
+    h64 hsize hSL hm hA hD hT.1 ⟨L.Front.Ind.frontAllProg_nv, L.Front.Ind.xOfTwin D a st hT⟩
     i hi n e he hk
   exact ⟨r, q, hs, claimR_of_pre D hc⟩
 
@@ -467,12 +382,12 @@ theorem loop1_claim : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : Stat
   obtain ⟨r1, m₁⟩ := q1
   rw [h1] at he
   have hK := triple_of_callE (frontLineK_spec frontAllProg frontAllProg_scan frontAllProg_front rfl
-      rfl rfl rfl rfl rfl frontAllProg_expr frontAllProg_dfields frontAllProg_decl rfl
+      rfl rfl rfl rfl rfl frontAllProg_expr
       b.data hsize (fun m => ∃ a st, FrontInvOK D b m a st)
       (fun m ⟨_, _, hI⟩ => ⟨hI.1.2.1.1.lit.1.cap, hI.1.2.1.1.lit.1.top⟩)
       (inv_step frontAllProg (FrontInvOK D b) b h64 hsize
         (fun m m' i ok nx st a hI hi h hok => lineKW_step_ok D b h64 hsize frontAllProg
-          frontAllProg_indFields frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine
+          frontAllProg_indFields frontAllProg_indApply frontAllProg_indInstall frontAllProg_dline
           m m' i ok nx st a hI hi h hok)) n ⟨m, Locals.init []⟩ i.toUInt64 hm ⟨a, st, hI⟩ hlt') h1
   obtain ⟨s1, hs1, hK1, -, -, -⟩ := hK
   rw [hs1] at hK1
@@ -485,7 +400,7 @@ theorem loop1_claim : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : Stat
   rw [frontRunE.k_front_line.arm4 _ _ _ _ _ _ h0 hnx hle] at he
   obtain ⟨r, q, st', hs, hq, hok', hres, hInv⟩ :=
     lineKW_step_ok D b h64 hsize frontAllProg frontAllProg_indFields frontAllProg_indApply
-      frontAllProg_indInstall frontAllProg_indLine m m₁ i _ _ st a hI hi hK1 h0
+      frontAllProg_indInstall frontAllProg_dline m m₁ i _ _ st a hI hi hK1 h0
   have hrun := AM.run_of_ok _ _ hok'
   rw [hres] at hrun
   have hq0 : q ≠ 0 := by

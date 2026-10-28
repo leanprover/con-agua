@@ -33,8 +33,9 @@ The functions:
 * `apply_decl(pl, name, lps, type, value, hk, hn, flag)`: the fields of `DeclIface.lean`; in
   con-ron's order, `decl_cv` first, then `decl_kind` (its declines), the value, the push.
 
-Each spec is an equation about a named `Option` model; the refinement is in
-`ApplyDeclRefine.lean`.
+Each spec of the callees is an equation about a named `Option` model. `decl_kind` and
+`apply_decl` have unified models and one refinement each (`declKind_ref`, `applyDecl_ref`,
+`ApplyDLineRef.lean`); the record they write is `declCvW`'s (`ApplyDeclRefine.lean`).
 -/
 
 set_option experimental.vcgen true
@@ -162,16 +163,6 @@ def declKind : FunDecl := lfn (pl, hk, hn, flag) {
   abort
 }
 
-/-- The model of `decl_kind`: the kind and the hint word, `none` where it aborts. -/
-def declKindW (pl hk hn flag : Word) : Option (Word × Word) :=
-  if pl = 20 then (if flag = 0 then some (1, 0) else none)
-  else if pl = 21 then
-    (if flag = 1 ∧ hk ≠ 0 ∧ hk ≤ 3 ∧ ¬ (hk = 3 ∧ hn = NONE) then some (2, hk) else none)
-  else if pl = 22 then some (3, 0)
-  else if pl = 23 then (if flag = 0 then some (4, 0) else none)
-  else if pl = 24 then (if flag ≠ 0 ∧ flag ≤ 4 then some (5, flag) else none)
-  else none
-
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD -/
 def declPush : FunDecl := lfn (k, n, o, l, t, v, q, h) locals (c, x) {
   if len(DECL.u64) == 0 { abort };
@@ -243,30 +234,23 @@ def declK1 (k q n t o l hn value : Word) : Option Mem → Option Mem
         (if tblOK m₁ EID value = true then pushW m₁ k n o l t (tblW m₁ EID value) q hn else none)
       else pushW m₁ k n o l t 0 q hn := rfl
 
-/-- The record after `decl_kind` returned `(k, q)`: `decl_cv`'s common data, the value, the push.
-(`apply_decl` runs `decl_cv` before `decl_kind`, as con-ron's `parseCVD` before the safety
-declines; `decl_kind` reads no memory, so the order does not show in this `Option` model.) -/
+/-- The record after `decl_kind` returned `(k, q)`: `decl_cv`'s common data, the value, the push
+(what `apply_decl`'s refinement, `applyDecl_ref`, reads off the runs of its callees). -/
 def declCvW (b : Array UInt8) (m : Mem) (k q name lps type value hn : Word) : Option Mem :=
   if tblOK m NID name = true ∧ tblOK m EID type = true then
     declK1 k q (tblW m NID name) (tblW m EID type) (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0)
       hn value (lpPutW b m lps)
   else none
 
-/-- After `decl_kind`. -/
-def declK0 (b : Array UInt8) (m : Mem) (name lps type value hn : Word) :
-    Option (Word × Word) → Option Mem
-  | none => none
-  | some (k, q) => declCvW b m k q name lps type value hn
-
-@[arena_grind =] theorem declK0_none (b : Array UInt8) (m : Mem) (name lps type value hn : Word) :
-    declK0 b m name lps type value hn none = none := rfl
-@[arena_grind =] theorem declK0_some (b : Array UInt8) (m : Mem) (name lps type value hn k q : Word) :
-    declK0 b m name lps type value hn (some (k, q)) = declCvW b m k q name lps type value hn := rfl
-
-/-- **The model of `apply_decl`.** -/
-def applyDeclW (b : Array UInt8) (m : Mem) (pl name lps type value hk hn flag : Word) :
-    Option Mem :=
-  declK0 b m name lps type value hn (declKindW pl hk hn flag)
+/-- `decl_cv` ran: the rest is `declK1` on its memory. -/
+theorem declCvW_of_cv {b : Array UInt8} {m m₁ : Mem} {name lps type : Word}
+    (h : cvW b m name lps type = some m₁) (k q value hn : Word) :
+    declCvW b m k q name lps type value hn = declK1 k q (tblW m NID name) (tblW m EID type)
+      (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0) hn value (some m₁) := by
+  unfold cvW at h
+  split at h
+  · rename_i hok; simp only [declCvW, ite_eq_left hok, h]
+  · cases h
 
 /-! ## The program -/
 
@@ -367,18 +351,6 @@ theorem lpPut_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         lpLoop_step_spec p hE b hb n] <;> finish [lpPutW]
 
-theorem declKind_spec (n : Nat) (s₀ : St) (pl hk hn flag : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "decl_kind" [pl, hk, hn, flag]
-    ⦃fun r s' => s' = s₀ ∧ declKindW pl hk hn flag = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hE.decl_kind]
-  simp only [callFn, declKind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc] <;> finish [declKindW, NONE]
-
 theorem declPush_spec (n : Nat) (s₀ : St) (k nm o l t v q h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "decl_push" [k, nm, o, l, t, v, q, h]
@@ -406,40 +378,6 @@ theorem declCv_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : S
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nameGet_spec p hE.expr.front n,
         exprGet_spec p hE.expr n, lpPut_spec p hE b hb n] <;>
       finish [cvW]
-
-omit hE in
-/-- `apply_decl`'s order (`decl_cv`, then `decl_kind`) gives `applyDeclW`. -/
-theorem applyDeclW_cv (b : Array UInt8) (m m₁ : Mem) (pl name lps type value hk hn flag : Word)
-    (h : cvW b m name lps type = some m₁) :
-    applyDeclW b m pl name lps type value hk hn flag =
-      match declKindW pl hk hn flag with
-      | none => none
-      | some (k, q) => declK1 k q (tblW m NID name) (tblW m EID type) (rdW (m.arr64 DLP) 0)
-          (lsCntN b (lps + 1) 0) hn value (some m₁) := by
-  unfold cvW at h
-  split at h
-  · rename_i hok
-    unfold applyDeclW
-    cases declKindW pl hk hn flag with
-    | none => rfl
-    | some kq => obtain ⟨k, q⟩ := kq; simp only [declK0, declCvW, ite_eq_left hok, h]
-  · cases h
-
-theorem applyDecl_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (pl name lps type value hk hn flag : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "apply_decl" [pl, name, lps, type, value, hk, hn, flag]
-    ⦃fun _ s' => LocEq s' s₀ ∧
-      applyDeclW b s₀.mem pl name lps type value hk hn flag = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hE.apply_decl]
-  simp only [callFn, applyDecl]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, declCv_spec p hE b hb n,
-        declKind_spec p hE n, exprGet_spec p hE.expr n, declPush_spec p hE n] <;>
-      finish [applyDeclW_cv]
 
 end specs
 

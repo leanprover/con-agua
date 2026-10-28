@@ -11,7 +11,7 @@ an inductive record's block offset (word `2`) and pointer words are nonzero (`L.
 This file and the next two show what one applied line does to `DECL` and `DLP` (`DGrow`): the old
 records' words and the pool below its old top stay, and a new record (at most one) has such words.
 A name, level or expression line leaves both arrays alone (`DK`, `lineRecW_dk`, `applyExprW_dk`); a
-declaration line appends one record of table handles (`applyDeclW_grow`).
+declaration line appends one record of table handles (`declCvW_grow`).
 -/
 
 open L.Arena
@@ -256,15 +256,11 @@ theorem applyExprW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)
   · exact DK.putK (.inr (.inr rfl)) (fun w m₁ hI => nodeW_dk hI) h
   · cases h
 
-/-- **A declaration line appends one record of table handles.** -/
-theorem applyDeclW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : StateDR m st)
-    (pl name lps type value hk hn flag : Word)
-    (h : applyDeclW b m pl name lps type value hk hn flag = some m') : DGrow m m' := by
-  unfold applyDeclW at h
-  rcases hK : declKindW pl hk hn flag with _ | ⟨k, q⟩ <;> simp only [hK, declK0, reduceCtorEq] at h
-  have hk5 : k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 := by
-    rcases declKindW_some _ _ _ _ _ _ hK with ⟨-, -, h⟩ | ⟨-, -, h, -⟩ | ⟨-, h⟩ | ⟨-, -, h⟩ | ⟨-, h, -⟩ <;>
-      simp [h]
+/-- **A declaration line appends one record of table handles** (`declCvW`, the record
+`apply_decl` writes after `decl_kind`'s `(k, q)`). -/
+theorem declCvW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : StateDR m st)
+    {k q : Word} (hk5 : k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5) (name lps type value hn : Word)
+    (h : declCvW b m k q name lps type value hn = some m') : DGrow m m' := by
   have hk6 : k ≠ 6 := by rcases hk5 with rfl | rfl | rfl | rfl | rfl <;> decide
   unfold declCvW at h
   have hok : tblOK m NID name = true ∧ tblOK m EID type = true :=
@@ -310,5 +306,35 @@ theorem applyDeclW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : State
     subst hx
     refine ⟨fun _ => ⟨by rw [w1]; exact hwn, by rw [w4]; exact hwt, by rw [w5]; exact hv⟩,
       fun h6 => absurd (w0.symm.trans h6) hk6⟩
+
+/-- A declaration line keeps the mode: it writes `DLP` and `DECL` only. -/
+theorem declCvW_mode (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : StateDR m st)
+    (k q name lps type value hn : Word)
+    (h : declCvW b m k q name lps type value hn = some m') (hmo : ModeOK m) : ModeOK m' := by
+  unfold declCvW at h
+  have hok : tblOK m NID name = true ∧ tblOK m EID type = true :=
+    Classical.byContradiction fun hok => by simp [hok] at h
+  simp only [hok, and_self, ↓reduceIte] at h
+  rcases hP : lpPutW b m lps with _ | m₁ <;> simp only [hP, declK1, reduceCtorEq] at h
+  have hDR := hD.decls
+  unfold lpPutW at hP
+  split at hP; cases hP
+  have hps := hDR.psize
+  have hptop := hDR.ptop
+  have hrd : rdW (m.arr64 DLP) 0 = (m.arr64 DLP)[0]?.getD 0 := rfl
+  obtain ⟨-, F2, -⟩ := lpLoopM_facts b (rdW (m.arr64 DLP) 0) m (lps + 1) 0 m₁
+    hP (by rw [hrd]; simp; omega) hps
+  have hm'D : m₁.arr64 DECL = m.arr64 DECL := F2.1 DECL (by decide) (by decide)
+  have hpush : ∃ v, pushW m₁ k (tblW m NID name) (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0)
+      (tblW m EID type) v q hn = some m' := by
+    split at h
+    · split at h
+      · exact ⟨_, h⟩
+      · cases h
+    · exact ⟨0, h⟩
+  obtain ⟨v, hpu⟩ := hpush
+  have hds : (m₁.arr64 DECL).size < 2 ^ 63 := by rw [hm'D]; exact hDR.dsize
+  obtain ⟨G1, -⟩ := pushW_facts m₁ m' _ _ _ _ _ _ _ _ _ rfl hpu hds
+  exact MemFrame.modeOK G1 (by simp) (by simp) (MemFrame.modeOK F2 (by simp) (by simp) hmo)
 
 end L.Front

@@ -1,5 +1,4 @@
-import ConAgua.Front.IndApplySpec3
-import ConAgua.Front.FrontPreOK2
+import ConAgua.Front.ApplyDLineRef
 import ConAgua.Scan.LineLink
 import Std.Tactic.BVDecide.Normalize.Prop
 
@@ -175,44 +174,11 @@ theorem applyLine_expr (st : StateD) (a₀ : AState) (i : Nat) (r : ExprRec)
     (Sum.inl : StateD → StateD ⊕ RecordVerdict) a₀ h
   exact ⟨h1, h3, h2⟩
 
-omit h64 hsize in
-/-- A declaration line keeps the mode: it writes `DLP` and `DECL` only. -/
-theorem applyDeclW_mode (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : StateDR m st)
-    (pl name lps type value hk hn flag : Word)
-    (h : applyDeclW b m pl name lps type value hk hn flag = some m') (hmo : ModeOK m) : ModeOK m' := by
-  unfold applyDeclW at h
-  rcases hK : declKindW pl hk hn flag with _ | ⟨k, q⟩ <;> simp only [hK, declK0, reduceCtorEq] at h
-  unfold declCvW at h
-  have hok : tblOK m NID name = true ∧ tblOK m EID type = true :=
-    Classical.byContradiction fun hok => by simp [hok] at h
-  simp only [hok, and_self, ↓reduceIte] at h
-  rcases hP : lpPutW b m lps with _ | m₁ <;> simp only [hP, declK1, reduceCtorEq] at h
-  have hDR := hD.decls
-  unfold lpPutW at hP
-  split at hP; cases hP
-  have hps := hDR.psize
-  have hptop := hDR.ptop
-  have hrd : rdW (m.arr64 DLP) 0 = (m.arr64 DLP)[0]?.getD 0 := rfl
-  obtain ⟨-, F2, -⟩ := lpLoopM_facts b (rdW (m.arr64 DLP) 0) m (lps + 1) 0 m₁
-    hP (by rw [hrd]; simp; omega) hps
-  have hm'D : m₁.arr64 DECL = m.arr64 DECL := F2.1 DECL (by decide) (by decide)
-  have hpush : ∃ v, pushW m₁ k (tblW m NID name) (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0)
-      (tblW m EID type) v q hn = some m' := by
-    split at h
-    · split at h
-      · exact ⟨_, h⟩
-      · cases h
-    · exact ⟨0, h⟩
-  obtain ⟨v, hpu⟩ := hpush
-  have hds : (m₁.arr64 DECL).size < 2 ^ 63 := by rw [hm'D]; exact hDR.dsize
-  obtain ⟨G1, -⟩ := pushW_facts m₁ m' _ _ _ _ _ _ _ _ _ rfl hpu hds
-  exact MemFrame.modeOK G1 (by simp) (by simp) (MemFrame.modeOK F2 (by simp) (by simp) hmo)
-
 /-- **The fields after a line's `{`, applied**: on the record con-leche's line loop reads there,
 `apply_any`'s model is con-ron's `applyLine`. -/
 theorem applyAnyW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState)
+    (hXI : DLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState)
     (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st) (hmode : ModeOK m)
     (hok : ConRon.Bridge.StateOK a₀)
     (j : USize) (r : LineRec) (e : USize)
@@ -234,45 +200,16 @@ theorem applyAnyW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     obtain ⟨hok, hA', hD', hM'⟩ := applyExprW_refines b h64 hsize m m' a₀ st hR hD hmode f i er hI hE h
     obtain ⟨h1, h2, h3⟩ := applyLine_expr st a₀ i er hok
     exact ⟨_, h1, h2, by rw [h3]; exact hA', hD', hM'⟩
-  · unfold applyDLineW at h
-    split at h
-    · cases h
-    rename_i _ _ hpl
-    have hX : (declLineN b.data j.toUInt64).pl ≠ 0 → DRecR b r (declLineN b.data j.toUInt64) :=
-      declLine_link b h64 hsize j true 0 0 .absent DFld.none r e hloop trivial
-    replace hX := hX hpl
-    generalize declLineN b.data j.toUInt64 = f at hX h
-    rcases r with _ | _ | _ | d | _ | _ <;> simp only [DRecR] at hX
-    split at h
-    · -- an inductive block: `apply_ind`'s run, its model, the twin's `.ind` arm
-      rename_i h25
-      cases d with
-      | ind tys cts rcs =>
-        obtain ⟨-, v, hv, e', hscan⟩ := hX
-        obtain ⟨x, hx, hxm⟩ := runF_some h
-        have hW := M.of_run' (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
-          (L.Front.Ind.applyInd_specE p hXI.apply_ind x.1 _ f.name)
-        rw [hxm, hv] at hW
-        have hP := L.Front.Ind.applyInd_ref hAI hFI hII h64 hsize x.1 hm hR hD hok hscan
-        rw [hW.2] at hP
-        obtain ⟨⟨st', h1, h3⟩, h2, h4, -⟩ := hP
-        have h1' : (applyLine st (.decl (.ind tys cts rcs))).run a₀ = .ok (.inl st', a₀) := h1
-        refine ⟨st', by simp [AM.ok, h1'], by simp [AM.res, h1'], by simp [AM.st, h1']; exact h2, h3,
-          h4 hmode⟩
-      | ax _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-      | defn _ _ _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-      | thm _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-      | opaq _ _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-      | quot _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-    obtain ⟨st', h1, h2, h3, hA', hD'⟩ := applyDeclW_refinesAM b m m' a₀ st hR hD f d hX h
-    refine ⟨st', h1, ?_, by rw [h3]; exact hA', hD', applyDeclW_mode b.data m m' st hD _ _ _ _ _ _ _ _ h hmode⟩
-    simp only [AM.res, h2]
+  · obtain ⟨⟨st', h1, h3⟩, h2, h4, -⟩ :=
+      applyDLine_runF hXI hAI hFI hII h64 hsize hm hR hD hok hloop h
+    refine ⟨st', by simp [AM.ok, h1], by simp [AM.res, h1], by simp [AM.st, h1]; exact h2, h3,
+      h4 hmode⟩
 
 /-- **`front_line`'s model refines con-ron's per-line step**: a line it accepts (`(1, nx)`) is one
 con-leche's scanner reads and con-ron's `applyLine` applies, with `ArenaD` and `StateDR` after. -/
 theorem frontLineW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (i : USize)
+    (hXI : DLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (i : USize)
     (a₀ : AState) (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st) (hmode : ModeOK m)
     (hsok : ConRon.Bridge.StateOK a₀) (nx : Word)
     (h : frontLineW p b.data m i.toUInt64 = some ([1, nx], m')) :
@@ -359,10 +296,9 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
     (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
     (hpl : p.lookup "apply_level" = some applyLevel) (hpr : p.lookup "apply_rec" = some applyRec)
     (hpt : p.lookup "apply_str" = some applyStr) (hE : ExprLookups p)
-    (hF : DeclFieldLookups p) (hDL : DeclLookups p)
-    (hpz : p.lookup "apply_dline" = some applyDLine) (hFI : L.Front.Ind.IndFieldLookups p)
+    (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+    (hXI : DLineLookups p) (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
     (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data) (i : USize) (hi : i.toNat ≤ b.size)
     (a₀ : AState) (st : StateD) (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st)
     (hmode : ModeOK s₀.mem) (hok : ConRon.Bridge.StateOK a₀) :
@@ -372,7 +308,7 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   apply M.triple_of_run
   intro s r s' hs hrun
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
-    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz b.data hsize n s₀ hm i.toUInt64
+    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE b.data hsize n s₀ hm i.toUInt64
       (by rw [USize.toNat_toUInt64]; exact hi) hR.1.lit.1.cap hR.1.lit.1.top)
   intro nx hr
   subst hr

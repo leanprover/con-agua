@@ -24,7 +24,7 @@ include h64 hsize
 /-- **`apply_any`'s model is `DGrow`.** -/
 theorem applyAnyW_grow (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState)
+    (hXI : DLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState)
     (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a₀)
     (j : USize) (r : LineRec) (e : USize)
     (hloop : scanLineLoop b j true 0 0 .absent = .ok r e)
@@ -34,36 +34,12 @@ theorem applyAnyW_grow (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
   · exact (lineRecW_dk _ _ _ _ _ _ _ _ h).grow
   split at h
   · exact (applyExprW_dk _ _ _ _ _ _ _ _ h).grow
-  · unfold applyDLineW at h
-    split at h; cases h; rename_i _ _ hpl
-    have hX : (declLineN b.data j.toUInt64).pl ≠ 0 → DRecR b r (declLineN b.data j.toUInt64) :=
-      declLine_link b h64 hsize j true 0 0 .absent DFld.none r e hloop trivial
-    replace hX := hX hpl
-    generalize declLineN b.data j.toUInt64 = f at hX h
-    split at h
-    · rename_i h25
-      rcases r with _ | _ | _ | d | _ | _ <;> simp only [DRecR] at hX
-      cases d with
-      | ind tys cts rcs =>
-        obtain ⟨-, v, hv, e', hscan⟩ := hX
-        obtain ⟨x, hx, hxm⟩ := runF_some h
-        have hW := M.of_run' (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
-          (L.Front.Ind.applyInd_specE p hXI.apply_ind x.1 _ f.name)
-        rw [hxm, hv] at hW
-        have hP := L.Front.Ind.applyInd_ref hAI hFI hII h64 hsize x.1 hm hR hD hok hscan
-        rw [hW.2] at hP
-        exact hP.grow
-      | ax _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-      | defn _ _ _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-      | thm _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-      | opaq _ _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-      | quot _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
-    · exact applyDeclW_grow _ _ _ st hD _ _ _ _ _ _ _ _ h
+  · exact (applyDLine_runF hXI hAI hFI hII h64 hsize hm hR hD hok hloop h).grow
 
 /-- **`front_line`'s model is `DGrow`.** -/
 theorem frontLineW_grow (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (i : USize)
+    (hXI : DLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (i : USize)
     (a₀ : AState) (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st)
     (hsok : ConRon.Bridge.StateOK a₀) (r : List Word)
     (h : frontLineW p b.data m i.toUInt64 = some (r, m')) : DGrow m m' := by
@@ -105,7 +81,7 @@ theorem frontLineW_grow (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
 
 theorem lineKW_grow (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (i : USize)
+    (hXI : DLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (i : USize)
     (a₀ : AState) (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st)
     (hsok : ConRon.Bridge.StateOK a₀) (ok nx : Word)
     (h : lineKW p b.data m i.toUInt64 = some (ok, nx, m')) : DGrow m m' := by

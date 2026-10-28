@@ -147,15 +147,6 @@ def lineRecW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
   else if pl = 2 then applyNNumW m idx a c
   else applyLevelW m idx (pl - 2) a c
 
-/-- The model of `apply_dline(j)`: an inductive block is `apply_ind`'s run in `p` (`runF`: its
-own model carries a fuel index, `IndApplySpec3.lean`). -/
-noncomputable def applyDLineW (p : Prog) (b : Array UInt8) (m : Mem) (j : Word) : Option Mem :=
-  if (declLineN b j).pl = 0 then none
-  else if (declLineN b j).pl = 25 then runF p "apply_ind" [(declLineN b j).name] m
-  else applyDeclW b m (declLineN b j).pl (declLineN b j).name (declLineN b j).lps
-    (declLineN b j).type (declLineN b j).value (declLineN b j).hk (declLineN b j).hn
-    (declLineN b j).flag
-
 /-- The model of `apply_any(j)`. -/
 noncomputable def applyAnyW (p : Prog) (b : Array UInt8) (m : Mem) (j : Word) : Option Mem :=
   if (recLineN b j).pl ≠ 0 then
@@ -164,7 +155,7 @@ noncomputable def applyAnyW (p : Prog) (b : Array UInt8) (m : Mem) (j : Word) : 
   else if (exprLineN b j).pl ≠ 0 then
     applyExprW b m (exprLineN b j).pl (exprLineN b j).idx (exprLineN b j).a (exprLineN b j).c
       (exprLineN b j).d
-  else applyDLineW p b m j
+  else runF p "apply_dline" [j] m
 
 /-- The model of `front_line(i)`. -/
 noncomputable def frontLineW (p : Prog) (b : Array UInt8) (m : Mem) (i : Word) : Option (List Word × Mem) :=
@@ -180,7 +171,7 @@ open L.Front.LineRec in
 /-- The record of a line that scans, applied as `front_line` dispatches on `pl`. -/
 noncomputable def lineApplyW (p : Prog) (b : Array UInt8) (m : Mem) (j : Word) (r : LRS) :
     Option Mem :=
-  if r.f.pl = 0 then applyDLineW p b m j
+  if r.f.pl = 0 then runF p "apply_dline" [j] m
   else if r.f.pl ≤ 7 then lineRecW b m r.f.pl r.f.idx r.f.a r.f.c r.f.d
   else applyExprW b m r.f.pl r.f.idx r.f.a r.f.c r.f.d
 
@@ -320,14 +311,13 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hpl : p.lookup "apply_level" = some applyLevel)
   (hpr : p.lookup "apply_rec" = some applyRec) (hpt : p.lookup "apply_str" = some applyStr)
   (hE : ExprLookups p)
-  (hF : DeclFieldLookups p) (hDL : DeclLookups p) (hpz : p.lookup "apply_dline" = some applyDLine)
   (b : Array UInt8) (hb : b.size < 2 ^ 63)
-include hS hL hpf hps hpn hpu hpl hpr hpt hE hF hDL hpz hb
+include hS hL hpf hps hpn hpu hpl hpr hpt hE hb
 
 attribute [local lang_grind =] map_okRes
 
 omit hb in
-omit hpf hps hpu hpl hpr hF hDL hpz in
+omit hpf hps hpu hpl hpr in
 theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
     (idx a c d : Word) :
@@ -351,7 +341,7 @@ theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
         applyNStr_spec p hL hpn n] <;> finish [applyStrW, Keep.size]
 
 omit hb in
-omit hpf hps hF hDL hpz in
+omit hpf hps in
 theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
     (pl idx a c d : Word) :
@@ -367,21 +357,6 @@ theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         applyStr_spec p hS hL hpn hpt hE b n,
         applyNNum_spec p hL hpu n, applyLevel_spec p hL hpl n] <;> finish [lineRecW, NONE]
-
-omit hS hL hpf hps hpn hpu hpl hpr hpt hE in
-theorem applyDLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "apply_dline" [j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ applyDLineW p b s₀.mem j = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hpz]
-  simp only [callFn, applyDLine]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        recDeclLine_spec p hF b hb n, applyDecl_spec p hDL b hb n, runF_spec p "apply_ind" _ n] <;>
-        finish [applyDLineW, DFld.enc]
 
 omit hps in
 theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
@@ -404,7 +379,7 @@ theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
         applyRec_spec p hS hL hpn hpu hpl hpr hpt hE b n,
         applyExpr_spec p hE b hb (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "esc_sur") (hS.get "esc_one")
           (hS.get "utf8_put") (hS.get "str_put_esc") n,
-        applyDLine_spec p hF hDL hpz b hb n] <;>
+        runF_spec p "apply_dline" _ n] <;>
         finish [frontLine2W, lineEndW, lineApplyW, okRes, L.Front.LineRec.LRS.enc,
           L.Front.LineRec.lineRecEntryN_le]
 
