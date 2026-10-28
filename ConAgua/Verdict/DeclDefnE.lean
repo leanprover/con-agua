@@ -7,7 +7,7 @@ import ConAgua.Arena.GrindAttr
 
 From the arm's refinement for both outcomes (`cdf_ref`, `Arena/DeclDefnT.lean`): the constant
 check, the definition check and the two gates' failures claim the twin's `checkDecl` failure. The
-pin gate's error claim (`DivGateSpecE`) is a hypothesis here (`DeclGatesE2.lean` proves it).
+pin gate's error claim (`DivGateSpecE`) is a hypothesis here (`dg_ref`'s error half, `DeclDivGateT.lean`).
 -/
 
 set_option experimental.vcgen true

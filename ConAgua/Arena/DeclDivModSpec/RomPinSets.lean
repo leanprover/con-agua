@@ -4,7 +4,6 @@ import ConAgua.Arena.DeclPins
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # RomPinSets
@@ -161,12 +160,6 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
   exact Array.getElem?_eq_getElem hlt
 
 /-! ## `defn_div_gate` -/
-
-/-- **`defn_div_gate` is its model `dgW`** (generated). -/
-l_model dg_specW (p : Prog) (hp : p.lookup "defn_div_gate" = some defnDivGate)
-  fns [hp ↦ dgW list]
-  specs [callW_spec p n "nat_div_mod_names", callW_spec p n "sl_contains", callW_spec p n "rom_pin_sets", callW_spec p n "check_div_mod_pin"]
-  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
 
 /-- The gate and its callees. -/
 def dgFns : List FnName :=

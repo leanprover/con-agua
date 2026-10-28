@@ -1,13 +1,11 @@
 import ConAgua.Arena.DeclDivModSpec.DivModTypePins
-import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # DecCIDefnValue
 
-`PinsIW`, `PinsIW.grow`, `loop_specW`, `loopW`, `decCI_defn_value`, `cp_specW`.
+`PinsIW`, `PinsIW.grow`, `decCI_defn_value`.
 -/
 
 set_option experimental.vcgen true
@@ -20,8 +18,6 @@ open L.Rom (PinSetR)
 namespace L.Ind
 
 open L.Arena
-
-local notation "V" => ConLeche.CheckMode.verified
 
 /-- **The variant slice**: `IW[o ‥ o + l]` holds pointers to the 40-word records of the variants
 `ips`, in order. -/
@@ -36,22 +32,6 @@ theorem PinsIW.grow {m m' : Mem} {o l : Nat} {ips : List INatOpPinSet} (h : Pins
   obtain ⟨ps, hp, hP⟩ := h3 j hj
   refine ⟨ps, ?_, PinSetR.grow hP hg⟩
   simp only [iwA] at hp ⊢; rw [hg.2.2.1 _ (by omega)]; exact hp
-
-section loop
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
-
-/-- **`check_div_mod_pin_loop` is its model `loopW`** (generated). -/
-l_model loop_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_loop" = some checkDivModPinLoopL)
-  fns [hp ↦ loopW list]
-  specs [callW_spec p n "div_mod_pin_guard", callW_spec p n "div_mod_certs_guard", callW_spec p n "check_div_mod_pin_at", callW_spec p n "check_div_mod_pin_loop"]
-  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 3200000 bind ntBW instances 10000
-
-end loop
-
-end L.Ind
-
-namespace L.Ind
-open L.Arena
 
 theorem decCI_defn_value {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {cv : IConstantVal} {v : EIdx} {hint : ConLeche.ReducibilityHint}
@@ -80,18 +60,5 @@ theorem decCI_defn_value {a : Array Word} {dn : NIdx → Option ConLeche.Name} {
       rw [e] at hv2
       exact ⟨w, rfl, hlt, (Option.some.inj hv2).symm⟩
     · simp [hd?, hq, hlt] at hv2
-
-local notation "V" => ConLeche.CheckMode.verified
-
-section pin
-variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
-
-/-- **`check_div_mod_pin` is its model `dmCpW`** (generated). -/
-l_model cp_specW (p : Prog) (hp : p.lookup "check_div_mod_pin" = some checkDivModPinL)
-  fns [hp ↦ dmCpW list]
-  specs [callW_spec p n "div_mod_env_guard", callW_spec p n "env_find", callW_spec p n "check_div_mod_pin_loop"]
-  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW, rdW_eq, getElem_rdW']
-
-end pin
 
 end L.Ind
