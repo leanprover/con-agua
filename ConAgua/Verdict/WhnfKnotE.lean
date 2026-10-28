@@ -12,8 +12,8 @@ program hypotheses (`KnotAllProg`), the verdict closure (`closedNV`), and the er
 callee outside the family the slot bodies reach (`WhnfCalleesE`: `defeq_list`, the `defeq`
 family's). Every function of the slot bodies' call tree is proved: `whnf_core`/`_loop`/`_step`
 (`WhnfSlotE`), `whnf`/`_loop`/`_step` (`WhnfSlotE`), the `reduce_nat` family (`WhnfNatE`), the `proj`
-arm (`sp_ref`, `Arena/WhnfCoreProj`), the `app` arm and `whnf_app` (`capp_ref`, `Arena/WhnfCoreStep`), the ι family (`WhnfIotaE`,
-`WhnfIotaRecE`, `WhnfPrepE`, `WhnfCertsE`, `WhnfIdxE`), `major_to_ctor` (`WhnfM2CE`), `proof_irrel`
+arm (`stepProj_ref`, `Arena/WhnfCoreProj`), the `app` arm and `whnf_app` (`capp_ref`,
+`Arena/WhnfCoreStep`), the ι family (`WhnfIotaE`, `WhnfIotaRecE`, `WhnfPrepE`, `WhnfCertsE`, `WhnfIdxE`), `major_to_ctor` (`WhnfM2CE`), `proof_irrel`
 (`WhnfPirrE`).
 -/
 
@@ -72,7 +72,7 @@ theorem whnfSlotsE_of (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     (fun N hk hkE F s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hF hn hs _ hsn hpe =>
       RefE.coreSpecE (coreStepProjE_spec p hq.core.sproj hq.core.rproj hq.core.plit (N + 1) s₀ mode
         cheap vis d e sn i pe) hnv hkE
-        (sp_ref p hq.core (KnotAllProg.whnfC hq).strLitSupported (KnotAllProg.whnfC hq).strLitCtor
+        (stepProj_ref p hq.core (KnotAllProg.whnfC hq).strLitSupported (KnotAllProg.whnfC hq).strLitCtor
           (KnotAllProg.projC hq) (erecKept_of hq.hcl) N hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d
           e sn i pe hs ‹_› hsn hpe (supKeep_of fe)))
     (reduceNatE_of p hq.delta hnv) n hk hkE

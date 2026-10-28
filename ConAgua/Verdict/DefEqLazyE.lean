@@ -9,7 +9,7 @@ import ConAgua.L.ModelGen
 The error halves of `DefEqMidLazy.lean`: `lds_left`, `lds_right`, `lds_unfold2`, `lds_same`,
 `lds_both`, `lazy_delta_step`. Each follows its ok proof over the generated error model; the
 callees outside this family are hypotheses in their ok refinements' shapes (`DeltaQuickE`,
-`TryUnfoldProjAppE`: the whnf family's; `DefeqSpineE`: this family's, `DefEqSpineE.lean`).
+`TryUnfoldProjAppE`: the whnf family's; `DefeqSpineE`: `sp_ref`'s, `DefEqMidSpine.lean`).
 -/
 
 open ConRon.Arena
@@ -46,6 +46,13 @@ def DefeqSpineE (p : Prog) : Prop :=
     (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
     CoreSpecE p (n + 1) "defeq_spine" [mode, vis, d, a, b]
       (defeqSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+/-- **`defeq_spine`'s error claim** (`sp_ref`'s error half). -/
+theorem defeqSpine_refinesE (p : Prog) (hp : SpineDProg p) (hnv : closedNV p L.Checker.nvFns = true) :
+    DefeqSpineE p :=
+  fun n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb =>
+    RefE.coreSpecE (spE_spec p hp.sp hp.sp2 hp.cmp hp.rev (n + 1) s₀ mode vis d a b) hnv hkE
+      (sp_ref p hp n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb)
 
 /-- The one-side unfoldings' error spec (`lds_left` at `left`, `lds_right` else). -/
 def LdsOneE (p : Prog) (f : FnName) (left : Bool) : Prop :=
@@ -265,7 +272,7 @@ def LdsSameE (p : Prog) : Prop :=
         (decHintW ka ha) (decHintW kb hb)) s₀ a₀
 
 /-- **`lds_same`'s error claim**. -/
-theorem ldsSame_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hspE : DefeqSpineE p)
+theorem ldsSame_refinesE (p : Prog) (hp : LazyProg p) (hspE : DefeqSpineE p)
     (hu2E : LdsUnfold2E p) (hnv : closedNV p L.Checker.nvFns = true) : LdsSameE p := by
   intro n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b ka ha kb hb hs hwa hwb hd
   refine CoreSpecE.of_runs fun er hc0 => ?_
@@ -314,7 +321,7 @@ theorem ldsSame_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (hspE
     | ok q =>
     obtain ⟨r₂, m₂⟩ := q
     rw [h2, ldsSameE.k_defeq_spine.arm1] at hW
-    have e₂ := CoreSpec.of_callW (defeqSpine_refines p hp.spine hc.store k (hk.mono (by omega)) F
+    have e₂ := CoreSpec.of_callW (defeqSpine_refines p hp.spine k (hk.mono (by omega)) F
       (by omega) (by omega) ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d a b ⟨hS₁, hs.mode4, hs.eb_mode⟩
       hwa hwb) (callW_of_callE h2)
     refine ErrClaim.bind_core e₂ (fun M₂ hS₂ => ?_)

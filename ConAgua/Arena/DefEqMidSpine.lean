@@ -1,4 +1,5 @@
 import ConAgua.Arena.DefEqMidQuick
+import ConAgua.Arena.DefEqMidLoops
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -125,11 +126,15 @@ def spineCmpT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (n : NIdx) (us : LsIdx) 
     | _ => pure false
   else pure false
 
-/-- **`spine_cmp` is its model `scW`** (generated). -/
-l_model spineCmp_spec (p : Prog) (hp : SpineDProg p)
-  fns [hp.cmp ↦ scW]
-  specs [callW_spec p n "lvls_eq_c", callW_spec p n "defeq_list_rev"]
-  grind [arena_grind] simp []
+/-- **`spine_cmp`'s model, both outcomes** (generated; `lvls_eq_c` lifted, `defeq_list_rev` by its
+unified model). -/
+l_model spcE_spec (p : Prog) (hf : p.lookup "spine_cmp" = some spineCmpL)
+    (hr : p.lookup "defeq_list_rev" = some defeqListRevL)
+  fns [hf ↦ spcE list]
+  specs [callW_spec p n "lvls_eq_c", defeqListRev_specE p hr n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `lvls_eq_c` does not return at fuel `1`. -/
 theorem lvlsEqC_one (p : Prog) (hp : LvlCacheProg p) (u v : Word) (m m' : Mem) (r : List Word) :
@@ -160,25 +165,19 @@ theorem decO_lt_two {w : Word} (h : ¬ 2 ≤ w) : decO w ≠ some true := by
     · exact .inr (UInt64.toNat_inj.mp (by simpa using e))
   rcases this with rfl | rfl <;> decide
 
-/-- **`spine_cmp` refines `spineCmpT`** on two slices below the stack top, at the knot. -/
-theorem spineCmp_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
+/-- **`spine_cmp` refines `spineCmpT`, both outcomes**, on two slices below the stack top: the
+errors are `defeq_list_rev`'s (the `defeq` slot's). -/
+theorem spc_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d nm us nm₂ us₂ ao an bo bn : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hnm : HW nm) (hnm₂ : HW nm₂) (hus : HW us)
-    (hus₂ : HW us₂) (lu lv : List ConLeche.Level) (_hdu : denoteLs a₀.store.lss (decI us) = some lu)
-    (_hdv : denoteLs a₀.store.lss (decI us₂) = some lv) (xs ys : List EIdx)
+    (hus₂ : HW us₂) (xs ys : List EIdx)
     (hx : SpineR s₀.mem ao an xs.toArray) (hy : SpineR s₀.mem bo bn ys.toArray)
     (hxt : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
-    CoreSpec p (n + 1) "spine_cmp" [mode, vis, d, nm, us, nm₂, us₂, ao, an, bo, bn]
+    RefE (KnotUpToE p n) (spcE p (n + 1) s₀.mem mode vis d nm us nm₂ us₂ ao an bo bn)
       (spineCmpT (coreKnot (decMode mode) fe id F) fe d.toNat (decI nm) (decI us) (decI nm₂) (decI us₂)
-        xs ys) decBool s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (spineCmp_spec p hp (n + 1) s₀ mode vis d nm us nm₂ us₂ ao an bo bn)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+        xs ys) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hxl := slice_len hx
   have hyl := slice_len hy
@@ -192,47 +191,44 @@ theorem spineCmp_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo
     · rintro ⟨rfl, rfl⟩; exact ⟨rfl, rfl⟩
   unfold spineCmpT
   by_cases hc : nm = nm₂ ∧ an = bn
-  · rw [scW.arm1 (hc1 := hc)] at hW
-    have hc' : decI nm = (decI nm₂ : NIdx) ∧ xs.length = ys.length := by
-      have := hcond.mpr hc; simpa using this
-    rw [ite_eq_left hc']
-    cases hc2 : callW p n "lvls_eq_c" [us, us₂] s.mem with
-    | none => rw [hc2, scW.k_lvls_eq_c.none] at hW; cases hW
-    | some q =>
-    obtain ⟨rz, m₁⟩ := q
-    rw [hc2] at hW
-    obtain ⟨n₁, rfl⟩ := callW_succ hc2
-    cases n₁ with
-    | zero => exact absurd hc2 (lvlsEqC_one p hp.quick.lv _ _ _ _ _)
-    | succ n₂ =>
-    have e₁ := CoreSpec.of_callW (s₀ := ⟨s.mem, Locals.init []⟩)
-      (lvlsEqC_refines p hp.quick.lv n₂ ⟨s.mem, Locals.init []⟩ a₀ dn vis fe M eb hS us us₂ hus
-        hus₂) hc2
-    refine coreRef_bindS e₁ (fun M₁ hS₁ hst₁ => ?_)
-    by_cases h2 : 2 ≤ rz.headD 0
-    · rw [scW.k_lvls_eq_c.arm1 (hc1 := h2)] at hW
-      rw [decO_two h2]
-      exact CoreSpec.of_call1W (s₀ := ⟨m₁, Locals.init []⟩)
-        (defeqListRev_refines p hp.rev (n₂ + 1) (hk.mono (by omega)) F (by omega) (by omega) _ _
-          dn vis fe M₁ eb mode d ao an bo bn ⟨hS₁, hs.mode4, hs.eb_mode⟩ xs ys
-          (hx.keep hst₁.size hst₁.below hxt hS.spn) (hy.keep hst₁.size hst₁.below hyt hS.spn)
-          (hst₁.1 ▸ hxt) (hst₁.1 ▸ hyt))
-        (fun r r' h => by simp only [decBool, h]) hW
-    · rw [scW.k_lvls_eq_c.arm2 (hc1 := h2), scW.j1.arm1, Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨hr, hm⟩ := hW
-      have hne := decO_lt_two h2
-      rw [← hm]
-      generalize decO (rz.headD 0) = o at hne
-      rcases o with _ | ⟨_ | _⟩
-      · exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw0)
-      · exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw0)
-      · exact absurd rfl hne
-  · rw [scW.arm2 (hc1 := hc), scW.j1.arm1, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+  case neg =>
     have hc' : ¬ (decI nm = (decI nm₂ : NIdx) ∧ xs.length = ys.length) := by
       intro h; apply hc; apply hcond.mp; simpa using h
-    rw [ite_eq_right hc', ← hm]
-    exact coreRef_ret hS (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw0)
+    rw [spcE.arm2 (hc1 := hc), spcE.j1, ite_eq_right hc']
+    exact RefE.ret rfl (CorePost.ret hS rfl resH_zero)
+  rw [spcE.arm1 (hc1 := hc)]
+  have hc' : decI nm = (decI nm₂ : NIdx) ∧ xs.length = ys.length := by
+    have := hcond.mpr hc; simpa using this
+  rw [ite_eq_left hc']
+  rcases c2 : callW p n "lvls_eq_c" [us, us₂] s₀.mem with _ | ⟨rz, m₁⟩
+  · rw [liftE_none, spcE.k_lvls_eq_c.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨n₁, rfl⟩ := callW_succ c2
+  cases n₁ with
+  | zero => exact absurd c2 (lvlsEqC_one p hp.quick.lv _ _ _ _ _)
+  | succ n₂ =>
+  have e₁ := CoreSpec.of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (lvlsEqC_refines p hp.quick.lv n₂ ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb hS us us₂ hus
+      hus₂) c2
+  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ hst₁ => ?_)
+  by_cases h2 : 2 ≤ rz.headD 0
+  case neg =>
+    rw [spcE.k_lvls_eq_c.arm2 (hc1 := h2), spcE.j1]
+    have hne := decO_lt_two h2
+    generalize decO (rz.headD 0) = o at hne
+    rcases o with _ | ⟨_ | _⟩
+    · exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
+    · exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
+    · exact absurd rfl hne
+  rw [spcE.k_lvls_eq_c.arm1 (hc1 := h2), decO_two h2]
+  have H := defeqListRev_ref p (n₂ + 1) (hk.mono (by omega)) F (by omega) (by omega)
+    ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d ao an bo bn ⟨hS₁, hs.mode4, hs.eb_mode⟩ xs ys
+    (hx.keep hst₁.size hst₁.below hxt hS.spn) (hy.keep hst₁.size hst₁.below hyt hS.spn)
+    (hst₁.1 ▸ hxt) (hst₁.1 ▸ hyt)
+  simp only [spcE.k_defeq_list_rev]
+  rcases h3 : lrevE p (n₂ + 1 + 1) m₁ mode vis d ao an bo bn with e | ⟨r₃, m₃⟩
+  · rw [h3] at H; exact fun hkE => H (hkE.mono (by omega))
+  · rw [h3] at H; exact H
 
 /-! ## `defeq_spine2` -/
 
@@ -243,49 +239,43 @@ def spine2T (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (n : NIdx) (u
   let bb ← getAppArgs coreWalkFuel b
   spineCmpT r fe depth n us n' us' aa bb
 
-/-- **`defeq_spine2` is its model `s2W`** (generated). -/
-l_model defeqSpine2_spec (p : Prog) (hp : SpineDProg p)
-  fns [hp.sp2 ↦ s2W]
-  specs [callW_spec p n "get_app_args", callW_spec p n "spine_cmp"]
-  grind [arena_grind] simp [rdW_eq, St.setLocs_mem']
+/-- **`defeq_spine2`'s model, both outcomes** (generated; `get_app_args` lifted, `spine_cmp` by its
+unified model). -/
+l_model sp2E_spec (p : Prog) (hf : p.lookup "defeq_spine2" = some defeqSpine2L)
+    (hc : p.lookup "spine_cmp" = some spineCmpL) (hr : p.lookup "defeq_list_rev" = some defeqListRevL)
+  fns [hf ↦ sp2E list]
+  specs [callW_spec p n "get_app_args", spcE_spec p hc hr n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **`defeq_spine2` refines `spine2T`** at the knot: the two argument slices pushed, compared, the
-stack top put back. -/
-theorem defeqSpine2_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
+/-- **`defeq_spine2` refines `spine2T`, both outcomes**: the two argument slices pushed, compared,
+the stack top put back; the errors are `spine_cmp`'s. -/
+theorem sp2_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b nm us nm₂ us₂ : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hnm : HW nm) (hnm₂ : HW nm₂)
-    (hus : HW us) (hus₂ : HW us₂) (lu lv : List ConLeche.Level)
-    (hdu : denoteLs a₀.store.lss (decI us) = some lu) (hdv : denoteLs a₀.store.lss (decI us₂) = some lv) :
-    CoreSpec p (n + 1) "defeq_spine2" [mode, vis, d, a, b, nm, us, nm₂, us₂]
+    (hus : HW us) (hus₂ : HW us₂) :
+    RefE (KnotUpToE p n) (sp2E p (n + 1) s₀.mem mode vis d a b nm us nm₂ us₂)
       (spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decI nm) (decI us)
-        (decI nm₂) (decI us₂)) decBool s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (defeqSpine2_spec p hp (n + 1) s₀ mode vis d a b nm us nm₂ us₂)
-  subst hs0
-  rw [s2W.arm1] at hW
-  refine ⟨hloc, ?_⟩
+        (decI nm₂) (decI us₂)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  cases hc1 : callW p n "get_app_args" [a] s.mem with
-  | none => rw [hc1, s2W.k_get_app_args.none] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [hc1, s2W.k_get_app_args.arm1] at hW
+  simp only [sp2E]
+  rcases c1 : callW p n "get_app_args" [a] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none, sp2E.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, sp2E.k_get_app_args.arm1]
+  obtain ⟨k, rfl⟩ := callW_succ c1
   obtain ⟨t₁, ht₁, -, hfr₁, hg₁, ho₁, htop₁, xs, hxs, hx₁⟩ := triple_of_callW
-    (s₀ := ⟨s.mem, Locals.init []⟩)
-    (getAppArgs_refines p hp.spine n ⟨s.mem, Locals.init []⟩ a₀ hS.arena.1 a ha hS.spn) hc1
+    (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (getAppArgs_refines p hp.spine (k + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.1 a ha hS.spn) c1
   rw [ht₁] at hfr₁ hg₁ htop₁ hx₁
   have hS₁ := hS.frame_stk hfr₁ (by simp) (by simp)
-  cases hc2 : callW p n "get_app_args" [b] m₁ with
-  | none => rw [hc2, s2W.k_get_app_args_2.none] at hW; cases hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  rw [hc2, s2W.k_get_app_args_2.arm1] at hW
+  rcases c2 : callW p (k + 1) "get_app_args" [b] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [liftE_none, sp2E.k_get_app_args_2.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, sp2E.k_get_app_args_2.arm1]
   obtain ⟨t₂, ht₂, -, hfr₂, hg₂, ho₂, htop₂, ys, hys, hy₂⟩ := triple_of_callW
     (s₀ := ⟨m₁, Locals.init []⟩)
-    (getAppArgs_refines p hp.spine n ⟨m₁, Locals.init []⟩ a₀ hS₁.arena.1 b hb hS₁.spn) hc2
+    (getAppArgs_refines p hp.spine (k + 1) ⟨m₁, Locals.init []⟩ a₀ hS₁.arena.1 b hb hS₁.spn) c2
   rw [ht₂] at hfr₂ hg₂ htop₂ hy₂
   have hS₂ := hS₁.frame_stk hfr₂ (by simp) (by simp)
   -- the first slice survives the second push
@@ -299,37 +289,24 @@ theorem defeqSpine2_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotU
     rw [htop₂, UInt64.toNat_add, ← ho₂]; omega
   have hle : (spTop m₁).toNat ≤ (spTop m₂).toNat := UInt64.le_iff_toNat_le.mp hg₂.1
   have hx₂ := hx₁.keep hg₂.size hg₂.below (by omega) hsp₁
-  cases hc3 : callW p n "spine_cmp" [mode, vis, d, nm, us, nm₂, us₂, r₁.headD 0, r₁.tail.headD 0,
-      r₂.headD 0, r₂.tail.headD 0] m₂ with
-  | none => rw [hc3, s2W.k_spine_cmp.none] at hW; cases hW
-  | some q =>
-  obtain ⟨r₃, m₃⟩ := q
-  rw [hc3, s2W.k_spine_cmp.arm1] at hW
-  obtain ⟨n', rfl⟩ := callW_succ hc3
-  have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (spineCmp_refines p hp n' (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ a₀ dn
-      vis fe M eb mode d nm us nm₂ us₂ _ _ _ _ ⟨hS₂, hs.mode4, hs.eb_mode⟩ hnm hnm₂ hus hus₂ lu lv hdu hdv
-      xs ys hx₂ hy₂ (by show _ ≤ (spTop m₂).toNat; omega) (by show _ ≤ (spTop m₂).toNat; omega)) hc3
-  · simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    have hT : (spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decI nm)
-        (decI us) (decI nm₂) (decI us₂)).run a₀ = (spineCmpT (coreKnot (decMode mode) fe id F) fe
-          d.toNat (decI nm) (decI us) (decI nm₂) (decI us₂) xs ys).run a₀ := by
-      simp only [spine2T, StateT.run_bind, hxs, hys, except_ok_bind]
-    obtain ⟨g1, ⟨M₃, hS₃, hK₃, hst₃⟩, g3, g4⟩ := e₃
-    have h136 : 136 < (m₃.arr64 CTL).size := by
-      obtain ⟨mp, h⟩ := hS₃.memos.2.2.2.2.1
-      unfold MemoRG MemoRV at h
-      have := h.1
-      simp only at this
-      have e : (156 : Word).toNat = 156 := rfl
-      omega
-    have hG : GrowRefP (spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
-        (decI nm) (decI us) (decI nm₂) (decI us₂)) a₀ decBool dn s.mem vis fe M eb r₃ m₃ :=
-      growRef_congr hT ⟨g1, ⟨M₃, hS₃, hK₃, hg₁.trans' (hg₂.trans' hst₃.toGrew')⟩, g3, g4⟩
-    have hR := GrowRefP.reset hG h136
-    rw [← hm]
-    exact coreRef_redec hR (by simp only [decBool, hr]) (by unfold ResH; rw [← hr]; exact g4)
+  have hT : (spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decI nm)
+      (decI us) (decI nm₂) (decI us₂)).run a₀ = (spineCmpT (coreKnot (decMode mode) fe id F) fe
+        d.toNat (decI nm) (decI us) (decI nm₂) (decI us₂) xs ys).run a₀ := by
+    simp only [spine2T, StateT.run_bind, hxs, hys, except_ok_bind]
+  refine RefE.of_run_eq hT ?_
+  have H := spc_ref p hp k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ a₀ dn
+    vis fe M eb mode d nm us nm₂ us₂ _ _ _ _ ⟨hS₂, hs.mode4, hs.eb_mode⟩ hnm hnm₂ hus hus₂
+    xs ys hx₂ hy₂ (by show _ ≤ (spTop m₂).toNat; omega) (by show _ ≤ (spTop m₂).toNat; omega)
+  simp only [sp2E.k_spine_cmp]
+  rcases h3 : spcE p (k + 1) m₂ mode vis d nm us nm₂ us₂ (r₁.headD 0) (r₁.tail.headD 0) (r₂.headD 0)
+      (r₂.tail.headD 0) with e | ⟨r₃, m₃⟩
+  · rw [h3] at H; exact fun hkE => H (hkE.mono (by omega))
+  rw [h3] at H
+  obtain ⟨y, a', hrun, hP⟩ := H
+  obtain ⟨M₃, hS₃, hK₃, hst₃⟩ := hP.after
+  exact RefE.ret hrun (GrowPost.restore (m₀ := s₀.mem)
+    ⟨⟨M₃, hS₃, hK₃, hg₁.trans' (hg₂.trans' hst₃.toGrew')⟩, hP.res, hP.valid⟩ [r₃.headD 0]
+    (by simp only [decBool, List.headD_cons]) hP.valid)
 
 /-! ## `defeq_spine` -/
 
@@ -355,12 +332,6 @@ theorem defeqSpine_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) :
     · simp only [pure_bind]
   · simp only [pure_bind]
 
-/-- **`defeq_spine` is its model `dsW`** (generated). -/
-l_model defeqSpine_spec (p : Prog) (hp : SpineDProg p)
-  fns [hp.sp ↦ dsW]
-  specs [callW_spec p n "spine_head", callW_spec p n "defeq_spine2"]
-  grind [arena_grind] simp [St.setLocs_mem']
-
 theorem decSH_none {r : List Word} (h : r.headD 0 = 0) : decSH r = none := by
   simp only [decSH, h, ↓reduceIte]
 
@@ -368,74 +339,65 @@ theorem decSH_some {r : List Word} (h : r.headD 0 ≠ 0) :
     decSH r = some (decI (r.tail.headD 0), decI (r.tail.tail.headD 0)) := by
   simp only [decSH, h, ↓reduceIte]
 
-/-- **`defeq_spine` refines `defeqSpine`** at the knot. -/
+/-- **`defeq_spine`'s model, both outcomes** (generated; `spine_head` lifted, `defeq_spine2` by its
+unified model). -/
+l_model spE_spec (p : Prog) (hf : p.lookup "defeq_spine" = some defeqSpineL)
+    (h2 : p.lookup "defeq_spine2" = some defeqSpine2L)
+    (hc : p.lookup "spine_cmp" = some spineCmpL) (hr : p.lookup "defeq_list_rev" = some defeqListRevL)
+  fns [hf ↦ spE list]
+  specs [callW_spec p n "spine_head", sp2E_spec p h2 hc hr n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+/-- **`defeq_spine` refines `defeqSpine`, both outcomes**: the errors are `defeq_spine2`'s. -/
+theorem sp_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    RefE (KnotUpToE p n) (spE p (n + 1) s₀.mem mode vis d a b)
+      (defeqSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
+  have hS := hs.rel
+  rw [defeqSpine_eq]
+  simp only [spE]
+  rcases c1 : callW p n "spine_head" [a] s₀.mem with _ | ⟨ra, m₁⟩
+  · rw [liftE_none, spE.k_spine_head.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨k, rfl⟩ := callW_succ c1
+  obtain ⟨rfl, hra, ⟨hra0, hra1, hra2⟩, -⟩ := spineHead_run hp hS.arena.1 ha c1
+  simp only [spE.k_spine_head]
+  refine RefE.bind_right hra ?_
+  by_cases h0 : ra.headD 0 = 0
+  · rw [ite_eq_left h0, decSH_none h0]
+    exact RefE.ret rfl (CorePost.ret hS rfl resH_zero)
+  rw [ite_eq_right h0, decSH_some h0]
+  rcases c2 : callW p (k + 1) "spine_head" [b] s₀.mem with _ | ⟨rb, m₂⟩
+  · rw [liftE_none, spE.k_spine_head_2.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨rfl, hrb, ⟨hrb0, hrb1, hrb2⟩, -⟩ := spineHead_run hp hS.arena.1 hb c2
+  simp only [spE.k_spine_head_2]
+  refine RefE.bind_right hrb ?_
+  by_cases h0' : rb.headD 0 = 0
+  · rw [ite_eq_left h0', decSH_none h0']
+    exact RefE.ret rfl (CorePost.ret hS rfl resH_zero)
+  rw [ite_eq_right h0', decSH_some h0']
+  exact RefE.tail_eq (k := spE.k_defeq_spine2 p) (fun _ => rfl) (fun _ => rfl)
+    (fun hkE => hkE.mono (by omega)) rfl
+    (fun v y a' (h : CorePost decBool dn s₀.mem vis fe M eb ResH v y a') => ⟨h.after, h.res.trans (by simp only [decBool, List.headD_cons]),
+      by unfold ResH; exact h.valid⟩)
+    (sp2_ref p hp k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb mode d a b _ _ _ _
+      hs ha hb hra1 hrb1 hra2 hrb2)
+
+/-- **`defeq_spine` refines `defeqSpine`** at the knot (`sp_ref`'s ok half). -/
 @[refines ConRon.Arena.defeqSpine]
-theorem defeqSpine_refines (p : Prog) (hp : SpineDProg p) (hsd : StoreDenotes) (n : Nat)
+theorem defeqSpine_refines (p : Prog) (hp : SpineDProg p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "defeq_spine" [mode, vis, d, a, b]
       (defeqSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
-      vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (defeqSpine_spec p hp (n + 1) s₀ mode vis d a b)
-  subst hs0
-  rw [dsW.arm1] at hW
-  refine ⟨hloc, ?_⟩
-  have hS := hs.rel
-  rw [defeqSpine_eq]
-  cases hc1 : callW p n "spine_head" [a] s.mem with
-  | none => rw [hc1, dsW.k_spine_head.none] at hW; cases hW
-  | some q =>
-  obtain ⟨ra, m₁⟩ := q
-  rw [hc1] at hW
-  obtain ⟨k, rfl⟩ := callW_succ hc1
-  obtain ⟨hm₁, hra, ⟨hra0, hra1, hra2⟩, hva⟩ := spineHead_run hp hS.arena.1 ha hc1
-  rw [hm₁] at hW
-  by_cases h0 : ra.headD 0 = 0
-  · rw [dsW.k_spine_head.arm1 (hc1 := h0), Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    rw [← hm]
-    refine coreRef_pure' hS (v := false) ?_ (by rw [decBool, ← hr]; rfl)
-      (by unfold ResH; rw [← hr]; exact hw0)
-    rw [StateT.run_bind, hra, except_ok_bind, decSH_none h0]; rfl
-  rw [dsW.k_spine_head.arm2 (hc1 := h0)] at hW
-  cases hc2 : callW p (k + 1) "spine_head" [b] s.mem with
-  | none => rw [hc2, dsW.k_spine_head_2.none] at hW; cases hW
-  | some q =>
-  obtain ⟨rb, m₂⟩ := q
-  rw [hc2] at hW
-  obtain ⟨hm₂, hrb, ⟨hrb0, hrb1, hrb2⟩, hvb⟩ := spineHead_run hp hS.arena.1 hb hc2
-  rw [hm₂] at hW
-  have hT₁ : ((spineHeadT (decE a) >>= fun o => match o with
-      | none => pure false
-      | some (n, us) => spineHeadT (decE b) >>= fun o' => match o' with
-        | none => pure false
-        | some (n', us') => spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
-            n us n' us') : AM Bool).run a₀ =
-      ((match decSH rb with
-        | none => pure false
-        | some (n', us') => spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
-            (decI (ra.tail.headD 0)) (decI (ra.tail.tail.headD 0)) n' us') : AM Bool).run a₀ := by
-    rw [StateT.run_bind, hra, except_ok_bind, decSH_some h0]
-    simp only [StateT.run_bind, hrb, except_ok_bind]
-  refine coreRef_congr hT₁ ?_
-  by_cases h0' : rb.headD 0 = 0
-  · rw [dsW.k_spine_head_2.arm1 (hc1 := h0'), Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    rw [decSH_none h0', ← hm]
-    exact coreRef_ret hS (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw0)
-  rw [dsW.k_spine_head_2.arm2 (hc1 := h0')] at hW
-  rw [decSH_some h0']
-  obtain ⟨ha', hva'⟩ := hva h0
-  obtain ⟨hb', hvb'⟩ := hvb h0'
-  obtain ⟨lu, hdu⟩ := hsd.constLs dn s.mem a₀ vis fe M eb hS _ _ _ hva'
-  obtain ⟨lv, hdv⟩ := hsd.constLs dn s.mem a₀ vis fe M eb hS _ _ _ hvb'
-  exact CoreSpec.of_call1W (s₀ := ⟨s.mem, Locals.init []⟩)
-    (defeqSpine2_refines p hp k (hk.mono (by omega)) F (by omega) (by omega) ⟨s.mem, Locals.init []⟩
-      a₀ dn vis fe M eb mode d a b _ _ _ _ ⟨hS, hs.mode4, hs.eb_mode⟩ ha hb hra1 hrb1 hra2 hrb2 lu lv hdu hdv)
-    (fun r r' h => by simp only [decBool, h]) hW
+      vis fe M eb :=
+  RefE.coreSpec (spE_spec p hp.sp hp.sp2 hp.cmp hp.rev (n + 1) s₀ mode vis d a b)
+    (sp_ref p hp n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb)
 
 end L.Arena

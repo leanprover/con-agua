@@ -119,89 +119,49 @@ def lamsOpenT (r : CoreFnsA) (depth : Nat) (ty₁ body₁ ty₂ body₂ : EIdx) 
 def decLO (r : List Word) : Option (EIdx × EIdx) :=
   if r.headD 0 = 0 then none else some (decE (r.tail.headD 0), decE (r.tail.tail.headD 0))
 
-section loK
-variable (p : Prog) (n : Nat) (d body₁ ty₂ body₂ : Word)
+/-- **`lams_open`'s model, both outcomes** (generated; the `defeq` slot through its run,
+`lams_inst` lifted). -/
+l_model loE_spec (p : Prog) (hf : p.lookup "lams_open" = some lamsOpenL)
+  fns [hf ↦ loE list]
+  specs [callW_spec p n "lams_inst"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-def loK2 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => some (1, r.headD 0, r.tail.headD 0, m)
-
-def loK1 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, 0, 0, m)
-    else loK2 (callW p n "lams_inst" [d, ty₂, body₁, body₂] m)
-
-variable (r : List Word) (m : Mem)
-theorem loK2_s : loK2 (some (r, m)) = some (1, r.headD 0, r.tail.headD 0, m) := rfl
-theorem loK1_z (h : r.headD 0 = 0) : loK1 p n d body₁ ty₂ body₂ (some (r, m)) = some (0, 0, 0, m) := by
-  simp only [loK1, h, ↓reduceIte]
-theorem loK1_nz (h : r.headD 0 ≠ 0) : loK1 p n d body₁ ty₂ body₂ (some (r, m)) =
-    loK2 (callW p n "lams_inst" [d, ty₂, body₁, body₂] m) := by
-  simp only [loK1, h, ↓reduceIte]
-end loK
-
-theorem lamsOpen_spec (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St)
-    (mode vis d ty₁ body₁ ty₂ body₂ : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂]
-    ⦃fun r s' => LocEq s' s₀ ∧ loK1 p n d body₁ ty₂ body₂
-      (callW p n "defeq" [mode, vis, d, ty₁, ty₂] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.open_]
-  simp only [callFn, lamsOpenL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "defeq",
-      callW_spec p n "lams_inst"] <;>
-    finish [loK1_z, loK1_nz, loK2_s]
-
-/-- **`lams_open` refines `lamsOpenT`** at the knot. -/
-theorem lamsOpen_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
+/-- **`lams_open` refines `lamsOpenT`, both outcomes**: the errors are the domains' `defeq` slot
+call's. -/
+theorem lo_ref (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d ty₁ body₁ ty₂ body₂ : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (h₁ : HW ty₁) (hb₁ : HW body₁) (h₂ : HW ty₂) (hb₂ : HW body₂) :
-    CoreSpec p (n + 1) "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂]
+    RefE (KnotUpToE p n) (loE p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂)
       (lamsOpenT (coreKnot (decMode mode) fe id F) d.toNat (decE ty₁) (decE body₁) (decE ty₂)
-        (decE body₂)) decLO s₀ a₀ dn vis fe M eb Res3 := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (lamsOpen_spec p hp n s₀ mode vis d ty₁ body₁ ty₂ body₂)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+        (decE body₂)) a₀ (CorePost decLO dn s₀.mem vis fe M eb Res3) := by
   unfold lamsOpenT
-  cases hc1 : callW p n "defeq" [mode, vis, d, ty₁, ty₂] s.mem with
-  | none => rw [hc1] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [hc1] at hW
+  simp only [loE]
+  rcases c1 : callE p n "defeq" [mode, vis, d, ty₁, ty₂] s₀.mem with e | ⟨r₁, m₁⟩
+  · exact fun hkE => ErrClaim.bind_left (CoreSpecE.of_callE
+      ((hkE n (Nat.le_refl _)).defeq F s₀ a₀ dn vis fe M eb mode d ty₁ ty₂ hF hn hs h₁ h₂) c1)
   have e₁ := CoreSpec.of_callW
-    ((hk n (Nat.le_refl _)).defeq F s a₀ dn vis fe M eb mode d ty₁ ty₂ hF hn hs h₁ h₂) hc1
-  refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
+    ((hk n (Nat.le_refl _)).defeq F s₀ a₀ dn vis fe M eb mode d ty₁ ty₂ hF hn hs h₁ h₂)
+    (callW_of_callE c1)
+  simp only [loE.k_defeq]
+  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ _ => ?_)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [loK1_z (h := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
-    obtain ⟨g1, g2, g3, hm⟩ := hW
-    rw [decBool_f h0, ← hm]
-    exact coreRef_ret hS₁ (by simp only [decLO, ← g1, ↓reduceIte])
-      (res3_of hw0 hw0 hw0 g1 g2 g3)
-  rw [loK1_nz (h := h0)] at hW
-  rw [decBool_t h0]
+  · rw [ite_eq_left h0, decBool_f h0]
+    exact RefE.ret rfl (CorePost.ret hS₁ (by simp only [decLO]; rfl) ⟨hw0, hw0, hw0⟩)
+  rw [ite_eq_right h0, decBool_t h0]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-  cases hc2 : callW p n "lams_inst" [d, ty₂, body₁, body₂] m₁ with
-  | none => rw [hc2] at hW; cases hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  rw [hc2, loK2_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
-  obtain ⟨g1, g2, g3, hm⟩ := hW
-  obtain ⟨n', rfl⟩ := callW_succ hc2
+  rcases c2 : callW p n "lams_inst" [d, ty₂, body₁, body₂] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [liftE_none, loE.k_lams_inst.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [loE.k_lams_inst]
+  obtain ⟨n', rfl⟩ := callW_succ c2
   have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (lamsInst_refines p hp hi n' _ _ dn vis fe M₁ eb d ty₂ body₁ body₂ hS₁ h₂ hb₁ hb₂) hc2
-  refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
-  rw [← hm]
-  exact coreRef_ret hS₂ (by simp only [decLO, decPair, ← g1, ← g2, ← g3]; rfl)
-    (res3_of hw1 e₂.2.2.2.1 e₂.2.2.2.2 g1 g2 g3)
+    (lamsInst_refines p hp hi n' _ _ dn vis fe M₁ eb d ty₂ body₁ body₂ hS₁ h₂ hb₁ hb₂) c2
+  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
+  exact RefE.ret rfl (CorePost.ret hS₂ (by simp only [decLO, decPair]; rfl)
+    ⟨hw1, e₂.2.2.2.1, e₂.2.2.2.2⟩)
 
 /-! ## `lam_pair` -/
 
@@ -338,24 +298,6 @@ l_model defeqLams_specE (p : Prog) (hf : p.lookup "defeq_lams" = some defeqLamsL
   fns [hf ↦ lamsE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-/-- **What the telescope loop's errors claim from**: `lams_open`'s and `defeq_lams_inner`'s error
-claims at every L fuel up to `n` (`Verdict/DefEqLamsE.lean`), `lam_pair` outside the verdict
-closure. -/
-structure LamsG (p : Prog) (n : Nat) : Prop where
-  open_ : ∀ j, j ≤ n → ∀ (F : Nat), j ≤ F → j ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb mode d ty₁ body₁ ty₂ body₂ : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW ty₁ → HW ty₂ →
-    CoreSpecE p (j + 1) "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂]
-      (lamsOpenT (coreKnot (decMode mode) fe id F) d.toNat (decE ty₁) (decE body₁) (decE ty₂)
-        (decE body₂)) s₀ a₀
-  pair : ∀ k args m e, callE p k "lam_pair" args m = .error e → e.cls = 0
-  inner : ∀ j, j ≤ n → ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d b₁ b₂ : Word), j ≤ F → j ≤ 2 ^ 62 →
-    SlotPre s₀ a₀ dn vis fe M eb mode → d.toNat + 1 < 2 ^ 64 → HW b₁ → HW b₂ →
-    CoreSpecE p (j + 1) "defeq_lams_inner" [mode, vis, d, b₁, b₂]
-      (defeqLamsInner (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE b₁) (decE b₂))
-      s₀ a₀
-
 /-! ## The loop refines `defeqLams` -/
 
 section loopRef
@@ -369,7 +311,7 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (d ty₁ body₁ ty₂ body₂ : Word) (m : Mem) (s : AState)
       (M : ModeMaps) (eb : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW ty₁ →
       HW body₁ → HW ty₂ → HW body₂ → d.toNat + k < 2 ^ 64 →
-      RefE (LamsG p n) (lamsE.loop1 p k m mode vis d ty₁ body₁ ty₂ body₂)
+      RefE (KnotNvG p n) (lamsE.loop1 p k m mode vis d ty₁ body₁ ty₂ body₂)
         (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) K d.toNat (decE ty₁)
           (decE body₁) (decE ty₂) (decE body₂)) s
         (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
@@ -390,15 +332,17 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       | succ k' =>
       obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
       rw [defeqLams_succ_eq, lamsLvl_succ]
-      exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
-        (hG.open_ k' (by omega) F (by omega) (by omega) _ s dn vis fe M eb mode d ty₁ body₁ ty₂ body₂
-          ⟨hS, hmode, heb⟩ h1 h2) hc
+      exact RefE.bind_left fun hG => RefE.run_err
+        (loE_spec p hp.open_ (k' + 1) ⟨m, Locals.init []⟩ mode vis d ty₁ body₁ ty₂ body₂) hG.nv
+        (hG.knot.mono (by omega)) (lo_ref p hp hi k' (hk.mono (by omega)) F (by omega) (by omega)
+          _ s dn vis fe M eb mode d ty₁ body₁ ty₂ body₂ ⟨hS, hmode, heb⟩ h1 hb1 h2 hb2) hc
     obtain ⟨k', rfl⟩ := callW_succ (callW_of_callE hc)
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
     rw [defeqLams_succ_eq, lamsLvl_succ]
     have e₁ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (lamsOpen_refines p hp hi k' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
-        mode d ty₁ body₁ ty₂ body₂ ⟨hS, hmode, heb⟩ h1 hb1 h2 hb2) (callW_of_callE hc)
+      (RefE.coreSpec (loE_spec p hp.open_ (k' + 1) ⟨m, Locals.init []⟩ mode vis d ty₁ body₁ ty₂ body₂)
+        (lo_ref p hp hi k' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
+          mode d ty₁ body₁ ty₂ body₂ ⟨hS, hmode, heb⟩ h1 hb1 h2 hb2)) (callW_of_callE hc)
     obtain ⟨-, hr1, hr2⟩ := e₁.2.2.2
     refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) e₁ (fun M₁ hS₁ _ => ?_)
     by_cases h0 : r.headD 0 = 0
@@ -410,7 +354,8 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     rcases hc2 : callE p (k' + 1) "lam_pair" [r.tail.headD 0, r.tail.tail.headD 0] m₁ with
       e | ⟨q, m₂⟩
     · rw [lamsE.k_lam_pair.none]
-      exact fun hG => ErrClaim.of_cls0 (hG.pair _ _ _ _ hc2)
+      exact fun hG => ErrClaim.of_cls0
+        (callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ hc2)
     have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lamPair_refines p hp k' _ _ dn vis fe M₁ eb _ _ hS₁ hr1 hr2) (callW_of_callE hc2)
     refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) e₂ (fun M₂ hS₂ _ => ?_)
@@ -421,9 +366,9 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       rcases hc3 : callE p (k' + 1) "defeq_lams_inner"
           [mode, vis, d, r.tail.headD 0, r.tail.tail.headD 0] m₂ with e | ⟨rr, m₃⟩
       · rw [lamsE.k_defeq_lams_inner.none]
-        exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
-          (hG.inner k' (by omega) F _ _ dn vis fe M₂ eb mode d _ _ (by omega) (by omega)
-            ⟨hS₂, hmode, heb⟩ (by omega) hr1 hr2) hc3
+        exact fun hG => RefE.run_err (liE_spec p hp.mid.lamsInner (k' + 1) ⟨m₂, Locals.init []⟩
+          mode vis d _ _) trivial (hG.knot.mono (by omega)) (li_ref p k' (hk.mono (by omega)) F _ _ dn
+            vis fe M₂ eb mode d _ _ (by omega) (by omega) ⟨hS₂, hmode, heb⟩ (by omega) hr1 hr2) hc3
       simp only [lamsE.k_defeq_lams_inner]
       obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
         (defeqLamsInner_refines p hp.mid k' (hk.mono (by omega)) F _ _ dn vis fe M₂ eb mode d _ _
@@ -449,7 +394,7 @@ theorem defeqLams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d ty₁ body₁ ty₂ body₂ : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (h1 : HW ty₁) (hb1 : HW body₁) (h2 : HW ty₂) (hb2 : HW body₂) (hd : d.toNat < 2 ^ 63) :
-    RefE (LamsG p n) (lamsE p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂)
+    RefE (KnotNvG p n) (lamsE p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂)
       (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) lamsFuel d.toNat (decE ty₁)
         (decE body₁) (decE ty₂) (decE body₂)) a₀
       (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by

@@ -2156,12 +2156,13 @@ the slots, as `m2c_*` in §3.7):
   `WhnfM2CE`, `WhnfCertsE`, `WhnfSetE`, `WhnfStuckE`;
 - [ ] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
   `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`; done,
-  §3.38),
+  §3.42),
   `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step`, `whnf`, `whnf_loop`, `whnf_step`; claims
   in `WhnfSlotE`);
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
-  `defeq_slot`, `defeq_body`, `is_def_eq_core`);
+  `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
+  `DefEqSpineE` (and `defeq_lams_inner`; §3.41);
 - [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`), `InferBindE` (6: `infer_lams`/`infer_pis` and
   their leaves), `InferSpineE` (4), `InferArmsE` (8), `InferKnotE` (4: `infer_body(_io)`, `infer`,
   `infer_io`).
@@ -2710,10 +2711,62 @@ Elaboration (user seconds, median of 3 interleaved runs, base master 0dd595e6,
 8.05 → 8.46 (+5 %, the new module's header). No module more than 10 % slower. No generator or kit
 change was needed.
 
-### 3.38 Retirement, group B, `whnf` itself, first landing (the `proj` and `app` arms)
+### 3.41 Retirement, group B, `is_def_eq`, first landing (the spine, the ∀ descent, the λ telescope, `quick_defeq`)
+
+Fourteen functions of §3.30 B's third bullet, the bottom of the `defeq` family: `spine_cmp`,
+`defeq_spine2`, `defeq_spine` (`Arena/DefEqMidSpine`); `peel_leaf`, `peel_dom`, `peel_step2`,
+`peel_step`, `defeq_binders` (`DefEqMidPeel`); `defeq_lams_inner` (`DefEqMid`), `lams_open`
+(`DefEqMidLams`); `quick_sort`, `quick_forall`, `quick_lam`, `quick_defeq` (`DefEqMidQuick`). Each
+has its unified model next to its refinement `*_ref` (`CorePost`); the `@[refines]` theorems with
+users are `RefE.coreSpec` one-liners, the claims the knot reads (`DefeqSpineE`, `QuickDefeqE`)
+`RefE.coreSpecE` one-liners. Gone: the claim files `Verdict/DefEqSpineE`, `DefEqPeelE`,
+`DefEqLamsE`, `DefEqQuickE` (with the statements `DefeqBindersE`, `DefeqLamsE`, read only there);
+the generated and hand ok models with their specs (`scW`, `s2W`, `dsW`, `plK*`, `pdK*`, `ps2K*`,
+`psK*`, `bK*`, `loK*`, `liW`, `qsK*`, `qfK*`, `qdK`, `qdW`); `peelDom_refines`,
+`peelStep2_refines`, `lamsOpen_refines`, `quickSort/Forall/Lam_refines`, `GrowRefP.reset`,
+`growRef_congr`, `coreRef_some`.
+
+| family | before: ok refinements, models, specs + claim files | after | change |
+|---|---:|---:|---:|
+| spine (3) | 240 + 227 = 467 | 193 + 7 = 200 | −57 % |
+| ∀ descent (5) | 433 + 329 = 762 | 281 | −63 % |
+| λ telescope (2) | 164 + 168 = 332 | 137 | −59 % |
+| `quick_*` (4) | 341 + 280 = 621 | 239 + 6 = 245 | −61 % |
+| **all** | **2 182** | **863** | **−60 %** |
+
+Diff of the landing against master: +766 −2 104 lines in 13 files.
+
+Choices:
+
+* **`G`**: `KnotUpToE p n` for the pieces whose errors are only the slots' (`spine_*`, `peel_leaf`,
+  `peel_dom`, `peel_step(2)`, `defeq_lams_inner`, `lams_open`); `True` for `quick_sort` (its one
+  error is its own decline). `KnotNvG p n` (`DefEqMid`: the knot and the verdict closure) for the
+  loops `defeq_peel` and `defeq_lams` and their callers `defeq_binders`, `quick_forall`,
+  `quick_lam`, `quick_defeq`; it replaces `PeelG` and `LamsG`, whose fields were the claims of
+  `peel_leaf`/`peel_step` and `lams_open`/`defeq_lams_inner` (now their refinements' error halves,
+  `RefE.run_err`) and the lifted callees' class `0` (now `callE_nv` from `nv`).
+* **Callees**: unified specs listed for the tails and the arms that only re-list a result
+  (`spine_cmp` → `defeq_list_rev`, `defeq_spine2` → `spine_cmp`, `defeq_spine` → `defeq_spine2`,
+  `peel_step(2)` → `peel_step2`/`peel_dom`, `quick_forall` → `defeq_binders`, `quick_lam` →
+  `defeq_lams`, `quick_defeq` → the three arms); the slots and `defeq_peel` through `callE` (the
+  ok half from `CoreSpec`/the growing triple, the error half from the claim or `RefE.run_err`).
+  Where the callee's model has another value type than the caller's (`lrevE`, `lamsE`: a word),
+  the arm cases on the callee's value instead of `RefE.tail_eq` (2–4 lines each).
+* **The stack top put back** (`defeq_spine2`, `defeq_binders`): `GrowPost.restore` (the kit, §1.5);
+  the old `GrowRefP.reset` and its `136 < size` bound are gone.
+* `defeqSpine_refines` lost its unused `StoreDenotes` argument (its two callers updated).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 619488ec,
+`_tmp/retire-defeq/times1.txt`): `Arena/DefEqMid` 3.34 → 3.46, `DefEqMidPeel` 8.20 → 6.16,
+`DefEqMidLams` 5.01 → 4.63, `DefEqMidQuick` 4.73 → 3.78, `DefEqMidSpine` 3.34 → 3.20,
+`DefEqMidLazy` 6.75 → 6.82, `Verdict/DefEqLazyE` 11.85 → 11.82, `DefEqAllE` 0.48 → 0.49, the four
+deleted claim files 9.45 → 0; sum 53.15 → 40.36 (−24 %). No module more than 10 % slower. No
+generator or kit change was needed.
+
+### 3.42 Retirement, group B, `whnf` itself, first landing (the `proj` and `app` arms)
 
 The six functions of `Verdict/WhnfModels2E` that §3.30 B's second bullet lists: `proj_lit_to_ctor`,
-`reduce_proj_core`, `whnf_core_step_proj` (`plit_ref`, `rp_ref`, `sp_ref`, `Arena/WhnfCoreProj`)
+`reduce_proj_core`, `whnf_core_step_proj` (`plit_ref`, `rp_ref`, `stepProj_ref`, `Arena/WhnfCoreProj`)
 and `whnf_app`, `whnf_core_app2`, `whnf_core_app` (`appLoop_ref`/`app_ref`,
 `Arena/WhnfCoreAppLoop`; `capp2_ref`, `capp_ref`, `Arena/WhnfCoreStep`). Their unified models stay
 in `WhnfModels2E`; the `*_refines'` the knot and the tagged theorems read are `RefE.coreSpec`

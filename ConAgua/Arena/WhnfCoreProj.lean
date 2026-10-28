@@ -15,7 +15,7 @@ import Std.WP.Tactic
 
 `proj_lit_to_ctor`, `whnf_core_step_proj`, `reduce_proj_core` (`WhnfCore.lean`): one refinement
 each over its unified model (`Verdict/WhnfModels2E.lean`), both outcomes (`plit_ref`, `rp_ref`,
-`sp_ref`); their errors are the knot's slots' (`KnotUpToE`). The pieces of `reduce_proj_head`
+`stepProj_ref`); their errors are the knot's slots' (`KnotUpToE`). The pieces of `reduce_proj_head`
 (`rpArg`, `rpFire`, `rpHead`) by the `WhnfCoreRefine.lean` method: a word-level model whose callees
 are `callW` runs, the L spec by `vcgen` + `finish`, then the refinement by case analysis on the
 model.
@@ -1062,7 +1062,7 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
 
 /-- **`whnf_core_step_proj` refines `whnfCoreStepProj`, both outcomes**: the errors are the
 scrutinee's head normalization's (a slot's) and `reduce_proj_core`'s. -/
-theorem sp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
+theorem stepProj_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
     (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p) (hE : ErecKept p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
@@ -1128,7 +1128,7 @@ theorem sp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
     obtain ⟨-, ⟨M₁, hS₁, hK₁, hSt₁⟩, -, hr₁⟩ := h1
     exact rest r₁ m₁ _ M₁ hS₁ hK₁ hSt₁ hr₁
 
-/-- **`whnf_core_step_proj` refines `whnfCoreStepProj`** (`sp_ref`'s ok half). -/
+/-- **`whnf_core_step_proj` refines `whnfCoreStepProj`** (`stepProj_ref`'s ok half). -/
 theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
     (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p)
     (_hl : p.lookup "ls_node" = some lsNode) (hE : ErecKept p) (n : Nat)
@@ -1140,7 +1140,7 @@ theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : St
       (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
         (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (coreStepProjE_spec p hp.sproj hp.rproj hp.plit (n + 1) s₀ mode cheap vis d e sn i pe)
-    (sp_ref p hp hStrSup hStrCtor hc hE n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs
+    (stepProj_ref p hp hStrSup hStrCtor hc hE n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs
       he hsn hpe hsup)
 
 /-! ## The refinements at the original statements (the stubs instantiated) -/

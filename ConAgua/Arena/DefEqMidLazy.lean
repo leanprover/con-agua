@@ -408,7 +408,7 @@ theorem ldsSame_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
         decBool_t hcnd.2.2.2]
     simp only [hsch, ↓reduceIte]
     refine coreRef_callK hW rfl
-        (defeqSpine_refines p hp.spine hc.store k (hk.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₁ eb mode d a b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hwa hwb)
+        (defeqSpine_refines p hp.spine k (hk.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₁ eb mode d a b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hwa hwb)
       fun r₂ m₂ hW e₂ M₂ hS₂ => ?_
     rw [smW.k_defeq_spine.arm1] at hW
     by_cases h2 : r₂.headD 0 ≠ 0
