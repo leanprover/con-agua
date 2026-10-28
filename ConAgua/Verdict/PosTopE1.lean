@@ -27,12 +27,17 @@ namespace L.Ind
 open L.Arena
 
 l_model iaoE_spec (p : Prog) (hf : p.lookup "check_abs_ctor_sorts_one" = some checkAbsCtorSortsOne)
-  fns [hf ↦ iaoE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+  fns [hf ↦ iaoE list] specs [callW_spec p n "open_pis_at_fvars_f"] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model iacE_spec (p : Prog) (hf : p.lookup "check_abs_ctor_sorts" = some checkAbsCtorSorts)
-  fns [hf ↦ iacE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+l_model iacE_spec (p : Prog) (h1 : p.lookup "check_abs_ctor_sorts_one" = some checkAbsCtorSortsOne)
+  (hf : p.lookup "check_abs_ctor_sorts" = some checkAbsCtorSorts)
+  fns [hf ↦ iacE list]
+  specs [callW_spec p n "all_level_params_defined", callW_spec p n "nest_ctx_hi_at", iaoE_spec p h1 n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model iaaE_spec (p : Prog) (hf : p.lookup "check_abs_ctor_sorts_all" = some checkAbsCtorSortsAll)
   fns [hf ↦ iaaE list] grind [arena_grind] fold [tierW, idxW]
