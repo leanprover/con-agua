@@ -14,7 +14,7 @@ values and both environments denote; the pre-block environment's `IFEnvOKS`), it
 transcribed from that spec's proof. The tail (`cscTailT`, `ctlW_okC`): the fields opened past the
 parameters (`openPisAtFvarsF_run`), the family head (`paramLevels_spec`, `internConstE_run`), the
 residual's spine (`getAppFn_run`, `getAppArgs_run`), the resolution tests (`fieldDomsResolve_spec`,
-`idxArgsResolve_spec`), the field sorts (`fsortsW_okC`, con-ron's `checkStructFieldSortsI_spec` on
+`idxArgsResolve_spec`), the field sorts (`installSimFsortsC`, con-ron's `checkStructFieldSortsI_spec` on
 its run for the `CoreStep`).
 -/
 
@@ -40,7 +40,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
 include hq henv hOpf hLC hLT in
 /-- **`check_sum_ctor_tail` under `StageC`** (twin side: the tail of con-ron's
 `checkSumCtor_spec`'s proof). -/
-theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
+theorem ctlW_okC (hP : SumProg p) (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
     (a : AState) (vis0 T lo ll nP nIdx rs isP lg nF cqO cqL cqB : Word) (lps : List NIdx)
     (cq1 : List EIdx) (cvCa : IConstantVal) (hC : StageC dn vis fe env m a) (hT : H T)
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
@@ -242,9 +242,10 @@ theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
       ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD :=
     fun i _ x hx => ConRon.Bridge.Inductives.openers_typeD_WScoped hxq hwsc i x hx
   refine Sim.bindK (K := ctlK9) rfl (fun _ _ => rfl)
-    (Sim.withRunC (fsortsW_okC hq henv hLC hLT n (by omega) m7 a7 isP lg rs nP xo xlw (ao + nP) (al - nP) nF xl1
-      (args.drop nP.toNat) hC7 hA7 (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.1; omega)
-      (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.1; omega) hrs (ConRon.Bridge.denoteL_ext hrsP hx07) hnf hxfvs7 hxpos))
+    (Sim.withRunC (installSimFsortsC hq henv hLC hLT hP (n + 1) (by omega) isP lg rs nP xo xlw (ao + nP) (al - nP) nF
+      hrs xl1 (args.drop nP.toNat) hC7 hA7 (ConRon.Bridge.denoteL_ext hrsP hx07)
+      (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.1; omega)
+      (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.1; omega) hnf hxfvs7 hxpos))
     fun r9 sorts m8 a8 hQ => ?_
   obtain ⟨⟨hC8, hg8, hd8, hb8, hA8⟩, hr8⟩ := hQ
   obtain ⟨c8, -⟩ := ConRon.Bridge.Inductives.checkStructFieldSortsI_spec fe
@@ -469,7 +470,7 @@ theorem ctorW_okC (hP : SumProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
     have := (ConLeche.openPisAtFvars_WScoped _ _ _ hcq hwsA).2
     simpa using this
   refine sumSim_map (K := ctorK9 cvCw) rfl (fun _ _ => rfl)
-    (ctlW_okC hq henv hOpf hLC hLT n (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC hC7 hT
+    (ctlW_okC hq henv hOpf hLC hLT hP n (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC hC7 hT
       (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).1; omega)
       (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.1; omega) hcqB hrs hni hnf hA7
       (ConRon.Bridge.denoteN_ext hTP hx07) (ConRon.Bridge.denoteNListE_ext hx07 _ _ hlpsP)

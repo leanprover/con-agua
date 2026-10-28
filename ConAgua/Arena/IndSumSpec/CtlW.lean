@@ -31,7 +31,7 @@ variable (cR : CallM) (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg nF
   (r : List Word)
 theorem ctlK9_some : ctlK9 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 theorem ctlK8_yes (h : r.headD 0 ≠ 0) : ctlK8 cR n vis isP lg rs nP nF xo xl ao al (some (r, m)) =
-    ctlK9 (fsortsW cR n m vis isP lg rs nP xo xl (ao + nP) (al - nP) nF) := by simp only [ctlK8]; rw [ite_eq_right h]
+    ctlK9 (fsortsR cR n m vis isP lg rs nP xo xl (ao + nP) (al - nP) nF) := by simp only [ctlK8]; rw [ite_eq_right h]
 theorem ctlK7_yes (h : r.headD 0 ≠ 0) : ctlK7 cR n vis0 vis isP lg rs nP nF xo xl ao al (some (r, m)) =
     ctlK8 cR n vis isP lg rs nP nF xo xl ao al (iarW (n + 1) m vis0 (ao + nP) (al - nP)) := by
   simp only [ctlK7]; rw [ite_eq_right h]
@@ -73,7 +73,7 @@ theorem ctlW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR)
     internConst_spec p hP.hcf hP.hcp hP.hic (n + 1),
     gafF_spec p hP.ad (n + 1), gaaF_spec p hP.ad (n + 1),
     slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr hP.ad.ftd hP.hcr (n + 1), iarW_spec p hP.hiar hP.hcr (n + 1),
-    fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd cR hcR n]
+    fsortsR_spec p cR hcR n]
   all_goals subst_vars
   -- the callee posts' `LocEq`s, unfolded, rewrite the locals before `grind` (as `tka_spec`)
   all_goals (try simp only [LocEq] at *)

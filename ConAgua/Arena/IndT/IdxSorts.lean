@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndT.Install5
+import ConAgua.Arena.IndT.Sum3
 import ConAgua.Verdict.IndBE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -10,7 +10,7 @@ import ConAgua.L.ModelGen
 `iisE` (`check_block_idx_sorts_one`) and `iisrE` (`check_block_idx_sorts`), `l_model … unified`:
 `open_pis_at_fvars_f`, `rec2` and `sl_cons` (outside the verdict closure) through their `Option`
 models, `check_struct_field_sorts_i` through its run (`callE`; its ok half by its `Option` spec
-and `fsortsW_okC`, its error half by its claim `CheckStructFieldSortsIE`), the member check
+and `fsorts_ref` from the run, its error half by its claim `CheckStructFieldSortsIE`), the member check
 through its unified model. `iis_ref` and `iisr_ref` refine `idxOneAM` and `checkBlockIdxSorts`
 for both outcomes; `checkBlockIdxSorts_refinesC` is the ok half.
 -/
