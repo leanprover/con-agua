@@ -172,10 +172,4 @@ def roK {β : Type} (c : NestCtx) (hi : Nat) (cur : EIdx) (K : Bool → AM β) :
 
 end L.Ind
 
-namespace L.Ind
-
-open L.Arena
-
-end L.Ind
-
 end
