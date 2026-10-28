@@ -1,12 +1,8 @@
 import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.DeclValSpec
-import ConAgua.Arena.IndInstallSpec.CapsProg
-import ConAgua.Arena.IndInstallSpec.DecCNS
 import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.IndRealIlpL
 import ConAgua.Arena.IndSumSpec.TblProg
 import ConAgua.Arena.KnotEntry
-import ConAgua.Arena.RecGenSpec.OcW
 import ConRon.Bridge.Inductives.ClassRead
 import ConAgua.Verdict.IndAGen
 import ConAgua.Arena.IndRealSctC
