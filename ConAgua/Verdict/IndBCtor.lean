@@ -257,7 +257,8 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
     (classFieldsOf_spec p P.cfo (n + 1) _ q (r3.tail.headD 0) (r3.tail.tail.headD 0) 0
       (r4.tail.headD 0) (r4.tail.tail.headD 0)) (callW_of_callE h5)
   simp only at hs5' hw5; rw [hs5'] at hw5
-  have hA5 := cfoW_afr hw5 hA4
+  have hA5 := cfoW_afr P.cfo hS4 (hbs.grow hg14) (DecB.stab (OMono.decPL (fun q => decNN_mono q) _ _) hihB)
+    hib hdl hbl (by simpa using (r4.tail.tail.headD 0).toNat_lt) hM0 hw5 hA4
   have hP5 := hP4.setNo hf5 ⟨mp5, hM5⟩
   have run5 := AM.run_of_ok _ a4 hok5
   generalize hx5 : AM.res (ConRon.Arena.classFieldsOf bs ihs (0 : Word).toNat fvs) a4 = kinds at run5 hsp5

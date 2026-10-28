@@ -5,7 +5,7 @@ import ConAgua.Arena.RecSim
 /-!
 # CfoProg
 
-`rec2NoMR_ftd`, `rec2NoMR_iw`, `cfgK6`, `CfoProg`, `rec2SimNestOcc`, `AgreeA` and the lemmas only they use.
+`rec2NoMR_ftd`, `rec2NoMR_iw`, `CfoProg`, `rec2SimNestOcc`, `AgreeA` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -29,13 +29,6 @@ theorem rec2NoMR_ftd {m m' : Mem} {args r : List Word} {mp : Std.HashMap EIdx Bo
 theorem rec2NoMR_iw {m m' : Mem} {mp : Std.HashMap EIdx Bool} (hf : MemFrame [IW] [200] m m')
     (hM : noMR m mp) : noMR m' mp :=
   memoRG_frame noSch noSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf mp hM
-
-/-! ## `class_fields_of_go`: the model -/
-
-/-- After the cons. -/
-def cfgK6 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
 
 /-- The lookups `class_fields_of` needs. -/
 structure CfoProg (p : Prog) : Prop where
