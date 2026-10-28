@@ -1,6 +1,5 @@
 import ConAgua.Arena.WhnfIotaRefine2
 import ConAgua.Verdict.WhnfModels3E
-import ConAgua.Arena.KnotE
 import ConAgua.Arena.Abs1Refine
 import ConAgua.Arena.Rom
 import ConAgua.Arena.GrindAttr
