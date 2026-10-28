@@ -400,8 +400,107 @@ theorem TwinPend.twinOK {fe : IFEnv} {pc : PendingCheck} {rest : List PendingChe
   obtain ⟨env, hck⟩ := hT.checkAt
   exact TwinOK.of_check hck ⟨hM.erec, hM.spn, hM.bstk, hc, fun k x e => (hM.dnP k x e).2⟩
 
-/-- **`check_pending` refines `checkPending` under `StageT`**: the bracket's opening keeps
-`TwinOK` at the record's view, `check_value_group` runs from `StageT`, the drop is a leaf. -/
+/-- The record's two words read by `rdW` (the unified model's loads). -/
+theorem pend_rdW (m : Mem) (pend : Array PendingCheck) (hP : PendR m pend) (j : Word)
+    (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62) :
+    decVG (erecP m) (rdW (m.arr64 PEND) (3 * j)).toNat = some (pdAt pend j).vg ∧
+    (rdW (m.arr64 PEND) (3 * j + 2)).toNat = (pdAt pend j).vis := by
+  have hr := hP.recs j.toNat hj
+  have e0 : (3 * j).toNat = 3 * j.toNat := by rw [UInt64.toNat_mul]; simp; omega
+  have e2 : (3 * j + 2).toNat = 3 * j.toNat + 2 := by rw [UInt64.toNat_add, e0]; simp; omega
+  have hpd : pdAt pend j = pend[j.toNat] := by simp [pdAt, hj]
+  simp only [decPend, nat?, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
+    Option.map_eq_some_iff] at hr
+  obtain ⟨g, ⟨w0, hw0, rfl⟩, vg, hvg, x, ⟨w1, hw1, rfl⟩, y, ⟨w2, hw2, rfl⟩, he⟩ := hr
+  rw [hpd, ← Option.some.inj he]
+  refine ⟨?_, ?_⟩
+  · rw [rdW_of_get? e0.symm hw0]; exact hvg
+  · rw [rdW_of_get? e2.symm hw2]
+
+/-- **`check_pending`'s unified model**: the bracket's opening and drop (outside the verdict
+closure) lifted, `check_value_group` through its run (its ok half reads the call's write set). -/
+l_model checkPending_specE (p : Prog) (hf : p.lookup "check_pending" = some checkPendingL)
+  fns [hf ↦ checkPendingE]
+  specs [callW_spec p n "scratch_enter", callW_spec p n "scratch_drop"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- What `check_pending`'s error arms assume: the no-verdict closure (the bracket) and
+`check_value_group`'s (`CvgCtx`). -/
+structure CpG (p : Prog) : Prop where
+  nv : closedNV p L.Checker.nvFns = true
+  cvg : CvgCtx p
+
+/-- What `check_pending` gives besides the twin's run: the loop's relation, the core's memos and
+`consts_resolve_ffast`'s memo after it. -/
+structure CpPost (vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (m' : Mem) (a' : AState) :
+    Prop where
+  loop : LoopR pins dn m' a' vis fe pend ds
+  core : CoreMemos m'
+  cr : L.Stubs.CrOK m'
+
+/-- **`check_pending` refines `checkPending` under `StageT`, both outcomes**: the bracket's
+opening keeps `TwinOK` at the record's view, `check_value_group` runs from `StageT` (`cvg_ref`'s
+error half on its run), the drop is a leaf. -/
+theorem cpd_ref (hm : mode = .verified) (hP : PhaseBProg p) {N : Nat} (hN : N ≤ 2 ^ 62 + 1)
+    {m : Mem} {a₀ : AState} {j vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
+    (hj : j.toNat < pend.size) {rest : List PendingCheck}
+    (hT : TwinPend fe (pdAt pend j :: rest) a₀) (hR : LoopR pins dn m a₀ vis fe pend ds)
+    (hM : LoopMem dn m a₀) (hc : CoreMemos m) (hCr : L.Stubs.CrOK m) :
+    RefE (CpG p) (checkPendingE p N m j vis) (checkPending mode fe (pdAt pend j)) a₀
+      (fun v _ a' => CpPost pins dn ds vis fe pend v.2 a') := by
+  subst hm
+  have hb := hP.bracket
+  have hTw := hT.twinOK dn hM hc
+  have hthm := hT.enterThm
+  rcases N with _ | n
+  · rw [checkPendingE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  have hn' : n ≤ 2 ^ 62 := by omega
+  by_cases g1 : 4611686018427387904 ≤ j
+  · rw [checkPendingE.abort1 _ _ _ _ _ g1]; exact RefE.of_cls0 rfl
+  rw [checkPendingE.arm1 _ _ _ _ _ g1]
+  have h62 : j.toNat < 2 ^ 62 := by
+    have : ¬ (4611686018427387904 : Word).toNat ≤ j.toNat := fun h => g1 (UInt64.le_iff_toNat_le.mpr h)
+    simp at this; omega
+  unfold checkPending
+  rcases c1 : callW p n "scratch_enter" [] m with _ | ⟨r1, m1⟩
+  · rw [liftE_none, checkPendingE.k_scratch_enter.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, checkPendingE.k_scratch_enter.arm1]
+  obtain ⟨s1, hs1, -, hok1, hR1, hT1, hfl1, hCr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (enter_loopB dn ds p hb hP.crk (pins := pins) n _ a₀ vis fe (fe.restrictTo (pdAt pend j).vis) pend
+      hT.stateOK.wf hT.off hR hTw hM.flag hCr) c1
+  subst hs1
+  refine RefE.bind_right (AM.run_of_ok _ _ hok1) ?_
+  obtain ⟨hg, hv⟩ := pend_rdW s1.mem pend hR1.pend j hj h62
+  generalize rdW (s1.mem.arr64 PEND) (3 * j + 2) = v at hv ⊢
+  generalize rdW (s1.mem.arr64 PEND) (3 * j) = g at hg ⊢
+  have hR' := hR1.restrict v
+  rw [hv] at hR'
+  have hS : StageT dn v (fe.restrictTo (pdAt pend j).vis) s1.mem (AM.st enterScratch a₀) :=
+    ⟨⟨hR'.check, hR'.iw⟩, hT1, hfl1⟩
+  rcases c2 : callE p n "check_value_group" [v, g] s1.mem with e2 | ⟨r2, m2⟩
+  · rw [checkPendingE.k_check_value_group.none]
+    exact RefE.bind_left fun hG => RefE.run_err (s₀ := ⟨s1.mem, Locals.init []⟩)
+      (checkValueGroup_specE p hP.cvg n _ v g) hG.nv hG.cvg
+      (cvg_ref hP.knot hP.cvg hP.knot.knot.lvc hP.apd hP.crk n hn' hS hg hCr1 hthm) c2
+  rw [checkPendingE.k_check_value_group.arm1]
+  obtain ⟨s2, hs2, -, hok2, hR2, hcm2, hCr2⟩ := triple_of_callE (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (checkValueGroup_specT .verified pins dn ds p rfl hP.cvg hP.knot hP.apd hP.crk n hn' _
+      (AM.st enterScratch a₀) v (fe.restrictTo (pdAt pend j).vis) pend g _ hg hthm hR' hT1 hfl1 hCr1) c2
+  subst hs2
+  refine RefE.bind_right (AM.run_of_ok _ _ hok2) ?_
+  rcases c3 : callW p n "scratch_drop" [] s2.mem with _ | ⟨r3, m3⟩
+  · rw [liftE_none, checkPendingE.k_scratch_drop.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, checkPendingE.k_scratch_drop.arm1]
+  obtain ⟨s3, hs3, -, hok3, hR3, hcm3, hCr3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+    (drop_loopB dn ds p hb hP.leaf hP.crk (pins := pins) n _ _ vis fe pend (hR2.unrestrict hR.vis)
+      hcm2 hCr2) c3
+  subst hs3
+  exact RefE.ret (AM.run_of_ok _ _ hok3) ⟨hR3, hcm3, hCr3⟩
+
+/-- **`check_pending` refines `checkPending` under `StageT`** (`cpd_ref`'s ok half). -/
 @[refines ConRon.Arena.checkPending]
 theorem checkPending_refinesT (hm : mode = .verified) (hP : PhaseBProg p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (j vis : Word) (fe : IFEnv)
@@ -413,41 +512,11 @@ theorem checkPending_refinesT (hm : mode = .verified) (hP : PhaseBProg p) (n : N
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (checkPending mode fe (pdAt pend j)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (checkPending mode fe (pdAt pend j)) a₀) vis fe pend ds ∧
       CoreMemos s'.mem ∧ L.Stubs.CrOK s'.mem; ⊤⦄ := by
-  have hb := hP.bracket
-  have hthm := hT.enterThm
-  have hvB := hR.vis
-  have hwf : StoreWF a₀.store := hT.stateOK.wf
-  have hoff := hT.off
-  have hTw := hT.twinOK dn hM hc
-  have hfl := hM.flag
-  have hres : ∀ m a, LoopR pins dn m a vis fe pend ds → ∀ v : Word,
-      LoopR pins dn m a v (fe.restrictTo v.toNat) pend ds := fun m a h v => h.restrict v
-  have hunr : ∀ m a (v : Word), LoopR pins dn m a v (fe.restrictTo (pdAt pend j).vis) pend ds →
-      LoopR pins dn m a vis fe pend ds := fun m a v h => h.unrestrict hvB
-  have hw : ∀ (m : Mem) (a : AState), LoopR pins dn m a vis fe pend ds → j.toNat < 2 ^ 62 →
-      (∀ (h : (3 * j).toNat < (m.arr64 PEND).size),
-        decVG (erecP m) ((m.arr64 PEND)[(3 * j).toNat]).toNat = some (pdAt pend j).vg) ∧
-      (∀ (h : (3 * j + 2).toNat < (m.arr64 PEND).size),
-        ((m.arr64 PEND)[(3 * j + 2).toNat]).toNat = (pdAt pend j).vis) :=
-    fun m a h h62 => pend_words m pend h.pend j hj h62
-  have inner : ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending" [j, vis]
-      ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧ AM.ok (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀) ∧
-        AM.ok dropScratch (AM.st (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀)) ∧ LoopR pins dn s'.mem (AM.st dropScratch (AM.st (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀))) vis fe pend ds ∧ CoreMemos s'.mem ∧ L.Stubs.CrOK s'.mem; ⊤⦄ := by
-    rw [invoke_eq _ hP.cp]
-    simp only [callFn, checkPendingL]
-    cases n with
-    | zero => vcgen [exec] <;> grind
-    | succ n =>
-      have hn' : n ≤ 2 ^ 62 := by omega
-      sym only [lang_grind, arena_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-          (enter_loopB dn ds p hb hP.crk (pins := pins) n · a₀ vis fe (fe.restrictTo (pdAt pend j).vis) pend hwf hoff),
-          (checkValueGroup_specT mode pins dn ds p hm hP.cvg hP.knot hP.apd hP.crk n hn' · (AM.st enterScratch a₀) · (fe.restrictTo (pdAt pend j).vis) pend · (pdAt pend j).vg · hthm),
-          (drop_loopB dn ds p hb hP.leaf hP.crk (pins := pins) n · (AM.st (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀)) vis fe pend)] <;>
-        finish
-  exact triple_post inner fun r s' ⟨h0, h1, h2, h3, h4, h5, h6⟩ => by
-    obtain ⟨o, st⟩ := checkPending_ok mode fe (pdAt pend j) a₀ h1 h2 h3
-    exact ⟨h0, o, by rw [st]; exact h4, h5, h6⟩
+  refine triple_post (RefE.triple (checkPending_specE p hP.cp n s₀ j vis)
+    (cpd_ref mode pins dn ds p hm hP (by omega) hj hT hR hM hc hCr)) ?_
+  rintro r s' ⟨hloc, _, a', hrun, hp⟩
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hloc, hok, by rw [hst]; exact hp.loop, hp.core, hp.cr⟩
 
 /-- `check_pending` is one of the loop's functions. -/
 theorem checkPending_loop : "check_pending" ∈ loopFns := loop_mem _ rfl
@@ -533,25 +602,15 @@ def PendPostT (m : Mem) (a : AState) (v : Word) (k : Nat) : Prop :=
   PendPost mode pins dn ds fe pend m a v k ∧ CoreMemos m ∧
     LoopMem dn m (AM.st (checkPendingList mode fe (pend.toList.drop k)) a) ∧ L.Stubs.CrOK m
 
-/-- **`check_pending`'s error claim** (what phase B's error arms assume; proved bottom-up,
-`DeclPendE.lean`): under `checkPending_loopT`'s hypotheses, a failing run claims `checkPending`'s
-failure. -/
-def CPErrT : Prop :=
-  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (j vis : Word), j.toNat < pend.size →
-    TwinPend fe (pend.toList.drop j.toNat) a₀ →
-    LoopR pins dn s₀.mem a₀ vis fe pend ds → LoopMem dn s₀.mem a₀ → CoreMemos s₀.mem →
-    j.toNat < 2 ^ 62 → L.Stubs.CrOK s₀.mem →
-    CoreSpecE p n "check_pending" [j, vis] (checkPending mode fe (pdAt pend j)) s₀ a₀
-
 /-- **`check_pending_go`'s refinement at fuel `n`, both outcomes**: from phase B's twin invariant
 (`TwinPend`) at check `j`, the loop's relation and the memory's half, an ok value ends in
-`PendPostT`; an error (under `check_pending`'s claim `CPErrT`) claims that phase B over the
+`PendPostT`; an error (under `check_pending`'s `CpG`) claims that phase B over the
 checks from `j` fails (a record's failure, as a value). -/
 def CPGoRef (n : Nat) : Prop :=
   ∀ (m : Mem) (a₀ : AState) (j cnt vis : Word), j.toNat ≤ pend.size → cnt.toNat = pend.size →
     TwinPend fe (pend.toList.drop j.toNat) a₀ →
     LoopR pins dn m a₀ vis fe pend ds → LoopMem dn m a₀ → CoreMemos m → L.Stubs.CrOK m →
-    RefC (CPErrT mode pins dn ds p fe pend) (checkPendingGoE p n m j cnt vis)
+    RefC (CpG p) (checkPendingGoE p n m j cnt vis)
       (fun v => PendPostT mode pins dn ds fe pend v.2 a₀ vis j.toNat)
       (ErrClaimV (checkPendingList mode fe (pend.toList.drop j.toNat)) a₀)
 
@@ -560,7 +619,7 @@ def CPNextRef (n : Nat) : Prop :=
   ∀ (m : Mem) (a₀ : AState) (j cnt vis : Word), j.toNat < pend.size → cnt.toNat = pend.size →
     TwinPend fe (pend.toList.drop j.toNat) a₀ →
     LoopR pins dn m a₀ vis fe pend ds → LoopMem dn m a₀ → CoreMemos m → L.Stubs.CrOK m →
-    RefC (CPErrT mode pins dn ds p fe pend) (checkPendingNextE p n m j cnt vis)
+    RefC (CpG p) (checkPendingNextE p n m j cnt vis)
       (fun v => PendPostT mode pins dn ds fe pend v.2 a₀ vis j.toNat)
       (ErrClaimV (checkPendingList mode fe (pend.toList.drop j.toNat)) a₀)
 
@@ -582,13 +641,22 @@ def CPNextSpecT (n : Nat) : Prop :=
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending_next" [j, cnt, vis]
     ⦃fun _ s' => LocEq s' s₀ ∧ PendPostT mode pins dn ds fe pend s'.mem a₀ vis j.toNat; ⊤⦄
 
+/-- **`check_pending`'s error claim** under `checkPending_loopT`'s hypotheses (the threads' error
+chain reads it at each group). -/
+def CPErrT : Prop :=
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (j vis : Word), j.toNat < pend.size →
+    TwinPend fe (pend.toList.drop j.toNat) a₀ →
+    LoopR pins dn s₀.mem a₀ vis fe pend ds → LoopMem dn s₀.mem a₀ → CoreMemos s₀.mem →
+    j.toNat < 2 ^ 62 → L.Stubs.CrOK s₀.mem →
+    CoreSpecE p n "check_pending" [j, vis] (checkPending mode fe (pdAt pend j)) s₀ a₀
+
 section cp
 variable (hP : PhaseBProg p) (hm : mode = .verified)
 include hP hm
 
 /-- **`check_pending_go` and `check_pending_next` refine `checkPendingList` from check `j` on, both
 outcomes**, by one induction on the fuel over the two models: `check_pending`'s ok run is the twin's
-step (`checkPending_loopT`), its failure the twin's value failure at the record (`CPErrT`); the
+step (`checkPending_loopT`), its failure the twin's value failure at the record (`cpd_ref`); the
 rest's outcome is the induction hypothesis's. -/
 theorem cp_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
     CPGoRef mode pins dn ds p fe pend n ∧ CPNextRef mode pins dn ds p fe pend n := by
@@ -638,9 +706,10 @@ theorem cp_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
     | error e1 =>
       rw [checkPendingNextE.k_check_pending.none]
       intro hE hk0
-      rw [hd]
+      rw [hd] at hT ⊢
       exact checkPendingList_fails_head
-        (CoreSpecE.of_callE (hE n hn' ⟨m, Locals.init []⟩ a₀ j vis hj hT hR hM hcm h62 hCr) hc1 hk0)
+        (RefE.run_err (checkPending_specE p hP.cp n ⟨m, Locals.init []⟩ j vis) hE.nv hE
+          (cpd_ref mode pins dn ds p hm hP (by omega) hj hT hR hM hcm hCr) hc1 hk0)
     | ok q =>
     obtain ⟨r, m₁⟩ := q
     obtain ⟨s', hs', -, hok, hR', hcm', hM', hT', hCr'⟩ := triple_of_callE
@@ -711,6 +780,14 @@ theorem checkPendingGo_workerT (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ :
   simp only [UInt64.toNat_zero, List.drop_zero] at hrun hres
   rw [hres] at hrun
   exact checkPendingList_worker_ok hT.caches hrun
+
+/-- `CPErrT` from `cpd_ref`. -/
+theorem checkPending_errT (hG : CpG p) : CPErrT mode pins dn ds p fe pend := by
+  intro n hn s₀ a₀ j vis hj hT hR hM hc hj62 hCr
+  have h1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  rw [drop_cons_pdAt pend j hj h1] at hT
+  exact RefE.coreSpecE (checkPending_specE p hP.cp n s₀ j vis) hG.nv hG
+    (cpd_ref mode pins dn ds p hm hP (by omega) hj hT hR hM hc hCr)
 
 end cp
 end phaseB
