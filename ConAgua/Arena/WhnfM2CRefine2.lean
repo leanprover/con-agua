@@ -189,6 +189,19 @@ theorem GrowPost.growRef {α : Type} [Inhabited α] {T : AM α} {a : AState} {de
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
   exact ⟨hok, hst ▸ h.after, hres.trans h.res, h.valid⟩
 
+/-- The ok half at a callee's run (`callW`), as `GrowRef`. -/
+theorem RefE.growRefW {α : Type} [Inhabited α] {T : AM α} {a : AState} {dec : List Word → α}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {ok : List Word → Prop} {G Gs : Prop} {p : Prog} {n : Nat} {f : FnName} {args : List Word}
+    {s₀ : St} {fx : Except Err (List Word × Mem)}
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => LocEq s' s₀ ∧ fx = .ok (r, s'.mem); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (h : RefE G fx T a (GrowPost dec dn s₀.mem vis fe M eb ok)) {r : List Word} {m' : Mem}
+    (hc : callW p n f args s₀.mem = some (r, m')) :
+    GrowRef T a dec dn s₀.mem vis fe M eb r m' ok := by
+  obtain ⟨s', rfl, -, y, a', hT, hR⟩ := RefE.run_okW hs h hc
+  exact hR.growRef hT
+
 /-- The arm's result word is the callee's (a tail call), after a run that kept the stack from `m₀`
 to `m₁` (`hK`, `hSt`). -/
 theorem GrowPost.of_tail {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv}
