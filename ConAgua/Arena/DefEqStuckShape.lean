@@ -95,6 +95,25 @@ theorem CoreS.restoreTop {dn : NIdx → Option ConLeche.Name} {m m₁ : Mem} {a 
   have hS₂ := hS₁.frame_stk (MemFrame.setCtl m₁ 136 (rdW (m.arr64 CTL) 136)) (by simp) (by simp)
   exact ⟨hS₂, StackKept.restoreG hg h136⟩
 
+/-- `restoreTop` without the bound: out of bounds the store is a no-op and the top reads `0` on
+both sides (the frame keeps `CTL`'s size). -/
+theorem CoreS.restoreTop' {dn : NIdx → Option ConLeche.Name} {m m₁ : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
+    (hf : MemFrame [SPN] [136] m m₁) (hg : StackGrew m m₁) :
+    CoreS dn (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) a vis fe M eb ∧
+      StackKept m (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) := by
+  by_cases h136 : (136 : Word).toNat < (m₁.arr64 CTL).size
+  · exact hS.restoreTop hf hg h136
+  have hfs := MemFrame.setCtl m₁ 136 (rdW (m.arr64 CTL) 136)
+  refine ⟨(hS.frame_stk hf (by simp) (by simp)).frame_stk hfs (by simp) (by simp), ?_, ?_,
+    fun i hi => ?_, hg.bstk.trans (BKept.of_frame hfs (by decide) (by decide)),
+    hg.pool.trans (PoolGrew.of_frame hfs (by decide) (by decide))⟩
+  · have hm : ¬ (136 : Word).toNat < (m.arr64 CTL).size := by rw [← hf.size CTL]; exact h136
+    rw [spTop, spTop, rdW_set64, ite_eq_right (fun h => h136 h.2.2)]
+    simp only [rdW, Array.getElem?_eq_none (Nat.le_of_not_lt h136), Array.getElem?_eq_none (Nat.le_of_not_lt hm)]
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hg.size
+  · simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hg.below i hi
+
 /-! ## `eta_ctor_shape` -/
 
 section ecs

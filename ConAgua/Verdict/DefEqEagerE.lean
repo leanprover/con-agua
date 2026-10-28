@@ -1,5 +1,4 @@
 import ConAgua.Verdict.DefEqBaseE
-import ConAgua.Arena.KnotE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 
