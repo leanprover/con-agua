@@ -2154,12 +2154,10 @@ the slots, as `m2c_*` in §3.7):
   `irAt`/`irC`/`irMajor`/`irFire`/`irFam`, `pm`, `lmtc`, `pirr`), `WhnfModels6E` (`mtc`); their claims
   in `WhnfMidE`, `WhnfUnitE`, `WhnfIotaE`, `WhnfIotaRecE`, `WhnfPrepE`, `WhnfIdxE`, `WhnfPirrE`,
   `WhnfM2CE`, `WhnfCertsE`, `WhnfSetE`, `WhnfStuckE`;
-- [ ] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
-  `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`; done,
-  §3.42),
-  `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step` (these two done, §3.43), `whnf`,
-  `whnf_loop`, `whnf_step`; claims
-  in `WhnfSlotE`);
+- [x] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
+  `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`),
+  `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step`, `whnf`, `whnf_loop`, `whnf_step`; claims
+  in `WhnfSlotE`). Done (§3.42, §3.43, §3.45);
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
@@ -2973,4 +2971,30 @@ Elaboration (user seconds, median of 3 interleaved runs, base master f6ca221b,
 49.27 (−26 %). **Three modules are more than 10 % slower**: the unified models moved in with the
 refinements (`strE`'s generation alone is about 20 s, as was the `errors` model's in `DefEqTailE`);
 the default recipe fails on `strE` (88 s). No generator or kit change was needed.
+
+### 3.45 Retirement, group B, `whnf` itself, third landing (`whnf_step`, `whnf_loop`, `whnf`)
+
+`wstep_ref`, `wloop_ref`, `whnf_ref` (new `Arena/WhnfSlotRefine`, after `reduce_nat`'s refinement in
+`Verdict/WhnfNatE`), over unified models that list their callees' unified specs: `whnf_step` lists
+`reduce_nat`'s, `whnf_loop` `whnf_step`'s, `whnf` `whnf_loop`'s (the memo's probes and puts and
+`unfold_definition` lifted, the `whnf_core` slot through its run). So all three have `G` =
+`KnotUpToE p n`, and `whnfSlotsE_step` needs neither `ReduceNatE` nor a loop claim. The knot's
+interfaces stay, as one-liners: `whnfStep_refines'` (now over `NatOpResultOK` instead of
+`reduce_nat`'s spec at every fuel), `whnfLoop_refines` (`@[refines]`, now under `n ≤ 2 ^ 62`),
+`whnf_refines` (no `WhnfLoopSpec` hypothesis), `whnfSlot_stepE`. Gone: the hand models `whnfStepW`,
+`whnfW` and the generated ok model `whnfLoopW` with their specs, `WhnfStepUpTo`, `WhnfStepSpec`,
+`whnfLoopW_ok`, the claims `whnfStep_refinesE`, `whnfLoopE_ok`, `whnfLoop_refinesE` and the old
+`whnfSlot_stepE`.
+
+| functions | before: ok side + claims | after | change |
+|---|---:|---:|---:|
+| `whnf_step`, `whnf_loop`, `whnf` | 475 | 203 | **−57 %** |
+
+With §3.42 and §3.43 the bullet is done: 11 functions, no `errors` model left in `WhnfModels2E`
+and `WhnfModelsE`.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 4f05df22): `Arena/WhnfDeltaSlot`
+3.12 → 1.12, `WhnfDeltaRefine4` 1.21 → 0.77, `WhnfSlotRefine` – → 0.98, `Verdict/WhnfModelsE`
+12.23 → 11.73, `WhnfSlotE` 0.99 → 0.49, `Arena/WhnfDelta`, `DefEqKnot`, `KnotSlot` 8.71 → 8.77;
+sum 26.26 → 23.86 (−9 %).
 

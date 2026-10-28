@@ -146,7 +146,7 @@ theorem unfoldDefinition_refines (n : Nat) (s₀ : St) (a₀ : AState)
 include hq in
 @[refines ConRon.Arena.whnfStep]
 theorem whnfStep_refines (n : Nat) : WhnfStepSpec' p n :=
-  whnfStep_refines' p hq.delta hq.instLP n (fun k _ => reduceNat_refines p hq.delta k)
+  whnfStep_refines' p hq.delta hq.instLP (natOpResultOK_of_agree hq.delta.natAgree) n
 
 /-! ## ι (`WhnfIotaRefine*`, `WhnfIotaRecRefine3`, `WhnfM2CRefine5`) -/
 
