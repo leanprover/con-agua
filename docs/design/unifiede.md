@@ -2675,3 +2675,36 @@ unified model's step proof over the line's nine arms. Tried: `simp []` (21.1 s),
 [Cmp.evalW, Cmp.eval]` (fails). No generator or kit change was needed; a faster unified recipe for
 long straight-line arms (the `errors` model of the same function took about 6 s) would be a
 generator wish.
+
+### 3.40 Retirement, group A: the frontend's driver, second landing (`builtin_prelude`)
+
+§3.38's third function; with it §3.30's group A is done.
+
+| function | before: ok composition + error claim | after | change |
+|---|---|---|---:|
+| `builtin_prelude` | `builtin_of_parts` 16, `BP1`/`BP2` 8, `bp_h1`‥`bp_h3` 40, `builtinPrelude_checker` 3, `blank_pre_empty`/`pre_empty` 4; `builtinPrelude_specE` 2, `run_of_callE_err` 8, `builtinPreludeE_fails` 10, `preludeStageE` 50, `checker_preludeStageE` 5 = 146 | `builtinPrelude_specE` 6, `run_of_callE_err` 8, `builtinPreludeE_fails` 10, `builtinPrelude_ref` 79, `builtinPrelude_checker` 10, `checker_preludeStageE` 14 = 127 | −13 % |
+
+Whole diff (without this report): +203 −222 in 5 files. The rate is low because the stage was
+already a composition of the frontend's halves: the ok facts of `pre_front_run`, the `CTL` store
+and `front_reset` stay as they were in `bp_h1`‥`bp_h3`, now arms of one walk.
+
+Choices:
+
+* **`G` is `True`**: the error arms need the closure (`checkerProg_nv`) and `SafeLink preludeText`
+  (`safeLink`), both theorems at `checkerProg`. `Checker/PreludeRef` sits between `FrontPreSimE`
+  (`preFrontRun_errSim`) and `PipeRest` (which reads `builtinPrelude_checker`).
+* **Through the run**: `pre_front_run` is `callE` (its halves are `front_run`'s through `preSim`:
+  `preSim_triple` with `frontRunOK_checker`, `preFrontRun_errSim` with `frontRun_errClaim`, which
+  now takes `checkerProg`'s call, `callE_frontAll` inside); `front_reset` lifted.
+* **`BP0`** states `240 < CTL`'s size in place of the pool's bound (no reader left since §3.39): the
+  unified model stores `CTL[240]` without a guard, the bound is kept across `pre_front_run` by
+  `Keep` (`checkerProg_noSt8`). `preludeStageE`/`frontStageE` (with their `SafeLink` parameter) are
+  folded into `checker_preludeStageE`/`checker_frontStageE`.
+* **Recipe**: the default `finish` for `builtinPreludeLE`; `builtinPrelude_ref` needs
+  `maxRecDepth 100000` (the prelude's bytes in `preIn`).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 0dd595e6,
+`_tmp/retire-front/times2.txt`): `Checker/PreludeRef` (new) 1.73; `PipePrelude` 2.40 → 2.04,
+`Verdict/FrontStageE` 1.61 → 0.59, `PipeRest` 1.14 → 1.14, `Front/FrontRunRef` 2.90 → 2.96; sum
+8.05 → 8.46 (+5 %, the new module's header). No module more than 10 % slower. No generator or kit
+change was needed.
