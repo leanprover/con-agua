@@ -350,6 +350,62 @@ Not migrated in this batch, and why:
   `VerdictClaimL` about the whole `validateIndD` (failures as record verdicts). `RefE` fits
   neither; it needs a variant over `ErrClaimV`-style twins with a `Prop` ok post (a kit change).
 
+**Landing 2: the knot families' leaves** (`DefEq*E`, `WhnfModels3E/E/7E`). Nine functions:
+
+| function | before: ok model/spec + ok refinement + error claim | after: ref + post + derived | change |
+|---|---:|---:|---:|
+| `whnf_top` | 39 | 26 | −33 % |
+| `whnf_core_loop` | ≈ 170 | ≈ 93 | −45 % |
+| `defeq_lst` | 174 | 106 | −39 % |
+| `defeq_list_rev` | 183 | 111 | −39 % |
+| `lazy_delta_reduction` | 165 | 83 | −50 % |
+| `lazy_delta_proj_reduction` | 180 | 119 | −34 % |
+| `defeq_lams` | 267 | 136 | −49 % |
+| `defeq_peel` | 315 | ≈ 214 | −32 % |
+| `proof_irrel_half` (with `proof_irrel`'s ok and error proofs over it) | 432 | 276 | −36 % |
+| **sum** | **≈ 1 925** | **≈ 1 164** | **−40 %** |
+
+Plus 81 lines of shared helpers in `Arena/KnotE.lean`; whole diff +1 047 −1 726.
+
+* **Placement**: as in landing 1, the unified model and its `…_ref` sit in the Arena file of the
+  ok side (`DefEqMidLoops`, `DefEqMidLazy2`, `DefEqStuckProj`, `DefEqMidLams`, `DefEqMidPeel`,
+  `WhnfCoreLoop`, `WhnfIotaRefine4`, `IndTwin`), because the knot's construction (`KnotUpTo`,
+  `DefEqKnot`, `KnotTagged`, `KnotEntry`) needs the ok halves there. The Verdict files keep the
+  old `…_refinesE` as one-liners (`RefE.coreSpecE`).
+* **`G`**: `KnotUpToE p n` where that suffices, else a named-field structure of the non-migrated
+  callees' `CoreSpecE` claims and the no-verdict callees' class-`0` facts (`CoreStepE`,
+  `LazyIterUpToE`, `LdprG`, `LamsG`, `PeelG`, `PihG`).
+* **Ok halves**: the slot theorems (`CoreSpec`) are one-liners through `CoreSpec.of_refE`
+  (`KnotE.lean`: batch 1a's `RefE.coreSpec` for a model value that `w` reads back as `(r, m)`;
+  over 1a's `CorePost`, with `RefE.bind_core`, `CorePost.ret`); `defeqPeel_refines` keeps its
+  `GrowRefP` shape (batch 1a's `GrowPost`, moved down to `WhnfCoreProj`; `RefE.bind_grow`).
+* **`proof_irrel_half`**'s twin was a relation (`PiHalfRun`); it is now a computation
+  (`piHalfA : AM (Option Bool)`, `piHalfT_eq`), so that `RefE` applies. `PiHalfRun`, `pihW`,
+  `growRef_ret`, `growRef_bindK`, `GrowRefP.of_core` are gone.
+* **Callers**: `whnfTop_refinesE` needs the ok knot (`∀ n, KnotOK p n`) and moved to its user
+  `PosKnotE`; `whnfTop_stageE` gained it (`IndA9`, `IndBWt` pass `knotOK`). `whnfCoreLoop_err`
+  moved to `WhnfCoreSlot`.
+* **For the kit/generator** (not changed here): `RefE.of_run_eq` and `RefE.mono` (`KnotE.lean`)
+  are generic and belong next to `RefE`; the `tuple` mode on `lazy_delta_reduction` (three result
+  words) kept only two in the unified model, so it uses `list`.
+
+Elaboration (as above; base master 488d6d54, load 7–30):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/WhnfCoreLoop` | 3.35 / 3.22 | 4.13 / 3.83 | **slower (+0.7 s)**: the unified loop model moved in (`simp` instead of `finish`: the same) |
+| `Verdict/WhnfModelsE` | 13.67 | 13.19 | its old home |
+| `Arena/WhnfIotaRefine4` | 5.69 / 5.61 | 6.31 / 6.14 | +0.6 s: `pihE` moved in |
+| `Verdict/WhnfModels3E` | 11.42 | 9.71 | its old home |
+| `Arena/DefEqMidLams`, `DefEqMidPeel` | 6.35, 10.37 | 5.09, 8.37 | |
+| `Verdict/DefEqLoopsE`, `DefEqLamsE`, `DefEqPeelE`, `WhnfPirrE` | 14.17 | 6.47 | the claims gone |
+| `Verdict/IndBWt` | 5.44 / 5.37 | 6.21 / 5.38 | noise |
+| the other 14 modules | 131.3 | 131.6 | |
+| **sum (24 modules)** | **188.3** | **177.2** | **−6 %** |
+
+Batch 1d in all: 13 functions migrated, the pair lines ≈ 2 910 → ≈ 1 670 (−43 %); `lvl_eq_fueled`
+and `install_header` wait for batches 1b/1c, the `vi_*` leaves for a `RefE` variant (above).
+
 ### 3.6 Batch 1c, first landing (`IndBTpd`, `IndBTmm`, `IndBToi`, `IndBPins`, `IndBRecPins`)
 
 Migrated: `target_params_def_eq_step` and `target_params_def_eq` (`pds_ref`, `pde_ref`;
@@ -489,3 +545,134 @@ are the `RefE` form of `CoreRef`/`CoreSpec` for every knot function (batch 1d's 
 will want them; they sit in `Arena/KnotE`); `RefE.tail` (a tail call whose continuation re-lists the
 callee's value) recurs in every nested family and belongs to the kit; a `PreRef`-like shape (an ok
 half that is not a twin run) recurs for prefixes of twin functions.
+
+### 3.8 Batch 1c, second landing (`IndBRec1`, `IndBFields`)
+
+Migrated: `class_key_of` (`kof_ref`, `KofPost`; `classKeyOf_refines` moved to `IndBRec1`, same
+statement), `class_minor_slot` (`cms_ref`, `CmsPost`; the `DecB` slices of the second invariant
+package are a conditional field `ihsB`, §1.4; `class_minor_slot_go` stays a run, its spec's `∃`
+post is no model the generator reads), `class_rec_ty_ok_guards` (`rg_ref`, `RgPost`),
+`class_fields_of_go` (`cfg_ref`, `CfgPost`, by induction; all seven callees lifted). The callers'
+error claims (`IndBCtor`, `IndBRec2`'s `classRecTyOk_claim`, `IndArmE`'s `classKeyOfE_of`) read
+`RefE.run_err`, their ok refinements `RefE.run_okW`; `cfoW` calls `class_fields_of_go` through
+`callW`, and `cfoW_sim`/`classFieldsOf_refines` moved into `IndBFields`.
+
+* **A function that stands for a prefix of a twin function**: `class_rec_ty_ok_guards` has no twin
+  of its own; its old ok proof (`rgW_sim`), its pass lemma (`rgW_pass`) and its claim (`rgE_claim`,
+  over `do …guards…; rest` for any `rest`) were three copies of the guard analysis. Now one twin
+  definition of the prefix, `rgT` (the guards, ending in `pure ci`), with `rgT_bind :
+  classRecTyOk … = rgT … >>= rest`, and `rg_ref` against `rgT`. The hand model `rtoW` reads the
+  guards through `cR` (`rtoW_simC`, `rtsW_simC` gained `hrp : RtoProg p`, three call sites).
+  `class_rule_ok_guards` (skipped in §3.6) has the same shape.
+* **`G := closedNV p nvFns = true`** for all four (no core stub below them), as in §3.6.
+* **Skipped: `class_const_ok_header`** (`IndBHdr`). Its ok half is `install_header`'s model `ihW` and
+  `ihW_okT` (the same body), and batch 1d skipped `install_header` for the same reason (§3.5): each
+  waits for the other. They should be migrated together, by one lane: one unified model of the
+  body, one refinement, used by both.
+* **Recipe**: `classRecTyOkGuardsE` with `simp []` (the old `errors` recipe) took 13.0 s for the
+  module; with the default `finish` 5.0 s. `cfgE`, `classKeyOfE`, `classMinorSlotE` keep theirs
+  (`finish` fails or is slower).
+
+Lines (`declen.py`, master 63762a3f against this branch; before = ok refinement(s) + error claim(s);
+the `rg` row includes `rgT`/`rgT_bind` after, the `cms` row the reworked scan lemmas `cmsGo_hits`,
+`cmsGo_decB`):
+
+| function | before | after | change |
+|---|---:|---:|---:|
+| `class_key_of` | 155 | 93 | **−40 %** |
+| `class_minor_slot` | 212 | 170 | **−20 %** |
+| `class_rec_ty_ok_guards` | 361 | 185 | **−49 %** |
+| `class_fields_of_go` | 374 | 179 | **−52 %** |
+| **pairs** | **1 102** | **627** | **−43 %** |
+
+The hand models, arms and specs deleted on top: about 250 lines. Whole diff of this landing
+against the first one (2853d80e): **+658 −1 317 = −659 lines** in 21 files.
+
+Elaboration (as §3.6, `times2.txt`; load 14–25; `IndBRec1` new after the recipe change, 3 runs
+5.00–5.24):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBRec1` | 5.93 | 5.02 | the three refinements; 13.78 with `simp []` for `classRecTyOkGuardsE` |
+| `Verdict/IndBFields` | 3.98 | **4.45** | **slower (+0.5 s)**: `cfoW`, its spec and `cfoW_sim` moved in |
+| `Arena/RecGenSpec/ClassFieldsOf` | 3.03 | 0.72 | …moved out of here; with `IndBFields`: 7.0 → 5.2 |
+| `RecGenSpec/ClassConstOk`, `ClassKeyCanon`, `ClassMinorSlot`, `RgW`, `CntW` | 16.62 | 13.24 | hand models and specs gone |
+| `IndBCtor`, `IndBRec2`, `IndBRec3`, `IndArmE`, `IndBE`, `RecGen27`, `RecGen7` | 21.43 | 22.19 | |
+| `CfoProg`, `ClassFeR`, `ClassMinorSlotHit`, `ClassMinorSlotW`, `KcW` | 18.32 | 18.13 | |
+| **sum** | **69.3** | **63.8** | **−8 %** |
+
+### 3.9 Batch 1b, first landing (the positivity leaves)
+
+Batch 1b's 17 depth-0 functions are two groups. Seven are leaves: `nest_pos_fvar`,
+`nest_cont_checks`, `nest_ctors_crest`, `nest_group_ctors` (called only by the `nestPos` block),
+`nest_inst_type_ty` (under `nest_inst_type`), `nest_uniform` and `nest_root` (under
+`check_block_positivity`). The other ten are the `nestPos` mutual block itself (`nest_pos`,
+`_bind`, `_app`, `nest_cont`, `_key`, `_new`, `nest_frame`, `nest_ctors`, `_one`, `_walk`,
+`nest_fields`). The survey put the block at depth 0 because a cycle counts as depth 0. Its two
+halves are one joint induction each, `NbOKC`/`nbOKC_all` and `NbOKE`/`nbOKE_all`. This landing
+migrates the seven leaves. The block is the next landing.
+
+| function | before: ok refinement + error claim | after | change |
+|---|---|---|---:|
+| `nest_pos_fvar` | `pfW_ok` 78 + `pfvE_claim` 116 = 194 | `pfv_ref` 97 + `PfvPost` 7 + `pfK_eq`/`pfK_run` 22 = 126 | −35 % |
+| `nest_cont_checks` | `p2ccW_okW` 48 + `nccE_claim` 86 = 134 | `ncc_ref` 67 + `NccPost` 9 + `nccT_eq` 17 = 93 | −31 % |
+| `nest_ctors_crest` | `p2ctW_okC` 126 + `crestE_claim` 182 = 308 | `crest_ref` 160 + `CrestPost` 13 + `crestT`/`oneRest`/`oneK_eq` 43 = 216 | −30 % |
+| `nest_uniform` | `unW_ok` 59 + `nuE_claim` 71 + spec 16 = 146 | `nu_ref` 66 + `NuPost` 6 = 72 | −51 % |
+| `nest_root` | `p2rtW_okC` 133 + `nrtE_claim` 172 = 305 | `nrt_ref` 151 + `NrtPost` 11 = 162 | −47 % |
+| `nest_inst_type_ty` | `ntyW_ok` 131 + `ntyE_claim` 197 = 328 | `nty_ref` 163 + `NtyPost`/`NtyOk`/`ntyT` 42 + `ntyT_eq` and helpers 38 = 243 | −26 % |
+| `nest_group_ctors` | `gcW_ok` 100 + `ngcE_claim` 121 = 221 | `ngc_ref` 112 + `GcPost` 11 = 123 | −44 % |
+| **sum** | **1 636** | **1 035** | **−37 %** |
+
+The hand ok models are gone too, with their continuations, arms and specs: `pfW`, `p2ccW`,
+`p2ctW`, `unW`, `p2rtW`, `ntyW` and `gcW`, about 370 lines. Generator wrappers were added:
+`noaW1`, `cpW1`, `ucW1` (15 lines each) and `nhiO` (7). The whole diff against master is
++1 379 −2 263.
+
+The rate is lower than the pilot's, for three reasons:
+
+* Four of the leaves are fragments of a twin function: `pfK`, `nccT`, `oneK`'s head and
+  `nestInstType` up to `instPisWith`. Their old claims held "whatever the continuation". The
+  unified refinement takes the fragment at `pure`, so it needs a lemma that splits the
+  continuation off (`pfK_eq`, `nccT_eq`, `oneK_eq`, `ntyT_eq`), and sometimes the fragment
+  restated (`crestT`, `oneRest`, `ntyT`).
+* The old ok refinements of `nest_cont_checks` and `nest_ctors_crest` returned the pieces of the
+  twin run separately, and their callers splice the pieces into the enclosing twin's run.
+  `NccPost` keeps those pieces as fields, so `contOKC_step` did not change.
+* The error halves were already short: their callees are mostly outside the verdict closure.
+
+Choices:
+
+* **`G` per function, as in 1d.** `pfv_ref`, `ncc_ref` and `nu_ref` use
+  `closedNV p nvFns = true`: their callees are lifted, and the block's error steps have only
+  `hnv`. `crest_ref` uses `VerdictCtx p`, because the core stubs type the crest. `nrt_ref` uses
+  `NrtG`, which is `closedNV` plus the block's `CtorsOKE` at every fuel, because `nest_ctors`
+  stays `callE` until the block is migrated.
+* **Generator limits, worked around with wrappers.** `unified` cannot lift a callee spec with
+  a singleton-list post `some ([r.headD 0], m)` (`nest_occ_any`, `nest_cont_params_closed`,
+  `nest_uniform_cs`), or a pure spec `r.headD 0 = F` (`nest_ctx_hi_at`). The wrappers (`noaW1`,
+  `cpW1`, `ucW1`, `nhiO`, each with a one-line spec from the old one) restate them as
+  `some (r.headD 0, m)`. A generator change would remove them.
+* **The block's hand models read the leaves through the run.** `pfvR`, `nccR`, `crestR`,
+  `ngcR` and `ntyR` are `cR n "f" [args] m`. The block's ok steps take `RefE.run_okW`. They now
+  need the leaves' lookups, so `nbOKC_all` takes `L : NbLook p`. The error steps take
+  `RefE.run_err`.
+* **Placement** follows the ok users' imports. `pfv_ref` and `ncc_ref` are in `Verdict/PosE1L`,
+  imported by `PosApp`/`PosCont`; `cpW_okW` moved in with them. `crest_ref` is in
+  `Arena/IndT/PosCrest`. `nty_ref` and `ngc_ref` are in new modules, `Verdict/PosNty` and
+  `Verdict/PosNgc`. `nu_ref` is in `PosTopE2`, `nrt_ref` in `PosTopE4`.
+* **Pitfall.** If the twin's result is `Unit`, destructuring `RefE.run_ok…` with `-` for that
+  value silently clears the run hypothesis that depends on it. Use `_` instead.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+63762a3f + unrelated landings, load 6–56):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/PosE1M` | 29.3 | 32.5 | **+11 %**: the unified `pfvE`, `nccE`, `ntyE`. With `simp [rdW]`, as their `errors` models had, it was 46.0. With `simp []` it is 32.5. `finish` fails. Wall time 8 → 21 s: `ntyE`'s step (`heartbeats 4000000`) is one long serial declaration |
+| `Verdict/PosTopE1` | 12.4 | 16.8 | **+35 %**: the unified `nuE`, `nrtE`. With `simp [rdW]` it was 21.2. `finish` fails |
+| `Arena/IndPosSpec/NestGroupCtors`, `NtyW`, `UnW`, `UnW2`, `P2rtW`, `P2sdW`, `NitW`, `CfW`, `NestContParamsClosed` | 43.6 | 19.0 | hand models and their specs gone |
+| `Arena/IndRealAbsPos` | 23.1 | 15.8 | the hand models' `…_afr` gone |
+| `Arena/IndT/Pos*`, `PosRoot`, `Positivity` | 25.8 | 18.5 | |
+| `Verdict/PosE1N`, `PosE2`, `PosE3O`, `PosTopE4` | 11.1 | 8.1 | claims gone |
+| `GgW2`, `FgW2`, `PosE2M`, `PosE3Cm` and 15 more (incl. the new `PosNty`, `PosNgc`) | 138.2 | 141.4 | |
+| **sum (45 modules)** | **288.9** | **252.1** | **−13 %** (first series, with `simp [rdW]`: 270.2) |

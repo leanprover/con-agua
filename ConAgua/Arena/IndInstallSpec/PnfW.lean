@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndInstallSpec.InstallIwB
 import ConAgua.Arena.IndInstallSpec.NfsProg
 import ConAgua.Arena.IndInstallSpec.PartsAt

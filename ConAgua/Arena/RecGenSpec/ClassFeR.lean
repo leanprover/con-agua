@@ -47,7 +47,7 @@ def rtoK1 (cR : CallM) (n : Nat) (vis g rc cvRi c : Word) : Option (List Word ×
 /-- **The model of `class_rec_ty_ok`.** -/
 def rtoW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, g, k, rc, cvRi, c => rtoK1 cR n vis g rc cvRi c (rgW n m g k rc c)
+  | n + 1, m, vis, g, k, rc, cvRi, c => rtoK1 cR n vis g rc cvRi c (cR n "class_rec_ty_ok_guards" [g, k, rc, c] m)
 
 end L.Ind
 

@@ -7,7 +7,7 @@ import ConAgua.L.GrindAttr
 /-!
 # P2rtW
 
-`p2rtW`, `p2rtK1`, `p2rtK2`, `p2rtK3`, `p2sfW`, `p2sfK`.
+`p2sfW`, `p2sfK`.
 -/
 
 noncomputable section
@@ -22,27 +22,6 @@ namespace L.Ind
 open L.Arena
 
 /-! ## Models -/
-
-mutual
-/-- `nest_root`. -/
-def p2rtW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, ctx, hO, hL, cO, cL, ns, oO, oL =>
-    if cL = 0 then some ([oO, oL, ns], m)
-    else p2rtK1 cR n vis ctx hO hL cO cL oO oL
-      (nbCtorsW cR n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10)) (rdW (m.arr64 IW) (ctx + 7))
-        (rdW (m.arr64 IW) (ctx + 8)) (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) hO hL
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) ns 0 0)
-def p2rtK1 (cR : CallM) (n : Nat) (vis ctx hO hL cO cL oO oL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => p2rtK2 cR n vis ctx hO hL cO cL oO oL (r.tail.tail.headD 0) (posRecW m1 [r.headD 0, r.tail.headD 0])
-def p2rtK2 (cR : CallM) (n : Nat) (vis ctx hO hL cO cL oO oL ns2 : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m2) => p2rtK3 cR n vis ctx hO hL cO cL ns2 (snocW n m2 oO oL q)
-def p2rtK3 (cR : CallM) (n : Nat) (vis ctx hO hL cO cL ns2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) => p2rtW cR n m3 vis ctx hO hL (cO + 1) (cL - 1) ns2 (r.headD 0) (r.tail.headD 0)
-end
 
 mutual
 /-- `nest_seeds_fuel`. -/

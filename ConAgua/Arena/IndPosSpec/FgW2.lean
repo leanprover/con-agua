@@ -246,18 +246,6 @@ import) -/
 def pos2PinW (m : Mem) (i : Word) : Option (List Word × Mem) :=
   if pinW m 0 = 0 then none else if 51 ≤ i then none else some ([rdW (m.arr64 PINS) (1 + i)], m)
 
-/-! ## `nest_cont_checks`: hole-free indices, not `Quot`, parameters without local variables -/
-
-def p2ccK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => if r.headD 0 = 0 then none else some ([0], m2)
-def p2ccK1 (k : Nat) (hp nn dO dL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 ≠ 0 then none
-    else match pos2PinW m1 47 with
-      | none => none
-      | some (q, m2) => if nn = q.headD 0 then none else p2ccK2 (cpW k m2 hp dO dL)
 end L.Ind
 
 end

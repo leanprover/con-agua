@@ -23,10 +23,6 @@ l_model whnfCore_specE (p : Prog) (hf : p.lookup "whnf_core" = some whnfCoreL)
   fns [hf ↦ whnfCoreE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
-l_model whnfCoreLoop_specE (p : Prog) (hf : p.lookup "whnf_core_loop" = some whnfCoreLoopL)
-  fns [hf ↦ whnfCoreLoopE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
-
 l_model whnfCoreStep_specE (p : Prog) (hf : p.lookup "whnf_core_step" = some whnfCoreStepL)
   fns [hf ↦ whnfCoreStepE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors

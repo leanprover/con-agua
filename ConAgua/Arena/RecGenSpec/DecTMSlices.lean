@@ -1,3 +1,4 @@
+import ConAgua.Arena.IlpRd
 import ConAgua.Arena.RecCheckSpec.TruncSl
 import ConAgua.Arena.RecGenSpec.CtorLp
 import ConAgua.Arena.InferBodyIntern

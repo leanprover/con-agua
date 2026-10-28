@@ -1,3 +1,4 @@
+import ConAgua.Verdict.IndBRec1
 import ConAgua.Arena.IndT.RecGen3
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecGenSpec.ClassRecTysOk
@@ -56,7 +57,7 @@ theorem ccoW_simC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (q : Word
 
 include hq hApd hCrk henv in
 /-- **`class_rec_ty_ok` under `StageC`** (twin side: con-ron's `classRecTyOk_spec`'s proof). -/
-theorem rtoW_simC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (g k rc cvRi c : Word)
+theorem rtoW_simC (hrp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (g k rc cvRi c : Word)
     (G : ClassGen) (RS : RecShape) (CVRi : IConstantVal) (hC : StageC dn vis fe env m a)
     (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64)
     (hrc : DecB (fun m => decRS m rc.toNat) m RS) (hcvR : ∀ q, iwN m rc.toNat = some q → CVExt m q)
@@ -72,11 +73,18 @@ theorem rtoW_simC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (g k rc c
   rw [rtoW_eq]
   unfold ConRon.Arena.classRecTyOk
   rcases n with _ | n
-  · exact RSim.none
+  · refine RSim.lstep (K := rtoK1 (realCall p) 0 vis g rc cvRi c) rfl fun b hb => ?_
+    obtain ⟨e', he', -⟩ := callE_zero p "class_rec_ty_ok_guards" [g, k, rc, c] m
+    simp [realCall, callW_eq_callE, he', Except.toOption] at hb
   obtain ⟨-, -, hcls, -, -, -, -, -⟩ := dClassGen_inv hgP
-  refine rgW_sim n m a g k rc c G RS hC.stage hG hns hrc hA
-    (rtoK1 (realCall p) (n + 1) vis g rc cvRi c) rfl _ _ ?_
-  intro m1 a1 tm hrun1 hS1 hg1 hA1
+  rw [rgT_bind]
+  refine RSim.bind (K := rtoK1 (realCall p) (n + 1) vis g rc cvRi c) rfl
+    (Q1 := fun b a1 tm => RgPost dn vis fe m a G c b.2 tm a1) (fun ⟨r1, m1⟩ hb => ?_) ?_
+  · obtain ⟨s1, rfl, -, tm, a1, run1, hR⟩ := RefE.run_okW
+      (classRecTyOkGuardsE_spec p hrp (n + 1) ⟨m, Locals.init []⟩ g k rc c)
+      (rg_ref dn fe vis (n + 1) hC.stage hG hns hrc hA) hb
+    exact ⟨tm, a1, run1, hR⟩
+  rintro ⟨r1, m1⟩ tm a1 - ⟨hrun1, hS1, hg1, hA1⟩
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.targetMajorAt_spec G.cls gP.cls c.toNat a a1 tm hC.check.state
     hC.check.pins hcls hrun1
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hS1 hA1 p1
@@ -161,7 +169,7 @@ theorem rtoW_simC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (g k rc c
 include hq hApd hCrk henv in
 /-- **`class_rec_tys_ok` under `StageC`** (twin side: con-ron's `classRecTysOk_spec`'s proof; the
 extension after one recursor from con-ron's `classRecTyOk_spec` on its run). -/
-theorem rtsW_simC (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 64)
+theorem rtsW_simC (hrp : RtoProg p) (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 64)
     (gP : ConLeche.ClassGen) (n : Nat) (hn : n ≤ 2 ^ 62) :
     ∀ (m : Mem) (a : AState) (ro rl vo vl co cl : Word) (rcs : List RecShape)
       (cvs : List IConstantVal) (cs : List Nat) (rcsP : List ConLeche.RecShape)
@@ -235,7 +243,7 @@ theorem rtsW_simC (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^
   have hvl1 := rec2ToNat_pred hvl
   have hcl1 := rec2ToNat_pred hcl
   unfold ConRon.Arena.classRecTysOk
-  have hr := RSim.withRun (rtoW_simC hq hApd hCrk henv n (by omega) m a g k (UInt64.ofNat pr) (UInt64.ofNat pv)
+  have hr := RSim.withRun (rtoW_simC hq hApd hCrk henv hrp n (by omega) m a g k (UInt64.ofNat pr) (UInt64.ofNat pv)
     (UInt64.ofNat c0) G RS CV hC hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR)
     (by rw [tv]; exact hCV) hA hgP hrcP hcvP (hw _ List.mem_cons_self))
   rw [tc] at hr
@@ -292,7 +300,7 @@ theorem classRecTyOk_refinesC (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s�
       AbsOK s'.mem; ⊤⦄ :=
   triple_post (classRecTyOk_spec p hp (realCall p) (realCall_spec p) n s₀ vis g k rc cvRi c)
     fun _ _ ⟨hl, hw⟩ =>
-      let h := (rtoW_simC hq hApd hCrk henv n hn _ a₀ g k rc cvRi c G RS CVRi hC hG hns hrc hcvR hcvRi hA
+      let h := (rtoW_simC hq hApd hCrk henv hp n hn _ a₀ g k rc cvRi c G RS CVRi hC hG hns hrc hcvR hcvRi hA
         hgP hrcP hRiP hRi).am hw
       ⟨hl, h.1, h.2.1, h.2.2⟩
 
@@ -318,7 +326,7 @@ theorem classRecTysOk_refinesC (hp : RtsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s
         (AM.res (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (classRecTysOk_spec p hp (realCall p) (realCall_spec p) n s₀ vis g k ro rl vo vl co cl)
     fun _ _ ⟨hl, hw'⟩ =>
-      let h := (rtsW_simC hq hApd hCrk henv g k G hns gP n hn _ a₀ ro rl vo vl co cl rcs cvs cs rcsP cvsP hC
+      let h := (rtsW_simC hq hApd hCrk henv hp.toRtoProg g k G hns gP n hn _ a₀ ro rl vo vl co cl rcs cvs cs rcsP cvsP hC
         hG hrcs hok hcvs hcs hA hgP hrcsP hcvsP hw).am hw'
       ⟨hl, h.1, h.2.1, h.2.2⟩
 

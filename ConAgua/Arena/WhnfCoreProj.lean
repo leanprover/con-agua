@@ -689,6 +689,23 @@ def GrowRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List W
     (eb : Word) (r : List Word) (m : Mem) (ok : List Word → Prop := ResH) : Prop :=
   AM.ok T a₀ ∧ CoreAfterG dn m₀ m (AM.st T a₀) vis fe M eb ∧ AM.res T a₀ = dec r ∧ ok r
 
+/-- `CorePost` with the stack grown (`CoreAfterG`, an arm that leaves a slice on the stack): what
+a run `v = (r, m)` from `m₀` gives besides the twin's result `y` and final state `a'`. -/
+structure GrowPost {α : Type} (dec : List Word → α) (dn : NIdx → Option ConLeche.Name) (m₀ : Mem)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop)
+    (v : List Word × Mem) (y : α) (a' : AState) : Prop where
+  after : CoreAfterG dn m₀ v.2 a' vis fe M eb
+  res : y = dec v.1
+  valid : ok v.1
+
+theorem GrowPost.growRef {α : Type} [Inhabited α] {T : AM α} {a : AState} {dec : List Word → α}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {ok : List Word → Prop} {m₀ m : Mem} {r : List Word} {y : α} {a' : AState}
+    (hT : T.run a = .ok (y, a')) (h : GrowPost dec dn m₀ vis fe M eb ok (r, m) y a') :
+    GrowRef T a dec dn m₀ vis fe M eb r m ok := by
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
+  exact ⟨hok, hst ▸ h.after, hres.trans h.res, h.valid⟩
+
 /-- `CoreSpec` with `GrowRef`. -/
 def GrowSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args : List Word)
     (T : AM α) (dec : List Word → α) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)

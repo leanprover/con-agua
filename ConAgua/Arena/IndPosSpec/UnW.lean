@@ -43,29 +43,6 @@ theorem ucK_yes (h : ¬ r.headD 0 = 0) : ucK cR k ctx o l (some (r, m1)) = ucW c
 end arms
 attribute [ind_grind] ucW_nil ucW_cons ucK_no ucK_yes
 
-mutual
-def unW (cR : CallM) : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | k + 1, m, ctx, off, l =>
-    if l = 0 then some m
-    else unK cR k ctx off l (ucW cR k m ctx (rdW (m.arr64 IW) (rdW (m.arr64 IW) off))
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 1)))
-def unK (cR : CallM) (k : Nat) (ctx off l : Word) : Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (r, m1) => if r.headD 0 = 0 then none else unW cR k m1 ctx (off + 1) (l - 1)
-end
-
-section arms
-variable (cR : CallM) (k : Nat) (m m1 : Mem) (ctx off l : Word) (r : List Word)
-theorem unW_nil (h : l = 0) : unW cR (k + 1) m ctx off l = some m := by simp [unW, h]
-theorem unW_cons (h : ¬ l = 0) : unW cR (k + 1) m ctx off l =
-    unK cR k ctx off l (ucW cR k m ctx (rdW (m.arr64 IW) (rdW (m.arr64 IW) off))
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 1))) := by simp [unW, h]
-theorem unK_yes (h : ¬ r.headD 0 = 0) : unK cR k ctx off l (some (r, m1)) = unW cR k m1 ctx (off + 1) (l - 1) := by
-  rw [unK, ite_eq_right h]
-end arms
-attribute [ind_grind] unW_nil unW_cons unK_yes
-
 end L.Ind
 
 end

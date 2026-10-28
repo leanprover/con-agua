@@ -11,8 +11,8 @@ instantiated), `lams_open` (the domains compared, then `lams_inst`), `lam_pair` 
 `lamPair?`), and the uncounted loop `defeqLamsLoop` calling them and `defeq_lams_inner`. The
 twin's `defeqLams` counts its levels on `lamsFuel = 2^62`; the L loop runs on its own fuel, at
 most `2^62 + 1`, and an iteration at the twin's fuel `0` would call `lams_open` at L fuel `0`,
-which does not return (`lamsW_ok`). Its unfolding lemmas are stated by `delta` and `rfl`, as
-`defeqPeel`'s (`lamsLvl`).
+which does not return (`lams_ref`, both outcomes). Its unfolding lemmas are stated by `delta` and
+`rfl`, as `defeqPeel`'s (`lamsLvl`).
 -/
 
 open ConRon.Arena
@@ -332,180 +332,136 @@ theorem lamsLvl_succ (mode : ConLeche.CheckMode) (r : CoreFnsA) (f : Nat)
 
 /-! ## `defeq_lams`: the loop -/
 
-/-- **The model of `defeq_lams`'s loop** at L fuel `k`. -/
-def lamsW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
-    Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, mode, vis, d, ty₁, body₁, ty₂, body₂ =>
-    match callW p k "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m with
-    | none => none
-    | some (r, m₁) =>
-      if r.headD 0 = 0 then some (0, m₁)
-      else match callW p k "lam_pair" [r.tail.headD 0, r.tail.tail.headD 0] m₁ with
-        | none => none
-        | some (q, m₂) =>
-          if q.headD 0 = 0 then
-            call1W p k "defeq_lams_inner" [mode, vis, d, r.tail.headD 0, r.tail.tail.headD 0] m₂
-          else if r.tail.headD 0 = r.tail.tail.headD 0 then some (1, m₂)
-          else lamsW p k m₂ mode vis (d + 1) (q.tail.headD 0) (q.tail.tail.headD 0)
-            (q.tail.tail.tail.headD 0) (q.tail.tail.tail.tail.headD 0)
+/-- **`defeq_lams`' model, both outcomes** (the loop `lamsE.loop1`: `lams_open`, `lam_pair`,
+`defeq_lams_inner` through their runs, `callE`). -/
+l_model defeqLams_specE (p : Prog) (hf : p.lookup "defeq_lams" = some defeqLamsL)
+  fns [hf ↦ lamsE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-section lamsArms
-variable (p : Prog) (k : Nat) (m m₁ m₂ : Mem) (mode vis d ty₁ body₁ ty₂ body₂ : Word) (r q : List Word)
-
-theorem lamsW_n1 (hc : callW p k "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m = none) :
-    lamsW p (k + 1) m mode vis d ty₁ body₁ ty₂ body₂ = none := by
-  simp only [lamsW, hc]
-theorem lamsW_z (hc : callW p k "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m = some (r, m₁))
-    (h0 : r.headD 0 = 0) : lamsW p (k + 1) m mode vis d ty₁ body₁ ty₂ body₂ = some (0, m₁) := by
-  simp only [lamsW, hc, h0, ↓reduceIte]
-theorem lamsW_n2 (hc : callW p k "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m = some (r, m₁))
-    (h0 : ¬ r.headD 0 = 0)
-    (hc2 : callW p k "lam_pair" [r.tail.headD 0, r.tail.tail.headD 0] m₁ = none) :
-    lamsW p (k + 1) m mode vis d ty₁ body₁ ty₂ body₂ = none := by
-  simp only [lamsW, hc, h0, hc2, ↓reduceIte]
-theorem lamsW_inner (hc : callW p k "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m = some (r, m₁))
-    (h0 : ¬ r.headD 0 = 0)
-    (hc2 : callW p k "lam_pair" [r.tail.headD 0, r.tail.tail.headD 0] m₁ = some (q, m₂))
-    (hq : q.headD 0 = 0) (rr : List Word) (m₃ : Mem)
-    (hc3 : callW p k "defeq_lams_inner" [mode, vis, d, r.tail.headD 0, r.tail.tail.headD 0] m₂ =
-      some (rr, m₃)) :
-    lamsW p (k + 1) m mode vis d ty₁ body₁ ty₂ body₂ = some (rr.headD 0, m₃) := by
-  simp only [lamsW, hc, h0, ↓reduceIte]; rw [hc2]; simp only [hq, ↓reduceIte, call1W, hc3]
-
-theorem lamsW_same (hc : callW p k "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m = some (r, m₁))
-    (h0 : ¬ r.headD 0 = 0)
-    (hc2 : callW p k "lam_pair" [r.tail.headD 0, r.tail.tail.headD 0] m₁ = some (q, m₂))
-    (hq : ¬ q.headD 0 = 0) (he : r.tail.headD 0 = r.tail.tail.headD 0) :
-    lamsW p (k + 1) m mode vis d ty₁ body₁ ty₂ body₂ = some (1, m₂) := by
-  simp only [lamsW, hc, h0, ↓reduceIte]; rw [hc2]; simp only [hq, he, ↓reduceIte]
-theorem lamsW_cont (hc : callW p k "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m = some (r, m₁))
-    (h0 : ¬ r.headD 0 = 0)
-    (hc2 : callW p k "lam_pair" [r.tail.headD 0, r.tail.tail.headD 0] m₁ = some (q, m₂))
-    (hq : ¬ q.headD 0 = 0) (he : ¬ r.tail.headD 0 = r.tail.tail.headD 0) :
-    lamsW p (k + 1) m mode vis d ty₁ body₁ ty₂ body₂ = lamsW p k m₂ mode vis (d + 1)
-      (q.tail.headD 0) (q.tail.tail.headD 0) (q.tail.tail.tail.headD 0)
-      (q.tail.tail.tail.tail.headD 0) := by
-  simp only [lamsW, hc, h0, hc2, hq, he, ↓reduceIte]
-
-end lamsArms
-
-theorem defeqLamsLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n defeqLamsLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      lamsW p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
-        (s₀.loc 6) = some ((r.retOr [0]).headD 0, s'.mem) ∧ r ≠ .normal; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := defeqLamsLoop) rfl]
-    sym (gen := 80) (instances := 5000) only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "lams_open",
-        callW_spec p n "lam_pair", callW_spec p n "defeq_lams_inner"] <;>
-      finish [lamsW_n1, lamsW_z, lamsW_n2, lamsW_inner, lamsW_same, lamsW_cont,
-        St.setLocs_mem']
-
-theorem defeqLams_spec (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St)
-    (mode vis d ty₁ body₁ ty₂ body₂ : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_lams" [mode, vis, d, ty₁, body₁, ty₂, body₂]
-    ⦃fun r s' => LocEq s' s₀ ∧ lamsW p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂ =
-      some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.lams]
-  simp only [callFn, defeqLamsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (defeqLamsLoop_spec p (n + 1) s)] <;>
-    finish
+/-- **What the telescope loop's errors claim from**: `lams_open`'s and `defeq_lams_inner`'s error
+claims at every L fuel up to `n` (`Verdict/DefEqLamsE.lean`), `lam_pair` outside the verdict
+closure. -/
+structure LamsG (p : Prog) (n : Nat) : Prop where
+  open_ : ∀ j, j ≤ n → ∀ (F : Nat), j ≤ F → j ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty₁ body₁ ty₂ body₂ : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW ty₁ → HW ty₂ →
+    CoreSpecE p (j + 1) "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂]
+      (lamsOpenT (coreKnot (decMode mode) fe id F) d.toNat (decE ty₁) (decE body₁) (decE ty₂)
+        (decE body₂)) s₀ a₀
+  pair : ∀ k args m e, callE p k "lam_pair" args m = .error e → e.cls = 0
+  inner : ∀ j, j ≤ n → ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d b₁ b₂ : Word), j ≤ F → j ≤ 2 ^ 62 →
+    SlotPre s₀ a₀ dn vis fe M eb mode → d.toNat + 1 < 2 ^ 64 → HW b₁ → HW b₂ →
+    CoreSpecE p (j + 1) "defeq_lams_inner" [mode, vis, d, b₁, b₂]
+      (defeqLamsInner (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE b₁) (decE b₂))
+      s₀ a₀
 
 /-! ## The loop refines `defeqLams` -/
-
-theorem coreRef_head {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec : List Word → α}
-    {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
-    {eb : Word} {r : List Word} (hdec : ∀ r r' : List Word, r.headD 0 = r'.headD 0 → dec r = dec r')
-    (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m) : CoreRef T a₀ dec dn m₀ vis fe M eb [r.headD 0] m :=
-  ⟨h.1, h.2.1, h.2.2.1.trans (hdec _ _ rfl), h.2.2.2⟩
 
 section loopRef
 variable (p : Prog) (hp : LamsProg p) (hi : Inst1OK p)
 
 include hp hi in
-/-- **The loop's model refines `defeqLams`** at every twin fuel `K` with `k ≤ K + 1`. -/
-theorem lamsW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+/-- **The telescope loop refines `defeqLams`, both outcomes**, at every twin fuel `K` with
+`k ≤ K + 1`. -/
+theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode : Word) (hmode : mode < 4) :
-    ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (d ty₁ body₁ ty₂ body₂ : Word) (m m' : Mem) (s : AState)
-      (M : ModeMaps) (eb v : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW ty₁ →
+    ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (d ty₁ body₁ ty₂ body₂ : Word) (m : Mem) (s : AState)
+      (M : ModeMaps) (eb : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW ty₁ →
       HW body₁ → HW ty₂ → HW body₂ → d.toNat + k < 2 ^ 64 →
-      lamsW p k m mode vis d ty₁ body₁ ty₂ body₂ = some (v, m') →
-      CoreRef (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) K d.toNat (decE ty₁)
-        (decE body₁) (decE ty₂) (decE body₂)) s decBool dn m vis fe M eb [v] m' := by
+      RefE (LamsG p n) (lamsE.loop1 p k m mode vis d ty₁ body₁ ty₂ body₂)
+        (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) K d.toNat (decE ty₁)
+          (decE body₁) (decE ty₂) (decE body₂)) s
+        (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   intro k
   induction k with
-  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ h; simp [lamsW] at h
+  | zero =>
+    intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    unfold lamsE.loop1; exact RefE.of_cls0 rfl
   | succ k ih =>
-    intro hkn K hK d ty₁ body₁ ty₂ body₂ m m' s M eb v hS heb h1 hb1 h2 hb2 hd h
-    cases hc : callW p k "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m with
-    | none => rw [lamsW_n1 (hc := hc)] at h; cases h
-    | some w =>
-    obtain ⟨r, m₁⟩ := w
-    obtain ⟨k', rfl⟩ := callW_succ hc
+    intro hkn K hK d ty₁ body₁ ty₂ body₂ m s M eb hS heb h1 hb1 h2 hb2 hd
+    rw [lamsE.loop1.arm1 (hc1 := rfl)]
+    rcases hc : callE p k "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m with e | ⟨r, m₁⟩
+    · rw [lamsE.k_lams_open.none]
+      cases k with
+      | zero =>
+        obtain ⟨e', he', h0⟩ := callE_zero p "lams_open" [mode, vis, d, ty₁, body₁, ty₂, body₂] m
+        rw [hc] at he'; cases he'; exact RefE.of_cls0 h0
+      | succ k' =>
+      obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
+      rw [defeqLams_succ_eq, lamsLvl_succ]
+      exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+        (hG.open_ k' (by omega) F (by omega) (by omega) _ s dn vis fe M eb mode d ty₁ body₁ ty₂ body₂
+          ⟨hS, hmode, heb⟩ h1 h2) hc
+    obtain ⟨k', rfl⟩ := callW_succ (callW_of_callE hc)
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
     rw [defeqLams_succ_eq, lamsLvl_succ]
     have e₁ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
       (lamsOpen_refines p hp hi k' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
-        mode d ty₁ body₁ ty₂ body₂ ⟨hS, hmode, heb⟩ h1 hb1 h2 hb2) hc
+        mode d ty₁ body₁ ty₂ body₂ ⟨hS, hmode, heb⟩ h1 hb1 h2 hb2) (callW_of_callE hc)
     obtain ⟨-, hr1, hr2⟩ := e₁.2.2.2
-    refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
+    refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) e₁ (fun M₁ hS₁ _ => ?_)
     by_cases h0 : r.headD 0 = 0
-    · rw [lamsW_z (hc := hc) (h0 := h0), Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+    · rw [lamsE.k_lams_open.arm1 (hc1 := h0)]
       simp only [decLO, h0, ↓reduceIte]
-      exact coreRef_ret hS₁ rfl resH_zero
+      exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
+    rw [lamsE.k_lams_open.arm2 (hc1 := h0)]
     simp only [decLO, h0, ↓reduceIte, lamsK]
-    cases hc2 : callW p (k' + 1) "lam_pair" [r.tail.headD 0, r.tail.tail.headD 0] m₁ with
-    | none => rw [lamsW_n2 (hc := hc) (h0 := h0) (hc2 := hc2)] at h; cases h
-    | some w =>
-    obtain ⟨q, m₂⟩ := w
+    rcases hc2 : callE p (k' + 1) "lam_pair" [r.tail.headD 0, r.tail.tail.headD 0] m₁ with
+      e | ⟨q, m₂⟩
+    · rw [lamsE.k_lam_pair.none]
+      exact fun hG => ErrClaim.of_cls0 (hG.pair _ _ _ _ hc2)
     have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-      (lamPair_refines p hp k' _ _ dn vis fe M₁ eb _ _ hS₁ hr1 hr2) hc2
-    refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
+      (lamPair_refines p hp k' _ _ dn vis fe M₁ eb _ _ hS₁ hr1 hr2) (callW_of_callE hc2)
+    refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) e₂ (fun M₂ hS₂ _ => ?_)
     obtain ⟨-, hq1, hq2, hq3, hq4⟩ := e₂.2.2.2
     by_cases hq : q.headD 0 = 0
-    · simp only [decLP, hq, ↓reduceIte]
-      cases hc3 : callW p (k' + 1) "defeq_lams_inner"
-          [mode, vis, d, r.tail.headD 0, r.tail.tail.headD 0] m₂ with
-      | none =>
-        have : lamsW p (k' + 1 + 1) m mode vis d ty₁ body₁ ty₂ body₂ = none := by
-          simp only [lamsW, hc, h0, ↓reduceIte]; rw [hc2]
-          simp only [hq, ↓reduceIte, call1W, hc3]
-        rw [this] at h; cases h
-      | some w =>
-      obtain ⟨rr, m₃⟩ := w
-      rw [lamsW_inner (hc := hc) (h0 := h0) (hc2 := hc2) (hq := hq) (hc3 := hc3),
-        Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact coreRef_head (fun r r' h => by simp only [decBool, h]) (CoreSpec.of_callW
-        (s₀ := ⟨m₂, Locals.init []⟩)
+    · rw [lamsE.k_lam_pair.arm1 (hc1 := hq)]
+      simp only [decLP, hq, ↓reduceIte]
+      rcases hc3 : callE p (k' + 1) "defeq_lams_inner"
+          [mode, vis, d, r.tail.headD 0, r.tail.tail.headD 0] m₂ with e | ⟨rr, m₃⟩
+      · rw [lamsE.k_defeq_lams_inner.none]
+        exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+          (hG.inner k' (by omega) F _ _ dn vis fe M₂ eb mode d _ _ (by omega) (by omega)
+            ⟨hS₂, hmode, heb⟩ (by omega) hr1 hr2) hc3
+      simp only [lamsE.k_defeq_lams_inner]
+      obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
         (defeqLamsInner_refines p hp.mid k' (hk.mono (by omega)) F _ _ dn vis fe M₂ eb mode d _ _
-          (by omega) (by omega) ⟨hS₂, hmode, heb⟩ (by omega) hr1 hr2) hc3)
+          (by omega) (by omega) ⟨hS₂, hmode, heb⟩ (by omega) hr1 hr2) (callW_of_callE hc3)).post
+      exact RefE.ret hrun ⟨hR.after, by simpa [decBool] using hR.res, hR.valid⟩
     simp only [decLP, hq, ↓reduceIte, decE_beq_eq _ _ hr1 hr2]
     by_cases he : r.tail.headD 0 = r.tail.tail.headD 0
-    · rw [lamsW_same (hc := hc) (h0 := h0) (hc2 := hc2) (hq := hq) (he := he), Option.some.injEq,
-        Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+    · rw [lamsE.k_lam_pair.arm2 (hc1 := hq) (hc2 := he)]
       simp only [decide_eq_true he, ↓reduceIte]
-      exact coreRef_ret hS₂ rfl resH_one
-    rw [lamsW_cont (hc := hc) (h0 := h0) (hc2 := hc2) (hq := hq) (he := he)] at h
+      exact RefE.ret rfl (CorePost.ret hS₂ rfl resH_one)
+    rw [lamsE.k_lam_pair.arm3 (hc1 := hq) (hc2 := he)]
     simp only [decide_eq_false he, Bool.false_eq_true, ↓reduceIte]
     have hd1 : (d + 1).toNat = d.toNat + 1 := by
       rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
-    have := ih (by omega) K' (by omega) (d + 1) _ _ _ _ m₂ m' _ M₂ eb v hS₂ heb hq1 hq2 hq3 hq4
-      (by rw [hd1]; omega) h
+    have := ih (by omega) K' (by omega) (d + 1) _ _ _ _ m₂ _ M₂ eb hS₂ heb hq1 hq2 hq3 hq4
+      (by rw [hd1]; omega)
     rw [hd1] at this
     exact this
 
 include hp hi in
-/-- **`defeq_lams` refines `defeqLams` at `lamsFuel`** (the twin's call in `quickDefEq`). -/
+/-- `defeq_lams` from its run, both outcomes (`lams_ref` at `lamsFuel`). -/
+theorem defeqLams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d ty₁ body₁ ty₂ body₂ : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
+    (h1 : HW ty₁) (hb1 : HW body₁) (h2 : HW ty₂) (hb2 : HW body₂) (hd : d.toNat < 2 ^ 63) :
+    RefE (LamsG p n) (lamsE p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂)
+      (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) lamsFuel d.toNat (decE ty₁)
+        (decE body₁) (decE ty₂) (decE body₂)) a₀
+      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
+  rw [lamsE.arm1]
+  have hL : (2 : Nat) ^ 62 = lamsFuel := rfl
+  exact lams_ref p hp hi n hk F hF hn dn vis fe mode hs.mode4 (n + 1) (Nat.le_refl _) lamsFuel
+    (by rw [← hL]; omega) d ty₁ body₁ ty₂ body₂ s₀.mem a₀ M eb hs.rel hs.eb_mode h1 hb1 h2 hb2
+    (by omega)
+
+include hp hi in
+/-- **`defeq_lams` refines `defeqLams` at `lamsFuel`** (the twin's call in `quickDefEq`;
+`defeqLams_ref`'s ok half). -/
 @[refines ConRon.Arena.defeqLams]
 theorem defeqLams_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -513,18 +469,12 @@ theorem defeqLams_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
     (h1 : HW ty₁) (hb1 : HW body₁) (h2 : HW ty₂) (hb2 : HW body₂) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "defeq_lams" [mode, vis, d, ty₁, body₁, ty₂, body₂]
       (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) lamsFuel d.toNat (decE ty₁)
-        (decE body₁) (decE ty₂) (decE body₂)) decBool s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (defeqLams_spec p hp n s₀ mode vis d ty₁ body₁ ty₂ body₂)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hL : (2 : Nat) ^ 62 = lamsFuel := rfl
-  obtain ⟨h1', h2', h3', h4'⟩ := lamsW_ok p hp hi n hk F hF hn dn vis fe mode hs.mode4 (n + 1)
-    (Nat.le_refl _) lamsFuel (by rw [← hL]; omega) d ty₁ body₁ ty₂ body₂ s.mem s'.mem a₀ M eb
-    (r.headD 0) hs.rel hs.eb_mode h1 hb1 h2 hb2 (by omega) hW
-  exact ⟨h1', h2', h3'.trans (by simp [decBool]), h4'⟩
+        (decE body₁) (decE ty₂) (decE body₂)) decBool s₀ a₀ dn vis fe M eb :=
+  CoreSpec.of_refE (w := fun (v : Word × Mem) => ([v.1], v.2))
+    (defeqLams_specE p hp.lams (n + 1) s₀ mode vis d ty₁ body₁ ty₂ body₂)
+    (defeqLams_ref p hp hi n hk F hF hn s₀ a₀ dn vis fe M eb mode d ty₁ body₁ ty₂ body₂ hs h1 hb1 h2
+      hb2 hd)
+    fun _ _ => ⟨rfl, by simp [decBool], id⟩
 
 end loopRef
 

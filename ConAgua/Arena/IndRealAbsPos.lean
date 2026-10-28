@@ -1,6 +1,8 @@
-import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.IndPosSpec.NcnW
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
+import ConAgua.Arena.IndPosSpec.P2ctK1
+import ConAgua.Arena.IndPosSpec.NestGroupCtors
+import ConAgua.Arena.IndPosSpec.NestHoles
 
 /-!
 # The `abstract1` memo across the positivity check's models (lane `indproofs4`, helper `abs`)
@@ -384,14 +386,6 @@ theorem nwsW_afr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
   afr_auto h [dcWf_afr]
 
 -- from IndPosSpec/NestCrest
-theorem gcW_afr : ∀ (k : Nat) (m m' : Mem) (vis nPc off l oo ol : Word) (r : List Word),
-    gcW k m vis nPc off l oo ol = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, h => by simp [gcW] at h
-  | k + 1, m, m', vis, nPc, off, l, oo, ol, r, h => by
-    unfold gcW gcK1 gcK2 at h
-    afr_auto h [ntWf_afr, appendW_afr, gcW_afr k _ _ _ _ _ _ _ _ _]
-
--- from IndPosSpec/NestCrest
 theorem rhGoW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP q j : Word),
     rhGoW k m no nl lv po pl nP q j = some m' → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
@@ -563,21 +557,5 @@ theorem roW_afr {k : Nat} {m m' : Mem} {ctx hi cur : Word} {r : List Word} (h : 
 theorem pos2PinW_afr {m m' : Mem} {i : Word} {r : List Word} (h : pos2PinW m i = some (r, m')) : AFr m m' := by
   simp only [pos2PinW] at h
   afr_auto h []
-
-theorem p2ccW_afr {k : Nat} {m m' : Mem} {ctx hp nn dO dL iO iL : Word} {r : List Word}
-    (h : p2ccW k m ctx hp nn dO dL iO iL = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [p2ccW] at h
-  | succ k =>
-  simp only [p2ccW, p2ccK1.eq_def, p2ccK2.eq_def] at h
-  afr_auto h [noaW_afr _ _ _ _ _ _ _ _ _ _, pos2PinW_afr, cpW_afr _ _ _ _ _ _ _]
-
-theorem pfW_afr {k : Nat} {m m' : Mem} {vis ctx po pl kb hi i aO aL : Word} {r : List Word}
-    (h : pfW k m vis ctx po pl kb hi i aO aL = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [pfW] at h
-  | succ k =>
-  simp only [pfW, p2pfK1.eq_def, p2pfK2.eq_def, p2pfK3.eq_def, haWf, naWf] at h
-  cases k <;> simp only at h <;> afr_auto h [haW_afr, noaW_afr _ _ _ _ _ _ _ _ _ _, naW_afr]
 
 end L.Ind

@@ -4,9 +4,9 @@ import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 
 /-!
-# ClassKeyCanon: `ConRon.Arena.classKeyCanon`, `ConRon.Arena.classKeyOf`, `ConRon.Arena.targetCanonParams`
+# ClassKeyCanon: `ConRon.Arena.classKeyCanon`, `ConRon.Arena.targetCanonParams`
 
-The refinement theorems `targetCanonParams_refinesP`, `classKeyCanon_refines`, `classKeyOf_refines` and the lemmas only they use.
+The refinement theorems `targetCanonParams_refinesP`, `classKeyCanon_refines` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -20,49 +20,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-/-- After `class_key_of_closed`. -/
-def kofK2 (k2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => if r.headD 0 = 0 then none else some ([k2], m)
-/-- After `class_key_canon`. -/
-def kofK1 (k : Nat) (nP : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => kofK2 (r.headD 0) (ckc2W (k + 1) m nP (rdW (m.arr64 IW) (r.headD 0 + 2))
-      (rdW (m.arr64 IW) (r.headD 0 + 3)))
-
-/-- **The model of `class_key_of(nP, po, pl, key)`** at exec fuel `k + 2`. -/
-def kofW (k : Nat) (m : Mem) (nP po pl key : Word) : Option (List Word × Mem) :=
-  kofK1 k nP (kcW k m po pl key)
-
-section arms2
-variable (k : Nat) (m : Mem) (nP k2 : Word) (r : List Word)
-theorem kofK2_fail (h : r.headD 0 = 0) : kofK2 k2 (some (r, m)) = none := by
-  simp only [kofK2]; rw [ite_eq_left h]
-theorem kofK2_ok (h : ¬ r.headD 0 = 0) : kofK2 k2 (some (r, m)) = some ([k2], m) := by
-  simp only [kofK2]; rw [ite_eq_right h]
-theorem kofK1_some : kofK1 k nP (some (r, m)) = kofK2 (r.headD 0) (ckc2W (k + 1) m nP
-    (rdW (m.arr64 IW) (r.headD 0 + 2)) (rdW (m.arr64 IW) (r.headD 0 + 3))) := rfl
-end arms2
-attribute [ind_grind] kofK2_fail kofK2_ok kofK1_some
-
-/-! ## The `vcgen` specs -/
-
-section spec
-variable {p : Prog} (L : KofProg p)
-include L
-
-theorem kof_spec (k : Nat) (s₀ : St) (nP po pl key : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 2)) "class_key_of" [nP, po, pl, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ kofW k s₀.mem nP po pl key = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.kof]
-  simp only [callFn, classKeyOfL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      kc_spec L k, ckc2_spec L (k + 1)] <;>
-    finish (gen := 20) [kofW, rdW_eq]
-
-end spec
 
 /-! ## The relational side -/
 
@@ -162,49 +119,6 @@ theorem ckc2W_ok (n : Nat) :
           simp only [bind, Except.bind, hn'', decide_true, ite_true]
           exact hrun3
 
-/-- **`class_key_of`'s model simulates `classKeyOf`.** -/
-theorem kofW_ok (k : Nat) (m m' : Mem) (a : AState) (nP po pl key : Word) (r : List Word)
-    (pfvs : List EIdx) (ck : ClassKey) (h : kofW k m nP po pl key = some (r, m')) (hS : StageR dn vis fe m a)
-    (hpf : decHL m po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop m)
-    (hk : DecB (fun m => decCK m key.toNat) m ck) (hP : PosMR m) :
-    ∃ x a', (ConRon.Arena.classKeyOf nP.toNat pfvs ck).run a = .ok (x, a') ∧
-      DecB (fun m => decCK m (r.headD 0).toNat) m' x ∧ (r.headD 0).toNat + 4 ≤ iwTop m' ∧
-      (rdW (m'.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat ≤ iwTop m' ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' := by
-  unfold kofW at h
-  obtain ⟨⟨r1, m1⟩, hc, h⟩ := of_K h rfl
-  rw [kofK1_some] at h
-  obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ := kcW_ok dn fe vis k m m1 a po pl key r1 pfvs ck hc hS hpf hpb hk hP
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
-  obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
-  obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
-  obtain ⟨⟨r2, m2⟩, hcl, h⟩ := of_K h rfl
-  obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 hcl hS1 hds
-    (by omega) hds1
-  by_cases h0 : r2.headD 0 = 0
-  · rw [kofK2_fail (h := h0)] at h; cases h
-  rw [kofK2_ok (h := h0)] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hbt : b = true := by rw [← hb2]; exact bne_iff_ne.mpr h0
-  subst hbt
-  refine ⟨ckOfNk nk, a2, ?_, ?_, by simpa using (by have := hg2.1; omega : (r1.headD 0).toNat + 4 ≤ iwTop m2), ?_,
-    hS2, hg1.trans hg2, hP1.fr (ckc2W_mfr _ _ _ _ _ _ _ hcl)⟩
-  · simp only [ConRon.Arena.classKeyOf, StateT.run_bind]
-    rw [hrun1]
-    simp only [except_ok_bind]
-    have e : (ckOfNk nk).ds = nk.ds := rfl
-    have hr2' : ((ckOfNk nk).ds.allM fun x => do
-        if (← bvarB coreWalkFuel x) != 0 then pure false
-        else pure ((← fvarB coreWalkFuel x) ≤ nP.toNat)).run a1 = .ok (true, a2) := hrun2
-    rw [hr2']
-    rfl
-  · simpa using hd1.grow (decCK_mono _) hg2
-  · have ek (j : Word) (hj : j.toNat < 4) :
-        rdW (m2.arr64 IW) (r1.headD 0 + j) = rdW (m1.arr64 IW) (r1.headD 0 + j) := by
-      simp only [rdW, word_add_toNat (show (r1.headD 0).toNat + j.toNat < 2 ^ 64 by omega)]
-      rw [hg2.2.2.1 _ (by omega)]
-    simp only [List.headD_cons]; rw [ek 2 (by decide), ek 3 (by decide)]; have := hg2.1; omega
-
 end rel
 
 /-! ## Census -/
@@ -249,28 +163,6 @@ theorem classKeyCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (po pl key :
   refine triple_post (kc_spec L k s₀ po pl key) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, h1, h2, h3, h4, h5, h6⟩ := kcW_ok dn fe vis k _ _ a₀ po pl key r pfvs ck hm hS hpf hpb hk hP
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hres]; exact h1, h2, h3, by rw [hst]; exact h4, h5, h6⟩
-
-/-- **`class_key_of` refines `classKeyOf`** (through `replace_fvars`' and `fvar_b`'s stubs;
-`bvar_b` the master's walk, at exec fuel below `coreWalkFuel`). -/
-@[refines ConRon.Arena.classKeyOf]
-theorem classKeyOf_refines (k : Nat) (s₀ : St) (a₀ : AState)
-    (nP po pl key : Word) (pfvs : List EIdx) (ck : ClassKey) (hS : StageR dn vis fe s₀.mem a₀)
-    (hpf : decHL s₀.mem po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop s₀.mem)
-    (hk : DecB (fun m => decCK m key.toNat) s₀.mem ck) (hP : PosMR s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 2)) "class_key_of" [nP, po, pl, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀ ∧
-      DecB (fun m => decCK m (r.headD 0).toNat) s'.mem (AM.res (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀) ∧
-      (r.headD 0).toNat + 4 ≤ iwTop s'.mem ∧
-      (rdW (s'.mem.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (s'.mem.arr64 IW) (r.headD 0 + 3)).toNat ≤
-        iwTop s'.mem ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
-  refine triple_post (kof_spec L k s₀ nP po pl key) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, h1, h2, h3, h4, h5, h6⟩ :=
-    kofW_ok dn fe vis k _ _ a₀ nP po pl key r pfvs ck hm hS hpf hpb hk hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact h1, h2, h3, by rw [hst]; exact h4, h5, h6⟩
 

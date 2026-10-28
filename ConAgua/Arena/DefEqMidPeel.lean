@@ -97,13 +97,6 @@ def GrowRefP {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List 
   AM.ok T a₀ ∧ (∃ M', CoreS dn m (AM.st T a₀) vis fe M' eb ∧ KeptAll M M' eb ∧ StackGrew m₀ m) ∧
     AM.res T a₀ = dec r ∧ ok r
 
-theorem GrowRefP.of_core {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec : List Word → α}
-    {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
-    {eb : Word} {r : List Word} {ok : List Word → Prop}
-    (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) : GrowRefP T a₀ dec dn m₀ vis fe M eb r m ok :=
-  let ⟨M', hS, hK, hSt⟩ := h.2.1
-  ⟨h.1, ⟨M', hS, hK, hSt.toGrew'⟩, h.2.2.1, h.2.2.2⟩
-
 /-- **A run, then a growing rest**. -/
 theorem growRef_bind {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α} {f : α → AM β}
     {a₀ : AState} {dec₁ : List Word → α} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name}
@@ -119,12 +112,6 @@ theorem growRef_bind {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α}
     rw [StateT.run_bind, AM.run_of_ok _ _ h₁.1, h₁.2.2.1]; rfl
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hT.trans (AM.run_of_ok _ _ hok2))
   exact ⟨hok, hst ▸ ⟨M'', hS'', hK.trans hK'', hSt.trans' hSt''⟩, hres.trans hres2, hrw2⟩
-
-theorem growRef_ret {α : Type} [Inhabited α] {a : AState} {dec : List Word → α}
-    {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
-    {eb : Word} {r : List Word} {v : α} {ok : List Word → Prop} (hS : CoreS dn m a vis fe M eb)
-    (hv : v = dec r) (hr : ok r) : GrowRefP (pure v) a dec dn m vis fe M eb r m ok :=
-  GrowRefP.of_core (coreRef_ret hS hv hr)
 
 /-! ## `peel_leaf` -/
 
@@ -740,80 +727,29 @@ theorem peelLvl_step_run (r : CoreFnsA) (d peel : Nat) (cont : EIdx → EIdx →
 
 /-! ## `defeq_peel`: the loop -/
 
-/-- **The model of `defeq_peel`'s loop** at L fuel `j`. -/
-def peelW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _ => none
-  | j + 1, m, mode, vis, d, peel, a, b, k, fo =>
-    if a = b then some (1, m)
-    else if peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6 then
-      call1W p j "peel_leaf" [mode, vis, d, a, b, k, fo] m
-    else match callW p j "peel_step" [mode, vis, d, a, b, k, fo] m with
-      | none => none
-      | some (r, m₁) =>
-        if r.headD 0 = 0 then some (0, m₁)
-        else match callW p j "peel_push" [d, k, fo, r.tail.headD 0] m₁ with
-          | none => none
-          | some (_, m₂) => peelW p j m₂ mode vis d (peel - 1) (r.tail.tail.headD 0)
-              (r.tail.tail.tail.headD 0) (k + 1) fo
+/-- **`defeq_peel`'s model, both outcomes** (the loop `peelE.loop1`: `peel_leaf`, `peel_step`,
+`peel_push` through their runs, `callE`). -/
+l_model defeqPeel_specE (p : Prog) (hf : p.lookup "defeq_peel" = some defeqPeelL)
+  fns [hf ↦ peelE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-section peelArms
-variable (p : Prog) (j : Nat) (m m₁ m₂ : Mem) (mode vis d peel a b k fo : Word) (r r₂ : List Word)
-
-theorem peelW_eq (h : a = b) : peelW p (j + 1) m mode vis d peel a b k fo = some (1, m) := by
-  simp only [peelW, h, ↓reduceIte]
-theorem peelW_leaf (h : ¬ a = b) (hl : peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6) :
-    peelW p (j + 1) m mode vis d peel a b k fo = call1W p j "peel_leaf" [mode, vis, d, a, b, k, fo] m := by
-  simp only [peelW, h, hl, ↓reduceIte]
-theorem peelW_n1 (h : ¬ a = b) (hl : ¬ (peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6))
-    (hc : callW p j "peel_step" [mode, vis, d, a, b, k, fo] m = none) :
-    peelW p (j + 1) m mode vis d peel a b k fo = none := by
-  simp only [peelW, h, hl, hc, ↓reduceIte]
-theorem peelW_stop (h : ¬ a = b) (hl : ¬ (peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6))
-    (hc : callW p j "peel_step" [mode, vis, d, a, b, k, fo] m = some (r, m₁)) (h0 : r.headD 0 = 0) :
-    peelW p (j + 1) m mode vis d peel a b k fo = some (0, m₁) := by
-  simp only [peelW, h, hl, hc, h0, ↓reduceIte]
-theorem peelW_n2 (h : ¬ a = b) (hl : ¬ (peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6))
-    (hc : callW p j "peel_step" [mode, vis, d, a, b, k, fo] m = some (r, m₁)) (h0 : ¬ r.headD 0 = 0)
-    (hc2 : callW p j "peel_push" [d, k, fo, r.tail.headD 0] m₁ = none) :
-    peelW p (j + 1) m mode vis d peel a b k fo = none := by
-  simp only [peelW, h, hl, hc, h0, hc2, ↓reduceIte]
-theorem peelW_cont (h : ¬ a = b) (hl : ¬ (peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6))
-    (hc : callW p j "peel_step" [mode, vis, d, a, b, k, fo] m = some (r, m₁)) (h0 : ¬ r.headD 0 = 0)
-    (hc2 : callW p j "peel_push" [d, k, fo, r.tail.headD 0] m₁ = some (r₂, m₂)) :
-    peelW p (j + 1) m mode vis d peel a b k fo = peelW p j m₂ mode vis d (peel - 1)
-      (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) (k + 1) fo := by
-  simp only [peelW, h, hl, hc, h0, hc2, ↓reduceIte]
-
-end peelArms
-
-theorem defeqPeelLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n defeqPeelLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      peelW p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
-        (s₀.loc 6) (s₀.loc 7) = some ((r.retOr [0]).headD 0, s'.mem) ∧ r ≠ .normal; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := defeqPeelLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "peel_leaf",
-        callW_spec p n "peel_step", callW_spec p n "peel_push"] <;>
-      finish (gen := 50) [peelW_eq, peelW_leaf, peelW_n1, peelW_stop, peelW_n2, peelW_cont, call1W_some,
-        St.setLocs_mem']
-
-theorem defeqPeel_spec (p : Prog) (hp : PeelProg p) (n : Nat) (s₀ : St)
-    (mode vis d peel a b k fo : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_peel" [mode, vis, d, peel, a, b, k, fo]
-    ⦃fun r s' => LocEq s' s₀ ∧ peelW p (n + 1) s₀.mem mode vis d peel a b k fo =
-      some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.peel]
-  simp only [callFn, defeqPeelL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (defeqPeelLoop_spec p (n + 1) s)] <;>
-    finish
+/-- **What the descent's errors claim from**: `peel_leaf`'s and `peel_step`'s error claims at every
+L fuel up to `n` (`Verdict/DefEqPeelE.lean`), `peel_push` outside the verdict closure. -/
+structure PeelG (p : Prog) (n : Nat) : Prop where
+  leaf : ∀ j, j ≤ n → ∀ (F : Nat), j ≤ F → j ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b k fo : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    ∀ (fvs : Array EIdx), FvsR s₀.mem fo k fvs → d.toNat + k.toNat < 2 ^ 64 →
+    CoreSpecE p (j + 1) "peel_leaf" [mode, vis, d, a, b, k, fo]
+      (defeqPeelLeaf (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs) s₀ a₀
+  step : ∀ j, j ≤ n → ∀ (F : Nat), j ≤ F → j ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b k fo : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    a >>> 28 = 6 → b >>> 28 = 6 → ∀ (fvs : Array EIdx), FvsR s₀.mem fo k fvs →
+    d.toNat + k.toNat < 2 ^ 64 →
+    CoreSpecE p (j + 1) "peel_step" [mode, vis, d, a, b, k, fo]
+      (peelStepT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs) s₀ a₀
+  push : ∀ k args m e, callE p k "peel_push" args m = .error e → e.cls = 0
 
 /-! ## The loop refines `defeqPeel` -/
 
@@ -822,22 +758,6 @@ theorem growRef_congr {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} 
     {eb : Word} {r : List Word} {ok : List Word → Prop} (h : T.run a₀ = T'.run a₀)
     (h' : GrowRefP T' a₀ dec dn m₀ vis fe M eb r m ok) : GrowRefP T a₀ dec dn m₀ vis fe M eb r m ok := by
   unfold GrowRefP AM.ok AM.st AM.res at *; rw [h]; exact h'
-
-/-- **A kept-stack run, then a growing rest.** -/
-theorem growRef_bindK {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α} {f : α → AM β}
-    {a₀ : AState} {dec₁ : List Word → α} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name}
-    {m₀ m₁ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r₁ r : List Word}
-    {ok₁ ok : List Word → Prop}
-    (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
-    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
-      GrowRefP (f (dec₁ r₁)) (AM.st T₁ a₀) dec dn m₁ vis fe M' eb r m ok) :
-    GrowRefP (T₁ >>= f) a₀ dec dn m₀ vis fe M eb r m ok := by
-  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
-  obtain ⟨hok2, ⟨M'', hS'', hK'', hSt''⟩, hres2, hrw2⟩ := h₂ M' hS hSt
-  have hT : (T₁ >>= f).run a₀ = (f (dec₁ r₁)).run (AM.st T₁ a₀) := by
-    rw [StateT.run_bind, AM.run_of_ok _ _ h₁.1, h₁.2.2.1]; rfl
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hT.trans (AM.run_of_ok _ _ hok2))
-  exact ⟨hok, hst ▸ ⟨M'', hS'', hK.trans hK'', hSt.toGrew'.trans' hSt''⟩, hres.trans hres2, hrw2⟩
 
 theorem defeqPeel_eq_run (r : CoreFnsA) (d peel : Nat) (a b : EIdx) (k : Nat) (fvs : Array EIdx)
     (s : AState) (h : (a == b) = true) : (defeqPeel r d peel a b k fvs).run s = .ok (true, s) := by
@@ -856,32 +776,73 @@ theorem defeqPeel_leaf_run (r : CoreFnsA) (d peel : Nat) (a b : EIdx) (k : Nat) 
 theorem word_toNat_zero_iff (w : Word) : w.toNat = 0 ↔ w = 0 :=
   ⟨fun h => UInt64.toNat_inj.mp (by simpa using h), fun h => by rw [h]; rfl⟩
 
+theorem GrowPost.of_core {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name}
+    {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
+    {r : List Word} {y : α} {a' : AState} (h : CorePost dec dn m₀ vis fe M eb ok (r, m) y a') :
+    GrowPost dec dn m₀ vis fe M eb ok (r, m) y a' :=
+  let ⟨M', hS, hK, hSt⟩ := h.after
+  ⟨⟨M', hS, hK, hSt.toGrew'⟩, h.res, h.valid⟩
+
+/-- A growing callee's ok run, then the rest, both outcomes. -/
+theorem RefE.bind_grow {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}
+    {f : γ → AM β} {a₀ : AState} {dec₁ : List Word → γ} {dec : List Word → β}
+    {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {r₁ : List Word} {ok₁ ok : List Word → Prop} {w : α → List Word × Mem}
+    (h₁ : GrowRefP T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
+    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackGrew m₀ m₁ →
+      RefE G x (f (dec₁ r₁)) (AM.st T₁ a₀)
+        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v) y a')) :
+    RefE G x (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') := by
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
+  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1])
+    ((h₂ M' hS hSt).mono fun _ _ _ h =>
+      let ⟨M'', hS'', hK'', hSt''⟩ := h.after
+      ⟨⟨M'', hS'', hK.trans hK'', hSt.trans' hSt''⟩, h.res, h.valid⟩)
+
+/-- A kept-stack callee's ok run, then a growing rest, both outcomes. -/
+theorem RefE.bind_growK {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}
+    {f : γ → AM β} {a₀ : AState} {dec₁ : List Word → γ} {dec : List Word → β}
+    {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {r₁ : List Word} {ok₁ ok : List Word → Prop} {w : α → List Word × Mem}
+    (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
+    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
+      RefE G x (f (dec₁ r₁)) (AM.st T₁ a₀)
+        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v) y a')) :
+    RefE G x (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') := by
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
+  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1])
+    ((h₂ M' hS hSt).mono fun _ _ _ h =>
+      let ⟨M'', hS'', hK'', hSt''⟩ := h.after
+      ⟨⟨M'', hS'', hK.trans hK'', hSt.toGrew'.trans' hSt''⟩, h.res, h.valid⟩)
+
 section loopRef
 variable (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
 
 include hp hil in
-/-- **The loop's model refines `defeqPeel`** at the knot. -/
-theorem peelW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+/-- **The descent refines `defeqPeel`, both outcomes**, at the knot. -/
+theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode d fo : Word)
     (hmode : mode < 4) :
-    ∀ j, j ≤ n + 1 → ∀ (peel a b k : Word) (m m' : Mem) (s : AState) (M : ModeMaps) (eb v : Word)
+    ∀ j, j ≤ n + 1 → ∀ (peel a b k : Word) (m : Mem) (s : AState) (M : ModeMaps) (eb : Word)
       (fvs : Array EIdx), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a → HW b →
       FvsR m fo k fvs → d.toNat + k.toNat + peel.toNat < 2 ^ 64 →
-      peelW p j m mode vis d peel a b k fo = some (v, m') →
-      GrowRefP (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b)
-        k.toNat fvs) s decBool dn m vis fe M eb [v] m' := by
+      RefE (PeelG p n) (peelE.loop1 p j m mode vis d peel a b k fo)
+        (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b)
+          k.toNat fvs) s
+        (fun v y a' => GrowPost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   intro j
   induction j with
-  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ h; simp [peelW] at h
+  | zero =>
+    intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    unfold peelE.loop1; exact RefE.of_cls0 rfl
   | succ j ih =>
-    intro hjn peel a b k m m' s M eb v fvs hS heb ha hb hx hdk h
+    intro hjn peel a b k m s M eb fvs hS heb ha hb hx hdk
     have hab : (decE a == decE b) = decide (a = b) := decE_beq_eq _ _ ha hb
     by_cases he : a = b
-    · rw [peelW_eq (h := he), Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+    · rw [peelE.loop1.arm1 (hc1 := rfl) (hc2 := he)]
       have hr := defeqPeel_eq_run (coreKnot (decMode mode) fe id F) d.toNat peel.toNat _ _ k.toNat
         fvs s (by rw [hab]; simp [he])
-      exact growRef_congr (T' := pure true) (by rw [hr]; rfl) (growRef_ret hS rfl resH_one)
+      exact RefE.ret hr (GrowPost.of_core (CorePost.ret hS rfl resH_one))
     have hab' : (decE a == decE b) = false := by rw [hab]; simp [he]
     have hlw : (decide (peel.toNat = 0) || (decE a).tag != ETag.forallE ||
         (decE b).tag != ETag.forallE) = decide (peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6) := by
@@ -889,15 +850,26 @@ theorem peelW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       by_cases h1 : peel = 0 <;> by_cases h2 : a >>> 28 = 6 <;> by_cases h3 : b >>> 28 = 6 <;>
         simp [h1, h2, h3]
     by_cases hl : peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6
-    · rw [peelW_leaf (h := he) (hl := hl)] at h
-      obtain ⟨j', rfl⟩ := call1W_succ h
+    · rw [peelE.loop1.arm2 (hc1 := rfl) (hc2 := he) (hc3 := hl)]
       have hr := defeqPeel_leaf_run (coreKnot (decMode mode) fe id F) d.toNat peel.toNat _ _ k.toNat
         fvs s hab' (by rw [hlw]; simp [hl])
-      refine growRef_congr hr (GrowRefP.of_core ?_)
-      exact CoreSpec.of_call1W (s₀ := ⟨m, Locals.init []⟩)
+      refine RefE.of_run_eq hr ?_
+      rcases h1 : callE p j "peel_leaf" [mode, vis, d, a, b, k, fo] m with e | ⟨r, m₁⟩
+      · rw [peelE.k_peel_leaf.none]
+        cases j with
+        | zero =>
+          obtain ⟨e', he', h0⟩ := callE_zero p "peel_leaf" [mode, vis, d, a, b, k, fo] m
+          rw [h1] at he'; cases he'; exact RefE.of_cls0 h0
+        | succ j' =>
+        exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+          (hG.leaf j' (by omega) F (by omega) (by omega) _ s dn vis fe M eb mode d a b k fo
+            ⟨hS, hmode, heb⟩ ha hb fvs hx (by omega)) h1
+      obtain ⟨j', rfl⟩ := callW_succ (callW_of_callE h1)
+      simp only [peelE.k_peel_leaf]
+      obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
         (peelLeaf_refines p hp hil j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
-          mode d a b k fo ⟨hS, hmode, heb⟩ ha hb fvs hx (by omega))
-        (fun r r' h => by simp only [decBool, h]) h
+          mode d a b k fo ⟨hS, hmode, heb⟩ ha hb fvs hx (by omega)) (callW_of_callE h1)).post
+      exact RefE.ret hrun (GrowPost.of_core ⟨hR.after, by simpa [decBool] using hR.res, hR.valid⟩)
     have hp0 : peel ≠ 0 := fun h0 => hl (.inl h0)
     have hga : a >>> 28 = 6 := Classical.byContradiction fun h' => hl (.inr (.inl h'))
     have hgb : b >>> 28 = 6 := Classical.byContradiction fun h' => hl (.inr (.inr h'))
@@ -907,48 +879,67 @@ theorem peelW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     have hk1 : (k + 1).toNat = k.toNat + 1 := by
       rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
-    cases hc : callW p j "peel_step" [mode, vis, d, a, b, k, fo] m with
-    | none => rw [peelW_n1 (h := he) (hl := hl) (hc := hc)] at h; cases h
-    | some w =>
-    obtain ⟨r₁, m₁⟩ := w
-    obtain ⟨j', rfl⟩ := callW_succ hc
-    have e₁ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (peelStep_refines p hp hil j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
-        mode d a b k fo ⟨hS, hmode, heb⟩ ha hb hga hgb fvs hx (by omega)) hc
+    rw [peelE.loop1.arm3 (hc1 := rfl) (hc2 := he) (hc3 := hl)]
     have hr := defeqPeel_succ_eq (coreKnot (decMode mode) fe id F) d.toNat q (decE a) (decE b)
       k.toNat fvs
     have hl' : (decide (q + 1 = 0) || (decE a).tag != ETag.forallE ||
         (decE b).tag != ETag.forallE) = false := by rw [← hq, hlw]; simp [hl]
     rw [hq]
-    refine growRef_congr ((congrArg (fun T => StateT.run T s) hr).trans
+    refine RefE.of_run_eq ((congrArg (fun T => StateT.run T s) hr).trans
       (peelLvl_step_run _ _ _ _ _ _ _ _ _ hab' hl')) ?_
-    refine growRef_bindK e₁ (fun M₁ hS₁ hst₁ => ?_)
+    rcases hc : callE p j "peel_step" [mode, vis, d, a, b, k, fo] m with e | ⟨r₁, m₁⟩
+    · rw [peelE.k_peel_step.none]
+      cases j with
+      | zero =>
+        obtain ⟨e', he', h0⟩ := callE_zero p "peel_step" [mode, vis, d, a, b, k, fo] m
+        rw [hc] at he'; cases he'; exact RefE.of_cls0 h0
+      | succ j' =>
+      exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+        (hG.step j' (by omega) F (by omega) (by omega) _ s dn vis fe M eb mode d a b k fo
+          ⟨hS, hmode, heb⟩ ha hb hga hgb fvs hx (by omega)) hc
+    obtain ⟨j', rfl⟩ := callW_succ (callW_of_callE hc)
+    have e₁ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (peelStep_refines p hp hil j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
+        mode d a b k fo ⟨hS, hmode, heb⟩ ha hb hga hgb fvs hx (by omega)) (callW_of_callE hc)
+    refine RefE.bind_growK (w := fun (v : Word × Mem) => ([v.1], v.2)) e₁ (fun M₁ hS₁ hst₁ => ?_)
     obtain ⟨hw0, hw1, hw2, hw3⟩ := e₁.2.2.2
     by_cases h0 : r₁.headD 0 = 0
-    · rw [peelW_stop (h := he) (hl := hl) (hc := hc) (h0 := h0), Option.some.injEq,
-        Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+    · rw [peelE.k_peel_step.arm1 (hc1 := h0)]
       simp only [decPS, h0, bne_self_eq_false, Bool.not_false, ↓reduceIte]
-      exact growRef_ret hS₁ rfl resH_zero
+      exact RefE.ret rfl (GrowPost.of_core (CorePost.ret hS₁ rfl resH_zero))
+    rw [peelE.k_peel_step.arm2 (hc1 := h0)]
     have hnz : (r₁.headD 0 != 0) = true := by simpa using h0
     simp only [decPS, hnz, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-    cases hc2 : callW p (j' + 1) "peel_push" [d, k, fo, r₁.tail.headD 0] m₁ with
-    | none => rw [peelW_n2 (h := he) (hl := hl) (hc := hc) (h0 := h0) (hc2 := hc2)] at h; cases h
-    | some w =>
-    obtain ⟨r₂, m₂⟩ := w
-    rw [peelW_cont (h := he) (hl := hl) (hc := hc) (h0 := h0) (hc2 := hc2)] at h
+    rcases hc2 : callE p (j' + 1) "peel_push" [d, k, fo, r₁.tail.headD 0] m₁ with e | ⟨r₂, m₂⟩
+    · rw [peelE.k_peel_push.none]
+      exact fun hG => ErrClaim.of_cls0 (hG.push _ _ _ _ hc2)
+    rw [peelE.k_peel_push.arm1]
     obtain ⟨e₂, hx₂⟩ := peelPush_run hp hS₁ d k fo _ hw1 fvs (hx.kept hst₁ hS.spn)
-      (by omega) r₂ hc2
-    refine growRef_bind e₂ (fun M₂ hS₂ _ => ?_)
-    have := ih (by omega) (peel - 1) _ _ (k + 1) m₂ m' _ M₂ eb v _ hS₂ heb hw2 hw3 hx₂
-      (by rw [hq1, hk1]; omega) h
+      (by omega) r₂ (callW_of_callE hc2)
+    refine RefE.bind_grow (w := fun (v : Word × Mem) => ([v.1], v.2)) e₂ (fun M₂ hS₂ _ => ?_)
+    have := ih (by omega) (peel - 1) _ _ (k + 1) m₂ _ M₂ eb _ hS₂ heb hw2 hw3 hx₂
+      (by rw [hq1, hk1]; omega)
     rw [hq1, hk1] at this
     exact this
+
+include hp hil in
+/-- `defeq_peel` from its run, both outcomes (`peel_ref` at the call's fuel). -/
+theorem defeqPeel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d peel a b k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
+    (ha : HW a) (hb : HW b) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
+    (hdk : d.toNat + k.toNat + peel.toNat < 2 ^ 64) :
+    RefE (PeelG p n) (peelE p (n + 1) s₀.mem mode vis d peel a b k fo)
+      (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b) k.toNat fvs) a₀
+      (fun v y a' => GrowPost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
+  rw [peelE.arm1]
+  exact peel_ref p hp hil n hk F hF hn dn vis fe mode d fo hs.mode4 (n + 1) (Nat.le_refl _) peel a b k
+    s₀.mem a₀ M eb fvs hs.rel hs.eb_mode ha hb hx hdk
 
 end loopRef
 
 /-- **`defeq_peel` refines `defeqPeel`** at the knot: the slice `fvs = (fo, k)` at the top of the
-stack, the result's stack grown. -/
+stack, the result's stack grown (`defeqPeel_ref`'s ok half). -/
 @[refines ConRon.Arena.defeqPeel]
 theorem defeqPeel_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
@@ -958,15 +949,13 @@ theorem defeqPeel_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_peel" [mode, vis, d, peel, a, b, k, fo]
     ⦃fun r s' => LocEq s' s₀ ∧ GrowRefP (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat
       peel.toNat (decE a) (decE b) k.toNat fvs) a₀ decBool dn s₀.mem vis fe M eb r s'.mem; ⊤⦄ := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (defeqPeel_spec p hp n s₀ mode vis d peel a b k fo)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  obtain ⟨h1, h2, h3, h4⟩ := peelW_ok p hp hil n hk F hF hn dn vis fe mode d fo hs.mode4 (n + 1)
-    (Nat.le_refl _) peel a b k s.mem s'.mem a₀ M eb (r.headD 0) fvs hs.rel hs.eb_mode ha hb hx hdk hW
-  exact ⟨h1, h2, h3.trans (by simp [decBool]), h4⟩
+  refine L.M.triple_of_run fun _ r s' hp0 hr => ?_
+  obtain ⟨hl, y, a', hrun, hR⟩ := L.M.of_run (P := fun s => s = s₀) hp0 hr
+    (RefE.triple (defeqPeel_specE p hp.peel (n + 1) s₀ mode vis d peel a b k fo)
+      (defeqPeel_ref p hp hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d peel a b k fo hs ha hb fvs hx
+        hdk))
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, hst ▸ hR.after, hres ▸ hR.res.trans (by simp [decBool]), hR.valid⟩
 
 /-! ## `defeq_binders` -/
 

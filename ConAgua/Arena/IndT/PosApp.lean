@@ -1,9 +1,7 @@
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.PosDefs
-import ConAgua.Arena.IndPosSpec.GgW2
-import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Verdict.PosE1L
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
 
 /-!
@@ -65,7 +63,7 @@ theorem pfK_pstep {fe : IFEnv} {env : ConLeche.Env} {c : NestCtx} {prog : List N
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
-theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis fe env (n + 1) := by
+theorem appOKC_step (hL : PfLook p) (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis fe env (n + 1) := by
   obtain ⟨-, -, -, hCont, -, -, -, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb hi w ns c prog NS r ctxP progP wP nsP dep h hC hW hhi hw hns hP hA hc hctx hprog
     hwP hnsP hww
@@ -105,13 +103,17 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
       cases v <;> simp only [ViewR] at hvr <;> (try (rw [h1] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
     obtain ⟨-, hi1, -, -⟩ := hvr
     rw [getD1_eq] at hi1
-    rcases hpf : pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) (ra.headD 0) (ra.tail.headD 0) with _ | ⟨rp, m3⟩ <;> rw [hpf] at h; · simp [nbAppK4] at h
+    rcases hpf : pfvR (realCall p) n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) (ra.headD 0)
+      (ra.tail.headD 0) with _ | ⟨rp, m3⟩ <;> rw [hpf] at h; · simp [nbAppK4] at h
     rw [nbAppK4_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
-    obtain ⟨k, a3, hK, hS3, hg3, hk, hP3⟩ := pfW_ok dn vis fe hpf hS2' (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2
-      (by have := hg2.1; omega) hP2
-    have hA3 : AbsOK m3 := pfW_afr hpf hA2
+    have hab2 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m2 := by have := hg2.1; omega
+    obtain ⟨s3, rfl, -, k, a3, hrun3, ⟨hS3, hg3, hk, hP3, hA3⟩⟩ := RefE.run_okW
+      (pfvE_spec p hL n ⟨m2, Locals.init []⟩ _ _ _ _ _ _ _ _ _)
+      (pfv_ref dn vis fe hS2' (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2 hab2 hP2) hpf
+    have hK := fun {β : Type} (K : NestFieldKind → AM β) => pfK_run hrun3 K
+    replace hA3 : AbsOK s3.mem := hA3 hA2
     have p3 : PStep a2 a3 := pfK_pstep hK hC.check hctx hprog hargsP
     refine ⟨(k, decI w, NS), a3, ?_, hC.of_pstep hS3 hA3 p3, hg12.trans hg3, by simpa using hk, rfl,
       by simpa using (hns.grow (hg12.trans hg3) htop), hP3, hA3, p3.toCore hC.check⟩

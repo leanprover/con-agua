@@ -296,75 +296,6 @@ end L.Arena
 
 namespace L.Arena
 
-l_model ldpr_specE (p : Prog) (hf : p.lookup "lazy_delta_proj_reduction" = some lazyDeltaProjReductionL)
-  fns [hf ↦ ldprE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
-theorem ldprE_loop1_zero (p : Prog) (m : Mem) (mode vis d sn i a b : Word) :
-    ldprE.loop1 p 0 m mode vis d sn i a b = .error .outOfFuel := by
-  unfold ldprE.loop1; rfl
-
-/-- **The projection loop's error claim** at every twin loop fuel `K + 1 ≥ k` (the error half of
-`ldprW_ok`). -/
-theorem ldprLoop_okE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hlsE : LazyDeltaStepE p)
-    (hrpE : ReduceProjCoreE p) (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n)
-    (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (mode d sn i : Word) (hmode : mode < 4) (hsn : HW sn) (hd : d.toNat < 2 ^ 63) :
-    ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (m : Mem) (a : AState) (MM : ModeMaps) (eb x y : Word)
-      (er : Err), CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW x → HW y →
-      ldprE.loop1 p k m mode vis d sn i x y = .error er →
-      ErrClaim (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
-        (decI sn) i.toNat K (decE x) (decE y)) a er := by
-  intro k
-  induction k with
-  | zero =>
-    intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ h
-    rw [ldprE_loop1_zero] at h; cases h
-    exact ErrClaim.of_cls0 Err.cls_outOfFuel
-  | succ k ih =>
-    intro hkn K hK m a MM eb x y er hS heb hx hy h
-    rw [ldprE.loop1.arm1 _ _ _ _ _ _ _ _ _ _ rfl] at h
-    cases hcl : callE p k "lazy_delta_step" [mode, vis, d, x, y] m with
-    | error e =>
-      rw [hcl, ldprE.k_lazy_delta_step.none] at h; cases h
-      refine ErrClaim.of_callE_succ hcl fun j hj h' => ?_
-      subst hj
-      obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-      exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
-        (hlsE j (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega)
-          ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d x y ⟨hS, hmode, heb⟩ hx hy hd) h')
-    | ok q =>
-    obtain ⟨r, m₁⟩ := q
-    rw [hcl] at h
-    obtain ⟨j, rfl⟩ := callE_succ hcl
-    obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    have hstep := hc.lazyDeltaStep j (hk.mono (by omega)) F (by omega) (by omega)
-      ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d x y ⟨hS, hmode, heb⟩ hx hy hd
-    obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep (callW_of_callE hcl)
-    have hsr := AM.run_of_ok _ _ hok
-    rw [hres] at hsr
-    obtain ⟨M', hS₁, -, -⟩ := hA
-    by_cases h0 : r.headD 0 = 0
-    · rw [ldprE.k_lazy_delta_step.arm2 _ _ _ _ _ _ _ _ _ _ _ h0] at h
-      rw [decDS_zero h0] at hsr
-      exact ErrClaim.congr_run (ldpr_cont_run (decMode mode) (coreKnot (decMode mode) fe id F) fe
-        d.toNat (decI sn) i.toNat K' (decE x) (decE y) _ _ a _ hsr)
-        (ih (by omega) K' (by omega) m₁ _ M' eb _ _ er hS₁ heb hrw.2.1 hrw.2.2 h)
-    · rw [ldprE.k_lazy_delta_step.arm1 _ _ _ _ _ _ _ _ _ _ _ h0] at h
-      have hds : decDSs r = decDSs [r.headD 0] := decDS_nz h0
-      have hnc : ∀ a' b', decDSs r ≠ .cont a' b' := decDS_ne_cont h0
-      have hrun := ldpr_exit_run (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
-        i.toNat K' (decE x) (decE y) _ _ _ hnc hsr
-      rw [hds] at hrun
-      cases hx' : callE p (j + 1) "ldpr_exit" [mode, vis, d, sn, i, x, y, r.headD 0] m₁ with
-      | error e =>
-        rw [hx', ldprE.k_ldpr_exit.none] at h; cases h
-        exact ErrClaim.congr_run hrun (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-          (ldprExit_refinesE p hq hc hrpE j (hk.mono (by omega)) (hkE.mono (by omega)) F
-            ⟨m₁, Locals.init []⟩ _ dn vis fe M' eb mode d sn i x y (r.headD 0) (by omega) (by omega)
-            ⟨hS₁, hmode, heb⟩ hsn hx hy h0) hx')
-      | ok q => rw [hx', ldprE.k_ldpr_exit.arm1] at h; cases h
-
 /-- **`lazy_delta_proj_reduction`'s error spec** (the error half of `ldpr_refines`). -/
 def LdprE (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F K : Nat), n ≤ F → n ≤ K → n ≤ 2 ^ 62 →
@@ -375,18 +306,17 @@ def LdprE (p : Prog) : Prop :=
       (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
         i.toNat K (decE a) (decE b)) s₀ a₀
 
-/-- **`lazy_delta_proj_reduction`'s error claim** (`LdprE`). -/
+/-- **`lazy_delta_proj_reduction`'s error claim** (`LdprE`, `ldpr_refC`'s error half). -/
 theorem ldpr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hlsE : LazyDeltaStepE p)
-    (hrpE : ReduceProjCoreE p) : LdprE p := by
-  intro n hk hkE F K hF hK hn s₀ a₀ dn vis fe M eb mode d sn i a b hs hsn ha hb hd
-  refine CoreSpecE.of_runs fun er hc0 => ?_
-  by_cases hkc : er.cls = 0
-  · exact ErrClaim.of_cls0 hkc
-  have hW := triple_of_callE_err (ldpr_specE p hq.ldpr (n + 1) ⟨s₀.mem, Locals.init []⟩
-    mode vis d sn i a b) hc0 (Err.code_ne_of_cls hkc)
-  rw [ldprE.arm1] at hW
-  exact ldprLoop_okE p hq hc hlsE hrpE n hk hkE F hF hn dn vis fe mode d sn i hs.mode4 hsn hd
-    (n + 1) (Nat.le_refl _) K (by omega) _ a₀ M eb a b er hs.rel hs.eb_mode ha hb hW
+    (hrpE : ReduceProjCoreE p) : LdprE p :=
+  fun n hk hkE F K hF hK hn s₀ a₀ dn vis fe M eb mode d sn i a b hs hsn ha hb hd =>
+    RefE.coreSpecE (ldpr_specE p hq.ldpr (n + 1) s₀ mode vis d sn i a b) trivial
+      ⟨fun j hj F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd =>
+        hlsE j (hk.mono hj) (hkE.mono hj) F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd,
+       fun j hj F s₀ a₀ dn vis fe M eb mode d sn i a b k hF hn hs hsn ha hb hk0 =>
+        ldprExit_refinesE p hq hc hrpE j (hk.mono hj) (hkE.mono hj) F s₀ a₀ dn vis fe M eb mode d sn
+          i a b k hF hn hs hsn ha hb hk0⟩
+      (ldpr_refC p hq hc n hk F K hF hK hn s₀ a₀ dn vis fe M eb mode d sn i a b hs hsn ha hb hd)
 
 l_model defeqProjPair_specE (p : Prog) (hf : p.lookup "defeq_proj_pair" = some defeqProjPairL)
   fns [hf ↦ defeqProjPairE] grind [arena_grind] fold [tierW, idxW]

@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndPosSpec.UnW
 import ConAgua.Arena.IndPosSpec.NbLook
 import ConAgua.Arena.IndPosSpec.NbPosW
 
