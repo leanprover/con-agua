@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndT.PosCrest
 
