@@ -26,20 +26,6 @@ local notation "V" => ConLeche.CheckMode.verified
 section gate
 variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
 
-/-- **`defn_nat_cert` is its model `defnNatCertW`** (generated). -/
-l_model defnNatCert_specW (p : Prog) (hp : p.lookup "defn_nat_cert" = some defnNatCert)
-  fns [hp ↦ defnNatCertW list]
-  specs [callW_spec p n "env_find", callW_spec p n "nat_op_equations", callW_spec p n "subst_const0_pairs",
-    callW_spec p n "certify_nat_eqs"]
-  grind [arena_grind] finish [ntBW] gen 20 heartbeats 6400000 bind ntBW instances 10000
-
-/-- **`defn_nat_gate` is its model `defnNatGateW`** (generated). -/
-l_model defnNatGate_specW (p : Prog) (hp : p.lookup "defn_nat_gate" = some defnNatGate)
-  fns [hp ↦ defnNatGateW list]
-  specs [callW_spec p n "nat_op_names", callW_spec p n "sl_contains", callW_spec p n "nat_op_guard",
-    callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", callW_spec p n "defn_nat_cert"]
-  grind [arena_grind] heartbeats 6400000 bind ntBW simp [ntBW]
-
 theorem decCI_defn_val {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
     {cv : IConstantVal} {v : EIdx} {hint : ConLeche.ReducibilityHint}
     (h : decCI a dn q = some (.defnInfo cv v hint)) :
