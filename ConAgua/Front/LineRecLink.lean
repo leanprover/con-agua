@@ -580,4 +580,181 @@ theorem exprN_none_step (i w ks w' k v ik pk : Word) (f : Fld)
     repeat' (rw [ite_eq_right (by simp_all)] at he)
     exact he rfl
 
+/-! ## The fields of a line -/
+
+theorem mbr_eta (i w : Word) (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
+    nextMemberN b i w = ⟨2, (nextMemberN b i w).pos, (nextMemberN b i w).w,
+      (nextMemberN b i w).key, (nextMemberN b i w).val⟩ := by
+  have := nextMemberN_tag b i w h0 h1
+  cases h : nextMemberN b i w; simp_all
+
+/-- The step's state, written once. -/
+abbrev lrSt (b : Array UInt8) (i w ik pk : Word) (f : Fld) : LRS :=
+  lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk f
+
+/-- The step case of an induction over `lineRecN`: the line goes on with the step's state. -/
+theorem lineRecN_next (i w ik pk : Word) (f : Fld) (h0 : (nextMemberN b i w).tag ≠ 0)
+    (h1 : (nextMemberN b i w).tag ≠ 1) (hne : (lrSt b i w ik pk f).e ≠ 0) :
+    lineRecN b i w ik pk f =
+      lineRecN b (lrSt b i w ik pk f).e 0 (lrSt b i w ik pk f).ik (lrSt b i w ik pk f).pk
+        (lrSt b i w ik pk f).f := by
+  rw [lineRecN_step b i w ik pk f h0 h1, ite_eq_right hne, Fld.mk_eta]
+
+/-- **What a line that scans ends with**: a payload kind of Stage B's, and `pl` as `PlOK` says. -/
+theorem lineRecN_kind (i w ik pk : Word) (f : Fld) (hp : PlOK pk f.pl)
+    (he : (lineRecN b i w ik pk f).e ≠ 0) :
+    PlOK (lineRecN b i w ik pk f).pk (lineRecN b i w ik pk f).f.pl ∧
+    ((lineRecN b i w ik pk f).pk = 1 ∨ (lineRecN b i w ik pk f).pk = 2 ∨
+      (lineRecN b i w ik pk f).pk = 3 ∨ (lineRecN b i w ik pk f).pk = 4 ∨
+      (lineRecN b i w ik pk f).pk = 5) ∧
+    (pk ≠ 0 → (lineRecN b i w ik pk f).pk = pk) := by
+  induction i, w, ik, pk, f using lineRecN.induct b with
+  | case5 i w ik pk f h0 h1 hlt ih =>
+    have hne : (lrSt b i w ik pk f).e ≠ 0 := fun h => by
+      simp only [lrSt] at h; rw [h] at hlt; exact UInt64.not_lt_zero hlt
+    rw [lineRecN_next i w ik pk f h0 h1 hne] at he ⊢
+    obtain ⟨a, c, d⟩ := ih (plOK_step _ _ _ _ _ _ hne hp) he
+    exact ⟨a, c, fun hp0 => by rw [d (by rw [lrStepN_pk _ _ _ _ _ _ hne hp0]; exact hp0),
+      lrStepN_pk _ _ _ _ _ _ hne hp0]⟩
+  | case6 i w ik pk f h0 h1 hlt =>
+    rw [lineRecN_step b i w ik pk f h0 h1, ite_eq_left (Decidable.byContradiction fun hne =>
+      hlt (lrStepN_lt b ik pk f _ _ _ hne))] at he
+    exact absurd rfl he
+  | case1 i w ik pk f h0 => rw [lineRecN_err b i w ik pk f h0] at he; exact absurd rfl he
+  | case2 i w ik pk f h0 h1 hw =>
+    rw [lineRecN_close b i w ik pk f h1, ite_eq_left hw] at he; exact absurd rfl he
+  | case3 i w ik pk f h0 h1 hw hk =>
+    rw [lineRecN_close b i w ik pk f h1, ite_eq_right hw, ite_eq_left hk]
+    refine ⟨hp, ?_, fun _ => rfl⟩
+    rcases hk with ⟨h, -⟩ | ⟨h, -⟩ | ⟨h, -⟩ | ⟨h, -⟩ | ⟨h, -⟩ <;> simp [h]
+  | case4 i w ik pk f h0 h1 hw hk =>
+    rw [lineRecN_close b i w ik pk f h1, ite_eq_right hw, ite_eq_right hk] at he
+    exact absurd rfl he
+
+/-- Once a line has a payload kind, it keeps it. -/
+theorem lineRecN_pk (i w ik pk : Word) (f : Fld) (he : (lineRecN b i w ik pk f).e ≠ 0)
+    (hp : pk ≠ 0) : (lineRecN b i w ik pk f).pk = pk := by
+  induction i, w, ik, pk, f using lineRecN.induct b with
+  | case5 i w ik pk f h0 h1 hlt ih =>
+    have hne : (lrSt b i w ik pk f).e ≠ 0 := fun h => by
+      simp only [lrSt] at h; rw [h] at hlt; exact UInt64.not_lt_zero hlt
+    rw [lineRecN_next i w ik pk f h0 h1 hne] at he ⊢
+    have hs := lrStepN_pk _ _ _ _ _ _ hne hp
+    rw [ih he (by rw [hs]; exact hp), hs]
+  | case6 i w ik pk f h0 h1 hlt =>
+    rw [lineRecN_step b i w ik pk f h0 h1, ite_eq_left (Decidable.byContradiction fun hne =>
+      hlt (lrStepN_lt b ik pk f _ _ _ hne))] at he
+    exact absurd rfl he
+  | case1 i w ik pk f h0 => rw [lineRecN_err b i w ik pk f h0] at he; exact absurd rfl he
+  | case2 i w ik pk f h0 h1 hw =>
+    rw [lineRecN_close b i w ik pk f h1, ite_eq_left hw] at he; exact absurd rfl he
+  | case3 i w ik pk f h0 h1 hw hk =>
+    rw [lineRecN_close b i w ik pk f h1, ite_eq_right hw, ite_eq_left hk]
+  | case4 i w ik pk f h0 h1 hw hk =>
+    rw [lineRecN_close b i w ik pk f h1, ite_eq_right hw, ite_eq_right hk] at he
+    exact absurd rfl he
+
+/-- The shared cases of the field theorems: no step that fails, no close that fails. -/
+theorem lineRecN_close_ok {i w ik pk : Word} {f : Fld} (h1 : (nextMemberN b i w).tag = 1)
+    (he : (lineRecN b i w ik pk f).e ≠ 0) : lineRecN b i w ik pk f =
+      ⟨(nextMemberN b i w).pos + 1, ik, pk, f⟩ := by
+  rw [lineRecN_close b i w ik pk f h1] at he ⊢
+  split at he
+  · exact absurd rfl he
+  · rename_i hw
+    split at he
+    · rename_i h; rw [ite_eq_left h, ite_eq_right hw]
+    · exact absurd rfl he
+
+/-- **On a name, level or header line, the record pass for them reads the single pass's fields.** -/
+theorem lineRecN_recN (i w ik pk : Word) (f : Fld) (he : (lineRecN b i w ik pk f).e ≠ 0)
+    (hk : (lineRecN b i w ik pk f).pk = 1 ∨ (lineRecN b i w ik pk f).pk = 2 ∨
+      (lineRecN b i w ik pk f).pk = 5) (hp : pk = 0 ∨ pk = 1 ∨ pk = 2 ∨ pk = 5) :
+    recN b i w f = (lineRecN b i w ik pk f).f := by
+  induction i, w, ik, pk, f using lineRecN.induct b with
+  | case5 i w ik pk f h0 h1 hlt ih =>
+    have hne : (lrSt b i w ik pk f).e ≠ 0 := fun h => by
+      simp only [lrSt] at h; rw [h] at hlt; exact UInt64.not_lt_zero hlt
+    rw [lineRecN_next i w ik pk f h0 h1 hne] at he hk ⊢
+    by_cases hs : (lrSt b i w ik pk f).pk = 0 ∨ (lrSt b i w ik pk f).pk = 1 ∨
+        (lrSt b i w ik pk f).pk = 2 ∨ (lrSt b i w ik pk f).pk = 5
+    · rw [recN_lrStep i w _ _ _ _ ik pk f (mbr_eta i w h0 h1) hne hs]
+      exact ih he hk hs
+    · exfalso
+      have h0' : (lrSt b i w ik pk f).pk ≠ 0 := fun h => hs (.inl h)
+      rw [lineRecN_pk _ _ _ _ _ he h0'] at hk
+      exact hs (.inr hk)
+  | case6 i w ik pk f h0 h1 hlt =>
+    rw [lineRecN_step b i w ik pk f h0 h1, ite_eq_left (Decidable.byContradiction fun hne =>
+      hlt (lrStepN_lt b ik pk f _ _ _ hne))] at he
+    exact absurd rfl he
+  | case1 i w ik pk f h0 => rw [lineRecN_err b i w ik pk f h0] at he; exact absurd rfl he
+  | _ => rw [lineRecN_close_ok ‹_› he, recN_close b _ _ _ ‹_›]
+
+/-- **On an expression line, the record pass for expressions reads the single pass's fields.** -/
+theorem lineRecN_exprN (i w ik pk : Word) (f : Fld) (he : (lineRecN b i w ik pk f).e ≠ 0)
+    (hk : (lineRecN b i w ik pk f).pk = 3) (hp : pk = 0 ∨ pk = 3) :
+    exprN b i w f = (lineRecN b i w ik pk f).f := by
+  induction i, w, ik, pk, f using lineRecN.induct b with
+  | case5 i w ik pk f h0 h1 hlt ih =>
+    have hne : (lrSt b i w ik pk f).e ≠ 0 := fun h => by
+      simp only [lrSt] at h; rw [h] at hlt; exact UInt64.not_lt_zero hlt
+    rw [lineRecN_next i w ik pk f h0 h1 hne] at he hk ⊢
+    by_cases hs : (lrSt b i w ik pk f).pk = 0 ∨ (lrSt b i w ik pk f).pk = 3
+    · rw [exprN_lrStep i w _ _ _ _ ik pk f (mbr_eta i w h0 h1) hne hs]
+      exact ih he hk hs
+    · exfalso
+      have h0' : (lrSt b i w ik pk f).pk ≠ 0 := fun h => hs (.inl h)
+      rw [lineRecN_pk _ _ _ _ _ he h0'] at hk
+      exact hs (.inr hk)
+  | case6 i w ik pk f h0 h1 hlt =>
+    rw [lineRecN_step b i w ik pk f h0 h1, ite_eq_left (Decidable.byContradiction fun hne =>
+      hlt (lrStepN_lt b ik pk f _ _ _ hne))] at he
+    exact absurd rfl he
+  | case1 i w ik pk f h0 => rw [lineRecN_err b i w ik pk f h0] at he; exact absurd rfl he
+  | _ => rw [lineRecN_close_ok ‹_› he, exprN_close b _ _ _ ‹_›]
+
+/-- **On an expression or a declaration line, the record pass for names and levels reads
+nothing** (`pl = 0`). -/
+theorem lineRecN_recN_none (i w ik pk : Word) (f : Fld) (he : (lineRecN b i w ik pk f).e ≠ 0)
+    (hk : (lineRecN b i w ik pk f).pk = 3 ∨ (lineRecN b i w ik pk f).pk = 4) (hp : pk = 0) :
+    (recN b i w f).pl = 0 := by
+  induction i, w, ik, pk, f using lineRecN.induct b with
+  | case5 i w ik pk f h0 h1 hlt ih =>
+    have hne : (lrSt b i w ik pk f).e ≠ 0 := fun h => by
+      simp only [lrSt] at h; rw [h] at hlt; exact UInt64.not_lt_zero hlt
+    rw [lineRecN_next i w ik pk f h0 h1 hne] at he hk
+    by_cases hs : (lrSt b i w ik pk f).pk = 0
+    · rw [recN_lrStep i w _ _ _ _ ik pk f (mbr_eta i w h0 h1) hne (.inl hs)]
+      exact ih he hk hs
+    · rw [lineRecN_pk _ _ _ _ _ he hs] at hk
+      rw [recN_none_step i w _ _ _ _ ik pk f (mbr_eta i w h0 h1) hne hk hp]; rfl
+  | case6 i w ik pk f h0 h1 hlt =>
+    rw [lineRecN_step b i w ik pk f h0 h1, ite_eq_left (Decidable.byContradiction fun hne =>
+      hlt (lrStepN_lt b ik pk f _ _ _ hne))] at he
+    exact absurd rfl he
+  | case1 i w ik pk f h0 => rw [lineRecN_err b i w ik pk f h0] at he; exact absurd rfl he
+  | _ => rw [lineRecN_close_ok ‹_› he] at hk; simp_all
+
+/-- **On a declaration line, the record pass for expressions reads nothing** (`pl = 0`). -/
+theorem lineRecN_exprN_none (i w ik pk : Word) (f : Fld) (he : (lineRecN b i w ik pk f).e ≠ 0)
+    (hk : (lineRecN b i w ik pk f).pk = 4) (hp : pk = 0) :
+    (exprN b i w f).pl = 0 := by
+  induction i, w, ik, pk, f using lineRecN.induct b with
+  | case5 i w ik pk f h0 h1 hlt ih =>
+    have hne : (lrSt b i w ik pk f).e ≠ 0 := fun h => by
+      simp only [lrSt] at h; rw [h] at hlt; exact UInt64.not_lt_zero hlt
+    rw [lineRecN_next i w ik pk f h0 h1 hne] at he hk
+    by_cases hs : (lrSt b i w ik pk f).pk = 0
+    · rw [exprN_lrStep i w _ _ _ _ ik pk f (mbr_eta i w h0 h1) hne (.inl hs)]
+      exact ih he hk hs
+    · rw [lineRecN_pk _ _ _ _ _ he hs] at hk
+      rw [exprN_none_step i w _ _ _ _ ik pk f (mbr_eta i w h0 h1) hne hk hp]; rfl
+  | case6 i w ik pk f h0 h1 hlt =>
+    rw [lineRecN_step b i w ik pk f h0 h1, ite_eq_left (Decidable.byContradiction fun hne =>
+      hlt (lrStepN_lt b ik pk f _ _ _ hne))] at he
+    exact absurd rfl he
+  | case1 i w ik pk f h0 => rw [lineRecN_err b i w ik pk f h0] at he; exact absurd rfl he
+  | _ => rw [lineRecN_close_ok ‹_› he] at hk; simp_all
+
 end L.Front.LineRec
