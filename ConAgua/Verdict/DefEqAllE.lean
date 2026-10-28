@@ -1,5 +1,4 @@
 import ConAgua.Verdict.DefEqLoopsE
-import ConAgua.Verdict.DefEqLazyE
 
 /-!
 # The `defeq` slot's error half one level up, assembled (lane `verdicts-b`, helper `k3`)
@@ -18,8 +17,7 @@ namespace L.Arena
 
 /-- **The whnf family's error claims this family uses** (hypotheses; each in its ok
 refinement's shape: `boolTrueShortcut_refines`, `propIrrel_refines`, `ReduceProjCoreH`,
-`setCert_refines`, `suCert_refines`, `ProofIrrelOK`, `etaCert_refines`, `deltaQuick_refines`,
-`tryUnfoldProjApp_refines`, `lazyNat_refines`). -/
+`setCert_refines`, `suCert_refines`, `ProofIrrelOK`, `etaCert_refines`). -/
 structure DefeqWhnfE (p : Prog) : Prop where
   boolTrueShortcut : BoolTrueShortcutE p
   propIrrel : PropIrrelE p
@@ -28,24 +26,18 @@ structure DefeqWhnfE (p : Prog) : Prop where
   suCert : SuCertE p
   proofIrrel : ProofIrrelE p
   etaCert : EtaCertE p
-  deltaQuick : DeltaQuickE p
-  tryUnfoldProjApp : TryUnfoldProjAppE p
-  lazyNat : LazyNatE p
 
 section all
 variable {p : Prog} (hq : KnotAllProg p) (hw : DefeqWhnfE p) (hnv : closedNV p L.Checker.nvFns = true)
 
-include hq hw hnv in
-/-- `lazy_delta_step`'s error claim from the family's proofs. -/
+include hq hnv in
+/-- `lazy_delta_step`'s error claim (`lds_ref`'s error half). -/
 theorem KnotAllProg.lazyDeltaStepE : LazyDeltaStepE p :=
   let lp := hq.body.lazy
-  let lc := KnotAllProg.lazy hq
-  let hlE := ldsLeft_refinesE p lp lc hw.deltaQuick hnv
-  let hrE := ldsRight_refinesE p lp lc hw.deltaQuick hnv
-  let hsE := ldsSame_refinesE p lp (defeqSpine_refinesE p lp.spine hnv)
-    (ldsUnfold2_refinesE p lp lc hw.deltaQuick hnv) hnv
-  lazyDeltaStep_refinesE p lp hw.deltaQuick hw.tryUnfoldProjApp hlE hrE
-    (ldsBoth_refinesE p lp hlE hrE hsE hnv) hnv
+  fun n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd =>
+    RefE.coreSpecE (ldsE_spec p lp.step lp.both lp.mid.tupa lp.left lp.right lp.same lp.unfold2 lp.mid.dq
+      lp.spine.sp lp.spine.sp2 lp.spine.cmp lp.spine.rev (n + 1) s₀ mode vis d a b) hnv ⟨hkE, hnv⟩
+      (lds_ref p lp (KnotAllProg.lazy hq) n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd)
 
 include hq hnv in
 /-- `quick_defeq`'s error claim. -/
@@ -58,13 +50,15 @@ theorem KnotAllProg.quickDefeqE : QuickDefeqE p :=
       (qd_ref p qp lc.instList lc.inst1 lc.store n hk F s₀ a₀ dn vis fe M eb mode d x y (by omega)
         (by omega) hs hx hy hd)
 
-include hq hw hnv in
-/-- `lazy_delta_reduction`'s error claim. -/
+include hq hnv in
+/-- `lazy_delta_reduction`'s error claim (`lazyDeltaReduction_ref`'s error half). -/
 theorem KnotAllProg.lazyDeltaReductionE : LazyDeltaReductionE p :=
   let lp := hq.body.lazy
-  let lc := KnotAllProg.lazy hq
-  lazyDeltaReduction_refinesE p lp lc (lazyIter_refinesE p lp lc
-    (defeqOffset_refinesE p lp.mid lc.natPred hnv) hw.lazyNat (KnotAllProg.lazyDeltaStepE hq hw hnv) hnv)
+  fun n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd =>
+    RefE.coreSpecE (lazyDeltaReduction_specE p lp.red (n + 1) s₀ mode vis d a b) trivial
+      ⟨⟨hkE, hnv⟩, reduceNatE_of p hq.delta hnv⟩
+      (lazyDeltaReduction_ref p lp (KnotAllProg.lazy hq) n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs
+        ha hb hd)
 
 include hq hw hnv in
 /-- `defeq_tail`'s error claim. -/
@@ -73,7 +67,7 @@ theorem KnotAllProg.defeqTailE : DefeqTailE p :=
   let sc := KnotAllProg.stuck hq
   let irrE := stuckIrrel_refinesE p sp hq.body.iota sc hw.setCert hw.suCert hw.proofIrrel
   defeqTail_refinesE p sp sc
-    (projPair_refinesE p sp (ldpr_refinesE p sp sc (KnotAllProg.lazyDeltaStepE hq hw hnv)
+    (projPair_refinesE p sp (ldpr_refinesE p sp sc (KnotAllProg.lazyDeltaStepE hq hnv)
       hw.reduceProjCore))
     (defeqStuck_refinesE p sp (stuckStrE_of p sp sc irrE hnv)
       (stuckAppE_of p sp sc (appCongE_of p sp (defeqLst_refinesE p hq.lst) hnv) irrE)
@@ -83,7 +77,7 @@ include hq hw hnv in
 /-- **`defeq_body`'s callees' error claims**, all of this family's proved. -/
 theorem KnotAllProg.defeqBodyCalleesE : DefeqBodyCalleesE p :=
   ⟨hw.boolTrueShortcut, hw.propIrrel, KnotAllProg.quickDefeqE hq hnv,
-    KnotAllProg.lazyDeltaReductionE hq hw hnv, KnotAllProg.defeqTailE hq hw hnv⟩
+    KnotAllProg.lazyDeltaReductionE hq hnv, KnotAllProg.defeqTailE hq hw hnv⟩
 
 include hq hw hnv in
 /-- **The `defeq` slot's error half one level up** (the `defeq` field of `KnotStepE`). -/
