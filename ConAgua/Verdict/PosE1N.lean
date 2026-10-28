@@ -1,14 +1,13 @@
-import ConAgua.Verdict.DeclValE
+import ConAgua.Verdict.LefRef
 import ConAgua.Verdict.PosNty
 import ConAgua.Verdict.PosE
 import ConAgua.Arena.IlpRdReal
-import ConAgua.Arena.IndT.Install2
 import ConAgua.Arena.IndRealAbsPos
 /-!
 # `nest_inst_type`: error claim (lane `verdicts-b`, helper `ia2`, fork `kn1`)
 
 `nitE_all`: `NitE` (`PosE.lean`), `nitW_ok`'s proof with `nitLe_realC`'s twin side; the level
-comparison's decline by `lvlEqFueled_errT`.
+comparison's decline by `lef_ref`'s error half (`RefE.run_err`).
 -/
 
 open ConRon.Arena
@@ -170,18 +169,20 @@ theorem nitE_all {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF
   rw [← hud'] at hsL
   rw [← hud', ← hsd]
   -- `lvl_eq_fueled`
+  have hsLE := lefE_spec p hl.hlf k ⟨m3, Locals.init []⟩ ((eViewW m2' (rs.getD 2 0)).tail.headD 0)
+    (rdW (m3.arr64 IW) (ctx + 9))
+  have hRL := lef_ref hq.closed hLC k hC3.stageT huH' hsH hsL hdv
   cases h5 : callE p k "lvl_eq_fueled" [(eViewW m2' (rs.getD 2 0)).tail.headD 0, rdW (m3.arr64 IW) (ctx + 9)] m3 with
   | error e5 =>
     rw [h5, nitE.k_lvl_eq_fueled.eq_1] at he; cases he
-    exact lvlEqFueled_errT hq hLC hl.hlf (nvAt_of hnv (_root_.L.Checker.nv_mem (by decide +kernel))) _ hC3.stageT huH' hsH _ _ hsL hdv h5
+    rw [lefT_bind]
+    exact ErrClaim.bind_left (RefE.run_err hsLE trivial
+      (nvAt_of hnv (_root_.L.Checker.nv_mem (by decide +kernel))) hRL h5)
   | ok q5 =>
   obtain ⟨r4, m4⟩ := q5
   rw [h5] at he
-  obtain ⟨s5, hs5, -, hle⟩ := triple_of_callW
-    (lvlEqFueled_specC p hl.hlf (realCall p) (realCall_spec p) k ⟨m3, Locals.init []⟩ _ _) (callW_of_callE h5)
-  dsimp only at hle
-  rw [hs5] at hle
-  obtain ⟨b', a6, hrunle, -, -, -, -, hr4⟩ := lveC_okC hq.closed hLC hle hC3 hA3 huH' hsH hsL hdv
+  obtain ⟨_, -, -, b', a6, -, ⟨hrunle, hr4, -, -, -, -⟩⟩ := RefE.run_ok hsLE hRL h5
+  dsimp only at hr4
   refine ErrClaim.bind_right hrunle ?_
   cases b' with
   | true => rw [nitE.k_lvl_eq_fueled.arm1 _ _ _ _ _ (by rw [hr4]; decide)] at he; cases he

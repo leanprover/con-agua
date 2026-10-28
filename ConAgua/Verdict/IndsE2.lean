@@ -7,7 +7,6 @@ import ConAgua.Arena.KnotEntry
 import ConRon.Bridge.Inductives.BlockInstall
 import ConAgua.Verdict.IndAGen
 import ConAgua.Arena.IndT.Install1
-import ConAgua.Arena.IndT.Install2
 import ConAgua.Arena.IndT.Install3
 
 /-!

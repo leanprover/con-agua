@@ -136,7 +136,7 @@ theorem checkBlockIndsE_claim : CheckBlockIndsE p := by
   | error e3 =>
     rw [h3, cbiE.k_check_block_agree.none] at he; cases he
     rw [← hsd'] at h1b
-    have hcl := RefE.run_err (cbagE_spec p hP.agreeP.agree hP.agreeP.one (k + 1) ⟨s2.mem, Locals.init []⟩ vis
+    have hcl := RefE.run_err (cbagE_spec p hP.agreeP.agree hP.agreeP.one hP.agreeP.lvl (k + 1) ⟨s2.mem, Locals.init []⟩ vis
       (UInt64.ofNat bs.nP) (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)) hnv ⟨hnv, hcE⟩
       (cbag_ref hq henv hOpf hLC hP.agreeP (UInt64.ofNat bs.nP) (r1.headD 0)
       (r1.tail.headD 0) cvTa0 hw1 (k + 1) (by omega) s2.mem a2 (r2.headD 0) (r2.tail.headD 0) cvs cvsP hC2 hA2

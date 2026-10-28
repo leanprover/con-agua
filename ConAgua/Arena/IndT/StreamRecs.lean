@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclArmT
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot

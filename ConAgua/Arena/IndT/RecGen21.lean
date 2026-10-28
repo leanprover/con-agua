@@ -112,13 +112,12 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   rw [hnp2] at h
   obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
   rw [cbcW.k_check_block_classes_keys.arm1] at h
-  obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (ckk_spec p hP.clm.keys.keys n _ (UInt64.ofNat bs.nP) po pl (r2.headD 0) (r2.tail.headD 0)) c3
-  simp only at hs3 hW3
+  obtain ⟨s3, hs3, -, keys, a3, hrun3, hR3⟩ := RefE.run_okW
+    (ckkE_spec p hP.clm.keys n ⟨s2.mem, Locals.init []⟩ (UInt64.ofNat bs.nP) po pl (r2.headD 0) (r2.tail.headD 0))
+    (ckk_ref dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n s2.mem a1 _ _ _ hS2
+      (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) (ccRes_pslR hcc) hP2) c3
   subst hs3
-  obtain ⟨keys, a3, hrun3, hS3, hg3, hks, hP3⟩ :=
-    ckkW_sim hP.clm.keys dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n s2.mem a1 _ _ _ hS2
-      (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) (ccRes_pslR hcc) hP2 r3 s3.mem hW3
+  obtain ⟨hS3, hg3, hks, hP3⟩ := hR3
   rw [hnpT] at hrun3
   have hA3 := hk3 n _ s2.mem r3 s3.mem c3 hA2
   obtain ⟨c2', keysP, ⟨hkeys, hwk⟩, -⟩ := ConRon.Bridge.Inductives.classKeysOf_spec fe bs.nP pfvs

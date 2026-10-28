@@ -4,7 +4,6 @@ import ConAgua.Arena.IndInstallSpec.CapsProg
 import ConAgua.Arena.IndInstallSpec.DecCNS
 import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.IndRealIlpL
-import ConAgua.Arena.IndSumSpec.SumProg
 import ConAgua.Arena.IndSumSpec.TblProg
 import ConAgua.Arena.KnotEntry
 import ConAgua.Arena.RecGenSpec.OcW
@@ -30,10 +29,8 @@ namespace L.Ind
 open L.Arena
 
 err_stmt CheckSumTeleE := checkSumTele_refinesC fuel k
-err_stmt CheckSumCtorsE := checkSumCtors_refinesC fuel k
 err_stmt CheckStructFieldSortsIE := checkStructFieldSortsI_refinesC fuel n
 err_stmt CheckStructProjTableE := checkStructProjTable_refinesC fuel n
-err_stmt ClassKeyOfE := classKeyOf_refines fuel k
 err_stmt ClassMajorsE := classMajors_refinesC fuel n
 
 end L.Ind

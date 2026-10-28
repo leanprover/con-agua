@@ -1,15 +1,17 @@
-import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.IndsE3
-import ConAgua.Arena.IndT.Install2
+import ConAgua.Arena.IndT.Install1
+import ConAgua.Verdict.LefRef
+import ConAgua.Arena.IndInstallSpec.IagW
 import ConAgua.Arena.Checker
 /-!
 # `check_block_agree_one`: one model and one refinement for both outcomes
 
 `cbaoE` (`l_model … unified`): `open_pis_at_fvars_f` and `fvar_type_ds` (outside the verdict
-closure) through their `Option` models, `check_block_doms_at` and `lvl_eq_fueled` through their
-runs. `cbao_ref` refines `agreeBodyAM` for both outcomes: the unopened member telescope and a
-length mismatch are the twin's rejects, `check_block_doms_at`'s errors by `cbdaE_claim`,
-`lvl_eq_fueled`'s by `lvlEqFueled_errT`, a `false` universe comparison the twin's reject.
+closure) through their `Option` models, `check_block_doms_at` through its run, `lvl_eq_fueled`
+through its unified model `lefE`. `cbao_ref` refines `agreeBodyAM` for both outcomes: the
+unopened member telescope and a length mismatch are the twin's rejects, `check_block_doms_at`'s
+errors by `cbdaE_claim`, `lvl_eq_fueled`'s by `lef_ref`, a `false` universe comparison the twin's
+reject.
 -/
 
 open ConRon.Arena
@@ -26,11 +28,12 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- **`check_block_agree_one`'s model, both outcomes**: `open_pis_at_fvars_f` and `fvar_type_ds`
-(outside the verdict closure) through their `Option` models, `check_block_doms_at` and
-`lvl_eq_fueled` through their runs. -/
+(outside the verdict closure) through their `Option` models, `check_block_doms_at` through its
+run, `lvl_eq_fueled` through `lefE`. -/
 l_model cbaoE_spec (p : Prog) (hf : p.lookup "check_block_agree_one" = some checkBlockAgreeOne)
+  (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
   fns [hf ↦ cbaoE]
-  specs [callW_spec p n "open_pis_at_fvars_f", callW_spec p n "fvar_type_ds"]
+  specs [callW_spec p n "open_pis_at_fvars_f", callW_spec p n "fvar_type_ds", lefE_spec p hl n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -198,42 +201,30 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     rw [hpre, StateT.run_bind, hrun3]; rfl
   refine RefE.of_run_eq hpre3 ?_
   -- `lvl_eq_fueled`
-  rcases h4 : callE p n "lvl_eq_fueled" [s, s0] m3 with e4 | ⟨re, m4⟩
-  · rw [cbaoE.k_lvl_eq_fueled.none, RefE_error]
-    intro hG
-    obtain ⟨lu, hlu⟩ : ∃ l, denoteL a3.store.ls (decI s) = some l := ⟨_, ConRon.Bridge.denoteL_ext hsP hx03⟩
-    obtain ⟨lv, hlv⟩ : ∃ l, denoteL a3.store.ls (decI s0) = some l := ⟨_, ConRon.Bridge.denoteL_ext hs0P hx03⟩
-    exact lvlEqFueled_errT hq hLC hP.lvl
-      (fun n args m e h => callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) n args m h)
-      (fun c : Bool => if c = true then (pure () : AM Unit) else
-        ConRon.Arena.fail (.invalid "mutually inductive types must live in the same universe"))
-      hC3.stageT hs hs0 lu lv hlu hlv h4
-  have hl4 : lveC (realCall p) n m3 s s0 = some (re, m4) := by
-    obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (lvlEqFueled_specC p hP.lvl (realCall p) (realCall_spec p) n _ _ _) (callW_of_callE h4)
-    rw [← hs']; exact hW
-  obtain ⟨b, a4, hrun4, hC4, hg4, hA4, -, hbre⟩ := lveC_okC hq.closed hLC hl4 hC3 hA3 hs hs0
-    (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03)
+  rw [lefT_bind]
+  have hR4 := lef_ref (p := p) hq.closed hLC n hC3.stageT hs hs0 (ConRon.Bridge.denoteL_ext hsP hx03)
+    (ConRon.Bridge.denoteL_ext hs0P hx03)
+  rcases h4 : lefE p n m3 s s0 with e4 | ⟨w, m4⟩
+  · rw [h4] at hR4
+    rw [cbaoE.k_lvl_eq_fueled.none]
+    exact RefE.bind_left fun hG =>
+      hR4 fun n args m e h => callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) n args m h
+  rw [h4] at hR4
+  obtain ⟨b, a4, hrun4, hL⟩ := hR4
   refine RefE.bind_right hrun4 ?_
-  by_cases hre : re.headD 0 = 0
-  · rw [cbaoE.k_lvl_eq_fueled.abort1 p re m4 hre, RefE_error]
-    have hb : b = false := by
-      cases b
-      · rfl
-      · rw [hbre] at hre; exact absurd hre (by decide)
-    subst hb
+  obtain ⟨hC4, hA4, -⟩ := hL.stageC env hC3 hA3
+  have hbre : w = if b then 1 else 0 := hL.res
+  by_cases hre : w = 0
+  · rw [cbaoE.k_lvl_eq_fueled.abort1 p w m4 hre, RefE_error]
+    obtain rfl : b = false := by cases b <;> simp_all
     intro _ _
-    exact ⟨.invalid "mutually inductive types must live in the same universe", by simp [liftFueled]; rfl, rfl⟩
-  rw [cbaoE.k_lvl_eq_fueled.arm1 p re m4 hre]
+    exact ⟨.invalid "mutually inductive types must live in the same universe", rfl, rfl⟩
+  rw [cbaoE.k_lvl_eq_fueled.arm1 p w m4 hre]
+  obtain rfl : b = true := by cases b <;> simp_all
   obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.lvlEq?_crun hC3.check
-    (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03) hrun4
-  have hb : b = true := by
-    cases b
-    · exact absurd (by rw [hbre]; rfl) hre
-    · rfl
-  subst hb
-  exact RefE.ret (by simp [liftFueled]; rfl)
-    ⟨hC4, (hg1.trans hg2).trans (hg3.trans hg4), hA4, ((p1.trans p2).toCore hC.check).trans (c3.trans c4)⟩
+    (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03) hL.run
+  exact RefE.ret rfl
+    ⟨hC4, (hg1.trans hg2).trans (hg3.trans hL.grow), hA4, ((p1.trans p2).toCore hC.check).trans (c3.trans c4)⟩
 
 end sims
 

@@ -1,5 +1,5 @@
 import ConAgua.Verdict.IndsE5
-import ConAgua.Arena.IndT.Install2
+import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Install3
 import ConAgua.Arena.IndRealSortDn

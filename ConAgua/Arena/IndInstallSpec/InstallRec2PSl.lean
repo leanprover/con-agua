@@ -88,52 +88,48 @@ theorem decCNSB_decCNS {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
   exact hd
 
 /-- **A `rec2` header `[off, len]` of a slice decoded below the tops**, decoded below the tops. -/
-theorem installRec2PSl {p : Prog} (hP : CtorsProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
+theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
-    (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
+    (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       DecB (fun m => decAt m (fun o l => decPL m (f m) o l) (r.headD 0).toNat) m' xs := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
   obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
   refine ⟨hS', hg, ?_⟩
   subst hr
-  have hq0 : (rdW (m.arr64 CTL) 200).toNat < iwTop s'.mem := by rw [htop]; simp [iwTop]
-  have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop s'.mem := by rw [htop]; simp [iwTop]
-  have w0 : iwN (truncM s'.mem) (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
+  have hq0 : (rdW (m.arr64 CTL) 200).toNat < iwTop m' := by rw [htop]; simp [iwTop]
+  have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop m' := by rw [htop]; simp [iwTop]
+  have w0 : iwN (truncM m') (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
     rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
     simp [iwN, nat?, iwA, this]
-  have w1 : iwN (truncM s'.mem) ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
+  have w1 : iwN (truncM m') ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
     rw [iwN_truncM hq1]; have := hget 1 (by simp)
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
     simp [iwN, nat?, iwA, this]
   have hd := hx.1.grow (OMono.decPL hf _ _) hg
-  show decAt (truncM s'.mem) _ _ = some xs
+  show decAt (truncM m') _ _ = some xs
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some]
   exact hd
 
 /-- **A `rec2` header `[off, len]` of a slice below the tops**, decoded with its bound. -/
-theorem installRec2PSlB {p : Prog} (hP : CtorsProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
+theorem installRec2PSlB {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
-    (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
+    (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
     DecB (fun m => decAt m (fun o l => decPLB m (f m) o l) (r.headD 0).toNat) m' xs := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
   obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
   subst hr
-  have hq0 : (rdW (m.arr64 CTL) 200).toNat < iwTop s'.mem := by rw [htop]; simp [iwTop]
-  have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop s'.mem := by rw [htop]; simp [iwTop]
-  have w0 : iwN (truncM s'.mem) (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
+  have hq0 : (rdW (m.arr64 CTL) 200).toNat < iwTop m' := by rw [htop]; simp [iwTop]
+  have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop m' := by rw [htop]; simp [iwTop]
+  have w0 : iwN (truncM m') (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
     rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
     simp [iwN, nat?, iwA, this]
-  have w1 : iwN (truncM s'.mem) ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
+  have w1 : iwN (truncM m') ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
     rw [iwN_truncM hq1]; have := hget 1 (by simp)
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
     simp [iwN, nat?, iwA, this]
   have hd := hx.1.grow (OMono.decPL hf _ _) hg
-  show decAt (truncM s'.mem) _ _ = some xs
+  show decAt (truncM m') _ _ = some xs
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some, decPLB]
   rw [ite_eq_left (le_iwA_truncM_size (Nat.le_trans hx.2 hg.1) hS'.2.1)]
   exact hd
@@ -176,3 +172,4 @@ theorem pos3_cns {m : Mem} {o l : Word} {css : List (List (IConstantVal × Nat))
 end L.Ind
 
 end
+

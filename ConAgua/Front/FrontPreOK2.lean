@@ -160,12 +160,12 @@ theorem DGrow.ofDK {m m₁ m' : Mem} (hk : DK m m₁) (hg : DGrow m₁ m') : DGr
   · rw [hg.dlp j h1 (by omega), hk.2]
 
 /-- **`apply_ind` appends one inductive record.** -/
-theorem applyIndW_grow {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+theorem applyIndW_grow {p : Prog} (hAL : IndApplyLookups p) {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
     {n : Nat} {m m' : Mem} {a : AState} {st : StateD}
     (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) {v : USize}
     {tys : List IndTypeRec} {cts : List IndCtorRec} {rcs : List IndRecRec} {e : USize}
     (hscan : scanIndDecl b v = .ok (.ind tys cts rcs) e)
-    (h : applyIndW n b.data m v.toUInt64 = some m') : DGrow m m' := by
+    (h : applyIndW p n b.data m v.toUInt64 = some m') : DGrow m m' := by
   cases n with
   | zero => simp [applyIndW] at h
   | succ n =>
@@ -177,7 +177,7 @@ theorem applyIndW_grow {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
   have hfr1 : MemFrame [IFR, IFL] [] m m₁ := hfR.1
   have hRoom : Room m₁ := hfR.2
   simp only [List.headD, List.tail] at h
-  rcases h2 : validateW n m₁ to tn co cn ro rn with _ | ⟨⟨oo, np⟩, m₂⟩ <;> simp only [h2, pmK, reduceCtorEq] at h
+  rcases h2 : validateW p n m₁ to tn co cn ro rn with _ | ⟨⟨oo, np⟩, m₂⟩ <;> simp only [h2, pmK, reduceCtorEq] at h
   have hA1 : ArenaD m₁ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFR, IFL]) (by simp) _ _ hfr1 _ hA.1,
       DerR.frameT hfr1 (by simp [IFR, IFL]) hA.2⟩
@@ -186,7 +186,7 @@ theorem applyIndW_grow {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
   have hs1' : (m₁.arr64 IFL).size = (m.arr64 IFL).size := hfr1.size IFL
   have hT1 : TopOK m₁ := ⟨by have := hRoom.2.1; exact this, Nat.le_of_lt hRoom.2.2.2⟩
   have hIFR1 : topN m₁ IFR < 2 ^ 62 := by have := hRoom.2.2.1; omega
-  obtain ⟨ordered, V1, V2, V3, V4, V5, V6, V7, V8⟩ := validateW_twin hA1.1 hD1 hok hT1 hF hIFR1 h2
+  obtain ⟨ordered, V1, V2, V3, V4, V5, V6, V7, V8⟩ := validateW_twin hAL hA1.1 hD1 hok hT1 hF hIFR1 h2
   have hfr2 := V2.frame
   have hA2 : ArenaD m₂ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFL, LH]) (by simp) _ _ hfr2 _ hA1.1,

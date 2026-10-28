@@ -1,4 +1,6 @@
 import ConAgua.Verdict.IndsE4
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 /-!
 # `check_block_agree`: one model and one refinement for both outcomes
 
@@ -25,8 +27,9 @@ local notation "V" => ConLeche.CheckMode.verified
 model, each member's agreements through `cbaoE`. -/
 l_model cbagE_spec (p : Prog) (hf : p.lookup "check_block_agree" = some checkBlockAgree)
   (ho : p.lookup "check_block_agree_one" = some checkBlockAgreeOne)
+  (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
   fns [hf ↦ cbagE]
-  specs [callW_spec p n "open_pis_at_fvars_f", cbaoE_spec p ho n]
+  specs [callW_spec p n "open_pis_at_fvars_f", cbaoE_spec p ho hl n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -185,7 +188,7 @@ theorem checkBlockAgree_refinesC (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62
       StageC dn vis fe env s'.mem
         (AM.st (ConRon.Arena.checkBlockAgree V fe nP.toNat cv0 (decI s0) rest) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
-  triple_post (RefE.triple (cbagE_spec p hP.agree hP.one n s₀ vis nP c0 s0 o l)
+  triple_post (RefE.triple (cbagE_spec p hP.agree hP.one hP.lvl n s₀ vis nP c0 s0 o l)
     (cbag_ref hq henv hOpf hLC hP nP c0 s0 cv0 h0 n hn _ a₀ o l rest cvsP hC hA hc0 hs0 hrest hc0P hs0P hcvs hws))
     fun _ _ ⟨hl, _, _, hrun, hR⟩ =>
       let ⟨hok, hst, _⟩ := AM.of_run_ok _ _ _ _ hrun

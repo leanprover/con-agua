@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndInstallSpec.LvlEqFueledSpecC
 import ConAgua.Arena.IndRealSpine
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

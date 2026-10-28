@@ -120,7 +120,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
         by rw [hhi0, hhiP]; exact hholes, hlen⟩
     rw [ConRon.Arena.nestRoot]
     -- `nest_ctx_hi_at`, `nest_ctors`
-    rw [show liftE (nhiO m ctx 0) = .ok (nhiW m ctx 0, m) from rfl, nrtE.k_nest_ctx_hi_at.arm1, rd0, rd1, rd2]
+    rw [rd0, rd1, rd2]
     have hRef := (nbRef_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv n (by omega)).ctors m a ctx 1
       0 0 0 (nhiW m ctx 0) _ _ _ _ _ hO hL cO' cL' ns 0 0 c [] c.params c.names holes cs NS [] ctxP [] _ _ _ _ csP
       nsP [] hC hW hCc hcl' hcb' hcsAt hns (by simpa using OutsB.nil m 0) (by simp) hP hA hc hctx rfl hpre hc1
@@ -321,7 +321,7 @@ theorem nsdE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
     rw [h3, nsdE.k_nest_inst_type.arm1] at he
     obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, -, hA2⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2
       a1 key kk _ (realCall p) (nty_ok L.nb.nit.ty (IlpRd.realC hIlpf hC1)) _
-      (nitLe_realC hq.closed hLC n' _ _ key c kk hC1 hA1 (dCtx_ext _ p1.ext _ _ hctx)
+      (nitLe_realC hq.closed hLC L.nb.nit.hlf n' _ _ key c kk hC1 hA1 (dCtx_ext _ p1.ext _ _ hctx)
         (ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey)) hni hS1 (hU.grow hg1) hkd1 hkin1 hksl1 hP1
     simp only [List.headD_cons, List.tail_cons] at hctyH hctyd
     have c1 := p1.toCore hC.check
