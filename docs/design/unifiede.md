@@ -985,3 +985,186 @@ affbbf73; load 18–42; `CntW` from a separate series after the recipe change):
 | **sum** | **41.3** | **30.6** | **−26 %** |
 
 `Install7` is the one flagged module; with the files it replaces (`Icbo`, `BlkE1`) it is 11.4 → 6.3 s.
+
+### 3.13 Batch 2a, first landing (`Decl*`, `whnf_telescope`)
+
+The batch's functions (`_tmp/unifiedE/inv.py` on master 1dc86825, the `Decl*`/`DefEq*`/`Whnf*`
+families and `IndBWt`; `DefEq*`/`Whnf*` have nothing left at depth 1–2): depth 0 left over
+`install_header`, `install_basis_decls`, `check_defn_val`, `check_opaque_val`, `check_reduce_pin`,
+`check_div_mod_certs`, `check_type_pins`; depth 1 `check_constant_val`, `install_value`,
+`check_thm_val`, `check_basis_decl`, `check_div_mod_pin_value`, `whnf_telescope`; depth 2
+`check_decl_axiom`, `check_decl_defn`, `check_decl_opaque`, `check_decl_quot`, `check_decl_thm`,
+`check_div_mod_pin_at`. This landing migrates fourteen of them:
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `install_header` | `ihE_okT` 244 (`ihW_okT` stays: `class_const_ok_header`'s) | `ih_ref` 185 + `IhPost` 7 + `IhCtx` 3 = 195 | (−20 %) |
+| `check_constant_val` | `ccvW_okT` 47 + `ccvW_okTA` 39 + `ccvE_okT` 60 = 146 | `ccv_ref` 54 + `CcvPost` 6 + `ccvE_okT` 13 = 73 | −50 % |
+| `install_value` | `ivW_genT` 102 + `ivW_okT` 62 + `ivE_core` 107 + `installValue_errT` 66 = 337 | `ivc_ref` 99 + `iv_ref` 37 + `IvPost`/`IvCtx`/`ivCoreT` 16 + `installValue_errT` 13 = 165 | −51 % |
+| `check_defn_val`, `check_opaque_val` | `dvW_okT` 36 + `defnvE_okT` 90 + `opaquevE_okT` 90 = 216 | `dv_ref` 85 + `ov_ref` 85 + `DvCtx`/`DvPost` 10 + the two claims 28 = 208 | −4 % |
+| `check_decl_defn` | `cdfW_okT` 143 + `checkDeclDefn_errT` 161 + `NatGateSpecE`/`natGateSpecE_of` 16 = 320 | `cdf_ref` 147 + `CdfCtx`/`CdfPost` 9 + `checkDeclDefn_errT` 22 = 178 | −44 % |
+| `install_basis_decls` | 143 | 64 | −55 % |
+| `check_basis_decl` | 242 | 117 | −52 % |
+| `check_decl_quot` | 231 | 106 | −54 % |
+| `check_div_mod_certs`, `check_type_pins`, `check_div_mod_pin_value`, `check_div_mod_pin_at` | `cmC` 239, `ctpC` 118, `cpvC` 105, `cpaC` 52; `cmE` 259, `ctpE` 112, `cpvE` 128, `cpaE` 71, `cpaClaimE_of` 7 = 1 091 | `cm_ref` 239, `ctp_ref` 112, `cpv_ref` 98, `cpa_ref` 55, `DmPost` 7; `cmC` 22, `cpvC` 17, `cpaC` 18, `cpaClaimE_of` 9 = 570 | −48 % |
+| `whnf_telescope` | `wtW_simC` 138 + `wtE_claim` 154 = 292 | `wt_ref` 135 + `WtPost`/`WtG` 12 = 147 | −50 % |
+| **pairs** | **3 262** | **1 823** | **−44 %** |
+
+The hand ok models with their arms and specs are gone too: `ccvW`/`ccvK1–3`/`ccv_specW`, `ivW`/
+`ivK1–5`/`iv_specW`, `dvW`/`dv_specW`/`ov_specW`/`dvBody_specW`, `cdfW`/`cdfK1–5`/`cdf_specW`,
+`ibdsW`, `cbdW`, `cdqW`, the file `DeclDivModSpec/CmW` (`cmW`, `dmCtpW`, `dmCpvW`, `cpaW` and their
+specs), `wtW`/`wtK1–6`/`wtW_spec`. Whole diff against master c4aef6d6: **+1 608 −3 652** in 38
+files.
+
+Choices and findings:
+
+* **`install_header` alone.** Its body and `class_const_ok_header`'s are two functions (§3.11);
+  `ih_ref` is `install_header`'s. The shared hand model `ihW` and `ihW_okT` stay for
+  `class_const_ok_header`'s ok proof (`RecGen3`, `IndBHdr`; batch 2b) and go with it. `G` is
+  `IhCtx p` (`closedNV` and `UceProg`: its consts-resolve site), the weakest that fits; callers
+  pass `⟨hG.nv, hG.uce⟩` from `VerdictCtxU`.
+* **`G` per function**: `VerdictCtxU p` for `check_constant_val` (the core stubs and the header);
+  `IvCtx` (`nv`, `uce`, `IvgE`) for `install_value`; `DvCtx` (`NVAt "env_push"`, `CoreStubsE`,
+  `IvgE`) for the value checks; `CdfCtx pins` (`VerdictCtxU`, `IvgE`, the pin gate's
+  `DivGateSpecE`) for the definition arm; `True` for the basis family; `CoreStubsE p` for the
+  `Nat.div` gates; `WtG` (`closedNV`, `WhnfTopE`) for `whnf_telescope`.
+* **A callee read through its run where the caller needs the run.** The definition arm needs each
+  callee's write-set frame (`PinSetsR.step`, `run_memFrame`), which comes from the program run, not
+  from a unified model's value. So `checkDeclDefnE` calls all its callees through `callE` and its
+  refinement takes their halves from the runs (`RefE.run_ok`, `RefE.run_err` with `ccv_ref`,
+  `dv_ref`, `dng_ref`). `whnf_telescope` does the same for `whnf_top` (`whnfC_rsim` reads the run).
+  A kit lemma from a unified model's ok value back to the call's run would allow listing such
+  callees by their unified specs.
+* **`install_value` against a kind-generic twin.** `ivT` has three kinds; `ivc_ref` is against
+  `ivCoreT` (header, guards unless `vk = 1`, push) and `iv_ref` reads each kind by
+  `RefE.of_run_eq`. The ok proof needs `install_value_guards`' spec, so `installValue_errT` and
+  `installStepGo_errT` gained `CvgProg p` (`DeclTopE` passes `hdc.cvg`).
+* **Two value checks, one text, two models.** `check_defn_val` and `check_opaque_val` differ only
+  in the abort code; their unified models are two constants, so `dv_ref` and `ov_ref` are the same
+  proof twice. They replace one shared ok proof and two error claims: −4 % only.
+* **`NatGateSpecE` gone**: with `dng_ref` read from the run, the definition arm's error claim no
+  longer takes the structural gate's claim as a hypothesis; `natGateSpecE_of`, and the hypothesis
+  in `DeclTopE`/`TopE`, are gone. `DivGateSpecE` moved to `Arena/DeclDefnT` (the pin gate is not
+  migrated: depth ≥ 3).
+* **Recipes.** `simp []` for every model here (with `locals` for `installHeaderE`); `finish` fails
+  for `installHeaderE`, `checkBasisDeclE`, `checkDivModCertsE`. `cv_lps`' spec carries the result's
+  length (`r = [r.headD 0, r.tail.headD 0]`), which as a `simp_all` hypothesis loops (max
+  recursion); `cvLps_specW1` drops it for the generator.
+* **Placement**: `ccv_ref`, `dv_ref`/`ov_ref` in `Verdict/DeclValsE` (now imported by
+  `Arena/DeclArmT`), `ih_ref` in `Verdict/DeclHdrE`, `iv_ref` in `Arena/DeclArmT`, `cdf_ref` in
+  `Arena/DeclDefnT`, the `Nat.div` gates in `Arena/DeclDivGateT2`, `wt_ref` in `Arena/IndT/Sum1`.
+* **Left for the next landing**: `check_reduce_pin`, `check_decl_axiom`, `check_decl_thm`,
+  `check_thm_val` (after `lvl_eq_fueled`), `check_decl_opaque`. `install_value_guards` (depth 0,
+  not in §3.1's list: no `@[refines]` of its own) has its hand model `ivgW` nested in
+  `check_thm_val`'s; it follows that.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+c4aef6d6, load 15–96, `_tmp/unify-b2a/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/DeclDivGateT2` | 2.42 | **10.59** | the four unified models and refinements moved in |
+| `Verdict/DeclGatesE2`, `Arena/DeclDivModSpec/CmW` | 29.54 | 2.92 | …from here (`CmW` deleted); with `DeclDivGateT2`: 32.0 → 13.5 |
+| `Arena/IndT/Sum1` | 2.34 | **6.46** | `wtE` and `wt_ref` moved in |
+| `Verdict/IndBWt`, `Arena/IndSumSpec/WtW`, `StructProjArgP` | 21.81 | 12.10 | …from here; with `Sum1`: 24.2 → 18.6 |
+| `Arena/DeclDefnT` | 1.23 | **2.58** | `checkDeclDefnE` and `cdf_ref` moved in |
+| `Verdict/DeclDefnE` | 2.51 | 0.57 | …from here; with `DeclDefnT`: 3.7 → 3.2 |
+| `Arena/DeclArmT` | 1.61 | **2.18** | `installValueE`, `iv_ref` |
+| `Arena/DeclCrpT`, `DeclDivGateT` | 2.57 | 3.95 | call sites only (load noise; 0.4 s for a doc change) |
+| `Verdict/DeclValsE` | 2.23 | 2.56 | three unified models |
+| `Verdict/DeclBasisE`, `DeclQuotE` | 7.02 | 1.15 | claims gone |
+| `Verdict/DeclHdrE`, `DeclStepE` | 8.64 | 7.96 | |
+| the other 21 | 45.6 | 41.8 | |
+| **sum (38 modules)** | **127.5** | **94.8** | **−26 %** |
+
+Every flagged module is a new home of models and refinements whose old modules got faster by more.
+
+### 3.14 Batch 2b, first landing (inductive targets and classes: `IndBPins`, `IndBTmt/Tmo`, `IndBHdr`, `IndBRec2`, `IndBFields`, `PosTopE1`, `PosE2M`)
+
+The batch's functions (depth 1–2 of §3.1 in the `IndB*`/`Pos*` families, callees migrated):
+`target_major_pins`, `target_major_of_outside_tail`, `target_major_of_outside`,
+`class_const_ok_header` (skipped in batch 1), `class_const_ok`, `class_rec_ty_ok`, `class_fields_of`,
+`check_abs_ctor_sorts_one`, `check_abs_ctor_sorts`, `nest_grow_group`, `nest_seeds` (this landing);
+`class_rule_ok`, `class_rules_ok_one` (after `class_rule_ok_guards`, §3.11) and `nest_inst_type`
+(after `lvl_eq_fueled`) are the second landing. Not in this batch: `whnf_telescope` (batch 2a),
+`class_stream_recs` and `check_sum_tele_slow` (their callee `check_constant_val` is batch 2a's).
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `target_major_pins` | `tmpW_okC` 112, `tmpE_claim` 148, `targetMajorPins_claim` 13, frames `tmpW_mfrR` 24, `tptR_mfr` 11 = 308 | `tmp_ref` 126 + `TmpPost` 6 = 132 | −57 % |
+| `target_major_of_outside_tail` | `tmtW_simC` 86, `tmtE_claim` 86, `tmoTail_claim` 25 = 197 | `tmt_ref` 106 + `TmoPost` 7 = 113 | −43 % |
+| `target_major_of_outside` | `tmoW_simC` 163, `tmoE_claim` 214, `tmo_claim` 26 = 403 | `tmo_ref` 168 | −58 % |
+| `class_const_ok_header` | `classConstOkHeader_claim` 244 (ok half: `install_header`'s `ihW_okT`, shared) | `cch_ref` 182 + `CchPost` 5 + `cchT`/`cchT_bind` 33 = 220 | −10 % |
+| `class_const_ok` | `ccoW_simT` 37, `classConstOk_of_ih` 38, `ccoW_simC` 16, `classConstOk_claim` 69 = 160 | `cco_ref` 41 + `CcoPost` 5 = 46 | −71 % |
+| `class_rec_ty_ok` | `rtoW_simC` 110, `classRecTyOk_claim` 169 = 279 | `rto_ref` 130 + `RtoPost` 6 = 136 | −51 % |
+| `class_fields_of` | `cfoW_sim` 31, `cfoW_afr` 11, `classFieldsOf_claim` 48 = 90 | `cfo_ref` 33 (`CfgPost`) | −63 % |
+| `check_abs_ctor_sorts_one` | `iaoW_simC` 63, `iaoE_claim` 61 = 124 | `iao_ref` 70 | −44 % |
+| `check_abs_ctor_sorts` | `iacW_simC` 145, `iacE_claim` 157 = 302 | `iac_ref` 136 + `IacPost` 6 = 142 | −53 % |
+| `nest_grow_group` | `ggW_ok` 133, `nggE_claim` 184 = 317 | `ngg_ref` 158 + `NggPost` 10 = 168 | −47 % |
+| `nest_seeds` | `p2sdW_okC` 153, `nsdE_claim` 204 = 357 | `nsd_ref` 163 + `NsdPost` 8 = 171 | −52 % |
+| **pairs** | **2 781** | **1 399** | **−50 %** |
+
+The hand ok models with their arms and specs are gone too (about 700 lines): `tmpW`/`tmpK1–4`,
+`tptR`, `tmtW`/`tmtK1–3`, `tmoW`/`tmoK1–4`, `ccoW`/`ccoK1–3`, `rtoW`/`rtoK1–5`, the generated `cfoW`,
+`iaoW`/`iaoK1–2`, `iacW`/`iacK1–4`, `ggW`/`ggK1–4`, `p2sdW`/`p2sdK1–3`/`keyR`, and their specs; the
+files `Arena/IndT/RecGen3`, `Arena/RecGenSpec/ClassConstOk`, `ClassConstOkHeader` and
+`Arena/IndPosSpec/P2sdW`. The `@[refines]` theorems keep their statements (`RefE.triple`). Whole diff
+against master 985859c8: +1 288 −3 434 in 49 files.
+
+Choices:
+
+* **`G` per function** (§1.5): `VerdictCtx p` for `target_major_pins` (the core stubs);
+  `closedNV p nvFns = true` for `target_major_of_outside(_tail)` and `class_fields_of`;
+  `VerdictCtxU p` for `class_const_ok_header`, `class_const_ok`, `class_rec_ty_ok` (the header's
+  consts-resolve site needs `UceProg`, `uce_errClaim_hi`); `CheckStructFieldSortsIE p` for the
+  abstract constructor sorts (`check_struct_field_sorts_i` stays `callE`); `NitE …` for
+  `nest_grow_group` and `NbG p` for `nest_seeds` (`nest_inst_type` stays `callE` until the second
+  landing).
+* **`class_const_ok_header` has its own model and refinement.** Its ok half used to be
+  `install_header`'s `ihW`/`ihW_okT` (the same body, but another L function with other abort codes
+  and another twin). Its twin is a prefix of `classConstOk`, so as with `rgT` (§3.8) there is one
+  twin definition of the prefix, `cchT`, with `cchT_bind : classConstOk … = cchT … >>= rest`. With
+  `install_header` migrated (§3.13), the shared hand model `ihW` (`ihK1–9`, `ihW_step`, `ih_specW`,
+  `Arena/DeclHeader`) and `ihW_okT` (`Arena/DeclValT`, 160 lines) had no user left and are gone.
+* **One post for a tail and its caller**: `target_major_of_outside` ends in its tail, so both
+  refinements share `TmoPost`; `tmo_ref`'s tail arm is `tmt_ref` and `RefE.mono`. Likewise `IacPost`
+  for the abstract constructor sorts and `CfgPost` for `class_fields_of`.
+* **Frames as post fields**: `tmpW_mfrR` (the frame of `target_major_pins`, used by `class_majors`)
+  is a field `mfr` of `TmpPost`, shorter than a lemma over the model.
+* **`nest_grow_group`'s old ok proof was generic** over a call reading and an invariant; its one
+  user fixed both, so `ngg_ref` states that invariant directly.
+* **Callers** (depth 3, minimal): `class_majors` (`clmW_simC`, `clmE_claim`), `target_major_of`
+  (`tmcW_simC`, `tmcE_claim`), `class_rec_tys_ok` (`rtsW` reads the call through `rtoR`),
+  `check_abs_ctor_sorts_all` (`iaaW_simC`, `iaaE_claim`), `nest_cont_new` (`newRef_step`) read the
+  halves through the run (`RefE.run_okW`, `RefE.run_err`). `nestSeedsE_claim` lost its `NitE`
+  hypothesis (`cid_claim2`).
+* **Placement**: `tmp_ref` in `Arena/IndT/RecCheckPins`, `tmt_ref`/`tmo_ref` in `Arena/IndT/RecGenTmf`
+  (`IndBTmt`/`IndBTmo` keep the models only), `cch_ref`/`cco_ref` in `IndBHdr`, `rto_ref` in
+  `IndBRec2`, `iao_ref`/`iac_ref` in `Arena/IndT/Install6`, `ngg_ref` in `Verdict/PosE2`, `nsdE` and
+  `nsd_ref` in `PosTopE4` (the model lists `nckE_spec`, from `IndE`).
+* **Recipes**: the default `finish` for `tmpE`, `iaoE`, `iacE`, `nsdE`; `finish … gen 20` for
+  `classConstOkHeaderE` (`simp []` hits the recursion limit) and `classRecTyOkE`; `simp […]` for
+  `tmtE` (1.8 → 1.0 s for `IndBTmt` against `finish`), `tmoE`, `nggE` (`finish` fails),
+  `classConstOkE`, `cfoE` (slightly faster than `finish`).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+985859c8, load 6–28):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/PosE2M` | 17.85 | **20.65** | **slower (+2.8 s)**: `nggE` unified (`finish` fails; `simp []`) |
+| `Verdict/PosTopE4` | 2.02 | **4.15** | **slower (+2.1 s)**: `nsdE` moved in … |
+| `Verdict/PosTopE1` | 10.99 | 7.88 | … from here; the pair 13.0 → 12.0 |
+| `Verdict/IndBHdr` | 3.34 | **4.63** | **slower (+1.3 s)**: the unified header model (`finish … gen 20`); with the deleted `ClassConstOk(Header)` 6.3 → 4.6 |
+| `Verdict/IndBRec2`, `IndBRec3` | 3.47 | 4.04 | `rto_ref` moved in; with `RgW`, `RecGen7` (−0.3) |
+| `Verdict/IndBTmt`, `IndBTmo`, `IndBToi`, `IndBTmc` | 8.23 | 8.32 | `IndBTmt` with `simp [Cmp.evalW, Cmp.eval]` (`finish`: 9.4) |
+| `Arena/IndInstallSpec/IacW`, `IndPosSpec/GgW`, `GgW2`, `IndT/PosRoot`, `RecGenSpec/OcW` | 39.18 | 20.55 | hand models and specs gone |
+| `IndPosSpec/P2sdW`, `IndT/RecGen3`, `RecGenSpec/ClassConstOk`, `ClassConstOkHeader` (deleted) | 7.87 | — | |
+| `Verdict/PosE1M` | 24.92 | 27.03 | import changes only (noise; load) |
+| the other 30 modules | 74.4 | 74.0 | |
+| **sum (48 modules)** | **192.3** | **171.2** | **−11 %** |
+
+Each flagged module is offset by the module that held the deleted hand model, except `PosE2M`.
+For the generator: nothing was missing in this landing; `nestSeedsFuel_spec` (a singleton-list post)
+and `nckE_spec` (a unified spec with `G = True`) were taken without wrappers, so the wrappers of §3.9
+(`noaW1`, `cpW1`, `ucW1`) may be removable.

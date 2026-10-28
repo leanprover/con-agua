@@ -90,12 +90,11 @@ theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (sz : Tiered
   have hnv := checkerProg_nvPB pb.data.toList
   have hcE := checkerProg_coreStubsEPB pb.data.toList
   have hkp : CrKeep (Prog.subPB pb.data.toList checkerProg) := ⟨hLC.indMemo, hLC.crf⟩
-  have hNG := natGateSpecE_of hLC.cd.natSub hLC.knot hLC.leaf hcE hnv hLC.cd.natGate hLC.cd.natCert
   have hDG := divGateSpecE_of hLC.cd.dm hLC.knot hLC.leaf hLC.cd.dgClosed
     (substC0_of hLC.cd.natSub.toNatSubProg)
     (substCAll_of ⟨hLC.cd.natSub.toNatSubProg, hLC.cd.dm.lSubstConstAll⟩) hkp hcE hnv ipins
   have hgo := (installFoldGo_errTop ipins (dnOf sE.store) ds _ hLC hcE
-    (hia _ hr h7.since.pbpre _ hdn hQd) hNG hDG hnv (checkerProg_uceLookupsPB _)
+    (hia _ hr h7.since.pbpre _ hdn hQd) hDG hnv (checkerProg_uceLookupsPB _)
     (frontDecls_of_prefix hpx) (declsLpsDn_dnOf hT.pd hT.den) hP.pp hP.pn hP.ps hP.pi hP.pd hP.pg
     hP.px hsz hP.bracket n hn).1
   have hF := hgo s.mem sE 0 cnt 0 (mkIFEnv IEnv.empty) #[] (by simp) hcnt' hT hR hM hc hIM e hcall hk
