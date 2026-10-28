@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.Sum2
-import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndInstallSpec.Cons
 import ConAgua.Verdict.IndBE
@@ -48,7 +47,7 @@ runs, `strip_pis` and `intern_sort` (outside the verdict closure) lifted. -/
 l_model cbtE_spec (p : Prog) (hf : p.lookup "check_block_tele" = some checkBlockTele)
   fns [hf ↦ cbtE] specs [callW_spec p n "strip_pis", callW_spec p n "intern_sort"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`check_block_teles`' unified model**: every member through `cbtE`, the `rec2`s and `sl_cons`es
@@ -57,7 +56,7 @@ l_model cbtsE_spec (p : Prog) (h1 : p.lookup "check_block_tele" = some checkBloc
   (hf : p.lookup "check_block_teles" = some checkBlockTeles)
   fns [hf ↦ cbtsE] specs [cbtE_spec p h1 n, callW_spec p n "rec2", callW_spec p n "sl_cons"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the error arms of `check_block_tele`/`_teles` assume: the claims of `check_constant_val`

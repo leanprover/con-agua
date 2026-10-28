@@ -6,7 +6,6 @@ import ConAgua.Arena.IndPosSpec.RsLook
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # Pos3Init

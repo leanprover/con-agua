@@ -5,7 +5,6 @@ import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # InstallRec2Tele
