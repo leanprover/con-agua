@@ -1,14 +1,11 @@
 import ConAgua.L.FuelMono
 
 /-!
-# The run of a function as its model
+# A call's run and the caller's locals
 
-`runF p f vs m`: the memory after a successful run of `f vs` on `m` with some fuel (`none` if no
-fuel gives one). It is well defined because a run that succeeds with fuel `n` gives the same result
-with more fuel (`exec_mono`, `L/FuelMono.lean`), and the
-caller's locals do not matter (`invoke_loc`). `runF_spec`: every successful run of `f` ends in
-`runF`'s memory, so a function whose own model carries a fuel index (the apply step of an
-`inductive` line) can be called from a fuel-free model.
+`invoke_loc`: a call's run does not depend on the caller's locals, which it restores. The fuel
+lemmas of `L/FuelMono.lean` (a run that succeeds with fuel `n` gives the same result with more
+fuel, `exec_mono`) are re-exported here.
 -/
 
 open Std.WP
@@ -61,51 +58,5 @@ theorem invoke_loc {p : Prog} {k : Stmt → M Sig} {f : FnName} {vs : List Word}
   refine run_bind_of h7 ?_
   refine run_bind_of (a := ()) (s' := { s5 with loc := s'.loc }) rfl ?_
   rfl
-
-/-- The run of `f vs` on `m` with fuel `n`: its results and final state. -/
-def RunOK (p : Prog) (f : FnName) (vs : List Word) (m : Mem) (x : Nat × List Word × St) : Prop :=
-  (invoke p (exec p x.1) f vs).run ⟨m, Locals.init []⟩ = .ok (x.2.1, x.2.2)
-
-open Classical in
-/-- **The memory after a successful run of `f vs` on `m`** (any fuel), `none` if there is none. -/
-noncomputable def runF (p : Prog) (f : FnName) (vs : List Word) (m : Mem) : Option Mem :=
-  if h : ∃ x, RunOK p f vs m x then some (Classical.choose h).2.2.mem else none
-
-/-- Two successful runs from the same memory end in the same memory. -/
-theorem runOK_mem {p : Prog} {f : FnName} {vs : List Word} {m : Mem} {x y : Nat × List Word × St}
-    (hx : RunOK p f vs m x) (hy : RunOK p f vs m y) : x.2.2.mem = y.2.2.mem := by
-  unfold RunOK at hx hy
-  have h1 := invoke_mono (exec_le p (Nat.le_max_left x.1 y.1)) hx
-  have h2 := invoke_mono (exec_le p (Nat.le_max_right x.1 y.1)) hy
-  rw [h1] at h2
-  simp only [Except.ok.injEq, Prod.mk.injEq] at h2
-  rw [h2.2]
-
-theorem runF_of {p : Prog} {f : FnName} {vs : List Word} {m : Mem} {x : Nat × List Word × St}
-    (hx : RunOK p f vs m x) : runF p f vs m = some x.2.2.mem := by
-  have h : ∃ x, RunOK p f vs m x := ⟨x, hx⟩
-  unfold runF
-  rw [dite_eq_left h, runOK_mem (Classical.choose_spec h) hx]
-
-theorem runF_some {p : Prog} {f : FnName} {vs : List Word} {m m' : Mem} (h : runF p f vs m = some m') :
-    ∃ x, RunOK p f vs m x ∧ x.2.2.mem = m' := by
-  unfold runF at h
-  split at h
-  · rename_i hx
-    simp only [Option.some.injEq] at h
-    exact ⟨_, Classical.choose_spec hx, h⟩
-  · cases h
-
-/-- **Every successful run of `f` is `runF`'s.** -/
-theorem runF_spec (p : Prog) (f : FnName) (vs : List Word) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs
-    ⦃fun _ s' => LocEq s' s₀ ∧ runF p f vs s₀.mem = some s'.mem; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs h
-  subst hs
-  obtain ⟨hl, h'⟩ := invoke_loc h
-  refine ⟨hl, ?_⟩
-  have := h' ⟨s.mem, Locals.init []⟩ rfl
-  exact runF_of (x := (n, r, { s' with loc := Locals.init [] })) this
 
 end L.Front

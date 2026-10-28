@@ -1,4 +1,4 @@
-import ConAgua.Checker.PipePrelude
+import ConAgua.Checker.PreludeRef
 import ConAgua.Checker.PrepRef
 import ConAgua.Checker.TwinPins
 import ConAgua.Checker.PreLoopWSStages
@@ -58,8 +58,8 @@ theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteAr
     (stage_since n (preLoop_mem "builtin_prelude" (by decide +kernel)) s₀))
     (stageFrame_builtin_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hbp⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   have hc := CapsOK.keep h3.since.keep h3.since.caps
-  obtain ⟨st, a', hb, hA, hD, ht, h240, hrk, hmo⟩ := hbp ⟨h3.arena, h3.sdr, h3.twin, by have := hc.pool; omega,
-    h3.mode⟩
+  obtain ⟨st, a', hb, hA, hD, ht, h240, hrk, hmo⟩ := hbp
+    ⟨h3.arena, h3.sdr, h3.twin, Nat.lt_of_lt_of_le (by decide) hc.2.1, h3.mode⟩
   obtain ⟨hstep, -, -, -⟩ := ConRon.Bridge.Frontend.builtinPreludeE_run h3.twin.ok h3.twin.off
     h3.twin.pins hb
   have hpf0 : PinFacts s₀.mem a.pins := ⟨h3.rset, h3.stk, h3.pinsFull, h3.pin0⟩
@@ -98,9 +98,8 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
       r.headD 0 = 0 → ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧
         R5 (loadMem b pb sz) m pb pre rc a' := by
   intro n _hn s₀ h4
-  have hc := CapsOK.keep h4.since.keep h4.since.caps
   have hm : s₀.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb sz
-  refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm (by have := hc.pool; omega)
+  refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm
     a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok h4.mode)
     (stage_since n (preLoop_mem "front_run" (by decide +kernel)) s₀))
     (stageFrame_front_run n s₀)) fun r s' ⟨⟨hpost, hl, hk, hpf⟩, hsf⟩ => ⟨hl, fun h0 => ?_⟩

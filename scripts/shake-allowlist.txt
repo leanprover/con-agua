@@ -74,7 +74,9 @@ ConAgua/Arena/RecCheckSpec/TruncSl.lean	public import ConAgua.Arena.RecCheckSpec
 ConAgua/Arena/RecClassSpec/CrW.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/RecClassSpec/MnW.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/RecGenSpec/ClassFeR.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
+ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.IndSumSpec.Row	# the build needs it: the modules above (Sum5, Install3, IndBSum4, …) reach `recW_afr` and the inductive specs through it
 ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
+ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.RecClassSpec.ClassGenRule	# the build needs it: the modules above (IndBRec4, GpbWSimF, …) reach `rec2CC_parts`, `gpbW` through it
 ConAgua/Arena/RecGenSpec/StabDecCKExt.lean	public import ConAgua.Arena.RecGenSpec.SlRGrow	# the build needs it: its dependents reach the handle lemmas and this module's other names through it
 ConAgua/Arena/SlotGrow.lean	public import ConAgua.Arena.Pool	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the pool lemmas through it
 ConAgua/Arena/Store.lean	public import ConAgua.Arena.Pool	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
@@ -144,14 +146,11 @@ ConAgua/Scan/Values.lean	public import ConAgua.L.Logic	# kept from before the sh
 ConAgua/Scan/Values.lean	public import ConAgua.L.Notation	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Scan/Values.lean	public import ConAgua.Scan.Leaves	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Scan/Values.lean	public import ConAgua.Scan.Utf8	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
-ConAgua/Verdict/FrontStageE.lean	public import ConAgua.L.ModelGen	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
 ConAgua/Verdict/FrontValidE.lean	public import ConAgua.L.ModelGen	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
+ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.DeclArmT	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndRealSctC	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.RecGen19	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum2	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/InferLeavesE.lean	public import ConAgua.Arena.WhnfIotaRefine6	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
-ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.IndSumSpec.Row	# the build needs it: the modules above (Sum5, Install3, IndBSum4, …) reach `recW_afr` and the inductive specs through it
-ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.RecClassSpec.ClassGenRule	# the build needs it: the modules above (IndBRec4, GpbWSimF, …) reach `rec2CC_parts`, `gpbW` through it
-ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.DeclArmT	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
