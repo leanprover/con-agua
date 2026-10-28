@@ -166,6 +166,115 @@ and the payoff small. No-go now.
   app-lam, 1.0 % of c05b.
 * **Hash template**: `hashtpl.md` (0.34 %) stands.
 
+### 3.5 Forward re-insertion growth (prototype)
+
+Lane rehashproto; unproved. Sources and asm are in `_tmp/rehashproto/`: `Grow.lean`, `base.s`, `up.s`,
+`back.s`, the verdict logs and `bench1.{log,json}`. Base: master 8dc00910. Its `checker.s` is
+unchanged at d6abfaec.
+
+**What con-ron does.** `HashMap2::try_resize` (`ron/hashmap2.rs`) makes a new table of twice the
+capacity. `move_slots` then visits the old slots in index order and puts every live slot of the
+current epoch into the new table with `insert_no_resize`, which probes from the home to the first
+vacant slot. Stale slots are dropped, and the old `Vec` is freed.
+
+**The prototype.** `Grow.lean` rebuilds the 19 `X_push` functions of `fzCS` with a new growth block
+in place of `kgrowB`, then compiles and prints the program as `AsmEmit` does. Mode `same` gives a
+byte-identical `checker.s`, and `FunDecl.wfSpec` holds for every rebuilt push. The new block works
+like this:
+* the head, the room check and the new count word are as before;
+* it zeroes `4 n` words right above the old table, at `ob + 2 n`;
+* it makes one sweep `H = 0 ‥ n - 1` over the old slots, which it only reads. Every live slot
+  (`bt < v`) is hashed as before (`khashB`) and put at the first free slot from its home in the
+  staging table: con-ron's `move_slots`, in the same order and with the same probe;
+* there is no mark loop, no swap chain and no `MARK`.
+
+Two ways to finish:
+* **`up`**: the staging table becomes the table, and the offset word `1` moves to `o + 2 n`. The old
+  region is left behind.
+* **`back`**: `copy64` moves the `4 n` words back to the old offset. This is a forward copy, so the
+  overlap is safe. The offset stays `0`.
+
+A first `back` build got `copy64`'s length as an expression, and the compiled copy then failed.
+`Stmt.wf` requires operands there (`opndWf`), and the harness had not checked it. Now it computes
+`e := n2 * 2` first, and the harness runs `wfSpec`.
+
+**Verdicts** (`diff-e2e.py --refs --parallel 16`; 634 fixtures):
+
+| binary | sequential | `--jobs 4` |
+|---|---|---|
+| master | 634 agree, 0 REFDIFF | — |
+| `back` | 634 agree, 0 REFDIFF | 634 agree, 0 REFDIFF |
+| `up` | 634 agree, 0 REFDIFF | **269 INCOMPLETE** |
+
+`up` breaks the parallel mode. The phase-B truncation cuts tier 0's slot array to `2 + 2 n` words
+and assumes the table sits at word 2 (`koW = 0`, `TierLay`, `FreezeTruncStore.lean`). `up` is
+no-go, so only `back` was benchmarked.
+
+The first runs showed REFDIFF on every fixture, for master too. The cause was the shared con-ron pins
+file `_tmp/bench/con-agua/pins3.con-ron-pins`: it was still format `con-ron-pins/1`, and the
+con-ron of Oct 27 wants `/2`, so every con-ron run said `error`. The stale file is now
+`…pins.v1-stale`, and `e2e.write_conron_pins` wrote a new one.
+
+**Benchmark.** `bench.py --asm base=… --asm back=… --cpus 40,41 --reps 5 --no-conron --no-ref`, run on
+the default set, c05b, app-lam, init-prelude and Init. The load was 8–11, so cycles and wall are
+±5 % on the small inputs. Each cell is back against master:
+
+| input | instructions | cycles | wall | peak RSS |
+|---|---:|---:|---:|---:|
+| app-lam | −4.3 % | **−17.5 %** | −17.5 % | 1,918 → 2,560 MB (**+33 %**) |
+| beta-ladder | −4.6 % | **−17.4 %** | −17.3 % | 586 → 781 MB (+33 %) |
+| let-ladder | −4.4 % | −15.3 % | −15.0 % | 317 → 414 MB (+30 %) |
+| c04a_restart_70 | −2.1 % | −8.3 % | −8.2 % | 390 → 507 MB (+30 %) |
+| c05b | −1.0 % | −3.7 % | −3.8 % | 655 → 688 MB (+5 %) |
+| c03d_pi_depth_1030 | −3.7 % | −3.4 % | −3.1 % | 124 → 168 MB (+35 %) |
+| Init | −0.2 % | −1.1 % | −1.1 % | 743 → 829 MB (+12 %) |
+| 8 small (quick set), long_line, init-prelude | −0.2 to −1.6 % | −6 to +2 % (noise) | noise | unchanged (init-prelude +2 MB) |
+| geometric mean (17) | 0.982 | 0.947 | 0.943 | |
+
+`up` on app-lam, one `perf stat`: −8.3 % instructions, −18.8 % cycles. `back` pays about 2 G
+instructions for the copy, because the compiled `copy64` loop takes 6 instructions per word. The
+cycles are nearly the same.
+
+* **Instructions fall less than cycles.** In the exact profile of app-lam, `app_push` falls from
+  366 to 312 instructions per call, and `lam_push` from 364 to 311. The old rehash's mark pass,
+  swap chains and second visits cost cache misses more than instructions.
+* **c05b gains little.** Its growth is mostly in the memos (`rf_put`, `MemoLib.lean`), which
+  already re-insert forward into a fresh region.
+* **The cost is memory.** The staging words above the table stay resident, because L cannot give
+  them back. At its peak a table spans 1.5× its own size, against 1× in place. The inputs dominated
+  by cons tables gain about +1/3 peak RSS. `stack_fuel_offset` (from the verdict run): 5.8 → 6.9 GB.
+
+**Go/no-go.** The speed criterion holds by a wide margin: app-lam −17.5 % cycles (≥ 5 %), and nothing
+is slower beyond noise. The criterion "nothing regresses" fails on peak RSS, at +30–35 % on the
+table-heavy inputs. So: **go on speed, conditional on accepting the memory.** The RSS trade-off is
+the maintainer's call. A low-footprint forward variant would have to be in place. It would stage the
+old table in the new upper half and sweep upward. It would then need a fix-up for entries whose
+probe runs past the read cursor, and for entries that wrap around the end. Those are the cases the
+marks exist for, so it is not prototyped here.
+
+**Proof cost (`back`).** The table relation, `TierLay` (`koW 0 = 0`), the freeze truncation, the
+scratch wrap and the find/push specs stay as they are. Only the growth's proof changes:
+* `SlotRehash.lean` (487 lines) is replaced by the forward loop's invariant, about 200 lines. The old
+  region is read-only. The staging table has only free slots or live, admissible ones, and holds
+  every node of the old slots `< H` as `FoundU`. Writing the free slot that the probe found keeps
+  every path, since all slots on it are live and unwritten. The `MARK` arithmetic, the marked case
+  of `SlotOK` and the swap case all disappear.
+* `SlotGrowSpec.lean`: `kmarkW`, `kprobeW`, `kplaceW`, `kinnerW` and `krehashW` (about 70 lines) become
+  one forward model and the copy, about 40 lines.
+* `StoreGrow.lean`: the mark-read lemmas go, and one shifted-read lemma for `copy64` comes in. The
+  conclusion `storeR_kgrow` is unchanged.
+* `ConsLibSpec.lean`'s growth block (lines 542–1163): the mark loop, pick, place and inner-loop specs,
+  about 190 lines, become the sweep, the probe and the copy, about 150 lines. The block's assembly
+  is edited, not rewritten.
+
+Net about **−300 lines, 12–20 h**, which is inside §4's 15–30 h. Risk is low: the invariant is the
+push's own insert, repeated.
+
+**Twin note for `docs/deviations.md` (when this lands).** D38 changes. The live slots are re-inserted
+in con-ron's `move_slots` order with its probe, so the new table is laid out as con-ron's. The
+remaining deviation is the staging region right above the table, copied back to offset `0`, whose
+words stay resident: 1.5× the table at its peak. con-ron frees the old `Vec`, and L has no allocator.
+
 ## 4. Ranked candidates
 
 | rank | candidate | axis | gain (measured or estimated) | cost | risk |
