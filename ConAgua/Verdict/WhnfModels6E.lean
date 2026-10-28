@@ -10,7 +10,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 /-!
 # The models of `major_to_ctor`'s pieces, for both outcomes
 
-`major_to_ctor`'s error model (`errors`); its pieces' unified models (`l_model … unified`): the
+`major_to_ctor`'s and its pieces' unified models (`l_model … unified`): the
 knot's slots and `proof_irrel` through their runs, the pieces through their unified models, every
 other callee (outside the verdict closure) through its `Option` model.
 -/
@@ -22,10 +22,6 @@ open scoped Lean.Order
 set_option experimental.vcgen true
 
 namespace L.Arena
-
-l_model mtcE_spec (p : Prog) (hf : p.lookup "major_to_ctor" = some majorToCtorL)
-  fns [hf ↦ mtcE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
 l_model m2cPreE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.pre ↦ m2cPreE list]
@@ -93,6 +89,13 @@ l_model m2cCtorE_spec (p : Prog) (hp : M2CProg p)
 l_model m2cHeadE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.head ↦ m2cHeadE list]
   specs [callW_spec p n "is_ctor_app", callW_spec p n "env_find", m2cCtorE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model mtcE_spec (p : Prog) (hp : M2CProg p) (hf : p.lookup "major_to_ctor" = some majorToCtorL)
+  fns [hf ↦ mtcE list]
+  specs [m2cHeadE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
