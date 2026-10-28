@@ -1,5 +1,4 @@
-import ConAgua.Verdict.DeclArmsE
-import ConAgua.Arena.DeclAxQuotT
+import ConAgua.Arena.CheckerT
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 

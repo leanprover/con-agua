@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DeclDefnE
+import ConAgua.Verdict.DeclArmsE
 import ConAgua.Verdict.DeclAxiomE
 import ConAgua.Verdict.DeclFoldE
 import ConAgua.Verdict.DeclQuotE
@@ -47,7 +48,8 @@ theorem checkDeclSpecE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : I
   have hU : UceProg p := ⟨hUL, strLitSupported_core p hdc.knot.knot.str⟩
   have hivE : IvgE p := ivgE_okT hdc.cvg hap hkp hnv hU
   have hnvE : NVAt p "env_push" := nvAt_of_closed hnv (by decide +kernel)
-  refine checkDecl_errT pins dn ds hdc.cd.cd hdc.andInd.toIbeProg hnv ⟨?_, ?_, ?_, ?_, ?_⟩ hia hFD hLD
+  refine checkDecl_errT pins dn ds hdc.cd hdc.knot hdc.leaf hdc.loop hdc.andInd.toIbeProg hdc.indIn hdc.dninj
+    hdc.quotDn hdc.indArm hdc.indMemo hdc.crf hnv ⟨?_, ?_, ?_, ?_, ?_⟩ hia hFD hLD
   · exact fun cv => checkDeclAxiom_errT pins dn ds hdc.cd.axp hdc.knot hdc.leaf hap hkp hnv hcE hUL hdc.dninj hdc.quotDn cv
   · exact fun cv v hh => checkDeclDefn_errT pins dn ds hdc.cd.arm hdc.cd.val
       ⟨hdc.cd.df, hdc.cd.natSub, hdc.cd.natGate, hdc.cd.natCert, hdc.cd.natText,
