@@ -1,4 +1,5 @@
 import ConAgua.Arena.DefEqMidQuick
+import ConAgua.Arena.DefEqMidLoops
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

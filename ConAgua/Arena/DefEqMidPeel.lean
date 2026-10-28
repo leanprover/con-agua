@@ -1,4 +1,4 @@
-import ConAgua.Arena.DefEqMidLoops
+import ConAgua.Arena.DefEqMid
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 
