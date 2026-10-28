@@ -18,7 +18,7 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem resW_00 : ResW [0, 0] := by unfold ResW HW; exact ⟨by decide, by decide⟩
+theorem resW_zero : ResW [0, 0] := by unfold ResW HW; exact ⟨by decide, by decide⟩
 
 /-- A tail call whose continuation passes the callee's errors on and maps its value (`f`), against
 a twin with the same run. -/
@@ -144,12 +144,12 @@ theorem reduceNatSucc_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   by_cases hcn : c ≠ r₂.headD 0
   · rw [reduceNatSuccE.k_pin_at.arm1 _ _ _ _ _ _ _ _ _ _ hcn]
     exact RefE.ret (redSucc_run_skip _ fe d.toNat (decI c) (decE b) a₀ a₁ s₀.mem hC.pins _ hsup
-      (hskip (Or.inl hcn))) ⟨hAfter1, rfl, resW_00⟩
+      (hskip (Or.inl hcn))) ⟨hAfter1, rfl, resW_zero⟩
   have hcn' : c = r₂.headD 0 := Classical.not_not.mp hcn
   by_cases hs0 : r₁.headD 0 = 0
   · rw [reduceNatSuccE.k_pin_at.arm2 _ _ _ _ _ _ _ _ _ _ hcn' hs0]
     exact RefE.ret (redSucc_run_skip _ fe d.toNat (decI c) (decE b) a₀ a₁ s₀.mem hC.pins _ hsup
-      (hskip (Or.inr hs0))) ⟨hAfter1, rfl, resW_00⟩
+      (hskip (Or.inr hs0))) ⟨hAfter1, rfl, resW_zero⟩
   rw [reduceNatSuccE.k_pin_at.arm3 _ _ _ _ _ _ _ _ _ _ hcn' hs0]
   have hcond : ((decI c : NIdx) == decI (pinW s₀.mem 4) && decBool r₁) = true := by
     rw [decI_beq _ _ hc hcw]
@@ -183,7 +183,7 @@ theorem reduceNatSucc_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     have hnone : rawDec m₃ r₄ = none := by unfold rawDec; rw [ite_eq_left hf]
     rw [hnone] at hrun4
     exact RefE.ret (redSucc_run_none _ fe d.toNat (decI c) (decE b) a₀ a₁ a₂ a₂ s₀.mem hC.pins _ hsup
-      hcond (decE (r₃.headD 0)) (by rw [hrun3]; rfl) hrun4) ⟨⟨M', hS3, hK3, hStK1.trans hSt3⟩, rfl, resW_00⟩
+      hcond (decE (r₃.headD 0)) (by rw [hrun3]; rfl) hrun4) ⟨⟨M', hS3, hK3, hStK1.trans hSt3⟩, rfl, resW_zero⟩
   rw [reduceNatSuccE.k_raw_nat_lit.arm2 _ _ _ _ hf]
   obtain ⟨hsl, hnorm⟩ := hslice4 hf
   rcases h5 : callW p n "nat_succ_lit" [r₄.tail.headD 0, r₄.tail.tail.headD 0] m₃ with _ | ⟨r₅, m₅⟩
@@ -239,7 +239,7 @@ theorem reduceNatOp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
     have hnone : rawDec m₁ r₂ = none := by unfold rawDec; rw [ite_eq_left hf2]
     rw [hnone] at hrun2
     exact RefE.ret (redOp_run_none1 _ d.toNat (decI c) (decE a) (decE b) a₀ a₁ a₁ _
-      (by rw [hrun1]; rfl) hrun2) ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, rfl, resW_00⟩
+      (by rw [hrun1]; rfl) hrun2) ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, rfl, resW_zero⟩
   rw [reduceNatOpE.k_raw_nat_lit.arm2 _ _ _ _ _ _ _ _ _ hf2]
   obtain ⟨hsl2, hnorm2⟩ := hslice2 hf2
   have hsome2 : rawDec m₁ r₂ = some (pv (vpool m₁) (r₂.tail.headD 0).toNat
@@ -273,7 +273,7 @@ theorem reduceNatOp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
     rw [hnone] at hrun4
     exact RefE.ret (redOp_run_none2 _ d.toNat (decI c) (decE a) (decE b) a₀ a₁ a₁ a₂ a₂ _ _ _
       (by rw [hrun1]; rfl) hrun2 (by rw [hrun3]; rfl) hrun4)
-      ⟨⟨M₃, hS₃, hK₁.trans hK₃, hSt₁.trans hSt₃⟩, rfl, resW_00⟩
+      ⟨⟨M₃, hS₃, hK₁.trans hK₃, hSt₁.trans hSt₃⟩, rfl, resW_zero⟩
   rw [reduceNatOpE.k_raw_nat_lit_2.arm2 _ _ _ _ _ _ _ hf4]
   obtain ⟨hsl4, hnorm4⟩ := hslice4 hf4
   have hsome4 : rawDec m₃ r₄ = some (pv (vpool m₃) (r₄.tail.headD 0).toNat
@@ -350,7 +350,7 @@ theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
         have : decBool r₂ = false := by simp only [decBool, h2]; rfl
         rw [this]; simp
     exact RefE.ret (redWf_run_skip _ fe d.toNat (decI c) (decE a) (decE b) a₀ a₁ _ hwf _ hsup hskip)
-      ⟨⟨MM, hS2, KeptAll.refl _ _, StackKept.of_const_frame hfr2⟩, rfl, resW_00⟩
+      ⟨⟨MM, hS2, KeptAll.refl _ _, StackKept.of_const_frame hfr2⟩, rfl, resW_zero⟩
   rw [reduceNatWfE.k_nat_lit_supported.arm1 _ _ _ _ _ _ _ _ _ _ hgo.1 hgo.2]
   have hbool : (([decI (pinW s₀.mem 22), decI (pinW s₀.mem 23),
       decI (pinW s₀.mem 24), decI (pinW s₀.mem 25), decI (pinW s₀.mem 26), decI (pinW s₀.mem 27),
@@ -385,7 +385,7 @@ theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     have hnone : rawDec m₃ r₄ = none := by unfold rawDec; rw [ite_eq_left hf4]
     rw [hnone] at hrun4
     exact RefE.ret (redWf_run_none1 _ fe d.toNat (decI c) (decE a) (decE b) a₀ a₁ a₂ a₂ _ hwf _ hsup
-      hbool _ (by rw [hrun3]; rfl) hrun4) ⟨⟨M₃, hS₃, hK₃, hStK.trans hSt₃⟩, rfl, resW_00⟩
+      hbool _ (by rw [hrun3]; rfl) hrun4) ⟨⟨M₃, hS₃, hK₃, hStK.trans hSt₃⟩, rfl, resW_zero⟩
   rw [reduceNatWfE.k_raw_nat_lit.arm1 _ _ _ _ _ _ _ _ hf4]
   have hsome4 : rawDec m₃ r₄ = some (pv (vpool m₃) (r₄.tail.headD 0).toNat
       (r₄.tail.tail.headD 0).toNat) := by unfold rawDec; rw [ite_eq_right hf4]
@@ -416,7 +416,7 @@ theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     rw [hnone] at hrun6
     exact RefE.ret (redWf_run_none2 _ fe d.toNat (decI c) (decE a) (decE b) a₀ a₁ a₂ a₂ a₃ a₃ _ hwf _
       hsup hbool _ _ _ (by rw [hrun3]; rfl) hrun4 (by rw [hrun5]; rfl) hrun6)
-      ⟨⟨M₅, hS₅, hK₃.trans hK₅, (hStK.trans hSt₃).trans hSt₅⟩, rfl, resW_00⟩
+      ⟨⟨M₅, hS₅, hK₃.trans hK₅, (hStK.trans hSt₃).trans hSt₅⟩, rfl, resW_zero⟩
   rw [reduceNatWfE.k_raw_nat_lit_2.abort1 _ _ _ hf6]
   have hsome6 : rawDec m₅ r₆ = some (pv (vpool m₅) (r₆.tail.headD 0).toNat
       (r₆.tail.tail.headD 0).toNat) := by unfold rawDec; rw [ite_eq_right hf6]
@@ -466,7 +466,7 @@ theorem reduceNatK_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
       rw [hbne _ _ hul hC.pins.lv_lt.1]
       have : tfld s₀.mem CONST (tierW f) (idxW f) 1 ≠ pinW s₀.mem 52 := by rw [← hr₁]; exact hne
       simp [this])
-    exact RefE.ret (hcg.trans hz) ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_00⟩
+    exact RefE.ret (hcg.trans hz) ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_zero⟩
   rw [reduceNatKE.k_pin_word.arm2 _ _ _ _ _ _ _ _ _ _ (by simpa using hne)]
   have hne' : tfld s₀.mem CONST (tierW f) (idxW f) 1 = pinW s₀.mem 52 := by
     rw [← hr₁]; simpa using hne
@@ -509,7 +509,7 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
     have ht : ((decE (gw)).tag == ETag.const) = false := by
       rw [decE_const_tag _ hgw]; exact beq_eq_false_iff_ne.mpr g3
     exact RefE.ret (hcg0.trans (redApp_notconst _ fe d.toNat (decE gw) (decE xw) (decE b) a₀ ht))
-      ⟨hCA, rfl, resW_00⟩
+      ⟨hCA, rfl, resW_zero⟩
   rw [ite_eq_right g3]
   have g3' : gw >>> 28 = 3 := by simpa using g3
   have ht : ((decE (gw)).tag == ETag.const) = true := by
@@ -541,7 +541,7 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
         rw [hbne _ _ hul hC.pins.lv_lt.1]
         have : uw ≠ pinW s₀.mem 52 := by rw [← hr₁]; exact hne
         simp [this])
-    exact RefE.ret (hcg0.trans hz) ⟨hCA, rfl, resW_00⟩
+    exact RefE.ret (hcg0.trans hz) ⟨hCA, rfl, resW_zero⟩
   rw [reduceNatApE.k_pin_word.arm2 _ _ _ _ _ _ _ _ _ _ _ (by simpa using hne)]
   have hne' : uw = pinW s₀.mem 52 := by rw [← hr₁]; simpa using hne
   have hcongrApp := redApp_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b) a₀
@@ -619,7 +619,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
     rw [ite_eq_right hbd]
     obtain ⟨v, hv, hc, hp'⟩ := view_nca s₀.mem a₀ hC.arena.1 f hf c ⟨hsc, by simpa using hbd⟩ hcg
     exact RefE.ret (redHead_other _ fe d.toNat _ (decE b) a₀ v hv hc hp')
-      ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_00⟩
+      ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_zero⟩
   have hmono : KnotUpToE p (n + 1) → KnotUpToE p n := fun h => h.mono (by omega)
   by_cases g3 : f >>> 28 = 3
   · rw [ite_eq_left g3]
@@ -688,7 +688,7 @@ theorem reduceNat_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : 
   by_cases g4 : e >>> 28 ≠ 4
   · rw [ite_eq_left g4]
     exact RefE.ret (reduceNat_notapp _ fe d.toNat (decE e) a₀ (by rw [hap]; exact beq_eq_false_iff_ne.mpr g4))
-      ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_00⟩
+      ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_zero⟩
   rw [ite_eq_right g4]
   have g4' : e >>> 28 = 4 := by simpa using g4
   by_cases hsc : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0

@@ -1,4 +1,4 @@
-import ConAgua.Verdict.WhnfNatE
+import ConAgua.Verdict.WhnfSlotE
 import ConAgua.Verdict.WhnfProjE
 import ConAgua.Verdict.WhnfCertsE
 import ConAgua.Verdict.WhnfIdxE
