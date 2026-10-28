@@ -5,7 +5,6 @@ import ConAgua.Verdict.DefEqAllE
 import ConAgua.Verdict.DefEqEagerE
 import ConAgua.Checker.LoopProg
 import ConAgua.Verdict.WhnfStuckE
-import ConAgua.Verdict.WhnfUnitE
 import ConAgua.Checker.NoVerdictClosed
 
 /-!
@@ -95,8 +94,9 @@ theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
     setCert_refinesE p hq.body.stuck hq.body.iota (KnotAllProg.stuck hq) hnv
       (defeqLst_refinesE p hq.lst) n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb
   suCert := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
-    suCert_refinesE p hq.body.stuck (KnotAllProg.stuck hq) hnv
-      n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb
+    RefE.coreSpecE (sucE_spec p hq.body.stuck.sunit hq.body.stuck.suHead hq.body.stuck.suTail (n + 1) s₀
+      mode vis d a b) hnv hkE
+      (suc_ref p hq.body.stuck (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
   proofIrrel := proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv
   etaCert := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d ty1 body1 b hF hn hs hty hbody hb =>
     etaCert_refinesE p hq.body.stuck (KnotAllProg.stuck hq) hnv

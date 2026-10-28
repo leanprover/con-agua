@@ -77,16 +77,27 @@ l_model sectE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_tail" = some struc
   fns [hf ↦ sectE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
-l_model sucE_spec (p : Prog) (hf : p.lookup "struct_unit_cert" = some structUnitCertL)
-  fns [hf ↦ sucE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model sutE_spec (p : Prog) (hf : p.lookup "struct_unit_tail" = some structUnitTailL)
+  fns [hf ↦ sutE list]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model suhE_spec (p : Prog) (hf : p.lookup "struct_unit_head" = some structUnitHeadL)
-  fns [hf ↦ suhE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+    (ht : p.lookup "struct_unit_tail" = some structUnitTailL)
+  fns [hf ↦ suhE list]
+  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args", callW_spec p n "ls_node", callW_spec p n "reserved_contains_w", sutE_spec p ht n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model sutE_spec (p : Prog) (hf : p.lookup "struct_unit_tail" = some structUnitTailL)
-  fns [hf ↦ sutE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model sucE_spec (p : Prog) (hf : p.lookup "struct_unit_cert" = some structUnitCertL)
+    (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
+    (ht : p.lookup "struct_unit_tail" = some structUnitTailL)
+  fns [hf ↦ sucE list]
+  specs [suhE_spec p hh ht n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena
