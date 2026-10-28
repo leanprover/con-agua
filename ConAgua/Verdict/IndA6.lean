@@ -1,11 +1,10 @@
-import ConAgua.Verdict.IndA2
 import ConAgua.Verdict.IndA5
 
 /-!
 # `check_ind_decl`'s error refinement, assembled (lane `verdicts-b`, helper `ia`)
 
 `cid_claim`: the inductive arm of `checkDecl`, a failing call of `check_ind_decl` of class `1`/`2`
-claims the twin's `checkDecl` fails with that class, under the hypotheses of `cidW_okC` and the
+claims the twin's `checkDecl` fails with that class, under the hypotheses of `cid_ref` and the
 error claims of the leaves of the arm that are not proved here (the callee hypotheses below, each
 in the shape of the callee's ok refinement): `check_basis_decl`, `check_constant_val`, the tail's
 callees (`TailG`), `check_block_inds`, `check_block_ctors`, `check_block_classes`,
@@ -30,7 +29,7 @@ variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
 
 include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
-/-- **`check_ind_decl`'s error refinement** (the shape of `cidW_okC`; the callees' claims as
+/-- **`check_ind_decl`'s error refinement** (the error half of `cid_ref`; the callees' claims as
 hypotheses). -/
 theorem cid_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
@@ -55,20 +54,16 @@ theorem cid_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hblk : DecB (fun m => decEBlk dn m o.toNat l.toNat) m block) (hb : o.toNat + l.toNat ≤ erTop m)
     (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block w.toNat) = some x) (hM : IndMemos m)
     (hfB : "check_basis_decl" ∈ fsC) (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
-    {fsH fsM : List FnName} (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
+    {fsH fsM fsMc : List FnName} (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
     (hfH : "check_block_tables" ∈ fsH) (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
+    (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
     (hlpd : BlockLpsDn dn block) :
-    ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e := by
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  replace he := triple_of_callE_err (cidE_spec p P.cid n ⟨m, Locals.init []⟩ vis o l w) he
-    (Err.code_ne_of_cls hk0)
-  simp only at he
-  exact cidE_claim hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr
-    hnv hCBD
-    (checkBlockE_claim hnv ⟨⟨eInds, eCtors, eCls, ePos, eSeeds⟩, hTG⟩)
-    (checkShapelessE_claim eCcv) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
+    ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e :=
+  RefE.run_err (cidE_spec p P n ⟨m, Locals.init []⟩ vis o l w) hnv
+    ⟨hCBD, ⟨⟨eInds, eCtors, eCls, ePos, eSeeds⟩, hTG⟩, checkShapelessE_claim eCcv⟩
+    (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr
+      (N := n) (by omega) hdn hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd) he
 
 end sims
 

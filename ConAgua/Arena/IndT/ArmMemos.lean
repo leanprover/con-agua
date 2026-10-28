@@ -5,7 +5,7 @@ import ConAgua.Arena.IndInstallSpec.Frame
 /-!
 # The inductive arm's memos across its calls (lane `indstaget`)
 
-What `cidW_okC` needs to hand back `IndMemos` and `CoreMemos` (`IndArmSpec`'s post) beyond the
+What `cid_ref` needs to hand back `IndMemos` and `CoreMemos` (`IndArmSpec`'s post) beyond the
 posts of its callees: write-set frames (program facts `closedA …`, decided for the checker's
 program) for the memos a call does not write. Measured on the checker's program, each memo array /
 epoch word of `IndMemos` and `CoreMemos` is written only by its own `…_put` / `…_clear`; the

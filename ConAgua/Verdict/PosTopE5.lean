@@ -4,7 +4,7 @@ import ConAgua.Verdict.PosTopEMono
 # `check_block_positivity`'s and `nest_seeds`' error claims, discharged (lane `verdicts-b`,
 helper `ia2`, fork `top`)
 
-The generated statements `CheckBlockPositivityE` and `NestSeedsE` (`IndA3.lean`), the error halves of
+The generated statements `CheckBlockPositivityE` and `NestSeedsE` (`Arena/IndT/Pass.lean`), the error halves of
 `cbp_ref` (`IndT/Positivity`, under the walk's `NbG` and `check_struct_field_sorts_i`'s
 `CheckStructFieldSortsIE`) and `nsd_ref` (under `NbG`); the fuels below the ok refinement's by
 `callE_err_mono`.

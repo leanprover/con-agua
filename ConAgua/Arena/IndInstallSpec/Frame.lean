@@ -4,7 +4,7 @@ import ConAgua.Arena.IndPosSpec.FgW
 /-!
 # Frame
 
-`cidK2`, `cidFreeA`, `cidFreeC`, `CidMemos`, `CidMemos.frame`.
+`cidFreeA`, `cidFreeC`, `CidMemos`, `CidMemos.frame`.
 -/
 
 set_option experimental.vcgen true
@@ -18,18 +18,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-! ## The model -/
-
-section model
-variable (p : Prog)
-
-/-- After `check_basis_decl` or `check_block`: the view. -/
-def cidK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-end model
 
 /-! ## The write set of `basis_pin_hit` and `block_parts` -/
 

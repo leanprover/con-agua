@@ -59,9 +59,10 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hblk : DecB (fun m => decEBlk dn m o.toNat l.toNat) m block) (hb : o.toNat + l.toNat ≤ erTop m)
     (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block w.toNat) = some x) (hM : IndMemos m)
     (hfB : "check_basis_decl" ∈ fsC) (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
-    {fsH fsM : List FnName} (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
+    {fsH fsM fsMc : List FnName} (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
     (hfH : "check_block_tables" ∈ fsH) (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
+    (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
     (hlpd : BlockLpsDn dn block) :
     ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e := by
   have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
@@ -70,6 +71,6 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     hkP hkt hkr hnv hCBD eCcv ⟨⟨⟨hnv, hcE⟩, hU⟩, hNfs, eSF, eTbl⟩
     (checkBlockIndsE_claim ⟨hnv, hcE, eCcv, eSum⟩) (checkBlockCtorsE_claim hnv eSC)
     (checkBlockClassesE_claim ⟨hnv, hcE⟩) (checkBlockPositivityE_claim hG eSF)
-    (nestSeedsE_claim hG) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
+    (nestSeedsE_claim hG) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
 
 end L.Ind

@@ -61,7 +61,7 @@ def FrontDecls (ds : Array IDeclaration) : Prop :=
   ∀ i (h : i < ds.size) b nP, ds[i] = .indDecl b nP → FrontBlock b
 
 /-- **The block's level-parameter handles have decoder names**: `L.Ind.BlockLpsDn dn block`
-(`Arena/IndArmLps.lean`), what `cidW_okC` takes; the loop has it from `DeclsLpsDn`. -/
+(`Arena/IndArmLps.lean`), what `cid_ref` takes; the loop has it from `DeclsLpsDn`. -/
 abbrev BlockLpsDnA (dn : NIdx → Option ConLeche.Name) (block : List IConstantInfo) : Prop :=
   L.Ind.BlockLpsDn dn block
 

@@ -10,7 +10,8 @@ import ConAgua.L.GrindAttr
 /-!
 # ShapeCVOfDecB
 
-`cidK4`, `cidK3`, `cidK1`, `cidW`, `cidW_step`, `cidK1_some` and the lemmas only they use.
+`checkShapeless_never`, `cidFrameCallees`, `shapeCV_of_decB` and `CidProg`: what `check_ind_decl`'s
+refinement (`IndT/CheckIndDecl`) reads.
 -/
 
 set_option experimental.vcgen true
@@ -25,56 +26,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-! ## The model -/
-
-section model
-variable (p : Prog)
-
-/-- After `block_parts`: the one route (the shapeless decline never returns). -/
-def cidK4 (n : Nat) (vis o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) =>
-    if r4.headD 0 = 0 then none
-    else cidK2 (callW p n "check_block" [vis, o, l, r4.tail.headD 0] m4)
-
-/-- After `ind_params_ok`. -/
-def cidK3 (n : Nat) (vis o l w : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) =>
-    if r3.headD 0 = 0 then none else cidK4 p n vis o l (callW p n "block_parts" [w, o, l] m3)
-
-/-- After `basis_pin_hit`. -/
-def cidK1 (n : Nat) (vis o l w : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    if r1.headD 0 = 0 then cidK3 p n vis o l w (callW p n "ind_params_ok" [w, o, l] m1)
-    else cidK2 (callW p n "check_basis_decl" [vis, r1.tail.headD 0] m1)
-
-/-- **The model of `check_ind_decl(vis, boff, blen, nP)`.** -/
-def cidW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, vis, o, l, w => cidK1 p n vis o l w (callW p n "basis_pin_hit" [o, l] m)
-
-section arms
-variable (n : Nat) (m m1 m3 m4 : Mem) (vis o l w : Word) (r r1 r3 r4 : List Word)
-theorem cidW_step : cidW p (n + 1) m vis o l w =
-    cidK1 p n vis o l w (callW p n "basis_pin_hit" [o, l] m) := rfl
-theorem cidK1_some : cidK1 p n vis o l w (some (r1, m1)) =
-    if r1.headD 0 = 0 then cidK3 p n vis o l w (callW p n "ind_params_ok" [w, o, l] m1)
-    else cidK2 (callW p n "check_basis_decl" [vis, r1.tail.headD 0] m1) := rfl
-theorem cidK3_some : cidK3 p n vis o l w (some (r3, m3)) =
-    if r3.headD 0 = 0 then none else cidK4 p n vis o l (callW p n "block_parts" [w, o, l] m3) := rfl
-theorem cidK4_some : cidK4 p n vis o l (some (r4, m4)) =
-    if r4.headD 0 = 0 then none
-    else cidK2 (callW p n "check_block" [vis, o, l, r4.tail.headD 0] m4) := rfl
-theorem cidK2_some : cidK2 (some (r, m)) = some ([r.headD 0], m) := rfl
-end arms
-
-grind_pattern [ind_grind] cidW_step => cidW p (n + 1) m vis o l w
-grind_pattern [ind_grind] cidK1_some => cidK1 p n vis o l w (some (r1, m1))
-grind_pattern [ind_grind] cidK3_some => cidK3 p n vis o l w (some (r3, m3))
-grind_pattern [ind_grind] cidK4_some => cidK4 p n vis o l (some (r4, m4))
-grind_pattern [ind_grind] cidK2_some => cidK2 (some (r, m))
+/-! ## `check_shapeless` -/
 
 /-- **`check_shapeless` never returns**: it calls `check_shapeless_formers` (whatever that
 does) and then aborts. Unlike `checkShapeless_refines` this needs no contract of the callee. -/
@@ -92,24 +44,6 @@ theorem checkShapeless_never (p : Prog)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         callW_spec p n "check_shapeless_formers"] <;>
       finish
-
-theorem cid_specW (hp : p.lookup "check_ind_decl" = some checkIndDecl)
-    (hsl : p.lookup "check_shapeless" = some checkShapeless) (n : Nat) (s₀ : St) (vis o l w : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_ind_decl" [vis, o, l, w]
-    ⦃fun r s' => LocEq s' s₀ ∧ cidW p n s₀.mem vis o l w = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkIndDecl]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        callW_spec p n "basis_pin_hit", callW_spec p n "check_basis_decl",
-        callW_spec p n "ind_params_ok", callW_spec p n "block_parts", callW_spec p n "check_block",
-        checkShapeless_never p hsl n] <;>
-      finish (gen := 20)
-
-end model
 
 /-- The callees of `check_ind_decl` that cross the walk memos by their write set. -/
 def cidFrameCallees : List FnName := ["basis_pin_hit", "block_parts"]

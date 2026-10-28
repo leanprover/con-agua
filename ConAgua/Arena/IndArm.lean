@@ -3,11 +3,10 @@ import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Arena.IndArmBridge2
 
 /-!
-# The inductive arm's contract from `cidW_okC` (lane `indproofs4`)
+# The inductive arm's contract from `checkIndDecl_refinesC` (lane `indproofs4`)
 
-`IndArmSpec p dn` (`CheckerT.lean`) from lane `indstaget`'s `cidW_okC`: the call of
-`check_ind_decl` is its model `cidW` (`cid_specW`), the front's block decoding is the stage's
-(`decB_decEBlk_of_decCIs`). The program facts `cidW_okC` takes (the lookups `CidProg`, the
+`IndArmSpec p dn` (`CheckerT.lean`) from `checkIndDecl_refinesC` (the ok half of `cid_ref`), the
+front's block decoding is the stage's (`decB_decEBlk_of_decCIs`). The program facts it takes (the lookups `CidProg`, the
 callees' write sets, the `AbsKeep` facts) are this theorem's hypotheses; `Checker/IndArm.lean`
 discharges them at the checker's program.
 -/
@@ -31,7 +30,7 @@ variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
 
 include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
-/-- **The inductive arm's contract** from `cidW_okC`, under its program facts. -/
+/-- **The inductive arm's contract** from `checkIndDecl_refinesC`, under its program facts. -/
 theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)
@@ -49,11 +48,8 @@ theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List Fn
     ∀ dn, DnInj dn → IndArmSpec p dn := by
   intro dn hdn pins n hn m m' a vis fe env block nP o l w r _ hw hdec hb _ hT _ hfold hden hlpd hM hc
   subst hw
-  obtain ⟨s', hs', -, hcid⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (cid_specW p P.cid P.csl n _ vis o l w) hc
-  subst hs'
-  exact cidW_okC hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr hn hdn
-    hcid hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
+  exact checkIndDecl_refinesC hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP
+    hkt hkr hn hdn hc hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
 
 end
 
