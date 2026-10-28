@@ -148,7 +148,8 @@ The shapes it covers:
 * a twin that reports failures as values: `C := ErrClaimV T a` or `VerdictClaimL T a`.
 
 Its lemmas: `RefC.mono`, `RefC.run_ok` / `run_okW`, `RefC.run_err` (with `C0`: the claim holds
-for errors of class `0`, as every claim of the verdict closure does).
+for errors of class `0`, as every claim of the verdict closure does), `RefC.triple` (the ok triple,
+the `@[refines]` shape; ascribe `(RefC.triple hs h :)` when the goal's post would fix `Ok` first).
 
 **Core functions (`Arena/RefECore.lean`)**, the functions the knot's slots call, whose ok halves
 are `CoreRef`s: the post `CorePost` (the relation after the run, the result decoded and valid),
