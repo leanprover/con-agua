@@ -66,7 +66,7 @@ theorem checkPendingGo_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs 
   have hc : callE (Prog.subPB bs checkerProg) n "check_pending_go" [0, k, v] m₂ = .error e := by
     simp only [callE, hrun₂]
   intro hk0
-  have := (checkPendingGo_refinesE mode pins dn ds (Prog.subPB bs checkerProg) fe pend hP hm hE n hn).1
+  have := (checkPendingGo_refinesE mode pins dn ds (Prog.subPB bs checkerProg) fe pend hP hm hE n hn)
     m₂ a 0 k v (by simp) hk (by simpa using h₂.twin) h₂.loop h₂.mem h₂.core h₂.cr e hc hk0
   simp only [UInt64.toNat_zero, List.drop_zero] at this
   exact checkPendingList_worker_fails h₂.twin.caches this
