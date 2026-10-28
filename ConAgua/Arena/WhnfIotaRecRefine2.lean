@@ -772,25 +772,12 @@ theorem findRule_mem : ∀ (rules : List IRecRule) (c : NIdx) (rl : IRecRule),
 
 
 /-- A found rule's record is one of the slice's: `find_rule` answers `ro + 11 * j`, `j < rc`. -/
-theorem frW_found (E : Array Word) (ro rc c : Word) : ∀ (K : Nat) (i : Word) (L : List Word),
-    rc.toNat - i.toNat = K → findRuleW E ro rc c K i = some L → L.headD 0 ≠ 0 →
-    ∃ j : Word, j < rc ∧ L.tail.headD 0 = ro + 11 * j := by
-  intro K
-  induction K with
-  | zero =>
-    intro i L hK h hne
-    rw [findRuleW] at h; cases h; simp at hne
-  | succ K ih =>
-    intro i L hK h hne
-    rw [findRuleW] at h
-    split at h
-    · rename_i hi
-      split at h
-      · split at h
-        · cases h; exact ⟨i, hi, rfl⟩
-        · exact ih (i + 1) L (by have := uint64_succ_toNat rc i hi; omega) h hne
-      · cases h
-    · cases h; simp at hne
+theorem frN_found (E : Array Word) (ro rc c : Word) (i : Nat) (hne : (frN E ro rc c i).headD 0 ≠ 0) :
+    ∃ j : Word, j < rc ∧ (frN E ro rc c i).tail.headD 0 = ro + 11 * j := by
+  fun_induction frN E ro rc c i with
+  | case1 i hi _ => exact ⟨UInt64.ofNat i, UInt64.lt_iff_toNat_lt.mpr (by have := rc.toNat_lt; simp; omega), rfl⟩
+  | case2 i _ _ ih => exact ih hne
+  | case3 => simp at hne
 
 /-- **`find_rule`'s answer decodes** when it found one. -/
 theorem findRule_found (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (n : Nat) (m : Mem)
@@ -799,7 +786,8 @@ theorem findRule_found (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (
     (h : callW p n "find_rule" [ro, rc, c] m = some (r, m')) (hne : r.headD 0 ≠ 0) :
     ∃ rule, decRule (m.arr64 EREC) (r.tail.headD 0).toNat = some rule := by
   obtain ⟨t, ht, -, -, hW⟩ := triple_of_callW (findRule_spec p hp n ⟨m, Locals.init []⟩ ro rc c) h
-  obtain ⟨j, hj, hq⟩ := frW_found _ ro rc c _ 0 r (by simp) hW hne
+  subst hW
+  obtain ⟨j, hj, hq⟩ := frN_found _ ro rc c 0 hne
   obtain ⟨hl, hg⟩ := decRules_get _ _ _ _ hr
   have hj' : j.toNat < rc.toNat := hj
   have hdr := hg j.toNat hj'
