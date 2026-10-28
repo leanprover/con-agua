@@ -1,4 +1,5 @@
 import ConAgua.Verdict.IndA3
+import ConAgua.Verdict.IndsE1
 /-!
 # `check_block_inds`' error refinement (lane `verdicts-b`, helper `ia2-inds`)
 

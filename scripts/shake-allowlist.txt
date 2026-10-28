@@ -159,3 +159,4 @@ ConAgua/Verdict/InferLeavesE.lean	public import ConAgua.Arena.WhnfIotaRefine6	# 
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.IndSumSpec.Row	# the build needs it: the modules above (Sum5, Install3, IndBSum4, …) reach `recW_afr` and the inductive specs through it
 ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.RecClassSpec.ClassGenRule	# the build needs it: the modules above (IndBRec4, GpbWSimF, …) reach `rec2CC_parts`, `gpbW` through it
+ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.DeclArmT	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)

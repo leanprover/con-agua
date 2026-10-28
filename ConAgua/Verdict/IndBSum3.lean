@@ -7,6 +7,8 @@ import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.IndSumSpec.CheckSumCtor
+import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 /-!
 # Error refinements of `check_sum_ctor_tail`, `check_sum_ctor`, `check_sum_ctors`
 (lane `verdicts-b`, helper `ib`)
