@@ -1078,3 +1078,58 @@ c4aef6d6, load 15–96, `_tmp/unify-b2a/times1.txt`):
 | **sum (38 modules)** | **127.5** | **94.8** | **−26 %** |
 
 Every flagged module is a new home of models and refinements whose old modules got faster by more.
+
+### 3.14 Batch 2a, second landing (the declaration arms, `check_thm_val`, `install_value_guards`)
+
+The rest of the batch's list (§3.13), now that `lvl_eq_fueled` is unified (§3.11's follow-up), and
+`install_value_guards`:
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `check_reduce_pin` | `crpW_okT` 199 + `crpE_okT` 240 = 439 | `crp_ref` 202 + `CrpPost` 5 + `crpE_okT` 16 = 223 | −49 % |
+| `check_decl_axiom` | `cdaW_gen` 293 + `cdaW_okT` 33 + `checkDeclAxiom_errT` 408 + `checkDeclAxiom_loopT` 24 = 758 | `cda_ref` 340 + `CdaPost` 5 + `checkDeclAxiom_errT` 14 + `checkDeclAxiom_loopT` 24 = 383 | −49 % |
+| `check_thm_val` | `tvW_okT` 116 + `dvK1_okT` 58 + `tvE_okT` 196 + `checkThmVal_refinesT` 21 = 391 | `tv_ref` 177 + `TvCtx` 4 + `ArmPost` 5 + `checkThmVal_refinesT` 19 = 205 | −48 % |
+| `check_decl_thm` | `cdtW_okT` 65 + `checkDeclThm_errT` 79 = 144 | `cdt_ref` 61 + `CdtCtx` 2 + `CdtPost` 5 + `checkDeclThm_errT` 20 = 88 | −39 % |
+| `check_decl_opaque` | `cdoW_okT` 174 + `checkDeclOpaque_errT` 180 + `checkDeclOpaque_loopT` 28 = 382 | `cdo_ref` 172 + `checkDeclOpaque_errT` 20 + `checkDeclOpaque_loopT` 27 = 219 | −43 % |
+| `install_value_guards` | `IvgT` 9 + `ivgW_okT` 86 + `ivgE_okT` 148 = 243 | `ivg_ref` 117 + `IvgPost` 6 + `ivgE_okT` 8 = 131 | −46 % |
+| **pairs** | **2 357** | **1 249** | **−47 %** |
+
+Gone with them: the hand models `crpW`/`crpK1–8`, `cdaW`/`cdaK1–10`/`cdaQ1–2`/`cdaT`/`cdaRet`,
+`tvW`/`tvK1–4` and the shared tail `dvK1–4`, `cdtW`/`cdtK1–3`, `cdoW`/`cdoK1–6` (the file
+`Arena/DeclArmOpaque`), `ivgW`/`ivgK1–5`, with their arms and specs. `Arena/DeclValSpec` holds only
+`ValProg` and the twin equations. Whole diff against master 9458a945: **+1 065 −2 774** in 25
+files.
+
+* **`G`**: `CoreStubsE p` (`check_reduce_pin`), `VerdictCtxU p` (`check_decl_axiom`), `TvCtx`
+  (core stubs, `IvgE`, `lvl_eq_c` outside the closure) for `check_thm_val`, `CdtCtx`
+  (`VerdictCtxU` and `IvgE`) for the theorem and the opaque arms, `IhCtx` (`closedNV`, `UceProg`)
+  for `install_value_guards` as for `install_header`.
+* **`install_value_guards`** was not in §3.1's list (no `@[refines]` of its own) but has an error
+  claim (`IvgE`) and an ok proof (`ivgW_okT`) read by five refinements. `ivg_ref` (in
+  `Verdict/DeclValE`, below `check_value_group`'s and `check_thm_val`'s) replaces both; the five
+  call sites read it through the run (`RefE.run_ok`), and `IvgE` stays as the claim's shape
+  (`ivgE_okT` is `RefE.run_err`) for the hypotheses of `CvgCtx`, `DvCtx`, `TvCtx`, `CdtCtx`.
+* **The arms read their callees through their runs**, as the definition arm (§3.13), where the
+  ok half needs the call's write-set frame or the loop's `run_memFrame`.
+* **Shake.** The new import graph left 16 imports unused; removing them broke five downstream
+  modules that had used them transitively (`DeclHeader`, `DeclAxQuotT`, `DeclDefnT`, `RecGen3`,
+  `RecGen7`), which now import what they use.
+* **Not here**: `install_header`'s shared hand model `ihW` and `ihW_okT` stay for
+  `class_const_ok_header` (batch 2b).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 9458a945, load 14–28,
+`_tmp/unify-b2a/times2.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/DeclAxQuotT` | 0.73 | **6.51** | `checkDeclAxiomE` and `cda_ref` moved in |
+| `Verdict/DeclAxiomE`, `Arena/DeclArmAxiom` | 11.18 | 1.18 | …from here; with `DeclAxQuotT`: 11.9 → 7.7 |
+| `Arena/DeclCrpT` | 1.67 | **2.84** | `checkDeclOpaqueE`, `cdo_ref`, `crp_ref` |
+| `Verdict/DeclCrpE`, `DeclArmsE`, `Arena/DeclArmOpaque` | 5.66 | 1.23 | …from here; with `DeclCrpT`: 7.3 → 4.1 |
+| `Verdict/DeclValE` | 4.76 | **6.08** | `installValueGuardsE`, `ivg_ref`, `checkThmValE`, `tv_ref` |
+| `Verdict/DeclHdrE`, `Arena/DeclValSpec`, `DeclCvg`, `DeclCvgT` | 9.59 | 7.03 | …from here; with `DeclValE`: 14.4 → 13.1 |
+| the other 13 | 24.4 | 24.6 | |
+| **sum (25 modules)** | **58.0** | **49.5** | **−15 %** |
+
+Batch 2a in all: 21 functions, one model and one refinement each; the pairs 5 619 → 3 072
+(−45 %).

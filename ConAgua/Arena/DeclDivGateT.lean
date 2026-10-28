@@ -8,7 +8,7 @@ import ConAgua.Arena.DeclArmDefn
 definition arm's push, at the pre-insertion view `vis` for its core calls and at the pushed view `w`
 for the environment guard. It runs here from the real program (`realCall p`) under `StageC`
 (`TwinStep.lean`), mirroring con-ron's `checkDivModPin_bridge` (`Bridge/Checker/DivMod.lean`), as
-`crpW_okT` (`DeclCrpT.lean`) does for the reduce-pin gate:
+`crp_ref` (`DeclCrpT.lean`) does for the reduce-pin gate:
 
 * the leaves (`nat_div_mod_names`, `sl_contains`, `rom_pin_sets`, `div_mod_env_guard`,
   `div_mod_decl_pin`, `div_mod_cert_stmts`, `div_mod_cert_proofs`, the substitution walks,

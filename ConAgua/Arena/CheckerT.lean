@@ -16,7 +16,7 @@ come from the fold's (`TwinFold`, con-ron's `FoldOK`) and the memory's half (`Tw
 sizes, the core's memos `CoreMemos`, the name decoder's readbacks), which the fold carries
 (`LoopMem`, `CoreMemos`). The bracket's opening keeps `TwinOK` (`TwinOK.flush`, `TwinOK.enter`);
 `install_value` and `check_decl`'s arms end with the stage relation at their environment and
-`CoreMemos` (`iv_ref`, `cdtW_okT`); the bracket's closing is a leaf (`LeafClosed`: it writes no
+`CoreMemos` (`iv_ref`, `cdt_ref`); the bracket's closing is a leaf (`LeafClosed`: it writes no
 core memo); the whole step writes the loop's write set (`LoopClosed`), so `LoopMem` comes back.
 
 `check_decl`'s arms run from `StageT` (`checkDeclThm_loopT`, `…Opaque…`, `…Defn…`, `…Axiom…`,
@@ -156,18 +156,12 @@ def ArmSpecT (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
     LoopR pins dn s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0)
       (AM.res (checkDecl V pins fe d) a₀) pend ds ∧ CoreMemos s'.mem; ⊤⦄
 
-/-- **`check_decl_thm` under `StageT`** (`cdtW_okT`). -/
+/-- **`check_decl_thm` under `StageT`** (`cdt_ref`'s ok half). -/
 theorem checkDeclThm_loopT (hA : ArmProg p) (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
     (hkp : CrKeep p) (hp : p.lookup "check_decl_thm" = some checkDeclThm) (cv : IConstantVal)
     (v : EIdx) :
     ArmSpecT pins dn ds p "check_decl_thm" (.thmDecl cv v) := by
   intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden _ hCr
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdt_specW p hp hV.rcp n s₀ i vis)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_thm") (by decide) [i, vis] s₀)
-  subst hs
   have hd' : ds[i.toNat] = .thmDecl cv v := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨env, hF⟩ := hF
@@ -177,14 +171,20 @@ theorem checkDeclThm_loopT (hA : ArmProg p) (hV : ValProg p) (hq : KnotStageProg
   rotate_left
   · cases hx
   rename_i c e hc he
-  obtain ⟨fe', a', hrun', hS', hcm, hg'⟩ :=
-    cdtW_okT (pins := pins) hV hq hap hkp hn hW hS hR.decls hi hd' hF hc hCr
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, fe', a', hrun', hP⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclThm_specE p hV hp n s₀ i vis)
+      (cdt_ref (pins := pins) hV hq hap hkp hn hS hR.decls hi hd' hF hc hCr))
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hA.closed.memFrame n (f := "check_decl_thm") (by decide) [i, vis] s₀)
+  subst hs
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_, hcm⟩
+  refine ⟨hloc, hok, ?_, hP.memos⟩
   rw [hst, hres]
-  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
+  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
 
-/-- **`check_decl_opaque` under `StageT`** (helper `loopt2-crp`'s `cdoW_okT`). -/
+/-- **`check_decl_opaque` under `StageT`** (`cdo_ref`). -/
 theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
     (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
     (hdn : DnInj dn) (hp : p.lookup "check_decl_opaque" = some checkDeclOpaque) (cv : IConstantVal) (v : EIdx) :
@@ -192,11 +192,6 @@ theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
   intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden _ hCr
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (cdo_specW p hp hV.rcp hC.red.pa n s₀ i vis)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_opaque") (by decide) [i, vis] s₀)
-  subst hs
   have hd' : ds[i.toNat] = .opaqueDecl cv v := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨env, hF⟩ := hF
@@ -206,12 +201,16 @@ theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
   rotate_left
   · cases hx
   rename_i c e hc he
-  obtain ⟨fe', a', hrun', hS', hcm, hg'⟩ :=
-    cdoW_okT (pins := pins) hV hC hq hcl hlc hap hkp hdn hn hW hS hR.decls hi hd' hF hc he hCr
+  obtain ⟨hloc, fe', a', hrun', hQ⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclOpaque_specE p hp n s₀ i vis)
+      (cdo_ref (pins := pins) hV hC hq hcl hlc hap hkp hdn n hn hS hR.decls hi hd' hF hc he hCr))
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hA.closed.memFrame n (f := "check_decl_opaque") (by decide) [i, vis] s₀)
+  subst hs
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_, hcm⟩
+  refine ⟨hloc, hok, ?_, hQ.memos⟩
   rw [hst, hres]
-  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
+  exact hR.of_step hQ.stage hf (IWGrow.erecPExt hQ.grow)
 
 /-- **`check_decl_defn` under `StageT`** (`cdf_ref`: the structural-`Nat` gate and the
 `Nat.div`-family pin gate under `StageC`). -/
@@ -244,30 +243,30 @@ theorem checkDeclDefn_loopT (hA : ArmProg p) (hV : ValProg p) (hG : DefnProgT p 
   rw [hst, hres]
   exact hR.of_step hQ.stage hf (IWGrow.erecPExt hQ.grow)
 
-/-- **`check_decl_axiom` under `StageT`** (helper `loopt3-axq`'s `cdaW_okT`). -/
+/-- **`check_decl_axiom` under `StageT`** (`cda_ref`'s ok half). -/
+@[refines_part ConRon.Arena.checkDecl "the axiom arm, under StageT"]
 theorem checkDeclAxiom_loopT (hA : ArmProg p) (hX : AxProg p) (hq : KnotStageProg p)
     (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hdn : DnInj dn) (hQd : QuotDn dn)
     (cv : IConstantVal) :
     ArmSpecT pins dn ds p "check_decl_axiom" (.axiomDecl cv) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd hok hR hS _ hden _ hCr
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (cda_specW p hX.cda hX.val.rcp hX.quot.pa n s₀ i vis)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_axiom") (by decide) [i, vis] s₀)
-  subst hs
+  intro n hn s₀ a₀ vis fe pend i hi hd hok hR hS hF hden _ hCr
   have hd' : ds[i.toNat] = .axiomDecl cv := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨x, hx⟩ := hden
   simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hx
   obtain ⟨c, hc, -⟩ := hx
-  obtain ⟨fe', a', hrun', hS', hcm, hg'⟩ :=
-    cdaW_okT (pins := pins) hX hq hcl hap hkp hdn hQd hn hW hS hR.decls hi hd' hok hc hCr
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, fe', a', hrun', hP⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclAxiom_specE p hX n s₀ i vis)
+      (cda_ref (pins := pins) hX hq hcl hap hkp hdn hQd hn hS hR.decls hi hd' hok hc hF hCr))
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hA.closed.memFrame n (f := "check_decl_axiom") (by decide) [i, vis] s₀)
+  subst hs
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok', ?_, hcm⟩
+  refine ⟨hloc, hok', ?_, hP.memos⟩
   rw [hst, hres]
-  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
+  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
 
 /-- **`check_decl_quot` under `StageT`** (`cdq_ref`'s ok half; the core's memos kept, the arm
 being a leaf). -/

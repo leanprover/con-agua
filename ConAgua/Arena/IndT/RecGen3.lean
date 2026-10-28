@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclValT
+import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.RecGenSpec.ClassConstOk
 
 /-!
