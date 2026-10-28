@@ -182,22 +182,19 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
     rw [hpre, decBool_t_m2c g7]; rfl
 
 include hE in
-/-- **`m2c_eta` refines `m2cEtaT`** (`indP` the family's record). -/
-theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
+/-- **`m2c_eta` refines `m2cEtaT`, both outcomes** (`indP` the family's record; the errors are
+`m2c_pre`'s). -/
+theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode d T indP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hT : HW T) (hmaj : HW major) (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
     (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps))
-    (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) (r : List Word) (m' : Mem)
-    (h : callW p (N + 1) "m2c_eta" [mode, vis, d, T, indP, major] m = some (r, m')) :
-    GrowRef (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
-      decH dn m vis fe M eb r m' := by
-  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (m2cEta_spec p hp.eta N _ mode vis d T indP major) h
-  dsimp only at hW
-  rw [hs'] at hW
-  simp only [m2cEtaW] at hW
+    (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) :
+    RefE (M2CCtxE p N) (m2cEtaE p (N + 1) m mode vis d T indP major)
+      (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
+      (GrowPost decH dn m vis fe M eb ResH) := by
+  rw [m2cEtaE.arm1]
   -- the record's words
   obtain ⟨po, pc, swd, so, sc, hpo, hpc, hsl, hswd, hso, hsc, hpw⟩ :=
     decCI_ind_fields _ dn _ cvT caps hci
@@ -211,36 +208,41 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have r12 : rdW (m.arr64 EREC) (indP + 12) = swd := rdW_off' hswd (by simp) (by omega)
   have r13 : rdW (m.arr64 EREC) (indP + 13) = so := rdW_off' hso (by simp) (by omega)
   have r14 : rdW (m.arr64 EREC) (indP + 14) = sc := rdW_off' hsc (by simp) (by omega)
-  rw [r2, r3, r6, r7, r8, r12, r13, r14] at hW
+  rw [r2, r3, r6, r7, r8, r12, r13, r14]
   have hlps : cvT.levelParams.length = pc.toNat := hslice?_length hsl
   cases N with
-  | zero => simp [callW_zero] at hW
+  | zero => rw [m2cPreE.eq_1, m2cEtaE.k_m2c_pre.none]; exact RefE.of_cls0 (by simp)
   | succ N' =>
-  rcases c1 : callW p (N' + 1) "m2c_pre" [mode, vis, d, major] m with _ | ⟨L, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
-  obtain ⟨a1, hpre, ⟨M1, hS1, hK1, hSt1⟩, he1, hhw⟩ := m2cPre_ok p hp hE N' F
-    (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d major hm4 hebm hmaj m a M hS
-    L m1 c1
+  have hpre0 := m2cPre_ref p hp hE N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode
+    d major hm4 hebm hmaj m a M hS
+  rcases c1 : m2cPreE p (N' + 1) m mode vis d major with e1 | ⟨L, m1⟩
+  · rw [m2cEtaE.k_m2c_pre.none]
+    rw [c1] at hpre0
+    unfold m2cEtaT
+    exact fun hG => hpre0 (hG.mono (Nat.le_succ _)) _
+  rw [c1] at hpre0
+  obtain ⟨a1, hpre, ⟨M1, hS1, hK1, hSt1⟩, he1, hhw⟩ := hpre0
   by_cases g0 : L.headD 0 = 0
-  · rw [ite_eq_left g0] at hW
-    obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩) (decH_of _ _ hr)
-      (resH_of_m2c _ _ hr hmaj)
-    unfold m2cEtaT; exact m2cPreT_none hpre g0 _
-  rw [ite_eq_right g0] at hW
+  · rw [m2cEtaE.k_m2c_pre.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g0]
+    exact RefE.ret (by unfold m2cEtaT; exact m2cPreT_none hpre g0 _)
+      ⟨CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩, rfl, hmaj⟩
+  rw [m2cEtaE.k_m2c_pre.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g0]
   obtain ⟨htm, hT2, hus⟩ := hhw g0
   obtain ⟨l, hvls, hll, -⟩ := hpre.view g0
   have hpre' := m2cPreT_some hpre g0
-  rcases c2 : callW p (N' + 1) "get_app_args" [L.tail.headD 0] m1 with _ | ⟨r2', m2⟩ <;>
-    simp only [c2, reduceCtorEq] at hW
+  rcases c2 : callW p (N' + 1) "get_app_args" [L.tail.headD 0] m1 with _ | ⟨r2', m2⟩
+  · rw [liftE_none, m2cEtaE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, m2cEtaE.k_get_app_args.arm1]
   obtain ⟨t2, ht2, -, hfr2, hg2, htop2, htop2', xs, hargs, hsp2⟩ := triple_of_callW
     (s₀ := ⟨m1, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a1 hS1.arena.1 _ htm hS1.spn) c2
   rw [ht2] at hfr2 hg2 hsp2 htop2'
   have hS2 := hS1.frame_stk hfr2 (by simp) (by simp)
   have he2 : m2.arr64 EREC = m1.arr64 EREC := hfr2.1 EREC (by simp [EREC, SPN]) (by decide)
   have hlen : xs.length = (r2'.tail.headD 0).toNat := by simpa using hsp2.size
-  rcases c3 : callW p (N' + 1) "caps_never_zero" [po, pc, L.tail.tail.tail.headD 0, swd, so, sc] m2 with _ | ⟨r3', m3⟩ <;>
-    simp only [c3, reduceCtorEq] at hW
+  rcases c3 : callW p (N' + 1) "caps_never_zero" [po, pc, L.tail.tail.tail.headD 0, swd, so, sc] m2 with
+    _ | ⟨r3', m3⟩
+  · rw [liftE_none, m2cEtaE.k_caps_never_zero.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   have hEe : m2.arr64 EREC = m.arr64 EREC := he2.trans he1
   obtain ⟨hrun3, ⟨M3, hS3, hK3, hSt3⟩, -⟩ := CoreSpec.run
     (hc.capsNeverZero (N' + 1) ⟨m2, Locals.init []⟩ a1 dn vis fe M1 eb po pc _ swd so sc
@@ -249,9 +251,9 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have hrun3' : (capsNeverZero cvT.levelParams (decI (L.tail.tail.tail.headD 0)) caps).run a1 =
       .ok (decBool r3', AM.st (capsNeverZeroPW cvT.levelParams (decI (L.tail.tail.tail.headD 0))
         caps.sortZ) a1) := hrun3
-  have hA3 : CoreAfterG dn m m3 (AM.st (capsNeverZeroPW cvT.levelParams
-      (decI (L.tail.tail.tail.headD 0)) caps.sortZ) a1) vis fe M eb :=
-    ⟨M3, hS3, hK1.trans hK3, hSt1.toGrew.trans (hg2.trans hSt3.toGrew)⟩
+  have hA3 : GrowPost decH dn m vis fe M eb ResH ([major], m3) (decE major) (AM.st (capsNeverZeroPW
+      cvT.levelParams (decI (L.tail.tail.tail.headD 0)) caps.sortZ) a1) :=
+    ⟨⟨M3, hS3, hK1.trans hK3, hSt1.toGrew.trans (hg2.trans hSt3.toGrew)⟩, rfl, hmaj⟩
   have hstep : (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps
       (decE major)).run a =
       (if (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = caps.etaParams ∧
@@ -263,43 +265,34 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
     unfold m2cEtaT; rw [hpre']
     simp only [StateT.run_bind, hvls, except_ok_bind, hargs, hrun3']
   have hmaj' : ∀ (hn : ¬ ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = caps.etaParams ∧
-      l.length = cvT.levelParams.length ∧ decBool r3' = true))
-      (hr : major = r.headD 0) (hm : m3 = m'),
-      GrowRef (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
-        decH dn m vis fe M eb r m' := by
-    intro hn hr hm
-    subst hm
-    refine GrowRef.of_run ?_ hA3 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
-    rw [hstep, ite_eq_right hn]; rfl
+      l.length = cvT.levelParams.length ∧ decBool r3' = true)),
+      RefE (M2CCtxE p (N' + 1)) (.ok ([major], m3))
+        (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
+        (GrowPost decH dn m vis fe M eb ResH) :=
+    fun hn => RefE.ret (by rw [hstep, ite_eq_right hn]; rfl) hA3
   by_cases g2 : L.tail.tail.headD 0 ≠ T
-  · rw [ite_eq_left g2] at hW
-    obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => g2 ((decI_inj_iff hT2 hT).mp e.1)) hr hm
-  rw [ite_eq_right g2] at hW
+  · rw [m2cEtaE.k_caps_never_zero.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2]
+    exact hmaj' (fun e => g2 ((decI_inj_iff hT2 hT).mp e.1))
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
   by_cases g3 : r2'.tail.headD 0 ≠ w7
-  · rw [ite_eq_left g3] at hW
-    obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => g3 (UInt64.toNat_inj.mp (by rw [← hlen, e.2.1, hep]))) hr hm
-  rw [ite_eq_right g3] at hW
+  · rw [m2cEtaE.k_caps_never_zero.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3]
+    exact hmaj' (fun e => g3 (UInt64.toNat_inj.mp (by rw [← hlen, e.2.1, hep])))
   have g3' : r2'.tail.headD 0 = w7 := by simpa using g3
   by_cases g4 : L.tail.tail.tail.tail.headD 0 ≠ pc
-  · rw [ite_eq_left g4] at hW
-    obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => g4 (UInt64.toNat_inj.mp (by rw [← hll, e.2.2.1, hlps]))) hr hm
-  rw [ite_eq_right g4] at hW
+  · rw [m2cEtaE.k_caps_never_zero.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3' g4]
+    exact hmaj' (fun e => g4 (UInt64.toNat_inj.mp (by rw [← hll, e.2.2.1, hlps])))
   have g4' : L.tail.tail.tail.tail.headD 0 = pc := by simpa using g4
   by_cases g5 : r3'.headD 0 = 0
-  · rw [ite_eq_left g5] at hW
-    obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => by rw [decBool_f_m2c g5] at e; exact Bool.false_ne_true e.2.2.2) hr hm
-  rw [ite_eq_right g5] at hW
+  · rw [m2cEtaE.k_caps_never_zero.arm4 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3' g4' g5]
+    exact hmaj' (fun e => by rw [decBool_f_m2c g5] at e; exact Bool.false_ne_true e.2.2.2)
+  rw [m2cEtaE.k_caps_never_zero.arm5 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3' g4' g5]
   have hcond : (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = caps.etaParams ∧
       l.length = cvT.levelParams.length ∧ decBool r3' = true :=
     ⟨by rw [g2'], by rw [hlen, g3', hep], by rw [hll, g4', hlps], decBool_t_m2c g5⟩
   rcases c4 : callW p (N' + 1) "m2c_eta2" [vis, d, T, w6, w8, r2'.headD 0, r2'.tail.headD 0,
-      L.tail.tail.tail.headD 0, major] m3 with _ | ⟨r4, m4⟩ <;> simp only [c4, reduceCtorEq] at hW
-  obtain ⟨hr, rfl⟩ := ret_eq hW
+      L.tail.tail.tail.headD 0, major] m3 with _ | ⟨r4, m4⟩
+  · rw [liftE_none, m2cEtaE.k_m2c_eta2.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, m2cEtaE.k_m2c_eta2.arm1]
   have hspn2 : (m2.arr64 SPN).size < 2 ^ 63 := hS2.spn
   have htop3 : r2'.headD 0 + r2'.tail.headD 0 = spTop m3 := by
     rw [hSt3.1, htop2', htop2]
@@ -317,10 +310,8 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
             Keeps.bind (keeps_stP_readLevelsM _) fun _ => Keeps.pure _)) (hp5 g0).2.2.1⟩) c4
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4
-  refine GrowRef.of_run (v := decH r4) ?_ (CoreAfterG.compK (hK1.trans hK3)
-    (hSt1.toGrew.trans (hg2.trans hSt3.toGrew)) hA4) (by unfold decH; rw [hr])
-    (by unfold ResH at hr4 ⊢; rw [← hr]; exact hr4)
-  rw [hstep, ite_eq_left hcond, hec, hef]; exact hrun4
+  refine RefE.ret (by rw [hstep, ite_eq_left hcond, hec, hef]; exact hrun4)
+    ⟨CoreAfterG.compK (hK1.trans hK3) (hSt1.toGrew.trans (hg2.trans hSt3.toGrew)) hA4, rfl, hr4⟩
 
 end etaarm
 

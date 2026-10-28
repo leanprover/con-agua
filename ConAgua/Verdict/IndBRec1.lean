@@ -1,7 +1,6 @@
 import ConAgua.Arena.RecGenSpec.ClassMinorSlotW
 import ConAgua.Arena.RecClassSpec.Rec2SimTMA
 import ConAgua.Arena.RecClassSpec.MkTMWAfr
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.RecGenSpec.RgW
@@ -9,7 +8,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.GenRec
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The recursor generation's leaves: one model and one refinement for both outcomes

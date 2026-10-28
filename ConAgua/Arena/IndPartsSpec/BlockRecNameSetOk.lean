@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndPartsSpec.SetEqW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

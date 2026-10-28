@@ -8,7 +8,6 @@ import ConAgua.Arena.IndSumSpec.SumProg
 import ConAgua.Arena.IndSumSpec.TblProg
 import ConAgua.Arena.KnotEntry
 import ConAgua.Arena.RecGenSpec.OcW
-import ConAgua.Arena.Verdict
 import ConRon.Bridge.Inductives.ClassRead
 import ConAgua.Verdict.IndAGen
 import ConAgua.Arena.IndRealSctC

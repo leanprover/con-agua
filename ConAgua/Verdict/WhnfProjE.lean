@@ -1,4 +1,3 @@
-import ConAgua.Verdict.WhnfModels2E
 import ConAgua.Verdict.WhnfSlotE
 import ConAgua.Arena.Checker
 /-!

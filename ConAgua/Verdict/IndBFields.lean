@@ -1,13 +1,11 @@
 import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.RecGenSpec.ClassFieldsOf
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.RecClassSpec.SlotProg
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `class_fields_of_go`: one model and one refinement for both outcomes
