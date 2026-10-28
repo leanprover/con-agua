@@ -1,4 +1,5 @@
 import ConAgua.Verdict.WhnfM2CE
+import ConAgua.Verdict.WhnfPrepE
 import ConAgua.Verdict.WhnfProjE
 import ConAgua.Verdict.WhnfCertsE
 import ConAgua.Verdict.WhnfIdxE
@@ -52,12 +53,11 @@ theorem KnotAllProg.iotaRecFireE : IotaRecFireE p :=
 
 include hq hnv hE in
 theorem KnotAllProg.iotaRecAtE : IotaRecAtE p :=
-  iotaRecAtE_of p hq.iotaRec hnv
-    (iotaRecMajorE_of p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
-      (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
-        (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq))
-      (ErecKeptKnot.of_closed hq.hcl) hnv (KnotAllProg.prepareMajorE hq hnv)
-      (KnotAllProg.iotaRecFireE hq hnv hE))
+  iotaRecAtE_of p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
+    (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
+      (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq))
+    (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl) hnv
+    (KnotAllProg.prepareMajorE hq hnv) (KnotAllProg.iotaRecFireE hq hnv hE)
 
 include hq hnv hE in
 /-- **The `whnf_core` and `whnf` slots' error halves one level up** (`KnotStepE`'s `whnf`

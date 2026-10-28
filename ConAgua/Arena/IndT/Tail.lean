@@ -304,7 +304,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
   have hfRc1 : ∀ f ∈ grcMemoCallees, f ∈ fsR := fun f hf => hfR f (by
     simp only [grcMemoCallees, List.mem_cons, List.not_mem_nil, or_false] at hf
     rcases hf with rfl | rfl <;> decide)
-  have hR5 := icr_ref hkp henv₂ hV hApd hCrk hIlpf hP.crec hP.grc hclR hfRc1 k (by omega) m3 a3 dn _ _ _ _ _ _ _ _
+  have hR5 := icr_ref hkp henv₂ hV hApd hCrk hIlpf hP.grc hclR hfRc1 k (by omega) m3 a3 dn _ _ _ _ _ _ _ _
     _ _ _ _ _ _ bs params tbl rd cls cvTas block hC3 hpre hrb3 hlp3 hR3 hA3
     (fun f hf => hkeep f (List.mem_append_right _ hf)) hcons.coh hden₂ dd1 dd2 dd3 dd4 dd5 dd6 dd7 hMs hTw
     (fun f hf => hfRc f (List.mem_append_left _ hf)) (nested := r4.headD 0)

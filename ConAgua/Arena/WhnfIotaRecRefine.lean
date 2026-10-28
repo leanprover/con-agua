@@ -1,4 +1,3 @@
-import ConAgua.Arena.WhnfIotaRec
 import ConAgua.Arena.WhnfIotaRefine5
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
