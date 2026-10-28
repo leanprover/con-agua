@@ -2155,7 +2155,8 @@ the slots, as `m2c_*` in §3.7):
   in `WhnfMidE`, `WhnfUnitE`, `WhnfIotaE`, `WhnfIotaRecE`, `WhnfPrepE`, `WhnfIdxE`, `WhnfPirrE`,
   `WhnfM2CE`, `WhnfCertsE`, `WhnfSetE`, `WhnfStuckE`;
 - [ ] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
-  `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`),
+  `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`; done,
+  §3.42),
   `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step`, `whnf`, `whnf_loop`, `whnf_step`; claims
   in `WhnfSlotE`);
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
@@ -2761,3 +2762,43 @@ Elaboration (user seconds, median of 3 interleaved runs, base master 619488ec,
 `DefEqMidLazy` 6.75 → 6.82, `Verdict/DefEqLazyE` 11.85 → 11.82, `DefEqAllE` 0.48 → 0.49, the four
 deleted claim files 9.45 → 0; sum 53.15 → 40.36 (−24 %). No module more than 10 % slower. No
 generator or kit change was needed.
+
+### 3.42 Retirement, group B, `whnf` itself, first landing (the `proj` and `app` arms)
+
+The six functions of `Verdict/WhnfModels2E` that §3.30 B's second bullet lists: `proj_lit_to_ctor`,
+`reduce_proj_core`, `whnf_core_step_proj` (`plit_ref`, `rp_ref`, `stepProj_ref`, `Arena/WhnfCoreProj`)
+and `whnf_app`, `whnf_core_app2`, `whnf_core_app` (`appLoop_ref`/`app_ref`,
+`Arena/WhnfCoreAppLoop`; `capp2_ref`, `capp_ref`, `Arena/WhnfCoreStep`). Their unified models stay
+in `WhnfModels2E`; the `*_refines'` the knot and the tagged theorems read are `RefE.coreSpec`
+one-liners with their old statements, the claims the error knot reads (`StepProjE`, `CoreAppE` in
+`WhnfKnotE`, `DefeqWhnfE.reduceProjCore` in `KnotAllE`) `RefE.coreSpecE` one-liners. Gone: the claim
+files `WhnfProjE`, `WhnfAppE`; the hand ok models `projLitToCtorW`, `stepProjW`, `rpCoreW`,
+`coreApp2W`, `coreAppW` with their specs; `whnf_app`'s loop as named blocks (`whnfAppL'` and its five
+blocks, `lamW`, `iotaW`, `appRestW`, `bodyW`, `appLoop`, `appFull` and their specs and equations).
+
+| functions | before: ok side + claims | after | change |
+|---|---:|---:|---:|
+| the `proj` arm (3) | 397 + 261 = 658 | 250 | **−62 %** |
+| the `app` arm (3) | 821 + 464 = 1 285 | 486 | **−62 %** |
+
+Diff of the landing against master: +757 −1 978 lines.
+
+* **`G`**: `KnotUpToE p n` for the `proj` arm (the slots' claims; `find_proj`, `reduce_proj_head`
+  and the string-literal callees are outside the verdict closure, lifted). `AppG p n` (the knot's
+  slots and `iota_rec_at`'s claim `IotaRecAtE`, moved here from `WhnfAppE`) for the `app` arm:
+  `iota_rec_at` stays `callE` (its ok half `CoreCallees.iota`), read by `RefE.bind_callE`, as are
+  the `whnf`/`whnf_core` slots.
+* **The stack top put back without its bound.** The unified models drop the bound of the final
+  `CTL` store: `GrowPost.restore` after `reduce_proj_head`/`head_and_args`/`get_app_spine`, and
+  `StackKept.restoreTop` (`StackKept.restoreG'` from the loop's invariants) at `whnf_app`'s three
+  exits.
+* `whnf_app`'s loop: one induction over `whnfAppE.loop1` under `k_loop1`, the old error claim's
+  invariants (`appLoopE_ref`) with the ok leaves of `appFull_ref`. Its continuations are
+  `@[irreducible]` (a mutual block), so an error is passed on by `simp only [whnfAppE.k_…]`, not by
+  `rfl`.
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base master
+72557e98): `Arena/WhnfCoreProj` 8.26 → 6.63, `WhnfCoreAppLoop` 6.31 → 1.66, `WhnfCoreStep` 1.44 →
+0.73, `Verdict/WhnfModels2E` 29.36 → 26.06, `WhnfProjE` + `WhnfAppE` 2.83 → –, `WhnfKnotE`,
+`WhnfIotaE`, `KnotAllE` 4.47 → 4.13; sum 52.67 → 39.21 (−26 %). No module is slower.
+
