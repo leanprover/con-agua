@@ -1485,3 +1485,61 @@ a second series, `times1b.txt`, the first being noisy for `DeclDivGateT2`):
 | `Arena/DeclNatEq`, `DeclNatGateT` | 9.33 | 9.31 | |
 | `Arena/DeclDefnT`, `Verdict/DeclDefnE`, `TopE` | 4.72 | 4.37 | |
 | **sum** | **44.4** | **34.2** | **−23 %** |
+
+### 3.19 Batch 3a, second landing (`class_stream_recs`, `check_sum_tele_slow`, `check_sum_tele`)
+
+The two depth-2 functions batch 2b left (their callee `check_constant_val` is batch 2a's) and
+their one caller `check_sum_tele` (depth 3, the same file):
+
+| function | before: ok refinement + error claim | after | change |
+|---|---|---|---:|
+| `check_sum_tele_slow` | `ctsW_okC` 131 + `checkSumTeleSlow_claim` 146 = 277 | `cts_ref` 120 + `CtsPost` 11 + `CtsG` 2 = 133 | −52 % |
+| `check_sum_tele` | `ctW_okC` 111 + `checkSumTele_claim` 95 + `checkSumTeleE_of` 8 = 214 | `ct_ref` 108 + `checkSumTeleE_of` 9 + `CtProg` 6 = 123 | −43 % |
+| `class_stream_recs` | `csrW_okC` 120 + `csrE_claim` 101 + `classStreamRecs_claim` 14 = 235 | `csr_ref` 107 + `CsrPost` 6 + claim 13 = 126 | −46 % |
+| the three `@[refines]` | 80 | 79 | ±0 |
+| **pairs** | **726** | **382** | **−47 %** |
+
+Also gone: the hand models `csrW`/`csK1–3`/`classStreamRecs_spec`, `ctsW`/`ctsK1–5`/`ctsW_spec`,
+`ctW`/`ctK1–2`/`ctW_spec`, `wtR`; the claim shape `WtE` with `wtE_of`; the files
+`Verdict/IndBWt`, `Arena/IndSumSpec/CtsK5`, `CtsW`, `WtW`. Whole diff of this landing: +395 −1 078
+in 16 files.
+
+* **Models**: `whnf_telescope` and `check_constant_val` by their unified models (`wt_ref`,
+  `ccv_ref`), `intern_sort`, `close_telescope`, `cv_new`, `strip_pis`, `e_view`, `sl_cons` lifted.
+  No wrapper needed (`e_view`'s `r ≠ [] ∧ r = F` post is lifted as is).
+* **`G`**: `VerdictCtxU p` for `class_stream_recs` (`ccv_ref`'s); `CtsG p` (`VerdictCtxU` and
+  `whnf_top`'s `WhnfTopE`) for the two telescope checks. `indArmSpecE_of` (`IndArmTopE`) takes
+  `WhnfTopE` instead of `WtE`; `CcvE` left the hypotheses of `grpE_claim`, `genRecCheckPrep_claim`,
+  `genRecCheck_claim'`, `genRecCheckE_of` (still used by `checkSumCtorsE_of`, `IndBSum3/4`).
+* **Callers keep their statements**: the `@[refines]` theorems (`RefE.triple`), `CheckSumTeleE`
+  (the `err_stmt` the block checks read; `checkSumTeleE_of` is `RefE.run_err` with `hG : CtsG p`),
+  `classStreamRecs_claim` (`RefE.coreSpecE`; `IndBGrp`'s one call site passes `VerdictCtxU`).
+* **Placement**: `csr_ref` in `Arena/IndT/StreamRecs`, `cts_ref`/`ct_ref` in `Arena/IndT/Sum2` (with
+  the lookup bundles `CtsProg`, `CtProg` over `WtProg`); `Verdict/IndBSum2` keeps `CcvE`.
+* **Recipes**: `simp []` for `ctsE` (`finish` fails; `simp [rdW]`, `simp [Cmp.evalW, Cmp.eval]`
+  slightly slower), the default `finish` for `ctE` (`Sum2` 3.8 s against 4.3–4.5 s with `simp []`),
+  `simp [Cmp.evalW, Cmp.eval]` for `csrE` (all recipes 1.4–1.6 s).
+
+Elaboration (as §3.18, `_tmp/unify-b3a/sum-times1.txt`, `sum-times2.txt`; load 21–54):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndT/Sum2` | 1.81 | **3.33** | **slower (+1.5 s)**: `ctsE`, `ctE`, `cts_ref`, `ct_ref` moved in … |
+| `Verdict/IndBSum2` | 3.54 | 0.50 | … from here |
+| `IndSumSpec/WtW`, `CtsW`, `CtsK5`, `Verdict/IndBWt` (deleted) | 3.12 | — | |
+| `Arena/IndT/StreamRecs` | 0.93 | **1.43** | **slower (+0.5 s)**: `csrE`, `csr_ref` moved in … |
+| `Verdict/IndBStream` | 1.50 | 0.63 | … from here |
+| `RecGenSpec/ClassMinorSlot` | 6.66 | 4.20 | `csrW` and its spec gone |
+| `IndSumSpec/DecCVpGrow`, `StructProjArgP` | 13.77 | 11.91 | |
+| `Install3`, `Sum1`, `IndArmE`, `IndArmTopE`, `IndBGrp` | 14.08 | 13.55 | |
+| **sum** | **45.7** | **36.7** | **−20 %** |
+
+Both flagged modules are the new homes of models whose old modules got faster by more.
+
+Batch 3a in all: 7 functions, one model and one refinement each; pairs 891 + 726 = 1 617 →
+435 + 382 = 817 (−49 %); no kit or generator change needed. Not taken, outside §3.1's inventory
+and the batch's families: the knot's own split functions in `DefEqLazyE`, `DefEqSpineE`,
+`DefEqQuickE`, `DefEqEagerE`, `WhnfModels3E`, `InferKnotE`, `InferLeavesE` (ok halves the knot's
+`CoreSpec` slots and `KnotTagged`), the `infer_lams`/`infer_pis` family (`InferBindE`, in the
+inventory at depth 0, unowned), and phase B's `check_pending_go`/`_next` (a twin that reports
+failures as values, like phase A's `install_fold_go`; with the spine, batch 4).
