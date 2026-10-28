@@ -30,12 +30,14 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+-- `finish (gen := 20)`: the generation depth (the default 8 leaves four paths open; `simp […]`
+-- passes too, about 1 s slower)
 l_model tkhE_spec (p : Prog) (hL : K53Look p)
   fns [hL.tkh ↦ tkhE]
   specs [gafF_spec p hL.ad n, gaaF_spec p hL.ad n, eView_spec p hL.hv n, tkaE_spec p hL n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  finish [] gen 20 heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model tkE_spec (p : Prog) (hL : K53Look p)
