@@ -328,32 +328,37 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (m2cCtor_ref p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
       mode d ro _ major hm4 hebm hmaj rl cvj cnP cnF m1 _ M1 hS1 (by rw [e1]; exact hrl) hciE)
 
-/-- **`major_to_ctor` refines `majorToCtor`** (the callees' specs as hypotheses; `m2c_head`'s
-run through `m2cHead_ref`). -/
-theorem majorToCtor_refines' : MajorToCtorOK p := by
-  intro n hk F hnF s₀ a₀ dn vis fe MM eb mode d rec ro rc major rules hn62 hS hm4 hebm hmaj hr
-  refine triple_post (majorToCtor_spec p hp.majorToCtor n s₀ mode vis d rec ro rc major) fun r s'
-    ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  simp only [mtcW] at hW
+/-- **`major_to_ctor` refines `majorToCtor`, both outcomes** (the top put back): `m2c_head`'s
+(`m2cHead_ref`). -/
+theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb mode d rec ro rc major : Word)
+    (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hmaj : HW major) (rules : List IRecRule)
+    (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
+    (hr : decRules (m.arr64 EREC) ro.toNat rc.toNat = some rules) :
+    RefE (M2CCtxE p n) (mtcE p (n + 1) m mode vis d rec ro rc major)
+      (majorToCtor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
+        (decE major)) a (CorePost decH dn m vis fe M eb ResH) := by
+  simp only [mtcE]
   cases n with
-  | zero => rw [callW_zero] at hW; cases hW
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ N =>
-  rcases c1 : callW p (N + 1) "m2c_head" [mode, vis, d, ro, rc, major] s₀.mem with _ | ⟨r1, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
-  obtain ⟨ok1, ⟨M1, hS1, hK1, hg1⟩, res1, hr1⟩ := RefE.growRefW
-    (m2cHeadE_spec p hp.toM2CProg (N + 1) ⟨s₀.mem, Locals.init []⟩ mode vis d ro rc major)
+  rw [majorToCtor_eq]
+  exact RefE.tail_eq (k := mtcE.k_m2c_head p (rdW (m.arr64 CTL) 136)) (fun _ => rfl) (fun _ => rfl)
+    (fun h => h.mono (Nat.le_succ _)) rfl
+    (fun v y a' h => by
+      obtain ⟨M', hS', hK', hg⟩ := h.after
+      exact ⟨⟨M', hS'.frame_stk (MemFrame.setCtl _ _ _) (by simp) (by simp), hK',
+        StackKept.restoreG' hg⟩, h.res, h.valid⟩)
     (m2cHead_ref p hp hc hpi hE hcc N F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
-      mode d ro rc major hm4 hebm hmaj rules s₀.mem a₀ MM hS hr) c1
-  by_cases h136 : 136 < (m1.arr64 CTL).size
-  · rw [ite_eq_left h136] at hW
-    obtain ⟨hr0, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    rw [majorToCtor_eq]
-    refine ⟨ok1, ⟨M1, ?_, hK1, ?_⟩, ?_, ?_⟩
-    · rw [← hm]; exact hS1.frame_stk (MemFrame.setCtl m1 136 _) (by simp) (by simp)
-    · rw [← hm]; exact StackKept.restoreG hg1 h136
-    · rw [res1]; unfold decH; rw [hr0]
-    · unfold ResH at hr1 ⊢; rw [← hr0]; exact hr1
-  · rw [ite_eq_right h136] at hW; cases hW
+      mode d ro rc major hm4 hebm hmaj rules m a M hS hr)
+
+/-- **`major_to_ctor` refines `majorToCtor`** (the callees' specs as hypotheses): `mtc_ref`'s ok
+half. -/
+theorem majorToCtor_refines' : MajorToCtorOK p :=
+  fun n hk F hnF s₀ a₀ dn vis fe MM eb mode d rec ro rc major rules hn62 hS hm4 hebm hmaj hr =>
+    RefE.coreSpec (mtcE_spec p hp.toM2CProg hp.majorToCtor (n + 1) s₀ mode vis d rec ro rc major)
+      (mtc_ref p hp hc hpi hE hcc n F hk hnF hn62 dn vis fe eb mode d rec ro rc major hm4 hebm hmaj
+        rules s₀.mem a₀ MM hS hr)
 
 end top
 

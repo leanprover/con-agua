@@ -5,11 +5,13 @@ import Std.Tactic.BVDecide.Normalize.Prop
 /-!
 # `apply_decl` refines con-ron's `processLineCoreD`
 
-`applyDeclW_refines`: if `apply_decl`'s model succeeds on fields `f` that con-leche's scanner
-relates to the declaration record `d` (`DeclR`, `DeclIface.lean`), then con-ron's
+`declCvW_refines`: if the record `apply_decl` writes (`declCvW`, after `decl_kind`'s `(k, q)`)
+succeeds on fields `f` that con-leche's scanner relates to the declaration record `d` (`DeclR`,
+`DeclIface.lean`), then con-ron's
 `applyLine st (.decl d)` is `pure (.inl st')` (no interning, no verdict), the memory after is
 related to the same arena state by `ArenaD` and to `st'` by `StateDR`: the record is appended to
-`DECL`, its universe parameter names to `DLP` (`DeclsF`, `StateDR.lean`).
+`DECL`, its universe parameter names to `DLP` (`DeclsF`, `StateDR.lean`). `apply_decl`'s
+refinement for both outcomes (`applyDecl_ref`) is in `ApplyDLineRef.lean`.
 -/
 
 open Std.WP
@@ -419,45 +421,28 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
       exact ⟨by rw [w0], hCV, by rw [w5, hve]⟩
     · exact ⟨by rw [w0], hCV, by rw [w6]⟩
 
-theorem declKindW_some (pl hk hn flag k q : Word) (h : declKindW pl hk hn flag = some (k, q)) :
-    (pl = 20 ∧ flag = 0 ∧ k = 1) ∨
+/-- What `decl_kind` returns, `(k, q)`, on a successful run: the kind of the record and its hint
+word, by the line's kind `pl` (`declKind_ref`'s ok half). -/
+def DeclKindOk (pl hk hn flag k q : Word) : Prop :=
+  (pl = 20 ∧ flag = 0 ∧ k = 1) ∨
     (pl = 21 ∧ flag = 1 ∧ k = 2 ∧ q = hk ∧ hk ≠ 0 ∧ hk ≤ 3 ∧ ¬ (hk = 3 ∧ hn = NONE)) ∨
     (pl = 22 ∧ k = 3) ∨ (pl = 23 ∧ flag = 0 ∧ k = 4) ∨
-    (pl = 24 ∧ k = 5 ∧ q = flag ∧ flag ≠ 0 ∧ flag ≤ 4) := by
-  unfold declKindW at h
-  split at h
-  · split at h <;> simp_all
-  split at h
-  · split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h; simp_all
-    · cases h
-  split at h
-  · simp_all
-  split at h
-  · split at h <;> simp_all
-  split at h
-  · split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h; simp_all
-    · cases h
-  · cases h
+    (pl = 24 ∧ k = 5 ∧ q = flag ∧ flag ≠ 0 ∧ flag ≤ 4)
 
-/-- **`apply_decl`'s model refines con-ron's declaration step**: on fields `f` that con-leche's
-scanner relates to the declaration record `d` (`DeclR`), a successful `apply_decl` is
-`applyLine st (.decl d) = pure (.inl st')` (no interning, no verdict), with `ArenaD` of the same
-arena state and `StateDR m' st'`. -/
-theorem applyDeclW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD)
-    (hA : ArenaD m a₀) (hD : StateDR m st) (f : DFld) (d : DeclRec) (hE : DeclR b d f)
-    (h : applyDeclW b.data m f.pl f.name f.lps f.type f.value f.hk f.hn f.flag = some m') :
+theorem DeclKindOk.k5 {pl hk hn flag k q : Word} (h : DeclKindOk pl hk hn flag k q) :
+    k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 := by
+  rcases h with ⟨-, -, h⟩ | ⟨-, -, h, -⟩ | ⟨-, h⟩ | ⟨-, -, h⟩ | ⟨-, h, -⟩ <;> simp [h]
+
+/-- **The record `apply_decl` writes refines con-ron's declaration step**: on fields `f` that
+con-leche's scanner relates to the declaration record `d` (`DeclR`), with `decl_kind`'s `(k, q)`,
+a successful `declCvW` is `applyLine st (.decl d) = pure (.inl st')` (no interning, no verdict),
+with `ArenaD` of the same arena state and `StateDR m' st'` (the ok half of `applyDecl_ref`). -/
+theorem declCvW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD)
+    (hA : ArenaD m a₀) (hD : StateDR m st) (f : DFld) (d : DeclRec) (hE : DeclR b d f) {k q : Word}
+    (hks : DeclKindOk f.pl f.hk f.hn f.flag k q)
+    (h : declCvW b.data m k q f.name f.lps f.type f.value f.hn = some m') :
     ∃ st', applyLine st (.decl d) = pure (.inl st') ∧ ArenaD m' a₀ ∧ StateDR m' st' := by
-  unfold applyDeclW at h
-  cases hK : declKindW f.pl f.hk f.hn f.flag with
-  | none => rw [hK, declK0_none] at h; cases h
-  | some kq =>
-  obtain ⟨k, q⟩ := kq
-  rw [hK, declK0_some] at h
-  have hks := declKindW_some _ _ _ _ _ _ hK
-  have hk5 : k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 := by
-    rcases hks with ⟨-, -, h⟩ | ⟨-, -, h, -⟩ | ⟨-, h⟩ | ⟨-, -, h⟩ | ⟨-, h, -⟩ <;> simp [h]
+  have hk5 := hks.k5
   cases d with
   | ax cv u =>
     obtain ⟨hpl, hcv, hfl⟩ := hE
@@ -533,16 +518,5 @@ theorem applyDeclW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : St
     have hpl : f.pl = 25 := hE.1
     rcases hks with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ <;>
       (rw [hpl] at h1; exact absurd h1 (by decide))
-
-/-- The same in `AM` terms: `applyLine st (.decl d)` succeeds from `a₀`, leaves the arena state
-alone and gives the parse state `st'`. -/
-@[refines_part ConRon.Arena.Frontend.processLineCoreD "axiom, def, thm, opaque, quot"]
-theorem applyDeclW_refinesAM (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD)
-    (hA : ArenaD m a₀) (hD : StateDR m st) (f : DFld) (d : DeclRec) (hE : DeclR b d f)
-    (h : applyDeclW b.data m f.pl f.name f.lps f.type f.value f.hk f.hn f.flag = some m') :
-    ∃ st', AM.ok (applyLine st (.decl d)) a₀ ∧ (applyLine st (.decl d)).run a₀ = .ok (.inl st', a₀) ∧
-      AM.st (applyLine st (.decl d)) a₀ = a₀ ∧ ArenaD m' a₀ ∧ StateDR m' st' := by
-  obtain ⟨st', hp, hA', hD'⟩ := applyDeclW_refines b m m' a₀ st hA hD f d hE h
-  exact ⟨st', by rw [hp]; trivial, by rw [hp]; rfl, by rw [hp]; rfl, hA', hD'⟩
 
 end L.Front

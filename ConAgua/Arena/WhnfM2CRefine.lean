@@ -162,26 +162,6 @@ theorem majorToCtor_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (
 
 Each piece's run as a function of the memory, its callees through `callW` (`WhnfBase.lean`). -/
 
-/-- Model of `major_to_ctor`. -/
-def mtcW (p : Prog) (n : Nat) (m : Mem) (mode vis d ro rc major : Word) : Option (Word × Mem) :=
-  match callW p n "m2c_head" [mode, vis, d, ro, rc, major] m with
-  | none => none
-  | some (r, m₁) =>
-    if 136 < (m₁.arr64 CTL).size then some (r.headD 0, m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136))
-    else none
-
-theorem majorToCtor_spec (p : Prog) (hp : p.lookup "major_to_ctor" = some majorToCtorL) (n : Nat)
-    (s₀ : St) (mode vis d rec ro rc major : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "major_to_ctor" [mode, vis, d, rec, ro, rc, major]
-    ⦃fun r s' => LocEq s' s₀ ∧ mtcW p n s₀.mem mode vis d ro rc major = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, majorToCtorL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-    callW_spec p n "m2c_head"] <;>
-  simp_all [mtcW, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
-    Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, rdW, CTL] <;>
-  (congr 1; rw [Array.getElem?_eq_getElem]; rfl)
-
 /-- Model of `m2c_const_view`. -/
 def cvwW (m : Mem) (hh : Word) : Option (List Word) :=
   if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none

@@ -52,7 +52,7 @@ include h64 hsize
 
 theorem lineKW_step_pre (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (i : USize) (ok nx : Word) (st : StateD)
+    (hXI : DLineLookups p) (m m' : Mem) (i : USize) (ok nx : Word) (st : StateD)
     (a : AState) (hI : FrontInvP D b m a st) (_hi : i < b.usize)
     (h : lineKW p b.data m i.toUInt64 = some (ok, nx, m'))
     (hok : ok ≠ 0) : LineStepI (FrontInvP D b) b i nx st a m' := by

@@ -325,7 +325,7 @@ include h64 hsize
 
 theorem lineKW_step_ok (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (i : USize) (ok nx : Word) (st : StateD)
+    (hXI : DLineLookups p) (m m' : Mem) (i : USize) (ok nx : Word) (st : StateD)
     (a : AState) (hI : FrontInvOK D b m a st) (hi : i < b.usize)
     (h : lineKW p b.data m i.toUInt64 = some (ok, nx, m'))
     (hok : ok ≠ 0) : LineStepI (FrontInvOK D b) b i nx st a m' := by
@@ -372,7 +372,7 @@ theorem initKW_inv_ok : ∀ (m m₁ : Mem) (a : AState),
 /-- **The driver's model refines `parseBytes`, after the prelude, with the records' words.** -/
 theorem frontRunW_refines_pre_ok (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
+    (hXI : DLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
     (hA : ArenaD m a₀) (hD : StateDR m (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
     (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
     (hR : ∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) (hmo : ModeOK m)
@@ -407,12 +407,12 @@ theorem frontAll_refines_pre_ok (b : ByteArray) (h64 : System.Platform.numBits =
     (frontRun_specI frontAllProg (lineKW frontAllProg b.data) b.data
       (fun m => ∃ a st, FrontInvOK D b m a st)
       (fun n s₁ i hm hI hi => frontLineK_spec frontAllProg frontAllProg_scan frontAllProg_front rfl
-        rfl rfl rfl rfl rfl frontAllProg_expr frontAllProg_dfields frontAllProg_decl rfl
+        rfl rfl rfl rfl rfl frontAllProg_expr
         b.data hsize _
         (fun m ⟨_, _, hI⟩ => ⟨hI.1.2.1.1.lit.1.cap, hI.1.2.1.1.lit.1.top⟩)
         (inv_step frontAllProg (FrontInvOK D b) b h64 hsize
           (fun m m' i ok nx st a hI hi h hok => lineKW_step_ok D b h64 hsize frontAllProg
-            frontAllProg_indFields frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine
+            frontAllProg_indFields frontAllProg_indApply frontAllProg_indInstall frontAllProg_dline
             m m' i ok nx st a hI hi h hok)) n s₁ i hm hI hi)
       initKW s₀.mem (fun n s₁ hs₁ => initK_inv frontAllProg frontAllProg_front frontAllProg_expr rfl
         (FrontInvOK D b) _ (initKW_inv_ok D b) s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins, hR, hmode⟩
@@ -420,7 +420,7 @@ theorem frontAll_refines_pre_ok (b : ByteArray) (h64 : System.Platform.numBits =
   rw [h0] at hW
   obtain ⟨st', a', h1, ⟨-, h2, h3, h4, hM⟩, h5, -⟩ :=
     frontRunW_refines_pre_ok D b h64 hsize frontAllProg frontAllProg_indFields frontAllProg_indApply
-      frontAllProg_indInstall frontAllProg_indLine s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hR hmode hW
+      frontAllProg_indInstall frontAllProg_dline s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hR hmode hW
   exact ⟨st', a', h1, h2, h3, h4, hM, h5⟩
 
 /-- **The same at the checker's program** (`checkerProg_front_run`). -/
