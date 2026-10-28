@@ -1,6 +1,5 @@
 import ConAgua.Verdict.DeclTopE
 import ConAgua.Verdict.KnotAllE
-import ConAgua.Verdict.DeclPendE
 import ConAgua.Verdict.CheckBE
 import ConAgua.Verdict.FrontStageE
 import ConAgua.Final.ThreadsVerdict
@@ -14,10 +13,11 @@ programs phase A runs (`IndArmVerdict`, the shape `indArmSpec_checker` has on th
 * Entry 1 (`entry1Verdict_of`): the prelude and the frontend by `checker_preludeStageE`,
   `checker_frontStageE`; the fold by `foldStageE_checker`, the error half of
   `foldStage_checker`: the run at `checkerProg` is the run at the substituted program
-  (`invoke_subPB`, errors included), where `installFoldGo_errTop` at the loop's start
-  (`loop_start`) gives phase A's failure, and `TwinVerdict.fold` the pipeline's.
-* Entry 2 (`entry2Verdict_of`) and the threads' `CPVerdict`: `checkPending_errT` at the
-  substituted program (no inductive arm in phase B).
+  (`invoke_subPB`, errors included), where `fold_ref`'s error half at the loop's start
+  (`loop_start`, its `IstgG` by `istgG_of`) gives phase A's failure, and `TwinVerdict.fold` the
+  pipeline's.
+* Entry 2 (`entry2Verdict_of`) and the threads' `CPVerdict`: `check_pending`'s `CpG` at the
+  substituted program (`cpG_proved`; no inductive arm in phase B).
 -/
 
 set_option experimental.vcgen true
@@ -92,11 +92,13 @@ theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (sz : Tiered
   have hDG := divGateSpecE_of hLC.cd.dm hLC.knot hLC.leaf hLC.cd.dgClosed
     (substC0_of hLC.cd.natSub.toNatSubProg)
     (substCAll_of ⟨hLC.cd.natSub.toNatSubProg, hLC.cd.dm.lSubstConstAll⟩) hkp hcE hnv ipins
-  have hgo := (installFoldGo_errTop ipins (dnOf sE.store) ds _ hLC hcE
-    (hia _ hr h7.since.pbpre _ hdn hQd) hDG hnv (checkerProg_uceLookupsPB _)
-    (frontDecls_of_prefix hpx) (declsLpsDn_dnOf hT.pd hT.den) hP.pp hP.pn hP.ps hP.pi hP.pd hP.pg
-    hP.px hsz hP.bracket n hn).1
-  have hF := hgo s.mem sE 0 cnt 0 (mkIFEnv IEnv.empty) #[] (by simp) hcnt' hT hR hM hc hIM e hcall hk
+  have hG := istgG_of ipins (dnOf sE.store) ds _ hLC hcE (hia _ hr h7.since.pbpre _ hdn hQd) hDG hnv
+    (checkerProg_uceLookupsPB _)
+  have hF := RefC.run_err (installFoldGo_specE _ hP.pg n ⟨s.mem, Locals.init []⟩ 0 cnt 0)
+    (fun _ h0 => ErrClaimV.of_cls0 h0) trivial hG
+    ((fold_ref .verified ipins (dnOf sE.store) ds _ hP.pp hP.pn hP.ps hP.pi hP.pd hP.pg hP.px hsz
+      hP.bracket hLC rfl (frontDecls_of_prefix hpx) (declsLpsDn_dnOf hT.pd hT.den) n hn).1
+      s.mem sE 0 cnt 0 (mkIFEnv IEnv.empty) #[] (by simp) hcnt' hT hR hM hc hIM) hcall hk
   simp only [UInt64.toNat_zero, List.drop_zero] at hF
   exact TwinVerdict.fold hA hB hC hD hE hF
 
@@ -105,22 +107,22 @@ theorem entry1Verdict_of_ind (hia : IndArmVerdict) : Entry1Verdict checkerProg :
   entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE,
     fun b pb sz hin n hn s₀ cnt => foldStageE_checker hia b pb sz hin n hn s₀ cnt⟩
 
-/-- **`check_pending`'s error claim at the programs phase B runs** (`CPVerdict`): proved, no
+/-- **What `check_pending`'s error arms assume, at the programs phase B runs**: proved, no
 hypothesis. -/
-theorem cpVerdict_proved : CPVerdict := by
-  intro bs dn _hr _hpre _hdn _hQd hP pins ds fe pend
+theorem cpG_proved (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg)) :
+    CpG (Prog.subPB bs checkerProg) := by
   have hnv := checkerProg_nvPB bs
   have hU : UceProg (Prog.subPB bs checkerProg) :=
     ⟨checkerProg_uceLookupsPB bs, strLitSupported_core _ hP.knot.knot.str⟩
-  have hivE : IvgE (Prog.subPB bs checkerProg) := ivgE_okT hP.cvg hP.apd hP.crk hnv hU
-  exact checkPending_errT .verified pins dn ds _ fe pend rfl hP (checkerProg_coreStubsEPB bs) hivE
-    hnv
-    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
-    (fun _ _ _ _ h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) _ _ _ h)
+  exact ⟨hnv, checkerProg_coreStubsEPB bs, ivgE_okT hP.cvg hP.apd hP.crk hnv hU⟩
+
+/-- **`check_pending`'s error claim at the programs phase B runs** (`CPVerdict`). -/
+theorem cpVerdict_proved : CPVerdict := fun bs dn _ _ _ _ hP pins ds fe pend =>
+  checkPending_errT .verified pins dn ds _ fe pend hP rfl (cpG_proved bs hP)
 
 /-- **The sequential driver's verdict claims** from the inductive arm's. -/
 theorem seqVerdicts_of (hia : IndArmVerdict) : SeqVerdicts checkerProg :=
-  ⟨entry1Verdict_of_ind hia, entry2Verdict_of cpVerdict_proved⟩
+  ⟨entry1Verdict_of_ind hia, entry2Verdict_of cpG_proved⟩
 
 /-- **The threaded harness's verdict claims** from the inductive arm's. -/
 theorem threadVerdicts_of (hia : IndArmVerdict) : ThreadVerdicts :=

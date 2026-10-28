@@ -48,7 +48,7 @@ theorem installFoldGo_phaseA (mode : ConLeche.CheckMode) (pins : List INatOpPinS
       PhaseBStart pins dn ds fe pend s'.mem a' (r.headD 0); ⊤⦄ := by
   have hsz : ds.size < 2 ^ 63 := by have := hR.decls.dsize; have := hR.decls.room; omega
   refine triple_post ((installFoldGo_refines mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc
-    hm hFD hLD n hn).1 s₀ a₀ 0 cnt 0 (mkIFEnv IEnv.empty) #[] (by simp) hcnt hT hR hM hc hIM) ?_
+    hm hFD hLD n hn) s₀ a₀ 0 cnt 0 (mkIFEnv IEnv.empty) #[] (by simp) hcnt hT hR hM hc hIM) ?_
   intro r s' ⟨hl, h⟩
   simp only [FoldPost, UInt64.toNat_zero, List.drop_zero] at h
   obtain ⟨h1, h2, h3, h4, h5⟩ := h

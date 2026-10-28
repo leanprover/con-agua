@@ -421,32 +421,6 @@ theorem installStepK_some (i v nt : Nat) (pend : Array PendingCheck) (r : IFEnv 
     (vg : ValueGroup) (h : r.2 = some vg) : installStepK i v nt pend r = isSomeT i v nt r.1 pend vg := by
   simp [installStepK, h]
 
-/-- `installStep` from its pieces, in `AM.ok`/`AM.st`/`AM.res` terms. -/
-theorem installStep_ok (i : Nat) (fe : IFEnv) (pend : Array PendingCheck) (pd : IDeclaration)
-    (a0 : AState) (h1 : AM.ok flushCaches a0) (h2 : AM.ok enterScratch (AM.st flushCaches a0))
-    (h3 : AM.ok (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) (h4 : AM.ok (installStepK i fe.visibleBelow fe.env.tables.length pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) :
-    AM.ok (installStep mode pins i fe pend pd) a0 ∧ AM.st (installStep mode pins i fe pend pd) a0 = AM.st (installStepK i fe.visibleBelow fe.env.tables.length pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) ∧ AM.res (installStep mode pins i fe pend pd) a0 = AM.res (installStepK i fe.visibleBelow fe.env.tables.length pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) := by
-  have r1 := AM.run_of_ok _ _ h1
-  have r2 := AM.run_of_ok _ _ h2
-  have r3 := AM.run_of_ok _ _ h3
-  have r4 := AM.run_of_ok _ _ h4
-  apply AM.of_run_ok
-  rw [installStep_eq]
-  simp only [StateT.run_bind, exc_ok_bind, r1, r2, r3, r4]
-
-/-- `installDeclStep` from its pieces (the `And` pin passed, the step went through). -/
-theorem installDeclStep_ok (p : Nat × IFEnv × Array PendingCheck) (pd : IDeclaration) (a0 : AState)
-    (h1 : AM.ok (andPinOk pd) a0) (hb : AM.res (andPinOk pd) a0 = true)
-    (h2 : AM.ok (installStep mode pins p.1 p.2.1 p.2.2 pd) (AM.st (andPinOk pd) a0)) :
-    AM.ok (installDeclStep mode pins p pd) a0 ∧ AM.st (installDeclStep mode pins p pd) a0 = AM.st (installStep mode pins p.1 p.2.1 p.2.2 pd) (AM.st (andPinOk pd) a0) ∧
-    AM.res (installDeclStep mode pins p pd) a0 = .ok (p.1 + 1, (AM.res (installStep mode pins p.1 p.2.1 p.2.2 pd) (AM.st (andPinOk pd) a0)).1, (AM.res (installStep mode pins p.1 p.2.1 p.2.2 pd) (AM.st (andPinOk pd) a0)).2) := by
-  have r1 := AM.run_of_ok _ _ h1
-  rw [hb] at r1
-  have r2 := AM.run_of_ok _ _ h2
-  apply AM.of_run_ok
-  simp only [installDeclStep, StateT.run] at r1 r2 ⊢
-  rw [r1]; simp only; rw [r2]
-
 /-- `installFold` past a successful step. -/
 theorem installFold_cons (p p' : Nat × IFEnv × Array PendingCheck) (d : IDeclaration)
     (rest : List IDeclaration) (a0 : AState)
@@ -476,23 +450,6 @@ theorem installFold_nil_ok (p : Nat × IFEnv × Array PendingCheck) (a0 : AState
     AM.ok (installFold mode pins p []) a0 ∧ AM.st (installFold mode pins p []) a0 = a0 ∧
     AM.res (installFold mode pins p []) a0 = .ok p :=
   AM.of_run_ok _ _ _ _ rfl
-
-theorem checkPending_ok (fe : IFEnv) (pc : PendingCheck) (a0 : AState)
-    (h1 : AM.ok enterScratch a0)
-    (h2 : AM.ok (checkValueGroup mode (fe.restrictTo pc.vis) pc.vg) (AM.st enterScratch a0))
-    (h3 : AM.ok dropScratch
-      (AM.st (checkValueGroup mode (fe.restrictTo pc.vis) pc.vg) (AM.st enterScratch a0))) :
-    AM.ok (checkPending mode fe pc) a0 ∧ AM.st (checkPending mode fe pc) a0 =
-      AM.st dropScratch
-        (AM.st (checkValueGroup mode (fe.restrictTo pc.vis) pc.vg) (AM.st enterScratch a0)) := by
-  have r1 := AM.run_of_ok _ _ h1
-  have r2 := AM.run_of_ok _ _ h2
-  have r3 := AM.run_of_ok _ _ h3
-  have := AM.of_run_ok (checkPending mode fe pc) a0
-    (AM.st dropScratch
-      (AM.st (checkValueGroup mode (fe.restrictTo pc.vis) pc.vg) (AM.st enterScratch a0))) ()
-    (by simp only [checkPending, StateT.run_bind, exc_ok_bind, r1, r2, r3])
-  exact ⟨this.1, this.2.1⟩
 
 theorem checkPendingList_cons_ok (fe : IFEnv) (pc : PendingCheck) (rest : List PendingCheck)
     (a0 : AState) (h1 : AM.ok (checkPending mode fe pc) a0)
@@ -590,28 +547,6 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
         (promoteNew_spec pins dn ds p hb.pr n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
         (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) v2 (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
       finish [isSomeT]
-
-theorem pend_words (m : Mem) (pend : Array PendingCheck) (hP : PendR m pend) (j : Word)
-    (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62) :
-    (∀ (h : (3 * j).toNat < (m.arr64 PEND).size),
-      decVG (erecP m) ((m.arr64 PEND)[(3 * j).toNat]).toNat = some (pdAt pend j).vg) ∧
-    (∀ (h : (3 * j + 2).toNat < (m.arr64 PEND).size),
-      ((m.arr64 PEND)[(3 * j + 2).toNat]).toNat = (pdAt pend j).vis) := by
-  have hr := hP.recs j.toNat hj
-  have e0 : (3 * j).toNat = 3 * j.toNat := by rw [UInt64.toNat_mul]; simp; omega
-  have e2 : (3 * j + 2).toNat = 3 * j.toNat + 2 := by rw [UInt64.toNat_add, e0]; simp; omega
-  have hpd : pdAt pend j = pend[j.toNat] := by simp [pdAt, hj]
-  simp only [decPend, nat?, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
-    Option.map_eq_some_iff] at hr
-  obtain ⟨g, ⟨w0, hw0, rfl⟩, vg, hvg, x, ⟨w1, hw1, rfl⟩, y, ⟨w2, hw2, rfl⟩, he⟩ := hr
-  rw [hpd, ← Option.some.inj he]
-  refine ⟨fun h => ?_, fun h => ?_⟩
-  · simp only [e0] at h ⊢
-    have : (m.arr64 PEND)[3 * j.toNat] = w0 := by simpa [h] using hw0
-    rw [this]; exact hvg
-  · simp only [e2] at h ⊢
-    have : (m.arr64 PEND)[3 * j.toNat + 2] = w2 := by simpa [h] using hw2
-    rw [this]
 
 section phaseB
 variable (fe : IFEnv) (pend : Array PendingCheck)
