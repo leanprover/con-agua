@@ -1340,7 +1340,7 @@ migrated): `target_major_of_const`, `target_major_of`, `class_majors` (this land
 `classMajors_refinesC` keeps its statement (`RefE.triple`, 27 → 29 lines). Gone with them: the
 hand models `tmcW`/`tmcK1–2`, `tmfW`/`tmfK1–3`/`tmfK6` with their arms and specs `tmc_spec`,
 `tmf_spec` (`Arena/RecGenSpec/Tmc`), the generated ok model `clmW` and `clm_spec`
-(`Arena/RecGenSpec/Clm`), the `errors` models. Whole diff against master d4f85701: +327 −987 in 11
+(`Arena/RecGenSpec/Clm`), the `errors` models. Whole diff against master d4f85701: +324 −988 in 11
 files.
 
 * **`G`**: `closedNV p nvFns = true` for `target_major_of_const` and `target_major_of` (every callee
