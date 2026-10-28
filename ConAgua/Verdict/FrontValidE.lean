@@ -1,11 +1,13 @@
-import ConAgua.Verdict.FrontRunE
+import ConAgua.Front.FrontPreOK
+import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Final.TwinVerdict
 import ConAgua.L.ModelGen
 /-!
-# `validate_ind_d`'s error half at the driver's program
+# The front's error arms' assumptions at the driver's program
 
-`validate_ref`'s error half (`IndApplyRefine9.lean`) read from a failing run: `ValidateClaim`
-(`FrontRunE.lean`) at `frontAllProg`, at the twin facts `XV` every state of the driver has
-(`xOfTwin`).
+`apply_ind`'s error arms (`applyInd_ref`, `FrontPreOK2.lean`) assume `ApplyIndG`: the twin facts
+`XV` (`validate_ref`'s), which every state of the driver has (`xOfTwin`), and the no-verdict
+closure of `frontAllProg` (`frontAllProg_nv`).
 -/
 
 open ConRon.Arena ConRon.Arena.Frontend L.Arena
@@ -62,18 +64,11 @@ theorem xOfTwin : ∀ (D : Array IDeclaration) (a : AState) (st : StateD), L.Fro
     XV (st.pre D) a := fun D _a _st hT =>
   ⟨fun i h hg => names_read_of_twin hT i h hg, namesReadR_of_twin hT D, viewReadR_of_ok hT.1⟩
 
-
 prog_all frontAllProg_nvChk : frontAllProg (L.nvChk L.Checker.nvTree)
 
 /-- **The functions outside the verdict closure claim nothing in `frontAllProg`** either (the
 unified models' lifted callees). -/
 theorem frontAllProg_nv : closedNV frontAllProg L.Checker.nvFns = true :=
   closedNV_of_all L.Checker.nvTree.eq frontAllProg_nvChk
-
-/-- **`validate_ind_d`'s claim at `frontAllProg`** (`ValidateClaim`, at the twin facts `XV`). -/
-theorem validateClaim_frontAll : ValidateClaim frontAllProg XV :=
-  fun _ n m _ _ to tn co cn ro rn _ _ _ _ hR hD hok hT hF hIFR hX hc =>
-    RefC.run_err (validate_specE frontAllProg frontAllProg_indApply n ⟨m, Locals.init []⟩ to tn co cn ro rn)
-      (fun _ h0 h => absurd h0 h) frontAllProg_nv hX (validate_ref hR hD hok hT hF hIFR frontAllProg n) hc
 
 end L.Front.Ind
