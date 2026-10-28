@@ -1,5 +1,4 @@
 import ConRon.Arena.Inductives.RecCheck
-import ConAgua.Arena.Refine
 
 /-!
 # PdsC
@@ -7,15 +6,10 @@ import ConAgua.Arena.Refine
 `tpClosed`, `tpRest`, `tpStep`, `ite_bind'`, `tpd_cons`, `tpd_nil`, `tpd_nilr`, `word_lt_iff`.
 -/
 
-set_option experimental.vcgen true
-
 open ConRon.Arena
-open Std.WP
 open scoped Lean.Order
 
 namespace L.Ind
-
-open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
@@ -69,6 +63,6 @@ theorem tpd_nilr (fe : IFEnv) (d : Nat) (names : List NIdx) (lvls : LsIdx) (hole
     (a : EIdx) (as : List EIdx) :
     ConRon.Arena.targetParamsDefEq V fe d names lvls holes pfvs (a :: as) [] = pure false := rfl
 
-theorem word_lt_iff {a b : Word} : a < b ↔ a.toNat < b.toNat := UInt64.lt_iff_toNat_lt
+theorem word_lt_iff {a b : UInt64} : a < b ↔ a.toNat < b.toNat := UInt64.lt_iff_toNat_lt
 
 end L.Ind
