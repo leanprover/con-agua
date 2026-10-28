@@ -1679,3 +1679,77 @@ No kit change was needed.
 
 Batch 3b in all (3 landings): `target_major_of*` and `class_majors` 869 → 358 pair lines, the
 class rules and recursor types 965 → 501, `target_k53*` 953 → 425: 2 787 → 1 284 (−54 %).
+
+### 3.21 Batch 3c, front validation (`validate_ind_d` and its callees)
+
+The front-validation family of §3.1 that no batch-2 lane took (`Verdict/FrontOrderE`,
+`FrontRecsE`, `FrontValidE`; the leaves `vi_unsafe`, `vi_np_go`, `vi_ctor`, `vi_rec_idx` are
+§3.11's): depth 1 `vi_nparams`, `vi_order_in`, `vi_rec`; depth 2 `vi_order_go`, `vi_recs_go`;
+depth 3 `vi_order`, `vi_recs`; depth 4 `vi_tail`; depth 5 `validate_ind_d`. All nine have unified
+models now. Their twin is one function, `validateIndD`, which reports failures as values (a record
+verdict), so each refinement is a `RefC` (as the leaves'): the ok half a fact about the twin's
+checks (`CtorOK`, `RecOK`, `VFacts`), the error half where the twin's check fails (`CtorFail`,
+`OrderFailW`, `RecFail`, `RecsFail`, and for `validate_ind_d` the record verdict itself,
+`VerdictClaimL`).
+
+| function | before: ok refinement + error claim | after | change |
+|---|---|---|---:|
+| `vi_order_in` | `orderInW_twin` 74 + `orderInE_fail` 74 = 148 | `orderIn_ref` 90 + `OrderInPost`/`OrderInFail` 17 = 107 | −28 % |
+| `vi_order_go` | `orderGoW_twin` 59 + `orderGoE_fail` 79 = 138 | `orderGo_ref` 80 + `OrderGoPost`/`OrderGoFail` 20 = 100 | −28 % |
+| `vi_order` | `orderW_twin` 57 + `orderE_fail` 71 + `OrderNV` 2 = 130 | `order_ref` 78 + `OrderPost`/`OrderErr` 14 = 92 | −29 % |
+| `vi_nparams` | `nparamsW_twin` 42 + `viNparams_fail` 34 + `viNparams_refinesE` 16 = 92 | `nparams_ref` 47 + `NparamsPost`/`NparamsFail` 8 = 55 | −40 % |
+| `vi_rec` | `recW_twin` 79 + `recE_claim` 139 = 218 | `rec_ref` 113 + `RecPost`/`RecErr` 10 = 123 | −44 % |
+| `vi_recs_go` | `recsGoW_twin` 35 + `recsGoE_claim` 54 = 89 | `recsGo_ref` 51 + `RecsGoPost`/`RecsGoErr` 14 = 65 | −27 % |
+| `vi_recs` | (ok half inside `validateW_twin`, ≈ 30) + `recsE_claim` 50 + `viRecs_refinesE` 22 = 102 | `recs_ref` 47 + `RecsPost`/`RecsErr` 11 = 58 | −43 % |
+| `vi_tail`, `validate_ind_d` | `validateW_twin` 338 (less the recursors' ≈ 30) + `validateE_claim` 438 + `validNV` and its lemmas 14 + `callE_zero` 12 + `validateClaim_frontAll` 6 = 778 | `validate_ref` 367 + `ValidatePost` 12 + `flat3`/`map_specT`/`listed_specT` 22 + `validateClaim_frontAll` 5 = 406 | −48 % |
+| **pairs** | **1 695** | **1 006** | **−41 %** |
+
+Also gone: the hand ok models `nparamsW`, `orderW`, `recW`, `recsGoW`, `recsW`, `tailW`,
+`validateW` with their specs, the generated `orderInW`/`orderGoW`, `pK`, the error models'
+`errors` variants. Whole diff against master d4f85701: +960 −1 780 in 15 files.
+
+Choices:
+
+* **`G`**: `True` for the eight inner functions (their callees outside the verdict closure are
+  lifted, their errors `.oob`; the callers pass `closedNV` at `RefC.run_err`); `XV st a` (the twin's
+  name reads the messages need) for `validate_ind_d`, so the ok half needs nothing new.
+* **`vi_tail` has no refinement of its own**: it never had a claim or an ok proof of its own
+  (`tailW` was unfolded in `validateW_twin`, its errors in `validateE_claim`), and its post would
+  be `validate_ref`'s context. `validate_ref` unfolds its unified model.
+* **Conditional error halves** where only the error needs a hypothesis: the type name handles below
+  `2^32` (`OrderInFail`, `OrderGoFail`, `OrderErr`), as `CtorErr`.
+* **One `VFacts` for both outcomes**: the recursors' failure needs the validation's facts without
+  the recursors (`VFactsR`); `validate_ref` builds `VFacts` once for any recursor list whose
+  records pass, at `rcs` for the ok half and at `[]` for the error half.
+* **Placement**: the refinements sit where `validateW_twin`'s pieces were (`IndApplyRefine5/7/8/9`),
+  imported by `apply_ind`'s ok proof (`IndApplyTwin`, `FrontPreOK2`, which read `validate_ind_d`
+  through its run). The twin halves stay in `FrontOrderE`/`FrontRecsE` (no L any more;
+  `FrontOrderE` now imports `IndValidTwin` instead of `IndApplyRefine9`, and `IndApplyRefine8`
+  imports it for `OrderFailW`); `RecFail`/`RecsFail` moved to `IndApplyRefine7`, the list lemmas
+  `fpos_lt`/`getElem_flatten'`/`flat_pos` to `IndValidTwin`. `FrontValidE` keeps the driver's
+  facts and `validateClaim_frontAll` (`RefC.run_err`).
+* **Generator observation** (not changed): a callee spec whose model returns a nested pair,
+  `mapW … = some ((r.headD 0, r.tail.headD 0), s'.mem)` (`vi_map`, `vi_listed`), is rejected as
+  an "unsupported post conjunct" in `unified` mode; the flat tuple `some (r₀, r₁, s'.mem)` is
+  accepted. `map_specT`/`listed_specT` restate the two specs through `flat3` (16 lines).
+* **Recipes**: `simp []` for every model; the default `finish` measured at parity or slower
+  (`IndApplyRefine5` 4.6/4.2/5.4 s against 4.9/4.8/5.4, `IndApplyRefine7` 5.2/4.9/5.4 against
+  5.2/6.3/5.3).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+d4f85701, load 22–130, `_tmp/unify-b3c/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Front/IndApplyRefine5` | 2.17 | **4.45** | `viOrderInE`/`viOrderGoE` moved in … |
+| `Front/IndApplyRefine7` | 1.72 | **4.78** | `viNparamsE`, `recE`, `recsGoE`, `recsE` moved in … |
+| `Front/IndApplyRefine8` | 1.14 | **1.63** | `viOrderE` moved in … |
+| `Front/IndApplyRefine9` | 6.65 | 7.21 | `viTailE`, `validateE`, `validate_ref` |
+| `Verdict/FrontOrderE`, `FrontRecsE`, `FrontValidE` | 37.80 | 16.90 | … from here (error models and claims gone) |
+| `Front/IndApplySpec` | 20.16 | 10.42 | hand models and specs gone |
+| `IndApplyRefine6`, `IndApplySpec3`, `IndApplyTwin`, `IndValidTwin`, `FrontPreOK2` | 12.17 | 11.74 | |
+| `Verdict/FrontRunE` | 21.09 | 24.73 | doc comment and an import only (load: 13.5–16.1 s wall base, 11.9–25.6 new) |
+| **sum (14 modules)** | **102.9** | **81.9** | **−20 %** |
+
+The three flagged modules are the new homes of the unified models; with the modules they came from
+they are 42.7 → 27.8 s.
