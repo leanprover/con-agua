@@ -7,7 +7,8 @@ import ConAgua.L.GrindAttr
 /-!
 # CheckStructFieldSortsISucc
 
-`eqTrueK`, `eqTrueK_some`, `eqTrueC`, `eqTrueC_succ`, `eqTrue_specC`, `cfbK4` and the lemmas only they use.
+`lvl_eq_true`'s model (`eqTrueC`), `check_field_sort_bound`'s (`cfbW`), and the twin's
+`checkStructFieldSortsI` at `j + 1` with its universe bound named (`sfbT`).
 -/
 
 noncomputable section
@@ -129,107 +130,6 @@ theorem cfbW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (isPr
 
 end spec
 
-/-! ## `check_struct_field_sorts_i_go`: the word model -/
-
-section model
-variable (rest : Mem → Option (List Word × Mem))
-
-/-- After the fields below. -/
-def csfK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => some ([0], m)
-/-- After the bound: write the sort, then the fields below. -/
-def csfK4 (res j u : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => csfK5 (rest (m.set64 IW (res + (j - 1)) u))
-/-- After `ensure_sort_core`: the bound. -/
-def csfK3 (cR : CallM) (n : Nat) (isProp large s io il fv res j : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (ru, m) => csfK4 rest res j (ru.headD 0) (cfbW cR n m isProp large s io il fv (ru.headD 0))
-/-- After `infer_type_core`. -/
-def csfK2 (cR : CallM) (n : Nat) (vis isProp large s nP io il fv res j : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (ry, m) => csfK3 rest cR n isProp large s io il fv res j
-      (cR n "ensure_sort_core" [vis, nP + (j - 1), ry.headD 0] m)
-/-- After `fvar_type_d`. -/
-def csfK1 (cR : CallM) (n : Nat) (vis isProp large s nP io il fv res j : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rt, m) => csfK2 rest cR n vis isProp large s nP io il fv res j
-      (cR n "infer_type_core" [vis, nP + (j - 1), rt.headD 0] m)
-
-end model
-
-/-- **The model of `check_struct_field_sorts_i_go(vis, isProp, large, s, nP, fo, fl, io, il, res,
-j)`** at exec fuel `n`. -/
-def csfW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, isProp, large, s, nP, fo, fl, io, il, res, j =>
-    if j = 0 then some ([0], m)
-    else if fl ≤ j - 1 then none
-    else csfK1 (fun m' => csfW cR n m' vis isProp large s nP fo fl io il res (j - 1)) cR n vis isProp large
-      s nP io il (rdW (m.arr64 IW) (fo + (j - 1))) res j
-      (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))])
-
-section arms
-variable (rest : Mem → Option (List Word × Mem)) (cR : CallM) (n : Nat) (m : Mem)
-  (vis isProp large s nP fo fl io il fv res j u : Word) (r : List Word)
-theorem csfW_zero (h : j = 0) :
-    csfW cR (n + 1) m vis isProp large s nP fo fl io il res j = some ([0], m) := by simp [csfW, h]
-theorem csfW_oob (h : j ≠ 0) (hl : fl ≤ j - 1) :
-    csfW cR (n + 1) m vis isProp large s nP fo fl io il res j = none := by simp [csfW, h, hl]
-theorem csfW_step (h : j ≠ 0) (hl : ¬ fl ≤ j - 1) :
-    csfW cR (n + 1) m vis isProp large s nP fo fl io il res j =
-      csfK1 (fun m' => csfW cR n m' vis isProp large s nP fo fl io il res (j - 1)) cR n vis isProp large
-        s nP io il (rdW (m.arr64 IW) (fo + (j - 1))) res j
-        (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))]) := by simp [csfW, h, hl]
-theorem csfK5_some : csfK5 (some (r, m)) = some ([0], m) := rfl
-theorem csfK4_some : csfK4 rest res j u (some (r, m)) = csfK5 (rest (m.set64 IW (res + (j - 1)) u)) :=
-  rfl
-theorem csfK3_some : csfK3 rest cR n isProp large s io il fv res j (some (r, m)) =
-    csfK4 rest res j (r.headD 0) (cfbW cR n m isProp large s io il fv (r.headD 0)) := rfl
-theorem csfK2_some : csfK2 rest cR n vis isProp large s nP io il fv res j (some (r, m)) =
-    csfK3 rest cR n isProp large s io il fv res j
-      (cR n "ensure_sort_core" [vis, nP + (j - 1), r.headD 0] m) := rfl
-theorem csfK1_some : csfK1 rest cR n vis isProp large s nP io il fv res j (some (r, m)) =
-    csfK2 rest cR n vis isProp large s nP io il fv res j
-      (cR n "infer_type_core" [vis, nP + (j - 1), r.headD 0] m) := rfl
-end arms
-attribute [ind_grind] csfW_zero csfW_oob csfW_step csfK5_some csfK4_some csfK3_some csfK2_some
-  csfK1_some
-
-section spec
-variable (p : Prog) (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_word" = some pinWordL)
-  (het : p.lookup "lvl_eq_true" = some lvlEqTrue) (hc : p.lookup "sl_contains" = some slContains)
-  (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
-  (hp : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL) (hftd : FtdF p)
-include hg hpw het hc hb hp hftd
-
-theorem csfW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ : St) (vis isProp large s nP fo fl io il res j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_field_sorts_i_go"
-      [vis, isProp, large, s, nP, fo, fl, io, il, res, j]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      csfW cR n s₀.mem vis isProp large s nP fo fl io il res j = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis isProp large s nP fo fl io il res j
-    rw [invoke_eq _ hp]; simp only [callFn, checkStructFieldSortsIGoL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis isProp large s nP fo fl io il res j
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkStructFieldSortsIGoL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        slGet_specW p hg n, ftdF_spec0 p hftd n, hcR n "infer_type_core",
-        hcR n "ensure_sort_core", cfbW_spec p hpw het hc hb cR hcR n, ih] <;>
-      finish (gen := 30) (instances := 5000) [getW, rdW_eq]
-
-end spec
-
 /-! ## The relation to the twin -/
 
 /-- The twin's universe bound for one field (`checkStructFieldSortsI`'s middle, verbatim). -/
@@ -288,52 +188,6 @@ theorem sumDecHL_write_front {k : IdxKind} (m : Mem) (o kk : Nat) (w v : Word) (
 
 theorem sum_toNat_add {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
   rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
-
-/-! ## `check_struct_field_sorts_i` -/
-
-/-- After the fields. -/
-def fsortsK2 (res nW : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m2) => some ([res, nW], m2)
-/-- After the allocation. -/
-def fsortsK1 (cR : CallM) (n : Nat) (vis isProp large s nP fo fl io il nW : Word) :
-    Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (res, m1) => fsortsK2 res nW (csfW cR n m1 vis isProp large s nP fo fl io il res nW)
-
-/-- **The model of `check_struct_field_sorts_i(vis, isProp, large, s, nP, fo, fl, io, il, n)`** at
-callee fuel `n`. -/
-def fsortsW (cR : CallM) (n : Nat) (m : Mem) (vis isProp large s nP fo fl io il nW : Word) : Option (List Word × Mem) :=
-  fsortsK1 cR n vis isProp large s nP fo fl io il nW (allocW m nW)
-
-theorem fsortsK1_some (cR : CallM) (n : Nat) (vis isProp large s nP fo fl io il nW res : Word) (m1 : Mem) :
-    fsortsK1 cR n vis isProp large s nP fo fl io il nW (some (res, m1)) =
-      fsortsK2 res nW (csfW cR n m1 vis isProp large s nP fo fl io il res nW) := rfl
-theorem fsortsK2_some (res nW : Word) (r : List Word) (m2 : Mem) :
-    fsortsK2 res nW (some (r, m2)) = some ([res, nW], m2) := rfl
-attribute [ind_grind] fsortsK1_some fsortsK2_some
-
-section spec2
-variable (p : Prog) (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_word" = some pinWordL)
-  (het : p.lookup "lvl_eq_true" = some lvlEqTrue) (hc : p.lookup "sl_contains" = some slContains)
-  (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
-  (hgo : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL)
-  (hia : p.lookup "iw_alloc" = some iwAlloc)
-  (hp : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL) (hftd : FtdF p)
-include hg hpw het hc hb hgo hia hp hftd
-
-theorem fsortsW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis isProp large s nP fo fl io il nW : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_struct_field_sorts_i"
-      [vis, isProp, large, s, nP, fo, fl, io, il, nW]
-    ⦃fun r s' => LocEq s' s₀ ∧ fsortsW cR n s₀.mem vis isProp large s nP fo fl io il nW = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkStructFieldSortsIL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      iwAlloc_specW p hia n, csfW_spec p hg hpw het hc hb hgo hftd cR hcR n] <;>
-    finish (gen := 30) (instances := 5000) [fsortsW]
-
-end spec2
 
 end L.Ind
 

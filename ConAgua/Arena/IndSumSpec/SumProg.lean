@@ -63,6 +63,18 @@ structure SumProg (p : Prog) : Prop where
 
 /-! ## `check_sum_ctor_tail`: the word model -/
 
+/-- `check_struct_field_sorts_i` read through its run (`fsorts_ref`). -/
+def fsortsR (cR : CallM) (n : Nat) (m : Mem) (vis isP lg rs nP xo xl io il nF : Word) :
+    Option (List Word × Mem) :=
+  cR (n + 1) "check_struct_field_sorts_i" [vis, isP, lg, rs, nP, xo, xl, io, il, nF] m
+
+theorem fsortsR_spec (p : Prog) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
+    (vis isP lg rs nP xo xl io il nF : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_struct_field_sorts_i"
+      [vis, isP, lg, rs, nP, xo, xl, io, il, nF]
+    ⦃fun r s' => LocEq s' s₀ ∧ fsortsR cR n s₀.mem vis isP lg rs nP xo xl io il nF = some (r, s'.mem); ⊤⦄ :=
+  hcR (n + 1) _ _ s₀
+
 /-- After the field sorts. -/
 def ctlK9 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -71,7 +83,7 @@ def ctlK9 : Option (List Word × Mem) → Option (List Word × Mem)
 def ctlK8 (cR : CallM) (n : Nat) (vis isP lg rs nP nF xo xl ao al : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => if r.headD 0 = 0 then none
-    else ctlK9 (fsortsW cR n m vis isP lg rs nP xo xl (ao + nP) (al - nP) nF)
+    else ctlK9 (fsortsR cR n m vis isP lg rs nP xo xl (ao + nP) (al - nP) nF)
 /-! ## The relation to the twin: pieces -/
 
 /-- The twin's tail of `checkSumCtor` (from the opened field telescope on), verbatim. -/
