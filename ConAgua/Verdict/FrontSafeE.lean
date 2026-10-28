@@ -1,4 +1,4 @@
-import ConAgua.Verdict.FrontRunE
+import ConAgua.Front.FrontRunRef
 
 
 /-!

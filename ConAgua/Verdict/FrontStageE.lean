@@ -10,8 +10,8 @@ import ConAgua.L.ModelGen
 helper `f2`)
 
 `Entry1StagesE.prelude` and `.front` (`Checker/VerdictEntry1.lean`), from the frontend's error
-claim at `frontAllProg` (`frontRunE_claim`, `FrontRunE.lean`): `front_run` runs in `checkerProg`
-as in `frontAllProg` (`callE_frontAll`); `builtin_prelude` fails only where `pre_front_run` does,
+half at `frontAllProg` (`frontRun_errClaim`, `Front/FrontRunRef.lean`): `front_run` runs in
+`checkerProg` as in `frontAllProg` (`callE_frontAll`); `builtin_prelude` fails only where `pre_front_run` does,
 which fails as `front_run` on the prelude's bytes (`preFrontRun_errSim`).
 -/
 
@@ -28,8 +28,25 @@ namespace L.Checker
 l_model builtinPrelude_specE (p : Prog) (hf : p.lookup "builtin_prelude" = some builtinPreludeL)
   fns [hf ↦ builtinPreludeLE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] errors
 
+/-- A call into the frontend runs in `frontAllProg` as in `checkerProg`. -/
+theorem callE_frontAll {g : FnName} (hg : L.Checker.inFront g = true) (n : Nat) (args : List Word)
+    (m : Mem) : callE frontAllProg n g args m = callE L.Checker.checkerProg n g args m := by
+  unfold callE
+  rw [L.Checker.invoke_exec_agree (P := L.Checker.inFront)
+    (fun f hf => L.Checker.checkerProg_frontAgree f ((L.Checker.inFront_iff f).1 hf))
+    L.Checker.checkerProg_frontClosed n hg]
+
+/-- A failing run is a failing call (`callE`) from its memory. -/
+theorem callE_of_run_err {p : Prog} {k : Nat} {f : FnName} {vs : List Word} {s : St} {e : Err}
+    (h : (invoke p (exec p k) f vs).run s = .error e) : callE p k f vs s.mem = .error e := by
+  rw [invoke_run_loc'] at h
+  unfold callE
+  cases hr : (invoke p (exec p k) f vs).run ⟨s.mem, Locals.init []⟩ with
+  | error e' => rw [hr] at h; cases h; rfl
+  | ok v => rw [hr] at h; cases h
+
 /-- **`front_run`'s error spec at the checker's stage relation** (`Entry1StagesE.front`'s
-statement), from the scanner's `safety` converse (`SafeLink`). -/
+statement), from the scanner's `safety` converse (`SafeLink`): `frontRun_ref`'s error half. -/
 theorem frontStageE
     (hSL : System.Platform.numBits = 64 → ∀ b : ByteArray, b.size < 2 ^ 63 → SafeLink b) :
     ∀ b pb sz, InputsOK b pb sz →
@@ -42,10 +59,8 @@ theorem frontStageE
   have hm : s.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb sz
   have hc := callE_of_run_err hr
   rw [← callE_frontAll (by decide) n [] s.mem] at hc
-  have hE := triple_of_callE_err (frontRun_specE frontAllProg rfl n ⟨s.mem, Locals.init []⟩) hc
-    (Err.code_ne_of_cls hk)
-  have hf := frontRunE_claim pre.decls b hin.1 hin.2.1 (hSL hin.1 b hin.2.1) n s.mem sB hm
-    h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok h4.mode e hE hk
+  have hf := frontRun_errClaim pre.decls b hin.1 hin.2.1 (hSL hin.1 b hin.2.1) n s.mem sB
+    ⟨hm, h4.arena, h4.sdr, h4.twin.ok, h4.twin.off, h4.twin.pins, h4.rok, h4.mode⟩ hc hk
   have hu : b.size < USize.size := by
     rw [show USize.size = 2 ^ 64 by simp [USize.size, hin.1]]; have := hin.2.1; omega
   refine TwinVerdict.front hA hB ?_
@@ -115,15 +130,13 @@ theorem preludeStageE
   have hc' := callE_of_run_err hsim
   simp only [St.setIn_mem] at hc'
   rw [← callE_frontAll (by decide) n [] _] at hc'
-  have hE' := triple_of_callE_err (frontRun_specE frontAllProg rfl n ⟨_, Locals.init []⟩) hc'
-    (Err.code_ne_of_cls hk)
   have hD0 : StateDR (s.mem.setIn preIn) (StateD.blank.pre #[]) := by
     rw [blank_pre_empty]; exact h3.sdr.frame (setIn_frame _ _) (by simp) (by simp)
-  exact frontRunE_claim #[] preludeText hin.1 preludeText_size (hSL hin.1 _ preludeText_size) n
-    (s.mem.setIn preIn) sA (by rw [Mem.arr8_setIn_zero, preIn_eq])
-    (L.Rom.ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) h3.arena) hD0 h3.twin.ok h3.twin.off
-    h3.twin.pins (fun x hx => absurd hx (by simp))
-    (ModeOK.frame h3.mode (setIn_frame _ _) (by simp) (by simp)) e hE' hk
+  exact frontRun_errClaim #[] preludeText hin.1 preludeText_size (hSL hin.1 _ preludeText_size) n
+    (s.mem.setIn preIn) sA ⟨by rw [Mem.arr8_setIn_zero, preIn_eq],
+      L.Rom.ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) h3.arena, hD0, h3.twin.ok,
+      h3.twin.off, h3.twin.pins, fun x hx => absurd hx (by simp),
+      ModeOK.frame h3.mode (setIn_frame _ _) (by simp) (by simp)⟩ hc' hk
 
 /-! ## The two stages, discharged -/
 

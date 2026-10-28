@@ -1,18 +1,18 @@
 import ConLeche.Verify.Frontend.Chunks
-import ConAgua.Front.FrontRun
+import ConAgua.Front.DriverRefine
 
 /-!
 # One chunk is the wholesale parse (lane `front3`)
 
 The checker's statement runs the twin's streaming parse on one chunk, `parseChunks [b]`; the L
-frontend `front_run` is the twin's wholesale `parseBytes b` (`L.Front.frontRun_refines`). The two
+frontend `front_run` is the twin's wholesale `parseBytes b` (`L.Front.frontRun_ref`). The two
 are the same function of the arena state whenever `b` fits in a machine word
 (`parseChunks_single`): the one chunk's step feeds every complete line exactly as `parseBytes`
 does, and the carried tail `b.extract tail b.size` is read by `applyFinalLine` at offset `0` as
 `parseBytes` reads `b` at `tail`, because a line's scan depends only on the bytes from its start
 (`scanLineFwd = scanLineSpec`, con-leche's `naiveLine` on `tailAt b i`), error offsets included
 (they are reported relative to the line's start). So `front_run` refines the streaming driver too
-(`frontAll_refines_chunks`)(`frontRun_refines_chunks`): the chunked-driver targets are covered through it, and L has no
+(`frontRun_checker_chunks`): the chunked-driver targets are covered through it, and L has no
 streaming driver of its own (docs/deviations.md, Deliberate).
 -/
 
@@ -74,24 +74,5 @@ theorem parseChunks_single (b : ByteArray) (hb : b.size < USize.size) :
           have he : (b.size - tail.toNat == 0) = true := by
             simp only [beq_iff_eq]; omega
           simp only [he, ht, ite_true, ite_false]
-
-open scoped Lean.Order in
-open Std.WP L L.Front L.Arena in
-/-- **`front_run` refines the twin's streaming parse of one chunk**, the form the checker's
-statement takes (`parseChunks [b]`): `frontAll_refines` and `parseChunks_single`. -/
-@[refines ConRon.Arena.Frontend.parseChunks]
-theorem frontAll_refines_chunks (b : ByteArray) (h64 : System.Platform.numBits = 64)
-    (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
-    (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
-    (hD : StateDR s₀.mem StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hmode : ModeOK s₀.mem) :
-    ⦃fun s => s = s₀⦄
-    invoke frontAllProg (exec frontAllProg n) "front_run" []
-    ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseChunks [b]).run a₀ = .ok (.ok (.ofState st'), a') ∧
-      ArenaD s'.mem a' ∧ StateDR s'.mem st'; ⊤⦄ := by
-  have hu : b.size < USize.size := by
-    rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega
-  rw [parseChunks_single b hu]
-  exact frontAll_refines b h64 hsize n s₀ hm hpool a₀ hA hD hok hoff hpins hmode
 
 end ConAgua.Front.ChunkBridge
