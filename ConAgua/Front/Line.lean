@@ -1,5 +1,5 @@
-import ConAgua.Front.ApplyDecl
-import ConAgua.Front.FieldsDeclSpec
+import ConAgua.Front.ApplyExpr
+import ConAgua.L.ProgHas
 import ConAgua.Front.RunModel
 import ConAgua.Front.LineRecLink
 import ConAgua.Arena.GrindAttr

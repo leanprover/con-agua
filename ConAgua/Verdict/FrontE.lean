@@ -2,7 +2,6 @@ import ConAgua.Arena.Verdict
 import ConAgua.Front.ApplyDeclRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConLeche.Frontend.ExportC

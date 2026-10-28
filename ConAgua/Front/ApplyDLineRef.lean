@@ -1,5 +1,6 @@
 import ConAgua.Front.FrontPreOK2
 import ConAgua.Front.IndApplySpec3
+import ConAgua.Front.FieldsDeclSpec
 
 /-!
 # A declaration line, both outcomes: `decl_kind`, `apply_decl`, `apply_dline`
