@@ -776,45 +776,6 @@ theorem defeqPeel_leaf_run (r : CoreFnsA) (d peel : Nat) (a b : EIdx) (k : Nat) 
 theorem word_toNat_zero_iff (w : Word) : w.toNat = 0 ↔ w = 0 :=
   ⟨fun h => UInt64.toNat_inj.mp (by simpa using h), fun h => by rw [h]; rfl⟩
 
-theorem GrowPost.of_core {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name}
-    {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
-    {r : List Word} {y : α} {a' : AState} (h : CorePost dec dn m₀ vis fe M eb ok (r, m) y a') :
-    GrowPost dec dn m₀ vis fe M eb ok (r, m) y a' :=
-  let ⟨M', hS, hK, hSt⟩ := h.after
-  ⟨⟨M', hS, hK, hSt.toGrew'⟩, h.res, h.valid⟩
-
-/-- A growing callee's ok run, then the rest, both outcomes. -/
-theorem RefE.bind_grow {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}
-    {f : γ → AM β} {a₀ : AState} {dec₁ : List Word → γ} {dec : List Word → β}
-    {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
-    {eb : Word} {r₁ : List Word} {ok₁ ok : List Word → Prop} {w : α → List Word × Mem}
-    (h₁ : GrowRefP T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
-    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackGrew m₀ m₁ →
-      RefE G x (f (dec₁ r₁)) (AM.st T₁ a₀)
-        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v) y a')) :
-    RefE G x (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') := by
-  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
-  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1])
-    ((h₂ M' hS hSt).mono fun _ _ _ h =>
-      let ⟨M'', hS'', hK'', hSt''⟩ := h.after
-      ⟨⟨M'', hS'', hK.trans hK'', hSt.trans' hSt''⟩, h.res, h.valid⟩)
-
-/-- A kept-stack callee's ok run, then a growing rest, both outcomes. -/
-theorem RefE.bind_growK {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}
-    {f : γ → AM β} {a₀ : AState} {dec₁ : List Word → γ} {dec : List Word → β}
-    {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
-    {eb : Word} {r₁ : List Word} {ok₁ ok : List Word → Prop} {w : α → List Word × Mem}
-    (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
-    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
-      RefE G x (f (dec₁ r₁)) (AM.st T₁ a₀)
-        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v) y a')) :
-    RefE G x (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') := by
-  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
-  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1])
-    ((h₂ M' hS hSt).mono fun _ _ _ h =>
-      let ⟨M'', hS'', hK'', hSt''⟩ := h.after
-      ⟨⟨M'', hS'', hK.trans hK'', hSt.toGrew'.trans' hSt''⟩, h.res, h.valid⟩)
-
 section loopRef
 variable (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
 

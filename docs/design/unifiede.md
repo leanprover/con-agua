@@ -66,16 +66,8 @@ One theorem per function, by one induction over its unified model:
   `target_k53_args` would have needed `hnv`/`hcE`.
 * **The post `R`** is a named-field Prop structure per function (`TcmPost`, `TmnPost`), not the
   ∧-tuple of the old `…_okC`.
-* **The kit.** These lemmas carry both outcomes at once:
-  * `RefE.ret` (an ok leaf);
-  * `RefE.of_cls0` (an error of class `0`: abort `0`, `liftE none`, out of fuel);
-  * `RefE.bind_left` (a callee's error claim);
-  * `RefE.bind_right` (the twin's step ran ok; both outcomes continue);
-  * `RefE.ite_pos` / `ite_neg`.
-* **The halves, from a call's run, through the model's spec.** `RefE.run_ok` and `RefE.run_okW`
-  turn `callE`/`callW … = ok` into the twin's ok run with `R`. `RefE.run_err` and
-  `RefE.coreSpecE` give the `ErrClaim`/`CoreSpecE` of a failing run. `RefE.triple` gives the ok
-  triple, the shape of the `@[refines]` theorems.
+* **The kit** (§1.5) carries both outcomes at once, and gives the halves from a call's run
+  through the model's spec.
 
 ### 1.3 Callers keep their statements, through the run
 
@@ -118,6 +110,61 @@ classes' package (`tmnW_okPC`, `tmnE_claimP`: constructor slices without the bou
 the extra conclusions as a field that is an implication:
 `ptrs : ∀ mb ps, decNL m nfo nfl = some ps → PtrsB mb ps nfs → fresh ∧ ∃ ps', …`. One proof
 replaces four.
+
+### 1.5 The kit
+
+Every lemma below exists once; a batch lane uses these and does not define local copies (a
+missing shape is a kit change, reported, not a local helper).
+
+**`RefE` (`Arena/Verdict.lean`)**, a model value against an ok run of a twin computation:
+
+* steps, both outcomes at once: `RefE.ret` (an ok leaf), `RefE.of_cls0` (an error of class `0`:
+  abort `0`, `liftE none`, out of fuel, a load out of bounds), `RefE.bind_left` (a callee's error
+  claim), `RefE.bind_right` (the twin's step ran ok; the rest decides), `RefE.ite_pos`/`ite_neg`;
+* `RefE.mono` (a weaker post: a recursive call's post is from its own start), `RefE.of_run_eq`
+  (another twin with the same run), `RefE.tail` / `RefE.tail_eq` (a tail call whose continuation
+  re-lists the callee's value, against a twin that runs as the callee's);
+* the halves from the call's run, through the model's spec: `RefE.run_ok` / `run_okW` (the ok
+  half from `callE`/`callW … = ok`), `RefE.run_err` (the `ErrClaim` of a failing run),
+  `RefE.coreSpecE` (as `CoreSpecE`), `RefE.triple` (the ok triple, the `@[refines]` shape);
+* `ErrClaim.of_run_eqW`, `ErrClaim.of_run_err` (a claim through equal or failing runs),
+  `callW_of_callE` and `callE_of_callW`.
+
+**`RefC` (`Arena/Verdict.lean`)**, a model value whose ok half is a fact, not a twin run:
+`RefC G x Ok C` says an ok value satisfies `Ok v` and an error `e` the claim `C e` under `G`.
+The shapes it covers:
+
+* a function that stands for a prefix of a twin function (`m2c_pre`'s `PreRef`: the ok value
+  gives the prefix's run, an error claims the failure of the prefix with every continuation);
+* a check whose ok result is a fact about the model (`vi_unsafe`: no type record is unsafe);
+* a twin that reports failures as values: `C := ErrClaimV T a` or `VerdictClaimL T a`.
+
+Its lemmas: `RefC.mono`, `RefC.run_ok` / `run_okW`, `RefC.run_err` (with `C0`: the claim holds
+for errors of class `0`, as every claim of the verdict closure does).
+
+**Core functions (`Arena/RefECore.lean`)**, the functions the knot's slots call, whose ok halves
+are `CoreRef`s: the post `CorePost` (the relation after the run, the result decoded and valid),
+`RefE.coreSpec` / `CoreSpec.of_refE` (the knot's `CoreSpec` from the refinement), `CoreRef.post`,
+`CorePost.ret`, `RefE.bind_core` (a kept-stack callee, then the rest). For arms that leave a
+slice on the stack: `CoreAfterG`, `GrowRef`, `GrowPost` with `GrowPost.growRef`, `of_core`,
+`of_tail`, `RefE.growRefW`, `RefE.bind_grow` / `bind_growK`.
+
+**`G`, what the error arms assume (`Verdict/VCtx.lean`).** One rule: `G` is the weakest of these
+that the function's error arms need, so that callers with less in their context can use the
+refinement:
+
+* `True`: its only errors are its own aborts (`install_basis_decl`);
+* `closedNV p nvFns = true`: its callees with errors are outside the verdict closure (lifted) or
+  unified under this `G` (most leaves of the inductive checks);
+* `CoreStubsE p`: the core stubs' claims and no lifted callee (the nat gates);
+* `VerdictCtx p`: both; `VerdictCtxU p`: also `UceProg p` (`unresolved_consts_error`'s program:
+  the consts-resolve sites);
+* the knot's claims (`KnotUpToE p n`) or a family's named-field structure, where non-migrated
+  callees' claims are needed (`CvgCtx`, `M2CCtxE`, `PeelG`, `NrtG`, …). Such a structure takes
+  `VerdictCtx`'s fields by name (`nv`, `core`) so that callers pass `hG.nv`.
+
+`CoreStubsE` and `VerdictCtx` sit below `Verdict/DeclValE.lean` (in `VCtx`), so the `Decl` files
+can use them.
 
 ## 2. Pilot (`ctors_have_name`, `target_class_match`, `target_major_nfs`)
 
@@ -237,12 +284,41 @@ The list with depths, files and callees: `_tmp/unifiedE/split.txt`.
 6. Pitfalls met in the pilot:
    * after `rcases` on a value, the hypotheses about `(r, m).fst` need `dsimp only` before `omega`;
    * a `by … omega` argument whose goal mentions `{ mem := m, … }.mem` needs `dsimp only` first;
-   * `Err.cls_of_code` (`grind →`) is needed by the generated steps for loads out of bounds;
+   * a load out of bounds is `.error .oob` exactly (`ld64_rdW_specE`, `L.ld8_specE`), so the
+     generated steps close its error goal by `simp` (with a post over the code they needed
+     `Err.cls_of_code` and `grind` at every load);
    * a caller's `Option` model reads the run through a named function of word arguments
      (`tcmR cR n m args := cR n "f" [args] m`, its spec `hcR n _ _ s₀`), not a list literal
      (`Tka` 8 % slower otherwise);
    * try the default `finish` recipe before `simp [...]` on the unified model (`tmnE`: 1.9 s
      against 3.0 s).
+   * an induction hypothesis applied in a `have` with tactic arguments (`ih (by omega) …`,
+     `HSl0.of (by rw …)`): the tactic arguments run before the implicit arguments are fixed by
+     unification, so `omega`/`rw` see metavariables. Name the implicits
+     (`ih (ao := ao + 1) (al := al - 1) …`) or apply it where the goal is known (`exact`,
+     `refine`), as `pde_ref` and `cfg_ref` do.
+7. Callee specs the generator lifts in `unified` mode (no wrapper needed): an `Option` model
+   (`some (r.headD 0, m)`, `some (r, m)`, a tuple), a total model (`r.headD 0 = F`,
+   `r ≠ [] ∧ r = F` as `e_view`'s, `s'.mem = F`), one result as a list
+   (`some ([r.headD 0], m)`). `↦ fW tuple` counts the `return`s of the named blocks spliced into
+   the body (a loop's `return (k, x, y)`).
+
+### 3.3a Rules for batch lanes
+
+* Use the kit (§1.5); do not define local copies of its lemmas. A missing shape or generator
+  feature is reported to the coordinator, with the function that needs it, and the function is
+  skipped until the kit has it.
+* `G` by the rule of §1.5: the weakest assumption the error arms need, named.
+* The post is a named-field structure; a second invariant package is a conditional field (§1.4).
+* One model and one refinement per function: delete the hand ok model, its arms and spec, the
+  old ok refinement and the error claim once no user is left; derive the `@[refines]` theorem
+  and any `CoreSpecE` a non-migrated caller needs as one-liners (`RefE.triple`,
+  `RefE.coreSpecE`).
+* Place the refinement where its ok users can import it; the old Verdict file keeps one-liners.
+* Measure the modules touched (user seconds, median of 3 interleaved runs, base and new); a
+  module more than 10 % slower is flagged with what was tried (`finish` before `simp […]`).
+* Merge master before each landing: the kit and the generator are shared, a sibling's landing
+  may change imports (shake).
 
 ### 3.3 Batches (for migration lanes)
 

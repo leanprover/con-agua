@@ -1,3 +1,4 @@
+import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.PosNty
 import ConAgua.Verdict.PosE
 import ConAgua.Arena.IlpRdReal

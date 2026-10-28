@@ -45,9 +45,9 @@ def Err.cls (e : Err) : Word := e.code &&& 3
 @[simp, grind =, lang_grind =] theorem Err.code_noFun (f : FnName) : (Err.noFun f).code = 0 := rfl
 
 @[simp, grind =] theorem Err.cls_abort (k : Word) : (Err.abort k).cls = k &&& 3 := rfl
-@[simp, grind =] theorem Err.cls_oob : Err.oob.cls = 0 := by simp [Err.cls]
-@[simp, grind =] theorem Err.cls_outOfFuel : Err.outOfFuel.cls = 0 := by simp [Err.cls]
-@[simp, grind =] theorem Err.cls_noFun (f : FnName) : (Err.noFun f).cls = 0 := by simp [Err.cls]
+@[simp, grind =, lang_grind =] theorem Err.cls_oob : Err.oob.cls = 0 := by simp [Err.cls]
+@[simp, grind =, lang_grind =] theorem Err.cls_outOfFuel : Err.outOfFuel.cls = 0 := by simp [Err.cls]
+@[simp, grind =, lang_grind =] theorem Err.cls_noFun (f : FnName) : (Err.noFun f).cls = 0 := by simp [Err.cls]
 
 /-- An error with code `0` has class `0` (a load out of bounds, in the `unified` models' steps). -/
 @[grind →, lang_grind →] theorem Err.cls_of_code {e : Err} (h : e.code = 0) : e.cls = 0 := by
@@ -103,11 +103,12 @@ theorem Triple.and_err {α : Type} {prog : M α} {P : St → Prop} {Q : α → S
 theorem Triple.step_exec' {p : Prog} {n : Nat} {s : Stmt} {P : St → Prop} {Q : Sig → St → Prop}
     {E : Err → Prop} (h : ⦃P⦄ exec p (n + 1) s ⦃Q; E⦄) : ⦃P⦄ step p (exec p n) s ⦃Q; E⦄ := h
 
-/-- A byte load, error-precise: its value as the models read it, or an error with code `0`. -/
+/-- A byte load, error-precise: its value as the models read it, or `oob` (exactly: an error post
+over the code would leave `unified`'s posts over the class to `grind`). -/
 theorem ld8_specE (a : ArrId) (i : Word) (s₀ : St) :
     ⦃fun s => s = s₀⦄ ld8 a i
     ⦃fun r s' => s' = s₀ ∧ r = ((s₀.mem.arr8 a)[i.toNat]?.getD 0).toUInt64 ∧
-      i.toNat < (s₀.mem.arr8 a).size; fun e => e.code = 0⦄ := by
+      i.toNat < (s₀.mem.arr8 a).size; fun e => e = .oob⦄ := by
   apply M.triple_of_run'
   · intro s r s' hs hrun
     subst hs

@@ -1,10 +1,11 @@
+import ConAgua.Arena.KnotEntry
+import ConAgua.Verdict.VCtx
 import ConAgua.Arena.DeclNatGateSpec
 import ConAgua.Arena.DeclNatOpEq
 import ConAgua.Arena.DeclReducePin
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.StageC
 import ConRon.Bridge.Checker.DeclVal
-import ConAgua.Verdict.DeclValE
 import ConAgua.L.ModelGen
 
 /-!

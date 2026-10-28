@@ -96,6 +96,19 @@ theorem ErrClaim.ite_neg {α : Type} {c : Prop} [Decidable c] {x y : AM α} {a :
     (hc : ¬ c) (h : ErrClaim y a e) : ErrClaim (if c then x else y) a e := by
   rw [ite_eq_right hc]; exact h
 
+/-- The twin computations agree on the run from `a`. -/
+theorem ErrClaim.of_run_eqW {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
+    (h : T.run a = T'.run a') (h' : ErrClaim T' a' e) : ErrClaim T a e := fun hk => by
+  obtain ⟨ce, hce, hc⟩ := h' hk
+  exact ⟨ce, h ▸ hce, hc⟩
+
+/-- The twin's run from `a` fails where `T'`'s from `a'` does. -/
+theorem ErrClaim.of_run_err {α β : Type} {T : AM α} {T' : AM β} {a a' : AState} {e : Err}
+    (h : ∀ ce, T'.run a' = .error ce → T.run a = .error ce) (h' : ErrClaim T' a' e) :
+    ErrClaim T a e := fun hk => by
+  obtain ⟨ce, hce, hc⟩ := h' hk
+  exact ⟨ce, h ce hce, hc⟩
+
 /-! ## The L side: `callE` and `callW` -/
 
 theorem callW_eq_callE (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (m : Mem) :
@@ -109,18 +122,27 @@ theorem callW_of_callE {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m : M
     callW p n f vs m = some (r, m') := by
   rw [callW_eq_callE, h]; rfl
 
+/-- An ok run of `callW` is the ok run of `callE` (so the unified refinements apply to it). -/
+theorem callE_of_callW {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m : Mem}
+    {r : List Word} {m' : Mem} (h : callW p n f vs m = some (r, m')) :
+    callE p n f vs m = .ok (r, m') := by
+  rw [callW_eq_callE] at h
+  cases hE : callE p n f vs m <;> simp_all [Except.toOption]
+
 /-- **A callee outside the verdict closure claims nothing.** -/
 theorem ErrClaim.of_callE_nv {α : Type} {T : AM α} {a : AState} {p : Prog} {fs : List FnName}
     (hp : closedNV p fs = true) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem}
     {e : Err} (h : callE p n f vs m = .error e) : ErrClaim T a e :=
   ErrClaim.of_cls0 (callE_nv hp hf n vs m h)
 
-/-- A word load, error-precise: its value as `rdW`, or an error with code `0` (the loads of the
-`errors` models, `l_model … extra [ld64_rdW_specE]`). -/
+/-- A word load, error-precise: its value as `rdW`, or `oob` (the loads of the `errors` and
+`unified` models, `l_model … extra [ld64_rdW_specE]`). The error is exact: with a post over its
+code, the generated steps of a `unified` model, whose error posts are over the class, fell
+through to slow `simp_all` rounds and `grind` at every load (`checkValueGroupE` 8.6 s → 2.9 s). -/
 theorem ld64_rdW_specE (a : ArrId) (i : Word) (s₀ : St) :
     ⦃fun s => s = s₀⦄ ld64 a i
     ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size;
-     fun e => e.code = 0⦄ := by
+     fun e => e = .oob⦄ := by
   apply M.triple_of_run'
   · intro s r s' hs hrun
     subst hs
@@ -258,10 +280,8 @@ theorem RefE.run_okW
     (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
       ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
     (h : RefE G fx T a R) {r : List Word} {m' : Mem} (hc : callW p n f args s₀.mem = some (r, m')) :
-    ∃ s', s'.mem = m' ∧ Q r s' ∧ ∃ y a', T.run a = .ok (y, a') ∧ R (V r s') y a' := by
-  refine RefE.run_ok hs h ?_
-  rw [callW_eq_callE] at hc
-  cases hE : callE p n f args s₀.mem <;> simp_all [Except.toOption]
+    ∃ s', s'.mem = m' ∧ Q r s' ∧ ∃ y a', T.run a = .ok (y, a') ∧ R (V r s') y a' :=
+  RefE.run_ok hs h (callE_of_callW hc)
 
 /-- **The error half**: a failing run of the call claims the twin's failure. -/
 theorem RefE.run_err
@@ -294,6 +314,115 @@ theorem RefE.triple
     exact ⟨hQ, h⟩
 
 end refE
+
+/-! ### Weaker posts, other twins, tail calls -/
+
+/-- `RefE` reads the twin only through its run from `a`. -/
+theorem RefE.of_run_eq {α β : Type} {G : Prop} {x : Except Err α} {T T' : AM β} {a a' : AState}
+    {R : α → β → AState → Prop} (h : T.run a = T'.run a') (h' : RefE G x T' a' R) :
+    RefE G x T a R := by
+  cases x with
+  | ok v => obtain ⟨y, a₁, hy, hR⟩ := h'; exact ⟨y, a₁, h.trans hy, hR⟩
+  | error e => exact fun hG => ErrClaim.of_run_eqW h (h' hG)
+
+/-- A weaker post. -/
+theorem RefE.mono {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}
+    {R R' : α → β → AState → Prop} (h : RefE G x T a R) (hR : ∀ v y a', R v y a' → R' v y a') :
+    RefE G x T a R' := by
+  cases x with
+  | ok v => obtain ⟨y, a₁, hy, hr⟩ := h; exact ⟨y, a₁, hy, hR _ _ _ hr⟩
+  | error e => exact h
+
+/-- A tail call whose continuation passes the callee's errors on and maps its value (`f`), against
+a twin that runs as the callee's twin `T'` from `a₁`. -/
+theorem RefE.tail {α β γ : Type} {G G' : Prop} {x : Except Err α} {k : Except Err α → Except Err α}
+    {f : α → α} {T : AM β} {T' : AM γ} {a a₁ : AState} {R : α → γ → AState → Prop}
+    {R' : α → β → AState → Prop}
+    (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
+    (hT : ∀ y a', T'.run a₁ = .ok (y, a') → ∃ y', T.run a = .ok (y', a') ∧ ∀ v, R v y a' → R' (f v) y' a')
+    (hTe : ∀ ce, T'.run a₁ = .error ce → T.run a = .error ce) (h : RefE G' x T' a₁ R) :
+    RefE G (k x) T a R' := by
+  cases x with
+  | error e => rw [hk]; exact fun g => ErrClaim.of_run_err hTe (h (hG g))
+  | ok v =>
+    rw [hk']
+    obtain ⟨y, a', hr, hR'⟩ := h
+    obtain ⟨y', hr', hf⟩ := hT y a' hr
+    exact ⟨y', a', hr', hf v hR'⟩
+
+/-- `RefE.tail` against a twin with the same run. -/
+theorem RefE.tail_eq {α β : Type} {G G' : Prop} {x : Except Err α} {k : Except Err α → Except Err α}
+    {f : α → α} {T T' : AM β} {a a₁ : AState} {R R' : α → β → AState → Prop}
+    (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
+    (hT : T.run a = T'.run a₁) (hR : ∀ v y a', R v y a' → R' (f v) y a') (h : RefE G' x T' a₁ R) :
+    RefE G (k x) T a R' :=
+  RefE.tail hk hk' hG (fun y a' hr => ⟨y, hT.trans hr, fun v => hR v y a'⟩) (fun _ he => hT.trans he) h
+
+/-! ## An ok fact and an error claim (`RefC`)
+
+`RefE` relates an ok value to an ok run of a twin computation. Some functions' ok halves are not
+such runs: a function that stands for a prefix of a twin function (`m2c_pre`; its ok value gives
+the prefix's run, its error claims the failure of the prefix with every continuation), a check
+whose ok result is a fact about the model (`vi_unsafe`: no type record is unsafe), or a function
+whose twin reports failures as values (`ErrClaimV`, `VerdictClaimL`). `RefC G x Ok C`: an ok value
+satisfies `Ok`, an error `e` the claim `C e` under `G`. The halves come from the call's run, as
+`RefE`'s. -/
+
+/-- **One refinement for both outcomes, by a fact and a claim**: an ok value of `x` satisfies
+`Ok`, an error `e` the claim `C e` (under `G`). -/
+def RefC {α : Type} (G : Prop) (x : Except Err α) (Ok : α → Prop) (C : Err → Prop) : Prop :=
+  match x with
+  | .ok v => Ok v
+  | .error e => G → C e
+
+section refC
+variable {α : Type} {G : Prop} {Ok : α → Prop} {C : Err → Prop}
+
+@[simp] theorem RefC_ok {v : α} : RefC G (.ok v) Ok C ↔ Ok v := Iff.rfl
+
+@[simp] theorem RefC_error {e : Err} : RefC G (.error e : Except Err α) Ok C ↔ (G → C e) := Iff.rfl
+
+/-- A weaker fact and a weaker claim. -/
+theorem RefC.mono {Ok' : α → Prop} {C' : Err → Prop} {x : Except Err α} (h : RefC G x Ok C)
+    (hOk : ∀ v, Ok v → Ok' v) (hC : ∀ e, G → C e → C' e) : RefC G x Ok' C' := by
+  cases x with
+  | ok v => exact hOk v h
+  | error e => exact fun g => hC e g (h g)
+
+variable {p : Prog} {n : Nat} {f : FnName} {args : List Word} {s₀ : St} {Gs : Prop}
+  {Q : List Word → St → Prop} {fx : Except Err α} {V : List Word → St → α}
+
+/-- **The ok half**: an ok run of the call satisfies the fact. -/
+theorem RefC.run_ok
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (h : RefC G fx Ok C) {r : List Word} {m' : Mem} (hc : callE p n f args s₀.mem = .ok (r, m')) :
+    ∃ s', s'.mem = m' ∧ Q r s' ∧ Ok (V r s') := by
+  obtain ⟨s', hm, hQ, hx⟩ := triple_of_callE hs hc
+  rw [hx] at h
+  exact ⟨s', hm, hQ, h⟩
+
+/-- The ok half from `callW`. -/
+theorem RefC.run_okW
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (h : RefC G fx Ok C) {r : List Word} {m' : Mem} (hc : callW p n f args s₀.mem = some (r, m')) :
+    ∃ s', s'.mem = m' ∧ Q r s' ∧ Ok (V r s') :=
+  RefC.run_ok hs h (callE_of_callW hc)
+
+/-- **The error half**: a failing run of the call satisfies the claim (`C0`: the claim holds for
+every error of class `0`, as `ErrClaim`'s and `ErrClaimV`'s do). -/
+theorem RefC.run_err
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (C0 : ∀ e, e.cls = 0 → C e) (hGs : Gs) (hG : G) (h : RefC G fx Ok C) {e : Err}
+    (hc : callE p n f args s₀.mem = .error e) : C e := by
+  by_cases h0 : e.cls = 0
+  · exact C0 e h0
+  rw [triple_of_callE_err hs hc hGs h0] at h
+  exact h hG
+
+end refC
 
 /-! ## Twin computations that report failures as values
 
