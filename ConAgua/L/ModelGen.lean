@@ -70,6 +70,7 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   off its post: `F = some (r.headD 0, s'.mem)` (effectful), `r.headD 0 = F₀ ∧ r.tail.headD 0 = F₁ …`
   with the memory unchanged (pure; other conjuncts over the arguments, `i < 51`, are ignored), `r ≠ [] ∧ r = F` (a list of results; `F = []` becomes `none`
   unless the callee is listed in `noguard`), `F = some s'.mem` (memory only),
+  `F = some ([r.headD 0], s'.mem)` (one result as a list: read as `F = some (r, s'.mem)`),
   `G ∧ s'.mem = F` (memory only, total; `¬ G` becomes `none`), `F = some (r.headD 0)` with the
   memory unchanged (read-only), `F = some (r, s'.mem)` (several results and the memory: the
   code after the call is a continuation over `some (r, m₁)`, its results `r.headD 0`,
@@ -129,7 +130,9 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   * a callee whose spec has an `Option` model (`F = some …`; a callee outside the verdict closure,
     `G` its closedness `closedNV p fs = true`) is called through `L.liftE F` (`none` is
     `.error .oob`, class `0`), its spec wrapped as `L.Triple.nv (mem (by decide +kernel)) S`, whose
-    error post is `G → ε.cls = 0`; `mem` proves `f ∈ fs` (`L.Checker.nv_mem`);
+    error post is `G → ε.cls = 0`; `mem` proves `f ∈ fs` (`L.Checker.nv_mem`). A callee with a
+    total model (a pure post `r.headD 0 = F`, a list `r ≠ [] ∧ r = F`, a memory `s'.mem = F`) is
+    wrapped the same way; a guard's failure (`F = []`) is `.error .oob`;
   * a callee with a unified model is listed by its unified spec (an `Except` post): the model calls
     that model, so the callee's refinement applies to it directly.
 
@@ -588,6 +591,10 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
             | (``Prod.mk, #[_, _, v1, v2]) =>
               if resIdx r v1 == some 0 && v2 == memS' then eff := some a
               else if v1 == r && v2 == memS' then effL := some a
+              -- `some ([r.headD 0], s'.mem)`: a list of one result, read as the list
+              else if (match v1.listLit? with
+                  | some (_, [e]) => resIdx r e == some 0
+                  | _ => false) && v2 == memS' then effL := some a
               else throwError "l_model: unsupported post conjunct {c}"
             | _ =>
               if v == memS' then memOpt := some a

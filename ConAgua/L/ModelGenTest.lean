@@ -514,6 +514,43 @@ l_model tUniL_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈
 example (p : Prog) (m : Mem) (h : rdW (m.arr64 TW) 2 = 3) : tUniLE p m 2 = .ok (5, m) := by
   simp [tUniLE, h]
 
+/-- A callee whose spec states its one result as a list (`some ([r.headD 0], s'.mem)`). -/
+-- con-ron: none — an `l_model` test function
+def tOne : FunDecl := lfn (x) {
+  if x == 9 { abort };
+  TW.u64[0] := x;
+  return x + 1
+}
+
+/-- `t_one`'s model with its result as a list. -/
+def tOneL (m : Mem) (x : Word) : Option (List Word × Mem) :=
+  if x = 9 then none else some ([x + 1], m.set64 TW 0 x)
+
+theorem tOne_spec (p : Prog) (hp : p.lookup "t_one" = some tOne) (n : Nat) (s₀ : St) (x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_one" [x]
+    ⦃fun r s' => LocEq s' s₀ ∧ tOneL s₀.mem x = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, tOne]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
+      simp_all [tOneL, Sig.retVal, Sig.retOr, Locals.init, LocEq, BinOp.eval, Cmp.eval]
+
+-- con-ron: none — an `l_model` test function
+def tUseOne : FunDecl := lfn (x) locals (a) {
+  a := call t_one(x);
+  return a + a
+}
+
+l_model tUseOne_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_one"] → f ∈ fs)
+    (hp : p.lookup "t_use_one" = some tUseOne) (hq : p.lookup "t_one" = some tOne)
+  fns [hp ↦ tUseOneE]
+  specs [tOne_spec p hq n]
+  grind [arena_grind] simp [] unified nv [closedNV p fs = true, hmem]
+
+example (p : Prog) (m : Mem) : tUseOneE p m 9 = .error .oob := by
+  simp [tUseOneE, tOneL, tUseOneE.k_t_one]
+
 /-- A tuple model whose `return (k, x, y)` is in a spliced loop block (three words, not two). -/
 -- con-ron: none — an `l_model` test block
 def tTupLoop : Stmt := lblk (n, k, x, y) {
