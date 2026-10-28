@@ -1680,7 +1680,7 @@ No kit change was needed.
 Batch 3b in all (3 landings): `target_major_of*` and `class_majors` 869 → 358 pair lines, the
 class rules and recursor types 965 → 501, `target_k53*` 953 → 425: 2 787 → 1 284 (−54 %).
 
-### 3.21 Batch 3c, front validation (`validate_ind_d` and its callees)
+### 3.24 Batch 3c, front validation (`validate_ind_d` and its callees)
 
 The front-validation family of §3.1 that no batch-2 lane took (`Verdict/FrontOrderE`,
 `FrontRecsE`, `FrontValidE`; the leaves `vi_unsafe`, `vi_np_go`, `vi_ctor`, `vi_rec_idx` are
@@ -1754,7 +1754,7 @@ d4f85701, load 22–130, `_tmp/unify-b3c/times1.txt`):
 The three flagged modules are the new homes of the unified models; with the modules they came from
 they are 42.7 → 27.8 s.
 
-### 3.21 Batch 3c, block checks, second landing (`check_block_tables_one`, `check_block_tables`)
+### 3.25 Batch 3c, block checks, second landing (`check_block_tables_one`, `check_block_tables`)
 
 The batch-2c leftovers of the family (§3.12, §3.15) that have no core call:
 
