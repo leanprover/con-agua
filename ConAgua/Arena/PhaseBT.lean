@@ -4,11 +4,12 @@ import ConAgua.Arena.LeafFns
 import ConAgua.Arena.PhaseWorker
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Verdict.DeclValE
 
 /-!
 # Phase B under `StageT` (lane `loopt3`, items 12 and 12a)
 
-Phase B runs `check_value_group` from `StageT` with the program's own core (`cvgW_okT`,
+Phase B runs `check_value_group` from `StageT` with the program's own core (`cvg_ref`,
 `realCall p`; its `StageR` version through the stubs is gone). Per pending check:
 
 * **The twin side** (`TwinPend`): con-ron's phase-B invariant (`Arena.checkPendingList_bridge`'s
@@ -363,7 +364,7 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
   (ds : Array IDeclaration) (p : Prog)
 
 /-- **`check_value_group` refines `checkValueGroup` under `StageT`** (the program's own core,
-`cvgW_okT`): from the loop's relation, `TwinOK` and the pin flag, the loop's relation and the
+`cvg_ref`'s ok half): from the loop's relation, `TwinOK` and the pin flag, the loop's relation and the
 core's memos after it. -/
 @[refines ConRon.Arena.checkValueGroup]
 theorem checkValueGroup_specT (hm : mode = .verified) (hP : CvgProg p) (hq : KnotStageProg p)
@@ -383,13 +384,12 @@ theorem checkValueGroup_specT (hm : mode = .verified) (hP : CvgProg p) (hq : Kno
   subst hm
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (cvg_specW p hP (realCall p) (realCall_spec p) n s₀ vis g)
+  obtain ⟨hloc, _, a', hrun', hS', hg', hCr'⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkValueGroup_specE p hP n s₀ vis g) (cvg_ref hq hP hq.knot.lvc hap hkp n hn
+      ⟨⟨hR.check, hR.iw⟩, hTw, hfl⟩ hg hCr hthm))
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (hP.closed.memFrame n (f := "check_value_group") (by decide) [vis, g] s₀)
   subst hs
-  obtain ⟨a', hrun', hS', hg', hCr'⟩ :=
-    cvgW_okT hq hq.knot.lvc hq.lvlEqC hap hkp hn hW ⟨⟨hR.check, hR.iw⟩, hTw, hfl⟩ hg hCr hthm
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, hst ▸ hR.of_step hS'.stage hf ?_, hS'.twin.memos, hCr'⟩
   rw [← erecP_reset s.mem]

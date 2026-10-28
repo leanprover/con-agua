@@ -43,10 +43,10 @@ theorem pend_rdW (m : Mem) (pend : Array PendingCheck) (hP : PendR m pend) (j : 
   · rw [rdW_of_get? e2.symm hw2]
 
 /-- **`check_pending`'s error claim** (`CPErrT`): `scratch_enter` and `scratch_drop` claim nothing;
-`check_value_group`'s claim (`cvgE_okT`) at the record's view, `StageT` from the loop's relation. -/
+`check_value_group`'s claim (`cvg_ref`) at the record's view, `StageT` from the loop's relation. -/
 theorem checkPending_errT (hm : mode = .verified) (hP : PhaseBProg p) (hcE : CoreStubsE p)
-    (hivE : IvgE p) (hnvR : NVAt p "iw_reset") (hnvP : NVAt p "pin_word")
-    (hnvL : NVAt p "lvl_eq_c") (hnvE : NVAt p "scratch_enter") (hnvD : NVAt p "scratch_drop") :
+    (hivE : IvgE p) (hnv : closedNV p L.Checker.nvFns = true) (hnvE : NVAt p "scratch_enter")
+    (hnvD : NVAt p "scratch_drop") :
     CPErrT mode pins dn ds p fe pend := by
   subst hm
   intro n hn s₀ a₀ j vis hj hT hR hM hc hj62 hCr
@@ -97,8 +97,8 @@ theorem checkPending_errT (hm : mode = .verified) (hP : PhaseBProg p) (hcE : Cor
   | error e2 =>
     rw [h2, checkPendingE.k_check_value_group.none] at hW; cases hW
     refine ErrClaim.bind_left ?_
-    exact cvgE_okT hP.knot hP.cvg hP.knot.knot.lvc hP.apd hP.crk hcE hivE hnvR hnvP hnvL (by omega) hS
-      hg hCr1 hthm h2
+    exact RefE.run_err (s₀ := ⟨s1.mem, Locals.init []⟩) (checkValueGroup_specE p hP.cvg n _ v g) hnv
+      ⟨hcE, hivE⟩ (cvg_ref hP.knot hP.cvg hP.knot.knot.lvc hP.apd hP.crk n (by omega) hS hg hCr1 hthm) h2
   | ok q =>
   obtain ⟨r2, m2⟩ := q
   rw [h2, checkPendingE.k_check_value_group.arm1] at hW
