@@ -298,6 +298,28 @@ theorem StackKept.restoreG {m m₁ : Mem} (hg : StackGrew m m₁)
     StackKept m (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) :=
   StackKept.restore hg.below hg.size hg.bstk hg.pool h136
 
+/-- `StackKept.restoreG` without the bound: out of bounds the top reads `0`, so the old top was
+`0` too. -/
+theorem StackKept.restoreG' {m m₁ : Mem} (hg : StackGrew m m₁) :
+    StackKept m (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) := by
+  by_cases h136 : (136 : Word).toNat < (m₁.arr64 CTL).size
+  · exact StackKept.restoreG hg h136
+  have h0 : spTop m₁ = 0 := by
+    simp only [spTop, rdW, Array.getElem?_eq_none (Nat.le_of_not_lt h136)]; rfl
+  have hfs := MemFrame.setCtl m₁ 136 (rdW (m.arr64 CTL) 136)
+  have hspn : (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)).arr64 SPN = m₁.arr64 SPN :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  refine ⟨?_, by rw [hspn, hg.size], fun i hi => by simp only [spW, hspn]; exact hg.below i hi,
+    hg.bstk.trans (BKept.of_frame hfs (by decide) (by decide)),
+    hg.pool.trans (PoolGrew.of_frame hfs (by decide) (by decide))⟩
+  have hle := hg.top
+  rw [h0] at hle
+  rw [spTop, rdW_set64, ite_eq_right (fun h => h136 h.2.2)]
+  show spTop m₁ = spTop m
+  rw [h0]
+  rw [UInt64.le_iff_toNat_le] at hle
+  exact UInt64.toNat_inj.mp (by simp at hle ⊢; omega)
+
 theorem addW (a b : Word) (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
   rw [UInt64.toNat_add, Nat.mod_eq_of_lt h]
 

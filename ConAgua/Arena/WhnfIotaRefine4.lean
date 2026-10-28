@@ -38,31 +38,13 @@ l_model pihE_spec (p : Prog) (hf : p.lookup "proof_irrel_half" = some proofIrrel
   fns [hf ↦ pihE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-/-- Model of `proof_irrel`. -/
-def pirrW (p : Prog) (n : Nat) (m : Mem) (mode vis d a b : Word) : Option (List Word × Mem) :=
-  match callW p n "proof_irrel_half" [mode, vis, d, a] m with
-  | none => none
-  | some (ra, m1) =>
-  if ra.headD 0 = 0 then some ([0], m1) else
-  match callW p n "proof_irrel_half" [mode, vis, d, b] m1 with
-  | none => none
-  | some (rb, m2) =>
-  if rb.headD 0 = 0 then some ([0], m2) else
-  some ([(if ra.headD 0 = 1 then 0 else 1) &&& (if rb.headD 0 = 1 then 0 else 1)], m2)
-
-theorem proofIrrel_spec (p : Prog) (hp : p.lookup "proof_irrel" = some proofIrrelL) (n : Nat)
-    (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "proof_irrel" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ pirrW p n s₀.mem mode vis d a b = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, proofIrrelL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-    callW_spec p n "proof_irrel_half"] <;>
-  simp_all [pirrW, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
-    St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
-    Sig.retOr]
-
+/-- **`proof_irrel`'s model, for both outcomes**: its halves through `proof_irrel_half`'s. -/
+l_model pirrE_spec (p : Prog) (hf : p.lookup "proof_irrel" = some proofIrrelL)
+    (hh : p.lookup "proof_irrel_half" = some proofIrrelHalfL)
+  fns [hf ↦ pirrE list]
+  specs [pihE_spec p hh n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
 /-! ### The refinement -/
 
@@ -297,8 +279,76 @@ theorem pih_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
   rw [hy]
   exact RefE.ret rfl ⟨hA5, (by show some y = decO (r5.headD 0); exact hy.symm), hr5⟩
 
-/-- `proofIrrel_refines` over the named hypothesis `LvlDen` (`LvlDen.of_den` from `CoreDen`): the
-halves' ok runs from `pih_ref`. -/
+theorem PihG.mono {p : Prog} {n n' : Nat} (h : PihG p n) (hn : n' ≤ n) : PihG p n' :=
+  ⟨h.knot.mono hn, h.pin, h.lvl⟩
+
+/-- **`proof_irrel` refines `proofIrrel`, both outcomes**: its halves' (`pih_ref`). -/
+theorem pirr_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hk : KnotUpTo p n)
+    (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (eb mode d a b : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (ha : HW a)
+    (hb : HW b) (m : Mem) (a₀ : AState) (M : ModeMaps) (hS : CoreS dn m a₀ vis fe M eb) :
+    RefE (PihG p n) (pirrE p (n + 1) m mode vis d a b)
+      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decBool dn m vis fe M eb ResH) := by
+  simp only [pirrE]
+  rw [proofIrrel_eq_halves, piHalfT_eq]
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ n' =>
+  have hA := pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode
+    d a hm4 hebm ha m a₀ M hS
+  rcases h1 : pihE p (n' + 1) m mode vis d a with e1 | ⟨ra, m1⟩
+  · rw [h1] at hA
+    exact fun hG => ErrClaim.bind_left (hA (hG.mono (Nat.le_succ n')))
+  rw [h1] at hA
+  obtain ⟨ya, a1, hA1, hRa⟩ := hA
+  refine RefE.bind_right hA1 ?_
+  have hya : ya = decO (ra.headD 0) := hRa.res
+  simp only [pirrE.k_proof_irrel_half]
+  by_cases hwa : ra.headD 0 = 0
+  · rw [ite_eq_left hwa, hya, hwa]
+    exact RefE.ret rfl ⟨hRa.after, rfl, by show HW (0 : Word); unfold HW; decide⟩
+  rw [ite_eq_right hwa]
+  obtain ⟨M1, hS1, hK1, hSt1⟩ := hRa.after
+  have hx : ya = some (decide (ra.headD 0 ≠ 1)) := by
+    rw [hya]; unfold decO; by_cases h1 : ra.headD 0 = 1
+    · rw [ite_eq_right hwa, ite_eq_left h1, h1]; rfl
+    · rw [ite_eq_right hwa, ite_eq_right h1, decide_eq_true h1]
+  rw [hx]
+  simp only
+  rw [piHalfT_eq]
+  have hB := pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode
+    d b hm4 hebm hb m1 a1 M1 hS1
+  rcases h2 : pihE p (n' + 1) m1 mode vis d b with e2 | ⟨rb, m2⟩
+  · rw [h2] at hB
+    exact fun hG => ErrClaim.bind_left (hB (hG.mono (Nat.le_succ n')))
+  rw [h2] at hB
+  obtain ⟨yb, a2, hA2, hRb⟩ := hB
+  refine RefE.bind_right hA2 ?_
+  have hyb : yb = decO (rb.headD 0) := hRb.res
+  have hCA := CoreAfter.comp hK1 hSt1 hRb.after
+  simp only [pirrE.k_proof_irrel_half_2]
+  by_cases hwb : rb.headD 0 = 0
+  · rw [ite_eq_left hwb, hyb, hwb]
+    exact RefE.ret rfl ⟨hCA, rfl, by show HW (0 : Word); unfold HW; decide⟩
+  rw [ite_eq_right hwb]
+  refine RefE.ret (y := (yb.map (decide (ra.headD 0 ≠ 1) && ·)).getD false) ?_ ⟨hCA, ?_, ?_⟩
+  · rw [hyb]; unfold decO; rw [ite_eq_right hwb]
+    by_cases h2 : rb.headD 0 = 1
+    · rw [ite_eq_left h2]; rfl
+    · rw [ite_eq_right h2]; rfl
+  · show _ = (_ != 0); rw [hyb]
+    generalize ra.headD 0 = va at *
+    generalize rb.headD 0 = vb at *
+    by_cases h1 : va = 1 <;> by_cases h2 : vb = 1 <;> simp [decO, h1, h2, hwb]
+  · show HW _
+    unfold HW
+    generalize ra.headD 0 = va
+    generalize rb.headD 0 = vb
+    by_cases h1 : va = 1 <;> by_cases h2 : vb = 1 <;> simp [h1, h2] <;> decide
+
+/-- `proofIrrel_refines` over the named hypothesis `LvlDen` (`LvlDen.of_den` from `CoreDen`):
+`pirr_ref`'s ok half. -/
 theorem proofIrrel_refines' (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -306,70 +356,10 @@ theorem proofIrrel_refines' (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) :
     eb = (mode >>> 1) &&& 1 → HW a → HW b →
     CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
       (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
-      vis fe MM eb := by
-  intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d a b hS hm4 hebm ha hb
-  refine triple_post (proofIrrel_spec p hp.proofIrrel n s₀ mode vis d a b) fun r s' ⟨hloc, hW⟩ =>
-    ⟨hloc, ?_⟩
-  simp only [pirrW] at hW
-  cases n with
-  | zero => rw [callW_zero] at hW; cases hW
-  | succ n' =>
-  rcases c1 : callW p (n' + 1) "proof_irrel_half" [mode, vis, d, a] s₀.mem with _ | ⟨ra, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
-  obtain ⟨t1, ht1, -, ya, a1, hA1, hRa⟩ := RefE.run_okW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-    (pihE_spec p hp.proofIrrelHalf (n' + 1) _ mode vis d a)
-    (pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode d a hm4
-      hebm ha s₀.mem a₀ MM hS) c1
-  rw [ht1] at hRa
-  have hya : ya = decO (ra.headD 0) := hRa.res
-  by_cases hwa : ra.headD 0 = 0
-  · rw [ite_eq_left hwa] at hW
-    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    rw [hwa] at hya
-    have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    refine CoreRef.of_run (proofIrrel_run_none (coreKnot (decMode mode) fe id F) fe d.toNat (decE a)
-      (decE b) a₀ a1 (by rw [hA1, hya]; rfl)) hRa.after ?_ ?_
-    · show false = (r.headD 0 != 0); rw [hr0]; rfl
-    · unfold ResH HW; rw [hr0]; decide
-  rw [ite_eq_right hwa] at hW
-  rcases c2 : callW p (n' + 1) "proof_irrel_half" [mode, vis, d, b] m1 with _ | ⟨rb, m2⟩ <;>
-    simp only [c2, reduceCtorEq] at hW
-  obtain ⟨M1, hS1, hK1, hSt1⟩ := hRa.after
-  obtain ⟨t2, ht2, -, yb, a2, hA2, hRb⟩ := RefE.run_okW (s₀ := ⟨m1, Locals.init []⟩)
-    (pihE_spec p hp.proofIrrelHalf (n' + 1) _ mode vis d b)
-    (pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode d b hm4
-      hebm hb m1 a1 M1 hS1) c2
-  rw [ht2] at hRb
-  have hCA := CoreAfter.comp hK1 hSt1 hRb.after
-  have hx : ya = some (decide (ra.headD 0 ≠ 1)) := by
-    rw [hya]; unfold decO; by_cases h1 : ra.headD 0 = 1
-    · rw [ite_eq_right hwa, ite_eq_left h1, h1]; rfl
-    · rw [ite_eq_right hwa, ite_eq_right h1, decide_eq_true h1]
-  rw [hx] at hA1
-  have hrunF := proofIrrel_run_half (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
-    a₀ a1 a2 _ yb hA1 hA2
-  have hyb : yb = decO (rb.headD 0) := hRb.res
-  by_cases hwb : rb.headD 0 = 0
-  · rw [ite_eq_left hwb] at hW
-    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    rw [hwb] at hyb
-    refine CoreRef.of_run hrunF hCA ?_ ?_
-    · show _ = (r.headD 0 != 0); rw [hr0, hyb]; rfl
-    · unfold ResH HW; rw [hr0]; decide
-  · rw [ite_eq_right hwb] at hW
-    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hr0 : r.headD 0 = (if ra.headD 0 = 1 then 0 else 1) &&& (if rb.headD 0 = 1 then 0 else 1) := by
-      simpa using hr.symm
-    refine CoreRef.of_run hrunF hCA ?_ ?_
-    · show _ = (r.headD 0 != 0); rw [hr0, hyb]
-      generalize ra.headD 0 = va at *
-      generalize rb.headD 0 = vb at *
-      by_cases h1 : va = 1 <;> by_cases h2 : vb = 1 <;> simp [decO, h1, h2, hwb]
-    · unfold ResH HW; rw [hr0]
-      generalize ra.headD 0 = va
-      generalize rb.headD 0 = vb
-      by_cases h1 : va = 1 <;> by_cases h2 : vb = 1 <;> simp [h1, h2] <;> decide
+      vis fe MM eb :=
+  fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d a b hS hm4 hebm ha hb =>
+    RefE.coreSpec (pirrE_spec p hp.proofIrrel hp.proofIrrelHalf (n + 1) s₀ mode vis d a b)
+      (pirr_ref p hp hld n F hk hnF hn62 dn vis fe eb mode d a b hm4 hebm ha hb s₀.mem a₀ MM hS)
 
 /-- **`proof_irrel` refines `proofIrrel`.** Statement changes (the knot's slots, `lvl_eq_c` and the
 level readback need them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; the

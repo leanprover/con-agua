@@ -5,8 +5,8 @@ import ConAgua.Arena.DefEqStuckEta
 # The structure-η certificate's tail: `struct_eta_cert_tail` (lane `defeq`, helper `defeq-top`)
 
 The level comparison and the two spine comparisons of `structEtaCertWith` (`setTailT`). The
-projections' slice stays on the stack, so the spec is a `GrowSpec` (lane `whnf`'s
-`WhnfCoreProj.lean`); `growRef_bindS` threads it. `eta_projs` from lane `whnf`'s `etaProjs_refines`
+projections' slice stays on the stack, so the post is a `GrowPost` (`RefE.bind_grow`/
+`bind_growK` thread it); the errors are the level comparison's decline and `defeq_lst`'s (`SetG`). `eta_projs` from lane `whnf`'s `etaProjs_refines`
 and `etaProjs_spec` (the new top), `defeq_lst` from `DefeqLstOK`, `lvls_eq_c` from `LvlsEqCH`.
 -/
 
@@ -68,6 +68,16 @@ theorem GrowRef.restore {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {
   have hS' := hS.frame_stk (MemFrame.setCtl m 136 (rdW (m₀.arr64 CTL) 136)) (by simp) (by simp)
   exact ⟨hok, ⟨M', hS', hK, StackKept.restoreG hg h136⟩, hres, hr⟩
 
+/-- **The top put back** after a run that grew the stack (`GrowPost` to `CorePost`), the result
+relisted as `r'`. -/
+theorem GrowPost.restore {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name}
+    {m₀ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
+    {r : List Word} {m : Mem} {y : α} {a' : AState} (h : GrowPost dec dn m₀ vis fe M eb ok (r, m) y a')
+    (r' : List Word) (hr : dec r' = dec r) (hok : ok r') :
+    CorePost dec dn m₀ vis fe M eb ok (r', m.set64 CTL 136 (rdW (m₀.arr64 CTL) 136)) y a' := by
+  obtain ⟨M', hS, hK, hg⟩ := h.after
+  exact ⟨⟨M', hS.frame_stk (MemFrame.setCtl _ _ _) (by simp) (by simp), hK, StackKept.restoreG' hg⟩,
+    h.res.trans hr.symm, hok⟩
 /-- A slice below the top survives a run that kept the stack below the top. -/
 theorem SpineR.grew {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
     (hg : StackGrew m m') (htop : off.toNat + cnt.toNat ≤ (spTop m).toNat)
@@ -111,63 +121,9 @@ def setTailT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (b : EIdx) (us : LsIdx) (
     else pure false
   else pure false
 
-/-! ## The model of `struct_eta_cert_tail` -/
-
-section stK
-variable (p : Prog) (n : Nat) (mode vis d b us T us2 ao an to tn ep nf : Word)
-
-def stK3 (tk : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    call1W p n "defeq_lst" [mode, vis, d, ao + tk, an - tk, r.headD 0, r.tail.headD 0] m
-
-def stK2 (tk : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, m)
-    else stK3 p n mode vis d ao an tk (callW p n "eta_projs" [T, b, nf] m)
-
-/-- **The model of `struct_eta_cert_tail`** past `lvls_eq_c`'s run. -/
-def stK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then none
-    else if r.headD 0 = 1 then some (0, m)
-    else stK2 p n mode vis d b T ao an nf (if an < ep then an else ep)
-      (callW p n "defeq_lst" [mode, vis, d, ao, if an < ep then an else ep, to, tn] m)
-
-variable (r : List Word) (m : Mem) (tk : Word)
-
-theorem stK3_some : stK3 p n mode vis d ao an tk (some (r, m)) =
-    call1W p n "defeq_lst" [mode, vis, d, ao + tk, an - tk, r.headD 0, r.tail.headD 0] m := rfl
-theorem stK2_no (h : r.headD 0 = 0) : stK2 p n mode vis d b T ao an nf tk (some (r, m)) = some (0, m) := by
-  simp only [stK2, h, ↓reduceIte]
-theorem stK2_yes (h : r.headD 0 ≠ 0) : stK2 p n mode vis d b T ao an nf tk (some (r, m)) =
-    stK3 p n mode vis d ao an tk (callW p n "eta_projs" [T, b, nf] m) := by
-  simp only [stK2, h, ↓reduceIte]
-
-end stK
-
 theorem wmin_le {a b : Word} (h : b ≤ a) : (if a < b then a else b) = b := by
   have : ¬ a < b := by rw [UInt64.lt_iff_toNat_lt]; rw [UInt64.le_iff_toNat_le] at h; omega
   simp only [this, ↓reduceIte]
-
-theorem setTail_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
-    (mode vis d b us T us2 ao an to tn ep nf : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_eta_cert_tail"
-      [mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf]
-    ⦃fun r s' => LocEq s' s₀ ∧ stK1 p n mode vis d b T ao an to tn ep nf
-      (callW p n "lvls_eq_c" [us, us2] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.setTail]
-  simp only [callFn, structEtaCertTailL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec p n "lvls_eq_c", callW_spec p n "defeq_lst", callW_spec p n "eta_projs"] <;>
-  simp_all [stK1, stK2, stK3, call1W, wmin_le, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
 
 /-! ## Leaves at any fuel -/
 
@@ -276,105 +232,154 @@ theorem min_le_an (an ep : Word) : (if an < ep then an else ep).toNat ≤ an.toN
   · simp only [hl, ↓reduceIte]; exact Nat.le_refl _
   · simp only [hl, ↓reduceIte]; rw [UInt64.lt_iff_toNat_lt] at hl; omega
 
-/-- **`struct_eta_cert_tail` refines `setTailT`** at the knot (the projections' slice left on the
-stack). -/
+/-- `defeq_lst`'s error claim at fuel `n + 1` (the premises of `DefeqLstOK`). -/
+def DefeqLstWE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d ao an bo bn : Word) (xs ys : Array EIdx),
+    SlotPre s₀ a₀ dn vis fe M eb mode → SpineR s₀.mem ao an xs → SpineR s₀.mem bo bn ys →
+    ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat → bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat →
+    CoreSpecE p (n + 1) "defeq_lst" [mode, vis, d, ao, an, bo, bn]
+      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) s₀ a₀
+
+/-- **What the structure-η certificate's errors assume** at L fuel `n`: the knot's slots' claims,
+`defeq_lst`'s. -/
+structure SetG (p : Prog) (n : Nat) : Prop where
+  knot : KnotUpToE p n
+  lst : DefeqLstWE p
+
+theorem SetG.mono {p : Prog} {n n' : Nat} (h : SetG p n) (hn : n' ≤ n) : SetG p n' :=
+  ⟨h.knot.mono hn, h.lst⟩
+
+/-- `defeq_lst`'s claim at a call of fuel `n` under `SetG p n`. -/
+theorem SetG.lstE {p : Prog} {n : Nat} (hG : SetG p n) (hk : KnotUpTo p n) {F : Nat} (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) {s₀ : St} {a₀ : AState} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb mode d ao an bo bn : Word} {xs ys : Array EIdx}
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (h1 : SpineR s₀.mem ao an xs)
+    (h2 : SpineR s₀.mem bo bn ys) (h3 : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
+    (h4 : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) {e : Err}
+    (hc : callE p n "defeq_lst" [mode, vis, d, ao, an, bo, bn] s₀.mem = .error e) :
+    ErrClaim (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) a₀ e := by
+  cases n with
+  | zero =>
+    obtain ⟨e', he', h0⟩ := callE_zero p "defeq_lst" [mode, vis, d, ao, an, bo, bn] s₀.mem
+    rw [hc] at he'; cases he'; exact ErrClaim.of_cls0 h0
+  | succ N =>
+    exact CoreSpecE.of_callE (hG.lst N (hk.mono (Nat.le_succ N)) (hG.knot.mono (Nat.le_succ N)) F
+      (by omega) (by omega) s₀ a₀ dn vis fe M eb mode d ao an bo bn xs ys hs h1 h2 h3 h4) hc
+
+/-- **`struct_eta_cert_tail` refines `setTailT`, both outcomes** (the projections' slice left on
+the stack): the errors are the level comparison's out-of-fuel decline and `defeq_lst`'s. -/
 @[refines_part ConRon.Arena.structEtaCertWith "the level comparison and the spines (setTailT)"]
-theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
+theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d b us T us2 ao an to tn ep nf : Word) (aargs targs : Array EIdx) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hus : HW us)
     (hT : HW T) (hus2 : HW us2) (hdus : ∃ lu, denoteLs a₀.store.lss (decI us) = some lu)
-    (hdus2 : ∃ lv, denoteLs a₀.store.lss (decI us2) = some lv) (ha : SpineR s₀.mem ao an aargs) (ht : SpineR s₀.mem to tn targs)
+    (hdus2 : ∃ lv, denoteLs a₀.store.lss (decI us2) = some lv) (ha : SpineR s₀.mem ao an aargs)
+    (ht : SpineR s₀.mem to tn targs)
     (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (htt : to.toNat + tn.toNat ≤ (spTop s₀.mem).toNat) :
-    GrowSpec p (n + 1) "struct_eta_cert_tail" [mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf]
+    RefE (SetG p n) (sectE p (n + 1) s₀.mem mode vis d b us T us2 ao an to tn ep nf)
       (setTailT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI us) (decI T) (decI us2)
-        ep.toNat nf.toNat aargs.toList targs.toList) decBool s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (setTail_spec p hq n s₀ mode vis d b us T us2 ao an to tn ep nf)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+        ep.toNat nf.toNat aargs.toList targs.toList) a₀
+      (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
   have hspn := hs.rel.spn
-  obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s a₀ dn vis fe M eb us us2 hs.rel hus hus2 hdus hdus2) hc1
+  simp only [sectE]
+  rcases c1 : callW p n "lvls_eq_c" [us, us2] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none, sectE.k_lvls_eq_c.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s₀ a₀ dn vis fe M eb us us2 hs.rel hus hus2 hdus hdus2) c1
   obtain ⟨_, _, _, hst₁⟩ := h₁.2.1
   unfold setTailT
-  refine growRef_bindS (GrowRef.of_core h₁) (fun M₁ hS₁ => ?_)
-  simp only [stK1] at hW
-  have h0 : ¬ r₁.headD 0 = 0 := fun h0 => by simp only [h0, ↓reduceIte] at hW; cases hW
-  have hd1 : decO (r₁.headD 0) = (if r₁.headD 0 = 1 then some false else some true) := by
-    simp only [decO, h0, ↓reduceIte]
-  rw [hd1]
+  refine RefE.bind_growK (w := id) h₁ (fun M₁ hS₁ _ => ?_)
+  simp only [sectE.k_lvls_eq_c]
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [ite_eq_left h0]
+    have hdo : decO (r₁.headD 0) = none := by rw [h0]; rfl
+    rw [hdo]
+    exact fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
+  rw [ite_eq_right h0]
   by_cases h1 : r₁.headD 0 = 1
-  · simp only [h1, ↓reduceIte] at hW
-    obtain ⟨hr, rfl⟩ := some_pair_inj hW
-    simp only [h1, ↓reduceIte]
-    refine growRef_pure hS₁ (by rfl) (decBool_false_of hr.symm).symm
-      (by unfold ResH; rw [← hr]; exact hw0)
-  simp only [h0, h1, ↓reduceIte] at hW
-  simp only [h1, ↓reduceIte]
-  refine growRef_congrS (T' := do
-      if ← defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (aargs.toList.take ep.toNat)
-          targs.toList then do
-        let projs ← etaProjs (decI T) (decE b) nf.toNat
-        defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (aargs.toList.drop ep.toNat) projs
-      else pure false) (by rfl) ?_
-  -- the parameters
+  · rw [ite_eq_left h1]
+    have hdo : decO (r₁.headD 0) = some false := by rw [h1]; rfl
+    rw [hdo]
+    refine RefE.bind_right (by simp [liftFueled]; rfl) ?_
+    exact RefE.ret rfl (GrowPost.of_core (CorePost.ret hS₁ rfl hw0))
+  rw [ite_eq_right h1]
+  have hdo : decO (r₁.headD 0) = some true := by unfold decO; rw [ite_eq_right h0, ite_eq_right h1]
+  rw [hdo]
+  refine RefE.bind_right (by simp [liftFueled]; rfl) ?_
+  simp only [↓reduceIte]
   obtain ⟨tk, htk⟩ : ∃ tk, tk = (if an < ep then an else ep) := ⟨_, rfl⟩
-  rw [← htk] at hW
+  have hj : (if an < ep then sectE.j1 p n mode vis d b T ao an to tn nf an m₁
+      else sectE.j1 p n mode vis d b T ao an to tn nf ep m₁) =
+      sectE.j1 p n mode vis d b T ao an to tn nf tk m₁ := by rw [htk]; split <;> rfl
+  rw [hj, sectE.j1]
   have hmin : tk.toNat ≤ an.toNat := htk ▸ min_le_an an ep
   have hlen : aargs.toList.length = an.toNat := by simpa using ha.size
   have hsp₁ : SpineR m₁ ao an aargs := ha.keep hst₁.size hst₁.below hat hspn
   have htp₁ : SpineR m₁ to tn targs := ht.keep hst₁.size hst₁.below htt hspn
-  have htop₁ : spTop m₁ = spTop s.mem := hst₁.1
-  obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
+  have htop₁ : spTop m₁ = spTop s₀.mem := hst₁.1
   have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hS₁.spn
   have htake := hsp₁.take tk hmin
+  have etake : ((aargs.toList.take tk.toNat).toArray).toList = aargs.toList.take ep.toNat := by
+    rw [htk]; exact take_min_eq _ _ _ hlen
+  rcases c2 : callE p n "defeq_lst" [mode, vis, d, ao, tk, to, tn] m₁ with e2 | ⟨r₂, m₂⟩
+  · intro hG
+    have h := hG.lstE hk hF hn (s₀ := ⟨m₁, Locals.init []⟩) ⟨hS₁, hs.mode4, hs.eb_mode⟩ htake htp₁
+      (by rw [htop₁]; omega) (by rw [htop₁]; exact htt) c2
+    rw [etake] at h
+    exact ErrClaim.bind_left h
   have h₂ := CoreSpec.of_callW (defeqLst_at p hc n hk F hF hn ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
     mode d ao tk to tn _ targs ⟨hS₁, hs.mode4, hs.eb_mode⟩ htake htp₁
-    (by rw [htop₁]; have := hmin; omega) (by rw [htop₁]; exact htt)) hc2
-  rw [show ((aargs.toList.take tk.toNat).toArray).toList = aargs.toList.take ep.toNat by
-    rw [htk]; exact take_min_eq _ _ _ hlen] at h₂
+    (by rw [htop₁]; omega) (by rw [htop₁]; exact htt)) (callW_of_callE c2)
+  rw [etake] at h₂
   obtain ⟨_, _, _, hst₂⟩ := h₂.2.1
-  refine growRef_bindS (GrowRef.of_core h₂) (fun M₂ hS₂ => ?_)
+  refine RefE.bind_growK (w := id) h₂ (fun M₂ hS₂ _ => ?_)
+  simp only [sectE.k_defeq_lst]
   by_cases h20 : r₂.headD 0 = 0
-  · rw [stK2_no (h := h20)] at hW
-    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    rw [decBool_false_of h20]
-    exact growRef_pure hS₂ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
-  rw [stK2_yes (h := h20)] at hW
-  rw [decBool_true_of h20]
+  · rw [ite_eq_left h20, decBool_false_of h20]
+    exact RefE.ret rfl (GrowPost.of_core (CorePost.ret hS₂ rfl hw0))
+  rw [ite_eq_right h20, decBool_true_of h20]
   simp only [↓reduceIte]
-  -- the projections
-  obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  obtain ⟨h₃, hr30, hr31, htop₃, hroom₃, hsp₃⟩ := etaProjs_callW hi hS₂ hT hb hc3
+  rcases c3 : callW p n "eta_projs" [T, b, nf] m₂ with _ | ⟨r₃, m₃⟩
+  · rw [liftE_none, sectE.k_eta_projs.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨h₃, hr30, hr31, htop₃, hroom₃, hsp₃⟩ := etaProjs_callW hi hS₂ hT hb c3
   obtain ⟨_, _, _, hst₃⟩ := h₃.2.1
-  refine growRef_bindS h₃ (fun M₃ hS₃ => ?_)
-  rw [stK3_some] at hW
+  refine RefE.bind_grow (w := id) h₃ (fun M₃ hS₃ _ => ?_)
+  simp only [sectE.k_eta_projs]
   have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := hS₂.spn
-  have htop₂ : spTop m₂ = spTop s.mem := hst₂.1.trans htop₁
+  have htop₂ : spTop m₂ = spTop s₀.mem := hst₂.1.trans htop₁
   have hdrop := hsp₁.drop tk hmin hspn₁
   have e1 : (ao + tk).toNat = ao.toNat + tk.toNat := by
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by have := hsp₁.bound; omega)
   have e2 : (an - tk).toNat = an.toNat - tk.toNat :=
     UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hmin)
   have hsum : (ao + tk).toNat + (an - tk).toNat = ao.toNat + an.toNat := by rw [e1, e2]; omega
-  have hle3 : (spTop s.mem).toNat ≤ (spTop m₃).toNat := htop₂ ▸ hst₃.1
+  have hle3 : (spTop s₀.mem).toNat ≤ (spTop m₃).toNat := htop₂ ▸ hst₃.1
   have hdrop₃ : SpineR m₃ (ao + tk) (an - tk) (aargs.toList.drop tk.toNat).toArray :=
-    (hdrop.keep hst₂.size hst₂.below (by rw [hsum, htop₁]; exact hat) hspn₁).keep hst₃.size hst₃.below
-      (by rw [hsum, htop₂]; exact hat) hspn₂
+    (hdrop.keep hst₂.size hst₂.below (by rw [hsum, htop₁]; exact hat) hspn₁).keep hst₃.size
+      hst₃.below (by rw [hsum, htop₂]; exact hat) hspn₂
   have hb₃ : (ao + tk).toNat + (an - tk).toNat ≤ (spTop m₃).toNat := by rw [hsum]; omega
   have hp₃ : (r₃.headD 0).toNat + (r₃.tail.headD 0).toNat ≤ (spTop m₃).toNat := by
     rw [hr30, hr31, htop₃, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; exact Nat.le_refl _
-  have h₄ := CoreSpec.of_call1W (s₀ := ⟨m₃, Locals.init []⟩)
-    (defeqLst_at p hc n hk F hF hn ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode d (ao + tk) (an - tk)
-      (r₃.headD 0) (r₃.tail.headD 0) _ _ ⟨hS₃, hs.mode4, hs.eb_mode⟩ hdrop₃ hsp₃ hb₃ hp₃)
-    (fun r r' h => by simp only [decBool, h]) hW
-  rw [show ((aargs.toList.drop tk.toNat).toArray).toList = aargs.toList.drop ep.toNat by
-    rw [htk]; exact drop_min_eq _ _ _ hlen] at h₄
-  exact GrowRef.of_core (by simpa using h₄)
+  have edrop : ((aargs.toList.drop tk.toNat).toArray).toList = aargs.toList.drop ep.toNat := by
+    rw [htk]; exact drop_min_eq _ _ _ hlen
+  rcases c4 : callE p n "defeq_lst" [mode, vis, d, ao + tk, an - tk, r₃.headD 0, r₃.tail.headD 0] m₃
+    with e4 | ⟨r₄, m₄⟩
+  · intro hG
+    have h := hG.lstE hk hF hn (s₀ := ⟨m₃, Locals.init []⟩) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hdrop₃ hsp₃
+      hb₃ hp₃ c4
+    rw [edrop, List.toList_toArray] at h
+    exact h
+  have h₄ := CoreSpec.of_callW (defeqLst_at p hc n hk F hF hn ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb
+    mode d (ao + tk) (an - tk) (r₃.headD 0) (r₃.tail.headD 0) _ _ ⟨hS₃, hs.mode4, hs.eb_mode⟩
+    hdrop₃ hsp₃ hb₃ hp₃) (callW_of_callE c4)
+  rw [edrop, List.toList_toArray] at h₄
+  obtain ⟨hrun, hP⟩ := h₄.post
+  exact RefE.ret hrun (GrowPost.of_core ⟨hP.after, hP.res, hP.valid⟩)
 
 end L.Arena
