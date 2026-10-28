@@ -1,4 +1,4 @@
-import ConAgua.Verdict.WhnfPrepE
+import ConAgua.Arena.WhnfM2CRefine5
 /-!
 # `major_to_ctor`'s verdict claims
 

@@ -3,7 +3,6 @@ import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.CoreDen
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
