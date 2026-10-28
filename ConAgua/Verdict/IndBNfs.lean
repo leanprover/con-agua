@@ -248,7 +248,7 @@ theorem cnsE_claim (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (ht
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 1)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 2))
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 3)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 6))
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 7)) tblo tbll
-  have hT := tmn_ref hkp henv P.tmn k (by omega) hC hA
+  have hT := tmn_ref hkp henv k (by omega) hC hA
     (hbs.grow hg) hlH (by rw [decHL_grow hg hftb]; exact hft) (by have := hg.1; omega) hpfS hdsS hctB hctb
     (htbl.grow (fun q => decNCN_mono q) hg) hP hsh hftP hpfvsP (by rw [hlD]; exact hlvls) hdsP hctorsP
     htblP hformer hscp

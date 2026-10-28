@@ -6,7 +6,7 @@ import ConAgua.Verdict.IndBStream
 # Error refinement of `gen_rec_check_prep` (lane `verdicts-b`, helper `ib`)
 
 Mirrors `grpAW_okC`/`grpBW_okC`/`grpCW_okC` (the three parts of `grpW_okC`). The claims used are
-`trp_ref`, `classStreamRecs_claim`, `classesCtors_claim`, `classRecTysOk_claim`;
+`trp_ref`, `classStreamRecs_claim` (`csr_ref`), `classesCtors_claim`, `classRecTysOk_claim`;
 `classes_nfs`' claim is a hypothesis (`ClassesNfsE`: the generator cannot produce its model, the
 function has nested loops), `block_large_elim_allowed` and the rest are `closedNV`.
 -/
@@ -57,7 +57,7 @@ section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p) (hCcv : CcvE p)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
 
 include hkp henv hApd hCrk hnv hcE hU in
 /-- **`gen_rec_check_prep`'s third part, error claim** (`grpCW_okC`'s hypotheses): the generator
@@ -299,7 +299,7 @@ theorem grpBE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
     (hcvRP : cvRis.mapM (Frontend.denoteCV a.store) = some cvRisP)
     (hwRis : ∀ cv ∈ cvRisP, ConLeche.Expr.WScoped 0 cv.type) {fsR : List FnName}
     (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR)
-    (hNfs : ClassesNfsE p dn vis fe env) (hTka : TkaE p dn vis fe env) :
+    (hNfs : ClassesNfsE p dn vis fe env) :
     ∀ e, grpE.j1 p n vis pp pO pL tO tL rd mO mL cO cL cRo cRl m = .error e →
       ∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
         ErrClaim (grcTwinB V fe bs tbl rdv ms cvTas (fun ms2 ctors ftc elim =>
@@ -375,7 +375,7 @@ theorem grpBE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
     rw [h3, grpE.k_classes_ctors.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (classesCtors_claim hkp henv P.ccs hIlpf P.opf dn fe hnv hTka pp (r1.headD 0)
+    exact CoreSpecE.of_callE (classesCtors_claim hkp henv P.ccs hIlpf P.opf dn fe hnv hcE pp (r1.headD 0)
       (r1.tail.headD 0) rd (r2.headD 0) (r2.tail.headD 0) n hn ⟨s2.mem, Locals.init []⟩ a2 bs
       (cvTas.map (·.type)) rdv ms2 hC2 hA2 (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1)
       (Nat.le_trans hftb1 hg2.1) (hrd.grow (decCR_mono _) hg12) hms2.1 (hS2.lt64 hms2.2) (hlp2 hk2) hnpk
@@ -534,7 +534,7 @@ theorem grpBE_claim (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx →
     (ConRon.Bridge.Inductives.dExt_denoteCV.list c18.ext _ _ hcvRP) hwRis hclR hfRc hP6 e he k
 
 
-include hkp henv hV hApd hCrk hIlpf hnv hcE hCcv hU in
+include hkp henv hV hApd hCrk hIlpf hnv hcE hU in
 /-- **`gen_rec_check_prep`'s model error claim** (`grpW_okC`'s hypotheses; the twin in its
 continuation form). -/
 theorem grpE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
@@ -559,7 +559,7 @@ theorem grpE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
     (hblkP : Frontend.denoteCIList a.store block = some blockP)
     (hT : ∀ cv ∈ cvTasP, ConLeche.Expr.WScoped 0 cv.type)
     (hMsT : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR)
-    (hNfs : ClassesNfsE p dn vis fe env) (hTka : TkaE p dn vis fe env) :
+    (hNfs : ClassesNfsE p dn vis fe env) :
     ∀ e, grpE p (n + 1) m vis pp nested pO pL tO tL rd mO mL cO cL bO bL = .error e →
       ∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
         ErrClaim (grcTwinA V fe bs (nested != 0) ms block (fun cvRis =>
@@ -651,7 +651,7 @@ theorem grpE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
     rw [h2, grpE.k_class_stream_recs.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (classStreamRecs_claim hkp henv hV hApd hCrk hnv hCcv P.csr n (by omega)
+    exact CoreSpecE.of_callE (classStreamRecs_claim hkp henv hV hApd hCrk ⟨⟨hnv, hcE⟩, hU⟩ P.ia P.cpy P.slc P.csr n (by omega)
       ⟨s1.mem, Locals.init []⟩ a1 fe vis _ _ bs.recs pP.recs hC1 hA1 (rec3RecsOK_of_decB hrecs1.1 hrecs1.2)
       hrecs1P) h2
   | ok q2 =>
@@ -713,7 +713,7 @@ theorem grpE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
       (ConRon.Bridge.Inductives.dCtorNf_ext.list c4.ext _ _ htblP)
       (ConRon.Bridge.Inductives.dClassRead_ext c4.ext _ _ hrdP)
       (ConRon.Bridge.Inductives.dMajor_ext.list c4.ext _ _ hmsP)
-      (ConRon.Bridge.Inductives.dExt_denoteCV.list c4.ext _ _ hcvTP) hT hMsT hcvRis4 hwRis hclR hfRc hNfs hTka
+      (ConRon.Bridge.Inductives.dExt_denoteCV.list c4.ext _ _ hcvTP) hT hMsT hcvRis4 hwRis hclR hfRc hNfs
       e hj k
   by_cases h7 : rdW (s2.mem.arr64 IW) (pp + 7) = 0
   · rw [h2, grpE.k_class_stream_recs.arm3 p n vis pp nested pO pL tO tL rd mO mL cO cL r2 _ hk0' h7] at he
@@ -786,7 +786,7 @@ theorem grpE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
   · rw [h2, grpE.k_class_stream_recs.arm2 p n vis pp nested pO pL tO tL rd mO mL cO cL r2 _ hk0' h7 hn0] at he
     exact large nested (by rw [show (nested != 0) = true by simpa using hn0]; rfl) he
 
-include hkp henv hV hApd hCrk hIlpf hnv hcE hCcv hU in
+include hkp henv hV hApd hCrk hIlpf hnv hcE hU in
 /-- **`gen_rec_check_prep`'s error claim** (every fuel; `grpW_okC`'s hypotheses): a failing call of
 class `1`/`2` claims that the twin's prep (in its continuation form) fails. -/
 theorem genRecCheckPrep_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
@@ -811,7 +811,7 @@ theorem genRecCheckPrep_claim (P : GrcProg p) {fsR : List FnName} (hclR : closed
     (hblkP : Frontend.denoteCIList a.store block = some blockP)
     (hT : ∀ cv ∈ cvTasP, ConLeche.Expr.WScoped 0 cv.type)
     (hMsT : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR)
-    (hNfs : ClassesNfsE p dn vis fe env) (hTka : TkaE p dn vis fe env) :
+    (hNfs : ClassesNfsE p dn vis fe env) :
     ∀ e, callE p n "gen_rec_check_prep" [vis, pp, nested, pO, pL, tO, tL, rd, mO, mL, cO, cL, bO, bL] m = .error e →
       ∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
         ErrClaim (grcTwinA V fe bs (nested != 0) ms block (fun cvRis =>
@@ -828,13 +828,12 @@ theorem genRecCheckPrep_claim (P : GrcProg p) {fsR : List FnName} (hclR : closed
     cases he
     exact ErrClaim.of_cls0 Err.cls_outOfFuel
   | succ n =>
-    exact grpE_claim hkp henv hV hApd hCrk hIlpf hnv hcE hU hCcv P hclR hfR n hn hC hbs hrb hpar hparb htbl hrd hms hcv
-      hblk hlp hP hA hkeep hsh hparP htblP hrdP hmsP hcvTP hblkP hT hMsT hfRc hNfs hTka e he k
+    exact grpE_claim hkp henv hV hApd hCrk hIlpf hnv hcE hU P hclR hfR n hn hC hbs hrb hpar hparb htbl hrd hms hcv
+      hblk hlp hP hA hkeep hsh hparP htblP hrdP hmsP hcvTP hblkP hT hMsT hfRc hNfs e he k
 
-include hkp henv hV hApd hCrk hIlpf hnv hcE hCcv hU in
+include hkp henv hV hApd hCrk hIlpf hnv hcE hU in
 /-- **`gen_rec_check`'s error claim** (every fuel; `genRecCheck_refinesC`'s hypotheses), modulo the
-two hypotheses `ClassesNfsE` (`classes_nfs`, whose model the generator cannot produce) and `TkaE`
-(`target_k53_args`, whose model it cannot either). -/
+hypothesis `ClassesNfsE` (`classes_nfs`, whose model the generator cannot produce). -/
 theorem genRecCheck_claim' (P : GrcProg p) {fsR : List FnName}
     (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (N : Nat)
     (hN : N ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -860,14 +859,14 @@ theorem genRecCheck_claim' (P : GrcProg p) {fsR : List FnName}
     (hblkP : Frontend.denoteCIList a₀.store block = some blockP)
     (hMs : ∀ M ∈ MsP, ConLeche.Cached.ClassMajScoped pP.nP M)
     (hT : ∀ cv ∈ cvTasP, ConLeche.Expr.WScoped 0 cv.type) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR)
-    (hNfs : ClassesNfsE p dn vis fe env) (hTka : TkaE p dn vis fe env) :
+    (hNfs : ClassesNfsE p dn vis fe env) :
     CoreSpecE p N "gen_rec_check" [vis, pp, nested, pO, pL, tO, tL, rd, mO, mL, cO, cL, bO, bL]
       (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms cvTas block) s₀ a₀ :=
   genRecCheck_claim hkp henv hV hApd hCrk hIlpf hnv hcE hU P hclR hfR N hN s₀ a₀ hC hbs hrb hpar hparb htbl hrd hms
     hcv hblk hlp hP hA hkeep hcoh hfe hsh hparP htblP hrdP hmsP hcvTP hblkP hMs hT hfRc
-    (fun n hn e hc {β} k => genRecCheckPrep_claim hkp henv hV hApd hCrk hIlpf hnv hcE hU hCcv P hclR hfR n (by omega) hC
+    (fun n hn e hc {β} k => genRecCheckPrep_claim hkp henv hV hApd hCrk hIlpf hnv hcE hU P hclR hfR n (by omega) hC
       hbs hrb hpar hparb htbl hrd hms hcv hblk hlp hP hA hkeep hsh hparP htblP hrdP hmsP hcvTP hblkP hT
-      (fun M hM => (hMs M hM).1) hfRc hNfs hTka e hc k)
+      (fun M hM => (hMs M hM).1) hfRc hNfs e hc k)
 
 end sims
 

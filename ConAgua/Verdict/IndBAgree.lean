@@ -32,13 +32,13 @@ l_model cfaE_spec (p : Prog) (hf : p.lookup "class_fields_agree" = some classFie
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (P : CfaProg p)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) {vis : Word} (hTka : TkaE p dn vis fe env)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) {vis : Word} (hcE : CoreStubsE p)
   (q fto ftl mo ml fvo fvl eo el ko kl : Word) (bs : BlockShape) (formerTys : List EIdx)
   (ms : List TargetMajor) (fvs : List EIdx) (es : List NestCtorNf) (ks : List ClassField)
   {pP : ConLeche.BlockShape} {formerTysP fvsP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
   {esP : List ConLeche.NestCtorNf}
 
-include hq henv P hnv hTka in
+include hq henv P hnv hcE in
 /-- **`class_fields_agree`' loop error claim** (`cfaW_okC`'s hypotheses). -/
 theorem cfaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j i : Word),
     StageC dn vis fe env m a → AbsOK m → BSOK m q.toNat bs →
@@ -248,7 +248,7 @@ theorem cfaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
       rw [h5, cfaE.k_class_nodes_agree.none] at he
       cases he
       refine ErrClaim.bind_left ?_
-      have := CoreSpecE.of_callE (classNodesAgree_claim hq henv P.toCnaProg hnv hTka q fto ftl (r3.headD 0)
+      have := CoreSpecE.of_callE (classNodesAgree_claim hq henv P.toCnaProg hnv hcE q fto ftl (r3.headD 0)
         (r2.tail.headD 0) (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0) fvo fvl i eo el bs formerTys tm teleB
         fvs (k' + 1) (by omega) ⟨s4.mem, Locals.init []⟩ a4 es hC4 hA4
         (hbs.grow hg04) (by rw [decHL_grow hg04 hftb]; exact hft) (Nat.le_trans hftb hg04.1)
@@ -320,7 +320,7 @@ theorem cfaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
     rw [h0, cfaE.k_intern_bvar.arm1] at he
     exact key r0 m0 (by rw [cfaFv_out p k m fvo fvl i hif]; exact callW_of_callE h0) he
 
-include hq henv P hnv hTka in
+include hq henv P hnv hcE in
 /-- **`class_fields_agree`' error claim** (every fuel; `classFieldsAgree_refinesC`'s hypotheses). -/
 theorem classFieldsAgree_claim (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (i0 : Word)
     (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
@@ -354,7 +354,7 @@ theorem classFieldsAgree_claim (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ :
       | error e' =>
         rw [hloop, cfaE.k_loop1.none] at he
         cases he
-        have := cfaE_claim hq henv P hnv hTka q fto ftl mo ml fvo fvl eo el ko kl bs formerTys ms fvs es ks
+        have := cfaE_claim hq henv P hnv hcE q fto ftl mo ml fvo fvl eo el ko kl bs formerTys ms fvs es ks
           (n + 1) hn s₀.mem a₀ 0 i0 hC hA hbs hft hftb hms hmsb hfv hfvb hes hks UInt64.zero_le
           (by simpa using hi) hP hsh hftP hmsP hfvP hesP hformer hMs _ hloop
         simpa using this
