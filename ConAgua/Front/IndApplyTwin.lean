@@ -23,12 +23,12 @@ namespace L.Front.Ind
 
 /-- **`apply_ind` refines the `.ind` arm of `processLineCoreD`.** -/
 @[refines_part ConRon.Arena.Frontend.processLineCoreD "inductive"]
-theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+theorem applyIndW_twin {p : Prog} (hAL : IndApplyLookups p) {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
     {n : Nat} {m m' : Mem} {a : AState} {st : StateD}
     (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) {v : USize}
     {tys : List IndTypeRec} {cts : List IndCtorRec} {rcs : List IndRecRec} {e : USize}
     (hscan : scanIndDecl b v = .ok (.ind tys cts rcs) e)
-    (h : applyIndW n b.data m v.toUInt64 = some m') :
+    (h : applyIndW p n b.data m v.toUInt64 = some m') :
     ∃ st', (processLineCoreD st (.ind tys cts rcs)).run a = .ok (.inl st', a) ∧
       ArenaD m' a ∧ StateDR m' st' ∧ (ModeOK m → ModeOK m') := by
   cases n with
@@ -46,7 +46,7 @@ theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
   have hfr1 : MemFrame [IFR, IFL] [] m m₁ := hfR.1
   have hRoom : Room m₁ := hfR.2
   simp only [List.headD, List.tail] at h
-  cases h2 : validateW n m₁ to tn co cn ro rn with
+  cases h2 : validateW p n m₁ to tn co cn ro rn with
   | none => rw [h2, pmK_none] at h; cases h
   | some x =>
   obtain ⟨⟨oo, np⟩, m₂⟩ := x
@@ -59,7 +59,7 @@ theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
   have hs1' : (m₁.arr64 IFL).size = (m.arr64 IFL).size := hfr1.size IFL
   have hT1 : TopOK m₁ := ⟨by have := hRoom.2.1; exact this, Nat.le_of_lt hRoom.2.2.2⟩
   have hIFR1 : topN m₁ IFR < 2 ^ 62 := by have := hRoom.2.2.1; omega
-  obtain ⟨ordered, V1, V2, V3, V4, V5, V6, V7, V8⟩ := validateW_twin hA1.1 hD1 hok hT1 hF hIFR1 h2
+  obtain ⟨ordered, V1, V2, V3, V4, V5, V6, V7, V8⟩ := validateW_twin hAL hA1.1 hD1 hok hT1 hF hIFR1 h2
   have hfr2 := V2.frame
   have hA2 : ArenaD m₂ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFL, LH]) (by simp) _ _ hfr2 _ hA1.1,

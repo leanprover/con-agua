@@ -5,7 +5,7 @@ import ConAgua.Arena.IndPosSpec.UnW2
 # `nest_uniform`: one model and one refinement for both outcomes
 
 `nuE` (`l_model … unified`, `PosTopE1`): `nest_uniform_cs` (no-verdict) through its `Option` model
-`ucW1`, the recursive call through the model itself. `nu_ref` refines `nestUniform` for both
+`ucW`, the recursive call through the model itself. `nu_ref` refines `nestUniform` for both
 outcomes, under an invariant `J` the callers choose (`ucW_ok`'s): its answer `0` is the twin's
 `allM` answering `false`, where it rejects.
 -/
@@ -68,20 +68,18 @@ theorem nu_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       have := hS.2.1; have := hS.2.2.2.1; simp; omega)
     have r3 : rdW (m.arr64 IW) (hdr + 1) = ll := by simp [rdW, hh1, h3]
     rw [r1, r2, r3, ConRon.Arena.nestUniform.eq_2]
-    rcases huc : ucW1 (realCall p) k m ctx o ll with _ | ⟨b1, m1⟩
+    rcases huc' : ucW (realCall p) k m ctx o ll with _ | ⟨r, m1⟩
     · rw [liftE_none, nuE.k_nest_uniform_cs.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some]
-    obtain ⟨r, huc', hrb⟩ := ucW1_some huc
     obtain ⟨b, a1, hrun1, hS1, hg1, hr, hP1, hJ1⟩ := ucW_ok dn fe vis ctx c hhi (realCall p) J Pcv hJI hJnu k m m1 a
       o ll cs _ huc' hS hJ (hPc cs List.mem_cons_self) hU h6 (by omega) h8 hP
-    rw [hrb] at hr
     refine RefE.bind_right hrun1 ?_
     cases b with
     | false =>
-      rw [nuE.k_nest_uniform_cs.abort1 p k ctx off l b1 m1 (by simpa using hr)]
+      rw [nuE.k_nest_uniform_cs.abort1 p k ctx off l r m1 (by simpa using hr)]
       exact fun _ => ErrClaim.fail _ _ (by decide)
     | true =>
-      rw [nuE.k_nest_uniform_cs.arm1 p k ctx off l b1 m1 (by rw [hr]; decide)]
+      rw [nuE.k_nest_uniform_cs.arm1 p k ctx off l r m1 (by rw [hr]; decide)]
       refine RefE.ite_pos rfl ?_
       have ho1 : (off + 1).toNat = off.toNat + 1 := word_add_toNat (by
         have := hS.2.1; have := hS.2.2.2.1; simp; omega)

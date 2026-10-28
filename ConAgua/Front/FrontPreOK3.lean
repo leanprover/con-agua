@@ -51,7 +51,7 @@ theorem applyAnyW_grow (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
         have hW := M.of_run (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
           (L.Front.Ind.applyInd_spec p hFI hAI hII hXI b.data hsize x.1 _ hm f.name)
         rw [hxm, hv] at hW
-        exact L.Front.Ind.applyIndW_grow h64 hsize hR hD hok hscan hW.2
+        exact L.Front.Ind.applyIndW_grow hAI h64 hsize hR hD hok hscan hW.2
       | ax _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
       | defn _ _ _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
       | thm _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
