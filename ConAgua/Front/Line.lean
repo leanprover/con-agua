@@ -3,6 +3,7 @@ import ConAgua.Front.ApplyDecl
 import ConAgua.Front.FieldsDeclSpec
 import ConAgua.Front.RunModel
 import ConAgua.Scan.Line
+import ConAgua.Scan.FastSound
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
@@ -13,8 +14,9 @@ import Std.WP.Tactic
 /-!
 # One line of the export, applied: `front_line`
 
-`front_line(i)` scans the line at `i` with Stage B's validator (`scan_line`), and, if it is a
-name or level line, reads its fields (`rec_line_loop`, `ConAgua.Front.Fields`) and applies it to
+`front_line(i)` first asks the fast path (`fast_line`, `ConAgua.Scan.Fast`): a line in
+lean4export's canonical form of a common shape is applied right away (`apply_expr`). Otherwise it
+scans the line at `i` with Stage B's validator (`scan_line`), and, if it is a name or level line, reads its fields (`rec_line_loop`, `ConAgua.Front.Fields`) and applies it to
 the parse state (`apply_nstr`, `apply_nnum`, `apply_level`, `ConAgua.Front.Apply`). It returns
 `(0, 0)` for a line that does not scan, `(1, next)` otherwise (`next` as `scan_line`'s). A blank
 line and the `meta` header change nothing. Expression, declaration and inductive lines go to
@@ -41,6 +43,11 @@ namespace L.Front
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine -/
 @[l_impl ConRon.Arena.Frontend.applyLine]
 def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d) {
+  (nx, pl, idx, a, c, d) := call fast_line(i);
+  if nx != 0 {
+    ok := call apply_expr(pl, idx, a, c, d);
+    return (1, nx)
+  };
   (ok, nx) := call scan_line(i);
   if ok == 0 { return (0, 0) };
   s := call skip_ws(i);
@@ -182,6 +189,32 @@ noncomputable def frontLineW (p : Prog) (b : Array UInt8) (m : Mem) (i : Word) :
 
 theorem map_okRes (nx : Word) (m : Mem) : Option.map (okRes nx) (some m) = some ([1, nx], m) := rfl
 
+open L.Scan.Fast L.Scan.FastSound in
+/-- **The fast arm's model**: on a line `fast_line` accepts, `front_line`'s model applies the
+fields it returns. -/
+theorem frontLineW_canon (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63) (m : Mem) (i : Word)
+    (r : List Word) (h : Canon b i r) :
+    frontLineW p b m i = (applyExprW b m (r.tail.headD 0) (r.tail.tail.headD 0)
+      (r.tail.tail.tail.headD 0) (r.tail.tail.tail.tail.headD 0)
+      (r.tail.tail.tail.tail.tail.headD 0)).map (okRes (r.headD 0)) := by
+  cases h with
+  | app h =>
+    obtain ⟨hL, hr, he⟩ := appLine_sound hb h
+    unfold frontLineW applyAnyW
+    rw [hL.fwd, hL.ws, UInt64.ofNat_toNat, ite_eq_right (by simp), ite_eq_left ⟨hL.lt, hL.brace⟩,
+      ite_eq_right (by simp [hr]), he, ite_eq_left (by simp)]
+    rfl
+
+/-- The same as an equation for `finish`: a nonzero answer of `fast_line` is applied. -/
+theorem frontLineW_fast (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63) (m : Mem) (i : Word)
+    (r : List Word) (h : L.Scan.Fast.FastOK b i r) (h0 : r.headD 0 ≠ 0) :
+    frontLineW p b m i = (applyExprW b m (r.tail.headD 0) (r.tail.tail.headD 0)
+      (r.tail.tail.tail.headD 0) (r.tail.tail.tail.tail.headD 0)
+      (r.tail.tail.tail.tail.tail.headD 0)).map (okRes (r.headD 0)) :=
+  frontLineW_canon p b hb m i r (h h0)
+
+grind_pattern [lang_grind] frontLineW_fast => frontLineW p b m i, L.Scan.Fast.FastOK b i r
+
 /-! ## The spec -/
 
 /-- The functions of `ScanLookups`. -/
@@ -219,7 +252,8 @@ def scanLookupsFns : Prog :=
    ("rec_num_name", L.Front.Fields.recNumName), ("rec_line_loop", L.Front.Fields.recLineLoop),
    ("obj_val", L.Front.Fields.objVal), ("rec_obj", L.Front.Fields.recObj),
    ("expr_val", L.Front.Fields.exprVal), ("rec_expr_loop", L.Front.Fields.recExprLoop),
-   ("esc_sur", escSur), ("esc_one", escOne), ("utf8_put", utf8Put), ("str_put_esc", strPutEsc)]
+   ("esc_sur", escSur), ("esc_one", escOne), ("utf8_put", utf8Put), ("str_put_esc", strPutEsc),
+   ("fast_line", L.Scan.Fast.fastLine)]
 
 /-- Every function of the validator and of the fields pass, at its name in `p`. -/
 abbrev ScanLookups (p : Prog) : Prop := ProgHas p scanLookupsFns
@@ -333,7 +367,11 @@ theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
         L.Scan.Line.scanLine_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "hints_num") (hS.get "hints_obj") (hS.get "scan_hints") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "scan_str_name") (hS.get "scan_num_name") (hS.get "scan_app") (hS.get "scan_binder") (hS.get "scan_let") (hS.get "scan_const") (hS.get "scan_proj") (hS.get "scan_rule") (hS.get "scan_rules") (hS.get "scan_ind_rec") (hS.get "scan_ind_recs") (hS.get "scan_ind_type") (hS.get "scan_ind_types") (hS.get "scan_ind_ctor") (hS.get "scan_ind_ctors") (hS.get "scan_axiom") (hS.get "scan_def") (hS.get "scan_thm") (hS.get "scan_opaque") (hS.get "scan_quot") (hS.get "scan_ind_decl") (hS.get "skip_braced") (hS.get "scan_quoted_nat") (hS.get "scan_line_loop") (hS.get "scan_line") n,
         L.Scan.Leaves.skipWs_spec p (hS.get "skip_ws") b hb64 n,
-        applyAny_spec p hS hL hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;> finish [frontLineW]
+        L.Scan.Fast.fastLine_spec p b (hS.get "fast_line") hb n,
+        applyExpr_spec p hE b hb (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "esc_sur") (hS.get "esc_one")
+          (hS.get "utf8_put") (hS.get "str_put_esc") n,
+        applyAny_spec p hS hL hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;>
+        finish [frontLineW, okRes]
 
 end spec
 
