@@ -398,4 +398,93 @@ theorem lineRecN_e (i w ik pk : Word) (f : Fld) :
     rw [lineRecN_close b _ _ _ _ _ ‹_›, L.Scan.Line.lineN_close b _ _ _ _ ‹_›]
     split <;> (try split) <;> simp_all [LRS.fail]
 
+/-! ## The fields -/
+
+theorem subRecN_some {v kd mk : Word} (h : (subRecN b v kd mk).e ≠ 0) :
+    v < UInt64.ofNat b.size ∧ byteW b v = 123 ∧
+      subRecN b v kd mk = subN b kd mk (v + 1) 1 0 ⟨0, 0, 0, 0, 0⟩ := by
+  unfold subRecN at h ⊢
+  split at h
+  · exact ⟨‹_ ∧ _›.1, ‹_ ∧ _›.2, by rw [ite_eq_left ‹_›]⟩
+  · exact absurd rfl h
+
+theorem strRecEntryN_sub {v : Word} (h : (subRecN b v 56 3).e ≠ 0) :
+    strRecEntryN b v = ((subRecN b v 56 3).e, (subRecN b v 56 3).x0, (subRecN b v 56 3).x1,
+      (subRecN b v 56 3).x2) := by
+  obtain ⟨-, -, hs⟩ := subRecN_some h
+  rw [hs] at h ⊢
+  exact subN_strRecN 3 _ _ _ ⟨0, 0, 0, 0, 0⟩ h
+
+theorem numRecEntryN_sub {v : Word} (h : (subRecN b v 38 3).e ≠ 0) :
+    numRecEntryN b v = ((subRecN b v 38 3).e, (subRecN b v 38 3).x0, (subRecN b v 38 3).x1) := by
+  obtain ⟨-, -, hs⟩ := subRecN_some h
+  rw [hs] at h ⊢
+  exact subN_numRecN 3 _ _ _ ⟨0, 0, 0, 0, 0⟩ h
+
+theorem recObjN_sub {v k mk : Word} (hk : ExprKind k) (h : (subRecN b v k mk).e ≠ 0) :
+    recObjN b v = subRecN b v k mk := by
+  obtain ⟨-, -, hs⟩ := subRecN_some h
+  rw [hs] at h ⊢
+  exact (subN_objRecN k mk hk _ _ _ _ h).symm
+
+/-- **A member read by the record pass for names and levels**: on a step that scans and leaves a
+name, level or header kind, `recN` moves on as the single pass does. -/
+theorem recN_lrStep (i w ks w' k v ik pk : Word) (f : Fld)
+    (hM : nextMemberN b i w = ⟨2, ks, w', k, v⟩) (he : (lrStepN b k ks v ik pk f).e ≠ 0)
+    (hk : (lrStepN b k ks v ik pk f).pk = 0 ∨ (lrStepN b k ks v ik pk f).pk = 1 ∨
+      (lrStepN b k ks v ik pk f).pk = 2 ∨ (lrStepN b k ks v ik pk f).pk = 5) :
+    recN b i w f = recN b (lrStepN b k ks v ik pk f).e 0 (lrStepN b k ks v ik pk f).f := by
+  rw [recN_key b i w f (by rw [hM]; simp) (by rw [hM]; simp), hM]
+  simp only
+  by_cases hkey : k = 21 ∨ k = 19 ∨ k = 18 ∨ k = 7 ∨ k = 55 ∨ k = 59 ∨ k = 46 ∨ k = 32 ∨ k = 20 ∨
+      k = 56 ∨ k = 38 ∨ k = 2 ∨ k = 29 ∨ k = 14 ∨ k = 30 ∨ k = 9 ∨ k = 48 ∨ k = 35 ∨ k = 57 ∨
+      k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ k = 49 ∨ k = 23 ∨ k = 33
+  · rcases hkey with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+      rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    · simp (config := { decide := true }) only [lrStepN, lrIdx, lrNat, lrList, lrName, lrExpr,
+        lrLit, lrDecl, lrMeta, reduceIte] at he hk ⊢
+      split at he
+      · rename_i h
+        simp only [h, ne_eq, not_false_eq_true, and_self, ite_true] at hk ⊢
+        all_goals first
+          | (simp only [natF, nameF, reduceIte] at hk ⊢; done)
+          | (simp only [natF, nameF, reduceIte] at hk ⊢; simp_all; done)
+          | (simp_all [slotNatN_pos, pairEntryN_natList, strRecEntryN_sub, numRecEntryN_sub,
+              natF, nameF])
+      · exact absurd rfl he
+  · exfalso
+    simp only [lrStepN] at he
+    repeat' (rw [ite_eq_right (by simp_all)] at he)
+    exact he rfl
+
+/-- **A member read by the record pass for expressions**: on a step that scans and leaves no
+payload kind or an expression's, `exprN` moves on as the single pass does. -/
+theorem exprN_lrStep (i w ks w' k v ik pk : Word) (f : Fld)
+    (hM : nextMemberN b i w = ⟨2, ks, w', k, v⟩) (he : (lrStepN b k ks v ik pk f).e ≠ 0)
+    (hk : (lrStepN b k ks v ik pk f).pk = 0 ∨ (lrStepN b k ks v ik pk f).pk = 3) :
+    exprN b i w f = exprN b (lrStepN b k ks v ik pk f).e 0 (lrStepN b k ks v ik pk f).f := by
+  rw [exprN_key b i w f (by rw [hM]; simp) (by rw [hM]; simp), hM]
+  simp only
+  by_cases hkey : k = 21 ∨ k = 19 ∨ k = 18 ∨ k = 7 ∨ k = 55 ∨ k = 59 ∨ k = 46 ∨ k = 32 ∨ k = 20 ∨
+      k = 56 ∨ k = 38 ∨ k = 2 ∨ k = 29 ∨ k = 14 ∨ k = 30 ∨ k = 9 ∨ k = 48 ∨ k = 35 ∨ k = 57 ∨
+      k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ k = 49 ∨ k = 23 ∨ k = 33
+  · rcases hkey with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+      rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    · simp (config := { decide := true }) only [lrStepN, lrIdx, lrNat, lrList, lrName, lrExpr,
+        lrLit, lrDecl, lrMeta, exVN, reduceIte] at he hk ⊢
+      split at he
+      · rename_i h
+        simp only [h, ne_eq, not_false_eq_true, and_self, ite_true] at hk ⊢
+        all_goals first
+          | (simp only [natF, exprF, fldPut, litEnd, reduceIte] at hk ⊢; done)
+          | (simp only [natF, exprF, fldPut, litEnd, reduceIte] at hk ⊢; simp_all; done)
+          | (rw [recObjN_sub (by simp [ExprKind]) h.2.1]
+             simp [objFld, fldPut, exprF, slotNatN_pos, h.2.2])
+          | (simp_all [slotNatN_pos, fldPut, natF, litEnd])
+      · exact absurd rfl he
+  · exfalso
+    simp only [lrStepN] at he
+    repeat' (rw [ite_eq_right (by simp_all)] at he)
+    exact he rfl
+
 end L.Front.LineRec
