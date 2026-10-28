@@ -161,29 +161,26 @@ theorem cbaoE_claim : CheckBlockAgreeOneE p := by
   obtain ⟨c3, -⟩ := ConRon.Bridge.Inductives.checkBlockDomsAt_specF fe
     (ConRon.Bridge.CoreSpec.of_core rfl) henv 0 fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD) hc ht
     nP.toNat a2 a3 u3 hC2.check ⟨hxs1', hdoms⟩ hrun3
+  have hx03 := p1.ext.trans (p2.ext.trans c3.ext)
+  have hsL := lefE_spec p hl n ⟨m3, Locals.init []⟩ s s0
+  have hRL := lef_ref hq.closed hLC n hC3.stageT hs hs0 (ConRon.Bridge.denoteL_ext hsP hx03)
+    (ConRon.Bridge.denoteL_ext hs0P hx03)
   cases h4 : callE p n "lvl_eq_fueled" [s, s0] m3 with
   | error e4 =>
     rw [h4, cbaoE.k_lvl_eq_fueled.none] at he; cases he
-    have hx03 := p1.ext.trans (p2.ext.trans c3.ext)
-    obtain ⟨lu, hlu⟩ : ∃ l, denoteL a3.store.ls (decI s) = some l := ⟨_, ConRon.Bridge.denoteL_ext hsP hx03⟩
-    obtain ⟨lv, hlv⟩ : ∃ l, denoteL a3.store.ls (decI s0) = some l := ⟨_, ConRon.Bridge.denoteL_ext hs0P hx03⟩
-    have hcl := lvlEqFueled_errT hq hLC hl (fun n args m e h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) n args m h)
-      (fun c : Bool => if c = true then (pure () : AM Unit) else
-        ConRon.Arena.fail (.invalid "mutually inductive types must live in the same universe"))
-      hC3.stageT hs hs0 lu lv hlu hlv h4
+    have hcl := ErrClaim.congr (lefT_bind (decI s) (decI s0) (fun c : Bool => if c = true then
+        (pure () : AM Unit) else
+        ConRon.Arena.fail (.invalid "mutually inductive types must live in the same universe")))
+      (ErrClaim.bind_left (RefE.run_err hsL trivial
+        (fun n args m e h => callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) n args m h) hRL h4))
     refine ErrClaim.of_twin hcl fun ce hce => ?_
     simp only [StateT.run_bind] at hce
     simp [agreeBodyAM, unwrapOr, hty', StateT.run_bind, hrun1, heq, hrun2, hrun3]
     exact hce
   | ok q4 =>
   obtain ⟨re, m4⟩ := q4
-  have hl4 : lveC (realCall p) n m3 s s0 = some (re, m4) := by
-    obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (lvlEqFueled_specC p hl (realCall p) (realCall_spec p) n _ _ _) (callW_of_callE h4)
-    rw [← hs']; exact hW
-  have hx03 := p1.ext.trans (p2.ext.trans c3.ext)
-  obtain ⟨b, a4, hrun4, hC4, hg4, hA4, -, hbre⟩ := lveC_okC hq.closed hLC hl4 hC3 hA3 hs hs0
-    (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03)
+  obtain ⟨_, -, -, b, a4, -, ⟨hrun4, hbre, -, -, -, -⟩⟩ := RefE.run_ok hsL hRL h4
+  dsimp only at hbre
   by_cases hre : re.headD 0 = 0
   · rw [h4, cbaoE.k_lvl_eq_fueled.abort1 p re m4 hre] at he; cases he
     have hb : b = false := by
