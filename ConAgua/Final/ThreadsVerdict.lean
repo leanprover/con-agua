@@ -263,7 +263,10 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk
   · have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
-    simp [zeroMem, Mem.arr64, zeros, checkerTab.wAt_pos64 hl]
+    simp only [abiLayout_tab]
+    rw [abiLayout_s64 _ _ _ _ _ _ (by
+      have := checkerTab.pos64_lt hl; have := (abiTabOk_spec checkerTab_abiOk).1; omega), checkerTab.wAt_pos64 hl]
+    simp [zeroMem, Mem.arr64, zeros]
   · obtain ⟨i', hi', rfl⟩ := List.mem_map.mp hc
     rw [List.mem_range'] at hi'
     rw [← hrax₁]; exact hR.claimed i' (by omega)
