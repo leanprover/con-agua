@@ -35,7 +35,7 @@ theorem nbOKE_prog {p : Prog} (P : CidProg p) (hkp : KnotStageProg p) (hIlpf : I
     ∀ dn vis fe env, ConLeche.EnvWF env → ∀ n, n ≤ 2 ^ 62 → NbOKE p dn vis fe env n :=
   fun _ _ _ _ henv => nbOKE_all P.cb.pass.pos.rs.nb hkp hIlpf hLC hnv
     (hkp.toKnotTopProg.coreStubsE hnv)
-    (whnfTop_stageE hkp.whnfTop (KnotAllProg.knotE_all hkp.knot hnv)) henv
+    (whnfTop_stageE hkp.whnfTop hkp.knotOK (KnotAllProg.knotE_all hkp.knot hnv)) henv
 
 /-- **`check_ind_decl`'s error refinement**, the pass and the tail discharged. -/
 theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)

@@ -1,14 +1,17 @@
 import ConAgua.Arena.DefEqStuckIrrel
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.KnotE
+import ConAgua.L.ModelGen
 
 /-!
 # `ldpr_exit`, `lazy_delta_proj_reduction`, `defeq_proj_pair` (lane `defeq`, helper `defeq-top`)
 
 The projection loop (`lazyDeltaProjReduction`) as a named block (`ldprLoopB`): one
 `lazy_delta_step` per iteration, the exit on a verdict its own function (`ldprExitT`). The
-model by L fuel (`ldprW`) refines the twin's loop at every twin fuel `K + 1 ≥` the L fuel
-(`ldprW_ok`, the shape of lane `whnf`'s `coreLoopW_ok`); the twin's budget is `2^62`.
+unified model by L fuel (`ldprE`) refines the twin's loop, both outcomes, at every twin fuel
+`K + 1 ≥` the L fuel (`ldpr_ref`, the shape of lane `whnf`'s `coreLoop_ref`); the twin's budget is
+`2^62`.
 -/
 
 open ConRon.Arena
@@ -203,104 +206,114 @@ theorem ldprExit_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
 
 /-! ## The loop -/
 
-/-- **The model of the projection loop** at L fuel `n`. -/
-def ldprW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
-    Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, mode, vis, d, sn, i, a, b =>
-    match callW p n "lazy_delta_step" [mode, vis, d, a, b] m with
-    | none => none
-    | some (r, m₁) =>
-      if r.headD 0 ≠ 0 then call1W p n "ldpr_exit" [mode, vis, d, sn, i, a, b, r.headD 0] m₁
-      else ldprW p n m₁ mode vis d sn i (r.tail.headD 0) (r.tail.tail.headD 0)
+/-- **`lazy_delta_proj_reduction`'s model, both outcomes** (the loop `ldprE.loop1`: one
+`lazy_delta_step` run per iteration, a final `ldpr_exit`, both `callE`). -/
+l_model ldpr_specE (p : Prog) (hf : p.lookup "lazy_delta_proj_reduction" = some lazyDeltaProjReductionL)
+  fns [hf ↦ ldprE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-section ldprArms
-variable (p : Prog) (n : Nat) (m m₁ : Mem) (mode vis d sn i a b : Word) (r : List Word)
+/-- **What the projection loop's errors claim from**: `lazy_delta_step`'s and `ldpr_exit`'s error
+claims at every L fuel up to `n` (`Verdict/DefEqTailE.lean`). -/
+structure LdprG (p : Prog) (n : Nat) : Prop where
+  step : ∀ j, j ≤ n → ∀ (F : Nat), j ≤ F → j ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+      (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+      d.toNat < 2 ^ 63 →
+      CoreSpecE p (j + 1) "lazy_delta_step" [mode, vis, d, a, b]
+        (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+        s₀ a₀
+  exit : ∀ j, j ≤ n → ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+      (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d sn i a b k : Word), j ≤ F → j ≤ 2 ^ 62 →
+      SlotPre s₀ a₀ dn vis fe M eb mode → HW sn → HW a → HW b → k ≠ 0 →
+      CoreSpecE p (j + 1) "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
+        (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+          (decE a) (decE b) (decDSs [k])) s₀ a₀
 
-end ldprArms
-
-theorem ldprLoopB_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n ldprLoopB
-    ⦃fun r s' => r ≠ .brk ∧
-      ldprW p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
-        (s₀.loc 6) = some ((r.retOr [0]).headD 0, s'.mem) ∧ r ≠ .normal; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := ldprLoopB) rfl]
-    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "lazy_delta_step",
-      callW_spec p n "ldpr_exit"] <;>
-    simp_all [ldprW, call1W, LocEq, St.setLocs_cons, Cmp.eval,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retOr]
-
-theorem ldpr_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d sn i a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lazy_delta_proj_reduction" [mode, vis, d, sn, i, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ ldprW p (n + 1) s₀.mem mode vis d sn i a b =
-      some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.ldpr]
-  simp only [callFn, lazyDeltaProjReductionL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (ldprLoopB_spec p (n + 1) s)] <;>
-    finish
-
-/-- **The loop's model refines `lazyDeltaProjReduction`** at every twin loop fuel `K + 1 ≥ k`. -/
-theorem ldprW_ok (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (hk : KnotUpTo p n)
+/-- **The projection loop refines `lazyDeltaProjReduction`, both outcomes**, at every twin loop
+fuel `K + 1 ≥ k`. -/
+theorem ldpr_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (hk : KnotUpTo p n)
     (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (mode d sn i : Word) (hmode : mode < 4) (hsn : HW sn) (hd : d.toNat < 2 ^ 63) :
-    ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (m m' : Mem) (a : AState) (MM : ModeMaps) (eb x y v : Word),
+    ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (m : Mem) (a : AState) (MM : ModeMaps) (eb x y : Word),
       CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW x → HW y →
-      ldprW p k m mode vis d sn i x y = some (v, m') →
-      CoreRef (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
-        (decI sn) i.toNat K (decE x) (decE y)) a decBool dn m vis fe MM eb [v] m' := by
+      RefE (LdprG p n) (ldprE.loop1 p k m mode vis d sn i x y)
+        (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+          (decI sn) i.toNat K (decE x) (decE y)) a
+        (fun v y' a' => CorePost decBool dn m vis fe MM eb ResH ([v.1], v.2) y' a') := by
   intro k
   induction k with
-  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ h; simp [ldprW] at h
+  | zero =>
+    intro _ _ _ _ _ _ _ _ _ _ _ _ _
+    unfold ldprE.loop1; exact RefE.of_cls0 rfl
   | succ k ih =>
-    intro hkn K hK m m' a MM eb x y v hS heb hx hy h
-    simp only [ldprW] at h
-    rcases hcl : callW p k "lazy_delta_step" [mode, vis, d, x, y] m with _ | ⟨r, m₁⟩ <;> simp only [hcl, reduceCtorEq] at h
+    intro hkn K hK m a MM eb x y hS heb hx hy
+    rw [ldprE.loop1.arm1 _ _ _ _ _ _ _ _ _ _ rfl]
+    rcases hcl : callE p k "lazy_delta_step" [mode, vis, d, x, y] m with e | ⟨r, m₁⟩
+    · rw [ldprE.k_lazy_delta_step.none]
+      cases k with
+      | zero =>
+        obtain ⟨e', he', h0⟩ := callE_zero p "lazy_delta_step" [mode, vis, d, x, y] m
+        rw [hcl] at he'; cases he'; exact RefE.of_cls0 h0
+      | succ j =>
+      obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
+      exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+        (hG.step j (by omega) F (by omega) (by omega) ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d x y
+          ⟨hS, hmode, heb⟩ hx hy hd) hcl
     cases k with
-    | zero => simp [callW_zero] at hcl
+    | zero =>
+      obtain ⟨e', he', -⟩ := callE_zero p "lazy_delta_step" [mode, vis, d, x, y] m
+      rw [hcl] at he'; cases he'
     | succ j =>
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
     have hstep := hc.lazyDeltaStep j (hk.mono (by omega)) F (by omega) (by omega)
       ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d x y ⟨hS, hmode, heb⟩ hx hy hd
-    obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep hcl
+    obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep (callW_of_callE hcl)
     have hsr := AM.run_of_ok _ _ hok
     rw [hres] at hsr
     obtain ⟨M', hS₁, hK₁, hSt₁⟩ := hA
     by_cases h0 : r.headD 0 = 0
-    · rw [ite_eq_right (by simpa using h0)] at h
+    · rw [ldprE.k_lazy_delta_step.arm2 _ _ _ _ _ _ _ _ _ _ _ h0]
       rw [decDS_zero h0] at hsr
-      have hrun := ldpr_cont_run (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
-        i.toNat K' (decE x) (decE y) _ _ a _ hsr
-      obtain ⟨hok₂, hA₂, hres₂, hrw₂⟩ := ih (by omega) K' (by omega) m₁ m' _ M' eb _ _ v hS₁ heb
-        hrw.2.1 hrw.2.2 h
-      rw [AM.run_of_ok _ _ hok₂] at hrun
-      obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
-      refine ⟨hok', ?_, hres'.trans hres₂, hrw₂⟩
-      rw [hst']
-      exact CoreAfter.comp hK₁ hSt₁ hA₂
-    · rw [ite_eq_left h0] at h
-      have hds : decDSs r = decDSs [r.headD 0] := decDS_nz h0
-      have hnc : ∀ a' b', decDSs r ≠ .cont a' b' := decDS_ne_cont h0
-      have hrun := ldpr_exit_run (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
-        i.toNat K' (decE x) (decE y) _ _ _ hnc hsr
-      rw [hds] at hrun
-      have hex := ldprExit_at p hq hc (j + 1) (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe
-        M' eb mode d sn i x y (r.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hsn hx hy h0
-      obtain ⟨hok₂, hA₂, hres₂, hrw₂⟩ := CoreSpec.of_call1W (r := [v]) hex
-        (fun r r' h => by simp only [decBool, h]) (by simpa using h)
-      rw [AM.run_of_ok _ _ hok₂] at hrun
-      obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
-      refine ⟨hok', ?_, hres'.trans hres₂, hrw₂⟩
-      rw [hst']
-      exact CoreAfter.comp hK₁ hSt₁ hA₂
+      exact RefE.of_run_eq (ldpr_cont_run (decMode mode) (coreKnot (decMode mode) fe id F) fe
+        d.toNat (decI sn) i.toNat K' (decE x) (decE y) _ _ a _ hsr)
+        ((ih (by omega) K' (by omega) m₁ _ M' eb _ _ hS₁ heb hrw.2.1 hrw.2.2).mono
+          fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.valid⟩)
+    rw [ldprE.k_lazy_delta_step.arm1 _ _ _ _ _ _ _ _ _ _ _ h0]
+    have hds : decDSs r = decDSs [r.headD 0] := decDS_nz h0
+    have hnc : ∀ a' b', decDSs r ≠ .cont a' b' := decDS_ne_cont h0
+    have hrun := ldpr_exit_run (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
+      i.toNat K' (decE x) (decE y) _ _ _ hnc hsr
+    rw [hds] at hrun
+    refine RefE.of_run_eq hrun ?_
+    rcases hx' : callE p (j + 1) "ldpr_exit" [mode, vis, d, sn, i, x, y, r.headD 0] m₁ with
+      e | ⟨r', m₂⟩
+    · rw [ldprE.k_ldpr_exit.none]
+      exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+        (hG.exit j (by omega) F ⟨m₁, Locals.init []⟩ _ dn vis fe M' eb mode d sn i x y (r.headD 0)
+          (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hsn hx hy h0) hx'
+    rw [ldprE.k_ldpr_exit.arm1]
+    obtain ⟨hrun₂, hR⟩ := (CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+      (ldprExit_at p hq hc (j + 1) (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe
+        M' eb mode d sn i x y (r.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hsn hx hy h0)
+      (callW_of_callE hx')).post
+    exact RefE.ret hrun₂ ⟨CoreAfter.comp hK₁ hSt₁ hR.after, by simpa [decBool] using hR.res, hR.valid⟩
+
+/-- `lazy_delta_proj_reduction` from its run, both outcomes (`ldpr_ref` at the call's fuel). -/
+theorem ldpr_refC (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
+    (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K) (hn : n ≤ 2 ^ 62) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d sn i a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn) (ha : HW a)
+    (hb : HW b) (hd : d.toNat < 2 ^ 63) :
+    RefE (LdprG p n) (ldprE p (n + 1) s₀.mem mode vis d sn i a b)
+      (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
+        i.toNat K (decE a) (decE b)) a₀
+      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
+  rw [ldprE.arm1]
+  exact ldpr_ref p hq hc n hk F hF hn dn vis fe mode d sn i hs.mode4 hsn hd (n + 1) (Nat.le_refl _) K
+    (by omega) s₀.mem a₀ M eb a b hs.rel hs.eb_mode ha hb
 
 /-- **`lazy_delta_proj_reduction` refines `lazyDeltaProjReduction`** at every twin loop fuel
-`K ≥ n` (the twin's `defeqLoopFuel` is `2^62`). -/
+`K ≥ n` (the twin's `defeqLoopFuel` is `2^62`; `ldpr_refC`'s ok half). -/
 @[refines ConRon.Arena.lazyDeltaProjReduction]
 theorem ldpr_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K) (hn : n ≤ 2 ^ 62) (s₀ : St)
@@ -309,16 +322,11 @@ theorem ldpr_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Na
     (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "lazy_delta_proj_reduction" [mode, vis, d, sn, i, a, b]
       (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
-        i.toNat K (decE a) (decE b)) decBool s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (ldpr_spec p hq n s₀ mode vis d sn i a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  obtain ⟨hok, hA, hres, hrw⟩ := ldprW_ok p hq hc n hk F hF hn dn vis fe mode d sn i hs.mode4 hsn hd
-    (n + 1) (Nat.le_refl _) K (by omega) s.mem s'.mem a₀ M eb a b (r.headD 0) hs.rel hs.eb_mode ha hb hW
-  exact ⟨hok, hA, hres.trans (by simp [decBool]), hrw⟩
+        i.toNat K (decE a) (decE b)) decBool s₀ a₀ dn vis fe M eb :=
+  CoreSpec.of_refE (w := fun (v : Word × Mem) => ([v.1], v.2))
+    (ldpr_specE p hq.ldpr (n + 1) s₀ mode vis d sn i a b)
+    (ldpr_refC p hq hc n hk F K hF hK hn s₀ a₀ dn vis fe M eb mode d sn i a b hs hsn ha hb hd)
+    fun _ _ => ⟨rfl, by simp [decBool], id⟩
 
 /-! ## `defeq_proj_pair` -/
 

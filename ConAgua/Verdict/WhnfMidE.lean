@@ -1,7 +1,7 @@
 import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Verdict.WhnfSlotE
 /-!
-# The `whnf` family's `defeq` helpers: `whnf_top`, `bool_true_shortcut`, `try_unfold_proj_app`,
+# The `whnf` family's `defeq` helpers: `bool_true_shortcut`, `try_unfold_proj_app`,
 `delta_quick`, `lazy_nat` (lane `verdicts-b`, helper `k2`)
 
 No verdict site of their own: their claims are the knot's slots' (`KnotUpToE`), `reduce_nat`'s
@@ -17,25 +17,6 @@ namespace L.Arena
 
 theorem whnfMidE_nv : ∀ f ∈ ["is_bool_true", "head_is_proj"], f ∈ L.Checker.nvFns :=
   _root_.L.Checker.nv_sub (by decide +kernel)
-
-/-! ## `whnf_top` -/
-
-/-- **`whnf_top`'s verdicts** are the `whnf` slot's (the verified mode). -/
-theorem whnfTop_refinesE (p : Prog) (hw : p.lookup "whnf_top" = some whnfTopL) (n : Nat)
-    (hkE : KnotUpToE p n) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (dep e : Word)
-    (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
-    CoreSpecE p (n + 1) "whnf_top" [vis, dep, e] (whnf ConLeche.CheckMode.verified fe F dep.toNat (decE e)) s₀ a₀ := by
-  refine CoreSpecE.of_runs fun er hc0 => ?_
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (wtopE_spec p hw (n + 1) ⟨s₀.mem, Locals.init []⟩ vis dep e) hc0
-    (Err.code_ne_of_cls hk0)
-  simp only [wtopE] at hW
-  have hW' := err_of_k (by intro q e; simp [wtopE.k_whnf]) (fun _ => rfl) hW
-  have := CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).whnf F s₀ a₀ dn vis fe M 0 0 dep e hF (by omega)
-    (slotPre_zero hS) he) hW'
-  exact this
 
 /-! ## `bool_true_shortcut`, `try_unfold_proj_app` -/
 

@@ -3,7 +3,6 @@ import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.WhnfIotaRefine4
 import ConRon.Bridge.Grind
 import ConAgua.Verdict.WhnfModels6E
-import ConAgua.Arena.KnotE
 
 /-!
 # `major_to_ctor`: refinements of `m2c_pre`, `m2c_check` and the K arm
@@ -173,23 +172,6 @@ theorem CoreAfterG.compK {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : 
     (h₂ : CoreAfterG dn m₁ m₂ a₂ vis fe M' eb) : CoreAfterG dn m₀ m₂ a₂ vis fe M eb := by
   obtain ⟨M'', hS', hK', hSt'⟩ := h₂
   exact ⟨M'', hS', hK.trans hK', hSt.trans hSt'⟩
-
-/-- `CorePost` with the stack grown (`CoreAfterG`, an arm that leaves a slice on the stack): what
-a run `v = (r, m)` from `m₀` gives besides the twin's result `y` and final state `a'`. -/
-structure GrowPost {α : Type} (dec : List Word → α) (dn : NIdx → Option ConLeche.Name) (m₀ : Mem)
-    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop)
-    (v : List Word × Mem) (y : α) (a' : AState) : Prop where
-  after : CoreAfterG dn m₀ v.2 a' vis fe M eb
-  res : y = dec v.1
-  valid : ok v.1
-
-theorem GrowPost.growRef {α : Type} [Inhabited α] {T : AM α} {a : AState} {dec : List Word → α}
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
-    {ok : List Word → Prop} {m₀ m : Mem} {r : List Word} {y : α} {a' : AState}
-    (hT : T.run a = .ok (y, a')) (h : GrowPost dec dn m₀ vis fe M eb ok (r, m) y a') :
-    GrowRef T a dec dn m₀ vis fe M eb r m ok := by
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
-  exact ⟨hok, hst ▸ h.after, hres.trans h.res, h.valid⟩
 
 /-- The ok half at a callee's run (`callW`), as `GrowRef`. -/
 theorem RefE.growRefW {α : Type} [Inhabited α] {T : AM α} {a : AState} {dec : List Word → α}

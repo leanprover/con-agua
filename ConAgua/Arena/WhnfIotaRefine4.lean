@@ -3,6 +3,8 @@ import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.CoreDen
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.KnotE
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -30,42 +32,11 @@ theorem view_sort_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.
 
 /-! ## `proof_irrel(mode, vis, d, a, b)` -/
 
-/-- Model of `proof_irrel_half`. -/
-def pihW (p : Prog) (n : Nat) (m : Mem) (mode vis d x : Word) : Option (Word × Mem) :=
-  match callW p n "infer_io" [mode, vis, d, x] m with
-  | none => none
-  | some (r1, m1) =>
-  match callW p n "infer_io" [mode, vis, d, r1.headD 0] m1 with
-  | none => none
-  | some (r2, m2) =>
-  match callW p n "whnf" [mode, vis, d, r2.headD 0] m2 with
-  | none => none
-  | some (r3, m3) =>
-  if r3.headD 0 >>> 28 ≠ 2 then some (0, m3)
-  else if tierW (r3.headD 0) ≠ 0 ∧ rdW (m3.arr64 CTL) 1 = 0 then none
-  else if tcnt m3 SORT (tierW (r3.headD 0)) ≤ idxW (r3.headD 0) then none
-  else
-  match callW p n "pin_word" [53] m3 with
-  | none => none
-  | some (z, m4) =>
-  match callW p n "lvl_eq_c"
-      [tfld m3 SORT (tierW (r3.headD 0)) (idxW (r3.headD 0)) 0, z.headD 0] m4 with
-  | none => none
-  | some (ok, m5) => if ok.headD 0 = 0 then none else some (ok.headD 0, m5)
-
-theorem proofIrrelHalf_spec (p : Prog) (hp : p.lookup "proof_irrel_half" = some proofIrrelHalfL)
-    (n : Nat) (s₀ : St) (mode vis d x : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "proof_irrel_half" [mode, vis, d, x]
-    ⦃fun r s' => LocEq s' s₀ ∧ pihW p n s₀.mem mode vis d x = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, proofIrrelHalfL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "pin_word",
-      callW_spec p n "lvl_eq_c"] <;>
-    finish [pihW, tierW, idxW]
+/-- **`proof_irrel_half`'s model, both outcomes**: the `infer_io` and `whnf` slots, `pin_word`,
+`lvl_eq_c` through their runs (`callE`). -/
+l_model pihE_spec (p : Prog) (hf : p.lookup "proof_irrel_half" = some proofIrrelHalfL)
+  fns [hf ↦ pihE list] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
 /-- Model of `proof_irrel`. -/
 def pirrW (p : Prog) (n : Nat) (m : Mem) (mode vis d a b : Word) : Option (List Word × Mem) :=
@@ -143,55 +114,59 @@ theorem lvlEqC_small (p : Prog) (hp : p.lookup "lvl_eq_c" = some lvlEqCL) (n : N
           simp_all [callW_zero]) hc
       exact hF
 
-/-- The twin's half of `proofIrrel` (for the proof): `w = 0` the head is not a sort, else the
-comparison's verdict (`w = 2` true). -/
-def PiHalfRun (r : CoreFnsA) (d : Nat) (x : EIdx) (a : AState) (w : Word) (a' : AState) : Prop :=
-  ∃ (ta tta hh : EIdx) (a1 a2 a3 : AState),
-    (r.inferIO d x).run a = .ok (ta, a1) ∧ (r.inferIO d ta).run a1 = .ok (tta, a2) ∧
-    (r.whnf d tta).run a2 = .ok (hh, a3) ∧
-    ((w = 0 ∧ hh.tag ≠ ETag.sort ∧ a' = a3) ∨
-     (w ≠ 0 ∧ hh.tag = ETag.sort ∧ ∃ (uT z : LIdx) (a4 : AState),
-        a3.store.view hh = some (.sort uT) ∧ zeroLevel.run a3 = .ok (z, a3) ∧
-        (lvlEq? uT z).run a3 = .ok (some (decide (w ≠ 1)), a4) ∧ a' = a4))
+/-- One half of the twin's `proofIrrel`, in continuation style. -/
+def piHalfT (r : CoreFnsA) (depth : Nat) (x : EIdx) (k : Bool → AM Bool) : AM Bool := do
+  let ta ← r.inferIO depth x
+  let hh ← r.whnf depth (← r.inferIO depth ta)
+  if hh.tag == ETag.sort then
+    match ← view hh with
+    | .sort uT => do
+      let z ← zeroLevel
+      let ok ← liftFueled "level comparison" (← lvlEq? uT z)
+      k ok
+    | _ => pure false
+  else pure false
+
+theorem proofIrrel_eq_halves (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) :
+    proofIrrel r fe depth a b =
+      piHalfT r depth a (fun okA => piHalfT r depth b (fun okB => pure (okA && okB))) := rfl
+
+/-- **One half of the twin's `proofIrrel` as a computation** (the twin side of
+`proof_irrel_half`): `none` the type's head is not a sort, else the level comparison's verdict. -/
+def piHalfA (r : CoreFnsA) (depth : Nat) (x : EIdx) : AM (Option Bool) := do
+  let ta ← r.inferIO depth x
+  let hh ← r.whnf depth (← r.inferIO depth ta)
+  if hh.tag == ETag.sort then
+    match ← view hh with
+    | .sort uT => do
+      let z ← zeroLevel
+      let ok ← liftFueled "level comparison" (← lvlEq? uT z)
+      pure (some ok)
+    | _ => pure none
+  else pure none
+
+theorem piHalfT_eq (r : CoreFnsA) (d : Nat) (x : EIdx) (k : Bool → AM Bool) :
+    piHalfT r d x k =
+      (piHalfA r d x >>= fun o => match o with | none => pure false | some ok => k ok) := by
+  simp only [piHalfT, piHalfA, bind_assoc]
+  congr 1; funext ta; congr 1; funext tta; congr 1; funext hh
+  split
+  · simp only [bind_assoc]; congr 1; funext v; split <;> simp [bind_assoc]
+  · simp
 
 theorem proofIrrel_run_none (r : CoreFnsA) (fe : IFEnv) (d : Nat) (a b : EIdx) (s s' : AState)
-    (h : PiHalfRun r d a s 0 s') :
+    (h : (piHalfA r d a).run s = .ok (none, s')) :
     (proofIrrel r fe d a b).run s = .ok (false, s') := by
-  obtain ⟨ta, tta, hh, a1, a2, a3, h1, h2, h3, h4⟩ := h
-  rcases h4 with ⟨-, ht, rfl⟩ | ⟨hne, -⟩
-  · simp only [proofIrrel, StateT.run_bind, h1, h2, h3, except_ok_bind]
-    have : (hh.tag == ETag.sort) = false := by simpa using ht
-    simp [this]; rfl
-  · exact absurd rfl hne
+  rw [proofIrrel_eq_halves, piHalfT_eq, StateT.run_bind, h]; rfl
 
 theorem proofIrrel_run_half (r : CoreFnsA) (fe : IFEnv) (d : Nat) (a b : EIdx) (s s1 s2 : AState)
-    (wa wb : Word) (hwa : wa ≠ 0) (ha : PiHalfRun r d a s wa s1) (hb : PiHalfRun r d b s1 wb s2) :
-    (proofIrrel r fe d a b).run s = .ok (decide (wa ≠ 1) && decide (wb ≠ 0 ∧ wb ≠ 1), s2) := by
-  obtain ⟨ta, tta, hh, a1, a2, a3, h1, h2, h3, h4⟩ := ha
-  rcases h4 with ⟨h0, -⟩ | ⟨-, ht, uT, z, a4, hv, hz, hl, hs1⟩
-  · exact absurd h0 hwa
-  obtain ⟨tb, ttb, hh', b1, b2, b3, g1, g2, g3, g4⟩ := hb
-  subst hs1
-  have hv' : (view hh).run a3 = .ok (.sort uT, a3) := by
-    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
-  have hl' : (liftFueled "level comparison" (some (decide (wa ≠ 1)))).run s1 = .ok (decide (wa ≠ 1), s1) := by
-    simp [liftFueled]; rfl
-  simp only [proofIrrel, StateT.run_bind, h1, h2, h3, except_ok_bind, ht, beq_self_eq_true, ↓reduceIte,
-    hv', hz, hl, hl']
-  rcases g4 with ⟨h0, gt, rfl⟩ | ⟨hwb, gt, uT', z', b4, gv, gz, gl, rfl⟩
-  · have : (hh'.tag == ETag.sort) = false := by simpa using gt
-    simp only [g1, g2, g3, except_ok_bind, this]
-    subst h0
-    simp; rfl
-  · have gv' : (view hh').run b3 = .ok (.sort uT', b3) := by
-      simp [view, gv, StateT.run_bind, StateT.run_get]; rfl
-    have gl' : (liftFueled "level comparison" (some (decide (wb ≠ 1)))).run s2 =
-        .ok (decide (wb ≠ 1), s2) := by
-      simp [liftFueled]; rfl
-    simp only [StateT.run_bind, g1, g2, g3, except_ok_bind, gt, beq_self_eq_true, ↓reduceIte,
-      gv', gz, gl, gl']
-    simp [hwb]; rfl
-
+    (x : Bool) (ob : Option Bool) (ha : (piHalfA r d a).run s = .ok (some x, s1))
+    (hb : (piHalfA r d b).run s1 = .ok (ob, s2)) :
+    (proofIrrel r fe d a b).run s = .ok ((ob.map (x && ·)).getD false, s2) := by
+  rw [proofIrrel_eq_halves, piHalfT_eq, StateT.run_bind, ha]
+  show (piHalfT r d b (fun okB => pure (x && okB))).run s1 = _
+  rw [piHalfT_eq, StateT.run_bind]
+  cases ob <;> (rw [hb]; rfl)
 
 /-- Model of `pin_word`. -/
 def pinWordM (m : Mem) (k : Word) : Option (List Word × Mem) :=
@@ -210,46 +185,80 @@ theorem pinWord_specM (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [pinWordM, pinW_eq, rdW_eq]
 
-theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F)
-    (hn62 : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+/-- **What `proof_irrel_half`'s errors claim from**: the knot's error half up to `n`, `pin_word`
+and `lvl_eq_c` outside the verdict closure. -/
+structure PihG (p : Prog) (n : Nat) : Prop where
+  knot : KnotUpToE p n
+  pin : ∀ k args m e, callE p k "pin_word" args m = .error e → e.cls = 0
+  lvl : ∀ k args m e, callE p k "lvl_eq_c" args m = .error e → e.cls = 0
+
+/-- **`proof_irrel_half` refines `piHalfA`, both outcomes**: the slots by the knot, the sort's
+level comparison by `lvl_eq_c` (out of fuel the twin's `liftFueled` fails). -/
+theorem pih_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot : KnotUpTo p n)
+    (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode d x : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hx : HW x)
-    (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (w : Word) (m' : Mem)
-    (h : pihW p n m mode vis d x = some (w, m')) :
-    ∃ a', PiHalfRun (coreKnot (decMode mode) fe id F) d.toNat (decE x) a w a' ∧
-      CoreAfter dn m m' a' vis fe M eb ∧ HW w := by
-  simp only [pihW] at h
-  rcases c1 : callW p n "infer_io" [mode, vis, d, x] m with _ | ⟨r1, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at h
-  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hr1⟩ := CoreSpec.run
-    ((hknot n (Nat.le_refl _)).inferIO F ⟨m, Locals.init []⟩ a dn vis fe M eb mode d x hnF hn62
-      ⟨hS, hm4, hebm⟩ hx) c1
-  rcases c2 : callW p n "infer_io" [mode, vis, d, r1.headD 0] m1 with _ | ⟨r2, m2⟩ <;>
-    simp only [c2, reduceCtorEq] at h
-  obtain ⟨hrun2, ⟨M2, hS2, hK2, hSt2⟩, hr2⟩ := CoreSpec.run
-    ((hknot n (Nat.le_refl _)).inferIO F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d _ hnF hn62
-      ⟨hS1, hm4, hebm⟩ hr1) c2
-  rcases c3 : callW p n "whnf" [mode, vis, d, r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;>
-    simp only [c3, reduceCtorEq] at h
-  obtain ⟨hrun3, ⟨M3, hS3, hK3, hSt3⟩, hr3⟩ := CoreSpec.run
-    ((hknot n (Nat.le_refl _)).whnf F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ hnF hn62
-      ⟨hS2, hm4, hebm⟩ hr2) c3
-  have hKA : KeptAll M M3 eb := hK1.trans (hK2.trans hK3)
-  have hStA : StackKept m m3 := hSt1.trans (hSt2.trans hSt3)
+    (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
+    RefE (PihG p n) (pihE p (n + 1) m mode vis d x)
+      (piHalfA (coreKnot (decMode mode) fe id F) d.toNat (decE x)) a
+      (fun v y a' => CorePost (fun r => decO (r.headD 0)) dn m vis fe M eb ResH v y a') := by
+  simp only [pihE]
+  unfold piHalfA
+  rcases c1 : callE p n "infer_io" [mode, vis, d, x] m with e1 | ⟨r1, m1⟩
+  · simp only [pihE.k_infer_io]
+    exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).inferIO F
+      ⟨m, Locals.init []⟩ a dn vis fe M eb mode d x hnF hn62 ⟨hS, hm4, hebm⟩ hx) c1
+  simp only [pihE.k_infer_io]
+  have e1 := CoreSpec.of_callW ((hknot n (Nat.le_refl _)).inferIO F ⟨m, Locals.init []⟩ a dn vis fe
+    M eb mode d x hnF hn62 ⟨hS, hm4, hebm⟩ hx) (callW_of_callE c1)
+  refine RefE.bind_core (w := id) e1 (fun M1 hS1 _ => ?_)
+  have hr1 := e1.2.2.2
+  rcases c2 : callE p n "infer_io" [mode, vis, d, r1.headD 0] m1 with e2 | ⟨r2, m2⟩
+  · simp only [pihE.k_infer_io_2]
+    exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).inferIO F
+      ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d _ hnF hn62 ⟨hS1, hm4, hebm⟩ hr1) c2
+  simp only [pihE.k_infer_io_2]
+  have e2 := CoreSpec.of_callW ((hknot n (Nat.le_refl _)).inferIO F ⟨m1, Locals.init []⟩ _ dn vis
+    fe M1 eb mode d _ hnF hn62 ⟨hS1, hm4, hebm⟩ hr1) (callW_of_callE c2)
+  refine RefE.bind_core (w := id) e2 (fun M2 hS2 _ => ?_)
+  have hr2 := e2.2.2.2
+  rcases c3 : callE p n "whnf" [mode, vis, d, r2.headD 0] m2 with e3 | ⟨r3, m3⟩
+  · simp only [pihE.k_whnf]
+    exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).whnf F
+      ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ hnF hn62 ⟨hS2, hm4, hebm⟩ hr2) c3
+  simp only [pihE.k_whnf]
+  have e3 := CoreSpec.of_callW ((hknot n (Nat.le_refl _)).whnf F ⟨m2, Locals.init []⟩ _ dn vis fe
+    M2 eb mode d _ hnF hn62 ⟨hS2, hm4, hebm⟩ hr2) (callW_of_callE c3)
+  refine RefE.bind_core (w := id) e3 (fun M3 hS3 _ => ?_)
+  have hr3 : HW (r3.headD 0) := e3.2.2.2
+  rw [show decH r3 = decE (r3.headD 0) from rfl]
   by_cases h2 : r3.headD 0 >>> 28 ≠ 2
-  · rw [ite_eq_left h2] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨_, ⟨_, _, _, _, _, _, hrun1, hrun2, hrun3, Or.inl ⟨rfl, ?_, rfl⟩⟩,
-      ⟨M3, hS3, hKA, hStA⟩, by unfold HW; decide⟩
-    exact fun ht => h2 ((decE_tag_eq _ hr3 2 (by decide)).mp ht)
-  rw [ite_eq_right h2] at h
+  · rw [ite_eq_left h2]
+    have htn : (decE (r3.headD 0)).tag ≠ ETag.sort :=
+      fun ht => h2 ((decE_tag_eq _ hr3 2 (by decide)).mp ht)
+    rw [beq_eq_false_iff_ne.mpr htn]
+    exact RefE.ret rfl (CorePost.ret hS3 rfl (by unfold ResH HW; simp))
+  rw [ite_eq_right h2]
   have h2' : r3.headD 0 >>> 28 = 2 := by simpa using h2
-  obtain ⟨hv1, h⟩ := of_ite_none h
-  obtain ⟨hv2, h⟩ := of_ite_none h
-  obtain ⟨hvw, hn32⟩ := view_sort_f m3 (AM.st _ _) hS3.arena.1 (r3.headD 0) hr3
+  by_cases hv1 : tierW (r3.headD 0) ≠ 0 ∧ rdW (m3.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hv1]; exact RefE.of_cls0 (by simp)
+  rw [ite_eq_right hv1]
+  by_cases hv2 : tcnt m3 SORT (tierW (r3.headD 0)) ≤ idxW (r3.headD 0)
+  · rw [ite_eq_left hv2]; exact RefE.of_cls0 (by simp)
+  rw [ite_eq_right hv2]
+  generalize ha3 : AM.st _ _ = a3 at hS3
+  obtain ⟨hvw, hn32⟩ := view_sort_f m3 a3 hS3.arena.1 (r3.headD 0) hr3
     ⟨hv1, UInt64.not_le.mp hv2⟩ h2'
-  generalize tfld m3 SORT (tierW (r3.headD 0)) (idxW (r3.headD 0)) 0 = uw at hvw hn32 h
-  rcases c4 : callW p n "pin_word" [53] m3 with _ | ⟨r4, m4⟩ <;> simp only [c4, reduceCtorEq] at h
-  obtain ⟨t4, ht4, hloc4, hpw⟩ := triple_of_callW
+  have htag : (decE (r3.headD 0)).tag = ETag.sort := (decE_tag_eq _ hr3 2 (by decide)).mpr h2'
+  rw [beq_iff_eq.mpr htag, ite_eq_left rfl]
+  generalize tfld m3 SORT (tierW (r3.headD 0)) (idxW (r3.headD 0)) 0 = uw at hvw hn32 ⊢
+  generalize decE (r3.headD 0) = hh at hvw ⊢
+  have hv' : (view hh).run a3 = .ok (.sort (decI uw), a3) := by
+    simp [view, hvw, StateT.run_bind, StateT.run_get]; rfl
+  refine RefE.bind_right hv' ?_
+  rcases c4 : callE p n "pin_word" [53] m3 with e4 | ⟨r4, m4⟩
+  · simp only [pihE.k_pin_word]; exact fun hG => ErrClaim.of_cls0 (hG.pin _ _ _ _ c4)
+  simp only [pihE.k_pin_word]
+  obtain ⟨t4, ht4, -, hpw⟩ := triple_of_callE
     (pinWord_specM p hp.pinw n ⟨m3, Locals.init []⟩ 53) c4
   have hpw' : pinWordM m3 53 = some (r4, m4) := by simpa [ht4] using hpw
   obtain ⟨-, hpw'⟩ := of_ite_none hpw'
@@ -257,42 +266,39 @@ theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
   have hP := hS3.pins
   have hr4' : r4.headD 0 = pinW m3 53 := by
     rw [← hr4]; simp [rdW, pinW]
-  obtain ⟨a3, ha3⟩ : ∃ a3, a3 = AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat
-      (decE (r2.headD 0))) (AM.st ((coreKnot (decMode mode) fe id F).inferIO d.toNat
-      (decE (r1.headD 0))) (AM.st ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE x)) a)) :=
-    ⟨_, rfl⟩
-  rw [← ha3] at hrun3 hvw hS3 hP
+  have hz : zeroLevel.run a3 = .ok (decI (r4.headD 0), a3) := by
+    rw [hr4']; exact pinZeroLevel_run hP
+  refine RefE.bind_right hz ?_
+  rcases c5 : callE p n "lvl_eq_c" [uw, r4.headD 0] m3 with e5 | ⟨r5, m5⟩
+  · simp only [pihE.k_lvl_eq_c]; exact fun hG => ErrClaim.of_cls0 (hG.lvl _ _ _ _ c5)
+  simp only [pihE.k_lvl_eq_c]
   rcases Nat.lt_or_ge n 2 with hsm | hbig
-  · rw [lvlEqC_small p hp.lvl.c n hsm] at h; cases h
+  · have := lvlEqC_small p hp.lvl.c n hsm [uw, r4.headD 0] m3
+    rw [callW_of_callE c5] at this; cases this
   obtain ⟨n', rfl⟩ : ∃ n', n = n' + 2 := ⟨n - 2, by omega⟩
-  rcases c5 : callW p (n' + 2) "lvl_eq_c" [uw, r4.headD 0] m3 with _ | ⟨r5, m5⟩ <;>
-    simp only [c5, reduceCtorEq] at h
   obtain ⟨hdn1, hdn2⟩ := hld _ _ _ _ _ _ _ hS3
   obtain ⟨lu, hdu⟩ := hdn1 _ _ hvw
   have hzl : a3.pins.zeroLevel = decI (r4.headD 0) := by rw [hP.zeroLevel, hr4']
   obtain ⟨lz, hdz⟩ := hdn2
   rw [hzl] at hdz
   have hz32 : HW (r4.headD 0) := by rw [hr4']; exact hP.lv_lt.2.1
-  obtain ⟨hrunL, ⟨M5, hS5, hK5, hSt5⟩, hr5⟩ := CoreSpec.run
+  obtain ⟨hrunL, hA5, hr5⟩ := CoreSpec.run
     (lvlEqC_refines p hp.lvl n' ⟨m3, Locals.init []⟩ a3 dn vis fe M3 eb hS3 uw (r4.headD 0)
-      hn32 hz32 lu lz hdu hdz) c5
-  obtain ⟨hw0, h⟩ := of_ite_none h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hdec : ∀ v : Word, v ≠ 0 → decO v = some (decide (v ≠ 1)) := by
-    intro v hv; unfold decO; by_cases h1 : v = 1 <;> simp [hv, h1]
-  simp only [hdec _ hw0] at hrunL
-  have hz : zeroLevel.run a3 = .ok (decI (r4.headD 0), a3) := by
-    rw [hr4']; exact pinZeroLevel_run hP
-  have htag : (decE (r3.headD 0)).tag = ETag.sort := (decE_tag_eq _ hr3 2 (by decide)).mpr h2'
-  have hrun3' : (((coreKnot (decMode mode) fe id F).whnf d.toNat (decE (r2.headD 0))).run
-      (AM.st ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE (r1.headD 0)))
-        (AM.st ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE x)) a))) =
-      .ok (decE (r3.headD 0), a3) := hrun3
-  exact ⟨_, ⟨_, _, _, _, _, a3, hrun1, hrun2, hrun3', Or.inr ⟨hw0, htag, decI uw, decI (r4.headD 0), _,
-    hvw, hz, hrunL, rfl⟩⟩, ⟨M5, hS5, hKA.trans hK5, hStA.trans hSt5⟩, hr5⟩
+      hn32 hz32 lu lz hdu hdz) (callW_of_callE c5)
+  refine RefE.bind_right hrunL ?_
+  by_cases hw0 : r5.headD 0 = 0
+  · rw [ite_eq_left hw0]
+    have hdo : decO (r5.headD 0) = none := by rw [hw0]; rfl
+    rw [hdo]
+    exact RefE.bind_left fun _ => ErrClaim.fail _ _ rfl
+  rw [ite_eq_right hw0]
+  obtain ⟨y, hy⟩ : ∃ y, decO (r5.headD 0) = some y := by
+    unfold decO; simp only [hw0, ↓reduceIte]; split <;> exact ⟨_, rfl⟩
+  rw [hy]
+  exact RefE.ret rfl ⟨hA5, (by show some y = decO (r5.headD 0); exact hy.symm), hr5⟩
 
-
-/-- `proofIrrel_refines` over the named hypothesis `LvlDen` (`LvlDen.of_den` from `CoreDen`). -/
+/-- `proofIrrel_refines` over the named hypothesis `LvlDen` (`LvlDen.of_den` from `CoreDen`): the
+halves' ok runs from `pih_ref`. -/
 theorem proofIrrel_refines' (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -310,48 +316,56 @@ theorem proofIrrel_refines' (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) :
   | succ n' =>
   rcases c1 : callW p (n' + 1) "proof_irrel_half" [mode, vis, d, a] s₀.mem with _ | ⟨ra, m1⟩ <;>
     simp only [c1, reduceCtorEq] at hW
-  obtain ⟨t1, ht1, -, hpa⟩ := triple_of_callW
-    (proofIrrelHalf_spec p hp.proofIrrelHalf n' ⟨s₀.mem, Locals.init []⟩ mode vis d a) c1
-  rw [ht1] at hpa
-  obtain ⟨a1, hA1, hCA1, hw1⟩ := pihW_ok p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega)
-    dn vis fe eb mode d a hm4 hebm ha s₀.mem a₀ MM hS (ra.headD 0) m1 hpa
+  obtain ⟨t1, ht1, -, ya, a1, hA1, hRa⟩ := RefE.run_okW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (pihE_spec p hp.proofIrrelHalf (n' + 1) _ mode vis d a)
+    (pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode d a hm4
+      hebm ha s₀.mem a₀ MM hS) c1
+  rw [ht1] at hRa
+  have hya : ya = decO (ra.headD 0) := hRa.res
   by_cases hwa : ra.headD 0 = 0
   · rw [ite_eq_left hwa] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    rw [hwa] at hA1
+    rw [hwa] at hya
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
     refine CoreRef.of_run (proofIrrel_run_none (coreKnot (decMode mode) fe id F) fe d.toNat (decE a)
-      (decE b) a₀ a1 hA1) hCA1 ?_ ?_
+      (decE b) a₀ a1 (by rw [hA1, hya]; rfl)) hRa.after ?_ ?_
     · show false = (r.headD 0 != 0); rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [ite_eq_right hwa] at hW
   rcases c2 : callW p (n' + 1) "proof_irrel_half" [mode, vis, d, b] m1 with _ | ⟨rb, m2⟩ <;>
     simp only [c2, reduceCtorEq] at hW
-  obtain ⟨M1, hS1, hK1, hSt1⟩ := hCA1
-  obtain ⟨t2, ht2, -, hpb⟩ := triple_of_callW
-    (proofIrrelHalf_spec p hp.proofIrrelHalf n' ⟨m1, Locals.init []⟩ mode vis d b) c2
-  rw [ht2] at hpb
-  obtain ⟨a2, hA2, hCA2, hw2⟩ := pihW_ok p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega)
-    dn vis fe eb mode d b hm4 hebm hb m1 a1 M1 hS1 (rb.headD 0) m2 hpb
-  have hCA := CoreAfter.comp hK1 hSt1 hCA2
+  obtain ⟨M1, hS1, hK1, hSt1⟩ := hRa.after
+  obtain ⟨t2, ht2, -, yb, a2, hA2, hRb⟩ := RefE.run_okW (s₀ := ⟨m1, Locals.init []⟩)
+    (pihE_spec p hp.proofIrrelHalf (n' + 1) _ mode vis d b)
+    (pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode d b hm4
+      hebm hb m1 a1 M1 hS1) c2
+  rw [ht2] at hRb
+  have hCA := CoreAfter.comp hK1 hSt1 hRb.after
+  have hx : ya = some (decide (ra.headD 0 ≠ 1)) := by
+    rw [hya]; unfold decO; by_cases h1 : ra.headD 0 = 1
+    · rw [ite_eq_right hwa, ite_eq_left h1, h1]; rfl
+    · rw [ite_eq_right hwa, ite_eq_right h1, decide_eq_true h1]
+  rw [hx] at hA1
   have hrunF := proofIrrel_run_half (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
-    a₀ a1 a2 (ra.headD 0) (rb.headD 0) hwa hA1 hA2
+    a₀ a1 a2 _ yb hA1 hA2
+  have hyb : yb = decO (rb.headD 0) := hRb.res
   by_cases hwb : rb.headD 0 = 0
   · rw [ite_eq_left hwb] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
+    rw [hwb] at hyb
     refine CoreRef.of_run hrunF hCA ?_ ?_
-    · show _ = (r.headD 0 != 0); rw [hr0, hwb]; simp
+    · show _ = (r.headD 0 != 0); rw [hr0, hyb]; rfl
     · unfold ResH HW; rw [hr0]; decide
   · rw [ite_eq_right hwb] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hr0 : r.headD 0 = (if ra.headD 0 = 1 then 0 else 1) &&& (if rb.headD 0 = 1 then 0 else 1) := by
       simpa using hr.symm
     refine CoreRef.of_run hrunF hCA ?_ ?_
-    · show _ = (r.headD 0 != 0); rw [hr0]
+    · show _ = (r.headD 0 != 0); rw [hr0, hyb]
       generalize ra.headD 0 = va at *
       generalize rb.headD 0 = vb at *
-      by_cases h1 : va = 1 <;> by_cases h2 : vb = 1 <;> simp [h1, h2, hwb]
+      by_cases h1 : va = 1 <;> by_cases h2 : vb = 1 <;> simp [decO, h1, h2, hwb]
     · unfold ResH HW; rw [hr0]
       generalize ra.headD 0 = va
       generalize rb.headD 0 = vb
