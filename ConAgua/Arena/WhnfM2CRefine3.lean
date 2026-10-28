@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfM2CRefine2
+import ConAgua.Arena.RecFireCore
 
 /-!
 # `major_to_ctor`: refinements of the `And` arm (`m2c_and`, `m2c_and2`)
@@ -89,17 +90,6 @@ theorem SpineR.ofKept {m m' : Mem} {o n : Word} {xs : Array EIdx} (h : SpineR m 
 theorem viewLsLen_some {a : AState} {h : LsIdx} {k : Nat} (hv : a.store.lss.viewLen h = some k) :
     (viewLsLen h).run a = .ok (some k, a) := by
   rw [viewLsLen_run, hv]
-
-/-- The core relation's memos reach past `CTL[136]` (the stack top's slot). -/
-theorem CoreS.ctl136 {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) :
-    136 < (m.arr64 CTL).size := by
-  obtain ⟨mp, h⟩ := hS.memos.2.2.2.2.1
-  unfold MemoRG MemoRV at h
-  have := h.1
-  simp only at this
-  have e : (156 : Word).toNat = 156 := rfl
-  omega
 
 /-- The model's bounds tests of the two pushes are `and2Push`'s. -/
 theorem and2Push_of {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
