@@ -2414,7 +2414,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- the number of continuations plus 5 (`grind`'s default of 5 rounds stops in the middle of a
   -- long path). `simp_all` over the unfolded models re-simplifies the whole model tree in each of
   -- its rounds: on `infer_proj`'s tail (133 conditions) 50 s, this recipe 11 s.
-  let flatRounds := st.ks.size + 5
+  let flatRounds := 2 * st.ks.size + 10
   let flatGen := (genN.getD flatRounds).max flatRounds
   let stepTac (attrs vcg : String) (ihs : List String) : String :=
     let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"

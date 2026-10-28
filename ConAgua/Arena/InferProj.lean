@@ -366,8 +366,8 @@ l_model ipaE_spec (p : Prog) (hf : p.lookup "infer_proj_at" = some inferProjAtL)
   specs [callW_spec p n "get_app_args", callW_spec p n "ls_node", callW_spec p n "pin_word",
     callW_spec p n "lvl_eq_c", callW_spec p n "field_sort_zero", callW_spec p n "proj_type_at"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-! ## `infer_proj_at` refines `projAtT` -/
 
