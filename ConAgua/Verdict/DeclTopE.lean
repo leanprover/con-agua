@@ -1,14 +1,13 @@
 import ConAgua.Verdict.DeclDefnE
 import ConAgua.Verdict.DeclArmsE
 import ConAgua.Verdict.DeclAxiomE
-import ConAgua.Verdict.DeclFoldE
 import ConAgua.Verdict.DeclQuotE
 /-!
-# Phase A's fold: the error claim from the leaves' (lane `verdicts-b`, helper `d`)
+# Phase A's fold: what its error arms assume, from the leaves' claims
 
-`installFoldGo_errTop`: `install_fold_go`'s error spec (`FoldGoSpecE`, `DeclFoldE.lean`) from the
-program hypotheses of the ok refinement (`LoopCallees`, `installFoldGo_refines`) and the claims of
-what lies outside the declaration family:
+`istgG_of`: `IstgG`, what `fold_ref`'s error half (`CheckerT.lean`) assumes, from the program
+hypotheses of the ok refinement (`LoopCallees`) and the claims of what lies outside the
+declaration family:
 
 * `CoreStubsE p`: the core stubs' error claims (`DeclValE.lean`),
 * `IndArmSpecE p dn`: the inductive arm's (`check_ind_decl`),
@@ -26,11 +25,6 @@ open scoped Lean.Order
 namespace L.Arena
 
 open L.Ind
-
-/-- A callee of the list is outside the verdict closure: `NVAt`. -/
-theorem nvAt_of_closed {p : Prog} (hnv : closedNV p L.Checker.nvFns = true) {f : FnName}
-    (hf : f ∈ declNvList) : NVAt p f :=
-  fun _ _ _ _ h => callE_nv hnv (declNv_mem f hf) _ _ _ h
 
 section top
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
@@ -56,28 +50,14 @@ theorem armsE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hDG : DivGateSpe
       hap hkp hnv hcE hUL hivE hdc.dninj hdc.cd.op cv v
   · exact fun k cv => checkDeclQuot_errT pins dn ds hdc.cd.quot hdc.cd.val.rcp hdc.dninj hdc.quotDn hnv k cv
 
-/-- **`install_fold_go` fails only where `installFold` does** (and `install_fold_next`), from the
-leaves' error claims: the whole declaration family. -/
-theorem installFoldGo_errTop (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : IndArmSpecE p dn)
-    (hDG : DivGateSpecE p pins)
-    (hnv : closedNV p L.Checker.nvFns = true) (hUL : UceLookups p) (hFD : FrontDecls ds)
-    (hLD : DeclsLpsDn dn ds) (hpp : p.lookup "pend_push" = some pendPushL)
-    (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
-    (hpi : p.lookup "install_step" = some installStepL)
-    (hpd : p.lookup "install_decl_step" = some installDeclStepL)
-    (hpg : p.lookup "install_fold_go" = some installFoldGoL)
-    (hpx : p.lookup "install_fold_next" = some installFoldNextL) (hsz : ds.size < 2 ^ 63)
-    (hb : BracketProg p) (n : Nat) (hn : n ≤ 2 ^ 62) :
-    FoldGoSpecE pins dn ds p n ∧ FoldNextSpecE pins dn ds p n := by
-  have hkp : CrKeep p := ⟨hdc.indMemo, hdc.crf⟩
-  have hap := hdc.cd.crp.apd
+/-- **What phase A's fold's error arms assume** (`IstgG`: `check_decl`'s arms' and inductive arm's
+claims, `install_value`'s), from the leaves' error claims: the whole declaration family. -/
+theorem istgG_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : IndArmSpecE p dn)
+    (hDG : DivGateSpecE p pins) (hnv : closedNV p L.Checker.nvFns = true) (hUL : UceLookups p) :
+    IstgG pins dn ds p := by
   have hU : UceProg p := ⟨hUL, strLitSupported_core p hdc.knot.knot.str⟩
-  have hivE : IvgE p := ivgE_okT hdc.cvg hap hkp hnv hU
-  have hGo := installStepGo_errT pins dn ds hdc hFD hLD hnv
-    ⟨⟨armsE_of pins dn ds p hdc hcE hDG hnv hUL, hia⟩, ⟨hnv, hU, hivE⟩⟩
-  have hSt := installStep_errT pins dn ds hb hpi hnv hGo
-  have hDS := installDeclStep_errT pins dn ds hdc hFD hnv hpd hSt
-  exact installFoldGo_refinesE pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hFD hLD hDS n hn
+  exact ⟨⟨armsE_of pins dn ds p hdc hcE hDG hnv hUL, hia⟩,
+    ⟨hnv, hU, ivgE_okT hdc.cvg hdc.cd.crp.apd ⟨hdc.indMemo, hdc.crf⟩ hnv hU⟩⟩
 
 end top
 

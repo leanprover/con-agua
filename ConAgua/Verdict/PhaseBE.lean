@@ -62,7 +62,7 @@ include hP hm
 check `j` (the hypotheses of `checkPendingGo_refinesT`), a failing run of class `≠ 0` means the
 twin's phase B over the checks from `j` fails with that class (a record's failure, as a value);
 `cp_ref`'s error half. -/
-theorem checkPendingGo_refinesE (hE : CPErrT mode pins dn ds p fe pend) (n : Nat)
+theorem checkPendingGo_refinesE (hE : CpG p) (n : Nat)
     (hn : n ≤ 2 ^ 62) : CPGoSpecE mode pins dn ds p fe pend n :=
   fun m a₀ j cnt vis hj hc hT hR hM hcm hCr _ he =>
     RefC.run_err (checkPendingGo_specE p hP.cpg n ⟨m, Locals.init []⟩ j cnt vis)

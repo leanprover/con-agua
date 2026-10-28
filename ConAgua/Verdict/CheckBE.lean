@@ -28,7 +28,7 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 from a memory that agrees with phase A's on what the loop names claims phase B's failure on the
 worker. -/
 theorem checkPendingGo_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
+    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
     (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
     (hPB : m.arr8 L.Rom.PB = bs.toArray)
     (h : PhaseBStart pins dn ds fe pend m a v) (x y z : Word) :
@@ -75,7 +75,7 @@ theorem checkPendingGo_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs 
 phase A's on what phase B's loop names, with the range `[0, k)`, an empty seed `CTLF` and the view
 `v` in the header's word 3, a failing run of class `≠ 0` claims phase B's failure on `a.worker`. -/
 theorem checkB_agree0E (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
+    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
     (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
     (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (s₀ : St)
     (hw : ∀ b, phaseBS b = true → s₀.mem.arr64 b = m.arr64 b)
@@ -108,7 +108,7 @@ theorem checkB_agree0E (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checker
 
 /-- `checkB_agree0E` with the memory facts as the precondition. -/
 theorem checkB_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
+    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
     (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
     (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) :
     ⦃fun s => (∀ b, phaseBS b = true → s.mem.arr64 b = m.arr64 b) ∧ s.mem.glob PLO = 0 ∧
@@ -122,7 +122,7 @@ theorem checkB_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerP
 
 /-- **Entry 2 in place, `check` with the mode word `2`, error half of `checkMode2_agree`.** -/
 theorem checkMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
+    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
     (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
     (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (s₀ : St)
     (hw : ∀ b, phaseBS b = true → s₀.mem.arr64 b = m.arr64 b) (hmode : s₀.mem.glob MODE = 2)
@@ -150,7 +150,7 @@ theorem checkMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs chec
 failing with class `≠ 0`, from a memory `w` as `checkMode2_agree` asks, claims phase B's failure on
 the worker. -/
 theorem runMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
+    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
     (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
     (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (w : Mem)
     (hw : ∀ b, phaseBS b = true → w.arr64 b = m.arr64 b) (hmode : w.glob MODE = 2)
@@ -171,15 +171,13 @@ theorem runMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checke
 end agree
 
 open ConAgua.Final L.Rom in
-/-- **Entry 2's verdict claim from `check_pending`'s error claim** (as `drv_twinAccepts`, with
-`runMode2_agreeE` for `runMode2_agree` and `TwinVerdict.phaseB` for the accepting pipeline).
-`hCP` is `check_pending`'s error claim under the program facts `drv_twinAccepts` has; it is
-discharged bottom-up (its callees: `scratch_enter`, `check_value_group`, `scratch_drop`). -/
+/-- **Entry 2's verdict claim from what `check_pending`'s error arms assume** (as
+`drv_twinAccepts`, with `runMode2_agreeE` for `runMode2_agree` and `TwinVerdict.phaseB` for the
+accepting pipeline). `hCP` is `CpG` at the programs phase B runs (the no-verdict closure,
+`check_value_group`'s `CvgCtx`); it is discharged bottom-up. -/
 theorem entry2Verdict_of
-    (hCP : ∀ (bs : List UInt8) (dn : NIdx → Option ConLeche.Name), RomOK bs →
-      bs = romData ++ bs.drop romData.length → L.Ind.DnInj dn → QuotDn dn →
-      PhaseBProg (Prog.subPB bs checkerProg) → ∀ pins ds fe pend,
-      CPErrT .verified pins dn ds (Prog.subPB bs checkerProg) fe pend) :
+    (hCP : ∀ (bs : List UInt8), PhaseBProg (Prog.subPB bs checkerProg) →
+      CpG (Prog.subPB bs checkerProg)) :
     Entry2Verdict checkerProg := by
   intro b pb sz hin N₁ hN₁ rs₁ m₁ h₁ hge N₂ hN₂ w hw hmode hlo hhi hctlf hv e h₂ hk0
   have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
@@ -212,7 +210,7 @@ theorem entry2Verdict_of
         UInt64.ofNat PA.pend.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
     rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hlt)]
   have hB := runMode2_agreeE .verified PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend
-    pb.data.toList hPB' rfl (hCP _ _ hrom hpre hdn hQd hPB' _ _ _ _) N₂ hN₂ m PA.sF v _ hk hPB hS w
+    pb.data.toList hPB' rfl (hCP _ hPB') N₂ hN₂ m PA.sF v _ hk hPB hS w
     hw' hmode hlo hhi hctlf hv' h₂ hk0
   obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
   exact TwinVerdict.phaseB hA hBp hC hD hE PA.fold hB

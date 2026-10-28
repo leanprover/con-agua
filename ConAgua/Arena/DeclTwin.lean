@@ -11,7 +11,7 @@ lane `decls3`'s `LitInj`), which is sound because the twin's store is well forme
 states but says nothing about the twin state's own well-formedness, and no L-side relation can
 give it. So the loop carries it on the twin side alone: `TwinFold` is con-ron's
 `installFold_bridge` induction invariant (`FoldOK`, unique names, the pins and the records
-denote, persistence), and `TwinFold.step` is that induction's step (`installStep_split`), applied
+denote, persistence), and `TwinFold.step_pext` is that induction's step (`installStep_split`), applied
 to the twin run the L step refines. From it, every state the step's arms start from is
 `StateOK` (`TwinFold.stateOK`, `.andPin`, `.enter`).
 
@@ -188,13 +188,6 @@ theorem step_pext (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) 
   exact ⟨⟨⟨env₁, hok₁, hnd₁⟩, ⟨pinsP, PinsDenote.pmono hx₁ _ _ h.pp hpins⟩, h.pp, h.pd,
     ⟨dsP, denoteDecls_pext hx₁ _ _ h.pd hden⟩, hpend₁, installStep_off hA⟩, hx₁⟩
 
-/-- **The fold's step**: an accepting `installDeclStep` on record `i` keeps the invariant. -/
-theorem step (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) {k : Nat}
-    {fe' : IFEnv} {pend' : Array PendingCheck} {a' : AState}
-    (hrun : installDeclStep .verified pins (i, fe, pend) ds[i] a = .ok (.ok (k, fe', pend'), a')) :
-    TwinFold pins ds fe' pend' a' :=
-  (h.step_pext hi hrun).1
-
 /-! ## In the `AM.ok`/`AM.st` form the loop's theorems use -/
 
 theorem andPinAM (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size)
@@ -204,15 +197,6 @@ theorem andPinAM (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size)
 theorem enterAM {a : AState} (h : StateOK a) :
     StateOK (AM.st enterScratch (AM.st flushCaches a)) :=
   enter h rfl
-
-theorem stepAM (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) {k : Nat}
-    {fe' : IFEnv} {pend' : Array PendingCheck}
-    (hok : AM.ok (installDeclStep .verified pins (i, fe, pend) ds[i]) a)
-    (hres : AM.res (installDeclStep .verified pins (i, fe, pend) ds[i]) a = .ok (k, fe', pend')) :
-    TwinFold pins ds fe' pend' (AM.st (installDeclStep .verified pins (i, fe, pend) ds[i]) a) := by
-  have := AM.run_of_ok _ _ hok
-  rw [hres] at this
-  exact h.step hi this
 
 end TwinFold
 
