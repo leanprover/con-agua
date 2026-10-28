@@ -1919,7 +1919,8 @@ Also gone: the hand ok models with their arms and specs: `cnaW`/`cnaK1–2`/`cna
 `cfaK1–6`/`cfa_spec`, `cxoW`/`cxoK1–9`/`cxo_spec`, `cosW`/`cosF`/`cos_spec`, `ccsW`/`ccsF`/`ccs_spec`,
 the generated `cbcW`/`cbc_spec`, `ibiW`/`ibi_spec`, the hand `icpW`/`icpK1–8`/`icp_spec`, `applyIndW`/
 `applyInd_spec` (about 820 lines); the files `Verdict/IndBNodes`, `IndBAgree`, `IndBCtor`, `IndBCos`,
-`IndsE1` and `Front/IndApplyTwin`, and the `errors` models. Whole diff against master 57da5c00: +1 584
+`IndsE1` and `Front/IndApplyTwin`, and the `errors` models. `ClassMajorsE` (with `classMajorsE_of`, `classMajors_claim`) had no
+user left once `check_block_classes` reads `clm_ref`. Whole diff against master 57da5c00: +1 584
 −4 241 in 44 files.
 
 Choices:
