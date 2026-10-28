@@ -2163,8 +2163,8 @@ the slots, as `m2c_*` in §3.7):
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
   `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE` (§3.45, §3.46);
 - [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.44), `InferBindE` (6: `infer_lams`/`infer_pis` and
-  their leaves), `InferSpineE` (4), `InferArmsE` (8), `InferKnotE` (4: `infer_body(_io)`, `infer`,
-  `infer_io`).
+  their leaves), `InferSpineE` (4), `InferArmsE` (8; done, §3.47), `InferKnotE` (4: `infer_body(_io)`,
+  `infer`, `infer_io`).
 
 **C. Hand `Except` models**:
 
@@ -3028,4 +3028,63 @@ Diff of the landing against master: +312 −737 lines in 4 files (before the imp
 `Verdict/DefEqTailE` 10.64 → 0.46, `DefEqAllE` 0.50 → 0.50, `KnotAllE` 3.05 → 3.07; sum 21.67 →
 16.12 (−26 %). The two Arena modules are slower for the same reason as in §3.45 (the generated
 models moved in with the refinements). No generator or kit change was needed.
+
+### 3.47 Retirement, group B, `infer`, second landing (the arms: `ensure_sort`, the stage entries, `infer_lit`, `infer_let`, `infer_lam_io`, `infer_forall_io`, `infer_spine_arg`)
+
+The eight functions of `Verdict/InferArmsE`. Each has one `unified` model and one refinement with
+`CorePost`, placed where its ok refinement was: `esE`/`es_ref` (`ensure_sort`), `itcE`/`itc_ref`
+(`infer_type_core`), `escE`/`esc_ref` (`ensure_sort_core`), `ilE`/`il_ref` (`infer_lit`;
+`Arena/InferLeaves`), `iletE`/`ilet_ref`, `ilamE`/`ilam_ref`, `ifaE`/`ifa_ref` (`InferBodyLet`),
+`isaE`/`isa_ref` (`InferBodySpineF`). The ok statements the knot and the entries read
+(`ensureSort_refines`, `inferTypeCore_refines`, `ensureSortCore_refines`, `inferLit_refines`,
+`inferLet_refines`, `inferLamIO_refines`, `inferForallIO_refines`, `inferSpineArg_refines`) are
+`RefE.coreSpec` one-liners; `Verdict/InferArmsE` keeps the error claims its non-migrated readers take
+(`InferSpineE`, `InferKnotE`, `KnotAllE`) as `RefE.coreSpecE`/`RefE.run_err` one-liners. Gone: the hand
+ok models and their specs (`ensureSortK`, `ensureSort_spec`, `ensureSort_run`, `inferLitK`, `litArmK`,
+`pinArmK` and their lemmas, `inferLit_spec`, `litArm_ref`, `inferTypeCore_spec`, `ensureSortCore_spec`,
+`ensureSortCore_of_spec` (`KnotSlot`), the generated `inferLetW`, `inferLamIOW`, `inferForallIOW`,
+`inferSpineArgW` with their specs, `coreRef_view`) and the eight `errors` models with their claims
+(`inferLitE_pin`, `inferTypeCore_eq`, `ensureSortCore_eq`).
+
+| function | before: ok side + error side | after | change |
+|---|---:|---:|---:|
+| `ensure_sort` | 63 + 53 = 116 | 58 | −50 % |
+| `infer_type_core`, `ensure_sort_core` | 56 + 67 = 123 | 78 | −37 % |
+| `infer_lit` | 127 + 92 = 219 | 111 | −49 % |
+| `infer_let` | 58 + 97 = 155 | 94 | −39 % |
+| `infer_lam_io` | 48 + 64 = 112 | 76 | −32 % |
+| `infer_forall_io` | 94 + 130 = 224 | 144 | −36 % |
+| `infer_spine_arg` | 40 + 51 = 91 | 61 | −33 % |
+| **all** | **1 040** | **622** | **−40 %** |
+
+(The "after" column counts the model, the refinement and the one-liners kept for readers.) Diff of
+the landing against master: +597 −1 028 lines.
+
+* **`G`**: `KnotUpToE p n` for `ensure_sort` (the `whnf` slot); the entries take the weakest:
+  `InferSlotE p n` (`infer_type_core`) and `EnsureSortSpecE p n` (`ensure_sort_core`, `es_ref`'s error
+  half at every fuel, `ensureSortSpecE_of_knot`); `closedNV` for `infer_lit` (every callee lifted);
+  `InferG p n` (moved from `InferProj` to `InferLeaves`) for `infer_let`, `infer_lam_io`,
+  `infer_forall_io`; `InferArgG p n` (`InferG` and `defeq_arg`'s claim `DefeqArgE`, which moves from
+  `InferArmsE` to `InferLeaves`; `defeq_arg` itself is not migrated) for `infer_spine_arg` and the
+  functions above it. `inferSpineArg_refinesE` gains `hnv` (its reader `inferSpineArg_anyE` too).
+* **Callees**: the slots and `ensure_sort` through `callE` (`RefE.bind_callE` for `ensure_sort`'s, the
+  rest as `rcases` + `RefE.bind_core`), the callees outside the verdict closure lifted
+  (`callW_spec`), their ok halves from their old specs.
+* `infer_lam_io`'s reader (`inferBodyIO_refinesE`) passes `hk` and `Abstract1OK` now: the error half
+  comes with the ok one.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master af364696,
+`_tmp/retire-infer2/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/InferBodyLet` | 2.59 | **4.26** | **slower (+1.7 s)**: the three unified models … |
+| `Arena/InferLeaves` | 4.94 | **5.57** | **slower (+0.6 s)**: `esE`, `ilE`, `itcE`, `escE` … |
+| `Verdict/InferArmsE` | 8.41 | 0.61 | … against the `errors` models and claims here |
+| `Arena/KnotSlot`, `IndTwin`, `InferBodySpineF`, `Verdict/InferSpineE`, `KnotAllE` | 26.74 | 26.53 | |
+| **sum** | **42.68** | **36.97** | **−13 %** |
+
+Recipes tried for `InferBodyLet`: the default `finish` fails on `iletE` and `ifaE` (`finish [tierW,
+idxW]` on `ifaE` too) and is slower on `ilamE` (4.83 s for the module); `simp []` it is, as for the old
+ok models. No generator or kit change was needed.
 

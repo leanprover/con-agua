@@ -155,3 +155,4 @@ ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build nee
 ConAgua/Arena/KnotSlot.lean	public import ConAgua.Arena.SimLib	# needed: the build fails without it (`of_ite_none`, which WhnfDeltaSlot.lean reached through WhnfDelta before); the tool names it unused
 ConAgua/Arena/InferLeaves.lean	public import ConAgua.Arena.RefECore	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/InferLeaves.lean	public import ConAgua.Checker.NoVerdictTree	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Arena/InferLeaves.lean	public import ConAgua.Arena.KnotE	# needed: the build fails without it (`KnotUpToE`, `InferSlotE` in es_ref, itc_ref, InferG); the tool names it unused

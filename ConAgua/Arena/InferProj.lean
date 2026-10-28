@@ -462,12 +462,6 @@ theorem projAtT_errLP (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : E
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, Bool.false_eq_true,
     ↓reduceIte, hlen, bne_self_eq_false, ip_viewLsLen_run, hvl, hl]; rfl
 
-/-- What the inference functions' error arms assume: the knot's error half at the callees' fuel
-and the verdict closure. -/
-structure InferG (p : Prog) (n : Nat) : Prop where
-  knot : KnotUpToE p n
-  nv : closedNV p L.Checker.nvFns = true
-
 /-- **`infer_proj_at` refines `projAtT`, both outcomes** (`inferProj` past the table lookup) at the
 table record `q` of field `i`, the subject type `te` headed by `T.{us}`. -/
 theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n : Nat)

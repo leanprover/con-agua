@@ -11,21 +11,24 @@ import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.RefECore
+import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The leaf inference functions of `Infer.lean` (lane `defeq`)
 
-The callW pattern (`WhnfCoreRefine.lean`): a word model of each function with its callees
-through their runs, the L spec by `vcgen` + `finish`, the refinement from the callees' specs.
+Each function has one model and one refinement for both outcomes (`RefE` with `CorePost`) where
+it is unified; its ok half (`RefE.coreSpec`) is the `CoreSpec` the knot reads.
 
-* `ensure_sort` refines `ensureSort` from the knot's `whnf` slot (`ensureSort_refines`), which
-  discharges `EnsureSortSpec` (`ensureSortCore_refines`).
+* `ensure_sort` refines `ensureSort` from the knot's `whnf` slot (`es_ref`; `ensureSort_refines`,
+  `EnsureSortSpecE`), which discharges the stage entry `ensure_sort_core` (`esc_ref`); the other
+  stage entry `infer_type_core` is the `infer` slot's (`itc_ref`).
 * `defeq_arg` refines `defeqArg` from the `defeq`/`defeq_e` slots and `is_eager_reduce`'s spec
-  (`IsEagerReduceH`, a hypothesis: its refinement is lane `defeq`'s other helper's).
-* `infer_const` refines the `.const` clause `inferConstT`, both outcomes (`inferConst_ref` over its
-  unified model `inferConstE`).
+  (`IsEagerReduceH`, a hypothesis: its refinement is lane `defeq`'s other helper's); its error
+  claim `DefeqArgE` is a hypothesis of the inference functions' errors (`InferArgG`).
+* `infer_lit` refines the `.lit` clauses `inferLitT` (`il_ref`), `infer_const` the `.const` clause
+  `inferConstT` (`inferConst_ref`).
 -/
 
 open ConRon.Arena
@@ -56,89 +59,138 @@ structure InferLeafProg (p : Prog) : Prop where
 
 /-! ## `ensure_sort` -/
 
-/-- The model of `ensure_sort` past `whnf`'s run `res`: the sort record's word. -/
-def ensureSortK (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m₁) =>
-    if r.headD 0 >>> 28 ≠ 2 then none
-    else if tierW (r.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
-    else if tcnt m₁ SORT (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
-    else some (tfld m₁ SORT (tierW (r.headD 0)) (idxW (r.headD 0)) 0, m₁)
-
-theorem ensureSortK_ok (m₁ : Mem) (r : List Word) (h1 : r.headD 0 >>> 28 = 2)
-    (h2 : ¬ (tierW (r.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0))
-    (h3 : idxW (r.headD 0) < tcnt m₁ SORT (tierW (r.headD 0))) :
-    ensureSortK (some (r, m₁)) =
-      some (tfld m₁ SORT (tierW (r.headD 0)) (idxW (r.headD 0)) 0, m₁) := by
-  have h3' : ¬ tcnt m₁ SORT (tierW (r.headD 0)) ≤ idxW (r.headD 0) := by
-    simpa using h3
-  simp only [ensureSortK, h1, h2, h3', ne_eq, not_true_eq_false, ↓reduceIte]
-
-section es
-variable (p : Prog) (hp : InferLeafProg p)
-
-include hp in
-theorem ensureSort_spec (n : Nat) (s₀ : St) (mode vis d e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ensure_sort" [mode, vis, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ ensureSortK (callW p n "whnf" [mode, vis, d, e] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ensureSort]
-  simp only [callFn, ensureSortL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "whnf",
-      evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [ensureSortK_ok, tierW, idxW]
-
-end es
+/-- **`ensure_sort`'s unified model**: the `whnf` slot through its run. -/
+l_model esE_spec (p : Prog) (hf : p.lookup "ensure_sort" = some ensureSortL)
+  fns [hf ↦ esE list] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] unified
 
 theorem tag_sort_beq (h : Word) (hh : HW h) (hg : h >>> 28 = 2) : ((decE h).tag == ETag.sort) = true := by
   rw [decE_tag_sort_beq h hh, hg]; rfl
 
-theorem ensureSort_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e x : EIdx) (u : LIdx) (a a₁ : AState)
-    (hw : (r.whnf d e).run a = .ok (x, a₁)) (ht : (x.tag == ETag.sort) = true)
-    (hv : a₁.store.view x = some (.sort u)) :
-    (ensureSort r fe d e).run a = .ok (u, a₁) := by
-  simp only [ensureSort, StateT.run_bind, hw, except_ok_bind, ht, ↓reduceIte, view_run _ _ _ hv]
-  rfl
+theorem tag_sort_ne (h : Word) (hh : HW h) (hg : h >>> 28 ≠ 2) :
+    ((decE h).tag == ETag.sort) = false := by
+  rw [decE_tag_sort_beq h hh]; simpa using hg
 
 section esr
-variable (p : Prog) (hp : InferLeafProg p)
+variable (p : Prog)
 
-include hp in
-/-- **`ensure_sort` refines `ensureSort`** at the knot, from the knot's `whnf` slot. -/
+/-- **`ensure_sort` refines `ensureSort`, both outcomes**: `whnf`'s errors are its slot's, a
+non-sort rejects. -/
+theorem es_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d e : Word)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e) :
+    RefE (KnotUpToE p n) (esE p (n + 1) s₀.mem mode vis d e)
+      (ensureSort (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
+      (CorePost decLv dn s₀.mem vis fe M eb ResH) := by
+  simp only [esE]
+  refine RefE.bind_callE (fun _ => rfl)
+    ((hk n (Nat.le_refl _)).whnf F s₀ a₀ dn vis fe M eb mode d e hF hn hs he)
+    (fun hG => (hG n (Nat.le_refl _)).whnf F s₀ a₀ dn vis fe M eb mode d e hF hn hs he)
+    (fun r₁ m₁ _ h₁ => ?_)
+  obtain ⟨-, ⟨M₁, hS₁, hK₁, hSt₁⟩, -, hrw⟩ := h₁
+  simp only [esE.k_whnf]
+  by_cases g1 : r₁.headD 0 >>> 28 ≠ 2
+  · rw [ite_eq_left g1]
+    simp only [show decH r₁ = decE (r₁.headD 0) from rfl, tag_sort_ne _ hrw g1, Bool.false_eq_true,
+      ↓reduceIte]
+    exact fun _ => ErrClaim.fail _ _ rfl
+  rw [ite_eq_right g1]
+  have hg : r₁.headD 0 >>> 28 = 2 := by simpa using g1
+  by_cases g2 : tierW (r₁.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
+  · rw [ite_eq_left g2]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right g2]
+  by_cases g3 : tcnt m₁ SORT (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
+  · rw [ite_eq_left g3]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right g3]
+  obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₁ _ hS₁.arena.1 (r₁.headD 0) hrw ⟨g2, by simpa using g3⟩ hg
+  simp only [show decH r₁ = decE (r₁.headD 0) from rfl, tag_sort_beq _ hrw hg, ↓reduceIte]
+  exact RefE.bind_right (view_run _ _ _ hv)
+    (RefE.ret rfl ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, rfl, hu⟩)
+
+/-- **`ensure_sort` refines `ensureSort`** at the knot (`es_ref`'s ok half). -/
 @[refines ConRon.Arena.ensureSort]
-theorem ensureSort_refines (n : Nat) (hk : KnotUpTo p n) : EnsureSortSpec p (n + 1) := by
-  intro F s₀ a₀ dn vis fe M eb mode d e hF hn hs he
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (ensureSort_spec p hp n s₀ mode vis d e)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  cases hc : callW p n "whnf" [mode, vis, d, e] s.mem with
-  | none => rw [hc] at hW; simp [ensureSortK] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
-    ((hk n (Nat.le_refl _)).whnf F s a₀ dn vis fe M eb mode d e (by omega) (by omega) hs he) hc
-  rw [hc] at hW; simp only [ensureSortK] at hW
-  obtain ⟨h1, hW⟩ := of_ite_none hW
-  obtain ⟨h2, hW⟩ := of_ite_none hW
-  obtain ⟨h3, hW⟩ := of_ite_none hW
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  have hg : r₁.headD 0 >>> 28 = 2 := by simpa using h1
-  obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₁ _ hS₁.arena.1 (r₁.headD 0) hrw
-    ⟨h2, by simpa using h3⟩ hg
-  have hrun := ensureSort_run _ fe d.toNat (decE e) _ _ a₀ _ (by rw [AM.run_of_ok _ _ hok, hres]; rfl)
-    (tag_sort_beq _ hrw hg) hv
-  obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
-  refine ⟨hok', ?_, by rw [hres', decLv, ← hr], by unfold ResH; rw [← hr]; exact hu⟩
-  rw [hst', ← hm]; exact ⟨M', hS₁, hK₁, hSt₁⟩
+theorem ensureSort_refines (hp : InferLeafProg p) (n : Nat) (hk : KnotUpTo p n) :
+    EnsureSortSpec p (n + 1) :=
+  fun F s₀ a₀ dn vis fe M eb mode d e hF hn hs he =>
+    RefE.coreSpec (esE_spec p hp.ensureSort (n + 1) s₀ mode vis d e)
+      (es_ref p n hk F s₀ a₀ dn vis fe M eb mode d e (by omega) (by omega) hs he)
 
 end esr
 
+/-- `ensure_sort`'s error claim (`es_ref`'s error half, at every L fuel). -/
+def EnsureSortSpecE (p : Prog) (n : Nat) : Prop :=
+  ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
+    HW e →
+    CoreSpecE p n "ensure_sort" [mode, vis, d, e]
+      (ensureSort (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀
+
+/-- `ensure_sort`'s error claim at every L fuel up to `n` (`es_ref`'s error half). -/
+theorem ensureSortSpecE_of_knot (p : Prog) (hp : InferLeafProg p) :
+    ∀ n, KnotUpTo p n → KnotUpToE p n → EnsureSortSpecE p n
+  | 0, _, _ => fun _ s₀ a₀ _ _ _ _ _ _ _ _ _ _ _ _ => CoreSpecE.zero p _ _ _ s₀ a₀
+  | n + 1, hk, hkE => fun F s₀ a₀ dn vis fe M eb mode d e hF hn hs he =>
+    RefE.coreSpecE (esE_spec p hp.ensureSort (n + 1) s₀ mode vis d e) trivial (hkE.mono (by omega))
+      (es_ref p n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d e (by omega) (by omega) hs he)
+
+/-! ## The stage entries `infer_type_core`, `ensure_sort_core` (the verified mode) -/
+
+/-- **`infer_type_core`'s model, both outcomes**: the `infer` slot through its run. -/
+l_model itcE_spec (p : Prog) (hf : p.lookup "infer_type_core" = some inferTypeCoreL)
+  fns [hf ↦ itcE list] grind [arena_grind] simp [] unified
+
+/-- **`ensure_sort_core`'s model, both outcomes**: `ensure_sort` through its run. -/
+l_model escE_spec (p : Prog) (hf : p.lookup "ensure_sort_core" = some ensureSortCoreL)
+  fns [hf ↦ escE list] grind [arena_grind] simp [] unified
+
+section entry
+variable (p : Prog) (hp : KnotEntryProg p)
+
+/-- **`infer_type_core(vis, dep, e)` refines `inferTypeCore .verified fe F dep e`, both
+outcomes**: the `infer` slot's. -/
+theorem itc_ref (n : Nat) (hi : InferSlot p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (dep e : Word)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
+    RefE (InferSlotE p n) (itcE p (n + 1) s₀.mem vis dep e)
+      (inferTypeCore .verified fe F dep.toNat (decE e)) a₀ (CorePost decH dn s₀.mem vis fe M 0 ResH) := by
+  simp only [itcE]
+  rcases h : callE p n "infer" [0, vis, dep, e] s₀.mem with e1 | ⟨r, m₁⟩
+  · exact fun hG => CoreSpecE.of_callE (hG F s₀ a₀ dn vis fe M 0 0 dep e hF hn (slotPre_zero hS) he) h
+  obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW (hi F s₀ a₀ dn vis fe M 0 0 dep e hF hn (slotPre_zero hS) he)
+    (callW_of_callE h)).post
+  exact RefE.ret hrun ⟨hR.after, by simpa [decH] using hR.res, by simpa [ResH] using hR.valid⟩
+
+include hp in
+/-- **`infer_type_core` refines `inferTypeCore`** at the verified mode and every fuel `F ≥ n`
+(`checkFuel` among them), from the `infer` slot at L-fuel `n` (`itc_ref`'s ok half). -/
+@[refines_part ConRon.Arena.inferTypeCore "from InferSlot"]
+theorem inferTypeCore_refines (n : Nat) (hi : InferSlot p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (dep e : Word)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
+    CoreSpec p (n + 1) "infer_type_core" [vis, dep, e]
+      (inferTypeCore .verified fe F dep.toNat (decE e)) decH s₀ a₀ dn vis fe M 0 :=
+  RefE.coreSpec (itcE_spec p hp.inferTypeCore (n + 1) s₀ vis dep e)
+    (itc_ref p n hi F s₀ a₀ dn vis fe M dep e hF hn hS he)
+
+/-- **`ensure_sort_core(vis, dep, t)` refines `ensureSortCore .verified fe F dep t`, both
+outcomes**: `ensure_sort`'s. -/
+theorem esc_ref (n : Nat) (hs : EnsureSortSpec p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (dep t : Word)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (ht : HW t) :
+    RefE (EnsureSortSpecE p n) (escE p (n + 1) s₀.mem vis dep t)
+      (ensureSortCore .verified fe F dep.toNat (decE t)) a₀ (CorePost decLv dn s₀.mem vis fe M 0 ResH) := by
+  simp only [escE]
+  rcases h : callE p n "ensure_sort" [0, vis, dep, t] s₀.mem with e1 | ⟨r, m₁⟩
+  · exact fun hG => CoreSpecE.of_callE (hG F s₀ a₀ dn vis fe M 0 0 dep t hF hn (slotPre_zero hS) ht) h
+  obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW (hs F s₀ a₀ dn vis fe M 0 0 dep t hF hn (slotPre_zero hS) ht)
+    (callW_of_callE h)).post
+  exact RefE.ret hrun ⟨hR.after, by simpa [decLv] using hR.res, by simpa [ResH] using hR.valid⟩
+
+end entry
+
 /-- **`ensure_sort_core` refines `ensureSortCore`** at the verified mode and every fuel `F > n`,
-from the knot at every L-fuel up to `n`. -/
+from the knot at every L-fuel up to `n` (`esc_ref`'s ok half). -/
 @[refines_part ConRon.Arena.ensureSortCore "from KnotUpTo"]
 theorem ensureSortCore_refines (p : Prog) (hp : InferLeafProg p) (he : KnotEntryProg p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
@@ -146,8 +198,8 @@ theorem ensureSortCore_refines (p : Prog) (hp : InferLeafProg p) (he : KnotEntry
     (hS : CoreS dn s₀.mem a₀ vis fe M 0) (ht : HW t) :
     CoreSpec p (n + 2) "ensure_sort_core" [vis, dep, t]
       (ensureSortCore .verified fe F dep.toNat (decE t)) decLv s₀ a₀ dn vis fe M 0 :=
-  ensureSortCore_of_spec p he (n + 1) (ensureSort_refines p hp n hk) F s₀ a₀ dn vis fe M dep t hF hn
-    hS ht
+  RefE.coreSpec (escE_spec p he.ensureSortCore (n + 2) s₀ vis dep t)
+    (esc_ref p (n + 1) (ensureSort_refines p hp n hk) F s₀ a₀ dn vis fe M dep t hF hn hS ht)
 
 /-! ## Sequencing two core runs -/
 
@@ -264,6 +316,33 @@ theorem defeqArg_refines (n : Nat) (he : IsEagerReduceH p) (hd : DefeqSlot p n)
       (fun r r' h => by simp only [decBool, h]) hW) hT
 
 end dar
+
+/-- **`defeq_arg`'s error claim** at the knot (the error half of `defeqArg_any`; it reads the
+`defeq` and `defeq_e` slots). -/
+def DefeqArgE (p : Prog) : Prop :=
+  ∀ n, KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a ta ty : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW a →
+    HW ta → HW ty →
+    CoreSpecE p n "defeq_arg" [mode, vis, d, a, ta, ty]
+      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) s₀ a₀
+
+/-- What the inference functions' error arms assume: the knot's error half at the callees' fuel
+and the verdict closure. -/
+structure InferG (p : Prog) (n : Nat) : Prop where
+  knot : KnotUpToE p n
+  nv : closedNV p L.Checker.nvFns = true
+
+theorem InferG.mono {p : Prog} {n n' : Nat} (h : InferG p n) (hn : n' ≤ n) : InferG p n' :=
+  ⟨h.knot.mono hn, h.nv⟩
+
+/-- **`InferG` and `defeq_arg`'s claim**: what the errors of the functions that check a spine's
+arguments assume (`infer_spine_arg` and every function above it). -/
+structure InferArgG (p : Prog) (n : Nat) : Prop extends InferG p n where
+  defeqArg : DefeqArgE p
+
+theorem InferArgG.mono {p : Prog} {n n' : Nat} (h : InferArgG p n) (hn : n' ≤ n) : InferArgG p n' :=
+  ⟨h.toInferG.mono hn, h.defeqArg⟩
 
 /-! ## `mk_forall` under `CoreS` -/
 
@@ -448,68 +527,15 @@ structure InferLitCallees (p : Prog) : Prop where
     (fe : IFEnv) (M : ModeMaps) (eb nm : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW nm →
     CoreSpec p n "const_e" [nm] (constE (decI nm)) decH s₀ a₀ dn vis fe M eb
 
-/-- The pin read and `const_e` after a support test's run `res`. -/
-def pinArmK (p : Prog) (n : Nat) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m₂) => call1W p n "const_e" [r.headD 0] m₂
-
-/-- A support test's run `res`, then the pin `k` and its constant. -/
-def litArmK (p : Prog) (n : Nat) (k : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m₁) => if r.headD 0 = 0 then none else pinArmK p n (callW p n "pin_at" [k] m₁)
-
-/-- **The model of `infer_lit`.** -/
-def inferLitK (p : Prog) (n : Nat) (m : Mem) (vis e : Word) : Option (Word × Mem) :=
-  if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m LIT (tierW e) ≤ idxW e then none
-  else if tfld m LIT (tierW e) (idxW e) 0 = 0 then
-    litArmK p n 1 (callW p n "nat_lit_supported" [vis] m)
-  else litArmK p n 5 (callW p n "str_lit_supported" [vis] m)
-
-section litK
-variable (p : Prog) (n : Nat) (m m₁ : Mem) (vis e k : Word) (r : List Word)
-
-theorem pinArmK_some : pinArmK p n (some (r, m₁)) = call1W p n "const_e" [r.headD 0] m₁ := rfl
-
-theorem litArmK_ok (h : r.headD 0 ≠ 0) :
-    litArmK p n k (some (r, m₁)) = pinArmK p n (callW p n "pin_at" [k] m₁) := by
-  simp only [litArmK, h, ↓reduceIte]
-
-theorem inferLitK_nat (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (h2 : idxW e < tcnt m LIT (tierW e))
-    (h3 : tfld m LIT (tierW e) (idxW e) 0 = 0) :
-    inferLitK p n m vis e = litArmK p n 1 (callW p n "nat_lit_supported" [vis] m) := by
-  have h2' : ¬ tcnt m LIT (tierW e) ≤ idxW e := by simpa using h2
-  simp only [inferLitK, h1, h2', h3, ↓reduceIte]
-
-theorem inferLitK_str (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (h2 : idxW e < tcnt m LIT (tierW e))
-    (h3 : tfld m LIT (tierW e) (idxW e) 0 ≠ 0) :
-    inferLitK p n m vis e = litArmK p n 5 (callW p n "str_lit_supported" [vis] m) := by
-  have h2' : ¬ tcnt m LIT (tierW e) ≤ idxW e := by simpa using h2
-  simp only [inferLitK, h1, h2', h3, ↓reduceIte]
-
-end litK
-
-section il
-variable (p : Prog) (hp : InferLeafProg p)
-
-include hp in
-theorem inferLit_spec (n : Nat) (s₀ : St) (vis e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_lit" [vis, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ inferLitK p n s₀.mem vis e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.inferLit]
-  simp only [callFn, inferLitL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "nat_lit_supported", callW_spec p n "str_lit_supported",
-      callW_spec p n "pin_at", callW_spec p n "const_e", evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE] <;>
-    finish [inferLitK_nat, inferLitK_str, litArmK_ok, pinArmK_some, call1W_some, tierW, idxW, tfld]
-
-end il
+/-- **`infer_lit`'s unified model**: the support tests, the pin and `const_e` (outside the verdict
+closure) lifted. -/
+l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
+  fns [hf ↦ ilE list]
+  specs [callW_spec p n "nat_lit_supported", callW_spec p n "str_lit_supported",
+    callW_spec p n "pin_at", callW_spec p n "const_e"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem view_lit_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
@@ -527,89 +553,106 @@ theorem inferLitT_str_run (fe : IFEnv) (s : String) (a a₁ : AState) (sn : NIdx
     (inferLitT fe (.strVal s)).run a = (constE sn).run a₁ := by
   simp only [inferLitT, StateT.run_bind, h1, except_ok_bind, ↓reduceIte, h2]
 
-/-- One `.lit` clause after its support test: the test's run, the pin, `const_e`. -/
-theorem litArm_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : Nat) (k : Nat)
-    (hk : k < 51) {T₁ : AM Bool} {T : AM EIdx} {s : St} {a₀ : AState}
+/-- One `.lit` clause after its passed support test (its run `h₁`, from `a₀`): the pin `k` and its
+constant, both outcomes (`pin_at` and `const_e` lifted). -/
+theorem il_arm (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : Nat) (k : Nat)
+    (hk : k < 51) {T₁ : AM Bool} {T : AM EIdx} {m₀ : Mem} {a₀ : AState}
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
-    {r r₁ : List Word} {m₁ m' : Mem}
-    (h₁ : CoreRef T₁ a₀ decBool dn s.mem vis fe M eb r₁ m₁)
-    (_h0 : r₁.headD 0 ≠ 0)
-    (hW : pinArmK p n (callW p n "pin_at" [k.toUInt64] m₁) = some (r.headD 0, m'))
+    {r₁ : List Word} {m₁ : Mem}
+    (h₁ : CoreRef T₁ a₀ decBool dn m₀ vis fe M eb r₁ m₁)
     (hT : ∀ nn, (pinAt k).run (AM.st T₁ a₀) = .ok (nn, AM.st T₁ a₀) →
       T.run a₀ = (constE nn).run (AM.st T₁ a₀)) :
-    CoreRef T a₀ decH dn s.mem vis fe M eb r m' := by
-  cases hc2 : callW p n "pin_at" [k.toUInt64] m₁ with
-  | none => rw [hc2] at hW; cases hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  rw [hc2, pinArmK_some] at hW
-  obtain ⟨M', hS', -, -⟩ := h₁.2.1
+    RefE (closedNV p L.Checker.nvFns = true) (ilE.k_pin_at p n (liftE (callW p n "pin_at" [k.toUInt64] m₁)))
+      T a₀
+      (CorePost decH dn m₀ vis fe M eb ResH) := by
+  rcases c2 : callW p n "pin_at" [k.toUInt64] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [ilE.k_pin_at]
+  obtain ⟨M', hS', hK', hSt'⟩ := h₁.2.1
   obtain ⟨s₂, hs₂, hm₂, -, hlt, hpin⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (pinAt_refines p hp.pinAt n _ (AM.st T₁ a₀) ⟨fun _ => hS'.pins⟩ k.toUInt64) hc2
+    (pinAt_refines p hp.pinAt n _ (AM.st T₁ a₀) ⟨fun _ => hS'.pins⟩ k.toUInt64) c2
   have hm : m₂ = m₁ := hs₂.symm.trans hm₂
   subst hm
   have hkk : k.toUInt64.toNat = k := by simp; omega
   rw [hkk] at hpin
-  exact coreRef_then h₁ (fun M'' hS'' => CoreSpec.of_call1W (s₀ := ⟨m₂, Locals.init []⟩)
-    (hc.constE n _ _ dn vis fe M'' eb (r₂.headD 0) hS'' hlt) (fun r r' h => by simp only [decH, h])
-    hW) (hT _ hpin)
+  rcases c3 : callW p n "const_e" [r₂.headD 0] m₂ with _ | ⟨r₃, m₃⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [ilE.k_const_e]
+  obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+    (hc.constE n _ _ dn vis fe M' eb (r₂.headD 0) hS' hlt) c3).post
+  exact RefE.ret ((hT _ hpin).trans hrun)
+    ⟨CoreAfter.comp hK' hSt' hP.after, hP.res, hP.valid⟩
 
 /-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`inferLitT`) at the literal the handle
-views, from the support tests' and `const_e`'s specs (`InferLitCallees`). -/
+views, both outcomes: a `Nat` literal without its basis rejects, a `String` literal without its
+support declines; the support tests, the pin and `const_e` (`InferLitCallees`) claim nothing. -/
+theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb e : Word) (l : ConLeche.Literal) (hS : CoreS dn s₀.mem a₀ vis fe M eb)
+    (he : HW e) (hg : e >>> 28 = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
+    RefE (closedNV p L.Checker.nvFns = true) (ilE p (n + 1) s₀.mem vis e) (inferLitT fe l) a₀
+      (CorePost decH dn s₀.mem vis fe M eb ResH) := by
+  simp only [ilE]
+  by_cases h1 : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left h1]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right h1]
+  by_cases h2 : tcnt s₀.mem LIT (tierW e) ≤ idxW e
+  · rw [ite_eq_left h2]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right h2]
+  obtain ⟨k, hk, hrel⟩ := view_lit_f s₀.mem a₀ hS.arena.1 e he ⟨h1, by simpa using h2⟩ hg
+  rw [hv] at hk
+  have hl : l = k.l := by simpa using hk
+  subst hl
+  obtain ⟨l⟩ := k
+  by_cases h3 : tfld s₀.mem LIT (tierW e) (idxW e) 0 = 0
+  · rw [ite_eq_left h3]
+    cases l with
+    | strVal str => simp [RecRel, StrRec, h3] at hrel
+    | natVal N =>
+    rcases c1 : callW p n "nat_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
+    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]; simp only [ilE.k_nat_lit_supported]
+    have h₁ := CoreSpec.of_callW (hc.natLitSup n s₀ a₀ dn vis fe M eb hS) c1
+    have hrun₁ := AM.run_of_ok _ _ h₁.1
+    by_cases h0 : r₁.headD 0 = 0
+    · rw [ite_eq_left h0]
+      rw [h₁.2.2.1, show decBool r₁ = false by simp only [decBool, h0]; rfl] at hrun₁
+      refine RefE.bind_right hrun₁ ?_
+      simp only [Bool.false_eq_true, ↓reduceIte]
+      exact fun _ => ErrClaim.fail _ _ rfl
+    rw [ite_eq_right h0]
+    rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
+    exact il_arm p hp hc n 1 (by decide) h₁
+      (fun nn hpin => inferLitT_nat_run fe N a₀ _ nn hrun₁ hpin)
+  · rw [ite_eq_right h3]
+    cases l with
+    | natVal N => simp [RecRel, NatRec, h3] at hrel
+    | strVal str =>
+    rcases c1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
+    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]; simp only [ilE.k_str_lit_supported]
+    have h₁ := CoreSpec.of_callW (hc.strLitSup n s₀ a₀ dn vis fe M eb hS) c1
+    have hrun₁ := AM.run_of_ok _ _ h₁.1
+    by_cases h0 : r₁.headD 0 = 0
+    · rw [ite_eq_left h0]
+      rw [h₁.2.2.1, show decBool r₁ = false by simp only [decBool, h0]; rfl] at hrun₁
+      refine RefE.bind_right hrun₁ ?_
+      simp only [Bool.false_eq_true, ↓reduceIte]
+      exact fun _ => ErrClaim.fail _ _ rfl
+    rw [ite_eq_right h0]
+    rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
+    exact il_arm p hp hc n 5 (by decide) h₁
+      (fun nn hpin => inferLitT_str_run fe str a₀ _ nn hrun₁ hpin)
+
+/-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`il_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "lit (inferLitT)"]
 theorem inferLit_refines (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb e : Word) (l : ConLeche.Literal) (hS : CoreS dn s₀.mem a₀ vis fe M eb)
     (he : HW e) (hg : e >>> 28 = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
-    CoreSpec p (n + 1) "infer_lit" [vis, e] (inferLitT fe l) decH s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (inferLit_spec p hp n s₀ vis e)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  unfold inferLitK at hW
-  obtain ⟨h1, hW⟩ := of_ite_none hW
-  obtain ⟨h2, hW⟩ := of_ite_none hW
-  obtain ⟨k, hk, hrel⟩ := view_lit_f s.mem a₀ hS.arena.1 e he ⟨h1, by simpa using h2⟩ hg
-  rw [hv] at hk
-  have hl : l = k.l := by simpa using hk
-  subst hl
-  obtain ⟨l⟩ := k
-  by_cases h3 : tfld s.mem LIT (tierW e) (idxW e) 0 = 0
-  · rw [ite_eq_left h3] at hW
-    cases l with
-    | strVal str => simp [RecRel, StrRec, h3] at hrel
-    | natVal N =>
-    cases hc1 : callW p n "nat_lit_supported" [vis] s.mem with
-    | none => rw [hc1] at hW; cases hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    rw [hc1] at hW
-    by_cases h0 : r₁.headD 0 = 0
-    · simp only [litArmK, h0, ↓reduceIte] at hW; cases hW
-    rw [litArmK_ok (h := h0)] at hW
-    have h₁ := CoreSpec.of_callW (hc.natLitSup n s a₀ dn vis fe M eb hS) hc1
-    have hrun₁ := AM.run_of_ok _ _ h₁.1
-    rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
-    exact litArm_ref p hp hc n 1 (by decide) h₁ h0 hW
-      (fun nn hpin => inferLitT_nat_run fe N a₀ _ nn hrun₁ hpin)
-  · rw [ite_eq_right h3] at hW
-    cases l with
-    | natVal N => simp [RecRel, NatRec, h3] at hrel
-    | strVal str =>
-    cases hc1 : callW p n "str_lit_supported" [vis] s.mem with
-    | none => rw [hc1] at hW; cases hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    rw [hc1] at hW
-    by_cases h0 : r₁.headD 0 = 0
-    · simp only [litArmK, h0, ↓reduceIte] at hW; cases hW
-    rw [litArmK_ok (h := h0)] at hW
-    have h₁ := CoreSpec.of_callW (hc.strLitSup n s a₀ dn vis fe M eb hS) hc1
-    have hrun₁ := AM.run_of_ok _ _ h₁.1
-    rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
-    exact litArm_ref p hp hc n 5 (by decide) h₁ h0 hW
-      (fun nn hpin => inferLitT_str_run fe str a₀ _ nn hrun₁ hpin)
+    CoreSpec p (n + 1) "infer_lit" [vis, e] (inferLitT fe l) decH s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (ilE_spec p hp.inferLit (n + 1) s₀ vis e)
+    (il_ref p hp hc n s₀ a₀ dn vis fe M eb e l hS he hg hv)
 
 /-! ## `infer_const`: the `.const` clause -/
 
