@@ -288,3 +288,97 @@ members, shared by the two shapes and unfolded in their proofs. `bndObj_sound` (
 `assumption` over the many position facts took 22 s (it unified unrelated `numR` positions by
 `whnf`); `with_reducible assumption` takes milliseconds. The two binder specs still need
 `maxHeartbeats 1000000` (about 60 paths after `vcgen`).
+
+### Status (paused 2026-10-28 by the coordinator)
+
+Paused on the question whether a fast path keyed to lean4export's exact byte format is an
+acceptable coupling (a generic single-pass scanner is the alternative, §4 rank 3).
+* Landed: app (#92), lam and forallE (#95). These cover about 90 % of `Init`'s lines; `Init`
+  257.66 G → 231.00 G instructions (−10.3 %). Verdicts 634/634 at each landing.
+* Proof so far: 2018 lines (`L/LitWord.lean` 144, `Scan/Fast.lean`, `Scan/FastSound.lean`), plus
+  about 150 changed lines in `Front/Line.lean`, `Verdict/FrontRunE.lean` and the registrations.
+  The spec `frontLine_spec` and the end-to-end theorem are unchanged.
+* In progress, not landed (branch `sfp3-names` in the lane's worktree): the str/num name shapes.
+  Their code and the string loop's models are written; the shape specs, the soundness walk
+  (`strRecN`/`numRecN`, `scanStringN` on a printable-ASCII body) and the `apply_rec` arm of
+  `front_line` are not. Not started: const lines (the `us` level list).
+* The coupling is to performance only: a line in any other form (whitespace, other key order,
+  escapes, long numbers) declines to the generic proved scanner, so a format change of
+  lean4export costs speed, never a verdict.
+
+## 7. Redirect: one generic pass (lane `scanfast-p3`, from 2026-10-28)
+
+The canonical-shape fast path (§5–6) is retired: it couples the scanner's speed to lean4export's
+byte format. In its place `front_line` reads each line once with a generic scanner shaped like
+con-ron's `scan_line_fwd`/`scan_line_loop`: one walk over the members (`next_member`), each value
+read once, validating and recording the fields together. `frontLine_spec` and `frontLineW` stay as
+they are.
+
+**What the single pass is proved against.** `frontLineW` speaks of three models of the same
+member walk: the validator `lineN`/`lineFwdN` (with `objN` for the sub-objects), and the two
+record passes `recN` (names, levels, the header) and `exprN` (expressions; `objRecN` for the
+sub-objects). All three call `nextMemberN` at the same positions; they differ in what they keep
+and in what they check. The single pass gets one model of its own that mirrors its code, and
+the link to the three is a pure theorem:
+* `lineRecN b i w ik pk f` (the line loop): `(end, kind, fields)`, the validator's checks
+  (`ik`/`pk` are `lineN`'s index and payload kinds) and the fields of `Fld` (`pl` 1–7 as `recN`,
+  8–17 as `exprN`). Its theorem: `end = lineN b i w ik pk`, and on an accepted line the fields
+  are `recN b i w f`'s when the kind is a name, level or the header, `exprN b i w f`'s when it is
+  an expression (both accumulate the index the same way while no payload key has been read, so
+  one accumulator `f` serves both). On an expression line `recN` gives `Fld.none` and on a
+  declaration line both do, which is `applyAnyW`'s dispatch.
+* `objFN kind b i w seen o` (the sub-object loop for `app`, `lam`/`forallE`, `letE`, `const`,
+  `proj`): validates with the kind's key bits and mask and fills the slots as `objRecN`. The value
+  of a key is `exValN` for every kind (the validator's per-record value scanners agree with it on
+  every key the record has), so the theorem is `(objFN …).e = objN (bit kind) (val kind) (mask
+  kind) …` and, when it is not `0`, the slots are `objRecN`'s.
+* `strFN`, `numFN` (the name objects): the same against `strNameN`/`numNameN` and
+  `strRecN`/`numRecN`.
+* `max`/`imax` keep the two list readers (`scan_nat_list` validates and counts, `rec_nat_list`
+  reads the pair; rare lines), with a lemma that the pair reader ends where the validator does.
+* Declaration lines are validated in the pass (`scan_axiom` …) and read afterwards by
+  `apply_dline`, as now (0.2 G of 27 G on `Init`).
+
+Each model is proved against its L loop by `vcgen` (one spec per arm, as `lineLoop`), the
+theorems above by functional induction over the member walk, one step lemma per key. Named-field
+structures for the loop states and the per-key results.
+
+**What goes.** `fast_line`, `L/LitWord.lean`, `Scan/Fast*.lean`, `front_line`'s fast arm and D41;
+the record passes' L code that nothing calls any more (`rec_line_loop`, `rec_expr_loop`,
+`expr_val`, `rec_obj`, `obj_val`'s caller, `rec_str_name`, `rec_num_name`, `apply_any`) with their
+specs; `recN`/`exprN`/`objRecN` stay (they are `frontLineW`'s and the con-leche links'). The Stage
+B validator (`Scan/Validator.lean`, `scan_line` and the `scan_*` record loops) stays: it is its own
+program, and the declaration validators are shared.
+
+**Landing order.** (1) the object and name loops with their models and theorems, used by the line
+loop of the same landing; the line loop; `front_line` on the single pass; the fast path and the
+dead record passes deleted. One landing, since nothing in between would have a caller. (2) Measure;
+then a separate follow-up if the profile shows a hot spot worth a leaf.
+
+**Expected.** About 12 G for the scanner on `Init` (§4: the record passes' 14.7 G go, the
+validator's walk remains with the values read once), so `Init` near 243 G, above the fast path's
+231 G: the speed beyond con-ron is the later compiler step (registers for the locals of non-leaf
+functions), for which the loops are kept as small functions over few locals.
+
+### 7.1 Landed: the single pass
+
+`front_line` = `skip_ws`, `line_rec` (`Front/LineRec.lean`: `line_rec` over `sub_rec`,
+`sub_bit`, `sub_val`), `skip_ws`, then `apply_dline`/`apply_rec`/`apply_expr`. The models
+`lineRecN`/`subN` are proved equal to the validator's `lineN`/`objN` and to the record passes'
+`recN`/`exprN` (`Front/LineRecLink.lean`, `frontLineW_eq`), so `frontLine_spec` and the
+end-to-end theorem are unchanged; `frontLineE_claim` (`Verdict/FrontRunE.lean`) is redone over the
+same calls. Deleted: `fast_line`, `L/LitWord.lean`, `Scan/Fast.lean`, `Scan/FastSound.lean`,
+`apply_any`, `rec_line_loop`, `rec_expr_loop`, `expr_val`, `rec_obj`, `obj_val`, `rec_str_name`,
+`rec_num_name` (L code and specs; the models stay); D41 moved to Fixed. `checker.s`: 254 functions
+reachable from `front_run` (was 268).
+
+| measure | base 53ec1c4b | fast path (master) | single pass |
+|---|---:|---:|---:|
+| `Init` instructions | 257.66 G | 231.00 G | 242.98 G |
+| scanner on `Init` (by difference from §1's 28 G) | 28 G | — | ≈ 13.3 G |
+| verdicts (`diff-e2e --refs`, `--jobs 4`) | | | 634/634, 0 refdiff |
+
+Proof lines: `LineRec.lean` 951 + `LineRecLink.lean` 767 new; the fast path's 2018
+(`LitWord` + `Fast` + `FastSound`) and the record passes' L code and specs (~600) gone; `ConAgua/`
+net −814 lines without generated files. Walls not reported: load 55 during the bench (cpus 46–47,
+`_tmp/sfp3/bench_single.log`).

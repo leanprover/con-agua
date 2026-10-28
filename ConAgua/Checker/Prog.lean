@@ -116,11 +116,11 @@ import ConAgua.Front.ApplyExpr
 import ConAgua.Front.Driver
 import ConAgua.Front.Fields
 import ConAgua.Front.FieldsDecl
-import ConAgua.Front.FieldsExpr
 import ConAgua.Front.IdTable
 import ConAgua.Front.IndApply
 import ConAgua.Front.IndFields
 import ConAgua.Front.Line
+import ConAgua.Front.LineRec
 import ConAgua.Front.NatDec
 import ConAgua.Front.Unescape
 import ConAgua.L.Examples
@@ -128,10 +128,8 @@ import ConAgua.L.Syntax
 import ConAgua.Layout
 import ConAgua.Rom.CIRead
 import ConAgua.Rom.PinRead
-import ConAgua.Scan.Fast
 import ConAgua.Scan.Key
 import ConAgua.Scan.Leaves
-import ConAgua.Scan.Line
 import ConAgua.Scan.Lit
 import ConAgua.Scan.Member
 import ConAgua.Scan.Records
@@ -147,7 +145,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1840 functions, 0 of them stubs.
+1811 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -157,10 +155,9 @@ open L L.Compiler
 /-- The called functions with no L code yet (each aborts). -/
 def checkerStubs : List String := []
 
-/-- The frontend functions `builtin_prelude` runs on the prelude's bytes (111; `preFn`,
+/-- The frontend functions `builtin_prelude` runs on the prelude's bytes (96; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
 def preNames : List String := [
-  "apply_any",
   "apply_decl",
   "apply_dline",
   "apply_expr",
@@ -175,8 +172,6 @@ def preNames : List String := [
   "esc_one",
   "esc_sur",
   "expr_node",
-  "expr_val",
-  "fast_line",
   "front_line",
   "front_run",
   "has_escape",
@@ -209,6 +204,7 @@ def preNames : List String := [
   "key_at_g5",
   "key_at_g6",
   "key_end",
+  "line_rec",
   "lp_put",
   "ls_put",
   "match_dlit",
@@ -220,22 +216,13 @@ def preNames : List String := [
   "node_lit",
   "node_lit_str",
   "num_end",
-  "obj_val",
   "read_nat",
   "rec_decl_line",
   "rec_decl_obj",
-  "rec_expr_loop",
-  "rec_line_loop",
   "rec_nat_list",
-  "rec_num_name",
-  "rec_obj",
-  "rec_str_name",
-  "scan_app",
   "scan_axiom",
-  "scan_binder",
   "scan_binder_info",
   "scan_bool",
-  "scan_const",
   "scan_def",
   "scan_hints",
   "scan_ind_ctor",
@@ -245,18 +232,12 @@ def preNames : List String := [
   "scan_ind_recs",
   "scan_ind_type",
   "scan_ind_types",
-  "scan_let",
-  "scan_line",
-  "scan_line_loop",
   "scan_nat_list",
-  "scan_num_name",
   "scan_opaque",
-  "scan_proj",
   "scan_quot",
   "scan_quoted_nat",
   "scan_rule",
   "scan_rules",
-  "scan_str_name",
   "scan_string",
   "scan_thm",
   "skip_braced",
@@ -266,6 +247,8 @@ def preNames : List String := [
   "str_close",
   "str_code",
   "str_put_esc",
+  "sub_rec",
+  "sub_val",
   "u_next",
   "unescape",
   "utf8_char",
@@ -274,7 +257,7 @@ def preNames : List String := [
 
 def preTree : NTree := nameTree preNames
 
-/-- The functions reachable from `front_run` that are not copied (157): the copies call them
+/-- The functions reachable from `front_run` that are not copied (158): the copies call them
 unrenamed (`PreSimProg`, `ConAgua/Checker/PreludeSim.lean`). -/
 def preShared : List String := [
   "app_find",
@@ -409,6 +392,7 @@ def preShared : List String := [
   "sort_find",
   "sort_push",
   "store_fuel",
+  "sub_bit",
   "succ_find",
   "succ_push",
   "utf8_put",
@@ -469,7 +453,6 @@ def checkerProg : Prog := [
   ("app_find", L.Arena.appFind),
   ("app_hole", L.Ind.appHole),
   ("app_push", L.Arena.appPush),
-  ("apply_any", L.Front.applyAny),
   ("apply_decl", L.Front.applyDecl),
   ("apply_dline", L.Front.applyDLine),
   ("apply_expr", L.Front.applyExpr),
@@ -938,10 +921,8 @@ def checkerProg : Prog := [
   ("expr_get_d", L.Ind.exprGetD),
   ("expr_node", L.Front.exprNode),
   ("expr_put", L.Front.exprPut),
-  ("expr_val", L.Front.Fields.exprVal),
   ("expr_view_ok", L.Arena.exprViewOkL),
   ("fab_scope_ok", L.Arena.fabScopeOkL),
-  ("fast_line", L.Scan.Fast.fastLine),
   ("field_doms_resolve", L.Ind.fieldDomsResolveL),
   ("field_sort_zero", L.Arena.fieldSortZeroL),
   ("find_is", L.Ind.findIs),
@@ -1357,6 +1338,7 @@ def checkerProg : Prog := [
   ("lift_let", L.Arena.liftLet),
   ("lift_proj", L.Arena.liftProj),
   ("limbs_eq", L.Arena.limbsEq),
+  ("line_rec", L.Front.LineRec.lineRec),
   ("list_cons_ty_ok", L.Arena.listConsTyOkL),
   ("list_nil_ty_ok", L.Arena.listNilTyOkL),
   ("list_ty_ok", L.Arena.listTyOkL),
@@ -1659,7 +1641,6 @@ def checkerProg : Prog := [
   ("nstr_push", L.Arena.nsPush),
   ("num_ctors_of", L.Ind.numCtorsOf),
   ("num_end", L.Scan.Leaves.numEnd),
-  ("obj_val", L.Front.Fields.objVal),
   ("of_reduce_ax_ok", L.Ind.ofReduceAxOkL),
   ("of_reduce_op", L.Ind.ofReduceOpL),
   ("of_reduce_pin_a", L.Ind.ofReducePinAL),
@@ -1829,19 +1810,14 @@ def checkerProg : Prog := [
   ("rec_block", L.Arena.recBlock),
   ("rec_decl_line", L.Front.Fields.recDeclLine),
   ("rec_decl_obj", L.Front.Fields.recDeclObj),
-  ("rec_expr_loop", L.Front.Fields.recExprLoop),
   ("rec_fire_args", L.Arena.recFireArgsL),
   ("rec_fire_levels", L.Arena.recFireLevelsL),
   ("rec_info_rec", L.Ind.recInfoRec),
-  ("rec_line_loop", L.Front.Fields.recLineLoop),
   ("rec_nat_list", L.Front.Fields.recNatList),
-  ("rec_num_name", L.Front.Fields.recNumName),
-  ("rec_obj", L.Front.Fields.recObj),
   ("rec_rule_bits", L.Stubs.recRuleBitsL),
   ("rec_rule_eta_of", L.Stubs.recRuleEtaOfL),
   ("rec_rule_k", L.Arena.recRuleKL),
   ("rec_rule_k_of", L.Stubs.recRuleKOfL),
-  ("rec_str_name", L.Front.Fields.recStrName),
   ("rec_target_of", L.Ind.recTargetOf),
   ("reduce_cert_var", L.Ind.reduceCertVarL),
   ("reduce_decl_pin", L.Ind.reduceDeclPinL),
@@ -1918,12 +1894,9 @@ def checkerProg : Prog := [
   ("rules_to_erec", L.Ind.rulesToErec),
   ("rules_to_erec_go", L.Ind.rulesToErecGo),
   ("same_const_heads", L.Arena.sameConstHeadsL),
-  ("scan_app", L.Scan.Records.scanApp),
   ("scan_axiom", L.Scan.Records.scanAxiomD),
-  ("scan_binder", L.Scan.Records.scanBinder),
   ("scan_binder_info", L.Scan.Values.scanBinderInfo),
   ("scan_bool", L.Scan.Lit.scanBool),
-  ("scan_const", L.Scan.Records.scanConstE),
   ("scan_def", L.Scan.Records.scanDefD),
   ("scan_hints", L.Scan.Values.scanHints),
   ("scan_ind_ctor", L.Scan.Records.scanIndCtor),
@@ -1933,18 +1906,12 @@ def checkerProg : Prog := [
   ("scan_ind_recs", L.Scan.Records.scanIndRecs),
   ("scan_ind_type", L.Scan.Records.scanIndType),
   ("scan_ind_types", L.Scan.Records.scanIndTypes),
-  ("scan_let", L.Scan.Records.scanLetE),
-  ("scan_line", L.Scan.Line.scanLine),
-  ("scan_line_loop", L.Scan.Line.scanLineLoop),
   ("scan_nat_list", L.Scan.Values.scanNatList),
-  ("scan_num_name", L.Scan.Records.scanNumName),
   ("scan_opaque", L.Scan.Records.scanOpaqueD),
-  ("scan_proj", L.Scan.Records.scanProj),
   ("scan_quot", L.Scan.Records.scanQuotD),
   ("scan_quoted_nat", L.Scan.Values.scanQuotedNat),
   ("scan_rule", L.Scan.Records.scanRule),
   ("scan_rules", L.Scan.Records.scanRules),
-  ("scan_str_name", L.Scan.Records.scanStrName),
   ("scan_string", L.Scan.Str.scanString),
   ("scan_thm", L.Scan.Records.scanThmD),
   ("scratch_drop", L.Arena.scratchDrop),
@@ -2037,7 +2004,10 @@ def checkerProg : Prog := [
   ("stuck_irrel", L.Arena.stuckIrrelL),
   ("stuck_rest", L.Arena.stuckRestL),
   ("stuck_str", L.Arena.stuckStrL),
+  ("sub_bit", L.Front.LineRec.subBitF),
   ("sub_borrow", L.Arena.subBorrow),
+  ("sub_rec", L.Front.LineRec.subRec),
+  ("sub_val", L.Front.LineRec.subValF),
   ("subst_const0", L.Ind.substConst0L),
   ("subst_const0_list", L.Ind.substConst0ListL),
   ("subst_const0_pairs", L.Ind.substConst0PairsL),
@@ -2166,7 +2136,6 @@ def checkerProg : Prog := [
   ("wscoped_bfast", L.Arena.wscopedBFastL),
   ("zero_find", L.Arena.zeroFind),
   ("zero_push", L.Arena.zeroPush),
-  ("pre_apply_any", preFn preTree (L.Front.applyAny)),
   ("pre_apply_decl", preFn preTree (L.Front.applyDecl)),
   ("pre_apply_dline", preFn preTree (L.Front.applyDLine)),
   ("pre_apply_expr", preFn preTree (L.Front.applyExpr)),
@@ -2181,8 +2150,6 @@ def checkerProg : Prog := [
   ("pre_esc_one", preFn preTree (L.Front.Unescape.escOne)),
   ("pre_esc_sur", preFn preTree (L.Front.Unescape.escSur)),
   ("pre_expr_node", preFn preTree (L.Front.exprNode)),
-  ("pre_expr_val", preFn preTree (L.Front.Fields.exprVal)),
-  ("pre_fast_line", preFn preTree (L.Scan.Fast.fastLine)),
   ("pre_front_line", preFn preTree (L.Front.frontLine)),
   ("pre_front_run", preFn preTree (L.Front.frontRun)),
   ("pre_has_escape", preFn preTree (L.Scan.Leaves.hasEscape)),
@@ -2215,6 +2182,7 @@ def checkerProg : Prog := [
   ("pre_key_at_g5", preFn preTree (L.Scan.Key.keyAtG5)),
   ("pre_key_at_g6", preFn preTree (L.Scan.Key.keyAtG6)),
   ("pre_key_end", preFn preTree (L.Scan.Leaves.keyEnd)),
+  ("pre_line_rec", preFn preTree (L.Front.LineRec.lineRec)),
   ("pre_lp_put", preFn preTree (L.Front.lpPut)),
   ("pre_ls_put", preFn preTree (L.Front.lsPut)),
   ("pre_match_dlit", preFn preTree (L.Front.Fields.matchDlit)),
@@ -2226,22 +2194,13 @@ def checkerProg : Prog := [
   ("pre_node_lit", preFn preTree (L.Front.nodeLit)),
   ("pre_node_lit_str", preFn preTree (L.Front.nodeLitStr)),
   ("pre_num_end", preFn preTree (L.Scan.Leaves.numEnd)),
-  ("pre_obj_val", preFn preTree (L.Front.Fields.objVal)),
   ("pre_read_nat", preFn preTree (L.Front.Fields.readNat)),
   ("pre_rec_decl_line", preFn preTree (L.Front.Fields.recDeclLine)),
   ("pre_rec_decl_obj", preFn preTree (L.Front.Fields.recDeclObj)),
-  ("pre_rec_expr_loop", preFn preTree (L.Front.Fields.recExprLoop)),
-  ("pre_rec_line_loop", preFn preTree (L.Front.Fields.recLineLoop)),
   ("pre_rec_nat_list", preFn preTree (L.Front.Fields.recNatList)),
-  ("pre_rec_num_name", preFn preTree (L.Front.Fields.recNumName)),
-  ("pre_rec_obj", preFn preTree (L.Front.Fields.recObj)),
-  ("pre_rec_str_name", preFn preTree (L.Front.Fields.recStrName)),
-  ("pre_scan_app", preFn preTree (L.Scan.Records.scanApp)),
   ("pre_scan_axiom", preFn preTree (L.Scan.Records.scanAxiomD)),
-  ("pre_scan_binder", preFn preTree (L.Scan.Records.scanBinder)),
   ("pre_scan_binder_info", preFn preTree (L.Scan.Values.scanBinderInfo)),
   ("pre_scan_bool", preFn preTree (L.Scan.Lit.scanBool)),
-  ("pre_scan_const", preFn preTree (L.Scan.Records.scanConstE)),
   ("pre_scan_def", preFn preTree (L.Scan.Records.scanDefD)),
   ("pre_scan_hints", preFn preTree (L.Scan.Values.scanHints)),
   ("pre_scan_ind_ctor", preFn preTree (L.Scan.Records.scanIndCtor)),
@@ -2251,18 +2210,12 @@ def checkerProg : Prog := [
   ("pre_scan_ind_recs", preFn preTree (L.Scan.Records.scanIndRecs)),
   ("pre_scan_ind_type", preFn preTree (L.Scan.Records.scanIndType)),
   ("pre_scan_ind_types", preFn preTree (L.Scan.Records.scanIndTypes)),
-  ("pre_scan_let", preFn preTree (L.Scan.Records.scanLetE)),
-  ("pre_scan_line", preFn preTree (L.Scan.Line.scanLine)),
-  ("pre_scan_line_loop", preFn preTree (L.Scan.Line.scanLineLoop)),
   ("pre_scan_nat_list", preFn preTree (L.Scan.Values.scanNatList)),
-  ("pre_scan_num_name", preFn preTree (L.Scan.Records.scanNumName)),
   ("pre_scan_opaque", preFn preTree (L.Scan.Records.scanOpaqueD)),
-  ("pre_scan_proj", preFn preTree (L.Scan.Records.scanProj)),
   ("pre_scan_quot", preFn preTree (L.Scan.Records.scanQuotD)),
   ("pre_scan_quoted_nat", preFn preTree (L.Scan.Values.scanQuotedNat)),
   ("pre_scan_rule", preFn preTree (L.Scan.Records.scanRule)),
   ("pre_scan_rules", preFn preTree (L.Scan.Records.scanRules)),
-  ("pre_scan_str_name", preFn preTree (L.Scan.Records.scanStrName)),
   ("pre_scan_string", preFn preTree (L.Scan.Str.scanString)),
   ("pre_scan_thm", preFn preTree (L.Scan.Records.scanThmD)),
   ("pre_skip_braced", preFn preTree (L.Examples.skipBraced)),
@@ -2272,6 +2225,8 @@ def checkerProg : Prog := [
   ("pre_str_close", preFn preTree (L.Examples.strClose)),
   ("pre_str_code", preFn preTree (L.Front.Fields.strCode)),
   ("pre_str_put_esc", preFn preTree (L.Front.Unescape.strPutEsc)),
+  ("pre_sub_rec", preFn preTree (L.Front.LineRec.subRec)),
+  ("pre_sub_val", preFn preTree (L.Front.LineRec.subValF)),
   ("pre_u_next", preFn preTree (L.Scan.Str.uNext)),
   ("pre_unescape", preFn preTree (L.Scan.Str.unescape)),
   ("pre_utf8_char", preFn preTree (L.Scan.Utf8.utf8Char)),

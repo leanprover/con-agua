@@ -14,7 +14,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 /-!
 # The fields of name and level lines, linked to con-leche
 
-On a line con-leche's scanner accepts, `rec_line_loop`'s words are the fields of the record it
+On a line con-leche's scanner accepts, `recLineN`'s words are the fields of the record it
 returns (`recLine_link`). Each loop of `ConAgua.Front.Fields` is related to con-leche's on its
 `ok` path only: the validator (`ConAgua.Scan.LineLink`) has already decided that the line scans,
 so the error branches of con-leche's loops are discharged by their result, and the second pass
@@ -97,7 +97,7 @@ def PlR (b : ByteArray) : LinePayload → Fld → Prop
   | .expr _, _ => False
   | .decl _, _ => False
 
-/-- What `rec_line_loop`'s words say about the line's record. -/
+/-- What `recLineN`'s words say about the line's record. -/
 def RecR (b : ByteArray) : LineRec → Fld → Prop
   | .name i r, f => ItemR f.idx i ∧ PlR b (.name r) f
   | .level i r, f => ItemR f.idx i ∧ PlR b (.level r) f
@@ -590,7 +590,7 @@ theorem numEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanNumName b v
     exact numRec_link b h64 hsize (v + 1) true 0 0 0 r e 0 0 h itemR_zero itemR_zero
   · cases h
 
-/-! ## `rec_line_loop` -/
+/-! ## The line (`recLineN`) -/
 
 omit h64 hsize in
 theorem plR_idx (pl : LinePayload) (f : Fld) (x : Word) (h : PlR b pl f) :

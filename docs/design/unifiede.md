@@ -752,3 +752,86 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 | `Verdict/PosE1N`, `PosE2`, `PosE3O`, `PosTopE4` | 11.1 | 8.1 | claims gone |
 | `GgW2`, `FgW2`, `PosE2M`, `PosE3Cm` and 15 more (incl. the new `PosNty`, `PosNgc`) | 138.2 | 141.4 | |
 | **sum (45 modules)** | **288.9** | **252.1** | **−13 %** (first series, with `simp [rdW]`: 270.2) |
+
+### 3.10 Batch 1b, second landing (the `nestPos` block)
+
+The block's eleven functions are `nest_pos`, `_bind`, `_app`, `nest_cont`, `_key`, `_new`,
+`nest_frame`, `nest_ctors`, `_one`, `_walk` and `nest_fields`. Each now has one refinement. The
+eleven statements `PosRef` … `FieldsRef` are in `Verdict/PosE.lean`. Each has the hypotheses of
+the old `XOKC`/`XOKE` and the conclusion `RefE (NbG p) (xE p n m args) twin a (XPost …)`. The
+posts are named-field structures: `PosPost`, `AppPost`, `KindPost`, `FramePost`, `CtorsPost`,
+`OnePost`, `WalkPost`, `FieldsPost`. `NbRef n` collects the eleven statements. One induction
+proves it, `nbRef_all` (`Arena/IndT/PosAll.lean`). Each step `xRef_step` lives in the old ok
+step's file. The induction replaces the two old ones, `nbOKC_all` over the hand models and
+`nbOKE_all` over `callE`.
+
+| function | before: ok step + error step | after | change |
+|---|---|---:|---:|
+| `nest_pos` | `posOKC_step` 115 + `posOKE_step` 129 = 244 | `posRef_step` 163 | −33 % |
+| `nest_pos_bind` | 116 + 169 = 285 | 203 | −29 % |
+| `nest_pos_app` | 103 + 155 = 258 | 164 | −36 % |
+| `nest_cont` | 140 + 218 = 358 | 213 | −41 % |
+| `nest_cont_key` | 99 + 143 + `keyOKE_zero` 8 = 250 | 154 | −38 % |
+| `nest_cont_new` | 192 + 314 = 506 | 331 | −35 % |
+| `nest_frame` | 216 + 298 = 514 | 305 | −41 % |
+| `nest_ctors` | 86 + 122 = 208 | 113 | −46 % |
+| `nest_ctors_one` | 133 + 140 = 273 | 197 | −28 % |
+| `nest_ctors_walk` | 99 + 72 = 171 | 106 | −38 % |
+| `nest_fields` | 129 + 206 = 335 | 185 | −45 % |
+| **steps** | **3 402** | **2 134** | **−37 %** |
+
+The statements went the same way. The old ones were the `*OKC` (`PosDefs`, 250 lines), the
+`*OKE` (`PosE`, about 200), and `NewOKE`/`KeyOKE`/`KeyOKEc`. The new ones are the `*Ref`, the
+posts, `NbG` and `NbRef`: about 330 lines with the fragments' split lemmas. The hand models are
+gone too: the mutual `nbPosW` … `nbFieldsW` and their continuations (`NbPosW`, `NbKeyK2`). Also
+gone are their arm lemmas, their specs `nb*_step` and `nbSpec_all` (`GgW2`, `Nb`), and the
+`StageR` predicates `NewOK`/`WalkOK`. So are the files `PosE1S`, `PosE3C`, `PosE3O`, `PosE3W`,
+`PosE3F` and `PosAllE`. The whole diff against master is +2 036 −4 555. With the first landing,
+the batch is +3 415 −6 818.
+
+Choices:
+
+* **`G` is `NbG p`**: the no-verdict closure, the core stubs' claims and `whnf_top`'s claim
+  under `StageT`. Every error arm of the block needs only these, plus `nest_inst_type`'s `NitE`,
+  which follows from them and the lookups (`nitE_all`). `nrt_ref` now uses `NbG` too, with the
+  block's ok and error halves both coming from `nbRef_all`. The callers' error claims
+  (`checkBlockPositivityE_claim`, `nestSeedsE_claim`, `cid_claim2`) take one `NbG p`
+  (`nbG_prog`), where before they took `NbOKE` at every environment.
+* **The models call every callee through `callE`**, as the old error models did. The new steps
+  are the old error steps with `ErrClaim` replaced by `RefE` and the ok leaves of the old ok
+  steps added. That is why they came out mechanical, and why the three steps could be proved in
+  parallel by three helpers against one fixed statement file.
+* **`errors` models with the unified spec derived.** A model with no lifted callee is the same
+  definition in `errors` and in `unified` mode. Only the spec's error post differs (code or
+  class). `triple_uni_of_code` (`Verdict/PosE3Fm.lean`) turns the `errors` spec `xE_specC` into
+  the unified one `xE_spec`. Two reasons for this. The generated `unified` steps fail for
+  `nest_cont_new` and `nest_ctors_one`: `grind` does not close `a.code = 0`, `a.cls ≠ 0` from
+  `Err.cls_of_code`. And for the others, the `unified` steps cost more: `PosE1M`'s four block
+  models took 41–49 s with `unified`, 32–34 s with `errors`. This is a generator observation.
+  `unified` without `nv` could emit the `errors` steps and derive its spec the same way.
+* **Fragments.** `nest_ctors_one` and `nest_ctors_walk` refine `oneT`/`walkT`, which are
+  `oneK`/`walkK` at a continuation returning its inputs. `oneK_split`/`walkK_split` recover the
+  CPS form. The old `@[refines]` statements (`PosCensus`) keep their `∀ K` form, as one-liners
+  from `RefE.triple`.
+* **`nest_seeds`** (batch 2) reads `nest_cont_key` through the run (`keyR`). Its ok proof
+  (`p2sdW_okC`) and its error claim (`nsdE_claim`) take `ih.key` through `RefE.run_okW` and
+  `RefE.run_err`.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+at the merge; load 4–95):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndPosSpec/GgW2` | 70.6 | 11.1 | the hand models' specs `nb*_step` gone |
+| `Verdict/PosE1M` | 38.9 | 34.9 | block models back in `errors` mode (second series; first series with `unified`: 34.4 → 38.6) |
+| `Verdict/IndE` | 4.69 | 3.86 | the same for `nckE` (first series with `unified`: 3.96 → 5.59) |
+| `Verdict/PosE` | 0.69 | 1.08 | the statements, posts, split lemmas |
+| `Verdict/PosE2` | 4.47 | 1.54 | `newOKE_step`, `frameOKE_step` gone |
+| `Verdict/PosE1S`, `PosE3C/O/W/F`, `PosAllE` | 7.07 | — | deleted |
+| `Arena/IndT/Pos*` (the eleven step files, `PosAll`, `PosCensus`, `PosDefs`) | 15.8 | 14.1 | |
+| `PosE2M`, `PosE3Cm`, `PosE3Fm`, `NbPosW`, `NbKeyK2`, `Nb`, `WalkOK` and 10 more | 55.6 | 53.0 | |
+| **sum (41 modules, first series, still with the `unified` block models)** | **192.6** | **124.9** | **−35 %** |
+
+Kit candidate: `RefE.of_run_eq` (`Arena/KnotE.lean`, from another batch) moves a refinement along
+an equation of twin runs. Two helpers wrote it again before finding it. It belongs in
+`Arena/Verdict.lean` with the rest of the kit.

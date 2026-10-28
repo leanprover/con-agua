@@ -17,10 +17,12 @@ import Std.WP.Triple.SpecLemmas
 /-!
 # The fields of name and level lines (`scan_fast.rs`'s record values)
 
-Stage B's scanner validates a line and stores nothing (`ConAgua.Scan.Line`). This file adds the
+Stage B's scanner validates a line and stores nothing (`ConAgua.Scan.Line`). This file models the
 values of the records the frontend applies first, names and levels, as a second pass over a line
-the validator accepted: `rec_line_loop(i)` walks the line's members again (`next_member`) and
-returns five words `(pl, idx, a, c, d)`:
+the validator accepted: `recN` walks the line's members again (`nextMemberN`) and gives five words
+`(pl, idx, a, c, d)`. It is the model `front_line`'s spec is stated with; the code reads the line
+once (`ConAgua.Front.LineRec`, proved equal on the lines that scan in
+`ConAgua.Front.LineRecLink`).
 
 | `pl` | record | `a` | `c` | `d` |
 |---|---|---|---|---|
@@ -32,12 +34,12 @@ returns five words `(pl, idx, a, c, d)`:
 | 7 | the `meta` header | | | |
 | 0 | anything else (expressions, declarations), or a failure | | | |
 
-`idx` is the value of the line's index key (`in`/`il`/`ie`). A number is read by `read_nat`,
+`idx` is the value of the line's index key (`in`/`il`/`ie`). A number is read by `read_nat` (`rdNatN`),
 con-leche's `readNat64` (`readNatAt` for at most 18 digits); a longer one reads as `NONE`
 (`2^64 - 1`), which the caller refuses: no export index or name component has 19 digits, and
 refusing is a defined failure.
 
-The pass trusts the validator: it checks no `seen` mask, no comma alternation, no key set (a
+The model trusts the validator: it checks no `seen` mask, no comma alternation, no key set (a
 member that is not a name/level key ends it with `pl = 0`), and it reads a string's body as the
 byte range between its quotes; `ConAgua.Front.FieldsLink` shows that on a line con-leche's
 `scanLineFwd` accepts, the words are the record's fields. Each loop keeps con-leche's progress
@@ -180,62 +182,7 @@ grind_pattern [lang_grind] pairN_digit => pairN b i cnt x0 x1, b[i.toNat], numEn
 grind_pattern [lang_grind] pairN_noprog => pairN b i cnt x0 x1, b[i.toNat], numEndN b i.toNat
 grind_pattern [lang_grind] pairN_other => pairN b i cnt x0 x1, b[i.toNat]
 
-/-! ## `rec_str_name`, `rec_num_name` -/
-
-def strRecLoop : Stmt := lblk (i, w, pre, vs, ve, tag, ks, k, v, e) {
-  while 0 == 0 {
-    (tag, ks, w, k, v) := call next_member(i, w);
-    if tag == 0 { return (0, pre, vs, ve) };
-    if tag == 1 { return (ks + 1, pre, vs, ve) };
-    if k == 47 {  -- `pre`
-      e := call slot_nat(ks, v);
-      if e <= ks { return (0, pre, vs, ve) };
-      pre := call read_nat(v, e)
-    } else {  -- `str`
-      e := call scan_string(v);
-      if e <= ks { return (0, pre, vs, ve) };
-      vs := v + 1;
-      ve := e - 1
-    };
-    i := e;
-    w := 0
-  }
-}
-
-/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:831-835 ConLeche.Frontend.scanStrName -/
-@[l_impl ConLeche.Frontend.scanStrName]
-def recStrName : FunDecl := lfn (i) locals (w, pre, vs, ve, tag, ks, k, v, e) {
-  i += 1;
-  w := 1;
-  ⟪strRecLoop⟫;
-  return (0, 0, 0, 0)
-}
-
-def numRecLoop : Stmt := lblk (i, w, pre, n, tag, ks, k, v, e) {
-  while 0 == 0 {
-    (tag, ks, w, k, v) := call next_member(i, w);
-    if tag == 0 { return (0, pre, n) };
-    if tag == 1 { return (ks + 1, pre, n) };
-    e := call slot_nat(ks, v);
-    if e <= ks { return (0, pre, n) };
-    if k == 47 {  -- `pre`
-      pre := call read_nat(v, e)
-    } else {  -- `i`
-      n := call read_nat(v, e)
-    };
-    i := e;
-    w := 0
-  }
-}
-
-/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:886-890 ConLeche.Frontend.scanNumName -/
-@[l_impl ConLeche.Frontend.scanNumName]
-def recNumName : FunDecl := lfn (i) locals (w, pre, n, tag, ks, k, v, e) {
-  i += 1;
-  w := 1;
-  ⟪numRecLoop⟫;
-  return (0, 0, 0)
-}
+/-! ## Names: `str`, `num` -/
 
 /-- The `str` name loop: `(end, pre, body start, body end)`. -/
 def strRecN (b : Array UInt8) (i w pre vs ve : Word) : Word × Word × Word × Word :=
@@ -338,56 +285,9 @@ grind_pattern [lang_grind] numRecN_err => numRecN b i w pre n, nextMemberN b i w
 grind_pattern [lang_grind] numRecN_close => numRecN b i w pre n, nextMemberN b i w
 grind_pattern [lang_grind] numRecN_key => numRecN b i w pre n, nextMemberN b i w
 
-/-! ## `rec_line_loop` -/
+/-! ## The line -/
 
-def recLoop : Stmt := lblk (i, w, pl, idx, a, c, d, tag, ks, k, v, e, x) {
-  while 0 == 0 {
-    (tag, ks, w, k, v) := call next_member(i, w);
-    if tag == 0 { return (0, 0, 0, 0, 0) };
-    if tag == 1 { return (pl, idx, a, c, d) };
-    if k == 21 || k == 19 || k == 18 {  -- `in`, `il`, `ie`
-      e := call slot_nat(ks, v);
-      if e <= ks { return (0, 0, 0, 0, 0) };
-      idx := call read_nat(v, e)
-    } else if k == 59 || k == 46 {  -- `succ`, `param`
-      e := call slot_nat(ks, v);
-      if e <= ks { return (0, 0, 0, 0, 0) };
-      a := call read_nat(v, e);
-      if k == 59 { pl := 3 } else { pl := 6 }
-    } else if k == 32 || k == 20 {  -- `max`, `imax`
-      (e, a, c) := call rec_nat_list(v);
-      if e <= ks { return (0, 0, 0, 0, 0) };
-      if k == 32 { pl := 4 } else { pl := 5 }
-    } else if k == 56 {  -- `str`
-      (e, a, c, d) := call rec_str_name(v);
-      if e <= ks { return (0, 0, 0, 0, 0) };
-      pl := 1
-    } else if k == 38 {  -- `num`
-      (e, a, c) := call rec_num_name(v);
-      if e <= ks { return (0, 0, 0, 0, 0) };
-      pl := 2
-    } else if k == 33 {  -- `meta`
-      if !(v < len(IN.u8) && IN.u8[v] == 123) { return (0, 0, 0, 0, 0) };
-      e := call skip_braced(v + 1, 0);
-      if e <= ks { return (0, 0, 0, 0, 0) };
-      pl := 7
-    } else {
-      return (0, 0, 0, 0, 0)
-    };
-    i := e;
-    w := 0
-  }
-}
-
-/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
-@[l_impl ConLeche.Frontend.scanLineLoop]
-def recLineLoop : FunDecl := lfn (i) locals (w, pl, idx, a, c, d, tag, ks, k, v, e, x) {
-  w := 1;
-  ⟪recLoop⟫;
-  return (0, 0, 0, 0, 0)
-}
-
-/-- What `rec_line_loop` returns. -/
+/-- A line's fields. -/
 structure Fld where
   pl : Word
   idx : Word
@@ -458,7 +358,7 @@ decreasing_by
     rw [UInt64.lt_iff_toNat_lt] at _h
     omega
 
-/-- `rec_line_loop(i)`, `i` after the line's `{`. -/
+/-- The name and level record of the line whose `{` is at `i - 1`. -/
 def recLineN (b : Array UInt8) (i : Word) : Fld := recN b i 1 .none
 
 section
@@ -547,9 +447,6 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpbr : p.lookup "skip_braced" = some L.Examples.skipBraced)
     (hprn : p.lookup "read_nat" = some readNat)
     (hprp : p.lookup "rec_nat_list" = some recNatList)
-    (hprs : p.lookup "rec_str_name" = some recStrName)
-    (hprm : p.lookup "rec_num_name" = some recNumName)
-    (hprl : p.lookup "rec_line_loop" = some recLineLoop)
 include hb
 
 omit hb in
@@ -629,149 +526,6 @@ theorem recNatList_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | succ n =>
     sym only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, pairLoop_step_spec p b hb hpd hpn hprn n] <;>
-        finish
-
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn in
-theorem strRecLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
-    exec p n strRecLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0, 0, 0, 0] =
-        [(strRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).1,
-         (strRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).2.1,
-         (strRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).2.2.1,
-         (strRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).2.2.2]; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := strRecLoop) rfl]
-    sym (gen := 16) only [lang_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
-        L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
-        slotNat_spec p b hb ‹_› ‹_› ‹_› n, readNat_spec p b hprn n] <;> finish
-
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn in
-theorem strRecLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
-    step p (exec p n) strRecLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0, 0, 0, 0] =
-        [(strRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).1,
-         (strRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).2.1,
-         (strRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).2.2.1,
-         (strRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).2.2.2]; ⊤⦄ :=
-  Triple.step_exec (strRecLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn (n + 1) s₀)
-
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hprs in
-attribute [local lang_grind] strRecEntryN in
-theorem recStrName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rec_str_name" [i]
-    ⦃fun r s' => s' = s₀ ∧ r = [(strRecEntryN b i).1, (strRecEntryN b i).2.1,
-      (strRecEntryN b i).2.2.1, (strRecEntryN b i).2.2.2]; ⊤⦄ := by
-  rw [invoke_eq _ hprs]
-  simp only [callFn, recStrName]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc,
-        strRecLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn n] <;>
-        finish
-
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hprn in
-theorem numRecLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
-    exec p n numRecLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0, 0, 0] =
-        [(numRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)).1,
-         (numRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)).2.1,
-         (numRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)).2.2]; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := numRecLoop) rfl]
-    sym (gen := 16) only [lang_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
-        slotNat_spec p b hb ‹_› ‹_› ‹_› n, readNat_spec p b hprn n] <;> finish
-
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hprn in
-theorem numRecLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
-    step p (exec p n) numRecLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0, 0, 0] =
-        [(numRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)).1,
-         (numRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)).2.1,
-         (numRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)).2.2]; ⊤⦄ :=
-  Triple.step_exec (numRecLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hprn (n + 1) s₀)
-
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hprn hprm in
-attribute [local lang_grind] numRecEntryN in
-theorem recNumName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rec_num_name" [i]
-    ⦃fun r s' => s' = s₀ ∧ r = [(numRecEntryN b i).1, (numRecEntryN b i).2.1,
-      (numRecEntryN b i).2.2]; ⊤⦄ := by
-  rw [invoke_eq _ hprm]
-  simp only [callFn, recNumName]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc,
-        numRecLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hprn n] <;>
-        finish
-
-attribute [local lang_grind] Mbr.err Fld.enc Fld.none metaN
-
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hpbr hprn hprp hprs hprm in
-set_option maxHeartbeats 4000000 in
-theorem recLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
-    exec p n recLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr Fld.none.enc = (recN b (s₀.loc 0) (s₀.loc 1)
-        ⟨s₀.loc 2, s₀.loc 3, s₀.loc 4, s₀.loc 5, s₀.loc 6⟩).enc; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := recLoop) rfl]
-    have hb64 : b.size < 2 ^ 64 := by omega
-    sym (gen := 16) only [lang_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
-        slotNat_spec p b hb ‹_› ‹_› ‹_› n, readNat_spec p b hprn n,
-        recNatList_spec p b hb hpd hpn hprn hprp n,
-        recStrName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hprs n,
-        recNumName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hprn hprm n,
-        L.Examples.skipBraced_spec p ‹_› ‹_› b hb64 n] <;> finish
-
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hpbr hprn hprp hprs hprm in
-theorem recLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
-    step p (exec p n) recLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr Fld.none.enc = (recN b (s₀.loc 0) (s₀.loc 1)
-        ⟨s₀.loc 2, s₀.loc 3, s₀.loc 4, s₀.loc 5, s₀.loc 6⟩).enc; ⊤⦄ :=
-  Triple.step_exec (recLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hpbr hprn hprp hprs hprm (n + 1) s₀)
-
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hpbr hprn hprp hprs hprm hprl in
-attribute [local lang_grind] recLineN in
-theorem recLineLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rec_line_loop" [i]
-    ⦃fun r s' => s' = s₀ ∧ r = (recLineN b i).enc; ⊤⦄ := by
-  rw [invoke_eq _ hprl]
-  simp only [callFn, recLineLoop]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, recLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hpbr hprn hprp hprs hprm n] <;>
         finish
 
 end specs
