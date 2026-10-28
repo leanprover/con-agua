@@ -438,7 +438,7 @@ All 17 functions migrated in one landing: the `reduce_nat` family (7) and `major
 
 Also gone: the generated `W` models of `reduce_nat*` (`WhnfDeltaRefine3`), the hand `W` models of
 `m2c_*` with their specs (≈ 330 lines, `WhnfM2CRefine`), `CoreRef.congr`. Whole diff of the
-batch against master: +1 403 −3 403 (with 46 imports the new import graph makes redundant).
+batch against master: +1 403 −3 403 (including the imports the new import graph makes redundant).
 
 Choices:
 
@@ -463,7 +463,7 @@ Choices:
   `WhnfSlotE`; `DefEqKnot` imports it; `ReduceNatE`, `reduceNat_refines` moved in), `m2c_*` in
   `Arena/WhnfM2CRefine2..5` in place of the ok refinements (importing `WhnfModels6E` and `KnotE`;
   `ProofIrrelWE` moved to `WhnfM2CRefine2`). `ErrClaim.of_run_err`/`of_run_eqW` moved from
-  `WhnfSlotE` to `KnotE`. The new graph makes 46 imports elsewhere redundant (removed, shake).
+  `WhnfSlotE` to `KnotE`. The new graph makes about 45 imports elsewhere redundant (removed, shake).
 * **Two model recipes changed**: `m2c_eta`'s unified model by the default recipe (`simp []` needed
   `heartbeats 1000000` and took 16 s; default 8 s). For `reduce_nat*` `simp []` stays: the default
   recipe and `finish … gen 30` fail, `simp [] locals` is slower.
