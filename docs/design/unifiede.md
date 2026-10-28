@@ -1123,9 +1123,9 @@ Choices:
 * **`class_const_ok_header` has its own model and refinement.** Its ok half used to be
   `install_header`'s `ihW`/`ihW_okT` (the same body, but another L function with other abort codes
   and another twin). Its twin is a prefix of `classConstOk`, so as with `rgT` (§3.8) there is one
-  twin definition of the prefix, `cchT`, with `cchT_bind : classConstOk … = cchT … >>= rest`. This
-  branch no longer uses `ihW` (with `ihK1–9`, `ihW_step`) or `ihW_okT`; they stay for
-  `install_header` (batch 2a).
+  twin definition of the prefix, `cchT`, with `cchT_bind : classConstOk … = cchT … >>= rest`. With
+  `install_header` migrated (§3.13), the shared hand model `ihW` (`ihK1–9`, `ihW_step`, `ih_specW`,
+  `Arena/DeclHeader`) and `ihW_okT` (`Arena/DeclValT`, 160 lines) had no user left and are gone.
 * **One post for a tail and its caller**: `target_major_of_outside` ends in its tail, so both
   refinements share `TmoPost`; `tmo_ref`'s tail arm is `tmt_ref` and `RefE.mono`. Likewise `IacPost`
   for the abstract constructor sorts and `CfgPost` for `class_fields_of`.
