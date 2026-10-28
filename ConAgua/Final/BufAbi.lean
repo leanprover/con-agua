@@ -257,10 +257,10 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
           (hcell1 _ hq2) ?_
         refine hrest _ _ (by simp [parDescB, hpb, hfz, hown]) rfl ?_
         intro r hr; rsimp; rw [← hR r hr]; cases r <;> first | exact absurd rfl hr | rfl
-      · -- owned: slot `2 + k'`, or the table-relative array inside the table's slot
+      · -- owned: slot `1 + k'`, or the table-relative array inside the table's slot
         simp only [parDescB, hpb, ite_false, hfz, hown] at hc0
         have hk' := idxOf?_lt hown
-        have hle : ownOff tab (tab.wAt p) k' + abiSlot ≤ abiSlot * (2 + own.length) := by
+        have hle : ownOff tab (tab.wAt p) k' + abiSlot ≤ abiSlot * (2 + (own.length - 1)) := by
           cases hct : tab.tbl64 (tab.wAt p) with
           | none =>
             rw [ownOff_slot hct, ← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)

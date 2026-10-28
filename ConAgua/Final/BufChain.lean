@@ -27,12 +27,12 @@ section
 variable {tab : Tab} {fz own : List TieredArray} {B : Array Word} {buf base blen : Nat}
 
 /-- Byte `j` of word `i` of owned array `s` (number `k`) is in the region. -/
-theorem own_region_bytes (hok : abiTabOk tab = true) (hn : abiSlot * (2 + own.length) ≤ blen) {s : TieredArray}
+theorem own_region_bytes (hok : abiTabOk tab = true) (hn : abiSlot * (2 + (own.length - 1)) ≤ blen) {s : TieredArray}
     {k base i j : Nat} (hk : k < own.length) (hi : i < abiSz tab s) (hj : j < 8) :
     base ≤ base + ownOff tab s k + 8 * i + j ∧ base + ownOff tab s k + 8 * i + j < base + blen := by
   rcases own_bytes hok (s := s) (k := k) (base := base) (x := base + ownOff tab s k + 8 * i + j)
     (by omega) (by omega) with ⟨-, h⟩ | ⟨-, h⟩
-  · have := h.lt (n := 2 + own.length) (by omega)
+  · have := h.lt (n := 2 + (own.length - 1)) (by omega)
     unfold InSlot at h; omega
   · unfold InTbl at h; simp only [abiSlot] at hn; omega
 

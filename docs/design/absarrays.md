@@ -605,3 +605,33 @@ tree.
   * `loadMem`'s `words := fun s => Array.replicate (sz s) 0` builds a fresh array at each read
     of an unwritten array in interpreter runs (E2E works around it with a shared zero array).
   * `ArrCheck` could check the table against `Prog.layout` once that exists.
+
+### 9.4 Batch 8's predicates: kept (2026-10-28, lane layoutleft)
+
+Batch 8's first item (delete `Mem.HasW`, `HasWs`, `HasB`, `SameShape` and their conjuncts) was
+looked at and skipped: it does not pay off.
+
+* **What is there** (master 61fcf0d6): 170 lines in 50 files mention the four predicates or their
+  lemmas (`HasW` 35 lines in 10 files, `HasWs` 5 in `L/Semantics.lean` only, `HasB` 24 in 5,
+  `SameShape` 80 in 30). Every one of them is `True` and proved by `trivial`, so no proof
+  depends on them and no statement is weaker or stronger for having them.
+* **Where the cost is.** The uses are not standalone hypotheses one can drop locally: `SameShape`
+  is a conjunct of `MemFrame` (cited in 287 files), `Frame`, `PFrame` (field `size`), `FreezeSpec`'s
+  frame (field `words`), `LevelHeapRel` (`wsize`) and the copy specs' posts; `HasW POOL`/`HasW
+  CTL` is the first conjunct of `PoolOK` (141 uses) and of the `Nat*` loop invariants (`ShrInv`,
+  `AddInv`, `DSubInv`, …), which are built as anonymous tuples and taken apart positionally
+  (`obtain ⟨hok1, hok2, …⟩`, `.2.2.1`) or by `grind`; `HasB IN` is the first premise of
+  `PreludeSim`'s `ERel`/`CRel`/`BRel`/`WRel`, which their proofs `intro`. Deleting a conjunct
+  renumbers every positional access after it, in about 360 files that mention these frames, and
+  the change starts in `L/Semantics.lean`, so each round of fixing rebuilds the whole tree and a
+  failing module hides its dependents' errors until the next round. It would be a `--wide`
+  landing that holds every other lane's entries.
+* **What it would buy:** about 170 lines shorter, statements without a `True` conjunct. No proof
+  gets simpler in substance, no kernel or build time is spent on them (they are `trivial`), and
+  nothing in the final theorems mentions them.
+
+So they stay, defined as `True` with their lemmas (`L/Semantics.lean`, "Which arrays exist"),
+until a change rewrites `MemFrame`/`PoolOK` anyway; then dropping the conjunct costs nothing extra.
+`HasWs` and its two lemmas are used nowhere and can go with the next change to `L/Semantics.lean`.
+The other batch 8 items (numeral ids, `szC`/`spS`, `loadMem`'s fresh arrays, `ArrCheck`) are
+unaffected by this note.
