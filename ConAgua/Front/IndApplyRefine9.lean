@@ -94,11 +94,11 @@ theorem iext_of_heap {m m' : Mem} (h : MemFrame [LH] [192] m m') : IExt m m' := 
 
 /-- **`validate_ind_d` refines `validateIndD`.** -/
 @[refines ConRon.Arena.Frontend.validateIndD]
-theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : StateD}
-    (hR : ArenaR m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) (hT : TopOK m)
+theorem validateW_twin {p : Prog} (hA : IndApplyLookups p) {b : ByteArray} {n : Nat} {m m' : Mem}
+    {a : AState} {st : StateD} (hR : ArenaR m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) (hT : TopOK m)
     {to tn co cn ro rn oo np : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}
     {rcs : List IndRecRec} (hF : IndFR b m to tn co cn ro rn tys cts rcs) (hIFR : topN m IFR < 2 ^ 62)
-    (h : validateW n m to tn co cn ro rn = some ((oo, np), m')) :
+    (h : validateW p n m to tn co cn ro rn = some ((oo, np), m')) :
     ∃ ordered : List IndCtorRec,
       (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = .ok (.inr (ordered, np.toNat), a) ∧
       IExt m m' ∧ TopOK m' ∧ ordered.length = cts.length ∧ 1 ≤ oo.toNat ∧
@@ -115,11 +115,16 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   | succ n =>
   simp only [validateW] at h
   -- `vi_unsafe`
-  rcases h1 : unsafeW n m to tn 0 with _ | u1 <;> simp only [h1, uK, reduceCtorEq] at h
-  have hu := unsafeW_twin hTy hTn hto n 0 h1
+  rcases h1 : callW p n "vi_unsafe" [to, tn, 0] m with _ | ⟨r1, mu⟩ <;> simp only [h1, lK, reduceCtorEq] at h
+  obtain ⟨s1, rfl, -, ⟨hmu, hu⟩⟩ := RefC.run_okW (viUnsafe_specE p hA.vi_unsafe n ⟨m, Locals.init []⟩ to tn 0)
+    (unsafe_ref hTy hTn hto p st cts rcs a n 0) h1
+  dsimp only at hmu
+  rw [hmu] at h
   -- `vi_nparams`
-  rcases h2 : nparamsW n m to tn with _ | np' <;> simp only [h2, wK, reduceCtorEq] at h
-  obtain ⟨np1, np2, np3⟩ := nparamsW_twin hTy hTn hto h2
+  rcases h2 : nparamsW p n m to tn with _ | ⟨np', mp⟩ <;>
+    simp only [h2, allocK_none, allocK_some, wK, reduceCtorEq] at h
+  obtain ⟨hmp, np1, np2, np3⟩ := nparamsW_twin hA hTy hTn hto h2
+  subst mp
   -- the type names
   rcases h3 : mapW n m to tn 11 0 0 with _ | ⟨⟨tyn, x1⟩, m₁⟩ <;> simp only [h3, pmK, reduceCtorEq] at h
   have hidT : ∀ s : Word, s.toNat < 11 → ∀ k (hk : k < tys.length),
@@ -182,7 +187,7 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
     rw [hkeep34 _ (by omega), hkeep34 _ hi'] at this
     exact this
   -- the tail
-  rcases h8 : tailW n m₄ to tn co cn ro rn np' tyn tyt fo cno with _ | ⟨oo', m₅⟩ <;> simp only [h8, allocK, reduceCtorEq] at h
+  rcases h8 : tailW p n m₄ to tn co cn ro rn np' tyn tyt fo cno with _ | ⟨oo', m₅⟩ <;> simp only [h8, allocK, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨⟨hoo, hnp⟩, hmm⟩ := h
   subst oo' np' m₅
@@ -194,18 +199,19 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   have hR₄ : ArenaR m₄ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₄ e14.frame a hR
   have hD₄ : StateDR m₄ st := hD.frame e14.frame (by decide) (by decide) (by decide) (by decide) (by decide)
   have hfuel := storeFuelW_ok hR₄ h9
-  rcases h10 : orderW n m₄ to tn tyn fo cno co cn fuel np with _ | ⟨oo₅, m₅⟩ <;> simp only [h10, allocK, reduceCtorEq] at h8
+  rcases h10 : orderW p n m₄ to tn tyn fo cno co cn fuel np with _ | ⟨oo₅, m₅⟩ <;> simp only [h10, allocK, reduceCtorEq] at h8
   rcases h11 : kExpW n m₅ to tn tyt oo₅ fuel with _ | ⟨ke, m₆⟩ <;> simp only [h11, reduceCtorEq] at h8
-  rcases h12 : recsW n m₆ to tn ro rn np cn ke tyn tyt fuel with _ | u12 <;> simp only [h12, uK, reduceCtorEq] at h8
-  obtain ⟨hoo5, hm6⟩ := Prod.mk.inj (Option.some.inj h8)
-  subst oo₅ m₆
+  rcases h12 : recsW p n m₆ to tn ro rn np cn ke tyn tyt fuel with _ | m₇ <;> simp only [h12, mK, reduceCtorEq] at h8
+  obtain ⟨hoo5, hm7⟩ := Prod.mk.inj (Option.some.inj h8)
+  subst oo₅ m'
+
   -- the order
   have hps4 : ∀ i, i ≤ tys.length → psum m₄ to i = fpos LS i := fun i hi => by
     rw [psum_congr e14.ifr]; exact psum_fpos (fun k hk => hTy.2.2 k hk) l9 i hi
   have hLSl : LS.length = tys.length := by have := congrArg List.length l9; simpa using this
   have hcnt : ∀ k (hk : k < tys.length), cntF m₄ to k = tys[k].ctors.length := fun k hk => by
     simp only [cntF, wd, e14.ifr]; exact (hTy.2.2 k hk).2.1
-  obtain ⟨o1, o2, o3, o4, o5⟩ := orderW_twin hR₄ hD₄ v3 (hCt.ext e14 (fun _ _ x => x.ext e14)) hCn v7
+  obtain ⟨o1, o2, o3, o4, o5⟩ := orderW_twin hA hR₄ hD₄ v3 (hCt.ext e14 (fun _ _ x => x.ext e14)) hCn v7
     (by rw [v6, v5]; omega) np3 hco ⟨by omega, by omega, by omega⟩ (by rw [hTn]; omega)
     (by rw [hTn]; omega)
     (fun p hp => by
@@ -219,18 +225,18 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   obtain ⟨k1, k2, k3⟩ := kExpW_twin hR₅ hok h11
   have e56 := iext_of_heap k1
   have e16 := e15.trans e56
-  have hR₆ : ArenaR m' a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m' e16.frame a hR
-  have hD₆ : StateDR m' st := hD.frame e16.frame (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hIFL56 : m'.arr64 IFL = m₅.arr64 IFL := k1.1 IFL (by decide) (by decide)
+  have hR₆ : ArenaR m₆ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₆ e16.frame a hR
+  have hD₆ : StateDR m₆ st := hD.frame e16.frame (by decide) (by decide) (by decide) (by decide) (by decide)
+  have hIFL56 : m₆.arr64 IFL = m₅.arr64 IFL := k1.1 IFL (by decide) (by decide)
   -- the words the twin's lists are read from
-  have hTNw : ∀ i, i < tys.length → wd m' IFL (tyn.toNat + i) = wd m₁ IFL (tyn.toNat + i) := fun i hi =>
+  have hTNw : ∀ i, i < tys.length → wd m₆ IFL (tyn.toNat + i) = wd m₁ IFL (tyn.toNat + i) := fun i hi =>
     ((u2.trans (l2.trans (v2.trans (o2.trans e56)))).keep _ (by omega) (by omega))
-  have hTTw : ∀ i, i < tys.length → wd m' IFL (tyt.toNat + i) = wd m₂ IFL (tyt.toNat + i) := fun i hi =>
+  have hTTw : ∀ i, i < tys.length → wd m₆ IFL (tyt.toNat + i) = wd m₂ IFL (tyt.toNat + i) := fun i hi =>
     ((l2.trans (v2.trans (o2.trans e56))).keep _ (by omega) (by omega))
-  have hTN : islice (k := .name) m' tyn.toNat tn.toNat = islice m₁ tyn.toNat tys.length := by
+  have hTN : islice (k := .name) m₆ tyn.toNat tn.toNat = islice m₁ tyn.toNat tys.length := by
     rw [hTn]; simp only [islice]; apply List.map_congr_left; intro i hi
     simp only [List.mem_range] at hi; rw [hTNw i hi]
-  have hTT : islice (k := .expr) m' tyt.toNat tn.toNat = islice m₂ tyt.toNat tys.length := by
+  have hTT : islice (k := .expr) m₆ tyt.toNat tn.toNat = islice m₂ tyt.toNat tys.length := by
     rw [hTn]; simp only [islice]; apply List.map_congr_left; intro i hi
     simp only [List.mem_range] at hi; rw [hTTw i hi]
   have hke : ke = 0 ∨ ke = 1 ∨ ke = 2 := by
@@ -250,10 +256,22 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   | zero => simp [recsW] at h12
   | succ n =>
   simp only [recsW] at h12
-  rcases h13 : nestedW n m' to tn 0 with _ | un <;> simp only [h13, wK, reduceCtorEq] at h12
-  have hTy₆ : ListF (TyF b m') m' 11 to.toNat tys := hTy.ext e16 (fun _ _ x => x.ext e16)
-  have hRc₆ : ListF (RecF b m') m' 11 ro.toNat rcs := hRc.ext e16 (fun _ _ x => x.ext e16)
+  rcases h13 : nestedW n m₆ to tn 0 with _ | un <;> simp only [h13, wK, reduceCtorEq] at h12
+  have hTy₆ : ListF (TyF b m₆) m₆ 11 to.toNat tys := hTy.ext e16 (fun _ _ x => x.ext e16)
+  have hRc₆ : ListF (RecF b m₆) m₆ 11 ro.toNat rcs := hRc.ext e16 (fun _ _ x => x.ext e16)
   obtain ⟨n1, n2⟩ := nestedW_twin hTy₆ hTn hto n 0 un h13
+  have hrb : tyn.toNat + tn.toNat ≤ 2 ^ 63 := by
+    have := t3.1; have := t3.2; have := u2.top; have := l2.top; have := v2.top; omega
+  have hrb' : tyt.toNat + tn.toNat ≤ 2 ^ 63 := by have := u3.1; have := u3.2; omega
+  have hTN32 : ∀ i, i < tn.toNat → (wd m₆ IFL (tyn.toNat + i)).toNat < 2 ^ 32 := fun i hi => by
+    rw [hTn] at hi; rw [hTNw i hi]; exact t7 i hi
+  -- `vi_recs` leaves the memory
+  obtain rfl : m₆ = m₇ := by
+    by_cases hun : un = 0
+    · rw [ite_eq_right (by simpa using hun)] at h12
+      exact (recsGoW_twin hA hR₆ hD₆ hRc₆ hRn hro np3 hke hrb hrb' hTN32 n 0 m₇ h12).1.symm
+    · rw [ite_eq_left (by simpa using hun)] at h12
+      exact Option.some.inj h12
   have hrecs : ∀ r ∈ (if (tys.any fun x => x.numNested != 0) = true then [] else rcs),
       RecOK st a (islice m₁ tyn.toNat tys.length) (islice m₂ tyt.toNat tys.length) np.toNat
         tys.length (ordList m₅ oo.toNat co.toNat cts cts.length).length (keOf ke) fuel.toNat r := by
@@ -268,10 +286,8 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
       simp only [Bool.false_eq_true, ite_false] at hr
       rw [ite_eq_right (by simpa using hun)] at h12
       obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hr
-      have := recsGoW_twin hR₆ hD₆ hRc₆ hRn hro np3 hke
-        (by have := t3.1; have := t3.2; have := u2.top; have := l2.top; have := v2.top; omega)
-        (by have := u3.1; have := u3.2; omega)
-        (fun i hi => by rw [hTn] at hi; rw [hTNw i hi]; exact t7 i hi) n 0 h12 k hk (Nat.zero_le _)
+      have := (recsGoW_twin hA hR₆ hD₆ hRc₆ hRn hro np3 hke hrb hrb' hTN32 n 0 m₆ h12).2 k hk
+        (Nat.zero_le _)
       rw [hTN, hTT, hTn, hCn] at this
       rw [ordList_length]; exact this
     · obtain ⟨k, hk, hk'⟩ := n2 hun
@@ -397,8 +413,8 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
         · simp [hz', he, hz, keOf]
       · have hz' : wd m IFR (co.toNat + 10 * kk + 4) ≠ 0 := fun e => hz (by rw [← c4.1, e]; rfl)
         simp [hz', hz, keOf]
-  have hsz5 : (m'.arr64 IFL).size = (m₅.arr64 IFL).size := k1.size IFL
-  have htop56 : topN m' IFL = topN m₅ IFL := by simp only [topN, wd, hIFL56]
+  have hsz5 : (m₆.arr64 IFL).size = (m₅.arr64 IFL).size := k1.size IFL
+  have htop56 : topN m₆ IFL = topN m₅ IFL := by simp only [topN, wd, hIFL56]
   refine ⟨_, validateIndD_ok hV, e16, ⟨by rw [hsz5]; exact o3.1, by rw [hsz5, htop56]; exact o3.2⟩,
     ordList_length _ _ _ _ _, by omega, by rw [htop56, o4, o1]; omega, fun p hp => ?_, np3⟩
   rw [ordList_length] at hp

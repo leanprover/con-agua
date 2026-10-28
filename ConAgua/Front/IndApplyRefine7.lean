@@ -1,4 +1,4 @@
-import ConAgua.Front.IndApplyRefine2
+import ConAgua.Verdict.FrontViE
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 
@@ -31,74 +31,17 @@ def RecOK (st : StateD) (a : AState) (TN : List NIdx) (TT : List EIdx) (nPd nTyp
 /-- `kExpected?` from its word (`0` none, `1` `some false`, `2` `some true`). -/
 def keOf (ke : Word) : Option Bool := if ke = 0 then none else some (ke = 2)
 
-theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn tyt fuel : Word}
-    (hnp : np.toNat < 10 ^ 18) (hni : ni.toNat < 10 ^ 18) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
-    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63) :
-    ∀ n j, recIdxW n m T ni np tn tyn tyt fuel j = some () →
-      ∀ k, j.toNat ≤ k → k < tn.toNat → wd m IFL (tyn.toNat + k) = T →
-        ∃ o, (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + k)))).run a = .ok (o, a) ∧
-          ∀ x, o = some x → np.toNat + ni.toNat = x := by
-  intro n
-  induction n with
-  | zero => intro j h; simp [recIdxW] at h
-  | succ n ih =>
-    intro j h k h1 h2 hT
-    by_cases hle : tn ≤ j
-    · have := UInt64.le_iff_toNat_le.mp hle; omega
-    have hj1 := wsucc j tn (UInt64.not_le.mp hle)
-    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
-    have ex1 : rdW (m.arr64 IFL) (tyn + j) = wd m IFL (tyn.toNat + j.toNat) := by
-      rw [wd_eq, widx2 _ _ (by omega)]
-    have ex2 : rdW (m.arr64 IFL) (tyt + j) = wd m IFL (tyt.toNat + j.toNat) := by
-      rw [wd_eq, widx2 _ _ (by omega)]
-    have hjj : recIdxW.j1 n T ni np tn tyn tyt fuel j m = some () →
-        recIdxW n m T ni np tn tyn tyt fuel (j + 1) = some () := by
-      intro hh
-      rcases hq : recIdxW n m T ni np tn tyn tyt fuel (j + 1) with _ | u
-      · rw [recIdxW.j1.abort1 _ _ _ _ _ _ _ _ _ _ hq] at hh; cases hh
-      · rfl
-    by_cases hk : k = j.toNat
-    · subst hk
-      have hT' : rdW (m.arr64 IFL) (tyn + j) = T := by rw [ex1]; exact hT
-      rw [recIdxW.arm2 _ _ _ _ _ _ _ _ _ _ hle hT', ex2] at h
-      rcases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with _ | ⟨ok, kk⟩ <;> rw [hs] at h
-      · rw [recIdxW.k_pi_sort_tele_len.none] at h; cases h
-      obtain ⟨s1, -⟩ := sortTeleW_ok m a hR n fuel _ ok kk hs
-      refine ⟨_, s1, fun x hx => ?_⟩
-      by_cases hok : ok = 0
-      · simp [hok] at hx
-      · simp only [hok, ite_false, Option.some.injEq] at hx
-        have : np + ni = kk := Classical.byContradiction fun hne => by
-          rw [recIdxW.k_pi_sort_tele_len.abort1 _ _ _ _ _ _ _ _ _ _ _ _ hok hne] at h; cases h
-        rw [← hx, ← this, widx2 _ _ (by omega)]
-    · have hrest : recIdxW n m T ni np tn tyn tyt fuel (j + 1) = some () := by
-        by_cases hT2 : rdW (m.arr64 IFL) (tyn + j) = T
-        · rw [recIdxW.arm2 _ _ _ _ _ _ _ _ _ _ hle hT2] at h
-          rcases hs : sortTeleW n m fuel (rdW (m.arr64 IFL) (tyt + j)) with _ | ⟨ok, kk⟩ <;>
-            rw [hs] at h
-          · rw [recIdxW.k_pi_sort_tele_len.none] at h; cases h
-          by_cases hok : ok = 0
-          · rw [recIdxW.k_pi_sort_tele_len.arm2 _ _ _ _ _ _ _ _ _ _ _ _ hok] at h
-            exact hjj h
-          · by_cases hnk : np + ni = kk
-            · rw [recIdxW.k_pi_sort_tele_len.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hok hnk] at h
-              exact hjj h
-            · rw [recIdxW.k_pi_sort_tele_len.abort1 _ _ _ _ _ _ _ _ _ _ _ _ hok hnk] at h
-              cases h
-        · rw [recIdxW.arm3 _ _ _ _ _ _ _ _ _ _ hle hT2] at h
-          exact hjj h
-      exact ih (j + 1) hrest k (by rw [hj1]; omega) h2 hT
-
 
 /-- **`vi_rec` against the twin's checks of one recursor record.** -/
-theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
+theorem recW_twin {p : Prog} (hA : IndApplyLookups p) {b : ByteArray} {n : Nat} {m m' : Mem}
+    {a : AState} {st : StateD} (hR : ArenaR m a)
     (hD : StateDR m st) {rc : IndRecRec} {r np tn cn ke tyn tyt fuel : Word}
     (hrec : RecF b m r.toNat rc) (hr : r.toNat + 11 < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
     (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
     (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
     (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32)
-    (h : recW n m r np tn cn ke tyn tyt fuel = some ()) :
-    RecOK st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat cn.toNat
+    (h : recW p n m r np tn cn ke tyn tyt fuel = some m') :
+    m' = m ∧ RecOK st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat cn.toNat
       (keOf ke) fuel.toNat rc := by
   cases n with
   | zero => simp [recW] at h
@@ -121,7 +64,30 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
   rw [ix 8 (by decide)] at e8; rw [ix 7 (by decide)] at e7; rw [ix 6 (by decide)] at e6
   simp only [show (8 : Word).toNat = 8 from rfl, show (7 : Word).toNat = 7 from rfl,
     show (6 : Word).toNat = 6 from rfl] at e8 e7 e6
-  refine ⟨_, hname, by rw [← c6.1, e8], by rw [← c5.1, e7], by rw [← c4.1, e6], fun kE hkE => ?_, ?_⟩
+  rcases hn : nrpW m rnw with _ | ⟨f, tt⟩
+  · rw [hn, pK_none] at h; cases h
+  rw [hn, pK_some] at h
+  obtain ⟨v, hv, hv1, hv0⟩ := nrpW_ok hR rnw f tt hn
+  have e5 : rdW (m.arr64 IFR) (r + 5) = wd m IFR (r.toNat + 5) := by
+    have := ix 5 (by decide); simpa using this
+  -- `vi_rec_idx`, if the name is `T.rec`
+  have hidx : m' = m ∧ (f ≠ 0 → ∀ k, k < tn.toNat → wd m IFL (tyn.toNat + k) = tt →
+      ∃ o, (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + k)))).run a = .ok (o, a) ∧
+        ∀ x, o = some x → np.toNat + (wd m IFR (r.toNat + 5)).toNat = x) := by
+    by_cases hf : f = 0
+    · simp only [hf, ne_eq, not_true_eq_false, ite_false, Option.some.injEq] at h
+      exact ⟨h.symm, fun h => absurd hf h⟩
+    simp only [ne_eq, hf, not_false_eq_true, ite_true] at h
+    rcases hc : callW p n "vi_rec_idx" [tt, rdW (m.arr64 IFR) (r + 5), np, tn, tyn, tyt, fuel, 0] m
+      with _ | ⟨rr, mr⟩ <;> rw [hc] at h
+    · cases h
+    simp only [lK, Option.some.injEq] at h
+    subst h
+    obtain ⟨sr, rfl, -, hpost⟩ := RefC.run_okW (recIdx_specE p hA n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _)
+      (recIdx_ref hR hnp (by rw [e5, c3.1]; exact c3.2) hb hb' p n 0) hc
+    refine ⟨hpost.mem, fun _ k hk hT => ?_⟩
+    rw [← e5]; exact hpost.idx k (Nat.zero_le _) hk hT
+  refine ⟨hidx.1, _, hname, by rw [← c6.1, e8], by rw [← c5.1, e7], by rw [← c4.1, e6], fun kE hkE => ?_, ?_⟩
   · simp only [keOf] at hkE
     split at hkE; cases hkE; rename_i hk0
     simp only [Option.some.injEq] at hkE
@@ -133,62 +99,54 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
     · exact absurd rfl hk0
     · subst hkE; cases hk : rc.k <;> simp_all
     · subst hkE; cases hk : rc.k <;> simp_all
-  · cases hn : nrpW m rnw with
-    | none => rw [hn, pK_none] at h; cases h
-    | some q =>
-    obtain ⟨f, tt⟩ := q
-    rw [hn, pK_some] at h
-    obtain ⟨v, hv, hv1, hv0⟩ := nrpW_ok hR rnw f tt hn
-    refine ⟨v, hv, fun T hT j hj hj' hTj => ?_⟩
+  · refine ⟨v, hv, fun T hT j hj hj' hTj => ?_⟩
     by_cases hf : f = 0
     · exact absurd hT (hv0 hf T)
     obtain ⟨hvs, htt⟩ := hv1 hf
     rw [hvs] at hT
     simp only [NNodeView.str.injEq, and_true] at hT
     subst hT
-    rw [ite_eq_left hf] at h
     simp only [islice_length] at hj hj'
     rw [islice_get] at hTj ⊢
     have hw : wd m IFL (tyn.toNat + j) = tt := decI_inj (hTN j hj) htt hTj
-    have e5 : rdW (m.arr64 IFR) (r + 5) = wd m IFR (r.toNat + 5) := by
-      have := ix 5 (by decide); simpa using this
-    rw [e5] at h
-    obtain ⟨o, ho1, ho2⟩ := recIdxW_twin hR hnp (by rw [c3.1]; exact c3.2) hb hb' n 0 h j
-      (Nat.zero_le _) hj hw
+    obtain ⟨o, ho1, ho2⟩ := hidx.2 hf j hj hw
     exact ⟨o, ho1, fun x hx => by rw [← ho2 x hx, c3.1]⟩
 
-
-theorem recsGoW_twin {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
+theorem recsGoW_twin {p : Prog} (hA : IndApplyLookups p) {b : ByteArray} {m : Mem} {a : AState}
+    {st : StateD} (hR : ArenaR m a)
     (hD : StateDR m st) {rcs : List IndRecRec} {ro rn np tn cn ke tyn tyt fuel : Word}
     (hL : ListF (RecF b m) m 11 ro.toNat rcs) (hrn : rn.toNat = rcs.length)
     (hro : ro.toNat + 11 * rcs.length < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
     (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
     (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
     (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) :
-    ∀ n j, recsGoW n m ro rn np tn cn ke tyn tyt fuel j = some () →
+    ∀ n j m', recsGoW p n m ro rn np tn cn ke tyn tyt fuel j = some m' → m' = m ∧
       ∀ k (hk : k < rcs.length), j.toNat ≤ k →
         RecOK st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
           cn.toNat (keOf ke) fuel.toNat rcs[k] := by
   intro n
   induction n with
-  | zero => intro j h; simp [recsGoW] at h
+  | zero => intro j m' h; simp [recsGoW] at h
   | succ n ih =>
-    intro j h k hk hjk
+    intro j m' h
     simp only [recsGoW] at h
     split at h
-    · rename_i hle; have := UInt64.le_iff_toNat_le.mp hle; omega
+    · cases h; exact ⟨rfl, fun k hk hjk => by rename_i hle; have := UInt64.le_iff_toNat_le.mp hle; omega⟩
     rename_i hlt
     have hj1 := wsucc j rn (UInt64.not_le.mp hlt)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    rcases hr : recW n m (ro + 11 * j) np tn cn ke tyn tyt fuel with _ | u <;> simp only [hr, uK, reduceCtorEq] at h
+    rcases hr : recW p n m (ro + 11 * j) np tn cn ke tyn tyt fuel with _ | m₁ <;>
+      simp only [hr, mK, reduceCtorEq] at h
+    have hix : (ro + 11 * j).toNat = ro.toNat + 11 * j.toNat := by
+      have := widx ro 11 j 0 (by simp; omega); simpa using this
+    have hrec := hL.2.2 j.toNat (by omega)
+    rw [← hix] at hrec
+    obtain ⟨rfl, hok⟩ := recW_twin hA hR hD hrec (by rw [hix]; omega) hnp hke hb hb' hTN hr
+    obtain ⟨hm, ih2⟩ := ih (j + 1) m' h
+    refine ⟨hm, fun k hk hjk => ?_⟩
     by_cases hkj : k = j.toNat
-    · subst hkj
-      have hix : (ro + 11 * j).toNat = ro.toNat + 11 * j.toNat := by
-        have := widx ro 11 j 0 (by simp; omega); simpa using this
-      have hrec := hL.2.2 j.toNat hk
-      rw [← hix] at hrec
-      exact recW_twin hR hD hrec (by rw [hix]; omega) hnp hke hb hb' hTN hr
-    · exact ih (j + 1) h k hk (by rw [hj1]; omega)
+    · subst hkj; exact hok
+    · exact ih2 k hk (by rw [hj1]; omega)
 
 theorem nestedW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : Word}
     (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
@@ -231,66 +189,12 @@ theorem nestedW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : 
       · exact i1 hu k hk (by omega)
 
 
-theorem unsafeW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : Word}
-    (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
-    (hto : to.toNat + 11 * tys.length < 2 ^ 63) :
-    ∀ n j, unsafeW n m to tn j = some () →
-      ∀ k (hk : k < tys.length), j.toNat ≤ k → tys[k].isUnsafe = false := by
-  intro n
-  induction n with
-  | zero => intro j h; simp [unsafeW] at h
-  | succ n ih =>
-    intro j h k hk hjk
-    simp only [unsafeW] at h
-    split at h
-    · rename_i hle; have := UInt64.le_iff_toNat_le.mp hle; omega
-    rename_i hlt
-    have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
-    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    split at h; cases h; rename_i h0
-    by_cases hkj : k = j.toNat
-    · subst hkj
-      have hix : (to + 11 * j + 7).toNat = to.toNat + 11 * j.toNat + 7 := widx _ _ _ _ (by simp; omega)
-      have : rdW (m.arr64 IFR) (to + 11 * j + 7) = 0 := Classical.byContradiction h0
-      rw [wd_eq, hix] at this
-      obtain ⟨-, -, -, h7, -, -⟩ := hL.2.2 j.toNat hk
-      rw [this] at h7
-      cases hu : tys[j.toNat].isUnsafe
-      · rfl
-      · rw [hu] at h7; simp [BoolW] at h7
-    · exact ih (j + 1) (by revert h; cases hh : unsafeW n m to tn (j + 1) <;> simp) k hk (by rw [hj1]; omega)
-
-theorem npGoW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn d : Word}
-    (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
-    (hto : to.toNat + 11 * tys.length < 2 ^ 63) :
-    ∀ n j, npGoW n m to tn d j = some () →
-      ∀ k (hk : k < tys.length), j.toNat ≤ k → tys[k].numParams = d.toNat := by
-  intro n
-  induction n with
-  | zero => intro j h; simp [npGoW] at h
-  | succ n ih =>
-    intro j h k hk hjk
-    simp only [npGoW] at h
-    split at h
-    · rename_i hle; have := UInt64.le_iff_toNat_le.mp hle; omega
-    rename_i hlt
-    have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
-    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    split at h; cases h; rename_i h0
-    by_cases hkj : k = j.toNat
-    · subst hkj
-      have hix : (to + 11 * j + 10).toNat = to.toNat + 11 * j.toNat + 10 := widx _ _ _ _ (by simp; omega)
-      have : rdW (m.arr64 IFR) (to + 11 * j + 10) = d := Classical.byContradiction h0
-      rw [wd_eq, hix] at this
-      obtain ⟨-, -, -, -, -, h10⟩ := hL.2.2 j.toNat hk
-      rw [← h10.1, this]
-    · exact ih (j + 1) (by revert h; cases hh : npGoW n m to tn d (j + 1) <;> simp) k hk (by rw [hj1]; omega)
-
 /-- **`vi_nparams` is `nPd`, and every type agrees.** -/
-theorem nparamsW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn np : Word} {n : Nat}
+theorem nparamsW_twin {p : Prog} (hA : IndApplyLookups p) {b : ByteArray} {m m' : Mem}
+    {tys : List IndTypeRec} {to tn np : Word} {n : Nat}
     (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
-    (hto : to.toNat + 11 * tys.length < 2 ^ 63) (h : nparamsW n m to tn = some np) :
-    np.toNat = ((tys.map fun x => x.numParams).head?.getD 0) ∧
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63) (h : nparamsW p n m to tn = some (np, m')) :
+    m' = m ∧ np.toNat = ((tys.map fun x => x.numParams).head?.getD 0) ∧
       ((tys.map fun x => x.numParams).all fun x => x == np.toNat) = true ∧ np.toNat < 10 ^ 18 := by
   cases n with
   | zero => simp [nparamsW] at h
@@ -305,9 +209,12 @@ theorem nparamsW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn n
     simp
   rename_i h0
   have hne : tys ≠ [] := fun e => h0 (by apply UInt64.toNat_inj.mp; rw [htn, e]; rfl)
-  rcases hg : npGoW n m to tn (rdW (m.arr64 IFR) (to + 10)) 0 with _ | u <;> simp only [hg, unitK, reduceCtorEq] at h
-  cases h
-  have hall := npGoW_twin hL htn hto n 0 hg
+  rcases hg : callW p n "vi_np_go" [to, tn, rdW (m.arr64 IFR) (to + 10), 0] m with _ | ⟨r, mg⟩ <;>
+    simp only [hg, lK, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨sg, rfl, -, ⟨hmg, hall⟩⟩ := RefC.run_okW (viNpGo_specE p hA.vi_np_go n ⟨m, Locals.init []⟩ _ _ _ _)
+    (npGo_ref hL htn hto p n 0) hg
+  refine ⟨hmg, ?_⟩
   have h0' : 0 < tys.length := by cases tys with | nil => exact absurd rfl hne | cons _ _ => simp
   have hfirst := hall 0 h0' (Nat.zero_le _)
   have hix : (to + 10).toNat = to.toNat + 10 := widx2 _ _ (by simp; omega)

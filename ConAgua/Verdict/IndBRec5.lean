@@ -231,7 +231,7 @@ theorem crsE_claim (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
   obtain ⟨s4, hs4, -, h4m⟩ := triple_of_callW (classRulesOkOne_spec p hP (realCall p) (realCall_spec p) n
     ⟨s3.mem, Locals.init []⟩ visT visR g cvR (UInt64.ofNat px) (r3.tail.headD 0)) (callW_of_callE h4)
   subst hs4
-  obtain ⟨a', hrun, hC', hg, hr, hA4, hc4⟩ := cr1W_relC hq hApd henv (by omega) h4m hC3 hgH
+  obtain ⟨a', hrun, hC', hg, hr, hA4, hc4⟩ := cr1W_relC hq hApd hP.cr henv (by omega) h4m hC3 hgH
     (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
     (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
     (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext)

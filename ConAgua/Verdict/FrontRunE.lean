@@ -1,4 +1,3 @@
-import ConAgua.Verdict.FrontE
 import ConAgua.Front.FrontPreOK
 import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Final.TwinVerdict

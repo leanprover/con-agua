@@ -33,7 +33,7 @@ variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option
 
 include hq hApd in
 /-- `class_rules_ok_one` under `StageC` (`cr1W_rel`'s, `cruleW_okC`). -/
-theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
+theorem cr1W_relC (hcr : CruleProg p) {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
     (henvR : ConLeche.EnvWF envR) {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem}
     {g cvR x gen : Word} {r : List Word} {cv : IConstantVal} {G : ClassGen} {X : ClassCtor}
     (h : cr1W (realCall p) N m visT visR g cvR x gen = some (r, m'))
@@ -65,7 +65,7 @@ theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
   rw [cr1K_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨a', hrun, hC', hg, rfl, hA', hc'⟩ := cruleW_okC hq hApd henvR (by omega) h1 hC hgen
+  obtain ⟨a', hrun, hC', hg, rfl, hA', hc'⟩ := cruleW_okC hq hcr hApd henvR (by omega) h1 hC hgen
     (rec2DecCV_erecP hcv hext) (rec3CVExt_lt hC.stage hext) hA hcvP hgP hie
   have hn : (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)).toNat =
       G.nP + G.slots.length + X.nF := by
@@ -76,7 +76,7 @@ theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
 
 include hq hApd in
 /-- **`class_rules_ok` under `StageC`** (`crsW_sim`'s; twin side con-ron's `classRulesOk_spec`). -/
-theorem crsW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {env₂ : ConLeche.Env}
+theorem crsW_simC (hcr : CruleProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {env₂ : ConLeche.Env}
     (g rco rcl cgo cgl cvR c : Word) (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal)
     (cv : IConstantVal) (hns : G.nP + G.slots.length < 2 ^ 64) (hrcb : rco.toNat + rcl.toNat < 2 ^ 64)
     (hcgb : cgo.toNat + cgl.toNat < 2 ^ 64) (gP : ConLeche.ClassGen)
@@ -173,7 +173,7 @@ theorem crsW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {
       b.1 = [r3.tail.headD 0] ∧ y = decI (r3.tail.headD 0) ∧ AbsOK b.2 ∧
       ConRon.Bridge.CoreStep V env feR a3 a')
     (fun ⟨r4, m4⟩ h4 => by
-      obtain ⟨a', hrun, hC', hg, hr, hA4, hc4⟩ := cr1W_relC hq hApd henv (by omega) h4 hC3 hgH
+      obtain ⟨a', hrun, hC', hg, hr, hA4, hc4⟩ := cr1W_relC hq hApd hcr henv (by omega) h4 hC3 hgH
         (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
         (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
         (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext)
@@ -242,7 +242,7 @@ theorem classRulesOk_refinesC (hp : CrsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s�
       AbsOK s'.mem; ⊤⦄ :=
   triple_post (classRulesOk_spec p hp (realCall p) (realCall_spec p) n s₀ visT visR g rco rcl cgo cgl
     cvR c xo xl) fun _ _ ⟨hl, hw⟩ =>
-    let h := (crsW_simC hq hApd henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl cvR c G recCls cvGs cv
+    let h := (crsW_simC hq hApd hp.cr henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl cvR c G recCls cvGs cv
       hns hrcb hcgb gP cvGsP cvRP n hn _ a₀ xo xl Xs XsP hC hG hrc hcg hcv hext hXs hA hgP hcvsP
       hcvP hXsP hie).am hw
     ⟨hl, h.1, h.2.1, h.2.2.1⟩

@@ -1,11 +1,11 @@
-import ConAgua.Front.IndApplyRefine4
+import ConAgua.Verdict.FrontViE
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # The apply step of an `inductive` line against the twin, V: the constructors in the block's order
 
 `vi_order_in`/`vi_order_go`/`vi_order`: every constructor of every type, in the block's order,
-passes `vi_ctor` (`ctorW_twin`), its record's pointer written to the ordered slice at `oo`. The
+passes `vi_ctor` (`ctor_ref`), its record's pointer written to the ordered slice at `oo`. The
 facts are collected per position (`CtorOK`); `ordList` reads the ordered constructors back from
 the slice.
 -/
@@ -72,18 +72,6 @@ theorem IOnly.islice {B : Nat} {m m' : Mem} (h : IOnly B m m') (o l : Nat) (hb :
   simp only [List.mem_range] at hc
   rw [h.2 _ (by omega)]
 
-/-- **The twin's checks of one constructor pass**: record `k` is the last one named `nn` among the
-constructor names `CN`, and its `cidx`, `induct` and telescope agree. -/
-def CtorOK (st : StateD) (a : AState) (cts : List IndCtorRec) (CN : List NIdx) (nn : NIdx)
-    (j : Nat) (T : NIdx) (np fuel : Nat) (k : Nat) : Prop :=
-  ∃ hk : k < cts.length,
-    (CN.foldl (fun (mi : Std.HashMap NIdx Nat × Nat) x => (mi.1.insert x mi.2, mi.2 + 1)) (∅, 0)).1[nn]? =
-      some k ∧
-    (∀ ci, cts[k].cidx = some ci → ci = j) ∧
-    (∀ iw, cts[k].induct = some iw → (st.name iw).run a = .ok (T, a)) ∧
-    ∃ cty, (getDeclD st cts[k].cv.type).run a = .ok (cty, a) ∧
-      (ConRon.Arena.Frontend.indPiTeleLen fuel cty).run a = .ok (np + cts[k].numFields, a)
-
 /-- The ordered constructors read back from the slice at `oo`: record `(w - co) / 10` for each
 pointer `w`. -/
 def ordList (m : Mem) (oo co : Nat) (cts : List IndCtorRec) (l : Nat) : List IndCtorRec :=
@@ -107,17 +95,17 @@ theorem ptr_rec (cts : List IndCtorRec) (co : Word) (k : Nat) (hk : k < cts.leng
 /-! ## `vi_order_in` -/
 
 section order
-variable {b : ByteArray} {m₀ : Mem} {a : AState} {st : StateD} (hR : ArenaR m₀ a)
+variable {p : Prog} (hL : IndApplyLookups p) {b : ByteArray} {m₀ : Mem} {a : AState} {st : StateD} (hR : ArenaR m₀ a)
   (hD : StateDR m₀ st) {cts : List IndCtorRec} {fo cno co cn fuel np oo : Word}
   (hCt : ListF (CtF b m₀) m₀ 10 co.toNat cts) (hcn : cn.toNat = cts.length)
   (hCN : ∀ k, k < cts.length → (wd m₀ IFL (cno.toNat + k)).toNat < 2 ^ 32)
   (hcnB : cno.toNat + cts.length ≤ oo.toNat) (hnp : np.toNat < 10 ^ 18)
   (hco : co.toNat + 10 * cts.length < 2 ^ 63) (hsz : oo.toNat + cts.length ≤ (m₀.arr64 IFL).size)
   (hsz63 : (m₀.arr64 IFL).size < 2 ^ 63)
-include hR hD hCt hcn hCN hcnB hnp hco hsz hsz63
+include hL hR hD hCt hcn hCN hcnB hnp hco hsz hsz63
 
 theorem orderInW_twin : ∀ (n : Nat) (m m' : Mem) (t tt jj pos pos' : Word),
-    orderInW n m fo cno co cn fuel np oo t tt jj pos = some (pos', m') → IOnly oo.toNat m₀ m →
+    orderInW p n m fo cno co cn fuel np oo t tt jj pos = some (pos', m') → IOnly oo.toNat m₀ m →
     t.toNat + 4 < 2 ^ 63 → jj.toNat ≤ (wd m₀ IFR (t.toNat + 4)).toNat →
     pos.toNat + ((wd m₀ IFR (t.toNat + 4)).toNat - jj.toNat) ≤ cts.length →
     (∀ c, jj.toNat ≤ c → c < (wd m₀ IFR (t.toNat + 4)).toNat →
@@ -152,14 +140,19 @@ theorem orderInW_twin : ∀ (n : Nat) (m m' : Mem) (t tt jj pos pos' : Word),
     have hnn : rdW (m.arr64 IFL) (fo + pos) = wd m₀ IFL (fo.toNat + pos.toNat) := by
       rw [wd_eq, hfp, hI.2 _ hf1]
     rw [hnn] at h
-    rcases hc : ctorW n m (wd m₀ IFL (fo.toNat + pos.toNat)) jj tt np fuel cno cn co with _ | c
+    rcases hc : callW p n "vi_ctor" [wd m₀ IFL (fo.toNat + pos.toNat), jj, tt, np, fuel, cno, cn, co] m
+      with _ | ⟨r, mc⟩
     · rw [hc, orderInW.k_vi_ctor.none] at h; cases h
     rw [hc, orderInW.k_vi_ctor.arm1] at h
     -- the constructor, against the twin
     have hCN' : ∀ k, k < cts.length → (wd m IFL (cno.toNat + k)).toNat < 2 ^ 32 := fun k hk => by
       rw [hI.2 _ (by omega)]; exact hCN k hk
-    obtain ⟨k, hk, hck, hfold, hcidx, hind, htele⟩ := ctorW_twin (hI.arena hR) (hI.stateDR hD)
-      (hI.listF hCt) hcn hCN' (by omega) hf2 hnp hco hc
+    obtain ⟨sc, rfl, -, ⟨hmc, k, hck, hk, hfold, hcidx, hind, htele⟩⟩ :=
+      RefC.run_okW (viCtor_specE p hL n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _)
+        (ctor_ref (hI.arena hR) (hI.stateDR hD) (hI.listF hCt) hcn hCN' (by omega) hf2 hnp hco p n) hc
+    dsimp only at hmc hck
+    rw [hmc] at h
+    generalize r.headD 0 = c at h hck
     rw [hI.islice _ _ hcnB] at hfold
     -- the rest of the loop
     have hj1 := wsucc jj _ (UInt64.not_le.mp hlt)
@@ -210,7 +203,7 @@ theorem psum_mono (m : Mem) (to : Word) (i j : Nat) (h : i ≤ j) : psum m to i 
     · have := ih (by omega); omega
 
 section orderGo
-variable {b : ByteArray} {m₀ : Mem} {a : AState} {st : StateD} (hR : ArenaR m₀ a)
+variable {p : Prog} (hL : IndApplyLookups p) {b : ByteArray} {m₀ : Mem} {a : AState} {st : StateD} (hR : ArenaR m₀ a)
   (hD : StateDR m₀ st) {cts : List IndCtorRec} {to tn tyn fo cno co cn fuel np oo : Word}
   (hCt : ListF (CtF b m₀) m₀ 10 co.toNat cts) (hcn : cn.toNat = cts.length)
   (hCN : ∀ k, k < cts.length → (wd m₀ IFL (cno.toNat + k)).toNat < 2 ^ 32)
@@ -220,10 +213,10 @@ variable {b : ByteArray} {m₀ : Mem} {a : AState} {st : StateD} (hR : ArenaR m�
   (hto : to.toNat + 11 * tn.toNat < 2 ^ 63) (htyn : tyn.toNat + tn.toNat ≤ oo.toNat)
   (hfo : ∀ p, p < psum m₀ to tn.toNat → fo.toNat + p < oo.toNat ∧ (wd m₀ IFL (fo.toNat + p)).toNat < 2 ^ 32)
   (hps : psum m₀ to tn.toNat ≤ cts.length)
-include hR hD hCt hcn hCN hcnB hnp hco hsz hsz63 hto htyn hfo hps
+include hL hR hD hCt hcn hCN hcnB hnp hco hsz hsz63 hto htyn hfo hps
 
 theorem orderGoW_twin : ∀ (n : Nat) (m m' : Mem) (ti pos : Word),
-    orderGoW n m to tn tyn fo cno co cn fuel np oo ti pos = some m' → IOnly oo.toNat m₀ m → ti ≤ tn →
+    orderGoW p n m to tn tyn fo cno co cn fuel np oo ti pos = some m' → IOnly oo.toNat m₀ m → ti ≤ tn →
     pos.toNat = psum m₀ to ti.toNat →
     IOnly oo.toNat m₀ m' ∧ (∀ i, i < oo.toNat + pos.toNat → wd m' IFL i = wd m IFL i) ∧
     ∀ k, ti.toNat ≤ k → k < tn.toNat → ∀ c, c < cntF m₀ to k →
@@ -250,17 +243,17 @@ theorem orderGoW_twin : ∀ (n : Nat) (m m' : Mem) (ti pos : Word),
     rw [htt] at h
     have hmono := psum_mono m₀ to (ti.toNat + 1) tn.toNat (by omega)
     rw [psum_succ] at hmono
-    rcases hin : orderInW n m fo cno co cn fuel np oo (to + 11 * ti) (wd m₀ IFL (tyn.toNat + ti.toNat)) 0 pos with _ | ⟨q, m₁⟩ <;> rw [hin] at h
+    rcases hin : orderInW p n m fo cno co cn fuel np oo (to + 11 * ti) (wd m₀ IFL (tyn.toNat + ti.toNat)) 0 pos with _ | ⟨q, m₁⟩ <;> rw [hin] at h
     · rw [orderGoW.k_vi_order_in.none] at h; cases h
     rw [orderGoW.k_vi_order_in.arm1] at h
-    rcases hgo : orderGoW n m₁ to tn tyn fo cno co cn fuel np oo (ti + 1) q with _ | m₂ <;> rw [hgo] at h
+    rcases hgo : orderGoW p n m₁ to tn tyn fo cno co cn fuel np oo (ti + 1) q with _ | m₂ <;> rw [hgo] at h
     · rw [orderGoW.k_vi_order_go.none] at h; cases h
     rw [orderGoW.k_vi_order_go.arm1] at h
     have h := hgo.trans h
     have ht : (to + 11 * ti).toNat = to.toNat + 11 * ti.toNat := by
       have := widx to 11 ti 0 (by simp; omega); simpa using this
     have hc4 : wd m₀ IFR ((to + 11 * ti).toNat + 4) = wd m₀ IFR (to.toNat + 11 * ti.toNat + 4) := by rw [ht]
-    obtain ⟨x1, x2, x3, x4⟩ := orderInW_twin hR hD hCt hcn hCN hcnB hnp hco hsz hsz63 n m m₁
+    obtain ⟨x1, x2, x3, x4⟩ := orderInW_twin hL hR hD hCt hcn hCN hcnB hnp hco hsz hsz63 n m m₁
       (to + 11 * ti) _ 0 pos q hin hI (by rw [ht]; omega) (by simp)
       (by simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero]; rw [hc4]; unfold cntF at hmono; omega)
       (fun c h1 h2 => by
