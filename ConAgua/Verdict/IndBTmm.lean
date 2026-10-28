@@ -12,8 +12,7 @@ import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 `tmmE` (`l_model … unified`): every callee (`block_shape_lps`, `param_levels`, `sl_eq`,
 `mk_target_major`) is outside the verdict closure, called through its `Option` model. `tmm_ref`
 refines the member branch of `targetMajorOf` (`tmoMemT`) for both outcomes: the aborts are the
-twin's `unwrapOr` internals (class `0`), the two rejects the twin's final `fail`. Its ok half is
-`target_major_of_const`'s refinement (`tmcW_simC`), its error half `tmcE_claim`'s member branch.
+twin's `unwrapOr` internals (class `0`), the two rejects the twin's final `fail`. It is the member branch of `target_major_of_const`'s refinement (`tmc_ref`).
 -/
 
 noncomputable section
