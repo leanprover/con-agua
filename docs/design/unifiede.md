@@ -2133,10 +2133,13 @@ is one model and one refinement by §3.2 unless it says otherwise.
   `checkPending_refinesT` in `Arena/PhaseBT`). `cp_ref` takes its claim (`CPErrT`) as `G` today and can
   then inline its unified model. Done (§3.31: `cpd_ref`; `cp_ref`'s `G` is `CpG`, `check_pending`
   still through its run).
-- [ ] `Verdict/FrontStageE` (`builtin_prelude`), `Verdict/FrontE` (`decl_kind`, `apply_decl`),
-  `Verdict/FrontRunE` (`apply_d_line`, `front_line`, `front_run`): the front's ok refinements in
-  `Front/…`; `apply_decl` and up are `RefC`s over the line's record verdict (`VerdictClaimR`), as
-  `apply_ind` (§3.28).
+- [x] `Verdict/FrontE` (`decl_kind`, `apply_decl`), `Verdict/FrontRunE` (`apply_d_line`): `RefC`s over
+  the line's record verdict (`VerdictClaimR`), as `apply_ind` (§3.28). Done (§3.32: `declKind_ref`,
+  `applyDecl_ref`, `applyDLine_ref`).
+- [ ] `Verdict/FrontStageE` (`builtin_prelude`), `Verdict/FrontRunE` (`front_line`, `front_run`):
+  their ok sides are not per-function refinements but the generic driver (`Front/Driver`'s `runW`/
+  `runI` over a line model `lineKW`, `DriverRefine`, the invariant steps of `FrontRun`/`FrontPreOK`)
+  and the stage composition (`builtin_of_parts`, `preSim`); see §3.32.
 
 **B. The knot's own functions** (ok halves the knot's `CoreSpec` slots, outside §3.1's
 inventory; `G` the knot's error half at the callees' fuel and `RefE.coreSpec`/`RefE.coreSpecE` for
@@ -2238,3 +2241,65 @@ dfe405f0, load 6–9, `_tmp/retire-a2/times.txt`):
 No module is more than 10 % slower. No generator or kit change was needed; the kit still has no
 `RefC.triple` (`installFoldGo_refines`, `installDeclStep_refines` and phase B's
 `checkPendingGo_refinesT` write the step out).
+
+### 3.32 Retirement, group A: a declaration line (`decl_kind`, `apply_decl`, `apply_dline`)
+
+Three of the front's items (§3.30), each one `unified` model and one `RefC` refinement whose error
+half is the line's record verdict (`VerdictClaimR`), as `apply_ind`'s (§3.28); all three in
+`Front/ApplyDLineRef`.
+
+| function | before: hand ok model + spec, ok refinement(s), error claim(s) | after | change |
+|---|---|---|---:|
+| `decl_kind` | `declKindW` 9, `declKind_spec` 11, `declKindW_some` 21; `declKindE_claim` 40, `declKind_refinesE` 11 = 92 | `declKind_ref` 55 + `DeclKindG` 4 + `DeclKindOk`/`.k5` 8 = 67 | −27 % |
+| `apply_decl` | `applyDeclW`/`declK0`/`applyDeclW_cv` 27, `applyDecl_spec` 15, `applyDeclW_refines` 88, `applyDeclW_refinesAM` 8, `applyDeclW_grow` 54, `applyDeclW_mode` 31; `ApplyDeclNV` 3, `applyDeclE_claim` 45, `applyDecl_refinesE` 9 = 280 | `applyDecl_ref` 57 + `ApplyDeclG`/`ApplyDeclPost` 8 + `declCvW_refines` 81 + `declCvW_grow` 48 + `declCvW_mode` 29 + `declCvW_of_cv` 11 = 234 | −16 % |
+| `apply_dline` | `applyDLineW` 9, `applyDLine_spec` 15, the line branches of `applyAnyW_refines`/`applyAnyW_grow` 95; `applyDLineE_claim` 69, `frontAll_nvD` 5 = 193 | `applyDLine_ref` 52 + `ApplyDLineG`/`ApplyDLinePost`/`DLineLookups` 12 + `applyDLine_runF` 14 + `applyAnyW_refines`/`_grow` 42 = 120 | −38 % |
+| **pairs** | **565** | **421** | **−25 %** |
+
+The rate is lower than the batches' because the record's ok facts (`declCvW_refines`, `_grow`,
+`_mode`: the twin's `processLineCoreD`, `DGrow`, the mode) were never duplicated by the error claim;
+they stay as lemmas about `declCvW`, the record the callees' runs write, which the refinement
+assembles from `decl_cv`'s, `expr_get`'s and `decl_push`'s runs. Whole diff against master dfe405f0:
++422 −518 in 12 files (before this report).
+
+Choices:
+
+* **`G`**: `DeclKindG` (the record's `DeclR`, the scanner's `safety` converse `DeclSafeR`, the twin's
+  `parseCVD`) for `decl_kind`, whose ok half needs nothing; `ApplyDeclG` (`nv`, `safe`) for
+  `apply_decl` (the `parseCVD` premise comes from `decl_cv`'s run); `ApplyDLineG` (`ApplyIndG`, the
+  `safety` converse for the line's record) for `apply_dline`. `front_line`'s claim builds it from
+  `SafeLink`; `ApplyDeclNV`, `frontAll_nvD` and the declaration callees of `frontNV` are gone.
+* **Callees**: `decl_cv`, `expr_get`, `decl_push`, `rec_decl_line` lifted (`callW_spec`, their ok
+  halves `triple_of_callW` on the old triples); `decl_kind`, `apply_decl`, `apply_ind` by their
+  unified models.
+* **Callers**: `front_line`'s hand model reads `apply_dline` through its run (`runF`, as it read
+  `apply_ind`), and `applyAnyW_refines`/`applyAnyW_grow` read `applyDLine_runF`; `IndLineLookups`
+  is extended to `DLineLookups` (the line's lookups), and the declaration lookups that only the old
+  `applyDLine_spec` needed left `frontLine_spec`, `frontLineK_spec`, `frontLine_refines`,
+  `frontRun_refines`. `front_line`'s error claim reads `applyDLine_ref` by `RefC.run_err`.
+* **Recipes**: `simp []` for `applyDeclE`, `applyDLineE` (the default `finish` fails on
+  `applyDeclE`), the default for `declKindE`.
+
+Skipped: **`front_line`, `front_run`, `builtin_prelude`.** Their ok halves are not refinements of
+the function but of the driver: `front_line`'s hand model `frontLineW` is the validator's
+`lineFwdN` with the record passes (its refinement goes through `lineFwd_link`, not the code's arms);
+`front_run`'s ok side is `Driver`'s generic loop model `runW`/`runI` over a line model, with the
+invariant steps (`inv_step`, `lineKW_step(_ok)`) and `DriverRefine`'s induction; `builtin_prelude`'s
+is the stage composition `builtin_of_parts` over memory predicates, its error claim `front_run`'s
+through `preSim`. One refinement each needs the driver restated over the unified models (the loop's
+induction once for both outcomes, the line model read through a run with results, a fuel-free
+`runF` with results), a restructuring of its own; their `errors` models and claims stay until then.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+dfe405f0, load 10–20, `_tmp/retire-a3/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Front/ApplyDLineRef` (new) | – | 9.69 | the three unified models and refinements |
+| `Verdict/FrontE` | 3.89 | 0.54 | … from here |
+| `Verdict/FrontRunE` | 15.55 | 8.84 | … and here |
+| `Front/ApplyDecl` | 4.42 | 2.93 | `declKind_spec`, `applyDecl_spec` gone |
+| `Front/FrontRun` | 27.40 | 29.58 | +8 %, noisy (no proof in it changed beyond arguments) |
+| `Front/ApplyDeclRefine`, `Line`, `FrontPreOK1`, `LineRefine`, `FrontPreOK3`, `FrontPre`, `FrontPreOK` | 17.07 | 16.48 | |
+| **sum (12 modules)** | **68.33** | **68.06** | **±0 %** |
+
+No module is more than 10 % slower. No generator or kit change was needed.
