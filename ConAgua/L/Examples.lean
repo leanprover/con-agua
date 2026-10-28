@@ -562,4 +562,18 @@ theorem nodeMk_spec (p : Prog) (hp : p.lookup "node_mk" = some nodeMk) (n : Nat)
 
 def nodeProg : Prog := [("node_mk", nodeMk)]
 
+/-! ## The checked node read
+
+`(t, i) := node R⟦h⟧` (`Notation.lean`, `desugar`) stands for the four statements below, for a
+store `R : TRec` and the control words `CTL` (here test constants). -/
+
+/-- A test store: one-word records in word array 3, node counts at `CTL[4 + t]`. -/
+abbrev TS : TRec := ⟨3, 1, 4, 0⟩
+/-- The control words. -/
+abbrev CTL : ArrId := 1
+
+example : (lblk (h, t, i) { (t, i) := node TS⟦h⟧; return TS⟨t, i⟩ }) = (lblk (h, t, i) {
+    t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
+    if TS⟨t⟩.count <= i { abort }; return TS⟨t, i⟩ }) := rfl
+
 end L.Examples
