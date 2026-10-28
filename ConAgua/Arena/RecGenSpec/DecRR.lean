@@ -3,7 +3,7 @@ import ConAgua.Arena.IndIface
 /-!
 # DecRR
 
-`decRR`, `crrXs`, `crrK5`.
+`decRR`, `crrXs`.
 -/
 
 noncomputable section
@@ -39,10 +39,6 @@ def crrXs (m : Mem) (g c : Word) : Word × Word :=
     (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c)),
      rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c) + 1))
   else (0, 0)
-
-def crrK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => some ([r5.headD 0, r5.tail.headD 0], m5)
 
 end L.Ind
 
