@@ -7,7 +7,6 @@ meta import ConAgua.L.Examples
 meta import ConAgua.Scan.Lit
 meta import ConAgua.Scan.Utf8
 public import ConAgua.Compiler.Run
-public import ConAgua.Compiler.WF
 public import ConAgua.L.Notation
 public import ConAgua.Layout
 /-!

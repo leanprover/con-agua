@@ -1,5 +1,4 @@
 import ConAgua.Checker.ProgTab
-import ConAgua.Compiler.AbiSim
 import ConAgua.Final.Abi
 
 /-!
