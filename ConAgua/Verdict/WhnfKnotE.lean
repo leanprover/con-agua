@@ -63,19 +63,7 @@ include hq hnv hE in
 family part). -/
 theorem whnfSlotsE_of (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     WhnfCoreSlotE p (n + 1) ∧ WhnfSlotE p (n + 1) :=
-  whnfSlotsE_step hq hnv
-    (fun N hk hkE F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he =>
-      RefE.coreSpecE (coreAppE_spec p hq.core.capp hq.core.capp2 hq.core.app (N + 1) s₀ mode cheap vis
-        d e) hnv ⟨hkE, KnotAllProg.iotaRecAtE hq hnv hE⟩
-        (capp_ref p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) N hk F hF hn s₀ a₀ dn vis fe
-          MM eb mode cheap d e hs he))
-    (fun N hk hkE F s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hF hn hs _ hsn hpe =>
-      RefE.coreSpecE (coreStepProjE_spec p hq.core.sproj hq.core.rproj hq.core.plit (N + 1) s₀ mode
-        cheap vis d e sn i pe) hnv hkE
-        (stepProj_ref p hq.core (KnotAllProg.whnfC hq).strLitSupported (KnotAllProg.whnfC hq).strLitCtor
-          (KnotAllProg.projC hq) (erecKept_of hq.hcl) N hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d
-          e sn i pe hs ‹_› hsn hpe (supKeep_of fe)))
-    (reduceNatE_of p hq.delta hnv) n hk hkE
+  whnfSlotsE_step hq hnv (KnotAllProg.iotaRecAtE hq hnv hE) (reduceNatE_of p hq.delta hnv) n hk hkE
 
 end knot
 
