@@ -1283,14 +1283,14 @@
     36  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
     37  the trampoline. -/
 
-== ConAgua/Layout.lean#L37-L43
-    37  namespace L
-    38  
-    39  /-- **The checker's arrays.** Tiered rows are the persistent (tier 0) and scratch (tier 1) tiers
-    40  of con-ron's per-tier tables. -/
-    41  declare_arrays checkerArrays
-    42    -- byte arrays
-    43    | /-- The input buffer. -/ IN : byte := 0
+== ConAgua/Layout.lean#L42-L48
+    42  namespace L
+    43  
+    44  /-- **The checker's arrays.** Tiered rows are the persistent (tier 0) and scratch (tier 1) tiers
+    45  of con-ron's per-tier tables. -/
+    46  declare_arrays checkerArrays
+    47    -- byte arrays
+    48    | /-- The input buffer. -/ IN : byte := 0
 
 == ConAgua/Checker/ArrCheck.lean#L25-L34
     25  

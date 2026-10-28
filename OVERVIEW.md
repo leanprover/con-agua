@@ -690,7 +690,7 @@ then one per word-array descriptor position: the compiler's current layout has
 address space (`ca_region_size` in `checker.s`).
 
 **The arrays.** Every array of the checker is declared once, in one table
-([`checkerArrays`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Layout.lean#L37-L43)): its
+([`checkerArrays`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Layout.lean#L42-L48)): its
 name, its kind (byte or word: two separate number spaces), whether it is tiered,
 its number and, for some word arrays, a minimum length (§8.1). The number is a name: the table is the list of arrays, not the
 layout. `Checker/ArrCheck.lean` checks it against the program and the compiler
