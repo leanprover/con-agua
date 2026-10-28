@@ -4,7 +4,6 @@ import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Verdict.PosE1M
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `nest_pos_fvar`, `nest_cont_checks`: one refinement for both outcomes

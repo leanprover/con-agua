@@ -5,7 +5,7 @@ import ConAgua.Front.FrontRun
 /-!
 # `checkerProg` agrees with `frontAllProg` on what `front_run` reaches (lane `pipeline`)
 
-The 267 functions reachable from `front_run` in `checkerProg` (`frontFns`): each is bound in
+The 268 functions reachable from `front_run` in `checkerProg` (`frontFns`): each is bound in
 `checkerProg` as in `L.Front.frontAllProg`, one lookup each, by position (`front_agree`, below). `frontAllProg` binds three more functions that `checkerProg` does not
 (`validate`, `str_put`, `apply_ind_line`: nothing reachable from `check` calls them), so the
 lookup bundles of `frontRun_refines` do not hold at `checkerProg`; `FrontProg.lean` transfers the
@@ -95,9 +95,9 @@ elab "front_agree" : tactic => do
       frontLk pc pf g
       setGoals gs.tail
 
-/-- The functions reachable from `front_run` in `checkerProg` (267). -/
+/-- The functions reachable from `front_run` in `checkerProg` (268). -/
 def frontFns : List FnName :=
-  ["front_run", "front_init", "front_line", "intern_nanon", "name_put", "intern_zero", "level_put", "scan_line", "skip_ws", "apply_any", "nanon_find", "nanon_push",
+  ["front_run", "front_init", "front_line", "fast_line", "intern_nanon", "name_put", "intern_zero", "level_put", "scan_line", "skip_ws", "apply_any", "nanon_find", "nanon_push",
    "nsp_find", "nsp_put", "zero_find", "zero_push", "lsp_find", "lsp_put", "scan_line_loop", "rec_line_loop", "apply_rec", "rec_expr_loop", "apply_expr", "apply_dline",
    "next_member", "slot_nat", "scan_nat_list", "scan_str_name", "scan_num_name", "scan_app", "scan_binder", "scan_let", "scan_const", "scan_proj", "scan_quoted_nat", "scan_string",
    "scan_axiom", "scan_def", "scan_thm", "scan_opaque", "scan_quot", "scan_ind_decl", "skip_braced", "read_nat", "rec_nat_list", "rec_str_name", "rec_num_name", "apply_str",
