@@ -2145,7 +2145,7 @@ is one model and one refinement by §3.2 unless it says otherwise.
 inventory; `G` the knot's error half at the callees' fuel and `RefE.coreSpec`/`RefE.coreSpecE` for
 the slots, as `m2c_*` in §3.7):
 
-- [ ] the `whnf` leaves: `Verdict/WhnfModels7E` (15: `bts`, `tupa`, `dq`, `ln`, `ec`/`ecb`/`ect`,
+- [x] the `whnf` leaves: `Verdict/WhnfModels7E` (15: `bts`, `tupa`, `dq`, `ln`, `ec`/`ecb`/`ect`,
   `sec`/`secw`/`secwtb`/`secg`/`sect`, `suc`/`suh`/`sut`), `WhnfModels3E` (8: the iota recursor's
   `irAt`/`irC`/`irMajor`/`irFire`/`irFam`, `pm`, `lmtc`, `pirr`), `WhnfModels6E` (`mtc`); their claims
   in `WhnfMidE`, `WhnfUnitE`, `WhnfIotaE`, `WhnfIotaRecE`, `WhnfPrepE`, `WhnfIdxE`, `WhnfPirrE`,
@@ -2169,7 +2169,7 @@ the slots, as `m2c_*` in §3.7):
 - [ ] `Verdict/IndBNfs`: `cnsEK1–3`, `cnfsE` (`classes_nfs`, nested loops; its claim `ClassesNfsE` is
   a field of `GrpG`/`TailG`): waits for nested-loop `unified` models in the generator (§3.3), or a
   hand unified model over `tmn_ref`;
-- [ ] `Verdict/WhnfUnitE` (`suhH`), `Verdict/WhnfStuckE` (`piHE`): with B's leaves.
+- [x] `Verdict/WhnfUnitE` (`suhH`), `Verdict/WhnfStuckE` (`piHE`): with B's leaves.
 
 **D. Then the machinery itself**:
 
@@ -2530,3 +2530,36 @@ other user and is gone, with the ok models `lmW`, `pmW`, `pmTail` and the twin's
 Elaboration (user seconds, median of 3 interleaved runs, base master 3b31cdfe):
 `Arena/WhnfIotaRefine3` 7.07 → 5.86, `WhnfIotaRefine4` 6.05 → 5.29, `Verdict/WhnfModels3E`
 9.17 → 8.79, `WhnfPrepE` 1.05 → 0.45, `WhnfIotaE` 1.33 → 1.33; sum 24.67 → 21.72 (−12 %).
+
+### 3.37 Retirement, group B, the `whnf` leaves, fourth landing (the ι recursor: `iota_rec_at`, `_c`, `_major`, `_fire`, `_fam`)
+
+The last five of §3.30 B's first bullet; with §3.32, §3.34, §3.36 the bullet and C's `suhH`/`piHE`
+are done (26 functions, no `errors` model left in `WhnfModels3E/6E/7E`). `fam_ref`, `fire_ref`,
+`major_ref` (`Arena/WhnfIotaRecRefine2`), `c_ref`, `at_ref` (`WhnfIotaRecRefine3`); the
+`@[refines]`-shaped `iotaRec*_refines'` and `IotaRecAtOK` are `RefE.coreSpec` one-liners, the claims
+`iotaRecFam_refinesE`, `IotaRecFireE`, `IotaRecAtE` `RefE.coreSpecE` one-liners. Gone:
+`iotaRecC_refinesE`, `iotaRecMajorE_of`, `IotaRecMajorE` (no reader left), the ok models `irFamW`,
+`irFireW`, `irMajorW`, `irCW`, `irAtW` with their specs, `cT_run_major`/`at_run_c` (now the run
+equations `cT_eq_major`/`at_eq_c` the tail calls need).
+
+* **`G`**: the callees outside this list keep their claims, as `G` fields: `FamG` (the knot,
+  `iota_rec_vck`'s claim `IotaRecVckE`, now a named statement), `FireG` (the knot,
+  `iota_rec_fire2`'s `IotaRecFire2E`), `MajorG` (the knot, the verdict closure, `PrepareMajorE`,
+  `IotaRecFireE`; the two moved from `WhnfIotaE`) for `major`, `c` and `at`. The hand models of
+  `iota_rec_vck` and `iota_rec_fire2` (`WhnfModels4E`) are outside §3.30's list and keep their
+  claims; migrating them would turn `FamG`/`FireG` into the refinements' own `G`s.
+* **Callees through `callE`** where an arm needs the run for the record pool (`ErecKeptKnot`,
+  `ErecKeptRec`): `prepare_major`, `iota_rec_fire`, `iota_rec_vck`, `iota_rec_fire2`; the tails
+  `c` → `major` and `at` → `c` list the unified spec (`RefE.tail_eq` over `cT_eq_major`/`at_eq_c`).
+* `iota_rec_fire` puts the top back without its bound (`StackKept.restoreG'`, §3.34).
+
+Diff of the landing against master: +649 −1 007 lines in 6 files. Elaboration (user seconds,
+median of 3 interleaved runs, base master 65c97497): `Arena/WhnfIotaRecRefine2` 6.27 → 4.45,
+`WhnfIotaRecRefine3` 2.22 → 0.98, `Verdict/WhnfModels3E` 8.64 → 8.41, `WhnfIotaE` 1.36 → 0.49,
+`WhnfIotaRecE` 1.95 → 1.56, `WhnfKnotE` 0.53 → 0.52; sum 20.97 → 16.41 (−22 %).
+
+For the generator/kit (not changed by this lane, §3.32–3.37): `GrowPost.restore` (`DefEqStuckWith`)
+and `StackKept.restoreG'` (`WhnfCoreRefine`) are the restore of a dropped-bound stack top that
+`struct_unit_head`, `struct_eta_cert_with`, `major_to_ctor` and `iota_rec_fire` share; a
+`RefE.of_callE` shape (a callee read through `callE`, ok half from its `CoreSpec`, error half from a
+claim, then the rest: `pm_m2c`, `pm_lmtc`) recurs at every non-migrated knot callee.
