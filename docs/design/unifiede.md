@@ -2237,3 +2237,58 @@ dfe405f0, load 6–9, `_tmp/retire-a2/times.txt`):
 No module is more than 10 % slower. No generator or kit change was needed; the kit still has no
 `RefC.triple` (`installFoldGo_refines`, `installDeclStep_refines` and phase B's
 `checkPendingGo_refinesT` write the step out).
+
+### 3.32 Retirement, group B, the `whnf` leaves, first landing (the `defeq` helpers, `struct_unit_*`, `eta_cert*`, `prop_irrel`)
+
+Eleven functions of §3.30 B's first bullet (and C's `suhH`, `piHE`): `bool_true_shortcut`,
+`try_unfold_proj_app`, `delta_quick`, `lazy_nat`, `struct_unit_cert`/`_head`/`_tail`, `eta_cert`,
+`eta_cert_body`, `eta_cert_ty`, `prop_irrel`. Each has its unified model in
+`Verdict/WhnfModels7E` (`prop_irrel`'s is new: `piE`, `gen 20`) and one refinement `*_ref` with
+`CorePost`, placed where the ok refinement was (`Arena/DefEqMid`, `DefEqMidLazy2`, `DefEqStuck`,
+`DefEqStuckEta`, `DefEqStuckUnit`). The `@[refines]` theorems that have users stay as
+`RefE.coreSpec` one-liners; the knot's error half (`KnotAllE`'s `DefeqWhnfE`) reads each
+refinement by `RefE.coreSpecE`. Gone: the claim files `WhnfMidE`, `WhnfUnitE`, `WhnfStuckE`; the
+generated and hand ok models (`btsW`, `tupaW`, `dqW`, `lnW`, `suTailW`, `uhK1–5`, `suCertW`,
+`ectW`, `ecbW`, `ecW`, `piK1–4`) with their specs; the hand error models `suhH` and `piHE`; the
+`_at` wrappers of the pieces.
+
+| functions | before: ok side + claims | after | change |
+|---|---:|---:|---:|
+| the 11 above | ok refinements, models, specs 894 + claim files 1 055 = 1 949 | `*_ref` + one-liners + `G`s 737 | **−62 %** |
+
+Whole diff of the landing against master: +716 −1 887 lines in 12 files.
+
+Choices:
+
+* **`G`**: `KnotUpToE p n` for all but three: `delta_quick` takes `QuickDefeqWE p n` (moved to
+  `DefEqMid`, beside `QuickDefeqSpec`), `lazy_nat` `LnG p n` (the knot's slots and `ReduceNatE`;
+  `reduce_nat` stays `callE`, its ok half `LazyCallees.reduceNat`), `prop_irrel` `M2CCtxE p n`
+  (`proof_irrel` stays `callE`; `M2CCtxE` and `ProofIrrelWE` moved from `WhnfM2CRefine2` to
+  `DefEqStuck`, beside `ProofIrrelOK`).
+* **Tail calls** (`suh` → `sut`, `suc` → `suh`, `ecb` → `ect`, `ec` → `ecb`): `RefE.tail_eq` with
+  `KnotUpToE.mono`; the callees are listed by their unified specs (lookup hypotheses of the chain
+  as extra parameters of the `l_model`).
+* **`struct_unit_head`'s top store.** The unified model drops the bound of the stack top's
+  store (an `oob` of class `0`), which is why the `errors` mode needed `suhH`. The ok half then
+  needs the restore without the bound: `CoreS.restoreTop'` (`DefEqStuckShape`; out of bounds both
+  tops read `0`).
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base master
+605b56a1):
+
+| module | base | new |
+|---|---:|---:|
+| `Arena/DefEqMid` | 4.10 | 3.33 |
+| `Arena/DefEqMidLazy2` | 4.28 | 3.50 |
+| `Arena/DefEqStuck` | 2.35 | 0.69 |
+| `Arena/DefEqStuckEta` | 2.73 | 0.94 |
+| `Arena/DefEqStuckShape` | 3.56 | 3.67 |
+| `Arena/DefEqStuckUnit` | 6.31 | 0.98 |
+| `Arena/WhnfM2CRefine2` | 1.56 | 1.60 |
+| `Verdict/KnotAllE` | 3.08 | 3.10 |
+| `Verdict/WhnfModels7E` | 33.33 | 32.93 |
+| `Verdict/WhnfMidE`, `WhnfStuckE`, `WhnfUnitE` | 5.95 | — |
+| **sum** | **67.25** | **50.74** (−25 %) |
+
+No module is more than 10 % slower. For the kit (not changed here): `CoreS.restoreTop'` is a
+domain lemma; the `struct_eta_cert*` chain (next landing) will want a `GrowPost` restore.
