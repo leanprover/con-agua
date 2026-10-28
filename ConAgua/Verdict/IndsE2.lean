@@ -1,6 +1,5 @@
 import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.DeclValSpec
-import ConAgua.Arena.IndInstallSpec.IagW
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.KnotEntry
