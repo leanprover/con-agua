@@ -307,7 +307,7 @@ def frontAllProg : Prog := L.Scan.Validator.valProg ++
    ("rec_obj", recObj), ("expr_val", exprVal), ("rec_expr_loop", recExprLoop)] ++
   exprProg.filter (fun f => f.1 != "skip_digits" && f.1 != "num_end" && f.1 != "byte_in" &&
     f.1 != "hex_val" && f.1 != "hex4" && f.1 != "hex3") ++
-  [("front_line", frontLine), ("apply_rec", applyRec), ("apply_str", applyStr),
+  [("front_line", frontLine), ("fast_line", L.Scan.Fast.fastLine), ("apply_rec", applyRec), ("apply_str", applyStr),
    ("apply_any", applyAny), ("front_run", frontRun),
    ("match_dlit", matchDlit), ("str_code", strCode), ("hints_val", hintsVal),
    ("d_member", dMember), ("decl_val", declVal), ("decl_code", declCodeF),
