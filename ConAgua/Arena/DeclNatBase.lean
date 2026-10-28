@@ -1,3 +1,4 @@
+import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.GrindAttr
