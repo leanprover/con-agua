@@ -1,3 +1,4 @@
+import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.IndsE3
 import ConAgua.Verdict.IndsE2
 import ConAgua.Arena.IndT.Install2
