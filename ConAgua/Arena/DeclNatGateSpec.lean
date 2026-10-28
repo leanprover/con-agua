@@ -2,7 +2,6 @@ import ConAgua.Arena.DeclArmDefn
 import ConAgua.Arena.DeclNatEq
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # `defn_nat_gate` refines `natGateT` (lane `decls3`, helper `decls3-nat`)
