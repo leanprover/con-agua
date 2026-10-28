@@ -5463,7 +5463,7 @@ hypothesis. Decisions:
   link would need `next_member` ↔ `scanLineLoop` for the first member). `DeclR`'s `.ind` arm says
   the block scans there (`scanIndDecl b v = .ok (.ind …) e`), proved in `declLine_link`.
 * **A fuel-indexed model under a fuel-free one: `runF`** (`RunModel.lean`). The apply step's
-  models (`validateW`, `installW`, … ~40 of them) carry the interpreter's fuel; the line's model
+  models (`mapW`, `installW`, … ~40 of them) carry the interpreter's fuel; the line's model
   (`applyDLineW`, `frontLineW`, the driver's `lineKW`) does not. `applyDLineW p` takes
   `apply_ind`'s *run* in `p` as the model (`runF p "apply_ind" [nm] m`, `Classical.choose` of a
   successful run). It is well defined because the interpreter is monotone in its fuel

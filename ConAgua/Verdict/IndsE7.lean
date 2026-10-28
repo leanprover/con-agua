@@ -1,10 +1,10 @@
-import ConAgua.Verdict.IndsE6
 import ConAgua.Verdict.IndA3
+import ConAgua.Verdict.IndsE1
 /-!
 # `check_block_inds`' error refinement (lane `verdicts-b`, helper `ia2-inds`)
 
-`ibiW_simC`'s proof on the error model `cbiE`: member 0's former by `cbtE_claim`, the other
-formers by `cbtsE_claim`, the agreements by `cbag_ref`; past them only class-`0` errors
+`ibiW_simC`'s proof on the error model `cbiE`: member 0's former by `cbt_ref`, the other
+formers by `cbts_ref` (through the runs), the agreements by `cbag_ref`; past them only class-`0` errors
 (`block_shape_with_sort`, `check_block_inds_cv_tas`, `cons_block_inds`, the empty block's abort).
 `CheckBlockIndsE` from the claims of `check_constant_val`, `check_sum_tele` and the core stubs.
 -/
@@ -74,8 +74,13 @@ theorem checkBlockIndsE_claim : CheckBlockIndsE p := by
   cases h1 : callE p n "check_block_tele" [vis, UInt64.ofNat bs.nP, UInt64.ofNat q0] m with
   | error e1 =>
     rw [h1, cbiE.k_check_block_tele.none] at he; cases he
-    have hcl := cbtE_claim hnv eCcv eSum hq henv hV hApd hCrk hP.toCstProg hP.bTele ⟨m, Locals.init []⟩ a
-      (UInt64.ofNat bs.nP) _ ms0 hC hmok hA hm0 hfe n hn e h1
+    cases n with
+    | zero =>
+      obtain ⟨e0, he0, hc0⟩ := callE_zero p "check_block_tele" [vis, UInt64.ofNat bs.nP, UInt64.ofNat q0] m
+      rw [h1] at he0; cases he0; exact absurd hc0 hk0
+    | succ k =>
+    have hcl := RefE.run_err (cbtE_spec p hP.bTele (k + 1) ⟨m, Locals.init []⟩ vis (UInt64.ofNat bs.nP) _) hnv
+      ⟨eCcv, eSum⟩ (cbt_ref hq henv hV hApd hCrk hP.toCstProg k (by omega) hC hmok hA hm0 hfe) h1
     rw [hnp] at hcl
     exact ErrClaim.bind_left hcl
   | ok q1 =>
@@ -104,12 +109,11 @@ theorem checkBlockIndsE_claim : CheckBlockIndsE p := by
   cases h2 : callE p (k + 1) "check_block_teles" [vis, UInt64.ofNat bs.nP, o + 1, l - 1] s1.mem with
   | error e2 =>
     rw [h2, cbiE.k_check_block_teles.none] at he; cases he
-    have hW2 := triple_of_callE_err (cbtsE_spec p hP.bTeles (k + 1) ⟨s1.mem, Locals.init []⟩ vis
-      (UInt64.ofNat bs.nP) (o + 1) (l - 1)) h2 (Err.code_ne_of_cls hk0)
-    simp only at hW2
-    have hcl := cbtsE_claim hnv eCcv eSum hq henv hV hApd hCrk hP.toInstProg (UInt64.ofNat bs.nP) (k + 1)
-      (by omega) s1.mem a1 (o + 1) (l - 1) rest restP hC1 (hrest.grow hg1) hA1
-      (ConRon.Bridge.Inductives.dMember_ext.list c1.ext _ _ hrestP) hfe1 e hW2
+    have hcl := RefE.run_err (cbtsE_spec p hP.bTele hP.bTeles (k + 1) ⟨s1.mem, Locals.init []⟩ vis
+      (UInt64.ofNat bs.nP) (o + 1) (l - 1)) hnv ⟨eCcv, eSum⟩
+      (cbts_ref hq henv hV hApd hCrk hP.toInstProg (UInt64.ofNat bs.nP) (k + 1) (by omega) s1.mem a1 (o + 1)
+        (l - 1) rest restP hC1 (hrest.grow hg1) hA1 (ConRon.Bridge.Inductives.dMember_ext.list c1.ext _ _ hrestP)
+        hfe1) h2
     rw [hnp] at hcl
     exact ErrClaim.bind_left hcl
   | ok q2 =>

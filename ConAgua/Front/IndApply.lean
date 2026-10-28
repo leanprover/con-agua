@@ -34,7 +34,7 @@ other declarations' universe parameter lists live in; a constant's universe para
 The relation is `IndDeclAt` (`StateDR.lean`). The line's hook: `Line.lean`'s `apply_dline` calls
 `apply_ind(nm)` at `pl = 25`, `nm` being the `inductive` member's value position (`decl_val`,
 `FieldsDecl.lean`); `apply_ind_line(j)` (the line's first member) is the same entry from the line.
-The refinement: `applyIndW_twin` (`IndApplyTwin.lean`), on `validateW_twin` (`IndApplyRefine9`) and
+The refinement: `applyIndW_twin` (`IndApplyTwin.lean`), on `validate_ref` (`IndApplyRefine9`) and
 `installW_twin` (`IndInstallRefine5`); the line's model is `apply_ind`'s run (`runF`,
 `RunModel.lean`).
 

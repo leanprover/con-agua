@@ -1,9 +1,9 @@
-import ConAgua.Arena.IndT.Install5
+import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.IndInstallSpec.IacW
 import ConAgua.Arena.IndInstallSpec.PnfW
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Verdict.IndBE
+import ConAgua.Arena.IndT.Install1
 
 /-!
 # `checkAbsCtorSorts`, `checkAbsCtorSortsAll` under `StageC` (lane `indstaget`)
@@ -14,10 +14,10 @@ normal forms scoped at the holes' depth, the environment denotes), the twin side
 that spec's proof: the level-parameter test (the stub's `StageR` contract;
 `allLevelParamsDefined_run` and `coreStep_of_store` for the step), the holes' depth (L only), the
 fields opened at the holes (`openPisAtFvarsF_run`), their sorts (`installSimFsortsC`, con-ron's
-`checkStructFieldSortsI_spec` on its run for the `CoreStep`). `check_abs_ctor_sorts_one` and
-`check_abs_ctor_sorts` have one refinement each for both outcomes over their unified models
-(`iao_ref`, `iac_ref`; their errors: `check_struct_field_sorts_i`'s claim), `check_abs_ctor_sorts_all`
-the ok refinement of its hand model.
+`checkStructFieldSortsI_spec` on its run for the `CoreStep`). `check_abs_ctor_sorts_one`,
+`check_abs_ctor_sorts` and `check_abs_ctor_sorts_all` have one refinement each for both outcomes
+over their unified models (`iao_ref`, `iac_ref`, `iaa_ref`; their errors:
+`check_struct_field_sorts_i`'s claim).
 -/
 
 
@@ -292,9 +292,10 @@ theorem checkAbsCtorSorts_refinesC (hP : AbsProg p) (n : Nat) (hn : n ≤ 2 ^ 62
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.abs⟩
 
 include hq henv hOpf hLC hLT hApd in
-/-- **`check_abs_ctor_sorts_all` under `StageC`** (twin side: con-ron's
-`checkAbsCtorSortsAll_specF`'s proof). -/
-theorem iaaW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb : (isP != 0) = b)
+/-- **`check_abs_ctor_sorts_all` refines `checkAbsCtorSortsAll`, both outcomes** under `StageC`
+(twin side: con-ron's `checkAbsCtorSortsAll_specF`'s proof; induction on the fuel): every member
+by `iac_ref`. -/
+theorem iaa_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb : (isP != 0) = b)
     (hhi : c.hiAt 0 < 2 ^ 64) {ctxP : ConLeche.NestCtx} (n : Nat) (hn : n ≤ 2 ^ 62) :
     ∀ (m : Mem) (a : AState) (so sl oo ol : Word) (css : List (List (IConstantVal × Nat)))
       (oss : List (List (List NestFieldKind × EIdx))) (cssP : List (List (ConLeche.ConstantVal × Nat)))
@@ -306,22 +307,21 @@ theorem iaaW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb
     ConRon.Bridge.Inductives.dOutss a.store oss = some ossP →
     (∀ os ∈ ossP, ∀ o ∈ os, ConLeche.Expr.WScoped (ctxP.hiAt 0) o.2) →
     ConRon.Bridge.denoteFEnv a.store fe = some env →
-    Sim (iaaW p n m vis ctx isP so sl oo ol) (ConRon.Arena.checkAbsCtorSortsAll V fe c b css oss) a
-      (fun _ _ m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ AbsOK m') := by
+    RefE (CheckStructFieldSortsIE p) (iaaE p n m vis ctx isP so sl oo ol)
+      (ConRon.Arena.checkAbsCtorSortsAll V fe c b css oss) a (fun v _ a' => IacPost dn vis fe env m v.2 a a') := by
   induction n with
-  | zero => intros; rw [iaaW_zero]; exact Sim.of_none
+  | zero => intros; rw [iaaE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
   intro m a so sl oo ol css oss cssP ossP hC hA hc hcss hoss hctxP hcssP hossP hws hfe
-  have hS := hC.stage
   by_cases hsl : sl = 0
-  · rw [iaaW_nil1 p n m vis ctx isP so sl oo ol hsl, hcss.nil hsl]
-    exact Sim.ret ⟨hC, IWGrow.refl m, hA⟩
+  · rw [iaaE.arm1 p n m vis ctx isP so sl oo ol hsl, hcss.nil hsl]
+    exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA, ConRon.Bridge.CoreStep.refl hC.check⟩
   by_cases hol : ol = 0
-  · rw [iaaW_nil2 p n m vis ctx isP so sl oo ol hsl hol, hoss.nil hol]
+  · rw [iaaE.arm2 p n m vis ctx isP so sl oo ol hsl hol, hoss.nil hol]
     have : ConRon.Arena.checkAbsCtorSortsAll V fe c b css [] = pure () := by
       cases css <;> simp [ConRon.Arena.checkAbsCtorSortsAll]
     rw [this]
-    exact Sim.ret ⟨hC, IWGrow.refl m, hA⟩
+    exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA, ConRon.Bridge.CoreStep.refl hC.check⟩
   obtain ⟨qc, cs, css', rfl, hwc, hqcb, hdc, hcss'⟩ := partsPSl_cons (hcss.pslr hsl) hsl
   obtain ⟨qo, os, oss', rfl, hwo, hqob, hdo, hoss'⟩ := partsPSl_cons (hoss.pslr hol) hol
   obtain ⟨csP, cssP', rfl, hcP, hcssP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcssP
@@ -340,30 +340,29 @@ theorem iaaW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb
   obtain ⟨w3, -, -⟩ := partsIwRd hoo (w := UInt64.ofNat qo) hqo'
   obtain ⟨w4, -, -⟩ := partsIwRd hol2 (w := UInt64.ofNat qo + 1) (by rw [UInt64.toNat_add, hqo']; simp; omega)
   rw [UInt64.ofNat_toNat] at w1 w2 w3 w4
-  rw [iaaW_cons p n m vis ctx isP so sl oo ol hsl hol, hwc, hwo, w1, w2, w3, w4]
+  rw [iaaE.arm3 p n m vis ctx isP so sl oo ol hsl hol, hwc, hwo, w1, w2, w3, w4]
   simp only [ConRon.Arena.checkAbsCtorSortsAll]
-  refine Sim.bindK (K := iaaK1 p n vis ctx isP so sl oo ol) (body := fun _ m1 => iaaK2
-      (iaaW p n m1 vis ctx isP (so + 1) (sl - 1) (oo + 1) (ol - 1))) (by simp [iaaK1])
-      (fun r m₁ => iaaK1_some p n m₁ vis ctx isP so sl oo ol r)
-    (Q := fun _ _ m' a' => IacPost dn vis fe env m m' a a')
-    (fun r m' e => by
-      obtain ⟨s', rfl, -, hR⟩ := RefE.run_okW (iacE_spec p hP.one hP.abs n ⟨m, Locals.init []⟩ vis ctx isP co cl oo2 ol2)
-        (iac_ref hq henv hOpf hLC hLT hApd hP ctx isP c b hb hhi n (by omega) m a co cl oo2 ol2 cs os csP osP hC hA
-          hc ⟨hcd, hcb⟩ ⟨hod, hob⟩ hctxP hcP hoP (hws osP List.mem_cons_self) hfe) e
-      exact hR) ?_
-  rintro _ _ m1 a1 ⟨hC1, hg1, hA1, c1⟩
-  refine Sim.post (K := iaaK2) rfl (fun _ _ => rfl)
-    (ih (by omega) m1 a1 (so + 1) (sl - 1) (oo + 1) (ol - 1) css' oss' cssP' ossP' hC1 hA1
-      (hc.grow (decCtx_mono _) hg1)
-      (PSlR0.grow decCNS_mono (⟨hcss'.1, Or.inr hcss'.2⟩ : PSlR0 decCNS css' (so + 1) (sl - 1) m) hg1)
-      (PSlR0.grow (fun q => OMono.decAt (fun o l => OMono.decPL decKE_mono o l) q)
-        (⟨hoss'.1, Or.inr hoss'.2⟩ : PSlR0 decKES oss' (oo + 1) (ol - 1) m) hg1)
-      (ConRon.Bridge.Inductives.dCtx_ext _ c1.ext _ _ hctxP)
-      (ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcssP')
-      (ConRon.Bridge.Inductives.dOutss_ext c1.ext _ _ hossP')
-      (fun y hy => hws y (List.mem_cons_of_mem _ hy)) (ConRon.Bridge.denoteFEnv_mono c1.ext hfe)) ?_
-  rintro _ _ _ _ ⟨hC2, hg2, hA2⟩
-  exact ⟨hC2, hg1.trans hg2, hA2⟩
+  have h1 := iac_ref hq henv hOpf hLC hLT hApd hP ctx isP c b hb hhi n (by omega) m a co cl oo2 ol2 cs os csP osP
+    hC hA hc ⟨hcd, hcb⟩ ⟨hod, hob⟩ hctxP hcP hoP (hws osP List.mem_cons_self) hfe
+  rcases h1' : iacE p n m vis ctx isP co cl oo2 ol2 with e1 | ⟨r1, m1⟩ <;> rw [h1'] at h1
+  · rw [iaaE.k_check_abs_ctor_sorts.none]; exact RefE.bind_left h1
+  obtain ⟨u1, a1, hrun1, hC1, hg1, hA1, c1⟩ := h1
+  refine RefE.bind_right hrun1 ?_
+  rw [iaaE.k_check_abs_ctor_sorts.arm1]
+  have ih' := ih (by omega) m1 a1 (so + 1) (sl - 1) (oo + 1) (ol - 1) css' oss' cssP' ossP' hC1 hA1
+    (hc.grow (decCtx_mono _) hg1)
+    (PSlR0.grow decCNS_mono (⟨hcss'.1, Or.inr hcss'.2⟩ : PSlR0 decCNS css' (so + 1) (sl - 1) m) hg1)
+    (PSlR0.grow (fun q => OMono.decAt (fun o l => OMono.decPL decKE_mono o l) q)
+      (⟨hoss'.1, Or.inr hoss'.2⟩ : PSlR0 decKES oss' (oo + 1) (ol - 1) m) hg1)
+    (ConRon.Bridge.Inductives.dCtx_ext _ c1.ext _ _ hctxP)
+    (ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcssP')
+    (ConRon.Bridge.Inductives.dOutss_ext c1.ext _ _ hossP')
+    (fun y hy => hws y (List.mem_cons_of_mem _ hy)) (ConRon.Bridge.denoteFEnv_mono c1.ext hfe)
+  rcases hx : iaaE p n m1 vis ctx isP (so + 1) (sl - 1) (oo + 1) (ol - 1) with ε | ⟨r0, m0⟩ <;> rw [hx] at ih'
+  · rw [iaaE.k_check_abs_ctor_sorts_all.none]; exact ih'
+  rw [iaaE.k_check_abs_ctor_sorts_all.arm1]
+  obtain ⟨y, a', hrun, hR⟩ := ih'
+  exact RefE.ret hrun ⟨hR.stage, hg1.trans hR.grow, hR.abs, c1.trans hR.core⟩
 
 include hq henv hOpf hLC hLT hApd in
 /-- **`check_abs_ctor_sorts_all` refines `checkAbsCtorSortsAll`** under `StageC` (the denotations
@@ -387,11 +386,13 @@ theorem checkAbsCtorSortsAll_refinesC (hP : AbsProg p) (n : Nat) (hn : n ≤ 2 ^
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_abs_ctor_sorts_all" [vis, ctx, isP, so, sl, oo, ol]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkAbsCtorSortsAll V fe c b css oss) a₀ ∧
       StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.checkAbsCtorSortsAll V fe c b css oss) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
-  triple_post (iaa_spec p hP.all n s₀ vis ctx isP so sl oo ol) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (iaaW_simC hq henv hOpf hLC hLT hApd hP ctx isP c b hb hhi n hn _ a₀ so sl oo ol css oss cssP ossP
-      hC hA hc hcss hoss hctxP hcssP hossP hws hfe) hm
-    ⟨hl, hok, hQ⟩
+      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (RefE.triple (iaaE_spec p hP.one hP.abs hP.all n s₀ vis ctx isP so sl oo ol)
+    (iaa_ref hq henv hOpf hLC hLT hApd hP ctx isP c b hb hhi n hn _ a₀ so sl oo ol css oss cssP ossP hC hA hc hcss
+      hoss hctxP hcssP hossP hws hfe)) ?_
+  rintro r s' ⟨hl, u, a', hrun, hR⟩
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.abs⟩
 
 end sims
 

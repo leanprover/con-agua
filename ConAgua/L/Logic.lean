@@ -183,4 +183,29 @@ theorem step_while {p : Prog} {k : Stmt → M Sig} {w : Stmt} {c : Cond} {s : St
       else return .normal) := by
   subst h; rfl
 
+/-- A callee post's length conjunct `r = [r.headD 0, r.getD 1 0, …]` (or `r.tail.headD 0`, …) as
+facts `simp_all` can use: as it stands, a rule `r → […]` whose right side holds `r` (it loops).
+Rewritten before its parts (`↓`) at each cons, it ends as `r ≠ [] ∧ r.tail = […]` (no `r` on the
+right) or `r ≠ [] ∧ r.tail ≠ [] ∧ r.tail.tail = []`. -/
+theorem List.eq_headD_cons {α : Type} {l t : List α} {d : α} :
+    (l = l.headD d :: t) ↔ (l ≠ [] ∧ l.tail = t) := by
+  cases l <;> simp
+
+/-- The statement after the first `k` of a right-nested `seq` chain. -/
+def seqDrop : Nat → Stmt → Stmt
+  | k + 1, .seq _ t => seqDrop k t
+  | _, s => s
+
+/-- The first `k` statements of a `seq` chain, followed by `r`. -/
+def seqTake : Nat → Stmt → Stmt → Stmt
+  | k + 1, .seq a t, r => .seq a (seqTake k t r)
+  | _, _, r => r
+
+theorem seqTake_drop : ∀ (k : Nat) (s : Stmt), seqTake k s (seqDrop k s) = s
+  | 0, s => by cases s <;> rfl
+  | k + 1, s => by
+    cases s with
+    | seq a t => simp only [seqTake, seqDrop, seqTake_drop k t]
+    | _ => rfl
+
 end L

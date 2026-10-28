@@ -145,6 +145,17 @@ def liftE {α : Type} : Option α → Except Err α
 @[simp, grind =, lang_grind =] theorem liftE_some {α : Type} (a : α) : liftE (some a) = .ok a := rfl
 @[simp, grind =, lang_grind =] theorem liftE_none {α : Type} : liftE (none : Option α) = .error .oob := rfl
 
+/-- A callee model's pair of results and memory, `some ((a, b), m)`, as the tuple the generator
+reads (`some (a, b, m)`): `l_model` wraps such a callee's model in it. -/
+def flat3 {α β γ : Type} : Option ((α × β) × γ) → Option (α × β × γ)
+  | none => none
+  | some ((x, y), z) => some (x, y, z)
+
+@[simp, grind =, lang_grind =] theorem flat3_none {α β γ : Type} :
+    flat3 (none : Option ((α × β) × γ)) = none := rfl
+@[simp, grind =, lang_grind =] theorem flat3_some {α β γ : Type} (x : α) (y : β) (z : γ) :
+    flat3 (some ((x, y), z)) = some (x, y, z) := rfl
+
 theorem invoke_run_loc' (p : Prog) (k : Stmt → M Sig) (f : FnName) (vs : List Word) (s : St) :
     (invoke p k f vs).run s =
       ((invoke p k f vs).run ⟨s.mem, Locals.init []⟩).map

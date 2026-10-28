@@ -1,5 +1,5 @@
 import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.DeclValSpec
+import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

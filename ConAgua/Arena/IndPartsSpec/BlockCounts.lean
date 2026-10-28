@@ -44,11 +44,6 @@ theorem piBinders_spec (n : Nat) : ∀ (s₀ : St) (fuel h : Word),
         eViewSpec4 p hv n, slConsSpec2 p ha hc hs n, ih] <;>
       finish (gen := 20) [List.getD_cons_zero, List.getD_cons_succ, Sig.retVal]
 
-theorem piBinders_spec' (n : Nat) (s₀ : St) (fuel h : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_binders" [fuel, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ piBW n s₀.mem fuel h = some (r, s'.mem); ⊤⦄ :=
-  triple_post (piBinders_spec p ha hc hv hs hp n s₀ fuel h) (fun _r _s' ⟨h1, h2, _⟩ => ⟨h1, h2⟩)
-
 end spec
 
 /-- **`pi_binders` is `piBinders`**: under `ArenaR`, a returning run is a successful twin run
@@ -67,8 +62,8 @@ theorem piBinders_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
         (r.getD 2 0).toNat < 2 ^ 32 ∧ decE (r.getD 2 0) = e) ∧
       IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem ∧
       (r.headD 0).toNat + (r.getD 1 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
-  refine triple_post (piBinders_spec' p ha hc hv hs hp n s₀ fuel h) ?_
-  intro r s' ⟨hl, hm⟩
+  refine triple_post (piBinders_spec p ha hc hv hs hp n s₀ fuel h) ?_
+  intro r s' ⟨hl, hm, _⟩
   obtain ⟨bs, e, hrun, hsh, hdec, hb1, hb2, hg, hf, hle⟩ :=
     piBW_ok n s₀.mem s'.mem a₀ fuel h r hR hm hh hsz hcl
   exact ⟨hl, hsh, ⟨bs, e, hrun, hdec, hb1, hb2⟩, hg, hf, hle⟩

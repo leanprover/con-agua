@@ -54,18 +54,6 @@ l_model checkDeclDefn_specE (p : Prog) (hf : p.lookup "check_decl_defn" = some c
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 400000 simp [] unified
 
-/-- **`defn_div_gate`'s error claim under `StageC`** (the error half of `DivGateSpecC`). -/
-def DivGateSpecE (p : Prog) (pins : List INatOpPinSet) : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name), DnInj dn → ∀ (vis w : Word) (fe2 : IFEnv)
-    (env env2 : ConLeche.Env) (n : Word) (nm : ConLeche.Name) (k : Nat), k ≤ 2 ^ 62 →
-    ∀ (m : Mem) (a : AState), n.toNat < 2 ^ 32 →
-    StageR dn w fe2 m a → StageC dn vis (fe2.restrictTo vis.toNat) env m a →
-    ConLeche.EnvWF env → StepOK env2 fe2 a → PinSetsR m pins →
-    (∃ pinsP, PinsDenote a.store pins pinsP) →
-    denoteN a.store.ns (decI n) = some nm → L.Stubs.CrOK m →
-    ∀ e, callE p k "defn_div_gate" [vis, w, n] m = .error e →
-    ErrClaim (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n)) a e
-
 /-- What the definition arm's error arms assume: `check_constant_val`'s (`VerdictCtxU`),
 `install_value_guards`' claim (`check_defn_val`), the pin gate's claim. -/
 structure CdfCtx (p : Prog) (pins : List INatOpPinSet) : Prop extends VerdictCtxU p where

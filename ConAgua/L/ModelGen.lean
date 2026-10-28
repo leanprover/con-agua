@@ -96,6 +96,13 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   locals by `simp only` before `simp_all` (cheaper for long functions with many calls and stores,
   IndBGrpM); `heartbeats`: per step theorem; `trace`: log the
   generated commands.
+* `cut k` (one function): the body after its first `k` statements, which must be the join point
+  `fW.jᵢ` after an `if` both of whose branches fall through, is a statement of its own
+  (`name.tailS := L.seqDrop k F.body`) with its own step theorem `name.tail` (`⦃s = s₁⦄ step p
+  (exec p n) name.tailS`, its post the member's over `fW.jᵢ` at the locals of `s₁`); the step
+  takes the body as `L.seqTake k F.body name.tailS` and the tail by that theorem, so the paths
+  through the first statements are not multiplied by the paths after them (`target_k53_args`'s two
+  index slices: 21.5 s → 4.9 s).
 * `pre [P]`: a precondition over the initial state `s₀` and the arguments (by their L names),
   e.g. `pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]`: every member's spec becomes
   `∀ s₀ args, P → ⦃…⦄`; a callee spec with a hypothesis (or the induction hypothesis) leaves it
@@ -465,10 +472,11 @@ meta partial def conjuncts (e : Lean.Expr) : Array Lean.Expr :=
   | (``And, #[a, b]) => conjuncts a ++ conjuncts b
   | _ => #[e]
 
-/-- `r.headD 0`, `r.tail.headD 0`, …: the index of the result word. -/
+/-- `r.headD 0`, `r.tail.headD 0`, `r.getD i 0`, …: the index of the result word. -/
 meta partial def resIdx (r e : Lean.Expr) : Option Nat :=
   match e.consumeMData.getAppFnArgs with
   | (``List.headD, #[_, l, _]) => go l 0
+  | (``List.getD, #[_, l, i, _]) => i.nat?.bind (go l ·)
   | _ => none
 where go (l : Lean.Expr) (k : Nat) : Option Nat :=
   if l == r then some k else
@@ -548,6 +556,9 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
     let mut roL : Option Lean.Expr := none
     let mut unitF : Option Lean.Expr := none
     let mut tupF : Option (Lean.Expr × Nat × Bool) := none
+    -- `some ((r.headD 0, r.tail.headD 0), s'.mem)`: a pair of results and the memory, read
+    -- through `L.flat3` as a tuple of two
+    let mut pairF : Option Lean.Expr := none
     let mut guards : Array Lean.Expr := #[]
     let mut opt := false
     -- a conjunct over the states' memories (and the arguments), not over the results: a fact the
@@ -592,6 +603,9 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
             | (``Prod.mk, #[_, _, v1, v2]) =>
               if resIdx r v1 == some 0 && v2 == memS' then eff := some a
               else if v1 == r && v2 == memS' then effL := some a
+              else if v2 == memS' && (match tupComps v1 with
+                  | [x, y] => resIdx r x == some 0 && resIdx r y == some 1
+                  | _ => false) then pairF := some a
               -- `some ([r.headD 0], s'.mem)`: a list of one result, read as the list
               else if (match v1.listLit? with
                   | some (_, [e]) => resIdx r e == some 0
@@ -617,7 +631,11 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
         if c.containsFVar r.fvarId! then throwError "l_model: unsupported post conjunct {c}"
         -- a fact about the final memory (`Keep s₀.mem s'.mem`, `Inv s'.mem`): not the model
         unless c.containsFVar s'.fvarId! do guards := guards.push c
-    let kind ← if let some e := unitF then do
+    let kind ← if let some e := pairF then do
+        unless eff.isNone && memOpt.isNone && memTot.isNone && ro.isNone && listF.isNone && effL.isNone && roL.isNone && tupF.isNone && unitF.isNone do
+          throwError "l_model: callee {fname}: ambiguous post"
+        pure (CKind.effT (← `(L.flat3 $(← delabT e))) 2)
+      else if let some e := unitF then do
         unless eff.isNone && memOpt.isNone && memTot.isNone && ro.isNone && listF.isNone && effL.isNone && roL.isNone && tupF.isNone do
           throwError "l_model: callee {fname}: ambiguous post"
         unless memSame do throwError "l_model: callee {fname} without results must keep the memory"
@@ -797,6 +815,15 @@ meta structure LoopInfo where
   exitStmts : Option (List (TSyntax `lstmt)) := none
   deriving Inhabited
 
+/-- A join point: its name, whether it takes the fuel, the locals it takes, whether it takes the
+memory. -/
+meta structure Join where
+  name : Name
+  fuel : Bool
+  caps : Array Nat
+  capMem : Bool
+  deriving Inhabited
+
 meta structure GenState where
   ks : Array KDef := #[]
   loops : Array LoopMeta := #[]
@@ -818,17 +845,11 @@ meta structure GenState where
   vcgX : Array String := #[]
   /-- the loops of the function being translated so far (names `fW.loopᵢ` in source order) -/
   loopN : Nat := 0
+  /-- `cut k`: the statements after the cut, and the join point they became -/
+  cutRest : Option (List Syntax) := none
+  cutJ : Option Join := none
   deriving Inhabited
 
-
-/-- A join point: its name, whether it takes the fuel, the locals it takes, whether it takes the
-memory. -/
-meta structure Join where
-  name : Name
-  fuel : Bool
-  caps : Array Nat
-  capMem : Bool
-  deriving Inhabited
 
 meta structure Ctx where
   names : Array Name
@@ -1607,7 +1628,10 @@ meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
       let kd : KDef := { name, fuel, caps, capMem, binder := 3, res := `r, body, key := k, refs, inLoop := ctx.loop.map (·.name) }
       modify fun st => { st with ks := st.ks.push kd }
       pure name
-  return { name, fuel, caps := capIdx, capMem }
+  let j : Join := { name, fuel, caps := capIdx, capMem }
+  if ctx.loop.isNone && st.cutRest == some (rest.map (·.raw)) then
+    modify fun st => { st with cutJ := some j }
+  return j
 
 /-- A loop `while c { body }` (written in the `lfn`: `direct`; or the named block `cst`) followed
 by `rest`. The loop is a model of its own, `fW.loopᵢ n m x₁ …` (`exec p n` on the loop, so the
@@ -1836,7 +1860,8 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" defs")?
   (&" nodefs")?
   (&" unified")?
-  (&" nv " "[" term "," term "]")? : command
+  (&" nv " "[" term "," term "]")?
+  (&" cut " num)? : command
 
 meta structure FnInfo where
   lname : String
@@ -1908,6 +1933,11 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let uni := stx[26].getNumArgs != 0
   let exc := exc || uni
   let nvT? : Option (Term × Term) := if stx[27].getNumArgs == 0 then none else some (⟨stx[27][2]⟩, ⟨stx[27][4]⟩)
+  -- `cut k`: the code after the first `k` statements of the (single) function's body, which
+  -- must be the join point after an `if` both of whose branches fall through, gets its own
+  -- step theorem (`name.tail`), used by the function's step: the paths through the code before
+  -- it are not multiplied by the paths after it
+  let cutK? : Option Nat := if stx[28].getNumArgs == 0 then none else stx[28][1].isNatLit?
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -2008,7 +2038,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       let names := fi.params ++ fi.lcls
       let env := names.mapIdx fun i n => if i < fi.params.size then MT.raw (mkIdent n) else .lit 0
       let ctx0 : Ctx := { names, env, mem := .raw (mkIdent memIdent), ro := fi.ro, multi := fi.multi, tup := fi.tup, void := fi.void, clash := mps }
-      let b ← transS E ctx0 (← blockStmts fi.body)
+      let ss ← blockStmts fi.body
+      if let some k := cutK? then
+        modify fun st => { st with cutRest := some ((ss.drop k).map (·.raw)) }
+      let b ← transS E ctx0 ss
       return (b, (← get).called, (← get).loopsCalled)
     go.run {}
   let calledBy := bodies.map (·.2.1)
@@ -2348,7 +2381,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let simpBase := ["L.LocEq", "L.St.setLoc_loc", "L.St.setLoc_mem", "L.St.setLocs_nil",
       "L.St.setLocs_cons", "L.Locals.init_nil", "L.Locals.init_cons_zero", "L.Locals.init_cons_succ",
       "L.Sig.retVal", "L.Sig.retOr", "L.BinOp.eval", "L.Cmp.eval", "List.headD_cons", "List.headD_nil",
-      "List.tail_cons", "List.tail_nil"]
+      "List.tail_cons", "List.tail_nil", "↓L.List.eq_headD_cons"]
   let simpTxt? ← simpTs?.mapM fun ts => do
     -- a lemma that is not in scope would make `simp_all` fail on every step, silently under the
     -- recipe's `try`, so it is an error here (CkcW, ErToIwWStage named an unimported lemma)
@@ -2559,19 +2592,77 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let nB ← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat))
   let ihB ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent `ih) : $stmt))
   let conjS ← mkConj (← `($nI + 1))
+  -- `cut k`: the tail `name.tailS` (the body after its first `k` statements) and its step
+  -- theorem `name.tail`, against the join point the tail became (over the locals of the state
+  -- `s₁` it starts from), as the hand tail specs (`depsTailS`, `derTailS`) did
+  let mut cutPre : Option String := none
+  let mut cutVcg : Option String := none
+  if let some k := cutK? then
+    unless fis.size == 1 do throwError "l_model: `cut` needs a single function"
+    let some j := st.cutJ |
+      throwError "l_model: `cut {k}`: the code after statement {k} is not the join point after an `if` both of whose branches fall through"
+    let fi := fis[0]!
+    let jName := (rn j.name).getD j.name
+    let kN := Syntax.mkNumLit (toString k)
+    let tailS := mkIdent (specName.getId ++ `tailS)
+    emit doTrace (← `(command|
+      /-- The function's body after its first statements (`cut`; generated by `l_model`). -/
+      def $tailS:ident : L.Stmt := L.seqDrop $kN (L.FunDecl.body $(mkIdent fi.decl))))
+    let s1 := mkIdent `s₁
+    let capTs ← j.caps.mapM fun i => `(L.St.loc $s1 $(Syntax.mkNumLit (toString i)))
+    let memS1 ← `(L.St.mem $s1)
+    let jArgs : Array Term := mpArgs ++ (if j.fuel then #[(nI : Term)] else #[]) ++ capTs ++
+      (if j.capMem then #[memS1] else #[])
+    let Japp ← `($(mkIdent jName) $jArgs*)
+    let rT ← `(L.Sig.retVal $(mkIdent `sig))
+    let rs ← (List.range fi.tup).toArray.mapM fun i => do
+      let mut e : Term := rT
+      for _ in [0:i] do e ← `(List.tail $e)
+      `(List.headD $e 0)
+    let memP ← `(L.St.mem $sP)
+    let body ← if fi.void then
+        if fi.ro then `($memP = $memS1 ∧ $Japp = $okI ()) else `($Japp = $okI $memP)
+      else if fi.tup > 0 then
+        if fi.ro then `($memP = $memS1 ∧ $Japp = $okI $(← tupP rs))
+        else `($Japp = $okI $(← tupP (rs.push memP)))
+      else match fi.ro, fi.multi with
+      | true, false => `($memP = $memS1 ∧ $Japp = $okI (List.headD $rT 0))
+      | false, false => `($Japp = $okI (List.headD $rT 0, $memP))
+      | true, true => `($memP = $memS1 ∧ $Japp = $okI $rT)
+      | false, true => `($Japp = $okI ($rT, $memP))
+    let epost ← if uni then `(fun $(mkIdent `ε) => $uniG → L.Err.cls $(mkIdent `ε) ≠ 0 → $Japp = Except.error $(mkIdent `ε))
+      else if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $Japp = Except.error $(mkIdent `ε))
+      else `(Lean.Order.top)
+    let selfRec := calledBy[0]!.contains fi.lname
+    let ihBs := if selfRec then #[ihB] else #[]
+    let (ihTxt, ihNames) := if selfRec then ("have ih1 := ih; ", ["ih", "ih1"]) else ("", [])
+    let unf := unfoldOf[0]!
+    let tac ← parseTac s!"{ihTxt}simp only [{tailS.getId}, L.seqDrop, {unf}]; {stepTac attrsTxt (vcgOf calledBy[0]! loopsBy[0]!) ihNames}"
+    let tailThm := mkIdent (specName.getId ++ `tail)
+    emit doTrace (← withHB (← `(command|
+      /-- The step theorem of the tail (`cut`; generated by `l_model`). -/
+      theorem $tailThm:ident $bs* $nB:bracketedBinder $ihBs* ($s1 : L.St) :
+        Std.WP.Triple (L.step $pName (L.exec $pName $nI) $tailS) (fun s => s = $s1)
+          (fun $(mkIdent `sig) $sP => $body) $epost := by $(⟨tac⟩):tactic)))
+    cutPre := some s!"rw [← L.seqTake_drop {k} (L.FunDecl.body {fi.decl}), show L.seqDrop {k} (L.FunDecl.body {fi.decl}) = {tailS.getId} from rfl]; simp only [{unf}, L.seqTake]"
+    cutVcg := some s!"{tailThm.getId} {argsTxt} n{if selfRec then " ih" else ""}"
   let mut zero := ""
   let mut steps : Array String := #[]
   for fi in fis, i in List.range k, called in calledBy, loops in loopsBy, ci in conjS, unf in unfoldOf do
     let vcg := vcgOf called loops
     let lk ← pp fi.lookup.raw
     let pre := s!"intros; rw [L.invoke_eq _ ({lk})]; simp only [L.callFn, {unf}]"
+    -- `cut`: the body as its first statements, then the tail with its own step theorem
+    let (preS, vcg) := match cutPre, cutVcg with
+      | some c, some t => (s!"intros; rw [L.invoke_eq _ ({lk})]; simp only [L.callFn]; {c}", s!"{vcg}, {t}")
+      | _, _ => (pre, vcg)
     let g := if k == 1 then "" else s!"case g{i+1} => "
     zero := zero ++ s!"\n    {g}({pre}; vcgen [L.exec] <;> grind)"
     -- under `simp`, an unused induction hypothesis is cleared (`simp_all` would rewrite it)
     let (ihTxt, ihNames) := if simpTs?.isSome && !fis.any (called.contains ·.lname) then ("clear ih", [])
       else if k == 1 then ("have ih1 := ih", ["ih", "ih1"])
       else (s!"obtain ⟨{ihs}⟩ := ih", (List.range k).map fun i => s!"ih{i+1}")
-    let tac ← parseTac s!"{ihTxt}; {pre}; {stepTac attrsTxt vcg ihNames}"
+    let tac ← parseTac s!"{ihTxt}; {preS}; {stepTac attrsTxt vcg ihNames}"
     let stepName := mkIdent (specName.getId ++ Name.mkSimple s!"step{i+1}")
     emit doTrace (← withHB (← `(command|
       theorem $stepName:ident $bs* $nB:bracketedBinder $ihB:bracketedBinder : $ci := by $(⟨tac⟩):tactic)))
