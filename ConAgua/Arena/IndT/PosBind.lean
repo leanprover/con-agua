@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndT.PosFields
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Verdict.PosE
 
 /-!
 # `nest_pos_bind` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

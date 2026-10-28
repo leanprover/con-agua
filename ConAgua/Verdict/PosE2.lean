@@ -1,12 +1,7 @@
-import ConAgua.Verdict.PosNgc
 import ConAgua.Verdict.PosE
-import ConAgua.Arena.IndT.PosCrest
 import ConAgua.Arena.IndT.PosNit
-import ConAgua.Arena.IndT.PosDefs
 import ConAgua.Verdict.PosNty
 import ConAgua.Arena.IndT.RecGen19
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-import ConAgua.Arena.IndPosSpec.Snoc
 /-!
 # `nest_grow_group`'s error claim (lane `verdicts-b`, helper `ia2`, fork `kn2a`)
 

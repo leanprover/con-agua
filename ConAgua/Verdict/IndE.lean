@@ -1,8 +1,3 @@
-import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.NbLook
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-import ConAgua.Arena.IndPosSpec.Snoc
-import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc

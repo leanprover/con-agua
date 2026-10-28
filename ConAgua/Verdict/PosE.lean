@@ -1,3 +1,7 @@
+import ConAgua.Arena.IndPosSpec.KlB
+import ConAgua.Arena.IndPosSpec.WCtx
+import ConAgua.Arena.IndPosSpec.OneK
+import ConAgua.Arena.IndPosSpec.WalkOK
 import ConAgua.Verdict.IndE
 import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.PosE1M

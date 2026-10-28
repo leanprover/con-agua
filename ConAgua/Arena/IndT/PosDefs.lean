@@ -1,7 +1,4 @@
 import ConRon.Bridge.Inductives.Positivity
-import ConAgua.Arena.TwinStep
-import ConAgua.Arena.IndPosSpec.OneK
-import ConAgua.Arena.IndPosSpec.WalkOK
 
 /-!
 # The positivity walk under `StageC`: the constructors' shared preconditions
@@ -12,13 +9,8 @@ import ConAgua.Arena.IndPosSpec.WalkOK
 
 
 open ConRon.Arena
-open ConRon.Bridge.Inductives (dCtx dProg dState dCtors dOut dGrp kindOf)
 
 namespace L.Ind
-
-open L.Arena
-
-local notation "V" => ConLeche.CheckMode.verified
 
 /-- The twin-side facts every constructor walk of a frame shares (con-ron's `nestCtors_spec`'s). -/
 structure CtorsPre (st : EStore) (us : LsIdx) (ds : List EIdx) (names : List NIdx) (holes : List EIdx)

@@ -1,4 +1,3 @@
-import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Arena.IndPosSpec.UnW2
 import ConAgua.Arena.IndT.PosAll

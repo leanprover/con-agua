@@ -1,8 +1,5 @@
-import ConAgua.Arena.IndPosSpec.GgW
-import ConAgua.Arena.IndPosSpec.MW9
 import ConAgua.Arena.IndPosSpec.NcnW
-import ConAgua.Arena.IndPosSpec.P2ctK1
-import ConAgua.Arena.IndPosSpec.FgW2
+import ConAgua.Arena.IndPosSpec.DepthGo
 
 /-!
 # NbKeyK2

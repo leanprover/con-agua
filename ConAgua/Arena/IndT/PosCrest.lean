@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndPosSpec.OneK
 import ConAgua.Arena.IndT.PosDefs
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Verdict.PosE3Cm
