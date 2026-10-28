@@ -91,7 +91,8 @@ if `fE` reads every callee exactly as `fW` does. But:
 So `fW n … = some` does not imply `fE … = .ok`. A caller's `Option` model now reads a unified
 function **through its run**:
 
-* `cR n "f" args m` in a `CallM` model (the hand models' callee reading);
+* `cR n "f" args m` in a `CallM` model (the hand models' callee reading), named per callee
+  (`tcmR`, `K53Look`);
 * `callW p n "f"` in a generated model.
 
 The caller's ok refinement gets the callee's ok half by `RefE.run_okW (fE_spec …) (f_ref …) h`.
@@ -130,8 +131,8 @@ replaces four.
 * **`target_major_nfs`**: `tmnE` (unified; calls `tcmE`, lifts `chnW` and `consW`), `tmn_ref` (154
   lines), `TmnPost`, `targetMajorNfs_refinesC` derived. `classes_nfs`' refinement (`RecGen28`) and
   its error claim (`IndBNfs`) read `tmn_ref` from the run.
-* **Caller `target_k53_args`**: its hand model calls `target_class_match` through `cR` (`K53Look`,
-  `Tka` spec), and its refinement reads `tcm_ref` through the run (`RecCheckK53`).
+* **Caller `target_k53_args`**: its hand model calls `target_class_match` through `cR` (`tcmR`,
+  `K53Look`; `tcmR_spec`, `Tka`), and its refinement reads `tcm_ref` through the run (`RecCheckK53`).
 
 ### 2.1 Lines
 
@@ -156,7 +157,28 @@ specs, `TcmF`, `TcmK6`, `Tmn`'s `tmnW` part. One-time infrastructure: +267 −23
 
 ### 2.2 Elaboration time
 
-<!-- filled from _tmp/unifiedE/times2.txt -->
+User seconds of `lean` on each module alone, three interleaved runs, base (master d6abfaec) and new
+(`_tmp/unifiedE/time2.sh`, `time3.sh`; `times2–5.txt`), medians:
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBTcm` | 2.29 | 2.29 | `tcm_ref` instead of `tcm_claim` |
+| `Verdict/IndBTmn` | 2.09 | **2.76** | **slower (+0.7 s)**: `tmnE`'s generated step 1.39 → 1.90 s (`finish`; with the `simp [Cmp.evalW, Cmp.eval]` recipe of the old `tmnE` it took 3.0 s), `tmn_ref` 0.33 s against `tmnE_claim` 1.52 s |
+| `Verdict/IndBNfs` | 14.68 | 14.27 | noisy (14.2–16.1) |
+| `Verdict/IndBTka` | 5.32 | 5.27 | |
+| `Arena/IndT/RecCheckTcm` | 1.49 | 0.54 | `tcmW_okC` gone |
+| `Arena/IndT/RecCheckTmn` | 0.79 | — | deleted |
+| `Arena/IndT/RecGen28` | 4.45 | 4.07 | `tmnW_okPC` gone |
+| `Arena/IndT/RecCheckK53` | 1.60 | 1.61 | |
+| `Arena/RecCheckSpec/Tmn` | 3.27 | 0.80 | the hand `tmn_spec` (2.5 s) gone |
+| `Arena/RecCheckSpec/TruncSl` | 1.32 | 0.54 | the hand `targetClassMatch_spec` gone |
+| `Arena/RecCheckSpec/TcmLook`, `TcmF`, `TcmK6` | 1.38 | 1.17 | |
+| `Arena/RecCheckSpec/K53Look` | 0.50 | 0.51 | |
+| `Arena/RecCheckSpec/Tka` | 14.48 | 14.48 | 15.6 when its model called `cR n "target_class_match" [12 words] m` directly: the list literal costs `grind` 8 %; a named reading `tcmR` (the run, 12 word arguments) is at parity |
+| **sum** | **53.7** | **48.3** | **−10 %** |
+
+`IndBTmn` is the one module that got slower: its generated step now does what the deleted
+hand `tmn_spec` did, and the sum over the modules is lower.
 
 ## 3. Migration of the other split functions
 
@@ -215,7 +237,12 @@ The list with depths, files and callees: `_tmp/unifiedE/split.txt`.
 6. Pitfalls met in the pilot:
    * after `rcases` on a value, the hypotheses about `(r, m).fst` need `dsimp only` before `omega`;
    * a `by … omega` argument whose goal mentions `{ mem := m, … }.mem` needs `dsimp only` first;
-   * `Err.cls_of_code` (`grind →`) is needed by the generated steps for loads out of bounds.
+   * `Err.cls_of_code` (`grind →`) is needed by the generated steps for loads out of bounds;
+   * a caller's `Option` model reads the run through a named function of word arguments
+     (`tcmR cR n m args := cR n "f" [args] m`, its spec `hcR n _ _ s₀`), not a list literal
+     (`Tka` 8 % slower otherwise);
+   * try the default `finish` recipe before `simp [...]` on the unified model (`tmnE`: 1.9 s
+     against 3.0 s).
 
 ### 3.3 Batches (for migration lanes)
 

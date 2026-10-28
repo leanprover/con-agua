@@ -241,9 +241,8 @@ theorem tkaW_okC (hT : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a 
     show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
     show UInt64.ofNat 3 = (3 : Word) from rfl] at e11 e12 e1 e2 e3
   rw [e11, e12, e1, e2, e3] at h
-  rcases h8 : realCall p n "target_class_match" [vis, q, fto, ftl, rdW (m.arr64 IW) (Mc + 11),
-      rdW (m.arr64 IW) (Mc + 12), rdW (m.arr64 IW) (Mc + 1), rdW (m.arr64 IW) (Mc + 2),
-      rdW (m.arr64 IW) (Mc + 3), usp, lao, lpl] m6 with _ | ⟨r8, m8⟩ <;> simp only [h8, tkaK8, reduceCtorEq] at h
+  rcases h8 : tcmR (realCall p) n m6 vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
+      (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl with _ | ⟨r8, m8⟩ <;> simp only [h8, tkaK8, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hpfl := ConRon.Bridge.Inductives.denoteEList_length (denoteEList_ext q14.ext _ _ hMpf)
   obtain ⟨s8, rfl, -, c, a8, run8, hR8⟩ := RefE.run_okW (s₀ := ⟨m6, Locals.init []⟩)

@@ -132,14 +132,22 @@ theorem tkaK6_some : tkaK6 cR n vis q fto ftl Mc usp lao lpl app (some (rn, m)) 
 theorem tkaK7_no (h : occ = 0) : tkaK7 cR n vis q fto ftl Mc usp lao lpl (some (occ, m)) = some ([0], m) := by
   simp only [tkaK7]; rw [ite_eq_left h]
 theorem tkaK7_yes (h : ¬ occ = 0) : tkaK7 cR n vis q fto ftl Mc usp lao lpl (some (occ, m)) =
-    tkaK8 (cR n "target_class_match" [vis, q, fto, ftl, rdW (m.arr64 IW) (Mc + 11),
-      rdW (m.arr64 IW) (Mc + 12), rdW (m.arr64 IW) (Mc + 1), rdW (m.arr64 IW) (Mc + 2),
-      rdW (m.arr64 IW) (Mc + 3), usp, lao, lpl] m) := by
+    tkaK8 (tcmR cR n m vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
+      (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl) := by
   simp only [tkaK7]; rw [ite_eq_right h]
 theorem tkaK8_some : tkaK8 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 attribute [ind_grind] tkaW_succ tkaK1_some tkaK2_some tkaK3_no tkaK3_yes tkaK4_big tkaK4_ok tkaK5_some
   tkaK6_some tkaK7_no tkaK7_yes tkaK8_some
+
+/-- `target_class_match` as `target_k53_args` reads it (`tcmR`, its run). -/
+theorem tcmR_spec (p : Prog) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
+    (vis q fto ftl pfo pfl us dso dsl lvls edso edsl : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_class_match"
+      [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      tcmR cR n s₀.mem vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, s'.mem); ⊤⦄ :=
+  hcR n _ _ s₀
 
 set_option maxHeartbeats 8000000 in
 theorem tka_spec (p : Prog) (L : K53Look p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
@@ -154,7 +162,7 @@ theorem tka_spec (p : Prog) (L : K53Look p) (cR : CallM) (hcR : CallSpec p cR) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ee_spec p L n, slEq_spec p L.eq n,
       internConst_spec p L.cf L.cp L.ic n, mknF_spec p L.ad n,
       blockShapeMemberNames_spec p L.tmn.tcm.ha L.tmn.tcm.mnc L.tmn.tcm.mn n, noF_spec p L n,
-      hcR n "target_class_match"]
+      tcmR_spec p cR hcR n]
     all_goals (try clear hcR)
     all_goals subst_vars
     -- `LocEq` unfolded, the callee posts' `s'.loc = …` serve `simp` as rewrites (`*`): the
