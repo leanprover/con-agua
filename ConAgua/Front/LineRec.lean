@@ -523,6 +523,60 @@ def LRS.enc (r : LRS) : List Word := [r.e, r.f.pl, r.f.idx, r.f.a, r.f.c, r.f.d]
 /-- `line_rec(i)`, `i` after the line's `{`. -/
 def lineRecEntryN (b : Array UInt8) (i : Word) : LRS := lineRecN b i 1 0 0 .none
 
+section
+variable (b : Array UInt8) (i w ik pk : Word) (f : Fld)
+
+/-- A member that scans moves past its key. -/
+theorem lrStepN_lt (k ks v : Word) (h : (lrStepN b k ks v ik pk f).e ≠ 0) :
+    ks < (lrStepN b k ks v ik pk f).e := by
+  unfold lrStepN at h ⊢
+  repeat' split at h <;> rename_i hk <;> simp only [hk, reduceIte, true_or, or_true] at *
+  all_goals first
+    | (simp only [LRS.fail] at h; exact absurd rfl h)
+    | (simp only [lrIdx, lrNat, lrList, lrName, lrExpr, lrLit, lrDecl, lrMeta] at h ⊢
+       split at h
+       · simp_all [slotNatN_pos]
+       · simp [LRS.fail] at h)
+
+theorem lineRecN_err (h : (nextMemberN b i w).tag = 0) : lineRecN b i w ik pk f = .fail := by
+  rw [lineRecN, ite_eq_left h]
+theorem lineRecN_close (h : (nextMemberN b i w).tag = 1) :
+    lineRecN b i w ik pk f =
+      if (nextMemberN b i w).w ≠ 0 ∧ (ik ≠ 0 ∨ pk ≠ 0) then .fail
+      else if (pk = 1 ∧ ik = 1) ∨ (pk = 2 ∧ ik = 2) ∨ (pk = 3 ∧ ik = 3) ∨ (pk = 4 ∧ ik = 0) ∨
+          (pk = 5 ∧ ik = 0) then ⟨(nextMemberN b i w).pos + 1, ik, pk, f⟩
+      else .fail := by
+  rw [lineRecN, ite_eq_right (by simp [h]), ite_eq_left h]
+theorem lineRecN_step (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
+    lineRecN b i w ik pk f =
+      if (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk
+          f).e = 0 then .fail
+      else lineRecN b
+        (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk f).e
+        0 (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk f).ik
+        (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk f).pk
+        ⟨(lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk
+            f).f.pl,
+          (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk
+            f).f.idx,
+          (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk
+            f).f.a,
+          (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk
+            f).f.c,
+          (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val ik pk
+            f).f.d⟩ := by
+  rw [lineRecN, ite_eq_right h0, ite_eq_right h1]
+  split
+  · rename_i hlt
+    rw [ite_eq_right (fun h => by rw [h] at hlt; exact UInt64.not_lt_zero hlt)]
+  · rename_i hlt
+    rw [ite_eq_left (Decidable.byContradiction fun hne => hlt (lrStepN_lt b ik pk f _ _ _ hne))]
+end
+
+grind_pattern [lang_grind] lineRecN_err => lineRecN b i w ik pk f, nextMemberN b i w
+grind_pattern [lang_grind] lineRecN_close => lineRecN b i w ik pk f, nextMemberN b i w
+grind_pattern [lang_grind] lineRecN_step => lineRecN b i w ik pk f, nextMemberN b i w
+
 /-! ## Specs -/
 
 section specs
@@ -831,6 +885,66 @@ theorem lrArmMeta_spec (n : Nat) (s₁ : St) :
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Nat.reduceEqDiff, reduceIte] at *
   all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, lrMeta, metaN, byteW,
     Sig.retOr]
+
+attribute [local lang_grind] LRS.fail Fld.none in
+include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr hprp hpq hpbr hphn hpho hph hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
+theorem lrDisp_spec (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b ∧ (s.loc 12).toNat ≤ b.size⦄
+    step p (exec p n) lrDisp
+    ⦃fun r s' => LRArmPost b s₁ r s'; ⊤⦄ := by
+  dsimp only [lrDisp]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs,
+      lrArmIdx_spec p b hb hpd hpn hps hprn n,
+      lrArmNat_spec p b hb hpd hpn hps hprn n,
+      lrArmList_spec p b hb hpd hpn hpl hprn hprp n,
+      lrArmName_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr n,
+      lrArmExpr_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr n,
+      lrArmLit_spec p b hb hpd hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpq n,
+      lrArmDecl_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hphn hpho hph hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+      lrArmMeta_spec p b hb hpsc hpbr n]
+  all_goals subst_vars
+  all_goals try rfl
+  all_goals simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, beq_iff_eq] at *
+  all_goals grind (splits := 40) [lang_grind, LRArmPost, lrStepS, lrStepN, Sig.retOr]
+
+attribute [local lang_grind] LRS.fail LRS.enc Fld.none in
+include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr hprp hpq hpbr hphn hpho hph hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD in
+theorem lrLoop_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    exec p n lrLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr LRS.fail.enc = (lineRecN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
+        ⟨s₀.loc 4, s₀.loc 5, s₀.loc 6, s₀.loc 7, s₀.loc 8⟩).enc; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := lrLoop) rfl]
+    vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs, ih,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
+        lrDisp_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr hprp hpq hpbr hphn hpho hph hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n]
+    all_goals clear ih hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr hprp hpq hpbr hphn hpho hph hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD
+    all_goals subst_vars
+    all_goals try rfl
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+        St.setLocs_cons, List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.and_eq_true,
+        Bool.or_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, Nat.reduceEqDiff, reduceIte, LRArmPost,
+        lrStepS] at *
+    all_goals grind (splits := 40) [lang_grind, Sig.retOr]
+
+attribute [local lang_grind] LRS.fail LRS.enc Fld.none lineRecEntryN in
+include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr hprp hpq hpbr hphn hpho hph hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD hplr in
+theorem lineRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "line_rec" [i]
+    ⦃fun r s' => s' = s₀ ∧ r = (lineRecEntryN b i).enc; ⊤⦄ := by
+  rw [invoke_eq _ hplr]
+  simp only [callFn, lineRec]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc,
+        fun s₀ => Triple.step_exec (lrLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr hprp hpq hpbr hphn hpho hph hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)] <;> finish
 
 end specs
 
