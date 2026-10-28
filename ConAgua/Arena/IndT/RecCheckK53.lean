@@ -249,7 +249,7 @@ theorem tkaW_okC (hT : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a 
   obtain ⟨s8, rfl, -, c, a8, run8, hR8⟩ := RefE.run_okW (s₀ := ⟨m6, Locals.init []⟩)
     (tcmE_spec p hT n _ _ _ _ _ _ _ _ _ _ _ _ _) (tcm_ref hq henv hT n (by omega) hC6 hA6
     (hbs.grow hg06) hlvH hus
-    (by rw [decHL_grow hg06 hftb]; exact hft) (by have := hg06.1; omega) (hpfS.grow hg06) (hdsS.grow hg06)
+    (by rw [decHL_grow hg06 hftb]; exact hft) (by dsimp only; have := hg06.1; omega) (hpfS.grow hg06) (hdsS.grow hg06)
     (hlp.grow ((hg4.trans hg5).trans hg6)) hP6
     (ConRon.Bridge.Inductives.dShape_ext q14.ext _ _ hsh) (denoteEList_ext q14.ext _ _ hftP)
     (denoteEList_ext q14.ext _ _ hMpf) (by rw [hlvD]; exact ConRon.Bridge.denoteLs_ext hMlv q14.ext)

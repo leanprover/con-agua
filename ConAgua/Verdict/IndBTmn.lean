@@ -8,7 +8,13 @@ import ConAgua.Verdict.IndBTcm
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 /-!
-# Error refinement of `target_major_nfs` (lane `verdicts-b`, helper `ib`)
+# `target_major_nfs`: one model and one refinement for both outcomes
+
+`tmnE` (`l_model … unified`): the recursive call through the model itself, `target_class_match`
+through its unified model (`tcmE`), `ctors_have_name` and `sl_cons` (outside the verdict closure)
+through their `Option` models. `tmn_ref` refines `targetMajorNfs` for both outcomes; its ok half
+is `targetMajorNfs_refinesC` and `classes_nfs`' refinement (`RecGen28`), its error half
+`classes_nfs`' error claim (`IndBNfs`).
 -/
 
 noncomputable section
@@ -214,6 +220,45 @@ theorem tmn_ref (hL : TmnLook p) (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {
   refine ⟨?_, e.toNat :: pr, by simpa using hd, ?_⟩
   · right; simp only [List.headD_cons]; exact hg12.1
   · rw [heT]; exact FA2.cons hpv hprb
+
+include hq henv in
+/-- **`target_major_nfs` refines `targetMajorNfs`** under `StageC` (`tmn_ref`'s ok half). -/
+@[refines ConRon.Arena.targetMajorNfs]
+theorem targetMajorNfs_refinesC (hL : TmnLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (q fto ftl pfo pfl us dso dsl cto ctl nfo nfl : Word)
+    (bs : BlockShape) (formerTys pfvs ds : List EIdx) (ctors : List (IConstantVal × Nat))
+    (nfs : List NestCtorNf) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
+    (hbs : BSOK s₀.mem q.toNat bs) (hus : H us)
+    (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
+    (hpf : HSl0 s₀.mem pfo pfl pfvs) (hds : HSl0 s₀.mem dso dsl ds)
+    (hct : PSlR decCN ctors cto ctl s₀.mem) (hnf : PSlR decNCN nfs nfo nfl s₀.mem) (hP : RcMR s₀.mem)
+    {pP : ConLeche.BlockShape} {formerTysP pfvsP dsP : List ConLeche.Expr}
+    {usP : List ConLeche.Level} {ctorsP : List (ConLeche.ConstantVal × Nat)}
+    {nfsP : List ConLeche.NestCtorNf}
+    (hsh : dShape a₀.store bs = some pP)
+    (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
+    (hpfP : Frontend.denoteEList a₀.store pfvs = some pfvsP)
+    (husP : denoteLs a₀.store.lss (decI us) = some usP)
+    (hdsP : Frontend.denoteEList a₀.store ds = some dsP) (hctP : dCtors a₀.store ctors = some ctorsP)
+    (hnfP : nfs.mapM (dCtorNf a₀.store) = some nfsP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hpw : ∀ x ∈ pfvsP, ConLeche.Expr.WScoped pfvsP.length x) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_major_nfs"
+      [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, cto, ctl, nfo, nfl]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.targetMajorNfs V fe bs formerTys pfvs (decI us) ds ctors nfs) a₀ ∧
+      PSlR decNCN (AM.res (ConRon.Arena.targetMajorNfs V fe bs formerTys pfvs (decI us) ds ctors nfs) a₀)
+        (r.headD 0) (r.tail.headD 0) s'.mem ∧
+      StageC dn vis fe env s'.mem
+        (AM.st (ConRon.Arena.targetMajorNfs V fe bs formerTys pfvs (decI us) ds ctors nfs) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (RefE.triple (tmnE_spec p hL n s₀ vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl)
+    (tmn_ref hq henv hL n hn hC hA hbs hus hft hftb hpf hds hct.1 (hC.stage.lt64 hct.2) hnf hP hsh hftP
+      hpfP husP hdsP hctP hnfP hformer hpw)) ?_
+  rintro r s' ⟨hl', ys, a', run, hR⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl', hok, by rw [hres]; exact hR.slice, by rw [hst]; exact hR.stage, hR.grow, hR.rc, hR.abs⟩
 
 end sims
 
