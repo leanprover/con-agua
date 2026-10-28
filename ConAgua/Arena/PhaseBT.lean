@@ -1,5 +1,4 @@
 import ConAgua.Arena.LoopT
-import ConAgua.Arena.LeafFns
 import ConAgua.Arena.PhaseWorker
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

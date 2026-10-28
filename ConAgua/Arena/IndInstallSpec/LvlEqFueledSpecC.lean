@@ -1,5 +1,4 @@
-import ConAgua.Arena.IndCallM
-import ConAgua.Arena.IndStubs
+import ConRon.Arena.Inductives.BlockInstall
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

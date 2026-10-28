@@ -1,6 +1,7 @@
-import ConAgua.Arena.DeclValT
+import ConAgua.Arena.DeclValSpec
+import ConAgua.Verdict.LefRef
+import ConAgua.Arena.DeclCvgT
 import ConAgua.Verdict.VCtx
-import ConAgua.Arena.IndRealLvlT
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

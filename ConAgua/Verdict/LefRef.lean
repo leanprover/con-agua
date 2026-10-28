@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndRealLvlC
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 

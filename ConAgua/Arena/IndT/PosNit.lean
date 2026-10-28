@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndT.Install2
+import ConAgua.Verdict.LefRef
 import ConAgua.Arena.IndPosSpec.NitLe
 import ConAgua.Arena.IndRealAbsPos
 
