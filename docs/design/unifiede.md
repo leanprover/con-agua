@@ -1680,7 +1680,7 @@ No kit change was needed.
 Batch 3b in all (3 landings): `target_major_of*` and `class_majors` 869 → 358 pair lines, the
 class rules and recursor types 965 → 501, `target_k53*` 953 → 425: 2 787 → 1 284 (−54 %).
 
-### 3.21 Batch 3c, front validation (`validate_ind_d` and its callees)
+### 3.24 Batch 3c, front validation (`validate_ind_d` and its callees)
 
 The front-validation family of §3.1 that no batch-2 lane took (`Verdict/FrontOrderE`,
 `FrontRecsE`, `FrontValidE`; the leaves `vi_unsafe`, `vi_np_go`, `vi_ctor`, `vi_rec_idx` are
@@ -1754,69 +1754,39 @@ d4f85701, load 22–130, `_tmp/unify-b3c/times1.txt`):
 The three flagged modules are the new homes of the unified models; with the modules they came from
 they are 42.7 → 27.8 s.
 
-### 3.21 The depth-0 leftovers of the block and sum families (`check_block_doms_at`, `check_struct_doms_at`, `check_sum_ctors`, `check_struct_field_sorts_i(_go)`, `check_block_tables(_one)`)
+### 3.25 Batch 3c, block checks, second landing (`check_block_tables_one`, `check_block_tables`)
 
-The leaves §3.12 and §3.15 left split, in one landing:
+The batch-2c leftovers of the family (§3.12, §3.15) that have no core call:
 
-| function | before: ok refinement + error claim(s) | after | change |
+| function | before: ok refinement + error claim | after | change |
 |---|---|---|---:|
-| `check_block_doms_at` | `domsW_simC` 111 + `cbdaE_claim` 137 + `ErrClaim.of_twin` 5 = 253 | `cbda_ref` 111 + `DomsPost` 6 = 117 | −54 % |
-| `check_struct_doms_at` | `sdomsW_simC` 22 (over `domsW_simC`) + `sdomsE_claim` 162 + `checkStructDomsAt_claim` 22 = 206 | `sds_ref` 128 + `callW_ftdF` 5 = 133 | −35 % |
-| `check_struct_field_sorts_i(_go)` | `csfW_okC` 116 + `fsortsW_okC` 29 + `csfE_claimB` 180 + `checkStructFieldSortsI_claim` 55 = 380 | `csfGo_ref` 163 + `fsorts_ref` 30 + `CsfGoPost`/`FsortsPost` 15 + claim 23 = 231 | −39 % |
-| `check_sum_ctors` | `sctsW_okC` 163 + `sctsE_claim` 181 + `checkSumCtors_claim` 25 = 369 | `scts_ref` 181 + `SctsG` 5 + `SctsPost` 12 = 198 | −46 % |
-| `check_block_tables(_one)` | `ctoW_simR` 143 + `ctbW_simR` 120 + `ctoE_claim` 138 + `ctbE_claim` 128 + `checkBlockTablesE_claim` 11 = 540 | `cto_ref` 154 + `ctb_ref` 122 + `TabPost` 7 + `checkBlockTablesE_claim` 7 = 290 | −46 % |
-| **pairs** | **1 748** | **969** | **−45 %** |
+| `check_block_tables_one` | `ctoW_simR` 143 + `ctoE_claim` 138 = 281 | `cto_ref` 151 + `TabPost` 7 = 158 | −44 % |
+| `check_block_tables` | `ctbW_simR` 120 + `ctbE_claim` 128 + `checkBlockTablesE_claim` 11 = 259 | `ctb_ref` 119 + `checkBlockTablesE_claim` 7 = 126 | −51 % |
+| **pairs** | **540** | **284** | **−47 %** |
 
-Gone with them: the hand models `domsW` and `sdomsW` with their arms, specs, `sdomsW_eq` and
-`checkStructDomsAt_of_block`; `csfW`/`fsortsW` with `csfK1–5`/`fsortsK1–2`; `sctsW` with `sctsK1–6`;
-`ctoW`/`ctbW` (the file `Arena/IndInstallSpec/CtbW`); the modules `Verdict/IndsE3`,
-`Arena/IndT/Install5`, `Arena/IndT/Sum5`; the statement `CheckBlockDomsAtE` (unused). Whole diff
-against master 62ca90b6: +1 100 −2 618 in 40 files.
+Also gone: the hand models `ctoW`/`ctoK1–3`, `ctbW`/`ctbK1–2` with their arms and `cto_spec`,
+`ctb_spec` (the file `IndInstallSpec/CtbW`, 157 lines), the `errors` models. `ctoE`/`ctbE`
+(`l_model … unified`, default `finish`; `simp []` 13–15 s and `simp [rdW]` 21–24 s for the module
+against 10–11 s) and the refinements sit in `Arena/IndRealSctC` beside `tblW_okR`; `G` is
+`check_struct_proj_table`'s claim in the `StageR` shape, `CheckStructProjTableRE` (moved there from
+`Verdict/BlkE3`; `struct_proj_guards` and `block_shape_lps` are lifted). One post `TabPost` for
+both (the stage at the returned view). `check_block_tail`'s ok proof (`Tail`) reads `ctb_ref`
+through the run (`RefE.run_okW`; `RcMR.ofClosedHb` needs the call's run);
+`checkBlockTablesE_claim` (`BlkE3`) is `RefE.run_err`.
 
-* **Two walks, two models.** `check_block_doms_at` and `check_struct_doms_at` shared the hand model
-  (`sdomsW` was `domsW` with the words dropped) and its ok proof, but their bodies differ (the block
-  reads the slices directly and returns a word, the structure walk reads them by `sl_get`; the reject
-  messages differ). They have two unified models `cbdaE`, `sdomsE` and two refinements, in
-  `Arena/IndT/Install1` with the post `DomsPost` (`stage`, `grow`, `abs`) for both.
-* **`G`**: `CoreStubsE p` for the two walks (their only claimed callee is `is_def_eq_core`;
-  `fvar_type_d` and `sl_get` are lifted); `VerdictCtx p` for the field sorts (`check_field_sort_bound`
-  stays `callE`, its claim needs `nv`); `SctsG p` (`VerdictCtx` and `CcvE`) for `check_sum_ctors`, whose
-  callee `check_sum_ctor` stays `callE` with its `ctor_claim`; `CheckStructProjTableRE p` for the
-  tables (`check_struct_proj_table` stays `callE`; the definition moved from `BlkE3` to the new
-  `Arena/IndT/Tables`).
-* **Callers through the run.** `check_sum_ctor`'s model `ctorW` read `sdomsW`, and
-  `check_sum_ctor_tail`'s `ctlW` read `fsortsW`: both now read the run (`cR (n+2) "check_struct_doms_at"
-  […] m`; the reader `fsortsR`), so `ctorW_okC`, `ctlW_okC` and `sctsW_okC`'s successor `scts_ref` take
-  `SumProg p` (the lookups). `cbao_ref` reads `cbda_ref` by `RefE.run_ok`/`RefE.run_err`; `ctor_claim`
-  reads `sds_ref` the same way; `Tail` reads `ctb_ref` by `RefE.run_okW`. The kept statements
-  (`checkStructFieldSortsI_claim`, `CheckSumCtorsE`, `CheckBlockTablesE`, the five `@[refines]`) are
-  one-liners from the refinements.
-* **Recipes**: `simp [rdW]` (`cbdaE`, `ctoE`, `ctbE`), `simp []` (`sdomsE`, `csfGoE`, `fsortsE`; the
-  default `finish` fails for `cbdaE`/`sdomsE` and took 12 s for `Install1` against 3.7 s), the old
-  `simp [Cmp.evalW, Cmp.eval]` for `sctsE` (`finish` fails).
-* **Shake.** The moves left 23 imports unused; removing them broke twelve downstream modules that
-  used them transitively, which now import what they use.
-
-Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
-62ca90b6, load 25–90, so ±15 % is noise; the second series for the modules that looked slower):
+Elaboration (as §3.20, base master f5e47a7f, load 36–85, `_tmp/unify-b3c-blk/timesB.txt`):
 
 | module | base | new | |
 |---|---:|---:|---|
-| `Arena/IndT/Install1` | 1.59 | **3.69** | **slower (+2.1 s)**: `cbdaE`, `sdomsE` and their refinements moved in |
-| `Arena/IndInstallSpec/DomsW`, `Verdict/IndsE3` (deleted), `Verdict/IndBSum1` | 13.32 | 1.37 | …from here |
-| `Arena/IndT/Sum3` | 2.29 | **3.07** | **slower (+0.8 s)**: `csfGoE`, `fsortsE`, their refinements |
-| `Arena/IndSumSpec/CheckStructFieldSortsISucc`, `Arena/IndT/Install5` (deleted) | 6.00 | 1.76 | …from here |
-| `Arena/IndT/Tables` (new) | — | 16.44 | the tables' models and refinements |
-| `Arena/IndInstallSpec/CtbW` (deleted), `Verdict/BlkE3`, `Arena/IndRealSctC` | 41.92 | 5.43 | …from here |
-| `Arena/IndSumSpec/CtorX`, `Arena/IndT/Sum5` (deleted), `Verdict/IndBSum4` | 20.27 | 15.12 | `sctsW` and its spec gone |
-| `Verdict/IndBSum3` | 27.34 / 30.74 | **31.79 / 37.08** | **slower (+15–20 %)**: only `ctor_claim`'s `check_struct_doms_at` call changed (6 lines shorter); the import header loads as fast (0.67 s both) |
-| `Verdict/IndA4` | 9.27 / 11.79 | **11.06 / 13.36** | **slower (+13–19 %)**: doc comment only; it now imports the unified models of `Tables` and `IndBSum1`'s importers |
-| `Verdict/IndsE4` | 3.16 / 4.05 | 4.28 / 4.75 | `cbao_ref` reads `cbda_ref` from the run |
-| the other 14 | 53.21 | 40.86 | |
-| **sum (31 modules)** | **178.4** | **134.9** | **−24 %** |
+| `Arena/IndRealSctC` | 4.61 | **9.95** | **slower (+5.3 s)**: `ctoE`, `ctbE` and their refinements moved in … |
+| `Verdict/BlkE3`, `Arena/IndInstallSpec/CtbW` (deleted) | 27.80 | 0.60 | … from here; the three 32.4 → 10.6 |
+| `Arena/IndT/Tail`, `Verdict/IndA4` | 10.73 | 10.02 | |
+| **sum** | **43.1** | **20.6** | **−52 %** |
 
-`IndBSum3` and `IndA4` are slower although their own text barely changed; a guess is a larger
-simp/grind environment from the unified models now imported below them (not investigated further).
-The default `finish` for `cbdaE`/`sdomsE` was the one recipe change tried (it fails).
-
-No kit or generator change was needed.
+**Not migrated** (the family's other depth-0 leftovers): `check_struct_field_sorts_i(_go)`,
+`check_block_doms_at`/`check_struct_doms_at` and `check_sum_ctors`. Their hand models (`csfW`,
+`fsortsW`, `domsW`/`sdomsW`, `sctsW`) read the core functions (`infer_type_core`,
+`ensure_sort_core`) through a `CallM` and are shared between several ok proofs, and their callees
+`check_field_sort_bound` (`cfbW`, an `errors` model in `IndE`) and `check_sum_ctor(_tail)`
+(`IndBSum3`) are not migrated: they go bottom-up with those callees, over the core-callee kit
+(`RefE.bind_core`, `CorePost`).

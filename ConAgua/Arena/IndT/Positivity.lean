@@ -9,7 +9,6 @@ import ConAgua.Arena.IndPartsSpec.BrsW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.L.ModelGen
 
 /-!

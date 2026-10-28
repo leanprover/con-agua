@@ -1,7 +1,7 @@
 import ConAgua.Arena.IndT.IdxSorts
 import ConAgua.Arena.IndT.GenRec3
 import ConAgua.Arena.IndT.ArmMemos
-import ConAgua.Arena.IndT.Tables
+import ConAgua.Arena.IndRealSctC
 import ConAgua.Arena.IndT.Install4
 import ConAgua.Arena.RecCheckSpec.BlockNestedBit
 import ConAgua.Arena.IndInstallSpec.BpRecBpassR
@@ -328,9 +328,8 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
   refine Sim.post (K := ictlK7) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m6 m' ∧ HbMemo m' ∧ AbsOK m' ∧ RcMR m')
     (fun r m' e7 => by
-      obtain ⟨s7, rfl, -, x, a', h1, hQ⟩ := RefE.run_okW
-        (ctbE_spec p hP.tabs k ⟨m6, Locals.init []⟩ _ _ _ _ _ _ _ _)
-        (ctb_ref hP.tabs hApd dn (UInt64.ofNat pw) bs k (by omega) m6 a6 (r6.headD 0) fe3 _ _ _ _ _
+      obtain ⟨s7, rfl, -, x, a', h1, h2⟩ := RefE.run_okW (ctbE_spec p hP.tabs.one hP.tabs.tabs k ⟨m6, Locals.init []⟩
+        _ _ _ _ _ _ _ _) (ctb_ref hP.tabs hApd dn (UInt64.ofNat pw) bs k (by omega) m6 a6 (r6.headD 0) fe3 _ _ _ _ _
         _ bs.members ctorsAs sss
         hS6 ((hbsD.grow (decBS_mono _) hg06)) (partsHsrc_grow hg06 hq9 hsrc) (hmss.grow decMS_mono hg06)
         (hcas.grow decCNS_mono hg06) (hsss'.grow decISS_mono hg06) hM6 hA6
@@ -340,7 +339,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
         ⟨_, ConRon.Bridge.Inductives.dCtors_ext.list x06 _ _ hcaP⟩
         ⟨_, ConRon.Bridge.Inductives.DExt.list (d := ConRon.Bridge.Inductives.denoteLLists)
           (fun hx x y h => ConRon.Bridge.Inductives.BI.denoteLLists_ext hx x y h) x06 _ _ hssP⟩) e7
-      exact ⟨x, a', h1, hQ.stage, hQ.grow, hQ.memo, hQ.abs, RcMR.ofClosedHb hclH hfH e7 hR6 hQ.memo⟩)
+      exact ⟨x, a', h1, h2.stage, h2.grow, h2.memo, h2.abs, RcMR.ofClosedHb hclH hfH e7 hR6 h2.memo⟩)
     (fun r x m7 a7 h => ⟨h.1, hg06.trans h.2.1, h.2.2⟩)
 
 include hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf in
