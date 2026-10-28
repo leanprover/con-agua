@@ -560,9 +560,20 @@ Landed as one `checker.s` regeneration. Base: master f3a463b8 (lsugar, lsugar-c 
 
 ### Left over
 
-* `ca_check_b`'s worker region still reserves a slot for `CTL` (`workerNeed own = abiSlot ·
-  (2 + |own|)`, `CTL` is owned but lives in slot 0): one unused slot per worker, 32 GiB of
-  address space. Removing it changes `ca_worker_size` and `BufLayout`'s `ownOff`.
+* ~~`ca_check_b`'s worker region still reserves a slot for `CTL`~~ done 2026-10-28 (lane
+  layoutleft). `bufMinOk` now requires the table-relative array to be `own[0]` (it is: `CTL`
+  heads `parOwnedL`) and nothing to be owned without one; `own[k]` for `k ≥ 1` takes slot
+  `1 + k` (`ownOff`), and `workerNeed own = abiSlot · (2 + (|own| − 1))` (the `− 1` truncates,
+  so an empty list still gets the stack's slot and the proofs need no non-emptiness premise).
+  The only new proof obligation is that an owned array in a slot is not `own[0]`
+  (`bufMinOk_pos`), used where `bufLayout_ok` separates the stack (slot 1) from the owned slots.
+  `ca_worker_size` 89 → 88 slots (3 058 016 714 752 → 3 023 656 976 384 bytes); `main.c` is
+  unchanged (`advise_huge` covers `ca_worker_size / ca_slot − 2` slots from slot 2, which is
+  still exactly the owned slots). Measured: proof lines `.lean` 4 files +59 / −31 (most of it
+  `bufMinOk_pos` and `bufMinOk_tbl`'s new proof); `checker.s` +88 / −88 (the size test, the 86
+  owned arrays' offsets, the `ca_worker_size` symbol); `diff-e2e.py --refs --parallel 16` and
+  `--jobs 4`: 634 fixtures agree (406 accepted, 228 not), no UNSOUND, INCOMPLETE, CRASH,
+  TIMEOUT or REFDIFF.
 * ~~The wall-time comparison on a quiet machine~~ done 2026-10-28 (`bench.py --reps 5 --cpus 40,41
   --asm` with `checker.s` of f3a463b8 and 58ef722d, interleaved, load 1–2; output in
   `_tmp/coordinator/quietbench`): the default set's geometric means are instructions 1.000,
