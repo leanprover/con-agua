@@ -1,5 +1,6 @@
 import ConAgua.Front.IndApplySpec2
 import ConAgua.Front.IndFieldsSpec
+import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop

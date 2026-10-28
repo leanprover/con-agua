@@ -3,7 +3,6 @@ import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Final.TwinVerdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 /-!
 # Error refinements of the frontend's driver: `apply_ind`, `apply_dline`,
 `front_line`, `front_run` (lane `verdicts-b`, helper `f2`)

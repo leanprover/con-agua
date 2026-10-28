@@ -1,10 +1,11 @@
 import ConAgua.Front.IndApply
+import ConAgua.L.ModelGen
+import ConAgua.Arena.LevelEquiv
 import ConAgua.Front.IndAlloc
 import ConAgua.Arena.IndView
 import ConAgua.Front.ApplyDecl
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LdRd
-import ConAgua.Arena.WhnfBase
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
