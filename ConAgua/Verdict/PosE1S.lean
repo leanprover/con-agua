@@ -1,4 +1,5 @@
 import ConAgua.Verdict.PosE1L
+import ConAgua.Verdict.PosNty
 import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndT.PosCrest
 /-!
