@@ -1097,8 +1097,8 @@ The rest of the batch's list (§3.13), now that `lvl_eq_fueled` is unified (§3.
 Gone with them: the hand models `crpW`/`crpK1–8`, `cdaW`/`cdaK1–10`/`cdaQ1–2`/`cdaT`/`cdaRet`,
 `tvW`/`tvK1–4` and the shared tail `dvK1–4`, `cdtW`/`cdtK1–3`, `cdoW`/`cdoK1–6` (the file
 `Arena/DeclArmOpaque`), `ivgW`/`ivgK1–5`, with their arms and specs. `Arena/DeclValSpec` holds only
-`ValProg` and the twin equations. Whole diff against master 9458a945: **+1 056 −2 759** (21
-`.lean` files, before the imports' shake).
+`ValProg` and the twin equations. Whole diff against master 9458a945: **+1 065 −2 774** in 25
+files.
 
 * **`G`**: `CoreStubsE p` (`check_reduce_pin`), `VerdictCtxU p` (`check_decl_axiom`), `TvCtx`
   (core stubs, `IvgE`, `lvl_eq_c` outside the closure) for `check_thm_val`, `CdtCtx`
@@ -1128,7 +1128,7 @@ Elaboration (user seconds, median of 3 interleaved runs, base master 9458a945, l
 | `Verdict/DeclCrpE`, `DeclArmsE`, `Arena/DeclArmOpaque` | 5.66 | 1.23 | …from here; with `DeclCrpT`: 7.3 → 4.1 |
 | `Verdict/DeclValE` | 4.76 | **6.08** | `installValueGuardsE`, `ivg_ref`, `checkThmValE`, `tv_ref` |
 | `Verdict/DeclHdrE`, `Arena/DeclValSpec`, `DeclCvg`, `DeclCvgT` | 9.59 | 7.03 | …from here; with `DeclValE`: 14.4 → 13.1 |
-| the other 15 | 24.4 | 24.6 | |
+| the other 13 | 24.4 | 24.6 | |
 | **sum (25 modules)** | **58.0** | **49.5** | **−15 %** |
 
 Batch 2a in all: 21 functions, one model and one refinement each; the pairs 5 619 → 3 072
