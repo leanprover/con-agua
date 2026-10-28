@@ -31,8 +31,8 @@ l_model cxoE_spec (p : Prog) (hf : p.lookup "class_ctor_of" = some classCtorOfL)
 section rel
 variable {p : Prog} (hq : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (P : CxoProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) {vis : Word} (hTka : TkaE p dn vis fe env)
-include hq henv P hIlpf hOpf hnv hTka
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) {vis : Word} (hcE : CoreStubsE p)
+include hq henv P hIlpf hOpf hnv hcE
 
 omit hIlpf in
 /-- **`class_ctor_of`'s model error claim** (`cxoW_okC`'s hypotheses; the model at fuel `n + 1`). -/
@@ -268,7 +268,7 @@ theorem cxoE_claim (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {q f
   | error e6 =>
     rw [h6, cxoE.k_class_fields_agree.none] at he
     cases he
-    exact ErrClaim.bind_left (CoreSpecE.of_callE (classFieldsAgree_claim hq henv P.toCfaProg hnv hTka q fto ftl mo ml
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (classFieldsAgree_claim hq henv P.toCfaProg hnv hcE q fto ftl mo ml
       (r4.tail.headD 0) (r4.tail.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) (r5.headD 0) (r5.tail.headD 0) bs
       formerTys ms fvs (e0' :: es') kinds (n + 1) (by omega) ⟨s5.mem, Locals.init []⟩ a5 0 hC5 hA5
       (hbs.grow hg15) (by rw [decHL_grow hg15 hftb]; exact hft)
@@ -340,7 +340,7 @@ theorem classCtorOf_claim (N : Nat) (hN : N ≤ 2 ^ 62) (s₀ : St) (a₀ : ASta
     refine CoreSpecE.of_runs fun e hc => ?_
     by_cases hk0 : e.cls = 0
     · exact ErrClaim.of_cls0 hk0
-    exact cxoE_claim hq henv P hOpf dn fe hnv hTka n hN hC hA hbs hft hftb hR hms hmsb hcA hlp hnpk
+    exact cxoE_claim hq henv P hOpf dn fe hnv hcE n hN hC hA hbs hft hftb hR hms hmsb hcA hlp hnpk
       hsz5 hP hsh hftP hmsP hcAP hformer hMs e
       (triple_of_callE_err (cxoE_spec p P.cxo (n + 1) s₀ vis q fto ftl rd mo ml c cA) hc (Err.code_ne_of_cls hk0))
 

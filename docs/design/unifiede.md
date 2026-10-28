@@ -1377,7 +1377,7 @@ d4f85701, load 32–59):
 
 No module is slower.
 
-### 3.18 Batch 3b, the rules and recursor types (`class_rec_tys_ok`, `class_rules_ok`, `class_recs_rules_ok_go`, `class_recs_rules_ok`)
+### 3.19 Batch 3b, the rules and recursor types (`class_rec_tys_ok`, `class_rules_ok`, `class_recs_rules_ok_go`, `class_recs_rules_ok`)
 
 The depth-3–4 functions of the `IndBRec*` family whose callees are unified (`class_rec_ty_ok`,
 §3.16; `class_rules_ok_one`, §3.17):
@@ -1431,7 +1431,7 @@ d4f85701, load ≈ 28):
 No module of the family is more than 10 % slower (`GenRec2`'s +10 % is 0.24 s and comes from its
 import, not from a proof in it).
 
-### 3.18 Batch 3a, first landing (the `Nat.div` pin gate, `certify_nat_eqs`)
+### 3.20 Batch 3a, first landing (the `Nat.div` pin gate, `certify_nat_eqs`)
 
 The batch's functions (§3.1's inventory at depth 3–5 in the `Decl*`/`DefEq*`/`Whnf*` families, and
 what batch 2 left): `check_div_mod_pin_loop` (depth 3), `check_div_mod_pin` (depth 4), with them
@@ -1486,7 +1486,7 @@ a second series, `times1b.txt`, the first being noisy for `DeclDivGateT2`):
 | `Arena/DeclDefnT`, `Verdict/DeclDefnE`, `TopE` | 4.72 | 4.37 | |
 | **sum** | **44.4** | **34.2** | **−23 %** |
 
-### 3.19 Batch 3a, second landing (`class_stream_recs`, `check_sum_tele_slow`, `check_sum_tele`)
+### 3.21 Batch 3a, second landing (`class_stream_recs`, `check_sum_tele_slow`, `check_sum_tele`)
 
 The two depth-2 functions batch 2b left (their callee `check_constant_val` is batch 2a's) and
 their one caller `check_sum_tele` (depth 3, the same file):
@@ -1520,7 +1520,7 @@ in 16 files.
   slightly slower), the default `finish` for `ctE` (`Sum2` 3.8 s against 4.3–4.5 s with `simp []`),
   `simp [Cmp.evalW, Cmp.eval]` for `csrE` (all recipes 1.4–1.6 s).
 
-Elaboration (as §3.18, `_tmp/unify-b3a/sum-times1.txt`, `sum-times2.txt`; load 21–54):
+Elaboration (as §3.20, `_tmp/unify-b3a/sum-times1.txt`, `sum-times2.txt`; load 21–54):
 
 | module | base | new | |
 |---|---:|---:|---|
@@ -1544,7 +1544,7 @@ and the batch's families: the knot's own split functions in `DefEqLazyE`, `DefEq
 inventory at depth 0, unowned), and phase B's `check_pending_go`/`_next` (a twin that reports
 failures as values, like phase A's `install_fold_go`; with the spine, batch 4).
 
-### 3.20 Batch 3c, block checks, first landing (`check_block_ctors`, `check_abs_ctor_sorts_all`, `check_block_positivity`, `check_block_tele(s)`)
+### 3.22 Batch 3c, block checks, first landing (`check_block_ctors`, `check_abs_ctor_sorts_all`, `check_block_positivity`, `check_block_tele(s)`)
 
 The block-check functions of depth 3–5 (§3.1, `Blk*`/`IndsE*`/`PosTopE*`) whose callees are
 migrated or stay `callE`: `check_block_ctors` (3), `check_abs_ctor_sorts_all` (3),
@@ -1579,7 +1579,7 @@ Choices:
 * **Callees read through their runs**: `check_block_positivity` calls `check_abs_ctor_sorts_all`
   through `callE` (its ok half needs the call's frame for the walk memos, `PosMR.ofClosed`, which
   takes the run), `check_block_tele` calls `check_constant_val` (`checkConstantVal_absOK` takes the
-  run) and `check_sum_tele` (unified meanwhile by batch 3a, §3.19; its claim `CheckSumTeleE` stays)
+  run) and `check_sum_tele` (unified meanwhile by batch 3a, §3.21; its claim `CheckSumTeleE` stays)
   through `callE`. Their halves come by
   `RefE.run_ok`/`RefE.run_err` or the claims in `G`. The callees outside the verdict closure are
   lifted by `callW_spec` (`block_nest_ctx`, `pin_word`, `lvl_eq_true`, `strip_pis`, `rec2`, …), so the
@@ -1612,6 +1612,147 @@ The flagged modules are the new homes of the moved models; each family is faster
 kit: a lemma from a unified model's ok value back to the call's run (§3.13) would let
 `check_block_positivity` and `check_block_tele` list `iaaE` and the `check_constant_val` model as
 unified callees.
+
+### 3.23 Batch 3b, third landing (`target_k53_args`, `target_k53_heads`, `target_k53`)
+
+The last three functions of batch 3b, above `target_class_match` (§2). `target_k53_args` had a
+hand error model (`tkaE`, "the generator's step `grind` fails") and its claim was a hypothesis
+(`TkaE`) threaded through the spine's claims; it is now an `l_model … unified` like the others.
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `target_k53_args` | `tkaW_okC` 149, `tkaE_of` 205, `TkaE` 18 = 372 | `tka_ref` 160 + `tkaE_succ` 13 + `tkaE_slEq` 8 = 181 | −51 % |
+| `target_k53_heads` | `tkhW_okC` 134, `tkhE_claim` 192, `targetK53Heads_claim` 23 = 349 | `tkh_ref` 138 | −60 % |
+| `target_k53` | `tkW_okC` 79, `tkE_claim` 102, `targetK53_claim` 25 = 206 | `tk_ref` 75 | −64 % |
+| `targetK53_refinesC` | 32 | 31 (`RefE.triple`) | |
+| `tcm_claimA` (§2) | 26 | — (its one user was `tkaE_of`) | |
+| **pairs** | **953** | **425** | **−55 %** |
+
+Also gone: the hand error model `tkaE` with `tkaTailS`/`tkaTail_specE`, the hand ok models
+`tkaW`/`tkaK1–8`, `tcmR`, `tkhW`/`tkhK1–5`, `tkW`/`tkK1–3` with their arms and specs (`tka_spec`,
+`tcmR_spec`, `tkh_spec`, `tk_spec`), the files `Arena/RecCheckSpec/TkhK2`, `TkhK2V2`, `TkhK5`.
+`Arena/IndT/RecCheckK53` keeps only the frames and the erasure lemmas. Whole diff against master
+48bb19b9: +407 −1 468 in 21 files (before this report).
+
+* **`G = VerdictCtx p`** for all three (`tcm_ref`'s; every other callee is lifted).
+* **`TkaE` is gone.** The spine's claims (`IndBNodes`, `IndBAgree`, `IndBCtor`, `IndBCos`,
+  `IndBCcs`, `IndBGrp`, `IndArmE`, `IndArmTopE`) took it as a hypothesis, discharged at the top by
+  `tkaE_of`; they now take `hcE : CoreStubsE p` in its place (`IndBGrp` had it already), and
+  `class_nodes_agree`'s error claim reads `tk_ref` through the run (`RefE.run_err hT hnv ⟨hnv, hcE⟩`,
+  `RefE.run_ok`). `class_nodes_agree`'s ok refinement (`RecGen23`) takes `RefE.run_okW … tk_ref`.
+* **Post**: the three share `TcmPost` (the result word against the twin's `Bool`, stage, growth,
+  `RcMR`, `AbsOK`), `tka_ref`'s last step being `tcm_ref` by `RefE.mono`.
+* **Models**: `tkaE` lifts `erase_each`, `sl_eq`, `intern_const`, `mk_app_n_f`, the shape's member
+  names and `nest_occ` and calls `tcmE`; `tkhE` lifts the spine stubs and `e_view` and calls `tkaE`;
+  `tkE` lifts `strip_pis` and `target_k53_tele` and calls `tkhE`. The two index slices' `if`s give
+  four copies of every later path; `tkaE_succ` and `tkaE_slEq` restate the model's first steps with
+  the slices as `if` terms, so `tka_ref` follows one path as `tkaW_okC` did.
+* **Placement**: `tkaE`, `tka_ref` in `Verdict/IndBTka`; `tkhE`, `tkE`, `tkh_ref`, `tk_ref`,
+  `targetK53_refinesC` in `Verdict/IndBK53`, which now imports `IndBTka` (the other way round
+  before); `RecGen23` imports `IndBK53`.
+* **Recipes**: `tkaE` fails with the default `finish` (`grind`'s generation threshold 8 on the
+  four `return 0` paths after `sl_eq`), with `simp [Cmp.evalW, Cmp.eval]` (± `locals`: `simp_all`
+  hits its step limit on those paths) and `simp []`, and with `finish … gen 12`/`16`; it passes
+  with `finish [] gen 20` (also `gen 40 instances 20000`, same time). `tkhE`: the default fails
+  (four paths), `simp [Cmp.evalW, Cmp.eval]`, `simp []` and `finish [] gen 20` pass; the last is
+  ≈ 1 s faster. `tkE`: the default.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+48bb19b9, load 22–135, `_tmp/unify-b3b/unify-b3b-k53/times.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBTka` | 8.27 | **32.01** | **slower (+23.7 s)**: the generated `tkaE` steps (≈ 23 s at `gen 20`) instead of the hand `tkaTail_specE` (5 s) … |
+| `Arena/RecCheckSpec/Tka` | 18.61 | 1.14 | … and the hand `tka_spec`, `tkh_spec`, `tk_spec` gone; the pair 26.9 → 33.2 |
+| `Verdict/IndBK53` | 4.83 | **6.18** | **slower (+1.3 s)**: the unified `tkhE` (≈ 5.3 s with the `gen 20` recipe in a separate series) |
+| `Arena/IndT/RecCheckK53` | 2.29 | 0.84 | the ok refinements gone |
+| `Arena/RecCheckSpec/K53Look`, `EeK2`, `TkhK2`, `TkhK2V2`, `TkhK5` | 2.61 | 1.06 | |
+| `Verdict/IndBTcm`, `IndBNodes`, `Arena/IndT/RecGen23` | 7.84 | 9.19 | |
+| `Verdict/IndBAgree`, `IndBCtor`, `IndBCos`, `IndBCcs`, `IndBGrp`, `IndArmE`, `IndArmTopE` | 36.07 | 38.80 | `hTka` → `hcE` only (noise: 11.5–20.9 s for `IndBCtor` alone) |
+| **sum (19 modules)** | **80.5** | **89.2** | **+11 %** |
+
+`IndBTka` is flagged: `target_k53_args` runs two `if`s before its seven calls, and a generated
+step goes through every path with all four slice combinations; the deleted hand model cut the
+body after the slices (`tkaTailS`, one spec for the tail, 43 s → 5 s). For the generator: a way to
+give a block of the body its own step theorem (a tail spec, as `tkaTailS`) would bring it back.
+No kit change was needed.
+
+Batch 3b in all (3 landings): `target_major_of*` and `class_majors` 869 → 358 pair lines, the
+class rules and recursor types 965 → 501, `target_k53*` 953 → 425: 2 787 → 1 284 (−54 %).
+
+### 3.21 Batch 3c, front validation (`validate_ind_d` and its callees)
+
+The front-validation family of §3.1 that no batch-2 lane took (`Verdict/FrontOrderE`,
+`FrontRecsE`, `FrontValidE`; the leaves `vi_unsafe`, `vi_np_go`, `vi_ctor`, `vi_rec_idx` are
+§3.11's): depth 1 `vi_nparams`, `vi_order_in`, `vi_rec`; depth 2 `vi_order_go`, `vi_recs_go`;
+depth 3 `vi_order`, `vi_recs`; depth 4 `vi_tail`; depth 5 `validate_ind_d`. All nine have unified
+models now. Their twin is one function, `validateIndD`, which reports failures as values (a record
+verdict), so each refinement is a `RefC` (as the leaves'): the ok half a fact about the twin's
+checks (`CtorOK`, `RecOK`, `VFacts`), the error half where the twin's check fails (`CtorFail`,
+`OrderFailW`, `RecFail`, `RecsFail`, and for `validate_ind_d` the record verdict itself,
+`VerdictClaimL`).
+
+| function | before: ok refinement + error claim | after | change |
+|---|---|---|---:|
+| `vi_order_in` | `orderInW_twin` 74 + `orderInE_fail` 74 = 148 | `orderIn_ref` 90 + `OrderInPost`/`OrderInFail` 17 = 107 | −28 % |
+| `vi_order_go` | `orderGoW_twin` 59 + `orderGoE_fail` 79 = 138 | `orderGo_ref` 80 + `OrderGoPost`/`OrderGoFail` 20 = 100 | −28 % |
+| `vi_order` | `orderW_twin` 57 + `orderE_fail` 71 + `OrderNV` 2 = 130 | `order_ref` 78 + `OrderPost`/`OrderErr` 14 = 92 | −29 % |
+| `vi_nparams` | `nparamsW_twin` 42 + `viNparams_fail` 34 + `viNparams_refinesE` 16 = 92 | `nparams_ref` 47 + `NparamsPost`/`NparamsFail` 8 = 55 | −40 % |
+| `vi_rec` | `recW_twin` 79 + `recE_claim` 139 = 218 | `rec_ref` 113 + `RecPost`/`RecErr` 10 = 123 | −44 % |
+| `vi_recs_go` | `recsGoW_twin` 35 + `recsGoE_claim` 54 = 89 | `recsGo_ref` 51 + `RecsGoPost`/`RecsGoErr` 14 = 65 | −27 % |
+| `vi_recs` | (ok half inside `validateW_twin`, ≈ 30) + `recsE_claim` 50 + `viRecs_refinesE` 22 = 102 | `recs_ref` 47 + `RecsPost`/`RecsErr` 11 = 58 | −43 % |
+| `vi_tail`, `validate_ind_d` | `validateW_twin` 338 (less the recursors' ≈ 30) + `validateE_claim` 438 + `validNV` and its lemmas 14 + `callE_zero` 12 + `validateClaim_frontAll` 6 = 778 | `validate_ref` 367 + `ValidatePost` 12 + `flat3`/`map_specT`/`listed_specT` 22 + `validateClaim_frontAll` 5 = 406 | −48 % |
+| **pairs** | **1 695** | **1 006** | **−41 %** |
+
+Also gone: the hand ok models `nparamsW`, `orderW`, `recW`, `recsGoW`, `recsW`, `tailW`,
+`validateW` with their specs, the generated `orderInW`/`orderGoW`, `pK`, the error models'
+`errors` variants. Whole diff against master d4f85701: +960 −1 780 in 15 files.
+
+Choices:
+
+* **`G`**: `True` for the eight inner functions (their callees outside the verdict closure are
+  lifted, their errors `.oob`; the callers pass `closedNV` at `RefC.run_err`); `XV st a` (the twin's
+  name reads the messages need) for `validate_ind_d`, so the ok half needs nothing new.
+* **`vi_tail` has no refinement of its own**: it never had a claim or an ok proof of its own
+  (`tailW` was unfolded in `validateW_twin`, its errors in `validateE_claim`), and its post would
+  be `validate_ref`'s context. `validate_ref` unfolds its unified model.
+* **Conditional error halves** where only the error needs a hypothesis: the type name handles below
+  `2^32` (`OrderInFail`, `OrderGoFail`, `OrderErr`), as `CtorErr`.
+* **One `VFacts` for both outcomes**: the recursors' failure needs the validation's facts without
+  the recursors (`VFactsR`); `validate_ref` builds `VFacts` once for any recursor list whose
+  records pass, at `rcs` for the ok half and at `[]` for the error half.
+* **Placement**: the refinements sit where `validateW_twin`'s pieces were (`IndApplyRefine5/7/8/9`),
+  imported by `apply_ind`'s ok proof (`IndApplyTwin`, `FrontPreOK2`, which read `validate_ind_d`
+  through its run). The twin halves stay in `FrontOrderE`/`FrontRecsE` (no L any more;
+  `FrontOrderE` now imports `IndValidTwin` instead of `IndApplyRefine9`, and `IndApplyRefine8`
+  imports it for `OrderFailW`); `RecFail`/`RecsFail` moved to `IndApplyRefine7`, the list lemmas
+  `fpos_lt`/`getElem_flatten'`/`flat_pos` to `IndValidTwin`. `FrontValidE` keeps the driver's
+  facts and `validateClaim_frontAll` (`RefC.run_err`).
+* **Generator observation** (not changed): a callee spec whose model returns a nested pair,
+  `mapW … = some ((r.headD 0, r.tail.headD 0), s'.mem)` (`vi_map`, `vi_listed`), is rejected as
+  an "unsupported post conjunct" in `unified` mode; the flat tuple `some (r₀, r₁, s'.mem)` is
+  accepted. `map_specT`/`listed_specT` restate the two specs through `flat3` (16 lines).
+* **Recipes**: `simp []` for every model; the default `finish` measured at parity or slower
+  (`IndApplyRefine5` 4.6/4.2/5.4 s against 4.9/4.8/5.4, `IndApplyRefine7` 5.2/4.9/5.4 against
+  5.2/6.3/5.3).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+d4f85701, load 22–130, `_tmp/unify-b3c/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Front/IndApplyRefine5` | 2.17 | **4.45** | `viOrderInE`/`viOrderGoE` moved in … |
+| `Front/IndApplyRefine7` | 1.72 | **4.78** | `viNparamsE`, `recE`, `recsGoE`, `recsE` moved in … |
+| `Front/IndApplyRefine8` | 1.14 | **1.63** | `viOrderE` moved in … |
+| `Front/IndApplyRefine9` | 6.65 | 7.21 | `viTailE`, `validateE`, `validate_ref` |
+| `Verdict/FrontOrderE`, `FrontRecsE`, `FrontValidE` | 37.80 | 16.90 | … from here (error models and claims gone) |
+| `Front/IndApplySpec` | 20.16 | 10.42 | hand models and specs gone |
+| `IndApplyRefine6`, `IndApplySpec3`, `IndApplyTwin`, `IndValidTwin`, `FrontPreOK2` | 12.17 | 11.74 | |
+| `Verdict/FrontRunE` | 21.09 | 24.73 | doc comment and an import only (load: 13.5–16.1 s wall base, 11.9–25.6 new) |
+| **sum (14 modules)** | **102.9** | **81.9** | **−20 %** |
+
+The three flagged modules are the new homes of the unified models; with the modules they came from
+they are 42.7 → 27.8 s.
 
 ### 3.21 The depth-0 leftovers of the block and sum families (`check_block_doms_at`, `check_struct_doms_at`, `check_sum_ctors`, `check_struct_field_sorts_i(_go)`, `check_block_tables(_one)`)
 

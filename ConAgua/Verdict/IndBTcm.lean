@@ -12,9 +12,8 @@ import ConAgua.L.ModelGen
 `tcmE` (`l_model … unified`): `target_params_def_eq` through its unified model (`pdeE`), the
 callees outside the verdict closure (`lvls_eq_c`, the shape's member names and parameters, `param_levels`,
 `target_holes`) through their `Option` models. `tcm_ref` refines `targetClassMatch` for both
-outcomes; its ok half is `targetClassMatch_refinesC` and the callers' ok refinements
-(`target_major_nfs`, `target_k53_args` through the run, `RefE.run_okW`), its error half
-`tcm_claimA`.
+outcomes; its ok half is `targetClassMatch_refinesC`; the callers' refinements (`tmn_ref`,
+`tka_ref`) apply it to their unified models' calls.
 -/
 
 noncomputable section
@@ -77,7 +76,6 @@ structure TcmPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
 
 include hq henv in
 /-- **`target_class_match` refines `targetClassMatch`, both outcomes** (twin side: con-ron's
@@ -227,33 +225,6 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   · exact h6
   obtain ⟨c, a6, run6, hR6⟩ := h6
   exact RefE.ret run6 ⟨hR6.res, hR6.stage, hg05.trans hR6.grow, hR6.rc, hR6.abs⟩
-
-include hq henv hnv hcE in
-/-- `target_class_match`'s error claim (`tcm_ref`'s error half). -/
-theorem tcm_claimA (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
-    (a₀ : AState) (q fto ftl pfo pfl us dso dsl lvls edso edsl : Word)
-    (bs : BlockShape) (formerTys pfvs ds eds : List EIdx) (hC : StageC dn vis fe env s₀.mem a₀)
-    (hA : AbsOK s₀.mem) (hbs : BSOK s₀.mem q.toNat bs) (hus : H us) (hlv : H lvls)
-    (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
-    (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
-    (hpf : HSl0 s₀.mem pfo pfl pfvs) (hds : HSl0 s₀.mem dso dsl ds)
-    (heds : HSl0 s₀.mem edso edsl eds) (hP : RcMR s₀.mem)
-    {pP : ConLeche.BlockShape} {formerTysP pfvsP dsP edsP : List ConLeche.Expr}
-    {usP lvlsP : List ConLeche.Level}
-    (hsh : dShape a₀.store bs = some pP)
-    (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
-    (hpfP : Frontend.denoteEList a₀.store pfvs = some pfvsP)
-    (husP : denoteLs a₀.store.lss (decI us) = some usP)
-    (hdsP : Frontend.denoteEList a₀.store ds = some dsP)
-    (hlvP : denoteLs a₀.store.lss (decI lvls) = some lvlsP)
-    (hedsP : Frontend.denoteEList a₀.store eds = some edsP)
-    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
-    (hpw : ∀ x ∈ pfvsP, ConLeche.Expr.WScoped pfvsP.length x) :
-    CoreSpecE p n "target_class_match" [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl]
-      (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) s₀ a₀ :=
-  RefE.coreSpecE (tcmE_spec p hL n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl) hnv ⟨hnv, hcE⟩
-    (tcm_ref hq henv n hn hC hA hbs hus hlv hft hftb hpf hds heds hP hsh hftP hpfP husP hdsP
-      hlvP hedsP hformer hpw)
 
 include hq henv in
 /-- **`target_class_match` refines `targetClassMatch`** under `StageC` (`tcm_ref`'s ok half). -/

@@ -75,7 +75,7 @@ theorem ctlW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR)
     slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr hP.ad.ftd hP.hcr (n + 1), iarW_spec p hP.hiar hP.hcr (n + 1),
     fsortsR_spec p cR hcR n]
   all_goals subst_vars
-  -- the callee posts' `LocEq`s, unfolded, rewrite the locals before `grind` (as `tka_spec`)
+  -- the callee posts' `LocEq`s, unfolded, rewrite the locals before `grind`
   all_goals (try simp only [LocEq] at *)
   all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
@@ -134,7 +134,7 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR
     hcR (n + 2) "open_pis_at_fvars_f", ftdsF_spec p hP.ad (n + 2),
     hcR (n + 2) "check_struct_doms_at", ctlW_spec p hP cR hcR n]
   all_goals subst_vars
-  -- the callee posts' `LocEq`s, unfolded, rewrite the locals before `grind` (as `tka_spec`)
+  -- the callee posts' `LocEq`s, unfolded, rewrite the locals before `grind`
   all_goals (try simp only [LocEq] at *)
   all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init,
     List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
