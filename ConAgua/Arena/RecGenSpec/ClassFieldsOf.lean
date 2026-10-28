@@ -1,12 +1,8 @@
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecClassSpec.PiBWRoom
-import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Arena.RecGenSpec.CfoProg
-import ConAgua.Arena.IndPartsSpec.BlockCounts
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # ClassFieldsOf: `ConRon.Arena.classFieldsOf`

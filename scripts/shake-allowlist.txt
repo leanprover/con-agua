@@ -156,7 +156,6 @@ ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.RecGen19	# the build
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum2	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum5	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
-ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.RecGenSpec.ClassKeyCanon	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install1	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install2	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)

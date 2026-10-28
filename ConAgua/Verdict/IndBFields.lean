@@ -1,3 +1,5 @@
+import ConAgua.Arena.RecGenSpec.CfhW
+import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.RecGenSpec.ClassFieldsOf
 import ConAgua.Arena.IndRealAbsPos

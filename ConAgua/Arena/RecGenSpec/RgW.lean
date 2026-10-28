@@ -1,7 +1,5 @@
+import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.GtProg
-import ConAgua.Arena.RecClassSpec.MkTMWAfr
-import ConAgua.Arena.RecClassSpec.Rec2SimTMA
-import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.RecGenSpec.ClassConstOkHeader
 import ConAgua.Arena.IndGrindAttr
 

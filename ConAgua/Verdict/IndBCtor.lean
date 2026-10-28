@@ -1,6 +1,4 @@
 import ConAgua.Verdict.IndBAgree
-import ConAgua.Verdict.IndBRec1
-import ConAgua.Verdict.IndBFields
 import ConAgua.Arena.IndT.RecGen27
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

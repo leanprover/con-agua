@@ -1,3 +1,6 @@
+import ConAgua.Arena.RecGenSpec.ClassMinorSlotW
+import ConAgua.Arena.RecClassSpec.Rec2SimTMA
+import ConAgua.Arena.RecClassSpec.MkTMWAfr
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
