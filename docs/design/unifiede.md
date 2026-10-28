@@ -985,3 +985,93 @@ affbbf73; load 18–42; `CntW` from a separate series after the recipe change):
 | **sum** | **41.3** | **30.6** | **−26 %** |
 
 `Install7` is the one flagged module; with the files it replaces (`Icbo`, `BlkE1`) it is 11.4 → 6.3 s.
+
+### 3.13 Batch 2b, first landing (inductive targets and classes: `IndBPins`, `IndBTmt/Tmo`, `IndBHdr`, `IndBRec2`, `IndBFields`, `PosTopE1`, `PosE2M`)
+
+The batch's functions (depth 1–2 of §3.1 in the `IndB*`/`Pos*` families, callees migrated):
+`target_major_pins`, `target_major_of_outside_tail`, `target_major_of_outside`,
+`class_const_ok_header` (skipped in batch 1), `class_const_ok`, `class_rec_ty_ok`, `class_fields_of`,
+`check_abs_ctor_sorts_one`, `check_abs_ctor_sorts`, `nest_grow_group`, `nest_seeds` (this landing);
+`class_rule_ok`, `class_rules_ok_one` (after `class_rule_ok_guards`, §3.11) and `nest_inst_type`
+(after `lvl_eq_fueled`) are the second landing. Not in this batch: `whnf_telescope` (batch 2a),
+`class_stream_recs` and `check_sum_tele_slow` (their callee `check_constant_val` is batch 2a's).
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `target_major_pins` | `tmpW_okC` 112, `tmpE_claim` 148, `targetMajorPins_claim` 13, frames `tmpW_mfrR` 24, `tptR_mfr` 11 = 308 | `tmp_ref` 126 + `TmpPost` 6 = 132 | −57 % |
+| `target_major_of_outside_tail` | `tmtW_simC` 86, `tmtE_claim` 86, `tmoTail_claim` 25 = 197 | `tmt_ref` 106 + `TmoPost` 7 = 113 | −43 % |
+| `target_major_of_outside` | `tmoW_simC` 163, `tmoE_claim` 214, `tmo_claim` 26 = 403 | `tmo_ref` 168 | −58 % |
+| `class_const_ok_header` | `classConstOkHeader_claim` 244 (ok half: `install_header`'s `ihW_okT`, shared) | `cch_ref` 182 + `CchPost` 5 + `cchT`/`cchT_bind` 33 = 220 | −10 % |
+| `class_const_ok` | `ccoW_simT` 37, `classConstOk_of_ih` 38, `ccoW_simC` 16, `classConstOk_claim` 69 = 160 | `cco_ref` 41 + `CcoPost` 5 = 46 | −71 % |
+| `class_rec_ty_ok` | `rtoW_simC` 110, `classRecTyOk_claim` 169 = 279 | `rto_ref` 130 + `RtoPost` 6 = 136 | −51 % |
+| `class_fields_of` | `cfoW_sim` 31, `cfoW_afr` 11, `classFieldsOf_claim` 48 = 90 | `cfo_ref` 33 (`CfgPost`) | −63 % |
+| `check_abs_ctor_sorts_one` | `iaoW_simC` 63, `iaoE_claim` 61 = 124 | `iao_ref` 70 | −44 % |
+| `check_abs_ctor_sorts` | `iacW_simC` 145, `iacE_claim` 157 = 302 | `iac_ref` 136 + `IacPost` 6 = 142 | −53 % |
+| `nest_grow_group` | `ggW_ok` 133, `nggE_claim` 184 = 317 | `ngg_ref` 158 + `NggPost` 10 = 168 | −47 % |
+| `nest_seeds` | `p2sdW_okC` 153, `nsdE_claim` 204 = 357 | `nsd_ref` 163 + `NsdPost` 8 = 171 | −52 % |
+| **pairs** | **2 781** | **1 399** | **−50 %** |
+
+The hand ok models with their arms and specs are gone too (about 700 lines): `tmpW`/`tmpK1–4`,
+`tptR`, `tmtW`/`tmtK1–3`, `tmoW`/`tmoK1–4`, `ccoW`/`ccoK1–3`, `rtoW`/`rtoK1–5`, the generated `cfoW`,
+`iaoW`/`iaoK1–2`, `iacW`/`iacK1–4`, `ggW`/`ggK1–4`, `p2sdW`/`p2sdK1–3`/`keyR`, and their specs; the
+files `Arena/IndT/RecGen3`, `Arena/RecGenSpec/ClassConstOk`, `ClassConstOkHeader` and
+`Arena/IndPosSpec/P2sdW`. The `@[refines]` theorems keep their statements (`RefE.triple`). Whole diff
+against master 985859c8: +1 288 −3 434 in 49 files.
+
+Choices:
+
+* **`G` per function** (§1.5): `VerdictCtx p` for `target_major_pins` (the core stubs);
+  `closedNV p nvFns = true` for `target_major_of_outside(_tail)` and `class_fields_of`;
+  `VerdictCtxU p` for `class_const_ok_header`, `class_const_ok`, `class_rec_ty_ok` (the header's
+  consts-resolve site needs `UceProg`, `uce_errClaim_hi`); `CheckStructFieldSortsIE p` for the
+  abstract constructor sorts (`check_struct_field_sorts_i` stays `callE`); `NitE …` for
+  `nest_grow_group` and `NbG p` for `nest_seeds` (`nest_inst_type` stays `callE` until the second
+  landing).
+* **`class_const_ok_header` has its own model and refinement.** Its ok half used to be
+  `install_header`'s `ihW`/`ihW_okT` (the same body, but another L function with other abort codes
+  and another twin). Its twin is a prefix of `classConstOk`, so as with `rgT` (§3.8) there is one
+  twin definition of the prefix, `cchT`, with `cchT_bind : classConstOk … = cchT … >>= rest`. This
+  branch no longer uses `ihW` (with `ihK1–9`, `ihW_step`) or `ihW_okT`; they stay for
+  `install_header` (batch 2a).
+* **One post for a tail and its caller**: `target_major_of_outside` ends in its tail, so both
+  refinements share `TmoPost`; `tmo_ref`'s tail arm is `tmt_ref` and `RefE.mono`. Likewise `IacPost`
+  for the abstract constructor sorts and `CfgPost` for `class_fields_of`.
+* **Frames as post fields**: `tmpW_mfrR` (the frame of `target_major_pins`, used by `class_majors`)
+  is a field `mfr` of `TmpPost`, shorter than a lemma over the model.
+* **`nest_grow_group`'s old ok proof was generic** over a call reading and an invariant; its one
+  user fixed both, so `ngg_ref` states that invariant directly.
+* **Callers** (depth 3, minimal): `class_majors` (`clmW_simC`, `clmE_claim`), `target_major_of`
+  (`tmcW_simC`, `tmcE_claim`), `class_rec_tys_ok` (`rtsW` reads the call through `rtoR`),
+  `check_abs_ctor_sorts_all` (`iaaW_simC`, `iaaE_claim`), `nest_cont_new` (`newRef_step`) read the
+  halves through the run (`RefE.run_okW`, `RefE.run_err`). `nestSeedsE_claim` lost its `NitE`
+  hypothesis (`cid_claim2`).
+* **Placement**: `tmp_ref` in `Arena/IndT/RecCheckPins`, `tmt_ref`/`tmo_ref` in `Arena/IndT/RecGenTmf`
+  (`IndBTmt`/`IndBTmo` keep the models only), `cch_ref`/`cco_ref` in `IndBHdr`, `rto_ref` in
+  `IndBRec2`, `iao_ref`/`iac_ref` in `Arena/IndT/Install6`, `ngg_ref` in `Verdict/PosE2`, `nsdE` and
+  `nsd_ref` in `PosTopE4` (the model lists `nckE_spec`, from `IndE`).
+* **Recipes**: the default `finish` for `tmpE`, `iaoE`, `iacE`, `nsdE`; `finish … gen 20` for
+  `classConstOkHeaderE` (`simp []` hits the recursion limit) and `classRecTyOkE`; `simp […]` for
+  `tmtE` (1.8 → 1.0 s for `IndBTmt` against `finish`), `tmoE`, `nggE` (`finish` fails),
+  `classConstOkE`, `cfoE` (slightly faster than `finish`).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+985859c8, load 6–28):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/PosE2M` | 17.85 | **20.65** | **slower (+2.8 s)**: `nggE` unified (`finish` fails; `simp []`) |
+| `Verdict/PosTopE4` | 2.02 | **4.15** | **slower (+2.1 s)**: `nsdE` moved in … |
+| `Verdict/PosTopE1` | 10.99 | 7.88 | … from here; the pair 13.0 → 12.0 |
+| `Verdict/IndBHdr` | 3.34 | **4.63** | **slower (+1.3 s)**: the unified header model (`finish … gen 20`); with the deleted `ClassConstOk(Header)` 6.3 → 4.6 |
+| `Verdict/IndBRec2`, `IndBRec3` | 3.47 | 4.04 | `rto_ref` moved in; with `RgW`, `RecGen7` (−0.3) |
+| `Verdict/IndBTmt`, `IndBTmo`, `IndBToi`, `IndBTmc` | 8.23 | 8.32 | `IndBTmt` with `simp [Cmp.evalW, Cmp.eval]` (`finish`: 9.2) |
+| `Arena/IndInstallSpec/IacW`, `IndPosSpec/GgW`, `GgW2`, `IndT/PosRoot`, `RecGenSpec/OcW` | 39.18 | 20.55 | hand models and specs gone |
+| `IndPosSpec/P2sdW`, `IndT/RecGen3`, `RecGenSpec/ClassConstOk`, `ClassConstOkHeader` (deleted) | 7.87 | — | |
+| `Verdict/PosE1M` | 24.92 | 27.03 | import changes only (noise; load) |
+| the other 30 modules | 73.4 | 74.1 | |
+| **sum (48 modules)** | **192.3** | **171.4** | **−11 %** |
+
+Each flagged module is offset by the module that held the deleted hand model, except `PosE2M`.
+For the generator: nothing was missing in this landing; `nestSeedsFuel_spec` (a singleton-list post)
+and `nckE_spec` (a unified spec with `G = True`) were taken without wrappers, so the wrappers of §3.9
+(`noaW1`, `cpW1`, `ucW1`) may be removable.
