@@ -23,12 +23,6 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model installBasisDecl_specE (p : Prog)
-  (hf : p.lookup "install_basis_decl" = some installBasisDeclL)
-  fns [hf ↦ installBasisDeclE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] errors
-
 l_model installBasisDecls_specE (p : Prog)
   (hf : p.lookup "install_basis_decls" = some installBasisDeclsL)
   fns [hf ↦ installBasisDeclsE] grind [arena_grind] fold [tierW, idxW]
@@ -40,51 +34,6 @@ l_model checkBasisDecl_specE (p : Prog)
   fns [hf ↦ checkBasisDeclE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 400000 simp [] errors
-
-/-- **`install_basis_decl`'s error claim** (a duplicate declaration rejects). -/
-theorem ibdE_okT {p : Prog} (hB : BasisProg p) (hnv : closedNV p L.Checker.nvFns = true)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
-    {m : Mem} {c : Word} {ci : IConstantInfo} {e : Err}
-    (hS : StageR dn vis fe m a) (hci : decCI (erecP m) dn c.toNat = some ci)
-    (hc : callE p n "install_basis_decl" [vis, c] m = .error e) :
-    ErrClaim (installBasisDecl fe ci) a e := by
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (installBasisDecl_specE p hB.ibd n ⟨m, Locals.init []⟩ vis c) hc
-    (Err.code_ne_of_cls hk0)
-  obtain ⟨w, hw1, hwl, hname⟩ := decCI_name hci
-  have hcb : c.toNat + 1 < 2 ^ 64 := erecP_bound hw1 hS.2
-  have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 hcb
-  have ew : rdW (m.arr64 EREC) (c + 1) = w := rdW_of_get? hc1.symm (erecP_get hw1)
-  cases n with
-  | zero => rw [installBasisDeclE.eq_1] at hW; cases hW; exact absurd rfl hk0
-  | succ n =>
-  rw [installBasisDeclE.arm1, ew] at hW
-  cases h1 : callE p n "env_find" [w, vis] m with
-  | error e1 =>
-    rw [h1, installBasisDeclE.k_env_find.none] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h1
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1] at hW
-  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callE
-    (envFind_specW p hB.ih.ix hB.ih.rowGet hB.ih.find n ⟨m, Locals.init []⟩ w vis) h1
-  subst hs1
-  by_cases hb : r1.headD 0 ≠ 0
-  · rw [installBasisDeclE.k_env_find.abort1 p _ _ _ _ _ hb] at hW; cases hW
-    have : (fe.find? ci.name).isSome = true := by
-      rw [hname]; exact envFindW_hitSome hW1 hS.1.env hwl hb
-    simp only [installBasisDecl, fail_bindAM]
-    refine ErrClaim.ite_neg (by simp [Option.isNone_iff_eq_none, Option.isSome_iff_ne_none] at this ⊢; exact this) ?_
-    exact ErrClaim.fail _ _ rfl
-  rw [installBasisDeclE.k_env_find.arm1 p _ _ _ _ _ (by simpa using hb)] at hW
-  cases h2 : callE p n "env_push" [vis, c] s1.mem with
-  | error e2 =>
-    rw [h2, installBasisDeclE.k_env_push.none] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h2
-  | ok q2 =>
-    obtain ⟨r2, m2⟩ := q2
-    rw [h2, installBasisDeclE.k_env_push.arm1] at hW; cases hW
 
 /-- **`install_basis_decls`' error claim**, on the model, by induction on the fuel (the recursion
 is the model's). -/
@@ -122,14 +71,14 @@ theorem ibdsE_rel {p : Prog} (hB : BasisProg p) (hnv : closedNV p L.Checker.nvFn
   cases h1 : callE p n "install_basis_decl" [vis, w0] m with
   | error e1 =>
     rw [h1, installBasisDeclsE.k_install_basis_decl.none] at h; cases h
-    exact ErrClaim.bind_left (ibdE_okT hB hnv hS hci' h1)
+    exact ErrClaim.bind_left (RefE.run_err (s₀ := ⟨m, Locals.init []⟩)
+      (installBasisDecl_specE p hB n _ vis w0) hnv trivial (ibd_ref hB n hS hci') h1)
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, installBasisDeclsE.k_install_basis_decl.arm1] at h
-  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callE (ibd_specW p hB n ⟨m, Locals.init []⟩ vis w0)
-    (h1)
+  obtain ⟨s1, hs1, -, fe1, a1, hrun1, hS1, hg1⟩ := RefE.run_ok (s₀ := ⟨m, Locals.init []⟩)
+    (installBasisDecl_specE p hB n _ vis w0) (ibd_ref hB n hS hci') h1
   subst hs1
-  obtain ⟨hrun1, hS1, hg1⟩ := ibdW_ok hB.rcp hW1 hS hci'
   have hob : o.toNat + 1 < 2 ^ 64 := by
     have := (Array.getElem?_eq_some_iff.mp hw0).1
     have := hS.2.2.2.1; simp only [iwA] at *; omega
@@ -138,7 +87,7 @@ theorem ibdsE_rel {p : Prog} (hB : BasisProg p) (hnv : closedNV p L.Checker.nvFn
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
   have hDt : DecB (basisDec dn (o + 1).toNat (l - 1).toNat) m cs := by
     rw [ho1, hl1]; exact decPL_tail hD'
-  have := ih s1.mem (r1.headD 0) (fe.push ci) a (o + 1) (l - 1) cs e h hS1
+  have := ih s1.mem (r1.headD 0) fe1 a1 (o + 1) (l - 1) cs e h hS1
     (DecB.grow (basisDec_mono dn _ _) hg1 hDt)
   simp only [installBasisDecls]
   exact ErrClaim.bind_right hrun1 this

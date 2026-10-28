@@ -1,6 +1,4 @@
 import ConAgua.Arena.DeclDivGateT2
-import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictFns
 import ConAgua.L.ModelGen
 
 /-!

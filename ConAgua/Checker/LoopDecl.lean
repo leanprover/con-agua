@@ -1,5 +1,4 @@
 import ConAgua.Checker.Prog
-import ConAgua.Compiler.WriteSetSplit
 import ConAgua.Arena.DeclArmLoop
 import ConAgua.Arena.DeclDivModSpec.RomPinSets
 import ConAgua.Arena.DeclNatGateSpec
