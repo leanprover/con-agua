@@ -1,13 +1,11 @@
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndT.Sum1
-import ConAgua.Arena.Verdict
 import ConRon.Bridge.Inductives.SumInstall
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of `check_sum_tele_slow`, `check_sum_tele` (lane `verdicts-b`, helper `ib`)
