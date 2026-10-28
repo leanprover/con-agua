@@ -16,7 +16,7 @@ the call chain need nothing new. `G` is the weakest of these that the error arms
 * `VerdictCtx p`: both; `VerdictCtxU p`: also `unresolved_consts_error`'s program (`UceProg`,
   with `str_lit_supported`'s refinement, a semantic fact);
 * a family's own named-field structure where the claims of callees not migrated yet, or of the
-  knot (`KnotUpToE`), are needed (`CvgCtx`, `M2CCtxE`, `PeelG`, …).
+  knot (`KnotUpToE`), are needed (`CvgCtx`, `M2CCtxE`, `KnotNvG`, …).
 
 A caller passes its own `G`'s fields (`hG.nv`, `hG.core`, `hG.toVerdictCtx`).
 -/
