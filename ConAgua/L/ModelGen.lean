@@ -1940,10 +1940,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- step theorem (`name.tail`), used by the function's step: the paths through the code before
   -- it are not multiplied by the paths after it
   let cutK? : Option Nat := if stx[28].getNumArgs == 0 then none else stx[28][1].isNatLit?
-  -- `flat` (with `simp`): the verification conditions without their intermediate states, the
-  -- hypotheses normalized before the models are unfolded (see `stepTac`)
+  -- `flat`: the verification conditions without their intermediate states, closed by `grind`
+  -- (see `stepTac`)
   let flat := stx[29].getNumArgs != 0
-  if flat && simpTs?.isNone then throwError "l_model: `flat` goes with `simp [..]`"
+  if flat && simpTs?.isSome then throwError "l_model: `flat` is a recipe of its own, without `simp [..]`"
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -2398,7 +2398,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         throwErrorAt t "l_model: the simp lemma `{hd.getId}` is not in scope (an import missing?)"
     let user ← ts.toList.mapM (pp ·.raw)
     let models := (fis.toList.map (s!"{·.model}")) ++ (st.ks.toList.map (s!"{·.name}"))
-    pure (simpBase ++ models ++ user)
+    pure (String.intercalate ", " (simpBase ++ models ++ user))
   -- Before `simp_all`, the induction hypotheses `ihs` are cleared: `vcgen` has used them, and
   -- `simp_all` would simplify them again and again, against every other hypothesis (IndBTmn
   -- 106 s -> 9 s). With `locals`, the locals are first evaluated by one `simp only … at *`: `vcgen`
@@ -2407,26 +2407,24 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- Not the default: on small functions the extra pass costs more than it saves (WhnfModels7E runs
   -- out of heartbeats, ClassFeR 35 s -> 48 s), and where `simp_all` fails, `grind` needs the
   -- `LocEq`s folded (CkcW).
-  -- With `flat`, each condition is first made small: the reads of locals resolved on the terms
-  -- `vcgen` built (`L.reduceLoc`, `L.reduceLocMem`, while they are still shared), the states
-  -- removed (`vc_flat`: the callees' posts as memories over the caller's locals), the hypotheses
-  -- normalized among themselves (`simp_all` without the models), and only then the models
-  -- unfolded, once, in the goal (`simp [.., *]`). `simp_all` with the models re-simplifies the
-  -- whole unfolded model tree in each of its rounds: on `infer_proj`'s tail 1.6 s per deep path,
-  -- against 0.1 s this way (ipE's 133 conditions 50 s -> 13 s). The recipe's `simp_all` and
-  -- `grind` follow for what is left.
-  let stepTac (attrs vcg : String) (ihs : List String) (keep : List String := []) : String :=
-    match simpTxt? with
-    | some ls =>
-      let l := String.intercalate ", " ls
-      let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
+  -- `flat`: `vc_flat` takes the intermediate states out of each condition (the callees' posts
+  -- become memories over the caller's locals), and `grind` closes it with the models' guarded
+  -- equations (`fW.armᵢ`, `fW.k_g.armᵢ`, …). A path through `d` continuations instantiates `d`
+  -- arms one after the other, one e-matching round each, so the rounds and the generations are
+  -- the number of continuations plus 5 (`grind`'s default of 5 rounds stops in the middle of a
+  -- long path). `simp_all` over the unfolded models re-simplifies the whole model tree in each of
+  -- its rounds: on `infer_proj`'s tail (133 conditions) 50 s, this recipe 11 s.
+  let flatRounds := st.ks.size + 5
+  let flatGen := (genN.getD flatRounds).max flatRounds
+  let stepTac (attrs vcg : String) (ihs : List String) : String :=
+    let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
+    if flat then
+      s!"(vcgen [{vcg}]{clr} <;> vc_flat <;> grind (ematch := {flatRounds}) (gen := {flatGen}) " ++
+        s!"{(match instN with | some i => s!"(instances := {i}) " | none => "")}[{attrs}])"
+    else match simpTxt? with
+    | some l =>
       let pre := if preLocals then s!" <;> (try simp only [{String.intercalate ", " simpBase}] at *)" else ""
-      let base := String.intercalate ", " simpBase
-      let flatT := if flat then
-          s!" <;> (try simp only [L.reduceLoc, L.reduceLocMem, ↓L.List.eq_headD_cons] at *) <;> vc_flat <;> " ++
-          s!"(try simp_all [{base}]) <;> (try simp [{String.intercalate ", " (ls.filter (!keep.contains ·))}, *])"
-        else ""
-      s!"(vcgen [{vcg}]{clr}{pre}{flatT} <;> (try simp_all [{l}]) <;> grind [{attrs}])"
+      s!"(vcgen [{vcg}]{clr}{pre} <;> (try simp_all [{l}]) <;> grind [{attrs}])"
     | none => s!"sym {symCfg}only [{attrs}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
   let parseTac (txt : String) : CommandElabM Syntax := do
     -- the library's names root-qualified, so that a binder `L` does not capture them
@@ -2618,8 +2616,6 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- `s₁` it starts from), as the hand tail specs (`depsTailS`, `derTailS`) did
   let mut cutPre : Option String := none
   let mut cutVcg : Option String := none
-  -- `flat`: the step does not unfold the join point the tail stands for (the tail's post is about it)
-  let mut cutKeep : List String := []
   if let some k := cutK? then
     unless fis.size == 1 do throwError "l_model: `cut` needs a single function"
     let some j := st.cutJ |
@@ -2669,7 +2665,6 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
           (fun $(mkIdent `sig) $sP => $body) $epost := by $(⟨tac⟩):tactic)))
     cutPre := some s!"rw [← L.seqTake_drop {k} (L.FunDecl.body {fi.decl}), show L.seqDrop {k} (L.FunDecl.body {fi.decl}) = {tailS.getId} from rfl]; simp only [{unf}, L.seqTake]"
     cutVcg := some s!"{tailThm.getId} {argsTxt} n{if selfRec then " ih" else ""}"
-    cutKeep := [s!"{jName}", s!"{j.name}"]
   let mut zero := ""
   let mut steps : Array String := #[]
   for fi in fis, i in List.range k, called in calledBy, loops in loopsBy, ci in conjS, unf in unfoldOf do
@@ -2686,7 +2681,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let (ihTxt, ihNames) := if simpTs?.isSome && !fis.any (called.contains ·.lname) then ("clear ih", [])
       else if k == 1 then ("have ih1 := ih", ["ih", "ih1"])
       else (s!"obtain ⟨{ihs}⟩ := ih", (List.range k).map fun i => s!"ih{i+1}")
-    let tac ← parseTac s!"{ihTxt}; {preS}; {stepTac attrsTxt vcg ihNames cutKeep}"
+    let tac ← parseTac s!"{ihTxt}; {preS}; {stepTac attrsTxt vcg ihNames}"
     let stepName := mkIdent (specName.getId ++ Name.mkSimple s!"step{i+1}")
     emit doTrace (← withHB (← `(command|
       theorem $stepName:ident $bs* $nB:bracketedBinder $ihB:bracketedBinder : $ci := by $(⟨tac⟩):tactic)))

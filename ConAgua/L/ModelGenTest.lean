@@ -483,15 +483,15 @@ l_model tUni_spec (p : Prog) (fs : List FnName)
 example (p : Prog) (n : Nat) (m : Mem) : tUniE p (n + 1) m 0 5 = .ok (0, m) := by simp [tUniE]
 example (p : Prog) (m : Mem) : tUniCE p m 3 = .error (.abort 8) := by simp [tUniCE]
 
-/-- `flat`: the same steps with the states removed from the conditions (`vc_flat`) before the
-models are unfolded; the recursive call goes through the induction hypothesis. -/
+/-- `flat`: the same steps with the states removed from the conditions (`vc_flat`), closed by
+`grind` over the guarded equations; the recursive call goes through the induction hypothesis. -/
 l_model tUniF_spec (p : Prog) (fs : List FnName)
     (hmem : ∀ {f : FnName}, f ∈ ["t_leaf_u"] → f ∈ fs)
     (hp : p.lookup "t_uni" = some tUni) (hl : p.lookup "t_leaf_u" = some tLeafU)
     (hc : p.lookup "t_uni_c" = some tUniC)
   fns [hp ↦ tUniFE]
   specs [tLeafU_spec p hl n, tUniC_spec p hc n]
-  grind [arena_grind] simp [] unified nv [closedNV p fs = true, hmem] flat
+  grind [arena_grind] unified nv [closedNV p fs = true, hmem] flat
 
 /-- A total callee outside the verdict closure (a list post `r ≠ [] ∧ r = F`, as `e_view`'s; its
 `[]` an error of class `0`) and a pure one (`r.headD 0 = F`), both lifted in `unified` mode. -/
@@ -722,11 +722,11 @@ l_model tCut_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ 
 example (p : Prog) (m : Mem) : tCutE p m 1 7 = .ok (7, m.set64 TW 0 6) := by
   simp [tCutE, tCutE.j1, tCutE.j2, tCutE.k_t_len, tLenL]
 
-/-- `flat` with `cut`: the step does not unfold the join point its tail stands for. -/
+/-- `flat` with `cut`: the tail's step theorem and the step both by `vc_flat` and `grind`. -/
 l_model tCutF_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_len"] → f ∈ fs)
     (hp : p.lookup "t_cut" = some tCut) (hq : p.lookup "t_len" = some tLen)
   fns [hp ↦ tCutFE]
   specs [tLen_spec p hq n]
-  grind [arena_grind] simp [] unified nv [closedNV p fs = true, hmem] cut 2 flat
+  grind [arena_grind] unified nv [closedNV p fs = true, hmem] cut 2 flat
 
 end L.ModelGenTest
