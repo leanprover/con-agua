@@ -10,7 +10,8 @@ one call of `check` on a worker region `[base, base + blen)` and the read-only f
 
 * `bufLayout`: the table at `base` (slot `0`), the L stack in slot `1`, frozen array `fz[i]` at
   `buf + 8·off_i` with `len_i` words (the buffer's header entry `i`, `bufEntry B i`), owned array
-  `own[k]` in slot `2 + k` with `abiWords` words, every other array (and both byte arrays)
+  `own[k]` in slot `1 + k` with `abiWords` words (`own[0]`, the table-relative array, inside slot
+  `0`), every other array (and both byte arrays)
   `(0, 0)`. `bufLayout_ok` under `BufGeom` (the buffer's header inside the buffer, its entries
   inside the buffer and pairwise apart, the buffer apart from the region).
 * `RegionRel tab base own r d`: what the call needs of the region's memory `d`: the owned arrays and
@@ -111,8 +112,8 @@ def bufL (tab : Tab) (B : Array Word) (fz own : List TieredArray) (a : TieredArr
     | none => 0
 
 /-- **`ca_check_b`'s layout**: the table at `base`, the stack in slot `1`, frozen array `fz[i]` at
-the buffer's entry `i`, owned array `own[k]` in slot `2 + k` (the table-relative one inside slot
-`0`, `ownOff`); descriptor position `p` holds the word array `tab.wAt p`. -/
+the buffer's entry `i`, owned array `own[k]` in slot `1 + k` (the table-relative one, `own[0]`,
+inside slot `0`, `ownOff`); descriptor position `p` holds the word array `tab.wAt p`. -/
 def bufLayout (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List TieredArray) :
     L.Compiler.Layout where
   tab
@@ -171,25 +172,48 @@ theorem idxOf?_inj {l : List TieredArray} {a b : TieredArray} {i : Nat} (ha : l.
 /-- **The minimum lengths in `ca_check_b`'s layout, statically**: an array with a minimum length
 (`Tab.min64`) is frozen (its length is the buffer's, which the stub tests: `bufMinChk`) or owned
 (a slot of `abiWords` words); every other array gets no memory. Positions the layout gives no
-array (`dom64`) are skipped. The table-relative array (`Tab.tbl`) is owned, not frozen: the stub
-places it inside the table's slot. -/
+array (`dom64`) are skipped. The table-relative array (`Tab.tbl`) is owned, the first of `own`,
+and not frozen: the stub places it inside the table's slot, so `own[k]` for `k ≥ 1` takes slot
+`1 + k` (`ownOff`). Without a table-relative array nothing is owned. -/
 def bufMinOk (tab : Tab) (fz own : List TieredArray) : Bool :=
   ((List.range (tab.nb + tab.nw)).all fun p =>
     !tab.dom64 (tab.wAt p) || tab.min64 (tab.wAt p) == 0 || fz.contains (tab.wAt p) ||
       own.contains (tab.wAt p)) &&
   match tab.tbl with
-  | none => true
-  | some (a, _) => own.contains (TieredArray.t0 a) && !fz.contains (TieredArray.t0 a)
+  | none => own.isEmpty
+  | some (a, _) => own.head? == some (TieredArray.t0 a) && !fz.contains (TieredArray.t0 a)
 
 theorem bufMinOk_tbl {tab : Tab} {fz own : List TieredArray} (h : bufMinOk tab fz own = true)
     {s : TieredArray} {c : Nat} (hc : tab.tbl64 s = some c) : own.contains s = true ∧ fz.contains s = false := by
   obtain ⟨a, ht, rfl⟩ := Tab.tbl64_some hc
   have h2 := ((Bool.and_eq_true _ _).mp h).2
-  simp only [ht, Bool.and_eq_true, Bool.not_eq_true'] at h2
-  exact h2
+  simp only [ht, Bool.and_eq_true, Bool.not_eq_true', beq_iff_eq] at h2
+  refine ⟨?_, h2.2⟩
+  cases own with
+  | nil => simp at h2
+  | cons b l => simp only [List.head?_cons, Option.some.injEq] at h2; simp [h2.1]
+
+/-- An owned array outside the table's slot is not `own[0]`. -/
+theorem bufMinOk_pos {tab : Tab} {fz own : List TieredArray} (h : bufMinOk tab fz own = true)
+    {s : TieredArray} {k : Nat} (hk : own.idxOf? s = some k) (hs : tab.tbl64 s = none) : 1 ≤ k := by
+  obtain ⟨hl, e, -⟩ := List.idxOf?_eq_some_iff.mp hk
+  refine Nat.pos_of_ne_zero fun h0 => ?_
+  subst h0
+  have h2 := ((Bool.and_eq_true _ _).mp h).2
+  cases own with
+  | nil => simp at hl
+  | cons b l =>
+    simp only [List.getElem_cons_zero] at e
+    subst e
+    cases ht : tab.tbl with
+    | none => simp [ht] at h2
+    | some ac =>
+      obtain ⟨a, c⟩ := ac
+      simp only [ht, Bool.and_eq_true, beq_iff_eq, List.head?_cons, Option.some.injEq] at h2
+      rw [h2.1, Tab.tbl64_t0 ht] at hs; cases hs
 
 theorem ownOff_slot {tab : Tab} {s : TieredArray} {k : Nat} (h : tab.tbl64 s = none) :
-    ownOff tab s k = abiSlot * (2 + k) := by simp only [ownOff, h]
+    ownOff tab s k = abiSlot * (1 + k) := by simp only [ownOff, h]
 
 theorem ownOff_tbl {tab : Tab} {s : TieredArray} {k c : Nat} (h : tab.tbl64 s = some c) :
     ownOff tab s k = c := by simp only [ownOff, h]
@@ -200,11 +224,11 @@ theorem _root_.L.Compiler.InTbl.region {tab : Tab} {fz own : List TieredArray} {
   have hn := hg.need; unfold workerNeed at hn; unfold InTbl at h
   simp only [abiSlot] at hn; omega
 
-/-- The bytes of owned array `s` (number `k`): in slot `2 + k`, or (the table-relative array) in
+/-- The bytes of owned array `s` (number `k`): in slot `1 + k`, or (the table-relative array) in
 `InTbl`. -/
 theorem own_bytes {tab : Tab} (hok : abiTabOk tab = true) {s : TieredArray} {k base x : Nat}
     (h1 : base + ownOff tab s k ≤ x) (h2 : x < base + ownOff tab s k + 8 * abiSz tab s) :
-    (tab.tbl64 s = none ∧ InSlot base (2 + k) x) ∨ ((∃ c, tab.tbl64 s = some c) ∧ InTbl tab base x) := by
+    (tab.tbl64 s = none ∧ InSlot base (1 + k) x) ∨ ((∃ c, tab.tbl64 s = some c) ∧ InTbl tab base x) := by
   cases hc : tab.tbl64 s with
   | none =>
     rw [ownOff_slot hc] at h1 h2; rw [abiSz_slot hc] at h2
@@ -228,13 +252,13 @@ section
 variable {tab : Tab} {fz own : List TieredArray} {B : Array Word} {buf base blen : Nat}
 
 /-- A byte of the word array at position `p` is in the buffer (frozen), or in the region's slot
-`2 + k` or (the table-relative array) in `InTbl` (owned). -/
+`1 + k` or (the table-relative array) in `InTbl` (owned). -/
 theorem buf_in64 (hok : abiTabOk tab = true) (_hg : BufGeom tab fz own B buf base blen) {p x : Nat}
     (hp : tab.nb ≤ p) (h : (bufLayout tab buf B base fz own).In64 p x) :
     (∃ i, fz.idxOf? (tab.wAt p) = some i ∧ buf + 8 * (bufEntry B i).1 ≤ x ∧
         x < buf + 8 * ((bufEntry B i).1 + (bufEntry B i).2)) ∨
       (fz.idxOf? (tab.wAt p) = none ∧ ∃ k, own.idxOf? (tab.wAt p) = some k ∧
-        ((tab.tbl64 (tab.wAt p) = none ∧ InSlot base (2 + k) x) ∨
+        ((tab.tbl64 (tab.wAt p) = none ∧ InSlot base (1 + k) x) ∨
           ((∃ c, tab.tbl64 (tab.wAt p) = some c) ∧ InTbl tab base x))) := by
   unfold Layout.In64 at h
   simp only [bufLayout_b64 _ _ _ _ _ _ hp, bufLayout_s64 _ _ _ _ _ _ hp] at h
@@ -274,9 +298,9 @@ theorem buf_inArr {x : Nat} (h : (bufLayout tab buf B base fz own).InArr x) :
   · exact absurd hx (buf_notIn8 hb)
   · exact ⟨p, by omega, hp, Layout.In.to64 (by simp only [bufLayout_tab]; omega) hx⟩
 
-/-- Bytes of the region's slots `< 2 + |own|` are in the region. -/
+/-- Bytes of the region's slots `< 2 + (|own| - 1)` are in the region. -/
 theorem _root_.L.Compiler.InSlot.region (hg : BufGeom tab fz own B buf base blen) {j x : Nat} (h : InSlot base j x)
-    (hj : j < 2 + own.length) : base ≤ x ∧ x < base + blen := by
+    (hj : j < 2 + (own.length - 1)) : base ≤ x ∧ x < base + blen := by
   have := h.lt hj
   have hn := hg.need
   unfold workerNeed at hn
@@ -285,7 +309,7 @@ theorem _root_.L.Compiler.InSlot.region (hg : BufGeom tab fz own B buf base blen
 
 /-- An owned array's bytes are in the region. -/
 theorem own_region (hg : BufGeom tab fz own B buf base blen) {k x : Nat} (hk : k < own.length)
-    (h : (InSlot base (2 + k) x) ∨ InTbl tab base x) : base ≤ x ∧ x < base + blen := by
+    (h : (InSlot base (1 + k) x) ∨ InTbl tab base x) : base ≤ x ∧ x < base + blen := by
   rcases h with h | h
   · exact h.region hg (by omega)
   · exact h.region hg
@@ -324,7 +348,7 @@ theorem buf_save (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base
         rcases hg.apart x (by omega) (by omega) with h5 | h5
         · omega
         · simp only [abiSlot] at hn; omega
-      · have : abiSlot * 2 ≤ abiSlot * (2 + k) := Nat.mul_le_mul_left _ (by omega)
+      · have : abiSlot * 1 ≤ abiSlot * (1 + k) := Nat.mul_le_mul_left _ (by omega)
         unfold InSlot at h3; simp only [abiSlot] at this h3; omega
       · unfold InTbl at h3; omega
 
@@ -358,7 +382,7 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
         cases hc : tab.tbl64 s with
         | none =>
           rw [ownOff_slot hc, abiSz_slot hc]
-          have hle : abiSlot * (2 + k) + abiSlot ≤ abiSlot * (2 + own.length) := by
+          have hle : abiSlot * (1 + k) + abiSlot ≤ abiSlot * (2 + (own.length - 1)) := by
             rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
           simp only [abiSlot, abiWords] at hle hn ⊢; omega
         | some c =>
@@ -379,10 +403,11 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
   · intro x h1 h2
     obtain ⟨p, hp1, -, h⟩ := buf_inArr h2
     · have ht := (buf_inStack h1).region hg (by omega)
-      rcases buf_in64 hok hg hp1 h with ⟨i, hi, q1, q2⟩ | ⟨-, k, hk, ⟨-, hs⟩ | ⟨-, hs⟩⟩
+      rcases buf_in64 hok hg hp1 h with ⟨i, hi, q1, q2⟩ | ⟨-, k, hk, ⟨hc, hs⟩ | ⟨-, hs⟩⟩
       · have := hg.ent i (idxOf?_lt hi)
         rcases hg.apart x (by omega) (by omega) with h' | h' <;> omega
-      · exact absurd (InSlot.eq (buf_inStack h1) hs) (by omega)
+      · have := bufMinOk_pos hmo hk hc
+        exact absurd (InSlot.eq (buf_inStack h1) hs) (by omega)
       · exact hs.not_slot (Nat.le_refl _) (buf_inStack h1)
   · intro a ha b hb hab' x h1 h2
     simp only [bufLayout_tab] at ha hb
@@ -446,7 +471,7 @@ end
 /-! ## The memory -/
 
 /-- **What a call needs of the region's memory `d`**: the owned arrays and the globals of the L
-memory `r` in place (`own[k]` at `ownOff`, in slot `2 + k` or the table-relative array inside the
+memory `r` in place (`own[k]` at `ownOff`, in slot `1 + k` or the table-relative array inside the
 table's slot, with `abiSz` words; the globals in the table at `base`). -/
 structure RegionRel (tab : Tab) (base : Nat) (own : List TieredArray) (r : Mem) (d : DataMem) : Prop where
   size : ∀ s, tab.dom64 s = true → ∀ k, own.idxOf? s = some k → (r.arr64 s).size = abiSz tab s

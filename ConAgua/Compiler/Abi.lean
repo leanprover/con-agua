@@ -195,7 +195,8 @@ arrays.
 * `ca_start_a(in, in_len, pins, pins_len, base, base_len)` (**entry 1**): `ca_setup` with the mode
   word `1` (the stages, phase A, the frozen buffer, header and images, in the array `out`).
 * `ca_check_b(buf, buf_len, j, region, region_len)` (**entry 2 over a buffer**, the threads):
-  the table at `region`, the L stack in its second slot, the arrays `own` in the slots after it,
+  the table at `region`, the L stack in its second slot, the arrays `own` in the slots after it
+  (`own[0]`, the table-relative array, inside the table's slot),
   frozen array `i` at `buf + 8 · buf[8 + 2i]` with length `buf[9 + 2i]`, every other array
   `(0, 0)`, the constant data as `ca_setup`; `plo := j`, `phi := j + 1` (one pending group), the
   mode word `2`; then `ca_enter`. Declines (`rdx = 1`) if a frozen array is shorter than its
@@ -227,15 +228,17 @@ def abiDrvDoneL : Label := "ca_drv_done"
 def abiDrvDeclineL : Label := "ca_drv_decline"
 
 
-/-- The worker region's size for the owned arrays `own`: the table, the stack, one slot each. -/
-def workerNeed (own : List TieredArray) : Nat := abiSlot * (2 + own.length)
+/-- The worker region's size for the owned arrays `own`: the table (with `own[0]`, the
+table-relative array, inside its slot), the stack, one slot each for `own[1]`, …. -/
+def workerNeed (own : List TieredArray) : Nat := abiSlot * (2 + (own.length - 1))
 
 /-- Where `ca_check_b` puts owned array `s`, number `k` of the owned list, from the worker region's
-start: the table-relative array at its offset inside the table's slot, every other at slot `2 + k`. -/
+start: the table-relative array (`own[0]`) at its offset inside the table's slot, every other at
+slot `1 + k` (`k ≥ 1`: `bufMinOk`). -/
 def ownOff (tab : Tab) (s : TieredArray) (k : Nat) : Nat :=
   match tab.tbl64 s with
   | some c => c
-  | none => abiSlot * (2 + k)
+  | none => abiSlot * (1 + k)
 
 /-- `ca_check_b`'s descriptor words at position `p`, for the array `tab.wAt p` there (`rdi` the
 buffer, `rcx` the table): a byte position gets no memory. -/
