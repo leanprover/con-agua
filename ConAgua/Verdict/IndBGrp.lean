@@ -8,7 +8,7 @@ import ConAgua.Verdict.IndBStream
 # Error refinement of `gen_rec_check_prep` (lane `verdicts-b`, helper `ib`)
 
 Mirrors `grpAW_okC`/`grpBW_okC`/`grpCW_okC` (the three parts of `grpW_okC`). The claims used are
-`targetRecPins_claim`, `classStreamRecs_claim`, `classesCtors_claim`, `classRecTysOk_claim`;
+`trp_ref`, `classStreamRecs_claim`, `classesCtors_claim`, `classRecTysOk_claim`;
 `classes_nfs`' claim is a hypothesis (`ClassesNfsE`: the generator cannot produce its model, the
 function has nested loops), `block_large_elim_allowed` and the rest are `closedNV`.
 -/
@@ -619,13 +619,13 @@ theorem grpE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
   | error e1 =>
     rw [h1, grpE.k_target_rec_pins.none] at he
     cases he
-    exact ErrClaim.bind_left (CoreSpecE.of_callE (targetRecPins_claim P.rp hnv n ⟨m, Locals.init []⟩ a pp bO bL bs
-      block hS hbs.1 hblk) h1)
+    exact ErrClaim.bind_left (RefE.run_err (trpE_spec p P.rp.pins n ⟨m, Locals.init []⟩ pp bO bL) trivial
+      ⟨hnv, hcE⟩ (trp_ref P.rp n hS hbs.1 hblk) h1)
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, grpE.k_target_rec_pins.arm1] at he
   obtain ⟨s1, hs1, -, hok1, hS1, hg1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (targetRecPins_refines p P.rp n _ a dn vis fe pp bO bL bs block hS hbs.1 hblk)
+    (targetRecPins_refines P.rp n _ a pp bO bL bs block hS hbs.1 hblk)
     (callW_mono (callW_of_callE h1) (Nat.le_add_right n 3))
   simp only at hs1 hS1 hg1; subst hs1
   have hrun1 := AM.run_of_ok _ a hok1

@@ -1,14 +1,17 @@
 import ConAgua.Arena.RecCheckSpec.TargetRecPins
 import ConAgua.Arena.Verdict
+import ConAgua.Verdict.VCtx
 import ConAgua.Arena.Checker
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 
 /-!
-# Error refinement of `target_rec_pins` (lane `verdicts-b`, helper `ib`)
+# `target_rec_pins`: one model and one refinement for both outcomes
 
-Every callee is `closedNV`; the five aborts are the twin's five `fail`s (`trpW_ok`'s tests).
+`trpE` (`l_model … unified`): every callee through its run (`callE`; they are outside the verdict
+closure). `trp_ref` refines `targetRecPins` for both outcomes; its ok half is
+`targetRecPins_refines`, its error half the error claim of `gen_rec_check_prep` (`IndBGrp`).
 -/
 
 set_option experimental.vcgen true
@@ -24,7 +27,7 @@ open L.Arena
 l_model trpE_spec (p : Prog) (hf : p.lookup "target_rec_pins" = some targetRecPins)
   fns [hf ↦ trpE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
+  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
 
 /-! ## The twin's four failing tests -/
 
@@ -196,24 +199,28 @@ theorem claim_of_fail {α : Type} {T : AM α} {a : AState} {e : Err}
   obtain ⟨s, hs⟩ := h
   exact ⟨_, hs, by rw [twinCls_invalid, hc]⟩
 
-section sims
-variable {p : Prog} (L : RpLook p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
-  {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+/-- What `target_rec_pins` gives besides the twin's run (from `m`): the stage relation, the growth. -/
+structure TrpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+    (a' : AState) : Prop where
+  stage : StageR dn vis fe m' a'
+  grow : IWGrow m m'
 
-include L hnv in
-/-- **`target_rec_pins`' model error claim** (`trpW_ok`'s hypotheses). -/
-theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockShape}
+section sims
+variable {p : Prog} (L : RpLook p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+include L in
+/-- **`target_rec_pins` refines `targetRecPins`, both outcomes**: the callees run through their
+runs (`callE`; outside the verdict closure, so their errors claim nothing); the five aborts are
+the twin's five `fail`s, a passing run its `trp_twin`. -/
+theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockShape}
     {blk : List IConstantInfo}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs)
     (hblk : DecB (fun m => decEBlk dn m bo.toNat bl.toNat) m blk) :
-    ∀ e, trpE p N m pp bo bl = .error e → ErrClaim (ConRon.Arena.targetRecPins bs blk) a e := by
-  intro e he
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
+    RefE (VerdictCtx p) (trpE p N m pp bo bl) (ConRon.Arena.targetRecPins bs blk) a
+      (fun v _ a' => TrpPost dn vis fe m v.2 a') := by
   obtain _ | N := N
-  · simp only [trpE] at he
-    cases he
-    exact ErrClaim.of_cls0 Err.cls_outOfFuel
+  · simp only [trpE]
+    exact RefE.of_cls0 Err.cls_outOfFuel
   have hT : ∀ m : Mem, iwTop m < 2 ^ 64 := fun m => (rdW (m.arr64 CTL) 200).toNat_lt
   have hq9 := rpShape9 hq
   obtain ⟨hmem, hrecs, -⟩ := decBS_some (show decBS (truncM m) pp.toNat = some bs from hq)
@@ -238,13 +245,12 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   have rd3 : rdW (m.arr64 IW) (pp + 3) = rl := by
     have := (trpRd (IWGrow.refl m) (i := 3) (by simpa [Nat.add_assoc] using hrl) (hi 3 (by omega))).1
     simpa using this
-  rw [trpE.arm1, rd2, rd3] at he
+  rw [trpE.arm1, rd2, rd3]
   -- `block_rec_lps_ok`
   cases h1 : callE p N "block_rec_lps_ok" [pp] m with
   | error e1 =>
-    rw [h1, trpE.k_block_rec_lps_ok.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
+    rw [trpE.k_block_rec_lps_ok.none]
+    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (blockRecLpsOk_spec p L.alloc L.erCopy L.erToIw L.slEq L.copy L.cons
@@ -252,21 +258,20 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   subst hs1
   obtain ⟨hr1, hS1, hg1⟩ := lokW_stage hW1 hS hq
   by_cases hz1 : r1.headD 0 = 0
-  · rw [h1, trpE.k_block_rec_lps_ok.abort1 p N pp bo bl ro rl r1 _ hz1] at he
-    cases he
+  · rw [trpE.k_block_rec_lps_ok.abort1 p N pp bo bl ro rl r1 _ hz1]
+    refine fun _ => ?_
     have hc : ¬ ConRon.Arena.blockRecLpsOk bs = true := by
       intro hc; rw [hr1] at hz1; simp [hc] at hz1
     exact claim_of_fail (trp_fail1 bs blk a hc) (by decide)
-  rw [h1, trpE.k_block_rec_lps_ok.arm1 p N pp bo bl ro rl r1 _ hz1] at he
+  rw [trpE.k_block_rec_lps_ok.arm1 p N pp bo bl ro rl r1 _ hz1]
   have hc0 : ConRon.Arena.blockRecLpsOk bs = true := by
     rw [hr1] at hz1
     exact Classical.byContradiction fun hc => by simp [hc] at hz1
   -- `block_rec_names_unreserved`
   cases h2 : callE p N "block_rec_names_unreserved" [ro, rl] s1.mem with
   | error e2 =>
-    rw [h2, trpE.k_block_rec_names_unreserved.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
+    rw [trpE.k_block_rec_names_unreserved.none]
+    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   obtain ⟨s2, hs2, -, hok2, hr2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
@@ -280,14 +285,14 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   dsimp only at hok2 hr2 hS2 hg2
   have hrun1 := partsRunOfOk hok2
   by_cases hz2 : r2.headD 0 = 0
-  · rw [h2, trpE.k_block_rec_names_unreserved.abort1 p N pp bo bl ro rl r2 _ hz2] at he
-    cases he
+  · rw [trpE.k_block_rec_names_unreserved.abort1 p N pp bo bl ro rl r2 _ hz2]
+    refine fun _ => ?_
     have hc : AM.res (ConRon.Arena.blockRecNamesUnreserved bs.recs) a = false := by
       rw [hr2] at hz2
       exact Classical.byContradiction fun hc => by simp [Bool.not_eq_false] at hc; simp [hc] at hz2
     rw [hc] at hrun1
     exact claim_of_fail (trp_fail2 bs blk a _ hc0 hrun1) (by decide)
-  rw [h2, trpE.k_block_rec_names_unreserved.arm1 p N pp bo bl ro rl r2 _ hz2, rd1 _ (hg1.trans hg2)] at he
+  rw [trpE.k_block_rec_names_unreserved.arm1 p N pp bo bl ro rl r2 _ hz2, rd1 _ (hg1.trans hg2)]
   have hc1 : AM.res (ConRon.Arena.blockRecNamesUnreserved bs.recs) a = true := by
     rw [hr2] at hz2
     exact Classical.byContradiction fun hc => by simp [hc] at hz2
@@ -295,9 +300,8 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   -- `block_rec_split_own_aux`
   cases h3 : callE p N "block_rec_split_own_aux" [ro, rl, ml] s2.mem with
   | error e3 =>
-    rw [h3, trpE.k_block_rec_split_own_aux.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
+    rw [trpE.k_block_rec_split_own_aux.none]
+    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
@@ -311,13 +315,12 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
     | succ n => exact ⟨n, rfl⟩
   obtain ⟨hS3, hg3, hown, haux⟩ := soaW_ok0 N' hW3 hS2 (hrs.grow (fun q => decRS_mono q) hg12)
   rw [hk] at hown haux
-  rw [h3, trpE.k_block_rec_split_own_aux.arm1, rd0 _ (hg12.trans hg3)] at he
+  rw [trpE.k_block_rec_split_own_aux.arm1, rd0 _ (hg12.trans hg3)]
   -- `block_rec_name_set_ok`
   cases h4 : callE p (N' + 1) "block_rec_name_set_ok" [mo, ml, r3.headD 0, r3.tail.headD 0] s3.mem with
   | error e4 =>
-    rw [h4, trpE.k_block_rec_name_set_ok.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
+    rw [trpE.k_block_rec_name_set_ok.none]
+    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4
   have hms3 := hms.grow (fun q => decMS_mono q) (hg12.trans hg3)
@@ -328,8 +331,8 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   dsimp only at hok4 hr4 hS4 hg4
   have hrun2 := partsRunOfOk hok4
   by_cases hz4 : r4.headD 0 = 0
-  · rw [h4, trpE.k_block_rec_name_set_ok.abort1 p (N' + 1) pp bo bl ro rl ml _ _ _ r4 _ hz4] at he
-    cases he
+  · rw [trpE.k_block_rec_name_set_ok.abort1 p (N' + 1) pp bo bl ro rl ml _ _ _ r4 _ hz4]
+    refine fun _ => ?_
     have hc : AM.res (ConRon.Arena.blockRecNameSetOk bs.members
         (bs.recs.filter fun rc => decide (rc.tgt < bs.k))) (AM.st (ConRon.Arena.blockRecNamesUnreserved bs.recs) a)
         = false := by
@@ -337,7 +340,7 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
       exact Classical.byContradiction fun hc => by simp [Bool.not_eq_false] at hc; simp [hc] at hz4
     rw [hc] at hrun2
     exact claim_of_fail (trp_fail3 bs blk a _ _ hc0 hrun1 hrun2) (by decide)
-  rw [h4, trpE.k_block_rec_name_set_ok.arm1 p (N' + 1) pp bo bl ro rl ml _ _ _ r4 _ hz4] at he
+  rw [trpE.k_block_rec_name_set_ok.arm1 p (N' + 1) pp bo bl ro rl ml _ _ _ r4 _ hz4]
   have hc2 : AM.res (ConRon.Arena.blockRecNameSetOk bs.members
       (bs.recs.filter fun rc => decide (rc.tgt < bs.k))) (AM.st (ConRon.Arena.blockRecNamesUnreserved bs.recs) a)
       = true := by
@@ -348,9 +351,8 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   cases h5 : callE p (N' + 1) "target_rec_pins_names"
       [mo, ml, ro, rl, r3.tail.tail.headD 0, r3.tail.tail.tail.headD 0] s4.mem with
   | error e5 =>
-    rw [h5, trpE.k_target_rec_pins_names.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
+    rw [trpE.k_target_rec_pins_names.none]
+    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
   | ok q5 =>
   obtain ⟨r5, m5⟩ := q5
   obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
@@ -363,14 +365,14 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
     (hms.grow (fun q => decMS_mono q) hg14) (hrs.grow (fun q => decRS_mono q) hg14)
     (haux.grow (fun q => decRS_mono q) hg4) r5 s5.mem hW5
   by_cases hz5 : r5.headD 0 = 0
-  · rw [h5, trpE.k_target_rec_pins_names.abort1 p (N' + 1) pp bo bl rl ml r5 _ hz5] at he
-    cases he
+  · rw [trpE.k_target_rec_pins_names.abort1 p (N' + 1) pp bo bl rl ml r5 _ hz5]
+    refine fun _ => ?_
     have hb : b5 = false := by
       rw [hr5] at hz5
       exact Classical.byContradiction fun hc => by simp [hc] at hz5
     subst hb
     exact claim_of_fail (trp_fail4 bs blk a _ _ _ hc0 hrun1 hrun2 hrun3) (by decide)
-  rw [h5, trpE.k_target_rec_pins_names.arm1 p (N' + 1) pp bo bl rl ml r5 _ hz5] at he
+  rw [trpE.k_target_rec_pins_names.arm1 p (N' + 1) pp bo bl rl ml r5 _ hz5]
   have hb : b5 = true := by
     rw [hr5] at hz5
     exact Classical.byContradiction fun hc => by simp [hc] at hz5
@@ -378,9 +380,8 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   -- `target_rec_pins_split`
   cases h6 : callE p (N' + 1) "target_rec_pins_split" [pp, ml, rl, bo, bl] s5.mem with
   | error e6 =>
-    rw [h6, trpE.k_target_rec_pins_split.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
+    rw [trpE.k_target_rec_pins_split.none]
+    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
   | ok q6 =>
   obtain ⟨r6, m6⟩ := q6
   obtain ⟨s6, hs6, -, hW6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
@@ -391,8 +392,8 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
   obtain ⟨b6, a6, hrun4, hr6, rfl, hS6, hg6⟩ := tpsW_sim p L N' s5.mem a5 pp ml rl bo bl bs blk hS5
     (hq.grow (decBS_mono _) hg15) (hblk.grow (decEBlk_mono dn _ _) hg15) hk hrlen r6 s6.mem hW6
   by_cases hz6 : r6.headD 0 = 0
-  · rw [h6, trpE.k_target_rec_pins_split.abort1 p r6 _ hz6] at he
-    cases he
+  · rw [trpE.k_target_rec_pins_split.abort1 p r6 _ hz6]
+    refine fun _ => ?_
     have hb : b6 = false := by
       rw [hr6] at hz6
       exact Classical.byContradiction fun hc => by simp [hc] at hz6
@@ -401,21 +402,33 @@ theorem trpE_claim (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : Bloc
       change Except.ok (splitOk bs blk, _) = Except.ok (false, _) at hrun4
       simp only [Except.ok.injEq, Prod.mk.injEq] at hrun4; exact hrun4.1
     exact claim_of_fail (trp_fail5 bs blk a _ _ _ hc0 hrun1 hrun2 (by simpa using hrun3) h4') (by decide)
-  rw [h6, trpE.k_target_rec_pins_split.arm1 p r6 _ hz6] at he
-  cases he
+  rw [trpE.k_target_rec_pins_split.arm1 p r6 _ hz6]
+  have h4' : splitOk bs blk = true := by
+    have hb : b6 = true := by
+      rw [hr6] at hz6
+      exact Classical.byContradiction fun hc => by simp [hc] at hz6
+    subst hb
+    change Except.ok (splitOk bs blk, _) = Except.ok (true, _) at hrun4
+    simp only [Except.ok.injEq, Prod.mk.injEq] at hrun4; exact hrun4.1
+  exact RefE.ret (trp_twin bs blk a _ _ _ hc0 hrun1 hrun2 (by simpa using hrun3) h4') ⟨hS6, hg15.trans hg6⟩
 
-include L hnv in
-/-- **`target_rec_pins`' error claim** (every fuel). -/
-theorem targetRecPins_claim (N : Nat) (s₀ : St) (a₀ : AState) (pp bo bl : Word) (bs : BlockShape)
+include L in
+/-- **`target_rec_pins` refines `targetRecPins`** (`trp_ref`'s ok half; through the stubs
+`name_rec`, `name_rec_i`, `intern_nanon`, the reserved-name tests): the shape and the block decoded
+below the tops, nothing else. -/
+@[refines ConRon.Arena.targetRecPins]
+theorem targetRecPins_refines (n : Nat) (s₀ : St) (a₀ : AState) (pp bo bl : Word) (bs : BlockShape)
     (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs)
     (hblk : DecB (fun m => decEBlk dn m bo.toNat bl.toNat) s₀.mem blk) :
-    CoreSpecE p N "target_rec_pins" [pp, bo, bl] (ConRon.Arena.targetRecPins bs blk) s₀ a₀ :=
-  CoreSpecE.of_runs fun e hc => by
-    by_cases hk0 : e.cls = 0
-    · exact ErrClaim.of_cls0 hk0
-    exact trpE_claim L hnv N hS hq hblk e
-      (triple_of_callE_err (trpE_spec p L.pins N s₀ pp bo bl) hc (Err.code_ne_of_cls hk0))
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 3)) "target_rec_pins" [pp, bo, bl]
+    ⦃fun _r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetRecPins bs blk) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetRecPins bs blk) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (RefE.triple (trpE_spec p L.pins (n + 3) s₀ pp bo bl) (trp_ref L (n + 3) hS hq hblk)) ?_
+  rintro _r s' ⟨hl, _, a', run, hR⟩
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow⟩
 
 end sims
 
