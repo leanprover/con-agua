@@ -316,8 +316,8 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2] at hrun2
   rcases c3 : callW p N "get_app_fn" [r2.headD 0] m2 with _ | ⟨r3, m3⟩
-  · rw [L.liftE_none, m2cPreE.k_get_app_fn.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)
-  rw [L.liftE_some]
+  · rw [liftE_none, m2cPreE.k_get_app_fn.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨t3, ht3, hm3, -, hh3, hga⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
     (getAppFn_refines' p hp.spine.fn N _ _ hS2.arena.1 (r2.headD 0) hr2) c3
   have hm3' : m3 = m2 := ht3.symm.trans hm3
@@ -332,8 +332,8 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have g3' : r3.headD 0 >>> 28 = 3 := by simpa using g3
   rw [m2cPreE.k_get_app_fn.arm2 _ _ _ _ _ g3']
   rcases c4 : callW p N "m2c_const_view" [r3.headD 0] m3 with _ | ⟨r4, m4⟩
-  · rw [L.liftE_none, m2cPreE.k_m2c_const_view.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)
-  rw [L.liftE_some, m2cPreE.k_m2c_const_view.arm1]
+  · rw [liftE_none, m2cPreE.k_m2c_const_view.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)
+  rw [liftE_some, m2cPreE.k_m2c_const_view.arm1]
   obtain ⟨t4, ht4, -, hm4', hcv⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (m2cConstView_spec p hp.constView N _ (r3.headD 0)) c4
   have hm4e : m4 = m3 := ht4.symm.trans hm4'
@@ -345,8 +345,8 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨hvw, hn32, hu32⟩ := view_const_f m4 _ hS2.arena.1 (r3.headD 0) hh3
     ⟨v1, UInt64.not_le.mp v2⟩ g3'
   rcases c5 : callW p N "ls_node" [r4.tail.headD 0] m4 with _ | ⟨r5, m5⟩
-  · rw [L.liftE_none, m2cPreE.k_ls_node.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)
-  rw [L.liftE_some, m2cPreE.k_ls_node.arm1]
+  · rw [liftE_none, m2cPreE.k_ls_node.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)
+  rw [liftE_some, m2cPreE.k_ls_node.arm1]
   obtain ⟨t5, ht5, ht5s, hne5, hr5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
     (lsNode_spec p hp.lvl.lsnode N _ (r4.tail.headD 0)) c5
   have hm5 : m5 = m4 := by rw [← ht5, ht5s]
@@ -427,11 +427,11 @@ theorem m2cCheck_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
         (decE fab) (decE major)) a (CorePost decH dn m vis fe M eb ResH) := by
   rw [m2cCheckE.arm1]
   cases N with
-  | zero => rw [callW_zero, L.liftE_none, m2cCheckE.k_fab_scope_ok.none]; exact RefE.of_cls0 (by simp)
+  | zero => rw [callW_zero, liftE_none, m2cCheckE.k_fab_scope_ok.none]; exact RefE.of_cls0 (by simp)
   | succ N' =>
   rcases c1 : callW p (N' + 1) "fab_scope_ok" [d, fab, major] m with _ | ⟨r1, m1⟩
-  · rw [L.liftE_none, m2cCheckE.k_fab_scope_ok.none]; exact RefE.of_cls0 (by simp)
-  rw [L.liftE_some]
+  · rw [liftE_none, m2cCheckE.k_fab_scope_ok.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, -⟩ := CoreSpec.run
     (fabScopeOk_refines' p hp.toIotaProg' hc (N' + 1) ⟨m, Locals.init []⟩ a dn vis fe M eb d fab major
       hS hfab hmaj) c1
@@ -580,11 +580,11 @@ theorem m2cK2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
         cnP.toNat (decE tmaj) (decI ust) (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cK2E.arm1]
   cases N with
-  | zero => rw [callW_zero, L.liftE_none, m2cK2E.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
+  | zero => rw [callW_zero, liftE_none, m2cK2E.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
   | succ N' =>
   rcases c1 : callW p (N' + 1) "get_app_args" [tmaj] m with _ | ⟨r1, m1⟩
-  · rw [L.liftE_none, m2cK2E.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
-  rw [L.liftE_some]
+  · rw [liftE_none, m2cK2E.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨t1, ht1, -, hfr1, hg1, htop1, -, xs, hargs, hsp1⟩ := triple_of_callW
     (s₀ := ⟨m, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a hS.arena.1 tmaj htm hS.spn) c1
   rw [ht1] at hfr1 hg1 hsp1
@@ -600,8 +600,8 @@ theorem m2cK2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   rw [m2cK2E.k_get_app_args.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g1]
   have hle : cnP.toNat ≤ xs.length := by rw [hlen]; exact UInt64.not_lt.mp g1
   rcases c2 : callW p (N' + 1) "intern_const" [ctor, ust] m1 with _ | ⟨r2, m2⟩
-  · rw [L.liftE_none, m2cK2E.k_intern_const.none]; exact RefE.of_cls0 (by simp)
-  rw [L.liftE_some, m2cK2E.k_intern_const.arm1]
+  · rw [liftE_none, m2cK2E.k_intern_const.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, m2cK2E.k_intern_const.arm1]
   obtain ⟨ok2, hD2, res2, hfr2, hh2⟩ := callW_internConst' p hp.constFind' hp.constPush'
     hp.internConst' (N' + 1) m1 a hS1.arena ctor ust hctor hus r2 m2 c2
   have hrun2 := AM.run_of_ok _ _ ok2
@@ -611,8 +611,8 @@ theorem m2cK2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
     (hsp1.take' (by rw [← hlen]; exact hle)).of_spn_core
       (hfr2.1 SPN (by simp [tier1, CREC, CSLOT, CLP, SPN]) (by decide))
   rcases c3 : callW p (N' + 1) "mk_app_n" [r2.headD 0, r1.headD 0, cnP] m2 with _ | ⟨r3, m3⟩
-  · rw [L.liftE_none, m2cK2E.k_mk_app_n.none]; exact RefE.of_cls0 (by simp)
-  rw [L.liftE_some, m2cK2E.k_mk_app_n.arm1]
+  · rw [liftE_none, m2cK2E.k_mk_app_n.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, m2cK2E.k_mk_app_n.arm1]
   obtain ⟨ok3, hD3, res3, hfr3, hh3⟩ := callW_mkAppN' p hp.spine (N' + 1) m2 _ hS2.arena
     (r2.headD 0) (r1.headD 0) cnP _ hh2 hsp2 r3 m3 c3
   have hrun3 := AM.run_of_ok _ _ ok3
