@@ -14,89 +14,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-theorem setCert_at (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
-      (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-      (eb mode d a b : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
-      HW a → HW b →
-      CoreSpec p n "struct_eta_cert" [mode, vis, d, a, b]
-        (structEtaCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
-        s₀ a₀ dn vis fe M eb
-  | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-  | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, hF, hn, hs, h1, h2 =>
-      setCert_refines p hq hi hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
-        (by omega) (by omega) hs h1 h2
-
-theorem suCert_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
-      (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-      (eb mode d a b : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
-      HW a → HW b →
-      CoreSpec p n "struct_unit_cert" [mode, vis, d, a, b]
-        (structUnitCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
-        s₀ a₀ dn vis fe M eb
-  | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-  | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, hF, hn, hs, h1, h2 =>
-      suCert_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
-        (by omega) (by omega) hs h1 h2
-
-section siK
-variable (p : Prog) (n : Nat) (mode vis d a b : Word)
-
-def siK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then some (1, m) else call1W p n "proof_irrel" [mode, vis, d, a, b] m
-
-def siK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then some (1, m)
-    else siK3 p n mode vis d a b (callW p n "struct_unit_cert" [mode, vis, d, a, b] m)
-
-/-- **The model of `stuck_irrel`** past the first `struct_eta_cert`'s run. -/
-def siK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then some (1, m)
-    else siK2 p n mode vis d a b (callW p n "struct_eta_cert" [mode, vis, d, b, a] m)
-
-variable (r : List Word) (m : Mem)
-theorem siK3_yes (h : r.headD 0 ≠ 0) : siK3 p n mode vis d a b (some (r, m)) = some (1, m) := by
-  simp only [siK3, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem siK3_no (h : r.headD 0 = 0) : siK3 p n mode vis d a b (some (r, m)) =
-    call1W p n "proof_irrel" [mode, vis, d, a, b] m := by
-  simp only [siK3, h, ne_eq, not_true_eq_false, ↓reduceIte]
-theorem siK2_yes (h : r.headD 0 ≠ 0) : siK2 p n mode vis d a b (some (r, m)) = some (1, m) := by
-  simp only [siK2, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem siK2_no (h : r.headD 0 = 0) : siK2 p n mode vis d a b (some (r, m)) =
-    siK3 p n mode vis d a b (callW p n "struct_unit_cert" [mode, vis, d, a, b] m) := by
-  simp only [siK2, h, ne_eq, not_true_eq_false, ↓reduceIte]
-theorem siK1_yes (h : r.headD 0 ≠ 0) : siK1 p n mode vis d a b (some (r, m)) = some (1, m) := by
-  simp only [siK1, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem siK1_no (h : r.headD 0 = 0) : siK1 p n mode vis d a b (some (r, m)) =
-    siK2 p n mode vis d a b (callW p n "struct_eta_cert" [mode, vis, d, b, a] m) := by
-  simp only [siK1, h, ne_eq, not_true_eq_false, ↓reduceIte]
-
-end siK
-
-theorem stuckIrrel_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "stuck_irrel" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ siK1 p n mode vis d a b
-      (callW p n "struct_eta_cert" [mode, vis, d, a, b] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.stuckIrrel]
-  simp only [callFn, stuckIrrelL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "struct_eta_cert",
-      callW_spec p n "struct_unit_cert", callW_spec p n "proof_irrel"] <;>
-  simp_all [siK1, siK2, siK3, call1W, LocEq, St.setLocs_cons, Cmp.eval,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
-
 /-- One `if ← c then pure true else k` step: a `true` verdict answers `1`. -/
 theorem coreRef_true {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word} {m' : Mem}
@@ -107,7 +24,96 @@ theorem coreRef_true {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
   exact coreRef_pure hS rfl (decBool_true_of (by rw [← hr]; decide)).symm
     (by unfold ResH; rw [← hr]; exact hw1)
 
-/-- **`stuck_irrel` refines `stuckIrrel`** at the knot. -/
+/-- **What the stuck side's errors claim from**: the knot's slots, `proof_irrel`'s claim and
+`defeq_lst`'s (through `struct_eta_cert`, `SetG`). -/
+structure StuckG (p : Prog) (n : Nat) : Prop where
+  knot : KnotUpToE p n
+  pirr : ProofIrrelWE p
+  lst : DefeqLstWE p
+
+theorem StuckG.mono {p : Prog} {n n' : Nat} (h : StuckG p n) (hn : n' ≤ n) : StuckG p n' :=
+  ⟨h.knot.mono hn, h.pirr, h.lst⟩
+
+theorem StuckG.set {p : Prog} {n : Nat} (h : StuckG p n) : SetG p n := ⟨h.knot, h.lst⟩
+
+/-- **`stuck_irrel`'s model, both outcomes** (generated; `struct_eta_cert` and `struct_unit_cert`
+by their unified models, `proof_irrel` through its run). -/
+l_model siE_spec (p : Prog) (hf : p.lookup "stuck_irrel" = some stuckIrrelL)
+    (hc : p.lookup "struct_eta_cert" = some structEtaCertL)
+    (hw : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
+    (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
+    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL)
+    (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
+    (hu : p.lookup "struct_unit_cert" = some structUnitCertL)
+    (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
+    (hut : p.lookup "struct_unit_tail" = some structUnitTailL)
+  fns [hf ↦ siE list]
+  specs [secE_spec p hc hw hb hg ht n, sucE_spec p hu hh hut n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- **`stuck_irrel` refines `stuckIrrel`, both outcomes**: structural η both ways, unit-likeness,
+then proof irrelevance; the errors are theirs. -/
+theorem si_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
+    (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    RefE (StuckG p n) (siE p (n + 1) s₀.mem mode vis d a b)
+      (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
+  unfold stuckIrrel
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ k =>
+  simp only [siE]
+  have H := sec_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b (by omega)
+    (by omega) hs ha hb
+  rcases h1 : secE p (k + 1) s₀.mem mode vis d a b with e | ⟨r₁, m₁⟩
+  · rw [h1] at H; exact fun hG => ErrClaim.bind_left (H (hG.set.mono (by omega)))
+  rw [h1] at H
+  obtain ⟨y, a', hrun, hP⟩ := H
+  simp only [siE.k_struct_eta_cert]
+  refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₁ hS₁ _ => ?_)
+  by_cases g1 : r₁.headD 0 ≠ 0
+  · rw [ite_eq_left g1, decBool_true_of g1]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
+  rw [ite_eq_right g1, decBool_false_of (by simpa using g1)]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  have H := sec_ref p hq hi hc k (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d
+    b a (by omega) (by omega) ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb ha
+  rcases h2 : secE p (k + 1) m₁ mode vis d b a with e | ⟨r₂, m₂⟩
+  · rw [h2] at H; exact fun hG => ErrClaim.bind_left (H (hG.set.mono (by omega)))
+  rw [h2] at H
+  obtain ⟨y, a', hrun, hP⟩ := H
+  simp only [siE.k_struct_eta_cert_2]
+  refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₂ hS₂ _ => ?_)
+  by_cases g2 : r₂.headD 0 ≠ 0
+  · rw [ite_eq_left g2, decBool_true_of g2]; exact RefE.ret rfl (CorePost.ret hS₂ rfl hw1)
+  rw [ite_eq_right g2, decBool_false_of (by simpa using g2)]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  have H := suc_ref p hq hc k (hk.mono (by omega)) F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d
+    a b (by omega) (by omega) ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb
+  rcases h3 : sucE p (k + 1) m₂ mode vis d a b with e | ⟨r₃, m₃⟩
+  · rw [h3] at H; exact fun hG => ErrClaim.bind_left (H (hG.knot.mono (by omega)))
+  rw [h3] at H
+  obtain ⟨y, a', hrun, hP⟩ := H
+  simp only [siE.k_struct_unit_cert]
+  refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₃ hS₃ _ => ?_)
+  by_cases g3 : r₃.headD 0 ≠ 0
+  · rw [ite_eq_left g3, decBool_true_of g3]; exact RefE.ret rfl (CorePost.ret hS₃ rfl hw1)
+  rw [ite_eq_right g3, decBool_false_of (by simpa using g3)]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  rcases c4 : callE p (k + 1) "proof_irrel" [mode, vis, d, a, b] m₃ with e | ⟨r₄, m₄⟩
+  · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+      (hG.pirr k (hk.mono (by omega)) (hG.knot.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe
+        M₃ eb mode d a b hS₃ hs.mode4 hs.eb_mode ha hb) c4
+  obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (s₀ := ⟨m₃, Locals.init []⟩)
+    (proofIrrel_at p hc (k + 1) hk F hF hn _ _ dn vis fe M₃ eb mode d a b hS₃ hs.mode4 hs.eb_mode ha
+      hb) (callW_of_callE c4)).post
+  exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+
+/-- **`stuck_irrel` refines `stuckIrrel`** at the knot (`si_ref`'s ok half). -/
 @[refines ConRon.Arena.stuckIrrel]
 theorem stuckIrrel_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
@@ -116,46 +122,9 @@ theorem stuckIrrel_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc 
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "stuck_irrel" [mode, vis, d, a, b]
       (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
-      s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (stuckIrrel_spec p hq n s₀ mode vis d a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  unfold stuckIrrel
-  obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
-  have h₁ := CoreSpec.of_callW (setCert_at p hq hi hc n hk F s a₀ dn vis fe M eb mode d a b hF hn hs
-    ha hb) hc1
-  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
-  by_cases h1 : r₁.headD 0 ≠ 0
-  · rw [siK1_yes (h := h1)] at hW1
-    rw [decBool_true_of h1]; exact coreRef_true hS₁ hW1
-  rw [siK1_no (h := by simpa using h1)] at hW1
-  rw [decBool_false_of (by simpa using h1)]
-  simp only [Bool.false_eq_true, ↓reduceIte]
-  obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
-  have h₂ := CoreSpec.of_callW (setCert_at p hq hi hc n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
-    mode d b a hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb ha) hc2
-  refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
-  by_cases h2 : r₂.headD 0 ≠ 0
-  · rw [siK2_yes (h := h2)] at hW2
-    rw [decBool_true_of h2]; exact coreRef_true hS₂ hW2
-  rw [siK2_no (h := by simpa using h2)] at hW2
-  rw [decBool_false_of (by simpa using h2)]
-  simp only [Bool.false_eq_true, ↓reduceIte]
-  obtain ⟨r₃, m₃, hc3, hW3⟩ := callW_cases rfl hW2
-  have h₃ := CoreSpec.of_callW (suCert_at p hq hc n hk F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb
-    mode d a b hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb) hc3
-  refine coreRef_bind h₃ (fun M₃ hS₃ => ?_)
-  by_cases h3 : r₃.headD 0 ≠ 0
-  · rw [siK3_yes (h := h3)] at hW3
-    rw [decBool_true_of h3]; exact coreRef_true hS₃ hW3
-  rw [siK3_no (h := by simpa using h3)] at hW3
-  rw [decBool_false_of (by simpa using h3)]
-  simp only [Bool.false_eq_true, ↓reduceIte]
-  exact CoreSpec.of_call1W (s₀ := ⟨m₃, Locals.init []⟩)
-    (proofIrrel_at p hc n hk F hF hn _ _ dn vis fe M₃ eb mode d a b hS₃ hs.mode4 hs.eb_mode ha hb)
-    (fun r r' h => by simp only [decBool, h]) hW3
+      s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (siE_spec p hq.stuckIrrel hq.setCert hq.setWith hq.setWtb hq.setGo hq.setTail hq.sunit
+    hq.suHead hq.suTail (n + 1) s₀ mode vis d a b)
+    (si_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 
 end L.Arena

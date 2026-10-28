@@ -63,7 +63,7 @@ include hq hnv hE in
 family part). -/
 theorem whnfSlotsE_of (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     WhnfCoreSlotE p (n + 1) ∧ WhnfSlotE p (n + 1) :=
-  whnfSlotsE_step hq hnv (KnotAllProg.iotaRecAtE hq hnv hE) (reduceNatE_of p hq.delta hnv) n hk hkE
+  whnfSlotsE_step hq hnv (KnotAllProg.iotaRecAtE hq hnv hE) n hk hkE
 
 end knot
 

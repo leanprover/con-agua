@@ -1,5 +1,6 @@
 import ConAgua.Arena.Knot
 import ConAgua.Arena.WhnfDeltaSlot
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
