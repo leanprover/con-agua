@@ -120,6 +120,24 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   exceptional post is `fun ε => ε.code ≠ 0 → fW n s₀.mem args = .error ε`: an error with a code
   (an abort) is the model's; out of bounds, where the model reads a default, has code `0` and is
   left out.
+* `unified` (with `nv [G, mem]` when a callee has an `Option` model): **one model for both
+  outcomes**, the default for a function whose errors claim the twin's failure (the verdict
+  closure). As `errors`, with three differences:
+  * the error post is over the class: `fun ε => G → ε.cls ≠ 0 → fW n s₀.mem args = .error ε`
+    (`G` is `True` without `nv`), so that a load out of bounds or a callee outside the verdict
+    closure (errors of class `0`) leaves the model free;
+  * a callee whose spec has an `Option` model (`F = some …`; a callee outside the verdict closure,
+    `G` its closedness `closedNV p fs = true`) is called through `L.liftE F` (`none` is
+    `.error .oob`, class `0`), its spec wrapped as `L.Triple.nv (mem (by decide +kernel)) S`, whose
+    error post is `G → ε.cls = 0`; `mem` proves `f ∈ fs` (`L.Checker.nv_mem`);
+  * a callee with a unified model is listed by its unified spec (an `Except` post): the model calls
+    that model, so the callee's refinement applies to it directly.
+
+  The refinement of a unified model is one theorem for both outcomes (`RefE`,
+  `Arena/Verdict.lean`); its ok half (callers' ok refinements, `@[refines]`) and its error half
+  (`CoreSpecE`) come from the call's run through the spec (`RefE.run_okW`, `RefE.run_err`).
+  Callers with `Option` models call a unified function through its run (`callW`, `cR`), not
+  through an `Option` model of it.
 
 * the **block operations and byte accesses**: a pool slice word `A⦃x⦄` is `rdW` of tier `x >>> 40`
   at `x &&& (2^40 - 1)` (`⦃x⦄.tier`, `.idx`, `.base` the same words); `le64!(A.u8, i)` is
