@@ -14,19 +14,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The twin computations agree on the run from `a`. -/
-theorem ErrClaim.of_run_eqW {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
-    (h : T.run a = T'.run a') (h' : ErrClaim T' a' e) : ErrClaim T a e := fun hk => by
-  obtain ⟨ce, hce, hc⟩ := h' hk
-  exact ⟨ce, h ▸ hce, hc⟩
-
-/-- The twin's run from `a` fails where `T'`'s from `a'` does. -/
-theorem ErrClaim.of_run_err {α β : Type} {T : AM α} {T' : AM β} {a a' : AState} {e : Err}
-    (h : ∀ ce, T'.run a' = .error ce → T.run a = .error ce) (h' : ErrClaim T' a' e) :
-    ErrClaim T a e := fun hk => by
-  obtain ⟨ce, hce, hc⟩ := h' hk
-  exact ⟨ce, h ce hce, hc⟩
-
 /-- A continuation that passes errors on and fails nowhere else: its error is its argument's. -/
 theorem err_of_k {β γ : Type} {k : Except Err β → Except Err γ}
     (hk : ∀ q e, k (.ok q) ≠ .error e) (hn : ∀ e, k (.error e) = .error e) {c : Except Err β}

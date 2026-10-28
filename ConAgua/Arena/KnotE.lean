@@ -92,4 +92,70 @@ theorem knotE_upTo {p : Prog} (hk : ∀ n, KnotUpTo p n) (hs : KnotStepE p) (n :
     · obtain rfl : k = n + 1 := by omega
       exact hs n (hk n) ih
 
+/-! ## Error claims through equal or failing runs -/
+
+/-- The twin computations agree on the run from `a`. -/
+theorem ErrClaim.of_run_eqW {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
+    (h : T.run a = T'.run a') (h' : ErrClaim T' a' e) : ErrClaim T a e := fun hk => by
+  obtain ⟨ce, hce, hc⟩ := h' hk
+  exact ⟨ce, h ▸ hce, hc⟩
+
+/-- The twin's run from `a` fails where `T'`'s from `a'` does. -/
+theorem ErrClaim.of_run_err {α β : Type} {T : AM α} {T' : AM β} {a a' : AState} {e : Err}
+    (h : ∀ ce, T'.run a' = .error ce → T.run a = .error ce) (h' : ErrClaim T' a' e) :
+    ErrClaim T a e := fun hk => by
+  obtain ⟨ce, hce, hc⟩ := h' hk
+  exact ⟨ce, h ce hce, hc⟩
+
+/-! ## Unified refinements of core functions
+
+A core function's unified refinement (`RefE`, `Verdict.lean`) relates its model's value `(r, m)`
+to the twin's run by `CorePost`: what `CoreRef` says besides the twin's ok run. Its halves come
+from the call's run through the model's spec: the ok spec (`RefE.coreSpec`), the `CoreRef` of a
+callee's run (`RefE.coreRefW`), the error spec (`RefE.coreSpecE`). -/
+
+/-- What a core function's run `v = (r, m)` from `m₀` gives besides the twin's result `y` and
+final state `a'`: the relation after it, the result words decoded, their validity. -/
+structure CorePost {α : Type} (dec : List Word → α) (dn : NIdx → Option ConLeche.Name) (m₀ : Mem)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop)
+    (v : List Word × Mem) (y : α) (a' : AState) : Prop where
+  after : CoreAfter dn m₀ v.2 a' vis fe M eb
+  res : y = dec v.1
+  valid : ok v.1
+
+section corePost
+open Std.WP
+variable {α : Type} [Inhabited α] {T : AM α} {a : AState} {dec : List Word → α}
+  {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+  {ok : List Word → Prop} {G Gs : Prop} {p : Prog} {n : Nat} {f : FnName} {args : List Word}
+  {s₀ : St} {fx : Except Err (List Word × Mem)}
+
+theorem CorePost.coreRef {m₀ m : Mem} {r : List Word} {y : α} {a' : AState}
+    (hT : T.run a = .ok (y, a')) (h : CorePost dec dn m₀ vis fe M eb ok (r, m) y a') :
+    CoreRef T a dec dn m₀ vis fe M eb r m ok := by
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
+  exact ⟨hok, hst ▸ h.after, hres.trans h.res, h.valid⟩
+
+/-- The ok half as the core spec of the call. -/
+theorem RefE.coreSpec
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => LocEq s' s₀ ∧ fx = .ok (r, s'.mem); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (h : RefE G fx T a (CorePost dec dn s₀.mem vis fe M eb ok)) :
+    CoreSpec p n f args T dec s₀ a dn vis fe M eb ok :=
+  L.M.triple_of_run fun _ _ _ hp hr => by
+    obtain ⟨hl, _, _, hT, hR⟩ := L.M.of_run' (P := fun s => s = s₀) hp hr (RefE.triple hs h)
+    exact ⟨hl, hR.coreRef hT⟩
+
+/-- The ok half at a callee's run (`callW`, the ok models' reading of a call). -/
+theorem RefE.coreRefW
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => LocEq s' s₀ ∧ fx = .ok (r, s'.mem); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (h : RefE G fx T a (CorePost dec dn s₀.mem vis fe M eb ok)) {r : List Word} {m' : Mem}
+    (hc : callW p n f args s₀.mem = some (r, m')) :
+    CoreRef T a dec dn s₀.mem vis fe M eb r m' ok := by
+  obtain ⟨s', rfl, -, y, a', hT, hR⟩ := RefE.run_okW hs h hc
+  exact hR.coreRef hT
+
+end corePost
+
 end L.Arena
