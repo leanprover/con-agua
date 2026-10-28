@@ -30,11 +30,11 @@ structure IndLineLookups (p : Prog) : Prop where
 def applyIndW (p : Prog) : Nat → Array UInt8 → Mem → Word → Option Mem
   | 0, _, _, _ => none
   | n + 1, b, m, v =>
-    lK (fun r m₁ => pmK (fun oo np m₂ =>
-        installW n b m₂ (r.headD 0) (r.tail.headD 0) oo (r.tail.tail.tail.headD 0)
-          (r.tail.tail.tail.tail.headD 0) (r.tail.tail.tail.tail.tail.headD 0) np)
-      (validateW p n m₁ (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0)
-        (r.tail.tail.tail.tail.headD 0) (r.tail.tail.tail.tail.tail.headD 0)))
+    lK (fun r m₁ => lK (fun q m₂ =>
+        installW n b m₂ (r.headD 0) (r.tail.headD 0) (q.headD 0) (r.tail.tail.tail.headD 0)
+          (r.tail.tail.tail.tail.headD 0) (r.tail.tail.tail.tail.tail.headD 0) (q.tail.headD 0))
+      (callW p n "validate_ind_d" [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
+        r.tail.tail.tail.tail.headD 0, r.tail.tail.tail.tail.tail.headD 0] m₁))
       (indFieldsW b m v)
 
 section specs
@@ -58,10 +58,9 @@ theorem applyInd_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Wor
       fun s₁ hm₁ v => Triple.keep hno (indFields_spec p hF b hb n s₁ hm₁ v)
     have h2 : ∀ (s₁ : St) (to tn co cn ro rn : Word),
         ⦃fun s => s = s₁⦄ invoke p (exec p n) "validate_ind_d" [to, tn, co, cn, ro, rn]
-        ⦃fun r s' => (LocEq s' s₁ ∧
-          validateW p n s₁.mem to tn co cn ro rn = some ((r.headD 0, r.tail.headD 0), s'.mem)) ∧
+        ⦃fun r s' => (LocEq s' s₁ ∧ callW p n "validate_ind_d" [to, tn, co, cn, ro, rn] s₁.mem = some (r, s'.mem)) ∧
           Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ :=
-      fun s₁ to tn co cn ro rn => Triple.keep hno (validate_spec p hL n s₁ to tn co cn ro rn)
+      fun s₁ to tn co cn ro rn => Triple.keep hno (callW_spec p n "validate_ind_d" [to, tn, co, cn, ro, rn] s₁)
     have h3 : ∀ (s₁ : St), s₁.mem.arr8 IN = b → ∀ (to tn oo on ro rn np : Word),
         ⦃fun s => s = s₁⦄ invoke p (exec p n) "install_ind_d" [to, tn, oo, on, ro, rn, np]
         ⦃fun _ s' => (LocEq s' s₁ ∧ installW n b s₁.mem to tn oo on ro rn np = some s'.mem) ∧

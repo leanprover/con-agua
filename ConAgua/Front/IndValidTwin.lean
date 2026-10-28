@@ -77,6 +77,47 @@ theorem fpos_full (LS : List (List NIdx)) : fpos LS LS.length = LS.flatten.lengt
     simp only [List.map_cons, List.sum_cons, List.flatten_cons, List.length_append]
     rw [ih]
 
+theorem fpos_lt (LS : List (List NIdx)) (i c : Nat) (hi : i < LS.length) (hc : c < LS[i].length) :
+    fpos LS i + c < LS.flatten.length := by
+  induction LS generalizing i with
+  | nil => simp at hi
+  | cons l L ih =>
+    cases i with
+    | zero => simp [fpos] at hc ⊢; omega
+    | succ i =>
+      have := ih i (by simpa using hi) (by simpa using hc)
+      simp only [fpos, List.take_succ_cons, List.map_cons, List.sum_cons, List.flatten_cons,
+        List.length_append] at this ⊢
+      omega
+
+theorem getElem_flatten' (LS : List (List NIdx)) (i c : Nat) (hi : i < LS.length) (hc : c < LS[i].length) :
+    LS[i][c] = LS.flatten[fpos LS i + c]'(fpos_lt LS i c hi hc) := by
+  induction LS generalizing i with
+  | nil => simp at hi
+  | cons l L ih =>
+    cases i with
+    | zero => simp [fpos, List.getElem_append_left (show c < l.length by simpa using hc)]
+    | succ i =>
+      have h1 := ih i (by simpa using hi) (by simpa using hc)
+      simp only [List.getElem_cons_succ] at h1 ⊢
+      rw [h1]
+      simp only [List.flatten_cons]
+      rw [List.getElem_append_right (by simp only [fpos, List.take_succ_cons, List.map_cons, List.sum_cons]; omega)]
+      congr 1
+      simp only [fpos, List.take_succ_cons, List.map_cons, List.sum_cons]; omega
+
+theorem flat_pos (LS : List (List NIdx)) (p : Nat) (hp : p < LS.flatten.length) :
+    ∃ i c, ∃ (hi : i < LS.length), c < LS[i].length ∧ fpos LS i + c = p := by
+  induction LS generalizing p with
+  | nil => simp at hp
+  | cons l L ih =>
+    by_cases hpl : p < l.length
+    · exact ⟨0, p, by simp, by simpa using hpl, by simp [fpos]⟩
+    · obtain ⟨i, c, hi, hc, he⟩ := ih (p - l.length) (by rw [List.flatten_cons, List.length_append] at hp; omega)
+      refine ⟨i + 1, c, by simpa using hi, by simpa using hc, ?_⟩
+      simp only [fpos, List.take_succ_cons, List.map_cons, List.sum_cons] at he ⊢
+      omega
+
 theorem take_push {α : Type} (l : List α) (p : Nat) (hp : p < l.length) :
     (l.take p).toArray.push l[p] = (l.take (p + 1)).toArray := by
   rw [List.take_add_one, List.getElem?_eq_getElem hp]; simp

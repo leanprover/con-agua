@@ -328,14 +328,6 @@ def lK {α : Type} (rest : List Word → Mem → Option α) : Option (List Word 
 @[arena_grind =] theorem lK_some {α : Type} (rest : List Word → Mem → Option α) (r : List Word) (m : Mem) :
     lK rest (some (r, m)) = rest r m := rfl
 
-/-- **The model of `vi_nparams(to, tn)`**: `nPd` and the memory (`vi_np_go` through its run). -/
-def nparamsW (p : Prog) : Nat → Mem → Word → Word → Option (Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, to, tn =>
-    if tn = 0 then some (0, m)
-    else lK (fun _ m₁ => some (rdW (m.arr64 IFR) (to + 10), m₁))
-      (callW p n "vi_np_go" [to, tn, rdW (m.arr64 IFR) (to + 10), 0] m)
-
 /-- After a lookup: the push of the handle. -/
 def lkPushK (m : Mem) : Option Word → Option (Word × Mem)
   | none => none
@@ -439,18 +431,6 @@ section specs2
 variable (p : Prog) (hL : IndApplyLookups p)
 include hL
 
-theorem nparams_spec (n : Nat) (s₀ : St) (to tn : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_nparams" [to, tn]
-    ⦃fun r s' => LocEq s' s₀ ∧ nparamsW p n s₀.mem to tn = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.vi_nparams]
-  simp only [callFn, viNparams]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "vi_np_go"] <;>
-        finish [nparamsW]
-
 theorem mapGo_spec (n : Nat) : ∀ (s₀ : St) (o l sz s f j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_map_go" [o, l, sz, s, f, j]
     ⦃fun _ s' => LocEq s' s₀ ∧ mapGoW n s₀.mem o l sz s f j = some s'.mem; ⊤⦄ := by
@@ -500,15 +480,6 @@ def wK {α : Type} (rest : Word → Option α) : Option Word → Option α
 @[arena_grind =] theorem wK_some {α : Type} (rest : Word → Option α) (x : Word) :
     wK rest (some x) = rest x := rfl
 
-/-- After a call that returns two words: the rest. -/
-def pK {α : Type} (rest : Word → Word → Option α) : Option (Word × Word) → Option α
-  | none => none
-  | some (a, b) => rest a b
-
-@[arena_grind =] theorem pK_none {α : Type} (rest : Word → Word → Option α) : pK rest none = none := rfl
-@[arena_grind =] theorem pK_some {α : Type} (rest : Word → Word → Option α) (a b : Word) :
-    pK rest (some (a, b)) = rest a b := rfl
-
 /-- After a call that returns two words and its memory: the rest. -/
 def pmK {α : Type} (rest : Word → Word → Mem → Option α) : Option ((Word × Word) × Mem) → Option α
   | none => none
@@ -518,24 +489,6 @@ def pmK {α : Type} (rest : Word → Word → Mem → Option α) : Option ((Word
     pmK rest none = none := rfl
 @[arena_grind =] theorem pmK_some {α : Type} (rest : Word → Word → Mem → Option α) (a b : Word)
     (m : Mem) : pmK rest (some ((a, b), m)) = rest a b m := rfl
-
-l_model orderIn_spec (p : Prog) (hL : IndApplyLookups p)
-  fns [hL.vi_order_in ↦ orderInW]
-  specs [callW_spec p n "vi_ctor"]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
-
-l_model orderGo_spec (p : Prog) (hL : IndApplyLookups p)
-  fns [hL.vi_order_go ↦ orderGoW void]
-  specs [orderIn_spec p hL n]
-  grind [arena_grind] simp []
-
-/-- **The model of `vi_order(to, tn, tyn, fo, cno, co, cn, fuel, np)`**: the slice's offset. -/
-def orderW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, to, tn, tyn, fo, cno, co, cn, fuel, np =>
-    allocK (fun oo m₁ => mK (fun m₂ => some (oo, m₂)) (orderGoW p n m₁ to tn tyn fo cno co cn fuel np oo 0 0))
-      (allocW m IFL cn)
 
 /-- `vi_k_expected` after `lv_equiv`. -/
 def keK3 (c : Word) : Option (Word × Mem) → Option (Word × Mem)
@@ -579,22 +532,6 @@ def kExpW : Nat → Mem → Word → Word → Word → Word → Word → Option 
     else if rdW (m.arr64 IFR) (to + 4) ≠ 1 then some (1, m)
     else keK1 n m oo (piResW n m fuel (rdW (m.arr64 IFL) tyt))
 
-/-- **The model of `vi_rec(r, np, tn, cn, ke, tyn, tyt, fuel)`**: the memory (`vi_rec_idx` through
-its run). -/
-def recW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, r, np, tn, cn, ke, tyn, tyt, fuel =>
-    wK (fun rn =>
-      if rdW (m.arr64 IFR) (r + 8) ≠ np then none
-      else if rdW (m.arr64 IFR) (r + 7) ≠ tn then none
-      else if rdW (m.arr64 IFR) (r + 6) ≠ cn then none
-      else if ke ≠ 0 ∧ rdW (m.arr64 IFR) (r + 4) ≠ ke - 1 then none
-      else pK (fun f tt => if f ≠ 0 then
-          lK (fun _ m₁ => some m₁) (callW p n "vi_rec_idx"
-            [tt, rdW (m.arr64 IFR) (r + 5), np, tn, tyn, tyt, fuel, 0] m)
-          else some m) (nrpW m rn))
-      (lkW m NID (rdW (m.arr64 IFR) r))
-
 /-- **The model of `vi_nested(to, tn, j)`.** -/
 def nestedW : Nat → Mem → Word → Word → Word → Option Word
   | 0, _, _, _, _ => none
@@ -606,19 +543,6 @@ def nestedW : Nat → Mem → Word → Word → Word → Option Word
 section specs4
 variable (p : Prog) (hL : IndApplyLookups p)
 include hL
-
-theorem order_spec (n : Nat) (s₀ : St) (to tn tyn fo cno co cn fuel np : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_order" [to, tn, tyn, fo, cno, co, cn, fuel, np]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      orderW p n s₀.mem to tn tyn fo cno co cn fuel np = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.vi_order]
-  simp only [callFn, viOrder]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        iflAlloc_spec p hL.ifl_alloc n, orderGo_spec p hL n] <;> finish (gen := 20) [orderW]
 
 theorem kExp_spec (n : Nat) (s₀ : St) (to tn tyt oo fuel : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_k_expected" [to, tn, tyt, oo, fuel]
@@ -633,19 +557,6 @@ theorem kExp_spec (n : Nat) (s₀ : St) (to tn tyt oo fuel : Word) :
         piRes_spec p hL n, eView_spec p hL.e_view n, lhMk_spec p hL.level.alloc n,
         lvEquiv_spec p hL.level hL.lv_equiv n] <;> finish (gen := 20) [kExpW]
 
-theorem rec_spec (n : Nat) (s₀ : St) (r np tn cn ke tyn tyt fuel : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_rec" [r, np, tn, cn, ke, tyn, tyt, fuel]
-    ⦃fun _ s' => LocEq s' s₀ ∧ recW p n s₀.mem r np tn cn ke tyn tyt fuel = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hL.vi_rec]
-  simp only [callFn, viRec]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nameGet_spec p hL.decl.expr.front n, nrp_spec p hL n, callW_spec p n "vi_rec_idx"] <;>
-        finish (gen := 20) [recW, lkW]
-
 theorem nested_spec (n : Nat) : ∀ (s₀ : St) (to tn j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_nested" [to, tn, j]
     ⦃fun r s' => s' = s₀ ∧ nestedW n s₀.mem to tn j = some (r.headD 0); ⊤⦄ := by
@@ -657,110 +568,6 @@ theorem nested_spec (n : Nat) : ∀ (s₀ : St) (to tn j : Word),
     simp only [callFn, viNested]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish (gen := 20) [nestedW]
-
-end specs4
-
-/-- **The model of `vi_recs_go(ro, rn, np, tn, cn, ke, tyn, tyt, fuel, j)`.** -/
-def recsGoW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Option Mem
-  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, ro, rn, np, tn, cn, ke, tyn, tyt, fuel, j =>
-    if rn ≤ j then some m
-    else mK (fun m₁ => recsGoW p n m₁ ro rn np tn cn ke tyn tyt fuel (j + 1))
-      (recW p n m (ro + 11 * j) np tn cn ke tyn tyt fuel)
-
-/-- **The model of `vi_recs(to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel)`.** -/
-def recsW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Option Mem
-  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel =>
-    wK (fun u => if u ≠ 0 then some m else recsGoW p n m ro rn np tn cn ke tyn tyt fuel 0)
-      (nestedW n m to tn 0)
-
-/-- **The model of `vi_tail(to, tn, co, cn, ro, rn, np, tyn, tyt, fo, cno)`**: the ordered
-constructors' offset. -/
-def tailW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, to, tn, co, cn, ro, rn, np, tyn, tyt, fo, cno =>
-    wK (fun fuel => allocK (fun oo m₅ => allocK (fun ke m₆ =>
-        mK (fun m₇ => some (oo, m₇)) (recsW p n m₆ to tn ro rn np cn ke tyn tyt fuel))
-      (kExpW n m₅ to tn tyt oo fuel)) (orderW p n m to tn tyn fo cno co cn fuel np))
-    (storeFuelW n m)
-
-/-- **The model of `validate_ind_d(to, tn, co, cn, ro, rn)`**: `(ordered.off, nPd)` and the
-memory. -/
-def validateW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word →
-    Option ((Word × Word) × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, to, tn, co, cn, ro, rn =>
-    lK (fun _ mu => allocK (fun np mp =>
-      pmK (fun tyn _ m₁ => pmK (fun tyt _ m₂ => pmK (fun fo x m₃ => pmK (fun cno _ m₄ =>
-        wK (fun u => if u = 0 then none else if x ≠ cn then none else
-          allocK (fun oo m₅ => some ((oo, np), m₅))
-            (tailW p n m₄ to tn co cn ro rn np tyn tyt fo cno))
-        (nodupW n m₄ fo x 0)) (mapW n m₃ co cn 10 0 0)) (listedW n m₂ to tn))
-        (mapW n m₁ to tn 11 2 1)) (mapW n mp to tn 11 0 0))
-      (nparamsW p n mu to tn)) (callW p n "vi_unsafe" [to, tn, 0] m)
-
-section specs4
-variable (p : Prog) (hL : IndApplyLookups p)
-include hL
-
-theorem recsGo_spec (n : Nat) : ∀ (s₀ : St) (ro rn np tn cn ke tyn tyt fuel j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_recs_go" [ro, rn, np, tn, cn, ke, tyn, tyt, fuel, j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ recsGoW p n s₀.mem ro rn np tn cn ke tyn tyt fuel j = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ ro rn np tn cn ke tyn tyt fuel j
-    rw [invoke_eq _ hL.vi_recs_go]; simp only [callFn, viRecsGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ro rn np tn cn ke tyn tyt fuel j
-    rw [invoke_eq _ hL.vi_recs_go]
-    simp only [callFn, viRecsGo]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih, rec_spec p hL n] <;>
-        finish (gen := 20) [recsGoW]
-
-theorem recs_spec (n : Nat) (s₀ : St) (to tn ro rn np cn ke tyn tyt fuel : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_recs" [to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel]
-    ⦃fun _ s' => LocEq s' s₀ ∧ recsW p n s₀.mem to tn ro rn np cn ke tyn tyt fuel = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hL.vi_recs]
-  simp only [callFn, viRecs]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nested_spec p hL n,
-        recsGo_spec p hL n] <;> finish (gen := 20) [recsW]
-
-theorem tail_spec (n : Nat) (s₀ : St) (to tn co cn ro rn np tyn tyt fo cno : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_tail" [to, tn, co, cn, ro, rn, np, tyn, tyt, fo, cno]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      tailW p n s₀.mem to tn co cn ro rn np tyn tyt fo cno = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.vi_tail]
-  simp only [callFn, viTail]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        storeFuel_spec p hL n, order_spec p hL n, kExp_spec p hL n,
-        recs_spec p hL n] <;> finish (gen := 20) [tailW]
-
-theorem validate_spec (n : Nat) (s₀ : St) (to tn co cn ro rn : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "validate_ind_d" [to, tn, co, cn, ro, rn]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      validateW p n s₀.mem to tn co cn ro rn = some ((r.headD 0, r.tail.headD 0), s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.validate_ind_d]
-  simp only [callFn, validateIndD]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        callW_spec p n "vi_unsafe", nparams_spec p hL n, map_spec p hL n, listed_spec p hL n,
-        nodup_spec p hL n, tail_spec p hL n] <;> finish (gen := 20) [validateW]
 
 end specs4
 

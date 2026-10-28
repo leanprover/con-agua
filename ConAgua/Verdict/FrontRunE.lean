@@ -20,8 +20,8 @@ set_option experimental.vcgen true
 
 namespace L.Front.Ind
 
-/-- **The claim of `validate_ind_d`** (proved in `FrontValidE.lean`): from the hypotheses of the
-ok refinement `validateW_twin` and twin facts `X st a`, a failing call claims `validateIndD`'s
+/-- **The claim of `validate_ind_d`** (proved in `FrontValidE.lean`): from the hypotheses of
+`validate_ref` and twin facts `X st a`, a failing call claims `validateIndD`'s
 record verdict (or failure). -/
 def ValidateClaim (p : Prog) (X : StateD → AState → Prop) : Prop :=
   ∀ (b : ByteArray) (n : Nat) (m : Mem) (a : AState) (st : StateD) (to tn co cn ro rn : Word)
