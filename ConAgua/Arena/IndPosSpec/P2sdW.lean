@@ -18,6 +18,12 @@ namespace L.Ind
 
 open L.Arena
 
+/-- `nest_cont_key(vis, ctx, fuel, progOff, progLen, kb, n, us, dsOff, dsLen, nPc, cty, ns)` through its
+run. -/
+def keyR (cR : CallM) (n : Nat) (m : Mem) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
+    Option (List Word × Mem) :=
+  cR n "nest_cont_key" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns] m
+
 mutual
 /-- `nest_seeds`. -/
 def p2sdW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
@@ -34,7 +40,7 @@ def p2sdK1 (cR : CallM) (n : Nat) (vis ctx sO sL hi key nPc ns : Word) : Option 
 def p2sdK2 (cR : CallM) (n : Nat) (vis ctx sO sL key nPc ns f : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m2) => p2sdK3 cR n vis ctx sO sL
-      (nbKeyW cR n m2 vis ctx f 0 0 0 (rdW (m2.arr64 IW) key) (rdW (m2.arr64 IW) (key + 1))
+      (keyR cR n m2 vis ctx f 0 0 0 (rdW (m2.arr64 IW) key) (rdW (m2.arr64 IW) (key + 1))
         (rdW (m2.arr64 IW) (key + 2)) (rdW (m2.arr64 IW) (key + 3)) nPc (r.tail.headD 0) ns)
 def p2sdK3 (cR : CallM) (n : Nat) (vis ctx sO sL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -55,7 +61,7 @@ theorem p2sdK1_some : p2sdK1 cR n vis ctx sO sL hi key nPc ns (some (r, m1)) =
     p2sdK2 cR n vis ctx sO sL key nPc ns (r.headD 0) (nitWf cR n m1 vis ctx hi key) := by rw [p2sdK1]
 theorem p2sdK2_some : p2sdK2 cR n vis ctx sO sL key nPc ns f (some (r, m1)) =
     p2sdK3 cR n vis ctx sO sL
-      (nbKeyW cR n m1 vis ctx f 0 0 0 (rdW (m1.arr64 IW) key) (rdW (m1.arr64 IW) (key + 1))
+      (keyR cR n m1 vis ctx f 0 0 0 (rdW (m1.arr64 IW) key) (rdW (m1.arr64 IW) (key + 1))
         (rdW (m1.arr64 IW) (key + 2)) (rdW (m1.arr64 IW) (key + 3)) nPc (r.tail.headD 0) ns) := by rw [p2sdK2]
 theorem p2sdK3_some : p2sdK3 cR n vis ctx sO sL (some (r, m1)) =
     p2sdW cR n m1 vis ctx (sO + 1) (sL - 1) (r.tail.headD 0) := by rw [p2sdK3]
@@ -74,11 +80,10 @@ theorem nestSeeds_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ 
   | succ n ih =>
     intro s₀ vis ctx sO sL ns
     have R := L.nb.ct.cr.rx
-    have hKey := (nbSpec_all L.nb cR hcR n).2.2.2.2.1
     simp only [invoke_eq _ L.pseeds, callFn, nestSeedsL]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        nestCtxHiAt_specE p R.hi n, nestSeedsFuel_spec L n, nestInstType_spec' p L.nb.nit cR hcR n, hKey, ih] <;>
-      simp_all [p2sdW_succ, p2sdK1_some, p2sdK2_some, p2sdK3_some, SLACK,
+        nestCtxHiAt_specE p R.hi n, nestSeedsFuel_spec L n, nestInstType_spec' p L.nb.nit cR hcR n, hcR n "nest_cont_key", ih] <;>
+      simp_all [p2sdW_succ, p2sdK1_some, p2sdK2_some, p2sdK3_some, keyR, SLACK,
         LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
         St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 
