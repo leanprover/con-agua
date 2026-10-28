@@ -30,10 +30,8 @@ namespace L.Ind
 open L.Arena
 
 err_stmt CheckSumTeleE := checkSumTele_refinesC fuel k
-err_stmt CheckSumCtorsE := checkSumCtors_refinesC fuel k
 err_stmt CheckStructFieldSortsIE := checkStructFieldSortsI_refinesC fuel n
 err_stmt CheckStructProjTableE := checkStructProjTable_refinesC fuel n
-err_stmt ClassKeyOfE := classKeyOf_refines fuel k
 err_stmt ClassMajorsE := classMajors_refinesC fuel n
 
 end L.Ind

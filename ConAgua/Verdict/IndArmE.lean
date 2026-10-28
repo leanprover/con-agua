@@ -81,12 +81,6 @@ theorem checkStructFieldSortsIE_of {p : Prog} (hnv : closedNV p _root_.L.Checker
       hgo hia hcsf hftd F (by omega) s₀ a₀ isProp large s nP fo fl io il nW fvs idxArgs hC hA hfv hfvb
       hix hixb hs hsP hnW hfvsP hws) hc
 
-theorem classKeyOfE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) :
-    ClassKeyOfE p := by
-  intro L dn fe vis s₀ a₀ nP po pl key pfvs ck hS hpf hpfb hk hP F _hF e hc
-  exact RefE.run_err (classKeyOfE_spec p L F s₀ nP po pl key) hnv hnv
-    (kof_ref dn fe vis F hS hpf hpfb hk hP) hc
-
 /-- **`gen_rec_check`'s claim in the generated shape** (`GenRecCheckE`), from `genRecCheck_claim'`
 and the claims of `classes_nfs`, `target_k53_args` at every stage. -/
 theorem genRecCheckE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)

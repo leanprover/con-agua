@@ -5,8 +5,7 @@ import ConAgua.L.ModelGen
 /-!
 # `check_block_classes`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)
 
-`check_block_classes_keys` (`ckkE_claim` by induction on the fuel: `class_key_of`'s claim
-`ClassKeyOfE`, its ok run by `kofCall_sim`), `check_block_classes` (`checkBlockClassesE_claim`:
+`check_block_classes` (`checkBlockClassesE_claim`: `check_block_classes_keys` by `ckk_ref`;
 `classRead`'s `none` and the one-class-per-member test reject as the twin's; `class_majors` by
 `ClassMajorsE`; `class_read`, `class_read_classes`, the count claim nothing).
 -/
@@ -23,73 +22,19 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model ckkE_spec (p : Prog) (hf : p.lookup "check_block_classes_keys" = some checkBlockClassesKeys)
-  fns [hf ↦ ckkE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
-
 l_model cbcE_spec (p : Prog) (hf : p.lookup "check_block_classes" = some checkBlockClassesL)
   fns [hf ↦ cbcE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 1000000 simp [rdW] errors
 
-theorem blkE4_nv : ∀ f ∈ ["sl_cons", "class_read", "class_read_classes", "check_block_classes_one_per_member"],
+theorem blkE4_nv : ∀ f ∈ ["class_read", "class_read_classes", "check_block_classes_one_per_member"],
     f ∈ _root_.L.Checker.nvFns :=
   _root_.L.Checker.nv_sub (by decide +kernel)
 
-/-- **`check_block_classes_keys`' error claim** (the model at fuel `n`; `ckkW_sim`'s hypotheses),
-from `class_key_of`'s. -/
-theorem ckkE_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) (eKey : ClassKeyOfE p)
-    (hP : KeysProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (nP po pl : Word) (pfvs : List EIdx) (n : Nat) (hn : n ≤ 2 ^ 62) :
-    ∀ (m : Mem) (a : AState) (ko kl : Word) (ks : List ClassKey),
-    StageR dn vis fe m a → DecB (fun m => decHL m po.toNat pl.toNat) m pfvs →
-    po.toNat + pl.toNat ≤ iwTop m → PSlR decCK ks ko kl m → PosMR m →
-    ∀ e, ckkE p n m nP po pl ko kl = .error e →
-      ErrClaim (ks.mapM (ConRon.Arena.classKeyOf nP.toNat pfvs)) a e := by
-  induction n with
-  | zero =>
-    intro m a ko kl ks _ _ _ _ _ e he
-    rw [ckkE.eq_1] at he; cases he; exact ErrClaim.of_cls0 Err.cls_outOfFuel
-  | succ n ih =>
-  intro m a ko kl ks hS hpf hpb hks hPm e he
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  by_cases hkl : kl = 0
-  · rw [ckkE.arm1 p n m nP po pl ko kl hkl] at he; cases he
-  obtain ⟨q, k0, ks', rfl, hw, hqb, hdk, hks'⟩ := partsPSl_cons hks hkl
-  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  rw [ckkE.arm2 p n m nP po pl ko kl hkl, hw] at he
-  simp only [List.mapM_cons]
-  cases h1 : callE p n "class_key_of" [nP, po, pl, UInt64.ofNat q] m with
-  | error e1 =>
-    rw [h1, ckkE.k_class_key_of.none] at he; cases he
-    exact ErrClaim.bind_left (eKey hP.toKofProg dn fe vis ⟨m, Locals.init []⟩ a nP po pl (UInt64.ofNat q) pfvs k0 hS
-      (hpf.get (OMono.decHL _ _)) hpb (by rw [hq']; exact hdk) hPm n (by omega) _ h1)
-  | ok q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, ckkE.k_class_key_of.arm1] at he
-    obtain ⟨x1, a1, hrun1, hd1, hS1, hg1, hP1⟩ :=
-      kofCall_sim hP.toKofProg n hS (hpf.get (OMono.decHL _ _)) hpb (by rw [hq']; exact hdk) hPm r1 m1
-        (callW_of_callE h1)
-    refine ErrClaim.bind_right hrun1 ?_
-    cases h2 : ckkE p n m1 nP po pl (ko + 1) (kl - 1) with
-    | error e2 =>
-      rw [h2, ckkE.k_check_block_classes_keys.none] at he; cases he
-      exact ErrClaim.bind_left (ih (by omega) m1 a1 (ko + 1) (kl - 1) ks' hS1 (hpf.grow (OMono.decHL _ _) hg1)
-        (Nat.le_trans hpb hg1.1) (hks'.grow decCK_mono hg1) hP1 _ h2)
-    | ok q2 =>
-      obtain ⟨r2, m2⟩ := q2
-      rw [h2, ckkE.k_check_block_classes_keys.arm1] at he
-      cases h3 : callE p n "sl_cons" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2 with
-      | error e3 =>
-        rw [h3, ckkE.k_sl_cons.none] at he; cases he
-        exact ErrClaim.of_callE_nv hnv (blkE4_nv _ (by simp)) h3
-      | ok q3 => obtain ⟨r3, m3⟩ := q3; rw [h3, ckkE.k_sl_cons.arm1] at he; cases he
-
 /-- **`check_block_classes`' error claim** (`CheckBlockClassesE`, the `err_stmt` of
 `checkBlockClasses_refinesC`): the two rejects (`classRead`'s `none`, not one class per member) are
-the twin's; `check_block_classes_keys` by `ckkE_claim`, `class_majors` by `ClassMajorsE`. -/
+the twin's; `check_block_classes_keys` by `ckk_ref`, `class_majors` by `ClassMajorsE`. -/
 theorem checkBlockClassesE_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (eKey : ClassKeyOfE p) (eClm : ClassMajorsE p) : CheckBlockClassesE p := by
+    (eClm : ClassMajorsE p) : CheckBlockClassesE p := by
   intro dn vis fe env hq hIlpf hLC henv hP fs hcl hfr hfc s₀ a pp po pl co cl bs css pfvs hC hb hsrc hrecs
     hcss hpf hpfb hPm hA hOpf hk2 hk3 pP pfvsP cssP hpl hpw hshP hpfP hcssP F hF e he
   by_cases hk0 : e.cls = 0
@@ -175,28 +120,23 @@ theorem checkBlockClassesE_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.n
   -- the keys
   obtain ⟨hnp2, -, -, -⟩ := partsShapeWords hg02 hbsD hq9
   rw [hnp2] at he
+  have hR3 := ckk_ref (p := p) dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n s2.mem a1 _ _ _ hS2
+    (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) (ccRes_pslR hcc) hP2
+  have hsT := ckkE_spec p hP.clm.keys n ⟨s2.mem, Locals.init []⟩ (UInt64.ofNat bs.nP) po pl (r2.headD 0)
+    (r2.tail.headD 0)
   cases c3 : callE p n "check_block_classes_keys" [UInt64.ofNat bs.nP, po, pl, r2.headD 0, r2.tail.headD 0]
       s2.mem with
   | error e3 =>
     rw [c3, cbcE.k_check_block_classes_keys.none] at he; cases he
-    have hW := triple_of_callE_err (ckkE_spec p hP.clm.keys.keys n ⟨s2.mem, Locals.init []⟩ (UInt64.ofNat bs.nP)
-      po pl (r2.headD 0) (r2.tail.headD 0)) c3 (Err.code_ne_of_cls hk0)
-    simp only at hW
-    have h := ckkE_claim hnv eKey hP.clm.keys dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n hn s2.mem a1 _ _ _ hS2
-      (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) (ccRes_pslR hcc) hP2 _ hW
+    have h := RefE.run_err hsT hnv hnv hR3 c3
     rw [hnpT] at h
     exact ErrClaim.bind_left h
   | ok q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [c3, cbcE.k_check_block_classes_keys.arm1] at he
-  obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (ckk_spec p hP.clm.keys.keys n _ (UInt64.ofNat bs.nP) po pl (r2.headD 0) (r2.tail.headD 0))
-    (callW_of_callE c3)
-  simp only at hs3 hW3
+  obtain ⟨s3, hs3, -, keys, a3, hrun3, hR3⟩ := RefE.run_ok hsT hR3 c3
   subst hs3
-  obtain ⟨keys, a3, hrun3, hS3, hg3, hks, hP3⟩ :=
-    ckkW_sim hP.clm.keys dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n s2.mem a1 _ _ _ hS2
-      (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) (ccRes_pslR hcc) hP2 r3 s3.mem hW3
+  obtain ⟨hS3, hg3, hks, hP3⟩ := hR3
   rw [hnpT] at hrun3
   have hA3 := hk3 n _ s2.mem r3 s3.mem (callW_of_callE c3) hA2
   obtain ⟨c2', keysP, ⟨hkeys, hwk⟩, -⟩ := ConRon.Bridge.Inductives.classKeysOf_spec fe bs.nP pfvs
