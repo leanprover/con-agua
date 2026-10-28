@@ -29,6 +29,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import e2e  # noqa: E402
+import arr_names  # noqa: E402
 
 ROOT = e2e.ROOT
 OUT = os.path.join(ROOT, "ConAgua", "Checker", "Prog.lean")
@@ -48,7 +49,9 @@ PRE_PARTS = 4
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
 PRE = "pre_"
 # the frontend's input (`ConAgua/Checker/Prelude.lean`, `preFn`: byte array 0)
-TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)")
+# the input byte array's number (`IN` in `ConAgua/Layout.lean`)
+IN_ID = next(n for n, name in arr_names.byte_names().items() if name == "IN")
+TOUCH = re.compile(rf"\((?:l8|s8) {IN_ID} |\(n8 {IN_ID}\)")
 ENTRY = "check"
 # every module that imports the generated file (the asm parts, the write-set decisions, ...): its
 # olean may be stale or missing while the file is regenerated
