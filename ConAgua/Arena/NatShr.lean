@@ -139,11 +139,10 @@ grind_pattern [natop_grind] shr_big_b => pv P oa la / 2 ^ pv Q ob lb, Norm Q ob 
 
 /-- One pass over the shifted slice `(oa, n)` (`oa` already moved past the skipped limbs). -/
 def shrLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, y, pt, pb) {
-  while i < n {
+  for i < n {
     y := call nat_limb(oa, n, i + 1);
     POOL⟨pt⟩[pb + i] := (x >> b) | ((y << 1) << (63 - b));
-    x := y;
-    i += 1
+    x := y
   }
 }
 

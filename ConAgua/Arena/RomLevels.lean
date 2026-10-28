@@ -138,10 +138,7 @@ grind_pattern [arena_grind] sputW_end => sputW m pt pb b k j
 grind_pattern [arena_grind] sputW_step => sputW m pt pb b k j, sputW m' pt pb b k j'
 
 def sputLoop : Stmt := lblk (b, k, top, j, pt, pb) {
-  while j < k {
-    POOL⟨pt⟩[pb + j] := RSTK.u64[b + j];
-    j += 1
-  }
+  for j < k { POOL⟨pt⟩[pb + j] := RSTK.u64[b + j] }
 }
 
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/

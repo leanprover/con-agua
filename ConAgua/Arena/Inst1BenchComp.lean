@@ -25,10 +25,7 @@ def inst1Bench : FunDecl := lfn (n, k, val, d) locals (b, x, i, v, r) {
   b := call intern_bvar(k & 9223372036854775807);
   x := b;
   i := 0;
-  while i < n {
-    x := call mk_app(x, b);
-    i += 1
-  };
+  for i < n { x := call mk_app(x, b) };
   if k >> 63 != 0 { return x };
   v := call intern_bvar(val);
   r := call inst_entry(x, v, d);

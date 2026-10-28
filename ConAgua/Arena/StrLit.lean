@@ -353,10 +353,7 @@ def strLitCtorL : FunDecl :=
   lfn (h) locals (cons, ofNat, nilE, t, i, o, cnt, spine, slN, sl, r) {
   (cons, ofNat, nilE) := call str_ctor_pre();
   if h >> 28 != 8 { abort };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LIT⟨t⟩.count <= i { abort };
+  (t, i) := node LIT⟦h⟧;
   if LIT⟨t, i⟩.kind != 1 { abort };
   o := LIT⟨t, i⟩.o;
   cnt := LIT⟨t, i⟩.l;

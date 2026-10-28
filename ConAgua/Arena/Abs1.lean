@@ -105,10 +105,7 @@ def absNode : FunDecl := lfn (h, k, d, fu) locals (x, g, t, i, r) {
   if g == 5 { r := call abs_lam(h, k, d, fu); return r };
   if g == 6 { r := call abs_forall(h, k, d, fu); return r };
   if g == 1 {
-    t := ⟦h⟧.tier;
-    i := ⟦h⟧.idx;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if FVAR⟨t⟩.count <= i { abort };
+    (t, i) := node FVAR⟦h⟧;
     x := FVAR⟨t, i⟩.i;
     if x == d { r := call intern_bvar(k); return r };
     return h
@@ -123,10 +120,7 @@ def absNode : FunDecl := lfn (h, k, d, fu) locals (x, g, t, i, r) {
 def absApp : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦h⟧;
   f := APP⟨t, i⟩.f;
   a := APP⟨t, i⟩.a;
   x := call abs_go(f, k, d, fu);
@@ -143,10 +137,7 @@ def absLam : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r
   if k + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LAM⟨t⟩.count <= i { abort };
+  (t, i) := node LAM⟦h⟧;
   f := LAM⟨t, i⟩.ty;
   a := LAM⟨t, i⟩.b;
   x := call abs_go(f, k, d, fu);
@@ -163,10 +154,7 @@ def absForall : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y
   if k + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if FORALL⟨t⟩.count <= i { abort };
+  (t, i) := node FORALL⟦h⟧;
   f := FORALL⟨t, i⟩.ty;
   a := FORALL⟨t, i⟩.b;
   x := call abs_go(f, k, d, fu);
@@ -183,10 +171,7 @@ def absLet : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, b, x, y
   if k + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LET⟨t⟩.count <= i { abort };
+  (t, i) := node LET⟦h⟧;
   f := LET⟨t, i⟩.ty;
   a := LET⟨t, i⟩.v;
   b := LET⟨t, i⟩.b;
@@ -204,10 +189,7 @@ def absLet : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, b, x, y
 def absProj : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if PROJ⟨t⟩.count <= i { abort };
+  (t, i) := node PROJ⟦h⟧;
   nm := PROJ⟨t, i⟩.n;
   ix := PROJ⟨t, i⟩.i;
   e := PROJ⟨t, i⟩.e;

@@ -124,10 +124,7 @@ def natSuccOkL : FunDecl := lfn (found, p) locals (nt, nc, ty, t, i, dom, body) 
   nc := call const_e(nt);
   ty := EREC.u64[p + 4];
   if ty >> 28 != 6 { return 0 };
-  t := ⟦ty⟧.tier;
-  i := ⟦ty⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if FORALL⟨t⟩.count <= i { abort };
+  (t, i) := node FORALL⟦ty⟧;
   dom := FORALL⟨t, i⟩.ty;
   body := FORALL⟨t, i⟩.b;
   if dom == nc && body == nc { return 1 };
@@ -162,10 +159,7 @@ def litToCtorIfNatL : FunDecl :=
   lfn (vis, h) locals (tag, t, i, k, sup, o, cnt, r) {
   tag := h >> 28;
   if tag != 8 { return h };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LIT⟨t⟩.count <= i { abort };
+  (t, i) := node LIT⟦h⟧;
   k := LIT⟨t, i⟩.kind;
   if k != 0 { return h };
   sup := call nat_lit_supported(vis);
@@ -268,10 +262,7 @@ every unfolding leaked its spine onto the stack: whnf-delta2). -/
 def unfoldDefnAtL : FunDecl :=
   lfn (e, n, us, p) locals (tu, iu, usl, lpl, po, value, v, top, ao, an, r) {
   if us >> 28 != 0 { abort };
-  tu := ⟦us⟧.tier;
-  iu := ⟦us⟧.idx;
-  if tu != 0 && CTL.u64[1] == 0 { abort };
-  if LVLS⟨tu⟩.count <= iu { abort };
+  (tu, iu) := node LVLS⟦us⟧;
   usl := LVLS⟨tu, iu⟩.l;
   lpl := EREC.u64[p + 3];
   if usl != lpl { return (0, 0) };
@@ -294,10 +285,7 @@ def unfoldDefinitionL : FunDecl :=
   lfn (vis, e) locals (hh, t, i, n, us, found, p, fl, r) {
   hh := call get_app_fn(e);
   if hh >> 28 != 3 { return (0, 0) };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   n := CONST⟨t, i⟩.n;
   us := CONST⟨t, i⟩.us;
   (found, p) := call env_find(n, vis);
@@ -421,10 +409,7 @@ def reduceNatApL : FunDecl :=
   g := APP⟨t2, i2⟩.f;
   a := APP⟨t2, i2⟩.a;
   if g >> 28 != 3 { return (0, 0) };
-  t3 := ⟦g⟧.tier;
-  i3 := ⟦g⟧.idx;
-  if t3 != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t3⟩.count <= i3 { abort };
+  (t3, i3) := node CONST⟦g⟧;
   c := CONST⟨t3, i3⟩.n;
   us := CONST⟨t3, i3⟩.us;
   el := call pin_word(52);
@@ -487,10 +472,7 @@ whnf-delta2). -/
 def reduceNatL : FunDecl :=
   lfn (mode, vis, d, e) locals (t, i, f, b, rf, rh) {
   if e >> 28 != 4 { return (0, 0) };
-  t := ⟦e⟧.tier;
-  i := ⟦e⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦e⟧;
   f := APP⟨t, i⟩.f;
   b := APP⟨t, i⟩.a;
   (rf, rh) := call reduce_nat_head(mode, vis, d, f, b);

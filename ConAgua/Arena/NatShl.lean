@@ -41,18 +41,14 @@ namespace L.Arena
 /-! ## `nat_shl(oa, la, ob, lb)` -/
 
 def shlZero : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c, pt, pb) {
-  while i < w {
-    POOL⟨pt⟩[pb + i] := 0;
-    i += 1
-  }
+  for i < w { POOL⟨pt⟩[pb + i] := 0 }
 }
 
 def shlLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c, pt, pb) {
-  while i < la {
+  for i < la {
     x := POOL⦃oa + i⦄;
     POOL⟨pt⟩[pb + (w + i)] := (x << b) | c;
-    c := (x >> 1) >> (63 - b);
-    i += 1
+    c := (x >> 1) >> (63 - b)
   }
 }
 

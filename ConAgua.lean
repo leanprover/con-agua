@@ -5,6 +5,7 @@ public import ConAgua.L.Syntax
 public import ConAgua.L.Semantics
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
+public import ConAgua.L.For
 public import ConAgua.L.FuelMono
 public import ConAgua.L.ProgHas
 public import ConAgua.L.WriteSet

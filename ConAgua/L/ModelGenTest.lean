@@ -151,6 +151,30 @@ l_model tNestR_spec (p : Prog) (hp : p.lookup "t_nest_r" = some tNestR)
   fns [hp ↦ tNestRW ro]
   grind [arena_grind] extra [ld64_rd_spec] simp []
 
+/-- `tNestR` with the counted-loop sugar (`for`): the same function, and `l_model` reads it as the
+plain text (`L.Notation.desugarAll`), so its models and loop blocks are `tNestR`'s. -/
+-- con-ron: none — an `l_model` test function
+def tNestF : FunDecl := lfn (n) locals (i, j) {
+  i := 0;
+  for i < n {
+    j := 0;
+    for j < n {
+      if TW.u64[j] == i { return j };
+      if TW.u64[j] == 7 { break }
+    }
+  };
+  return 99
+}
+
+example : tNestF = tNestR := rfl
+
+l_model tNestF_spec (p : Prog) (hp : p.lookup "t_nest_f" = some tNestF)
+  fns [hp ↦ tNestFW ro]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
+
+example : tNestFW.loop1.stmt = tNestRW.loop1.stmt := rfl
+example : tNestFW.loop2.stmt = tNestRW.loop2.stmt := rfl
+
 /-- `errors` mode: the aborts' codes kept, through the nested loops and the block operations. -/
 -- con-ron: none — an `l_model` test function
 def tNestE : FunDecl := lfn (n, d) locals (i, j) {

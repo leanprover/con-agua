@@ -623,10 +623,7 @@ def ilGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
 /-- con-ron: ConRon/Arena/ExprOps.lean:422-432 ConRon.Arena.instListArmApp -/
 @[l_impl ConRon.Arena.instListArmApp]
 def ilApp : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦h⟧;
   f := APP⟨t, i⟩.f;
   a := APP⟨t, i⟩.a;
   x := call il_go(f, d, o, l, fu);
@@ -639,10 +636,7 @@ def ilApp : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
 @[l_impl ConRon.Arena.instListArmBind]
 def ilLam : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   if d + 1 == 0 { abort };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LAM⟨t⟩.count <= i { abort };
+  (t, i) := node LAM⟦h⟧;
   f := LAM⟨t, i⟩.ty;
   a := LAM⟨t, i⟩.b;
   x := call il_go(f, d, o, l, fu);
@@ -655,10 +649,7 @@ def ilLam : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
 @[l_impl ConRon.Arena.instListArmBind]
 def ilForall : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   if d + 1 == 0 { abort };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if FORALL⟨t⟩.count <= i { abort };
+  (t, i) := node FORALL⟦h⟧;
   f := FORALL⟨t, i⟩.ty;
   a := FORALL⟨t, i⟩.b;
   x := call il_go(f, d, o, l, fu);
@@ -671,10 +662,7 @@ def ilForall : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
 @[l_impl ConRon.Arena.instListArmLet]
 def ilLet : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, b, x, y, z, r) {
   if d + 1 == 0 { abort };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LET⟨t⟩.count <= i { abort };
+  (t, i) := node LET⟦h⟧;
   f := LET⟨t, i⟩.ty;
   a := LET⟨t, i⟩.v;
   b := LET⟨t, i⟩.b;
@@ -688,10 +676,7 @@ def ilLet : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, b, x, y, z, r) {
 /-- con-ron: ConRon/Arena/ExprOps.lean:459-468 ConRon.Arena.instListArmProj -/
 @[l_impl ConRon.Arena.instListArmProj]
 def ilProj : FunDecl := lfn (h, d, o, l, fu) locals (t, i, nm, ix, e, x, r) {
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if PROJ⟨t⟩.count <= i { abort };
+  (t, i) := node PROJ⟦h⟧;
   nm := PROJ⟨t, i⟩.n;
   ix := PROJ⟨t, i⟩.i;
   e := PROJ⟨t, i⟩.e;
@@ -703,10 +688,7 @@ def ilProj : FunDecl := lfn (h, d, o, l, fu) locals (t, i, nm, ix, e, x, r) {
 /-- con-ron: ConRon/Arena/ExprOps.lean:470-495 ConRon.Arena.instListArmBVar -/
 @[l_impl ConRon.Arena.instListArmBVar]
 def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if BVAR⟨t⟩.count <= i { abort };
+  (t, i) := node BVAR⟦h⟧;
   j := BVAR⟨t, i⟩.i;
   if j < d { return h };
   q := j - d;
@@ -744,10 +726,7 @@ def ilgGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
 def ilgApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilm_find(h, d);
   if fd != 0 { return ILMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦h⟧;
   f := APP⟨t, i⟩.f;
   a := APP⟨t, i⟩.a;
   x := call ilg_go(f, d, o, l, fu);
@@ -764,10 +743,7 @@ def ilgLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
   if d + 1 == 0 { abort };
   (fd, j, e0) := call ilm_find(h, d);
   if fd != 0 { return ILMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LAM⟨t⟩.count <= i { abort };
+  (t, i) := node LAM⟦h⟧;
   f := LAM⟨t, i⟩.ty;
   a := LAM⟨t, i⟩.b;
   x := call ilg_go(f, d, o, l, fu);
@@ -784,10 +760,7 @@ def ilgForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x
   if d + 1 == 0 { abort };
   (fd, j, e0) := call ilm_find(h, d);
   if fd != 0 { return ILMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if FORALL⟨t⟩.count <= i { abort };
+  (t, i) := node FORALL⟦h⟧;
   f := FORALL⟨t, i⟩.ty;
   a := FORALL⟨t, i⟩.b;
   x := call ilg_go(f, d, o, l, fu);
@@ -804,10 +777,7 @@ def ilgLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x
   if d + 1 == 0 { abort };
   (fd, j, e0) := call ilm_find(h, d);
   if fd != 0 { return ILMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LET⟨t⟩.count <= i { abort };
+  (t, i) := node LET⟦h⟧;
   f := LET⟨t, i⟩.ty;
   a := LET⟨t, i⟩.v;
   b := LET⟨t, i⟩.b;
@@ -825,10 +795,7 @@ def ilgLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x
 def ilgProj : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ilm_find(h, d);
   if fd != 0 { return ILMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if PROJ⟨t⟩.count <= i { abort };
+  (t, i) := node PROJ⟦h⟧;
   nm := PROJ⟨t, i⟩.n;
   ix := PROJ⟨t, i⟩.i;
   e := PROJ⟨t, i⟩.e;

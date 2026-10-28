@@ -130,13 +130,10 @@ theorem inferSpineArg_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg 
 
 /-- The loop of `inferSpineL` (Infer.lean), named for its spec. -/
 def inferSpineW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, dom, dom2, ty2, w, z, r) {
-  while i < an {
+  for i < an {
     a := SPN.u64[ao + i];
     if ty >> 28 == 6 {
-      t := ⟦ty⟧.tier;
-      x := ⟦ty⟧.idx;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if FORALL⟨t⟩.count <= x { abort };
+      (t, x) := node FORALL⟦ty⟧;
       dom := FORALL⟨t, x⟩.ty;
       ty := FORALL⟨t, x⟩.b;
       dom2 := call inst_list(dom, co, cn, 0);
@@ -149,10 +146,7 @@ def inferSpineW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, do
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
       if w >> 28 != 6 { fail R_FUNCTION_EXPECTED_2 };
-      t := ⟦w⟧.tier;
-      x := ⟦w⟧.idx;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if FORALL⟨t⟩.count <= x { abort };
+      (t, x) := node FORALL⟦w⟧;
       dom := FORALL⟨t, x⟩.ty;
       ty := FORALL⟨t, x⟩.b;
       z := call infer_spine_arg(mode, vis, d, a, dom);
@@ -160,8 +154,7 @@ def inferSpineW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, do
       SPN.u64[co] := a;
       cn := 1;
       CTL.u64[136] := co + 1
-    };
-    i += 1
+    }
   }
 }
 

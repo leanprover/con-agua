@@ -48,13 +48,10 @@ theorem w_lt_false {a b : Word} (h : b ≤ a) : (a < b) = False := eq_false (UIn
 
 /-- The loop of `inferSpineIOL` (Infer.lean), named for its spec. -/
 def inferSpineIOW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, ty2, w, r) {
-  while i < an {
+  for i < an {
     a := SPN.u64[ao + i];
     if ty >> 28 == 6 {
-      t := ⟦ty⟧.tier;
-      x := ⟦ty⟧.idx;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if FORALL⟨t⟩.count <= x { abort };
+      (t, x) := node FORALL⟦ty⟧;
       if len(SPN.u64) <= co + cn { abort };
       SPN.u64[co + cn] := a;
       cn += 1;
@@ -64,17 +61,13 @@ def inferSpineIOW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, 
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
       if w >> 28 != 6 { fail R_FUNCTION_EXPECTED_2 };
-      t := ⟦w⟧.tier;
-      x := ⟦w⟧.idx;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if FORALL⟨t⟩.count <= x { abort };
+      (t, x) := node FORALL⟦w⟧;
       if len(SPN.u64) <= co { abort };
       SPN.u64[co] := a;
       cn := 1;
       CTL.u64[136] := co + 1;
       ty := FORALL⟨t, x⟩.b
-    };
-    i += 1
+    }
   }
 }
 

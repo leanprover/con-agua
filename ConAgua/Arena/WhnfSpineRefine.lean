@@ -29,10 +29,7 @@ def getAppFnLoop : Stmt := lblk (e, f, t, x) {
   while e >> 28 == 4 {
     if f == 0 { abort };
     f -= 1;
-    t := ⟦e⟧.tier;
-    x := ⟦e⟧.idx;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if APP⟨t⟩.count <= x { abort };
+    (t, x) := node APP⟦e⟧;
     e := APP⟨t, x⟩.f
   }
 }
@@ -225,10 +222,7 @@ def piResultLoop : Stmt := lblk (e, f, t, x) {
   while e >> 28 == 6 {
     if f == 0 { abort };
     f -= 1;
-    t := ⟦e⟧.tier;
-    x := ⟦e⟧.idx;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if FORALL⟨t⟩.count <= x { abort };
+    (t, x) := node FORALL⟦e⟧;
     e := FORALL⟨t, x⟩.b
   }
 }
@@ -415,10 +409,7 @@ non-`∀`, the trailing `return (1, e)` at `k = 0`. -/
 def peelPisLoop : Stmt := lblk (k, e, t, x) {
   while k != 0 {
     if e >> 28 != 6 { return (0, 0) };
-    t := ⟦e⟧.tier;
-    x := ⟦e⟧.idx;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if FORALL⟨t⟩.count <= x { abort };
+    (t, x) := node FORALL⟦e⟧;
     e := FORALL⟨t, x⟩.b;
     k -= 1
   }
@@ -601,10 +592,7 @@ twin fuel: `mkAppW`'s own success already gives the handle bounds `mk_app_ok` ne
 (`or_shr32`), so the induction carries no separate `HW` bookkeeping. -/
 
 def mkAppNFromLoop : Stmt := lblk (f, o, n, i) {
-  while i < n {
-    f := call mk_app(f, SPN.u64[o + i]);
-    i += 1
-  }
+  for i < n { f := call mk_app(f, SPN.u64[o + i]) }
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1305-1311 ConRon.Arena.mkAppN -/

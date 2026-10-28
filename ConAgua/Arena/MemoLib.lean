@@ -149,11 +149,10 @@ grind_pattern [arena_grind] mprobeG_next2 =>
   mprobeG mm k1 k2 e b n j d, mm[a], mm[a1], mm[a2], mprobeG mm k1 k2 e b n j' d'
 
 def mfindLoopG (S : MemoSch) : Stmt := lblk (k1, k2, n, e, j, d, b) {
-  while d < n {
+  for d < n {
     if S.arr.u64[(b + j) * 4] != e { return (0, b + j, d) };
     if S.arr.u64[(b + j) * 4 + 1] == k1 && S.arr.u64[(b + j) * 4 + 2] == k2 { return (1, b + j, d) };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
+    j := (j + 1) * u64(j + 1 < n)
   }
 }
 

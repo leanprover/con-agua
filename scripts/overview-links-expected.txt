@@ -669,16 +669,13 @@
    189    | .error (e, n) => pure (.error (atDecl e n))
    190    | .ok _ => pure (.ok records)
 
-== ConAgua/Arena/LevelEquiv.lean#L293-L301
+== ConAgua/Arena/LevelEquiv.lean#L293-L298
    293  /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
    294  def lsNode : FunDecl := lfn (h) locals (t, i) {
    295    if h >> 28 != 0 { abort };
-   296    t := ⟦h⟧.tier;
-   297    i := ⟦h⟧.idx;
-   298    if t != 0 && CTL.u64[1] == 0 { abort };
-   299    if LVLS⟨t⟩.count <= i { abort };
-   300    return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
-   301  }
+   296    (t, i) := node LVLS⟦h⟧;
+   297    return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
+   298  }
 
 == vendor/con-ron/ConRon/Arena/Monad.lean#L491-L497
    491  /-- con-leche: ConLeche/Kernel/Expr.lean:256-375 Expr — decode a
@@ -770,96 +767,103 @@
    213  /-- A program: its functions, by name. The first binding of a name wins. -/
    214  abbrev Prog := List (FnName × FunDecl)
 
-== ConAgua/L/Notation.lean#L75-L157
-    75  declare_syntax_cat lexpr
-    76  declare_syntax_cat lcond
-    77  declare_syntax_cat lstmt (behavior := both)
-    78  declare_syntax_cat lblock
-    79  
-    80  syntax num : lexpr
-    81  syntax char : lexpr
-    82  syntax "⟪" term "⟫" : lexpr
-    83  syntax ident : lexpr
-    84  syntax ident noWs "[" lexpr "]" : lexpr
-    85  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
-    86  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
-    87  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
-    88  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
-    89  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
-    90  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
-    91  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
-    92  syntax ident noWs "⟦" lexpr "⟧" : lexpr
-    93  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
-    94  syntax "len" "(" ident ")" : lexpr
-    95  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
-    96  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
-    97  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
-    98  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
-    99  syntax "u64" "(" lcond ")" : lexpr
-   100  syntax ident noWs "⦃" lexpr "⦄" : lexpr
-   101  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
-   102  syntax "(" lexpr ")" : lexpr
-   103  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
-   104  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
-   105  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
-   106  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
-   107  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
-   108  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
-   109  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
-   110  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
-   111  
-   112  syntax:50 lexpr:51 " == " lexpr:51 : lcond
-   113  syntax:50 lexpr:51 " != " lexpr:51 : lcond
-   114  syntax:50 lexpr:51 " < " lexpr:51 : lcond
-   115  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
-   116  syntax:50 lexpr:51 " > " lexpr:51 : lcond
-   117  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
-   118  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
-   119  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
-   120  syntax:35 lcond:36 " && " lcond:35 : lcond
-   121  syntax:30 lcond:31 " || " lcond:30 : lcond
-   122  syntax:max "!" lcond:max : lcond
-   123  syntax "(" lcond ")" : lcond
-   124  
-   125  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
-   126  
-   127  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
-   128  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
-   129  syntax ident " := " lexpr : lstmt
-   130  syntax ident " += " lexpr : lstmt
-   131  syntax ident " -= " lexpr : lstmt
-   132  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
-   133  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
-   134  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
-   135  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
-   136  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
-   137  syntax "if " lcond lblock : lstmt
-   138  syntax "if " lcond lblock " else " lblock : lstmt
-   139  syntax "if " lcond lblock " else " lstmt : lstmt
-   140  syntax "while " lcond lblock : lstmt
-   141  syntax "break" : lstmt
-   142  syntax "return " lexpr : lstmt
-   143  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
-   144  syntax "abort" : lstmt
-   145  /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
-   146  syntax "abort " ident : lstmt
-   147  /-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
-   148  syntax (name := lfail) &"fail" ident : lstmt
-   149  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
-   150  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
-   151  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
-   152  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
-   153  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
-   154  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
-   155    lexpr ")" : lstmt
-   156  syntax "skip" : lstmt
-   157  syntax "⟪" term "⟫" : lstmt
+== ConAgua/L/Notation.lean#L80-L169
+    80  declare_syntax_cat lexpr
+    81  declare_syntax_cat lcond
+    82  declare_syntax_cat lstmt (behavior := both)
+    83  declare_syntax_cat lblock
+    84  
+    85  syntax num : lexpr
+    86  syntax char : lexpr
+    87  syntax "⟪" term "⟫" : lexpr
+    88  syntax ident : lexpr
+    89  syntax ident noWs "[" lexpr "]" : lexpr
+    90  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    91  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
+    92  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    93  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
+    94  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
+    95  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
+    96  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    97  syntax ident noWs "⟦" lexpr "⟧" : lexpr
+    98  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    99  syntax "len" "(" ident ")" : lexpr
+   100  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
+   101  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
+   102  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+   103  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+   104  syntax "u64" "(" lcond ")" : lexpr
+   105  syntax ident noWs "⦃" lexpr "⦄" : lexpr
+   106  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
+   107  syntax "(" lexpr ")" : lexpr
+   108  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
+   109  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
+   110  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
+   111  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
+   112  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
+   113  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
+   114  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
+   115  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
+   116  
+   117  syntax:50 lexpr:51 " == " lexpr:51 : lcond
+   118  syntax:50 lexpr:51 " != " lexpr:51 : lcond
+   119  syntax:50 lexpr:51 " < " lexpr:51 : lcond
+   120  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
+   121  syntax:50 lexpr:51 " > " lexpr:51 : lcond
+   122  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
+   123  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
+   124  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
+   125  syntax:35 lcond:36 " && " lcond:35 : lcond
+   126  syntax:30 lcond:31 " || " lcond:30 : lcond
+   127  syntax:max "!" lcond:max : lcond
+   128  syntax "(" lcond ")" : lcond
+   129  
+   130  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
+   131  
+   132  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
+   133  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
+   134  syntax ident " := " lexpr : lstmt
+   135  syntax ident " += " lexpr : lstmt
+   136  syntax ident " -= " lexpr : lstmt
+   137  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
+   138  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   139  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
+   140  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
+   141  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   142  syntax "if " lcond lblock : lstmt
+   143  syntax "if " lcond lblock " else " lblock : lstmt
+   144  syntax "if " lcond lblock " else " lstmt : lstmt
+   145  syntax "while " lcond lblock : lstmt
+   146  syntax "break" : lstmt
+   147  syntax "return " lexpr : lstmt
+   148  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
+   149  syntax "abort" : lstmt
+   150  /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
+   151  syntax "abort " ident : lstmt
+   152  /-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
+   153  syntax (name := lfail) &"fail" ident : lstmt
+   154  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   155  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   156  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   157  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   158  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   159  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   160    lexpr ")" : lstmt
+   161  syntax "skip" : lstmt
+   162  syntax "⟪" term "⟫" : lstmt
+   163  /-- `(t, i) := node R⟦h⟧`: the tier and index of the node that the handle word `h` names in the
+   164  store `R`, checked (sugar, `desugar`): abort on a scratch-tier handle while the scratch tier is
+   165  closed, and on an index at or past the tier's node count. -/
+   166  syntax "(" ident ", " ident ")" " := " &"node" ident noWs "⟦" lexpr "⟧" : lstmt
+   167  /-- `for j < n { body }`: the counted loop `while j < n { body; j += 1 }` (sugar, `desugar`);
+   168  `body` assigns neither `j` nor `n`. -/
+   169  syntax "for " ident " < " ident lblock : lstmt
 
-== ConAgua/L/Notation.lean#L398-L399
-   398  
-   399  macro_rules
+== ConAgua/L/Notation.lean#L466-L467
+   466  syntax "lfn " "(" ident,* ")" (" locals " "(" ident,* ")")? lblock : term
+   467  
 
-== ConAgua/L/Notation.lean#L11-L62
+== ConAgua/L/Notation.lean#L11-L68
     11  # L: concrete syntax
     12  
     13  A Rust-like surface for writing L functions by hand:
@@ -912,6 +916,59 @@
     60    `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `abort R`, `fail R`, `skip`, and `⟪t⟫` for a
     61    named block `t : L.Stmt` (see `lblk`; a block written with other variables than a prefix of
     62    the enclosing ones is an error).
+    63  * Two statements are shorthand for plain ones (`desugar`): `(t, i) := node R⟦h⟧`, the checked
+    64    node read (`t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
+    65    if R⟨t⟩.count <= i { abort }`), and `for j < n { … }`, the counted loop
+    66    (`while j < n { …; j += 1 }`; the body assigns neither `j` nor `n`, and `L/For.lean` has its
+    67    loop rule).
+    68  -/
+
+== ConAgua/L/Notation.lean#L325-L350
+   325  /-- **The sugar statements**, as the plain statements they stand for, at the syntax level: the
+   326  notation (`transBlock`) and the model generator (`l_model`, `desugarAll`) both expand them with
+   327  this function, so a function written with them is the term, and has the models, of the function
+   328  written without them.
+   329  
+   330  * `(t, i) := node R⟦h⟧` is `t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
+   331    if R⟨t⟩.count <= i { abort }`;
+   332  * `for j < n { body }` is `while j < n { body; j += 1 }`.
+   333  
+   334  Other statements are returned unchanged. -/
+   335  meta def desugar (s : TSyntax `lstmt) : MacroM (Array (TSyntax `lstmt)) := withRef s do
+   336    match s with
+   337    | `(lstmt| ($t:ident, $i:ident) := node $r:ident⟦$h:lexpr⟧) =>
+   338      -- built with `mkIdent`: hygiene would rename them, and the accessors compare names
+   339      let (ctl, tier, idx, cnt) := (mkIdent `CTL.u64, mkIdent `tier, mkIdent `idx, mkIdent `count)
+   340      return #[← `(lstmt| $t:ident := ⟦$h⟧.$tier:ident), ← `(lstmt| $i:ident := ⟦$h⟧.$idx:ident),
+   341        ← `(lstmt| if $t:ident != 0 && $ctl:ident[1] == 0 { abort }),
+   342        ← `(lstmt| if $r:ident⟨$t:ident⟩.$cnt:ident <= $i:ident { abort })]
+   343    | `(lstmt| for $j:ident < $n:ident { $ss;* }) => do
+   344      for x in ss.getElems do
+   345        let a := assigned x
+   346        if a.contains j.getId || a.contains n.getId then
+   347          Macro.throwErrorAt x s!"the body of `for {j.getId} < {n.getId}` assigns `{j.getId}` or `{n.getId}`"
+   348      let body : Syntax.TSepArray `lstmt "; " := .ofElems (ss.getElems.push (← `(lstmt| $j:ident += 1)))
+   349      return #[← `(lstmt| while $j:ident < $n:ident { $body;* })]
+   350    | _ => return #[s]
+
+== ConAgua/L/For.lean#L69-L85
+    69  /-- **The counted-loop rule.** An invariant `I` that the body keeps (with `j += 1` after it)
+    70  while `j < n`, and that gives the post when `j < n` fails, gives the loop's triple at every
+    71  fuel. -/
+    72  theorem Triple.forUp {p : Prog} {w body : Stmt} {j n : Var} (hw : w = forS j n body)
+    73      (I : St → Prop) (Q : Sig → St → Prop)
+    74      (hexit : ∀ s, I s → ¬ s.loc j < s.loc n → Q .normal s)
+    75      (hbody : ∀ k s₀, ⦃fun s => s = s₀ ∧ I s ∧ s.loc j < s.loc n⦄ step p (exec p k) body
+    76        ⦃fun r s' => ForPost I Q j r s'; ⊤⦄) :
+    77      ∀ k s₀, ⦃fun s => s = s₀ ∧ I s⦄ exec p k w ⦃Q; ⊤⦄ := by
+    78    intro k
+    79    induction k with
+    80    | zero => intro s₀; vcgen [exec] <;> grind
+    81    | succ k ih =>
+    82      intro s₀
+    83      rw [exec, step_while (c := .cmp .ult (.var j) (.var n)) hw, step_snoc]
+    84      vcgen [step, evalC, evalE, setLoc, hbody k, ih]
+    85      all_goals (subst_vars; simp_all [Cmp.eval, BinOp.eval])
 
 == ConAgua/L/Semantics.lean#L7-L21
      7  /-!
@@ -1050,18 +1107,18 @@
     30  `f₀ | f_hi << 32`); `TRec.st` stores a whole word (unpacked fields only).
     31  -/
 
-== ConAgua/L/Notation.lean#L97-L98
-    97  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
-    98  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+== ConAgua/L/Notation.lean#L102-L103
+   102  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+   103  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
 
-== ConAgua/L/Notation.lean#L149-L155
-   149  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
-   150  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
-   151  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
-   152  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
-   153  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
-   154  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
-   155    lexpr ")" : lstmt
+== ConAgua/L/Notation.lean#L154-L160
+   154  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   155  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   156  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   157  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   158  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   159  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   160    lexpr ")" : lstmt
 
 == ConAgua/L/Semantics.lean#L149-L168
    149  /-- The little-endian word of the bytes `k, …, k + 7` of `b` (as the machine's 8-byte load
@@ -1154,22 +1211,22 @@
    214  A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
    215  array's first words.
 
-== ConAgua/Arena/ConsLib.lean#L486-L491
-   486  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
-   487  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
-   488  def cpGrowIf (C : ConsSch) : Stmt :=
-   489    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
-   490        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
-   491      (kgrowBlk C) .skip
+== ConAgua/Arena/ConsLib.lean#L485-L490
+   485  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
+   486  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
+   487  def cpGrowIf (C : ConsSch) : Stmt :=
+   488    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
+   489        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
+   490      (kgrowBlk C) .skip
 
-== ConAgua/Arena/ConsLib.lean#L463-L469
-   463  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
-   464  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
-   465  the slot count doubles, the new upper half is zeroed, every live slot of the old half is marked,
-   466  then each marked entry is re-inserted from its home in the doubled table (linear probing past
-   467  the live unmarked slots; a marked slot met on the way is swapped and re-inserted next: absl's
-   468  in-place rehash). Aborts if the array cannot hold the doubled table. Template variables
-   469  `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
+== ConAgua/Arena/ConsLib.lean#L462-L468
+   462  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
+   463  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
+   464  the slot count doubles, the new upper half is zeroed, every live slot of the old half is marked,
+   465  then each marked entry is re-inserted from its home in the doubled table (linear probing past
+   466  the live unmarked slots; a marked slot met on the way is swapped and re-inserted next: absl's
+   467  in-place rehash). Aborts if the array cannot hold the doubled table. Template variables
+   468  `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
 
 == ConAgua/Arena/SlotGrow.lean#L41-L44
     41  /-- The home slot of hash `h` among `n`: con-ron's multiply-xor finaliser, then the high word

@@ -53,10 +53,7 @@ instance : Inhabited LazyResA := ⟨.verdict false⟩
 @[l_impl ConRon.Arena.isBoolTrue]
 def isBoolTrueL : FunDecl := lfn (h) locals (t, i, el, bt) {
   if h >> 28 != 3 { return 0 };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦h⟧;
   el := call pin_word(52);
   if CONST⟨t, i⟩.us != el { return 0 };
   bt := call pin_at(30);
@@ -67,22 +64,13 @@ def isBoolTrueL : FunDecl := lfn (h) locals (t, i, el, bt) {
 @[l_impl ConRon.Arena.isEagerReduce]
 def isEagerReduceL : FunDecl := lfn (h) locals (t, i, f, g, er) {
   if h >> 28 != 4 { return 0 };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦h⟧;
   f := APP⟨t, i⟩.f;
   if f >> 28 != 4 { return 0 };
-  t := ⟦f⟧.tier;
-  i := ⟦f⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦f⟧;
   g := APP⟨t, i⟩.f;
   if g >> 28 != 3 { return 0 };
-  t := ⟦g⟧.tier;
-  i := ⟦g⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦g⟧;
   er := call pin_at(50);
   return u64(CONST⟨t, i⟩.n == er)
 }
@@ -93,14 +81,8 @@ views): the same kind, the same length, the same limbs/bytes (`limbs_eq` on the 
 -- con-ron: ConRon/Arena/Core.lean:3064-3090 ConRon.Arena.quickDefEq
 @[l_impl ConRon.Arena.quickDefEq]
 def litEqL : FunDecl := lfn (a, b) locals (ta, xa, tb, xb, la, lb, r) {
-  ta := ⟦a⟧.tier;
-  xa := ⟦a⟧.idx;
-  if ta != 0 && CTL.u64[1] == 0 { abort };
-  if LIT⟨ta⟩.count <= xa { abort };
-  tb := ⟦b⟧.tier;
-  xb := ⟦b⟧.idx;
-  if tb != 0 && CTL.u64[1] == 0 { abort };
-  if LIT⟨tb⟩.count <= xb { abort };
+  (ta, xa) := node LIT⟦a⟧;
+  (tb, xb) := node LIT⟦b⟧;
   if LIT⟨ta, xa⟩.kind != LIT⟨tb, xb⟩.kind { return 0 };
   la := LIT⟨ta, xa⟩.l;
   lb := LIT⟨tb, xb⟩.l;
@@ -123,10 +105,7 @@ def ioNeutralL : FunDecl := lfn (e) locals (h, t) {
 def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
   hh := call get_app_fn(e);
   if hh >> 28 != 3 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return 0 };
   if EREC.u64[p] != 1 { return 0 };
@@ -139,10 +118,7 @@ def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
 def headHintL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p) {
   hh := call get_app_fn(e);
   if hh >> 28 != 3 { return (0, 0) };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return (0, 0) };
   if EREC.u64[p] != 1 { return (0, 0) };
@@ -165,39 +141,24 @@ def hintLtL : FunDecl := lfn (k1, h1, k2, h2) locals () {
 @[l_impl ConRon.Arena.sameConstHeads]
 def sameConstHeadsL : FunDecl := lfn (a, b) locals (t, i, f1, f2, hh, n1) {
   if a >> 28 != 4 { return 0 };
-  t := ⟦a⟧.tier;
-  i := ⟦a⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦a⟧;
   f1 := APP⟨t, i⟩.f;
   if b >> 28 != 4 { return 0 };
-  t := ⟦b⟧.tier;
-  i := ⟦b⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦b⟧;
   f2 := APP⟨t, i⟩.f;
   hh := call get_app_fn(f1);
   if hh >> 28 != 3 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   n1 := CONST⟨t, i⟩.n;
   hh := call get_app_fn(f2);
   if hh >> 28 != 3 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   return u64(n1 == CONST⟨t, i⟩.n)
 }
 
 /-- `er_slice_eq`'s loop (named, for its spec). -/
 def erSliceEqLoop : Stmt := lblk (o1, n1, o2, n2, i) {
-  while i < n1 {
-    if EREC.u64[o1 + i] != EREC.u64[o2 + i] { return 0 };
-    i += 1
-  }
+  for i < n1 { if EREC.u64[o1 + i] != EREC.u64[o2 + i] { return 0 } }
 }
 
 /-- `er_slice_eq(o1, n1, o2, n2)`: two `EREC` slices of handles are the same list (the twin's
@@ -597,10 +558,7 @@ def natPredL : FunDecl := lfn (e) locals (t, i, l, f, x, el, ns) {
     f := APP⟨t, i⟩.f;
     x := APP⟨t, i⟩.a;
     if f >> 28 != 3 { return (0, 0) };
-    t := ⟦f⟧.tier;
-    i := ⟦f⟧.idx;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CONST⟨t⟩.count <= i { abort };
+    (t, i) := node CONST⟦f⟧;
     el := call pin_word(52);
     ns := call pin_at(3);
     if CONST⟨t, i⟩.n == ns && CONST⟨t, i⟩.us == el { return (1, x) };
@@ -856,17 +814,11 @@ con-ron: ConRon/Arena/Core.lean:3309-3322 ConRon.Arena.defeqProjPair -/
 def defeqProjPairL : FunDecl := lfn (mode, vis, d, a, b) locals (t, i, s, x1, x2, x3, y1, y2, y3, r) {
   if a >> 28 != 9 { return 0 };
   if b >> 28 != 9 { return 0 };
-  t := ⟦a⟧.tier;
-  i := ⟦a⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if PROJ⟨t⟩.count <= i { abort };
+  (t, i) := node PROJ⟦a⟧;
   x1 := PROJ⟨t, i⟩.n;
   x2 := PROJ⟨t, i⟩.i;
   x3 := PROJ⟨t, i⟩.e;
-  s := ⟦b⟧.tier;
-  i := ⟦b⟧.idx;
-  if s != 0 && CTL.u64[1] == 0 { abort };
-  if PROJ⟨s⟩.count <= i { abort };
+  (s, i) := node PROJ⟦b⟧;
   y1 := PROJ⟨s, i⟩.n;
   y2 := PROJ⟨s, i⟩.i;
   y3 := PROJ⟨s, i⟩.e;
@@ -929,10 +881,7 @@ def etaCertL : FunDecl :=
   tb := call infer_io(mode, vis, d, b);
   hh := call whnf(mode, vis, d, tb);
   if hh >> 28 != 6 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if FORALL⟨t⟩.count <= i { abort };
+  (t, i) := node FORALL⟦hh⟧;
   ty2 := FORALL⟨t, i⟩.ty;
   cod2 := FORALL⟨t, i⟩.b;
   ok := call defeq(mode, vis, d, ty2, ty1);
@@ -946,10 +895,7 @@ def etaCertL : FunDecl :=
 def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an, nf) {
   hh := call get_app_fn(a);
   if hh >> 28 != 3 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return 0 };
   if EREC.u64[p] != 4 { return 0 };
@@ -1022,10 +968,7 @@ def structEtaCertWtbL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, ao, an, wtb) locals (hh, t, i, T, us2, f, q, to, tn, r) {
   hh := call get_app_fn(wtb);
   if hh >> 28 != 3 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   T := CONST⟨t, i⟩.n;
   us2 := CONST⟨t, i⟩.us;
   (f, q) := call env_find(T, vis);
@@ -1042,10 +985,7 @@ def structEtaCertWithL : FunDecl :=
     lfn (mode, vis, d, a, b, wtb) locals (top, hh, t, i, c, us, f, p, ao, an, nf, r) {
   hh := call get_app_fn(a);
   if hh >> 28 != 3 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   c := CONST⟨t, i⟩.n;
   us := CONST⟨t, i⟩.us;
   (f, p) := call env_find(c, vis);
@@ -1095,10 +1035,7 @@ def structUnitHeadL : FunDecl :=
     lfn (mode, vis, d, b, wta) locals (top, hh, t, i, T, us2, f, q, ul, up, lpn, to, tn, lo, uslen, rc, r) {
   hh := call get_app_fn(wta);
   if hh >> 28 != 3 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   T := CONST⟨t, i⟩.n;
   us2 := CONST⟨t, i⟩.us;
   (f, q) := call env_find(T, vis);
@@ -1151,15 +1088,9 @@ the first call. -/
 @[l_impl ConRon.Arena.defeqStuck]
 def stuckStrL : FunDecl :=
     lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, co, uo, el, sl, ss, c, r) {
-  t := ⟦lt⟧.tier;
-  i := ⟦lt⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LIT⟨t⟩.count <= i { abort };
+  (t, i) := node LIT⟦lt⟧;
   if LIT⟨t, i⟩.kind == 1 && fo >> 28 == 3 {
-    t := ⟦fo⟧.tier;
-    i := ⟦fo⟧.idx;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CONST⟨t⟩.count <= i { abort };
+    (t, i) := node CONST⟦fo⟧;
     co := CONST⟨t, i⟩.n;
     uo := CONST⟨t, i⟩.us;
     el := call pin_word(52);

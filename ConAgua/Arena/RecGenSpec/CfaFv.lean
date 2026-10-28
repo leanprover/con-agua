@@ -30,7 +30,7 @@ local notation "V" => ConLeche.CheckMode.verified
 -- con-ron: none — `classFieldsAgreeL`'s own loop (`rfl`), a named block for the proof
 def cfaLoop : Stmt := lblk (vis, p, ftOff, ftLen, msOff, msLen, fvsOff, fvsLen, esOff, esLen, i0,
     ksOff, ksLen, j, i, kf, tag, t, tele, fv, fty, ok, teleOff, teleLen, leaf, mt, b) {
-  while j < ksLen {
+  for j < ksLen {
     kf := IW.u64[ksOff + j];
     tag := IW.u64[kf];
     if tag == 1 {
@@ -46,8 +46,7 @@ def cfaLoop : Stmt := lblk (vis, p, ftOff, ftLen, msOff, msLen, fvsOff, fvsLen, 
       b := call class_nodes_agree(vis, p, ftOff, ftLen, mt, teleOff, teleLen, leaf, fvsOff, fvsLen,
         i, esOff, esLen)
     };
-    i := i + 1;
-    j += 1
+    i := i + 1
   }
 }
 

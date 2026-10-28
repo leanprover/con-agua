@@ -143,14 +143,11 @@ con-ron: ConRon/Arena/Core.lean:2104-2108 ConRon.Arena.internAppRebuilt -/
 def whnfAppL : FunDecl :=
     lfn (mode, vis, d, v, hd, vo, vn, same, ao, an, i) locals (top, a, node, ap, st, e2, e3, t, x) {
   top := CTL.u64[136];
-  while i < an {
+  for i < an {
     a := SPN.u64[ao + i];
     node := SPN.u64[ao + an + i];
     if v >> 28 == 5 {
-      t := ⟦v⟧.tier;
-      x := ⟦v⟧.idx;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if LAM⟨t⟩.count <= x { abort };
+      (t, x) := node LAM⟦v⟧;
       (st, e3) := call beta_peel(LAM⟨t, x⟩.b, a, ao, an, i + 1);
       CTL.u64[136] := top;
       return (st, e3)
@@ -169,8 +166,7 @@ def whnfAppL : FunDecl :=
         return (1, e3)
       }
     };
-    v := ap;
-    i += 1
+    v := ap
   };
   CTL.u64[136] := top;
   return (0, v)
@@ -184,23 +180,19 @@ def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) 
   SPN.u64[co] := a;
   cn := 1;
   CTL.u64[136] := co + 1;
-  while i < an {
+  for i < an {
     if t >> 28 != 5 {
       e2 := call inst_list(t, co, cn, 0);
       e3 := call mk_app_n_from(e2, ao, an, i);
       CTL.u64[136] := co;
       return (1, e3)
     };
-    tt := ⟦t⟧.tier;
-    x := ⟦t⟧.idx;
-    if tt != 0 && CTL.u64[1] == 0 { abort };
-    if LAM⟨tt⟩.count <= x { abort };
+    (tt, x) := node LAM⟦t⟧;
     t := LAM⟨tt, x⟩.b;
     if len(SPN.u64) <= co + cn { abort };
     SPN.u64[co + cn] := SPN.u64[ao + i];
     cn += 1;
-    CTL.u64[136] := co + cn;
-    i += 1
+    CTL.u64[136] := co + cn
   };
   e2 := call inst_list(t, co, cn, 0);
   CTL.u64[136] := co;
@@ -236,10 +228,7 @@ def reduceProjHeadL : FunDecl :=
     lfn (mode, vis, e1, q, i) locals (hh, t, x, k, us, st, r) {
   hh := call get_app_fn(e1);
   if hh >> 28 != 3 { return (0, 0) };
-  t := ⟦hh⟧.tier;
-  x := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= x { abort };
+  (t, x) := node CONST⟦hh⟧;
   k := CONST⟨t, x⟩.n;
   us := CONST⟨t, x⟩.us;
   (st, r) := call reduce_proj_fire(mode, vis, e1, q, i, k, us);
@@ -293,10 +282,7 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
 @[l_impl ConRon.Arena.projLitToCtor]
 def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
   if h >> 28 != 8 { return h };
-  t := ⟦h⟧.tier;
-  x := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LIT⟨t⟩.count <= x { abort };
+  (t, x) := node LIT⟦h⟧;
   if LIT⟨t, x⟩.kind != 1 { return h };
   s := call str_lit_supported(vis);
   if s == 0 { return h };

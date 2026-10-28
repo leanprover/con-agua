@@ -115,11 +115,10 @@ grind_pattern [arena_grind] shr63_le => x >>> 63
 /-! ## The in-place passes -/
 
 def shl1Loop : Stmt := lblk (r, n, bit, i, c, x, rt, rb) {
-  while i < n {
+  for i < n {
     x := POOL⦃r + i⦄;
     POOL⟨rt⟩[rb + i] := (x << 1) | c;
-    c := x >> 63;
-    i += 1
+    c := x >> 63
   }
 }
 
@@ -134,12 +133,11 @@ def divShl1 : FunDecl := lfn (r, n, bit) locals (i, c, x, rt, rb) {
 }
 
 def dsubLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
-  while i < n {
+  for i < n {
     x := POOL⦃r + i⦄;
     y := call nat_limb(ob, lb, i);
     POOL⟨rt⟩[rb + i] := x - y - c;
-    c := call sub_borrow(x, y, c);
-    i += 1
+    c := call sub_borrow(x, y, c)
   }
 }
 
@@ -153,12 +151,11 @@ def divSub : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
 }
 
 def daddLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
-  while i < n {
+  for i < n {
     x := POOL⦃r + i⦄;
     y := call nat_limb(ob, lb, i);
     POOL⟨rt⟩[rb + i] := x + y + c;
-    c := call add_carry(x, y, c);
-    i += 1
+    c := call add_carry(x, y, c)
   }
 }
 
@@ -574,24 +571,20 @@ def bitLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c) {
 /-- One limb of the dividend, from the top (con-ron's `dm_limbs`): `pa` and `pq` point at the
 current limb of `a` and of the quotient, `i` counts the limbs done. -/
 def limbLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq, pt, pb) {
-  while i < la {
+  for i < la {
     pa -= 1;
     pq -= 1;
     x := POOL⦃pa⦄;
     q := 0;
     j := 64;
     ⟪bitLoop⟫;
-    POOL⟨pt⟩[pb + (pq - top)] := q;
-    i += 1
+    POOL⟨pt⟩[pb + (pq - top)] := q
   }
 }
 
 /-- The remainder starts at `0`. -/
 def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq, pt, pb) {
-  while j < n {
-    POOL⟨pt⟩[pb + (la + j)] := 0;
-    j += 1
-  }
+  for j < n { POOL⟨pt⟩[pb + (la + j)] := 0 }
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
