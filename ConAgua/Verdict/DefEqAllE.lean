@@ -1,4 +1,5 @@
-import ConAgua.Verdict.DefEqSpineE
+import ConAgua.Verdict.DefEqLoopsE
+import ConAgua.Verdict.DefEqLazyE
 import ConAgua.Verdict.DefEqLamsE
 import ConAgua.Verdict.DefEqPeelE
 
@@ -43,7 +44,7 @@ theorem KnotAllProg.lazyDeltaStepE : LazyDeltaStepE p :=
   let lc := KnotAllProg.lazy hq
   let hlE := ldsLeft_refinesE p lp lc hw.deltaQuick hnv
   let hrE := ldsRight_refinesE p lp lc hw.deltaQuick hnv
-  let hsE := ldsSame_refinesE p lp lc (defeqSpine_refinesE p lp.spine hnv)
+  let hsE := ldsSame_refinesE p lp (defeqSpine_refinesE p lp.spine hnv)
     (ldsUnfold2_refinesE p lp lc hw.deltaQuick hnv) hnv
   lazyDeltaStep_refinesE p lp hw.deltaQuick hw.tryUnfoldProjApp hlE hrE
     (ldsBoth_refinesE p lp hlE hrE hsE hnv) hnv
