@@ -127,6 +127,22 @@ theorem CoreRef.post {α : Type} [Inhabited α] {T : AM α} {a₀ : AState}
       CorePost dec dn m₀ vis fe M eb ok r m (AM.res T a₀) (AM.st T a₀) :=
   ⟨AM.run_of_ok _ _ h.1, h.2.1, h.2.2.1, h.2.2.2⟩
 
+/-- `RefE` reads the twin only through its run from `a`. -/
+theorem RefE.of_run_eq {α β : Type} {G : Prop} {x : Except Err α} {T T' : AM β} {a a' : AState}
+    {R : α → β → AState → Prop} (h : T.run a = T'.run a') (h' : RefE G x T' a' R) :
+    RefE G x T a R := by
+  cases x with
+  | ok v => obtain ⟨y, a₁, hy, hR⟩ := h'; exact ⟨y, a₁, h.trans hy, hR⟩
+  | error e => exact fun hG hk => by obtain ⟨ce, hce, hc⟩ := h' hG hk; exact ⟨ce, h ▸ hce, hc⟩
+
+/-- A weaker post. -/
+theorem RefE.mono {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}
+    {R R' : α → β → AState → Prop} (h : RefE G x T a R) (hR : ∀ v y a', R v y a' → R' v y a') :
+    RefE G x T a R' := by
+  cases x with
+  | ok v => obtain ⟨y, a₁, hy, hr⟩ := h; exact ⟨y, a₁, hy, hR _ _ _ hr⟩
+  | error e => exact h
+
 /-- **The ok half of a unified core function** as its `CoreSpec`: `w` reads the model's ok value
 back as the results and the memory. -/
 theorem CoreSpec.of_refE {α β : Type} [Inhabited β] {p : Prog} {n : Nat} {f : FnName}
