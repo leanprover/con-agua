@@ -2,6 +2,7 @@ import ConAgua.Arena.DefEqMidLazy
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.KnotE
 
 /-!
 # The lazy-delta loop: `lazy_nat`, `lazy_iter`, `lazy_delta_reduction` (lane `defeq`)
@@ -10,7 +11,7 @@ One iteration of the twin's `lazyDeltaReduction` is `iterT` (offsets, the litera
 `natT`, one `lazyDeltaStep`), answering a result (`inl`) or the next pair (`inr`); the twin's loop
 is `iterT` then its own recursion (`lazyLvl_eq`, the unfolding by `delta` and `rfl` as
 `defeqPeel`'s). `lazy_iter` refines `iterT`, the uncounted L loop the twin's at
-`defeqLoopFuel = 2^62` (`lazyW_ok`).
+`defeqLoopFuel = 2^62`, both outcomes (`lazy_ref`).
 -/
 
 open ConRon.Arena
@@ -366,56 +367,22 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
 
 /-! ## The loop -/
 
-/-- **The model of `lazy_delta_reduction`'s loop** at L fuel `j`. -/
-def lazyW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word →
-    Option (Word × Word × Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | j + 1, m, mode, vis, d, a, b =>
-    match callW p j "lazy_iter" [mode, vis, d, a, b] m with
-    | none => none
-    | some (r, m₁) =>
-      if r.headD 0 ≠ 3 then some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, m₁)
-      else lazyW p j m₁ mode vis d (r.tail.headD 0) (r.tail.tail.headD 0)
+/-- **`lazy_delta_reduction`'s model, both outcomes** (the loop `ldrE.loop1`: one `lazy_iter`
+run per iteration, `callE`). -/
+l_model lazyDeltaReduction_specE (p : Prog)
+    (hf : p.lookup "lazy_delta_reduction" = some lazyDeltaReductionL)
+  fns [hf ↦ ldrE list] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-section lzArms
-variable (p : Prog) (j : Nat) (m m₁ : Mem) (mode vis d a b : Word) (r : List Word)
-theorem lazyW_n (hc : callW p j "lazy_iter" [mode, vis, d, a, b] m = none) :
-    lazyW p (j + 1) m mode vis d a b = none := by simp only [lazyW, hc]
-theorem lazyW_done (hc : callW p j "lazy_iter" [mode, vis, d, a, b] m = some (r, m₁))
-    (h : r.headD 0 ≠ 3) :
-    lazyW p (j + 1) m mode vis d a b = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, m₁) := by
-  simp only [lazyW, hc, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem lazyW_cont (hc : callW p j "lazy_iter" [mode, vis, d, a, b] m = some (r, m₁))
-    (h : r.headD 0 = 3) :
-    lazyW p (j + 1) m mode vis d a b = lazyW p j m₁ mode vis d (r.tail.headD 0) (r.tail.tail.headD 0) := by
-  simp only [lazyW, hc, h, ne_eq, not_true_eq_false, ↓reduceIte]
-end lzArms
-
-theorem lazyDeltaLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n lazyDeltaLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      lazyW p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) =
-        some ((r.retOr [0]).headD 0, (r.retOr [0]).tail.headD 0, (r.retOr [0]).tail.tail.headD 0,
-          s'.mem) ∧ r ≠ .normal; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := lazyDeltaLoop) rfl]
-    sym (gen := 80) (instances := 5000) only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "lazy_iter"] <;>
-      finish [lazyW_n, lazyW_done, lazyW_cont, St.setLocs_mem']
-
-theorem lazyDeltaReduction_spec (p : Prog) (hp : LazyProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lazy_delta_reduction" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ lazyW p (n + 1) s₀.mem mode vis d a b =
-      some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.red]
-  simp only [callFn, lazyDeltaReductionL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (lazyDeltaLoop_spec p (n + 1) s)] <;>
-    finish
+/-- **`lazy_iter`'s error claim** at every L fuel up to `n` (what the loop's errors claim from;
+`lazyIter_refinesE`, `Verdict/DefEqLazyE.lean`). -/
+def LazyIterUpToE (p : Prog) (n : Nat) : Prop :=
+  ∀ j, j ≤ n → ∀ (F : Nat), j ≤ F → j ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    d.toNat < 2 ^ 63 →
+    CoreSpecE p (j + 1) "lazy_iter" [mode, vis, d, a, b]
+      (iterT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
 
 theorem decIter_done {r : List Word} (h : r.headD 0 ≠ 3) : decIter r = .inl (decLR r) := by
   unfold decIter decLR
@@ -433,48 +400,70 @@ section loopRef
 variable (p : Prog) (hp : LazyProg p) (hc : LazyCallees p)
 
 include hp hc in
-/-- **The loop's model refines `lazyDeltaReduction`** at every twin fuel `K` with `j ≤ K + 1`. -/
-theorem lazyW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+/-- **The loop refines `lazyDeltaReduction`, both outcomes**, at every twin fuel `K` with
+`j ≤ K + 1`: each iteration is `lazy_iter`'s (`lazyIter_refines`, its claim `LazyIterUpToE`). -/
+theorem lazy_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode d : Word) (hmode : mode < 4)
     (hd : d.toNat < 2 ^ 63) :
-    ∀ j, j ≤ n + 1 → ∀ K, j ≤ K + 1 → ∀ (a b : Word) (m m' : Mem) (s : AState) (M : ModeMaps)
-      (eb x y z : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a → HW b →
-      lazyW p j m mode vis d a b = some (x, y, z, m') →
-      CoreRef (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat K
-        (decE a) (decE b)) s decLR dn m vis fe M eb [x, y, z] m' Res3 := by
+    ∀ j, j ≤ n + 1 → ∀ K, j ≤ K + 1 → ∀ (a b : Word) (m : Mem) (s : AState) (M : ModeMaps)
+      (eb : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a → HW b →
+      RefE (LazyIterUpToE p n) (ldrE.loop1 p j m mode vis d a b)
+        (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat K
+          (decE a) (decE b)) s
+        (fun v y a' => CorePost decLR dn m vis fe M eb Res3 v.1 v.2 y a') := by
   intro j
   induction j with
-  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ h; simp [lazyW] at h
+  | zero =>
+    intro _ _ _ _ _ _ _ _ _ _ _ _ _
+    unfold ldrE.loop1; exact RefE.of_cls0 rfl
   | succ j ih =>
-    intro hjn K hK a b m m' s M eb x y z hS heb ha hb h
-    cases hc1 : callW p j "lazy_iter" [mode, vis, d, a, b] m with
-    | none => rw [lazyW_n (hc := hc1)] at h; cases h
-    | some q =>
-    obtain ⟨r, m₁⟩ := q
-    obtain ⟨j', rfl⟩ := callW_succ hc1
+    intro hjn K hK a b m s M eb hS heb ha hb
+    rw [ldrE.loop1.arm1 (hc1 := rfl)]
+    rcases hc1 : callE p j "lazy_iter" [mode, vis, d, a, b] m with e | ⟨r, m₁⟩
+    · rw [ldrE.k_lazy_iter.none]
+      cases j with
+      | zero =>
+        obtain ⟨e', he', h0⟩ := callE_zero p "lazy_iter" [mode, vis, d, a, b] m
+        rw [hc1] at he'; cases he'; exact RefE.of_cls0 h0
+      | succ j' =>
+      obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
+      rw [lazyDeltaReduction_succ_eq, lazyLvl_eq]
+      exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+        (hG j' (by omega) F (by omega) (by omega) _ s dn vis fe M eb mode d a b ⟨hS, hmode, heb⟩
+          ha hb hd) hc1
+    obtain ⟨j', rfl⟩ := callW_succ (callW_of_callE hc1)
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
     rw [lazyDeltaReduction_succ_eq, lazyLvl_eq]
     have e := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
       (lazyIter_refines p hp hc j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb mode
-        d a b ⟨hS, hmode, heb⟩ ha hb hd) hc1
-    obtain ⟨-, hr1, hr2⟩ := e.2.2.2
-    refine coreRef_bind e (fun M₁ hS₁ => ?_)
+        d a b ⟨hS, hmode, heb⟩ ha hb hd) (callW_of_callE hc1)
+    obtain ⟨g0, hr1, hr2⟩ := e.2.2.2
+    refine RefE.bind_core (w := id) e (fun M₁ hS₁ _ => ?_)
     by_cases h3 : r.headD 0 ≠ 3
-    · rw [lazyW_done (hc := hc1) (h := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
-        Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      rw [decIter_done h3]
-      refine coreRef_ret hS₁ rfl ?_
-      obtain ⟨g0, -, -⟩ := e.2.2.2
-      exact ⟨g0, hr1, hr2⟩
+    · rw [ldrE.k_lazy_iter.arm1 (hc1 := h3), decIter_done h3]
+      exact RefE.ret rfl (CorePost.ret hS₁ rfl ⟨g0, hr1, hr2⟩)
     have h3' : r.headD 0 = 3 := by simpa using h3
-    rw [lazyW_cont (hc := hc1) (h := h3')] at h
-    rw [decIter_cont h3']
-    exact ih (by omega) K' (by omega) _ _ m₁ m' _ M₁ eb x y z hS₁ heb hr1 hr2 h
+    rw [ldrE.k_lazy_iter.arm2 (hc1 := h3'), decIter_cont h3']
+    exact ih (by omega) K' (by omega) _ _ m₁ _ M₁ eb hS₁ heb hr1 hr2
+
+include hp hc in
+/-- `lazy_delta_reduction` from its run, both outcomes (`lazy_ref` at `defeqLoopFuel`). -/
+theorem lazyDeltaReduction_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
+    (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
+    RefE (LazyIterUpToE p n) (ldrE p (n + 1) s₀.mem mode vis d a b)
+      (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat defeqLoopFuel
+        (decE a) (decE b)) a₀
+      (fun v y a' => CorePost decLR dn s₀.mem vis fe M eb Res3 v.1 v.2 y a') := by
+  rw [ldrE.arm1]
+  have hL : (2 : Nat) ^ 62 = defeqLoopFuel := rfl
+  exact lazy_ref p hp hc n hk F hF hn dn vis fe mode d hs.mode4 hd (n + 1) (Nat.le_refl _)
+    defeqLoopFuel (by rw [← hL]; omega) a b s₀.mem a₀ M eb hs.rel hs.eb_mode ha hb
 
 include hp hc in
 /-- **`lazy_delta_reduction` refines `lazyDeltaReduction` at `defeqLoopFuel`** (the twin's call in
-`defeqBody`). -/
+`defeqBody`; `lazyDeltaReduction_ref`'s ok half). -/
 @[refines ConRon.Arena.lazyDeltaReduction]
 theorem lazyDeltaReduction_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -482,20 +471,11 @@ theorem lazyDeltaReduction_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF :
     (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "lazy_delta_reduction" [mode, vis, d, a, b]
       (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat defeqLoopFuel
-        (decE a) (decE b)) decLR s₀ a₀ dn vis fe M eb Res3 := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (lazyDeltaReduction_spec p hp n s₀ mode vis d a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hL : (2 : Nat) ^ 62 = defeqLoopFuel := rfl
-  obtain ⟨g1, g2, g3, g4⟩ := lazyW_ok p hp hc n hk F hF hn dn vis fe mode d hs.mode4 hd (n + 1)
-    (Nat.le_refl _) defeqLoopFuel (by rw [← hL]; omega) a b s.mem s'.mem a₀ M eb _ _ _ hs.rel
-    hs.eb_mode ha hb hW
-  refine ⟨g1, g2, g3.trans rfl, ?_⟩
-  obtain ⟨h1, h2, h3⟩ := g4
-  exact ⟨h1, h2, h3⟩
+        (decE a) (decE b)) decLR s₀ a₀ dn vis fe M eb Res3 :=
+  CoreSpec.of_refE (w := id)
+    (lazyDeltaReduction_specE p hp.red (n + 1) s₀ mode vis d a b)
+    (lazyDeltaReduction_ref p hp hc n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd)
+    fun _ _ => ⟨rfl, rfl, id⟩
 
 end loopRef
 

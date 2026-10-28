@@ -300,60 +300,6 @@ theorem KeptAll.wc {M M' : ModeMaps} {eb : Word} (h : KeptAll M M' eb) (k : EIdx
   have : ¬ ((k, eb) == (k', (0 : Word))) = true := by simp [h0]
   simp only [this, Bool.false_eq_true, ↓reduceIte]; exact a1 k'
 
-/-! ## The loop -/
-
-/-- **The model of `whnf_core_loop`'s loop** at L fuel `n`: each iteration is a run of
-`whnf_core_step` (`callW`), done on `(0, v)`, continuing on `(1, e')`. -/
-def coreLoopW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, mode, cheap, vis, d, e =>
-    match callW p n "whnf_core_step" [mode, cheap, vis, d, e] m with
-    | none => none
-    | some (r, m₁) =>
-      if r.headD 0 = 0 then some (r.tail.headD 0, m₁)
-      else coreLoopW p n m₁ mode cheap vis d (r.tail.headD 0)
-
-section loop
-variable (p : Prog) (n : Nat) (m m₁ : Mem) (mode cheap vis d e : Word) (r : List Word)
-
-theorem coreLoopW_done (h : callW p n "whnf_core_step" [mode, cheap, vis, d, e] m = some (r, m₁))
-    (h0 : r.headD 0 = 0) :
-    coreLoopW p (n + 1) m mode cheap vis d e = some (r.tail.headD 0, m₁) := by
-  simp only [coreLoopW, h, h0, ↓reduceIte]
-
-theorem coreLoopW_cont (h : callW p n "whnf_core_step" [mode, cheap, vis, d, e] m = some (r, m₁))
-    (h0 : ¬ r.headD 0 = 0) :
-    coreLoopW p (n + 1) m mode cheap vis d e = coreLoopW p n m₁ mode cheap vis d (r.tail.headD 0) := by
-  simp only [coreLoopW, h, h0, ↓reduceIte]
-
-end loop
-
-theorem whnfCoreLoopB_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n whnfCoreLoopB
-    ⦃fun r s' => r ≠ .brk ∧
-      coreLoopW p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) =
-        some ((r.retOr [0]).headD 0, s'.mem) ∧ r ≠ .normal; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := whnfCoreLoopB) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "whnf_core_step"] <;>
-      finish [coreLoopW_done, coreLoopW_cont]
-
-theorem whnfCoreLoop_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
-    (mode cheap vis d e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_core_loop" [mode, cheap, vis, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ coreLoopW p (n + 1) s₀.mem mode cheap vis d e =
-      some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.loop]
-  simp only [callFn, whnfCoreLoopL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (whnfCoreLoopB_spec p (n + 1) s)] <;>
-    finish
-
 /-! ## The loop refines `whnfCoreLoop` -/
 
 theorem whnfCoreLoop_done (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (c : Bool)
@@ -367,5 +313,11 @@ theorem whnfCoreLoop_cont (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv
     (hs : (whnfCoreStep mode r fe c d e).run a = .ok (.cont e', a₁)) :
     (whnfCoreLoop mode r fe c d (K + 1) e).run a = (whnfCoreLoop mode r fe c d K e').run a₁ := by
   simp only [whnfCoreLoop, StateT.run_bind, hs, except_ok_bind]
+
+theorem whnfCoreLoop_err (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (c : Bool)
+    (d K : Nat) (e : EIdx) (a : AState) (ce : CheckError)
+    (hs : (whnfCoreStep mode r fe c d e).run a = .error ce) :
+    (whnfCoreLoop mode r fe c d (K + 1) e).run a = .error ce := by
+  simp only [whnfCoreLoop, StateT.run_bind, hs]; rfl
 
 end L.Arena
