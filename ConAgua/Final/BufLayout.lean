@@ -1,5 +1,5 @@
 import ConAgua.Arena.FreezeRel
-import ConAgua.Final.SeqLayout
+import ConAgua.Compiler.AbiSim
 
 /-!
 # The threads' entry 2: `ca_check_b`'s layout and memory (lane parmode)
