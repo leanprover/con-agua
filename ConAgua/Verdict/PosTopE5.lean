@@ -7,7 +7,7 @@ import ConAgua.Verdict.PosTopE3
 # `check_block_positivity`'s and `nest_seeds`' error claims, discharged (lane `verdicts-b`,
 helper `ia2`, fork `top`)
 
-`cbposW_okC`'s proof (`Positivity.lean`) on the model `cbpE`: `nest_uniform` (`nuE_claim`),
+`cbposW_okC`'s proof (`Positivity.lean`) on the model `cbpE`: `nest_uniform` (`nu_ref`),
 `nest_root` (`nrtE_claim`), `check_abs_ctor_sorts_all` (`iaaE_claim`); the other callees claim
 nothing (`nvFns`). Then the generated statements `CheckBlockPositivityE` and `NestSeedsE`
 (`IndA3.lean`), from the walk's claims (`NbOKE`, `NitE`) and `check_struct_field_sorts_i`'s
@@ -139,25 +139,17 @@ theorem cbpE_claim (hP : PosBlkProg p) {fs : List FnName} (_hclP : closedA p pos
   cases h2 : callE p (n + 2) "nest_uniform" [r1.headD 0, caO, caL] s1.mem with
   | error e2 =>
     rw [h2, cbpE.k_nest_uniform.none] at h; cases h
-    refine ErrClaim.bind_left ?_
-    by_cases hk0 : e.cls = 0
-    · exact ErrClaim.of_cls0 hk0
-    have hW2 := triple_of_callE_err (nuE_spec p hP.nuP (n + 2) ⟨s1.mem, Locals.init []⟩ (r1.headD 0) caO caL) h2
-      (Err.code_ne_of_cls hk0)
-    simp only at hW2
-    exact nuE_claim hP.nu hP.nuCs hnv dn fe vis (r1.headD 0) c hhi1 _ _ hJI hJnu (n + 2) s1.mem a1 caO caL css _
-      hW2 hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1 hlen hcss1 hP1
+    exact ErrClaim.bind_left (RefE.run_err
+      (nuE_spec p hP.nu hP.nuCs hP.nuP (n + 2) ⟨s1.mem, Locals.init []⟩ (r1.headD 0) caO caL) hnv hnv
+      (nu_ref dn fe vis (r1.headD 0) c hhi1 _ _ hJI hJnu (n + 2) hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1
+        hlen hcss1 hP1) h2)
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, cbpE.k_nest_uniform.arm1] at h
-  obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (nestUniform_spec p hP.nu hP.nuCs hP.nuP (realCall p) (realCall_spec p) (n + 2) _ (r1.headD 0) caO caL)
-    (callW_of_callE h2)
-  subst hs2
-  obtain ⟨a2, hrun2, hS2, hg2, hP2, hJ2⟩ := unW_ok dn fe vis (r1.headD 0) c hhi1 (realCall p)
-    (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a1.store a'.store)
-    (fun cvv => ∃ cvP, Frontend.denoteCV a1.store cvv = some cvP) hJI hJnu
-    (n + 2) s1.mem s2.mem a1 caO caL css hw2 hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1 hlen hcss1 hP1
+  obtain ⟨s2, rfl, -, _, a2, hrun2, hS2, hg2, hP2, hJ2⟩ := RefE.run_ok
+    (nuE_spec p hP.nu hP.nuCs hP.nuP (n + 2) ⟨s1.mem, Locals.init []⟩ (r1.headD 0) caO caL)
+    (nu_ref dn fe vis (r1.headD 0) c hhi1 _ _ hJI hJnu (n + 2) hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1
+      hlen hcss1 hP1) h2
   obtain ⟨c2, -, -, -⟩ := ConRon.Bridge.Inductives.nestUniform_spec (μ := V) (env := env) (fe := fe)
     env.find? c ctxP css cssP a1 _ _ hC1.check
     ⟨hctx, hcss1P⟩ hrun2

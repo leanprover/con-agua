@@ -1,6 +1,8 @@
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndPos2
+import ConAgua.Arena.IndPosSpec.NuW
+import ConAgua.Checker.NoVerdictTree
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -16,6 +18,8 @@ The `errors` models of `check_abs_ctor_sorts_one`, `check_abs_ctor_sorts`,
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -35,9 +39,28 @@ l_model iaaE_spec (p : Prog) (hf : p.lookup "check_abs_ctor_sorts_all" = some ch
   fns [hf ↦ iaaE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
 
-l_model nuE_spec (p : Prog) (hf : p.lookup "nest_uniform" = some nestUniformL)
-  fns [hf ↦ nuE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+/-- `nest_uniform_cs`' model with its one result as a word (the generator reads `some (r, m)`). -/
+def ucW1 (cR : CallM) (k : Nat) (m : Mem) (ctx o l : Word) : Option (Word × Mem) :=
+  (ucW cR k m ctx o l).map fun x => (x.1.headD 0, x.2)
+
+theorem ucW1_some {cR : CallM} {k : Nat} {m m' : Mem} {ctx o l b : Word}
+    (h : ucW1 cR k m ctx o l = some (b, m')) : ∃ r, ucW cR k m ctx o l = some (r, m') ∧ r.headD 0 = b := by
+  simp only [ucW1, Option.map_eq_some_iff, Prod.mk.injEq] at h
+  obtain ⟨⟨r, m₁⟩, h, rfl, rfl⟩ := h
+  exact ⟨r, h, rfl⟩
+
+theorem nestUniformCs_spec1 (p : Prog) (hl : NuLook p) (hp : p.lookup "nest_uniform_cs" = some nestUniformCsL)
+    (k : Nat) (s₀ : St) (ctx o l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_uniform_cs" [ctx, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ ucW1 (realCall p) k s₀.mem ctx o l = some (r.headD 0, s'.mem); ⊤⦄ :=
+  triple_post (nestUniformCs_spec p hl hp (realCall p) (realCall_spec p) k s₀ ctx o l) fun r s' ⟨hl', h⟩ =>
+    ⟨hl', by simp [ucW1, h]⟩
+
+l_model nuE_spec (p : Prog) (hL : NuLook p) (hc : p.lookup "nest_uniform_cs" = some nestUniformCsL)
+  (hf : p.lookup "nest_uniform" = some nestUniformL)
+  fns [hf ↦ nuE list] specs [nestUniformCs_spec1 p hL hc n] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model nrtE_spec (p : Prog) (hf : p.lookup "nest_root" = some nestRootL)
   fns [hf ↦ nrtE list] grind [arena_grind] fold [tierW, idxW]
@@ -52,3 +75,5 @@ l_model cbpE_spec (p : Prog) (hf : p.lookup "check_block_positivity" = some chec
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
 
 end L.Ind
+
+end
