@@ -263,45 +263,122 @@ theorem _root_.L.Scan.Fast.NumAt.notWs {v e x : Word} (h : NumAt b v e x) : ¬ I
 /-! ## The key codes -/
 
 /-- A key's bytes as a member writes them: quote, key, quote, colon. -/
-def keyLit (s : String) : List UInt8 := 34 :: bytesOf s ++ [34, 58]
+def keyLit (k : List UInt8) : List UInt8 := 34 :: k ++ [34, 58]
 
-theorem keyChars (s : String) (h : ((bytesOf s).all fun c => 32 ≤ c && c != 34 && c != 92) = true) :
-    ∀ c ∈ bytesOf s, 32 ≤ c ∧ c ≠ 34 ∧ c ≠ 92 := by
+/-- The key `app`. -/
+def yApp : List UInt8 := [97, 112, 112]
+/-- The key `arg`. -/
+def yArg : List UInt8 := [97, 114, 103]
+/-- The key `fn`. -/
+def yFn : List UInt8 := [102, 110]
+/-- The key `ie`. -/
+def yIe : List UInt8 := [105, 101]
+/-- The key `lam`. -/
+def yLam : List UInt8 := [108, 97, 109]
+/-- The key `binderInfo`. -/
+def yBinderInfo : List UInt8 := [98, 105, 110, 100, 101, 114, 73, 110, 102, 111]
+/-- The key `body`. -/
+def yBody : List UInt8 := [98, 111, 100, 121]
+/-- The key `name`. -/
+def yName : List UInt8 := [110, 97, 109, 101]
+/-- The key `type`. -/
+def yType : List UInt8 := [116, 121, 112, 101]
+/-- The key `forallE`. -/
+def yForallE : List UInt8 := [102, 111, 114, 97, 108, 108, 69]
+
+theorem keyChars (k : List UInt8) (h : (k.all fun c => 32 ≤ c && c != 34 && c != 92) = true) :
+    ∀ c ∈ k, 32 ≤ c ∧ c ≠ 34 ∧ c ≠ 92 := by
   intro c hc
   have := List.all_eq_true.mp h c hc
   simp only [Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at this
   exact ⟨this.1.1, this.1.2, this.2⟩
 
 /-- A key's byte `j` (from `1`), as `key_at` reads it. -/
-theorem keyByte {q : Word} {s : String} (h : LitAt b q (keyLit s)) (hb : b.size < 2 ^ 63) (j : Nat)
-    (hj : j < (keyLit s).length) : byteW b (q + UInt64.ofNat j) = ((keyLit s)[j]).toUInt64 :=
+theorem keyByte {q : Word} {k : List UInt8} (h : LitAt b q (keyLit k)) (hb : b.size < 2 ^ 63) (j : Nat)
+    (hj : j < (keyLit k).length) : byteW b (q + UInt64.ofNat j) = ((keyLit k)[j]).toUInt64 :=
   h.bw hb j hj
 
-theorem key_app {q : Word} (h : LitAt b q (keyLit "app")) (hb : b.size < 2 ^ 63) :
-    keyAtN b q (UInt64.ofNat (bytesOf "app").length) = 2 := by
+theorem key_app {q : Word} (h : LitAt b q (keyLit yApp)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat (yApp).length) = 2 := by
   have h1 : byteW b (q + 1) = 97 := keyByte h hb 1 (by decide)
   have h2 : byteW b (q + 2) = 112 := keyByte h hb 2 (by decide)
   have h3 : byteW b (q + 3) = 112 := keyByte h hb 3 (by decide)
-  simp [keyAtN, L.Scan.Key.keyAtG6N, h1, h2, h3, bytesOf]
+  simp [keyAtN, L.Scan.Key.keyAtG6N, h1, h2, h3, yApp]
 
-theorem key_arg {q : Word} (h : LitAt b q (keyLit "arg")) (hb : b.size < 2 ^ 63) :
-    keyAtN b q (UInt64.ofNat (bytesOf "arg").length) = 3 := by
+theorem key_arg {q : Word} (h : LitAt b q (keyLit yArg)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat (yArg).length) = 3 := by
   have h1 : byteW b (q + 1) = 97 := keyByte h hb 1 (by decide)
   have h2 : byteW b (q + 2) = 114 := keyByte h hb 2 (by decide)
   have h3 : byteW b (q + 3) = 103 := keyByte h hb 3 (by decide)
-  simp [keyAtN, L.Scan.Key.keyAtG6N, h1, h2, h3, bytesOf]
+  simp [keyAtN, L.Scan.Key.keyAtG6N, h1, h2, h3, yArg]
 
-theorem key_fn {q : Word} (h : LitAt b q (keyLit "fn")) (hb : b.size < 2 ^ 63) :
-    keyAtN b q (UInt64.ofNat (bytesOf "fn").length) = 13 := by
+theorem key_fn {q : Word} (h : LitAt b q (keyLit yFn)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat (yFn).length) = 13 := by
   have h1 : byteW b (q + 1) = 102 := keyByte h hb 1 (by decide)
   have h2 : byteW b (q + 2) = 110 := keyByte h hb 2 (by decide)
-  simp [keyAtN, L.Scan.Key.keyAtG6N, h1, h2, bytesOf]
+  simp [keyAtN, L.Scan.Key.keyAtG6N, h1, h2, yFn]
 
-theorem key_ie {q : Word} (h : LitAt b q (keyLit "ie")) (hb : b.size < 2 ^ 63) :
-    keyAtN b q (UInt64.ofNat (bytesOf "ie").length) = 18 := by
+theorem key_ie {q : Word} (h : LitAt b q (keyLit yIe)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat (yIe).length) = 18 := by
   have h1 : byteW b (q + 1) = 105 := keyByte h hb 1 (by decide)
   have h2 : byteW b (q + 2) = 101 := keyByte h hb 2 (by decide)
-  simp [keyAtN, L.Scan.Key.keyAtG1N, h1, h2, bytesOf]
+  simp [keyAtN, L.Scan.Key.keyAtG1N, h1, h2, yIe]
+
+theorem key_lam {q : Word} (h : LitAt b q (keyLit yLam)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat yLam.length) = 29 := by
+  have h1 : byteW b (q + 1) = 108 := keyByte h hb 1 (by decide)
+  have h2 : byteW b (q + 2) = 97 := keyByte h hb 2 (by decide)
+  have h3 : byteW b (q + 3) = 109 := keyByte h hb 3 (by decide)
+  simp [keyAtN, L.Scan.Key.keyAtG5N, h1, h2, h3, yLam]
+
+theorem key_binderInfo {q : Word} (h : LitAt b q (keyLit yBinderInfo)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat yBinderInfo.length) = 5 := by
+  have h1 : byteW b (q + 1) = 98 := keyByte h hb 1 (by decide)
+  have h2 : byteW b (q + 2) = 105 := keyByte h hb 2 (by decide)
+  have h3 : byteW b (q + 3) = 110 := keyByte h hb 3 (by decide)
+  have h4 : byteW b (q + 4) = 100 := keyByte h hb 4 (by decide)
+  have h5 : byteW b (q + 5) = 101 := keyByte h hb 5 (by decide)
+  have h6 : byteW b (q + 6) = 114 := keyByte h hb 6 (by decide)
+  have h7 : byteW b (q + 7) = 73 := keyByte h hb 7 (by decide)
+  have h8 : byteW b (q + 8) = 110 := keyByte h hb 8 (by decide)
+  have h9 : byteW b (q + 9) = 102 := keyByte h hb 9 (by decide)
+  have h10 : byteW b (q + 10) = 111 := keyByte h hb 10 (by decide)
+  simp [keyAtN, L.Scan.Key.keyAtG6N, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, yBinderInfo]
+
+theorem key_body {q : Word} (h : LitAt b q (keyLit yBody)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat yBody.length) = 6 := by
+  have h1 : byteW b (q + 1) = 98 := keyByte h hb 1 (by decide)
+  have h2 : byteW b (q + 2) = 111 := keyByte h hb 2 (by decide)
+  have h3 : byteW b (q + 3) = 100 := keyByte h hb 3 (by decide)
+  have h4 : byteW b (q + 4) = 121 := keyByte h hb 4 (by decide)
+  simp [keyAtN, L.Scan.Key.keyAtG6N, h1, h2, h3, h4, yBody]
+
+theorem key_name {q : Word} (h : LitAt b q (keyLit yName)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat yName.length) = 34 := by
+  have h1 : byteW b (q + 1) = 110 := keyByte h hb 1 (by decide)
+  have h2 : byteW b (q + 2) = 97 := keyByte h hb 2 (by decide)
+  have h3 : byteW b (q + 3) = 109 := keyByte h hb 3 (by decide)
+  have h4 : byteW b (q + 4) = 101 := keyByte h hb 4 (by decide)
+  simp [keyAtN, L.Scan.Key.keyAtG2N, h1, h2, h3, h4, yName]
+
+theorem key_type {q : Word} (h : LitAt b q (keyLit yType)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat yType.length) = 61 := by
+  have h1 : byteW b (q + 1) = 116 := keyByte h hb 1 (by decide)
+  have h2 : byteW b (q + 2) = 121 := keyByte h hb 2 (by decide)
+  have h3 : byteW b (q + 3) = 112 := keyByte h hb 3 (by decide)
+  have h4 : byteW b (q + 4) = 101 := keyByte h hb 4 (by decide)
+  simp [keyAtN, L.Scan.Key.keyAtG3N, h1, h2, h3, h4, yType]
+
+theorem key_forallE {q : Word} (h : LitAt b q (keyLit yForallE)) (hb : b.size < 2 ^ 63) :
+    keyAtN b q (UInt64.ofNat yForallE.length) = 14 := by
+  have h1 : byteW b (q + 1) = 102 := keyByte h hb 1 (by decide)
+  have h2 : byteW b (q + 2) = 111 := keyByte h hb 2 (by decide)
+  have h3 : byteW b (q + 3) = 114 := keyByte h hb 3 (by decide)
+  have h4 : byteW b (q + 4) = 97 := keyByte h hb 4 (by decide)
+  have h5 : byteW b (q + 5) = 108 := keyByte h hb 5 (by decide)
+  have h6 : byteW b (q + 6) = 108 := keyByte h hb 6 (by decide)
+  have h7 : byteW b (q + 7) = 69 := keyByte h hb 7 (by decide)
+  simp [keyAtN, L.Scan.Key.keyAtG6N, h1, h2, h3, h4, h5, h6, h7, yForallE]
 
 /-! ## Positions -/
 
@@ -378,16 +455,16 @@ theorem appLine_sound (hb : b.size < 2 ^ 63) {i nx idx f a : Word} (h : AppLine 
   have t27 : (e2 + 7).toNat = e2.toNat + 7 := toNat_add_ofNat e2 7 (by omega)
   have t31 : (e3 + 1).toNat = e3.toNat + 1 := toNat_add_ofNat e3 1 (by omega)
   -- the members
-  have k1 : LitAt b (i + 1) (keyLit "app") := hhd.sub hb 1 6 (by decide) _ (by decide)
+  have k1 : LitAt b (i + 1) (keyLit yApp) := hhd.sub hb 1 6 (by decide) _ (by decide)
   have M1 : nextMemberN b (i + 1) 1 = ⟨2, i + 1, 1, 2, i + 7⟩ :=
     nextMemberN_at hb _ _ _ _ _ (by decide) k1 (keyChars _ (by decide)) (key_app k1 hb)
       (addc i 1 _ 7 (by decide)) (by
         rw [show i + 7 = i + UInt64.ofNat 7 from rfl, hhd.bw hb 7 (by decide)]; decide)
-  have k2 : LitAt b (i + 8) (keyLit "arg") := harg.take 6 (by decide) _ (by decide)
+  have k2 : LitAt b (i + 8) (keyLit yArg) := harg.take 6 (by decide) _ (by decide)
   have M2 : nextMemberN b (i + 8) 1 = ⟨2, i + 8, 1, 3, i + 14⟩ :=
     nextMemberN_at hb _ _ _ _ _ (by decide) k2 (keyChars _ (by decide)) (key_arg k2 hb)
       (addc i 8 _ 14 (by decide)) hna.notWs
-  have k3 : LitAt b (e1 + 1) (keyLit "fn") := hfn.sub hb 1 5 (by decide) _ (by decide)
+  have k3 : LitAt b (e1 + 1) (keyLit yFn) := hfn.sub hb 1 5 (by decide) _ (by decide)
   have M3 : nextMemberN b e1 0 = ⟨2, e1 + 1, 1, 13, e1 + 6⟩ := by
     rw [nextMemberN_comma' e1 (by simpa using lt_size_of_lit hfn hb 0 (by decide))
       ((hfn.bw0 hb (by decide)).trans (by decide))]
@@ -396,7 +473,7 @@ theorem appLine_sound (hb : b.size < 2 ^ 63) {i nx idx f a : Word} (h : AppLine 
   have M4 : ∀ w, nextMemberN b e2 w = ⟨1, e2, w, 0, 0⟩ := fun w =>
     nextMemberN_close' e2 w (by simpa using lt_size_of_lit hie hb 0 (by decide))
       ((hie.bw0 hb (by decide)).trans (by decide))
-  have k5 : LitAt b (e2 + 2) (keyLit "ie") := hie.sub hb 2 5 (by decide) _ (by decide)
+  have k5 : LitAt b (e2 + 2) (keyLit yIe) := hie.sub hb 2 5 (by decide) _ (by decide)
   have M5 : nextMemberN b (e2 + 1) 0 = ⟨2, e2 + 2, 1, 18, e2 + 7⟩ := by
     rw [nextMemberN_comma' (e2 + 1) (lt_size_of_lit hie hb 1 (by decide))
       ((hie.bw hb 1 (by decide)).trans (by decide)), addc e2 1 1 2 (by decide)]
@@ -487,6 +564,464 @@ theorem appLine_sound (hb : b.size < 2 ^ 63) {i nx idx f a : Word} (h : AppLine 
     simp only
     rw [ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, t22]; omega),
       exprN_close b _ _ _ (by rw [M6])]
+    simp [fldPut, Fld.none]
+
+/-! ## Binder values -/
+
+theorem _root_.L.LitAt.append {p : Word} {l₁ l₂ : List UInt8} (h₁ : LitAt b p l₁)
+    (h₂ : LitAt b (p + UInt64.ofNat l₁.length) l₂) (hb : b.size < 2 ^ 63) :
+    LitAt b p (l₁ ++ l₂) := by
+  have f1 := h₁.fits; have f2 := h₂.fits
+  have hp : (p + UInt64.ofNat l₁.length).toNat = p.toNat + l₁.length :=
+    toNat_add_ofNat p _ (by omega)
+  rw [hp] at f2
+  refine ⟨by simp; omega, ?_⟩
+  apply List.ext_getElem
+  · simp
+  · intro j h1 h2
+    simp only [List.getElem_map, List.getElem_range]
+    by_cases hj : j < l₁.length
+    · rw [List.getElem_append_left hj]; exact h₁.get j hj
+    · rw [List.getElem_append_right (by omega)]
+      have := h₂.get (j - l₁.length) (by simp at h1; omega)
+      rw [hp, show p.toNat + l₁.length + (j - l₁.length) = p.toNat + j by omega] at this
+      exact this
+
+open L.Scan.Lit (matchLitN byteAtN) in
+theorem matchLitN_iff (i : Nat) (W : List UInt8) (o n : Nat) : ∀ k,
+    matchLitN b i W o n k = true ↔ ∀ t, k ≤ t → t < n → byteAtN b (i + t) = W.getD (o + t) 0 := by
+  intro k
+  induction h : n - k generalizing k with
+  | zero =>
+    rw [L.Scan.Lit.matchLitN_end b i W o n k (by omega)]
+    exact ⟨fun _ t h1 h2 => absurd h2 (by omega), fun _ => rfl⟩
+  | succ m ih =>
+    rw [L.Scan.Lit.matchLitN]
+    rw [ite_eq_left (show k < n by omega)]
+    split
+    · rw [ih (k + 1) (by omega)]
+      constructor
+      · intro h' t h1 h2
+        by_cases ht : t = k
+        · subst ht; assumption
+        · exact h' t (by omega) h2
+      · intro h' t h1 h2; exact h' t (by omega) h2
+    · constructor
+      · intro h'; cases h'
+      · intro h'; exact absurd (h' k (Nat.le_refl _) (by omega)) ‹_›
+
+open L.Scan.Lit (matchLitN byteAtN) in
+/-- A literal match on bytes the line is known to have. -/
+theorem matchLitN_lit {p : Word} {l : List UInt8} (h : LitAt b p l) (W : List UInt8) (o n : Nat)
+    (hn : n ≤ l.length) (hall : ∀ t < n, l.getD t 0 = W.getD (o + t) 0) :
+    matchLitN b p.toNat W o n 0 = true := by
+  rw [matchLitN_iff]
+  intro t _ h2
+  obtain ⟨_, he⟩ := h.get' t (by omega)
+  rw [byteAtN, he, ← hall t h2, ← List.getElem_eq_getD 0]
+
+open L.Scan.Lit (matchLitN byteAtN) in
+/-- A literal mismatch at a byte the line is known to have. -/
+theorem matchLitN_miss_lit {p : Word} {l : List UInt8} (h : LitAt b p l) (W : List UInt8)
+    (o n t : Nat) (ht : t < n) (htl : t < l.length) (hne : l.getD t 0 ≠ W.getD (o + t) 0) :
+    matchLitN b p.toNat W o n 0 = false := by
+  cases hm : matchLitN b p.toNat W o n 0 with
+  | false => rfl
+  | true =>
+    exfalso
+    have := (matchLitN_iff _ W o n 0).mp hm t (Nat.zero_le _) ht
+    obtain ⟨_, he⟩ := h.get' t htl
+    rw [byteAtN, he, List.getElem_eq_getD 0] at this
+    exact hne this
+
+theorem _root_.L.Scan.Fast.BiAt.toNat {p e : Word} (h : BiAt b p e) (hp : p.toNat + 15 < 2 ^ 64) :
+    p.toNat + 8 ≤ e.toNat ∧ e.toNat ≤ p.toNat + 15 := by
+  cases h <;> (rw [UInt64.toNat_add]; simp; omega)
+
+/-- **A binder's value** after the quote at `v`: `scan_binder_info`'s end. -/
+theorem binderInfoN_at (hb : b.size < 2 ^ 63) {v e : Word} (h : BiAt b (v + 1) e)
+    (hq : byteW b v = 34) (hv : v.toNat < b.size) : binderInfoN b v = e := by
+  have hs : UInt64.size = 2 ^ 64 := rfl
+  have hlt : v < UInt64.ofNat b.size := by
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by omega)]; exact hv
+  unfold binderInfoN
+  rw [ite_eq_left ⟨hlt, hq⟩]
+  have m0 : ∀ {l : List UInt8}, LitAt b (v + 1) l → 0 < l.length → l.getD 0 0 ≠ 100 →
+      ¬ L.Scan.Lit.matchLitN b (v + 1).toNat WORDS 0 8 0 = true := fun h hl hne => by
+    rw [matchLitN_miss_lit h WORDS 0 8 0 (by decide) hl (by rw [show WORDS.getD (0 + 0) 0 = 100 from rfl]; exact hne)]; simp
+  cases h with
+  | dflt h1 =>
+    rw [ite_eq_left (matchLitN_lit h1 WORDS 0 8 (by decide) (by decide))]
+    exact (addc v 1 8 9 (by decide)).symm
+  | impl h1 h2 =>
+    have h12 := h1.append (show LitAt b (v + 1 + UInt64.ofNat biI8.length) kQ from h2) hb
+    rw [ite_eq_right (m0 h12 (by decide) (by decide)),
+      ite_eq_left (matchLitN_lit h12 WORDS 8 9 (by decide) (by decide))]
+    exact (addc v 1 9 10 (by decide)).symm
+  | inst h1 h2 =>
+    have h12 := h1.append (show LitAt b (v + 1 + UInt64.ofNat biN8.length) biN5 from h2) hb
+    have m1 : ¬ L.Scan.Lit.matchLitN b (v + 1).toNat WORDS 8 9 0 = true := by
+      rw [matchLitN_miss_lit h12 WORDS 8 9 1 (by decide) (by decide) (by decide)]; simp
+    have m2 : ¬ L.Scan.Lit.matchLitN b (v + 1).toNat WORDS 17 15 0 = true := by
+      rw [matchLitN_miss_lit h12 WORDS 17 15 0 (by decide) (by decide) (by decide)]; simp
+    rw [ite_eq_right (m0 h12 (by decide) (by decide)), ite_eq_right m1, ite_eq_right m2,
+      ite_eq_left (matchLitN_lit h12 WORDS 32 13 (by decide) (by decide))]
+    exact (addc v 1 13 14 (by decide)).symm
+  | strict h1 h2 =>
+    have h12 := h1.append (show LitAt b (v + 1 + UInt64.ofNat biS8.length) biS7 from h2) hb
+    have m1 : ¬ L.Scan.Lit.matchLitN b (v + 1).toNat WORDS 8 9 0 = true := by
+      rw [matchLitN_miss_lit h12 WORDS 8 9 0 (by decide) (by decide) (by decide)]; simp
+    rw [ite_eq_right (m0 h12 (by decide) (by decide)), ite_eq_right m1,
+      ite_eq_left (matchLitN_lit h12 WORDS 17 15 (by decide) (by decide))]
+    exact (addc v 1 15 16 (by decide)).symm
+
+/-- A comma, then a member with the key `key` (code `code`) and its value at `v`. -/
+theorem nextMemberN_comma_at (hb : b.size < 2 ^ 63) (q v code : Word) (key : List UInt8)
+    (hk : LitAt b q (44 :: keyLit key)) (hkc : ∀ c ∈ key, 32 ≤ c ∧ c ≠ 34 ∧ c ≠ 92)
+    (hcode : LitAt b (q + 1) (keyLit key) → keyAtN b (q + 1) (UInt64.ofNat key.length) = code)
+    (hv : q + 1 + UInt64.ofNat (key.length + 3) = v) (hvw : ¬ IsWs (byteW b v)) :
+    nextMemberN b q 0 = ⟨2, q + 1, 1, code, v⟩ := by
+  have h1 : LitAt b (q + 1) (keyLit key) :=
+    hk.sub hb 1 (keyLit key).length (by simp only [List.length_cons]; omega) _ (by simp)
+  rw [nextMemberN_comma' q (by simpa using lt_size_of_lit hk hb 0 (by simp))
+    ((hk.bw0 hb (by simp)).trans (by simp))]
+  exact nextMemberN_at hb _ _ _ _ key (by decide) h1 hkc (hcode h1) hv hvw
+
+theorem kBody_eq : kBody = 44 :: keyLit yBody := by decide
+theorem kName_eq : kName = 44 :: keyLit yName := by decide
+theorem kType_eq : kType = 44 :: keyLit yType := by decide
+
+open L.Scan.Records (binderN) in
+open L.Front.Fields in
+/-- What the generic models read from a binder object with its `{` at `v`, its `}` at `e`. -/
+structure BndOK (b : Array UInt8) (v e bd t nm : Word) : Prop where
+  scan : binderN b v = e + 1
+  slots : recObjN b v = ⟨e + 1, t, bd, 0, nm⟩
+  lt : v.toNat < e.toNat
+
+open L.Scan.Records (binderN binderBit binderVal) in
+open L.Front.Fields in
+/-- **A binder object** with its `{` at `v` and its `}` at `bE4 b (v + 1)`: the validator ends after
+it, and the record pass reads `type`, `body` and `name` into its slots. -/
+theorem bndObj_sound (hb : b.size < 2 ^ 63) {v bd t : Word} (h : BndAt b (v + 1) bd t)
+    (hv : v < UInt64.ofNat b.size) (h0 : byteW b v = 123)
+    (hcl : bE4 b (v + 1) < UInt64.ofNat b.size) (hc : byteW b (bE4 b (v + 1)) = 125) :
+    BndOK b v (bE4 b (v + 1)) bd t (numR b (bE2 b (v + 1) + 8)).2 := by
+  obtain ⟨k1, k2, hbi, hbody, hnb, hname, hnn, htype, hnt⟩ := h
+  generalize (numR b (bE2 b (v + 1) + 8)).2 = nm at *
+  generalize bE4 b (v + 1) = e4 at *
+  generalize bE3 b (v + 1) = e3 at *
+  generalize bE2 b (v + 1) = e2 at *
+  generalize bE1 b (v + 1) = e1 at *
+  have hs : UInt64.size = 2 ^ 64 := rfl
+  have f1 := k1.fits; have fb := hbody.fits; have fn := hname.fits; have ft := htype.fits
+  simp only [show kBinderI.length = 8 from rfl, show kBody.length = 8 from rfl,
+    show kName.length = 8 from rfl, show kType.length = 8 from rfl] at f1 fb fn ft
+  obtain ⟨b1, b2, b3⟩ := hnb.lt_size hb
+  obtain ⟨n1, n2, n3⟩ := hnn.lt_size hb
+  obtain ⟨t1, t2, t3⟩ := hnt.lt_size hb
+  have hvN := L.Scan.lt_of_lt_ofNat hv
+  have hv1 : (v + 1).toNat = v.toNat + 1 := toNat_add_ofNat v 1 (by omega)
+  have p14 : v + 1 + 8 + 6 = v + 14 + 1 := by
+    rw [UInt64.add_assoc, UInt64.add_assoc, UInt64.add_assoc]; rfl
+  rw [p14] at hbi
+  -- the members
+  have kbi : LitAt b (v + 1) (keyLit yBinderInfo) :=
+    (k1.append (show LitAt b (v + 1 + UInt64.ofNat kBinderI.length) (kNfo.take 5) from
+      k2.take 5 (by decide) _ rfl) hb).take 13 (by decide) _ (by decide)
+  have q14 : byteW b (v + 14) = 34 := by
+    have := k2.bw hb 5 (by decide)
+    rw [show v + 1 + 8 + UInt64.ofNat 5 = v + 14 by rw [UInt64.add_assoc, UInt64.add_assoc]; rfl]
+      at this
+    exact this.trans (by decide)
+  have t14 : (v + 14).toNat = v.toNat + 14 := toNat_add_ofNat v 14 (by omega)
+  have M1 : nextMemberN b (v + 1) 1 = ⟨2, v + 1, 1, 5, v + 14⟩ :=
+    nextMemberN_at hb _ _ _ _ _ (by decide) kbi (keyChars _ (by decide)) (key_binderInfo kbi hb)
+      (addc v 1 _ 14 (by decide)) (by rw [q14]; decide)
+  have h14 : (v + 14).toNat < b.size := by
+    have := lt_size_of_lit k2 hb 5 (by decide)
+    rw [show v + 1 + 8 + UInt64.ofNat 5 = v + 14 by rw [UInt64.add_assoc, UInt64.add_assoc]; rfl]
+      at this
+    exact L.Scan.lt_of_lt_ofNat this
+  have hBI : binderInfoN b (v + 14) = e1 := binderInfoN_at hb hbi q14 h14
+  have M2 : nextMemberN b e1 0 = ⟨2, e1 + 1, 1, 6, e1 + 8⟩ :=
+    nextMemberN_comma_at hb _ _ _ _ (kBody_eq ▸ hbody) (keyChars _ (by decide))
+      (fun h => key_body h hb)
+      (addc e1 1 _ 8 (by decide)) hnb.notWs
+  have M3 : nextMemberN b e2 0 = ⟨2, e2 + 1, 1, 34, e2 + 8⟩ :=
+    nextMemberN_comma_at hb _ _ _ _ (kName_eq ▸ hname) (keyChars _ (by decide))
+      (fun h => key_name h hb)
+      (addc e2 1 _ 8 (by decide)) hnn.notWs
+  have M4 : nextMemberN b e3 0 = ⟨2, e3 + 1, 1, 61, e3 + 8⟩ :=
+    nextMemberN_comma_at hb _ _ _ _ (kType_eq ▸ htype) (keyChars _ (by decide))
+      (fun h => key_type h hb)
+      (addc e3 1 _ 8 (by decide)) hnt.notWs
+  have M5 : ∀ w, nextMemberN b e4 w = ⟨1, e4, w, 0, 0⟩ := fun w => nextMemberN_close' e4 w hcl hc
+  -- the numbers
+  have te1 : (e1 + 1).toNat = e1.toNat + 1 := toNat_add_ofNat e1 1 (by omega)
+  have te8 : (e1 + 8).toNat = e1.toNat + 8 := toNat_add_ofNat e1 8 (by omega)
+  have te21 : (e2 + 1).toNat = e2.toNat + 1 := toNat_add_ofNat e2 1 (by omega)
+  have te28 : (e2 + 8).toNat = e2.toNat + 8 := toNat_add_ofNat e2 8 (by omega)
+  have te31 : (e3 + 1).toNat = e3.toNat + 1 := toNat_add_ofNat e3 1 (by omega)
+  have te38 : (e3 + 8).toNat = e3.toNat + 8 := toNat_add_ofNat e3 8 (by omega)
+  have s2 : slotNatN b (e1 + 1) (e1 + 8) = e2 :=
+    hnb.slot hb _ (by rw [UInt64.lt_iff_toNat_lt, te1, te8]; omega)
+  have s3 : slotNatN b (e2 + 1) (e2 + 8) = e3 :=
+    hnn.slot hb _ (by rw [UInt64.lt_iff_toNat_lt, te21, te28]; omega)
+  have s4 : slotNatN b (e3 + 1) (e3 + 8) = e4 :=
+    hnt.slot hb _ (by rw [UInt64.lt_iff_toNat_lt, te31, te38]; omega)
+  have l1 : v + 1 < e1 := by
+    have t15 : (v + 14 + 1).toNat = v.toNat + 15 := by
+      rw [toNat_add_one _ (by omega), t14]
+    have := hbi.toNat (by omega)
+    rw [UInt64.lt_iff_toNat_lt, hv1]; omega
+  have rb := hnb.rd hb
+  have rn := hnn.rd hb
+  have rt := hnt.rd hb
+  refine ⟨?_, ?_, ?_⟩
+  · unfold binderN objEntryN
+    rw [ite_eq_left ⟨hv, h0⟩]
+    rw [objN_step _ _ _ b (v + 1) 1 0 e1 1 (by rw [M1]; simp) (by rw [M1]; simp)
+      (by rw [M1]; simp [binderBit]) (by rw [M1]; simp [binderBit])
+      (by rw [M1]; simp [binderVal, hBI]) (by rw [M1]; exact l1) (by rw [M1]; simp [binderBit])]
+    rw [objN_step _ _ _ b e1 0 1 e2 3 (by rw [M2]; simp) (by rw [M2]; simp)
+      (by rw [M2]; simp [binderBit]) (by rw [M2]; simp [binderBit])
+      (by rw [M2]; simp [binderVal, s2]) (by rw [M2, UInt64.lt_iff_toNat_lt, te1]; omega)
+      (by rw [M2]; simp [binderBit])]
+    rw [objN_step _ _ _ b e2 0 3 e3 7 (by rw [M3]; simp) (by rw [M3]; simp)
+      (by rw [M3]; simp [binderBit]) (by rw [M3]; simp [binderBit])
+      (by rw [M3]; simp [binderVal, s3]) (by rw [M3, UInt64.lt_iff_toNat_lt, te21]; omega)
+      (by rw [M3]; simp [binderBit])]
+    rw [objN_step _ _ _ b e3 0 7 e4 15 (by rw [M4]; simp) (by rw [M4]; simp)
+      (by rw [M4]; simp [binderBit]) (by rw [M4]; simp [binderBit])
+      (by rw [M4]; simp [binderVal, s4]) (by rw [M4, UInt64.lt_iff_toNat_lt, te31]; omega)
+      (by rw [M4]; simp [binderBit])]
+    rw [objN_close _ _ _ b e4 0 15 (by rw [M5]), M5]
+    simp
+  · unfold recObjN
+    rw [objRecN_key b _ _ _ (by rw [M1]; simp) (by rw [M1]; simp), M1]
+    simp only [exValN, reduceIte, hBI]
+    rw [ite_eq_left l1, objRecN_key b _ _ _ (by rw [M2]; simp) (by rw [M2]; simp), M2]
+    simp only [exValN, numKey, show (6 : Word) ≠ 5 by decide, show (6 : Word) ≠ 37 by decide,
+      show (6 : Word) ≠ 64 by decide, reduceIte, true_or, or_true, s2]
+    rw [ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, te1]; omega), rb,
+      objRecN_key b _ _ _ (by rw [M3]; simp) (by rw [M3]; simp), M3]
+    simp only [exValN, numKey, show (34 : Word) ≠ 5 by decide, show (34 : Word) ≠ 37 by decide,
+      show (34 : Word) ≠ 64 by decide, reduceIte, true_or, or_true, s3]
+    rw [ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, te21]; omega), rn,
+      objRecN_key b _ _ _ (by rw [M4]; simp) (by rw [M4]; simp), M4]
+    simp only [exValN, numKey, show (61 : Word) ≠ 5 by decide, show (61 : Word) ≠ 37 by decide,
+      show (61 : Word) ≠ 64 by decide, reduceIte, true_or, or_true, s4]
+    rw [ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, te31]; omega), rt,
+      objRecN_close b _ _ _ (by rw [M5]), M5]
+    simp [objPut]
+  · have t15 : (v + 14 + 1).toNat = v.toNat + 15 := by
+      rw [toNat_add_one _ (by omega), t14]
+    have := hbi.toNat (by omega)
+    omega
+
+/-! ## Lambda and pi lines -/
+
+open L.Scan.Records (binderN) in
+open L.Front.Fields in
+/-- **A lambda line** scans, and its fields are the expression record `(11, idx, t, bd, bd)`. -/
+theorem lamLine_sound (hb : b.size < 2 ^ 63) {i nx idx t bd : Word}
+    (h : LamLine b i nx idx t bd) :
+    LineOK b i nx ∧ (recLineN b (i + 1)).pl = 0 ∧ exprLineN b (i + 1) = ⟨11, idx, t, bd, bd⟩ := by
+  obtain ⟨hhd, hni, hlam, hbnd, htl, hnx⟩ := h
+  generalize (numR b (i + 6)).1 = e0 at *
+  have hs : UInt64.size = 2 ^ 64 := rfl
+  have f0 := hhd.fits; have fl := hlam.fits; have ft := htl.fits
+  simp only [show hIe.length = 6 from rfl, show kLam.length = 8 from rfl,
+    show kEnd2.length = 3 from rfl] at f0 fl ft
+  obtain ⟨ni1, ni2, ni3⟩ := hni.lt_size hb
+  have p8 : e0 + 8 = e0 + 7 + 1 := (addc e0 7 1 8 (by decide)).symm
+  rw [p8] at hbnd htl hnx
+  have t0 : (e0 + 7).toNat = e0.toNat + 7 := toNat_add_ofNat e0 7 (by omega)
+  have q7 : byteW b (e0 + 7) = 123 := (hlam.bw hb 7 (by decide)).trans (by decide)
+  have h4lt : bE4 b (e0 + 7 + 1) < UInt64.ofNat b.size := by simpa using lt_size_of_lit htl hb 0 (by decide)
+  have h4c : byteW b (bE4 b (e0 + 7 + 1)) = 125 := (htl.bw0 hb (by decide)).trans (by decide)
+  obtain ⟨hB, hO, hlt4⟩ := bndObj_sound hb hbnd (by
+    rw [UInt64.lt_iff_toNat_lt, t0, UInt64.toNat_ofNat_of_lt' (by omega)]; omega) q7 h4lt h4c
+  generalize bE4 b (e0 + 7 + 1) = e4 at *
+  generalize (numR b (bE2 b (e0 + 7 + 1) + 8)).2 = nm at *
+  subst hnx
+  have f4 := L.Scan.lt_of_lt_ofNat h4lt
+  have t6 : (i + 6).toNat = i.toNat + 6 := toNat_add_ofNat i 6 (by omega)
+  have t1 : (i + 1).toNat = i.toNat + 1 := toNat_add_ofNat i 1 (by omega)
+  have te1 : (e0 + 1).toNat = e0.toNat + 1 := toNat_add_ofNat e0 1 (by omega)
+  have t41 : (e4 + 1).toNat = e4.toNat + 1 := toNat_add_ofNat e4 1 (by omega)
+  -- the members
+  have k1 : LitAt b (i + 1) (keyLit yIe) := hhd.sub hb 1 5 (by decide) _ (by decide)
+  have M1 : nextMemberN b (i + 1) 1 = ⟨2, i + 1, 1, 18, i + 6⟩ :=
+    nextMemberN_at hb _ _ _ _ _ (by decide) k1 (keyChars _ (by decide)) (key_ie k1 hb)
+      (addc i 1 _ 6 (by decide)) hni.notWs
+  have M2 : nextMemberN b e0 0 = ⟨2, e0 + 1, 1, 29, e0 + 7⟩ :=
+    nextMemberN_comma_at hb _ _ _ _ (hlam.take 7 (by decide) _ (by decide))
+      (keyChars _ (by decide)) (fun h => key_lam h hb) (addc e0 1 _ 7 (by decide))
+      (by rw [q7]; decide)
+  have M3 : ∀ w, nextMemberN b (e4 + 1) w = ⟨1, e4 + 1, w, 0, 0⟩ := fun w =>
+    nextMemberN_close' _ w (lt_size_of_lit htl hb 1 (by decide))
+      ((htl.bw hb 1 (by decide)).trans (by decide))
+  rw [t6] at ni1 ni3
+  have s0 : slotNatN b (i + 1) (i + 6) = e0 :=
+    hni.slot hb _ (by rw [UInt64.lt_iff_toNat_lt, t1, t6]; omega)
+  have hS1 : L.Scan.Line.lineStepN b 18 (i + 1) (i + 6) 0 0 = (e0, 3, 0) := by
+    rw [L.Scan.Line.lineStepN_idx b 18 _ _ _ _ (by decide), s0,
+      ite_eq_left ⟨rfl, by rw [UInt64.lt_iff_toNat_lt, t1]; omega⟩]
+    rfl
+  have hS2 : L.Scan.Line.lineStepN b 29 (e0 + 1) (e0 + 7) 3 0 = (e4 + 1, 3, 3) := by
+    rw [L.Scan.Line.lineStepN_pay b 29 _ _ _ _ (by decide) (by decide) (by decide),
+      L.Scan.Line.lineKind_29, L.Scan.Line.lineVal_29, hB,
+      ite_eq_left ⟨by decide, rfl, by rw [UInt64.lt_iff_toNat_lt, te1, t41]; omega⟩]
+  have hL : lineLoopN b (i + 1) = e4 + 1 + 1 := by
+    unfold lineLoopN
+    rw [L.Scan.Line.lineN_step b _ _ _ _ (by rw [M1]; simp) (by rw [M1]; simp), M1]
+    simp only
+    rw [hS1]
+    simp only
+    rw [ite_eq_right (by intro h; rw [h] at ni3; simp at ni3)]
+    rw [L.Scan.Line.lineN_step b _ _ _ _ (by rw [M2]; simp) (by rw [M2]; simp), M2]
+    simp only
+    rw [hS2]
+    simp only
+    rw [ite_eq_right (by intro h; have := congrArg UInt64.toNat h; rw [t41] at this; simp at this)]
+    rw [L.Scan.Line.lineN_close b _ _ _ _ (by rw [M3]), M3]
+    simp
+  have e43 : e4 + 3 = e4 + 1 + 2 := (addc e4 1 2 3 (by decide)).symm
+  have e42 : e4 + 1 + 1 = e4 + 2 := addc e4 1 1 2 (by decide)
+  refine ⟨e43 ▸ lineOK_of hb i (e4 + 1) (by simpa using lt_size_of_lit hhd hb 0 (by decide))
+    ((hhd.bw0 hb (by decide)).trans (by decide)) hL
+    (by rw [UInt64.lt_iff_toNat_lt, toNat_add_one _ (by omega), t41]; omega)
+    (by rw [e42]; exact lt_size_of_lit htl hb 2 (by decide))
+    (by rw [e42]; exact (htl.bw hb 2 (by decide)).trans (by decide)), ?_, ?_⟩
+  · unfold recLineN
+    rw [recN_key b _ _ _ (by rw [M1]; simp) (by rw [M1]; simp), M1]
+    simp only [show (18 : Word) = 21 ∨ (18 : Word) = 19 ∨ (18 : Word) = 18 by decide, reduceIte,
+      or_true]
+    rw [s0, ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, t1]; omega),
+      recN_key b _ _ _ (by rw [M2]; simp) (by rw [M2]; simp), M2]
+    simp [Fld.none]
+  · have r0 := hni.rd hb
+    have hE1 : exVN b 18 (i + 1) (i + 6) = ⟨e0, 0, idx, 0, 0⟩ := by simp [exVN, s0, r0]
+    have hE2 : exVN b 29 (e0 + 1) (e0 + 7) = ⟨e4 + 1, 11, t, bd, bd⟩ := by
+      simp [exVN, hO, objFld]
+    unfold exprLineN
+    rw [exprN_key b _ _ _ (by rw [M1]; simp) (by rw [M1]; simp), M1]
+    simp only
+    rw [hE1]
+    simp only
+    rw [ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, t1]; omega)]
+    rw [exprN_key b _ _ _ (by rw [M2]; simp) (by rw [M2]; simp), M2]
+    simp only
+    rw [hE2]
+    simp only
+    rw [ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, te1, t41]; omega),
+      exprN_close b _ _ _ (by rw [M3])]
+    simp [fldPut, Fld.none]
+
+open L.Scan.Records (binderN) in
+open L.Front.Fields in
+/-- **A pi line** scans, and its fields are the expression record `(12, idx, t, bd, bd)`. -/
+theorem forallLine_sound (hb : b.size < 2 ^ 63) {i nx idx t bd : Word}
+    (h : ForallLine b i nx idx t bd) :
+    LineOK b i nx ∧ (recLineN b (i + 1)).pl = 0 ∧ exprLineN b (i + 1) = ⟨12, idx, t, bd, bd⟩ := by
+  obtain ⟨hhd, hk, hbnd, hie, hni, htl, hnx⟩ := h
+  have hs : UInt64.size = 2 ^ 64 := rfl
+  have f0 := hhd.fits; have fk := hk.fits
+  simp only [show hForall.length = 8 from rfl, show kForallE.length = 4 from rfl] at f0 fk
+  have p12 : i + 8 + 4 = i + 11 + 1 := by
+    rw [UInt64.add_assoc, UInt64.add_assoc]; rfl
+  rw [p12] at hbnd hie hni htl hnx
+  have t8 : (i + 8).toNat = i.toNat + 8 := toNat_add_ofNat i 8 (by omega)
+  have t11 : (i + 11).toNat = i.toNat + 11 := toNat_add_ofNat i 11 (by omega)
+  have q11 : byteW b (i + 11) = 123 := by
+    have := hk.bw hb 3 (by decide)
+    rw [show i + 8 + UInt64.ofNat 3 = i + 11 by rw [UInt64.add_assoc]; rfl] at this
+    exact this.trans (by decide)
+  have h4lt : bE4 b (i + 11 + 1) < UInt64.ofNat b.size := by
+    simpa using lt_size_of_lit hie hb 0 (by decide)
+  have h4c : byteW b (bE4 b (i + 11 + 1)) = 125 := (hie.bw0 hb (by decide)).trans (by decide)
+  obtain ⟨hB, hO, hlt4⟩ := bndObj_sound hb hbnd (by
+    rw [UInt64.lt_iff_toNat_lt, t11, UInt64.toNat_ofNat_of_lt' (by omega)]; omega) q11 h4lt h4c
+  generalize bE4 b (i + 11 + 1) = e4 at *
+  generalize (numR b (bE2 b (i + 11 + 1) + 8)).2 = nm at *
+  generalize (numR b (e4 + 7)).1 = e5 at *
+  subst hnx
+  have f4 := L.Scan.lt_of_lt_ofNat h4lt
+  have f3 := hie.fits; have f5 := htl.fits
+  simp only [show kIe.length = 7 from rfl, show kEnd1.length = 2 from rfl] at f3 f5
+  obtain ⟨ni1, ni2, ni3⟩ := hni.lt_size hb
+  have t1 : (i + 1).toNat = i.toNat + 1 := toNat_add_ofNat i 1 (by omega)
+  have t41 : (e4 + 1).toNat = e4.toNat + 1 := toNat_add_ofNat e4 1 (by omega)
+  have t42 : (e4 + 2).toNat = e4.toNat + 2 := toNat_add_ofNat e4 2 (by omega)
+  have t47 : (e4 + 7).toNat = e4.toNat + 7 := toNat_add_ofNat e4 7 (by omega)
+  have t51 : (e5 + 1).toNat = e5.toNat + 1 := toNat_add_ofNat e5 1 (by omega)
+  rw [t47] at ni1 ni3
+  -- the members
+  have k1 : LitAt b (i + 1) (keyLit yForallE) :=
+    ((hhd.sub hb 1 7 (by decide) _ rfl).append (show LitAt b (i + 1 + UInt64.ofNat 7)
+      (kForallE.take 3) by
+        rw [show i + 1 + UInt64.ofNat 7 = i + 8 by rw [UInt64.add_assoc]; rfl]
+        exact hk.take 3 (by decide) _ rfl) hb).take 10 (by decide) _ (by decide)
+  have M1 : nextMemberN b (i + 1) 1 = ⟨2, i + 1, 1, 14, i + 11⟩ :=
+    nextMemberN_at hb _ _ _ _ _ (by decide) k1 (keyChars _ (by decide)) (key_forallE k1 hb)
+      (addc i 1 _ 11 (by decide)) (by rw [q11]; decide)
+  have k2 : LitAt b (e4 + 1) (44 :: keyLit yIe) := hie.sub hb 1 6 (by decide) _ (by decide)
+  have M2 : nextMemberN b (e4 + 1) 0 = ⟨2, e4 + 1 + 1, 1, 18, e4 + 7⟩ :=
+    nextMemberN_comma_at hb _ _ _ _ k2 (keyChars _ (by decide)) (fun h => key_ie h hb)
+      (by rw [UInt64.add_assoc, UInt64.add_assoc]; rfl) hni.notWs
+  have e42 : e4 + 1 + 1 = e4 + 2 := addc e4 1 1 2 (by decide)
+  rw [e42] at M2
+  have M3 : ∀ w, nextMemberN b e5 w = ⟨1, e5, w, 0, 0⟩ := fun w =>
+    nextMemberN_close' _ w (by simpa using lt_size_of_lit htl hb 0 (by decide))
+      ((htl.bw0 hb (by decide)).trans (by decide))
+  have s5 : slotNatN b (e4 + 2) (e4 + 7) = e5 :=
+    hni.slot hb _ (by rw [UInt64.lt_iff_toNat_lt, t42, t47]; omega)
+  have hS1 : L.Scan.Line.lineStepN b 14 (i + 1) (i + 11) 0 0 = (e4 + 1, 0, 3) := by
+    rw [L.Scan.Line.lineStepN_pay b 14 _ _ _ _ (by decide) (by decide) (by decide),
+      L.Scan.Line.lineKind_14, L.Scan.Line.lineVal_14, hB,
+      ite_eq_left ⟨by decide, rfl, by rw [UInt64.lt_iff_toNat_lt, t1, t41]; omega⟩]
+  have hS2 : L.Scan.Line.lineStepN b 18 (e4 + 2) (e4 + 7) 0 3 = (e5, 3, 3) := by
+    rw [L.Scan.Line.lineStepN_idx b 18 _ _ _ _ (by decide), s5,
+      ite_eq_left ⟨rfl, by rw [UInt64.lt_iff_toNat_lt, t42]; omega⟩]
+    rfl
+  have hL : lineLoopN b (i + 1) = e5 + 1 := by
+    unfold lineLoopN
+    rw [L.Scan.Line.lineN_step b _ _ _ _ (by rw [M1]; simp) (by rw [M1]; simp), M1]
+    simp only
+    rw [hS1]
+    simp only
+    rw [ite_eq_right (by intro h; have := congrArg UInt64.toNat h; rw [t41] at this; simp at this)]
+    rw [L.Scan.Line.lineN_step b _ _ _ _ (by rw [M2]; simp) (by rw [M2]; simp), M2]
+    simp only
+    rw [hS2]
+    simp only
+    rw [ite_eq_right (by intro h; rw [h] at ni3; simp at ni3)]
+    rw [L.Scan.Line.lineN_close b _ _ _ _ (by rw [M3]), M3]
+    simp
+  refine ⟨lineOK_of hb i e5 (by simpa using lt_size_of_lit hhd hb 0 (by decide))
+    ((hhd.bw0 hb (by decide)).trans (by decide)) hL
+    (by rw [UInt64.lt_iff_toNat_lt, t51]; omega) (lt_size_of_lit htl hb 1 (by decide))
+    ((htl.bw hb 1 (by decide)).trans (by decide)), ?_, ?_⟩
+  · unfold recLineN
+    rw [recN_key b _ _ _ (by rw [M1]; simp) (by rw [M1]; simp), M1]
+    simp [Fld.none]
+  · have r5 := hni.rd hb
+    have hE1 : exVN b 14 (i + 1) (i + 11) = ⟨e4 + 1, 12, t, bd, bd⟩ := by
+      simp [exVN, hO, objFld]
+    have hE2 : exVN b 18 (e4 + 2) (e4 + 7) = ⟨e5, 0, idx, 0, 0⟩ := by simp [exVN, s5, r5]
+    unfold exprLineN
+    rw [exprN_key b _ _ _ (by rw [M1]; simp) (by rw [M1]; simp), M1]
+    simp only
+    rw [hE1]
+    simp only
+    rw [ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, t1, t41]; omega)]
+    rw [exprN_key b _ _ _ (by rw [M2]; simp) (by rw [M2]; simp), M2]
+    simp only
+    rw [hE2]
+    simp only
+    rw [ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, t42]; omega), exprN_close b _ _ _ (by rw [M3])]
     simp [fldPut, Fld.none]
 
 end L.Scan.FastSound
