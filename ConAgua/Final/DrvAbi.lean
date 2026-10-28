@@ -21,7 +21,7 @@ open L L.Compiler
 checked it), entry 1's run of `check` (mode word `3`) ends with result `r₁`, and either
 `r₁ = ACCEPT` or `r₁ = 2^63 + k` (`9223372036854775808 = 2^63`) and entry 2's run from its memory
 (`seqMem m₁ … 0 k`) ends with `ACCEPT`. -/
-def DrvAccepts (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+def DrvAccepts (tab : Tab) (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (b pb : ByteArray) : Prop :=
   b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 3) =
       .ok (rs1, m1) ∧
@@ -33,7 +33,7 @@ def DrvAccepts (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Na
 /-- **What a failing driver run means**: both buffers are below `2^63` bytes, and entry 1's run of
 `check` fails with an error of code `k`, or it returns `2^63 + j` and entry 2's run from its memory
 fails with an error of code `k`. -/
-def DrvErr (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+def DrvErr (tab : Tab) (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (b pb : ByteArray) (k : Word) : Prop :=
   b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
   ((∃ e, L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 3) =
@@ -149,11 +149,8 @@ theorem abiLayout_out {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n p
       · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4; exact hin ⟨h3, h4⟩
       · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hpins ⟨h3, h4⟩
     · simp only [abiLayout_tab] at ha
-      have := tab.wposInv_ltN ha
-      simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4
-      have hle : 2 ^ 35 * (2 + (2 - 2) + tab.wposInv a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + tab.nw) :=
-        by rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
-      omega
+      have := abiLayout_in64_bounds hok ha ⟨h3, h4⟩
+      simp only [abiNeed, hnb, abiSlot] at this; omega
   · intro ⟨h3, h4⟩
     simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4
     omega
@@ -184,8 +181,8 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p mode plo phi out hdrf ctlf hw b pb) ∧
-        (st.data.regs.rdx = 2 → DrvErr p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts tab p mode plo phi out hdrf ctlf hw b pb) ∧
+        (st.data.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
       dm (label abiStartL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hfits := hc.hfits
@@ -209,11 +206,11 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       base + abiNeed tab + 16 < 2 ^ 64 →
       rdW s.dmem (A (base + abiNeed tab)) = some dm.regs.r15 →
       rdW s.dmem (A (base + abiNeed tab + 8)) = some ra → (rdW s.dmem (A rsp0)).isSome →
-      (s.regs.rdx = 0 → s.regs.rax = ACCEPT → DrvAccepts p mode plo phi out hdrf ctlf hw b pb) →
-      (s.regs.rdx = 2 → DrvErr p mode plo phi out hdrf ctlf hw b pb s.regs.rax) →
+      (s.regs.rdx = 0 → s.regs.rax = ACCEPT → DrvAccepts tab p mode plo phi out hdrf ctlf hw b pb) →
+      (s.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb s.regs.rax) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p mode plo phi out hdrf ctlf hw b pb) ∧
-        (st.data.regs.rdx = 2 → DrvErr p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts tab p mode plo phi out hdrf ctlf hw b pb) ∧
+        (st.data.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
         s (label abiDrvDoneL) := by
     intro s h15 hsp hbp h14 hbx h12 h13 hfitS hw15 hwra hmsp hacc herr
     rw [Code.label (i := 29) hL3 rfl]
