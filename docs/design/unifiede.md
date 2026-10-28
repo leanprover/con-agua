@@ -1486,7 +1486,134 @@ a second series, `times1b.txt`, the first being noisy for `DeclDivGateT2`):
 | `Arena/DeclDefnT`, `Verdict/DeclDefnE`, `TopE` | 4.72 | 4.37 | |
 | **sum** | **44.4** | **34.2** | **−23 %** |
 
-### 3.21 Batch 3b, third landing (`target_k53_args`, `target_k53_heads`, `target_k53`)
+### 3.21 Batch 3a, second landing (`class_stream_recs`, `check_sum_tele_slow`, `check_sum_tele`)
+
+The two depth-2 functions batch 2b left (their callee `check_constant_val` is batch 2a's) and
+their one caller `check_sum_tele` (depth 3, the same file):
+
+| function | before: ok refinement + error claim | after | change |
+|---|---|---|---:|
+| `check_sum_tele_slow` | `ctsW_okC` 131 + `checkSumTeleSlow_claim` 146 = 277 | `cts_ref` 120 + `CtsPost` 11 + `CtsG` 2 = 133 | −52 % |
+| `check_sum_tele` | `ctW_okC` 111 + `checkSumTele_claim` 95 + `checkSumTeleE_of` 8 = 214 | `ct_ref` 108 + `checkSumTeleE_of` 9 + `CtProg` 6 = 123 | −43 % |
+| `class_stream_recs` | `csrW_okC` 120 + `csrE_claim` 101 + `classStreamRecs_claim` 14 = 235 | `csr_ref` 107 + `CsrPost` 6 + claim 13 = 126 | −46 % |
+| the three `@[refines]` | 80 | 79 | ±0 |
+| **pairs** | **726** | **382** | **−47 %** |
+
+Also gone: the hand models `csrW`/`csK1–3`/`classStreamRecs_spec`, `ctsW`/`ctsK1–5`/`ctsW_spec`,
+`ctW`/`ctK1–2`/`ctW_spec`, `wtR`; the claim shape `WtE` with `wtE_of`; the files
+`Verdict/IndBWt`, `Arena/IndSumSpec/CtsK5`, `CtsW`, `WtW`. Whole diff of this landing: +395 −1 078
+in 16 files.
+
+* **Models**: `whnf_telescope` and `check_constant_val` by their unified models (`wt_ref`,
+  `ccv_ref`), `intern_sort`, `close_telescope`, `cv_new`, `strip_pis`, `e_view`, `sl_cons` lifted.
+  No wrapper needed (`e_view`'s `r ≠ [] ∧ r = F` post is lifted as is).
+* **`G`**: `VerdictCtxU p` for `class_stream_recs` (`ccv_ref`'s); `CtsG p` (`VerdictCtxU` and
+  `whnf_top`'s `WhnfTopE`) for the two telescope checks. `indArmSpecE_of` (`IndArmTopE`) takes
+  `WhnfTopE` instead of `WtE`; `CcvE` left the hypotheses of `grpE_claim`, `genRecCheckPrep_claim`,
+  `genRecCheck_claim'`, `genRecCheckE_of` (still used by `checkSumCtorsE_of`, `IndBSum3/4`).
+* **Callers keep their statements**: the `@[refines]` theorems (`RefE.triple`), `CheckSumTeleE`
+  (the `err_stmt` the block checks read; `checkSumTeleE_of` is `RefE.run_err` with `hG : CtsG p`),
+  `classStreamRecs_claim` (`RefE.coreSpecE`; `IndBGrp`'s one call site passes `VerdictCtxU`).
+* **Placement**: `csr_ref` in `Arena/IndT/StreamRecs`, `cts_ref`/`ct_ref` in `Arena/IndT/Sum2` (with
+  the lookup bundles `CtsProg`, `CtProg` over `WtProg`); `Verdict/IndBSum2` keeps `CcvE`.
+* **Recipes**: `simp []` for `ctsE` (`finish` fails; `simp [rdW]`, `simp [Cmp.evalW, Cmp.eval]`
+  slightly slower), the default `finish` for `ctE` (`Sum2` 3.8 s against 4.3–4.5 s with `simp []`),
+  `simp [Cmp.evalW, Cmp.eval]` for `csrE` (all recipes 1.4–1.6 s).
+
+Elaboration (as §3.20, `_tmp/unify-b3a/sum-times1.txt`, `sum-times2.txt`; load 21–54):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndT/Sum2` | 1.81 | **3.33** | **slower (+1.5 s)**: `ctsE`, `ctE`, `cts_ref`, `ct_ref` moved in … |
+| `Verdict/IndBSum2` | 3.54 | 0.50 | … from here |
+| `IndSumSpec/WtW`, `CtsW`, `CtsK5`, `Verdict/IndBWt` (deleted) | 3.12 | — | |
+| `Arena/IndT/StreamRecs` | 0.93 | **1.43** | **slower (+0.5 s)**: `csrE`, `csr_ref` moved in … |
+| `Verdict/IndBStream` | 1.50 | 0.63 | … from here |
+| `RecGenSpec/ClassMinorSlot` | 6.66 | 4.20 | `csrW` and its spec gone |
+| `IndSumSpec/DecCVpGrow`, `StructProjArgP` | 13.77 | 11.91 | |
+| `Install3`, `Sum1`, `IndArmE`, `IndArmTopE`, `IndBGrp` | 14.08 | 13.55 | |
+| **sum** | **45.7** | **36.7** | **−20 %** |
+
+Both flagged modules are the new homes of models whose old modules got faster by more.
+
+Batch 3a in all: 7 functions, one model and one refinement each; pairs 891 + 726 = 1 617 →
+435 + 382 = 817 (−49 %); no kit or generator change needed. Not taken, outside §3.1's inventory
+and the batch's families: the knot's own split functions in `DefEqLazyE`, `DefEqSpineE`,
+`DefEqQuickE`, `DefEqEagerE`, `WhnfModels3E`, `InferKnotE`, `InferLeavesE` (ok halves the knot's
+`CoreSpec` slots and `KnotTagged`), the `infer_lams`/`infer_pis` family (`InferBindE`, in the
+inventory at depth 0, unowned), and phase B's `check_pending_go`/`_next` (a twin that reports
+failures as values, like phase A's `install_fold_go`; with the spine, batch 4).
+
+### 3.22 Batch 3c, block checks, first landing (`check_block_ctors`, `check_abs_ctor_sorts_all`, `check_block_positivity`, `check_block_tele(s)`)
+
+The block-check functions of depth 3–5 (§3.1, `Blk*`/`IndsE*`/`PosTopE*`) whose callees are
+migrated or stay `callE`: `check_block_ctors` (3), `check_abs_ctor_sorts_all` (3),
+`check_block_positivity` (4), `check_block_tele` (4), `check_block_teles` (5). The batch-2c
+leftovers of the family (`check_block_doms_at` with `check_struct_doms_at`,
+`check_struct_field_sorts_i(_go)`, `check_sum_ctors`, `check_block_tables(_one)`) are the next landing.
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `check_block_ctors` | `checkBlockCtors_refinesC` 55 (a `Sim` of `ictW`), `checkBlockCtorsE_claim` 38 = 93 | `ict_ref` 33 + `checkBlockCtors_refinesC` 31 + `checkBlockCtorsE_claim` 12 = 76 | −18 % |
+| `check_abs_ctor_sorts_all` | `iaaW_simC` 70, `checkAbsCtorSortsAll_refinesC` 23, `iaaE_claim` 70 = 163 | `iaa_ref` 68 + `checkAbsCtorSortsAll_refinesC` 25 = 93 | −43 % |
+| `check_block_positivity` | `cbposW_okC` 197, `checkBlockPositivity_refinesC` 35, `cbpE_claim` 241, `checkBlockPositivityE_claim` 13 = 486 | `cbp_ref` 213 + `CbpG`/`CbpPost` 14 + `checkBlockPositivity_refinesC` 35 + `checkBlockPositivityE_claim` 10 = 272 | −44 % |
+| `check_block_tele` | `ibtW_simC` 108, `checkBlockTele_refinesC` 16, `cbtE_claim` 94 = 218 | `cbt_ref` 124 + `TeleG`/`TelePost` 8 + `checkBlockTele_refinesC` 18 = 150 | −31 % |
+| `check_block_teles` | `ibtsW_simC` 57, `checkBlockTeles_refinesC` 17, `cbtsE_claim` 71 = 145 | `cbts_ref` 58 + `TelesPost` 7 + `checkBlockTeles_refinesC` 18 = 83 | −43 % |
+| **pairs** | **1 105** | **674** | **−39 %** |
+
+Also gone: the generated ok models `ictW` (the file `IndInstallSpec/Icbo`), `cbposW` with
+`cbpos_spec`, `ibtW`/`ibt_spec`, `ibtsW`/`ibts_spec`, the hand model `iaaW`/`iaaK1–2` with
+`iaa_spec` (the file `IndInstallSpec/IacW`), the `errors` models `ictE`, `iaaE`, `cbpE`, `cbtE`,
+`cbtsE`, the files `Verdict/PosTopE3`, `IndsE2` (with the unused statements `CheckBlockTeleE`,
+`CheckBlockTelesE`, `CheckBlockDomsAtE`) and `IndsE6`. Whole diff against master: +442 −1 087 in 21
+files.
+
+Choices:
+
+* **`G` per function**: `CtorsG p` for `check_block_ctors` (as `check_block_ctors_go`'s; its
+  `block_shape_lps` is lifted); `CheckStructFieldSortsIE p` for `check_abs_ctor_sorts_all` (as
+  `iac_ref`'s); `CbpG p` (`nb : NbG p` for `nest_root`, `csf` for the abstract sorts) for
+  `check_block_positivity`; `TeleG p` (`ccv : CheckConstantValE p`, `sum : CheckSumTeleE p`) for
+  the formers. `err_stmt CheckConstantValE` moved from `Verdict/IndA5` to `Verdict/IndBE` (beside
+  `CheckSumTeleE`): `IndA5` is above `Install3`, `IndBE` is not, and `Install3` now imports it.
+* **Callees read through their runs**: `check_block_positivity` calls `check_abs_ctor_sorts_all`
+  through `callE` (its ok half needs the call's frame for the walk memos, `PosMR.ofClosed`, which
+  takes the run), `check_block_tele` calls `check_constant_val` (`checkConstantVal_absOK` takes the
+  run) and `check_sum_tele` (unified meanwhile by batch 3a, §3.21; its claim `CheckSumTeleE` stays)
+  through `callE`. Their halves come by
+  `RefE.run_ok`/`RefE.run_err` or the claims in `G`. The callees outside the verdict closure are
+  lifted by `callW_spec` (`block_nest_ctx`, `pin_word`, `lvl_eq_true`, `strip_pis`, `rec2`, …), so the
+  ok proofs keep their `callW` steps unchanged.
+* **Posts**: `check_block_ctors` ends in `check_block_ctors_go` and shares `IcbgPost`;
+  `check_abs_ctor_sorts_all` shares `IacPost` (now with the core step); new `CbpPost`, `TelePost`,
+  `TelesPost`. The `@[refines]` theorems keep their statements (`RefE.triple`); the claims the spine
+  still takes (`CheckBlockCtorsE`, `CheckBlockPositivityE`) are `RefE.run_err` one-liners, and
+  `check_block_inds`' claim (`IndsE7`) reads `cbt_ref`/`cbts_ref` through the runs.
+* **Recipes**: the default `finish` for `ictE`, `iaaE`, `cbtE`, `cbtsE` (`cbtE`/`cbtsE`: at parity
+  with `simp [rdW]`, 2.8–2.9 s for `Install3` either way); `simp []` for `cbpE` (the default fails).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+d4f85701, load 18–54, `_tmp/unify-b3c-blk/timesA.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndT/Install3` | 0.92 | **3.07** | **slower (+2.2 s)**: `cbtE`, `cbtsE` and their refinements moved in … |
+| `Verdict/IndsE1`, `IndsE2`, `IndsE6` (two deleted) | 7.40 | 3.94 | … from here; the four 8.3 → 7.0 |
+| `Arena/IndT/Positivity` | 3.50 | **4.33** | **slower (+0.8 s)**: `cbpE` moved in (`simp []`) … |
+| `Verdict/PosTopE1`, `PosTopE3` (deleted), `PosTopE5`, `Arena/IndInstallSpec/Pos3Init` | 15.82 | 8.71 | … from here; the five 19.3 → 13.0 |
+| `Arena/IndT/Install7` | 4.35 | 4.79 | `ictE` moved in; with `BlkE1`, `Icbo` (deleted) 6.5 → 5.5 |
+| `Verdict/BlkE1`, `Arena/IndInstallSpec/Icbo` (deleted) | 2.16 | 0.70 | |
+| `Arena/IndT/Install6`, `IndInstallSpec/IacW` (deleted) | 5.52 | 1.40 | `iaaW` and `iaa_spec` gone |
+| `InstallSimCall`, `InstallRec2Tele` | 3.22 | 1.31 | `ibt_spec`, `ibts_spec` gone |
+| `Verdict/IndsE7`, `IndA5`, `IndBE` | 3.65 | 3.67 | |
+| **sum (19 modules)** | **46.5** | **31.9** | **−31 %** |
+
+The flagged modules are the new homes of the moved models; each family is faster in all. For the
+kit: a lemma from a unified model's ok value back to the call's run (§3.13) would let
+`check_block_positivity` and `check_block_tele` list `iaaE` and the `check_constant_val` model as
+unified callees.
+
+### 3.23 Batch 3b, third landing (`target_k53_args`, `target_k53_heads`, `target_k53`)
 
 The last three functions of batch 3b, above `target_class_match` (§2). `target_k53_args` had a
 hand error model (`tkaE`, "the generator's step `grind` fails") and its claim was a hypothesis
