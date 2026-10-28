@@ -359,3 +359,26 @@ then a separate follow-up if the profile shows a hot spot worth a leaf.
 validator's walk remains with the values read once), so `Init` near 243 G, above the fast path's
 231 G: the speed beyond con-ron is the later compiler step (registers for the locals of non-leaf
 functions), for which the loops are kept as small functions over few locals.
+
+### 7.1 Landed: the single pass
+
+`front_line` = `skip_ws`, `line_rec` (`Front/LineRec.lean`: `line_rec` over `sub_rec`,
+`sub_bit`, `sub_val`), `skip_ws`, then `apply_dline`/`apply_rec`/`apply_expr`. The models
+`lineRecN`/`subN` are proved equal to the validator's `lineN`/`objN` and to the record passes'
+`recN`/`exprN` (`Front/LineRecLink.lean`, `frontLineW_eq`), so `frontLine_spec` and the
+end-to-end theorem are unchanged; `frontLineE_claim` (`Verdict/FrontRunE.lean`) is redone over the
+same calls. Deleted: `fast_line`, `L/LitWord.lean`, `Scan/Fast.lean`, `Scan/FastSound.lean`,
+`apply_any`, `rec_line_loop`, `rec_expr_loop`, `expr_val`, `rec_obj`, `obj_val`, `rec_str_name`,
+`rec_num_name` (L code and specs; the models stay); D41 moved to Fixed. `checker.s`: 254 functions
+reachable from `front_run` (was 268).
+
+| measure | base 53ec1c4b | fast path (master) | single pass |
+|---|---:|---:|---:|
+| `Init` instructions | 257.66 G | 231.00 G | 242.98 G |
+| scanner on `Init` (by difference from §1's 28 G) | 28 G | — | ≈ 13.3 G |
+| verdicts (`diff-e2e --refs`, `--jobs 4`) | | | 634/634, 0 refdiff |
+
+Proof lines: `LineRec.lean` 951 + `LineRecLink.lean` 767 new; the fast path's 2018
+(`LitWord` + `Fast` + `FastSound`) and the record passes' L code and specs (~600) gone; `ConAgua/`
+net −814 lines without generated files. Walls not reported: load 55 during the bench (cpus 46–47,
+`_tmp/sfp3/bench_single.log`).
