@@ -5,7 +5,7 @@ import ConAgua.Arena.IndGrindAttr
 /-!
 # GgW
 
-`snocW_words`, `nitWf`.
+`snocW_words`.
 -/
 
 noncomputable section
@@ -36,12 +36,6 @@ theorem snocW_words {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   refine ⟨snocW_stage h hS, hg, by simp [hqt], by simp [hl1], by omega, fun i hi => ?_, ?_⟩
   · rw [hget, ite_eq_right (by omega), ite_eq_left (by omega)]; congr 2; omega
   · rw [hget, ite_eq_left rfl]
-
-/-- `nest_inst_type` at any exec fuel. -/
-def nitWf (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | k + 1, m, vis, ctx, hi, key => nitW cR k m vis ctx hi key
-
 
 end L.Ind
 

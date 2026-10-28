@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndT.PosNit
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
@@ -11,7 +10,8 @@ import ConAgua.Verdict.PosE1N
 `contRef_step`: `nest_cont` refines `nestCont`, both outcomes (`ncE`, unified): the
 container (`nestContainer_spec`), the parameters' locality (`paramsLocal_spec`; the index checks
 and `Quot`'s pin leave the state), the instantiation's former (`nestInstType_spec`), the
-instantiation met (the block's `KeyRef` at `n`); the instantiation's error by `nitE_all`.
+instantiation met (the block's `KeyRef` at `n`); the instantiation by `nit_ref` (both halves
+through the run).
 -/
 
 
@@ -179,25 +179,18 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
       ConRon.Bridge.denoteLs_ext husP hx02,
       ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx02 _ _ hargsP) nPcW.toNat]
   have hP3 : PosMR m3 := hP2.fr (posRecW_mfr hk4)
+  have hsN := nitE_spec p L.nit (n' + 1) ⟨m3, Locals.init []⟩ vis ctx (nhiW m1 ctx pl) key
+  have hN := nit_ref L.nit hcl hIlpf hLC (n' + 1) (hi := nhiW m1 ctx pl) hC3 hA3 rfl ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl hP3
+    (dCtx_ext _ hx02 _ _ hctx) hkey2
   cases h5 : callE p (n' + 1) "nest_inst_type" [vis, ctx, nhiW m1 ctx pl, key] m3 with
   | error e5 =>
     rw [ncE.k_nest_inst_type.eq_1]
-    exact fun hG => ErrClaim.bind_left (nitE_all L hq hIlpf hLC hG.nv dn vis fe env (n' + 1) m3 a2 ctx
-      (nhiW m1 ctx pl) key _ c _ ctxP _ hC3 hA3 rfl ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl hP3
-      (dCtx_ext _ hx02 _ _ hctx) hkey2 _ h5)
+    exact fun hG => ErrClaim.bind_left (RefE.run_err hsN hG.nv hG.nv hN h5)
   | ok q5 =>
   obtain ⟨r4, m4⟩ := q5
-  obtain ⟨s5, hs5, -, hni⟩ := triple_of_callW
-    (nestInstType_spec' p L.nit (realCall p) (realCall_spec p) (n' + 1) ⟨m3, Locals.init []⟩ vis ctx _ _)
-    (callW_of_callE h5)
-  dsimp only at hni
-  rw [hs5] at hni
-  simp only [nitWf] at hni
-  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, -, hA4⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
-    _ rfl c m3 m4 a2 key _ _ (realCall p) (nty_ok L.nit.ty (IlpRd.realC hIlpf hC3)) _
-    (nitLe_realC hcl hLC L.nit.hlf n' _ _ key c _ hC3 hA3 (dCtx_ext _ hx02 _ _ hctx) hkey2) hni hS3
-    ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl hP3
-  simp only [List.headD_cons, List.tail_cons] at hni0 hctyH hctyd
+  obtain ⟨s5, hs5, -, xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, hA4⟩ := RefE.run_ok hsN hN h5
+  dsimp only at hS4 hg4 hni0 hctyH hctyd hP4 hA4
+  rw [hs5] at hS4 hg4 hP4 hA4
   obtain ⟨c4, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (nhiW m1 ctx pl).toNat
     ⟨decI nn, decI us, args.take nPcW.toNat⟩ ⟨nP, usP, argsP.take nPcW.toNat⟩ a2 a4 xi c2.ok
     ⟨dCtx_ext _ hx02 _ _ hctx, hkey2⟩ hrun4

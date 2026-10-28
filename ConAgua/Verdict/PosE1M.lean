@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 import ConAgua.Arena.IndPosSpec.GgW2
+import ConAgua.Verdict.LefRef
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
@@ -56,10 +57,6 @@ l_model nccE_spec (p : Prog) (hL : NbLook p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model nitE_spec (p : Prog) (hf : p.lookup "nest_inst_type" = some nestInstTypeL)
-  fns [hf ↦ nitE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
-
 noncomputable section
 
 l_model ntyE_spec (p : Prog) (hL : NtyLook p)
@@ -70,6 +67,14 @@ l_model ntyE_spec (p : Prog) (hL : NtyLook p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model nitE_spec (p : Prog) (hL : NitLook p)
+  fns [hL.hp ↦ nitE]
+  specs [ntyE_spec p hL.ty n, piBinders_spec' p hL.ty.ha hL.hc2 hL.ty.hv hL.hs hL.hpb n, eView_spec p hL.ty.hv n,
+    nestOccAny_spec p hL.no hL.hoa n, lefE_spec p hL.hlf n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end

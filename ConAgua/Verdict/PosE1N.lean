@@ -4,15 +4,17 @@ import ConAgua.Verdict.PosE
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndRealAbsPos
 /-!
-# `nest_inst_type`: error claim (lane `verdicts-b`, helper `ia2`, fork `kn1`)
+# `nest_inst_type`: one refinement for both outcomes
 
-`nitE_all`: `NitE` (`PosE.lean`), `nitW_ok`'s proof with `nitLe_realC`'s twin side; the level
-comparison's decline by `lef_ref`'s error half (`RefE.run_err`).
+`nit_ref` on the unified model `nitE` (`PosE1M.lean`): `nest_inst_type_ty` by `nty_ref`, `pi_binders`,
+`e_view` and `nest_occ_any` lifted, the level comparison by `lef_ref` (its error assumption
+`NVAt p "lvl_eq_c"` from the no-verdict closure).
 -/
 
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
+open ConRon.Bridge.Inductives (dCtx dKey)
 
 namespace L.Ind
 open L.Arena
@@ -26,121 +28,101 @@ theorem ErrClaim.of_run_eq' {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
   obtain ⟨ce, hce, hc⟩ := h' hk
   exact ⟨ce, h ▸ hce, hc⟩
 
-/-- **`nest_inst_type`'s error claim** (`NitE`). -/
-theorem nitE_all {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
-    (hnv : closedNV p _root_.L.Checker.nvFns = true) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (env : ConLeche.Env) : NitE p dn vis fe env := by
-  intro k m a ctx hi key HI c kk ctxP keyP hC hA hHI hU hk hkin hksl hP hctx hkey er he
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hl := L.nit
-  replace he := triple_of_callE_err (nitE_spec p hl.hp k ⟨m, Locals.init []⟩ vis ctx hi key) he
-    (Err.code_ne_of_cls hk0)
-  dsimp only at he
-  have hS := hC.stage
+/-- What `nest_inst_type` gives besides the twin's result `x` (from `m`): the stage, the growth, the
+count of binders at `r[0]`, the container's type at `r[1]`, the frames, `AbsOK`. -/
+structure NitPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
+    (m' : Mem) (x : Nat × EIdx) (a' : AState) : Prop where
+  stage : StageR dn vis fe m' a'
+  grow : IWGrow m m'
+  count : (r.headD 0).toNat = x.1
+  hty : H (r.tail.headD 0)
+  dec : decI (r.tail.headD 0) = x.2
+  pos : PosMR m'
+  abs : AbsOK m'
+
+/-- **`nest_inst_type` refines `nestInstType`, both outcomes**, under `StageC`: `nest_inst_type_ty`
+(`nty_ref`), `pi_binders`, `e_view` and `nest_occ_any` (lifted), the level comparison (`lef_ref`,
+under `StageC` with the context's and key's denotations). -/
+theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env} (k : Nat) {m : Mem}
+    {a : AState} {ctx hi key : Word} {HI : Nat} {c : NestCtx} {kk : NestKey} {ctxP : ConLeche.NestCtx}
+    {keyP : ConLeche.NestKey} (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hHI : hi.toNat = HI)
+    (hU : UCtx dn vis fe m ctx c) (hk : decNK m key.toNat = some kk) (hkin : NKIn m key.toNat (· < iwTop m))
+    (hksl : NKSl m key) (hP : PosMR m) (hctx : dCtx a.store env.find? c = some ctxP)
+    (hkey : dKey a.store kk = some keyP) :
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (nitE p k m vis ctx hi key)
+      (ConRon.Arena.nestInstType fe c HI kk) a (fun v x a' => NitPost dn vis fe m v.1 v.2 x a') := by
   cases k with
-  | zero => rw [nitE.eq_1] at he; cases he; exact absurd rfl hk0
+  | zero => rw [nitE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ k =>
-  rw [nitE.arm1] at he
-  have hTy := nty_ref hl.ty k (IlpRd.realC hIlpf hC) hS hk hkin hksl
-  cases h1 : callE p k "nest_inst_type_ty" [vis, key] m with
-  | error e1 =>
-    rw [h1, nitE.k_nest_inst_type_ty.eq_1] at he; cases he
-    exact ErrClaim.nestInstType (RefE.run_err (ntyE_spec p hl.ty k ⟨m, Locals.init []⟩ vis key) hnv hnv hTy h1)
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, nitE.k_nest_inst_type_ty.arm1] at he
-  obtain ⟨s1, hs1, -, ty, a5, -, ⟨⟨cv, caps, q, a3, a4, tl, hfind, hvl, hrun3, hrun4, hrun5⟩, hS1, hg1, htyH, htyd,
-    hA1, hM1⟩⟩ := RefE.run_ok (ntyE_spec p hl.ty k ⟨m, Locals.init []⟩ vis key) hTy h1
-  rw [hs1] at hS1 hg1 hA1 hM1
+  have hS := hC.stage
+  rw [nitE.arm1]
+  have hTy := nty_ref L.ty k (IlpRd.realC hIlpf hC) hS hk hkin hksl
+  rcases h1 : ntyE p k m vis key with e1 | ⟨w1, m1⟩ <;> rw [h1] at hTy
+  · rw [nitE.k_nest_inst_type_ty.none]; exact fun hnv => ErrClaim.nestInstType (hTy hnv)
+  rw [nitE.k_nest_inst_type_ty.arm1]
+  obtain ⟨ty, a5, -, ⟨cv, caps, q, a3, a4, tl, hfind, hvl, hrun3, hrun4, hrun5⟩, hS1, hg1, htyH, htyd, hA1, hM1⟩ :=
+    hTy
+  dsimp only at hS1 hg1 htyH htyd hA1 hM1
   -- the twin up to `instPisWith`
   rw [ConRon.Arena.nestInstType.eq_1]
-  refine ErrClaim.bind_right (v := cv) (a₁ := a) (by rw [hfind]; rfl) ?_
-  refine ErrClaim.bind_right (v := some cv.levelParams.length) (a₁ := a) (by rw [viewLsLen_run, hvl]) ?_
-  refine ErrClaim.ite_neg (by simp) ?_
-  refine ErrClaim.bind_right hrun3 ?_
-  refine ErrClaim.bind_right hrun4 ?_
-  refine ErrClaim.bind_right hrun5 ?_
+  refine RefE.bind_right (v := cv) (a₁ := a) (by rw [hfind]; rfl) ?_
+  refine RefE.bind_right (v := some cv.levelParams.length) (a₁ := a) (by rw [viewLsLen_run, hvl]) ?_
+  refine RefE.ite_neg (by simp) ?_
+  refine RefE.bind_right hrun3 ?_
+  refine RefE.bind_right hrun4 ?_
+  refine RefE.bind_right hrun5 ?_
   dsimp only
   -- `pi_binders`
-  cases h2 : callE p k "pi_binders" [CWF, r1.headD 0] m1 with
-  | error e2 =>
-    rw [h2, nitE.k_pi_binders.eq_1] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
-  | ok q2 =>
-  obtain ⟨rs, m2⟩ := q2
-  rw [h2, nitE.k_pi_binders.arm1] at he
-  obtain ⟨s2, hs2, -, hpb, hrs⟩ := triple_of_callW
-    (piBinders_spec p hl.ty.ha hl.hc2 hl.ty.hv hl.hs hl.hpb k ⟨m1, Locals.init []⟩ CWF _) (callW_of_callE h2)
-  dsimp only at hpb
-  rw [hs2] at hpb
+  rcases hpb : piBW k m1 CWF w1 with _ | ⟨rs, m2⟩
+  · rw [liftE_none, nitE.k_pi_binders.none]; exact RefE.of_cls0 rfl
+  rw [liftE_some]
   obtain ⟨bs, e', hrunpb, hdecbs, hresH, hresd, hS2, hg2, hbsb⟩ := piBW_cwf hpb hS1 htyH
   have hrunpb' : (ConRon.Arena.piBinders coreWalkFuel ty).run a5 = .ok ((bs, e'), a5) := htyd ▸ hrunpb
-  refine ErrClaim.bind_right hrunpb' ?_
+  refine RefE.bind_right hrunpb' ?_
   dsimp only
-  have hg2' : rs.tail.tail.headD 0 = rs.getD 2 0 := by rw [hrs]; rfl
-  have hg1' : rs.tail.headD 0 = rs.getD 1 0 := by rw [hrs]; rfl
-  rw [hg2', hg1'] at he
+  have hg2' : rs.tail.tail.headD 0 = rs.getD 2 0 := by rcases rs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
+  have hg1' : rs.tail.headD 0 = rs.getD 1 0 := by rcases rs with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
   -- `e_view`
-  cases h3 : callE p k "e_view" [rs.getD 2 0] m2 with
-  | error e3 =>
-    rw [h3, nitE.k_e_view.eq_1] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
-  | ok q3 =>
-  obtain ⟨rv, m2'⟩ := q3
-  obtain ⟨s3, hs3, hm3, hv0, hrv⟩ := triple_of_callW (eView_spec p hl.ty.hv k ⟨m2, Locals.init []⟩ _)
-    (callW_of_callE h3)
-  have hm2' : m2' = m2 := by rw [← hs3, hm3]
-  dsimp only at hrv
-  subst hm2' hrv
-  rw [h3] at he
-  obtain ⟨v, hview, hvr⟩ := eViewW_ok m2' a5 hS2.1.arena.1 (rs.getD 2 0) hv0
+  by_cases hv0 : eViewW m2 (rs.getD 2 0) = []
+  · rw [nitE.k_pi_binders.arm1 _ _ _ _ _ _ _ (by rw [hg2']; exact hv0)]; exact RefE.of_cls0 rfl
+  obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a5 hS2.1.arena.1 (rs.getD 2 0) hv0
   have hview' : (view e').run a5 = .ok (v, a5) := view_run _ _ _ (hresd ▸ hview)
-  refine ErrClaim.bind_right hview' ?_
-  by_cases hv2 : (eViewW m2' (rs.getD 2 0)).headD 0 ≠ 2
-  · rw [nitE.k_e_view.abort1 _ _ _ _ _ _ _ _ _ hv2] at he; cases he
+  refine RefE.bind_right hview' ?_
+  by_cases hv2 : (eViewW m2 (rs.getD 2 0)).headD 0 ≠ 2
+  · rw [nitE.k_pi_binders.abort1 _ _ _ _ _ _ _ (by rw [hg2']; exact hv0) (by rw [hg2']; exact hv2)]
     cases v with
     | sort u => exact absurd hvr.1 hv2
-    | _ => exact ErrClaim.fail _ _ (by decide)
-  have hv2' : (eViewW m2' (rs.getD 2 0)).headD 0 = 2 := by simpa using hv2
-  rw [nitE.k_e_view.arm1 _ _ _ _ _ _ _ _ _ hv2'] at he
-  obtain ⟨u, rfl, huH, hud⟩ : ∃ u, v = .sort u ∧ ((eViewW m2' (rs.getD 2 0)).getD 1 0).toNat < 2 ^ 32 ∧
-      decI ((eViewW m2' (rs.getD 2 0)).getD 1 0) = u := by
+    | _ => exact fun _ => ErrClaim.fail _ _ (by decide)
+  have hv2' : (eViewW m2 (rs.getD 2 0)).headD 0 = 2 := by simpa using hv2
+  rw [nitE.k_pi_binders.arm2 _ _ _ _ _ _ _ (by rw [hg2']; exact hv0) (by rw [hg2']; exact hv2'), hg2', hg1']
+  obtain ⟨u, rfl, huH, hud⟩ : ∃ u, v = .sort u ∧ ((eViewW m2 (rs.getD 2 0)).getD 1 0).toNat < 2 ^ 32 ∧
+      decI ((eViewW m2 (rs.getD 2 0)).getD 1 0) = u := by
     cases v <;> simp only [ViewR] at hvr <;> (try (rw [hv2'] at hvr; simp at hvr))
     · exact ⟨_, rfl, hvr.1, hvr.2⟩
   dsimp only
   -- `nest_occ_any` over the binders
   have hg12 := hg1.trans hg2
   have hU2 := hU.grow hg12
-  have htop2 : iwTop m2' < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
   obtain ⟨hn2, -, -, -, hnP2, -⟩ := ctx_fields hU2.dec hU2.inn htop2
   have hne2 := ctx_names_end hU2.dec hU2.inn hU2.sl htop2
-  cases h4 : callE p k "nest_occ_any" [rdW (m2'.arr64 IW) ctx, rdW (m2'.arr64 IW) (ctx + 1),
-      rdW (m2'.arr64 IW) (ctx + 4), hi, rs.headD 0, rs.getD 1 0] m2' with
-  | error e4 =>
-    rw [h4, nitE.k_nest_occ_any.eq_1] at he; cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
-  | ok q4 =>
-  obtain ⟨r3, m3⟩ := q4
-  obtain ⟨s4, hs4, -, hoa⟩ := triple_of_callW (nestOccAny_spec p hl.no hl.hoa k ⟨m2', Locals.init []⟩ _ _ _ _ _ _)
-    (callW_of_callE h4)
-  dsimp only at hoa
-  rw [hs4] at hoa
-  rw [h4] at he
-  obtain ⟨b, hrunoa, hS3, hg3, hr3, hP3⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m2' m3 a5 _ _ bs _ hoa hS2
-    hn2 hne2 hdecbs (fun j hj => by omega)
-    ((hP.fr hM1).fr (piBW_mfr _ _ _ _ _ _ hpb))
-  simp only [List.headD_cons] at hr3
+  rcases hoa : noaW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi
+      (rs.headD 0) (rs.getD 1 0) with _ | ⟨r3, m3⟩
+  · rw [liftE_none, nitE.k_nest_occ_any.none]; exact RefE.of_cls0 rfl
+  rw [liftE_some]
+  obtain ⟨b, hrunoa, hS3, hg3, hr3, hP3⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m2 m3 a5 _ _ bs _ hoa hS2
+    hn2 hne2 hdecbs (fun j hj => by omega) ((hP.fr hM1).fr (piBW_mfr _ _ _ _ _ _ hpb))
   rw [hnP2, hHI] at hrunoa
-  refine ErrClaim.bind_right hrunoa ?_
+  refine RefE.bind_right hrunoa ?_
   cases b with
   | true =>
-    rw [nitE.k_nest_occ_any.abort1 _ _ _ _ _ _ _ _ (by rw [hr3]; decide)] at he; cases he
-    exact ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
+    rw [nitE.k_nest_occ_any.abort1 _ _ _ _ _ _ _ _ (by rw [hr3]; decide)]
+    exact fun _ => ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
   | false =>
-  rw [nitE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ (by rw [hr3]; rfl)] at he
-  refine ErrClaim.ite_neg (by simp) ?_
-  -- the stage at the comparison (`nitLe_realC`'s twin side)
+  rw [nitE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ (by rw [hr3]; rfl)]
+  refine RefE.ite_neg (by simp) ?_
+  -- the stage at the comparison
   have hok := hC.check
   obtain ⟨hcn, hlv, hds⟩ := ConRon.Bridge.Inductives.dKey_inv hkey
   obtain ⟨namesP, lpsP, paramsP, sortP, -, -, -, -, hsort, -⟩ := ConRon.Bridge.Inductives.dCtx_inv hctx
@@ -164,30 +146,29 @@ theorem nitE_all {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF
   obtain ⟨-, -, -, -, -, -, -, hsH, hsd, -⟩ := ctx_fields hU3.dec hU3.inn htop3
   have hdv : denoteL a5.store.ls (decI (rdW (m3.arr64 IW) (ctx + 9))) = some sortP := by
     rw [hsd]; exact ConRon.Bridge.denoteL_ext hsort c5.ext
-  have huH' : H ((eViewW m2' (rs.getD 2 0)).tail.headD 0) := by rw [← getD1_eq]; exact huH
-  have hud' : decI ((eViewW m2' (rs.getD 2 0)).tail.headD 0) = u := by rw [← getD1_eq]; exact hud
+  have huH' : H ((eViewW m2 (rs.getD 2 0)).tail.headD 0) := by rw [← getD1_eq]; exact huH
+  have hud' : decI ((eViewW m2 (rs.getD 2 0)).tail.headD 0) = u := by rw [← getD1_eq]; exact hud
   rw [← hud'] at hsL
   rw [← hud', ← hsd]
   -- `lvl_eq_fueled`
-  have hsLE := lefE_spec p hl.hlf k ⟨m3, Locals.init []⟩ ((eViewW m2' (rs.getD 2 0)).tail.headD 0)
-    (rdW (m3.arr64 IW) (ctx + 9))
-  have hRL := lef_ref hq.closed hLC k hC3.stageT huH' hsH hsL hdv
-  cases h5 : callE p k "lvl_eq_fueled" [(eViewW m2' (rs.getD 2 0)).tail.headD 0, rdW (m3.arr64 IW) (ctx + 9)] m3 with
-  | error e5 =>
-    rw [h5, nitE.k_lvl_eq_fueled.eq_1] at he; cases he
-    rw [lefT_bind]
-    exact ErrClaim.bind_left (RefE.run_err hsLE trivial
-      (nvAt_of hnv (_root_.L.Checker.nv_mem (by decide +kernel))) hRL h5)
-  | ok q5 =>
-  obtain ⟨r4, m4⟩ := q5
-  rw [h5] at he
-  obtain ⟨_, -, -, b', a6, -, ⟨hrunle, hr4, -, -, -, -⟩⟩ := RefE.run_ok hsLE hRL h5
-  dsimp only at hr4
-  refine ErrClaim.bind_right hrunle ?_
+  have hRL := lef_ref hcl hLC k hC3.stageT huH' hsH hsL hdv
+  rcases h5 : lefE p k m3 ((eViewW m2 (rs.getD 2 0)).tail.headD 0) (rdW (m3.arr64 IW) (ctx + 9)) with
+    e5 | ⟨w4, m4⟩ <;> rw [h5] at hRL
+  · rw [nitE.k_lvl_eq_fueled.none, lefT_bind]
+    exact RefE.bind_left fun hnv => hRL (nvAt_of hnv (_root_.L.Checker.nv_mem (by decide +kernel)))
+  obtain ⟨b', a6, -, hRp⟩ := hRL
+  dsimp only at hRp
+  refine RefE.bind_right hRp.run ?_
   cases b' with
-  | true => rw [nitE.k_lvl_eq_fueled.arm1 _ _ _ _ _ (by rw [hr4]; decide)] at he; cases he
   | false =>
-    rw [nitE.k_lvl_eq_fueled.abort1 _ _ _ _ _ (by rw [hr4]; rfl)] at he; cases he
-    exact ErrClaim.bind_right (v := false) (a₁ := a6) rfl (ErrClaim.ite_neg (by simp) (ErrClaim.fail _ _ (by decide)))
+    rw [nitE.k_lvl_eq_fueled.abort1 _ _ _ _ _ (by rw [hRp.res]; rfl)]
+    exact fun _ => ErrClaim.bind_right (v := false) (a₁ := a6) rfl
+      (ErrClaim.ite_neg (by simp) (ErrClaim.fail _ _ (by decide)))
+  | true =>
+    rw [nitE.k_lvl_eq_fueled.arm1 _ _ _ _ _ (by rw [hRp.res]; decide)]
+    obtain ⟨hC4, hA4, -⟩ := hRp.stageC env hC3 hA3
+    refine RefE.bind_right (v := true) (a₁ := a6) rfl (RefE.ite_pos (by simp) (RefE.ret rfl ?_))
+    exact ⟨hC4.stage, (hg12.trans hg3).trans hRp.grow, (decHL_length _ hdecbs).symm, htyH, htyd,
+      hP3.fr hRp.mfr, hA4⟩
 
 end L.Ind

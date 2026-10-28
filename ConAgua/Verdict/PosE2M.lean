@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPosSpec.NestGroupCtors
+import ConAgua.Verdict.PosE1M
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
@@ -22,16 +23,16 @@ namespace L.Ind
 
 open L.Arena
 
-l_model nggE_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hc : p.lookup "iw_copy" = some iwCopy)
-    (h2 : p.lookup "rec2" = some rec2) (h4 : p.lookup "rec4" = some rec4)
+noncomputable section
+
+l_model nggE_spec (p : Prog) (hn : NitLook p) (h2 : p.lookup "rec2" = some rec2) (h4 : p.lookup "rec4" = some rec4)
     (hsn : p.lookup "sl_snoc" = some slSnoc) (hf : p.lookup "nest_grow_group" = some nestGrowGroupL)
   fns [hf ↦ nggE list]
-  specs [posRec4_specW p ha h4 n, posRec2_specW p ha h2 n, slSnoc_specW p ha hc hsn n]
+  specs [posRec4_specW p hn.ty.ha h4 n, nitE_spec p hn n, posRec2_specW p hn.ty.ha h2 n,
+    slSnoc_specW p hn.ty.ha hn.hc2 hsn n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-noncomputable section
 
 l_model ngcE_spec (p : Prog) (hl : NtLook p) (hc : p.lookup "iw_copy" = some iwCopy)
     (hap : p.lookup "sl_append" = some slAppend) (hp : p.lookup "nest_group_ctors" = some nestGroupCtorsL)
