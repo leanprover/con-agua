@@ -8,7 +8,6 @@ import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.L.Examples
 import ConAgua.L.For
-import ConAgua.Arena.LdRd
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs (primed)
