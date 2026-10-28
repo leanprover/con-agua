@@ -2464,3 +2464,23 @@ Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, b
 `Arena/WhnfIotaRefine4` is 16 % slower: `pirrE`'s model moved there from `WhnfModels3E` (which got
 1.6 s faster); together −0.6 s. No generator or kit change was needed; `GrowPost.restore` is a
 candidate for `RefECore`.
+
+### 3.35 Retirement, group B, the `whnf` leaves, third landing (`lit_major_to_ctor`, `prepare_major`)
+
+`lmtc_ref` (`Arena/WhnfIotaRefine3`, `G` = `KnotUpToE p n`) and `pm_ref` (`Arena/WhnfIotaRefine4`,
+`G` = `PmG p n`: the knot's slots, the verdict closure, `major_to_ctor`'s claim `MajorToCtorE`,
+moved there from `WhnfPrepE` with `pmTailT`). `prepare_major` calls `lit_major_to_ctor` and
+`major_to_ctor` through `callE`: its arms need their runs for the record pool (`ErecKeptKnot`), so it
+reads `lit_major_to_ctor`'s ok half by `litMajorToCtor_refines'` and its error half by
+`RefE.run_err` over `lmtc_ref`; `pm_m2c`/`pm_lmtc` are the two calls, both outcomes, used at three and
+two sites. `PrepareMajorE` is `pm_ref`'s error half (`WhnfPrepE`, one line); `LitMajorToCtorE` had no
+other user and is gone, with the ok models `lmW`, `pmW`, `pmTail` and the twin's run lemmas
+`prepareMajor_run_*`, `PmTail`, `pmTail_ok`.
+
+| functions | before | after | change |
+|---|---:|---:|---:|
+| `lit_major_to_ctor`, `prepare_major` | ok side 218 + claims 375 = 593 | 315 | **−47 %** |
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 3b31cdfe):
+`Arena/WhnfIotaRefine3` 7.07 → 5.86, `WhnfIotaRefine4` 6.05 → 5.29, `Verdict/WhnfModels3E`
+9.17 → 8.79, `WhnfPrepE` 1.05 → 0.45, `WhnfIotaE` 1.33 → 1.33; sum 24.67 → 21.72 (−12 %).
