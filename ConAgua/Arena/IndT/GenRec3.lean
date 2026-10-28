@@ -565,7 +565,7 @@ theorem genRecCheck_refinesC (P : GrcProg p) {fsR : List FnName}
 
 include hkp henv hV hApd hCrk hIlpf in
 /-- **`check_block_rec` refines `checkBlockRec`, both outcomes** (`gck_ref`, its result repacked). -/
-theorem icr_ref (hp : p.lookup "check_block_rec" = some checkBlockRec)
+theorem icr_ref
     (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR)
     (N : Nat) (hN : N ≤ 2 ^ 62 + 1) (m : Mem) (a : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -651,7 +651,7 @@ theorem checkBlockRec_refinesC (hp : p.lookup "check_block_rec" = some checkBloc
       ConRon.Bridge.CoreStep V env fe a₀
         (AM.st (ConRon.Arena.checkBlockRec V fe ⟨bs⟩ (nested != 0) params tbl rdv ms block cvTas) a₀); ⊤⦄ := by
   refine triple_post (RefE.triple (icrE_spec p P hp (n + 1) s₀ vis pp nested pO pL tO tL rd mO mL bO bL cO cL)
-    (icr_ref hkp henv hV hApd hCrk hIlpf hp P hclR hfR (n + 1) (by omega) s₀.mem a₀ dn vis fe pp nested pO pL tO tL
+    (icr_ref hkp henv hV hApd hCrk hIlpf P hclR hfR (n + 1) (by omega) s₀.mem a₀ dn vis fe pp nested pO pL tO tL
       rd mO mL bO bL cO cL bs params tbl rdv ms cvTas block hC hpre hrb hlp hP hA hkeep hcoh hfe hsh hparP htblP
       hrdP hmsP hcvTP hblkP hMs hT hfRc)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
