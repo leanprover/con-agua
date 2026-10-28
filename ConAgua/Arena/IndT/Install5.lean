@@ -3,11 +3,10 @@ import ConAgua.Arena.IndInstallSpec.IcvgW
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 
 /-!
-# `check_struct_field_sorts_i` and `sl_cons` as callees under `StageC`
+# `check_struct_field_sorts_i` as a callee under `StageC`
 
 `installSimFsortsC`: a call of `check_struct_field_sorts_i` (`fsortsW_okC`) as a `Sim`;
-`installCons_afr`: `sl_cons` keeps the abstraction memos. Used by the block checks
-(`IndT/IdxSorts`, `Install6`, `Install7`).
+Used by the block checks (`IndT/IdxSorts`, `Install6`).
 -/
 
 
@@ -21,12 +20,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-theorem installCons_afr {p : Prog} (hP : CstProg p) {n : Nat} {x o l : Word} {r : List Word}
-    {m m' : Mem} (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (slCons_specW p hP.alloc hP.copy hP.cons n _ x o l) h
-  exact consW_afr hW
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}

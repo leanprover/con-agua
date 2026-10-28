@@ -20,7 +20,7 @@ import ConAgua.Arena.IndInstallSpec.SelProg
 /-!
 # GrcProg
 
-`decIS`, `_root_.L.Arena.Sim.tail`, `idxTail`, `idxOneAM`, `installIdx_cons`, `installIdxTail`, `IdxProg` and the lemmas only they use.
+`decIS`, `idxTail`, `idxOneAM`, `installIdx_cons`, `installIdxTail`, `IdxProg` and the lemmas only they use.
 -/
 
 section
@@ -39,22 +39,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- A pointer to `[off, len]` of level handles. -/
 def decIS (m : Mem) (rp : Nat) : Option (List LIdx) := decAt m (decHL m) rp
-
-/-- **A model-only tail** after the twin's last step. -/
-theorem _root_.L.Arena.Sim.tail {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {body : β → Mem → Option (γ × Mem)}
-    {mo : Option (β × Mem)} {op : AM α} {a : AState} {Q : β → α → Mem → AState → Prop}
-    {R : γ → α → Mem → AState → Prop}
-    (hn : K Option.none = Option.none) (hs : ∀ r m₁, K (some (r, m₁)) = body r m₁)
-    (h : Sim mo op a Q) (h2 : ∀ r x m₁ a₁, Q r x m₁ a₁ → ∀ r' m', body r m₁ = some (r', m') → R r' x m' a₁) :
-    Sim (K mo) op a R := by
-  intro r' m' e
-  cases hmo : mo with
-  | none => rw [hmo, hn] at e; cases e
-  | some x =>
-    obtain ⟨r, m₁⟩ := x
-    rw [hmo, hs] at e
-    obtain ⟨y, a₁, h1, hq⟩ := h r m₁ hmo
-    exact ⟨y, a₁, h1, h2 r y m₁ a₁ hq r' m' e⟩
 
 /-- The index binders' slice: the telescope's tail past `nP`, `(0, 0)` when empty. -/
 def idxTail (nP o l : Word) : Word × Word := if nP < l then (o + nP, l - nP) else (0, 0)

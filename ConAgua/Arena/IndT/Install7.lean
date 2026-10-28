@@ -202,13 +202,13 @@ theorem icbo_ref (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   rcases h2 : recW m1 2 [r1.headD 0, r1.tail.headD 0] with _ | ⟨r2, m2⟩
   · rw [liftE_none, icboE.k_rec2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, icboE.k_rec2.arm1]
-  obtain ⟨hS2, hg2, hd2⟩ := installRec2PSlW decCN_mono h2 hC1.stage hcs1
-  have hd2b := installRec2PSlBW decCN_mono h2 hC1.stage hcs1
+  obtain ⟨hS2, hg2, hd2⟩ := installRec2PSl decCN_mono h2 hC1.stage hcs1
+  have hd2b := installRec2PSlB decCN_mono h2 hC1.stage hcs1
   have hA2 : AbsOK m2 := recW_afr h2 hA1
   rcases h3 : recW m2 2 [r1.tail.tail.headD 0, r1.tail.tail.tail.headD 0] with _ | ⟨r3, m3⟩
   · rw [liftE_none, icboE.k_rec2_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, icboE.k_rec2_2.arm1]
-  obtain ⟨hS3, hg3, hd3⟩ := installRec2PSlW decIS_mono h3 hS2 (hss1.grow decIS_mono hg2)
+  obtain ⟨hS3, hg3, hd3⟩ := installRec2PSl decIS_mono h3 hS2 (hss1.grow decIS_mono hg2)
   have hA3 : AbsOK m3 := recW_afr h3 hA2
   exact RefE.ret hrun1 ⟨hC1.of_pstep hS3 hA3 (PStep.refl hC1.check.state), (hg1.trans hg2).trans hg3,
     hd2.grow (decCNS_mono _) hg3, hd3, hd2b.grow (decCNSB_mono _) hg3, hA3, c1⟩

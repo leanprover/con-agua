@@ -88,7 +88,7 @@ theorem decCNSB_decCNS {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
   exact hd
 
 /-- **A `rec2` header `[off, len]` of a slice decoded below the tops**, decoded below the tops. -/
-theorem installRec2PSlW {α : Type} {f : Mem → Nat → Option α}
+theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
     (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
@@ -112,7 +112,7 @@ theorem installRec2PSlW {α : Type} {f : Mem → Nat → Option α}
   exact hd
 
 /-- **A `rec2` header `[off, len]` of a slice below the tops**, decoded with its bound. -/
-theorem installRec2PSlBW {α : Type} {f : Mem → Nat → Option α}
+theorem installRec2PSlB {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
     (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
@@ -141,28 +141,6 @@ theorem lpsW_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m
   | succ n =>
     simp only [lpsW] at h
     afr_auto h [erToIwW_afr]
-
-/-- **A `rec2` header `[off, len]` of a slice decoded below the tops** (the call's run). -/
-theorem installRec2PSl {p : Prog} (hP : CtorsProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
-    (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
-    (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
-      DecB (fun m => decAt m (fun o l => decPL m (f m) o l) (r.headD 0).toNat) m' xs := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
-  exact installRec2PSlW hf hW hS hx
-
-/-- **A `rec2` header `[off, len]` of a slice below the tops**, decoded with its bound (the call's
-run). -/
-theorem installRec2PSlB {p : Prog} (hP : CtorsProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
-    (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
-    (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
-    DecB (fun m => decAt m (fun o l => decPLB m (f m) o l) (r.headD 0).toNat) m' xs := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
-  exact installRec2PSlBW hf hW hS hx
 
 end L.Ind
 
