@@ -1,5 +1,5 @@
-import ConAgua.Verdict.WhnfModels3E
-import ConAgua.Verdict.WhnfSlotE
+import ConAgua.Arena.WhnfIotaRefine4
+import ConAgua.Arena.DefEqStuck
 /-!
 # `proof_irrel`'s verdict claims (lane `verdicts-b`, helper `k2`)
 
