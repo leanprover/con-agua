@@ -1,4 +1,4 @@
-import ConAgua.Arena.DefEqStuckIrrel
+import ConAgua.Arena.DefEqStuck
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
