@@ -171,7 +171,7 @@ lifted, `validate_ind_d` through its run (the install needs the input bytes kept
 comes from the run). -/
 l_model applyInd_specE (p : Prog) (hf : p.lookup "apply_ind" = some applyInd)
   fns [hf ↦ applyIndE] specs [callW_spec p n "ind_fields", callW_spec p n "install_ind_d"]
-  grind [arena_grind] simp [] unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  grind [arena_grind] unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `validateIndD`'s verdict is the `.ind` line's. -/
 theorem claimR_of_validate {st : StateD} {tys : List IndTypeRec} {cts : List IndCtorRec}
