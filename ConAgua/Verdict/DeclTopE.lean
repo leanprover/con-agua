@@ -46,10 +46,7 @@ theorem checkDeclSpecE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : I
   have hap := hdc.cd.crp.apd
   have hU : UceProg p := ⟨hUL, strLitSupported_core p hdc.knot.knot.str⟩
   have hivE : IvgE p := ivgE_okT hdc.cvg hap hkp hnv hU
-  have hnvP : NVAt p "pin_word" := nvAt_of_closed hnv (by decide +kernel)
   have hnvE : NVAt p "env_push" := nvAt_of_closed hnv (by decide +kernel)
-  have hnvL : NVAt p "lvl_eq_c" := fun _ _ _ _ h =>
-    callE_nv hnv (_root_.L.Checker.nv_mem (f := "lvl_eq_c") (by decide +kernel)) _ _ _ h
   refine checkDecl_errT pins dn ds hdc.cd.cd hdc.andInd.toIbeProg hnv ⟨?_, ?_, ?_, ?_, ?_⟩ hia hFD hLD
   · exact fun cv => checkDeclAxiom_errT pins dn ds hdc.cd.axp hdc.knot hdc.leaf hap hkp hnv hcE hUL hdc.dninj hdc.quotDn cv
   · exact fun cv v hh => checkDeclDefn_errT pins dn ds hdc.cd.arm hdc.cd.val
@@ -57,8 +54,8 @@ theorem checkDeclSpecE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : I
         divGateSpecC hdc.cd.dm hdc.knot hdc.leaf hdc.cd.dgClosed (substC0_of hdc.cd.natSub.toNatSubProg)
           (substCAll_of ⟨hdc.cd.natSub.toNatSubProg, hdc.cd.dm.lSubstConstAll⟩) hkp pins⟩
       hdc.knot hdc.leaf hdc.loop hap hkp hnv hcE hUL hivE hDG hdc.dninj cv v hh
-  · exact fun cv v => checkDeclThm_errT pins dn ds hdc.cd.val hdc.knot hap hkp hnv hcE hUL hivE hnvP hnvL
-      hnvE hdc.cd.th cv v
+  · exact fun cv v => checkDeclThm_errT pins dn ds hdc.cd.val hdc.knot hap hkp hnv hcE hUL hivE
+      hdc.cd.th cv v
   · exact fun cv v => checkDeclOpaque_errT pins dn ds hdc.cd.val hdc.cd.crp hdc.knot hdc.leaf hdc.loop
       hap hkp hnv hcE hUL hivE hnvE hdc.dninj hdc.cd.op cv v
   · exact fun k cv => checkDeclQuot_errT pins dn ds hdc.cd.quot hdc.cd.val.rcp hdc.dninj hdc.quotDn hnv k cv
