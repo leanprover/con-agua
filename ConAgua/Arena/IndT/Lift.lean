@@ -170,4 +170,11 @@ theorem isDefEqC_rsim (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
 
 end entriesC
 
+/-- **`whnf_top`'s error claim under `StageT`** (a core stub, like `CoreStubsE`'s fields). -/
+def WhnfTopE (p : Prog) : Prop :=
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {m : Mem} {a : AState}, StageT dn vis fe m a → ∀ (dep t : Word), H t →
+    ∀ e, callE p n "whnf_top" [vis, dep, t] m = .error e →
+      ErrClaim (whnf V fe checkFuel dep.toNat (decI t)) a e
+
 end L.Ind

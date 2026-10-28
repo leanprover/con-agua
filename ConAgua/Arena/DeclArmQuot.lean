@@ -6,6 +6,7 @@ import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # The quotient pin: `quot_pin_hit(k, q)` (lane `decls3`)
@@ -184,66 +185,6 @@ theorem slotOfW_eq (kw : Word) : slotOfW kw = UInt64.ofNat (quotW kw).slot := by
   unfold slotOfW quotW
   by_cases h1 : kw = 1 <;> by_cases h2 : kw = 2 <;> by_cases h3 : kw = 3 <;> simp_all <;> rfl
 
-section qmodel
-variable (p : Prog)
-
-/-- After `check_basis_decl`. -/
-def cdqK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => some ([r3.headD 0], m3)
-
-/-- After `quot_pin_hit`. -/
-def cdqK2 (n : Nat) (vis ks : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then none
-    else if ks = 0 then cdqK3 (callW p n "check_basis_decl" [vis, 4] m2) else some ([vis], m2)
-
-/-- After `erec_ci`. -/
-def cdqK1 (n : Nat) (vis ks : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => cdqK2 p n vis ks (callW p n "quot_pin_hit" [ks, r1.headD 0 + 1] m1)
-
-/-- **The model of `check_decl_quot(i, vis)`.** -/
-def cdqW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, i, vis =>
-    cdqK1 p n vis (slotOfW (rdW (m.arr64 DECL) (7 + 8 * i))) (erecCiW n m i 0)
-
-section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (i vis ks : Word) (r1 r2 r3 : List Word)
-theorem cdqW_step : cdqW p (n + 1) m i vis =
-    cdqK1 p n vis (slotOfW (rdW (m.arr64 DECL) (7 + 8 * i))) (erecCiW n m i 0) := rfl
-theorem cdqK1_some : cdqK1 p n vis ks (some (r1, m1)) =
-    cdqK2 p n vis ks (callW p n "quot_pin_hit" [ks, r1.headD 0 + 1] m1) := rfl
-theorem cdqK2_some : cdqK2 p n vis ks (some (r2, m2)) =
-    if r2.headD 0 = 0 then none
-    else if ks = 0 then cdqK3 (callW p n "check_basis_decl" [vis, 4] m2) else some ([vis], m2) := rfl
-theorem cdqK3_some : cdqK3 (some (r3, m3)) = some ([r3.headD 0], m3) := rfl
-end arms
-
-grind_pattern [ind_grind] cdqW_step => cdqW p (n + 1) m i vis
-grind_pattern [ind_grind] cdqK1_some => cdqK1 p n vis ks (some (r1, m1))
-grind_pattern [ind_grind] cdqK2_some => cdqK2 p n vis ks (some (r2, m2))
-grind_pattern [ind_grind] cdqK3_some => cdqK3 (some (r3, m3))
-
-set_option maxHeartbeats 1600000 in
-theorem cdq_specW (hp : p.lookup "check_decl_quot" = some checkDeclQuot) (hR : RecProg p)
-    (n : Nat) (s₀ : St) (i vis : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_quot" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ cdqW p n s₀.mem i vis = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkDeclQuot]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecCi_specW p hR n,
-        callW_spec p n "quot_pin_hit", callW_spec p n "check_basis_decl"] <;>
-      finish (gen := 20) [rdW_eq, slotOfW]
-
-end qmodel
-
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- The lookups of the quotient arm. -/
@@ -256,23 +197,38 @@ structure QuotProg (p : Prog) : Prop where
   pa : p.lookup "pin_at" = some pinAtL
   cdq : p.lookup "check_decl_quot" = some checkDeclQuot
 
-/-- **The quotient arm at the stage relation, with a memory invariant `J`** kept by `erec_ci`,
-`quot_pin_hit` and `check_basis_decl` (`cdqW_ok`: `J` trivial; `cdqW_okT`: the core's memos,
-kept by the leaves' frame). -/
-theorem cdqW_gen {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
-    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
+/-- **The model of `check_decl_quot(i, vis)`, both outcomes**: `erec_ci` and `quot_pin_hit`
+(outside the verdict closure) lifted, `check_basis_decl` by its unified model. -/
+l_model checkDeclQuot_specE (p : Prog) (hQ : QuotProg p) (hRp : RecProg p)
+  fns [hQ.cdq ↦ checkDeclQuotE]
+  specs [erecCi_specW p hRp n, qph_specW p hQ.qph n, checkBasisDecl_specE p hQ.basis hQ.pa hQ.cbd n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 400000 simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+theorem checkDecl_quot_shape (pins : List INatOpPinSet) (fe : IFEnv) (k : ConLeche.QuotKind)
+    (cv : IConstantVal) :
+    checkDecl V pins fe (.quotDecl k cv) =
+      (quotPinHit k cv >>= fun b => if b = true then
+        (match k with | .type => checkBasisDecl fe .quotK | _ => pure fe)
+        else fail (.notImplemented (match k with
+          | .sound => "quotient soundness axiom mismatch"
+          | _ => "quotient declaration mismatch"))) := rfl
+
+/-- **`check_decl_quot(i, vis)` refines the quotient arm of `checkDecl`, both outcomes**
+(con-ron's `checkDecl_bridge_quot`): the record against the pinned block's constant at its slot
+(`quot_pin_hit`), then for `Quot` itself the block's install (`cbd_ref`). -/
+theorem cdq_ref {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {i : Word}
     {ds : Array IDeclaration} {pins : List INatOpPinSet} {k : ConLeche.QuotKind}
-    {cv : IConstantVal} (J : Mem → Prop)
-    (hJe : ∀ {k : Nat} {x y : Mem} {rx : List Word}, erecCiW k x i 0 = some (rx, y) → J x → J y)
-    (hJ : ∀ {f : FnName} {k : Nat} {args : List Word} {x y : Mem} {rx : List Word},
-      f ∈ ["quot_pin_hit", "check_basis_decl"] → callW p k f args x = some (rx, y) → J x → J y)
-    (h : cdqW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a) (hJ0 : J m)
+    {cv : IConstantVal} (hS : StageR dn vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a)
     (hN : L.Rom.NamesDn dn a L.Rom.quotNames)
     (hcvD : ∃ c, ConRon.Arena.Frontend.denoteCV a.store cv = some c) :
-    ∃ fe' a', (checkDecl V pins fe (.quotDecl k cv)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' ∧ J m' := by
+    RefE True (checkDeclQuotE p n m i vis) (checkDecl V pins fe (.quotDecl k cv)) a
+      (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
   have hdecl := hD.recs i.toNat hi
   rw [hd] at hdecl
   obtain ⟨-, hcvAt, hk⟩ := hdecl
@@ -281,81 +237,53 @@ theorem cdqW_gen {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Nam
   have hkw : rdW (m.arr64 DECL) (7 + 8 * i) = dw (m.arr64 DECL) i.toNat 6 :=
     rdW_dw _ (by omega) (by decide) (by decide)
   cases n with
-  | zero => simp [cdqW] at h
+  | zero => rw [checkDeclQuotE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
-  rw [cdqW_step, hkw, slotOfW_eq, hk] at h
-  cases h1 : erecCiW n m i 0 with
-  | none => rw [h1] at h; cases h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, cdqK1_some] at h
+  rw [checkDeclQuotE.eq_2, hkw]
+  have hsel : ∀ (kw : Word) (J : Word → Except Err (Word × Mem)),
+      (if kw = 1 then J 0 else if kw = 2 then J 1 else if kw = 3 then J 2 else J 3) =
+        J (slotOfW kw) := by
+    intro kw J; unfold slotOfW
+    by_cases h1 : kw = 1 <;> by_cases h2 : kw = 2 <;> by_cases h3 : kw = 3 <;> simp [h1, h2, h3]
+  rw [hsel (dw (m.arr64 DECL) i.toNat 6) (fun ks => checkDeclQuotE.j1 p n i vis ks m),
+    slotOfW_eq, hk, checkDeclQuotE.j1.arm1, checkDecl_quot_shape]
+  rcases h1 : erecCiW n m i 0 with _ | ⟨r1, m1⟩
+  · rw [liftE_none, checkDeclQuotE.k_erec_ci.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, checkDeclQuotE.k_erec_ci.arm1]
   obtain ⟨hS1, hg1, -, hcv1, htop1⟩ := erecCiW_okA h1 hS hD hi hcvAt
-  have hJ1 : J m1 := hJe h1 hJ0
   have hqb : (r1.headD 0).toNat + 8 < 2 ^ 64 := by
     have := hS1.2.2.1; have := hS1.2.2.2.2.1; omega
   have hq1 : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := toNat_add_small _ 1 (by omega)
   -- `quot_pin_hit`
-  cases h2 : callW p n "quot_pin_hit" [UInt64.ofNat k.slot, r1.headD 0 + 1] m1 with
-  | none => rw [h2] at h; cases h
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, cdqK2_some] at h
-  have hJ2 : J m2 := hJ (by simp) h2 hJ1
-  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (qph_specW p hQ.qph n ⟨m1, Locals.init []⟩ _ _) h2
-  rw [hs2] at hW2
+  rcases h2 : qphW p n m1 (UInt64.ofNat k.slot) (r1.headD 0 + 1) with _ | ⟨r2, m2⟩
+  · rw [liftE_none, checkDeclQuotE.k_quot_pin_hit.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨b, a2, hrun2, hS2, hg2, hd2⟩ :=
-    qphW_ok hQ.canon hQ.rom hW2 hS1 (by rw [hq1]; exact hcv1) hok hN
+    qphW_ok hQ.canon hQ.rom h2 hS1 (by rw [hq1]; exact hcv1) hok hN
   obtain ⟨c, hc⟩ := hcvD
   have hrun2' : quotPinHit k cv a = .ok (b, a2) := hrun2
   obtain ⟨hok2, hx2, -⟩ := ConRon.Bridge.quotPinHit_run hok hc hrun2'
+  refine RefE.bind_right hrun2 ?_
   by_cases z2 : r2.headD 0 = 0
-  · rw [ite_eq_left z2] at h; cases h
-  rw [ite_eq_right z2] at h
+  · rw [checkDeclQuotE.k_quot_pin_hit.abort1 p _ _ _ _ _ z2]
+    have hb : b = false := by rw [← hd2.1]; simpa using z2
+    rw [hb]
+    exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
   have hb : b = true := by rw [← hd2.1]; simpa using z2
-  rw [hb] at hrun2
+  rw [hb]
+  refine RefE.ite_pos rfl ?_
   by_cases ht : UInt64.ofNat k.slot = 0
-  · rw [ite_eq_left ht] at h
+  · rw [checkDeclQuotE.k_quot_pin_hit.arm1 p _ _ _ _ _ z2 ht]
     have hk0 : k = .type := by
       cases k <;> simp_all [ConLeche.QuotKind.slot] <;> exact absurd ht (by decide)
     subst hk0
-    cases h3 : callW p n "check_basis_decl" [vis, 4] m2 with
-    | none => rw [h3] at h; cases h
-    | some rm3 =>
-    obtain ⟨r3, m3⟩ := rm3
-    rw [h3, cdqK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨s3, hs3, -, hok3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-      (checkBasisDecl_refines p hQ.basis hQ.canon hQ.rom hQ.pa hQ.cbd n ⟨m2, Locals.init []⟩ a2 dn hdn fe
-        vis 4 (by decide) hS2 (fun _ => ⟨hok2, L.Rom.NamesDn.ext hN hx2⟩)) h3
-    subst hs3
-    have hrun3 := AM.run_of_ok _ _ hok3
-    refine ⟨_, _, ?_, by simpa using hS3, hg1.trans (hg2.trans hg3), hJ (by simp) h3 hJ2⟩
-    show (do if ← quotPinHit .type cv then checkBasisDecl fe .quotK
-             else fail (.notImplemented "quotient declaration mismatch")).run a = _
-    simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]
-    exact hrun3
-  · rw [ite_eq_right ht] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨fe, a2, ?_, by simpa using hS2, hg1.trans hg2, hJ2⟩
-    cases k with
-    | type => exact absurd rfl ht
-    | ctor =>
-      show (do if ← quotPinHit .ctor cv then pure fe
-               else fail (.notImplemented "quotient declaration mismatch")).run a = _
-      simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]; rfl
-    | lift =>
-      show (do if ← quotPinHit .lift cv then pure fe
-               else fail (.notImplemented "quotient declaration mismatch")).run a = _
-      simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]; rfl
-    | ind =>
-      show (do if ← quotPinHit .ind cv then pure fe
-               else fail (.notImplemented "quotient declaration mismatch")).run a = _
-      simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]; rfl
-    | sound =>
-      show (do if ← quotPinHit .sound cv then pure fe
-               else fail (.notImplemented "quotient soundness axiom mismatch")).run a = _
-      simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]; rfl
+    exact (cbd_ref (k := 4) hQ.basis hQ.canon hQ.rom hdn n (by decide) hS2
+      (fun _ => ⟨hok2, L.Rom.NamesDn.ext hN hx2⟩)).mono
+      fun _ _ _ hR => ⟨hR.stage, hg1.trans (hg2.trans hR.grow)⟩
+  rw [checkDeclQuotE.k_quot_pin_hit.arm2 p _ _ _ _ _ z2 ht]
+  refine RefE.ret (y := fe) (a' := a2) ?_ ⟨by simpa using hS2, hg1.trans hg2⟩
+  cases k with
+  | type => exact absurd rfl ht
+  | ctor | lift | ind | sound => rfl
 
 end L.Arena

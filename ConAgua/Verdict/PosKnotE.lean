@@ -1,5 +1,5 @@
-import ConAgua.Verdict.PosE
 import ConAgua.Verdict.DefEqBaseE
+import ConAgua.Arena.IndT.Lift
 
 /-!
 # `whnf_top`'s error claim under `StageT`

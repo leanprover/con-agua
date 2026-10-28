@@ -1,17 +1,20 @@
 import ConAgua.Verdict.DeclValE
+import ConAgua.Arena.IndT.WalkC
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 /-!
-# The verdict claims of `install_value_guards` and `install_header` (lane `verdicts-b`, helper `d`)
+# `install_header`'s refinement and `install_value_guards`' verdict claim
 
-The error models and error refinements of the two guard functions, under the hypotheses of their
-ok refinements (`ivgW_okT`, `ihW_okT`): a failing call of class `1`/`2` claims the twin's
-`installValueGuards`/`installHeader` fails with an error of that class. The callees are all
-outside the verdict closure (`nvFns`), so their failures claim nothing; the abort sites are the
-twin's `fail`s. The consts-resolve site is a call of `unresolved_consts_error` (it always fails):
-its error's class is the twin's `unresolvedConstsErrorL (← strLitSupported fe) …`
-(`uce_errClaim_lo`, `UnresolvedE.lean`).
+`install_header`: one unified model and one refinement for both outcomes (`ih_ref`, under
+`StageT`). `install_value_guards`: its error model and error claim (`ivgE_okT`) under the
+hypotheses of its ok refinement (`ivgW_okT`). The callees are all outside the verdict closure
+(`nvFns`), so their failures claim nothing; the abort sites are the twin's `fail`s. The
+consts-resolve site is a call of `unresolved_consts_error` (it always fails): its error's class is
+the twin's `unresolvedConstsErrorL (← strLitSupported fe) …` (`uce_errClaim_lo`,
+`UnresolvedE.lean`).
 -/
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -31,10 +34,26 @@ l_model installValueGuards_specE (p : Prog)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 400000 simp [] errors
 
-l_model installHeader_specE (p : Prog) (hf : p.lookup "install_header" = some installHeaderL)
-  fns [hf ↦ installHeaderE] grind [arena_grind] fold [tierW, idxW]
+/-- `cv_lps`' spec without the result's length (as a `simp` hypothesis `r = [r.headD 0, …]` loops). -/
+theorem cvLps_specW1 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
+    (hp : p.lookup "cv_lps" = some cvLps) (n : Nat) (s₀ : St) (q : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_lps" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ cvLpsW n s₀.mem q = some (r, s'.mem); ⊤⦄ :=
+  triple_post (cvLps_specW p ha hc he hp n s₀ q) fun _ _ h => ⟨h.1, h.2.1⟩
+
+/-- **The model of `install_header`, both outcomes**: the callees outside the verdict closure with
+`Option` models lifted; `all_level_params_defined`, `consts_resolve_ffast` and
+`unresolved_consts_error` through their runs. -/
+l_model installHeader_specE (p : Prog) (hP : IhProg p)
+  fns [hP.ih ↦ installHeaderE]
+  specs [envFind_specW p hP.ix hP.rowGet hP.find n, resCont_spec p hP.resF hP.resC n,
+    cvLps_specW1 p hP.alloc hP.copy hP.eti hP.lps n, slNodup_spec p hP.cont hP.nodup n,
+    lbbF_spec p hP.bvb n, hffF_spec p hP.hf n]
+  grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] errors
+  heartbeats 400000 simp [] locals unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- The callees of the declaration family outside the verdict closure. -/
 def declNvList : List FnName :=
@@ -248,19 +267,29 @@ theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
   rw [installValueGuardsE.k_consts_resolve_ffast.arm2 p _ _ _ _ _ hb5] at hW
   cases hW
 
-/-- **`install_header`'s error claim under `StageT`** (the error half of `ihW_okT`). -/
-theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true) (hU : UceProg p)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} {m : Mem} {q : Word} {cv : IConstantVal} {e : Err}
-    (hc : callE p n "install_header" [vis, q] m = .error e) (hS : StageT dn vis fe m a)
-    (hq : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+/-- What `install_header`'s error arms assume: the no-verdict closure (`all_level_params_defined`,
+`consts_resolve_ffast`) and `unresolved_consts_error`'s program. -/
+structure IhCtx (p : Prog) : Prop where
+  nv : closedNV p L.Checker.nvFns = true
+  uce : UceProg p
+
+/-- What `install_header` gives besides the twin's run: the stage, the growth, the memos. -/
+structure IhPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+    (a' : AState) : Prop where
+  stage : StageT dn vis fe m' a'
+  grow : IWGrow m m'
+  crOK : L.Stubs.CrOK m'
+  afr : AFr m m'
+
+/-- **`install_header` refines `installHeader`, both outcomes**, under `StageT`: the duplicate,
+reserved-name and universe-parameter guards, the closedness walks (`lbbF_okT`, `hffF_okT`,
+`apdF_okT`, `crfF_okT`), the consts-resolve site by `uce_errClaim_lo`. -/
+theorem ih_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {q : Word} {cv : IConstantVal}
+    (hS : StageT dn vis fe m a) (hq : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
     (hlpsN : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
-    ErrClaim (installHeader fe cv) a e := by
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (installHeader_specE p hP.ih n ⟨m, Locals.init []⟩ vis q) hc
-    (Err.code_ne_of_cls hk0)
+    RefE (IhCtx p) (installHeaderE p n m vis q) (installHeader fe cv) a
+      (fun v _ a' => IhPost dn vis fe m v.2 a') := by
   have hq0 : decCV (erA m) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt (IWGrow.refl m)) hq
   obtain ⟨wx, hwx, hwxl, hname⟩ := decCV_name hq0
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hq0
@@ -268,229 +297,177 @@ theorem ihE_okT {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
   have et : rdW (m.arr64 EREC) (q + 3) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hwt
   cases n with
-  | zero => rw [installHeaderE.eq_1] at hW; cases hW; exact absurd rfl hk0
+  | zero => rw [installHeaderE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
-  rw [installHeaderE.arm1, ex, et] at hW
+  rw [installHeaderE.arm1, ex, et]
   simp only [installHeader, fail_bindAM]
   -- `env_find(x, vis)`
-  cases h1 : callE p n "env_find" [wx, vis] m with
-  | error e1 =>
-    rw [h1, installHeaderE.k_env_find.none] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h1
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1] at hW
-  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callE
-    (envFind_specW p hP.ix hP.rowGet hP.find n ⟨m, Locals.init []⟩ wx vis) h1
-  subst hs1
+  rcases h1 : envFindW m wx vis with _ | ⟨r1, m1⟩
+  · rw [liftE_none, installHeaderE.k_env_find.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   by_cases hb1 : r1.headD 0 ≠ 0
-  · rw [installHeaderE.k_env_find.eq_2, ite_eq_left hb1] at hW; cases hW
+  · rw [installHeaderE.k_env_find.abort1 p _ _ _ _ _ _ _ hb1]
     have : (fe.find? cv.name).isSome = true := by
-      rw [hname]; exact envFindW_hitSome hW1 hS.stage.1.env hwxl hb1
-    exact ErrClaim.ite_pos this (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_env_find.eq_2, ite_eq_right hb1] at hW
-  obtain ⟨rfl, hfind⟩ := envFindW_miss hW1 hS.stage.1.env hwxl (by simpa using hb1)
+      rw [hname]; exact envFindW_hitSome h1 hS.stage.1.env hwxl hb1
+    exact fun _ => ErrClaim.ite_pos this (ErrClaim.fail_abort _ _ rfl)
+  rw [installHeaderE.k_env_find.arm1 p _ _ _ _ _ _ _ (by simpa using hb1)]
+  obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.stage.1.env hwxl (by simpa using hb1)
   have hfind' : (fe.find? cv.name).isSome = false := by rw [hname, hfind]; rfl
-  refine ErrClaim.ite_neg (by simp [hfind']) ?_
+  refine RefE.ite_neg (by simp [hfind']) ?_
   -- `reserved_contains(x)`
-  cases h2 : callE p n "reserved_contains" [wx] s1.mem with
-  | error e2 =>
-    rw [h2, installHeaderE.k_reserved_contains.none] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h2
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2] at hW
-  obtain ⟨s2, hs2, -, hm2, hW2⟩ := triple_of_callE
-    (resCont_spec p hP.resF hP.resC n ⟨s1.mem, Locals.init []⟩ wx) h2
-  have hm2' : m2 = s1.mem := hs2.symm.trans hm2
-  subst hm2'
-  have hW2' : resContW n s1.mem wx = some (r2.headD 0) := hW2
-  by_cases hb2 : r2.headD 0 ≠ 0
-  · rw [installHeaderE.k_reserved_contains.eq_2, ite_eq_left hb2] at hW; cases hW
-    obtain ⟨l, hrunR, hcl⟩ := resContW_hit hb2 hW2' hS.stage.1.pins
-    refine ErrClaim.bind_right hrunR (ErrClaim.ite_pos ?_ (ErrClaim.fail_abort _ _ rfl))
+  rcases h2 : resContW n m1 wx with _ | c
+  · rw [liftE_none, installHeaderE.k_reserved_contains.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  by_cases hb2 : c ≠ 0
+  · rw [installHeaderE.k_reserved_contains.abort1 p _ _ _ _ _ _ hb2]
+    obtain ⟨l, hrunR, hcl⟩ := resContW_hit hb2 h2 hS.stage.1.pins
+    refine RefE.bind_right hrunR (RefE.ite_pos ?_ (fun _ => ErrClaim.fail_abort _ _ rfl))
     rw [hname]; exact hcl
-  rw [installHeaderE.k_reserved_contains.eq_2, ite_eq_right hb2] at hW
-  have hb2' : r2.headD 0 = 0 := by simpa using hb2
-  rw [hb2'] at hW2'
-  obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl hW2' hS.stage.1.pins
-  refine ErrClaim.bind_right hrunR (ErrClaim.ite_neg ?_ ?_)
+  have hc0 : c = 0 := by simpa using hb2
+  subst hc0
+  rw [installHeaderE.k_reserved_contains.arm1 p _ _ _ _ _ _ rfl]
+  obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl h2 hS.stage.1.pins
+  refine RefE.bind_right hrunR (RefE.ite_neg ?_ ?_)
   · rw [hname, hcl]; decide
   -- `cv_lps(q)`
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq0
-  have e1 : rdW (s1.mem.arr64 EREC) (q + 1) = w1 :=
+  have e1 : rdW (m1.arr64 EREC) (q + 1) = w1 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw1
-  have e2 : rdW (s1.mem.arr64 EREC) (q + 2) = w2 :=
+  have e2 : rdW (m1.arr64 EREC) (q + 2) = w2 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw2
-  have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (s1.mem.arr64 EREC).size := by
+  have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (m1.arr64 EREC).size := by
     rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
     · exact .inl h0
     · exact .inr (L.Ind.hslice?_bound _ _ _ _ hsl h0)
-  cases h4 : callE p n "cv_lps" [q] s1.mem with
-  | error e4 =>
-    rw [h4, installHeaderE.k_cv_lps.none] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h4
-  | ok q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [h4, installHeaderE.k_cv_lps.eq_2] at hW
-  obtain ⟨s4, hs4, -, hW4, -⟩ := triple_of_callE
-    (cvLps_specW p hP.alloc hP.copy hP.eti hP.lps n ⟨s1.mem, Locals.init []⟩ q) h4
-  subst hs4
+  rcases h4 : cvLpsW n m1 q with _ | ⟨r4, m4⟩
+  · rw [liftE_none, installHeaderE.k_cv_lps.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, installHeaderE.k_cv_lps.arm1]
   cases n with
-  | zero => simp [cvLpsW] at hW4
+  | zero => simp [cvLpsW] at h4
   | succ n =>
-  rw [cvLpsW_step, e1, e2] at hW4
-  obtain ⟨-, hr4t, hdec4, hS4R, hg4, htop4⟩ := erToIwW_stage hW4 hS.stage hsrc
-  have hS4 := StageT.of_iw hS hS4R (erToIwW_frame hW4 hS.stage hsrc)
-  have hCr4 := CrOK.frame hCr (erToIwW_frame hW4 hS.stage hsrc) (by decide) (by decide)
-  have hdecL : decHL s4.mem (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
+  rw [cvLpsW_step, e1, e2] at h4
+  obtain ⟨-, hr4t, hdec4, hS4R, hg4, htop4⟩ := erToIwW_stage h4 hS.stage hsrc
+  have hS4 := StageT.of_iw hS hS4R (erToIwW_frame h4 hS.stage hsrc)
+  have hCr4 := CrOK.frame hCr (erToIwW_frame h4 hS.stage hsrc) (by decide) (by decide)
+  have hA4 : AFr m1 m4 := erToIwW_afr h4
+  rw [hr4t]
+  have hdecL : decHL m4 (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
     rw [hdec4]; exact hsl
-  rw [hr4t] at hW
   -- `sl_nodup(o, l)`
-  cases h5 : callE p (n + 1) "sl_nodup" [r4.headD 0, w2] s4.mem with
-  | error e5 =>
-    rw [h5, installHeaderE.k_sl_nodup.eq_1] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h5
-  | ok q5 =>
-  obtain ⟨r5, m5⟩ := q5
-  rw [h5] at hW
-  obtain ⟨s5, hs5, -, hm5, hW5⟩ := triple_of_callE
-    (slNodup_spec p hP.cont hP.nodup (n + 1) ⟨s4.mem, Locals.init []⟩ (r4.headD 0) w2) h5
-  have hW5' : nodupW (n + 1) s4.mem (r4.headD 0) w2 = some (r5.headD 0) := hW5
-  have htopb : iwTop s4.mem < 2 ^ 64 := by simp only [iwTop]; exact UInt64.toNat_lt _
-  obtain ⟨ws, hws, hlps, hwsl⟩ := slR_of_decHL s4.mem _ _ _ hdecL (by omega)
+  rcases h5 : nodupW (n + 1) m4 (r4.headD 0) w2 with _ | d
+  · rw [liftE_none, installHeaderE.k_sl_nodup.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have htopb : iwTop m4 < 2 ^ 64 := by simp only [iwTop]; exact UInt64.toNat_lt _
+  obtain ⟨ws, hws, hlps, hwsl⟩ := slR_of_decHL m4 _ _ _ hdecL (by omega)
   simp only [UInt64.ofNat_toNat] at hws
-  have hd := nodupW_ok _ _ _ _ _ _ hws hW5'
-  have hm5' : m5 = s4.mem := hs5.symm.trans hm5
-  subst hm5'
-  by_cases hb5 : r5.headD 0 = 0
-  · rw [installHeaderE.k_sl_nodup.eq_2, ite_eq_left hb5] at hW; cases hW
+  have hd := nodupW_ok _ _ _ _ _ _ hws h5
+  by_cases hb5 : d = 0
+  · rw [installHeaderE.k_sl_nodup.abort1 p _ _ _ _ _ _ _ hb5]
     have hnd : nameNodup cv.levelParams = false := by
       rw [hlps, nameNodup_map ws hwsl]
       by_cases hn : ws.Nodup
       · rw [ite_eq_left hn, hb5] at hd; exact absurd hd (by decide)
       · simp [hn]
-    exact ErrClaim.ite_neg (by simp [hnd]) (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_sl_nodup.eq_2, ite_eq_right hb5] at hW
+    exact fun _ => ErrClaim.ite_neg (by simp [hnd]) (ErrClaim.fail_abort _ _ rfl)
+  rw [installHeaderE.k_sl_nodup.arm1 p _ _ _ _ _ _ _ hb5]
   have hnd : nameNodup cv.levelParams = true := by
     rw [hlps, nameNodup_map ws hwsl]
     by_cases hn : ws.Nodup
     · simp [hn]
     · rw [ite_eq_right hn] at hd; exact absurd hd hb5
-  refine ErrClaim.ite_pos hnd ?_
+  refine RefE.ite_pos hnd ?_
   -- `loose_bvars_bounded_fast(4000000000, 0, t)`
-  cases h6 : callE p (n + 1) "loose_bvars_bounded_fast" [4000000000, 0, wt] s4.mem with
-  | error e6 =>
-    rw [h6, installHeaderE.k_loose_bvars_bounded_fast.none] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h6
-  | ok q6 =>
-  obtain ⟨r6, m6⟩ := q6
-  rw [h6] at hW
-  obtain ⟨s6, hs6, -, hW6⟩ := triple_of_callE
-    (lbbF_spec p hP.bvb (n + 1) ⟨s4.mem, Locals.init []⟩ [4000000000, 0, wt]) h6
-  subst hs6
-  have hCr6 := CrOK.frame hCr4 (lbbF_frame hW6) (by decide) (by decide)
+  rcases h6 : lbbF m4 [4000000000, 0, wt] with _ | ⟨r6, m6⟩
+  · rw [liftE_none, installHeaderE.k_loose_bvars_bounded_fast.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨x6, a6, hrun6, hS6, hg6, hx6, -⟩ :=
-    lbbF_okT dn vis fe 4000000000 0 wt hwtl s4.mem s6.mem a r6 hW6 hS4
+    lbbF_okT dn vis fe 4000000000 0 wt hwtl m4 m6 a r6 h6 hS4
+  have hCr6 := CrOK.frame hCr4 (lbbF_frame h6) (by decide) (by decide)
+  have hA6 : AFr m1 m6 := hA4.trans (AFr.of_frame (lbbF_frame h6))
   rw [fuelW] at hrun6
   rw [show ((0 : Word).toNat) = 0 from rfl, ← hty] at hrun6
-  refine ErrClaim.bind_right hrun6 ?_
+  refine RefE.bind_right hrun6 ?_
   by_cases hb6 : r6.headD 0 = 0
-  · rw [installHeaderE.k_loose_bvars_bounded_fast.abort1 p _ _ _ _ _ _ _ hb6] at hW
-    cases hW
+  · rw [installHeaderE.k_loose_bvars_bounded_fast.abort1 p _ _ _ _ _ _ _ hb6]
     have ex6 : x6 = false := by rw [← hx6]; simpa using hb6
     rw [ex6]
-    exact ErrClaim.ite_neg (by decide) (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_loose_bvars_bounded_fast.arm1 p _ _ _ _ _ _ _ hb6] at hW
+    exact fun _ => ErrClaim.ite_neg (by decide) (ErrClaim.fail_abort _ _ rfl)
+  rw [installHeaderE.k_loose_bvars_bounded_fast.arm1 p _ _ _ _ _ _ _ hb6]
   have ex6 : x6 = true := by rw [← hx6]; simpa using hb6
   rw [ex6]
-  refine ErrClaim.ite_pos rfl ?_
+  refine RefE.ite_pos rfl ?_
   -- `has_fvar_fast(4000000000, t)`
-  cases h7 : callE p (n + 1) "has_fvar_fast" [4000000000, wt] s6.mem with
-  | error e7 =>
-    rw [h7, installHeaderE.k_has_fvar_fast.eq_1] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h7
-  | ok q7 =>
-  obtain ⟨r7, m7⟩ := q7
-  rw [h7] at hW
-  obtain ⟨s7, hs7, -, hW7⟩ := triple_of_callE
-    (hffF_spec p hP.hf (n + 1) ⟨s6.mem, Locals.init []⟩ [4000000000, wt]) h7
-  subst hs7
-  have hCr7 := CrOK.frame hCr6 (hffF_frame hW7) (by decide) (by decide)
+  rcases h7 : hffF m6 [4000000000, wt] with _ | ⟨r7, m7⟩
+  · rw [liftE_none, installHeaderE.k_has_fvar_fast.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨x7, a7, hrun7, hS7, hg7, hx7, -⟩ :=
-    hffF_okT dn vis fe 4000000000 wt hwtl s6.mem s7.mem a6 r7 hW7 hS6
+    hffF_okT dn vis fe 4000000000 wt hwtl m6 m7 a6 r7 h7 hS6
+  have hCr7 := CrOK.frame hCr6 (hffF_frame h7) (by decide) (by decide)
+  have hA7 : AFr m1 m7 := hA6.trans (AFr.of_frame (hffF_frame h7))
   rw [fuelW] at hrun7
   rw [← hty] at hrun7
-  refine ErrClaim.bind_right hrun7 ?_
+  refine RefE.bind_right hrun7 ?_
   by_cases hb7 : r7.headD 0 ≠ 0
-  · rw [installHeaderE.k_has_fvar_fast.abort1 p _ _ _ _ _ _ _ hb7] at hW
-    cases hW
+  · rw [installHeaderE.k_has_fvar_fast.abort1 p _ _ _ _ _ _ _ hb7]
     have ex7 : x7 = true := by rw [← hx7]; simpa using hb7
     rw [ex7]
-    exact ErrClaim.ite_pos rfl (ErrClaim.fail_abort _ _ rfl)
+    exact fun _ => ErrClaim.ite_pos rfl (ErrClaim.fail_abort _ _ rfl)
   have hb7' : r7.headD 0 = 0 := by simpa using hb7
-  rw [installHeaderE.k_has_fvar_fast.arm1 p _ _ _ _ _ _ _ hb7'] at hW
+  rw [installHeaderE.k_has_fvar_fast.arm1 p _ _ _ _ _ _ _ hb7']
   have ex7 : x7 = false := by rw [← hx7]; simpa using hb7
   rw [ex7]
-  refine ErrClaim.ite_neg (by decide) ?_
+  refine RefE.ite_neg (by decide) ?_
   -- `all_level_params_defined(o, l, t)`
-  have hdec7 : decHL s7.mem (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
+  have hdec7 : decHL m7 (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
     rw [decHL_grow (hg6.trans hg7) (by omega), hdecL]
   have hst7 : a7.store = a.store := by
     rw [hffF_store hrun7, lbbF_store hrun6]
-  cases h8 : callE p (n + 1) "all_level_params_defined" [r4.headD 0, w2, wt] s7.mem with
-  | error e8 =>
-    rw [h8, installHeaderE.k_all_level_params_defined.eq_1] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h8
-  | ok q8 =>
-  obtain ⟨r8, m8⟩ := q8
-  rw [h8] at hW
+  rcases h8 : callE p (n + 1) "all_level_params_defined" [r4.headD 0, w2, wt] m7 with e8 | ⟨r8, m8⟩
+  · rw [installHeaderE.k_all_level_params_defined.none]
+    exact fun hG => nvl hG.nv (by decide +kernel) h8
   have h8' := apdF_of_callW hap (callW_of_callE h8)
   have hCr8 := CrOK.frame hCr7 (apdF_frame h8') (by decide) (by decide)
   obtain ⟨x8, a8, hrun8, hS8, hg8, hx8, -⟩ :=
-    apdF_okT dn vis fe (r4.headD 0) w2 wt hwtl cv.levelParams s7.mem m8 a7 r8 h8'
+    apdF_okT dn vis fe (r4.headD 0) w2 wt hwtl cv.levelParams m7 m8 a7 r8 h8'
       ⟨hS7, hdec7, by rw [hst7]; exact hlpsN⟩
+  have hA8 : AFr m1 m8 := fun hA => absOK_apdF h8' (hA7 hA) hS8
   rw [← hty] at hrun8
-  refine ErrClaim.bind_right hrun8 ?_
+  refine RefE.bind_right hrun8 ?_
   by_cases hb8 : r8.headD 0 = 0
-  · rw [installHeaderE.k_all_level_params_defined.abort1 p _ _ _ _ _ hb8] at hW
-    cases hW
+  · rw [installHeaderE.k_all_level_params_defined.abort1 p _ _ _ _ _ hb8]
     have ex8 : x8 = false := by rw [← hx8]; simpa using hb8
     rw [ex8]
-    exact ErrClaim.ite_neg (by decide) (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_all_level_params_defined.arm1 p _ _ _ _ _ hb8] at hW
+    exact fun _ => ErrClaim.ite_neg (by decide) (ErrClaim.fail_abort _ _ rfl)
+  rw [installHeaderE.k_all_level_params_defined.arm1 p _ _ _ _ _ hb8]
   have ex8 : x8 = true := by rw [← hx8]; simpa using hb8
   rw [ex8]
-  refine ErrClaim.ite_pos rfl ?_
+  refine RefE.ite_pos rfl ?_
   -- `consts_resolve_ffast(vis, t)`
-  cases h9 : callE p (n + 1) "consts_resolve_ffast" [vis, wt] m8 with
-  | error e9 =>
-    rw [h9, installHeaderE.k_consts_resolve_ffast.none] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h9
-  | ok q9 =>
-  obtain ⟨r9, m9⟩ := q9
-  rw [h9] at hW
+  rcases h9 : callE p (n + 1) "consts_resolve_ffast" [vis, wt] m8 with e9 | ⟨r9, m9⟩
+  · rw [installHeaderE.k_consts_resolve_ffast.none]
+    exact fun hG => nvl hG.nv (by decide +kernel) h9
+  have h9' := crfF_of_callW hCrf (callW_of_callE h9)
   obtain ⟨x9, a9, hrun9, ⟨hS9, hg9, hx9, -⟩, hCr9⟩ :=
-    crfF_okT dn vis fe wt hwtl m8 m9 a8 r9 (crfF_of_callW hkp.crf (callW_of_callE h9))
-      ⟨hS8, hCr8.crMemo⟩
+    crfF_okT dn vis fe wt hwtl m8 m9 a8 r9 h9' ⟨hS8, hCr8.crMemo⟩
+  have hA9 : AFr m1 m9 := fun hA => absOK_crfF h9' (hA8 hA) hCr9 hS9
   rw [← hty] at hrun9
-  refine ErrClaim.bind_right hrun9 ?_
+  refine RefE.bind_right hrun9 ?_
   by_cases hb9 : r9.headD 0 = 0
-  · rw [installHeaderE.k_consts_resolve_ffast.arm1 p _ _ _ _ _ hb9] at hW
+  · rw [installHeaderE.k_consts_resolve_ffast.arm1 p _ _ _ _ _ hb9]
     have ex9 : x9 = false := by rw [← hx9]; simpa using hb9
     rw [ex9]
-    refine ErrClaim.ite_neg (by decide) ?_
-    cases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 0] m9 with
-    | error e10 =>
-      rw [h10, installHeaderE.k_unresolved_consts_error.none] at hW; cases hW
+    refine RefE.ite_neg (by decide) ?_
+    rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 0] m9 with e10 | ⟨r10, m10⟩
+    · rw [installHeaderE.k_unresolved_consts_error.none]
+      intro hG
       obtain ⟨M9, hC9⟩ := hS9.core
       rw [hty]
-      exact uce_errClaim_lo hU hnv hC9 hwtl (by decide) h10 "type"
-    | ok q10 =>
-      obtain ⟨r10, m10⟩ := q10
-      rw [h10, installHeaderE.k_unresolved_consts_error.abort1] at hW; cases hW
-      exact ErrClaim.of_cls0 rfl
-  rw [installHeaderE.k_consts_resolve_ffast.arm2 p _ _ _ _ _ hb9] at hW
-  cases hW
+      exact uce_errClaim_lo hG.uce hG.nv hC9 hwtl (by decide) h10 "type"
+    · rw [installHeaderE.k_unresolved_consts_error.abort1]; exact RefE.of_cls0 rfl
+  rw [installHeaderE.k_consts_resolve_ffast.arm2 p _ _ _ _ _ hb9]
+  have ex9 : x9 = true := by rw [← hx9]; simpa using hb9
+  rw [ex9]
+  exact RefE.ite_pos rfl (RefE.ret rfl
+    ⟨hS9, hg4.trans (hg6.trans (hg7.trans (hg8.trans hg9))), hCr9.crOK, hA9⟩)
 
 end L.Arena
