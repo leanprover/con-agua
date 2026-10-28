@@ -7,11 +7,11 @@ import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
 
 /-!
-# `nest_cont_key` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
+# `nest_cont_key` refines `nestContKey`, both outcomes (lane `indstaget`, helper `indstaget-pos`)
 
-`keyOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestContKey_spec`: the
-parameters' closedness (`closedAll_spec`), then a cache hit or a new frame (the block's `NewOKC`
-at `n`).
+`keyRef_step`, on the unified model `nckE`, with the twin side of con-ron's `nestContKey_spec`: the
+key not in progress, the parameters' closedness (`closedAll_spec`), then a cache hit or a new frame
+(the block's `NewRef` at `n`).
 -/
 
 

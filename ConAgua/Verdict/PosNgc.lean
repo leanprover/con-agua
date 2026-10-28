@@ -7,9 +7,8 @@ import ConAgua.Arena.IndPosSpec.NestCrest
 
 `ngcE` (`l_model … unified`, `PosE2M.lean`): the recursive call through the model itself,
 `nest_container` and `sl_append` (outside the verdict closure) through their `Option` models.
-`ngc_ref` refines `nestGroupCtors` for both outcomes; its ok half is `nestGroupCtors_refines` and
-`nest_frame`'s refinement (`frameOKC_step`, through the run), its error half `nest_frame`'s error
-claim (`frameOKE_step`).
+`ngc_ref` refines `nestGroupCtors` for both outcomes; its users are `nestGroupCtors_refines` and
+`nest_frame`'s refinement (`frameRef_step`, through the run).
 -/
 
 noncomputable section
