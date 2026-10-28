@@ -96,9 +96,19 @@ l_model nitE_spec (p : Prog) (hf : p.lookup "nest_inst_type" = some nestInstType
   fns [hf ↦ nitE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
 
-l_model ntyE_spec (p : Prog) (hf : p.lookup "nest_inst_type_ty" = some nestInstTypeTyL)
-  fns [hf ↦ ntyE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+noncomputable section
+
+l_model ntyE_spec (p : Prog) (hL : NtyLook p)
+  fns [hL.hp ↦ ntyE]
+  specs [envFind_specW p hL.hx hL.hg hL.hf n, callW_spec p n "view_ls_len", stripPis_specF p hL.hst n,
+    cvLps_spec p hL.ha hL.hc hL.he hL.hcv n, callW_spec p n "inst_lp_fast",
+    instPisWith_spec p hL.hv hL.hip hL.hi1 n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 4000000 simp [rdW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+end
 
 end L.Ind
 

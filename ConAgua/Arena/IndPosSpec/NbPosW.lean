@@ -50,21 +50,24 @@ def nbAppK1 (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns :
   | some (ra, m1) => nbAppK2 cR n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
       (gafF m1 [CWF, w])
 
-def nbFrameK5 (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO gL ns : Word) :
+/-- `nest_group_ctors(vis, nPc, off, l, outOff, outLen)` through its run. -/
+def ngcR (cR : CallM) (n : Nat) (m : Mem) (vis nPc off l oo ol : Word) : Option (List Word × Mem) :=
+  cR n "nest_group_ctors" [vis, nPc, off, l, oo, ol] m
+def nbFrameK5 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rp, m5) => nbFrameK6 k ctorsF vis ctx fu hi us dO dL gO gL ns (rp.headD 0) (rp.tail.headD 0)
       (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0)
-      (gcW k m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0)
-def nbFrameK4 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
+      (ngcR cR k m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0)
+def nbFrameK4 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m4) => nbFrameK5 k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
+  | some (_, m4) => nbFrameK5 cR k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
       (fgW k m4 hi us dO dL gO gL po pl 0 0)
 def nbFrameK3 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ra, m3) => nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
+  | some (ra, m3) => nbFrameK4 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
       (cR k "infer_type_core" [vis, hi, ra.headD 0] m3)
 def nbFrameK2 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (Word × Mem) → Option (List Word × Mem)

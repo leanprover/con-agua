@@ -1,4 +1,5 @@
 import ConAgua.Verdict.PosE1L
+import ConAgua.Verdict.PosNty
 
 /-!
 # `nest_cont` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
@@ -119,7 +120,7 @@ theorem contOKC_step (hL : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClosed p)
       ConRon.Bridge.denoteLs_ext husP hx02,
       ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx02 _ _ hargsP) nPcW.toNat]
   obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, -, hA4⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
-    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 (realCall p) (IlpRd.realC hIlpf hC3) (IlpFr.real hIlpf) _
+    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 (realCall p) (nty_ok hL.nit.ty (IlpRd.realC hIlpf hC3)) _
     (nitLe_realC hcl hLC n' _ _ key c _ hC3 hA3 (dCtx_ext _ hx02 _ _ hctx) hkey2) hni hS3
     ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl (hP2.fr (posRecW_mfr hk4))
   obtain ⟨c4, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (c.hiAt prog.length)

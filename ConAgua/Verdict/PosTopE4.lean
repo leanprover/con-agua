@@ -332,7 +332,7 @@ theorem nsdE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
     rw [hs3] at hni
     rw [h3, nsdE.k_nest_inst_type.arm1] at he
     obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, -, hA2⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2
-      a1 key kk _ (realCall p) (IlpRd.realC hIlpf hC1) (IlpFr.real hIlpf) _
+      a1 key kk _ (realCall p) (nty_ok L.nb.nit.ty (IlpRd.realC hIlpf hC1)) _
       (nitLe_realC hq.closed hLC n' _ _ key c kk hC1 hA1 (dCtx_ext _ p1.ext _ _ hctx)
         (ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey)) hni hS1 (hU.grow hg1) hkd1 hkin1 hksl1 hP1
     simp only [List.headD_cons, List.tail_cons] at hctyH hctyd
