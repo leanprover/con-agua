@@ -208,7 +208,7 @@ def agK2 (cR : CallM) (n : Nat) (vis nP _fvs0L s0 s : Word) (r : List Word) :
 /-- After `check_block_doms_at`: `lvl_eq_fueled`. -/
 def agK3 (cR : CallM) (n : Nat) (s0 s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m3) => agK4 (lveC cR n m3 s s0)
+  | some (_, m3) => agK4 (cR n "lvl_eq_fueled" [s, s0] m3)
 
 /-- After `lvl_eq_fueled`: `eq = 0` aborts. -/
 def agK4 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -229,7 +229,7 @@ theorem agK1_ok (h0 : r.headD 0 ≠ 0) (h : r.tail.tail.headD 0 = fvs0L) :
   rw [agK1, ite_eq_right h0, ite_eq_right (by simpa using h)]
 theorem agK2_some : agK2 cR n vis nP fvs0L s0 s r (some (rd, m2)) =
     agK3 cR n s0 s (domsW cR n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP) := rfl
-theorem agK3_some (r' : List Word) : agK3 cR n s0 s (some (r', m3)) = agK4 (lveC cR n m3 s s0) := rfl
+theorem agK3_some (r' : List Word) : agK3 cR n s0 s (some (r', m3)) = agK4 (cR n "lvl_eq_fueled" [s, s0] m3) := rfl
 theorem agK4_ok (h : re.headD 0 ≠ 0) : agK4 (some (re, m1)) = some ([], m1) := by
   rw [agK4, ite_eq_right h]
 theorem agK4_abort (h : re.headD 0 = 0) : agK4 (some (re, m1)) = none := by
@@ -246,7 +246,6 @@ grind_pattern [ind_grind] agK4_abort => agK4 (some (re, m1))
 
 theorem checkBlockAgreeOne_spec (p : Prog)
     (hd : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
-    (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
     (hp : p.lookup "check_block_agree_one" = some checkBlockAgreeOne) (had : AdF p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
     (vis nP fvs0O fvs0L s0 cvTa s : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_agree_one"
@@ -260,7 +259,7 @@ theorem checkBlockAgreeOne_spec (p : Prog)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         hcR n "open_pis_at_fvars_f", ftdsF_spec p had n,
-        domsW_spec p hd had.ftd cR hcR n, lvlEqFueled_specC p hl cR hcR n] <;>
+        domsW_spec p hd had.ftd cR hcR n, hcR n "lvl_eq_fueled"] <;>
       finish (gen := 20) [agW]
 
 /-- A successful `domsW cR` has `j` within both lists. -/

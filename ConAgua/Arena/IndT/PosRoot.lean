@@ -105,7 +105,7 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     have hhi0 : (nhiW m ctx 0).toNat = c.hiAt 0 := by simpa using hW.hi htop
     obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, -, hA2⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2
       a1 key kk r2 (realCall p) (nty_ok Lb.nit.ty (IlpRd.realC hIlpf hC1)) _
-      (nitLe_realC hq.closed hLC n' _ _ key c kk hC1 hA1 (dCtx_ext _ p1.ext _ _ hctx)
+      (nitLe_realC hq.closed hLC Lb.nit.hlf n' _ _ key c kk hC1 hA1 (dCtx_ext _ p1.ext _ _ hctx)
         (ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey)) hni hS1 (hU.grow hg1) (hkd'.get (decNK_mono _) |>.symm ▸ (hkd'.stab (decNK_mono _) m1 hg1))
       (pos2_nk_in (hkd'.grow (decNK_mono _) hg1)).2 ((hsd.grow hg1 htop) 0 (by simp) |>.elim fun _ h' => by
         obtain ⟨key', nPc', h0', -, -, h1', -, -, hksl', -⟩ := h'

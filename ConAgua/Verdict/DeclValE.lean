@@ -24,10 +24,6 @@ namespace L.Arena
 
 open L.Ind
 
-l_model lvlEqFueled_specE (p : Prog) (hf : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
-  fns [hf ↦ lvlEqFueledE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
-
 l_model checkThmVal_specE (p : Prog) (hf : p.lookup "check_thm_val" = some checkThmValL)
   fns [hf ↦ checkThmValE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 400000 simp [] errors
@@ -35,10 +31,6 @@ l_model checkThmVal_specE (p : Prog) (hf : p.lookup "check_thm_val" = some check
 local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## The callees' error claims (hypotheses, discharged bottom-up) -/
-
-/-- A callee outside the verdict closure: its errors are of class `0` (`callE_nv`). -/
-def NVAt (p : Prog) (f : FnName) : Prop :=
-  ∀ n args m e, callE p n f args m = .error e → e.cls = 0
 
 /-- **`install_value_guards`' error claim under `StageT`** (the error half of `IvgT`). -/
 def IvgE (p : Prog) : Prop :=
@@ -49,80 +41,11 @@ def IvgE (p : Prog) : Prop :=
     (∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) → L.Stubs.CrOK m →
     ErrClaim (installValueGuards fe cv (decI v)) a e
 
-/-! ## `lvl_eq_fueled` -/
-
-/-- **`lvl_eq_fueled` under `StageT`, the answer exact**: `lvl_eq_c`'s word is `0`, `1` or `2`
-(`lvlEqC_simTE`), so `0` is the twin's `some false`, `1` its `some true`. -/
-theorem lfW_okTE {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {n : Nat} {m m' : Mem} {a : AState} {u v : Word} {r : List Word}
-    (h : lfW (realCall p) n m u v = some (r, m')) (hS : StageT dn vis fe m a) (hu : H u) (hv : H v)
-    (lu lv : ConLeche.Level) (hdu : denoteL a.store.ls (decI u) = some lu)
-    (hdv : denoteL a.store.ls (decI v) = some lv) :
-    ∃ x a', (lvlEq? (decI u) (decI v)).run a = .ok (x, a') ∧ StageT dn vis fe m' a' ∧
-      IWGrow m m' ∧ x = some (r.headD 0 != 0) := by
-  cases n with
-  | zero => simp [lfW] at h
-  | succ n =>
-  simp only [lfW] at h
-  cases hs : realCall p n "lvl_eq_c" [u, v] m with
-  | none => simp [hs] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  simp only [hs] at h
-  by_cases h0 : r1.headD 0 = 0
-  · rw [ite_eq_left h0] at h; exact absurd h (by simp)
-  rw [ite_eq_right h0] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨x, a1, hrun, hSt, hg, hdec⟩ :=
-    lvlEqC_simTE p hq.closed hL n hS u v hu hv lu lv hdu hdv r1 m1 hs
-  refine ⟨x, a1, hrun, hSt, hg, ?_⟩
-  unfold decLvlEq at hdec
-  rcases x with _ | _ | _ <;> simp_all
-
-/-- **`lvl_eq_fueled`'s verdict claim**: its decline (`lvl_eq_c` answers `0`) is the twin's
-`liftFueled` on `none`; `lvl_eq_c` claims nothing. -/
-theorem lvlEqFueled_errT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
-    (hf : p.lookup "lvl_eq_fueled" = some lvlEqFueled) (hnv : NVAt p "lvl_eq_c")
-    {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {n : Nat} {m : Mem} {a : AState} {u v : Word} {β : Type} (k : Bool → AM β)
-    (hS : StageT dn vis fe m a) (hu : H u) (hv : H v)
-    (lu lv : ConLeche.Level) (hdu : denoteL a.store.ls (decI u) = some lu)
-    (hdv : denoteL a.store.ls (decI v) = some lv) {e : Err}
-    (hc : callE p n "lvl_eq_fueled" [u, v] m = .error e) :
-    ErrClaim (lvlEq? (decI u) (decI v) >>= fun x => liftFueled "level comparison" x >>= k) a e := by
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (lvlEqFueled_specE p hf n ⟨m, Locals.init []⟩ u v) hc
-    (Err.code_ne_of_cls hk0)
-  cases n with
-  | zero => rw [lvlEqFueledE.eq_1] at hW; cases hW; exact absurd rfl hk0
-  | succ n =>
-  rw [lvlEqFueledE.arm1] at hW
-  cases h1 : callE p n "lvl_eq_c" [u, v] m with
-  | error e1 =>
-    rw [h1, lvlEqFueledE.k_lvl_eq_c.none] at hW; cases hW; exact ErrClaim.of_cls0 (hnv _ _ _ _ h1)
-  | ok q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [h1] at hW
-  by_cases h0 : r1.headD 0 = 0
-  · rw [lvlEqFueledE.k_lvl_eq_c.abort1 p r1 m1 h0] at hW
-    cases hW
-    obtain ⟨x, a1, hrun, -, -, hdec⟩ :=
-      lvlEqC_simTE p hq.closed hL n hS u v hu hv lu lv hdu hdv r1 m1 (callW_of_callE h1)
-    have hx : x = none := by
-      unfold decLvlEq at hdec; rw [h0] at hdec
-      rcases x with _ | _ | _ <;> first | rfl | exact absurd hdec (by decide)
-    subst hx
-    exact ErrClaim.bind_right hrun (ErrClaim.bind_left (ErrClaim.fail _ _ rfl))
-  · rw [lvlEqFueledE.k_lvl_eq_c.arm1 p r1 m1 h0] at hW; cases hW
-
 /-! ## `check_thm_val(vis, c)` -/
 
 /-- **`check_thm_val`'s verdict claim under `StageT`** (`tvW_okT`'s hypotheses): the type not a
 proposition and the type mismatch are the twin's `invalid`, the level comparison out of fuel its
-`notImplemented` (`lvlEqFueled_errT`); the core stubs and `install_value_guards` by their claims. -/
+`notImplemented` (`lef_ref`'s error half); the core stubs and `install_value_guards` by their claims. -/
 theorem tvE_okT {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hL : LvlCacheProg p)
     (hap : ApdF p) (hkp : CrKeep p) (hcE : CoreStubsE p) (hivE : IvgE p)
     (hnvP : NVAt p "pin_word") (hnvL : NVAt p "lvl_eq_c") (hnvE : NVAt p "env_push")
@@ -213,34 +136,38 @@ theorem tvE_okT {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hL : LvlCach
   obtain ⟨lz, hdz⟩ := hS2.twin.den.zero
   rw [hF.zeroLevel] at hdz
   -- the comparison
+  have hsL := lefE_spec p hV.lef n ⟨m2, Locals.init []⟩ (r2.headD 0) (pinW m2 53)
+  have hRL := lef_ref hq.closed hL n hS2 hx2l hF.lv_lt.2.1 hdu hdz
+  rw [← hx2, lefT_bind]
   cases h4 : callE p n "lvl_eq_fueled" [r2.headD 0, pinW m2 53] m2 with
   | error e4 =>
     rw [h4, checkThmValE.k_lvl_eq_fueled.none] at hW; cases hW
-    rw [← hx2]
-    exact lvlEqFueled_errT hq hL hV.lef hnvL _ hS2 hx2l hF.lv_lt.2.1 lu lz hdu hdz h4
+    exact ErrClaim.bind_left (RefE.run_err hsL trivial hnvL hRL h4)
   | ok q =>
   obtain ⟨r4, m4⟩ := q
   rw [h4] at hW
-  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callE
-    (lvlEqFueled_specc p hV.lef (realCall p) (realCall_spec p) n ⟨m2, Locals.init []⟩
-      (r2.headD 0) (pinW m2 53)) h4
+  have hCr4 := hkp.call (im_mem _ rfl) (callW_of_callE h4) hCr2
+  obtain ⟨s4, hs4, -, b4, a4, hrunT, ⟨hrun4, hr4, hS4, hg4, -, -⟩⟩ := RefE.run_ok hsL hRL h4
   subst hs4
-  have hCr4 := lfW_crOK hkp hW4 hCr2
-  obtain ⟨x4, a4, hrun4, hS4, hg4, hx4⟩ :=
-    lfW_okTE hq hL hW4 hS2 hx2l hF.lv_lt.2.1 lu lz hdu hdz
+  dsimp only at hS4 hg4 hr4
   have hrun4' := hrun4
-  rw [hx2] at hrun4'
-  refine ErrClaim.bind_right hrun4' ?_
+  refine ErrClaim.bind_right hrunT ?_
   by_cases hb4 : r4.headD 0 = 0
   · -- the type is not a proposition
     rw [checkThmValE.k_lvl_eq_fueled.abort1 p n vis c wv wt r4 _ hb4] at hW
     cases hW
-    rw [hx4, hb4]
-    exact ErrClaim.bind_right (a₁ := a4) rfl (ErrClaim.bind_left (ErrClaim.fail _ _ rfl))
+    have : b4 = false := by
+      cases b4
+      · rfl
+      · exact absurd hr4 (by rw [hb4]; decide)
+    subst this
+    exact ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
   rw [checkThmValE.k_lvl_eq_fueled.arm1 p n vis c wv wt r4 _ hb4] at hW
-  have ex4 : x4 = some true := by rw [hx4]; simpa using hb4
-  rw [ex4]
-  refine ErrClaim.bind_right (a₁ := a4) rfl ?_
+  have ex4 : b4 = true := by
+    cases b4
+    · exact absurd hr4 (by simpa using hb4)
+    · rfl
+  subst ex4
   show ErrClaim (dvT fe cv (decI wv) (.thmInfo cv) "type mismatch in theorem") a4 e
   unfold dvT
   -- the parameters' names read back at the guards: the prefix extends the store

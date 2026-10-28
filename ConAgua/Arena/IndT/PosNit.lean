@@ -6,7 +6,7 @@ import ConAgua.Arena.IndRealAbsPos
 # `nest_inst_type`'s level comparison under `StageC` (lane `indstaget`, helper `rcF`)
 
 `NitLe` (`IndPosSpec/NitLe.lean`) at `realCall p`: `lvl_eq_fueled` with the real `lvl_eq_c`
-(`lveC_okC`), from `StageC` at `nest_inst_type`'s start and the context's and key's denotations.
+(`lef_ref`), from `StageC` at `nest_inst_type`'s start and the context's and key's denotations.
 The twin's steps before the comparison are con-ron's `nestInstType_spec`'s: `stripPis`
 (`stripPis_pstep`), `instLPFast` (`instLPFast_cstep`), `instPisWith` (`instPisWith_spec`),
 `piBinders` (`piBinders_spec`) and the result's sort (`denote_sort_inv`); `AbsOK` across the L
@@ -21,22 +21,10 @@ namespace L.Ind
 
 open L.Arena
 
-/-- `lvl_eq_fueled` with the real `lvl_eq_c` leaves the stage's per-call memos alone. -/
-theorem lveC_real_mfr {p : Prog} (hcl : CoreStageClosed p) {k : Nat} {m m' : Mem} {u v : Word}
-    {r : List Word} (h : lveC (realCall p) k m u v = some (r, m')) : MFr [] [] m m' := by
-  cases k with
-  | zero => simp [lveC] at h
-  | succ k =>
-  simp only [lveC] at h
-  rcases hs : realCall p k "lvl_eq_c" [u, v] m with _ | ⟨r1, m1⟩; · simp [hs] at h
-  simp only [hs] at h
-  split at h; · simp at h
-  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  exact MFr.of_frame (run_memFrame hcl (by decide) (run_of_callW hs)).1 coreStageA_stage coreStageC_stage
-
 /-- **`nest_inst_type`'s `lvl_eq_fueled` under `StageC`**: `NitLe` at the real call, `AbsOK`
 after. -/
 theorem nitLe_realC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
+    (hlf : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env} (k : Nat)
     (ctx hi key : Word) (c : NestCtx) (kk : NestKey) {m : Mem} {a : AState}
     (hC : StageC dn vis fe env m a) (hA : AbsOK m) {ctxP : ConLeche.NestCtx}
@@ -65,8 +53,11 @@ theorem nitLe_realC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   have hC3 : StageC dn vis fe env m3 a5 := hC.of_check hS3 hA3 c5.ok c5.ext
   have hdv : denoteL a5.store.ls (decI (rdW (m3.arr64 IW) (ctx + 9))) = some sortP := by
     rw [hvd]; exact ConRon.Bridge.denoteL_ext hsort c5.ext
-  obtain ⟨b, a6, hrun, hC4, hg4, hA4, -, hr⟩ := lveC_okC hcl hLC hle hC3 hA3 hu hv hsL hdv
+  obtain ⟨s4, hs4, -, b, a6, -, ⟨hrun, hr, -, hg4, hf4, hC4'⟩⟩ :=
+    RefE.run_okW (lefE_spec p hlf k ⟨m3, Locals.init []⟩ _ _) (lef_ref hcl hLC k hC3.stageT hu hv hsL hdv) hle
+  subst hs4
+  obtain ⟨hC4, hA4, -⟩ := hC4' env hC3 hA3
   rw [hvd] at hrun
-  exact ⟨b, a6, hrun, hC4.stage, hg4, lveC_real_mfr hcl hle, hr, hA4⟩
+  exact ⟨b, a6, hrun, hC4.stage, hg4, hf4, hr, hA4⟩
 
 end L.Ind
