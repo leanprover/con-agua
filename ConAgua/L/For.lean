@@ -2,6 +2,9 @@ module
 
 public import ConAgua.L.Logic
 import ConAgua.L.Notation
+-- (the interpreter's equation lemmas, realized there: a second copy here would make the import
+-- gate credit this module for them in every module that uses them)
+import ConAgua.Front.Preserve
 
 @[expose] public section
 
@@ -56,11 +59,11 @@ def ForPost (I : St → Prop) (Q : Sig → St → Prop) (j : Var) : Sig → St �
   | .brk, s => Q .normal s
   | .ret v, s => Q (.ret v) s
 
-@[simp, lang_grind =] theorem ForPost_normal (I : St → Prop) (Q : Sig → St → Prop) (j : Var)
+@[simp] theorem ForPost_normal (I : St → Prop) (Q : Sig → St → Prop) (j : Var)
     (s : St) : ForPost I Q j .normal s = I (s.setLoc j (s.loc j + 1)) := rfl
-@[simp, lang_grind =] theorem ForPost_brk (I : St → Prop) (Q : Sig → St → Prop) (j : Var)
+@[simp] theorem ForPost_brk (I : St → Prop) (Q : Sig → St → Prop) (j : Var)
     (s : St) : ForPost I Q j .brk s = Q .normal s := rfl
-@[simp, lang_grind =] theorem ForPost_ret (I : St → Prop) (Q : Sig → St → Prop) (j : Var)
+@[simp] theorem ForPost_ret (I : St → Prop) (Q : Sig → St → Prop) (j : Var)
     (v : List Word) (s : St) : ForPost I Q j (.ret v) s = Q (.ret v) s := rfl
 
 /-- **The counted-loop rule.** An invariant `I` that the body keeps (with `j += 1` after it)
