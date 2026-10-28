@@ -315,6 +315,11 @@ The list with depths, files and callees: `_tmp/unifiedE/split.txt`.
    is, no primed variant. A guard without a `Decidable` instance (`flush_caches`' `FlushOK`) is
    decided classically (the definitions `noncomputable`), no `open Classical in`; a generated
    definition holding `sorry` stops the command with an error.
+   A pair of results and the memory, `some ((r.headD 0, r.tail.headD 0), s'.mem)` (`vi_map`), is
+   read through `L.flat3` as a tuple of two. **`cut k`**: when one step runs through every
+   combination of some leading `if`s (they only set locals) before a long tail, `cut k` gives the
+   body after its first `k` statements its own step theorem (`name.tail`, against the join point
+   after the `k`-th statement, which must be an `if` both of whose branches fall through).
 
 ### 3.3a Rules for batch lanes
 
@@ -1804,7 +1809,7 @@ Elaboration (as §3.20, base master f5e47a7f, load 36–85, `_tmp/unify-b3c-blk/
 (`IndBSum3`) are not migrated: they go bottom-up with those callees, over the core-callee kit
 (`RefE.bind_core`, `CorePost`).
 
-### 3.24 Generator and kit, after batch 2 (lane `unify-gen`)
+### 3.26 Generator and kit, after batch 2 (lane `unify-gen`)
 
 * **No `sorry` from the generator.** A callee guard without a `Decidable` instance
   (`flush_caches`' `FlushOK`) became `decide sorry` unless the `l_model` sat under
@@ -1888,3 +1893,32 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 Both flagged modules are the new homes of models whose old modules got faster by more.
 
 No kit or generator change was needed.
+
+**Second round** (wishes from batch 3):
+
+* **`cut k`** (b3b, `IndBTka`): the generator made the code after an `if` both of whose branches
+  fall through a join point of the model (`fW.jᵢ`), but the step theorem still ran `vcgen` over
+  the whole body, so each path after the `if`s was proved once per combination of them. With
+  `cut k` the body after its first `k` statements is `name.tailS := L.seqDrop k F.body` with a
+  step theorem `name.tail` against the join point at the locals of its start state, and the step
+  reads the body as `L.seqTake k F.body name.tailS` (the hand tail specs' shape: `depsTailS`,
+  `derTailS`, the deleted `tkaTailS`). `seqDrop`/`seqTake`/`seqTake_drop` moved from `Arena/LdRd`
+  to `L/Logic`. `tkaE` takes `cut 3` (`gen 20` stays: the tail's `return 0` after `sl_eq`).
+  Test `tCut`.
+* **A pair model** (b3c): a callee post `F = some ((r.headD 0, r.tail.headD 0), s'.mem)` was an
+  unsupported conjunct; the model now calls such a callee as `L.flat3 F` (`L/ErrSpec`, with
+  `flat3_none`/`flat3_some` for `simp` and `grind`). The front validation's `flat3`,
+  `map_specT`, `listed_specT` are gone; `validateE` lists `map_spec`, `listed_spec`. Test
+  `tUseLenP`.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master bc2112b9):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBTka` | 21.20 | 4.88 | `cut 3` |
+| `L/ModelGen` | 12.11 | **13.52** | **slower (+1.4 s, 12 %)**: the `cut` and pair code, compiled once |
+| `L/ModelGenTest` | 23.78 | 24.27 | two more tests |
+| `Front/IndApplyRefine9` | 9.09 | 8.87 | |
+| `Arena/DeclNatDeps`, `ExprMk`, `Verdict/InferLeavesE`, `L/Logic`, `L/ErrSpec`, `Arena/LdRd` | 71.91 | 71.96 | |
+| **sum (10 modules)** | **138.1** | **123.5** | **−11 %** |
+
