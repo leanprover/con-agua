@@ -148,7 +148,8 @@ The shapes it covers:
 * a twin that reports failures as values: `C := ErrClaimV T a` or `VerdictClaimL T a`.
 
 Its lemmas: `RefC.mono`, `RefC.run_ok` / `run_okW`, `RefC.run_err` (with `C0`: the claim holds
-for errors of class `0`, as every claim of the verdict closure does).
+for errors of class `0`, as every claim of the verdict closure does), `RefC.triple` (the ok triple,
+the `@[refines]` shape; ascribe `(RefC.triple hs h :)` when the goal's post would fix `Ok` first).
 
 **Core functions (`Arena/RefECore.lean`)**, the functions the knot's slots call, whose ok halves
 are `CoreRef`s: the post `CorePost` (the relation after the run, the result decoded and valid),
@@ -2119,16 +2120,19 @@ is one model and one refinement by §3.2 unless it says otherwise.
   `checkShapelessE_claim`) goes.
 - [ ] `Verdict/UnresolvedE`: `unresolved_consts_error` (`uceE`, `uce_errClaim_hi`); the `uce`
   field of `VerdictCtxU` stays as its `G`.
-- [ ] `Verdict/DeclStepE`: `install_step`, `install_decl_step` (`installStepE`,
+- [x] `Verdict/DeclStepE`: `install_step`, `install_decl_step` (`installStepE`,
   `installDeclStepE`; ok `installStep_refines`/`installStep_pieces`, `installDeclStep_refines` in
-  `Arena/CheckerT`). `G` is `IstgG` plus the bracket's (`nv`).
-- [ ] `Verdict/DeclFoldE`: `install_fold_go`, `install_fold_next` (`installFoldGoE`,
+  `Arena/CheckerT`). `G` is `IstgG` plus the bracket's (`nv`). Done (§3.31: `ist_ref`, `ids_ref`;
+  `G` is `IstgG`, whose `iv.nv` is the bracket's).
+- [x] `Verdict/DeclFoldE`: `install_fold_go`, `install_fold_next` (`installFoldGoE`,
   `installFoldNextE`; ok `installFoldGo_refines`, `foldGo_step`, `foldNext_step`). The twin reports
   failures as values: `RefC` with `ErrClaimV` errors, one induction over the two mutually recursive
-  models, as phase B's `cp_ref` (§3.28). `Verdict/DeclTopE` then only builds `G`.
-- [ ] `Verdict/DeclPendE`: `check_pending` (`checkPendingE`, its claim by `CoreSpecE.of_runs`; ok
+  models, as phase B's `cp_ref` (§3.28). `Verdict/DeclTopE` then only builds `G`. Done (§3.31:
+  `fold_ref`; `DeclTopE`'s `istgG_of`).
+- [x] `Verdict/DeclPendE`: `check_pending` (`checkPendingE`, its claim by `CoreSpecE.of_runs`; ok
   `checkPending_refinesT` in `Arena/PhaseBT`). `cp_ref` takes its claim (`CPErrT`) as `G` today and can
-  then inline its unified model.
+  then inline its unified model. Done (§3.31: `cpd_ref`; `cp_ref`'s `G` is `CpG`, `check_pending`
+  still through its run).
 - [ ] `Verdict/FrontStageE` (`builtin_prelude`), `Verdict/FrontE` (`decl_kind`, `apply_decl`),
   `Verdict/FrontRunE` (`apply_d_line`, `front_line`, `front_run`): the front's ok refinements in
   `Front/…`; `apply_decl` and up are `RefC`s over the line's record verdict (`VerdictClaimR`), as
@@ -2177,3 +2181,60 @@ the slots, as `m2c_*` in §3.7):
   `Arena/IndT/Install7` 1, `Verdict/IndBE` 4): kept while a `G` names a callee's claim; each goes
   when its function's refinement can be listed as a unified callee instead (§3.28's `PassG` reads
   five).
+
+### 3.31 Retirement, group A: the declaration pipeline (`install_step`, `install_decl_step`, `install_fold_go`/`_next`, `check_pending`)
+
+Four of §3.30's group A items, each one `unified` model and one refinement; nothing skipped.
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---:|---:|
+| `install_step` | `installStep_pieces` 59, `installStep_refines` 21; `InstallStepSpecE` 9, `installStep_errT` 88, `InstallStepGoSpecE` 9, `installStepGo_errT` 5 = 191 | `ist_ref` 85 + `IstPost` 6 + `installStep_refines` 20 = 111 | −42 % |
+| `install_decl_step` | `installDeclStep_core` 38, `installDeclStep_refines` 34; `InstallDeclStepSpecE` 6, `installDeclStep_errT` 67 = 145 | `ids_ref` 63 + `installDeclStep_refines` 32 = 95 | −34 % |
+| `install_fold_go`, `_next` | `FoldGoSpec`/`FoldNextSpec` 16, `foldGo_step` 24, `foldNext_step` 56, `installFoldGo_refines` 14; `FoldGoSpecE`/`FoldNextSpecE` 14, `foldGoE_step` 20, `foldNextE_step` 38, `installFoldGo_refinesE` 17, `installFold_fails_head`/`_tail` 22, `installFoldGo_errTop` 20 = 241 | `FoldGoSpec` 10 + `FoldGoRef`/`FoldNextRef` 15 + `fold_ref` 88 + `installFoldGo_refines` 10 + `installFold_fails_head` 10 + `istgG_of` 6 = 139 | −42 % |
+| `check_pending` | `checkPending_refinesT` 46; `CPErrT` 6, `checkPending_errT` 66, `cpVerdict_proved` 10 = 128 | `cpd_ref` 55 + `CpG`/`CpPost` 8 + `checkPending_refinesT` 17 + `CPErrT` 6 + `checkPending_errT` 7 + `cpG_proved`/`cpVerdict_proved` 9 = 102 | −20 % |
+| **pairs** | **705** | **447** | **−37 %** |
+
+Also gone: the files `Verdict/DeclStepE`, `DeclFoldE`, `DeclPendE` with their `errors` models; `FoldNextSpec`,
+`nvAt_of_closed` (no user); the twin lemmas only the old proofs read (`installStep_ok`, `installDeclStep_ok`,
+`checkPending_ok`, `pend_words`, `TwinFold.step`, `TwinFold.stepAM`). Whole diff against master
+dfe405f0: +535 −972 in 12 files (before this report).
+
+Choices:
+
+* **`G`**: `IstgG` for `install_step`, `install_decl_step` and the fold (its `iv.nv` covers the lifted
+  callees' runs); `DeclTopE` now only builds it (`istgG_of`, from `armsE_of`, the inductive arm's
+  claim and `IvCtx`), and `TopE` reads `fold_ref`'s error half by `RefC.run_err`. `CpG` (`nv`,
+  `check_value_group`'s `CvgCtx`) for `check_pending` and phase B's loop (`cp_ref`, which took
+  `CPErrT`). `entry2Verdict_of` and the phase B chain in `CheckBE` take `CpG` (`cpG_proved` at the
+  programs phase B runs); the threads' chain (`ThreadsE`, `CPVerdict`) keeps `CPErrT`, now the
+  one-liner `checkPending_errT` from `cpd_ref`.
+* **Inlined vs. through the run**: `install_step_go` into `install_step` and `install_step` into
+  `install_decl_step` (their posts carry all the caller needs). Through the run, read by
+  `RefE.run_err`/`RefC.run_err` and the derived triples: `check_value_group` in `check_pending`
+  (`checkValueGroup_specT` frames the loop's relation by the call's write set), `install_decl_step`
+  in `install_fold_next` and `check_pending` in `check_pending_next` (`LoopMem` after the step is the
+  step call's write set, `invoke_memFrame`). So `cp_ref` does not inline `checkPendingE`: its `G`
+  is `cpd_ref`'s instead of `CPErrT`. The bracket's leaves, the table count, the promotions and the
+  `And` pin are lifted (`callW_spec`), their ok halves `triple_of_callW` on the old triples.
+* **`install_decl_step` is a `RefC`**: the twin reports failures as values, so the ok fact is the
+  twin's run to `.ok (.ok (i + 1, x), a')` with `IstPost`, the error `ErrClaimV`. Its triple
+  (`installDeclStep_refines`) now states that run form instead of the `AM.ok`/`AM.res` pieces;
+  `fold_ref` reads `TwinFold.step_pext` on it directly.
+* **Recipes**: `simp []` for `installStepE`/`installDeclStepE` (as the `errors` models),
+  `finish [tierW, idxW]` for `checkPendingE`, the default for the fold's two; each generates in
+  about a second.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+dfe405f0, load 6–9, `_tmp/retire-a2/times.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/CheckerT` | 7.96 | 7.33 | `installStepE`, `installDeclStepE`, the fold's models and refinements moved in; the vcgen proofs gone |
+| `Arena/PhaseBT` | 2.42 | 2.63 | `checkPendingE`, `cpd_ref` moved in (+9 %) |
+| `Verdict/DeclStepE`, `DeclFoldE`, `DeclPendE` (deleted) | 4.51 | – | |
+| `Arena/Checker`, `DeclTwin`, `PhaseAEntry`, `Verdict/PhaseBE`, `CheckBE`, `DeclTopE`, `TopE` | 12.25 | 12.06 | |
+| **sum (12 modules)** | **27.14** | **22.02** | **−19 %** |
+
+No module is more than 10 % slower. No generator or kit change was needed; the kit still has no
+`RefC.triple` (`installFoldGo_refines`, `installDeclStep_refines` and phase B's
+`checkPendingGo_refinesT` write the step out).
