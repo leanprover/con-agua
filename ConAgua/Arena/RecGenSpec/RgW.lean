@@ -1,6 +1,5 @@
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.GtProg
-import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.IndGrindAttr
 
 /-!

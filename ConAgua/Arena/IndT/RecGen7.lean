@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndBRec2
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecGenSpec.ClassRecTysOk
 import ConRon.Bridge.Inductives.GenRec
 

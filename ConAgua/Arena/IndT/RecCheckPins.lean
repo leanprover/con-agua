@@ -1,3 +1,7 @@
+import ConAgua.Arena.RecClassSpec.IhW
+import ConAgua.Arena.RecGenSpec.DecCIIndCv
+import ConAgua.Arena.RecGenSpec.CkcW
+import ConAgua.Arena.RecClassSpec.ReadProg
 import ConAgua.Verdict.IndBPins
 import ConAgua.Arena.IndPosSpec.NestCrest
 

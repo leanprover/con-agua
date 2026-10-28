@@ -1,5 +1,7 @@
+import ConAgua.Arena.DeclValSpec
+import ConAgua.Arena.DeclCvgT
+import ConAgua.Arena.IndT.WalkC
 import ConAgua.Verdict.VCtx
-import ConAgua.Arena.DeclValT
 import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

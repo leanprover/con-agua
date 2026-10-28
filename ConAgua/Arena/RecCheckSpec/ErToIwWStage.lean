@@ -1,4 +1,3 @@
-import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

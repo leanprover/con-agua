@@ -1,9 +1,6 @@
+import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Inductives.RecCheck
-import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.RecClassSpec.ReadProg
-import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Verdict.VCtx
 import ConAgua.Arena.RecCheckSpec.RcLook
 import ConAgua.Arena.GrindAttr
