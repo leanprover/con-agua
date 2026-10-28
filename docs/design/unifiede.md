@@ -2411,3 +2411,57 @@ dfe405f0, load 10–20, `_tmp/retire-a3/times1.txt`):
 | **sum (12 modules)** | **68.33** | **68.06** | **±0 %** |
 
 No module is more than 10 % slower. No generator or kit change was needed.
+
+### 3.34 Retirement, group A: the frontend's driver, design (`front_line`, `front_run`, `builtin_prelude`)
+
+§3.32 skipped these three because their ok halves are not refinements of the functions but of
+generic models: `front_line`'s hand model `frontLineW` (the validator's `lineFwdN` with the record
+passes, `frontLineW_eq` to the code, refined by `frontLineW_refines` and, for the records' words,
+`frontLineW_grow`); `front_run`'s generic loop model `runW`/`runK`/`runI` over a line model
+`lineKW` (`Front/Driver`'s `runLoop_spec(I)`, `frontRun_spec(I)`), refined by `DriverRefine`'s
+`runW_refines`/`runI_refines` under an invariant whose step is `lineKW_step` (`FrontInv`),
+`lineKW_step_pre` (`FrontInvP`), `lineKW_step_ok` (`FrontInvOK`), with `inv_step`, `initK_inv`,
+`frontLineK_spec` to thread the memory invariant through the generic triples; `builtin_prelude`'s
+the stage composition `builtin_of_parts` with `bp_h1`‥`bp_h3`. The error claims repeat the same
+walks (`frontLineE_claim`, `loop1_claim`, `frontRunE_claim`, `preludeStageE`).
+
+What replaces what:
+
+* **`front_line`**: `frontLineE` `unified` (`Front/LineRef`): `skip_ws`, `line_rec`, `apply_rec`,
+  `apply_expr` lifted, `apply_dline` by its unified model. One `RefC`, `frontLine_ref`, at any
+  parse state `st` related to the memory: the ok fact `FrontLinePost` (a line it applies is
+  `LineStep`, plus `DGrow` and the mode; `(0, 0)` keeps the memory), the error claim the line's
+  record verdict (`∃ r q, scanLineFwd b i = .ok r q ∧ VerdictClaimR (applyLine st r) a e`, today's
+  `frontLineE_claim` statement), `G` = `FrontLineG` (`ApplyIndG`, `SafeLink`). It walks the code
+  (as the error claim did) and reads the twin's scan through `lineFwd_link` at the arm's
+  `lineFwdN` value. Gone: `frontLineW`, `frontLine2W`, `lineEndW`, `lineApplyW`, `applyAnyW`,
+  `frontLineW_eq`, `applyAnyW_lineRec` (its field equations stay as a lemma), `frontLine_spec`,
+  `frontLineW_refines`, `applyAnyW_refines`, `frontLineW_grow`, `applyAnyW_grow`, `lineFwd2N_ne`,
+  `frontLineE_claim(_all)`, the `errors` model. `frontLine_refines` (`@[refines applyLine]`)
+  becomes `RefC.triple`.
+* **`front_run`**: `frontRunE` `unified`: `front_init` lifted, `front_line` through its run
+  (`callE`: the loop needs the input bytes kept, `Keep`, a fact of the run, not of the model).
+  One `RefC` for the loop, `loop_ref`, by induction on the fuel under `FrontInvOK D b` (the
+  strongest of the three invariants; `D = #[]` is the stream's blank start): the ok fact "a `0`
+  result is `finishFrom`'s acceptance with the invariant after", the error claim
+  `ErrClaimV (finishFrom st b i lineNo) a`; each line reads `frontLine_ref` by
+  `RefC.run_ok`/`RefC.run_err`, and one step lemma (`lineStep_ok`, today's `lineKW_step_pre` and
+  `lineKW_step_ok` in one) turns `FrontLinePost` at `st.pre D` into the next invariant.
+  `frontRun_ref` adds `front_init` and `parseBytes_eq`. `G` = `FrontRunG` (`nv`, `SafeLink b`;
+  `XV` comes from the invariant, `xOfTwin`). Gone: `runW`, `runK`, `runI`, `runLoop_spec(I)`,
+  `frontRun_spec(I)` and their step lemmas, `runW_refines`, `runI_refines`, `lineKW`,
+  `FrontInv`, `lineKW_step(_pre/_ok)`, `inv_step`, `initK_inv`, `frontLineK_spec`,
+  `frontRunW_refines(_pre_ok)`, `lineKW_grow`, `loop1_claim`, `frontRunE_claim`, the `errors`
+  model. `frontAll_refines_pre_ok`/`frontRunOK_checker` (read by `PipeRest`, `PipePrelude`) and
+  the `@[refines parseBytes/parseChunks]` theorems become `RefC.triple` one-liners (the blank
+  start as `D = #[]`); `frontStageE` a `RefC.run_err` one-liner.
+* **`builtin_prelude`**: `builtinPreludeLE` `unified` (`Checker/PreludeRef`, between
+  `FrontPreSimE` and `PipeRest`): `front_reset` lifted, `pre_front_run` through its run, whose
+  two halves are `front_run`'s through `preSim` (`preSim_triple`, `preFrontRun_errSim`) and
+  `frontRun_ref`. One `RefC` (ok fact today's `BP3`, error claim `ErrClaimV builtinPreludeE a`,
+  `G` = `True`: the closure and `SafeLink preludeText` are theorems at `checkerProg`). Gone:
+  `builtin_of_parts`, `bp_h1`‥`bp_h3`, `BP1`, `BP2`, `preludeStageE`'s walk;
+  `builtinPrelude_checker` and `checker_preludeStageE` become one-liners.
+
+`Audit/Final` and the stage statements (`StageSpec`, `StageSpecE`, `RelSpec`) do not change.
+Landing in two steps: `front_line` and `front_run` first, `builtin_prelude` second.
