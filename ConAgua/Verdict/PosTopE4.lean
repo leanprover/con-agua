@@ -1,3 +1,4 @@
+import ConAgua.L.ModelGen
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Arena.IndPosSpec.UnW2
 import ConAgua.Arena.IndT.PosAll
@@ -204,7 +205,7 @@ end root
 unified model, `nest_inst_type` through its run. -/
 l_model nsdE_spec (p : Prog) (hL : RsLook p)
   fns [hL.pseeds ↦ nsdE list]
-  specs [nestCtxHiAt_specO p hL.nb.ct.cr.rx.hi n, nestSeedsFuel_spec hL n, nckE_spec p hL.nb.pkey n]
+  specs [nestCtxHiAt_specE p hL.nb.ct.cr.rx.hi n, nestSeedsFuel_spec hL n, nckE_spec p hL.nb.pkey n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -255,8 +256,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
       subst this
       exact RefE.ret (by rw [ConRon.Arena.nestSeeds.eq_def]; rfl) ⟨hC, IWGrow.refl _, by simpa using hns, hP, hA,
         ConRon.Bridge.CoreStep.refl hC.check⟩
-    rw [nsdE.arm2 p n m vis ctx sO sL ns h0, show nhiO m ctx 0 = some (nhiW m ctx 0, m) from rfl, liftE_some,
-      nsdE.k_nest_ctx_hi_at.arm1]
+    rw [nsdE.arm2 p n m vis ctx sO sL ns h0]
     obtain ⟨⟨kk, nPcN⟩, seeds', rfl⟩ : ∃ x seeds', seeds = x :: seeds' := by
       cases seeds with
       | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hsl)) h0
