@@ -1,6 +1,3 @@
-import ConAgua.Arena.IndRealFvtD
-import ConAgua.Arena.IndCallM
-import ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndRealSpine
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -9,7 +6,8 @@ import ConAgua.L.GrindAttr
 /-!
 # DomsW
 
-`domsW`, `domsK1`, `domsK2`, `domsK3`, `domsW_zero`, `domsW_abortF` and the lemmas only they use.
+Slice lemmas: `decHL` along the pool's growth (`decHL_grow`) and its elements as word reads
+(`decHL_getI`, `decHL_get'`), and the `getD` readings `agGetD0–2`.
 -/
 
 section
@@ -27,107 +25,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-! ## `domsW`: the word model of `check_block_doms_at` -/
-
-mutual
-/-- **The model of `check_block_doms_at`.** `j = 0`: `return 0`, no callee touched. Otherwise:
-abort if either index is out of the (logical) list length, else call `fvar_type_d` then
-`is_def_eq_core`, then recurse at `j - 1`. -/
-def domsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
-    Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, off, fo, fl, dO, dl, j =>
-    if j = 0 then some ([0], m)
-    else if fl ≤ j - 1 then none
-    else if dl ≤ j - 1 then none
-    else
-      domsK1 cR n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
-        (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))])
-
-/-- After `fvar_type_d`: call `is_def_eq_core`. -/
-def domsK1 (cR : CallM) (n : Nat) (vis off fo fl dO dl j b : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (ra, m1) =>
-    domsK2 cR n vis off fo fl dO dl j
-      (cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, b] m1)
-
-/-- After `is_def_eq_core`: `unless ok do abort`, then the recursive call. -/
-def domsK2 (cR : CallM) (n : Nat) (vis off fo fl dO dl j : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rb, m2) =>
-    if rb.headD 0 = 0 then none else domsK3 (domsW cR n m2 vis off fo fl dO dl (j - 1))
-
-/-- After the recursive call: `u := call …; return u` returns the callee's first word. -/
-def domsK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-end
-
-section arms
-variable (cR : CallM) (n : Nat) (m m1 m2 : Mem) (vis off fo fl dO dl j b : Word) (ra rb : List Word)
-
-theorem domsW_zero (hj : j = 0) : domsW cR (n + 1) m vis off fo fl dO dl j = some ([0], m) := by
-  simp [domsW, hj]
-theorem domsW_abortF (hj : j ≠ 0) (hfl : fl ≤ j - 1) :
-    domsW cR (n + 1) m vis off fo fl dO dl j = none := by simp [domsW, hj, hfl]
-theorem domsW_abortD (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : dl ≤ j - 1) :
-    domsW cR (n + 1) m vis off fo fl dO dl j = none := by simp [domsW, hj, hfl, hdl]
-theorem domsW_cons (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : ¬ dl ≤ j - 1) :
-    domsW cR (n + 1) m vis off fo fl dO dl j =
-      domsK1 cR n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
-        (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))]) := by
-  simp [domsW, hj, hfl, hdl]
-theorem domsK1_some :
-    domsK1 cR n vis off fo fl dO dl j b (some (ra, m1)) =
-      domsK2 cR n vis off fo fl dO dl j
-        (cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, b] m1) := by
-  rw [domsK1]
-theorem domsK2_abort (heq : rb.headD 0 = 0) : domsK2 cR n vis off fo fl dO dl j (some (rb, m2)) = none := by
-  rw [domsK2, ite_eq_left heq]
-theorem domsK2_ok (heq : rb.headD 0 ≠ 0) :
-    domsK2 cR n vis off fo fl dO dl j (some (rb, m2)) = domsK3 (domsW cR n m2 vis off fo fl dO dl (j - 1)) := by
-  rw [domsK2, ite_eq_right heq]
-theorem domsK3_some (r : List Word) (m : Mem) : domsK3 (some (r, m)) = some ([r.headD 0], m) := rfl
-end arms
-
-grind_pattern [ind_grind] domsW_zero => domsW cR (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] domsW_abortF => domsW cR (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] domsW_abortD => domsW cR (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] domsW_cons => domsW cR (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] domsK1_some => domsK1 cR n vis off fo fl dO dl j b (some (ra, m1))
-grind_pattern [ind_grind] domsK2_abort => domsK2 cR n vis off fo fl dO dl j (some (rb, m2))
-grind_pattern [ind_grind] domsK3_some => domsK3 (some (r, m))
-grind_pattern [ind_grind] domsK2_ok => domsK2 cR n vis off fo fl dO dl j (some (rb, m2))
-
-/-! ## `domsW_spec`: the `vcgen` proof against the L code (no twin values) -/
-
-section spec
-variable (p : Prog) (hp : p.lookup "check_block_doms_at" = some checkBlockDomsAt) (hftd : FtdF p)
-include hp hftd
-
-theorem domsW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_block_doms_at" [vis, off, fo, fl, dO, dl, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ domsW cR n s₀.mem vis off fo fl dO dl j = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis off fo fl dO dl j
-    rw [invoke_eq _ hp]; simp only [callFn, checkBlockDomsAt]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis off fo fl dO dl j
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkBlockDomsAt]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ftdF_spec0 p hftd n, hcR n "is_def_eq_core", ih] <;>
-      finish (gen := 20)
-
-end spec
-
-/-! ## `domsW_ok`: the relational lemma, by induction on the model's fuel -/
 
 theorem mapM_opt_congr {α β : Type} (f g : α → Option β) :
     ∀ (xs : List α), (∀ x ∈ xs, f x = g x) → xs.mapM f = xs.mapM g
@@ -181,27 +78,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-- A successful `domsW cR` has `j` within both lists. -/
-theorem domsW_le {cR : CallM} {n : Nat} {m : Mem} {vis off fo fl dO dl j : Word} {r : List Word} {m' : Mem}
-    (h : domsW cR n m vis off fo fl dO dl j = some (r, m')) :
-    j.toNat ≤ fl.toNat ∧ j.toNat ≤ dl.toNat := by
-  cases n with
-  | zero => simp [domsW] at h
-  | succ n =>
-    by_cases hj : j = 0
-    · subst hj; simp
-    · have hjpos : 1 ≤ j.toNat := Nat.pos_of_ne_zero fun h0 => hj (UInt64.toNat_inj.mp (by simpa using h0))
-      have hj1 : (j - 1).toNat = j.toNat - 1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hjpos))]
-        simp
-      by_cases hfl : fl ≤ j - 1
-      · rw [domsW_abortF cR n m vis off fo fl dO dl j hj hfl] at h; simp at h
-      by_cases hdl : dl ≤ j - 1
-      · rw [domsW_abortD cR n m vis off fo fl dO dl j hj hfl hdl] at h; simp at h
-      have h1 : ¬ fl.toNat ≤ (j - 1).toNat := by rw [← UInt64.le_iff_toNat_le]; exact hfl
-      have h2 : ¬ dl.toNat ≤ (j - 1).toNat := by rw [← UInt64.le_iff_toNat_le]; exact hdl
-      omega
 
 theorem agGetD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   rcases r with _ | ⟨a, _ | ⟨b, c⟩⟩ <;> rfl

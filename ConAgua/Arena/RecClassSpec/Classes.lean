@@ -2,6 +2,7 @@ import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndCallM
 
 /-!
 # Classes: `ConRon.Arena.ClassRead.classes`

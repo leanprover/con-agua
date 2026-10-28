@@ -4,6 +4,8 @@ import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.IndSumSpec.CtlW
 
 /-!
 # `checkSumCtor` under `StageC` (lane `indstaget`)
@@ -14,7 +16,7 @@ values and both environments denote; the pre-block environment's `IFEnvOKS`), it
 transcribed from that spec's proof. The tail (`cscTailT`, `ctlW_okC`): the fields opened past the
 parameters (`openPisAtFvarsF_run`), the family head (`paramLevels_spec`, `internConstE_run`), the
 residual's spine (`getAppFn_run`, `getAppArgs_run`), the resolution tests (`fieldDomsResolve_spec`,
-`idxArgsResolve_spec`), the field sorts (`fsortsW_okC`, con-ron's `checkStructFieldSortsI_spec` on
+`idxArgsResolve_spec`), the field sorts (`installSimFsortsC`, con-ron's `checkStructFieldSortsI_spec` on
 its run for the `CoreStep`).
 -/
 
@@ -40,7 +42,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
 include hq henv hOpf hLC hLT in
 /-- **`check_sum_ctor_tail` under `StageC`** (twin side: the tail of con-ron's
 `checkSumCtor_spec`'s proof). -/
-theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
+theorem ctlW_okC (hP : SumProg p) (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
     (a : AState) (vis0 T lo ll nP nIdx rs isP lg nF cqO cqL cqB : Word) (lps : List NIdx)
     (cq1 : List EIdx) (cvCa : IConstantVal) (hC : StageC dn vis fe env m a) (hT : H T)
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
@@ -242,9 +244,10 @@ theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
       ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD :=
     fun i _ x hx => ConRon.Bridge.Inductives.openers_typeD_WScoped hxq hwsc i x hx
   refine Sim.bindK (K := ctlK9) rfl (fun _ _ => rfl)
-    (Sim.withRunC (fsortsW_okC hq henv hLC hLT n (by omega) m7 a7 isP lg rs nP xo xlw (ao + nP) (al - nP) nF xl1
-      (args.drop nP.toNat) hC7 hA7 (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.1; omega)
-      (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.1; omega) hrs (ConRon.Bridge.denoteL_ext hrsP hx07) hnf hxfvs7 hxpos))
+    (Sim.withRunC (installSimFsortsC hq henv hLC hLT hP (n + 1) (by omega) isP lg rs nP xo xlw (ao + nP) (al - nP) nF
+      hrs xl1 (args.drop nP.toNat) hC7 hA7 (ConRon.Bridge.denoteL_ext hrsP hx07)
+      (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.1; omega)
+      (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.1; omega) hnf hxfvs7 hxpos))
     fun r9 sorts m8 a8 hQ => ?_
   obtain ⟨⟨hC8, hg8, hd8, hb8, hA8⟩, hr8⟩ := hQ
   obtain ⟨c8, -⟩ := ConRon.Bridge.Inductives.checkStructFieldSortsI_spec fe
@@ -256,10 +259,10 @@ theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
     by simpa using hb8, hA8, (hp07.toCore hC.check).trans c8⟩
 
 include hq henv in
-/-- `check_struct_doms_at` under `StageC` as a `Sim` (an out-of-range count aborts in the model). -/
-theorem sdSimC (k : Nat) (hk : k ≤ 2 ^ 62) (m : Mem) (a : AState) (off fo fl dO dl j : Word)
-    (fvs doms : List EIdx) (fvsP domsP : List ConLeche.Expr) (hC : StageC dn vis fe env m a)
-    (hA : AbsOK m)
+/-- `check_struct_doms_at` under `StageC` as a `Sim` of its run (`sds_ref`'s ok half). -/
+theorem sdSimC (hP : SumProg p) (k : Nat) (hk : k ≤ 2 ^ 62) (m : Mem) (a : AState)
+    (off fo fl dO dl j : Word) (fvs doms : List EIdx) (fvsP domsP : List ConLeche.Expr)
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m)
     (hfvs : decHL m fo.toNat fl.toNat = some fvs) (hdoms : decHL m dO.toNat dl.toNat = some doms)
     (hfb : fo.toNat + fl.toNat ≤ iwTop m) (hdb : dO.toNat + dl.toNat ≤ iwTop m)
     (hoob : off.toNat + fl.toNat < 2 ^ 64)
@@ -267,22 +270,20 @@ theorem sdSimC (k : Nat) (hk : k ≤ 2 ^ 62) (m : Mem) (a : AState) (off fo fl d
     (hdP : Frontend.denoteEList a.store doms = some domsP)
     (hws : ∀ i, i < j.toNat → ∀ x y, fvsP[i]? = some x → domsP[i]? = some y →
       ConLeche.Expr.WScoped (off.toNat + i) x.fvarTypeD ∧ ConLeche.Expr.WScoped (off.toNat + i) y) :
-    Sim (sdomsW (realCall p) k m vis off fo fl dO dl j) (checkStructDomsAt V fe off.toNat fvs doms j.toNat) a
+    Sim (realCall p k "check_struct_doms_at" [vis, off, fo, fl, dO, dl, j] m)
+      (checkStructDomsAt V fe off.toNat fvs doms j.toNat) a
       (fun _ _ m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ AbsOK m') := by
   intro r m' e
-  have e' := e
-  rw [sdomsW_eq] at e'
-  cases hd : domsW (realCall p) k m vis off fo fl dO dl j with
-  | none => rw [hd] at e'; cases e'
-  | some x =>
-  obtain ⟨hjf, hjd⟩ := domsW_le hd
   have hS := hC.stage
-  exact sdomsW_simC hq henv k hk m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms
-    (hS.lt64 hfb) (hS.lt64 hdb) hfb hdb hoob hjf hjd hfP hdP hws (r, m') e
+  obtain ⟨s', rfl, -, u, a', hrun, hR⟩ :=
+    RefE.run_okW (sdomsE_spec p hP.hsd k ⟨m, Locals.init []⟩ vis off fo fl dO dl j)
+      (sds_ref hq henv hP.hg hP.ad.ftd k hk m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms
+        (hS.lt64 hfb) (hS.lt64 hdb) hfb hdb hoob hfP hdP hws) e
+  exact ⟨u, a', hrun, hR.stage, hR.grow, hR.abs⟩
 
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` under `StageC`** (twin side: con-ron's `checkSumCtor_spec`'s proof). -/
-theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
+theorem ctorW_okC (hP : SumProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
     (a : AState) (vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
     (cvC cvTa : IConstantVal) (hC : StageC dn vis fe env m a) (hT : H T)
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
@@ -452,7 +453,7 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
     obtain ⟨z, hz, rfl⟩ := Option.map_eq_some_iff.mp hy
     exact ConRon.Bridge.Inductives.openers_typeD_WScoped htq hws i z hz
   refine Sim.bindK (K := ctorK8 (realCall p) n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
-    (fun _ _ => rfl) (Sim.withRunC (sdSimC hq henv (n + 2) hn m6 a6 0 _ _ _ _ nP cl tdoms cfvsP
+    (fun _ _ => rfl) (Sim.withRunC (sdSimC hq henv hP (n + 2) hn m6 a6 0 _ _ _ _ nP cl tdoms cfvsP
       (tfvsP.map ConLeche.Expr.fvarTypeD) hC6 hA6 hcl6 htd hclb6 htdb
       (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := hC6.stage.lt64 hclb6; omega)
       hcfvs6 hdoms hws7))
@@ -471,7 +472,7 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
     have := (ConLeche.openPisAtFvars_WScoped _ _ _ hcq hwsA).2
     simpa using this
   refine sumSim_map (K := ctorK9 cvCw) rfl (fun _ _ => rfl)
-    (ctlW_okC hq henv hOpf hLC hLT n (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC hC7 hT
+    (ctlW_okC hq henv hOpf hLC hLT hP n (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC hC7 hT
       (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).1; omega)
       (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.1; omega) hcqB hrs hni hnf hA7
       (ConRon.Bridge.denoteN_ext hTP hx07) (ConRon.Bridge.denoteNListE_ext hx07 _ _ hlpsP)
@@ -523,7 +524,7 @@ theorem checkSumCtor_refinesC (hP : SumProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62)
   refine triple_post (ctorW_spec p hP (realCall p) (realCall_spec p) n s₀ vis0 vis T lo ll nP nIdx rs
     isP lg cvCw nF cvTaw) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hok, hC', hg', h0, h1, hd, -, hA', -⟩ := (ctorW_okC hq henv hV hOpf hLC hLT hApd hCrk n hn _ a₀ vis0 T lo ll nP nIdx rs
+  obtain ⟨hok, hC', hg', h0, h1, hd, -, hA', -⟩ := (ctorW_okC hq henv hV hOpf hLC hLT hApd hCrk hP n hn _ a₀ vis0 T lo ll nP nIdx rs
     isP lg cvCw nF cvTaw lps cvC cvTa hC hT hlps hlb hcv hta hrs hni hnf hA hTP hlpsP hrsP hcvCP hcvTaP
     hws hok₀ hfe).run hm
   exact ⟨hl, hok, hC', hg', h0, h1, hd, hA'⟩

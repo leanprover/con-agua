@@ -1831,3 +1831,60 @@ Elaboration (user seconds, median of 3 interleaved runs, base master 02beda5d): 
 module at parity (`Arena/RecClassSpec/CrW` 24.5/24.5, `Verdict/PosE1M` 21.9/21.8, `DeclValE`
 8.5/7.7, `IndBHdr` 5.5/5.2, the 14 others within 0.4 s) but `L/ModelGenTest` 23.2 → 25.4 (the two
 new tests).
+
+### 3.26 The depth-0 leftovers of the sum family and the domain walks (`check_block_doms_at`, `check_struct_doms_at`, `check_sum_ctors`, `check_struct_field_sorts_i(_go)`)
+
+The leaves §3.12 and §3.15 left split, but `check_block_tables(_one)` (§3.25):
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `check_block_doms_at` | `domsW_simC` 111 + `cbdaE_claim` 137 + `ErrClaim.of_twin` 5 = 253 | `cbda_ref` 111 + `DomsPost` 6 = 117 | −54 % |
+| `check_struct_doms_at` | `sdomsW_simC` 22 (over `domsW_simC`) + `sdomsE_claim` 162 + `checkStructDomsAt_claim` 22 = 206 | `sds_ref` 128 + `callW_ftdF` 5 = 133 | −35 % |
+| `check_struct_field_sorts_i(_go)` | `csfW_okC` 116 + `fsortsW_okC` 29 + `csfE_claimB` 180 + `checkStructFieldSortsI_claim` 55 = 380 | `csfGo_ref` 163 + `fsorts_ref` 30 + `CsfGoPost`/`FsortsPost` 15 + claim 23 = 231 | −39 % |
+| `check_sum_ctors` | `sctsW_okC` 163 + `sctsE_claim` 181 + `checkSumCtors_claim` 25 = 369 | `scts_ref` 181 + `SctsG` 5 + `SctsPost` 12 = 198 | −46 % |
+| **pairs** | **1 208** | **679** | **−44 %** |
+
+Gone with them: the hand models `domsW` and `sdomsW` with their arms, specs, `sdomsW_eq` and
+`checkStructDomsAt_of_block`; `csfW`/`fsortsW` with `csfK1–5`/`fsortsK1–2`; `sctsW` with `sctsK1–6`;
+the modules `Verdict/IndsE3`, `Arena/IndT/Install5`, `Arena/IndT/Sum5`; the unused statement
+`CheckBlockDomsAtE`. Whole diff against master 97ff8cd6: +728 −1 845 in 32 files.
+
+* **Two walks, two models.** `check_block_doms_at` and `check_struct_doms_at` shared the hand model
+  (`sdomsW` was `domsW` with the words dropped) and its ok proof, but their bodies differ (the block
+  reads the slices directly and returns a word, the structure walk reads them by `sl_get`; the reject
+  messages differ). They have two unified models `cbdaE`, `sdomsE` and two refinements, in
+  `Arena/IndT/Install1`, with one post `DomsPost` (`stage`, `grow`, `abs`).
+* **`G`**: `CoreStubsE p` for the two walks (their only claimed callee is `is_def_eq_core`;
+  `fvar_type_d` and `sl_get` are lifted); `VerdictCtx p` for the field sorts (`check_field_sort_bound`
+  stays `callE`, its claim needs `nv`); `SctsG p` (`VerdictCtx` and `CcvE`) for `check_sum_ctors`, whose
+  callee `check_sum_ctor` stays `callE` with its `ctor_claim`.
+* **Callers through the run.** `check_sum_ctor`'s model `ctorW` read `sdomsW`, and
+  `check_sum_ctor_tail`'s `ctlW` read `fsortsW`: both now read the run (`cR (n+2) "check_struct_doms_at"
+  […] m`; the reader `fsortsR`), so `ctorW_okC` and `ctlW_okC` take `SumProg p` (the lookups).
+  `cbao_ref` reads `cbda_ref` by `RefE.run_ok`/`RefE.run_err`, `ctor_claim` reads `sds_ref` the same
+  way. The kept statements (`checkStructFieldSortsI_claim`, `CheckSumCtorsE`, the four `@[refines]`)
+  are one-liners from the refinements.
+* **Recipes**: `simp [rdW]` (`cbdaE`), `simp []` (`sdomsE`, `csfGoE`, `fsortsE`; the default `finish`
+  fails for `cbdaE`/`sdomsE` and took 12 s for `Install1` against 3.7 s), the old
+  `simp [Cmp.evalW, Cmp.eval]` for `sctsE` (`finish` fails).
+* **Shake.** The moves left about 25 imports unused; removing them broke a dozen downstream
+  modules that used them transitively, which now import what they use.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+97ff8cd6, load 9–126, so ±15 % is noise):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndT/Install1` | 1.14 | **3.83** | **slower (+2.7 s)**: `cbdaE`, `sdomsE` and their refinements moved in |
+| `Arena/IndInstallSpec/DomsW`, `Verdict/IndsE3` (deleted), `Verdict/IndBSum1`, `IndsE1` | 13.75 | 3.04 | …from here |
+| `Arena/IndT/Sum3` | 1.68 | **2.89** | **slower (+1.2 s)**: `csfGoE`, `fsortsE`, their refinements |
+| `Arena/IndSumSpec/CheckStructFieldSortsISucc`, `Arena/IndT/Install5` (deleted) | 4.29 | 1.61 | …from here |
+| `Arena/IndSumSpec/CtorX`, `Arena/IndT/Sum5` (deleted), `Verdict/IndBSum4` | 17.76 | 12.14 | `sctsW` and its spec gone |
+| `Arena/IndSumSpec/StructProjArgP`, `CtlW`, `CtlK1` | 16.88 | 11.54 | `sdomsW` and its arms gone |
+| `Verdict/IndBSum3` | 27.80 | 21.91 | |
+| the other 11 | 32.36 | 27.81 | |
+| **sum (26 modules)** | **115.7** | **84.8** | **−27 %** |
+
+Both flagged modules are the new homes of models whose old modules got faster by more.
+
+No kit or generator change was needed.

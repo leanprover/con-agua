@@ -4,6 +4,7 @@ import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
 
 /-!
 # CheckSumCtor
