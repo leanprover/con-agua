@@ -10,8 +10,8 @@ import ConAgua.Arena.IndPosSpec.RsLook
 /-!
 # The positivity pass's entry points: error models (lane `verdicts-b`, helper `ia2`, fork `top`)
 
-The `errors` models of `check_abs_ctor_sorts_one`, `check_abs_ctor_sorts`,
-`check_abs_ctor_sorts_all`, `nest_uniform`, `nest_root`, `nest_seeds`, `check_block_positivity`.
+The models of `check_abs_ctor_sorts_one`, `check_abs_ctor_sorts`, `nest_uniform`, `nest_root`
+(`unified`), `check_abs_ctor_sorts_all`, `check_block_positivity` (`errors`).
 -/
 
 open ConRon.Arena
@@ -27,12 +27,17 @@ namespace L.Ind
 open L.Arena
 
 l_model iaoE_spec (p : Prog) (hf : p.lookup "check_abs_ctor_sorts_one" = some checkAbsCtorSortsOne)
-  fns [hf ↦ iaoE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+  fns [hf ↦ iaoE list] specs [callW_spec p n "open_pis_at_fvars_f"] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model iacE_spec (p : Prog) (hf : p.lookup "check_abs_ctor_sorts" = some checkAbsCtorSorts)
-  fns [hf ↦ iacE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+l_model iacE_spec (p : Prog) (h1 : p.lookup "check_abs_ctor_sorts_one" = some checkAbsCtorSortsOne)
+  (hf : p.lookup "check_abs_ctor_sorts" = some checkAbsCtorSorts)
+  fns [hf ↦ iacE list]
+  specs [callW_spec p n "all_level_params_defined", callW_spec p n "nest_ctx_hi_at", iaoE_spec p h1 n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model iaaE_spec (p : Prog) (hf : p.lookup "check_abs_ctor_sorts_all" = some checkAbsCtorSortsAll)
   fns [hf ↦ iaaE list] grind [arena_grind] fold [tierW, idxW]
@@ -77,10 +82,6 @@ l_model nrtE_spec (p : Prog) (hL : RsLook p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-l_model nsdE_spec (p : Prog) (hf : p.lookup "nest_seeds" = some nestSeedsL)
-  fns [hf ↦ nsdE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
 
 l_model cbpE_spec (p : Prog) (hf : p.lookup "check_block_positivity" = some checkBlockPositivity)
   fns [hf ↦ cbpE list] grind [arena_grind] fold [tierW, idxW]
