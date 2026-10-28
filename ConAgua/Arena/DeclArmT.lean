@@ -314,7 +314,7 @@ structure IvPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (v : List Word �
   some : y.2 ≠ none
 
 /-- **`install_value` refines `ivCoreT`, both outcomes**, under `StageT`: `install_header` by
-`ih_ref`, the value's guards by `ivgW_okT` (ok) and `IvgE` (errors); after the push the stage
+`ih_ref`, the value's guards by `ivg_ref`; after the push the stage
 relation at the extended environment and `CoreMemos`. -/
 theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -405,12 +405,11 @@ theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hk
       rw [hwvd]
       exact hG.ivg h3 hP2.stage hcv2 (by rw [hq1]; omega) hwvl hlps2 hP2.crOK
     rw [installValueE.k_install_value_guards.arm1]
-    obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-      (ivg_specW p hC (realCall p) (realCall_spec p) n ⟨m2, Locals.init []⟩ vis (q + 1) wv)
-      (callW_of_callE h3)
+    obtain ⟨s3, hs3, -, _, a3, hrun3, hS3, hg3, -⟩ := RefE.run_ok
+      (s₀ := ⟨m2, Locals.init []⟩)
+      (installValueGuards_specE p hC n _ vis (q + 1) wv)
+      (ivg_ref hap hkp.crf n hP2.stage hcv2 (by rw [hq1]; omega) hwvl hlps2 hP2.crOK) h3
     subst hs3
-    obtain ⟨a3, hrun3, hS3, hg3, -⟩ :=
-      ivgW_okT hap hkp hW3 hP2.stage hcv2 (by rw [hq1]; omega) hwvl hlps2 hP2.crOK
     rw [← hwvd] at hrun3
     exact RefE.bind_right hrun3 (tail _ a3 hS3 (hP2.grow.trans hg3))
   · rw [installValueE.k_install_header.arm2 p _ _ _ _ _ _ (by simpa using hv1), ite_eq_right hv1]

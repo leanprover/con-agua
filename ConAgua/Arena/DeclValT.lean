@@ -149,7 +149,7 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
     by_cases hn : ws.Nodup
     · simp [hn]
     · simp [hn] at hd; exact absurd hd hb5
-  -- the four walks, as in `ivgW_ok`
+  -- the four walks, as in `ivg_ref`
   cases h6 : lbbF m4 [4000000000, 0, wt] with
   | none => rw [h6] at h; simp [ihK6] at h
   | some rm6 =>

@@ -144,7 +144,7 @@ structure DvPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (fe' : IFEnv) (w
   res : y = fe'
 
 /-- **`check_defn_val` refines its twin `dvT …`, both outcomes**, under `StageT`: the value's guards
-by `ivgW_okT` (ok) and `IvgE` (errors), the core stubs by `KnotStageProg` and `CoreStubsE`, the
+by `ivg_ref`, the core stubs by `KnotStageProg` and `CoreStubsE`, the
 type mismatch the twin's `invalid`; after the push the stage at the extended environment. -/
 theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -176,13 +176,12 @@ theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     exact RefE.bind_left fun hG => hG.ivg h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
       (by rw [hc1]; omega) hwvl hlps hCr
   rw [checkDefnValE.k_install_value_guards.arm1]
-  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (ivg_specW p hp.cvg (realCall p) (realCall_spec p) n ⟨m, Locals.init []⟩ vis (c + 1) wv)
-    (callW_of_callE h1)
+  obtain ⟨s1, hs1, -, _, a1, hrun1, hS1, hg1, -⟩ := RefE.run_ok
+    (s₀ := ⟨m, Locals.init []⟩)
+    (installValueGuards_specE p hp.cvg n _ vis (c + 1) wv)
+    (ivg_ref hap hkp.crf n hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
+      (by rw [hc1]; omega) hwvl hlps hCr) h1
   subst hs1
-  obtain ⟨a1, hrun1, hS1, hg1, -⟩ :=
-    ivgW_okT hap hkp hW1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
-      (by rw [hc1]; omega) hwvl hlps hCr
   refine RefE.bind_right hrun1 ?_
   -- the value's type
   rcases h2 : callE p n "infer_type_core" [vis, 0, wv] s1.mem with e2 | ⟨r2, m2⟩
@@ -233,7 +232,7 @@ theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
   exact RefE.ret rfl ⟨by simpa using hS4, hM4, hg1.trans (hg2.trans (hg3.trans hg4)), rfl⟩
 
 /-- **`check_opaque_val` refines its twin `dvT …`, both outcomes**, under `StageT`: the value's guards
-by `ivgW_okT` (ok) and `IvgE` (errors), the core stubs by `KnotStageProg` and `CoreStubsE`, the
+by `ivg_ref`, the core stubs by `KnotStageProg` and `CoreStubsE`, the
 type mismatch the twin's `invalid`; after the push the stage at the extended environment. -/
 theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -265,13 +264,12 @@ theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     exact RefE.bind_left fun hG => hG.ivg h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
       (by rw [hc1]; omega) hwvl hlps hCr
   rw [checkOpaqueValE.k_install_value_guards.arm1]
-  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (ivg_specW p hp.cvg (realCall p) (realCall_spec p) n ⟨m, Locals.init []⟩ vis (c + 1) wv)
-    (callW_of_callE h1)
+  obtain ⟨s1, hs1, -, _, a1, hrun1, hS1, hg1, -⟩ := RefE.run_ok
+    (s₀ := ⟨m, Locals.init []⟩)
+    (installValueGuards_specE p hp.cvg n _ vis (c + 1) wv)
+    (ivg_ref hap hkp.crf n hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
+      (by rw [hc1]; omega) hwvl hlps hCr) h1
   subst hs1
-  obtain ⟨a1, hrun1, hS1, hg1, -⟩ :=
-    ivgW_okT hap hkp hW1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
-      (by rw [hc1]; omega) hwvl hlps hCr
   refine RefE.bind_right hrun1 ?_
   -- the value's type
   rcases h2 : callE p n "infer_type_core" [vis, 0, wv] s1.mem with e2 | ⟨r2, m2⟩
