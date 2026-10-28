@@ -4,7 +4,6 @@ import ConAgua.Verdict.VCtx
 import ConAgua.Arena.Checker
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `target_rec_pins`: one model and one refinement for both outcomes
