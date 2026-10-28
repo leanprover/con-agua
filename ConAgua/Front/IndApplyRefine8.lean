@@ -24,8 +24,8 @@ theorem psum_congr {m m' : Mem} (h : m'.arr64 IFR = m.arr64 IFR) (to : Word) (i 
   intro k _
   simp only [cntF, wd, h]
 
-theorem orderW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : StateD}
-    (hR : ArenaR m a) (hD : StateDR m st) {cts : List IndCtorRec}
+theorem orderW_twin {p : Prog} (hL : IndApplyLookups p) {b : ByteArray} {n : Nat} {m m' : Mem}
+    {a : AState} {st : StateD} (hR : ArenaR m a) (hD : StateDR m st) {cts : List IndCtorRec}
     {to tn tyn fo cno co cn fuel np oo : Word} (hT : TopOK m)
     (hCt : ListF (CtF b m) m 10 co.toNat cts) (hcn : cn.toNat = cts.length)
     (hCN : ∀ k, k < cts.length → (wd m IFL (cno.toNat + k)).toNat < 2 ^ 32)
@@ -34,7 +34,7 @@ theorem orderW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : St
     (hto : to.toNat + 11 * tn.toNat < 2 ^ 63) (htyn : tyn.toNat + tn.toNat ≤ topN m IFL + 1)
     (hfo : ∀ p, p < psum m to tn.toNat → fo.toNat + p ≤ topN m IFL ∧ (wd m IFL (fo.toNat + p)).toNat < 2 ^ 32)
     (hps : psum m to tn.toNat ≤ cts.length)
-    (h : orderW n m to tn tyn fo cno co cn fuel np = some (oo, m')) :
+    (h : orderW p n m to tn tyn fo cno co cn fuel np = some (oo, m')) :
     oo.toNat = topN m IFL + 1 ∧ IExt m m' ∧ TopOK m' ∧ topN m' IFL = topN m IFL + cts.length ∧
     ∀ k, k < tn.toNat → ∀ c, c < cntF m to k →
       ∃ kk, wd m' IFL (oo.toNat + psum m to k + c) = co + 10 * UInt64.ofNat kk ∧
@@ -46,7 +46,7 @@ theorem orderW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : St
   | succ n =>
   simp only [orderW] at h
   rcases ha : allocW m IFL cn with _ | ⟨oo', m₁⟩ <;> simp only [ha, allocK, reduceCtorEq] at h
-  rcases hg : orderGoW n m₁ to tn tyn fo cno co cn fuel np oo' 0 0 with _ | m₂ <;> simp only [hg, mK, reduceCtorEq] at h
+  rcases hg : orderGoW p n m₁ to tn tyn fo cno co cn fuel np oo' 0 0 with _ | m₂ <;> simp only [hg, mK, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a1, a2, a3, a4⟩ := allocW_ok hT ha
   obtain ⟨-, -, a5, -, -⟩ := allocW_factsA (by decide) hT.1 (by have := hT.1; have := hT.2; omega) ha
@@ -59,7 +59,7 @@ theorem orderW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : St
     rw [hkeep _ (by omega) (by omega)]; exact hCN k hk
   have hCt₁ : ListF (CtF b m₁) m₁ 10 co.toNat cts := hCt.ext a1 (fun _ _ x => x.ext a1)
   rw [← hps₁] at hfo hps
-  obtain ⟨g1, -, g3⟩ := orderGoW_twin hR₁ hD₁ hCt₁ hcn hCN₁ (by omega) hnp hco
+  obtain ⟨g1, -, g3⟩ := orderGoW_twin hL hR₁ hD₁ hCt₁ hcn hCN₁ (by omega) hnp hco
     (by rw [a1.size]; omega) a2.1 hto (by omega)
     (fun p hp => by
       obtain ⟨f1, f2⟩ := hfo p hp

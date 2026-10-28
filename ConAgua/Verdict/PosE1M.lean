@@ -1,4 +1,3 @@
-import ConAgua.Verdict.PosE3Fm
 import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict
@@ -24,102 +23,34 @@ namespace L.Ind
 
 open L.Arena
 
-l_model npE_specC (p : Prog) (hf : p.lookup "nest_pos" = some nestPosL)
+l_model npE_spec (p : Prog) (hf : p.lookup "nest_pos" = some nestPosL)
   fns [hf ↦ npE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
 
-/-- `nest_pos`'s unified spec (the error post over the class), from the `errors` spec. -/
-theorem npE_spec (p : Prog) (hf : p.lookup "nest_pos" = some nestPosL) (n : Nat) (s₀ : St)
-    (vis ctx fuel progOff progLen dep kb e ns : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos" [vis, ctx, fuel, progOff, progLen, dep, kb, e, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ npE p n s₀.mem vis ctx fuel progOff progLen dep kb e ns = .ok (r, s'.mem);
-     fun ε => True → ε.cls ≠ 0 → npE p n s₀.mem vis ctx fuel progOff progLen dep kb e ns = .error ε⦄ :=
-  triple_uni_of_code (npE_specC p hf n s₀ _ _ _ _ _ _ _ _ _)
-
-l_model npbE_specC (p : Prog) (hf : p.lookup "nest_pos_bind" = some nestPosBindL)
+l_model npbE_spec (p : Prog) (hf : p.lookup "nest_pos_bind" = some nestPosBindL)
   fns [hf ↦ npbE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
 
-/-- `nest_pos_bind`'s unified spec (the error post over the class), from the `errors` spec. -/
-theorem npbE_spec (p : Prog) (hf : p.lookup "nest_pos_bind" = some nestPosBindL) (n : Nat) (s₀ : St)
-    (vis ctx fuel progOff progLen dep kb w ns : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_bind" [vis, ctx, fuel, progOff, progLen, dep, kb, w, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ npbE p n s₀.mem vis ctx fuel progOff progLen dep kb w ns = .ok (r, s'.mem);
-     fun ε => True → ε.cls ≠ 0 → npbE p n s₀.mem vis ctx fuel progOff progLen dep kb w ns = .error ε⦄ :=
-  triple_uni_of_code (npbE_specC p hf n s₀ _ _ _ _ _ _ _ _ _)
-
-l_model npaE_specC (p : Prog) (hf : p.lookup "nest_pos_app" = some nestPosAppL)
+l_model npaE_spec (p : Prog) (hf : p.lookup "nest_pos_app" = some nestPosAppL)
   fns [hf ↦ npaE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
 
-/-- `nest_pos_app`'s unified spec (the error post over the class), from the `errors` spec. -/
-theorem npaE_spec (p : Prog) (hf : p.lookup "nest_pos_app" = some nestPosAppL) (n : Nat) (s₀ : St)
-    (vis ctx fuel progOff progLen kb hi w ns : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_app" [vis, ctx, fuel, progOff, progLen, kb, hi, w, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ npaE p n s₀.mem vis ctx fuel progOff progLen kb hi w ns = .ok (r, s'.mem);
-     fun ε => True → ε.cls ≠ 0 → npaE p n s₀.mem vis ctx fuel progOff progLen kb hi w ns = .error ε⦄ :=
-  triple_uni_of_code (npaE_specC p hf n s₀ _ _ _ _ _ _ _ _ _)
-
-l_model ncE_specC (p : Prog) (hf : p.lookup "nest_cont" = some nestContL)
+l_model ncE_spec (p : Prog) (hf : p.lookup "nest_cont" = some nestContL)
   fns [hf ↦ ncE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
-
-/-- `nest_cont`'s unified spec (the error post over the class), from the `errors` spec. -/
-theorem ncE_spec (p : Prog) (hf : p.lookup "nest_cont" = some nestContL) (n : Nat) (s₀ : St)
-    (vis ctx fuel progOff progLen kb n' us argsOff argsLen ns : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont" [vis, ctx, fuel, progOff, progLen, kb, n', us, argsOff, argsLen, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ ncE p n s₀.mem vis ctx fuel progOff progLen kb n' us argsOff argsLen ns = .ok (r, s'.mem);
-     fun ε => True → ε.cls ≠ 0 → ncE p n s₀.mem vis ctx fuel progOff progLen kb n' us argsOff argsLen ns = .error ε⦄ :=
-  triple_uni_of_code (ncE_specC p hf n s₀ _ _ _ _ _ _ _ _ _ _ _)
-
-/-- `nest_occ_any`'s model with its one result as a word (the generator reads `some (r, m)`). -/
-def noaW1 (k : Nat) (m : Mem) (no nl lo hi off ln : Word) : Option (Word × Mem) :=
-  (noaW k m no nl lo hi off ln).map fun x => (x.1.headD 0, x.2)
-
-theorem noaW1_some {k : Nat} {m m' : Mem} {no nl lo hi off ln b : Word}
-    (h : noaW1 k m no nl lo hi off ln = some (b, m')) :
-    ∃ r, noaW k m no nl lo hi off ln = some (r, m') ∧ r.headD 0 = b := by
-  simp only [noaW1, Option.map_eq_some_iff, Prod.mk.injEq] at h
-  obtain ⟨⟨r, m₁⟩, h, rfl, rfl⟩ := h
-  exact ⟨r, h, rfl⟩
-
-theorem nestOccAny_spec1 (p : Prog) (hl : NoLook p) (hp : p.lookup "nest_occ_any" = some nestOccAnyL)
-    (k : Nat) (s₀ : St) (no nl lo hi off ln : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_occ_any" [no, nl, lo, hi, off, ln]
-    ⦃fun r s' => LocEq s' s₀ ∧ noaW1 k s₀.mem no nl lo hi off ln = some (r.headD 0, s'.mem); ⊤⦄ :=
-  triple_post (nestOccAny_spec p hl hp k s₀ no nl lo hi off ln) fun r s' ⟨hl', h⟩ =>
-    ⟨hl', by simp [noaW1, h]⟩
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
 
 l_model pfvE_spec (p : Prog) (hL : PfLook p)
   fns [hL.hp ↦ pfvE]
-  specs [nestHoleAt_spec' p hL n, nestOccAny_spec1 p hL.no hL.hoa n, nestArity_spec' p hL.na n,
+  specs [nestHoleAt_spec' p hL n, nestOccAny_spec p hL.no hL.hoa n, nestArity_spec' p hL.na n,
     nestPosHoleKind_spec p hL.hh hL.hk n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- `nest_cont_params_closed`'s model with its one result as a word. -/
-def cpW1 (k : Nat) (m : Mem) (hpw dO dL : Word) : Option (Word × Mem) :=
-  (cpW k m hpw dO dL).map fun x => (x.1.headD 0, x.2)
-
-theorem cpW1_some {k : Nat} {m m' : Mem} {hpw dO dL b : Word} (h : cpW1 k m hpw dO dL = some (b, m')) :
-    ∃ r, cpW k m hpw dO dL = some (r, m') ∧ r.headD 0 = b := by
-  simp only [cpW1, Option.map_eq_some_iff, Prod.mk.injEq] at h
-  obtain ⟨⟨r, m₁⟩, h, rfl, rfl⟩ := h
-  exact ⟨r, h, rfl⟩
-
-theorem nestContParamsClosed_spec1 (p : Prog) (hb : BvbProg p) (hf : HfF p)
-    (hp : p.lookup "nest_cont_params_closed" = some nestContParamsClosedL) (n : Nat) (s₀ : St)
-    (hpw dO dL : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_params_closed" [hpw, dO, dL]
-    ⦃fun r s' => LocEq s' s₀ ∧ cpW1 n s₀.mem hpw dO dL = some (r.headD 0, s'.mem); ⊤⦄ :=
-  triple_post (nestContParamsClosed_spec p hb hf hp n s₀ hpw dO dL) fun r s' ⟨hl', h⟩ =>
-    ⟨hl', by simp [cpW1, h]⟩
-
 l_model nccE_spec (p : Prog) (hL : NbLook p)
   fns [hL.hcc ↦ nccE]
-  specs [nestOccAny_spec1 p hL.nit.no hL.nit.hoa n, pos2Pin_spec p hL.hpa n,
-    nestContParamsClosed_spec1 p hL.usl.hbp hL.dc.hf hL.hpc n]
+  specs [nestOccAny_spec p hL.nit.no hL.nit.hoa n, pos2Pin_spec p hL.hpa n,
+    nestContParamsClosed_spec p hL.usl.hbp hL.dc.hf hL.hpc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

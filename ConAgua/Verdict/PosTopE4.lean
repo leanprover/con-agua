@@ -120,7 +120,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
         by rw [hhi0, hhiP]; exact hholes, hlen⟩
     rw [ConRon.Arena.nestRoot]
     -- `nest_ctx_hi_at`, `nest_ctors`
-    rw [show liftE (nhiO m ctx 0) = .ok (nhiW m ctx 0, m) from rfl, nrtE.k_nest_ctx_hi_at.arm1, rd0, rd1, rd2]
+    rw [rd0, rd1, rd2]
     have hRef := (nbRef_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv n (by omega)).ctors m a ctx 1
       0 0 0 (nhiW m ctx 0) _ _ _ _ _ hO hL cO' cL' ns 0 0 c [] c.params c.names holes cs NS [] ctxP [] _ _ _ _ csP
       nsP [] hC hW hCc hcl' hcb' hcsAt hns (by simpa using OutsB.nil m 0) (by simp) hP hA hc hctx rfl hpre hc1

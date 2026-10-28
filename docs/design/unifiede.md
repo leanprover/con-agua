@@ -835,3 +835,83 @@ at the merge; load 4–95):
 Kit candidate: `RefE.of_run_eq` (`Arena/KnotE.lean`, from another batch) moves a refinement along
 an equation of twin runs. Two helpers wrote it again before finding it. It belongs in
 `Arena/Verdict.lean` with the rest of the kit.
+
+### 3.11 The kit after batch 1, and the functions batch 1 skipped
+
+**The kit** (§1.5) gathers the helpers the batch lanes had put in place: `RefE.tail`/`tail_eq`,
+`RefE.of_run_eq`, `RefE.mono` and the `ErrClaim` run lemmas (from `Arena/KnotE`) and
+`callE_of_callW` are in `Arena/Verdict.lean`; `CorePost`, `RefE.coreSpec`, `CoreSpec.of_refE`,
+`RefE.bind_core` (from `KnotE`), `CoreAfterG`, `GrowRef`, `GrowPost` (from `WhnfCoreProj`),
+`RefE.growRefW`, `GrowPost.of_tail` (from `WhnfM2CRefine2`), `GrowPost.of_core`,
+`RefE.bind_grow(K)` (from `DefEqMidPeel`, over `GrowRefP`, which is `GrowRef` unfolded) are in the
+new `Arena/RefECore.lean`. New: `RefC` (an ok fact and an error claim; `PreRef` is now a `RefC`),
+`VerdictCtxU` (with `UceProg`), and `CoreStubsE`/`VerdictCtx` moved below `DeclValE` into
+`Verdict/VCtx`, so that the `Decl` files can use them.
+
+**Why the unified steps cost about twice the `errors` steps.** The word and byte load specs
+(`ld64_rdW_specE`, `L.ld8_specE`) had the error post `e.code = 0`. The `errors` post
+`ε.code ≠ 0 → …` closes against it by `simp`, but the unified post `G → ε.cls ≠ 0 → …` needs
+`cls` from `code` (`Err.cls_of_code`), which `simp_all` does not have: every load's error goal
+went through slow `simp_all` rounds and then `grind`. The error is `.oob` exactly, so the posts
+now say `e = .oob` (and `Err.cls_oob` is a `lang_grind` lemma). `checkValueGroupE`'s step:
+`errors` 2.5 s, `unified` 8.6 s before, 2.9 s after (profile: `simp` 5.8 s → 1.6 s, `grind`
+0.9 s → 0.004 s).
+
+Elaboration of the 41 modules with unified models or the moved kit (user seconds, median of 3
+interleaved runs, base master 93656432):
+
+| module | base | new |
+|---|---:|---:|
+| `Verdict/DeclValE` | 10.37 | 5.27 |
+| `Verdict/IndBTmm` | 32.97 | 14.75 |
+| `Verdict/IndBToi` | 4.30 | 2.52 |
+| `Verdict/IndBRecPins` | 7.37 | 4.67 |
+| `Verdict/PosE1M` | 34.96 | 26.14 |
+| `Verdict/PosTopE1` | 17.83 | 11.66 |
+| `Verdict/WhnfModels2E` | 33.17 | 30.31 |
+| `Verdict/WhnfModels6E` | 16.67 | 14.35 |
+| `Arena/DefEqMidLoops`, `DefEqMidLams` | 12.64 | 9.56 |
+| the other 32 (incl. the new `RefECore`; `DefEqMidLazy2` re-measured at parity) | 163.1 | 163.1 |
+| **sum** | **333.4** | **282.4** |
+
+So the flagged modules of batch 1 (`DeclValE`, `IndBTmm`, `IndBToi`, `IndBRecPins`, `PosE1M`,
+`PosTopE1`, `WhnfModels2E`) are back at or below their `errors` times.
+
+**The generator.** `↦ fW tuple` counted only the `return`s of the body, not those of the named
+blocks spliced into it (`lazy_delta_reduction`'s `return (k, x, y)` is in `⟪lazyDeltaLoop⟫`): the
+arity now includes them. `unified` now lifts the callee specs with a total model (`r.headD 0 = F`,
+`r ≠ [] ∧ r = F` as `e_view`'s, `s'.mem = F`; a guard's failure is `.error .oob`) and a result
+stated as a one-element list (`some ([r.headD 0], m)`). Tests: `tUniL`, `tUseOne`, `tTup3`. With
+these, the positivity wrappers `noaW1`, `cpW1`, `ucW1`, `nhiO` are gone, and the twelve positivity
+models that were `errors` plus `triple_uni_of_code` (their unified steps were slower before the
+load fix) are `unified` (`PosE1M`, `PosE2M`, `PosE3Cm`, `PosE3Fm`, `IndE`; 20 modules at parity,
+93.9 → 93.1 s).
+
+**Migrated here**:
+
+| function | before: ok + claim | after | change |
+|---|---|---|---:|
+| `class_rule_ok_guards` | `crgW_okC` 90 + `crgE_claim` 129 = 219 | `crg_ref` 110 + `CrgPost` 8 + `crgT`/`crgT_bind` 31 = 149 | −32 % |
+| `vi_unsafe` | 86 | 54 | −37 % |
+| `vi_np_go` | 67 | 50 | −25 % |
+| `vi_ctor` | 346 | 167 | −52 % |
+| `vi_rec_idx` | 160 | 89 | −44 % |
+
+* `class_rule_ok_guards` (`Verdict/IndBCrg`): `G := VerdictCtxU p`, against the twin's guards prefix
+  `crgT` (`classRuleOk = crgT >>= rest`, as `rgT`). `cruleW` reads it through the run;
+  `cruleW_okC` and three callers gained `CruleProg p`. The hand model `crgW` and its arms are gone.
+* `vi_*` (`Verdict/FrontViE`): `RefC` with `G := True` (the lifted callees' errors are `.oob`; the
+  callers pass `closedNV frontAllProg nvFns`, `frontAllProg_nv`, proved once in `FrontValidE`,
+  +2 s there). The front models that read them (`nparamsW`, `recW`, `recsGoW`, `recsW`,
+  `validateW`, `orderInW`) read the run and take the program; four of them return the memory now
+  (the run's memory is unchanged only by the ok fact). The hand models `unsafeW`, `npGoW`,
+  `recIdxW`, `ctorW` and `IndApplyRefine4` are gone. 15 modules 68.4 → 69.5 s.
+
+**Not migrated**:
+
+* `install_header` and `class_const_ok_header` (§3.5, §3.8) are not one body: their abort codes
+  differ (`R_LOOSE_BOUND_VARIABLE` against a plain `abort`), `unresolved_consts_error` is called
+  with `w = 0` against `w = 2`, and the twins differ (`installHeader`, `classConstOk`'s header).
+  Only the ok model `ihW` is shared. They need two unified models and two refinements (the second
+  against a header prefix of `classConstOk` with a `…_bind` lemma); the shared `ihW` goes when
+  both are done.

@@ -1,4 +1,3 @@
-import ConAgua.Verdict.PosE3Fm
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
@@ -175,21 +174,12 @@ theorem cfbE_claim {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   · rw [h3, cfbE.k_sl_contains.arm1 p _ r3 m3 hg, cfbE.j1.arm1] at he
     cases he
 
-l_model nckE_specC (p : Prog) (hf : p.lookup "nest_cont_key" = some nestContKeyL)
+l_model nckE_spec (p : Prog) (hf : p.lookup "nest_cont_key" = some nestContKeyL)
   fns [hf ↦ nckE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
-/-- `nest_cont_key`'s unified spec (the error post over the class), from the `errors` spec. -/
-theorem nckE_spec (p : Prog) (hf : p.lookup "nest_cont_key" = some nestContKeyL) (n : Nat) (s₀ : St)
-    (vis ctx fuel progOff progLen kb n' us dsOff dsLen nPc cty ns : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_key" [vis, ctx, fuel, progOff, progLen, kb, n', us, dsOff, dsLen, nPc, cty, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nckE p n s₀.mem vis ctx fuel progOff progLen kb n' us dsOff dsLen nPc cty ns = .ok (r, s'.mem);
-     fun ε => True → ε.cls ≠ 0 → nckE p n s₀.mem vis ctx fuel progOff progLen kb n' us dsOff dsLen nPc cty ns = .error ε⦄ :=
-  triple_uni_of_code (nckE_specC p hf n s₀ _ _ _ _ _ _ _ _ _ _ _ _ _)
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
 open ConRon.Bridge.Inductives (dCtx dProg dState dCtx_ext dProg_ext dState_ext)
 
 local notation "V" => ConLeche.CheckMode.verified
-
 
 end L.Ind

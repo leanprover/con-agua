@@ -138,6 +138,7 @@ theorem R_BLOCK_cls : (Err.abort R_THE_INDUCTIVE_BLOCK).cls = 1 := by decide
 refinement `validateW_twin`, the twin facts `XV`, and that the callees outside the verdict
 closure claim nothing (`validNV`). -/
 theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p validNV)
+    (hG : closedNV p L.Checker.nvFns = true)
     {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
     (hR : ArenaR m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) (hT : TopOK m)
     {to tn co cn ro rn : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}
@@ -160,15 +161,15 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   cases h1 : callE p n "vi_unsafe" [to, tn, 0] m with
   | error e1 =>
     rw [h1, validateE.k_vi_unsafe.none] at he; cases he
-    cases n with
-    | zero => exact absurd (callE_zero h1) hk
-    | succ n' => exact viUnsafe_refinesE p hL.vi_unsafe n' m hTy hTn hto st cts rcs a e h1 hk
+    exact RefC.run_err (viUnsafe_specE p hL.vi_unsafe n ⟨m, Locals.init []⟩ to tn 0)
+      (fun _ h0 h => absurd h0 h) trivial trivial (unsafe_ref hTy hTn hto p st cts rcs a n 0) h1 hk
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, validateE.k_vi_unsafe.arm1] at he
-  obtain ⟨s1, hs1, -, hsm1, hW1⟩ := triple_of_callE (unsafe_spec p hL n ⟨m, Locals.init []⟩ to tn 0) h1
+  obtain ⟨s1, hs1, -, hsm1, hu⟩ := RefC.run_ok (viUnsafe_specE p hL.vi_unsafe n ⟨m, Locals.init []⟩ to tn 0)
+    (unsafe_ref hTy hTn hto p st cts rcs a n 0) h1
+  dsimp only at hsm1
   rw [← hs1, hsm1] at he
-  have hu := unsafeW_twin hTy hTn hto n 0 hW1
   have hsafe : (tys.any fun x => x.isUnsafe) = false := by
     rw [List.any_eq_false]
     intro x hx
@@ -185,10 +186,11 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   | ok q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, validateE.k_vi_nparams.arm1] at he
-  obtain ⟨s2, hs2, hsm2, hW2⟩ := triple_of_callE (nparams_spec p hL n ⟨m, Locals.init []⟩ to tn) h2
-  rw [← hs2, hsm2] at he
+  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callE (nparams_spec p hL n ⟨m, Locals.init []⟩ to tn) h2
+  rw [← hs2] at he
   generalize hnp : r2.headD 0 = np at he hW2
-  obtain ⟨np1, np2, np3⟩ := nparamsW_twin hTy hTn hto hW2
+  obtain ⟨hsm2, np1, np2, np3⟩ := nparamsW_twin hL hTy hTn hto hW2
+  rw [hsm2] at he
   -- the type names
   have hidT : ∀ s : Word, s.toNat < 11 → ∀ k (hk : k < tys.length),
       rdW (m.arr64 IFR) (to + 11 * UInt64.ofNat k + s) = wd m IFR (to.toNat + 11 * k + s.toNat) := by
@@ -366,7 +368,7 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
     | succ n' =>
     obtain ⟨hc1, hOW⟩ := orderE_fail hL (fun g hg => hnv g (by
         simp only [List.mem_cons, List.not_mem_nil, or_false] at hg
-        rcases hg with rfl | rfl | rfl | rfl | rfl <;> decide)) hR₄ hD₄ v3
+        subst hg; decide)) hG hR₄ hD₄ v3
       (hCt.ext e14 (fun _ _ x => x.ext e14)) hCn v7
       (by rw [v6, v5]; omega) np3 hco ⟨by omega, by omega, by omega⟩ (by rw [hTn]; omega)
       (by rw [hTn]; omega)
@@ -389,7 +391,7 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   rw [hs10] at hW10
   dsimp only at hW10
   generalize hoo : r10.headD 0 = oo at hE hW10
-  obtain ⟨o1, o2, o3, o4, o5⟩ := orderW_twin hR₄ hD₄ v3 (hCt.ext e14 (fun _ _ x => x.ext e14)) hCn v7
+  obtain ⟨o1, o2, o3, o4, o5⟩ := orderW_twin hL hR₄ hD₄ v3 (hCt.ext e14 (fun _ _ x => x.ext e14)) hCn v7
     (by rw [v6, v5]; omega) np3 hco ⟨by omega, by omega, by omega⟩ (by rw [hTn]; omega)
     (by rw [hTn]; omega)
     (fun p hp => by
@@ -447,7 +449,7 @@ theorem validateE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p valid
   have hRc₆ : ListF (RecF b m₆) m₆ 11 ro.toNat rcs := hRc.ext e16 (fun _ _ x => x.ext e16)
   obtain ⟨hc1, hany, hRF⟩ := viRecs_refinesE hL (fun g hg => hnv g (by
       simp only [recsNV, List.mem_cons, List.not_mem_nil, or_false] at hg
-      rcases hg with rfl | rfl | rfl | rfl <;> decide)) hR₆ hD₆ hTy₆ hTn hto hRc₆ hRn hro np3 hke
+      rcases hg with rfl | rfl | rfl | rfl <;> decide)) hG hR₆ hD₆ hTy₆ hTn hto hRc₆ hRn hro np3 hke
     (by have := t3.1; have := t3.2; have := u2.top; have := l2.top; have := v2.top; omega)
     (by have := u3.1; have := u3.2; omega)
     (fun i hi => by rw [hTn] at hi; rw [hTNw i hi]; exact t7 i hi) n e h12 hk
@@ -589,10 +591,17 @@ theorem frontAll_validNV : NVCls frontAllProg validNV := by
   rw [callE_frontAll (validNV_front g hg)] at h
   exact callE_nv L.Checker.checkerProg_nv (validNV_nv g hg) n args m h
 
+prog_all frontAllProg_nvChk : frontAllProg (L.nvChk L.Checker.nvTree)
+
+/-- **The functions outside the verdict closure claim nothing in `frontAllProg`** either (the
+unified models' lifted callees). -/
+theorem frontAllProg_nv : closedNV frontAllProg L.Checker.nvFns = true :=
+  closedNV_of_all L.Checker.nvTree.eq frontAllProg_nvChk
+
 /-- **`validate_ind_d`'s claim at `frontAllProg`** (`ValidateClaim`, at the twin facts `XV`). -/
 theorem validateClaim_frontAll : ValidateClaim frontAllProg XV := by
   intro b n m a st to tn co cn ro rn tys cts rcs e hR hD hok hT hF hIFR hX hc hk
-  exact validateE_claim frontAllProg_indApply frontAll_validNV hR hD hok hT hF hIFR hX e
+  exact validateE_claim frontAllProg_indApply frontAll_validNV frontAllProg_nv hR hD hok hT hF hIFR hX e
     (triple_of_callE_err (validate_specE frontAllProg frontAllProg_indApply.validate_ind_d n
       ⟨m, Locals.init []⟩ _ _ _ _ _ _) hc (Err.code_ne_of_cls hk)) hk
 
