@@ -217,147 +217,150 @@ def decIter (r : List Word) : LazyResA ⊕ (EIdx × EIdx) :=
   else if r.headD 0 = 3 then .inr (decE (r.tail.headD 0), decE (r.tail.tail.headD 0))
   else .inl (.unknown (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)))
 
-/-- **`lazy_iter` is its model `itW`** (generated). -/
-l_model lazyIter_spec (p : Prog) (hp : LazyProg p)
-  fns [hp.iter ↦ itW tuple]
-  specs [callW_spec p n "defeq_offset", callW_spec p n "lazy_fold_ok", callW_spec p n "lazy_nat",
-    callW_spec p n "lazy_delta_step"]
-  grind [arena_grind] heartbeats 1000000 simp [St.setLocs_mem']
+/-- **`lazy_iter`'s model, both outcomes** (generated; `lazy_fold_ok` lifted, the other callees by
+their unified models). -/
+l_model itE_spec (p : Prog) (hf : p.lookup "lazy_iter" = some lazyIterL)
+    (ho : p.lookup "defeq_offset" = some defeqOffsetL) (hna : p.lookup "lazy_nat" = some lazyNatL)
+    (hst : p.lookup "lazy_delta_step" = some lazyDeltaStepL)
+    (hbo : p.lookup "lds_both" = some ldsBothL)
+    (ht : p.lookup "try_unfold_proj_app" = some tryUnfoldProjAppL)
+    (hl : p.lookup "lds_left" = some ldsLeftL) (hr' : p.lookup "lds_right" = some ldsRightL)
+    (hs : p.lookup "lds_same" = some ldsSameL)
+    (hu : p.lookup "lds_unfold2" = some ldsUnfold2L) (hq : p.lookup "delta_quick" = some deltaQuickL)
+    (h1 : p.lookup "defeq_spine" = some defeqSpineL) (h2 : p.lookup "defeq_spine2" = some defeqSpine2L)
+    (hc : p.lookup "spine_cmp" = some spineCmpL) (hr : p.lookup "defeq_list_rev" = some defeqListRevL)
+  fns [hf ↦ itE list]
+  specs [offE_spec p ho n, callW_spec p n "lazy_fold_ok", lnE_spec p hna n,
+    ldsE_spec p hst hbo ht hl hr' hs hu hq h1 h2 hc hr n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **`lazy_iter` refines `iterT`** at the knot. -/
+/-- **What the lazy-delta loop's errors claim from**: the knot's slots and the verdict closure
+(`KnotNvG`), `reduce_nat`'s claim (through `lazy_nat`). -/
+structure LazyG (p : Prog) (n : Nat) : Prop extends KnotNvG p n where
+  reduceNat : ReduceNatE p
+
+theorem LazyG.mono {p : Prog} {n n' : Nat} (h : LazyG p n) (hn : n' ≤ n) : LazyG p n' :=
+  ⟨h.toKnotNvG.mono hn, h.reduceNat⟩
+
+/-- **`lazy_iter` refines `iterT`, both outcomes**: the errors are `defeq_offset`'s, `lazy_nat`'s
+and `lazy_delta_step`'s. -/
+theorem it_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
+    (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
+    RefE (LazyG p n) (itE p (n + 1) s₀.mem mode vis d a b)
+      (iterT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decIter dn s₀.mem vis fe M eb Res3) := by
+  have hS := hs.rel
+  -- the step arm
+  have stepArm : ∀ (m₃ : Mem) (M₃ : ModeMaps) (a₃ : AState), CoreS dn m₃ a₃ vis fe M₃ eb →
+      RefE (LazyG p n) (itE.j1 p n mode vis d a b m₃)
+        (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a)
+          (decE b) >>= fun st => match st with
+          | .cont a' b' => pure (.inr (a', b'))
+          | .eq => pure (.inl (.verdict true))
+          | .diff => pure (.inl (.verdict false))
+          | .unknown => pure (.inl (.unknown (decE a) (decE b))))
+        a₃ (CorePost decIter dn m₃ vis fe M₃ eb Res3) := by
+    intro m₃ M₃ a₃ hS₃
+    cases n with
+    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+    | succ k =>
+    have H := lds_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ a₃
+      dn vis fe M₃ eb mode d a b ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd
+    simp only [itE.j1]
+    rcases h4 : ldsE p (k + 1) m₃ mode vis d a b with e | ⟨rs, m₄⟩
+    · rw [h4] at H; exact fun hG => ErrClaim.bind_left (H (hG.toKnotNvG.mono (by omega)))
+    rw [h4] at H
+    obtain ⟨y, a', hrun, hP⟩ := H
+    simp only [itE.k_lazy_delta_step]
+    refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₄ hS₄ _ => ?_)
+    obtain ⟨-, hx, hy⟩ := hP.valid
+    by_cases k0 : rs.headD 0 = 0
+    · rw [ite_eq_left k0, show decDS rs = .cont (decE (rs.tail.headD 0)) (decE (rs.tail.tail.headD 0))
+        by simp only [decDS, k0, ↓reduceIte]]
+      exact RefE.ret rfl (CorePost.ret hS₄ rfl ⟨hw3, hx, hy⟩)
+    rw [ite_eq_right k0]
+    by_cases k1 : rs.headD 0 = 1
+    · rw [ite_eq_left k1, show decDS rs = .eq by rw [decDS, ite_eq_right k0, ite_eq_left k1]]
+      exact RefE.ret rfl (CorePost.ret hS₄ rfl ⟨hw1, hw0, hw0⟩)
+    rw [ite_eq_right k1]
+    by_cases k2 : rs.headD 0 = 2
+    · rw [ite_eq_left k2, show decDS rs = .diff by
+        rw [decDS, ite_eq_right k0, ite_eq_right k1, ite_eq_left k2]]
+      exact RefE.ret rfl (CorePost.ret hS₄ rfl ⟨hw0, hw0, hw0⟩)
+    rw [ite_eq_right k2, show decDS rs = .unknown by
+      rw [decDS, ite_eq_right k0, ite_eq_right k1, ite_eq_right k2]]
+    exact RefE.ret rfl (CorePost.ret hS₄ rfl ⟨hw2, ha, hb⟩)
+  unfold iterT
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ k =>
+  simp only [itE]
+  have H := off_ref p hp.mid hc.natPred k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
+    (by omega) (by omega) hs ha hb
+  rcases h1 : offE p (k + 1) s₀.mem mode vis d a b with e | ⟨ro, m₁⟩
+  · rw [h1] at H; exact fun hG => ErrClaim.bind_left (H (hG.knot.mono (by omega)))
+  rw [h1] at H
+  obtain ⟨y, a', hrun, hP⟩ := H
+  simp only [itE.k_defeq_offset]
+  refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₁ hS₁ _ => ?_)
+  by_cases h0 : ro.headD 0 ≠ 0
+  · rw [ite_eq_left h0, show decOB ro = some (ro.tail.headD 0 != 0) by
+      simp only [decOB, h0, ↓reduceIte]]
+    by_cases hv : ro.tail.headD 0 ≠ 0
+    · rw [ite_eq_left hv, show (ro.tail.headD 0 != 0) = true from bne_iff_ne.mpr hv]
+      exact RefE.ret rfl (CorePost.ret hS₁ rfl ⟨hw1, hw0, hw0⟩)
+    · have hv' : ro.tail.headD 0 = 0 := by simpa using hv
+      rw [ite_eq_right hv, hv']
+      exact RefE.ret rfl (CorePost.ret hS₁ rfl ⟨hw0, hw0, hw0⟩)
+  have h0' : ro.headD 0 = 0 := by simpa using h0
+  rw [ite_eq_right h0, show decOB ro = none by simp only [decOB, h0', ↓reduceIte]]
+  rcases c2 : callW p (k + 1) "lazy_fold_ok" [mode, a, b] m₁ with _ | ⟨rf, m₂⟩
+  · rw [liftE_none, itE.k_lazy_fold_ok.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [itE.k_lazy_fold_ok]
+  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+    (lazyFoldOk_refines p hp.mid hc.hasFvar k _ _ dn vis fe M₁ eb mode a b hS₁ hs.mode4 ha hb) c2
+  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
+  by_cases hf : rf.headD 0 ≠ 0
+  · rw [ite_eq_left hf, decBool_t hf]
+    simp only [↓reduceIte]
+    have H := ln_ref p hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ _ dn vis
+      fe M₂ eb mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb
+    rcases h3 : lnE p (k + 1) m₂ mode vis d a b with e | ⟨rn, m₃⟩
+    · rw [h3] at H
+      exact fun hG => ErrClaim.bind_left (H ⟨hG.knot.mono (by omega), hG.reduceNat⟩)
+    rw [h3] at H
+    obtain ⟨y, a', hrun, hP⟩ := H
+    simp only [itE.k_lazy_nat]
+    refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₃ hS₃ _ => ?_)
+    by_cases h3 : rn.headD 0 ≠ 3
+    · rw [ite_eq_left h3, show decNat rn = some (rn.headD 0 != 0) by simp only [decNat, h3, ↓reduceIte]]
+      rcases hP.valid with e0 | e1 | e3
+      · rw [e0]; exact RefE.ret rfl (CorePost.ret hS₃ rfl ⟨hw0, hw0, hw0⟩)
+      · rw [e1]; exact RefE.ret rfl (CorePost.ret hS₃ rfl ⟨hw1, hw0, hw0⟩)
+      · exact absurd e3 h3
+    have h3' : rn.headD 0 = 3 := by simpa using h3
+    rw [ite_eq_right (fun h => h h3'), show decNat rn = none by simp only [decNat, h3', ↓reduceIte]]
+    exact stepArm _ _ _ hS₃
+  have hf' : rf.headD 0 = 0 := by simpa using hf
+  rw [ite_eq_right hf, decBool_f hf']
+  simp only [Bool.false_eq_true, ↓reduceIte, pure_bind]
+  exact stepArm _ _ _ hS₂
+
+/-- **`lazy_iter` refines `iterT`** at the knot (`it_ref`'s ok half). -/
 theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "lazy_iter" [mode, vis, d, a, b]
       (iterT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decIter
-      s₀ a₀ dn vis fe M eb Res3 := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (lazyIter_spec p hp (n + 1) s₀ mode vis d a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hS := hs.rel
-  -- the step arm
-  have stepArm : ∀ (m₃ : Mem) (M₃ : ModeMaps) (a₃ : AState), CoreS dn m₃ a₃ vis fe M₃ eb →
-      itW.j1 p n mode vis d a b m₃ = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
-      CoreRef (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a)
-        (decE b) >>= fun st => match st with
-          | .cont a' b' => pure (.inr (a', b'))
-          | .eq => pure (.inl (.verdict true))
-          | .diff => pure (.inl (.verdict false))
-          | .unknown => pure (.inl (.unknown (decE a) (decE b))))
-        a₃ decIter dn m₃ vis fe M₃ eb r s'.mem Res3 := by
-    intro m₃ M₃ a₃ hS₃ h
-    rw [itW.j1.arm1] at h
-    cases hc4 : callW p n "lazy_delta_step" [mode, vis, d, a, b] m₃ with
-    | none => rw [hc4] at h; cases h
-    | some q =>
-    obtain ⟨rs, m₄⟩ := q
-    rw [hc4] at h
-    obtain ⟨k, rfl⟩ := callW_succ hc4
-    have e₄ := CoreSpec.of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-      (lazyDeltaStep_refines p hp hc k (hk.mono (by omega)) F (by omega) (by omega) _ a₃ dn vis fe M₃
-        eb mode d a b ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd) hc4
-    refine coreRef_bind e₄ (fun M₄ hS₄ => ?_)
-    obtain ⟨-, hx, hy⟩ := e₄.2.2.2
-    by_cases k0 : rs.headD 0 = 0
-    · rw [itW.k_lazy_delta_step.arm1 (hc1 := k0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
-      obtain ⟨g1, g2, g3, hm⟩ := h
-      have : decDS rs = .cont (decE (rs.tail.headD 0)) (decE (rs.tail.tail.headD 0)) := by
-        simp only [decDS, k0, ↓reduceIte]
-      rw [this, ← hm]
-      exact coreRef_ret hS₄ (by simp only [decIter, ← g1, ← g2, ← g3]; rfl)
-        (res3_of hw3 hx hy g1 g2 g3)
-    by_cases k1 : rs.headD 0 = 1
-    · rw [itW.k_lazy_delta_step.arm2 (hc1 := k0) (hc2 := k1), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
-      obtain ⟨g1, g2, g3, hm⟩ := h
-      have : decDS rs = .eq := by rw [decDS, ite_eq_right k0, ite_eq_left k1]
-      rw [this, ← hm]
-      exact coreRef_ret hS₄ (by simp only [decIter, ← g1]; rfl) (res3_of hw1 hw0 hw0 g1 g2 g3)
-    by_cases k2 : rs.headD 0 = 2
-    · rw [itW.k_lazy_delta_step.arm3 (hc1 := k0) (hc2 := k1) (hc3 := k2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
-      obtain ⟨g1, g2, g3, hm⟩ := h
-      have : decDS rs = .diff := by rw [decDS, ite_eq_right k0, ite_eq_right k1, ite_eq_left k2]
-      rw [this, ← hm]
-      exact coreRef_ret hS₄ (by simp only [decIter, ← g1]; rfl) (res3_of hw0 hw0 hw0 g1 g2 g3)
-    rw [itW.k_lazy_delta_step.arm4 (hc1 := k0) (hc2 := k1) (hc3 := k2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
-      Prod.mk.injEq] at h
-    obtain ⟨g1, g2, g3, hm⟩ := h
-    have : decDS rs = .unknown := by rw [decDS, ite_eq_right k0, ite_eq_right k1, ite_eq_right k2]
-    rw [this, ← hm]
-    exact coreRef_ret hS₄ (by simp only [decIter, ← g1, ← g2, ← g3]; rfl) (res3_of hw2 ha hb g1 g2 g3)
-  unfold iterT
-  rw [itW.arm1] at hW
-  cases hc1 : callW p n "defeq_offset" [mode, vis, d, a, b] s.mem with
-  | none => rw [hc1] at hW; cases hW
-  | some q =>
-  obtain ⟨ro, m₁⟩ := q
-  rw [hc1] at hW
-  obtain ⟨k, rfl⟩ := callW_succ hc1
-  have e₁ := CoreSpec.of_callW (defeqOffset_refines p hp.mid hc.natPred k (hk.mono (by omega)) F s a₀
-    dn vis fe M eb mode d a b (by omega) (by omega) hs ha hb) hc1
-  refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
-  by_cases h0 : ro.headD 0 ≠ 0
-  · rw [itW.k_defeq_offset.arm1 (hc1 := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
-    obtain ⟨g1, g2, g3, hm⟩ := hW
-    have : decOB ro = some (ro.tail.headD 0 != 0) := by simp only [decOB, h0, ↓reduceIte]
-    rw [this, ← hm]
-    by_cases hv : ro.tail.headD 0 ≠ 0
-    · rw [ite_eq_left hv] at g1
-      have hb' : (ro.tail.headD 0 != 0) = true := bne_iff_ne.mpr hv
-      exact coreRef_ret hS₁ (by rw [hb']; simp only [decIter, ← g1]; rfl)
-        (res3_of hw1 hw0 hw0 g1 g2 g3)
-    · have hv' : ro.tail.headD 0 = 0 := by simpa using hv
-      rw [ite_eq_right hv] at g1
-      exact coreRef_ret hS₁ (by simp only [decIter, ← g1, hv']; rfl) (res3_of hw0 hw0 hw0 g1 g2 g3)
-  have h0' : ro.headD 0 = 0 := by simpa using h0
-  rw [itW.k_defeq_offset.arm2 (hc1 := h0')] at hW
-  have : decOB ro = none := by simp only [decOB, h0', ↓reduceIte]
-  rw [this]
-  cases hc2 : callW p (k + 1) "lazy_fold_ok" [mode, a, b] m₁ with
-  | none => rw [hc2] at hW; cases hW
-  | some q =>
-  obtain ⟨rf, m₂⟩ := q
-  rw [hc2] at hW
-  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (lazyFoldOk_refines p hp.mid hc.hasFvar k _ _ dn vis fe M₁ eb mode a b hS₁ hs.mode4 ha hb) hc2
-  refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
-  by_cases hf : rf.headD 0 ≠ 0
-  · rw [itW.k_lazy_fold_ok.arm1 (hc1 := hf)] at hW
-    rw [decBool_t hf]
-    simp only [↓reduceIte]
-    cases hc3 : callW p (k + 1) "lazy_nat" [mode, vis, d, a, b] m₂ with
-    | none => rw [hc3] at hW; cases hW
-    | some q =>
-    obtain ⟨rn, m₃⟩ := q
-    rw [hc3] at hW
-    have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-      (lazyNat_refines p hp hc k (hk.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₂ eb mode
-        d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb) hc3
-    have hnw := e₃.2.2.2
-    refine coreRef_bind e₃ (fun M₃ hS₃ => ?_)
-    by_cases h3 : rn.headD 0 ≠ 3
-    · rw [itW.k_lazy_nat.arm1 (hc1 := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
-      obtain ⟨g1, g2, g3, hm⟩ := hW
-      have : decNat rn = some (rn.headD 0 != 0) := by simp only [decNat, h3, ↓reduceIte]
-      rw [this, ← hm]
-      rcases hnw with e0 | e1 | e3
-      · exact coreRef_ret hS₃ (by simp only [decIter, ← g1, e0]; rfl)
-          (res3_of hw0 hw0 hw0 (e0.symm.trans g1) g2 g3)
-      · exact coreRef_ret hS₃ (by simp only [decIter, ← g1, e1]; rfl)
-          (res3_of hw1 hw0 hw0 (e1.symm.trans g1) g2 g3)
-      · exact absurd e3 h3
-    have h3' : rn.headD 0 = 3 := by simpa using h3
-    rw [itW.k_lazy_nat.arm2 (hc1 := h3')] at hW
-    have : decNat rn = none := by simp only [decNat, h3', ↓reduceIte]
-    rw [this]
-    exact stepArm _ _ _ hS₃ hW
-  have hf' : rf.headD 0 = 0 := by simpa using hf
-  rw [itW.k_lazy_fold_ok.arm2 (hc1 := hf')] at hW
-  rw [decBool_f hf']
-  simp only [Bool.false_eq_true, ↓reduceIte, pure_bind]
-  exact stepArm _ _ _ hS₂ hW
+      s₀ a₀ dn vis fe M eb Res3 :=
+  RefE.coreSpec (itE_spec p hp.iter hp.mid.off hp.nat hp.step hp.both hp.mid.tupa hp.left hp.right
+    hp.same hp.unfold2 hp.mid.dq hp.spine.sp hp.spine.sp2 hp.spine.cmp hp.spine.rev (n + 1) s₀ mode vis
+    d a b) (it_ref p hp hc n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd)
 
 /-! ## The loop -/
 
@@ -367,16 +370,6 @@ l_model lazyDeltaReduction_specE (p : Prog)
     (hf : p.lookup "lazy_delta_reduction" = some lazyDeltaReductionL)
   fns [hf ↦ ldrE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
-
-/-- **`lazy_iter`'s error claim** at every L fuel up to `n` (what the loop's errors claim from;
-`lazyIter_refinesE`, `Verdict/DefEqLazyE.lean`). -/
-def LazyIterUpToE (p : Prog) (n : Nat) : Prop :=
-  ∀ j, j ≤ n → ∀ (F : Nat), j ≤ F → j ≤ 2 ^ 62 →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
-    d.toNat < 2 ^ 63 →
-    CoreSpecE p (j + 1) "lazy_iter" [mode, vis, d, a, b]
-      (iterT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
 
 theorem decIter_done {r : List Word} (h : r.headD 0 ≠ 3) : decIter r = .inl (decLR r) := by
   unfold decIter decLR
@@ -395,13 +388,13 @@ variable (p : Prog) (hp : LazyProg p) (hc : LazyCallees p)
 
 include hp hc in
 /-- **The loop refines `lazyDeltaReduction`, both outcomes**, at every twin fuel `K` with
-`j ≤ K + 1`: each iteration is `lazy_iter`'s (`lazyIter_refines`, its claim `LazyIterUpToE`). -/
+`j ≤ K + 1`: each iteration is `lazy_iter`'s (`it_ref`). -/
 theorem lazy_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode d : Word) (hmode : mode < 4)
     (hd : d.toNat < 2 ^ 63) :
     ∀ j, j ≤ n + 1 → ∀ K, j ≤ K + 1 → ∀ (a b : Word) (m : Mem) (s : AState) (M : ModeMaps)
       (eb : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a → HW b →
-      RefE (LazyIterUpToE p n) (ldrE.loop1 p j m mode vis d a b)
+      RefE (LazyG p n) (ldrE.loop1 p j m mode vis d a b)
         (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat K
           (decE a) (decE b)) s
         (fun v y a' => CorePost decLR dn m vis fe M eb Res3 v y a') := by
@@ -422,9 +415,11 @@ theorem lazy_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       | succ j' =>
       obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
       rw [lazyDeltaReduction_succ_eq, lazyLvl_eq]
-      exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
-        (hG j' (by omega) F (by omega) (by omega) _ s dn vis fe M eb mode d a b ⟨hS, hmode, heb⟩
-          ha hb hd) hc1
+      exact RefE.bind_left fun hG => RefE.run_err (itE_spec p hp.iter hp.mid.off hp.nat hp.step hp.both
+        hp.mid.tupa hp.left hp.right hp.same hp.unfold2 hp.mid.dq hp.spine.sp hp.spine.sp2 hp.spine.cmp
+        hp.spine.rev (j' + 1) ⟨m, Locals.init []⟩ mode vis d a b) hG.nv (hG.mono (by omega))
+        (it_ref p hp hc j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb mode d a b
+          ⟨hS, hmode, heb⟩ ha hb hd) hc1
     obtain ⟨j', rfl⟩ := callW_succ (callW_of_callE hc1)
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
     rw [lazyDeltaReduction_succ_eq, lazyLvl_eq]
@@ -446,7 +441,7 @@ theorem lazyDeltaReduction_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
-    RefE (LazyIterUpToE p n) (ldrE p (n + 1) s₀.mem mode vis d a b)
+    RefE (LazyG p n) (ldrE p (n + 1) s₀.mem mode vis d a b)
       (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat defeqLoopFuel
         (decE a) (decE b)) a₀
       (fun v y a' => CorePost decLR dn s₀.mem vis fe M eb Res3 v y a') := by

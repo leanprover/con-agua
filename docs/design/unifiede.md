@@ -2162,8 +2162,8 @@ the slots, as `m2c_*` in §3.7):
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
-  `DefEqSpineE` (and `defeq_lams_inner`; §3.41);
-- [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.43), `InferBindE` (6: `infer_lams`/`infer_pis` and
+  `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43);
+- [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.44), `InferBindE` (6: `infer_lams`/`infer_pis` and
   their leaves), `InferSpineE` (4), `InferArmsE` (8), `InferKnotE` (4: `infer_body(_io)`, `infer`,
   `infer_io`).
 
@@ -2172,7 +2172,7 @@ the slots, as `m2c_*` in §3.7):
 - [x] `Verdict/InferLeavesE`: `inferProjE`'s hand continuations (`inferProjE.j2`,
   `.k_env_find_2`, `.k_infer_proj_at`) and `ipaE2–5`/`ipaEP` (`infer_proj_at`): with B's `infer`
   family;
-  Done (§3.43: generated `unified` models `ipE`, `ipaE`; `ip_ref`, `ipa_ref`).
+  Done (§3.44: generated `unified` models `ipE`, `ipaE`; `ip_ref`, `ipa_ref`).
 - [ ] `Verdict/IndBNfs`: `cnsEK1–3`, `cnfsE` (`classes_nfs`, nested loops; its claim `ClassesNfsE` is
   a field of `GrpG`/`TailG`): waits for nested-loop `unified` models in the generator (§3.3), or a
   hand unified model over `tmn_ref`;
@@ -2803,7 +2803,52 @@ Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, b
 0.73, `Verdict/WhnfModels2E` 29.36 → 26.06, `WhnfProjE` + `WhnfAppE` 2.83 → –, `WhnfKnotE`,
 `WhnfIotaE`, `KnotAllE` 4.47 → 4.13; sum 52.67 → 39.21 (−26 %). No module is slower.
 
-### 3.43 Retirement, group B, `infer`, first landing (`infer_const`, `infer_proj`, `infer_proj_at`)
+### 3.43 Retirement, group B, `is_def_eq`, second landing (the lazy-delta step and iteration)
+
+The eight functions of `Verdict/DefEqLazyE`: `defeq_offset` (`off_ref`, `Arena/DefEqMid`);
+`lds_left`, `lds_right`, `lds_unfold2`, `lds_same`, `lds_both`, `lazy_delta_step` (`ll_ref`,
+`lr_ref`, `u2_ref`, `sm_ref`, `bo_ref`, `lds_ref`, `DefEqMidLazy`); `lazy_iter` (`it_ref`,
+`DefEqMidLazy2`). `lazy_delta_reduction`'s loop (`lazy_ref`, unified since batch 2) now reads
+`it_ref` by `RefE.run_err`; its `G` is `it_ref`'s. The `@[refines]` theorems with users stay as
+`RefE.coreSpec` one-liners (`defeqOffset_refines`, `lazyDeltaStep_refines`, `lazyIter_refines`);
+the knot's claims `LazyDeltaStepE`, `LazyDeltaReductionE` are `RefE.coreSpecE` one-liners in
+`DefEqAllE`. Gone: `Verdict/DefEqLazyE` (with the statements `DeltaQuickE`, `TryUnfoldProjAppE`,
+`DefeqSpineE`, `LdsOneE`, `LdsUnfold2E`, `LdsSameE`, `LdsBothE`, `LazyNatE`, `DefeqOffsetE`,
+`LazyIterE`), `LazyIterUpToE`; the ok models and specs (`offW`, `llK*`, `uW`, `smW`, `bothW`,
+`ldsStepW`, `itW`) and `llK1_ref`, `resW_00`; `DefeqWhnfE`'s fields `deltaQuick`,
+`tryUnfoldProjApp`, `lazyNat` (and their builders in `KnotAllE`, `KnotAllProg.quickDefeqWE`): the
+refinements read `dq_ref`, `tupa_ref`, `ln_ref` directly.
+
+| functions | before: ok refinements, models, specs + claim file | after | change |
+|---|---:|---:|---:|
+| the 8 above | 724 + 803 = 1 527 | 663 + 18 = 681 | **−55 %** |
+
+Diff of the landing against master: +587 −1 464 lines in 6 files.
+
+Choices:
+
+* **`G`**: `KnotUpToE p n` for `defeq_offset`; `KnotNvG p n` for the step's pieces (the
+  `whnf_core` slot, and `delta_quick`'s `QuickDefeqWE` at every fuel up to `n + 1` from `qd_ref`,
+  `quickWEUpTo`); `LazyG p n` (`KnotNvG` and `reduce_nat`'s claim `ReduceNatE`, for `lazy_nat`)
+  for `lazy_iter` and the loop.
+* **Callees**: the unified specs are listed for every callee of the family (`delta_quick`,
+  `try_unfold_proj_app`, `defeq_spine`, `lazy_nat` and the family's own); the slots through
+  `callE`. A tail call that re-lists the callee's three words is `RefE.tail_eq` with
+  `CorePost.relist3` (`dq_tail` for `delta_quick`'s four sites); a call followed by more code
+  cases on the callee's model value and threads its ok run by `RefE.bind_core` over
+  `CorePost.coreRef`.
+* The unified models by `simp []`, as the `errors` models: the default recipe fails on
+  `lds_both`'s and takes 20 s for `DefEqMidLazy` (8.2 s with `simp []`).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 7d656c31,
+`_tmp/retire-defeq/times2.txt`): `Arena/DefEqMid` 3.54 → 4.06 (+15 %), `DefEqMidLazy` 6.86 → 8.20
+(+20 %), `DefEqMidLazy2` 3.72 → 4.37 (+17 %), `Verdict/DefEqAllE` 0.51 → 0.54, `KnotAllE` 3.55 →
+3.64, `DefEqLazyE` (deleted) 12.83 → 0; sum 31.01 → 20.81 (−33 %). **Three modules are more than
+10 % slower**: they now generate the unified models whose `errors` versions `DefEqLazyE` generated
+(the ok models they replace were cheaper, with the callees as `callW` runs); the default recipe was
+tried (above). No generator or kit change was needed.
+
+### 3.44 Retirement, group B, `infer`, first landing (`infer_const`, `infer_proj`, `infer_proj_at`)
 
 The leaves of `Verdict/InferLeavesE` (and C's hand `Except` models of `infer_proj` and
 `infer_proj_at`). Each has one generated `unified` model and one refinement with `CorePost`, placed
