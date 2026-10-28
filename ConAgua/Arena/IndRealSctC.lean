@@ -1,3 +1,4 @@
+import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.TblFrame

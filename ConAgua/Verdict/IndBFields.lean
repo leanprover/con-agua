@@ -8,13 +8,13 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 
 /-!
-# `class_fields_of_go`: one model and one refinement for both outcomes
+# `class_fields_of_go`, `class_fields_of`: one model and one refinement for both outcomes
 
 `cfgE` (`l_model … unified`): the recursive call through the model itself, the callees (all outside
 the verdict closure) through their `Option` models. `cfg_ref` refines `classFieldsOf` for both
 outcomes: an error comes from the single abort (`R_GENERATED_RECURSOR_THE_INDUCTIVE`, the twin's
-`fail`) or is of class `0`. `class_fields_of` reads it through its run (`cfoW`, `cfoW_sim`), its
-error claim through `RefE.run_err`.
+`fail`) or is of class `0`. `class_fields_of`'s unified model `cfoE` calls it in tail position
+(`cfo_ref`); its callers read `cfo_ref` through the run (`RefE.run_okW`, `RefE.run_err`).
 -/
 
 noncomputable section
@@ -40,11 +40,6 @@ l_model cfgE_spec (p : Prog) (hP : CfoProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-l_model cfoE_spec (p : Prog) (hf : p.lookup "class_fields_of" = some classFieldsOfL)
-  fns [hf ↦ cfoE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] errors
 
 /-- What `class_fields_of_go` gives besides the twin's kinds `ks` (from `m`): the stage relation,
 growth, the kinds a slice stable above `m`'s top, `nest_occ`'s memo relation at some map, the
@@ -243,61 +238,60 @@ end sims
 
 /-! ## `class_fields_of` -/
 
-l_model classFieldsOf_spec (p : Prog) (h : CfoProg p)
-  fns [h.cfo ↦ cfoW]
-  specs [blockShapeMemberNames_spec p h.alloc h.mnc h.mn n, callW_spec p n "class_fields_of_go"]
-  grind [arena_grind] simp []
+l_model cfoE_spec (p : Prog) (hP : CfoProg p)
+  fns [hP.cfo ↦ cfoE]
+  specs [blockShapeMemberNames_spec p hP.alloc hP.mnc hP.mn n, cfgE_spec p hP n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 4000000 simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-theorem cfoW_sim {p : Prog} (hP : CfoProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) (m : Mem) (a : AState) (q io il i fo fl : Word)
-    (fs : List EIdx) (mp0 : Std.HashMap EIdx Bool) (hS : StageR dn vis fe m a) (hb : BSOK m q.toNat bsh)
-    (hih : StabD (fun m => decPL m (decNN m) io.toNat il.toNat) m ihs) (hib : io.toNat + il.toNat < 2 ^ 64)
-    (hfs : decHL m fo.toNat fl.toNat = some fs) (hfb : fo.toNat + fl.toNat ≤ iwTop m)
-    (hi : i.toNat + fl.toNat < 2 ^ 64) (hM : noMR m mp0) :
-    RSim (cfoW p n m q io il i fo fl) (ConRon.Arena.classFieldsOf bsh ihs i.toNat fs) a
-      (fun b a' ks => CfoQ dn vis fe m b a' ks ∧ AFr m b.2) := by
+section cfo
+variable {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+
+/-- **`class_fields_of` refines `classFieldsOf`, both outcomes**: the block's member names
+(`block_shape_member_names`, outside the verdict closure), then `class_fields_of_go` (`cfg_ref`) in
+tail position. -/
+theorem cfo_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) {m : Mem} {a : AState}
+    {q io il i fo fl : Word} {fs : List EIdx} {mp0 : Std.HashMap EIdx Bool} (hS : StageR dn vis fe m a)
+    (hb : BSOK m q.toNat bsh) (hih : StabD (fun m => decPL m (decNN m) io.toNat il.toNat) m ihs)
+    (hib : io.toNat + il.toNat < 2 ^ 64) (hfs : decHL m fo.toNat fl.toNat = some fs)
+    (hfb : fo.toNat + fl.toNat ≤ iwTop m) (hi : i.toNat + fl.toNat < 2 ^ 64) (hM : noMR m mp0) :
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (cfoE p n m q io il i fo fl)
+      (ConRon.Arena.classFieldsOf bsh ihs i.toNat fs) a
+      (fun v ks a' => CfgPost dn vis fe m v.1 v.2 ks a') := by
   cases n with
-  | zero => exact RSim.none
+  | zero => rw [cfoE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
-  rw [cfoW.arm1]
-  refine RSim.lstep (K := cfoW.k_block_shape_member_names p n io il i fo fl) rfl fun ⟨r1, m1⟩ h1 => ?_
+  rw [cfoE.arm1]
+  rcases h1 : memberNamesW n m q with _ | ⟨r1, m1⟩
+  · rw [liftE_none, cfoE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, cfoE.k_block_shape_member_names.arm1]
   have ht := hb.ptop
   have hsz := hS.2.2.2.1
   have hts : iwTop m ≤ (m.arr64 IW).size := hS.2.1
   have hf1 := (memberNamesW_dec h1 hsz hS.2.2.2.2.2 hb.dec (by omega) hb.2.1 hb.2.2).2.2.2.1
   obtain ⟨hS1, hg1, -, hd1, ht1⟩ := memberNamesW_stage h1 hS hb
-  rw [cfoW.k_block_shape_member_names.arm1]
-  refine RSim.lstep (K := cfoW.k_class_fields_of_go p) rfl fun ⟨r2, m2⟩ h2 => ?_
-  obtain ⟨s2, rfl, -, ks, a2, run2, hR⟩ := RefE.run_okW
-    (cfgE_spec p hP n ⟨m1, Locals.init []⟩ _ _ io il i fo fl)
-    (cfg_ref (dn := dn) (vis := vis) (fe := fe) bsh ihs n (a := a) (mo := r1.headD 0)
-      (ml := r1.tail.headD 0) hS1 hd1
-      (by dsimp only; omega) (hih.grow hg1) hib (by rw [decHL_grow hg1 hfb]; exact hfs) (Nat.le_trans hfb hg1.1) hi
-      (rec2NoMR_iw hf1 hM)) h2
-  rw [cfoW.k_class_fields_of_go.arm1]
-  rintro b hb
-  cases hb
-  exact ⟨ks, a2, run2, ⟨hR.stage, hg1.trans hR.grow, by simpa using hR.kinds.mono hg1.1, hR.nomr,
-    (MFr.of_iw hf1).up.trans hR.frame⟩, (memberNamesW_afr h1).trans hR.afr⟩
+  have hR := cfg_ref (p := p) (dn := dn) (vis := vis) (fe := fe) bsh ihs n (a := a) (mo := r1.headD 0)
+    (ml := r1.tail.headD 0) (io := io) (il := il) (i := i) (fo := fo) (fl := fl) hS1 hd1
+    (by omega) (hih.grow hg1) hib (by rw [decHL_grow hg1 hfb]; exact hfs)
+    (Nat.le_trans hfb hg1.1) hi (rec2NoMR_iw hf1 hM)
+  rcases h2 : cfgE p n m1 (r1.headD 0) (r1.tail.headD 0) io il i fo fl with e2 | ⟨r2, m2⟩
+  · rw [h2] at hR
+    rw [cfoE.k_class_fields_of_go.none]
+    exact hR
+  rw [h2] at hR
+  rw [cfoE.k_class_fields_of_go.arm1]
+  obtain ⟨ks, a2, run2, hP2⟩ := hR
+  exact RefE.ret run2 ⟨hP2.stage, hg1.trans hP2.grow, by simpa using hP2.kinds.mono hg1.1, hP2.nomr,
+    (MFr.of_iw hf1).up.trans hP2.frame, (memberNamesW_afr h1).trans hP2.afr⟩
 
-/-- `class_fields_of`'s model keeps the abstraction memo's frame (`cfoW_sim`). -/
-theorem cfoW_afr {p : Prog} (hP : CfoProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {bsh : BlockShape} {ihs : List (Nat × Nat)} {n : Nat} {m : Mem} {a : AState} {q io il i fo fl : Word}
-    {fs : List EIdx} {mp0 : Std.HashMap EIdx Bool} (hS : StageR dn vis fe m a) (hb : BSOK m q.toNat bsh)
-    (hih : StabD (fun m => decPL m (decNN m) io.toNat il.toNat) m ihs) (hib : io.toNat + il.toNat < 2 ^ 64)
-    (hfs : decHL m fo.toNat fl.toNat = some fs) (hfb : fo.toNat + fl.toNat ≤ iwTop m)
-    (hi : i.toNat + fl.toNat < 2 ^ 64) (hM : noMR m mp0) {r : List Word} {m' : Mem}
-    (h : cfoW p n m q io il i fo fl = some (r, m')) : AFr m m' := by
-  obtain ⟨_, _, _, _, hA⟩ := cfoW_sim hP dn vis fe bsh ihs n m a q io il i fo fl fs mp0 hS hb hih hib hfs hfb hi hM
-    (r, m') h
-  exact hA
-
-/-- **`class_fields_of` refines `classFieldsOf`** (through the stub `fvar_type_d`): the fields' kinds
-are a stable slice of `ClassField` records; `nest_occ`'s memo relation is needed before and holds
-after (at some map). -/
+/-- **`class_fields_of` refines `classFieldsOf`** (through the stub `fvar_type_d`; `cfo_ref`'s ok
+half): the fields' kinds are a stable slice of `ClassField` records; `nest_occ`'s memo relation is
+needed before and holds after (at some map). -/
 @[refines ConRon.Arena.classFieldsOf]
-theorem classFieldsOf_refines (p : Prog) (hp : CfoProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q io il i fo fl : Word) (bsh : BlockShape)
+theorem classFieldsOf_refines (hp : CfoProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (q io il i fo fl : Word) (bsh : BlockShape)
     (ihs : List (Nat × Nat)) (fs : List EIdx) (mp0 : Std.HashMap EIdx Bool)
     (hS : StageR dn vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bsh)
     (hih : StabD (fun m => decPL m (decNN m) io.toNat il.toNat) s₀.mem ihs) (hib : io.toNat + il.toNat < 2 ^ 64)
@@ -306,65 +300,14 @@ theorem classFieldsOf_refines (p : Prog) (hp : CfoProg p) (n : Nat) (s₀ : St) 
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fields_of" [q, io, il, i, fo, fl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classFieldsOf bsh ihs i.toNat fs) a₀ ∧
       CfoQ dn vis fe s₀.mem (r, s'.mem) (AM.st (ConRon.Arena.classFieldsOf bsh ihs i.toNat fs) a₀)
-        (AM.res (ConRon.Arena.classFieldsOf bsh ihs i.toNat fs) a₀); ⊤⦄ :=
-  triple_post (classFieldsOf_spec p hp n s₀ q io il i fo fl) fun _ _ ⟨hl, hw⟩ =>
-    let h := (cfoW_sim hp dn vis fe bsh ihs n _ a₀ q io il i fo fl fs mp0 hS hb hih hib hfs hfb hi hM).am hw
-    ⟨hl, h.1, h.2.1⟩
+        (AM.res (ConRon.Arena.classFieldsOf bsh ihs i.toNat fs) a₀); ⊤⦄ := by
+  refine triple_post (RefE.triple (cfoE_spec p hp n s₀ q io il i fo fl)
+    (cfo_ref dn vis fe bsh ihs n hS hb hih hib hfs hfb hi hM)) ?_
+  rintro r s' ⟨hl, x, a', run, hR⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.kinds, hR.nomr, hR.frame⟩
 
-section claims
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-variable {p : Prog} (P : CfoProg p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
-
-include P hnv in
-/-- **`class_fields_of`' error claim** (every fuel). -/
-theorem classFieldsOf_claim (n : Nat) (s₀ : St) (a₀ : AState) (q io il i fo fl : Word)
-    (bsh : BlockShape) (ihs : List (Nat × Nat)) (fs : List EIdx) (mp0 : Std.HashMap EIdx Bool)
-    (hS : StageR dn vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bsh)
-    (hih : StabD (fun m => decPL m (decNN m) io.toNat il.toNat) s₀.mem ihs) (hib : io.toNat + il.toNat < 2 ^ 64)
-    (hfs : decHL s₀.mem fo.toNat fl.toNat = some fs) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem)
-    (hi : i.toNat + fl.toNat < 2 ^ 64) (hM : noMR s₀.mem mp0) :
-    CoreSpecE p n "class_fields_of" [q, io, il, i, fo, fl]
-      (ConRon.Arena.classFieldsOf bsh ihs i.toNat fs) s₀ a₀ := by
-  refine CoreSpecE.of_runs fun e hc => ?_
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have he := triple_of_callE_err (cfoE_spec p P.cfo n s₀ q io il i fo fl) hc (Err.code_ne_of_cls hk0)
-  cases n with
-  | zero =>
-    simp only [cfoE] at he
-    cases he
-    exact ErrClaim.of_cls0 Err.cls_outOfFuel
-  | succ n =>
-  rw [cfoE.arm1] at he
-  cases h1 : callE p n "block_shape_member_names" [q] s₀.mem with
-  | error e1 =>
-    rw [h1, cfoE.k_block_shape_member_names.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, cfoE.k_block_shape_member_names.arm1] at he
-  obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (blockShapeMemberNames_spec p P.alloc P.mnc P.mn n s₀ q)
-    (callW_of_callE h1)
-  subst hs1
-  have ht := hb.ptop
-  have hsz := hS.2.2.2.1
-  have hts : iwTop s₀.mem ≤ (s₀.mem.arr64 IW).size := hS.2.1
-  have hf1 := (memberNamesW_dec h1m hsz hS.2.2.2.2.2 hb.dec (by omega) hb.2.1 hb.2.2).2.2.2.1
-  obtain ⟨hS1, hg1, -, hd1, ht1⟩ := memberNamesW_stage h1m hS hb
-  cases h2 : callE p n "class_fields_of_go" [r1.headD 0, r1.tail.headD 0, io, il, i, fo, fl] s1.mem with
-  | error e2 =>
-    rw [h2, cfoE.k_class_fields_of_go.none] at he
-    cases he
-    exact RefE.run_err (cfgE_spec p P n ⟨s1.mem, Locals.init []⟩ _ _ io il i fo fl) hnv hnv
-      (cfg_ref (dn := dn) (vis := vis) (fe := fe) bsh ihs n (a := a₀) (mo := r1.headD 0)
-        (ml := r1.tail.headD 0) hS1 hd1 (by dsimp only; omega) (hih.grow hg1) hib
-        (by rw [decHL_grow hg1 hfb]; exact hfs) (Nat.le_trans hfb hg1.1) hi (rec2NoMR_iw hf1 hM)) h2
-  | ok q2 =>
-    rw [h2, cfoE.k_class_fields_of_go.arm1] at he
-    cases he
-
-end claims
+end cfo
 
 end L.Ind
 

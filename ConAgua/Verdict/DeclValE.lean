@@ -1,3 +1,8 @@
+import ConAgua.Arena.DeclCvgT
+import ConAgua.Arena.CrOKFrame
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.IndRealApdT
+import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.DeclValT
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Verdict.LefRef

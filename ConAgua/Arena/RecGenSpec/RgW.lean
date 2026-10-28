@@ -1,12 +1,11 @@
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.GtProg
-import ConAgua.Arena.RecGenSpec.ClassConstOkHeader
 import ConAgua.Arena.IndGrindAttr
 
 /-!
 # RgW
 
-`rec2DecCV_agree`, `rtoK5`, `rtoK4` and the lemmas only they use.
+`rec2DecCV_agree`, `RtoProg` (the lookups of `class_rec_ty_ok`) and the lemmas of its refinement.
 -/
 
 noncomputable section
@@ -49,38 +48,6 @@ theorem rec2DecCV_agree {a b : Array Word} {q T : Nat} (hag : ∀ i, i < T → b
         exact hag (o + j) (by omega)
   rw [hlist]
 
-/-! ## `class_rec_ty_ok` -/
-
-def rtoK5 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => if r5.headD 0 = 0 then none else some ([q], m5)
-
-def rtoK4 (cR : CallM) (n : Nat) (vis cvRi gty q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m4) => rtoK5 q (cR n "is_def_eq_core" [vis, 0, rdW (m4.arr64 EREC) (cvRi + 3), gty] m4)
-
-def rtoK3 (cR : CallM) (n : Nat) (vis cvRi gty : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m3) => rtoK4 cR n vis cvRi gty q (ccoW cR n m3 vis q)
-
-def rtoK2 (cR : CallM) (n : Nat) (vis rc cvRi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then none
-    else rtoK3 cR n vis cvRi (r2.tail.headD 0)
-      (cvNewW m2 (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc))
-        (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc + 1)) (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc + 2))
-        (r2.tail.headD 0))
-
-section arms
-variable (cR : CallM) (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis g k rc cvRi c gty q : Word) (r1 r2 r4 r5 : List Word)
-theorem rtoK2_fail (h : r2.headD 0 = 0) : rtoK2 cR n vis rc cvRi (some (r2, m2)) = none := by
-  rw [rtoK2, ite_eq_left h]
-theorem rtoK5_fail (h : r5.headD 0 = 0) : rtoK5 q (some (r5, m5)) = none := by rw [rtoK5, ite_eq_left h]
-end arms
-
-grind_pattern [ind_grind] rtoK2_fail => rtoK2 cR n vis rc cvRi (some (r2, m2))
-grind_pattern [ind_grind] rtoK5_fail => rtoK5 q (some (r5, m5))
 /-- The lookups `class_rec_ty_ok` needs. -/
 structure RtoProg (p : Prog) : Prop extends GtProg p where
   ih : IhProg p

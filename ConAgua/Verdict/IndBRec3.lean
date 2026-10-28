@@ -1,4 +1,5 @@
 import ConAgua.Verdict.IndBRec2
+import ConAgua.Arena.RecGenSpec.ClassRecTysOk
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 /-!
@@ -112,23 +113,21 @@ theorem rtsE_claim (hp : RtsProg p) (g k : Word) (G : ClassGen) (hns : G.nP + G.
     rw [h1, classRecTysOkE.k_class_rec_ty_ok.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    have hcl := CoreSpecE.of_callE (classRecTyOk_claim hq hApd hCrk hnv hcE hU henv hp.toRtoProg n (by omega)
-      ⟨m, Locals.init []⟩ a g k (UInt64.ofNat pr) (UInt64.ofNat pv)
-      (UInt64.ofNat c0) G RS CV hC hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR)
-      (by rw [tv]; exact hCV) hA hgP hrcP hcvP (hw _ List.mem_cons_self)) h1
+    have hcl := RefE.run_err (classRecTyOkE_spec p hp.toRtoProg n ⟨m, Locals.init []⟩ vis g k _ _ _) hnv
+      { nv := hnv, core := hcE, uce := hU }
+      (rto_ref hq hApd hCrk henv n (by omega) hC hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR)
+        (by rw [tv]; exact hCV) hA hgP hrcP hcvP (hw _ List.mem_cons_self)) h1
     rw [tc] at hcl
     exact hcl
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, classRecTysOkE.k_class_rec_ty_ok.arm1] at he
-  obtain ⟨s1, hs1, -, hmodel⟩ := triple_of_callW
-    (classRecTyOk_spec p hp.toRtoProg (realCall p) (realCall_spec p) n ⟨m, Locals.init []⟩ vis g k
-      (UInt64.ofNat pr) (UInt64.ofNat pv) (UInt64.ofNat c0)) (callW_of_callE h1)
+  obtain ⟨s1, hs1, -, x, a1, hrun1, hR1⟩ := RefE.run_ok
+    (classRecTyOkE_spec p hp.toRtoProg n ⟨m, Locals.init []⟩ vis g k _ _ _)
+    (rto_ref hq hApd hCrk henv n (by omega) hC hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR)
+      (by rw [tv]; exact hCV) hA hgP hrcP hcvP (hw _ List.mem_cons_self)) h1
   subst hs1
-  obtain ⟨x, a1, hrun1, ⟨⟨hC1, hg1, hx⟩, hA1⟩⟩ :=
-    (rtoW_simC hq hApd hCrk henv hp.toRtoProg n (by omega) m a g k (UInt64.ofNat pr) (UInt64.ofNat pv)
-      (UInt64.ofNat c0) G RS CV hC hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR)
-      (by rw [tv]; exact hCV) hA hgP hrcP hcvP (hw _ List.mem_cons_self)) (r1, s1.mem) hmodel
+  obtain ⟨hC1, hg1, hx, hA1⟩ := hR1
   dsimp only at hC1 hg1 hx hA1
   rw [tc] at hrun1
   obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.classRecTyOk_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)

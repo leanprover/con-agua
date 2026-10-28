@@ -7,7 +7,7 @@ import ConRon.Bridge.Inductives.GenRec
 /-!
 # `classMajors` under `StageC` (lane `indstaget`, helper `indstaget-tpt`)
 
-`class_majors`' model at `realCall p` (its `target_major_pins` through `tmpW_okC`), from `StageC`,
+`class_majors`' model at `realCall p` (its `target_major_pins` through `tmp_ref`), from `StageC`,
 `AbsOK` and the inputs' denotations con-ron's `classMajors_spec` asks, the twin side transcribed
 from that spec's proof: the key's intern (`internConstE_run`), `mkAppN` (`mkAppN_run`),
 `targetMajorOf` (`targetMajorOf_spec`, a `CoreStep`), `targetMajorPins` (`targetMajorPins_spec`).
@@ -27,75 +27,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-! ## Frames of `target_major_pins` at `realCall p` -/
-
-section mfr
-variable {p : Prog} (hq : KnotStageProg p)
-
-include hq in
-theorem coreC_mfr {n : Nat} {args r : List Word} {m m' : Mem}
-    (h : realCall p n "infer_type_core" args m = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (run_memFrame hq.closed (by decide) (run_of_callW h)).1 coreStageA_stage coreStageC_stage
-
-include hq in
-theorem tptE_mfr : ∀ (n : Nat) (m m' : Mem) (vis d xo xl v : Word),
-    tptE p n m vis d xo xl = .ok (v, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, h => by rw [tptE.eq_def] at h; cases h
-  | n + 1, m, m', vis, d, xo, xl, v, h => by
-    by_cases hl : xl = 0
-    · rw [tptE.arm1 p n m vis d xo xl hl] at h
-      cases h; exact MFr.refl _ _ _
-    rw [tptE.arm2 p n m vis d xo xl hl] at h
-    rcases h1 : callE p n "infer_type_core" [vis, d, rdW (m.arr64 IW) xo] m with e1 | ⟨r1, m1⟩ <;>
-      rw [h1] at h
-    · rw [tptE.k_infer_type_core.none] at h; cases h
-    rw [tptE.k_infer_type_core.arm1] at h
-    refine (coreC_mfr hq (callW_of_callE h1)).trans ?_
-    rcases h2 : tptE p n m1 vis d (xo + 1) (xl - 1) with e2 | ⟨v2, m2⟩ <;> rw [h2] at h
-    · rw [tptE.k_target_pin_tys.none] at h; cases h
-    rw [tptE.k_target_pin_tys.arm1] at h
-    cases h
-    exact tptE_mfr n _ _ _ _ _ _ _ h2
-
-include hq in
-theorem tptR_mfr (hp : p.lookup "target_pin_tys" = some targetPinTys) {n : Nat} {m m' : Mem}
-    {vis d xo xl : Word} {r : List Word} (h : tptR (realCall p) n m vis d xo xl = some (r, m')) :
-    MFr [] [] m m' := by
-  rw [show tptR (realCall p) n m vis d xo xl = callW p n "target_pin_tys" [vis, d, xo, xl] m from rfl,
-    callW_eq_callE] at h
-  rcases hE : callE p n "target_pin_tys" [vis, d, xo, xl] m with e | ⟨r1, m1⟩ <;> rw [hE] at h <;>
-    simp only [Except.toOption, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨s1, rfl, -, he⟩ := triple_of_callE (s₀ := ⟨m, Locals.init []⟩) (tptE_spec p hp n _ vis d xo xl) hE
-  exact tptE_mfr hq _ _ _ _ _ _ _ _ he
-
-include hq in
-theorem tmpW_mfrR (hp : p.lookup "target_pin_tys" = some targetPinTys) {N : Nat} {m m' : Mem}
-    {vis rP M : Word} {r : List Word}
-    (h : tmpW (realCall p) N m vis rP M = some (r, m')) : MFr [] [] m m' := by
-  rcases N with _ | N
-  · simp [tmpW] at h
-  by_cases hm : rdW (m.arr64 IW) (M + 8) ≠ 0
-  · rw [tmpW_mem (realCall p) N m vis rP M hm] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-  rw [tmpW_out (realCall p) N m vis rP M hm] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
-  rw [tmpK1_some] at h
-  refine (tptR_mfr hq hp h1).trans ?_
-  obtain ⟨⟨hd, m2⟩, h2, h⟩ := of_K h rfl
-  rw [tmpK2_some] at h
-  refine (ceinternW_mfr h2).trans ?_
-  obtain ⟨hb, h⟩ := of_ite_none h
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
-  rw [tmpK3_some] at h
-  refine (MFr.ofMknF h3).trans ?_
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
-  rw [tmpK4_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  rw [← h.2]; exact coreC_mfr hq h4
-
-end mfr
 
 /-! ## `class_majors` -/
 
@@ -261,19 +192,18 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
     (Q := fun _ _ m' a' => StageC dn vis fe env m' a' ∧ IWGrow m3 m' ∧ PosMR m' ∧ AbsOK m' ∧
       ConRon.Bridge.CoreStep V env fe a3 a') ?_ ?_
   · intro r4 m4 e4
-    obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (targetMajorPins_spec p hP.tmp (realCall p) (realCall_spec p) n _ vis _ _) e4
     have hrB : (rdW (m3.arr64 IW) (pp + 4)).toNat = bs.nP := by
       rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb]
     have hrP : (rdW (m3.arr64 IW) (pp + 4)).toNat = pP.nP := hrB.trans hnP
-    obtain ⟨a4, hrun4, hC4, hg4, hA4⟩ := tmpW_okC hq henv hP.tmp.tpt
-      (by omega) hW4 hC3 hA3 hd3 hm (fun _ => by rw [hrP]; exact hdsW)
+    obtain ⟨s4, rfl, -, ⟨⟩, a4, hrun4, hR4⟩ := RefE.run_okW (s₀ := ⟨m3, Locals.init []⟩)
+      (tmpE_spec p hP.tmp n _ vis _ _)
+      (tmp_ref hq henv n (by omega) hC3 hA3 hd3 hm (fun _ => by rw [hrP]; exact hdsW)) e4
     have hrun4' := hrun4
     rw [hrP] at hrun4'
     obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.targetMajorPins_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
       henv pP.nP tm MP (fun _ => hdsW) a3 a4 () hC3.check hm hrun4'
     rw [hrB] at hrun4
-    exact ⟨(), a4, hrun4, hC4, hg4, hP3.fr (tmpW_mfrR hq hP.tmp.tpt hW4), hA4, c4⟩
+    exact ⟨(), a4, hrun4, hR4.stage, hR4.grow, hP3.fr hR4.mfr, hR4.abs, c4⟩
   rintro r4 - m4 a4 ⟨hC4, hg4, hP4, hA4, c4⟩
   have hg04 := hg03.trans hg4
   have c14 := (c12.trans c3).trans c4

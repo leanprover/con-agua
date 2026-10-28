@@ -214,22 +214,15 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
     rcases decB_decPL_bound hihB with h0 | h0
     · rw [h0]; exact (r3.tail.headD 0).toNat_lt
     · exact hS4.lt64 h0
-  obtain ⟨s5, hs5, -, hok5, hS5, hg5, hsp5, ⟨mp5, hM5⟩, hf5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (classFieldsOf_refines p P.cfo (n + 1) _ a4 dn vis fe q (r3.tail.headD 0) (r3.tail.tail.headD 0) 0
-      (r4.tail.headD 0) (r4.tail.tail.headD 0) bs ihs fvs mp0 hS4 (hbs.grow hg14)
+  obtain ⟨s5, hs5, -, kinds, a5, run5, hS5, hg5, hsp5, ⟨mp5, hM5⟩, hf5, hA5⟩ := RefE.run_okW
+    (cfoE_spec p P.cfo (n + 1) ⟨s4.mem, Locals.init []⟩ q (r3.tail.headD 0) (r3.tail.tail.headD 0) 0
+      (r4.tail.headD 0) (r4.tail.tail.headD 0))
+    (cfo_ref dn vis fe bs ihs (n + 1) hS4 (hbs.grow hg14)
       (DecB.stab (OMono.decPL (fun q => decNN_mono q) _ _) hihB) hib hdl hbl
       (by simpa using (r4.tail.tail.headD 0).toNat_lt) hM0) c5
-  simp only at hs5 hS5 hg5 hsp5 hM5 hf5; subst hs5
-  obtain ⟨s5', hs5', -, hw5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (classFieldsOf_spec p P.cfo (n + 1) _ q (r3.tail.headD 0) (r3.tail.tail.headD 0) 0
-      (r4.tail.headD 0) (r4.tail.tail.headD 0)) c5
-  simp only at hs5' hw5; rw [hs5'] at hw5
-  have hA5 := cfoW_afr P.cfo hS4 (hbs.grow hg14) (DecB.stab (OMono.decPL (fun q => decNN_mono q) _ _) hihB)
-    hib hdl hbl (by simpa using (r4.tail.tail.headD 0).toNat_lt) hM0 hw5 hA4
+  subst hs5
+  replace hA5 := hA5 hA4
   have hP5 := hP4.setNo hf5 ⟨mp5, hM5⟩
-  have run5 := AM.run_of_ok _ a4 hok5
-  generalize hx5 : AM.res (ConRon.Arena.classFieldsOf bs ihs (0 : Word).toNat fvs) a4 = kinds at run5 hsp5
-  generalize ha5 : AM.st (ConRon.Arena.classFieldsOf bs ihs (0 : Word).toNat fvs) a4 = a5 at run5 hS5
   obtain ⟨q5, -⟩ := ConRon.Bridge.Inductives.classFieldsOf_spec bs pP cvP.name ihs fvs fvsP 0 a4 a5 kinds
     hC4.check.state ⟨ConRon.Bridge.Inductives.dShape_ext q14.ext _ _ hsh, hfvsP⟩ run5
   have hC5 := hC4.of_pstep hS5 hA5 q5

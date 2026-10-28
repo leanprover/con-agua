@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndT.WalkC
 import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

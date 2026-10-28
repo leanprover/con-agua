@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndCallM
 import ConAgua.Arena.DeclDivModSpec.PureRun
 import ConAgua.Arena.DeclNatBase
 
