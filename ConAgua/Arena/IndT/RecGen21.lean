@@ -6,7 +6,7 @@ import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 
 `check_block_classes`' model (over the program's own calls); twin side con-ron's
 `checkBlockClasses_spec`'s proof: `classRead` (`classRead_spec`), the classes (L only), the keys
-(`classKeysOf_spec`), the majors (`clmW_simC`, `classMajors_spec`), one class per member (L only).
+(`classKeysOf_spec`), the majors (`clm_ref`, `classMajors_spec`), one class per member (L only).
 The walk memos across `class_read` by its real `open_pis_at_fvars_f` (`classRead_refinesA`), across
 the other calls by the program facts `AbsKeep`.
 -/
@@ -129,18 +129,16 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   -- the majors
   obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
   rw [cbcW.k_class_majors.arm1] at h
-  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (clm_spec p hP.clm.cm n _ vis pp co cl po pl (r3.headD 0) (r3.tail.headD 0)) c4
-  simp only at hs4 hW4
-  subst hs4
-  obtain ⟨ms, a4, hrun4, hC4, hg4, hms, hP4, hA4⟩ :=
-    clmW_simC hq hIlpf hLC henv hP.clm pp co cl po pl bs css pfvs pP cssP pfvsP hpw n hn s3.mem a3 _ _ keys
+  obtain ⟨s4, rfl, -, ms, a4, hrun4, ⟨hC4, hg4, hms, hP4, hA4⟩⟩ := RefE.run_okW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (clmE_spec p hP.clm n _ vis pp co cl po pl (r3.headD 0) (r3.tail.headD 0))
+    (clm_ref hq hIlpf hLC henv hP.clm pp co cl po pl bs css pfvs pP cssP pfvsP hpw n hn s3.mem a3 _ _ keys
       keysP hC3 hA3 (hbsD.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc)
       (hcss.grow decCNS_mono hg03) (hpf.grow (OMono.decHL _ _) hg03) (Nat.le_trans hpfb hg03.1) hks
       hP3 (fun k hk x hx => ⟨pP.nP, hnPP ▸ hwk k hk x hx⟩)
       (ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hshP)
       (ConRon.Bridge.Inductives.dCtors_ext.list c12.ext _ _ hcssP)
-      (ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP) hkeys r4 s4.mem hW4
+      (ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP) hkeys) c4
+  dsimp only at hC4 hg4 hms hP4 hA4
   obtain ⟨c3', -⟩ := ConRon.Bridge.Inductives.classMajors_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv bs pP css cssP pfvs pfvsP hpl hpw keys keysP (fun k hk x hx => ⟨pP.nP, hnPP ▸ hwk k hk x hx⟩) a3 a4
     ms hC3.check ⟨ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hshP,
