@@ -253,7 +253,7 @@ theorem applyAnyW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
         have hW := M.of_run (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
           (L.Front.Ind.applyInd_spec p hFI hAI hII hXI b.data hsize x.1 _ hm f.name)
         rw [hxm, hv] at hW
-        obtain ⟨st', h1, h2, h3, h4⟩ := L.Front.Ind.applyIndW_twin h64 hsize hR hD hok hscan hW.2
+        obtain ⟨st', h1, h2, h3, h4⟩ := L.Front.Ind.applyIndW_twin hAI h64 hsize hR hD hok hscan hW.2
         have h1' : (applyLine st (.decl (.ind tys cts rcs))).run a₀ = .ok (.inl st', a₀) := h1
         refine ⟨st', by simp [AM.ok, h1'], by simp [AM.res, h1'], by simp [AM.st, h1']; exact h2, h3,
           h4 hmode⟩
