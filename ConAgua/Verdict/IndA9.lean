@@ -70,7 +70,7 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   exact cid_claim hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC
     hkP hkt hkr hnv hCBD eCcv (checkBlockIdxSortsE_claim hnv eSF) eGrc (checkBlockTablesE_claim hnv eTbl)
     (checkBlockIndsE_claim hnv hcE eCcv eSum) (checkBlockCtorsE_claim hnv eSC)
-    (checkBlockClassesE_claim hnv eClm) (checkBlockPositivityE_claim hG eSF)
+    (checkBlockClassesE_claim ⟨hnv, hcE⟩) (checkBlockPositivityE_claim hG eSF)
     (nestSeedsE_claim hG) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
 
 end L.Ind
