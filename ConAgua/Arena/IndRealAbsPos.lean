@@ -572,12 +572,4 @@ theorem p2ccW_afr {k : Nat} {m m' : Mem} {ctx hp nn dO dL iO iL : Word} {r : Lis
   simp only [p2ccW, p2ccK1.eq_def, p2ccK2.eq_def] at h
   afr_auto h [noaW_afr _ _ _ _ _ _ _ _ _ _, pos2PinW_afr, cpW_afr _ _ _ _ _ _ _]
 
-theorem pfW_afr {k : Nat} {m m' : Mem} {vis ctx po pl kb hi i aO aL : Word} {r : List Word}
-    (h : pfW k m vis ctx po pl kb hi i aO aL = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [pfW] at h
-  | succ k =>
-  simp only [pfW, p2pfK1.eq_def, p2pfK2.eq_def, p2pfK3.eq_def, haWf, naWf] at h
-  cases k <;> simp only at h <;> afr_auto h [haW_afr, noaW_afr _ _ _ _ _ _ _ _ _ _, naW_afr]
-
 end L.Ind

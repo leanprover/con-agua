@@ -396,19 +396,6 @@ theorem nestArity_spec' (p : Prog) (hl : NaLook p) (k : Nat) (s₀ : St) (vis c 
   | zero => rw [invoke_eq _ hl.hp]; simp only [callFn, nestArityL]; vcgen [exec] <;> grind
   | succ k => exact nestArity_spec p hl k s₀ vis c
 
-theorem nestPosFvar_spec (p : Prog) (L : PfLook p) (n : Nat) (s₀ : St) (vis ctx po pl kb hi i aO aL : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_fvar" [vis, ctx, po, pl, kb, hi, i, aO, aL]
-    ⦃fun r s' => LocEq s' s₀ ∧ pfW n s₀.mem vis ctx po pl kb hi i aO aL = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ L.hp, callFn, nestPosFvarL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestHoleAt_spec' p L n, nestOccAny_spec p L.no L.hoa n, nestArity_spec' p L.na n,
-        nestPosHoleKind_spec p L.hh L.hk n] <;>
-      finish (gen := 20) (instances := 5000) [pfW, p2pfK1_eq, p2pfK2_eq, p2pfK3_eq, rdW_eq]
-
 end L.Ind
 
 namespace L.Ind
@@ -523,17 +510,17 @@ theorem nbAppK6_some (r : List Word) (m3 : Mem) :
 theorem nbAppK5_some (contF : MW11) (m2 : Mem) (vis ctx fu po pl kb ns aO aL : Word) (v : List Word) (o : Word) :
     nbAppK5 contF m2 vis ctx fu po pl kb ns aO aL v (some o) = if o ≠ 0 then none
     else nbAppK6 (contF m2 vis ctx fu po pl kb (v.tail.headD 0) (v.tail.tail.headD 0) aO aL ns) := rfl
-theorem nbAppK2_some (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) (rh : List Word) (m2 : Mem) :
-    nbAppK2 n contF vis ctx fu po pl kb hi ns aO aL (some (rh, m2)) =
+theorem nbAppK2_some (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) (rh : List Word) (m2 : Mem) :
+    nbAppK2 cR n contF vis ctx fu po pl kb hi ns aO aL (some (rh, m2)) =
     if eViewW m2 (rh.headD 0) = [] then none
     else if (eViewW m2 (rh.headD 0)).headD 0 = 1 then
-      nbAppK4 ns (pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
+      nbAppK4 ns (pfvR cR n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
     else if (eViewW m2 (rh.headD 0)).headD 0 = 3 then
       nbAppK5 contF m2 vis ctx fu po pl kb ns aO aL (eViewW m2 (rh.headD 0))
         (containsW n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) ((eViewW m2 (rh.headD 0)).tail.headD 0))
     else none := rfl
-theorem nbAppK1_some (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) (ra : List Word) (m1 : Mem) :
-    nbAppK1 n contF vis ctx fu po pl kb hi w ns (some (ra, m1)) = nbAppK2 n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
+theorem nbAppK1_some (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) (ra : List Word) (m1 : Mem) :
+    nbAppK1 cR n contF vis ctx fu po pl kb hi w ns (some (ra, m1)) = nbAppK2 cR n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
       (gafF m1 [CWF, w]) := rfl
 theorem nbContK4_some (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc : Word) (r4 : List Word) (m4 : Mem) :
     nbContK4 keyF vis ctx fu po pl kb nn us aO aL ns nPc (some (r4, m4)) =
@@ -877,7 +864,6 @@ theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
 
-omit hcR in
 theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_pos_app" [vis, ctx, fu, po, pl, kb, hi, w, ns]
     ⦃fun r s' => LocEq s' s₀ ∧ nbAppW cR (n + 1) s₀.mem vis ctx fu po pl kb hi w ns =
@@ -887,8 +873,8 @@ theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
   simp only [invoke_eq _ L.papp, callFn, nestPosAppL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       gaaF_spec p L.nt.ad n, gafF_spec p L.nt.ad n, eView_spec p R.hl.hv n,
-      nestPosFvar_spec p L.pf n, slContains_spec p L.nit.no.hc n, hCont] <;>
-    simp_all [nbAppW_succ, nbAppK1_some, nbAppK2_some, nbAppK4_some, nbAppK5_some, nbAppK6_some,
+      hcR n "nest_pos_fvar", slContains_spec p L.nit.no.hc n, hCont] <;>
+    simp_all [nbAppW_succ, nbAppK1_some, nbAppK2_some, pfvR, nbAppK4_some, nbAppK5_some, nbAppK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 
@@ -939,7 +925,7 @@ theorem nbSpec_all {p : Prog} (L : NbLook p) (cR : CallM) (hcR : CallSpec p cR) 
   induction n with
   | zero => exact nbSpec_zero p cR
   | succ n ih =>
-    exact ⟨nbPos_step L cR hcR n ih, nbBind_step L cR n ih, nbApp_step L cR n ih, nbCont_step L cR hcR n ih, nbKey_step L cR n ih,
+    exact ⟨nbPos_step L cR hcR n ih, nbBind_step L cR n ih, nbApp_step L cR hcR n ih, nbCont_step L cR hcR n ih, nbKey_step L cR n ih,
       nbNew_step L cR hcR n ih, nbFrame_step L cR hcR n ih, nbCtors_step L cR n ih, nbOne_step L cR hcR n ih, nbWalk_step L cR n ih,
       nbFields_step L cR n ih⟩
 

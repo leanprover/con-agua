@@ -26,21 +26,24 @@ def nwsWf : Nat → Mem → Word → Word → Word → Word → Word → Option 
   | _, _, _, _, _, _, _ => none
 
 abbrev MW17 := Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-def nbAppK2 (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) :
+/-- `nest_pos_fvar(vis, ctx, progOff, progLen, kb, hi, i, argsOff, argsLen)` through its run. -/
+def pfvR (cR : CallM) (n : Nat) (m : Mem) (vis ctx po pl kb hi i aO aL : Word) : Option (List Word × Mem) :=
+  cR n "nest_pos_fvar" [vis, ctx, po, pl, kb, hi, i, aO, aL] m
+def nbAppK2 (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rh, m2) =>
     if eViewW m2 (rh.headD 0) = [] then none
     else if (eViewW m2 (rh.headD 0)).headD 0 = 1 then
-      nbAppK4 ns (pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
+      nbAppK4 ns (pfvR cR n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
     else if (eViewW m2 (rh.headD 0)).headD 0 = 3 then
       nbAppK5 contF m2 vis ctx fu po pl kb ns aO aL (eViewW m2 (rh.headD 0))
         (containsW n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) ((eViewW m2 (rh.headD 0)).tail.headD 0))
     else none
-def nbAppK1 (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) :
+def nbAppK1 (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ra, m1) => nbAppK2 n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
+  | some (ra, m1) => nbAppK2 cR n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
       (gafF m1 [CWF, w])
 
 def nbFrameK5 (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO gL ns : Word) :
@@ -92,7 +95,7 @@ def nbBindW (cR : CallM) : Nat → MW9
 def nbAppW (cR : CallM) : Nat → MW9
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, ctx, fu, po, pl, kb, hi, w, ns =>
-    nbAppK1 n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w])
+    nbAppK1 cR n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w])
 /-- `nest_cont(vis, ctx, fuel, progOff, progLen, kb, n, us, argsOff, argsLen, ns)`. -/
 def nbContW (cR : CallM) : Nat → MW11
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
@@ -163,7 +166,7 @@ theorem nbBindW_succ (cR : CallM) (n : Nat) (m : Mem) (vis ctx fu po pl dep kb w
           (nhiW m ctx pl) ((eViewW m w).tail.headD 0)) := by
   rw [nbBindW]
 theorem nbAppW_succ (cR : CallM) (n : Nat) (m : Mem) (vis ctx fu po pl kb hi w ns : Word) :
-    nbAppW cR (n + 1) m vis ctx fu po pl kb hi w ns = nbAppK1 n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w]) := by
+    nbAppW cR (n + 1) m vis ctx fu po pl kb hi w ns = nbAppK1 cR n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w]) := by
   rw [nbAppW]
 theorem nbContW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us aO aL ns : Word) :
     nbContW cR (k + 1) m vis ctx fu po pl kb nn us aO aL ns = nbContK1 cR k (nbKeyW cR k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn) := by

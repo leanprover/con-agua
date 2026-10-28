@@ -80,14 +80,6 @@ namespace L.Ind
 
 open L.Arena
 
-def p2pfK3 (k : Nat) (ctx kb i aL dL2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) =>
-    if aL + dL2 < aL then none
-    else if aL + dL2 ≠ r.headD 0 then none
-    else match hkWf k m3 ctx kb i with
-      | none => none
-      | some w => some ([w], m3)
 /-- The lookups of `nest_pos_fvar`. -/
 structure PfLook (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc

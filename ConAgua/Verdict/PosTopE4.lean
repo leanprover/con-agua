@@ -126,7 +126,7 @@ theorem nrtE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
       simpa using hE
     | ok q2 =>
     obtain ⟨r1', m1⟩ := q2
-    have hCt := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) hq hIlpf hLC henv n (by omega)).2.2.2.2.2.2.2.1
+    have hCt := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv n (by omega)).2.2.2.2.2.2.2.1
     obtain ⟨s2, hs2, -, hct⟩ := triple_of_callW
       ((nbSpec_all L.nb (realCall p) (realCall_spec p) n).2.2.2.2.2.2.2.1 ⟨mh, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _
         _ _ _ _ _ _ _ _ _) (callW_of_callE h2)
@@ -375,7 +375,7 @@ theorem nsdE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
       exact hE
     | ok q4 =>
     obtain ⟨r3', m3⟩ := q4
-    have hKey := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) hq hIlpf hLC henv (n' + 1) (by omega)).2.2.2.2.1
+    have hKey := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv (n' + 1) (by omega)).2.2.2.2.1
     obtain ⟨s4, hs4, -, hk3⟩ := triple_of_callW
       ((nbSpec_all L.nb (realCall p) (realCall_spec p) (n' + 1)).2.2.2.2.1 ⟨m2, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _
         _ _ _) (callW_of_callE h4)

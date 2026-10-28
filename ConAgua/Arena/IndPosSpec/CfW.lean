@@ -216,40 +216,6 @@ def naWf : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, vis, c => naW k m vis c
 
-def p2pfK2 (k : Nat) (vis ctx kb i aL hp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) =>
-    if r.headD 0 ≠ 0 then none
-    else p2pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
-      (naWf k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp)))
-def p2pfK1 (k : Nat) (vis ctx kb hi i aO aL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then none
-    else p2pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
-      (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL)
-/-- The model of `nest_pos_fvar(vis, ctx, progOff, progLen, kb, hi, i, argsOff, argsLen)`. -/
-def pfW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, vis, ctx, po, pl, kb, hi, i, aO, aL => p2pfK1 k vis ctx kb hi i aO aL (haWf k m ctx po pl i)
-
-section arms
-variable (k : Nat) (m1 m2 m3 : Mem) (vis ctx kb hi i aO aL hp dL2 : Word) (r : List Word)
-theorem p2pfK1_eq : p2pfK1 k vis ctx kb hi i aO aL (some (r, m1)) =
-    if r.headD 0 = 0 then none
-    else p2pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
-      (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL) := rfl
-theorem p2pfK2_eq : p2pfK2 k vis ctx kb i aL hp (some (r, m2)) =
-    if r.headD 0 ≠ 0 then none
-    else p2pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
-      (naWf k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp))) := rfl
-theorem p2pfK3_eq : p2pfK3 k ctx kb i aL dL2 (some (r, m3)) =
-    if aL + dL2 < aL then none
-    else if aL + dL2 ≠ r.headD 0 then none
-    else match hkWf k m3 ctx kb i with
-      | none => none
-      | some w => some ([w], m3) := rfl
-end arms
 
 end L.Ind
 

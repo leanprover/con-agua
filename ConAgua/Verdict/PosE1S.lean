@@ -414,12 +414,12 @@ theorem appOKE_step {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker
         ra.headD 0, ra.tail.headD 0] m2 with
     | error e4 =>
       rw [h4, npaE.k_nest_pos_fvar.eq_1] at hce; cases hce
-      have h4' := triple_of_callE_err (pfvE_spec p L.pf.hp n ⟨m2, Locals.init []⟩ vis ctx po pl kb hi _ _ _) h4
-        (Err.code_ne_of_cls hk0)
-      dsimp only at h4'
-      have := pfvE_claim L.pf hnv dn vis fe h4' hS2 (hW.grow hg12).u (hW.grow hg12).hs hargs2
-        (by have := hg2.1; omega) hP2 (fun k => (pure (k, (decI w : EIdx), NS) : AM (NestFieldKind × EIdx × NestState)))
-      rw [hi1] at this
+      have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
+      have hab2 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m2 := by have := hg2.1; omega
+      have := RefE.run_err (pfvE_spec p L.pf n ⟨m2, Locals.init []⟩ vis ctx po pl kb hi _ _ _) hnv hnv
+        (pfv_ref dn vis fe hS2 (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2 hab2 hP2) h4
+      have := ErrClaim.bind_left (f := fun k => (pure (k, (decI w : EIdx), NS) : AM (NestFieldKind × EIdx × NestState))) this
+      rw [← pfK_eq, hi1] at this
       exact this
     | ok q4 =>
       obtain ⟨r4, m4⟩ := q4
