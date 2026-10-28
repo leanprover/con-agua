@@ -832,6 +832,36 @@ theorem ev_movRMt {d r : Reg64} {off : Int} (hk : Host.prog[k]? = some (movRM d 
   simp only [Reg64s.get64_r15, UInt64.toNat_toBitVec, hi, Effects.All]
   simpa using h
 
+/-- `mov [r15 + 8 r + off], v` (the table-relative array, `genStT`). -/
+theorem ev_stT {r v : Reg64} {off : Int} (hk : Host.prog[k]? = some (movMR (tdesc r off) v))
+    (hoff : SmallOff off)
+    (hm : (rdW s.dmem (A (s.regs.r15.toNat + 8 * (s.regs.get64 r).toNat + off.toNat))).isSome)
+    (h : Ev Q { s with
+      dmem := wrW s.dmem (A (s.regs.r15.toNat + 8 * (s.regs.get64 r).toNat + off.toNat)) (s.regs.get64 v) }
+      (at_ (k + 1))) : Ev Q s (at_ k) := by
+  run_instr
+  rw [AddrExpr.zeroExtend_interp_sib, addr_tdesc _ _ _ hoff.1 (by omega)]
+  simp only [rdW, Option.isSome_map] at hm
+  obtain ⟨j, hj⟩ := Option.isSome_iff_exists.mp hm
+  simp only [Reg64s.get64_r15, UInt64.toNat_toBitVec, hj, Effects.All]
+  exact h
+
+/-- `mov qword [r15 + 8 r + off], imm32` (the table-relative array, `genStT`). -/
+theorem ev_stTI {r : Reg64} {off : Int} {w : Word}
+    (hk : Host.prog[k]? = some (i64 (.mov (.mem (tdesc r off)) (.imm (.int64 w.toInt64)))))
+    (hoff : SmallOff off)
+    (hm : (rdW s.dmem (A (s.regs.r15.toNat + 8 * (s.regs.get64 r).toNat + off.toNat))).isSome)
+    (h : Ev Q { s with
+      dmem := wrW s.dmem (A (s.regs.r15.toNat + 8 * (s.regs.get64 r).toNat + off.toNat)) w.toBitVec }
+      (at_ (k + 1))) : Ev Q s (at_ k) := by
+  run_instr
+  rw [AddrExpr.zeroExtend_interp_sib, addr_tdesc _ _ _ hoff.1 (by omega)]
+  simp only [rdW, Option.isSome_map] at hm
+  obtain ⟨j, hj⟩ := Option.isSome_iff_exists.mp hm
+  simp only [Reg64s.get64_r15, UInt64.toNat_toBitVec, hj, Effects.All, Width.bits, BitVec.truncate_eq_setWidth,
+    BitVec.setWidth_eq]
+  exact h
+
 /-- `cmp rax, [r15 + 8 r + off]`. -/
 theorem ev_cmpRMt {r : Reg64} {off : Int} (hk : Host.prog[k]? = some (i64 (.cmp (.reg (rr .rax)) (oM (tdesc r off)))))
     (hoff : SmallOff off) {v : Word}
