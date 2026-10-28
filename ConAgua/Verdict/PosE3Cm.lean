@@ -195,7 +195,7 @@ grind_pattern [arena_grind]nctE.k_nest_ctors_one.none =>
   nctE.k_nest_ctors_one p n vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen csOff
     csLen outsOff outsLen (Except.error ε)
 
-theorem nctE_specC (p : Prog) (hf : p.lookup "nest_ctors" = some nestCtorsL) (n : Nat) (s₀ : St)
+theorem nctE_spec (p : Prog) (hf : p.lookup "nest_ctors" = some nestCtorsL) (n : Nat) (s₀ : St)
     (vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen csOff csLen ns outsOff
       outsLen : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors"
@@ -204,7 +204,7 @@ theorem nctE_specC (p : Prog) (hf : p.lookup "nest_ctors" = some nestCtorsL) (n 
     ⦃fun r s' => LocEq s' s₀ ∧
       nctE p n s₀.mem vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen csOff csLen
         ns outsOff outsLen = .ok (r, s'.mem);
-     fun ε => ε.code ≠ 0 →
+     fun ε => True → ε.cls ≠ 0 →
       nctE p n s₀.mem vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen csOff csLen
         ns outsOff outsLen = .error ε⦄ := by
   cases n with
@@ -225,32 +225,9 @@ theorem nctE_specC (p : Prog) (hf : p.lookup "nest_ctors" = some nestCtorsL) (n 
                 nctE.k_nest_ctors, nctE.k_sl_snoc, nctE.k_rec3, nctE.k_nest_ctors_one]) <;>
         grind [lang_grind, arena_grind]
 
-/-- `nest_ctors`' unified spec (the error post over the class). -/
-theorem nctE_spec (p : Prog) (hf : p.lookup "nest_ctors" = some nestCtorsL) (n : Nat) (s₀ : St)
-    (vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen csOff csLen ns outsOff
-      outsLen : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors"
-      [vis, ctx, root, fuel, progOff, progLen, hi, us, dsOff, dsLen, namesOff, namesLen, holesOff, holesLen, csOff,
-        csLen, ns, outsOff, outsLen]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      nctE p n s₀.mem vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen csOff csLen
-        ns outsOff outsLen = .ok (r, s'.mem);
-     fun ε => True → ε.cls ≠ 0 →
-      nctE p n s₀.mem vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen csOff csLen
-        ns outsOff outsLen = .error ε⦄ :=
-  triple_uni_of_code (nctE_specC p hf n s₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
-
-l_model nwE_specC (p : Prog) (hf : p.lookup "nest_ctors_walk" = some nestCtorsWalkL)
+l_model nwE_spec (p : Prog) (hf : p.lookup "nest_ctors_walk" = some nestCtorsWalkL)
   fns [hf ↦ nwE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
-/-- `nest_ctors_walk`'s unified spec (the error post over the class), from the `errors` spec. -/
-theorem nwE_spec (p : Prog) (hf : p.lookup "nest_ctors_walk" = some nestCtorsWalkL) (n : Nat) (s₀ : St)
-    (vis ctx root fuel progOff progLen hi nF crest ns : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_walk" [vis, ctx, root, fuel, progOff, progLen, hi, nF, crest, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nwE p n s₀.mem vis ctx root fuel progOff progLen hi nF crest ns = .ok (r, s'.mem);
-     fun ε => True → ε.cls ≠ 0 → nwE p n s₀.mem vis ctx root fuel progOff progLen hi nF crest ns = .error ε⦄ :=
-  triple_uni_of_code (nwE_specC p hf n s₀ _ _ _ _ _ _ _ _ _ _)
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
 l_model ncrE_spec (p : Prog) (hL : CtLook p)
   fns [hL.hp ↦ ncrE]
@@ -260,22 +237,9 @@ l_model ncrE_spec (p : Prog) (hL : CtLook p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model noE_specC (p : Prog) (hf : p.lookup "nest_ctors_one" = some nestCtorsOneL)
+l_model noE_spec (p : Prog) (hf : p.lookup "nest_ctors_one" = some nestCtorsOneL)
   fns [hf ↦ noE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
-/-- `nest_ctors_one`'s unified spec (the error post over the class; the generated `unified` steps fail). -/
-theorem noE_spec (p : Prog) (hf : p.lookup "nest_ctors_one" = some nestCtorsOneL) (n : Nat) (s₀ : St)
-    (vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen cv nF ns : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_one"
-      [vis, ctx, root, fuel, progOff, progLen, hi, us, dsOff, dsLen, namesOff, namesLen, holesOff, holesLen, cv, nF, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      noE p n s₀.mem vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen cv nF ns =
-        .ok (r, s'.mem);
-     fun ε => True → ε.cls ≠ 0 →
-      noE p n s₀.mem vis ctx root fuel progOff progLen hi us dsOff dsLen namesOff namesLen holesOff holesLen cv nF ns =
-        .error ε⦄ :=
-  triple_uni_of_code (noE_specC p hf n s₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
 end L.Ind
 

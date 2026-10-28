@@ -90,16 +90,14 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   obtain ⟨hn1, -, -, -, hnP1, -⟩ := ctx_fields hU1.dec hU1.inn htop1
   have hne1 := ctx_names_end hU1.dec hU1.inn hU1.sl htop1
-  rcases hoa1 : noaW1 (k + 1) m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
-      (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL with _ | ⟨o2, m2⟩
+  rcases hoa : noaW (k + 1) m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
+      (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL with _ | ⟨r2, m2⟩
   · rw [liftE_none, pfvE.k_nest_occ_any.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨r2, hoa, hr2o⟩ := noaW1_some hoa1
   obtain ⟨b, hrunoa, hS2, hg2, hr2, hP2⟩ := noaW_ok dn fe vis _ _ _ _ c.names (k + 1) m1 m2 a aO aL args _ hoa hS1
     hn1 hne1 (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs)
     (fun j hj => by have := hg1.1; omega) (hP.fr (haW_mfr hha'))
   rw [hnP1] at hrunoa
-  rw [hr2o] at hr2
   refine RefE.bind_right hrunoa ?_
   cases b with
   | true =>
@@ -283,14 +281,12 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   obtain ⟨hn, -, -, -, hnP, -⟩ := ctx_fields hU.dec hU.inn htop
   have hne := ctx_names_end hU.dec hU.inn hU.sl htop
-  rcases hoa1 : noaW1 k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4)) hp
-      iO iL with _ | ⟨o1, m1⟩
+  rcases hoa : noaW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4)) hp
+      iO iL with _ | ⟨r1, m1⟩
   · rw [liftE_none, nccE.k_nest_occ_any.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨r1, hoa, hr1o⟩ := noaW1_some hoa1
   obtain ⟨b, hrunoa, hS1, hg1, hr1, hP1⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m m1 a iO iL idx _ hoa hS
     hn hne hidx hidxb hP
-  rw [hr1o] at hr1
   rw [hnP] at hrunoa
   unfold nccT
   refine RefE.bind_right hrunoa ?_
@@ -315,14 +311,12 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [nccE.k_pin_at.arm1 _ _ _ _ _ _ _ _ hnq]
   have hbeq : ((decI nn : NIdx) == decI (rq.headD 0)) = false := by rw [decI_beq _ _ hnH hqH]; simpa using hnq
   refine RefE.ite_neg (by rw [hbeq]; simp) ?_
-  rcases hcp1 : cpW1 k m2 hp dO dL with _ | ⟨b3w, m3⟩
+  rcases hcp : cpW k m2 hp dO dL with _ | ⟨r3, m3⟩
   · rw [liftE_none, nccE.k_nest_cont_params_closed.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨r3, hcp, hr3o⟩ := cpW1_some hcp1
   obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_okW dn fe vis hp k m2 m3 a dO dL ds r3 hcp hS1
     (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
     (fun j hj => by have := hdsb j hj; have := hg1.1; omega)
-  rw [hr3o] at hr3
   refine RefE.bind_right hrun3 ?_
   cases b3 with
   | false =>
