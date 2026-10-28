@@ -95,7 +95,7 @@ include h64 hsize
 
 theorem lineKW_step (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (i : USize) (ok nx : Word) (st : StateD)
+    (hXI : DLineLookups p) (m m' : Mem) (i : USize) (ok nx : Word) (st : StateD)
     (a : AState) (hI : FrontInv b m a st) (_hi : i < b.usize)
     (h : lineKW p b.data m i.toUInt64 = some (ok, nx, m'))
     (hok : ok ≠ 0) : LineStepI (FrontInv b) b i nx st a m' := by
@@ -157,7 +157,7 @@ accept from a memory holding `b` and related to `a₀` and the blank parse state
 accepts with the invariant after. -/
 theorem frontRunW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
+    (hXI : DLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
     (hA : ArenaD m a₀) (hD : StateDR m StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
     (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hmo : ModeOK m)
     (h : runI (lineKW p b.data) b.size (initKW m) = some (0, m')) :
@@ -201,12 +201,11 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hpl : p.lookup "apply_level" = some applyLevel)
   (hpr : p.lookup "apply_rec" = some applyRec) (hpt : p.lookup "apply_str" = some applyStr)
   (hE : ExprLookups p)
-  (hF : DeclFieldLookups p) (hDL : DeclLookups p) (hpz : p.lookup "apply_dline" = some applyDLine)
   (hpi : p.lookup "front_init" = some frontInit) (hpd : p.lookup "front_run" = some frontRun)
   (hFI : L.Front.Ind.IndFieldLookups p) (hAI : L.Front.Ind.IndApplyLookups p)
-  (hII : L.Front.Ind.IndInstallLookups p) (hXI : L.Front.Ind.IndLineLookups p)
+  (hII : L.Front.Ind.IndInstallLookups p) (hXI : DLineLookups p)
 
-include hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz in
+include hS hL hpf hpn hpu hpl hpr hpt hE in
 /-- `front_line` under a run invariant `Inv` that bounds the pool's top (`hInv`) and that every
 line applied keeps (`hpres`, a fact of the model). -/
 theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Inv : Mem → Prop)
@@ -221,7 +220,7 @@ theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Inv : Mem → 
   have hi' : i.toNat ≤ b.size := by have := L.Scan.lt_of_lt_ofNat hi; omega
   obtain ⟨h1, h2⟩ := hInv _ hI
   have h := Triple.keep hE.no_st8
-    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz b hb n s₀ hm i hi' h1 h2)
+    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE b hb n s₀ hm i hi' h1 h2)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hW, hk, hl⟩ := M.of_run (P := fun s => s = s₀) hs hrun h
@@ -262,7 +261,7 @@ theorem initK_inv (Inv : Mem → AState → StateD → Prop) (Inv₀ : Mem → A
   obtain ⟨st₀, a₁, -, hI⟩ := hinit _ _ _ h₀ hi
   exact ⟨a₁, st₀, hI⟩
 
-include hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz hpi hpd hFI hAI hII hXI in
+include hS hL hpf hpn hpu hpl hpr hpt hE hpi hpd hFI hAI hII hXI in
 /-- **Bytes → stores, in one theorem**: when `front_run()` returns `0` on a memory holding the
 input `b` and related to the arena state `a₀` (by `ArenaD`) and to the blank parse state, con-ron's
 `parseBytes b` accepts from `a₀`, and the memory after is related to its final arena state by
@@ -282,7 +281,7 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   intro s r s' hs hrun h0
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
     (frontRun_specI p (lineKW p b.data) b.data (fun m => ∃ a st, FrontInv b m a st)
-      (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz b.data
+      (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hpn hpu hpl hpr hpt hE b.data
         hsize _ (fun m ⟨_, _, hI⟩ => ⟨hI.2.1.1.lit.1.cap, hI.2.1.1.lit.1.top⟩)
         (inv_step p (FrontInv b) b h64 hsize
           (fun m m' i ok nx st a hI hi h hok => lineKW_step b h64 hsize p hFI hAI hII hXI m m' i ok nx
@@ -349,8 +348,8 @@ theorem frontAllProg_indApply : L.Front.Ind.IndApplyLookups frontAllProg := by
 theorem frontAllProg_indInstall : L.Front.Ind.IndInstallLookups frontAllProg := by
   constructor <;> rfl
 
-theorem frontAllProg_indLine : L.Front.Ind.IndLineLookups frontAllProg := by
-  constructor <;> rfl
+theorem frontAllProg_dline : DLineLookups frontAllProg :=
+  { apply_ind := rfl, apply_ind_line := rfl, apply_dline := rfl, dfields := frontAllProg_dfields }
 
 /-- **Bytes → stores, for the whole program.** -/
 theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
@@ -363,8 +362,8 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
       ArenaD s'.mem a' ∧ StateDR s'.mem st'; ⊤⦄ :=
   frontRun_refines frontAllProg frontAllProg_scan frontAllProg_front rfl rfl rfl rfl rfl rfl
-    frontAllProg_expr frontAllProg_dfields frontAllProg_decl rfl rfl rfl frontAllProg_indFields
-    frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine b h64 hsize n s₀ hm hpool a₀ hA hD
+    frontAllProg_expr rfl rfl frontAllProg_indFields
+    frontAllProg_indApply frontAllProg_indInstall frontAllProg_dline b h64 hsize n s₀ hm hpool a₀ hA hD
     hok hoff hpins hmode
 
 /-- A memory with the tier-0 word arrays `0‥223` of 4096 words (as `initMem`, but one shared zero
