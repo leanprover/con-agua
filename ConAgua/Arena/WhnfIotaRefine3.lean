@@ -1,4 +1,7 @@
 import ConAgua.Arena.WhnfIotaRefine2
+import ConAgua.Verdict.WhnfModels3E
+import ConAgua.Arena.RefECore
+import ConAgua.Arena.KnotE
 import ConAgua.Arena.Abs1Refine
 import ConAgua.Arena.Rom
 import ConAgua.Arena.GrindAttr
@@ -506,46 +509,6 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
 
 /-! ## `lit_major_to_ctor(mode, vis, d, h)` -/
 
-/-- Model of `lit_major_to_ctor`. -/
-def lmW (p : Prog) (k : Nat) (m : Mem) (mode vis d h : Word) : Option (List Word × Mem) :=
-  if h >>> 28 ≠ 8 then
-    match callW p k "lit_to_ctor_if_nat" [vis, h] m with
-    | none => none
-    | some (r, m₁) => some ([r.headD 0], m₁)
-  else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m LIT (tierW h) ≤ idxW h then none
-  else match ldE (m.arr64 (tierA REC (tierW h))) (LIT.ad (idxW h) 0) with
-    | none => none
-    | some kind =>
-      if kind ≠ 1 then
-        match callW p k "lit_to_ctor_if_nat" [vis, h] m with
-        | none => none
-        | some (r, m₁) => some ([r.headD 0], m₁)
-      else match callW p k "str_lit_supported" [vis] m with
-        | none => none
-        | some (r₁, m₁) =>
-          if r₁.headD 0 = 0 then some ([h], m₁)
-          else match callW p k "str_lit_ctor" [h] m₁ with
-            | none => none
-            | some (r₂, m₂) =>
-              match callW p k "whnf" [mode, vis, d, r₂.headD 0] m₂ with
-              | none => none
-              | some (r₃, m₃) => some ([r₃.headD 0], m₃)
-
-theorem litMajorToCtor_spec (p : Prog) (hp : p.lookup "lit_major_to_ctor" = some litMajorToCtorL)
-    (k : Nat) (s₀ : St) (mode vis d h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "lit_major_to_ctor" [mode, vis, d, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ lmW p k s₀.mem mode vis d h = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, litMajorToCtorL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p k "lit_to_ctor_if_nat", callW_spec p k "str_lit_supported",
-      callW_spec p k "str_lit_ctor", callW_spec p k "whnf"] <;>
-    finish (gen := 20) [lmW, ldE, tierW, idxW, tfld, tcnt, TRec.ad, TRec.wd, TRec.ex]
-
 theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
     ∃ l, a.store.viewLit (decE h) = some l ∧ a.store.view (decE h) = some (.lit l) ∧
@@ -605,9 +568,103 @@ theorem CoreRef.of_run_eq {α : Type} [Inhabited α] {T T' : AM α} {a₀ : ASta
   simp only [CoreRef, AM.ok, AM.st, AM.res, hT] at h ⊢
   exact h
 
-/-- **`lit_major_to_ctor` refines `litMajorToCtor`.** Statement changes (the knot's `whnf` slot needs
-them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; and `SupKeep` (`strLitSupported` keeps the
-store's views: `StrLitKeep.supKeep_of`) as a hypothesis. -/
+theorem litMajorToCtor_err_str (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (a a₁ a₂ : AState)
+    (ht : h.tag = ETag.lit) (s : String) (hv : a.store.view h = some (.lit (.strVal s)))
+    (hs : (strLitSupported fe).run a = .ok (true, a₁)) (c : EIdx)
+    (hc : (strLitToConstructor s).run a₁ = .ok (c, a₂)) (ce : CheckError)
+    (hw : (r.whnf d c).run a₂ = .error ce) :
+    (litMajorToCtor r fe d h).run a = .error ce := by
+  have hv' : (view h).run a = .ok (.lit (.strVal s), a) := by
+    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
+  simp only [litMajorToCtor, ht, beq_self_eq_true, ↓reduceIte, StateT.run_bind, hv', except_ok_bind,
+    hs, hc, hw]
+
+/-- **`lit_major_to_ctor` refines `litMajorToCtor`, both outcomes**: the errors are the `whnf`
+slot's (on a supported string literal). -/
+theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
+    (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
+    (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
+    (hh : HW h) :
+    RefE (KnotUpToE p n) (lmtcE p (n + 1) s₀.mem mode vis d h)
+      (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) a₀
+      (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
+  have hR := hS.arena.1
+  simp only [lmtcE]
+  -- `lit_to_ctor_if_nat`, whenever the twin runs `litToCtorIfNat`
+  have hnat : (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)).run a₀ =
+      (litToCtorIfNat fe (decE h)).run a₀ →
+      RefE (KnotUpToE p n) (lmtcE.k_lit_to_ctor_if_nat p
+        (liftE (callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem)))
+        (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) a₀
+        (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
+    intro hT
+    rcases c1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩
+    · rw [liftE_none, lmtcE.k_lit_to_ctor_if_nat.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe
+      MM eb h hS hh) c1).post
+    exact RefE.of_run_eq hT (RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩)
+  by_cases h8 : h >>> 28 ≠ 8
+  · rw [ite_eq_left h8]
+    exact hnat (litMajorToCtor_run_nolit _ fe d.toNat (decE h) a₀
+      (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
+  rw [ite_eq_right h8]
+  have h8' : h >>> 28 = 8 := by simpa using h8
+  by_cases hv1 : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hv1]; exact RefE.of_cls0 (by decide)
+  rw [ite_eq_right hv1]
+  by_cases hv2 : tcnt s₀.mem LIT (tierW h) ≤ idxW h
+  · rw [ite_eq_left hv2]; exact RefE.of_cls0 (by decide)
+  rw [ite_eq_right hv2]
+  obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8'
+  have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8'
+  cases l with
+  | natVal N =>
+    have hk0 : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0 := hrel.1
+    rw [ite_eq_left (by rw [hk0]; decide)]
+    exact hnat (litMajorToCtor_run_nat _ fe d.toNat (decE h) a₀ htag N hview)
+  | strVal str =>
+    have hk1 : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 1 := hrel.1
+    rw [ite_eq_right (by rw [hk1]; decide)]
+    rcases c1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
+    · rw [liftE_none, lmtcE.k_str_lit_supported.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, -⟩ := CoreSpec.run
+      (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) c1
+    simp only [lmtcE.k_str_lit_supported]
+    by_cases h0 : r₁.headD 0 = 0
+    · rw [ite_eq_left h0]
+      rw [decBool_f_m2c h0] at hrun1
+      exact RefE.ret (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe d.toNat
+        (decE h) a₀ _ htag str hview hrun1) ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, rfl, hh⟩
+    rw [ite_eq_right h0]
+    rw [decBool_t_m2c h0] at hrun1
+    rcases c2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩
+    · rw [liftE_none, lmtcE.k_str_lit_ctor.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    have hviewA : (AM.st (strLitSupported fe) a₀).store.view (decE h) =
+        some (.lit (.strVal str)) := hsup fe a₀ (decE h) _ hview
+    obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
+      (hw.strLitCtor n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb h str hS₁ hh hviewA) c2
+    simp only [lmtcE.k_str_lit_ctor]
+    have hW := (hk n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _ hnF hn62
+      ⟨hS₂, hm4, hebm⟩ hr₂
+    rcases c3 : callE p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
+    · exact fun hkE => ErrClaim.of_run_err (fun ce h' => litMajorToCtor_err_str _ fe d.toNat (decE h)
+        a₀ _ _ htag str hview hrun1 _ hrun2 ce h')
+        (CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb
+          mode d _ hnF hn62 ⟨hS₂, hm4, hebm⟩ hr₂) c3)
+    obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW hW (callW_of_callE c3)
+    have hrun3 := AM.run_of_ok _ _ hok3
+    exact RefE.ret (litMajorToCtor_run_str (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) a₀
+      _ _ _ htag str hview hrun1 _ _ hrun2 hrun3)
+      ⟨⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩, hres3, hr₃⟩
+
+/-- **`lit_major_to_ctor` refines `litMajorToCtor`** (`lmtc_ref`'s ok half). Statement changes (the
+knot's `whnf` slot needs them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; and
+`SupKeep` (`strLitSupported` keeps the store's views: `StrLitKeep.supKeep_of`) as a hypothesis. -/
 theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
@@ -616,90 +673,10 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     eb = (mode >>> 1) &&& 1 → HW h →
     CoreSpec p (n + 1) "lit_major_to_ctor" [mode, vis, d, h]
       (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
-      eb := by
-  intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h hS hm4 hebm hh
-  refine triple_post (litMajorToCtor_spec p hp.litMajorToCtor n s₀ mode vis d h) fun r s' ⟨hloc,
-    hW⟩ => ⟨hloc, ?_⟩
-  have hR := hS.arena.1
-  simp only [lmW] at hW
-  by_cases h8 : h >>> 28 = 8
-  · rw [ite_eq_right (by simpa using h8)] at hW
-    obtain ⟨hv1, hW⟩ := of_ite_none hW
-    obtain ⟨hv2, hW⟩ := of_ite_none hW
-    obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8
-    have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8
-    cases hld : ldE (s₀.mem.arr64 (tierA REC (tierW h))) (LIT.ad (idxW h) 0) with
-    | none => rw [hld] at hW; cases hW
-    | some kind =>
-    rw [hld] at hW
-    obtain ⟨-, hkind⟩ := ldE_some _ _ _ hld
-    dsimp only at hW
-    cases l with
-    | natVal N =>
-      have hk0 : kind = 0 := by rw [hkind]; exact hrel.1
-      rw [ite_eq_left (by rw [hk0]; decide)] at hW
-      rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-        simp only [hc1, reduceCtorEq] at hW
-      obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-      have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
-      have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
-        (litMajorToCtor_run_nat _ fe d.toNat (decE h) a₀ htag N hview)
-        (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
-      obtain ⟨hok, hca, hres, hr₁⟩ := hcr
-      refine ⟨hok, ?_, ?_, ?_⟩
-      · exact hca
-      · rw [hres]; simp only [decH]; rw [hr1]
-      · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
-    | strVal str =>
-      have hk1 : kind = 1 := by rw [hkind]; exact hrel.1
-      rw [ite_eq_right (by rw [hk1]; decide)] at hW
-      rcases hc1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-        simp only [hc1, reduceCtorEq] at hW
-      obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
-        (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) hc1
-      by_cases h0 : r₁.headD 0 = 0
-      · rw [ite_eq_left h0] at hW
-        obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-        rw [decBool_f_m2c h0] at hrun1
-        have hr1 : r.headD 0 = h := by simpa using hr.symm
-        refine CoreRef.of_run (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe
-          d.toNat (decE h) a₀ _ htag str hview hrun1) ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ ?_
-        · simp only [decH]; rw [hr1]
-        · unfold ResH HW; rw [hr1]; exact hh
-      · rw [ite_eq_right h0] at hW
-        rw [decBool_t_m2c h0] at hrun1
-        rcases hc2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩ <;>
-          simp only [hc2, reduceCtorEq] at hW
-        have hviewA : (AM.st (strLitSupported fe) a₀).store.view (decE h) = some (.lit (.strVal str)) :=
-          hsup fe a₀ (decE h) _ hview
-        obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
-          (hw.strLitCtor n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb h str hS₁ hh hviewA) hc2
-        rcases hc3 : callW p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with _ | ⟨r₃, m₃⟩ <;>
-          simp only [hc3, reduceCtorEq] at hW
-        obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-        obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
-          ((hk n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _ hnF hn62
-            ⟨hS₂, hm4, hebm⟩ hr₂) hc3
-        have hrun3 := AM.run_of_ok _ _ hok3
-        have hr1 : r₃.headD 0 = r.headD 0 := by simpa using hr
-        refine CoreRef.of_run (litMajorToCtor_run_str (coreKnot (decMode mode) fe id F) fe d.toNat
-          (decE h) a₀ _ _ _ htag str hview hrun1 _ _ hrun2 hrun3) (hm ▸ ⟨M₃, hS₃, hK₁.trans
-          (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩) ?_ ?_
-        · simp only [decH]; rw [← hr1]; exact hres3
-        · unfold ResH HW; rw [← hr1]; exact hr₃
-  · rw [ite_eq_left h8] at hW
-    rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-      simp only [hc1, reduceCtorEq] at hW
-    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
-    have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
-      (litMajorToCtor_run_nolit _ fe d.toNat (decE h) a₀ (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
-      (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
-    obtain ⟨hok, hca, hres, hr₁⟩ := hcr
-    refine ⟨hok, ?_, ?_, ?_⟩
-    · exact hca
-    · rw [hres]; simp only [decH]; rw [hr1]
-    · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
+      eb :=
+  fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h hS hm4 hebm hh =>
+    RefE.coreSpec (lmtcE_spec p hp.litMajorToCtor (n + 1) s₀ mode vis d h)
+      (lmtc_ref p hc hw hsup n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h hS hm4 hebm hh)
 
 /-! ## `mk_proj` as a run under `CoreS` -/
 
