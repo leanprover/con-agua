@@ -61,9 +61,9 @@ theorem checkSumCtorsE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = 
     (hcE : CoreStubsE p) (hCcv : CcvE p) : CheckSumCtorsE p :=
   fun hkp {_dn _vis _fe _env} henv hV hOpf hLC hLT hApd hCrk P s₀ a₀ vis0 T lo ll nP nIdx rs isP lg cvTaw cO cL lps cvTa cs
       hC hT hrs hlps hlpsb hcv hcs hA {_env₀ _TP _lpsP _rsP _cvTaP _csP} hTP hlpsP hrsP hcvP hws hcsP hie hfe F hF _e hc =>
-    CoreSpecE.of_callE (checkSumCtors_claim hkp henv hV hOpf hLC hLT hApd hCrk hnv hcE hCcv P F hF s₀
-      a₀ vis0 T lo ll nP nIdx rs isP lg cvTaw cO cL lps cvTa cs hC hT hrs hlps hlpsb hcv hcs hA hTP
-      hlpsP hrsP hcvP hws hcsP hie hfe) hc
+    RefE.run_err (sctsE_spec p P F s₀ vis0 _ T lo ll nP nIdx rs isP lg cvTaw cO cL) hnv ⟨⟨hnv, hcE⟩, hCcv⟩
+      (scts_ref hkp henv hV hOpf hLC hLT hApd hCrk P vis0 T lo ll nP nIdx rs isP lg cvTaw lps cvTa hT hrs hws F hF
+        s₀.mem a₀ cO cL cs _ hC hlps hlpsb hcv hcs hA hTP hlpsP hrsP hcvP hcsP hie hfe) hc
 
 theorem checkStructFieldSortsIE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
     (hcE : CoreStubsE p) : CheckStructFieldSortsIE p := by
