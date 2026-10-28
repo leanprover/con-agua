@@ -119,7 +119,6 @@ globs = ["ConAgua", "ConAgua.L.ModelGenTest", "ConAgua.Arena.PromoteCIRef.+", "C
   "ConAgua.Arena.IndT.Sum5",
   "ConAgua.Arena.IndT.Install3",
   "ConAgua.Arena.IndT.Install4",
-  "ConAgua.Arena.IndT.Install5",
   "ConAgua.Arena.IndT.Install6",
   "ConAgua.Arena.IndT.Install7",
   "ConAgua.Arena.IndT.PosDefs",
