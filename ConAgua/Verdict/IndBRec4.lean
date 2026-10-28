@@ -1,4 +1,3 @@
-import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndT.RecGen4
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

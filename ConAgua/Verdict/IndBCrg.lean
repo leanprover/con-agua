@@ -2,7 +2,7 @@ import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.WalkC
 import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.RecGenSpec.CfhW
+import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.GenRec
