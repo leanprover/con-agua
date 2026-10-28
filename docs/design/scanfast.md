@@ -288,3 +288,20 @@ members, shared by the two shapes and unfolded in their proofs. `bndObj_sound` (
 `assumption` over the many position facts took 22 s (it unified unrelated `numR` positions by
 `whnf`); `with_reducible assumption` takes milliseconds. The two binder specs still need
 `maxHeartbeats 1000000` (about 60 paths after `vcgen`).
+
+### Status (paused 2026-10-28 by the coordinator)
+
+Paused on the question whether a fast path keyed to lean4export's exact byte format is an
+acceptable coupling (a generic single-pass scanner is the alternative, §4 rank 3).
+* Landed: app (#92), lam and forallE (#95). These cover about 90 % of `Init`'s lines; `Init`
+  257.66 G → 231.00 G instructions (−10.3 %). Verdicts 634/634 at each landing.
+* Proof so far: 2018 lines (`L/LitWord.lean` 144, `Scan/Fast.lean`, `Scan/FastSound.lean`), plus
+  about 150 changed lines in `Front/Line.lean`, `Verdict/FrontRunE.lean` and the registrations.
+  The spec `frontLine_spec` and the end-to-end theorem are unchanged.
+* In progress, not landed (branch `sfp3-names` in the lane's worktree): the str/num name shapes.
+  Their code and the string loop's models are written; the shape specs, the soundness walk
+  (`strRecN`/`numRecN`, `scanStringN` on a printable-ASCII body) and the `apply_rec` arm of
+  `front_line` are not. Not started: const lines (the `us` level list).
+* The coupling is to performance only: a line in any other form (whitespace, other key order,
+  escapes, long numbers) declines to the generic proved scanner, so a format change of
+  lean4export costs speed, never a verdict.
