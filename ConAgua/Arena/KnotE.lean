@@ -143,6 +143,28 @@ theorem RefE.mono {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a :
   | ok v => obtain ⟨y, a₁, hy, hr⟩ := h; exact ⟨y, a₁, hy, hR _ _ _ hr⟩
   | error e => exact h
 
+/-- A leaf: the twin returns at the start's state, the relation holds there. -/
+theorem CorePost.ret {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m : Mem}
+    {a : AState} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
+    {r : List Word} {y : α} (hS : CoreS dn m a vis fe M eb) (hy : y = dec r) (hr : ok r) :
+    CorePost dec dn m vis fe M eb ok r m y a :=
+  ⟨⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, hy, hr⟩
+
+/-- **A core callee's ok run, then the rest**, both outcomes: the rest from the callee's state,
+at any maps of the relation there, the stack kept across the callee. -/
+theorem RefE.bind_core {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}
+    {f : γ → AM β} {a₀ : AState} {dec₁ : List Word → γ} {dec : List Word → β}
+    {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {r₁ : List Word} {ok₁ ok : List Word → Prop} {w : α → List Word × Mem}
+    (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
+    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
+      RefE G x (f (dec₁ r₁)) (AM.st T₁ a₀)
+        (fun v y a' => CorePost dec dn m₁ vis fe M' eb ok (w v).1 (w v).2 y a')) :
+    RefE G x (T₁ >>= f) a₀ (fun v y a' => CorePost dec dn m₀ vis fe M eb ok (w v).1 (w v).2 y a') := by
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
+  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1])
+    ((h₂ M' hS hSt).mono fun _ _ _ h => ⟨CoreAfter.comp hK hSt h.after, h.res, h.ok⟩)
+
 /-- **The ok half of a unified core function** as its `CoreSpec`: `w` reads the model's ok value
 back as the results and the memory. -/
 theorem CoreSpec.of_refE {α β : Type} [Inhabited β] {p : Prog} {n : Nat} {f : FnName}
