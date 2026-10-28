@@ -113,8 +113,8 @@ def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (nb nw : 
     d := kStoreBytes d b8 (m.arr8 a).toList
   for q in [0:nw] do
     let b64 : Nat := bases64[q]!
-    d := kStoreWord d (T + (tab.dbase64 q).toNat) b64.toUInt64
-    d := kStoreWord d (T + (tab.dlen64 q).toNat) (m.arr64 (atW q)).size.toUInt64
+    d := kStoreWord d (T + (tab.dbase q).toNat) b64.toUInt64
+    d := kStoreWord d (T + (tab.dlen q).toNat) (m.arr64 (atW q)).size.toUInt64
     d := kStoreBytes d b64 ((m.arr64 (atW q)).toList.flatMap kWordBytes)
   d := kStoreBytes d (T + tab.romBase.toNat) tab.rom
   d := kStoreBytes d (T + tab.resBase.toNat) (List.replicate (8 * tab.nxres) 0)

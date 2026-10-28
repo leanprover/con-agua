@@ -116,58 +116,8 @@ def Prog.wf (tab : Tab) (p : Prog) : Bool := kernelOpaque (Prog.wfSpec tab p)
 
 theorem Prog.wf_eq (tab : Tab) (p : Prog) : Prog.wf tab p = Prog.wfSpec tab p := kernelOpaque_eq _
 
-/-! ## The arrays a program names
-
-For checking programs whose memory layout is not fixed elsewhere: `Prog.wfAuto p` is `Prog.wf` for
-the smallest table `p` fits (one more byte/word array than the largest id it names). -/
-
-def arrsMax (a b : Nat × Nat) : Nat × Nat := (max a.1 b.1, max a.2 b.2)
-
-def BSrc.arrs : BSrc → Nat × Nat
-  | .arr a => (a + 1, 0)
-  | .rom _ => (0, 0)
-
-def Expr.arrs : Expr → Nat × Nat
-  | .bin _ a b | .cmpw _ a b => arrsMax (Expr.arrs a) (Expr.arrs b)
-  | .ld8 a i => arrsMax (a + 1, 0) (Expr.arrs i)
-  | .ld64 a i => arrsMax (0, a + 1) (Expr.arrs i)
-  | .len8 a => (a + 1, 0)
-  | .len64 a => (0, a + 1)
-  | .ldc _ i => Expr.arrs i
-  | .ld64t a t i => arrsMax (0, a + tierOff + 1) (arrsMax (Expr.arrs t) (Expr.arrs i))
-  | .len64t a t => arrsMax (0, a + tierOff + 1) (Expr.arrs t)
-  | .ld8x8 s i => arrsMax (BSrc.arrs s) (Expr.arrs i)
-  | _ => (0, 0)
-
-def WArr.arrs : WArr → Nat × Nat
-  | .plain a => (0, a + 1)
-  | .tier a t => arrsMax (0, a + tierOff + 1) (Expr.arrs t)
-
-def Cond.arrs : Cond → Nat × Nat
-  | .cmp _ a b => arrsMax (Expr.arrs a) (Expr.arrs b)
-  | .and p q | .or p q => arrsMax (Cond.arrs p) (Cond.arrs q)
-  | .not p => Cond.arrs p
-
-def Stmt.arrs : Stmt → Nat × Nat
-  | .skip | .brk => (0, 0)
-  | .set _ e | .abort e => Expr.arrs e
-  | .st8 a i e => arrsMax (a + 1, 0) (arrsMax (Expr.arrs i) (Expr.arrs e))
-  | .st64 a i e => arrsMax (0, a + 1) (arrsMax (Expr.arrs i) (Expr.arrs e))
-  | .seq s t => arrsMax (Stmt.arrs s) (Stmt.arrs t)
-  | .ite c s t => arrsMax (Cond.arrs c) (arrsMax (Stmt.arrs s) (Stmt.arrs t))
-  | .while c s => arrsMax (Cond.arrs c) (Stmt.arrs s)
-  | .ret es | .call _ _ es => es.foldl (fun acc e => arrsMax acc (Expr.arrs e)) (0, 0)
-  | .gset _ e => Expr.arrs e
-  | .st64t a t i e => arrsMax (0, a + tierOff + 1) (arrsMax (Expr.arrs t) (arrsMax (Expr.arrs i) (Expr.arrs e)))
-  | .copy64 d di s si n => arrsMax (WArr.arrs d) (arrsMax (Expr.arrs di) (arrsMax (WArr.arrs s)
-      (arrsMax (Expr.arrs si) (Expr.arrs n))))
-  | .copy8w d di s si n => arrsMax (WArr.arrs d) (arrsMax (Expr.arrs di) (arrsMax (BSrc.arrs s)
-      (arrsMax (Expr.arrs si) (Expr.arrs n))))
-  | .scan8 _ s i e _ => arrsMax (BSrc.arrs s) (arrsMax (Expr.arrs i) (Expr.arrs e))
-
-def Prog.arrs (p : Prog) : Nat × Nat := p.foldl (fun acc (_, fd) => arrsMax acc (Stmt.arrs fd.body)) (0, 0)
-
-/-- `Prog.wf` for the smallest table that has every array `p` names. -/
-def Prog.wfAuto (p : Prog) : Bool := Prog.wf (Prog.tab p (Prog.arrs p).1 (Prog.arrs p).2) p
+/-- `Prog.wf` for the table of the arrays `p` names (`Prog.tab`), for checking programs whose
+memory layout is not fixed elsewhere. -/
+def Prog.wfAuto (p : Prog) : Bool := Prog.wf (Prog.tab p) p
 
 end L.Compiler

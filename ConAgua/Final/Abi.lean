@@ -132,19 +132,19 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (b pb : ByteArray) (d
     rcases h2 a ha with rfl | rfl
     · have := hW 2 _ g2
       simp only [SVal.val, Reg64s.get64_rdi, UInt64.ofBitVec_toBitVec] at this
-      simpa [Tab.dbase8] using this
+      simpa [Tab.dbase] using this
     · have := hW 4 _ g4
       simp only [SVal.val, Reg64s.get64_rdx, UInt64.ofBitVec_toBitVec] at this
-      simpa [Tab.dbase8] using this
+      simpa [Tab.dbase] using this
   · intro a ha
     simp only [abiLayout_tab, hnb] at ha
     rcases h2 a ha with rfl | rfl
     · have := hW 3 _ g3
       simp only [SVal.val, Reg64s.get64_rsi, UInt64.ofBitVec_toBitVec] at this
-      simpa [Tab.dlen8, ← hc.hn] using this
+      simpa [Tab.dlen, ← hc.hn] using this
     · have := hW 5 _ g5
       simp only [SVal.val, Reg64s.get64_rcx, UInt64.ofBitVec_toBitVec] at this
-      simpa [Tab.dlen8, ← hc.hnp] using this
+      simpa [Tab.dlen, ← hc.hnp] using this
   · intro p hp
     simp only [abiLayout_tab] at hp
     have hq := tab.wposInv_ltN hp
@@ -158,14 +158,14 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (b pb : ByteArray) (d
         simp only [abiSlot] at this ⊢; omega
       | some c => rw [abiOff_tbl hc]; have := abiTabOk_tbl hok hc; omega
     rw [addr_val _ _ (by rw [hbase]; omega), hbase] at this
-    simp only [abiLayout_T, abiLayout_tab, abiLayout_b64, Tab.dbase64, hnb]
+    simp only [abiLayout_T, abiLayout_tab, abiLayout_b64, Tab.dbase, hnb]
     rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (p : Int)).toNat = 8 * (6 + p) by omega]
     exact this
   · intro p hp
     simp only [abiLayout_tab] at hp
     have := hW (6 + tab.nw + p) _ (gw p hp).2
     simp only [SVal.val, UInt64.ofBitVec_toBitVec] at this
-    simp only [abiLayout_T, abiLayout_tab, abiLayout_s64, Tab.dlen64, hnb]
+    simp only [abiLayout_T, abiLayout_tab, abiLayout_s64, Tab.dlen, hnb]
     rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.nw : Int) + 8 * (p : Int)).toNat =
       8 * (6 + tab.nw + p) by omega]
     exact this

@@ -371,15 +371,15 @@ variable (tab : Tab) (base inp n pins np : Nat)
 @[simp] theorem abiLayout_tab : (abiLayout tab base inp n pins np).tab = tab := rfl
 @[simp] theorem abiLayout_T : (abiLayout tab base inp n pins np).T = base := rfl
 @[simp] theorem abiLayout_b64 (p : Nat) :
-    (abiLayout tab base inp n pins np).b64 p = base + abiOff tab p := rfl
-@[simp] theorem abiLayout_s64 (a : Nat) : (abiLayout tab base inp n pins np).s64 a = abiSz tab (tab.wAt a) := rfl
+    (abiLayout tab base inp n pins np).b p = base + abiOff tab p := rfl
+@[simp] theorem abiLayout_s64 (a : Nat) : (abiLayout tab base inp n pins np).s a = abiSz tab (tab.wAt a) := rfl
 @[simp] theorem abiLayout_lo : (abiLayout tab base inp n pins np).lo = base + abiSlot := rfl
 @[simp] theorem abiLayout_hi : (abiLayout tab base inp n pins np).hi = base + abiSlot + abiStack := rfl
 @[simp] theorem abiLayout_nargs : (abiLayout tab base inp n pins np).nargs = 0 := rfl
-@[simp] theorem abiLayout_b8_0 : (abiLayout tab base inp n pins np).b8 0 = inp := rfl
-@[simp] theorem abiLayout_b8_1 : (abiLayout tab base inp n pins np).b8 1 = pins := rfl
-@[simp] theorem abiLayout_s8_0 : (abiLayout tab base inp n pins np).s8 0 = n := rfl
-@[simp] theorem abiLayout_s8_1 : (abiLayout tab base inp n pins np).s8 1 = np := rfl
+@[simp] theorem abiLayout_b8_0 : (abiLayout tab base inp n pins np).b 0 = inp := rfl
+@[simp] theorem abiLayout_b8_1 : (abiLayout tab base inp n pins np).b 1 = pins := rfl
+@[simp] theorem abiLayout_s8_0 : (abiLayout tab base inp n pins np).s 0 = n := rfl
+@[simp] theorem abiLayout_s8_1 : (abiLayout tab base inp n pins np).s 1 = np := rfl
 end
 
 /-- Byte `x` is in slot `j` of the region at `base`. -/

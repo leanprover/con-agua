@@ -129,12 +129,12 @@ section
 variable (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List TieredArray)
 @[simp] theorem bufLayout_tab : (bufLayout tab buf B base fz own).tab = tab := rfl
 @[simp] theorem bufLayout_T : (bufLayout tab buf B base fz own).T = base := rfl
-@[simp] theorem bufLayout_b8 (a : Nat) : (bufLayout tab buf B base fz own).b8 a = 0 := rfl
-@[simp] theorem bufLayout_s8 (a : Nat) : (bufLayout tab buf B base fz own).s8 a = 0 := rfl
+@[simp] theorem bufLayout_b8 (a : Nat) : (bufLayout tab buf B base fz own).b a = 0 := rfl
+@[simp] theorem bufLayout_s8 (a : Nat) : (bufLayout tab buf B base fz own).s a = 0 := rfl
 @[simp] theorem bufLayout_b64 (p : Nat) :
-    (bufLayout tab buf B base fz own).b64 p = bufB tab B buf base fz own (tab.wAt p) := rfl
+    (bufLayout tab buf B base fz own).b p = bufB tab B buf base fz own (tab.wAt p) := rfl
 @[simp] theorem bufLayout_s64 (p : Nat) :
-    (bufLayout tab buf B base fz own).s64 p = bufL tab B fz own (tab.wAt p) := rfl
+    (bufLayout tab buf B base fz own).s p = bufL tab B fz own (tab.wAt p) := rfl
 @[simp] theorem bufLayout_lo : (bufLayout tab buf B base fz own).lo = base + abiSlot := rfl
 @[simp] theorem bufLayout_hi : (bufLayout tab buf B base fz own).hi = base + abiSlot + abiStack := rfl
 @[simp] theorem bufLayout_nargs : (bufLayout tab buf B base fz own).nargs = 0 := rfl
@@ -580,7 +580,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   · intro a ha
     simp only [bufLayout_tab, hnb] at ha
     have := hW (2 + 2 * a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_b8, Tab.dbase8]
+    simp only [bufLayout_T, bufLayout_b8, Tab.dbase]
     rw [show (16 + 16 * (a : Int)).toNat = 8 * (2 + 2 * a) by omega, this]
     simp only [bufVal, show 2 + 2 * a ≠ 0 by omega, show 2 + 2 * a ≠ 1 by omega,
       show 2 + 2 * a < 6 by omega, ite_false, ite_true]
@@ -588,7 +588,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   · intro a ha
     simp only [bufLayout_tab, hnb] at ha
     have := hW (3 + 2 * a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_s8, Tab.dlen8]
+    simp only [bufLayout_T, bufLayout_s8, Tab.dlen]
     rw [show (24 + 16 * (a : Int)).toNat = 8 * (3 + 2 * a) by omega, this]
     simp only [bufVal, show 3 + 2 * a ≠ 0 by omega, show 3 + 2 * a ≠ 1 by omega,
       show 3 + 2 * a < 6 by omega, ite_false, ite_true]
@@ -596,7 +596,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   · intro p hp
     simp only [bufLayout_tab] at hp
     have := hW (6 + p) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_tab, bufLayout_b64, Tab.dbase64, hnb]
+    simp only [bufLayout_T, bufLayout_tab, bufLayout_b64, Tab.dbase, hnb]
     rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (p : Int)).toNat = 8 * (6 + p) by omega, this]
     simp only [bufVal, show 6 + p ≠ 0 by omega, show 6 + p ≠ 1 by omega,
       show ¬ 6 + p < 6 by omega, show 6 + p < 6 + tab.nw by omega, ite_false, ite_true,
@@ -604,7 +604,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   · intro p hp
     simp only [bufLayout_tab] at hp
     have := hW (6 + tab.nw + p) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_tab, bufLayout_s64, Tab.dlen64, hnb]
+    simp only [bufLayout_T, bufLayout_tab, bufLayout_s64, Tab.dlen, hnb]
     rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.nw : Int) + 8 * (p : Int)).toNat =
       8 * (6 + tab.nw + p) by omega, this]
     simp only [bufVal, show 6 + tab.nw + p ≠ 0 by omega, show 6 + tab.nw + p ≠ 1 by omega,

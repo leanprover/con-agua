@@ -219,15 +219,15 @@ def parDescB (tab : Tab) (fz own : List TieredArray) (p : Nat) : Program :=
   match fz.idxOf? (tab.wAt p) with
   | some i =>
     [movRM .rax (mb .rdi (8 * (8 + 2 * i))), i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-     i64 (.add (.reg (rr .rax)) (oR .rdi)), movMR (mb .rcx (tab.dbase64 p)) .rax,
-     movRM .rax (mb .rdi (8 * (9 + 2 * i))), movMR (mb .rcx (tab.dlen64 p)) .rax]
+     i64 (.add (.reg (rr .rax)) (oR .rdi)), movMR (mb .rcx (tab.dbase p)) .rax,
+     movRM .rax (mb .rdi (8 * (9 + 2 * i))), movMR (mb .rcx (tab.dlen p)) .rax]
   | none =>
     match own.idxOf? (tab.wAt p) with
     | some k =>
       [movRI .rax (ownOff tab (tab.wAt p) k).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
-       movMR (mb .rcx (tab.dbase64 p)) .rax, movRI .rax (abiSz tab (tab.wAt p)).toUInt64,
-       movMR (mb .rcx (tab.dlen64 p)) .rax]
-    | none => [movRI .rax 0, movMR (mb .rcx (tab.dbase64 p)) .rax, movMR (mb .rcx (tab.dlen64 p)) .rax]
+       movMR (mb .rcx (tab.dbase p)) .rax, movRI .rax (abiSz tab (tab.wAt p)).toUInt64,
+       movMR (mb .rcx (tab.dlen p)) .rax]
+    | none => [movRI .rax 0, movMR (mb .rcx (tab.dbase p)) .rax, movMR (mb .rcx (tab.dlen p)) .rax]
 
 /-- `ca_check_seq`'s table words, in `abiVals`' order: `ca_setup`'s layout of the region, except
 that `out`, the seed `ctlf` and the byte arrays get no memory and the header `hdrf` is the first

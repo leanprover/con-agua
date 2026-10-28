@@ -935,8 +935,8 @@ theorem arrW_plain {a : ArrId} (ha : G.tab.dom64 a = true) {σ : St} {s : Machin
   have hsz := hI.mem.size64 a ha
   have hendp := G.tab.pos64_lt ha
   have hend := hG.end64 _ hendp
-  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [Tab.len64, Tab.dlen64]; lomega, by simp [hT, Tab.len64, Tab.dlen64]; lomega⟩, ?_⟩,
-    G.b64 (G.tab.pos64 a), .inl ⟨_, _, rfl, ⟨by simp [Tab.base64, Tab.dbase64]; lomega, by simp [hT, Tab.base64, Tab.dbase64]; lomega⟩, ?_⟩,
+  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [Tab.len64, Tab.dlen]; lomega, by simp [hT, Tab.len64, Tab.dlen]; lomega⟩, ?_⟩,
+    G.b (G.tab.pos64 a), .inl ⟨_, _, rfl, ⟨by simp [Tab.base64, Tab.dbase]; lomega, by simp [hT, Tab.base64, Tab.dbase]; lomega⟩, ?_⟩,
     by rw [hsz]; exact hend, fun j hj => hI.mem.get64 a ha j hj⟩
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len64A ha
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base64A ha
@@ -961,8 +961,8 @@ theorem arrB_plain {a : ArrId} (ha : G.tab.dom8 a = true) {σ : St} {s : Machine
   have hsz := hI.mem.size8 a ha
   have hendp := G.tab.pos8_lt ha
   have hend := hG.end8 _ hendp
-  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [hT, Tab.len8, Tab.dlen8]; lomega, by simp [hT, Tab.len8, Tab.dlen8]; lomega⟩, ?_⟩,
-    G.b8 (G.tab.pos8 a), .inl ⟨_, _, rfl, ⟨by simp [hT, Tab.base8, Tab.dbase8]; lomega, by simp [hT, Tab.base8, Tab.dbase8]; lomega⟩, ?_⟩,
+  refine ⟨.inl ⟨_, _, rfl, ⟨by simp [hT, Tab.len8, Tab.dlen]; lomega, by simp [hT, Tab.len8, Tab.dlen]; lomega⟩, ?_⟩,
+    G.b (G.tab.pos8 a), .inl ⟨_, _, rfl, ⟨by simp [hT, Tab.base8, Tab.dbase]; lomega, by simp [hT, Tab.base8, Tab.dbase]; lomega⟩, ?_⟩,
     by rw [hsz]; exact hend, fun j hj => hI.mem.get8 a ha j hj⟩
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len8A ha
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base8A ha
@@ -983,8 +983,8 @@ theorem arrW_tier {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s :
     intro d; rw [hR, UInt64.toNat_toBitVec, hI.r15]
   have hsz := hI.mem.size64 _ hta
   have hend := hG.end64 _ htap
-  refine ⟨.inr ⟨_, _, rfl, ⟨by simp [Tab.len64, Tab.dlen64]; lomega, by simp [hT, Tab.len64, Tab.dlen64]; lomega⟩, ?_⟩,
-    G.b64 (G.tab.pos64 (tierA a u)), .inr ⟨_, _, rfl, ⟨by simp [Tab.base64, Tab.dbase64]; lomega, by simp [hT, Tab.base64, Tab.dbase64]; lomega⟩, ?_⟩,
+  refine ⟨.inr ⟨_, _, rfl, ⟨by simp [Tab.len64, Tab.dlen]; lomega, by simp [hT, Tab.len64, Tab.dlen]; lomega⟩, ?_⟩,
+    G.b (G.tab.pos64 (tierA a u)), .inr ⟨_, _, rfl, ⟨by simp [Tab.base64, Tab.dbase]; lomega, by simp [hT, Tab.base64, Tab.dbase]; lomega⟩, ?_⟩,
     by rw [hsz]; exact hend, fun j hj => hI.mem.get64 _ hta j hj⟩
   · rw [hD, show G.T + 8 * (u &&& 1).toNat + (ctx.tab.len64 a).toNat =
       G.T + (G.tab.len64 (tierA a u)).toNat by rw [hT]; omega, hsz]

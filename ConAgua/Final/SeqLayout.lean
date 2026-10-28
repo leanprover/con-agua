@@ -94,16 +94,16 @@ section
 variable (tab : Tab) (base : Nat) (out hdrf ctlf : ArrId) (hw : Nat)
 @[simp] theorem seqLayout_tab : (seqLayout tab base out hdrf ctlf hw).tab = tab := rfl
 @[simp] theorem seqLayout_T : (seqLayout tab base out hdrf ctlf hw).T = base := rfl
-@[simp] theorem seqLayout_b8 (a : Nat) : (seqLayout tab base out hdrf ctlf hw).b8 a = 0 := rfl
-@[simp] theorem seqLayout_s8 (a : Nat) : (seqLayout tab base out hdrf ctlf hw).s8 a = 0 := rfl
+@[simp] theorem seqLayout_b8 (a : Nat) : (seqLayout tab base out hdrf ctlf hw).b a = 0 := rfl
+@[simp] theorem seqLayout_s8 (a : Nat) : (seqLayout tab base out hdrf ctlf hw).s a = 0 := rfl
 @[simp] theorem seqLayout_lo : (seqLayout tab base out hdrf ctlf hw).lo = base + abiSlot := rfl
 @[simp] theorem seqLayout_hi : (seqLayout tab base out hdrf ctlf hw).hi = base + abiSlot + abiStack := rfl
 @[simp] theorem seqLayout_nargs : (seqLayout tab base out hdrf ctlf hw).nargs = 0 := rfl
-theorem seqLayout_b64 (p : Nat) : (seqLayout tab base out hdrf ctlf hw).b64 p =
+theorem seqLayout_b64 (p : Nat) : (seqLayout tab base out hdrf ctlf hw).b p =
     if tab.wposInv p = out ∨ tab.wposInv p = ctlf then 0
     else if tab.wposInv p = hdrf then base + abiSlot * abiSlot64 tab out else base + abiOff tab p := by
   simp only [seqLayout]
-theorem seqLayout_s64 (p : Nat) : (seqLayout tab base out hdrf ctlf hw).s64 p =
+theorem seqLayout_s64 (p : Nat) : (seqLayout tab base out hdrf ctlf hw).s p =
     if tab.wposInv p = out ∨ tab.wposInv p = ctlf then 0
     else if tab.wposInv p = hdrf then hw else abiSz tab (tab.wAt p) := by simp only [seqLayout]
 end
@@ -386,7 +386,7 @@ theorem seqBase_val {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (R : Reg64s) 
     (hR : R.r8.toNat = base) {p : Nat} (hfo : base + abiSlot * abiSlot64 tab out < 2 ^ 64)
     (hfp : base + abiOff tab p < 2 ^ 64) :
     UInt64.ofBitVec ((seqBase tab out hdrf ctlf p).val R) =
-      UInt64.ofNat ((seqLayout tab base out hdrf ctlf hw).b64 p) := by
+      UInt64.ofNat ((seqLayout tab base out hdrf ctlf hw).b p) := by
   rw [seqLayout_b64]
   unfold seqBase
   by_cases h1 : tab.wposInv p = out ∨ tab.wposInv p = ctlf
@@ -398,7 +398,7 @@ theorem seqBase_val {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (R : Reg64s) 
 
 theorem seqLen_val {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (R : Reg64s) (base p : Nat) :
     UInt64.ofBitVec ((seqLen tab out hdrf ctlf hw p).val R) =
-      UInt64.ofNat ((seqLayout tab base out hdrf ctlf hw).s64 p) := by
+      UInt64.ofNat ((seqLayout tab base out hdrf ctlf hw).s p) := by
   rw [seqLayout_s64]
   unfold seqLen
   by_cases h1 : tab.wposInv p = out ∨ tab.wposInv p = ctlf
@@ -511,14 +511,14 @@ theorem seq_memRel {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (hok : abiTabO
     simp only [seqLayout_tab, hnb] at ha
     have := hW (2 + 2 * a) _ (gb _ (by omega) (by omega))
     simp only [SVal.val] at this
-    simp only [seqLayout_T, seqLayout_b8, Tab.dbase8]
+    simp only [seqLayout_T, seqLayout_b8, Tab.dbase]
     rw [show (16 + 16 * (a : Int)).toNat = 8 * (2 + 2 * a) by omega]
     exact this
   · intro a ha
     simp only [seqLayout_tab, hnb] at ha
     have := hW (3 + 2 * a) _ (gb _ (by omega) (by omega))
     simp only [SVal.val] at this
-    simp only [seqLayout_T, seqLayout_s8, Tab.dlen8]
+    simp only [seqLayout_T, seqLayout_s8, Tab.dlen]
     rw [show (24 + 16 * (a : Int)).toNat = 8 * (3 + 2 * a) by omega]
     exact this
   · intro p hp'
@@ -532,14 +532,14 @@ theorem seq_memRel {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (hok : abiTabO
     have hp2 := (hoff p hp').1
     rw [seqBase_val (hw := hw) R hR (by simp only [hn, abiSlot] at hfit hle ⊢; omega)
       (by simp only [hn, abiSlot] at hfit hp2 ⊢; omega)] at this
-    simp only [seqLayout_T, seqLayout_tab, Tab.dbase64, hnb]
+    simp only [seqLayout_T, seqLayout_tab, Tab.dbase, hnb]
     rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (p : Int)).toNat = 8 * (6 + p) by omega]
     exact this
   · intro p hp'
     simp only [seqLayout_tab] at hp'
     have := hW (6 + tab.nw + p) _ (gw p hp').2
     rw [seqLen_val (tab := tab) R base p] at this
-    simp only [seqLayout_T, seqLayout_tab, Tab.dlen64, hnb]
+    simp only [seqLayout_T, seqLayout_tab, Tab.dlen, hnb]
     rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.nw : Int) + 8 * (p : Int)).toNat =
       8 * (6 + tab.nw + p) by omega]
     exact this
