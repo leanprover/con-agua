@@ -384,14 +384,6 @@ theorem nwsW_afr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
   afr_auto h [dcWf_afr]
 
 -- from IndPosSpec/NestCrest
-theorem gcW_afr : ∀ (k : Nat) (m m' : Mem) (vis nPc off l oo ol : Word) (r : List Word),
-    gcW k m vis nPc off l oo ol = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, h => by simp [gcW] at h
-  | k + 1, m, m', vis, nPc, off, l, oo, ol, r, h => by
-    unfold gcW gcK1 gcK2 at h
-    afr_auto h [ntWf_afr, appendW_afr, gcW_afr k _ _ _ _ _ _ _ _ _]
-
--- from IndPosSpec/NestCrest
 theorem rhGoW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP q j : Word),
     rhGoW k m no nl lv po pl nP q j = some m' → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h

@@ -588,15 +588,15 @@ theorem nbFrameK7_some (ctorsF : MW19) (vis ctx fu hi us dO dL gL ns p2O p2L nO 
 theorem nbFrameK6_some (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL gO gL ns p2O p2L nO nL : Word) (rc : List Word) (m6 : Mem) :
     nbFrameK6 k ctorsF vis ctx fu hi us dO dL gO gL ns p2O p2L nO nL (some (rc, m6)) = nbFrameK7 ctorsF vis ctx fu hi us dO dL gL ns p2O p2L nO nL (rc.headD 0) (rc.tail.headD 0)
       (fhW k m6 hi gO gL 0 0) := rfl
-theorem nbFrameK5_some (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO gL ns : Word) (rp : List Word) (m5 : Mem) :
-    nbFrameK5 k ctorsF vis ctx fu hi us dO dL nPc gO gL ns (some (rp, m5)) = nbFrameK6 k ctorsF vis ctx fu hi us dO dL gO gL ns (rp.headD 0) (rp.tail.headD 0)
+theorem nbFrameK5_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO gL ns : Word) (rp : List Word) (m5 : Mem) :
+    nbFrameK5 cR k ctorsF vis ctx fu hi us dO dL nPc gO gL ns (some (rp, m5)) = nbFrameK6 k ctorsF vis ctx fu hi us dO dL gO gL ns (rp.headD 0) (rp.tail.headD 0)
       (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0)
-      (gcW k m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0) := rfl
-theorem nbFrameK4_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (w_ : List Word) (m4 : Mem) :
-    nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (w_, m4)) = nbFrameK5 k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
+      (ngcR cR k m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0) := rfl
+theorem nbFrameK4_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (w_ : List Word) (m4 : Mem) :
+    nbFrameK4 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (w_, m4)) = nbFrameK5 cR k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
       (fgW k m4 hi us dO dL gO gL po pl 0 0) := rfl
 theorem nbFrameK3_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (ra : List Word) (m3 : Mem) :
-    nbFrameK3 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (ra, m3)) = nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
+    nbFrameK3 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (ra, m3)) = nbFrameK4 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
       (cR k "infer_type_core" [vis, hi, ra.headD 0] m3) := rfl
 theorem nbFrameK2_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (hc : Word) (m2 : Mem) :
     nbFrameK2 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (hc, m2)) =
@@ -808,10 +808,10 @@ theorem nbFrame_step (s₀ : St) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Wo
       naF_spec p L.na n, internConst_spec p R.cf R.cp R.ci n,
       mknF_spec p L.nt.ad n, hcR n "infer_type_core",
       nestFrameGrp_spec p R.ha L.nit.hc2 R.h2 R.h4 L.nag.hsn L.hfg n,
-      nestGroupCtors_spec p L.nt L.nit.hc2 L.hap L.hgc n,
+      hcR n "nest_group_ctors",
       nestFrameHoles_spec p R.ha L.nit.hc2 L.nag.hsn R.hl.hff R.hl.hfp R.hl.hif L.hfh n, hCtors] <;>
     simp_all [nbFrameW_succ, nbFrameK1_some, nbFrameK2_some, nbFrameK3_some, nbFrameK4_some,
-      nbFrameK5_some, nbFrameK6_some, nbFrameK7_some, nbFrameK8_some,
+      nbFrameK5_some, ngcR, nbFrameK6_some, nbFrameK7_some, nbFrameK8_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 

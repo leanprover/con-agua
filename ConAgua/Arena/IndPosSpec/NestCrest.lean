@@ -272,13 +272,6 @@ theorem nwsW_mfr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
   unfold nwsW nwsK at h
   mfr_auto h [dcWf_mfr]
 
-theorem gcW_mfr : ∀ (k : Nat) (m m' : Mem) (vis nPc off l oo ol : Word) (r : List Word),
-    gcW k m vis nPc off l oo ol = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, h => by simp [gcW] at h
-  | k + 1, m, m', vis, nPc, off, l, oo, ol, r, h => by
-    unfold gcW gcK1 gcK2 at h
-    mfr_auto h [ntWf_mfr, appendW_mfr, gcW_mfr k _ _ _ _ _ _ _ _ _]
-
 theorem rhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP q j : Word),
     rhGoW k m no nl lv po pl nP q j = some m' → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
