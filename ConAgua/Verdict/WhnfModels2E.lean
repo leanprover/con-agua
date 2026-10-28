@@ -74,28 +74,51 @@ l_model reduceNatE_spec (p : Prog) (hp : WhnfDeltaProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model coreStepProj_specE (p : Prog) (hf : p.lookup "whnf_core_step_proj" = some whnfCoreStepProjL)
-  fns [hf ↦ coreStepProjE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model projLitToCtorE_spec (p : Prog) (hf : p.lookup "proj_lit_to_ctor" = some projLitToCtorL)
+  fns [hf ↦ projLitToCtorE list]
+  specs [callW_spec p n "str_lit_supported", callW_spec p n "str_lit_ctor"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model reduceProjCore_specE (p : Prog) (hf : p.lookup "reduce_proj_core" = some reduceProjCoreL)
-  fns [hf ↦ reduceProjCoreE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model reduceProjCoreE_spec (p : Prog) (hf : p.lookup "reduce_proj_core" = some reduceProjCoreL)
+    (hl : p.lookup "proj_lit_to_ctor" = some projLitToCtorL)
+  fns [hf ↦ reduceProjCoreE list]
+  specs [projLitToCtorE_spec p hl n, callW_spec p n "find_proj", callW_spec p n "reduce_proj_head"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model projLitToCtor_specE (p : Prog) (hf : p.lookup "proj_lit_to_ctor" = some projLitToCtorL)
-  fns [hf ↦ projLitToCtorE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model coreStepProjE_spec (p : Prog) (hf : p.lookup "whnf_core_step_proj" = some whnfCoreStepProjL)
+    (hr : p.lookup "reduce_proj_core" = some reduceProjCoreL)
+    (hl : p.lookup "proj_lit_to_ctor" = some projLitToCtorL)
+  fns [hf ↦ coreStepProjE list]
+  specs [reduceProjCoreE_spec p hr hl n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model coreApp_specE (p : Prog) (hf : p.lookup "whnf_core_app" = some whnfCoreAppL)
-  fns [hf ↦ coreAppE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model whnfAppE_spec (p : Prog) (hf : p.lookup "whnf_app" = some whnfAppL)
+  fns [hf ↦ whnfAppE list]
+  specs [callW_spec p n "beta_peel", callW_spec p n "mk_app", callW_spec p n "mk_app_n_from"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model coreApp2_specE (p : Prog) (hf : p.lookup "whnf_core_app2" = some whnfCoreApp2L)
-  fns [hf ↦ coreApp2E list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model coreApp2E_spec (p : Prog) (hf : p.lookup "whnf_core_app2" = some whnfCoreApp2L)
+    (ha : p.lookup "whnf_app" = some whnfAppL)
+  fns [hf ↦ coreApp2E list]
+  specs [callW_spec p n "head_and_args", whnfAppE_spec p ha n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model whnfApp_specE (p : Prog) (hf : p.lookup "whnf_app" = some whnfAppL)
-  fns [hf ↦ whnfAppE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model coreAppE_spec (p : Prog) (hf : p.lookup "whnf_core_app" = some whnfCoreAppL)
+    (h2 : p.lookup "whnf_core_app2" = some whnfCoreApp2L) (ha : p.lookup "whnf_app" = some whnfAppL)
+  fns [hf ↦ coreAppE list]
+  specs [callW_spec p n "get_app_spine", coreApp2E_spec p h2 ha n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena

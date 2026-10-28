@@ -579,7 +579,7 @@ def stop_leftovers(cur):
 
 # Steps that read the built environment. When the green stamp covers `build` they must be covered too:
 # rerun after a skipped build they would read the queue worktree's older oleans (#80, 2026-10-28).
-EXPENSIVE = ("build", "shake") + tuple(gate_select.CLOSURES) + ("checker-prog", "e2e")
+EXPENSIVE = ("build", "warnings", "shake") + tuple(gate_select.CLOSURES) + ("checker-prog", "e2e")
 
 
 def green_steps(merged, steps):

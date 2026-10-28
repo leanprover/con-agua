@@ -45,6 +45,9 @@ The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py 
 `scripts/diff-e2e.py`: the binary is exactly main.c + checker.s + pins.bin (a change to L code, the
 compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
 fails), so these files (and reasons.h, the abort messages) decide whether the verdicts can change.
+
+`warnings` (scripts/lean_warnings.py: the Lean warnings of the .lean files changed since the base, from
+the build's traces and the log store beside the cache) goes with every selection of `build`.
 """
 import os
 import re
@@ -54,7 +57,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHEAP = ["links", "vendor", "modules", "provenance", "reasons"]
 CLOSURES = ["core-fns", "loop-fns", "leaf-fns", "preloop-ws"]
-ORDER = CHEAP + ["build", "shake"] + CLOSURES + ["checker-prog", "e2e"]
+ORDER = CHEAP + ["build", "warnings", "shake"] + CLOSURES + ["checker-prog", "e2e"]
 
 ALL_EXACT = {"lakefile.toml", "lake-manifest.json", "lean-toolchain", "scripts/lake",
              "scripts/gates.sh", "scripts/gate_select.py"}
@@ -140,6 +143,8 @@ def select(paths, root=ROOT):
                     why.setdefault(t, p)
             else:
                 why.setdefault(s, p)
+    if "build" in why:
+        why.setdefault("warnings", why["build"])
     return [(s, why[s]) for s in ORDER if s in why]
 
 

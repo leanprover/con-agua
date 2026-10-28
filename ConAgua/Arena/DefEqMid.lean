@@ -6,7 +6,6 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Verdict.WhnfModels7E
-import ConAgua.Arena.KnotE
 
 /-!
 # Refinements of `DefEq.lean`'s middle layer (lane `defeq`, helper `defeq-mid`)

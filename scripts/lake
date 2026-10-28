@@ -25,8 +25,11 @@ With LAKE_ARTIFACT_CACHE=false the build still takes the lock and gets the sourc
 can be just as wrong; a later writing build would publish it), but nothing is staged or published; it
 still READS the shared cache (Lake gets the variable unset: Lake's own `false` would disable reads too).
 LAKE_COLD=1 keeps the shared cache out in both directions (Lake gets LAKE_ARTIFACT_CACHE=false): a worktree with
-no `.lake/build` then compiles every module itself. Needed to see warnings: a module restored from the cache has
-a synthetic trace with an EMPTY log ("log": []), so its warnings are neither stored nor replayed.
+no `.lake/build` then compiles every module itself, and Lake prints every warning (it still fills the log store
+below). Without it, a module restored from the cache has
+a synthetic trace with an EMPTY log ("log": []), so its warnings are neither stored nor replayed by Lake;
+scripts/lean_warnings.py (the gate `warnings`) finds them in the log store that a writing or cold build fills
+beside the cache (`_tmp/lake-cache-v2/logs/`, by input hash, under the same guard as the mappings).
 `env` and `serve` are passed through read-only (no lock, no writes). Plain `lake` bypasses all of this:
 do not use it in a worktree (use LAKE_ARTIFACT_CACHE=false scripts/lake to keep the cache out).
 """
@@ -174,6 +177,19 @@ def publish(stage_out, shared_out, since):
     return new, conflicts
 
 
+def publish_logs(root, since):
+    """The log store beside the cache (`_tmp/lake-cache-v2/logs`, scripts/lean_warnings.py): the
+    messages of every module Lake compiled in this build, by input hash, so that the warnings of a module
+    another checkout restores from the cache are still known. Same guard as the mappings: only after a
+    build whose sources did not change."""
+    sys.path.insert(0, os.path.join(root, "scripts"))
+    try:
+        import lean_warnings
+        lean_warnings.harvest(root, root, since)
+    except Exception as e:  # the logs are an aid; never fail a build over them
+        print(f"scripts/lake: note: could not store the build's logs: {e}", file=sys.stderr)
+
+
 def main():
     args = sys.argv[1:]
     root = toplevel()
@@ -261,11 +277,14 @@ def main():
                 print(f"  ... and {len(changed) - 30} more", file=sys.stderr)
             if rc == 0:
                 rc = 3
-        elif stage and os.path.isdir(os.path.join(stage, "outputs")):
-            new, conflicts = publish(os.path.join(stage, "outputs"), os.path.join(shared, "outputs"), since)
-            if conflicts:
-                print(f"scripts/lake: note: {conflicts} cache mapping(s) differ from the shared cache's "
-                      f"(kept the shared ones)", file=sys.stderr)
+        else:
+            if stage and os.path.isdir(os.path.join(stage, "outputs")):
+                new, conflicts = publish(os.path.join(stage, "outputs"), os.path.join(shared, "outputs"), since)
+                if conflicts:
+                    print(f"scripts/lake: note: {conflicts} cache mapping(s) differ from the shared cache's "
+                          f"(kept the shared ones)", file=sys.stderr)
+            if writes or cold:
+                publish_logs(root, since)
     finally:
         if stage:
             shutil.rmtree(stage, ignore_errors=True)
