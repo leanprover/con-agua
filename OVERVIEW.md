@@ -210,7 +210,7 @@ not accepted
 | **the assembler-file parser** | `include_asm`, which turns `checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
 | **the C harness** | [`main.c`](main.c): reads the input, maps the region, calls `ca_start` as `AbiCall` says with the embedded pin data, reads `rdx` and `rax` | review; about two hundred lines with no checker logic. That its callee-saved registers survive each call is proved (`RegsRestored`, §2.1), for the threaded entries too (§9.3) |
 | **reading the file** | that the bytes `b` are the file's | the theorem is about whatever bytes the buffer holds; [`read_input`](https://github.com/leanprover/con-agua/blob/master/main.c#L148-L166) maps a regular file read-only and reads anything else (a pipe) until end of file; a file that another process changes during the run is outside the theorem |
-| **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 10 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
+| **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 6 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
 | **Lean's kernel, and con-leche's own assumptions** | as for con-leche and con-ron | their documentation |
 
 **The threaded mode** (`--jobs=N`, §9.3) has its own theorem, and its harness
@@ -437,7 +437,7 @@ twin's failure condition. Functions whose call closure aborts only with class
 
 ### 4.5 The composition
 
-[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L176-L186)
+[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L174-L184)
 is the driver on the machine: `ca_start` calls entry 1, whose setup stub builds
 the layout and enters the trampoline, so `compile_correct` gives one L run of
 `check` in mode 3; if that returns `2^63 + k`, it calls entry 2 in place, a
@@ -620,8 +620,8 @@ Their semantics are ordinary Lean functions
 ([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L149-L168)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L827-L838),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L860-L867)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L986-L997),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1019-L1026)).
 
 ## 6. Data structures and memory layout
 
@@ -687,36 +687,39 @@ dropped with the scratch tier; within one declaration the pool only grows
 ### 6.4 The region
 
 At run time every array lives in one region the harness maps
-([the entry stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L37)).
+([the entry stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L39)).
 The region is a static partition into slots of `2^35` bytes: slot 0 holds the
-descriptor table (a base and a length per array, the constant data, the
-globals), slot 1 the L stack (1 GiB at its bottom), then one slot per array,
-each array getting its whole slot (`2^32` words). The one exception is the
-control words `CTL` (marked `at table` in the array table): they live in slot 0,
-past the table, with a fixed length of 256 words, and their own slot stays
-unused. There is no allocator: the
-pages a run never touches never become real (`MAP_NORESERVE`), so the
-capacities cost address space, not memory. The checker has 390 slots (two,
-then one per word-array descriptor position: the compiler's current layout has
-`388` positions, unused ones between the arrays included), about 12 TiB of
-address space (`ca_region_size` in `checker.s`).
+descriptor table (a base and a length per descriptor position, the constant
+data, the globals), slot 1 the L stack (1 GiB at its bottom), then one slot per
+array, each array getting its whole slot (`2^32` words). The input and the pin
+data are the caller's buffers, at descriptor positions 0 and 1, and have no
+slot. The other exception is the control words `CTL` (marked `at table` in the
+array table): they live in slot 0, past the table, with a fixed length of 256
+words; they have the last position, which gets no slot. There is no allocator:
+the pages a run never touches never become real (`MAP_NORESERVE`), so the
+capacities cost address space, not memory. The checker has 183 descriptor
+positions (2 byte arrays, 127 word arrays of which 54 are tiered, so 181 word
+positions), a descriptor table of 2 944 bytes, and 182 slots, about 5.7 TiB
+of address space (`ca_region_size` in `checker.s`).
 
 **The arrays.** Every array of the checker is declared once, in one table
-([`checkerArrays`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Layout.lean#L42-L48)): its
-name, its kind (byte or word: two separate number spaces), whether it is tiered,
+([`checkerArrays`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Layout.lean#L47-L53)): its
+name, its kind (byte or word, in one name space: no two arrays share a number), whether it is tiered,
 its number and, for some word arrays, a minimum length (§8.1). The number is a name: the table is the list of arrays, not the
 layout. `Checker/ArrCheck.lean` checks it against the program and the compiler
 ([the checks](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ArrCheck.lean#L25-L34)):
-the numbers are distinct per kind; a byte access names a byte array of the
+the numbers are distinct; a byte access names a byte array of the
 table, a tiered access a tiered array, and a plain word access a word array of
 the table
 ([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L225-L228));
 the compiler's layout has a position for every array of the table; and the
 parallel mode's frozen and owned arrays are arrays of the table.
 
-**The layout.** The compiler maps each array a program names to a descriptor
-position, tier 1 of a tiered array right after its tier 0 (§8.1), and the
-entry stub gives position `p` its slot. The harness reads the layout only
+**The layout.** The compiler maps each array of the table to a descriptor
+position, the byte arrays first, then the word arrays in table order, tier 1 of
+a tiered array right after its tier 0 (§8.1)
+([`checkerTabOf`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ProgTab.lean#L12-L23)),
+and the entry stub gives position `p ≥ 2` slot `p`. The harness reads the layout only
 through the symbols the stub exports (`ca_region_size`, `ca_slot`, …), so it
 does not know the arrays at all.
 
@@ -821,27 +824,31 @@ array access loads the base and length from the table and branches to
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1806-L1827)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1965-L1986)).
 
 The local optimisations, all inside the proof: a comparison of two simple
 operands (a register, a memory word, a constant) is one `cmp`, its operands
 swapped when the left one is a constant; `x := x op e` updates `x` in place; a
 local is zeroed on entry only if it may be read before it is assigned; a leaf
 function keeps its locals in nine registers
-([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L616));
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L774));
 the tier local of a leaf stays in `rsi`; a leaf with a frame, other than the
 entry, checks no stack limit: its callers' checks leave room for its frame
-([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1777-L1789)); a tiered access finds tier 1's
+([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1936-L1948)); a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's.
 
-**The layout map.** Only the compiler knows where arrays live. Its layout
-([`WLay`, `BLay`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L123-L144))
-maps every array a program may name (`dom`) to a descriptor position (`pos`),
-injectively and below the table's size, with `pos (tier1 a) = pos ↑a + 1` for a
-tiered array. The checker's layout is computed from the table's size
-([`Tab.wl`, `Tab.bl`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L164-L224)),
-and its definitions are irreducible past their lemmas, so no simulation proof
-reads a position. `Prog.wf` checks every operand against `dom`.
+**The layout map.** Only the compiler knows where arrays live. Byte and word
+arrays share one position space, each position with an element kind: the
+byte positions come first, then the word positions. The layout map is a search
+tree from an array's name to its position, stored in the table with its inverse
+(the array at each position), and the table carries a `Bool` check that the two
+agree, that the kinds are right and that tier 1 of a tiered array sits right
+after its tier 0
+([`layOkB`, `Tab`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L98-L157),
+[`dom8`, `pos8`, `dom64`, `pos64`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L168-L180)).
+The definitions are irreducible past their lemmas, so no simulation proof
+reads a position. `Prog.wf` checks every operand against `dom8`/`dom64`, which
+also checks its kind.
 
 ### 8.2 The proof
 
@@ -851,12 +858,12 @@ in continuation-passing style
 then expressions, statements, calls, functions and blocks (`SimExpr` …
 `SimBlock`), composed by induction on the fuel and then on the statement
 (`execSim_all`). The relation is
-[`MemRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Rel.lean#L112-L130),
+[`MemRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Rel.lean#L144-L164),
 which relates L's array `s` to the machine region at position `pos s`, for
 every `s` in `dom`, under a layout whose regions are in the address space and pairwise disjoint
 and which gives every array at least its minimum length and the table-relative
 array its fixed offset
-([`Layout.Ok`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Rel.lean#L67-L84)).
+([`Layout.Ok`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Rel.lean#L71-L85)).
 Well-formedness of a program (`Prog.wf`) is a `Bool` check, evaluated by the
 kernel through a fast variant keyed by name codes.
 
@@ -868,11 +875,14 @@ it with `ca_start`'s arguments. It checks the region size and that
 a small region), writes
 the descriptor table for the static partition (§6.4) and the constant data by
 immediate stores, and enters the trampoline with fuel `2^62 - 1`
-([the stubs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L37)).
+([the stubs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L39)).
 Its proof (`sim_abiStub`, `abiLayout_ok`, `abi_memRel`) shows that it
 establishes `Layout.Ok` and `MemRel`, so the harness only maps zeros. Every
 array gets a whole slot there, so every minimum length holds; the table-relative
-array gets its minimum length, at the offset the code addresses.
+array gets its minimum length, at the offset the code addresses. The stub puts
+the caller's two buffers at descriptor positions 0 and 1; that the layout map
+has the input and the pin data there is a `Bool` check on the checker's table
+that only the stub proof uses (`abiIO`).
 
 ### 8.4 The committed file, checked by the kernel
 
@@ -946,9 +956,9 @@ sequential driver `ca_start` runs the same two entries one after the other
 3 (the buffer's header only), then one entry-2 run over all groups `[0, k)` in
 place, on phase A's own arrays, so it needs the setup stub's region plus 16
 bytes, where it keeps its return address and the caller's `r15`
-([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L185-L194)).
+([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L209-L218)).
 Its machine-level theorem
-([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L176-L186))
+([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L174-L184))
 says that an accept means the two L runs accepted, and an error report
 (`rdx = 2`) that one of them failed with the code in `rax`;
 [`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L23-L32)
