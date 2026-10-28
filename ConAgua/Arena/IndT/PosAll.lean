@@ -9,12 +9,12 @@ import ConAgua.Arena.IndT.PosOne
 import ConAgua.Arena.IndT.PosWalk
 
 /-!
-# `nest_pos` and the whole walk under `StageC` (lane `indstaget`, helper `indstaget-pos`)
+# `nest_pos` and the whole walk under `StageC`
 
 `posRef_step`: `nest_pos` refines con-ron's `nestPos_succ`, both outcomes (`npE`, unified): the
 reduct (`whnfC_rsim`; its error by `WhnfTopE`), its occurrence checks (no state change), then
-hole-free, a binder (the block's `BindRef` at `n`) or a head (`AppRef` at `n`). Then the block's `StageC` facts at every
-exec fuel up to the core walk's (`nbOKC_all`).
+hole-free, a binder (the block's `BindRef` at `n`) or a head (`AppRef` at `n`). Then the block's refinements at every L
+fuel up to the core walk's (`nbRef_all`).
 -/
 
 

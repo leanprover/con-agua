@@ -7,9 +7,9 @@ import ConAgua.Arena.IndT.PosAll
 
 `nest_root`'s one refinement for both outcomes (`nrt_ref`, on its unified model `nrtE`) and
 `nest_seeds`' error claim (`p2sdW_okC`'s proof, `PosRoot.lean`, on the model `nsdE`): the walk's
-callees by their claims (`CtorsOKE`, `KeyOKEc` of `NbOKE`, `NitE`), the others claim nothing
-(`nvFns`); their ok runs through the block's specs (`nbSpec_all`) and `StageC` facts
-(`nbOKC_all`).
+callees `nest_ctors`, `nest_cont_key` by the block's refinements (`nbRef_all`, both halves through
+the run; the errors under `NbG`), `nest_inst_type` by its claim `NitE`, the others claim nothing
+(`nvFns`).
 -/
 
 open ConRon.Arena
@@ -24,12 +24,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-- What `nest_root`'s error claims assume: the no-verdict closure and `nest_ctors`' claims. -/
-structure NrtG (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env) :
-    Prop where
-  nv : closedNV p _root_.L.Checker.nvFns = true
-  ctors : ∀ n, n ≤ 2 ^ 62 → CtorsOKE p dn vis fe env n
 
 /-- What `nest_root` gives besides the twin's outputs and state `x` (from `m`, `a`): the stage, the
 growth, the outputs' slice at `r`, the state at `r[2]`, the frames, the core step. -/
@@ -57,7 +51,7 @@ variable {p : Prog} (L : RsLook p)
 
 include L hq hIlpf hLC henv hc hholes hlen hpar in
 /-- **`nest_root` refines `nestRoot`, both outcomes** (under `StageC`; `nest_ctors` through its
-run: the ok half by `nbOKC_all`, the error half by its claim `CtorsOKE`). -/
+run, both halves from `nbRef_all`). -/
 theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO cL ns oO oL : Word)
     (css : List (List (IConstantVal × Nat))) (NS : NestState) (outss : List (List (List NestFieldKind × EIdx)))
     (cssP : List (List (ConLeche.ConstantVal × Nat))) (nsP : ConLeche.NestState)
@@ -70,7 +64,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
     dCtx a.store env.find? c = some ctxP → Frontend.denoteEList a.store holes = some holesP →
     css.mapM (dCtors a.store) = some cssP → dState a.store NS = some nsP → dOutss a.store outss = some outssP →
     (∀ cs ∈ cssP, ∀ x ∈ cs, x.1.type.hasFvar = false) →
-    RefE (NrtG p dn vis fe env) (nrtE p n m vis ctx hO hL cO cL ns oO oL) (nestRoot V fe c holes css NS outss) a
+    RefE (NbG p) (nrtE p n m vis ctx hO hL cO cL ns oO oL) (nestRoot V fe c holes css NS outss) a
       (fun v x a' => NrtPost dn vis fe env m a v.1 v.2 x a')
   | 0, _, m, a, cO, cL, ns, oO, oL, css, NS, outss, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
       _, _ => by
@@ -128,29 +122,24 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
     rw [ConRon.Arena.nestRoot]
     -- `nest_ctx_hi_at`, `nest_ctors`
     rw [show liftE (nhiO m ctx 0) = .ok (nhiW m ctx 0, m) from rfl, nrtE.k_nest_ctx_hi_at.arm1, rd0, rd1, rd2]
+    have hRef := (nbRef_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv n (by omega)).ctors m a ctx 1
+      0 0 0 (nhiW m ctx 0) _ _ _ _ _ hO hL cO' cL' ns 0 0 c [] c.params c.names holes cs NS [] ctxP [] _ _ _ _ csP
+      nsP [] hC hW hCc hcl' hcb' hcsAt hns (by simpa using OutsB.nil m 0) (by simp) hP hA hc hctx rfl hpre hc1
+      (hcF csP List.mem_cons_self) hnsP rfl
     rcases h2 : callE p n "nest_ctors" [vis, ctx, 1, 0, 0, 0, nhiW m ctx 0, rdW (m.arr64 IW) (ctx + 10),
         rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8), rdW (m.arr64 IW) ctx,
         rdW (m.arr64 IW) (ctx + 1), hO, hL, cO', cL', ns, 0, 0] m with e2 | ⟨r1', m1⟩
     · rw [nrtE.k_nest_ctors.none]
       refine RefE.bind_left fun hG => ?_
-      have hE := hG.ctors n (by omega) m a ctx 1 0 0 0 (nhiW m ctx 0) _ _ _ _ _ hO hL cO' cL' ns 0 0 c [] c.params
-        c.names holes cs NS [] ctxP [] _ _ _ _ csP nsP [] hC hW hCc hcl' hcb' hcsAt hns
-        (by simpa using OutsB.nil m 0) (by simp) hP hA hc hctx rfl hpre hc1 (hcF csP List.mem_cons_self) hnsP rfl
-        _ h2
+      have hE := RefE.run_err (nctE_spec p L.nb.pctors n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
+        True.intro hG hRef h2
       rw [hhi0, husd0] at hE
       simpa using hE
     rw [nrtE.k_nest_ctors.arm1]
-    have hCt := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv n (by omega)).2.2.2.2.2.2.2.1
-    obtain ⟨s2, hs2, -, hct⟩ := triple_of_callW
-      ((nbSpec_all L.nb (realCall p) (realCall_spec p) n).2.2.2.2.2.2.2.1 ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _
-        _ _ _ _ _ _ _ _ _) (callW_of_callE h2)
-    simp only at hct hs2
-    rw [hs2] at hct
-    obtain ⟨x1, a1, hrun1, hC1, hg1, hO1, hOb1, hns1, hP1, hA1, c1⟩ := hCt m m1 a ctx 1 0 0 0 (nhiW m ctx 0) _ _ _ _ _
-      hO hL cO' cL' ns 0 0 c [] c.params c.names holes cs NS [] _ ctxP [] _ _ _ _ csP nsP [] hct hC hW hCc hcl'
-      hcb' hcsAt hns (by simpa using OutsB.nil m 0) (by simp) hP hA hc hctx rfl hpre hc1
-      (hcF csP List.mem_cons_self) hnsP rfl
-    simp only [List.headD_cons, List.tail_cons] at hO1 hOb1 hns1
+    obtain ⟨s2, hs2, -, x1, a1, hrun1, hR1⟩ := RefE.run_ok
+      (nctE_spec p L.nb.pctors n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) hRef h2
+    rw [hs2] at hR1; dsimp only at hR1
+    obtain ⟨hC1, hg1, hO1, hOb1, hns1, hP1, hA1, c1⟩ := hR1
     have hS1 := hC1.stage
     rw [hhi0, husd0] at hrun1
     have hrun1' : (nestCtors V fe c true 0 [] (c.hiAt 0) c.lvls c.params c.names holes cs NS []).run a =
@@ -216,10 +205,10 @@ section seeds
 variable {p : Prog} (L : RsLook p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
   (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hKeyE : ∀ n, n ≤ 2 ^ 62 → KeyOKEc p dn vis fe env n) (hNit : NitE p dn vis fe env)
+  (hG : NbG p) (hNit : NitE p dn vis fe env)
   (ctx : Word) (c : NestCtx) {ctxP : ConLeche.NestCtx} (hc : ConLeche.NestCtxOk ctxP)
 
-include L hnv hq hIlpf hLC henv hKeyE hNit hc in
+include L hnv hq hIlpf hLC henv hG hNit hc in
 /-- **`nest_seeds`'s error claim** (`p2sdW_okC`'s hypotheses). -/
 theorem nsdE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO sL ns : Word)
     (seeds : List (NestKey × Nat)) (NS : NestState)
@@ -367,31 +356,32 @@ theorem nsdE_claim : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) 
     | error e4 =>
       rw [h4, nsdE.k_nest_cont_key.none] at he; cases he
       refine ErrClaim.bind_left ?_
-      have hE := hKeyE (n' + 1) (by omega) m2 a2 ctx (rf'.headD 0) 0 0 0 _ _ _ _ nPc _ ns
+      have hE := RefE.run_err (nckE_spec p L.nb.pkey (n' + 1) ⟨m2, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _)
+        True.intro hG ((nbRef_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv (n' + 1)
+          (by omega)).key m2 a2 ctx (rf'.headD 0) 0 0 0 _ _ _ _ nPc _ ns
         c [] kk.ds NS ctxP [] keyP.cname keyP.lvls keyP.ds niP.2 nsP
         hC2 (hW.grow hg12) hnnH husH hdsB (by simpa using hksl2) hctyH (hns.grow hg12 htop) hP2 hA2
         hc (dCtx_ext _ hx02 _ _ hctx) rfl (by rw [hnnd]; exact ConRon.Bridge.denoteN_ext hkc hx02)
         (by rw [husd]; exact ConRon.Bridge.denoteLs_ext hkl hx02) (ConRon.Bridge.denoteEList_ext hx02 _ _ hkd)
-        (by rw [hctyd]; exact hni2) (dState_ext hx02 _ _ hnsP) (by simpa using hw _ List.mem_cons_self) hni3 _ h4
+        (by rw [hctyd]; exact hni2) (dState_ext hx02 _ _ hnsP) (by simpa using hw _ List.mem_cons_self) hni3) h4
       rw [hnnd, husd, hctyd, hnpc] at hE
       exact hE
     | ok q4 =>
     obtain ⟨r3', m3⟩ := q4
-    have hKey := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv (n' + 1) (by omega)).2.2.2.2.1
-    obtain ⟨s4, hs4, -, hk3⟩ := triple_of_callW
-      ((nbSpec_all L.nb (realCall p) (realCall_spec p) (n' + 1)).2.2.2.2.1 ⟨m2, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _
-        _ _ _) (callW_of_callE h4)
-    simp only at hk3 hs4
-    rw [hs4] at hk3
     rw [h4, nsdE.k_nest_cont_key.arm1] at he
-    obtain ⟨x3, a3, hrun3, hC3, hg3, -, hns3, hP3, hA3, c3⟩ := hKey m2 m3 a2 ctx (rf'.headD 0) 0 0 0 _ _ _ _ nPc _ ns
-      c [] kk.ds NS _ ctxP [] keyP.cname keyP.lvls keyP.ds niP.2 nsP
-      hk3 hC2 (hW.grow hg12) hnnH husH hdsB
+    obtain ⟨s4, hs4, -, x3, a3, hrun3, hR3⟩ := RefE.run_ok
+      (nckE_spec p L.nb.pkey (n' + 1) ⟨m2, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _)
+      ((nbRef_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv (n' + 1) (by omega)).key m2 a2 ctx
+        (rf'.headD 0) 0 0 0 (rdW (mh.arr64 IW) key) (rdW (mh.arr64 IW) (key + UInt64.ofNat 1))
+        (rdW (mh.arr64 IW) (key + UInt64.ofNat 2)) (rdW (mh.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns
+      c [] kk.ds NS ctxP [] keyP.cname keyP.lvls keyP.ds niP.2 nsP
+      hC2 (hW.grow hg12) hnnH husH hdsB
       (by simpa using hksl2) hctyH (hns.grow hg12 htop) hP2 hA2
       hc (dCtx_ext _ hx02 _ _ hctx) rfl (by rw [hnnd']; exact ConRon.Bridge.denoteN_ext hkc hx02)
       (by rw [husd']; exact ConRon.Bridge.denoteLs_ext hkl hx02) (ConRon.Bridge.denoteEList_ext hx02 _ _ hkd)
-      (by rw [hctyd]; exact hni2) (dState_ext hx02 _ _ hnsP) (by simpa using hw _ List.mem_cons_self) hni3
-    simp only [List.headD_cons, List.tail_cons] at hns3
+      (by rw [hctyd]; exact hni2) (dState_ext hx02 _ _ hnsP) (by simpa using hw _ List.mem_cons_self) hni3) h4
+    rw [hs4] at hR3; dsimp only at hR3
+    obtain ⟨hC3, hg3, -, hns3, hP3, hA3, c3⟩ := hR3
     have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hC3.stage.2.1 hC3.stage.2.2.2.1
     have hg13 := hg12.trans hg3
     have hsO1 : (sO + 1).toNat = sO.toNat + 1 := word_add_toNat (by simp; omega)

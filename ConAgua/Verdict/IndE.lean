@@ -187,50 +187,5 @@ open ConRon.Bridge.Inductives (dCtx dProg dState dCtx_ext dProg_ext dState_ext)
 
 local notation "V" => ConLeche.CheckMode.verified
 
-section stmts
-variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
-
-/-- **`nest_cont_new`'s error claim** at L fuel `n` (a callee's error claim, the shape of
-`NewOKC`'s hypotheses; discharged bottom-up). -/
-def NewOKE (n : Nat) : Prop :=
-  ∀ (m : Mem) (a : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word) (c : NestCtx)
-    (prog : List NestHole) (ds : List EIdx) (NS : NestState)
-    (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (nP : ConLeche.Name)
-    (usP : List ConLeche.Level) (dsP : List ConLeche.Expr) (ctyP : ConLeche.Expr)
-    (nsP : ConLeche.NestState),
-    StageC dn vis fe env m a →
-    WCtx dn vis fe m ctx po pl c prog → H nn → H us →
-    DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) m ds → dO.toNat + dL.toNat ≤ iwTop m →
-    H cty → NSB m ns NS → PosMR m → AbsOK m →
-    ConLeche.NestCtxOk ctxP → dCtx a.store env.find? c = some ctxP → dProg a.store prog = some progP →
-    denoteN a.store.ns (decI nn) = some nP → denoteLs a.store.lss (decI us) = some usP →
-    Frontend.denoteEList a.store ds = some dsP → denoteE a.store (decI cty) = some ctyP →
-    dState a.store NS = some nsP →
-    (∀ d ∈ dsP, ConLeche.Expr.WScoped (ctxP.hiAt progP.length) d) →
-    (∀ d, (∀ y ∈ dsP, ConLeche.Expr.WScoped d y) → ConLeche.Expr.WScoped d ctyP) →
-    ∀ e, callE p n "nest_cont_new" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns] m = .error e →
-      ErrClaim (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS) a e
-
-/-- **`nest_cont_key`'s error claim** at L fuel `n`. -/
-def KeyOKE (n : Nat) : Prop :=
-  ∀ (m : Mem) (a : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word) (c : NestCtx)
-    (prog : List NestHole) (ds : List EIdx) (NS : NestState)
-    (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (nP : ConLeche.Name)
-    (usP : List ConLeche.Level) (dsP : List ConLeche.Expr) (ctyP : ConLeche.Expr)
-    (nsP : ConLeche.NestState),
-    StageC dn vis fe env m a →
-    WCtx dn vis fe m ctx po pl c prog → H nn → H us →
-    DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) m ds → dO.toNat + dL.toNat ≤ iwTop m →
-    H cty → NSB m ns NS → PosMR m → AbsOK m →
-    ConLeche.NestCtxOk ctxP → dCtx a.store env.find? c = some ctxP → dProg a.store prog = some progP →
-    denoteN a.store.ns (decI nn) = some nP → denoteLs a.store.lss (decI us) = some usP →
-    Frontend.denoteEList a.store ds = some dsP → denoteE a.store (decI cty) = some ctyP →
-    dState a.store NS = some nsP →
-    (∀ d ∈ dsP, ConLeche.Expr.WScoped (ctxP.hiAt progP.length) d) →
-    (∀ d, (∀ y ∈ dsP, ConLeche.Expr.WScoped d y) → ConLeche.Expr.WScoped d ctyP) →
-    ∀ e, nckE p n m vis ctx fu po pl kb nn us dO dL nPc cty ns = .error e →
-      ErrClaim (nestContKey V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS) a e
-
-end stmts
 
 end L.Ind
