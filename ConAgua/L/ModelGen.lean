@@ -653,7 +653,12 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
     -- other conjuncts over the arguments and the initial state (`i < 51`) are facts the callee's
     -- post states besides its model: the model does not need them (only a total memory model
     -- turns them into guards, above)
-    return (fname, { kind, opt })
+    -- a total model (`pure`, a list, a memory) is not an `Except` model either: in `unified` mode
+    -- it is lifted like an `Option` model (its guard's failure an error of class `0`)
+    let total := match kind with
+      | .pure .. | .list .. | .memTot .. => true
+      | _ => false
+    return (fname, { kind, opt := opt || total })
 
 /-! ## The L text -/
 
@@ -1133,6 +1138,16 @@ meta partial def splices (s : Syntax) (acc : Array Ident := #[]) : Array Ident :
     | _ => acc
   s.getArgs.foldl (fun acc a => splices a acc) acc
 
+/-- `retArity` with the named blocks spliced in `s` (`⟪X⟫`, from `blocks`, transitively up to
+`fuel` levels). -/
+meta def spliceArity (blocks : Array (String × Name × List (TSyntax `lstmt) × Bool)) :
+    Nat → Syntax → Nat
+  | 0, s => retArity s
+  | fuel + 1, s => (splices s).foldl (init := retArity s) fun k t =>
+    match blocks.find? (·.1 == key t) with
+    | some (_, _, ss, _) => ss.foldl (fun k x => max k (spliceArity blocks fuel x.raw)) k
+    | none => k
+
 /-- The named blocks spliced as statements (`⟪X⟫`, those in `E.blocks`) replaced by their
 statements, at any depth. -/
 meta partial def expandBlocks (E : Env) (s : Syntax) : Syntax :=
@@ -1205,6 +1220,11 @@ where
       if h'.size == h.size then return h
       h := h'
     return h
+
+/-- A callee's failure that its model has as `none` (a guard, `F = none`): `none`, in `errors`
+mode an error of class `0`. -/
+meta def failMR (E : Env) : MetaM MR := do
+  if E.exc then return .tail (.raw (← `(Except.error L.Err.oob))) else return .none
 
 mutual
 meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM MR
@@ -1405,8 +1425,8 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     match c.kind with
     | .memOpt .. => if !(E.uni && c.opt) then
         throwErrorAt f "l_model: in `errors` mode the callee {fname} needs a spec with an error post (`callE_spec`)"
-    | .pure .. | .list .. | .memTot .. =>
-      throwErrorAt f "l_model: in `errors` mode the callee {fname} needs a spec with an error post (`callE_spec`)"
+    | .pure .. | .list .. | .memTot .. => if !E.uni then
+        throwErrorAt f "l_model: in `errors` mode the callee {fname} needs a spec with an error post (`callE_spec`)"
     | _ => pure ()
     if c.opt && !E.uni then
       throwErrorAt f "l_model: in `errors` mode the callee {fname} needs a spec with an error post (`callE_spec`); `unified` with `nv` lifts the `Option` model of a callee outside the verdict closure"
@@ -1443,7 +1463,7 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
       return MT.raw (← `(List.headD $e 0))
     let body ← transS E (assign ctx vs) rest
     if guard && !E.noguard.contains fname then
-      return .ite (.cmp "=" (.raw l) (.raw (← `([])))) .none body
+      return .ite (.cmp "=" (.raw l) (.raw (← `([])))) (← failMR E) body
     return body
   | .memOpt t =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model cannot write"
@@ -1455,7 +1475,7 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     let mut r := body
     for g in guards.reverse do
       let g ← substT g memT argsT
-      r := .ite (← negC g) .none r
+      r := .ite (← negC g) (← failMR E) r
     return r
   | .ro t =>
     let callT := MT.raw (← substC t)
@@ -1469,8 +1489,7 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
   | .unitOpt t =>
     let u ← substT t memT argsT
     let body ← transS E (assign ctx #[]) rest
-    let fail : MR ← if E.exc then pure (.tail (.raw (← `(Except.error L.Err.oob)))) else pure .none
-    return .ite (.cmp "=" (.raw u) (.raw (← `(Option.none)))) fail body
+    return .ite (.cmp "=" (.raw u) (.raw (← `(Option.none)))) (← failMR E) body
 
 /-- Make the continuation of a call: the rest of the code, as a definition over the locals it
 reads. -/
@@ -1933,11 +1952,11 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       | throwError "l_model: {decl} is not an `lfn`"
     let params := ps.getElems.map (sanitize ·.getId mps)
     let locals' := ((ls.map (·.getElems.map (sanitize ·.getId mps))).getD #[])
+    -- the tuple's arity counts the `return`s of the spliced named blocks too (below)
     let tup := if tuple && !void then max 2 (retArity body) else 0
     let multi := tup == 0 && !void && (list || hasMultiRet body)
     let vars := ps.getElems ++ ((ls.map (·.getElems)).getD #[])
     fis := fis.push { lname, decl, model, ro, multi, tup, void, lookup, params, lcls := locals', body, lfnStx := s, vars }
-  let grp := fis.map fun fi => (fi.lname, fi.model, fi.ro, fi.multi, fi.tup)
   -- the named blocks spliced into the bodies
   -- (and into the named blocks: a loop block may splice its inner loop's block)
   let mut blocks : Array (String × Name × List (TSyntax `lstmt) × Bool) := #[]
@@ -1957,6 +1976,13 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         | _ => false
       blocks := blocks.push (key t, c, ss, isLoop)
       for x in ss do todo := todo ++ splices x
+  -- a tuple model's arity: the longest `return` of its body and of the named blocks spliced
+  -- into it (transitively; a loop's `return (k, x, y)` is often in a named block)
+  let blocks0 := blocks
+  fis := fis.map fun fi =>
+    if fi.tup > 0 then { fi with tup := max fi.tup (spliceArity blocks0 (blocks0.size + 1) fi.body) }
+    else fi
+  let grp := fis.map fun fi => (fi.lname, fi.model, fi.ro, fi.multi, fi.tup)
   let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks, bind := bindC, exc, uni, voids := (fis.filter (·.void)).map (·.lname) }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
