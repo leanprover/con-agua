@@ -9,8 +9,9 @@ noncomputable section
 /-!
 # `checkDecl`'s value checks under the stage relation (lane `decls3`)
 
-`check_constant_val(vis, q)` refines `checkConstantVal` (the header's checks, `install_header`,
-then the type's sort), and `check_defn_val`/`check_thm_val`/`check_opaque_val(vis, c)` refine
+`checkConstantVal` is `installHeader`, then the type's sort (`checkConstantVal_eq`; the unified
+model of `check_constant_val` and its refinement are in `Verdict/DeclValsE.lean`).
+`check_defn_val`/`check_thm_val`/`check_opaque_val(vis, c)` refine
 `checkDefnVal`/`checkThmVal`/`checkOpaqueVal` at the arm's constant record `c` (built by `erec_ci`
 with the kind the twin pushes, its value word at `c + 5`). On the template of `DeclCvg.lean`:
 word models with the core's stubs (`stubM`), `install_header`'s and `install_value_guards`' models
@@ -57,59 +58,8 @@ theorem checkConstantVal_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (cv : ICons
                                       pure ()) := by
   simp only [checkConstantVal, installHeader, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
 
-/-! ## `check_constant_val(vis, q)` -/
-
 section models
 variable (p : Prog)
-
-/-- After `ensure_sort_core`. -/
-def ccvK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m3) => some ([0], m3)
-
-/-- After `infer_type_core`. -/
-def ccvK2 (c : CallM) (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => ccvK3 (c n "ensure_sort_core" [vis, 0, r2.headD 0] m2)
-
-/-- After `install_header`. -/
-def ccvK1 (c : CallM) (n : Nat) (vis t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m1) => ccvK2 c n vis (c n "infer_type_core" [vis, 0, t] m1)
-
-/-- **The model of `check_constant_val`.** -/
-def ccvW (c : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, vis, q => ccvK1 c n vis (rdW (m.arr64 EREC) (q + 3)) (ihW c n m vis q)
-
-section arms
-variable (c : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis q t : Word) (r1 r2 r3 : List Word)
-theorem ccvW_step : ccvW c (n + 1) m vis q = ccvK1 c n vis (rdW (m.arr64 EREC) (q + 3)) (ihW c n m vis q) :=
-  rfl
-theorem ccvK1_some : ccvK1 c n vis t (some (r1, m1)) =
-    ccvK2 c n vis (c n "infer_type_core" [vis, 0, t] m1) := rfl
-theorem ccvK2_some : ccvK2 c n vis (some (r2, m2)) =
-    ccvK3 (c n "ensure_sort_core" [vis, 0, r2.headD 0] m2) := rfl
-theorem ccvK3_some : ccvK3 (some (r3, m3)) = some ([0], m3) := rfl
-end arms
-
-grind_pattern [ind_grind] ccvW_step => ccvW c (n + 1) m vis q
-grind_pattern [ind_grind] ccvK1_some => ccvK1 c n vis t (some (r1, m1))
-grind_pattern [ind_grind] ccvK2_some => ccvK2 c n vis (some (r2, m2))
-grind_pattern [ind_grind] ccvK3_some => ccvK3 (some (r3, m3))
-
-theorem ccv_specW (h : ValProg p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St) (vis q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_constant_val" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ ccvW c n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.ccv]
-  simp only [callFn, checkConstantValL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ih_specW p h.ih c hc n, hc n "infer_type_core", hc n "ensure_sort_core"] <;>
-      finish (gen := 20)
 
 /-! ## `check_defn_val(vis, c)` and `check_opaque_val(vis, c)`: one text -/
 

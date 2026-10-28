@@ -5,8 +5,8 @@ import Std.Tactic.BVDecide.Normalize.Prop
 /-!
 # `checkDecl`'s value checks: the relational lemmas (lane `decls3`)
 
-A model run of `check_constant_val`/`check_defn_val`/`check_thm_val`/`check_opaque_val` from the
-stage relation is a successful twin run (`ccvW_ok`, `dvW_ok`, `tvW_ok`), and the census theorems
+A model run of `check_defn_val`/`check_thm_val`/`check_opaque_val` from the
+stage relation is a successful twin run (`dvW_ok`, `tvW_ok`), and the census theorems
 (`checkConstantVal_refines`, …) assemble them with the `vcgen` specs of `DeclValSpec.lean`.
 -/
 

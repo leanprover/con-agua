@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclValT
+import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.DeclArmLoop
 import ConRon.Bridge.Checker.Split
 
@@ -16,6 +17,8 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
+
+noncomputable section
 
 namespace L.Arena
 
@@ -94,11 +97,11 @@ theorem checkConstantVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStagePro
     ⦃fun _r s' => LocEq s' s₀ ∧ AM.ok (checkConstantVal V fe cv) a₀ ∧
       StageT dn vis fe s'.mem (AM.st (checkConstantVal V fe cv) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       L.Stubs.CrOK s'.mem; ⊤⦄ := by
-  refine triple_post (ccv_specW p hp (realCall p) (realCall_spec p) n s₀ vis q) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hS', hg, hCr'⟩ := ccvW_okT hq hap hkp hn hm hS hqd hqb hlps hCr
+  refine triple_post (RefE.triple (checkConstantVal_specE p hp n s₀ vis q)
+    (ccv_ref hq hap hkp hn hS hqd hqb hlps hCr)) ?_
+  rintro r s' ⟨hl, _, a', hrun, hP⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, hCr'⟩
+  exact ⟨hl, hok, by rw [hst]; exact hP.stage, hP.grow, hP.crOK⟩
 
 /-- **`check_constant_val` keeps the walk memos** (`AbsOK`), under `checkConstantVal_refinesT`'s
 preconditions (lane `indstaget`: replaces the `AbsKeep` premise of the inductive stage). -/
@@ -108,9 +111,9 @@ theorem checkConstantVal_absOK (p : Prog) (hp : ValProg p) (hq : KnotStageProg p
     (hS : StageT dn vis fe m a₀) (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks) (hCr : L.Stubs.CrOK m)
     (h : callW p n "check_constant_val" [vis, q] m = some (r, m')) (hA : AbsOK m) : AbsOK m' := by
-  obtain ⟨s', rfl, -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (ccv_specW p hp (realCall p) (realCall_spec p) n _ vis q) h
-  exact ccvW_okTA hq hap hkp hn hm hS hqd hqb hlps hCr hA
+  obtain ⟨s', rfl, -, _, _, -, hP⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
+    (checkConstantVal_specE p hp n _ vis q) (ccv_ref hq hap hkp hn hS hqd hqb hlps hCr) h
+  exact hP.abs hA
 /-- **`check_thm_val` refines `checkThmVal .verified`** under `StageT`, at the call: the stage
 relation at the extended environment and the core's memos after it (the census link since lane
 `indstaget`). -/
@@ -267,80 +270,109 @@ theorem erecVgW_frame {m m' : Mem} {q vk : Word} {r : List Word} (h : erecVgW m 
   exact (((((f1.trans f0).trans (fs _ 1)).trans (fs _ 2)).trans (fs _ 3)).trans (fs _ 4)).trans
     (fs _ 5)
 
-/-- **`install_value` under `StageT`** (`ivW_gen`'s): the header and the value's guards under
-`StageT`; after the push the stage relation at the extended environment and `CoreMemos`. -/
-theorem ivW_genT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
+set_option experimental.vcgen true in
+/-- **The model of `install_value`, both outcomes**: `erec_ci`, `erec_vg` lifted, `install_header`
+by its unified model, `install_value_guards` and `env_push` through their runs. -/
+l_model installValue_specE (p : Prog) (hP : IvProg p)
+  fns [hP.iv ↦ installValueE list]
+  specs [erecCi_specW p hP.recP n, installHeader_specE p hP.ih n, erecVg_specW p hP.recP n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 400000 simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- What `install_value`'s error arms assume: `install_header`'s (`IhCtx`) and
+`install_value_guards`' claim. -/
+structure IvCtx (p : Prog) : Prop where
+  nv : closedNV p L.Checker.nvFns = true
+  uce : UceProg p
+  ivg : IvgE p
+
+/-- `install_value`'s twin for a record of kind `vk`: the header, the value's guards unless a
+theorem (`vk = 1`), the push. `ivT` of each kind is this (`ivT_eq_core`). -/
+def ivCoreT (fe : IFEnv) (cv : IConstantVal) (v : EIdx) (vk : Word) (ci : IConstantInfo)
+    (k : ValueKind) : AM (IFEnv × Option ValueGroup) := do
+  installHeader fe cv
+  if vk ≠ 1 then installValueGuards fe cv v else pure ()
+  pure (fe.push ci, some ⟨k, cv, v⟩)
+
+/-- What `install_value` gives besides the twin's run: the stage at the extended environment,
+the core's memos, the growth, the value group's record. -/
+structure IvPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (v : List Word × Mem)
+    (y : IFEnv × Option ValueGroup) (a' : AState) : Prop where
+  stage : StageR dn (v.1.headD 0) y.1 v.2 a'
+  memos : CoreMemos v.2
+  grow : IWGrow m v.2
+  vg : y.2 = decVG (erecP v.2) (v.1.tail.headD 0).toNat
+  some : y.2 ≠ none
+
+/-- **`install_value` refines `ivCoreT`, both outcomes**, under `StageT`: `install_header` by
+`ih_ref`, the value's guards by `ivgW_okT` (ok) and `IvgE` (errors); after the push the stage
+relation at the extended environment and `CoreMemos`. -/
+theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i ck vk : Word} {r : List Word}
+    {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {i ck vk : Word}
     {ds : Array IDeclaration} {ci : IConstantInfo} {k : ValueKind} {env : ConLeche.Env}
-    {c : ConLeche.ConstantVal}
-    (h : ivW p n m i vis ck vk = some (r, m')) (hS : StageT dn vis fe m a)
+    {c : ConLeche.ConstantVal} (hS : StageT dn vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hci : stepCI ck.toNat ds[i.toNat] = some ci) (hk : decVK vk.toNat = some k)
     (hfold : ConRon.Bridge.FoldOK V env fe a)
     (hcvd : Frontend.denoteCV a.store (stepCV ds[i.toNat]) = some c) (hCr : L.Stubs.CrOK m) :
-    ∃ a2 a3, (installHeader fe (stepCV ds[i.toNat])).run a = .ok ((), a2) ∧
-      (vk ≠ 1 → (installValueGuards fe (stepCV ds[i.toNat]) (stepVal ds[i.toNat])).run a2 =
-        .ok ((), a3)) ∧ (vk = 1 → a3 = a2) ∧
-      StageR dn (r.headD 0) (fe.push ci) m' a3 ∧ CoreMemos m' ∧ IWGrow m m' ∧
-      decVG (erecP m') (r.tail.headD 0).toNat = some ⟨k, stepCV ds[i.toNat], stepVal ds[i.toNat]⟩ := by
+    RefE (IvCtx p) (installValueE p n m i vis ck vk)
+      (ivCoreT fe (stepCV ds[i.toNat]) (stepVal ds[i.toNat]) vk ci k) a
+      (fun v y a' => IvPost dn m v y a') := by
   cases n with
-  | zero => simp [ivW] at h
+  | zero => rw [installValueE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
-  rw [ivW_step] at h
-  cases h1 : erecCiW n m i ck with
-  | none => rw [h1] at h; simp [ivK1] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, ivK1_some] at h
+  rw [installValueE.arm1]
+  rcases h1 : erecCiW n m i ck with _ | ⟨r1, m1⟩
+  · rw [liftE_none, installValueE.k_erec_ci.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, installValueE.k_erec_ci.arm1]
   have hCr1 := CrOK.frame hCr (erecCiW_frame h1) (by decide) (by decide)
   obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ := erecCiW_okT h1 hS hD hi hci
-  generalize hq : r1.headD 0 = q at h hci1 hcv1 hval1 htop1
+  generalize hq : r1.headD 0 = q at hci1 hcv1 hval1 htop1 ⊢
   have hb : q.toNat + 8 < 2 ^ 64 := by
     have h1 := hS1.stage.2.2.1; have h2 := hS1.stage.2.2.2.2.1; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  cases h2 : callW p n "install_header" [vis, q + 1] m1 with
-  | none => rw [h2] at h; simp [ivK2] at h
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, ivK2_some] at h
-  have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
-  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (ih_specW p hI (realCall p) (realCall_spec p) n ⟨m1, Locals.init []⟩ vis (q + 1)) h2
-  rw [hs2] at hW2
-  obtain ⟨a2, hrun2, hS2, hg2, -, -⟩ :=
-    ihW_okT hap hkp.crf hW2 hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega) (denoteCV_lps hcvd) hCr1
+  -- `install_header(vis, q + 1)`
+  have h2R := ih_ref hap hkp.crf n hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega)
+    (denoteCV_lps hcvd) hCr1
+  simp only [ivCoreT]
+  rcases h2 : installHeaderE p n m1 vis (q + 1) with e2 | ⟨r2, m2⟩
+  · rw [installValueE.k_install_header.none]
+    rw [h2] at h2R
+    exact RefE.bind_left fun hG => h2R ⟨hG.nv, hG.uce⟩
+  rw [h2] at h2R
+  obtain ⟨_, a2, hrun2, hP2⟩ := h2R
   -- the parameters' names read back after the header: con-ron's `installHeader_bridge`
   have hlps2 : ∃ ks, (stepCV ds[i.toNat]).levelParams.mapM (denoteN a2.store.ns) = some ks := by
     obtain ⟨hstep, -⟩ := ConRon.Bridge.installHeader_bridge hfold hcvd hrun2
     exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hstep.ext)
+  refine RefE.bind_right hrun2 ?_
   have tail : ∀ (m3 : Mem) (a3 : AState), StageT dn vis fe m3 a3 → IWGrow m1 m3 →
-      ivK4 p vis vk q (callW p n "env_push" [vis, q] m3) = some (r, m') →
-      StageR dn (r.headD 0) (fe.push ci) m' a3 ∧ CoreMemos m' ∧ IWGrow m1 m' ∧
-      decVG (erecP m') (r.tail.headD 0).toNat = some ⟨k, stepCV ds[i.toNat], stepVal ds[i.toNat]⟩ := by
-    intro m3 a3 hS3 hg3 h
+      RefE (IvCtx p) (installValueE.j1 p n vis vk q m3)
+        (pure (fe.push ci, some ⟨k, stepCV ds[i.toNat], stepVal ds[i.toNat]⟩) : AM _) a3
+        (fun v y a' => IvPost dn m v y a') := by
+    intro m3 a3 hS3 hg3
+    rw [installValueE.j1.arm1]
     have hx3 : ArrExt (erecP m1) (erecP m3) := IWGrow.erecPExt hg3
     have hci3 := ArrExt.decCI hx3 hci1
     obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci3
     have hw : (rdW (m3.arr64 EREC) (q + 1)).toNat < 2 ^ 32 := by
       rw [rdW_of_get? hq1.symm (erecP_get hw1)]; exact hwl
-    cases h4 : callW p n "env_push" [vis, q] m3 with
-    | none => rw [h4] at h; simp [ivK4] at h
-    | some rm4 =>
-    obtain ⟨r4, m4⟩ := rm4
-    rw [h4, ivK4_some] at h
+    rcases h4 : callE p n "env_push" [vis, q] m3 with e4 | ⟨r4, m4⟩
+    · rw [installValueE.k_env_push.none]
+      exact fun hG => nvl hG.nv (by decide +kernel) h4
+    rw [installValueE.k_env_push.arm1]
     obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (envPush_specW p hRp n ⟨m3, Locals.init []⟩ vis q hw) h4
+      (envPush_specW p hRp n ⟨m3, Locals.init []⟩ vis q hw) (callW_of_callE h4)
     subst hs4
     obtain ⟨hS4, hg4⟩ := envPushW_ok hW4 hS3.stage hci3
     have hM4 : CoreMemos s4.mem := hS3.twin.memos.frame (envPushW_frame hW4)
       (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-    cases h5 : erecVgW s4.mem q vk with
-    | none => rw [h5] at h; simp [ivK5] at h
-    | some rm5 =>
-    obtain ⟨r5, m5⟩ := rm5
-    rw [h5, ivK5_some] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    rcases h5 : erecVgW s4.mem q vk with _ | ⟨r5, m5⟩
+    · rw [liftE_none, installValueE.k_erec_vg.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some, installValueE.k_erec_vg.arm1]
     have hx4 : ArrExt (erecP m1) (erecP s4.mem) := IWGrow.erecPExt (hg3.trans hg4)
     have htop4 : q.toNat + 8 ≤ erTop s4.mem := by
       have := (hg3.trans hg4).2.1; omega
@@ -348,28 +380,71 @@ theorem ivW_genT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hk
       htop4 hk
     have hM5 : CoreMemos m5 := hM4.frame (erecVgW_frame h5)
       (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-    exact ⟨by simpa using hS5, hM5, hg3.trans (hg4.trans hg5), by simpa using hvg⟩
+    exact RefE.ret rfl ⟨by simpa using hS5, hM5, hg1.trans (hg3.trans (hg4.trans hg5)),
+      by simpa using hvg.symm, by simp⟩
   by_cases hv1 : vk ≠ 1
-  · rw [ite_eq_left hv1] at h
+  · rw [installValueE.k_install_header.arm1 p _ _ _ _ _ _ hv1, ite_eq_left hv1]
     have hval2 : hd? (erecP m2) (q.toNat + 5) = some (stepVal ds[i.toNat]) :=
-      ArrExt.hd? (IWGrow.erecPExt hg2) hval1
+      ArrExt.hd? (IWGrow.erecPExt hP2.grow) hval1
     obtain ⟨wv, hwv, hwvl, hwvd⟩ := hd?_some hval2
     have hq5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
     have ev : rdW (m2.arr64 EREC) (q + 5) = wv := rdW_of_get? hq5.symm (erecP_get hwv)
-    rw [ev] at h
-    cases h3 : ivgW (realCall p) n m2 vis (q + 1) wv with
-    | none => rw [h3] at h; simp [ivK3] at h
-    | some rm3 =>
-    obtain ⟨r3, m3⟩ := rm3
-    rw [h3, ivK3_some] at h
+    rw [ev]
     have hcv2 : decCV (erA m2) (q + 1).toNat = some (stepCV ds[i.toNat]) := by
-      rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt (hg2)) hcv1
-    obtain ⟨a3, hrun3, hS3, hg3, -⟩ := ivgW_okT hap hkp h3 hS2 hcv2 (by rw [hq1]; omega) hwvl hlps2 hCr2
-    obtain ⟨hS', hM', hg', hvg'⟩ := tail m3 a3 hS3 (hg2.trans hg3) h
-    refine ⟨a2, a3, hrun2, fun _ => by rw [hwvd]; exact hrun3, fun h' => absurd h' hv1, hS', hM',
-      hg1.trans hg', hvg'⟩
-  · rw [ite_eq_right hv1] at h
-    obtain ⟨hS', hM', hg', hvg'⟩ := tail m2 a2 hS2 hg2 h
-    exact ⟨a2, a2, hrun2, fun h' => absurd h' hv1, fun _ => rfl, hS', hM', hg1.trans hg', hvg'⟩
+      rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hP2.grow) hcv1
+    rcases h3 : callE p n "install_value_guards" [vis, q + 1, wv] m2 with e3 | ⟨r3, m3⟩
+    · rw [installValueE.k_install_value_guards.none]
+      refine RefE.bind_left fun hG => ?_
+      rw [hwvd]
+      exact hG.ivg h3 hP2.stage hcv2 (by rw [hq1]; omega) hwvl hlps2 hP2.crOK
+    rw [installValueE.k_install_value_guards.arm1]
+    obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+      (ivg_specW p hC (realCall p) (realCall_spec p) n ⟨m2, Locals.init []⟩ vis (q + 1) wv)
+      (callW_of_callE h3)
+    subst hs3
+    obtain ⟨a3, hrun3, hS3, hg3, -⟩ :=
+      ivgW_okT hap hkp hW3 hP2.stage hcv2 (by rw [hq1]; omega) hwvl hlps2 hP2.crOK
+    rw [← hwvd] at hrun3
+    exact RefE.bind_right hrun3 (tail _ a3 hS3 (hP2.grow.trans hg3))
+  · rw [installValueE.k_install_header.arm2 p _ _ _ _ _ _ (by simpa using hv1), ite_eq_right hv1]
+    exact tail m2 a2 hP2.stage hP2.grow
+
+/-- **`install_value` refines `ivT`, both outcomes** (`ivc_ref` at the record's kind). -/
+theorem iv_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {i ck vk : Word}
+    {ds : Array IDeclaration} (hS : StageT dn vis fe m a)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hk : IvArgs ck vk (dsAt ds i)) (hF : ∃ env, ConRon.Bridge.FoldOK V env fe a)
+    (hcvd : ∃ c, Frontend.denoteCV a.store (stepCV (dsAt ds i)) = some c) (hCr : L.Stubs.CrOK m) :
+    RefE (IvCtx p) (installValueE p n m i vis ck vk) (ivT fe (dsAt ds i)) a
+      (fun v y a' => IvPost dn m v y a') := by
+  have hd : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
+  rw [hd] at hk hcvd ⊢
+  obtain ⟨env, hF⟩ := hF
+  obtain ⟨c, hcvd⟩ := hcvd
+  cases hdi : ds[i.toNat] with
+  | defnDecl cv v hint =>
+    rw [hdi] at hk
+    obtain ⟨rfl, rfl⟩ := hk
+    refine RefE.of_run_eq ?_ (ivc_ref (ci := .defnInfo cv v hint) (k := .defn) hRp hC hap hkp n hS
+      hD hi (by rw [hdi]; rfl) rfl hF hcvd hCr)
+    simp [hdi, ivT, ivCoreT, stepCV, stepVal]
+  | thmDecl cv v =>
+    rw [hdi] at hk
+    obtain ⟨rfl, rfl⟩ := hk
+    refine RefE.of_run_eq ?_ (ivc_ref (ci := .thmInfo cv) (k := .thm) hRp hC hap hkp n hS
+      hD hi (by rw [hdi]; rfl) rfl hF hcvd hCr)
+    simp [hdi, ivT, ivCoreT, stepCV, stepVal]
+  | opaqueDecl cv v =>
+    rw [hdi] at hk
+    obtain ⟨rfl, rfl⟩ := hk
+    refine RefE.of_run_eq ?_ (ivc_ref (ci := .axiomInfo cv) (k := .opaque) hRp hC hap hkp n hS
+      hD hi (by rw [hdi]; rfl) rfl hF hcvd hCr)
+    simp [hdi, ivT, ivCoreT, stepCV, stepVal]
+  | axiomDecl _ => rw [hdi] at hk; exact hk.elim
+  | quotDecl _ _ => rw [hdi] at hk; exact hk.elim
+  | indDecl _ _ => rw [hdi] at hk; exact hk.elim
+  | basisDecl _ => rw [hdi] at hk; exact hk.elim
 
 end L.Arena

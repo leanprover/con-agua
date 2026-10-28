@@ -81,7 +81,7 @@ theorem installFoldGo_errTop (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia 
   have hU : UceProg p := ⟨hUL, strLitSupported_core p hdc.knot.knot.str⟩
   have hivE : IvgE p := ivgE_okT hdc.cvg hap hkp hnv hU
   have hCD := checkDeclSpecE_of pins dn ds p hdc hcE hia hNG hDG hnv hUL hFD hLD
-  have hGo := installStepGo_errT pins dn ds hdc.istg hdc.iv hap hkp hnv hivE hU hCD
+  have hGo := installStepGo_errT pins dn ds hdc.istg hdc.iv hdc.cvg hap hkp hnv hivE hU hCD
   have hSt := installStep_errT pins dn ds hb hpi hnv hGo
   have hDS := installDeclStep_errT pins dn ds hdc hFD hnv hpd hSt
   exact installFoldGo_refinesE pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hFD hLD hDS n hn

@@ -11,6 +11,8 @@ Under the hypotheses of the ok refinements (`checkConstantVal_refinesT`, `checkD
 by `ihE_okT`).
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -23,11 +25,14 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model checkConstantVal_specE (p : Prog)
-  (hf : p.lookup "check_constant_val" = some checkConstantValL)
-  fns [hf ↦ checkConstantValE] grind [arena_grind] fold [tierW, idxW]
+/-- **The model of `check_constant_val`, both outcomes**: `install_header` by its unified model,
+the core stubs through their runs. -/
+l_model checkConstantVal_specE (p : Prog) (hp : ValProg p)
+  fns [hp.ccv ↦ checkConstantValE] specs [installHeader_specE p hp.ih n]
+  grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] errors
+  heartbeats 400000 simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model checkDefnVal_specE (p : Prog)
   (hf : p.lookup "check_defn_val" = some checkDefnValL)
@@ -41,8 +46,73 @@ l_model checkOpaqueVal_specE (p : Prog)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 400000 simp [] errors
 
-/-- **`check_constant_val`'s error claim under `StageT`**: `install_header` by `ihE_okT`, the core
-stubs by `CoreStubsE`. -/
+/-- What `check_constant_val` gives besides the twin's run: the stage, the growth, the memos; the
+walk memos (`AbsOK`) kept. -/
+structure CcvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+    (a' : AState) : Prop where
+  stage : StageT dn vis fe m' a'
+  grow : IWGrow m m'
+  crOK : L.Stubs.CrOK m'
+  abs : AbsOK m → AbsOK m'
+
+/-- **`check_constant_val` refines `checkConstantVal .verified`, both outcomes**, under `StageT`:
+`install_header` by `ih_ref`, the core stubs by `KnotStageProg` (ok) and `CoreStubsE` (errors). -/
+theorem ccv_ref {p : Prog} (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {q : Word} {cv : IConstantVal}
+    (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
+    RefE (VerdictCtxU p) (checkConstantValE p n m vis q) (checkConstantVal V fe cv) a
+      (fun v _ a' => CcvPost dn vis fe m v.2 a') := by
+  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hqd
+  have et : rdW (m.arr64 EREC) (q + 3) = wt :=
+    rdW_of_get? (k := q.toNat + 3) (toNat_add_small q 3 hqb).symm (erecP_get hwt)
+  cases n with
+  | zero => rw [checkConstantValE.eq_1]; exact RefE.of_cls0 rfl
+  | succ n =>
+  have hn' : n ≤ 2 ^ 62 := by omega
+  rw [checkConstantValE.arm1, et, checkConstantVal_eq]
+  -- `install_header(vis, q)`
+  have h1R := ih_ref hap hkp.crf n hS hqd hqb hlps hCr
+  rcases h1 : installHeaderE p n m vis q with e1 | ⟨r1, m1⟩
+  · rw [checkConstantValE.k_install_header.none]
+    rw [h1] at h1R
+    exact RefE.bind_left fun hG => h1R ⟨hG.nv, hG.uce⟩
+  rw [checkConstantValE.k_install_header.arm1]
+  rw [h1] at h1R
+  obtain ⟨_, a1, hrun1, hP1⟩ := h1R
+  refine RefE.bind_right hrun1 ?_
+  -- the type's type
+  rcases h2 : callE p n "infer_type_core" [vis, 0, wt] m1 with e2 | ⟨r2, m2⟩
+  · rw [checkConstantValE.k_infer_type_core.none]
+    intro hG
+    have := hG.core.inferTypeCore n hn' hP1.stage 0 wt hwtl _ h2
+    rw [show ((0 : Word).toNat) = 0 from rfl, ← hty] at this
+    exact ErrClaim.bind_left this
+  rw [checkConstantValE.k_infer_type_core.arm1]
+  have h2w := callW_of_callE h2
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := hq.inferTypeCore_sim n hn' hP1.stage 0 wt hwtl r2 m2 h2w
+  have hCr2 := hkp.call (im_mem _ rfl) h2w hP1.crOK
+  rw [show ((0 : Word).toNat) = 0 from rfl, ← hty] at hrun2
+  refine RefE.bind_right hrun2 ?_
+  -- its sort
+  rcases h3 : callE p n "ensure_sort_core" [vis, 0, r2.headD 0] m2 with e3 | ⟨r3, m3⟩
+  · rw [checkConstantValE.k_ensure_sort_core.none]
+    intro hG
+    have := hG.core.ensureSortCore n hn' hS2 0 (r2.headD 0) hx2l _ h3
+    rw [show ((0 : Word).toNat) = 0 from rfl, hx2] at this
+    exact ErrClaim.bind_left this
+  rw [checkConstantValE.k_ensure_sort_core.arm1]
+  have h3w := callW_of_callE h3
+  obtain ⟨x3, a3, hrun3, hS3, hg3, -⟩ := hq.ensureSortCore_sim n hn' hS2 0 (r2.headD 0) hx2l r3 m3 h3w
+  have hCr3 := hkp.call (im_mem _ rfl) h3w hCr2
+  rw [show ((0 : Word).toNat) = 0 from rfl, hx2] at hrun3
+  refine RefE.bind_right hrun3 (RefE.ret rfl ⟨hS3, hP1.grow.trans (hg2.trans hg3), hCr3, ?_⟩)
+  intro hA
+  exact absOK_core hq.closed (by decide) h3w
+    (absOK_core hq.closed (by decide) h2w (hP1.afr hA) hS2) hS3
+
+/-- **`check_constant_val`'s error claim under `StageT`** (`ccv_ref`'s error half). -/
 theorem ccvE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
     (hUL : UceLookups p)
@@ -51,58 +121,10 @@ theorem ccvE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF 
     (hc : callE p n "check_constant_val" [vis, q] m = .error e) (hS : StageT dn vis fe m a)
     (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
-    ErrClaim (checkConstantVal V fe cv) a e := by
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (checkConstantVal_specE p hp.ccv n ⟨m, Locals.init []⟩ vis q) hc
-    (Err.code_ne_of_cls hk0)
-  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hqd
-  have et : rdW (m.arr64 EREC) (q + 3) = wt :=
-    rdW_of_get? (k := q.toNat + 3) (toNat_add_small q 3 hqb).symm (erecP_get hwt)
-  cases n with
-  | zero => rw [checkConstantValE.eq_1] at hW; cases hW; exact absurd rfl hk0
-  | succ n =>
-  have hn' : n ≤ 2 ^ 62 := by omega
-  rw [checkConstantValE.arm1, et] at hW
-  rw [checkConstantVal_eq]
-  -- `install_header(vis, q)`
-  cases h1 : callE p n "install_header" [vis, q] m with
-  | error e1 =>
-    rw [h1, checkConstantValE.k_install_header.eq_1] at hW; cases hW
-    exact ErrClaim.bind_left (ihE_okT hp.ih hap hkp hnv ⟨hUL, strLitSupported_core p hq.knot.str⟩ h1 hS hqd hqb hlps hCr)
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, checkConstantValE.k_install_header.eq_2] at hW
-  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callE
-    (ih_specW p hp.ih (realCall p) (realCall_spec p) n ⟨m, Locals.init []⟩ vis q) h1
-  subst hs1
-  obtain ⟨a1, hrun1, hS1, hg1, hCr1, -⟩ := ihW_okT hap hkp.crf hW1 hS hqd hqb hlps hCr
-  refine ErrClaim.bind_right hrun1 ?_
-  -- the type's type
-  cases h2 : callE p n "infer_type_core" [vis, 0, wt] s1.mem with
-  | error e2 =>
-    rw [h2, checkConstantValE.k_infer_type_core.eq_1] at hW; cases hW
-    have := hcE.inferTypeCore n hn' hS1 0 wt hwtl _ h2
-    rw [show ((0 : Word).toNat) = 0 from rfl, ← hty] at this
-    exact ErrClaim.bind_left this
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2, checkConstantValE.k_infer_type_core.eq_2] at hW
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
-    hq.inferTypeCore_sim n hn' hS1 0 wt hwtl r2 m2 (callW_of_callE h2)
-  rw [show ((0 : Word).toNat) = 0 from rfl, ← hty] at hrun2
-  refine ErrClaim.bind_right hrun2 ?_
-  -- its sort
-  cases h3 : callE p n "ensure_sort_core" [vis, 0, r2.headD 0] m2 with
-  | error e3 =>
-    rw [h3, checkConstantValE.k_ensure_sort_core.eq_1] at hW; cases hW
-    have := hcE.ensureSortCore n hn' hS2 0 (r2.headD 0) hx2l _ h3
-    rw [show ((0 : Word).toNat) = 0 from rfl, hx2] at this
-    exact ErrClaim.bind_left this
-  | ok q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [h3, checkConstantValE.k_ensure_sort_core.eq_2] at hW
-  cases hW
+    ErrClaim (checkConstantVal V fe cv) a e :=
+  RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkConstantVal_specE p hp n _ vis q) hnv
+    ⟨⟨hnv, hcE⟩, ⟨hUL, strLitSupported_core p hq.knot.str⟩⟩
+    (ccv_ref hq hap hkp hn hS hqd hqb hlps hCr) hc
 
 /-- **`check_defn_val`'s error claim under `StageT`**: the value's guards by `IvgE`, the core
 stubs by `CoreStubsE`, the type mismatch is the twin's `invalid`; `env_push` claims nothing. -/
