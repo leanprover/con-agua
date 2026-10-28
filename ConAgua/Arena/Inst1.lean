@@ -51,10 +51,7 @@ def instGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   if g == 5 { r := call inst_lam(h, d, v, fu - 1); return r };
   if g == 6 { r := call inst_forall(h, d, v, fu - 1); return r };
   if g == 0 {
-    t := ⟦h⟧.tier;
-    i := ⟦h⟧.idx;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if BVAR⟨t⟩.count <= i { abort };
+    (t, i) := node BVAR⟦h⟧;
     x := BVAR⟨t, i⟩.i;
     if x == d { return v };
     if d < x { r := call intern_bvar(x - 1); return r };
@@ -70,10 +67,7 @@ def instGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
 def instApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call if_find(h, d);
   if fd != 0 { return IMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦h⟧;
   f := APP⟨t, i⟩.f;
   a := APP⟨t, i⟩.a;
   x := call inst_go(f, d, v, fu);
@@ -90,10 +84,7 @@ def instLam : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, 
   if d + 1 == 0 { abort };
   (fd, j, e0) := call if_find(h, d);
   if fd != 0 { return IMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LAM⟨t⟩.count <= i { abort };
+  (t, i) := node LAM⟦h⟧;
   f := LAM⟨t, i⟩.ty;
   a := LAM⟨t, i⟩.b;
   x := call inst_go(f, d, v, fu);
@@ -110,10 +101,7 @@ def instForall : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, 
   if d + 1 == 0 { abort };
   (fd, j, e0) := call if_find(h, d);
   if fd != 0 { return IMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if FORALL⟨t⟩.count <= i { abort };
+  (t, i) := node FORALL⟦h⟧;
   f := FORALL⟨t, i⟩.ty;
   a := FORALL⟨t, i⟩.b;
   x := call inst_go(f, d, v, fu);
@@ -130,10 +118,7 @@ def instLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, 
   if d + 1 == 0 { abort };
   (fd, j, e0) := call if_find(h, d);
   if fd != 0 { return IMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LET⟨t⟩.count <= i { abort };
+  (t, i) := node LET⟦h⟧;
   f := LET⟨t, i⟩.ty;
   a := LET⟨t, i⟩.v;
   b := LET⟨t, i⟩.b;
@@ -151,10 +136,7 @@ def instLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, 
 def instProj : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call if_find(h, d);
   if fd != 0 { return IMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if PROJ⟨t⟩.count <= i { abort };
+  (t, i) := node PROJ⟦h⟧;
   nm := PROJ⟨t, i⟩.n;
   ix := PROJ⟨t, i⟩.i;
   e := PROJ⟨t, i⟩.e;

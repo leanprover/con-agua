@@ -163,7 +163,7 @@ syntax "⟪" term "⟫" : lstmt
 /-- `(t, i) := node R⟦h⟧`: the tier and index of the node that the handle word `h` names in the
 store `R`, checked (sugar, `desugar`): abort on a scratch-tier handle while the scratch tier is
 closed, and on an index at or past the tier's node count. -/
-syntax "(" ident ", " ident ")" " := " "node " ident noWs "⟦" lexpr "⟧" : lstmt
+syntax "(" ident ", " ident ")" " := " &"node" ident noWs "⟦" lexpr "⟧" : lstmt
 /-- `for j < n { body }`: the counted loop `while j < n { body; j += 1 }` (sugar, `desugar`);
 `body` assigns neither `j` nor `n`. -/
 syntax "for " ident " < " ident lblock : lstmt

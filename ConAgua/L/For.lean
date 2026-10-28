@@ -16,7 +16,8 @@ notation writes it). Its rule, proved once:
   post `ForPost I Q j`: on `normal` the invariant after `j += 1`, on `break` and `return` the loop's
   post) and that gives the loop's post when `j < n` fails is a triple of the loop at every fuel.
   A loop spec of a `for` is then its invariant and one `vcgen` of the body, without an induction
-  on the fuel. `Triple.forUp_at` is the rule at a start state.
+  on the fuel. `Triple.forUp_at` is the rule at a start state, `Triple.forUp_pre` in the shape
+  `⦃s = s₀ ∧ P s⦄ exec p k w ⦃Q⦄` of a hand loop spec.
 * `forUp_succ_toNat`: the step does not wrap (`j < n`).
 
 `forS_body` reads the body back off a `for` written in a named block, for the rule's `hw`.
@@ -88,6 +89,16 @@ theorem Triple.forUp_at {p : Prog} {w body : Stmt} {j n : Var} (hw : w = forS j 
       ⦃fun r s' => ForPost I Q j r s'; ⊤⦄) (k : Nat) (s₀ : St) (hI : I s₀) :
     ⦃fun s => s = s₀⦄ exec p k w ⦃Q; ⊤⦄ :=
   ⟨fun s hs => (Triple.forUp hw I Q hexit hbody k s₀).le_wp s ⟨hs, by subst hs; exact hI⟩⟩
+
+/-- The counted-loop rule in the shape of a hand loop spec, `⦃s = s₀ ∧ P s⦄ exec p k w ⦃Q⦄`: the
+invariant `I` (which may name `s₀`) holds at the start when `P` does. -/
+theorem Triple.forUp_pre {p : Prog} {w body : Stmt} {j n : Var} {P : St → Prop} {s₀ : St}
+    (hw : w = forS j n body) (I : St → Prop) {Q : Sig → St → Prop} (hI : P s₀ → I s₀)
+    (hexit : ∀ s, I s → ¬ s.loc j < s.loc n → Q .normal s)
+    (hbody : ∀ k s₁, ⦃fun s => s = s₁ ∧ I s ∧ s.loc j < s.loc n⦄ step p (exec p k) body
+      ⦃fun r s' => ForPost I Q j r s'; ⊤⦄) (k : Nat) :
+    ⦃fun s => s = s₀ ∧ P s⦄ exec p k w ⦃Q; ⊤⦄ :=
+  ⟨fun s ⟨hs, hP⟩ => (Triple.forUp hw I Q hexit hbody k s₀).le_wp s ⟨hs, by subst hs; exact hI hP⟩⟩
 
 /-- The step of a counted loop does not wrap. -/
 theorem forUp_succ_toNat {i n : Word} (h : i < n) : (i + 1).toNat = i.toNat + 1 := by

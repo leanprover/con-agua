@@ -58,10 +58,9 @@ def DLITS : List UInt8 := [115, 97, 102, 101, 116, 121, 112, 101, 99, 116, 111, 
 theorem DLITS_length : DLITS.length = 19 := rfl
 
 def matchDlitLoop : Stmt := lblk (i, o, n, k, c) {
-  while k < n {
+  for k < n {
     if i + k < len(IN.u8) { c := IN.u8[i + k] } else { c := 0 };
-    if c != DLITS.c8[o + k] { return 0 };
-    k += 1
+    if c != DLITS.c8[o + k] { return 0 }
   }
 }
 

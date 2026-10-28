@@ -97,10 +97,9 @@ def WORDS : List UInt8 :=
 theorem WORDS_length : WORDS.length = 59 := rfl
 
 def matchWordLoop : Stmt := lblk (i, o, n, k, c) {
-  while k < n {
+  for k < n {
     if i + k < len(IN.u8) { c := IN.u8[i + k] } else { c := 0 };
-    if c != WORDS.c8[o + k] { return 0 };
-    k += 1
+    if c != WORDS.c8[o + k] { return 0 }
   }
 }
 

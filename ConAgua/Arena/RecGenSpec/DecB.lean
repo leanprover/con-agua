@@ -37,7 +37,7 @@ def ncpLoop : Stmt := lblk (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen, 
 -- con-ron: none — `classesNfsL`'s own loop (`rfl`), a named block for the proof
 def cnsLoop : Stmt := lblk (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen, q, j, m, esOff,
     esLen, nm, k) {
-  while j < msLen {
+  for j < msLen {
     m := IW.u64[msOff + j];
     (esOff, esLen) := call target_major_nfs(vis, p, ftOff, ftLen, IW.u64[m + 11], IW.u64[m + 12],
       IW.u64[m + 1], IW.u64[m + 2], IW.u64[m + 3], IW.u64[m + 6], IW.u64[m + 7], tblOff, tblLen);
@@ -48,8 +48,7 @@ def cnsLoop : Stmt := lblk (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen, 
     IW.u64[nm + 10] := esLen;
     IW.u64[nm + 11] := IW.u64[m + 11];
     IW.u64[nm + 12] := IW.u64[m + 12];
-    IW.u64[q + j] := nm;
-    j += 1
+    IW.u64[q + j] := nm
   }
 }
 

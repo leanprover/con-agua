@@ -99,10 +99,7 @@ def poolAlloc0 : FunDecl := lfn (l) locals (t, q) {
 
 /-- `pool_copy0`'s loop: the words `POOL⦃o + j‥o + l⦄` to `POOL⟨0⟩[q + j‥q + l]`. -/
 def copy0Loop : Stmt := lblk (o, l, q, j) {
-  while j < l {
-    POOL⟨0⟩[q + j] := POOL⦃o + j⦄;
-    j += 1
-  }
+  for j < l { POOL⟨0⟩[q + j] := POOL⦃o + j⦄ }
 }
 
 /-- `pool_copy0(o, l)`: a tier-0 copy of the slice `(o, l)`, its address. -/

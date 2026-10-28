@@ -318,10 +318,7 @@ theorem inferLamsLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p
 /-- The peel loop of `inferLamsL` (Infer.lean), named for its spec. -/
 def inferLamsW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, tty, w, fv, r) {
   while peel != 0 && t >> 28 == 5 {
-    s := ⟦t⟧.tier;
-    i := ⟦t⟧.idx;
-    if s != 0 && CTL.u64[1] == 0 { abort };
-    if LAM⟨s⟩.count <= i { abort };
+    (s, i) := node LAM⟦t⟧;
     ty := LAM⟨s, i⟩.ty;
     body := LAM⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);

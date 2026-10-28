@@ -338,23 +338,19 @@ theorem SpineR.push {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m o
 
 /-- The loop of `betaPeelL` (WhnfCore.lean), named for its spec. -/
 def betaPeelW : Stmt := lblk (t, a, ao, an, i, co, cn, tt, x, e2, e3) {
-  while i < an {
+  for i < an {
     if t >> 28 != 5 {
       e2 := call inst_list(t, co, cn, 0);
       e3 := call mk_app_n_from(e2, ao, an, i);
       CTL.u64[136] := co;
       return (1, e3)
     };
-    tt := ⟦t⟧.tier;
-    x := ⟦t⟧.idx;
-    if tt != 0 && CTL.u64[1] == 0 { abort };
-    if LAM⟨tt⟩.count <= x { abort };
+    (tt, x) := node LAM⟦t⟧;
     t := LAM⟨tt, x⟩.b;
     if len(SPN.u64) <= co + cn { abort };
     SPN.u64[co + cn] := SPN.u64[ao + i];
     cn += 1;
-    CTL.u64[136] := co + cn;
-    i += 1
+    CTL.u64[136] := co + cn
   }
 }
 

@@ -191,10 +191,7 @@ def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
     (o, l) := call rom_basis_decls(k);
     if l == bl {
       j := 0;
-      while j < l {
-        if EREC.u64[IW.u64[o + j] + 1] != EREC.u64[EREC.u64[bo + j] + 1] { break };
-        j += 1
-      };
+      for j < l { if EREC.u64[IW.u64[o + j] + 1] != EREC.u64[EREC.u64[bo + j] + 1] { break } };
       if j == l {
         (q, ql) := call er_to_iw(bo, bl);
         e := call canon_eq_list(q, ql, o, l);
@@ -217,7 +214,7 @@ binders (no such telescope: fine), a constructor declares exactly `nP` parameter
 @[l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;
-  while j < l {
+  for j < l {
     p := EREC.u64[o + j];
     k := EREC.u64[p];
     if k == 3 {
@@ -226,8 +223,7 @@ def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
     };
     if k == 4 {
       if EREC.u64[p + 5] != np { return 0 }
-    };
-    j += 1
+    }
   };
   return 1
 }

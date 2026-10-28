@@ -144,15 +144,14 @@ def classNodesAgreeL : FunDecl := lfn
     (vis, p, ftOff, ftLen, mc, teleOff, teleLen, leaf, fvsOff, fvsLen, i, esOff, esLen)
     locals (j, e, ok, domsOff, domsLen, f, b) {
   j := 0;
-  while j < esLen {
+  for j < esLen {
     e := IW.u64[esOff + j];
     (ok, domsOff, domsLen) := call target_pi_doms_with(fvsOff, fvsLen, IW.u64[e + 4]);
     if ok == 0 { domsLen := 0 };
     if domsLen <= i { fail R_GENERATED_RECURSOR_A };
     f := IW.u64[domsOff + i];
     b := call target_k53(vis, p, ftOff, ftLen, mc, teleOff, teleLen, leaf, f);
-    if b == 0 { fail R_GENERATED_RECURSOR_FIELD_OF };
-    j += 1
+    if b == 0 { fail R_GENERATED_RECURSOR_FIELD_OF }
   };
   return 0
 }
@@ -176,7 +175,7 @@ def classFieldsAgreeL : FunDecl := lfn
     locals (j, i, kf, tag, t, tele, fv, fty, ok, teleOff, teleLen, leaf, mt, b) {
   j := 0;
   i := i0;
-  while j < ksLen {
+  for j < ksLen {
     kf := IW.u64[ksOff + j];
     tag := IW.u64[kf];
     if tag == 1 {
@@ -192,8 +191,7 @@ def classFieldsAgreeL : FunDecl := lfn
       b := call class_nodes_agree(vis, p, ftOff, ftLen, mt, teleOff, teleLen, leaf, fvsOff, fvsLen,
         i, esOff, esLen)
     };
-    i := i + 1;
-    j += 1
+    i := i + 1
   };
   return 0
 }
@@ -207,10 +205,9 @@ def classCtorOfNfs : FunDecl := lfn (nfsOff, nfsLen, name) locals (q, j, nf, rp)
   q := call iw_alloc(nfsLen);
   j := 0;
   rp := 0;
-  while j < nfsLen {
+  for j < nfsLen {
     nf := IW.u64[nfsOff + j];
-    if IW.u64[nf] == name { IW.u64[q + rp] := nf; rp += 1 };
-    j += 1
+    if IW.u64[nf] == name { IW.u64[q + rp] := nf; rp += 1 }
   };
   return (q, rp)
 }
@@ -249,10 +246,9 @@ def classCtorsOfL : FunDecl := lfn (vis, p, ftOff, ftLen, rd, msOff, msLen, c, c
     locals (q, j, cc) {
   q := call iw_alloc(cAsLen);
   j := 0;
-  while j < cAsLen {
+  for j < cAsLen {
     cc := call class_ctor_of(vis, p, ftOff, ftLen, rd, msOff, msLen, c, IW.u64[cAsOff + j]);
-    IW.u64[q + j] := cc;
-    j += 1
+    IW.u64[q + j] := cc
   };
   return (q, cAsLen)
 }
@@ -265,13 +261,12 @@ def classesCtorsL : FunDecl := lfn (vis, p, ftOff, ftLen, rd, msOff, msLen)
     locals (q, c, m, xsOff, xsLen, hdr) {
   q := call iw_alloc(msLen);
   c := 0;
-  while c < msLen {
+  for c < msLen {
     m := IW.u64[msOff + c];
     (xsOff, xsLen) := call class_ctors_of(vis, p, ftOff, ftLen, rd, msOff, msLen, c,
       IW.u64[m + 6], IW.u64[m + 7]);
     hdr := call rec2(xsOff, xsLen);
-    IW.u64[q + c] := hdr;
-    c += 1
+    IW.u64[q + c] := hdr
   };
   return (q, msLen)
 }
@@ -307,7 +302,7 @@ def classesNfsL : FunDecl := lfn (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, m
     locals (q, j, m, esOff, esLen, nm, k) {
   q := call iw_alloc(msLen);
   j := 0;
-  while j < msLen {
+  for j < msLen {
     m := IW.u64[msOff + j];
     (esOff, esLen) := call target_major_nfs(vis, p, ftOff, ftLen, IW.u64[m + 11], IW.u64[m + 12],
       IW.u64[m + 1], IW.u64[m + 2], IW.u64[m + 3], IW.u64[m + 6], IW.u64[m + 7], tblOff, tblLen);
@@ -318,8 +313,7 @@ def classesNfsL : FunDecl := lfn (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, m
     IW.u64[nm + 10] := esLen;
     IW.u64[nm + 11] := IW.u64[m + 11];
     IW.u64[nm + 12] := IW.u64[m + 12];
-    IW.u64[q + j] := nm;
-    j += 1
+    IW.u64[q + j] := nm
   };
   return (q, msLen)
 }
@@ -769,7 +763,7 @@ def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
 def genRecCheckFormerTys : FunDecl := lfn (cvTasOff, cvTasLen) locals (q, j) {
   q := call iw_alloc(cvTasLen);
   j := 0;
-  while j < cvTasLen { IW.u64[q + j] := EREC.u64[IW.u64[cvTasOff + j] + 3]; j += 1 };
+  for j < cvTasLen { IW.u64[q + j] := EREC.u64[IW.u64[cvTasOff + j] + 3] };
   return (q, cvTasLen)
 }
 
@@ -780,10 +774,9 @@ def genRecCheckFormerTysC : FunDecl := lfn (vis, cvTasOff, cvTasLen, ms2Off, ms2
     locals (q, j, e) {
   q := call iw_alloc(ms2Len);
   j := 0;
-  while j < ms2Len {
+  for j < ms2Len {
     e := call class_former_ty(vis, cvTasOff, cvTasLen, IW.u64[ms2Off + j]);
-    IW.u64[q + j] := e;
-    j += 1
+    IW.u64[q + j] := e
   };
   return (q, ms2Len)
 }
@@ -796,18 +789,16 @@ def genRecCheckMinorOk : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
     locals (j, s, minorCnt, ctorSum, hdr) {
   minorCnt := 0;
   j := 0;
-  while j < slotsLen {
+  for j < slotsLen {
     s := call class_slot_is_minor(IW.u64[slotsOff + j]);
-    minorCnt := minorCnt + s;
-    j += 1
+    minorCnt := minorCnt + s
   };
   ctorSum := 0;
   j := 0;
-  while j < ctorsLen {
+  for j < ctorsLen {
     hdr := IW.u64[ctorsOff + j];
     if ctorSum + IW.u64[hdr + 1] < ctorSum { return 0 };
-    ctorSum := ctorSum + IW.u64[hdr + 1];
-    j += 1
+    ctorSum := ctorSum + IW.u64[hdr + 1]
   };
   return u64(minorCnt == ctorSum)
 }

@@ -38,10 +38,7 @@ namespace L.Arena
 def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
   hh := call whnf(mode, vis, d, e);
   if hh >> 28 != 2 { fail R_EXPECTED_A_SORT };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if SORT⟨t⟩.count <= i { abort };
+  (t, i) := node SORT⟦hh⟧;
   return SORT⟨t, i⟩.u
 }
 
@@ -71,10 +68,7 @@ behind its basis guard. -/
 -- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO
 @[l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO]
 def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
-  t := ⟦e⟧.tier;
-  i := ⟦e⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LIT⟨t⟩.count <= i { abort };
+  (t, i) := node LIT⟦e⟧;
   if LIT⟨t, i⟩.kind == 0 {
     s := call nat_lit_supported(vis);
     if s == 0 { fail R_NAT_LITERAL_WITHOUT };
@@ -126,10 +120,7 @@ def inferLamsLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt,
 def inferLamsL : FunDecl :=
     lfn (mode, vis, d, peel, t, k, fo, lo) locals (s, i, ty, body, tyo, tty, w, fv, r) {
   while peel != 0 && t >> 28 == 5 {
-    s := ⟦t⟧.tier;
-    i := ⟦t⟧.idx;
-    if s != 0 && CTL.u64[1] == 0 { abort };
-    if LAM⟨s⟩.count <= i { abort };
+    (s, i) := node LAM⟦t⟧;
     ty := LAM⟨s, i⟩.ty;
     body := LAM⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);
@@ -173,20 +164,14 @@ def inferPisLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, 
 def inferPisL : FunDecl :=
     lfn (mode, vis, d, peel, t, k, fo, lo) locals (s, i, ty, body, tyo, tty, w, u, fv, r) {
   while peel != 0 && t >> 28 == 6 {
-    s := ⟦t⟧.tier;
-    i := ⟦t⟧.idx;
-    if s != 0 && CTL.u64[1] == 0 { abort };
-    if FORALL⟨s⟩.count <= i { abort };
+    (s, i) := node FORALL⟦t⟧;
     ty := FORALL⟨s, i⟩.ty;
     body := FORALL⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
     if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
-    s := ⟦w⟧.tier;
-    i := ⟦w⟧.idx;
-    if s != 0 && CTL.u64[1] == 0 { abort };
-    if SORT⟨s⟩.count <= i { abort };
+    (s, i) := node SORT⟦w⟧;
     u := SORT⟨s, i⟩.u;
     fv := call intern_fvar(d + k, tyo);
     if len(SPN.u64) <= fo + k { abort };
@@ -232,10 +217,7 @@ def inferForallL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, t, i,
   tty := call infer(mode, vis, d, ty);
   w := call whnf(mode, vis, d, tty);
   if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
-  t := ⟦w⟧.tier;
-  i := ⟦w⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if SORT⟨t⟩.count <= i { abort };
+  (t, i) := node SORT⟦w⟧;
   u := SORT⟨t, i⟩.u;
   fv := call intern_fvar(d, ty);
   so := CTL.u64[136];
@@ -289,13 +271,10 @@ def inferSpineL : FunDecl :=
   if len(SPN.u64) < co { abort };
   cn := 0;
   i := 0;
-  while i < an {
+  for i < an {
     a := SPN.u64[ao + i];
     if ty >> 28 == 6 {
-      t := ⟦ty⟧.tier;
-      x := ⟦ty⟧.idx;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if FORALL⟨t⟩.count <= x { abort };
+      (t, x) := node FORALL⟦ty⟧;
       dom := FORALL⟨t, x⟩.ty;
       ty := FORALL⟨t, x⟩.b;
       dom2 := call inst_list(dom, co, cn, 0);
@@ -308,10 +287,7 @@ def inferSpineL : FunDecl :=
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
       if w >> 28 != 6 { fail R_FUNCTION_EXPECTED_2 };
-      t := ⟦w⟧.tier;
-      x := ⟦w⟧.idx;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if FORALL⟨t⟩.count <= x { abort };
+      (t, x) := node FORALL⟦w⟧;
       dom := FORALL⟨t, x⟩.ty;
       ty := FORALL⟨t, x⟩.b;
       z := call infer_spine_arg(mode, vis, d, a, dom);
@@ -319,8 +295,7 @@ def inferSpineL : FunDecl :=
       SPN.u64[co] := a;
       cn := 1;
       CTL.u64[136] := co + 1
-    };
-    i += 1
+    }
   };
   r := call inst_list(ty, co, cn, 0);
   CTL.u64[136] := co;
@@ -346,13 +321,10 @@ def inferSpineIOL : FunDecl :=
   if len(SPN.u64) < co { abort };
   cn := 0;
   i := 0;
-  while i < an {
+  for i < an {
     a := SPN.u64[ao + i];
     if ty >> 28 == 6 {
-      t := ⟦ty⟧.tier;
-      x := ⟦ty⟧.idx;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if FORALL⟨t⟩.count <= x { abort };
+      (t, x) := node FORALL⟦ty⟧;
       if len(SPN.u64) <= co + cn { abort };
       SPN.u64[co + cn] := a;
       cn += 1;
@@ -362,17 +334,13 @@ def inferSpineIOL : FunDecl :=
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
       if w >> 28 != 6 { fail R_FUNCTION_EXPECTED_2 };
-      t := ⟦w⟧.tier;
-      x := ⟦w⟧.idx;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if FORALL⟨t⟩.count <= x { abort };
+      (t, x) := node FORALL⟦w⟧;
       if len(SPN.u64) <= co { abort };
       SPN.u64[co] := a;
       cn := 1;
       CTL.u64[136] := co + 1;
       ty := FORALL⟨t, x⟩.b
-    };
-    i += 1
+    }
   };
   r := call inst_list(ty, co, cn, 0);
   CTL.u64[136] := co;
@@ -443,10 +411,7 @@ def inferProjL : FunDecl :=
   te := call whnf(mode, vis, d, it);
   hh := call get_app_fn(te);
   if hh >> 28 != 3 { fail R_INVALID_PROJECTION_NOT };
-  t := ⟦hh⟧.tier;
-  x := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= x { abort };
+  (t, x) := node CONST⟦hh⟧;
   cT := CONST⟨t, x⟩.n;
   cu := CONST⟨t, x⟩.us;
   (f, q) := call find_proj(vis, cT, i);
@@ -539,10 +504,7 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
   tt := call infer_io(mode, vis, d, ty);
   hh := call whnf(mode, vis, d, tt);
   if hh >> 28 != 2 { fail R_EXPECTED_A_SORT };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if SORT⟨t⟩.count <= i { abort };
+  (t, i) := node SORT⟦hh⟧;
   u := SORT⟨t, i⟩.u;
   fv := call intern_fvar(d, ty);
   ob := call inst1(body, fv, 0);

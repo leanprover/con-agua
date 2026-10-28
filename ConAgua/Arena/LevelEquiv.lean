@@ -293,10 +293,7 @@ def lsNodeW (m : Mem) (h : Word) : List Word :=
 /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
 def lsNode : FunDecl := lfn (h) locals (t, i) {
   if h >> 28 != 0 { abort };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LVLS⟨t⟩.count <= i { abort };
+  (t, i) := node LVLS⟦h⟧;
   return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
 }
 

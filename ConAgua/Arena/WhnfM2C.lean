@@ -61,10 +61,7 @@ def m2cCtorL : FunDecl := lfn (mode, vis, d, ro, cvjP, major)
 record).
 con-ron: ConRon/Arena/Core.lean:1706-1821 ConRon.Arena.majorToCtor -/
 def m2cConstViewL : FunDecl := lfn (hh) locals (t, i) {
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   return (CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
 }
 

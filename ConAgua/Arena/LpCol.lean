@@ -277,11 +277,10 @@ def hpBlkL : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
 
 /-- `ls_push`'s loop: `x := x | lvlHP(u)` for each element `u` of the slice `(o, l)`, from `q`. -/
 def hpLoopLs : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
-  while q < l {
+  for q < l {
     u := POOL⦃o + q⦄;
     ⟪hpBlkL⟫;
-    x := x | y;
-    q += 1
+    x := x | y
   }
 }
 

@@ -114,12 +114,11 @@ def addCarry : FunDecl := lfn (x, y, c) locals (s) {
 }
 
 def addLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
-  while i < n {
+  for i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
     POOL⟨pt⟩[pb + i] := x + y + c;
-    c := call add_carry(x, y, c);
-    i += 1
+    c := call add_carry(x, y, c)
   }
 }
 
