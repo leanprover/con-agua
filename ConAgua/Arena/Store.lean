@@ -16,6 +16,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.L.For
 
 @[expose] public section
 
@@ -105,13 +106,11 @@ theorem hashLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ HashRes s⦄
     exec p n hashLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := hashLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish [HashRes]
+      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
+  Triple.forUp_pre rfl (fun s => s.mem = s₀.mem ∧ s.loc 0 = s₀.loc 0 ∧ s.loc 1 = s₀.loc 1 ∧ HashRes s)
+    (fun h => ⟨rfl, rfl, rfl, h⟩) (by grind [HashRes]) (fun k s₁ => by
+      sym only [lang_grind, arena_grind] =>
+        vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [HashRes, LoopPost]) n
 
 theorem hashLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ HashRes s⦄
@@ -228,13 +227,13 @@ theorem eqLoop_spec (n : Nat) (s₀ : St) :
     exec p n eqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [1] = [if eqW (tpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
-        then 1 else 0]; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := eqLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish [EqRes]
+        then 1 else 0]; ⊤⦄ :=
+  Triple.forUp_pre rfl (fun s => s.mem = s₀.mem ∧ s.loc 0 = s₀.loc 0 ∧ s.loc 1 = s₀.loc 1 ∧
+      s.loc 2 = s₀.loc 2 ∧ EqRes s ∧ eqW (tpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s.loc 3) =
+        eqW (tpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3))
+    (fun h => ⟨rfl, rfl, rfl, rfl, h, rfl⟩) (by grind [eqW_end, Sig.retOr]) (fun k s₁ => by
+      sym only [lang_grind, arena_grind] =>
+        vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [EqRes, LoopPost]) n
 
 theorem eqLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ EqRes s⦄

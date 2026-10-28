@@ -7,6 +7,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.L.Examples
+import ConAgua.L.For
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs (primed)
@@ -75,119 +76,83 @@ theorem rule_idx (a : Array Word) (ro i : Word) (rl : IRecRule)
 
 /-! ## `find_rule(ro, rc, c)` -/
 
-/-- Model of the `find_rule` scan from index `i` with step bound `K` (`rc - i`). -/
-def findRuleW (E : Array Word) (ro rc c : Word) : Nat → Word → Option (List Word)
-  | 0, _ => some [0, 0]
-  | K + 1, i =>
-    if i < rc then
-      if h : (ro + 11 * i).toNat < E.size then
-        if E[(ro + 11 * i).toNat] = c then some [1, ro + 11 * i] else findRuleW E ro rc c K (i + 1)
-      else none
-    else some [0, 0]
+theorem uint64_succ_toNat (n i : Word) (h : i < n) : (i + 1).toNat = i.toNat + 1 :=
+  forUp_succ_toNat h
 
-theorem uint64_succ_toNat (n i : Word) (h : i < n) : (i + 1).toNat = i.toNat + 1 := by
-  rw [UInt64.toNat_add]; simp
-  have := n.toNat_lt
-  have : i.toNat < n.toNat := h
-  omega
+/-- Model of the `find_rule` scan from index `i`, by the `Nat` index (`rdW`: a read past the
+array is `0`; the L code aborts there, so the spec only constrains successful runs). -/
+def frN (E : Array Word) (ro rc c : Word) (i : Nat) : List Word :=
+  if i < rc.toNat then
+    if rdW E (ro + 11 * UInt64.ofNat i) = c then [1, ro + 11 * UInt64.ofNat i] else frN E ro rc c (i + 1)
+  else [0, 0]
+termination_by rc.toNat - i
 
-theorem frW_done (E : Array Word) (ro rc c i : Word) (h : ¬ i < rc) :
-    findRuleW E ro rc c (rc.toNat - i.toNat) i = some [0, 0] := by
-  cases hK : rc.toNat - i.toNat with
-  | zero => rw [findRuleW]
-  | succ k => rw [findRuleW]; simp [h]
-
-theorem frW_step (E : Array Word) (ro rc c i : Word) (h : i < rc) :
-    findRuleW E ro rc c (rc.toNat - i.toNat) i =
-      if h : (ro + 11 * i).toNat < E.size then
-        if E[(ro + 11 * i).toNat] = c then some [1, ro + 11 * i]
-        else findRuleW E ro rc c (rc.toNat - (i + 1).toNat) (i + 1)
-      else none := by
-  have h1 := uint64_succ_toNat rc i h
-  have : i.toNat < rc.toNat := h
-  have hK : rc.toNat - i.toNat = (rc.toNat - (i + 1).toNat) + 1 := by omega
-  rw [hK, findRuleW]
-  simp [h]
+theorem frN_end (E : Array Word) (ro rc c x : Word) (h : ¬ x < rc) : frN E ro rc c x.toNat = [0, 0] := by
+  rw [frN, ite_eq_right (fun e => h (UInt64.lt_iff_toNat_lt.mpr e))]
+theorem frN_hit (E : Array Word) (ro rc c x : Word) (h : x < rc) (hc : rdW E (ro + 11 * x) = c) :
+    frN E ro rc c x.toNat = [1, ro + 11 * x] := by
+  rw [frN, ite_eq_left (UInt64.lt_iff_toNat_lt.mp h)]; simp [hc]
+theorem frN_miss (E : Array Word) (ro rc c x : Word) (h : x < rc) (hc : ¬ rdW E (ro + 11 * x) = c) :
+    frN E ro rc c x.toNat = frN E ro rc c (x + 1).toNat := by
+  rw [frN, ite_eq_left (UInt64.lt_iff_toNat_lt.mp h), forUp_succ_toNat h]; simp [hc]
 
 theorem findRuleLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p k findRuleLoop
+    ⦃fun s => s = s₀ ∧ True⦄ exec p k findRuleLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      findRuleW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) ((s₀.loc 1).toNat - (s₀.loc 3).toNat)
-        (s₀.loc 3) = some (r.retOr [0, 0]); ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := findRuleLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish [frW_done, frW_step]
+      frN (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat = r.retOr [0, 0]; ⊤⦄ :=
+  Triple.forUp_pre rfl (fun s => s.mem = s₀.mem ∧ s.loc 0 = s₀.loc 0 ∧ s.loc 1 = s₀.loc 1 ∧
+      s.loc 2 = s₀.loc 2 ∧ frN (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s.loc 3).toNat =
+        frN (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat)
+    (fun _ => ⟨rfl, rfl, rfl, rfl, rfl⟩) (by grind [frN_end, Sig.retOr]) (fun k s₁ => by
+      sym only [lang_grind, arena_grind] =>
+        vcgen [step, evalE, evalC, evalArgs, setLoc, ld64_rd_spec] <;> finish [frN_hit, frN_miss, LoopPost]) k
 
 theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k : Nat)
     (s₀ : St) (ro rc c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p k) "find_rule" [ro, rc, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      findRuleW (s₀.mem.arr64 EREC) ro rc c rc.toNat 0 = some r; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ frN (s₀.mem.arr64 EREC) ro rc c 0 = r; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, findRuleL]
   cases k with
   | zero => vcgen [exec] <;> grind
   | succ k =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (findRuleLoop_spec p (k + 1) s₀)] <;>
-      finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        fun s₀ => Triple.step_exec (findRuleLoop_spec p (k + 1) s₀)] <;> finish
 
-/-- **The scan model computes `findRule`.** -/
-theorem frW_rel (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc c : Word) (hc : HW c)
+/-- Rule `i` of a decoded slice, as the model reads it. -/
+theorem frN_at (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc : Word) (rules : List IRecRule)
+    (hget : ∀ j, j < rc.toNat → decRule E (ro.toNat + 11 * j) = rules[j]?) (i : Nat) (hi : i < rc.toNat)
+    (hlen : rules.length = rc.toNat) :
+    ∃ rl w, rules.drop i = rl :: rules.drop (i + 1) ∧ rdW E (ro + 11 * UInt64.ofNat i) = w ∧
+      w.toNat < 2 ^ 32 ∧ rl.ctor = decI w ∧ decRule E (ro + 11 * UInt64.ofNat i).toNat = some rl := by
+  have hi' : (UInt64.ofNat i).toNat = i := by have := rc.toNat_lt; simp; omega
+  obtain ⟨rl, hrl⟩ : ∃ rl, rules[i]? = some rl := ⟨rules[i], List.getElem?_eq_getElem (by omega)⟩
+  have hdr := hget i hi
+  rw [hrl] at hdr
+  obtain ⟨hw, -⟩ := rule_idx E ro (UInt64.ofNat i) rl hsz (by rw [hi']; exact hdr)
+  rw [hi'] at hw
+  obtain ⟨⟨w, hwE, hw32, hctor⟩, _⟩ := decRule_fields E _ rl hdr
+  refine ⟨rl, w, ?_, by simp [rdW, hw, hwE], hw32, hctor, by rw [hw]; exact hdr⟩
+  rw [List.drop_eq_getElem_cons (by omega)]; simp [List.getElem?_eq_some_iff.mp hrl |>.2]
+
+/-- **The scan model computes `findRule`**, by the model's own induction. -/
+theorem frN_rel (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc c : Word) (hc : HW c)
     (rules : List IRecRule) (hlen : rules.length = rc.toNat)
-    (hget : ∀ j, j < rc.toNat → decRule E (ro.toNat + 11 * j) = rules[j]?) :
-    ∀ (K : Nat) (i : Word) (L : List Word), rc.toNat - i.toNat = K →
-      findRuleW E ro rc c K i = some L →
-      findRule (rules.drop i.toNat) (decI c) =
-        (if L.headD 0 = 0 then none else decRule E (L.tail.headD 0).toNat) := by
-  intro K
-  induction K with
-  | zero =>
-    intro i L hK h
-    rw [findRuleW] at h
-    cases h
-    have : rules.drop i.toNat = [] := List.drop_eq_nil_of_le (by omega)
-    simp [this, findRule]
-  | succ K ih =>
-    intro i L hK h
-    have hi : i < rc := by
-      have : i.toNat < rc.toNat := by omega
-      exact this
-    have hi' : i.toNat < rc.toNat := hi
-    obtain ⟨rl, hrl⟩ : ∃ rl, rules[i.toNat]? = some rl :=
-      ⟨rules[i.toNat], List.getElem?_eq_getElem (by omega)⟩
-    have hdr := hget i.toNat hi'
-    rw [hrl] at hdr
-    obtain ⟨hw, hlt⟩ := rule_idx E ro i rl hsz hdr
-    have hdrop : rules.drop i.toNat = rl :: rules.drop (i.toNat + 1) := by
-      rw [List.drop_eq_getElem_cons (by omega)]
-      simp [List.getElem?_eq_some_iff.mp hrl |>.2]
-    obtain ⟨⟨w, hwE, hw32, hctor⟩, _⟩ := decRule_fields E _ rl hdr
-    have hwE' : E[ro.toNat + 11 * i.toNat] = w := (Array.getElem?_eq_some_iff.mp hwE).2
-    rw [findRuleW] at h
-    simp only [hi, ite_true, hw, hlt, dite_true] at h
-    rw [hdrop, findRule]
-    split at h
-    · rename_i hEq
-      cases h
-      have hEq' : w = c := hwE'.symm.trans hEq
-      subst hEq'
-      simp [hctor, hw, hdr]
-    · rename_i hEq
-      have hne : ¬ w = c := fun e => hEq (hwE'.trans e)
-      have hbeq : (rl.ctor == decI c) = false := by
-        rw [hctor, decI_beq _ _ hw32 hc]; simpa using hne
-      have h1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat rc i hi
-      rw [hbeq]
-      simp only [Bool.false_eq_true, ite_false]
-      have := ih (i + 1) L (by omega) h
-      rwa [h1] at this
+    (hget : ∀ j, j < rc.toNat → decRule E (ro.toNat + 11 * j) = rules[j]?) (i : Nat) :
+    findRule (rules.drop i) (decI c) =
+      (if (frN E ro rc c i).headD 0 = 0 then none else decRule E ((frN E ro rc c i).tail.headD 0).toNat) := by
+  fun_induction frN E ro rc c i with
+  | case3 i hi => simp [List.drop_eq_nil_of_le (show rules.length ≤ i by omega), findRule]
+  | case1 i hi hEq =>
+    obtain ⟨rl, w, hdrop, hr, -, hctor, hdr⟩ := frN_at E hsz ro rc rules hget i hi hlen
+    rw [hr] at hEq; subst hEq; simp [hdrop, findRule, hctor] at hdr ⊢; exact hdr.symm
+  | case2 i hi hEq ih =>
+    obtain ⟨rl, w, hdrop, hr, hw32, hctor, -⟩ := frN_at E hsz ro rc rules hget i hi hlen
+    rw [hr] at hEq
+    have hbeq : (rl.ctor == decI c) = false := by rw [hctor, decI_beq _ _ hw32 hc]; simpa using hEq
+    rw [hdrop, findRule, hbeq]; simpa using ih
 
 /-- **`find_rule` refines `findRule`.** `HW c` (`decI` truncates) and a size bound on the pool
 (the index arithmetic `ro + 11 * i` does not wrap) are added to the statement. -/
@@ -204,9 +169,9 @@ theorem findRule_refines (p : Prog) (hp : p.lookup "find_rule" = some findRuleL)
   intro s r s' hs0 hrun
   obtain ⟨hloc, hmem, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (findRule_spec p hp n s₀ ro rc c)
   obtain ⟨hl, hg⟩ := decRules_get _ _ _ _ hr
-  have := frW_rel _ hsz ro rc c hc rules hl hg _ 0 r rfl hW
+  have := frN_rel _ hsz ro rc c hc rules hl hg 0
   refine ⟨hmem, hloc, ?_⟩
-  simpa [decRuleAt] using this
+  simpa [decRuleAt, hW] using this
 
 /-! ## `rec_rule_k(ro, rc)` -/
 

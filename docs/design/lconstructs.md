@@ -279,3 +279,53 @@ no proof or statement changes, but B should go when few lanes edit L text). Orde
 C's numbers. Expected: −370 to −400 L lines (2 %), −0.1 k proof lines from the pilot, then −25 to
 −40 per loop as loops are touched. Rank 3's −5 to −12 k is withdrawn; the realistic figure is
 −0.5 to −2.5 k over time, most of it from D.
+
+## 5. Batches A–C done (lane lsugar)
+
+**A, B (landed, #78).** `L/For.lean`: `forS`, `ForPost`, `Triple.forUp`, `Triple.forUp_at`,
+`forUp_succ_toNat`; `Notation.lean`: `(t, i) := node R⟦h⟧` and `for j < n { … }` through one
+`desugar` (at the syntax level), which `transBlock` and `l_model` (`declSyntax` → `desugarAll`)
+both call. Two details beyond §2: `node` is a non-reserved token (`&"node"`; as a keyword it broke
+identifiers named `node`), and `for` appends the step inside the body's right-nested `seq`
+(`Stmt.snoc`, `step_snoc`), so `forS` is the term the notation writes for a body of any length.
+The rewrite (script `_tmp/lsugar/rewrite.py`) took 102 node reads and 66 counted loops in 49 files
+(test files of `while` itself, `ModelGenTest` and `Compiler/Tests`, kept as they were; the five
+loops bounded by a literal stay `while`). Each of the 147 rewritten declarations was checked by a
+temporary `example : f = f_lsOrig := rfl` in a full build, then the checks were removed. `checker.s`,
+`pins.bin` and the generated program files are byte-identical (`asm_file.py --check`,
+`checker_prog.py --check`, on master before and after dense-impl's D2). L lines: 19 288 → 18 886
+(**−402**; `scripts/loc.py`). One gate surprise: `step`'s equation lemmas, realized in `For.lean`
+and in `Front/Preserve.lean`, made `shake` credit `For` in nine modules; `For.lean` imports
+`Preserve` so they are realized once.
+
+**C, the pilot.** Three hand loop specs reproved with the rule; old and new declarations copied
+into isolated files and elaborated three times each (`lake env lean`, profiler totals without
+import; `_tmp/lsugar/pilot/`):
+
+| loop | what changed | lines (old → new) | elaboration, s (old → new) |
+|---|---|---:|---:|
+| `find_rule` (`WhnfIotaRefine`, `WhnfIotaRecRefine2`) | fuel-bounded model `findRuleW` → `Nat`-indexed `frN`; loop spec by the rule; refinement and `frN_found` by `fun_induction` on the model | 127 → 79 (**−38 %**) | 1.45 → 0.98 (−32 %) |
+| `lit_hash`'s `hashLoop` (`Store`) | loop spec by the rule (model `hashN` unchanged) | 11 → 10 | 1.24 → 1.27 (both specs) |
+| `limbs_eq`'s `eqLoop` (`Store`) | loop spec by the rule (model `eqW` unchanged) | 13 → 12 | (with the above) |
+
+For a hand spec the rule needed one more form, `Triple.forUp_pre`: over the loop's whole body (the
+step included, post `LoopPost`), in the shape `⦃s = s₀ ∧ P s⦄ exec p k w ⦃Q⦄`, so that `hw` is
+`rfl` against the named block (with `forS j n body`, Lean cannot infer `body` through `snoc`).
+
+What the numbers say: **the rule alone saves almost nothing.** A fuel-induction loop spec is
+already 6 lines (`induction` + `vcgen … ih`); the rule replaces the induction by an invariant that
+must restate the frame (`s.mem = s₀.mem ∧ s.loc 0 = s₀.loc 0 ∧ …`), so `hashLoop` and `eqLoop`
+come out even. The saving in `find_rule` comes from the **model**: a step bound `K` with its
+re-indexing lemmas (`frW_done`, `frW_step`), the no-wrap bookkeeping, and refinements by induction
+on `K` with `rc - i = K` threaded through, all replaced by a model on a `Nat` index whose own
+recursion the refinements follow (`fun_induction`). Where a hand model already recurses on a `Nat`
+(`hashN`) or well-founded on the word (`eqW`), there is nothing to remove.
+
+**D (`l_model … natfor`): no-go now.** The generated loop models are fuel-indexed, like
+`findRuleW`, so D would give the `find_rule` kind of saving (−40 to −50 lines per loop whose
+refinement is reproved) — but only on reproving: the 14 refinements of generated loop models
+(1 061 lines) and the hand-model ones are done and stable, and D costs 10–16 h before the first
+saving. At about 45 lines per loop that is break-even after 15–25 reproved loops, and no lane plans
+to reprove that many. Revisit when a twin bump or a performance change rewrites at least that many
+counted loops with generated models; until then, new hand loops should use a `Nat`-indexed model
+and `Triple.forUp_pre` directly (as `find_rule` now does), which needs no generator change.
