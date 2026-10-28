@@ -1485,3 +1485,70 @@ a second series, `times1b.txt`, the first being noisy for `DeclDivGateT2`):
 | `Arena/DeclNatEq`, `DeclNatGateT` | 9.33 | 9.31 | |
 | `Arena/DeclDefnT`, `Verdict/DeclDefnE`, `TopE` | 4.72 | 4.37 | |
 | **sum** | **44.4** | **34.2** | **−23 %** |
+
+### 3.19 The depth-0 leftovers of the block and sum families (`check_block_doms_at`, `check_struct_doms_at`, `check_sum_ctors`, `check_struct_field_sorts_i(_go)`, `check_block_tables(_one)`)
+
+The leaves §3.12 and §3.15 left split, in one landing:
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `check_block_doms_at` | `domsW_simC` 111 + `cbdaE_claim` 137 + `ErrClaim.of_twin` 5 = 253 | `cbda_ref` 111 + `DomsPost` 6 = 117 | −54 % |
+| `check_struct_doms_at` | `sdomsW_simC` 22 (over `domsW_simC`) + `sdomsE_claim` 162 + `checkStructDomsAt_claim` 22 = 206 | `sds_ref` 128 + `callW_ftdF` 5 = 133 | −35 % |
+| `check_struct_field_sorts_i(_go)` | `csfW_okC` 116 + `fsortsW_okC` 29 + `csfE_claimB` 180 + `checkStructFieldSortsI_claim` 55 = 380 | `csfGo_ref` 163 + `fsorts_ref` 30 + `CsfGoPost`/`FsortsPost` 15 + claim 23 = 231 | −39 % |
+| `check_sum_ctors` | `sctsW_okC` 163 + `sctsE_claim` 181 + `checkSumCtors_claim` 25 = 369 | `scts_ref` 181 + `SctsG` 5 + `SctsPost` 12 = 198 | −46 % |
+| `check_block_tables(_one)` | `ctoW_simR` 143 + `ctbW_simR` 120 + `ctoE_claim` 138 + `ctbE_claim` 128 + `checkBlockTablesE_claim` 11 = 540 | `cto_ref` 154 + `ctb_ref` 122 + `TabPost` 7 + `checkBlockTablesE_claim` 7 = 290 | −46 % |
+| **pairs** | **1 748** | **969** | **−45 %** |
+
+Gone with them: the hand models `domsW` and `sdomsW` with their arms, specs, `sdomsW_eq` and
+`checkStructDomsAt_of_block`; `csfW`/`fsortsW` with `csfK1–5`/`fsortsK1–2`; `sctsW` with `sctsK1–6`;
+`ctoW`/`ctbW` (the file `Arena/IndInstallSpec/CtbW`); the modules `Verdict/IndsE3`,
+`Arena/IndT/Install5`, `Arena/IndT/Sum5`; the statement `CheckBlockDomsAtE` (unused). Whole diff
+against master 62ca90b6: +1 100 −2 618 in 40 files.
+
+* **Two walks, two models.** `check_block_doms_at` and `check_struct_doms_at` shared the hand model
+  (`sdomsW` was `domsW` with the words dropped) and its ok proof, but their bodies differ (the block
+  reads the slices directly and returns a word, the structure walk reads them by `sl_get`; the reject
+  messages differ). They have two unified models `cbdaE`, `sdomsE` and two refinements, in
+  `Arena/IndT/Install1` with the post `DomsPost` (`stage`, `grow`, `abs`) for both.
+* **`G`**: `CoreStubsE p` for the two walks (their only claimed callee is `is_def_eq_core`;
+  `fvar_type_d` and `sl_get` are lifted); `VerdictCtx p` for the field sorts (`check_field_sort_bound`
+  stays `callE`, its claim needs `nv`); `SctsG p` (`VerdictCtx` and `CcvE`) for `check_sum_ctors`, whose
+  callee `check_sum_ctor` stays `callE` with its `ctor_claim`; `CheckStructProjTableRE p` for the
+  tables (`check_struct_proj_table` stays `callE`; the definition moved from `BlkE3` to the new
+  `Arena/IndT/Tables`).
+* **Callers through the run.** `check_sum_ctor`'s model `ctorW` read `sdomsW`, and
+  `check_sum_ctor_tail`'s `ctlW` read `fsortsW`: both now read the run (`cR (n+2) "check_struct_doms_at"
+  […] m`; the reader `fsortsR`), so `ctorW_okC`, `ctlW_okC` and `sctsW_okC`'s successor `scts_ref` take
+  `SumProg p` (the lookups). `cbao_ref` reads `cbda_ref` by `RefE.run_ok`/`RefE.run_err`; `ctor_claim`
+  reads `sds_ref` the same way; `Tail` reads `ctb_ref` by `RefE.run_okW`. The kept statements
+  (`checkStructFieldSortsI_claim`, `CheckSumCtorsE`, `CheckBlockTablesE`, the five `@[refines]`) are
+  one-liners from the refinements.
+* **Recipes**: `simp [rdW]` (`cbdaE`, `ctoE`, `ctbE`), `simp []` (`sdomsE`, `csfGoE`, `fsortsE`; the
+  default `finish` fails for `cbdaE`/`sdomsE` and took 12 s for `Install1` against 3.7 s), the old
+  `simp [Cmp.evalW, Cmp.eval]` for `sctsE` (`finish` fails).
+* **Shake.** The moves left 23 imports unused; removing them broke twelve downstream modules that
+  used them transitively, which now import what they use.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+62ca90b6, load 25–90, so ±15 % is noise; the second series for the modules that looked slower):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndT/Install1` | 1.59 | **3.69** | **slower (+2.1 s)**: `cbdaE`, `sdomsE` and their refinements moved in |
+| `Arena/IndInstallSpec/DomsW`, `Verdict/IndsE3` (deleted), `Verdict/IndBSum1` | 13.32 | 1.37 | …from here |
+| `Arena/IndT/Sum3` | 2.29 | **3.07** | **slower (+0.8 s)**: `csfGoE`, `fsortsE`, their refinements |
+| `Arena/IndSumSpec/CheckStructFieldSortsISucc`, `Arena/IndT/Install5` (deleted) | 6.00 | 1.76 | …from here |
+| `Arena/IndT/Tables` (new) | — | 16.44 | the tables' models and refinements |
+| `Arena/IndInstallSpec/CtbW` (deleted), `Verdict/BlkE3`, `Arena/IndRealSctC` | 41.92 | 5.43 | …from here |
+| `Arena/IndSumSpec/CtorX`, `Arena/IndT/Sum5` (deleted), `Verdict/IndBSum4` | 20.27 | 15.12 | `sctsW` and its spec gone |
+| `Verdict/IndBSum3` | 27.34 / 30.74 | **31.79 / 37.08** | **slower (+15–20 %)**: only `ctor_claim`'s `check_struct_doms_at` call changed (6 lines shorter); the import header loads as fast (0.67 s both) |
+| `Verdict/IndA4` | 9.27 / 11.79 | **11.06 / 13.36** | **slower (+13–19 %)**: doc comment only; it now imports the unified models of `Tables` and `IndBSum1`'s importers |
+| `Verdict/IndsE4` | 3.16 / 4.05 | 4.28 / 4.75 | `cbao_ref` reads `cbda_ref` from the run |
+| the other 14 | 57.82 | 53.33 | |
+| **sum (31 modules)** | **178.4** | **134.9** | **−24 %** |
+
+`IndBSum3` and `IndA4` are slower although their own text barely changed; a guess is a larger
+simp/grind environment from the unified models now imported below them (not investigated further).
+The default `finish` for `cbdaE`/`sdomsE` was the one recipe change tried (it fails).
+
+No kit or generator change was needed.
