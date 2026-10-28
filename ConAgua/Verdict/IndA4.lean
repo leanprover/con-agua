@@ -7,7 +7,7 @@ import ConAgua.Verdict.IndAGen
 
 `checkBlockTailE_claim`: `CheckBlockTailE p` from the claims of `check_block_idx_sorts`,
 `check_block_rec` (generated `err_stmt`s) and `check_block_tables` (`CheckBlockTablesE`, in the
-shape of `ctbW_simR`); `check_block_tail_rec` is entered through its model `ictrE`.
+shape of `ctb_ref`); `check_block_tail_rec` is entered through its model `ictrE`.
 `cons_block_ctors`, `flush_caches`, `block_nested_bit` and `cons_block_recs_tf` are outside the
 verdict closure.
 -/
@@ -36,7 +36,7 @@ l_model ictrE_spec (p : Prog) (hf : p.lookup "check_block_tail_rec" = some check
 err_stmt CheckBlockIdxSortsE := checkBlockIdxSorts_refinesC fuel n
 err_stmt CheckBlockRecE := checkBlockRec_refinesC fuel n
 
-/-- **`check_block_tables`' error claim**, in the shape of `ctbW_simR` (the recursion over the
+/-- **`check_block_tables`' error claim**, in the shape of `ctb_ref` (the recursion over the
 members; any fuel `F ≤ 2 ^ 62`). -/
 def CheckBlockTablesE (p : Prog) : Prop :=
   ∀ (_ : TabsProg p) (_ : ApdF p) (dn : NIdx → Option ConLeche.Name) (pp : Word) (bs : BlockShape)
