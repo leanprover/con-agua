@@ -956,7 +956,7 @@ sequential driver `ca_start` runs the same two entries one after the other
 3 (the buffer's header only), then one entry-2 run over all groups `[0, k)` in
 place, on phase A's own arrays, so it needs the setup stub's region plus 16
 bytes, where it keeps its return address and the caller's `r15`
-([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L209-L218)).
+([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L210-L219)).
 Its machine-level theorem
 ([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L174-L184))
 says that an accept means the two L runs accepted, and an error report

@@ -2004,17 +2004,17 @@
    137    return 71757147230292
    138  }
 
-== ConAgua/Compiler/Abi.lean#L209-L218
-   209  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
-   210    harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
-   211    returns `rdx = 0` and `rax = 2^63 + k`, `ca_check_seq` on the same region for `[0, k)`, whose
-   212    result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
-   213    on the arrays as phase A left them.
-   214    It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
-   215    driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
-   216    address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
-   217    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
-   218    the driver touches no callee-saved register but `r15`. -/
+== ConAgua/Compiler/Abi.lean#L210-L219
+   210  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
+   211    harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
+   212    returns `rdx = 0` and `rax = 2^63 + k`, `ca_check_seq` on the same region for `[0, k)`, whose
+   213    result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
+   214    on the arrays as phase A left them.
+   215    It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
+   216    driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
+   217    address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
+   218    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
+   219    the driver touches no callee-saved register but `r15`. -/
 
 == ConAgua/Final/DrvAbi.lean#L174-L184
    174  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
