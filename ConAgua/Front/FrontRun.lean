@@ -200,13 +200,13 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
   (hpl : p.lookup "apply_level" = some applyLevel)
   (hpr : p.lookup "apply_rec" = some applyRec) (hpt : p.lookup "apply_str" = some applyStr)
-  (hE : ExprLookups p) (hpy : p.lookup "apply_any" = some applyAny)
+  (hE : ExprLookups p)
   (hF : DeclFieldLookups p) (hDL : DeclLookups p) (hpz : p.lookup "apply_dline" = some applyDLine)
   (hpi : p.lookup "front_init" = some frontInit) (hpd : p.lookup "front_run" = some frontRun)
   (hFI : L.Front.Ind.IndFieldLookups p) (hAI : L.Front.Ind.IndApplyLookups p)
   (hII : L.Front.Ind.IndInstallLookups p) (hXI : L.Front.Ind.IndLineLookups p)
 
-include hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz in
+include hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz in
 /-- `front_line` under a run invariant `Inv` that bounds the pool's top (`hInv`) and that every
 line applied keeps (`hpres`, a fact of the model). -/
 theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Inv : Mem → Prop)
@@ -221,7 +221,7 @@ theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Inv : Mem → 
   have hi' : i.toNat ≤ b.size := by have := L.Scan.lt_of_lt_ofNat hi; omega
   obtain ⟨h1, h2⟩ := hInv _ hI
   have h := Triple.keep hE.no_st8
-    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n s₀ hm i hi' h1 h2)
+    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz b hb n s₀ hm i hi' h1 h2)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hW, hk, hl⟩ := M.of_run (P := fun s => s = s₀) hs hrun h
@@ -262,7 +262,7 @@ theorem initK_inv (Inv : Mem → AState → StateD → Prop) (Inv₀ : Mem → A
   obtain ⟨st₀, a₁, -, hI⟩ := hinit _ _ _ h₀ hi
   exact ⟨a₁, st₀, hI⟩
 
-include hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz hpi hpd hFI hAI hII hXI in
+include hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz hpi hpd hFI hAI hII hXI in
 /-- **Bytes → stores, in one theorem**: when `front_run()` returns `0` on a memory holding the
 input `b` and related to the arena state `a₀` (by `ArenaD`) and to the blank parse state, con-ron's
 `parseBytes b` accepts from `a₀`, and the memory after is related to its final arena state by
@@ -282,7 +282,7 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   intro s r s' hs hrun h0
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
     (frontRun_specI p (lineKW p b.data) b.data (fun m => ∃ a st, FrontInv b m a st)
-      (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data
+      (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz b.data
         hsize _ (fun m ⟨_, _, hI⟩ => ⟨hI.2.1.1.lit.1.cap, hI.2.1.1.lit.1.top⟩)
         (inv_step p (FrontInv b) b h64 hsize
           (fun m m' i ok nx st a hI hi h hok => lineKW_step b h64 hsize p hFI hAI hII hXI m m' i ok nx
@@ -299,16 +299,16 @@ end run
 
 /-! ## The whole program -/
 
-/-- Every function of the frontend: the validator, the fields passes, the stores, the apply
+/-- Every function of the frontend: the validator, the single pass, the stores, the apply
 steps, the line and the driver. -/
 def frontAllProg : Prog := L.Scan.Validator.valProg ++
-  [("rec_nat_list", recNatList), ("rec_str_name", recStrName),
-   ("rec_num_name", recNumName), ("rec_line_loop", recLineLoop), ("obj_val", objVal),
-   ("rec_obj", recObj), ("expr_val", exprVal), ("rec_expr_loop", recExprLoop)] ++
+  [("rec_nat_list", recNatList), ("sub_bit", L.Front.LineRec.subBitF),
+   ("sub_val", L.Front.LineRec.subValF), ("sub_rec", L.Front.LineRec.subRec),
+   ("line_rec", L.Front.LineRec.lineRec)] ++
   exprProg.filter (fun f => f.1 != "skip_digits" && f.1 != "num_end" && f.1 != "byte_in" &&
     f.1 != "hex_val" && f.1 != "hex4" && f.1 != "hex3") ++
-  [("front_line", frontLine), ("fast_line", L.Scan.Fast.fastLine), ("apply_rec", applyRec), ("apply_str", applyStr),
-   ("apply_any", applyAny), ("front_run", frontRun),
+  [("front_line", frontLine), ("apply_rec", applyRec), ("apply_str", applyStr),
+   ("front_run", frontRun),
    ("match_dlit", matchDlit), ("str_code", strCode), ("hints_val", hintsVal),
    ("d_member", dMember), ("decl_val", declVal), ("decl_code", declCodeF),
    ("rec_decl_obj", recDeclObj), ("rec_decl_line", recDeclLine),
@@ -363,7 +363,7 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
       ArenaD s'.mem a' ∧ StateDR s'.mem st'; ⊤⦄ :=
   frontRun_refines frontAllProg frontAllProg_scan frontAllProg_front rfl rfl rfl rfl rfl rfl
-    frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl rfl rfl frontAllProg_indFields
+    frontAllProg_expr frontAllProg_dfields frontAllProg_decl rfl rfl rfl frontAllProg_indFields
     frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine b h64 hsize n s₀ hm hpool a₀ hA hD
     hok hoff hpins hmode
 

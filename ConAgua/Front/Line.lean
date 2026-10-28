@@ -43,7 +43,7 @@ namespace L.Front
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine -/
 @[l_impl ConRon.Arena.Frontend.applyLine]
--- con-leche: ConLeche/Frontend/Scan/Fast.lean:2587-2599 ConLeche.Frontend.scanLineFwd
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2576-2599 ConLeche.Frontend.scanLineFwd
 def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
   s := call skip_ws(i);
   if s < len(IN.u8) && IN.u8[s] == 10 { return (1, s + 1) };
