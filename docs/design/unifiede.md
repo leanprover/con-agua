@@ -1837,7 +1837,35 @@ module at parity (`Arena/RecClassSpec/CrW` 24.5/24.5, `Verdict/PosE1M` 21.9/21.8
 8.5/7.7, `IndBHdr` 5.5/5.2, the 14 others within 0.4 s) but `L/ModelGenTest` 23.2 → 25.4 (the two
 new tests).
 
-### 3.26 The depth-0 leftovers of the sum family and the domain walks (`check_block_doms_at`, `check_struct_doms_at`, `check_sum_ctors`, `check_struct_field_sorts_i(_go)`)
+**Second round** (wishes from batch 3):
+
+* **`cut k`** (b3b, `IndBTka`): the generator made the code after an `if` both of whose branches
+  fall through a join point of the model (`fW.jᵢ`), but the step theorem still ran `vcgen` over
+  the whole body, so each path after the `if`s was proved once per combination of them. With
+  `cut k` the body after its first `k` statements is `name.tailS := L.seqDrop k F.body` with a
+  step theorem `name.tail` against the join point at the locals of its start state, and the step
+  reads the body as `L.seqTake k F.body name.tailS` (the hand tail specs' shape: `depsTailS`,
+  `derTailS`, the deleted `tkaTailS`). `seqDrop`/`seqTake`/`seqTake_drop` moved from `Arena/LdRd`
+  to `L/Logic`. `tkaE` takes `cut 3` (`gen 20` stays: the tail's `return 0` after `sl_eq`).
+  Test `tCut`.
+* **A pair model** (b3c): a callee post `F = some ((r.headD 0, r.tail.headD 0), s'.mem)` was an
+  unsupported conjunct; the model now calls such a callee as `L.flat3 F` (`L/ErrSpec`, with
+  `flat3_none`/`flat3_some` for `simp` and `grind`). The front validation's `flat3`,
+  `map_specT`, `listed_specT` are gone; `validateE` lists `map_spec`, `listed_spec`. Test
+  `tUseLenP`.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master bc2112b9):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBTka` | 21.20 | 4.88 | `cut 3` |
+| `L/ModelGen` | 12.11 | **13.52** | **slower (+1.4 s, 12 %)**: the `cut` and pair code, compiled once |
+| `L/ModelGenTest` | 23.78 | 24.27 | two more tests |
+| `Front/IndApplyRefine9` | 9.09 | 8.87 | |
+| `Arena/DeclNatDeps`, `ExprMk`, `Verdict/InferLeavesE`, `L/Logic`, `L/ErrSpec`, `Arena/LdRd` | 71.91 | 71.96 | |
+| **sum (10 modules)** | **138.1** | **123.5** | **−11 %** |
+
+### 3.27 The depth-0 leftovers of the sum family and the domain walks (`check_block_doms_at`, `check_struct_doms_at`, `check_sum_ctors`, `check_struct_field_sorts_i(_go)`)
 
 The leaves §3.12 and §3.15 left split, but `check_block_tables(_one)` (§3.25):
 
@@ -1893,32 +1921,3 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 Both flagged modules are the new homes of models whose old modules got faster by more.
 
 No kit or generator change was needed.
-
-**Second round** (wishes from batch 3):
-
-* **`cut k`** (b3b, `IndBTka`): the generator made the code after an `if` both of whose branches
-  fall through a join point of the model (`fW.jᵢ`), but the step theorem still ran `vcgen` over
-  the whole body, so each path after the `if`s was proved once per combination of them. With
-  `cut k` the body after its first `k` statements is `name.tailS := L.seqDrop k F.body` with a
-  step theorem `name.tail` against the join point at the locals of its start state, and the step
-  reads the body as `L.seqTake k F.body name.tailS` (the hand tail specs' shape: `depsTailS`,
-  `derTailS`, the deleted `tkaTailS`). `seqDrop`/`seqTake`/`seqTake_drop` moved from `Arena/LdRd`
-  to `L/Logic`. `tkaE` takes `cut 3` (`gen 20` stays: the tail's `return 0` after `sl_eq`).
-  Test `tCut`.
-* **A pair model** (b3c): a callee post `F = some ((r.headD 0, r.tail.headD 0), s'.mem)` was an
-  unsupported conjunct; the model now calls such a callee as `L.flat3 F` (`L/ErrSpec`, with
-  `flat3_none`/`flat3_some` for `simp` and `grind`). The front validation's `flat3`,
-  `map_specT`, `listed_specT` are gone; `validateE` lists `map_spec`, `listed_spec`. Test
-  `tUseLenP`.
-
-Elaboration (user seconds, median of 3 interleaved runs, base master bc2112b9):
-
-| module | base | new | |
-|---|---:|---:|---|
-| `Verdict/IndBTka` | 21.20 | 4.88 | `cut 3` |
-| `L/ModelGen` | 12.11 | **13.52** | **slower (+1.4 s, 12 %)**: the `cut` and pair code, compiled once |
-| `L/ModelGenTest` | 23.78 | 24.27 | two more tests |
-| `Front/IndApplyRefine9` | 9.09 | 8.87 | |
-| `Arena/DeclNatDeps`, `ExprMk`, `Verdict/InferLeavesE`, `L/Logic`, `L/ErrSpec`, `Arena/LdRd` | 71.91 | 71.96 | |
-| **sum (10 modules)** | **138.1** | **123.5** | **−11 %** |
-
