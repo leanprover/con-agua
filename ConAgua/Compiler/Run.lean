@@ -85,18 +85,20 @@ def kWordBytes (v : Word) : List UInt8 :=
 /-- Run `entry` of the compiled `p` on Kraken's semantics: the table at `0x10000`, the L stack
 (`stackBytes` bytes) below `0x400000`, the arrays from `0x1000000` on, the trampoline's caller
 stack at `0x8000`, returning to `0xdead0`. Returns `(rax, rdx)` at the return. -/
-def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (nb nw : Nat) (fuel : Word)
+def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (fuel : Word)
     (stackBytes : Nat := 4096) : Except String Outcome := do
-  let tab : Tab := Prog.tab p nb nw
-  -- the word array at each descriptor position (today's layout: `wposInv`, then the tier)
-  let atW : Nat → TieredArray := fun q => let n := tab.wposInv q; if n < tierOff then TieredArray.t0 n else tier1 (n - tierOff)
+  let tab : Tab := Prog.tab p
   let T := 0x10000
   let stackTop := 0x400000
   let ra : Nat := 0xdead0
   let csp := 0x8000
-  -- the arrays, one after the other
-  let (bases8, next) := (List.range nb).foldl (fun (acc, a) q => (acc.push a, a + (m.arr8 q).size + 64)) (#[], 0x1000000)
-  let (bases64, _) := (List.range nw).foldl (fun (acc, a) q => (acc.push a, a + 8 * (m.arr64 (atW q)).size + 64)) (#[], next)
+  -- the arrays, one after the other, by descriptor position (a byte position holds bytes)
+  let bytesAt : Nat → List UInt8 := fun q =>
+    if q < tab.nb then (m.arr8 (tab.wAt q).arr).toList else (m.arr64 (tab.wAt q)).toList.flatMap kWordBytes
+  let lenAt : Nat → Nat := fun q =>
+    if q < tab.nb then (m.arr8 (tab.wAt q).arr).size else (m.arr64 (tab.wAt q)).size
+  let (bases, _) := (List.range (tab.nb + tab.nw)).foldl
+    (fun (acc, a) q => (acc.push a, a + (bytesAt q).length + 64)) (#[], 0x1000000)
   let mut d : DataMem := ∅
   -- the caller's stack: 64 bytes below and the return address
   d := kStoreBytes d (csp - 64) (List.replicate 64 0)
@@ -106,16 +108,11 @@ def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (nb nw : 
   -- the table
   d := kStoreWord d (T + Tab.stackTop.toNat) stackTop.toUInt64
   d := kStoreWord d (T + Tab.stackLimit.toNat) (stackTop - stackBytes).toUInt64
-  for a in [0:nb] do
-    let b8 : Nat := bases8[a]!
-    d := kStoreWord d (T + (tab.base8 a).toNat) b8.toUInt64
-    d := kStoreWord d (T + (tab.len8 a).toNat) (m.arr8 a).size.toUInt64
-    d := kStoreBytes d b8 (m.arr8 a).toList
-  for q in [0:nw] do
-    let b64 : Nat := bases64[q]!
-    d := kStoreWord d (T + (tab.dbase q).toNat) b64.toUInt64
-    d := kStoreWord d (T + (tab.dlen q).toNat) (m.arr64 (atW q)).size.toUInt64
-    d := kStoreBytes d b64 ((m.arr64 (atW q)).toList.flatMap kWordBytes)
+  for q in [0:tab.nb + tab.nw] do
+    let b : Nat := bases[q]!
+    d := kStoreWord d (T + (tab.dbase q).toNat) b.toUInt64
+    d := kStoreWord d (T + (tab.dlen q).toNat) (lenAt q).toUInt64
+    d := kStoreBytes d b (bytesAt q)
   d := kStoreBytes d (T + tab.romBase.toNat) tab.rom
   d := kStoreBytes d (T + tab.resBase.toNat) (List.replicate (8 * tab.nxres) 0)
   for g in [0:tab.ng] do
