@@ -2252,7 +2252,7 @@
     43  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
     44  """
 
-== scripts/gates.sh#L11-L21
+== scripts/gates.sh#L11-L23
     11  # Steps, in order (stops at the first failure):
     12  #   links       scripts/overview-links.sh            OVERVIEW.md/README.md line anchors
     13  #   vendor      scripts/bump-con-ron.sh --check      vendor/ = upstream + patches
@@ -2260,10 +2260,12 @@
     15  #   provenance  scripts/provenance.py check          every FunDecl's twin citation is exact
     16  #   reasons     scripts/reasons.py --check           (when the script exists)
     17  #   build       scripts/lake build ConAgua           (timeout 90 min)
-    18  #   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
-    19  #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
-    20  #   checker-prog  scripts/checker_prog.py --no-build --check   the generated program files are current
-    21  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
+    18  #   warnings    scripts/lean_warnings.py --base BASE   no Lean warning in the changed .lean files (vendor/
+    19  #               excluded), also for modules restored from the shared cache (their logs are in the log store)
+    20  #   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
+    21  #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
+    22  #   checker-prog  scripts/checker_prog.py --no-build --check   the generated program files are current
+    23  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 
 == scripts/gate_select.py#L17-L43
     17  The table (first match per path; "cheap" = links, vendor, modules, provenance, reasons, always run):
