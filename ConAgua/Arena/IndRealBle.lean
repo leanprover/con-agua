@@ -20,7 +20,7 @@ is why `IndInstallSpec/PapW.blockLargeElimAllowed_spec` was a stub contract):
   unchanged, the verdict as a word, the twin's store unchanged and its cache holding readbacks;
 * `blockLargeElimAllowed_simC`: under `StageC` and the shape's denotation (con-ron's
   `blockLargeElimAllowed_cspec`'s precondition), `StageC` after and the twin's step a `PStep`
-  (`readLevelM_pstep`) — for lane `indstaget`'s `grpAW_okC`, in place of the stub contract.
+  (`readLevelM_pstep`) — for `gen_rec_check_prep`'s refinement (`grp_ref`), in place of the stub contract.
 -/
 
 set_option experimental.vcgen true
@@ -229,7 +229,7 @@ theorem blockLargeElimAllowed_sim {p : Prog} (P : BleProg p) (n : Nat) {m : Mem}
   exact bleW_ok P hW hS hq hsrc hrl hd
 
 /-- **`block_large_elim_allowed` refines `blockLargeElimAllowed` under `StageC`** (for lane
-`indstaget`'s `grpAW_okC`, replacing `IndInstallSpec/PapW.blockLargeElimAllowed_spec`): from the
+`grp_ref`, replacing `IndInstallSpec/PapW.blockLargeElimAllowed_spec`): from the
 shape's denotation (con-ron's `blockLargeElimAllowed_spec`'s precondition) and `AbsOK` (the memory
 is unchanged), `StageC` after, the twin's step a `PStep`, the verdict con-leche's. -/
 theorem blockLargeElimAllowed_simC {p : Prog} (P : BleProg p) (n : Nat) {env : ConLeche.Env}

@@ -1,11 +1,12 @@
-import ConAgua.Verdict.IndBGrp
+import ConAgua.Arena.IndT.GenRec2
+import ConAgua.Verdict.IndBGrpM
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 /-!
 # `classes_nfs`' error claim (lane `verdicts-b`, helper `verdicts-b-fin`, fork `nfs`)
 
-`ClassesNfsE` (IndBGrp.lean) proved. `classes_nfs` has nested loops (the generator cannot model
+`ClassesNfsE` (`Arena/IndT/GenRec2`) proved. `classes_nfs` has nested loops (the generator cannot model
 it): its error model is written by hand over the ok model's pieces (`cnsW`, `ncpW`,
 RecGenSpec/DecB.lean), keeping only what an error of class `≠ 0` can come from, the
 `target_major_nfs` call (`iw_alloc` is outside the verdict closure, the copy loop and the stores
@@ -443,7 +444,7 @@ theorem cnsE_claim (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (ht
 
 end loopE
 
-/-- **`classes_nfs`' error claim** (`ClassesNfsE`, the hypothesis of `genRecCheck_claim'`), at
+/-- **`classes_nfs`' error claim** (`ClassesNfsE`, what `gen_rec_check_prep`'s error arms assume, `GrpG`), at
 every `dn`, `vis`, `fe`, `env` (the error half of `classesNfs_refinesLpC`). -/
 theorem classesNfsE_of {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
     (henv : ConLeche.EnvWF env) (P : CnsProg p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
