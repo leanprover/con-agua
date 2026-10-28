@@ -4,7 +4,6 @@ import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Verdict.WhnfModels7E
-import ConAgua.Arena.KnotE
 
 /-!
 # The stuck and irrelevance side of `DefEq.lean`: `prop_irrel` (lane `defeq`, helper `defeq-top`)

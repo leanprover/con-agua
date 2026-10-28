@@ -1054,7 +1054,7 @@ and completeness.
 ### 10.4 The gates
 
 A branch lands on master only after the gates of
-[`scripts/gates.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/gates.sh#L11-L21)
+[`scripts/gates.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/gates.sh#L11-L23)
 pass on its merge with master: `lake build` (which includes the axiom
 guards, `checkerFile_eq` and the staleness checks of the generated closures),
 the `--check` modes of the closure scripts and of the generator of the checker's program
@@ -1062,7 +1062,9 @@ the `--check` modes of the closure scripts and of the generator of the checker's
 module is built by some target), the citation check `scripts/provenance.py
 check`, the vendor check, `scripts/diff-e2e.py`, the import check `scripts/shake.py` (every
 import that Lean's import minimizer, `lake shake`, finds unused is listed in
-`scripts/shake-allowlist.txt` with the reason the build needs it), and this document's link gate.
+`scripts/shake-allowlist.txt` with the reason the build needs it), the warning check
+`scripts/lean_warnings.py` (no Lean warning in the changed modules, including those restored from the
+shared build cache, whose warnings are kept in a log store beside it), and this document's link gate.
 Each merge runs the gates its change can affect
 ([the table](https://github.com/leanprover/con-agua/blob/master/scripts/gate_select.py#L17-L43)).
 `scripts/overview-links.sh` extracts every line-anchored link of OVERVIEW.md

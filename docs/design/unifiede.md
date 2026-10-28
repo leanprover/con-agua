@@ -2139,10 +2139,11 @@ is one model and one refinement by §3.2 unless it says otherwise.
 - [x] `Verdict/FrontE` (`decl_kind`, `apply_decl`), `Verdict/FrontRunE` (`apply_d_line`): `RefC`s over
   the line's record verdict (`VerdictClaimR`), as `apply_ind` (§3.28). Done (§3.32: `declKind_ref`,
   `applyDecl_ref`, `applyDLine_ref`).
-- [ ] `Verdict/FrontStageE` (`builtin_prelude`), `Verdict/FrontRunE` (`front_line`, `front_run`):
+- [x] `Verdict/FrontStageE` (`builtin_prelude`), `Verdict/FrontRunE` (`front_line`, `front_run`):
   their ok sides are not per-function refinements but the generic driver (`Front/Driver`'s `runW`/
   `runI` over a line model `lineKW`, `DriverRefine`, the invariant steps of `FrontRun`/`FrontPreOK`)
-  and the stage composition (`builtin_of_parts`, `preSim`); see §3.32.
+  and the stage composition (`builtin_of_parts`, `preSim`); see §3.32. Done (§3.38‥§3.40:
+  `frontLine_ref`, `frontRun_ref`, `builtinPrelude_ref`; the generic driver is gone).
 
 **B. The knot's own functions** (ok halves the knot's `CoreSpec` slots, outside §3.1's
 inventory; `G` the knot's error half at the callees' fuel and `RefE.coreSpec`/`RefE.coreSpecE` for
@@ -2154,12 +2155,14 @@ the slots, as `m2c_*` in §3.7):
   in `WhnfMidE`, `WhnfUnitE`, `WhnfIotaE`, `WhnfIotaRecE`, `WhnfPrepE`, `WhnfIdxE`, `WhnfPirrE`,
   `WhnfM2CE`, `WhnfCertsE`, `WhnfSetE`, `WhnfStuckE`;
 - [ ] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
-  `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`),
+  `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`; done,
+  §3.42),
   `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step`, `whnf`, `whnf_loop`, `whnf_step`; claims
   in `WhnfSlotE`);
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
-  `defeq_slot`, `defeq_body`, `is_def_eq_core`);
+  `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
+  `DefEqSpineE` (and `defeq_lams_inner`; §3.41);
 - [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`), `InferBindE` (6: `infer_lams`/`infer_pis` and
   their leaves), `InferSpineE` (4), `InferArmsE` (8), `InferKnotE` (4: `infer_body(_io)`, `infer`,
   `infer_io`).
@@ -2566,3 +2569,236 @@ and `StackKept.restoreG'` (`WhnfCoreRefine`) are the restore of a dropped-bound 
 `struct_unit_head`, `struct_eta_cert_with`, `major_to_ctor` and `iota_rec_fire` share; a
 `RefE.of_callE` shape (a callee read through `callE`, ok half from its `CoreSpec`, error half from a
 claim, then the rest: `pm_m2c`, `pm_lmtc`) recurs at every non-migrated knot callee.
+
+### 3.38 Retirement, group A: the frontend's driver, design (`front_line`, `front_run`, `builtin_prelude`)
+
+§3.32 skipped these three because their ok halves are not refinements of the functions but of
+generic models: `front_line`'s hand model `frontLineW` (the validator's `lineFwdN` with the record
+passes, `frontLineW_eq` to the code, refined by `frontLineW_refines` and, for the records' words,
+`frontLineW_grow`); `front_run`'s generic loop model `runW`/`runK`/`runI` over a line model
+`lineKW` (`Front/Driver`'s `runLoop_spec(I)`, `frontRun_spec(I)`), refined by `DriverRefine`'s
+`runW_refines`/`runI_refines` under an invariant whose step is `lineKW_step` (`FrontInv`),
+`lineKW_step_pre` (`FrontInvP`), `lineKW_step_ok` (`FrontInvOK`), with `inv_step`, `initK_inv`,
+`frontLineK_spec` to thread the memory invariant through the generic triples; `builtin_prelude`'s
+the stage composition `builtin_of_parts` with `bp_h1`‥`bp_h3`. The error claims repeat the same
+walks (`frontLineE_claim`, `loop1_claim`, `frontRunE_claim`, `preludeStageE`).
+
+What replaces what:
+
+* **`front_line`**: `frontLineE` `unified` (`Front/LineRef`): `skip_ws`, `line_rec`, `apply_rec`,
+  `apply_expr` lifted, `apply_dline` by its unified model. One `RefC`, `frontLine_ref`, at any
+  parse state `st` related to the memory: the ok fact `FrontLinePost` (a line it applies is
+  `LineStep`, plus `DGrow` and the mode; `(0, 0)` keeps the memory), the error claim the line's
+  record verdict (`∃ r q, scanLineFwd b i = .ok r q ∧ VerdictClaimR (applyLine st r) a e`, today's
+  `frontLineE_claim` statement), `G` = `FrontLineG` (`ApplyIndG`, `SafeLink`). It walks the code
+  (as the error claim did) and reads the twin's scan through `lineFwd_link` at the arm's
+  `lineFwdN` value. Gone: `frontLineW`, `frontLine2W`, `lineEndW`, `lineApplyW`, `applyAnyW`,
+  `frontLineW_eq`, `applyAnyW_lineRec` (its field equations stay as a lemma), `frontLine_spec`,
+  `frontLineW_refines`, `applyAnyW_refines`, `frontLineW_grow`, `applyAnyW_grow`, `lineFwd2N_ne`,
+  `frontLineE_claim(_all)`, the `errors` model. `frontLine_refines` (`@[refines applyLine]`)
+  becomes `RefC.triple`.
+* **`front_run`**: `frontRunE` `unified`: `front_init` lifted, `front_line` through its run
+  (`callE`: the loop needs the input bytes kept, `Keep`, a fact of the run, not of the model).
+  One `RefC` for the loop, `loop_ref`, by induction on the fuel under `FrontInvOK D b` (the
+  strongest of the three invariants; `D = #[]` is the stream's blank start): the ok fact "a `0`
+  result is `finishFrom`'s acceptance with the invariant after", the error claim
+  `ErrClaimV (finishFrom st b i lineNo) a`; each line reads `frontLine_ref` by
+  `RefC.run_ok`/`RefC.run_err`, and one step lemma (`lineStep_ok`, today's `lineKW_step_pre` and
+  `lineKW_step_ok` in one) turns `FrontLinePost` at `st.pre D` into the next invariant.
+  `frontRun_ref` adds `front_init` and `parseBytes_eq`. `G` = `FrontRunG` (`nv`, `SafeLink b`;
+  `XV` comes from the invariant, `xOfTwin`). Gone: `runW`, `runK`, `runI`, `runLoop_spec(I)`,
+  `frontRun_spec(I)` and their step lemmas, `runW_refines`, `runI_refines`, `lineKW`,
+  `FrontInv`, `lineKW_step(_pre/_ok)`, `inv_step`, `initK_inv`, `frontLineK_spec`,
+  `frontRunW_refines(_pre_ok)`, `lineKW_grow`, `loop1_claim`, `frontRunE_claim`, the `errors`
+  model. `frontAll_refines_pre_ok`/`frontRunOK_checker` (read by `PipeRest`, `PipePrelude`) and
+  the `@[refines parseBytes/parseChunks]` theorems become `RefC.triple` one-liners (the blank
+  start as `D = #[]`); `frontStageE` a `RefC.run_err` one-liner.
+* **`builtin_prelude`**: `builtinPreludeLE` `unified` (`Checker/PreludeRef`, between
+  `FrontPreSimE` and `PipeRest`): `front_reset` lifted, `pre_front_run` through its run, whose
+  two halves are `front_run`'s through `preSim` (`preSim_triple`, `preFrontRun_errSim`) and
+  `frontRun_ref`. One `RefC` (ok fact today's `BP3`, error claim `ErrClaimV builtinPreludeE a`,
+  `G` = `True`: the closure and `SafeLink preludeText` are theorems at `checkerProg`). Gone:
+  `builtin_of_parts`, `bp_h1`‥`bp_h3`, `BP1`, `BP2`, `preludeStageE`'s walk;
+  `builtinPrelude_checker` and `checker_preludeStageE` become one-liners.
+
+`Audit/Final` and the stage statements (`StageSpec`, `StageSpecE`, `RelSpec`) do not change.
+Landing in two steps: `front_line` and `front_run` first, `builtin_prelude` second.
+
+### 3.39 Retirement, group A: the frontend's driver, first landing (`front_line`, `front_run`)
+
+§3.38's design, the first two functions; nothing skipped (`builtin_prelude` is the second landing).
+
+| function | before: ok side (models, specs, refinements) + error claims | after | change |
+|---|---:|---:|---:|
+| `front_line` | `frontLineW` and its pieces 40, `applyAnyW_lineRec`/`frontLineW_eq` 65, `frontLine_spec` 23, `applyAnyW_refines`/`frontLineW_refines`/`frontLine_refines` 131, `applyAnyW_grow`/`frontLineW_grow` 56, `applyDLine_runF` 16; `frontLine_specE`, `lineFwd2N_ne`, `frontLineE_claim(_all)` 189, `SafeLink` 7 = 527 | `frontLine_specE` 11, `LineLookups` 13, `lineRec_fields`/`scan_of_fwd`/`scan_shape`/`lineStep_blank` 86, `FrontLineG`/`LineClaim`/`FrontLinePost` 16, `frontLine_ref` 150, `frontLine_refines` 15, `frontAllProg_line` 5, `SafeLink` 7 = 303 | −42 % |
+| `front_run` | `Driver`'s `runW`/`runK`/`runI` with lemmas, `runLoop_spec(I)`, `frontRun_spec(I)` 132; `runW_refines`/`runI_refines` 83; `lineKW`, `FrontInv`, `lineKW_step(_pre/_ok)`, `inv_step`, `initKW_inv`, `initK_inv`, `frontLineK_spec`, `lineKW_grow`, `frontLineW_shape` 196; `frontRunW_refines(_pre_ok)`, `frontRun_refines`, `frontAll_refines(_pre_ok)`, `frontRunOK_checker`, the two `parseChunks` ones 128; `frontRun_specE`, `NVCls`, `frontNV*`, `loop1_claim`, `frontRunE_claim`, `frontStageE` 147 = 686 | `frontRun_specE` 6, `lineStep_ok` 31, `FrontRunG` 5, `loop_ref` 84, `frontRun_ref` 30, `frontRun_refines` 14, `frontRunOK_checker` 22, `frontRun_checker_chunks` 15, `frontRun_errClaim` 13, `frontStageE` 21, `pre_nil`s 4 = 245 | −64 % |
+| **pairs** | **1213** | **548** | **−55 %** |
+
+Whole diff (without this report and the warning fixes below): +837 −1706 in 26 files. Gone besides:
+the files `Verdict/FrontRunE`, `Front/FrontPreOK3`; `runF` and its lemmas (`RunModel` keeps
+`invoke_loc`); `frontAll_refines_chunks` (its statement at `checkerProg`, `frontRun_checker_chunks`,
+carries `@[refines parseChunks]`).
+
+Choices:
+
+* **`G`**: `FrontLineG` (`ApplyIndG`, `SafeLink b`) for the line; `FrontRunG` (`nv`, `SafeLink b`)
+  for the driver, whose invariant gives the line's `XV` (`xOfTwin`).
+* **One invariant**: the loop runs under `FrontInvOK D b` only; the stream's blank start is
+  `D = #[]` (`frontRun_refines`, `frontRun_checker_chunks`), so `FrontInv` and its step are gone.
+  `frontLine_ref` is stated at any related parse state; `lineStep_ok` moves its ok fact from
+  `st.pre D` to the invariant at `st`.
+* **Through the run**: the loop calls `front_line` by `callE` (the next line needs the input bytes
+  kept, `Keep`, a fact of the run: `Triple.keep`) and reads `frontLine_ref` by
+  `RefC.run_ok`/`run_err`; the line's callees are lifted, `apply_dline` its unified model.
+* **The scan** is read through the validator (`lineFwd_link`) at the arm's `lineFwdN` value; the
+  record's fields against the record passes' links through `lineRec_fields` (from
+  `applyAnyW_lineRec`).
+* **Recipes**: `simp [Cmp.evalW, Cmp.eval]` with `heartbeats 1000000` for `frontLineE` (the default
+  `finish` fails, also with `finish [Cmp.evalW, Cmp.eval]`; `simp []` takes as long), the default
+  for `frontRunE`.
+* Also in this landing (warnings a cold build shows): `Front/LineRec`, `LineRecLink` (unused simp
+  arguments and variable, deprecated names), `ApplyDeclRefine`, `FieldsDeclLink` (`if_pos`/`if_neg`).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+0a05a703, `_tmp/retire-front/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Front/LineRef` (new) | – | **20.18** | `frontLineE`'s generated step proof is 19.2 of it … |
+| `Verdict/FrontRunE` (deleted) | 8.88 | – | … the `errors` model and claims were here … |
+| `Front/Line` | 6.06 | 1.86 | … and `frontLine_spec` here |
+| `Front/FrontRunRef` (new) | – | 3.00 | |
+| `Front/FrontPreOK`, `FrontPreOK3` (deleted), `Driver`, `DriverRefine`, `LineRefine`, `FrontStageE`, `ChunkBridge` | 9.78 | 4.94 | |
+| `Front/FrontRun`, `FrontPre`, `ApplyDLineRef`, `Checker/FrontProg`, `PipePrelude`, `PipeRest` | 47.55 | 46.55 | |
+| **sum (17 modules)** | **72.37** | **76.53** | **+6 %** |
+
+Flagged: `Front/LineRef` (20.2 s) is slower than the three places it replaces (15.0 s): the
+unified model's step proof over the line's nine arms. Tried: `simp []` (21.1 s), `finish
+[Cmp.evalW, Cmp.eval]` (fails). No generator or kit change was needed; a faster unified recipe for
+long straight-line arms (the `errors` model of the same function took about 6 s) would be a
+generator wish.
+
+### 3.40 Retirement, group A: the frontend's driver, second landing (`builtin_prelude`)
+
+§3.38's third function; with it §3.30's group A is done.
+
+| function | before: ok composition + error claim | after | change |
+|---|---|---|---:|
+| `builtin_prelude` | `builtin_of_parts` 16, `BP1`/`BP2` 8, `bp_h1`‥`bp_h3` 40, `builtinPrelude_checker` 3, `blank_pre_empty`/`pre_empty` 4; `builtinPrelude_specE` 2, `run_of_callE_err` 8, `builtinPreludeE_fails` 10, `preludeStageE` 50, `checker_preludeStageE` 5 = 146 | `builtinPrelude_specE` 6, `run_of_callE_err` 8, `builtinPreludeE_fails` 10, `builtinPrelude_ref` 79, `builtinPrelude_checker` 10, `checker_preludeStageE` 14 = 127 | −13 % |
+
+Whole diff (without this report): +203 −222 in 5 files. The rate is low because the stage was
+already a composition of the frontend's halves: the ok facts of `pre_front_run`, the `CTL` store
+and `front_reset` stay as they were in `bp_h1`‥`bp_h3`, now arms of one walk.
+
+Choices:
+
+* **`G` is `True`**: the error arms need the closure (`checkerProg_nv`) and `SafeLink preludeText`
+  (`safeLink`), both theorems at `checkerProg`. `Checker/PreludeRef` sits between `FrontPreSimE`
+  (`preFrontRun_errSim`) and `PipeRest` (which reads `builtinPrelude_checker`).
+* **Through the run**: `pre_front_run` is `callE` (its halves are `front_run`'s through `preSim`:
+  `preSim_triple` with `frontRunOK_checker`, `preFrontRun_errSim` with `frontRun_errClaim`, which
+  now takes `checkerProg`'s call, `callE_frontAll` inside); `front_reset` lifted.
+* **`BP0`** states `240 < CTL`'s size in place of the pool's bound (no reader left since §3.39): the
+  unified model stores `CTL[240]` without a guard, the bound is kept across `pre_front_run` by
+  `Keep` (`checkerProg_noSt8`). `preludeStageE`/`frontStageE` (with their `SafeLink` parameter) are
+  folded into `checker_preludeStageE`/`checker_frontStageE`.
+* **Recipe**: the default `finish` for `builtinPreludeLE`; `builtinPrelude_ref` needs
+  `maxRecDepth 100000` (the prelude's bytes in `preIn`).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 0dd595e6,
+`_tmp/retire-front/times2.txt`): `Checker/PreludeRef` (new) 1.73; `PipePrelude` 2.40 → 2.04,
+`Verdict/FrontStageE` 1.61 → 0.59, `PipeRest` 1.14 → 1.14, `Front/FrontRunRef` 2.90 → 2.96; sum
+8.05 → 8.46 (+5 %, the new module's header). No module more than 10 % slower. No generator or kit
+change was needed.
+
+### 3.41 Retirement, group B, `is_def_eq`, first landing (the spine, the ∀ descent, the λ telescope, `quick_defeq`)
+
+Fourteen functions of §3.30 B's third bullet, the bottom of the `defeq` family: `spine_cmp`,
+`defeq_spine2`, `defeq_spine` (`Arena/DefEqMidSpine`); `peel_leaf`, `peel_dom`, `peel_step2`,
+`peel_step`, `defeq_binders` (`DefEqMidPeel`); `defeq_lams_inner` (`DefEqMid`), `lams_open`
+(`DefEqMidLams`); `quick_sort`, `quick_forall`, `quick_lam`, `quick_defeq` (`DefEqMidQuick`). Each
+has its unified model next to its refinement `*_ref` (`CorePost`); the `@[refines]` theorems with
+users are `RefE.coreSpec` one-liners, the claims the knot reads (`DefeqSpineE`, `QuickDefeqE`)
+`RefE.coreSpecE` one-liners. Gone: the claim files `Verdict/DefEqSpineE`, `DefEqPeelE`,
+`DefEqLamsE`, `DefEqQuickE` (with the statements `DefeqBindersE`, `DefeqLamsE`, read only there);
+the generated and hand ok models with their specs (`scW`, `s2W`, `dsW`, `plK*`, `pdK*`, `ps2K*`,
+`psK*`, `bK*`, `loK*`, `liW`, `qsK*`, `qfK*`, `qdK`, `qdW`); `peelDom_refines`,
+`peelStep2_refines`, `lamsOpen_refines`, `quickSort/Forall/Lam_refines`, `GrowRefP.reset`,
+`growRef_congr`, `coreRef_some`.
+
+| family | before: ok refinements, models, specs + claim files | after | change |
+|---|---:|---:|---:|
+| spine (3) | 240 + 227 = 467 | 193 + 7 = 200 | −57 % |
+| ∀ descent (5) | 433 + 329 = 762 | 281 | −63 % |
+| λ telescope (2) | 164 + 168 = 332 | 137 | −59 % |
+| `quick_*` (4) | 341 + 280 = 621 | 239 + 6 = 245 | −61 % |
+| **all** | **2 182** | **863** | **−60 %** |
+
+Diff of the landing against master: +766 −2 104 lines in 13 files.
+
+Choices:
+
+* **`G`**: `KnotUpToE p n` for the pieces whose errors are only the slots' (`spine_*`, `peel_leaf`,
+  `peel_dom`, `peel_step(2)`, `defeq_lams_inner`, `lams_open`); `True` for `quick_sort` (its one
+  error is its own decline). `KnotNvG p n` (`DefEqMid`: the knot and the verdict closure) for the
+  loops `defeq_peel` and `defeq_lams` and their callers `defeq_binders`, `quick_forall`,
+  `quick_lam`, `quick_defeq`; it replaces `PeelG` and `LamsG`, whose fields were the claims of
+  `peel_leaf`/`peel_step` and `lams_open`/`defeq_lams_inner` (now their refinements' error halves,
+  `RefE.run_err`) and the lifted callees' class `0` (now `callE_nv` from `nv`).
+* **Callees**: unified specs listed for the tails and the arms that only re-list a result
+  (`spine_cmp` → `defeq_list_rev`, `defeq_spine2` → `spine_cmp`, `defeq_spine` → `defeq_spine2`,
+  `peel_step(2)` → `peel_step2`/`peel_dom`, `quick_forall` → `defeq_binders`, `quick_lam` →
+  `defeq_lams`, `quick_defeq` → the three arms); the slots and `defeq_peel` through `callE` (the
+  ok half from `CoreSpec`/the growing triple, the error half from the claim or `RefE.run_err`).
+  Where the callee's model has another value type than the caller's (`lrevE`, `lamsE`: a word),
+  the arm cases on the callee's value instead of `RefE.tail_eq` (2–4 lines each).
+* **The stack top put back** (`defeq_spine2`, `defeq_binders`): `GrowPost.restore` (the kit, §1.5);
+  the old `GrowRefP.reset` and its `136 < size` bound are gone.
+* `defeqSpine_refines` lost its unused `StoreDenotes` argument (its two callers updated).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 619488ec,
+`_tmp/retire-defeq/times1.txt`): `Arena/DefEqMid` 3.34 → 3.46, `DefEqMidPeel` 8.20 → 6.16,
+`DefEqMidLams` 5.01 → 4.63, `DefEqMidQuick` 4.73 → 3.78, `DefEqMidSpine` 3.34 → 3.20,
+`DefEqMidLazy` 6.75 → 6.82, `Verdict/DefEqLazyE` 11.85 → 11.82, `DefEqAllE` 0.48 → 0.49, the four
+deleted claim files 9.45 → 0; sum 53.15 → 40.36 (−24 %). No module more than 10 % slower. No
+generator or kit change was needed.
+
+### 3.42 Retirement, group B, `whnf` itself, first landing (the `proj` and `app` arms)
+
+The six functions of `Verdict/WhnfModels2E` that §3.30 B's second bullet lists: `proj_lit_to_ctor`,
+`reduce_proj_core`, `whnf_core_step_proj` (`plit_ref`, `rp_ref`, `stepProj_ref`, `Arena/WhnfCoreProj`)
+and `whnf_app`, `whnf_core_app2`, `whnf_core_app` (`appLoop_ref`/`app_ref`,
+`Arena/WhnfCoreAppLoop`; `capp2_ref`, `capp_ref`, `Arena/WhnfCoreStep`). Their unified models stay
+in `WhnfModels2E`; the `*_refines'` the knot and the tagged theorems read are `RefE.coreSpec`
+one-liners with their old statements, the claims the error knot reads (`StepProjE`, `CoreAppE` in
+`WhnfKnotE`, `DefeqWhnfE.reduceProjCore` in `KnotAllE`) `RefE.coreSpecE` one-liners. Gone: the claim
+files `WhnfProjE`, `WhnfAppE`; the hand ok models `projLitToCtorW`, `stepProjW`, `rpCoreW`,
+`coreApp2W`, `coreAppW` with their specs; `whnf_app`'s loop as named blocks (`whnfAppL'` and its five
+blocks, `lamW`, `iotaW`, `appRestW`, `bodyW`, `appLoop`, `appFull` and their specs and equations).
+
+| functions | before: ok side + claims | after | change |
+|---|---:|---:|---:|
+| the `proj` arm (3) | 397 + 261 = 658 | 250 | **−62 %** |
+| the `app` arm (3) | 821 + 464 = 1 285 | 486 | **−62 %** |
+
+Diff of the landing against master: +757 −1 978 lines.
+
+* **`G`**: `KnotUpToE p n` for the `proj` arm (the slots' claims; `find_proj`, `reduce_proj_head`
+  and the string-literal callees are outside the verdict closure, lifted). `AppG p n` (the knot's
+  slots and `iota_rec_at`'s claim `IotaRecAtE`, moved here from `WhnfAppE`) for the `app` arm:
+  `iota_rec_at` stays `callE` (its ok half `CoreCallees.iota`), read by `RefE.bind_callE`, as are
+  the `whnf`/`whnf_core` slots.
+* **The stack top put back without its bound.** The unified models drop the bound of the final
+  `CTL` store: `GrowPost.restore` after `reduce_proj_head`/`head_and_args`/`get_app_spine`, and
+  `StackKept.restoreTop` (`StackKept.restoreG'` from the loop's invariants) at `whnf_app`'s three
+  exits.
+* `whnf_app`'s loop: one induction over `whnfAppE.loop1` under `k_loop1`, the old error claim's
+  invariants (`appLoopE_ref`) with the ok leaves of `appFull_ref`. Its continuations are
+  `@[irreducible]` (a mutual block), so an error is passed on by `simp only [whnfAppE.k_…]`, not by
+  `rfl`.
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base master
+72557e98): `Arena/WhnfCoreProj` 8.26 → 6.63, `WhnfCoreAppLoop` 6.31 → 1.66, `WhnfCoreStep` 1.44 →
+0.73, `Verdict/WhnfModels2E` 29.36 → 26.06, `WhnfProjE` + `WhnfAppE` 2.83 → –, `WhnfKnotE`,
+`WhnfIotaE`, `KnotAllE` 4.47 → 4.13; sum 52.67 → 39.21 (−26 %). No module is slower.
+

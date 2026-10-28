@@ -35,8 +35,8 @@ The relation is `IndDeclAt` (`StateDR.lean`). The line's hook: `Line.lean`'s `ap
 `apply_ind(nm)` at `pl = 25`, `nm` being the `inductive` member's value position (`decl_val`,
 `FieldsDecl.lean`); `apply_ind_line(j)` (the line's first member) is the same entry from the line.
 The refinement: `applyInd_ref` (`FrontPreOK2.lean`), on `validate_ref` (`IndApplyRefine9`) and
-`installW_twin` (`IndInstallRefine5`); the line's model is `apply_ind`'s run (`runF`,
-`RunModel.lean`).
+`installW_twin` (`IndInstallRefine5`); the line's (`applyDLine_ref`, `ApplyDLineRef.lean`) reads
+it through `apply_ind`'s unified model.
 
 ## The work lists
 

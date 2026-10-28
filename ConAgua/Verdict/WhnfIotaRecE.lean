@@ -1,3 +1,4 @@
+import ConAgua.Verdict.WhnfSlotE
 import ConAgua.Verdict.WhnfModels4E
 import ConAgua.Verdict.WhnfIotaE
 

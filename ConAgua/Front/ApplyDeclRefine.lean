@@ -192,7 +192,7 @@ theorem pushW_facts (m m' : Mem) (k n o l t v q h : Word) (c : Word)
   · rw [arr_set64]
     simp only [recM, arr_set64, size_set64, e1, e2, e3, e4, e5, e6, e7, hx]
     simp only [show (0 : Word).toNat = 0 from rfl]
-    repeat (first | rw [if_pos (by omega)] | rw [ite_eq_right (by omega)])
+    repeat (first | rw [ite_eq_left (by omega)] | rw [ite_eq_right (by omega)])
   · simp only [dw, arr_set64, recM, size_set64, e1, e2, e3, e4, e5, e6, e7, hx,
       show (0 : Word).toNat = 0 from rfl, true_and]
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>

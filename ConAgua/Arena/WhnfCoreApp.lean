@@ -29,18 +29,11 @@ rest of what `CoreS` reads kept by `keeps_cpl_mkAppNFrom`). `inst_list` is used 
 `callW_mkApp`/`callW_mkAppNFrom` re-derive it from the store (`consInternM_lt`: a hit's index is below
 the tier's node count, a push's below `2^27`).
 
-**Proved in `WhnfCoreAppLoop.lean`: `whnfApp_refines'`** (with `hp : WhnfCoreProg p`, over
-`WhnfCallees` (`instList` through `betaPeel_refines'`) and `CoreCallees` (`iota` for
-`iota_rec_at`); the tagged `whnfApp_refines` instantiates the stub bundles). The loop of `whnfAppL` is spliced from named blocks
-(`whnfAppW` is `while i < an { ⟪whnfAppBodyW⟫ }`, the body is `a := ..; node := ..; ⟪whnfAppLamW⟫;
-⟪whnfAppRestW⟫`, the rest contains the ι arm `⟪whnfAppIotaW⟫`; `whnfAppL_eq := rfl`; a spliced block
-must be a single statement unless it is the last of its sequence, which is why the push is not a
-block of its own). Each block has its own model (`lamW`, `iotaW`, `appRestW`, `bodyW`) with callees
-through `callW`, and its own small spec, which `vcgen` + `finish` closes: the blow-up came from
-putting the two-result call, the `CTL` write and the loop's induction hypothesis in one goal. The
-loop spec `whnfAppW_spec` is then by fuel induction against `bodyW_spec`, `whnfApp_spec` is the
-function's, and `appFull_ref` the refinement by induction on the fuel (the `peelFull_ref` pattern,
-with the twin's state and the mode maps generalized: a fired `iota_rec_at` moves both).
+**Proved in `WhnfCoreAppLoop.lean`: `app_ref`**, `whnf_app`'s one refinement, both outcomes, over
+its unified model (`whnfAppE`), by induction on the L fuel (`appLoop_ref`: the `peelFull_ref`
+pattern, with the twin's state and the mode maps generalized: a fired `iota_rec_at` moves both);
+over `WhnfCallees` (`instList` through `betaPeel_refines'`) and `CoreCallees` (`iota` for
+`iota_rec_at`), its errors `iota_rec_at`'s (`AppG`). `whnfApp_refines'` is its ok half.
 -/
 
 open ConRon.Arena

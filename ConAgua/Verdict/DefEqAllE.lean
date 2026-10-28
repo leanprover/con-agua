@@ -1,6 +1,5 @@
-import ConAgua.Verdict.DefEqSpineE
-import ConAgua.Verdict.DefEqLamsE
-import ConAgua.Verdict.DefEqPeelE
+import ConAgua.Verdict.DefEqLoopsE
+import ConAgua.Verdict.DefEqLazyE
 
 /-!
 # The `defeq` slot's error half one level up, assembled (lane `verdicts-b`, helper `k3`)
@@ -43,7 +42,7 @@ theorem KnotAllProg.lazyDeltaStepE : LazyDeltaStepE p :=
   let lc := KnotAllProg.lazy hq
   let hlE := ldsLeft_refinesE p lp lc hw.deltaQuick hnv
   let hrE := ldsRight_refinesE p lp lc hw.deltaQuick hnv
-  let hsE := ldsSame_refinesE p lp lc (defeqSpine_refinesE p lp.spine hnv)
+  let hsE := ldsSame_refinesE p lp (defeqSpine_refinesE p lp.spine hnv)
     (ldsUnfold2_refinesE p lp lc hw.deltaQuick hnv) hnv
   lazyDeltaStep_refinesE p lp hw.deltaQuick hw.tryUnfoldProjApp hlE hrE
     (ldsBoth_refinesE p lp hlE hrE hsE hnv) hnv
@@ -53,8 +52,11 @@ include hq hnv in
 theorem KnotAllProg.quickDefeqE : QuickDefeqE p :=
   let qp := hq.body.lazy.spine.quick
   let lc := KnotAllProg.lazy hq
-  quickDefeq_refinesE p qp lc.store (defeqBinders_refinesE p qp.lams.peel lc.instList hnv)
-    (defeqLams_refinesE p qp.lams lc.inst1 hnv) hnv
+  fun n hk hkE F s₀ a₀ dn vis fe M eb mode d x y hF hn hs hx hy hd =>
+    RefE.coreSpecE (qdE_spec p qp.qd qp.qs qp.qf qp.ql qp.lams.peel.binders qp.lams.lams (n + 1) s₀
+      mode vis d x y) hnv ⟨hkE, hnv⟩
+      (qd_ref p qp lc.instList lc.inst1 lc.store n hk F s₀ a₀ dn vis fe M eb mode d x y (by omega)
+        (by omega) hs hx hy hd)
 
 include hq hw hnv in
 /-- `lazy_delta_reduction`'s error claim. -/

@@ -1,4 +1,3 @@
-import ConAgua.Final.TwinVerdict
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.ParDriverL
 
