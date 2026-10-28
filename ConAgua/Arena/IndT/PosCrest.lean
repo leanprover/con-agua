@@ -9,8 +9,7 @@ import ConAgua.Verdict.PosE3Cm
 its twin side transcribed from con-ron's `nestCtors_spec` (the cons case's head), the level
 instantiation (`instLPFast_cstep`), the crest (`nestCrest_spec`, well scoped by
 `WScoped_nestCrest`), its type (`inferC_rsim`) and that type's sort (`ensureSortC_rsim`), whose
-errors are the core stubs' claims. Its ok half serves `oneOKC_step` through the run, its error
-half `oneOKE_step`.
+errors are the core stubs' claims. It serves `oneRef_step` (`PosOne.lean`) through the run.
 -/
 
 
